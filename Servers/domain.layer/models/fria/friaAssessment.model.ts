@@ -135,8 +135,8 @@ export class FriaAssessmentModel extends Model<FriaAssessmentModel> implements I
 
   // Metadata
   @ForeignKey(() => UserModel)
-  @Column({ type: DataType.INTEGER, allowNull: false })
-  created_by!: number;
+  @Column({ type: DataType.INTEGER, allowNull: true })
+  created_by?: number;
 
   @ForeignKey(() => UserModel)
   @Column({ type: DataType.INTEGER, allowNull: true })

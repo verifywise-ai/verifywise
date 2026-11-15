@@ -11,7 +11,7 @@ import { alertTextSx, infoAlertSx, successAlertSx } from "../../RiskInheritanceG
 import useTranslation from "../../../../application/hooks/useTranslation";
 import { useAuth } from "../../../../application/hooks/useAuth";
 import useUsers from "../../../../application/hooks/useUsers";
-import { useHasPermission } from "../../../../application/hooks/useMyPermissions";
+import { useCan } from "../../../../application/hooks/useCan";
 import { useIsAdmin } from "../../../../application/hooks/useIsAdmin";
 import {
   useAcceptFinding,
@@ -99,7 +99,7 @@ export default function VendorResearchFindings({
   onNotify,
 }: VendorResearchFindingsProps) {
   const { t } = useTranslation();
-  const canEdit = useHasPermission("vendor.edit");
+  const canEdit = useCan("vendor.edit");
   const isAdmin = useIsAdmin();
 
   // The vendor starts as the URL says. The link in a notification can also arrive while this

@@ -75,9 +75,23 @@ jest.mock("../../utils/statusCode.utils", () => ({
     500: (d: any) => ({ message: "Internal Server Error", data: d }),
   },
 }));
+// Intake answers mapped to custom fields (#5262): definitions and writes mocked.
+jest.mock("../../utils/customField.utils", () => ({
+  ...(jest.requireActual("../../utils/customField.utils") as object),
+  listCustomFieldDefinitionsQuery: jest.fn<any>().mockResolvedValue([]),
+  setCustomFieldValueQuery: jest.fn<any>().mockResolvedValue({}),
+}));
 const tx = { commit: jest.fn(), rollback: jest.fn() };
+// A savepoint is a nested transaction: sequelize.transaction({ transaction: tx }).
+const sp = { commit: jest.fn(), rollback: jest.fn() };
 jest.mock("../../database/db", () => ({
-  sequelize: { transaction: jest.fn<any>().mockImplementation(async () => tx) },
+  sequelize: {
+    transaction: jest
+      .fn<any>()
+      .mockImplementation(async (opts?: { transaction?: unknown }) =>
+        opts?.transaction ? sp : tx,
+      ),
+  },
 }));
 
 /* eslint-disable @typescript-eslint/no-require-imports */
@@ -89,6 +103,14 @@ const projects = require("../../utils/project.utils");
 const models = require("../../utils/modelInventory.utils");
 const { createRiskService } = require("../../services/risk.service");
 const { createNewModelRiskQuery } = require("../../utils/modelRisk.utils");
+const customFields = require("../../utils/customField.utils");
+const { ValidationException } = require("../../domain.layer/exceptions/custom.exception");
+const {
+  ModelInventoryModel,
+} = require("../../domain.layer/models/modelInventory/modelInventory.model");
+const logger = require("../../utils/logger/fileLogger").default;
+const { logSuccess } = require("../../utils/logger/logHelper");
+const { sequelize } = require("../../database/db");
 /* eslint-enable @typescript-eslint/no-require-imports */
 
 const ORG = 5;
@@ -159,11 +181,12 @@ const request = (body: object = {}) => ({
   params: { id: "11" },
   body: { confirmedEntityData: { project_title: "P", name: "M" }, ...body },
 });
-const approve = async (body: object = {}) => {
+const approve = async (body: object = {}, handler = ctrl.approveSubmission) => {
   const r = res();
-  await ctrl.approveSubmission(request(body) as any, r);
+  await handler(request(body) as any, r);
   return { status: r.status.mock.calls[0]?.[0], body: r.json.mock.calls[0]?.[0] };
 };
+const approveV1 = (body: object = {}) => approve(body, ctrl.approveSubmissionV1);
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -379,5 +402,133 @@ describe("approveSubmission holds the floor", () => {
       bias: 2,
     });
     expect(intake.updateSubmissionAssessmentV2Query).not.toHaveBeenCalled();
+  });
+});
+
+describe("approveSubmission writes mapped custom fields (#5262)", () => {
+  const SCHEMA = {
+    version: "1.0",
+    fields: [
+      { id: "q1", type: "text", label: "Who owns it?", entityFieldMapping: "custom_field:owner" },
+      { id: "q2", type: "number", label: "Monthly cost", entityFieldMapping: "custom_field:cost" },
+    ],
+  };
+  const DEFS = [
+    { id: 1, field_key: "owner", label: "Owner", field_type: "text", options: null },
+    { id: 2, field_key: "cost", label: "Cost", field_type: "number", options: null },
+  ];
+
+  beforeEach(() => {
+    intake.getSubmissionByIdQuery.mockResolvedValue(
+      submission({
+        entityType: "model",
+        data: { q1: "Alice", q2: "5" },
+        suggestedRisks: { status: "complete", items: [], droppedCount: 0 },
+      }),
+    );
+    intake.getIntakeFormByIdQuery.mockResolvedValue({ id: 1, name: "F", schema: SCHEMA });
+    runs.getLatestRunForSubmissionQuery.mockResolvedValue(null);
+    customFields.listCustomFieldDefinitionsQuery.mockResolvedValue(DEFS);
+  });
+
+  it("writes each value in a savepoint and reports a refused one as skipped", async () => {
+    customFields.setCustomFieldValueQuery.mockRejectedValueOnce(
+      new ValidationException("Expected string value", "value"),
+    );
+    const r = await approveV1();
+    expect(r.status).toBe(200);
+    expect(customFields.listCustomFieldDefinitionsQuery).toHaveBeenCalledWith(
+      ORG,
+      "model_inventory",
+      tx,
+    );
+    expect(customFields.setCustomFieldValueQuery).toHaveBeenCalledTimes(2);
+    expect(customFields.setCustomFieldValueQuery.mock.calls).toEqual([
+      [{ definition_id: 1, entity_id: 60, value: "Alice" }, ORG, sp],
+      [{ definition_id: 2, entity_id: 60, value: 5 }, ORG, sp],
+    ]);
+    expect(sequelize.transaction).toHaveBeenCalledWith({ transaction: tx });
+    expect(sp.rollback).toHaveBeenCalledTimes(1);
+    expect(sp.commit).toHaveBeenCalledTimes(1);
+    expect(tx.commit).toHaveBeenCalled();
+    expect(r.body.data).toEqual({
+      id: 11,
+      customFieldSkips: [
+        { label: "Owner", reason: "The answer is not a valid value for this custom field" },
+      ],
+    });
+    expect(logger.warn).toHaveBeenCalledWith(expect.stringContaining("owner"));
+    expect(logSuccess).toHaveBeenCalledWith(
+      expect.objectContaining({
+        description: "custom field owner skipped on submission 11: invalid_value",
+      }),
+    );
+  });
+
+  it("reports answers the resolver can't use, translated, without writing them", async () => {
+    customFields.listCustomFieldDefinitionsQuery.mockResolvedValue([DEFS[1]]);
+    const r = await approveV1();
+    expect(r.status).toBe(200);
+    expect(customFields.setCustomFieldValueQuery).toHaveBeenCalledTimes(1);
+    expect(r.body.data.customFieldSkips).toEqual([
+      { label: "Who owns it?", reason: "This custom field no longer exists" },
+    ]);
+  });
+
+  it("treats an array confirmedEntityData as data to keep, not as an object to filter", async () => {
+    const filter = jest.spyOn(Object, "entries");
+    const r = await approveV1({ confirmedEntityData: ["a", "b"] });
+    const filteredAnArray = filter.mock.calls.some(
+      ([arg]) => Array.isArray(arg) && arg.length === 2 && arg[0] === "a",
+    );
+    filter.mockRestore();
+    expect(r.status).toBe(200);
+    expect(filteredAnArray).toBe(false);
+  });
+
+  it("an unexpected write error rolls the approval back", async () => {
+    customFields.setCustomFieldValueQuery.mockRejectedValueOnce(new Error("connection lost"));
+    const r = await approveV1();
+    expect(r.status).toBe(500);
+    expect(tx.rollback).toHaveBeenCalled();
+    expect(tx.commit).not.toHaveBeenCalled();
+    expect(intake.approveSubmissionQuery).not.toHaveBeenCalled();
+  });
+
+  it("takes custom values from the answers, never from confirmedEntityData", async () => {
+    const r = await approveV1({
+      confirmedEntityData: { name: "x", "custom_field:owner": "y" },
+    });
+    expect(r.status).toBe(200);
+    const created = ModelInventoryModel.createNewModelInventory.mock.calls[0][0];
+    expect(created.model).toBe("x");
+    expect(Object.keys(created)).not.toContain("custom_field:owner");
+    expect(customFields.setCustomFieldValueQuery.mock.calls[0][0]).toEqual({
+      definition_id: 1,
+      entity_id: 60,
+      value: "Alice",
+    });
+  });
+
+  it("the legacy route writes the values but answers the pre-v1 shape", async () => {
+    customFields.setCustomFieldValueQuery.mockRejectedValueOnce(
+      new ValidationException("Expected string value", "value"),
+    );
+    const r = await approve();
+    expect(r.status).toBe(200);
+    expect(customFields.setCustomFieldValueQuery).toHaveBeenCalledTimes(2);
+    expect(r.body.data).toEqual({ id: 11 });
+  });
+
+  it("a form without custom mappings reads no definitions and skips nothing", async () => {
+    intake.getIntakeFormByIdQuery.mockResolvedValue({
+      id: 1,
+      name: "F",
+      schema: { version: "1.0", fields: [] },
+    });
+    const r = await approveV1();
+    expect(r.status).toBe(200);
+    expect(customFields.listCustomFieldDefinitionsQuery).not.toHaveBeenCalled();
+    expect(r.body.data.customFieldSkips).toEqual([]);
   });
 });

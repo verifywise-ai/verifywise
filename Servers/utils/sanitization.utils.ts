@@ -84,9 +84,10 @@ export const USER_HTML_ALLOWED_ATTRIBUTES: sanitizeHtml.IOptions["allowedAttribu
   img: ["src", "alt", "width", "height", "title"],
   th: ["colspan", "rowspan"],
   td: ["colspan", "rowspan"],
-  // TipTap task-list specific attributes
+  // TipTap task-list specific attributes. TaskItem only parses
+  // li[data-type="taskItem"], so without it checklists load back as bullets (P-M7).
   ul: ["data-type"],
-  li: ["data-checked"],
+  li: ["data-checked", { name: "data-type", multiple: false, values: ["taskItem"] }],
 };
 
 /**
@@ -133,6 +134,18 @@ export function sanitizeUserHtml(input: unknown): string | null | undefined {
   if (input === null || input === undefined) return input as null | undefined;
   const str = typeof input === "string" ? input : String(input);
   return sanitizeHtml(str, SANITIZE_OPTIONS);
+}
+
+/**
+ * sanitizeUserHtml for a server-side PDF render, which also keeps data: images.
+ * Policies saved before content was sanitized can hold base64 images. Only use
+ * this where the page runs with JavaScript off and its network blocked.
+ */
+export function sanitizeHtmlForPdf(input: string): string {
+  return sanitizeHtml(input, {
+    ...SANITIZE_OPTIONS,
+    allowedSchemesByTag: { img: [...USER_HTML_ALLOWED_SCHEMES, "data"] },
+  });
 }
 
 /**

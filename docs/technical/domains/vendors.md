@@ -816,12 +816,12 @@ the sub-tab bar stay.
 Choosing a heat map cell takes the viewer to the Risks tab (`/vendors/risks`). Before it
 navigates, the page (`handleHeatCell`) resets the register view, so that the register
 lists exactly the risks of the cell: the use case (back to all), **Risk status** (back to
-Active), the filter conditions, the grouping, the search and the risk level card are all
-cleared, and the toolbar shows that: the Risks tab mounts `FilterBy` and `GroupBy` afresh
-each time it opens, and the page hands them its own state (`defaultConditions` and
-`defaultLogic` from `useFilterBy`, `defaultGroupBy` and `defaultSortOrder` from the grouping),
-which the reset has just emptied, so they open blank. The same hand-over keeps a filter or a
-grouping chosen on the Risks tab when the viewer leaves the tab and comes back. There
+Active), the filter conditions, the search and the risk level card are all
+cleared (a summary card is not a filter condition, so `handleHeatCell` clears it itself), and
+the toolbar shows that: the Risks tab mounts `TableFilter` afresh each time it opens, and the
+page hands it its own state (`defaultConditions` and `defaultLogic` from `useFilterBy`), which
+the reset has just emptied, so it opens blank. The same hand-over keeps a filter chosen on the
+Risks tab when the viewer leaves the tab and comes back. There
 `HeatCellNotice` (`VendorRiskInsights/HeatCellNotice.tsx`, `role="status"`) says "The
 table shows only the risks in the selected heat map cell." with a **Show all risks**
 link that clears the cell and leaves the viewer on the Risks tab, with the keyboard focus moved to the register (a `region` labelled "Vendor risks list", `tabIndex={-1}`), since the link is removed with the notice and the focus would otherwise fall to the page. The notice takes the
@@ -1337,7 +1337,7 @@ All vendor changes are tracked:
 - Export functionality
 - Page tour for guidance
 
-**Tabs of the page.** The tabs are route-driven (`TAB_PATHS` and `tabOfPath` in `pages/Vendors/tabs.ts`, which also holds `TAB_HEADERS` and `TAB_TEXT`): the active tab is read from the path, without regard to case, to a trailing slash and to percent-encoding, as the router matches it (`/Vendors/Risks/` and `/vendors/%72isks` are the Risks route), and choosing a tab navigates to its path, so every tab can be linked to. All four routes render the same `Vendors` page (`application/config/routes.tsx`), so the page's state (the heat map cell filter among it) survives a change of tab. The `FilterBy` and `GroupBy` of the Vendors toolbar and of the Risks toolbar keep their own state inside and are mounted only while their tab is open, so the page passes each of them its conditions, logic, grouping and sort order as defaults every time they mount.
+**Tabs of the page.** The tabs are route-driven (`TAB_PATHS` and `tabOfPath` in `pages/Vendors/tabs.ts`, which also holds `TAB_HEADERS` and `TAB_TEXT`): the active tab is read from the path, without regard to case, to a trailing slash and to percent-encoding, as the router matches it (`/Vendors/Risks/` and `/vendors/%72isks` are the Risks route), and choosing a tab navigates to its path, so every tab can be linked to. All four routes render the same `Vendors` page (`application/config/routes.tsx`), so the page's state (the heat map cell filter among it) survives a change of tab. The `TableFilter` of the Vendors toolbar and of the Risks toolbar keeps its own state inside and are mounted only while their tab is open, so the page passes each of them its conditions, logic, grouping and sort order as defaults every time they mount.
 
 | Tab | Path | Count | Content |
 |-----|------|-------|---------|
@@ -1362,8 +1362,7 @@ The header (title and description, `TAB_HEADERS`) follows the tab, and the tab n
 | `VendorResearchButton` | **Research risks** icon button in each row of the vendors table |
 | `RiskTable` | Display vendor risks, including the Inherited by column |
 | `TableWithPlaceholder` | Main vendor list |
-| `GroupedTableView` | Grouped display |
-| `FilterBy` | Dynamic filtering |
+| `TableFilter` | Dynamic filtering (`FilterBy` in the classic look, filter chips in phase 1) |
 
 ### Hooks
 

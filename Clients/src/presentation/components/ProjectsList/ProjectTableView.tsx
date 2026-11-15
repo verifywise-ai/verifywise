@@ -40,9 +40,8 @@ import useFormattedDate from "../../../application/hooks/useFormattedDate";
 import { deleteProject } from "../../../application/repository/project.repository";
 import { VerifyWiseContext } from "../../../application/contexts/VerifyWise.context";
 import Alert from "../Alert";
-import allowedRoles from "../../../application/constants/permissions";
-import { useAuth } from "../../../application/hooks/useAuth";
-import { text } from "../../themes/palette";
+import { useCanCheck } from "../../../application/hooks/useCan";
+import { text, palette as vwPalette } from "../../themes/palette";
 import useUsers from "../../../application/hooks/useUsers";
 import { useCustomFieldDefinitions } from "../../../application/hooks/useCustomFields";
 import { formatCustomFieldValue } from "../CustomFieldsSection/formatCustomFieldValue";
@@ -199,7 +198,7 @@ const ProjectTableView: React.FC<IProjectTableViewProps> = ({
   const theme = useTheme();
   const navigate = useNavigateSearch();
   const { setProjects } = useContext(VerifyWiseContext);
-  const { userRoleName } = useAuth();
+  const can = useCanCheck();
   const [page, setPage] = useState(0);
   const [alert, setAlert] = useState<{
     variant: "success" | "info" | "warning" | "error";
@@ -525,7 +524,10 @@ const ProjectTableView: React.FC<IProjectTableViewProps> = ({
                       ...singleTheme.tableStyles.primary.body.cell,
                       fontSize: "13px",
                       fontWeight: 600,
-                      backgroundColor: sortConfig.key === "ucId" ? "#e8e8e8" : "#fafafa",
+                      backgroundColor:
+                        sortConfig.key === "ucId"
+                          ? vwPalette.border.light
+                          : vwPalette.background.alt,
                     }}
                   >
                     {project.uc_id || project.id}
@@ -629,7 +631,7 @@ const ProjectTableView: React.FC<IProjectTableViewProps> = ({
                         entityType="useCase"
                         entityLabel={project.project_title}
                       />
-                      {allowedRoles.projects.delete.includes(userRoleName) && (
+                      {can("useCase.edit") && (
                         <IconButton
                           id={project.id}
                           type="use case"

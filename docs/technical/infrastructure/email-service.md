@@ -157,7 +157,7 @@ Templates are stored in `Servers/templates/` as `.mjml` files.
 | `user-added-project-reviewer.mjml` | Added as reviewer | Same as above |
 | `user-added-project-auditor.mjml` | Added as auditor | Same as above |
 | `member-role-changed-editor-to-admin.mjml` | Role change | `{{user_name}}`, `{{project_name}}`, `{{new_role}}` |
-| `policy-due-soon.mjml` | Policy deadline | `{{admin_name}}`, `{{policy_name}}`, `{{due_date}}` |
+| `policy-review-reminder.mjml` | Policy review due soon or overdue | `{{reminder_title}}`, `{{reminder_message}}`, `{{recipient_name}}`, `{{policy_name}}`, `{{review_date}}`, `{{policy_url}}` |
 | `pmm-initial-notification.mjml` | PMM cycle start | `{{stakeholder_name}}`, `{{use_case_title}}`, `{{cycle_number}}` |
 | `pmm-reminder.mjml` | PMM reminder | Same as above + `{{days_remaining}}` |
 | `pmm-escalation.mjml` | PMM escalation | Escalation details |
@@ -237,7 +237,7 @@ export const EMAIL_TEMPLATES = {
   USER_ADDED_PROJECT_EDITOR: "user-added-project-editor.mjml",
   USER_ADDED_PROJECT_REVIEWER: "user-added-project-reviewer.mjml",
   MEMBER_ROLE_CHANGED_EDITOR_TO_ADMIN: "member-role-changed-editor-to-admin.mjml",
-  POLICY_DUE_SOON: "policy-due-soon.mjml",
+  POLICY_REVIEW_REMINDER: "policy-review-reminder.mjml",
 };
 
 export const getEmailTemplate = (key: EmailTemplateKey): string => {
@@ -298,12 +298,15 @@ import { notificationService } from "./notificationService";
 // Uses rate limiting (2 emails/second max)
 await notificationService.sendEmailWithTemplate(
   "user@example.com",
-  "Policy Due Soon",
-  "policy-due-soon.mjml",
+  "Policy review due soon: Data Privacy Policy",
+  "policy-review-reminder.mjml",
   {
-    admin_name: "John",
+    reminder_title: "Policy review due soon",
+    reminder_message: 'The review of policy "Data Privacy Policy" is due on January 15, 2024.',
+    recipient_name: "John",
     policy_name: "Data Privacy Policy",
-    due_date: "2024-01-15",
+    review_date: "January 15, 2024",
+    policy_url: "https://app.example.com/policies/7/edit",
   }
 );
 ```

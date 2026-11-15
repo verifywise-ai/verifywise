@@ -4,7 +4,7 @@
  */
 
 import React from "react";
-import { Box, Typography, Stack, CircularProgress, useTheme } from "@mui/material";
+import { Box, Typography, Stack, CircularProgress } from "@mui/material";
 import VWAvatar from "../../../components/Avatar/VWAvatar";
 import { Clock } from "lucide-react";
 import {
@@ -16,7 +16,7 @@ import { useProfilePhotoFetch } from "../../../../application/hooks/useProfilePh
 import { EntityType, getEntityHistoryConfig } from "../../../../config/changeHistory.config";
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
-import { brand } from "../../../themes/palette";
+import { brand, border, background, icon, text, accent, radiusPx } from "../../../themes/palette";
 import useFormattedDate from "../../../../application/hooks/useFormattedDate";
 import { displayFormattedTime } from "../../../tools/isoDateToString";
 
@@ -66,7 +66,6 @@ const formatRelativeTime = (
 
 const Activity: React.FC<ActivityProps> = ({ entityType, entityId }) => {
   const formatDate = useFormattedDate();
-  const theme = useTheme();
   const { userId: currentUserId } = useAuth();
   const { data, isLoading, isError, fetchNextPage, hasNextPage, isFetchingNextPage } =
     useEntityChangeHistory(entityType, entityId);
@@ -169,7 +168,7 @@ const Activity: React.FC<ActivityProps> = ({ entityType, entityId }) => {
         <Typography
           sx={{
             fontSize: 13,
-            color: isOldValue ? "#B91C1C" : "#0D7C4F",
+            color: isOldValue ? accent.red.text : accent.primary.text,
             fontWeight: 400,
             wordBreak: "break-word",
             textDecoration: isOldValue ? "line-through" : "none",
@@ -190,7 +189,7 @@ const Activity: React.FC<ActivityProps> = ({ entityType, entityId }) => {
             }}
             sx={{
               "fontSize": 12,
-              "color": theme.palette.primary.main,
+              "color": brand.primary,
               "fontWeight": 500,
               "cursor": "pointer",
               "marginTop": "4px",
@@ -228,9 +227,9 @@ const Activity: React.FC<ActivityProps> = ({ entityType, entityId }) => {
         sx={{
           "marginBottom": "32px",
           "padding": "16px",
-          "backgroundColor": theme.palette.background.main,
-          "borderRadius": "8px",
-          "border": `1px solid #d0d5dd`,
+          "backgroundColor": background.main,
+          "borderRadius": radiusPx.lg,
+          "border": `1px solid ${border.dark}`,
           "&:last-child": {
             marginBottom: 0,
           },
@@ -254,7 +253,7 @@ const Activity: React.FC<ActivityProps> = ({ entityType, entityId }) => {
               sx={{
                 fontSize: 14,
                 fontWeight: 500,
-                color: theme.palette.text.primary,
+                color: text.primary,
               }}
             >
               {firstEntry.action === "created" && `${userName} created this ${config.entityName}`}
@@ -263,11 +262,11 @@ const Activity: React.FC<ActivityProps> = ({ entityType, entityId }) => {
               {firstEntry.action === "deleted" && `${userName} deleted this ${config.entityName}`}
             </Typography>
             <Stack direction="row" gap="8px" alignItems="center">
-              <Clock size={12} color={theme.palette.text.secondary} />
+              <Clock size={12} color={text.secondary} />
               <Typography
                 sx={{
                   fontSize: 12,
-                  color: theme.palette.text.secondary,
+                  color: text.secondary,
                 }}
               >
                 {relativeTime}
@@ -294,7 +293,7 @@ const Activity: React.FC<ActivityProps> = ({ entityType, entityId }) => {
                 sx={{
                   fontSize: 12,
                   fontWeight: 500,
-                  color: theme.palette.text.secondary,
+                  color: text.secondary,
                   marginBottom: "8px",
                 }}
               >
@@ -305,8 +304,8 @@ const Activity: React.FC<ActivityProps> = ({ entityType, entityId }) => {
                 <Box
                   sx={{
                     padding: "8px 12px",
-                    borderRadius: "4px",
-                    backgroundColor: "#F1F8F4",
+                    borderRadius: radiusPx.sm,
+                    backgroundColor: accent.primary.bg,
                   }}
                 >
                   {renderTruncatedValue(entry.id, entry.new_value, "new")}
@@ -318,8 +317,8 @@ const Activity: React.FC<ActivityProps> = ({ entityType, entityId }) => {
                       sx={{
                         flex: 1,
                         padding: "8px 12px",
-                        borderRadius: "4px",
-                        backgroundColor: "#FEF2F2",
+                        borderRadius: radiusPx.sm,
+                        backgroundColor: accent.red.bg,
                       }}
                     >
                       {renderTruncatedValue(entry.id, entry.old_value, "old")}
@@ -333,7 +332,7 @@ const Activity: React.FC<ActivityProps> = ({ entityType, entityId }) => {
                       <Typography
                         sx={{
                           fontSize: 16,
-                          color: theme.palette.text.secondary,
+                          color: text.secondary,
                         }}
                       >
                         →
@@ -345,8 +344,8 @@ const Activity: React.FC<ActivityProps> = ({ entityType, entityId }) => {
                       sx={{
                         flex: 1,
                         padding: "8px 12px",
-                        borderRadius: "4px",
-                        backgroundColor: "#F1F8F4",
+                        borderRadius: radiusPx.sm,
+                        backgroundColor: accent.primary.bg,
                       }}
                     >
                       {renderTruncatedValue(entry.id, entry.new_value, "new")}
@@ -374,12 +373,12 @@ const Activity: React.FC<ActivityProps> = ({ entityType, entityId }) => {
           padding: "0 24px",
         }}
       >
-        <Clock size={48} strokeWidth={1.5} color="#DC2626" opacity={0.6} />
+        <Clock size={48} strokeWidth={1.5} color={icon.error} opacity={0.6} />
         <Typography
           sx={{
             fontSize: 16,
             fontWeight: 600,
-            color: theme.palette.text.primary,
+            color: text.primary,
             marginTop: "16px",
           }}
         >
@@ -388,7 +387,7 @@ const Activity: React.FC<ActivityProps> = ({ entityType, entityId }) => {
         <Typography
           sx={{
             fontSize: 13,
-            color: theme.palette.text.secondary,
+            color: text.secondary,
             marginTop: "8px",
             lineHeight: 1.6,
           }}
@@ -433,7 +432,7 @@ const Activity: React.FC<ActivityProps> = ({ entityType, entityId }) => {
           sx={{
             fontSize: 16,
             fontWeight: 600,
-            color: theme.palette.text.primary,
+            color: text.primary,
             marginTop: "16px",
           }}
         >
@@ -442,7 +441,7 @@ const Activity: React.FC<ActivityProps> = ({ entityType, entityId }) => {
         <Typography
           sx={{
             fontSize: 13,
-            color: theme.palette.text.secondary,
+            color: text.secondary,
             marginTop: "8px",
             lineHeight: 1.6,
           }}
@@ -460,15 +459,15 @@ const Activity: React.FC<ActivityProps> = ({ entityType, entityId }) => {
           sx={{
             padding: "12px 16px",
             marginBottom: "24px",
-            backgroundColor: "#F8FAFB",
-            borderRadius: "4px",
-            border: `1px solid #d0d5dd`,
+            backgroundColor: background.alt,
+            borderRadius: radiusPx.sm,
+            border: `1px solid ${border.dark}`,
           }}
         >
           <Typography
             sx={{
               fontSize: 13,
-              color: theme.palette.text.secondary,
+              color: text.secondary,
             }}
           >
             <Box component="span" sx={{ fontWeight: 400 }}>
@@ -502,9 +501,7 @@ const Activity: React.FC<ActivityProps> = ({ entityType, entityId }) => {
             sx={{
               "fontSize": 14,
               "fontWeight": 500,
-              "color": isFetchingNextPage
-                ? theme.palette.text.disabled
-                : theme.palette.primary.main,
+              "color": isFetchingNextPage ? text.disabled : brand.primary,
               "cursor": isFetchingNextPage ? "default" : "pointer",
               "&:hover": {
                 textDecoration: isFetchingNextPage ? "none" : "underline",

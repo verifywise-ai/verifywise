@@ -184,13 +184,15 @@ describe("workflows / definitions / policyRenewal", () => {
   });
 
   describe("notify_owner", () => {
-    it("sends a POLICY_DUE_SOON in-app notification to the policy author", async () => {
+    it("sends a POLICY_DUE_SOON in-app notification to the policy author when there is no owner", async () => {
       const policy = {
         id: 42,
         title: "Acceptable Use",
         next_review_date: reviewDateIn(10),
         author_id: 7,
       };
+
+      mockQuery.mockResolvedValueOnce([{ user_id: 7 }] as any);
 
       const result = await handlerFor("notify_owner")(
         ctx({ workflowRunId: 55, organizationId: 9, results: { fetch_policy: policy } }),
@@ -211,12 +213,64 @@ describe("workflows / definitions / policyRenewal", () => {
       });
     });
 
-    it("skips when the policy has no author_id", async () => {
+    it("notifies the policy owner instead of the author when there is an owner", async () => {
+      const policy = {
+        id: 42,
+        title: "Acceptable Use",
+        next_review_date: reviewDateIn(10),
+        author_id: 7,
+        policy_owner_id: 11,
+      };
+      mockQuery.mockResolvedValueOnce([{ user_id: 7 }, { user_id: 11 }] as any);
+
+      const result = await handlerFor("notify_owner")(ctx({ results: { fetch_policy: policy } }));
+
+      expect((result as any).output).toEqual({ notified: 11 });
+      expect(mockNotify.mock.calls[0][1]).toMatchObject({ user_id: 11 });
+      const [sql, options] = mockQuery.mock.calls[0] as [string, any];
+      expect(sql).toContain("FROM organization_members");
+      expect(options.replacements.ids).toEqual([11, 7]);
+    });
+
+    it("falls back to the author when the owner has left the organization", async () => {
+      const policy = {
+        id: 42,
+        title: "Acceptable Use",
+        next_review_date: reviewDateIn(10),
+        author_id: 7,
+        policy_owner_id: 11,
+      };
+      mockQuery.mockResolvedValueOnce([{ user_id: 7 }] as any);
+
+      const result = await handlerFor("notify_owner")(ctx({ results: { fetch_policy: policy } }));
+
+      expect((result as any).output).toEqual({ notified: 7 });
+      expect(mockNotify.mock.calls[0][1]).toMatchObject({ user_id: 7 });
+    });
+
+    it("skips when neither the owner nor the author is a member", async () => {
+      const policy = {
+        id: 42,
+        title: "Acceptable Use",
+        next_review_date: reviewDateIn(10),
+        author_id: 7,
+        policy_owner_id: 11,
+      };
+      mockQuery.mockResolvedValueOnce([] as any);
+
+      const result = await handlerFor("notify_owner")(ctx({ results: { fetch_policy: policy } }));
+
+      expect((result as any).type).toBe("skip");
+      expect(mockNotify).not.toHaveBeenCalled();
+    });
+
+    it("skips when the policy has neither an owner nor an author", async () => {
       const policy = {
         id: 42,
         title: "Acceptable Use",
         next_review_date: reviewDateIn(10),
         author_id: null,
+        policy_owner_id: null,
       };
 
       const result = await handlerFor("notify_owner")(ctx({ results: { fetch_policy: policy } }));

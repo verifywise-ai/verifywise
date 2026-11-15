@@ -73,6 +73,7 @@ const listProjects = async (
         projects.status,
         projects.ai_risk_classification,
         projects.owner,
+        projects.external_owner_name,
         projects.is_organizational
       FROM projects
       WHERE ${whereClause}
@@ -90,6 +91,7 @@ const listProjects = async (
       status: string | null;
       ai_risk_classification: string | null;
       owner: number | null;
+      external_owner_name: string | null;
       is_organizational: boolean;
     }>;
 
@@ -100,6 +102,7 @@ const listProjects = async (
       status: r.status,
       ai_risk_classification: r.ai_risk_classification,
       owner: r.owner,
+      external_owner_name: r.external_owner_name,
       is_organizational: r.is_organizational,
     }));
   } catch (error) {

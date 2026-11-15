@@ -1,23 +1,27 @@
 /**
- * @fileoverview Templates tab: toolbar (filter/group/search) and built-in templates table.
+ * @fileoverview Templates tab: toolbar (filter/search) and built-in templates table.
  *
  * @module pages/EvalsDashboard/ProjectDatasets/TemplatesTab
  */
 
 import { Box, Stack } from "@mui/material";
 import SearchBox from "../../../components/Search/SearchBox";
-import {
-  FilterBy,
-  type FilterColumn,
-  type FilterCondition,
-} from "../../../components/Table/FilterBy";
-import { GroupBy } from "../../../components/Table/GroupBy";
+import { type FilterColumn, type FilterCondition } from "../../../components/Table/FilterBy";
+import { TableFilter } from "../../../components/Table/TableFilter";
 import TemplatesTable from "../../../components/Table/TemplatesTable";
 import type { BuiltInDataset, TemplateWithCategory } from "./types";
+import type { FilterFieldValue } from "../../../../application/utils/filterConditions";
 
 export type TemplatesTabProps = {
   filterColumns: FilterColumn[];
   onFilterChange: (conditions: FilterCondition[], logic: "and" | "or") => void;
+  /** The page's current conditions, so the filter shows them again after a tab switch. */
+  filterConditions: FilterCondition[];
+  /** The page's current and/or logic, so the classic filter restores it too. */
+  filterLogic: "and" | "or";
+  /** Templates before filtering, so the filter chips can count values. */
+  filterRows: TemplateWithCategory[];
+  getFilterFieldValue: (item: TemplateWithCategory, fieldId: string) => FilterFieldValue;
   templateSearchTerm: string;
   onTemplateSearchTermChange: (value: string) => void;
   filteredTemplates: TemplateWithCategory[];
@@ -32,6 +36,10 @@ export type TemplatesTabProps = {
 export default function TemplatesTab({
   filterColumns,
   onFilterChange,
+  filterConditions,
+  filterLogic,
+  filterRows,
+  getFilterFieldValue,
   templateSearchTerm,
   onTemplateSearchTermChange,
   filteredTemplates,
@@ -46,13 +54,13 @@ export default function TemplatesTab({
     <Box>
       {/* Filter + search toolbar */}
       <Stack direction="row" alignItems="center" gap={2} sx={{ marginBottom: "18px" }}>
-        <FilterBy columns={filterColumns} onFilterChange={onFilterChange} />
-        <GroupBy
-          options={[
-            { id: "category", label: "Category" },
-            { id: "difficulty", label: "Difficulty" },
-          ]}
-          onGroupChange={() => {}}
+        <TableFilter
+          columns={filterColumns}
+          defaultConditions={filterConditions}
+          defaultLogic={filterLogic}
+          onFilterChange={onFilterChange}
+          data={filterRows}
+          getFieldValue={getFilterFieldValue}
         />
         <SearchBox
           placeholder="Search templates..."

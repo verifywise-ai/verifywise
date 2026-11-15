@@ -86,6 +86,18 @@ describe("dateFormatter utils", () => {
       expect((passedDate as Date).toISOString()).toBe("2026-03-15T05:00:00.000Z");
     });
 
+    it("accepts a Date object directly", () => {
+      (isValid as unknown as ReturnType<typeof vi.fn>).mockReturnValue(true);
+      (formatDistanceToNow as unknown as ReturnType<typeof vi.fn>).mockReturnValue("1 day ago");
+
+      const input = new Date("2026-04-01T12:00:00.000Z");
+      const result = formatRelativeDate(input);
+
+      expect(result).toBe("1 day ago");
+      const [passedDate] = (formatDistanceToNow as any).mock.calls[0];
+      expect(passedDate).toBe(input);
+    });
+
     it("trims whitespace from input date string", () => {
       (isValid as unknown as ReturnType<typeof vi.fn>).mockReturnValue(true);
       (formatDistanceToNow as unknown as ReturnType<typeof vi.fn>).mockReturnValue("1 day ago");

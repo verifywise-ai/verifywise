@@ -15,3 +15,12 @@
   font-style: normal;
   font-display: swap;
 }
+
+/* Code, IDs and counts (phase 1 restyle; replaces Fira Code, which was never self-hosted) */
+@font-face {
+  font-family: "Geist Mono";
+  src: url("/fonts/GeistMono-Variable.woff2") format("woff2");
+  font-weight: 400 600;
+  font-style: normal;
+  font-display: swap;
+}

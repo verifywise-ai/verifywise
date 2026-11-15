@@ -30,22 +30,6 @@ vi.mock("lucide-react", () => {
 });
 
 /**
- * 2) Mock permissions (allowedRoles) used during scope validation
- * Adjust if the real permissions file contains more resources/actions
- */
-vi.mock("../../constants/permissions", () => ({
-  default: {
-    projects: {
-      editTeamMembers: ["Admin"],
-      read: ["Admin", "User"],
-    },
-    vendors: {
-      read: ["Admin", "User"],
-    },
-  },
-}));
-
-/**
  * Helper function
  * Loads a fresh instance of the registry for each test
  * (prevents state leakage between tests because registry is a singleton)
@@ -135,140 +119,74 @@ describe("commandRegistry (registry.ts)", () => {
       expect(emptySearchResults.length).toBe(allResults.length);
     });
 
-    it("excludes command and logs error for invalid scope format", async () => {
+    const scopedCommand = (commandRegistry: any, id: string, scope: string) => ({
+      id,
+      label: id,
+      description: id,
+      keywords: [id],
+      group: commandRegistry.groups[0],
+      icon: (() => null) as any,
+      action: { type: "navigate", payload: "/" },
+      scope,
+    });
+
+    it("excludes command and logs error for a scope that is not a permission key", async () => {
       const { commandRegistry } = await loadRegistryModule();
       const spy = vi.spyOn(console, "error").mockImplementation(() => {});
 
       // Inject directly into internal command list to bypass registerCommand validation
-      (commandRegistry as any)._commands.push({
-        id: "bad-scope-command",
-        label: "Bad Scope",
-        description: "Bad Scope",
-        keywords: ["bad"],
-        group: commandRegistry.groups[0],
-        icon: (() => null) as any,
-        action: { type: "navigate", payload: "/" },
-        scope: "invalidformat", // invalid: missing dot
-      });
+      (commandRegistry as any)._commands.push(
+        scopedCommand(commandRegistry, "bad-scope-command", "invalidformat"),
+        scopedCommand(commandRegistry, "old-scope-command", "projects.editTeamMembers"),
+      );
 
       const results = commandRegistry.getCommands({ userRole: "Admin" } as any);
 
       expect(results.some((c) => c.id === "bad-scope-command")).toBe(false);
+      expect(results.some((c) => c.id === "old-scope-command")).toBe(false);
       expect(spy).toHaveBeenCalledWith(
-        expect.stringContaining("Invalid command scope format: invalidformat"),
+        expect.stringContaining("Unknown permission in command scope: invalidformat"),
       );
     });
 
-    it("excludes command and logs error for unknown resource in scope", async () => {
+    it("uses the built-in role's permissions while the list has not loaded", async () => {
       const { commandRegistry } = await loadRegistryModule();
-      const spy = vi.spyOn(console, "error").mockImplementation(() => {});
-
-      commandRegistry.registerCommand({
-        id: "unknown-resource",
-        label: "Unknown Resource",
-        group: commandRegistry.groups[0],
-        icon: (() => null) as any,
-        action: { type: "navigate", payload: "/" },
-        scope: "unknown.read",
-      } as any);
-
-      const results = commandRegistry.getCommands({ userRole: "Admin" } as any);
-
-      expect(results.some((c) => c.id === "unknown-resource")).toBe(false);
-      expect(spy).toHaveBeenCalledWith(expect.stringContaining("Unknown resource in scope"));
-    });
-
-    it("excludes command and logs error for unknown action in scope", async () => {
-      const { commandRegistry } = await loadRegistryModule();
-      const spy = vi.spyOn(console, "error").mockImplementation(() => {});
-
-      commandRegistry.registerCommand({
-        id: "unknown-action",
-        label: "Unknown Action",
-        group: commandRegistry.groups[0],
-        icon: (() => null) as any,
-        action: { type: "navigate", payload: "/" },
-        scope: "projects.unknownAction",
-      } as any);
-
-      const results = commandRegistry.getCommands({ userRole: "Admin" } as any);
-
-      expect(results.some((c) => c.id === "unknown-action")).toBe(false);
-      expect(spy).toHaveBeenCalledWith(expect.stringContaining("Unknown action in scope"));
-    });
-
-    it("excludes command when userRole does not have required scope permission", async () => {
-      const { commandRegistry } = await loadRegistryModule();
-
-      commandRegistry.registerCommand({
-        id: "needs-admin-scope",
-        label: "Needs Admin Scope",
-        group: commandRegistry.groups[0],
-        icon: (() => null) as any,
-        action: { type: "navigate", payload: "/" },
-        scope: "projects.editTeamMembers",
-      } as any);
-
-      const results = commandRegistry.getCommands({ userRole: "User" } as any);
-      expect(results.some((c) => c.id === "needs-admin-scope")).toBe(false);
-    });
-
-    it("includes command when userRole has required scope permission", async () => {
-      const { commandRegistry } = await loadRegistryModule();
-
-      commandRegistry.registerCommand({
-        id: "admin-scope-ok",
-        label: "Admin Scope OK",
-        group: commandRegistry.groups[0],
-        icon: (() => null) as any,
-        action: { type: "navigate", payload: "/" },
-        scope: "projects.editTeamMembers",
-      } as any);
-
-      const results = commandRegistry.getCommands({ userRole: "Admin" } as any);
-      expect(results.some((c) => c.id === "admin-scope-ok")).toBe(true);
-    });
-
-    it("handles unexpected errors during scope validation gracefully", async () => {
-      vi.resetModules();
-
-      // Mock permissions so that accessing allowedRoles["projects"] throws
-      vi.doMock("../../constants/permissions", () => ({
-        default: new Proxy(
-          {},
-          {
-            get(_target, prop) {
-              if (prop === "projects") throw new Error("boom");
-              return undefined;
-            },
-          },
-        ),
-      }));
-
-      const mod = await import("../registry");
-      const { commandRegistry } = mod;
-
-      const spy = vi.spyOn(console, "error").mockImplementation(() => {});
-
-      // Inject a command with a VALID scope format so it enters the scope block
-      (commandRegistry as any)._commands.push({
-        id: "scope-throws",
-        label: "Scope Throws",
-        description: "Scope Throws",
-        keywords: ["scope"],
-        group: commandRegistry.groups[0],
-        icon: (() => null) as any,
-        action: { type: "navigate", payload: "/" },
-        scope: "projects.read",
-      });
-
-      const results = commandRegistry.getCommands({ userRole: "Admin" } as any);
-
-      expect(results.some((c) => c.id === "scope-throws")).toBe(false);
-      expect(spy).toHaveBeenCalledWith(
-        expect.stringContaining("Error checking permissions for scope: projects.read"),
-        expect.any(Error),
+      commandRegistry.registerCommand(
+        scopedCommand(commandRegistry, "needs-members", "useCase.members") as any,
       );
+
+      const asEditor = commandRegistry.getCommands({ userRole: "Editor" } as any);
+      const asAdmin = commandRegistry.getCommands({ userRole: "Admin" } as any);
+      expect(asEditor.some((c) => c.id === "needs-members")).toBe(false);
+      expect(asAdmin.some((c) => c.id === "needs-members")).toBe(true);
+    });
+
+    it("hides a scoped command from a custom role until its permissions load", async () => {
+      const { commandRegistry } = await loadRegistryModule();
+      commandRegistry.registerCommand(
+        scopedCommand(commandRegistry, "needs-vendor-edit", "vendor.edit") as any,
+      );
+
+      const loading = commandRegistry.getCommands({ userRole: "Vendor team" } as any);
+      expect(loading.some((c) => c.id === "needs-vendor-edit")).toBe(false);
+    });
+
+    it("follows the loaded permission list, for custom and built-in roles", async () => {
+      const { commandRegistry } = await loadRegistryModule();
+      commandRegistry.registerCommand(
+        scopedCommand(commandRegistry, "needs-vendor-edit", "vendor.edit") as any,
+      );
+
+      const custom = commandRegistry.getCommands({
+        userRole: "Vendor team",
+        permissions: ["vendor.edit"],
+      } as any);
+      const adminWithout = commandRegistry.getCommands({
+        userRole: "Admin",
+        permissions: [],
+      } as any);
+      expect(custom.some((c) => c.id === "needs-vendor-edit")).toBe(true);
+      expect(adminWithout.some((c) => c.id === "needs-vendor-edit")).toBe(false);
     });
   });
 

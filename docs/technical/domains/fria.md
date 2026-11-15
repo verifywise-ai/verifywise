@@ -156,8 +156,8 @@ fria_assessments
 │   └── rights_flagged (INTEGER, DEFAULT 0)
 │
 ├── Metadata
-│   ├── created_by (FK → users, NOT NULL)
-│   ├── updated_by (FK → users)
+│   ├── created_by (FK → users, ON DELETE SET NULL)
+│   ├── updated_by (FK → users, ON DELETE SET NULL)
 │   ├── created_at (TIMESTAMPTZ)
 │   ├── updated_at (TIMESTAMPTZ)
 │   ├── is_deleted (BOOLEAN, DEFAULT FALSE)
@@ -235,7 +235,7 @@ fria_snapshots
 ├── version (INTEGER, NOT NULL)
 ├── snapshot_data (JSONB, NOT NULL)
 ├── snapshot_reason (VARCHAR(255))
-├── created_by (FK → users)
+├── created_by (FK → users, ON DELETE SET NULL)
 ├── created_at, updated_at (TIMESTAMPTZ)
 └── is_deleted, deleted_at
 ```

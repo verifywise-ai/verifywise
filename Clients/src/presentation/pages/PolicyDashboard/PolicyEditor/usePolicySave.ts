@@ -5,12 +5,15 @@ import { useCreatePolicy, useUpdatePolicy } from "../../../../application/hooks/
 import { PolicyManagerModel } from "../../../../domain/models/Common/policy/policyManager.model";
 import { PolicyFormData, PolicyFormErrors } from "../../../types/interfaces/i.policy";
 import { type CustomFieldsSectionHandle } from "../../../components/CustomFieldsSection";
+import { policyOwnerIdToSave } from "./policyFormDirty";
 
 export interface UsePolicySaveParams {
   isNew: boolean;
   policy: PolicyManagerModel | null;
   setPolicy: Dispatch<SetStateAction<PolicyManagerModel | null>>;
   formData: PolicyFormData;
+  /** Ids of the users the owner and team member fields can show. */
+  knownUserIds: ReadonlySet<number>;
   editor: Editor | null;
   formRef: RefObject<HTMLDivElement | null>;
   customFieldsRef: RefObject<CustomFieldsSectionHandle | null>;
@@ -19,6 +22,15 @@ export interface UsePolicySaveParams {
   resetErrors: () => void;
   setEditedTitle: Dispatch<SetStateAction<string>>;
   setIsEditingTitle: Dispatch<SetStateAction<boolean>>;
+  /** The content last loaded or saved; content equal to it is not sent on update. */
+  savedContent: string;
+  /** Called after a successful save with the form content that was saved. */
+  onSaved?: (savedFormContent: string) => void;
+  /**
+   * The title and content are locked (a pending approval request): the save
+   * leaves them out, since the server refuses a change, and saves the rest.
+   */
+  textLocked?: boolean;
 }
 
 /**
@@ -37,6 +49,7 @@ export function usePolicySave({
   policy,
   setPolicy,
   formData,
+  knownUserIds,
   editor,
   formRef,
   customFieldsRef,
@@ -45,6 +58,9 @@ export function usePolicySave({
   resetErrors,
   setEditedTitle,
   setIsEditingTitle,
+  savedContent,
+  onSaved,
+  textLocked = false,
 }: UsePolicySaveParams) {
   const navigate = useNavigate();
   const createPolicyMutation = useCreatePolicy();
@@ -54,10 +70,13 @@ export function usePolicySave({
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [serverErrors, setServerErrors] = useState<PolicyFormErrors>({});
   const [validationSnackbar, setValidationSnackbar] = useState(false);
+  // Server message for a failed save that no form field can show.
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   const save = async () => {
     if (customFieldsBlocked) return;
     setServerErrors({});
+    setSaveError(null);
     resetErrors();
     if (!validateAll(formData)) {
       formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -71,13 +90,25 @@ export function usePolicySave({
     setIsSaving(true);
 
     const html = editor?.getHTML() || "";
-    const payload = {
-      title: formData.title,
+    // On update, the title and content go out only when the user changed them:
+    // TipTap re-serializes stored HTML, so sending it back unchanged could
+    // differ from the stored text, which the server refuses while an approval
+    // request is pending (also when the approval state has not loaded). While
+    // locked they are never sent. A left-out key is unchanged on the server.
+    const titleChanged = formData.title !== (policy?.title ?? "");
+    const contentChanged = formData.content !== savedContent;
+    const sendTitle = !isNew && titleChanged && !textLocked;
+    const sendContent = !isNew && contentChanged && !textLocked;
+    const fields = {
       status: formData.status,
       tags: formData.tags,
-      content_html: html,
-      next_review_date: formData.nextReviewDate ? new Date(formData.nextReviewDate) : undefined,
-      policy_owner_id: formData.policyOwner?.id ?? null,
+      // Sent as "YYYY-MM-DD" so the stored date is the one the user picked.
+      next_review_date: formData.nextReviewDate || undefined,
+      policy_owner_id: policyOwnerIdToSave({
+        policy: isNew ? null : policy,
+        formOwnerId: formData.policyOwner?.id ?? null,
+        knownUserIds,
+      }),
       assigned_reviewer_ids: formData.assignedReviewers
         .map((u) => u.id)
         .filter((id) => id !== formData.policyOwner?.id),
@@ -87,11 +118,21 @@ export function usePolicySave({
       let savedPolicy: PolicyManagerModel;
 
       if (isNew) {
-        savedPolicy = await createPolicyMutation.mutateAsync(payload);
+        savedPolicy = await createPolicyMutation.mutateAsync({
+          ...fields,
+          title: formData.title,
+          content_html: html,
+        });
       } else {
         savedPolicy = await updatePolicyMutation.mutateAsync({
           id: policy!.id,
-          input: payload,
+          // Spread, never undefined: the list cache update spreads the input
+          // over the cached row.
+          input: {
+            ...fields,
+            ...(sendTitle ? { title: formData.title } : {}),
+            ...(sendContent ? { content_html: html } : {}),
+          },
         });
       }
 
@@ -109,6 +150,8 @@ export function usePolicySave({
           ? ({ ...savedPolicy, content_html: prev.content_html } as PolicyManagerModel)
           : savedPolicy,
       );
+      // Changed content left out of a locked save was not saved: it stays unsaved.
+      if (isNew || sendContent || !contentChanged) onSaved?.(formData.content);
 
       // Flush any locally-staged custom field changes (create OR update).
       let cfFlushFailed = false;
@@ -136,10 +179,13 @@ export function usePolicySave({
       setIsSaving(false);
 
       const errorData = err?.originalError?.response || err?.response?.data || err?.response;
+      // The server sends field errors as STATUS_CODE[400]({ message, errors }),
+      // i.e. under `data`; a bare top-level `errors` is accepted too.
+      const fieldErrors = errorData?.data?.errors ?? errorData?.errors;
 
-      if (errorData?.errors) {
+      if (Array.isArray(fieldErrors)) {
         const apiErrors: PolicyFormErrors = {};
-        errorData.errors.forEach((error: any) => {
+        fieldErrors.forEach((error: any) => {
           if (error.field === "title") apiErrors.title = error.message;
           else if (error.field === "status") apiErrors.status = error.message;
           else if (error.field === "tags") apiErrors.tags = error.message;
@@ -150,7 +196,10 @@ export function usePolicySave({
           else if (error.field === "policy_owner_id") apiErrors.policyOwner = error.message;
         });
         setServerErrors(apiErrors);
+        if (Object.keys(apiErrors).length > 0) return;
       }
+      // Nothing to show under a field: surface the server's (translated) message.
+      setSaveError(err?.originalError?.message || err?.message || null);
     }
   };
 
@@ -163,5 +212,7 @@ export function usePolicySave({
     setServerErrors,
     validationSnackbar,
     setValidationSnackbar,
+    saveError,
+    setSaveError,
   };
 }

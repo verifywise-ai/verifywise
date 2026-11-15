@@ -1,32 +1,23 @@
 import React, { useEffect, useState, useMemo, useCallback } from "react";
-import { Box, Typography, Stack, IconButton, Fade } from "@mui/material";
+import { Box, Typography, Stack, Fade } from "@mui/material";
 import TabContext from "@mui/lab/TabContext";
+import { LayoutGrid } from "lucide-react";
 import DashboardTabs from "../../components/DashboardTabs";
 import type { DashboardTabConfig } from "../../components/DashboardTabs";
-import HelperIcon from "../../components/HelperIcon";
 import ReadinessDashboard from "../ReadinessDashboard";
 import AIContentReview from "../AIContentReview";
 import AIAuditDashboard from "../AIAuditDashboard";
-import {
-  ChevronLeft,
-  ChevronRight,
-  Brain,
-  Building2,
-  ScrollText,
-  GraduationCap,
-  AlertCircle,
-  GitCompareArrows,
-} from "lucide-react";
-import useNavigateSearch from "../../../application/hooks/useNavigateSearch";
 import { useDashboard } from "../../../application/hooks/useDashboard";
 import {
   useDashboardMetrics,
   hasDashboardCache,
 } from "../../../application/hooks/useDashboardMetrics";
+import {
+  useDashboardPreferences,
+  useUpdateDashboardPreferences,
+} from "../../../application/hooks/useDashboardPreferences";
 import { useAuth } from "../../../application/hooks/useAuth";
 import { useGovernancePreferences } from "../../../application/hooks/useGovernanceOs";
-import { formatRelativeDate } from "../../../application/utils/dateFormatter";
-import { buildRecentActivities } from "./recentActivity";
 import { PageBreadcrumbs } from "../../components/breadcrumbs/PageBreadcrumbs";
 import PageTour from "../../components/PageTour";
 import DashboardSteps from "./DashboardSteps";
@@ -34,41 +25,25 @@ import AddNewMegaDropdown from "../../components/MegaDropdown/AddNewMegaDropdown
 import MegaDropdownErrorBoundary from "../../components/MegaDropdown/MegaDropdownErrorBoundary";
 import DashboardErrorBoundary from "../../components/Dashboard/DashboardErrorBoundary";
 import ChangeOrganizationNameModal from "../../components/Modals/ChangeOrganizationName";
-import { DashboardHeaderCard } from "../../components/Cards/DashboardHeaderCard";
-import { DashboardCard } from "../../components/Cards/DashboardCard";
-import { TaskRadarCard } from "../../components/Cards/TaskRadarCard";
-import { RiskDonutWithLegend } from "../../components/Charts/RiskDonutWithLegend";
-import {
-  TrainingCompletionCard,
-  PolicyStatusCard,
-  IncidentStatusCard,
-  EvidenceCoverageCard,
-  ModelLifecycleCard,
-} from "../../components/Charts/NewMetricsCards";
-import { GovernanceScoreCard } from "../../components/Charts/GovernanceScoreCard";
-import { PortfolioExposureCard } from "../../components/Charts/PortfolioExposureCard";
-import { PortfolioTrendChart } from "../../components/Charts/PortfolioTrendChart";
-import { LossCategoryBreakdown } from "../../components/Charts/LossCategoryBreakdown";
-import UseCasesTable from "../../components/Table/UseCasesTable";
-import UseCaseLifecycleWidgets from "./UseCaseLifecycleWidgets";
 import { EmptyStateMessage } from "../../components/EmptyStateMessage";
-import ActivityItem from "../../components/ActivityItem";
 import { ButtonToggle } from "../../components/button-toggle";
+import { CustomizableButton } from "../../components/button/customizable-button";
 import { StepProgressDialog } from "../../components/StepProgressDialog";
-import { OrganizationalFrameworkData } from "../../../application/hooks/useDashboardMetrics";
 import { useRiskAssessmentMode } from "../../../application/hooks/useRiskAssessmentMode";
 import { useOrgPortfolio, usePortfolioTrend } from "../../../application/hooks/useQuantitativeRisk";
+import { getRiskLevelData, getVendorRiskData, getModelRiskData } from "./constants";
+import { DashboardWidget, type DashboardWidgetData } from "./DashboardWidgets";
+import EditLayoutModal from "./EditLayoutModal";
 import {
-  navIconButtonSx,
-  getRiskLevelData,
-  getVendorRiskData,
-  getModelRiskData,
-  getNistStatusData,
-  getCompletionData,
-} from "./constants";
-import { text } from "../../themes/palette";
-
-type DashboardView = "executive" | "operations";
+  buildLayoutForSave,
+  defaultViewLayout,
+  groupWidgetRows,
+  isWidgetAvailable,
+  resolveViewLayout,
+  type DashboardView,
+  type DashboardWidgetKey,
+  type ViewWidget,
+} from "./widgetRegistry";
 
 const DASHBOARD_VIEW_KEY = "dashboard_view_preference";
 const DASHBOARD_TABS_KEY = "dashboard_active_tabs";
@@ -113,7 +88,6 @@ const DEFAULT_TABS = SHOW_AI_AGENT_DASHBOARD_TABS
   : ["overview"];
 
 const IntegratedDashboard: React.FC = () => {
-  const navigateSearch = useNavigateSearch();
   const { userId } = useAuth();
   const { dashboard, loading: dashboardLoading, fetchDashboard } = useDashboard();
   const { data: governancePrefs } = useGovernancePreferences();
@@ -151,38 +125,34 @@ const IntegratedDashboard: React.FC = () => {
   // Dashboard view state with localStorage persistence
   const [dashboardView, setDashboardView] = useState<DashboardView>(() => {
     const saved = localStorage.getItem(DASHBOARD_VIEW_KEY);
-    return (saved as DashboardView) || "operations";
+    return saved === "executive" ? "executive" : "operations";
   });
 
   const handleViewChange = useCallback((view: DashboardView) => {
     setDashboardView(view);
     localStorage.setItem(DASHBOARD_VIEW_KEY, view);
   }, []);
+  const metrics = useDashboardMetrics();
   const {
     vendorRiskMetrics,
-    vendorMetrics,
-    policyMetrics,
-    incidentMetrics,
     riskMetrics,
     modelRiskMetrics,
-    trainingMetrics,
-    policyStatusMetrics,
-    incidentStatusMetrics,
-    evidenceHubMetrics,
-    evidenceMetrics,
-    modelLifecycleMetrics,
     organizationalFrameworks,
-    taskMetrics,
-    useCaseMetrics,
-    governanceScoreMetrics,
     loading: metricsLoading,
     progressStep,
     progressSteps,
-  } = useDashboardMetrics();
+  } = metrics;
 
   const { isQuantitative } = useRiskAssessmentMode();
   const { portfolio } = useOrgPortfolio();
   const { snapshots: trendSnapshots } = usePortfolioTrend(90);
+
+  // Per-user layout (#5257). No saved row or a failed read leaves `savedLayout`
+  // empty, which resolves to the default layout.
+  const { data: preferences, isLoading: layoutLoading } = useDashboardPreferences();
+  const { mutateAsync: saveLayout } = useUpdateDashboardPreferences();
+  const [isEditingLayout, setIsEditingLayout] = useState(false);
+  const savedLayout = preferences?.layout;
 
   const loading = dashboardLoading || metricsLoading;
 
@@ -297,76 +267,35 @@ const IntegratedDashboard: React.FC = () => {
     };
   }, [modelRiskMetrics]);
 
-  // Convert organizational framework data to RiskDataItem format for donut charts
-  // Returns multiple views for ISO frameworks (Overall, Clauses, Annexes)
-  const getFrameworkStatusViews = useCallback((framework: OrganizationalFrameworkData) => {
-    // For NIST AI RMF, use the status breakdown (single view)
-    if (framework.nistStatusBreakdown) {
-      const data = getNistStatusData(framework.nistStatusBreakdown).filter(
-        (item) => item.value > 0,
-      );
-      const total = data.reduce((sum, item) => sum + item.value, 0);
-      return [{ label: "Status", data, total }];
-    }
+  const availability = {
+    hasOrganizationalFrameworks: organizationalFrameworks.length > 0,
+    hasQuantitativePortfolio: Boolean(isQuantitative && portfolio && portfolio.risk_count > 0),
+  };
+  const isAvailable = (key: DashboardWidgetKey) => isWidgetAvailable(key, availability);
 
-    // For ISO frameworks (42001, 27001), create multiple views
-    const clauseProgress = framework.clauseProgress || { totalSubclauses: 0, doneSubclauses: 0 };
-    const annexProgress = framework.annexProgress || {};
+  const viewLayout = resolveViewLayout(savedLayout, dashboardView);
+  const widgetRows = groupWidgetRows(
+    viewLayout.filter((w) => w.visible && isAvailable(w.key)).map((w) => w.key),
+  );
 
-    const totalClauses = clauseProgress.totalSubclauses || 0;
-    const doneClauses = clauseProgress.doneSubclauses || 0;
+  const widgetData: DashboardWidgetData = {
+    dashboard,
+    metrics,
+    isGovernanceEnabled,
+    portfolio,
+    trendSnapshots,
+    useCases,
+    useCaseRisks: useCaseRiskData,
+    vendorRisks: vendorRiskData,
+    modelRisks: modelRiskData,
+  };
 
-    const totalAnnex =
-      (annexProgress.totalAnnexControls || 0) + (annexProgress.totalAnnexcategories || 0);
-    const doneAnnex =
-      (annexProgress.doneAnnexControls || 0) + (annexProgress.doneAnnexcategories || 0);
-
-    const views = [];
-
-    if (totalClauses > 0) {
-      views.push({
-        label: "Clauses",
-        data: getCompletionData(doneClauses, totalClauses - doneClauses).filter(
-          (item) => item.value > 0,
-        ),
-        total: totalClauses,
-      });
-    }
-
-    if (totalAnnex > 0) {
-      views.push({
-        label: "Annexes",
-        data: getCompletionData(doneAnnex, totalAnnex - doneAnnex).filter((item) => item.value > 0),
-        total: totalAnnex,
-      });
-    }
-
-    if (views.length === 0) {
-      views.push({ label: "Status", data: [], total: 0 });
-    }
-
-    return views;
-  }, []);
-
-  // State to track current view index for each framework
-  const [frameworkViewIndices, setFrameworkViewIndices] = useState<Record<number, number>>({});
-
-  const handlePrevView = useCallback((frameworkId: number, maxViews: number) => {
-    setFrameworkViewIndices((prev) => ({
-      ...prev,
-      [frameworkId]: ((prev[frameworkId] || 0) - 1 + maxViews) % maxViews,
-    }));
-  }, []);
-
-  const handleNextView = useCallback((frameworkId: number, maxViews: number) => {
-    setFrameworkViewIndices((prev) => ({
-      ...prev,
-      [frameworkId]: ((prev[frameworkId] || 0) + 1) % maxViews,
-    }));
-  }, []);
+  const handleSaveLayout = async (widgets: ViewWidget[]) => {
+    await saveLayout((latest) => buildLayoutForSave(latest, dashboardView, widgets));
+  };
 
   // Show step progress dialog on cold loads (no cache)
-  if (loading && !hasAnyCache) {
+  if ((loading || layoutLoading) && !hasAnyCache) {
     return (
       <StepProgressDialog
         open={true}
@@ -412,6 +341,15 @@ const IntegratedDashboard: React.FC = () => {
 
           <Stack direction="row" alignItems="center" gap="16px">
             {dashboardTab === "overview" && (
+              <CustomizableButton
+                text="Edit layout"
+                variant="outlined"
+                startIcon={<LayoutGrid size={16} strokeWidth={1.5} />}
+                onClick={() => setIsEditingLayout(true)}
+                sx={{ height: "30px" }}
+              />
+            )}
+            {dashboardTab === "overview" && (
               <ButtonToggle
                 options={[
                   { label: "Operations view", value: "operations" },
@@ -454,668 +392,42 @@ const IntegratedDashboard: React.FC = () => {
         {/* Tab: AI Audit */}
         {dashboardTab === "ai-audit" && <AIAuditDashboard />}
 
-        {/* Tab: Overview (original dashboard) */}
-        {dashboardTab === "overview" && (
-          <>
-            {/* Quick Stats Row */}
-            <Box
-              data-joyride-id="dashboard-stats"
-              sx={{
-                "display": "flex",
-                "flexWrap": "wrap",
-                "gap": "16px",
-                "mb": "16px",
-                "& > *": {
-                  flex: "1 1 0",
-                  minWidth: "150px",
-                },
-              }}
-            >
-              <DashboardHeaderCard
-                title="Models"
-                count={dashboard?.models || 0}
-                icon={<Brain size={18} />}
-                navigateTo="/model-inventory"
-              />
-              <DashboardHeaderCard
-                title="Vendors"
-                count={vendorMetrics?.total || 0}
-                icon={<Building2 size={18} />}
-                navigateTo="/vendors"
-              />
-              <DashboardHeaderCard
-                title="Policies"
-                count={policyMetrics?.total || 0}
-                icon={<ScrollText size={18} />}
-                navigateTo="/policies"
-              />
-              <DashboardHeaderCard
-                title="Trainings"
-                count={dashboard?.trainings || 0}
-                icon={<GraduationCap size={18} />}
-              />
-              <DashboardHeaderCard
-                title="Incidents"
-                count={incidentMetrics?.total || 0}
-                icon={<AlertCircle size={18} />}
-                navigateTo="/ai-incident-managements"
-              />
-              {isGovernanceEnabled && (
-                <DashboardHeaderCard
-                  title="Governance Intelligence"
-                  count="Open"
-                  icon={<GitCompareArrows size={18} />}
-                  navigateTo="/governance"
-                />
-              )}
-            </Box>
-
-            {/* Conditional rows based on dashboard view */}
-            {dashboardView === "executive" ? (
-              <>
-                {/* Executive Row 2: Organizational Frameworks */}
-                {organizationalFrameworks.length > 0 && (
-                  <Box
-                    sx={{
-                      display: "grid",
-                      gridTemplateColumns: "repeat(3, 1fr)",
-                      gap: "16px",
-                      mb: "16px",
-                    }}
-                  >
-                    {organizationalFrameworks.map((framework) => {
-                      const views = getFrameworkStatusViews(framework);
-                      const currentIndex = frameworkViewIndices[framework.projectFrameworkId] || 0;
-                      const currentView = views[currentIndex];
-                      const hasMultipleViews = views.length > 1;
-
-                      return (
-                        <DashboardCard
-                          key={framework.projectFrameworkId}
-                          title={framework.frameworkName}
-                          navigateTo="/framework"
-                          actionPosition="center"
-                          action={
-                            hasMultipleViews ? (
-                              <Stack direction="row" alignItems="center" gap={0.5}>
-                                <IconButton
-                                  size="small"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handlePrevView(framework.projectFrameworkId, views.length);
-                                  }}
-                                  aria-label={`Previous ${framework.frameworkName} view`}
-                                  sx={navIconButtonSx}
-                                >
-                                  <ChevronLeft size={18} />
-                                </IconButton>
-                                <Typography
-                                  sx={{
-                                    fontSize: 13,
-                                    fontWeight: 500,
-                                    color: `${text.icon}`,
-                                    minWidth: 55,
-                                    textAlign: "center",
-                                  }}
-                                >
-                                  {currentView.label}
-                                </Typography>
-                                <IconButton
-                                  size="small"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleNextView(framework.projectFrameworkId, views.length);
-                                  }}
-                                  aria-label={`Next ${framework.frameworkName} view`}
-                                  sx={navIconButtonSx}
-                                >
-                                  <ChevronRight size={18} />
-                                </IconButton>
-                              </Stack>
-                            ) : undefined
-                          }
-                        >
-                          {currentView.total === 0 ? (
-                            <EmptyStateMessage message="No data available" />
-                          ) : (
-                            <RiskDonutWithLegend
-                              data={currentView.data}
-                              total={currentView.total}
-                            />
-                          )}
-                        </DashboardCard>
-                      );
-                    })}
-                  </Box>
-                )}
-
-                {/* Executive Row 3: Governance Score + Risks (top row) */}
+        {/* Tab: Overview (original dashboard): rows come from the widget registry.
+            They wait for the saved layout so widgets do not visibly rearrange. */}
+        {dashboardTab === "overview" &&
+          !layoutLoading &&
+          (widgetRows.length === 0 ? (
+            <EmptyStateMessage message="All widgets are hidden. Use Edit layout to show them." />
+          ) : (
+            widgetRows.map((row) =>
+              row.width === "full" ? (
+                <DashboardWidget key={row.keys[0]} widgetKey={row.keys[0]} data={widgetData} />
+              ) : (
                 <Box
+                  key={row.keys[0]}
                   sx={{
                     display: "grid",
-                    gridTemplateColumns: "1fr 1fr 1fr",
+                    gridTemplateColumns: row.width === "half" ? "1fr 1fr" : "repeat(3, 1fr)",
                     gap: "16px",
                     mb: "16px",
                   }}
                 >
-                  <DashboardCard
-                    title="AI governance score"
-                    action={
-                      <HelperIcon
-                        articlePath="getting-started/dashboard"
-                        sectionId="governance-score"
-                      />
-                    }
-                  >
-                    {governanceScoreMetrics && governanceScoreMetrics?.score > 0 ? (
-                      <GovernanceScoreCard
-                        score={governanceScoreMetrics?.score}
-                        modules={governanceScoreMetrics?.modules}
-                      />
-                    ) : (
-                      <EmptyStateMessage message="Add data to see your governance score" />
-                    )}
-                  </DashboardCard>
-                  <DashboardCard title="Use case & framework risks" navigateTo="/risk-management">
-                    {useCaseRiskData.total === 0 ? (
-                      <EmptyStateMessage message="No risks identified" />
-                    ) : (
-                      <RiskDonutWithLegend
-                        data={useCaseRiskData.data}
-                        total={useCaseRiskData.total}
-                      />
-                    )}
-                  </DashboardCard>
-                  <DashboardCard title="Vendor risks" navigateTo="/vendors/risks">
-                    {vendorRiskData.total === 0 ? (
-                      <EmptyStateMessage message="No vendor risks" />
-                    ) : (
-                      <RiskDonutWithLegend
-                        data={vendorRiskData.data}
-                        total={vendorRiskData.total}
-                      />
-                    )}
-                  </DashboardCard>
+                  {row.keys.map((key) => (
+                    <DashboardWidget key={key} widgetKey={key} data={widgetData} />
+                  ))}
                 </Box>
+              ),
+            )
+          ))}
 
-                {/* Executive Row 4: Model risks */}
-                <Box
-                  sx={{
-                    display: "grid",
-                    gridTemplateColumns: "1fr 1fr 1fr",
-                    gap: "16px",
-                    mb: "16px",
-                  }}
-                >
-                  <DashboardCard title="Model risks" navigateTo="/model-inventory/model-risks">
-                    {modelRiskData.total === 0 ? (
-                      <EmptyStateMessage message="No model risks" />
-                    ) : (
-                      <RiskDonutWithLegend data={modelRiskData.data} total={modelRiskData.total} />
-                    )}
-                  </DashboardCard>
-                </Box>
-
-                {/* Executive Row 4b: Quantitative risk portfolio (conditional) */}
-                {isQuantitative && portfolio && portfolio.risk_count > 0 && (
-                  <Box
-                    sx={{
-                      display: "grid",
-                      gridTemplateColumns: "1fr 1fr 1fr",
-                      gap: "16px",
-                      mb: "16px",
-                    }}
-                  >
-                    <DashboardCard title="AI portfolio exposure" navigateTo="/risk-management">
-                      <PortfolioExposureCard portfolio={portfolio} />
-                    </DashboardCard>
-                    <DashboardCard title="Exposure trend (90 days)">
-                      <PortfolioTrendChart snapshots={trendSnapshots} height={200} />
-                    </DashboardCard>
-                    <DashboardCard title="Loss category breakdown">
-                      <LossCategoryBreakdown
-                        regulatory={portfolio.loss_regulatory}
-                        operational={portfolio.loss_operational}
-                        litigation={portfolio.loss_litigation}
-                        reputational={portfolio.loss_reputational}
-                      />
-                    </DashboardCard>
-                  </Box>
-                )}
-
-                {/* Executive Row 5: Recent activity + Recent use cases */}
-                <Box
-                  sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px", mb: "16px" }}
-                >
-                  <DashboardCard title="Recent activity">
-                    {(() => {
-                      const sortedActivities = buildRecentActivities({
-                        policyMetrics,
-                        incidentMetrics,
-                        riskMetrics,
-                        evidenceMetrics,
-                        vendorMetrics,
-                        vendorRiskMetrics,
-                        modelRiskMetrics,
-                        taskMetrics,
-                        useCaseMetrics,
-                        trainingMetrics,
-                      });
-
-                      if (sortedActivities.length === 0) {
-                        return <EmptyStateMessage message="No recent activity" />;
-                      }
-
-                      return (
-                        // ActivityItem carries role="listitem", which is only
-                        // valid inside a list.
-                        <Stack gap={0} role="list">
-                          {sortedActivities.map((activity, index) => (
-                            <ActivityItem
-                              key={activity.id}
-                              title={activity.title}
-                              timestamp={formatRelativeDate(activity.timestamp)}
-                              type={activity.type}
-                              entityId={activity.entityId}
-                              entityType={activity.entityType}
-                              isLast={index === sortedActivities.length - 1}
-                            />
-                          ))}
-                        </Stack>
-                      );
-                    })()}
-                  </DashboardCard>
-                  <DashboardCard title="Recent use cases" navigateTo="/overview">
-                    {useCases.length === 0 ? (
-                      <EmptyStateMessage message="No use cases created yet" />
-                    ) : (
-                      <UseCasesTable
-                        data={useCases}
-                        ariaLabel="Recent use cases"
-                        onRowClick={(id) =>
-                          navigateSearch("/project-view", { projectId: id.toString() })
-                        }
-                        formatDate={formatRelativeDate}
-                      />
-                    )}
-                  </DashboardCard>
-                </Box>
-
-                {/* Executive Row 5b: Use case lifecycle (#5187) */}
-                <UseCaseLifecycleWidgets />
-
-                {/* Executive Row 5: Training, Policy, Incident status */}
-                <Box
-                  sx={{
-                    display: "grid",
-                    gridTemplateColumns: "repeat(3, 1fr)",
-                    gap: "16px",
-                    mb: "16px",
-                  }}
-                >
-                  <DashboardCard title="Training status" navigateTo="/training">
-                    {trainingMetrics && trainingMetrics.total > 0 ? (
-                      <TrainingCompletionCard
-                        total={trainingMetrics.total}
-                        distribution={trainingMetrics.distribution}
-                        completionPercentage={trainingMetrics.completionPercentage}
-                        totalPeople={trainingMetrics.totalPeople}
-                      />
-                    ) : (
-                      <EmptyStateMessage message="No training data" />
-                    )}
-                  </DashboardCard>
-                  <DashboardCard title="Policy status" navigateTo="/policies">
-                    {policyStatusMetrics && policyStatusMetrics.total > 0 ? (
-                      <PolicyStatusCard
-                        total={policyStatusMetrics.total}
-                        distribution={policyStatusMetrics.distribution}
-                      />
-                    ) : (
-                      <EmptyStateMessage message="No policies" />
-                    )}
-                  </DashboardCard>
-                  <DashboardCard title="Incident status" navigateTo="/ai-incident-managements">
-                    {incidentStatusMetrics && incidentStatusMetrics.total > 0 ? (
-                      <IncidentStatusCard
-                        total={incidentStatusMetrics.total}
-                        distribution={incidentStatusMetrics.distribution}
-                      />
-                    ) : (
-                      <EmptyStateMessage message="No incidents" />
-                    )}
-                  </DashboardCard>
-                </Box>
-
-                {/* Executive Row 6: Task radar, Evidence coverage, Model lifecycle */}
-                <Box
-                  sx={{
-                    display: "grid",
-                    gridTemplateColumns: "repeat(3, 1fr)",
-                    gap: "16px",
-                    mb: "16px",
-                  }}
-                >
-                  <TaskRadarCard
-                    overdue={dashboard?.task_radar?.overdue || 0}
-                    due={dashboard?.task_radar?.due || 0}
-                    upcoming={dashboard?.task_radar?.upcoming || 0}
-                  />
-                  <DashboardCard title="Evidence coverage" navigateTo="/file-manager">
-                    {evidenceHubMetrics ? (
-                      <EvidenceCoverageCard
-                        total={evidenceHubMetrics.total}
-                        totalFiles={evidenceHubMetrics.totalFiles}
-                        modelsWithEvidence={evidenceHubMetrics.modelsWithEvidence}
-                        totalModels={evidenceHubMetrics.totalModels}
-                        coveragePercentage={evidenceHubMetrics.coveragePercentage}
-                      />
-                    ) : (
-                      <EmptyStateMessage message="No evidence data" />
-                    )}
-                  </DashboardCard>
-                  <DashboardCard title="Model lifecycle" navigateTo="/model-inventory">
-                    {modelLifecycleMetrics && modelLifecycleMetrics.total > 0 ? (
-                      <ModelLifecycleCard
-                        total={modelLifecycleMetrics.total}
-                        distribution={modelLifecycleMetrics.distribution}
-                      />
-                    ) : (
-                      <EmptyStateMessage message="No models" />
-                    )}
-                  </DashboardCard>
-                </Box>
-              </>
-            ) : (
-              <>
-                {/* Operations Row 2: Task radar, Incident status, Evidence coverage */}
-                <Box
-                  sx={{
-                    display: "grid",
-                    gridTemplateColumns: "repeat(3, 1fr)",
-                    gap: "16px",
-                    mb: "16px",
-                  }}
-                >
-                  <TaskRadarCard
-                    overdue={dashboard?.task_radar?.overdue || 0}
-                    due={dashboard?.task_radar?.due || 0}
-                    upcoming={dashboard?.task_radar?.upcoming || 0}
-                  />
-                  <DashboardCard title="Incident status" navigateTo="/ai-incident-managements">
-                    {incidentStatusMetrics && incidentStatusMetrics.total > 0 ? (
-                      <IncidentStatusCard
-                        total={incidentStatusMetrics.total}
-                        distribution={incidentStatusMetrics.distribution}
-                      />
-                    ) : (
-                      <EmptyStateMessage message="No incidents" />
-                    )}
-                  </DashboardCard>
-                  <DashboardCard title="Evidence coverage" navigateTo="/file-manager">
-                    {evidenceHubMetrics ? (
-                      <EvidenceCoverageCard
-                        total={evidenceHubMetrics.total}
-                        totalFiles={evidenceHubMetrics.totalFiles}
-                        modelsWithEvidence={evidenceHubMetrics.modelsWithEvidence}
-                        totalModels={evidenceHubMetrics.totalModels}
-                        coveragePercentage={evidenceHubMetrics.coveragePercentage}
-                      />
-                    ) : (
-                      <EmptyStateMessage message="No evidence data" />
-                    )}
-                  </DashboardCard>
-                </Box>
-
-                {/* Operations Row 3: Governance Score + Risks */}
-                <Box
-                  sx={{
-                    display: "grid",
-                    gridTemplateColumns: "1fr 1fr 1fr",
-                    gap: "16px",
-                    mb: "16px",
-                  }}
-                >
-                  <DashboardCard
-                    title="AI governance score"
-                    action={
-                      <HelperIcon
-                        articlePath="getting-started/dashboard"
-                        sectionId="governance-score"
-                      />
-                    }
-                  >
-                    {governanceScoreMetrics && governanceScoreMetrics?.score > 0 ? (
-                      <GovernanceScoreCard
-                        score={governanceScoreMetrics.score}
-                        modules={governanceScoreMetrics.modules}
-                      />
-                    ) : (
-                      <EmptyStateMessage message="Add data to see your governance score" />
-                    )}
-                  </DashboardCard>
-                  <DashboardCard title="Use case & framework risks" navigateTo="/risk-management">
-                    {useCaseRiskData.total === 0 ? (
-                      <EmptyStateMessage message="No risks identified" />
-                    ) : (
-                      <RiskDonutWithLegend
-                        data={useCaseRiskData.data}
-                        total={useCaseRiskData.total}
-                      />
-                    )}
-                  </DashboardCard>
-                  <DashboardCard title="Vendor risks" navigateTo="/vendors/risks">
-                    {vendorRiskData.total === 0 ? (
-                      <EmptyStateMessage message="No vendor risks" />
-                    ) : (
-                      <RiskDonutWithLegend
-                        data={vendorRiskData.data}
-                        total={vendorRiskData.total}
-                      />
-                    )}
-                  </DashboardCard>
-                </Box>
-
-                {/* Operations Row 4: Model risks */}
-                <Box
-                  sx={{
-                    display: "grid",
-                    gridTemplateColumns: "1fr 1fr 1fr",
-                    gap: "16px",
-                    mb: "16px",
-                  }}
-                >
-                  <DashboardCard title="Model risks" navigateTo="/model-inventory/model-risks">
-                    {modelRiskData.total === 0 ? (
-                      <EmptyStateMessage message="No model risks" />
-                    ) : (
-                      <RiskDonutWithLegend data={modelRiskData.data} total={modelRiskData.total} />
-                    )}
-                  </DashboardCard>
-                </Box>
-
-                {/* Operations Row 4: Recent use cases + Recent activity */}
-                <Box
-                  sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px", mb: "16px" }}
-                >
-                  <DashboardCard title="Recent use cases" navigateTo="/overview">
-                    {useCases.length === 0 ? (
-                      <EmptyStateMessage message="No use cases created yet" />
-                    ) : (
-                      <UseCasesTable
-                        data={useCases}
-                        ariaLabel="Recent use cases"
-                        onRowClick={(id) =>
-                          navigateSearch("/project-view", { projectId: id.toString() })
-                        }
-                        formatDate={formatRelativeDate}
-                      />
-                    )}
-                  </DashboardCard>
-                  <DashboardCard title="Recent activity">
-                    {(() => {
-                      const sortedActivities = buildRecentActivities({
-                        policyMetrics,
-                        incidentMetrics,
-                        riskMetrics,
-                        evidenceMetrics,
-                        vendorMetrics,
-                        vendorRiskMetrics,
-                        modelRiskMetrics,
-                        taskMetrics,
-                        useCaseMetrics,
-                        trainingMetrics,
-                      });
-
-                      if (sortedActivities.length === 0) {
-                        return <EmptyStateMessage message="No recent activity" />;
-                      }
-
-                      return (
-                        // ActivityItem carries role="listitem", which is only
-                        // valid inside a list.
-                        <Stack gap={0} role="list">
-                          {sortedActivities.map((activity, index) => (
-                            <ActivityItem
-                              key={activity.id}
-                              title={activity.title}
-                              timestamp={formatRelativeDate(activity.timestamp)}
-                              type={activity.type}
-                              entityId={activity.entityId}
-                              entityType={activity.entityType}
-                              isLast={index === sortedActivities.length - 1}
-                            />
-                          ))}
-                        </Stack>
-                      );
-                    })()}
-                  </DashboardCard>
-                </Box>
-
-                {/* Operations Row 4b: Use case lifecycle (#5187) */}
-                <UseCaseLifecycleWidgets />
-
-                {/* Operations Row 5: Training, Policy, Model lifecycle */}
-                <Box
-                  sx={{
-                    display: "grid",
-                    gridTemplateColumns: "repeat(3, 1fr)",
-                    gap: "16px",
-                    mb: "16px",
-                  }}
-                >
-                  <DashboardCard title="Training status" navigateTo="/training">
-                    {trainingMetrics && trainingMetrics.total > 0 ? (
-                      <TrainingCompletionCard
-                        total={trainingMetrics.total}
-                        distribution={trainingMetrics.distribution}
-                        completionPercentage={trainingMetrics.completionPercentage}
-                        totalPeople={trainingMetrics.totalPeople}
-                      />
-                    ) : (
-                      <EmptyStateMessage message="No training data" />
-                    )}
-                  </DashboardCard>
-                  <DashboardCard title="Policy status" navigateTo="/policies">
-                    {policyStatusMetrics && policyStatusMetrics.total > 0 ? (
-                      <PolicyStatusCard
-                        total={policyStatusMetrics.total}
-                        distribution={policyStatusMetrics.distribution}
-                      />
-                    ) : (
-                      <EmptyStateMessage message="No policies" />
-                    )}
-                  </DashboardCard>
-                  <DashboardCard title="Model lifecycle" navigateTo="/model-inventory">
-                    {modelLifecycleMetrics && modelLifecycleMetrics.total > 0 ? (
-                      <ModelLifecycleCard
-                        total={modelLifecycleMetrics.total}
-                        distribution={modelLifecycleMetrics.distribution}
-                      />
-                    ) : (
-                      <EmptyStateMessage message="No models" />
-                    )}
-                  </DashboardCard>
-                </Box>
-
-                {/* Operations Row 6: Organizational Frameworks (only if any exist) */}
-                {organizationalFrameworks.length > 0 && (
-                  <Box
-                    sx={{
-                      display: "grid",
-                      gridTemplateColumns: "repeat(3, 1fr)",
-                      gap: "16px",
-                      mb: "16px",
-                    }}
-                  >
-                    {organizationalFrameworks.map((framework) => {
-                      const views = getFrameworkStatusViews(framework);
-                      const currentIndex = frameworkViewIndices[framework.projectFrameworkId] || 0;
-                      const currentView = views[currentIndex];
-                      const hasMultipleViews = views.length > 1;
-
-                      return (
-                        <DashboardCard
-                          key={framework.projectFrameworkId}
-                          title={framework.frameworkName}
-                          navigateTo="/framework"
-                          actionPosition="center"
-                          action={
-                            hasMultipleViews ? (
-                              <Stack direction="row" alignItems="center" gap={0.5}>
-                                <IconButton
-                                  size="small"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handlePrevView(framework.projectFrameworkId, views.length);
-                                  }}
-                                  aria-label={`Previous ${framework.frameworkName} view`}
-                                  sx={navIconButtonSx}
-                                >
-                                  <ChevronLeft size={18} />
-                                </IconButton>
-                                <Typography
-                                  sx={{
-                                    fontSize: 13,
-                                    fontWeight: 500,
-                                    color: "text.icon",
-                                    minWidth: 55,
-                                    textAlign: "center",
-                                  }}
-                                >
-                                  {currentView.label}
-                                </Typography>
-                                <IconButton
-                                  size="small"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleNextView(framework.projectFrameworkId, views.length);
-                                  }}
-                                  aria-label={`Next ${framework.frameworkName} view`}
-                                  sx={navIconButtonSx}
-                                >
-                                  <ChevronRight size={18} />
-                                </IconButton>
-                              </Stack>
-                            ) : undefined
-                          }
-                        >
-                          {currentView.total === 0 ? (
-                            <EmptyStateMessage message="No data available" />
-                          ) : (
-                            <RiskDonutWithLegend
-                              data={currentView.data}
-                              total={currentView.total}
-                            />
-                          )}
-                        </DashboardCard>
-                      );
-                    })}
-                  </Box>
-                )}
-              </>
-            )}
-          </>
+        {isEditingLayout && (
+          <EditLayoutModal
+            widgets={viewLayout}
+            defaults={defaultViewLayout(dashboardView)}
+            isAvailable={isAvailable}
+            onSave={handleSaveLayout}
+            onClose={() => setIsEditingLayout(false)}
+          />
         )}
 
         {/* Page Tour */}

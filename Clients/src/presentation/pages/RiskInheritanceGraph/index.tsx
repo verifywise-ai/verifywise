@@ -28,7 +28,6 @@ import { Network, AlertTriangle } from "lucide-react";
 import { EmptyState } from "../../components/EmptyState";
 import { CustomizableButton } from "../../components/button/customizable-button";
 import { getRiskGraph } from "../../../application/repository/riskLink.repository";
-import { useIsAdmin } from "../../../application/hooks/useIsAdmin";
 import { useTranslation } from "../../../application/hooks/useTranslation";
 import { APIError } from "../../../application/tools/error";
 import type { RiskGraph } from "../../../domain/interfaces/i.riskLink";
@@ -59,6 +58,7 @@ import {
   statsContainerSx,
   statsTextSx,
 } from "./styles";
+import { useCan, usePermissionsSettled } from "../../../application/hooks/useCan";
 
 // Register custom node types
 const nodeTypes = { riskNode: RiskNode };
@@ -413,7 +413,9 @@ const RiskInheritanceGraphInner: React.FC = () => {
 };
 
 const RiskInheritanceGraph: React.FC = () => {
-  const isAdmin = useIsAdmin();
+  const isAdmin = useCan("riskLinks.admin");
+  const settled = usePermissionsSettled();
+  if (!settled) return null;
   if (!isAdmin) {
     return (
       <Box sx={pageContainerSx}>

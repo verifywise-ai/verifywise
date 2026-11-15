@@ -73,14 +73,18 @@ export async function createRuleCtrl(req: Request, res: Response) {
     if (!name || !conditions || !event_type) {
       return res
         .status(400)
-        .json(STATUS_CODE[400]("name, conditions, and event_type are required"));
+        .json(STATUS_CODE[400](req.t!("name, conditions, and event_type are required")));
     }
 
     const validEventTypes = ["auto-approve", "require-approval", "auto-reject"];
     if (!validEventTypes.includes(event_type)) {
-      return res
-        .status(400)
-        .json(STATUS_CODE[400](`event_type must be one of: ${validEventTypes.join(", ")}`));
+      return res.status(400).json(
+        STATUS_CODE[400](
+          req.t!("event_type must be one of: {options}", {
+            options: validEventTypes.join(", "),
+          }),
+        ),
+      );
     }
 
     // Validate conditions structure
@@ -136,14 +140,16 @@ export async function updateRuleCtrl(req: Request, res: Response) {
     )) as any[];
 
     if (!existing[0]) {
-      return res.status(404).json(STATUS_CODE[404]("Rule not found"));
+      return res.status(404).json(STATUS_CODE[404](req.t!("Rule not found")));
     }
     if (existing[0].is_default) {
       return res
         .status(400)
         .json(
           STATUS_CODE[400](
-            "Cannot modify default rules. Create a custom rule with the same name to override.",
+            req.t!(
+              "Cannot modify default rules. Create a custom rule with the same name to override.",
+            ),
           ),
         );
     }
@@ -162,9 +168,13 @@ export async function updateRuleCtrl(req: Request, res: Response) {
     if (event_type) {
       const validEventTypes = ["auto-approve", "require-approval", "auto-reject"];
       if (!validEventTypes.includes(event_type)) {
-        return res
-          .status(400)
-          .json(STATUS_CODE[400](`event_type must be one of: ${validEventTypes.join(", ")}`));
+        return res.status(400).json(
+          STATUS_CODE[400](
+            req.t!("event_type must be one of: {options}", {
+              options: validEventTypes.join(", "),
+            }),
+          ),
+        );
       }
     }
 
@@ -236,10 +246,10 @@ export async function deleteRuleCtrl(req: Request, res: Response) {
     )) as any[];
 
     if (!existing[0]) {
-      return res.status(404).json(STATUS_CODE[404]("Rule not found"));
+      return res.status(404).json(STATUS_CODE[404](req.t!("Rule not found")));
     }
     if (existing[0].is_default) {
-      return res.status(400).json(STATUS_CODE[400]("Cannot delete default rules"));
+      return res.status(400).json(STATUS_CODE[400](req.t!("Cannot delete default rules")));
     }
 
     await sequelize.query(
@@ -267,7 +277,7 @@ export async function testRuleCtrl(req: Request, res: Response) {
     const { rule, facts } = req.body;
 
     if (!rule || !facts) {
-      return res.status(400).json(STATUS_CODE[400]("rule and facts are required"));
+      return res.status(400).json(STATUS_CODE[400](req.t!("rule and facts are required")));
     }
 
     // Validate the rule conditions

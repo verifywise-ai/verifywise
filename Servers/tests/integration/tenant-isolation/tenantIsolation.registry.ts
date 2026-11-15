@@ -18,7 +18,14 @@
 
 import { crudEntity } from "./tenantIsolation.matrix";
 import type { MatrixSpec } from "./tenantIsolation.matrix";
-import { fileFixture, projectFixture, riskFixture, taskFixture } from "./tenantIsolation.fixtures";
+import {
+  fileFixture,
+  groupFixture,
+  policyTemplateFixture,
+  projectFixture,
+  riskFixture,
+  taskFixture,
+} from "./tenantIsolation.fixtures";
 
 export interface IsolationEntity {
   /** Human-readable entity name (kebab-case). */
@@ -84,6 +91,29 @@ export const tenantIsolationRegistry: IsolationEntity[] = [
   crudEntity("tasks", "/api/tasks", ["tasks", "task_assignees"], taskFixture, {
     updateVerb: "PUT",
   }),
+  // Groups / teams with group-level use-case access (#5253). The group itself
+  // runs through the matrix; its members and its use case links are
+  // sub-resources with no read-by-id route, covered by a hand-written test.
+  crudEntity("groups", "/api/v1/groups", ["groups"], groupFixture),
+  {
+    name: "group_members",
+    tables: ["group_members"],
+    baseRoute: "/api/v1/groups/:id/members",
+    testFile: "groups-sub-resources.isolation.test.ts",
+  },
+  {
+    name: "project_groups",
+    tables: ["project_groups"],
+    baseRoute: "/api/v1/groups/projects/:projectId/groups",
+    testFile: "groups-sub-resources.isolation.test.ts",
+  },
+  // Organisation-owned policy templates (#5261).
+  crudEntity(
+    "policy_templates",
+    "/api/v1/policy-templates",
+    ["policy_templates"],
+    policyTemplateFixture,
+  ),
   {
     name: "ai_incidents",
     tables: ["ai_incident_managements"],
@@ -141,6 +171,23 @@ export const tenantIsolationRegistry: IsolationEntity[] = [
     tables: ["use_case_org_settings"],
     baseRoute: "/api/v1/use-case-org-settings",
     testFile: "use-case-org-settings.isolation.test.ts",
+  },
+  {
+    name: "raci_entries",
+    tables: ["raci_entries"],
+    baseRoute: "/api/v1/projects",
+  },
+  {
+    name: "training_assignments",
+    tables: ["training_assignments"],
+    baseRoute: "/api/v1/training/assignments",
+  },
+  {
+    // One row per user per organization; the JWT alone picks the row.
+    name: "dashboard_preferences",
+    tables: ["dashboard_preferences"],
+    baseRoute: "/api/v1/dashboard/preferences",
+    testFile: "dashboard-preferences.isolation.test.ts",
   },
   {
     name: "lifecycle_org_settings",
@@ -221,6 +268,14 @@ export const tenantIsolationRegistry: IsolationEntity[] = [
     baseRoute: "/api/v1/vendor-risk-findings",
   },
   {
+    // AI Detection review decisions kept per repository, and what was done with
+    // a scan's suggested risks. Routes are nested under a scan, so a hand-written file covers them.
+    name: "ai_detection_decisions",
+    tables: ["ai_detection_governance_decisions", "ai_detection_suggested_risk_actions"],
+    baseRoute: "/api/ai-detection/scans",
+    testFile: "ai-detection-decisions.isolation.test.ts",
+  },
+  {
     name: "file_change_history",
     tables: ["file_change_history"],
     baseRoute: "/api/file-change-history",
@@ -229,6 +284,25 @@ export const tenantIsolationRegistry: IsolationEntity[] = [
     name: "ai_app_change_history",
     tables: ["ai_app_change_history"],
     baseRoute: "/api/v1/ai-app-lifecycle",
+  },
+  {
+    // Links between AI apps and use cases (#5259); both sides are org-checked.
+    name: "ai_apps_projects",
+    tables: ["ai_apps_projects"],
+    baseRoute: "/api/v1/ai-apps",
+    testFile: "ai-apps-projects.isolation.test.ts",
+  },
+  {
+    // Bulk assessment questionnaires (#5258).
+    name: "ai_app_questionnaires",
+    tables: ["ai_app_questionnaires"],
+    baseRoute: "/api/v1/ai-apps/questionnaires",
+  },
+  {
+    // Bulk assessments (#5258); ids from another org behave as nonexistent.
+    name: "ai_app_assessments",
+    tables: ["ai_app_assessments"],
+    baseRoute: "/api/v1/ai-apps/assessments",
   },
   {
     name: "mrm_validations",
@@ -309,6 +383,56 @@ export const tenantIsolationRegistry: IsolationEntity[] = [
     tables: ["risk_links"],
     baseRoute: "/api/riskLinks",
     testFile: "riskLinks.isolation.test.ts",
+  },
+  {
+    // Framework import extension (#5254). The list is keyed by the caller's
+    // organization and topics/subtopics are only reachable through their
+    // framework, so a hand-written file covers all three tables.
+    name: "imported_frameworks",
+    tables: ["imported_frameworks", "imported_framework_topics", "imported_framework_subtopics"],
+    baseRoute: "/api/v1/framework-import/imported",
+    testFile: "framework-import.isolation.test.ts",
+  },
+  {
+    // Imported frameworks attached to use cases and assessed (#5254). Impl
+    // rows and their risk links are only reachable through their link, so a
+    // hand-written file covers all five tables.
+    name: "imported_framework_assessments",
+    tables: [
+      "projects_imported_frameworks",
+      "imported_framework_topic_impl",
+      "imported_framework_subtopic_impl",
+      "imported_framework_topic_impl__risks",
+      "imported_framework_subtopic_impl__risks",
+    ],
+    baseRoute: "/api/v1/imported-framework-assessments",
+    testFile: "imported-framework-assessment.isolation.test.ts",
+  },
+  {
+    // Slack extension connections. Every connection belongs to an
+    // organization; management routes and delivery filter by it, so a
+    // hand-written file covers the routes and the delivery query.
+    name: "slack-webhooks",
+    tables: ["slack_webhooks"],
+    baseRoute: "/api/extensions/slack",
+    testFile: "slack-webhooks.isolation.test.ts",
+  },
+  {
+    // Model Lifecycle extension. Setup rows are keyed by the caller's
+    // organization; every per-model row is reached through a model and an
+    // item that must both be in the organization, so a hand-written file
+    // covers all seven tables.
+    name: "model-lifecycle",
+    tables: [
+      "model_lifecycle_phases",
+      "model_lifecycle_items",
+      "model_lifecycle_values",
+      "model_lifecycle_item_files",
+      "model_lifecycle_item_people",
+      "model_lifecycle_item_approvals",
+      "model_lifecycle_change_history",
+    ],
+    baseRoute: "/api/extensions/model-lifecycle",
   },
 ];
 

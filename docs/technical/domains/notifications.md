@@ -133,6 +133,7 @@ Before delivering notifications:
 | `user_added` | Member added to project | Email |
 | `role_changed_to_admin` | Role promoted | Email |
 | `project_created` | New project | Email |
+| External owner notice | External owner named (#5256) or still-live check due | Email only (`external-owner-notice.mjml`); no in-app row |
 
 ### Risk Notifications
 
@@ -155,6 +156,18 @@ The organization check is `isUserOfOrganization` (`services/vendorResearch/assig
 - `metadata`: `{ run_id, vendor_id, count }`.
 - **Dedup: one notification per run.** The partial unique index `notifications_vendor_research_findings_uniq` is on `(organization_id, user_id, (metadata->>'run_id')) WHERE type = 'vendor_research_findings'`. A run belongs to one vendor, so the run id is enough to tell one notice from the next. Two attempts to announce the same run collide, and `notifyAssigneeOfVendorResearch` treats that unique violation (23505 on this index only) as a suppressed duplicate. Any other 23505 still throws.
 - The enum value and the index are two migrations, in this order: `20261010161236-vendor-research-notification-type.js`, then `20261010161240-vendor-research-notification-unique.js`. A new Postgres enum value cannot be used until the statement that added it has committed, and the index predicate names it. The first migration's `down` is a no-op, as for `vendor_risk_candidates`.
+
+### AI Detection Notifications
+
+Sent by `services/aiDetection/scanNotifications.ts` when a scan ends. Entity type `ai_detection_scan`; the link opens `/ai-detection/scans/:id`. Full rules in [AI Detection](./ai-detection.md#notifications).
+
+| Type | Trigger | Delivery | Recipients |
+|------|---------|----------|------------|
+| `ai_detection_scan_completed` | Scan completed | In-app | Triggering user |
+| `ai_detection_scan_attention` | New exposed secrets, new high-risk findings, or a lower governance grade than the previous scan of the repository | In-app + Email | Triggering user + org Admins |
+| `ai_detection_scan_failed` | Scan failed (not cancelled) | In-app; also Email for scheduled and webhook scans | Triggering user; plus org Admins for scheduled and webhook scans |
+
+A scan is announced once: the notifier claims it by setting `ai_detection_scans.notified_at` in one conditional UPDATE before sending anything. Scans marked failed as stale after a crash or restart are announced too. The platform has no per-user email opt-out, so these emails go to every recipient listed.
 
 #### Deadline escalation dedup
 
@@ -197,6 +210,15 @@ enum SlackNotificationRoutingType {
 }
 ```
 
+Only these five types are delivered. An event posts to a Slack connection
+only when Slack is enabled for the event's organization, the connection
+belongs to that organization, is active and is routed for the type, and the
+connection is organization-wide or the event's user is its owner. Events
+without an organization are dropped. Connections belong to the organization
+and are managed by its Admins. The 1-day deadline leg posts once per risk or
+model risk to organization-wide connections. Details:
+[Extensions → Slack connections and delivery](../infrastructure/extensions.md#slack-connections-and-delivery).
+
 ## Email Notifications
 
 ### Rate Limiting
@@ -220,7 +242,8 @@ const rateLimitConfig = {
 | `PROJECT_CREATED_ADMIN` | Project creation |
 | `USER_ADDED_PROJECT_*` | Member addition (by role) |
 | `MEMBER_ROLE_CHANGED_*` | Role changes |
-| `POLICY_DUE_SOON` | Policy review reminders |
+| `POLICY_REVIEW_REMINDER` | Policy review due soon or overdue (daily sweep) |
+| `AI_DETECTION_SCAN_ALERT` | AI Detection scan needs attention, or a scheduled/webhook scan failed |
 | `ASSIGNMENT_NOTIFICATION` | "You have been assigned" for a vendor, risk, project, model and so on (`notifyUserAssigned`) |
 
 ### Assignment emails
@@ -305,8 +328,8 @@ sendUserAddedToProjectNotification(userId, projectId, role)
 sendMemberRoleChangedEditorToAdminNotification(userId, projectId)
 sendProjectCreatedNotification(adminId, projectId)
 
-// Policy notifications
-sendPolicyDueSoonNotification(policyId, dueDate)
+// Policy notifications (daily review reminder sweep)
+notifyPolicyReviewReminder(organizationId, userId, policy, kind, baseUrl)
 ```
 
 ## Post-Market Monitoring Notifications
@@ -386,6 +409,7 @@ const key = `${tenantId}:${userId}`;
 | `services/userNotification/projectNotifications.ts` | Project emails |
 | `services/slack/slackNotificationService.ts` | Slack integration |
 | `services/postMarketMonitoring/pmmScheduler.ts` | PMM notifications |
+| `services/aiDetection/scanNotifications.ts` | AI Detection scan notifications |
 
 ### Frontend
 
@@ -450,6 +474,8 @@ enum NotificationEntityType {
   TRAINING = "training",
   MODEL = "model",
   INCIDENT = "incident",
+  AI_DETECTION_SCAN = "ai_detection_scan",
+  // ... more types
 }
 ```
 

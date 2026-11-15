@@ -25,8 +25,9 @@ vi.mock("../../../../application/repository/vendorResearch.repository", async (i
   startVendorResearch: vi.fn(),
 }));
 
-vi.mock("../../../../application/hooks/useMyPermissions", () => ({
-  useHasPermission: (key: string) => key === "vendor.edit",
+vi.mock("../../../../application/hooks/useCan", () => ({
+  useCan: (key: string) => key === "vendor.edit",
+  useCanCheck: () => (key: string) => key === "vendor.edit",
 }));
 
 import * as repository from "../../../../application/repository/vendorResearch.repository";

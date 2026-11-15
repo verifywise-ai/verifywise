@@ -5,9 +5,13 @@ Endpoints for running LLM Arena comparisons using ArenaGEval.
 Based on DeepEval's LLM Arena: https://deepeval.com/docs/getting-started-llm-arena
 
 Shared-schema multi-tenancy: Uses organization_id from request.state.
+
+Arena is a per-organization setting (off by default). Every endpoint here
+returns 403 while Arena is off for the caller's organization; see
+controllers/org_settings.py.
 """
 
-from fastapi import APIRouter, BackgroundTasks, Request, Body, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Request, Body, Depends, HTTPException
 from fastapi.responses import JSONResponse
 from typing import List, Dict, Any, Optional
 from controllers.deepeval_arena import (
@@ -17,8 +21,9 @@ from controllers.deepeval_arena import (
     list_arena_comparisons_controller,
     delete_arena_comparison_controller,
 )
+from controllers.org_settings import require_arena_enabled
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(require_arena_enabled)])
 
 
 def _get_organization_id(request: Request) -> int:

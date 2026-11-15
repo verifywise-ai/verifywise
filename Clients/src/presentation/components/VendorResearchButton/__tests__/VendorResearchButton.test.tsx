@@ -21,8 +21,9 @@ vi.mock("../../../../application/repository/vendorResearch.repository", async (i
 }));
 
 const role = vi.hoisted(() => ({ canEdit: true }));
-vi.mock("../../../../application/hooks/useMyPermissions", () => ({
-  useHasPermission: (key: string) => key === "vendor.edit" && role.canEdit,
+vi.mock("../../../../application/hooks/useCan", () => ({
+  useCan: (key: string) => key === "vendor.edit" && role.canEdit,
+  useCanCheck: () => (key: string) => key === "vendor.edit" && role.canEdit,
 }));
 
 import * as repository from "../../../../application/repository/vendorResearch.repository";

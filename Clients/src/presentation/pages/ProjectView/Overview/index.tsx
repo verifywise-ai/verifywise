@@ -2,6 +2,7 @@
  * This file is currently in use
  */
 
+import ExternalOwnerName from "../../../components/ExternalOwner/ExternalOwnerName";
 import { Stack, Typography, useTheme } from "@mui/material";
 import ProgressBar from "../../../components/ProjectCard/ProgressBar";
 import { FC, memo, useCallback, useMemo } from "react";
@@ -13,7 +14,7 @@ import useProjectData from "../../../../application/hooks/useProjectData";
 import useProjectStatus from "../../../../application/hooks/useProjectStatus";
 import { useAuth } from "../../../../application/hooks/useAuth";
 import getProjectData from "../../../../application/tools/getProjectData";
-import { text } from "../../../themes/palette";
+import { text, palette as vwPalette } from "../../../themes/palette";
 
 export type RiskData = {
   veryHighRisks: number;
@@ -70,13 +71,13 @@ const Overview: FC<OverviewProps> = memo(({ projectRisksSummary }) => {
       },
       title: {
         fontSize: 12,
-        color: "#8594AC",
+        color: vwPalette.text.accent,
         pb: "2px",
       },
       value: {
         fontSize: 16,
         fontWeight: 600,
-        color: "#2D3748",
+        color: vwPalette.text.secondary,
       },
     }),
     [theme],
@@ -94,7 +95,7 @@ const Overview: FC<OverviewProps> = memo(({ projectRisksSummary }) => {
           {label} status
         </Typography>
         <ProgressBar progress={progress} />
-        <Typography sx={{ fontSize: 11, color: "#8594AC" }}>
+        <Typography sx={{ fontSize: 11, color: vwPalette.text.accent }}>
           {progress} {label}
           {completed > 1 && "s"} completed
         </Typography>
@@ -124,7 +125,13 @@ const Overview: FC<OverviewProps> = memo(({ projectRisksSummary }) => {
         <Stack direction="row" spacing={18} sx={{ pb: "31px" }}>
           <Stack sx={styles.block}>
             <Typography sx={styles.title}>Owner</Typography>
-            <Typography sx={styles.value}>{projectOwner}</Typography>
+            <Typography sx={styles.value}>
+              {project?.external_owner_name ? (
+                <ExternalOwnerName name={project.external_owner_name} />
+              ) : (
+                projectOwner
+              )}
+            </Typography>
           </Stack>
           <Stack sx={styles.block}>
             <Typography sx={styles.title}>Last updated</Typography>

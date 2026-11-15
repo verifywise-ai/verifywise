@@ -1,11 +1,18 @@
-import { Box, List, ListItemButton, ListItemIcon, ListItemText } from "@mui/material";
+import { Box, List, ListItemButton, ListItemIcon, ListItemText, Tooltip } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
 import { LucideIcon } from "lucide-react";
+import { palette, radiusPx } from "../../themes/palette";
 
 export interface SectionItem {
   id: string;
   label: string;
   Icon: LucideIcon;
+  /** Shown but not selectable. */
+  disabled?: boolean;
+  /** Hover text, shown to the right of the item. */
+  tooltip?: string;
+  /** Hover text while the item is disabled, saying why. Falls back to `tooltip`. */
+  disabledTooltip?: string;
 }
 
 interface SectionSidebarProps {
@@ -35,8 +42,8 @@ const SectionSidebar = ({
         alignSelf: "flex-start",
         display: { xs: "none", md: "block" },
         backgroundColor: theme.palette.background.main,
-        border: `1px solid ${theme.palette.border?.dark || "#d0d5dd"}`,
-        borderRadius: "4px",
+        border: `1px solid ${theme.palette.border?.dark || palette.border.dark}`,
+        borderRadius: radiusPx.sm,
         padding: "12px 0",
       }}
     >
@@ -45,12 +52,14 @@ const SectionSidebar = ({
           const isActive = activeSection === section.id;
           const SectionIcon = section.Icon;
 
-          return (
+          const item = (
             <ListItemButton
               key={section.id}
               disableRipple={theme.components?.MuiListItemButton?.defaultProps?.disableRipple}
               className={isActive ? "selected-path" : "unselected"}
               onClick={() => onSelect(section.id)}
+              disabled={section.disabled}
+              aria-current={isActive ? "page" : undefined}
               sx={{
                 "height": "32px",
                 "gap": "8px",
@@ -58,22 +67,22 @@ const SectionSidebar = ({
                 "padding": "0 8px",
                 "justifyContent": "flex-start",
                 "background": isActive
-                  ? "linear-gradient(135deg, #F7F7F7 0%, #F2F2F2 100%)"
+                  ? `linear-gradient(135deg, ${palette.background.hover} 0%, ${palette.background.hover} 100%)`
                   : "transparent",
-                "border": isActive ? "1px solid #E8E8E8" : "1px solid transparent",
+                "border": isActive ? `1px solid ${palette.border.light}` : "1px solid transparent",
                 "&:hover": {
                   background: isActive
-                    ? "linear-gradient(135deg, #F7F7F7 0%, #F2F2F2 100%)"
-                    : "#FAFAFA",
-                  border: isActive ? "1px solid #E8E8E8" : "1px solid transparent",
+                    ? `linear-gradient(135deg, ${palette.background.hover} 0%, ${palette.background.hover} 100%)`
+                    : palette.background.alt,
+                  border: isActive ? `1px solid ${palette.border.light}` : "1px solid transparent",
                 },
                 "&:hover svg": {
-                  color: "#13715B !important",
-                  stroke: "#13715B !important",
+                  color: `${palette.brand.primary} !important`,
+                  stroke: `${palette.brand.primary} !important`,
                   animation: "icon-shake 400ms ease-in-out",
                 },
                 "&:hover svg path": {
-                  stroke: "#13715B !important",
+                  stroke: `${palette.brand.primary} !important`,
                 },
               }}
             >
@@ -87,16 +96,16 @@ const SectionSidebar = ({
                   "marginRight": 0,
                   "& svg": {
                     color: isActive
-                      ? "#13715B !important"
+                      ? `${palette.brand.primary} !important`
                       : `${theme.palette.text.tertiary} !important`,
                     stroke: isActive
-                      ? "#13715B !important"
+                      ? `${palette.brand.primary} !important`
                       : `${theme.palette.text.tertiary} !important`,
                     transition: "color 0.2s ease, stroke 0.2s ease",
                   },
                   "& svg path": {
                     stroke: isActive
-                      ? "#13715B !important"
+                      ? `${palette.brand.primary} !important`
                       : `${theme.palette.text.tertiary} !important`,
                   },
                 }}
@@ -114,6 +123,17 @@ const SectionSidebar = ({
                 }}
               />
             </ListItemButton>
+          );
+
+          const hint = section.disabled
+            ? (section.disabledTooltip ?? section.tooltip)
+            : section.tooltip;
+          if (!hint) return item;
+          return (
+            <Tooltip key={section.id} title={hint} placement="right" enterDelay={500} describeChild>
+              {/* A disabled button fires no events, so the span carries the hover. */}
+              <span style={{ display: "block" }}>{item}</span>
+            </Tooltip>
           );
         })}
       </List>

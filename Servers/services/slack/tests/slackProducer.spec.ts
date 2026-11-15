@@ -9,12 +9,14 @@
 const mockObliterate = jest.fn().mockResolvedValue(undefined);
 const mockAdd = jest.fn().mockResolvedValue({ id: "job-1" });
 const mockUpsertJobScheduler = jest.fn().mockResolvedValue({ id: "job-1" });
+const mockRemoveJobScheduler = jest.fn().mockResolvedValue(true);
 
 jest.mock("bullmq", () => ({
   Queue: jest.fn().mockImplementation(() => ({
     obliterate: mockObliterate,
     add: mockAdd,
     upsertJobScheduler: mockUpsertJobScheduler,
+    removeJobScheduler: mockRemoveJobScheduler,
   })),
 }));
 
@@ -28,36 +30,22 @@ jest.mock("../../../database/redis", () => ({
 }));
 
 import { Queue } from "bullmq";
-import { scheduleDailyNotification } from "../slackProducer";
+import { removeRetiredSlackPolicyScheduler } from "../slackProducer";
 
 describe("slackProducer", () => {
   beforeEach(() => {
     mockObliterate.mockClear();
     mockAdd.mockClear();
     mockUpsertJobScheduler.mockClear();
+    mockRemoveJobScheduler.mockClear();
   });
 
-  describe("scheduleDailyNotification", () => {
-    it("should not obliterate the queue (the scheduler upsert is idempotent by id)", async () => {
-      await scheduleDailyNotification();
+  describe("removeRetiredSlackPolicyScheduler", () => {
+    it("removes the retired policy Slack scheduler and schedules nothing", async () => {
+      await removeRetiredSlackPolicyScheduler();
+      expect(mockRemoveJobScheduler).toHaveBeenCalledWith("slack-notification-policy");
+      expect(mockUpsertJobScheduler).not.toHaveBeenCalled();
       expect(mockObliterate).not.toHaveBeenCalled();
-    });
-
-    it("should schedule policy notification job with cron pattern", async () => {
-      await scheduleDailyNotification();
-      expect(mockUpsertJobScheduler).toHaveBeenCalledWith(
-        "slack-notification-policy",
-        { pattern: "0 9 * * *" },
-        expect.objectContaining({
-          name: "slack-notification-policy",
-          data: { type: "policies" },
-          opts: expect.objectContaining({
-            removeOnComplete: true,
-            // A week, at most 5000, as every scheduler of the automation queue: never for good.
-            removeOnFail: { age: 604_800, count: 5000 },
-          }),
-        }),
-      );
     });
   });
 

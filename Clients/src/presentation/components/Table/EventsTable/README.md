@@ -63,8 +63,11 @@ Timestamps are displayed in the format: `"1 November 2024, 14:30:25"` (day month
 
 ## Event Type Colors
 
-- **Create**: Green (#c8e6c9, #388e3c)
-- **Read**: Blue (#bbdefb, #1976d2)
-- **Update**: Yellow (#fff9c4, #fbc02d)
-- **Delete**: Red (#ffcdd2, #d32f2f)
-- **Error**: Orange (#ffccbc, #e64a19)
+Badges render through `StatusBadge` (background, text):
+
+- **Create**: Green (`status.success`: #E6F4EA, #138A5E)
+- **Read**: Blue (#DCEFFF, #1976D2)
+- **Update**: Amber (`status.warning.bg` #FFF8E1, text #795000)
+- **Delete**: Red (`status.error`: #FFD6D6, #D32F2F)
+- **Error**: Orange (`risk.high`: #FFE5D0, #E64A19)
+- **Unknown type**: Grey (#E0E0E0, #424242)

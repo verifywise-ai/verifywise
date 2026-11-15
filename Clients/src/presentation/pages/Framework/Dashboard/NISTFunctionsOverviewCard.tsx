@@ -5,7 +5,14 @@ import { Shield, Map, Gauge, Settings, ChevronRight } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { getEntityById } from "../../../../application/repository/entity.repository";
 import { getStatusColor } from "../../ISO/style";
-import { background, border as borderPalette, icon, text } from "../../../themes/palette";
+import {
+  background,
+  border as borderPalette,
+  icon,
+  text,
+  radiusPx,
+  palette as vwPalette,
+} from "../../../themes/palette";
 import { textStyles } from "../../../themes/typography";
 
 interface FrameworkData {
@@ -109,7 +116,7 @@ const NISTFunctionsOverviewCard = ({
             height: 12,
             borderRadius: "2px",
             backgroundColor: "status.default.border",
-            border: "1px solid #D1D5DB",
+            border: `1px solid ${vwPalette.border.dark}`,
           }}
         />
       );
@@ -167,7 +174,7 @@ const NISTFunctionsOverviewCard = ({
           textAlign: "center",
           py: 4,
           backgroundColor: "background.accent",
-          borderRadius: 2,
+          borderRadius: radiusPx.sm,
           border: `1px solid ${borderPalette.dark}`,
         }}
       >
@@ -197,7 +204,7 @@ const NISTFunctionsOverviewCard = ({
       <Box
         sx={{
           border: `1px solid ${borderPalette.dark}`,
-          borderRadius: "4px",
+          borderRadius: radiusPx.sm,
           overflow: "hidden",
           backgroundColor: "background.main",
         }}
@@ -236,7 +243,7 @@ const NISTFunctionsOverviewCard = ({
                 "display": "flex",
                 "alignItems": "center",
                 "p": "4px",
-                "borderRadius": "4px",
+                "borderRadius": radiusPx.sm,
                 "&:hover": {
                   backgroundColor: "rgba(0, 0, 0, 0.04)",
                 },

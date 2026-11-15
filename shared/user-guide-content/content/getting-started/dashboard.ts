@@ -43,6 +43,20 @@ export const dashboardContent: ArticleContent = {
     },
     {
       type: 'heading',
+      id: 'customize-layout',
+      level: 2,
+      text: 'Customizing your layout',
+    },
+    {
+      type: 'paragraph',
+      text: 'Click "Edit layout" next to the view toggle to choose what appears on your dashboard. Use the toggle beside a widget to show or hide it and the arrows to move it up or down, then click "Save". Each view keeps its own layout. Your layout is saved to your account, so it follows you to other browsers, and nobody else in your organization is affected.',
+    },
+    {
+      type: 'paragraph',
+      text: 'To go back to the standard arrangement, open "Edit layout", click "Reset to default" and save. Widgets that need data you don\'t have yet, such as organizational frameworks, join the list once that data exists.',
+    },
+    {
+      type: 'heading',
       id: 'governance-score',
       level: 2,
       text: 'AI governance score',
@@ -286,7 +300,7 @@ export const dashboardContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: "The sidebar on the left is your main navigation. It's divided into a top section and 3 labeled groups:",
+      text: "The sidebar on the left is your main navigation. It has a top section and 4 labeled groups:",
     },
     {
       type: 'icon-cards',
@@ -294,28 +308,32 @@ export const dashboardContent: ArticleContent = {
         {
           icon: 'LayoutDashboard',
           title: 'Top items',
-          description: 'Start here, Dashboard, Tasks (with open count badge), and Frameworks.',
+          description: 'Home, Dashboard, Workflows, Incidents, and Tasks (with open count badge). Home is the Start here page.',
         },
         {
           icon: 'FolderTree',
-          title: 'Inventory',
-          description: 'Use cases, Model inventory, Datasets, and AI agents.',
+          title: 'Record',
+          description: 'Inventory (use cases, models, AI apps, agents, datasets), AI Trust Index, AI Detection, Evidence & reports, and Intake.',
         },
         {
           icon: 'Shield',
-          title: 'Assurance',
-          description: 'Risk management, Training registry, Evidence, Reporting, and AI trust center.',
+          title: 'Track',
+          description: 'AI risks, Vendors, and Frameworks.',
         },
         {
           icon: 'Building2',
-          title: 'Governance',
-          description: 'Vendors, Policy manager, and Incident management.',
+          title: 'Enforce',
+          description: 'Policy, LLM Evals, AI Gateway, and Agent controls.',
         },
       ],
     },
     {
       type: 'paragraph',
-      text: "At the bottom of the sidebar you'll find Event tracker (audit log), Settings, and your user profile with logout.",
+      text: "Items with several pages open in place when you click them. Workspace, at the bottom, holds Settings, Event tracker (audit log) and Extensions. Your user profile with logout is below it.",
+    },
+    {
+      type: 'paragraph',
+      text: 'The "User guide" tab on the right edge of the screen opens this guide on the page that covers where you are. In LLM Evals, for example, it opens the topic for the section you have selected, such as Experiments or Datasets. Pages without their own topic open the guide for that module.',
     },
     {
       type: 'heading',

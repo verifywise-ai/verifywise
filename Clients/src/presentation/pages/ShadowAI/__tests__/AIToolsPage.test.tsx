@@ -134,7 +134,7 @@ describe("ShadowAI - AIToolsPage", () => {
 
     await waitFor(() => {
       expect(mockGetTools).toHaveBeenCalledWith(
-        expect.objectContaining({ page: 1, limit: 20, sort_by: "risk_score", order: "desc" }),
+        expect.objectContaining({ page: 1, limit: 20, sort: "risk" }),
       );
     });
 

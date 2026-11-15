@@ -7,7 +7,7 @@ import UploadProgress, { FileUploadResult } from "./UploadProgress";
 import { useFileAnalysis } from "./useFileAnalysis";
 import { useAuth } from "../../../../application/hooks/useAuth";
 import { apiServices } from "../../../../infrastructure/api/networkServices";
-import { brand, text } from "../../../themes/palette";
+import { brand, text, palette as vwPalette } from "../../../themes/palette";
 
 interface BulkUploadModalProps {
   open: boolean;
@@ -153,7 +153,11 @@ export default function BulkUploadModal({ open, onClose, onSuccess }: BulkUpload
     }
 
     if (activeStep === 1 && !analyzing && analysisError) {
-      return <Typography sx={{ fontSize: 13, color: "#F04438" }}>{analysisError}</Typography>;
+      return (
+        <Typography sx={{ fontSize: 13, color: vwPalette.status.error.text }}>
+          {analysisError}
+        </Typography>
+      );
     }
 
     if (activeStep === 1 && !analyzing && analyses.length > 0) {

@@ -78,13 +78,13 @@ export const automationQueue = new Queue("automation-actions", {
 
 **Queue Name:** `slack-notifications`
 
-Handles Slack channel notifications for policy due dates. Its scheduler `slack-notification-policy` removes a completed run at once and keeps a failed run a week, at most 5000 (`removeOnFail: FAILED_JOB_RETENTION`, exported from `services/automations/automationProducer.ts`), like every automation scheduler; no scheduler that `jobs/producer.ts` adds sets `removeOnFail: false` (`schedulePMMCheck` in `services/postMarketMonitoring/pmmScheduler.ts`, which does, is called by nothing).
+No longer receives scheduled jobs. It used to run the 9 AM `slack-notification-policy` job; policy review reminders now come from `policy_review_reminder_sweep`, which sends its Slack messages directly. The queue remains so startup can remove that retired scheduler and the worker can finish a job queued before the upgrade without sending.
 
 ```typescript
 // File: Servers/services/slack/slackProducer.ts
 
-export const slackQueue = new Queue("slack-notifications", {
-  connection: { url: process.env.REDIS_URL }
+export const notificationQueue = new Queue("slack-notifications", {
+  connection: { url: REDIS_URL },
 });
 ```
 
@@ -134,7 +134,7 @@ Recurring (cron) jobs only — see [On-Demand Jobs](#on-demand-jobs) below for j
 | `pmm_hourly_check` | `0 * * * *` | Every hour | PMM cycle processing |
 | `report_scheduler_tick` | `*/15 * * * *` | Every 15 minutes | Template-first scheduled report dispatch |
 | `extension_sync_tick` | `*/5 * * * *` | Every 5 minutes | Sync engine: queues one `extension_sync_run` per org whose schedule is due (interval and failure backoff) for every extension with a sync provider (see [Extensions → Scheduled sync](./extensions.md#scheduled-sync)). Retires the old `jira_assets_scheduled_sync_check` scheduler, whose name the worker still accepts for one release |
-| `slack-notification-policy` | `0 9 * * *` | Daily at 9 AM | Slack policy due notifications |
+| `policy_review_reminder_sweep` | `0 8 * * *` | Daily at 8 AM | Policy review reminders: once within 7 days of the review date, once overdue, to owner and reviewers (in-app, email, Slack). Replaced `send_policy_due_soon_notification` and `slack-notification-policy`, whose schedulers startup removes (see [Policies](../domains/policies.md)) |
 | `approval_overdue_sweep` | `17 * * * *` | Every hour at minute 17 | Approval SLA escalation: the active step of each pending approval request whose `due_at` has passed is claimed once (`escalated_at`), and its escalation user is notified in-app and by email (`services/automations/actions/approvalOverdueSweep.ts`) |
 | `data_retention_prune` | `30 3 * * *` | Daily at 03:30 | Prunes each organization's audit records older than its `audit_retention_months`: the audit ledger from its oldest end (with checkpoints), then each audit table, in batches. Organizations without a period are skipped. See [Data retention](../domains/data-retention.md) |
 | `vendor_research_scan` (queue `vendor-research`) | `11 * * * *` (UTC) | Every hour at minute 11 | Scheduled vendor research: for each organization that chose a scan interval in Research settings, starts at most 5 due vendors while the runs of the last 24 hours are under half of the daily cap. See [Vendors → The scheduled scan](../domains/vendors.md#the-scheduled-scan) |
@@ -561,9 +561,13 @@ CREATE INDEX idx_automation_execution_logs_triggered_at
   ON automation_execution_logs(triggered_at DESC);
 ```
 
+### Dispatch of risk and policy events
+
+Risk and policy triggers run every action of every active automation, ordered by automation id and then action order, enqueued one after another after the save commits (`getEventAutomationActionsQuery`, `enqueueAutomationActions` in `Servers/utils/automation/automationActions.utils.ts`). Automations that existed before every-action dispatch keep their old behaviour until someone edits and saves them: only the event's first action runs (`automations.legacy_first_action_only`, set by migration `20261114200100-legacy-automation-first-action`; the dispatch keeps the single first legacy row by action order, then automation id). Saving the automation in the editor clears the flag; the active toggle does not. New automations run every action. Other triggers (AI Detection) use `getActiveAutomationActionsQuery` and always run every action.
+
 ### Seeded Triggers
 
-26 triggers are seeded in `Servers/database/migrations/20260226234301-public-schema-tables.js`:
+26 triggers are seeded in `Servers/database/migrations/20260226234301-public-schema-tables.js`, and 3 AI Detection triggers in `20261112143741-ai-detection-notifications-and-triggers.js` (29 in all):
 
 | Key pattern | Entities | Event name | Description |
 |-------------|----------|------------|-------------|
@@ -572,6 +576,11 @@ CREATE INDEX idx_automation_execution_logs_triggered_at
 | `<entity>_deleted` | same 8 entities | `<entity>.deleted` | Record deleted |
 | `vendor_review_date_approaching` | vendor | `vendor.review_date_approaching` | Review date within threshold |
 | `scheduled_report` | — | `report.scheduled` | Scheduled report generation |
+| `ai_detection_scan_completed` | AI Detection scan | `ai_detection.scan_completed` | Scan finished |
+| `ai_detection_high_risk_finding` | AI Detection scan | `ai_detection.high_risk_finding` | Scan has high-risk findings (exposed secrets included) the previous scan of the repository did not have |
+| `ai_detection_scan_failed` | AI Detection scan | `ai_detection.scan_failed` | Scan failed |
+
+The AI Detection triggers are fired by `services/aiDetection/scanNotifications.ts`, which enqueues every active automation of the trigger (template variables are listed in [AI Detection](../domains/ai-detection.md#automations-triggers)).
 
 ### Seeded Actions
 

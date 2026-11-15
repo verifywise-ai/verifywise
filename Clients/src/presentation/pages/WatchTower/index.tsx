@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useCan } from "../../../application/hooks/useCan";
 import { Stack } from "@mui/material";
 import TabContext from "@mui/lab/TabContext";
 import TabPanel from "@mui/lab/TabPanel";
@@ -8,7 +9,7 @@ import { useLocation, useNavigate } from "react-router";
 import TabBar from "../../components/TabBar";
 import { PageHeaderExtended } from "../../components/Layout/PageHeaderExtended";
 import CustomizableSkeleton from "../../components/Skeletons";
-import { useHasPermission, useMyPermissions } from "../../../application/hooks/useMyPermissions";
+import { useMyPermissions } from "../../../application/hooks/useMyPermissions";
 
 const tabPanelStyle = {
   padding: 0,
@@ -29,7 +30,7 @@ const WatchTower = () => {
   // Logs, anyone else is replaced to /event-tracker, so the logs request is
   // never made for them.
   const { isLoading: permissionsLoading } = useMyPermissions();
-  const canViewLogs = useHasPermission("logs.admin", { fallbackToAdmin: true });
+  const canViewLogs = useCan("logs.admin");
 
   //tab from URL - derive directly from URL state
   const isLogsPage = location.pathname.includes("/logs");

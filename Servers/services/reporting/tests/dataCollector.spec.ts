@@ -35,7 +35,7 @@ jest.mock("../../../utils/framework.utils", () => ({
   getAllFrameworkByIdQuery: jest.fn(),
 }));
 
-import { brand, risk, text } from "../../../tools/design-tokens/palette";
+import { brand, riskMark, text } from "../../../tools/design-tokens/palette";
 
 jest.mock("../chartUtils", () => ({
   generateRiskDistributionChart: jest.fn().mockReturnValue("<svg>bar</svg>"),
@@ -166,6 +166,23 @@ describe("dataCollector", () => {
       expect(result.sections.projectRisks!.risksByLevel.length).toBe(2);
     });
 
+    it("reports the inherent severity as impact, not the residual risk_severity", async () => {
+      mockGetProjectRisks.mockResolvedValue([
+        {
+          id: 1,
+          risk_name: "Risk 1",
+          risk_level_autocalculated: "High risk",
+          severity: "Catastrophic",
+          risk_severity: "Minor",
+        },
+      ] as any);
+
+      const collector = createDataCollector(10, 1, 1, 100, 5);
+      const result = await collector.collectAllData(["projectRisks"]);
+
+      expect(result.sections.projectRisks!.risks[0].impact).toBe("Catastrophic");
+    });
+
     it("should collect all sections when 'all' is specified", async () => {
       mockGetProjectRisks.mockResolvedValue([]);
 
@@ -204,10 +221,10 @@ describe("dataCollector", () => {
       const medium = risksByLevel.find((r) => r.level === "Medium");
       const low = risksByLevel.find((r) => r.level === "Low");
 
-      expect(critical!.color).toBe(risk.critical.text);
-      expect(high!.color).toBe(risk.high.text);
-      expect(medium!.color).toBe(risk.medium.text);
-      expect(low!.color).toBe(risk.low.text);
+      expect(critical!.color).toBe(riskMark.critical);
+      expect(high!.color).toBe(riskMark.high);
+      expect(medium!.color).toBe(riskMark.medium);
+      expect(low!.color).toBe(riskMark.low);
     });
 
     it("should use default color for unknown risk levels", async () => {
@@ -222,6 +239,32 @@ describe("dataCollector", () => {
         (r) => r.level === "CustomLevel",
       );
       expect(custom!.color).toBe(text.icon);
+    });
+
+    it("shows the owner name the project query resolved, including an external owner", async () => {
+      mockGetProject.mockResolvedValue({
+        project_title: "Test",
+        owner: null,
+        is_organizational: false,
+        dataValues: { owner_name: "Ada (external)" },
+      } as any);
+
+      const result = await createDataCollector(10, 1, 1, 100, 5).collectAllData([]);
+
+      expect(result.metadata.projectOwner).toBe("Ada (external)");
+    });
+
+    it("reports Unknown when the project query found no owner", async () => {
+      mockGetProject.mockResolvedValue({
+        project_title: "Test",
+        owner: null,
+        is_organizational: false,
+        dataValues: { owner_name: "Unassigned" },
+      } as any);
+
+      const result = await createDataCollector(10, 1, 1, 100, 5).collectAllData([]);
+
+      expect(result.metadata.projectOwner).toBe("Unknown");
     });
 
     it("should handle missing project owner gracefully", async () => {
@@ -474,11 +517,11 @@ describe("dataCollector", () => {
     // colour map was keyed "High"/"Medium", so every level missed and the
     // report's donut, bar chart and legend came out uniformly grey.
     it.each([
-      ["Very high risk", risk.critical.text],
-      ["High risk", risk.high.text],
-      ["Medium risk", risk.medium.text],
-      ["Low risk", risk.low.text],
-      ["Very low risk", risk.veryLow.text],
+      ["Very high risk", riskMark.critical],
+      ["High risk", riskMark.high],
+      ["Medium risk", riskMark.medium],
+      ["Low risk", riskMark.low],
+      ["Very low risk", riskMark.veryLow],
     ])("%s is not the grey fallback", async (level, expected) => {
       mockGetProjectRisks.mockResolvedValue([
         { id: 1, risk_name: "R", risk_level_autocalculated: level },
@@ -488,6 +531,33 @@ describe("dataCollector", () => {
       const result = await collector.collectAllData(["projectRisks"]);
 
       expect(result.sections.projectRisks!.risksByLevel[0].color).toBe(expected);
+    });
+
+    it("uses the effective level: current beats inherent, null current falls back", async () => {
+      mockGetProjectRisks.mockResolvedValue([
+        {
+          id: 1,
+          risk_name: "A",
+          risk_level_autocalculated: "Low risk",
+          current_risk_level: "Very high risk",
+        },
+        {
+          id: 2,
+          risk_name: "B",
+          risk_level_autocalculated: "Medium risk",
+          current_risk_level: null,
+        },
+      ] as never);
+
+      const collector = createDataCollector(10, 1, 1, 100, 5);
+      const result = await collector.collectAllData(["projectRisks"]);
+
+      const section = result.sections.projectRisks!;
+      expect(section.risks.map((r) => r.riskLevel)).toEqual(["Very high risk", "Medium risk"]);
+      expect(section.risksByLevel.map((l) => l.level).sort()).toEqual([
+        "Medium risk",
+        "Very high risk",
+      ]);
     });
 
     it("still falls back to grey for a level with no palette entry", async () => {

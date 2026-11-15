@@ -58,7 +58,10 @@ export type FileSource =
   | "Saudi PDPL articles"
   | "SOC 2 controls"
   | "Texas AI Act sections"
-  | "UAE PDPL articles";
+  | "UAE PDPL articles"
+  // Evidence uploaded on an imported framework's topic or subtopic
+  // (extensions/framework-import/importedAssessment.service.ts)
+  | "Imported framework items";
 
 export type ReviewStatus =
   "draft" | "pending_review" | "approved" | "rejected" | "expired" | "superseded";
@@ -247,6 +250,7 @@ export class FileModel extends Model<File> {
       "SOC 2 controls",
       "Texas AI Act sections",
       "UAE PDPL articles",
+      "Imported framework items",
     ),
   })
   source!: FileSource;

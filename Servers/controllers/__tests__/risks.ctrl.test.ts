@@ -7,11 +7,14 @@ jest.mock("../../utils/risk.utils", () => ({
   getRisksByFrameworkQuery: jest.fn(),
   getRisksByProjectQuery: jest.fn(),
   updateRiskByIdQuery: jest.fn(),
-  deleteRiskByIdQuery: jest.fn(),
-  bulkSetProjectRisksOwnerQuery: jest.fn(),
-  bulkSetProjectRisksCategoryQuery: jest.fn(),
-  bulkArchiveProjectRisksQuery: jest.fn(),
+  archiveRiskQuery: jest.fn(),
+  recordRiskSnapshots: jest.fn(),
+  assertRiskReferencesInOrganization: jest.fn(),
+  getActiveRisksByIdsQuery: jest.fn(),
+  getProjectTitlesByRiskIdsQuery: jest.fn().mockResolvedValue(new Map()),
+  sameRiskCategories: jest.fn().mockReturnValue(false),
   PROJECT_RISK_CATEGORIES_SET: new Set(["financial", "operational", "strategic", "compliance"]),
+  enqueueBulkRiskAutomation: jest.fn(),
 }));
 jest.mock("../../domain.layer/models/risks/risk.model", () => ({
   RiskModel: jest.fn(),
@@ -32,7 +35,7 @@ jest.mock("../../utils/bulkAction.utils", () => ({
   assertOrgOwnsIds: jest.fn().mockResolvedValue(undefined),
   withBulkTransaction: jest.fn().mockImplementation(async (_opts: any, fn: any) => {
     const transaction = { commit: jest.fn(), rollback: jest.fn() };
-    await fn(transaction);
+    return fn(transaction);
   }),
 }));
 jest.mock("../../utils/logger/logHelper", () => ({
@@ -53,6 +56,7 @@ jest.mock("../../utils/projectRiskChangeHistory.utils", () => ({
 }));
 jest.mock("../../services/inAppNotification.service", () => ({
   notifyUserAssigned: jest.fn().mockResolvedValue(undefined),
+  notifyUserAssignedMany: jest.fn().mockResolvedValue(undefined),
 }));
 jest.mock("../../utils/quantitativeRisk.utils", () => ({
   computeDerivedFields: jest.fn().mockReturnValue({}),
@@ -100,10 +104,7 @@ import {
   getRisksByFrameworkQuery,
   getRisksByProjectQuery,
   updateRiskByIdQuery,
-  deleteRiskByIdQuery,
-  bulkSetProjectRisksOwnerQuery,
-  bulkSetProjectRisksCategoryQuery,
-  bulkArchiveProjectRisksQuery,
+  archiveRiskQuery,
 } from "../../utils/risk.utils";
 import { createRiskService } from "../../services/risk.service";
 import {
@@ -121,18 +122,8 @@ const mockGetByProject = getRisksByProjectQuery as jest.MockedFunction<
   typeof getRisksByProjectQuery
 >;
 const mockUpdate = updateRiskByIdQuery as jest.MockedFunction<typeof updateRiskByIdQuery>;
-const mockDelete = deleteRiskByIdQuery as jest.MockedFunction<typeof deleteRiskByIdQuery>;
+const mockDelete = archiveRiskQuery as jest.MockedFunction<typeof archiveRiskQuery>;
 const mockCreateService = createRiskService as jest.MockedFunction<typeof createRiskService>;
-const mockBulkOwner = bulkSetProjectRisksOwnerQuery as jest.MockedFunction<
-  typeof bulkSetProjectRisksOwnerQuery
->;
-const mockBulkCategory = bulkSetProjectRisksCategoryQuery as jest.MockedFunction<
-  typeof bulkSetProjectRisksCategoryQuery
->;
-const mockBulkArchive = bulkArchiveProjectRisksQuery as jest.MockedFunction<
-  typeof bulkArchiveProjectRisksQuery
->;
-
 function createReq(overrides?: Partial<Request>): any {
   return {
     userId: 1,
@@ -373,6 +364,51 @@ describe("risks.ctrl", () => {
         }),
       });
     });
+    it.each([
+      ["likelihood", { likelihood: null }],
+      ["severity", { severity: "" }],
+    ])("clears the inherent level when %s is explicitly cleared", async (_n, body) => {
+      const existing = { ...buildRisk(), risk_owner: null, event_frequency_min: null };
+      mockGetById.mockResolvedValue(existing as any);
+      mockUpdate.mockResolvedValue(existing as any);
+      const res = createRes();
+      await updateRiskById(createReq({ params: { id: "1" }, body }), res);
+      expect(mockUpdate.mock.calls[mockUpdate.mock.calls.length - 1][1]).toHaveProperty(
+        "risk_level_autocalculated",
+        null,
+      );
+    });
+    it("clears the residual level when a residual input is explicitly cleared", async () => {
+      const existing = { ...buildRisk(), risk_owner: null, event_frequency_min: null };
+      mockGetById.mockResolvedValue(existing as any);
+      mockUpdate.mockResolvedValue(existing as any);
+      const res = createRes();
+      await updateRiskById(
+        createReq({ params: { id: "1" }, body: { likelihood_mitigation: null } }),
+        res,
+      );
+      expect(mockUpdate.mock.calls[mockUpdate.mock.calls.length - 1][1]).toHaveProperty(
+        "final_risk_level",
+        null,
+      );
+    });
+    it("does not write a level for an unrecognised non-null label", async () => {
+      const existing = {
+        ...buildRisk(),
+        severity: "Major",
+        risk_owner: null,
+        event_frequency_min: null,
+      };
+      mockGetById.mockResolvedValue(existing as any);
+      mockUpdate.mockResolvedValue(existing as any);
+      const res = createRes();
+      await updateRiskById(
+        createReq({ params: { id: "1" }, body: { likelihood: "Sometimes" } }),
+        res,
+      );
+      const sent = mockUpdate.mock.calls[mockUpdate.mock.calls.length - 1][1];
+      expect(sent).not.toHaveProperty("risk_level_autocalculated");
+    });
     it("should return 500 on error", async () => {
       mockGetById.mockRejectedValue(new Error("DB error"));
       const req = createReq({ params: { id: "1" }, body: { risk_name: "R2" } });
@@ -383,17 +419,19 @@ describe("risks.ctrl", () => {
   });
 
   describe("deleteRiskById", () => {
-    it("should return 200 when risk is deleted", async () => {
-      const risk = buildRisk();
-      mockDelete.mockResolvedValue(risk as any);
+    it("should archive through the shared path and return 200 with data true", async () => {
+      // archiveRiskQuery returns the archived row; the legacy response stays `true`.
+      mockDelete.mockResolvedValue({ id: 1, risk_name: "Archived risk", is_deleted: true });
       const req = createReq({ params: { id: "1" } });
       const res = createRes();
       await deleteRiskById(req, res);
+      // userId 1 from createReq, so the shared path records the deletion.
+      expect(mockDelete).toHaveBeenCalledWith(1, 1, 1, expect.anything());
       expect(res.status).toHaveBeenCalledWith(200);
-      expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ data: risk }));
+      expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ data: true }));
     });
     it("should return 404 when risk is not found", async () => {
-      mockDelete.mockResolvedValue(null as any);
+      mockDelete.mockResolvedValue(false);
       const req = createReq({ params: { id: "99" } });
       const res = createRes();
       await deleteRiskById(req, res);
@@ -410,21 +448,30 @@ describe("risks.ctrl", () => {
 
   describe("bulkUpdateProjectRisks", () => {
     it("should return 200 for set_owner action", async () => {
+      const { getActiveRisksByIdsQuery } = require("../../utils/risk.utils");
+      (getActiveRisksByIdsQuery as jest.Mock<any>).mockResolvedValue([
+        buildRisk({ id: 1 }),
+        buildRisk({ id: 2 }),
+      ]);
+      mockUpdate.mockImplementation(async (id: number) => buildRisk({ id }) as any);
       const req = createReq({ body: { ids: [1, 2], action: "set_owner", ownerId: 3 } });
       const res = createRes();
       await bulkUpdateProjectRisks(req, res);
       expect(res.status).toHaveBeenCalledWith(200);
       expect(res.json).toHaveBeenCalledWith(
-        expect.objectContaining({ data: { updated: 2, action: "set_owner" } }),
+        expect.objectContaining({ data: { updated: 2, changed: 2, action: "set_owner" } }),
       );
     });
     it("should return 200 for archive action", async () => {
+      const { getActiveRisksByIdsQuery } = require("../../utils/risk.utils");
+      (getActiveRisksByIdsQuery as jest.Mock<any>).mockResolvedValue([buildRisk({ id: 1 })]);
+      mockDelete.mockResolvedValue(true);
       const req = createReq({ body: { ids: [1], action: "archive" } });
       const res = createRes();
       await bulkUpdateProjectRisks(req, res);
       expect(res.status).toHaveBeenCalledWith(200);
       expect(res.json).toHaveBeenCalledWith(
-        expect.objectContaining({ data: { updated: 1, action: "archive" } }),
+        expect.objectContaining({ data: { updated: 1, changed: 1, action: "archive" } }),
       );
     });
     it("should return 400 for invalid action", async () => {

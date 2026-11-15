@@ -1,9 +1,18 @@
+/** Roles that see every use case in the org, whatever the owner or members. */
+export const seesAllProjects = (role: string | undefined): boolean =>
+  role === "Admin" || role === "SuperAdmin";
+
 /**
  * Which use cases (projects) a user can see: Admins (and SuperAdmins) every
- * one in the org, everyone else the ones they own or are a member of.
+ * one in the org, everyone else the ones they own, are a member of, or reach
+ * through a group attached to the use case (#5253: a row in project_groups
+ * grants every group member access, resolved here at check time).
  *
  * The single definition behind the use cases list (getUserProjects) and the
- * lifecycle summary and dashboard queries, so their counts always agree.
+ * lifecycle summary and dashboard queries, so their counts always agree. It
+ * also gates PATCH /projects/:id (canViewProjectQuery) and the routes behind
+ * requireProjectAccess (getProjectAccessQuery; getProjectReadAccessQuery adds
+ * task assignees and workflow approvers for reads).
  * Returns an SQL fragment (starting with " AND ", or empty) against `alias`
  * and the replacements it needs. The caller's query must bind
  * :organizationId.
@@ -12,15 +21,35 @@ export function projectVisibilitySql(
   alias: string,
   viewer: { userId: number; role: string },
 ): { sql: string; replacements: Record<string, unknown> } {
-  if (viewer.role === "Admin" || viewer.role === "SuperAdmin") {
+  if (seesAllProjects(viewer.role)) {
     return { sql: "", replacements: {} };
   }
+  return projectAccessSql(alias, viewer.userId);
+}
+
+/**
+ * The non-admin half of projectVisibilitySql, whatever the role: the use
+ * cases the user owns, is a member of, or reaches through a group. For
+ * callers that scope by access even for Admins (search).
+ */
+export function projectAccessSql(
+  alias: string,
+  userId: number,
+): { sql: string; replacements: { visibilityUserId: number } } {
   return {
     sql: ` AND (${alias}.owner = :visibilityUserId OR EXISTS (
              SELECT 1 FROM projects_members pm
               WHERE pm.organization_id = :organizationId
                 AND pm.project_id = ${alias}.id
-                AND pm.user_id = :visibilityUserId))`,
-    replacements: { visibilityUserId: viewer.userId },
+                AND pm.user_id = :visibilityUserId)
+           OR EXISTS (
+             SELECT 1 FROM project_groups pg
+             JOIN group_members gm
+               ON gm.group_id = pg.group_id
+              AND gm.organization_id = pg.organization_id
+              WHERE pg.organization_id = :organizationId
+                AND pg.project_id = ${alias}.id
+                AND gm.user_id = :visibilityUserId))`,
+    replacements: { visibilityUserId: userId },
   };
 }

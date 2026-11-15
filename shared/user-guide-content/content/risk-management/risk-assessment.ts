@@ -126,7 +126,7 @@ export const riskAssessmentContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Each risk gets analyzed using likelihood and severity. VerifyWise calculates the overall risk level automatically from these inputs.',
+      text: 'Each risk gets analyzed using likelihood and severity. VerifyWise calculates the inherent risk level automatically from these inputs, on the server, every time you save a risk.',
     },
     {
       type: 'heading',
@@ -184,21 +184,42 @@ export const riskAssessmentContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'VerifyWise calculates the risk level from your likelihood and severity ratings:',
+      text: 'Each rating counts from 1 to 5 (Rare to Almost certain, Negligible to Catastrophic). VerifyWise adds the likelihood once and the severity three times: score = likelihood + 3 × severity. The score decides the level:',
     },
     {
       type: 'table',
       columns: [
+        { key: 'score', label: 'Score', width: '1fr' },
         { key: 'level', label: 'Risk level', width: '1fr' },
         { key: 'action', label: 'Recommended action', width: '2fr' },
       ],
       rows: [
-        { level: 'No risk', action: 'No action required' },
-        { level: 'Very low', action: 'Monitor periodically' },
-        { level: 'Low', action: 'Standard monitoring and review' },
-        { level: 'Medium', action: 'Active management required' },
-        { level: 'High', action: 'Priority attention needed' },
-        { level: 'Very high', action: 'Immediate action required' },
+        { score: '4', level: 'No risk', action: 'No action required' },
+        { score: '5 to 8', level: 'Low risk', action: 'Standard monitoring and review' },
+        { score: '9 to 12', level: 'Medium risk', action: 'Active management required' },
+        { score: '13 to 16', level: 'High risk', action: 'Priority attention needed' },
+        { score: '17 to 20', level: 'Very high risk', action: 'Immediate action required' },
+      ],
+    },
+    {
+      type: 'paragraph',
+      text: 'The same formula applies everywhere a level is calculated: the risk form, imports, the AI advisor, intake forms and AI suggestions. After mitigation, the residual level uses the same formula on the mitigated likelihood and severity.',
+    },
+    {
+      type: 'heading',
+      id: 'which-level-is-shown',
+      level: 3,
+      text: 'Which level a risk shows',
+    },
+    {
+      type: 'paragraph',
+      text: 'A risk can have two levels. The inherent level is calculated from likelihood and severity. The current level is one you pick by hand in the Mitigation tab. VerifyWise shows the current level when you have set one and the inherent level otherwise. This level drives the chip in the risks table, sorting, the summary cards, filters, exports, reports, the dashboard and the compliance score.',
+    },
+    {
+      type: 'bullet-list',
+      items: [
+        { bold: 'Table chip', text: 'Hover over the chip to see the inherent level' },
+        { bold: 'Heat map', text: 'The heat map plots likelihood against severity, so it always shows the inherent level. Its tab reads "Heat map (inherent level)"' },
       ],
     },
     {
@@ -224,6 +245,21 @@ export const riskAssessmentContent: ArticleContent = {
       variant: 'tip',
       title: 'Best practice',
       text: 'Link each risk to its relevant use case and any applicable compliance frameworks. That way, risks show up in both use case reviews and compliance assessments.',
+    },
+    {
+      type: 'heading',
+      id: 'archiving-and-bulk-edits',
+      level: 2,
+      text: 'Archiving, bulk edits and export',
+    },
+    {
+      type: 'bullet-list',
+      items: [
+        { bold: 'Archiving', text: 'Archiving a risk, one at a time, in bulk or through the AI advisor, removes it from the risk register, from reports and from every policy it was linked to. Its change history keeps a deletion entry. Archived risks no longer count towards use case totals, framework control panels or post-market monitoring cycle snapshots' },
+        { bold: 'Bulk owner and category', text: 'Setting the owner or category on several risks records change history on each changed risk. A new owner gets one notification listing the risks assigned to them, and automations run once for the whole bulk action, with a summary of the changes. Risks that already have the value are skipped' },
+        { bold: 'Removing a use case or framework', text: 'When you remove a use case or framework from a risk, the risk\'s links to controls in every framework of that use case are removed too' },
+        { bold: 'Export', text: 'Export includes the risks that match your current filters and search. If nothing matches, there is nothing to export and the export button is disabled' },
+      ],
     },
     {
       type: 'heading',

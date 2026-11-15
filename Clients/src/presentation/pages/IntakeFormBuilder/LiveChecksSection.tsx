@@ -11,6 +11,7 @@ import {
   HINT_KIND_LABELS,
   hintsForQuestion,
 } from "../../components/IntakeLiveChecks/hintKinds";
+import { radiusPx } from "../../themes/palette";
 
 /** Every hint stored on the submission: the server's rule hints plus the job's AI hints. */
 export const allLiveCheckHints = (liveChecks: ILiveChecks | null): LiveCheckHint[] =>
@@ -36,7 +37,7 @@ export function LiveChecksSection({ liveChecks }: { liveChecks: ILiveChecks | nu
       sx={{
         p: "16px",
         border: `1px solid ${theme.palette.border.dark}`,
-        borderRadius: "4px",
+        borderRadius: radiusPx.sm,
         display: "flex",
         flexDirection: "column",
         gap: "8px",
@@ -113,7 +114,7 @@ export function LiveCheckChips({ hints }: { hints: LiveCheckHint[] }) {
                 gap: "4px",
                 px: "8px",
                 height: 22,
-                borderRadius: "4px",
+                borderRadius: radiusPx.sm,
                 fontSize: "12px",
                 color: colors.text,
                 backgroundColor: colors.bg,

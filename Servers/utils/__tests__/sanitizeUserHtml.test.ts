@@ -178,6 +178,16 @@ describe("sanitizeUserHtml", () => {
       expect(sanitizeUserHtml(clean)).toBe(clean);
     });
 
+    it("keeps data-type on task items so checklists load back as checklists (P-M7)", () => {
+      const clean = `<ul data-type="taskList"><li data-type="taskItem" data-checked="true"><p>Done</p></li></ul>`;
+      expect(sanitizeUserHtml(clean)).toBe(clean);
+    });
+
+    it("drops any li data-type other than taskItem", () => {
+      const out = sanitizeUserHtml(`<ul><li data-type="evil">x</li></ul>`);
+      expect(out).not.toContain("evil");
+    });
+
     it("preserves text-align style", () => {
       const clean = `<p style="text-align:center;">centered</p>`;
       expect(sanitizeUserHtml(clean)).toBe(`<p style="text-align:center">centered</p>`);

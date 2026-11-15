@@ -12,6 +12,7 @@ import {
   CreateRepositoryInput,
   UpdateRepositoryInput,
   RepositoriesResponse,
+  WebhookConfig,
 } from "../../domain/ai-detection/repositoryTypes";
 import { Scan, ScansResponse } from "../../domain/ai-detection/types";
 
@@ -73,6 +74,27 @@ export async function getRepositoryScans(
 export async function generateWebhookSecret(id: number): Promise<{ webhook_secret: string }> {
   const response = await apiServices.post<{ data: { webhook_secret: string } }>(
     `${BASE_URL}/${id}/webhook-secret`,
+  );
+  return response.data.data;
+}
+
+/**
+ * Where GitHub should send webhooks. `apiBaseUrl` is the address this app
+ * talks to the API at, when it is absolute: the server uses it when the API
+ * has no explicit public address and that one is reachable from the internet.
+ */
+export async function getWebhookConfig(
+  apiBaseUrl?: string,
+  signal?: AbortSignal,
+): Promise<WebhookConfig> {
+  const response = await apiServices.get<{ data: WebhookConfig }>(
+    "/v1/ai-detection-repositories/webhook-config",
+    {
+      ...(apiBaseUrl ? { api_base_url: apiBaseUrl } : {}),
+      signal,
+      // The modal falls back to the browser's own address, so no global toast.
+      suppressGlobalErrorToast: true,
+    },
   );
   return response.data.data;
 }

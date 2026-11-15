@@ -31,8 +31,8 @@ export class FriaSnapshotModel extends Model<FriaSnapshotModel> implements IFria
   snapshot_reason?: string;
 
   @ForeignKey(() => UserModel)
-  @Column({ type: DataType.INTEGER, allowNull: false })
-  created_by!: number;
+  @Column({ type: DataType.INTEGER, allowNull: true })
+  created_by?: number;
 
   @Column({ type: DataType.DATE, allowNull: true })
   created_at?: Date;

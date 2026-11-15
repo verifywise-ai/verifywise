@@ -221,6 +221,36 @@ export const deleteFolderByIdQuery = async (
 };
 
 /**
+ * What deleting a folder would unfile: whether the folder or any of its
+ * subfolders holds files or policies. The delete cascades to subfolders and
+ * to both mapping tables.
+ */
+export const getFolderTreeContentsQuery = async (
+  organizationId: number,
+  folderId: number,
+  transaction?: Transaction,
+): Promise<{ hasFiles: boolean; hasPolicies: boolean }> => {
+  const [row] = await sequelize.query<{ has_files: boolean; has_policies: boolean }>(
+    `WITH RECURSIVE tree AS (
+       SELECT id FROM virtual_folders WHERE organization_id = :organizationId AND id = :folderId
+       UNION ALL
+       SELECT vf.id FROM virtual_folders vf
+         INNER JOIN tree t ON vf.parent_id = t.id
+        WHERE vf.organization_id = :organizationId
+     )
+     SELECT
+       EXISTS (SELECT 1 FROM file_folder_mappings m
+                WHERE m.organization_id = :organizationId
+                  AND m.folder_id IN (SELECT id FROM tree)) AS has_files,
+       EXISTS (SELECT 1 FROM policy_folder_mappings m
+                WHERE m.organization_id = :organizationId
+                  AND m.folder_id IN (SELECT id FROM tree)) AS has_policies`,
+    { replacements: { organizationId, folderId }, type: QueryTypes.SELECT, transaction },
+  );
+  return { hasFiles: Boolean(row?.has_files), hasPolicies: Boolean(row?.has_policies) };
+};
+
+/**
  * Check if folder name exists in parent (for uniqueness validation)
  */
 export const checkFolderNameExistsQuery = async (

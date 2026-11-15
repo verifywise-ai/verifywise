@@ -1,6 +1,7 @@
 import { Component, ErrorInfo, ReactNode } from "react";
 import { Box, Button, Stack, Typography } from "@mui/material";
 import { AlertCircle, RefreshCw } from "lucide-react";
+import { palette } from "../../themes/palette";
 
 interface Props {
   children: ReactNode;
@@ -64,7 +65,7 @@ class ChunkErrorBoundary extends Component<Props, State> {
           }}
         >
           <Stack alignItems="center" spacing={2} sx={{ maxWidth: 420, textAlign: "center" }}>
-            <AlertCircle size={48} color="#1976d2" />
+            <AlertCircle size={48} color={palette.status.info.text} />
             <Typography variant="h6" fontWeight={600}>
               A new version is available
             </Typography>

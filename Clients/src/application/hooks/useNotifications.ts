@@ -53,10 +53,15 @@ export type NotificationType =
   | "policy_overdue"
   | "training_assigned"
   | "training_completed"
+  | "training_due_soon"
+  | "training_overdue"
   | "vendor_review_due"
   | "file_uploaded"
   | "comment_added"
   | "mention"
+  | "ai_detection_scan_completed"
+  | "ai_detection_scan_failed"
+  | "ai_detection_scan_attention"
   | "system"
   | "connected"; // Internal type for SSE handshake
 
@@ -340,10 +345,15 @@ export const useNotifications = (options: UseNotificationsOptions = {}): UseNoti
         policy_overdue: "error",
         training_assigned: "info",
         training_completed: "success",
+        training_due_soon: "warning",
+        training_overdue: "error",
         vendor_review_due: "warning",
         file_uploaded: "info",
         comment_added: "info",
         mention: "info",
+        ai_detection_scan_completed: "success",
+        ai_detection_scan_failed: "error",
+        ai_detection_scan_attention: "warning",
         system: "info",
       };
 

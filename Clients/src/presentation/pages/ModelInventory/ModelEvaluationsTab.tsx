@@ -3,7 +3,8 @@ import { Box, Stack, Typography, Alert as MuiAlert } from "@mui/material";
 import { FlaskConical, AlertTriangle } from "lucide-react";
 import Chip from "../../components/Chip";
 import CustomizableSkeleton from "../../components/Skeletons";
-import { palette } from "../../themes/palette";
+import { palette, radiusPx } from "../../themes/palette";
+import { chartTheme } from "../../themes/chartTheme";
 import {
   getAllModelEvaluations,
   type ModelEvaluation,
@@ -12,10 +13,10 @@ import {
 import useFormattedDate from "../../../application/hooks/useFormattedDate";
 
 const statusColorMap: Record<string, string> = {
-  completed: "#4caf50",
-  running: "#ff9800",
-  pending: "#9e9e9e",
-  failed: "#f44336",
+  completed: chartTheme.evaluationStatus.completed,
+  running: chartTheme.evaluationStatus.running,
+  pending: palette.text.disabled,
+  failed: chartTheme.evaluationStatus.failed,
 };
 
 function hasFailedMetrics(eval_: ModelEvaluation): boolean {
@@ -107,7 +108,7 @@ export default function ModelEvaluationsTab() {
         <MuiAlert
           severity="warning"
           icon={<AlertTriangle size={16} strokeWidth={1.5} />}
-          sx={{ mb: "16px", fontSize: "13px", borderRadius: "4px" }}
+          sx={{ mb: "16px", fontSize: "13px", borderRadius: radiusPx.sm }}
         >
           {flaggedCount} evaluation{flaggedCount !== 1 ? "s" : ""} flagged a potential risk.
           Consider adding {flaggedCount !== 1 ? "these" : "this"} to the risk register.
@@ -167,8 +168,8 @@ export default function ModelEvaluationsTab() {
                 <td>
                   <Chip
                     label={e.status}
-                    backgroundColor={`${statusColorMap[e.status] || "#9e9e9e"}20`}
-                    textColor={statusColorMap[e.status] || "#9e9e9e"}
+                    backgroundColor={`${statusColorMap[e.status] || palette.text.disabled}20`}
+                    textColor={statusColorMap[e.status] || palette.text.disabled}
                     size="small"
                   />
                 </td>
@@ -176,7 +177,7 @@ export default function ModelEvaluationsTab() {
                   <Stack direction="row" alignItems="center" spacing={0.5}>
                     <Typography sx={{ fontSize: "13px" }}>{getKeyResult(e)}</Typography>
                     {hasFailedMetrics(e) && (
-                      <AlertTriangle size={14} color="#f44336" strokeWidth={1.5} />
+                      <AlertTriangle size={14} color={palette.text.error} strokeWidth={1.5} />
                     )}
                   </Stack>
                 </td>

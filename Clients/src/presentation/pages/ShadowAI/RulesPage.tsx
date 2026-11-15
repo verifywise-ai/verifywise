@@ -62,7 +62,7 @@ import {
   useSortedRows,
   SortableTableHead,
 } from "./constants";
-import { palette } from "../../themes/palette";
+import { palette, radiusPx } from "../../themes/palette";
 import { pageOfLabel } from "../../components/Table/pageOfLabel";
 
 const TRIGGER_LABELS: Record<ShadowAiTriggerType, string> = {
@@ -403,7 +403,7 @@ export default function RulesPage() {
 
         {/* Content */}
         {loading ? (
-          <Skeleton variant="rectangular" height={300} sx={{ borderRadius: "4px" }} />
+          <Skeleton variant="rectangular" height={300} sx={{ borderRadius: radiusPx.sm }} />
         ) : viewMode === "rules" ? (
           rules.length === 0 ? (
             <EmptyState
@@ -438,7 +438,7 @@ export default function RulesPage() {
                   sx={{
                     p: "16px",
                     border: `1px solid ${palette.border.dark}`,
-                    borderRadius: "4px",
+                    borderRadius: radiusPx.sm,
                     opacity: rule.is_active ? 1 : 0.6,
                     transition: "opacity 0.2s ease",
                   }}
@@ -715,7 +715,7 @@ export default function RulesPage() {
                   sx={{
                     p: "8px 12px",
                     bgcolor: palette.background.accent,
-                    borderRadius: "4px",
+                    borderRadius: radiusPx.sm,
                     border: `1px solid ${palette.border.light}`,
                   }}
                 >
@@ -757,7 +757,7 @@ export default function RulesPage() {
                   sx={{
                     p: "8px 12px",
                     bgcolor: palette.background.accent,
-                    borderRadius: "4px",
+                    borderRadius: radiusPx.sm,
                     border: `1px solid ${palette.border.light}`,
                   }}
                 >

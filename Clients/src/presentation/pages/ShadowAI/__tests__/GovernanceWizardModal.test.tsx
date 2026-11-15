@@ -220,6 +220,30 @@ describe("GovernanceWizardModal", () => {
     expect(onClose).not.toHaveBeenCalled();
   });
 
+  it("stops a risk description over 5000 characters before sending it", async () => {
+    renderWithProviders(
+      <GovernanceWizardModal
+        isOpen={true}
+        onClose={onClose}
+        tool={baseTool}
+        onSuccess={onSuccess}
+      />,
+    );
+
+    fireEvent.change(screen.getByLabelText("Owner"), { target: { value: "1" } });
+    fireEvent.change(screen.getByLabelText("Risk description"), {
+      target: { value: "x".repeat(5001) },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Start governance" }));
+
+    await waitFor(() => {
+      expect(
+        screen.getByText("Risk description must be 5000 characters or fewer."),
+      ).toBeInTheDocument();
+    });
+    expect(mockStartGovernance).not.toHaveBeenCalled();
+  });
+
   it("falls back to a generic error message for non-Error rejections", async () => {
     mockStartGovernance.mockRejectedValue("boom");
 

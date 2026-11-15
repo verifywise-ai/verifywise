@@ -6,22 +6,21 @@ test.describe("Start Here", () => {
 
   test("renders the start here page", async ({ authedPage: page }) => {
     await page.goto("/start-here");
-    await expect(page).toHaveURL(/\/start-here/);
+    // The new look moved Start here into Home's Get started tab.
+    await expect(page).toHaveURL(/\/home\?tab=get-started/);
 
-    // Page should show onboarding or getting-started content
-    await expect(
-      page
-        .getByText(/start/i)
-        .or(page.getByText(/getting started/i))
-        .or(page.getByText(/welcome/i))
-        .or(page.getByText(/setup/i))
-        .first(),
-    ).toBeVisible({ timeout: 15_000 });
+    // The Get started panel (not the always-visible tab label) holds the content.
+    const panel = page.getByTestId("home-get-started-tab");
+    await expect(panel).toBeVisible({ timeout: 15_000 });
+    await expect(panel.getByText("Your progress")).toBeVisible({ timeout: 15_000 });
   });
 
   test("page has no accessibility violations", async ({ authedPage: page }) => {
     await page.goto("/start-here");
-    await page.waitForLoadState("domcontentloaded");
+    await expect(page).toHaveURL(/\/home\?tab=get-started/);
+    await expect(page.getByTestId("home-get-started-tab").getByText("Your progress")).toBeVisible({
+      timeout: 15_000,
+    });
 
     const results = await new AxeBuilder({ page })
       .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])

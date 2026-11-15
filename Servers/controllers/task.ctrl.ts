@@ -48,8 +48,8 @@ export async function createTask(req: Request, res: Response): Promise<any> {
 
   const transaction = await sequelize.transaction();
   try {
-    const { userId } = req;
-    if (!userId) {
+    const { userId, role } = req;
+    if (!userId || !role) {
       await transaction.rollback();
       return res.status(401).json(STATUS_CODE[401](req.t!("Unauthorized")));
     }
@@ -95,7 +95,13 @@ export async function createTask(req: Request, res: Response): Promise<any> {
     // other entities survive even if a client skips the follow-up
     // POST /tasks/:id/entities calls.
     if (task.id && Array.isArray(entity_links) && entity_links.length > 0) {
-      await persistTaskEntityLinks(task.id, entity_links, req.organizationId!, transaction);
+      await persistTaskEntityLinks(
+        task.id,
+        entity_links,
+        { userId, role },
+        req.organizationId!,
+        transaction,
+      );
     }
 
     await transaction.commit();
@@ -243,8 +249,6 @@ export async function getAllTasks(req: Request, res: Response): Promise<any> {
       include_archived,
       sort_by = "created_at",
       sort_order = "DESC",
-      page = "1",
-      page_size = "25",
     } = req.query;
 
     // Parse filters
@@ -266,22 +270,21 @@ export async function getAllTasks(req: Request, res: Response): Promise<any> {
       sort_order: sort_order as "ASC" | "DESC",
     };
 
-    // Parse pagination
-    const pageNum = parseInt(page as string, 10);
-    const pageSize = parseInt(page_size as string, 10);
-    const limit = Math.min(pageSize, 100); // Cap at 100 items per page
-
+    // No limit/offset is passed: the query returns every task matching the
+    // filters that this user may see in this organization. The /tasks page
+    // and the sidebar's open-task count rely on that (they send page and
+    // page_size, but filter and paginate client-side), so page and page_size
+    // are ignored and the response is always one page holding every match.
     const tasks = await getTasksQuery({ userId, role }, req.organizationId!, filters, sort);
 
-    // Calculate pagination metadata
-    const totalTasks = tasks.length; // This is just the current page, we'd need a count query for real total
+    const totalTasks = tasks.length;
     const pagination = {
-      page: pageNum,
-      pageSize: limit,
-      total: totalTasks, // This would need to be calculated properly
-      totalPages: Math.ceil(totalTasks / limit),
-      hasNext: tasks.length === limit,
-      hasPrev: pageNum > 1,
+      page: 1,
+      pageSize: totalTasks,
+      total: totalTasks,
+      totalPages: totalTasks > 0 ? 1 : 0,
+      hasNext: false,
+      hasPrev: false,
     };
 
     // Add assignees and entity_links to each task response (manually from dataValues)
@@ -471,7 +474,13 @@ export async function updateTask(req: Request, res: Response): Promise<any> {
     // Persist any new entity links atomically with the task update (additive
     // only — removals continue to go through DELETE /tasks/:id/entities/:linkId).
     if (updatedTask.id && Array.isArray(entity_links) && entity_links.length > 0) {
-      await persistTaskEntityLinks(updatedTask.id, entity_links, req.organizationId!, transaction);
+      await persistTaskEntityLinks(
+        updatedTask.id,
+        entity_links,
+        { userId, role },
+        req.organizationId!,
+        transaction,
+      );
     }
 
     await transaction.commit();

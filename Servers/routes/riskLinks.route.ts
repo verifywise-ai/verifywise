@@ -26,39 +26,24 @@ import {
 
 // Declared before GET /:riskId is irrelevant (different verb), but kept first
 // so the backfill route is the obvious one in this file.
-router.post(
-  "/recompute",
-  authenticateJWT,
-  authorize(["Admin", "SuperAdmin"]),
-  recomputeAllRiskLinks,
-);
+router.post("/recompute", authenticateJWT, authorize("riskLinks.admin"), recomputeAllRiskLinks);
 router.post(
   "/suggest-hierarchy",
   authenticateJWT,
-  authorize(["Admin", "SuperAdmin"]),
+  authorize("riskLinks.admin"),
   suggestRiskHierarchy,
 );
 
-router.post("/", authenticateJWT, authorize(["Admin", "Editor"]), createRiskLink);
+router.post("/", authenticateJWT, authorize("riskLinks.edit"), createRiskLink);
 // Org-wide graph + dismissal analytics expose every link and raw dismiss notes;
 // admin-only, matching the write/fan-out routes above.
-router.get("/", authenticateJWT, authorize(["Admin", "SuperAdmin"]), getRiskGraph);
-router.get(
-  "/dismissals",
-  authenticateJWT,
-  authorize(["Admin", "SuperAdmin"]),
-  getDismissalAnalytics,
-);
+router.get("/", authenticateJWT, authorize("riskLinks.admin"), getRiskGraph);
+router.get("/dismissals", authenticateJWT, authorize("riskLinks.admin"), getDismissalAnalytics);
 // Declared before /:riskId: the param route would swallow /duplicates as a
 // risk id. Org-wide report like the graph and dismissals above: admin-only.
-router.get(
-  "/duplicates",
-  authenticateJWT,
-  authorize(["Admin", "SuperAdmin"]),
-  getDuplicateCandidates,
-);
+router.get("/duplicates", authenticateJWT, authorize("riskLinks.admin"), getDuplicateCandidates);
 // Same param-route trap as /duplicates: /coverage must sit above /:riskId.
-router.get("/coverage", authenticateJWT, authorize(["Admin", "SuperAdmin"]), getControlCoverage);
+router.get("/coverage", authenticateJWT, authorize("riskLinks.admin"), getControlCoverage);
 // Vendor risk insights. Single segments, so they must sit above /:riskId like
 // /duplicates and /coverage. Any authenticated user: they show nothing that
 // GET /api/vendorRisks/all does not.
@@ -79,7 +64,7 @@ router.get(
 router.post(
   "/vendor-risks/recompute",
   authenticateJWT,
-  authorize(["Admin", "SuperAdmin"]),
+  authorize("riskLinks.admin"),
   recomputeAllVendorRiskLinks,
 );
 // The hierarchy pass scoped to one vendor risk. Admin-only like the org-wide
@@ -87,25 +72,21 @@ router.post(
 router.post(
   "/vendor-risks/:vendorRiskId/suggest-hierarchy",
   authenticateJWT,
-  authorize(["Admin", "SuperAdmin"]),
+  authorize("riskLinks.admin"),
   suggestVendorRiskHierarchy,
 );
 router.get("/:riskId", authenticateJWT, getRiskLinks);
 router.get("/:riskId/shared-projects", authenticateJWT, getSharedProjects);
-// Role matrix: Admin full, Editor write, Reviewer approve (status), Auditor
-// read-only. Create and ack are writes (Admin/Editor); status transitions are
-// approvals (Admin/Editor/Reviewer).
-router.patch(
-  "/:id",
-  authenticateJWT,
-  authorize(["Admin", "Editor", "Reviewer"]),
-  updateRiskLinkStatus,
-);
+// Permissions: create and ack are writes (riskLinks.edit: Admin, Editor by
+// default); status transitions are approvals (riskLinks.review: Admin, Editor,
+// Reviewer by default); the org-wide reports and backfills above need
+// riskLinks.admin (Admin, SuperAdmin by default). Auditor is read-only.
+router.patch("/:id", authenticateJWT, authorize("riskLinks.review"), updateRiskLinkStatus);
 // Clearing a stale-inheritance warning the user has reviewed. Idempotent.
 router.post(
   "/:id/acknowledge-parent-change",
   authenticateJWT,
-  authorize(["Admin", "Editor"]),
+  authorize("riskLinks.edit"),
   acknowledgeParentLevelChange,
 );
 

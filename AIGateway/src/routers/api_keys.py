@@ -16,7 +16,12 @@ from crud.api_keys import (
     update_api_key,
     delete_api_key,
 )
-from utils.auth import get_org_id, get_user_id, require_admin, require_admin_or_editor
+from utils.auth import (
+    get_org_id,
+    get_user_id,
+    require_llm_keys_admin,
+    require_llm_keys_writer,
+)
 from utils.encryption import decrypt
 from utils.notifications import config_event, notify_config_change
 
@@ -32,7 +37,8 @@ router = APIRouter(prefix="/keys", tags=["API Keys"])
 # accepted here.
 VALID_PROVIDERS = {"openai", "anthropic", "gemini", "xai", "mistral", "openrouter", "together_ai", "cohere"}
 
-# Provider verification endpoints (matches Express controller)
+# Provider verification endpoints. Each must reject a bad key (401/403); a public
+# endpoint that answers any key would report every key as valid.
 PROVIDER_VERIFY_ENDPOINTS: dict[str, dict] = {
     "openai": {
         "url": lambda _k: "https://api.openai.com/v1/models",
@@ -55,7 +61,8 @@ PROVIDER_VERIFY_ENDPOINTS: dict[str, dict] = {
         "headers": lambda k: {"Authorization": f"Bearer {k}"},
     },
     "openrouter": {
-        "url": lambda _k: "https://openrouter.ai/api/v1/models",
+        # /models is public and answers 200 to any key; /key needs a valid one (401 otherwise).
+        "url": lambda _k: "https://openrouter.ai/api/v1/key",
         "headers": lambda k: {"Authorization": f"Bearer {k}"},
     },
     "together_ai": {
@@ -134,7 +141,7 @@ async def _check_provider_key(provider: str, api_key: str, forbidden_rejects: bo
 @router.post("/verify")
 async def verify_api_key(request: Request):
     """Verify a provider API key by hitting the provider's models endpoint."""
-    require_admin(request)
+    require_llm_keys_admin(request)
 
     body = await request.json()
     provider = body.get("provider", "").lower()
@@ -149,7 +156,7 @@ async def verify_api_key(request: Request):
 @router.post("/{key_id}/verify")
 async def verify_saved_api_key(key_id: int, request: Request):
     """Verify a saved key without sending it to the client. Only says valid or not."""
-    require_admin_or_editor(request)
+    require_llm_keys_writer(request)
     org_id = get_org_id(request)
 
     key = await get_api_key_by_id(org_id, key_id)
@@ -188,7 +195,7 @@ def _safe_key(key: dict) -> dict:
 @router.post("")
 async def create_key(request: Request):
     """Create a new provider API key."""
-    require_admin_or_editor(request)
+    require_llm_keys_writer(request)
     org_id = get_org_id(request)
     user_id = get_user_id(request)
 
@@ -223,7 +230,7 @@ async def create_key(request: Request):
 @router.patch("/{key_id}")
 async def update_key(key_id: int, request: Request):
     """Update an existing API key."""
-    require_admin(request)
+    require_llm_keys_admin(request)
     org_id = get_org_id(request)
 
     body = await request.json()
@@ -246,7 +253,7 @@ async def update_key(key_id: int, request: Request):
 @router.delete("/{key_id}")
 async def delete_key(key_id: int, request: Request):
     """Delete an API key."""
-    require_admin(request)
+    require_llm_keys_admin(request)
     org_id = get_org_id(request)
     user_id = get_user_id(request)
 

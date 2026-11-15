@@ -4,7 +4,7 @@
 # stay slim.
 
 pytest==9.2.0
-pytest-asyncio==1.4.0
+pytest-asyncio==1.4.1.post1
 pytest-httpx==0.36.2
 respx==0.23.1
 httpx==0.28.1

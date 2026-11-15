@@ -101,6 +101,55 @@ const submit = async (submitRef: React.MutableRefObject<(() => void) | undefined
   });
 };
 
+describe("ProjectForm external owner (#5256)", () => {
+  beforeEach(() => {
+    vi.mocked(updateProject).mockClear();
+    Element.prototype.scrollIntoView = vi.fn();
+  });
+
+  const renderWith = (projectToEdit: object) => {
+    const submitRef = { current: undefined } as React.MutableRefObject<(() => void) | undefined>;
+    renderWithProviders(
+      <ProjectForm
+        onClose={vi.fn()}
+        projectToEdit={projectToEdit as never}
+        useStandardModal
+        onSubmitRef={submitRef}
+      />,
+    );
+    return submitRef;
+  };
+  const externalUseCase = {
+    ...euAiActUseCase(["Deployer"]),
+    owner: null,
+    external_owner_name: "Ada Lovelace",
+    external_owner_email: "ada@example.com",
+  };
+
+  it("keeps an externally owned use case external on save", async () => {
+    await submit(renderWith(externalUseCase));
+    expect((vi.mocked(updateProject).mock.calls[0][0] as any).body).toMatchObject({
+      owner: null,
+      external_owner_name: "Ada Lovelace",
+      external_owner_email: "ada@example.com",
+    });
+  });
+
+  it("does not save an external owner with an invalid email", async () => {
+    await submit(renderWith({ ...externalUseCase, external_owner_email: "not-an-email" }));
+    expect(updateProject).not.toHaveBeenCalled();
+  });
+
+  it("sends empty external fields for a user owner", async () => {
+    await submit(renderWith(euAiActUseCase(["Deployer"])));
+    expect((vi.mocked(updateProject).mock.calls[0][0] as any).body).toMatchObject({
+      owner: 1,
+      external_owner_name: null,
+      external_owner_email: null,
+    });
+  });
+});
+
 describe("ProjectForm high-risk roles", () => {
   beforeEach(() => {
     vi.mocked(updateProject).mockClear();

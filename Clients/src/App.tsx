@@ -36,6 +36,8 @@ import CommandPaletteErrorBoundary from "./presentation/components/CommandPalett
 import useCommandPalette from "./application/hooks/useCommandPalette";
 import useUserPreferences from "./application/hooks/useUserPreferences";
 import { SetupModal, useOnboarding } from "./presentation/components/Onboarding";
+import { SETUP_MODAL_ROUTES } from "./application/hooks/useOnboarding";
+import { isClassicUi } from "./presentation/themes/uiStyle";
 import { lazyRoute } from "./application/utils/lazyRoute";
 import {
   UserGuideSidebarProvider,
@@ -132,7 +134,7 @@ function App() {
   const { users, refreshUsers } = useUsers();
   const { userPreferences } = useUserPreferences();
   const commandPalette = useCommandPalette();
-  const { completeOnboarding, state, isLoading: isOnboardingLoading } = useOnboarding();
+  const { completeOnboarding, state } = useOnboarding();
 
   // SSE notifications disabled for now - can be re-enabled later if needed
   // useNotifications({
@@ -141,23 +143,23 @@ function App() {
   //   reconnectDelay: 3000,
   // });
 
-  // Onboarding should show on dashboard (/) or start-here page
-  const isOnboardingRoute = location.pathname === "/" || location.pathname === "/start-here";
+  // Onboarding should show on the dashboard (/), Home or the start-here page
+  const isOnboardingRoute = SETUP_MODAL_ROUTES.includes(location.pathname);
 
   // Derive modal visibility from onboarding state and current route
   // Only show modal if:
   // 1. User is authenticated (has token and userId)
-  // 2. Onboarding state is loaded (not loading)
-  // 3. Onboarding is not complete (first login)
-  // 4. Currently on dashboard or start-here route
+  // 2. Onboarding is not complete (first login)
+  // 3. Currently on the dashboard, Home or start-here route
   const showModal = useMemo(
-    () => token && userId && !isOnboardingLoading && !state.isComplete && isOnboardingRoute,
-    [token, userId, isOnboardingLoading, state.isComplete, isOnboardingRoute],
+    () => token && userId && !state.isComplete && isOnboardingRoute,
+    [token, userId, state.isComplete, isOnboardingRoute],
   );
 
   const handleOnboardingDone = useCallback(() => {
     completeOnboarding();
-    navigate("/start-here");
+    // The new look keeps Start here as Home's Get started tab.
+    navigate(isClassicUi() ? "/start-here" : "/home?tab=get-started");
   }, [completeOnboarding, navigate]);
 
   useEffect(() => {

@@ -16,7 +16,6 @@ This controller manages vendor-related operations, providing CRUD functionality 
 
 ```typescript
 import { Request, Response } from "express";
-import { MOCKDATA_ON } from "../flags";
 import { STATUS_CODE } from "../utils/statusCode.utils";
 ```
 
@@ -136,4 +135,4 @@ The controller uses HTTP status codes and a standardized STATUS_CODE utility for
 - 500: Internal Server Error
 - 503: Service Unavailable
 
-All endpoints are wrapped in try-catch blocks for error handling, with support for both mock and real data operations through the MOCKDATA_ON flag.
+All endpoints are wrapped in try-catch blocks for error handling.

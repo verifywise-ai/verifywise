@@ -14,7 +14,7 @@ export const mcpApprovalsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'You\'ll find it at **AI Gateway > Agent Control > Approvals**.',
+      text: 'You\'ll find it at **Enforce > Agent controls > Approvals**.',
     },
     {
       type: 'heading',

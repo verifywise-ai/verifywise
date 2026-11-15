@@ -458,17 +458,19 @@ export async function handleBreaches(
     const baseUrl = process.env.FRONTEND_URL || "http://localhost:5173";
     for (const breach of breaches) {
       const isHard = breach.evaluation!.status === MrmEvalStatus.BREACH;
-      const title = isHard
-        ? `Metric breach: ${breach.point.metric}`
-        : `Metric warning: ${breach.point.metric}`;
-      const message = `${label} — "${breach.point.metric}" = ${breach.point.value} breached its monitoring threshold.`;
+      // Translated per recipient by sendInAppNotification; the same key titles
+      // the in-app row and the email.
+      const titleKey = isHard ? "Metric breach: {metric}" : "Metric warning: {metric}";
+      const titleVars = { metric: breach.point.metric };
       await dispatchAlerts(
         organizationId,
         recipients,
         {
           type: NotificationType.MRM_METRIC_BREACH,
-          title,
-          message,
+          titleKey,
+          titleVars,
+          messageKey: '{label} — "{metric}" = {value} breached its monitoring threshold.',
+          messageVars: { label, metric: breach.point.metric, value: String(breach.point.value) },
           entity_type: NotificationEntityType.MODEL,
           entity_id: modelInventoryId,
           entity_name: label,
@@ -476,7 +478,8 @@ export async function handleBreaches(
         settings.alert_email_enabled,
         {
           template: EMAIL_TEMPLATES.MRM_BREACH_ALERT,
-          subject: title,
+          subjectKey: titleKey,
+          subjectVars: titleVars,
           variables: {
             model_label: label,
             metric: breach.point.metric,

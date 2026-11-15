@@ -211,15 +211,40 @@ describe("addAllJobs", () => {
     expect([...automationQueue().schedulers.keys()]).toEqual(
       expect.arrayContaining([
         "send_vendor_notification",
-        "send_policy_due_soon_notification",
+        "policy_review_reminder_sweep",
         "send_report_notification",
         "extension_sync_tick",
       ]),
     );
-    expect([...slackQueue().schedulers.keys()]).toEqual(["slack-notification-policy"]);
+    // The Slack queue has no scheduler any more: the policy review reminder sweep sends the Slack
+    // messages itself.
+    expect([...slackQueue().schedulers.keys()]).toEqual([]);
   });
 
-  it("removes the repeatable jobs BullMQ 5 left, and keeps the schedulers that replace them", async () => {
+  it("removes the two policy schedulers that the policy review reminder sweep replaced", async () => {
+    automationQueue().schedulers.set("send_policy_due_soon_notification", {
+      key: "send_policy_due_soon_notification",
+      name: "send_policy_due_soon_notification",
+      next: Date.now() + 60_000,
+      pattern: "0 8 * * *",
+    });
+    slackQueue().schedulers.set("slack-notification-policy", {
+      key: "slack-notification-policy",
+      name: "slack-notification-policy",
+      next: Date.now() + 60_000,
+      pattern: "0 9 * * *",
+    });
+
+    await addAllJobs();
+
+    expect([...automationQueue().schedulers.keys()]).not.toContain(
+      "send_policy_due_soon_notification",
+    );
+    expect([...automationQueue().schedulers.keys()]).toContain("policy_review_reminder_sweep");
+    expect([...slackQueue().schedulers.keys()]).toEqual([]);
+  });
+
+  it("removes the repeatable jobs BullMQ 5 left, and keeps the automation scheduler that replaces one", async () => {
     automationQueue().schedulers.set(BULLMQ5_REPORT_NOTIFICATION_KEY, {
       key: BULLMQ5_REPORT_NOTIFICATION_KEY,
       name: "send_report_notification",
@@ -238,7 +263,8 @@ describe("addAllJobs", () => {
     const automationSchedulers = [...automationQueue().schedulers.keys()];
     expect(automationSchedulers).not.toContain(BULLMQ5_REPORT_NOTIFICATION_KEY);
     expect(automationSchedulers).toContain("send_report_notification");
-    expect([...slackQueue().schedulers.keys()]).toEqual(["slack-notification-policy"]);
+    // The Slack policy job has no replacement on its queue, so nothing is left there.
+    expect([...slackQueue().schedulers.keys()]).toEqual([]);
   });
 
   it("still registers the schedulers when the removal of BullMQ 5 jobs fails", async () => {
@@ -295,7 +321,14 @@ describe("addAllJobs", () => {
       ...automationQueue().schedulers.values(),
       ...slackQueue().schedulers.values(),
     ];
-    expect(schedulers.map(({ key }) => key)).toContain("slack-notification-policy");
+    // The sweeps of the policy reminders and of the training reminders were added without a
+    // retention of their own, which is what this test is for.
+    expect(schedulers.map(({ key }) => key)).toEqual(
+      expect.arrayContaining([
+        "policy_review_reminder_sweep",
+        "training_assignment_reminder_sweep",
+      ]),
+    );
     const keptForever = schedulers
       .filter(({ template }) => {
         const removeOnFail = template?.opts?.removeOnFail;

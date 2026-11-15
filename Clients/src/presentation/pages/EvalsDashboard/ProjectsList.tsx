@@ -40,8 +40,8 @@ import { EmptyState } from "../../components/EmptyState";
 import EmptyStateTip from "../../components/EmptyState/EmptyStateTip";
 import ConfirmationModal from "../../components/Dialogs/ConfirmationModal";
 import SearchBox from "../../components/Search/SearchBox";
-import { FilterBy, type FilterColumn } from "../../components/Table/FilterBy";
-import { GroupBy } from "../../components/Table/GroupBy";
+import { type FilterColumn } from "../../components/Table/FilterBy";
+import { TableFilter } from "../../components/Table/TableFilter";
 import { useFilterBy } from "../../../application/hooks/useFilterBy";
 import {
   getAllProjects,
@@ -53,9 +53,9 @@ import {
 } from "../../../application/repository/deepEval.repository";
 import singleTheme from "../../themes/v1SingleTheme";
 import type { DeepEvalProject } from "./types";
-import { useAuth } from "../../../application/hooks/useAuth";
-import allowedRoles from "../../../application/constants/permissions";
-import { palette } from "../../themes/palette";
+import { useCanCheck } from "../../../application/hooks/useCan";
+import { useArenaSetting } from "../../../application/hooks/useArenaSetting";
+import { palette, radiusPx } from "../../themes/palette";
 
 const columns: StandardColumn[] = [
   { id: "name", label: "Name", minWidth: "180px", sortable: true, align: "left" },
@@ -70,6 +70,7 @@ export default function ProjectsList() {
   const formatUserDate = useFormattedDate();
   const navigate = useNavigate();
   const [projects, setProjects] = useState<DeepEvalProject[]>([]);
+  const { data: arenaSetting } = useArenaSetting();
   const [runsByProject, setRunsByProject] = useState<Record<string, number>>({});
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -79,10 +80,10 @@ export default function ProjectsList() {
   } | null>(null);
 
   // RBAC permissions
-  const { userRoleName } = useAuth();
-  const canCreateProject = allowedRoles.evals.createProject.includes(userRoleName);
-  const canEditProject = allowedRoles.evals.editProject.includes(userRoleName);
-  const canDeleteProject = allowedRoles.evals.deleteProject.includes(userRoleName);
+  const can = useCanCheck();
+  const canCreateProject = can("evals.edit");
+  const canEditProject = can("evals.edit");
+  const canDeleteProject = can("evals.edit");
 
   // Search and filter state
   const [searchTerm, setSearchTerm] = useState("");
@@ -112,7 +113,12 @@ export default function ProjectsList() {
     }
   }, []);
 
-  const { filterData, handleFilterChange } = useFilterBy<DeepEvalProject>(getFieldValue);
+  const {
+    filterData,
+    handleFilterChange,
+    conditions: filterConditions,
+    logic: filterLogic,
+  } = useFilterBy<DeepEvalProject>(getFieldValue);
 
   const filteredProjects = useMemo(() => {
     const afterFilter = filterData(projects);
@@ -382,7 +388,7 @@ export default function ProjectsList() {
                 "fontSize": "11px",
                 "height": "20px",
                 "minWidth": "20px",
-                "borderRadius": "10px",
+                "borderRadius": radiusPx.pill,
                 "& .MuiChip-label": {
                   padding: "0 6px",
                 },
@@ -401,8 +407,14 @@ export default function ProjectsList() {
         gap={2}
       >
         <Stack direction="row" alignItems="center" gap={2}>
-          <FilterBy columns={filterColumns} onFilterChange={handleFilterChange} />
-          <GroupBy options={[{ id: "useCase", label: "Use case" }]} onGroupChange={() => {}} />
+          <TableFilter
+            columns={filterColumns}
+            onFilterChange={handleFilterChange}
+            defaultConditions={filterConditions}
+            defaultLogic={filterLogic}
+            data={projects}
+            getFieldValue={getFieldValue}
+          />
           <SearchBox
             placeholder="Search projects..."
             value={searchTerm}
@@ -443,11 +455,13 @@ export default function ProjectsList() {
                 title="What is an eval project?"
                 description="A project groups related evaluations for a single LLM application. Define test suites, scoring criteria, and track quality over time."
               />
-              <EmptyStateTip
-                icon={Layers}
-                title="Compare models side by side"
-                description="Run the same test suite across different models or prompts. The arena view shows head-to-head comparisons with automated scoring."
-              />
+              {arenaSetting?.enabled === true && (
+                <EmptyStateTip
+                  icon={Layers}
+                  title="Compare models side by side"
+                  description="Run the same test suite across different models or prompts. The arena view shows head-to-head comparisons with automated scoring."
+                />
+              )}
               <EmptyStateTip
                 icon={TrendingUp}
                 title="Track quality over releases"
@@ -516,7 +530,7 @@ export default function ProjectsList() {
                           "fontWeight": 500,
                           "fontSize": "12px",
                           "height": "24px",
-                          "borderRadius": "4px",
+                          "borderRadius": radiusPx.sm,
                           "& .MuiChip-icon": {
                             color: "inherit",
                             marginLeft: "8px",
@@ -557,7 +571,7 @@ export default function ProjectsList() {
                           fontSize: "12px",
                           height: "22px",
                           minWidth: "32px",
-                          borderRadius: "4px",
+                          borderRadius: radiusPx.sm,
                         }}
                       />
                     </TableCell>

@@ -1,6 +1,7 @@
 import { describe, it, expect, jest, beforeEach } from "@jest/globals";
 import crypto from "crypto";
 import { Request, Response } from "express";
+import { getTranslator } from "../../utils/i18n.utils";
 import {
   CSRF_COOKIE_NAME,
   CSRF_HEADER_NAME,
@@ -20,6 +21,8 @@ describe("csrf.middleware", () => {
       method: "GET",
       cookies: {},
       headers: {},
+      // Set by i18nMiddleware, which runs before csrfProtection.
+      t: getTranslator("en"),
       ...overrides,
     } as unknown as Request;
   }

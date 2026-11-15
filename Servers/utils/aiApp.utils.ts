@@ -18,6 +18,10 @@ import {
   ValidationException,
   NotFoundException,
 } from "../domain.layer/exceptions/custom.exception";
+import {
+  deleteAllCustomFieldValuesForEntityQuery,
+  fetchCustomFieldsForEntities,
+} from "./customField.utils";
 
 /** UNIQUE(organization_id, name) on ai_apps (20260615140000-create-ai-apps). */
 export const AI_APP_NAME_CONSTRAINT = "ai_apps_organization_id_name_key";
@@ -53,6 +57,8 @@ interface GetAllAiAppsOptions {
   withLifecycle?: boolean;
   /** v1 only (#5193): case-insensitive match on name or description. */
   search?: string;
+  /** v1 only (#5262): add each app's custom field values as `custom_fields`. */
+  withCustomFields?: boolean;
   vendorId?: number;
   page?: number;
   limit?: number;
@@ -91,18 +97,12 @@ function parseAiAppRow(row: any): IAIApp {
   };
 }
 
-export async function getAllAiAppsQuery(
-  organizationId: number,
-  options: GetAllAiAppsOptions = {},
-): Promise<{ ai_apps: IAIApp[]; total: number }> {
-  const page = options.page || 1;
-  const limit = options.limit || 20;
-  const offset = (page - 1) * limit;
-
+/** WHERE clause shared by the list and the id lookup behind "Select all". */
+function aiAppFilter(organizationId: number, options: GetAllAiAppsOptions) {
   // Columns are qualified with ai_apps.* because the list query LEFT JOINs vendors,
   // which also has organization_id (would be ambiguous unqualified).
   const whereConditions: string[] = ["ai_apps.organization_id = :organizationId"];
-  const replacements: Record<string, any> = { organizationId, limit, offset };
+  const replacements: Record<string, any> = { organizationId };
 
   if (options.status) {
     whereConditions.push("ai_apps.status = :status");
@@ -126,7 +126,41 @@ export async function getAllAiAppsQuery(
     replacements.vendorId = options.vendorId;
   }
 
-  const whereClause = `WHERE ${whereConditions.join(" AND ")}`;
+  return { whereClause: `WHERE ${whereConditions.join(" AND ")}`, replacements };
+}
+
+/** Ids matching the list filters, newest first, capped; `total` counts every match. */
+export async function getAiAppIdsQuery(
+  organizationId: number,
+  options: Pick<GetAllAiAppsOptions, "status" | "lifecycleStage" | "search">,
+  cap: number,
+): Promise<{ ids: number[]; total: number }> {
+  const { whereClause, replacements } = aiAppFilter(organizationId, options);
+  const [rows] = await sequelize.query(
+    `SELECT ai_apps.id FROM ai_apps ${whereClause}
+     ORDER BY ai_apps.created_at DESC NULLS LAST, ai_apps.id DESC
+     LIMIT :cap`,
+    { replacements: { ...replacements, cap } },
+  );
+  const [count] = await sequelize.query(`SELECT COUNT(*) AS total FROM ai_apps ${whereClause}`, {
+    replacements,
+  });
+  return {
+    ids: (rows as { id: number }[]).map((row) => row.id),
+    total: parseInt((count as { total: string }[])[0].total, 10),
+  };
+}
+
+export async function getAllAiAppsQuery(
+  organizationId: number,
+  options: GetAllAiAppsOptions = {},
+): Promise<{ ai_apps: IAIApp[]; total: number }> {
+  const page = options.page || 1;
+  const limit = options.limit || 20;
+  const offset = (page - 1) * limit;
+  const filter = aiAppFilter(organizationId, options);
+  const { whereClause } = filter;
+  const replacements = { ...filter.replacements, limit, offset };
 
   // Qualified with ai_apps. because the list query joins vendors (shared column names
   // like created_at/status/risk_score would otherwise be ambiguous in ORDER BY).
@@ -160,12 +194,23 @@ export async function getAllAiAppsQuery(
     { replacements },
   );
 
+  const customFieldsByApp = options.withCustomFields
+    ? await fetchCustomFieldsForEntities(
+        "ai_app",
+        (rows as any[]).map((row) => row.id as number),
+        organizationId,
+      )
+    : null;
+
   return {
-    ai_apps: (rows as any[]).map((row) =>
-      options.withLifecycle
+    ai_apps: (rows as any[]).map((row) => {
+      const app = options.withLifecycle
         ? { ...parseAiAppRow(row), ...lifecycleFields(row) }
-        : parseAiAppRow(row),
-    ),
+        : parseAiAppRow(row);
+      return customFieldsByApp
+        ? { ...app, custom_fields: customFieldsByApp.get(row.id) ?? [] }
+        : app;
+    }),
     total: parseInt((countResult as any[])[0].total, 10),
   };
 }
@@ -410,6 +455,7 @@ export async function deleteAiAppByIdQuery(
   organizationId: number,
   transaction: Transaction,
 ): Promise<boolean> {
+  await deleteAllCustomFieldValuesForEntityQuery("ai_app", id, organizationId, transaction);
   const [rows] = await sequelize.query(
     `DELETE FROM ai_apps WHERE organization_id = :organizationId AND id = :id RETURNING *`,
     {

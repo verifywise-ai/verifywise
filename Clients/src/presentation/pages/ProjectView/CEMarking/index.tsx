@@ -21,7 +21,16 @@ import { useNavigate } from "react-router";
 import dayjs, { Dayjs } from "dayjs";
 import { Info as GreyCircleInfoIcon } from "lucide-react";
 import { cardStyles } from "../../../themes";
-import { background } from "../../../themes/palette";
+import { green, yellow } from "../../../themes";
+import {
+  background,
+  border,
+  status,
+  text,
+  palette as vwPalette,
+  radiusPx,
+} from "../../../themes/palette";
+import { chartTheme } from "../../../themes/chartTheme";
 import {
   CEMarkingData,
   ConformityStepStatus,
@@ -162,7 +171,7 @@ const ensureUrlProtocol = (url: string | null): string | null => {
 // Table styles - using the primary theme table styles
 const getTableHeaderRowStyles = () => ({
   textTransform: "uppercase",
-  borderBottom: "1px solid #d0d5dd",
+  borderBottom: `1px solid ${border.dark}`,
   background: `linear-gradient(180deg, ${background.accent} 0%, ${background.hover} 100%)`,
 });
 
@@ -176,11 +185,11 @@ const getTableHeaderCellStyles = () => ({
 
 const getTableBodyRowStyles = () => ({
   "textTransform": "capitalize",
-  "borderBottom": "1px solid #d0d5dd",
+  "borderBottom": `1px solid ${border.dark}`,
   "backgroundColor": "white",
   "transition": "background-color 0.3s ease-in-out",
   "&:hover td": {
-    backgroundColor: "#fafafa",
+    backgroundColor: background.alt,
   },
   "&:hover": {
     cursor: "pointer",
@@ -194,33 +203,33 @@ const getTableBodyCellStyles = () => ({
   backgroundColor: "white",
 });
 
-const getStatusColor = (status: ConformityStepStatus): string => {
-  switch (status) {
+const getStatusColor = (stepStatus: ConformityStepStatus): string => {
+  switch (stepStatus) {
     case ConformityStepStatus.Completed:
-      return "#10B981";
+      return green[500];
     case ConformityStepStatus.InProgress:
-      return "#3B82F6";
+      return vwPalette.status.info.text;
     case ConformityStepStatus.NotStarted:
-      return "status.default.text";
+      return status.default.text;
     case ConformityStepStatus.NotNeeded:
-      return "text.disabled";
+      return text.disabled;
     default:
-      return "status.default.text";
+      return status.default.text;
   }
 };
 
-const getStatusBgColor = (status: ConformityStepStatus): string => {
-  switch (status) {
+const getStatusBgColor = (stepStatus: ConformityStepStatus): string => {
+  switch (stepStatus) {
     case ConformityStepStatus.Completed:
-      return "#10B98120";
+      return `${green[500]}20`;
     case ConformityStepStatus.InProgress:
-      return "#3B82F620";
+      return `${chartTheme.entity.blue}20`;
     case ConformityStepStatus.NotStarted:
-      return "#6B728020";
+      return `${status.default.text}20`;
     case ConformityStepStatus.NotNeeded:
-      return "#9CA3AF20";
+      return `${text.disabled}20`;
     default:
-      return "#6B728020";
+      return `${status.default.text}20`;
   }
 };
 
@@ -911,11 +920,11 @@ const CEMarking: React.FC<CEMarkingProps> = ({ projectId }) => {
                   }
                   sx={{
                     "height": 8,
-                    "borderRadius": 4,
+                    "borderRadius": radiusPx.lg,
                     "backgroundColor": "background.hover",
                     "& .MuiLinearProgress-bar": {
-                      backgroundColor: "#FBBF24",
-                      borderRadius: 4,
+                      backgroundColor: yellow[600],
+                      borderRadius: radiusPx.lg,
                     },
                   }}
                 />
@@ -951,11 +960,11 @@ const CEMarking: React.FC<CEMarkingProps> = ({ projectId }) => {
                   }
                   sx={{
                     "height": 8,
-                    "borderRadius": 4,
+                    "borderRadius": radiusPx.lg,
                     "backgroundColor": "background.hover",
                     "& .MuiLinearProgress-bar": {
-                      backgroundColor: "#FBBF24",
-                      borderRadius: 4,
+                      backgroundColor: yellow[600],
+                      borderRadius: radiusPx.lg,
                     },
                   }}
                 />
@@ -1005,11 +1014,11 @@ const CEMarking: React.FC<CEMarkingProps> = ({ projectId }) => {
               value={(data.completedStepsCount / data.totalStepsCount) * 100}
               sx={{
                 "height": 6,
-                "borderRadius": 3,
+                "borderRadius": radiusPx.md,
                 "backgroundColor": "background.hover",
                 "& .MuiLinearProgress-bar": {
-                  backgroundColor: "#FBBF24",
-                  borderRadius: 3,
+                  backgroundColor: yellow[600],
+                  borderRadius: radiusPx.md,
                 },
               }}
             />
@@ -1054,7 +1063,7 @@ const CEMarking: React.FC<CEMarkingProps> = ({ projectId }) => {
                         sx={{
                           backgroundColor: getStatusBgColor(step.status),
                           color: getStatusColor(step.status),
-                          borderRadius: "4px !important",
+                          borderRadius: `${radiusPx.sm} !important`,
                           fontWeight: 600,
                           fontSize: "0.75rem",
                           textTransform: "uppercase",
@@ -1207,8 +1216,8 @@ const CEMarking: React.FC<CEMarkingProps> = ({ projectId }) => {
                     "width": "100%",
                     "height": 34,
                     "fontSize": 13,
-                    "borderColor": "#D1D5DB",
-                    "color": "#374151",
+                    "borderColor": border.dark,
+                    "color": text.secondary,
                     "&:hover": {
                       borderColor: "text.disabled",
                       backgroundColor: "background.accent",
@@ -1326,8 +1335,8 @@ const CEMarking: React.FC<CEMarkingProps> = ({ projectId }) => {
                     "width": "100%",
                     "height": 34,
                     "fontSize": 13,
-                    "borderColor": "#D1D5DB",
-                    "color": "#374151",
+                    "borderColor": border.dark,
+                    "color": text.secondary,
                     "&:hover": {
                       borderColor: "text.disabled",
                       backgroundColor: "background.accent",
@@ -1771,7 +1780,7 @@ const CEMarking: React.FC<CEMarkingProps> = ({ projectId }) => {
                       "padding": "12px",
                       "borderBottom":
                         index < availablePolicies.length - 1
-                          ? `1px solid ${theme.palette.border?.light || "#e0e0e0"}`
+                          ? `1px solid ${theme.palette.border?.light || border.light}`
                           : "none",
                       "&:hover": {
                         backgroundColor: theme.palette.action?.hover || background.surface,
@@ -1856,7 +1865,7 @@ const CEMarking: React.FC<CEMarkingProps> = ({ projectId }) => {
                       "padding": "12px",
                       "borderBottom":
                         index < availableEvidences.length - 1
-                          ? `1px solid ${theme.palette.border?.light || "#e0e0e0"}`
+                          ? `1px solid ${theme.palette.border?.light || border.light}`
                           : "none",
                       "&:hover": {
                         backgroundColor: theme.palette.action?.hover || background.surface,
@@ -1951,7 +1960,7 @@ const CEMarking: React.FC<CEMarkingProps> = ({ projectId }) => {
                       "padding": "12px",
                       "borderBottom":
                         index < availableIncidents.length - 1
-                          ? `1px solid ${theme.palette.border?.light || "#e0e0e0"}`
+                          ? `1px solid ${theme.palette.border?.light || border.light}`
                           : "none",
                       "&:hover": {
                         backgroundColor: theme.palette.action?.hover || background.surface,

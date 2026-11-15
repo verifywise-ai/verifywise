@@ -25,7 +25,7 @@ export const promptsContent: ArticleContent = {
     {
       type: 'ordered-list',
       items: [
-        { text: 'Go to **AI Gateway > Prompts** in the sidebar' },
+        { text: 'Go to **Enforce > AI Gateway > Prompts** in the sidebar' },
         { text: 'Click **Create prompt**' },
         { text: 'Enter a name (e.g., "Customer support agent"). A URL-safe slug is generated from the name automatically.' },
         { text: 'Add a description if you want (optional, but helps your team find the right prompt later)' },

@@ -313,7 +313,7 @@ async def run_custom_scorer(
 
     # Normalize judge-model shape. Scorers may be persisted in any of three shapes
     # depending on which write path created them:
-    #   1. Nested (Scorers page / _upsert_judge_scorer):
+    #   1. Nested (Scorers page):
     #        config = {"provider": ..., "judgeModel": {"name", "provider", ...}, ...}
     #   2. Legacy string (very old records):
     #        config = {"judgeModel": "<model name>"}

@@ -3,8 +3,6 @@ import {
   Box,
   Stack,
   Typography,
-  TextField,
-  Button,
   Paper,
   IconButton,
   Accordion,
@@ -14,6 +12,7 @@ import {
 } from "@mui/material";
 import { CustomizableButton } from "../../components/button/customizable-button";
 import VWChip from "../../components/Chip";
+import Field from "../../components/Inputs/Field";
 import { useNavigate, useParams, useSearchParams } from "react-router";
 import {
   readDataset,
@@ -191,7 +190,7 @@ export default function DatasetEditorPage() {
   }
 
   return (
-    <Box sx={{ maxWidth: "900px", margin: "0 auto", p: 3 }}>
+    <Box sx={{ maxWidth: "900px", margin: "0 auto", p: "6px" }}>
       {alert && <Alert variant={alert.variant} body={alert.body} />}
 
       <PageBreadcrumbs
@@ -212,9 +211,9 @@ export default function DatasetEditorPage() {
         direction="row"
         alignItems="center"
         justifyContent="space-between"
-        sx={{ mb: 3, mt: 2 }}
+        sx={{ mb: "6px", mt: "4px" }}
       >
-        <Stack direction="row" alignItems="center" spacing={1}>
+        <Stack direction="row" alignItems="center" spacing="2px">
           <IconButton size="small" onClick={handleBack} aria-label="Back">
             <ArrowLeft size={18} />
           </IconButton>
@@ -222,7 +221,7 @@ export default function DatasetEditorPage() {
             Edit dataset
           </Typography>
         </Stack>
-        <Stack direction="row" spacing={1}>
+        <Stack direction="row" spacing="2px">
           <CustomizableButton
             color="secondary"
             variant="outlined"
@@ -253,13 +252,11 @@ export default function DatasetEditorPage() {
       </Stack>
 
       {/* Dataset name input */}
-      <Stack spacing={2} sx={{ mb: 3 }}>
-        <TextField
+      <Stack spacing="4px" sx={{ mb: "6px" }}>
+        <Field
           label="Dataset name"
           value={datasetName}
           onChange={(e) => setDatasetName(e.target.value)}
-          fullWidth
-          size="small"
           placeholder="Enter a descriptive name for this dataset"
         />
         <Typography variant="body2" sx={{ color: palette.text.tertiary, fontSize: "13px" }}>
@@ -268,25 +265,26 @@ export default function DatasetEditorPage() {
       </Stack>
 
       {/* Prompts editor */}
-      <Stack spacing={1.25}>
+      <Stack spacing="2.5px">
         {prompts.length === 0 ? (
           <Paper
             variant="outlined"
             sx={{
               textAlign: "center",
-              py: 4,
-              px: 2,
+              py: "8px",
+              px: "4px",
               borderStyle: "dashed",
               borderColor: palette.border.dark,
             }}
           >
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: "4px" }}>
               No prompts in this dataset yet.
             </Typography>
-            <Button
+            <CustomizableButton
               variant="outlined"
               startIcon={<Plus size={16} />}
               onClick={handleAddPrompt}
+              text="Add your first prompt"
               sx={{
                 "color": palette.brand.primary,
                 "borderColor": palette.brand.primary,
@@ -295,9 +293,7 @@ export default function DatasetEditorPage() {
                   backgroundColor: palette.brand.primaryLight,
                 },
               }}
-            >
-              Add your first prompt
-            </Button>
+            />
           </Paper>
         ) : (
           prompts.map((p, idx) => {
@@ -306,7 +302,12 @@ export default function DatasetEditorPage() {
             return (
               <Accordion key={stp.id || idx} disableGutters defaultExpanded={!stp.prompt}>
                 <AccordionSummary expandIcon={<ChevronDown size={16} />}>
-                  <Stack direction="row" alignItems="center" spacing={1} sx={{ flex: 1, mr: 1 }}>
+                  <Stack
+                    direction="row"
+                    alignItems="center"
+                    spacing="2px"
+                    sx={{ flex: 1, mr: "2px" }}
+                  >
                     <Typography
                       sx={{ fontWeight: 700, fontSize: "13px" }}
                     >{`Prompt ${idx + 1}`}</Typography>
@@ -321,7 +322,7 @@ export default function DatasetEditorPage() {
                         sx={{
                           fontSize: "12px",
                           color: palette.text.disabled,
-                          ml: 1,
+                          ml: "2px",
                           overflow: "hidden",
                           textOverflow: "ellipsis",
                           whiteSpace: "nowrap",
@@ -351,121 +352,82 @@ export default function DatasetEditorPage() {
                   </IconButton>
                 </AccordionSummary>
                 <AccordionDetails>
-                  <Paper variant="outlined" sx={{ p: 1.5 }}>
-                    <Stack spacing={2}>
+                  <Paper variant="outlined" sx={{ p: "3px" }}>
+                    <Stack spacing="4px">
                       {/* Category */}
-                      <Box>
-                        <Typography
-                          sx={{ fontSize: "12px", color: palette.text.tertiary, mb: 0.5 }}
-                        >
-                          Category
-                        </Typography>
-                        <TextField
-                          size="small"
-                          value={stp.category || ""}
-                          onChange={(e) => {
-                            const next = [...prompts];
-                            next[idx] = { ...next[idx], category: e.target.value };
-                            setPrompts(next);
-                          }}
-                          fullWidth
-                          placeholder="e.g., General, Safety, Factual"
-                        />
-                      </Box>
+                      <Field
+                        label="Category"
+                        value={stp.category || ""}
+                        onChange={(e) => {
+                          const next = [...prompts];
+                          next[idx] = { ...next[idx], category: e.target.value };
+                          setPrompts(next);
+                        }}
+                        placeholder="e.g., General, Safety, Factual"
+                      />
 
                       {/* Prompt */}
-                      <Box>
-                        <Typography
-                          sx={{ fontSize: "12px", color: palette.text.tertiary, mb: 0.5 }}
-                        >
-                          Prompt *
-                        </Typography>
-                        <TextField
-                          size="small"
-                          value={stp.prompt}
-                          onChange={(e) => {
-                            const next = [...prompts];
-                            next[idx] = { ...next[idx], prompt: e.target.value };
-                            setPrompts(next);
-                          }}
-                          fullWidth
-                          multiline
-                          minRows={2}
-                          placeholder="Enter the prompt text..."
-                        />
-                      </Box>
+                      <Field
+                        label="Prompt"
+                        isRequired
+                        value={stp.prompt}
+                        onChange={(e) => {
+                          const next = [...prompts];
+                          next[idx] = { ...next[idx], prompt: e.target.value };
+                          setPrompts(next);
+                        }}
+                        multiline
+                        minRows={2}
+                        placeholder="Enter the prompt text..."
+                      />
 
                       {/* Expected output */}
-                      <Box>
-                        <Typography
-                          sx={{ fontSize: "12px", color: palette.text.tertiary, mb: 0.5 }}
-                        >
-                          Expected output
-                        </Typography>
-                        <TextField
-                          size="small"
-                          value={stp.expected_output || ""}
-                          onChange={(e) => {
-                            const next = [...prompts];
-                            next[idx] = { ...next[idx], expected_output: e.target.value };
-                            setPrompts(next);
-                          }}
-                          fullWidth
-                          multiline
-                          minRows={2}
-                          placeholder="Expected model response..."
-                        />
-                      </Box>
+                      <Field
+                        label="Expected output"
+                        value={stp.expected_output || ""}
+                        onChange={(e) => {
+                          const next = [...prompts];
+                          next[idx] = { ...next[idx], expected_output: e.target.value };
+                          setPrompts(next);
+                        }}
+                        multiline
+                        minRows={2}
+                        placeholder="Expected model response..."
+                      />
 
                       {/* Keywords */}
-                      <Box>
-                        <Typography
-                          sx={{ fontSize: "12px", color: palette.text.tertiary, mb: 0.5 }}
-                        >
-                          Keywords
-                        </Typography>
-                        <TextField
-                          size="small"
-                          value={(stp.expected_keywords || []).join(", ")}
-                          onChange={(e) => {
-                            const value = e.target.value
-                              .split(",")
-                              .map((s) => s.trim())
-                              .filter(Boolean);
-                            const next = [...prompts];
-                            next[idx] = { ...next[idx], expected_keywords: value };
-                            setPrompts(next);
-                          }}
-                          fullWidth
-                          placeholder="Comma separated keywords"
-                        />
-                      </Box>
+                      <Field
+                        label="Keywords"
+                        value={(stp.expected_keywords || []).join(", ")}
+                        onChange={(e) => {
+                          const value = e.target.value
+                            .split(",")
+                            .map((s) => s.trim())
+                            .filter(Boolean);
+                          const next = [...prompts];
+                          next[idx] = { ...next[idx], expected_keywords: value };
+                          setPrompts(next);
+                        }}
+                        placeholder="Comma separated keywords"
+                      />
 
                       {/* Retrieval context */}
-                      <Box>
-                        <Typography
-                          sx={{ fontSize: "12px", color: palette.text.tertiary, mb: 0.5 }}
-                        >
-                          Retrieval context
-                        </Typography>
-                        <TextField
-                          size="small"
-                          value={(stp.retrieval_context || []).join("\n")}
-                          onChange={(e) => {
-                            const lines = e.target.value
-                              .split("\n")
-                              .map((s) => s.trim())
-                              .filter(Boolean);
-                            const next = [...prompts];
-                            next[idx] = { ...next[idx], retrieval_context: lines };
-                            setPrompts(next);
-                          }}
-                          fullWidth
-                          multiline
-                          minRows={2}
-                          placeholder="One context entry per line"
-                        />
-                      </Box>
+                      <Field
+                        label="Retrieval context"
+                        value={(stp.retrieval_context || []).join("\n")}
+                        onChange={(e) => {
+                          const lines = e.target.value
+                            .split("\n")
+                            .map((s) => s.trim())
+                            .filter(Boolean);
+                          const next = [...prompts];
+                          next[idx] = { ...next[idx], retrieval_context: lines };
+                          setPrompts(next);
+                        }}
+                        multiline
+                        minRows={2}
+                        placeholder="One context entry per line"
+                      />
                     </Stack>
                   </Paper>
                 </AccordionDetails>
@@ -476,24 +438,23 @@ export default function DatasetEditorPage() {
 
         {/* Add prompt button */}
         {prompts.length > 0 && (
-          <Button
+          <CustomizableButton
             variant="outlined"
             startIcon={<Plus size={16} />}
             onClick={handleAddPrompt}
+            text="Add prompt"
             sx={{
               "color": palette.brand.primary,
               "borderColor": palette.border.dark,
               "borderStyle": "dashed",
-              "py": 1.5,
+              "py": "3px",
               "&:hover": {
                 borderColor: palette.brand.primary,
                 backgroundColor: palette.brand.primaryLight,
                 borderStyle: "dashed",
               },
             }}
-          >
-            Add prompt
-          </Button>
+          />
         )}
       </Stack>
     </Box>

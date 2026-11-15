@@ -17,8 +17,7 @@ import AddNewRiskForm from "../../../../components/AddNewRiskForm";
 import StandardModal from "../../../../components/Modals/StandardModal";
 import Alert from "../../../../components/Alert";
 import useUsers from "../../../../../application/hooks/useUsers";
-import { useAuth } from "../../../../../application/hooks/useAuth";
-import allowedRoles from "../../../../../application/constants/permissions";
+import { useCanCheck } from "../../../../../application/hooks/useCan";
 import { handleAlert } from "../../../../../application/tools/alertUtils";
 import { suggestRisksWithAI } from "../../../../../application/repository/projectRisk.repository";
 import type {
@@ -37,7 +36,7 @@ import {
   mapFreeformSuggestionToMitigationForm,
   RISK_SUGGESTION_SOURCE_LABELS,
 } from "../../../../components/AddNewRiskForm/riskSuggestionMappers";
-import { palette } from "../../../../themes/palette";
+import { palette, radiusPx } from "../../../../themes/palette";
 
 type SuggestionItem =
   | { kind: "matched"; key: string; entry: MatchedCatalogRisk }
@@ -66,8 +65,8 @@ interface AiRiskSuggestionsProps {
 export function AiRiskSuggestions({ onRiskSaved }: AiRiskSuggestionsProps) {
   const [searchParams] = useSearchParams();
   const projectId = parseInt(searchParams.get("projectId") ?? "", 10);
-  const { userRoleName } = useAuth();
-  const canCreateRisks = allowedRoles.projectRisks.create.includes(userRoleName);
+  const can = useCanCheck();
+  const canCreateRisks = can("risks.edit");
   const { users, loading: usersLoading } = useUsers();
 
   const [isSuggesting, setIsSuggesting] = useState(false);
@@ -241,9 +240,9 @@ export function AiRiskSuggestions({ onRiskSaved }: AiRiskSuggestionsProps) {
           sx={{
             width: "100%",
             mt: 2,
-            background: "linear-gradient(135deg, #FEFFFE 0%, #F8F9FA 100%)",
+            background: `linear-gradient(135deg, ${palette.background.main} 0%, ${palette.background.alt} 100%)`,
             border: `1px solid ${palette.border.light}`,
-            borderRadius: "8px",
+            borderRadius: radiusPx.lg,
             p: "14px 16px",
           }}
         >
@@ -294,7 +293,7 @@ export function AiRiskSuggestions({ onRiskSaved }: AiRiskSuggestionsProps) {
                     key={item.key}
                     sx={{
                       "border": `1px solid ${palette.border.light}`,
-                      "borderRadius": "4px",
+                      "borderRadius": radiusPx.sm,
                       "p": "8px",
                       "backgroundColor": palette.background.main,
                       "&:hover": { borderColor: palette.border.dark },

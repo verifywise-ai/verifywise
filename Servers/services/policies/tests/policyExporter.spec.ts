@@ -21,8 +21,14 @@ const mockPage = {
   close: jest.fn(),
 };
 
-const mockBrowser = {
+const mockContext = {
   newPage: jest.fn().mockResolvedValue(mockPage),
+  route: jest.fn(),
+  close: jest.fn(),
+};
+
+const mockBrowser = {
+  newContext: jest.fn().mockResolvedValue(mockContext),
   isConnected: jest.fn().mockReturnValue(true),
   close: jest.fn(),
 };
@@ -175,7 +181,8 @@ describe("policyExporter", () => {
     beforeEach(async () => {
       await closeBrowser();
       jest.clearAllMocks();
-      mockBrowser.newPage.mockResolvedValue(mockPage);
+      mockContext.newPage.mockResolvedValue(mockPage);
+      mockBrowser.newContext.mockResolvedValue(mockContext);
       mockBrowser.isConnected.mockReturnValue(true);
       mockLaunch.mockResolvedValue(mockBrowser);
       mockPage.pdf.mockResolvedValue(Buffer.from("%PDF-1.4 fake"));
@@ -188,12 +195,41 @@ describe("policyExporter", () => {
       expect(result.toString()).toBe("%PDF-1.4 fake");
     });
 
-    it("launches a headless browser with the sandbox flags", async () => {
-      await generatePolicyPDF("Security Policy", "<p>Body</p>", 1);
+    describe("browser launch", () => {
+      const launchArgs = [
+        "--no-sandbox",
+        "--disable-setuid-sandbox",
+        "--disable-dev-shm-usage",
+        "--disable-gpu",
+      ];
+      const originalPath = process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH;
 
-      expect(mockLaunch).toHaveBeenCalledWith({
-        headless: true,
-        args: ["--no-sandbox", "--disable-setuid-sandbox"],
+      afterEach(() => {
+        if (originalPath === undefined) {
+          delete process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH;
+        } else {
+          process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH = originalPath;
+        }
+      });
+
+      it("uses Playwright's own browser when no executable path is configured", async () => {
+        delete process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH;
+
+        await generatePolicyPDF("Security Policy", "<p>Body</p>", 1);
+
+        expect(mockLaunch).toHaveBeenCalledWith({ headless: true, args: launchArgs });
+      });
+
+      it("uses the configured executable, as the Docker image requires", async () => {
+        process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH = "/usr/bin/chromium-browser";
+
+        await generatePolicyPDF("Security Policy", "<p>Body</p>", 1);
+
+        expect(mockLaunch).toHaveBeenCalledWith({
+          headless: true,
+          args: launchArgs,
+          executablePath: "/usr/bin/chromium-browser",
+        });
       });
     });
 
@@ -224,20 +260,80 @@ describe("policyExporter", () => {
       });
     });
 
-    it("closes the page but leaves the browser open for reuse", async () => {
+    it("closes the context but leaves the browser open for reuse", async () => {
       await generatePolicyPDF("Security Policy", "<p>Body</p>", 1);
 
-      expect(mockPage.close).toHaveBeenCalledTimes(1);
+      expect(mockContext.close).toHaveBeenCalledTimes(1);
       expect(mockBrowser.close).not.toHaveBeenCalled();
     });
 
-    it("closes the page even when PDF rendering fails", async () => {
+    it("closes the context even when PDF rendering fails", async () => {
       mockPage.pdf.mockRejectedValue(new Error("render failed"));
 
       await expect(generatePolicyPDF("Security Policy", "<p>Body</p>", 1)).rejects.toThrow(
         "render failed",
       );
-      expect(mockPage.close).toHaveBeenCalledTimes(1);
+      expect(mockContext.close).toHaveBeenCalledTimes(1);
+    });
+
+    describe("rendering untrusted policy HTML", () => {
+      it("removes scripts and event handlers even if the stored HTML still has them", async () => {
+        await generatePolicyPDF(
+          "Security Policy",
+          '<p onclick="steal()">Kept</p><script>fetch("http://internal/")</script>',
+          1,
+        );
+
+        const [html] = mockPage.setContent.mock.calls[0];
+        expect(html).toContain("Kept");
+        expect(html).not.toContain("internal/");
+        expect(html).not.toContain("onclick");
+      });
+
+      it("keeps base64 images from older policies, but only on images", async () => {
+        await generatePolicyPDF(
+          "Security Policy",
+          '<img src="data:image/png;base64,AAAA"><a href="data:text/html,x">Link</a>',
+          1,
+        );
+
+        const [html] = mockPage.setContent.mock.calls[0];
+        expect(html).toContain('src="data:image/png;base64,AAAA"');
+        expect(html).not.toContain("data:text/html");
+      });
+
+      it("renders with JavaScript disabled", async () => {
+        await generatePolicyPDF("Security Policy", "<p>Body</p>", 1);
+
+        expect(mockBrowser.newContext).toHaveBeenCalledWith({ javaScriptEnabled: false });
+      });
+
+      it("blocks every request except inlined data and the web font", async () => {
+        await generatePolicyPDF("Security Policy", "<p>Body</p>", 1);
+
+        const [pattern, handler] = mockContext.route.mock.calls[0];
+        expect(pattern).toBe("**/*");
+
+        const decide = (url: string) => {
+          const route = {
+            request: () => ({ url: () => url }),
+            continue: jest.fn(),
+            abort: jest.fn(),
+          };
+          handler(route);
+          return route.continue.mock.calls.length > 0 ? "allowed" : "blocked";
+        };
+
+        expect(decide("data:image/png;base64,AAAA")).toBe("allowed");
+        expect(decide("https://fonts.googleapis.com/css2?family=Inter")).toBe("allowed");
+        expect(decide("https://fonts.gstatic.com/s/inter.woff2")).toBe("allowed");
+        expect(decide("http://169.254.169.254/latest/meta-data/")).toBe("blocked");
+        expect(decide("http://localhost:3000/api/users")).toBe("blocked");
+        expect(decide("http://fonts.googleapis.com/insecure")).toBe("blocked");
+        expect(decide("https://fonts.googleapis.com.evil.test/x")).toBe("blocked");
+        expect(decide("file:///etc/passwd")).toBe("blocked");
+        expect(decide("not a url")).toBe("blocked");
+      });
     });
 
     it("reuses the singleton browser across calls", async () => {
@@ -245,7 +341,7 @@ describe("policyExporter", () => {
       await generatePolicyPDF("Second", "<p>b</p>", 1);
 
       expect(mockLaunch).toHaveBeenCalledTimes(1);
-      expect(mockBrowser.newPage).toHaveBeenCalledTimes(2);
+      expect(mockBrowser.newContext).toHaveBeenCalledTimes(2);
     });
 
     it("relaunches the browser when the existing instance has disconnected", async () => {
@@ -316,7 +412,8 @@ describe("policyExporter", () => {
     beforeEach(async () => {
       await closeBrowser();
       jest.clearAllMocks();
-      mockBrowser.newPage.mockResolvedValue(mockPage);
+      mockContext.newPage.mockResolvedValue(mockPage);
+      mockBrowser.newContext.mockResolvedValue(mockContext);
       mockBrowser.isConnected.mockReturnValue(true);
       mockLaunch.mockResolvedValue(mockBrowser);
       mockPage.pdf.mockResolvedValue(Buffer.from("%PDF-1.4 fake"));

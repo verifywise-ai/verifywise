@@ -239,7 +239,7 @@ describe("project.repository", () => {
 
       const result = await createProject({ body: createData });
 
-      expect(apiServices.post).toHaveBeenCalledWith("/projects", createData);
+      expect(apiServices.post).toHaveBeenCalledWith("/v1/projects", createData);
       expect(result).toEqual(response);
     });
 
@@ -268,7 +268,7 @@ describe("project.repository", () => {
 
       await createProject({ body: createData });
 
-      expect(apiServices.post).toHaveBeenCalledWith("/projects", createData);
+      expect(apiServices.post).toHaveBeenCalledWith("/v1/projects", createData);
     });
 
     it("should handle validation errors on create", async () => {
@@ -326,7 +326,7 @@ describe("project.repository", () => {
 
       const result = await updateProject({ id: 1, body: updateData });
 
-      expect(apiServices.patch).toHaveBeenCalledWith("/projects/1", updateData);
+      expect(apiServices.patch).toHaveBeenCalledWith("/v1/projects/1", updateData);
       expect(result).toEqual(response);
       expect(result.data.name).toBe("Updated Project");
     });
@@ -347,7 +347,7 @@ describe("project.repository", () => {
 
       await updateProject({ id: 15, body: { status: "archived" } });
 
-      expect(apiServices.patch).toHaveBeenCalledWith("/projects/15", {
+      expect(apiServices.patch).toHaveBeenCalledWith("/v1/projects/15", {
         status: "archived",
       });
     });
@@ -362,7 +362,7 @@ describe("project.repository", () => {
 
       await updateProject({ id: 1, body: updateData });
 
-      expect(apiServices.patch).toHaveBeenCalledWith("/projects/1", updateData);
+      expect(apiServices.patch).toHaveBeenCalledWith("/v1/projects/1", updateData);
     });
 
     it("should handle project not found on update", async () => {

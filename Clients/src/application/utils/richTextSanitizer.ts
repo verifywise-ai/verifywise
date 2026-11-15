@@ -137,13 +137,23 @@ function sanitizeStyleAttribute(styleValue: string): string {
   const temp = document.createElement("div");
   temp.style.cssText = styleValue;
 
+  // Parse the browser-serialized cssText instead of iterating
+  // CSSStyleDeclaration indices: modern CSS parsers (jsdom 31+ / cssstyle)
+  // decompose shorthands such as `text-align` into derived property names
+  // (`text-align-all`), which would miss the allowlist lookup and silently
+  // drop legitimate styles. Serialization still emits the canonical name.
   const allowed: string[] = [];
-  for (let i = 0; i < temp.style.length; i++) {
-    const property = temp.style.item(i);
-    if (RICH_TEXT_ALLOWED_STYLES.has(property)) {
-      const value = temp.style.getPropertyValue(property);
-      allowed.push(`${property}:${value}`);
+  for (const declaration of temp.style.cssText.split(";")) {
+    const colonIndex = declaration.indexOf(":");
+    if (colonIndex === -1) {
+      continue;
     }
+    const property = declaration.slice(0, colonIndex).trim();
+    if (!RICH_TEXT_ALLOWED_STYLES.has(property)) {
+      continue;
+    }
+    const value = declaration.slice(colonIndex + 1).trim();
+    allowed.push(`${property}:${value}`);
   }
 
   return allowed.join(";");

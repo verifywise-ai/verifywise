@@ -2,7 +2,7 @@ import { Box, Paper, Typography, Stack, Button } from "@mui/material";
 import CustomTextField from "../Components/CustomTextField/CustomTextField";
 import { CheckCircle as CheckCircleOutlineIcon } from "lucide-react";
 import { downloadResource } from "../../../../application/tools/downloadResource";
-import { brand } from "../../../themes/palette";
+import { brand, palette as vwPalette } from "../../../themes/palette";
 
 const Overview = ({
   data,
@@ -118,7 +118,7 @@ const Overview = ({
             sx={{
               background: "background.main",
               borderRadius: 1,
-              border: "1px solid #E0E0E0",
+              border: `1px solid ${vwPalette.border.light}`,
               p: 3,
               width: "100%",
             }}
@@ -133,7 +133,10 @@ const Overview = ({
                   sx={{ py: 0.5 }}
                 >
                   <Box display="flex" alignItems="center" gap={1}>
-                    <CheckCircleOutlineIcon size={24} style={{ color: "#10B981" }} />
+                    <CheckCircleOutlineIcon
+                      size={24}
+                      style={{ color: vwPalette.status.success.strong }}
+                    />
                     <Typography variant="body2">{resource.name}</Typography>
                   </Box>
                   <Button
@@ -144,7 +147,7 @@ const Overview = ({
                       minWidth: 100,
                       backgroundColor: "background.main",
                       color: "text.secondary",
-                      border: "1px solid #d0d5dd",
+                      border: `1px solid ${vwPalette.border.dark}`,
                       borderRadius: 1,
                     }}
                   >

@@ -13,7 +13,7 @@ import * as path from "path";
  * into Express, Sequelize, notifications and audit logging to exercise its four
  * commit sites from a unit test without mocking half the backend. These assert
  * the policy against the source instead: the enqueue appears in the create,
- * update and set_category paths, and nowhere near the delete path.
+ * update and bulk edit paths, and nowhere near the delete path.
  */
 const source = fs.readFileSync(path.join(__dirname, "..", "risks.ctrl.ts"), "utf8");
 
@@ -30,8 +30,11 @@ describe("risk link enqueue matrix (amendment B)", () => {
     expect(enqueueRiskLinkRecompute).toBeDefined();
   });
 
+  // createRisk and the AI Detection "add suggested risk" route share the
+  // post-commit steps in runRiskCreatedSideEffects.
   it("enqueues after creating a risk", () => {
-    expect(bodyOf("createRisk")).toContain("enqueueRiskLinkRecompute(");
+    expect(bodyOf("createRisk")).toContain("runRiskCreatedSideEffects(");
+    expect(bodyOf("runRiskCreatedSideEffects")).toContain("enqueueRiskLinkRecompute(");
   });
 
   it("enqueues after updating a risk", () => {
@@ -43,10 +46,12 @@ describe("risk link enqueue matrix (amendment B)", () => {
     expect(bodyOf("deleteRiskById")).not.toContain("enqueueRiskLinkRecompute(");
   });
 
-  it("enqueues from the bulk path only under set_category", () => {
+  // The bulk edits match the single edit, which enqueues on every update; a
+  // bulk archive matches the delete and does not.
+  it("enqueues from the bulk path for edits, never for archive", () => {
     const bulk = bodyOf("bulkUpdateProjectRisks");
     expect(bulk).toContain("enqueueRiskLinkRecompute(");
-    expect(bulk).toContain('action === "set_category"');
+    expect(bulk).toContain('action !== "archive"');
   });
 });
 

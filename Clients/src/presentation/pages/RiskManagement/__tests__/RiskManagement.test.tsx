@@ -16,15 +16,6 @@ vi.mock("../../../../application/hooks/useUsers", () => ({
   }),
 }));
 
-vi.mock("../../../../application/hooks/useTableGrouping", () => ({
-  useTableGrouping: () => [],
-  useGroupByState: () => ({
-    groupBy: null,
-    groupSortOrder: "asc",
-    handleGroupChange: vi.fn(),
-  }),
-}));
-
 vi.mock("../../../../application/hooks/useFilterBy", () => ({
   useFilterBy: () => ({
     filterData: (data: unknown[]) => data,
@@ -72,17 +63,6 @@ vi.mock("../../../../application/events/aiActionEvents", () => ({
 // Mock infrastructure
 vi.mock("../../../../infrastructure/api/networkServices", () => ({
   apiServices: {},
-}));
-
-// Mock constants
-vi.mock("../../../../application/constants/permissions", () => ({
-  default: {
-    projectRisks: {
-      create: ["Admin", "Editor"],
-      update: ["Admin", "Editor"],
-      delete: ["Admin"],
-    },
-  },
 }));
 
 // Mock child components
@@ -140,20 +120,25 @@ vi.mock("../../Extensions/risk-import/RiskImportModal", () => ({
 }));
 
 vi.mock("../../../components/Layout/PageHeaderExtended", () => ({
-  PageHeaderExtended: ({ children, title }: any) => (
+  PageHeaderExtended: ({ children, title, summaryCards }: any) => (
     <div data-testid="page-header-extended">
       <span>{title}</span>
+      {summaryCards}
       {children}
     </div>
   ),
 }));
 
 vi.mock("../../../components/Cards/StatusTileCards", () => ({
-  StatusTileCards: () => <div data-testid="status-tile-cards" />,
-}));
-
-vi.mock("../../../components/Table/GroupedTableView", () => ({
-  GroupedTableView: () => <div data-testid="grouped-table-view" />,
+  StatusTileCards: ({ items }: { items: { key: string; count: number }[] }) => (
+    <div data-testid="status-tile-cards">
+      {items.map((item) => (
+        <span key={item.key} data-testid={`tile-${item.key}`}>
+          {item.count}
+        </span>
+      ))}
+    </div>
+  ),
 }));
 
 vi.mock("../../../components/Table/ExportMenu", () => ({
@@ -166,10 +151,6 @@ vi.mock("../../../components/Table/FilterBy", () => ({
   FilterCondition: {},
 }));
 
-vi.mock("../../../components/Table/GroupBy", () => ({
-  GroupBy: () => <div data-testid="group-by" />,
-}));
-
 vi.mock("../../../components/Table/ColumnSelector", () => ({
   ColumnSelector: () => <div data-testid="column-selector" />,
 }));
@@ -179,6 +160,8 @@ vi.mock("../../../components/button/customizable-button", () => ({
 }));
 
 import RiskManagement from "../index";
+import { getAllProjectRisks } from "../../../../application/repository/projectRisk.repository";
+import { screen, waitFor } from "@testing-library/react";
 
 describe("RiskManagement", () => {
   beforeEach(() => {
@@ -193,5 +176,25 @@ describe("RiskManagement", () => {
   it("renders without crashing", () => {
     const { container } = renderWithProviders(<RiskManagement />);
     expect(container).toBeTruthy();
+  });
+
+  it("counts the summary cards by the effective level", async () => {
+    vi.mocked(getAllProjectRisks).mockResolvedValue({
+      data: [
+        // inherent Very high, current Low: counted as Low
+        { id: 1, risk_level_autocalculated: "Very high risk", current_risk_level: "Low risk" },
+        // current null: inherent High
+        { id: 2, risk_level_autocalculated: "High risk", current_risk_level: null },
+        // No risk and Very low both land in the very-low card
+        { id: 3, risk_level_autocalculated: "No risk", current_risk_level: null },
+        { id: 4, risk_level_autocalculated: "Low risk", current_risk_level: "Very low risk" },
+      ],
+    } as never);
+    renderWithProviders(<RiskManagement />);
+    await waitFor(() => expect(screen.getByTestId("tile-Total")).toHaveTextContent("4"));
+    expect(screen.getByTestId("tile-Very high")).toHaveTextContent("0");
+    expect(screen.getByTestId("tile-High")).toHaveTextContent("1");
+    expect(screen.getByTestId("tile-Low")).toHaveTextContent("1");
+    expect(screen.getByTestId("tile-Very low")).toHaveTextContent("2");
   });
 });

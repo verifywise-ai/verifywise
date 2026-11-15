@@ -1,4 +1,5 @@
 import {
+  isCustomFieldMapping,
   MAX_AFFIX_LENGTH,
   MAX_CONDITIONS,
   MAX_DECIMALS,
@@ -61,6 +62,7 @@ export function validateSchemaLogic(schema: LogicSchema, entityType: string): Sc
     : [];
   const errors: SchemaLogicError[] = [];
   const seenIds = new Set<string>();
+  const seenCustomFields = new Set<string>();
   // Fields some show/hide condition depends on: rules match options by value.
   const referencedIds = new Set(
     fields.flatMap((field) =>
@@ -76,6 +78,13 @@ export function validateSchemaLogic(schema: LogicSchema, entityType: string): Sc
 
     if (seenIds.has(field.id)) add(`another field already uses the id "${field.id}"`);
     seenIds.add(field.id);
+
+    if (isCustomFieldMapping(field.entityFieldMapping)) {
+      if (seenCustomFields.has(field.entityFieldMapping)) {
+        add("two questions map to the same custom field");
+      }
+      seenCustomFields.add(field.entityFieldMapping);
+    }
 
     // Rules match options by value, so a field a rule uses needs unique,
     // non-blank values. Only those fields are checked: older forms may hold

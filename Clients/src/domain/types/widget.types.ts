@@ -45,6 +45,12 @@ export interface DatePickerCoreProps {
   disabled?: boolean;
   id?: string;
   onBlur?: () => void;
+  /** Earliest date that can be picked. */
+  minDate?: Dayjs;
+  /** Fires when a date is confirmed in the calendar, not on each typed character. */
+  onAccept?: (date: Dayjs | null) => void;
+  /** Blocks typing in the field, leaving the calendar as the only way to change the date. */
+  isFieldReadOnly?: boolean;
 }
 
 export interface DropDownsProps {
@@ -112,8 +118,8 @@ export interface IStatusDropdownProps {
   onStatusChange: (newStatus: string) => Promise<boolean>;
   disabled?: boolean;
   size?: "small" | "medium";
-  allowedRoles?: string[];
-  userRole?: string;
+  /** Whether the user may change the status (their permission). Defaults to true. */
+  canEdit?: boolean;
   statusOptions?: string[];
 }
 
@@ -140,7 +146,8 @@ export interface ITimelineEvent {
   risk: RiskModel;
   title: string;
   description: string;
-  riskLevel: number;
+  /** The risk's effective level label, e.g. "Very high risk". */
+  riskLevel: string;
 }
 
 export interface IGenerateReportProps {

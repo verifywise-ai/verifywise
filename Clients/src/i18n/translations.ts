@@ -27,6 +27,7 @@ import {
   es as agentDiscoveryEs,
 } from "./modules/agentDiscovery";
 import { de as aiAppsDe, fr as aiAppsFr, es as aiAppsEs } from "./modules/aiApps";
+import { de as aiAppsBulkDe, fr as aiAppsBulkFr, es as aiAppsBulkEs } from "./modules/aiAppsBulk";
 import { de as aiAuditDe, fr as aiAuditFr, es as aiAuditEs } from "./modules/aiAudit";
 import {
   de as aiContentReviewDe,
@@ -76,6 +77,12 @@ import {
 import { de as evidenceDe, fr as evidenceFr, es as evidenceEs } from "./modules/evidence";
 import { de as frameworksDe, fr as frameworksFr, es as frameworksEs } from "./modules/frameworks";
 import { de as governanceDe, fr as governanceFr, es as governanceEs } from "./modules/governance";
+import {
+  de as changeNoticeDe,
+  fr as changeNoticeFr,
+  es as changeNoticeEs,
+} from "./modules/changeNotice";
+import { de as homeQueueDe, fr as homeQueueFr, es as homeQueueEs } from "./modules/homeQueue";
 import { de as incidentsDe, fr as incidentsFr, es as incidentsEs } from "./modules/incidents";
 import {
   de as intakeLiveChecksDe,
@@ -118,6 +125,7 @@ import {
   es as useCaseLifecycleEs,
 } from "./modules/useCaseLifecycle";
 import { de as vendorsDe, fr as vendorsFr, es as vendorsEs } from "./modules/vendors";
+import { de as commonDe, fr as commonFr, es as commonEs } from "./modules/common";
 
 export type Lang = "en" | "de" | "fr" | "es";
 
@@ -125,6 +133,7 @@ export const translations: Record<string, Record<string, string>> = {
   de: {
     ...agentDiscoveryDe,
     ...aiAppsDe,
+    ...aiAppsBulkDe,
     ...aiAuditDe,
     ...aiContentReviewDe,
     ...aiDetectionDe,
@@ -135,6 +144,7 @@ export const translations: Record<string, Record<string, string>> = {
     ...approvalsDe,
     ...authenticationDe,
     ...automationsDe,
+    ...changeNoticeDe,
     ...dashboardDe,
     ...datasetsDe,
     ...evalsDe,
@@ -142,6 +152,7 @@ export const translations: Record<string, Record<string, string>> = {
     ...evidenceDe,
     ...frameworksDe,
     ...governanceDe,
+    ...homeQueueDe,
     ...incidentsDe,
     ...intakeLiveChecksDe,
     ...intakeLogicDe,
@@ -5796,11 +5807,13 @@ export const translations: Record<string, Record<string, string>> = {
       "Wird im öffentlichen Formular unter dem Feld angezeigt",
     "Use case and AI app lifecycles, intake form logic and MCP server auth":
       "Lebenszyklen für Anwendungsfälle und KI-Apps, Logik für Aufnahmeformulare und MCP-Server-Authentifizierung",
+    ...commonDe,
   },
 
   fr: {
     ...agentDiscoveryFr,
     ...aiAppsFr,
+    ...aiAppsBulkFr,
     ...aiAuditFr,
     ...aiContentReviewFr,
     ...aiDetectionFr,
@@ -5811,6 +5824,7 @@ export const translations: Record<string, Record<string, string>> = {
     ...approvalsFr,
     ...authenticationFr,
     ...automationsFr,
+    ...changeNoticeFr,
     ...dashboardFr,
     ...datasetsFr,
     ...evalsFr,
@@ -5818,6 +5832,7 @@ export const translations: Record<string, Record<string, string>> = {
     ...evidenceFr,
     ...frameworksFr,
     ...governanceFr,
+    ...homeQueueFr,
     ...incidentsFr,
     ...intakeLiveChecksFr,
     ...intakeLogicFr,
@@ -11406,10 +11421,13 @@ export const translations: Record<string, Record<string, string>> = {
       "Cycles de vie des cas d'usage et des applications d'IA, logique des formulaires d'intake et authentification des serveurs MCP",
 
     "Request": "Requête",
+    ...commonFr,
   },
+
   es: {
     ...agentDiscoveryEs,
     ...aiAppsEs,
+    ...aiAppsBulkEs,
     ...aiAuditEs,
     ...aiContentReviewEs,
     ...aiDetectionEs,
@@ -11420,6 +11438,7 @@ export const translations: Record<string, Record<string, string>> = {
     ...approvalsEs,
     ...authenticationEs,
     ...automationsEs,
+    ...changeNoticeEs,
     ...dashboardEs,
     ...datasetsEs,
     ...evalsEs,
@@ -11427,6 +11446,7 @@ export const translations: Record<string, Record<string, string>> = {
     ...evidenceEs,
     ...frameworksEs,
     ...governanceEs,
+    ...homeQueueEs,
     ...incidentsEs,
     ...intakeLiveChecksEs,
     ...intakeLogicEs,
@@ -16906,5 +16926,6 @@ export const translations: Record<string, Record<string, string>> = {
       "Introduzca una dirección web completa que empiece por http:// o https://",
     "Shown under the field on the public form":
       "Se muestra debajo del campo en el formulario público",
+    ...commonEs,
   },
 };

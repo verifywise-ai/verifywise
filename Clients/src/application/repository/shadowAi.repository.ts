@@ -127,8 +127,8 @@ export interface GetUsersParams {
   limit?: number;
   period?: string;
   department?: string;
-  sort_by?: string;
-  order?: string;
+  /** Server order; omitted means most prompts first. */
+  sort?: "risk" | "email";
 }
 
 export interface UsersResponse {
@@ -144,8 +144,7 @@ export async function getUsers(params: GetUsersParams = {}): Promise<UsersRespon
   if (params.limit) queryParams.append("limit", params.limit.toString());
   if (params.period) queryParams.append("period", params.period);
   if (params.department) queryParams.append("department", params.department);
-  if (params.sort_by) queryParams.append("sort_by", params.sort_by);
-  if (params.order) queryParams.append("order", params.order);
+  if (params.sort) queryParams.append("sort", params.sort);
   const qs = queryParams.toString();
   const response = await apiServices.get<{ data: UsersResponse }>(
     `${BASE_URL}/users${qs ? `?${qs}` : ""}`,
@@ -202,8 +201,8 @@ export interface GetToolsParams {
   page?: number;
   limit?: number;
   status?: ShadowAiToolStatus;
-  sort_by?: string;
-  order?: string;
+  /** Server order; omitted means most recently seen first. */
+  sort?: "risk" | "users" | "events" | "name";
 }
 
 export interface ToolsResponse {
@@ -218,8 +217,7 @@ export async function getTools(params: GetToolsParams = {}): Promise<ToolsRespon
   if (params.page) queryParams.append("page", params.page.toString());
   if (params.limit) queryParams.append("limit", params.limit.toString());
   if (params.status) queryParams.append("status", params.status);
-  if (params.sort_by) queryParams.append("sort_by", params.sort_by);
-  if (params.order) queryParams.append("order", params.order);
+  if (params.sort) queryParams.append("sort", params.sort);
   const qs = queryParams.toString();
   const response = await apiServices.get<{ data: ToolsResponse }>(
     `${BASE_URL}/tools${qs ? `?${qs}` : ""}`,

@@ -1,7 +1,8 @@
-import { SlackNotificationRoutingType } from "../enums/slack.enum";
+import { SlackDeliveryScope, SlackNotificationRoutingType } from "../enums/slack.enum";
 
 export interface ISlackWebhook {
   id?: number;
+  organization_id?: number | null; // FK to organizations; NULL only on rows whose owner had no organization
   access_token_iv?: string;
   access_token: string;
   scope: string;
@@ -17,4 +18,5 @@ export interface ISlackWebhook {
   updated_at?: Date;
   is_active?: boolean;
   routing_type?: SlackNotificationRoutingType[];
+  delivery_scope?: SlackDeliveryScope;
 }

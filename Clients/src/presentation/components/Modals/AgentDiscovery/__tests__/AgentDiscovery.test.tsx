@@ -33,8 +33,16 @@ vi.mock("../../../../../application/repository/entity.repository", () => ({
 // tests default to granting it.
 const permissionState = vi.hoisted(() => ({ canManage: true }));
 vi.mock("../../../../../application/hooks/useMyPermissions", () => ({
-  useHasPermission: (key: string) => key === "agentDiscovery.admin" && permissionState.canManage,
+  useMyPermissions: () => ({ permissions: undefined, isLoading: true, error: null }),
 }));
+vi.mock("../../../../../application/hooks/useCan", () => {
+  const useCan = (key: string) => key === "agentDiscovery.admin" && permissionState.canManage;
+  return {
+    useCan,
+    useCanCheck: () => useCan,
+    usePermissionsSettled: () => true,
+  };
+});
 vi.mock("../../../../../infrastructure/api/networkServices", () => ({
   apiServices: {
     post: vi.fn().mockResolvedValue({}),

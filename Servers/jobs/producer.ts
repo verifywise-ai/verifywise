@@ -1,6 +1,9 @@
 export * from "../services/slack/slackProducer";
 
-import { notificationQueue, scheduleDailyNotification } from "../services/slack/slackProducer";
+import {
+  notificationQueue,
+  removeRetiredSlackPolicyScheduler,
+} from "../services/slack/slackProducer";
 import { scheduleVendorResearchScan } from "../services/vendorResearch/queue";
 import { scheduleVendorRiskDatabaseSync } from "../services/vendorResearch/vrdb/queue";
 import logger from "../utils/logger/fileLogger";
@@ -11,7 +14,8 @@ import {
   scheduleVendorReviewDateNotification,
   schedulePMMHourlyCheck,
   scheduleShadowAiJobs,
-  schedulePolicyDueSoonNotification,
+  removeRetiredPolicyDueSoonScheduler,
+  schedulePolicyReviewReminderSweep,
   scheduleAgentDiscoverySync,
   scheduleAiDetectionScanCheck,
   scheduleAiGatewayRiskDetection,
@@ -29,6 +33,7 @@ import {
   scheduleFileExpirySweep,
   scheduleIntakeConfirmationSweep,
   scheduleLifecycleConfirmationSweep,
+  scheduleTrainingAssignmentReminderSweep,
   scheduleAiTrustIndexSync,
   scheduleEvidenceFreshnessSweep,
   scheduleDeadlineEscalationSweep,
@@ -64,9 +69,7 @@ export async function addAllJobs(): Promise<void> {
   await safeSchedule("slack-legacy-repeatables", () =>
     removeLegacyRepeatableJobs(notificationQueue),
   );
-  await safeSchedule("daily-notification", scheduleDailyNotification);
   await safeSchedule("vendor-review-date-notification", scheduleVendorReviewDateNotification);
-  await safeSchedule("policy-due-soon-notification", schedulePolicyDueSoonNotification);
   await safeSchedule("report-notification", scheduleReportNotification);
   await safeSchedule("pmm-hourly-check", schedulePMMHourlyCheck);
   await safeSchedule("shadow-ai-jobs", scheduleShadowAiJobs);
@@ -87,6 +90,12 @@ export async function addAllJobs(): Promise<void> {
   await safeSchedule("file-expiry-sweep", scheduleFileExpirySweep);
   await safeSchedule("intake-confirmation-sweep", scheduleIntakeConfirmationSweep);
   await safeSchedule("lifecycle-confirmation-sweep", scheduleLifecycleConfirmationSweep);
+  await safeSchedule("policy-review-reminder-sweep", schedulePolicyReviewReminderSweep);
+  // The two jobs the sweep replaced. Their schedulers persist in Redis.
+  // Can be removed one release after the policy review reminder sweep ships.
+  await safeSchedule("retired-policy-due-soon-notification", removeRetiredPolicyDueSoonScheduler);
+  await safeSchedule("retired-slack-policy-notification", removeRetiredSlackPolicyScheduler);
+  await safeSchedule("training-assignment-reminder-sweep", scheduleTrainingAssignmentReminderSweep);
   await safeSchedule("evidence-freshness-sweep", scheduleEvidenceFreshnessSweep);
   await safeSchedule("deadline-escalation-sweep", scheduleDeadlineEscalationSweep);
   await safeSchedule("stale-inheritance-notify-sweep", scheduleStaleInheritanceNotifySweep);

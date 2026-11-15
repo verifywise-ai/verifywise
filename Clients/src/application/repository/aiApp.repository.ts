@@ -4,7 +4,10 @@ import {
   IAIAppDetail,
   IAIAppListResponse,
   IAIAppUpdatePayload,
+  IAIAppUseCases,
+  ICreateAiAppPreview,
   IGetAiAppsFilters,
+  ILinkedAiApp,
   IPolicySuggestion,
 } from "../../domain/interfaces/i.aiApp";
 import { AiAppStatus } from "../../domain/enums/aiApp.enum";
@@ -27,9 +30,9 @@ export async function getAllAiApps(
   filters: IGetAiAppsFilters = {},
   signal?: AbortSignal,
 ): Promise<IAIAppListResponse> {
-  // The lifecycle stage filter and columns are only on the v1 list (#5193).
-  const base = filters.lifecycleStage ? "/v1/ai-apps" : "/ai-apps";
-  const response = await apiServices.get(`${base}${buildQueryString(filters)}`, {
+  // The v1 list is the legacy list plus the lifecycle stage filter and columns
+  // (#5193), search, and each app's custom field values (#5262).
+  const response = await apiServices.get(`/v1/ai-apps${buildQueryString(filters)}`, {
     signal,
   });
   // Backend wraps payloads as STATUS_CODE[200]({ ai_apps, total }) → { message, data },
@@ -106,4 +109,44 @@ export async function getPolicySuggestions(
 export async function promoteFromShadowAi(shadowAiToolId: number): Promise<IAIAppDetail> {
   const response = await apiServices.post(`/ai-apps/from-shadow-ai/${shadowAiToolId}`, {});
   return (response.data as { data: IAIAppDetail }).data;
+}
+
+export async function getProjectAiApps(
+  projectId: number,
+  signal?: AbortSignal,
+): Promise<ILinkedAiApp[]> {
+  const response = await apiServices.get(`/v1/projects/${projectId}/ai-apps`, { signal });
+  return (response.data as { data: ILinkedAiApp[] }).data;
+}
+
+export async function getCreateAiAppPreview(
+  projectId: number,
+  signal?: AbortSignal,
+): Promise<ICreateAiAppPreview> {
+  const response = await apiServices.get(`/v1/projects/${projectId}/create-ai-app`, { signal });
+  return (response.data as { data: ICreateAiAppPreview }).data;
+}
+
+export async function createAiAppFromUseCase(
+  projectId: number,
+  name: string,
+): Promise<IAIAppDetail> {
+  const response = await apiServices.post(`/v1/projects/${projectId}/create-ai-app`, { name });
+  return (response.data as { data: IAIAppDetail }).data;
+}
+
+export async function getAiAppUseCases(
+  aiAppId: number,
+  signal?: AbortSignal,
+): Promise<IAIAppUseCases> {
+  const response = await apiServices.get(`/v1/ai-apps/${aiAppId}/use-cases`, { signal });
+  return (response.data as { data: IAIAppUseCases }).data;
+}
+
+export async function linkUseCaseToAiApp(aiAppId: number, projectId: number): Promise<void> {
+  await apiServices.post(`/v1/ai-apps/${aiAppId}/use-cases`, { project_id: projectId });
+}
+
+export async function unlinkUseCaseFromAiApp(aiAppId: number, projectId: number): Promise<void> {
+  await apiServices.delete(`/v1/ai-apps/${aiAppId}/use-cases/${projectId}`);
 }

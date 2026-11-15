@@ -9,7 +9,12 @@ export { default as singleTheme } from "./v1SingleTheme";
 export { alertStyles } from "./alerts";
 export { tableStyles } from "./tables";
 export { palette, default as colorPalette } from "./palette";
-export {
+export { getUiStyle, isClassicUi, setUiStyle } from "./uiStyle";
+export type { UiStyle } from "./uiStyle";
+
+import { primitives } from "./palette";
+// Raw scales for the active look (phase 1 or classic, see ./uiStyle.ts).
+export const {
   grey,
   green,
   red,
@@ -20,8 +25,13 @@ export {
   purple,
   teal,
   pink,
-  default as grayScale,
-} from "@design-tokens/primitives";
+  yellow,
+  signalGreen,
+  cocoa,
+  neutral,
+  series,
+} = primitives;
+export const grayScale = primitives.grey;
 export {
   typography,
   fontFamily,

@@ -25,7 +25,7 @@ import {
 import { chromium, Browser } from "playwright";
 import { getFileById } from "../../repositories/file.repository";
 import { JSDOM } from "jsdom";
-import { escapeHtml } from "../../utils/sanitization.utils";
+import { escapeHtml, sanitizeHtmlForPdf } from "../../utils/sanitization.utils";
 
 // VerifyWise theme colors
 const COLORS = {
@@ -39,14 +39,41 @@ const COLORS = {
 // Browser instance singleton for PDF generation
 let browserInstance: Browser | null = null;
 
+// The only remote hosts the PDF page may load from: the stylesheet's web font.
+const PDF_FONT_HOSTS = new Set(["fonts.googleapis.com", "fonts.gstatic.com"]);
+
+/**
+ * Policy HTML is user content rendered on the server, so a URL in it must not
+ * make the server fetch anything: internal addresses would be reachable.
+ */
+function isAllowedPdfRequest(rawUrl: string): boolean {
+  try {
+    const url = new URL(rawUrl);
+    return (
+      url.protocol === "data:" || (url.protocol === "https:" && PDF_FONT_HOSTS.has(url.hostname))
+    );
+  } catch {
+    return false;
+  }
+}
+
 /**
  * Get or create browser instance for PDF generation
  */
 async function getBrowser(): Promise<Browser> {
   if (!browserInstance || !browserInstance.isConnected()) {
+    // The Docker image skips Playwright's browser download and ships system Chromium.
+    const executablePath = process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH;
+
     browserInstance = await chromium.launch({
       headless: true,
-      args: ["--no-sandbox", "--disable-setuid-sandbox"],
+      args: [
+        "--no-sandbox",
+        "--disable-setuid-sandbox",
+        "--disable-dev-shm-usage",
+        "--disable-gpu",
+      ],
+      ...(executablePath ? { executablePath } : {}),
     });
   }
   return browserInstance;
@@ -126,8 +153,9 @@ export async function generatePolicyPDF(
   contentHtml: string,
   organizationId: number,
 ): Promise<Buffer> {
-  // Process images - replace file-manager URLs with base64
-  const processedHtml = await processImagesInHtml(contentHtml, organizationId);
+  // Sanitized here as well as on write: not every write path sanitizes, and older
+  // rows may predate it.
+  const processedHtml = await processImagesInHtml(sanitizeHtmlForPdf(contentHtml), organizationId);
 
   // Build full HTML document with styling
   const fullHtml = `
@@ -272,9 +300,13 @@ export async function generatePolicyPDF(
   `;
 
   const browser = await getBrowser();
-  const page = await browser.newPage();
+  const context = await browser.newContext({ javaScriptEnabled: false });
 
   try {
+    await context.route("**/*", (route) =>
+      isAllowedPdfRequest(route.request().url()) ? route.continue() : route.abort(),
+    );
+    const page = await context.newPage();
     await page.setContent(fullHtml, { waitUntil: "networkidle" });
 
     const pdfBuffer = await page.pdf({
@@ -290,7 +322,7 @@ export async function generatePolicyPDF(
 
     return Buffer.from(pdfBuffer);
   } finally {
-    await page.close();
+    await context.close();
   }
 }
 

@@ -12,7 +12,8 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import VWTooltip from "../../components/VWTooltip";
-import { text } from "../../themes/palette";
+import { text, palette as vwPalette, radiusPx } from "../../themes/palette";
+import { chartTheme } from "../../themes/chartTheme";
 
 export type EntityType =
   "useCase" | "model" | "risk" | "vendor" | "evidence" | "framework" | "user";
@@ -40,23 +41,18 @@ const entityIcons: Record<EntityType, LucideIcon> = {
   user: User,
 };
 
-export const riskLevelColors: Record<string, string> = {
-  "Low": "#4caf50",
-  "Medium": "#ff9800",
-  "High": "#f44336",
-  "Critical": "#9c27b0",
-  "Very low risk": "#4caf50",
-  "Low risk": "#8bc34a",
-  "Medium risk": "#ff9800",
-  "High risk": "#f44336",
-  "Very high risk": "#9c27b0",
-};
+/** Risk level dot colours (see `chartTheme.graphRisk`). */
+export const riskLevelColors = chartTheme.graphRisk.mark;
 
 const EntityNode: React.FC<NodeProps> = ({ data, sourcePosition, targetPosition }) => {
   const nodeData = data as unknown as EntityNodeData;
   const IconComponent = entityIcons[nodeData.entityType] || FolderTree;
   const isRiskNode = nodeData.entityType === "risk";
   const riskColor = nodeData.riskLevel ? riskLevelColors[nodeData.riskLevel] : undefined;
+  // The caption needs a text colour: the pale Very low mark is unreadable as 9px text.
+  const riskTextColor = nodeData.riskLevel
+    ? chartTheme.graphRisk.text[nodeData.riskLevel]
+    : undefined;
 
   // Node size based on connections (subtle scaling)
   const connections = nodeData.connectionCount || 0;
@@ -77,9 +73,11 @@ const EntityNode: React.FC<NodeProps> = ({ data, sourcePosition, targetPosition 
     <VWTooltip header={nodeData.label} content={tooltipContent} placement="top" maxWidth={400}>
       <Box
         sx={{
-          "backgroundColor": nodeData.isHighlighted ? "#fffbeb" : "white",
-          "border": nodeData.isHighlighted ? "3px solid #f59e0b" : `2px solid ${nodeData.color}`,
-          "borderRadius": "4px",
+          "backgroundColor": nodeData.isHighlighted ? vwPalette.status.warning.bg : "white",
+          "border": nodeData.isHighlighted
+            ? `3px solid ${vwPalette.riskMark.medium}`
+            : `2px solid ${nodeData.color}`,
+          "borderRadius": radiusPx.sm,
           "padding": "8px 12px",
           "minWidth": minWidth,
           "maxWidth": maxWidth,
@@ -111,7 +109,7 @@ const EntityNode: React.FC<NodeProps> = ({ data, sourcePosition, targetPosition 
           <Box
             sx={{
               backgroundColor: nodeData.color,
-              borderRadius: "4px",
+              borderRadius: radiusPx.sm,
               p: 0.5,
               display: "flex",
               alignItems: "center",
@@ -176,7 +174,7 @@ const EntityNode: React.FC<NodeProps> = ({ data, sourcePosition, targetPosition 
               variant="caption"
               sx={{
                 fontSize: 9,
-                color: riskColor || text.icon,
+                color: riskTextColor || text.icon,
                 fontWeight: 500,
               }}
             >

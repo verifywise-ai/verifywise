@@ -1,4 +1,4 @@
-import { brand, background } from "../../../themes/palette";
+import { brand, background, palette as vwPalette } from "../../../themes/palette";
 export const styles = {
   BpIcon: {
     "borderRadius": "50%",
@@ -11,17 +11,17 @@ export const styles = {
       outlineOffset: 2,
     },
     "input:hover ~ &": {
-      backgroundColor: "#fbfbfb",
+      backgroundColor: vwPalette.background.alt,
     },
   },
   BpCheckedIcon: {
     "backgroundColor": `${brand.primary}`,
-    "boxShadow": "inset 0 0 0 1px #297af2, inset 0 -1px 0 #297af2",
+    "boxShadow": `inset 0 0 0 1px ${vwPalette.brand.primary}, inset 0 -1px 0 ${vwPalette.brand.primary}`,
     "&::before": {
       display: "block",
       width: 20,
       height: 20,
-      backgroundImage: `radial-gradient(${background.main},#fff 28%,transparent 32%)`,
+      backgroundImage: `radial-gradient(${background.main},${vwPalette.background.main} 28%,transparent 32%)`,
       content: '""',
     },
     "input:hover ~ &": {

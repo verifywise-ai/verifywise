@@ -133,3 +133,42 @@ def test_query_secret_rule_matches_the_gateway_copy() -> None:
     if not gateway.is_file():
         pytest.skip("AIGateway source not present")
     assert _QUERY_SECRET.pattern in gateway.read_text()
+
+
+GEMINI_CREDITS_ERROR = (
+    'BadRequestError (402): litellm.BadRequestError: GeminiException - {"error": {"code": 402, '
+    '"message": "Your prepayment credits are depleted. Please go to AI Studio to manage your '
+    'project and billing. API credit balance is too low."}}'
+)
+
+
+def test_termination_reason_names_the_provider() -> None:
+    tracker = FatalErrorTracker(threshold=2)
+    tracker.track_error(GEMINI_CREDITS_ERROR)
+    assert tracker.track_error(GEMINI_CREDITS_ERROR) is True
+    reason = tracker.get_termination_reason()
+    assert reason.startswith("Google Gemini: ")
+    assert reason.endswith("(failed 2 times consecutively)")
+
+
+def test_termination_reason_without_a_known_provider_is_unchanged() -> None:
+    tracker = FatalErrorTracker(threshold=1)
+    assert tracker.track_error("credit balance is too low") is True
+    assert not tracker.get_termination_reason().startswith(":")
+    assert tracker.get_termination_reason().startswith("API credit balance is too low")
+
+
+@pytest.mark.parametrize(
+    "message,provider",
+    [
+        ("litellm.AuthenticationError: AnthropicException - invalid x-api-key", "Anthropic"),
+        # Raised for any OpenAI-compatible endpoint, so it names no provider
+        ("litellm.NotFoundError: OpenAIException - model not found", None),
+        ("Gateway completion failed: 502 BaseException then MistralException", "Mistral"),
+        ("plain error with no provider", None),
+    ],
+)
+def test_provider_from_error(message: str, provider: str | None) -> None:
+    from utils.error_detection import provider_from_error
+
+    assert provider_from_error(message) == provider

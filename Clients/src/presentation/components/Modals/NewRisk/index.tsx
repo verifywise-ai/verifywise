@@ -39,13 +39,12 @@ import StandardModal from "../StandardModal";
 import TabBar from "../../TabBar";
 import { RiskCalculator } from "../../../tools/riskCalculator";
 import { RiskLikelihood, RiskSeverity } from "../../RiskLevel/riskValues";
-import allowedRoles from "../../../../application/constants/permissions";
+import { useCanCheck } from "../../../../application/hooks/useCan";
 import { SelectChangeEvent } from "@mui/material";
 import {
   useCreateVendorRisk,
   useUpdateVendorRisk,
 } from "../../../../application/hooks/useVendorRiskMutations";
-import { useAuth } from "../../../../application/hooks/useAuth";
 import { HistorySidebar } from "../../Common/HistorySidebar";
 import VendorRiskLinksPanel from "../../LinkedRisksPanel/VendorRiskLinksPanel";
 import CustomFieldsSection, { type CustomFieldsSectionHandle } from "../../CustomFieldsSection";
@@ -141,10 +140,10 @@ const AddNewRisk: React.FC<AddNewRiskProps> = ({
   initialTab,
   preview,
 }) => {
-  const { userRoleName } = useAuth();
+  const can = useCanCheck();
   // A preview is for a new risk: with an existing one the form edits that.
   const draft = existingRisk ? null : (preview ?? null);
-  const isEditingDisabled = !draft && !allowedRoles.vendors.edit.includes(userRoleName);
+  const isEditingDisabled = !draft && !can("vendor.edit");
   const VENDOR_OPTIONS =
     vendors?.length > 0
       ? vendors
@@ -664,7 +663,8 @@ const AddNewRisk: React.FC<AddNewRiskProps> = ({
           Calculate risk level
         </Typography>
         <Typography sx={{ ...textStyles.body, color: "text.tertiary" }}>
-          The risk level is calculated from the likelihood and the severity you select.
+          The risk level is a weighted score: likelihood plus three times severity, so severity
+          counts more. Pick a likelihood and a severity and the level follows from the score.
         </Typography>
       </Stack>
       <RiskLevel

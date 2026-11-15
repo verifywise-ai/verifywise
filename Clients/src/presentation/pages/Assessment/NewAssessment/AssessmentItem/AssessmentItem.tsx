@@ -4,7 +4,8 @@
 
 import { List, ListItem, ListItemButton, ListItemText, Typography, useTheme } from "@mui/material";
 import { Topic } from "../../../../../application/hooks/useAssessmentAnswers";
-import { background } from "../../../../themes/palette";
+import { background, radiusPx } from "../../../../themes/palette";
+import { chartTheme } from "../../../../themes/chartTheme";
 
 interface AssessmentItemProps {
   assessmentsValues: Topic[];
@@ -28,10 +29,10 @@ const AssessmentItem = ({
           sx={{
             "display": "block",
             "& .MuiListItemButton-root.Mui-selected": {
-              backgroundColor: "#4C7DE7",
+              backgroundColor: chartTheme.action.fill,
             },
             "& .MuiListItemButton-root.Mui-selected:hover": {
-              backgroundColor: "#4C7DE7",
+              backgroundColor: chartTheme.action.fill,
             },
           }}
         >
@@ -41,8 +42,8 @@ const AssessmentItem = ({
             disableRipple
             sx={{
               paddingLeft: 4,
-              borderRadius: 2,
-              backgroundColor: index === activeTab ? "#4C7DE7" : "transparent",
+              borderRadius: radiusPx.sm,
+              backgroundColor: index === activeTab ? chartTheme.action.fill : "transparent",
               width: 260,
               height: 40,
             }}

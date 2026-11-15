@@ -18,6 +18,7 @@ import singleTheme from "../../themes/v1SingleTheme";
 import { RISK_LABELS } from "../../components/RiskLevel/constants";
 import { getAllVendors } from "../../../application/repository/vendor.repository";
 import { background } from "../../themes/palette";
+import { getEffectiveRiskLevel } from "../../../application/utils/riskLevel";
 
 const DEFAULT_ROWS_PER_PAGE = 10;
 const RISKS_ROWS_PER_PAGE_KEY = "verifywise_risks_rows_per_page";
@@ -34,6 +35,7 @@ interface TableRow {
   impact?: string;
   risk_owner?: string | number;
   risk_level_autocalculated?: string;
+  current_risk_level?: string | null;
   likelihood?: string;
   mitigation_status?: string;
   final_risk_level?: string;
@@ -165,9 +167,9 @@ const CustomizableBasicTable = ({
                   )?.name ||
                     (typeof row.risk_owner === "string" ? row.risk_owner : String(row.risk_owner))}
                 </TableCell>
-                <TableCell>{riskLevelChecker(row.risk_level_autocalculated)}</TableCell>
+                <TableCell>{riskLevelChecker(getEffectiveRiskLevel(row))}</TableCell>
                 <TableCell>{row.likelihood}</TableCell>
-                <TableCell>{row.risk_level_autocalculated}</TableCell>
+                <TableCell>{getEffectiveRiskLevel(row)}</TableCell>
                 <TableCell>{row.mitigation_status}</TableCell>
                 <TableCell>{row.final_risk_level}</TableCell>
               </TableRow>

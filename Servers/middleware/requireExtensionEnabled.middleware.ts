@@ -23,6 +23,20 @@ async function resolveExtensionId(key: string): Promise<number | null> {
   return extension.id;
 }
 
+/**
+ * The gate's lookup outside a request: whether the organization has enabled
+ * the extension. An extension missing from the catalog counts as disabled.
+ */
+export async function isExtensionEnabledForOrganization(
+  extensionKey: string,
+  organizationId: number,
+): Promise<boolean> {
+  const extensionId = await resolveExtensionId(extensionKey);
+  if (extensionId === null) return false;
+  const enablement = await ExtensionEnablementModel.findByExtensionId(extensionId, organizationId);
+  return !!enablement?.enabled;
+}
+
 async function checkEnabled(
   extensionKey: string,
   req: Request,
@@ -40,22 +54,23 @@ async function checkEnabled(
     if (extensionId === null) {
       res
         .status(404)
-        .json(STATUS_CODE[404](`Extension '${sanitizeForLog(extensionKey)}' not found in catalog`));
+        .json(
+          STATUS_CODE[404](
+            req.t!("Extension '{key}' not found in catalog", { key: sanitizeForLog(extensionKey) }),
+          ),
+        );
       return;
     }
 
-    const enablement = await ExtensionEnablementModel.findByExtensionId(
-      extensionId,
-      organizationId,
-    );
-    if (!enablement || !enablement.enabled) {
-      res
-        .status(403)
-        .json(
-          STATUS_CODE[403](
-            `Extension '${sanitizeForLog(extensionKey)}' is not enabled for this organization`,
-          ),
-        );
+    // Same lookup the background senders use, so the gate and they agree.
+    if (!(await isExtensionEnabledForOrganization(extensionKey, organizationId))) {
+      res.status(403).json(
+        STATUS_CODE[403](
+          req.t!("Extension '{key}' is not enabled for this organization", {
+            key: sanitizeForLog(extensionKey),
+          }),
+        ),
+      );
       return;
     }
 

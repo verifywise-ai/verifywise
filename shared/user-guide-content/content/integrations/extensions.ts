@@ -79,11 +79,11 @@ export const extensionsContent: ArticleContent = {
     {
       type: 'bullet-list',
       items: [
-        { bold: 'Configuration', text: 'A form with the extension\'s connection settings. Password and token fields are stored encrypted. Leave a secret field blank to keep the existing value.' },
+        { bold: 'Configuration', text: 'A form with the extension\'s connection settings. Password and token fields are stored encrypted. Leave a secret field blank to keep the existing value. If you change the server URL or endpoint, enter the token, key or password again; if you change the username, enter the password again. A saved secret is never sent to a changed address.' },
         { bold: 'Extension panel', text: 'Slack, Model Lifecycle, Jira Assets and Jira incidents show their own setup panel here once enabled.' },
         { bold: 'Enable / Disable', text: 'Turns the extension on or off.' },
         { bold: 'Save configuration', text: 'Saves changes to the Configuration form after the extension is enabled. You see "Configuration saved." when it works.' },
-        { bold: 'Test connection', text: 'Checks the saved settings against the external service. Available for MLflow, Azure AI Foundry and Jira incidents. Jira Assets has its own **Test Connection** button in its panel, and Jira incidents also has a **Test connection** button in its panel that checks the values you have typed before you save them.' },
+        { bold: 'Test connection', text: 'Checks the saved settings against the external service. Available for MLflow, Azure AI Foundry and Jira incidents. Jira Assets has its own **Test Connection** button in its panel, and Jira incidents also has a **Test connection** button in its panel that checks the values you have typed before you save them. If the service answers with an error, the result shows only its HTTP status code, not the reply.' },
       ],
     },
     {
@@ -138,20 +138,24 @@ export const extensionsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Sends VerifyWise notifications to channels in your Slack workspace.',
+      text: 'Sends VerifyWise notifications to channels in your Slack workspace. Slack connections belong to the organization. Admins add, route and remove them, and every Admin sees the same list.',
     },
     {
       type: 'ordered-list',
       items: [
         { text: 'Click **Enable** on the Slack card, then **Configure**.' },
-        { text: 'Click **Add to Slack**. Slack asks you to pick a workspace and the channel to post to, and to approve the connection.' },
-        { text: 'Back in VerifyWise, the connection appears in the table (Team Name, Channel, Creation Date, Active, Action). You can add more connections the same way.' },
-        { text: 'Click **Configure** to open **Notification Routing**, choose the notification types under "Apply to all workspaces", and click **Save Changes**.' },
+        { text: 'Click **Add to Slack**. The same tab opens Slack. Pick a workspace and the channel to post to, then approve the connection.' },
+        { text: 'Back in VerifyWise, the connection appears in the table. You can add more connections the same way.' },
+        { text: 'Click **Edit routing** on the connection\'s row, choose the notification types that channel should receive, then click **Save**. A new connection receives nothing until you do.' },
       ],
     },
     {
       type: 'paragraph',
       text: '**Where it shows up:** notifications arrive in the Slack channels you connected. See **Slack integration** for routing, troubleshooting and removing connections.',
+    },
+    {
+      type: 'paragraph',
+      text: '**Older connections:** a connection added before this change only posts events of the person who added it. Once an Admin saves **Notification Routing**, every connection posts the organization\'s events.',
     },
     {
       type: 'callout',
@@ -194,7 +198,7 @@ export const extensionsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: '**Where it shows up:** an **MLFlow** tab in **Model inventory**. Click **Sync** there to pull the latest runs. Syncing is manual; nothing syncs on a schedule.',
+      text: '**Where it shows up:** an **MLFlow** tab in **Model inventory**. Admins and Editors can click **Sync** there to pull the latest runs. Syncing is manual; nothing syncs on a schedule.',
     },
     {
       type: 'heading',
@@ -230,7 +234,7 @@ export const extensionsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: '**Where it shows up:** an **Azure AI Foundry** tab in **Model inventory**. Click **Sync** there to refresh the deployments.',
+      text: '**Where it shows up:** an **Azure AI Foundry** tab in **Model inventory**. Admins and Editors can click **Sync** there to refresh the deployments.',
     },
     {
       type: 'heading',
@@ -258,7 +262,11 @@ export const extensionsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: '**Where it shows up:** a **View lifecycle** button on each row in **Model inventory**, and a lifecycle section on each model\'s detail page.',
+      text: '**Where it shows up:** a **View lifecycle** button on each row in **Model inventory** opens the model\'s lifecycle page.',
+    },
+    {
+      type: 'paragraph',
+      text: 'Admins set up the phases and items. Admins and Editors fill in a model\'s lifecycle: answers, documents, people and approvers. Other roles can view it. Only the person named as an approver can approve or reject their own approval, Admins included. To change an approver, an Admin or Editor removes them and adds someone else.',
     },
     {
       type: 'heading',
@@ -302,14 +310,14 @@ export const extensionsContent: ArticleContent = {
         { text: 'Click **Enable** on the Jira Assets Integration card, then **Configure**.' },
         { text: 'Choose a **Deployment Type**: JIRA Cloud (Atlassian-hosted) or JIRA Data Center / Server (Self-hosted).' },
         { text: 'Fill in **JIRA Base URL**, then **Workspace ID** (Cloud) or **Insight Object Schema ID** (Data Center), then **Email** and **API Token** (Cloud) or **Username** and **Password / Token** (Data Center).' },
-        { text: 'Click **Test Connection**, then **Save Configuration**.' },
+        { text: 'Click **Test Connection**, then **Save Configuration**. If you later change the deployment type, base URL, workspace or schema ID, or email or username, enter the token or password again.' },
         { text: 'Pick the **Schema** and the **Object Type (AI Systems)** to import from.' },
         { text: 'In the **Import & Sync** section, click **Import**, select the objects you want and click **Import N Selected**. The list shows up to 1,000 objects at a time; if Jira has more, click **Load more**.' },
       ],
     },
     {
       type: 'paragraph',
-      text: '**Where it shows up:** imported objects appear as use cases under **Use cases**. To refresh them later, click **Sync Now** in the **Import & Sync** section.',
+      text: '**Where it shows up:** imported objects appear as use cases under **Use cases**. The list shows members the imported use cases that appear in their use case list, and opening one follows the same access rules as any other use case page; Admins see all of them. Only Admins can pick the schema and object type. To refresh imported use cases later, click **Sync Now** in the **Import & Sync** section.',
     },
     {
       type: 'callout',
@@ -426,8 +434,13 @@ export const extensionsContent: ArticleContent = {
       rows: [
         { action: 'Open the Extensions page', roles: 'Admin' },
         { action: 'Enable, configure or disable an extension', roles: 'Admin' },
+        { action: 'See, add, route, turn off or remove Slack connections (Slack)', roles: 'Admin' },
         { action: 'Import risks from Excel (Risk Import)', roles: 'Admin, Editor' },
         { action: 'Bulk upload datasets (Dataset Bulk Upload)', roles: 'Admin, Editor' },
+        { action: 'Sync models from MLflow or Azure AI Foundry', roles: 'Admin, Editor' },
+        { action: 'Set up lifecycle phases and items (Model Lifecycle)', roles: 'Admin' },
+        { action: 'Fill in a model\'s lifecycle: answers, documents, people, approvers (Model Lifecycle)', roles: 'Admin, Editor' },
+        { action: 'Approve or reject a lifecycle approval (Model Lifecycle)', roles: 'The named approver only' },
         { action: 'See the Jira key on imported incidents (Jira incidents)', roles: 'Anyone who can see incidents' },
       ],
     },

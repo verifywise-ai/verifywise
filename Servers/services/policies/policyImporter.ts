@@ -30,6 +30,8 @@ export const DOCX_ALLOWED_MIMES = [
 export interface DocxImportResult {
   html: string;
   warnings: string[];
+  /** Images in the document that the sanitizer dropped (mammoth inlines them as data: URIs). */
+  skippedImages: number;
 }
 
 /**
@@ -63,10 +65,14 @@ export async function convertDocxToHtml(buffer: Buffer): Promise<DocxImportResul
   html = html.replace(/<(\/?)h[456](\s|>)/gi, "<$1h3$2");
   html = html.replace(/\s+class="[^"]*"/g, "");
 
+  // Images are not uploaded on import. mammoth inlines them as data: URIs,
+  // which the sanitizer below drops, so count them first to tell the user.
+  const skippedImages = (html.match(/<img\b[^>]*\bsrc\s*=\s*["']?\s*data:/gi) ?? []).length;
+
   // Server-side sanitization — only allow safe URI schemes (no data: URIs)
   html = sanitizeUserHtml(html);
 
   const warnings = result.messages.filter((m) => m.type === "warning").map((m) => m.message);
 
-  return { html, warnings };
+  return { html, warnings, skippedImages };
 }

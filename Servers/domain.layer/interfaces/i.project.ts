@@ -8,7 +8,10 @@ export interface IProjectAttributes {
   id?: number;
   uc_id?: string;
   project_title: string;
-  owner: number;
+  owner: number | null;
+  /** An owner with no account (#5256). Set only when owner is null. */
+  external_owner_name?: string | null;
+  external_owner_email?: string | null;
   start_date: Date;
   geography: number;
   ai_risk_classification?: AiRiskClassification | null;

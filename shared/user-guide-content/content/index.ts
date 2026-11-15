@@ -2,6 +2,7 @@ import type { ArticleContent } from '../contentTypes';
 import { welcomeContent } from './getting-started/welcome';
 import { installingContent } from './getting-started/installing';
 import { dashboardContent } from './getting-started/dashboard';
+import { homeContent } from './getting-started/home';
 import { quickStartContent } from './getting-started/quick-start';
 import { useCasesContent } from './ai-governance/use-cases';
 import { intakeFormsContent } from './ai-governance/intake-forms';
@@ -30,6 +31,7 @@ import { iso27001Content } from './compliance/iso-27001';
 import { nistAiRmfContent } from './compliance/nist-ai-rmf';
 import { assessmentsContent } from './compliance/assessments';
 import { addingFrameworksContent } from './compliance/adding-frameworks';
+import { frameworkImportContent } from './compliance/framework-import';
 import { friaContent } from './compliance/fria';
 import { ceMarkingContent } from './compliance/ce-marking';
 import { postMarketMonitoringContent } from './compliance/post-market-monitoring';
@@ -50,6 +52,7 @@ import { generatingReportsContent } from './reporting/generating-reports';
 import { organizationSettingsContent } from './settings/organization-settings';
 import { userManagementContent } from './settings/user-management';
 import { roleConfigurationContent } from './settings/role-configuration';
+import { userGroupsContent } from './settings/user-groups';
 import { notificationsContent } from './settings/notifications';
 import { integrationOverviewContent } from './integrations/integration-overview';
 import { slackIntegrationContent } from './integrations/slack-integration';
@@ -127,6 +130,7 @@ export const articleContentMap: Record<string, ArticleContent> = {
   'getting-started/welcome': welcomeContent,
   'getting-started/installing': installingContent,
   'getting-started/dashboard': dashboardContent,
+  'getting-started/home': homeContent,
   'getting-started/quick-start': quickStartContent,
   // AI Governance
   'ai-governance/use-cases': useCasesContent,
@@ -165,6 +169,7 @@ export const articleContentMap: Record<string, ArticleContent> = {
   'compliance/nist-ai-rmf': nistAiRmfContent,
   'compliance/assessments': assessmentsContent,
   'compliance/adding-frameworks': addingFrameworksContent,
+  'compliance/framework-import': frameworkImportContent,
   'compliance/fria': friaContent,
   'compliance/ce-marking': ceMarkingContent,
   'compliance/post-market-monitoring': postMarketMonitoringContent,
@@ -182,6 +187,7 @@ export const articleContentMap: Record<string, ArticleContent> = {
   'settings/organization-settings': organizationSettingsContent,
   'settings/user-management': userManagementContent,
   'settings/role-configuration': roleConfigurationContent,
+  'settings/user-groups': userGroupsContent,
   'settings/notifications': notificationsContent,
   'settings/super-admin': superAdminContent,
   // Integrations

@@ -68,12 +68,6 @@ vi.mock("../../../../application/contexts/VerifyWise.context", () => ({
   },
 }));
 
-vi.mock("../../../../application/constants/permissions", () => ({
-  default: {
-    projectRisks: { edit: ["Admin"], create: ["Admin"] },
-  },
-}));
-
 vi.mock("../../../tools/riskCalculator", () => ({
   RiskCalculator: {
     getRiskLevel: () => ({ level: "Low" }),
@@ -182,7 +176,6 @@ describe("useRiskForm", () => {
   it("returns correct permission flags for unauthenticated user", () => {
     const { result } = renderHook(() => useRiskForm(createProps()), { wrapper: Wrapper });
 
-    expect(result.current.userRoleName).toBe("");
     expect(result.current.isEditingDisabled).toBe(true);
     expect(result.current.isCreatingDisabled).toBe(true);
   });

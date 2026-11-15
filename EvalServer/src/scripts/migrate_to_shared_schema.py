@@ -561,6 +561,15 @@ async def migrate_table(
         # Filter to only columns that exist in values_dict
         target_columns = [c for c in target_columns if c in values_dict or c == "organization_id"]
 
+        # Experiment configs used to carry the run's provider keys; never copy them.
+        if table_name == "llm_evals_experiments" and values_dict.get("config") is not None:
+            from utils.secret_config import strip_secrets
+
+            config_val = values_dict["config"]
+            if isinstance(config_val, str):
+                config_val = json.loads(config_val)
+            values_dict["config"] = strip_secrets(config_val)
+
         # Serialize dict/list values to JSON strings (asyncpg can't encode raw dicts for JSONB)
         for col in target_columns:
             val = values_dict.get(col)

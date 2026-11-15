@@ -1,3 +1,4 @@
+import { radiusPx } from "../../themes/palette";
 export const mainStackStyle = {
   display: "flex",
   flexDirection: "column",
@@ -22,6 +23,16 @@ export const filterRowStyle = {
   flexWrap: "wrap",
 };
 
+/** House controls render at 34px by default; these bring a control to the 30px standard. */
+export const controlButtonSx = { height: "30px", minHeight: "30px" };
+export const controlSelectSx = { height: "30px" };
+export const controlFieldSx = { "& .MuiInputBase-root": { height: "30px" } };
+export const controlSearchSx = {
+  height: "30px !important",
+  minHeight: "30px",
+  maxHeight: "30px",
+};
+
 export const catalogGridStyle = {
   display: "grid",
   gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))",
@@ -30,7 +41,7 @@ export const catalogGridStyle = {
 
 export const catalogCardStyle = {
   "padding": "16px",
-  "borderRadius": "4px",
+  "borderRadius": radiusPx.sm,
   "border": "1px solid",
   "borderColor": "border.light",
   "backgroundColor": "background.main",

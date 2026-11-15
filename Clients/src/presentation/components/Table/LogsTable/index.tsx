@@ -21,7 +21,17 @@ import {
   getPaginationRowCount,
   setPaginationRowCount,
 } from "../../../../application/utils/paginationStorage";
-import { text, status } from "../../../themes/palette";
+import {
+  text,
+  status,
+  risk,
+  border,
+  background,
+  palette as vwPalette,
+  radiusPx,
+} from "../../../themes/palette";
+import { chartTheme } from "../../../themes/chartTheme";
+import StatusBadge from "../../StatusBadge";
 import useFormattedDate from "../../../../application/hooks/useFormattedDate";
 import { pageOfLabel } from "../pageOfLabel";
 
@@ -101,40 +111,24 @@ const parseLogLine = (line: string, index: number): ParsedLogEntry | null => {
   return null;
 };
 
+// processing text, info, debug and the unknown fallback have no palette token
+// with the same value, so they keep their literals to stay visually unchanged.
+const STATE_COLORS: Record<string, { bg: string; text: string }> = {
+  successful: { bg: status.success.bg, text: status.success.text },
+  success: { bg: status.success.bg, text: status.success.text },
+  processing: { bg: status.warning.bg, text: chartTheme.pendingLabelText },
+  error: { bg: status.error.bg, text: status.error.text },
+  info: { bg: vwPalette.status.info.bg, text: vwPalette.status.info.text },
+  warn: { bg: risk.high.bg, text: risk.high.text },
+  warning: { bg: risk.high.bg, text: risk.high.text },
+  debug: { bg: vwPalette.accent.purple.bg, text: vwPalette.accent.purple.text },
+};
+
+const UNKNOWN_STATE_COLORS = { bg: vwPalette.border.light, text: vwPalette.text.secondary };
+
 const StateBadge: React.FC<{ state: string }> = ({ state }) => {
-  const stateStyles: Record<string, { bg: string; color: string }> = {
-    successful: { bg: "#E6F4EA", color: `${status.success.text}` },
-    success: { bg: "#E6F4EA", color: `${status.success.text}` },
-    processing: { bg: "#FFF8E1", color: "#795000" },
-    error: { bg: "#FFD6D6", color: `${status.error.text}` },
-    info: { bg: "#DCEFFF", color: "#1976D2" },
-    warn: { bg: "#FFE5D0", color: "#E64A19" },
-    warning: { bg: "#FFE5D0", color: "#E64A19" },
-    debug: { bg: "#F3E5F5", color: "#6A1B9A" },
-  };
-
-  const normalizedState = state.toLowerCase();
-  const style = stateStyles[normalizedState] || {
-    bg: "#E0E0E0",
-    color: "#424242",
-  };
-
-  return (
-    <span
-      style={{
-        backgroundColor: style.bg,
-        color: style.color,
-        padding: "4px 8px",
-        borderRadius: "4px",
-        fontWeight: 500,
-        fontSize: 11,
-        textTransform: "uppercase",
-        display: "inline-block",
-      }}
-    >
-      {state}
-    </span>
-  );
+  const colors = STATE_COLORS[state.toLowerCase()] ?? UNKNOWN_STATE_COLORS;
+  return <StatusBadge label={state} backgroundColor={colors.bg} textColor={colors.text} />;
 };
 
 const LogsTable: React.FC<LogsTableProps> = ({ data, isLoading = false, paginated = true }) => {
@@ -341,8 +335,8 @@ const LogsTable: React.FC<LogsTableProps> = ({ data, isLoading = false, paginate
                     fontSize: "12px",
                     backgroundColor:
                       sortConfig.key && sortConfig.key.toLowerCase().includes("id")
-                        ? "#e8e8e8"
-                        : "#fafafa",
+                        ? background.surface
+                        : background.alt,
                   }}
                 >
                   {log.id}
@@ -448,8 +442,8 @@ const LogsTable: React.FC<LogsTableProps> = ({ data, isLoading = false, paginate
         alignItems="center"
         justifyContent="center"
         sx={{
-          border: "1px solid #d0d5dd",
-          borderRadius: "4px",
+          border: `1px solid ${border.dark}`,
+          borderRadius: radiusPx.sm,
           padding: theme.spacing(15, 5),
           paddingBottom: theme.spacing(20),
           gap: theme.spacing(10),
@@ -471,7 +465,7 @@ const LogsTable: React.FC<LogsTableProps> = ({ data, isLoading = false, paginate
           sx={{
             ...singleTheme.tableStyles.primary.frame,
             ...(paginated && {
-              borderRadius: "4px 4px 0 0",
+              borderRadius: `${radiusPx.sm} ${radiusPx.sm} 0 0`,
               borderBottom: "none",
             }),
           }}

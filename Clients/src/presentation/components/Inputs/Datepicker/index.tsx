@@ -25,6 +25,9 @@ function DatePicker({
   disabled = false,
   id,
   onBlur,
+  minDate,
+  onAccept,
+  isFieldReadOnly = false,
 }: DatePickerProps) {
   const theme = useTheme();
   const generatedId = React.useId();
@@ -99,9 +102,16 @@ function DatePicker({
           }}
           value={date ? dayjs(date) : null}
           onChange={(value) => handleDateChange(value)}
+          // MUI also fires onAccept for each valid change typed into the field.
+          onAccept={(value, context) => {
+            if (context.source !== "field") onAccept?.(value);
+          }}
+          minDate={minDate}
           format="MM/DD/YYYY"
           disabled={disabled}
           slotProps={{
+            // Only when asked, so other pickers keep their own read-only behaviour.
+            ...(isFieldReadOnly ? { field: { readOnly: true } } : {}),
             textField: {
               id: fieldId,
               onBlur,

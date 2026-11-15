@@ -5,6 +5,8 @@ import { MitigationFormValues, RiskFormValues } from "../components/AddNewRiskFo
 export const PROJECT_FORM_FIELD_ORDER: (keyof FormValues)[] = [
   "project_title",
   "owner",
+  "external_owner_name",
+  "external_owner_email",
   "ai_risk_classification",
   "high_risk_roles",
   "start_date",
@@ -16,6 +18,8 @@ export const PROJECT_FORM_FIELD_ORDER: (keyof FormValues)[] = [
 export const PROJECT_FORM_FIELD_IDS: Partial<Record<keyof FormValues, string>> = {
   project_title: "project-title-input",
   owner: "owner-input",
+  external_owner_name: "external-owner-name-input",
+  external_owner_email: "external-owner-email-input",
   ai_risk_classification: "risk-classification-input",
   high_risk_roles: "high-risk-roles-input",
   start_date: "project-start-date-input",

@@ -19,9 +19,17 @@ vi.mock("../../../../application/hooks/useAuth", () => ({
 }));
 // Admin holds organization.admin; "Compliance lead" is a custom role granted it.
 vi.mock("../../../../application/hooks/useMyPermissions", () => ({
-  useHasPermission: (key: string) =>
-    key === "organization.admin" && (mockRole === "Admin" || mockRole === "Compliance lead"),
+  useMyPermissions: () => ({ permissions: undefined, isLoading: true, error: null }),
 }));
+vi.mock("../../../../application/hooks/useCan", () => {
+  const useCan = (key: string) =>
+    key === "organization.admin" && (mockRole === "Admin" || mockRole === "Compliance lead");
+  return {
+    useCan,
+    useCanCheck: () => useCan,
+    usePermissionsSettled: () => true,
+  };
+});
 
 const settings: IMrmOrgSettings = {
   organization_id: 1,

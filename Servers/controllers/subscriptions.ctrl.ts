@@ -11,7 +11,7 @@ import {
 import { sequelize } from "../database/db";
 import { SubscriptionModel } from "../domain.layer/models/subscriptions/subscriptions.model";
 
-export async function getSubscriptionController(_req: Request, res: Response) {
+export async function getSubscriptionController(req: Request, res: Response) {
   logStructured(
     "processing",
     "Fetching subscriptions",
@@ -39,7 +39,7 @@ export async function getSubscriptionController(_req: Request, res: Response) {
       "getSubscriptionController",
       "subscriptions.ctrl.ts",
     );
-    return res.status(404).json(STATUS_CODE[404]({ message: _req.t!("No subscriptions found") }));
+    return res.status(404).json(STATUS_CODE[404]({ message: req.t!("No subscriptions found") }));
   } catch (error) {
     logStructured(
       "error",
@@ -48,7 +48,7 @@ export async function getSubscriptionController(_req: Request, res: Response) {
       "subscriptions.ctrl.ts",
     );
     logger.error("❌ Error fetching subscriptions:", error);
-    return res.status(500).json(STATUS_CODE[500]({ message: _req.t!("Internal server error") }));
+    return res.status(500).json(STATUS_CODE[500]({ message: req.t!("Internal server error") }));
   }
 }
 

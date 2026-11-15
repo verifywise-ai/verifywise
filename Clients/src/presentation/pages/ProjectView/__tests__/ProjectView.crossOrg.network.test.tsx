@@ -26,6 +26,11 @@ vi.mock("../../../../application/hooks/useAuth", () => ({
   useAuth: () => ({ userRoleName: "Admin", userId: 1, userToken: { name: "Test User" } }),
 }));
 
+// Permissions not loaded: the built-in role from useAuth decides (useCan).
+vi.mock("../../../../application/hooks/useMyPermissions", () => ({
+  useMyPermissions: () => ({ permissions: undefined, isLoading: true, error: null }),
+}));
+
 // renderWithProviders mounts <ExtensionsProvider>, so the mock re-exports it
 // as a passthrough.
 vi.mock("../../../../application/contexts/Extensions.context", () => ({

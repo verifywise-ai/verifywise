@@ -29,6 +29,7 @@ import ConsultationSection from "./sections/ConsultationSection";
 import SummarySection from "./sections/SummarySection";
 import FriaVersionHistory from "./FriaVersionHistory";
 import StandardModal from "../../../components/Modals/StandardModal";
+import { brand } from "../../../themes/palette";
 import Field from "../../../components/Inputs/Field";
 
 interface FriaProps {
@@ -183,7 +184,7 @@ const FriaAssessment = ({ projectId }: FriaProps) => {
           </Typography>
         )}
         {!isSaving && lastSaveStatus === "saved" && (
-          <Typography sx={{ fontSize: 12, color: "#13715B", mr: "8px" }}>Saved</Typography>
+          <Typography sx={{ fontSize: 12, color: brand.primary, mr: "8px" }}>Saved</Typography>
         )}
         {!isSaving && lastSaveStatus === "error" && (
           <Typography sx={{ fontSize: 12, color: "error.main", mr: "8px" }}>Save failed</Typography>

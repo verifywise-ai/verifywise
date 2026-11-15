@@ -1,6 +1,7 @@
 import { Box, Typography } from "@mui/material";
 import type { LiveCheckHint } from "../../../domain/types/intakeLiveChecks";
 import { HINT_KIND_COLORS } from "../../components/IntakeLiveChecks/hintKinds";
+import { radiusPx } from "../../themes/palette";
 
 /** The field border a set of hints asks for: red for prohibited, amber for regulation or contradiction. */
 export function fieldToneFor(hints: LiveCheckHint[]): "error" | "warning" | undefined {
@@ -52,7 +53,7 @@ export function LiveCheckHints({
             data-vw-no-translate={isAi ? "true" : undefined}
             sx={{
               p: "8px 12px",
-              borderRadius: "4px",
+              borderRadius: radiusPx.sm,
               borderLeft: `3px solid ${colors.text}`,
               backgroundColor: colors.bg,
               opacity: stale ? 0.5 : 1,

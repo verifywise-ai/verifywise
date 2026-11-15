@@ -46,7 +46,8 @@ import { updateEUAIActAnswerById } from "../../../../application/repository/ques
 import { getEntityById } from "../../../../application/repository/entity.repository";
 import { attachFilesToEntity } from "../../../../application/repository/file.repository";
 import { getAssessmentTopicById } from "../../../../application/repository/assesment.repository";
-import allowedRoles from "../../../../application/constants/permissions";
+import { useCanCheck } from "../../../../application/hooks/useCan";
+import { palette, radiusPx } from "../../../themes/palette";
 
 const FRAMEWORK_TYPE = "eu_ai_act";
 const ENTITY_TYPE = "assessment";
@@ -101,7 +102,8 @@ const EUAIActQuestionDrawerDialog: React.FC<EUAIActQuestionDrawerProps> = ({
   onSaveSuccess,
 }) => {
   const theme = useTheme();
-  const { userRoleName, userId } = useAuth();
+  const { userId } = useAuth();
+  const can = useCanCheck();
   const { users } = useUsers();
 
   const [isLoading, setIsLoading] = useState(false);
@@ -131,7 +133,7 @@ const EUAIActQuestionDrawerDialog: React.FC<EUAIActQuestionDrawerProps> = ({
 
   const risks = useLinkedRisks({ onAlert: handleAlert });
 
-  const isEditingDisabled = !allowedRoles.frameworks.edit.includes(userRoleName);
+  const isEditingDisabled = !can("framework.edit");
 
   const fetchLinkedRisks = async (riskIds?: number[]) => {
     if (!questionProp?.answer_id) return;
@@ -387,10 +389,10 @@ const EUAIActQuestionDrawerDialog: React.FC<EUAIActQuestionDrawerProps> = ({
             {displayQuestion?.question && (
               <Stack
                 sx={{
-                  border: "1px solid #eee",
+                  border: `1px solid ${palette.border.light}`,
                   padding: "12px",
                   backgroundColor: "background.accent",
-                  borderRadius: "4px",
+                  borderRadius: radiusPx.sm,
                 }}
               >
                 <Typography fontSize={13} sx={{ marginBottom: "8px" }}>
@@ -405,16 +407,16 @@ const EUAIActQuestionDrawerDialog: React.FC<EUAIActQuestionDrawerProps> = ({
             {displayQuestion?.hint && (
               <Stack
                 sx={{
-                  border: "1px solid #d5e8d5",
+                  border: `1px solid ${palette.status.success.border}`,
                   padding: "12px",
-                  backgroundColor: "#f5fef5",
-                  borderRadius: "4px",
+                  backgroundColor: palette.status.success.bg,
+                  borderRadius: radiusPx.sm,
                 }}
               >
                 <Typography fontSize={13} sx={{ marginBottom: "8px", fontWeight: 600 }}>
                   Hint:
                 </Typography>
-                <Typography fontSize={13} color="#666">
+                <Typography fontSize={13} color={palette.text.tertiary}>
                   {displayQuestion.hint}
                 </Typography>
               </Stack>
@@ -437,7 +439,7 @@ const EUAIActQuestionDrawerDialog: React.FC<EUAIActQuestionDrawerProps> = ({
                         justifyContent: "center",
                         height: 24,
                         padding: "4px 12px",
-                        borderRadius: "4px",
+                        borderRadius: radiusPx.sm,
                         background: `linear-gradient(180deg, ${gradientTop} 0%, ${gradientBottom} 100%)`,
                         border: `1px solid ${borderColor}`,
                         color: colors.text,
@@ -463,9 +465,9 @@ const EUAIActQuestionDrawerDialog: React.FC<EUAIActQuestionDrawerProps> = ({
                     justifyContent: "center",
                     height: 24,
                     padding: "4px 12px",
-                    borderRadius: "4px",
-                    background: "linear-gradient(180deg, #E6F4EA 0%, #D4E8DB 100%)",
-                    border: "1px solid #B8DCC5",
+                    borderRadius: radiusPx.sm,
+                    background: `linear-gradient(180deg, ${palette.status.success.bg} 0%, ${palette.status.success.bg} 100%)`,
+                    border: `1px solid ${palette.status.success.border}`,
                     color: "primary.main",
                     fontSize: 11,
                     fontWeight: 600,
@@ -491,13 +493,13 @@ const EUAIActQuestionDrawerDialog: React.FC<EUAIActQuestionDrawerProps> = ({
                 initialContent={formData.answer}
                 isEditable={!isEditingDisabled}
                 headerSx={{
-                  borderRadius: "4px 4px 0 0",
+                  borderRadius: `${radiusPx.sm} ${radiusPx.sm} 0 0`,
                   borderTop: `1px solid ${theme.palette.border.dark}`,
                   borderColor: "border.dark",
                 }}
                 bodySx={{
                   "borderColor": "border.dark",
-                  "borderRadius": "0 0 4px 4px",
+                  "borderRadius": `0 0 ${radiusPx.sm} ${radiusPx.sm}`,
                   "& .ProseMirror > p": { margin: 0 },
                 }}
               />

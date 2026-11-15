@@ -23,7 +23,6 @@ import StandardModal from "../../../components/Modals/StandardModal";
 import Field from "../../../components/Inputs/Field";
 import Select from "../../../components/Inputs/Select";
 import Toggle from "../../../components/Inputs/Toggle";
-import { useAuth } from "../../../../application/hooks/useAuth";
 import {
   CUSTOM_FIELD_ENTITY_LABELS,
   CUSTOM_FIELD_TYPE_LABELS,
@@ -52,6 +51,8 @@ import ScoredOptionsEditor, {
   ScoredOptionRow,
 } from "./ScoredOptionsEditor";
 import MoveOptionAnswersModal, { OptionInUse } from "./MoveOptionAnswersModal";
+import { useCan, usePermissionsSettled } from "../../../../application/hooks/useCan";
+import { palette, radiusPx } from "../../../themes/palette";
 
 const TABLE_COLUMNS = [
   { id: "label", label: "LABEL" },
@@ -74,8 +75,8 @@ const FIELD_TYPE_ITEMS = Object.entries(CUSTOM_FIELD_TYPE_LABELS).map(([value, l
 
 const CustomFieldsTab: React.FC = () => {
   const theme = useTheme();
-  const { userRoleName } = useAuth();
-  const isAdmin = userRoleName === "Admin";
+  const isAdmin = useCan("customField.admin");
+  const permissionsSettled = usePermissionsSettled();
 
   const [entityType, setEntityType] = useState<CustomFieldEntityType>("vendor");
   const [editing, setEditing] = useState<ICustomFieldDefinition | null>(null);
@@ -123,6 +124,7 @@ const CustomFieldsTab: React.FC = () => {
     setServerError(extractErrorMessage(err));
   };
 
+  if (!permissionsSettled) return null;
   if (!isAdmin) {
     return (
       <Stack sx={{ mt: 3, width: "100%" }}>
@@ -149,7 +151,7 @@ const CustomFieldsTab: React.FC = () => {
           <Typography sx={{ fontSize: 15, fontWeight: 600, color: "text.black" }}>
             Custom fields
           </Typography>
-          <Typography sx={{ fontSize: 13, color: "#666666", mt: 0.5 }}>
+          <Typography sx={{ fontSize: 13, color: palette.text.tertiary, mt: 0.5 }}>
             Define additional fields that appear on records across your organization. Choose an
             entity and add fields. Field keys are permanent once created.
           </Typography>
@@ -258,7 +260,7 @@ const CustomFieldsTab: React.FC = () => {
                         <Chip
                           key={chip.key}
                           label={chip.text}
-                          sx={{ fontSize: "11px", height: "20px", borderRadius: "4px" }}
+                          sx={{ fontSize: "11px", height: "20px", borderRadius: radiusPx.sm }}
                         />
                       ))}
                     </Stack>

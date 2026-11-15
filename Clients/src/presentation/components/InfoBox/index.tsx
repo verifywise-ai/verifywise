@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import { Box, Typography, IconButton, useTheme, keyframes } from "@mui/material";
 import { X, Info, AlertCircle } from "lucide-react";
+import { note, radiusPx } from "../../themes/palette";
+import { isClassicUi } from "../../themes/uiStyle";
 
 // Fade-out animation
 const fadeOut = keyframes`
@@ -13,6 +15,8 @@ const fadeOut = keyframes`
     transform: translateY(-8px);
   }
 `;
+
+const classicUi = isClassicUi();
 
 interface InfoBoxProps {
   message: string;
@@ -53,7 +57,11 @@ function InfoBox({
     },
   };
 
-  const { Icon, color } = iconConfig[variant];
+  // Phase 1: explanations (info) use the amber note; warnings keep their look.
+  const useNote = !classicUi && variant === "info";
+  const { Icon } = iconConfig[variant];
+  // The note's icon takes the note's own tone, not the green info colour.
+  const color = useNote ? note.text : iconConfig[variant].color;
 
   // Check if this info box has been dismissed before (only if using internal storage)
   useEffect(() => {
@@ -103,25 +111,25 @@ function InfoBox({
         alignItems: "center",
         justifyContent: "space-between",
         fontSize: 13,
-        color: theme.palette.text.secondary,
-        background: backgroundColor || theme.palette.background.paper,
-        px: 4,
-        py: 3.5,
-        borderRadius: 0.5,
-        border: `1px solid ${borderColor || theme.palette.divider}`,
-        gap: 2,
+        color: useNote ? note.text : theme.palette.text.secondary,
+        background: useNote ? note.bg : backgroundColor || theme.palette.background.paper,
+        ...(useNote
+          ? { padding: "10px 12px", borderRadius: radiusPx.sm }
+          : { px: 4, py: 3.5, borderRadius: 0.5 }),
+        border: `1px solid ${useNote ? note.border : borderColor || theme.palette.divider}`,
+        gap: "8px",
         animation: !disableAnimation && isClosing ? `${fadeOut} 0.3s ease-out forwards` : "none",
       }}
     >
-      <Box sx={{ display: "flex", alignItems: "flex-start", gap: 2, flex: 1 }}>
+      <Box sx={{ display: "flex", alignItems: "flex-start", gap: "8px", flex: 1 }}>
         <Icon size={18} strokeWidth={2} color={color} style={{ marginTop: 2, flexShrink: 0 }} />
-        <Box sx={{ display: "flex", flexDirection: "column", gap: 0.5, flex: 1 }}>
+        <Box sx={{ display: "flex", flexDirection: "column", gap: "1px", flex: 1 }}>
           {header && (
             <Typography
               sx={{
                 fontSize: 13,
                 fontWeight: 600,
-                color: theme.palette.text.primary,
+                color: useNote ? note.text : theme.palette.text.primary,
                 lineHeight: 1.5,
               }}
             >
@@ -131,7 +139,7 @@ function InfoBox({
           <Typography
             sx={{
               fontSize: 13,
-              color: theme.palette.text.secondary,
+              color: useNote ? note.text : theme.palette.text.secondary,
               lineHeight: 1.5,
             }}
           >

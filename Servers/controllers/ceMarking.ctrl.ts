@@ -39,7 +39,7 @@ export const getCEMarking = async (req: Request, res: Response) => {
     if (!projectResult || projectResult.length === 0) {
       return res
         .status(404)
-        .json(STATUS_CODE[404]("Project not found or you do not have access to it"));
+        .json(STATUS_CODE[404](req.t!("Project not found or you do not have access to it")));
     }
 
     // Check if CE Marking record exists
@@ -324,7 +324,7 @@ export const updateCEMarking = async (req: Request, res: Response) => {
       await transaction.rollback();
       return res
         .status(404)
-        .json(STATUS_CODE[404]("Project not found or you do not have access to it"));
+        .json(STATUS_CODE[404](req.t!("Project not found or you do not have access to it")));
     }
 
     // Get existing CE Marking record

@@ -11,6 +11,39 @@ interface ChangelogEntry {
 
 const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "v2.6.8",
+    date: "November 13, 2026",
+    title: "Training assignments, groups and custom roles, and framework import",
+    summary:
+      "You can now assign trainings to people with due dates and reminders, put users in groups with custom roles, and import your own frameworks from a spreadsheet. Intake forms can fill custom fields, Settings has a section sidebar, and LLM Evals gets a long list of fixes.",
+    items: [
+      "Training assignments: assign a training to named people with a due date. They see it under My training and get a reminder before the due date and another once it is overdue",
+      "Groups and custom roles: put users in groups, give a group access to use cases, and create custom roles with allow or deny per permission. Groups are in Settings",
+      "Framework import: with the extension enabled, import your own framework from an Excel template and assess it on a use case",
+      "Policy templates: save a policy as a template for your organization, and duplicate system templates to edit them",
+      "Intake forms: map answers to custom fields on the use case, model or AI app that approval creates",
+      "Settings: sections are in a sidebar, and Team shows when each member was added and last logged in",
+      "User guide: opens on the topic for the page you are viewing",
+      "LLM Evals: RAG retrieval context reaches the model and the judge, simulated datasets run as simulated conversations, DeepEval is upgraded to 4.3.4, and Arena is an organization setting that is off by default",
+      "Security: LLM Evals no longer stores provider keys in experiment configs, and screens and routes check permissions instead of role names",
+      "Fixes: OpenRouter key checks, provider key management for custom roles with LLM key admin rights, a working help menu, and translated server messages and notification subjects",
+    ],
+  },
+  {
+    version: "v2.6.7",
+    date: "November 9, 2026",
+    title: "AI app bulk import and bulk assessment",
+    summary:
+      "You can now load AI apps from a spreadsheet and risk-assess many of them at once with a reusable questionnaire. App owners can answer for their own apps, on screen or through an Excel worksheet.",
+    items: [
+      "AI app import: upload up to 1000 apps from an Excel template and review a preview before anything is written. Apps already in your inventory are skipped",
+      "Bulk assessment: select apps across pages and request an assessment from a reusable questionnaire of weighted questions rated 1 to 5",
+      "App owners: owners can answer for their own apps without edit rights. Each owner can get one summary of new assessments, in the app and by email",
+      "Worksheets: answer up to 1000 assessments in Excel. Rows left blank remain pending, so you can finish over several uploads",
+      "Risk scores: a completed assessment sets the app's risk score and stays in its history with its answers",
+    ],
+  },
+  {
     version: "v2.6.6",
     date: "November 1, 2026",
     title: "Use case and AI app lifecycles, intake form logic and MCP server auth",

@@ -3,11 +3,11 @@
   font-weight: 500;
   align-items: center;
   font-size: 13px;
-  color: #344054;
+  color: var(--vw-text-secondary, #344054);
 }
 
 .vw-multi-select-label .required {
-  color: #344054;
+  color: var(--vw-text-secondary, #344054);
   margin-left: 2px;
 }
 

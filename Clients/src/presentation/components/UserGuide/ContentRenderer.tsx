@@ -48,6 +48,7 @@ import type {
   ArticleContent,
 } from "@user-guide-content/contentTypes";
 import "./ContentRenderer.css";
+import { palette, radiusPx } from "../../themes/palette";
 
 // Icon mapping
 const iconMap: Record<string, LucideIcon> = {
@@ -601,7 +602,7 @@ const ContentRenderer: React.FC<ContentRendererProps> = ({ content, onNavigate }
         style={{
           fontSize: typography.fontSize.sm,
           fontFamily: typography.fontFamily.mono,
-          color: "#E5E7EB",
+          color: palette.border.light,
           margin: 0,
           whiteSpace: "pre-wrap",
           wordBreak: "break-all",
@@ -825,7 +826,7 @@ const ContentRenderer: React.FC<ContentRendererProps> = ({ content, onNavigate }
       <div
         style={{
           height: "1px",
-          backgroundColor: "#d0d5dd",
+          backgroundColor: palette.border.dark,
           marginBottom: spacing.xl,
         }}
       />
@@ -855,7 +856,7 @@ const ContentRenderer: React.FC<ContentRendererProps> = ({ content, onNavigate }
               justifyContent: "space-between",
               padding: spacing.sm,
               margin: `0 -${spacing.sm}`,
-              borderRadius: "4px",
+              borderRadius: radiusPx.sm,
               cursor: "pointer",
             }}
           >

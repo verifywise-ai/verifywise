@@ -39,6 +39,10 @@ jest.mock("../../../middleware/accessControl.middleware", () =>
   jest.fn(() => (_req: any, _res: any, next: any) => next()),
 );
 
+jest.mock("../../../middleware/projectAccess.middleware", () => ({
+  requireProjectAccess: jest.fn(() => (_req: any, _res: any, next: any) => next()),
+}));
+
 jest.mock("../../../controllers/euAiActClassification.ctrl", () => ({
   getUseCaseClassification: jest.fn((_req: any, res: any) => res.status(200).json({ run: null })),
   classifyUseCase: jest.fn((_req: any, res: any) => res.status(201).json({ saved: true })),

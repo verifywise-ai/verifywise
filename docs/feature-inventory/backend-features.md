@@ -169,12 +169,12 @@ The backend mounts **116 route modules** (including 7 extension routers). Each s
 
 | Method | Pattern | Middleware / Auth | Controller |
 |---|---|---|---|
-| GET | `/oauth/workspaces` | JWT, extension:slack | `getAllSlackWebhooks` |
-| GET | `/oauth/workspaces/:id` | JWT, extension:slack | `getSlackWebhookById` |
-| POST | `/oauth/workspaces` | JWT, extension:slack | `createNewSlackWebhook` |
-| PATCH | `/oauth/workspaces/:id` | JWT, extension:slack | `updateSlackWebhookById` |
-| DELETE | `/oauth/workspaces/:id` | JWT, extension:slack | `deleteSlackWebhookById` |
-| POST | `/oauth/workspaces/:id/send` | JWT, extension:slack | `sendSlackMessage` |
+| GET | `/oauth/workspaces` | JWT, extension:slack, authorize('extension.admin') | `getAllSlackWebhooks` |
+| GET | `/oauth/workspaces/:id` | JWT, extension:slack, authorize('extension.admin') | `getSlackWebhookById` |
+| POST | `/oauth/workspaces` | JWT, extension:slack, authorize('extension.admin') | `createNewSlackWebhook` |
+| PATCH | `/oauth/workspaces/:id` | JWT, extension:slack, authorize('extension.admin') | `updateSlackWebhookById` |
+| DELETE | `/oauth/workspaces/:id` | JWT, extension:slack, authorize('extension.admin') | `deleteSlackWebhookById` |
+| POST | `/oauth/workspaces/:id/send` | JWT, extension:slack, authorize('extension.admin') | `sendSlackMessage` |
 
 ## `routes/advisor.route.ts`
 - **Base path(s):** `/api/advisor`
@@ -335,14 +335,6 @@ The backend mounts **116 route modules** (including 7 extension routers). Each s
 | POST | `/:id/scan` | JWT, authorize(...) | `triggerRepositoryScan` |
 | POST | `/:id/webhook-secret` | JWT, authorize(...) | `generateWebhookSecretController` |
 | GET | `/:id/scans` | JWT, authorize(...) | `getRepositoryScans` |
-
-## `routes/aiEditor.route.ts`
-- **Base path(s):** `?`
-- **Controller:** `controllers/aiEditor.ctrl.ts`
-
-| Method | Pattern | Middleware / Auth | Controller |
-|---|---|---|---|
-| POST | `/command` | JWT | `editorAICommand` |
 
 ## `routes/aiGateway.route.ts`
 - **Base path(s):** `/api/ai-gateway`
@@ -1543,17 +1535,17 @@ The backend mounts **116 route modules** (including 7 extension routers). Each s
 | DELETE | `/:id` | JWT | `deleteShareLink` |
 
 ## `routes/slackWebhook.route.ts`
-- **Base path(s):** `/api/slackWebhooks`
+- **Base path(s):** `/api/slackWebhooks` (deprecated alias of `/api/extensions/slack/oauth/workspaces`, slated for removal)
 - **Controller:** `controllers/slackWebhook.ctrl.ts`
 
 | Method | Pattern | Middleware / Auth | Controller |
 |---|---|---|---|
-| GET | `/` | JWT | `getAllSlackWebhooks` |
-| GET | `/:id` | JWT | `getSlackWebhookById` |
-| POST | `/` | JWT | `createNewSlackWebhook` |
-| PATCH | `/:id` | JWT | `updateSlackWebhookById` |
-| DELETE | `/:id` | JWT | `deleteSlackWebhookById` |
-| POST | `/:id/send` | JWT | `sendSlackMessage` |
+| GET | `/` | JWT, extension:slack, authorize('extension.admin') | `getAllSlackWebhooks` |
+| GET | `/:id` | JWT, extension:slack, authorize('extension.admin') | `getSlackWebhookById` |
+| POST | `/` | JWT, extension:slack, authorize('extension.admin') | `createNewSlackWebhook` |
+| PATCH | `/:id` | JWT, extension:slack, authorize('extension.admin') | `updateSlackWebhookById` |
+| DELETE | `/:id` | JWT, extension:slack, authorize('extension.admin') | `deleteSlackWebhookById` |
+| POST | `/:id/send` | JWT, extension:slack, authorize('extension.admin') | `sendSlackMessage` |
 
 ## `routes/ssoConfig.route.ts`
 - **Base path(s):** `/api/ssoConfig`
@@ -2405,7 +2397,6 @@ The backend mounts **116 route modules** (including 7 extension routers). Each s
 | `/api/ai-content` | `routes/aiContent.route.ts` | `controllers/aiContent.ctrl.ts` | 4 | JWT; JWT, authorize(['Admin', 'Editor']) |
 | `/api/ai-detection` | `routes/aiDetection.route.ts` | `controllers/aiDetection.ctrl.ts` | 23 | JWT, authorize([]) |
 | `/api/ai-detection/repositories` | `routes/aiDetectionRepository.route.ts` | `controllers/aiDetectionRepository.ctrl.ts` | 8 | JWT, authorize([]) |
-| `?` | `routes/aiEditor.route.ts` | `controllers/aiEditor.ctrl.ts` | 1 | JWT |
 | `/api/ai-gateway` | `routes/aiGateway.route.ts` | `controllers/aiGateway.ctrl.ts` | 0 |  |
 | `/api/ai-incident-managements` | `routes/aiIncidentManagement.route.ts` | `../controllers/incident-management.ctrl` | 6 | JWT |
 | `/api/deepeval` | `routes/deepEvalRoutes.route.ts` | `controllers/deepEvalRoutes.ctrl.ts` | 1 | JWT |
@@ -2415,7 +2406,7 @@ The backend mounts **116 route modules** (including 7 extension routers). Each s
 
 **Key controllers / services / utils:**
 
-- Controllers: ../controllers/incident-management.ctrl, controllers/advisor.ctrl.ts, controllers/agentDiscovery.ctrl.ts, controllers/aiApp.ctrl.ts, controllers/aiApproval.ctrl.ts, controllers/aiApprovalRules.ctrl.ts, controllers/aiAudit.ctrl.ts, controllers/aiConfirmation.ctrl.ts, controllers/aiContent.ctrl.ts, controllers/aiDetection.ctrl.ts, controllers/aiDetectionRepository.ctrl.ts, controllers/aiEditor.ctrl.ts, controllers/aiGateway.ctrl.ts, controllers/deepEvalRoutes.ctrl.ts, controllers/evaluationLlmApiKey.ctrl.ts, controllers/shadowAi.ctrl.ts, controllers/shadowAiIngestion.ctrl.ts
+- Controllers: ../controllers/incident-management.ctrl, controllers/advisor.ctrl.ts, controllers/agentDiscovery.ctrl.ts, controllers/aiApp.ctrl.ts, controllers/aiApproval.ctrl.ts, controllers/aiApprovalRules.ctrl.ts, controllers/aiAudit.ctrl.ts, controllers/aiConfirmation.ctrl.ts, controllers/aiContent.ctrl.ts, controllers/aiDetection.ctrl.ts, controllers/aiDetectionRepository.ctrl.ts, controllers/aiGateway.ctrl.ts, controllers/deepEvalRoutes.ctrl.ts, controllers/evaluationLlmApiKey.ctrl.ts, controllers/shadowAi.ctrl.ts, controllers/shadowAiIngestion.ctrl.ts
 - Services: aiAuditTrail.service.ts, aiDetection.service.ts, aiDetectionSuppression.service.ts, shadowAiAggregation.service.ts, shadowAiAlertNotification.service.ts, shadowAiModelExtractor.service.ts, shadowAiRiskScoring.service.ts, shadowAiToolMatcher.service.ts
 - Utils: ai*.utils.ts, llm*.utils.ts
 
@@ -2573,7 +2564,7 @@ The backend mounts **116 route modules** (including 7 extension routers). Each s
 | `/api/organizations` | `routes/organization.route.ts` | `controllers/organization.ctrl.ts` | 6 | JWT, super-admin; JWT, super-admin, authorize(['Admin']); super-admin |
 | `/api/pmm` | `routes/postMarketMonitoring.route.ts` | `controllers/postMarketMonitoring.ctrl.ts` | 20 | JWT |
 | `/api/search` | `routes/search.route.ts` | `controllers/search.ctrl.ts` | 1 | JWT |
-| `/api/slackWebhooks` | `routes/slackWebhook.route.ts` | `controllers/slackWebhook.ctrl.ts` | 6 | JWT |
+| `/api/slackWebhooks` (deprecated alias) | `routes/slackWebhook.route.ts` | `controllers/slackWebhook.ctrl.ts` | 6 | JWT, extension:slack, authorize('extension.admin') |
 | `/api/subscriptions` | `routes/subscription.route.ts` | `../controllers/subscriptions.ctrl` | 3 | JWT |
 | `/api/telemetry` | `routes/telemetry.route.ts` | `controllers/telemetry.ctrl.ts` | 1 | public/special |
 | `/api/tiers` | `routes/tiers.route.ts` | `controllers/tiers.ctrl.ts` | 1 | JWT |
@@ -3094,7 +3085,6 @@ Scripts are defined in `Servers/package.json`. Tests are run from the `Servers/`
 
 ## 8. Notes & Caveats
 
-- `routes/aiEditor.route.ts` exists in the codebase but is **not currently mounted** in `app.ts` (base path `?` in the inventory above).
 - Several route modules share a base path (e.g., `/api/frameworks`, `/api/policies`, `/api/mrm`, `/api/files`, `/api/extensions`), so endpoint ordering matters.
 - RLS Phase 2 is off by default; the application relies on `organization_id` filtering at the controller/repository layer, with an extensive tenant-isolation test suite to catch cross-tenant regressions.
 - The `internal.route.ts` and `/api/internal` surface, plus `/api/telemetry` and `/v1` virtual-key proxy, are intended for internal/platform use and may bypass some user-auth assumptions.

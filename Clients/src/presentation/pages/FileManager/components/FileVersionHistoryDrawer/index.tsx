@@ -30,7 +30,7 @@ import Chip from "../../../../components/Chip";
 import StatusBadge from "../StatusBadge";
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
-import { text } from "../../../../themes/palette";
+import { text, palette as vwPalette, radiusPx } from "../../../../themes/palette";
 import useFormattedDate from "../../../../../application/hooks/useFormattedDate";
 
 dayjs.extend(relativeTime);
@@ -208,7 +208,7 @@ export const FileVersionHistoryDrawer: React.FC<FileVersionHistoryDrawerProps> =
           alignItems: "center",
           justifyContent: "space-between",
           padding: "16px 20px",
-          borderBottom: "1px solid #E0E4E9",
+          borderBottom: `1px solid ${vwPalette.border.light}`,
         }}
       >
         <Box>
@@ -216,7 +216,7 @@ export const FileVersionHistoryDrawer: React.FC<FileVersionHistoryDrawerProps> =
             sx={{
               fontSize: 16,
               fontWeight: 600,
-              color: "#101828",
+              color: vwPalette.text.primary,
             }}
           >
             Version history
@@ -272,13 +272,15 @@ export const FileVersionHistoryDrawer: React.FC<FileVersionHistoryDrawerProps> =
           <Box
             sx={{
               padding: "12px",
-              backgroundColor: "#FEF3F2",
-              borderRadius: "4px",
-              border: "1px solid #FECDCA",
+              backgroundColor: vwPalette.accent.red.bg,
+              borderRadius: radiusPx.sm,
+              border: `1px solid ${vwPalette.status.error.border}`,
               mb: 2,
             }}
           >
-            <Typography sx={{ fontSize: 12, color: "#B42318" }}>{versionsError}</Typography>
+            <Typography sx={{ fontSize: 12, color: vwPalette.status.error.text }}>
+              {versionsError}
+            </Typography>
           </Box>
         ) : versions.length === 0 ? (
           <Box
@@ -302,11 +304,15 @@ export const FileVersionHistoryDrawer: React.FC<FileVersionHistoryDrawerProps> =
                   key={version.id}
                   sx={{
                     "padding": "10px 12px",
-                    "borderRadius": "4px",
-                    "backgroundColor": isCurrent ? "#F0FDF4" : "transparent",
-                    "border": isCurrent ? "1px solid #BBF7D0" : "1px solid transparent",
+                    "borderRadius": radiusPx.sm,
+                    "backgroundColor": isCurrent ? vwPalette.status.success.bg : "transparent",
+                    "border": isCurrent
+                      ? `1px solid ${vwPalette.status.success.border}`
+                      : "1px solid transparent",
                     "&:hover": {
-                      backgroundColor: isCurrent ? "#F0FDF4" : "background.accent",
+                      backgroundColor: isCurrent
+                        ? vwPalette.status.success.bg
+                        : "background.accent",
                     },
                     "position": "relative",
                   }}
@@ -320,7 +326,7 @@ export const FileVersionHistoryDrawer: React.FC<FileVersionHistoryDrawerProps> =
                         bottom: -1,
                         width: 1,
                         height: 8,
-                        backgroundColor: "#E0E4E9",
+                        backgroundColor: vwPalette.border.light,
                       }}
                     />
                   )}
@@ -331,7 +337,7 @@ export const FileVersionHistoryDrawer: React.FC<FileVersionHistoryDrawerProps> =
                         width: 8,
                         height: 8,
                         borderRadius: "50%",
-                        backgroundColor: isCurrent ? "#16A34A" : "border.dark",
+                        backgroundColor: isCurrent ? vwPalette.status.success.text : "border.dark",
                         flexShrink: 0,
                       }}
                     />
@@ -354,11 +360,11 @@ export const FileVersionHistoryDrawer: React.FC<FileVersionHistoryDrawerProps> =
                             sx={{
                               fontSize: 10,
                               fontWeight: 500,
-                              color: "#16A34A",
-                              backgroundColor: "#F0FDF4",
+                              color: vwPalette.status.success.text,
+                              backgroundColor: vwPalette.status.success.bg,
                               padding: "1px 6px",
-                              borderRadius: "4px",
-                              border: "1px solid #BBF7D0",
+                              borderRadius: radiusPx.sm,
+                              border: `1px solid ${vwPalette.status.success.border}`,
                               whiteSpace: "nowrap",
                             }}
                           >
@@ -464,8 +470,8 @@ export const FileVersionHistoryDrawer: React.FC<FileVersionHistoryDrawerProps> =
                   sx={{
                     padding: "10px 12px",
                     backgroundColor: "background.accent",
-                    borderRadius: "4px",
-                    border: "1px solid #F2F4F7",
+                    borderRadius: radiusPx.sm,
+                    border: `1px solid ${vwPalette.background.hover}`,
                   }}
                 >
                   <Stack
@@ -505,7 +511,7 @@ export const FileVersionHistoryDrawer: React.FC<FileVersionHistoryDrawerProps> =
                             <Typography
                               sx={{
                                 fontSize: 10,
-                                color: "#B91C1C",
+                                color: vwPalette.status.error.text,
                                 textDecoration: "line-through",
                                 maxWidth: 100,
                                 overflow: "hidden",
@@ -526,7 +532,7 @@ export const FileVersionHistoryDrawer: React.FC<FileVersionHistoryDrawerProps> =
                             <Typography
                               sx={{
                                 fontSize: 10,
-                                color: "#0D7C4F",
+                                color: vwPalette.status.success.text,
                                 fontWeight: 500,
                                 maxWidth: 100,
                                 overflow: "hidden",

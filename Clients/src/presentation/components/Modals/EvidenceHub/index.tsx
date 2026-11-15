@@ -16,6 +16,7 @@ import CustomizableMultiSelect from "../../Inputs/Select/Multi";
 import TagInput from "../../Inputs/TagInput";
 import { HistorySidebar } from "../../Common/HistorySidebar";
 import { useQueryClient } from "@tanstack/react-query";
+import { radiusPx } from "../../../themes/palette";
 
 interface NewEvidenceHubProps {
   isOpen: boolean;
@@ -411,7 +412,7 @@ const NewEvidenceHub: FC<NewEvidenceHubProps> = ({
                   justifyContent: "center",
                   minHeight: "120px",
                   border: `1px dashed ${theme.palette.border.dark}`,
-                  borderRadius: "4px",
+                  borderRadius: radiusPx.sm,
                   color: theme.palette.text.tertiary,
                 }}
               >
@@ -625,7 +626,7 @@ const NewEvidenceHub: FC<NewEvidenceHubProps> = ({
               sx={{
                 "color": isHistoryOpen ? theme.palette.primary.main : theme.palette.text.secondary,
                 "border": `1px solid ${theme.palette.divider}`,
-                "borderRadius": "4px",
+                "borderRadius": radiusPx.sm,
                 "&:hover": {
                   backgroundColor: theme.palette.background.fill,
                 },

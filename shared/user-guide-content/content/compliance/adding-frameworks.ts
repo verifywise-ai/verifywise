@@ -218,12 +218,18 @@ export const addingFrameworksContent: ArticleContent = {
     {
       type: 'callout',
       variant: 'info',
-      text: 'You can\'t create your own framework in VerifyWise yet. If you need a framework that isn\'t listed, contact the VerifyWise team.',
+      text: 'If you need a framework that isn\'t listed, you can import your own from an Excel file once an Admin enables the Framework Import extension. See Importing your own framework.',
     },
     {
       type: 'article-links',
       title: 'Related articles',
       items: [
+        {
+          collectionId: 'compliance',
+          articleId: 'framework-import',
+          title: 'Importing your own framework',
+          description: 'Import a framework from Excel, add it to use cases and assess it',
+        },
         {
           collectionId: 'compliance',
           articleId: 'assessments',

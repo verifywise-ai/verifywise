@@ -1,6 +1,6 @@
 // style.ts
 import { SxProps, Theme } from "@mui/material";
-import { background, border as borderPalette } from "../../themes/palette";
+import { background, border as borderPalette, palette as vwPalette } from "../../themes/palette";
 
 export const searchBoxStyle = (isSearchBarVisible: boolean): SxProps<Theme> => ({
   display: "flex",
@@ -21,7 +21,7 @@ export const inputStyle = (isSearchBarVisible: boolean): SxProps<Theme> => ({
 });
 
 export const noProjectsTextStyle: SxProps<Theme> = {
-  color: "#666",
+  color: vwPalette.text.tertiary,
   textAlign: "left",
   mt: 3,
 };

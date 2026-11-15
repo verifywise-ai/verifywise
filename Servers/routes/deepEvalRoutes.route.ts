@@ -7,6 +7,7 @@ import {
 } from "../domain.layer/models/evaluationLlmApiKey/evaluationLlmApiKey.model";
 import { getDecryptedAiGatewayKeyForProviderQuery } from "../utils/aiGatewayEvalKey.utils";
 import { getGatewayInternalKey, getGatewayUrl } from "../utils/aiGatewayConfig";
+import { createPermissionFlagMiddleware } from "../utils/proxyPermissionFlag.utils";
 
 // JSON body parser for routes that need to inspect/modify the body before proxying
 const jsonParser = express.json({ limit: "50mb" });
@@ -41,6 +42,30 @@ interface ReportGenerateBody {
 }
 
 // Headers are now set directly in the proxyReq handler to ensure they're forwarded
+
+/**
+ * Header that tells the EvalServer the caller may change LLM Evals
+ * organization settings (PUT /deepeval/settings/arena). The proxy always
+ * strips a client-supplied value and sets it only from the caller's
+ * "organization.admin" permission, so the EvalServer can trust it the same way
+ * it trusts x-organization-id.
+ */
+export const MANAGE_SETTINGS_HEADER = "x-can-manage-org-settings";
+
+type SettingsPermissionRequest = Request & { canManageEvalsSettings?: boolean };
+
+/**
+ * Resolve, for writes to the LLM Evals settings routes, whether the caller
+ * holds "organization.admin", the permission that gates those settings. The
+ * header can only grant access, so other paths skip the lookup. Fails closed:
+ * on a lookup error the flag stays unset and the EvalServer refuses the write.
+ */
+export const resolveEvalsSettingsPermission = createPermissionFlagMiddleware({
+  pathPrefix: "/settings",
+  permission: "organization.admin",
+  flag: "canManageEvalsSettings",
+  logLabel: "DeepEval Proxy",
+});
 
 /**
  * Build the LiteLLM model string from a (provider, model) pair.
@@ -457,6 +482,7 @@ function deepEvalRoutes() {
         proxyReq.removeHeader("x-organization-id");
         proxyReq.removeHeader("x-user-id");
         proxyReq.removeHeader("x-role");
+        proxyReq.removeHeader(MANAGE_SETTINGS_HEADER);
 
         if (expressReq.organizationId) {
           proxyReq.setHeader("x-organization-id", expressReq.organizationId.toString());
@@ -466,6 +492,9 @@ function deepEvalRoutes() {
         }
         if (expressReq.role) {
           proxyReq.setHeader("x-role", expressReq.role);
+        }
+        if ((expressReq as SettingsPermissionRequest).canManageEvalsSettings) {
+          proxyReq.setHeader(MANAGE_SETTINGS_HEADER, "true");
         }
 
         // Fix request body - this re-streams the parsed body to the proxy target
@@ -492,7 +521,14 @@ function deepEvalRoutes() {
   });
 
   // All routes go through the proxy to Python eval server (including /models)
-  router.use("/", authenticateJWT, jsonParser, injectApiKeys, proxy);
+  router.use(
+    "/",
+    authenticateJWT,
+    jsonParser,
+    injectApiKeys,
+    resolveEvalsSettingsPermission,
+    proxy,
+  );
 
   return router;
 }

@@ -2,7 +2,7 @@ import { Stack, Typography } from "@mui/material";
 import { X as ClearIcon } from "lucide-react";
 import { ProjectRiskMitigationTable } from "../Table/ProjectRiskMitigationTable/ProjectRiskMitigationTable";
 import { IProjectRiskMitigationProps } from "../../../domain/interfaces/i.project";
-import { text } from "../../themes/palette";
+import { text, palette as vwPalette, radiusPx } from "../../themes/palette";
 
 export const ProjectRiskMitigation: React.FC<IProjectRiskMitigationProps> = ({
   onClose,
@@ -17,9 +17,9 @@ export const ProjectRiskMitigation: React.FC<IProjectRiskMitigationProps> = ({
     <Stack
       sx={{
         width: "100%",
-        backgroundColor: "#FCFCFD",
+        backgroundColor: vwPalette.background.main,
         padding: 10,
-        borderRadius: "4px",
+        borderRadius: radiusPx.sm,
         minHeight: "300px",
       }}
     >

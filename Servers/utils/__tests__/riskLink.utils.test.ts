@@ -7,6 +7,8 @@ jest.mock("../../database/db", () => ({
 import { sequelize } from "../../database/db";
 import {
   getRiskLinksForRiskQuery,
+  getRiskLinksForVendorRiskQuery,
+  getRiskGraphQuery,
   getRiskScoringRowsQuery,
   getRecomputeOwnedLinksQuery,
   getStructuralNeighboursQuery,
@@ -236,5 +238,20 @@ describe("riskLink.utils", () => {
       expect(modelBlock).toBeDefined();
       expect(modelBlock).toBe(hierarchyBlock(mockQuery.mock.calls[1][0]));
     });
+  });
+
+  // Linked-risk panels show the effective level (current when set, else inherent).
+  it.each([
+    ["risk panel", () => getRiskLinksForRiskQuery(7, 42, ["confirmed"]), "related"],
+    ["vendor-risk panel", () => getRiskLinksForVendorRiskQuery(7, 9, ["confirmed"]), "child"],
+    ["graph source", () => getRiskGraphQuery(7, ["confirmed"]), "src"],
+    ["graph target", () => getRiskGraphQuery(7, ["confirmed"]), "tgt"],
+  ])("selects the effective level for the %s", async (_name, run, alias) => {
+    await run();
+    const sql = mockQuery.mock.calls[0][0] as string;
+    expect(sql).toContain(
+      `COALESCE(${alias}.current_risk_level::text, ${alias}.risk_level_autocalculated::text)`,
+    );
+    expect(sql).not.toMatch(new RegExp(`(?<!, )${alias}\\.risk_level_autocalculated::text(,| AS)`));
   });
 });

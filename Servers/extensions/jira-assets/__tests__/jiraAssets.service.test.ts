@@ -13,6 +13,7 @@ import {
   JiraNotConfiguredError,
   jiraReadiness,
   JiraUseCaseDeleteFailedError,
+  listUseCases,
   JiraUseCaseNotFoundError,
   parseSyncIntervalHours,
   removeMissingUseCases,
@@ -33,7 +34,7 @@ import * as engineStatus from "../../sync-engine/status";
 import type { RunView } from "../../sync-engine/status";
 import { sequelize } from "../../../database/db";
 import { decryptText } from "../../../tools/createSecureValue";
-import { JiraAssetsClient } from "../jira.client";
+import { JiraAssetsClient, JiraInvalidIdError } from "../jira.client";
 import { deleteProjectByIdQuery, lockProjectForDelete } from "../../../utils/project.utils";
 import {
   getPendingApprovalRequestIdQuery,
@@ -72,9 +73,13 @@ jest.mock("../../../tools/createSecureValue", () => ({
 }));
 jest.mock("../jira.client", () => {
   class JiraUpstreamError extends Error {}
+  // The id rule itself is real: the selection writes share it with the client.
+  const { jiraId, JiraInvalidIdError } = jest.requireActual("../jira.client");
   return {
     JiraAssetsClient: jest.fn(),
     JiraUpstreamError,
+    jiraId,
+    JiraInvalidIdError,
     WORKER_SYNC_DEADLINE_MS: 600_000,
     MAX_PAGES: 500,
     PAGE_SIZE: 50,
@@ -1483,15 +1488,64 @@ describe("updateSelection (partial patch)", () => {
     });
   });
 
-  it("rejects bad ids and empty bodies, and reports a missing config", async () => {
+  it("rejects empty bodies, and reports a missing config", async () => {
     await expect(updateSelection(5, 8, {})).rejects.toBeInstanceOf(JiraConfigValidationError);
-    await expect(
-      updateSelection(5, 8, { selected_object_type_id: "1; DROP TABLE x" }),
-    ).rejects.toBeInstanceOf(JiraConfigValidationError);
     mockQuery.mockResolvedValue([[], 0]);
     await expect(updateSelection(5, 8, { selected_schema_id: "3" })).rejects.toBeInstanceOf(
       JiraNotConfiguredError,
     );
+  });
+});
+
+describe("selected ids follow the client's numeric Jira id rule", () => {
+  const bad = ["1; DROP TABLE x", "abc", "OBJ-1", "1:2", "-1", "1.5", "1".repeat(19), {}, true];
+
+  it.each(bad)("updateSelection refuses %p before writing", async (id) => {
+    const err = await updateSelection(5, 8, { selected_object_type_id: id }).catch((e) => e);
+
+    expect(err).toBeInstanceOf(JiraInvalidIdError);
+    expect(err.i18nVars).toEqual({ field: "selected_object_type_id" });
+    expect(mockQuery).not.toHaveBeenCalled();
+  });
+
+  it("updateSelection still clears with an empty string", async () => {
+    mockQuery.mockResolvedValue([[{ selected_schema_id: null, selected_object_type_id: "7" }], 1]);
+
+    await updateSelection(5, 8, { selected_schema_id: "", selected_object_type_id: "7" });
+
+    expect(mockQuery.mock.calls[0][1].replacements).toMatchObject({
+      schemaId: null,
+      objectTypeId: "7",
+    });
+  });
+
+  const base = { jira_base_url: "https://x.atlassian.net", workspace_id: "w", email: "a@b.co" };
+
+  it.each([
+    ["selected_schema_id", "../../api"],
+    ["selected_object_type_id", "OBJ-1"],
+  ])("saveConfig refuses a non-numeric %s before writing", async (field, id) => {
+    mockQuery.mockResolvedValueOnce([{ id: 1, api_token_encrypted: "enc", ...base }]);
+
+    const err = await saveConfig(5, 3, { ...base, [field]: id }).catch((e) => e);
+
+    expect(err).toBeInstanceOf(JiraInvalidIdError);
+    expect(err.i18nVars).toEqual({ field });
+    expect(mockQuery).toHaveBeenCalledTimes(1);
+    expect(mockTransaction).not.toHaveBeenCalled();
+  });
+
+  it("saveConfig stores numeric ids and null for missing or empty ones", async () => {
+    mockQuery
+      .mockResolvedValueOnce([{ id: 1, api_token_encrypted: "enc", ...base }])
+      .mockResolvedValue([]);
+
+    await saveConfig(5, 3, { ...base, selected_schema_id: "3", selected_object_type_id: "" });
+
+    expect(mockQuery.mock.calls[1][1].replacements).toMatchObject({
+      selectedSchemaId: "3",
+      selectedObjectTypeId: null,
+    });
   });
 });
 
@@ -1519,9 +1573,11 @@ describe("saveConfig validation", () => {
     workspace_id: "w",
     email: "a@b.co",
   };
+  // The stored row for the same connection (deployment type unset reads as cloud).
+  const stored = { id: 1, api_token_encrypted: "enc", ...base, deployment_type: null };
 
   it("rejects an out-of-range interval before writing", async () => {
-    mockQuery.mockResolvedValueOnce([{ id: 1, api_token_encrypted: "enc" }]);
+    mockQuery.mockResolvedValueOnce([stored]);
 
     await expect(saveConfig(5, 3, { ...base, sync_interval_hours: 500 })).rejects.toBeInstanceOf(
       JiraConfigValidationError,
@@ -1530,7 +1586,7 @@ describe("saveConfig validation", () => {
   });
 
   it("writes the connection without sync columns and the schedule through the engine", async () => {
-    mockQuery.mockResolvedValueOnce([{ id: 1, api_token_encrypted: "enc" }]).mockResolvedValue([]);
+    mockQuery.mockResolvedValueOnce([stored]).mockResolvedValue([]);
     const save = jest.spyOn(engineSchedule, "saveSchedule").mockResolvedValue({
       enabled: true,
       interval_hours: 6,
@@ -1555,7 +1611,7 @@ describe("saveConfig validation", () => {
   });
 
   it("saves only the sync field the body carries, keeping the other", async () => {
-    mockQuery.mockResolvedValueOnce([{ id: 1, api_token_encrypted: "enc" }]).mockResolvedValue([]);
+    mockQuery.mockResolvedValueOnce([stored]).mockResolvedValue([]);
     const save = jest.spyOn(engineSchedule, "saveSchedule").mockResolvedValue({
       enabled: true,
       interval_hours: 6,
@@ -1571,7 +1627,7 @@ describe("saveConfig validation", () => {
       expect.objectContaining({ userId: 3 }),
     );
 
-    mockQuery.mockResolvedValueOnce([{ id: 1, api_token_encrypted: "enc" }]);
+    mockQuery.mockResolvedValueOnce([stored]);
     await saveConfig(5, 3, { ...base, sync_enabled: true });
     expect(save).toHaveBeenLastCalledWith(
       "jira-assets",
@@ -1583,13 +1639,58 @@ describe("saveConfig validation", () => {
   });
 
   it("leaves the schedule alone when the body has no sync fields", async () => {
-    mockQuery.mockResolvedValueOnce([{ id: 1, api_token_encrypted: "enc" }]).mockResolvedValue([]);
+    mockQuery.mockResolvedValueOnce([stored]).mockResolvedValue([]);
     const save = jest.spyOn(engineSchedule, "saveSchedule");
 
     await saveConfig(5, 3, base);
 
     expect(save).not.toHaveBeenCalled();
     save.mockRestore();
+  });
+
+  describe("a stored token is never kept for a changed connection", () => {
+    it.each([
+      [
+        "base URL",
+        { jira_base_url: "https://evil.example.com" },
+        "Enter the API token again: the Jira base URL changed.",
+      ],
+      [
+        "workspace",
+        { workspace_id: "other" },
+        "Enter the API token again: the workspace ID changed.",
+      ],
+      ["email", { email: "b@b.co" }, "Enter the API token again: the email changed."],
+      [
+        "deployment type",
+        { deployment_type: "datacenter" as const },
+        "Enter the API token again: the deployment type changed.",
+      ],
+    ])("refuses a changed %s without a token, before writing", async (_, change, message) => {
+      mockQuery.mockResolvedValueOnce([stored]);
+      await expect(saveConfig(5, 3, { ...base, ...change })).rejects.toThrow(message);
+      expect(mockQuery).toHaveBeenCalledTimes(1);
+    });
+
+    it("saves a changed base URL with a new token", async () => {
+      mockQuery.mockResolvedValueOnce([stored]).mockResolvedValue([]);
+      await saveConfig(5, 3, { ...base, jira_base_url: "https://new.example.com", api_token: "n" });
+      const [updateSql, update] = mockQuery.mock.calls[1];
+      expect(updateSql).toContain("api_token_encrypted = :apiTokenEncrypted");
+      expect(update.replacements.jiraBaseUrl).toBe("https://new.example.com");
+    });
+
+    it("keeps the stored token when the connection is unchanged (a trailing slash is no change)", async () => {
+      mockQuery.mockResolvedValueOnce([stored]).mockResolvedValue([]);
+      await saveConfig(5, 3, {
+        ...base,
+        jira_base_url: "https://x.atlassian.net/",
+        email: " a@b.co ",
+        deployment_type: "cloud",
+      });
+      const [updateSql] = mockQuery.mock.calls[1];
+      expect(updateSql).not.toContain("api_token_encrypted");
+    });
   });
 });
 
@@ -1615,6 +1716,33 @@ describe("removal skip reasons", () => {
       expect(swagger).toContain(reason);
       expect(docs).toContain(`\`${reason}\``);
     }
+  });
+});
+
+describe("listUseCases visibility (E-M5)", () => {
+  it("limits a non-admin to the use cases they own, are a member of or reach through a group", async () => {
+    mockQuery.mockResolvedValueOnce([{ project_id: 50 }]);
+
+    const rows = await listUseCases(5, { userId: 8, role: "Editor" });
+
+    expect(rows).toEqual([{ project_id: 50 }]);
+    const [sql, options] = mockQuery.mock.calls[0];
+    expect(sql).toContain("p.owner = :visibilityUserId");
+    expect(sql).toContain("FROM projects_members pm");
+    expect(sql).toContain("FROM project_groups pg");
+    // The rule sits in the WHERE clause, before the ORDER BY.
+    expect(sql.indexOf("p.owner = :visibilityUserId")).toBeLessThan(sql.indexOf("ORDER BY"));
+    expect(options.replacements).toEqual({ organizationId: 5, visibilityUserId: 8 });
+  });
+
+  it.each(["Admin", "SuperAdmin"])("leaves the list whole for an %s", async (role) => {
+    mockQuery.mockResolvedValueOnce([]);
+
+    await listUseCases(5, { userId: 8, role });
+
+    const [sql, options] = mockQuery.mock.calls[0];
+    expect(sql).not.toContain(":visibilityUserId");
+    expect(options.replacements).toEqual({ organizationId: 5 });
   });
 });
 

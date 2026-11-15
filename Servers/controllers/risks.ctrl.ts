@@ -2,15 +2,18 @@ import { Request, Response } from "express";
 
 import { STATUS_CODE } from "../utils/statusCode.utils";
 import {
-  deleteRiskByIdQuery,
+  archiveRiskQuery,
   getAllRisksQuery,
   getRiskByIdQuery,
   getRisksByFrameworkQuery,
   getRisksByProjectQuery,
-  bulkSetProjectRisksOwnerQuery,
-  bulkSetProjectRisksCategoryQuery,
-  bulkArchiveProjectRisksQuery,
+  assertRiskReferencesInOrganization,
+  recordRiskSnapshots,
+  getActiveRisksByIdsQuery,
+  getProjectTitlesByRiskIdsQuery,
+  sameRiskCategories,
   PROJECT_RISK_CATEGORIES_SET,
+  enqueueBulkRiskAutomation,
 } from "../utils/risk.utils";
 import { sequelize } from "../database/db";
 import {
@@ -22,8 +25,7 @@ import { parseBulkIds, assertOrgOwnsIds, withBulkTransaction } from "../utils/bu
 import { logProcessing } from "../utils/logger/logHelper";
 import logger, { logStructured } from "../utils/logger/fileLogger";
 import { logEvent } from "../utils/logger/dbLogger";
-import { recordProjectRiskDeletion } from "../utils/projectRiskChangeHistory.utils";
-import { notifyUserAssigned } from "../services/inAppNotification.service";
+import { notifyUserAssigned, notifyUserAssignedMany } from "../services/inAppNotification.service";
 import { QueryTypes } from "sequelize";
 import { recordPortfolioSnapshot } from "../utils/quantitativeRisk.utils";
 import {
@@ -42,6 +44,8 @@ import {
 } from "../services/riskSuggestions/riskSuggestions.service";
 
 import { translateError } from "../utils/i18n.utils";
+import { IRisk } from "../domain.layer/interfaces/I.risk";
+import { BulkRiskChange } from "../utils/automation/risk.automation.utils";
 // Helper function to get user name
 async function getUserNameById(userId: number): Promise<string> {
   const result = await sequelize.query<{ name: string; surname: string }>(
@@ -52,6 +56,96 @@ async function getUserNameById(userId: number): Promise<string> {
     return `${result[0].name} ${result[0].surname}`.trim();
   }
   return "Someone";
+}
+
+type AssignedRisk = Pick<IRisk, "id" | "risk_owner" | "risk_name" | "risk_description">;
+
+/**
+ * Tell each risk's new owner they were assigned. Shared by the single edit and
+ * the bulk set_owner. An owner given one risk gets the single-risk notice; an
+ * owner given several in one bulk action gets one notice listing them all.
+ * Run it after commit and do not await it: a failed notification must not
+ * fail the edit.
+ */
+async function notifyNewRiskOwners(
+  organizationId: number,
+  assignerUserId: number,
+  risks: AssignedRisk[],
+): Promise<void> {
+  if (risks.length === 0) return;
+  const baseUrl = process.env.FRONTEND_URL || "http://localhost:3000";
+  const assignerName = await getUserNameById(assignerUserId);
+
+  const byOwner = new Map<number, AssignedRisk[]>();
+  for (const risk of risks) {
+    const owned = byOwner.get(risk.risk_owner) ?? [];
+    owned.push(risk);
+    byOwner.set(risk.risk_owner, owned);
+  }
+
+  const singles: AssignedRisk[] = [];
+  for (const [ownerId, owned] of byOwner) {
+    if (owned.length === 1) {
+      singles.push(owned[0]);
+      continue;
+    }
+    try {
+      await notifyUserAssignedMany(
+        organizationId,
+        ownerId,
+        {
+          entityType: "project_risk",
+          items: owned.map((risk) => ({ id: risk.id!, name: risk.risk_name })),
+          roleType: "Risk Owner",
+          entityUrl: "/risk-management",
+          texts: {
+            titleKey: "{count} risks were assigned to you",
+            messageKey: "{assigner} assigned you as Risk Owner for {count} risks: {names}",
+            messageMoreKey:
+              "{assigner} assigned you as Risk Owner for {count} risks: {names} and {more} more",
+            itemsLabel: "risks",
+            roleDescription:
+              "As the Risk Owner, you are responsible for managing and mitigating these risks.",
+          },
+        },
+        assignerName,
+        baseUrl,
+      );
+    } catch (err) {
+      logger.error("Failed to send risk owner notification:", err);
+    }
+  }
+  if (singles.length === 0) return;
+
+  // Project name for context, one query for every single-risk notice
+  const projectTitles = await getProjectTitlesByRiskIdsQuery(
+    singles.map((risk) => risk.id!),
+    organizationId,
+  );
+
+  for (const risk of singles) {
+    try {
+      await notifyUserAssigned(
+        organizationId,
+        risk.risk_owner,
+        {
+          entityType: "project_risk",
+          entityId: risk.id!,
+          entityName: risk.risk_name,
+          roleType: "Risk Owner",
+          entityUrl: `/risk-management?riskId=${risk.id}`,
+        },
+        assignerName,
+        baseUrl,
+        {
+          projectName: projectTitles.get(risk.id!),
+          description: risk.risk_description,
+        },
+      );
+    } catch (err) {
+      logger.error("Failed to send risk owner notification:", err);
+    }
+  }
 }
 
 export async function getAllRisks(req: Request, res: Response): Promise<any> {
@@ -251,6 +345,80 @@ export async function getRiskById(req: Request, res: Response): Promise<any> {
   }
 }
 
+/**
+ * What follows a committed risk creation: the event log entry, the portfolio
+ * snapshot (FAIR risks), the risk link recompute and the risk owner's
+ * notification. Shared by every HTTP route that creates a risk from a
+ * request body, so they behave the same.
+ */
+export async function runRiskCreatedSideEffects(
+  newProjectRisk: Awaited<ReturnType<typeof createRiskService>>,
+  req: Request,
+): Promise<void> {
+  logStructured(
+    "successful",
+    `project risk created: ${newProjectRisk.risk_name}`,
+    "createProjectRisk",
+    "projectRisks.ctrl.ts",
+  );
+  await logEvent(
+    "Create",
+    `Project risk created: ${newProjectRisk.risk_name}`,
+    req.userId!,
+    req.organizationId!,
+  );
+
+  // Record portfolio snapshot if quantitative fields were provided (fire-and-forget)
+  if (newProjectRisk.ale_estimate != null) {
+    recordPortfolioSnapshot(req.organizationId!).catch((err) =>
+      logger.error("Failed to record portfolio snapshot:", err),
+    );
+  }
+
+  // Recompute this risk's stored links (fire-and-forget)
+  enqueueRiskLinkRecompute(req.organizationId!, newProjectRisk.id!).catch((err) =>
+    logger.error("Failed to enqueue risk link recompute:", err),
+  );
+
+  // Send risk owner assignment notification (fire-and-forget)
+  if (newProjectRisk.risk_owner) {
+    const baseUrl = process.env.FRONTEND_URL || "http://localhost:3000";
+    const assignerName = await getUserNameById(req.userId!);
+
+    // Get project name for context (use first associated project if available)
+    let projectName: string | undefined;
+    const projects = req.body.projects || [];
+    if (projects.length > 0) {
+      const projectResult = await sequelize.query<{ project_title: string }>(
+        `SELECT project_title FROM projects WHERE id = :projectId AND organization_id = :organizationId`,
+        {
+          replacements: { projectId: projects[0], organizationId: req.organizationId! },
+          type: QueryTypes.SELECT,
+        },
+      );
+      projectName = projectResult[0]?.project_title;
+    }
+
+    notifyUserAssigned(
+      req.organizationId!,
+      newProjectRisk.risk_owner,
+      {
+        entityType: "project_risk",
+        entityId: newProjectRisk.id!,
+        entityName: newProjectRisk.risk_name,
+        roleType: "Risk Owner",
+        entityUrl: `/risk-management?riskId=${newProjectRisk.id}`,
+      },
+      assignerName,
+      baseUrl,
+      {
+        projectName,
+        description: newProjectRisk.risk_description,
+      },
+    ).catch((err) => logger.error("Failed to send risk owner notification:", err));
+  }
+}
+
 export async function createRisk(req: Request, res: Response): Promise<any> {
   const transaction = await sequelize.transaction();
   const riskData = req.body;
@@ -263,6 +431,8 @@ export async function createRisk(req: Request, res: Response): Promise<any> {
         ...riskData,
         projects: req.body.projects || [],
         frameworks: req.body.frameworks || [],
+        // Only the demo seed creates demo risks; "Delete demo data" removes them.
+        is_demo: false,
       },
       { userId: req.userId!, organizationId: req.organizationId! },
       transaction,
@@ -270,68 +440,7 @@ export async function createRisk(req: Request, res: Response): Promise<any> {
 
     if (newProjectRisk) {
       await transaction.commit();
-      logStructured(
-        "successful",
-        `project risk created: ${newProjectRisk.risk_name}`,
-        "createProjectRisk",
-        "projectRisks.ctrl.ts",
-      );
-      await logEvent(
-        "Create",
-        `Project risk created: ${newProjectRisk.risk_name}`,
-        req.userId!,
-        req.organizationId!,
-      );
-
-      // Record portfolio snapshot if quantitative fields were provided (fire-and-forget)
-      if (newProjectRisk.ale_estimate != null) {
-        recordPortfolioSnapshot(req.organizationId!).catch((err) =>
-          console.error("Failed to record portfolio snapshot:", err),
-        );
-      }
-
-      // Recompute this risk's stored links (fire-and-forget)
-      enqueueRiskLinkRecompute(req.organizationId!, newProjectRisk.id!).catch((err) =>
-        console.error("Failed to enqueue risk link recompute:", err),
-      );
-
-      // Send risk owner assignment notification (fire-and-forget)
-      if (newProjectRisk.risk_owner) {
-        const baseUrl = process.env.FRONTEND_URL || "http://localhost:3000";
-        const assignerName = await getUserNameById(req.userId!);
-
-        // Get project name for context (use first associated project if available)
-        let projectName: string | undefined;
-        const projects = req.body.projects || [];
-        if (projects.length > 0) {
-          const projectResult = await sequelize.query<{ project_title: string }>(
-            `SELECT project_title FROM projects WHERE id = :projectId AND organization_id = :organizationId`,
-            {
-              replacements: { projectId: projects[0], organizationId: req.organizationId! },
-              type: QueryTypes.SELECT,
-            },
-          );
-          projectName = projectResult[0]?.project_title;
-        }
-
-        notifyUserAssigned(
-          req.organizationId!,
-          newProjectRisk.risk_owner,
-          {
-            entityType: "project_risk",
-            entityId: newProjectRisk.id!,
-            entityName: newProjectRisk.risk_name,
-            roleType: "Risk Owner",
-            entityUrl: `/risk-management?riskId=${newProjectRisk.id}`,
-          },
-          assignerName,
-          baseUrl,
-          {
-            projectName,
-            description: newProjectRisk.risk_description,
-          },
-        ).catch((err) => console.error("Failed to send risk owner notification:", err));
-      }
+      await runRiskCreatedSideEffects(newProjectRisk, req);
 
       return res.status(201).json(STATUS_CODE[201](newProjectRisk));
     }
@@ -470,42 +579,11 @@ export async function updateRiskById(req: Request, res: Response): Promise<any> 
       );
 
       // Send risk owner assignment notification if owner changed (fire-and-forget)
-      const oldRiskOwner = existingProjectRisk.risk_owner;
       const newRiskOwner = updatedProjectRisk.risk_owner;
-      if (newRiskOwner && newRiskOwner !== oldRiskOwner) {
-        const baseUrl = process.env.FRONTEND_URL || "http://localhost:3000";
-        const assignerName = await getUserNameById(req.userId!);
-
-        // Get project name for context
-        let projectName: string | undefined;
-        const projectsResult = await sequelize.query<{ project_title: string }>(
-          `SELECT p.project_title FROM projects p
-           JOIN projects_risks prl ON p.id = prl.project_id AND prl.organization_id = :organizationId
-           WHERE prl.risk_id = :riskId AND p.organization_id = :organizationId LIMIT 1`,
-          {
-            replacements: { riskId: projectRiskId, organizationId: req.organizationId! },
-            type: QueryTypes.SELECT,
-          },
+      if (newRiskOwner && newRiskOwner !== existingProjectRisk.risk_owner) {
+        notifyNewRiskOwners(req.organizationId!, req.userId!, [updatedProjectRisk]).catch((err) =>
+          console.error("Failed to send risk owner notification:", err),
         );
-        projectName = projectsResult[0]?.project_title;
-
-        notifyUserAssigned(
-          req.organizationId!,
-          newRiskOwner,
-          {
-            entityType: "project_risk",
-            entityId: projectRiskId,
-            entityName: updatedProjectRisk.risk_name,
-            roleType: "Risk Owner",
-            entityUrl: `/risk-management?riskId=${projectRiskId}`,
-          },
-          assignerName,
-          baseUrl,
-          {
-            projectName,
-            description: updatedProjectRisk.risk_description,
-          },
-        ).catch((err) => console.error("Failed to send risk owner notification:", err));
       }
 
       return res.status(200).json(STATUS_CODE[200](updatedProjectRisk));
@@ -607,23 +685,15 @@ export async function deleteRiskById(req: Request, res: Response): Promise<any> 
   );
   logger.debug(`🗑️ Delete request for project risk ID ${projectRiskId}`);
   try {
-    const deletedProjectRisk = await deleteRiskByIdQuery(
+    // Soft delete + automation + change history + policy unlinks (R-M8)
+    const deletedProjectRisk = await archiveRiskQuery(
       projectRiskId,
       req.organizationId!,
+      req.userId,
       transaction,
     );
 
     if (deletedProjectRisk) {
-      // Record deletion in change history
-      if (req.userId) {
-        await recordProjectRiskDeletion(
-          projectRiskId,
-          req.userId,
-          req.organizationId!,
-          transaction,
-        );
-      }
-
       await transaction.commit();
       logStructured(
         "successful",
@@ -637,7 +707,8 @@ export async function deleteRiskById(req: Request, res: Response): Promise<any> 
         req.userId!,
         req.organizationId!,
       );
-      return res.status(200).json(STATUS_CODE[200](deletedProjectRisk));
+      // The response body stays `true`: the legacy contract never returned the row.
+      return res.status(200).json(STATUS_CODE[200](true));
     }
 
     logStructured(
@@ -730,52 +801,115 @@ export async function bulkUpdateProjectRisks(req: Request, res: Response): Promi
       categories = raw as string[];
     }
 
-    await withBulkTransaction(
+    const organizationId = req.organizationId!;
+    const userId = req.userId!;
+
+    // Each risk goes through the single-edit path, so it gets the same change
+    // history and policy unlinks (R-M8). The org's automation runs once for
+    // the whole action, with a summary, not once per risk.
+    const { updatedIds, newOwnerRisks } = await withBulkTransaction(
       {
         audit: {
           action,
           ids,
           fileName: "risks.ctrl.ts",
           functionName: "bulkUpdateProjectRisks",
-          userId: req.userId!,
-          organizationId: req.organizationId!,
+          userId,
+          organizationId,
           eventType: action === "archive" ? "Delete" : "Update",
         },
       },
       async (transaction) => {
-        await assertOrgOwnsIds({
-          table: "risks",
-          ids,
-          organizationId: req.organizationId!,
-          transaction,
-        });
+        await assertOrgOwnsIds({ table: "risks", ids, organizationId, transaction });
+
+        const updatedIds: number[] = [];
+        const newOwnerRisks: AssignedRisk[] = [];
+        const changes: BulkRiskChange[] = [];
+
+        if (action === "archive") {
+          for (const id of ids) {
+            // The archived row, for the automation's summary.
+            const archived = await archiveRiskQuery(id, organizationId, userId, transaction, {
+              recordSnapshots: false,
+              runAutomations: false,
+            });
+            if (archived) {
+              updatedIds.push(id);
+              changes.push({ before: archived, after: archived });
+            }
+          }
+          if (updatedIds.length > 0) {
+            await recordRiskSnapshots(organizationId, transaction);
+            await enqueueBulkRiskAutomation("risk_deleted", changes, organizationId, transaction);
+          }
+          return { updatedIds, newOwnerRisks };
+        }
 
         if (action === "set_owner") {
-          await bulkSetProjectRisksOwnerQuery(req.organizationId!, ids, ownerId!, transaction);
-        } else if (action === "set_category") {
-          await bulkSetProjectRisksCategoryQuery(
-            req.organizationId!,
-            ids,
-            categories!,
+          await assertRiskReferencesInOrganization(
+            { risk_owner: ownerId },
+            organizationId,
             transaction,
           );
-        } else {
-          await bulkArchiveProjectRisksQuery(req.organizationId!, ids, transaction);
         }
+
+        // Archived risks are left alone, as before.
+        const activeRisks = await getActiveRisksByIdsQuery(ids, organizationId, transaction);
+
+        for (const risk of activeRisks) {
+          // A risk that already has the value is not an edit: no write,
+          // automation, history or recompute, and it is not counted.
+          const unchanged =
+            action === "set_owner"
+              ? Number(risk.risk_owner) === ownerId
+              : sameRiskCategories(risk.risk_category, categories!);
+          if (unchanged) continue;
+
+          const input =
+            action === "set_owner" ? { risk_owner: ownerId } : { risk_category: categories };
+          const updated = await updateRiskService(
+            risk.id!,
+            input,
+            risk,
+            { userId, organizationId },
+            transaction,
+            { recordSnapshots: false, runAutomations: false },
+          );
+          if (!updated) continue;
+          updatedIds.push(risk.id!);
+          changes.push({ before: risk, after: updated.dataValues ?? updated });
+          if (action === "set_owner" && updated.risk_owner) {
+            newOwnerRisks.push(updated);
+          }
+        }
+        if (updatedIds.length > 0) {
+          await recordRiskSnapshots(organizationId, transaction);
+          await enqueueBulkRiskAutomation("risk_updated", changes, organizationId, transaction);
+        }
+        return { updatedIds, newOwnerRisks };
       },
     );
 
-    // Only set_category moves a scoring signal. set_owner does not affect
-    // scoring, and archive is a soft delete — see R7.
-    if (action === "set_category") {
-      for (const riskId of ids) {
-        enqueueRiskLinkRecompute(req.organizationId!, riskId).catch((err) =>
+    // After commit, as the single edit does: a link recompute for every
+    // updated risk (an archive is a soft delete and recomputes nothing — R7)
+    // and one notification to the new owner (one notice listing the risks
+    // when there are several).
+    if (action !== "archive") {
+      for (const riskId of updatedIds) {
+        enqueueRiskLinkRecompute(organizationId, riskId).catch((err) =>
           console.error("Failed to enqueue risk link recompute:", err),
         );
       }
     }
+    notifyNewRiskOwners(organizationId, userId, newOwnerRisks).catch((err) =>
+      console.error("Failed to send risk owner notification:", err),
+    );
 
-    return res.status(200).json(STATUS_CODE[200]({ updated: ids.length, action }));
+    // `updated` keeps its frozen meaning (the ids sent); `changed` is how many
+    // risks were actually archived or edited.
+    return res
+      .status(200)
+      .json(STATUS_CODE[200]({ updated: ids.length, changed: updatedIds.length, action }));
   } catch (error) {
     if (error instanceof ValidationException) {
       return res.status(400).json(STATUS_CODE[400](error.message));
@@ -857,7 +991,7 @@ export async function suggestRisksWithAI(req: Request, res: Response): Promise<a
       logger.debug(`No LLM keys found for organization: ${organizationId}`);
       return res
         .status(400)
-        .json(STATUS_CODE[400]("No LLM keys configured for this organization."));
+        .json(STATUS_CODE[400](req.t!("No LLM keys configured for this organization.")));
     }
 
     const llmKeyId = req.body?.llmKeyId !== undefined ? Number(req.body.llmKeyId) : undefined;

@@ -75,6 +75,11 @@ export const handlers = [
     }),
   ),
 
+  // Per-user dashboard layout: none saved, so the default layout applies.
+  http.get("/api/v1/dashboard/preferences", () =>
+    HttpResponse.json({ data: { layout: null, updated_at: null } }),
+  ),
+
   // ==================== Auth / Users ====================
 
   // Specific auth routes (must precede /api/users/:id)
@@ -559,6 +564,13 @@ export const handlers = [
   http.delete("/api/deepeval/arena/comparisons/:id", () =>
     HttpResponse.json({ message: "deleted", id: 1 }),
   ),
+  http.get("/api/deepeval/settings/arena", () =>
+    HttpResponse.json({ enabled: true, configured: true }),
+  ),
+  http.put("/api/deepeval/settings/arena", async ({ request }) => {
+    const body = (await request.json()) as { enabled?: boolean };
+    return HttpResponse.json({ enabled: body?.enabled === true, configured: true });
+  }),
 
   // ==================== DeepEval — Bias Audits ====================
   http.get("/api/deepeval/bias-audits", () =>

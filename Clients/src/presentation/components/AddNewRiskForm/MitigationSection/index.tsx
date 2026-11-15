@@ -22,7 +22,7 @@ import selectValidation from "../../../../application/validations/selectValidati
 import useUsers from "../../../../application/hooks/useUsers";
 import { mitigationStatusItems, riskLevelItems, approvalStatusItems } from "../projectRiskValue";
 import { alertState } from "../../../../domain/interfaces/i.alert";
-import allowedRoles from "../../../../application/constants/permissions";
+import { useCanCheck } from "../../../../application/hooks/useCan";
 
 // Layout constants - matching RisksSection
 const LAYOUT = {
@@ -53,7 +53,6 @@ interface MitigationSectionProps {
   setMitigationValues: Dispatch<SetStateAction<MitigationFormValues>>;
   validateRef?: React.MutableRefObject<((values: MitigationFormValues) => boolean) | null>;
   firstInvalidFieldRef?: React.MutableRefObject<keyof MitigationFormValues | null>;
-  userRoleName: string;
   disableInternalScroll?: boolean;
   compactMode?: boolean;
   /** Backend validation errors to display inline (keyed by MitigationFormValues field). */
@@ -72,22 +71,25 @@ interface MitigationSectionProps {
  * @param {MitigationFormValues} props.mitigationValues - Current form values
  * @param {function} props.setMitigationValues - State setter for form values
  * @param {MitigationFormErrors} [props.mitigationErrors] - Form validation errors (optional)
- * @param {string} props.userRoleName - Current user's role for permission checks
  * @returns {JSX.Element} Rendered mitigation form section
  */
+/** Approval is started once an approver or an approval status is picked. */
+const isApprovalStarted = (values: MitigationFormValues): boolean =>
+  Boolean(values.approver) || Boolean(values.approvalStatus);
+
 const MitigationSection: FC<MitigationSectionProps> = ({
   mitigationValues,
   setMitigationValues,
   validateRef,
   firstInvalidFieldRef,
-  userRoleName,
   disableInternalScroll = false,
   compactMode = false,
   serverErrors,
   onValidityChange,
 }) => {
   const theme = useTheme();
-  const isEditingDisabled = !allowedRoles.projectRisks.edit.includes(userRoleName);
+  const can = useCanCheck();
+  const isEditingDisabled = !can("risks.edit");
 
   const [alert, setAlert] = useState<alertState | null>(null);
 
@@ -107,6 +109,8 @@ const MitigationSection: FC<MitigationSectionProps> = ({
     width: "100%",
     maxWidth: contentWidth,
   };
+
+  const approvalStarted = isApprovalStarted(mitigationValues);
 
   const validators = useMemo<FieldValidators<MitigationFormValues>>(
     () => ({
@@ -130,15 +134,19 @@ const MitigationSection: FC<MitigationSectionProps> = ({
         const r = checkStringValidation("Implementation strategy", v as string, 1, 1024);
         return r.accepted ? "" : r.message;
       },
-      approver: (v: unknown) => {
+      // Approval data is required only once approval is started (R-M12).
+      approver: (v: unknown, all: MitigationFormValues) => {
+        if (!isApprovalStarted(all)) return "";
         const r = selectValidation("Approver", v as number);
         return r.accepted ? "" : r.message;
       },
-      approvalStatus: (v: unknown) => {
+      approvalStatus: (v: unknown, all: MitigationFormValues) => {
+        if (!isApprovalStarted(all)) return "";
         const r = selectValidation("Approval status", v as number);
         return r.accepted ? "" : r.message;
       },
-      dateOfAssessment: (v: unknown) => {
+      dateOfAssessment: (v: unknown, all: MitigationFormValues) => {
+        if (!isApprovalStarted(all)) return "";
         const r = checkStringValidation("Date of assessment", v as string, 1);
         return r.accepted ? "" : r.message;
       },
@@ -156,6 +164,21 @@ const MitigationSection: FC<MitigationSectionProps> = ({
   } = useFormValidation<MitigationFormValues>(validators);
   const mitigationValuesRef = useRef(mitigationValues);
   mitigationValuesRef.current = mitigationValues;
+
+  // Approval fields become optional again once approval is un-started, so
+  // drop the errors on the ones that are now empty: a "required" message, or
+  // a server message about a value the user has since removed. Approver and
+  // approval status are always empty here; a date of assessment left filled
+  // in keeps its error, since the value it describes is unchanged.
+  // serverErrors is deliberately not a dependency: this runs only when
+  // approval turns off, so a server error that arrives while it is off is
+  // merged by the effect below and kept.
+  useEffect(() => {
+    if (approvalStarted) return;
+    clearFieldError("approver");
+    clearFieldError("approvalStatus");
+    if (!mitigationValuesRef.current.dateOfAssessment) clearFieldError("dateOfAssessment");
+  }, [approvalStarted, clearFieldError]);
 
   // Merge backend validation errors into the inline error state.
   useEffect(() => {
@@ -226,7 +249,10 @@ const MitigationSection: FC<MitigationSectionProps> = ({
       field: keyof Pick<MitigationFormValues, "deadline" | "dateOfAssessment">,
       newDate: Dayjs | null,
     ) => {
-      if (newDate?.isValid()) {
+      if (newDate === null) {
+        // Cleared by the user: keep it empty.
+        setMitigationValues((prevValues) => ({ ...prevValues, [field]: "" }));
+      } else if (newDate.isValid()) {
         setMitigationValues((prevValues) => ({
           ...prevValues,
           [field]: newDate.toISOString(),
@@ -302,9 +328,7 @@ const MitigationSection: FC<MitigationSectionProps> = ({
               <DatePicker
                 id="mitigation-deadline-input"
                 label="Deadline"
-                date={
-                  mitigationValues.deadline ? dayjs(mitigationValues.deadline) : dayjs(new Date())
-                }
+                date={mitigationValues.deadline ? dayjs(mitigationValues.deadline) : null}
                 handleDateChange={(e) => handleDateChange("deadline", e)}
                 onBlur={handleFieldBlur("deadline")}
                 sx={{ flex: 1 }}
@@ -361,8 +385,8 @@ const MitigationSection: FC<MitigationSectionProps> = ({
             Calculate residual risk level
           </Typography>
           <Typography sx={{ fontSize: theme.typography.fontSize }}>
-            The Risk Level is calculated by multiplying the Likelihood and Severity scores. By
-            assigning these scores, the risk level will be determined based on your inputs.
+            The risk level is a weighted score: likelihood plus three times severity, so severity
+            counts more. Pick a likelihood and a severity and the level follows from the score.
           </Typography>
         </Stack>
         <Stack sx={{ mt: `${LAYOUT.VERTICAL_GAP}px`, width: "100%", maxWidth: contentWidth }}>
@@ -393,7 +417,7 @@ const MitigationSection: FC<MitigationSectionProps> = ({
             onBlur={handleFieldBlur("approver")}
             items={userOptions}
             sx={formFieldStyles}
-            isRequired
+            isRequired={approvalStarted}
             error={errors.approver}
             disabled={isEditingDisabled || usersLoading}
           />
@@ -406,7 +430,7 @@ const MitigationSection: FC<MitigationSectionProps> = ({
             onBlur={handleFieldBlur("approvalStatus")}
             items={approvalStatusItems}
             sx={formFieldStyles}
-            isRequired
+            isRequired={approvalStarted}
             error={errors.approvalStatus}
             disabled={isEditingDisabled}
           />
@@ -414,14 +438,12 @@ const MitigationSection: FC<MitigationSectionProps> = ({
             id="mitigation-assessment-date-input"
             label="Assessment date"
             date={
-              mitigationValues.dateOfAssessment
-                ? dayjs(mitigationValues.dateOfAssessment)
-                : dayjs(new Date())
+              mitigationValues.dateOfAssessment ? dayjs(mitigationValues.dateOfAssessment) : null
             }
             handleDateChange={(e) => handleDateChange("dateOfAssessment", e)}
             onBlur={handleFieldBlur("dateOfAssessment")}
             sx={{ flex: 1 }}
-            isRequired
+            isRequired={approvalStarted}
             error={errors.dateOfAssessment}
             disabled={isEditingDisabled}
           />

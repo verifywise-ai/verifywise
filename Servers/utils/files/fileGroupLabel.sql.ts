@@ -24,7 +24,8 @@ const BUILTIN_BRANCHES = `
         WHEN fel.framework_type = 'iso_42001'   AND fel.entity_type = 'annex_category' THEN 'Reference controls group'
         WHEN fel.framework_type = 'iso_27001'   AND fel.entity_type = 'subclause'      THEN 'Main clauses group'
         WHEN fel.framework_type = 'iso_27001'   AND fel.entity_type = 'annex_control'  THEN 'Annex controls group'
-        WHEN fel.framework_type = 'nist_ai_rmf' AND fel.entity_type = 'subcategory'    THEN 'Main clauses group'`;
+        WHEN fel.framework_type = 'nist_ai_rmf' AND fel.entity_type = 'subcategory'    THEN 'Main clauses group'
+        WHEN fel.framework_type = 'imported'    AND fel.entity_type IN ('imported_topic', 'imported_subtopic') THEN 'Imported framework items'`;
 
 function sqlEscape(value: string): string {
   return value.replace(/'/g, "''");

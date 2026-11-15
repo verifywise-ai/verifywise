@@ -120,6 +120,14 @@ describe("ShadowAI - InsightsPage", () => {
     });
   });
 
+  it("asks the server for the tools in risk order", async () => {
+    renderWithProviders(<InsightsPage />);
+
+    await waitFor(() => {
+      expect(mockGetTools).toHaveBeenCalledWith({ sort: "risk", limit: 5 });
+    });
+  });
+
   it("renders department breakdown chart with data", async () => {
     renderWithProviders(<InsightsPage />);
 

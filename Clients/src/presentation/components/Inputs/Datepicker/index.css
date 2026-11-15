@@ -57,7 +57,7 @@
 
 /* Selected day should keep green background on hover */
 .MuiPickersDay-root.Mui-selected:hover {
-  background-color: #13715b !important;
+  background-color: var(--vw-brand-primary, #13715b) !important;
   color: #ffffff !important;
 }
 

@@ -16,9 +16,9 @@ import CEMarking from "../CEMarking";
 import Activity from "../Activity";
 import PostMarketMonitoring from "../PostMarketMonitoring";
 import FriaAssessment from "../Fria";
-import allowedRoles from "../../../../application/constants/permissions";
+import { useCanCheck } from "../../../../application/hooks/useCan";
 import { PageBreadcrumbs } from "../../../components/breadcrumbs/PageBreadcrumbs";
-import { useAuth } from "../../../../application/hooks/useAuth";
+import Raci from "./Raci";
 import { BreadcrumbItem } from "../../../types/interfaces/i.breadcrumbs";
 import { getRouteIcon } from "../../../components/breadcrumbs/routeMapping";
 import { FileText as FileTextIcon, FileX as FileXIcon } from "lucide-react";
@@ -33,7 +33,7 @@ import { JiraUseCaseMonitoring } from "../../Extensions/jira-assets/JiraUseCaseM
 import { JiraUseCaseSettings } from "../../Extensions/jira-assets/JiraUseCaseSettings";
 
 const VWProjectView = () => {
-  const { userRoleName } = useAuth();
+  const can = useCanCheck();
   const [searchParams, setSearchParams] = useSearchParams();
   const projectId = searchParams.get("projectId") ?? "1";
   // Extract numeric ID from composite IDs (e.g., "prefix-123" -> 123)
@@ -144,6 +144,9 @@ const VWProjectView = () => {
     fetchLinkedModelsCount();
   }, [numericProjectId, refreshKey]);
 
+  // Organizational use cases have no RACI tab, so a link to it lands on overview.
+  const activeTab = value === "raci" && project?.is_organizational ? "overview" : value;
+
   const handleChange = (_: SyntheticEvent, newValue: string) => {
     searchParams.set("tab", newValue);
     searchParams.delete("framework");
@@ -229,7 +232,7 @@ const VWProjectView = () => {
         )}
       </Stack>
       <Stack className="vw-project-view-body">
-        <TabContext value={value}>
+        <TabContext value={activeTab}>
           <TabBar
             tabs={[
               {
@@ -285,6 +288,17 @@ const VWProjectView = () => {
                 disabled: isApprovalBlocked,
                 tooltip: "Recent changes and audit trail",
               },
+              ...(project?.is_organizational
+                ? []
+                : [
+                    {
+                      label: "RACI",
+                      value: "raci",
+                      icon: "Users" as const,
+                      disabled: isApprovalBlocked,
+                      tooltip: "Who is responsible, accountable, consulted and informed",
+                    },
+                  ]),
               {
                 label: "Monitoring",
                 value: "monitoring",
@@ -296,11 +310,11 @@ const VWProjectView = () => {
                 label: "Settings",
                 value: "settings",
                 icon: "Settings",
-                disabled: isApprovalBlocked || !allowedRoles.projects.edit.includes(userRoleName),
+                disabled: isApprovalBlocked || !can("useCase.edit"),
                 tooltip: "Use case configuration and permissions",
               },
             ]}
-            activeTab={value}
+            activeTab={activeTab}
             onChange={handleChange}
             disabledTabTooltip={getDisabledTooltip()}
             scrollable
@@ -381,6 +395,16 @@ const VWProjectView = () => {
               <CustomizableSkeleton variant="rectangular" width="100%" height={400} />
             )}
           </TabPanel>
+
+          {!project?.is_organizational && (
+            <TabPanel value="raci" sx={tabPanelStyle}>
+              {project ? (
+                <Raci projectId={numericProjectId} />
+              ) : (
+                <CustomizableSkeleton variant="rectangular" width="100%" height={400} />
+              )}
+            </TabPanel>
+          )}
 
           <TabPanel value="activity" sx={tabPanelStyle}>
             {project ? (

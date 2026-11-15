@@ -43,9 +43,10 @@ import {
 import { getEntityById } from "../../../../application/repository/entity.repository";
 import { attachFilesToEntity } from "../../../../application/repository/file.repository";
 import { useInvalidateEvidenceGaps } from "../../../../application/hooks/useEvidenceAi";
-import allowedRoles from "../../../../application/constants/permissions";
+import { useCanCheck } from "../../../../application/hooks/useCan";
 import { HistorySidebar } from "../../Common/HistorySidebar";
 import { useQueryClient } from "@tanstack/react-query";
+import { radiusPx, palette as vwPalette } from "../../../themes/palette";
 
 const FRAMEWORK_TYPE = "iso_42001";
 const ENTITY_TYPE = "annex_category";
@@ -107,7 +108,8 @@ const VWISO42001AnnexDrawerDialog = ({
   project_id,
   onSaveSuccess,
 }: VWISO42001ClauseDrawerDialogProps) => {
-  const { userId, userRoleName } = useAuth();
+  const { userId } = useAuth();
+  const can = useCanCheck();
   const { users } = useUsers();
 
   const [isLoading, setIsLoading] = useState(false);
@@ -160,8 +162,8 @@ const VWISO42001AnnexDrawerDialog = ({
     [users],
   );
 
-  const isEditingDisabled = !allowedRoles.frameworks.edit.includes(userRoleName);
-  const isAuditingDisabled = !allowedRoles.frameworks.audit.includes(userRoleName);
+  const isEditingDisabled = !can("framework.edit");
+  const isAuditingDisabled = !can("framework.audit");
 
   const fetchLinkedRisks = async () => {
     if (!fetchedAnnex?.id) return;
@@ -387,10 +389,10 @@ const VWISO42001AnnexDrawerDialog = ({
           <Stack gap="15px">
             <Stack
               sx={{
-                border: "1px solid #eee",
+                border: `1px solid ${vwPalette.border.light}`,
                 padding: "10px",
                 backgroundColor: "background.accent",
-                borderRadius: "4px",
+                borderRadius: radiusPx.sm,
               }}
             >
               <Typography fontSize={13}>

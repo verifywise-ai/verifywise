@@ -113,6 +113,29 @@ describe("/v1 virtual key proxy body handling", () => {
     expect(res.body).toEqual({ forwarded: json });
   });
 
+  it("applies the 10 MB cap to the decompressed size, not the wire size", async () => {
+    // ~11 MB of "x" compresses to a few KB; the cap must still trip
+    const res = await request(appWithRoute())
+      .post("/v1/chat/completions")
+      .set("Content-Type", "application/octet-stream")
+      .set("Content-Encoding", "gzip")
+      .send(gzipSync("x".repeat(11 * 1024 * 1024)));
+
+    expect(res.status).toBe(413);
+    expect(res.body).toEqual({ detail: "Request body is larger than 10 MB" });
+  });
+
+  it("answers 400 in the gateway's error shape for a body that cannot be decompressed", async () => {
+    const res = await request(appWithRoute())
+      .post("/v1/chat/completions")
+      .set("Content-Type", "application/octet-stream")
+      .set("Content-Encoding", "gzip")
+      .send(Buffer.from("not gzip at all"));
+
+    expect(res.status).toBe(400);
+    expect(res.body).toEqual({ detail: "Invalid request body" });
+  });
+
   it("drops Expect once the body is read, so the proxy writes the body", async () => {
     const app = appWithRoute();
     app.use((req, res) => {

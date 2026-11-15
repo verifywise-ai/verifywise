@@ -335,6 +335,9 @@ export async function evaluateRulesForBatch(
           if (toolData && toolData.status === "blocked") {
             const cooldownKey = `${rule.id}:tool:${attempt.toolId}`;
             if (recentKeys.has(cooldownKey)) continue;
+            // A batch can hold many blocked requests to the same tool; the
+            // cooldown applies within the batch too, so one alert per tool.
+            recentKeys.add(cooldownKey);
             triggered.push({
               rule,
               context: {

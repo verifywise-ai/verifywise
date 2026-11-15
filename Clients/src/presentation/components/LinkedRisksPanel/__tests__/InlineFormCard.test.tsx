@@ -20,8 +20,9 @@ describe("InlineFormCard", () => {
     );
 
     const card = screen.getByText("Link a risk").parentElement!;
-    // The house border of CLAUDE.md, whatever the case the token is written in.
-    expect(light.palette.border.dark.toLowerCase()).toBe("#d0d5dd");
+    // The default border token, which the look (phase 1 or classic) gives its own value.
+    expect(light.palette.border.dark).toBeTruthy();
+    expect(light.palette.border.dark).not.toBe(light.palette.border.light);
     expect(card).toHaveStyle({ borderColor: light.palette.border.dark, borderRadius: "4px" });
   });
 

@@ -5,6 +5,7 @@ import { useNavigate } from "react-router";
 import { setExpiration } from "../../../application/redux/auth/authSlice";
 import { startSession } from "../../../application/utils/clearSession";
 import { ReactComponent as MicrosoftIcon } from "../../assets/icons/microsoft-icon.svg";
+import { palette, radiusPx } from "../../themes/palette";
 
 interface MicrosoftSignInProps {
   isSubmitting: boolean;
@@ -80,15 +81,15 @@ export const MicrosoftSignIn: React.FC<MicrosoftSignInProps> = ({
       sx={{
         "height": 34,
         "fontSize": "13px",
-        "backgroundColor": "#2f2f2f",
-        "color": "#ffffff",
+        "backgroundColor": palette.text.primary,
+        "color": palette.background.main,
         "boxShadow": "none",
         "textTransform": "none",
-        "borderRadius": "4px",
+        "borderRadius": radiusPx.sm,
         "position": "relative",
         "paddingLeft": theme.spacing(6),
-        "&:hover": { backgroundColor: "#1a1a1a", boxShadow: "none" },
-        "&:disabled": { backgroundColor: "#cccccc", color: "#666666" },
+        "&:hover": { backgroundColor: palette.text.primary, boxShadow: "none" },
+        "&:disabled": { backgroundColor: palette.border.dark, color: palette.text.tertiary },
       }}
       onClick={handleClick}
       disabled={disabled}

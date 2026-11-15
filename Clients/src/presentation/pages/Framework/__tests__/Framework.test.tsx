@@ -43,6 +43,13 @@ vi.mock("react", async () => {
   };
 });
 
+// Mock contexts
+const mockIsEnabled = vi.fn((_key: string) => false);
+vi.mock("../../../../application/contexts/Extensions.context", () => ({
+  useExtensions: () => ({ isEnabled: mockIsEnabled }),
+  ExtensionsProvider: ({ children }: any) => children,
+}));
+
 // Mock repositories
 const mockGetAllEntities = vi.fn();
 vi.mock("../../../../application/repository/entity.repository", () => ({
@@ -87,9 +94,10 @@ vi.mock("../../ProjectView/AddNewFramework", () => ({
     ) : null,
 }));
 vi.mock("../../../components/Dialogs/ConfirmationModal", () => ({
-  default: ({ title, onCancel, onProceed, proceedText }: any) => (
+  default: ({ title, body, onCancel, onProceed, proceedText }: any) => (
     <div data-testid="confirmation-modal">
       <span>{title}</span>
+      {typeof body === "string" ? null : body}
       <button onClick={onCancel}>cancel-confirmation</button>
       <button onClick={onProceed}>{proceedText}</button>
     </div>
@@ -162,14 +170,25 @@ vi.mock("react-router", async () => {
   };
 });
 
-// Mock constants
-vi.mock("../../../../application/constants/permissions", () => ({
-  default: {
-    frameworks: { manage: ["Admin"] },
-    projects: { create: ["Admin"], edit: ["Admin"], delete: ["Admin"] },
-  },
+const mockHasPermission = vi.fn((_key: string) => true);
+vi.mock("../../../../application/hooks/useMyPermissions", () => ({
+  // The signed-in Admin's keys that this page gates on.
+  useMyPermissions: () => ({
+    permissions: ["framework.edit", "useCase.edit"],
+    isLoading: false,
+    error: null,
+  }),
 }));
+vi.mock("../../../../application/hooks/useCan", () => {
+  const useCan = (key: string) => mockHasPermission(key);
+  return {
+    useCan,
+    useCanCheck: () => useCan,
+    usePermissionsSettled: () => true,
+  };
+});
 
+// Mock constants
 vi.mock("../../../components/Forms/ProjectForm/constants", () => ({
   FrameworkTypeEnum: { OrganizationWide: "organization_wide" },
 }));
@@ -589,5 +608,23 @@ describe("Framework", () => {
     mockUseParams.mockReturnValue({ tab: "settings" });
     renderWithProviders(<Framework />, { route: "/framework/settings" });
     expect(screen.getByTestId("framework-settings")).toBeInTheDocument();
+  });
+
+  describe("imported frameworks (#5254)", () => {
+    afterEach(() => {
+      mockIsEnabled.mockImplementation(() => false);
+    });
+
+    it("does not show the imported frameworks list on the overview", () => {
+      mockIsEnabled.mockImplementation((key: string) => key === "framework-import");
+      mockUseContext.mockReturnValue({
+        changeComponentVisibility: vi.fn(),
+        projects: [buildOrgProject([])],
+        userRoleName: "Admin",
+        setProjects: vi.fn(),
+      });
+      renderWithProviders(<Framework />, { route: "/framework" });
+      expect(screen.queryByText("Imported frameworks")).not.toBeInTheDocument();
+    });
   });
 });

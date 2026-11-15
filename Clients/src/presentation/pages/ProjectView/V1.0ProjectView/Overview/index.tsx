@@ -1,3 +1,4 @@
+import ExternalOwnerName from "../../../../components/ExternalOwner/ExternalOwnerName";
 import { Alert, Divider, Stack, Typography } from "@mui/material";
 import { columnStyle, rowStyle } from "./style";
 import { GroupStatsCard } from "../../../../components/Cards/GroupStatsCard";
@@ -16,6 +17,7 @@ import { User } from "../../../../../domain/types/User";
 import { getEntityById } from "../../../../../application/repository/entity.repository";
 import useProjectRisks from "../../../../../application/hooks/useProjectRisks";
 import useUsers from "../../../../../application/hooks/useUsers";
+import { useImportedFrameworkDashboards } from "../../../../../application/hooks/useImportedFrameworkAssessment";
 import {
   User as UserIcon,
   Activity as ActivityIcon,
@@ -29,6 +31,8 @@ import {
 import { brand } from "../../../../themes/palette";
 import { singleTheme } from "../../../../themes";
 import UseCaseLifecyclePanel from "./UseCaseLifecyclePanel";
+import LinkedAiAppsCard from "./LinkedAiAppsCard";
+import { chartTheme } from "../../../../themes/chartTheme";
 
 /**
  * A use case whose approval request is pending or rejected has every tab in the
@@ -101,6 +105,14 @@ const VWProjectOverview = ({
       setProjectFrameworkId2(null);
     }
   }, [project]);
+
+  const importedLinks = useMemo(
+    () => project?.imported_frameworks ?? [],
+    [project?.imported_frameworks],
+  );
+  const importedDashboards = useImportedFrameworkDashboards(
+    importedLinks.map((link) => link.project_imported_framework_id),
+  );
 
   const { projectRisksSummary } = useProjectRisks({
     projectId: projectId ?? 0,
@@ -243,6 +255,20 @@ const VWProjectOverview = ({
     return <div>No project selected</div>;
   }
 
+  // Imported frameworks (#5254): one completion card per attached framework.
+  const importedFrameworkProgress = importedLinks.flatMap((link, index) => {
+    const data = importedDashboards[index]?.data;
+    if (!data) return [];
+    return [
+      {
+        linkId: link.project_imported_framework_id,
+        name: link.name,
+        done: data.progress?.done ?? 0,
+        total: data.progress?.total ?? 0,
+      },
+    ];
+  });
+
   const user: User = users.find((u: User) => u.id === project.last_updated_by) ?? ({} as User);
 
   const projectMembers: string[] = users
@@ -305,7 +331,17 @@ const VWProjectOverview = ({
         <Stack className="vw-project-overview-row" sx={rowStyle}>
           {project ? (
             <>
-              <InfoCard title="Owner" body={projectOwner || "N/A"} icon={<UserIcon size={16} />} />
+              <InfoCard
+                title="Owner"
+                body={
+                  project.external_owner_name ? (
+                    <ExternalOwnerName name={project.external_owner_name} />
+                  ) : (
+                    projectOwner || "N/A"
+                  )
+                }
+                icon={<UserIcon size={16} />}
+              />
               <InfoCard
                 title="Use case status"
                 body={project.status || "Not started"}
@@ -355,6 +391,7 @@ const VWProjectOverview = ({
             </>
           )}
         </Stack>
+        {!project.is_organizational && <LinkedAiAppsCard project={project} />}
         <Stack className="vw-project-overview-frameworks" sx={{ width: "100%", gap: 2, mb: 10 }}>
           {project ? (
             <>
@@ -391,6 +428,17 @@ const VWProjectOverview = ({
                   />
                 </Stack>
               ))}
+              {importedFrameworkProgress.map((fw) => (
+                <Stack key={`imported-${fw.linkId}`} sx={columnStyle}>
+                  <Typography sx={projectRiskSection}>{`${fw.name} completion status`}</Typography>
+                  <GroupStatsCard
+                    completed={[fw.done]}
+                    total={[fw.total]}
+                    title={["Topics and subtopics"]}
+                    progressbarColor={brand.primary}
+                  />
+                </Stack>
+              ))}
             </>
           ) : (
             <>
@@ -411,37 +459,37 @@ const VWProjectOverview = ({
                       key: "Total",
                       label: "Total",
                       count: projectRisksSummary.total,
-                      color: "#4B5563",
+                      color: chartTheme.riskSummary.total,
                     },
                     {
                       key: "Very high",
                       label: "Very high",
                       count: projectRisksSummary.veryHighRisks,
-                      color: "#C63622",
+                      color: chartTheme.riskSummary.veryHigh,
                     },
                     {
                       key: "High",
                       label: "High",
                       count: projectRisksSummary.highRisks,
-                      color: "#D68B61",
+                      color: chartTheme.riskSummary.high,
                     },
                     {
                       key: "Medium",
                       label: "Medium",
                       count: projectRisksSummary.mediumRisks,
-                      color: "#D6B971",
+                      color: chartTheme.riskSummary.medium,
                     },
                     {
                       key: "Low",
                       label: "Low",
                       count: projectRisksSummary.lowRisks,
-                      color: "#52AB43",
+                      color: chartTheme.riskSummary.low,
                     },
                     {
                       key: "Very low",
                       label: "Very low",
                       count: projectRisksSummary.veryLowRisks,
-                      color: "#B8D39C",
+                      color: chartTheme.riskSummary.veryLow,
                     },
                   ] satisfies StatusTileItem[]
                 }

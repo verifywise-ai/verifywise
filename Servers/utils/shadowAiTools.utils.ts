@@ -34,8 +34,10 @@ export async function getAllToolsQuery(
 
   const whereClause = `WHERE ${whereConditions.join(" AND ")}`;
 
+  // id breaks ties so pages never repeat or skip a row (many new tools share
+  // a null risk score).
   const sortColumn =
-    options?.sort === "risk"
+    (options?.sort === "risk"
       ? "risk_score DESC NULLS LAST"
       : options?.sort === "users"
         ? "total_users DESC"
@@ -43,7 +45,7 @@ export async function getAllToolsQuery(
           ? "total_events DESC"
           : options?.sort === "name"
             ? "name ASC"
-            : "last_seen_at DESC NULLS LAST";
+            : "last_seen_at DESC NULLS LAST") + ", id ASC";
 
   const [tools] = await sequelize.query(
     `SELECT * FROM shadow_ai_tools

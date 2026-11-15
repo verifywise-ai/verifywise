@@ -30,8 +30,7 @@ function constValues(arr: readonly string[]): string[] {
   return [...arr];
 }
 
-// The canonical current-risk-level values used by calculateRiskLevel and
-// validateCurrentRiskLevel in riskValidation.utils.ts.
+// The canonical current-risk-level values (see riskLevel.utils.ts).
 const CURRENT_RISK_LEVEL_VALUES = [
   "No risk",
   "Very low risk",

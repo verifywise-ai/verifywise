@@ -36,7 +36,8 @@ import useUsers from "../../../../application/hooks/useUsers";
 import { User } from "../../../../domain/types/User";
 import { FileData } from "../../../../domain/types/File";
 import { attachFilesToEntity } from "../../../../application/repository/file.repository";
-import allowedRoles from "../../../../application/constants/permissions";
+import { useCanCheck } from "../../../../application/hooks/useCan";
+import { radiusPx } from "../../../themes/palette";
 
 const FRAMEWORK_TYPE = "nist_ai_rmf";
 const ENTITY_TYPE = "subcategory";
@@ -80,7 +81,8 @@ const NISTAIRMFDrawerDialog: React.FC<NISTAIRMFDrawerProps> = ({
   function: functionType,
 }) => {
   const theme = useTheme();
-  const { userRoleName, userId } = useAuth();
+  const { userId } = useAuth();
+  const can = useCanCheck();
   const { users } = useUsers();
 
   const [isLoading, setIsLoading] = useState(false);
@@ -128,8 +130,8 @@ const NISTAIRMFDrawerDialog: React.FC<NISTAIRMFDrawerProps> = ({
     [users],
   );
 
-  const isEditingDisabled = !allowedRoles.frameworks.edit.includes(userRoleName);
-  const isAuditingDisabled = !allowedRoles.frameworks.audit.includes(userRoleName);
+  const isEditingDisabled = !can("framework.edit");
+  const isAuditingDisabled = !can("framework.audit");
 
   // Populate form when subcategory prop changes and (re)load evidence files.
   useEffect(() => {
@@ -334,7 +336,7 @@ const NISTAIRMFDrawerDialog: React.FC<NISTAIRMFDrawerProps> = ({
                 border: `1px solid ${theme.palette.border.light}`,
                 padding: "10px",
                 backgroundColor: "background.accent",
-                borderRadius: "4px",
+                borderRadius: radiusPx.sm,
               }}
             >
               <Typography fontSize={13}>
@@ -373,7 +375,7 @@ const NISTAIRMFDrawerDialog: React.FC<NISTAIRMFDrawerProps> = ({
                     minHeight: "34px",
                   },
                   "& .MuiChip-root": {
-                    borderRadius: "4px",
+                    borderRadius: radiusPx.sm,
                     height: "22px",
                     margin: "1px 2px",
                     fontSize: "13px",

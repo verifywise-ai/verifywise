@@ -25,8 +25,7 @@ import CustomFieldsSection, { type CustomFieldsSectionHandle } from "../../Custo
 import { useRequiredCustomFieldsGate } from "../../CustomFieldsSection/RequiredCustomFieldsGate";
 import type { TabItem } from "../../TabBar";
 import { logEngine } from "../../../../application/tools/log.engine";
-import { useAuth } from "../../../../application/hooks/useAuth";
-import allowedRoles from "../../../../application/constants/permissions";
+import { useCanCheck } from "../../../../application/hooks/useCan";
 import ReadOnlyFieldset from "../../ReadOnlyFieldset";
 
 interface NewModelRiskProps {
@@ -85,8 +84,8 @@ const NewModelRisk: FC<NewModelRiskProps> = ({
 }) => {
   const theme = useTheme();
   // Roles without edit rights can open an existing record but not change it.
-  const { userRoleName } = useAuth();
-  const isReadOnly = isEdit && !allowedRoles.modelInventory.edit.includes(userRoleName);
+  const can = useCanCheck();
+  const isReadOnly = isEdit && !can("model.edit");
   const [values, setValues] = useState<IModelRiskFormData>(initialData || initialState);
   const [users, setUsers] = useState<User[]>([]);
   const [isLoadingUsers, setIsLoadingUsers] = useState(false);

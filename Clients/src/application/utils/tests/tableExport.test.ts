@@ -155,6 +155,73 @@ describe("tableExport", () => {
     });
   });
 
+  describe("exportToCSV formula injection", () => {
+    const readCell = async (value: unknown): Promise<string> => {
+      exportToCSV([{ a: value }], [{ id: "a", label: "A" }], "x");
+      const blob = (saveAs as any).mock.calls.at(-1)[0] as Blob;
+      const text = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(String(reader.result));
+        reader.onerror = () => reject(reader.error);
+        reader.readAsText(blob);
+      });
+      return text.slice(text.indexOf("\n") + 1);
+    };
+
+    it.each([
+      ["=1+1", "'=1+1"],
+      ["+cmd", "'+cmd"],
+      ["-cmd", "'-cmd"],
+      ["@SUM(A1)", "'@SUM(A1)"],
+      ["\tfoo", "'\tfoo"],
+      ["\rfoo", "'\rfoo"],
+      ["  =1+1", "'  =1+1"],
+      [" \t=1", "' \t=1"],
+      ["-5+cmd", "'-5+cmd"],
+    ])("neutralizes %j", async (value, expected) => {
+      expect(await readCell(value)).toBe(expected);
+    });
+
+    it("prefixes the quote before CSV quoting", async () => {
+      expect(await readCell('=HYPERLINK("x","y")')).toBe('"\'=HYPERLINK(""x"",""y"")"');
+    });
+
+    it.each(["-5", "+1.2", "-.5", "5.", " -5"])("leaves numeric text %j alone", async (value) => {
+      expect(await readCell(value)).toBe(value);
+    });
+
+    it.each(["-", " -", "- "])("leaves the dash placeholder %j alone", async (value) => {
+      expect(await readCell(value)).toBe(value);
+    });
+
+    it.each([
+      ["\t-", "'\t-"],
+      ["--", "'--"],
+      ["-=1", "'-=1"],
+    ])("still neutralizes %j, which is more than a lone dash", async (value, expected) => {
+      expect(await readCell(value)).toBe(expected);
+    });
+
+    it.each([
+      [-5, "-5"],
+      [1.2, "1.2"],
+      [0, "0"],
+    ])("leaves the number %d alone", async (value, expected) => {
+      expect(await readCell(value)).toBe(expected);
+    });
+
+    it("leaves ordinary text alone", async () => {
+      expect(await readCell("Ada Lovelace")).toBe("Ada Lovelace");
+      expect(await readCell("a=b")).toBe("a=b");
+    });
+
+    it("does not change exportToExcel values", async () => {
+      (XLSX.utils.aoa_to_sheet as any).mockReturnValue({});
+      await exportToExcel([{ a: "=1+1" }], [{ id: "a", label: "A" }], "x");
+      expect((XLSX.utils.aoa_to_sheet as any).mock.calls[0][0][1]).toEqual(["=1+1"]);
+    });
+  });
+
   describe("exportToExcel", () => {
     it("creates worksheet data, sets !cols widths (capped at 50), and calls XLSX.writeFile", async () => {
       const aoa_to_sheet = XLSX.utils.aoa_to_sheet as unknown as ReturnType<typeof vi.fn>;

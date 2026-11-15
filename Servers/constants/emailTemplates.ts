@@ -29,7 +29,7 @@ export const EMAIL_TEMPLATES = {
   MEMBER_ROLE_CHANGED_EDITOR_TO_ADMIN: "member-role-changed-editor-to-admin.mjml",
 
   // Policy templates
-  POLICY_DUE_SOON: "policy-due-soon.mjml",
+  POLICY_REVIEW_REMINDER: "policy-review-reminder.mjml",
 
   // Task templates
   TASK_ASSIGNED: "task-assigned.mjml",
@@ -49,6 +49,7 @@ export const EMAIL_TEMPLATES = {
 
   // Training templates
   TRAINING_ASSIGNED: "training-assigned.mjml",
+  TRAINING_REMINDER: "training-reminder.mjml",
 
   // Vendor templates
   VENDOR_REVIEW_DUE: "vendor-review-due.mjml",
@@ -59,6 +60,9 @@ export const EMAIL_TEMPLATES = {
   // Shadow AI templates
   SHADOW_AI_ALERT: "shadow-ai-alert.mjml",
 
+  // AI Detection templates
+  AI_DETECTION_SCAN_ALERT: "ai-detection-scan-alert.mjml",
+
   // MRM templates
   MRM_BREACH_ALERT: "mrm-breach-alert.mjml",
   MRM_REVALIDATION_DUE: "mrm-revalidation-due.mjml",
@@ -68,6 +72,9 @@ export const EMAIL_TEMPLATES = {
 
   // Inventory lifecycle templates
   LIFECYCLE_CONFIRMATION_DUE: "lifecycle-confirmation-due.mjml",
+
+  // External use case owners (no account; email only)
+  EXTERNAL_OWNER_NOTICE: "external-owner-notice.mjml",
 
   // AI Gateway templates
   AI_GATEWAY_BUDGET_WARNING: "ai-gateway-budget-warning.mjml",
@@ -85,6 +92,9 @@ export const EMAIL_TEMPLATES = {
 
   // Assignment notification template
   ASSIGNMENT_NOTIFICATION: "assignment-notification.mjml",
+
+  // AI app bulk assessment: one summary per owner per run
+  AI_APP_ASSESSMENTS_ASSIGNED: "ai-app-assessments-assigned.mjml",
 } as const;
 
 // Type-safe template keys

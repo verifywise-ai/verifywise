@@ -14,3 +14,21 @@ export function fill(template: string, values: Record<string, string | number>):
     Object.prototype.hasOwnProperty.call(values, name) ? String(values[name]) : placeholder,
   );
 }
+
+/**
+ * Picks the singular or plural template for a count using the active
+ * language's plural rules, not English's: French reads 0 as singular
+ * ("0 expérience"), English as plural ("0 experiments").
+ *
+ * Dictionary keys stay English, so pass the English singular and plural
+ * templates and translate the result with `t()`.
+ */
+export function pluralKey(lang: string, count: number, one: string, other: string): string {
+  let category: Intl.LDMLPluralRule;
+  try {
+    category = new Intl.PluralRules(lang).select(count);
+  } catch {
+    category = count === 1 ? "one" : "other";
+  }
+  return category === "one" ? one : other;
+}

@@ -4,7 +4,7 @@
  * Following VerifyWise clean architecture patterns
  */
 
-import { background, brand, risk, status, text } from "../../tools/design-tokens/palette";
+import { background, brand, riskMark, status, text } from "../../tools/design-tokens/palette";
 import {
   ReportData,
   ReportMetadata,
@@ -57,6 +57,7 @@ import { getProjectByIdQuery } from "../../utils/project.utils";
 import { getAllFrameworkByIdQuery } from "../../utils/framework.utils";
 import { sequelize } from "../../database/db";
 import { QueryTypes } from "sequelize";
+import { effectiveRiskLevelSql, getEffectiveRiskLevel } from "../../utils/riskLevel.utils";
 
 /**
  * Risk level colour mapping.
@@ -66,21 +67,24 @@ import { QueryTypes } from "sequelize";
  * 2026-07-29 only the unsuffixed forms were here, so every real level missed
  * and the report's donut, bar chart and legend rendered uniformly grey.
  *
+ * Bars and slices use the solid risk marks (phase 1 restyle), not the
+ * darker text colours meant for words on a tint.
+ *
  * The unsuffixed keys are kept: vendor and model risk levels are written
  * without the suffix, and they share this map.
  */
 const RISK_LEVEL_COLORS: Record<string, string> = {
-  Critical: risk.critical.text,
-  "Very high risk": risk.critical.text,
-  "Very High": risk.critical.text,
-  "High risk": risk.high.text,
-  High: risk.high.text,
-  "Medium risk": risk.medium.text,
-  Medium: risk.medium.text,
-  "Low risk": risk.low.text,
-  Low: risk.low.text,
-  "Very low risk": risk.veryLow.text,
-  "Very Low": risk.veryLow.text,
+  Critical: riskMark.critical,
+  "Very high risk": riskMark.critical,
+  "Very High": riskMark.critical,
+  "High risk": riskMark.high,
+  High: riskMark.high,
+  "Medium risk": riskMark.medium,
+  Medium: riskMark.medium,
+  "Low risk": riskMark.low,
+  Low: riskMark.low,
+  "Very low risk": riskMark.veryLow,
+  "Very Low": riskMark.veryLow,
   "No risk": text.icon,
 };
 
@@ -570,14 +574,9 @@ export class ReportDataCollector {
     );
     const user = await getUserByIdQuery(this.userId);
 
-    // Get project owner name
-    let projectOwnerName = "Unknown";
-    if (project?.owner) {
-      const owner = await getUserByIdQuery(project.owner);
-      if (owner) {
-        projectOwnerName = `${owner.name || ""} ${owner.surname || ""}`.trim();
-      }
-    }
+    // getProjectByIdQuery has already resolved the owner's name.
+    const ownerName: string | undefined = (project as any)?.dataValues?.owner_name;
+    const projectOwnerName = !ownerName || ownerName === "Unassigned" ? "Unknown" : ownerName;
 
     return {
       projectId,
@@ -721,7 +720,7 @@ export class ReportDataCollector {
 
     const risksByLevel: Record<string, number> = {};
     risks.forEach((risk) => {
-      const level = risk.risk_level_autocalculated || "Unknown";
+      const level = getEffectiveRiskLevel(risk) || "Unknown";
       risksByLevel[level] = (risksByLevel[level] || 0) + 1;
     });
 
@@ -736,8 +735,8 @@ export class ReportDataCollector {
         id: risk.id,
         name: risk.risk_name || "Unnamed Risk",
         description: risk.risk_description || "",
-        riskLevel: risk.risk_level_autocalculated || "Unknown",
-        impact: risk.risk_severity || "Unknown",
+        riskLevel: getEffectiveRiskLevel(risk) || "Unknown",
+        impact: risk.severity || "Unknown",
         likelihood: risk.likelihood || "Unknown",
         // `risks` carries both columns and they are orthogonal — a risk can be
         // mitigation_status 'Completed' while approval_status is 'Rejected'.
@@ -767,6 +766,7 @@ export class ReportDataCollector {
          FROM risks risk
          LEFT JOIN users u ON risk.risk_owner = u.id
         WHERE risk.organization_id = :organizationId
+          AND risk.is_deleted = false
         ORDER BY risk.id`,
       { replacements: { organizationId: this.organizationId }, type: QueryTypes.SELECT },
     )) as any[];
@@ -794,6 +794,7 @@ export class ReportDataCollector {
          JOIN projects_risks pr ON risk.id = pr.risk_id AND pr.organization_id = :organizationId
          LEFT JOIN users u ON risk.risk_owner = u.id
         WHERE risk.organization_id = :organizationId
+          AND risk.is_deleted = false
           AND pr.project_id = ANY(ARRAY[:scopedProjectIds]::INTEGER[])
         ORDER BY risk.id`,
       {
@@ -1361,7 +1362,7 @@ export class ReportDataCollector {
           ns.status,
           r.id AS risk_id,
           r.risk_name,
-          r.risk_level_autocalculated AS risk_level
+          ${effectiveRiskLevelSql("r")} AS risk_level
         FROM nist_ai_rmf_subcategories ns
         JOIN nist_ai_rmf_subcategories_struct ss ON ns.subcategory_meta_id = ss.id
         JOIN nist_ai_rmf_categories_struct cs ON ss.category_struct_id = cs.id
@@ -1369,6 +1370,8 @@ export class ReportDataCollector {
                ON nsr.nist_ai_rmf_subcategory_id = ns.id
               AND nsr.organization_id = ns.organization_id
         LEFT JOIN risks r ON r.id = nsr.projects_risks_id
+               AND r.organization_id = nsr.organization_id
+               AND r.is_deleted = false
         WHERE ns.organization_id = :organizationId AND ns.projects_frameworks_id = :projectFrameworkId
         ORDER BY ss.function, cs.order_no, ss.order_no
       `;

@@ -33,7 +33,7 @@ import ISO42001Annex from "./ISO42001/Annex";
 import { getAllEntities } from "../../../application/repository/entity.repository";
 import { ProjectForm } from "../../components/Forms/ProjectForm";
 import AddFrameworkModal from "../ProjectView/AddNewFramework";
-import allowedRoles from "../../../application/constants/permissions";
+import { useCanCheck, useCan } from "../../../application/hooks/useCan";
 import { CustomizableButton } from "../../components/button/customizable-button";
 import ConfirmationModal from "../../components/Dialogs/ConfirmationModal";
 import StandardModal from "../../components/Modals/StandardModal";
@@ -55,10 +55,13 @@ import NISTAIRMFMap from "./NIST-AI-RMF/Map";
 import NISTAIRMFMeasure from "./NIST-AI-RMF/Measure";
 import NISTAIRMFManage from "./NIST-AI-RMF/Manage";
 import GenericFramework from "./Generic";
-import { brand, border as borderPalette, icon } from "../../themes/palette";
+import { brand, border as borderPalette, icon, radiusPx } from "../../themes/palette";
 import GovernanceIntelligenceContextBar from "../../components/GovernanceOS/GovernanceIntelligenceContextBar";
 import { storageService } from "../../../infrastructure/storage";
 import { textStyles } from "../../themes/typography";
+import { useExtensions } from "../../../application/contexts/Extensions.context";
+import FrameworkImportModal from "./Components/FrameworkImportModal";
+import { FileUp as FileUpIcon } from "lucide-react";
 
 // Tab styles following ProjectFrameworks pattern
 const tabStyle = {
@@ -109,12 +112,20 @@ const Framework = () => {
   const categoryId = searchParams.get("categoryId");
   const subcategoryId = searchParams.get("subcategoryId");
 
-  const { changeComponentVisibility, projects, userRoleName, setProjects } =
-    useContext(VerifyWiseContext);
+  const { changeComponentVisibility, projects, setProjects } = useContext(VerifyWiseContext);
+  const can = useCanCheck();
   const { refs, allVisible } = useMultipleOnScreen<HTMLElement>({
     countToTrigger: 1,
   });
   const { users } = useUsers();
+  // The framework-import routes authorize on this key, so a custom role
+  // granted it gets the import controls too (Admin and Editor by default).
+  const canImportFrameworks = useCan("ext.frameworkImport.edit");
+
+  // Framework import extension (#5254).
+  const { isEnabled } = useExtensions();
+  const isFrameworkImportEnabled = isEnabled("framework-import");
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
 
   // Check if there are any organizational projects
   const organizationalProject = useMemo(() => {
@@ -530,7 +541,7 @@ const Framework = () => {
             textAlign: "center",
             py: 8,
             backgroundColor: "background.accent",
-            borderRadius: 2,
+            borderRadius: radiusPx.sm,
             border: "1px solid status.default.border",
           }}
         >
@@ -803,11 +814,7 @@ const Framework = () => {
                     setRotated((prev) => !prev);
                     handleManageProjectClick(event as React.MouseEvent<any>);
                   }}
-                  isDisabled={
-                    !allowedRoles.frameworks.manage.includes(userRoleName) &&
-                    !allowedRoles.projects.edit.includes(userRoleName) &&
-                    !allowedRoles.projects.delete.includes(userRoleName)
-                  }
+                  isDisabled={!can("framework.edit") && !can("useCase.edit")}
                   sx={{
                     backgroundColor: "brand.primary",
                     border: "1px solid brand.primary",
@@ -829,7 +836,7 @@ const Framework = () => {
                   sx={{
                     "mt": 1,
                     "& .MuiPopover-paper": {
-                      borderRadius: "4px",
+                      borderRadius: radiusPx.sm,
                       boxShadow: "0 8px 24px rgba(0, 0, 0, 0.12)",
                       border: `1px solid ${borderPalette.dark}`,
                       overflow: "visible",
@@ -837,10 +844,7 @@ const Framework = () => {
                     },
                   }}
                 >
-                  <MenuItem
-                    onClick={handleManageFrameworksClick}
-                    disabled={!allowedRoles.frameworks.manage.includes(userRoleName)}
-                  >
+                  <MenuItem onClick={handleManageFrameworksClick} disabled={!can("framework.edit")}>
                     <ListItemIcon sx={{ minWidth: 32 }}>
                       <SettingsIcon size={16} color={icon.default} />
                     </ListItemIcon>
@@ -852,10 +856,27 @@ const Framework = () => {
                       }}
                     />
                   </MenuItem>
-                  <MenuItem
-                    onClick={handleEditProjectClick}
-                    disabled={!allowedRoles.projects.edit.includes(userRoleName)}
-                  >
+                  {isFrameworkImportEnabled && (
+                    <MenuItem
+                      onClick={() => {
+                        closeFrameworkMenu();
+                        setIsImportModalOpen(true);
+                      }}
+                      disabled={!canImportFrameworks}
+                    >
+                      <ListItemIcon sx={{ minWidth: 32 }}>
+                        <FileUpIcon size={16} color={icon.default} />
+                      </ListItemIcon>
+                      <ListItemText
+                        primary="Import framework from Excel"
+                        primaryTypographyProps={{
+                          ...textStyles.body,
+                          color: "text.primary",
+                        }}
+                      />
+                    </MenuItem>
+                  )}
+                  <MenuItem onClick={handleEditProjectClick} disabled={!can("useCase.edit")}>
                     <ListItemIcon sx={{ minWidth: 32 }}>
                       <EditIconGrey size={16} color={icon.default} />
                     </ListItemIcon>
@@ -868,10 +889,7 @@ const Framework = () => {
                     />
                   </MenuItem>
                   <Divider sx={{ my: 0.5 }} />
-                  <MenuItem
-                    onClick={handleDeleteProjectClick}
-                    disabled={!allowedRoles.projects.delete.includes(userRoleName)}
-                  >
+                  <MenuItem onClick={handleDeleteProjectClick} disabled={!can("useCase.edit")}>
                     <ListItemIcon sx={{ minWidth: 32 }}>
                       <DeleteIconRed size={16} color={icon.error} />
                     </ListItemIcon>
@@ -891,7 +909,7 @@ const Framework = () => {
                 text="New Project"
                 startIcon={<AddCircleOutlineIcon size={16} />}
                 onClick={() => setIsProjectFormModalOpen(true)}
-                isDisabled={!allowedRoles.projects.create.includes(userRoleName)}
+                isDisabled={!can("useCase.edit")}
               />
             )}
           </Box>
@@ -900,6 +918,14 @@ const Framework = () => {
         {/* Only show framework content if organizational project exists */}
         {organizationalProject && (
           <>
+            {isImportModalOpen && (
+              <FrameworkImportModal
+                open={isImportModalOpen}
+                onClose={() => setIsImportModalOpen(false)}
+                onImportComplete={() => setIsImportModalOpen(false)}
+              />
+            )}
+
             <TabContext value={mainTabValue}>
               <TabBar
                 tabs={[

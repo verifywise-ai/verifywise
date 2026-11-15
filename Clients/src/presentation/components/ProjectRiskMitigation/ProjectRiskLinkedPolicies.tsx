@@ -11,8 +11,7 @@ import { getAllPolicies } from "../../../application/repository/policy.repositor
 import { PolicyManagerModel } from "../../../../src/domain/models/Common/policy/policyManager.model";
 import LinkedPolicyObjectsTable from "../Table/PolicyTable/LinkedPolicyObjectTable";
 import Alert from "../../components/Alert";
-import { useAuth } from "../../../application/hooks/useAuth";
-import allowedRoles from "../../../application/constants/permissions";
+import { useCanCheck } from "../../../application/hooks/useCan";
 
 interface ProjectRiskLinkedPoliciesModalProps {
   onClose: () => void;
@@ -29,8 +28,8 @@ const ProjectRiskLinkedPolicies: React.FC<ProjectRiskLinkedPoliciesModalProps> =
   riskId,
   evidenceId,
 }) => {
-  const { userRoleName } = useAuth();
-  const canEditPolicies = !!userRoleName && allowedRoles.policies.edit.includes(userRoleName);
+  const can = useCanCheck();
+  const canEditPolicies = can("policy.edit");
   const [risks, setRisks] = useState<any[]>([]);
   const [evidence, setEvidence] = useState<any[]>([]);
 

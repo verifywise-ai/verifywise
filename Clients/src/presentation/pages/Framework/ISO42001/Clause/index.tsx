@@ -22,11 +22,11 @@ import { useSearchParams } from "react-router";
 import StatusDropdown from "../../../../components/StatusDropdown";
 import { updateISO42001ClauseStatus } from "../../../../components/StatusDropdown/statusUpdateApi";
 import { useAuth } from "../../../../../application/hooks/useAuth";
-import allowedRoles from "../../../../../application/constants/permissions";
+import { useCanCheck } from "../../../../../application/hooks/useCan";
 import { Project } from "../../../../../domain/types/Project";
 import { TabFilterBar } from "../../../../components/FrameworkFilter/TabFilterBar";
 import { StatsCard } from "../../../../components/Cards/StatsCard";
-import { text } from "../../../../themes/palette";
+import { text, palette as vwPalette } from "../../../../themes/palette";
 import { textStyles } from "../../../../themes/typography";
 
 const ISO42001Clause = ({
@@ -66,7 +66,8 @@ const ISO42001Clause = ({
   ownerOptions?: { label: string; value: string }[];
   reviewerOptions?: { label: string; value: string }[];
 }) => {
-  const { userId, userRoleName } = useAuth();
+  const { userId } = useAuth();
+  const can = useCanCheck();
   const [clauses, setClauses] = useState<ClauseStructISO[]>([]);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [selectedSubClause, setSelectedSubClause] = useState<any>(null);
@@ -371,15 +372,15 @@ const ISO42001Clause = ({
                     flexDirection: "row",
                     alignItems: "center",
                     padding: "10px 16px",
-                    backgroundColor: "#fafbfc",
-                    borderBottom: "1px solid #eaecf0",
+                    backgroundColor: vwPalette.background.alt,
+                    borderBottom: `1px solid ${vwPalette.border.light}`,
                   }}
                 >
                   <Typography
                     fontSize={11}
                     fontWeight={600}
                     sx={{
-                      color: "#57606a",
+                      color: vwPalette.text.tertiary,
                       textTransform: "uppercase",
                       letterSpacing: "0.04em",
                     }}
@@ -410,7 +411,7 @@ const ISO42001Clause = ({
                           top: "50%",
                           width: "12px",
                           height: "1px",
-                          backgroundColor: "#c9d1d9",
+                          backgroundColor: vwPalette.border.dark,
                         },
                       }
                     : {}),
@@ -424,8 +425,7 @@ const ISO42001Clause = ({
                   currentStatus={subClause.status ?? "Not started"}
                   onStatusChange={(newStatus) => handleStatusChange(subClause, newStatus)}
                   size="small"
-                  allowedRoles={allowedRoles.frameworks.edit}
-                  userRole={userRoleName}
+                  canEdit={can("framework.edit")}
                 />
               </Stack>
             );
@@ -515,8 +515,8 @@ const ISO42001Clause = ({
           const count = filteredSubClausesCountMemo[clause.id ?? 0];
           const chipColor =
             count !== undefined && count > 0
-              ? { bg: "#E6F4EA", color: "status.success.text" }
-              : { bg: "#FFF8E1", color: "#795548" };
+              ? { bg: vwPalette.status.success.bg, color: "status.success.text" }
+              : { bg: vwPalette.risk.medium.bg, color: vwPalette.risk.medium.text };
           return (
             <Stack key={clause.id} sx={styles.container}>
               <Accordion

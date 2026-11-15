@@ -14,8 +14,11 @@ import { ProjectModel } from "../domain.layer/models/project/project.model";
 import { IProjectAttributes } from "../domain.layer/interfaces/i.project";
 import { HighRiskRole } from "../domain.layer/enums/high-risk-role.enum";
 import {
+  canViewProjectQuery,
   createNewProjectQuery,
+  ensureProjectMemberQuery,
   getCurrentProjectMembers,
+  keepPreviousOwnerAsMemberQuery,
   updateProjectByIdQuery,
 } from "../utils/project.utils";
 import { resolveHighRiskRolesWrite } from "../utils/highRiskRoles.utils";
@@ -30,11 +33,25 @@ import {
 } from "../utils/useCaseChangeHistory.utils";
 import { createUseCaseApprovalRequest } from "./projects/approvalRequest.service";
 import { logStructured } from "../utils/logger/fileLogger";
+import { seesAllProjects } from "../utils/projectVisibility.utils";
+import { changesExternalOwner } from "../utils/externalOwner.utils";
+import { ForbiddenException } from "../domain.layer/exceptions/custom.exception";
 
 export interface UseCaseServiceContext {
   userId: number;
   organizationId: number;
+  /** The acting user's role, when the caller has one (HTTP requests do). */
+  actorRole?: string;
+  /** Reject a write that leaves no owner of either kind. On for the v1 API only. */
+  requireOwner?: boolean;
 }
+
+const isExternallyOwned = (useCase: Pick<IProjectAttributes, "owner" | "external_owner_email">) =>
+  !useCase.owner && Boolean(useCase.external_owner_email);
+
+/** Non-Admins see a use case only as its owner or a member. */
+const needsMembershipForAccess = (actorRole: string | undefined): boolean =>
+  actorRole !== undefined && !seesAllProjects(actorRole);
 
 /**
  * The frameworks whose controls, clauses, annexes and assessments are built out
@@ -113,7 +130,17 @@ export async function createUseCaseService(
     ctx.organizationId,
     ctx.userId,
     transaction,
+    false,
+    { requireOwner: ctx.requireOwner ?? false },
   );
+
+  // owner is NULL, so a non-Admin creator would otherwise lose the use case.
+  if (isExternallyOwned(createdProject) && needsMembershipForAccess(ctx.actorRole)) {
+    await ensureProjectMemberQuery(createdProject.id!, ctx.userId, ctx.organizationId, transaction);
+    const members: number[] = (createdProject.dataValues as any).members ?? [];
+    if (!members.includes(ctx.userId)) members.push(ctx.userId);
+    (createdProject.dataValues as any).members = members;
+  }
 
   // 3. Only create frameworks immediately if NO approval workflow is assigned.
   //    Otherwise they stay on the use case as pending_frameworks and are
@@ -141,6 +168,8 @@ export async function createUseCaseService(
       {
         project_title: createdProject.project_title,
         owner: createdProject.owner,
+        external_owner_name: createdProject.external_owner_name,
+        external_owner_email: createdProject.external_owner_email,
         start_date: createdProject.start_date,
         geography: createdProject.geography,
         ai_risk_classification: createdProject.ai_risk_classification,
@@ -213,6 +242,24 @@ export async function updateUseCaseService(
   ctx: UseCaseServiceContext,
   transaction: Transaction,
 ): Promise<UpdateUseCaseServiceResult> {
+  // A numeric owner replaces an external owner, which useCase.edit alone must
+  // not allow. Rows with no external owner are not checked, so the frozen legacy
+  // contract is unchanged for them. A caller with no role is not trusted.
+  if (
+    existingUseCase.external_owner_email &&
+    changesExternalOwner(input, existingUseCase) &&
+    !(await canViewProjectQuery(
+      useCaseId,
+      { userId: ctx.userId, role: ctx.actorRole ?? "" },
+      ctx.organizationId,
+      transaction,
+    ))
+  ) {
+    throw new ForbiddenException("Access denied", "use_case", "change_external_owner", {
+      i18nKey: "Access denied",
+    });
+  }
+
   // Only replace members when the request sends a list; a missing field leaves
   // them unchanged. null still clears them, as it did before.
   const rawMembers = input.members as number[] | null | undefined;
@@ -238,7 +285,29 @@ export async function updateUseCaseService(
     members,
     ctx.organizationId,
     transaction,
+    { requireOwner: ctx.requireOwner ?? false },
   );
+
+  // Moved from a user to an external owner: owner is now NULL, so anyone who
+  // relied on it would lose access. Neither the previous owner nor a non-Admin
+  // who made the change should.
+  const keptAsMembers: number[] = [];
+  if (useCase && existingUseCase.owner && isExternallyOwned(useCase)) {
+    await keepPreviousOwnerAsMemberQuery(
+      useCaseId,
+      existingUseCase.owner,
+      ctx.organizationId,
+      transaction,
+    );
+    keptAsMembers.push(Number(existingUseCase.owner));
+    if (needsMembershipForAccess(ctx.actorRole)) {
+      await ensureProjectMemberQuery(useCaseId, ctx.userId, ctx.organizationId, transaction);
+      keptAsMembers.push(ctx.userId);
+    }
+    useCase.members = (
+      await getCurrentProjectMembers(useCaseId, ctx.organizationId, transaction)
+    ).map(Number);
+  }
 
   // 4. Change history.
   if (useCase) {
@@ -246,7 +315,7 @@ export async function updateUseCaseService(
     // the same members in another order are not recorded as a change.
     const byId = (a: number, b: number) => a - b;
     const memberChanges =
-      members !== undefined
+      members !== undefined || keptAsMembers.length > 0
         ? await trackUseCaseChanges(
             { members: currentMembers.map(Number).sort(byId) } as any,
             { members: [...useCase.members].sort(byId) } as any,
@@ -264,5 +333,7 @@ export async function updateUseCaseService(
     }
   }
 
-  return { useCase, currentMembers: currentMembers.map(Number) };
+  // Kept members count as already present, so the "you were added" email skips them.
+  const before = currentMembers.map(Number);
+  return { useCase, currentMembers: [...before, ...keptAsMembers] };
 }

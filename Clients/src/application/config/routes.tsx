@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import { Route, Navigate } from "react-router";
 import { lazyRoute, LazyFallback } from "../utils/lazyRoute";
 import { SHOW_AI_GATEWAY_PROMPTS } from "./featureFlags";
+import { isClassicUi } from "../../presentation/themes/uiStyle";
 
 // Eager imports — app shell and route guard
 import Dashboard from "../../presentation/containers/Dashboard";
@@ -43,6 +44,7 @@ const IntegratedDashboard = lazyRoute(
   () => import("../../presentation/pages/DashboardOverview/IntegratedDashboard"),
 );
 const StartHere = lazyRoute(() => import("../../presentation/pages/StartHere"));
+const HomePage = lazyRoute(() => import("../../presentation/pages/HomeQueue"));
 const VWProjectView = lazyRoute(
   () => import("../../presentation/pages/ProjectView/V1.0ProjectView"),
 );
@@ -57,6 +59,9 @@ const PolicyDashboard = lazyRoute(
 );
 const PolicyEditorPage = lazyRoute(
   () => import("../../presentation/pages/PolicyDashboard/PolicyEditorPage"),
+);
+const PolicyTemplateEditorPage = lazyRoute(
+  () => import("../../presentation/pages/PolicyDashboard/PolicyTemplateEditorPage"),
 );
 const WatchTower = lazyRoute(() => import("../../presentation/pages/WatchTower"));
 const RiskManagement = lazyRoute(() => import("../../presentation/pages/RiskManagement"));
@@ -80,6 +85,9 @@ const AgentDiscovery = lazyRoute(() => import("../../presentation/pages/AgentDis
 const AgentDetail = lazyRoute(() => import("../../presentation/pages/AgentDiscovery/AgentDetail"));
 const ModelInventory = lazyRoute(() => import("../../presentation/pages/ModelInventory"));
 const AIApps = lazyRoute(() => import("../../presentation/pages/AIApps"));
+const AIAppAssessments = lazyRoute(
+  () => import("../../presentation/pages/AIApps/AIAppAssessments"),
+);
 const ModelLifecycleDetail = lazyRoute(
   () => import("../../presentation/pages/ModelInventory/ModelLifecycleDetail"),
 );
@@ -225,7 +233,7 @@ const isDev = import.meta.env.DEV;
 
 export const createRoutes = (
   triggerSidebar: boolean,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+
   _triggerSidebarReload: () => void,
 ) => [
   // ReactFlow Demo - Development only (must be before dashboard route)
@@ -373,11 +381,24 @@ export const createRoutes = (
       }
     />
     <Route
-      path="/start-here"
+      path="/home"
       element={
         <Suspense fallback={<LazyFallback />}>
-          <StartHere />
+          <HomePage />
         </Suspense>
+      }
+    />
+    {/* The new look moved Start here into Home's Get started tab; classic keeps the page. */}
+    <Route
+      path="/start-here"
+      element={
+        isClassicUi() ? (
+          <Suspense fallback={<LazyFallback />}>
+            <StartHere />
+          </Suspense>
+        ) : (
+          <Navigate to="/home?tab=get-started" replace />
+        )
       }
     />
     <Route
@@ -529,6 +550,14 @@ export const createRoutes = (
       }
     />
     <Route
+      path="/training/my-training"
+      element={
+        <Suspense fallback={<LazyFallback />}>
+          <Training />
+        </Suspense>
+      }
+    />
+    <Route
       path="/training/evidence-hub"
       element={
         <Suspense fallback={<LazyFallback />}>
@@ -565,6 +594,14 @@ export const createRoutes = (
       element={
         <Suspense fallback={<LazyFallback />}>
           <PolicyEditorPage />
+        </Suspense>
+      }
+    />
+    <Route
+      path="/policies/templates/:templateId/edit"
+      element={
+        <Suspense fallback={<LazyFallback />}>
+          <PolicyTemplateEditorPage />
         </Suspense>
       }
     />
@@ -616,6 +653,14 @@ export const createRoutes = (
       element={
         <Suspense fallback={<LazyFallback />}>
           <AIApps />
+        </Suspense>
+      }
+    />
+    <Route
+      path="/ai-apps/assessments"
+      element={
+        <Suspense fallback={<LazyFallback />}>
+          <AIAppAssessments />
         </Suspense>
       }
     />
@@ -727,6 +772,8 @@ export const createRoutes = (
         </Suspense>
       }
     />
+    {/* Groups moved to a Settings tab; keep old links working. */}
+    <Route path="/groups" element={<Navigate to="/settings/groups" replace />} />
     <Route
       path="/automations"
       element={

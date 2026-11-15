@@ -1,7 +1,7 @@
-import { border as borderPalette } from "../../../themes/palette";
+import { border as borderPalette, radiusPx } from "../../../themes/palette";
 export const smallStatsCardStyle = {
   border: `1px solid ${borderPalette.light}`,
-  borderRadius: "4px",
+  borderRadius: radiusPx.sm,
   padding: "10px",
   pt: "15px",
   minWidth: 300,

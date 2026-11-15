@@ -32,7 +32,7 @@ function buildServiceContext(req: Request): IServiceContext {
   };
 }
 
-function handleException(res: Response, error: unknown): Response {
+function handleException(req: Request, res: Response, error: unknown): Response {
   if (error instanceof ValidationException) {
     return res.status(400).json(STATUS_CODE[400](error.message));
   }
@@ -46,7 +46,7 @@ function handleException(res: Response, error: unknown): Response {
     return res.status(502).json(STATUS_CODE[502](error.message));
   }
 
-  return res.status(500).json(STATUS_CODE[500]("An internal error occurred"));
+  return res.status(500).json(STATUS_CODE[500](req.t!("An internal error occurred")));
 }
 
 /**
@@ -86,7 +86,7 @@ export async function createSuppressionController(req: Request, res: Response): 
       userId: req.userId!,
       organizationId: req.organizationId!,
     });
-    return handleException(res, error);
+    return handleException(req, res, error);
   }
 }
 
@@ -101,7 +101,7 @@ export async function listSuppressionsController(req: Request, res: Response): P
     const rules = await listSuppressions(ctx, { includeExpired });
     return res.status(200).json(STATUS_CODE[200](rules));
   } catch (error) {
-    return handleException(res, error);
+    return handleException(req, res, error);
   }
 }
 
@@ -121,7 +121,7 @@ export async function deleteSuppressionController(req: Request, res: Response): 
     const id = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id, 10);
 
     if (isNaN(id)) {
-      return res.status(400).json(STATUS_CODE[400]("Invalid suppression rule ID"));
+      return res.status(400).json(STATUS_CODE[400](req.t!("Invalid suppression rule ID")));
     }
 
     const ctx = buildServiceContext(req);
@@ -147,6 +147,6 @@ export async function deleteSuppressionController(req: Request, res: Response): 
       userId: req.userId!,
       organizationId: req.organizationId!,
     });
-    return handleException(res, error);
+    return handleException(req, res, error);
   }
 }

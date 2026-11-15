@@ -59,6 +59,7 @@ export function registerAiPlatformRoutes(app: express.Application): void {
   app.use("/api/extensions/jira-assets", jiraAssetsExtensionRoutes);
   app.use("/api/extensions/jira-incidents", jiraIncidentsExtensionRoutes);
   app.use("/api/extensions/model-lifecycle", modelLifecycleExtensionRoutes);
+  // Deprecated alias of /api/extensions/slack/oauth/workspaces (ADR 0001).
   app.use("/api/slackWebhooks", slackWebhookRoutes);
   app.use("/api/llm-keys", llmKeyRouter);
   app.use("/api/ai-content", aiContentRoutes);

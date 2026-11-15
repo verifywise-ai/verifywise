@@ -1,6 +1,6 @@
 import React from "react";
 import singleTheme from "../../themes/v1SingleTheme";
-import { background } from "../../themes/palette";
+import { background, palette as vwPalette } from "../../themes/palette";
 
 // A. Main Layout
 export const riskMainStackStyle = {
@@ -103,7 +103,7 @@ export const riskMenuItemLogoStyle: React.CSSProperties = {
 };
 
 export const riskMenuItemRecommendedBadgeStyle = {
-  backgroundColor: "#13715B",
+  backgroundColor: vwPalette.brand.primary,
   color: "white",
   fontSize: "9px",
   fontWeight: 600,

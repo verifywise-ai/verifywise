@@ -52,7 +52,7 @@ export const incidentManagementContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Go to **Governance > Incident management** in the sidebar and click **New incident**. You\'ll need to provide:',
+      text: 'Go to **Incidents** in the sidebar and click **New incident**. You\'ll need to provide:',
     },
     {
       type: 'ordered-list',

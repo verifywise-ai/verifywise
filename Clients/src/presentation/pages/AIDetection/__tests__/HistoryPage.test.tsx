@@ -110,6 +110,38 @@ describe("HistoryPage", () => {
     expect(screen.getByText("88")).toBeInTheDocument();
   });
 
+  it("labels the column Governance score and marks partial scores", async () => {
+    mockGetScans.mockResolvedValue({
+      scans: [
+        makeScan({ risk_score: 95, risk_score_grade: "A", vulnerability_check_status: "off" }),
+      ],
+      pagination: { total: 1, page: 1, limit: 10, total_pages: 1 },
+    });
+    renderWithProviders(<HistoryPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText("95")).toBeInTheDocument();
+    });
+    expect(screen.getByText("GOVERNANCE SCORE")).toBeInTheDocument();
+    expect(screen.queryByText("RISK SCORE")).toBeNull();
+    expect(screen.getByText("Partial")).toBeInTheDocument();
+  });
+
+  it("does not mark a score partial when vulnerability checks ran", async () => {
+    mockGetScans.mockResolvedValue({
+      scans: [
+        makeScan({ risk_score: 95, risk_score_grade: "A", vulnerability_check_status: "ran" }),
+      ],
+      pagination: { total: 1, page: 1, limit: 10, total_pages: 1 },
+    });
+    renderWithProviders(<HistoryPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText("95")).toBeInTheDocument();
+    });
+    expect(screen.queryByText("Partial")).toBeNull();
+  });
+
   it("shows a dash for risk score when the scan has none", async () => {
     mockGetScans.mockResolvedValue({
       scans: [makeScan({ risk_score: null, risk_score_grade: null })],

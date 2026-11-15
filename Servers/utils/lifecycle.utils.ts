@@ -43,6 +43,8 @@ export interface LifecycleEntityConfig {
    * confirmation nor a go-live date; the columns differ per table.
    */
   fallbackTimestampsSql: (alias: string) => string;
+  /** Whether the entry can be owned by someone with no account (#5256). */
+  hasExternalOwner?: boolean;
   /** Whether the table has a free-text department column (AI apps use ai_apps_departments). */
   hasDepartmentColumn: boolean;
   /**
@@ -69,6 +71,7 @@ export const LIFECYCLE_ENTITIES: Record<LifecycleEntityConfig["key"], LifecycleE
     historyEntity: "use_case",
     editPermission: "useCase.edit",
     fallbackTimestampsSql: (a) => `${a}.last_updated, ${a}.created_at::timestamptz`,
+    hasExternalOwner: true,
     hasDepartmentColumn: true,
     scope: "is_organizational = false",
   },
@@ -201,8 +204,13 @@ function scopeSql(entity: LifecycleEntityConfig, alias: string): string {
 export interface ConfirmationDueRow {
   id: number;
   title: string;
-  owner: number;
+  owner: number | null;
   baseline: Date | string;
+  // Present only on entities that can have an external owner (use cases).
+  external_owner_name?: string | null;
+  external_owner_email?: string | null;
+  /** Who an external owner is told to contact: the last person to edit the entry. */
+  contact_user_id?: number | null;
 }
 
 /**
@@ -215,14 +223,20 @@ export async function findConfirmationsDue(
   organizationId: number,
   intervalDays: number,
 ): Promise<ConfirmationDueRow[]> {
+  const externalColumns = entity.hasExternalOwner
+    ? `, e.external_owner_name, e.external_owner_email, e.last_updated_by AS contact_user_id`
+    : "";
+  const hasOwner = entity.hasExternalOwner
+    ? `(e.${entity.ownerColumn} IS NOT NULL OR e.external_owner_email IS NOT NULL)`
+    : `e.${entity.ownerColumn} IS NOT NULL`;
   return (await sequelize.query(
     `SELECT e.id,
             e.${entity.titleColumn} AS title,
             e.${entity.ownerColumn} AS owner,
-            ${confirmationBaselineSql("e", entity)} AS baseline
+            ${confirmationBaselineSql("e", entity)} AS baseline${externalColumns}
        FROM ${entity.table} e
       WHERE e.organization_id = :organizationId
-        AND e.${entity.ownerColumn} IS NOT NULL
+        AND ${hasOwner}
         AND ${staleSql("e", ":intervalDays", entity)}${scopeSql(entity, "e")}
         AND (
           e.confirmation_reminded_at IS NULL

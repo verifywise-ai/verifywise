@@ -1,14 +1,15 @@
 import { styled } from "@mui/material/styles";
 import { TableRow, Box } from "@mui/material";
 import singleTheme from "../../../themes/v1SingleTheme";
+import { radiusPx, palette as vwPalette } from "../../../themes/palette";
 
 export const StyledTableRow = styled(TableRow)<{ isflashing: number }>(({ isflashing }) => ({
   "& > *": {
-    backgroundColor: isflashing ? "#e3f5e6" : "inherit",
+    backgroundColor: isflashing ? vwPalette.status.success.bg : "inherit",
     transition: "background-color 0.3s ease",
   },
   "&:hover > *": {
-    backgroundColor: isflashing ? "#e3f5e6" : "#FBFBFB",
+    backgroundColor: isflashing ? vwPalette.status.success.bg : vwPalette.background.alt,
     cursor: "pointer",
   },
 }));
@@ -45,7 +46,7 @@ export const styles = {
   progressBar: (theme: import("@mui/material/styles").Theme) => ({
     width: "100px",
     height: "5px",
-    borderRadius: "4px",
+    borderRadius: radiusPx.sm,
     backgroundColor: theme.palette.grey[200],
   }),
 

@@ -1,4 +1,19 @@
 import {
+  EXTERNAL_OWNER_OPTION,
+  EXTERNAL_OWNER_OPTION_ID,
+  externalOwnerPayload,
+  ownerSelectValue,
+  validateExternalOwner,
+} from "../../../../application/utils/externalOwner";
+import ExternalOwnerFields from "../../../components/ExternalOwner/ExternalOwnerFields";
+import ExternalOwnerName from "../../../components/ExternalOwner/ExternalOwnerName";
+import {
+  ownerChangeForExternalEdit,
+  ownerChangeForSelection,
+  OwnerParty,
+  PendingOwnerChange,
+} from "./ownerChange";
+import {
   SelectChangeEvent,
   Stack,
   Typography,
@@ -27,7 +42,13 @@ import { logEngine } from "../../../../application/tools/log.engine";
 import { useNavigate, useSearchParams } from "react-router";
 import useProjectData from "../../../../application/hooks/useProjectData";
 import useUsers from "../../../../application/hooks/useUsers";
+import {
+  useGroups,
+  useProjectGroups,
+  useSetProjectGroups,
+} from "../../../../application/hooks/useGroups";
 import { CustomizableButton } from "../../../components/button/customizable-button";
+import { border, text, radiusPx } from "../../../themes/palette";
 import { Save as SaveIcon, Trash2 as DeleteIcon } from "lucide-react";
 import CustomizableToast from "../../../components/Toast";
 import CustomizableSkeleton from "../../../components/Skeletons";
@@ -38,9 +59,8 @@ import CustomFieldsSection, {
 import { useRequiredCustomFieldsGate } from "../../../components/CustomFieldsSection/RequiredCustomFieldsGate";
 import useFrameworks from "../../../../application/hooks/useFrameworks";
 import { Framework } from "../../../../domain/types/Framework";
-import allowedRoles from "../../../../application/constants/permissions";
+import { useCanCheck, useCan } from "../../../../application/hooks/useCan";
 import { VerifyWiseContext } from "../../../../application/contexts/VerifyWise.context";
-import { User } from "../../../../domain/types/User";
 import {
   deleteProject,
   updateProject,
@@ -131,6 +151,8 @@ interface FormValues {
   goal: string;
   status: number;
   owner: number;
+  externalOwnerName: string;
+  externalOwnerEmail: string;
   members: number[];
   startDate: string;
   riskClassification: number | null;
@@ -155,6 +177,8 @@ interface FormErrors {
   goal?: string;
   status?: string;
   owner?: string;
+  externalOwnerName?: string;
+  externalOwnerEmail?: string;
   startDate?: string;
   members?: string;
   riskClassification?: string;
@@ -174,6 +198,8 @@ const initialState: FormValues = {
   goal: "",
   status: 1,
   owner: 0,
+  externalOwnerName: "",
+  externalOwnerEmail: "",
   members: [],
   startDate: "",
   riskClassification: null,
@@ -188,19 +214,21 @@ const initialState: FormValues = {
   deploymentContext: null,
 };
 
+const OwnerPartyName = ({ party }: { party: OwnerParty }) =>
+  party.external ? <ExternalOwnerName name={party.name} showIcon={false} /> : <>{party.name}</>;
+
 const ProjectSettings = React.memo(
   ({ triggerRefresh = () => {} }: { triggerRefresh?: (isUpdate: boolean) => void }) => {
     const { setProjects } = useContext(VerifyWiseContext);
-    const { userRoleName, userId } = useAuth();
+    const { userId } = useAuth();
+    const can = useCanCheck();
     const [searchParams] = useSearchParams();
     const projectId = searchParams.get("projectId") ?? "1"; // default project ID is 2
     const theme = useTheme();
     const styles = useStyles();
-    const [isChangeOwnerModalOpen, setIsChangeOwnerModalOpen] = useState(false);
-    const [pendingOwnerId, setPendingOwnerId] = useState<User | null>(null);
-    const [removedOwner, setRemovedOwner] = useState<User | null>(null);
+    const [pendingOwnerChange, setPendingOwnerChange] = useState<PendingOwnerChange | null>(null);
     const [isRiskModalOpen, setIsRiskModalOpen] = useState(false);
-    const canClassify = allowedRoles.projects.classify.includes(userRoleName);
+    const canClassify = can("useCase.classify");
 
     const { project } = useProjectData({ projectId });
     const navigate = useNavigate();
@@ -240,6 +268,8 @@ const ProjectSettings = React.memo(
         values.goal !== initialValuesRef.current.goal ||
         values.status !== initialValuesRef.current.status ||
         values.owner !== initialValuesRef.current.owner ||
+        values.externalOwnerName !== initialValuesRef.current.externalOwnerName ||
+        values.externalOwnerEmail !== initialValuesRef.current.externalOwnerEmail ||
         JSON.stringify(values.members) !== JSON.stringify(initialValuesRef.current.members) ||
         values.startDate !== initialValuesRef.current.startDate ||
         values.riskClassification !== initialValuesRef.current.riskClassification ||
@@ -296,6 +326,14 @@ const ProjectSettings = React.memo(
 
     const { users } = useUsers();
 
+    // Groups attached to this use case (#5253).
+    const { data: groups } = useGroups();
+    const { data: projectGroups } = useProjectGroups(Number(projectId));
+    const setProjectGroupsMutation = useSetProjectGroups(Number(projectId));
+    // The groups route checks useCase.edit, so the picker does too.
+    const canEditProjectGroups = useCan("useCase.edit");
+    const selectedGroupIds = (projectGroups ?? []).map((g) => g.id);
+
     const { filteredFrameworks: monitoredFrameworks, allFrameworks } = useFrameworks({
       listOfFrameworks: project?.framework || [],
     });
@@ -331,7 +369,9 @@ const ProjectSettings = React.memo(
             projectStatusItems.find(
               (item) => item.name.toLowerCase() === (project.status || "Not started").toLowerCase(),
             )?._id || 1,
-          owner: project.owner ?? 0,
+          owner: ownerSelectValue(project),
+          externalOwnerName: project.external_owner_name ?? "",
+          externalOwnerEmail: project.external_owner_email ?? "",
           startDate: project.start_date ? dayjs(project.start_date).toISOString() : "",
           members: project.members ? project.members.map(Number) : [],
           riskClassification:
@@ -382,20 +422,9 @@ const ProjectSettings = React.memo(
         const selectedValue = Number(event.target.value);
 
         if (prop === "owner") {
-          if (values.members.includes(selectedValue)) {
-            let oldOwner = null;
-            let newOwnerId = null;
-            for (const user of users) {
-              if (user.id === selectedValue) {
-                newOwnerId = user;
-              }
-              if (user.id === values.owner) {
-                oldOwner = user;
-              }
-            }
-            setRemovedOwner(oldOwner);
-            setPendingOwnerId(newOwnerId);
-            setIsChangeOwnerModalOpen(true);
+          const change = ownerChangeForSelection(values, selectedValue, users);
+          if (change) {
+            setPendingOwnerChange(change);
             return;
           }
         }
@@ -405,21 +434,8 @@ const ProjectSettings = React.memo(
       [users, values],
     );
 
-    const handleOwnershipChangeAcknowledge = () => {
-      if (!pendingOwnerId) return;
-      setValues((prevValues) => ({
-        ...prevValues,
-        owner: pendingOwnerId.id,
-        members: values.members.filter((member) => member !== pendingOwnerId.id),
-      }));
-      setErrors((prevErrors) => ({ ...prevErrors, owner: "" }));
-      setIsChangeOwnerModalOpen(false);
-      setPendingOwnerId(null);
-      setRemovedOwner(null);
-    };
-
     const handleCloseOwnerChangeDialog = useCallback((): void => {
-      setIsChangeOwnerModalOpen(false);
+      setPendingOwnerChange(null);
     }, []);
 
     const handleOnTextFieldChange = useCallback(
@@ -634,9 +650,18 @@ const ProjectSettings = React.memo(
         newErrors.startDate = startDate.message;
       }
 
-      const owner = selectValidation("Owner", values.owner);
-      if (!owner.accepted) {
-        newErrors.owner = owner.message;
+      if (values.owner === EXTERNAL_OWNER_OPTION_ID) {
+        const externalErrors = validateExternalOwner(
+          values.externalOwnerName,
+          values.externalOwnerEmail,
+        );
+        if (externalErrors.name) newErrors.externalOwnerName = externalErrors.name;
+        if (externalErrors.email) newErrors.externalOwnerEmail = externalErrors.email;
+      } else {
+        const owner = selectValidation("Owner", values.owner);
+        if (!owner.accepted) {
+          newErrors.owner = owner.message;
+        }
       }
 
       // Framework selection is optional for use cases
@@ -671,6 +696,11 @@ const ProjectSettings = React.memo(
         return;
       }
       if (validateForm()) {
+        const externalEdit = ownerChangeForExternalEdit(initialValuesRef.current, values, users);
+        if (externalEdit) {
+          setPendingOwnerChange(externalEdit);
+          return;
+        }
         setIsSaving(true);
         handleSaveConfirm().finally(() => setIsSaving(false));
       } else {
@@ -741,7 +771,11 @@ const ProjectSettings = React.memo(
         body: {
           id: projectId,
           project_title: values.projectTitle,
-          owner: values.owner,
+          ...externalOwnerPayload(
+            values.owner,
+            values.externalOwnerName,
+            values.externalOwnerEmail,
+          ),
           members: values.members.map(String),
           start_date: values.startDate,
           ai_risk_classification: selectedRiskClass,
@@ -765,51 +799,90 @@ const ProjectSettings = React.memo(
             null,
           framework: values.monitoredRegulationsAndStandards.map((fw) => fw._id),
         },
-      }).then(async (response) => {
-        if (response.status === 202) {
-          // Create new values reference and update both ref and form state
-          const newValues = { ...values };
-          initialValuesRef.current = newValues;
-          setValues(newValues);
+      })
+        .then(async (response) => {
+          if (response.status === 202) {
+            // Create new values reference and update both ref and form state
+            // The server can add the acting user to the team when an external
+            // owner is named, so keep its list or the next save would drop them.
+            const savedMembers = response.data?.data?.members;
+            const newValues = {
+              ...values,
+              members: Array.isArray(savedMembers) ? savedMembers.map(Number) : values.members,
+            };
+            initialValuesRef.current = newValues;
+            setValues(newValues);
 
-          let cfFlushFailed = false;
-          const pid = Number(projectId);
-          if (Number.isFinite(pid) && pid > 0 && customFieldsRef.current?.hasPendingValues()) {
-            try {
-              await customFieldsRef.current.flush(pid);
-            } catch (cfError) {
-              cfFlushFailed = true;
-              console.error("Project saved, but custom field values failed to save:", cfError);
+            let cfFlushFailed = false;
+            const pid = Number(projectId);
+            if (Number.isFinite(pid) && pid > 0 && customFieldsRef.current?.hasPendingValues()) {
+              try {
+                await customFieldsRef.current.flush(pid);
+              } catch (cfError) {
+                cfFlushFailed = true;
+                console.error("Project saved, but custom field values failed to save:", cfError);
+              }
             }
-          }
-          if (cfFlushFailed) {
-            setIsLoading(false);
-            return;
-          }
+            if (cfFlushFailed) {
+              setIsLoading(false);
+              return;
+            }
 
-          setAlert({
-            variant: "success",
-            body: "Use case updated successfully",
-            isToast: true,
-            visible: true,
-          });
-          setTimeout(() => {
+            setAlert({
+              variant: "success",
+              body: "Use case updated successfully",
+              isToast: true,
+              visible: true,
+            });
+            setTimeout(() => {
+              setIsLoading(false);
+              setAlert(null);
+            }, 2000);
+            // setRefreshKey((prevKey) => prevKey + 1);
+            triggerRefresh(true);
+          } else if (response.status === 400) {
             setIsLoading(false);
-            setAlert(null);
-          }, 2000);
-          // setRefreshKey((prevKey) => prevKey + 1);
-          triggerRefresh(true);
-        } else if (response.status === 400) {
+            setAlert({
+              variant: "error",
+              body: response.data.data.message,
+              isToast: true,
+              visible: true,
+            });
+          }
+        })
+        .catch(() => {
+          // A refused save (403, for one) rejects, and the API layer shows the error.
           setIsLoading(false);
-          setAlert({
-            variant: "error",
-            body: response.data.data.message,
-            isToast: true,
-            visible: true,
-          });
-        }
-      });
+        });
     }, [values, projectId]);
+
+    const handleOwnershipChangeAcknowledge = () => {
+      if (!pendingOwnerChange) return;
+      const { nextOwner, removeMemberId, saveOnProceed } = pendingOwnerChange;
+      setPendingOwnerChange(null);
+      if (saveOnProceed) {
+        setIsSaving(true);
+        handleSaveConfirm().finally(() => setIsSaving(false));
+        return;
+      }
+      setValues((prevValues) => ({
+        ...prevValues,
+        owner: nextOwner,
+        // Details of a previous external owner must not linger after a change.
+        externalOwnerName: "",
+        externalOwnerEmail: "",
+        members:
+          removeMemberId === undefined
+            ? prevValues.members
+            : prevValues.members.filter((member) => member !== removeMemberId),
+      }));
+      setErrors((prevErrors) => ({
+        ...prevErrors,
+        owner: "",
+        externalOwnerName: "",
+        externalOwnerEmail: "",
+      }));
+    };
 
     const handleConfirmDelete = useCallback(async () => {
       setIsLoading(true);
@@ -891,7 +964,7 @@ const ProjectSettings = React.memo(
                   {/* Use case title Row */}
                   <Box>
                     <Typography sx={{ fontSize: 13, fontWeight: 500 }}>Use case title</Typography>
-                    <Typography sx={{ fontSize: 12, color: "#888", mt: 0.5 }}>
+                    <Typography sx={{ fontSize: 12, color: text.subdued, mt: 0.5 }}>
                       A concise name for your AI use case
                     </Typography>
                   </Box>
@@ -909,7 +982,7 @@ const ProjectSettings = React.memo(
                   {/* Description Row */}
                   <Box>
                     <Typography sx={{ fontSize: 13, fontWeight: 500 }}>Description</Typography>
-                    <Typography sx={{ fontSize: 12, color: "#888", mt: 0.5 }}>
+                    <Typography sx={{ fontSize: 12, color: text.subdued, mt: 0.5 }}>
                       Overview of this use case
                     </Typography>
                   </Box>
@@ -929,7 +1002,7 @@ const ProjectSettings = React.memo(
                   {/* Goal Row */}
                   <Box>
                     <Typography sx={{ fontSize: 13, fontWeight: 500 }}>Goal</Typography>
-                    <Typography sx={{ fontSize: 12, color: "#888", mt: 0.5 }}>
+                    <Typography sx={{ fontSize: 12, color: text.subdued, mt: 0.5 }}>
                       What you aim to achieve
                     </Typography>
                   </Box>
@@ -950,7 +1023,7 @@ const ProjectSettings = React.memo(
                   {/* Target industry Row */}
                   <Box>
                     <Typography sx={{ fontSize: 13, fontWeight: 500 }}>Target industry</Typography>
-                    <Typography sx={{ fontSize: 12, color: "#888", mt: 0.5 }}>
+                    <Typography sx={{ fontSize: 12, color: text.subdued, mt: 0.5 }}>
                       Industry sector for this use case
                     </Typography>
                   </Box>
@@ -991,13 +1064,14 @@ const ProjectSettings = React.memo(
                     label=""
                     value={values.owner || ""}
                     onChange={handleOnSelectChange("owner")}
-                    items={
-                      users?.map((user) => ({
+                    items={[
+                      ...(users?.map((user) => ({
                         _id: user.id,
                         name: `${user.name} ${user.surname}`,
                         email: user.email,
-                      })) || []
-                    }
+                      })) || []),
+                      EXTERNAL_OWNER_OPTION,
+                    ]}
                     sx={{
                       width: 400,
                       backgroundColor: theme.palette.background.main,
@@ -1005,24 +1079,60 @@ const ProjectSettings = React.memo(
                     error={errors.owner}
                     isRequired
                   />
-                  {isChangeOwnerModalOpen && (
+                  {values.owner === EXTERNAL_OWNER_OPTION_ID && (
+                    <>
+                      <Box />
+                      <ExternalOwnerFields
+                        name={values.externalOwnerName}
+                        email={values.externalOwnerEmail}
+                        nameError={errors.externalOwnerName}
+                        emailError={errors.externalOwnerEmail}
+                        width={400}
+                        onNameChange={(value) => {
+                          setValues((prev) => ({ ...prev, externalOwnerName: value }));
+                          setErrors((prev) => ({ ...prev, externalOwnerName: "" }));
+                        }}
+                        onEmailChange={(value) => {
+                          setValues((prev) => ({ ...prev, externalOwnerEmail: value }));
+                          setErrors((prev) => ({ ...prev, externalOwnerEmail: "" }));
+                        }}
+                      />
+                    </>
+                  )}
+                  {pendingOwnerChange && (
                     <ConfirmationModal
                       title="Confirm owner change"
                       body={
                         <Typography fontSize={13}>
-                          You setting ownership from{" "}
-                          <strong>
-                            {removedOwner?.name} {removedOwner?.surname}
-                          </strong>{" "}
+                          You are setting ownership
+                          {pendingOwnerChange.from && (
+                            <>
+                              {" "}
+                              from{" "}
+                              <strong>
+                                <OwnerPartyName party={pendingOwnerChange.from} />
+                              </strong>
+                            </>
+                          )}{" "}
                           to{" "}
                           <strong>
-                            {pendingOwnerId?.name} {pendingOwnerId?.surname}
+                            {pendingOwnerChange.to ? (
+                              <OwnerPartyName party={pendingOwnerChange.to} />
+                            ) : null}
                           </strong>
-                          . We will remove{" "}
-                          <strong>
-                            {pendingOwnerId?.name} {pendingOwnerId?.surname}
-                          </strong>{" "}
-                          from the members list.
+                          {pendingOwnerChange.removeMemberId !== undefined ? (
+                            <>
+                              . We will remove{" "}
+                              <strong>
+                                {pendingOwnerChange.to ? (
+                                  <OwnerPartyName party={pendingOwnerChange.to} />
+                                ) : null}
+                              </strong>{" "}
+                              from the members list.
+                            </>
+                          ) : (
+                            "."
+                          )}
                         </Typography>
                       }
                       cancelText="Cancel"
@@ -1064,7 +1174,7 @@ const ProjectSettings = React.memo(
                   {/* Use case status Row */}
                   <Box>
                     <Typography sx={{ fontSize: 13, fontWeight: 500 }}>Use case status</Typography>
-                    <Typography sx={{ fontSize: 12, color: "#888", mt: 0.5 }}>
+                    <Typography sx={{ fontSize: 12, color: text.subdued, mt: 0.5 }}>
                       Development stage of this use case
                     </Typography>
                   </Box>
@@ -1105,7 +1215,9 @@ const ProjectSettings = React.memo(
                         <Typography sx={{ fontSize: 13, fontWeight: 500 }}>
                           Applicable regulations (optional)
                         </Typography>
-                        <Typography sx={{ fontSize: 12, color: "#888", whiteSpace: "nowrap" }}>
+                        <Typography
+                          sx={{ fontSize: 12, color: text.subdued, whiteSpace: "nowrap" }}
+                        >
                           Add all monitored regulations and standards of the use case.
                         </Typography>
                       </Box>
@@ -1242,10 +1354,10 @@ const ProjectSettings = React.memo(
                                   ...getAutocompleteStyles(theme, {
                                     hasError: !!errors.monitoredRegulationsAndStandards,
                                   })["& .MuiOutlinedInput-root"],
-                                  borderRadius: "4px",
+                                  borderRadius: radiusPx.sm,
                                 },
                                 "& .MuiChip-root": {
-                                  "borderRadius": "4px",
+                                  "borderRadius": radiusPx.sm,
                                   "& .MuiChip-deleteIcon": {
                                     display:
                                       values.monitoredRegulationsAndStandards.length === 1
@@ -1260,7 +1372,7 @@ const ProjectSettings = React.memo(
                                     "& .MuiAutocomplete-listbox": {
                                       "& .MuiAutocomplete-option": {
                                         fontSize: "13px",
-                                        color: "#1c2130",
+                                        color: text.primary,
                                         paddingLeft: "9px",
                                         paddingRight: "9px",
                                       },
@@ -1286,7 +1398,7 @@ const ProjectSettings = React.memo(
                   {/* Team members Row */}
                   <Box>
                     <Typography sx={{ fontSize: 13, fontWeight: 500 }}>Team members</Typography>
-                    <Typography sx={{ fontSize: 12, color: "#888", whiteSpace: "nowrap" }}>
+                    <Typography sx={{ fontSize: 12, color: text.subdued, whiteSpace: "nowrap" }}>
                       Add all team members of the use case.
                       <br />
                       Only those who are added will be able to see the use case.
@@ -1294,7 +1406,7 @@ const ProjectSettings = React.memo(
                   </Box>
                   <Autocomplete
                     multiple
-                    readOnly={!allowedRoles.projects.editTeamMembers.includes(userRoleName)}
+                    readOnly={!can("useCase.members")}
                     id="users-input"
                     size="small"
                     value={users.filter((user) => values.members.includes(Number(user.id)))}
@@ -1377,10 +1489,10 @@ const ProjectSettings = React.memo(
                         ...getAutocompleteStyles(theme, { hasError: !!errors.members })[
                           "& .MuiOutlinedInput-root"
                         ],
-                        borderRadius: "4px",
+                        borderRadius: radiusPx.sm,
                       },
                       "& .MuiChip-root": {
-                        borderRadius: "4px",
+                        borderRadius: radiusPx.sm,
                       },
                     }}
                     slotProps={{
@@ -1389,7 +1501,7 @@ const ProjectSettings = React.memo(
                           "& .MuiAutocomplete-listbox": {
                             "& .MuiAutocomplete-option": {
                               fontSize: "13px",
-                              color: "#1c2130",
+                              color: text.primary,
                               paddingLeft: "9px",
                               paddingRight: "9px",
                             },
@@ -1407,6 +1519,92 @@ const ProjectSettings = React.memo(
                     }}
                   />
 
+                  {/* Groups Row (#5253): attaching a group grants every member access. */}
+                  <Box>
+                    <Typography sx={{ fontSize: 13, fontWeight: 500 }}>Groups</Typography>
+                    <Typography sx={{ fontSize: 12, color: text.subdued, whiteSpace: "nowrap" }}>
+                      Add a whole group to the use case in one step.
+                      <br />
+                      Every group member can see and work on the use case.
+                    </Typography>
+                  </Box>
+                  <Autocomplete
+                    multiple
+                    readOnly={!canEditProjectGroups}
+                    id="groups-input"
+                    size="small"
+                    value={(projectGroups ?? []).filter((g) => selectedGroupIds.includes(g.id))}
+                    options={(groups ?? []).filter((g) => !selectedGroupIds.includes(g.id))}
+                    getOptionLabel={(group) => group.name}
+                    isOptionEqualToValue={(option, value) => option.id === value.id}
+                    noOptionsText={
+                      (groups ?? []).length === 0
+                        ? "No groups yet. Groups are managed in Settings → Groups."
+                        : "All groups selected"
+                    }
+                    onChange={(_event, selected) => {
+                      setProjectGroupsMutation.mutate(
+                        selected.map((g) => g.id),
+                        {
+                          onError: () => {
+                            setAlert({
+                              variant: "error",
+                              body: "Could not update the use case's groups. Please try again.",
+                              isToast: true,
+                              visible: true,
+                            });
+                            setTimeout(() => setAlert(null), 3000);
+                          },
+                        },
+                      );
+                    }}
+                    popupIcon={<ChevronDown size={16} color={theme.palette.text.tertiary} />}
+                    renderInput={(params) => (
+                      <TextField
+                        {...params}
+                        placeholder="Select groups"
+                        sx={{
+                          "& .MuiOutlinedInput-root": {
+                            height: "34px",
+                            padding: "0 10px",
+                            display: "flex",
+                            alignItems: "center",
+                          },
+                          "& .MuiInputBase-root": {
+                            height: "34px !important",
+                            padding: "0 10px !important",
+                            display: "flex !important",
+                            alignItems: "center !important",
+                            justifyContent: "flex-start !important",
+                          },
+                          "& .MuiInputBase-input": {
+                            padding: "0 !important",
+                            margin: "0 !important",
+                            fontSize: "13px",
+                            lineHeight: "1 !important",
+                          },
+                          "& ::placeholder": {
+                            fontSize: "13px",
+                          },
+                        }}
+                      />
+                    )}
+                    sx={{
+                      ...getAutocompleteStyles(theme, { hasError: false }),
+                      "width": "400px",
+                      "backgroundColor": theme.palette.background.main,
+                      "& .MuiOutlinedInput-root": {
+                        ...getAutocompleteStyles(theme, { hasError: false })[
+                          "& .MuiOutlinedInput-root"
+                        ],
+                        borderRadius: radiusPx.sm,
+                      },
+                      "& .MuiChip-root": {
+                        borderRadius: radiusPx.sm,
+                      },
+                    }}
+                  />
+
                   {values.monitoredRegulationsAndStandards.some((fw) => fw._id === 1) && (
                     <>
                       {/* AI risk classification Row */}
@@ -1415,7 +1613,9 @@ const ProjectSettings = React.memo(
                           AI risk classification *
                         </Typography>
                         {canClassify && (
-                          <Typography sx={{ fontSize: 12, color: "#888", whiteSpace: "nowrap" }}>
+                          <Typography
+                            sx={{ fontSize: 12, color: text.subdued, whiteSpace: "nowrap" }}
+                          >
                             Not sure about your risk level?&nbsp;
                             <VWLink onClick={() => setIsRiskModalOpen(true)}>
                               Calculate your AI risk classification
@@ -1443,7 +1643,9 @@ const ProjectSettings = React.memo(
                         <Typography sx={{ fontSize: 13, fontWeight: 500 }}>
                           High-risk roles *
                         </Typography>
-                        <Typography sx={{ fontSize: 12, color: "#888", whiteSpace: "nowrap" }}>
+                        <Typography
+                          sx={{ fontSize: 12, color: text.subdued, whiteSpace: "nowrap" }}
+                        >
                           If you are not sure about the high risk role,&nbsp;
                           <VWLink
                             url="https://artificialintelligenceact.eu/high-level-summary/"
@@ -1472,7 +1674,7 @@ const ProjectSettings = React.memo(
                     <Typography sx={{ fontSize: 13, fontWeight: 500 }}>
                       Use case category
                     </Typography>
-                    <Typography sx={{ fontSize: 12, color: "#888", whiteSpace: "nowrap" }}>
+                    <Typography sx={{ fontSize: 12, color: text.subdued, whiteSpace: "nowrap" }}>
                       Select the category that best describes the use case.
                     </Typography>
                   </Box>
@@ -1493,7 +1695,7 @@ const ProjectSettings = React.memo(
                   {/* Use case purpose Row */}
                   <Box>
                     <Typography sx={{ fontSize: 13, fontWeight: 500 }}>Use case purpose</Typography>
-                    <Typography sx={{ fontSize: 12, color: "#888", whiteSpace: "nowrap" }}>
+                    <Typography sx={{ fontSize: 12, color: text.subdued, whiteSpace: "nowrap" }}>
                       What business purpose does the use case serve?
                     </Typography>
                   </Box>
@@ -1516,7 +1718,7 @@ const ProjectSettings = React.memo(
                     <Typography sx={{ fontSize: 13, fontWeight: 500 }}>
                       Use case audience
                     </Typography>
-                    <Typography sx={{ fontSize: 12, color: "#888", whiteSpace: "nowrap" }}>
+                    <Typography sx={{ fontSize: 12, color: text.subdued, whiteSpace: "nowrap" }}>
                       Who is the intended audience for the use case?
                     </Typography>
                   </Box>
@@ -1539,7 +1741,7 @@ const ProjectSettings = React.memo(
                     <Typography sx={{ fontSize: 13, fontWeight: 500 }}>
                       Deployment context
                     </Typography>
-                    <Typography sx={{ fontSize: 12, color: "#888", whiteSpace: "nowrap" }}>
+                    <Typography sx={{ fontSize: 12, color: text.subdued, whiteSpace: "nowrap" }}>
                       How is the AI use case deployed?
                     </Typography>
                   </Box>
@@ -1579,7 +1781,7 @@ const ProjectSettings = React.memo(
                   <CustomizableButton
                     sx={{
                       ...styles.saveButton,
-                      backgroundColor: isSaveDisabled ? "#ccc" : "brand.primary",
+                      backgroundColor: isSaveDisabled ? border.dark : "brand.primary",
                       border: isSaveDisabled
                         ? "1px solid rgba(0, 0, 0, 0.26)"
                         : "1px solid brand.primary",
@@ -1595,7 +1797,7 @@ const ProjectSettings = React.memo(
                 </Box>
 
                 {/* divider for seperation */}
-                <Box sx={{ mt: 6, borderTop: "1px solid #E0E0E0", pt: 8, width: "100%" }} />
+                <Box sx={{ mt: 6, borderTop: `1px solid ${border.dark}`, pt: 8, width: "100%" }} />
                 <Typography
                   sx={{
                     fontSize: theme.typography.fontSize,
@@ -1619,16 +1821,14 @@ const ProjectSettings = React.memo(
                   sx={{
                     width: { xs: "100%", sm: theme.spacing(80) },
                     mb: theme.spacing(4),
-                    backgroundColor: "#DB504A",
-                    color: "background.main",
-                    border: "1px solid #DB504A",
                     gap: 2,
                   }}
                   icon={<DeleteIcon size={16} />}
                   variant="contained"
+                  color="error"
                   onClick={handleOpenDeleteDialog}
                   text="Delete use case"
-                  isDisabled={!allowedRoles.projects.delete.includes(userRoleName)}
+                  isDisabled={!can("useCase.edit")}
                 />
               </Stack>
             </Stack>

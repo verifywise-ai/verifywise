@@ -12,6 +12,7 @@ import Field from "../../../components/Inputs/Field";
 import Select from "../../../components/Inputs/Select";
 import Checkbox from "../../../components/Inputs/Checkbox";
 import { PMMQuestion, QuestionType } from "../../../../domain/types/PostMarketMonitoring";
+import { radiusPx } from "../../../themes/palette";
 
 interface PMMQuestionEditorProps {
   isOpen: boolean;
@@ -220,7 +221,7 @@ const PMMQuestionEditor: React.FC<PMMQuestionEditorProps> = ({
                   "gap": 1,
                   "padding": "8px 12px",
                   "border": `1px dashed ${theme.palette.border.dark}`,
-                  "borderRadius": "4px",
+                  "borderRadius": radiusPx.sm,
                   "backgroundColor": "transparent",
                   "color": theme.palette.other.icon,
                   "fontSize": 13,

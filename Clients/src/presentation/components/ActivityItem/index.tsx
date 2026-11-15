@@ -2,6 +2,7 @@ import React, { memo } from "react";
 import { Box, Stack, Typography, useTheme } from "@mui/material";
 import { Link } from "react-router";
 import { getActivityLink } from "./activityRoutes";
+import { radiusPx } from "../../themes/palette";
 
 interface ActivityItemProps {
   title: string;
@@ -24,7 +25,7 @@ const ActivityItem: React.FC<ActivityItemProps> = memo(
       py: 1,
       px: link ? 1 : 0,
       mx: link ? -1 : 0,
-      borderRadius: "4px",
+      borderRadius: radiusPx.sm,
       textDecoration: "none",
       color: "inherit",
       ...(link

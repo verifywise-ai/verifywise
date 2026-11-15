@@ -16,6 +16,7 @@ import type { ResearchAlert } from "../../../application/utils/vendorResearchAle
 import { ApprovalWorkflowModel } from "src/domain/models/Common/approvalWorkflow/approvalWorkflow.model";
 import { TrainingRegistarModel } from "src/domain/models/Common/trainingRegistar/trainingRegistar.model";
 import { AIIncidentManagementModel } from "src/domain/models/Common/incidentManagement/incidentManagement.model";
+import type { TrainingAssignmentSummary } from "../../../application/repository/trainingAssignment.repository";
 
 export interface IAITrustCenterTableColumn {
   id: string;
@@ -300,7 +301,6 @@ export interface TrainingTableProps {
   onEdit?: (id: string) => void;
   onDelete?: (id: string) => void;
   paginated?: boolean;
-  hidePagination?: boolean;
   visibleColumns?: Set<string>;
 }
 
@@ -310,8 +310,10 @@ export interface TrainingTableProps {
   onEdit?: (id: string) => void;
   onDelete?: (id: string) => void;
   paginated?: boolean;
-  hidePagination?: boolean;
   visibleColumns?: Set<string>;
+  /** Assignment counts keyed by training id. */
+  assignmentSummaries?: Map<number, TrainingAssignmentSummary>;
+  onOpenAssignments?: (training: TrainingRegistarModel) => void;
 }
 
 export interface IncidentTableProps {
@@ -322,7 +324,6 @@ export interface IncidentTableProps {
   onArchive?: (id: string, mode: string) => void;
   paginated?: boolean;
   archivedId?: string | null;
-  hidePagination?: boolean;
   visibleColumns?: Set<string>;
   /** Jira issue links by incident id (Jira incidents extension); a chip shows next to the incident ID. */
   jiraLinks?: Map<number, JiraIncidentLink>;

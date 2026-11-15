@@ -1,3 +1,4 @@
+import { externalOwnerLabel } from "../utils/externalOwner";
 import { useEffect, useMemo, useState } from "react";
 import { Project } from "../../domain/types/Project";
 import { User } from "../../domain/types/User";
@@ -64,6 +65,7 @@ const useProjectData = ({ projectId, refreshKey }: UseProjectDataParams): UsePro
   // the project when the users list updates.
   const projectOwner = useMemo<string | null>(() => {
     if (!project) return null;
+    if (project.external_owner_name) return externalOwnerLabel(project.external_owner_name);
     const ownerUser = users.find((user: User) => user.id === project.owner);
     return ownerUser ? `${ownerUser.name} ${ownerUser.surname}` : null;
   }, [project, users]);

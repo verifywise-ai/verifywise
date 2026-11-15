@@ -11,7 +11,8 @@ import {
   AlertCircle,
   Plus,
 } from "lucide-react";
-import { brand, background } from "../../themes/palette";
+import { brand, background, palette as vwPalette, radiusPx } from "../../themes/palette";
+import { chartTheme } from "../../themes/chartTheme";
 
 /**
  * Represents a single item in the mega dropdown menu
@@ -33,62 +34,62 @@ const items: MegaDropdownItem[] = [
   {
     id: "use-case",
     label: "Use case",
-    icon: <FolderTree size={20} strokeWidth={1.5} color="#81C784" />,
+    icon: <FolderTree size={20} strokeWidth={1.5} color={chartTheme.menuIcons[0]} />,
     path: "/overview",
     state: { openCreateModal: true },
   },
   {
     id: "vendor",
     label: "Vendor",
-    icon: <Building size={20} strokeWidth={1.5} color="#64B5F6" />,
+    icon: <Building size={20} strokeWidth={1.5} color={chartTheme.menuIcons[1]} />,
     path: "/vendors",
     state: { openCreateModal: true },
   },
   {
     id: "model",
     label: "Model",
-    icon: <ListIcon size={20} strokeWidth={1.5} color="#BA68C8" />,
+    icon: <ListIcon size={20} strokeWidth={1.5} color={chartTheme.menuIcons[2]} />,
     path: "/model-inventory",
     state: { openCreateModal: true },
   },
   {
     id: "risk",
     label: "Risk",
-    icon: <AlertTriangle size={20} strokeWidth={1.5} color="#FFB74D" />,
+    icon: <AlertTriangle size={20} strokeWidth={1.5} color={chartTheme.menuIcons[3]} />,
     path: "/risk-management",
     state: { openCreateModal: true },
   },
   {
     id: "policy",
     label: "Policy",
-    icon: <Shield size={20} strokeWidth={1.5} color="#7986CB" />,
+    icon: <Shield size={20} strokeWidth={1.5} color={chartTheme.menuIcons[4]} />,
     path: "/policies/new",
   },
   {
     id: "vendor-risk",
     label: "Vendor risk",
-    icon: <Building size={20} strokeWidth={1.5} color="#E57373" />,
+    icon: <Building size={20} strokeWidth={1.5} color={chartTheme.menuIcons[5]} />,
     path: "/vendors/risks",
     state: { openCreateModal: true },
   },
   {
     id: "model-risk",
     label: "Model risk",
-    icon: <AlertTriangle size={20} strokeWidth={1.5} color="#F06292" />,
+    icon: <AlertTriangle size={20} strokeWidth={1.5} color={chartTheme.menuIcons[6]} />,
     path: "/model-inventory/model-risks",
     state: { openCreateModal: true },
   },
   {
     id: "training",
     label: "Training",
-    icon: <GraduationCap size={20} strokeWidth={1.5} color="#4DD0E1" />,
+    icon: <GraduationCap size={20} strokeWidth={1.5} color={chartTheme.menuIcons[7]} />,
     path: "/training",
     state: { openCreateModal: true },
   },
   {
     id: "ai-incident",
     label: "Incident",
-    icon: <AlertCircle size={20} strokeWidth={1.5} color="#FF8A65" />,
+    icon: <AlertCircle size={20} strokeWidth={1.5} color={chartTheme.menuIcons[8]} />,
     path: "/ai-incident-managements",
     state: { openCreateModal: true },
   },
@@ -143,11 +144,11 @@ const AddNewMegaDropdown: React.FC<AddNewMegaDropdownProps> = ({ buttonLabel = "
           "height": "34px",
           "minHeight": "34px",
           "padding": "0 12px",
-          "borderRadius": "4px",
+          "borderRadius": radiusPx.sm,
           "textTransform": "none",
           "boxShadow": "none",
           "&:hover": {
-            background: "#0f5f4c",
+            background: vwPalette.brand.primaryHover,
             boxShadow: "none",
           },
           "transition": "background 0.2s ease",
@@ -172,7 +173,7 @@ const AddNewMegaDropdown: React.FC<AddNewMegaDropdownProps> = ({ buttonLabel = "
         sx={{
           "mt": 1,
           "& .MuiPopover-paper": {
-            borderRadius: "12px",
+            borderRadius: radiusPx.xl,
             boxShadow: "0 4px 20px rgba(0, 0, 0, 0.15)",
             overflow: "hidden",
             backgroundColor: `${background.main}`,
@@ -205,7 +206,7 @@ const AddNewMegaDropdown: React.FC<AddNewMegaDropdownProps> = ({ buttonLabel = "
                 }
               }}
               sx={{
-                "borderRadius": "8px",
+                "borderRadius": radiusPx.lg,
                 "padding": "12px 8px",
                 "cursor": "pointer",
                 "display": "flex",
@@ -214,7 +215,10 @@ const AddNewMegaDropdown: React.FC<AddNewMegaDropdownProps> = ({ buttonLabel = "
                 "justifyContent": "center",
                 "gap": 1,
                 "backgroundColor": hoveredItem === item.id ? "background.surface" : "transparent",
-                "border": hoveredItem === item.id ? "1px solid #e0e0e0" : "1px solid transparent",
+                "border":
+                  hoveredItem === item.id
+                    ? `1px solid ${vwPalette.border.light}`
+                    : "1px solid transparent",
                 "transition": "all 0.15s ease",
                 "minWidth": "90px",
                 "position": "relative",
@@ -228,7 +232,7 @@ const AddNewMegaDropdown: React.FC<AddNewMegaDropdownProps> = ({ buttonLabel = "
                 sx={{
                   width: 40,
                   height: 40,
-                  borderRadius: "10px",
+                  borderRadius: radiusPx.lgPlus,
                   backgroundColor: "background.main",
                   display: "flex",
                   alignItems: "center",
@@ -243,7 +247,7 @@ const AddNewMegaDropdown: React.FC<AddNewMegaDropdownProps> = ({ buttonLabel = "
                 sx={{
                   fontWeight: 400,
                   fontSize: "12px",
-                  color: "#1a1a1a",
+                  color: vwPalette.text.primary,
                   textAlign: "center",
                   lineHeight: 1.2,
                 }}

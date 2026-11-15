@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
+import { useCan } from "../../../../application/hooks/useCan";
 import { Box, Typography } from "@mui/material";
 import { CustomizableButton } from "../../../components/button/customizable-button";
 import Field from "../../../components/Inputs/Field";
 import { useMrmSettings, useUpdateMrmSettings } from "../../../../application/hooks/useMrm";
-import { useHasPermission } from "../../../../application/hooks/useMyPermissions";
 import { mrmErrorMessage } from "./constants";
 import { mrmSectionIntroStyle } from "./mrmStyles";
 
@@ -20,7 +20,7 @@ const RetentionSection = ({ onError, onSuccess }: RetentionSectionProps) => {
   // The server allows any role holding organization.admin (custom roles too).
   // SuperAdmin is a cross-tenant grant, not admin access inside an org, so an
   // elected SuperAdmin follows their org role here.
-  const canEdit = useHasPermission("organization.admin", { fallbackToAdmin: true });
+  const canEdit = useCan("organization.admin");
   const [months, setMonths] = useState<string>("");
 
   // Seed the input from the loaded settings; keep user edits afterwards.

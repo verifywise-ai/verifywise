@@ -12,7 +12,7 @@
  */
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { convertToCamelCaseRiskKey } from "../tools/stringUtil";
+import { getEffectiveRiskLevel, riskLevelBucket } from "../utils/riskLevel";
 import { getAllProjectRisksByProjectId } from "../repository/projectRisk.repository";
 
 export interface ProjectRisk {
@@ -75,13 +75,8 @@ const useProjectRisks = ({ projectId, refreshKey }: { projectId: number; refresh
   const projectRisksSummary = useMemo(() => {
     return projectRisks.reduce(
       (acc, risk) => {
-        const _risk = convertToCamelCaseRiskKey(risk.risk_level_autocalculated);
-        const key = `${_risk.replace(/risks?$/i, "")}Risks`;
-        if (key in acc && key !== "total") {
-          const riskKey = key as
-            "veryHighRisks" | "highRisks" | "mediumRisks" | "lowRisks" | "veryLowRisks";
-          acc[riskKey] = acc[riskKey] + 1;
-        }
+        const bucket = riskLevelBucket(getEffectiveRiskLevel(risk));
+        if (bucket) acc[`${bucket}Risks`] += 1;
         acc.total = acc.total + 1;
         return acc;
       },

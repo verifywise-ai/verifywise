@@ -18,6 +18,7 @@ import Field from "../../../components/Inputs/Field";
 import { SectionPaper, PrivacyFields, styles, getFormControlLabelStyles } from "./styles";
 
 import { COMPLIANCE_BADGES, SUCCESS_MESSAGE } from "./constants";
+import { palette } from "../../../themes/palette";
 
 // Using standard TextField with theme styling for consistency
 
@@ -565,8 +566,8 @@ const AITrustCenterOverview: React.FC = () => {
         <CustomizableButton
           sx={{
             ...styles.saveButton,
-            backgroundColor: hasUnsavedChanges ? "brand.primary" : "#ccc",
-            border: `1px solid ${hasUnsavedChanges ? "#13715B" : "#ccc"}`,
+            backgroundColor: hasUnsavedChanges ? "brand.primary" : palette.border.dark,
+            border: `1px solid ${hasUnsavedChanges ? palette.brand.primary : palette.border.dark}`,
           }}
           icon={<SaveIcon size={16} />}
           variant="contained"

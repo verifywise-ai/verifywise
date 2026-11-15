@@ -7,6 +7,7 @@ import { AdvisorDomain } from "./advisorConfig";
 import { useAdvisorConversationSafe } from "../../../application/contexts/AdvisorConversation.context";
 import useUserPreferences from "../../../application/hooks/useUserPreferences";
 import { useEffect, useRef, useMemo, memo } from "react";
+import { radiusPx } from "../../themes/palette";
 
 // Extracted style functions for performance (created once per theme)
 const createPaperStyles = (theme: Theme): SxProps<Theme> => ({
@@ -16,7 +17,7 @@ const createPaperStyles = (theme: Theme): SxProps<Theme> => ({
   flexDirection: "column",
   border: 1,
   borderColor: theme.palette.border?.light ?? theme.palette.divider,
-  borderRadius: 3,
+  borderRadius: radiusPx.md,
   bgcolor: theme.palette.background.main ?? theme.palette.background.default,
 });
 

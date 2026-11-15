@@ -13,7 +13,7 @@ import { deleteDemoUsersQuery } from "../../utils/user.utils";
 import { createNewModelRiskQuery } from "../../utils/modelRisk.utils";
 import { createNewTaskQuery } from "../../utils/task.utils";
 import { createNewTrainingRegistarQuery } from "../../utils/trainingRegistar.utils";
-import { createPolicyQuery } from "../../utils/policyManager.utils";
+import { createPolicyQuery, deletePolicyLeftoversQuery } from "../../utils/policyManager.utils";
 import { createNewModelInventoryQuery } from "../../utils/modelInventory.utils";
 import { createNewDatasetQuery } from "../../utils/dataset.utils";
 
@@ -1068,7 +1068,16 @@ export async function deleteMockData(organizationId: number) {
       { replacements: { organizationId }, transaction },
     );
 
-    // 2a. Delete demo AI apps (child tables cascade via ON DELETE CASCADE)
+    // 2a. Delete demo AI apps (child tables cascade via ON DELETE CASCADE).
+    // custom_field_values is polymorphic (no FK), so clear its rows first.
+    await sequelize.query(
+      `DELETE FROM custom_field_values
+         WHERE organization_id = :organizationId AND entity_type = 'ai_app'
+           AND entity_id IN (
+             SELECT id FROM ai_apps WHERE organization_id = :organizationId AND is_demo = true
+           )`,
+      { replacements: { organizationId }, transaction },
+    );
     await sequelize.query(
       `DELETE FROM ai_apps WHERE organization_id = :organizationId AND is_demo = true`,
       { replacements: { organizationId }, transaction },
@@ -1093,6 +1102,13 @@ export async function deleteMockData(organizationId: number) {
         { replacements: { organizationId, id: policy.id }, transaction },
       );
     }
+    // The rows a single policy delete also removes (folder mappings, CE marking,
+    // task and share links, notifications, custom field values).
+    await deletePolicyLeftoversQuery(
+      organizationId,
+      demoPolicies[0].map((policy) => policy.id),
+      transaction,
+    );
     await sequelize.query(
       `DELETE FROM policy_manager WHERE organization_id = :organizationId AND is_demo = true`,
       { replacements: { organizationId }, transaction },

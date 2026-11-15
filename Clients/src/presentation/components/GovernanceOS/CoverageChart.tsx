@@ -14,7 +14,14 @@ import { ChevronDown, ChevronUp, Plus, CheckSquare, Square, Info } from "lucide-
 import { ICoverageChartProps } from "../../../domain/interfaces/i.governanceOs";
 import { CustomizableButton } from "../button/customizable-button";
 import GovernanceTooltip from "./GovernanceTooltip";
-import { border as borderPalette, background, text, status, brand } from "../../themes/palette";
+import {
+  border as borderPalette,
+  background,
+  text,
+  status,
+  brand,
+  radiusPx,
+} from "../../themes/palette";
 
 const CoverageChart = ({
   coverage,
@@ -103,7 +110,7 @@ const CoverageChart = ({
             key={fw.framework_id}
             sx={{
               "border": `1px solid ${isPrimary ? brand.primary : borderPalette.light}`,
-              "borderRadius": "4px",
+              "borderRadius": radiusPx.sm,
               "p": "16px",
               "background": isPrimary ? alpha(brand.primary, 0.04) : background.main,
               "transition": "all 0.2s ease",
@@ -144,7 +151,7 @@ const CoverageChart = ({
                         alignItems: "center",
                         height: 18,
                         px: "6px",
-                        borderRadius: "4px",
+                        borderRadius: radiusPx.sm,
                         fontSize: 10,
                         fontWeight: 500,
                         backgroundColor: alpha(brand.primary, 0.12),
@@ -178,13 +185,13 @@ const CoverageChart = ({
                 value={fw.coverage_percentage}
                 sx={{
                   "height": 6,
-                  "borderRadius": "4px",
+                  "borderRadius": radiusPx.sm,
                   "mt": "8px",
                   "mb": "8px",
                   "backgroundColor": background.hover,
                   "& .MuiLinearProgress-bar": {
                     backgroundColor: brand.primary,
-                    borderRadius: "4px",
+                    borderRadius: radiusPx.sm,
                   },
                 }}
               />
@@ -215,7 +222,7 @@ const CoverageChart = ({
                         alignItems: "center",
                         height: 20,
                         px: "6px",
-                        borderRadius: "4px",
+                        borderRadius: radiusPx.sm,
                         fontSize: 10,
                         fontWeight: 500,
                         mr: "4px",
@@ -240,7 +247,7 @@ const CoverageChart = ({
                         alignItems: "center",
                         height: 20,
                         px: "6px",
-                        borderRadius: "4px",
+                        borderRadius: radiusPx.sm,
                         fontSize: 10,
                         fontWeight: 500,
                         backgroundColor: status.success.bg,
@@ -304,7 +311,7 @@ const CoverageChart = ({
                   <Box
                     sx={{
                       border: `1px solid ${borderPalette.light}`,
-                      borderRadius: "4px",
+                      borderRadius: radiusPx.sm,
                       maxHeight: 200,
                       overflow: "auto",
                     }}
@@ -416,7 +423,7 @@ const CoverageChart = ({
                           alignItems: "center",
                           height: 22,
                           px: "8px",
-                          borderRadius: "4px",
+                          borderRadius: radiusPx.sm,
                           fontSize: 11,
                           fontFamily: "monospace",
                           backgroundColor: status.success.bg,

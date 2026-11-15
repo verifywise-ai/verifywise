@@ -10,6 +10,7 @@ import {
   type SuggestedRisksBlock,
 } from "../../../../application/repository/intakeForm.repository";
 import SuggestedRiskEditor from "./SuggestedRiskEditor";
+import { radiusPx } from "../../../themes/palette";
 
 export interface SuggestedRisksSectionProps {
   submissionId: number;
@@ -163,7 +164,7 @@ function SuggestedRisksSection({
             data-testid={`suggested-risk-${risk.id}`}
             sx={{
               border: `1px solid ${theme.palette.border.dark}`,
-              borderRadius: "4px",
+              borderRadius: radiusPx.sm,
               p: "12px",
               opacity: risk.state === "dismissed" ? 0.6 : 1,
             }}

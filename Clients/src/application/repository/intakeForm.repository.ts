@@ -446,6 +446,23 @@ export async function getPendingSubmissions(
   };
 }
 
+/** A custom field value approval would save, or why it would be skipped. */
+export interface SubmissionCustomFieldPreview {
+  /** The custom field's label, or the question's when the field was deleted. */
+  label: string;
+  /** The value to save, or the answer as submitted when it is skipped. */
+  displayValue: string;
+  /** Translated reason the value would not be saved. */
+  skipped?: string;
+}
+
+/** A custom field value approval did not save. */
+export interface CustomFieldSkip {
+  label: string;
+  /** Translated reason. */
+  reason: string;
+}
+
 /** What the review modal loads for one submission. */
 export interface SubmissionPreview {
   submission: IntakeSubmission;
@@ -478,6 +495,11 @@ export interface SubmissionPreview {
   /** Reviewers of the assigned lane. */
   laneReviewers?: Array<{ id: number; name: string }>;
   isSeniorReviewer?: boolean;
+  /**
+   * Values for questions mapped to custom fields, for a pending submission.
+   * Null when they could not be read; absent once the submission is decided.
+   */
+  customFields?: SubmissionCustomFieldPreview[] | null;
 }
 
 /**
@@ -487,7 +509,8 @@ export async function getSubmissionPreview(
   submissionId: number,
   signal?: AbortSignal,
 ): Promise<{ data: SubmissionPreview }> {
-  const response = await apiServices.get(`${BASE_URL}/submissions/${submissionId}/preview`, {
+  // The v1 preview adds the custom field values approval would write (#5262).
+  const response = await apiServices.get(`/v1/intake-submissions/${submissionId}/preview`, {
     signal,
   });
   return response.data as { data: SubmissionPreview };
@@ -530,6 +553,9 @@ export async function acceptAllSuggestedRisks(
   };
 }
 
+/** The approve response: the updated submission plus the custom field values not saved. */
+export type ApprovedSubmission = IntakeSubmission & { customFieldSkips?: CustomFieldSkip[] };
+
 /**
  * Approve a submission with optional entity data overrides and risk override
  */
@@ -545,13 +571,14 @@ export async function approveSubmission(
     euAiActOverride?: { level: string; justification: string };
   },
   signal?: AbortSignal,
-): Promise<{ data: { submission: IntakeSubmission; createdEntity: unknown } }> {
+): Promise<{ data: ApprovedSubmission }> {
+  // The v1 approval also reports the custom field values it could not save (#5262).
   const response = await apiServices.post(
-    `${BASE_URL}/submissions/${submissionId}/approve`,
+    `/v1/intake-submissions/${submissionId}/approve`,
     data || {},
     { signal },
   );
-  return response.data as { data: { submission: IntakeSubmission; createdEntity: unknown } };
+  return response.data as { data: ApprovedSubmission };
 }
 
 /**

@@ -12,10 +12,16 @@ import { deleteEntityById } from "../../../application/repository/entity.reposit
 import CustomizableToast from "../Toast";
 import CustomizableSkeleton from "../Skeletons";
 import useUsers from "../../../application/hooks/useUsers";
-import { useAuth } from "../../../application/hooks/useAuth";
 import { RiskModel } from "../../../domain/models/Common/risks/risk.model";
 import { IFilterState } from "../../types/interfaces/i.filter";
 import { IRiskLoadingStatus, IRisksViewProps } from "../../types/interfaces/i.risk";
+import { useCan } from "../../../application/hooks/useCan";
+import { chartTheme } from "../../themes/chartTheme";
+import {
+  getEffectiveRiskLevel,
+  riskLevelBucket,
+  type RiskLevelBucket,
+} from "../../../application/utils/riskLevel";
 
 const initialLoadingState: IRiskLoadingStatus = {
   loading: false,
@@ -33,9 +39,7 @@ const RisksView = ({
   showEmptyTips = false,
 }: IRisksViewProps) => {
   const { users, loading: usersLoading } = useUsers();
-  const { userRoleName } = useAuth();
-  const canRunBulkActions =
-    !readOnly && !!userRoleName && ["Admin", "Editor"].includes(userRoleName);
+  const canRunBulkActions = useCan("risks.edit") && !readOnly;
   const [refreshKey, setRefreshKey] = useState(0);
   const [projectRisks, setProjectRisks] = useState<RiskModel[]>([]);
   const [selectedRow, setSelectedRow] = useState<RiskModel[]>([]);
@@ -56,46 +60,13 @@ const RisksView = ({
 
   // Compute risk summary from fetched data
   const risksSummary = useMemo(() => {
-    const veryHighRisks = projectRisks.filter((risk) => {
-      const riskLevel = (
-        risk.current_risk_level ||
-        risk.risk_level_autocalculated ||
-        ""
-      ).toLowerCase();
-      return riskLevel.includes("very high");
-    }).length;
-    const highRisks = projectRisks.filter((risk) => {
-      const riskLevel = (
-        risk.current_risk_level ||
-        risk.risk_level_autocalculated ||
-        ""
-      ).toLowerCase();
-      return riskLevel.includes("high") && !riskLevel.includes("very high");
-    }).length;
-    const mediumRisks = projectRisks.filter((risk) => {
-      const riskLevel = (
-        risk.current_risk_level ||
-        risk.risk_level_autocalculated ||
-        ""
-      ).toLowerCase();
-      return riskLevel.includes("medium");
-    }).length;
-    const lowRisks = projectRisks.filter((risk) => {
-      const riskLevel = (
-        risk.current_risk_level ||
-        risk.risk_level_autocalculated ||
-        ""
-      ).toLowerCase();
-      return riskLevel.includes("low") && !riskLevel.includes("very low");
-    }).length;
-    const veryLowRisks = projectRisks.filter((risk) => {
-      const riskLevel = (
-        risk.current_risk_level ||
-        risk.risk_level_autocalculated ||
-        ""
-      ).toLowerCase();
-      return riskLevel.includes("very low") || riskLevel.includes("no risk");
-    }).length;
+    const countBucket = (bucket: RiskLevelBucket) =>
+      projectRisks.filter((risk) => riskLevelBucket(getEffectiveRiskLevel(risk)) === bucket).length;
+    const veryHighRisks = countBucket("veryHigh");
+    const highRisks = countBucket("high");
+    const mediumRisks = countBucket("medium");
+    const lowRisks = countBucket("low");
+    const veryLowRisks = countBucket("veryLow");
 
     return {
       total: veryHighRisks + highRisks + mediumRisks + lowRisks + veryLowRisks,
@@ -243,26 +214,41 @@ const RisksView = ({
           <StatusTileCards
             items={
               [
-                { key: "Total", label: "Total", count: risksSummary.total, color: "#4B5563" },
+                {
+                  key: "Total",
+                  label: "Total",
+                  count: risksSummary.total,
+                  color: chartTheme.riskSummary.total,
+                },
                 {
                   key: "Very high",
                   label: "Very high",
                   count: risksSummary.veryHighRisks,
-                  color: "#C63622",
+                  color: chartTheme.riskSummary.veryHigh,
                 },
-                { key: "High", label: "High", count: risksSummary.highRisks, color: "#D68B61" },
+                {
+                  key: "High",
+                  label: "High",
+                  count: risksSummary.highRisks,
+                  color: chartTheme.riskSummary.high,
+                },
                 {
                   key: "Medium",
                   label: "Medium",
                   count: risksSummary.mediumRisks,
-                  color: "#D6B971",
+                  color: chartTheme.riskSummary.medium,
                 },
-                { key: "Low", label: "Low", count: risksSummary.lowRisks, color: "#52AB43" },
+                {
+                  key: "Low",
+                  label: "Low",
+                  count: risksSummary.lowRisks,
+                  color: chartTheme.riskSummary.low,
+                },
                 {
                   key: "Very low",
                   label: "Very low",
                   count: risksSummary.veryLowRisks,
-                  color: "#B8D39C",
+                  color: chartTheme.riskSummary.veryLow,
                 },
               ] satisfies StatusTileItem[]
             }

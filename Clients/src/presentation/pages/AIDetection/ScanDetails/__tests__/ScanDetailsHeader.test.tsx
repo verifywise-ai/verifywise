@@ -162,6 +162,28 @@ describe("ScanDetailsHeader", () => {
     expect(onExport).toHaveBeenCalled();
   });
 
+  it("disables Recalculate score while the AI analysis is running", () => {
+    const onRecalculate = vi.fn();
+    renderWithProviders(
+      <ScanDetailsHeader
+        scan={makeScanResponse({
+          status: "completed",
+          // Only the analysis state matters to the button; the card is covered elsewhere
+          risk_score_details: { llm_status: "pending" } as unknown as Scan["risk_score_details"],
+        })}
+        onBack={vi.fn()}
+        isRecalculating={false}
+        onRecalculate={onRecalculate}
+        isExporting={false}
+        onExport={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByRole("button", { name: /Recalculate score/ })).toBeDisabled();
+    fireEvent.click(screen.getByText("Recalculate score"));
+    expect(onRecalculate).not.toHaveBeenCalled();
+  });
+
   it("does not show action buttons for non-completed scans", () => {
     renderWithProviders(
       <ScanDetailsHeader

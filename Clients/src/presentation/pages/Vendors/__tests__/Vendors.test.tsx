@@ -100,22 +100,20 @@ vi.mock("../../../../application/hooks/useMultipleOnScreen", () => ({
   }),
 }));
 
-// What the filter and the grouping hooks of the page hold, and the handlers the page calls on them.
-// The page has two of each: the vendors tab's (the first of the two in the page's source) and the
-// risks tab's (the second), and each toolbar is handed what ITS hooks hold. So there are two slots,
-// each with its own state and its own spies, and an instance of a hook takes its slot when it first
-// renders: the first instance the page makes is the vendors', the next the risks', and so on in
-// turns, which holds while a test renders the page once (the counters are reset before each test).
-// A handler writes what it was given back into the state, as the real one does through useState,
-// and the page reads it on its next render.
+// What the filter hooks of the page hold, and the handlers the page calls on them. The page has two
+// of them: the vendors tab's (the first of the two in the page's source) and the risks tab's (the
+// second), and each toolbar is handed what ITS hook holds. So there are two slots, each with its own
+// state and its own spy, and an instance of the hook takes its slot when it first renders: the
+// first instance the page makes is the vendors', the next the risks', and so on in turns, which
+// holds while a test renders the page once (the counters are reset before each test). A handler
+// writes what it was given back into the state, as the real one does through useState, and the page
+// reads it on its next render.
 type FilterConditionStub = { columnId: string; operator: string; value: string };
 const toolbar = vi.hoisted(() => {
   const slot = () => {
     const state = {
       conditions: [] as FilterConditionStub[],
       logic: "and" as "and" | "or",
-      groupBy: null as string | null,
-      groupSortOrder: "asc" as "asc" | "desc",
     };
     return {
       state,
@@ -123,23 +121,16 @@ const toolbar = vi.hoisted(() => {
         state.conditions = conditions;
         state.logic = logic;
       }),
-      handleGroupChange: vi.fn((groupBy: string | null, groupSortOrder: "asc" | "desc") => {
-        state.groupBy = groupBy;
-        state.groupSortOrder = groupSortOrder;
-      }),
     };
   };
-  return { vendors: slot(), risks: slot(), filterInstances: 0, groupInstances: 0 };
+  return { vendors: slot(), risks: slot(), filterInstances: 0 };
 });
 const resetToolbars = () => {
   for (const slot of [toolbar.vendors, toolbar.risks]) {
     slot.state.conditions = [];
     slot.state.logic = "and";
-    slot.state.groupBy = null;
-    slot.state.groupSortOrder = "asc";
   }
   toolbar.filterInstances = 0;
-  toolbar.groupInstances = 0;
 };
 
 const FOR_VENDORS: FilterConditionStub[] = [
@@ -150,33 +141,9 @@ const FOR_RISKS: FilterConditionStub[] = [
 ];
 /** The two lists hold different things, so that a toolbar given the other's state shows it. */
 const holdDifferentStates = () => {
-  Object.assign(toolbar.vendors.state, {
-    conditions: FOR_VENDORS,
-    logic: "or",
-    groupBy: "review_status",
-    groupSortOrder: "desc",
-  });
-  Object.assign(toolbar.risks.state, {
-    conditions: FOR_RISKS,
-    logic: "and",
-    groupBy: "risk_level",
-    groupSortOrder: "asc",
-  });
+  Object.assign(toolbar.vendors.state, { conditions: FOR_VENDORS, logic: "or" });
+  Object.assign(toolbar.risks.state, { conditions: FOR_RISKS, logic: "and" });
 };
-
-vi.mock("../../../../application/hooks/useTableGrouping", () => ({
-  useTableGrouping: () => [],
-  useGroupByState: () => {
-    const [slot] = useState(() =>
-      toolbar.groupInstances++ % 2 === 0 ? toolbar.vendors : toolbar.risks,
-    );
-    return {
-      groupBy: slot.state.groupBy,
-      groupSortOrder: slot.state.groupSortOrder,
-      handleGroupChange: slot.handleGroupChange,
-    };
-  },
-}));
 
 vi.mock("../../../../application/hooks/useFilterBy", () => ({
   useFilterBy: () => {
@@ -226,8 +193,9 @@ vi.mock("../../../../application/repository/vendorResearch.repository", async (i
   dismissVendorRiskFinding: vi.fn(),
 }));
 
-vi.mock("../../../../application/hooks/useMyPermissions", () => ({
-  useHasPermission: (key: string) => key === "vendor.edit",
+vi.mock("../../../../application/hooks/useCan", () => ({
+  useCan: (key: string) => key === "vendor.edit",
+  useCanCheck: () => (key: string) => key === "vendor.edit",
 }));
 
 vi.mock("../../../../application/hooks/useRiskLinks", () => ({
@@ -341,35 +309,6 @@ vi.mock("../../../components/Table/RisksTable", () => ({
   ),
 }));
 
-vi.mock("../../../components/Table/GroupedTableView", () => ({
-  GroupedTableView: ({ ungroupedData, renderTable }: any) => (
-    <div data-testid="grouped-table-view">{renderTable(ungroupedData, {})}</div>
-  ),
-}));
-
-vi.mock("../../../components/Table/GroupBy", () => ({
-  // Like the real one, it reads its defaults once, when it mounts, and shows what it started with.
-  GroupBy: ({
-    defaultGroupBy,
-    defaultSortOrder,
-  }: {
-    defaultGroupBy?: string;
-    defaultSortOrder?: "asc" | "desc";
-  }) => {
-    const [started] = useState(() => ({
-      groupBy: defaultGroupBy ?? null,
-      sortOrder: defaultSortOrder ?? null,
-    }));
-    return (
-      <div
-        data-testid="group-by"
-        data-started-group-by={JSON.stringify(started.groupBy)}
-        data-started-sort-order={JSON.stringify(started.sortOrder)}
-      />
-    );
-  },
-}));
-
 vi.mock("../../../components/Table/ExportMenu", () => ({
   ExportMenu: () => <div data-testid="export-menu" />,
 }));
@@ -378,10 +317,10 @@ vi.mock("../../../components/Table/ColumnSelector", () => ({
   ColumnSelector: () => <div data-testid="column-selector" />,
 }));
 
-vi.mock("../../../components/Table/FilterBy", () => ({
+vi.mock("../../../components/Table/TableFilter", () => ({
   // A button stands in for choosing "Use case is 3" in the filter of the Risks tab.
   // Like the real one, it reads its defaults once, when it mounts, and shows what it started with.
-  FilterBy: ({
+  TableFilter: ({
     onFilterChange,
     defaultConditions,
     defaultLogic,
@@ -412,8 +351,6 @@ vi.mock("../../../components/Table/FilterBy", () => ({
       </div>
     );
   },
-  FilterColumn: {},
-  FilterCondition: {},
 }));
 
 vi.mock("../VendorsSteps", () => ({
@@ -549,7 +486,7 @@ describe("Vendors", () => {
     renderWithProviders(<Vendors />, { route: "/vendors" });
 
     expect(screen.queryByText("Failed to load vendors. Please try again later.")).toBeNull();
-    expect(screen.getByTestId("grouped-table-view")).toBeInTheDocument();
+    expect(screen.getByTestId("vendor-table")).toBeInTheDocument();
   });
 });
 
@@ -1436,11 +1373,9 @@ describe("Vendors, the tabs", () => {
     const FILTERED: FilterConditionStub[] = [
       { columnId: "risk_description", operator: "contains", value: "leak" },
     ];
-    const holdAFilterAndAGrouping = () => {
+    const holdAFilter = () => {
       toolbar.risks.state.conditions = FILTERED;
       toolbar.risks.state.logic = "or";
-      toolbar.risks.state.groupBy = "risk_level";
-      toolbar.risks.state.groupSortOrder = "desc";
     };
     const chooseOnInsights = async () => {
       registerState.risks = RISKS;
@@ -1450,49 +1385,34 @@ describe("Vendors, the tabs", () => {
     };
 
     it("empties the filter of the register, with the logic it starts from", async () => {
-      holdAFilterAndAGrouping();
+      holdAFilter();
       await chooseOnInsights();
 
       expect(toolbar.risks.handleFilterChange).toHaveBeenLastCalledWith([], "and");
     });
 
-    it("takes the grouping off, with the sort order it starts from", async () => {
-      holdAFilterAndAGrouping();
-      await chooseOnInsights();
-
-      expect(toolbar.risks.handleGroupChange).toHaveBeenLastCalledWith(null, "asc");
-    });
-
-    // The reset is of the register's filter and grouping, not of the vendor list's: they are two
-    // hooks, and the vendors' own stay as they were, to be shown when the Vendors tab is opened.
-    it("lets go of the Risks list's filter and grouping alone, and leaves the Vendors list's as it was", async () => {
+    // The reset is of the register's filter, not of the vendor list's: they are two hooks, and the
+    // vendors' own stays as it was, to be shown when the Vendors tab is opened.
+    it("lets go of the Risks list's filter alone, and leaves the Vendors list's as it was", async () => {
       holdDifferentStates();
       await chooseOnInsights();
 
       expect(toolbar.risks.handleFilterChange).toHaveBeenLastCalledWith([], "and");
-      expect(toolbar.risks.handleGroupChange).toHaveBeenLastCalledWith(null, "asc");
       expect(toolbar.vendors.handleFilterChange).not.toHaveBeenCalled();
-      expect(toolbar.vendors.handleGroupChange).not.toHaveBeenCalled();
 
       await userEvent.click(tab(/^Vendors/));
       const filter = await screen.findByTestId("filter-by");
       expect(filter).toHaveAttribute("data-started-conditions", JSON.stringify(FOR_VENDORS));
       expect(filter).toHaveAttribute("data-started-logic", '"or"');
-      const group = screen.getByTestId("group-by");
-      expect(group).toHaveAttribute("data-started-group-by", '"review_status"');
-      expect(group).toHaveAttribute("data-started-sort-order", '"desc"');
     });
 
     it("opens the toolbar of the Risks tab blank, since what it held is gone", async () => {
-      holdAFilterAndAGrouping();
+      holdAFilter();
       await chooseOnInsights();
 
       const filter = screen.getByTestId("filter-by");
       expect(filter).toHaveAttribute("data-started-conditions", "[]");
       expect(filter).toHaveAttribute("data-started-logic", '"and"');
-      const group = screen.getByTestId("group-by");
-      expect(group).toHaveAttribute("data-started-group-by", "null");
-      expect(group).toHaveAttribute("data-started-sort-order", '"asc"');
     });
 
     it("lets go of a risk level that a summary card chose, which would hide the risks of the cell", async () => {
@@ -1511,20 +1431,18 @@ describe("Vendors, the tabs", () => {
     });
   });
 
-  // The toolbar of the Risks tab is mounted only while that tab is open, and what its filter and its
-  // grouping show is read when they mount. The page keeps the state, so it hands it to them.
+  // The toolbar of the Risks tab is mounted only while that tab is open, and what its filter shows
+  // is read when it mounts. The page keeps the state, so it hands it to them.
   describe("opening the Risks tab, what its toolbar starts with", () => {
     const FILTERED: FilterConditionStub[] = [
       { columnId: "risk_description", operator: "contains", value: "leak" },
     ];
 
     it.each(["/vendors", "/vendors/research-findings", "/vendors/insights"])(
-      "from %s: the filter and the grouping the page holds",
+      "from %s: the filter the page holds",
       async (route) => {
         toolbar.risks.state.conditions = FILTERED;
         toolbar.risks.state.logic = "or";
-        toolbar.risks.state.groupBy = "risk_level";
-        toolbar.risks.state.groupSortOrder = "desc";
         renderPage(route);
         await userEvent.click(await screen.findByRole("tab", { name: /^Risks/ }));
         await waitFor(() => expect(tab(/^Risks/)).toHaveAttribute("aria-selected", "true"));
@@ -1532,9 +1450,6 @@ describe("Vendors, the tabs", () => {
         const filter = screen.getByTestId("filter-by");
         expect(filter).toHaveAttribute("data-started-conditions", JSON.stringify(FILTERED));
         expect(filter).toHaveAttribute("data-started-logic", '"or"');
-        const group = screen.getByTestId("group-by");
-        expect(group).toHaveAttribute("data-started-group-by", '"risk_level"');
-        expect(group).toHaveAttribute("data-started-sort-order", '"desc"');
       },
     );
 
@@ -1556,53 +1471,45 @@ describe("Vendors, the tabs", () => {
     });
   });
 
-  // The page has a filter and a grouping for each list, and each toolbar is mounted only while its
-  // tab is open and reads its defaults when it mounts, so it opens on what ITS list's hooks hold:
-  // not blank, and not what the other list holds.
+  // The page has a filter for each list, and each toolbar is mounted only while its tab is open and
+  // reads its defaults when it mounts, so it opens on what ITS list's hook holds: not blank, and not
+  // what the other list holds.
   describe("each toolbar starts on the state of its own list", () => {
-    const expectStartedOn = (
-      conditions: FilterConditionStub[],
-      logic: string,
-      groupBy: string,
-      sortOrder: string,
-    ) => {
+    const expectStartedOn = (conditions: FilterConditionStub[], logic: string) => {
       const filter = screen.getByTestId("filter-by");
       expect(filter).toHaveAttribute("data-started-conditions", JSON.stringify(conditions));
       expect(filter).toHaveAttribute("data-started-logic", JSON.stringify(logic));
-      const group = screen.getByTestId("group-by");
-      expect(group).toHaveAttribute("data-started-group-by", JSON.stringify(groupBy));
-      expect(group).toHaveAttribute("data-started-sort-order", JSON.stringify(sortOrder));
     };
 
-    it("opens the Vendors toolbar on the filter and the grouping of the vendors, on the first render", async () => {
+    it("opens the Vendors toolbar on the filter of the vendors, on the first render", async () => {
       holdDifferentStates();
       renderPage("/vendors");
       await screen.findByTestId("vendor-table");
 
-      expectStartedOn(FOR_VENDORS, "or", "review_status", "desc");
+      expectStartedOn(FOR_VENDORS, "or");
     });
 
     it.each(["/vendors/risks", "/vendors/research-findings", "/vendors/insights"])(
-      "opens the Vendors toolbar, from %s, on the vendors' filter and grouping, not the risks'",
+      "opens the Vendors toolbar, from %s, on the vendors' filter, not the risks'",
       async (route) => {
         holdDifferentStates();
         renderPage(route);
         await userEvent.click(await screen.findByRole("tab", { name: /^Vendors/ }));
         await waitFor(() => expect(tab(/^Vendors/)).toHaveAttribute("aria-selected", "true"));
 
-        expectStartedOn(FOR_VENDORS, "or", "review_status", "desc");
+        expectStartedOn(FOR_VENDORS, "or");
       },
     );
 
     it.each(["/vendors", "/vendors/research-findings", "/vendors/insights"])(
-      "opens the Risks toolbar, from %s, on the risks' filter and grouping, not the vendors'",
+      "opens the Risks toolbar, from %s, on the risks' filter, not the vendors'",
       async (route) => {
         holdDifferentStates();
         renderPage(route);
         await userEvent.click(await screen.findByRole("tab", { name: /^Risks/ }));
         await waitFor(() => expect(tab(/^Risks/)).toHaveAttribute("aria-selected", "true"));
 
-        expectStartedOn(FOR_RISKS, "and", "risk_level", "asc");
+        expectStartedOn(FOR_RISKS, "and");
       },
     );
 

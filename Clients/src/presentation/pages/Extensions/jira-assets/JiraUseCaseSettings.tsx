@@ -7,6 +7,7 @@ import React, { useEffect, useState } from "react";
 import { Stack, Typography, Box, Chip, useTheme, CircularProgress } from "@mui/material";
 import { Database } from "lucide-react";
 import { apiServices } from "../../../../infrastructure/api/networkServices";
+import { palette } from "../../../themes/palette";
 
 interface JiraUseCaseSettingsProps {
   project: {
@@ -33,8 +34,8 @@ const formatValue = (value: any): string => {
 // Styles matching ProjectSettings exactly
 const useStyles = () => {
   const theme = useTheme();
-  const borderLight = (theme.palette as any).border?.light || "#E5E7EB";
-  const borderDark = (theme.palette as any).border?.dark || "#D0D5DD";
+  const borderLight = (theme.palette as any).border?.light || palette.border.light;
+  const borderDark = (theme.palette as any).border?.dark || palette.border.dark;
 
   return {
     root: {
@@ -78,7 +79,7 @@ const useStyles = () => {
     valueBox: {
       width: 400,
       padding: "10px 14px",
-      backgroundColor: (theme.palette as any).background?.fill || "#F9FAFB",
+      backgroundColor: (theme.palette as any).background?.fill || palette.background.alt,
       border: `1px solid ${borderDark}`,
       borderRadius: theme.shape.borderRadius,
       fontSize: 13,
@@ -92,7 +93,7 @@ const useStyles = () => {
     valueBoxMultiline: {
       width: 400,
       padding: "10px 14px",
-      backgroundColor: (theme.palette as any).background?.fill || "#F9FAFB",
+      backgroundColor: (theme.palette as any).background?.fill || palette.background.alt,
       border: `1px solid ${borderDark}`,
       borderRadius: theme.shape.borderRadius,
       fontSize: 13,
@@ -242,12 +243,12 @@ export const JiraUseCaseSettings: React.FC<JiraUseCaseSettingsProps> = ({ projec
           label="JIRA Assets Object"
           size="small"
           sx={{
-            "backgroundColor": "#E3F2FD",
-            "color": "#1565C0",
-            "& .MuiChip-icon": { color: "#1565C0" },
+            "backgroundColor": palette.status.info.bg,
+            "color": palette.status.info.text,
+            "& .MuiChip-icon": { color: palette.status.info.text },
           }}
         />
-        <Typography sx={{ fontSize: 13, color: "#6B7280" }}>
+        <Typography sx={{ fontSize: 13, color: palette.text.icon }}>
           This use case is imported from JIRA and is read-only
         </Typography>
       </Box>
@@ -263,7 +264,7 @@ export const JiraUseCaseSettings: React.FC<JiraUseCaseSettingsProps> = ({ projec
             {rows.map(({ key, value, hasValue }) => renderRow(key, value, hasValue))}
           </Box>
         ) : (
-          <Typography sx={{ color: "#6B7280", fontStyle: "italic" }}>
+          <Typography sx={{ color: palette.text.icon, fontStyle: "italic" }}>
             No attributes available
           </Typography>
         )}

@@ -200,6 +200,7 @@ export const de: Record<string, string> = {
     "Benutzersitzung nicht gefunden. Bitte erneut anmelden.",
   "Version control": "Versionskontrolle",
   "AI Approval Rules": "AI Approval Rules",
+  "AI approval rules": "KI-Genehmigungsregeln",
   "Add Rule": "Add Rule",
   "Auto-Approve": "Auto-Approve",
   "Auto-Reject": "Auto-Reject",
@@ -235,13 +236,20 @@ export const de: Record<string, string> = {
   "Client secret": "Client-Geheimnis",
   "Enter your client secret": "Geben Sie Ihr Client-Geheimnis ein",
   "Parallel agents": "Parallele Agenten",
+  "Interface style": "Darstellung",
+  "Select a style": "Stil auswählen",
+  "New style": "Neuer Stil",
+  "Classic": "Klassisch",
+  "Your browser is blocking site storage, so the interface style can't be saved. Allow site data for VerifyWise and try again.":
+    "Ihr Browser blockiert den Websitespeicher, daher kann die Darstellung nicht gespeichert werden. Erlauben Sie Websitedaten für VerifyWise und versuchen Sie es erneut.",
+  "The classic look stays available until January 2027. Changing this reloads the page.":
+    "Die klassische Darstellung bleibt bis Januar 2027 verfügbar. Eine Änderung lädt die Seite neu.",
   "Accordion": "Akkordeon",
   "Accordion view": "Akkordeon-Ansicht",
   "Add Approver": "Genehmigenden hinzufügen",
   "Add checklist item...": "Checklistenpunkt hinzufügen...",
   "Add new phase": "Neue Phase hinzufügen",
   "Add to Slack": "Zu Slack hinzufügen",
-  "Apply to all workspaces:": "Auf alle Workspaces anwenden:",
   "Artifact Location:": "Artefakt-Speicherort:",
   "Assign frameworks in the Frameworks/regulations tab.":
     "Weisen Sie Rahmenwerke im Tab Rahmenwerke/Regulierungen zu.",
@@ -257,8 +265,6 @@ export const de: Record<string, string> = {
   "Capacity": "Kapazität",
   "Channel": "Kanal",
   "Choose File": "Datei auswählen",
-  'Click "Add to Slack" above to connect your first workspace.':
-    'Klicken Sie oben auf "Zu Slack hinzufügen", um Ihren ersten Workspace zu verbinden.',
   "Click to upload documents": "Zum Hochladen von Dokumenten klicken",
   "Could not remove the file. Try again.":
     "Die Datei konnte nicht entfernt werden. Versuchen Sie es erneut.",
@@ -267,16 +273,11 @@ export const de: Record<string, string> = {
   "Configuration saved.": "Konfiguration gespeichert.",
   "Configure Model Lifecycle": "Modelllebenszyklus konfigurieren",
   "Configure Phases": "Phasen konfigurieren",
-  "Configure which notification types go to which Slack channels.":
-    "Konfigurieren Sie, welche Benachrichtigungstypen an welche Slack-Kanäle gesendet werden.",
   "Connect to your Jira Service Management Assets to import AI Systems as use-cases.":
     "Verbinden Sie sich mit Ihren Jira Service Management Assets, um KI-Systeme als Anwendungsfälle zu importieren.",
-  "Connect your Slack workspace and route VerifyWise notifications to specific channels.":
-    "Verbinden Sie Ihren Slack-Workspace und leiten Sie VerifyWise-Benachrichtigungen an bestimmte Kanäle weiter.",
   "Create phase": "Phase erstellen",
   "Created in JIRA": "In JIRA erstellt",
   "Created:": "Erstellt:",
-  "Creation Date": "Erstellungsdatum",
   "Delete item": "Element löschen",
   "Delete phase": "Phase löschen",
   "Delete this item? This cannot be undone.":
@@ -340,13 +341,21 @@ export const de: Record<string, string> = {
   "Lifecycle Progress": "Lebenszyklusfortschritt",
   "Lifecycle stage": "Lebenszyklusstadium",
   "Loading MLFlow data...": "MLFlow-Daten werden geladen...",
-  "Loading workspaces...": "Workspaces werden geladen...",
   "Model not found": "Modell nicht gefunden",
   "Move item down": "Element nach unten verschieben",
   "Move item up": "Element nach oben verschieben",
   "Move phase down": "Phase nach unten verschieben",
   "Move phase up": "Phase nach oben verschieben",
   "No attributes available": "Keine Attribute verfügbar",
+  "Ask an Admin to set up Azure AI Foundry.":
+    "Bitten Sie einen Admin, Azure AI Foundry einzurichten.",
+  "Ask an Admin to set up MLflow.": "Bitten Sie einen Admin, MLflow einzurichten.",
+  "Configure the Azure AI Foundry extension to start syncing model deployments.":
+    "Konfigurieren Sie die Azure AI Foundry-Erweiterung, um Modellbereitstellungen zu synchronisieren.",
+  "Configure the MLflow extension to start syncing live data.":
+    "Konfigurieren Sie die MLflow-Erweiterung, um Live-Daten zu synchronisieren.",
+  "No MLflow models have been synced yet.": "Es wurden noch keine MLflow-Modelle synchronisiert.",
+  "No deployments synced yet.": "Noch keine Bereitstellungen synchronisiert.",
   "No deployments synced yet. Click Sync to pull model deployments from Azure AI Foundry.":
     "Noch keine Bereitstellungen synchronisiert. Klicken Sie auf Synchronisieren, um Modellbereitstellungen aus Azure AI Foundry abzurufen.",
   "No frameworks assigned to this use case yet.":
@@ -356,9 +365,9 @@ export const de: Record<string, string> = {
     "Es sind noch keine Lebenszyklusphasen konfiguriert. Klicken Sie auf die Schaltfläche unten, um Phasen hinzuzufügen.",
   "No lifecycle phases configured. Contact an administrator to set up the model lifecycle.":
     "Keine Lebenszyklusphasen konfiguriert. Wenden Sie sich an einen Administrator, um den Modelllebenszyklus einzurichten.",
+  "No lifecycle phases yet. An Admin can add them.":
+    "Noch keine Lebenszyklusphasen. Ein Admin kann sie hinzufügen.",
   "No use case found": "Kein Anwendungsfall gefunden",
-  "No workspaces connected": "Keine Workspaces verbunden",
-  "Notification Routing": "Benachrichtigungsweiterleitung",
   "Object Type": "Objekttyp",
   "Object Type (AI Systems)": "Objekttyp (KI-Systeme)",
   "Phase name": "Phasenname",
@@ -375,7 +384,6 @@ export const de: Record<string, string> = {
   "Save phase name": "Phasennamen speichern",
   "Schema": "Schema",
   "Select a phase from the sidebar": "Wählen Sie eine Phase aus der Seitenleiste",
-  "Slack Client ID not configured.": "Slack-Client-ID nicht konfiguriert.",
   "Staging": "Staging",
   "Step 1: Connection Settings": "Schritt 1: Verbindungseinstellungen",
   "Step 1: Download Excel Template": "Schritt 1: Excel-Vorlage herunterladen",
@@ -388,7 +396,6 @@ export const de: Record<string, string> = {
   "Succeeded": "Erfolgreich",
   "Sync": "Synchronisieren",
   "Sync Status": "Synchronisierungsstatus",
-  "Team Name": "Teamname",
   "Test connection": "Verbindung testen",
   "Testing...": "Wird getestet...",
   "Text Area": "Textbereich",
@@ -399,8 +406,6 @@ export const de: Record<string, string> = {
   "Upload your Excel file with risk data.": "Laden Sie Ihre Excel-Datei mit Risikodaten hoch.",
   "Version:": "Version:",
   "View lifecycle": "Lebenszyklus anzeigen",
-  "Workspace disconnected successfully!": "Workspace erfolgreich getrennt!",
-  "Workspace status updated successfully!": "Workspace-Status erfolgreich aktualisiert!",
   "Default retention policy": "Standard-Aufbewahrungsrichtlinie",
   "File retention": "Dateiaufbewahrung",
   "Audit records": "Auditdatensätze",
@@ -455,6 +460,110 @@ export const de: Record<string, string> = {
     "Die Aufbewahrungseinstellungen konnten nicht geladen werden.",
   "Extension": "Erweiterung",
   "Configure and enable this extension.": "Konfigurieren und aktivieren Sie diese Erweiterung.",
+  // Groups and custom roles (#5253)
+  "Add a whole group to the use case in one step.":
+    "Fügen Sie eine ganze Gruppe in einem Schritt zum Anwendungsfall hinzu.",
+  "Allow": "Erlauben",
+  "Could not update the use case": "Der Anwendungsfall konnte nicht aktualisiert werden",
+  "Create teams and grant them use-case access in one step. Members of a group attached to a use case can see and work on it.":
+    "Erstellen Sie Teams und gewähren Sie ihnen in einem Schritt Zugriff auf Anwendungsfälle. Mitglieder einer Gruppe, die einem Anwendungsfall zugeordnet ist, können ihn sehen und bearbeiten.",
+  "Custom role": "Benutzerdefinierte Rolle",
+  "Delete group": "Gruppe löschen",
+  "Delete this group?": "Diese Gruppe löschen?",
+  "Edit group": "Gruppe bearbeiten",
+  "Edit what each custom role is allowed to do":
+    "Legen Sie fest, was jede benutzerdefinierte Rolle tun darf",
+  "Every group member can see and work on the use case.":
+    "Jedes Gruppenmitglied kann den Anwendungsfall sehen und bearbeiten.",
+  "Failed to load groups.": "Gruppen konnten nicht geladen werden.",
+  "The group was created, but its members were not saved. Select Save to try again.":
+    "Die Gruppe wurde erstellt, aber ihre Mitglieder wurden nicht gespeichert. Wählen Sie Speichern, um es erneut zu versuchen.",
+  "Groups": "Gruppen",
+  "Bundle users into teams to give them use-case access together":
+    "Benutzer zu Teams bündeln, um ihnen gemeinsam Zugriff auf Anwendungsfälle zu geben",
+  "Loading groups": "Gruppen werden geladen",
+  "Members": "Mitglieder",
+  "You don't have access to this section.": "Sie haben keinen Zugriff auf diesen Bereich.",
+  "No groups yet.": "Noch keine Gruppen.",
+  "No members found": "Keine Mitglieder gefunden",
+  "No groups yet. Groups are managed in Settings → Groups.":
+    "Noch keine Gruppen. Gruppen werden unter Einstellungen → Gruppen verwaltet.",
+  "Groups bundle users so you can add a whole team to a use case in one step.":
+    "Gruppen fassen Benutzer zusammen, sodass Sie ein ganzes Team in einem Schritt zu einem Anwendungsfall hinzufügen können.",
+  "Loading members...": "Mitglieder werden geladen...",
+  "New group": "Neue Gruppe",
+  "No groups yet. Create one to grant a whole team access to a use case.":
+    "Noch keine Gruppen. Erstellen Sie eine, um einem ganzen Team Zugriff auf einen Anwendungsfall zu geben.",
+  "Only Admins can manage roles.": "Nur Administratoren können Rollen verwalten.",
+  "Roles and permissions": "Rollen und Berechtigungen",
+  "Save permissions": "Berechtigungen speichern",
+  "Select groups": "Gruppen auswählen",
+  "Select members": "Mitglieder auswählen",
+  "What is this group responsible for?": "Wofür ist diese Gruppe zuständig?",
+  "Create a role, choose what it can do, then assign it to people in the Team tab.":
+    "Erstellen Sie eine Rolle, legen Sie fest, was sie darf, und weisen Sie sie dann im Tab „Team“ Personen zu.",
+  "Delete role": "Rolle löschen",
+  "Loading permissions": "Berechtigungen werden geladen",
+  "Loading roles": "Rollen werden geladen",
+  "New role": "Neue Rolle",
+  "No custom roles yet": "Noch keine benutzerdefinierten Rollen",
+  "What this role is for": "Wofür diese Rolle gedacht ist",
+  "Connect a Slack channel and choose which VerifyWise notifications it receives.":
+    "Verbinden Sie einen Slack-Kanal und wählen Sie, welche VerifyWise-Benachrichtigungen er erhält.",
+  "Connection removed.": "Verbindung entfernt.",
+  "Edit routing": "Weiterleitung bearbeiten",
+  "No Slack connections yet": "Noch keine Slack-Verbindungen",
+  "Notification routing": "Benachrichtigungsweiterleitung",
+  "Notification routing saved.": "Benachrichtigungsweiterleitung gespeichert.",
+  "Posts only its owner's events until you save its routing.":
+    "Sendet nur die Ereignisse seines Eigentümers, bis Sie die Weiterleitung speichern.",
+  "Remove Slack connection?": "Slack-Verbindung entfernen?",
+  "Select Add to Slack to connect a channel.":
+    'Wählen Sie "Add to Slack", um einen Kanal zu verbinden.',
+  "Slack connected.": "Slack verbunden.",
+  "Slack did not connect. Select Add to Slack to try again.":
+    'Slack wurde nicht verbunden. Wählen Sie "Add to Slack", um es erneut zu versuchen.',
+  "Slack sign-in needs session storage, which this browser blocks.":
+    "Die Slack-Anmeldung benötigt den Sitzungsspeicher, den dieser Browser blockiert.",
+  "Slack was not connected: the request was cancelled.":
+    "Slack wurde nicht verbunden: Die Anfrage wurde abgebrochen.",
+  "Team name": "Teamname",
+  "The Slack client ID is not configured.": "Die Slack-Client-ID ist nicht konfiguriert.",
+  "This Slack sign-in could not be verified. Select Add to Slack to try again.":
+    'Diese Slack-Anmeldung konnte nicht bestätigt werden. Wählen Sie "Add to Slack", um es erneut zu versuchen.',
+  "Unlinked connections": "Nicht verknüpfte Verbindungen",
+  "Connecting Slack...": "Slack wird verbunden...",
+  "Loading Slack connections...": "Slack-Verbindungen werden geladen...",
+  "Turn off": "Ausschalten",
+  "Turn on": "Einschalten",
+  "Could not load the Slack connections.": "Die Slack-Verbindungen konnten nicht geladen werden.",
+  "Could not connect Slack. Select Add to Slack to try again.":
+    'Slack konnte nicht verbunden werden. Wählen Sie "Add to Slack", um es erneut zu versuchen.',
+  "Connection turned off.": "Verbindung ausgeschaltet.",
+  "Connection turned on.": "Verbindung eingeschaltet.",
+  "Could not update the connection.": "Die Verbindung konnte nicht aktualisiert werden.",
+  "Could not save the notification routing.":
+    "Die Benachrichtigungsweiterleitung konnte nicht gespeichert werden.",
+  "Could not remove the connection.": "Die Verbindung konnte nicht entfernt werden.",
+  "{channel} in {team} stops receiving VerifyWise notifications.":
+    "{channel} in {team} erhält keine VerifyWise-Benachrichtigungen mehr.",
+  "This removes {channel} in {team}. It sends nothing now.":
+    "Dadurch wird {channel} in {team} entfernt. Die Verbindung sendet derzeit nichts.",
+  "Edit routing for {channel}": "Weiterleitung für {channel} bearbeiten",
+  "Turn off {channel}": "{channel} ausschalten",
+  "Turn on {channel}": "{channel} einschalten",
+  "Remove {channel}": "{channel} entfernen",
+  "Choose which notifications {channel} in {team} receives.":
+    "Wählen Sie, welche Benachrichtigungen {channel} in {team} erhält.",
+  "Saving makes this connection post events for the whole organization, not only its owner's.":
+    "Nach dem Speichern sendet diese Verbindung Ereignisse der gesamten Organisation, nicht nur die ihres Eigentümers.",
+  "These connections were created before connections belonged to an organization. They send nothing. Remove them, then add Slack again if you still need it.":
+    "Diese Verbindungen wurden erstellt, bevor Verbindungen zu einer Organisation gehörten. Sie senden nichts. Entfernen Sie sie und fügen Sie Slack erneut hinzu, wenn Sie es noch benötigen.",
+  "Membership and roles": "Mitgliedschaft und Rollen",
+  "Projects and organizations": "Projekte und Organisationen",
+  "Policy reminders and status": "Richtlinienerinnerungen und -status",
+  "Evidence and task alerts": "Nachweis- und Aufgabenwarnungen",
+  "Control or policy changes": "Kontroll- oder Richtlinienänderungen",
 };
 
 export const fr: Record<string, string> = {
@@ -657,6 +766,7 @@ export const fr: Record<string, string> = {
     "Session utilisateur introuvable. Veuillez vous reconnecter.",
   "Version control": "Contrôle de version",
   "AI Approval Rules": "AI Approval Rules",
+  "AI approval rules": "Règles d'approbation IA",
   "Add Rule": "Add Rule",
   "Auto-Approve": "Auto-Approve",
   "Auto-Reject": "Auto-Reject",
@@ -693,13 +803,20 @@ export const fr: Record<string, string> = {
   "Client secret": "Secret client",
   "Enter your client secret": "Saisissez votre secret client",
   "Parallel agents": "Agents parallèles",
+  "Interface style": "Style de l'interface",
+  "Select a style": "Choisir un style",
+  "New style": "Nouveau style",
+  "Classic": "Classique",
+  "Your browser is blocking site storage, so the interface style can't be saved. Allow site data for VerifyWise and try again.":
+    "Votre navigateur bloque le stockage du site, le style de l'interface ne peut donc pas être enregistré. Autorisez les données de site pour VerifyWise et réessayez.",
+  "The classic look stays available until January 2027. Changing this reloads the page.":
+    "L'apparence classique reste disponible jusqu'en janvier 2027. Ce changement recharge la page.",
   "Accordion": "Accordéon",
   "Accordion view": "Vue accordéon",
   "Add Approver": "Ajouter un approbateur",
   "Add checklist item...": "Ajouter un élément de liste de contrôle...",
   "Add new phase": "Ajouter une nouvelle phase",
   "Add to Slack": "Ajouter à Slack",
-  "Apply to all workspaces:": "Appliquer à tous les espaces de travail :",
   "Artifact Location:": "Emplacement de l'artefact :",
   "Assign frameworks in the Frameworks/regulations tab.":
     "Attribuez des référentiels dans l'onglet Référentiels/réglementations.",
@@ -715,24 +832,17 @@ export const fr: Record<string, string> = {
   "Capacity": "Capacité",
   "Channel": "Canal",
   "Choose File": "Choisir un fichier",
-  'Click "Add to Slack" above to connect your first workspace.':
-    "Cliquez sur « Ajouter à Slack » ci-dessus pour connecter votre premier espace de travail.",
   "Click to upload documents": "Cliquez pour téléverser des documents",
   "Could not remove the file. Try again.": "Impossible de supprimer le fichier. Réessayez.",
   "Could not upload the file. Try again.": "Impossible de téléverser le fichier. Réessayez.",
   "Configuration saved.": "Configuration enregistrée.",
   "Configure Model Lifecycle": "Configurer le cycle de vie du modèle",
   "Configure Phases": "Configurer les phases",
-  "Configure which notification types go to which Slack channels.":
-    "Configurez quels types de notifications sont envoyés vers quels canaux Slack.",
   "Connect to your Jira Service Management Assets to import AI Systems as use-cases.":
     "Connectez-vous à vos Jira Service Management Assets pour importer des systèmes IA en tant que cas d'utilisation.",
-  "Connect your Slack workspace and route VerifyWise notifications to specific channels.":
-    "Connectez votre espace de travail Slack et acheminez les notifications VerifyWise vers des canaux spécifiques.",
   "Create phase": "Créer une phase",
   "Created in JIRA": "Créé dans JIRA",
   "Created:": "Créé :",
-  "Creation Date": "Date de création",
   "Delete item": "Supprimer l'élément",
   "Delete phase": "Supprimer la phase",
   "Delete this item? This cannot be undone.":
@@ -796,13 +906,21 @@ export const fr: Record<string, string> = {
   "Lifecycle Progress": "Progression du cycle de vie",
   "Lifecycle stage": "Étape du cycle de vie",
   "Loading MLFlow data...": "Chargement des données MLFlow...",
-  "Loading workspaces...": "Chargement des espaces de travail...",
   "Model not found": "Modèle introuvable",
   "Move item down": "Déplacer l'élément vers le bas",
   "Move item up": "Déplacer l'élément vers le haut",
   "Move phase down": "Déplacer la phase vers le bas",
   "Move phase up": "Déplacer la phase vers le haut",
   "No attributes available": "Aucun attribut disponible",
+  "Ask an Admin to set up Azure AI Foundry.":
+    "Demandez à un administrateur de configurer Azure AI Foundry.",
+  "Ask an Admin to set up MLflow.": "Demandez à un administrateur de configurer MLflow.",
+  "Configure the Azure AI Foundry extension to start syncing model deployments.":
+    "Configurez l'extension Azure AI Foundry pour synchroniser les déploiements de modèles.",
+  "Configure the MLflow extension to start syncing live data.":
+    "Configurez l'extension MLflow pour synchroniser les données en direct.",
+  "No MLflow models have been synced yet.": "Aucun modèle MLflow n'a encore été synchronisé.",
+  "No deployments synced yet.": "Aucun déploiement synchronisé pour le moment.",
   "No deployments synced yet. Click Sync to pull model deployments from Azure AI Foundry.":
     "Aucun déploiement synchronisé pour le moment. Cliquez sur Synchroniser pour importer les déploiements de modèles depuis Azure AI Foundry.",
   "No frameworks assigned to this use case yet.":
@@ -812,9 +930,9 @@ export const fr: Record<string, string> = {
     "Aucune phase de cycle de vie configurée pour le moment. Cliquez sur le bouton ci-dessous pour ajouter des phases.",
   "No lifecycle phases configured. Contact an administrator to set up the model lifecycle.":
     "Aucune phase de cycle de vie configurée. Contactez un administrateur pour configurer le cycle de vie du modèle.",
+  "No lifecycle phases yet. An Admin can add them.":
+    "Aucune phase de cycle de vie pour le moment. Un Admin peut en ajouter.",
   "No use case found": "Aucun cas d'utilisation trouvé",
-  "No workspaces connected": "Aucun espace de travail connecté",
-  "Notification Routing": "Routage des notifications",
   "Object Type": "Type d'objet",
   "Object Type (AI Systems)": "Type d'objet (systèmes IA)",
   "Phase name": "Nom de la phase",
@@ -831,7 +949,6 @@ export const fr: Record<string, string> = {
   "Save phase name": "Enregistrer le nom de la phase",
   "Schema": "Schéma",
   "Select a phase from the sidebar": "Sélectionnez une phase dans la barre latérale",
-  "Slack Client ID not configured.": "ID client Slack non configuré.",
   "Staging": "Préproduction",
   "Step 1: Connection Settings": "Étape 1 : Paramètres de connexion",
   "Step 1: Download Excel Template": "Étape 1 : Télécharger le modèle Excel",
@@ -844,7 +961,6 @@ export const fr: Record<string, string> = {
   "Succeeded": "Réussi",
   "Sync": "Synchroniser",
   "Sync Status": "Statut de synchronisation",
-  "Team Name": "Nom de l'équipe",
   "Test connection": "Tester la connexion",
   "Testing...": "Test en cours...",
   "Text Area": "Zone de texte",
@@ -856,9 +972,6 @@ export const fr: Record<string, string> = {
     "Téléversez votre fichier Excel contenant les données de risque.",
   "Version:": "Version :",
   "View lifecycle": "Voir le cycle de vie",
-  "Workspace disconnected successfully!": "Espace de travail déconnecté avec succès !",
-  "Workspace status updated successfully!":
-    "Statut de l'espace de travail mis à jour avec succès !",
   "Default retention policy": "Politique de rétention par défaut",
   "File retention": "Rétention des fichiers",
   "Audit records": "Enregistrements d'audit",
@@ -912,6 +1025,110 @@ export const fr: Record<string, string> = {
     "Les paramètres de conservation n'ont pas pu être chargés.",
   "Extension": "Extension",
   "Configure and enable this extension.": "Configurez et activez cette extension.",
+  // Groups and custom roles (#5253)
+  "Add a whole group to the use case in one step.":
+    "Ajoutez un groupe entier au cas d'usage en une seule étape.",
+  "Allow": "Autoriser",
+  "Could not update the use case": "Impossible de mettre à jour le cas d'usage",
+  "Create teams and grant them use-case access in one step. Members of a group attached to a use case can see and work on it.":
+    "Créez des équipes et donnez-leur accès aux cas d'usage en une seule étape. Les membres d'un groupe associé à un cas d'usage peuvent le voir et y travailler.",
+  "Custom role": "Rôle personnalisé",
+  "Delete group": "Supprimer le groupe",
+  "Delete this group?": "Supprimer ce groupe ?",
+  "Edit group": "Modifier le groupe",
+  "Edit what each custom role is allowed to do":
+    "Modifiez ce que chaque rôle personnalisé est autorisé à faire",
+  "Every group member can see and work on the use case.":
+    "Chaque membre du groupe peut voir le cas d'usage et y travailler.",
+  "Failed to load groups.": "Impossible de charger les groupes.",
+  "The group was created, but its members were not saved. Select Save to try again.":
+    "Le groupe a été créé, mais ses membres n’ont pas été enregistrés. Sélectionnez Enregistrer pour réessayer.",
+  "Groups": "Groupes",
+  "Bundle users into teams to give them use-case access together":
+    "Regrouper des utilisateurs en équipes pour leur donner ensemble accès aux cas d'usage",
+  "Loading groups": "Chargement des groupes",
+  "Members": "Membres",
+  "You don't have access to this section.": "Vous n'avez pas accès à cette section.",
+  "No groups yet.": "Aucun groupe pour le moment.",
+  "No members found": "Aucun membre trouvé",
+  "No groups yet. Groups are managed in Settings → Groups.":
+    "Aucun groupe pour le moment. Les groupes se gèrent dans Paramètres → Groupes.",
+  "Groups bundle users so you can add a whole team to a use case in one step.":
+    "Les groupes rassemblent des utilisateurs pour que vous puissiez ajouter toute une équipe à un cas d'usage en une seule étape.",
+  "Loading members...": "Chargement des membres...",
+  "New group": "Nouveau groupe",
+  "No groups yet. Create one to grant a whole team access to a use case.":
+    "Aucun groupe pour l'instant. Créez-en un pour donner à toute une équipe l'accès à un cas d'usage.",
+  "Only Admins can manage roles.": "Seuls les administrateurs peuvent gérer les rôles.",
+  "Roles and permissions": "Rôles et autorisations",
+  "Save permissions": "Enregistrer les autorisations",
+  "Select groups": "Sélectionner des groupes",
+  "Select members": "Sélectionner des membres",
+  "What is this group responsible for?": "De quoi ce groupe est-il responsable ?",
+  "Create a role, choose what it can do, then assign it to people in the Team tab.":
+    "Créez un rôle, choisissez ce qu'il permet de faire, puis attribuez-le à des personnes dans l'onglet Équipe.",
+  "Delete role": "Supprimer le rôle",
+  "Loading permissions": "Chargement des autorisations",
+  "Loading roles": "Chargement des rôles",
+  "New role": "Nouveau rôle",
+  "No custom roles yet": "Aucun rôle personnalisé pour le moment",
+  "What this role is for": "À quoi sert ce rôle",
+  "Connect a Slack channel and choose which VerifyWise notifications it receives.":
+    "Connectez un canal Slack et choisissez les notifications VerifyWise qu'il reçoit.",
+  "Connection removed.": "Connexion supprimée.",
+  "Edit routing": "Modifier le routage",
+  "No Slack connections yet": "Aucune connexion Slack pour l'instant",
+  "Notification routing": "Routage des notifications",
+  "Notification routing saved.": "Routage des notifications enregistré.",
+  "Posts only its owner's events until you save its routing.":
+    "Publie uniquement les événements de son propriétaire jusqu'à ce que vous enregistriez son routage.",
+  "Remove Slack connection?": "Supprimer la connexion Slack ?",
+  "Select Add to Slack to connect a channel.":
+    "Sélectionnez « Add to Slack » pour connecter un canal.",
+  "Slack connected.": "Slack connecté.",
+  "Slack did not connect. Select Add to Slack to try again.":
+    "Slack n'a pas été connecté. Sélectionnez « Add to Slack » pour réessayer.",
+  "Slack sign-in needs session storage, which this browser blocks.":
+    "La connexion à Slack nécessite le stockage de session, que ce navigateur bloque.",
+  "Slack was not connected: the request was cancelled.":
+    "Slack n'a pas été connecté : la demande a été annulée.",
+  "Team name": "Nom de l'équipe",
+  "The Slack client ID is not configured.": "L'ID client Slack n'est pas configuré.",
+  "This Slack sign-in could not be verified. Select Add to Slack to try again.":
+    "Cette connexion à Slack n'a pas pu être vérifiée. Sélectionnez « Add to Slack » pour réessayer.",
+  "Unlinked connections": "Connexions non liées",
+  "Connecting Slack...": "Connexion de Slack...",
+  "Loading Slack connections...": "Chargement des connexions Slack...",
+  "Turn off": "Désactiver",
+  "Turn on": "Activer",
+  "Could not load the Slack connections.": "Impossible de charger les connexions Slack.",
+  "Could not connect Slack. Select Add to Slack to try again.":
+    "Impossible de connecter Slack. Sélectionnez « Add to Slack » pour réessayer.",
+  "Connection turned off.": "Connexion désactivée.",
+  "Connection turned on.": "Connexion activée.",
+  "Could not update the connection.": "Impossible de mettre à jour la connexion.",
+  "Could not save the notification routing.":
+    "Impossible d'enregistrer le routage des notifications.",
+  "Could not remove the connection.": "Impossible de supprimer la connexion.",
+  "{channel} in {team} stops receiving VerifyWise notifications.":
+    "{channel} dans {team} ne recevra plus de notifications VerifyWise.",
+  "This removes {channel} in {team}. It sends nothing now.":
+    "Cela supprime {channel} dans {team}. Elle n'envoie rien actuellement.",
+  "Edit routing for {channel}": "Modifier le routage de {channel}",
+  "Turn off {channel}": "Désactiver {channel}",
+  "Turn on {channel}": "Activer {channel}",
+  "Remove {channel}": "Supprimer {channel}",
+  "Choose which notifications {channel} in {team} receives.":
+    "Choisissez les notifications que reçoit {channel} dans {team}.",
+  "Saving makes this connection post events for the whole organization, not only its owner's.":
+    "Après l'enregistrement, cette connexion publie les événements de toute l'organisation, pas seulement ceux de son propriétaire.",
+  "These connections were created before connections belonged to an organization. They send nothing. Remove them, then add Slack again if you still need it.":
+    "Ces connexions ont été créées avant que les connexions n'appartiennent à une organisation. Elles n'envoient rien. Supprimez-les, puis ajoutez à nouveau Slack si vous en avez encore besoin.",
+  "Membership and roles": "Adhésion et rôles",
+  "Projects and organizations": "Projets et organisations",
+  "Policy reminders and status": "Rappels et statut des politiques",
+  "Evidence and task alerts": "Alertes de preuves et de tâches",
+  "Control or policy changes": "Modifications de contrôles ou de politiques",
 };
 
 export const es: Record<string, string> = {
@@ -1112,6 +1329,7 @@ export const es: Record<string, string> = {
     "No se encontró la sesión del usuario. Inicia sesión de nuevo.",
   "Version control": "Control de versiones",
   "AI Approval Rules": "Reglas de aprobación de IA",
+  "AI approval rules": "Reglas de aprobación de IA",
   "Add Rule": "Añadir regla",
   "Auto-Approve": "Aprobar automáticamente",
   "Auto-Reject": "Rechazar automáticamente",
@@ -1148,13 +1366,20 @@ export const es: Record<string, string> = {
   "Client secret": "Secreto de cliente",
   "Enter your client secret": "Introduzca su secreto de cliente",
   "Parallel agents": "Agentes paralelos",
+  "Interface style": "Estilo de la interfaz",
+  "Select a style": "Selecciona un estilo",
+  "New style": "Estilo nuevo",
+  "Classic": "Clásico",
+  "Your browser is blocking site storage, so the interface style can't be saved. Allow site data for VerifyWise and try again.":
+    "Tu navegador está bloqueando el almacenamiento del sitio, así que no se puede guardar el estilo de la interfaz. Permite los datos del sitio para VerifyWise e inténtalo de nuevo.",
+  "The classic look stays available until January 2027. Changing this reloads the page.":
+    "El aspecto clásico seguirá disponible hasta enero de 2027. Al cambiarlo se recarga la página.",
   "Accordion": "Acordeón",
   "Accordion view": "Vista acordeón",
   "Add Approver": "Añadir aprobador",
   "Add checklist item...": "Añadir elemento de lista de verificación...",
   "Add new phase": "Añadir nueva fase",
   "Add to Slack": "Añadir a Slack",
-  "Apply to all workspaces:": "Aplicar a todos los espacios de trabajo:",
   "Artifact Location:": "Ubicación del artefacto:",
   "Assign frameworks in the Frameworks/regulations tab.":
     "Asigne marcos en la pestaña Marcos/regulaciones.",
@@ -1170,24 +1395,17 @@ export const es: Record<string, string> = {
   "Capacity": "Capacidad",
   "Channel": "Canal",
   "Choose File": "Elegir archivo",
-  'Click "Add to Slack" above to connect your first workspace.':
-    'Haga clic en "Añadir a Slack" arriba para conectar su primer espacio de trabajo.',
   "Click to upload documents": "Haga clic para cargar documentos",
   "Could not remove the file. Try again.": "No se pudo quitar el archivo. Inténtelo de nuevo.",
   "Could not upload the file. Try again.": "No se pudo cargar el archivo. Inténtelo de nuevo.",
   "Configuration saved.": "Configuración guardada.",
   "Configure Model Lifecycle": "Configurar el ciclo de vida del modelo",
   "Configure Phases": "Configurar fases",
-  "Configure which notification types go to which Slack channels.":
-    "Configure qué tipos de notificaciones se envían a qué canales de Slack.",
   "Connect to your Jira Service Management Assets to import AI Systems as use-cases.":
     "Conéctese a sus Jira Service Management Assets para importar sistemas de IA como casos de uso.",
-  "Connect your Slack workspace and route VerifyWise notifications to specific channels.":
-    "Conecte su espacio de trabajo de Slack y enrute las notificaciones de VerifyWise a canales específicos.",
   "Create phase": "Crear fase",
   "Created in JIRA": "Creado en JIRA",
   "Created:": "Creado:",
-  "Creation Date": "Fecha de creación",
   "Delete item": "Eliminar elemento",
   "Delete phase": "Eliminar fase",
   "Delete this item? This cannot be undone.":
@@ -1251,13 +1469,21 @@ export const es: Record<string, string> = {
   "Lifecycle Progress": "Progreso del ciclo de vida",
   "Lifecycle stage": "Etapa del ciclo de vida",
   "Loading MLFlow data...": "Cargando datos de MLFlow...",
-  "Loading workspaces...": "Cargando espacios de trabajo...",
   "Model not found": "Modelo no encontrado",
   "Move item down": "Mover elemento hacia abajo",
   "Move item up": "Mover elemento hacia arriba",
   "Move phase down": "Mover fase hacia abajo",
   "Move phase up": "Mover fase hacia arriba",
   "No attributes available": "No hay atributos disponibles",
+  "Ask an Admin to set up Azure AI Foundry.":
+    "Pida a un administrador que configure Azure AI Foundry.",
+  "Ask an Admin to set up MLflow.": "Pida a un administrador que configure MLflow.",
+  "Configure the Azure AI Foundry extension to start syncing model deployments.":
+    "Configure la extensión Azure AI Foundry para sincronizar despliegues de modelos.",
+  "Configure the MLflow extension to start syncing live data.":
+    "Configure la extensión MLflow para sincronizar datos en vivo.",
+  "No MLflow models have been synced yet.": "Aún no se han sincronizado modelos de MLflow.",
+  "No deployments synced yet.": "Aún no se han sincronizado despliegues.",
   "No deployments synced yet. Click Sync to pull model deployments from Azure AI Foundry.":
     "Aún no se han sincronizado despliegues. Haga clic en Sincronizar para importar despliegues de modelos desde Azure AI Foundry.",
   "No frameworks assigned to this use case yet.":
@@ -1267,9 +1493,9 @@ export const es: Record<string, string> = {
     "Aún no se han configurado fases del ciclo de vida. Haga clic en el botón de abajo para añadir fases.",
   "No lifecycle phases configured. Contact an administrator to set up the model lifecycle.":
     "No hay fases del ciclo de vida configuradas. Póngase en contacto con un administrador para configurar el ciclo de vida del modelo.",
+  "No lifecycle phases yet. An Admin can add them.":
+    "Aún no hay fases del ciclo de vida. Un Admin puede añadirlas.",
   "No use case found": "No se encontró ningún caso de uso",
-  "No workspaces connected": "No hay espacios de trabajo conectados",
-  "Notification Routing": "Enrutamiento de notificaciones",
   "Object Type": "Tipo de objeto",
   "Object Type (AI Systems)": "Tipo de objeto (sistemas de IA)",
   "Phase name": "Nombre de la fase",
@@ -1286,7 +1512,6 @@ export const es: Record<string, string> = {
   "Save phase name": "Guardar nombre de la fase",
   "Schema": "Esquema",
   "Select a phase from the sidebar": "Seleccione una fase de la barra lateral",
-  "Slack Client ID not configured.": "ID de cliente de Slack no configurado.",
   "Staging": "Preproducción",
   "Step 1: Connection Settings": "Paso 1: Configuración de conexión",
   "Step 1: Download Excel Template": "Paso 1: Descargar plantilla de Excel",
@@ -1299,7 +1524,6 @@ export const es: Record<string, string> = {
   "Succeeded": "Correcto",
   "Sync": "Sincronizar",
   "Sync Status": "Estado de sincronización",
-  "Team Name": "Nombre del equipo",
   "Test connection": "Probar conexión",
   "Testing...": "Probando...",
   "Text Area": "Área de texto",
@@ -1310,9 +1534,6 @@ export const es: Record<string, string> = {
   "Upload your Excel file with risk data.": "Suba su archivo Excel con los datos de riesgo.",
   "Version:": "Versión:",
   "View lifecycle": "Ver ciclo de vida",
-  "Workspace disconnected successfully!": "¡Espacio de trabajo desconectado correctamente!",
-  "Workspace status updated successfully!":
-    "¡Estado del espacio de trabajo actualizado correctamente!",
   "Default retention policy": "Política de retención predeterminada",
   "File retention": "Retención de archivos",
   "Audit records": "Registros de auditoría",
@@ -1366,4 +1587,106 @@ export const es: Record<string, string> = {
   "Retention settings could not be loaded.": "No se pudo cargar la configuración de retención.",
   "Extension": "Extensión",
   "Configure and enable this extension.": "Configure y active esta extensión.",
+  // Groups and custom roles (#5253)
+  "Add a whole group to the use case in one step.":
+    "Agregue un grupo completo al caso de uso en un solo paso.",
+  "Allow": "Permitir",
+  "Could not update the use case": "No se pudo actualizar el caso de uso",
+  "Create teams and grant them use-case access in one step. Members of a group attached to a use case can see and work on it.":
+    "Cree equipos y deles acceso a casos de uso en un solo paso. Los miembros de un grupo asociado a un caso de uso pueden verlo y trabajar en él.",
+  "Custom role": "Rol personalizado",
+  "Delete group": "Eliminar grupo",
+  "Delete this group?": "¿Eliminar este grupo?",
+  "Edit group": "Editar grupo",
+  "Edit what each custom role is allowed to do": "Edite lo que cada rol personalizado puede hacer",
+  "Every group member can see and work on the use case.":
+    "Cada miembro del grupo puede ver el caso de uso y trabajar en él.",
+  "Failed to load groups.": "No se pudieron cargar los grupos.",
+  "The group was created, but its members were not saved. Select Save to try again.":
+    "El grupo se creó, pero sus miembros no se guardaron. Seleccione Guardar para intentarlo de nuevo.",
+  "Groups": "Grupos",
+  "Bundle users into teams to give them use-case access together":
+    "Agrupar usuarios en equipos para darles acceso conjunto a los casos de uso",
+  "Loading groups": "Cargando grupos",
+  "Members": "Miembros",
+  "You don't have access to this section.": "No tienes acceso a esta sección.",
+  "No groups yet.": "Aún no hay grupos.",
+  "No members found": "No se encontraron miembros",
+  "No groups yet. Groups are managed in Settings → Groups.":
+    "Aún no hay grupos. Los grupos se gestionan en Configuración → Grupos.",
+  "Groups bundle users so you can add a whole team to a use case in one step.":
+    "Los grupos reúnen usuarios para que pueda agregar un equipo completo a un caso de uso en un solo paso.",
+  "Loading members...": "Cargando miembros...",
+  "New group": "Nuevo grupo",
+  "No groups yet. Create one to grant a whole team access to a use case.":
+    "Aún no hay grupos. Cree uno para dar acceso a un caso de uso a todo un equipo.",
+  "Only Admins can manage roles.": "Solo los administradores pueden gestionar roles.",
+  "Roles and permissions": "Roles y permisos",
+  "Save permissions": "Guardar permisos",
+  "Select groups": "Seleccionar grupos",
+  "Select members": "Seleccionar miembros",
+  "What is this group responsible for?": "¿De qué es responsable este grupo?",
+  "Create a role, choose what it can do, then assign it to people in the Team tab.":
+    "Cree un rol, elija lo que puede hacer y asígnelo a personas en la pestaña Equipo.",
+  "Delete role": "Eliminar rol",
+  "Loading permissions": "Cargando permisos",
+  "Loading roles": "Cargando roles",
+  "New role": "Nuevo rol",
+  "No custom roles yet": "Aún no hay roles personalizados",
+  "What this role is for": "Para qué sirve este rol",
+  "Connect a Slack channel and choose which VerifyWise notifications it receives.":
+    "Conecte un canal de Slack y elija qué notificaciones de VerifyWise recibe.",
+  "Connection removed.": "Conexión eliminada.",
+  "Edit routing": "Editar enrutamiento",
+  "No Slack connections yet": "Aún no hay conexiones de Slack",
+  "Notification routing": "Enrutamiento de notificaciones",
+  "Notification routing saved.": "Enrutamiento de notificaciones guardado.",
+  "Posts only its owner's events until you save its routing.":
+    "Solo publica los eventos de su propietario hasta que guarde su enrutamiento.",
+  "Remove Slack connection?": "¿Eliminar la conexión de Slack?",
+  "Select Add to Slack to connect a channel.": 'Seleccione "Add to Slack" para conectar un canal.',
+  "Slack connected.": "Slack conectado.",
+  "Slack did not connect. Select Add to Slack to try again.":
+    'Slack no se conectó. Seleccione "Add to Slack" para volver a intentarlo.',
+  "Slack sign-in needs session storage, which this browser blocks.":
+    "El inicio de sesión de Slack necesita el almacenamiento de sesión, que este navegador bloquea.",
+  "Slack was not connected: the request was cancelled.":
+    "Slack no se conectó: la solicitud se canceló.",
+  "Team name": "Nombre del equipo",
+  "The Slack client ID is not configured.": "El ID de cliente de Slack no está configurado.",
+  "This Slack sign-in could not be verified. Select Add to Slack to try again.":
+    'No se pudo verificar este inicio de sesión de Slack. Seleccione "Add to Slack" para volver a intentarlo.',
+  "Unlinked connections": "Conexiones no vinculadas",
+  "Connecting Slack...": "Conectando Slack...",
+  "Loading Slack connections...": "Cargando conexiones de Slack...",
+  "Turn off": "Desactivar",
+  "Turn on": "Activar",
+  "Could not load the Slack connections.": "No se pudieron cargar las conexiones de Slack.",
+  "Could not connect Slack. Select Add to Slack to try again.":
+    'No se pudo conectar Slack. Seleccione "Add to Slack" para volver a intentarlo.',
+  "Connection turned off.": "Conexión desactivada.",
+  "Connection turned on.": "Conexión activada.",
+  "Could not update the connection.": "No se pudo actualizar la conexión.",
+  "Could not save the notification routing.":
+    "No se pudo guardar el enrutamiento de notificaciones.",
+  "Could not remove the connection.": "No se pudo eliminar la conexión.",
+  "{channel} in {team} stops receiving VerifyWise notifications.":
+    "{channel} en {team} dejará de recibir notificaciones de VerifyWise.",
+  "This removes {channel} in {team}. It sends nothing now.":
+    "Esto elimina {channel} en {team}. Ahora no envía nada.",
+  "Edit routing for {channel}": "Editar el enrutamiento de {channel}",
+  "Turn off {channel}": "Desactivar {channel}",
+  "Turn on {channel}": "Activar {channel}",
+  "Remove {channel}": "Eliminar {channel}",
+  "Choose which notifications {channel} in {team} receives.":
+    "Elija qué notificaciones recibe {channel} en {team}.",
+  "Saving makes this connection post events for the whole organization, not only its owner's.":
+    "Al guardar, esta conexión publica los eventos de toda la organización, no solo los de su propietario.",
+  "These connections were created before connections belonged to an organization. They send nothing. Remove them, then add Slack again if you still need it.":
+    "Estas conexiones se crearon antes de que las conexiones pertenecieran a una organización. No envían nada. Elimínelas y vuelva a añadir Slack si aún lo necesita.",
+  "Membership and roles": "Membresía y roles",
+  "Projects and organizations": "Proyectos y organizaciones",
+  "Policy reminders and status": "Recordatorios y estado de políticas",
+  "Evidence and task alerts": "Alertas de evidencias y tareas",
+  "Control or policy changes": "Cambios en controles o políticas",
 };

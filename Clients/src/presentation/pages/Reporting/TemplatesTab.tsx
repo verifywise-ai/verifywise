@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { Box, Stack, Typography, CircularProgress, useTheme } from "@mui/material";
 import { LayoutTemplate } from "lucide-react";
-import { text as textColors } from "../../themes/palette";
+import { text as textColors, radiusPx } from "../../themes/palette";
 import Chip from "../../components/Chip";
 import { CustomizableButton } from "../../components/button/customizable-button";
 import { EmptyState } from "../../components/EmptyState";
@@ -190,7 +190,7 @@ export default function TemplatesTab({
     gap: "8px",
     backgroundColor: theme.palette.background.main,
     border: `1px solid ${theme.palette.border.light}`,
-    borderRadius: "4px",
+    borderRadius: radiusPx.sm,
     padding: "16px",
   };
 

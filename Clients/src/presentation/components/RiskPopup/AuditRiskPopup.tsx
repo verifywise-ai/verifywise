@@ -3,7 +3,7 @@ import { CustomizableButton } from "../button/customizable-button";
 import { AuditRiskTable } from "../Table/AuditRiskTable/AuditRiskTable";
 import { useState } from "react";
 import { IAuditRiskModalProps } from "../../../domain/interfaces/i.riskForm";
-import { brand, text, background } from "../../themes/palette";
+import { brand, text, background, palette as vwPalette, radiusPx } from "../../themes/palette";
 
 export const AuditRiskPopup: React.FC<IAuditRiskModalProps> = ({
   onClose,
@@ -35,9 +35,9 @@ export const AuditRiskPopup: React.FC<IAuditRiskModalProps> = ({
     <Stack
       sx={{
         width: "100%",
-        backgroundColor: "#FCFCFD",
+        backgroundColor: vwPalette.background.main,
         padding: 10,
-        borderRadius: "4px",
+        borderRadius: radiusPx.sm,
         gap: 10,
         justifyContent: "space-between",
         minHeight: "300px",

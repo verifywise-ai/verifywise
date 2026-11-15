@@ -27,6 +27,7 @@ import { PageHeaderExtended } from "../../../components/Layout/PageHeaderExtende
 import { apiServices } from "../../../../infrastructure/api/networkServices";
 import { getGatewayErrorText } from "../../../../application/utils/apiErrorReason";
 import palette from "../../../themes/palette";
+import { radiusPx } from "../../../themes/palette";
 import {
   CODE_BLOCK_BG,
   CODE_BLOCK_TEXT,
@@ -646,7 +647,7 @@ export default function MCPAgentKeysPage() {
               p: "12px 16px",
               backgroundColor: KEY_DISPLAY_BG,
               border: `1px solid ${palette.border.dark}`,
-              borderRadius: "4px",
+              borderRadius: radiusPx.sm,
               fontFamily: "monospace",
               fontSize: 13,
               wordBreak: "break-all",
@@ -673,7 +674,7 @@ export default function MCPAgentKeysPage() {
               p: "12px 16px",
               backgroundColor: WARNING_BG,
               border: `1px solid ${WARNING_BORDER}`,
-              borderRadius: "4px",
+              borderRadius: radiusPx.sm,
             }}
           >
             <Typography sx={{ fontSize: 12, color: WARNING_TEXT, fontWeight: 500 }}>
@@ -687,7 +688,7 @@ export default function MCPAgentKeysPage() {
               sx={{
                 p: "12px 16px",
                 backgroundColor: CODE_BLOCK_BG,
-                borderRadius: "4px",
+                borderRadius: radiusPx.sm,
                 fontFamily: "monospace",
                 fontSize: 12,
                 color: CODE_BLOCK_TEXT,

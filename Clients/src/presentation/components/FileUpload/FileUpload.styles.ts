@@ -1,5 +1,6 @@
 import { styled } from "@mui/material/styles";
 import { Dialog, DialogContent } from "@mui/material";
+import { radiusPx, palette as vwPalette } from "../../themes/palette";
 
 export const StyledDialog = styled(Dialog, {
   shouldForwardProp: (prop) => prop !== "modalHeight",
@@ -9,7 +10,7 @@ export const StyledDialog = styled(Dialog, {
   ".MuiDialog-paper": {
     width: "384px",
     height: `${modalHeight}px`,
-    borderRadius: "4px",
+    borderRadius: radiusPx.sm,
     maxHeight: "90vh",
     margin: "0 ",
     transition: "all 0.3s ease",
@@ -45,13 +46,13 @@ export const DragDropArea = styled("div", {
   "minHeight": "200px",
   "maxHeight": "400px",
   "height": `${190 + Math.min(uploadedFilesCount * 40, 200)}px`,
-  "border": "1px dashed #D1D5DB",
+  "border": `1px dashed ${vwPalette.border.dark}`,
   "display": "flex",
   "alignItems": "center",
   "flexDirection": "column",
   "justifyContent": "center",
   "gap": 4,
-  "borderRadius": "8px",
+  "borderRadius": radiusPx.lg,
   "backgroundColor": "background.main",
   "transition": "height 0.3s ease",
   "overflowY": "auto",

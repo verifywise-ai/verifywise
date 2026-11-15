@@ -7,6 +7,7 @@ import {
   useTheme,
   Typography,
   Stack,
+  Tooltip,
 } from "@mui/material";
 import { VWLink } from "../../Link";
 import singleTheme from "../../../themes/v1SingleTheme";
@@ -17,18 +18,19 @@ import { VerifyWiseContext } from "../../../../application/contexts/VerifyWise.c
 import IconButton from "../../IconButton";
 import ViewRelationshipsButton from "../../ViewRelationshipsButton";
 import useFormattedDate from "../../../../application/hooks/useFormattedDate";
-import allowedRoles from "../../../../application/constants/permissions";
+import { useCanCheck } from "../../../../application/hooks/useCan";
 import { useSearchParams } from "react-router";
 import { ProjectRiskMitigation } from "../../ProjectRiskMitigation/ProjectRiskMitigation";
 import useUsers from "../../../../application/hooks/useUsers";
-import { useAuth } from "../../../../application/hooks/useAuth";
 import { IVWProjectRisksTableRow } from "../../../types/interfaces/i.risk";
 import { RiskModel } from "../../../../domain/models/Common/risks/risk.model";
 import { User } from "../../../../domain/types/User";
 import Chip from "../../Chip";
 import ProjectRiskLinkedPolicies from "../../../components/ProjectRiskMitigation/ProjectRiskLinkedPolicies";
-import { text } from "../../../themes/palette";
+import { text, palette as vwPalette } from "../../../themes/palette";
 import { formatCustomFieldValue } from "../../CustomFieldsSection/formatCustomFieldValue";
+import { riskCalendarDay } from "../../../tools/isoDateToString";
+import { getEffectiveRiskLevel } from "../../../../application/utils/riskLevel";
 
 function getDummyEvent() {
   const realEvent = new Event("click", { bubbles: true, cancelable: true });
@@ -73,12 +75,16 @@ const VWProjectRisksTableBody = ({
   selection,
 }: IVWProjectRisksTableRow) => {
   const formatDate = useFormattedDate();
+  const formatDeadline = (value: unknown) => {
+    const day = riskCalendarDay(value);
+    return day ? formatDate(day) : "NA";
+  };
   const isColVisible = (colId: string) => !visibleColumns || visibleColumns.has(colId);
   const theme = useTheme();
   const { setInputValues } = useContext(VerifyWiseContext);
-  const { userRoleName } = useAuth();
+  const can = useCanCheck();
   const { users } = useUsers();
-  const isDeletingAllowed = allowedRoles.projectRisks.delete.includes(userRoleName);
+  const isDeletingAllowed = can("risks.edit");
   const cellStyle = singleTheme.tableStyles.primary.body.cell;
 
   const getCellStyle = (row: RiskModel) => ({
@@ -161,7 +167,7 @@ const VWProjectRisksTableBody = ({
                   ...singleTheme.tableStyles.primary.body.row,
                   ...(row.is_deleted && {
                     opacity: 0.7,
-                    backgroundColor: theme.palette.action?.hover || "#fafafa",
+                    backgroundColor: theme.palette.action?.hover || vwPalette.background.alt,
                   }),
                 }}
                 onClick={(e) => handleEditRisk(row, e)}
@@ -205,8 +211,8 @@ const VWProjectRisksTableBody = ({
                       flashRow === row.id
                         ? singleTheme.flashColors.background
                         : sortConfig.key === "risk_name"
-                          ? "#e8e8e8"
-                          : "#fafafa",
+                          ? vwPalette.border.light
+                          : vwPalette.background.alt,
                   }}
                 >
                   {row.risk_name
@@ -299,8 +305,18 @@ const VWProjectRisksTableBody = ({
                             : "",
                     }}
                   >
-                    {row.risk_level_autocalculated ? (
-                      <Chip label={row.risk_level_autocalculated} />
+                    {getEffectiveRiskLevel(row) ? (
+                      <Tooltip
+                        title={
+                          row.risk_level_autocalculated
+                            ? `Inherent level: ${row.risk_level_autocalculated}`
+                            : ""
+                        }
+                      >
+                        <span>
+                          <Chip label={getEffectiveRiskLevel(row)} />
+                        </span>
+                      </Tooltip>
                     ) : (
                       "-"
                     )}
@@ -318,7 +334,7 @@ const VWProjectRisksTableBody = ({
                             : "",
                     }}
                   >
-                    {row.deadline ? formatDate(row.deadline.toString()) : "NA"}
+                    {formatDeadline(row.deadline)}
                   </TableCell>
                 )}
                 {isColVisible("controls_mapping") && (

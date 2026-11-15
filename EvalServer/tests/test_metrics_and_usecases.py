@@ -98,8 +98,6 @@ async def test_default_metrics_for_chatbot_task(
 
     captured = _capture_metrics_config(monkeypatch)
     monkeypatch.setattr(run_eval_module, "list_scorers", AsyncMock(return_value=[]))
-    monkeypatch.setattr(run_eval_module, "create_scorer", AsyncMock(return_value=None))
-    monkeypatch.setattr(run_eval_module, "update_scorer", AsyncMock(return_value=None))
     monkeypatch.setattr(run_eval_module, "touch_scorer_updated_at", AsyncMock(return_value=None))
     monkeypatch.setattr(crud_module, "create_log", AsyncMock(return_value={"id": "l1"}))
     monkeypatch.setattr(crud_module, "update_experiment_status", AsyncMock(return_value=None))
@@ -139,8 +137,6 @@ async def test_default_metrics_for_rag_task(
 
     captured = _capture_metrics_config(monkeypatch)
     monkeypatch.setattr(run_eval_module, "list_scorers", AsyncMock(return_value=[]))
-    monkeypatch.setattr(run_eval_module, "create_scorer", AsyncMock(return_value=None))
-    monkeypatch.setattr(run_eval_module, "update_scorer", AsyncMock(return_value=None))
     monkeypatch.setattr(run_eval_module, "touch_scorer_updated_at", AsyncMock(return_value=None))
     monkeypatch.setattr(crud_module, "create_log", AsyncMock(return_value={"id": "l1"}))
     monkeypatch.setattr(crud_module, "update_experiment_status", AsyncMock(return_value=None))
@@ -180,8 +176,6 @@ async def test_default_metrics_for_agent_task(
 
     captured = _capture_metrics_config(monkeypatch)
     monkeypatch.setattr(run_eval_module, "list_scorers", AsyncMock(return_value=[]))
-    monkeypatch.setattr(run_eval_module, "create_scorer", AsyncMock(return_value=None))
-    monkeypatch.setattr(run_eval_module, "update_scorer", AsyncMock(return_value=None))
     monkeypatch.setattr(run_eval_module, "touch_scorer_updated_at", AsyncMock(return_value=None))
     monkeypatch.setattr(crud_module, "create_log", AsyncMock(return_value={"id": "l1"}))
     monkeypatch.setattr(crud_module, "update_experiment_status", AsyncMock(return_value=None))
@@ -221,8 +215,6 @@ async def test_metrics_list_format_from_ci_runner_is_normalized(
 
     captured = _capture_metrics_config(monkeypatch)
     monkeypatch.setattr(run_eval_module, "list_scorers", AsyncMock(return_value=[]))
-    monkeypatch.setattr(run_eval_module, "create_scorer", AsyncMock(return_value=None))
-    monkeypatch.setattr(run_eval_module, "update_scorer", AsyncMock(return_value=None))
     monkeypatch.setattr(run_eval_module, "touch_scorer_updated_at", AsyncMock(return_value=None))
     monkeypatch.setattr(crud_module, "create_log", AsyncMock(return_value={"id": "l1"}))
     monkeypatch.setattr(crud_module, "update_experiment_status", AsyncMock(return_value=None))
@@ -369,8 +361,6 @@ async def test_thresholds_key_is_consumed_by_runner(
         evaluator_module.DeepEvalEvaluator, "run_evaluation", lambda self, **kwargs: []
     )
     monkeypatch.setattr(run_eval_module, "list_scorers", AsyncMock(return_value=[]))
-    monkeypatch.setattr(run_eval_module, "create_scorer", AsyncMock(return_value=None))
-    monkeypatch.setattr(run_eval_module, "update_scorer", AsyncMock(return_value=None))
     monkeypatch.setattr(run_eval_module, "touch_scorer_updated_at", AsyncMock(return_value=None))
     monkeypatch.setattr(crud_module, "create_log", AsyncMock(return_value={"id": "l1"}))
     monkeypatch.setattr(crud_module, "update_experiment_status", AsyncMock(return_value=None))

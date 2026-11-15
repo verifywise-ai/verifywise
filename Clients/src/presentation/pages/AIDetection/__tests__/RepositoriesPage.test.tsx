@@ -16,6 +16,7 @@ vi.mock("../../../../application/repository/aiDetectionRepository.repository", (
   deleteRepository: (...args: unknown[]) => mockDeleteRepository(...args),
   triggerRepositoryScan: (...args: unknown[]) => mockTriggerRepositoryScan(...args),
   generateWebhookSecret: vi.fn(),
+  getWebhookConfig: vi.fn().mockResolvedValue({ webhook_url: null, is_public: false }),
 }));
 
 const mockStartTrackingScan = vi.fn();
@@ -264,5 +265,37 @@ describe("RepositoriesPage", () => {
     await waitFor(() => {
       expect(mockRefreshRepositoryCount).toHaveBeenCalled();
     });
+  });
+
+  it("keeps the dialog open on the GitHub setup step after adding a repository with CI/CD", async () => {
+    mockGetRepositories.mockResolvedValue({
+      repositories: [],
+      pagination: { total: 0, page: 1, limit: 10, total_pages: 0 },
+    });
+    mockCreateRepository.mockResolvedValue({
+      id: 11,
+      ci_enabled: true,
+      webhook_secret: "fresh-secret",
+    });
+
+    renderWithProviders(<RepositoriesPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText(/No repositories added yet/)).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Add repository" }));
+    fireEvent.change(screen.getByPlaceholderText("https://github.com/owner/repo"), {
+      target: { value: "https://github.com/acme/new-repo" },
+    });
+    const dialog = screen.getByRole("dialog");
+    fireEvent.click(within(dialog).getAllByRole("switch")[1]);
+    const dialogSubmit = screen.getAllByRole("button", { name: "Add repository" });
+    fireEvent.click(dialogSubmit[dialogSubmit.length - 1]);
+
+    expect(await screen.findByRole("heading", { name: "Connect GitHub" })).toBeInTheDocument();
+    expect(mockCreateRepository).toHaveBeenCalledWith(
+      expect.objectContaining({ ci_enabled: true }),
+    );
   });
 });

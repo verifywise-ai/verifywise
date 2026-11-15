@@ -1,6 +1,7 @@
 import { screen } from "@testing-library/react";
 import { renderWithProviders } from "../../../../../test/renderWithProviders";
 import AutoCompleteField from "../index";
+import { palette } from "../../../../themes/palette";
 
 const options = [
   { label: "Apple", id: 1 },
@@ -94,6 +95,6 @@ describe("AutoCompleteField Component", () => {
       />,
     );
 
-    expect(screen.getByText("*")).toHaveStyle({ color: "#D32F2F" });
+    expect(screen.getByText("*")).toHaveStyle({ color: palette.status.error.text });
   });
 });

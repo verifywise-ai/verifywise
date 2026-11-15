@@ -29,12 +29,12 @@ export const getSSOConfig = async (req: Request, res: Response) => {
   try {
     const organizationId = req.organizationId;
     if (!organizationId) {
-      return res.status(400).json(STATUS_CODE[400]("Organization context required"));
+      return res.status(400).json(STATUS_CODE[400](req.t!("Organization context required")));
     }
     const provider = parseProvider(req);
     const config = await getSSOConfigQuery(organizationId, provider);
     if (!config) {
-      return res.status(404).json(STATUS_CODE[404]("SSO configuration not found"));
+      return res.status(404).json(STATUS_CODE[404](req.t!("SSO configuration not found")));
     }
     return res.status(200).json(
       STATUS_CODE[200]({
@@ -53,14 +53,14 @@ export const saveSSOConfig = async (req: Request, res: Response) => {
   try {
     const organizationId = req.organizationId;
     if (!organizationId) {
-      return res.status(400).json(STATUS_CODE[400]("Organization context required"));
+      return res.status(400).json(STATUS_CODE[400](req.t!("Organization context required")));
     }
     const provider = parseProvider(req);
     const body = req.body as AzureADConfigData;
     if (!body?.client_id || !body?.client_secret || !body?.tenant_id) {
       return res
         .status(400)
-        .json(STATUS_CODE[400]("client_id, client_secret, and tenant_id are required"));
+        .json(STATUS_CODE[400](req.t!("client_id, client_secret, and tenant_id are required")));
     }
     const saved = await saveSSOConfigQuery(organizationId, provider, body);
     return res.status(201).json(
@@ -80,7 +80,7 @@ export const enableSSO = async (req: Request, res: Response) => {
   try {
     const organizationId = req.organizationId;
     if (!organizationId) {
-      return res.status(400).json(STATUS_CODE[400]("Organization context required"));
+      return res.status(400).json(STATUS_CODE[400](req.t!("Organization context required")));
     }
     const provider = parseProvider(req);
     await setSSOEnabledQuery(organizationId, provider, true);
@@ -96,7 +96,7 @@ export const disableSSO = async (req: Request, res: Response) => {
   try {
     const organizationId = req.organizationId;
     if (!organizationId) {
-      return res.status(400).json(STATUS_CODE[400]("Organization context required"));
+      return res.status(400).json(STATUS_CODE[400](req.t!("Organization context required")));
     }
     const provider = parseProvider(req);
     await setSSOEnabledQuery(organizationId, provider, false);

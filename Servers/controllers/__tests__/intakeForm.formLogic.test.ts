@@ -20,6 +20,11 @@ jest.mock("../../utils/intakeForm.utils", () => ({
   updateSubmissionRiskQuery: jest.fn<any>().mockResolvedValue(undefined),
   updateSubmissionRiskOverrideQuery: jest.fn<any>().mockResolvedValue(undefined),
   updateIntakeFormQuery: jest.fn<any>().mockResolvedValue({ id: 1 }),
+  createIntakeFormQuery: jest.fn<any>().mockResolvedValue({ id: 2 }),
+}));
+jest.mock("../../utils/customField.utils", () => ({
+  ...(jest.requireActual("../../utils/customField.utils") as object),
+  listCustomFieldDefinitionsQuery: jest.fn<any>().mockResolvedValue([]),
 }));
 jest.mock("../../utils/euAiActClassification.utils", () => ({
   insertClassificationRunQuery: jest.fn(),
@@ -77,6 +82,7 @@ jest.mock("../../database/db", () => ({
 const ctrl = require("../intakeForm.ctrl") as typeof import("../intakeForm.ctrl");
 const intake = require("../../utils/intakeForm.utils");
 const enqueue = require("../../services/intakeScoring/enqueue");
+const customFields = require("../../utils/customField.utils");
 /* eslint-enable @typescript-eslint/no-require-imports */
 
 /** Same format as the controller's private createSignedToken. */
@@ -93,7 +99,8 @@ const req = (overrides: any = {}) => ({
   ip: "127.0.0.1",
   headers: {},
   lang: "en",
-  t: (k: string) => k,
+  t: (k: string, vars?: Record<string, string>) =>
+    vars ? k.replace(/\{(\w+)\}/g, (_, v) => vars[v]) : k,
   params: {},
   body: {},
   ...overrides,
@@ -436,6 +443,109 @@ describe("saving a form with invalid logic", () => {
     );
     expect(r.status).toHaveBeenCalledWith(400);
     expect(intake.updateIntakeFormQuery).not.toHaveBeenCalled();
+  });
+});
+
+describe("publishing a form whose custom-field mapping is broken (#5262)", () => {
+  const MAPPED = {
+    version: "1.0",
+    fields: [
+      {
+        id: "owner",
+        type: "text",
+        label: "Who owns it?",
+        order: 0,
+        required: false,
+        entityFieldMapping: "custom_field:owner",
+      },
+    ],
+  };
+  const createBody = (status: string) => ({
+    name: "Model intake",
+    entityType: "model",
+    schema: MAPPED,
+    status,
+  });
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    customFields.listCustomFieldDefinitionsQuery.mockResolvedValue([]);
+    intake.getIntakeFormByIdQuery.mockResolvedValue({
+      id: 1,
+      entityType: "model",
+      status: "draft",
+      euAiActRiskStepEnabled: false,
+      schema: { version: "1.0", fields: [] },
+    });
+  });
+
+  it("create: 400 naming the question when published", async () => {
+    const r = res();
+    await ctrl.createIntakeForm(req({ body: createBody("active") }) as any, r);
+    expect(r.status).toHaveBeenCalledWith(400);
+    expect(String(r.json.mock.calls[0][0].data)).toContain("Who owns it?");
+    expect(String(r.json.mock.calls[0][0].data)).toContain("owner");
+    expect(customFields.listCustomFieldDefinitionsQuery).toHaveBeenCalledWith(
+      5,
+      "model_inventory",
+      expect.anything(),
+    );
+    expect(intake.createIntakeFormQuery).not.toHaveBeenCalled();
+  });
+
+  it("create: a draft with the same mapping saves", async () => {
+    const r = res();
+    await ctrl.createIntakeForm(req({ body: createBody("draft") }) as any, r);
+    expect(r.status).toHaveBeenCalledWith(201);
+    expect(customFields.listCustomFieldDefinitionsQuery).not.toHaveBeenCalled();
+  });
+
+  it("update: 400 naming the question when publishing", async () => {
+    const r = res();
+    await ctrl.updateIntakeForm(
+      req({ params: { id: "1" }, body: { schema: MAPPED, status: "active" } }) as any,
+      r,
+    );
+    expect(r.status).toHaveBeenCalledWith(400);
+    expect(String(r.json.mock.calls[0][0].data)).toContain(
+      'Question "Who owns it?": custom field "owner" no longer exists',
+    );
+    expect(intake.updateIntakeFormQuery).not.toHaveBeenCalled();
+  });
+
+  it("update: a mapping of the wrong type is refused too", async () => {
+    customFields.listCustomFieldDefinitionsQuery.mockResolvedValue([
+      { id: 1, field_key: "owner", label: "Owner", field_type: "number", options: null },
+    ]);
+    const r = res();
+    await ctrl.updateIntakeForm(
+      req({ params: { id: "1" }, body: { schema: MAPPED, status: "active" } }) as any,
+      r,
+    );
+    expect(r.status).toHaveBeenCalledWith(400);
+    expect(String(r.json.mock.calls[0][0].data)).toContain(
+      'Question "Who owns it?": custom field "owner" cannot store this question type',
+    );
+  });
+
+  it("update: saving the same schema as a draft is fine", async () => {
+    const r = res();
+    await ctrl.updateIntakeForm(req({ params: { id: "1" }, body: { schema: MAPPED } }) as any, r);
+    expect(r.status).not.toHaveBeenCalledWith(400);
+    expect(intake.updateIntakeFormQuery).toHaveBeenCalled();
+  });
+
+  it("update: a valid mapping publishes", async () => {
+    customFields.listCustomFieldDefinitionsQuery.mockResolvedValue([
+      { id: 1, field_key: "owner", label: "Owner", field_type: "text", options: null },
+    ]);
+    const r = res();
+    await ctrl.updateIntakeForm(
+      req({ params: { id: "1" }, body: { schema: MAPPED, status: "active" } }) as any,
+      r,
+    );
+    expect(r.status).not.toHaveBeenCalledWith(400);
+    expect(intake.updateIntakeFormQuery).toHaveBeenCalled();
   });
 });
 

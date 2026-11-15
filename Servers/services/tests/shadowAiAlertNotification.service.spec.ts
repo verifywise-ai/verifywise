@@ -53,9 +53,14 @@ jest.mock("../../utils/logger/fileLogger", () => ({
   },
 }));
 
-import { processTriggeredRules } from "../shadowAiAlertNotification.service";
+import { evaluateRulesForBatch, processTriggeredRules } from "../shadowAiAlertNotification.service";
 import { sendInAppNotification, sendBulkInAppNotifications } from "../inAppNotification.service";
-import { insertAlertHistoryQuery } from "../../utils/shadowAiRules.utils";
+import {
+  getActiveRulesQuery,
+  getRecentAlertKeys,
+  insertAlertHistoryQuery,
+} from "../../utils/shadowAiRules.utils";
+import { sequelize } from "../../database/db";
 import logger from "../../utils/logger/fileLogger";
 
 // Cast mocks
@@ -346,6 +351,70 @@ describe("shadowAiAlertNotification.service", () => {
           }),
         }),
       );
+    });
+  });
+
+  describe("evaluateRulesForBatch", () => {
+    const blockedRule = {
+      id: 5,
+      name: "Blocked",
+      is_active: true,
+      trigger_type: "blocked_attempt" as const,
+      trigger_config: {},
+      actions: [{ type: "send_alert" as const }],
+      notification_user_ids: [10],
+      cooldown_minutes: 60,
+      created_by: 1,
+    };
+
+    const batchWith = (
+      blockedAttempts: { toolId: number; toolName: string; userEmail: string }[],
+    ) => ({
+      newToolIds: [],
+      newToolNames: new Map<number, string>(),
+      toolEventCounts: new Map(blockedAttempts.map((a) => [a.toolId, 1])),
+      toolDepartments: new Map<number, Set<string>>(),
+      toolEmails: new Map<number, Set<string>>(),
+      blockedAttempts,
+      allDepartments: new Set<string>(),
+      allEmails: new Set<string>(),
+      firstEventId: null,
+    });
+
+    beforeEach(() => {
+      (getActiveRulesQuery as jest.Mock).mockResolvedValue([blockedRule]);
+      (getRecentAlertKeys as jest.Mock).mockResolvedValue(new Set<string>());
+      (sequelize.query as jest.Mock).mockResolvedValue([
+        [
+          { id: 7, name: "Blocked AI", risk_score: null, total_events: 3, status: "blocked" },
+          { id: 8, name: "Other AI", risk_score: null, total_events: 1, status: "blocked" },
+        ],
+      ]);
+    });
+
+    it("sends one blocked-attempt alert per tool when a batch repeats it", async () => {
+      await evaluateRulesForBatch(
+        1,
+        batchWith([
+          { toolId: 7, toolName: "Blocked AI", userEmail: "a@corp.com" },
+          { toolId: 7, toolName: "Blocked AI", userEmail: "b@corp.com" },
+          { toolId: 7, toolName: "Blocked AI", userEmail: "a@corp.com" },
+          { toolId: 8, toolName: "Other AI", userEmail: "a@corp.com" },
+        ]) as any,
+      );
+
+      expect(mockInsertAlert).toHaveBeenCalledTimes(2);
+      const toolIds = mockInsertAlert.mock.calls.map((c) => (c[1] as any).trigger_data.tool_id);
+      expect(toolIds.sort()).toEqual([7, 8]);
+    });
+
+    it("sends nothing for a tool still in its cooldown from an earlier batch", async () => {
+      (getRecentAlertKeys as jest.Mock).mockResolvedValue(new Set(["5:tool:7"]));
+      await evaluateRulesForBatch(
+        1,
+        batchWith([{ toolId: 7, toolName: "Blocked AI", userEmail: "a@corp.com" }]) as any,
+      );
+      expect(mockInsertAlert).not.toHaveBeenCalled();
     });
   });
 });

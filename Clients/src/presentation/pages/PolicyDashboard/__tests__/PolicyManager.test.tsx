@@ -1,6 +1,7 @@
-import { screen, fireEvent, waitFor } from "@testing-library/react";
+import { screen, fireEvent, waitFor, within } from "@testing-library/react";
 import { renderWithProviders } from "../../../../test/renderWithProviders";
 import { PolicyManagerModel } from "../../../../domain/models/Common/policy/policyManager.model";
+import CustomException from "../../../../infrastructure/exceptions/customeException";
 
 const mockNavigate = vi.fn();
 vi.mock("react-router", async () => {
@@ -22,6 +23,38 @@ let mockPolicies: PolicyManagerModel[] = [];
 let mockPoliciesLoading = false;
 let mockPoliciesError: Error | null = null;
 const mockUsePolicies = vi.fn();
+// undefined = the counts are loading or failed to load.
+let mockFolderCounts: Record<number, number> | undefined = {};
+const mockCreateFromPolicy = vi.fn();
+vi.mock("../../../../application/hooks/usePolicyTemplates", () => ({
+  useCreatePolicyTemplateFromPolicy: () => ({
+    mutateAsync: mockCreateFromPolicy,
+    isPending: false,
+  }),
+}));
+
+let mockCanManageTemplates = true;
+vi.mock("../../../../application/hooks/useMyPermissions", () => ({
+  // Not loaded: useCan falls back to the mocked built-in role.
+  useMyPermissions: () => ({ permissions: undefined, isLoading: true, error: null }),
+}));
+vi.mock("../../../../application/hooks/useCan", async () => {
+  // Policy templates are stubbed; every other key follows the mocked built-in
+  // role, as the real hook does while permissions load.
+  const { canWithPermissions } = await vi.importActual<
+    typeof import("../../../../application/constants/permissions")
+  >("../../../../application/constants/permissions");
+  const useCan = (key: string) =>
+    key === "policyTemplate.edit"
+      ? mockCanManageTemplates
+      : canWithPermissions(key as never, undefined, mockUserRoleName);
+  return {
+    useCan,
+    useCanCheck: () => useCan,
+    usePermissionsSettled: () => true,
+  };
+});
+
 vi.mock("../../../../application/hooks/usePolicies", () => ({
   usePolicies: (...args: unknown[]) => {
     mockUsePolicies(...args);
@@ -31,8 +64,10 @@ vi.mock("../../../../application/hooks/usePolicies", () => ({
       error: mockPoliciesError,
     };
   },
+  usePolicyFolderCounts: () => ({ data: mockFolderCounts }),
   policyQueryKeys: {
     all: ["policies"],
+    folderCounts: () => ["policies", "folder-counts"],
     lists: () => ["policies", "list"],
     list: (filters: Record<string, unknown> = {}) => ["policies", "list", filters],
   },
@@ -73,6 +108,7 @@ vi.mock("../../../components/Policies/PolicyTable", () => ({
     onLinkedObjects,
     onAssignToFolder,
     onBulkActionSuccess,
+    onSaveAsTemplate,
   }: any) => (
     <div data-testid="policy-table">
       <span data-testid="policy-row-count">{data.length}</span>
@@ -91,15 +127,22 @@ vi.mock("../../../components/Policies/PolicyTable", () => ({
       <button data-testid="linked-first" onClick={() => data[0] && onLinkedObjects(data[0].id)}>
         linked
       </button>
-      <button
-        data-testid="assign-folder-first"
-        onClick={() => data[0] && onAssignToFolder?.(data[0].id)}
-      >
-        assign folder
-      </button>
+      {onAssignToFolder && (
+        <button
+          data-testid="assign-folder-first"
+          onClick={() => data[0] && onAssignToFolder(data[0].id)}
+        >
+          assign folder
+        </button>
+      )}
       <button data-testid="bulk-archive" onClick={() => onBulkActionSuccess?.("archive", 2)}>
         bulk archive
       </button>
+      {onSaveAsTemplate && (
+        <button data-testid="save-template-first" onClick={() => onSaveAsTemplate(data[0].id)}>
+          save as template
+        </button>
+      )}
     </div>
   ),
 }));
@@ -109,7 +152,13 @@ vi.mock("../../../components/Table/ExportMenu", () => ({
 }));
 
 vi.mock("../../FileManager/components/FolderTree", () => ({
-  FolderTree: () => <div data-testid="folder-tree" />,
+  FolderTree: ({ canManage, countByFolderId }: any) => (
+    <div
+      data-testid="folder-tree"
+      data-can-manage={String(Boolean(canManage))}
+      data-counts={JSON.stringify(countByFolderId)}
+    />
+  ),
 }));
 
 vi.mock("../../FileManager/components/CreateFolderModal", () => ({
@@ -148,6 +197,7 @@ describe("PolicyManager", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockUserRoleName = "Admin";
+    mockCanManageTemplates = true;
     mockUsers = [{ id: 1, name: "Jane", surname: "Doe", email: "jane@test.com" }];
     mockPolicies = [
       buildPolicy({ id: 1, title: "AI Ethics Policy", status: "Draft" }),
@@ -155,9 +205,73 @@ describe("PolicyManager", () => {
     ];
     mockPoliciesLoading = false;
     mockPoliciesError = null;
+    mockFolderCounts = {};
     mockGetPolicyFolders.mockResolvedValue([]);
     mockGetPolicyIdsInFolder.mockResolvedValue([]);
     mockUpdatePolicyFolders.mockResolvedValue(undefined);
+  });
+
+  it("offers Save as template only with policyTemplate.edit", () => {
+    mockCanManageTemplates = false;
+    renderWithProviders(<PolicyManager tags={[]} />, { route: "/policies" });
+    expect(screen.queryByTestId("save-template-first")).not.toBeInTheDocument();
+  });
+
+  const openAndSubmitSaveAsTemplate = async () => {
+    renderWithProviders(<PolicyManager tags={[]} />, { route: "/policies" });
+    fireEvent.click(screen.getByTestId("save-template-first"));
+    fireEvent.click(await screen.findByRole("button", { name: /save template/i }));
+  };
+
+  it("shows a taken template name inside the still-open modal", async () => {
+    mockCreateFromPolicy.mockRejectedValue(
+      new CustomException("Conflict", 409, {
+        message: "Conflict",
+        data: "a template with this name already exists",
+      }),
+    );
+    await openAndSubmitSaveAsTemplate();
+    const dialog = await screen.findByRole("dialog");
+    expect(
+      await within(dialog).findByText("A template with this name already exists"),
+    ).toBeVisible();
+    // The name stays editable so the user can change it.
+    expect(within(dialog).getByDisplayValue("AI Ethics Policy (template)")).toBeInTheDocument();
+  });
+
+  it("shows the server reason for a rejected name", async () => {
+    mockCreateFromPolicy.mockRejectedValue(
+      new CustomException("Bad Request", 400, {
+        message: "Bad Request",
+        data: "name must be a string between 2 and 255 characters",
+      }),
+    );
+    await openAndSubmitSaveAsTemplate();
+    const dialog = await screen.findByRole("dialog");
+    expect(
+      await within(dialog).findByText("Name must be a string between 2 and 255 characters"),
+    ).toBeVisible();
+  });
+
+  it("never shows a server error's internals", async () => {
+    mockCreateFromPolicy.mockRejectedValue(
+      new CustomException("relation does not exist", 500, { error: "relation does not exist" }),
+    );
+    await openAndSubmitSaveAsTemplate();
+    const dialog = await screen.findByRole("dialog");
+    expect(
+      await within(dialog).findByText("Could not save the template. Please try again."),
+    ).toBeVisible();
+    expect(screen.queryByText(/relation does not exist/)).not.toBeInTheDocument();
+  });
+
+  it("closes the modal and shows a visible success toast", async () => {
+    mockCreateFromPolicy.mockResolvedValue({ id: 9 });
+    await openAndSubmitSaveAsTemplate();
+    expect(
+      await screen.findByText("The policy was saved as an organization template."),
+    ).toBeVisible();
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
   });
 
   it("renders the status cards and the policy table with data", () => {
@@ -285,5 +399,35 @@ describe("PolicyManager", () => {
     expect(screen.queryByTestId("folder-tree")).not.toBeInTheDocument();
     fireEvent.click(screen.getByLabelText("Documents"));
     expect(screen.getByTestId("folder-tree")).toBeInTheDocument();
+  });
+
+  it("offers folder actions to roles that can edit policies", () => {
+    renderWithProviders(<PolicyManager tags={[]} />, { route: "/policies" });
+    expect(screen.getByTestId("assign-folder-first")).toBeInTheDocument();
+    fireEvent.click(screen.getByLabelText("Documents"));
+    expect(screen.getByTestId("folder-tree")).toHaveAttribute("data-can-manage", "true");
+  });
+
+  it.each(["Auditor", "Reviewer"])("hides folder actions from the read-only %s role", (role) => {
+    mockUserRoleName = role;
+    renderWithProviders(<PolicyManager tags={[]} />, { route: "/policies" });
+    expect(screen.queryByTestId("assign-folder-first")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByLabelText("Documents"));
+    expect(screen.getByTestId("folder-tree")).toHaveAttribute("data-can-manage", "false");
+  });
+
+  it("passes the policy counts to the folder sidebar once they load", () => {
+    mockFolderCounts = { 4: 2 };
+    renderWithProviders(<PolicyManager tags={[]} />, { route: "/policies" });
+    fireEvent.click(screen.getByLabelText("Documents"));
+    expect(screen.getByTestId("folder-tree")).toHaveAttribute("data-counts", '{"4":2}');
+  });
+
+  it("hides the folder counts while they load or after they fail", () => {
+    // usePolicyFolderCounts has no data in both states.
+    mockFolderCounts = undefined;
+    renderWithProviders(<PolicyManager tags={[]} />, { route: "/policies" });
+    fireEvent.click(screen.getByLabelText("Documents"));
+    expect(screen.getByTestId("folder-tree")).toHaveAttribute("data-counts", "null");
   });
 });

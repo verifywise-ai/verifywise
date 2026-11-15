@@ -82,6 +82,12 @@ import {
   NotFoundException,
   ValidationException,
 } from "../domain.layer/exceptions/custom.exception";
+import {
+  previewIntakeCustomFields,
+  validateFormCustomFieldMappings,
+  writeIntakeCustomFields,
+  type CustomFieldDisplay,
+} from "../utils/intakeCustomFields.utils";
 import { llmKeyExistsQuery } from "../utils/llmKey.utils";
 import { sanitizeUserHtml } from "../utils/sanitization.utils";
 import logger from "../utils/logger/fileLogger";
@@ -98,7 +104,12 @@ import {
   trySendSubmitterConfirmation,
 } from "../services/intakeConfirmation/confirmation";
 import { notificationAudience } from "../services/intakeScoring/assessmentJob";
-import { cleanSubmission, isEmptyAnswer, parseFormula } from "../services/intakeFormLogic";
+import {
+  cleanSubmission,
+  CUSTOM_FIELD_MAPPING_PREFIX,
+  isEmptyAnswer,
+  parseFormula,
+} from "../services/intakeFormLogic";
 import { generateSuggestedQuestions, generateFieldGuidance } from "../services/intakeLLM.service";
 import { getCompanyLogoQuery } from "../utils/aiTrustCentre.utils";
 
@@ -833,6 +844,52 @@ function prepareSubmissionData(
 // ENTITY DATA MAPPING (fixes hardcoded mapper bug)
 // ============================================================================
 
+// Answers mapped to entity custom fields (#5262). Skip reasons travel as
+// stable codes and are worded here, at the HTTP edge.
+const CUSTOM_FIELD_SKIP_REASONS: Record<string, string> = {
+  field_removed: "This custom field no longer exists",
+  type_changed: "This custom field's type no longer matches the question",
+  no_matching_option: "The answer matches no option of this custom field",
+  invalid_value: "The answer is not a valid value for this custom field",
+};
+
+const customFieldSkipReason = (req: Request, code: string): string =>
+  req.t!(CUSTOM_FIELD_SKIP_REASONS[code] ?? CUSTOM_FIELD_SKIP_REASONS.invalid_value);
+
+const customFieldDisplay = (req: Request, display: CustomFieldDisplay): string =>
+  typeof display === "boolean" ? req.t!(display ? "Yes" : "No") : display;
+
+/** Custom field values are written only from the answers, never from reviewer-sent data. */
+const withoutCustomFieldKeys = (data: Record<string, unknown>): Record<string, unknown> =>
+  Object.fromEntries(
+    Object.entries(data).filter(([key]) => !key.startsWith(CUSTOM_FIELD_MAPPING_PREFIX)),
+  );
+
+const CUSTOM_FIELD_MAPPING_PROBLEMS = {
+  field_removed: 'Question "{label}": custom field "{key}" no longer exists',
+  type_changed: 'Question "{label}": custom field "{key}" cannot store this question type',
+  options_mismatch:
+    'Question "{label}": some options do not match the options of custom field "{key}"',
+} as const;
+
+/** Why a form about to go live can't: a mapped custom field is gone or can't hold the answer. */
+async function customFieldMappingErrors(
+  req: Request,
+  schema: IIntakeFormSchema | undefined,
+  intakeEntityType: unknown,
+  transaction: Transaction,
+): Promise<string[]> {
+  const problems = await validateFormCustomFieldMappings(
+    schema,
+    intakeEntityType,
+    req.organizationId!,
+    transaction,
+  );
+  return problems.map(({ label, fieldKey, problem }) =>
+    req.t!(CUSTOM_FIELD_MAPPING_PROBLEMS[problem], { label, key: fieldKey }),
+  );
+}
+
 // ============================================================================
 // INTAKE FORM CONTROLLERS (Admin - Authenticated)
 // ============================================================================
@@ -1115,9 +1172,14 @@ export async function createIntakeForm(req: Request, res: Response) {
 
     // Drafts may hold unfinished logic (a new calculated field starts with an
     // empty formula); only a form that will be live must be valid.
+    // A live form's custom-field mappings must also point at fields that exist
+    // and can hold the answer (#5262).
     const logicErrors =
       (status ?? IntakeFormStatus.DRAFT) === IntakeFormStatus.ACTIVE
-        ? validateIntakeFormSchemaLogic(schema, entityType)
+        ? [
+            ...validateIntakeFormSchemaLogic(schema, entityType),
+            ...(await customFieldMappingErrors(req, schema, entityType, transaction)),
+          ]
         : [];
     if (logicErrors.length > 0) {
       await transaction.rollback();
@@ -1283,10 +1345,18 @@ export async function updateIntakeForm(req: Request, res: Response) {
     const touchesLogic = schema !== undefined || entityType !== undefined || status !== undefined;
     const logicErrors =
       touchesLogic && (status ?? existingForm.status) === IntakeFormStatus.ACTIVE
-        ? validateIntakeFormSchemaLogic(
-            schema ?? existingForm.schema,
-            entityType ?? existingForm.entityType,
-          )
+        ? [
+            ...validateIntakeFormSchemaLogic(
+              schema ?? existingForm.schema,
+              entityType ?? existingForm.entityType,
+            ),
+            ...(await customFieldMappingErrors(
+              req,
+              schema ?? existingForm.schema,
+              entityType ?? existingForm.entityType,
+              transaction,
+            )),
+          ]
         : [];
     if (logicErrors.length > 0) {
       await transaction.rollback();
@@ -1735,9 +1805,27 @@ export async function getIntakeOversight(req: Request, res: Response) {
 }
 
 /**
- * Get submission preview for approval flow
+ * Get submission preview for approval flow.
+ * GET /api/intake/submissions/:id/preview (legacy shape).
  */
 export async function getSubmissionPreview(req: Request, res: Response) {
+  return submissionPreview(req, res, { withCustomFields: false });
+}
+
+/**
+ * GET /api/v1/intake-submissions/:id/preview (#5262): the legacy preview plus
+ * `customFields`, the values approval would write for questions mapped to
+ * custom fields. Null when they cannot be read, absent unless pending.
+ */
+export async function getSubmissionPreviewV1(req: Request, res: Response) {
+  return submissionPreview(req, res, { withCustomFields: true });
+}
+
+async function submissionPreview(
+  req: Request,
+  res: Response,
+  { withCustomFields }: { withCustomFields: boolean },
+) {
   const submissionId = parseId(req.params.id);
   if (isNaN(submissionId)) {
     return res.status(400).json(STATUS_CODE[400](req.t!("Invalid submission ID")));
@@ -1759,6 +1847,21 @@ export async function getSubmissionPreview(req: Request, res: Response) {
       submission.data as Record<string, unknown>,
       form.schema,
     );
+    // Only a pending submission still has values to write.
+    const customFieldRows =
+      withCustomFields && submission.status === "pending"
+        ? await previewIntakeCustomFields(
+            submission.entityType,
+            (submission.data ?? {}) as Record<string, unknown>,
+            form.schema,
+            req.organizationId!,
+          )
+        : undefined;
+    const customFields = customFieldRows?.map((row) => ({
+      label: row.label,
+      displayValue: customFieldDisplay(req, row.display),
+      ...(row.skipReason ? { skipped: customFieldSkipReason(req, row.skipReason) } : {}),
+    }));
 
     const storedRun = await getLatestRunForSubmissionQuery(submission.id!, req.organizationId!);
     // A run that can no longer be scored shows no panel rather than failing the
@@ -1824,6 +1927,9 @@ export async function getSubmissionPreview(req: Request, res: Response) {
         riskOverride: submission.riskOverride,
         liveChecks: submission.liveChecks ?? null,
         entityPreview: entityData,
+        ...(withCustomFields && customFieldRows !== undefined
+          ? { customFields: customFields ?? null }
+          : {}),
         euAiActClassification,
         assessment,
         suggestedRisks: submission.suggestedRisks,
@@ -2213,9 +2319,27 @@ export async function acceptAllSuggestedRisks(req: Request, res: Response) {
 }
 
 /**
- * Approve submission — now accepts optional confirmedEntityData and riskOverride
+ * Approve submission — now accepts optional confirmedEntityData and riskOverride.
+ * POST /api/intake/submissions/:id/approve (legacy shape: the updated submission).
+ * Answers mapped to custom fields are written on both routes.
  */
 export async function approveSubmission(req: Request, res: Response) {
+  return approve(req, res, { withCustomFieldSkips: false });
+}
+
+/**
+ * POST /api/v1/intake-submissions/:id/approve (#5262): the legacy approval,
+ * whose response adds `customFieldSkips`, the mapped answers it could not save.
+ */
+export async function approveSubmissionV1(req: Request, res: Response) {
+  return approve(req, res, { withCustomFieldSkips: true });
+}
+
+async function approve(
+  req: Request,
+  res: Response,
+  { withCustomFieldSkips }: { withCustomFieldSkips: boolean },
+) {
   const submissionId = parseId(req.params.id);
   if (isNaN(submissionId)) {
     return res.status(400).json(STATUS_CODE[400](req.t!("Invalid submission ID")));
@@ -2268,9 +2392,15 @@ export async function approveSubmission(req: Request, res: Response) {
 
     // Use confirmed entity data from admin if provided, otherwise build from mapping
     const { confirmedEntityData, riskOverride, euAiActOverride } = req.body;
+    // Custom field values come from the answers only (#5262), so any
+    // custom_field:* key the reviewer sent is dropped here.
     let entityData: Record<string, unknown> =
-      confirmedEntityData ||
-      buildEntityDataFromSubmission(submission.data as Record<string, unknown>, form.schema);
+      confirmedEntityData &&
+      typeof confirmedEntityData === "object" &&
+      !Array.isArray(confirmedEntityData)
+        ? withoutCustomFieldKeys(confirmedEntityData as Record<string, unknown>)
+        : confirmedEntityData ||
+          buildEntityDataFromSubmission(submission.data as Record<string, unknown>, form.schema);
 
     // The EU AI Act step owns the use case's level: score the stored answers
     // again and apply a justified reviewer change; the dialog's level is
@@ -2625,6 +2755,17 @@ export async function approveSubmission(req: Request, res: Response) {
       return res.status(400).json(STATUS_CODE[400](req.t!("Unsupported entity type")));
     }
 
+    // Answers mapped to custom fields are written on the new entity (#5262).
+    // One the write refuses is skipped and reported, not a failed approval.
+    const customFieldSkips = await writeIntakeCustomFields(
+      submission.entityType,
+      (submission.data ?? {}) as Record<string, unknown>,
+      form.schema,
+      entityId,
+      req.organizationId!,
+      transaction,
+    );
+
     // The suggested risks reviewers accepted become real risks on the new
     // entity, in this transaction: any failure rolls the approval back. The
     // submission row is locked above, so no suggestion changes underneath.
@@ -2687,6 +2828,19 @@ export async function approveSubmission(req: Request, res: Response) {
       userId: req.userId!,
       organizationId: req.organizationId!,
     });
+    for (const skip of customFieldSkips) {
+      logger.warn(
+        `Intake answer for custom field ${skip.fieldKey} was not written on submission ${submissionId}: ${skip.reason}`,
+      );
+      await logSuccess({
+        eventType: "Update",
+        description: `custom field ${skip.fieldKey} skipped on submission ${submissionId}: ${skip.reason}`,
+        functionName: "approveSubmission",
+        fileName: "intakeForm.ctrl.ts",
+        userId: req.userId!,
+        organizationId: req.organizationId!,
+      });
+    }
     await logIfOutsideLane(req, submissionId, decision.lane, routingCfg, "approveSubmission");
     if (pickedForSecondReview && routingCfg) {
       sendSecondReviewRequestEmail(
@@ -2705,7 +2859,22 @@ export async function approveSubmission(req: Request, res: Response) {
       });
     }
 
-    return res.status(200).json(STATUS_CODE[200](updatedSubmission));
+    if (!withCustomFieldSkips) {
+      return res.status(200).json(STATUS_CODE[200](updatedSubmission));
+    }
+    const plainSubmission =
+      updatedSubmission && typeof (updatedSubmission as { toJSON?: unknown }).toJSON === "function"
+        ? (updatedSubmission as unknown as { toJSON: () => object }).toJSON()
+        : updatedSubmission;
+    return res.status(200).json(
+      STATUS_CODE[200]({
+        ...(plainSubmission ?? {}),
+        customFieldSkips: customFieldSkips.map((skip) => ({
+          label: skip.label,
+          reason: customFieldSkipReason(req, skip.reason),
+        })),
+      }),
+    );
   } catch (error) {
     await transaction.rollback();
     await logFailure({

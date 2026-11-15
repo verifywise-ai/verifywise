@@ -9,7 +9,7 @@ import { Box, Typography } from "@mui/material";
 import { AlertCircle } from "lucide-react";
 import { CustomizableButton } from "../../../components/button/customizable-button";
 import { Finding } from "../../../../domain/ai-detection/types";
-import { palette } from "../../../themes/palette";
+import { palette, radiusPx } from "../../../themes/palette";
 import { FindingRow } from "./FindingRow";
 import { isFindingSuppressed } from "./scanDetailsConfig";
 
@@ -132,7 +132,7 @@ export function FindingsTabPanel({
           sx={{
             backgroundColor: alertColor.bg,
             border: `1px solid ${alertColor.border}`,
-            borderRadius: "4px",
+            borderRadius: radiusPx.sm,
             p: "16px",
             mb: "16px",
             display: "flex",
@@ -157,7 +157,7 @@ export function FindingsTabPanel({
           sx={{
             backgroundColor: palette.background.main,
             border: `1px solid ${palette.border.dark}`,
-            borderRadius: "4px",
+            borderRadius: radiusPx.sm,
             p: "16px",
             mb: "8px",
           }}

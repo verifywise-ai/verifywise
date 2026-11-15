@@ -80,3 +80,35 @@ describe("project-scoped section queries", () => {
     expect(sql).toContain("SELECT DISTINCT");
   });
 });
+
+describe("archived risks stay out of report risk reads", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockQuery.mockResolvedValue([]);
+  });
+
+  it("filters archived risks from the organization-wide risk read", async () => {
+    const collector = createDataCollector(10, 1, 1, 100, 5);
+    await (collector as any).fetchOrganizationRisks();
+
+    expect(sqlFor("FROM risks risk")).toContain("risk.is_deleted = false");
+  });
+
+  it("filters archived risks from the project-set risk read", async () => {
+    const collector = createDataCollector(10, 1, 1, 100, 5);
+    await (collector as any).fetchRisksForProjects([1, 2]);
+
+    expect(sqlFor("FROM risks risk")).toContain("risk.is_deleted = false");
+  });
+
+  it("drops an archived risk from the NIST join without dropping the subcategory", async () => {
+    const collector = createDataCollector(10, 1, 1, 100, 5);
+    await (collector as any).collectNistSubcategories();
+
+    const sql = sqlFor("nist_ai_rmf_subcategories__risks");
+    expect(sql).toMatch(
+      /LEFT JOIN risks r ON r\.id = nsr\.projects_risks_id[\s\S]*?r\.is_deleted = false/,
+    );
+    expect(sql).toContain("r.organization_id = nsr.organization_id");
+  });
+});

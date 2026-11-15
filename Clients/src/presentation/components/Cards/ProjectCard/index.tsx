@@ -1,3 +1,4 @@
+import ExternalOwnerName from "../../ExternalOwner/ExternalOwnerName";
 import React, { useEffect, useState, useMemo } from "react";
 
 import { Stack, Typography, Tooltip, Link } from "@mui/material";
@@ -27,6 +28,7 @@ import {
   ComplianceProgress,
 } from "../../../../application/interfaces/iprogress";
 import StaleMarker from "../../LifecycleTabs/StaleMarker";
+import { chartTheme } from "../../../themes/chartTheme";
 
 function ProjectCardSkeleton() {
   return (
@@ -212,7 +214,13 @@ export const ProjectCard = React.memo(function ProjectCard({
             <Stack className="project-card-spec-tile" alignItems="flex-end">
               <Typography sx={projectCardSpecKeyStyle}>Owner</Typography>
               <Typography sx={projectCardSpecValueStyle}>
-                {ownerUser ? `${ownerUser.name} ${ownerUser.surname}` : "Unknown User"}
+                {project.external_owner_name ? (
+                  <ExternalOwnerName name={project.external_owner_name} />
+                ) : ownerUser ? (
+                  `${ownerUser.name} ${ownerUser.surname}`
+                ) : (
+                  "Unknown User"
+                )}
               </Typography>
             </Stack>
             <Stack className="project-card-spec-tile" alignItems="flex-end">
@@ -258,7 +266,7 @@ export const ProjectCard = React.memo(function ProjectCard({
                     })
                   }
                   sx={{
-                    "color": "#014576",
+                    "color": chartTheme.frameworkChip,
                     "textDecoration": "none",
                     "cursor": "pointer",
                     "display": "flex",
@@ -298,7 +306,7 @@ export const ProjectCard = React.memo(function ProjectCard({
                     })
                   }
                   sx={{
-                    "color": "#014576",
+                    "color": chartTheme.frameworkChip,
                     "textDecoration": "none",
                     "cursor": "pointer",
                     "display": "flex",
@@ -370,7 +378,7 @@ export const ProjectCard = React.memo(function ProjectCard({
                       })
                     }
                     sx={{
-                      "color": "#014576",
+                      "color": chartTheme.frameworkChip,
                       "textDecoration": "none",
                       "cursor": "pointer",
                       "display": "flex",
@@ -410,7 +418,7 @@ export const ProjectCard = React.memo(function ProjectCard({
                       })
                     }
                     sx={{
-                      "color": "#014576",
+                      "color": chartTheme.frameworkChip,
                       "textDecoration": "none",
                       "cursor": "pointer",
                       "display": "flex",

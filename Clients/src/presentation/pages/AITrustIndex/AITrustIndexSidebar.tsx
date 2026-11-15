@@ -7,27 +7,22 @@
  * @module pages/AITrustIndex/AITrustIndexSidebar
  */
 
-import { useCallback } from "react";
 import { Compass, Star, Settings } from "lucide-react";
 import SidebarShell, { SidebarMenuItem } from "../../components/Sidebar/SidebarShell";
-import { useUserGuideSidebarContext } from "../../components/UserGuide/UserGuideSidebarContext";
+import { useCan } from "../../../application/hooks/useCan";
 
 interface AITrustIndexSidebarProps {
   activeTab: string;
   onTabChange: (value: string) => void;
   trackedCount?: number;
-  isAdmin?: boolean;
 }
 
 export default function AITrustIndexSidebar({
   activeTab,
   onTabChange,
   trackedCount = 0,
-  isAdmin = false,
 }: AITrustIndexSidebarProps) {
-  const { open: openUserGuide, openTab } = useUserGuideSidebarContext();
-  const openReleaseNotes = useCallback(() => openTab("whats-new"), [openTab]);
-
+  const canManageSettings = useCan("aiTrustIndex.admin");
   const flatItems: SidebarMenuItem[] = [
     {
       id: "browse",
@@ -44,7 +39,7 @@ export default function AITrustIndexSidebar({
       count: trackedCount,
       disabled: false,
     },
-    ...(isAdmin
+    ...(canManageSettings
       ? [
           {
             id: "settings",
@@ -73,8 +68,6 @@ export default function AITrustIndexSidebar({
       isItemActive={isItemActive}
       onItemClick={handleItemClick}
       showReadyToSubscribe={false}
-      openUserGuide={openUserGuide}
-      openReleaseNotes={openReleaseNotes}
       enableFlyingHearts={false}
     />
   );

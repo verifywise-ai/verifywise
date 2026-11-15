@@ -1,6 +1,6 @@
 import { Box, IconButton, TextField, Tooltip, Typography } from "@mui/material";
 import { ArrowLeft, Check, Loader2, Pencil, X } from "lucide-react";
-import { palette } from "../../../themes/palette";
+import { palette, radiusPx } from "../../../themes/palette";
 import { textStyles } from "../../../themes/typography";
 
 export interface PolicyEditorTitleAreaProps {
@@ -15,6 +15,8 @@ export interface PolicyEditorTitleAreaProps {
   onSaveTitle: () => void;
   onCancelEditTitle: () => void;
   readOnly?: boolean;
+  /** The title cannot change right now (a pending approval request). */
+  titleLocked?: boolean;
 }
 
 /** Back control + inline policy title editing. */
@@ -30,6 +32,7 @@ export function PolicyEditorTitleArea({
   onSaveTitle,
   onCancelEditTitle,
   readOnly = false,
+  titleLocked = false,
 }: PolicyEditorTitleAreaProps) {
   return (
     <Box sx={{ display: "flex", flexDirection: "row", alignItems: "center", gap: 1 }}>
@@ -39,7 +42,7 @@ export function PolicyEditorTitleArea({
           size="small"
           sx={{
             "padding": "4px",
-            "borderRadius": "4px",
+            "borderRadius": radiusPx.sm,
             "color": palette.text.muted,
             "&:hover": { backgroundColor: palette.background.hover, color: palette.text.secondary },
           }}
@@ -108,7 +111,7 @@ export function PolicyEditorTitleArea({
             <Typography sx={{ ...textStyles.cardTitle, color: palette.text.secondary }}>
               {pageTitle}
             </Typography>
-            {!readOnly && (
+            {!readOnly && !titleLocked && (
               <IconButton
                 size="small"
                 onClick={onStartEditTitle}

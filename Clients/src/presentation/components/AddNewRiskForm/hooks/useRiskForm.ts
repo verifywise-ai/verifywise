@@ -14,9 +14,8 @@ import { ApiResponse } from "../../../../domain/interfaces/i.response";
 import { createProjectRisk } from "../../../../application/repository/projectRisk.repository";
 import { useUpdateProjectRisk } from "../../../../application/hooks/useUpdateProjectRisk";
 import useUsers from "../../../../application/hooks/useUsers";
-import { useAuth } from "../../../../application/hooks/useAuth";
 import { VerifyWiseContext } from "../../../../application/contexts/VerifyWise.context";
-import allowedRoles from "../../../../application/constants/permissions";
+import { useCanCheck } from "../../../../application/hooks/useCan";
 import { RiskCalculator } from "../../../tools/riskCalculator";
 import { CustomFieldsSectionHandle } from "../../CustomFieldsSection";
 import { useRequiredCustomFieldsGate } from "../../CustomFieldsSection/RequiredCustomFieldsGate";
@@ -115,7 +114,6 @@ export interface UseRiskFormReturn {
   handleMitigationValidityChange: (isValid: boolean) => void;
   users: import("../../../../domain/types/User").User[] | undefined;
   usersLoading: boolean;
-  userRoleName: string;
   isEditingDisabled: boolean;
   isCreatingDisabled: boolean;
   isQuantitative: boolean;
@@ -141,6 +139,7 @@ export function useRiskForm(props: AddNewRiskFormProps): UseRiskFormReturn {
     usersLoading: usersLoadingProp,
     onSubmitRef,
     entityId,
+    createRisk,
   } = props;
 
   const riskValidateRef = useRef<((values: RiskFormValues) => boolean) | null>(null);
@@ -162,7 +161,7 @@ export function useRiskForm(props: AddNewRiskFormProps): UseRiskFormReturn {
   const [searchParams] = useSearchParams();
   const projectId = searchParams.get("projectId");
 
-  const { userRoleName } = useAuth();
+  const can = useCanCheck();
   const { isQuantitative } = useRiskAssessmentMode();
 
   const hookData = useUsers();
@@ -172,8 +171,8 @@ export function useRiskForm(props: AddNewRiskFormProps): UseRiskFormReturn {
   const { inputValues } = useContext(VerifyWiseContext);
   const updateProjectRiskMutation = useUpdateProjectRisk();
 
-  const isEditingDisabled = !allowedRoles.projectRisks.edit.includes(userRoleName);
-  const isCreatingDisabled = !allowedRoles.projectRisks.create.includes(userRoleName);
+  const isEditingDisabled = !can("risks.edit");
+  const isCreatingDisabled = !can("risks.edit");
 
   const mitigation = useMitigationSection(initialMitigationValues);
 
@@ -602,7 +601,9 @@ export function useRiskForm(props: AddNewRiskFormProps): UseRiskFormReturn {
                 projectId: projectId ? Number(projectId) : undefined,
                 body: formData,
               })
-            : await createProjectRisk({ body: formData });
+            : createRisk
+              ? await createRisk(formData)
+              : await createProjectRisk({ body: formData });
 
         if (response && response.status === 201) {
           const newRiskId = response.data?.data?.id as number | undefined;
@@ -618,7 +619,7 @@ export function useRiskForm(props: AddNewRiskFormProps): UseRiskFormReturn {
               );
             }
           }
-          onSuccess();
+          onSuccess(newRiskId);
           if (cfFlushFailed) {
             return;
           }
@@ -739,7 +740,6 @@ export function useRiskForm(props: AddNewRiskFormProps): UseRiskFormReturn {
     handleMitigationValidityChange,
     users,
     usersLoading,
-    userRoleName,
     isEditingDisabled,
     isCreatingDisabled,
     isQuantitative,

@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useMemo, useCallback } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useLocation, useNavigate, useSearchParams } from "react-router";
 import { Box, Stack, Fade, Tooltip, IconButton } from "@mui/material";
 import {
@@ -12,6 +13,11 @@ import {
 import PolicyTable from "../../components/Policies/PolicyTable";
 import { CustomizableButton } from "../../components/button/customizable-button";
 import { useDeletePolicy } from "../../../application/hooks/usePolicyMutations";
+import { useCreatePolicyTemplateFromPolicy } from "../../../application/hooks/usePolicyTemplates";
+import StandardModal from "../../components/Modals/StandardModal";
+import Field from "../../components/Inputs/Field";
+import Select from "../../components/Inputs/Select";
+import { PolicyTemplateCategory } from "../../../domain/enums/policy.enum";
 import { EmptyState } from "../../components/EmptyState";
 import EmptyStateTip from "../../components/EmptyState/EmptyStateTip";
 import StandardTableHead from "../../components/Table/StandardTableHead";
@@ -21,19 +27,26 @@ import type { StandardColumn } from "../../../domain/types/standardTable";
 import { SearchBox } from "../../components/Search";
 import { handleAlert } from "../../../application/tools/alertUtils";
 import Alert from "../../components/Alert";
+import {
+  getApiErrorReason,
+  getClientErrorReason,
+  isClientError,
+} from "../../../application/utils/apiErrorReason";
 import { AlertProps } from "../../types/alert.types";
 import { PolicyManagerModel } from "../../../domain/models/Common/policy/policyManager.model";
 import { PolicyManagerProps } from "../../types/interfaces/i.policy";
-import { usePolicies } from "../../../application/hooks/usePolicies";
+import {
+  usePolicies,
+  usePolicyFolderCounts,
+  policyQueryKeys,
+} from "../../../application/hooks/usePolicies";
+import { usePolicyApprovalChangedListener } from "../../../application/hooks/usePolicyApproval";
 import PolicyStatusCard from "./PolicyStatusCard";
 import { ExportMenu } from "../../components/Table/ExportMenu";
 import useUsers from "../../../application/hooks/useUsers";
-import { useAuth } from "../../../application/hooks/useAuth";
-import allowedRoles from "../../../application/constants/permissions";
-import { GroupBy } from "../../components/Table/GroupBy";
-import { useTableGrouping, useGroupByState } from "../../../application/hooks/useTableGrouping";
-import { GroupedTableView } from "../../components/Table/GroupedTableView";
-import { FilterBy, FilterColumn } from "../../components/Table/FilterBy";
+import { useCanCheck, useCan } from "../../../application/hooks/useCan";
+import { FilterColumn } from "../../components/Table/FilterBy";
+import { TableFilter } from "../../components/Table/TableFilter";
 import { ColumnSelector } from "../../components/Table/ColumnSelector";
 import { useColumnVisibility, ColumnConfig } from "../../../application/hooks/useColumnVisibility";
 import { useFilterBy } from "../../../application/hooks/useFilterBy";
@@ -54,6 +67,8 @@ import type {
   IVirtualFolder,
   IVirtualFolderInput,
 } from "../../../domain/interfaces/i.virtualFolder";
+import { palette, radiusPx } from "../../themes/palette";
+import { toDateOnlyString } from "../../tools/isoDateToString";
 
 type PolicyColumnKey =
   "title" | "status" | "next_review" | "author" | "last_updated" | "updated_by" | "actions";
@@ -79,10 +94,17 @@ const PolicyManager: React.FC<PolicyManagerProps> = ({ tags: _tags }) => {
     isLoading,
     error: policiesError,
   } = usePolicies({ suppressGlobalErrorToast: true });
+  // Refetch when a policy request is decided from the approval requests modal.
+  usePolicyApprovalChangedListener();
+  const queryClient = useQueryClient();
+  const { data: folderCounts } = usePolicyFolderCounts();
   const deletePolicyMutation = useDeletePolicy();
   const [flashRowId, setFlashRowId] = useState<number | null>(null);
-  const { userRoleName } = useAuth();
-  const canRunBulkActions = !!userRoleName && allowedRoles.policies.edit.includes(userRoleName);
+  const can = useCanCheck();
+  // policy.edit gates bulk actions and folder actions (create folder, assign to folder).
+  const canEditPolicies = can("policy.edit");
+  // "Save as template" writes a template, so it follows the template routes' key.
+  const canManageTemplates = useCan("policyTemplate.edit");
 
   const [showLinkedObjectModal, setLinkedObjectsModalOpen] = useState(false);
   const [policyId, setSelectedPolicyId] = useState<number | null>(null);
@@ -140,9 +162,6 @@ const PolicyManager: React.FC<PolicyManagerProps> = ({ tags: _tags }) => {
   const [showAlert, setShowAlert] = useState(false);
   const [selectedStatus, setSelectedStatus] = useState<string | null>(null);
 
-  // GroupBy state
-  const { groupBy, groupSortOrder, handleGroupChange } = useGroupByState();
-
   // Navigate to editor page when coming from "Add new..." dropdown
   useEffect(() => {
     if (location.state?.openCreateModal) {
@@ -190,6 +209,58 @@ const PolicyManager: React.FC<PolicyManagerProps> = ({ tags: _tags }) => {
 
   const handleAddNewPolicy = () => {
     handleOpen();
+  };
+
+  // Save-as-template state (#5261): which policy is being templated and the
+  // name the user wants for the new organization template.
+  const [templateSourceId, setTemplateSourceId] = useState<number | null>(null);
+  const [templateName, setTemplateName] = useState("");
+  // policy_manager has no category, so the user picks one; the default is the
+  // same curated category the backend falls back to.
+  const [templateCategory, setTemplateCategory] = useState<string>(
+    PolicyTemplateCategory.Core_AI_Governance,
+  );
+  // Shown inside the modal (not as a page toast) so it is announced and the
+  // user can fix the name without losing what they typed.
+  const [templateError, setTemplateError] = useState<string | null>(null);
+  const createTemplateMutation = useCreatePolicyTemplateFromPolicy();
+
+  const handleSaveAsTemplate = (id: number) => {
+    const policy = policies.find((p) => Number(p.id) === id);
+    setTemplateName(policy ? `${policy.title} (template)` : "");
+    setTemplateCategory(PolicyTemplateCategory.Core_AI_Governance);
+    setTemplateError(null);
+    setTemplateSourceId(id);
+  };
+
+  const handleConfirmSaveAsTemplate = async () => {
+    if (templateSourceId === null) return;
+    setTemplateError(null);
+    try {
+      await createTemplateMutation.mutateAsync({
+        policy_id: templateSourceId,
+        name: templateName.trim() || undefined,
+        category: templateCategory,
+      });
+      setTemplateSourceId(null);
+      handleAlert({
+        variant: "success",
+        body: "The policy was saved as an organization template.",
+        setAlert,
+        alertTimeout: 4000,
+      });
+    } catch (err) {
+      // For a rejected request (4xx: name taken, invalid name, policy gone)
+      // show the server's reason; 5xx reasons are never shown.
+      const reason = isClientError(err)
+        ? (getApiErrorReason(err) ?? getClientErrorReason(err))
+        : null;
+      setTemplateError(
+        reason
+          ? reason.charAt(0).toUpperCase() + reason.slice(1)
+          : "Could not save the template. Please try again.",
+      );
+    }
   };
 
   const handleDelete = async (id: number) => {
@@ -258,6 +329,7 @@ const PolicyManager: React.FC<PolicyManagerProps> = ({ tags: _tags }) => {
         setAssignFolderPolicyId(null);
         setAssignFolderCurrentFolders([]);
         await refreshFolders();
+        queryClient.invalidateQueries({ queryKey: policyQueryKeys.folderCounts() });
         // Refresh folder filter if a folder is currently selected
         if (typeof selectedFolder === "number") {
           const updatedIds = await getPolicyIdsInFolder(selectedFolder);
@@ -281,7 +353,7 @@ const PolicyManager: React.FC<PolicyManagerProps> = ({ tags: _tags }) => {
         setAssignFolderSubmitting(false);
       }
     },
-    [assignFolderPolicyId, refreshFolders],
+    [assignFolderPolicyId, refreshFolders, queryClient],
   );
 
   // Handle policy card click to filter by status
@@ -299,10 +371,11 @@ const PolicyManager: React.FC<PolicyManagerProps> = ({ tags: _tags }) => {
     }
   }, []);
 
-  // Auto-dismiss info alert after 3 seconds with fade animation
+  // Show every alert; success and error alerts already clear themselves via
+  // handleAlert's timeout. Info alerts auto-dismiss after 3 seconds with a fade.
   useEffect(() => {
+    if (alert) setShowAlert(true);
     if (alert && alert.variant === "info") {
-      setShowAlert(true);
       const timer = setTimeout(() => {
         setShowAlert(false);
         setTimeout(() => setAlert(null), 300);
@@ -392,8 +465,12 @@ const PolicyManager: React.FC<PolicyManagerProps> = ({ tags: _tags }) => {
   );
 
   // FilterBy - Initialize hook
-  const { filterData: filterPolicyData, handleFilterChange: handlePolicyFilterChange } =
-    useFilterBy<PolicyManagerModel>(getPolicyFieldValue);
+  const {
+    filterData: filterPolicyData,
+    handleFilterChange: handlePolicyFilterChange,
+    conditions: policyFilterConditions,
+    logic: policyFilterLogic,
+  } = useFilterBy<PolicyManagerModel>(getPolicyFieldValue);
 
   // ✅ Filter + search using FilterBy
   const filteredPolicies = useMemo(() => {
@@ -418,33 +495,6 @@ const PolicyManager: React.FC<PolicyManagerProps> = ({ tags: _tags }) => {
 
     return result;
   }, [filterPolicyData, policies, selectedStatus, searchTerm, folderPolicyIds]);
-
-  // Define how to get the group key for each policy
-  const getPolicyGroupKey = useCallback(
-    (policy: PolicyManagerModel, field: string): string => {
-      switch (field) {
-        case "status":
-          return policy.status || "Unknown";
-        case "author":
-          if (policy.author_id) {
-            const user = users.find((u) => u.id === policy.author_id);
-            return user ? `${user.name} ${user.surname}`.trim() : "Unknown";
-          }
-          return "Unknown";
-        default:
-          return "Other";
-      }
-    },
-    [users],
-  );
-
-  // Apply grouping to filtered policies
-  const groupedPolicies = useTableGrouping({
-    data: filteredPolicies,
-    groupByField: groupBy,
-    sortOrder: groupSortOrder,
-    getGroupKey: getPolicyGroupKey,
-  });
 
   const standardTableColumns = useMemo(
     (): StandardColumn[] =>
@@ -522,7 +572,9 @@ const PolicyManager: React.FC<PolicyManagerProps> = ({ tags: _tags }) => {
       return {
         title: policy.title || "-",
         status: policy.status || "-",
-        next_review: policy.next_review_date ? formatDate(policy.next_review_date) : "-",
+        next_review: policy.next_review_date
+          ? formatDate(toDateOnlyString(policy.next_review_date))
+          : "-",
         author: authorName,
         last_updated: policy.last_updated_at ? formatDate(policy.last_updated_at) : "-",
         updated_by: updatedByName,
@@ -560,21 +612,19 @@ const PolicyManager: React.FC<PolicyManagerProps> = ({ tags: _tags }) => {
           spacing={4}
           sx={{ width: "100%" }}
         >
-          {/* Left side: Filter + Group + Search together */}
+          {/* Left side: Filter + Search together */}
           <Stack direction="row" spacing={2} alignItems="center">
             {/* FilterBy */}
             <div data-joyride-id="policy-status-filter">
-              <FilterBy columns={policyFilterColumns} onFilterChange={handlePolicyFilterChange} />
+              <TableFilter
+                columns={policyFilterColumns}
+                onFilterChange={handlePolicyFilterChange}
+                defaultConditions={policyFilterConditions}
+                defaultLogic={policyFilterLogic}
+                data={policies}
+                getFieldValue={getPolicyFieldValue}
+              />
             </div>
-
-            {/* Group By */}
-            <GroupBy
-              options={[
-                { id: "status", label: "Status" },
-                { id: "author", label: "Author" },
-              ]}
-              onGroupChange={handleGroupChange}
-            />
 
             {/* Column Selector */}
             <ColumnSelector
@@ -605,10 +655,12 @@ const PolicyManager: React.FC<PolicyManagerProps> = ({ tags: _tags }) => {
                 sx={{
                   "color": folderSidebarOpen ? "brand.primary" : "text.muted",
                   "padding": "4px",
-                  "borderRadius": "4px",
-                  "backgroundColor": folderSidebarOpen ? "#E6F4F1" : "transparent",
+                  "borderRadius": radiusPx.sm,
+                  "backgroundColor": folderSidebarOpen ? palette.accent.teal.bg : "transparent",
                   "&:hover": {
-                    backgroundColor: folderSidebarOpen ? "#D1EDE6" : "#F2F4F7",
+                    backgroundColor: folderSidebarOpen
+                      ? palette.brand.primaryLight
+                      : palette.background.hover,
                   },
                 }}
               >
@@ -621,7 +673,7 @@ const PolicyManager: React.FC<PolicyManagerProps> = ({ tags: _tags }) => {
               filename="policy-manager"
               title="Policy Manager"
             />
-            {canRunBulkActions && (
+            {canEditPolicies && (
               <Box data-joyride-id="add-policy-button">
                 <CustomizableButton
                   variant="contained"
@@ -647,9 +699,9 @@ const PolicyManager: React.FC<PolicyManagerProps> = ({ tags: _tags }) => {
               sx={{
                 "width": folderSidebarCollapsed ? 48 : 260,
                 "minWidth": folderSidebarCollapsed ? 48 : 260,
-                "backgroundColor": "#FAFBFC",
-                "border": "1px solid #d0d5dd",
-                "borderRadius": "4px",
+                "backgroundColor": palette.background.alt,
+                "border": `1px solid ${palette.border.dark}`,
+                "borderRadius": radiusPx.sm,
                 "overflow": "hidden",
                 "transition": "width 200ms ease, min-width 200ms ease",
                 // Override FolderTree's internal borderRight since this wrapper already has a full border
@@ -669,9 +721,11 @@ const PolicyManager: React.FC<PolicyManagerProps> = ({ tags: _tags }) => {
                   setCreateFolderOpen(true);
                 }}
                 loading={foldersLoading}
-                canManage
+                canManage={canEditPolicies}
                 collapsed={folderSidebarCollapsed}
                 onToggleCollapse={() => setFolderSidebarCollapsed((p) => !p)}
+                // No counts while they load or after they fail, rather than a 0 everywhere.
+                countByFolderId={folderCounts ?? null}
                 allLabel="All policies"
                 showUncategorized={false}
               />
@@ -732,35 +786,29 @@ const PolicyManager: React.FC<PolicyManagerProps> = ({ tags: _tags }) => {
                 </TableEmptyStateLayout>
               }
             >
-              <GroupedTableView
-                groupedData={groupedPolicies}
-                ungroupedData={filteredPolicies}
-                renderTable={(data, options) => (
-                  <PolicyTable
-                    data={data}
-                    onOpen={handleOpen}
-                    onDelete={handleDelete}
-                    onLinkedObjects={handleLinkedObject}
-                    onAssignToFolder={handleAssignToFolder}
-                    hidePagination={options?.hidePagination}
-                    flashRowId={flashRowId}
-                    visibleColumns={visibleColumns}
-                    canRunBulkActions={canRunBulkActions}
-                    onBulkActionSuccess={(action, count) => {
-                      handleAlert({
-                        variant: "success",
-                        title:
-                          action === "archive"
-                            ? `${count} polic${count === 1 ? "y" : "ies"} archived`
-                            : action === "set_reviewer"
-                              ? `Reviewer assigned to ${count} polic${count === 1 ? "y" : "ies"}`
-                              : `Tags updated on ${count} polic${count === 1 ? "y" : "ies"}`,
-                        body: "",
-                        setAlert,
-                      });
-                    }}
-                  />
-                )}
+              <PolicyTable
+                data={filteredPolicies}
+                onOpen={handleOpen}
+                onDelete={handleDelete}
+                onLinkedObjects={handleLinkedObject}
+                onAssignToFolder={canEditPolicies ? handleAssignToFolder : undefined}
+                onSaveAsTemplate={canManageTemplates ? handleSaveAsTemplate : undefined}
+                flashRowId={flashRowId}
+                visibleColumns={visibleColumns}
+                canRunBulkActions={canEditPolicies}
+                onBulkActionSuccess={(action, count) => {
+                  handleAlert({
+                    variant: "success",
+                    title:
+                      action === "archive"
+                        ? `${count} polic${count === 1 ? "y" : "ies"} archived`
+                        : action === "set_reviewer"
+                          ? `Reviewer assigned to ${count} polic${count === 1 ? "y" : "ies"}`
+                          : `Tags updated on ${count} polic${count === 1 ? "y" : "ies"}`,
+                    body: "",
+                    setAlert,
+                  });
+                }}
               />
             </ListStateWrapper>
           </Box>
@@ -773,6 +821,44 @@ const PolicyManager: React.FC<PolicyManagerProps> = ({ tags: _tags }) => {
             policyId={policyId}
             isOpen={showLinkedObjectModal}
           />
+        )}
+
+        {/* Save as template modal (#5261) */}
+        {templateSourceId !== null && (
+          <StandardModal
+            isOpen
+            onClose={() => setTemplateSourceId(null)}
+            title="Save as template"
+            description="Save this policy as a reusable template for your organization. It will appear under Policy templates → Our templates."
+            onSubmit={handleConfirmSaveAsTemplate}
+            submitButtonText="Save template"
+            isSubmitting={createTemplateMutation.isPending}
+            maxWidth="560px"
+          >
+            <Stack sx={{ gap: "16px" }}>
+              <Field
+                label="Template name"
+                placeholder="e.g. AI Accountability and Roles Policy"
+                value={templateName}
+                onChange={(e) => setTemplateName(e.target.value)}
+                isRequired
+              />
+              <Select
+                id="save-as-template-category"
+                label="Category"
+                value={templateCategory}
+                items={Object.values(PolicyTemplateCategory).map((value) => ({
+                  _id: value,
+                  name: value,
+                }))}
+                onChange={(e) => setTemplateCategory(String(e.target.value))}
+                isRequired
+              />
+              {templateError && (
+                <Alert variant="error" body={templateError} hasIcon={false} inline />
+              )}
+            </Stack>
+          </StandardModal>
         )}
 
         {/* Assign to Folder Modal */}

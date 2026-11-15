@@ -44,7 +44,7 @@ export const insightsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'This panel lists five AI tools with their risk score. Despite its title, it currently picks the five most recently seen tools rather than the five highest scores, and a tool without a score yet shows 0. It also shows the number of events recorded for each tool since it was first detected. The event total is not limited to the selected period. Click "Go to AI tools" to see the full tool list.',
+      text: 'This panel lists the five AI tools with the highest risk scores. Tools that have no score yet come last and show 0. It also shows the number of events recorded for each tool since it was first detected. The event total is not limited to the selected period. Click "Go to AI tools" to see the full tool list.',
     },
     {
       type: 'callout',

@@ -23,6 +23,8 @@ export interface CreateProjectFormErrors {
   projectTitle?: string;
   members?: string;
   owner?: string;
+  externalOwnerName?: string;
+  externalOwnerEmail?: string;
   startDate?: string;
   riskClassification?: string;
   typeOfHighRiskRole?: string;

@@ -28,6 +28,22 @@ const buildProject = (overrides: Partial<Project> = {}): Project =>
     ...overrides,
   }) as Project;
 
+vi.mock("./LinkedAiAppsCard", () => ({
+  default: () => <div data-testid="linked-ai-apps-card" />,
+}));
+
+describe("VWProjectOverview linked AI apps", () => {
+  it("shows the card on a use case", () => {
+    renderWithProviders(<VWProjectOverview project={buildProject()} />);
+    expect(screen.getByTestId("linked-ai-apps-card")).toBeInTheDocument();
+  });
+
+  it("leaves the card off an organizational project", () => {
+    renderWithProviders(<VWProjectOverview project={buildProject({ is_organizational: true })} />);
+    expect(screen.queryByTestId("linked-ai-apps-card")).toBeNull();
+  });
+});
+
 describe("VWProjectOverview approval banner", () => {
   it("explains why the tabs are disabled while the request is pending", () => {
     renderWithProviders(

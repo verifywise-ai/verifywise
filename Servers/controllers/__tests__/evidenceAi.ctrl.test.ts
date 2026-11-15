@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import { STATUS_CODE } from "../../utils/statusCode.utils";
+import { getTranslator } from "../../utils/i18n.utils";
 
 jest.mock("../../database/db", () => ({
   sequelize: {
@@ -61,6 +62,7 @@ function createReq(overrides?: Partial<Request>): any {
     organizationId: 1,
     params: { fileId: "42" },
     body: {},
+    t: getTranslator("en"),
     ...overrides,
   };
 }

@@ -5,7 +5,9 @@ export class ProjectModel {
   id?: number;
   uc_id?: string;
   project_title!: string;
-  owner!: number;
+  owner!: number | null;
+  external_owner_name?: string | null;
+  external_owner_email?: string | null;
   start_date!: Date;
   ai_risk_classification?: AiRiskClassification | null;
   high_risk_roles?: HighRiskRole[];
@@ -29,6 +31,8 @@ export class ProjectModel {
     this.uc_id = data.uc_id;
     this.project_title = data.project_title;
     this.owner = data.owner;
+    this.external_owner_name = data.external_owner_name;
+    this.external_owner_email = data.external_owner_email;
     this.start_date = data.start_date;
     this.ai_risk_classification = data.ai_risk_classification;
     this.high_risk_roles = data.high_risk_roles;

@@ -230,7 +230,7 @@ export async function calculateForFramework(req: Request, res: Response) {
       projectId,
     );
     if (controls.length === 0) {
-      return res.status(404).json(STATUS_CODE[404]("No controls found for framework"));
+      return res.status(404).json(STATUS_CODE[404](req.t!("No controls found for framework")));
     }
 
     const controlScores: Array<{

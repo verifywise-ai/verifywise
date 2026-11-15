@@ -12,19 +12,21 @@ import {
   NotificationType,
   NotificationEntityType,
   IEmailNotificationConfig,
+  IInAppNotificationInput,
 } from "../domain.layer/interfaces/i.notification";
 import { notificationService } from "./notificationService";
 import { EMAIL_TEMPLATES } from "../constants/emailTemplates";
 import { translate, type SupportedLang } from "../utils/i18n.utils";
 import { getUserLanguage } from "../utils/userPreference.utils";
 import { deadlineNoticeKey } from "../utils/deadline.utils";
+import { formatReviewDate } from "../utils/policyReviewDate.utils";
 
 /**
  * Build a frontend-compatible URL for a given entity type and id.
  * The frontend routes don't all follow a single `/:entityType/:id` pattern,
  * so each entity type is mapped to the actual route that exists.
  */
-const buildEntityUrl = (entityType: NotificationEntityType, entityId: number): string => {
+export const buildEntityUrl = (entityType: NotificationEntityType, entityId: number): string => {
   switch (entityType) {
     case NotificationEntityType.TASK:
       return `/tasks?taskId=${entityId}`;
@@ -51,6 +53,8 @@ const buildEntityUrl = (entityType: NotificationEntityType, entityId: number): s
       return `/shadow-ai/tools/${entityId}`;
     case NotificationEntityType.AI_GATEWAY:
       return `/ai-gateway/settings`;
+    case NotificationEntityType.AI_DETECTION_SCAN:
+      return `/ai-detection/scans/${entityId}`;
     case NotificationEntityType.COMMENT:
     case NotificationEntityType.USER:
     default:
@@ -58,17 +62,62 @@ const buildEntityUrl = (entityType: NotificationEntityType, entityId: number): s
   }
 };
 
+/** The email subject: fixed text, or its key translated into `lang`. */
+const emailSubject = (config: IEmailNotificationConfig, lang: string | undefined): string =>
+  config.subjectKey !== undefined
+    ? translate(lang, config.subjectKey, config.subjectVars)
+    : config.subject;
+
+/**
+ * Resolve the title/message keys of a notification into the recipient's
+ * language. The language is read at most once: from `input.lang` when the
+ * caller already has it, otherwise from the recipient's saved preference, and
+ * only when something is keyed.
+ */
+const localizeNotification = async (
+  input: IInAppNotificationInput,
+  emailConfig: IEmailNotificationConfig | undefined,
+): Promise<{ notification: ICreateNotification; lang: string | undefined }> => {
+  const {
+    lang: givenLang,
+    title,
+    titleKey,
+    titleVars,
+    message,
+    messageKey,
+    messageVars,
+    ...rest
+  } = input;
+  const keyed =
+    titleKey !== undefined || messageKey !== undefined || emailConfig?.subjectKey !== undefined;
+  const lang = givenLang ?? (keyed ? await getUserLanguage(input.user_id) : undefined);
+  return {
+    lang,
+    notification: {
+      ...rest,
+      title: titleKey !== undefined ? translate(lang, titleKey, titleVars) : title,
+      message: messageKey !== undefined ? translate(lang, messageKey, messageVars) : message,
+    },
+  };
+};
+
 /**
  * Send a notification to a user via both in-app storage and real-time SSE
- * Optionally also sends an email notification
+ * Optionally also sends an email notification. Keyed title, message and
+ * subject are translated into the recipient's saved language.
  */
 export const sendInAppNotification = async (
   organizationId: number,
-  notification: ICreateNotification,
+  input: IInAppNotificationInput,
   sendEmailNotification?: boolean,
   emailConfig?: IEmailNotificationConfig,
 ): Promise<INotificationJSON> => {
   try {
+    const { notification, lang } = await localizeNotification(
+      input,
+      sendEmailNotification ? emailConfig : undefined,
+    );
+
     // 1. Store notification in database
     const storedNotification = await createNotificationQuery(notification, organizationId);
 
@@ -95,7 +144,7 @@ export const sendInAppNotification = async (
         if (user?.email) {
           await notificationService.sendEmailWithTemplate(
             user.email,
-            emailConfig.subject,
+            emailSubject(emailConfig, lang),
             emailConfig.template,
             emailConfig.variables,
           );
@@ -151,9 +200,11 @@ export const sendBulkInAppNotifications = async (
       const users = await getUserEmails(bulk.user_ids);
       for (const user of users) {
         try {
+          const lang =
+            emailConfig.subjectKey !== undefined ? await getUserLanguage(user.id) : undefined;
           await notificationService.sendEmailWithTemplate(
             user.email,
-            emailConfig.subject,
+            emailSubject(emailConfig, lang),
             emailConfig.template,
             {
               ...emailConfig.variables,
@@ -739,8 +790,21 @@ export const notifyApprovalRequested = async (
   },
   requesterName: string,
   baseUrl: string,
+  /**
+   * The request's entity, when it is not a use case. For a policy, `useCase.id`
+   * is the approval request id: the notification names the policy and links
+   * to the approval workflows page opened on that request (the same
+   * `/approval-workflows?request=<id>` link the Home queue uses), where the
+   * approver decides.
+   */
+  entity?: { type: string; id: number },
 ): Promise<void> => {
   const approver = await getUserById(approverId);
+
+  const isPolicy = entity?.type === "policy";
+  const actionUrl = isPolicy
+    ? `/approval-workflows?request=${useCase.id}`
+    : buildEntityUrl(NotificationEntityType.USE_CASE, useCase.id);
 
   await sendInAppNotification(
     organizationId,
@@ -749,10 +813,10 @@ export const notifyApprovalRequested = async (
       type: NotificationType.APPROVAL_REQUESTED,
       title: `Approval requested - Step ${useCase.stepNumber}`,
       message: `${requesterName} needs your approval for: ${useCase.name}`,
-      entity_type: NotificationEntityType.USE_CASE,
-      entity_id: useCase.id,
+      entity_type: isPolicy ? NotificationEntityType.POLICY : NotificationEntityType.USE_CASE,
+      entity_id: isPolicy ? entity!.id : useCase.id,
       entity_name: useCase.name,
-      action_url: buildEntityUrl(NotificationEntityType.USE_CASE, useCase.id),
+      action_url: actionUrl,
       metadata: { stepNumber: useCase.stepNumber },
     },
     true,
@@ -766,7 +830,7 @@ export const notifyApprovalRequested = async (
         workflow_name: useCase.workflowName,
         step_number: String(useCase.stepNumber),
         total_steps: String(useCase.totalSteps),
-        approval_url: `${baseUrl}${buildEntityUrl(NotificationEntityType.USE_CASE, useCase.id)}`,
+        approval_url: `${baseUrl}${actionUrl}`,
       },
     },
   );
@@ -792,6 +856,8 @@ export const notifyApprovalComplete = async (
    * that don't pass it.
    */
   entityType?: string,
+  /** approval_requests.entity_id, for entity types whose link needs it (policy). */
+  entityId?: number,
 ): Promise<void> => {
   const requester = await getUserById(requesterId);
 
@@ -800,8 +866,22 @@ export const notifyApprovalComplete = async (
   // approval workflow, just add a row here.
   const labelFor = (
     et?: string,
-  ): { label: string; entity: NotificationEntityType; url: string } => {
+  ): { label: string; entity: NotificationEntityType; url: string; entityId?: number } => {
     switch (et) {
+      case "policy":
+        if (entityId) {
+          return {
+            label: "Policy",
+            entity: NotificationEntityType.POLICY,
+            url: buildEntityUrl(NotificationEntityType.POLICY, entityId),
+            entityId,
+          };
+        }
+        return {
+          label: "Policy",
+          entity: NotificationEntityType.POLICY,
+          url: `/policies`,
+        };
       case "ai_action":
         return {
           label: "AI action",
@@ -837,7 +917,7 @@ export const notifyApprovalComplete = async (
     }
   };
 
-  const { label, entity, url } = labelFor(entityType);
+  const { label, entity, url, entityId: linkedId } = labelFor(entityType);
 
   await sendInAppNotification(
     organizationId,
@@ -847,7 +927,7 @@ export const notifyApprovalComplete = async (
       title: `${label} fully approved`,
       message: `Your ${label.toLowerCase()} "${useCase.name}" has been fully approved`,
       entity_type: entity,
-      entity_id: useCase.id,
+      entity_id: linkedId ?? useCase.id,
       entity_name: useCase.name,
       action_url: url,
     },
@@ -925,23 +1005,34 @@ export const notifyApprovalStepOverdueEscalation = async (
   baseUrl: string,
 ): Promise<void> => {
   const escalationUser = await getUserById(escalationUserId);
-  const dueText = request.dueAt.toLocaleString("en-US", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-    timeZone: "UTC",
-    timeZoneName: "short",
-  });
+  // The in-app row is in the recipient's language, dates included; the email
+  // body stays English.
+  const lang = await getUserLanguage(escalationUserId);
+  const dueTextIn = (locale: string) =>
+    request.dueAt.toLocaleString(locale, {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      timeZone: "UTC",
+      timeZoneName: "short",
+    });
+  const dueText = dueTextIn("en-US");
 
   await sendInAppNotification(
     organizationId,
     {
       user_id: escalationUserId,
+      lang,
       type: NotificationType.APPROVAL_STEP_OVERDUE_ESCALATION,
-      title: "Approval step overdue",
-      message: `Step "${request.stepName}" of "${request.name}" was due ${dueText} and has been escalated to you`,
+      titleKey: "Approval step overdue",
+      messageKey: 'Step "{stepName}" of "{name}" was due {due} and has been escalated to you',
+      messageVars: {
+        stepName: request.stepName,
+        name: request.name,
+        due: dueTextIn(DATE_LOCALES[lang]),
+      },
       entity_type: NotificationEntityType.USE_CASE,
       entity_id: request.id,
       entity_name: request.name,
@@ -954,7 +1045,8 @@ export const notifyApprovalStepOverdueEscalation = async (
     true,
     {
       template: EMAIL_TEMPLATES.APPROVAL_STEP_OVERDUE,
-      subject: `Overdue approval escalated: ${request.name}`,
+      subjectKey: "Overdue approval escalated: {name}",
+      subjectVars: { name: request.name },
       variables: {
         escalation_user_name: escalationUser ? `${escalationUser.name}` : "there",
         request_name: request.name,
@@ -1059,6 +1151,7 @@ export const notifyRiskDeadlineDueSoon = async (
     organizationId,
     {
       user_id: recipientId,
+      lang,
       type: NotificationType.RISK_DEADLINE_DUE_SOON,
       title: translate(lang, "Risk deadline approaching"),
       message: translate(lang, 'Risk "{name}" is due {distance} ({date}).', {
@@ -1076,7 +1169,8 @@ export const notifyRiskDeadlineDueSoon = async (
     sendEmail
       ? {
           template: EMAIL_TEMPLATES.RISK_DEADLINE_DUE,
-          subject: `Risk deadline approaching: ${risk.name}`,
+          subjectKey: "Risk deadline approaching: {name}",
+          subjectVars: { name: risk.name },
           variables: {
             recipient_name: recipient ? `${recipient.name}` : "there",
             entity_kind: "Risk",
@@ -1120,6 +1214,7 @@ export const notifyModelRiskDueSoon = async (
     organizationId,
     {
       user_id: recipientId,
+      lang,
       type: NotificationType.MODEL_RISK_DUE_SOON,
       title: translate(lang, "Model risk target date approaching"),
       message: translate(lang, 'Model risk "{name}" is due {distance} ({date}).', {
@@ -1140,7 +1235,8 @@ export const notifyModelRiskDueSoon = async (
     sendEmail
       ? {
           template: EMAIL_TEMPLATES.RISK_DEADLINE_DUE,
-          subject: `Model risk target date approaching: ${modelRisk.name}`,
+          subjectKey: "Model risk target date approaching: {name}",
+          subjectVars: { name: modelRisk.name },
           variables: {
             recipient_name: recipient ? `${recipient.name}` : "there",
             entity_kind: "Model risk",
@@ -1156,43 +1252,60 @@ export const notifyModelRiskDueSoon = async (
 };
 
 /**
- * Notify policy due soon
+ * Remind a policy's owner or reviewer that its review is due soon or overdue
+ * (P-H3, P-M2). The in-app notice is the channel of record: it is stored
+ * first, and a failure to store it rejects, so the sweep leaves the policy
+ * unstamped and retries it the next day. The email is best-effort:
+ * sendInAppNotification logs and swallows its failure (e.g. no email
+ * configured, or no address), so it never blocks the reminder. Title,
+ * message and subject are keyed and reach the recipient in their language;
+ * the email body stays English.
+ *
+ * @param policy.reviewDate - The review day, "YYYY-MM-DD".
  */
-export const notifyPolicyDueSoon = async (
+export const notifyPolicyReviewReminder = async (
   organizationId: number,
-  adminId: number,
-  policy: {
-    id: number;
-    name: string;
-    projectName: string;
-    dueDate: string;
-  },
+  userId: number,
+  policy: { id: number; title: string; reviewDate: string },
+  kind: "due_soon" | "overdue",
   baseUrl: string,
 ): Promise<void> => {
-  const admin = await getUserById(adminId);
+  const user = await getUserById(userId);
+  const overdue = kind === "overdue";
+  const titleKey = overdue ? "Policy review overdue" : "Policy review due soon";
+  const messageKey = overdue
+    ? 'The review of policy "{title}" was due on {date}. Please review it as soon as you can.'
+    : 'The review of policy "{title}" is due on {date}.';
+  const subjectKey = overdue ? "Policy review overdue: {title}" : "Policy review due soon: {title}";
+  const policyPath = buildEntityUrl(NotificationEntityType.POLICY, policy.id);
+  const reviewDate = formatReviewDate(policy.reviewDate);
 
   await sendInAppNotification(
     organizationId,
     {
-      user_id: adminId,
-      type: NotificationType.POLICY_DUE_SOON,
-      title: "Policy due soon",
-      message: `Policy "${policy.name}" is due on ${policy.dueDate}`,
+      user_id: userId,
+      lang: await getUserLanguage(userId),
+      type: overdue ? NotificationType.POLICY_OVERDUE : NotificationType.POLICY_DUE_SOON,
+      titleKey,
+      messageKey,
+      messageVars: { title: policy.title, date: reviewDate },
       entity_type: NotificationEntityType.POLICY,
       entity_id: policy.id,
-      entity_name: policy.name,
-      action_url: buildEntityUrl(NotificationEntityType.POLICY, policy.id),
+      entity_name: policy.title,
+      action_url: policyPath,
     },
     true,
     {
-      template: EMAIL_TEMPLATES.POLICY_DUE_SOON,
-      subject: `Policy due soon: ${policy.name}`,
+      template: EMAIL_TEMPLATES.POLICY_REVIEW_REMINDER,
+      subjectKey,
+      subjectVars: { title: policy.title },
       variables: {
-        admin_name: admin ? `${admin.name}` : "Admin",
-        policy_name: policy.name,
-        project_name: policy.projectName,
-        due_date: policy.dueDate,
-        policy_url: `${baseUrl}${buildEntityUrl(NotificationEntityType.POLICY, policy.id)}`,
+        reminder_title: translate("en", titleKey),
+        reminder_message: translate("en", messageKey, { title: policy.title, date: reviewDate }),
+        recipient_name: user?.name || "there",
+        policy_name: policy.title,
+        review_date: reviewDate,
+        policy_url: `${baseUrl}${policyPath}`,
       },
     },
   );
@@ -1461,21 +1574,29 @@ export const notifyFileExpiring = async (
   baseUrl: string,
 ): Promise<void> => {
   const recipient = await getUserById(recipientId);
-
-  const daysRemainingLabel =
+  // The label is worded for the in-app row's language; the email body stays English.
+  const lang = await getUserLanguage(recipientId);
+  const daysRemainingIn = (l: string) =>
     file.daysRemaining <= 0
-      ? "expires today"
+      ? translate(l, "expires today")
       : file.daysRemaining === 1
-        ? "1 day"
-        : `${file.daysRemaining} days`;
+        ? translate(l, "1 day")
+        : translate(l, "{days} days", { days: file.daysRemaining });
+  const daysRemainingLabel = daysRemainingIn("en");
 
   await sendInAppNotification(
     organizationId,
     {
       user_id: recipientId,
+      lang,
       type: NotificationType.FILE_EXPIRING,
-      title: "File expiring soon",
-      message: `File "${file.name}" expires on ${file.expiryDate} (${daysRemainingLabel})`,
+      titleKey: "File expiring soon",
+      messageKey: 'File "{name}" expires on {expiryDate} ({daysRemaining})',
+      messageVars: {
+        name: file.name,
+        expiryDate: file.expiryDate,
+        daysRemaining: daysRemainingIn(lang),
+      },
       entity_type: NotificationEntityType.FILE,
       entity_id: file.id,
       entity_name: file.name,
@@ -1484,7 +1605,8 @@ export const notifyFileExpiring = async (
     true,
     {
       template: EMAIL_TEMPLATES.FILE_EXPIRING,
-      subject: `File expiring soon: ${file.name}`,
+      subjectKey: "File expiring soon: {name}",
+      subjectVars: { name: file.name },
       variables: {
         recipient_name: recipient ? `${recipient.name}` : "there",
         file_name: file.name,
@@ -1502,6 +1624,13 @@ export const notifyFileExpiring = async (
  * `noun` and `path` come from the entity's LifecycleEntityConfig, so AI apps
  * reuse this unchanged.
  */
+// One whole-sentence title per inventory noun: translating the noun on its own
+// would break gender agreement in German and French.
+const LIFECYCLE_TITLE_KEYS: Record<string, string> = {
+  "use case": "Is this use case still live?",
+  "AI app": "Is this AI app still live?",
+};
+
 export const notifyLifecycleConfirmationDue = async (
   organizationId: number,
   recipientId: number,
@@ -1517,14 +1646,17 @@ export const notifyLifecycleConfirmationDue = async (
   baseUrl: string,
 ): Promise<void> => {
   const recipient = await getUserById(recipientId);
+  const titleKey = LIFECYCLE_TITLE_KEYS[entry.noun];
 
   await sendInAppNotification(
     organizationId,
     {
       user_id: recipientId,
       type: NotificationType.LIFECYCLE_CONFIRMATION_DUE,
-      title: `Is this ${entry.noun} still live?`,
-      message: `"${entry.title}" has not been confirmed as live since ${entry.since}. Confirm it, or retire it if it is no longer in use.`,
+      ...(titleKey ? { titleKey } : { title: `Is this ${entry.noun} still live?` }),
+      messageKey:
+        '"{title}" has not been confirmed as live since {since}. Confirm it, or retire it if it is no longer in use.',
+      messageVars: { title: entry.title, since: entry.since },
       entity_type: entry.entityType,
       entity_id: entry.id,
       entity_name: entry.title,
@@ -1533,7 +1665,8 @@ export const notifyLifecycleConfirmationDue = async (
     true,
     {
       template: EMAIL_TEMPLATES.LIFECYCLE_CONFIRMATION_DUE,
-      subject: `Is "${entry.title}" still live?`,
+      subjectKey: 'Is "{title}" still live?',
+      subjectVars: { title: entry.title },
       variables: {
         recipient_name: recipient ? `${recipient.name}` : "there",
         entry_noun: entry.noun,
@@ -1547,7 +1680,56 @@ export const notifyLifecycleConfirmationDue = async (
 };
 
 /**
- * Notify training assigned
+ * One summary of the AI app assessments a bulk run left for this owner (#5258).
+ * Awaits the in-app row, which rejects if it can't be stored. The email joins
+ * the rate-limited queue un-awaited, at about 600ms each it would otherwise
+ * hold the request open, and its recipient is passed in so nothing touches the
+ * database once the response has gone.
+ */
+export const notifyAiAppAssessmentsAssigned = async (
+  organizationId: number,
+  owner: { id: number; name: string; email: string },
+  count: number,
+  requesterName: string,
+): Promise<void> => {
+  const title = `${count} AI app assessment${count === 1 ? "" : "s"} to complete`;
+  const actionUrl = "/ai-apps/assessments?assigned=me";
+
+  await sendInAppNotification(organizationId, {
+    user_id: owner.id,
+    type: NotificationType.ASSIGNMENT_OWNER,
+    title,
+    message: `${requesterName} asked you to complete the risk assessment for AI apps you own.`,
+    entity_type: NotificationEntityType.AI_APP,
+    action_url: actionUrl,
+  });
+
+  const baseUrl = process.env.FRONTEND_URL || "http://localhost:5173";
+  notificationService
+    .sendEmailWithTemplate(owner.email, title, EMAIL_TEMPLATES.AI_APP_ASSESSMENTS_ASSIGNED, {
+      summary_title: title,
+      recipient_name: owner.name || "there",
+      requester_name: requesterName,
+      assessments_url: `${baseUrl}${actionUrl}`,
+    })
+    .catch((error: unknown) => {
+      logger.error(
+        `Failed to email owner ${owner.id} about AI app assessments: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      );
+    });
+};
+
+/** The page where a trainee sees and completes their assignments. */
+const MY_TRAINING_PATH = "/training/my-training";
+
+/**
+ * Notify someone that a training was assigned to them (#5260). The in-app row
+ * is awaited, because under RLS enforcement a query issued after the response
+ * would run on the request's finished transaction. The email joins the
+ * rate-limited queue un-awaited, so it cannot hold the request open or fail it.
+ * `actionPath` is for callers whose recipient is not the trainee.
  */
 export const notifyTrainingAssigned = async (
   organizationId: number,
@@ -1558,39 +1740,96 @@ export const notifyTrainingAssigned = async (
     description?: string;
     duration?: string;
     dueDate?: string;
+    actionPath?: string;
   },
   assignerName: string,
   baseUrl: string,
 ): Promise<void> => {
   const user = await getUserById(userId);
+  const actionPath = training.actionPath ?? MY_TRAINING_PATH;
 
-  await sendInAppNotification(
-    organizationId,
-    {
-      user_id: userId,
-      type: NotificationType.TRAINING_ASSIGNED,
-      title: "Training assigned",
-      message: `${assignerName} assigned you to training: ${training.name}`,
-      entity_type: NotificationEntityType.TRAINING,
-      entity_id: training.id,
-      entity_name: training.name,
-      action_url: buildEntityUrl(NotificationEntityType.TRAINING, training.id),
-    },
-    true,
-    {
-      template: EMAIL_TEMPLATES.TRAINING_ASSIGNED,
-      subject: `Training assigned: ${training.name}`,
-      variables: {
-        trainee_name: user ? `${user.name}` : "User",
+  await sendInAppNotification(organizationId, {
+    user_id: userId,
+    type: NotificationType.TRAINING_ASSIGNED,
+    title: "Training assigned",
+    message: `${assignerName} assigned you to training: ${training.name}`,
+    entity_type: NotificationEntityType.TRAINING,
+    entity_id: training.id,
+    entity_name: training.name,
+    action_url: actionPath,
+  });
+
+  if (!user?.email) return;
+  notificationService
+    .sendEmailWithTemplate(
+      user.email,
+      `Training assigned: ${training.name}`,
+      EMAIL_TEMPLATES.TRAINING_ASSIGNED,
+      {
+        trainee_name: user.name,
         assigner_name: assignerName,
         training_name: training.name,
         training_description: training.description || "No description provided",
         training_duration: training.duration || "Not specified",
         training_due_date: training.dueDate || "No due date",
-        training_url: `${baseUrl}${buildEntityUrl(NotificationEntityType.TRAINING, training.id)}`,
+        training_url: `${baseUrl}${actionPath}`,
       },
+    )
+    .catch((error: unknown) => {
+      logger.error(
+        `Failed to email user ${userId} about training ${training.id}: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      );
+    });
+};
+
+/**
+ * Remind someone about an open training assignment (#5260). Rejects when the
+ * email fails, so the sweep leaves the assignment unstamped and retries it.
+ * sendInAppNotification swallows email errors, so the email is sent here, and
+ * first: a retry after a failed email then adds no second in-app notice.
+ */
+export const notifyTrainingReminder = async (
+  organizationId: number,
+  userId: number,
+  training: { id: number; name: string; dueDate: string },
+  kind: "due_soon" | "overdue",
+  baseUrl: string,
+): Promise<void> => {
+  const user = await getUserById(userId);
+  if (!user?.email) throw new Error(`User ${userId} has no email address`);
+
+  const overdue = kind === "overdue";
+  const title = overdue ? "Training overdue" : "Training due soon";
+  const message = overdue
+    ? `This training was due on ${training.dueDate}. Please complete it as soon as you can.`
+    : `This training is due on ${training.dueDate}.`;
+
+  await notificationService.sendEmailWithTemplate(
+    user.email,
+    `${title}: ${training.name}`,
+    EMAIL_TEMPLATES.TRAINING_REMINDER,
+    {
+      reminder_title: title,
+      reminder_message: message,
+      trainee_name: user.name,
+      training_name: training.name,
+      training_due_date: training.dueDate,
+      training_url: `${baseUrl}${MY_TRAINING_PATH}`,
     },
   );
+
+  await sendInAppNotification(organizationId, {
+    user_id: userId,
+    type: overdue ? NotificationType.TRAINING_OVERDUE : NotificationType.TRAINING_DUE_SOON,
+    title,
+    message: `${training.name}: ${message}`,
+    entity_type: NotificationEntityType.TRAINING,
+    entity_id: training.id,
+    entity_name: training.name,
+    action_url: MY_TRAINING_PATH,
+  });
 };
 
 // Helper functions
@@ -1791,6 +2030,44 @@ function buildEntityContextHtml(context?: AssignmentEntityContext): string {
   return `<table style="width: 100%; border-collapse: collapse; margin-bottom: 8px;">${rows.join("")}</table>`;
 }
 
+/** An assignment link: absolute URLs as they are, relative ones on `baseUrl`. */
+const buildAssignmentUrl = (entityUrl: string, baseUrl: string): string =>
+  entityUrl.startsWith("http")
+    ? entityUrl
+    : `${baseUrl}${entityUrl.startsWith("/") ? "" : "/"}${entityUrl}`;
+
+/**
+ * Shared scaffolding of the assignment notifications: look up the assignee
+ * (skip with a warning when missing), run `send`, log what it returns, and
+ * never throw, since notifications must not break the main flow.
+ */
+const sendAssignmentNotification = async (
+  assigneeId: number,
+  send: (assignee: { name: string; surname: string; email: string }) => Promise<string>,
+): Promise<void> => {
+  try {
+    const assignee = await getUserById(assigneeId);
+    if (!assignee) {
+      logger.warn(`Cannot send assignment notification: user ${assigneeId} not found`);
+      return;
+    }
+
+    const sent = await send(assignee);
+
+    // The values are interpolated into the message here rather than passed as
+    // printf arguments: winston is configured without format.splat(), so a
+    // stray %s or %d in caller-supplied data (assigneeId reaches here from a
+    // request body) is printed literally instead of being treated as a
+    // format specifier.
+    logger.info(`📧 Assignment notification sent to user ${assigneeId} ${sent}`);
+  } catch (error) {
+    logger.error(
+      `Failed to send assignment notification to user ${assigneeId}: ${error instanceof Error ? error.message : String(error)}`,
+    );
+    // Don't rethrow - notifications should not break the main flow
+  }
+};
+
 /**
  * Notify a user when they are assigned to an entity
  *
@@ -1814,23 +2091,15 @@ export const notifyUserAssigned = async (
   assignerName: string,
   baseUrl: string,
   entityContext?: AssignmentEntityContext,
-): Promise<void> => {
-  try {
-    const assignee = await getUserById(assigneeId);
-    if (!assignee) {
-      logger.warn(`Cannot send assignment notification: user ${assigneeId} not found`);
-      return;
-    }
-
+): Promise<void> =>
+  sendAssignmentNotification(assigneeId, async (assignee) => {
     const displayEntityType =
       ENTITY_TYPE_DISPLAY_LABELS[assignment.entityType] || assignment.entityType;
     const notificationType = getNotificationTypeForRole(assignment.roleType);
     const notificationEntityType = getNotificationEntityType(assignment.entityType);
 
     // Build full URL
-    const fullUrl = assignment.entityUrl.startsWith("http")
-      ? assignment.entityUrl
-      : `${baseUrl}${assignment.entityUrl.startsWith("/") ? "" : "/"}${assignment.entityUrl}`;
+    const fullUrl = buildAssignmentUrl(assignment.entityUrl, baseUrl);
 
     // Build entity context HTML for email
     const entityContextHtml = buildEntityContextHtml(entityContext);
@@ -1872,18 +2141,101 @@ export const notifyUserAssigned = async (
       },
     );
 
-    // The values are interpolated into the message here rather than passed as
-    // printf arguments: winston is configured without format.splat(), so a
-    // stray %s or %d in caller-supplied data (assigneeId reaches here from a
-    // request body) is printed literally instead of being treated as a
-    // format specifier.
-    logger.info(
-      `📧 Assignment notification sent to user ${assigneeId} as ${assignment.roleType} for ${assignment.entityType} ${assignment.entityId}`,
+    return `as ${assignment.roleType} for ${assignment.entityType} ${assignment.entityId}`;
+  });
+
+/** Items listed in a multi-item assignment notice before "and <k> more". */
+export const ASSIGNED_MANY_LIST_LIMIT = 20;
+
+/**
+ * The words of a multi-item assignment notice, chosen by the caller. The keys
+ * are translated into the recipient's language; the email body stays English.
+ */
+export interface AssignedManyTexts {
+  /** Title and email subject. Vars: {count}. */
+  titleKey: string;
+  /** Message listing every item. Vars: {assigner}, {count}, {names}. */
+  messageKey: string;
+  /** Message when the list is cut. Vars: {assigner}, {count}, {names}, {more}. */
+  messageMoreKey: string;
+  /** Plural noun for the English email body, e.g. "risks". */
+  itemsLabel: string;
+  /** English email line on what the role means for these items. */
+  roleDescription: string;
+}
+
+/**
+ * Notify a user once when a bulk action assigns them to several items of one
+ * kind (e.g. a bulk set owner on risks): one in-app notification and one
+ * assignment email listing the items, instead of one per item. Same
+ * notification type, entity type and email template as notifyUserAssigned.
+ *
+ * @param assignment.entityUrl - Link to the list page, e.g. "/risk-management"
+ */
+export const notifyUserAssignedMany = async (
+  organizationId: number,
+  assigneeId: number,
+  assignment: {
+    entityType: string;
+    items: Array<{ id: number; name: string }>;
+    roleType: AssignmentRoleType;
+    entityUrl: string;
+    texts: AssignedManyTexts;
+  },
+  assignerName: string,
+  baseUrl: string,
+): Promise<void> =>
+  sendAssignmentNotification(assigneeId, async (assignee) => {
+    const { texts } = assignment;
+    const count = assignment.items.length;
+    const shown = assignment.items.slice(0, ASSIGNED_MANY_LIST_LIMIT).map((item) => item.name);
+    const more = count - shown.length;
+    const names = shown.join(", ");
+
+    // The item names are user text: escaped here, since *_html variables are
+    // inserted into the email as is.
+    const itemStyle = `color: ${emailColorTokens.colorTextSecondary}; font-size: 13px; margin-bottom: 4px;`;
+    const listItems = shown.map((name) => `<li style="${itemStyle}">${escapeHtml(name)}</li>`);
+    if (more > 0) listItems.push(`<li style="${itemStyle}">and ${more} more</li>`);
+    const listHtml = `<ul style="margin: 0 0 8px 0; padding-left: 20px;">${listItems.join("")}</ul>`;
+
+    await sendInAppNotification(
+      organizationId,
+      {
+        user_id: assigneeId,
+        type: getNotificationTypeForRole(assignment.roleType),
+        titleKey: texts.titleKey,
+        titleVars: { count },
+        ...(more > 0
+          ? {
+              messageKey: texts.messageMoreKey,
+              messageVars: { assigner: assignerName, count, names, more },
+            }
+          : {
+              messageKey: texts.messageKey,
+              messageVars: { assigner: assignerName, count, names },
+            }),
+        entity_type: getNotificationEntityType(assignment.entityType),
+        action_url: assignment.entityUrl,
+      },
+      true,
+      {
+        template: EMAIL_TEMPLATES.ASSIGNMENT_NOTIFICATION,
+        subjectKey: texts.titleKey,
+        subjectVars: { count },
+        variables: {
+          recipient_name: assignee.name || "User",
+          assigner_name: assignerName,
+          role_type: assignment.roleType,
+          entity_type: texts.itemsLabel,
+          entity_name: `${count} ${texts.itemsLabel}`,
+          entity_url: buildAssignmentUrl(assignment.entityUrl, baseUrl),
+          assignment_date: formatAssignmentDate(),
+          role_description: texts.roleDescription,
+          entity_context_html: listHtml,
+        },
+      },
     );
-  } catch (error) {
-    logger.error(
-      `Failed to send assignment notification to user ${assigneeId}: ${error instanceof Error ? error.message : String(error)}`,
-    );
-    // Don't rethrow - notifications should not break the main flow
-  }
-};
+
+    return `as ${assignment.roleType} for ${count} ${assignment.entityType} items`;
+  });

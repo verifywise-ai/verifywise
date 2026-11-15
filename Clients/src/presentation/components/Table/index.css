@@ -21,16 +21,47 @@
 .MuiTable-root .MuiTableBody-root .MuiTableRow-root:last-child .MuiTableCell-root {
   border: none;
 }
+/* Phase 1: the last body row has no divider, so draw one above the paginator. */
+:root[data-ui-style="phase1"]
+  .MuiTable-root
+  .MuiTableFooter-root
+  .MuiTableRow-root:first-child
+  .MuiTableCell-root {
+  border-top: 1px solid var(--vw-border-light, #d1d5d5);
+}
 
-.MuiTable-root .MuiTableHead-root .MuiTableCell-root,
 .MuiTable-root .MuiTableBody-root .MuiTableCell-root {
   font-size: 13px;
 }
-.MuiTable-root .MuiTableHead-root .MuiTableCell-root {
-  padding: 12px 10px;
-  font-weight: 400;
+/* Phase 1: figures line up in columns. */
+:root[data-ui-style="phase1"] .MuiTable-root .MuiTableBody-root .MuiTableCell-root {
+  font-variant-numeric: tabular-nums;
 }
-.MuiTable-root .MuiTableHead-root span {
+/* Header values come from themes/cssVars.ts so they follow the interface style. */
+.MuiTable-root .MuiTableHead-root .MuiTableCell-root {
+  font-size: var(--vw-table-head-size, 13px);
+  padding: var(--vw-table-head-padding, 12px 10px);
+  font-weight: var(--vw-table-head-weight, 400);
+  letter-spacing: var(--vw-table-head-tracking, normal);
+}
+/* Select-all cells are 40px wide: the header padding above would squeeze the
+   checkbox to half its width. Kept separate so a browser without :has() only
+   loses this override, not the header padding. */
+.MuiTable-root .MuiTableHead-root .MuiTableCell-root:has(.MuiCheckbox-root) {
+  padding: 0;
+}
+/* Phase 1: many tables wrap header labels in a Typography with its own size;
+   let the label take the 11px header size and tracking from the cell. */
+:root[data-ui-style="phase1"]
+  .MuiTable-root
+  .MuiTableHead-root
+  .MuiTableCell-root
+  .MuiTypography-root {
+  font-size: inherit;
+  letter-spacing: inherit;
+}
+/* Sort-icon wrappers; the select-all checkbox is a span too and must not be clipped. */
+.MuiTable-root .MuiTableHead-root span:not(.MuiCheckbox-root, .MuiCheckbox-root *) {
   display: inline-block;
   height: 17px;
   width: 20px;
@@ -38,7 +69,7 @@
   margin-bottom: -3px;
   margin-left: 3px;
 }
-.MuiTable-root .MuiTableHead-root span svg {
+.MuiTable-root .MuiTableHead-root span:not(.MuiCheckbox-root) svg {
   width: 20px;
   height: 20px;
 }
@@ -50,7 +81,7 @@
 }
 
 .MuiPaper-root + .MuiPagination-root {
-  border-radius: 4px;
+  border-radius: var(--vw-radius-sm, 4px);
   padding: 16px 24px;
 }
 .MuiPaper-root + .MuiPagination-root ul {

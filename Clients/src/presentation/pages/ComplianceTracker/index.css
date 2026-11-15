@@ -16,9 +16,9 @@
   min-width: 30%;
   width: 100%;
   height: 64px;
-  border-radius: 4px;
+  border-radius: var(--vw-radius-sm, 4px);
   background-color: #fff;
-  border: 1px solid #eaecf0;
+  border: 1px solid var(--vw-border-light, #eaecf0);
   display: flex;
   flex-direction: column;
   align-items: start;
@@ -31,7 +31,7 @@
 .metric-card .metric-card-name {
   font-size: 12px;
   font-weight: 400;
-  color: #8594ac;
+  color: var(--vw-text-accent, #8594ac);
 }
 
 .metric-card .metric-card-amount {
@@ -48,10 +48,10 @@
 
 .new-compliance-tracker-details .new-compliance-tracker-details-accordion {
   margin-top: 9px;
-  border: 1px solid #eaecf0;
+  border: 1px solid var(--vw-border-light, #eaecf0);
   width: 100%;
   margin-left: 1.5px;
-  border-radius: 4px;
+  border-radius: var(--vw-radius-sm, 4px);
   overflow: hidden;
   position: relative;
   margin: 0;
@@ -69,7 +69,7 @@
 }
 
 .new-compliance-tracker-details-accordion .new-compliance-tracker-details-accordion-summary {
-  background-color: #fafafa;
+  background-color: var(--vw-background-alt, #fafafa);
   padding: 10px;
   flex-direction: row-reverse;
   height: 64;

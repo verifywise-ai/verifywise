@@ -24,7 +24,9 @@ export interface ProjectResponseDTO {
   id: number;
   uc_id?: string;
   project_title: string;
-  owner: number;
+  owner: number | null;
+  external_owner_name?: string | null;
+  external_owner_email?: string | null;
   members: string[] | number[]; // Can be IDs or names depending on API
   start_date: string; // ISO date string from API
   ai_risk_classification: number | string | null; // Can be number, enum string, or null

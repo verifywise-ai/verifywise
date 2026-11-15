@@ -8,6 +8,7 @@ import {
 } from "../../../../application/repository/intakeForm.repository";
 import type { SecondReview, SubmissionRouting } from "../types";
 import { serverErrorMessage } from "./serverErrorMessage";
+import { radiusPx } from "../../../themes/palette";
 
 const NOTE_MAX = 2000;
 
@@ -67,7 +68,7 @@ const SecondReviewPanel = ({
       data-testid="second-review-panel"
       sx={{
         border: `1px solid ${theme.palette.border.dark}`,
-        borderRadius: "4px",
+        borderRadius: radiusPx.sm,
         p: "16px",
         display: "flex",
         flexDirection: "column",

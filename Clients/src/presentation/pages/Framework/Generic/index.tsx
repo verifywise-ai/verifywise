@@ -10,6 +10,10 @@
  *   1. As a page at route /projects/:projectId/framework/:frameworkId.
  *   2. Embedded inside another component (e.g. ProjectFrameworks) by
  *      passing `projectId` and `frameworkId` as props.
+ *
+ * Imported frameworks (#5254) use the same page with `source="imported"` and
+ * the use case's link id: the tree, impl and status calls then go to
+ * /v1/imported-framework-assessments/links/:linkId/... instead.
  */
 
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -33,10 +37,11 @@ import Alert from "../../../components/Alert";
 import { AlertProps } from "../../../types/alert.types";
 import { handleAlert } from "../../../../application/tools/alertUtils";
 import { useAuth } from "../../../../application/hooks/useAuth";
-import allowedRoles from "../../../../application/constants/permissions";
+import { useCanCheck } from "../../../../application/hooks/useCan";
 import { StatsCard } from "../../../components/Cards/StatsCard";
 import { pluralizeEntityType } from "../../../tools/pluralizeEntityType";
 import { isCompletedStatus } from "../../../../domain/types/Status";
+import { importedAssessmentPaths } from "../../../../application/repository/importedFrameworkAssessment.repository";
 import { styles } from "./style";
 
 interface FrameworkMeta {
@@ -58,6 +63,10 @@ interface TreeNode {
   evidence_examples?: string[] | null;
   status?: string | null;
   order_no?: number | null;
+  /** Imported frameworks only: removed from the source file but kept for its data. */
+  retired?: boolean;
+  /** Imported frameworks only: topic/subtopic number from the spreadsheet. */
+  number?: string | null;
   children?: TreeNode[];
 }
 
@@ -83,6 +92,10 @@ interface SelectedRow {
 interface GenericFrameworkProps {
   projectId?: number;
   frameworkId?: number;
+  /** "imported" renders an organization-imported framework attached to a use case. */
+  source?: "bundled" | "imported";
+  /** projects_imported_frameworks id; required when source is "imported". */
+  linkId?: number;
 }
 
 const STATUS_OPTIONS = [
@@ -96,15 +109,37 @@ const STATUS_OPTIONS = [
   { label: "Needs rework", value: "Needs rework" },
 ];
 
+/**
+ * Shown after an imported topic/subtopic that is no longer in the source file
+ * but is kept because it already holds assessment data.
+ */
+const RetiredMarker = () => (
+  <Typography
+    component="span"
+    fontSize={12}
+    sx={{ color: "text.secondary", marginLeft: "8px" }}
+    title="Removed from the imported file. Kept because it has assessment data."
+  >
+    Retired
+  </Typography>
+);
+
 const GenericFramework = ({
   projectId: propProjectId,
   frameworkId: propFrameworkId,
+  source = "bundled",
+  linkId,
 }: GenericFrameworkProps = {}) => {
   const params = useParams<{ frameworkId: string; projectId: string }>();
-  const { userId, userRoleName } = useAuth();
+  const { userId } = useAuth();
+  const can = useCanCheck();
 
   const fwIdNum = propFrameworkId ?? (params.frameworkId ? parseInt(params.frameworkId, 10) : NaN);
   const projectIdNum = propProjectId ?? (params.projectId ? parseInt(params.projectId, 10) : NaN);
+  const isImported = source === "imported";
+  const linkIdNum = linkId ?? NaN;
+  // Imported impl rows live under the link, not under a framework id.
+  const implBaseUrl = isImported ? importedAssessmentPaths.impl(linkIdNum) : undefined;
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -119,7 +154,10 @@ const GenericFramework = ({
   const [searchTerm, setSearchTerm] = useState("");
 
   const fetchTree = useCallback(async () => {
-    if (!Number.isFinite(fwIdNum) || !Number.isFinite(projectIdNum)) {
+    const hasValidIds = isImported
+      ? Number.isFinite(linkIdNum) && Number.isFinite(projectIdNum)
+      : Number.isFinite(fwIdNum) && Number.isFinite(projectIdNum);
+    if (!hasValidIds) {
       setError("Invalid framework or project id");
       setLoading(false);
       return;
@@ -128,10 +166,19 @@ const GenericFramework = ({
     setError(null);
     try {
       const response = await getEntityById({
-        routeUrl: `/frameworks/${fwIdNum}/tree/${projectIdNum}`,
+        routeUrl: isImported
+          ? importedAssessmentPaths.tree(linkIdNum)
+          : `/frameworks/${fwIdNum}/tree/${projectIdNum}`,
       });
       if (response?.data) {
-        setData(response.data as TreeResponse);
+        const tree = response.data as TreeResponse;
+        setData(tree);
+        // An imported framework has a single group node (the framework itself):
+        // open it so its topics show without an extra click.
+        if (isImported && tree.tree?.length === 1) {
+          const onlyId = tree.tree[0].id;
+          setExpanded((prev) => (prev === false ? onlyId : prev));
+        }
       } else {
         setError("Empty response");
       }
@@ -140,7 +187,7 @@ const GenericFramework = ({
     } finally {
       setLoading(false);
     }
-  }, [fwIdNum, projectIdNum]);
+  }, [fwIdNum, projectIdNum, isImported, linkIdNum]);
 
   useEffect(() => {
     fetchTree();
@@ -174,9 +221,11 @@ const GenericFramework = ({
     return {
       completed,
       total,
-      title: pluralizeEntityType(data.framework.entity_types.l2_impl),
+      title: isImported
+        ? "Topics and subtopics"
+        : pluralizeEntityType(data.framework.entity_types.l2_impl),
     };
-  }, [data]);
+  }, [data, isImported]);
 
   const drawerProps = useMemo(() => {
     if (!selected || !data) return null;
@@ -185,9 +234,15 @@ const GenericFramework = ({
         ? data.framework.entity_types.l2_impl
         : data.framework.entity_types.l3_impl || "";
     // Matches NotesAttachedToEnum values in Servers/domain.layer/models/notes/notes.model.ts.
-    const notesAttachedTo = `${data.framework.framework_type.toUpperCase()}_${entityType.toUpperCase()}`;
+    // That enum has no imported-framework values, so imported rows get no Notes tab.
+    const notesAttachedTo = isImported
+      ? undefined
+      : `${data.framework.framework_type.toUpperCase()}_${entityType.toUpperCase()}`;
     return {
-      frameworkId: data.framework.id,
+      // Imported: 0 keeps the risk picker on this use case's risks (framework id 1
+      // would switch it to the organization-wide EU AI Act list).
+      frameworkId: isImported ? 0 : data.framework.id,
+      implBaseUrl,
       frameworkType: data.framework.framework_type,
       entityType,
       level: selected.level,
@@ -200,7 +255,7 @@ const GenericFramework = ({
       evidenceExamples: selected.node.evidence_examples,
       notesAttachedTo,
     };
-  }, [selected, data, projectIdNum]);
+  }, [selected, data, projectIdNum, isImported, implBaseUrl]);
 
   const handleAccordionChange =
     (panel: number) => (_: React.SyntheticEvent, isExpanded: boolean) => {
@@ -246,6 +301,7 @@ const GenericFramework = ({
       implId: node.impl_id,
       newStatus,
       userId: userId || 1,
+      implBaseUrl,
     });
     if (success) {
       // Patch only the changed row in local state. Avoids the whole-tree
@@ -323,12 +379,19 @@ const GenericFramework = ({
       if (!isThreeLevel && !l2Matches) return;
 
       const l2Num = l2.order_no ?? l2Index + 1;
-      const l2Label = `${l1Prefix}.${l2Num}`;
+      // Imported rows carry the number from the spreadsheet ("1", "1.2"); the
+      // group node above them is the framework itself, not a numbered section.
+      const l2Label = isImported ? (l2.number ?? `${l2Num}`) : `${l1Prefix}.${l2Num}`;
       rows.push({ kind: "l2", node: l2, label: l2Label });
 
       l3Filtered.forEach((l3, l3Index) => {
         const l3Num = l3.order_no ?? l3Index + 1;
-        rows.push({ kind: "l3", node: l3, label: `${l2Label}.${l3Num}` });
+        const l3Label = `${l2Label}.${l3Num}`;
+        rows.push({
+          kind: "l3",
+          node: l3,
+          label: isImported ? (l3.number ?? l3Label) : l3Label,
+        });
       });
     });
 
@@ -356,13 +419,13 @@ const GenericFramework = ({
               >
                 <Typography fontSize={13}>
                   {row.label} {row.node.title}
+                  {row.node.retired && <RetiredMarker />}
                 </Typography>
                 <StatusDropdown
                   currentStatus={row.node.status ?? "Not started"}
                   onStatusChange={(newStatus) => handleStatusChange("l3", row.node, newStatus)}
                   size="small"
-                  allowedRoles={allowedRoles.frameworks.edit}
-                  userRole={userRoleName}
+                  canEdit={can("framework.edit")}
                 />
               </Stack>
             );
@@ -375,13 +438,13 @@ const GenericFramework = ({
             >
               <Typography fontSize={13}>
                 {row.label} {row.node.title}
+                {row.node.retired && <RetiredMarker />}
               </Typography>
               <StatusDropdown
                 currentStatus={row.node.status ?? "Not started"}
                 onStatusChange={(newStatus) => handleStatusChange("l2", row.node, newStatus)}
                 size="small"
-                allowedRoles={allowedRoles.frameworks.edit}
-                userRole={userRoleName}
+                canEdit={can("framework.edit")}
               />
             </Stack>
           );

@@ -48,6 +48,15 @@ jest.mock("../../services/policies/policyExporter", () => ({
   generateFilename: jest.fn(),
 }));
 
+jest.mock("../../utils/policyStatus.utils", () => ({
+  assertPoliciesCanBeArchived: jest.fn<any>().mockResolvedValue(undefined),
+  assertPolicyStatusChange: jest.fn(),
+  assertPolicyUpdateAllowed: jest.fn<any>().mockResolvedValue(null),
+}));
+
+jest.mock("../../services/policies/policyApproval.service", () => ({
+  rejectPendingPolicyRequestOnDelete: jest.fn<any>().mockResolvedValue(null),
+}));
 jest.mock("../../services/policies/policyImporter", () => ({
   convertDocxToHtml: jest.fn(),
   DOCX_ALLOWED_MIMES: [],
@@ -75,6 +84,7 @@ import {
   bulkSetPoliciesTagsQuery,
 } from "../../utils/policyManager.utils";
 import { parseBulkIds, assertOrgOwnsIds, withBulkTransaction } from "../../utils/bulkAction.utils";
+import { assertPoliciesCanBeArchived } from "../../utils/policyStatus.utils";
 import {
   ForbiddenException,
   ValidationException,
@@ -134,7 +144,7 @@ describe("bulkUpdatePolicies", () => {
     expect(mockAssertOrgOwnsIds).toHaveBeenCalledWith(
       expect.objectContaining({ table: "policy_manager", ids: [1, 2, 3], organizationId: 4 }),
     );
-    expect(mockArchive).toHaveBeenCalledWith(4, [1, 2, 3], 9, expect.anything());
+    expect(mockArchive).toHaveBeenCalledWith(4, [1, 2, 3], 9, expect.anything(), undefined);
     expect(mockSetReviewer).not.toHaveBeenCalled();
     expect(mockSetTags).not.toHaveBeenCalled();
     expect(res.status).toHaveBeenCalledWith(200);
@@ -144,13 +154,68 @@ describe("bulkUpdatePolicies", () => {
     });
   });
 
+  it("checks the archive status gate inside the bulk transaction before archiving", async () => {
+    const tx = { id: "tx" };
+    mockWithBulkTransaction.mockImplementationOnce(async (_options: any, handler: any) =>
+      handler(tx),
+    );
+    const locked = [
+      { id: 1, status: "Draft" },
+      { id: 2, status: "Archived" },
+    ];
+    (assertPoliciesCanBeArchived as jest.Mock<any>).mockResolvedValueOnce(locked);
+    const req = createReq({ ids: [1, 2], action: "archive" });
+    const res = createRes();
+
+    await PolicyController.bulkUpdatePolicies(req as Request, res as Response);
+
+    expect(assertPoliciesCanBeArchived).toHaveBeenCalledWith(4, [1, 2], tx);
+    // The statuses read under the lock reach the history writer.
+    expect(mockArchive).toHaveBeenCalledWith(4, [1, 2], 9, tx, locked);
+    const gateOrder = (assertPoliciesCanBeArchived as jest.Mock).mock.invocationCallOrder[0];
+    expect(gateOrder).toBeLessThan(mockArchive.mock.invocationCallOrder[0]);
+  });
+
+  it("returns 400 with the gate's message and archives nothing when a policy is blocked", async () => {
+    (assertPoliciesCanBeArchived as jest.Mock<any>).mockRejectedValueOnce(
+      new ValidationException(
+        'Withdraw the approval request before archiving these policies: "Alpha"',
+        "status",
+        [1],
+      ),
+    );
+    const req = createReq({ ids: [1, 2], action: "archive" });
+    const res = createRes();
+
+    await PolicyController.bulkUpdatePolicies(req as Request, res as Response);
+
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json).toHaveBeenCalledWith({
+      message: "Bad Request",
+      data: 'Withdraw the approval request before archiving these policies: "Alpha"',
+    });
+    expect(mockArchive).not.toHaveBeenCalled();
+  });
+
+  it("does not run the archive gate for set_reviewer or set_tags", async () => {
+    await PolicyController.bulkUpdatePolicies(
+      createReq({ ids: [1], action: "set_reviewer", reviewerId: 7 }) as Request,
+      createRes(),
+    );
+    await PolicyController.bulkUpdatePolicies(
+      createReq({ ids: [1], action: "set_tags", tags: ["Privacy"] }) as Request,
+      createRes(),
+    );
+    expect(assertPoliciesCanBeArchived).not.toHaveBeenCalled();
+  });
+
   it("returns 200 and runs set_reviewer when a positive reviewerId is supplied", async () => {
     const req = createReq({ ids: [10, 11], action: "set_reviewer", reviewerId: 7 });
     const res = createRes();
 
     await PolicyController.bulkUpdatePolicies(req as Request, res as Response);
 
-    expect(mockSetReviewer).toHaveBeenCalledWith(4, [10, 11], 7, expect.anything());
+    expect(mockSetReviewer).toHaveBeenCalledWith(4, [10, 11], 7, 9, expect.anything());
     expect(res.status).toHaveBeenCalledWith(200);
   });
 
@@ -174,7 +239,13 @@ describe("bulkUpdatePolicies", () => {
 
     await PolicyController.bulkUpdatePolicies(req as Request, res as Response);
 
-    expect(mockSetTags).toHaveBeenCalledWith(4, [1], ["AI ethics", "Privacy"], expect.anything());
+    expect(mockSetTags).toHaveBeenCalledWith(
+      4,
+      [1],
+      ["AI ethics", "Privacy"],
+      9,
+      expect.anything(),
+    );
     expect(res.status).toHaveBeenCalledWith(200);
   });
 

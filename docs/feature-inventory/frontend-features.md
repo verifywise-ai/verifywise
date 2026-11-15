@@ -556,7 +556,7 @@ For each page/screen the following subsections describe: routes, user-facing fea
 | Routes | `/model-inventory`, `/model-inventory/model-risks`, `/model-inventory/evidence-hub`, `/model-inventory/model-risk-management`, `/model-inventory/model-risk-management/:mrmTab`, `/model-inventory/model-risk-management/settings/:settingsSection`, `/model-inventory/models/:id`, `/model-inventory/:pluginTab` |
 | Component | `Clients/src/presentation/pages/ModelInventory/index.tsx` |
 | Tabs | Models, Model risks, Evidence hub, Evaluations, Model risk management, plus extension tabs (MLflow, Azure AI Foundry). |
-| Features | Model table with status cards, search, filters, grouping, column visibility, export; add/edit model modal (`NewModelInventory`); model-risk table with add/edit modal (`NewModelRisk`); evidence hub table with upload/edit modal (`EvidenceHub`) and file preview; model evaluations; model-risk management (MRM) with overview, tiering, validation, findings, monitoring, settings sub-tabs; model lifecycle detail page; share view dropdown. |
+| Features | Model table with status cards, search, filters, column visibility, export; add/edit model modal (`NewModelInventory`); model-risk table with add/edit modal (`NewModelRisk`); evidence hub table with upload/edit modal (`EvidenceHub`) and file preview; model evaluations; model-risk management (MRM) with overview, tiering, validation, findings, monitoring, settings sub-tabs; model lifecycle detail page; share view dropdown. |
 | Key components | `ModelInventoryTable`, `ModelRisksTable`, `EvidenceHubTable`, `DatasetSummary`, `ModelInventorySummary`, `ModelRiskSummary`, `AnalyticsDrawer`, `NewModelInventory`, `NewModelRisk`, `EvidenceHub`, `FilePreviewPanel`, `ModelEvaluationsTab`, `ModelRiskManagementTab`, `ShareViewDropdown`, `MLFlowTab`, `AzureAIFoundryTab`. |
 | Access | Main sidebar → Model inventory. |
 | e2e tests | `Clients/e2e/model-inventory.spec.ts` |
@@ -584,7 +584,7 @@ For each page/screen the following subsections describe: routes, user-facing fea
 |-----------|-------|
 | Routes | `/datasets` |
 | Component | `Clients/src/presentation/pages/Datasets/index.tsx` |
-| Features | Dataset table with status summary cards, search, filters, grouping, column visibility; add/edit dataset modal (`NewDataset`); delete; bulk upload extension (`BulkUploadButton`/`BulkUploadModal`). |
+| Features | Dataset table with status summary cards, search, filters, column visibility; add/edit dataset modal (`NewDataset`); delete; bulk upload extension (`BulkUploadButton`/`BulkUploadModal`). |
 | Key components | `DatasetTable`, `DatasetSummary`, `NewDataset`, `BulkUploadButton`, `BulkUploadModal`. |
 | Access | Main sidebar → Datasets. |
 | e2e tests | `Clients/e2e/datasets.spec.ts` |
@@ -691,8 +691,8 @@ For each page/screen the following subsections describe: routes, user-facing fea
 | Routes | `/vendors`, `/vendors/risks`, `/vendors/research-findings`, `/vendors/insights` |
 | Component | `Clients/src/presentation/pages/Vendors/index.tsx` |
 | Tabs | Vendors, Risks, Research findings (count of pending findings), Insights. Each tab is a route. |
-| Features | Vendor table with status tile cards, search, filters (`FilterBy`), grouping, column visibility, export; create/edit vendor modal (`NewVendor`); vendor-risk register with create/edit modal (`NewRisk`); AI-suggested research findings to preview, accept or dismiss; insights (heat map, blast radius, duplicate vendor risks, framework coverage); delete actions; project filter; scorecard column. |
-| Key components | `TableWithPlaceholder`, `RisksTable`, `VendorResearchFindings`, `VendorRiskInsights`, `NewVendor`, `NewRisk`, `StatusTileCards`, `FilterBy`, `GroupBy`, `ColumnSelector`, `ExportMenu`. |
+| Features | Vendor table with status tile cards, search, filters (`TableFilter`), column visibility, export; create/edit vendor modal (`NewVendor`); vendor-risk register with create/edit modal (`NewRisk`); AI-suggested research findings to preview, accept or dismiss; insights (heat map, blast radius, duplicate vendor risks, framework coverage); delete actions; project filter; scorecard column. |
+| Key components | `TableWithPlaceholder`, `RisksTable`, `VendorResearchFindings`, `VendorRiskInsights`, `NewVendor`, `NewRisk`, `StatusTileCards`, `TableFilter`, `ColumnSelector`, `ExportMenu`. |
 | Access | Main sidebar → Vendors; dashboard stat cards; vendor research notifications (link to `/vendors/research-findings`). |
 | e2e tests | `Clients/e2e/vendors.spec.ts` |
 | Unit tests | `Clients/src/presentation/pages/Vendors/**/*.test.tsx`, `Clients/src/presentation/components/Modals/NewVendor/__tests__/*.test.tsx` |
@@ -707,7 +707,7 @@ For each page/screen the following subsections describe: routes, user-facing fea
 | Component | `Clients/src/presentation/pages/PolicyDashboard/PoliciesDashboard.tsx`, `PolicyEditorPage.tsx` |
 | Tabs | Policies, Templates. |
 | Features | Policy table with status/progress, search, filters; create/edit policy editor with rich text, AI editor menu, version history, approval workflow, linked policies/evidence/risks selectors; policy templates table. |
-| Key components | `PolicyTable`, `PolicyForm`, `AIEditorMenu`, `RichTextEditor`, `RichTextRenderer`, `LinkedPoliciesTable`, `LinkedPolicyModal`, `LinkEvidenceSelectorModal`, `LinkRiskSelectorModal`. |
+| Key components | `PolicyTable`, `PolicyForm`, `RichTextEditor`, `RichTextRenderer`, `LinkedPoliciesTable`, `LinkedPolicyModal`, `LinkEvidenceSelectorModal`, `LinkRiskSelectorModal`. |
 | Access | Main sidebar → Policy manager. |
 | e2e tests | `Clients/e2e/policies.spec.ts`, `Clients/e2e/policy-editor.spec.ts` |
 | Unit tests | `Clients/src/presentation/pages/PolicyDashboard/**/*.test.tsx`, `Clients/src/presentation/components/Policies/**/*.test.tsx`, `Clients/src/presentation/components/RichTextEditor/__tests__/*.test.tsx` |

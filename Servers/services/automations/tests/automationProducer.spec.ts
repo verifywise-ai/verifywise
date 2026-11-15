@@ -41,7 +41,8 @@ import {
   scheduleExtensionSyncTick,
   automationQueue,
   scheduleVendorReviewDateNotification,
-  schedulePolicyDueSoonNotification,
+  schedulePolicyReviewReminderSweep,
+  removeRetiredPolicyDueSoonScheduler,
   scheduleReportNotification,
   schedulePMMHourlyCheck,
   scheduleShadowAiJobs,
@@ -126,15 +127,27 @@ describe("automationProducer", () => {
     });
   });
 
-  describe("schedulePolicyDueSoonNotification", () => {
-    it("should add a repeating job at 8 AM daily", async () => {
-      await schedulePolicyDueSoonNotification();
+  describe("schedulePolicyReviewReminderSweep", () => {
+    it("adds a daily 8 AM sweep without obliterating the queue", async () => {
+      await schedulePolicyReviewReminderSweep();
 
+      expect(mockObliterate).not.toHaveBeenCalled();
       expectSchedulerCall(
-        "send_policy_due_soon_notification",
-        { type: "policy_due_soon" },
+        "policy_review_reminder_sweep",
+        { type: "policy_review_reminder" },
         "0 8 * * *",
       );
+    });
+  });
+
+  describe("removeRetiredPolicyDueSoonScheduler", () => {
+    it("removes the retired policy due soon scheduler from Redis", async () => {
+      await removeRetiredPolicyDueSoonScheduler();
+
+      expect(automationQueue.removeJobScheduler).toHaveBeenCalledWith(
+        "send_policy_due_soon_notification",
+      );
+      expect(mockUpsertJobScheduler).not.toHaveBeenCalled();
     });
   });
 

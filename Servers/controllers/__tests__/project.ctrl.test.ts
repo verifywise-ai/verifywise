@@ -6,6 +6,7 @@ jest.mock("../../utils/project.utils", () => ({
   getProjectByIdQuery: jest.fn(),
   createNewProjectQuery: jest.fn(),
   updateProjectByIdQuery: jest.fn(),
+  canViewProjectQuery: jest.fn(),
   deleteProjectByIdQuery: jest.fn(),
   lockProjectForDelete: jest.fn(),
   getCurrentProjectMembers: jest.fn(),
@@ -102,6 +103,7 @@ jest.mock("../../domain.layer/models/project/project.model", () => ({
 jest.mock("../../domain.layer/exceptions/custom.exception", () => ({
   ValidationException: class ValidationException extends Error {},
   BusinessLogicException: class BusinessLogicException extends Error {},
+  ForbiddenException: class ForbiddenException extends Error {},
 }));
 jest.mock("../../services/projects/approvalRequest.service", () => ({
   ...jest.requireActual("../../services/projects/approvalRequest.service"),
@@ -142,6 +144,7 @@ import { createUseCaseApprovalRequest } from "../../services/projects/approvalRe
 import { notifyUseCaseApprovalRequested } from "../../services/projects/approvalRequest.service";
 import { notifyApprovalAutoApproved } from "../../services/inAppNotification.service";
 import { ValidationException } from "../../domain.layer/exceptions/custom.exception";
+import { sendSlackNotification } from "../../services/slack/slackNotificationService";
 import {
   createPendingFrameworksForApprovedUseCase,
   getPendingApprovalRequestIdQuery,
@@ -285,6 +288,19 @@ describe("project.ctrl", () => {
         expect.objectContaining({ data: expect.objectContaining({ project }) }),
       );
     });
+    it("sends the Slack notice for the request's organization and actor", async () => {
+      const project = { ...buildProject(), owner: 1, approval_workflow_id: null, members: [] };
+      mockCreate.mockResolvedValue(project as any);
+      const req = createReq({
+        organizationId: 7,
+        body: { project_title: "P1", owner: 1, framework: [], members: [] },
+      } as any);
+      await createProject(req, createRes());
+      expect(sendSlackNotification).toHaveBeenCalledWith(
+        { organizationId: 7, userId: 1, routingType: "Projects and organizations" },
+        expect.objectContaining({ title: "Project created" }),
+      );
+    });
     it("should return 500 when creation returns null due to premature access on null", async () => {
       mockCreate.mockResolvedValue(null as any);
       const req = createReq({
@@ -414,6 +430,22 @@ describe("project.ctrl", () => {
   });
 
   describe("updateProjectById", () => {
+    const mockCanView = jest.requireMock<any>("../../utils/project.utils").canViewProjectQuery;
+
+    beforeEach(() => {
+      mockCanView.mockResolvedValue(true);
+    });
+
+    it("returns 403 and writes nothing when the caller cannot see the use case", async () => {
+      mockCanView.mockResolvedValue(false);
+      mockGetById.mockResolvedValue({ ...buildProject(), owner: 1 } as any);
+      const req = createReq({ params: { id: "1" }, body: { members: [2] } });
+      const res = createRes();
+      await updateProjectById(req, res);
+      expect(res.status).toHaveBeenCalledWith(403);
+      expect(mockUpdate).not.toHaveBeenCalled();
+    });
+
     it("should return 401 when userId or role is missing", async () => {
       const req = createReq({
         params: { id: "1" },
@@ -466,6 +498,7 @@ describe("project.ctrl", () => {
         undefined,
         1,
         expect.anything(),
+        { requireOwner: false },
       );
     });
     it("rolls back its transaction when the row is gone at update time", async () => {
@@ -499,7 +532,9 @@ describe("project.ctrl", () => {
       const req = createReq({ params: { id: "1" }, body: { project_title: "P2", members: null } });
       const res = createRes();
       await updateProjectById(req, res);
-      expect(mockUpdate).toHaveBeenCalledWith(1, expect.anything(), [], 1, expect.anything());
+      expect(mockUpdate).toHaveBeenCalledWith(1, expect.anything(), [], 1, expect.anything(), {
+        requireOwner: false,
+      });
     });
     it("passes an explicit empty members list through, so members can still be cleared", async () => {
       const existing = { ...buildProject(), owner: 1 };
@@ -510,7 +545,9 @@ describe("project.ctrl", () => {
       const req = createReq({ params: { id: "1" }, body: { project_title: "P2", members: [] } });
       const res = createRes();
       await updateProjectById(req, res);
-      expect(mockUpdate).toHaveBeenCalledWith(1, expect.anything(), [], 1, expect.anything());
+      expect(mockUpdate).toHaveBeenCalledWith(1, expect.anything(), [], 1, expect.anything(), {
+        requireOwner: false,
+      });
     });
     it("records member changes in the use case history, ignoring order", async () => {
       const existing = { ...buildProject(), owner: 1 };

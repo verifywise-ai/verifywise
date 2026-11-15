@@ -35,7 +35,7 @@ export const aiToolsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Use the status filter to show tools with one status. Clicking a column header sorts the rows on the current page, and your choice is remembered.',
+      text: 'The list opens with the highest risk scores first; tools that have no score yet come last. Use the status filter to show tools with one status. Clicking a column header sorts the rows on the current page, and your choice is remembered.',
     },
     {
       type: 'heading',
@@ -108,7 +108,7 @@ export const aiToolsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'If a tool is not yet in the model inventory, a "Start governance" button appears in the detail view. It opens a form with the provider and model name filled in from the tool. Choose a governance owner (required) and, optionally, a version. The form also asks for data sensitivity and a risk description, but these two values are not saved yet. Submitting creates a model inventory entry with the status Pending, links the tool to it and sets the tool\'s status to Under review. Tick "Automatically create a lifecycle entry" to also start the model lifecycle checklist for the new entry.',
+      text: 'If a tool is not yet in the model inventory, a "Start governance" button appears in the detail view. It opens a form with the provider and model name filled in from the tool. Choose a governance owner (required) and, optionally, a version. Submitting creates a model inventory entry with the status Pending, links the tool to it and sets the tool\'s status to Under review. If you also pick a data sensitivity or write a risk description, a risk named "Use of <tool name>" is added to the new model\'s risks. Its level follows the data sensitivity (Medium if you only wrote a description), the governance owner owns it, and it is due in 90 days. Tick "Automatically create a lifecycle entry" to also start the model lifecycle checklist for the new entry.',
     },
     {
       type: 'callout',

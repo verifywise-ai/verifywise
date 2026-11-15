@@ -20,7 +20,7 @@ import { alertState } from "../../../../domain/interfaces/i.alert";
 import useUsers from "../../../../application/hooks/useUsers";
 import { useProjects } from "../../../../application/hooks/useProjects";
 import useFrameworks from "../../../../application/hooks/useFrameworks";
-import allowedRoles from "../../../../application/constants/permissions";
+import { useCanCheck } from "../../../../application/hooks/useCan";
 import AutoCompleteField from "../../Inputs/Autocomplete";
 import {
   useFormValidation,
@@ -30,6 +30,7 @@ import { RISK_FORM_FIELD_ORDER } from "../../../constants/formValidationFieldMap
 import { createFieldBlurHandler } from "../../../../application/utils/formValidationFocus";
 import { checkStringValidation } from "../../../../application/validations/stringValidation";
 import selectValidation from "../../../../application/validations/selectValidation";
+import { radiusPx } from "../../../themes/palette";
 
 // Layout constants
 const LAYOUT = {
@@ -54,7 +55,7 @@ const FORM_CONSTANTS = {
 
 const FORM_STYLES = {
   fontSize: "13px",
-  borderRadius: "8px",
+  borderRadius: radiusPx.lg,
   focusedBackground: "background.accent",
   padding: "12px",
   chipPadding: "4px",
@@ -65,7 +66,6 @@ interface RiskSectionProps {
   setRiskValues: Dispatch<SetStateAction<RiskFormValues>>;
   validateRef?: React.MutableRefObject<((values: RiskFormValues) => boolean) | null>;
   firstInvalidFieldRef?: React.MutableRefObject<keyof RiskFormValues | null>;
-  userRoleName: string;
   disableInternalScroll?: boolean;
   compactMode?: boolean;
   /** Backend validation errors to display inline (keyed by RiskFormValues field). */
@@ -84,7 +84,6 @@ interface RiskSectionProps {
  * @param {RiskSectionProps} props - The props for the RiskSection component
  * @param {RiskFormValues} props.riskValues - Current form values
  * @param {Dispatch<SetStateAction<RiskFormValues>>} props.setRiskValues - Function to update form values
- * @param {string} props.userRoleName - Current user's role name for permissions
  * @returns {JSX.Element} The rendered RiskSection component
  */
 const RiskSection: FC<RiskSectionProps> = ({
@@ -92,14 +91,14 @@ const RiskSection: FC<RiskSectionProps> = ({
   setRiskValues,
   validateRef,
   firstInvalidFieldRef,
-  userRoleName,
   disableInternalScroll = false,
   compactMode = false,
   serverErrors,
   onValidityChange,
 }) => {
   const theme = useTheme();
-  const isEditingDisabled = !allowedRoles.projectRisks.edit.includes(userRoleName);
+  const can = useCanCheck();
+  const isEditingDisabled = !can("risks.edit");
 
   // Dynamic layout based on compactMode - squeeze into 990px when sidebar is open
   const contentWidth = compactMode
@@ -135,7 +134,8 @@ const RiskSection: FC<RiskSectionProps> = ({
         return r.accepted ? "" : r.message;
       },
       potentialImpact: (v: unknown) => {
-        const r = checkStringValidation("Potential impact", v as string, 1, 256);
+        // impact is VARCHAR(255) (R-M6).
+        const r = checkStringValidation("Potential impact", v as string, 1, 255);
         return r.accepted ? "" : r.message;
       },
       reviewNotes: (v: unknown) => {
@@ -329,7 +329,7 @@ const RiskSection: FC<RiskSectionProps> = ({
                 sx={{
                   "width": "100%",
                   "& .MuiChip-root": {
-                    "borderRadius": "4px",
+                    "borderRadius": radiusPx.sm,
                     "& .MuiChip-deleteIcon": {
                       display: "flex",
                     },
@@ -411,7 +411,7 @@ const RiskSection: FC<RiskSectionProps> = ({
                 sx={{
                   "width": "100%",
                   "& .MuiChip-root": {
-                    "borderRadius": "4px",
+                    "borderRadius": radiusPx.sm,
                     "& .MuiChip-deleteIcon": {
                       display: "flex",
                     },
@@ -548,7 +548,7 @@ const RiskSection: FC<RiskSectionProps> = ({
                 sx={{
                   "flex": 1,
                   "& .MuiChip-root": {
-                    "borderRadius": "4px",
+                    "borderRadius": radiusPx.sm,
                     "& .MuiChip-deleteIcon": {
                       display: riskValues.riskCategory.length === 1 ? "none" : "flex",
                     },
@@ -557,7 +557,7 @@ const RiskSection: FC<RiskSectionProps> = ({
                 slotProps={{
                   paper: {
                     sx: {
-                      "borderRadius": 2,
+                      "borderRadius": radiusPx.sm,
                       "boxShadow": "0px 4px 24px -4px rgba(16, 24, 40, 0.1)",
                       "border": `1px solid ${theme.palette.border?.light}`,
                       "& .MuiAutocomplete-listbox": {
@@ -619,8 +619,8 @@ const RiskSection: FC<RiskSectionProps> = ({
               lineHeight: 1.5,
             }}
           >
-            The Risk Level is calculated by multiplying the Likelihood and Severity scores. By
-            assigning these scores, the risk level will be determined based on your inputs.
+            The risk level is a weighted score: likelihood plus three times severity, so severity
+            counts more. Pick a likelihood and a severity and the level follows from the score.
           </Typography>
         </Stack>
         <Stack sx={{ mt: `${LAYOUT.VERTICAL_GAP}px`, width: "100%", maxWidth: contentWidth }}>

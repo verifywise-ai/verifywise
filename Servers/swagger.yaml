@@ -3194,9 +3194,12 @@ components:
           type: integer
           minimum: 0
           maximum: 59
+        has_webhook_secret:
+          type: boolean
+          description: 'Whether a webhook secret is set. Read responses never include the secret.'
         webhook_secret:
           type: string
-          nullable: true
+          description: 'Returned only on the create or update response that generated the secret (CI/CD turned on for the first time), so it can be copied into GitHub once.'
         ci_enabled:
           type: boolean
         ci_min_score:
@@ -5701,6 +5704,21 @@ components:
         governance_owner_id:
           type: integer
           minimum: 1
+        risk_assessment:
+          type: object
+          nullable: true
+          description: 'When either field is set, a model risk named "Use of <tool>" is created on the new model inventory entry, owned by the governance owner and due in 90 days.'
+          properties:
+            data_sensitivity:
+              type: string
+              enum:
+                - High
+                - Medium
+                - Low
+              description: 'Sets the risk level. Without it the level is Medium.'
+            description:
+              type: string
+              maxLength: 5000
         start_lifecycle:
           type: boolean
           default: false
@@ -5711,6 +5729,10 @@ components:
           type: integer
         tool_id:
           type: integer
+        risk_entry_id:
+          type: integer
+          nullable: true
+          description: 'The model risk created from risk_assessment, or null.'
         lifecycle_initialized:
           type: boolean
     ShadowAiRule:
@@ -6767,6 +6789,8 @@ components:
         - policy_overdue
         - training_assigned
         - training_completed
+        - training_due_soon
+        - training_overdue
         - vendor_review_due
         - file_uploaded
         - comment_added
@@ -7895,7 +7919,13 @@ tags:
   -
     name: 'v1: Change History'
   -
+    name: 'v1: Extensions'
+  -
     name: 'v1: Intake Forms'
+  -
+    name: 'v1: Intake submissions'
+  -
+    name: 'v1: Policies'
   -
     name: 'v1: Shadow AI'
   -
@@ -7905,9 +7935,29 @@ tags:
   -
     name: 'v1: V1/Ai Apps'
   -
+    name: 'v1: V1/Ai Detection'
+  -
+    name: 'v1: V1/Ai Detection Repositories'
+  -
+    name: 'v1: V1/Change Notices'
+  -
+    name: 'v1: V1/Dashboard'
+  -
+    name: 'v1: V1/Groups'
+  -
+    name: 'v1: V1/Home'
+  -
+    name: 'v1: V1/Imported Framework Assessments'
+  -
     name: 'v1: V1/Intake Form Review Time'
   -
     name: 'v1: V1/Lifecycle Settings'
+  -
+    name: 'v1: V1/Policy Templates'
+  -
+    name: 'v1: V1/Projects'
+  -
+    name: 'v1: V1/Training'
   -
     name: 'v1: V1/Use Case Lifecycle'
   -
@@ -14103,6 +14153,8 @@ paths:
       responses:
         '200':
           description: Success
+        '400':
+          description: 'code is missing, not a string, blank or over 512 characters; Slack did not accept it; Slack rejected the redirect URI (FRONTEND_URL does not match the address VerifyWise is opened at); or Slack returned no user token (the user scopes were not granted)'
         '403':
           description: 'Extension not enabled for this organization, or role not allowed'
         '500':
@@ -17404,7 +17456,7 @@ paths:
       tags:
         - Policies
       summary: 'Request review for a policy'
-      description: "Sets the policy review status to pending_review and sends in-app notifications to each specified reviewer.\n"
+      description: "**Deprecated.** Sunset: not before v2.7.0. Submit with POST /v1/policies/{id}/submit-for-approval and decide through the approval requests endpoints (/approval-requests), or, when the organization has no policy approval workflow, an Admin approves with POST /v1/policies/{id}/approve.\n\nSets the policy review status to pending_review and sends in-app notifications to each specified reviewer.\n"
       operationId: PolicyController.requestReview
       security:
         -
@@ -17450,12 +17502,13 @@ paths:
           $ref: '#/components/responses/NotFound'
         '500':
           $ref: '#/components/responses/InternalServerError'
+      deprecated: true
   '/policies/{id}/review/approve':
     put:
       tags:
         - Policies
       summary: 'Approve a policy review'
-      description: "Sets the policy review status to approved and sends an in-app notification to the policy author.\n"
+      description: "**Deprecated.** Sunset: not before v2.7.0. Submit with POST /v1/policies/{id}/submit-for-approval and decide through the approval requests endpoints (/approval-requests), or, when the organization has no policy approval workflow, an Admin approves with POST /v1/policies/{id}/approve.\n\nSets the policy review status to approved and sends an in-app notification to the policy author.\n"
       operationId: PolicyController.approveReview
       security:
         -
@@ -17494,12 +17547,13 @@ paths:
           $ref: '#/components/responses/NotFound'
         '500':
           $ref: '#/components/responses/InternalServerError'
+      deprecated: true
   '/policies/{id}/review/reject':
     put:
       tags:
         - Policies
       summary: 'Reject a policy review (request changes)'
-      description: "Sets the policy review status to changes_requested and sends an in-app notification to the policy author. A comment is required.\n"
+      description: "**Deprecated.** Sunset: not before v2.7.0. Submit with POST /v1/policies/{id}/submit-for-approval and decide through the approval requests endpoints (/approval-requests), or, when the organization has no policy approval workflow, an Admin approves with POST /v1/policies/{id}/approve.\n\nSets the policy review status to changes_requested and sends an in-app notification to the policy author. A comment is required.\n"
       operationId: PolicyController.rejectReview
       security:
         -
@@ -17540,6 +17594,7 @@ paths:
           $ref: '#/components/responses/NotFound'
         '500':
           $ref: '#/components/responses/InternalServerError'
+      deprecated: true
   '/policies/folders/{folderId}/policies':
     get:
       tags:
@@ -23501,6 +23556,8 @@ paths:
           description: 'Created successfully'
         '401':
           description: Unauthorized
+        '409':
+          description: 'The tool is already under governance'
         '500':
           description: 'Internal server error'
   /shadow-ai/rules:
@@ -24695,7 +24752,7 @@ paths:
       tags:
         - 'Intake Forms'
       summary: 'Approve Submission'
-      description: 'With routing on, only a reviewer of the lane the approval would make true, or an Admin, can approve (403 otherwise). A standard-lane approval by a non-senior reviewer may be picked for a second review.'
+      description: 'With routing on, only a reviewer of the lane the approval would make true, or an Admin, can approve (403 otherwise). A standard-lane approval by a non-senior reviewer may be picked for a second review. Answers mapped to entity custom fields are written on the new entity in the approval transaction; custom_field:* keys in confirmedEntityData are ignored. The response data is the approved submission; POST /api/v1/intake-submissions/{id}/approve also reports the custom field values it could not write.'
       operationId: approveSubmission
       security:
         -
@@ -26531,6 +26588,8 @@ paths:
       responses:
         '200':
           description: Success
+        '403':
+          description: 'Forbidden - the user lacks edit permission on the record the custom field belongs to (for a task: the people who may change its status, that is its creator, an assignee, an admin, or anyone with task.edit)'
         '500':
           description: 'Internal server error'
       tags:
@@ -26545,6 +26604,8 @@ paths:
       responses:
         '200':
           description: Success
+        '403':
+          description: 'Forbidden - the user lacks edit permission on the record the custom field belongs to (for a task: the people who may change its status, that is its creator, an assignee, an admin, or anyone with task.edit)'
         '500':
           description: 'Internal server error'
       tags:
@@ -27495,6 +27556,7 @@ paths:
   /v1/ai-apps:
     get:
       summary: 'Get All Ai Apps V1'
+      description: 'The legacy GET /api/ai-apps list plus the lifecycle columns, an optional ?lifecycle_stage= filter, ?search= on name or description, and each app''s custom_fields: [{ definition_id, field_key, label, field_type, value }].'
       responses:
         '200':
           description: Success
@@ -27948,3 +28010,1254 @@ paths:
       security:
         -
           bearerAuth: []
+  /v1/dashboard/preferences:
+    get:
+      summary: 'Get Dashboard Preferences Handler'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Dashboard'
+      operationId: getDashboardPreferencesHandler
+      security:
+        -
+          bearerAuth: []
+    put:
+      summary: 'Update Dashboard Preferences Handler'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Dashboard'
+      operationId: updateDashboardPreferencesHandler
+      security:
+        -
+          bearerAuth: []
+  /v1/projects:
+    post:
+      summary: 'Create Project'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Projects'
+      operationId: v1_projects_createProject
+      security:
+        -
+          bearerAuth: []
+  '/v1/projects/{id}':
+    patch:
+      summary: 'Update Project By Id'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Projects'
+      operationId: v1_projects_updateProjectById
+      security:
+        -
+          bearerAuth: []
+  '/v1/ai-apps/{id}/use-cases':
+    get:
+      summary: 'List Ai App Use Cases'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Ai Apps'
+      operationId: listAiAppUseCases
+      security:
+        -
+          bearerAuth: []
+    post:
+      summary: 'Link Ai App Use Case'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Ai Apps'
+      operationId: linkAiAppUseCase
+      security:
+        -
+          bearerAuth: []
+  '/v1/ai-apps/{id}/use-cases/{projectId}':
+    delete:
+      summary: 'Unlink Ai App Use Case'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Ai Apps'
+      operationId: unlinkAiAppUseCase
+      security:
+        -
+          bearerAuth: []
+  '/v1/projects/{id}/ai-apps':
+    get:
+      summary: 'List Use Case Ai Apps'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Projects'
+      operationId: listUseCaseAiApps
+      security:
+        -
+          bearerAuth: []
+  '/v1/projects/{id}/create-ai-app':
+    get:
+      summary: 'Get Create Ai App Preview'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Projects'
+      operationId: getCreateAiAppPreview
+      security:
+        -
+          bearerAuth: []
+    post:
+      summary: 'Create Ai App From Use Case'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Projects'
+      operationId: createAiAppFromUseCase
+      security:
+        -
+          bearerAuth: []
+  '/v1/projects/{id}/raci':
+    get:
+      summary: 'Get Raci Matrix'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Projects'
+      operationId: getRaciMatrix
+      security:
+        -
+          bearerAuth: []
+  '/v1/projects/{id}/raci/users/{userId}':
+    put:
+      summary: 'Update Raci User Roles'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Projects'
+      operationId: updateRaciUserRoles
+      security:
+        -
+          bearerAuth: []
+  /v1/ai-apps/ids:
+    get:
+      summary: 'Get Ai App Ids V1'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Ai Apps'
+      operationId: getAiAppIdsV1
+      security:
+        -
+          bearerAuth: []
+  /v1/ai-apps/import/template:
+    get:
+      summary: 'Download Ai App Import Template'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Ai Apps'
+      operationId: downloadAiAppImportTemplate
+      security:
+        -
+          bearerAuth: []
+  /v1/ai-apps/import:
+    post:
+      summary: 'Import Ai Apps'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Ai Apps'
+      operationId: importAiApps
+      security:
+        -
+          bearerAuth: []
+  /v1/ai-apps/questionnaires:
+    get:
+      summary: 'List Ai App Questionnaires'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Ai Apps'
+      operationId: listAiAppQuestionnaires
+      security:
+        -
+          bearerAuth: []
+    post:
+      summary: 'Create Ai App Questionnaire'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Ai Apps'
+      operationId: createAiAppQuestionnaire
+      security:
+        -
+          bearerAuth: []
+  '/v1/ai-apps/questionnaires/{id}':
+    patch:
+      summary: 'Update Ai App Questionnaire'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Ai Apps'
+      operationId: updateAiAppQuestionnaire
+      security:
+        -
+          bearerAuth: []
+    delete:
+      summary: 'Delete Ai App Questionnaire'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Ai Apps'
+      operationId: deleteAiAppQuestionnaire
+      security:
+        -
+          bearerAuth: []
+  /v1/ai-apps/bulk-assess:
+    post:
+      summary: 'Bulk Assess Ai Apps'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Ai Apps'
+      operationId: bulkAssessAiApps
+      security:
+        -
+          bearerAuth: []
+  /v1/ai-apps/assessments:
+    get:
+      summary: 'List Ai App Assessments'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Ai Apps'
+      operationId: listAiAppAssessments
+      security:
+        -
+          bearerAuth: []
+  /v1/ai-apps/assessments/worksheet:
+    get:
+      summary: 'Download Ai App Assessment Worksheet'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Ai Apps'
+      operationId: downloadAiAppAssessmentWorksheet
+      security:
+        -
+          bearerAuth: []
+  /v1/ai-apps/assessments/answers:
+    post:
+      summary: 'Submit Ai App Assessment Answers'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Ai Apps'
+      operationId: submitAiAppAssessmentAnswers
+      security:
+        -
+          bearerAuth: []
+  /v1/ai-apps/assessments/cancel:
+    post:
+      summary: 'Cancel Ai App Assessments'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Ai Apps'
+      operationId: cancelAiAppAssessments
+      security:
+        -
+          bearerAuth: []
+  '/v1/ai-apps/assessments/{assessmentId}/answers':
+    put:
+      summary: 'Answer Ai App Assessment'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Ai Apps'
+      operationId: answerAiAppAssessment
+      security:
+        -
+          bearerAuth: []
+  '/v1/ai-apps/{id}/assessments':
+    get:
+      summary: 'List Ai App Assessments For App'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Ai Apps'
+      operationId: listAiAppAssessmentsForApp
+      security:
+        -
+          bearerAuth: []
+  /v1/training/assignments/mine:
+    get:
+      summary: 'List My Training Assignments'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Training'
+      operationId: listMyTrainingAssignments
+      security:
+        -
+          bearerAuth: []
+  /v1/training/assignments/summary:
+    get:
+      summary: 'Get Training Assignment Summary'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Training'
+      operationId: getTrainingAssignmentSummary
+      security:
+        -
+          bearerAuth: []
+  /v1/training/assignments:
+    get:
+      summary: 'List Training Assignments'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Training'
+      operationId: listTrainingAssignments
+      security:
+        -
+          bearerAuth: []
+    post:
+      summary: 'Create Training Assignments'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Training'
+      operationId: createTrainingAssignments
+      security:
+        -
+          bearerAuth: []
+  /v1/training/assignments/complete-all:
+    post:
+      summary: 'Complete All Training Assignments'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Training'
+      operationId: completeAllTrainingAssignments
+      security:
+        -
+          bearerAuth: []
+  '/v1/training/assignments/{id}':
+    patch:
+      summary: 'Update Training Assignment'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Training'
+      operationId: updateTrainingAssignment
+      security:
+        -
+          bearerAuth: []
+    delete:
+      summary: 'Delete Training Assignment'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Training'
+      operationId: deleteTrainingAssignment
+      security:
+        -
+          bearerAuth: []
+  '/v1/training/assignments/{id}/complete':
+    post:
+      summary: 'Complete Training Assignment'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Training'
+      operationId: completeTrainingAssignment
+      security:
+        -
+          bearerAuth: []
+  '/v1/training/assignments/{id}/reopen':
+    post:
+      summary: 'Reopen Training Assignment'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Training'
+      operationId: reopenTrainingAssignment
+      security:
+        -
+          bearerAuth: []
+  /v1/groups:
+    get:
+      summary: 'List Groups'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Groups'
+      operationId: listGroups
+      security:
+        -
+          bearerAuth: []
+    post:
+      summary: 'Create Group'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Groups'
+      operationId: createGroup
+      security:
+        -
+          bearerAuth: []
+  '/v1/groups/{id}':
+    get:
+      summary: 'Get Group By Id'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Groups'
+      operationId: getGroupById
+      security:
+        -
+          bearerAuth: []
+    patch:
+      summary: 'Update Group By Id'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Groups'
+      operationId: updateGroupById
+      security:
+        -
+          bearerAuth: []
+    delete:
+      summary: 'Delete Group By Id'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Groups'
+      operationId: deleteGroupById
+      security:
+        -
+          bearerAuth: []
+  '/v1/groups/{id}/members':
+    get:
+      summary: 'List Group Members'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Groups'
+      operationId: listGroupMembers
+      security:
+        -
+          bearerAuth: []
+    post:
+      summary: 'Add Group Members'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Groups'
+      operationId: addGroupMembers
+      security:
+        -
+          bearerAuth: []
+    put:
+      summary: 'Set Group Members'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Groups'
+      operationId: setGroupMembers
+      security:
+        -
+          bearerAuth: []
+  '/v1/groups/{id}/members/{userId}':
+    delete:
+      summary: 'Remove Group Member'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Groups'
+      operationId: removeGroupMember
+      security:
+        -
+          bearerAuth: []
+  '/v1/groups/projects/{projectId}/groups':
+    get:
+      summary: 'List Project Groups'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Groups'
+      operationId: listProjectGroups
+      security:
+        -
+          bearerAuth: []
+    put:
+      summary: 'Set Project Groups'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Groups'
+      operationId: setProjectGroups
+      security:
+        -
+          bearerAuth: []
+  /v1/policy-templates:
+    get:
+      summary: 'List Policy Templates'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Policy Templates'
+      operationId: listPolicyTemplates
+      security:
+        -
+          bearerAuth: []
+    post:
+      summary: 'Create Policy Template'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Policy Templates'
+      operationId: createPolicyTemplate
+      security:
+        -
+          bearerAuth: []
+  '/v1/policy-templates/{id}':
+    get:
+      summary: 'Get Policy Template'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Policy Templates'
+      operationId: getPolicyTemplate
+      security:
+        -
+          bearerAuth: []
+    patch:
+      summary: 'Update Policy Template'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Policy Templates'
+      operationId: updatePolicyTemplate
+      security:
+        -
+          bearerAuth: []
+    delete:
+      summary: 'Delete Policy Template'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Policy Templates'
+      operationId: deletePolicyTemplate
+      security:
+        -
+          bearerAuth: []
+  /v1/policy-templates/from-policy:
+    post:
+      summary: 'Create Policy Template From Policy'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Policy Templates'
+      operationId: createPolicyTemplateFromPolicy
+      security:
+        -
+          bearerAuth: []
+  /v1/framework-import/template:
+    get:
+      summary: 'Download Excel Template'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: Extensions'
+      operationId: v1_framework_import_downloadExcelTemplate
+      security:
+        -
+          bearerAuth: []
+  /v1/framework-import/import:
+    post:
+      summary: 'Bulk Import Frameworks'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: Extensions'
+      operationId: bulkImportFrameworks
+      security:
+        -
+          bearerAuth: []
+  /v1/framework-import/imported:
+    get:
+      summary: 'List Imported Frameworks'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: Extensions'
+      operationId: listImportedFrameworks
+      security:
+        -
+          bearerAuth: []
+  '/v1/framework-import/imported/{id}':
+    patch:
+      summary: 'Update Imported Framework'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: Extensions'
+      operationId: updateImportedFramework
+      security:
+        -
+          bearerAuth: []
+    delete:
+      summary: 'Delete Imported Framework'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: Extensions'
+      operationId: deleteImportedFramework
+      security:
+        -
+          bearerAuth: []
+  '/v1/imported-framework-assessments/projects/{projectId}':
+    get:
+      summary: 'List Project Links'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Imported Framework Assessments'
+      operationId: listProjectLinks
+      security:
+        -
+          bearerAuth: []
+    post:
+      summary: 'Attach To Project'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Imported Framework Assessments'
+      operationId: attachToProject
+      security:
+        -
+          bearerAuth: []
+  '/v1/imported-framework-assessments/projects/{projectId}/{linkId}':
+    delete:
+      summary: 'Detach From Project'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Imported Framework Assessments'
+      operationId: detachFromProject
+      security:
+        -
+          bearerAuth: []
+  '/v1/imported-framework-assessments/links/{linkId}/tree':
+    get:
+      summary: 'Get Link Tree'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Imported Framework Assessments'
+      operationId: getLinkTree
+      security:
+        -
+          bearerAuth: []
+  '/v1/imported-framework-assessments/links/{linkId}/dashboard':
+    get:
+      summary: 'Get Link Dashboard'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Imported Framework Assessments'
+      operationId: getLinkDashboard
+      security:
+        -
+          bearerAuth: []
+  '/v1/imported-framework-assessments/links/{linkId}/impl/{level}/{implId}':
+    get:
+      summary: 'Get Impl'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Imported Framework Assessments'
+      operationId: getImpl
+      security:
+        -
+          bearerAuth: []
+    patch:
+      summary: 'Update Impl'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Imported Framework Assessments'
+      operationId: v1_imported_framework_assessments_updateImpl
+      security:
+        -
+          bearerAuth: []
+  '/v1/imported-framework-assessments/links/{linkId}/impl/{level}/{implId}/risks':
+    get:
+      summary: 'Get Impl Risks'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Imported Framework Assessments'
+      operationId: v1_imported_framework_assessments_getImplRisks
+      security:
+        -
+          bearerAuth: []
+    put:
+      summary: 'Replace Impl Risks'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Imported Framework Assessments'
+      operationId: replaceImplRisks
+      security:
+        -
+          bearerAuth: []
+  '/v1/intake-submissions/{id}/preview':
+    get:
+      summary: 'Get Submission Preview V1'
+      description: 'The legacy GET /api/intake/submissions/{id}/preview response plus customFields, for a pending submission: in question order, the entity custom field values approval would write from answers mapped to custom fields, as { label, displayValue, skipped? }. For a value that would not be written, displayValue is the answer as submitted and skipped is the translated reason. customFields is null when the custom field definitions could not be read, and absent once the submission is decided.'
+      parameters:
+        -
+          name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Success
+        '400':
+          description: 'Invalid submission ID'
+        '404':
+          description: 'Submission or form not found'
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: Intake submissions'
+      operationId: getSubmissionPreviewV1
+      security:
+        -
+          bearerAuth: []
+  '/v1/intake-submissions/{id}/approve':
+    post:
+      summary: 'Approve Submission V1'
+      description: 'Same request, checks and effects as the legacy POST /api/intake/submissions/{id}/approve. Answers mapped to entity custom fields are written on the new entity in the approval transaction; custom_field:* keys in confirmedEntityData are ignored. The response data is the approved submission plus customFieldSkips: [{ label, reason }], the values not written and the translated reason (an empty array when none were skipped).'
+      parameters:
+        -
+          name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Success
+        '400':
+          description: 'Invalid submission ID, a submission that is not pending, or invalid entity data'
+        '403':
+          description: 'Forbidden - the caller lacks intakeForm.edit, or routing is on and the caller may not decide this lane'
+        '404':
+          description: 'Submission or form not found'
+        '409':
+          description: 'Conflict - the submission changed while it was being approved, or an AI app with this name already exists'
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: Intake submissions'
+      operationId: approveSubmissionV1
+      security:
+        -
+          bearerAuth: []
+  '/v1/ai-detection/scans/{scanId}/suggested-risks/actions':
+    get:
+      summary: 'List Suggested Risk Actions Controller'
+      tags:
+        - 'v1: V1/Ai Detection'
+      operationId: listSuggestedRiskActionsController
+      security:
+        -
+          bearerAuth: []
+    put:
+      summary: 'Record Suggested Risk Action Controller'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Ai Detection'
+      operationId: recordSuggestedRiskActionController
+      security:
+        -
+          bearerAuth: []
+  /v1/ai-detection-repositories/webhook-config:
+    get:
+      summary: 'Get Webhook Config Controller'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Ai Detection Repositories'
+      operationId: getWebhookConfigController
+      security:
+        -
+          bearerAuth: []
+  '/v1/ai-detection/scans/{scanId}/suggested-risks/actions/{actionId}':
+    delete:
+      summary: 'Delete Suggested Risk Action Controller'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Ai Detection'
+      operationId: deleteSuggestedRiskActionController
+      security:
+        -
+          bearerAuth: []
+  '/v1/ai-detection/scans/{scanId}/findings':
+    get:
+      summary: 'Get Scan Findings V1 Controller'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Ai Detection'
+      operationId: getScanFindingsV1Controller
+      security:
+        -
+          bearerAuth: []
+  '/v1/ai-detection/scans/{scanId}/findings/{findingId}/governance':
+    patch:
+      summary: 'Update Governance Status V1 Controller'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Ai Detection'
+      operationId: updateGovernanceStatusV1Controller
+      security:
+        -
+          bearerAuth: []
+  '/v1/ai-detection/scans/{scanId}/suggested-risks/risks':
+    post:
+      summary: 'Add Suggested Risk To Register Controller'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Ai Detection'
+      operationId: addSuggestedRiskToRegisterController
+      security:
+        -
+          bearerAuth: []
+  /v1/home/queue:
+    get:
+      summary: 'Get Home Queue Handler'
+      description: "Everything that needs the signed-in user's action in the token's organization, merged and sorted (overdue first, then due soonest, then oldest waiting). A source that failed is reported as `unavailable` with no items, never as an empty list; a source or count the user may not see is absent, as is the prompts count when no AI Gateway is configured. Titles are built on the client from these structured fields.\n"
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: {type: string, example: OK}
+                  data: {type: object, required: [items, sources, counts], properties: {items: {type: array, items: {type: object, required: [id, source, part, entityType, entityId, name, url, dueDate, waitingSince, overdue, meta], properties: {id: {type: string, description: '`<source>:<entityId>`, plus a suffix when one entity can appear twice', example: 'tasks:12'}, source: {type: string, enum: [approvals, tasks, intake, risks, policyReviews, vendorReviews, incidents, mrmFindings]}, part: {type: string, enum: [automate, record, track, enforce]}, entityType: {type: string, example: task}, entityId: {type: integer, example: 12}, name: {type: string, example: 'Update DPIA for chatbot'}, url: {type: string, description: 'Client route that opens the record', example: '/tasks?taskId=12'}, dueDate: {type: string, nullable: true, description: YYYY-MM-DD, example: '2026-11-10'}, waitingSince: {type: string, format: date-time, nullable: true}, overdue: {type: boolean}, meta: {type: object, description: 'Source-specific fields (e.g. stepNumber/stepCount for approvals, status/priority for tasks)', additionalProperties: {nullable: true, oneOf: [{type: string}, {type: number}]}}}}}, sources: {type: object, description: 'Per visible source: ok with its item count, or unavailable (count 0) when it failed', additionalProperties: {type: object, properties: {status: {type: string, enum: [ok, unavailable]}, count: {type: integer}}}}, counts: {type: object, description: 'Org-wide counts the user may see; null when a count failed to load; a count that does not apply (prompts blocked or masked without an AI Gateway) is absent', additionalProperties: {type: integer, nullable: true}}}}
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Home'
+      operationId: getHomeQueueHandler
+      security:
+        -
+          bearerAuth: []
+  '/v1/change-notices/{id}/view':
+    post:
+      summary: 'View Change Notice Handler'
+      description: 'Counts a visit to a page''s change notice and says whether to show it. Stops after the user dismisses it, after 3 visits, or 90 days after the user first saw it; skipped for accounts created after the first time anyone in the organization saw it. A refusal writes nothing. A token with no organization always gets show false.'
+      parameters:
+        -
+          name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: '^[a-z0-9][a-z0-9-]{0,63}$'
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: {type: string, example: OK}
+                  data: {type: object, required: [show], properties: {show: {type: boolean}}}
+        '400':
+          description: 'Invalid notice id'
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Change Notices'
+      operationId: viewChangeNoticeHandler
+      security:
+        -
+          bearerAuth: []
+  '/v1/change-notices/{id}/dismissed':
+    put:
+      summary: 'Set Change Notice Dismissed Handler'
+      description: 'Dismisses the signed-in user''s change notice, or restores it when dismissed is false (Undo).'
+      parameters:
+        -
+          name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: '^[a-z0-9][a-z0-9-]{0,63}$'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - dismissed
+              properties:
+                dismissed:
+                  type: boolean
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: {type: string, example: OK}
+                  data: {type: object, required: [dismissed], properties: {dismissed: {type: boolean}}}
+        '400':
+          description: 'Invalid notice id or body'
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Change Notices'
+      operationId: setChangeNoticeDismissedHandler
+      security:
+        -
+          bearerAuth: []
+  '/v1/policies/{id}/approval':
+    get:
+      summary: 'Get Policy Approval State'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: Policies'
+      operationId: getPolicyApprovalState
+      security:
+        -
+          bearerAuth: []
+  '/v1/policies/{id}/submit-for-approval':
+    post:
+      summary: 'Submit Policy For Approval'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: Policies'
+      operationId: submitPolicyForApproval
+      security:
+        -
+          bearerAuth: []
+  '/v1/policies/{id}/approve':
+    post:
+      summary: 'Approve Policy Directly'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: Policies'
+      operationId: approvePolicyDirectly
+      security:
+        -
+          bearerAuth: []
+  /v1/policies/folder-counts:
+    get:
+      summary: 'Get Policy Folder Counts'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: Policies'
+      operationId: getPolicyFolderCounts
+      security:
+        -
+          bearerAuth: []
+  /extensions/slack/oauth/unlinked:
+    get:
+      summary: 'Get Unlinked Slack Connections'
+      responses:
+        '200':
+          description: 'The caller''s own connections with no organization: id, team_name, channel, created_at. No token or webhook URL.'
+        '403':
+          description: 'Extension not enabled for this organization, or role not allowed'
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Extensions
+      operationId: getUnlinkedSlackConnections
+      security:
+        -
+          bearerAuth: []
+      description: 'Requires the slack extension to be enabled for the organization (403 otherwise). Lists the caller''s own Slack connections that belong to no organization (created before connections belonged to an organization). They send nothing; they can only be removed.'
+  '/extensions/slack/oauth/unlinked/{id}':
+    delete:
+      summary: 'Delete Unlinked Slack Connection'
+      responses:
+        '204':
+          description: Deleted
+        '400':
+          description: 'Invalid id'
+        '403':
+          description: 'Extension not enabled for this organization, or role not allowed'
+        '404':
+          description: 'No connection with this id that belongs to no organization and to the caller'
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Extensions
+      operationId: deleteUnlinkedSlackConnection
+      security:
+        -
+          bearerAuth: []
+      description: 'Requires the slack extension to be enabled for the organization (403 otherwise). Removes one of the caller''s own Slack connections that belong to no organization. Another user''s connection and an organization''s connection answer 404.'
+      parameters:
+        -
+          name: id
+          in: path
+          required: true
+          description: 'The connection id'
+          schema:
+            type: integer

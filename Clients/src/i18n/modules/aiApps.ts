@@ -60,6 +60,54 @@ export const de: Record<string, string> = {
   "Vendor security posture, review status and track record":
     "Sicherheitsniveau, Prüfstatus und Erfolgsbilanz des Anbieters",
   "Risk assessment": "Risikobewertung",
+  "Linked AI apps": "Verknüpfte KI-Apps",
+  "No AI apps are linked to this use case yet.":
+    "Mit diesem Anwendungsfall sind noch keine KI-Apps verknüpft.",
+  "Create AI app from this use case": "KI-App aus diesem Anwendungsfall erstellen",
+  "Create AI app": "KI-App erstellen",
+  "Start a draft AI app from this use case and link the two.":
+    "Erstellen Sie aus diesem Anwendungsfall einen KI-App-Entwurf und verknüpfen Sie beide.",
+  "AI app name": "Name der KI-App",
+  "AI app name is required": "Der Name der KI-App ist erforderlich",
+  "AI app name must be 255 characters or fewer":
+    "Der Name der KI-App darf höchstens 255 Zeichen lang sein",
+  "An AI app with this name already exists": "Eine KI-App mit diesem Namen existiert bereits",
+  "AI app created from this use case": "KI-App aus diesem Anwendungsfall erstellt",
+  "Copies the description, the owner and 1 linked model.":
+    "Übernimmt die Beschreibung, den Eigentümer und 1 verknüpftes Modell.",
+  "Copies the description, the owner and {count} linked models.":
+    "Übernimmt die Beschreibung, den Eigentümer und {count} verknüpfte Modelle.",
+  "Linked use cases": "Verknüpfte Anwendungsfälle",
+  "Add use case": "Anwendungsfall hinzufügen",
+  "Select the use case this AI app serves.":
+    "Wählen Sie den Anwendungsfall aus, dem diese KI-App dient.",
+  "All use cases are already linked": "Alle Anwendungsfälle sind bereits verknüpft",
+  "Select a use case": "Anwendungsfall auswählen",
+  "No use cases are linked to this AI app yet.":
+    "Mit dieser KI-App sind noch keine Anwendungsfälle verknüpft.",
+  "Use case linked": "Anwendungsfall verknüpft",
+  "Use case removed": "Anwendungsfall entfernt",
+  "Remove {name}": "{name} entfernen",
+  "1 more linked use case you do not have access to":
+    "1 weiterer verknüpfter Anwendungsfall, auf den Sie keinen Zugriff haben",
+  "{count} more linked use cases you do not have access to":
+    "{count} weitere verknüpfte Anwendungsfälle, auf die Sie keinen Zugriff haben",
+  "Created from use case": "Aus Anwendungsfall erstellt",
+  "Linked use case": "Verknüpfter Anwendungsfall",
+  "Copies the description and the linked models.":
+    "Übernimmt die Beschreibung und die verknüpften Modelle.",
+  "Copies the description and 1 linked model.":
+    "Übernimmt die Beschreibung und 1 verknüpftes Modell.",
+  "Copies the description and {count} linked models.":
+    "Übernimmt die Beschreibung und {count} verknüpfte Modelle.",
+  "This use case's owner has no account in this organization, so you will own the new AI app.":
+    "Der Eigentümer dieses Anwendungsfalls hat kein Konto in dieser Organisation, daher werden Sie Eigentümer der neuen KI-App.",
+  "This use case is no longer available": "Dieser Anwendungsfall ist nicht mehr verfügbar",
+  "This use case or AI app is no longer available":
+    "Dieser Anwendungsfall oder diese KI-App ist nicht mehr verfügbar",
+  "This use case is no longer linked": "Dieser Anwendungsfall ist nicht mehr verknüpft",
+  "Loading use cases...": "Anwendungsfälle werden geladen...",
+  "No use cases can be linked yet": "Es können noch keine Anwendungsfälle verknüpft werden",
 };
 
 export const fr: Record<string, string> = {
@@ -121,6 +169,52 @@ export const fr: Record<string, string> = {
   "Vendor security posture, review status and track record":
     "Posture de sécurité, statut d'examen et antécédents du fournisseur",
   "Risk assessment": "Évaluation des risques",
+  "Linked AI apps": "Applications IA liées",
+  "No AI apps are linked to this use case yet.":
+    "Aucune application IA n'est encore liée à ce cas d'usage.",
+  "Create AI app from this use case": "Créer une application IA à partir de ce cas d'usage",
+  "Create AI app": "Créer une application IA",
+  "Start a draft AI app from this use case and link the two.":
+    "Créez un brouillon d'application IA à partir de ce cas d'usage et liez les deux.",
+  "AI app name": "Nom de l'application IA",
+  "AI app name is required": "Le nom de l'application IA est obligatoire",
+  "AI app name must be 255 characters or fewer":
+    "Le nom de l'application IA ne doit pas dépasser 255 caractères",
+  "An AI app with this name already exists": "Une application IA portant ce nom existe déjà",
+  "AI app created from this use case": "Application IA créée à partir de ce cas d'usage",
+  "Copies the description, the owner and 1 linked model.":
+    "Copie la description, le responsable et 1 modèle lié.",
+  "Copies the description, the owner and {count} linked models.":
+    "Copie la description, le responsable et {count} modèles liés.",
+  "Linked use cases": "Cas d'usage liés",
+  "Add use case": "Ajouter un cas d'usage",
+  "Select the use case this AI app serves.":
+    "Sélectionnez le cas d'usage que sert cette application IA.",
+  "All use cases are already linked": "Tous les cas d'usage sont déjà liés",
+  "Select a use case": "Sélectionner un cas d'usage",
+  "No use cases are linked to this AI app yet.":
+    "Aucun cas d'usage n'est encore lié à cette application IA.",
+  "Use case linked": "Cas d'usage lié",
+  "Use case removed": "Cas d'usage retiré",
+  "Remove {name}": "Retirer {name}",
+  "1 more linked use case you do not have access to":
+    "1 autre cas d'usage lié auquel vous n'avez pas accès",
+  "{count} more linked use cases you do not have access to":
+    "{count} autres cas d'usage liés auxquels vous n'avez pas accès",
+  "Created from use case": "Créée à partir d'un cas d'usage",
+  "Linked use case": "Cas d'usage lié",
+  "Copies the description and the linked models.": "Copie la description et les modèles liés.",
+  "Copies the description and 1 linked model.": "Copie la description et 1 modèle lié.",
+  "Copies the description and {count} linked models.":
+    "Copie la description et {count} modèles liés.",
+  "This use case's owner has no account in this organization, so you will own the new AI app.":
+    "Le responsable de ce cas d'usage n'a pas de compte dans cette organisation : vous serez donc responsable de la nouvelle application IA.",
+  "This use case is no longer available": "Ce cas d'usage n'est plus disponible",
+  "This use case or AI app is no longer available":
+    "Ce cas d'usage ou cette application IA n'est plus disponible",
+  "This use case is no longer linked": "Ce cas d'usage n'est plus lié",
+  "Loading use cases...": "Chargement des cas d'usage...",
+  "No use cases can be linked yet": "Aucun cas d'usage ne peut encore être lié",
 };
 
 export const es: Record<string, string> = {
@@ -182,4 +276,50 @@ export const es: Record<string, string> = {
   "Vendor security posture, review status and track record":
     "Postura de seguridad, estado de revisión e historial del proveedor",
   "Risk assessment": "Evaluación de riesgos",
+  "Linked AI apps": "Aplicaciones de IA vinculadas",
+  "No AI apps are linked to this use case yet.":
+    "Todavía no hay aplicaciones de IA vinculadas a este caso de uso.",
+  "Create AI app from this use case": "Crear aplicación de IA a partir de este caso de uso",
+  "Create AI app": "Crear aplicación de IA",
+  "Start a draft AI app from this use case and link the two.":
+    "Crea un borrador de aplicación de IA a partir de este caso de uso y vincula ambos.",
+  "AI app name": "Nombre de la aplicación de IA",
+  "AI app name is required": "El nombre de la aplicación de IA es obligatorio",
+  "AI app name must be 255 characters or fewer":
+    "El nombre de la aplicación de IA no puede superar los 255 caracteres",
+  "An AI app with this name already exists": "Ya existe una aplicación de IA con este nombre",
+  "AI app created from this use case": "Aplicación de IA creada a partir de este caso de uso",
+  "Copies the description, the owner and 1 linked model.":
+    "Copia la descripción, el responsable y 1 modelo vinculado.",
+  "Copies the description, the owner and {count} linked models.":
+    "Copia la descripción, el responsable y {count} modelos vinculados.",
+  "Linked use cases": "Casos de uso vinculados",
+  "Add use case": "Añadir caso de uso",
+  "Select the use case this AI app serves.":
+    "Selecciona el caso de uso al que sirve esta aplicación de IA.",
+  "All use cases are already linked": "Todos los casos de uso ya están vinculados",
+  "Select a use case": "Selecciona un caso de uso",
+  "No use cases are linked to this AI app yet.":
+    "Todavía no hay casos de uso vinculados a esta aplicación de IA.",
+  "Use case linked": "Caso de uso vinculado",
+  "Use case removed": "Caso de uso eliminado",
+  "Remove {name}": "Eliminar {name}",
+  "1 more linked use case you do not have access to":
+    "1 caso de uso vinculado más al que no tienes acceso",
+  "{count} more linked use cases you do not have access to":
+    "{count} casos de uso vinculados más a los que no tienes acceso",
+  "Created from use case": "Creada a partir de un caso de uso",
+  "Linked use case": "Caso de uso vinculado",
+  "Copies the description and the linked models.": "Copia la descripción y los modelos vinculados.",
+  "Copies the description and 1 linked model.": "Copia la descripción y 1 modelo vinculado.",
+  "Copies the description and {count} linked models.":
+    "Copia la descripción y {count} modelos vinculados.",
+  "This use case's owner has no account in this organization, so you will own the new AI app.":
+    "El responsable de este caso de uso no tiene cuenta en esta organización, así que serás responsable de la nueva aplicación de IA.",
+  "This use case is no longer available": "Este caso de uso ya no está disponible",
+  "This use case or AI app is no longer available":
+    "Este caso de uso o esta aplicación de IA ya no está disponible",
+  "This use case is no longer linked": "Este caso de uso ya no está vinculado",
+  "Loading use cases...": "Cargando casos de uso...",
+  "No use cases can be linked yet": "Todavía no se puede vincular ningún caso de uso",
 };

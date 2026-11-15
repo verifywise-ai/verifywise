@@ -123,6 +123,7 @@ export const de: Record<string, string> = {
   "High-risk roles *": "Hochrisiko-Rollen *",
   "Not a high-risk role:": "Keine Hochrisiko-Rolle:",
   "Roles:": "Rollen:",
+  "Roles": "Rollen",
   "Upload new": "Neu hochladen",
   "Manage all organization risks in risk management":
     "Alle Risiken der Organisation im Risikomanagement verwalten",
@@ -145,6 +146,18 @@ export const de: Record<string, string> = {
   "Captcha answer": "Captcha-Antwort",
   "Close editor": "Editor schließen",
   "Confirm owner change": "Verantwortlichenwechsel bestätigen",
+  "External owner": "Externer Verantwortlicher",
+  "(external)": "(extern)",
+  "an external owner": "einen externen Verantwortlichen",
+  "External owners receive email notices only. They have no login and no access to VerifyWise.":
+    "Externe Verantwortliche erhalten nur E-Mail-Benachrichtigungen. Sie haben keine Anmeldung und keinen Zugriff auf VerifyWise.",
+  "You are setting ownership": "Sie legen die Verantwortung fest",
+  "from": "von",
+  "Name is required": "Name ist erforderlich",
+  "Email is required": "E-Mail ist erforderlich",
+  "Enter a valid email address": "Geben Sie eine gültige E-Mail-Adresse ein",
+  "Name must be at most 255 characters": "Der Name darf höchstens 255 Zeichen lang sein",
+  "Email must be at most 254 characters": "Die E-Mail darf höchstens 254 Zeichen lang sein",
   "Create and manage intake forms for external submissions":
     "Eingangsformulare für externe Einreichungen erstellen und verwalten",
   "Create new form": "Neues Formular erstellen",
@@ -699,6 +712,43 @@ export const de: Record<string, string> = {
   "Use case defaults saved": "Standardwerte für Anwendungsfälle gespeichert",
   "Failed to save use case defaults":
     "Standardwerte für Anwendungsfälle konnten nicht gespeichert werden",
+  "RACI": "RACI",
+  "RACI matrix": "RACI-Matrix",
+  "Add person": "Person hinzufügen",
+  "Give someone in your organization a role on this use case.":
+    "Geben Sie einer Person aus Ihrer Organisation eine Rolle für diesen Anwendungsfall.",
+  "No one has a RACI role on this use case yet.":
+    "Für diesen Anwendungsfall hat noch niemand eine RACI-Rolle.",
+  "Person": "Person",
+  "Select a person": "Person auswählen",
+  "The RACI matrix could not be loaded.": "Die RACI-Matrix konnte nicht geladen werden.",
+  "The role change could not be saved. Please try again.":
+    "Die Rollenänderung konnte nicht gespeichert werden. Bitte versuchen Sie es erneut.",
+  "Who is responsible, accountable, consulted and informed":
+    "Wer verantwortlich, rechenschaftspflichtig, konsultiert und informiert ist",
+  "Responsible": "Verantwortlich",
+  "Accountable": "Rechenschaftspflichtig",
+  "Consulted": "Konsultiert",
+  "Informed": "Informiert",
+  "Responsible: does the work": "Verantwortlich: erledigt die Arbeit",
+  "Accountable: answers for the outcome": "Rechenschaftspflichtig: steht für das Ergebnis ein",
+  "Consulted: gives input before decisions": "Konsultiert: gibt vor Entscheidungen Rückmeldung",
+  "Informed: kept up to date": "Informiert: wird auf dem Laufenden gehalten",
+  "Owner of this use case": "Eigentümer dieses Anwendungsfalls",
+  "Team member of this use case": "Teammitglied dieses Anwendungsfalls",
+  "Approver in this use case's approval workflow":
+    "Genehmiger im Genehmigungsablauf dieses Anwendungsfalls",
+  "Assigned to an open task linked to this use case":
+    "Einer offenen Aufgabe zugewiesen, die mit diesem Anwendungsfall verknüpft ist",
+  "Added manually": "Manuell hinzugefügt",
+  "No one is accountable for this use case yet. Give one person the A role.":
+    "Für diesen Anwendungsfall ist noch niemand rechenschaftspflichtig. Geben Sie einer Person die Rolle A.",
+  "More than one person is accountable for this use case. Keep one person in the A role where you can.":
+    "Für diesen Anwendungsfall ist mehr als eine Person rechenschaftspflichtig. Belassen Sie die Rolle A möglichst bei einer Person.",
+  "Everyone is already in this matrix": "Alle sind bereits in dieser Matrix",
+  "Loading people...": "Personen werden geladen...",
+  "People could not be loaded.": "Die Personen konnten nicht geladen werden.",
+  "No people found.": "Keine Personen gefunden.",
 };
 
 export const fr: Record<string, string> = {
@@ -821,6 +871,7 @@ export const fr: Record<string, string> = {
   "High-risk roles *": "Rôles à haut risque *",
   "Not a high-risk role:": "Pas un rôle à haut risque :",
   "Roles:": "Rôles :",
+  "Roles": "Rôles",
   "Upload new": "Téléverser nouveau",
   "Manage all organization risks in risk management":
     "Gérer tous les risques de l'organisation dans la gestion des risques",
@@ -842,6 +893,18 @@ export const fr: Record<string, string> = {
   "Captcha answer": "Réponse au captcha",
   "Close editor": "Fermer l'éditeur",
   "Confirm owner change": "Confirmer le changement de responsable",
+  "External owner": "Responsable externe",
+  "(external)": "(externe)",
+  "an external owner": "un responsable externe",
+  "External owners receive email notices only. They have no login and no access to VerifyWise.":
+    "Les responsables externes reçoivent uniquement des notifications par e-mail. Ils n'ont ni identifiant ni accès à VerifyWise.",
+  "You are setting ownership": "Vous définissez la responsabilité",
+  "from": "de",
+  "Name is required": "Le nom est requis",
+  "Email is required": "L'e-mail est requis",
+  "Enter a valid email address": "Saisissez une adresse e-mail valide",
+  "Name must be at most 255 characters": "Le nom ne doit pas dépasser 255 caractères",
+  "Email must be at most 254 characters": "L'e-mail ne doit pas dépasser 254 caractères",
   "Create and manage intake forms for external submissions":
     "Créer et gérer des formulaires d'entrée pour les soumissions externes",
   "Create new form": "Créer un nouveau formulaire",
@@ -1394,6 +1457,43 @@ export const fr: Record<string, string> = {
   "Use case defaults saved": "Valeurs par défaut des cas d'usage enregistrées",
   "Failed to save use case defaults":
     "Impossible d'enregistrer les valeurs par défaut des cas d'usage",
+  "RACI": "RACI",
+  "RACI matrix": "Matrice RACI",
+  "Add person": "Ajouter une personne",
+  "Give someone in your organization a role on this use case.":
+    "Attribuez à une personne de votre organisation un rôle sur ce cas d'usage.",
+  "No one has a RACI role on this use case yet.":
+    "Personne n'a encore de rôle RACI sur ce cas d'usage.",
+  "Person": "Personne",
+  "Select a person": "Sélectionner une personne",
+  "The RACI matrix could not be loaded.": "La matrice RACI n'a pas pu être chargée.",
+  "The role change could not be saved. Please try again.":
+    "La modification du rôle n'a pas pu être enregistrée. Veuillez réessayer.",
+  "Who is responsible, accountable, consulted and informed":
+    "Qui est responsable, redevable, consulté et informé",
+  "Responsible": "Responsable",
+  "Accountable": "Redevable",
+  "Consulted": "Consulté",
+  "Informed": "Informé",
+  "Responsible: does the work": "Responsable : réalise le travail",
+  "Accountable: answers for the outcome": "Redevable : répond du résultat",
+  "Consulted: gives input before decisions": "Consulté : donne son avis avant les décisions",
+  "Informed: kept up to date": "Informé : tenu au courant",
+  "Owner of this use case": "Propriétaire de ce cas d'usage",
+  "Team member of this use case": "Membre de l'équipe de ce cas d'usage",
+  "Approver in this use case's approval workflow":
+    "Approbateur dans le circuit d'approbation de ce cas d'usage",
+  "Assigned to an open task linked to this use case":
+    "Affecté à une tâche ouverte liée à ce cas d'usage",
+  "Added manually": "Ajouté manuellement",
+  "No one is accountable for this use case yet. Give one person the A role.":
+    "Personne n'est encore redevable de ce cas d'usage. Attribuez le rôle A à une personne.",
+  "More than one person is accountable for this use case. Keep one person in the A role where you can.":
+    "Plusieurs personnes sont redevables de ce cas d'usage. Dans la mesure du possible, gardez une seule personne dans le rôle A.",
+  "Everyone is already in this matrix": "Tout le monde figure déjà dans cette matrice",
+  "Loading people...": "Chargement des personnes...",
+  "People could not be loaded.": "Les personnes n'ont pas pu être chargées.",
+  "No people found.": "Aucune personne trouvée.",
 };
 
 export const es: Record<string, string> = {
@@ -1515,6 +1615,7 @@ export const es: Record<string, string> = {
   "High-risk roles *": "Roles de alto riesgo *",
   "Not a high-risk role:": "No es un rol de alto riesgo:",
   "Roles:": "Roles:",
+  "Roles": "Roles",
   "Upload new": "Subir nuevo",
   "Manage all organization risks in risk management":
     "Gestionar todos los riesgos de la organización en gestión de riesgos",
@@ -1536,6 +1637,19 @@ export const es: Record<string, string> = {
   "Captcha answer": "Respuesta del captcha",
   "Close editor": "Cerrar editor",
   "Confirm owner change": "Confirmar el cambio de propietario",
+  "External owner": "Propietario externo",
+  "(external)": "(externo)",
+  "an external owner": "un propietario externo",
+  "External owners receive email notices only. They have no login and no access to VerifyWise.":
+    "Los propietarios externos solo reciben avisos por correo electrónico. No tienen inicio de sesión ni acceso a VerifyWise.",
+  "You are setting ownership": "Está estableciendo la propiedad",
+  "from": "de",
+  "Name is required": "El nombre es obligatorio",
+  "Email is required": "El correo electrónico es obligatorio",
+  "Enter a valid email address": "Introduzca una dirección de correo electrónico válida",
+  "Name must be at most 255 characters": "El nombre debe tener como máximo 255 caracteres",
+  "Email must be at most 254 characters":
+    "El correo electrónico debe tener como máximo 254 caracteres",
   "Create and manage intake forms for external submissions":
     "Cree y gestione formularios de admisión para envíos externos",
   "Create new form": "Crear nuevo formulario",
@@ -2084,4 +2198,42 @@ export const es: Record<string, string> = {
   "Use case defaults saved": "Valores predeterminados de casos de uso guardados",
   "Failed to save use case defaults":
     "No se pudieron guardar los valores predeterminados de los casos de uso",
+  "RACI": "RACI",
+  "RACI matrix": "Matriz RACI",
+  "Add person": "Añadir persona",
+  "Give someone in your organization a role on this use case.":
+    "Asigne a alguien de su organización un rol en este caso de uso.",
+  "No one has a RACI role on this use case yet.":
+    "Nadie tiene todavía un rol RACI en este caso de uso.",
+  "Person": "Persona",
+  "Select a person": "Seleccionar una persona",
+  "The RACI matrix could not be loaded.": "No se pudo cargar la matriz RACI.",
+  "The role change could not be saved. Please try again.":
+    "No se pudo guardar el cambio de rol. Inténtelo de nuevo.",
+  "Who is responsible, accountable, consulted and informed":
+    "Quién es responsable, rinde cuentas, es consultado y es informado",
+  "Responsible": "Responsable",
+  "Accountable": "Rinde cuentas",
+  "Consulted": "Consultado",
+  "Informed": "Informado",
+  "Responsible: does the work": "Responsable: realiza el trabajo",
+  "Accountable: answers for the outcome": "Rinde cuentas: responde por el resultado",
+  "Consulted: gives input before decisions":
+    "Consultado: aporta su opinión antes de las decisiones",
+  "Informed: kept up to date": "Informado: se le mantiene al día",
+  "Owner of this use case": "Propietario de este caso de uso",
+  "Team member of this use case": "Miembro del equipo de este caso de uso",
+  "Approver in this use case's approval workflow":
+    "Aprobador en el flujo de aprobación de este caso de uso",
+  "Assigned to an open task linked to this use case":
+    "Asignado a una tarea abierta vinculada a este caso de uso",
+  "Added manually": "Añadido manualmente",
+  "No one is accountable for this use case yet. Give one person the A role.":
+    "Todavía nadie rinde cuentas de este caso de uso. Asigne el rol A a una persona.",
+  "More than one person is accountable for this use case. Keep one person in the A role where you can.":
+    "Más de una persona rinde cuentas de este caso de uso. Siempre que pueda, mantenga a una sola persona en el rol A.",
+  "Everyone is already in this matrix": "Todos están ya en esta matriz",
+  "Loading people...": "Cargando personas...",
+  "People could not be loaded.": "No se pudieron cargar las personas.",
+  "No people found.": "No se encontraron personas.",
 };

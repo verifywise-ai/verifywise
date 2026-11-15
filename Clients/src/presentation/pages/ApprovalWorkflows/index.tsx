@@ -8,9 +8,16 @@ import { addNewWorkflowButton, workflowMainStack, filterSearchContainer } from "
 import { CustomizableButton } from "../../components/button/customizable-button";
 import { ReactComponent as AddCircleOutlineIcon } from "../../assets/icons/plus-circle-white.svg";
 import CreateNewApprovalWorkflow from "../../components/Modals/NewApprovalWorkflow";
+import RequestorApprovalModal from "../../components/Modals/RequestorApprovalModal";
+import { useSearchParams } from "react-router";
+import { useQueryClient } from "@tanstack/react-query";
+import { useCan } from "../../../application/hooks/useCan";
+import { HOME_QUEUE_QUERY_KEY } from "../../../application/hooks/useHomeQueue";
+import { dispatchApprovalRequestsChanged } from "../../../application/events/approvalRequestEvents";
 import { ApprovalWorkflowStepModel } from "../../../domain/models/Common/approvalWorkflow/approvalWorkflowStepModel";
 import { ApprovalStatus } from "../../../domain/enums/aiApprovalWorkflow.enum";
-import { FilterBy, FilterColumn } from "../../components/Table/FilterBy";
+import { FilterColumn } from "../../components/Table/FilterBy";
+import { TableFilter } from "../../components/Table/TableFilter";
 import { useFilterBy } from "../../../application/hooks/useFilterBy";
 import { SearchBox } from "../../components/Search";
 import { ColumnSelector } from "../../components/Table/ColumnSelector";
@@ -41,6 +48,29 @@ const ApprovalWorkflows: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [isNewWorkflowModalOpen, setIsNewWorkflowModalOpen] = useState(false);
   const [archivedId, setArchivedId] = useState<string | null>(null);
+
+  // `?request=<id>` (Home queue links) opens the approval requests modal on
+  // that request; closing it drops the parameter.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const requestParam = searchParams.get("request");
+  const linkedRequestId =
+    requestParam && /^[1-9]\d*$/.test(requestParam) ? Number(requestParam) : null;
+  const handleCloseLinkedRequest = useCallback(() => {
+    setSearchParams(
+      (params) => {
+        const next = new URLSearchParams(params);
+        next.delete("request");
+        return next;
+      },
+      { replace: true },
+    );
+  }, [setSearchParams]);
+  // A decision here removes the request from Home and changes the top-bar count.
+  const queryClient = useQueryClient();
+  const handleLinkedRequestDecided = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: HOME_QUEUE_QUERY_KEY });
+    dispatchApprovalRequestsChanged();
+  }, [queryClient]);
 
   // Column visibility
   const {
@@ -102,8 +132,12 @@ const ApprovalWorkflows: React.FC = () => {
   );
 
   // FilterBy - Initialize hook
-  const { filterData: filterWorkflowData, handleFilterChange: handleWorkflowFilterChange } =
-    useFilterBy<ApprovalWorkflowModel>(getWorkflowFieldValue);
+  const {
+    filterData: filterWorkflowData,
+    handleFilterChange: handleWorkflowFilterChange,
+    conditions: workflowFilterConditions,
+    logic: workflowFilterLogic,
+  } = useFilterBy<ApprovalWorkflowModel>(getWorkflowFieldValue);
 
   /** -------------------- FILTERING -------------------- */
   const filteredData = useMemo(() => {
@@ -186,6 +220,8 @@ const ApprovalWorkflows: React.FC = () => {
   }, []);
 
   /** -------------------- WORKFLOW MODAL HANDLERS -------------------- */
+  // Saving a workflow needs this permission; approvers arriving from Home often lack it.
+  const canManageWorkflows = useCan("approvalWorkflow.admin");
   const handleNewWorkflowClick = () => setIsNewWorkflowModalOpen(true);
 
   const handleEditWorkflowClick = async (id: string) => {
@@ -344,7 +380,14 @@ const ApprovalWorkflows: React.FC = () => {
           sx={filterSearchContainer}
         >
           <Stack direction="row" spacing={2} alignItems="center">
-            <FilterBy columns={workflowFilterColumns} onFilterChange={handleWorkflowFilterChange} />
+            <TableFilter
+              columns={workflowFilterColumns}
+              onFilterChange={handleWorkflowFilterChange}
+              defaultConditions={workflowFilterConditions}
+              defaultLogic={workflowFilterLogic}
+              data={workflowData}
+              getFieldValue={getWorkflowFieldValue}
+            />
             <ColumnSelector
               columns={allWorkflowColumns}
               visibleColumns={workflowVisibleColumns}
@@ -359,22 +402,24 @@ const ApprovalWorkflows: React.FC = () => {
               fullWidth={false}
             />
           </Stack>
-          <Box data-joyride-id="add-workflow-button">
-            <CustomizableButton
-              variant="contained"
-              sx={addNewWorkflowButton}
-              text="Add new workflow"
-              icon={<AddCircleOutlineIcon />}
-              onClick={handleNewWorkflowClick}
-            />
-          </Box>
+          {canManageWorkflows && (
+            <Box data-joyride-id="add-workflow-button">
+              <CustomizableButton
+                variant="contained"
+                sx={addNewWorkflowButton}
+                text="Add new workflow"
+                icon={<AddCircleOutlineIcon />}
+                onClick={handleNewWorkflowClick}
+              />
+            </Box>
+          )}
         </Stack>
         {/* Approval Table */}
         <ApprovalWorkflowsTable
           data={filteredData}
           isLoading={isLoading}
-          onEdit={handleEditWorkflowClick}
-          onArchive={handleArchiveWorkflow}
+          onEdit={canManageWorkflows ? handleEditWorkflowClick : undefined}
+          onArchive={canManageWorkflows ? handleArchiveWorkflow : undefined}
           archivedId={archivedId}
           visibleColumns={workflowVisibleColumns}
         />
@@ -394,6 +439,12 @@ const ApprovalWorkflows: React.FC = () => {
         }
         isEdit={!!selectWorkflow}
         onSuccess={handleWorkflowSuccess}
+      />
+      <RequestorApprovalModal
+        isOpen={linkedRequestId !== null}
+        onClose={handleCloseLinkedRequest}
+        onRefresh={handleLinkedRequestDecided}
+        initialRequestId={linkedRequestId}
       />
     </PageHeaderExtended>
   );

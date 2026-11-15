@@ -42,7 +42,6 @@ import {
   type VendorModalFormValues,
 } from "../../../constants/formValidationFieldMaps";
 import { checkStringValidation } from "../../../../application/validations/stringValidation";
-import { useAuth } from "../../../../application/hooks/useAuth";
 import { useProjects } from "../../../../application/hooks/useProjects";
 import useUsers from "../../../../application/hooks/useUsers";
 import CustomizableToast from "../../Toast";
@@ -52,7 +51,7 @@ import CustomFieldsSection, { type CustomFieldsSectionHandle } from "../../Custo
 import { useRequiredCustomFieldsGate } from "../../CustomFieldsSection/RequiredCustomFieldsGate";
 import TabBar from "../../TabBar";
 import { EnhancedTooltip } from "../../EnhancedTooltip";
-import allowedRoles from "../../../../application/constants/permissions";
+import { useCanCheck } from "../../../../application/hooks/useCan";
 import { useCreateVendor, useUpdateVendor } from "../../../../application/hooks/useVendors";
 import { useModalKeyHandling } from "../../../../application/hooks/useModalKeyHandling";
 import { User } from "../../../../domain/types/User";
@@ -68,6 +67,7 @@ import {
   calculateVendorRiskScore,
   getRiskScoreColor,
 } from "../../../../domain/utils/vendorScorecard.utils";
+import { radiusPx, palette as vwPalette } from "../../../themes/palette";
 
 const initialState: VendorModalFormValues = {
   vendorName: "",
@@ -217,7 +217,7 @@ const AddNewVendor: React.FC<AddNewVendorProps> = ({
   const [projectOptions, setProjectOptions] = useState<{ _id: number; name: string }[]>([]);
   const [isScorecardExpanded, setIsScorecardExpanded] = useState(false);
   const [activeTab, setActiveTab] = useState("details");
-  const { userRoleName } = useAuth();
+  const can = useCanCheck();
   const { users } = useUsers();
   const { approvedProjects } = useProjects();
   const queryClient = useQueryClient();
@@ -232,7 +232,7 @@ const AddNewVendor: React.FC<AddNewVendorProps> = ({
   // Prefetch history data when modal opens in edit mode
   useEntityChangeHistory("vendor", existingVendor?.id);
 
-  const isEditingDisabled = !allowedRoles.vendors.edit.includes(userRoleName);
+  const isEditingDisabled = !can("vendor.edit");
   const customFieldsGate = useRequiredCustomFieldsGate("vendor", existingVendor?.id ?? null);
 
   const formattedUsers = users?.map((user: User) => ({
@@ -801,7 +801,7 @@ const AddNewVendor: React.FC<AddNewVendorProps> = ({
             "cursor": "pointer",
             "padding": theme.spacing(2),
             "border": `1px solid ${theme.palette.divider}`,
-            "borderRadius": "4px",
+            "borderRadius": radiusPx.sm,
             "backgroundColor": theme.palette.grey[50],
             "&:hover": {
               backgroundColor: theme.palette.grey[100],
@@ -831,7 +831,7 @@ const AddNewVendor: React.FC<AddNewVendorProps> = ({
                   <Box
                     sx={{
                       backgroundColor: "rgba(255, 255, 255, 0.05)",
-                      borderRadius: "4px",
+                      borderRadius: radiusPx.sm,
                       padding: "12px",
                       mb: 2,
                       fontFamily: "monospace",
@@ -839,7 +839,7 @@ const AddNewVendor: React.FC<AddNewVendorProps> = ({
                   >
                     <Typography
                       sx={{
-                        color: "#16C784",
+                        color: vwPalette.status.success.text,
                         fontSize: "12px",
                         lineHeight: 1.8,
                       }}
@@ -903,7 +903,7 @@ const AddNewVendor: React.FC<AddNewVendorProps> = ({
                       alignItems: "center",
                       gap: 1,
                       padding: "4px 8px",
-                      borderRadius: "4px",
+                      borderRadius: radiusPx.sm,
                       backgroundColor: `${riskColor}20`,
                       border: `1px solid ${riskColor}`,
                       minWidth: "50px",

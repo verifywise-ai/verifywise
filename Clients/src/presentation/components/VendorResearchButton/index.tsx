@@ -28,7 +28,7 @@ import { Box, IconButton, alpha } from "@mui/material";
 import { Microscope } from "lucide-react";
 import VWTooltip from "../VWTooltip";
 import { brand, text } from "../../themes/palette";
-import { useHasPermission } from "../../../application/hooks/useMyPermissions";
+import { useCan } from "../../../application/hooks/useCan";
 import {
   followResearch,
   useStartVendorResearch,
@@ -114,7 +114,7 @@ const StartResearchButton: React.FC<VendorResearchButtonProps> = ({
 };
 
 const VendorResearchButton: React.FC<VendorResearchButtonProps> = (props) => {
-  const canEdit = useHasPermission("vendor.edit");
+  const canEdit = useCan("vendor.edit");
   return canEdit ? <StartResearchButton {...props} /> : null;
 };
 

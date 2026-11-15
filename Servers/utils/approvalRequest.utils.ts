@@ -19,6 +19,7 @@ import {
 import { logStructured } from "./logger/fileLogger";
 import { withLegacyHighRiskRole } from "./highRiskRoles.utils";
 import { executeAiAction } from "../advisor/aiActions";
+import { applyPolicyApprovalDecision } from "./policyApprovalDecision.utils";
 
 /**
  * Notification info to be sent after transaction commits
@@ -33,6 +34,9 @@ export interface NotificationInfo {
   // Additional fields for step completion notifications to requester
   completedStep?: number;
   totalSteps?: number;
+  /** The request's entity, so a notification can link to it (e.g. a policy). */
+  entityType?: string | null;
+  entityId?: number | null;
 }
 
 /**
@@ -512,9 +516,9 @@ export const getApprovalRequestByIdQuery = async (
       p.high_risk_roles,
       p.start_date,
       p.geography,
-      owner_user.name as owner_name,
+      COALESCE(owner_user.name, p.external_owner_name || ' (external)') as owner_name,
       owner_user.surname as owner_surname,
-      owner_user.email as owner_email,
+      COALESCE(owner_user.email, p.external_owner_email) as owner_email,
       -- File fields
       f.filename as file_name,
       f.size as file_size,
@@ -934,6 +938,19 @@ export const processApprovalQuery = async (
       await releaseUseCaseFromReview(organizationId, entityId, userId, transaction);
     }
 
+    // A rejected policy goes back to Draft with the reviewer's comment.
+    if (entityType === "policy" && entityId) {
+      await applyPolicyApprovalDecision({
+        organizationId,
+        policyId: entityId,
+        requestId,
+        decision: "rejected",
+        actorId: userId,
+        comment: comments,
+        transaction,
+      });
+    }
+
     if (entityType === "file" && entityId) {
       // Update file review_status to 'rejected'
       await sequelize.query(
@@ -954,6 +971,8 @@ export const processApprovalQuery = async (
       requestId,
       requesterId: (request as any).requested_by,
       requestName: (request as any).request_name,
+      entityType,
+      entityId,
     };
   }
   // If approved and conditions met (all/any), move to next step or complete
@@ -1031,6 +1050,8 @@ export const processApprovalQuery = async (
         requestName: (request as any).request_name,
         completedStep: currentStep,
         totalSteps: stepCount,
+        entityType: (request as any).entity_type ?? null,
+        entityId: (request as any).entity_id ?? null,
       };
     } else {
       // All steps completed - mark as approved
@@ -1048,6 +1069,11 @@ export const processApprovalQuery = async (
         },
       );
 
+      // ===== FRAMEWORK CREATION AFTER APPROVAL =====
+      // Get the entity (use-case/project) to check if it has pending frameworks
+      const entityId = (request as any).entity_id;
+      const entityType = (request as any).entity_type;
+
       // Store notification info to be sent after transaction commits
       const notificationInfo: NotificationInfo = {
         type: "requester_approved",
@@ -1055,12 +1081,9 @@ export const processApprovalQuery = async (
         requestId,
         requesterId: (request as any).requested_by,
         requestName: (request as any).request_name,
+        entityType,
+        entityId,
       };
-
-      // ===== FRAMEWORK CREATION AFTER APPROVAL =====
-      // Get the entity (use-case/project) to check if it has pending frameworks
-      const entityId = (request as any).entity_id;
-      const entityType = (request as any).entity_type;
 
       if (entityType === "use_case" && entityId) {
         await createPendingFrameworksForApprovedUseCase(
@@ -1069,6 +1092,19 @@ export const processApprovalQuery = async (
           transaction,
           userId,
         );
+      }
+
+      // ===== POLICY STATUS UPDATE AFTER FINAL APPROVAL =====
+      if (entityType === "policy" && entityId) {
+        await applyPolicyApprovalDecision({
+          organizationId,
+          policyId: entityId,
+          requestId,
+          decision: "approved",
+          actorId: userId,
+          comment: comments,
+          transaction,
+        });
       }
 
       // ===== FILE STATUS UPDATE AFTER APPROVAL =====
@@ -1130,17 +1166,21 @@ export const withdrawApprovalRequestQuery = async (
      */
     releaseUseCase?: boolean;
   } = {},
-): Promise<void> => {
+): Promise<boolean> => {
+  // Only a pending request can be withdrawn: a decided one keeps its outcome,
+  // and its entity (a use case, a policy) is not moved back. Returns whether
+  // a pending request was withdrawn.
   const rows = (await sequelize.query(
     `UPDATE approval_requests
      SET status = :status, updated_at = NOW()
-     WHERE organization_id = :organizationId AND id = :requestId
+     WHERE organization_id = :organizationId AND id = :requestId AND status = :pending
      RETURNING entity_type, entity_id`,
     {
       replacements: {
         organizationId,
         requestId,
         status: ApprovalRequestStatus.WITHDRAWN,
+        pending: ApprovalRequestStatus.PENDING,
       },
       type: QueryTypes.SELECT,
       transaction,
@@ -1159,6 +1199,18 @@ export const withdrawApprovalRequestQuery = async (
       transaction,
     );
   }
+  // A withdrawn policy goes back to Draft.
+  if (withdrawn?.entity_type === "policy" && withdrawn.entity_id) {
+    await applyPolicyApprovalDecision({
+      organizationId,
+      policyId: withdrawn.entity_id,
+      requestId,
+      decision: "withdrawn",
+      actorId: options.changedBy ?? null,
+      transaction,
+    });
+  }
+  return Boolean(withdrawn);
 };
 
 /**
@@ -1275,22 +1327,27 @@ export const getApprovalStatusQuery = async (
 };
 
 /**
- * Reject an approval request when the associated entity is deleted
- * This is used when a file with a pending approval is deleted
+ * Reject an approval request when the associated entity is deleted (a file, a
+ * policy). Pass `outerTransaction` to reject inside the delete's transaction;
+ * the caller then commits or rolls back. Without it the function runs its own.
+ * Returns null when the request does not exist or is no longer pending.
  */
 export const rejectApprovalRequestOnEntityDelete = async (
   approvalRequestId: number,
   organizationId: number,
   reason: string = "The associated entity has been deleted.",
+  outerTransaction?: Transaction,
 ): Promise<NotificationInfo | null> => {
-  const transaction = await sequelize.transaction();
+  const transaction = outerTransaction ?? (await sequelize.transaction());
+  const ownsTransaction = !outerTransaction;
 
   try {
     // Get the approval request
     const [request] = (await sequelize.query(
-      `SELECT id, request_name, requested_by, status
+      `SELECT id, request_name, requested_by, status, entity_type, entity_id
        FROM approval_requests
-       WHERE organization_id = :organizationId AND id = :requestId`,
+       WHERE organization_id = :organizationId AND id = :requestId
+       FOR UPDATE`,
       {
         replacements: { organizationId, requestId: approvalRequestId },
         type: "SELECT",
@@ -1299,7 +1356,7 @@ export const rejectApprovalRequestOnEntityDelete = async (
     )) as any[];
 
     if (!request || request.status !== ApprovalRequestStatus.PENDING) {
-      await transaction.rollback();
+      if (ownsTransaction) await transaction.rollback();
       return null; // Request doesn't exist or is not pending
     }
 
@@ -1337,26 +1394,31 @@ export const rejectApprovalRequestOnEntityDelete = async (
     // Update all pending step approvals with the rejection reason
     await sequelize.query(
       `UPDATE approval_request_step_approvals
-       SET status = :status, comments = :reason, date_responded = NOW()
+       SET approval_result = :result, comments = :reason, approved_at = NOW()
        WHERE organization_id = :organizationId
          AND request_step_id IN (
            SELECT id FROM approval_request_steps WHERE organization_id = :organizationId AND request_id = :requestId
-         ) AND status = :pendingStatus`,
+         ) AND approval_result = :pendingResult`,
       {
         replacements: {
           organizationId,
-          status: ApprovalResult.REJECTED,
+          result: ApprovalResult.REJECTED,
           reason,
           requestId: approvalRequestId,
-          pendingStatus: ApprovalResult.PENDING,
+          pendingResult: ApprovalResult.PENDING,
         },
         transaction,
       },
     );
 
-    await transaction.commit();
+    if (ownsTransaction) await transaction.commit();
 
-    console.log(`📋 Approval request ${approvalRequestId} rejected: ${reason}`);
+    logStructured(
+      "successful",
+      `approval request ${approvalRequestId} rejected: ${reason}`,
+      "rejectApprovalRequestOnEntityDelete",
+      "approvalRequest.utils.ts",
+    );
 
     // Return notification info to notify the requester
     return {
@@ -1365,10 +1427,17 @@ export const rejectApprovalRequestOnEntityDelete = async (
       requestId: approvalRequestId,
       requesterId: request.requested_by,
       requestName: request.request_name,
+      entityType: request.entity_type ?? null,
+      entityId: request.entity_id ?? null,
     };
   } catch (error) {
-    await transaction.rollback();
-    console.error(`Failed to reject approval request ${approvalRequestId}:`, error);
+    if (ownsTransaction) await transaction.rollback();
+    logStructured(
+      "error",
+      `failed to reject approval request ${approvalRequestId}: ${(error as Error)?.message ?? error}`,
+      "rejectApprovalRequestOnEntityDelete",
+      "approvalRequest.utils.ts",
+    );
     throw error;
   }
 };

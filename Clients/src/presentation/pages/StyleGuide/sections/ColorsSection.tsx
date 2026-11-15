@@ -1,18 +1,7 @@
 import React, { useState } from "react";
 import { Box, Stack, Typography, useTheme, Divider, Snackbar } from "@mui/material";
 import { Copy } from "lucide-react";
-import {
-  grey,
-  green,
-  red,
-  amber,
-  orange,
-  blue,
-  indigo,
-  purple,
-  teal,
-  pink,
-} from "@design-tokens/primitives";
+import { grey, green, red, amber, orange, blue, indigo, purple, teal, pink } from "../../../themes";
 import { button } from "../../../themes/palette";
 import { fontSize } from "../../../themes/typography";
 

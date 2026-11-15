@@ -8,6 +8,7 @@ export interface Command {
   icon?: React.ComponentType<Record<string, unknown>>;
   shortcut?: string[];
   requiredRole?: string[];
+  /** A permission key (e.g. "useCase.edit") the user must hold to see the command. */
   scope?: string;
 }
 
@@ -53,7 +54,8 @@ export interface CommandAction {
 export interface CommandContext {
   currentPath: string;
   userRole: string;
-  permissions: string[];
+  /** The user's permission keys; undefined while they load (built-in roles fall back). */
+  permissions?: readonly string[];
   searchTerm?: string;
 }
 

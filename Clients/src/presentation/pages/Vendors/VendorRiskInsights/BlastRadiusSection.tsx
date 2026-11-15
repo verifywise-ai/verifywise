@@ -3,7 +3,6 @@ import { Box, Typography } from "@mui/material";
 import { Info } from "lucide-react";
 import { useNavigate } from "react-router";
 import { useVendorExposure } from "../../../../application/hooks/useRiskLinks";
-import { useIsAdmin } from "../../../../application/hooks/useIsAdmin";
 import { useTranslation } from "../../../../application/hooks/useTranslation";
 import type { VendorExposureSummary } from "../../../../domain/interfaces/i.riskLink";
 import { VWLink } from "../../../components/Link";
@@ -23,6 +22,7 @@ import {
 } from "../../RiskInheritanceGraph/reportStyles";
 import { fill } from "../../../../i18n/fill";
 import { ReportError, ReportLoading } from "./ReportState";
+import { useCan } from "../../../../application/hooks/useCan";
 
 /**
  * Blast radius: for each vendor, how many project risks inherit from its risks
@@ -31,7 +31,8 @@ import { ReportError, ReportLoading } from "./ReportState";
  */
 export default function BlastRadiusSection() {
   const { data, isLoading, error } = useVendorExposure();
-  const isAdmin = useIsAdmin();
+  // Scans, suggestions and the graph authorize on riskLinks.admin.
+  const isAdmin = useCan("riskLinks.admin");
   const navigate = useNavigate();
   const { t } = useTranslation();
 

@@ -1,30 +1,16 @@
 import { Queue } from "bullmq";
-import logger from "../../utils/logger/fileLogger";
 import { REDIS_URL } from "../../database/redis";
-import { FAILED_JOB_RETENTION } from "../automations/automationProducer";
 
 // Create a new queue (connected to Redis using environment variable)
 export const notificationQueue = new Queue("slack-notifications", {
   connection: { url: REDIS_URL },
 });
 
-export async function scheduleDailyNotification() {
-  logger.info("Adding Slack notification jobs to the queue...");
-
-  // Policy Due Soon Slack Notification Every day at 9 am
-  await notificationQueue.upsertJobScheduler(
-    "slack-notification-policy",
-    {
-      pattern: "0 9 * * *",
-    },
-    {
-      name: "slack-notification-policy",
-      data: { type: "policies" },
-      opts: {
-        removeOnComplete: true,
-        // The start no longer empties this queue, so a failed run must not stay in Redis for good.
-        removeOnFail: FAILED_JOB_RETENTION,
-      },
-    },
-  );
+/**
+ * Remove the retired 9 AM policy Slack job (P-H3). The policy review reminder
+ * sweep sends those Slack messages now. Job schedulers live in Redis, so
+ * without this a deployment that ran the old code would keep firing it.
+ */
+export async function removeRetiredSlackPolicyScheduler() {
+  await notificationQueue.removeJobScheduler("slack-notification-policy");
 }

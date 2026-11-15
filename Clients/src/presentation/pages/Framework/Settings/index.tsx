@@ -13,16 +13,23 @@ import ConfirmationModal from "../../../components/Dialogs/ConfirmationModal";
 import StandardModal from "../../../components/Modals/StandardModal";
 import { deleteProject } from "../../../../application/repository/project.repository";
 import { FrameworkTypeEnum } from "../../../components/Forms/ProjectForm/constants";
-import allowedRoles from "../../../../application/constants/permissions";
-import { useAuth } from "../../../../application/hooks/useAuth";
+import { useCanCheck } from "../../../../application/hooks/useCan";
 import {
   assignFrameworkToProject,
   deleteEntityById,
 } from "../../../../application/repository/entity.repository";
 import Alert from "../../../components/Alert";
 import CustomizableToast from "../../../components/Toast";
-import { background, border as borderPalette, text } from "../../../themes/palette";
+import {
+  background,
+  border as borderPalette,
+  text,
+  palette as vwPalette,
+  radiusPx,
+} from "../../../themes/palette";
 import { fontSize, fontWeight, textStyles } from "../../../themes/typography";
+import { useExtensions } from "../../../../application/contexts/Extensions.context";
+import ImportedFrameworksSettings from "./ImportedFrameworksSettings";
 
 interface FrameworkSettingsProps {
   organizationalProject: Project;
@@ -41,7 +48,10 @@ const FrameworkSettings: React.FC<FrameworkSettingsProps> = ({
   onFrameworksChanged,
   setProjects,
 }) => {
-  const { userRoleName } = useAuth();
+  const can = useCanCheck();
+  // Framework import extension (#5254): imported frameworks are managed here.
+  const { isEnabled } = useExtensions();
+  const isFrameworkImportEnabled = isEnabled("framework-import");
   const [isEditProjectModalOpen, setIsEditProjectModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -230,60 +240,55 @@ const FrameworkSettings: React.FC<FrameworkSettingsProps> = ({
 
         <Box
           sx={{
-            display: "grid",
-            gridTemplateColumns: "1fr 1fr",
-            gap: 3,
-            alignItems: "stretch",
+            background: `linear-gradient(135deg, ${background.main} 0%, ${background.gradientStop} 100%)`,
+            border: `1px solid ${borderPalette.dark}`,
+            borderRadius: radiusPx.sm,
+            p: "24px",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            flexWrap: "wrap",
+            gap: "16px",
           }}
         >
-          <Box
-            sx={{
-              background: `linear-gradient(135deg, ${background.main} 0%, ${background.gradientStop} 100%)`,
-              border: `1px solid ${borderPalette.dark}`,
-              borderRadius: "4px",
-              p: "24px",
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-            }}
-          >
-            <Box>
-              <Typography sx={{ ...textStyles.subsectionTitle, mb: 1, color: text.primary }}>
-                {organizationalProject.project_title}
-              </Typography>
-              <Typography sx={{ ...textStyles.body, color: text.tertiary }}>
-                Organizational framework
-              </Typography>
-            </Box>
-
-            <Stack direction="row" spacing={2}>
-              <CustomizableButton
-                variant="outlined"
-                icon={<EditIconGrey size={16} />}
-                text="Edit framework"
-                onClick={handleEditProjectClick}
-                isDisabled={!allowedRoles.projects.edit.includes(userRoleName)}
-                sx={{
-                  "borderColor": borderPalette.dark,
-                  "width": "170px",
-                  "color": text.primary,
-                  "&:hover": {
-                    borderColor: borderPalette.dark,
-                    backgroundColor: background.hover,
-                  },
-                }}
-              />
-
-              <CustomizableButton
-                variant="outlined"
-                color="error"
-                icon={<DeleteIconRed size={16} />}
-                text="Delete framework"
-                onClick={handleDeleteProjectClick}
-                isDisabled={!allowedRoles.projects.delete.includes(userRoleName)}
-              />
-            </Stack>
+          <Box>
+            <Typography sx={{ ...textStyles.subsectionTitle, mb: 1, color: text.primary }}>
+              {organizationalProject.project_title}
+            </Typography>
+            <Typography sx={{ ...textStyles.body, color: text.tertiary }}>
+              Organizational framework
+            </Typography>
           </Box>
+
+          <Stack direction="row" sx={{ gap: "8px", flexShrink: 0 }}>
+            <CustomizableButton
+              variant="outlined"
+              icon={<EditIconGrey size={16} />}
+              text="Edit framework"
+              onClick={handleEditProjectClick}
+              isDisabled={!can("useCase.edit")}
+              sx={{
+                "borderColor": borderPalette.dark,
+                "width": "170px",
+                "whiteSpace": "nowrap",
+                "color": text.primary,
+                "&:hover": {
+                  borderColor: borderPalette.dark,
+                  backgroundColor: background.hover,
+                },
+              }}
+            />
+
+            <CustomizableButton
+              variant="outlined"
+              color="error"
+              icon={<DeleteIconRed size={16} />}
+              text="Delete framework"
+              onClick={handleDeleteProjectClick}
+              isDisabled={!can("useCase.edit")}
+              sx={{ width: "170px", whiteSpace: "nowrap" }}
+            />
+          </Stack>
         </Box>
       </Box>
 
@@ -321,7 +326,7 @@ const FrameworkSettings: React.FC<FrameworkSettingsProps> = ({
                 sx={{
                   background: `linear-gradient(135deg, ${background.main} 0%, ${background.gradientStop} 100%)`,
                   border: `1px solid ${borderPalette.dark}`,
-                  borderRadius: "4px",
+                  borderRadius: radiusPx.sm,
                   p: "24px",
                   display: "flex",
                   flexDirection: "column",
@@ -338,8 +343,8 @@ const FrameworkSettings: React.FC<FrameworkSettingsProps> = ({
                         display: "flex",
                         alignItems: "center",
                         gap: 0.5,
-                        backgroundColor: "#E6F4EE",
-                        borderRadius: "4px",
+                        backgroundColor: vwPalette.accent.teal.bg,
+                        borderRadius: radiusPx.sm,
                         px: 1.5,
                         py: 0.5,
                         fontSize: 13,
@@ -353,7 +358,7 @@ const FrameworkSettings: React.FC<FrameworkSettingsProps> = ({
                   )}
                 </Box>
 
-                <Typography sx={{ fontSize: 13, color: "#666666", mb: "auto" }}>
+                <Typography sx={{ fontSize: 13, color: vwPalette.text.tertiary, mb: "auto" }}>
                   {fw.description}
                 </Typography>
 
@@ -362,22 +367,18 @@ const FrameworkSettings: React.FC<FrameworkSettingsProps> = ({
                     <CustomizableButton
                       variant="outlined"
                       text="Remove"
-                      isDisabled={
-                        isLoading ||
-                        onlyOneFramework ||
-                        !allowedRoles.frameworks.manage.includes(userRoleName)
-                      }
+                      isDisabled={isLoading || onlyOneFramework || !can("framework.edit")}
                       onClick={() => {
                         setFrameworkToRemove(fw);
                         setIsRemoveModalOpen(true);
                       }}
                       sx={{
                         "minWidth": 100,
-                        "borderColor": "#F87171",
-                        "color": "#DC2626",
+                        "borderColor": vwPalette.status.error.border,
+                        "color": vwPalette.riskMark.critical,
                         "&:hover": {
-                          borderColor: "#EF4444",
-                          backgroundColor: "#FEF2F2",
+                          borderColor: vwPalette.riskMark.critical,
+                          backgroundColor: vwPalette.status.error.bg,
                         },
                       }}
                     />
@@ -385,15 +386,13 @@ const FrameworkSettings: React.FC<FrameworkSettingsProps> = ({
                     <CustomizableButton
                       variant="contained"
                       text="Add"
-                      isDisabled={
-                        isLoading || !allowedRoles.frameworks.manage.includes(userRoleName)
-                      }
+                      isDisabled={isLoading || !can("framework.edit")}
                       onClick={() => handleAddFramework(fw)}
                       sx={{
                         "minWidth": 100,
                         "backgroundColor": "brand.primary",
                         "color": "background.main",
-                        "&:hover": { backgroundColor: "#0e5c47" },
+                        "&:hover": { backgroundColor: vwPalette.brand.primaryHover },
                       }}
                     />
                   )}
@@ -403,6 +402,8 @@ const FrameworkSettings: React.FC<FrameworkSettingsProps> = ({
           })}
         </Box>
       </Box>
+
+      {isFrameworkImportEnabled && <ImportedFrameworksSettings />}
 
       {/* Modals */}
       {isEditProjectModalOpen && (

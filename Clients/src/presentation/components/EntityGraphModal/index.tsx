@@ -25,6 +25,7 @@ import {
 import "@xyflow/react/dist/style.css";
 // Import EntityGraph directly (not lazy) to avoid portal/context issues
 import EntityGraph from "../../pages/EntityGraph";
+import { radiusPx } from "../../themes/palette";
 
 export type FocusEntityType = "model" | "risk" | "vendor" | "useCase" | "evidence" | "framework";
 
@@ -107,7 +108,7 @@ const EntityGraphModalInner: FC<EntityGraphModalProps> = ({
           width: "95vw",
           height: "90vh",
           backgroundColor: theme.palette.background.main,
-          borderRadius: "8px",
+          borderRadius: radiusPx.lg,
           boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
           display: "flex",
           flexDirection: "column",

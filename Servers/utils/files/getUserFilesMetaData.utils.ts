@@ -1,6 +1,7 @@
 import { sequelize } from "../../database/db";
 import { FileList } from "../../domain.layer/models/file/file.model";
 import { attachLinkProjections } from "./attachLinkProjections";
+import { projectVisibilitySql } from "../projectVisibility.utils";
 
 export type { FileEntityLinkProjection } from "./attachLinkProjections";
 
@@ -38,20 +39,18 @@ const getUserFilesMetaDataQuery = async (
       ${paginationClause};
     `;
   } else {
+    // Owner, member or group member (#5253), by the use case list's rule.
+    const visibility = projectVisibilitySql("p", { userId, role });
     query = `
-      WITH projects_of_user AS (
-        SELECT DISTINCT project_id FROM projects_members WHERE organization_id = :organizationId AND user_id = :userId
-        UNION ALL
-        SELECT id AS project_id FROM projects WHERE organization_id = :organizationId AND owner = :userId
-      ) SELECT f.id, f.filename, f.project_id, f.uploaded_time, f.source, f.review_status,
+      SELECT f.id, f.filename, f.project_id, f.uploaded_time, f.source, f.review_status,
           p.project_title, u.name AS uploader_name, u.surname AS uploader_surname
-        FROM files f JOIN projects_of_user pu ON f.project_id = pu.project_id
-        JOIN projects p ON p.id = pu.project_id AND p.organization_id = :organizationId
+        FROM files f
+        JOIN projects p ON p.id = f.project_id AND p.organization_id = :organizationId
         JOIN users u ON f.uploaded_by = u.id
-        WHERE f.organization_id = :organizationId AND f.source::TEXT NOT ILIKE '%report%'
+        WHERE f.organization_id = :organizationId AND f.source::TEXT NOT ILIKE '%report%'${visibility.sql}
         ORDER BY f.uploaded_time DESC
       ${paginationClause};`;
-    replacements.userId = userId;
+    Object.assign(replacements, visibility.replacements);
   }
 
   if (limit !== undefined) replacements.limit = limit;

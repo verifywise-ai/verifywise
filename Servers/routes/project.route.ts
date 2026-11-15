@@ -21,6 +21,7 @@ import {
 
 import authenticateJWT from "../middleware/auth.middleware";
 import authorize from "../middleware/accessControl.middleware";
+import { requireProjectAccess } from "../middleware/projectAccess.middleware";
 import {
   classifyUseCase,
   getUseCaseClassification,
@@ -39,29 +40,45 @@ router.get(
   "/calculateProjectRisks/:id",
   authenticateJWT,
   validateProjectIdParam,
+  requireProjectAccess(),
   getProjectRisksCalculations,
 );
 router.get(
   "/calculateVendorRisks/:id",
   authenticateJWT,
   validateProjectIdParam,
+  requireProjectAccess(),
   getVendorRisksCalculations,
 );
-router.get("/:id", authenticateJWT, validateProjectIdParam, getProjectById);
-router.get("/stats/:id", authenticateJWT, validateProjectIdParam, getProjectStatsById);
+router.get("/:id", authenticateJWT, validateProjectIdParam, requireProjectAccess(), getProjectById);
+router.get(
+  "/stats/:id",
+  authenticateJWT,
+  validateProjectIdParam,
+  requireProjectAccess(),
+  getProjectStatsById,
+);
 
-router.get("/complainces/:projid", authenticateJWT, validateProjectProjIdParam, getCompliances);
+router.get(
+  "/complainces/:projid",
+  authenticateJWT,
+  validateProjectProjIdParam,
+  requireProjectAccess("projid"),
+  getCompliances,
+);
 
 router.get(
   "/compliance/progress/:id",
   authenticateJWT,
   validateProjectIdParam,
+  requireProjectAccess(),
   projectComplianceProgress,
 );
 router.get(
   "/assessment/progress/:id",
   authenticateJWT,
   validateProjectIdParam,
+  requireProjectAccess(),
   projectAssessmentProgress,
 );
 
@@ -69,6 +86,7 @@ router.get(
   "/:id/eu-ai-act-classification",
   authenticateJWT,
   validateProjectIdParam,
+  requireProjectAccess(),
   getUseCaseClassification,
 );
 router.get("/all/compliance/progress", authenticateJWT, allProjectsComplianceProgress);
@@ -81,6 +99,7 @@ router.post(
   authenticateJWT,
   validateProjectIdParam,
   authorize("useCase.classify"),
+  requireProjectAccess(),
   classifyUseCase,
 );
 // router.post("/saveControls", authenticateJWT, saveControls);
@@ -98,6 +117,7 @@ router.patch(
   authenticateJWT,
   authorize("useCase.edit"),
   validateUpdateProjectStatus,
+  requireProjectAccess(),
   updateProjectStatus,
 );
 
@@ -107,6 +127,7 @@ router.delete(
   authenticateJWT,
   authorize("useCase.edit"),
   validateProjectIdParam,
+  requireProjectAccess(),
   deleteProjectById,
 );
 

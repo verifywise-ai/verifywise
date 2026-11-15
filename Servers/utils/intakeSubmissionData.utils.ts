@@ -10,6 +10,7 @@ import {
   type ClassificationResult,
   type Questionnaire,
 } from "../services/euAiActClassification";
+import { isCustomFieldMapping } from "../services/intakeFormLogic";
 import { HIGH_RISK_ROLE_MAPPING, resolveMappedHighRiskRoles } from "./highRiskRoles.utils";
 import logger from "./logger/fileLogger";
 
@@ -59,6 +60,8 @@ export function buildEntityDataFromSubmission(
   const result: Record<string, unknown> = {};
   for (const field of formSchema.fields) {
     if (!field.entityFieldMapping || submissionData[field.id] === undefined) continue;
+    // Custom fields are written by their own resolver, not through entity data.
+    if (isCustomFieldMapping(field.entityFieldMapping)) continue;
     if (field.entityFieldMapping === HIGH_RISK_ROLE_MAPPING) {
       // A select stores option values; match each option by label or value.
       // Options that name no role are kept by label for the review dialog.

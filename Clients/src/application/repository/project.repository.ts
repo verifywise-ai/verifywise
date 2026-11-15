@@ -37,12 +37,13 @@ export async function getProjectById({
 }
 
 export async function createProject({ body }: { body: any }): Promise<any> {
-  const response = await apiServices.post("/projects", body);
+  // v1: the legacy create and update contracts have no external owner fields.
+  const response = await apiServices.post("/v1/projects", body);
   return response;
 }
 
 export async function updateProject({ id, body }: { id: number; body: any }): Promise<any> {
-  const response = await apiServices.patch(`/projects/${id}`, body);
+  const response = await apiServices.patch(`/v1/projects/${id}`, body);
   return response;
 }
 

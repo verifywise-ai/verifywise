@@ -14,11 +14,16 @@ import {
   importDocxToHtml,
 } from "../../../application/repository/policy.repository";
 import { useUpdatePolicy } from "../../../application/hooks/usePolicyMutations";
+import {
+  usePolicyApproval,
+  usePolicyApprovalChangedListener,
+} from "../../../application/hooks/usePolicyApproval";
+import { usePolicyTemplate } from "../../../application/hooks/usePolicyTemplates";
 import useUsers from "../../../application/hooks/useUsers";
-import { useAuth } from "../../../application/hooks/useAuth";
-import allowedRoles from "../../../application/constants/permissions";
+import { useCanCheck } from "../../../application/hooks/useCan";
+import { useTranslation } from "../../../application/hooks/useTranslation";
 import { User } from "../../../domain/types/User";
-import { PolicyFormData, PolicyInput } from "../../types/interfaces/i.policy";
+import { PolicyFormData } from "../../types/interfaces/i.policy";
 import { PolicyManagerModel } from "../../../domain/models/Common/policy/policyManager.model";
 import { checkStringValidation } from "../../../application/validations/stringValidation";
 import { useFormValidation } from "../../../application/hooks/useFormValidation";
@@ -31,6 +36,10 @@ import { PolicyContentEditor } from "./PolicyEditor/PolicyContentEditor";
 import { PolicyHeader } from "./PolicyEditor/PolicyHeader";
 import { PolicyMetadataSidebar } from "./PolicyEditor/PolicyMetadataSidebar";
 import { PolicyReviewPanel } from "./PolicyEditor/PolicyReviewPanel";
+import { isPolicyFormDirty } from "./PolicyEditor/policyFormDirty";
+import { radiusPx } from "../../themes/palette";
+import { fill, pluralKey } from "../../../i18n/fill";
+import { toDateOnlyString } from "../../tools/isoDateToString";
 
 // ── Component ─────────────────────────────────────────────────────────
 export default function PolicyEditorPage() {
@@ -39,24 +48,36 @@ export default function PolicyEditorPage() {
   const navigate = useNavigate();
   const { users } = useUsers();
   const updatePolicyMutation = useUpdatePolicy();
-  const { userRoleName } = useAuth();
-  const readOnly = !userRoleName || !allowedRoles.policies.edit.includes(userRoleName);
+  const can = useCanCheck();
+  const readOnly = !can("policy.edit");
+  const { t, lang } = useTranslation();
 
   const isNew = !id;
   const templateId = searchParams.get("templateId");
 
-  // Policy templates (loaded dynamically)
-  const [policyTemplates, setPolicyTemplates] = useState<
+  // Policy templates (#5261) resolve through the API. Links carry a composite
+  // `origin-id` (system and org template ids can collide); a bare numeric id
+  // is a legacy link into the static JSON library, kept as a fallback.
+  const [templateOrigin, templateNumericId] = useMemo(() => {
+    if (!templateId) return [null, null] as const;
+    const composite = templateId.match(/^(system|organization)-(\d+)$/);
+    if (composite) return [composite[1], Number(composite[2])] as const;
+    return ["system", Number(templateId)] as const;
+  }, [templateId]);
+
+  const { data: apiTemplate } = usePolicyTemplate(templateNumericId ?? undefined);
+
+  const [staticTemplates, setStaticTemplates] = useState<
     { id: number; title: string; tags: string[]; content: string }[]
   >([]);
 
   useEffect(() => {
-    if (!templateId) return;
+    if (!templateId || templateOrigin !== "system") return;
     fetch("/data/PolicyTemplates.json")
       .then((res) => res.json())
-      .then(setPolicyTemplates)
+      .then(setStaticTemplates)
       .catch(() => {});
-  }, [templateId]);
+  }, [templateId, templateOrigin]);
 
   // Data loading state
   const [policy, setPolicy] = useState<PolicyManagerModel | null>(null);
@@ -73,6 +94,7 @@ export default function PolicyEditorPage() {
   const [exportError, setExportError] = useState<string | null>(null);
   const [isImporting, setIsImporting] = useState(false);
   const [importError, setImportError] = useState<string | null>(null);
+  const [importNotice, setImportNotice] = useState<string | null>(null);
   const [pendingImportFile, setPendingImportFile] = useState<File | null>(null);
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [editedTitle, setEditedTitle] = useState("");
@@ -111,7 +133,8 @@ export default function PolicyEditorPage() {
 
   const [formData, setFormData] = useState<PolicyFormData>({
     title: "",
-    status: "Under Review",
+    // A new policy starts as a draft; it goes under review only by submitting it (P-L13).
+    status: "Draft",
     tags: [],
     nextReviewDate: "",
     policyOwner: null,
@@ -148,7 +171,7 @@ export default function PolicyEditorPage() {
     try {
       const updated = await updatePolicyMutation.mutateAsync({
         id: policy.id,
-        input: { title: trimmed } as PolicyInput,
+        input: { title: trimmed },
       });
       setFormData((prev) => ({ ...prev, title: trimmed }));
       setPolicy((prev) => (prev ? { ...prev, ...updated, title: trimmed } : updated));
@@ -177,9 +200,12 @@ export default function PolicyEditorPage() {
   // Resolve template from query param (memoized to avoid new object each render)
   const template = useMemo(() => {
     if (!templateId) return undefined;
-    const t = policyTemplates.find((p) => p.id === Number(templateId));
+    if (apiTemplate && (templateOrigin === "organization" || apiTemplate.is_system_template)) {
+      return { title: apiTemplate.name, tags: apiTemplate.tags, content: apiTemplate.content };
+    }
+    const t = staticTemplates.find((p) => p.id === templateNumericId);
     return t ? { title: t.title, tags: t.tags, content: t.content } : undefined;
-  }, [templateId, policyTemplates]);
+  }, [templateId, templateOrigin, templateNumericId, apiTemplate, staticTemplates]);
 
   // Prefetch change history for existing policies
   usePolicyChangeHistory(!isNew && policy?.id ? policy.id : undefined);
@@ -224,16 +250,26 @@ export default function PolicyEditorPage() {
   // post-save setPolicy() (same id, new object) refreshes metadata but does NOT
   // clobber formData.content — the editor owns content and holds the live value.
   const seededContentPolicyId = useRef<number | null>(null);
+  // Set by an approval reload: the next seed takes only the status from the
+  // policy, so unsaved edits to the other fields survive.
+  const approvalReloadSeed = useRef(false);
+  // The content last loaded or saved, for the unsaved-changes check.
+  const [savedContent, setSavedContent] = useState("");
   useEffect(() => {
     if (policy) {
       const isNewPolicyIdentity = seededContentPolicyId.current !== policy.id;
+      const approvalOnly = approvalReloadSeed.current && !isNewPolicyIdentity;
+      approvalReloadSeed.current = false;
+      if (approvalOnly) {
+        setFormData((prev) => ({ ...prev, status: policy.status || "Draft" }));
+        return;
+      }
+      if (isNewPolicyIdentity) setSavedContent(policy.content_html || "");
       setFormData((prev) => ({
         title: policy.title || "",
         status: policy.status || "Draft",
         tags: policy.tags || [],
-        nextReviewDate: policy.next_review_date
-          ? new Date(policy.next_review_date).toISOString().slice(0, 10)
-          : "",
+        nextReviewDate: toDateOnlyString(policy.next_review_date),
         policyOwner:
           policy.policy_owner_id != null
             ? (users.find((u) => u.id === policy.policy_owner_id) ?? null)
@@ -273,10 +309,30 @@ export default function PolicyEditorPage() {
 
   const findReplace = usePolicyFindReplace(editor);
 
+  // ── Approval ──────────────────────────────────────────────────────
+  const { data: approvalState } = usePolicyApproval(policy?.id);
+  const hasPendingApproval = Boolean(approvalState?.pending_request);
+  // While a request is pending the approvers decide on the submitted text:
+  // the title and content are locked (the server refuses a change), the other
+  // fields stay editable. Follows the approval query, so a withdrawal or a
+  // decision unlocks them without a reload.
+  const textLocked = !isNew && !readOnly && hasPendingApproval;
+
   // Reviewer and Auditor can read policies but not change them.
   useEffect(() => {
-    editor?.setEditable(!readOnly);
-  }, [editor, readOnly]);
+    editor?.setEditable(!readOnly && !textLocked);
+  }, [editor, readOnly, textLocked]);
+
+  // Close anything that would change the title or content once they lock.
+  const { closeFindReplace } = findReplace;
+  useEffect(() => {
+    if (!textLocked) return;
+    setIsEditingTitle(false);
+    setPendingImportFile(null);
+    closeFindReplace();
+  }, [textLocked, closeFindReplace]);
+
+  const knownUserIds = useMemo(() => new Set(users.map((u) => u.id)), [users]);
 
   // ── Save (validation, create/update, custom-fields flush, navigation) ──
   const {
@@ -288,11 +344,14 @@ export default function PolicyEditorPage() {
     setServerErrors,
     validationSnackbar,
     setValidationSnackbar,
+    saveError,
+    setSaveError,
   } = usePolicySave({
     isNew,
     policy,
     setPolicy,
     formData,
+    knownUserIds,
     editor,
     formRef,
     customFieldsRef,
@@ -301,7 +360,48 @@ export default function PolicyEditorPage() {
     resetErrors,
     setEditedTitle,
     setIsEditingTitle,
+    savedContent,
+    onSaved: setSavedContent,
+    textLocked,
   });
+
+  const hasUnsavedChanges = useMemo(
+    () => (policy ? isPolicyFormDirty({ policy, formData, knownUserIds, savedContent }) : true),
+    [policy, formData, knownUserIds, savedContent],
+  );
+
+  // An approval action changes only the status server-side: take the new
+  // status (and last-updated stamp) into the saved policy and the form, and
+  // leave every other field alone, so unsaved edits are kept and still show
+  // as unsaved.
+  const policyId = policy?.id;
+  const reloadPolicy = useCallback(async () => {
+    if (!policyId) return;
+    try {
+      const fresh = await getPolicyById(String(policyId));
+      setPolicy((prev) => {
+        if (!prev || prev.id !== fresh.id) return prev;
+        approvalReloadSeed.current = true;
+        return {
+          ...prev,
+          status: fresh.status,
+          last_updated_by: fresh.last_updated_by,
+          last_updated_at: fresh.last_updated_at,
+        };
+      });
+    } catch {
+      // The approval section has already refreshed; a failed reload leaves the old metadata.
+    }
+  }, [policyId]);
+
+  // The approval requests modal decided or withdrew this policy's request.
+  const handleApprovalChangedElsewhere = useCallback(
+    (detail?: { policyId?: number }) => {
+      if (detail?.policyId == null || detail.policyId === policyId) reloadPolicy();
+    },
+    [policyId, reloadPolicy],
+  );
+  usePolicyApprovalChangedListener(handleApprovalChangedElsewhere);
 
   const displayErrors = useMemo(
     () => ({ ...validationErrors, ...serverErrors }),
@@ -373,6 +473,7 @@ export default function PolicyEditorPage() {
     const file = e.target.files?.[0];
     if (!file) return;
     e.target.value = ""; // reset so same file can be re-selected
+    if (textLocked) return;
 
     if (file.size > MAX_DOCX_SIZE) {
       setImportError("File is too large. Maximum size is 10 MB.");
@@ -388,13 +489,30 @@ export default function PolicyEditorPage() {
   };
 
   const processDocxImport = async (file: File) => {
+    if (textLocked) return;
     setIsImporting(true);
     setImportError(null);
+    setImportNotice(null);
     try {
-      const { html } = await importDocxToHtml(file);
+      const { html, skippedImages = 0 } = await importDocxToHtml(file);
       const sanitized = sanitizeRichText(html);
       if (editor) {
         editor.commands.setContent(sanitized);
+      }
+      if (skippedImages > 0) {
+        setImportNotice(
+          fill(
+            t(
+              pluralKey(
+                lang,
+                skippedImages,
+                "{count} image from the document wasn't imported. Add it with the image button in the toolbar.",
+                "{count} images from the document weren't imported. Add them with the image button in the toolbar.",
+              ),
+            ),
+            { count: skippedImages },
+          ),
+        );
       }
     } catch {
       setImportError("Failed to import DOCX file. Please try again.");
@@ -436,7 +554,7 @@ export default function PolicyEditorPage() {
             textAlign: "center",
             border: "1px solid",
             borderColor: "border.dark",
-            borderRadius: "4px",
+            borderRadius: radiusPx.sm,
           }}
         >
           <Typography sx={{ color: "text.secondary", mb: 2 }}>{loadError}</Typography>
@@ -496,6 +614,8 @@ export default function PolicyEditorPage() {
             onDownloadExport={downloadExport}
             isImporting={isImporting}
             onDocxFileSelect={handleDocxFileSelect}
+            isImportDisabled={textLocked}
+            titleLocked={textLocked}
             isSaving={isSaving}
             saveSuccess={saveSuccess}
             isSaveDisabled={isSaving || customFieldsGate.blocked}
@@ -524,6 +644,10 @@ export default function PolicyEditorPage() {
             entityId={isNew ? null : (policy?.id ?? null)}
             onPendingChange={customFieldsGate.onPendingChange}
             readOnly={readOnly}
+            savedStatus={isNew ? null : policy?.status || "Draft"}
+            hasPendingApproval={hasPendingApproval}
+            hasUnsavedChanges={hasUnsavedChanges}
+            onApprovalChanged={reloadPolicy}
           />
 
           <PolicyContentEditor
@@ -538,7 +662,12 @@ export default function PolicyEditorPage() {
             onCloseLink={handleCloseLink}
             onInsertLink={handleInsertLink}
             findReplace={findReplace}
-            readOnly={readOnly}
+            readOnly={readOnly || textLocked}
+            lockedNote={
+              textLocked
+                ? t("Waiting for approval. Withdraw the request to edit the title or content.")
+                : undefined
+            }
           >
             <PolicyReviewPanel isOpen={isHistorySidebarOpen} isNew={isNew} policyId={policy?.id} />
           </PolicyContentEditor>
@@ -557,6 +686,18 @@ export default function PolicyEditorPage() {
         </Alert>
       </Snackbar>
 
+      {/* Save error snackbar: a server error no form field can show */}
+      <Snackbar
+        open={Boolean(saveError)}
+        autoHideDuration={6000}
+        onClose={() => setSaveError(null)}
+        anchorOrigin={{ vertical: "top", horizontal: "center" }}
+      >
+        <Alert onClose={() => setSaveError(null)} severity="error" sx={{ width: "100%" }}>
+          {saveError}
+        </Alert>
+      </Snackbar>
+
       {/* Import error snackbar */}
       <Snackbar
         open={Boolean(importError)}
@@ -566,6 +707,18 @@ export default function PolicyEditorPage() {
       >
         <Alert onClose={() => setImportError(null)} severity="error" sx={{ width: "100%" }}>
           {importError}
+        </Alert>
+      </Snackbar>
+
+      {/* Import notice snackbar: the document imported, but some images did not */}
+      <Snackbar
+        open={Boolean(importNotice)}
+        autoHideDuration={8000}
+        onClose={() => setImportNotice(null)}
+        anchorOrigin={{ vertical: "top", horizontal: "center" }}
+      >
+        <Alert onClose={() => setImportNotice(null)} severity="warning" sx={{ width: "100%" }}>
+          {importNotice}
         </Alert>
       </Snackbar>
 

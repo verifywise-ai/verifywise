@@ -36,12 +36,8 @@ export const ShadowAISidebarProvider: FC<{ children: ReactNode }> = ({ children 
   // Load recent tools for sidebar on mount
   const refreshRecentTools = useCallback(async () => {
     try {
-      const response = await getTools({
-        page: 1,
-        limit: 5,
-        sort_by: "last_seen_at",
-        order: "desc",
-      });
+      // The server's default order is most recently seen first
+      const response = await getTools({ page: 1, limit: 5 });
       setToolsCount(response.total);
       setRecentTools(response.tools.map((t) => ({ id: t.id, name: t.name })));
     } catch (error) {

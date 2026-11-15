@@ -6,7 +6,10 @@ export type Project = {
   id: number;
   uc_id?: string;
   project_title: string;
-  owner: number;
+  owner: number | null;
+  /** An owner with no account: email notices only, no access (#5256). */
+  external_owner_name?: string | null;
+  external_owner_email?: string | null;
   members: string[];
   start_date: Date;
   ai_risk_classification: "high risk" | "limited risk" | "minimal risk" | null;
@@ -20,6 +23,12 @@ export type Project = {
   framework: {
     project_framework_id: number;
     framework_id: number;
+    name: string;
+  }[];
+  /** Organization-imported frameworks attached to this use case (#5254). */
+  imported_frameworks?: {
+    project_imported_framework_id: number;
+    imported_framework_id: number;
     name: string;
   }[];
   monitored_regulations_and_standards: string[];

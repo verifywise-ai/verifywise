@@ -177,23 +177,13 @@ export async function scheduleVendorReviewDateNotification() {
   );
 }
 
-export async function schedulePolicyDueSoonNotification() {
-  logger.info("Adding Policy Due Soon Notification jobs to the queue...");
-  // Policy Due Soon Notification every day at 8 AM
-  await automationQueue.upsertJobScheduler(
-    "send_policy_due_soon_notification",
-    {
-      pattern: "0 8 * * *",
-    },
-    {
-      name: "send_policy_due_soon_notification",
-      data: { type: "policy_due_soon" },
-      opts: {
-        removeOnComplete: true,
-        removeOnFail: FAILED_JOB_RETENTION,
-      },
-    },
-  );
+/**
+ * Remove the retired 8 AM policy due soon email job (P-H3). Job schedulers
+ * live in Redis, so without this a deployment that ran the old code would keep
+ * firing it every morning.
+ */
+export async function removeRetiredPolicyDueSoonScheduler() {
+  await automationQueue.removeJobScheduler("send_policy_due_soon_notification");
 }
 
 export async function scheduleReportNotification() {
@@ -791,6 +781,46 @@ export async function scheduleLifecycleConfirmationSweep() {
     {
       name: "lifecycle_confirmation_sweep",
       data: { type: "lifecycle_confirmation" },
+      opts: {
+        removeOnComplete: true,
+        removeOnFail: FAILED_JOB_RETENTION,
+      },
+    },
+  );
+}
+
+export async function scheduleTrainingAssignmentReminderSweep() {
+  logger.info("Adding training assignment reminder sweep job to the queue...");
+  // Daily at 8:30 AM, a free slot. Reminds people of open training assignments
+  // due within seven days or overdue. Dedup is the *_reminded_at columns, so a
+  // re-run does not notify twice. No obliterate here, the scheduler upsert is
+  // idempotent by scheduler id.
+  await automationQueue.upsertJobScheduler(
+    "training_assignment_reminder_sweep",
+    { pattern: "30 8 * * *" },
+    {
+      name: "training_assignment_reminder_sweep",
+      data: { type: "training_assignment_reminder" },
+      opts: {
+        removeOnComplete: true,
+        removeOnFail: FAILED_JOB_RETENTION,
+      },
+    },
+  );
+}
+
+export async function schedulePolicyReviewReminderSweep() {
+  logger.info("Adding policy review reminder sweep job to the queue...");
+  // Daily at 8 AM, the slot of the retired policy due soon job. Reminds owners
+  // and reviewers of policies whose review is within seven days or overdue.
+  // Dedup is the *_reminded_at columns, so a re-run does not notify twice. No
+  // obliterate here, the scheduler upsert is idempotent by scheduler id.
+  await automationQueue.upsertJobScheduler(
+    "policy_review_reminder_sweep",
+    { pattern: "0 8 * * *" },
+    {
+      name: "policy_review_reminder_sweep",
+      data: { type: "policy_review_reminder" },
       opts: {
         removeOnComplete: true,
         removeOnFail: FAILED_JOB_RETENTION,

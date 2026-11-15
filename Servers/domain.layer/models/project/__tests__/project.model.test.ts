@@ -18,4 +18,15 @@ describe("ProjectModel.toJSON", () => {
     } as unknown as ProjectModel);
     expect(json.custom_fields).toEqual(customFields);
   });
+
+  it("includes the imported frameworks attached to the use case", () => {
+    const importedFrameworks = [
+      { project_imported_framework_id: 1, imported_framework_id: 3, name: "Internal policy" },
+    ];
+    const json = ProjectModel.prototype.toJSON.call({
+      id: 7,
+      dataValues: { imported_frameworks: importedFrameworks },
+    } as unknown as ProjectModel);
+    expect(json.imported_frameworks).toEqual(importedFrameworks);
+  });
 });

@@ -16,7 +16,6 @@ This controller manages role-related operations, providing CRUD functionality fo
 
 ```typescript
 import { Request, Response } from "express";
-import { MOCKDATA_ON } from "../flags";
 import { STATUS_CODE } from "../utils/statusCode.utils";
 ```
 

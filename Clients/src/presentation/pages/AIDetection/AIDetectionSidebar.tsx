@@ -7,13 +7,11 @@
  * @module pages/AIDetection/AIDetectionSidebar
  */
 
-import { useCallback } from "react";
 import { Search, FolderGit2, History, Settings } from "lucide-react";
 import SidebarShell, {
   SidebarMenuItem,
   RecentSection,
 } from "../../components/Sidebar/SidebarShell";
-import { useUserGuideSidebarContext } from "../../components/UserGuide/UserGuideSidebarContext";
 import { Scan } from "../../../domain/ai-detection/types";
 
 interface RecentScan {
@@ -38,9 +36,6 @@ export default function AIDetectionSidebar({
   recentScans = [],
   onScanClick,
 }: AIDetectionSidebarProps) {
-  const { open: openUserGuide, openTab } = useUserGuideSidebarContext();
-  const openReleaseNotes = useCallback(() => openTab("whats-new"), [openTab]);
-
   // Menu items for AI Detection
   const flatItems: SidebarMenuItem[] = [
     {
@@ -109,8 +104,6 @@ export default function AIDetectionSidebar({
       isItemActive={isItemActive}
       onItemClick={handleItemClick}
       showReadyToSubscribe={false}
-      openUserGuide={openUserGuide}
-      openReleaseNotes={openReleaseNotes}
       enableFlyingHearts={false}
     />
   );

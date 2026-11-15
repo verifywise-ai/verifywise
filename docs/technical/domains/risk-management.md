@@ -1,6 +1,6 @@
 # Risk Management Domain
 
-**Last Updated:** 2026-10-06
+**Last Updated:** 2026-11-14
 
 ## Overview
 
@@ -55,16 +55,16 @@ project_risks
 │
 ├── likelihood (ENUM)                 # current risk
 ├── severity (ENUM)                   # current risk
-├── risk_level_autocalculated (ENUM)  # derived from likelihood + severity
+├── risk_level_autocalculated (ENUM)  # inherent level, calculated by the server from likelihood + severity
 ├── risk_severity (ENUM)              # RESIDUAL severity (mitigation)
-├── current_risk_level (ENUM)
+├── current_risk_level (ENUM)         # picked by hand in the Mitigation tab; optional
 │
 ├── mitigation_status (ENUM)
 ├── mitigation_plan
 ├── implementation_strategy
 ├── mitigation_evidence_document
 ├── likelihood_mitigation (ENUM)      # residual likelihood (mitigation)
-├── final_risk_level                  # derived from the two residual fields
+├── final_risk_level                  # residual level, calculated by the server from the two residual fields
 │
 ├── risk_approval (FK → users)
 ├── approval_status
@@ -134,9 +134,11 @@ enum Likelihood {
   UNLIKELY = "Unlikely"
   POSSIBLE = "Possible"
   LIKELY = "Likely"
-  ALMOST_CERTAIN = "Almost certain"
+  ALMOST_CERTAIN = "Almost Certain"
 }
 ```
+
+Project risks spell the top value "Almost Certain"; the vendor risk enum spells it "Almost certain". Vendor risk create and update accept either casing and store "Almost certain" (`normalizeVendorRiskLikelihood` in `utils/vendorRisk.utils.ts`).
 
 ### Severity
 
@@ -150,7 +152,7 @@ enum Severity {
 }
 ```
 
-### Risk Level (Auto-calculated)
+### Risk Level
 
 ```typescript
 enum RiskLevel {
@@ -244,11 +246,59 @@ Severity is weighted 3x heavier than likelihood.
 | 13-16 | High risk |
 | ≥17 | Very high risk |
 
-`RiskCalculator` (`Clients/src/presentation/tools/riskCalculator.ts`) is the only
-implementation of this formula. Views that show a score — including the risk heat
-map on the use case's **Use case risks** tab — must call `getRiskLevel` /
-`getRiskScore` rather than re-deriving it, or they will report a different level
-than the summary cards and the risks table for the same risk.
+The same formula runs in the form, the server, the risk import, the AI advisor,
+the MCP tools, intake and AI suggestions. Client:
+`Clients/src/presentation/tools/riskCalculator.ts` (`getRiskLevel` /
+`getRiskScore`). Server: `calculateRiskLevel(likelihood, severity)` in
+`Servers/utils/riskLevel.utils.ts` (argument order is likelihood, then severity;
+labels are matched case-insensitively, and "Critical" scores like "Catastrophic"
+because residual severity is stored under that label). It returns null when
+either input is missing or unknown. Views that show a score, including the risk
+heat map on the use case's **Use case risks** tab, must call these helpers
+rather than re-deriving the score.
+
+### Risk levels: inherent, current, residual, effective
+
+| Level | Column | How it is set |
+|-------|--------|---------------|
+| Inherent | `risk_level_autocalculated` | Server, from `likelihood` and `severity`, on every create and update |
+| Residual | `final_risk_level` | Server, from `likelihood_mitigation` and `risk_severity`, with the same formula |
+| Current | `current_risk_level` | Picked by hand in the Mitigation tab; may be empty |
+| Effective | none (derived) | `current_risk_level` when set, otherwise `risk_level_autocalculated` |
+
+A level sent by a client for the inherent or residual column is ignored: the
+server drops it and recomputes it (`createRiskService` and `updateRiskService` in
+`Servers/services/risk.service.ts`). On update the level is recomputed only when
+one of its two inputs is in the payload.
+
+The effective level is what the risk table chip and sort, summary cards, filters,
+grouping, export, the use case risks view, the dashboard, the timeline, risk
+categories, DOCX and PDF reports, risk trend snapshots, the compliance score's
+high and very high counts, proactive detection, link coverage, the home queue and
+the AI advisor read. Do not read `risk_level_autocalculated` directly for those;
+use:
+
+- Server: `effectiveRiskLevelSql(alias)` (`COALESCE(current, inherent)`) and
+  `riskLevelRankSql(expr)` (No risk 0 to Very high risk 5) in
+  `Servers/utils/riskLevel.utils.ts`.
+- Client: `getEffectiveRiskLevel`, `riskLevelBucket` and `riskLevelRank` in
+  `Clients/src/application/utils/riskLevel.ts`. "No risk" and "Very low risk" share
+  the very-low summary card.
+
+The heat map is the exception: it plots likelihood and severity, so it shows the
+inherent level, and its tab reads "Heat map (inherent level)". The table chip has
+a tooltip with the inherent level (`VWProjectRisksTableBody.tsx`).
+
+"Very low risk" is still a valid stored value for the current level, but the
+formula never produces it, and the current level has no "No risk" value.
+
+### Spelling of the current level
+
+The current level used to be stored as "Very Low risk". Migration
+`20261114090307-current-risk-level-spelling.js` renames the enum value to
+"Very low risk" so it matches the inherent level. The API now returns "Very low
+risk". Every input that accepts a current level accepts both spellings and stores
+"Very low risk" (`normalizeCurrentRiskLevel` in `Servers/utils/riskLevel.utils.ts`).
 
 ### Example Calculation
 
@@ -348,7 +398,7 @@ risk linked only via `answers_eu__risks` is still a `gap`.
 | GET | `/projectRisks/by-frameworkid/:id` | Get by framework |
 | POST | `/projectRisks/` | Create risk |
 | PUT | `/projectRisks/:id` | Update risk |
-| DELETE | `/projectRisks/:id` | Delete risk (soft) |
+| DELETE | `/projectRisks/:id` | Archive risk (soft delete) |
 
 ### Vendor Risks
 
@@ -381,6 +431,36 @@ risk linked only via `answers_eu__risks` is still a `gap`.
 | GET | `/riskHistory/current-counts` | Get distribution |
 | POST | `/riskHistory/snapshot` | Create snapshot |
 
+### Archiving and bulk actions
+
+Archiving a risk (single, bulk or through the AI advisor) goes through one server path. In one transaction it soft-deletes the risk, records a deletion entry in its change history, runs the "risk deleted" automation (once per bulk action, see below) and removes the risk from every policy it was linked to. The client no longer sends a separate unlink request. `DELETE /policy-linked/risk/:riskId/unlink-all` still exists for API callers.
+
+Bulk "set owner" and "set category" go through the single-edit path, so each changed risk still gets its change-history entries. Risks that already hold the value are skipped and not counted.
+
+Bulk archive, set owner and set category run the organization's automation once per bulk action, not once per risk: the per-risk paths take `runAutomations: false` and the controller calls `enqueueBulkRiskAutomation` ("risk deleted" for archive, "risk updated" for the edits) with the changed risks. With one changed risk the variables are exactly those of a single edit or delete. With several, `{{risk.name}}` is "<n> risks: <names>" (10 names, then "and <k> more"), `{{risk.id}}` is empty, every other variable keeps its value only when all the changed risks share it (for example `{{risk.owner}}` after set owner) and is empty otherwise, and `{{changes_summary}}` has one line per risk such as "• Risk A: Owner: Ann → Bo" (50 lines, then "• and <k> more"). Owner and approver names come from one query for the batch.
+
+A risk trigger (added, updated, deleted) runs every action of every active automation for it, ordered by automation id and then action order. The jobs are enqueued after the save commits; one failing action is logged and does not stop the others.
+
+Automations that existed before every-action dispatch keep their old behaviour until someone edits and saves them: only the event's first action runs (`automations.legacy_first_action_only`, set by migration `20261114200100-legacy-automation-first-action`; the dispatch keeps the single first legacy row by action order, then automation id). Saving the automation in the editor clears the flag; the active toggle does not. New automations run every action.
+
+A bulk set owner that gives the new owner two or more risks sends one in-app notification and one assignment email, "<n> risks were assigned to you", listing the risks (20, then "and <k> more") with a link to the risk list (`notifyUserAssignedMany`). With one changed risk the owner gets the usual single-risk notice.
+
+`PATCH /projectRisks/bulk` answers `{ updated, changed, action }`. `updated` keeps its original meaning, the number of ids sent; `changed` is the number of risks actually archived or edited. The risk table reports `changed`. The risk added, updated and deleted automations are enqueued after the transaction commits, so a bulk action that rolls back sends none, and the owner notice is sent after the commit too. A bulk action records the risk history snapshots once, after its loop.
+
+Removing a use case or framework from a risk removes the risk's mappings in every framework of that use case: EU AI Act, ISO 42001, ISO 27001, NIST AI RMF, the 21 bundled frameworks, custom frameworks and imported frameworks.
+
+### Archived risks are excluded from
+
+- use-case and organization reports (DOCX and PDF), including the NIST section
+- use-case risk totals, which the advisor and the MCP use-case tool also use
+- ISO 42001 subclause and annex risk panels, generic framework control panels and imported-framework control panels
+- the advisor's readiness risk count
+- the post-market monitoring cycle snapshot, which counts the use case's active risks by risk level (high = High or Very high, medium = Medium, low = Low, Very low or No risk)
+
+The report's Severity column shows the inherent severity, not the post-mitigation severity.
+
+The risk register export uses the filtered list. With a filter or search that matches nothing, the export is empty and the export button is disabled.
+
 ## Risk History Tracking
 
 ### Purpose
@@ -410,7 +490,7 @@ Track how risk distribution changes over time across severity, likelihood, and m
 - `severity` - Distribution of severity levels
 - `likelihood` - Distribution of likelihood levels
 - `mitigation_status` - Distribution of mitigation statuses
-- `risk_level` - Distribution of calculated risk levels
+- `risk_level` - Distribution of risk levels. From this release snapshots are keyed by the effective level (the current level when set, otherwise the inherent level). Older snapshots are keyed by the inherent level, so the trend chart can step once after deploy for organizations that set current levels. The compliance score's high and very high counts use the same effective level, so they now include risks with no current level but a high inherent level.
 
 ### Timeseries Query Parameters
 
@@ -452,23 +532,53 @@ POST /projectRisks/
 
 ### Field Limits
 
-| Field | Max Length |
-|-------|------------|
-| risk_name | 255 chars |
-| risk_description | 1000 chars |
-| impact | 500 chars |
-| assessment_mapping | 500 chars |
-| controls_mapping | 500 chars |
-| review_notes | 1000 chars |
-| mitigation_plan | 1000 chars |
-| implementation_strategy | 1000 chars |
-| mitigation_evidence_document | 500 chars |
+The validator (`middleware/validators/risks.validator.ts`) enforces the column limits, so overlong text is a 400, not a 500. The other text columns are `TEXT` and have no limit.
+
+| Field | Max length | Column |
+|-------|------------|--------|
+| risk_name | 255 chars | VARCHAR(255) NOT NULL |
+| impact | 255 chars | VARCHAR(255) |
+| mitigation_evidence_document | 255 chars | VARCHAR(255) |
+| final_risk_level | 255 chars | VARCHAR(255) |
+| approval_status | 255 chars | VARCHAR(255) |
 
 ### Required Fields
 
-- `risk_name` - Non-empty string
-- `risk_owner` - Valid user ID
-- `risk_description` - Non-empty string
+- `risk_name` - non-empty string (create). An empty `risk_name` on update is ignored.
+- `risk_owner` - positive user id (create)
+
+The risk form requires approver, approval status and assessment date only once an approver or an approval status is set. A new risk starts without an assessment date, and import leaves an empty assessment date empty.
+
+### Saving and clearing fields
+
+`updateRiskByIdQuery` writes every key present in the request and leaves absent keys alone, so a partial edit does not touch the owner or log an owner change. A present key clears the field: `""` is stored on text columns, and `""`, `null` or user id `0` become `NULL` on enum, date and user columns. The form sends unset selects, dates and the approver as `null`. Change history diffs the row the update returned (`writtenValues`), so it records what was stored.
+
+Delete is a soft delete (`is_deleted = true`). It keeps the risk's custom field values and returns 404 when the risk does not exist or is already deleted, before any automation runs.
+
+### Calendar dates (deadline, date of assessment)
+
+`deadline` and `date_of_assessment` are `TIMESTAMP WITH TIME ZONE` but hold calendar dates. A calendar date is stored at 12:00 UTC on its day:
+
+- The form sends the picked day as `"YYYY-MM-DD"`. The server (`toRiskCalendarDate` in `utils/riskCalendarDate.utils.ts`) stores a date-only string, or a value at exactly 00:00 UTC (a date-only value something already parsed: import, the advisor, a JSON client), at noon UTC on that day.
+- Any other time, such as an explicit API or MCP timestamp, is stored as sent.
+- Risk import reads a cell without a time ("05/01/2026") as that calendar day (`riskCalendarDateFromCell`), whatever the server's time zone.
+- The client (`riskCalendarDay` in `Clients/src/presentation/tools/isoDateToString.ts`) reads `"YYYY-MM-DD"` as that day, exactly 12:00 UTC as that UTC date, and any other value as the local date of the instant. The risk form, table, sort, filters, export, timeline, entity graph sidebar and linked policies table use it, so every time zone sees the same day and saving the form never changes the date.
+
+Migration `20261114120000-risk-dates-utc-noon` rewrote existing rows on every deployment. A value that looks like a browser's local midnight (a whole quarter hour with no seconds) was set to 12:00 UTC on the UTC date of the value plus 13 hours: 00:00 to 10:45 UTC keep their day (UTC and the Americas), 11:00 to 23:45 UTC take the next day (New Zealand summer time, Asia, Europe). Values at exactly 12:00 UTC and values with seconds were left alone, so the migration can run twice safely. Picks from UTC+12 (New Zealand winter, Fiji), UTC+14 and UTC-11, and whole-quarter-hour times sent on purpose through the API, can be a day off.
+
+A deadline now passes at 12:00 UTC on its day, so overdue checks (`deadline < NOW()`) fire up to 12 hours later than they did with the picker's local midnight.
+
+### Organization references
+
+Every risk write (REST, bulk `set_owner`, import, MCP, advisor, intake, AI Detection, demo seed) goes through `assertRiskReferencesInOrganization` in `utils/risk.utils.ts`, called by `createRiskQuery` and `updateRiskByIdQuery`. A request returns 400 when:
+
+- `risk_owner` or `risk_approval` is not a member of the caller's organization (`organization_members`). On update, an unchanged owner or approver is not re-checked, so a risk whose owner left the organization can still be edited.
+- a `projects` id is not a use case of the caller's organization.
+- a `frameworks` id does not exist (frameworks are a global catalog).
+
+Ids fail closed: a value that is not a positive integer (for example `5.5`, which PostgreSQL would round to another id) is rejected, never skipped. The advisor's `agent_assign_risk_owner` and `agent_link_risk_to_project` run the same guard. Risk import reports a non-member or malformed owner or approver as a row error. REST create ignores a client-sent `is_demo`.
+
+`POST /riskHistory/snapshot` requires `risks.edit`.
 
 ## Frontend Structure
 
@@ -495,12 +605,11 @@ POST /projectRisks/
 
 ### Dashboard Features
 
-- Risk list with filtering and grouping
+- Risk list with filtering
 - Search functionality
 - Table view with sorting/pagination
 - Bulk actions (multi-select)
 - Export functionality
-- Group-by (Project, Framework)
 - Filter-by (name, severity, status)
 - Analytics drawer
 - History sidebar

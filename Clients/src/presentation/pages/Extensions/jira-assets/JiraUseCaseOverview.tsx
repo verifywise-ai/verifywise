@@ -22,6 +22,8 @@ import {
   infoCardbodyStyle,
 } from "../../../components/Cards/InfoCard/style";
 import useFormattedDate from "../../../../application/hooks/useFormattedDate";
+import { palette, radiusPx } from "../../../themes/palette";
+import { scoreColor } from "../../../themes/chartTheme";
 
 interface JiraData {
   id?: string;
@@ -82,7 +84,7 @@ const columnStyle = {
 };
 
 const projectRiskSection = {
-  color: "#1A1919",
+  color: palette.text.primary,
   fontWeight: 600,
   mb: "10px",
   fontSize: 16,
@@ -100,28 +102,22 @@ const groupStatsCardFrame = {
   gap: "40px",
   backgroundColor: "white",
   padding: "10px 25px",
-  border: "1px solid #d0d5dd",
-  borderRadius: "4px",
+  border: `1px solid ${palette.border.dark}`,
+  borderRadius: radiusPx.sm,
   boxShadow: "none",
 };
 
 const groupStatsCardRate = {
-  color: "#2D3748",
+  color: palette.text.secondary,
   fontSize: 26,
 };
 
 // Get progress bar color based on percentage
 const getProgressColor = (value: number): string => {
-  if (value <= 10) return "#FF4500";
-  if (value <= 20) return "#FF4500";
-  if (value <= 30) return "#FFA500";
-  if (value <= 40) return "#FFD700";
-  if (value <= 50) return "#E9F14F";
-  if (value <= 60) return "#CDDD24";
-  if (value <= 70) return "#64E730";
-  if (value <= 80) return "#13715B";
-  if (value <= 90) return "#13715B";
-  return "#13715B";
+  if (value <= 70) return scoreColor(value);
+  if (value <= 80) return palette.brand.primary;
+  if (value <= 90) return palette.brand.primary;
+  return palette.brand.primary;
 };
 
 // InfoCard component
@@ -134,7 +130,7 @@ function InfoCard({ title, body, icon }: { title: string; body: string; icon?: R
             position: "absolute",
             top: 8,
             right: 8,
-            color: "#8594AC",
+            color: palette.text.accent,
             opacity: 0.7,
           }}
         >
@@ -157,8 +153,8 @@ function ProgressBar({ progress }: { progress: string }) {
       sx={{
         width: "100%",
         height: 8,
-        backgroundColor: "#E5E7EB",
-        borderRadius: "4px",
+        backgroundColor: palette.border.light,
+        borderRadius: radiusPx.sm,
         position: "relative",
         overflow: "hidden",
       }}
@@ -168,7 +164,7 @@ function ProgressBar({ progress }: { progress: string }) {
           width: `${value}%`,
           height: "100%",
           backgroundColor: getProgressColor(value),
-          borderRadius: "4px",
+          borderRadius: radiusPx.sm,
           transition: "width 0.3s ease",
         }}
       />
@@ -216,7 +212,7 @@ function GroupStatsCard({
         {stats.map((stat) => (
           <Stack key={stat.label} sx={{ gap: 1 }}>
             <ProgressBar progress={stat.progress} />
-            <Typography sx={{ color: "#8594AC", fontSize: 13 }}>
+            <Typography sx={{ color: palette.text.accent, fontSize: 13 }}>
               {`${stat.completed} ${stat.label} out of ${stat.total} is completed`}
             </Typography>
           </Stack>
@@ -415,9 +411,9 @@ export const JiraUseCaseOverview: React.FC<JiraUseCaseOverviewProps> = ({ projec
             label="Imported from JIRA Assets"
             size="small"
             sx={{
-              "backgroundColor": "#E3F2FD",
-              "color": "#1565C0",
-              "& .MuiChip-icon": { color: "#1565C0" },
+              "backgroundColor": palette.status.info.bg,
+              "color": palette.status.info.text,
+              "& .MuiChip-icon": { color: palette.status.info.text },
             }}
           />
           {missingInJiraSince && (
@@ -425,7 +421,7 @@ export const JiraUseCaseOverview: React.FC<JiraUseCaseOverviewProps> = ({ projec
               label="Missing in Jira"
               size="small"
               title={formatDate(new Date(missingInJiraSince))}
-              sx={{ backgroundColor: "#FEF3F2", color: "#B42318" }}
+              sx={{ backgroundColor: palette.accent.red.bg, color: palette.status.error.text }}
             />
           )}
         </Box>
@@ -537,7 +533,7 @@ export const JiraUseCaseOverview: React.FC<JiraUseCaseOverviewProps> = ({ projec
               <Typography
                 sx={{
                   fontSize: 13,
-                  color: "#8594AC",
+                  color: palette.text.accent,
                   textAlign: "center",
                 }}
               >

@@ -21,9 +21,17 @@
 // 1. Primitives — raw type scale
 // ---------------------------------------------------------------------------
 
+import { isClassicUi } from "./uiStyle";
+
+// Phase 1 restyle (see ./uiStyle.ts): card titles 14, small labels uppercase,
+// Geist Mono for code and IDs. The classic look keeps today's values.
+const classicUi = isClassicUi();
+
 export const fontFamily = {
   sans: "'Geist', system-ui, -apple-system, BlinkMacSystemFont, Helvetica, Arial, sans-serif",
-  mono: "'Fira Code', 'Consolas', monospace",
+  mono: classicUi
+    ? "'Fira Code', 'Consolas', monospace"
+    : "'Geist Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace",
 } as const;
 
 /** Allowed font sizes in px. Do not invent sizes outside this scale. */
@@ -75,6 +83,7 @@ export const textStyles = {
     fontSize: fontSize["2xl"],
     fontWeight: fontWeight.semibold,
     lineHeight: lineHeight.snug,
+    letterSpacing: classicUi ? "normal" : "-0.02em",
   },
   /** In-page section heading below the page title. 18 / 600 */
   sectionTitle: {
@@ -82,9 +91,9 @@ export const textStyles = {
     fontWeight: fontWeight.semibold,
     lineHeight: lineHeight.normal,
   },
-  /** Card, panel, modal, or drawer title. 16 / 600 */
+  /** Card, panel, modal, or drawer title. 14 / 600 (classic: 16) */
   cardTitle: {
-    fontSize: fontSize.lg,
+    fontSize: classicUi ? fontSize.lg : fontSize.md,
     fontWeight: fontWeight.semibold,
     lineHeight: lineHeight.normal,
   },
@@ -149,11 +158,25 @@ export const textStyles = {
     fontWeight: fontWeight.regular,
     lineHeight: lineHeight.normal,
   },
-  /** Table column header (often uppercase in UI). 12 / 500 */
+  /** Table column header. 11 / 500 uppercase, 0.07em (classic: 12 / 500) */
   tableHeader: {
-    fontSize: fontSize.sm,
+    fontSize: classicUi ? fontSize.sm : fontSize.caption,
     fontWeight: fontWeight.medium,
     lineHeight: lineHeight.relaxed,
+    textTransform: classicUi ? "none" : "uppercase",
+    letterSpacing: classicUi ? "normal" : "0.07em",
+  },
+  /** Small label: stat labels, eyebrows. 11 / 500 uppercase, 0.07em */
+  label: {
+    fontSize: fontSize.caption,
+    fontWeight: fontWeight.medium,
+    lineHeight: lineHeight.normal,
+    textTransform: "uppercase",
+    letterSpacing: "0.07em",
+  },
+  /** Numbers that line up in a column or sit in a stat. */
+  tabularNumbers: {
+    fontVariantNumeric: "tabular-nums",
   },
   /** Standard table cell text. 13 / 400 */
   tableCell: {

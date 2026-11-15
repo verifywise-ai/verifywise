@@ -14,7 +14,7 @@ export const mcpAuditContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'You\'ll find it at **AI Gateway > Agent Control > Activity**.',
+      text: 'You\'ll find it at **Enforce > Agent controls > Activity**.',
     },
     {
       type: 'heading',

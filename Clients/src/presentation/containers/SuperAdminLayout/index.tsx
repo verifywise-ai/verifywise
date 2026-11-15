@@ -4,6 +4,7 @@ import AppSwitcher from "../../components/AppSwitcher";
 import SuperAdminSidebar from "../../components/SuperAdminSidebar";
 import { useActiveModule } from "../../../application/hooks/useActiveModule";
 import { useAuth } from "../../../application/hooks/useAuth";
+import { palette } from "../../themes/palette";
 
 const SuperAdminLayout = () => {
   const { activeModule, setActiveModule } = useActiveModule();
@@ -14,7 +15,7 @@ const SuperAdminLayout = () => {
       maxWidth="100%"
       flexDirection="row"
       gap={0}
-      sx={{ backgroundColor: "#FCFCFD", height: "100vh", overflow: "hidden" }}
+      sx={{ backgroundColor: palette.background.main, height: "100vh", overflow: "hidden" }}
     >
       <AppSwitcher
         activeModule={activeModule}

@@ -130,4 +130,5 @@ jobs:
             tests/test_api_key_saved_verify.py \
             tests/test_endpoint_model_prefix.py \
             tests/test_change_history_columns.py \
+            tests/test_proxy_auth.py \
             -v

@@ -1,9 +1,14 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Box, Stack } from "@mui/material";
+import { useQueryClient } from "@tanstack/react-query";
 import StandardModal from "../StandardModal";
 import Field from "../../Inputs/Field";
 import Select from "../../Inputs/Select";
-import { useCreateAiApp, useUpdateAiApp } from "../../../../application/hooks/useAiApps";
+import {
+  aiAppQueryKeys,
+  useCreateAiApp,
+  useUpdateAiApp,
+} from "../../../../application/hooks/useAiApps";
 import { useVendors } from "../../../../application/hooks/useVendors";
 import useUsers from "../../../../application/hooks/useUsers";
 import { useFormValidation } from "../../../../application/hooks/useFormValidation";
@@ -14,6 +19,9 @@ import { VendorModel } from "../../../../domain/models/Common/vendor/vendor.mode
 import { IAIApp, IAIAppDetail } from "../../../../domain/interfaces/i.aiApp";
 import { STATUS_OPTIONS } from "../../../pages/AIApps/utils";
 import Alert from "../../Alert";
+import { useTranslation } from "../../../../application/hooks/useTranslation";
+import CustomFieldsSection, { type CustomFieldsSectionHandle } from "../../CustomFieldsSection";
+import { useRequiredCustomFieldsGate } from "../../CustomFieldsSection/RequiredCustomFieldsGate";
 
 interface ApiErrorResponse {
   response?: { data?: { message?: string } };
@@ -22,7 +30,8 @@ interface ApiErrorResponse {
 interface NewAIAppProps {
   isOpen: boolean;
   onClose: () => void;
-  onSuccess: () => void;
+  /** `warning` is set when the app was saved but its custom field values were not. */
+  onSuccess: (result?: { warning?: string }) => void;
   /** When provided, the modal edits this app instead of creating a new one. */
   app?: IAIAppDetail | IAIApp | null;
 }
@@ -78,6 +87,7 @@ function stateFromApp(app: IAIAppDetail | IAIApp): FormState {
 }
 
 export default function NewAIApp({ isOpen, onClose, onSuccess, app }: NewAIAppProps) {
+  const { t } = useTranslation();
   const isEditing = !!app;
   const [values, setValues] = useState<FormState>(initialState);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -87,6 +97,10 @@ export default function NewAIApp({ isOpen, onClose, onSuccess, app }: NewAIAppPr
     body: string;
   } | null>(null);
 
+  const customFieldsRef = useRef<CustomFieldsSectionHandle | null>(null);
+  const customFieldsGate = useRequiredCustomFieldsGate("ai_app", app?.id ?? null);
+
+  const queryClient = useQueryClient();
   const createAiAppMutation = useCreateAiApp();
   const updateAiAppMutation = useUpdateAiApp();
   const { data: vendorsData } = useVendors();
@@ -141,12 +155,15 @@ export default function NewAIApp({ isOpen, onClose, onSuccess, app }: NewAIAppPr
   };
 
   const handleSubmit = async () => {
+    if (customFieldsGate.blocked) return;
     const isValid = validateAll(values);
     if (!isValid) return;
 
     setIsSubmitting(true);
     try {
+      let savedId: number | undefined;
       if (isEditing && app?.id) {
+        savedId = app.id;
         await updateAiAppMutation.mutateAsync({
           id: app.id,
           data: {
@@ -160,7 +177,7 @@ export default function NewAIApp({ isOpen, onClose, onSuccess, app }: NewAIAppPr
           },
         });
       } else {
-        await createAiAppMutation.mutateAsync({
+        const created = await createAiAppMutation.mutateAsync({
           name: values.name,
           description: values.description || undefined,
           vendor_id: values.vendor_id,
@@ -169,6 +186,29 @@ export default function NewAIApp({ isOpen, onClose, onSuccess, app }: NewAIAppPr
           discovered_source: values.discovered_source,
           required_training: values.required_training || undefined,
         });
+        savedId = created?.id;
+      }
+      if (savedId && customFieldsRef.current?.hasPendingValues()) {
+        try {
+          await customFieldsRef.current.flush(savedId);
+        } catch (cfError) {
+          console.error("AI app saved, but custom field values failed to save:", cfError);
+          if (isEditing) {
+            // Retrying an edit is an update, so keep the modal open with its inline warning.
+            return;
+          }
+          // The app exists now. Close create mode so a retry cannot duplicate it.
+          onSuccess({
+            warning: t(
+              "Saved the AI app, but its custom field values were not saved. Edit the app to try again.",
+            ),
+          });
+          return;
+        } finally {
+          // The save mutation refreshed the list before these values were
+          // written, so the table's custom field columns need another read.
+          queryClient.invalidateQueries({ queryKey: aiAppQueryKeys.lists() });
+        }
       }
       onSuccess();
     } catch (err: unknown) {
@@ -197,6 +237,7 @@ export default function NewAIApp({ isOpen, onClose, onSuccess, app }: NewAIAppPr
       onSubmit={handleSubmit}
       submitButtonText={isEditing ? "Save" : "Create"}
       isSubmitting={isSubmitting}
+      isSubmitDisabled={customFieldsGate.blocked}
       maxWidth="720px"
     >
       <Stack sx={{ gap: "16px" }}>
@@ -271,6 +312,13 @@ export default function NewAIApp({ isOpen, onClose, onSuccess, app }: NewAIAppPr
           placeholder="e.g. AI Literacy 101"
           value={values.required_training}
           onChange={(e) => handleChange("required_training", e.target.value)}
+        />
+
+        <CustomFieldsSection
+          ref={customFieldsRef}
+          entityType="ai_app"
+          entityId={app?.id ?? null}
+          onPendingChange={customFieldsGate.onPendingChange}
         />
 
         {alert && (

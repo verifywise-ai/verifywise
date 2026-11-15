@@ -55,6 +55,10 @@ import { ShadowAiToolStatus } from "../domain.layer/interfaces/i.shadowAi";
 
 import { translateError } from "../utils/i18n.utils";
 import { normalizeIp } from "../services/shadowAiSyslog/ip";
+import { buildGovernanceModelRisk } from "../services/shadowAiGovernance";
+import { createNewModelRiskQuery } from "../utils/modelRisk.utils";
+import { getUserByIdQuery } from "../utils/user.utils";
+import { recordEntityCreation } from "../utils/changeHistory.base.utils";
 import { readSyslogListenerConfig } from "../services/shadowAiSyslog/config";
 import { getSyslogListenerState } from "../services/shadowAiSyslog/listener";
 import { invalidateSourceCacheAfterCommit } from "../services/shadowAiSyslog/sourceCache";
@@ -633,6 +637,13 @@ export async function startGovernance(req: Request, res: Response) {
       return res.status(404).json(STATUS_CODE[404](req.t!("Tool not found")));
     }
 
+    // A second run would add another model and risk and orphan the first pair.
+    if (tool.model_inventory_id) {
+      return res
+        .status(409)
+        .json(STATUS_CODE[409](req.t!("This tool is already under governance")));
+    }
+
     const { model_inventory, governance_owner_id } = req.body;
 
     if (!model_inventory?.provider || !model_inventory?.model || !governance_owner_id) {
@@ -652,6 +663,14 @@ export async function startGovernance(req: Request, res: Response) {
       return res
         .status(400)
         .json(STATUS_CODE[400](req.t!("governance_owner_id must be a positive integer")));
+    }
+
+    // The owner is stored on the tool and on the model risk, so it must be a
+    // member of this organization.
+    if (!(await getUserByIdQuery(ownerId, null, organizationId))) {
+      return res
+        .status(400)
+        .json(STATUS_CODE[400](req.t!("The governance owner must be a user in your organization")));
     }
 
     let transaction: Transaction | null = null;
@@ -693,12 +712,35 @@ export async function startGovernance(req: Request, res: Response) {
       );
       const modelInventoryId = (miResult as any[])[0].id;
 
-      // Link tool to model inventory
+      // Record the form's risk assessment as a risk on the new model
+      let riskEntryId: number | null = null;
+      const modelRisk = buildGovernanceModelRisk(req.body.risk_assessment ?? undefined, {
+        toolName: tool.name,
+        ownerId,
+        modelId: modelInventoryId,
+        startedAt: new Date(),
+      });
+      if (modelRisk) {
+        const created = await createNewModelRiskQuery(modelRisk, organizationId, transaction);
+        riskEntryId = created.id ?? null;
+        if (riskEntryId !== null) {
+          await recordEntityCreation(
+            "model_risk",
+            riskEntryId,
+            userId,
+            organizationId,
+            modelRisk,
+            transaction,
+          );
+        }
+      }
+
+      // Link tool to model inventory and to the risk created above
       await linkToolToModelInventoryQuery(
         organizationId,
         toolId,
         modelInventoryId,
-        undefined,
+        riskEntryId ?? undefined,
         transaction,
       );
 
@@ -768,7 +810,7 @@ export async function startGovernance(req: Request, res: Response) {
 
       await logSuccess({
         eventType: "Create",
-        description: `governance started for tool: ${toolId}, MI: ${modelInventoryId}, lifecycle: ${lifecycleInitialized}`,
+        description: `governance started for tool: ${toolId}, MI: ${modelInventoryId}, risk: ${riskEntryId}, lifecycle: ${lifecycleInitialized}`,
         functionName: fn,
         fileName: FILE_NAME,
         userId,
@@ -779,6 +821,7 @@ export async function startGovernance(req: Request, res: Response) {
         STATUS_CODE[201]({
           model_inventory_id: modelInventoryId,
           tool_id: toolId,
+          risk_entry_id: riskEntryId,
           lifecycle_initialized: lifecycleInitialized,
         }),
       );

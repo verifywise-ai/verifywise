@@ -6,7 +6,16 @@
  *
  * Authorization:
  * - GET endpoints: All authenticated users
- * - POST/PATCH/DELETE endpoints: Admin and Editor roles only
+ * - Creating and renaming folders: file.edit or policy.edit. The File manager
+ *   and the Policies page share these folders, so either screen's edit
+ *   permission manages them.
+ * - Deleting a folder: the same, plus file.edit when the folder or a
+ *   subfolder holds files and policy.edit when one holds policies, since the
+ *   delete cascades to both mapping tables.
+ * - Putting files into folders and taking them out: file.edit, checked by
+ *   authorize() on the routes.
+ * Both keys are held by Admin and Editor by default, as the old role-name
+ * list allowed; a pure super admin (no organization) is refused, as before.
  *
  * @module controllers/virtualFolder.ctrl
  */
@@ -29,6 +38,7 @@ import {
   bulkUpdateFileFoldersQuery,
   getFolderPathQuery,
   wouldCreateCircularReferenceQuery,
+  getFolderTreeContentsQuery,
 } from "../utils/virtualFolder.utils";
 import { sequelize } from "../database/db";
 import { translateError } from "../utils/i18n.utils";
@@ -36,15 +46,25 @@ import {
   IVirtualFolderInput,
   IVirtualFolderUpdate,
 } from "../domain.layer/interfaces/i.virtualFolder";
+import { isPureSuperAdmin, requestEffectivePermissions } from "../utils/rolePermissions.utils";
 
-const ALLOWED_ROLES = ["Admin", "Editor"];
+interface FolderPermissions {
+  files: boolean;
+  policies: boolean;
+}
 
 /**
- * Check if user has permission to manage folders
+ * The caller's folder permissions, resolved with one role lookup. Runs before
+ * a transaction is opened, so no pooled connection waits on it.
  */
-const hasManagePermission = (userRole: string | undefined): boolean => {
-  return userRole ? ALLOWED_ROLES.includes(userRole) : false;
+const folderPermissions = async (req: Request): Promise<FolderPermissions> => {
+  if (isPureSuperAdmin(req)) return { files: false, policies: false };
+  const permissions = await requestEffectivePermissions(req);
+  return { files: permissions.has("file.edit"), policies: permissions.has("policy.edit") };
 };
+
+const canManageFolders = (permissions: FolderPermissions): boolean =>
+  permissions.files || permissions.policies;
 
 /**
  * Safely parse a route parameter to integer
@@ -134,14 +154,19 @@ export const getFolderPath = async (req: Request, res: Response): Promise<Respon
  * Create a new folder
  */
 export const createFolder = async (req: Request, res: Response): Promise<Response> => {
+  let permissions: FolderPermissions;
+  try {
+    permissions = await folderPermissions(req);
+  } catch (error) {
+    console.error("Error checking folder permissions:", error);
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
+  }
+  if (!canManageFolders(permissions)) {
+    return res.status(403).json(STATUS_CODE[403](req.t!("Insufficient permissions")));
+  }
+
   const transaction = await sequelize.transaction();
   try {
-    // Check permissions
-    if (!hasManagePermission(req.role)) {
-      await transaction.rollback();
-      return res.status(403).json(STATUS_CODE[403](req.t!("Insufficient permissions")));
-    }
-
     const { name, description, parent_id, color, icon } = req.body as IVirtualFolderInput;
 
     // Validate required fields
@@ -199,14 +224,19 @@ export const createFolder = async (req: Request, res: Response): Promise<Respons
  * Update an existing folder
  */
 export const updateFolder = async (req: Request, res: Response): Promise<Response> => {
+  let permissions: FolderPermissions;
+  try {
+    permissions = await folderPermissions(req);
+  } catch (error) {
+    console.error("Error checking folder permissions:", error);
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
+  }
+  if (!canManageFolders(permissions)) {
+    return res.status(403).json(STATUS_CODE[403](req.t!("Insufficient permissions")));
+  }
+
   const transaction = await sequelize.transaction();
   try {
-    // Check permissions
-    if (!hasManagePermission(req.role)) {
-      await transaction.rollback();
-      return res.status(403).json(STATUS_CODE[403](req.t!("Insufficient permissions")));
-    }
-
     const folderId = parseParamId(req.params.id);
     if (isNaN(folderId)) {
       await transaction.rollback();
@@ -306,14 +336,19 @@ export const updateFolder = async (req: Request, res: Response): Promise<Respons
  * Delete a folder (cascade deletes children and mappings)
  */
 export const deleteFolder = async (req: Request, res: Response): Promise<Response> => {
+  let permissions: FolderPermissions;
+  try {
+    permissions = await folderPermissions(req);
+  } catch (error) {
+    console.error("Error checking folder permissions:", error);
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
+  }
+  if (!canManageFolders(permissions)) {
+    return res.status(403).json(STATUS_CODE[403](req.t!("Insufficient permissions")));
+  }
+
   const transaction = await sequelize.transaction();
   try {
-    // Check permissions
-    if (!hasManagePermission(req.role)) {
-      await transaction.rollback();
-      return res.status(403).json(STATUS_CODE[403](req.t!("Insufficient permissions")));
-    }
-
     const folderId = parseParamId(req.params.id);
     if (isNaN(folderId)) {
       await transaction.rollback();
@@ -331,6 +366,16 @@ export const deleteFolder = async (req: Request, res: Response): Promise<Respons
     if (existingFolder.is_system) {
       await transaction.rollback();
       return res.status(403).json(STATUS_CODE[403](req.t!("System folders cannot be deleted")));
+    }
+
+    // The delete unfiles everything in the folder and its subfolders.
+    const contents = await getFolderTreeContentsQuery(req.organizationId!, folderId, transaction);
+    if (
+      (contents.hasFiles && !permissions.files) ||
+      (contents.hasPolicies && !permissions.policies)
+    ) {
+      await transaction.rollback();
+      return res.status(403).json(STATUS_CODE[403](req.t!("Insufficient permissions")));
     }
 
     const deleted = await deleteFolderByIdQuery(req.organizationId!, folderId, transaction);
@@ -398,12 +443,6 @@ export const getUncategorizedFiles = async (req: Request, res: Response): Promis
 export const assignFilesToFolder = async (req: Request, res: Response): Promise<Response> => {
   const transaction = await sequelize.transaction();
   try {
-    // Check permissions
-    if (!hasManagePermission(req.role)) {
-      await transaction.rollback();
-      return res.status(403).json(STATUS_CODE[403](req.t!("Insufficient permissions")));
-    }
-
     const folderId = parseParamId(req.params.id);
     if (isNaN(folderId)) {
       await transaction.rollback();
@@ -447,12 +486,6 @@ export const assignFilesToFolder = async (req: Request, res: Response): Promise<
 export const removeFileFromFolder = async (req: Request, res: Response): Promise<Response> => {
   const transaction = await sequelize.transaction();
   try {
-    // Check permissions
-    if (!hasManagePermission(req.role)) {
-      await transaction.rollback();
-      return res.status(403).json(STATUS_CODE[403](req.t!("Insufficient permissions")));
-    }
-
     const folderId = parseParamId(req.params.id);
     const fileId = parseParamId(req.params.fileId);
     if (isNaN(folderId) || isNaN(fileId)) {
@@ -502,12 +535,6 @@ export const getFileFolders = async (req: Request, res: Response): Promise<Respo
 export const updateFileFolders = async (req: Request, res: Response): Promise<Response> => {
   const transaction = await sequelize.transaction();
   try {
-    // Check permissions
-    if (!hasManagePermission(req.role)) {
-      await transaction.rollback();
-      return res.status(403).json(STATUS_CODE[403](req.t!("Insufficient permissions")));
-    }
-
     const fileId = parseParamId(req.params.id);
     if (isNaN(fileId)) {
       await transaction.rollback();

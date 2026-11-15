@@ -49,9 +49,9 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useFormValidation } from "../../../../application/hooks/useFormValidation";
 import { focusFormFieldById } from "../../../../application/utils/formValidationFocus";
 import { checkStringValidation } from "../../../../application/validations/stringValidation";
-import { useAuth } from "../../../../application/hooks/useAuth";
-import allowedRoles from "../../../../application/constants/permissions";
+import { useCanCheck } from "../../../../application/hooks/useCan";
 import ReadOnlyFieldset from "../../ReadOnlyFieldset";
+import { palette, radiusPx } from "../../../themes/palette";
 
 dayjs.extend(utc);
 
@@ -178,8 +178,8 @@ const NewModelInventory: FC<NewModelInventoryProps> = ({
   const [users, setUsers] = useState<User[]>([]);
   const [isLoadingUsers, setIsLoadingUsers] = useState(false);
   // Roles without edit rights can open an existing record but not change it.
-  const { userRoleName } = useAuth();
-  const isReadOnly = isEdit && !allowedRoles.modelInventory.edit.includes(userRoleName);
+  const can = useCanCheck();
+  const isReadOnly = isEdit && !can("model.edit");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("details");
@@ -716,7 +716,7 @@ const NewModelInventory: FC<NewModelInventoryProps> = ({
         popupIcon={<ChevronDown />}
         placeholder="Select capabilities"
         error={errors.capabilities}
-        sx={{ "& .MuiChip-root": { borderRadius: "4px" } }}
+        sx={{ "& .MuiChip-root": { borderRadius: radiusPx.sm } }}
       />
 
       {/* Used in Projects Section */}
@@ -749,7 +749,7 @@ const NewModelInventory: FC<NewModelInventoryProps> = ({
         popupIcon={<ChevronDown size={16} />}
         placeholder="Select projects"
         error={errors.projects}
-        sx={{ "& .MuiChip-root": { borderRadius: "4px" } }}
+        sx={{ "& .MuiChip-root": { borderRadius: radiusPx.sm } }}
       />
 
       {/* Used in Frameworks Section */}
@@ -782,7 +782,7 @@ const NewModelInventory: FC<NewModelInventoryProps> = ({
         popupIcon={<ChevronDown size={16} />}
         placeholder="Select frameworks"
         error={errors.frameworks}
-        sx={{ "& .MuiChip-root": { borderRadius: "4px" } }}
+        sx={{ "& .MuiChip-root": { borderRadius: radiusPx.sm } }}
       />
 
       <Stack direction={"row"} spacing={6}>
@@ -924,7 +924,7 @@ const NewModelInventory: FC<NewModelInventoryProps> = ({
           variant="caption"
           sx={{
             mt: 1,
-            color: "#f04438",
+            color: palette.status.error.text,
             fontWeight: 300,
             fontSize: 11,
           }}

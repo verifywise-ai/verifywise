@@ -237,6 +237,9 @@ const showGlobalErrorAlert = (error: AxiosError) => {
     // a failure: the Settings page opens a dialog asking where to move answers.
     const inner = responseData.data as { code?: unknown } | undefined;
     if (status === 409 && inner?.code === "options_in_use") return;
+    // The create AI app modal shows a taken name on its name field.
+    if (status === 409 && error.config?.method === "post" && requestUrl.endsWith("/create-ai-app"))
+      return;
     const detail = getEnvelopeErrorMessage(responseData);
     showAlert({
       variant: "error",

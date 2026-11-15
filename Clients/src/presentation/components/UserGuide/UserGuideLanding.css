@@ -6,7 +6,7 @@
 }
 
 .collection-card:hover {
-  border-color: #13715b;
+  border-color: var(--vw-brand-primary, #13715b);
   box-shadow: 0px 4px 24px -4px rgba(16, 24, 40, 0.08);
 }
 
@@ -16,7 +16,7 @@
 }
 
 .fast-find-item:hover {
-  background-color: #f9fafb;
+  background-color: var(--vw-background-alt, #f9fafb);
 }
 
 .fast-find-item .arrow-icon {
@@ -24,7 +24,7 @@
 }
 
 .fast-find-item:hover .arrow-icon {
-  color: #13715b;
+  color: var(--vw-brand-primary, #13715b);
 }
 
 /* Search input focus */

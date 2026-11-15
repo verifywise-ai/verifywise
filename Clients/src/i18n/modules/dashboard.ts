@@ -32,6 +32,19 @@ export const de: Record<string, string> = {
     "Per-control readiness scores, framework aggregations, and improvement recommendations.",
   "Review and approve AI-generated content (EU AI Act art. 52)":
     "Review and approve AI-generated content (EU AI Act art. 52)",
+  "Edit layout": "Layout bearbeiten",
+  "Quick stats": "Schnellstatistiken",
+  "Organizational frameworks": "Organisatorische Frameworks",
+  "Quantitative risk portfolio": "Quantitatives Risikoportfolio",
+  "Show, hide and reorder the widgets in this view. Only you see these changes.":
+    "Blenden Sie die Widgets in dieser Ansicht ein oder aus und ändern Sie ihre Reihenfolge. Nur Sie sehen diese Änderungen.",
+  "All widgets are hidden. Use Edit layout to show them.":
+    "Alle Widgets sind ausgeblendet. Über „Layout bearbeiten“ können Sie sie wieder einblenden.",
+  "Could not save your layout. Try again.":
+    "Ihr Layout konnte nicht gespeichert werden. Versuchen Sie es erneut.",
+  "Show {widget}": "{widget} anzeigen",
+  "Move {widget} up": "{widget} nach oben verschieben",
+  "Move {widget} down": "{widget} nach unten verschieben",
 };
 
 export const fr: Record<string, string> = {
@@ -64,6 +77,19 @@ export const fr: Record<string, string> = {
     "Per-control readiness scores, framework aggregations, and improvement recommendations.",
   "Review and approve AI-generated content (EU AI Act art. 52)":
     "Review and approve AI-generated content (EU AI Act art. 52)",
+  "Edit layout": "Modifier la disposition",
+  "Quick stats": "Statistiques rapides",
+  "Organizational frameworks": "Cadres organisationnels",
+  "Quantitative risk portfolio": "Portefeuille de risques quantitatif",
+  "Show, hide and reorder the widgets in this view. Only you see these changes.":
+    "Affichez, masquez et réorganisez les widgets de cette vue. Vous seul voyez ces modifications.",
+  "All widgets are hidden. Use Edit layout to show them.":
+    "Tous les widgets sont masqués. Utilisez « Modifier la disposition » pour les afficher.",
+  "Could not save your layout. Try again.":
+    "Impossible d'enregistrer votre disposition. Réessayez.",
+  "Show {widget}": "Afficher {widget}",
+  "Move {widget} up": "Monter {widget}",
+  "Move {widget} down": "Descendre {widget}",
 };
 
 export const es: Record<string, string> = {
@@ -96,4 +122,16 @@ export const es: Record<string, string> = {
     "Puntuaciones de preparación por control, agregaciones por marco y recomendaciones de mejora.",
   "Review and approve AI-generated content (EU AI Act art. 52)":
     "Revisa y aprueba el contenido generado por IA (EU AI Act art. 52)",
+  "Edit layout": "Editar diseño",
+  "Quick stats": "Estadísticas rápidas",
+  "Organizational frameworks": "Marcos organizativos",
+  "Quantitative risk portfolio": "Cartera de riesgos cuantitativa",
+  "Show, hide and reorder the widgets in this view. Only you see these changes.":
+    "Muestre, oculte y reordene los widgets de esta vista. Solo usted ve estos cambios.",
+  "All widgets are hidden. Use Edit layout to show them.":
+    "Todos los widgets están ocultos. Use «Editar diseño» para mostrarlos.",
+  "Could not save your layout. Try again.": "No se pudo guardar su diseño. Inténtelo de nuevo.",
+  "Show {widget}": "Mostrar {widget}",
+  "Move {widget} up": "Subir {widget}",
+  "Move {widget} down": "Bajar {widget}",
 };

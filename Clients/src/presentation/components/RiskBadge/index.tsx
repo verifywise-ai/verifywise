@@ -1,11 +1,17 @@
 import { Box, Typography } from "@mui/material";
+import { palette, radiusPx } from "../../themes/palette";
 
 interface RiskBadgeProps {
   score: number;
 }
 
 export default function RiskBadge({ score }: RiskBadgeProps) {
-  const color = score >= 70 ? "#DC2626" : score >= 40 ? "#F59E0B" : "#10B981";
+  const color =
+    score >= 70
+      ? palette.riskMark.critical
+      : score >= 40
+        ? palette.riskMark.medium
+        : palette.status.success.strong;
 
   return (
     <Box
@@ -15,7 +21,7 @@ export default function RiskBadge({ score }: RiskBadgeProps) {
         gap: 0.5,
         px: 1,
         py: 0.25,
-        borderRadius: "4px",
+        borderRadius: radiusPx.sm,
         backgroundColor: `${color}14`,
         border: `1px solid ${color}33`,
       }}

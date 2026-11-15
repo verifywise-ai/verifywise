@@ -37,13 +37,22 @@ jest.mock("../../utils/aiGatewayEvalKey.utils", () => ({
   getDecryptedAiGatewayKeyForProviderQuery: jest.fn(),
 }));
 
+jest.mock("../../utils/rolePermissions.utils", () => ({
+  __esModule: true,
+  requestHasPermission: jest.fn(),
+}));
+
 import {
   gatewayDetailMessage,
   gatewayErrorMessage,
   injectApiKeys,
+  resolveEvalsSettingsPermission,
   toLiteLLMModel,
 } from "../deepEvalRoutes.route";
 import { getDecryptedAiGatewayKeyForProviderQuery } from "../../utils/aiGatewayEvalKey.utils";
+import { requestHasPermission } from "../../utils/rolePermissions.utils";
+
+const mockHasPermission = requestHasPermission as jest.MockedFunction<typeof requestHasPermission>;
 
 const mockGetKey = getDecryptedAiGatewayKeyForProviderQuery as jest.MockedFunction<
   typeof getDecryptedAiGatewayKeyForProviderQuery
@@ -71,6 +80,7 @@ function buildNext(): jest.Mock {
 
 beforeEach(() => {
   mockGetKey.mockReset();
+  mockHasPermission.mockReset();
 });
 
 // --------------------------------------------------------------------------- //
@@ -572,5 +582,124 @@ describe("gatewayErrorMessage", () => {
 
   it("uses the raw text when the body is not JSON", () => {
     expect(gatewayErrorMessage(502, "Bad Gateway", null)).toBe("Bad Gateway");
+  });
+});
+
+// --------------------------------------------------------------------------- //
+// resolveEvalsSettingsPermission — feeds the x-can-manage-org-settings header //
+// --------------------------------------------------------------------------- //
+
+describe("resolveEvalsSettingsPermission", () => {
+  type FlagReq = MockReq & { canManageEvalsSettings?: boolean };
+
+  it("does not look up permissions for read-only requests", async () => {
+    const req: FlagReq = buildReq({
+      method: "GET",
+      url: "/settings/arena",
+      path: "/settings/arena",
+    });
+    const next = buildNext();
+    await resolveEvalsSettingsPermission(
+      req as Request,
+      buildRes(),
+      next as unknown as NextFunction,
+    );
+    expect(req.canManageEvalsSettings).toBe(false);
+    expect(mockHasPermission).not.toHaveBeenCalled();
+    expect(next).toHaveBeenCalledTimes(1);
+  });
+
+  it("checks organization.admin on writes and sets the flag when granted", async () => {
+    mockHasPermission.mockResolvedValueOnce(true);
+    const req: FlagReq = buildReq({
+      method: "PUT",
+      url: "/settings/arena",
+      path: "/settings/arena",
+    });
+    const next = buildNext();
+    await resolveEvalsSettingsPermission(
+      req as Request,
+      buildRes(),
+      next as unknown as NextFunction,
+    );
+    expect(mockHasPermission).toHaveBeenCalledWith(req, "organization.admin");
+    expect(req.canManageEvalsSettings).toBe(true);
+    expect(next).toHaveBeenCalledTimes(1);
+  });
+
+  it("leaves the flag off when the permission is missing", async () => {
+    mockHasPermission.mockResolvedValueOnce(false);
+    const req: FlagReq = buildReq({
+      method: "PUT",
+      url: "/settings/arena",
+      path: "/settings/arena",
+    });
+    await resolveEvalsSettingsPermission(
+      req as Request,
+      buildRes(),
+      buildNext() as unknown as NextFunction,
+    );
+    expect(req.canManageEvalsSettings).toBe(false);
+  });
+
+  it("overwrites a flag set earlier on the request", async () => {
+    mockHasPermission.mockResolvedValueOnce(false);
+    const req: FlagReq = {
+      ...buildReq({ method: "PUT", path: "/settings/arena" }),
+      canManageEvalsSettings: true,
+    };
+    await resolveEvalsSettingsPermission(
+      req as Request,
+      buildRes(),
+      buildNext() as unknown as NextFunction,
+    );
+    expect(req.canManageEvalsSettings).toBe(false);
+  });
+
+  it("skips the lookup for writes outside /settings", async () => {
+    const req: FlagReq = { ...buildReq({ method: "POST", path: "/experiments" }) };
+    const next = buildNext();
+    await resolveEvalsSettingsPermission(
+      req as Request,
+      buildRes(),
+      next as unknown as NextFunction,
+    );
+    expect(mockHasPermission).not.toHaveBeenCalled();
+    expect(req.canManageEvalsSettings).toBe(false);
+    expect(next).toHaveBeenCalledTimes(1);
+  });
+
+  it.each(["/Settings/arena", "/%73ettings/arena", "//settings/arena"])(
+    "still checks the permission for the settings path spelled %s",
+    async (path) => {
+      mockHasPermission.mockResolvedValueOnce(true);
+      const req: FlagReq = buildReq({ method: "PUT", path });
+      await resolveEvalsSettingsPermission(
+        req as Request,
+        buildRes(),
+        buildNext() as unknown as NextFunction,
+      );
+      expect(mockHasPermission).toHaveBeenCalledTimes(1);
+      expect(req.canManageEvalsSettings).toBe(true);
+    },
+  );
+
+  it("fails closed when the permission lookup throws", async () => {
+    mockHasPermission.mockRejectedValueOnce(new Error("db down"));
+    const errSpy = jest.spyOn(console, "error").mockImplementation(() => {});
+    const req: FlagReq = buildReq({
+      method: "PUT",
+      url: "/settings/arena",
+      path: "/settings/arena",
+    });
+    const next = buildNext();
+    await resolveEvalsSettingsPermission(
+      req as Request,
+      buildRes(),
+      next as unknown as NextFunction,
+    );
+    expect(req.canManageEvalsSettings).toBe(false);
+    expect(next).toHaveBeenCalledTimes(1);
+    errSpy.mockRestore();
   });
 });

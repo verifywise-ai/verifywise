@@ -5,8 +5,9 @@
  */
 
 import { Box, Typography } from "@mui/material";
+import SectionLabel from "./SectionLabel";
 import { Upload } from "lucide-react";
-import { palette } from "../../../themes/palette";
+import { palette, radiusPx } from "../../../themes/palette";
 import { readDataset, uploadDataset } from "../../../../application/repository/deepEval.repository";
 import type { DatasetPrompt, UserDataset } from "./newExperimentConfig";
 import { validateDatasetFileContent } from "./datasetUpload";
@@ -37,18 +38,7 @@ export default function DatasetUploadZone({
 }: DatasetUploadZoneProps) {
   return (
     <Box>
-      <Typography
-        sx={{
-          fontSize: "12px",
-          fontWeight: 600,
-          color: palette.text.disabled,
-          textTransform: "uppercase",
-          letterSpacing: "0.5px",
-          mb: "8px",
-        }}
-      >
-        Option 1: Use custom dataset
-      </Typography>
+      <SectionLabel>Upload a dataset</SectionLabel>
       <Box
         component="label"
         sx={{
@@ -58,7 +48,7 @@ export default function DatasetUploadZone({
           "p": "8px",
           "border": "1px dashed",
           "borderColor": uploading ? palette.brand.primary : palette.border.dark,
-          "borderRadius": "4px",
+          "borderRadius": radiusPx.sm,
           "backgroundColor": palette.background.accent,
           "cursor": uploading ? "wait" : "pointer",
           "transition": "all 0.15s ease",
@@ -72,7 +62,7 @@ export default function DatasetUploadZone({
           sx={{
             width: 32,
             height: 32,
-            borderRadius: "6px",
+            borderRadius: radiusPx.md,
             backgroundColor: palette.brand.primary,
             display: "flex",
             alignItems: "center",
@@ -86,7 +76,7 @@ export default function DatasetUploadZone({
           <Typography sx={{ fontSize: "13px", fontWeight: 500, color: palette.text.secondary }}>
             {uploading ? "Uploading..." : "Upload dataset"}
           </Typography>
-          <Typography sx={{ fontSize: "11px", color: palette.text.disabled }}>
+          <Typography sx={{ fontSize: "12px", color: palette.text.tertiary }}>
             JSON file with prompts and expected outputs
           </Typography>
         </Box>
