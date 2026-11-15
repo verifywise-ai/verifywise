@@ -1480,5 +1480,7 @@
   "You have already responded to this step": "You have already responded to this step",
   "You have been invited to an organization": "You have been invited to an organization",
   "You've been assigned as {roleType}: {entityName}": "You've been assigned as {roleType}: {entityName}",
-  "Your role changed to project admin on {projectName}": "Your role changed to project admin on {projectName}"
+  "Your role changed to project admin on {projectName}": "Your role changed to project admin on {projectName}",
+  "A Slack authorization code is required": "A Slack authorization code is required",
+  "Slack did not accept the authorization code. Add Slack again.": "Slack did not accept the authorization code. Add Slack again."
 }

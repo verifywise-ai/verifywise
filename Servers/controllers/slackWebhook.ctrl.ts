@@ -7,7 +7,8 @@
  * body or query. Every read and write is filtered by the caller's
  * organization in SQL; another organization's id answers 404, exactly like a
  * missing id. Connections with no organization (legacy rows, see
- * utils/slackWebhook.utils.ts) are invisible here.
+ * utils/slackWebhook.utils.ts) are invisible to those routes; their owner
+ * lists and removes them at /api/extensions/slack/oauth/unlinked.
  */
 import { Request, Response } from "express";
 
@@ -25,6 +26,8 @@ import {
   updateSlackWebhookByIdQuery,
   deleteSlackWebhookByIdQuery,
   withOrganizationScope,
+  getUnlinkedSlackConnectionsQuery,
+  deleteUnlinkedSlackConnectionQuery,
 } from "../utils/slackWebhook.utils";
 import { SlackWebhookModel } from "../domain.layer/models/slackNotification/slackWebhook.model";
 import {
@@ -138,18 +141,36 @@ export async function getSlackWebhookById(req: Request, res: Response): Promise<
   }
 }
 
+/** Longest authorization code accepted; Slack's codes are far shorter. */
+const MAX_SLACK_OAUTH_CODE_LENGTH = 512;
+
+/** The OAuth `code` from the request body: a non-empty string of at most 512 characters. */
+export function isValidSlackOAuthCode(code: unknown): code is string {
+  return (
+    typeof code === "string" && code.trim().length > 0 && code.length <= MAX_SLACK_OAUTH_CODE_LENGTH
+  );
+}
+
+/**
+ * Exchange the authorization code with Slack. Slack refusing it (a used,
+ * expired or foreign code) throws a ValidationException with a fixed message:
+ * Slack's own error is logged here, never sent to the client. Anything else
+ * (no SLACK_API_URL, network failure, a body that is not JSON) throws a
+ * generic error.
+ */
 async function validateSlackOAuth(code: string): Promise<any> {
+  let data: any;
   try {
     const url = process.env.SLACK_API_URL;
+    if (!url) {
+      throw new Error("Slack API URL is not configured");
+    }
     const searchParams = {
       client_id: process.env.SLACK_CLIENT_ID || "",
       client_secret: process.env.SLACK_CLIENT_SECRET || "",
       code: code,
       redirect_uri: `${process.env.FRONTEND_URL}/extensions/slack/settings`,
     };
-    if (!url) {
-      throw new Error("Slack API URL is not configured");
-    }
     const tokenResponse = await fetch(url, {
       method: "POST",
       headers: {
@@ -157,25 +178,37 @@ async function validateSlackOAuth(code: string): Promise<any> {
       },
       body: new URLSearchParams(searchParams),
     });
-    const data = await tokenResponse.json();
-
-    if (data.ok) {
-      return data;
-    } else {
-      throw new Error(data.error || "Slack OAuth failed");
-    }
-  } catch (error) {
+    data = await tokenResponse.json();
+  } catch {
     throw new Error("Failed to validate Slack OAuth code");
   }
+
+  if (!data || data.ok !== true) {
+    // Slack's error is a short code such as invalid_code; keep only safe characters.
+    const reason = String(data?.error ?? "unknown")
+      .replace(/[^a-z0-9_]/gi, "")
+      .slice(0, 64);
+    logger.warn(`Slack refused the OAuth code: ${reason}`);
+    throw new ValidationException(
+      "Slack did not accept the authorization code. Add Slack again.",
+      "code",
+    );
+  }
+  return data;
 }
 
 export async function createNewSlackWebhook(req: Request, res: Response): Promise<any> {
   const functionName = "createNewSlackWebhook";
 
+  const code: unknown = req.body?.code;
+  if (!isValidSlackOAuthCode(code)) {
+    return res.status(400).json(STATUS_CODE[400](req.t!("A Slack authorization code is required")));
+  }
+
   logStructured("processing", `starting slackWebhook creation`, functionName, fileName);
 
   try {
-    const slackWebhookData = await validateSlackOAuth(req.body?.code);
+    const slackWebhookData = await validateSlackOAuth(code);
     // Owner and organization come from the token. A userId in the body is ignored.
     const slackWebhookModel = await SlackWebhookModel.createNewSlackWebhook(
       slackWebhookData.access_token,
@@ -426,6 +459,77 @@ export async function deleteSlackWebhookById(req: Request, res: Response): Promi
       req.userId!,
       req.organizationId!,
     );
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
+  }
+}
+
+/**
+ * The caller's own connections with no organization (created before
+ * connections belonged to an organization). They send nothing; the owner can
+ * only remove them. Only the owner's rows are returned, never a token or URL.
+ */
+export async function getUnlinkedSlackConnections(req: Request, res: Response): Promise<any> {
+  const functionName = "getUnlinkedSlackConnections";
+  try {
+    const connections = await getUnlinkedSlackConnectionsQuery(req.userId!);
+    logStructured(
+      "successful",
+      `${connections.length} unlinked slackWebhooks found`,
+      functionName,
+      fileName,
+    );
+    return res.status(200).json(STATUS_CODE[200](connections));
+  } catch (error) {
+    logStructured("error", "failed to retrieve unlinked slackWebhooks", functionName, fileName);
+    logger.error("❌ Error in getUnlinkedSlackConnections:", error);
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
+  }
+}
+
+/**
+ * Remove one of the caller's own connections with no organization. Another
+ * user's row, an organization's connection and a missing id all answer 404.
+ */
+export async function deleteUnlinkedSlackConnection(req: Request, res: Response): Promise<any> {
+  const functionName = "deleteUnlinkedSlackConnection";
+  const connectionId = parseConnectionId(req);
+  if (connectionId === null) {
+    return res.status(400).json(STATUS_CODE[400](req.t!("Valid ID is required (must be >= 1)")));
+  }
+
+  try {
+    const deleted = await deleteUnlinkedSlackConnectionQuery(connectionId, req.userId!);
+    if (!deleted) {
+      logStructured(
+        "error",
+        `unlinked slackWebhook not found: ID ${connectionId}`,
+        functionName,
+        fileName,
+      );
+      return res.status(404).json(STATUS_CODE[404](req.t!("Slack Webhook not found")));
+    }
+
+    logStructured(
+      "successful",
+      `unlinked slackWebhook deleted: ID ${connectionId}`,
+      functionName,
+      fileName,
+    );
+    await logEvent(
+      "Delete",
+      `Unlinked slackWebhook deleted: ID ${connectionId}`,
+      req.userId!,
+      req.organizationId!,
+    );
+    return res.status(204).send();
+  } catch (error) {
+    logStructured(
+      "error",
+      `failed to delete unlinked slackWebhook: ID ${connectionId}`,
+      functionName,
+      fileName,
+    );
+    logger.error("❌ Error in deleteUnlinkedSlackConnection:", error);
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }

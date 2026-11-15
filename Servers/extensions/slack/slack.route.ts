@@ -1,6 +1,8 @@
 /**
  * Slack extension routes: the organization's Slack connections, at
- * /api/extensions/slack/oauth/workspaces.
+ * /api/extensions/slack/oauth/workspaces, and the caller's own connections
+ * with no organization (legacy rows that send nothing), at
+ * /api/extensions/slack/oauth/unlinked.
  *
  * Handlers live in Servers/controllers/slackWebhook.ctrl.ts (OAuth exchange,
  * AES encryption of access_token/url, bot invite). Every route needs the
@@ -26,6 +28,8 @@ import {
   updateSlackWebhookById,
   sendSlackMessage,
   deleteSlackWebhookById,
+  getUnlinkedSlackConnections,
+  deleteUnlinkedSlackConnection,
 } from "../../controllers/slackWebhook.ctrl";
 
 const router = express.Router();
@@ -44,5 +48,10 @@ router.delete("/oauth/workspaces/:id", admin, deleteSlackWebhookById);
 
 // Test message to this one connection's channel.
 router.post("/oauth/workspaces/:id/send", admin, sendSlackMessage);
+
+// The caller's own connections with no organization: list and remove only.
+// Filtered by the caller's user id, not the organization.
+router.get("/oauth/unlinked", admin, getUnlinkedSlackConnections);
+router.delete("/oauth/unlinked/:id", admin, deleteUnlinkedSlackConnection);
 
 export default router;

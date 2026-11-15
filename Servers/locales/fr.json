@@ -1480,5 +1480,7 @@
   "You have already responded to this step": "Vous avez déjà répondu à cette étape",
   "You have been invited to an organization": "Vous avez été invité à rejoindre une organisation",
   "You've been assigned as {roleType}: {entityName}": "Vous avez été affecté en tant que {roleType} : {entityName}",
-  "Your role changed to project admin on {projectName}": "Votre rôle a été modifié en administrateur du projet sur {projectName}"
+  "Your role changed to project admin on {projectName}": "Votre rôle a été modifié en administrateur du projet sur {projectName}",
+  "A Slack authorization code is required": "Un code d'autorisation Slack est requis",
+  "Slack did not accept the authorization code. Add Slack again.": "Slack n'a pas accepté le code d'autorisation. Ajoutez Slack à nouveau."
 }
