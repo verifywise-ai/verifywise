@@ -13,10 +13,10 @@ jest.mock("../../utils/validations/validation.utils", () => ({
   sanitizeForLog: (value: string) => value,
 }));
 
-const mockLoggerError = jest.fn();
+const mockLogError = jest.fn();
 jest.mock("../../utils/logger/fileLogger", () => ({
   __esModule: true,
-  default: { error: (...args: unknown[]) => mockLoggerError(...args) },
+  logStructuredError: (...args: unknown[]) => mockLogError(...args),
 }));
 
 const mockFindByKey = jest.fn();
@@ -159,7 +159,12 @@ describe("requireExtensionEnabled middleware", () => {
     expect(JSON.stringify((res.json as jest.Mock).mock.calls)).not.toContain(
       "extension_enablements",
     );
-    expect(mockLoggerError).toHaveBeenCalledWith(expect.stringContaining("slack-crash"), cause);
+    expect(mockLogError).toHaveBeenCalledWith(
+      expect.stringContaining("slack-crash"),
+      cause,
+      "checkEnabled",
+      "requireExtensionEnabled.middleware.ts",
+    );
     expect(next).not.toHaveBeenCalled();
   });
 
