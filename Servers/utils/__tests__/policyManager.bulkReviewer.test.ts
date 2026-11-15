@@ -25,8 +25,8 @@ describe("bulkSetPoliciesReviewerQuery", () => {
     await bulkSetPoliciesReviewerQuery(4, [10, 11], 7, 9, tx);
 
     const sqls = mockQuery.mock.calls.map((c) => String(c[0]));
-    // snapshot, delete, insert, snapshot
-    expect(sqls).toHaveLength(4);
+    // snapshot, delete, insert
+    expect(sqls).toHaveLength(3);
     expect(sqls[1]).toContain("DELETE FROM policy_manager__assigned_reviewer_ids");
     expect(sqls[2]).toContain("INSERT INTO policy_manager__assigned_reviewer_ids");
     expect(sqls.some((s) => s.includes("review_status"))).toBe(false);

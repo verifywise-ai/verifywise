@@ -733,9 +733,17 @@ export const bulkArchivePoliciesQuery = async (
   }
 };
 
-type PolicyBulkSnapshot = Map<number, { tags: string[]; assigned_reviewer_ids: number[] }>;
+type PolicyBulkValues = {
+  tags: string[];
+  assigned_reviewer_ids: number[];
+  policy_owner_id: number | null;
+};
+type PolicyBulkSnapshot = Map<number, PolicyBulkValues>;
 
-/** The tracked bulk-editable values (tags, reviewers) of the policies, by id. */
+/**
+ * The tracked bulk-editable values (tags, reviewers) of the policies, by id,
+ * with the owner the reviewer rule needs.
+ */
 const snapshotPolicyBulkValues = async (
   organizationId: number,
   ids: number[],
@@ -743,6 +751,7 @@ const snapshotPolicyBulkValues = async (
 ): Promise<PolicyBulkSnapshot> => {
   const rows = (await sequelize.query(
     `SELECT pm.id,
+            pm.policy_owner_id,
             COALESCE(pm.tags, ARRAY[]::text[]) AS tags,
             COALESCE(
               ARRAY(
@@ -755,35 +764,43 @@ const snapshotPolicyBulkValues = async (
      FROM policy_manager pm
      WHERE pm.organization_id = :organizationId AND pm.id IN (:ids)`,
     { replacements: { organizationId, ids }, type: QueryTypes.SELECT, transaction },
-  )) as Array<{ id: number; tags: string[]; assigned_reviewer_ids: number[] }>;
+  )) as Array<{
+    id: number;
+    tags: string[];
+    assigned_reviewer_ids: number[];
+    policy_owner_id: number | null;
+  }>;
   return new Map(
     rows.map((r) => [
       Number(r.id),
-      { tags: r.tags, assigned_reviewer_ids: r.assigned_reviewer_ids.map(Number) },
+      {
+        tags: r.tags,
+        assigned_reviewer_ids: r.assigned_reviewer_ids.map(Number),
+        policy_owner_id: r.policy_owner_id === null ? null : Number(r.policy_owner_id),
+      },
     ]),
   );
 };
 
 /**
- * Records one history entry per policy whose `field` differs between the two
- * snapshots, as the acting user. Policies with equal values get none.
+ * Records one history entry per policy whose `field` changed, as the acting
+ * user: `afterValue` derives the written value from the policy's prior values,
+ * so no second read is needed. Policies with equal values get none.
  */
-const recordBulkFieldHistory = async (
-  field: "tags" | "assigned_reviewer_ids",
+const recordBulkFieldHistory = async <F extends "tags" | "assigned_reviewer_ids">(
+  field: F,
   organizationId: number,
   userId: number,
   before: PolicyBulkSnapshot,
-  after: PolicyBulkSnapshot,
+  afterValue: (prior: PolicyBulkValues) => PolicyBulkValues[F],
   transaction: Transaction,
 ): Promise<void> => {
   for (const [id, prior] of before) {
-    const current = after.get(id);
-    if (!current) continue;
     await recordUpdateChanges(
       "policy",
       id,
       { [field]: prior[field] },
-      { [field]: current[field] },
+      { [field]: afterValue(prior) },
       userId,
       organizationId,
       transaction,
@@ -828,13 +845,13 @@ export const bulkSetPoliciesReviewerQuery = async (
     { replacements: { organizationId, ids, reviewerId }, transaction },
   );
 
-  const after = await snapshotPolicyBulkValues(organizationId, ids, transaction);
+  // The insert above skips a policy the reviewer owns, leaving it with none.
   await recordBulkFieldHistory(
     "assigned_reviewer_ids",
     organizationId,
     userId,
     before,
-    after,
+    (prior) => (prior.policy_owner_id === reviewerId ? [] : [reviewerId]),
     transaction,
   );
 };
@@ -871,6 +888,6 @@ export const bulkSetPoliciesTagsQuery = async (
     },
   );
 
-  const after = await snapshotPolicyBulkValues(organizationId, ids, transaction);
-  await recordBulkFieldHistory("tags", organizationId, userId, before, after, transaction);
+  // The update writes the sent list as is, in order.
+  await recordBulkFieldHistory("tags", organizationId, userId, before, () => tags, transaction);
 };

@@ -72,17 +72,11 @@ describe("bulk policy history", () => {
     expect(mockStatus).toHaveBeenCalledTimes(2);
   });
 
-  it("set tags records before and after per policy as the acting user", async () => {
-    queueSnapshots(
-      [
-        { id: 1, tags: ["Privacy"], assigned_reviewer_ids: [] },
-        { id: 2, tags: ["AI ethics"], assigned_reviewer_ids: [] },
-      ],
-      [
-        { id: 1, tags: ["AI ethics"], assigned_reviewer_ids: [] },
-        { id: 2, tags: ["AI ethics"], assigned_reviewer_ids: [] },
-      ],
-    );
+  it("set tags records before and the sent list per policy as the acting user", async () => {
+    queueSnapshots([
+      { id: 1, tags: ["Privacy"], assigned_reviewer_ids: [], policy_owner_id: null },
+      { id: 2, tags: ["AI ethics"], assigned_reviewer_ids: [], policy_owner_id: null },
+    ]);
     await bulkSetPoliciesTagsQuery(4, [1, 2], ["AI ethics"] as any, 9, tx);
     expect(mockUpdate).toHaveBeenCalledWith(
       "policy",
@@ -105,12 +99,12 @@ describe("bulk policy history", () => {
     );
   });
 
-  it("set reviewer records the reviewer list read back after the write", async () => {
-    queueSnapshots(
-      [{ id: 1, tags: [], assigned_reviewer_ids: [3, 5] }],
-      [{ id: 1, tags: [], assigned_reviewer_ids: [7] }],
-    );
-    await bulkSetPoliciesReviewerQuery(4, [1], 7, 9, tx);
+  it("set reviewer records the new reviewer, and none on a policy the reviewer owns", async () => {
+    queueSnapshots([
+      { id: 1, tags: [], assigned_reviewer_ids: [3, 5], policy_owner_id: 2 },
+      { id: 2, tags: [], assigned_reviewer_ids: [3], policy_owner_id: 7 },
+    ]);
+    await bulkSetPoliciesReviewerQuery(4, [1, 2], 7, 9, tx);
     expect(mockUpdate).toHaveBeenCalledWith(
       "policy",
       1,
@@ -120,13 +114,26 @@ describe("bulk policy history", () => {
       4,
       tx,
     );
+    // The insert skips a policy the reviewer owns, so its team ends up empty.
+    expect(mockUpdate).toHaveBeenCalledWith(
+      "policy",
+      2,
+      { assigned_reviewer_ids: [3] },
+      { assigned_reviewer_ids: [] },
+      9,
+      4,
+      tx,
+    );
   });
 
-  it("snapshots are read org-scoped on the transaction", async () => {
-    queueSnapshots([], []);
-    await bulkSetPoliciesTagsQuery(4, [1], [] as any, 9, tx);
+  it.each([
+    ["set tags", () => bulkSetPoliciesTagsQuery(4, [1], [] as any, 9, tx)],
+    ["set reviewer", () => bulkSetPoliciesReviewerQuery(4, [1], 7, 9, tx)],
+  ])("%s reads one snapshot, org-scoped on the transaction", async (_label, run) => {
+    queueSnapshots([]);
+    await run();
     const snaps = mockQuery.mock.calls.filter((c) => String(c[0]).includes("SELECT pm.id"));
-    expect(snaps).toHaveLength(2);
+    expect(snaps).toHaveLength(1);
     for (const [sql, opts] of snaps as Array<[string, any]>) {
       expect(sql).toContain("pm.organization_id = :organizationId");
       expect(opts.replacements.organizationId).toBe(4);
