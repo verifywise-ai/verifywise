@@ -258,7 +258,11 @@ export const extensionsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: '**Where it shows up:** a **View lifecycle** button on each row in **Model inventory**, and a lifecycle section on each model\'s detail page.',
+      text: '**Where it shows up:** a **View lifecycle** button on each row in **Model inventory** opens the model\'s lifecycle page.',
+    },
+    {
+      type: 'paragraph',
+      text: 'Admins set up the phases and items. Admins and Editors fill in a model\'s lifecycle: answers, documents, people and approvers. Other roles can view it. Only the person named as an approver can approve or reject their own approval, Admins included. To change an approver, an Admin or Editor removes them and adds someone else.',
     },
     {
       type: 'heading',
@@ -428,6 +432,9 @@ export const extensionsContent: ArticleContent = {
         { action: 'Enable, configure or disable an extension', roles: 'Admin' },
         { action: 'Import risks from Excel (Risk Import)', roles: 'Admin, Editor' },
         { action: 'Bulk upload datasets (Dataset Bulk Upload)', roles: 'Admin, Editor' },
+        { action: 'Set up lifecycle phases and items (Model Lifecycle)', roles: 'Admin' },
+        { action: 'Fill in a model\'s lifecycle: answers, documents, people, approvers (Model Lifecycle)', roles: 'Admin, Editor' },
+        { action: 'Approve or reject a lifecycle approval (Model Lifecycle)', roles: 'The named approver only' },
         { action: 'See the Jira key on imported incidents (Jira incidents)', roles: 'Anyone who can see incidents' },
       ],
     },
