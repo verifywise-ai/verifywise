@@ -38,7 +38,7 @@ const [mitigationValues, setMitigationValues] =
     likelihood: 0,
     riskSeverity: 0,
     approver: 0,
-    approvalStatus: 0,
+    approvalStatus: RISK_APPROVAL_STATUS.NotRequired,
     dateOfAssessment: "",
     recommendations: "",
   };
@@ -63,10 +63,29 @@ The component is organized into several logical sections:
    - Row 1: Mitigation status, current risk level, deadline
    - Row 2: Mitigation plan and implementation strategy
 3. **Risk Level Calculation**: Interactive risk level calculator
-4. **Risk Approval**: Approver selection, approval status, and assessment date
+4. **Risk Approval**: Approver selection, approval status, and assessment date (all optional)
 5. **Recommendations**: Optional recommendations field
 
 ## Key Features
+
+### Risk approval
+
+Approver, approval status and assessment date are optional. The status is one of
+Pending, Approved, Rejected or Not required (the default), and the form mirrors the
+server rule (`Servers/utils/riskApproval.utils.ts`):
+
+- The Approver select has a "None" option. Choosing a different approver sets the
+  status to Pending; choosing None sets Not required; choosing the saved approver
+  again restores the saved status.
+- With no approver the Approval status select is disabled (always Not required).
+- Approved and Rejected are disabled unless the user holds `organization.admin`, or
+  is the saved approver and has not changed the approver in this edit. In a save that
+  changes the approver only an Admin can pick them.
+- When the saved status is Approved or Rejected and the user cannot decide, every
+  other status is disabled too; the user can still save other fields.
+- Pass `savedApproval` (the risk's stored approver and status; `AddNewRiskForm`
+  passes its original mitigation values). A server refusal (403) reaches the form's
+  `onError` with the server's reason.
 
 ### Form Validation
 

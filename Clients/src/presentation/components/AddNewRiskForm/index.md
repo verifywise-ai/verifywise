@@ -82,8 +82,8 @@ return (
       likelihood: 1,
       riskSeverity: 1,
       approver: 0,
-      approvalStatus: 0,
-      dateOfAssessment: new Date().toISOString(),
+      approvalStatus: RISK_APPROVAL_STATUS.NotRequired,
+      dateOfAssessment: "",
       recommendations: "",
     }}
   />
@@ -219,7 +219,7 @@ const COMPONENT_CONSTANTS = {
 - `aiLifecyclePhase` - AI lifecycle phase options
 - `riskCategoryItems` - Risk category options
 - `mitigationStatusItems` - Mitigation status options
-- `approvalStatusItems` - Approval status options
+- `approvalStatusItems` - Approval status options (Pending, Approved, Rejected, Not required; ids in `RISK_APPROVAL_STATUS`)
 - `riskLevelItems` - Risk level options
 - `likelihoodItems` - Likelihood options
 - `riskSeverityItems` - Risk severity options

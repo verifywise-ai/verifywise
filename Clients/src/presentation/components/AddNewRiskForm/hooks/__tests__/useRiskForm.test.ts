@@ -9,11 +9,15 @@ import { AddNewRiskFormProps } from "../../../../types/riskForm.types";
 import authReducer from "../../../../../application/redux/auth/authSlice";
 import uiReducer from "../../../../../application/redux/ui/uiSlice";
 import fileReducer from "../../../../../application/redux/file/fileSlice";
+import CustomException from "../../../../../infrastructure/exceptions/customeException";
 
 const mockClosePopup = vi.fn();
 const mockOnSuccess = vi.fn();
 const mockOnError = vi.fn();
 const mockOnLoading = vi.fn();
+const mockMitigationValidateRef = vi.hoisted(() => ({
+  current: null as ((values: unknown) => boolean) | null,
+}));
 
 vi.mock("react-router", async (importOriginal) => {
   const actual = await importOriginal<any>();
@@ -93,7 +97,7 @@ vi.mock("../useMitigationSection", () => ({
     setMitigationValues: vi.fn(),
     originalMitigationValues: initial || {},
     setOriginalMitigationValues: vi.fn(),
-    validateRef: { current: null },
+    validateRef: mockMitigationValidateRef,
     mapFromInputValues: vi.fn(() => ({})),
     buildBackendData: vi.fn(() => ({})),
   }),
@@ -183,6 +187,33 @@ describe("useRiskForm", () => {
   it("exposes risk form submit handler", () => {
     const { result } = renderHook(() => useRiskForm(createProps()), { wrapper: Wrapper });
     expect(typeof result.current.riskFormSubmitHandler).toBe("function");
+  });
+
+  it("shows the server's reason when the approver rule refuses the save (403)", async () => {
+    const reason = "Only the risk's approver or an Admin can approve or reject it.";
+    // apiServices puts the envelope's `data` reason in the exception message.
+    const createRisk = vi
+      .fn()
+      .mockRejectedValue(new CustomException(reason, 403, { message: "Forbidden", data: reason }));
+    const { result } = renderHook(
+      () =>
+        useRiskForm(
+          createProps({
+            createRisk,
+            initialMitigationValues: { likelihood: 1, riskSeverity: 1 } as never,
+          }),
+        ),
+      { wrapper: Wrapper },
+    );
+    result.current.riskValidateRef.current = () => true;
+    mockMitigationValidateRef.current = () => true;
+
+    await act(async () => {
+      await result.current.riskFormSubmitHandler();
+    });
+
+    expect(createRisk).toHaveBeenCalled();
+    expect(mockOnError).toHaveBeenCalledWith(reason);
   });
 
   it("returns usersLoading as false when users are loaded", () => {
