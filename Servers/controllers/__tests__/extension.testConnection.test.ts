@@ -12,7 +12,8 @@ jest.mock("../../extensions/jira-incidents/jiraIncidents.config", () => ({
   testConnection: jest.fn(),
 }));
 jest.mock("../../extensions/jira-assets/jiraAssets.service", () => ({
-  JiraNotConfiguredError: class JiraNotConfiguredError extends Error {},
+  // The real field checks (parseJiraConnection) and error classes.
+  ...jest.requireActual("../../extensions/jira-assets/jiraAssets.service"),
   clientFromConfig: jest.fn(),
   loadFullConfig: jest.fn(),
 }));
@@ -32,7 +33,6 @@ import {
 import { ExtensionService } from "../../services/extension/extensionService";
 import { testConnection as mlflowTest } from "../../extensions/mlflow/mlflow.service";
 import { testConnection as azureTest } from "../../extensions/azure-ai-foundry/azureAiFoundry.service";
-import { assertSafeOutboundUrl } from "../../utils/safeOutboundUrl";
 
 const mockClientFromConfig = clientFromConfig as jest.Mock;
 const mockLoadFullConfig = loadFullConfig as jest.Mock;
@@ -82,28 +82,99 @@ describe("POST /api/extensions/jira-assets/test-connection", () => {
   });
 
   it("answers a refused base URL as a failed test, not a server error", async () => {
-    mockClientFromConfig.mockImplementation((c: { jira_base_url: string }) => {
-      assertSafeOutboundUrl(c.jira_base_url);
-      return {};
-    });
     const { status, body } = await call({ ...config, jira_base_url: "http://169.254.169.254" });
     expect(status).toBe(200);
     expect(body.data).toMatchObject({
       success: false,
-      message: "The URL resolves to a link-local address, which is not allowed",
+      message: "JIRA Base URL points to an address that is not allowed",
     });
+    expect(mockClientFromConfig).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    [{ jira_base_url: "jira.example.com" }, "JIRA Base URL must be a valid http or https URL"],
+    [
+      { jira_base_url: "https://u:p@jira.example.com" },
+      "JIRA Base URL must not include a user name or password",
+    ],
+    [
+      { workspace_id: "a/b" },
+      "Workspace ID may only contain letters, numbers and hyphens, up to 64 characters",
+    ],
+    [{ workspace_id: "  " }, "Workspace ID is required"],
+    [{ deployment_type: "server" }, "Deployment type must be cloud or datacenter"],
+    [{ deployment_type: "cloud", email: "not-an-email" }, "Email must be a valid email address"],
+    [{ email: 42 }, "Jira connection fields must be text"],
+  ])(
+    "answers invalid fields %p as a failed test with the save message",
+    async (change, message) => {
+      const { status, body } = await call({ ...config, ...change });
+      expect(status).toBe(200);
+      expect(body.data).toMatchObject({ success: false, message });
+      expect(mockClientFromConfig).not.toHaveBeenCalled();
+    },
+  );
+
+  it("answers a missing token with none stored as a failed test, not a server error", async () => {
+    mockLoadFullConfig.mockResolvedValue(null);
+    const { status, body } = await call({ ...config, api_token: "" });
+    expect(status).toBe(200);
+    expect(body.data).toMatchObject({ success: false, message: "API Token is required" });
+    expect(mockClientFromConfig).not.toHaveBeenCalled();
+  });
+
+  it("tests the trimmed fields, as a save stores them", async () => {
+    mockClientFromConfig.mockReturnValue({
+      testConnection: jest.fn().mockResolvedValue({ success: true }),
+    });
+    await call({
+      ...config,
+      jira_base_url: "  https://jira.example.com ",
+      workspace_id: " w ",
+      email: " a@example.com ",
+      api_token: " t ",
+    });
+    expect(mockClientFromConfig).toHaveBeenCalledWith(
+      expect.objectContaining({
+        jira_base_url: "https://jira.example.com",
+        workspace_id: "w",
+        email: "a@example.com",
+        api_token: "t",
+        deployment_type: "datacenter",
+      }),
+    );
   });
 });
 
 describe("jira-assets test connection with a missing configuration", () => {
   afterEach(() => jest.resetAllMocks());
 
+  // Field checks (parseJiraConnection) run first, so an empty submission is
+  // answered by the save message for the first missing field.
   it("answers a failed test, not a 500, when nothing is submitted or stored", async () => {
     mockLoadFullConfig.mockResolvedValue(null);
+    const { status, body } = await call({});
+    expect(status).toBe(200);
+    expect(body.data).toMatchObject({
+      success: false,
+      message: "JIRA Base URL is required",
+    });
+    expect(mockClientFromConfig).not.toHaveBeenCalled();
+  });
+
+  const validFields = {
+    jira_base_url: "https://jira.example.com",
+    workspace_id: "ws-1",
+    email: "a@example.com",
+    deployment_type: "cloud",
+  };
+
+  it("answers a client that reports a missing field without its raw text", async () => {
+    mockLoadFullConfig.mockResolvedValue({ ...validFields, api_token: "stored" });
     mockClientFromConfig.mockImplementation(() => {
       throw new JiraNotConfiguredError("Jira connection is not fully configured");
     });
-    const { status, body } = await call({});
+    const { status, body } = await call(validFields);
     expect(status).toBe(200);
     expect(body.data).toMatchObject({
       success: false,
@@ -114,7 +185,7 @@ describe("jira-assets test connection with a missing configuration", () => {
 
   it("keeps the 500 for a real fault", async () => {
     mockLoadFullConfig.mockRejectedValue(new Error("connection terminated"));
-    const { status } = await call({});
+    const { status } = await call(validFields);
     expect(status).toBe(500);
   });
 });

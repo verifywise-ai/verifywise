@@ -15,6 +15,7 @@ import {
   JiraUseCaseDeleteFailedError,
   listUseCases,
   JiraUseCaseNotFoundError,
+  parseJiraConnection,
   parseSyncIntervalHours,
   removeMissingUseCases,
   REMOVAL_SKIP_REASONS,
@@ -33,7 +34,7 @@ import * as engineSchedule from "../../sync-engine/schedule";
 import * as engineStatus from "../../sync-engine/status";
 import type { RunView } from "../../sync-engine/status";
 import { sequelize } from "../../../database/db";
-import { decryptText } from "../../../tools/createSecureValue";
+import { decryptText, encryptText } from "../../../tools/createSecureValue";
 import { JiraAssetsClient, JiraInvalidIdError } from "../jira.client";
 import { deleteProjectByIdQuery, lockProjectForDelete } from "../../../utils/project.utils";
 import {
@@ -74,12 +75,16 @@ jest.mock("../../../tools/createSecureValue", () => ({
 jest.mock("../jira.client", () => {
   class JiraUpstreamError extends Error {}
   // The id rule itself is real: the selection writes share it with the client.
-  const { jiraId, JiraInvalidIdError } = jest.requireActual("../jira.client");
+  // So are the workspace format and deployment types a saved config is checked against.
+  const { jiraId, JiraInvalidIdError, JIRA_DEPLOYMENT_TYPES, WORKSPACE_ID_PATTERN } =
+    jest.requireActual("../jira.client");
   return {
     JiraAssetsClient: jest.fn(),
     JiraUpstreamError,
     jiraId,
     JiraInvalidIdError,
+    JIRA_DEPLOYMENT_TYPES,
+    WORKSPACE_ID_PATTERN,
     WORKER_SYNC_DEADLINE_MS: 600_000,
     MAX_PAGES: 500,
     PAGE_SIZE: 50,
@@ -1690,6 +1695,112 @@ describe("saveConfig validation", () => {
       });
       const [updateSql] = mockQuery.mock.calls[1];
       expect(updateSql).not.toContain("api_token_encrypted");
+    });
+  });
+});
+
+describe("saveConfig checks the connection fields before reading or writing", () => {
+  const base = {
+    jira_base_url: "https://x.atlassian.net",
+    workspace_id: "12345678-1234-1234-1234-123456789012",
+    email: "a@b.co",
+    api_token: "tok",
+  };
+
+  const refusal = async (body: Record<string, unknown>) => {
+    const err = await saveConfig(5, 3, body as any).catch((e) => e);
+    expect(err).toBeInstanceOf(JiraConfigValidationError);
+    expect(mockQuery).not.toHaveBeenCalled();
+    expect(mockTransaction).not.toHaveBeenCalled();
+    return err as JiraConfigValidationError;
+  };
+
+  it.each([
+    ["jira_base_url", undefined, "JIRA Base URL is required"],
+    ["jira_base_url", "   ", "JIRA Base URL is required"],
+    ["jira_base_url", 42, "Jira connection fields must be text"],
+    ["jira_base_url", "x.atlassian.net", "JIRA Base URL must be a valid http or https URL"],
+    ["jira_base_url", "ftp://x.atlassian.net", "JIRA Base URL must be a valid http or https URL"],
+    ["jira_base_url", "javascript:alert(1)", "JIRA Base URL must be a valid http or https URL"],
+    [
+      "jira_base_url",
+      "https://me:pw@x.atlassian.net",
+      "JIRA Base URL must not include a user name or password",
+    ],
+    [
+      "jira_base_url",
+      "http://169.254.169.254/latest",
+      "JIRA Base URL points to an address that is not allowed",
+    ],
+    ["workspace_id", "", "Workspace ID is required"],
+    ["workspace_id", { id: 1 }, "Jira connection fields must be text"],
+    [
+      "workspace_id",
+      "../../admin",
+      "Workspace ID may only contain letters, numbers and hyphens, up to 64 characters",
+    ],
+    [
+      "workspace_id",
+      "a".repeat(65),
+      "Workspace ID may only contain letters, numbers and hyphens, up to 64 characters",
+    ],
+    ["deployment_type", "server", "Deployment type must be cloud or datacenter"],
+    ["deployment_type", "", "Deployment type must be cloud or datacenter"],
+    ["deployment_type", 1, "Jira connection fields must be text"],
+    ["email", undefined, "Email is required"],
+    ["email", "not-an-email", "Email must be a valid email address"],
+    ["email", ["a@b.co"], "Jira connection fields must be text"],
+    ["api_token", 123, "Jira connection fields must be text"],
+  ])("refuses %s = %p with a translatable message", async (field, value, message) => {
+    const err = await refusal({ ...base, [field]: value });
+    expect(err.message).toBe(message);
+    expect(err.i18nKey).toBe(message);
+  });
+
+  it("asks for the API token on a first save, after reading the row", async () => {
+    mockQuery.mockResolvedValueOnce([]);
+    const err = await saveConfig(5, 3, { ...base, api_token: "  " }).catch((e) => e);
+    expect(err).toBeInstanceOf(JiraConfigValidationError);
+    expect(err.i18nKey).toBe("API Token is required");
+    expect(mockQuery).toHaveBeenCalledTimes(1);
+    expect(mockTransaction).not.toHaveBeenCalled();
+  });
+
+  it("stores trimmed values and defaults the deployment type to cloud", async () => {
+    mockQuery.mockResolvedValueOnce([]).mockResolvedValue([]);
+
+    await saveConfig(5, 3, {
+      jira_base_url: "  https://x.atlassian.net/  ",
+      workspace_id: " ws-1 ",
+      email: " a@b.co ",
+      api_token: " tok ",
+    });
+
+    const [insertSql, insert] = mockQuery.mock.calls[1];
+    expect(insertSql).toContain("INSERT INTO jira_assets_config");
+    expect(insert.replacements).toMatchObject({
+      jiraBaseUrl: "https://x.atlassian.net/",
+      workspaceId: "ws-1",
+      email: "a@b.co",
+      deploymentType: "cloud",
+    });
+    expect(encryptText).toHaveBeenCalledWith("tok");
+  });
+
+  it("accepts a user name instead of an email on Data Center, and a private host", () => {
+    expect(
+      parseJiraConnection({
+        jira_base_url: "http://10.0.0.5:8080/jira",
+        workspace_id: "3",
+        email: "jira-admin",
+        deployment_type: "datacenter",
+      }),
+    ).toEqual({
+      jiraBaseUrl: "http://10.0.0.5:8080/jira",
+      workspaceId: "3",
+      email: "jira-admin",
+      apiToken: undefined,
+      deploymentType: "datacenter",
     });
   });
 });

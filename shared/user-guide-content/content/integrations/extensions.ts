@@ -311,7 +311,7 @@ export const extensionsContent: ArticleContent = {
         { text: 'Click **Enable** on the Jira Assets Integration card, then **Configure**.' },
         { text: 'Choose a **Deployment Type**: JIRA Cloud (Atlassian-hosted) or JIRA Data Center / Server (Self-hosted).' },
         { text: 'Fill in **JIRA Base URL**, then **Workspace ID** (Cloud) or **Insight Object Schema ID** (Data Center), then **Email** and **API Token** (Cloud) or **Username** and **Password / Token** (Data Center).' },
-        { text: 'Click **Test Connection**, then **Save Configuration**. If you later change the deployment type, base URL, workspace or schema ID, or email or username, enter the token or password again.' },
+        { text: 'Click **Test Connection**, then **Save Configuration**. If you later change the deployment type, base URL, workspace or schema ID, or email or username, enter the token or password again. Test Connection and saving both check the values first: the base URL must be a full http:// or https:// address with no user name or password in it, the workspace or schema ID may only contain letters, numbers and hyphens, and on Cloud the email must be a valid email address. If a value is wrong, the panel shows why, the test does not contact Jira and a save stores nothing.' },
         { text: 'Pick the **Schema** and the **Object Type (AI Systems)** to import from.' },
         { text: 'In the **Import & Sync** section, click **Import**, select the objects you want and click **Import N Selected**. The list shows up to 1,000 objects at a time; if Jira has more, click **Load more**.' },
       ],

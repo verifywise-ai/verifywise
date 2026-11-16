@@ -13,6 +13,12 @@ jest.mock("../../utils/validations/validation.utils", () => ({
   sanitizeForLog: (value: string) => value,
 }));
 
+const mockLogError = jest.fn();
+jest.mock("../../utils/logger/fileLogger", () => ({
+  __esModule: true,
+  logStructuredError: (...args: unknown[]) => mockLogError(...args),
+}));
+
 const mockFindByKey = jest.fn();
 const mockFindByExtensionId = jest.fn();
 
@@ -138,8 +144,9 @@ describe("requireExtensionEnabled middleware", () => {
     expect(next).toHaveBeenCalledTimes(3);
   });
 
-  it("returns 500 with the underlying message when the DB layer throws", async () => {
-    mockFindByKey.mockRejectedValueOnce(new Error("db down") as never);
+  it("returns a generic 500 and logs the cause when the DB layer throws", async () => {
+    const cause = new Error('relation "extension_enablements" does not exist');
+    mockFindByKey.mockRejectedValueOnce(cause as never);
     const mw = requireExtensionEnabled("slack-crash");
     const req = makeReq(7) as Request;
     const res = makeRes() as Response;
@@ -148,6 +155,16 @@ describe("requireExtensionEnabled middleware", () => {
     await mw(req, res, next);
 
     expect(res.status).toHaveBeenCalledWith(500);
+    expect(res.json).toHaveBeenCalledWith({ message: "Internal server error" });
+    expect(JSON.stringify((res.json as jest.Mock).mock.calls)).not.toContain(
+      "extension_enablements",
+    );
+    expect(mockLogError).toHaveBeenCalledWith(
+      expect.stringContaining("slack-crash"),
+      cause,
+      "checkEnabled",
+      "requireExtensionEnabled.middleware.ts",
+    );
     expect(next).not.toHaveBeenCalled();
   });
 

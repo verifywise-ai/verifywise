@@ -111,6 +111,20 @@ enabled the extension. All are tenant-scoped by `organization_id`.
 | risk-import, dataset-bulk-upload | None. They write to the core `risks` and `datasets` / `files` tables. |
 | framework-import | `imported_frameworks`, `imported_framework_topics`, `imported_framework_subtopics`, plus the use case tables `projects_imported_frameworks`, `imported_framework_topic_impl`, `imported_framework_subtopic_impl`, `imported_framework_topic_impl__risks`, `imported_framework_subtopic_impl__risks` (all eight with the `tenant_isolation` RLS policy). Imported frameworks are **not** rows in the global `frameworks` catalog or `projects_frameworks`; use cases attach them through `projects_imported_frameworks`. See [Imported frameworks](../domains/compliance-frameworks.md#imported-frameworks). |
 
+Every table above, and `extension_enablements`, has an entry in the
+tenant-isolation registry (`Servers/tests/integration/tenant-isolation/tenantIsolation.registry.ts`)
+with cross-organization tests. The one exception is `jira_assets_sync_history`,
+which stays on the deferred list in `Servers/scripts/auditTenantIsolationCoverage.ts`
+until a follow-up migration drops it. The extension suites are
+`mlflow.isolation.test.ts` (`mlflow_integrations`, `mlflow_model_records`),
+`azure-ai-foundry.isolation.test.ts` (`azure_ai_model_records`),
+`jira-assets-use-cases.isolation.test.ts` (`jira_assets_config`,
+`jira_assets_use_cases`) and `extension-enablements.isolation.test.ts`. In each,
+the second organization's syncs, config writes, enable, disable and removals
+leave the first organization's rows unchanged. Its lists show none of the
+first organization's rows, and requests by id for them answer 404 (a
+remove-missing request skips them as `not_found`). Outbound calls are stubbed.
+
 ---
 
 ## Server
@@ -167,6 +181,36 @@ top-level `configuration` is the only copy a client gets.
 Jira Assets is the exception. It keeps its connection settings, including its
 own encrypted `api_token` (via `Servers/tools/createSecureValue`), in the
 `jira_assets_config` table. Its `extension_enablements.configuration` is empty.
+
+`POST /api/extensions/jira-assets/config` checks the connection fields itself
+(`parseJiraConnection` in `jiraAssets.service.ts`) before anything is read or
+written:
+
+- `jira_base_url`, `workspace_id`, `email`, `api_token` and `deployment_type`
+  must be strings when present (400 "Jira connection fields must be text"). They
+  are trimmed, and a blank value counts as missing. The trimmed values are what
+  is stored, compared by the stored-secret guard and encrypted.
+- `jira_base_url` must be an `http` or `https` URL with a host and no user name
+  or password in it, and must pass the static checks of `assertSafeOutboundUrl`
+  (no DNS lookup at save). The check is `assertSafeOutboundUrl` itself: the
+  `code` on its `UnsafeOutboundUrlError` (`invalid-url`, `credentials`,
+  `blocked-address`) picks the save message. The Jira client runs the same
+  checks before it connects. A loopback host such as `localhost` is refused unless
+  `OUTBOUND_ALLOW_LOOPBACK=true`. Link-local and cloud metadata addresses are
+  always refused.
+- `workspace_id` must match the client's `WORKSPACE_ID_PATTERN`
+  (`/^[a-zA-Z0-9-]{1,64}$/`, exported from `jira.client.ts`). On Data Center
+  the panel labels this field "Insight Object Schema ID" and the same pattern
+  applies.
+- `deployment_type` is `cloud` (the default when it is missing) or
+  `datacenter` (`JIRA_DEPLOYMENT_TYPES`).
+- On `cloud` the email must pass `isEmail`. On Data Center the field holds a
+  user name, so no format is checked there.
+- `api_token` is required only when no token is stored.
+
+Each refusal is a 400. Its message is a server locale key (en, de, fr) and the
+controller sends it translated. Other `JiraConfigValidationError` messages go
+out as before.
 
 ### Stored secrets and changed addresses
 
@@ -304,7 +348,7 @@ router.use(requireExtensionEnabled("mlflow"));
 | No `req.organizationId` | 401 "User not authenticated" |
 | Key not in the catalog | 404 "Extension '`<key>`' not found in catalog" |
 | No enablement row, or `enabled = false` | 403 "Extension '`<key>`' is not enabled for this organization" |
-| Lookup error | 500 |
+| Lookup error | 500 with the translated generic "Internal server error". The cause is logged with the extension key and organization (`logStructuredError`: the structured log line plus the stack in the tenant log) and is not sent to the client. |
 
 The key → id lookup is cached in process. The catalog only changes through
 migrations.
@@ -318,7 +362,7 @@ to a runner that returns `{ success, message, testedAt }`:
 |-----|--------|
 | `mlflow` | Stored runtime config overlaid with the submitted config (`overlayOnStored`, which applies the [stored-secret rule](#stored-secrets-and-changed-addresses)) → `testConnection` in `extensions/mlflow/mlflow.service.ts`. Reports "The server answered HTTP <status>" or "Could not reach the server". |
 | `azure-ai-foundry` | Same pattern → `testConnection` in `extensions/azure-ai-foundry/azureAiFoundry.service.ts` |
-| `jira-assets` | Submitted config. If no `api_token` is submitted, the stored token comes from `jira_assets_config`, unless the base URL, workspace, email or deployment type changed (then a failed result asks for the token again). Then `clientFromConfig(...).testConnection()`. A refused base URL is a failed result, not a 500, and so is a missing field with nothing stored to fill it ("Save the Jira Assets connection first.", no field names or raw error). A database or decryption fault is still a 500. An error answer reads "Jira returned HTTP <status>" without Jira's reply (its start goes to the server log). |
+| `jira-assets` | Submitted config, first checked by `parseJiraConnection` as a save checks it (trimmed text, base URL, workspace ID, deployment type, email on cloud). An invalid field is a failed result with the translated save message, not a 400 or 500. If no `api_token` is submitted, the stored token comes from `jira_assets_config`, unless the base URL, workspace, email or deployment type changed (then a failed result asks for the token again); with no token either way the result is "API Token is required". Then `clientFromConfig(...).testConnection()` with the trimmed fields. A refused base URL is a failed result, not a 500; a client that still reports a missing field gives "Save the Jira Assets connection first." (no field names or raw error). A database or decryption fault is still a 500. An error answer reads "Jira returned HTTP <status>" without Jira's reply (its start goes to the server log). |
 | `jira-incidents` | `testConnection(orgId, submitted)` in `extensions/jira-incidents/jiraIncidents.config.ts`: submitted fields overlaid on `jira_incidents_config`; a changed site URL or email needs a submitted token; checks `/myself`, then the three project permissions when a project is known. Never throws. |
 
 Any other key returns **200** with `success: false` and "Test connection is not
@@ -472,8 +516,26 @@ and ignores it.
 - MLflow and Azure AI Foundry sync is manual only. Jira Assets also refreshes
   its imported use cases on the configured interval (see
   [Scheduled sync](#scheduled-sync)). The scheduler skips organizations where
-  the extension is disabled. No Jira Assets sync ever deletes a use case:
-  objects gone from Jira are flagged, and an Admin removes them explicitly.
+  the extension is disabled, and a sync job queued before the extension was
+  disabled is dropped when the worker picks it up (see [Jobs](#jobs)). No Jira
+  Assets sync ever deletes a use case: objects gone from Jira are flagged, and
+  an Admin removes them explicitly.
+- Shadow AI **Start governance** with `start_lifecycle` set seeds the new
+  model's lifecycle only when model-lifecycle is enabled for the organization.
+  `startGovernance` (`shadowAi.ctrl.ts`) first calls `canStartLifecycle` in
+  `extensions/model-lifecycle/modelLifecycle.service.ts`, before it opens the
+  governance transaction, so the enablement lookup never waits for a second
+  pooled connection while the transaction holds one. It answers false when the
+  extension is disabled or the lookup fails (logged). Only on true does the
+  controller call `startLifecycleForModel` inside the transaction: one
+  `INSERT INTO model_lifecycle_values ... SELECT` over the organization's active
+  items of active phases, under a savepoint, with `ON CONFLICT DO NOTHING` and
+  `RETURNING id`. It returns true only when a row was inserted. A failure rolls
+  back to the savepoint and is logged, and governance still succeeds.
+  `lifecycle_initialized` in the response is its result. The **Start lifecycle
+  review** toggle in the Shadow AI form (`GovernanceWizardModal`) is shown only
+  when `useExtensions().isEnabled("model-lifecycle")` is true (hidden while the
+  extensions list loads), and the form sends `start_lifecycle` only then.
 
 ---
 
@@ -597,10 +659,20 @@ under jobId `ext-sync-<key>-<orgId>`, with one attempt, removed on complete and
 on fail. `enqueueExtensionSyncRun` adds nothing when a job for the pair is
 already waiting (`queued: false`); a queue call made for an HTTP request gives
 up after 5 seconds with `BackgroundJobsUnavailableError` (503). The worker
-(`runExtensionSyncJob`) validates the payload and claims at pickup. If a run is
-live, a manual job records a `skipped` row (no token, "Another sync or import
-was running, so this sync did not start.") and a scheduled job records nothing.
-Enablement is not checked at pickup.
+(`runExtensionSyncJob`) validates the payload, then checks enablement with
+`isExtensionEnabledForOrganization` (the lookup the gate uses). A job for an
+organization that disabled the extension after it was queued, manual or
+scheduled, is logged (`logStructured`) and returns `skipped` without claiming,
+so no run row is written. The extension's run routes are gated for that
+organization, so nobody waits on one. If the enablement lookup throws, the
+cause is logged with its stack (`logStructuredError`) and the job fails with
+nothing claimed and no run row: whether the extension is on is unknown, so
+nothing is written behind its gate. A client waiting on "Sync now" still
+resolves, because the failed job is removed: the status shows nothing queued,
+nothing running and no newer run, and `decidePoll` (`useExtensionSync.ts`)
+ends with "The sync did not start. Try again." after three polls. Otherwise the worker claims at pickup. If a run is live, a
+manual job records a `skipped` row (no token, "Another sync or import was
+running, so this sync did not start.") and a scheduled job records nothing.
 
 The worker also accepts the old Jira job names for one release:
 `jira_assets_scheduled_sync_check` runs the tick and `jira_assets_sync_run` runs

@@ -3,7 +3,13 @@ jest.mock("../../../database/db", () => ({
 }));
 jest.mock("../../sync-engine/jobs", () => ({ startManualRun: jest.fn() }));
 jest.mock("../jiraAssets.service", () => {
-  class JiraConfigValidationError extends Error {}
+  class JiraConfigValidationError extends Error {
+    i18nKey?: string;
+    constructor(message: string, options: { i18nKey?: string } = {}) {
+      super(message);
+      this.i18nKey = options.i18nKey;
+    }
+  }
   class JiraNotConfiguredError extends Error {}
   class RunSupersededError extends Error {}
   class JiraUseCaseNotFoundError extends Error {}
@@ -41,6 +47,7 @@ jest.mock("../jiraAssets.service", () => {
     },
     loadFullConfig: jest.fn(),
     clientFromConfig: jest.fn(),
+    saveConfig: jest.fn(),
   };
 });
 jest.mock("../jira.client", () => {
@@ -76,6 +83,7 @@ import {
   getSyncStatusCtrl,
   listUseCasesCtrl,
   patchSelection,
+  postConfig,
   postImport,
   postSync,
   removeMissingCtrl,
@@ -99,6 +107,7 @@ import {
   loadFullConfig,
   removeMissingUseCases,
   RunSupersededError,
+  saveConfig,
   updateSelection,
 } from "../jiraAssets.service";
 import { JiraInvalidIdError, JiraUpstreamError } from "../jira.client";
@@ -516,5 +525,48 @@ describe("DELETE /use-cases/:id", () => {
 
     expect(res.status).toHaveBeenCalledWith(400);
     expect(deleteUseCaseByProjectId).not.toHaveBeenCalled();
+  });
+});
+
+describe("POST /config", () => {
+  it("sends a keyed validation error translated, as a 400", async () => {
+    const invalid = new JiraConfigValidationError("Email must be a valid email address", {
+      i18nKey: "Email must be a valid email address",
+    });
+    (saveConfig as jest.Mock).mockRejectedValueOnce(invalid);
+    (translateError as jest.Mock).mockReturnValueOnce(
+      "L'adresse e-mail doit être une adresse e-mail valide",
+    );
+    const res = mockRes();
+
+    await postConfig(req, res);
+
+    expect(translateError).toHaveBeenCalledWith(req, invalid);
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json).toHaveBeenCalledWith({
+      message: "Bad Request",
+      data: "L'adresse e-mail doit être une adresse e-mail valide",
+    });
+    expect(logFailure).not.toHaveBeenCalled();
+  });
+
+  it("sends a validation error without a key as it is", async () => {
+    const invalid = new JiraConfigValidationError("sync_enabled must be true or false");
+    (saveConfig as jest.Mock).mockRejectedValueOnce(invalid);
+    // The real translateError: with no i18nKey it passes the message through the translator.
+    const actual = jest.requireActual<typeof import("../../../utils/i18n.utils")>(
+      "../../../utils/i18n.utils",
+    );
+    (translateError as jest.Mock).mockImplementationOnce(actual.translateError as any);
+    const res = mockRes();
+
+    await postConfig(req, res);
+
+    expect(translateError).toHaveBeenCalledWith(req, invalid);
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json).toHaveBeenCalledWith({
+      message: "Bad Request",
+      data: "sync_enabled must be true or false",
+    });
   });
 });
