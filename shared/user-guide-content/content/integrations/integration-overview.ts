@@ -37,7 +37,7 @@ export const integrationOverviewContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'VerifyWise includes seven extensions:',
+      text: 'VerifyWise includes nine extensions:',
     },
     {
       type: 'grid-cards',
@@ -46,10 +46,12 @@ export const integrationOverviewContent: ArticleContent = {
         { title: 'Slack', description: 'Send VerifyWise notifications to channels in your Slack workspace.' },
         { title: 'MLflow', description: 'Pull models and runs from your MLflow tracking server into Model inventory.' },
         { title: 'Azure AI Foundry', description: 'Import model deployments from an Azure AI Foundry project into Model inventory.' },
-        { title: 'Model Lifecycle', description: 'Define lifecycle phases, with approvals, documents and people, for each model.' },
-        { title: 'Risk Import', description: 'Create many risks at once from an Excel template.' },
-        { title: 'Jira Assets Integration', description: 'Import AI System objects from Jira Service Management Assets as use cases.' },
-        { title: 'Dataset Bulk Upload', description: 'Upload up to 20 dataset files at once, with PII detection.' },
+        { title: 'Model lifecycle', description: 'Define lifecycle phases, with approvals, documents and people, for each model.' },
+        { title: 'Risk import', description: 'Create many risks at once from an Excel template.' },
+        { title: 'Jira Assets', description: 'Import AI System objects from Jira Service Management Assets as use cases.' },
+        { title: 'Jira incidents', description: 'Import new Jira issues as incidents and keep their status in sync both ways.' },
+        { title: 'Dataset bulk upload', description: 'Upload up to 20 dataset files at once, with PII detection.' },
+        { title: 'Framework import', description: 'Import your own framework from an Excel file, then add it to use cases and assess it.' },
       ],
     },
     {
@@ -107,7 +109,7 @@ export const integrationOverviewContent: ArticleContent = {
       items: [
         { text: 'Check on the Extensions page that it shows the **Enabled** badge' },
         { text: 'Open its settings with **Configure** and check the connection details' },
-        { text: 'For MLflow and Azure AI Foundry, click **Test connection**. For Jira Assets, use **Test Connection** in its panel' },
+        { text: 'For MLflow and Azure AI Foundry, click **Test connection**. For Jira Assets and Jira incidents, use **Test connection** in their panels' },
         { text: 'Check that the external service is running and reachable from VerifyWise' },
         { text: 'Read the error message shown on the settings page' },
       ],

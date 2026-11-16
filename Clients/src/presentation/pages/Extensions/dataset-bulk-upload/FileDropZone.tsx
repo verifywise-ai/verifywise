@@ -1,7 +1,9 @@
-import { useCallback, useRef, useState } from "react";
+import { Fragment, useCallback, useRef, useState } from "react";
 import { Box, Typography, Stack, IconButton, Alert } from "@mui/material";
 import { Upload, X, FileSpreadsheet } from "lucide-react";
 import { brand, text, palette as vwPalette, radiusPx } from "../../../themes/palette";
+import useTranslation from "../../../../application/hooks/useTranslation";
+import { fill } from "../../../../i18n/fill";
 
 const MAX_FILES = 20;
 const MAX_SIZE = 30 * 1024 * 1024; // 30MB
@@ -24,23 +26,28 @@ interface FileDropZoneProps {
 
 export default function FileDropZone({ files, onFilesChange }: FileDropZoneProps) {
   const inputRef = useRef<HTMLInputElement>(null);
+  const { t } = useTranslation();
   const [dragOver, setDragOver] = useState(false);
-  const [validationError, setValidationError] = useState<string | null>(null);
+  // Each problem keeps the file name apart from the static message, so the
+  // message translates as a whole.
+  const [validationErrors, setValidationErrors] = useState<
+    { fileName?: string; message: string }[] | null
+  >(null);
 
   const validateAndAdd = useCallback(
     (incoming: File[]) => {
-      setValidationError(null);
-      const errors: string[] = [];
+      setValidationErrors(null);
+      const errors: { fileName?: string; message: string }[] = [];
       const valid: File[] = [];
 
       for (const file of incoming) {
         const ext = getExtension(file.name);
         if (!ACCEPTED_EXTENSIONS.includes(ext)) {
-          errors.push(`${file.name}: unsupported type (only CSV, XLSX, XLS)`);
+          errors.push({ fileName: file.name, message: "unsupported type (only CSV, XLSX, XLS)" });
           continue;
         }
         if (file.size > MAX_SIZE) {
-          errors.push(`${file.name}: exceeds 30MB limit`);
+          errors.push({ fileName: file.name, message: "exceeds 30MB limit" });
           continue;
         }
         valid.push(file);
@@ -48,12 +55,16 @@ export default function FileDropZone({ files, onFilesChange }: FileDropZoneProps
 
       const total = files.length + valid.length;
       if (total > MAX_FILES) {
-        errors.push(`Maximum ${MAX_FILES} files allowed (${total} selected)`);
+        errors.push({
+          message: fill(t("Maximum {max} files allowed. Extra files were not added."), {
+            max: MAX_FILES,
+          }),
+        });
         valid.splice(MAX_FILES - files.length);
       }
 
       if (errors.length > 0) {
-        setValidationError(errors.join("; "));
+        setValidationErrors(errors);
       }
 
       if (valid.length > 0) {
@@ -62,7 +73,7 @@ export default function FileDropZone({ files, onFilesChange }: FileDropZoneProps
         onFilesChange([...files, ...newFiles]);
       }
     },
-    [files, onFilesChange],
+    [files, onFilesChange, t],
   );
 
   const handleDrop = useCallback(
@@ -93,7 +104,7 @@ export default function FileDropZone({ files, onFilesChange }: FileDropZoneProps
   );
 
   return (
-    <Stack spacing={2}>
+    <Stack spacing="4px">
       {/* Drop zone */}
       <Box
         onDragOver={(e) => {
@@ -118,7 +129,7 @@ export default function FileDropZone({ files, onFilesChange }: FileDropZoneProps
         <Upload size={32} color={text.icon} />
         <Typography
           sx={{
-            mt: 1,
+            mt: "2px",
             fontSize: 13,
             fontWeight: 500,
             color: "text.secondary",
@@ -144,9 +155,15 @@ export default function FileDropZone({ files, onFilesChange }: FileDropZoneProps
         />
       </Box>
 
-      {validationError && (
-        <Alert severity="warning" onClose={() => setValidationError(null)}>
-          {validationError}
+      {validationErrors && (
+        <Alert severity="warning" onClose={() => setValidationErrors(null)}>
+          {validationErrors.map((e, i) => (
+            <Fragment key={i}>
+              {i > 0 && "; "}
+              {e.fileName && `${e.fileName}: `}
+              {e.message}
+            </Fragment>
+          ))}
         </Alert>
       )}
 

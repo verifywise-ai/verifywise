@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { ReactNode, useCallback, useEffect, useMemo, useState } from "react";
 import { Navigate, useNavigate, useParams } from "react-router";
 import { Box, CircularProgress, Stack, Typography, useTheme } from "@mui/material";
 import { ChevronLeft } from "lucide-react";
@@ -24,18 +24,28 @@ import { JiraIncidentsConfiguration } from "../jira-incidents/JiraIncidentsConfi
 import { useCan, usePermissionsSettled } from "../../../../application/hooks/useCan";
 import { palette, radiusPx, status } from "../../../themes/palette";
 import ConfirmDisableModal from "../ConfirmDisableModal";
+import {
+  EXTENSION_DISABLED_MESSAGE,
+  EXTENSION_ENABLED_MESSAGE,
+  humanizeCategory,
+} from "../catalogCopy";
+import useTranslation from "../../../../application/hooks/useTranslation";
+import { fill } from "../../../../i18n/fill";
 
-const CATEGORY_LABEL: Record<string, string> = {
-  communication: "Communication",
-  ml_ops: "ML Ops",
-  data_management: "Data management",
-  version_control: "Version control",
-  monitoring: "Monitoring",
-  security: "Security",
-  analytics: "Analytics",
-};
-const humanizeCategory = (raw: string): string =>
-  CATEGORY_LABEL[raw] ?? raw.replace(/_/g, " ").replace(/^./, (c) => c.toUpperCase());
+// Enable and disable feedback is one full sentence per extension so it
+// translates as a whole. An extension missing from the map gets the same
+// sentence as a template with its name filled in.
+function toggledMessage(
+  extension: Extension,
+  action: "enabled" | "disabled",
+  t: (key: string) => string,
+): string {
+  const sentences = action === "enabled" ? EXTENSION_ENABLED_MESSAGE : EXTENSION_DISABLED_MESSAGE;
+  const sentence = sentences[extension.key];
+  if (sentence) return sentence;
+  const template = action === "enabled" ? "{name} enabled." : "{name} disabled.";
+  return fill(t(template), { name: extension.displayName });
+}
 
 /**
  * Per-extension settings page — /extensions/:key/settings.
@@ -57,6 +67,7 @@ export default function ExtensionSettingsPage() {
   const theme = useTheme();
   const { key } = useParams();
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const canManageExtensions = useCan("extension.admin");
   const permissionsSettled = usePermissionsSettled();
   const { enable, disable, updateConfiguration, getByKey } = useExtensions();
@@ -72,7 +83,7 @@ export default function ExtensionSettingsPage() {
   const [confirmDisableOpen, setConfirmDisableOpen] = useState(false);
   const [feedback, setFeedback] = useState<{
     severity: "success" | "error" | "info";
-    message: string;
+    message: ReactNode;
   } | null>(null);
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
 
@@ -133,7 +144,7 @@ export default function ExtensionSettingsPage() {
       const next = await enable(extension.key, submit);
       setExtension(next);
       reseedForm(next);
-      setFeedback({ severity: "success", message: `${extension.displayName} enabled.` });
+      setFeedback({ severity: "success", message: toggledMessage(extension, "enabled", t) });
     } catch (err: any) {
       setFeedback({
         severity: "error",
@@ -152,7 +163,7 @@ export default function ExtensionSettingsPage() {
       const next = await disable(extension.key);
       // No reseed: unsaved edits stay in the form for the next Enable.
       setExtension(next);
-      setFeedback({ severity: "success", message: `${extension.displayName} disabled.` });
+      setFeedback({ severity: "success", message: toggledMessage(extension, "disabled", t) });
     } catch (err: any) {
       setFeedback({
         severity: "error",

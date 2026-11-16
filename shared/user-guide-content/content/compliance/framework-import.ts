@@ -25,7 +25,7 @@ export const frameworkImportContent: ArticleContent = {
     {
       type: 'bullet-list',
       items: [
-        { bold: 'Turn on the extension', text: 'An Admin enables **Framework Import** on the Extensions page. There is nothing to configure. Until then, none of the import controls appear.' },
+        { bold: 'Turn on the extension', text: 'An Admin enables **Framework import** on the Extensions page. There is nothing to configure. Until then, none of the import controls appear.' },
         { bold: 'Organizational project', text: 'Import controls are on the Organizational Frameworks page, which needs an organization-level project. If the page says "No Organizational Project Found", create one first.' },
         { bold: 'Permission', text: 'Importing, re-importing and deleting need the "Import frameworks from a spreadsheet" permission (module **Extensions**). By default **Admin** and **Editor** have it.' },
       ],
@@ -226,7 +226,7 @@ export const frameworkImportContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Disabling **Framework Import** hides the import controls and the **Imported frameworks** sections. Imported frameworks can no longer be added to use cases. Use cases that already use one keep it, and you can go on assessing it. Nothing is deleted.',
+      text: 'Disabling **Framework import** hides the import controls and the **Imported frameworks** sections. Imported frameworks can no longer be added to use cases. Use cases that already use one keep it, and you can go on assessing it. Nothing is deleted.',
     },
     {
       type: 'article-links',

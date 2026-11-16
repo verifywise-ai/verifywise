@@ -1,10 +1,9 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useEffect, useRef } from "react";
 import {
   Box,
-  Button,
   Typography,
   Alert,
-  CircularProgress,
+  AlertTitle,
   Table,
   TableBody,
   TableCell,
@@ -12,17 +11,16 @@ import {
   TableHead,
   TableRow,
   Chip,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  IconButton,
   Card,
   CardContent,
   Paper,
 } from "@mui/material";
-import { Download, Upload, CheckCircle, XCircle, X } from "lucide-react";
+import { Download, Upload, CheckCircle, XCircle } from "lucide-react";
 import { apiServices } from "../../../../infrastructure/api/networkServices";
-import { brand, icon, radiusPx } from "../../../themes/palette";
+import StandardModal from "../../../components/Modals/StandardModal";
+import { CustomizableButton } from "../../../components/button/customizable-button";
+import useTranslation from "../../../../application/hooks/useTranslation";
+import { fill, pluralKey } from "../../../../i18n/fill";
 
 /**
  * Most rows one import may hold. Mirrors MAX_IMPORT_ROWS in
@@ -74,16 +72,25 @@ function importResultFromError(err: any): ImportResult | null {
 }
 
 export default function RiskImportModal({ open, onClose, onImportComplete }: RiskImportModalProps) {
-  const [loading, setLoading] = useState(false);
+  // The template download and the import are tracked apart: only an import in
+  // flight holds the modal open.
+  const [downloadingTemplate, setDownloadingTemplate] = useState(false);
+  const [importing, setImporting] = useState(false);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [excelData, setExcelData] = useState<any[]>([]);
   const [importResult, setImportResult] = useState<ImportResult | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  // Same shape as the MLflow and Azure tabs: an optional title, and the cause
+  // from the parser or server as the body, so the title translates whole.
+  const [error, setError] = useState<{ title?: string; body: string } | null>(null);
+  const { t, lang } = useTranslation();
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Once an import succeeds the same rows must not be sent again.
+  const importSucceeded = importResult?.success === true;
 
   const handleDownloadTemplate = async () => {
     try {
-      setLoading(true);
+      setDownloadingTemplate(true);
       setError(null);
 
       const response = await apiServices.get("/extensions/risk-import/template", {
@@ -102,9 +109,9 @@ export default function RiskImportModal({ open, onClose, onImportComplete }: Ris
       link.remove();
       window.URL.revokeObjectURL(url);
     } catch (err: any) {
-      setError(`Failed to download template: ${err.message || "Unknown error"}`);
+      setError({ title: "Failed to download template", body: err.message || "Unknown error" });
     } finally {
-      setLoading(false);
+      setDownloadingTemplate(false);
     }
   };
 
@@ -113,7 +120,7 @@ export default function RiskImportModal({ open, onClose, onImportComplete }: Ris
     if (!file) return;
 
     if (!file.name.endsWith(".xlsx")) {
-      setError("Please upload an Excel file (.xlsx)");
+      setError({ body: "Please upload an Excel file (.xlsx)" });
       return;
     }
 
@@ -130,7 +137,7 @@ export default function RiskImportModal({ open, onClose, onImportComplete }: Ris
 
       const worksheet = workbook.getWorksheet(1);
       if (!worksheet) {
-        setError("Excel file is empty or invalid");
+        setError({ body: "Excel file is empty or invalid" });
         setExcelData([]);
         return;
       }
@@ -170,24 +177,25 @@ export default function RiskImportModal({ open, onClose, onImportComplete }: Ris
 
       setExcelData(data);
     } catch (err: any) {
-      setError(`Error parsing Excel file: ${err.message}`);
+      setError({ title: "Error parsing Excel file", body: err.message || "Unknown error" });
       setExcelData([]);
     }
   }, []);
 
   const handleImport = async () => {
+    if (importing || importSucceeded) return;
     if (excelData.length === 0) {
-      setError("No data to import. Please upload a valid Excel file.");
+      setError({ body: "No data to import. Please upload a valid Excel file." });
       return;
     }
     if (excelData.length > MAX_RISK_IMPORT_ROWS) {
       setImportResult(null);
-      setError(TOO_MANY_ROWS_MESSAGE);
+      setError({ body: TOO_MANY_ROWS_MESSAGE });
       return;
     }
 
     try {
-      setLoading(true);
+      setImporting(true);
       setError(null);
       setImportResult(null);
 
@@ -203,10 +211,14 @@ export default function RiskImportModal({ open, onClose, onImportComplete }: Ris
       if (payload) {
         setImportResult(payload);
 
-        if (payload.success && onImportComplete) {
-          setTimeout(() => {
-            onImportComplete();
-            onClose();
+        if (payload.success) {
+          // Leave the success message up for a moment, then close through the
+          // same reset as Cancel: the modal stays mounted, so state left here
+          // would let a reopen send the same rows again.
+          closeTimerRef.current = setTimeout(() => {
+            closeTimerRef.current = null;
+            onImportComplete?.();
+            closeAndReset();
           }, 1000);
         }
       }
@@ -214,18 +226,22 @@ export default function RiskImportModal({ open, onClose, onImportComplete }: Ris
       const rowResult = importResultFromError(err);
       const fileErrors = rowResult?.errors.filter(isFileError) ?? [];
       if (fileErrors.length > 0) {
-        setError(fileErrors.map((e) => e.message).join(" "));
+        setError({ body: fileErrors.map((e) => e.message).join(" ") });
       } else if (rowResult) {
         setImportResult(rowResult);
       } else {
-        setError(err?.message || "Failed to import risks");
+        setError({ body: err?.message || "Failed to import risks" });
       }
     } finally {
-      setLoading(false);
+      setImporting(false);
     }
   };
 
-  const handleReset = () => {
+  const resetState = () => {
+    if (closeTimerRef.current) {
+      clearTimeout(closeTimerRef.current);
+      closeTimerRef.current = null;
+    }
     setUploadedFile(null);
     setExcelData([]);
     setImportResult(null);
@@ -235,248 +251,259 @@ export default function RiskImportModal({ open, onClose, onImportComplete }: Ris
     }
   };
 
-  const handleClose = () => {
-    handleReset();
+  function closeAndReset() {
+    resetState();
     onClose();
+  }
+
+  const handleReset = () => {
+    if (importing) return;
+    resetState();
   };
 
+  const handleClose = () => {
+    // Cancel, the close icon and Escape wait for an import in flight, so the
+    // outcome is not lost. A template download does not hold the modal.
+    if (importing) return;
+    closeAndReset();
+  };
+
+  // The parent keeps this modal mounted and only flips `open`: start every
+  // opening (and end every closing) from a clean state.
+  useEffect(() => {
+    resetState();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
+
+  useEffect(
+    () => () => {
+      if (closeTimerRef.current) clearTimeout(closeTimerRef.current);
+    },
+    [],
+  );
+
   return (
-    <Dialog
-      open={open}
+    <StandardModal
+      isOpen={open}
       onClose={handleClose}
-      maxWidth="md"
-      fullWidth
-      PaperProps={{
-        sx: {
-          borderRadius: radiusPx.sm,
-          maxHeight: "90vh",
-        },
-      }}
+      title="Import risks from Excel"
+      description="Download the template, fill it with your risk data, and upload to create risks in bulk"
+      onSubmit={handleImport}
+      submitButtonText={importing ? "Importing..." : "Import risks"}
+      isSubmitting={importing}
+      isSubmitDisabled={excelData.length === 0 || importing || importSucceeded}
+      maxWidth="900px"
     >
-      <DialogTitle
-        sx={{
-          display: "flex",
-          alignItems: "flex-start",
-          justifyContent: "space-between",
-          pb: 1,
-        }}
-      >
-        <Box>
-          <Typography variant="h6" sx={{ fontWeight: 600 }}>
-            Import Risks from Excel
+      {error && (
+        <Alert severity="error" sx={{ mb: "6px" }} onClose={() => setError(null)}>
+          {error.title && <AlertTitle>{error.title}</AlertTitle>}
+          {error.body}
+        </Alert>
+      )}
+
+      {importResult && (
+        <Alert
+          severity={importResult.success ? "success" : "warning"}
+          sx={{ mb: "6px" }}
+          icon={importResult.success ? <CheckCircle /> : <XCircle />}
+        >
+          <Typography variant="body2" sx={{ fontWeight: 600, mb: "2px" }}>
+            {importResult.success ? "Import completed" : "Import completed with errors"}
           </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-            Download the template, fill it with your risk data, and upload to create risks in bulk
-          </Typography>
-        </Box>
-        <IconButton onClick={handleClose} size="small" sx={{ color: icon.default, mt: -0.5 }}>
-          <X size={20} />
-        </IconButton>
-      </DialogTitle>
-
-      <DialogContent sx={{ pt: 2 }}>
-        {error && (
-          <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError(null)}>
-            {error}
-          </Alert>
-        )}
-
-        {importResult && (
-          <Alert
-            severity={importResult.success ? "success" : "warning"}
-            sx={{ mb: 3 }}
-            icon={importResult.success ? <CheckCircle /> : <XCircle />}
-          >
-            <Typography variant="body2" sx={{ fontWeight: 600, mb: 1 }}>
-              Import {importResult.success ? "Completed" : "Completed with Errors"}
-            </Typography>
-            <Typography variant="body2">
-              Successfully imported: {importResult.imported} risk(s)
-              {importResult.failed > 0 && ` | Failed: ${importResult.failed} risk(s)`}
-            </Typography>
-
-            {importResult.errors && importResult.errors.length > 0 && (
-              <Box sx={{ mt: 2 }}>
-                <Typography variant="body2" sx={{ fontWeight: 600, mb: 1 }}>
-                  Error Details:
-                </Typography>
-                <TableContainer component={Paper} sx={{ maxHeight: 200 }}>
-                  <Table size="small">
-                    <TableHead>
-                      <TableRow>
-                        <TableCell>Row</TableCell>
-                        <TableCell>Field</TableCell>
-                        <TableCell>Error</TableCell>
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {importResult.errors.slice(0, 10).map((err, idx) => (
-                        <TableRow key={idx}>
-                          <TableCell>{err.row}</TableCell>
-                          <TableCell>{err.field}</TableCell>
-                          <TableCell>{err.message}</TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </TableContainer>
-                {importResult.errors.length > 10 && (
-                  <Typography variant="caption" color="text.secondary" sx={{ mt: 1 }}>
-                    Showing first 10 of {importResult.errors.length} errors
-                  </Typography>
-                )}
-              </Box>
+          <Typography variant="body2">
+            {fill(
+              t(
+                pluralKey(
+                  lang,
+                  importResult.imported,
+                  "{count} risk imported",
+                  "{count} risks imported",
+                ),
+              ),
+              { count: importResult.imported },
             )}
-          </Alert>
-        )}
+            {importResult.failed > 0 &&
+              `, ${fill(
+                t(
+                  pluralKey(
+                    lang,
+                    importResult.failed,
+                    "{count} risk failed",
+                    "{count} risks failed",
+                  ),
+                ),
+                { count: importResult.failed },
+              )}`}
+          </Typography>
 
-        <Card sx={{ mb: 3 }}>
-          <CardContent>
-            <Typography variant="h6" sx={{ mb: 2 }}>
-              Step 1: Download Excel Template
-            </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-              Download the Excel template with dropdown menus for enum fields and sample data.
-            </Typography>
-            <Button
-              variant="outlined"
-              startIcon={<Download size={16} />}
-              onClick={handleDownloadTemplate}
-              disabled={loading}
-            >
-              Download Template
-            </Button>
-          </CardContent>
-        </Card>
-
-        <Card sx={{ mb: 3 }}>
-          <CardContent>
-            <Typography variant="h6" sx={{ mb: 2 }}>
-              Step 2: Upload Filled Excel File
-            </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-              Upload your Excel file with risk data.
-            </Typography>
-
-            <Box sx={{ display: "flex", gap: 2, alignItems: "center" }}>
-              <Button variant="outlined" component="label" startIcon={<Upload size={16} />}>
-                Choose File
-                <input
-                  type="file"
-                  hidden
-                  accept=".xlsx"
-                  onChange={handleFileUpload}
-                  ref={fileInputRef}
-                />
-              </Button>
-
-              {uploadedFile && (
-                <Chip
-                  label={uploadedFile.name}
-                  onDelete={handleReset}
-                  color="primary"
-                  variant="outlined"
-                />
+          {importResult.errors && importResult.errors.length > 0 && (
+            <Box sx={{ mt: "4px" }}>
+              <Typography variant="body2" sx={{ fontWeight: 600, mb: "2px" }}>
+                Error details
+              </Typography>
+              <TableContainer component={Paper} sx={{ maxHeight: 200 }}>
+                <Table size="small">
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>Row</TableCell>
+                      <TableCell>Field</TableCell>
+                      <TableCell>Error</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {importResult.errors.slice(0, 10).map((err, idx) => (
+                      <TableRow key={idx}>
+                        <TableCell>{err.row}</TableCell>
+                        <TableCell>{err.field}</TableCell>
+                        <TableCell>{err.message}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+              {importResult.errors.length > 10 && (
+                <Typography variant="caption" color="text.secondary" sx={{ mt: "2px" }}>
+                  {fill(t("Showing the first 10 of {count} errors"), {
+                    count: importResult.errors.length,
+                  })}
+                </Typography>
               )}
             </Box>
+          )}
+        </Alert>
+      )}
 
-            {excelData.length > 0 && (
-              <Box sx={{ mt: 3 }}>
-                <Typography variant="body2" sx={{ mb: 1, fontWeight: 600 }}>
-                  Preview ({excelData.length} risk(s) found):
-                </Typography>
-                <TableContainer component={Paper} sx={{ maxHeight: 300 }}>
-                  <Table size="small" stickyHeader>
-                    <TableHead>
-                      <TableRow>
-                        <TableCell>#</TableCell>
-                        <TableCell>Risk Name</TableCell>
-                        <TableCell>Owner</TableCell>
-                        <TableCell>Description</TableCell>
-                        <TableCell>Lifecycle Phase</TableCell>
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {excelData.slice(0, 5).map((row, idx) => (
-                        <TableRow key={idx}>
-                          <TableCell>{idx + 1}</TableCell>
-                          <TableCell>{row.risk_name || "-"}</TableCell>
-                          <TableCell>{row.risk_owner || "-"}</TableCell>
-                          <TableCell
-                            sx={{ maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis" }}
-                          >
-                            {row.risk_description || "-"}
-                          </TableCell>
-                          <TableCell>{row.ai_lifecycle_phase || "-"}</TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </TableContainer>
-                {excelData.length > 5 && (
-                  <Typography
-                    variant="caption"
-                    color="text.secondary"
-                    sx={{ mt: 1, display: "block" }}
-                  >
-                    Showing first 5 of {excelData.length} risks
-                  </Typography>
-                )}
-              </Box>
-            )}
-          </CardContent>
-        </Card>
+      <Card sx={{ mb: "6px" }}>
+        <CardContent>
+          <Typography variant="h6" sx={{ mb: "4px" }}>
+            Step 1: Download the Excel template
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: "4px" }}>
+            Download the Excel template with dropdown menus for enum fields and sample data.
+          </Typography>
+          <CustomizableButton
+            variant="outlined"
+            icon={<Download size={16} />}
+            text="Download template"
+            onClick={handleDownloadTemplate}
+            isDisabled={downloadingTemplate}
+            testId="risk-import-download-template"
+          />
+        </CardContent>
+      </Card>
 
-        <Card sx={{ opacity: excelData.length > 0 ? 1 : 0.5 }}>
-          <CardContent>
-            <Typography
-              variant="h6"
-              sx={{ mb: 2, color: excelData.length > 0 ? "inherit" : "text.disabled" }}
-            >
-              Step 3: Import Risks
-            </Typography>
-            <Typography
-              variant="body2"
-              sx={{ mb: 2, color: excelData.length > 0 ? "text.secondary" : "text.disabled" }}
-            >
-              {excelData.length > 0
-                ? "Review the preview above and click Import to create the risks."
-                : "Upload an Excel file first to enable import."}
-            </Typography>
+      <Card sx={{ mb: "6px" }}>
+        <CardContent>
+          <Typography variant="h6" sx={{ mb: "4px" }}>
+            Step 2: Upload the filled Excel file
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: "4px" }}>
+            Upload your Excel file with risk data.
+          </Typography>
 
-            <Box sx={{ display: "flex", gap: 2 }}>
-              <Button
-                variant="contained"
-                onClick={handleImport}
-                disabled={loading || excelData.length === 0}
-                startIcon={
-                  loading ? (
-                    <CircularProgress size={16} color="inherit" />
-                  ) : (
-                    <CheckCircle size={16} />
-                  )
-                }
-                sx={{
-                  "backgroundColor": brand.primary,
-                  "&:hover": {
-                    backgroundColor: brand.primaryHover,
-                  },
-                }}
-              >
-                {loading ? "Importing..." : "Import Risks"}
-              </Button>
+          <Box sx={{ display: "flex", gap: "4px", alignItems: "center" }}>
+            <CustomizableButton
+              variant="outlined"
+              icon={<Upload size={16} />}
+              text="Choose file"
+              onClick={() => fileInputRef.current?.click()}
+              isDisabled={importing || importSucceeded}
+              testId="risk-import-choose-file"
+            />
+            <input
+              type="file"
+              hidden
+              accept=".xlsx"
+              onChange={handleFileUpload}
+              ref={fileInputRef}
+              data-testid="risk-import-file-input"
+            />
 
-              <Button
+            {uploadedFile && (
+              <Chip
+                label={uploadedFile.name}
+                onDelete={importing ? undefined : handleReset}
+                color="primary"
                 variant="outlined"
-                onClick={handleReset}
-                disabled={loading || excelData.length === 0}
-              >
-                Reset
-              </Button>
+              />
+            )}
+          </Box>
+
+          {excelData.length > 0 && (
+            <Box sx={{ mt: "6px" }}>
+              <Typography variant="body2" sx={{ mb: "2px", fontWeight: 600 }}>
+                {fill(
+                  t(
+                    pluralKey(
+                      lang,
+                      excelData.length,
+                      "Preview ({count} risk found)",
+                      "Preview ({count} risks found)",
+                    ),
+                  ),
+                  { count: excelData.length },
+                )}
+              </Typography>
+              <TableContainer component={Paper} sx={{ maxHeight: 300 }}>
+                <Table size="small" stickyHeader>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>#</TableCell>
+                      <TableCell>Risk name</TableCell>
+                      <TableCell>Owner</TableCell>
+                      <TableCell>Description</TableCell>
+                      <TableCell>Lifecycle phase</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {excelData.slice(0, 5).map((row, idx) => (
+                      <TableRow key={idx}>
+                        <TableCell>{idx + 1}</TableCell>
+                        <TableCell>{row.risk_name || "-"}</TableCell>
+                        <TableCell>{row.risk_owner || "-"}</TableCell>
+                        <TableCell
+                          sx={{ maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis" }}
+                        >
+                          {row.risk_description || "-"}
+                        </TableCell>
+                        <TableCell>{row.ai_lifecycle_phase || "-"}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+              {excelData.length > 5 && (
+                <Typography
+                  variant="caption"
+                  color="text.secondary"
+                  sx={{ mt: "2px", display: "block" }}
+                >
+                  {fill(t("Showing the first 5 of {count} risks"), { count: excelData.length })}
+                </Typography>
+              )}
             </Box>
-          </CardContent>
-        </Card>
-      </DialogContent>
-    </Dialog>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card sx={{ opacity: excelData.length > 0 ? 1 : 0.5 }}>
+        <CardContent>
+          <Typography
+            variant="h6"
+            sx={{ mb: "4px", color: excelData.length > 0 ? "inherit" : "text.disabled" }}
+          >
+            Step 3: Import risks
+          </Typography>
+          <Typography
+            variant="body2"
+            sx={{ color: excelData.length > 0 ? "text.secondary" : "text.disabled" }}
+          >
+            {excelData.length > 0
+              ? "Review the preview above, then select Import risks to create them."
+              : "Upload an Excel file first to enable import."}
+          </Typography>
+        </CardContent>
+      </Card>
+    </StandardModal>
   );
 }

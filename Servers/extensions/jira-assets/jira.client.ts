@@ -20,11 +20,12 @@ import {
 } from "../../utils/outboundFetch.utils";
 
 export type JiraDeploymentType = "cloud" | "datacenter";
+export const JIRA_DEPLOYMENT_TYPES: readonly JiraDeploymentType[] = ["cloud", "datacenter"];
 
 // JIRA workspace IDs are UUIDs (e.g. "12345678-1234-1234-1234-123456789012").
 // Constrained here so a malicious value can't inject additional path
-// segments into the composed cloud URL.
-const WORKSPACE_ID_PATTERN = /^[a-zA-Z0-9-]{1,64}$/;
+// segments into the composed cloud URL. Saving a config checks it too.
+export const WORKSPACE_ID_PATTERN = /^[a-zA-Z0-9-]{1,64}$/;
 
 /** Objects requested per page when listing an object type. */
 export const PAGE_SIZE = 50;
@@ -175,7 +176,7 @@ export class JiraAssetsClient {
     deploymentType: JiraDeploymentType = "cloud",
   ) {
     if (!WORKSPACE_ID_PATTERN.test(workspaceId)) {
-      throw new Error("JIRA workspace ID has an invalid format");
+      throw new Error("Jira workspace ID has an invalid format");
     }
     // For datacenter, validate baseUrl now so the constructor fails fast
     // instead of every request. Cloud ignores baseUrl but we still normalize

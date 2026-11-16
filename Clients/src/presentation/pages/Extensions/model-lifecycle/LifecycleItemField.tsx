@@ -426,20 +426,20 @@ function DocumentsFieldRenderer({
   }
 
   return (
-    <Stack sx={{ gap: 6 }}>
+    <Stack sx={{ gap: "12px" }}>
       {files.length > 0 && (
-        <Stack sx={{ gap: 4 }}>
+        <Stack sx={{ gap: "8px" }}>
           {files.map((file) => (
             <Stack
               key={file.id}
               direction="row"
               alignItems="center"
               sx={{
-                gap: 4,
-                pt: 4,
-                pb: 4,
-                pl: 6,
-                pr: 6,
+                gap: "8px",
+                pt: "8px",
+                pb: "8px",
+                pl: "12px",
+                pr: "12px",
                 borderRadius: radiusPx.sm,
                 border: `1px solid ${border.light}`,
                 backgroundColor: background.alt,
@@ -489,10 +489,10 @@ function DocumentsFieldRenderer({
           sx={{
             "border": `1px dashed ${VW_COLORS.borderDark}`,
             "borderRadius": radiusPx.sm,
-            "pt": 4,
-            "pb": 4,
-            "pl": 6,
-            "pr": 6,
+            "pt": "8px",
+            "pb": "8px",
+            "pl": "12px",
+            "pr": "12px",
             "textAlign": "center",
             "cursor": "pointer",
             "transition": "all 0.15s ease",
@@ -506,7 +506,10 @@ function DocumentsFieldRenderer({
           {uploading ? (
             <CircularProgress size={20} sx={{ color: VW_COLORS.primary }} />
           ) : (
-            <Stack direction="row" sx={{ gap: 4, justifyContent: "center", alignItems: "center" }}>
+            <Stack
+              direction="row"
+              sx={{ gap: "8px", justifyContent: "center", alignItems: "center" }}
+            >
               <Upload size={16} color={text.icon} />
               <Typography
                 sx={{
@@ -615,9 +618,9 @@ function PeopleFieldRenderer({
   if (readOnly && currentPeople.length === 0) return <ReadOnlyValue />;
 
   return (
-    <Stack sx={{ gap: 4 }}>
+    <Stack sx={{ gap: "8px" }}>
       {currentPeople.length > 0 && (
-        <Stack direction="row" flexWrap="wrap" sx={{ gap: 4 }}>
+        <Stack direction="row" flexWrap="wrap" sx={{ gap: "8px" }}>
           {currentPeople.map((p) => (
             <Chip
               key={p.user_id}
@@ -639,7 +642,7 @@ function PeopleFieldRenderer({
         </Stack>
       )}
       {!readOnly && (
-        <Stack direction="row" alignItems="center" sx={{ gap: 4 }}>
+        <Stack direction="row" alignItems="center" sx={{ gap: "8px" }}>
           <Select
             id={`lifecycle-people-${item.id}`}
             ariaLabel={item.name}
@@ -652,9 +655,8 @@ function PeopleFieldRenderer({
           <CustomizableButton
             variant="outlined"
             color="secondary"
-            size="small"
             onClick={handleAdd}
-            disabled={saving || !selectedUserId}
+            isDisabled={saving || !selectedUserId}
           >
             Add
           </CustomizableButton>
@@ -719,7 +721,7 @@ function ClassificationFieldRenderer({
   if (readOnly) return <ReadOnlyValue>{currentValue}</ReadOnlyValue>;
 
   return (
-    <Stack sx={{ gap: 4 }}>
+    <Stack sx={{ gap: "8px" }}>
       <RadioGroup value={selected} onChange={(e) => handleChange(e.target.value)}>
         {levels.map((level) => (
           <FormControlLabel
@@ -838,9 +840,9 @@ function ChecklistFieldRenderer({
   if (readOnly && items.length === 0) return <ReadOnlyValue />;
 
   return (
-    <Stack sx={{ gap: 4 }}>
+    <Stack sx={{ gap: "8px" }}>
       {items.map((it, index) => (
-        <Stack key={index} direction="row" alignItems="center" sx={{ gap: 4 }}>
+        <Stack key={index} direction="row" alignItems="center" sx={{ gap: "8px" }}>
           <Checkbox
             checked={it.checked}
             onChange={() => toggleItem(index)}
@@ -850,7 +852,7 @@ function ChecklistFieldRenderer({
             sx={{
               "color": border.dark,
               "&.Mui-checked": { color: brand.primary },
-              "padding": 2,
+              "padding": "4px",
             }}
           />
           <Typography
@@ -879,7 +881,7 @@ function ChecklistFieldRenderer({
         </Stack>
       ))}
       {!readOnly && (
-        <Stack direction="row" alignItems="center" sx={{ gap: 4 }}>
+        <Stack direction="row" alignItems="center" sx={{ gap: "8px" }}>
           <Field
             placeholder="Add checklist item..."
             value={newItemText}
@@ -892,7 +894,6 @@ function ChecklistFieldRenderer({
           <CustomizableButton
             variant="outlined"
             color="secondary"
-            size="small"
             onClick={addItem}
             loading={saving}
           >
@@ -983,7 +984,7 @@ function ApprovalFieldRenderer({
       setSelectedUserId("");
       onValueChanged?.();
     } catch {
-      // Keep the picked approver selected so Add Approver can be pressed again.
+      // Keep the picked approver selected so Add approver can be pressed again.
       setSaveFailed(true);
     } finally {
       setSaving(false);
@@ -1033,7 +1034,7 @@ function ApprovalFieldRenderer({
   if (readOnly && currentApprovals.length === 0) return <ReadOnlyValue />;
 
   return (
-    <Stack sx={{ gap: 6 }}>
+    <Stack sx={{ gap: "12px" }}>
       {currentApprovals.map((approval) => (
         <Stack
           key={approval.user_id}
@@ -1041,11 +1042,11 @@ function ApprovalFieldRenderer({
           direction="row"
           alignItems="center"
           sx={{
-            gap: 4,
-            pt: 6,
-            pb: 6,
-            pr: 8,
-            pl: 8,
+            gap: "8px",
+            pt: "12px",
+            pb: "12px",
+            pr: "16px",
+            pl: "16px",
             borderRadius: radiusPx.sm,
             border: `1px solid ${border.light}`,
             background: background.main,
@@ -1111,7 +1112,7 @@ function ApprovalFieldRenderer({
         </Stack>
       ))}
       {!readOnly && (
-        <Stack direction="row" alignItems="center" sx={{ gap: 4 }}>
+        <Stack direction="row" alignItems="center" sx={{ gap: "8px" }}>
           <Select
             id={`lifecycle-approval-${item.id}`}
             ariaLabel={item.name}
@@ -1124,12 +1125,11 @@ function ApprovalFieldRenderer({
           <CustomizableButton
             variant="outlined"
             color="secondary"
-            size="small"
             onClick={addApprover}
-            disabled={saving || !selectedUserId}
+            isDisabled={saving || !selectedUserId}
             loading={saving}
           >
-            Add Approver
+            Add approver
           </CustomizableButton>
         </Stack>
       )}

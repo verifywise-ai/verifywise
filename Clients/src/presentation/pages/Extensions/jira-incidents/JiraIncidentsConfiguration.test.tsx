@@ -227,8 +227,9 @@ describe("JiraIncidentsConfiguration", () => {
     await waitFor(() => expect(panelProps).toHaveBeenCalled());
     const props = panelProps.mock.calls[panelProps.mock.calls.length - 1][0];
     expect(props).toMatchObject({ extensionKey: "jira-incidents", showSyncNow: false });
-    expect(props.describeCompletedRun({ counts: { imported: 1 } })).toBe(
-      "Sync completed: imported 1",
+    const identity = (key: string) => key;
+    expect(props.describeCompletedRun({ counts: { imported: 1 } }, identity, "en")).toBe(
+      "Sync completed: 1 incident imported",
     );
   });
 

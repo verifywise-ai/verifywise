@@ -168,7 +168,7 @@ export const slackIntegrationContent: ArticleContent = {
     {
       type: 'image',
       src: '/images/user-guide/slack-notifications.png',
-      alt: 'Notification routing dialog listing notification types such as Membership and roles, Projects and organizations, Policy reminders and Evidence alerts',
+      alt: 'Notification routing dialog listing notification types such as Membership and roles, Projects and organizations, Policy reminders and status, and Evidence and task alerts',
       caption: 'Choose which notification types VerifyWise sends to Slack.',
     },
     {

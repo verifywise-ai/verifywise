@@ -27,6 +27,7 @@ import {
   deleteUnlinkedSlackConnectionQuery,
 } from "../slackWebhook.utils";
 import { SlackNotificationRoutingType } from "../../domain.layer/enums/slack.enum";
+import { ValidationException } from "../../domain.layer/exceptions/custom.exception";
 
 const mockQuery = sequelize.query as jest.Mock;
 const mockTransaction = sequelize.transaction as unknown as jest.Mock;
@@ -176,13 +177,13 @@ describe("management queries filter by organization", () => {
 
     const [sql, options] = mockQuery.mock.calls[0];
     expect(squash(sql)).toContain(
-      "SET routing_type = :routing_type, delivery_scope = :organizationScope",
+      "SET routing_type = ARRAY[:routing_type]::text[], delivery_scope = :organizationScope",
     );
     expect(squash(sql)).toContain("WHERE id = :id AND organization_id = :organizationId");
     expect(options.replacements).toMatchObject({
       id: 4,
       organizationId: 7,
-      routing_type: '{"Membership and roles"}',
+      routing_type: ["Membership and roles"],
       organizationScope: "organization",
     });
     expect(options.transaction).toBe(txn);
@@ -199,7 +200,30 @@ describe("management queries filter by organization", () => {
 
   it("an empty routing list clears routing", async () => {
     await updateSlackWebhookByIdQuery(4, 7, { routing_type: [] }, txn);
-    expect(mockQuery.mock.calls[0][1].replacements.routing_type).toBe("{}");
+    const [sql, options] = mockQuery.mock.calls[0];
+    expect(sql).toContain("routing_type = ARRAY[:routing_type]::text[]");
+    expect(options.replacements.routing_type).toEqual([]);
+  });
+
+  it("binds each routing type as its own value, not as a hand-built literal", async () => {
+    const routing = [
+      SlackNotificationRoutingType.MEMBERSHIP_AND_ROLES,
+      SlackNotificationRoutingType.CONTROL_OR_POLICY_CHANGES,
+    ];
+    await updateSlackWebhookByIdQuery(4, 7, { routing_type: routing }, txn);
+    expect(mockQuery.mock.calls[0][1].replacements.routing_type).toEqual(routing);
+  });
+
+  it.each([
+    [["Membership and roles", "Not a type"]],
+    [['Membership and roles","x']],
+    [[42]],
+    ["Membership and roles"],
+  ])("refuses a routing value outside the allow-list (%p) and writes nothing", async (routing) => {
+    await expect(
+      updateSlackWebhookByIdQuery(4, 7, { routing_type: routing as any }, txn),
+    ).rejects.toBeInstanceOf(ValidationException);
+    expect(mockQuery).not.toHaveBeenCalled();
   });
 
   it("update returns null when no row of the organization matched", async () => {
