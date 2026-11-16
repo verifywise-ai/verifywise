@@ -77,12 +77,18 @@ server rule (`Servers/utils/riskApproval.utils.ts`):
 - The Approver select has a "None" option. Choosing a different approver sets the
   status to Pending; choosing None sets Not required; choosing the saved approver
   again restores the saved status.
-- With no approver the Approval status select is disabled (always Not required).
-- Approved and Rejected are disabled unless the user holds `organization.admin`, or
-  is the saved approver and has not changed the approver in this edit. In a save that
-  changes the approver only an Admin can pick them.
-- When the saved status is Approved or Rejected and the user cannot decide, every
-  other status is disabled too; the user can still save other fields.
+- "Decides" means the user holds `organization.admin` or is the saved approver
+  (never the approver picked in this edit).
+- The Approval status select is disabled with no approver (always Not required),
+  when a saved approver exists and the user does not decide, and when the approver
+  was changed in this edit unless the user is an Admin. After an approver change,
+  Not required is disabled (a new approver means Pending unless an Admin decides).
+- The Approver select is disabled when the saved status is Approved or Rejected and
+  the user does not decide. A non-Admin's own name is listed but disabled, unless
+  they already are the saved approver.
+- The "None" and status option names are translated for display (`useTranslation`);
+  the value sent to the server comes from `approvalStatusItems` by id, so it stays
+  English.
 - Pass `savedApproval` (the risk's stored approver and status; `AddNewRiskForm`
   passes its original mitigation values). A server refusal (403) reaches the form's
   `onError` with the server's reason.

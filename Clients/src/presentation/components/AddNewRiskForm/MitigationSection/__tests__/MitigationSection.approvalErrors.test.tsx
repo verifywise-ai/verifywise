@@ -3,6 +3,7 @@ import { act, fireEvent, screen, within } from "@testing-library/react";
 import { useState, type MutableRefObject } from "react";
 
 const auth = vi.hoisted(() => ({ userId: 5 as number | null, isAdmin: false }));
+const i18n = vi.hoisted(() => ({ dict: {} as Record<string, string> }));
 
 vi.mock("../../../../../application/hooks/useUsers", () => ({
   default: () => ({
@@ -22,10 +23,14 @@ vi.mock("../../../../../application/hooks/useAuth", () => ({
   useAuth: () => ({ userId: auth.userId }),
 }));
 
+vi.mock("../../../../../application/hooks/useTranslation", () => ({
+  useTranslation: () => ({ t: (key: string) => i18n.dict[key] ?? key, lang: "en" }),
+}));
+
 import { renderWithProviders } from "../../../../../test/renderWithProviders";
 import MitigationSection from "../index";
 import { mitigationInitialState } from "../../hooks/useMitigationSection";
-import { RISK_APPROVAL_STATUS } from "../../projectRiskValue";
+import { approvalStatusItems, RISK_APPROVAL_STATUS } from "../../projectRiskValue";
 import type { MitigationFormValues } from "../../interface";
 
 type ServerErrors = Partial<Record<keyof MitigationFormValues, string>>;
@@ -94,9 +99,13 @@ const pick = (testId: string, name: string) => {
 const statusShown = () =>
   within(screen.getByTestId("approval-status-select")).getByRole("combobox").textContent;
 
+const isDisabled = (testId: string) =>
+  within(screen.getByTestId(testId)).getByRole("combobox").getAttribute("aria-disabled") === "true";
+
 beforeEach(() => {
   auth.userId = 5;
   auth.isAdmin = false;
+  i18n.dict = {};
 });
 
 describe("MitigationSection approval fields", () => {
@@ -128,15 +137,14 @@ describe("MitigationSection approval fields", () => {
     expect(statusShown()).toBe("Not required");
   });
 
-  it("disables Approved and Rejected for a user who is neither the approver nor an Admin", () => {
+  it("locks the status for a user who is neither the saved approver nor an Admin", () => {
     renderWithProviders(
       <Harness saved={{ ...filled, approver: 7, approvalStatus: RISK_APPROVAL_STATUS.Pending }} />,
     );
-
-    openSelect("approval-status-select");
-    expect(option("Approved")).toHaveAttribute("aria-disabled", "true");
-    expect(option("Rejected")).toHaveAttribute("aria-disabled", "true");
-    expect(option("Pending")).not.toHaveAttribute("aria-disabled", "true");
+    // Any status change needs the approver or an Admin, Not required included.
+    expect(isDisabled("approval-status-select")).toBe(true);
+    // A Pending risk can still be handed to someone else.
+    expect(isDisabled("approver-select")).toBe(false);
   });
 
   it("lets the saved approver approve or reject", () => {
@@ -148,6 +156,7 @@ describe("MitigationSection approval fields", () => {
     openSelect("approval-status-select");
     expect(option("Approved")).not.toHaveAttribute("aria-disabled", "true");
     expect(option("Rejected")).not.toHaveAttribute("aria-disabled", "true");
+    expect(option("Not required")).not.toHaveAttribute("aria-disabled", "true");
   });
 
   it("allows only an Admin to decide in the save that changes the approver", () => {
@@ -156,17 +165,9 @@ describe("MitigationSection approval fields", () => {
     const saved = { ...filled, approver: 7, approvalStatus: RISK_APPROVAL_STATUS.Pending };
     const view = renderWithProviders(<Harness saved={saved} />);
     pick("approver-select", "Alan Turing");
-    openSelect("approval-status-select");
-    expect(option("Approved")).toHaveAttribute("aria-disabled", "true");
+    expect(statusShown()).toBe("Pending");
+    expect(isDisabled("approval-status-select")).toBe(true);
     view.unmount();
-
-    // Naming yourself does not let you approve in the same save.
-    auth.userId = 8;
-    const self = renderWithProviders(<Harness saved={saved} />);
-    pick("approver-select", "Alan Turing");
-    openSelect("approval-status-select");
-    expect(option("Approved")).toHaveAttribute("aria-disabled", "true");
-    self.unmount();
 
     auth.userId = 5;
     auth.isAdmin = true;
@@ -174,23 +175,48 @@ describe("MitigationSection approval fields", () => {
     pick("approver-select", "Alan Turing");
     openSelect("approval-status-select");
     expect(option("Approved")).not.toHaveAttribute("aria-disabled", "true");
+    // A new approver means Pending unless the Admin decides.
+    expect(option("Not required")).toHaveAttribute("aria-disabled", "true");
   });
 
-  it("keeps a decided risk's status for others but still lets them save other fields", () => {
+  it("does not let a non-Admin pick themself as a new approver", () => {
+    auth.userId = 8;
+    renderWithProviders(<Harness saved={filled} />);
+    openSelect("approver-select");
+    expect(option("Alan Turing")).toHaveAttribute("aria-disabled", "true");
+    expect(option("Ada Lovelace")).not.toHaveAttribute("aria-disabled", "true");
+  });
+
+  it("lets the saved approver keep themself, and an Admin pick themself", () => {
+    auth.userId = 7;
+    const saved = { ...filled, approver: 7, approvalStatus: RISK_APPROVAL_STATUS.Pending };
+    const view = renderWithProviders(<Harness saved={saved} />);
+    openSelect("approver-select");
+    expect(option("Ada Lovelace")).not.toHaveAttribute("aria-disabled", "true");
+    view.unmount();
+
+    auth.userId = 8;
+    auth.isAdmin = true;
+    renderWithProviders(<Harness saved={filled} />);
+    openSelect("approver-select");
+    expect(option("Alan Turing")).not.toHaveAttribute("aria-disabled", "true");
+  });
+
+  it("keeps a decided risk's approver and status for others but lets them save other fields", () => {
     const validateRef: MutableRefObject<ValidateFn | null> = { current: null };
     const saved = { ...filled, approver: 7, approvalStatus: RISK_APPROVAL_STATUS.Approved };
     renderWithProviders(<Harness saved={saved} validateRef={validateRef} />);
 
     expect(statusShown()).toBe("Approved");
-    openSelect("approval-status-select");
-    expect(option("Pending")).toHaveAttribute("aria-disabled", "true");
-    expect(option("Not required")).toHaveAttribute("aria-disabled", "true");
+    expect(isDisabled("approval-status-select")).toBe(true);
+    expect(isDisabled("approver-select")).toBe(true);
     act(() => {
       expect(validateRef.current?.({ ...saved, mitigationPlan: "Changed plan" })).toBe(true);
     });
   });
 
   it("restores the saved status when the saved approver is chosen again", () => {
+    auth.userId = 7;
     const saved = { ...filled, approver: 7, approvalStatus: RISK_APPROVAL_STATUS.Approved };
     renderWithProviders(<Harness saved={saved} />);
 
@@ -198,6 +224,38 @@ describe("MitigationSection approval fields", () => {
     expect(statusShown()).toBe("Pending");
     pick("approver-select", "Ada Lovelace");
     expect(statusShown()).toBe("Approved");
+  });
+
+  it("shows the approval options translated and keeps the stored values in English", () => {
+    i18n.dict = {
+      "None": "Keine",
+      "Pending": "Ausstehend",
+      "Approved": "Genehmigt",
+      "Rejected": "Abgelehnt",
+      "Not required": "Nicht erforderlich",
+    };
+    auth.userId = 7;
+    renderWithProviders(
+      <Harness saved={{ ...filled, approver: 7, approvalStatus: RISK_APPROVAL_STATUS.Pending }} />,
+    );
+
+    expect(statusShown()).toBe("Ausstehend");
+    pick("approval-status-select", "Genehmigt");
+    expect(statusShown()).toBe("Genehmigt");
+    openSelect("approval-status-select");
+    for (const name of ["Ausstehend", "Abgelehnt", "Nicht erforderlich"]) {
+      expect(option(name)).toBeInTheDocument();
+    }
+    fireEvent.keyDown(screen.getByRole("listbox"), { key: "Escape" });
+    openSelect("approver-select");
+    expect(option("Keine")).toBeInTheDocument();
+    // What the server receives is looked up from these, by id.
+    expect(approvalStatusItems.map((item) => item.name)).toEqual([
+      "Pending",
+      "Approved",
+      "Rejected",
+      "Not required",
+    ]);
   });
 });
 

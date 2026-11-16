@@ -713,18 +713,21 @@ Ids fail closed: a value that is not a positive integer (for example `5.5`, whic
 `resolveRiskApproval` in `utils/riskApproval.utils.ts` decides the stored approver and status. It runs in `createRiskService` and `updateRiskService` (REST, MCP, advisor create) and in the advisor's update executor.
 
 - **Unknown values are ignored.** `/api/projectRisks` is frozen and unversioned. A submitted status that is not one of the four (after ignoring case, spaces, `_` and `-`) counts as not supplied: the stored value is kept on update, `Not required` is used on create. Old clients that send `"In Progress"` or `""` get no 400.
-- **Who decides.** Setting `Approved` or `Rejected`, or changing a status away from either, needs the approver as saved by this request or an Admin (`organization.admin` via `roleHasPermission`). A status sent back unchanged is not checked. Other fields save normally for any editor.
-- **Approver change.** Naming a different approver sets `Pending` with no permission check. In that save only an Admin can also set `Approved` or `Rejected`. A non-Admin who asks for a decision gets the 403, including the newly named approver: naming yourself and approving in one save is not allowed. The new approver decides in a later save.
-- **No approver, no approval.** Clearing the approver, or any save that leaves the risk without one, stores `Not required`.
-- **Notification.** A newly named approver who is not the caller gets the assignment notice (`notifyUserAssigned`, role `"Risk Approver"`, the Risk Owner notification type): an in-app notification and the assignment email. `notifyNewRiskApprover` in `services/riskApproverNotification.service.ts` sends it after commit, fire and forget, from REST create and update and from the advisor's create and update.
+- **Who decides.** "Decides" means an Admin (`organization.admin` via `roleHasPermission`) or the risk's saved approver. The approver named in the same request never counts.
+- **Status changes (R1).** While the risk has a saved approver, any change of `approval_status`, to any of the four values, needs a caller who decides. A status sent back unchanged is not a change. Other fields save normally for any editor.
+- **Approver changes (R2).** Changing `risk_approval` (to another user or to `null`) on an `Approved` or `Rejected` risk needs a caller who decides. On a `Pending` or `Not required` risk anyone with edit rights may change it. A new approver sets `Pending`; in that save only an Admin may set `Approved` or `Rejected` instead, and a non-Admin who asks for a decision gets the 403. Clearing the approver sets `Not required`.
+- **Naming yourself (R3).** A non-Admin cannot name themself as the new approver (403, "You can't name yourself as the approver. Ask an Admin or pick someone else."). Keeping yourself when you already are the saved approver is fine.
+- **No approver (R4).** On create, and when a save clears the approver, the status is `Not required`. When neither the approver nor the status changes, the stored status is kept, so a legacy `Approved` row whose approver is `NULL` (kept by the migration, or left by a deleted user) is not erased by an unrelated save. A status change on a risk with no approver before or after the save can only be `Not required`; `Pending`, `Approved` and `Rejected` are ignored there, with no 403.
+- **Concurrent saves.** `updateRiskService` and the advisor's update executor re-read `risk_approval` and `approval_status` with `SELECT ... FOR UPDATE` (scoped by `organization_id`, `lockRiskApprovalQuery`) inside the write transaction and resolve against that row, not the caller's earlier read.
+- **Notification.** A newly named approver who is not the caller gets the assignment notice (`notifyUserAssigned`, role `"Risk Approver"`, the Risk Owner notification type): an in-app notification and the assignment email. `notifyRiskAssignee` in `services/riskApproverNotification.service.ts` sends both the approver notice (`notifyNewRiskApprover`) and the owner notice on create, after commit, fire and forget, from REST create and update and from the advisor's create and update. The assigner's name is looked up through `organization_members` for the risk's organization.
 
-A refused decision returns 403:
+A refused change returns 403. `RiskApprovalForbiddenError` is a `ForbiddenException`, so the risk controllers and the AI Detection `handleException` map it to:
 
 ```json
 { "message": "Forbidden", "data": "Only the risk's approver or an Admin can approve or reject it." }
 ```
 
-`data` is translated (en, de, fr). The advisor checks the same rule before it files an approval request (`advisor/aiActions/riskApprovalPrecheck.ts`) and tells the user when the decision is not theirs to make.
+`data` is translated (en, de, fr). The advisor checks the same rule before it files an approval request (`advisor/aiActions/riskApprovalPrecheck.ts`) and tells the user the reason. It looks up the requester's role only when an approval field is sent.
 
 Bulk actions do not touch approval. Risk import keeps `Approved` or `Rejected` from the file only when an Admin imports. Other rows get `Pending` with an approver and `Not required` without one, whatever the cell says.
 
@@ -739,19 +742,21 @@ Bulk actions do not touch approval. Risk import keeps `Approved` or `Rejected` f
 | Pending, Requires review, without an approver | Not required |
 | anything else (`NULL`, `""`, mitigation values such as `In Progress`) | Not required |
 
-It then sets the default, `NOT NULL` and the CHECK. It sends no notifications. `down()` drops the CHECK, `NOT NULL` and default only; the rewritten values are not restored.
+`Approved` and `Rejected` are kept even when the risk has no approver: the migration does not erase a recorded decision. Such a row keeps its status until someone clears it to `Not required` or an Admin names an approver (R4). It then sets the default, `NOT NULL` and the CHECK. It sends no notifications. `down()` drops the CHECK, `NOT NULL` and default only; the rewritten values are not restored.
 
 ### Code
 
 - `domain.layer/enums/risk-approval-status.enum.ts`: the four values, `normalizeRiskApprovalStatus`, `isRiskApprovalDecision`
 - `utils/riskApproval.utils.ts`: `resolveRiskApproval`, `callerCanDecideAnyRisk`, `RiskApprovalForbiddenError`
-- `services/riskApproverNotification.service.ts`: `notifyNewRiskApprover`
+- `services/riskApproverNotification.service.ts`: `notifyRiskAssignee`, `notifyNewRiskApprover`, `getUserNameById`
+- `utils/risk.utils.ts`: `lockRiskApprovalQuery`
 - `extensions/risk-import/riskImport.service.ts`: `importedApprovalStatus`
 
 ### Follow-ups
 
 - Editing a risk's content after approval does not reset the approval.
-- Approvers named in a risk import or through MCP are not notified.
+- Approvers named in a risk import are not notified. The MCP risk tools take no approver or approval status, so they never name one.
+- Risk import does not apply R3: a non-Admin importer can name themself as approver (the row gets `Pending`). Deferred with the import review.
 
 ## Frontend Structure
 

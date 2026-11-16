@@ -30,6 +30,7 @@ import {
 import { alertState } from "../../../../domain/interfaces/i.alert";
 import { useCanCheck } from "../../../../application/hooks/useCan";
 import { useAuth } from "../../../../application/hooks/useAuth";
+import { useTranslation } from "../../../../application/hooks/useTranslation";
 
 // Layout constants - matching RisksSection
 const LAYOUT = {
@@ -105,6 +106,7 @@ const MitigationSection: FC<MitigationSectionProps> = ({
   const { userId } = useAuth();
   const isEditingDisabled = !can("risks.edit");
   const isAdmin = can("organization.admin");
+  const { t } = useTranslation();
 
   const [alert, setAlert] = useState<alertState | null>(null);
 
@@ -125,23 +127,32 @@ const MitigationSection: FC<MitigationSectionProps> = ({
     maxWidth: contentWidth,
   };
 
-  // Mirrors the server rule: Approved and Rejected, and moving off them, are
-  // for the saved approver or an Admin. In a save that changes the approver
-  // only an Admin decides; the new approver decides in a later save.
+  // Mirrors the server rule. "Decides" means an Admin or the risk's SAVED
+  // approver, never the approver picked in this form.
+  // - With a saved approver, only someone who decides changes the status.
+  // - A new approver sets Pending; only an Admin may decide in that save.
+  // - An Approved or Rejected risk changes approver only through someone who
+  //   decides.
+  // - A non-Admin cannot pick themself as a new approver.
+  // - Without an approver the status is always Not required.
+  const savedApprover = savedApproval.approver;
   const hasApprover = Boolean(mitigationValues.approver);
-  const approverUnchanged = mitigationValues.approver === savedApproval.approver;
-  const canDecide =
-    isAdmin ||
-    (hasApprover && approverUnchanged && userId !== null && userId === savedApproval.approver);
-  const statusLocked = !canDecide && approverUnchanged && isDecision(savedApproval.approvalStatus);
+  const approverUnchanged = mitigationValues.approver === savedApprover;
+  const callerDecides = isAdmin || (Boolean(savedApprover) && userId === savedApprover);
+  const approverLocked = !callerDecides && isDecision(savedApproval.approvalStatus);
+  const statusLocked = !hasApprover || !(approverUnchanged ? callerDecides : isAdmin);
 
+  // Option names are translated for display only; the value sent to the
+  // server is looked up from approvalStatusItems by id, so it stays English.
   const approvalStatusOptions = useMemo(
     () =>
       approvalStatusItems.map((item) => ({
         ...item,
-        disabled: !canDecide && (isDecision(item._id) || statusLocked),
+        name: t(item.name),
+        // A new approver always means Pending unless an Admin decides.
+        disabled: !approverUnchanged && item._id === RISK_APPROVAL_STATUS.NotRequired,
       })),
-    [canDecide, statusLocked],
+    [t, approverUnchanged],
   );
 
   const validators = useMemo<FieldValidators<MitigationFormValues>>(
@@ -230,16 +241,18 @@ const MitigationSection: FC<MitigationSectionProps> = ({
     };
   }, [validateRef, firstInvalidFieldRef, validateAll, getFirstInvalidField]);
 
-  // Memoized values. "None" (id 0) clears the approver.
+  // Memoized values. "None" (id 0) clears the approver. A non-Admin sees
+  // their own name but cannot pick it, unless they already are the approver.
   const userOptions = useMemo(
     () => [
-      { _id: 0, name: "None" },
+      { _id: 0, name: t("None") },
       ...(users?.map((user) => ({
         _id: user.id,
         name: `${user.name} ${user.surname}`,
+        disabled: !isAdmin && user.id === userId && user.id !== savedApprover,
       })) || []),
     ],
-    [users],
+    [users, t, isAdmin, userId, savedApprover],
   );
 
   const formFieldStyles = useMemo(
@@ -453,7 +466,8 @@ const MitigationSection: FC<MitigationSectionProps> = ({
             items={userOptions}
             sx={formFieldStyles}
             error={errors.approver}
-            disabled={isEditingDisabled || usersLoading}
+            // Only an Admin or the saved approver re-assigns a decided risk.
+            disabled={isEditingDisabled || usersLoading || approverLocked}
             dataTestId="approver-select"
           />
           <Select
@@ -466,8 +480,7 @@ const MitigationSection: FC<MitigationSectionProps> = ({
             items={approvalStatusOptions}
             sx={formFieldStyles}
             error={errors.approvalStatus}
-            // With no approver the status is always Not required.
-            disabled={isEditingDisabled || !hasApprover}
+            disabled={isEditingDisabled || statusLocked}
             dataTestId="approval-status-select"
           />
           <DatePicker

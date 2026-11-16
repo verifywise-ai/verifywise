@@ -210,12 +210,12 @@ export const riskMitigationContent: ArticleContent = {
       items: [
         { text: 'On the risk form, pick an approver. The approval status changes to Pending. The approver gets an in-app notification and an assignment email.' },
         { text: 'The approver opens the risk to review the mitigation plan and its evidence. Then they set the approval status to Approved or Rejected.' },
-        { text: 'To take a risk out of approval, set the approver to **None**. The status goes back to Not required.' },
+        { text: 'To take a risk out of approval, set the approver to **None**. The status goes back to Not required. On an approved or rejected risk, only the approver or an Admin can do this.' },
       ],
     },
     {
       type: 'paragraph',
-      text: 'The approval status field is greyed out until the risk has an approver.',
+      text: 'The approval status field is greyed out until the risk has an approver, and for anyone other than that approver or an Admin.',
     },
     {
       type: 'heading',
@@ -225,11 +225,15 @@ export const riskMitigationContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Only the risk\'s approver or an Admin can set Approved or Rejected. The same rule applies to changing a status that is already Approved or Rejected. Other users who can edit the risk can save its other fields. When they try to make the decision, the save fails with "Only the risk\'s approver or an Admin can approve or reject it."',
+      text: 'Once a risk has an approver, only that approver or an Admin can change its approval status. That covers every change, including moving a Pending risk to Not required. Other users who can edit the risk can still save its other fields. If they change the status, the save fails with "Only the risk\'s approver or an Admin can approve or reject it."',
     },
     {
-      type: 'paragraph',
-      text: 'Changing the approver sets the status back to Pending, even on a risk that was approved. In that same save only an Admin can set Approved or Rejected. The new approver decides in a later edit.',
+      type: 'bullet-list',
+      items: [
+        { bold: 'Changing the approver', text: 'Anyone who can edit a Pending or Not required risk can pick a different approver. The status goes back to Pending and the new approver decides in a later edit. Only an Admin can approve or reject in the same save.' },
+        { bold: 'Approved or rejected risks', text: 'Only the approver or an Admin can change or remove the approver. The approver field is greyed out for everyone else.' },
+        { bold: 'Naming yourself', text: 'You can\'t pick yourself as a new approver unless you are an Admin. Your name shows in the list but can\'t be selected. If you already are the approver, you stay on the risk.' },
+      ],
     },
     {
       type: 'callout',
@@ -252,7 +256,7 @@ export const riskMitigationContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Risks created before these rules kept Approved, Rejected and Not required. Pending and Requires review became Pending when the risk had an approver, or Not required when it had none. Other values, such as In Progress, became Not required.',
+      text: 'Risks created before these rules kept Approved, Rejected and Not required, even when the risk had no approver. Editing other fields does not change that. Pending and Requires review became Pending when the risk had an approver, or Not required when it had none. Other values, such as In Progress, became Not required.',
     },
     {
       type: 'heading',
