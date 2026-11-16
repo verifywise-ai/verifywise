@@ -8,21 +8,7 @@ import { Extension } from "../../../domain/types/extensions";
 import { useCan, usePermissionsSettled } from "../../../application/hooks/useCan";
 import { radiusPx, status } from "../../themes/palette";
 import ConfirmDisableModal from "./ConfirmDisableModal";
-
-// Map backend enum snake_case to display strings. `category` mirrors the DB
-// CHECK constraint on verifywise.extensions.category.
-const CATEGORY_LABEL: Record<string, string> = {
-  communication: "Communication",
-  ml_ops: "ML Ops",
-  data_management: "Data management",
-  version_control: "Version control",
-  monitoring: "Monitoring",
-  security: "Security",
-  analytics: "Analytics",
-};
-
-const humanizeCategory = (raw: string): string =>
-  CATEGORY_LABEL[raw] ?? raw.replace(/_/g, " ").replace(/^./, (c) => c.toUpperCase());
+import { humanizeCategory } from "./catalogCopy";
 
 // Where an enabled extension without a settings page appears, using the
 // labels the sidebar and pages show: "AI risks" (sidebar) → "Add new risk"
@@ -191,7 +177,12 @@ function ExtensionCard({
         }}
       >
         {humanizeCategory(extension.category)} · v{extension.version}
-        {hasPreEnableFields && !isEnabled && " · Configuration required"}
+        {hasPreEnableFields && !isEnabled && (
+          <>
+            {" · "}
+            <span>Configuration required</span>
+          </>
+        )}
       </Typography>
 
       <Typography

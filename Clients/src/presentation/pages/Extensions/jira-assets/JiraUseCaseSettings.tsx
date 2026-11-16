@@ -256,8 +256,14 @@ export const JiraUseCaseSettings: React.FC<JiraUseCaseSettingsProps> = ({ projec
       {/* All Attributes - Two Column Grid */}
       <Box sx={styles.card}>
         <Typography sx={styles.sectionTitle}>
-          JIRA Attributes ({rows.length}
-          {schema.length > 0 ? ` — ${setCount} set` : ""})
+          <span>JIRA Attributes</span> ({rows.length}
+          {schema.length > 0 && (
+            <>
+              {" — "}
+              {setCount} set
+            </>
+          )}
+          )
         </Typography>
         {rows.length > 0 ? (
           <Box sx={styles.gridContainer}>

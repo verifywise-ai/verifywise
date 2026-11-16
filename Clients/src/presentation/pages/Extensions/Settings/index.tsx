@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { ReactNode, useCallback, useEffect, useMemo, useState } from "react";
 import { Navigate, useNavigate, useParams } from "react-router";
 import { Box, CircularProgress, Stack, Typography, useTheme } from "@mui/material";
 import { ChevronLeft } from "lucide-react";
@@ -24,18 +24,25 @@ import { JiraIncidentsConfiguration } from "../jira-incidents/JiraIncidentsConfi
 import { useCan, usePermissionsSettled } from "../../../../application/hooks/useCan";
 import { palette, radiusPx, status } from "../../../themes/palette";
 import ConfirmDisableModal from "../ConfirmDisableModal";
+import {
+  EXTENSION_DISABLED_MESSAGE,
+  EXTENSION_ENABLED_MESSAGE,
+  humanizeCategory,
+} from "../catalogCopy";
 
-const CATEGORY_LABEL: Record<string, string> = {
-  communication: "Communication",
-  ml_ops: "ML Ops",
-  data_management: "Data management",
-  version_control: "Version control",
-  monitoring: "Monitoring",
-  security: "Security",
-  analytics: "Analytics",
-};
-const humanizeCategory = (raw: string): string =>
-  CATEGORY_LABEL[raw] ?? raw.replace(/_/g, " ").replace(/^./, (c) => c.toUpperCase());
+// Enable and disable feedback is one full sentence per extension so it
+// translates as a whole. An extension missing from the map shows its name
+// and the status word as separate nodes, so the word still translates.
+function toggledMessage(extension: Extension, action: "enabled" | "disabled"): ReactNode {
+  const sentences = action === "enabled" ? EXTENSION_ENABLED_MESSAGE : EXTENSION_DISABLED_MESSAGE;
+  const sentence = sentences[extension.key];
+  if (sentence) return sentence;
+  return (
+    <>
+      <span>{extension.displayName}</span> <span>{action}</span>.
+    </>
+  );
+}
 
 /**
  * Per-extension settings page — /extensions/:key/settings.
@@ -72,7 +79,7 @@ export default function ExtensionSettingsPage() {
   const [confirmDisableOpen, setConfirmDisableOpen] = useState(false);
   const [feedback, setFeedback] = useState<{
     severity: "success" | "error" | "info";
-    message: string;
+    message: ReactNode;
   } | null>(null);
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
 
@@ -133,7 +140,7 @@ export default function ExtensionSettingsPage() {
       const next = await enable(extension.key, submit);
       setExtension(next);
       reseedForm(next);
-      setFeedback({ severity: "success", message: `${extension.displayName} enabled.` });
+      setFeedback({ severity: "success", message: toggledMessage(extension, "enabled") });
     } catch (err: any) {
       setFeedback({
         severity: "error",
@@ -152,7 +159,7 @@ export default function ExtensionSettingsPage() {
       const next = await disable(extension.key);
       // No reseed: unsaved edits stay in the form for the next Enable.
       setExtension(next);
-      setFeedback({ severity: "success", message: `${extension.displayName} disabled.` });
+      setFeedback({ severity: "success", message: toggledMessage(extension, "disabled") });
     } catch (err: any) {
       setFeedback({
         severity: "error",

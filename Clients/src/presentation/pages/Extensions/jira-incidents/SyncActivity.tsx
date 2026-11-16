@@ -9,6 +9,7 @@ import {
   Typography,
   useTheme,
 } from "@mui/material";
+import type { ReactNode } from "react";
 import { Link as RouterLink } from "react-router";
 import useFormattedDate from "../../../../application/hooks/useFormattedDate";
 import type { JiraIncidentEvent } from "../../../../application/repository/jiraIncidents.repository";
@@ -25,12 +26,19 @@ const EVENT_LABELS: Record<string, string> = {
 const text = (v: unknown): string | null => (typeof v === "string" && v !== "" ? v : null);
 
 /** What happened, in a few words: the reason, a status move, or the conflict outcome. */
-export function eventDetail(event: JiraIncidentEvent): string {
+export function eventDetail(event: JiraIncidentEvent): ReactNode {
   const d = event.detail ?? {};
   if (event.kind === "conflict") {
     const loser = d.winner === "jira" ? text(d.vw_status) : text(d.jira_status);
     const applied = text(d.applied);
-    if (applied && loser) return `Kept ${applied}; ${loser} was overwritten`;
+    // Status names are their own text nodes so the words translate.
+    if (applied && loser) {
+      return (
+        <>
+          Kept {applied}; {loser} was overwritten
+        </>
+      );
+    }
   }
   const reason = text(d.reason);
   if (reason) return reason;

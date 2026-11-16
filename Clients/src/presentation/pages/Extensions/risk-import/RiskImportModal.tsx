@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import React, { type ReactNode, useState, useCallback } from "react";
 import {
   Box,
   Button,
@@ -78,7 +78,9 @@ export default function RiskImportModal({ open, onClose, onImportComplete }: Ris
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [excelData, setExcelData] = useState<any[]>([]);
   const [importResult, setImportResult] = useState<ImportResult | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  // A cause from the parser or server is its own text node, apart from the
+  // static prefix, so the prefix translates.
+  const [error, setError] = useState<ReactNode>(null);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   const handleDownloadTemplate = async () => {
@@ -102,7 +104,12 @@ export default function RiskImportModal({ open, onClose, onImportComplete }: Ris
       link.remove();
       window.URL.revokeObjectURL(url);
     } catch (err: any) {
-      setError(`Failed to download template: ${err.message || "Unknown error"}`);
+      setError(
+        <>
+          {"Failed to download template: "}
+          {err.message || "Unknown error"}
+        </>,
+      );
     } finally {
       setLoading(false);
     }
@@ -170,7 +177,12 @@ export default function RiskImportModal({ open, onClose, onImportComplete }: Ris
 
       setExcelData(data);
     } catch (err: any) {
-      setError(`Error parsing Excel file: ${err.message}`);
+      setError(
+        <>
+          {"Error parsing Excel file: "}
+          {err.message}
+        </>,
+      );
       setExcelData([]);
     }
   }, []);
@@ -288,11 +300,18 @@ export default function RiskImportModal({ open, onClose, onImportComplete }: Ris
             icon={importResult.success ? <CheckCircle /> : <XCircle />}
           >
             <Typography variant="body2" sx={{ fontWeight: 600, mb: 1 }}>
-              Import {importResult.success ? "Completed" : "Completed with Errors"}
+              {importResult.success ? "Import completed" : "Import completed with errors"}
             </Typography>
             <Typography variant="body2">
-              Successfully imported: {importResult.imported} risk(s)
-              {importResult.failed > 0 && ` | Failed: ${importResult.failed} risk(s)`}
+              {"Successfully imported: "}
+              {importResult.imported} risk(s)
+              {importResult.failed > 0 && (
+                <>
+                  {" | "}
+                  {"Failed: "}
+                  {importResult.failed} risk(s)
+                </>
+              )}
             </Typography>
 
             {importResult.errors && importResult.errors.length > 0 && (

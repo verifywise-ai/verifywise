@@ -66,7 +66,9 @@ export default function MLFlowTab() {
   // Sync writes model records, so the server requires model.edit for it.
   const canSync = useCan("model.edit");
   const [loading, setLoading] = useState(false);
-  const [warning, setWarning] = useState<string | null>(null);
+  // The server's reason stays out of the static title so "Sync failed"
+  // translates on its own.
+  const [warning, setWarning] = useState<{ title?: string; body: string } | null>(null);
   const [notConfigured, setNotConfigured] = useState(false);
   const [selectedModel, setSelectedModel] = useState<MLFlowModel | null>(null);
   const [mlflowData, setMlflowData] = useState<MLFlowModel[]>([]);
@@ -108,16 +110,16 @@ export default function MLFlowTab() {
         if (!payload.configured) {
           setNotConfigured(true);
         } else if (payload.connected === false) {
-          setWarning(payload.message || "MLFlow server is not reachable.");
+          setWarning({ body: payload.message || "MLflow server is not reachable." });
         } else if (payload.error) {
-          setWarning(payload.error);
+          setWarning({ body: payload.error });
         }
         setMlflowData(payload.models);
       } else {
         setMlflowData([]);
       }
     } catch {
-      setWarning("Unable to reach the MLFlow backend.");
+      setWarning({ body: "Unable to reach the MLflow backend." });
       setMlflowData([]);
     } finally {
       setLoading(false);
@@ -138,9 +140,9 @@ export default function MLFlowTab() {
       await fetchMLFlowData();
       const reason = getApiErrorReason(error);
       if (reason) {
-        setWarning(`Sync failed: ${reason}`);
+        setWarning({ title: "Sync failed", body: reason });
       } else {
-        setWarning("Failed to sync with MLflow server. Showing cached data.");
+        setWarning({ body: "Failed to sync with MLflow server. Showing cached data." });
       }
     }
   };
@@ -184,11 +186,19 @@ export default function MLFlowTab() {
       {notConfigured && (
         <ExtensionSetupNotice
           extensionKey="mlflow"
-          name="MLflow"
           adminText="Configure the MLflow extension to start syncing live data."
+          askAdminText="Ask an Admin to set up MLflow."
         />
       )}
-      {warning && <Alert variant="warning" inline body={warning} sx={{ mb: "16px" }} />}
+      {warning && (
+        <Alert
+          variant="warning"
+          inline
+          title={warning.title}
+          body={warning.body}
+          sx={{ mb: "16px" }}
+        />
+      )}
 
       {canSync && (
         <Box

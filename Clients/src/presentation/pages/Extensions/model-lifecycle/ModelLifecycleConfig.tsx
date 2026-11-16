@@ -467,7 +467,12 @@ export default function ModelLifecycleConfig() {
                   {phase.name}
                 </Typography>
                 <Chip
-                  label={`${phase.items?.length || 0} items`}
+                  // Count and word are separate text nodes so the word translates.
+                  label={
+                    <>
+                      {phase.items?.length || 0} {phase.items?.length === 1 ? "item" : "items"}
+                    </>
+                  }
                   size="small"
                   sx={{
                     fontSize: "11px",

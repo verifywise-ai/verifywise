@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { ReactNode, useState, useEffect, useMemo, useCallback } from "react";
 import {
   Box,
   Typography,
@@ -91,7 +91,7 @@ export default function AzureAIFoundryTab() {
   // Sync writes model records, so the server requires model.edit for it.
   const canSync = useCan("model.edit");
   const [loading, setLoading] = useState(false);
-  const [warning, setWarning] = useState<string | null>(null);
+  const [warning, setWarning] = useState<ReactNode>(null);
   const [notConfigured, setNotConfigured] = useState(false);
   const [selectedModel, setSelectedModel] = useState<AzureModel | null>(null);
   const [models, setModels] = useState<AzureModel[]>([]);
@@ -150,7 +150,17 @@ export default function AzureAIFoundryTab() {
       // Refresh first: fetchModels clears the warning when it starts.
       await fetchModels();
       const reason = getApiErrorReason(error);
-      setWarning(reason ? `Sync failed: ${reason}` : "Sync failed. Showing cached data.");
+      // The reason is its own text node so "Sync failed:" translates.
+      setWarning(
+        reason ? (
+          <>
+            {"Sync failed: "}
+            {reason}
+          </>
+        ) : (
+          "Sync failed. Showing cached data."
+        ),
+      );
     }
   };
 
@@ -187,8 +197,8 @@ export default function AzureAIFoundryTab() {
       {notConfigured && (
         <ExtensionSetupNotice
           extensionKey="azure-ai-foundry"
-          name="Azure AI Foundry"
           adminText="Configure the Azure AI Foundry extension to start syncing model deployments."
+          askAdminText="Ask an Admin to set up Azure AI Foundry."
         />
       )}
       {warning && (

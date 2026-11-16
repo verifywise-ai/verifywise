@@ -193,7 +193,7 @@ export default function FilePreviewAndMetadata({
                 }}
               />
               <Chip
-                label={`${analysis.rowCount} rows`}
+                label={<>{analysis.rowCount} rows</>}
                 size="small"
                 variant="outlined"
                 sx={{
@@ -203,7 +203,7 @@ export default function FilePreviewAndMetadata({
                 }}
               />
               <Chip
-                label={`${analysis.headers.length} cols`}
+                label={<>{analysis.headers.length} cols</>}
                 size="small"
                 variant="outlined"
                 sx={{

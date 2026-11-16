@@ -36,7 +36,8 @@ export default function UploadProgress({ results, totalFiles }: UploadProgressPr
       <Box>
         <Stack direction="row" justifyContent="space-between" sx={{ mb: 0.5 }}>
           <Typography sx={{ fontSize: 13, fontWeight: 500, color: "text.secondary" }}>
-            {isComplete ? "Upload complete" : `Uploading ${completed + 1} of ${totalFiles}...`}
+            {/* The counter on the right shows the numbers. */}
+            {isComplete ? "Upload complete" : "Uploading files..."}
           </Typography>
           <Typography sx={{ fontSize: 13, color: "text.tertiary" }}>
             {completed}/{totalFiles}
@@ -62,7 +63,7 @@ export default function UploadProgress({ results, totalFiles }: UploadProgressPr
         <Stack direction="row" spacing={1}>
           <Chip
             icon={<CheckCircle2 size={14} />}
-            label={`${successCount} succeeded`}
+            label={<>{successCount} uploaded</>}
             size="small"
             variant="outlined"
             sx={{
@@ -75,7 +76,7 @@ export default function UploadProgress({ results, totalFiles }: UploadProgressPr
           {errorCount > 0 && (
             <Chip
               icon={<XCircle size={14} />}
-              label={`${errorCount} failed`}
+              label={<>{errorCount} failed to upload</>}
               size="small"
               variant="outlined"
               sx={{

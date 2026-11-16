@@ -29,6 +29,23 @@ describe("ModelLifecycleConfig setup entry", () => {
     expect(screen.getByRole("button", { name: "Configure Phases" })).toBeInTheDocument();
   });
 
+  // The count and the word are separate text nodes so the word translates.
+  it("shows the item count with a translatable singular or plural word", async () => {
+    api.get.mockResolvedValue({
+      data: {
+        data: [
+          { ...phases[0], items: [{ id: 1 }] },
+          { ...phases[0], id: 2, name: "Deploy", items: [] },
+        ],
+      },
+    });
+    auth.keys = new Set(["model.edit"]);
+    render(<ModelLifecycleConfig />);
+    const one = await screen.findByText("1 item");
+    expect(Array.from(one.childNodes).map((n) => n.textContent?.trim())).toEqual(["1", "", "item"]);
+    expect(screen.getByText("0 items")).toBeInTheDocument();
+  });
+
   it("hides Configure Phases without extension.admin", async () => {
     auth.keys = new Set(["model.edit"]);
     render(<ModelLifecycleConfig />);

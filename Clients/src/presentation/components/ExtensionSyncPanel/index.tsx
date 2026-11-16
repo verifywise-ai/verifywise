@@ -1,4 +1,4 @@
-import { useEffect, useId, useState } from "react";
+import { type ReactNode, useEffect, useId, useState } from "react";
 import { Alert, Box, CircularProgress, Stack, Typography } from "@mui/material";
 import { RefreshCw } from "lucide-react";
 import { VWSelect } from "../VWComponents";
@@ -35,7 +35,7 @@ const SYNC_COMPLETED_MESSAGE = "Sync completed.";
 /** Desktop control height for the panel's button. */
 const CONTROL_HEIGHT_SX = { height: "30px", minHeight: "30px" };
 
-type PanelMessage = { type: "success" | "error"; text: string };
+type PanelMessage = { type: "success" | "error"; text: ReactNode };
 
 /** The presets, plus the stored interval when it is not one (set through the API). */
 export function intervalItems(current: number): Array<{ _id: number; name: string }> {
@@ -50,7 +50,7 @@ export function intervalItems(current: number): Array<{ _id: number; name: strin
 /** The message "Sync now" ends with; null when the panel went away mid-poll. */
 export function outcomeMessage(
   outcome: SyncNowOutcome,
-  describeCompleted: (run: ExtensionRun) => string,
+  describeCompleted: (run: ExtensionRun) => ReactNode,
 ): PanelMessage | null {
   switch (outcome.kind) {
     case "unmounted":
@@ -98,7 +98,7 @@ export interface ExtensionSyncPanelProps {
   /** Called with the schedule shown, so a page can send a draft with its own save. */
   onScheduleChange?: (schedule: ScheduleState) => void;
   /** The success line for a completed "Sync now" run. */
-  describeCompletedRun?: (run: ExtensionRun) => string;
+  describeCompletedRun?: (run: ExtensionRun) => ReactNode;
   onRunCompleted?: (run: ExtensionRun) => void;
 }
 

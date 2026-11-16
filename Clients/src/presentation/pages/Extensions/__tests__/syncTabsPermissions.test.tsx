@@ -72,7 +72,10 @@ describe.each(tabs)("%s tab", (_name, Tab, askText) => {
 
     fireEvent.click(await screen.findByRole("button", { name: /sync/i }));
 
-    expect(await screen.findByText("Sync failed: connection failed")).toBeInTheDocument();
+    // "Sync failed" and the reason are separate text nodes so the static part
+    // translates (MLflow: alert title and body; Azure: two nodes in one line).
+    expect(await screen.findByText(/connection failed/)).toBeInTheDocument();
+    expect(screen.getByText(/^Sync failed/)).toBeInTheDocument();
     expect(mockGet.mock.calls.length).toBeGreaterThanOrEqual(2);
   });
 });

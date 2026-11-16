@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from "react";
+import { Fragment, useCallback, useRef, useState } from "react";
 import { Box, Typography, Stack, IconButton, Alert } from "@mui/material";
 import { Upload, X, FileSpreadsheet } from "lucide-react";
 import { brand, text, palette as vwPalette, radiusPx } from "../../../themes/palette";
@@ -25,22 +25,26 @@ interface FileDropZoneProps {
 export default function FileDropZone({ files, onFilesChange }: FileDropZoneProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragOver, setDragOver] = useState(false);
-  const [validationError, setValidationError] = useState<string | null>(null);
+  // Each problem keeps the file name apart from the static message, so the
+  // message translates as a whole.
+  const [validationErrors, setValidationErrors] = useState<
+    { fileName?: string; message: string }[] | null
+  >(null);
 
   const validateAndAdd = useCallback(
     (incoming: File[]) => {
-      setValidationError(null);
-      const errors: string[] = [];
+      setValidationErrors(null);
+      const errors: { fileName?: string; message: string }[] = [];
       const valid: File[] = [];
 
       for (const file of incoming) {
         const ext = getExtension(file.name);
         if (!ACCEPTED_EXTENSIONS.includes(ext)) {
-          errors.push(`${file.name}: unsupported type (only CSV, XLSX, XLS)`);
+          errors.push({ fileName: file.name, message: "unsupported type (only CSV, XLSX, XLS)" });
           continue;
         }
         if (file.size > MAX_SIZE) {
-          errors.push(`${file.name}: exceeds 30MB limit`);
+          errors.push({ fileName: file.name, message: "exceeds 30MB limit" });
           continue;
         }
         valid.push(file);
@@ -48,12 +52,13 @@ export default function FileDropZone({ files, onFilesChange }: FileDropZoneProps
 
       const total = files.length + valid.length;
       if (total > MAX_FILES) {
-        errors.push(`Maximum ${MAX_FILES} files allowed (${total} selected)`);
+        // Static text: keep the number in step with MAX_FILES.
+        errors.push({ message: "Maximum 20 files allowed. Extra files were not added." });
         valid.splice(MAX_FILES - files.length);
       }
 
       if (errors.length > 0) {
-        setValidationError(errors.join("; "));
+        setValidationErrors(errors);
       }
 
       if (valid.length > 0) {
@@ -144,9 +149,15 @@ export default function FileDropZone({ files, onFilesChange }: FileDropZoneProps
         />
       </Box>
 
-      {validationError && (
-        <Alert severity="warning" onClose={() => setValidationError(null)}>
-          {validationError}
+      {validationErrors && (
+        <Alert severity="warning" onClose={() => setValidationErrors(null)}>
+          {validationErrors.map((e, i) => (
+            <Fragment key={i}>
+              {i > 0 && "; "}
+              {e.fileName && `${e.fileName}: `}
+              {e.message}
+            </Fragment>
+          ))}
         </Alert>
       )}
 

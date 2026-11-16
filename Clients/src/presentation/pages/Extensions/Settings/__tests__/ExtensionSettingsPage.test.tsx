@@ -376,4 +376,35 @@ describe("ExtensionSettingsPage", () => {
     await waitFor(() => expect(mockEnable).toHaveBeenCalledTimes(1));
     expect(mockEnable.mock.calls[0][1]).toMatchObject({ experiment: "staging" });
   });
+  // The DOM translator matches whole text nodes, so the sentence must be one node.
+  it("confirms an enable with one full sentence for a known extension", async () => {
+    const stored = makeExtension();
+    mockGetExtensionByKey.mockResolvedValue(stored);
+    mockEnable.mockResolvedValue({ ...stored, enabled: true });
+    renderPage();
+
+    fireEvent.click(await screen.findByRole("button", { name: "Enable" }));
+
+    expect(await screen.findByText("MLflow enabled.")).toBeInTheDocument();
+  });
+
+  it("confirms a disable of an unknown extension with its name and a separate word", async () => {
+    const stored = makeExtension({
+      key: "acme",
+      displayName: "Acme sync",
+      configFields: [],
+      enabled: true,
+    });
+    mockGetExtensionByKey.mockResolvedValue(stored);
+    mockDisable.mockResolvedValue({ ...stored, enabled: false });
+    renderPage("acme");
+
+    fireEvent.click(await screen.findByRole("button", { name: "Disable" }));
+    const dialog = await screen.findByRole("dialog");
+    fireEvent.click(within(dialog).getByRole("button", { name: "Disable" }));
+
+    const word = await screen.findByText("disabled");
+    expect(word.tagName).toBe("SPAN");
+    expect(word.parentElement).toHaveTextContent("Acme sync disabled.");
+  });
 });

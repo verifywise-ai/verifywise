@@ -155,4 +155,40 @@ describe("Extensions catalog", () => {
     expect(screen.getByText("Disabled")).toBeInTheDocument();
     expect(screen.queryByText("Where it shows up")).not.toBeInTheDocument();
   });
+  // The DOM translator matches whole text nodes, so the catalog text the
+  // database sends and the card's own words each sit in their own node.
+  it("keeps the category and Configuration required in their own text nodes", () => {
+    ctx.extensions = [
+      makeExtension({
+        key: "mlflow",
+        displayName: "MLflow",
+        category: "ml_ops",
+        requiresConfiguration: true,
+        configFields: [
+          {
+            id: 1,
+            fieldKey: "tracking_server_url",
+            fieldType: "url",
+            label: "Tracking server URL",
+            helpText: null,
+            placeholder: null,
+            isRequired: true,
+            isSecret: false,
+            defaultValue: null,
+            displayOrder: 1,
+            options: null,
+            validation: null,
+          },
+        ],
+      }),
+    ];
+    renderWithProviders(<ExtensionsPage />);
+
+    expect(screen.getByText("Configuration required").tagName).toBe("SPAN");
+    const meta = screen.getByText("Configuration required").parentElement!;
+    const nodes = Array.from(meta.childNodes).map((n) => n.textContent?.trim());
+    expect(nodes).toContain("ML Ops");
+    expect(meta).toHaveTextContent("ML Ops · v1.0.0 · Configuration required");
+    expect(screen.getByRole("button", { name: "Configure to enable" })).toBeInTheDocument();
+  });
 });

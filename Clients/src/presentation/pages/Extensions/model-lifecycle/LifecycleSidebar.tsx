@@ -54,7 +54,12 @@ export default function LifecycleSidebar({
         </Typography>
         <Typography sx={{ ...textStyles.caption, color: text.secondary }}>
           {progress?.completion_percentage ?? 0}% complete
-          {progress ? ` (${progress.filled_items}/${progress.total_items} items)` : ""}
+          {progress && (
+            <>
+              {" "}
+              ({progress.filled_items}/{progress.total_items} <span>items</span>)
+            </>
+          )}
         </Typography>
       </Box>
 

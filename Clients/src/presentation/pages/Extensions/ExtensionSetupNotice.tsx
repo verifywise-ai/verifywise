@@ -5,10 +5,13 @@ import Alert from "../../components/Alert";
 interface ExtensionSetupNoticeProps {
   /** Extension key, used for the settings route (`/extensions/<key>/settings`). */
   extensionKey: string;
-  /** Product name shown to people who cannot set the extension up. */
-  name: string;
   /** What an Admin reads before the settings link. */
   adminText: string;
+  /**
+   * What everyone else reads, as one full sentence
+   * (e.g. "Ask an Admin to set up MLflow.") so it translates as a whole.
+   */
+  askAdminText: string;
 }
 
 /**
@@ -18,8 +21,8 @@ interface ExtensionSetupNoticeProps {
  */
 export default function ExtensionSetupNotice({
   extensionKey,
-  name,
   adminText,
+  askAdminText,
 }: ExtensionSetupNoticeProps) {
   const canSetUp = useCan("extension.admin");
   const navigate = useNavigate();
@@ -28,7 +31,7 @@ export default function ExtensionSetupNotice({
     <Alert
       variant="warning"
       inline
-      body={canSetUp ? adminText : `Ask an Admin to set up ${name}.`}
+      body={canSetUp ? adminText : askAdminText}
       action={
         canSetUp
           ? {

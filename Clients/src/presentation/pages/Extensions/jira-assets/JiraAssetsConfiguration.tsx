@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import React, { type ReactNode, useState, useEffect, useCallback, useMemo, useRef } from "react";
 import {
   Box,
   Typography,
@@ -27,6 +27,7 @@ import StandardModal from "../../../components/Modals/StandardModal";
 import { getApiErrorReason } from "../../../../application/utils/apiErrorReason";
 import { CustomizableButton } from "../../../components/button/customizable-button";
 import ExtensionSyncPanel from "../../../components/ExtensionSyncPanel";
+import { describeRunCounts } from "../../../components/ExtensionSyncPanel/runCounts";
 import {
   useExtensionSyncStatus,
   type ScheduleState,
@@ -83,8 +84,11 @@ const REMOVE_PROGRESS_LABEL = "Removing use cases";
 /** Desktop control height for the panel's action buttons. */
 const CONTROL_HEIGHT_SX = { height: 30, minHeight: 30 };
 /** The "Sync now" success line, as the page showed it before the shared panel. */
-function describeJiraSync(run: ExtensionRun): string {
-  return `Sync completed: ${run.counts.created ?? 0} created, ${run.counts.updated ?? 0} updated`;
+function describeJiraSync(run: ExtensionRun): ReactNode {
+  return describeRunCounts([
+    { count: run.counts.created ?? 0, label: "created" },
+    { count: run.counts.updated ?? 0, label: "updated" },
+  ]);
 }
 const MISSING_EXPLAINER =
   "Jira no longer returns these objects. Syncs keep their use cases; remove them here if they should go.";
@@ -928,8 +932,8 @@ export const JiraAssetsConfiguration: React.FC = () => {
             }
             items={objectTypes.map((ot) => ({
               _id: ot.id,
-              name:
-                ot.objectCount !== undefined ? `${ot.name} (${ot.objectCount} objects)` : ot.name,
+              // Name and count only: a select option is one string, so no word to translate.
+              name: ot.objectCount !== undefined ? `${ot.name} (${ot.objectCount})` : ot.name,
             }))}
           />
         </Box>
@@ -987,8 +991,13 @@ export const JiraAssetsConfiguration: React.FC = () => {
               </Typography>
               <Typography variant="body2" fontSize={12} color="text.secondary">
                 {importedUseCases.length} use cases imported
-                {lastSyncAt &&
-                  ` • Last sync: ${formatDate(new Date(lastSyncAt), { includeTime: true })}`}
+                {lastSyncAt && (
+                  <>
+                    {" • "}
+                    {"Last sync: "}
+                    {formatDate(new Date(lastSyncAt), { includeTime: true })}
+                  </>
+                )}
               </Typography>
             </Box>
             <Box sx={{ display: "flex", gap: 1 }}>
@@ -1075,7 +1084,14 @@ export const JiraAssetsConfiguration: React.FC = () => {
                   testId="jira-import-selected"
                   sx={CONTROL_HEIGHT_SX}
                 >
-                  {isImporting ? "Importing..." : `Import ${selectedObjects.size} selected`}
+                  {isImporting ? (
+                    "Importing..."
+                  ) : (
+                    // "Import selected" is its own text node so it translates.
+                    <>
+                      {"Import selected"} ({selectedObjects.size})
+                    </>
+                  )}
                 </CustomizableButton>
               </Box>
 

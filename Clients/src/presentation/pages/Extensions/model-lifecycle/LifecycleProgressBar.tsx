@@ -44,7 +44,12 @@ export default function LifecycleProgressBar({
           return (
             <Tooltip
               key={phase.phase_id}
-              title={`${phase.phase_name}: ${phase.filled_items}/${phase.total_items} items`}
+              // The phase name and counts are their own text nodes so "items" translates.
+              title={
+                <>
+                  {phase.phase_name}: {phase.filled_items}/{phase.total_items} <span>items</span>
+                </>
+              }
               arrow
             >
               <Box
