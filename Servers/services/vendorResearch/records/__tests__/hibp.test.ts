@@ -138,6 +138,27 @@ describe("parseHibp", () => {
     expect(performance.now() - startedAt).toBeLessThan(2000);
   });
 
+  it("strips a tag that removing the tags inside it puts together, however deep", () => {
+    const [nested, deeper] = parseHibp([
+      raw({ Description: "A <scr<script>ipt>alert(1)</script> breach" }),
+      raw({ Name: "Deeper", Description: "A <scr<scr<b>ipt>ipt>x breach" }),
+    ]);
+
+    expect(nested.description).toBe("A alert(1) breach");
+    expect(deeper.description).toBe("A x breach");
+  });
+
+  it("strips nested tags in time in proportion to their depth", () => {
+    const startedAt = performance.now();
+
+    const [parsed] = parseHibp([
+      raw({ Description: `A ${"<a".repeat(100_000)}${">".repeat(100_000)} breach` }),
+    ]);
+
+    expect(parsed.description).toBe("A breach");
+    expect(performance.now() - startedAt).toBeLessThan(2000);
+  });
+
   it("writes the line breaks and the white space of a description as single spaces", () => {
     const [parsed] = parseHibp([
       raw({ Description: "  First<br>second<br/>third<br />fourth \n\n  fifth\t sixth  " }),

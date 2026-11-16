@@ -34,7 +34,12 @@ const PACKAGE_RELATIONSHIPS = "http://schemas.openxmlformats.org/package/2006/re
 type Cell = string | number | boolean | null;
 
 const xmlEscape = (text: string): string =>
-  text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&apos;");
 
 /** `1` is A, `27` is AA. */
 function columnName(column: number): string {

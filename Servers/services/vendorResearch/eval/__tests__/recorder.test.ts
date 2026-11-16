@@ -342,7 +342,9 @@ describe("createRecorder", () => {
       );
       // The entry of OFAC's list is offered, as in the replay of the case.
       expect(
-        first.pack.some((source) => source.url.startsWith("https://sanctionssearch.ofac")),
+        first.pack.some(
+          (source) => new URL(source.url).hostname === "sanctionssearch.ofac.treas.gov",
+        ),
       ).toBe(true);
       expect(second.pack).toEqual(first.pack);
       expect(second.kept).toEqual(first.kept);

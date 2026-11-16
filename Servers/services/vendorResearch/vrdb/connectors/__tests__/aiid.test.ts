@@ -742,6 +742,24 @@ describe("aiidConnector.parse", () => {
       expect(aiidDescriptionOf("One <b <i>two</i> three")).toBe("One <b two three");
     });
 
+    it("strips a tag that removing the tags inside it puts together, however deep, and one its references spell", () => {
+      expect(aiidDescriptionOf("A <scr<script>ipt>alert(1)</script> here")).toBe("A alert(1) here");
+      expect(aiidDescriptionOf("A <scr<scr<b>ipt>ipt>x here")).toBe("A x here");
+      expect(aiidDescriptionOf("A <<b>i>x</<b>i> here")).toBe("A x here");
+      expect(aiidDescriptionOf("A &lt;scr<b>ipt&gt;x here")).toBe("A x here");
+      expect(aiidDescriptionOf("A &lt;scr&lt;b&gt;ipt&gt;x here")).toBe("A x here");
+      // A `<` that starts no tag stays, and so does a `>` after it.
+      expect(aiidDescriptionOf("Values <5<b>x</b> and 7>")).toBe("Values <5x and 7>");
+    });
+
+    it("strips nested tags in time in proportion to their depth", () => {
+      const startedAt = performance.now();
+      expect(aiidDescriptionOf(`A ${"<a".repeat(100_000)}${">".repeat(100_000)} here`)).toBe(
+        "A here",
+      );
+      expect(performance.now() - startedAt).toBeLessThan(2000);
+    });
+
     it("leaves a less-than sign that starts no tag", () => {
       for (const text of [
         "Fewer than 5 <5% of cases, a < b, and 3<4.",

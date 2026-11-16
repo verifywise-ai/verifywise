@@ -1306,7 +1306,7 @@ describe("the spellings of a party", () => {
       const row = body.rows.find((candidate) => candidate.id.startsWith("anglebracket"));
       const record = recordOf(parsed, (row as FtcCompetitionRow).id);
       expect(record.identifiers.party).toBe(
-        whole.replace("<", cp(0x2039)).replace(">", cp(0x203a)),
+        `Anglebracket${cp(0x2039)}${"x".repeat(110)}${cp(0x203a)} Inc`,
       );
       expect(JSON.stringify(record)).not.toMatch(/[<>]/);
     });

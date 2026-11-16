@@ -384,7 +384,9 @@ describe("classifySource", () => {
     });
 
     it("takes a page of atlas.mitre.org, or of a subdomain of it, for trusted press under the name MITRE ATLAS, from the one registry entry that holds the host", () => {
-      expect(REGISTRY.filter((entry) => entry.hosts.includes("atlas.mitre.org"))).toHaveLength(1);
+      expect(
+        REGISTRY.filter((entry) => entry.hosts.some((host) => host === "atlas.mitre.org")),
+      ).toHaveLength(1);
       for (const url of [
         "https://atlas.mitre.org/studies/AML.CS0046",
         "https://atlas.mitre.org/matrices/ATLAS",

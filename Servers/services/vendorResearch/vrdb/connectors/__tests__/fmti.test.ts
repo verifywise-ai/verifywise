@@ -795,11 +795,14 @@ describe("fmtiConnector", () => {
 
     it("reads a header with a byte order mark, line ends of CRLF, a last row without a line break, and blank lines", async () => {
       const bom = String.fromCodePoint(0xfeff);
+      // A blank line after the header: the first line end, doubled.
+      const csv = csvOf();
+      const headerEnd = csv.indexOf("\n");
       for (const text of [
         `${bom}${csvOf()}`,
         csvOf({ eol: "\r\n" }),
         csvOf({ noFinalBreak: true }),
-        csvOf().replace("\n", "\n\n"),
+        `${csv.slice(0, headerEnd)}\n${csv.slice(headerEnd)}`,
       ]) {
         const { result } = await run(text);
         expect(result.records).toHaveLength(11);

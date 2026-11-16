@@ -2587,12 +2587,9 @@ describe("c2paConformingConnector", () => {
 
     it("do not pollute what they name: a key called __proto__ is a key of its own", async () => {
       // JSON.parse makes the key an own property of the product, and sets no prototype with it.
-      const item: unknown = JSON.parse(
-        JSON.stringify(product({ n: 11104, applicant: "Proto Optical" })).replace(
-          "{",
-          '{"__proto__":{"applicant":"polluted"},',
-        ),
-      );
+      const json = JSON.stringify(product({ n: 11104, applicant: "Proto Optical" }));
+      expect(json.startsWith("{")).toBe(true);
+      const item: unknown = JSON.parse(`{"__proto__":{"applicant":"polluted"},${json.slice(1)}`);
       const done = await run([...fillers(), item]);
       expect(done.byId.has("protooptical")).toBe(true);
       expect(everythingOf(done)).not.toContain("polluted");

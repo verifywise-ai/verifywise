@@ -42,9 +42,39 @@ const NAME = /^[A-Za-z0-9][A-Za-z0-9._-]{0,99}$/;
 const DAY = /^\d{4}-\d{2}-\d{2}/;
 const textOf = (value: unknown): string => (typeof value === "string" ? value : "");
 
+const LESS_THAN = 0x3c;
+const GREATER_THAN = 0x3e;
+
+/**
+ * The text without anything from a `<` to the next `>` with no `<` or `>` between them. A tag that
+ * removing another one puts together (`<scr<b>ipt>`) is removed too, as if the tags were removed
+ * again and again until none is left, but in one pass: the `<` that are still open are kept on a
+ * stack, and a `>` closes the last one. A `>` that closes no `<` is kept.
+ */
+function withoutTags(text: string): string {
+  const kept: number[] = [];
+  const open: number[] = [];
+  for (let index = 0; index < text.length; index += 1) {
+    const code = text.charCodeAt(index);
+    if (code === LESS_THAN) {
+      open.push(kept.length);
+      kept.push(code);
+    } else if (code === GREATER_THAN && open.length > 0) {
+      kept.length = open.pop() as number;
+    } else {
+      kept.push(code);
+    }
+  }
+  let result = "";
+  for (let index = 0; index < kept.length; index += 8192) {
+    result += String.fromCharCode(...kept.slice(index, index + 8192));
+  }
+  return result;
+}
+
 /** The text of a description that HIBP writes in a little HTML. */
 function plainText(html: string): string {
-  const text = decodeEntities(html.replace(/<br\s*\/?>/gi, " ").replace(/<[^<>]*>/g, ""));
+  const text = decodeEntities(withoutTags(html.replace(/<br\s*\/?>/gi, " ")));
   return cleanText(text).replace(/\s+/g, " ").trim();
 }
 

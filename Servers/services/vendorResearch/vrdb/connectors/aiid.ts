@@ -88,7 +88,7 @@ export const AIID_SHEET_LIMITS: SheetLimits = { maxRows: 20_000, maxColumns: 256
 
 /** The address of an export: https, the pinned host, any folders, then the file named by its date. */
 const EXPORT_ADDRESS = new RegExp(
-  `^https://${AIID_EXPORT_HOST.replace(/\./g, "\\.")}/(?:[^?#\\s"'<>\\\\]*/)?AIID_Excel_Export-(\\d{8})\\.xlsx$`,
+  `^https://${AIID_EXPORT_HOST.replace(/[\\^$.*+?()[\]{}|]/g, "\\$&")}/(?:[^?#\\s"'<>\\\\]*/)?AIID_Excel_Export-(\\d{8})\\.xlsx$`,
 );
 const EXPORT_NAME_START = "AIID_Excel_Export-";
 /** What ends an address in the text of a page: a quote, a bracket, white space, a comma. */
@@ -110,8 +110,57 @@ const SHORTENED = " [shortened]";
 const MAX_FIELD_CHARS = 1000;
 const MAX_INCIDENT_ID_DIGITS = 9;
 
-/** An HTML tag, or a comment or declaration without a `<` or `>` in it; `<5 and 7>` is not one. */
-const TAG = /<\/?[A-Za-z!?][^<>]*>/g;
+const LESS_THAN = 0x3c;
+const GREATER_THAN = 0x3e;
+const SLASH = 0x2f;
+
+/** A letter, `!` or `?`: what comes after the `<` (or `</`) that starts a tag. */
+function startsTag(code: number): boolean {
+  return (
+    (code >= 0x41 && code <= 0x5a) ||
+    (code >= 0x61 && code <= 0x7a) ||
+    code === 0x21 ||
+    code === 0x3f
+  );
+}
+
+/**
+ * The text without its HTML tags, comments and declarations: a `<`, an optional `/`, a letter, `!`
+ * or `?`, and no `<` or `>` up to the `>`; `<5 and 7>` is not one. A tag that removing another one
+ * puts together (`<scr<b>ipt>`) is removed too, as if the tags were removed again and again until
+ * none is left, but in one pass: the `<` that are still open are kept on a stack, and a `>` closes
+ * the last one. A `>` that closes no tag closes every `<` before it, since a tag holds no `>`.
+ */
+function withoutTags(text: string): string {
+  const kept: number[] = [];
+  let open: number[] = [];
+  for (let index = 0; index < text.length; index += 1) {
+    const code = text.charCodeAt(index);
+    if (code === LESS_THAN) {
+      open.push(kept.length);
+      kept.push(code);
+    } else if (code === GREATER_THAN) {
+      const start = open.pop();
+      const first = start === undefined ? -1 : start + 1;
+      const isTag =
+        start !== undefined &&
+        (startsTag(kept[first]) || (kept[first] === SLASH && startsTag(kept[first + 1])));
+      if (isTag) {
+        kept.length = start;
+      } else {
+        kept.push(code);
+        open = [];
+      }
+    } else {
+      kept.push(code);
+    }
+  }
+  let result = "";
+  for (let index = 0; index < kept.length; index += 8192) {
+    result += String.fromCharCode(...kept.slice(index, index + 8192));
+  }
+  return result;
+}
 /** `[text](url)`, the url with at most one level of parentheses; each part is read once. */
 const MARKDOWN_LINK = /\[([^[\]]*)\]\((?:[^()\s]|\([^()\s]*\))*\)/g;
 const BLANK_LINE = /\r?\n[^\S\r\n]*\r?\n/;
@@ -249,8 +298,8 @@ function shortened(text: string): string {
  * them; it keeps a description that carried markup from putting it before the model.
  */
 export function aiidDescriptionOf(text: string): string {
-  const reduced = visible(text).replace(TAG, "").replace(MARKDOWN_LINK, "$1");
-  const decoded = visible(decodeEntities(reduced)).replace(TAG, "");
+  const reduced = withoutTags(visible(text)).replace(MARKDOWN_LINK, "$1");
+  const decoded = withoutTags(visible(decodeEntities(reduced)));
   return shortened(oneLine(cleanText(decoded.trim().split(BLANK_LINE, 1)[0])));
 }
 

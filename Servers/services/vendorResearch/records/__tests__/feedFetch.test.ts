@@ -183,7 +183,9 @@ describe("fetchFeed", () => {
       if (url.endsWith("/robots.txt")) {
         requested.push(url);
         return response(
-          url.startsWith("https://acme.statuspage.io") ? "User-agent: *\nDisallow: /history\n" : "",
+          new URL(url).origin === "https://acme.statuspage.io"
+            ? "User-agent: *\nDisallow: /history\n"
+            : "",
           { contentType: "text/plain" },
         );
       }

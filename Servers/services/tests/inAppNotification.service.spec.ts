@@ -484,7 +484,19 @@ describe("inAppNotification.service", () => {
       expect(contextHtml).toContain("&lt;u&gt;p&lt;/u&gt;");
       expect(contextHtml).toContain("&lt;img src=x onerror=alert(1)&gt;");
       // The rows are still a table: only the values were turned into text.
-      expect(contextHtml).toMatch(/^<table [^>]*>(<tr>.*<\/tr>)+<\/table>$/);
+      // Read without a regular expression, which on a long run of rows would backtrack: an opening
+      // table tag, one or more rows on one line each, and the closing tag.
+      expect(contextHtml.startsWith("<table ")).toBe(true);
+      expect(contextHtml.endsWith("</table>")).toBe(true);
+      const tableStart = contextHtml.indexOf(">") + 1;
+      expect(contextHtml.slice("<table ".length, tableStart)).not.toContain("<");
+      const rows = contextHtml.slice(tableStart, -"</table>".length).split("</tr>");
+      expect(rows.pop()).toBe("");
+      expect(rows.length).toBeGreaterThan(0);
+      for (const row of rows) {
+        expect(row.startsWith("<tr>")).toBe(true);
+        expect(row).not.toContain("\n");
+      }
 
       // What the recipient gets: text for every value, markup only where the template has it.
       const html = await render(template, variables);

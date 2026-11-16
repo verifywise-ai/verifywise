@@ -82,7 +82,12 @@ interface CaseRow {
 }
 
 const xmlEscape = (text: string): string =>
-  text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&apos;");
 
 /** The Excel serial of a day, in the 1900 system. */
 const serialOf = (day: string): number =>
@@ -2971,7 +2976,7 @@ describe("the entities", () => {
         );
         const record = recordOf(parsed, rowStartingWith(body, "anglebracket").id);
         expect(record.identifiers.defendant).toBe(
-          whole.replace("<", cp(0x2039)).replace(">", cp(0x203a)),
+          `Anglebracket${cp(0x2039)}${"x".repeat(110)}${cp(0x203a)} Inc`,
         );
         expect(JSON.stringify(record)).not.toMatch(/[<>]/);
       });
@@ -3663,7 +3668,9 @@ describe("the download", () => {
   });
 
   it("reads a catalogue whose keys are named like the properties of an object", async () => {
-    const text = catalogueOf().replace("{", '{"__proto__":{"polluted":true},"constructor":1,');
+    const catalogue = catalogueOf();
+    expect(catalogue.startsWith("{")).toBe(true);
+    const text = `{"__proto__":{"polluted":true},"constructor":1,${catalogue.slice(1)}`;
     const { body } = await run(rows, { catalogue: text });
     expect(body.total).toBe(313);
     expect(({} as { polluted?: boolean }).polluted).toBeUndefined();

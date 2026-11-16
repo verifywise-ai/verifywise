@@ -300,7 +300,12 @@ describe("readSheetTable", () => {
   };
 
   const xmlEscape = (text: string): string =>
-    text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    text
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&apos;");
 
   /** `1` is A, `27` is AA. */
   function columnName(column: number): string {
