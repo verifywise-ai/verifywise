@@ -1728,3 +1728,69 @@ describe("round 3: advisor analytics and policy links", () => {
     expect((await read()).total_count).toBe(0);
   });
 });
+
+describe("use case delete: risks linked only to the use case", () => {
+  const path = (projectId: number) => `/api/v1/projects/${projectId}/risks-linked-only-here`;
+
+  it("lists the active risks linked to this use case and no other", async () => {
+    const archived = await risk(seed.orgId, "archived on A", [seed.projectA]);
+    await sequelize.query(`UPDATE risks SET is_deleted = true WHERE id = :id`, {
+      replacements: { id: archived },
+    });
+
+    const res = await (await apiAs(seed.users.memberA)).get(path(seed.projectA));
+    expect(res.status).toBe(200);
+    // Not "both" (still linked to B), not "unlinked" (never on A), not the archived one.
+    expect(res.body.data).toEqual({
+      count: 1,
+      risks: [{ id: seed.risks.onlyA, risk_name: "Visprobe only A" }],
+    });
+
+    const onB = await (await apiAs(seed.users.admin)).get(path(seed.projectB));
+    expect(ids(onB.body.data.risks)).toEqual(
+      sorted([seed.risks.onlyB, seed.risks.ownedOnB, seed.risks.approvedOnB]),
+    );
+  });
+
+  it("is refused to a caller who could not delete the use case", async () => {
+    const res = await (await apiAs(seed.users.noAccess)).get(path(seed.projectA));
+    expect(res.status).toBe(403);
+  });
+
+  it("answers 404 for a use case in another organization", async () => {
+    const otherOrg = await createTestOrganization();
+    const otherOwner = await user(otherOrg, "Admin");
+    const otherProject = await createTestProject(otherOrg, otherOwner.userId, {
+      project_title: "Other org use case",
+    });
+    await risk(otherOrg, "other org only", [otherProject]);
+
+    const res = await (await apiAs(seed.users.admin)).get(path(otherProject));
+    expect(res.status).toBe(404);
+  });
+
+  it("archive then delete leaves nothing revealed; delete alone reveals the risk", async () => {
+    // The dialog's archive path: archive what the endpoint listed, then delete.
+    const member = await apiAs(seed.users.memberA);
+    const listed = await member.get(path(seed.projectA));
+    const archive = await member
+      .patch("/api/projectRisks/bulk")
+      .send({ ids: listed.body.data.risks.map((r: { id: number }) => r.id), action: "archive" });
+    expect(archive.status).toBe(200);
+    expect((await member.delete(`/api/projects/${seed.projectA}`)).status).toBe(202);
+    expect((await riskRow(seed.risks.onlyA)).is_deleted).toBe(true);
+    const noAccessList = ids(await getAllRisksQuery(seed.orgId, "active", seed.users.noAccess));
+    expect(noAccessList).not.toContain(seed.risks.onlyA);
+
+    // With A gone, the risk that was on A and B is now linked only to B.
+    const admin = await apiAs(seed.users.admin);
+    expect(ids((await admin.get(path(seed.projectB))).body.data.risks)).toEqual(
+      sorted([seed.risks.onlyB, seed.risks.both, seed.risks.ownedOnB, seed.risks.approvedOnB]),
+    );
+    // The keep path: delete only, and the risk on B alone shows to everyone.
+    expect((await admin.delete(`/api/projects/${seed.projectB}`)).status).toBe(202);
+    expect(ids(await getAllRisksQuery(seed.orgId, "active", seed.users.memberA))).toContain(
+      seed.risks.onlyB,
+    );
+  });
+});

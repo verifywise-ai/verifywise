@@ -1601,3 +1601,43 @@ export const PROJECT_RISK_CATEGORIES = [
 export type ProjectRiskCategory = (typeof PROJECT_RISK_CATEGORIES)[number];
 
 export const PROJECT_RISK_CATEGORIES_SET: Set<string> = new Set(PROJECT_RISK_CATEGORIES);
+
+/**
+ * The active risks that deleting a use case would leave linked to no use case
+ * at all. Deleting a use case removes its projects_risks rows and keeps the
+ * risks, and a risk with no projects_risks row is visible to everyone in the
+ * organization (riskVisibilitySql), so these are the risks the deletion would
+ * reveal.
+ *
+ * Returns null when the use case is not in the organization. The "no other
+ * use case" test ignores projects_risks.organization_id for the same reason
+ * riskVisibilitySql does: a row with a NULL organization still counts as a
+ * link. Archived (soft deleted) risks are left out.
+ */
+export const getRisksLinkedOnlyToProjectQuery = async (
+  projectId: number,
+  organizationId: number,
+): Promise<{ id: number; risk_name: string }[] | null> => {
+  const [project] = await sequelize.query<{ id: number }>(
+    `SELECT id FROM projects WHERE id = :projectId AND organization_id = :organizationId`,
+    { replacements: { projectId, organizationId }, type: QueryTypes.SELECT },
+  );
+  if (!project) return null;
+
+  const rows = await sequelize.query<{ id: number; risk_name: string }>(
+    `SELECT r.id, r.risk_name
+       FROM risks r
+      WHERE r.organization_id = :organizationId
+        AND r.is_deleted = false
+        AND EXISTS (
+          SELECT 1 FROM projects_risks pr
+           WHERE pr.risk_id = r.id AND pr.project_id = :projectId)
+        AND NOT EXISTS (
+          SELECT 1 FROM projects_risks other
+           WHERE other.risk_id = r.id
+             AND other.project_id IS DISTINCT FROM :projectId)
+      ORDER BY r.risk_name, r.id`,
+    { replacements: { projectId, organizationId }, type: QueryTypes.SELECT },
+  );
+  return rows.map((row) => ({ id: Number(row.id), risk_name: row.risk_name }));
+};

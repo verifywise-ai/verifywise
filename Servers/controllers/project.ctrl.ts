@@ -41,6 +41,7 @@ import {
   createPendingFrameworksForApprovedUseCase,
 } from "../utils/approvalRequest.utils";
 import { deleteProjectWithSideEffects } from "../utils/projectDeletion.utils";
+import { getRisksLinkedOnlyToProjectQuery } from "../utils/risk.utils";
 import {
   createUseCaseApprovalRequest,
   notifyUseCaseApprovalRequested,
@@ -860,6 +861,56 @@ export async function deleteProjectById(req: Request, res: Response): Promise<an
       eventType: "Delete",
       description: "Failed to delete project",
       functionName: "deleteProjectById",
+      fileName: "project.ctrl.ts",
+      error: error as Error,
+      userId: req.userId!,
+      organizationId: req.organizationId!,
+    });
+
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
+  }
+}
+
+/**
+ * GET /api/v1/projects/:id/risks-linked-only-here: the active risks that
+ * deleting this use case would leave linked to no use case, which makes them
+ * visible to everyone in the organization. The delete dialog asks first. The
+ * route lets through only callers who could delete the use case, and every
+ * such caller can see these risks (they are linked to a use case the caller
+ * has write access to).
+ */
+export async function getRisksLinkedOnlyToProject(req: Request, res: Response): Promise<any> {
+  const projectId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id, 10);
+
+  logProcessing({
+    description: `starting getRisksLinkedOnlyToProject for project ID ${projectId}`,
+    functionName: "getRisksLinkedOnlyToProject",
+    fileName: "project.ctrl.ts",
+    userId: req.userId!,
+    organizationId: req.organizationId!,
+  });
+
+  try {
+    const risks = await getRisksLinkedOnlyToProjectQuery(projectId, req.organizationId!);
+    if (!risks) {
+      return res.status(404).json(STATUS_CODE[404]({}));
+    }
+
+    await logSuccess({
+      eventType: "Read",
+      description: `Retrieved ${risks.length} risks linked only to project ID ${projectId}`,
+      functionName: "getRisksLinkedOnlyToProject",
+      fileName: "project.ctrl.ts",
+      userId: req.userId!,
+      organizationId: req.organizationId!,
+    });
+
+    return res.status(200).json(STATUS_CODE[200]({ count: risks.length, risks }));
+  } catch (error) {
+    await logFailure({
+      eventType: "Read",
+      description: `Failed to read the risks linked only to project ID ${projectId}`,
+      functionName: "getRisksLinkedOnlyToProject",
       fileName: "project.ctrl.ts",
       error: error as Error,
       userId: req.userId!,

@@ -49,6 +49,8 @@ const mockDeleteProject = vi.fn();
 vi.mock("../../../../application/repository/project.repository", () => ({
   updateProject: (...args: any[]) => mockUpdateProject(...args),
   deleteProject: (...args: any[]) => mockDeleteProject(...args),
+  // The delete dialog asks which risks the delete would reveal; none here.
+  getRisksLinkedOnlyToProject: async () => ({ count: 0, risks: [] }),
 }));
 
 vi.mock("../../../../application/tools/log.engine", () => ({
@@ -501,6 +503,7 @@ describe("ProjectSettings", () => {
     expect(screen.getByText("Delete this use case?")).toBeInTheDocument();
     expect(screen.getByText(/This cannot be undone\./)).toBeInTheDocument();
 
+    await waitFor(() => expect(screen.getByRole("button", { name: "Delete" })).toBeEnabled());
     fireEvent.click(screen.getByRole("button", { name: "Delete" }));
 
     await waitFor(() => {
@@ -517,6 +520,7 @@ describe("ProjectSettings", () => {
     await waitFor(() => expect(screen.getByDisplayValue("Chatbot Assistant")).toBeInTheDocument());
 
     fireEvent.click(screen.getByRole("button", { name: "Delete use case" }));
+    await waitFor(() => expect(screen.getByRole("button", { name: "Delete" })).toBeEnabled());
     fireEvent.click(screen.getByRole("button", { name: "Delete" }));
 
     expect(

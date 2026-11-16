@@ -10,7 +10,13 @@ import {
   validateRaciProjectId,
   validateRaciRoleChange,
 } from "../../middleware/validators/raci.validator";
-import { createProject, updateProjectById } from "../../controllers/project.ctrl";
+import {
+  createProject,
+  getRisksLinkedOnlyToProject,
+  updateProjectById,
+} from "../../controllers/project.ctrl";
+import { validateProjectIdParam } from "../../middleware/validators/project.validator";
+import { requireProjectAccess } from "../../middleware/projectAccess.middleware";
 import { getRaciMatrix, updateRaciUserRoles } from "../../controllers/raci.ctrl";
 import {
   createAiAppFromUseCase,
@@ -42,6 +48,18 @@ router.patch(
   validateUpdateProjectV1,
   acceptExternalOwner,
   updateProjectById,
+);
+
+// What deleting the use case would reveal: its risks linked to no other use
+// case. Same gate as DELETE /api/projects/:id (useCase.edit plus write access
+// to this use case), since only someone who could delete it needs to know.
+router.get(
+  "/:id/risks-linked-only-here",
+  authenticateJWT,
+  authorize("useCase.edit"),
+  validateProjectIdParam,
+  requireProjectAccess("id", "params", "write"),
+  getRisksLinkedOnlyToProject,
 );
 
 router.get("/:id/raci", authenticateJWT, validateRaciProjectId, getRaciMatrix);

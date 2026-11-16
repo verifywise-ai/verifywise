@@ -34,6 +34,7 @@ import { checkStringValidation } from "../../../../application/validations/strin
 import selectValidation from "../../../../application/validations/selectValidation";
 import Alert from "../../../components/Alert";
 import ConfirmationModal from "../../../components/Dialogs/ConfirmationModal";
+import DeleteUseCaseModal from "../../../components/Modals/DeleteUseCase";
 import {
   assignFrameworkToProject,
   deleteEntityById,
@@ -1836,21 +1837,12 @@ const ProjectSettings = React.memo(
         )}
 
         {isDeleteModalOpen && (
-          <ConfirmationModal
-            title="Delete this use case?"
-            body={
-              <Typography fontSize={13}>
-                This deletes the use case, its framework progress and its files. Its risks stay in
-                the risk register but are no longer linked to it. This cannot be undone.
-              </Typography>
-            }
-            cancelText="Cancel"
+          <DeleteUseCaseModal
+            projectId={Number(projectId)}
+            message="This deletes the use case, its framework progress and its files. Its risks stay in the risk register but are no longer linked to it. This cannot be undone."
             proceedText="Delete"
             onCancel={handleCloseDeleteDialog}
-            onProceed={handleConfirmDelete}
-            proceedButtonColor="error"
-            proceedButtonVariant="contained"
-            TitleFontSize={0}
+            onDelete={handleConfirmDelete}
           />
         )}
 

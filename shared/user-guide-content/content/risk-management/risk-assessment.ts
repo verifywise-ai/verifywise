@@ -266,7 +266,7 @@ export const riskAssessmentContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'When the last use case link of a risk is removed, everyone in the organization can see the risk. This also happens when that use case is deleted.',
+      text: 'When the last use case link of a risk is removed, everyone in the organization can see the risk. This also happens when that use case is deleted. Before you delete a use case, the delete dialog tells you how many of its risks are linked to no other use case and lets you archive them or keep them visible to everyone. Archiving is selected by default. To keep such a risk private instead, cancel and link it to another use case first.',
     },
     {
       type: 'paragraph',

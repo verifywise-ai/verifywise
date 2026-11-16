@@ -10,6 +10,7 @@
  * @param {string} props.title - The title to display next to the radio button.
  * @param {string} props.desc - The description to display below the title.
  * @param {string} props.name - Shared by the options of one group, so the browser treats them as one radio group (one tab stop, arrow keys move the selection).
+ * @param {string} props.testId - Set as data-testid on the radio input.
  *
  * @returns {JSX.Element} The rendered Radio component.
  */
@@ -32,9 +33,22 @@ interface RadioProps {
   desc?: string;
   disabled?: boolean;
   name?: string;
+  /** Rendered as data-testid on the radio input. */
+  testId?: string;
 }
 
-function Radio({ checked, value, id, size, onChange, title, desc, disabled, name }: RadioProps) {
+function Radio({
+  checked,
+  value,
+  id,
+  size,
+  onChange,
+  title,
+  desc,
+  disabled,
+  name,
+  testId,
+}: RadioProps) {
   const theme = useTheme();
   // aria-labelledby/describedby split on whitespace, so the derived ids must not contain any.
   const refId = id.replace(/\s+/g, "-");
@@ -55,6 +69,7 @@ function Radio({ checked, value, id, size, onChange, title, desc, disabled, name
           // (and getByRole) hears "Inherits from", not the whole paragraph.
           slotProps={{
             input: {
+              ...(testId ? { "data-testid": testId } : {}),
               "aria-labelledby": `${refId}-title`,
               "aria-describedby": desc ? `${refId}-desc` : undefined,
             },

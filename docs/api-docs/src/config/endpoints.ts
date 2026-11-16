@@ -13437,6 +13437,23 @@ export const v1V1projectsEndpoints: Endpoint[] = [
     ],
     tag: "v1: V1/Projects",
   },
+  {
+    method: 'GET',
+    path: '/v1/projects/{id}/risks-linked-only-here',
+    summary: "Get Risks Linked Only To Project",
+    description: "The active (not archived) risks linked to this use case and to no other use case, as { count, risks: [{ id, risk_name }] }. Deleting the use case removes its risk links, and a risk with no use case link is visible to everyone in the organization, so the delete dialog reads this first. Same access as DELETE /api/projects/{id}: useCase.edit and write access to the use case (an Admin, its owner, a member or a member of one of its groups).",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The use case id" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 403, description: "No useCase.edit permission, or no write access to the use case" },
+      { status: 404, description: "Use case not found in the organization" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Projects",
+  },
 ];
 
 // v1: V1/Training endpoints

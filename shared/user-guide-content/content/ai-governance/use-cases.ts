@@ -229,6 +229,10 @@ export const useCasesContent: ArticleContent = {
       text: 'Deleting a use case cannot be undone. Any pending approval requests get withdrawn automatically.',
     },
     {
+      type: 'paragraph',
+      text: 'Deleting a use case keeps its risks in the risk register. A risk that was linked only to this use case is then linked to none, so everyone in the organization can see it. When there are such risks, the delete dialog says how many and gives you a choice. **Archive these risks** is selected by default and archives them before the use case is deleted. **Keep them visible to everyone** deletes the use case and leaves the risks as they are. **Show risk names** lists them. To keep a risk private, cancel and link it to another use case first. If the risks cannot be archived, the use case is not deleted.',
+    },
+    {
       type: 'heading',
       id: 'risk-classification-wizard',
       level: 2,

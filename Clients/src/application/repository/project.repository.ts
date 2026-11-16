@@ -52,6 +52,30 @@ export async function deleteProject({ id }: { id: number }): Promise<any> {
   return response;
 }
 
+export interface RisksLinkedOnlyToProject {
+  count: number;
+  risks: { id: number; risk_name: string }[];
+}
+
+/**
+ * The active risks linked to this use case and no other. Deleting the use
+ * case would leave them linked to none, which shows them to everyone in the
+ * organization. Same access as deleting the use case.
+ */
+export async function getRisksLinkedOnlyToProject({
+  id,
+  signal,
+}: {
+  id: number;
+  signal?: AbortSignal;
+}): Promise<RisksLinkedOnlyToProject> {
+  const response = await apiServices.get<{ data: RisksLinkedOnlyToProject }>(
+    `/v1/projects/${id}/risks-linked-only-here`,
+    { signal },
+  );
+  return response.data.data;
+}
+
 export async function getProjectProgressData({
   routeUrl,
   signal,

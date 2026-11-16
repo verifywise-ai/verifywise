@@ -28,9 +28,16 @@ const eventTypeFor = (method: string): "Read" | "Delete" | "Update" => {
  * @param source where the handler reads that field. It must be the same place:
  * a repeated query field is refused rather than resolved, so the id checked
  * here is the id the handler acts on.
+ * @param access "write" applies the write rule to a GET as well, for a read
+ * that only someone who could change the use case may make (what deleting it
+ * would do, for example). The default picks the rule from the method.
  */
 export const requireProjectAccess =
-  (paramName: string = "id", source: "params" | "query" = "params") =>
+  (
+    paramName: string = "id",
+    source: "params" | "query" = "params",
+    access: "method" | "write" = "method",
+  ) =>
   async (req: Request, res: Response, next: NextFunction) => {
     const { userId, role, organizationId } = req;
     if (!userId || !role) {
@@ -44,13 +51,16 @@ export const requireProjectAccess =
     }
 
     try {
-      const accessQuery = req.method === "GET" ? getProjectReadAccessQuery : getProjectAccessQuery;
+      const accessQuery =
+        req.method === "GET" && access === "method"
+          ? getProjectReadAccessQuery
+          : getProjectAccessQuery;
       // No organization means nothing to scope the check to (a pure SuperAdmin).
-      const access = organizationId
+      const result = organizationId
         ? await accessQuery(projectId, { userId, role }, organizationId)
         : "denied";
 
-      if (access === "denied") {
+      if (result === "denied") {
         await logFailure({
           eventType,
           description: `${req.method} refused, no access to project ID ${projectId}`,

@@ -14,6 +14,8 @@ interface ConfirmationModalProps {
   confirmBtnSx?: SxProps<Theme> | undefined;
   isOpen?: boolean;
   isLoading?: boolean;
+  /** Disables only the proceed button, for example while the dialog loads what it asks about. */
+  isProceedDisabled?: boolean;
 }
 
 const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
@@ -29,6 +31,7 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
   confirmBtnSx,
   isOpen = true,
   isLoading = false,
+  isProceedDisabled = false,
 }) => {
   return (
     <Modal
@@ -99,7 +102,7 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
             variant={proceedButtonVariant}
             onClick={onProceed}
             sx={confirmBtnSx}
-            isDisabled={isLoading}
+            isDisabled={isLoading || isProceedDisabled}
           />
         </Stack>
       </Stack>

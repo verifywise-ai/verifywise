@@ -22,6 +22,7 @@ import Chip from "../Chip";
 import StaleMarker from "../LifecycleTabs/StaleMarker";
 import ViewRelationshipsButton from "../ViewRelationshipsButton";
 import IconButton from "../IconButton";
+import DeleteUseCaseModal from "../Modals/DeleteUseCase";
 import {
   ChevronsUpDown,
   ChevronUp,
@@ -200,6 +201,8 @@ const ProjectTableView: React.FC<IProjectTableViewProps> = ({
   const { setProjects } = useContext(VerifyWiseContext);
   const can = useCanCheck();
   const [page, setPage] = useState(0);
+  // The use case whose delete dialog is open.
+  const [projectIdToDelete, setProjectIdToDelete] = useState<number | null>(null);
   const [alert, setAlert] = useState<{
     variant: "success" | "info" | "warning" | "error";
     title?: string;
@@ -636,12 +639,10 @@ const ProjectTableView: React.FC<IProjectTableViewProps> = ({
                           id={project.id}
                           type="use case"
                           onEdit={() => handleEditProject(project.id)}
-                          onDelete={() => {
-                            handleDeleteProject(project.id);
-                          }}
+                          // No warning props: the menu item opens DeleteUseCaseModal,
+                          // which also asks about risks linked only to this use case.
+                          onDelete={() => setProjectIdToDelete(project.id)}
                           onMouseEvent={() => {}}
-                          warningTitle="Delete this use case?"
-                          warningMessage="Note that deleting a use case will remove all data related to that use case from your system. This is permanent and non-recoverable."
                         />
                       )}
                     </Stack>
@@ -734,6 +735,19 @@ const ProjectTableView: React.FC<IProjectTableViewProps> = ({
           )}
         </Table>
       </TableContainer>
+      {projectIdToDelete !== null && (
+        <DeleteUseCaseModal
+          projectId={projectIdToDelete}
+          message="Note that deleting a use case will remove all data related to that use case from your system. This is permanent and non-recoverable."
+          proceedText="Delete use case"
+          onCancel={() => setProjectIdToDelete(null)}
+          onDelete={async () => {
+            const id = projectIdToDelete;
+            setProjectIdToDelete(null);
+            await handleDeleteProject(id);
+          }}
+        />
+      )}
     </>
   );
 };

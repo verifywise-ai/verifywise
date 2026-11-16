@@ -344,13 +344,17 @@ When a project is deleted, the following are removed:
 
 1. Withdraw pending approval requests
 2. Record deletion in change history
-3. Delete associated risks (`projects_risks`)
+3. Delete risk links (`projects_risks`). The risks stay in the register
 4. Delete members (`projects_members`)
 5. Delete framework-specific data (controls, assessments)
 6. Delete framework associations (`projects_frameworks`)
 7. Delete associated files
 8. Delete project record
 9. Trigger `project_deleted` automation
+
+### Risks linked only to the deleted use case
+
+A risk with no use case link is visible to everyone in the organization (see [Visibility](./risk-management.md#visibility)), so deleting a use case reveals the risks linked to it and to no other use case. The delete dialog (`presentation/components/Modals/DeleteUseCase`, used by the use case table and the use case settings page) reads them from `GET /api/v1/projects/:id/risks-linked-only-here` when it opens. When there are some, it says how many, offers to archive them first (the default) or keep them visible, and can list their names. Archiving uses the existing bulk archive route before the delete, and a failed archive stops the delete. The route has the delete route's gate: `useCase.edit` plus write access to the use case. The organizational project deleted from the Framework page uses its own dialog and does not ask.
 
 ## Stakeholder Management
 
