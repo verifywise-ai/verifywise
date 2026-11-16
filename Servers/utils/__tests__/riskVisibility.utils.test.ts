@@ -6,10 +6,12 @@ jest.mock("../userPermission.utils", () => ({ getUserRoleInOrganization: jest.fn
 import { sequelize } from "../../database/db";
 import { getUserRoleInOrganization } from "../userPermission.utils";
 import {
+  accessibleProjectIdSql,
   getAccessibleProjectIdsQuery,
   isRiskVisibleQuery,
   projectRiskVisibilitySql,
   riskViewer,
+  riskIdVisibilitySql,
   riskViewerForUserQuery,
   riskVisibilityCondition,
   riskVisibilitySql,
@@ -153,6 +155,52 @@ describe("UNKNOWN_RISK_VIEWER", () => {
     expect(scopedRiskViewer(UNKNOWN_RISK_VIEWER)).toEqual({ userId: 0, role: "" });
     expect(riskVisibilitySql("r", UNKNOWN_RISK_VIEWER).replacements).toEqual({
       visibilityUserId: 0,
+    });
+  });
+});
+
+describe("riskIdVisibilitySql", () => {
+  it("is an EXISTS over the risk with that id in the organization, for a non-Admin", () => {
+    const { sql, replacements } = riskIdVisibilitySql("t.risk_id", { userId: 5, role: "Editor" });
+    expect(sql.startsWith("EXISTS (")).toBe(true);
+    expect(sql).toContain("rvid.id = t.risk_id");
+    expect(sql).toContain("rvid.organization_id = :organizationId");
+    expect(sql).toContain("prv.risk_id = rvid.id");
+    expect(sql).toContain("rvid.risk_owner = :visibilityUserId");
+    expect(replacements).toEqual({ visibilityUserId: 5 });
+  });
+
+  it.each([
+    ["an Admin", { userId: 1, role: "Admin" }],
+    ["the system viewer", SYSTEM_RISK_VIEWER],
+  ])("is empty for %s", (_label, viewer) => {
+    expect(riskIdVisibilitySql("t.risk_id", viewer)).toEqual({ sql: "", replacements: {} });
+  });
+});
+
+describe("accessibleProjectIdSql", () => {
+  it("keeps only use cases the non-Admin can access", () => {
+    const { sql, replacements } = accessibleProjectIdSql("pr.project_id", {
+      userId: 5,
+      role: "Reviewer",
+    });
+    expect(sql.startsWith(" AND EXISTS (")).toBe(true);
+    expect(sql).toContain("pacc.id = pr.project_id");
+    expect(sql).toContain("pacc.organization_id = :organizationId");
+    expect(sql).toContain("pacc.owner = :visibilityUserId");
+    expect(sql).toContain("projects_members");
+    expect(sql).toContain("project_groups");
+    expect(replacements).toEqual({ visibilityUserId: 5 });
+  });
+
+  it.each([
+    ["an Admin", { userId: 1, role: "Admin" }],
+    ["a SuperAdmin", { userId: 1, role: "SuperAdmin" }],
+    ["the system viewer", SYSTEM_RISK_VIEWER],
+  ])("is empty for %s", (_label, viewer) => {
+    expect(accessibleProjectIdSql("pr.project_id", viewer)).toEqual({
+      sql: "",
+      replacements: {},
     });
   });
 });

@@ -43,7 +43,7 @@ import {
   suggestRisksForUseCase,
 } from "../services/riskSuggestions/riskSuggestions.service";
 
-import { riskViewer, riskVisibilitySql } from "../utils/riskVisibility.utils";
+import { riskViewer, riskVisibilitySql, SYSTEM_RISK_VIEWER } from "../utils/riskVisibility.utils";
 import { translateError } from "../utils/i18n.utils";
 import { IRisk } from "../domain.layer/interfaces/I.risk";
 import { BulkRiskChange } from "../utils/automation/risk.automation.utils";
@@ -854,9 +854,12 @@ export async function bulkUpdateProjectRisks(req: Request, res: Response): Promi
 
         if (action === "archive") {
           for (const id of ids) {
-            // The archived row, for the automation's summary.
+            // The archived row, for the automation's summary. The batch
+            // check above already rejected any id the user cannot see, in
+            // this transaction, so archive as the system rather than repeat
+            // the visibility check once per id.
             const archived = await archiveRiskQuery(id, organizationId, userId, transaction, {
-              viewer: riskViewer(req),
+              viewer: SYSTEM_RISK_VIEWER,
               recordSnapshots: false,
               runAutomations: false,
             });

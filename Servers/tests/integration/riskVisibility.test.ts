@@ -31,6 +31,7 @@ import {
   getRiskByIdQuery,
   getRisksByFrameworkQuery,
   getRisksByProjectQuery,
+  updateRiskByIdQuery,
 } from "../../utils/risk.utils";
 import {
   isRiskVisibleQuery,
@@ -49,7 +50,8 @@ import { getPortfolioByProject } from "../../utils/quantitativeRisk.utils";
 import { getPolicyLinkedObjectByIdQuery } from "../../utils/policyLinkedObject.utils";
 import { writeToolExecutors } from "../../advisor/confirmation/createWriteTool";
 // Importing the module registers the risk write tools with the executor map.
-import "../../advisor/functions/riskFunctions";
+import { availableRiskTools } from "../../advisor/functions/riskFunctions";
+import { availableSearchTools } from "../../advisor/functions/searchFunctions";
 import "../../advisor/functions/policyLinkedObjectFunctions";
 
 const ROLE = { Admin: 1, Editor: 3 } as const;
@@ -252,10 +254,100 @@ describe("risk reads", () => {
     }
   });
 
-  it("a risk's own projects list is not narrowed by the rule", async () => {
-    const rows = await getAllRisksQuery(seed.orgId, "active", seed.users.memberA);
-    const both = rows.find((row) => Number(row.id) === seed.risks.both) as any;
-    expect(sorted(both.projects.map(Number))).toEqual(sorted([seed.projectA, seed.projectB]));
+  it("a risk's projects name only the use cases a non-Admin can access", async () => {
+    const { projectA, projectB } = seed;
+    const projectsOf = (rows: any[] | null, id: number) =>
+      sorted(((rows ?? []).find((row) => Number(row.id) === id)?.projects ?? []).map(Number));
+    const r = seed.risks;
+
+    // The rule still lets the shared risk through for a member of A, but it
+    // names only A. An Admin and the system viewer get both.
+    for (const viewer of [seed.users.memberA, seed.users.groupA]) {
+      expect(projectsOf(await getAllRisksQuery(seed.orgId, "active", viewer), r.both)).toEqual([
+        projectA,
+      ]);
+      expect(
+        projectsOf(await getRisksByProjectQuery(projectA, seed.orgId, "active", viewer), r.both),
+      ).toEqual([projectA]);
+      expect(
+        sorted(((await getRiskByIdQuery(r.both, seed.orgId, viewer)) as any).projects),
+      ).toEqual([projectA]);
+    }
+    for (const viewer of [seed.users.admin, SYSTEM_RISK_VIEWER]) {
+      expect(projectsOf(await getAllRisksQuery(seed.orgId, "active", viewer), r.both)).toEqual(
+        sorted([projectA, projectB]),
+      );
+      expect(
+        sorted(((await getRiskByIdQuery(r.both, seed.orgId, viewer)) as any).projects),
+      ).toEqual(sorted([projectA, projectB]));
+    }
+
+    // The owner of a risk on a hidden use case sees the risk but not the use case.
+    const { noAccess } = seed.users;
+    expect(projectsOf(await getAllRisksQuery(seed.orgId, "active", noAccess), r.ownedOnB)).toEqual(
+      [],
+    );
+    expect(
+      projectsOf(
+        await getRisksByProjectQuery(projectB, seed.orgId, "active", noAccess),
+        r.ownedOnB,
+      ),
+    ).toEqual([]);
+
+    // By framework: link onlyA to the framework too, then read as memberA.
+    await sequelize.query(
+      `INSERT INTO projects_risks (project_id, risk_id, organization_id) VALUES (:projectB, :id, :orgId)`,
+      { replacements: { projectB, id: r.onlyA, orgId: seed.orgId } },
+    );
+    await sequelize.query(
+      `INSERT INTO frameworks_risks (organization_id, risk_id, framework_id) VALUES (:orgId, :id, :fw)`,
+      { replacements: { orgId: seed.orgId, id: r.onlyA, fw: FRAMEWORK_ID } },
+    );
+    expect(
+      projectsOf(
+        await getRisksByFrameworkQuery(FRAMEWORK_ID, seed.orgId, "active", seed.users.memberA),
+        r.onlyA,
+      ),
+    ).toEqual([projectA]);
+    expect(
+      projectsOf(
+        await getRisksByFrameworkQuery(FRAMEWORK_ID, seed.orgId, "active", seed.users.admin),
+        r.onlyA,
+      ),
+    ).toEqual(sorted([projectA, projectB]));
+  });
+
+  it("GET routes return the narrowed projects, and saving them back keeps the hidden link (J3)", async () => {
+    const api = await apiAs(seed.users.memberA);
+    const r = seed.risks;
+    const list = await api.get("/api/projectRisks");
+    expect(list.status).toBe(200);
+    const fromList = (list.body.data as any[]).find((row) => Number(row.id) === r.both);
+    expect(fromList.projects.map(Number)).toEqual([seed.projectA]);
+
+    const one = await api.get(`/api/projectRisks/${r.both}`);
+    expect(one.status).toBe(200);
+    expect(one.body.data.projects.map(Number)).toEqual([seed.projectA]);
+
+    // The form sends back what it was given: the hidden link to B survives.
+    const put = await api
+      .put(`/api/projectRisks/${r.both}`)
+      .send({ review_notes: "Round trip", projects: one.body.data.projects });
+    expect(put.status).toBe(200);
+    expect(await projectLinks(r.both)).toEqual(sorted([seed.projectA, seed.projectB]));
+
+    // The same for an owner whose only link is hidden: the narrowed list is empty.
+    const owner = await apiAs(seed.users.noAccess);
+    const owned = await owner.get(`/api/projectRisks/${r.ownedOnB}`);
+    expect(owned.body.data.projects).toEqual([]);
+    expect(
+      (
+        await owner
+          .put(`/api/projectRisks/${r.ownedOnB}`)
+          .send({ review_notes: "Owner", projects: owned.body.data.projects })
+      ).status,
+    ).toBe(200);
+    expect(await projectLinks(r.ownedOnB)).toEqual([seed.projectB]);
   });
 
   describe("by use case (J7)", () => {
@@ -542,7 +634,9 @@ describe("secondary reads", () => {
       expect(await candidates(seed.users.admin)).toEqual(onAOrB);
       expect(await candidates(SYSTEM_RISK_VIEWER)).toEqual(onAOrB);
       expect(await candidates(seed.users.memberA)).toEqual(sorted([r.onlyA, r.both]));
-      expect(await candidates(seed.users.noAccess)).toEqual(sorted([r.ownedOnB, r.approvedOnB]));
+      // They own or approve these on B, but the picker lists a risk under its
+      // use cases and B is hidden from them, so nothing is listed.
+      expect(await candidates(seed.users.noAccess)).toEqual([]);
 
       const res = await (
         await apiAs(seed.users.memberA)
@@ -1057,5 +1151,342 @@ describe("getRiskByIdQuery and archiveRiskQuery with a viewer", () => {
     }
     expect((await riskRow(seed.risks.onlyB)).is_deleted).toBe(false);
     expect((await riskRow(seed.risks.onlyA)).is_deleted).toBe(true);
+  });
+});
+
+describe("round 2: pickers and the vendor exposure report", () => {
+  let vendor: number;
+  let vendorRisk: number;
+
+  beforeEach(async () => {
+    vendor = await createTestVendor(seed.orgId);
+    await linkVendorToProject(seed.orgId, vendor, seed.projectA);
+    await linkVendorToProject(seed.orgId, vendor, seed.projectB);
+    vendorRisk = await createTestVendorRisk(seed.orgId, { vendor_id: vendor });
+  });
+
+  it("shared-project candidates name only the use cases the viewer can access", async () => {
+    const titles = async (viewer: RiskViewer) =>
+      (await getSharedProjectCandidatesQuery(seed.orgId, seed.risks.both, viewer)).map((c) =>
+        [...c.projects].sort(),
+      );
+    expect(await titles(seed.users.admin)).toEqual([["Use case A", "Use case B"]]);
+    expect(await titles(seed.users.memberA)).toEqual([["Use case A"]]);
+  });
+
+  it("a vendor reached only through a hidden use case is not a candidate", async () => {
+    const onlyOnB = await createTestVendor(seed.orgId);
+    await linkVendorToProject(seed.orgId, onlyOnB, seed.projectB);
+    const hiddenVendorRisk = await createTestVendorRisk(seed.orgId, { vendor_id: onlyOnB });
+    const candidateIds = async (viewer: RiskViewer) =>
+      sorted(
+        (await getSharedProjectCandidatesQuery(seed.orgId, seed.risks.both, viewer)).map((c) =>
+          Number(c.id),
+        ),
+      );
+    expect(await candidateIds(seed.users.admin)).toEqual(sorted([vendorRisk, hiddenVendorRisk]));
+    expect(await candidateIds(seed.users.memberA)).toEqual([vendorRisk]);
+  });
+
+  it("the vendor risk link picker names only accessible use cases", async () => {
+    const titlesOf = async (viewer: RiskViewer, riskId: number) =>
+      (await getVendorRiskChildCandidatesQuery(seed.orgId, vendorRisk, viewer))
+        .find((c) => Number(c.id) === riskId)
+        ?.projects.sort();
+    expect(await titlesOf(seed.users.admin, seed.risks.both)).toEqual(["Use case A", "Use case B"]);
+    expect(await titlesOf(seed.users.memberA, seed.risks.both)).toEqual(["Use case A"]);
+    // An owner sees their risk on B, but not B's title, so the row drops out.
+    expect(await titlesOf(seed.users.noAccess, seed.risks.ownedOnB)).toBeUndefined();
+    expect(await titlesOf(seed.users.admin, seed.risks.ownedOnB)).toEqual(["Use case B"]);
+  });
+
+  it("vendor exposure counts and names only what the viewer can see", async () => {
+    await sequelize.query(
+      `INSERT INTO risk_links (organization_id, source_risk_id, target_vendor_risk_id, relation_type, status, source, reasons)
+       VALUES (:orgId, :a, :vr, 'inherits_from', 'confirmed', 'user', '[]'::jsonb),
+              (:orgId, :b, :vr, 'inherits_from', 'confirmed', 'user', '[]'::jsonb),
+              (:orgId, :both, :vr, 'inherits_from', 'confirmed', 'user', '[]'::jsonb),
+              (:orgId, :owned, :vr, 'inherits_from', 'suggested', 'derived', '[]'::jsonb)`,
+      {
+        replacements: {
+          orgId: seed.orgId,
+          a: seed.risks.onlyA,
+          b: seed.risks.onlyB,
+          both: seed.risks.both,
+          owned: seed.risks.ownedOnB,
+          vr: vendorRisk,
+        },
+      },
+    );
+    const report = async (viewer: UserRiskViewer) => {
+      const res = await (await apiAs(viewer)).get("/api/riskLinks/vendor-exposure");
+      expect(res.status).toBe(200);
+      const risk = (res.body.data.risks as any[]).find((x) => x.vendor_risk_id === vendorRisk);
+      const summary = (res.body.data.vendors as any[]).find((x) => x.vendor_id === vendor);
+      return {
+        children: risk.children,
+        suggested: risk.suggested,
+        useCases: risk.use_cases.map((u: { name: string }) => u.name),
+        inheriting: summary.inheriting_risks,
+        vendorUseCases: summary.use_cases.map((u: { name: string }) => u.name),
+      };
+    };
+
+    expect(await report(seed.users.admin)).toEqual({
+      children: 3,
+      suggested: 1,
+      useCases: ["Use case A", "Use case B"],
+      inheriting: 3,
+      vendorUseCases: ["Use case A", "Use case B"],
+    });
+    expect(await report(seed.users.memberA)).toEqual({
+      children: 2,
+      suggested: 0,
+      useCases: ["Use case A"],
+      inheriting: 2,
+      vendorUseCases: ["Use case A"],
+    });
+    // The owner sees their suggested child, but not the use case it sits in.
+    expect(await report(seed.users.noAccess)).toEqual({
+      children: 0,
+      suggested: 1,
+      useCases: [],
+      inheriting: 0,
+      vendorUseCases: [],
+    });
+  });
+});
+
+describe("round 2: deleting a policy link by its row id", () => {
+  it("a link to a hidden risk answers like a missing row and is kept", async () => {
+    const created = await (await apiAs(seed.users.admin)).post("/api/policies").send({
+      title: `Row delete policy ${Date.now()}`,
+      content_html: "<p>Body</p>",
+      tags: ["Privacy"],
+      next_review_date: "2030-01-15",
+    });
+    expect(created.status).toBe(201);
+    const policyId = created.body.data.id as number;
+    const rows = await sequelize.query<{ id: number; object_id: number }>(
+      `INSERT INTO policy_linked_objects (organization_id, policy_id, object_type, object_id)
+       VALUES (:orgId, :policyId, 'risk', :a), (:orgId, :policyId, 'risk', :b)
+       RETURNING id, object_id`,
+      {
+        replacements: { orgId: seed.orgId, policyId, a: seed.risks.onlyA, b: seed.risks.onlyB },
+        type: QueryTypes.SELECT,
+      },
+    );
+    const rowFor = (riskId: number) => Number(rows.find((r) => Number(r.object_id) === riskId)!.id);
+    const exists = async (rowId: number) =>
+      (
+        await sequelize.query(`SELECT 1 FROM policy_linked_objects WHERE id = :rowId`, {
+          replacements: { rowId },
+          type: QueryTypes.SELECT,
+        })
+      ).length > 0;
+
+    const api = await apiAs(seed.users.memberA);
+    const hidden = await api.delete(
+      `/api/policy-linked/${rowFor(seed.risks.onlyB)}/linked-objects`,
+    );
+    const missing = await api.delete(`/api/policy-linked/${MISSING_ID}/linked-objects`);
+    expect(hidden.status).toBe(missing.status);
+    expect(hidden.body).toEqual(missing.body);
+    expect(await exists(rowFor(seed.risks.onlyB))).toBe(true);
+
+    const visible = await api.delete(
+      `/api/policy-linked/${rowFor(seed.risks.onlyA)}/linked-objects`,
+    );
+    expect(visible.status).toBe(200);
+    expect(await exists(rowFor(seed.risks.onlyA))).toBe(false);
+
+    const asAdmin = await (
+      await apiAs(seed.users.admin)
+    ).delete(`/api/policy-linked/${rowFor(seed.risks.onlyB)}/linked-objects`);
+    expect(asAdmin.status).toBe(200);
+    expect(await exists(rowFor(seed.risks.onlyB))).toBe(false);
+  });
+});
+
+describe("round 2: updateRiskByIdQuery guards its own write", () => {
+  const update = async (riskId: number, viewer: RiskViewer, data: Record<string, unknown>) => {
+    const transaction = await sequelize.transaction();
+    try {
+      const result = await updateRiskByIdQuery(riskId, data as any, seed.orgId, transaction, {
+        viewer,
+        recordSnapshots: false,
+        runAutomations: false,
+      });
+      await transaction.commit();
+      return result;
+    } catch (error) {
+      await transaction.rollback();
+      throw error;
+    }
+  };
+
+  it("a hidden risk returns null and nothing is written, links included", async () => {
+    const before = await riskRow(seed.risks.onlyB);
+    expect(
+      await update(seed.risks.onlyB, seed.users.memberA, {
+        review_notes: "Should not land",
+        projects: [seed.projectA],
+      }),
+    ).toBeNull();
+    expect(await riskRow(seed.risks.onlyB)).toEqual(before);
+    expect(await projectLinks(seed.risks.onlyB)).toEqual([seed.projectB]);
+    expect(await update(MISSING_ID, seed.users.memberA, { review_notes: "x" })).toBeNull();
+  });
+
+  it("a hidden risk with an invalid owner still answers null, not a validation error", async () => {
+    expect(
+      await update(seed.risks.onlyB, seed.users.memberA, { risk_owner: MISSING_ID }),
+    ).toBeNull();
+  });
+
+  it("a visible risk, and any risk for an Admin, is written", async () => {
+    expect(
+      await update(seed.risks.onlyA, seed.users.memberA, { review_notes: "Member" }),
+    ).not.toBeNull();
+    expect((await riskRow(seed.risks.onlyA)).review_notes).toBe("Member");
+    expect(
+      await update(seed.risks.onlyB, seed.users.admin, { review_notes: "Admin" }),
+    ).not.toBeNull();
+    expect((await riskRow(seed.risks.onlyB)).review_notes).toBe("Admin");
+  });
+});
+
+describe("round 2: advisor reads and tools run as the chatting user", () => {
+  const fetchIds = async (params: Record<string, unknown>) =>
+    sorted(
+      ((await availableRiskTools.fetch_risks(params, seed.orgId)) as { id: number }[]).map((r) =>
+        Number(r.id),
+      ),
+    );
+
+  it("fetch_risks returns what the list returns to that user", async () => {
+    const visible = expectedVisible();
+    for (const name of VIEWERS) {
+      expect([name, await fetchIds({ _userId: seed.users[name].userId })]).toEqual([
+        name,
+        visible[name],
+      ]);
+    }
+    // With no user it fails closed: only risks linked to no use case.
+    expect(await fetchIds({})).toEqual(sorted([seed.risks.unlinked, seed.risks.frameworkOnly]));
+    // By use case, J7 applies.
+    expect(
+      await fetchIds({ projectId: seed.projectB, _userId: seed.users.memberA.userId }),
+    ).toEqual([]);
+  });
+
+  it("the executive summary never names a hidden risk", async () => {
+    await sequelize.query(
+      `UPDATE risks SET severity = 'Catastrophic', mitigation_status = 'Not Started'
+        WHERE organization_id = :orgId`,
+      { replacements: { orgId: seed.orgId } },
+    );
+    const summary = async (userId: number) =>
+      (await availableRiskTools.get_executive_summary({ _userId: userId }, seed.orgId)) as any;
+    const member = await summary(seed.users.memberA.userId);
+    expect(member.totalActiveRisks).toBe(expectedVisible().memberA.length);
+    const named = member.urgentRisks.map((u: { id: number }) => Number(u.id));
+    for (const id of named) expect(expectedVisible().memberA).toContain(id);
+    expect(named).not.toContain(seed.risks.onlyB);
+    expect((await summary(seed.users.admin.userId)).totalActiveRisks).toBe(7);
+  });
+
+  it("risk analytics stays organization-wide: counts only (J4)", async () => {
+    const analytics = (await availableRiskTools.get_risk_analytics(
+      { _userId: seed.users.noAccess.userId },
+      seed.orgId,
+    )) as any;
+    expect(analytics.totalRisks).toBe(7);
+  });
+
+  it("the search tools return only the risks the user can see", async () => {
+    const found = async (tool: string, userId: number) => {
+      const result = (await availableSearchTools[tool](
+        { query: "Visprobe", entity_type: "project_risks", _userId: userId },
+        seed.orgId,
+      )) as any;
+      const rows = tool === "global_search" ? result.results.project_risks.results : result.results;
+      return sorted(rows.map((r: { id: number }) => Number(r.id)));
+    };
+    for (const tool of ["global_search", "search_within_entity"]) {
+      expect(await found(tool, seed.users.memberA.userId)).toEqual(expectedVisible().memberA);
+      expect(await found(tool, seed.users.admin.userId)).toEqual(expectedVisible().admin);
+    }
+  });
+
+  it("agent_update_risk answers a hidden risk like a missing one and writes nothing", async () => {
+    const execute = writeToolExecutors.get("agent_update_risk")!;
+    const before = await riskRow(seed.risks.onlyB);
+    const hidden = await execute(
+      {
+        risk_id: seed.risks.onlyB,
+        review_notes: "x",
+        risk_name: "Hidden",
+        _userId: seed.users.memberA.userId,
+      },
+      seed.orgId,
+    ).catch((e: Error) => e);
+    const missing = await execute(
+      { risk_id: MISSING_ID, risk_name: "Missing", _userId: seed.users.memberA.userId },
+      seed.orgId,
+    ).catch((e: Error) => e);
+    expect((hidden as Error).message).toBe("Risk not found");
+    expect((missing as Error).message).toBe("Risk not found");
+    expect(await riskRow(seed.risks.onlyB)).toEqual(before);
+
+    await execute(
+      { risk_id: seed.risks.onlyA, risk_name: "Renamed", _userId: seed.users.memberA.userId },
+      seed.orgId,
+    );
+    const [row] = await sequelize.query<{ risk_name: string }>(
+      `SELECT risk_name FROM risks WHERE id = :id`,
+      { replacements: { id: seed.risks.onlyA }, type: QueryTypes.SELECT },
+    );
+    expect(row.risk_name).toBe("Renamed");
+  });
+
+  it("agent_unlink_object_from_policy leaves a hidden risk's link alone", async () => {
+    const created = await (await apiAs(seed.users.admin)).post("/api/policies").send({
+      title: `Advisor unlink policy ${Date.now()}`,
+      content_html: "<p>Body</p>",
+      tags: ["Privacy"],
+      next_review_date: "2030-01-15",
+    });
+    const policyId = created.body.data.id as number;
+    await sequelize.query(
+      `INSERT INTO policy_linked_objects (organization_id, policy_id, object_type, object_id)
+       VALUES (:orgId, :policyId, 'risk', :a), (:orgId, :policyId, 'risk', :b)`,
+      { replacements: { orgId: seed.orgId, policyId, a: seed.risks.onlyA, b: seed.risks.onlyB } },
+    );
+    const linked = async () =>
+      sorted(
+        (
+          await sequelize.query<{ object_id: number }>(
+            `SELECT object_id FROM policy_linked_objects WHERE policy_id = :policyId`,
+            { replacements: { policyId }, type: QueryTypes.SELECT },
+          )
+        ).map((r) => Number(r.object_id)),
+      );
+    const execute = writeToolExecutors.get("agent_unlink_object_from_policy")!;
+    const unlink = (riskId: number, userId: number) =>
+      execute(
+        { policy_id: policyId, object_type: "risk", object_id: riskId, _userId: userId },
+        seed.orgId,
+      );
+
+    const hidden = await unlink(seed.risks.onlyB, seed.users.memberA.userId);
+    const missing = await unlink(MISSING_ID, seed.users.memberA.userId);
+    expect(hidden).toEqual({ ...(missing as object), object_id: seed.risks.onlyB });
+    expect(await linked()).toEqual(sorted([seed.risks.onlyA, seed.risks.onlyB]));
+
+    await unlink(seed.risks.onlyA, seed.users.memberA.userId);
+    expect(await linked()).toEqual([seed.risks.onlyB]);
+    await unlink(seed.risks.onlyB, seed.users.admin.userId);
+    expect(await linked()).toEqual([]);
   });
 });

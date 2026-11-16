@@ -10,7 +10,7 @@ import {
 } from "../../mocks/mockRiskData";
 import { createMockTenant } from "../../mocks/mockTenant";
 import { IRisk } from "../../../domain.layer/interfaces/I.risk";
-import { SYSTEM_RISK_VIEWER } from "../../../utils/riskVisibility.utils";
+import { UNKNOWN_RISK_VIEWER } from "../../../utils/riskVisibility.utils";
 
 const availableTools = {
   ...availableRiskTools,
@@ -48,6 +48,7 @@ describe("Advisor Functions: fetchRisks", () => {
 
   const fetchRisks = availableTools["fetch_risks"];
 
+  // No _userId (no chatting user): the read fails closed (UNKNOWN_RISK_VIEWER).
   describe("Basic Fetching", () => {
     it("should fetch all risks when no filters provided", async () => {
       jest.spyOn(riskUtils, "getAllRisksQuery").mockResolvedValue(mockRisks);
@@ -57,7 +58,7 @@ describe("Advisor Functions: fetchRisks", () => {
       expect(riskUtils.getAllRisksQuery).toHaveBeenCalledWith(
         mockTenant,
         "active",
-        SYSTEM_RISK_VIEWER,
+        UNKNOWN_RISK_VIEWER,
       );
       expect(result).toEqual(mockRisks.map(toProjection));
       expect(result).toHaveLength(mockRisks.length);
@@ -72,7 +73,7 @@ describe("Advisor Functions: fetchRisks", () => {
         1,
         mockTenant,
         "active",
-        SYSTEM_RISK_VIEWER,
+        UNKNOWN_RISK_VIEWER,
       );
       expect(result).toEqual(mockProjectRisks.map(toProjection));
     });
@@ -86,7 +87,7 @@ describe("Advisor Functions: fetchRisks", () => {
         1,
         mockTenant,
         "active",
-        SYSTEM_RISK_VIEWER,
+        UNKNOWN_RISK_VIEWER,
       );
       expect(result).toEqual(mockFrameworkRisks.map(toProjection));
     });

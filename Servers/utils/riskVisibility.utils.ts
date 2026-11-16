@@ -96,6 +96,56 @@ export function riskVisibilityCondition(
 }
 
 /**
+ * The rule for a risk known only by an id column of another table (a policy
+ * link, a risk link end): `EXISTS (...)` over the risk with that id in the
+ * organization that the viewer can see, or an empty sql for a viewer who sees
+ * every risk. A NULL id matches no risk, so a caller whose column is nullable
+ * must allow the NULL case itself (`col IS NULL OR ...`). The caller's query
+ * must bind :organizationId.
+ */
+export function riskIdVisibilitySql(
+  column: string,
+  viewer: RiskViewer,
+): { sql: string; replacements: Record<string, unknown> } {
+  const condition = riskVisibilityCondition("rvid", viewer);
+  if (!condition) return { sql: "", replacements: {} };
+  return {
+    sql: `EXISTS (
+             SELECT 1 FROM risks rvid
+              WHERE rvid.id = ${column}
+                AND rvid.organization_id = :organizationId
+                AND ${condition.sql})`,
+    replacements: condition.replacements,
+  };
+}
+
+/**
+ * Narrows a risk's use case ids (its `projects` array, the use case of a
+ * mapping row) to the use cases the viewer can access (projectAccessSql), so a
+ * risk never names a use case hidden from the viewer. An " AND EXISTS (...)"
+ * fragment against `projectIdColumn`, or empty for a viewer who sees every use
+ * case. The caller's query must bind :organizationId.
+ *
+ * Only the response is narrowed. An edit keeps the links to hidden use cases
+ * (ruling J3), so sending the narrowed list back loses nothing.
+ */
+export function accessibleProjectIdSql(
+  projectIdColumn: string,
+  viewer: RiskViewer,
+): { sql: string; replacements: Record<string, unknown> } {
+  const scoped = scopedRiskViewer(viewer);
+  if (!scoped) return { sql: "", replacements: {} };
+  const access = projectAccessSql("pacc", scoped.userId);
+  return {
+    sql: ` AND EXISTS (
+             SELECT 1 FROM projects pacc
+              WHERE pacc.id = ${projectIdColumn}
+                AND pacc.organization_id = :organizationId${access.sql})`,
+    replacements: access.replacements,
+  };
+}
+
+/**
  * The rule for the risks of one use case (bound as :projectId). On top of
  * riskVisibilitySql, a viewer who cannot see that use case gets only the risks
  * they own or approve there, so a risk shared with another use case they can

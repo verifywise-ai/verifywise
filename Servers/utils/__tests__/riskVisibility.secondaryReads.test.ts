@@ -8,12 +8,14 @@ jest.mock("../policyManager.utils", () => ({
 import { sequelize } from "../../database/db";
 import { getPortfolioByProject, recordPortfolioSnapshot } from "../quantitativeRisk.utils";
 import {
+  deletePolicyLinkedObjectQuery,
   getAllPolicyLinkedObjectsQuery,
   getPolicyLinkedObjectByIdQuery,
   linkObjectsToPolicyQuery,
 } from "../policyLinkedObject.utils";
 import { ForbiddenException } from "../../domain.layer/exceptions/custom.exception";
 import { wiseSearch } from "../search.utils";
+import { getVendorExposureRowsQuery } from "../vendorRiskReport.utils";
 import { SYSTEM_RISK_VIEWER } from "../riskVisibility.utils";
 
 const mockQuery = sequelize.query as jest.Mock;
@@ -59,9 +61,28 @@ describe("policy linked objects", () => {
     await read();
     const [sql, options] = mockQuery.mock.calls[0];
     expect(sql).toContain("object_type <> 'risk' OR EXISTS");
-    expect(sql).toContain("lr.id = policy_linked_objects.object_id");
-    expect(sql).toContain("prv.risk_id = lr.id");
+    expect(sql).toContain("rvid.id = policy_linked_objects.object_id");
+    expect(sql).toContain("rvid.organization_id = :organizationId");
+    expect(sql).toContain("prv.risk_id = rvid.id");
     expect(options.replacements).toMatchObject({ organizationId: 4, visibilityUserId: 9 });
+  });
+
+  it("delete by row id matches nothing for a link to a hidden risk, like a missing row", async () => {
+    mockQuery.mockResolvedValue([[]]);
+    await deletePolicyLinkedObjectQuery(31, 4, editor);
+    const [sql, options] = mockQuery.mock.calls[0];
+    expect(sql).toContain("DELETE FROM policy_linked_objects");
+    expect(sql).toContain("id = :id AND (policy_linked_objects.object_type <> 'risk' OR EXISTS");
+    expect(sql).toContain("prv.risk_id = rvid.id");
+    expect(options.replacements).toMatchObject({ organizationId: 4, id: 31, visibilityUserId: 9 });
+  });
+
+  it("delete by row id is not narrowed for an Admin", async () => {
+    mockQuery.mockResolvedValue([[]]);
+    await deletePolicyLinkedObjectQuery(31, 4, admin);
+    const [sql, options] = mockQuery.mock.calls[0];
+    expect(sql).not.toContain("object_type <> 'risk'");
+    expect(options.replacements).toEqual({ organizationId: 4, id: 31 });
   });
 
   it("keep every link for an Admin", async () => {
@@ -128,5 +149,27 @@ describe("Wise Search risk results", () => {
     const [sql, { replacements }] = riskSearch();
     expect(sql).not.toContain("visibilityUserId");
     expect(replacements.visibilityUserId).toBeUndefined();
+  });
+});
+
+describe("vendor exposure rows", () => {
+  it("count and name only the project risks and use cases a non-Admin can see", async () => {
+    mockQuery.mockResolvedValue([]);
+    await getVendorExposureRowsQuery(4, editor);
+    const [sql, options] = mockQuery.mock.calls[0];
+    // children: only visible project risks
+    expect(sql).toContain("prv.risk_id = child.id");
+    // use cases: only accessible ones
+    expect(sql).toContain("pacc.id = p.id");
+    expect(sql).toContain("pacc.owner = :visibilityUserId");
+    expect(options.replacements).toMatchObject({ organizationId: 4, visibilityUserId: 9 });
+  });
+
+  it("are not narrowed for an Admin", async () => {
+    mockQuery.mockResolvedValue([]);
+    await getVendorExposureRowsQuery(4, admin);
+    const [sql, options] = mockQuery.mock.calls[0];
+    expect(sql).not.toContain("visibilityUserId");
+    expect(options.replacements).toEqual({ organizationId: 4 });
   });
 });

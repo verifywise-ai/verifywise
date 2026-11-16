@@ -5,6 +5,7 @@ import logger from "../../utils/logger/fileLogger";
 import { linkObjectsToPolicyQuery } from "../../utils/policyLinkedObject.utils";
 import { actingRiskViewer } from "./riskFunctions";
 import { parseBulkIds } from "../../utils/bulkAction.utils";
+import { riskIdVisibilitySql } from "../../utils/riskVisibility.utils";
 
 // --- Read Tools ---
 
@@ -93,18 +94,29 @@ const agentUnlinkObjectFromPolicy = createWriteToolFn({
   descriptionFn: (params) =>
     `Unlink ${params.object_type} #${params.object_id} from policy #${params.policy_id}`,
   executeFn: async (params, organizationId) => {
+    // A link to a risk the acting user cannot see is treated like a missing
+    // link: nothing is deleted and the answer is the same.
+    const visibility =
+      params.object_type === "risk"
+        ? riskIdVisibilitySql(
+            "policy_linked_objects.object_id",
+            await actingRiskViewer(params, organizationId),
+          )
+        : { sql: "", replacements: {} };
+    const hiddenRisk = visibility.sql ? ` AND ${visibility.sql}` : "";
     await sequelize.query(
       `DELETE FROM policy_linked_objects
-       WHERE organization_id = :organization_id
+       WHERE organization_id = :organizationId
        AND policy_id = :policy_id
        AND object_type = :object_type
-       AND object_id = :object_id`,
+       AND object_id = :object_id${hiddenRisk}`,
       {
         replacements: {
-          organization_id: organizationId,
+          organizationId,
           policy_id: params.policy_id,
           object_type: params.object_type,
           object_id: params.object_id,
+          ...visibility.replacements,
         },
       },
     );

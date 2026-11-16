@@ -14,7 +14,13 @@ import { HierarchyEdge, ParentEntityType } from "../services/riskLinks/hierarchy
 import { DismissReason } from "../services/riskLinks/dismissReason";
 import { toJsonArray, toNumber } from "./pgRow.utils";
 import { effectiveRiskLevelSql, riskLevelRankSql } from "./riskLevel.utils";
-import { riskVisibilityCondition, riskVisibilitySql, RiskViewer } from "./riskVisibility.utils";
+import {
+  accessibleProjectIdSql,
+  riskIdVisibilitySql,
+  riskVisibilityCondition,
+  riskVisibilitySql,
+  RiskViewer,
+} from "./riskVisibility.utils";
 
 /**
  * pg hands NUMERIC back as a string and can hand JSONB / JSON_AGG output back
@@ -917,6 +923,9 @@ export async function getVendorRiskChildCandidatesQuery(
   viewer: RiskViewer,
 ): Promise<VendorRiskChildCandidate[]> {
   const childVisibility = riskVisibilitySql("child", viewer);
+  // Only the use cases the viewer can access: a hidden one's title is never
+  // named, and a risk reached only through it drops out.
+  const projectAccess = accessibleProjectIdSql("p.id", viewer);
   const rows = await sequelize.query(
     `SELECT DISTINCT child.id AS id, p.project_title AS project_title
        FROM vendorrisks vr
@@ -933,10 +942,15 @@ export async function getVendorRiskChildCandidatesQuery(
        JOIN projects p ON p.id = vp.project_id
       WHERE vr.id = :vendorRiskId
         AND vr.organization_id = :organizationId
-        AND vr.is_deleted = false${childVisibility.sql}
+        AND vr.is_deleted = false${childVisibility.sql}${projectAccess.sql}
       ORDER BY child.id, p.project_title`,
     {
-      replacements: { organizationId, vendorRiskId, ...childVisibility.replacements },
+      replacements: {
+        organizationId,
+        vendorRiskId,
+        ...childVisibility.replacements,
+        ...projectAccess.replacements,
+      },
       type: QueryTypes.SELECT,
     },
   );
@@ -1208,16 +1222,14 @@ function linkEndsVisibilitySql(viewer: RiskViewer): {
   sql: string;
   replacements: Record<string, unknown>;
 } {
-  const source = riskVisibilityCondition("lsr", viewer);
-  const target = riskVisibilityCondition("ltr", viewer);
-  if (!source || !target) return { sql: "", replacements: {} };
+  // Both ends are nullable (a vendor or model risk end has no risk id), and a
+  // NULL end is not a project risk, so it never hides the link.
+  const source = riskIdVisibilitySql("risk_links.source_risk_id", viewer);
+  const target = riskIdVisibilitySql("risk_links.target_risk_id", viewer);
+  if (!source.sql || !target.sql) return { sql: "", replacements: {} };
   return {
-    sql: ` AND (risk_links.source_risk_id IS NULL OR EXISTS (
-             SELECT 1 FROM risks lsr
-              WHERE lsr.id = risk_links.source_risk_id AND ${source.sql}))
-           AND (risk_links.target_risk_id IS NULL OR EXISTS (
-             SELECT 1 FROM risks ltr
-              WHERE ltr.id = risk_links.target_risk_id AND ${target.sql}))`,
+    sql: ` AND (risk_links.source_risk_id IS NULL OR ${source.sql})
+           AND (risk_links.target_risk_id IS NULL OR ${target.sql})`,
     replacements: { ...source.replacements, ...target.replacements },
   };
 }
@@ -1352,6 +1364,10 @@ export async function getSharedProjectCandidatesQuery(
   viewer: RiskViewer,
 ): Promise<SharedProjectCandidate[]> {
   const subjectVisibility = riskVisibilitySql("subject", viewer);
+  // Only the subject's use cases the viewer can access: a hidden one's title
+  // is never named, and a vendor or model risk reached only through it drops
+  // out.
+  const projectAccess = accessibleProjectIdSql("pr.project_id", viewer);
   const rows = await sequelize.query(
     `WITH subject_projects AS (
        SELECT pr.project_id
@@ -1361,7 +1377,7 @@ export async function getSharedProjectCandidatesQuery(
           AND subject.organization_id = :organizationId
           AND subject.is_deleted = false${subjectVisibility.sql}
         WHERE pr.risk_id = :riskId
-          AND pr.organization_id = :organizationId
+          AND pr.organization_id = :organizationId${projectAccess.sql}
      )
      SELECT DISTINCT 'vendor_risk' AS entity_type, vr.id AS id,
             LEFT(vr.risk_description, 80) AS name, p.project_title AS project_title
@@ -1388,7 +1404,12 @@ export async function getSharedProjectCandidatesQuery(
 
      ORDER BY entity_type, id, project_title`,
     {
-      replacements: { organizationId, riskId, ...subjectVisibility.replacements },
+      replacements: {
+        organizationId,
+        riskId,
+        ...subjectVisibility.replacements,
+        ...projectAccess.replacements,
+      },
       type: QueryTypes.SELECT,
     },
   );

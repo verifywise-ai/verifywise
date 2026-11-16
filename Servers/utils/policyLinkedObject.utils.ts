@@ -4,7 +4,7 @@ import logger from "../utils/logger/fileLogger";
 import { PolicyLinkedObjectsModel } from "../domain.layer/models/policy/policy_linked_objects.model";
 import { assertOrgOwnsIds } from "./bulkAction.utils";
 import { policyExistsInOrganizationQuery } from "./policyManager.utils";
-import { riskVisibilityCondition, riskVisibilitySql, RiskViewer } from "./riskVisibility.utils";
+import { riskIdVisibilitySql, riskVisibilitySql, RiskViewer } from "./riskVisibility.utils";
 import {
   NotFoundException,
   ValidationException,
@@ -92,14 +92,11 @@ export const linkObjectsToPolicyQuery = async (
 const hiddenRiskLinksFilter = (
   viewer: RiskViewer,
 ): { sql: string; replacements: Record<string, unknown> } => {
-  const visibility = riskVisibilityCondition("lr", viewer);
-  if (!visibility) return { sql: "", replacements: {} };
+  // object_type and object_id are NOT NULL, so `<>` needs no NULL case.
+  const visibility = riskIdVisibilitySql("policy_linked_objects.object_id", viewer);
+  if (!visibility.sql) return visibility;
   return {
-    sql: ` AND (object_type <> 'risk' OR EXISTS (
-             SELECT 1 FROM risks lr
-              WHERE lr.id = policy_linked_objects.object_id
-                AND lr.organization_id = :organizationId
-                AND ${visibility.sql}))`,
+    sql: ` AND (policy_linked_objects.object_type <> 'risk' OR ${visibility.sql})`,
     replacements: visibility.replacements,
   };
 };
@@ -222,21 +219,25 @@ export const updatePolicyLinkedObjectQuery = async (
 };
 
 /**
- * DELETE linked object (by id)
+ * DELETE linked object (by id). A link to a risk the viewer cannot see (risk
+ * visibility rule) does not match, so it is deleted and answered exactly like
+ * a missing row.
  */
 export const deletePolicyLinkedObjectQuery = async (
   id: number,
   organizationId: number,
+  viewer: RiskViewer,
   transaction?: Transaction,
 ) => {
   logger.debug(`🗑 Deleting policy_linked_object → policy:${id}`);
 
+  const hidden = hiddenRiskLinksFilter(viewer);
   const result = await sequelize.query(
     `DELETE FROM policy_linked_objects
-       WHERE organization_id = :organizationId AND id = :id
+       WHERE organization_id = :organizationId AND id = :id${hidden.sql}
        RETURNING *`,
     {
-      replacements: { organizationId, id },
+      replacements: { organizationId, id, ...hidden.replacements },
       mapToModel: true,
       model: PolicyLinkedObjectsModel,
       transaction,

@@ -14,6 +14,7 @@ import {
   getStructuralNeighboursQuery,
   getConfirmedHierarchyEdgesQuery,
   getSharedProjectCandidatesQuery,
+  getVendorRiskChildCandidatesQuery,
   getModelRiskCandidatesQuery,
   getVendorRiskCandidatesQuery,
   upsertRiskLinkQuery,
@@ -311,6 +312,39 @@ describe("risk link reads follow the risk visibility rule", () => {
     expect(options.replacements.visibilityUserId).toBe(9);
   });
 
+  it("names only the subject's use cases a non-Admin can access in shared-project candidates", async () => {
+    await getSharedProjectCandidatesQuery(3, 99, editor);
+    const [sql] = mockQuery.mock.calls[0];
+    // subject_projects keeps only accessible use cases, so a vendor or model
+    // risk reached only through a hidden one, and its title, drop out.
+    expect(sql).toMatch(
+      /pr\.organization_id = :organizationId AND EXISTS \(\s*SELECT 1 FROM projects pacc/,
+    );
+    expect(sql).toContain("pacc.id = pr.project_id");
+  });
+
+  it("does not narrow shared-project candidates for the system viewer", async () => {
+    await getSharedProjectCandidatesQuery(3, 99, SYSTEM_RISK_VIEWER);
+    expect(mockQuery.mock.calls[0][0]).not.toContain("pacc");
+  });
+
+  it("names only use cases a non-Admin can access in the vendor risk link picker", async () => {
+    await getVendorRiskChildCandidatesQuery(3, 12, editor);
+    const [sql, options] = mockQuery.mock.calls[0];
+    expect(sql).toContain("prv.risk_id = child.id");
+    expect(sql).toContain("pacc.id = p.id");
+    expect(options.replacements).toMatchObject({
+      organizationId: 3,
+      vendorRiskId: 12,
+      visibilityUserId: 9,
+    });
+  });
+
+  it("does not narrow the vendor risk link picker for the system viewer", async () => {
+    await getVendorRiskChildCandidatesQuery(3, 12, SYSTEM_RISK_VIEWER);
+    expect(mockQuery.mock.calls[0][0]).not.toContain("pacc");
+  });
+
   it("gives no shared-project candidates for a subject a non-Admin cannot see", async () => {
     await getSharedProjectCandidatesQuery(3, 99, editor);
     const [sql, options] = mockQuery.mock.calls[0];
@@ -352,9 +386,12 @@ describe("risk link writes treat a hidden risk as a missing one", () => {
     await run();
     const [sql, options] = mockQuery.mock.calls[0];
     expect(sql).toContain("risk_links.source_risk_id IS NULL OR EXISTS");
-    expect(sql).toContain("prv.risk_id = lsr.id");
+    expect(sql).toContain("rvid.id = risk_links.source_risk_id");
     expect(sql).toContain("risk_links.target_risk_id IS NULL OR EXISTS");
-    expect(sql).toContain("prv.risk_id = ltr.id");
+    expect(sql).toContain("rvid.id = risk_links.target_risk_id");
+    // Both ends keep the organization filter (riskIdVisibilitySql).
+    expect(sql.match(/rvid\.organization_id = :organizationId/g)).toHaveLength(2);
+    expect(sql).toContain("prv.risk_id = rvid.id");
     expect(options.replacements.visibilityUserId).toBe(9);
   });
 

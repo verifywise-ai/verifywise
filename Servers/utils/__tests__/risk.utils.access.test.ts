@@ -27,7 +27,10 @@ import { sequelize } from "../../database/db";
 import {
   archiveRiskQuery,
   assertRiskReferencesInOrganization,
+  getAllRisksQuery,
   getRiskByIdQuery,
+  getRisksByFrameworkQuery,
+  getRisksByProjectQuery,
   linkRiskToProjectQuery,
   updateRiskByIdQuery,
 } from "../risk.utils";
@@ -229,5 +232,127 @@ describe("getRiskByIdQuery and archiveRiskQuery take a viewer", () => {
     expect(sql).toContain("prv.risk_id = risks.id");
     expect(options.replacements).toMatchObject({ id: 5, organizationId: 1, visibilityUserId: 7 });
     expect(mockQuery).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("updateRiskByIdQuery guards the write itself", () => {
+  const updateSql = () => mockQuery.mock.calls.find((c) => String(c[0]).startsWith("UPDATE risks"));
+
+  it("answers a risk hidden from a non-Admin with null before validating or writing", async () => {
+    answerSql([3], [3]);
+    mockVisible.mockResolvedValue(false);
+    await expect(
+      updateRiskByIdQuery(5, { risk_name: "R", projects: [3] } as any, 1, tx, {
+        viewer: editor,
+        ...quiet,
+      }),
+    ).resolves.toBeNull();
+    expect(mockVisible).toHaveBeenCalledWith(5, 1, editor, tx);
+    expect(mockAccessible).not.toHaveBeenCalled();
+    expect(mockQuery).not.toHaveBeenCalled();
+  });
+
+  it("applies the visibility rule in the UPDATE's WHERE", async () => {
+    answerSql([], []);
+    await updateRiskByIdQuery(5, { risk_name: "R" } as any, 1, tx, { viewer: editor, ...quiet });
+    const [sql, options] = updateSql()!;
+    expect(sql).toContain("WHERE id = :id AND organization_id = :organizationId AND (NOT EXISTS");
+    expect(sql).toContain("prv.risk_id = risks.id");
+    expect(options.replacements).toMatchObject({ id: 5, organizationId: 1, visibilityUserId: 7 });
+  });
+
+  it("returns null and writes no links when the UPDATE matches no row", async () => {
+    answerSql([3], [3]);
+    mockAccessible.mockResolvedValue([3]);
+    const base = mockQuery.getMockImplementation()!;
+    mockQuery.mockImplementation(async (sql: string, opts?: any) =>
+      String(sql).startsWith("UPDATE risks") ? [] : base(sql, opts),
+    );
+    await expect(
+      updateRiskByIdQuery(5, { risk_name: "R", projects: [3] } as any, 1, tx, {
+        viewer: editor,
+        ...quiet,
+      }),
+    ).resolves.toBeNull();
+    const writes = mockQuery.mock.calls.filter((c) =>
+      /^(DELETE FROM projects_risks|INSERT INTO projects_risks)/.test(String(c[0]).trim()),
+    );
+    expect(writes).toHaveLength(0);
+  });
+
+  it("does not add the rule for an Admin and skips the visibility read", async () => {
+    answerSql([], []);
+    await updateRiskByIdQuery(5, { risk_name: "R" } as any, 1, tx, { viewer: admin, ...quiet });
+    expect(mockVisible).not.toHaveBeenCalled();
+    expect(updateSql()![0]).not.toContain("visibilityUserId");
+  });
+
+  it("reads the accessible use cases once, current and requested together", async () => {
+    answerSql([3, 4], [3, 8]);
+    mockAccessible.mockImplementation(async (ids: number[]) => ids.filter((i) => i !== 8));
+    await updateRiskByIdQuery(5, { projects: [3, 4] } as any, 1, tx, { viewer: editor, ...quiet });
+    expect(mockAccessible).toHaveBeenCalledTimes(1);
+    expect([...mockAccessible.mock.calls[0][0]].sort()).toEqual([3, 4, 8]);
+    const del = mockQuery.mock.calls.find((c) =>
+      String(c[0]).startsWith("DELETE FROM projects_risks"),
+    )!;
+    expect(del[1].replacements.keptHiddenIds).toEqual([8]);
+  });
+
+  it("still rejects a requested use case the viewer cannot access", async () => {
+    answerSql([3, 4], [3]);
+    mockAccessible.mockImplementation(async (ids: number[]) => ids.filter((i) => i === 3));
+    await expect(
+      updateRiskByIdQuery(5, { projects: [3, 4] } as any, 1, tx, { viewer: editor, ...quiet }),
+    ).rejects.toThrow("Linked use cases must belong to this organization");
+    expect(mockAccessible).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("risk reads narrow the use cases a risk names", () => {
+  beforeEach(() => mockQuery.mockReset());
+
+  it.each([
+    ["the list", () => getAllRisksQuery(1, "active", editor), "pr.project_id"],
+    ["by use case", () => getRisksByProjectQuery(3, 1, "active", editor), "p.id"],
+    ["by framework", () => getRisksByFrameworkQuery(2, 1, "active", editor), "p.id"],
+  ])("%s lists only accessible use cases in projects for a non-Admin", async (_l, run, col) => {
+    mockQuery.mockResolvedValue([]);
+    await run();
+    const [sql, options] = mockQuery.mock.calls[0];
+    expect(sql).toContain(`FILTER (WHERE ${col} IS NOT NULL AND EXISTS`);
+    expect(sql).toContain(`pacc.id = ${col}`);
+    expect(options.replacements.visibilityUserId).toBe(7);
+  });
+
+  it.each([
+    ["the list", () => getAllRisksQuery(1, "active", admin)],
+    ["by use case", () => getRisksByProjectQuery(3, 1, "active", admin)],
+    ["by framework", () => getRisksByFrameworkQuery(2, 1, "active", SYSTEM_RISK_VIEWER)],
+  ])("%s does not narrow projects for an Admin or the system", async (_l, run) => {
+    mockQuery.mockResolvedValue([]);
+    await run();
+    expect(mockQuery.mock.calls[0][0]).not.toContain("pacc");
+  });
+
+  it("by id narrows projects and every mapping row's use case for a non-Admin", async () => {
+    mockQuery.mockImplementation(async (sql: string) =>
+      String(sql).startsWith("SELECT * FROM risks") ? [[{ id: 5 }], 1] : [[], 0],
+    );
+    await getRiskByIdQuery(5, 1, editor);
+    const calls = mockQuery.mock.calls.map((c) => String(c[0]));
+    const links = calls.find((s) => s.includes("SELECT project_id FROM projects_risks"))!;
+    expect(links).toContain("pacc.id = projects_risks.project_id");
+    const mappings = calls.filter((s) => s.includes("JOIN projects_frameworks pf"));
+    expect(mappings).toHaveLength(6);
+    for (const sql of mappings) expect(sql).toContain("pacc.id = pf.project_id");
+  });
+
+  it("by id does not narrow for an Admin", async () => {
+    mockQuery.mockImplementation(async (sql: string) =>
+      String(sql).startsWith("SELECT * FROM risks") ? [[{ id: 5 }], 1] : [[], 0],
+    );
+    await getRiskByIdQuery(5, 1, admin);
+    for (const [sql] of mockQuery.mock.calls) expect(String(sql)).not.toContain("pacc");
   });
 });

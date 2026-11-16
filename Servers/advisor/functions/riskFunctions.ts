@@ -15,7 +15,6 @@ import { sequelize } from "../../database/db";
 import logger from "../../utils/logger/fileLogger";
 import { getEffectiveRiskLevel } from "../../utils/riskLevel.utils";
 import {
-  isRiskVisibleQuery,
   riskViewerForUserQuery,
   riskVisibilitySql,
   RiskViewer,
@@ -88,20 +87,20 @@ export interface FetchRisksParams {
 }
 
 const fetchRisks = async (
-  params: FetchRisksParams,
+  params: FetchRisksParams & Record<string, unknown>,
   organizationId: number,
 ): Promise<Partial<IRisk>[]> => {
   let risks: IRisk[] = [];
 
   try {
-    // Fetch based on scope. Advisor read tools stay org-wide until the J2
-    // follow-up scopes them to the user.
+    // Only the risks the chatting user can see (risk visibility rule).
+    const viewer = await actingRiskViewer(params, organizationId);
     if (params.projectId) {
       const result = await getRisksByProjectQuery(
         params.projectId,
         organizationId,
         "active",
-        SYSTEM_RISK_VIEWER,
+        viewer,
       );
       risks = result || [];
     } else if (params.frameworkId) {
@@ -109,11 +108,11 @@ const fetchRisks = async (
         params.frameworkId,
         organizationId,
         "active",
-        SYSTEM_RISK_VIEWER,
+        viewer,
       );
       risks = result || [];
     } else {
-      risks = await getAllRisksQuery(organizationId, "active", SYSTEM_RISK_VIEWER);
+      risks = await getAllRisksQuery(organizationId, "active", viewer);
     }
 
     // Apply filters
@@ -196,8 +195,8 @@ const getRiskAnalytics = async (
   organizationId: number,
 ): Promise<RiskAnalytics> => {
   try {
-    // Fetch risks for analysis
-    // Org-wide until the J2 follow-up scopes advisor reads to the user.
+    // Fetch risks for analysis. Counts only, no per-risk detail, so like the
+    // dashboard counts they stay organization-wide (ruling J4).
     const risks = params.projectId
       ? (await getRisksByProjectQuery(
           params.projectId,
@@ -308,20 +307,16 @@ export interface ExecutiveSummary {
 }
 
 const getExecutiveSummary = async (
-  params: { projectId?: number },
+  params: { projectId?: number } & Record<string, unknown>,
   organizationId: number,
 ): Promise<ExecutiveSummary> => {
   try {
-    // Fetch risks
-    // Org-wide until the J2 follow-up scopes advisor reads to the user.
+    // The summary names its most urgent risks, so it covers only the risks
+    // the chatting user can see (risk visibility rule), counts included.
+    const viewer = await actingRiskViewer(params, organizationId);
     const risks = params.projectId
-      ? (await getRisksByProjectQuery(
-          params.projectId,
-          organizationId,
-          "active",
-          SYSTEM_RISK_VIEWER,
-        )) || []
-      : await getAllRisksQuery(organizationId, "active", SYSTEM_RISK_VIEWER);
+      ? (await getRisksByProjectQuery(params.projectId, organizationId, "active", viewer)) || []
+      : await getAllRisksQuery(organizationId, "active", viewer);
 
     const totalActiveRisks = risks.length;
 
@@ -435,12 +430,12 @@ const getRiskHistoryTimeseries = async (
 };
 
 /**
- * The user a write tool runs for, as the risk visibility rule sees them: the
- * user who asked for the action (`_requesterId`, set by the approval gateway
- * from the approval record), else the user the gateway runs it for
- * (`_userId`: the chatting user when auto-approved, the approver otherwise).
- * With no user at all it fails closed (UNKNOWN_RISK_VIEWER), never the
- * system viewer.
+ * The user a tool runs for, as the risk visibility rule sees them: the user
+ * who asked for the action (`_requesterId`, set by the approval gateway from
+ * the approval record), else the user the gateway runs it for (`_userId`: the
+ * chatting user for a read or an auto-approved write, the approver otherwise;
+ * toolBridge injects it for every tool). With no user at all it fails closed
+ * (UNKNOWN_RISK_VIEWER), never the system viewer.
  */
 export const actingRiskViewer = async (
   params: Record<string, unknown>,
@@ -514,9 +509,6 @@ const agentUpdateRisk = createWriteToolFn({
     try {
       const riskId = params.risk_id as number;
       const viewer = await actingRiskViewer(params, organizationId);
-      if (!(await isRiskVisibleQuery(riskId, organizationId, viewer, transaction))) {
-        throw new NotFoundException("Risk not found", "risk", riskId);
-      }
       const updateData: any = {};
       if (params.risk_name !== undefined) updateData.risk_name = params.risk_name;
       if (params.risk_description !== undefined)
@@ -530,7 +522,14 @@ const agentUpdateRisk = createWriteToolFn({
         updateData.mitigation_status = params.mitigation_status;
       if (params.mitigation_plan !== undefined) updateData.mitigation_plan = params.mitigation_plan;
 
-      await updateRiskByIdQuery(riskId, updateData, organizationId, transaction, { viewer });
+      // Null when the risk is missing or hidden from the acting user: nothing
+      // was written, and both answer "Risk not found".
+      const updated = await updateRiskByIdQuery(riskId, updateData, organizationId, transaction, {
+        viewer,
+      });
+      if (!updated) {
+        throw new NotFoundException("Risk not found", "risk", riskId);
+      }
       await transaction.commit();
       return { id: riskId, updated: true, message: "Risk updated successfully" };
     } catch (error) {

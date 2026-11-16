@@ -9,12 +9,8 @@ import {
 } from "../utils/quantitativeRisk.utils";
 import { applyBenchmarkToRiskQuery, getBenchmarkByIdQuery } from "../utils/riskBenchmark.utils";
 import { getRiskByIdQuery } from "../utils/risk.utils";
-import {
-  getAccessibleProjectIdsQuery,
-  isRiskVisibleQuery,
-  riskViewer,
-  scopedRiskViewer,
-} from "../utils/riskVisibility.utils";
+import { getProjectAccessQuery } from "../utils/project.utils";
+import { isRiskVisibleQuery, riskViewer, scopedRiskViewer } from "../utils/riskVisibility.utils";
 import { sequelize } from "../database/db";
 import { QueryTypes } from "sequelize";
 import { logStructured } from "../utils/logger/fileLogger";
@@ -97,15 +93,12 @@ export async function getPortfolioTrendHandler(req: Request, res: Response): Pro
     // include risks hidden from them, so they get no snapshots (ruling J7).
     // The organization trend stays organization-wide (ruling J4).
     const viewer = riskViewer(req);
-    if (projectId && scopedRiskViewer(viewer)) {
-      const accessible = await getAccessibleProjectIdsQuery(
-        [projectId],
-        req.organizationId!,
-        viewer,
-      );
-      if (accessible.length === 0) {
-        return res.status(200).json(STATUS_CODE[200]([]));
-      }
+    if (
+      projectId &&
+      scopedRiskViewer(viewer) &&
+      (await getProjectAccessQuery(projectId, viewer, req.organizationId!)) !== "allowed"
+    ) {
+      return res.status(200).json(STATUS_CODE[200]([]));
     }
 
     const snapshots = await getPortfolioTrend(req.organizationId!, days, projectId);

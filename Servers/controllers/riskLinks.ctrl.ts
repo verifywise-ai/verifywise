@@ -411,7 +411,7 @@ export async function getVendorExposure(req: Request, res: Response): Promise<an
     res,
     "getVendorExposure",
     "vendor exposure report",
-    findVendorExposure,
+    (organizationId) => findVendorExposure(organizationId, riskViewer(req)),
   );
 }
 

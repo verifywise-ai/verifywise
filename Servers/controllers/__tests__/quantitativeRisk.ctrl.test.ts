@@ -7,8 +7,8 @@ jest.mock("../../utils/logger/dbLogger", () => ({ logEvent: jest.fn() }));
 jest.mock("../../utils/riskVisibility.utils", () => ({
   ...jest.requireActual("../../utils/riskVisibility.utils"),
   isRiskVisibleQuery: jest.fn(),
-  getAccessibleProjectIdsQuery: jest.fn(),
 }));
+jest.mock("../../utils/project.utils", () => ({ getProjectAccessQuery: jest.fn() }));
 
 import { applyBenchmark, getPortfolioTrendHandler } from "../quantitativeRisk.ctrl";
 import { sequelize } from "../../database/db";
@@ -19,10 +19,11 @@ import {
 } from "../../utils/quantitativeRisk.utils";
 import { applyBenchmarkToRiskQuery, getBenchmarkByIdQuery } from "../../utils/riskBenchmark.utils";
 import { getRiskByIdQuery } from "../../utils/risk.utils";
-import { getAccessibleProjectIdsQuery, isRiskVisibleQuery } from "../../utils/riskVisibility.utils";
+import { isRiskVisibleQuery } from "../../utils/riskVisibility.utils";
+import { getProjectAccessQuery } from "../../utils/project.utils";
 
 const mockVisible = isRiskVisibleQuery as jest.Mock;
-const mockAccessible = getAccessibleProjectIdsQuery as jest.Mock;
+const mockAccess = getProjectAccessQuery as jest.Mock;
 const mockApply = applyBenchmarkToRiskQuery as jest.Mock;
 const mockBenchmark = getBenchmarkByIdQuery as jest.Mock;
 const mockTrend = getPortfolioTrend as jest.Mock;
@@ -95,20 +96,23 @@ describe("applyBenchmark", () => {
 });
 
 describe("getPortfolioTrendHandler", () => {
-  it("gives a non-Admin without access to the use case no snapshots", async () => {
-    mockAccessible.mockResolvedValue([]);
-    const r = res();
+  it.each(["denied", "not_found"])(
+    "gives a non-Admin no snapshots when access to the use case is %s",
+    async (access) => {
+      mockAccess.mockResolvedValue(access);
+      const r = res();
 
-    await getPortfolioTrendHandler(req({ query: { projectId: "11" } }), r);
+      await getPortfolioTrendHandler(req({ query: { projectId: "11" } }), r);
 
-    expect(mockAccessible).toHaveBeenCalledWith([11], 7, { userId: 5, role: "Editor" });
-    expect(mockTrend).not.toHaveBeenCalled();
-    expect(r.status).toHaveBeenCalledWith(200);
-    expect(r.json).toHaveBeenCalledWith(expect.objectContaining({ data: [] }));
-  });
+      expect(mockAccess).toHaveBeenCalledWith(11, { userId: 5, role: "Editor" }, 7);
+      expect(mockTrend).not.toHaveBeenCalled();
+      expect(r.status).toHaveBeenCalledWith(200);
+      expect(r.json).toHaveBeenCalledWith(expect.objectContaining({ data: [] }));
+    },
+  );
 
   it("gives a viewer with access the use case trend", async () => {
-    mockAccessible.mockResolvedValue([11]);
+    mockAccess.mockResolvedValue("allowed");
     mockTrend.mockResolvedValue([{ id: 1 }]);
     const r = res();
 
@@ -124,7 +128,7 @@ describe("getPortfolioTrendHandler", () => {
 
     await getPortfolioTrendHandler(req({ role: "Admin", query: { projectId: "11" } }), r);
 
-    expect(mockAccessible).not.toHaveBeenCalled();
+    expect(mockAccess).not.toHaveBeenCalled();
     expect(mockTrend).toHaveBeenCalledWith(7, 30, 11);
   });
 
@@ -134,7 +138,7 @@ describe("getPortfolioTrendHandler", () => {
 
     await getPortfolioTrendHandler(req(), r);
 
-    expect(mockAccessible).not.toHaveBeenCalled();
+    expect(mockAccess).not.toHaveBeenCalled();
     expect(mockTrend).toHaveBeenCalledWith(7, 30, undefined);
   });
 });

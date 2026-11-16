@@ -308,7 +308,9 @@ export async function deleteLinkedObject(req: Request, res: Response) {
     const tenant = req.organizationId!;
     transaction = await sequelize.transaction();
 
-    await deletePolicyLinkedObjectQuery(id, tenant, transaction);
+    // A link to a risk the user cannot see is not deleted and is answered
+    // like a missing row (ruling J2).
+    await deletePolicyLinkedObjectQuery(id, tenant, riskViewer(req), transaction);
 
     await transaction.commit();
 

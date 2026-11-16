@@ -42,6 +42,8 @@ const exposureRow = (overrides: Partial<VendorExposureRow>): VendorExposureRow =
   ...overrides,
 });
 
+const EDITOR = { userId: 9, role: "Editor" };
+
 describe("findVendorExposure", () => {
   it("rolls each vendor's risks up into one reach, counting a child once", async () => {
     mockExposureRows.mockResolvedValue([
@@ -63,9 +65,9 @@ describe("findVendorExposure", () => {
       exposureRow({ vendor_risk_id: 3 }),
     ]);
 
-    const report = await findVendorExposure(7);
+    const report = await findVendorExposure(7, EDITOR);
 
-    expect(mockExposureRows).toHaveBeenCalledWith(7);
+    expect(mockExposureRows).toHaveBeenCalledWith(7, EDITOR);
     expect(report.risks).toEqual([
       { vendor_risk_id: 1, children: 2, suggested: 0, use_cases: [{ id: 5, name: "Lending" }] },
       {
@@ -118,7 +120,7 @@ describe("findVendorExposure", () => {
       }),
     ]);
 
-    const report = await findVendorExposure(7);
+    const report = await findVendorExposure(7, EDITOR);
 
     expect(report.vendors.map((v) => v.vendor_name)).toEqual(["Delta", "Gamma", "Beta", "Zeta"]);
   });
@@ -128,7 +130,7 @@ describe("findVendorExposure", () => {
       exposureRow({ vendor_risk_id: 1, vendor_id: null, vendor_name: null, child_ids: [5] }),
     ]);
 
-    const report = await findVendorExposure(7);
+    const report = await findVendorExposure(7, EDITOR);
 
     expect(report.risks).toHaveLength(1);
     expect(report.vendors).toEqual([]);
