@@ -101,8 +101,9 @@ test.describe("Vendors Page", () => {
     await expect(insightsTab).toBeVisible({ timeout: 10_000 });
     await insightsTab.click();
     await expect(page).toHaveURL(/\/vendors\/insights/, { timeout: 10_000 });
-    // Not found by name again: see the Research findings tab above.
-    await expect(page.getByRole("tab", { selected: true })).toContainText(/insights/i);
+    // Not found by name again: see the Research findings tab above. The Insights page has a section
+    // tab bar of its own with a selected tab, so take the first selected tab: the page's own bar.
+    await expect(page.getByRole("tab", { selected: true }).first()).toContainText(/insights/i);
   });
 
   test("a notification link to the Risks tab with findings lands on the Research findings tab", async ({
