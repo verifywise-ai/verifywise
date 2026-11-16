@@ -37,11 +37,12 @@ export interface CreateRiskServiceContext {
   userId: number;
   organizationId: number;
   /**
-   * The acting user as the risk visibility rule sees them. When set and not an
-   * Admin, the use cases a risk is linked to must be ones they can write to.
-   * MCP (Admin-only) and the demo seed leave it out.
+   * The acting user as the risk visibility rule sees them. Unless they see
+   * every risk, the use cases a risk is linked to must be ones they can write
+   * to. MCP (Admin-only) and intake approval (ruling J8) pass
+   * SYSTEM_RISK_VIEWER.
    */
-  viewer?: RiskViewer;
+  viewer: RiskViewer;
 }
 
 /**

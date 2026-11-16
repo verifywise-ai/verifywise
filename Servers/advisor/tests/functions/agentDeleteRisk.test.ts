@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, jest } from "@jest/globals";
 
 jest.mock("../../../utils/risk.utils");
 jest.mock("../../../utils/riskVisibility.utils", () => ({
+  ...(jest.requireActual("../../../utils/riskVisibility.utils") as object),
   isRiskVisibleQuery: jest.fn(),
   riskViewerForUserQuery: jest.fn(),
 }));

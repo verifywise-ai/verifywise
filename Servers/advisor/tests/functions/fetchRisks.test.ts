@@ -10,6 +10,7 @@ import {
 } from "../../mocks/mockRiskData";
 import { createMockTenant } from "../../mocks/mockTenant";
 import { IRisk } from "../../../domain.layer/interfaces/I.risk";
+import { SYSTEM_RISK_VIEWER } from "../../../utils/riskVisibility.utils";
 
 const availableTools = {
   ...availableRiskTools,
@@ -53,7 +54,11 @@ describe("Advisor Functions: fetchRisks", () => {
 
       const result = await fetchRisks({}, mockTenant);
 
-      expect(riskUtils.getAllRisksQuery).toHaveBeenCalledWith(mockTenant, "active");
+      expect(riskUtils.getAllRisksQuery).toHaveBeenCalledWith(
+        mockTenant,
+        "active",
+        SYSTEM_RISK_VIEWER,
+      );
       expect(result).toEqual(mockRisks.map(toProjection));
       expect(result).toHaveLength(mockRisks.length);
     });
@@ -63,7 +68,12 @@ describe("Advisor Functions: fetchRisks", () => {
 
       const result = await fetchRisks({ projectId: 1 }, mockTenant);
 
-      expect(riskUtils.getRisksByProjectQuery).toHaveBeenCalledWith(1, mockTenant, "active");
+      expect(riskUtils.getRisksByProjectQuery).toHaveBeenCalledWith(
+        1,
+        mockTenant,
+        "active",
+        SYSTEM_RISK_VIEWER,
+      );
       expect(result).toEqual(mockProjectRisks.map(toProjection));
     });
 
@@ -72,7 +82,12 @@ describe("Advisor Functions: fetchRisks", () => {
 
       const result = await fetchRisks({ frameworkId: 1 }, mockTenant);
 
-      expect(riskUtils.getRisksByFrameworkQuery).toHaveBeenCalledWith(1, mockTenant, "active");
+      expect(riskUtils.getRisksByFrameworkQuery).toHaveBeenCalledWith(
+        1,
+        mockTenant,
+        "active",
+        SYSTEM_RISK_VIEWER,
+      );
       expect(result).toEqual(mockFrameworkRisks.map(toProjection));
     });
 

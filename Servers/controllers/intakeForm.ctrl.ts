@@ -146,6 +146,7 @@ import {
   recomputeAssessmentForLevel,
 } from "../services/intakeScoring/approvalRisks";
 import { createRiskService } from "../services/risk.service";
+import { SYSTEM_RISK_VIEWER } from "../utils/riskVisibility.utils";
 import { createNewModelRiskQuery } from "../utils/modelRisk.utils";
 import { LIKELIHOODS, SEVERITIES } from "../services/intakeScoring/riskMappers";
 import type { IntakeSuggestedRisk } from "../services/intakeScoring/intakeSuggestions";
@@ -2793,7 +2794,13 @@ async function approve(
       } else {
         await createRiskService(
           buildUseCaseRiskFromSuggestion(s, { ...approval, useCaseId: entityId }),
-          { userId: req.userId!, organizationId: req.organizationId! },
+          // Ruling J8: the risk is linked to the use case this approval just
+          // created, which the approver need not be a member of.
+          {
+            userId: req.userId!,
+            organizationId: req.organizationId!,
+            viewer: SYSTEM_RISK_VIEWER,
+          },
           transaction,
         );
       }

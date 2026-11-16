@@ -17,7 +17,9 @@ import { getEffectiveRiskLevel } from "../../utils/riskLevel.utils";
 import {
   isRiskVisibleQuery,
   riskViewerForUserQuery,
+  riskVisibilitySql,
   RiskViewer,
+  SYSTEM_RISK_VIEWER,
 } from "../../utils/riskVisibility.utils";
 import { NotFoundException } from "../../domain.layer/exceptions/custom.exception";
 import { Transaction } from "sequelize";
@@ -91,15 +93,26 @@ const fetchRisks = async (
   let risks: IRisk[] = [];
 
   try {
-    // Fetch based on scope
+    // Fetch based on scope. Advisor read tools stay org-wide until the J2
+    // follow-up scopes them to the user.
     if (params.projectId) {
-      const result = await getRisksByProjectQuery(params.projectId, organizationId, "active");
+      const result = await getRisksByProjectQuery(
+        params.projectId,
+        organizationId,
+        "active",
+        SYSTEM_RISK_VIEWER,
+      );
       risks = result || [];
     } else if (params.frameworkId) {
-      const result = await getRisksByFrameworkQuery(params.frameworkId, organizationId, "active");
+      const result = await getRisksByFrameworkQuery(
+        params.frameworkId,
+        organizationId,
+        "active",
+        SYSTEM_RISK_VIEWER,
+      );
       risks = result || [];
     } else {
-      risks = await getAllRisksQuery(organizationId, "active");
+      risks = await getAllRisksQuery(organizationId, "active", SYSTEM_RISK_VIEWER);
     }
 
     // Apply filters
@@ -183,9 +196,15 @@ const getRiskAnalytics = async (
 ): Promise<RiskAnalytics> => {
   try {
     // Fetch risks for analysis
+    // Org-wide until the J2 follow-up scopes advisor reads to the user.
     const risks = params.projectId
-      ? (await getRisksByProjectQuery(params.projectId, organizationId, "active")) || []
-      : await getAllRisksQuery(organizationId, "active");
+      ? (await getRisksByProjectQuery(
+          params.projectId,
+          organizationId,
+          "active",
+          SYSTEM_RISK_VIEWER,
+        )) || []
+      : await getAllRisksQuery(organizationId, "active", SYSTEM_RISK_VIEWER);
 
     const totalRisks = risks.length;
 
@@ -293,9 +312,15 @@ const getExecutiveSummary = async (
 ): Promise<ExecutiveSummary> => {
   try {
     // Fetch risks
+    // Org-wide until the J2 follow-up scopes advisor reads to the user.
     const risks = params.projectId
-      ? (await getRisksByProjectQuery(params.projectId, organizationId, "active")) || []
-      : await getAllRisksQuery(organizationId, "active");
+      ? (await getRisksByProjectQuery(
+          params.projectId,
+          organizationId,
+          "active",
+          SYSTEM_RISK_VIEWER,
+        )) || []
+      : await getAllRisksQuery(organizationId, "active", SYSTEM_RISK_VIEWER);
 
     const totalActiveRisks = risks.length;
 
@@ -409,16 +434,16 @@ const getRiskHistoryTimeseries = async (
 };
 
 /**
- * The user a write tool runs for, as the risk visibility rule sees them.
- * Undefined when the gateway sent no user (no check, as before).
+ * The user a write tool runs for, as the risk visibility rule sees them. The
+ * system viewer when the gateway sent no user (no check, as before).
  */
 const actingRiskViewer = async (
   params: Record<string, unknown>,
   organizationId: number,
   transaction?: Transaction,
-): Promise<RiskViewer | undefined> => {
+): Promise<RiskViewer> => {
   const userId = Number(params._userId);
-  if (!userId) return undefined;
+  if (!userId) return SYSTEM_RISK_VIEWER;
   return riskViewerForUserQuery(userId, organizationId, transaction);
 };
 
@@ -485,7 +510,7 @@ const agentUpdateRisk = createWriteToolFn({
     try {
       const riskId = params.risk_id as number;
       const viewer = await actingRiskViewer(params, organizationId, transaction);
-      if (viewer && !(await isRiskVisibleQuery(riskId, organizationId, viewer, transaction))) {
+      if (!(await isRiskVisibleQuery(riskId, organizationId, viewer, transaction))) {
         throw new NotFoundException("Risk not found", "risk", riskId);
       }
       const updateData: any = {};
@@ -524,7 +549,7 @@ const agentDeleteRisk = createWriteToolFn({
       // Same archive as the console: history entry and policy unlinks included.
       // A risk the user cannot see is left alone, as a missing one is.
       const viewer = await actingRiskViewer(params, organizationId, transaction);
-      if (!viewer || (await isRiskVisibleQuery(riskId, organizationId, viewer, transaction))) {
+      if (await isRiskVisibleQuery(riskId, organizationId, viewer, transaction)) {
         await archiveRiskQuery(riskId, organizationId, userId, transaction);
       }
       await transaction.commit();
@@ -545,13 +570,16 @@ const agentAssignRiskOwner = createWriteToolFn({
     const riskId = params.risk_id as number;
     const ownerUserId = params.owner_user_id as number;
     await assertRiskReferencesInOrganization({ risk_owner: ownerUserId }, organizationId);
+    // A risk the user cannot see is left alone, as a missing one is.
+    const visibility = riskVisibilitySql("risks", await actingRiskViewer(params, organizationId));
     await sequelize.query(
-      `UPDATE risks SET risk_owner = :owner_user_id, updated_at = NOW() WHERE id = :risk_id AND organization_id = :organization_id AND is_deleted = false`,
+      `UPDATE risks SET risk_owner = :owner_user_id, updated_at = NOW() WHERE id = :risk_id AND organization_id = :organizationId AND is_deleted = false${visibility.sql}`,
       {
         replacements: {
           owner_user_id: ownerUserId,
           risk_id: riskId,
-          organization_id: organizationId,
+          organizationId,
+          ...visibility.replacements,
         },
       },
     );
@@ -566,10 +594,12 @@ const agentChangeRiskStatus = createWriteToolFn({
   executeFn: async (params, organizationId) => {
     const riskId = params.risk_id as number;
     const status = params.status as string;
+    // A risk the user cannot see is left alone, as a missing one is.
+    const visibility = riskVisibilitySql("risks", await actingRiskViewer(params, organizationId));
     await sequelize.query(
-      `UPDATE risks SET mitigation_status = :status, updated_at = NOW() WHERE id = :risk_id AND organization_id = :organization_id AND is_deleted = false`,
+      `UPDATE risks SET mitigation_status = :status, updated_at = NOW() WHERE id = :risk_id AND organization_id = :organizationId AND is_deleted = false${visibility.sql}`,
       {
-        replacements: { status, risk_id: riskId, organization_id: organizationId },
+        replacements: { status, risk_id: riskId, organizationId, ...visibility.replacements },
       },
     );
     return { id: riskId, mitigation_status: status, message: "Risk status updated successfully" };
@@ -586,10 +616,17 @@ const agentBulkUpdateRiskStatus = createWriteToolFn({
   executeFn: async (params, organizationId) => {
     const riskIds = params.risk_ids as number[];
     const status = params.status as string;
+    // Risks the user cannot see are skipped, as missing ids are.
+    const visibility = riskVisibilitySql("risks", await actingRiskViewer(params, organizationId));
     await sequelize.query(
-      `UPDATE risks SET mitigation_status = :status, updated_at = NOW() WHERE id = ANY(ARRAY[:risk_ids]::int[]) AND organization_id = :organization_id AND is_deleted = false`,
+      `UPDATE risks SET mitigation_status = :status, updated_at = NOW() WHERE id = ANY(ARRAY[:risk_ids]::int[]) AND organization_id = :organizationId AND is_deleted = false${visibility.sql}`,
       {
-        replacements: { status, risk_ids: riskIds, organization_id: organizationId },
+        replacements: {
+          status,
+          risk_ids: riskIds,
+          organizationId,
+          ...visibility.replacements,
+        },
       },
     );
     return {

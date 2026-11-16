@@ -1,14 +1,39 @@
 import { QueryTypes, Transaction } from "sequelize";
 import { sequelize } from "../database/db";
-import { projectAccessSql, projectVisibilitySql, seesAllProjects } from "./projectVisibility.utils";
+import { projectAccessSql, seesAllProjects } from "./projectVisibility.utils";
 
-export type RiskViewer = { userId: number; role: string };
+/** A user, with their role in the organization, as the risk visibility rule sees them. */
+export type UserRiskViewer = { userId: number; role: string };
+
+/**
+ * The viewer for internal callers that act on every risk of the organization
+ * with no user to scope by: the demo seed, MCP tools (Admin-only), intake
+ * approval (ruling J8), jobs and organization-wide aggregates. Passing it is a
+ * deliberate choice, never a default.
+ */
+export const SYSTEM_RISK_VIEWER = Object.freeze({ system: true } as const);
+
+/**
+ * Who a risk read or write runs for. The risk list and access functions take
+ * one with no default, so a new caller has to name a user or the system viewer
+ * and cannot fail open by leaving it out.
+ */
+export type RiskViewer = UserRiskViewer | typeof SYSTEM_RISK_VIEWER;
 
 /** The signed-in user as the risk visibility rule sees them. */
-export const riskViewer = (req: { userId?: number; role?: string }): RiskViewer => ({
+export const riskViewer = (req: { userId?: number; role?: string }): UserRiskViewer => ({
   userId: req.userId!,
   role: req.role ?? "",
 });
+
+/**
+ * The user whose risks are narrowed, or null when the viewer sees every risk
+ * in the organization (the system viewer, an Admin or a SuperAdmin).
+ */
+export function scopedRiskViewer(viewer: RiskViewer): UserRiskViewer | null {
+  if ("system" in viewer || seesAllProjects(viewer.role)) return null;
+  return viewer;
+}
 
 /**
  * Which risks a user can see. Admins (and SuperAdmins) see every risk in the
@@ -27,12 +52,26 @@ export function riskVisibilitySql(
   riskAlias: string,
   viewer: RiskViewer,
 ): { sql: string; replacements: Record<string, unknown> } {
-  if (seesAllProjects(viewer.role)) {
-    return { sql: "", replacements: {} };
-  }
-  const access = projectAccessSql("pv", viewer.userId);
+  const condition = riskVisibilityCondition(riskAlias, viewer);
+  return condition
+    ? { sql: ` AND ${condition.sql}`, replacements: condition.replacements }
+    : { sql: "", replacements: {} };
+}
+
+/**
+ * The same rule as riskVisibilitySql as a bare condition (no leading AND), for
+ * a WHERE built from a list of conditions or for a joined risk. Null when the
+ * viewer sees every risk.
+ */
+export function riskVisibilityCondition(
+  riskAlias: string,
+  viewer: RiskViewer,
+): { sql: string; replacements: Record<string, unknown> } | null {
+  const scoped = scopedRiskViewer(viewer);
+  if (!scoped) return null;
+  const access = projectAccessSql("pv", scoped.userId);
   return {
-    sql: ` AND (NOT EXISTS (
+    sql: `(NOT EXISTS (
              SELECT 1 FROM projects_risks prv
               WHERE prv.risk_id = ${riskAlias}.id
                 AND prv.organization_id = :organizationId)
@@ -50,6 +89,29 @@ export function riskVisibilitySql(
 }
 
 /**
+ * The rule for the risks of one use case (bound as :projectId). On top of
+ * riskVisibilitySql, a viewer who cannot see that use case gets only the risks
+ * they own or approve there, so a risk shared with another use case they can
+ * see does not expose the hidden use case's list (ruling J7).
+ */
+export function projectRiskVisibilitySql(
+  riskAlias: string,
+  viewer: RiskViewer,
+): { sql: string; replacements: Record<string, unknown> } {
+  const scoped = scopedRiskViewer(viewer);
+  if (!scoped) return { sql: "", replacements: {} };
+  const visibility = riskVisibilitySql(riskAlias, scoped);
+  const access = projectAccessSql("pvs", scoped.userId);
+  return {
+    sql: `${visibility.sql} AND (EXISTS (
+        SELECT 1 FROM projects pvs
+         WHERE pvs.id = :projectId AND pvs.organization_id = :organizationId${access.sql})
+      OR ${riskAlias}.risk_owner = :visibilityUserId OR ${riskAlias}.risk_approval = :visibilityUserId)`,
+    replacements: { ...visibility.replacements, ...access.replacements },
+  };
+}
+
+/**
  * Whether the viewer can see one risk that exists in the organization
  * (deleted or not). Admins always can, without a query: a risk that does not
  * exist is the caller's own not-found. For anyone else a missing risk is not
@@ -61,7 +123,7 @@ export async function isRiskVisibleQuery(
   viewer: RiskViewer,
   transaction?: Transaction,
 ): Promise<boolean> {
-  if (seesAllProjects(viewer.role)) return true;
+  if (!scopedRiskViewer(viewer)) return true;
   const visibility = riskVisibilitySql("r", viewer);
   const rows = await sequelize.query<{ id: number }>(
     `SELECT r.id FROM risks r
@@ -79,12 +141,15 @@ export async function isRiskVisibleQuery(
  * The viewer for a user known only by id (advisor tools, which carry no
  * request): their role in the organization. A user with no role in it is
  * a plain non-Admin, so the visibility rule applies to them.
+ * Ruling J9: a SuperAdmin with no role in this organization is scoped like a
+ * non-Admin too: a SuperAdmin is a cross-tenant org/user admin, never an
+ * in-org Admin, and an elected SuperAdmin follows their role in the org.
  */
 export async function riskViewerForUserQuery(
   userId: number,
   organizationId: number,
   transaction?: Transaction,
-): Promise<RiskViewer> {
+): Promise<UserRiskViewer> {
   const rows = await sequelize.query<{ name: string }>(
     `SELECT r.name FROM organization_members om
        JOIN roles r ON r.id = om.role_id
@@ -96,7 +161,8 @@ export async function riskViewerForUserQuery(
 
 /**
  * Which of these use cases of the organization the viewer can see and write
- * to (projectVisibilitySql: owner, member or group member; Admins all).
+ * to (projectAccessSql: owner, member or group member; Admins and the system
+ * viewer all).
  */
 export async function getAccessibleProjectIdsQuery(
   projectIds: number[],
@@ -105,7 +171,8 @@ export async function getAccessibleProjectIdsQuery(
   transaction?: Transaction,
 ): Promise<number[]> {
   if (projectIds.length === 0) return [];
-  const access = projectVisibilitySql("p", viewer);
+  const scoped = scopedRiskViewer(viewer);
+  const access = scoped ? projectAccessSql("p", scoped.userId) : { sql: "", replacements: {} };
   const rows = await sequelize.query<{ id: number }>(
     `SELECT p.id FROM projects p
       WHERE p.organization_id = :organizationId AND p.id IN (:projectIds)${access.sql}`,

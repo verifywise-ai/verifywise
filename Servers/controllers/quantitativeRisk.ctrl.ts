@@ -9,6 +9,7 @@ import {
 } from "../utils/quantitativeRisk.utils";
 import { applyBenchmarkToRiskQuery, getBenchmarkByIdQuery } from "../utils/riskBenchmark.utils";
 import { getRiskByIdQuery } from "../utils/risk.utils";
+import { riskViewer } from "../utils/riskVisibility.utils";
 import { sequelize } from "../database/db";
 import { QueryTypes } from "sequelize";
 import { logStructured } from "../utils/logger/fileLogger";
@@ -56,7 +57,7 @@ export async function getProjectPortfolio(req: Request, res: Response): Promise<
   );
 
   try {
-    const summary = await getPortfolioByProject(req.organizationId!, projectId);
+    const summary = await getPortfolioByProject(req.organizationId!, projectId, riskViewer(req));
     return res.status(200).json(STATUS_CODE[200](summary));
   } catch (error) {
     logStructured(

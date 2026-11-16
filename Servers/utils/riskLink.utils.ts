@@ -14,6 +14,7 @@ import { HierarchyEdge, ParentEntityType } from "../services/riskLinks/hierarchy
 import { DismissReason } from "../services/riskLinks/dismissReason";
 import { toJsonArray, toNumber } from "./pgRow.utils";
 import { effectiveRiskLevelSql, riskLevelRankSql } from "./riskLevel.utils";
+import { riskVisibilityCondition, riskVisibilitySql, RiskViewer } from "./riskVisibility.utils";
 
 /**
  * pg hands NUMERIC back as a string and can hand JSONB / JSON_AGG output back
@@ -721,12 +722,19 @@ export interface RiskLinkWithRelated extends RiskLinkRow {
  * hides them. Both endpoints are joined and both are filtered: `related` so a
  * deleted partner disappears from the list, `subject` so a deleted subject
  * returns an empty list rather than its old neighbours.
+ *
+ * The risk visibility rule applies to both ends as well: a subject the viewer
+ * cannot see returns an empty list, as a missing one does, and a related
+ * project risk they cannot see drops out of the list.
  */
 export async function getRiskLinksForRiskQuery(
   organizationId: number,
   riskId: number,
   statuses: RiskLinkStatus[],
+  viewer: RiskViewer,
 ): Promise<RiskLinkWithRelated[]> {
+  const subjectVisibility = riskVisibilitySql("subject", viewer);
+  const relatedVisibility = riskVisibilityCondition("related", viewer);
   const rows = await sequelize.query(
     `SELECT l.*,
             COALESCE(mr.id, vr.id, related.id) AS related_id,
@@ -770,9 +778,20 @@ export async function getRiskLinksForRiskQuery(
        AND subject.organization_id = :organizationId
        AND subject.is_deleted = false
        AND l.status IN (:statuses)
-       AND COALESCE(related.id, mr.id, vr.id) IS NOT NULL
+       AND COALESCE(related.id, mr.id, vr.id) IS NOT NULL${subjectVisibility.sql}${
+         relatedVisibility ? ` AND (related.id IS NULL OR ${relatedVisibility.sql})` : ""
+       }
      ORDER BY l.score DESC, COALESCE(mr.id, vr.id, related.id) ASC`,
-    { replacements: { organizationId, riskId, statuses }, type: QueryTypes.SELECT },
+    {
+      replacements: {
+        organizationId,
+        riskId,
+        statuses,
+        ...subjectVisibility.replacements,
+        ...relatedVisibility?.replacements,
+      },
+      type: QueryTypes.SELECT,
+    },
   );
 
   return (rows as any[]).map((row) => ({
@@ -791,13 +810,16 @@ export async function getRiskLinksForRiskQuery(
  * to it (`related_to` pairs stored with `source_vendor_risk_id`).
  *
  * Same R7 rule as getRiskLinksForRiskQuery: a soft-deleted partner drops out of
- * the list, and a soft-deleted subject returns nothing.
+ * the list, and a soft-deleted subject returns nothing. A child project risk
+ * the viewer cannot see (risk visibility rule) drops out too.
  */
 export async function getRiskLinksForVendorRiskQuery(
   organizationId: number,
   vendorRiskId: number,
   statuses: RiskLinkStatus[],
+  viewer: RiskViewer,
 ): Promise<RiskLinkWithRelated[]> {
+  const childVisibility = riskVisibilitySql("child", viewer);
   const rows = await sequelize.query(
     `SELECT l.*,
             child.id AS related_id,
@@ -818,7 +840,7 @@ export async function getRiskLinksForVendorRiskQuery(
       WHERE l.organization_id = :organizationId
         AND l.target_vendor_risk_id = :vendorRiskId
         AND l.relation_type = 'inherits_from'
-        AND l.status IN (:statuses)
+        AND l.status IN (:statuses)${childVisibility.sql}
 
      UNION ALL
 
@@ -849,7 +871,10 @@ export async function getRiskLinksForVendorRiskQuery(
         AND l.status IN (:statuses)
 
       ORDER BY score DESC, related_entity_type, related_id`,
-    { replacements: { organizationId, vendorRiskId, statuses }, type: QueryTypes.SELECT },
+    {
+      replacements: { organizationId, vendorRiskId, statuses, ...childVisibility.replacements },
+      type: QueryTypes.SELECT,
+    },
   );
 
   return (rows as any[]).map((row) => ({
@@ -1272,11 +1297,16 @@ export interface SharedProjectCandidate {
  * tenant boundary and matches the rest of the codebase. The subject's own
  * ownership is anchored to `risks.organization_id`, which is NOT NULL, so it
  * does not depend on the nullable `projects_risks.organization_id`.
+ *
+ * A subject the viewer cannot see (risk visibility rule) has no candidates, as
+ * a missing one does.
  */
 export async function getSharedProjectCandidatesQuery(
   organizationId: number,
   riskId: number,
+  viewer: RiskViewer,
 ): Promise<SharedProjectCandidate[]> {
+  const subjectVisibility = riskVisibilitySql("subject", viewer);
   const rows = await sequelize.query(
     `WITH subject_projects AS (
        SELECT pr.project_id
@@ -1284,7 +1314,7 @@ export async function getSharedProjectCandidatesQuery(
          JOIN risks subject
            ON subject.id = pr.risk_id
           AND subject.organization_id = :organizationId
-          AND subject.is_deleted = false
+          AND subject.is_deleted = false${subjectVisibility.sql}
         WHERE pr.risk_id = :riskId
           AND pr.organization_id = :organizationId
      )
@@ -1312,7 +1342,10 @@ export async function getSharedProjectCandidatesQuery(
         AND mr.is_deleted = false
 
      ORDER BY entity_type, id, project_title`,
-    { replacements: { organizationId, riskId }, type: QueryTypes.SELECT },
+    {
+      replacements: { organizationId, riskId, ...subjectVisibility.replacements },
+      type: QueryTypes.SELECT,
+    },
   );
 
   // DISTINCT already guarantees one row per (entity, id, title), so the titles

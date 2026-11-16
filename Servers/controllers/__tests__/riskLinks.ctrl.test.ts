@@ -32,6 +32,8 @@ import {
   getDismissalAnalytics,
   getRiskLinks,
   getRiskGraph,
+  getSharedProjects,
+  getVendorRiskLinks,
   updateRiskLinkStatus,
   recomputeAllRiskLinks,
   createRiskLink,
@@ -63,10 +65,12 @@ describe("getRiskLinks", () => {
   it("defaults to suggested and confirmed", async () => {
     mockUtils.getRiskLinksForRiskQuery.mockResolvedValue([]);
     await getRiskLinks(req({ params: { riskId: "42" } }) as any, res() as any);
-    expect(mockUtils.getRiskLinksForRiskQuery).toHaveBeenCalledWith(7, 42, [
-      "suggested",
-      "confirmed",
-    ]);
+    expect(mockUtils.getRiskLinksForRiskQuery).toHaveBeenCalledWith(
+      7,
+      42,
+      ["suggested", "confirmed"],
+      { userId: 5, role: "" },
+    );
   });
 
   it("honours ?status=dismissed", async () => {
@@ -75,7 +79,10 @@ describe("getRiskLinks", () => {
       req({ params: { riskId: "42" }, query: { status: "dismissed" } }) as any,
       res() as any,
     );
-    expect(mockUtils.getRiskLinksForRiskQuery).toHaveBeenCalledWith(7, 42, ["dismissed"]);
+    expect(mockUtils.getRiskLinksForRiskQuery).toHaveBeenCalledWith(7, 42, ["dismissed"], {
+      userId: 5,
+      role: "",
+    });
   });
 
   it("rejects an unknown status with 400", async () => {
@@ -1197,6 +1204,31 @@ describe("link history", () => {
       "-",
       "Confirmed: Relates to Data leakage",
       "tx",
+    );
+  });
+});
+
+describe("per-risk link reads pass the signed-in viewer", () => {
+  it("shared projects are read for the viewer", async () => {
+    mockUtils.getSharedProjectCandidatesQuery.mockResolvedValue([]);
+    await getSharedProjects(req({ params: { riskId: "42" }, role: "Editor" }) as any, res() as any);
+    expect(mockUtils.getSharedProjectCandidatesQuery).toHaveBeenCalledWith(7, 42, {
+      userId: 5,
+      role: "Editor",
+    });
+  });
+
+  it("a vendor risk's links are read for the viewer", async () => {
+    mockUtils.getRiskLinksForVendorRiskQuery.mockResolvedValue([]);
+    await getVendorRiskLinks(
+      req({ params: { vendorRiskId: "9" }, role: "Editor" }) as any,
+      res() as any,
+    );
+    expect(mockUtils.getRiskLinksForVendorRiskQuery).toHaveBeenCalledWith(
+      7,
+      9,
+      ["suggested", "confirmed"],
+      { userId: 5, role: "Editor" },
     );
   });
 });

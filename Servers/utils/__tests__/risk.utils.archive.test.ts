@@ -36,6 +36,7 @@ import {
   updateRiskByIdQuery,
 } from "../risk.utils";
 import { FRAMEWORK_STRUCTURES } from "../../structures";
+import { SYSTEM_RISK_VIEWER } from "../riskVisibility.utils";
 
 const mockQuery = sequelize.query as jest.Mock;
 const mockSnapshot = recordSnapshotIfChanged as jest.Mock;
@@ -284,6 +285,7 @@ describe("updateRiskByIdQuery link removal", () => {
       { deletedLinkedProject: true, deletedLinkedFrameworks: true } as never,
       4,
       TX,
+      { viewer: SYSTEM_RISK_VIEWER },
     );
 
     // ISO 27001 mappings go for the removed use case, not only EU AI Act ones.
@@ -359,7 +361,9 @@ describe("risk automations wait for the commit", () => {
     arrange("risk_updated");
     const tx = makeTransaction();
 
-    await updateRiskByIdQuery(5, { risk_name: "Renamed" } as never, 4, tx as never);
+    await updateRiskByIdQuery(5, { risk_name: "Renamed" } as never, 4, tx as never, {
+      viewer: SYSTEM_RISK_VIEWER,
+    });
     expect(mockEnqueue).not.toHaveBeenCalled();
 
     tx.commit();
@@ -371,7 +375,9 @@ describe("risk automations wait for the commit", () => {
     arrange("risk_added");
     const tx = makeTransaction();
 
-    await createRiskQuery({ risk_name: "New" } as never, 4, tx as never);
+    await createRiskQuery({ risk_name: "New" } as never, 4, tx as never, {
+      viewer: SYSTEM_RISK_VIEWER,
+    });
     expect(mockEnqueue).not.toHaveBeenCalled();
 
     tx.commit();
@@ -419,6 +425,7 @@ describe("risk automations wait for the commit", () => {
     await archiveRiskQuery(5, 4, 9, tx as never, { runAutomations: false });
     await updateRiskByIdQuery(5, { risk_name: "Renamed" } as never, 4, tx as never, {
       runAutomations: false,
+      viewer: SYSTEM_RISK_VIEWER,
     });
 
     expect(sqlCalls().some((sql) => sql.includes("FROM automation_triggers"))).toBe(false);
@@ -448,7 +455,9 @@ describe("risk automations wait for the commit", () => {
     arrangeFourActions("risk_updated");
     const tx = makeTransaction();
 
-    await updateRiskByIdQuery(5, { risk_name: "Renamed" } as never, 4, tx as never);
+    await updateRiskByIdQuery(5, { risk_name: "Renamed" } as never, 4, tx as never, {
+      viewer: SYSTEM_RISK_VIEWER,
+    });
     expect(mockEnqueue).not.toHaveBeenCalled();
 
     const automationSql = sqlCalls().find((sql) => sql.includes("FROM automation_triggers"))!;
@@ -480,7 +489,9 @@ describe("risk automations wait for the commit", () => {
     arrangeFourActions("risk_updated");
     const tx = makeTransaction();
 
-    await updateRiskByIdQuery(5, { risk_name: "Renamed" } as never, 4, tx as never);
+    await updateRiskByIdQuery(5, { risk_name: "Renamed" } as never, 4, tx as never, {
+      viewer: SYSTEM_RISK_VIEWER,
+    });
     tx.rollback();
 
     expect(mockEnqueue).not.toHaveBeenCalled();
@@ -503,7 +514,9 @@ describe("risk automations wait for the commit", () => {
   it("runs every action for risk_added and, without a transaction, at once", async () => {
     arrangeFourActions("risk_added");
     const tx = makeTransaction();
-    await createRiskQuery({ risk_name: "New" } as never, 4, tx as never);
+    await createRiskQuery({ risk_name: "New" } as never, 4, tx as never, {
+      viewer: SYSTEM_RISK_VIEWER,
+    });
     tx.commit();
     await settle();
     expect(mockEnqueue).toHaveBeenCalledTimes(4);
@@ -722,7 +735,9 @@ describe("updateRiskByIdQuery snapshots", () => {
   it("records the changed parameters' snapshots by default", async () => {
     arrange();
 
-    await updateRiskByIdQuery(7, { severity: "Major" } as never, 4, TX);
+    await updateRiskByIdQuery(7, { severity: "Major" } as never, 4, TX, {
+      viewer: SYSTEM_RISK_VIEWER,
+    });
 
     expect(mockSnapshot.mock.calls.map((c) => c[0])).toContain("severity");
   });
@@ -732,6 +747,7 @@ describe("updateRiskByIdQuery snapshots", () => {
 
     await updateRiskByIdQuery(7, { severity: "Major" } as never, 4, TX, {
       recordSnapshots: false,
+      viewer: SYSTEM_RISK_VIEWER,
     });
 
     expect(mockSnapshot).not.toHaveBeenCalled();

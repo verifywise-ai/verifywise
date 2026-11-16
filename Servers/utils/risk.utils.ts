@@ -29,10 +29,11 @@ import { unlinkRiskFromAllPoliciesQuery } from "./policyLinkedObject.utils";
 import {
   getAccessibleProjectIdsQuery,
   isRiskVisibleQuery,
+  projectRiskVisibilitySql,
   riskVisibilitySql,
   RiskViewer,
+  scopedRiskViewer,
 } from "./riskVisibility.utils";
-import { projectAccessSql, seesAllProjects } from "./projectVisibility.utils";
 
 type RiskAutomationTrigger = "risk_added" | "risk_updated" | "risk_deleted";
 
@@ -183,7 +184,7 @@ export const assertRiskReferencesInOrganization = async (
 
   // A use case the viewer cannot see is answered like one outside the
   // organization: no new status or message. Only newly linked ones count.
-  if (options.viewer && !seesAllProjects(options.viewer.role) && projectIds) {
+  if (options.viewer && scopedRiskViewer(options.viewer) && projectIds) {
     const already = new Set((options.alreadyLinked ?? []).map(Number));
     const toCheck = [...new Set(projectIds)].filter((id) => !already.has(id));
     const accessible = await getAccessibleProjectIdsQuery(
@@ -222,7 +223,7 @@ export const assertRiskReferencesInOrganization = async (
 export const getAllRisksQuery = async (
   organizationId: number,
   filter: "active" | "deleted" | "all" = "active",
-  viewer?: RiskViewer,
+  viewer: RiskViewer,
 ): Promise<IRisk[]> => {
   let whereClause = "WHERE r.organization_id = :organizationId";
   switch (filter) {
@@ -237,9 +238,8 @@ export const getAllRisksQuery = async (
       break;
   }
 
-  // Without a viewer the list is org-wide; a non-Admin viewer sees only the
-  // risks riskVisibilitySql lets through.
-  const visibility = viewer ? riskVisibilitySql("r", viewer) : { sql: "", replacements: {} };
+  // A non-Admin viewer sees only the risks riskVisibilitySql lets through.
+  const visibility = riskVisibilitySql("r", viewer);
   whereClause += visibility.sql;
 
   // OPTIMIZED: Fast query for list view - only fetches basic risk data with projects/frameworks
@@ -526,7 +526,7 @@ export const getRisksByProjectQuery = async (
   projectId: number,
   organizationId: number,
   filter: "active" | "deleted" | "all" = "active",
-  viewer?: RiskViewer,
+  viewer: RiskViewer,
 ): Promise<IRisk[] | null> => {
   let whereClause = "WHERE r.organization_id = :organizationId";
   switch (filter) {
@@ -542,17 +542,9 @@ export const getRisksByProjectQuery = async (
   }
 
   // A viewer who cannot see the use case gets only the risks they own or
-  // approve there, so a risk shared with another use case they can see does
-  // not expose the hidden use case's list.
-  const visibility = viewer ? riskVisibilitySql("r", viewer) : { sql: "", replacements: {} };
+  // approve there (projectRiskVisibilitySql).
+  const visibility = projectRiskVisibilitySql("r", viewer);
   whereClause += visibility.sql;
-  if (viewer && !seesAllProjects(viewer.role)) {
-    const access = projectAccessSql("pvs", viewer.userId);
-    whereClause += ` AND (EXISTS (
-        SELECT 1 FROM projects pvs
-         WHERE pvs.id = :projectId AND pvs.organization_id = :organizationId${access.sql})
-      OR r.risk_owner = :visibilityUserId OR r.risk_approval = :visibilityUserId)`;
-  }
 
   const result = (await sequelize.query(
     `SELECT
@@ -586,7 +578,7 @@ export const getRisksByFrameworkQuery = async (
   frameworkId: number,
   organizationId: number,
   filter: "active" | "deleted" | "all" = "active",
-  viewer?: RiskViewer,
+  viewer: RiskViewer,
 ): Promise<IRisk[] | null> => {
   let whereClause = "WHERE r.organization_id = :organizationId";
   switch (filter) {
@@ -601,7 +593,7 @@ export const getRisksByFrameworkQuery = async (
       break;
   }
 
-  const visibility = viewer ? riskVisibilitySql("r", viewer) : { sql: "", replacements: {} };
+  const visibility = riskVisibilitySql("r", viewer);
   whereClause += visibility.sql;
 
   const result = (await sequelize.query(
@@ -828,8 +820,8 @@ export const linkRiskToProjectQuery = async (
   riskId: number,
   projectId: number,
   organizationId: number,
-  transaction?: Transaction,
-  viewer?: RiskViewer,
+  transaction: Transaction | undefined,
+  viewer: RiskViewer,
 ): Promise<void> => {
   const risks = await sequelize.query(
     `SELECT id FROM risks
@@ -840,7 +832,7 @@ export const linkRiskToProjectQuery = async (
   // A risk the viewer cannot see is a missing one.
   if (
     risks.length === 0 ||
-    (viewer && !(await isRiskVisibleQuery(riskId, organizationId, viewer, transaction)))
+    !(await isRiskVisibleQuery(riskId, organizationId, viewer, transaction))
   ) {
     throw new NotFoundException("Risk not found", "risk", riskId);
   }
@@ -895,7 +887,7 @@ export const createRiskQuery = async (
   projectRisk: Partial<RiskModel & { projects: number[]; frameworks: number[] }>,
   organizationId: number,
   transaction: Transaction,
-  { viewer }: { viewer?: RiskViewer } = {},
+  { viewer }: { viewer: RiskViewer },
 ): Promise<RiskModel> => {
   await assertRiskReferencesInOrganization(projectRisk, organizationId, transaction, { viewer });
 
@@ -1062,13 +1054,15 @@ export const updateRiskByIdQuery = async (
     recordSnapshots = true,
     runAutomations = true,
     viewer,
-  }: { recordSnapshots?: boolean; runAutomations?: boolean; viewer?: RiskViewer } = {},
+  }: { recordSnapshots?: boolean; runAutomations?: boolean; viewer: RiskViewer },
 ): Promise<RiskModel | null> => {
   const existingRisk = await getRiskByIdQuery(id, organizationId, true);
-  const scopedViewer = viewer && !seesAllProjects(viewer.role) ? viewer : undefined;
-  const linkedBefore = scopedViewer
-    ? await getLinkedProjectIdsQuery(id, organizationId, transaction)
-    : [];
+  const scopedViewer = scopedRiskViewer(viewer) ?? undefined;
+  // Only an edit of the use case links needs the links as they were.
+  const linkedBefore =
+    scopedViewer && projectRisk.projects
+      ? await getLinkedProjectIdsQuery(id, organizationId, transaction)
+      : [];
   // Unchanged owner/approver are not re-checked, so a risk whose owner has
   // left the organization can still be edited.
   await assertRiskReferencesInOrganization(

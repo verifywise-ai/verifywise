@@ -30,6 +30,7 @@ jest.mock("../logger/fileLogger", () => ({
 import { sequelize } from "../../database/db";
 import { enqueueAutomationAction } from "../../services/automations/automationProducer";
 import { enqueueBulkRiskAutomation, updateRiskByIdQuery } from "../risk.utils";
+import { SYSTEM_RISK_VIEWER } from "../riskVisibility.utils";
 import { createPolicyQuery } from "../policyManager.utils";
 import { updateAutomationByIdQuery } from "../automation.utils";
 import {
@@ -127,7 +128,9 @@ describe("risk and policy events", () => {
     arrange("risk_updated", TWO_LEGACY);
     const tx = makeTransaction();
 
-    await updateRiskByIdQuery(7, { risk_name: "Risk 7" } as never, 4, tx as never);
+    await updateRiskByIdQuery(7, { risk_name: "Risk 7" } as never, 4, tx as never, {
+      viewer: SYSTEM_RISK_VIEWER,
+    });
     tx.commit();
     await settle();
 
@@ -138,7 +141,9 @@ describe("risk and policy events", () => {
     arrange("risk_updated", LEGACY_AND_NEW);
     const tx = makeTransaction();
 
-    await updateRiskByIdQuery(7, { risk_name: "Risk 7" } as never, 4, tx as never);
+    await updateRiskByIdQuery(7, { risk_name: "Risk 7" } as never, 4, tx as never, {
+      viewer: SYSTEM_RISK_VIEWER,
+    });
     tx.commit();
     await settle();
 

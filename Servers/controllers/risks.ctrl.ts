@@ -899,7 +899,7 @@ export async function bulkUpdateProjectRisks(req: Request, res: Response): Promi
             risk.id!,
             input,
             risk,
-            { userId, organizationId },
+            { userId, organizationId, viewer: riskViewer(req) },
             transaction,
             { recordSnapshots: false, runAutomations: false },
           );
@@ -1038,7 +1038,9 @@ export async function suggestRisksWithAI(req: Request, res: Response): Promise<a
         ? req.body.technologySummary.trim()
         : undefined;
 
-    const existingRisks = (await getRisksByProjectQuery(projectId, organizationId)) ?? [];
+    // Only the risks the user can see are named to the model as existing ones.
+    const existingRisks =
+      (await getRisksByProjectQuery(projectId, organizationId, "active", riskViewer(req))) ?? [];
     const existingRiskNames = existingRisks
       .map((risk) => risk.risk_name)
       .filter((name): name is string => Boolean(name));

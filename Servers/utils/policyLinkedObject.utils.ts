@@ -4,6 +4,7 @@ import logger from "../utils/logger/fileLogger";
 import { PolicyLinkedObjectsModel } from "../domain.layer/models/policy/policy_linked_objects.model";
 import { assertOrgOwnsIds } from "./bulkAction.utils";
 import { policyExistsInOrganizationQuery } from "./policyManager.utils";
+import { riskVisibilityCondition, RiskViewer } from "./riskVisibility.utils";
 import {
   NotFoundException,
   ValidationException,
@@ -75,15 +76,39 @@ export const linkObjectsToPolicyQuery = async (
 };
 
 /**
+ * Leaves out the links to risks the viewer cannot see (risk visibility rule),
+ * so a policy's links never name a hidden risk. Empty for a viewer who sees
+ * every risk. Bound against policy_linked_objects (unaliased).
+ */
+const hiddenRiskLinksFilter = (
+  viewer: RiskViewer,
+): { sql: string; replacements: Record<string, unknown> } => {
+  const visibility = riskVisibilityCondition("lr", viewer);
+  if (!visibility) return { sql: "", replacements: {} };
+  return {
+    sql: ` AND (object_type <> 'risk' OR EXISTS (
+             SELECT 1 FROM risks lr
+              WHERE lr.id = policy_linked_objects.object_id
+                AND lr.organization_id = :organizationId
+                AND ${visibility.sql}))`,
+    replacements: visibility.replacements,
+  };
+};
+
+/**
  * GET all linked objects
  */
-export const getAllPolicyLinkedObjectsQuery = async (organizationId: number) => {
+export const getAllPolicyLinkedObjectsQuery = async (
+  organizationId: number,
+  viewer: RiskViewer,
+) => {
   logger.debug(`📥 Fetching all policy_linked_objects for organization ${organizationId}`);
 
+  const hidden = hiddenRiskLinksFilter(viewer);
   const rows = await sequelize.query(
-    `SELECT * FROM policy_linked_objects WHERE organization_id = :organizationId ORDER BY created_at DESC, id ASC`,
+    `SELECT * FROM policy_linked_objects WHERE organization_id = :organizationId${hidden.sql} ORDER BY created_at DESC, id ASC`,
     {
-      replacements: { organizationId },
+      replacements: { organizationId, ...hidden.replacements },
       mapToModel: true,
       model: PolicyLinkedObjectsModel,
     },
@@ -96,13 +121,18 @@ export const getAllPolicyLinkedObjectsQuery = async (organizationId: number) => 
  * GET linked object by ID
  */
 
-export const getPolicyLinkedObjectByIdQuery = async (policy_id: number, organizationId: number) => {
+export const getPolicyLinkedObjectByIdQuery = async (
+  policy_id: number,
+  organizationId: number,
+  viewer: RiskViewer,
+) => {
   logger.debug(`📥 Fetching linked objects for policy ${policy_id}`);
 
+  const hidden = hiddenRiskLinksFilter(viewer);
   const rows = await sequelize.query(
-    `SELECT * FROM policy_linked_objects WHERE organization_id = :organizationId AND policy_id = :policy_id`,
+    `SELECT * FROM policy_linked_objects WHERE organization_id = :organizationId AND policy_id = :policy_id${hidden.sql}`,
     {
-      replacements: { organizationId, policy_id },
+      replacements: { organizationId, policy_id, ...hidden.replacements },
       mapToModel: true,
       model: PolicyLinkedObjectsModel,
     },

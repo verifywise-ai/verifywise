@@ -18,6 +18,7 @@ import {
 } from "../domain.layer/exceptions/custom.exception";
 
 import { translateError } from "../utils/i18n.utils";
+import { riskViewer } from "../utils/riskVisibility.utils";
 
 /** Most ids one link request may carry (evidence lists can be long). */
 const MAX_LINK_IDS = 1000;
@@ -36,7 +37,7 @@ export async function getAllLinkedObjects(req: Request, res: Response) {
 
   try {
     const tenant = req.organizationId!;
-    const rows = await getAllPolicyLinkedObjectsQuery(tenant);
+    const rows = await getAllPolicyLinkedObjectsQuery(tenant, riskViewer(req));
 
     const grouped = rows.reduce(
       (acc, row: any) => {
@@ -100,7 +101,7 @@ export async function getLinkedObjects(req: Request, res: Response) {
 
   try {
     const tenant = req.organizationId!;
-    const rows = await getPolicyLinkedObjectByIdQuery(policyId, tenant);
+    const rows = await getPolicyLinkedObjectByIdQuery(policyId, tenant, riskViewer(req));
 
     const grouped = rows.reduce(
       (acc, row: any) => {

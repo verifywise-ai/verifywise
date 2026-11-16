@@ -13,6 +13,7 @@ import {
   getLiveVendorRiskIdsQuery,
 } from "../utils/vendorRiskLink.utils";
 import { getLLMKeysQuery } from "../utils/llmKey.utils";
+import { riskViewer } from "../utils/riskVisibility.utils";
 import {
   connectedComponents,
   MAX_COMPONENT_SIZE,
@@ -324,7 +325,12 @@ export async function getRiskLinks(req: Request, res: Response): Promise<any> {
     }
     const statuses = requested ? [requested] : DEFAULT_STATUSES;
 
-    const links = await getRiskLinksForRiskQuery(req.organizationId!, riskId, statuses);
+    const links = await getRiskLinksForRiskQuery(
+      req.organizationId!,
+      riskId,
+      statuses,
+      riskViewer(req),
+    );
 
     logSuccess({
       eventType: "Read",
@@ -457,7 +463,12 @@ export async function getVendorRiskLinks(req: Request, res: Response): Promise<a
     }
     const statuses = requested ? [requested] : DEFAULT_STATUSES;
 
-    const links = await getRiskLinksForVendorRiskQuery(req.organizationId!, vendorRiskId, statuses);
+    const links = await getRiskLinksForVendorRiskQuery(
+      req.organizationId!,
+      vendorRiskId,
+      statuses,
+      riskViewer(req),
+    );
 
     logSuccess({
       eventType: "Read",
@@ -777,7 +788,11 @@ export async function getSharedProjects(req: Request, res: Response): Promise<an
       return res.status(400).json(STATUS_CODE[400](req.t!("Invalid risk ID")));
     }
 
-    const candidates = await getSharedProjectCandidatesQuery(req.organizationId!, riskId);
+    const candidates = await getSharedProjectCandidatesQuery(
+      req.organizationId!,
+      riskId,
+      riskViewer(req),
+    );
 
     logSuccess({
       eventType: "Read",

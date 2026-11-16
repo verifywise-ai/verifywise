@@ -29,7 +29,11 @@ import {
   linkRiskToProjectQuery,
   updateRiskByIdQuery,
 } from "../risk.utils";
-import { getAccessibleProjectIdsQuery, isRiskVisibleQuery } from "../riskVisibility.utils";
+import {
+  getAccessibleProjectIdsQuery,
+  isRiskVisibleQuery,
+  SYSTEM_RISK_VIEWER,
+} from "../riskVisibility.utils";
 
 const mockQuery = sequelize.query as jest.Mock;
 const mockAccessible = getAccessibleProjectIdsQuery as jest.Mock;
@@ -119,10 +123,9 @@ describe("linkRiskToProjectQuery with a viewer", () => {
     });
   });
 
-  it("links without a viewer exactly as before", async () => {
+  it("links for the system viewer without a use case check", async () => {
     answerSql([3]);
-    await linkRiskToProjectQuery(5, 3, 1, tx);
-    expect(mockVisible).not.toHaveBeenCalled();
+    await linkRiskToProjectQuery(5, 3, 1, tx, SYSTEM_RISK_VIEWER);
     expect(mockAccessible).not.toHaveBeenCalled();
   });
 });
@@ -159,9 +162,12 @@ describe("updateRiskByIdQuery link replacement", () => {
     expect(mockAccessible).not.toHaveBeenCalled();
   });
 
-  it("replaces every link with no viewer", async () => {
+  it("replaces every link for the system viewer", async () => {
     answerSql([3], [3, 8]);
-    await updateRiskByIdQuery(5, { projects: [3] } as any, 1, tx, quiet);
+    await updateRiskByIdQuery(5, { projects: [3] } as any, 1, tx, {
+      ...quiet,
+      viewer: SYSTEM_RISK_VIEWER,
+    });
     expect(deleteSql()![0]).not.toContain("NOT IN");
   });
 });

@@ -197,7 +197,7 @@ describe("bulkUpdateProjectRisks", () => {
         1,
         { risk_owner: 7 },
         expect.objectContaining({ id: 1, risk_owner: 3 }),
-        { userId: 9, organizationId: 4 },
+        { userId: 9, organizationId: 4, viewer: { userId: 9, role: "Editor" } },
         TX,
         { recordSnapshots: false, runAutomations: false },
       );
@@ -378,7 +378,7 @@ describe("bulkUpdateProjectRisks", () => {
         1,
         { risk_category: ["Strategic risk", "Operational risk"] },
         expect.objectContaining({ id: 1 }),
-        { userId: 9, organizationId: 4 },
+        { userId: 9, organizationId: 4, viewer: { userId: 9, role: "Editor" } },
         TX,
         { recordSnapshots: false, runAutomations: false },
       );

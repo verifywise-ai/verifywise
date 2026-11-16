@@ -1,5 +1,6 @@
 import { wiseSearch, GroupedSearchResults } from "../../utils/search.utils";
 import logger from "../../utils/logger/fileLogger";
+import { SYSTEM_RISK_VIEWER } from "../../utils/riskVisibility.utils";
 
 // --- Read Tools ---
 
@@ -12,6 +13,8 @@ const globalSearch = async (
       query: params.query,
       organizationId,
       userId: 0, // Advisor uses org-level access
+      // Org-wide until the J2 follow-up scopes advisor reads to the user.
+      riskViewer: SYSTEM_RISK_VIEWER,
       limit: params.limit || 20,
     });
 
@@ -57,6 +60,8 @@ const searchWithinEntity = async (
       query: params.query,
       organizationId,
       userId: 0, // Advisor uses org-level access
+      // Org-wide until the J2 follow-up scopes advisor reads to the user.
+      riskViewer: SYSTEM_RISK_VIEWER,
       limit: params.limit || 20,
       reviewStatus: params.filters?.review_status,
     });
