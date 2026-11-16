@@ -27,7 +27,6 @@ import { logProcessing } from "../utils/logger/logHelper";
 import logger, { logStructured } from "../utils/logger/fileLogger";
 import { logEvent } from "../utils/logger/dbLogger";
 import { notifyUserAssigned, notifyUserAssignedMany } from "../services/inAppNotification.service";
-import { QueryTypes } from "sequelize";
 import { recordPortfolioSnapshot } from "../utils/quantitativeRisk.utils";
 import {
   createRiskService,
@@ -48,17 +47,12 @@ import { riskViewer, riskVisibilitySql, SYSTEM_RISK_VIEWER } from "../utils/risk
 import { translateError } from "../utils/i18n.utils";
 import { IRisk } from "../domain.layer/interfaces/I.risk";
 import { BulkRiskChange } from "../utils/automation/risk.automation.utils";
-// Helper function to get user name
-async function getUserNameById(userId: number): Promise<string> {
-  const result = await sequelize.query<{ name: string; surname: string }>(
-    `SELECT name, surname FROM users WHERE id = :userId`,
-    { replacements: { userId }, type: QueryTypes.SELECT },
-  );
-  if (result[0]) {
-    return `${result[0].name} ${result[0].surname}`.trim();
-  }
-  return "Someone";
-}
+import { callerCanDecideAnyRisk } from "../utils/riskApproval.utils";
+import {
+  getUserNameById,
+  notifyNewRiskApprover,
+  notifyRiskAssignee,
+} from "../services/riskApproverNotification.service";
 
 type AssignedRisk = Pick<IRisk, "id" | "risk_owner" | "risk_name" | "risk_description">;
 
@@ -76,7 +70,7 @@ async function notifyNewRiskOwners(
 ): Promise<void> {
   if (risks.length === 0) return;
   const baseUrl = process.env.FRONTEND_URL || "http://localhost:3000";
-  const assignerName = await getUserNameById(assignerUserId);
+  const assignerName = await getUserNameById(assignerUserId, organizationId);
 
   const byOwner = new Map<number, AssignedRisk[]>();
   for (const risk of risks) {
@@ -149,6 +143,10 @@ async function notifyNewRiskOwners(
     }
   }
 }
+
+/** Whether the signed-in user may decide any risk's approval (an Admin). */
+const requestCallerIsAdmin = (req: Request): Promise<boolean> =>
+  callerCanDecideAnyRisk(req.organizationId ?? null, req.role ?? "");
 
 export async function getAllRisks(req: Request, res: Response): Promise<any> {
   const filter = (req.query.filter as "active" | "deleted" | "all") || "active";
@@ -393,41 +391,21 @@ export async function runRiskCreatedSideEffects(
     logger.error("Failed to enqueue risk link recompute:", err),
   );
 
+  // Tell a named approver (fire-and-forget)
+  if (newProjectRisk.risk_approval) {
+    notifyNewRiskApprover(req.organizationId!, req.userId!, newProjectRisk).catch((err) =>
+      logger.error("Failed to send risk approver notification:", err),
+    );
+  }
+
   // Send risk owner assignment notification (fire-and-forget)
   if (newProjectRisk.risk_owner) {
-    const baseUrl = process.env.FRONTEND_URL || "http://localhost:3000";
-    const assignerName = await getUserNameById(req.userId!);
-
-    // Get project name for context (use first associated project if available)
-    let projectName: string | undefined;
-    const projects = req.body.projects || [];
-    if (projects.length > 0) {
-      const projectResult = await sequelize.query<{ project_title: string }>(
-        `SELECT project_title FROM projects WHERE id = :projectId AND organization_id = :organizationId`,
-        {
-          replacements: { projectId: projects[0], organizationId: req.organizationId! },
-          type: QueryTypes.SELECT,
-        },
-      );
-      projectName = projectResult[0]?.project_title;
-    }
-
-    notifyUserAssigned(
+    notifyRiskAssignee(
       req.organizationId!,
+      req.userId!,
+      newProjectRisk,
       newProjectRisk.risk_owner,
-      {
-        entityType: "project_risk",
-        entityId: newProjectRisk.id!,
-        entityName: newProjectRisk.risk_name,
-        roleType: "Risk Owner",
-        entityUrl: `/risk-management?riskId=${newProjectRisk.id}`,
-      },
-      assignerName,
-      baseUrl,
-      {
-        projectName,
-        description: newProjectRisk.risk_description,
-      },
+      "Risk Owner",
     ).catch((err) => logger.error("Failed to send risk owner notification:", err));
   }
 }
@@ -447,7 +425,12 @@ export async function createRisk(req: Request, res: Response): Promise<any> {
         // Only the demo seed creates demo risks; "Delete demo data" removes them.
         is_demo: false,
       },
-      { userId: req.userId!, organizationId: req.organizationId!, viewer: riskViewer(req) },
+      {
+        userId: req.userId!,
+        organizationId: req.organizationId!,
+        viewer: riskViewer(req),
+        callerIsAdmin: await requestCallerIsAdmin(req),
+      },
       transaction,
     );
 
@@ -469,6 +452,11 @@ export async function createRisk(req: Request, res: Response): Promise<any> {
     return res.status(400).json(STATUS_CODE[400](req.t!("Unable to create project risk")));
   } catch (error) {
     await transaction.rollback();
+
+    // A refused approval change (RiskApprovalForbiddenError) among others.
+    if (error instanceof ForbiddenException) {
+      return res.status(403).json(STATUS_CODE[403](translateError(req, error)));
+    }
 
     // Handle specific validation errors
     if (error instanceof ValidationException) {
@@ -565,7 +553,12 @@ export async function updateRiskById(req: Request, res: Response): Promise<any> 
       projectRiskId,
       updateData,
       existingProjectRisk,
-      { userId: req.userId!, organizationId: req.organizationId!, viewer: riskViewer(req) },
+      {
+        userId: req.userId!,
+        organizationId: req.organizationId!,
+        viewer: riskViewer(req),
+        callerIsAdmin: await requestCallerIsAdmin(req),
+      },
       transaction,
     );
 
@@ -604,6 +597,14 @@ export async function updateRiskById(req: Request, res: Response): Promise<any> 
         );
       }
 
+      // Tell a newly named approver (fire-and-forget)
+      const newApprover = updatedProjectRisk.risk_approval;
+      if (newApprover && Number(newApprover) !== Number(existingProjectRisk.risk_approval)) {
+        notifyNewRiskApprover(req.organizationId!, req.userId!, updatedProjectRisk).catch((err) =>
+          logger.error("Failed to send risk approver notification:", err),
+        );
+      }
+
       return res.status(200).json(STATUS_CODE[200](updatedProjectRisk));
     }
 
@@ -623,6 +624,11 @@ export async function updateRiskById(req: Request, res: Response): Promise<any> 
     return res.status(404).json(STATUS_CODE[404](req.t!("Project risk not found")));
   } catch (error) {
     await transaction.rollback();
+
+    // A refused approval change (RiskApprovalForbiddenError) among others.
+    if (error instanceof ForbiddenException) {
+      return res.status(403).json(STATUS_CODE[403](translateError(req, error)));
+    }
 
     // Raised by updateRiskService when the merged FAIR field set does not
     // validate. Answered with the whole list, exactly as this handler did
@@ -891,7 +897,8 @@ export async function bulkUpdateProjectRisks(req: Request, res: Response): Promi
             risk.id!,
             input,
             risk,
-            { userId, organizationId, viewer: SYSTEM_RISK_VIEWER },
+            // A bulk action sends no approver or approval status.
+            { userId, organizationId, viewer: SYSTEM_RISK_VIEWER, callerIsAdmin: false },
             transaction,
             { recordSnapshots: false, runAutomations: false },
           );

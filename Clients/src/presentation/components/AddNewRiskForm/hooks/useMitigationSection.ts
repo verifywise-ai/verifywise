@@ -6,6 +6,7 @@ import {
   riskLevelItems,
   approvalStatusItems,
   likelihoodItems,
+  RISK_APPROVAL_STATUS,
   riskSeverityItems,
 } from "../projectRiskValue";
 import { Likelihood, Severity } from "../../RiskLevel/constants";
@@ -34,8 +35,9 @@ export const mitigationInitialState: MitigationFormValues = {
   likelihood: 1 as Likelihood,
   riskSeverity: 1 as Severity,
   approver: 0,
-  approvalStatus: 0,
-  // Set only once approval is started, so a new risk does not look assessed.
+  // A risk always has an approval status; it needs none until an approver is named.
+  approvalStatus: RISK_APPROVAL_STATUS.NotRequired,
+  // Optional, so a new risk does not look assessed.
   dateOfAssessment: "",
 };
 
@@ -87,8 +89,10 @@ export function useMitigationSection(
           likelihoodItems.find((item) => item.name === inputValues.likelihood_mitigation)?._id ?? 1,
         riskSeverity: riskSeverityItems.find((item) => item.name === residualSeverity)?._id ?? 1,
         approver: (inputValues.risk_approval as number) ?? 0,
+        // A value from before the four statuses (the server maps them) opens as Not required.
         approvalStatus:
-          approvalStatusItems.find((item) => item.name === inputValues.approval_status)?._id ?? 0,
+          approvalStatusItems.find((item) => item.name === inputValues.approval_status)?._id ??
+          RISK_APPROVAL_STATUS.NotRequired,
         dateOfAssessment: parseDateValue(inputValues.date_of_assessment),
       };
     },
@@ -118,7 +122,8 @@ export function useMitigationSection(
           : riskSeverityItems.find((item) => item._id === values.riskSeverity)?.name || "",
       risk_approval: values.approver || null,
       approval_status:
-        approvalStatusItems.find((item) => item._id === values.approvalStatus)?.name || null,
+        approvalStatusItems.find((item) => item._id === values.approvalStatus)?.name ??
+        "Not required",
       date_of_assessment: toCalendarDay(values.dateOfAssessment),
     };
   }, []);

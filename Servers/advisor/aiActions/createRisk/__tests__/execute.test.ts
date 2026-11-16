@@ -10,11 +10,20 @@ jest.mock("../../../../services/inAppNotification.service", () => ({
   sendInAppNotification: jest.fn(),
 }));
 
+jest.mock("../../../../utils/rolePermissions.utils", () => ({
+  roleHasPermission: jest.fn().mockResolvedValue(false),
+}));
+jest.mock("../../../../services/riskApproverNotification.service", () => ({
+  notifyNewRiskApprover: jest.fn().mockResolvedValue(undefined),
+}));
+
 jest.mock("../../../../utils/riskVisibility.utils", () => ({
   riskViewerForUserQuery: jest.fn().mockResolvedValue({ userId: 2, role: "Editor" }),
 }));
 
 import { createRiskService } from "../../../../services/risk.service";
+import { roleHasPermission } from "../../../../utils/rolePermissions.utils";
+import { notifyNewRiskApprover } from "../../../../services/riskApproverNotification.service";
 import { executeCreateRisk } from "../execute";
 
 const mockCreate = createRiskService as jest.Mock;
@@ -63,5 +72,55 @@ describe("executeCreateRisk", () => {
     expect(mockCreate.mock.calls.at(-1)[1]).toEqual(
       expect.objectContaining({ viewer: { userId: 2, role: "Editor" } }),
     );
+  });
+
+  it("creates a risk with no approver or assessment date", async () => {
+    (roleHasPermission as jest.Mock).mockClear();
+    mockCreate.mockResolvedValue({ id: 3, risk_approval: null });
+    const afterCommit = jest.fn();
+    await executeCreateRisk({
+      inputParams: {
+        risk_name: "R",
+        risk_description: "d",
+        ai_lifecycle_phase: "Deployment & integration",
+        risk_category: ["Data privacy risk"],
+        impact: "i",
+        deadline: "2027-01-01",
+      },
+      organizationId: 1,
+      requesterId: 2,
+      transaction: { afterCommit },
+    } as never);
+    const payload = mockCreate.mock.calls.at(-1)[0];
+    expect(payload.date_of_assessment).toBeUndefined();
+    expect(payload.risk_approval).toBeUndefined();
+    // No approval field sent, so the Admin permission is not looked up.
+    expect(roleHasPermission).not.toHaveBeenCalled();
+    expect(mockCreate.mock.calls.at(-1)[1].callerIsAdmin).toBe(false);
+    // Only the link recompute is queued; no approver to notify.
+    expect(afterCommit).toHaveBeenCalledTimes(1);
+  });
+
+  it("notifies a named approver after commit", async () => {
+    const risk = { id: 3, risk_name: "R", risk_approval: 8 };
+    mockCreate.mockResolvedValue(risk);
+    const afterCommit = jest.fn();
+    await executeCreateRisk({
+      inputParams: {
+        risk_name: "R",
+        risk_description: "d",
+        ai_lifecycle_phase: "Deployment & integration",
+        risk_category: ["Data privacy risk"],
+        impact: "i",
+        deadline: "2027-01-01",
+        approver: 8,
+      },
+      organizationId: 1,
+      requesterId: 2,
+      transaction: { afterCommit },
+    } as never);
+    expect(notifyNewRiskApprover).not.toHaveBeenCalled();
+    afterCommit.mock.calls.forEach(([fn]) => fn());
+    expect(notifyNewRiskApprover).toHaveBeenCalledWith(1, 2, risk);
   });
 });

@@ -172,6 +172,7 @@ describe("create_risk", () => {
       userId: 7,
       organizationId: 3,
       viewer: SYSTEM_RISK_VIEWER,
+      callerIsAdmin: true,
     });
   });
 

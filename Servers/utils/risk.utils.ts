@@ -1,3 +1,4 @@
+import { RISK_APPROVAL_NOT_REQUIRED } from "../domain.layer/enums/risk-approval-status.enum";
 import { RiskModel } from "../domain.layer/models/risks/risk.model";
 import { getEffectiveRiskLevel } from "./riskLevel.utils";
 import { sequelize } from "../database/db";
@@ -776,7 +777,9 @@ export const createRiskQuery = async (
         risk_severity: projectRisk.risk_severity,
         final_risk_level: projectRisk.final_risk_level,
         risk_approval: projectRisk.risk_approval,
-        approval_status: projectRisk.approval_status,
+        // An omitted value would bind NULL, which the column refuses; store
+        // the column default instead.
+        approval_status: projectRisk.approval_status ?? RISK_APPROVAL_NOT_REQUIRED,
         date_of_assessment: toRiskCalendarDate(projectRisk.date_of_assessment ?? null),
         is_demo: projectRisk.is_demo || false,
         event_frequency_min: projectRisk.event_frequency_min ?? null,
@@ -1287,6 +1290,29 @@ export const getProjectTitlesByRiskIdsQuery = async (
     { replacements: { riskIds, organizationId }, type: QueryTypes.SELECT },
   );
   return new Map(rows.map((r) => [Number(r.risk_id), r.project_title]));
+};
+
+/**
+ * The stored approver and approval status of a risk, read with a row lock
+ * inside `transaction`, so two saves that both change the approval resolve
+ * one after the other instead of against the same stale read. Null when the
+ * risk is not in this organization.
+ */
+export const lockRiskApprovalQuery = async (
+  riskId: number,
+  organizationId: number,
+  transaction: Transaction,
+): Promise<{ risk_approval: number | null; approval_status: string | null } | null> => {
+  const rows = await sequelize.query<{
+    risk_approval: number | null;
+    approval_status: string | null;
+  }>(
+    `SELECT risk_approval, approval_status FROM risks
+      WHERE id = :riskId AND organization_id = :organizationId
+      FOR UPDATE`,
+    { replacements: { riskId, organizationId }, type: QueryTypes.SELECT, transaction },
+  );
+  return rows[0] ?? null;
 };
 
 /**

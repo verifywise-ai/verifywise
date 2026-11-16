@@ -1541,11 +1541,17 @@ components:
           nullable: true
         risk_approval:
           type: integer
-          description: 'User ID of the approver.'
+          description: 'User ID of the approver. Optional; naming a new approver sets the approval status to Pending and notifies them.'
           nullable: true
         approval_status:
           type: string
-          nullable: true
+          enum:
+            - Pending
+            - Approved
+            - Rejected
+            - 'Not required'
+          default: 'Not required'
+          description: 'Approval status of the risk. A risk without an approver is always Not required. Only the risk''s approver or an Admin can set Approved or Rejected, or move away from either (403 otherwise); naming a new approver resets it to Pending, and only an Admin can name an approver and decide in the same request. On this unversioned route a value outside the four is ignored (the stored status is kept, or Not required on create).'
         date_of_assessment:
           type: string
           format: date-time
@@ -7975,6 +7981,8 @@ tags:
   -
     name: 'v1: Policies'
   -
+    name: 'v1: Risk import'
+  -
     name: 'v1: Shadow AI'
   -
     name: 'v1: Use Case Settings'
@@ -10363,6 +10371,8 @@ paths:
                   data: {$ref: '#/components/schemas/ProjectRiskResponse'}
         '401':
           description: Unauthorized
+        '403':
+          description: 'Only the risk''s approver or an Admin can change its approval.'
         '500':
           description: 'Internal server error'
   '/projectRisks/by-projid/{id}':
@@ -10510,6 +10520,8 @@ paths:
                   data: {$ref: '#/components/schemas/ProjectRiskResponse'}
         '401':
           description: Unauthorized
+        '403':
+          description: 'Only the risk''s approver or an Admin can change its approval.'
         '500':
           description: 'Internal server error'
     delete:
@@ -29221,6 +29233,20 @@ paths:
       tags:
         - 'v1: V1/Projects'
       operationId: getRisksLinkedOnlyToProject
+      security:
+        -
+          bearerAuth: []
+  /v1/risk-import/import:
+    post:
+      summary: 'Bulk Import Risks Strict'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: Risk import'
+      operationId: bulkImportRisksStrict
       security:
         -
           bearerAuth: []

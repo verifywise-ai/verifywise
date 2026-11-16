@@ -2800,6 +2800,8 @@ async function approve(
             userId: req.userId!,
             organizationId: req.organizationId!,
             viewer: SYSTEM_RISK_VIEWER,
+            // A system writer: the suggestion names no approval decision.
+            callerIsAdmin: true,
           },
           transaction,
         );

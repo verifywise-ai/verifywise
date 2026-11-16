@@ -20,6 +20,7 @@ import {
   RiskAiLifecyclePhase,
   RiskCategory,
   CurrentRiskLevel,
+  RiskApprovalStatusSchema,
 } from "../createRisk/schema";
 
 const isoDateString = z
@@ -65,7 +66,7 @@ export const AgentUpdateRiskSchema = z
     implementation_strategy: z.string().min(1).max(1024).optional(),
     deadline: isoDateString.optional(),
     approver: z.number().int().positive().optional(),
-    approval_status: RiskMitigationStatus.optional(),
+    approval_status: RiskApprovalStatusSchema.optional(),
     date_of_assessment: isoDateString.optional(),
   })
   .strict()

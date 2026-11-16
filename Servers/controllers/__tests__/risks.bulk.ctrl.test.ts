@@ -203,7 +203,7 @@ describe("bulkUpdateProjectRisks", () => {
         { risk_owner: 7 },
         expect.objectContaining({ id: 1, risk_owner: 3 }),
         // The batch check already rejected hidden ids, so each edit runs as the system.
-        { userId: 9, organizationId: 4, viewer: SYSTEM_RISK_VIEWER },
+        { userId: 9, organizationId: 4, viewer: SYSTEM_RISK_VIEWER, callerIsAdmin: false },
         TX,
         { recordSnapshots: false, runAutomations: false },
       );
@@ -385,7 +385,7 @@ describe("bulkUpdateProjectRisks", () => {
         { risk_category: ["Strategic risk", "Operational risk"] },
         expect.objectContaining({ id: 1 }),
         // The batch check already rejected hidden ids, so each edit runs as the system.
-        { userId: 9, organizationId: 4, viewer: SYSTEM_RISK_VIEWER },
+        { userId: 9, organizationId: 4, viewer: SYSTEM_RISK_VIEWER, callerIsAdmin: false },
         TX,
         { recordSnapshots: false, runAutomations: false },
       );

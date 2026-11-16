@@ -167,8 +167,11 @@ export class RiskModel extends Model<RiskModel> implements IRisk {
   })
   risk_approval!: number;
 
+  /** One of RISK_APPROVAL_STATUSES (risks_approval_status_check). */
   @Column({
     type: DataType.STRING,
+    allowNull: false,
+    defaultValue: "Not required",
   })
   approval_status!: string;
 

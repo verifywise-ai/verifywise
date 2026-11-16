@@ -200,19 +200,20 @@ export const validateDeadline = (value: any): ValidationResult => {
 };
 
 /**
- * Validates date of assessment field
+ * Validates date of assessment field. Optional (ruling K8).
  */
 export const validateDateOfAssessment = (value: any): ValidationResult => {
   return validateDate(value, "Date of assessment", {
-    required: true,
+    required: false,
   });
 };
 
 /**
- * Validates risk approval field
+ * Validates risk approval field. Optional: a risk without an approver is
+ * Not required.
  */
 export const validateRiskApproval = (value: any): ValidationResult => {
-  return validateForeignKey(value, "Risk approval", true);
+  return validateForeignKey(value, "Risk approval", false);
 };
 
 /**
