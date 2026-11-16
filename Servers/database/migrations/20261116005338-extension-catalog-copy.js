@@ -9,6 +9,10 @@
  *   membership and role changes, use case changes, policy review reminders
  *   and deadline alerts.
  * - "use-cases" → "use cases" in the Jira Assets description.
+ * - Framework import keeps the description its seed migration has today.
+ *   An earlier edit of that seed described imported frameworks as a
+ *   reference list; databases seeded before the edit still carry that text,
+ *   so up() writes the current one for every database.
  *
  * down() restores the exact values seeded by 20260811102307-extensions-migration
  * and 20261111092001-framework-import-extension.
@@ -47,7 +51,7 @@ const NEW_VALUES = {
     name: "Framework import",
     display_name: "Framework import",
     description:
-      "Import your own framework structure (topics and subtopics) from an Excel file as a reference list.",
+      "Import your own framework (topics and subtopics) from an Excel file, then add it to use cases and assess it.",
   },
 };
 
@@ -84,7 +88,7 @@ const OLD_VALUES = {
     name: "Framework Import",
     display_name: "Framework Import",
     description:
-      "Import your own framework structure (topics and subtopics) from an Excel file as a reference list.",
+      "Import your own framework (topics and subtopics) from an Excel file, then add it to use cases and assess it.",
   },
 };
 
