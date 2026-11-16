@@ -466,8 +466,11 @@ describe("checkPdfStreams: what the library reads that a quick look would miss",
 describe("checkPdfStreams: the work on the event loop", () => {
   // These tests make the check read megabytes of dictionary on purpose. Alone they take well under
   // jest's 5 seconds, but in a full parallel run on a loaded machine (a CI runner, a developer's
-  // laptop) two of them timed out although the code was right. The assertions are unchanged.
-  jest.setTimeout(30_000);
+  // laptop) two of them timed out although the code was right. The assertions are unchanged. The
+  // coverage run of CI executes the whole suite in one process for half an hour, and one of them
+  // took more than 30 seconds there although it takes about a second alone; a test that really
+  // hangs still fails, only later.
+  jest.setTimeout(120_000);
 
   it("allows each file WORK_PER_FILE_BYTE times its length, plus WORK_FLOOR_BYTES", async () => {
     const body = pdfOf([{ dictionary: "<< /Length LENGTH /Filter /Fl >>", data: deflate(KIB) }]);
