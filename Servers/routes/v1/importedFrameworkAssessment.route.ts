@@ -4,6 +4,8 @@ import authorize from "../../middleware/accessControl.middleware";
 import { requireExtensionEnabled } from "../../middleware/requireExtensionEnabled.middleware";
 import { requireProjectAccess } from "../../middleware/projectAccess.middleware";
 import { createMemoryUpload } from "../../utils/upload.utils";
+import { requireFrameworkWriteAccess } from "../../middleware/frameworkWriteAccess.middleware";
+import { importedImplChanges } from "../../utils/frameworkWriteAccess.utils";
 import {
   attachToProject,
   detachFromProject,
@@ -41,6 +43,7 @@ router.get("/projects/:projectId", requireProjectAccess("projectId"), listProjec
 router.post(
   "/projects/:projectId",
   authorize("useCase.edit"),
+  authorize("framework.edit"),
   requireExtensionEnabled("framework-import"),
   requireProjectAccess("projectId"),
   attachToProject,
@@ -50,6 +53,7 @@ router.post(
 router.delete(
   "/projects/:projectId/:linkId",
   authorize("useCase.edit"),
+  authorize("framework.edit"),
   requireProjectAccess("projectId"),
   detachFromProject,
 );
@@ -64,12 +68,21 @@ router.get("/links/:linkId/dashboard", getLinkDashboard);
 router.get("/links/:linkId/impl/:level/:implId", getImpl);
 
 // PATCH /links/:linkId/impl/:level/:implId — save it (multipart, evidence files)
-router.patch("/links/:linkId/impl/:level/:implId", upload.any(), updateImpl);
+router.patch(
+  "/links/:linkId/impl/:level/:implId",
+  upload.any(),
+  requireFrameworkWriteAccess(importedImplChanges),
+  updateImpl,
+);
 
 // GET /links/:linkId/impl/:level/:implId/risks — linked risks
 router.get("/links/:linkId/impl/:level/:implId/risks", getImplRisks);
 
 // PUT /links/:linkId/impl/:level/:implId/risks — replace linked risks { risk_ids }
-router.put("/links/:linkId/impl/:level/:implId/risks", replaceImplRisks);
+router.put(
+  "/links/:linkId/impl/:level/:implId/risks",
+  authorize("framework.edit"),
+  replaceImplRisks,
+);
 
 export default router;

@@ -8,6 +8,8 @@ import {
 import { getDecryptedAiGatewayKeyForProviderQuery } from "../utils/aiGatewayEvalKey.utils";
 import { getGatewayInternalKey, getGatewayUrl } from "../utils/aiGatewayConfig";
 import { createPermissionFlagMiddleware } from "../utils/proxyPermissionFlag.utils";
+import { requestHasPermission } from "../utils/rolePermissions.utils";
+import { STATUS_CODE } from "../utils/statusCode.utils";
 
 // JSON body parser for routes that need to inspect/modify the body before proxying
 const jsonParser = express.json({ limit: "50mb" });
@@ -66,6 +68,72 @@ export const resolveEvalsSettingsPermission = createPermissionFlagMiddleware({
   flag: "canManageEvalsSettings",
   logLabel: "DeepEval Proxy",
 });
+
+/**
+ * EvalServer writes that need "evals.edit", as [method, path] with `*` for one
+ * path segment (paths relative to /api/deepeval). These are the writes the
+ * app offers only to roles holding evals.edit: deleting projects and
+ * experiments, setting an experiment's status, and creating, changing or
+ * deleting scorers, datasets and saved models.
+ *
+ * Not listed, because the app offers them to every role today: creating a
+ * project (sidebar "New project"), changing a project (its use case setting),
+ * creating an experiment (rerun on the experiment page), renaming or
+ * describing an experiment, and uploading a dataset (copying a template).
+ * Runs, tests, arena, bias audits, reports, logs and settings are not edits.
+ */
+export const EVALS_EDIT_WRITES: ReadonlyArray<readonly [string, string]> = [
+  ["DELETE", "projects/*"],
+  ["DELETE", "experiments/*"],
+  ["PUT", "experiments/*/status"],
+  ["POST", "scorers"],
+  ["PUT", "scorers/*"],
+  ["DELETE", "scorers/*"],
+  ["DELETE", "datasets/user"],
+  ["POST", "models"],
+  ["PUT", "models/*"],
+  ["DELETE", "models/*"],
+];
+
+const READ_ONLY_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
+
+/**
+ * Whether a write to `path` needs evals.edit. The path is compared the way the
+ * EvalServer routes it: decoded, lower-cased, empty segments ignored. A `.` or
+ * `..` segment, or an undecodable path, needs the permission (fail closed).
+ */
+export function isEvalsEditWrite(method: string, path: string): boolean {
+  const verb = method.toUpperCase();
+  if (READ_ONLY_METHODS.has(verb)) return false;
+  let decoded: string;
+  try {
+    decoded = decodeURIComponent(path);
+  } catch {
+    return true;
+  }
+  const segments = decoded.toLowerCase().split("/").filter(Boolean);
+  if (segments.some((s) => s === "." || s === "..")) return true;
+  return EVALS_EDIT_WRITES.some(([m, pattern]) => {
+    if (m !== verb) return false;
+    const wanted = pattern.split("/");
+    return (
+      wanted.length === segments.length && wanted.every((w, i) => w === "*" || w === segments[i])
+    );
+  });
+}
+
+/** 403 for an EvalServer edit (see EVALS_EDIT_WRITES) without evals.edit. */
+export async function requireEvalsEditForChanges(req: Request, res: Response, next: NextFunction) {
+  if (!isEvalsEditWrite(req.method, req.path)) return next();
+  try {
+    if (!(await requestHasPermission(req, "evals.edit"))) {
+      return res.status(403).json(STATUS_CODE[403](req.t!("Access denied")));
+    }
+    return next();
+  } catch (error) {
+    return next(error);
+  }
+}
 
 /**
  * Build the LiteLLM model string from a (provider, model) pair.
@@ -524,6 +592,7 @@ function deepEvalRoutes() {
   router.use(
     "/",
     authenticateJWT,
+    requireEvalsEditForChanges,
     jsonParser,
     injectApiKeys,
     resolveEvalsSettingsPermission,

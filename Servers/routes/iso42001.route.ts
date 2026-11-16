@@ -6,6 +6,12 @@ import { createMemoryUpload } from "../utils/upload.utils";
 const upload = createMemoryUpload();
 
 import authenticateJWT from "../middleware/auth.middleware";
+import authorize from "../middleware/accessControl.middleware";
+import { requireFrameworkWriteAccess } from "../middleware/frameworkWriteAccess.middleware";
+import {
+  iso42001AnnexChanges,
+  iso42001SubclauseChanges,
+} from "../utils/frameworkWriteAccess.utils";
 import {
   deleteManagementSystemClauses,
   deleteReferenceControls,
@@ -102,20 +108,36 @@ router.get(
   getProjectAnnexesAssignments,
 );
 
-router.patch("/saveClauses/:id", authenticateJWT, validateId("id"), upload.any(), saveClauses);
+router.patch(
+  "/saveClauses/:id",
+  authenticateJWT,
+  validateId("id"),
+  upload.any(),
+  requireFrameworkWriteAccess(iso42001SubclauseChanges),
+  saveClauses,
+);
 
-router.patch("/saveAnnexes/:id", authenticateJWT, validateId("id"), upload.any(), saveAnnexes);
+router.patch(
+  "/saveAnnexes/:id",
+  authenticateJWT,
+  validateId("id"),
+  upload.any(),
+  requireFrameworkWriteAccess(iso42001AnnexChanges),
+  saveAnnexes,
+);
 
 router.delete(
   "/clauses/byProjectId/:id",
   authenticateJWT,
   validateId("id"),
+  authorize("framework.edit"),
   deleteManagementSystemClauses,
 );
 router.delete(
   "/annexes/byProjectId/:id",
   authenticateJWT,
   validateId("id"),
+  authorize("framework.edit"),
   deleteReferenceControls,
 );
 
