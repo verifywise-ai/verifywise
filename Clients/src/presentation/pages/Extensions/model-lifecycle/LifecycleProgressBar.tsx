@@ -2,6 +2,8 @@ import { Stack, Typography, Box, Tooltip } from "@mui/material";
 import { LifecycleProgress } from "./useModelLifecycle";
 import { accent, background, status, text, radiusPx } from "../../../themes/palette";
 import { textStyles } from "../../../themes";
+import useTranslation from "../../../../application/hooks/useTranslation";
+import { fill } from "../../../../i18n/fill";
 
 interface LifecycleProgressBarProps {
   progress: LifecycleProgress | null;
@@ -12,6 +14,7 @@ export default function LifecycleProgressBar({
   progress,
   onPhaseClick,
 }: LifecycleProgressBarProps) {
+  const { t } = useTranslation();
   const phases = Array.isArray(progress?.phases) ? progress.phases : [];
   if (!progress || phases.length === 0) {
     return null;
@@ -31,8 +34,11 @@ export default function LifecycleProgressBar({
           Lifecycle progress
         </Typography>
         <Typography sx={{ ...textStyles.caption, color: text.secondary }}>
-          {progress.completion_percentage}% complete ({progress.filled_items}/{progress.total_items}{" "}
-          items)
+          {fill(t("{percent}% complete ({filled}/{total} items)"), {
+            percent: progress.completion_percentage,
+            filled: progress.filled_items,
+            total: progress.total_items,
+          })}
         </Typography>
       </Stack>
 
@@ -44,12 +50,11 @@ export default function LifecycleProgressBar({
           return (
             <Tooltip
               key={phase.phase_id}
-              // The phase name and counts are their own text nodes so "items" translates.
-              title={
-                <>
-                  {phase.phase_name}: {phase.filled_items}/{phase.total_items} <span>items</span>
-                </>
-              }
+              title={fill(t("{phase}: {filled}/{total} items"), {
+                phase: phase.phase_name,
+                filled: phase.filled_items,
+                total: phase.total_items,
+              })}
               arrow
             >
               <Box

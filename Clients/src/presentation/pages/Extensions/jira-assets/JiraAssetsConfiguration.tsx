@@ -1,4 +1,4 @@
-import React, { type ReactNode, useState, useEffect, useCallback, useMemo, useRef } from "react";
+import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import {
   Box,
   Typography,
@@ -21,11 +21,17 @@ import { Download } from "lucide-react";
 import { VWField, VWSelect } from "../../../components/VWComponents";
 import { apiServices } from "../../../../infrastructure/api/networkServices";
 import useFormattedDate from "../../../../application/hooks/useFormattedDate";
+import useTranslation from "../../../../application/hooks/useTranslation";
+import { fill, pluralKey } from "../../../../i18n/fill";
+import { syncStatusLabel } from "./syncStatusLabel";
 import StandardModal from "../../../components/Modals/StandardModal";
 import { getApiErrorReason } from "../../../../application/utils/apiErrorReason";
 import { CustomizableButton } from "../../../components/button/customizable-button";
 import ExtensionSyncPanel from "../../../components/ExtensionSyncPanel";
-import { describeRunCounts } from "../../../components/ExtensionSyncPanel/runCounts";
+import {
+  describeRunCounts,
+  type Translate,
+} from "../../../components/ExtensionSyncPanel/runCounts";
 import {
   useExtensionSyncStatus,
   type ScheduleState,
@@ -80,11 +86,23 @@ const SELECTION_SAVE_FAILED = "Could not save the schema and object type. Try ag
 const IMPORT_PROGRESS_LABEL = "Importing objects";
 const REMOVE_PROGRESS_LABEL = "Removing use cases";
 /** The "Sync now" success line, as the page showed it before the shared panel. */
-function describeJiraSync(run: ExtensionRun): ReactNode {
-  return describeRunCounts([
-    { count: run.counts.created ?? 0, label: "created" },
-    { count: run.counts.updated ?? 0, label: "updated" },
-  ]);
+function describeJiraSync(run: ExtensionRun, t: Translate, lang: string): string {
+  return describeRunCounts(
+    [
+      {
+        count: run.counts.created ?? 0,
+        one: "{count} use case created",
+        other: "{count} use cases created",
+      },
+      {
+        count: run.counts.updated ?? 0,
+        one: "{count} use case updated",
+        other: "{count} use cases updated",
+      },
+    ],
+    t,
+    lang,
+  );
 }
 const MISSING_EXPLAINER =
   "Jira no longer returns these objects. Syncs keep their use cases; remove them here if they should go.";
@@ -126,6 +144,7 @@ interface ImportedUseCase {
 export const JiraAssetsConfiguration: React.FC = () => {
   const theme = useTheme();
   const formatDate = useFormattedDate();
+  const { t, lang } = useTranslation();
   // The settings page already redirects non-Admins; this keeps the sync
   // controls read-only if the panel is ever shown to anyone else.
   const canManageSync = useCan("extension.admin");
@@ -936,12 +955,23 @@ export const JiraAssetsConfiguration: React.FC = () => {
                 Import & sync
               </Typography>
               <Typography variant="body2" fontSize={12} color="text.secondary">
-                {importedUseCases.length} use cases imported
+                {fill(
+                  t(
+                    pluralKey(
+                      lang,
+                      importedUseCases.length,
+                      "{count} use case imported",
+                      "{count} use cases imported",
+                    ),
+                  ),
+                  { count: importedUseCases.length },
+                )}
                 {lastSyncAt && (
                   <>
                     {" • "}
-                    {"Last sync: "}
-                    {formatDate(new Date(lastSyncAt), { includeTime: true })}
+                    {fill(t("Last sync: {date}"), {
+                      date: formatDate(new Date(lastSyncAt), { includeTime: true }),
+                    })}
                   </>
                 )}
               </Typography>
@@ -1004,9 +1034,7 @@ export const JiraAssetsConfiguration: React.FC = () => {
                   }
                   label={
                     <Typography variant="body2" fontSize={13}>
-                      {/* Each word is its own text node so it translates. */}
-                      <span>Select all</span> (<span>{jiraObjects.length}</span>{" "}
-                      <span>available</span>)
+                      {fill(t("Select all ({count} available)"), { count: jiraObjects.length })}
                     </Typography>
                   }
                 />
@@ -1018,14 +1046,9 @@ export const JiraAssetsConfiguration: React.FC = () => {
                   startIcon={<Download size={14} />}
                   testId="jira-import-selected"
                 >
-                  {isImporting ? (
-                    "Importing..."
-                  ) : (
-                    // "Import selected" is its own text node so it translates.
-                    <>
-                      {"Import selected"} ({selectedObjects.size})
-                    </>
-                  )}
+                  {isImporting
+                    ? "Importing..."
+                    : fill(t("Import selected ({count})"), { count: selectedObjects.size })}
                 </CustomizableButton>
               </Box>
 
@@ -1339,13 +1362,13 @@ export const JiraAssetsConfiguration: React.FC = () => {
                           </TableCell>
                           <TableCell>
                             <Chip
-                              label={uc.sync_status}
+                              label={syncStatusLabel(uc.sync_status, t)}
                               size="small"
                               color={
                                 uc.sync_status === "synced"
                                   ? "success"
-                                  : uc.sync_status === "updated"
-                                    ? "info"
+                                  : uc.sync_status === "failed"
+                                    ? "error"
                                     : "default"
                               }
                               sx={{ fontSize: "11px" }}

@@ -2,6 +2,8 @@ import { Box, Typography, Stack, LinearProgress, Chip } from "@mui/material";
 import { keyframes } from "@mui/system";
 import { CheckCircle2, XCircle, Loader2, FileSpreadsheet } from "lucide-react";
 import { brand, text, palette as vwPalette, radiusPx } from "../../../themes/palette";
+import useTranslation from "../../../../application/hooks/useTranslation";
+import { fill, pluralKey } from "../../../../i18n/fill";
 
 const spin = keyframes`
   from { transform: rotate(0deg); }
@@ -24,6 +26,7 @@ interface UploadProgressProps {
 }
 
 export default function UploadProgress({ results, totalFiles }: UploadProgressProps) {
+  const { t, lang } = useTranslation();
   const completed = results.filter((r) => r.status === "success" || r.status === "error").length;
   const successCount = results.filter((r) => r.status === "success").length;
   const errorCount = results.filter((r) => r.status === "error").length;
@@ -63,7 +66,10 @@ export default function UploadProgress({ results, totalFiles }: UploadProgressPr
         <Stack direction="row" spacing="2px">
           <Chip
             icon={<CheckCircle2 size={14} />}
-            label={<>{successCount} uploaded</>}
+            label={fill(
+              t(pluralKey(lang, successCount, "{count} file uploaded", "{count} files uploaded")),
+              { count: successCount },
+            )}
             size="small"
             variant="outlined"
             sx={{
@@ -76,7 +82,17 @@ export default function UploadProgress({ results, totalFiles }: UploadProgressPr
           {errorCount > 0 && (
             <Chip
               icon={<XCircle size={14} />}
-              label={<>{errorCount} failed to upload</>}
+              label={fill(
+                t(
+                  pluralKey(
+                    lang,
+                    errorCount,
+                    "{count} file failed to upload",
+                    "{count} files failed to upload",
+                  ),
+                ),
+                { count: errorCount },
+              )}
               size="small"
               variant="outlined"
               sx={{

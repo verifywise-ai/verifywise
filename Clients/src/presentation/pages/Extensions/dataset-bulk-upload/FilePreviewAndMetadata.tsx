@@ -24,6 +24,8 @@ import Toggle from "../../../components/Inputs/Toggle";
 import { CustomizableButton } from "../../../components/button/customizable-button";
 import { FileAnalysis, DatasetMetadata } from "./useFileAnalysis";
 import { radiusPx } from "../../../themes/palette";
+import useTranslation from "../../../../application/hooks/useTranslation";
+import { fill, pluralKey } from "../../../../i18n/fill";
 
 const DATASET_TYPES = [
   { _id: "Training", name: "Training" },
@@ -54,6 +56,7 @@ export default function FilePreviewAndMetadata({
   onApplyBatchDefaults,
 }: FilePreviewAndMetadataProps) {
   const theme = useTheme();
+  const { t, lang } = useTranslation();
   const [expanded, setExpanded] = useState<number | false>(0);
   const [batchType, setBatchType] = useState("");
   const [batchClassification, setBatchClassification] = useState("");
@@ -187,7 +190,9 @@ export default function FilePreviewAndMetadata({
                 }}
               />
               <Chip
-                label={<>{analysis.rowCount} rows</>}
+                label={fill(t(pluralKey(lang, analysis.rowCount, "{count} row", "{count} rows")), {
+                  count: analysis.rowCount,
+                })}
                 size="small"
                 variant="outlined"
                 sx={{
@@ -197,7 +202,10 @@ export default function FilePreviewAndMetadata({
                 }}
               />
               <Chip
-                label={<>{analysis.headers.length} cols</>}
+                label={fill(
+                  t(pluralKey(lang, analysis.headers.length, "{count} column", "{count} columns")),
+                  { count: analysis.headers.length },
+                )}
                 size="small"
                 variant="outlined"
                 sx={{

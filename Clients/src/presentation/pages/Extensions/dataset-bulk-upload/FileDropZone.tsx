@@ -2,6 +2,8 @@ import { Fragment, useCallback, useRef, useState } from "react";
 import { Box, Typography, Stack, IconButton, Alert } from "@mui/material";
 import { Upload, X, FileSpreadsheet } from "lucide-react";
 import { brand, text, palette as vwPalette, radiusPx } from "../../../themes/palette";
+import useTranslation from "../../../../application/hooks/useTranslation";
+import { fill } from "../../../../i18n/fill";
 
 const MAX_FILES = 20;
 const MAX_SIZE = 30 * 1024 * 1024; // 30MB
@@ -24,6 +26,7 @@ interface FileDropZoneProps {
 
 export default function FileDropZone({ files, onFilesChange }: FileDropZoneProps) {
   const inputRef = useRef<HTMLInputElement>(null);
+  const { t } = useTranslation();
   const [dragOver, setDragOver] = useState(false);
   // Each problem keeps the file name apart from the static message, so the
   // message translates as a whole.
@@ -52,8 +55,11 @@ export default function FileDropZone({ files, onFilesChange }: FileDropZoneProps
 
       const total = files.length + valid.length;
       if (total > MAX_FILES) {
-        // Static text: keep the number in step with MAX_FILES.
-        errors.push({ message: "Maximum 20 files allowed. Extra files were not added." });
+        errors.push({
+          message: fill(t("Maximum {max} files allowed. Extra files were not added."), {
+            max: MAX_FILES,
+          }),
+        });
         valid.splice(MAX_FILES - files.length);
       }
 
@@ -67,7 +73,7 @@ export default function FileDropZone({ files, onFilesChange }: FileDropZoneProps
         onFilesChange([...files, ...newFiles]);
       }
     },
-    [files, onFilesChange],
+    [files, onFilesChange, t],
   );
 
   const handleDrop = useCallback(

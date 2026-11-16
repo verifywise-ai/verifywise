@@ -22,6 +22,9 @@ import {
   infoCardbodyStyle,
 } from "../../../components/Cards/InfoCard/style";
 import useFormattedDate from "../../../../application/hooks/useFormattedDate";
+import useTranslation from "../../../../application/hooks/useTranslation";
+import { fill } from "../../../../i18n/fill";
+import { syncStatusLabel } from "./syncStatusLabel";
 import { palette, radiusPx } from "../../../themes/palette";
 import { scoreColor } from "../../../themes/chartTheme";
 
@@ -232,6 +235,7 @@ function GroupStatsCard({
 
 export const JiraUseCaseOverview: React.FC<JiraUseCaseOverviewProps> = ({ project }) => {
   const formatDate = useFormattedDate();
+  const { t } = useTranslation();
   const [jiraData, setJiraData] = useState<JiraData | null>(null);
   const [syncStatus, setSyncStatus] = useState<string>("synced");
   // Set when a sync no longer found this object in Jira (syncs never delete).
@@ -440,7 +444,7 @@ export const JiraUseCaseOverview: React.FC<JiraUseCaseOverviewProps> = ({ projec
           />
           <InfoCard
             title="Sync status"
-            body={syncStatus.charAt(0).toUpperCase() + syncStatus.slice(1)}
+            body={syncStatusLabel(syncStatus, t)}
             icon={<SyncIcon size={16} />}
           />
         </Stack>
@@ -509,8 +513,7 @@ export const JiraUseCaseOverview: React.FC<JiraUseCaseOverviewProps> = ({ projec
           {customFrameworks.map((fw) => (
             <Stack key={fw.name} sx={columnStyle}>
               <Typography sx={projectRiskSection}>
-                {/* The framework name, then the static words in their own node. */}
-                <span>{fw.name}</span> <span>completion status</span>
+                {fill(t("{framework} completion status"), { framework: fw.name })}
               </Typography>
               <GroupStatsCard
                 title={["Progress"]}

@@ -30,7 +30,7 @@ describe("ModelLifecycleConfig setup entry", () => {
   });
 
   // The count and the word are separate text nodes so the word translates.
-  it("shows the item count with a translatable singular or plural word", async () => {
+  it("shows the item count as one singular or plural template", async () => {
     api.get.mockResolvedValue({
       data: {
         data: [
@@ -41,8 +41,7 @@ describe("ModelLifecycleConfig setup entry", () => {
     });
     auth.keys = new Set(["model.edit"]);
     render(<ModelLifecycleConfig />);
-    const one = await screen.findByText("1 item");
-    expect(Array.from(one.childNodes).map((n) => n.textContent?.trim())).toEqual(["1", "", "item"]);
+    expect(await screen.findByText("1 item")).toBeInTheDocument();
     expect(screen.getByText("0 items")).toBeInTheDocument();
   });
 
@@ -140,11 +139,9 @@ describe("ModelLifecycleConfig house modals and copy", () => {
   }
 
   // Heading, count and word are separate text nodes so each translates.
-  it("shows the configured phases heading in sentence case with a separate active count", async () => {
+  it("shows the configured phases heading as one sentence-case template", async () => {
     render(<ModelLifecycleConfig />);
-    const heading = await screen.findByText("Configured phases");
-    expect(heading.tagName).toBe("SPAN");
-    expect(screen.getByText("active").tagName).toBe("SPAN");
+    expect(await screen.findByText("Configured phases (1 active)")).toBeInTheDocument();
   });
 
   it("opens the configuration as a standard modal that Close dismisses", async () => {

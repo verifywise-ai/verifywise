@@ -36,6 +36,8 @@ import { background, border, brand, status, text, radiusPx } from "../../../them
 import { textStyles } from "../../../../presentation/themes/typography";
 import { CustomizableButton } from "../../../components/button/customizable-button";
 import StandardModal from "../../../components/Modals/StandardModal";
+import useTranslation from "../../../../application/hooks/useTranslation";
+import { fill, pluralKey } from "../../../../i18n/fill";
 
 // ============================================================================
 // Styled Components
@@ -137,6 +139,7 @@ export default function ModelLifecycleConfig() {
   const { phases, loading, refresh, setPhases } = useLifecycleConfig(true);
   // Phase and item setup is an extension.admin action on the server.
   const canConfigure = useCan("extension.admin");
+  const { t, lang } = useTranslation();
   const [saving, setSaving] = useState(false);
   // Set when a phase or item write fails, shown at the top of the dialog
   // until the next write starts. The global error toast carries the reason;
@@ -414,9 +417,9 @@ export default function ModelLifecycleConfig() {
                 color: text.primary,
               }}
             >
-              {/* Heading, count and word are separate text nodes so each translates. */}
-              <span>Configured phases</span> (
-              <span>{phases.filter((p) => p.is_active).length}</span> <span>active</span>)
+              {fill(t("Configured phases ({count} active)"), {
+                count: phases.filter((p) => p.is_active).length,
+              })}
             </Typography>
             {phases.map((phase, idx) => (
               <Box
@@ -453,12 +456,10 @@ export default function ModelLifecycleConfig() {
                   {phase.name}
                 </Typography>
                 <Chip
-                  // Count and word are separate text nodes so the word translates.
-                  label={
-                    <>
-                      {phase.items?.length || 0} {phase.items?.length === 1 ? "item" : "items"}
-                    </>
-                  }
+                  label={fill(
+                    t(pluralKey(lang, phase.items?.length ?? 0, "{count} item", "{count} items")),
+                    { count: phase.items?.length ?? 0 },
+                  )}
                   size="small"
                   sx={{
                     ...vwChip,

@@ -8,6 +8,8 @@ import { Stack, Typography, Box, Chip, useTheme, CircularProgress } from "@mui/m
 import { Database } from "lucide-react";
 import { apiServices } from "../../../../infrastructure/api/networkServices";
 import { palette } from "../../../themes/palette";
+import useTranslation from "../../../../application/hooks/useTranslation";
+import { fill } from "../../../../i18n/fill";
 
 interface JiraUseCaseSettingsProps {
   project: {
@@ -107,6 +109,7 @@ const useStyles = () => {
 
 export const JiraUseCaseSettings: React.FC<JiraUseCaseSettingsProps> = ({ project }) => {
   const styles = useStyles();
+  const { t } = useTranslation();
   const [jiraData, setJiraData] = useState<Record<string, any> | null>(null);
   const [schema, setSchema] = useState<JiraAttributeSchema[]>([]);
   const [loading, setLoading] = useState(true);
@@ -256,14 +259,12 @@ export const JiraUseCaseSettings: React.FC<JiraUseCaseSettingsProps> = ({ projec
       {/* All Attributes - Two Column Grid */}
       <Box sx={styles.card}>
         <Typography sx={styles.sectionTitle}>
-          <span>Jira attributes</span> ({rows.length}
-          {schema.length > 0 && (
-            <>
-              {" — "}
-              {setCount} set
-            </>
-          )}
-          )
+          {schema.length > 0
+            ? fill(t("Jira attributes ({count}, {filled} with a value)"), {
+                count: rows.length,
+                filled: setCount,
+              })
+            : fill(t("Jira attributes ({count})"), { count: rows.length })}
         </Typography>
         {rows.length > 0 ? (
           <Box sx={styles.gridContainer}>

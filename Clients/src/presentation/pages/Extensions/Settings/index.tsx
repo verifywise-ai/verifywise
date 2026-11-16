@@ -29,19 +29,22 @@ import {
   EXTENSION_ENABLED_MESSAGE,
   humanizeCategory,
 } from "../catalogCopy";
+import useTranslation from "../../../../application/hooks/useTranslation";
+import { fill } from "../../../../i18n/fill";
 
 // Enable and disable feedback is one full sentence per extension so it
-// translates as a whole. An extension missing from the map shows its name
-// and the status word as separate nodes, so the word still translates.
-function toggledMessage(extension: Extension, action: "enabled" | "disabled"): ReactNode {
+// translates as a whole. An extension missing from the map gets the same
+// sentence as a template with its name filled in.
+function toggledMessage(
+  extension: Extension,
+  action: "enabled" | "disabled",
+  t: (key: string) => string,
+): string {
   const sentences = action === "enabled" ? EXTENSION_ENABLED_MESSAGE : EXTENSION_DISABLED_MESSAGE;
   const sentence = sentences[extension.key];
   if (sentence) return sentence;
-  return (
-    <>
-      <span>{extension.displayName}</span> <span>{action}</span>.
-    </>
-  );
+  const template = action === "enabled" ? "{name} enabled." : "{name} disabled.";
+  return fill(t(template), { name: extension.displayName });
 }
 
 /**
@@ -64,6 +67,7 @@ export default function ExtensionSettingsPage() {
   const theme = useTheme();
   const { key } = useParams();
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const canManageExtensions = useCan("extension.admin");
   const permissionsSettled = usePermissionsSettled();
   const { enable, disable, updateConfiguration, getByKey } = useExtensions();
@@ -140,7 +144,7 @@ export default function ExtensionSettingsPage() {
       const next = await enable(extension.key, submit);
       setExtension(next);
       reseedForm(next);
-      setFeedback({ severity: "success", message: toggledMessage(extension, "enabled") });
+      setFeedback({ severity: "success", message: toggledMessage(extension, "enabled", t) });
     } catch (err: any) {
       setFeedback({
         severity: "error",
@@ -159,7 +163,7 @@ export default function ExtensionSettingsPage() {
       const next = await disable(extension.key);
       // No reseed: unsaved edits stay in the form for the next Enable.
       setExtension(next);
-      setFeedback({ severity: "success", message: toggledMessage(extension, "disabled") });
+      setFeedback({ severity: "success", message: toggledMessage(extension, "disabled", t) });
     } catch (err: any) {
       setFeedback({
         severity: "error",

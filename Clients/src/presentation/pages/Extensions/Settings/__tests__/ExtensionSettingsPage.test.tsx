@@ -388,7 +388,7 @@ describe("ExtensionSettingsPage", () => {
     expect(await screen.findByText("MLflow enabled.")).toBeInTheDocument();
   });
 
-  it("confirms a disable of an unknown extension with its name and a separate word", async () => {
+  it("confirms a disable of an unknown extension with its name in the template", async () => {
     const stored = makeExtension({
       key: "acme",
       displayName: "Acme sync",
@@ -403,8 +403,6 @@ describe("ExtensionSettingsPage", () => {
     const dialog = await screen.findByRole("dialog");
     fireEvent.click(within(dialog).getByRole("button", { name: "Disable" }));
 
-    const word = await screen.findByText("disabled");
-    expect(word.tagName).toBe("SPAN");
-    expect(word.parentElement).toHaveTextContent("Acme sync disabled.");
+    expect(await screen.findByText("Acme sync disabled.")).toBeInTheDocument();
   });
 });

@@ -5,6 +5,8 @@ import { VWSelect } from "../VWComponents";
 import Toggle from "../Inputs/Toggle";
 import { CustomizableButton } from "../button/customizable-button";
 import useFormattedDate from "../../../application/hooks/useFormattedDate";
+import useTranslation from "../../../application/hooks/useTranslation";
+import type { Translate } from "./runCounts";
 import {
   useExtensionSync,
   type ScheduleState,
@@ -96,7 +98,7 @@ export interface ExtensionSyncPanelProps {
   /** Called with the schedule shown, so a page can send a draft with its own save. */
   onScheduleChange?: (schedule: ScheduleState) => void;
   /** The success line for a completed "Sync now" run. */
-  describeCompletedRun?: (run: ExtensionRun) => ReactNode;
+  describeCompletedRun?: (run: ExtensionRun, t: Translate, lang: string) => ReactNode;
   onRunCompleted?: (run: ExtensionRun) => void;
 }
 
@@ -119,6 +121,7 @@ export function ExtensionSyncPanel({
   onRunCompleted,
 }: ExtensionSyncPanelProps) {
   const formatDate = useFormattedDate();
+  const { t, lang } = useTranslation();
   const sync = useExtensionSync(extensionKey, { persistSchedule });
   const [message, setMessage] = useState<PanelMessage | null>(null);
   const autoSyncId = useId();
@@ -142,7 +145,7 @@ export function ExtensionSyncPanel({
   const handleSyncNow = async () => {
     setMessage(null);
     const outcome = await sync.syncNow();
-    const next = outcomeMessage(outcome, describeCompletedRun);
+    const next = outcomeMessage(outcome, (run) => describeCompletedRun(run, t, lang));
     if (next) setMessage(next);
     if (outcome.kind === "done" && outcome.run.status === "completed") {
       onRunCompleted?.(outcome.run);

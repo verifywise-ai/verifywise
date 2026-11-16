@@ -9,9 +9,10 @@ import {
   Typography,
   useTheme,
 } from "@mui/material";
-import type { ReactNode } from "react";
 import { Link as RouterLink } from "react-router";
 import useFormattedDate from "../../../../application/hooks/useFormattedDate";
+import useTranslation from "../../../../application/hooks/useTranslation";
+import { fill } from "../../../../i18n/fill";
 import type { JiraIncidentEvent } from "../../../../application/repository/jiraIncidents.repository";
 
 const EVENT_LABELS: Record<string, string> = {
@@ -25,24 +26,26 @@ const EVENT_LABELS: Record<string, string> = {
 
 const text = (v: unknown): string | null => (typeof v === "string" && v !== "" ? v : null);
 
-/** What happened, in a few words: the reason, a status move, or the conflict outcome. */
-export function eventDetail(event: JiraIncidentEvent): ReactNode {
+/**
+ * What happened, in a few words: the reason, a status move, or the conflict
+ * outcome. The conflict sentence is one template with the status names
+ * filled in (each looked up too, so VerifyWise status names translate).
+ */
+export function eventDetail(event: JiraIncidentEvent, t: (key: string) => string): string {
   const d = event.detail ?? {};
   if (event.kind === "conflict") {
     const loser = d.winner === "jira" ? text(d.vw_status) : text(d.jira_status);
     const applied = text(d.applied);
-    // Status names are their own text nodes so the words translate.
     if (applied && loser) {
-      return (
-        <>
-          Kept {applied}; {loser} was overwritten
-        </>
-      );
+      return fill(t("Kept {kept}; {overwritten} was overwritten"), {
+        kept: t(applied),
+        overwritten: t(loser),
+      });
     }
   }
   const reason = text(d.reason);
   if (reason) return reason;
-  if (text(d.skipped)) return "Jira left unchanged";
+  if (text(d.skipped)) return t("Jira left unchanged");
   const from = text(d.from);
   const to = text(d.to);
   if (from && to) return `${from} → ${to}`;
@@ -57,6 +60,7 @@ interface SyncActivityProps {
 export function SyncActivity({ events, loadFailed }: SyncActivityProps) {
   const theme = useTheme();
   const formatDate = useFormattedDate();
+  const { t } = useTranslation();
   const cell = { borderColor: theme.palette.border.light, py: "8px", px: "12px", fontSize: 13 };
 
   if (loadFailed) {
@@ -112,7 +116,7 @@ export function SyncActivity({ events, loadFailed }: SyncActivityProps) {
                 (text(event.detail?.jira_issue_key) ?? "—")
               )}
             </TableCell>
-            <TableCell sx={{ ...cell, wordBreak: "break-word" }}>{eventDetail(event)}</TableCell>
+            <TableCell sx={{ ...cell, wordBreak: "break-word" }}>{eventDetail(event, t)}</TableCell>
           </TableRow>
         ))}
       </TableBody>

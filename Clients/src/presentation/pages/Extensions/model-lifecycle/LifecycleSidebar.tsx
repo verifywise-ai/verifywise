@@ -4,6 +4,8 @@ import { Check } from "lucide-react";
 import { LifecyclePhase, LifecycleProgress } from "./useModelLifecycle";
 import { background, border, brand, text } from "../../../themes/palette";
 import { textStyles } from "../../../../presentation/themes/typography";
+import useTranslation from "../../../../application/hooks/useTranslation";
+import { fill } from "../../../../i18n/fill";
 
 interface LifecycleSidebarProps {
   phases: LifecyclePhase[];
@@ -18,6 +20,7 @@ export default function LifecycleSidebar({
   activePhaseId,
   onPhaseSelect,
 }: LifecycleSidebarProps) {
+  const { t } = useTranslation();
   const progressPhases = Array.isArray(progress?.phases) ? progress.phases : [];
 
   const phaseData = useMemo(() => {
@@ -53,13 +56,13 @@ export default function LifecycleSidebar({
           Lifecycle progress
         </Typography>
         <Typography sx={{ ...textStyles.caption, color: text.secondary }}>
-          {progress?.completion_percentage ?? 0}% complete
-          {progress && (
-            <>
-              {" "}
-              ({progress.filled_items}/{progress.total_items} <span>items</span>)
-            </>
-          )}
+          {progress
+            ? fill(t("{percent}% complete ({filled}/{total} items)"), {
+                percent: progress.completion_percentage,
+                filled: progress.filled_items,
+                total: progress.total_items,
+              })
+            : fill(t("{percent}% complete"), { percent: 0 })}
         </Typography>
       </Box>
 
