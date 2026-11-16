@@ -31,7 +31,7 @@
 - Move conditional single-use token consumption into the controller transaction after domain password validation.
 - Pass that transaction to token consumption, password update, and refresh-token revocation.
 - Preserve conditional `UPDATE ... WHERE consumed_at IS NULL ... RETURNING` for replay/concurrency safety.
-- Align the reset page with the existing frontend password-policy mirror without weakening server validation.
+- Add the missing lowercase rule to the existing reset-form validator without changing other password policies.
 - No migration, route change, generated API document change, or response-schema change is expected.
 
 ## Task Board
@@ -39,11 +39,11 @@
 | ID | Owner | Wave | Task | Status | Expected files |
 |---|---|---|---|---|---|
 | T1 | Technical Lead + Product Manager | 6A | Record root causes, scope, and acceptance criteria | Complete | `MULTI_AGENT_PLAN.md` |
-| T2 | Senior Backend Developer | 6A/6B | Make token consumption and session revocation transactional | Not started | Reset middleware/controller, token utilities, backend tests |
-| T3 | Senior Frontend Developer | 6B | Align reset-page checks and messages with server policy | Not started | Reset page, validation, translations, frontend tests |
-| T4 | QA + Test Automation | 6C | Prove retry, rollback, success, and replay behavior | Not started | Backend/frontend regression tests |
-| T5 | AppSec + Technical Lead | 7/8 | Review security invariants and implementation | Not started | Review evidence in this plan |
-| T6 | DevOps / Orchestrator | 9 | Run local checks, open PR, and monitor CI | Not started | PR and CI evidence |
+| T2 | Senior Backend Developer | 6A/6B | Make token consumption and session revocation transactional | Complete | Reset middleware/controller, token utilities, backend tests |
+| T3 | Senior Frontend Developer | 6B | Align reset-page checks and messages with server policy | Complete | Reset page, validation, frontend tests |
+| T4 | QA + Test Automation | 6C | Prove retry, rollback, success, and replay behavior | Complete | Backend/frontend regression tests |
+| T5 | AppSec + Technical Lead | 7/8 | Review security invariants and implementation | Complete | Approved; QA retry gap addressed |
+| T6 | DevOps / Orchestrator | 9 | Run local checks, open PR, and monitor CI | In progress | PR and CI evidence |
 
 ## API Contracts
 
@@ -66,12 +66,12 @@ No contract changes. The existing endpoint, bearer token, request body, and succ
 
 | Check | Status |
 |---|---|
-| Backend regression tests | Pending |
-| Frontend regression tests | Pending |
-| Servers build | Pending |
-| Clients typecheck | Pending |
-| Clients build | Pending |
-| Security review | Pending |
+| Backend regression tests | Passed — 127/127 targeted tests |
+| Frontend regression tests | Passed — 18/18 targeted tests |
+| Servers build | Passed |
+| Clients typecheck | Passed |
+| Clients build | Passed |
+| Security review | Approved; no blocking findings |
 | Pull-request CI | Pending |
 
 ## Change Log
@@ -79,6 +79,10 @@ No contract changes. The existing endpoint, bearer token, request body, and succ
 - Loaded all 62 roster agents across 10 categories, workflow, coding standards, and UI/UX standards.
 - Confirmed both defects through cross-layer source investigation.
 - Created `fix/password-reset-retry-policy` and recorded the implementation plan.
+- Moved token consumption into the password-reset transaction and included refresh-token revocation.
+- Added the missing lowercase rule to the reset-page validation and checklist.
+- Added direct invalid → corrected retry → replay coverage with the same token.
+- AppSec/Technical Lead approved the implementation; QA's requested cross-layer retry test was added.
 
 ## Retrospective Notes
 
