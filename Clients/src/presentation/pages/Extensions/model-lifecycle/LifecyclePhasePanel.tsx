@@ -57,7 +57,7 @@ export default function LifecyclePhasePanel({
         "borderRadius": `${radiusPx.sm} !important`,
         "&:before": { display: "none" },
         "boxShadow": "none",
-        "mb": 6,
+        "mb": "12px",
         "overflow": "hidden",
       }}
     >
@@ -75,20 +75,20 @@ export default function LifecyclePhasePanel({
         sx={{
           "backgroundColor": expanded ? background.alt : background.main,
           "&:hover": { backgroundColor: background.alt },
-          "px": 8,
-          "py": 6,
+          "px": "16px",
+          "py": "12px",
           "& .MuiAccordionSummary-expandIconWrapper": {
             transform: "none !important",
           },
         }}
       >
-        <Stack direction="row" alignItems="center" sx={{ width: "100%", gap: 6 }}>
+        <Stack direction="row" alignItems="center" sx={{ width: "100%", gap: "12px" }}>
           <Stack sx={{ flex: 1 }}>
             <Typography sx={{ ...textStyles.cardTitle, color: text.secondary }}>
               {phase.name}
             </Typography>
             {phase.description && (
-              <Typography sx={{ ...textStyles.body, color: text.secondary, mt: 2 }}>
+              <Typography sx={{ ...textStyles.body, color: text.secondary, mt: "4px" }}>
                 {phase.description}
               </Typography>
             )}
@@ -105,8 +105,8 @@ export default function LifecyclePhasePanel({
       <AccordionDetails sx={{ p: 0 }}>
         <Stack spacing={0} divider={<Box sx={{ borderTop: `1px solid ${border.light}` }} />}>
           {items.map((item) => (
-            <Stack key={item.id} sx={{ px: 8, py: 8, gap: 4 }}>
-              <Stack direction="row" alignItems="center" sx={{ gap: 4 }}>
+            <Stack key={item.id} sx={{ px: "16px", py: "16px", gap: "8px" }}>
+              <Stack direction="row" alignItems="center" sx={{ gap: "8px" }}>
                 <Typography sx={{ ...textStyles.formLabel, color: text.secondary }}>
                   {item.name}
                 </Typography>
@@ -126,7 +126,7 @@ export default function LifecyclePhasePanel({
           ))}
           {items.length === 0 && (
             <Typography
-              sx={{ ...textStyles.body, textAlign: "center", color: text.subdued, py: 4 }}
+              sx={{ ...textStyles.body, textAlign: "center", color: text.subdued, py: "8px" }}
             >
               No items configured for this phase
             </Typography>
