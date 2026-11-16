@@ -25,6 +25,9 @@ import { recordProjectRiskDeletion } from "../projectRiskChangeHistory.utils";
 import { enqueueAutomationAction } from "../../services/automations/automationProducer";
 import {
   archiveRiskQuery,
+  archiveRisksInBulkQuery,
+  getRisksLinkedOnlyToProjectQuery,
+  lockRiskLinksOfProjectQuery,
   createRiskQuery,
   deleteRiskByIdQuery,
   enqueueBulkRiskAutomation,
@@ -126,6 +129,118 @@ describe("archiveRiskQuery", () => {
 
     expect(mockRecordDeletion).not.toHaveBeenCalled();
     expect(deletesFrom("policy_linked_objects")).toHaveLength(1);
+  });
+});
+
+describe("archiveRisksInBulkQuery", () => {
+  /** Ids in `archivable` come back from the soft delete; the rest are missing or archived. */
+  function arrange(archivable: number[]) {
+    mockQuery.mockImplementation(async (sql: string, opts: any) => {
+      if (sql.includes("FROM automation_triggers")) return [];
+      if (sql.startsWith("UPDATE risks SET is_deleted = true")) {
+        const id = opts.replacements.id;
+        return [archivable.includes(id) ? [{ id, risk_owner: 2, risk_approval: 3 }] : [], 0];
+      }
+      return [[], 0];
+    });
+  }
+  const archiveUpdates = () =>
+    mockQuery.mock.calls.filter(([sql]) =>
+      String(sql).startsWith("UPDATE risks SET is_deleted = true"),
+    );
+
+  it("archives each risk as the system, records history, and snapshots once", async () => {
+    arrange([10, 12]);
+
+    const rows = await archiveRisksInBulkQuery([10, 11, 12], 4, 9, TX);
+
+    expect(rows.map((row) => row.id)).toEqual([10, 12]);
+    expect(archiveUpdates()).toHaveLength(3);
+    // No visibility fragment: the caller already decided which ids may go.
+    for (const [sql] of archiveUpdates()) expect(String(sql)).not.toContain("visibilityUserId");
+    expect(mockRecordDeletion).toHaveBeenCalledTimes(2);
+    expect(mockRecordDeletion).toHaveBeenCalledWith(10, 9, 4, TX);
+    expect(deletesFrom("policy_linked_objects")).toHaveLength(2);
+    // The per-risk snapshots are skipped and taken once for the batch.
+    expect(mockSnapshot.mock.calls.length).toBeGreaterThan(0);
+    const perBatch = mockSnapshot.mock.calls.length;
+    mockSnapshot.mockClear();
+    arrange([10]);
+    await archiveRisksInBulkQuery([10], 4, 9, TX);
+    expect(mockSnapshot.mock.calls.length).toBe(perBatch);
+  });
+
+  it("does nothing else when no risk was archived", async () => {
+    arrange([]);
+
+    await expect(archiveRisksInBulkQuery([10], 4, 9, TX)).resolves.toEqual([]);
+
+    expect(mockSnapshot).not.toHaveBeenCalled();
+    expect(sqlCalls().some((sql) => sql.includes("FROM automation_triggers"))).toBe(false);
+  });
+
+  it("archives nothing for an empty list", async () => {
+    await expect(archiveRisksInBulkQuery([], 4, 9, TX)).resolves.toEqual([]);
+    expect(mockQuery).not.toHaveBeenCalled();
+  });
+});
+
+describe("getRisksLinkedOnlyToProjectQuery", () => {
+  it("answers null when the use case is not in the organization (no row at all)", async () => {
+    mockQuery.mockResolvedValue([]);
+    await expect(getRisksLinkedOnlyToProjectQuery(7, 4)).resolves.toBeNull();
+  });
+
+  it("answers an empty list for a use case with no such risk (one row, no risk)", async () => {
+    mockQuery.mockResolvedValue([{ project_id: 7, id: null, risk_name: null }]);
+    await expect(getRisksLinkedOnlyToProjectQuery(7, 4)).resolves.toEqual([]);
+  });
+
+  it("returns the risks in one query, inside the caller's transaction", async () => {
+    mockQuery.mockResolvedValue([
+      { project_id: 7, id: "3", risk_name: "Bias" },
+      { project_id: 7, id: 5, risk_name: "Drift" },
+    ]);
+
+    await expect(getRisksLinkedOnlyToProjectQuery(7, 4, TX)).resolves.toEqual([
+      { id: 3, risk_name: "Bias" },
+      { id: 5, risk_name: "Drift" },
+    ]);
+    expect(mockQuery).toHaveBeenCalledTimes(1);
+    const [sql, opts] = mockQuery.mock.calls[0];
+    expect(opts).toEqual(expect.objectContaining({ transaction: TX }));
+    expect(opts.replacements).toEqual({ projectId: 7, organizationId: 4 });
+    // Driven from this use case's links, under a LEFT JOIN from the use case.
+    expect(String(sql)).toContain("FROM projects_risks pr");
+    expect(String(sql)).toContain("WHERE pr.project_id = :projectId");
+    expect(String(sql)).toContain(") only_here ON true");
+    expect(String(sql)).toContain("r.is_deleted = false");
+    expect(String(sql)).toContain("other.project_id <> pr.project_id");
+    expect(String(sql)).not.toContain("IS DISTINCT FROM");
+  });
+});
+
+describe("lockRiskLinksOfProjectQuery", () => {
+  it("locks the risks linked here, then every link of them, in key order", async () => {
+    mockQuery.mockResolvedValue([]);
+
+    await lockRiskLinksOfProjectQuery(7, 4, TX);
+
+    expect(mockQuery).toHaveBeenCalledTimes(2);
+    const [[risksSql, risksOpts], [linksSql, linksOpts]] = mockQuery.mock.calls;
+    expect(String(risksSql)).toMatch(/FROM risks r[\s\S]*ORDER BY r\.id\s+FOR UPDATE/);
+    expect(risksOpts).toEqual(
+      expect.objectContaining({
+        transaction: TX,
+        replacements: { projectId: 7, organizationId: 4 },
+      }),
+    );
+    // All links of those risks, not only this use case's.
+    expect(String(linksSql)).toContain(
+      "WHERE pr.risk_id IN (SELECT risk_id FROM projects_risks WHERE project_id = :projectId)",
+    );
+    expect(String(linksSql)).toMatch(/ORDER BY pr\.risk_id, pr\.project_id\s+FOR UPDATE/);
+    expect(linksOpts).toEqual(expect.objectContaining({ transaction: TX }));
   });
 });
 

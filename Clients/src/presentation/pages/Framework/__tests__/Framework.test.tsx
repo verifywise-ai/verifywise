@@ -56,10 +56,23 @@ vi.mock("../../../../application/repository/entity.repository", () => ({
   getAllEntities: (...args: any[]) => mockGetAllEntities(...args),
 }));
 
-const mockDeleteProject = vi.fn();
 vi.mock("../../../../application/repository/project.repository", () => ({
-  deleteProject: (...args: any[]) => mockDeleteProject(...args),
   getAllProjects: vi.fn().mockResolvedValue({ data: [] }),
+}));
+
+// The dialog itself (count, archive choice, request, errors) has its own
+// tests; here it reports a finished delete or a cancel.
+vi.mock("../../../components/Modals/DeleteUseCase", () => ({
+  default: ({ projectId, title, message, proceedText, onDeleted, onCancel }: any) => (
+    <div data-testid="delete-use-case-modal" data-project-id={projectId}>
+      <span>{title}</span>
+      <p>{message}</p>
+      <button onClick={onCancel}>cancel-confirmation</button>
+      <button onClick={() => onDeleted({ deleted: true, archived_risk_ids: [] })}>
+        {proceedText}
+      </button>
+    </div>
+  ),
 }));
 
 // Mock child components
@@ -238,7 +251,6 @@ describe("Framework", () => {
     localStorage.clear();
     mockUseParams.mockReturnValue({});
     mockGetAllEntities.mockResolvedValue({ data: [] });
-    mockDeleteProject.mockResolvedValue({ status: 200 });
     mockUseFrameworks.mockReturnValue({
       allFrameworks: [],
       loading: false,
@@ -516,7 +528,7 @@ describe("Framework", () => {
     expect(screen.getByText("Edit framework")).toBeInTheDocument();
   });
 
-  it("deletes the project when confirmed from the manage frameworks menu", async () => {
+  it("deletes the project through the use case delete dialog from the manage frameworks menu", async () => {
     const orgProject = buildOrgProject([{ framework_id: 3, project_framework_id: 20 }]);
     const setProjects = vi.fn();
     mockUseFrameworks.mockReturnValue({
@@ -534,39 +546,16 @@ describe("Framework", () => {
     renderWithProviders(<Framework />, { route: "/framework" });
     fireEvent.click(screen.getByText("Manage frameworks"));
     fireEvent.click(screen.getByText("Delete project"));
+    const dialog = screen.getByTestId("delete-use-case-modal");
+    expect(dialog).toHaveAttribute("data-project-id", "1");
     expect(screen.getByText("Confirm Delete")).toBeInTheDocument();
+    expect(dialog).toHaveTextContent("Its risks stay in the risk register");
+    expect(dialog).not.toHaveTextContent("remove all associated data");
     fireEvent.click(screen.getByText("Delete"));
-    await waitFor(() => {
-      expect(mockDeleteProject).toHaveBeenCalledWith({ id: 1 });
-    });
     await waitFor(() => {
       expect(setProjects).toHaveBeenCalled();
     });
-  });
-
-  it("logs an error when project deletion fails", async () => {
-    mockDeleteProject.mockResolvedValue({ status: 500 });
-    const orgProject = buildOrgProject([{ framework_id: 3, project_framework_id: 20 }]);
-    mockUseFrameworks.mockReturnValue({
-      allFrameworks: [iso27001Fw],
-      loading: false,
-      error: null,
-      refreshFilteredFrameworks: vi.fn(),
-    });
-    mockUseContext.mockReturnValue({
-      changeComponentVisibility: vi.fn(),
-      projects: [orgProject],
-      userRoleName: "Admin",
-      setProjects: vi.fn(),
-    });
-    renderWithProviders(<Framework />, { route: "/framework" });
-    fireEvent.click(screen.getByText("Manage frameworks"));
-    fireEvent.click(screen.getByText("Delete project"));
-    fireEvent.click(screen.getByText("Delete"));
-    await waitFor(() => {
-      expect(mockDeleteProject).toHaveBeenCalled();
-    });
-    expect(screen.queryByTestId("confirmation-modal")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("delete-use-case-modal")).not.toBeInTheDocument();
   });
 
   it("cancels the delete confirmation modal without deleting", () => {
@@ -587,8 +576,7 @@ describe("Framework", () => {
     fireEvent.click(screen.getByText("Manage frameworks"));
     fireEvent.click(screen.getByText("Delete project"));
     fireEvent.click(screen.getByText("cancel-confirmation"));
-    expect(screen.queryByTestId("confirmation-modal")).not.toBeInTheDocument();
-    expect(mockDeleteProject).not.toHaveBeenCalled();
+    expect(screen.queryByTestId("delete-use-case-modal")).not.toBeInTheDocument();
   });
 
   it("navigates when the main tab bar route changes via URL params", () => {

@@ -1533,5 +1533,6 @@
   "Invalid approval status. Must be one of: {values}": "Ungültiger Genehmigungsstatus. Erlaubt sind: {values}",
   "Only an Admin can import a risk as Approved or Rejected": "Nur ein Admin kann ein Risiko als genehmigt oder abgelehnt importieren",
   "{assigner} assigned you as Risk Approver for {count} risks: {names}": "{assigner} hat Sie als Risikogenehmiger für {count} Risiken zugewiesen: {names}",
-  "{assigner} assigned you as Risk Approver for {count} risks: {names} and {more} more": "{assigner} hat Sie als Risikogenehmiger für {count} Risiken zugewiesen: {names} und {more} weitere"
+  "{assigner} assigned you as Risk Approver for {count} risks: {names} and {more} more": "{assigner} hat Sie als Risikogenehmiger für {count} Risiken zugewiesen: {names} und {more} weitere",
+  "archive_risks_linked_only_here must be \"true\" or \"false\"": "archive_risks_linked_only_here muss \"true\" oder \"false\" sein"
 }

@@ -1533,5 +1533,6 @@
   "Invalid approval status. Must be one of: {values}": "Invalid approval status. Must be one of: {values}",
   "Only an Admin can import a risk as Approved or Rejected": "Only an Admin can import a risk as Approved or Rejected",
   "{assigner} assigned you as Risk Approver for {count} risks: {names}": "{assigner} assigned you as Risk Approver for {count} risks: {names}",
-  "{assigner} assigned you as Risk Approver for {count} risks: {names} and {more} more": "{assigner} assigned you as Risk Approver for {count} risks: {names} and {more} more"
+  "{assigner} assigned you as Risk Approver for {count} risks: {names} and {more} more": "{assigner} assigned you as Risk Approver for {count} risks: {names} and {more} more",
+  "archive_risks_linked_only_here must be \"true\" or \"false\"": "archive_risks_linked_only_here must be \"true\" or \"false\""
 }

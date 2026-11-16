@@ -11,7 +11,9 @@ import { Framework } from "../../../../domain/types/Framework";
 import { ProjectForm } from "../../../components/Forms/ProjectForm";
 import ConfirmationModal from "../../../components/Dialogs/ConfirmationModal";
 import StandardModal from "../../../components/Modals/StandardModal";
-import { deleteProject } from "../../../../application/repository/project.repository";
+import DeleteUseCaseModal from "../../../components/Modals/DeleteUseCase";
+import { useTranslation } from "../../../../application/hooks/useTranslation";
+import { fill } from "../../../../i18n/fill";
 import { FrameworkTypeEnum } from "../../../components/Forms/ProjectForm/constants";
 import { useCanCheck } from "../../../../application/hooks/useCan";
 import {
@@ -49,6 +51,7 @@ const FrameworkSettings: React.FC<FrameworkSettingsProps> = ({
   setProjects,
 }) => {
   const can = useCanCheck();
+  const { t } = useTranslation();
   // Framework import extension (#5254): imported frameworks are managed here.
   const { isEnabled } = useExtensions();
   const isFrameworkImportEnabled = isEnabled("framework-import");
@@ -109,43 +112,21 @@ const FrameworkSettings: React.FC<FrameworkSettingsProps> = ({
     setIsDeleteModalOpen(true);
   };
 
-  const handleDeleteProject = async () => {
-    try {
-      const response = await deleteProject({
-        id: organizationalProject.id,
-      });
-
-      if (response.status >= 200 && response.status < 300) {
-        // Remove the project from context
-        setProjects((prevProjects) =>
-          prevProjects.filter((project) => project.id !== organizationalProject.id),
-        );
-        setAlert({
-          variant: "success",
-          body: "Framework deleted successfully",
-          isToast: true,
-          visible: true,
-        });
-      } else {
-        setAlert({
-          variant: "error",
-          body: "Failed to delete framework",
-          isToast: true,
-          visible: true,
-        });
-      }
-    } catch (error) {
-      console.error("Error deleting project:", error);
-      setAlert({
-        variant: "error",
-        body: "An unexpected error occurred while deleting the project",
-        isToast: true,
-        visible: true,
-      });
-    } finally {
-      setIsDeleteModalOpen(false);
-      setTimeout(() => setAlert(null), 3000);
-    }
+  // Runs once DeleteUseCaseModal has deleted the project (a failure keeps the
+  // dialog open with its own error).
+  const handleProjectDeleted = () => {
+    // Remove the project from context
+    setProjects((prevProjects) =>
+      prevProjects.filter((project) => project.id !== organizationalProject.id),
+    );
+    setAlert({
+      variant: "success",
+      body: "Framework deleted successfully",
+      isToast: true,
+      visible: true,
+    });
+    setIsDeleteModalOpen(false);
+    setTimeout(() => setAlert(null), 3000);
   };
 
   const handleAddFramework = async (fw: Framework) => {
@@ -437,21 +418,18 @@ const FrameworkSettings: React.FC<FrameworkSettingsProps> = ({
       )}
 
       {isDeleteModalOpen && (
-        <ConfirmationModal
+        <DeleteUseCaseModal
+          projectId={organizationalProject.id}
           title="Confirm delete"
-          body={
-            <Typography fontSize={fontSize.base}>
-              Are you sure you want to delete the framework "{organizationalProject.project_title}"?
-              This action cannot be undone and will remove all associated data.
-            </Typography>
-          }
-          cancelText="Cancel"
+          message={fill(
+            t(
+              'Are you sure you want to delete the framework "{title}"? This deletes its framework progress and its files. Its risks stay in the risk register but are no longer linked to it. This cannot be undone.',
+            ),
+            { title: organizationalProject.project_title },
+          )}
           proceedText="Delete"
           onCancel={() => setIsDeleteModalOpen(false)}
-          onProceed={handleDeleteProject}
-          proceedButtonColor="error"
-          proceedButtonVariant="contained"
-          TitleFontSize={0}
+          onDeleted={handleProjectDeleted}
         />
       )}
 

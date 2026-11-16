@@ -1414,6 +1414,44 @@ export const archiveRiskQuery = async (
 };
 
 /**
+ * Archive several risks as one bulk action: each goes through archiveRiskQuery
+ * (change history, policy unlinks), then the history snapshots are recorded
+ * and the org's "risk deleted" automation runs once for the batch. Shared by
+ * the bulk archive (PATCH /projectRisks/bulk), the v1 use case delete and the
+ * advisor's use case delete.
+ *
+ * Runs as the system viewer: every caller has already decided which ids the
+ * user may archive, in the same transaction. Returns the archived rows; an id
+ * that is missing or already archived is skipped.
+ */
+export const archiveRisksInBulkQuery = async (
+  ids: number[],
+  organizationId: number,
+  userId: number | undefined,
+  transaction: Transaction,
+): Promise<RiskModel[]> => {
+  const archivedRows: RiskModel[] = [];
+  for (const id of ids) {
+    const archived = await archiveRiskQuery(id, organizationId, userId, transaction, {
+      viewer: SYSTEM_RISK_VIEWER,
+      recordSnapshots: false,
+      runAutomations: false,
+    });
+    if (archived) archivedRows.push(archived);
+  }
+  if (archivedRows.length > 0) {
+    await recordRiskSnapshots(organizationId, transaction);
+    await enqueueBulkRiskAutomation(
+      "risk_deleted",
+      archivedRows.map((row) => ({ before: row, after: row })),
+      organizationId,
+      transaction,
+    );
+  }
+  return archivedRows;
+};
+
+/**
  * One mapping table family: the risk junction, its impl-id column, and the
  * subquery that selects the impl rows belonging to :pfIds. Every name here is
  * a literal or comes from the Servers/structures registry, never from input.
@@ -1627,3 +1665,96 @@ export const PROJECT_RISK_CATEGORIES = [
 export type ProjectRiskCategory = (typeof PROJECT_RISK_CATEGORIES)[number];
 
 export const PROJECT_RISK_CATEGORIES_SET: Set<string> = new Set(PROJECT_RISK_CATEGORIES);
+
+/**
+ * The active risks linked to this use case and to no other: deleting the use
+ * case removes its projects_risks rows and keeps the risks, so these would be
+ * left with no use case link. An active risk with no link is visible to
+ * everyone in the organization (riskVisibilitySql); an archived one is not, so
+ * the delete can archive these to keep them private
+ * (deleteProjectWithSideEffects with archiveRisksLinkedOnlyHere).
+ *
+ * One query, driven from this use case's projects_risks rows (joined to their
+ * risks, with NOT EXISTS for any other link), under a LEFT JOIN from the use
+ * case row: no row at all means the use case is not in the organization
+ * (null) and a single row with no risk means none. projects_risks has the key
+ * (risk_id, project_id), so a risk appears once, and project_id is NOT NULL,
+ * so `<>` is enough. The "no other use case" test ignores
+ * projects_risks.organization_id for the same reason riskVisibilitySql does: a
+ * row with a NULL organization still counts as a link. Archived risks are left
+ * out: they are already private once unlinked.
+ *
+ * Both the count endpoint and the delete (deleteProjectWithSideEffects) call
+ * this function, so the dialog's list and the set the delete archives come
+ * from the same SQL. The delete passes its transaction, after the use case row
+ * and the risks' links are locked (lockRiskLinksOfProjectQuery), to read the
+ * set at the moment of the delete.
+ */
+export const getRisksLinkedOnlyToProjectQuery = async (
+  projectId: number,
+  organizationId: number,
+  transaction?: Transaction,
+): Promise<{ id: number; risk_name: string }[] | null> => {
+  const rows = await sequelize.query<{ project_id: number; id: number | null; risk_name: string }>(
+    `SELECT p.id AS project_id, only_here.id, only_here.risk_name
+       FROM projects p
+       LEFT JOIN (
+         SELECT r.id, r.risk_name
+           FROM projects_risks pr
+           JOIN risks r
+             ON r.id = pr.risk_id
+            AND r.organization_id = :organizationId
+            AND r.is_deleted = false
+          WHERE pr.project_id = :projectId
+            AND NOT EXISTS (
+              SELECT 1 FROM projects_risks other
+               WHERE other.risk_id = pr.risk_id AND other.project_id <> pr.project_id)
+       ) only_here ON true
+      WHERE p.id = :projectId AND p.organization_id = :organizationId
+      ORDER BY only_here.risk_name, only_here.id`,
+    { replacements: { projectId, organizationId }, type: QueryTypes.SELECT, transaction },
+  );
+  if (rows.length === 0) return null;
+  return rows
+    .filter((row) => row.id !== null)
+    .map((row) => ({ id: Number(row.id), risk_name: row.risk_name }));
+};
+
+/**
+ * Locks, in this transaction, every risk linked to this use case and every
+ * projects_risks row of those risks (their links to any use case, not only
+ * this one), so the "linked only here" set read right after cannot change
+ * before the delete commits. Risk rows first, then link rows, each in key
+ * order: the risk update path also updates the risk row before it deletes the
+ * risk's links, so both take the locks in the same order and cannot deadlock
+ * on them.
+ *
+ * Every path that removes a link deletes the projects_risks row (risk update
+ * link diff, risk delete, another use case's delete), and a DELETE waits for
+ * this row lock. A link removed by a transaction that commits while this one
+ * waits is skipped by the lock (READ COMMITTED) and is gone for the next read,
+ * so the risk then counts as linked only here. A new link waits too: its
+ * foreign key check takes a key share lock on the risk row, which conflicts
+ * with the lock taken here.
+ */
+export const lockRiskLinksOfProjectQuery = async (
+  projectId: number,
+  organizationId: number,
+  transaction: Transaction,
+): Promise<void> => {
+  await sequelize.query(
+    `SELECT r.id FROM risks r
+      WHERE r.organization_id = :organizationId
+        AND r.id IN (SELECT risk_id FROM projects_risks WHERE project_id = :projectId)
+      ORDER BY r.id
+      FOR UPDATE`,
+    { replacements: { projectId, organizationId }, type: QueryTypes.SELECT, transaction },
+  );
+  await sequelize.query(
+    `SELECT pr.risk_id, pr.project_id FROM projects_risks pr
+      WHERE pr.risk_id IN (SELECT risk_id FROM projects_risks WHERE project_id = :projectId)
+      ORDER BY pr.risk_id, pr.project_id
+      FOR UPDATE`,
+    { replacements: { projectId }, type: QueryTypes.SELECT, transaction },
+  );
+};

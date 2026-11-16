@@ -3,6 +3,7 @@ import { Request, Response } from "express";
 import { STATUS_CODE } from "../utils/statusCode.utils";
 import {
   archiveRiskQuery,
+  archiveRisksInBulkQuery,
   getAllRisksQuery,
   getRiskByIdQuery,
   getRisksByFrameworkQuery,
@@ -859,26 +860,11 @@ export async function bulkUpdateProjectRisks(req: Request, res: Response): Promi
         const changes: BulkRiskChange[] = [];
 
         if (action === "archive") {
-          for (const id of ids) {
-            // The archived row, for the automation's summary. The batch
-            // check above already rejected any id the user cannot see, in
-            // this transaction, so archive as the system rather than repeat
-            // the visibility check once per id.
-            const archived = await archiveRiskQuery(id, organizationId, userId, transaction, {
-              viewer: SYSTEM_RISK_VIEWER,
-              recordSnapshots: false,
-              runAutomations: false,
-            });
-            if (archived) {
-              updatedIds.push(id);
-              changes.push({ before: archived, after: archived });
-            }
-          }
-          if (updatedIds.length > 0) {
-            await recordRiskSnapshots(organizationId, transaction);
-            await enqueueBulkRiskAutomation("risk_deleted", changes, organizationId, transaction);
-          }
-          return { updatedIds, newOwnerRisks };
+          // The batch check above already rejected any id the user cannot
+          // see, in this transaction, so the shared bulk archive runs as the
+          // system rather than repeat the visibility check once per id.
+          const archived = await archiveRisksInBulkQuery(ids, organizationId, userId, transaction);
+          return { updatedIds: archived.map((row) => Number(row.id)), newOwnerRisks };
         }
 
         if (action === "set_owner") {

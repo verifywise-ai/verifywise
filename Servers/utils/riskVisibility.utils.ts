@@ -39,8 +39,9 @@ export function scopedRiskViewer(viewer: RiskViewer): UserRiskViewer | null {
 /**
  * Which risks a user can see. Admins (and SuperAdmins) see every risk in the
  * org. Everyone else sees a risk when
- *  - it is not linked to any use case (only projects_risks counts: a link to a
- *    framework or one of its elements does not tie a risk to a use case), or
+ *  - it is not archived and not linked to any use case (only projects_risks
+ *    counts: a link to a framework or one of its elements does not tie a risk
+ *    to a use case), or
  *  - it is linked to at least one use case they can see (projectAccessSql), or
  *  - they are its owner or approver, so an assignee can always act on it.
  *
@@ -55,6 +56,14 @@ export function scopedRiskViewer(viewer: RiskViewer): UserRiskViewer | null {
  * pins the organization (the risk itself is filtered by it). The "linked to a
  * use case they can see" test keeps the filter, where a NULL row hides the
  * risk, which is the safe side.
+ *
+ * An archived risk with no use case link is private: only Admins, its owner
+ * and its approver see it. Deleting a use case removes its links, so the risks
+ * it archives on the way (deleteProjectWithSideEffects with
+ * archiveRisksLinkedOnlyHere) stay hidden. Restoring such a risk (is_deleted
+ * back to false) makes it visible to everyone again. risks.is_deleted is
+ * NOT NULL, so the test needs no NULL case. Archived risks that are linked
+ * follow the link rule like active ones.
  */
 export function riskVisibilitySql(
   riskAlias: string,
@@ -79,9 +88,9 @@ export function riskVisibilityCondition(
   if (!scoped) return null;
   const access = projectAccessSql("pv", scoped.userId);
   return {
-    sql: `(NOT EXISTS (
+    sql: `((${riskAlias}.is_deleted = false AND NOT EXISTS (
              SELECT 1 FROM projects_risks prv
-              WHERE prv.risk_id = ${riskAlias}.id)
+              WHERE prv.risk_id = ${riskAlias}.id))
            OR EXISTS (
              SELECT 1 FROM projects_risks prv
              JOIN projects pv

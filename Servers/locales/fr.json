@@ -1533,5 +1533,6 @@
   "Invalid approval status. Must be one of: {values}": "Statut d'approbation non valide. Valeurs acceptées : {values}",
   "Only an Admin can import a risk as Approved or Rejected": "Seul un Admin peut importer un risque comme approuvé ou rejeté",
   "{assigner} assigned you as Risk Approver for {count} risks: {names}": "{assigner} vous a désigné approbateur de {count} risques : {names}",
-  "{assigner} assigned you as Risk Approver for {count} risks: {names} and {more} more": "{assigner} vous a désigné approbateur de {count} risques : {names} et {more} autres"
+  "{assigner} assigned you as Risk Approver for {count} risks: {names} and {more} more": "{assigner} vous a désigné approbateur de {count} risques : {names} et {more} autres",
+  "archive_risks_linked_only_here must be \"true\" or \"false\"": "archive_risks_linked_only_here doit valoir \"true\" ou \"false\""
 }

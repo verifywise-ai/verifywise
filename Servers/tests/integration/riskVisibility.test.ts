@@ -54,8 +54,12 @@ import { writeToolExecutors } from "../../advisor/confirmation/createWriteTool";
 import { availableRiskTools } from "../../advisor/functions/riskFunctions";
 import { availableSearchTools } from "../../advisor/functions/searchFunctions";
 import { availablePolicyLinkedObjectTools } from "../../advisor/functions/policyLinkedObjectFunctions";
+// Registers agent_delete_use_case with the executor map.
+import "../../advisor/functions/useCaseFunctions";
+import * as projectUtils from "../../utils/project.utils";
+import { deleteProjectWithSideEffects } from "../../utils/projectDeletion.utils";
 
-const ROLE = { Admin: 1, Editor: 3 } as const;
+const ROLE = { Admin: 1, Reviewer: 2, Editor: 3 } as const;
 const FRAMEWORK_ID = 1;
 const MISSING_ID = 2147483000;
 
@@ -1726,5 +1730,351 @@ describe("round 3: advisor analytics and policy links", () => {
     expect(riskIds(admin)).toEqual(sorted([seed.risks.onlyA, seed.risks.onlyB]));
     expect(admin.total_count).toBe(2);
     expect((await read()).total_count).toBe(0);
+  });
+});
+
+describe("use case delete: risks linked only to the use case", () => {
+  const path = (projectId: number) => `/api/v1/projects/${projectId}/risks-linked-only-here`;
+
+  it("lists the active risks linked to this use case and no other", async () => {
+    const archived = await risk(seed.orgId, "archived on A", [seed.projectA]);
+    await sequelize.query(`UPDATE risks SET is_deleted = true WHERE id = :id`, {
+      replacements: { id: archived },
+    });
+
+    const res = await (await apiAs(seed.users.memberA)).get(path(seed.projectA));
+    expect(res.status).toBe(200);
+    // Not "both" (still linked to B), not "unlinked" (never on A), not the archived one.
+    expect(res.body.data).toEqual({
+      count: 1,
+      risks: [{ id: seed.risks.onlyA, risk_name: "Visprobe only A" }],
+    });
+
+    const onB = await (await apiAs(seed.users.admin)).get(path(seed.projectB));
+    expect(ids(onB.body.data.risks)).toEqual(
+      sorted([seed.risks.onlyB, seed.risks.ownedOnB, seed.risks.approvedOnB]),
+    );
+  });
+
+  it("is refused to a caller who could not delete the use case", async () => {
+    const res = await (await apiAs(seed.users.noAccess)).get(path(seed.projectA));
+    expect(res.status).toBe(403);
+  });
+
+  it("answers 404 for a use case in another organization", async () => {
+    const otherOrg = await createTestOrganization();
+    const otherOwner = await user(otherOrg, "Admin");
+    const otherProject = await createTestProject(otherOrg, otherOwner.userId, {
+      project_title: "Other org use case",
+    });
+    await risk(otherOrg, "other org only", [otherProject]);
+
+    const res = await (await apiAs(seed.users.admin)).get(path(otherProject));
+    expect(res.status).toBe(404);
+  });
+
+  it("the frozen legacy delete keeps the risks active, so one left unlinked shows to everyone", async () => {
+    const member = await apiAs(seed.users.memberA);
+    const res = await member.delete(`/api/projects/${seed.projectA}`);
+    expect(res.status).toBe(202);
+    // The legacy body is unchanged: `true`, no archived ids.
+    expect(res.body.data).toBe(true);
+    expect((await riskRow(seed.risks.onlyA)).is_deleted).toBe(false);
+    expect(ids(await getAllRisksQuery(seed.orgId, "active", seed.users.noAccess))).toContain(
+      seed.risks.onlyA,
+    );
+  });
+});
+
+describe("archived risks linked to no use case are private", () => {
+  async function archive(id: number) {
+    await sequelize.query(`UPDATE risks SET is_deleted = true, deleted_at = NOW() WHERE id = :id`, {
+      replacements: { id },
+    });
+  }
+  async function setPeople(id: number, owner: number | null, approver: number | null) {
+    await sequelize.query(
+      `UPDATE risks SET risk_owner = :owner, risk_approval = :approver WHERE id = :id`,
+      { replacements: { id, owner, approver } },
+    );
+  }
+  const listed = async (viewer: RiskViewer, filter: "deleted" | "all") =>
+    ids(await getAllRisksQuery(seed.orgId, filter, viewer));
+
+  it("the archived and all lists hide an archived unlinked risk from a member", async () => {
+    await archive(seed.risks.unlinked);
+    for (const filter of ["deleted", "all"] as const) {
+      expect(await listed(seed.users.memberA, filter)).not.toContain(seed.risks.unlinked);
+      expect(await listed(seed.users.noAccess, filter)).not.toContain(seed.risks.unlinked);
+      expect(await listed(seed.users.admin, filter)).toContain(seed.risks.unlinked);
+      expect(await listed(SYSTEM_RISK_VIEWER, filter)).toContain(seed.risks.unlinked);
+    }
+    // The same through the route.
+    const res = await (await apiAs(seed.users.memberA)).get("/api/projectRisks?filter=deleted");
+    expect(res.status).toBe(200);
+    expect(ids(res.body.data)).not.toContain(seed.risks.unlinked);
+    // A framework link alone is still no use case link.
+    await archive(seed.risks.frameworkOnly);
+    expect(await listed(seed.users.memberA, "deleted")).not.toContain(seed.risks.frameworkOnly);
+  });
+
+  it("its owner and its approver still see it", async () => {
+    await archive(seed.risks.unlinked);
+    await setPeople(seed.risks.unlinked, seed.users.memberA.userId, seed.users.noAccess.userId);
+    expect(await listed(seed.users.memberA, "deleted")).toContain(seed.risks.unlinked);
+    expect(await listed(seed.users.noAccess, "all")).toContain(seed.risks.unlinked);
+    expect(await listed(seed.users.groupA, "deleted")).not.toContain(seed.risks.unlinked);
+  });
+
+  it("an archived linked risk follows its links like an active one", async () => {
+    await archive(seed.risks.onlyA);
+    expect(await listed(seed.users.memberA, "deleted")).toContain(seed.risks.onlyA);
+    expect(await listed(seed.users.groupA, "deleted")).toContain(seed.risks.onlyA);
+    expect(await listed(seed.users.noAccess, "deleted")).not.toContain(seed.risks.onlyA);
+  });
+
+  it("reads like a missing risk to a member, including a by-id read that includes archived risks", async () => {
+    await archive(seed.risks.unlinked);
+    expect(await isRiskVisibleQuery(seed.risks.unlinked, seed.orgId, seed.users.memberA)).toBe(
+      false,
+    );
+    expect(
+      await getRiskByIdQuery(seed.risks.unlinked, seed.orgId, seed.users.memberA, true),
+    ).toBeNull();
+    expect(
+      await getRiskByIdQuery(seed.risks.unlinked, seed.orgId, seed.users.admin, true),
+    ).not.toBeNull();
+    // Any write a member tries answers like a missing risk, as for every archived one.
+    const res = await (
+      await apiAs(seed.users.memberA)
+    )
+      .put(`/api/projectRisks/${seed.risks.unlinked}`)
+      .send({ is_deleted: false, risk_name: "Restored" });
+    expect(res.status).toBe(404);
+    expect((await riskRow(seed.risks.unlinked)).is_deleted).toBe(true);
+  });
+
+  it("restoring it (is_deleted back to false) makes it visible to everyone again", async () => {
+    await archive(seed.risks.unlinked);
+    expect(ids(await getAllRisksQuery(seed.orgId, "all", seed.users.noAccess))).not.toContain(
+      seed.risks.unlinked,
+    );
+    await sequelize.query(`UPDATE risks SET is_deleted = false, deleted_at = NULL WHERE id = :id`, {
+      replacements: { id: seed.risks.unlinked },
+    });
+    expect(ids(await getAllRisksQuery(seed.orgId, "active", seed.users.noAccess))).toContain(
+      seed.risks.unlinked,
+    );
+  });
+});
+
+describe("DELETE /api/v1/projects/:id", () => {
+  const path = (projectId: number, archive: boolean) =>
+    `/api/v1/projects/${projectId}?archive_risks_linked_only_here=${archive}`;
+
+  async function projectExists(id: number): Promise<boolean> {
+    const rows = await sequelize.query(`SELECT id FROM projects WHERE id = :id`, {
+      replacements: { id },
+      type: QueryTypes.SELECT,
+    });
+    return rows.length > 0;
+  }
+  async function deletionHistory(riskId: number): Promise<number> {
+    const rows = await sequelize.query(
+      `SELECT id FROM project_risk_change_history
+        WHERE project_risk_id = :riskId AND action = 'deleted'`,
+      { replacements: { riskId }, type: QueryTypes.SELECT },
+    );
+    return rows.length;
+  }
+
+  it("archives exactly the risks linked only here, then hides them once unlinked", async () => {
+    const archivedBefore = await risk(seed.orgId, "already archived on A", [seed.projectA]);
+    await sequelize.query(`UPDATE risks SET is_deleted = true WHERE id = :id`, {
+      replacements: { id: archivedBefore },
+    });
+
+    const res = await (await apiAs(seed.users.memberA)).delete(path(seed.projectA, true));
+
+    expect(res.status).toBe(202);
+    // Not "both" (also on B), not the one already archived.
+    expect(res.body.data).toEqual({ deleted: true, archived_risk_ids: [seed.risks.onlyA] });
+    expect(await projectExists(seed.projectA)).toBe(false);
+    expect((await riskRow(seed.risks.onlyA)).is_deleted).toBe(true);
+    expect(await deletionHistory(seed.risks.onlyA)).toBe(1);
+    expect((await riskRow(seed.risks.both)).is_deleted).toBe(false);
+    expect(await projectLinks(seed.risks.both)).toEqual([seed.projectB]);
+    expect(await projectLinks(seed.risks.onlyA)).toEqual([]);
+
+    // Archived and linked to nothing: private to Admins, owner and approver.
+    for (const name of ["memberA", "groupA", "noAccess"] as const) {
+      for (const filter of ["active", "deleted", "all"] as const) {
+        expect(ids(await getAllRisksQuery(seed.orgId, filter, seed.users[name]))).not.toContain(
+          seed.risks.onlyA,
+        );
+      }
+    }
+    expect(ids(await getAllRisksQuery(seed.orgId, "deleted", seed.users.admin))).toContain(
+      seed.risks.onlyA,
+    );
+  });
+
+  it("keep leaves them active, unlinked and visible to everyone", async () => {
+    const res = await (await apiAs(seed.users.memberA)).delete(path(seed.projectA, false));
+
+    expect(res.status).toBe(202);
+    expect(res.body.data).toEqual({ deleted: true, archived_risk_ids: [] });
+    expect((await riskRow(seed.risks.onlyA)).is_deleted).toBe(false);
+    expect(ids(await getAllRisksQuery(seed.orgId, "active", seed.users.noAccess))).toContain(
+      seed.risks.onlyA,
+    );
+  });
+
+  it("a failure rolls back the archive and the delete together", async () => {
+    const spy = jest
+      .spyOn(projectUtils, "deleteProjectByIdQuery")
+      .mockRejectedValue(new Error("forced failure"));
+    try {
+      const res = await (await apiAs(seed.users.memberA)).delete(path(seed.projectA, true));
+      expect(res.status).toBe(500);
+      expect(spy).toHaveBeenCalledTimes(1);
+    } finally {
+      spy.mockRestore();
+    }
+
+    expect(await projectExists(seed.projectA)).toBe(true);
+    expect((await riskRow(seed.risks.onlyA)).is_deleted).toBe(false);
+    expect(await deletionHistory(seed.risks.onlyA)).toBe(0);
+    expect(await projectLinks(seed.risks.onlyA)).toEqual([seed.projectA]);
+  });
+
+  it("is refused to a caller without write access to the use case", async () => {
+    const res = await (await apiAs(seed.users.noAccess)).delete(path(seed.projectA, true));
+    expect(res.status).toBe(403);
+    expect(await projectExists(seed.projectA)).toBe(true);
+  });
+
+  it("requires the archive choice", async () => {
+    const res = await (await apiAs(seed.users.admin)).delete(`/api/v1/projects/${seed.projectA}`);
+    expect(res.status).toBe(400);
+    expect(await projectExists(seed.projectA)).toBe(true);
+  });
+});
+
+describe("advisor agent_delete_use_case", () => {
+  it("archives the risks linked only to the use case by default", async () => {
+    const execute = writeToolExecutors.get("agent_delete_use_case")!;
+    const result = (await execute(
+      { use_case_id: seed.projectA, _userId: seed.users.admin.userId },
+      seed.orgId,
+    )) as any;
+
+    expect(result.success).toBe(true);
+    expect(result.archived_risk_ids).toEqual([seed.risks.onlyA]);
+    expect(result.message).toContain("archived");
+    expect((await riskRow(seed.risks.onlyA)).is_deleted).toBe(true);
+    expect((await riskRow(seed.risks.both)).is_deleted).toBe(false);
+    expect(ids(await getAllRisksQuery(seed.orgId, "all", seed.users.noAccess))).not.toContain(
+      seed.risks.onlyA,
+    );
+  });
+
+  it("refuses the delete and changes nothing for a requester who cannot archive risks", async () => {
+    // Reviewers do not hold risks.edit.
+    const reviewer = await user(seed.orgId, "Reviewer");
+    const execute = writeToolExecutors.get("agent_delete_use_case")!;
+    const result = (await execute(
+      {
+        use_case_id: seed.projectA,
+        _userId: seed.users.admin.userId,
+        _requesterId: reviewer.userId,
+      },
+      seed.orgId,
+    )) as any;
+
+    expect(result.success).toBe(false);
+    expect(result.message).toContain("does not allow archiving risks");
+    const [project] = await sequelize.query(`SELECT id FROM projects WHERE id = :id`, {
+      replacements: { id: seed.projectA },
+      type: QueryTypes.SELECT,
+    });
+    expect(project).toBeDefined();
+    expect((await riskRow(seed.risks.onlyA)).is_deleted).toBe(false);
+    expect(await projectLinks(seed.risks.onlyA)).toEqual([seed.projectA]);
+  });
+
+  it("records the deletion in the use case history, as the shared delete does", async () => {
+    const execute = writeToolExecutors.get("agent_delete_use_case")!;
+    await execute({ use_case_id: seed.projectA, _userId: seed.users.admin.userId }, seed.orgId);
+
+    const rows = await sequelize.query(
+      `SELECT id FROM use_case_change_history
+        WHERE use_case_id = :id AND action = 'deleted' AND changed_by_user_id = :userId`,
+      {
+        replacements: { id: seed.projectA, userId: seed.users.admin.userId },
+        type: QueryTypes.SELECT,
+      },
+    );
+    expect(rows).toHaveLength(1);
+  });
+});
+
+describe("use case delete against a concurrent unlink", () => {
+  /** Waits until some session in this database is waiting for a lock. */
+  async function untilALockWaits(timeoutMs = 5000): Promise<boolean> {
+    const until = Date.now() + timeoutMs;
+    while (Date.now() < until) {
+      const [row] = await sequelize.query<{ n: number }>(
+        `SELECT count(*)::int AS n FROM pg_stat_activity
+          WHERE datname = current_database() AND wait_event_type = 'Lock'`,
+        { type: QueryTypes.SELECT },
+      );
+      if (row.n > 0) return true;
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    }
+    return false;
+  }
+
+  it("waits for an uncommitted unlink, then archives the risk it left linked only here", async () => {
+    // "both" is linked to A and B. Another transaction removes its B link and
+    // has not committed when the delete of A reads the risks linked only here.
+    const unlink = await sequelize.transaction();
+    await sequelize.query(
+      `DELETE FROM projects_risks WHERE risk_id = :riskId AND project_id = :projectId`,
+      {
+        replacements: { riskId: seed.risks.both, projectId: seed.projectB },
+        transaction: unlink,
+      },
+    );
+
+    const deleteTx = await sequelize.transaction();
+    const deleting = deleteProjectWithSideEffects(seed.projectA, seed.orgId, deleteTx, {
+      userId: seed.users.admin.userId,
+      archiveRisksLinkedOnlyHere: true,
+    });
+    let waited = false;
+    try {
+      // The delete must block on the B link's row lock rather than read past it.
+      waited = await untilALockWaits();
+    } finally {
+      await unlink.commit();
+    }
+    let result: Awaited<typeof deleting>;
+    try {
+      result = await deleting;
+      await deleteTx.commit();
+    } catch (error) {
+      await deleteTx.rollback();
+      throw error;
+    }
+
+    expect(waited).toBe(true);
+    expect(sorted(result.archivedRiskIds)).toEqual(sorted([seed.risks.onlyA, seed.risks.both]));
+    expect((await riskRow(seed.risks.both)).is_deleted).toBe(true);
+    expect(await projectLinks(seed.risks.both)).toEqual([]);
+    // Archived and unlinked: hidden from a member.
+    expect(ids(await getAllRisksQuery(seed.orgId, "all", seed.users.noAccess))).not.toContain(
+      seed.risks.both,
+    );
   });
 });
