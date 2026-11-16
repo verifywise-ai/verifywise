@@ -14,6 +14,7 @@ import { ChevronDown, ChevronRight, Plus, Sparkles } from "lucide-react";
 import { CustomizableButton } from "../../../../components/button/customizable-button";
 import Chip from "../../../../components/Chip";
 import AddNewRiskForm from "../../../../components/AddNewRiskForm";
+import { RISK_APPROVAL_STATUS } from "../../../../components/AddNewRiskForm/projectRiskValue";
 import StandardModal from "../../../../components/Modals/StandardModal";
 import Alert from "../../../../components/Alert";
 import useUsers from "../../../../../application/hooks/useUsers";
@@ -153,7 +154,7 @@ export function AiRiskSuggestions({ onRiskSaved }: AiRiskSuggestionsProps) {
         likelihood: form.likelihood,
         riskSeverity: form.riskSeverity,
         approver: 0,
-        approvalStatus: 0,
+        approvalStatus: RISK_APPROVAL_STATUS.NotRequired,
         dateOfAssessment: "",
       });
     } else {
@@ -170,7 +171,7 @@ export function AiRiskSuggestions({ onRiskSaved }: AiRiskSuggestionsProps) {
         likelihood: mitigation.likelihood ?? form.likelihood,
         riskSeverity: mitigation.riskSeverity ?? form.riskSeverity,
         approver: 0,
-        approvalStatus: 0,
+        approvalStatus: RISK_APPROVAL_STATUS.NotRequired,
         dateOfAssessment: "",
       });
     }

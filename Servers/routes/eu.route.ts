@@ -5,6 +5,9 @@ import { createMemoryUpload } from "../utils/upload.utils";
 const upload = createMemoryUpload();
 
 import authenticateJWT from "../middleware/auth.middleware";
+import authorize from "../middleware/accessControl.middleware";
+import { requireFrameworkWriteAccess } from "../middleware/frameworkWriteAccess.middleware";
+import { euAnswerChanges, euControlChanges } from "../utils/frameworkWriteAccess.utils";
 import {
   deleteAssessmentsByProjectId,
   deleteCompliancesByProjectId,
@@ -44,10 +47,32 @@ router.get("/topicById", authenticateJWT, getTopicById);
 // get control by id
 router.get("/controlById", authenticateJWT, getControlById);
 
-router.patch("/saveControls/:id", authenticateJWT, upload.any(), saveControls);
-router.patch("/saveAnswer/:id", authenticateJWT, upload.any(), updateQuestionById);
+router.patch(
+  "/saveControls/:id",
+  authenticateJWT,
+  upload.any(),
+  requireFrameworkWriteAccess(euControlChanges),
+  saveControls,
+);
+router.patch(
+  "/saveAnswer/:id",
+  authenticateJWT,
+  upload.any(),
+  requireFrameworkWriteAccess(euAnswerChanges),
+  updateQuestionById,
+);
 
-router.delete("/assessments/byProjectId/:id", authenticateJWT, deleteAssessmentsByProjectId);
-router.delete("/compliances/byProjectId/:id", authenticateJWT, deleteCompliancesByProjectId);
+router.delete(
+  "/assessments/byProjectId/:id",
+  authenticateJWT,
+  authorize("framework.edit"),
+  deleteAssessmentsByProjectId,
+);
+router.delete(
+  "/compliances/byProjectId/:id",
+  authenticateJWT,
+  authorize("framework.edit"),
+  deleteCompliancesByProjectId,
+);
 
 export default router;

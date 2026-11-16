@@ -1580,5 +1580,12 @@
   "A required value in this row is empty.": "Une valeur obligatoire de cette ligne est vide.",
   "A value in this row is too long.": "Une valeur de cette ligne est trop longue.",
   "A date in this row is not valid. Use YYYY-MM-DD.": "Une date de cette ligne n'est pas valide. Utilisez AAAA-MM-JJ.",
-  "This row could not be saved.": "Cette ligne n'a pas pu être enregistrée."
+  "This row could not be saved.": "Cette ligne n'a pas pu être enregistrée.",
+  "Only the risk's approver or an Admin can change its approval.": "Seul l'approbateur du risque ou un Admin peut modifier son approbation.",
+  "You can't name yourself as the approver. Ask an Admin or pick someone else.": "Vous ne pouvez pas vous désigner comme approbateur. Demandez à un Admin ou choisissez quelqu'un d'autre.",
+  "Invalid approval status. Must be one of: {values}": "Statut d'approbation non valide. Valeurs acceptées : {values}",
+  "Only an Admin can import a risk as Approved or Rejected": "Seul un Admin peut importer un risque comme approuvé ou rejeté",
+  "{assigner} assigned you as Risk Approver for {count} risks: {names}": "{assigner} vous a désigné approbateur de {count} risques : {names}",
+  "{assigner} assigned you as Risk Approver for {count} risks: {names} and {more} more": "{assigner} vous a désigné approbateur de {count} risques : {names} et {more} autres",
+  "archive_risks_linked_only_here must be \"true\" or \"false\"": "archive_risks_linked_only_here doit valoir \"true\" ou \"false\""
 }

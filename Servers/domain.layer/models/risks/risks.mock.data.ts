@@ -41,7 +41,7 @@ const mockProjectRisks = (_projectId1: number, userId1: number, userId2: number)
       risk_severity: "Moderate",
       final_risk_level: "Low",
       risk_approval: userId2,
-      approval_status: "In Progress",
+      approval_status: "Pending",
       date_of_assessment: createPastDate(60),
     },
     {
@@ -68,7 +68,7 @@ const mockProjectRisks = (_projectId1: number, userId1: number, userId2: number)
       risk_severity: "Minor",
       final_risk_level: "Low",
       risk_approval: userId1,
-      approval_status: "Completed",
+      approval_status: "Approved",
       date_of_assessment: createPastDate(75),
     },
     // Project risk for the second project

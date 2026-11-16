@@ -3,6 +3,7 @@ import { Request, Response } from "express";
 
 jest.mock("../../utils/risk.utils", () => ({
   archiveRiskQuery: jest.fn<any>().mockResolvedValue(true),
+  archiveRisksInBulkQuery: jest.fn<any>().mockResolvedValue([]),
   recordRiskSnapshots: jest.fn<any>().mockResolvedValue(undefined),
   assertRiskReferencesInOrganization: jest.fn<any>().mockResolvedValue(undefined),
   getActiveRisksByIdsQuery: jest.fn<any>().mockResolvedValue([]),
@@ -76,6 +77,7 @@ jest.mock("../../database/db", () => ({
 import { bulkUpdateProjectRisks } from "../risks.ctrl";
 import {
   archiveRiskQuery,
+  archiveRisksInBulkQuery,
   recordRiskSnapshots,
   assertRiskReferencesInOrganization,
   getActiveRisksByIdsQuery,
@@ -102,6 +104,7 @@ const mockWithBulkTransaction = withBulkTransaction as jest.MockedFunction<
   typeof withBulkTransaction
 >;
 const mockArchive = archiveRiskQuery as jest.MockedFunction<typeof archiveRiskQuery>;
+const mockBulkArchive = archiveRisksInBulkQuery as unknown as jest.Mock<any>;
 const mockSnapshots = recordRiskSnapshots as jest.MockedFunction<typeof recordRiskSnapshots>;
 const mockUpdateService = updateRiskService as jest.MockedFunction<typeof updateRiskService>;
 const mockNotify = notifyUserAssigned as jest.MockedFunction<typeof notifyUserAssigned>;
@@ -163,6 +166,7 @@ describe("bulkUpdateProjectRisks", () => {
       return result;
     });
     mockArchive.mockResolvedValue({ id: 1, risk_name: "R1" } as any);
+    mockBulkArchive.mockResolvedValue([]);
     mockUpdateService.mockImplementation(async (id: number, input: any, existing: any) => {
       return { ...existing, ...input, id } as any;
     });
@@ -199,7 +203,7 @@ describe("bulkUpdateProjectRisks", () => {
         { risk_owner: 7 },
         expect.objectContaining({ id: 1, risk_owner: 3 }),
         // The batch check already rejected hidden ids, so each edit runs as the system.
-        { userId: 9, organizationId: 4, viewer: SYSTEM_RISK_VIEWER },
+        { userId: 9, organizationId: 4, viewer: SYSTEM_RISK_VIEWER, callerIsAdmin: false },
         TX,
         { recordSnapshots: false, runAutomations: false },
       );
@@ -245,7 +249,7 @@ describe("bulkUpdateProjectRisks", () => {
 
       // The single edit enqueues a link recompute on every update; so does bulk.
       expect(mockEnqueue.mock.calls.map((c) => c[1])).toEqual([1]);
-      expect(mockArchive).not.toHaveBeenCalled();
+      expect(mockBulkArchive).not.toHaveBeenCalled();
       expect(res.status).toHaveBeenCalledWith(200);
       // `updated` is the ids sent; risk 2 was unchanged and risk 5 is archived,
       // so neither is in `changed`.
@@ -381,7 +385,7 @@ describe("bulkUpdateProjectRisks", () => {
         { risk_category: ["Strategic risk", "Operational risk"] },
         expect.objectContaining({ id: 1 }),
         // The batch check already rejected hidden ids, so each edit runs as the system.
-        { userId: 9, organizationId: 4, viewer: SYSTEM_RISK_VIEWER },
+        { userId: 9, organizationId: 4, viewer: SYSTEM_RISK_VIEWER, callerIsAdmin: false },
         TX,
         { recordSnapshots: false, runAutomations: false },
       );
@@ -482,42 +486,28 @@ describe("bulkUpdateProjectRisks", () => {
   });
 
   describe("archive", () => {
-    it("archives each risk through the shared path and records the snapshots once", async () => {
+    it("archives the ids through the shared bulk archive, after the batch check", async () => {
       // Risk 11 was already archived; the others come back as archived rows.
-      mockArchive.mockImplementation(
-        async (id: number) => (id === 11 ? null : { id, risk_name: `R${id}` }) as any,
-      );
+      mockBulkArchive.mockResolvedValue([
+        { id: 10, risk_name: "R10" },
+        { id: 12, risk_name: "R12" },
+      ]);
       const req = createReq({ ids: [10, 11, 12], action: "archive" });
       const res = createRes();
 
       await bulkUpdateProjectRisks(req as Request, res as Response);
       await flush();
 
-      expect(mockArchive).toHaveBeenCalledTimes(3);
-      for (const id of [10, 11, 12]) {
-        // The batch check already rejected hidden ids, so each archive runs
-        // as the system.
-        expect(mockArchive).toHaveBeenCalledWith(id, 4, 9, TX, {
-          viewer: SYSTEM_RISK_VIEWER,
-          recordSnapshots: false,
-          runAutomations: false,
-        });
-      }
-      expect(mockSnapshots).toHaveBeenCalledTimes(1);
-      expect(mockSnapshots).toHaveBeenCalledWith(4, TX);
-      // One risk_deleted automation for the batch, listing the archived risks.
-      // The archived rows feed the summary: no extra read of the risks.
-      expect(mockGetActive).not.toHaveBeenCalled();
-      expect(mockBulkAutomation).toHaveBeenCalledTimes(1);
-      expect(mockBulkAutomation).toHaveBeenCalledWith(
-        "risk_deleted",
-        [
-          { before: { id: 10, risk_name: "R10" }, after: { id: 10, risk_name: "R10" } },
-          { before: { id: 12, risk_name: "R12" }, after: { id: 12, risk_name: "R12" } },
-        ],
-        4,
-        TX,
+      expect(mockAssertOrgOwnsIds).toHaveBeenCalledTimes(1);
+      // History, policy unlinks, the snapshots and the one automation are the
+      // shared helper's (risk.utils.archive.test.ts covers them).
+      expect(mockBulkArchive).toHaveBeenCalledTimes(1);
+      expect(mockBulkArchive).toHaveBeenCalledWith([10, 11, 12], 4, 9, TX);
+      expect(mockAssertOrgOwnsIds.mock.invocationCallOrder[0]).toBeLessThan(
+        mockBulkArchive.mock.invocationCallOrder[0],
       );
+      expect(mockArchive).not.toHaveBeenCalled();
+      expect(mockGetActive).not.toHaveBeenCalled();
       expect(mockUpdateService).not.toHaveBeenCalled();
       expect(mockEnqueue).not.toHaveBeenCalled();
       expect(res.status).toHaveBeenCalledWith(200);
@@ -527,15 +517,13 @@ describe("bulkUpdateProjectRisks", () => {
       });
     });
 
-    it("records no snapshots when nothing was archived", async () => {
-      mockArchive.mockResolvedValue(null);
+    it("reports nothing changed when nothing was archived", async () => {
+      mockBulkArchive.mockResolvedValue([]);
       const req = createReq({ ids: [10], action: "archive" });
       const res = createRes();
 
       await bulkUpdateProjectRisks(req as Request, res as Response);
 
-      expect(mockSnapshots).not.toHaveBeenCalled();
-      expect(mockBulkAutomation).not.toHaveBeenCalled();
       expect(res.json).toHaveBeenCalledWith({
         message: "OK",
         data: { updated: 1, changed: 0, action: "archive" },
@@ -573,7 +561,7 @@ describe("bulkUpdateProjectRisks", () => {
     await bulkUpdateProjectRisks(req as Request, res as Response);
 
     expect(res.status).toHaveBeenCalledWith(403);
-    expect(mockArchive).not.toHaveBeenCalled();
+    expect(mockBulkArchive).not.toHaveBeenCalled();
   });
 
   it("returns 500 on unexpected errors", async () => {

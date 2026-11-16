@@ -1,3 +1,6 @@
+/** A risk's approval status. Only the risk's approver or an Admin sets Approved or Rejected. */
+export type RiskApprovalStatus = "Pending" | "Approved" | "Rejected" | "Not required";
+
 // projectRisk.model.ts
 
 export type ProjectRiskMitigation = {
@@ -72,7 +75,7 @@ export type ProjectRisk = {
   risk_severity: "Negligible" | "Minor" | "Moderate" | "Major" | "Catastrophic";
   final_risk_level: string;
   risk_approval: string;
-  approval_status: string;
+  approval_status: RiskApprovalStatus;
   date_of_assessment: Date;
   annexCategories?: ProjectRiskMitigation[];
   subClauses?: ProjectRiskMitigation[];

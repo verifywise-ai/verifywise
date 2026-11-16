@@ -35,9 +35,10 @@ import { ProjectForm } from "../../components/Forms/ProjectForm";
 import AddFrameworkModal from "../ProjectView/AddNewFramework";
 import { useCanCheck, useCan } from "../../../application/hooks/useCan";
 import { CustomizableButton } from "../../components/button/customizable-button";
-import ConfirmationModal from "../../components/Dialogs/ConfirmationModal";
 import StandardModal from "../../components/Modals/StandardModal";
-import { deleteProject } from "../../../application/repository/project.repository";
+import DeleteUseCaseModal from "../../components/Modals/DeleteUseCase";
+import { useTranslation } from "../../../application/hooks/useTranslation";
+import { fill } from "../../../i18n/fill";
 import { FrameworkTypeEnum } from "../../components/Forms/ProjectForm/constants";
 import NoProject from "../../components/NoProject/NoProject";
 import { useNavigate, useParams, useSearchParams } from "react-router";
@@ -114,6 +115,7 @@ const Framework = () => {
 
   const { changeComponentVisibility, projects, setProjects } = useContext(VerifyWiseContext);
   const can = useCanCheck();
+  const { t } = useTranslation();
   const { refs, allVisible } = useMultipleOnScreen<HTMLElement>({
     countToTrigger: 1,
   });
@@ -183,29 +185,16 @@ const Framework = () => {
     closeFrameworkMenu();
   };
 
-  // Function to handle project deletion
-  const handleDeleteProject = async () => {
+  // Runs once DeleteUseCaseModal has deleted the project (a failure keeps the
+  // dialog open with its own error).
+  const handleProjectDeleted = () => {
     if (!organizationalProject) return;
-
-    try {
-      const response = await deleteProject({
-        id: organizationalProject.id,
-      });
-
-      if (response.status >= 200 && response.status < 300) {
-        // Remove the project from context
-        setProjects((prevProjects) =>
-          prevProjects.filter((project) => project.id !== organizationalProject.id),
-        );
-        // Stay on the Framework page - the UI will automatically show "No Organizational Project Found"
-      } else {
-        console.error("Failed to delete project");
-      }
-    } catch (error) {
-      console.error("Error deleting project:", error);
-    } finally {
-      setIsDeleteModalOpen(false);
-    }
+    // Remove the project from context
+    setProjects((prevProjects) =>
+      prevProjects.filter((project) => project.id !== organizationalProject.id),
+    );
+    // Stay on the Framework page - the UI will automatically show "No Organizational Project Found"
+    setIsDeleteModalOpen(false);
   };
 
   // Stable reference for the frameworks list — otherwise every render
@@ -1132,21 +1121,18 @@ const Framework = () => {
         )}
 
         {isDeleteModalOpen && organizationalProject && (
-          <ConfirmationModal
+          <DeleteUseCaseModal
+            projectId={organizationalProject.id}
             title="Confirm Delete"
-            body={
-              <Typography {...textStyles.body}>
-                Are you sure you want to delete the project "{organizationalProject.project_title}"?
-                This action cannot be undone and will remove all associated data.
-              </Typography>
-            }
-            cancelText="Cancel"
+            message={fill(
+              t(
+                'Are you sure you want to delete the project "{title}"? This deletes its framework progress and its files. Its risks stay in the risk register but are no longer linked to it. This cannot be undone.',
+              ),
+              { title: organizationalProject.project_title },
+            )}
             proceedText="Delete"
             onCancel={() => setIsDeleteModalOpen(false)}
-            onProceed={handleDeleteProject}
-            proceedButtonColor="error"
-            proceedButtonVariant="contained"
-            TitleFontSize={0}
+            onDeleted={handleProjectDeleted}
           />
         )}
 

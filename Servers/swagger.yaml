@@ -1541,11 +1541,17 @@ components:
           nullable: true
         risk_approval:
           type: integer
-          description: 'User ID of the approver.'
+          description: 'User ID of the approver. Optional; naming a new approver sets the approval status to Pending and notifies them.'
           nullable: true
         approval_status:
           type: string
-          nullable: true
+          enum:
+            - Pending
+            - Approved
+            - Rejected
+            - 'Not required'
+          default: 'Not required'
+          description: 'Approval status of the risk. A risk without an approver is always Not required. Only the risk''s approver or an Admin can set Approved or Rejected, or move away from either (403 otherwise); naming a new approver resets it to Pending, and only an Admin can name an approver and decide in the same request. On this unversioned route a value outside the four is ignored (the stored status is kept, or Not required on create).'
         date_of_assessment:
           type: string
           format: date-time
@@ -9717,7 +9723,7 @@ paths:
                 $ref: '#/components/schemas/ServerError'
     delete:
       summary: 'Delete a project by ID'
-      description: 'Deletes a project and all dependent entities (files, risks, members, framework data).'
+      description: 'Deletes a project and its dependent entities (files, members, framework data, risk links). Its risks stay in the register and are never archived here. An active risk left with no use case link is visible to everyone in the organization; to archive those risks in the same transaction and keep them private, use DELETE /api/v1/projects/{id} with archive_risks_linked_only_here=true.'
       operationId: deleteProjectById
       tags:
         - Projects
@@ -10371,6 +10377,8 @@ paths:
                   data: {$ref: '#/components/schemas/ProjectRiskResponse'}
         '401':
           description: Unauthorized
+        '403':
+          description: 'Only the risk''s approver or an Admin can change its approval.'
         '500':
           description: 'Internal server error'
   '/projectRisks/by-projid/{id}':
@@ -10518,6 +10526,8 @@ paths:
                   data: {$ref: '#/components/schemas/ProjectRiskResponse'}
         '401':
           description: Unauthorized
+        '403':
+          description: 'Only the risk''s approver or an Admin can change its approval.'
         '500':
           description: 'Internal server error'
     delete:
@@ -28138,6 +28148,44 @@ paths:
       security:
         -
           bearerAuth: []
+    delete:
+      summary: 'Delete Project By Id V1'
+      description: 'Deletes a use case and, when archive_risks_linked_only_here is true, archives the active risks linked to it and to no other use case in the same transaction. An archived risk with no use case link is visible only to Admins, its owner and its approver, while an active one is visible to everyone in the organization, so archiving keeps them private. The set of risks is read at the moment of the delete, after the use case row is locked. Any failure rolls back the archive and the delete together. Each archived risk gets a deletion entry in its change history and loses its policy links, and the organization''s risk deleted automation runs once for the batch, as with the bulk archive. Same access as DELETE /api/projects/{id} (useCase.edit and write access to the use case); archiving also needs risks.edit. The legacy DELETE /api/projects/{id} never archives.'
+      parameters:
+        -
+          name: id
+          in: path
+          required: true
+          description: 'The use case id'
+          schema:
+            type: integer
+        -
+          name: archive_risks_linked_only_here
+          in: query
+          required: true
+          description: 'true archives the active risks linked only to this use case; false keeps them active (they then become visible to everyone in the organization). Required, given once.'
+          schema:
+            type: string
+            enum:
+              - 'true'
+              - 'false'
+      responses:
+        '202':
+          description: 'Deleted. Body data: { deleted: true, archived_risk_ids: number[] } (empty unless archiving was asked for)'
+        '400':
+          description: 'Invalid id, or archive_risks_linked_only_here missing, repeated or not true/false'
+        '403':
+          description: 'No useCase.edit permission, no write access to the use case, or archiving asked without risks.edit'
+        '404':
+          description: 'Use case not found in the organization'
+        '500':
+          description: 'Internal server error; nothing was archived or deleted'
+      tags:
+        - 'v1: V1/Projects'
+      operationId: deleteProjectByIdV1
+      security:
+        -
+          bearerAuth: []
   '/v1/ai-apps/{id}/use-cases':
     get:
       summary: 'List Ai App Use Cases'
@@ -29334,6 +29382,33 @@ paths:
           description: 'The connection id'
           schema:
             type: integer
+  '/v1/projects/{id}/risks-linked-only-here':
+    get:
+      summary: 'Get Risks Linked Only To Project'
+      description: 'The active (not archived) risks linked to this use case and to no other use case, as { count, risks: [{ id, risk_name }] }. Deleting the use case removes its risk links, and an active risk with no use case link is visible to everyone in the organization (an archived one only to Admins, its owner and its approver), so the delete dialog reads this first and offers to archive them through DELETE /api/v1/projects/{id}. Same access as that delete: useCase.edit and write access to the use case (an Admin, its owner, a member or a member of one of its groups).'
+      parameters:
+        -
+          name: id
+          in: path
+          required: true
+          description: 'The use case id'
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Success
+        '403':
+          description: 'No useCase.edit permission, or no write access to the use case'
+        '404':
+          description: 'Use case not found in the organization'
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Projects'
+      operationId: getRisksLinkedOnlyToProject
+      security:
+        -
+          bearerAuth: []
   /v1/risk-import/import:
     post:
       summary: 'Bulk Import Risks Strict'

@@ -1878,7 +1878,14 @@ async function getUserEmails(
  * Role type for assignment notifications
  */
 export type AssignmentRoleType =
-  "Owner" | "Reviewer" | "Approver" | "Member" | "Assignee" | "Action Owner" | "Risk Owner";
+  | "Owner"
+  | "Reviewer"
+  | "Approver"
+  | "Member"
+  | "Assignee"
+  | "Action Owner"
+  | "Risk Owner"
+  | "Risk Approver";
 
 /**
  * Entity type labels for display in notifications
@@ -1905,6 +1912,8 @@ function getNotificationTypeForRole(roleType: AssignmentRoleType): NotificationT
   switch (roleType) {
     case "Owner":
     case "Risk Owner":
+    // Same type as Risk Owner, so no notification type enum change (ruling K5)
+    case "Risk Approver":
       return NotificationType.ASSIGNMENT_OWNER;
     case "Reviewer":
       return NotificationType.ASSIGNMENT_REVIEWER;
@@ -1930,6 +1939,8 @@ function getRoleDescription(roleType: AssignmentRoleType): string {
       return "As the Owner, you are responsible for completing this item and ensuring all requirements are met.";
     case "Risk Owner":
       return "As the Risk Owner, you are responsible for managing and mitigating this risk.";
+    case "Risk Approver":
+      return "As the Risk Approver, you decide whether this risk's treatment is approved or rejected.";
     case "Reviewer":
       return "As the Reviewer, you are responsible for reviewing the work and providing feedback before approval.";
     case "Approver":

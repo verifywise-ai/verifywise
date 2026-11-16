@@ -34,6 +34,7 @@ import { checkStringValidation } from "../../../../application/validations/strin
 import selectValidation from "../../../../application/validations/selectValidation";
 import Alert from "../../../components/Alert";
 import ConfirmationModal from "../../../components/Dialogs/ConfirmationModal";
+import DeleteUseCaseModal from "../../../components/Modals/DeleteUseCase";
 import {
   assignFrameworkToProject,
   deleteEntityById,
@@ -61,10 +62,7 @@ import useFrameworks from "../../../../application/hooks/useFrameworks";
 import { Framework } from "../../../../domain/types/Framework";
 import { useCanCheck, useCan } from "../../../../application/hooks/useCan";
 import { VerifyWiseContext } from "../../../../application/contexts/VerifyWise.context";
-import {
-  deleteProject,
-  updateProject,
-} from "../../../../application/repository/project.repository";
+import { updateProject } from "../../../../application/repository/project.repository";
 import { useAuth } from "../../../../application/hooks/useAuth";
 import { AiRiskClassification } from "../../../../domain/enums/aiRiskClassification.enum";
 import { HighRiskRole } from "../../../../domain/enums/highRiskRole.enum";
@@ -884,51 +882,24 @@ const ProjectSettings = React.memo(
       }));
     };
 
-    const handleConfirmDelete = useCallback(async () => {
-      setIsLoading(true);
-      try {
-        const response = await deleteProject({
-          id: Number(projectId),
-        });
-        const isError = response.status === 404 || response.status === 500;
-        setAlert({
-          variant: isError ? "error" : "success",
-          title: isError ? "Error" : "Success",
-          body: isError
-            ? "Failed to delete use case. Please try again."
-            : "Use case deleted successfully.",
-          isToast: true,
-          visible: true,
-        });
-        if (!isError) {
-          setProjects((prevProjects) =>
-            prevProjects.filter((project) => project.id !== Number(projectId)),
-          );
-          navigate("/overview");
-          setTimeout(() => {
-            setAlert(null);
-          }, 3000);
-        } else {
-          setTimeout(() => {
-            setAlert(null);
-          }, 3000);
-        }
-      } catch (_error) {
-        logEngine({
-          type: "error",
-          message: "An error occured while deleting the project.",
-        });
-        setAlert({
-          variant: "error",
-          title: "Error",
-          body: "Failed to delete use case. Please try again.",
-          isToast: true,
-          visible: true,
-        });
-      } finally {
-        setIsDeleteModalOpen(false);
-        setIsLoading(false);
-      }
+    // The dialog has already deleted the use case (and archived its risks when
+    // asked) in one request; a failure stays in the dialog and never gets here.
+    const handleUseCaseDeleted = useCallback(() => {
+      setIsDeleteModalOpen(false);
+      setAlert({
+        variant: "success",
+        title: "Success",
+        body: "Use case deleted successfully.",
+        isToast: true,
+        visible: true,
+      });
+      setProjects((prevProjects) =>
+        prevProjects.filter((project) => project.id !== Number(projectId)),
+      );
+      navigate("/overview");
+      setTimeout(() => {
+        setAlert(null);
+      }, 3000);
     }, [navigate, projectId]);
 
     return (
@@ -1259,7 +1230,7 @@ const ProjectSettings = React.memo(
                           <span style={{ width: "400px" }}>
                             <Autocomplete
                               multiple
-                              disabled={hasPendingApproval}
+                              disabled={hasPendingApproval || !can("framework.edit")}
                               id="monitored-regulations-and-standards-input"
                               size="small"
                               value={values.monitoredRegulationsAndStandards}
@@ -1814,8 +1785,8 @@ const ProjectSettings = React.memo(
                     mb: 8,
                   }}
                 >
-                  Note that deleting a use case will remove all data related to that use case from
-                  your system. This is permanent and non-recoverable.
+                  This deletes the use case, its framework progress and its files. Its risks stay in
+                  the risk register but are no longer linked to it. This cannot be undone.
                 </Typography>
                 <CustomizableButton
                   sx={{
@@ -1836,21 +1807,12 @@ const ProjectSettings = React.memo(
         )}
 
         {isDeleteModalOpen && (
-          <ConfirmationModal
-            title="Delete this use case?"
-            body={
-              <Typography fontSize={13}>
-                This deletes the use case, its framework progress and its files. Its risks stay in
-                the risk register but are no longer linked to it. This cannot be undone.
-              </Typography>
-            }
-            cancelText="Cancel"
+          <DeleteUseCaseModal
+            projectId={Number(projectId)}
+            message="This deletes the use case, its framework progress and its files. Its risks stay in the risk register but are no longer linked to it. This cannot be undone."
             proceedText="Delete"
             onCancel={handleCloseDeleteDialog}
-            onProceed={handleConfirmDelete}
-            proceedButtonColor="error"
-            proceedButtonVariant="contained"
-            TitleFontSize={0}
+            onDeleted={handleUseCaseDeleted}
           />
         )}
 

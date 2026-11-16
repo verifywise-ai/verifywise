@@ -1,6 +1,6 @@
 # Risk Management Domain
 
-**Last Updated:** 2026-11-15
+**Last Updated:** 2026-11-16
 
 ## Overview
 
@@ -471,13 +471,43 @@ Which project risks a user can see depends on the use cases each risk is linked 
 
 Admins and SuperAdmins (`seesAllProjects` in `utils/projectVisibility.utils.ts`) see every risk in the organization. Other users see a risk when at least one of these holds:
 
-- it has no `projects_risks` row. A link to a framework or one of its elements does not tie a risk to a use case, so a risk linked only to frameworks counts as unlinked;
+- it is not archived (`is_deleted = false`) and has no `projects_risks` row. A link to a framework or one of its elements does not tie a risk to a use case, so a risk linked only to frameworks counts as unlinked;
 - it is linked to at least one use case the user can access as owner, team member or member of a group attached to the use case (`projectAccessSql`, the rule behind the use case list);
 - the user is its action owner (`risk_owner`) or approver (`risk_approval`), so an assignee can act on it.
 
 Task assignees and workflow approvers can open a use case read-only (`getProjectReadAccessQuery`). That access does not show them the use case's risks.
 
-A risk whose last use case link is removed becomes visible to everyone in the organization. This includes deleting the use case, which deletes its `projects_risks` rows and keeps the risks.
+An archived risk with no use case link is private: only Admins, SuperAdmins, its owner and its approver see it, in the archived and "all" lists and everywhere else the rule applies. This holds for every archived unlinked risk, including one that was never on a use case. An archived risk that is linked follows the link rule like an active one. Restoring an archived unlinked risk (setting `is_deleted` back to false) makes it visible to everyone again. There is no restore action for project risks today: no route, screen or advisor tool sets `is_deleted` back to false, and `PUT /projectRisks/:id` answers 404 for any archived risk.
+
+An active risk whose last use case link is removed becomes visible to everyone in the organization. This includes deleting the use case, which deletes its `projects_risks` rows and keeps the risks.
+
+#### Deleting a use case
+
+`DELETE /api/v1/projects/:id?archive_risks_linked_only_here=true|false` deletes a use case and, with `true`, archives the active risks linked to it and to no other use case, so they stay private. The flag is required, so an API caller always decides; any other value, a missing one or a repeated one answers 400. The flag is a query parameter because no v1 `DELETE` takes a body. The gate is the legacy delete's: `useCase.edit` and write access to the use case (`requireProjectAccess`). With `true` the caller also needs `risks.edit`, the bulk archive's permission, or the route answers 403 before anything changes. A role can lack it only as a custom role, since every built-in role holds both permissions or neither.
+
+Everything runs in one transaction (`deleteProjectWithSideEffects` with `archiveRisksLinkedOnlyHere`): lock the use case row, withdraw a pending approval, record the use case deletion, lock the risks linked to this use case and every `projects_risks` row of those risks, including their links to other use cases (`lockRiskLinksOfProjectQuery`), read the risks linked only here at that moment (`getRisksLinkedOnlyToProjectQuery` with the transaction), archive them through `archiveRisksInBulkQuery` (the bulk archive's path: a deletion entry in each risk's change history, its policy links removed, the history snapshots once and one "risk deleted" automation for the batch, enqueued after commit), then delete the use case. Any failure rolls all of it back. The response is 202 with `{ deleted: true, archived_risk_ids }`. The legacy body is a bare `true`, which cannot carry a list, so the v1 body is an object. A use case outside the organization answers 404.
+
+The locks keep a concurrent unlink from changing the set between the read and the commit. Every path that removes a link deletes its `projects_risks` row (the risk update's link diff, a risk delete, another use case's delete), and that `DELETE` waits for the row lock. When the other transaction commits first, the lock skips the removed row and the read that follows no longer sees it, so the risk counts as linked only here and is archived. A new link waits too, because its foreign key check takes a key share lock on the risk row. The risk rows are locked before the link rows, each in key order. The risk update path updates the risk row before it deletes the risk's links, so the two take their locks in the same order and cannot deadlock on them. An integration test (`riskVisibility`, "use case delete against a concurrent unlink") drives the two transactions and checks that the delete waits and then archives the risk.
+
+`DELETE /api/projects/:id` is frozen and unchanged: it never archives and still answers `true`. Its orphaned risks stay visible to everyone while they are active, so API clients that want them private should call the v1 route with `archive_risks_linked_only_here=true`. No screen calls it any more: the use case table, the use case Settings tab and the Framework page's organizational project delete (the page menu and its Settings tab) all use the delete dialog and the v1 route.
+
+Every caller of `deleteProjectWithSideEffects`:
+
+| Caller | Archives the risks linked only here |
+|--------|-------------------------------------|
+| `DELETE /api/v1/projects/:id` | When the flag is `true` |
+| `DELETE /api/projects/:id` (legacy, frozen) | Never |
+| Advisor `agent_delete_use_case` | Always, and refuses without `risks.edit` |
+| Jira Assets removals (`DELETE /api/extensions/jira-assets/use-cases/:id` and the remove missing action, both `extension.admin`) | Always, recorded as the Admin who asked |
+| Demo data removal (`autoDriver.driver.ts`) | Never: it deletes the demo risks before the demo use cases |
+
+The advisor's `agent_delete_use_case` always archives the risks linked only to the use case. It deletes through `deleteProjectWithSideEffects` with `archiveRisksLinkedOnlyHere`, so it also withdraws a pending approval, records the use case deletion and runs the "project deleted" automation after the commit, like the console. It acts as the user who asked for the action (`_requesterId`, else `_userId`): that user must hold `risks.edit` (`userHasPermission`, the permission the v1 route asks for with `true`), or the tool answers that the use case was not deleted because their role does not allow archiving risks, and changes nothing. It never deletes without archiving. Its result keeps `deleted_use_case` and adds `archived_risk_ids` and a message saying how many risks were archived and that an archived risk with no use case is visible only to Admins and its owner and approver. The approval description and the tool description say so too. A use case that is not in the organization answers "not found" and changes nothing.
+
+The Jira Assets removals delete their use cases with `archiveRisksLinkedOnlyHere: true` too. Both are actions of an Admin (`extension.admin`); the scheduled sync only flags missing objects and deletes nothing. The use case and risk history entries record that Admin.
+
+`GET /api/v1/projects/:id/risks-linked-only-here` feeds the delete dialog. It returns `{ count, risks: [{ id, risk_name }] }`: the active risks in the organization linked to this use case and to no other (archived ones are already private once unlinked). It is one query, driven from the use case's `projects_risks` rows joined to their risks with `NOT EXISTS` for any other link, under a `LEFT JOIN` from the use case row: no row means the use case is not in the organization (404) and one row with no risk means none. The delete reads its set through the same function, so the dialog and the archive cannot drift apart. Like the visibility rule, the "no other use case" test ignores `projects_risks.organization_id`. The route has the same gate as the delete: `useCase.edit` and write access to the use case (`requireProjectAccess` with its `"write"` option, so a task assignee's read access does not pass). Every caller who passes can see all the risks it lists, because they are linked to a use case the caller has write access to.
+
+The dialog (`Modals/DeleteUseCase`) reads the count when it opens. With some risks it shows a warning and two choices: archive the risks (the default) or keep them visible to everyone. Deleting is one request to the v1 route with that choice; the server works the set out again in the transaction, so a risk linked or unlinked after the dialog opened is handled correctly. While the request runs the dialog cannot be closed (Cancel, Escape and the backdrop do nothing). If it fails the dialog stays open with an error and nothing changed. A user whose role lacks `risks.edit` sees the warning without the choice and the delete keeps the risks. If the count request fails, the dialog shows one line saying that linked risks may become visible to everyone, and still offers the choice (archive selected). The archive flag does not depend on the count: with `risks.edit` and archive chosen it is always sent, also when the count was 0, so a risk that became linked only here after the dialog opened is archived too; with an empty set the server archives nothing. Every successful delete refreshes the cached project risk queries and the project lists. To keep such a risk active and private, link it to another use case before deleting.
 
 The check is a pair of `EXISTS` subqueries, so it decides which risks a user sees without narrowing their aggregates. The use cases a visible risk names are narrowed separately. For a non-Admin, the `projects` array of the list, by-use-case, by-framework and by-id reads, and the framework mapping rows of the by-id read, list only the use cases the user can access (`accessibleProjectIdSql`). The by-id mapping queries join a mapping to every use case that runs its framework, so for a non-Admin each mapping is kept only under its own use case, the one its element row belongs to (`projects_frameworks_id` on the ISO 42001, ISO 27001 and EU AI Act control rows, and on the assessment of an EU AI Act answer), and only when that use case is accessible. A mapping on a hidden use case never shows, not even under an accessible use case on the same framework. Admins and the system viewer get the mapping rows exactly as before, one per use case running the framework. An owner of a risk whose only use case is hidden from them gets an empty `projects` array. Admins and the system viewer get every use case. Because an edit keeps links to hidden use cases (see Writes), sending the narrowed array back loses nothing.
 
@@ -673,7 +703,7 @@ The validator (`middleware/validators/risks.validator.ts`) enforces the column l
 - `risk_name` - non-empty string (create). An empty `risk_name` on update is ignored.
 - `risk_owner` - positive user id (create)
 
-The risk form requires approver, approval status and assessment date only once an approver or an approval status is set. A new risk starts without an assessment date, and import leaves an empty assessment date empty.
+Approver, approval status and assessment date are optional everywhere (validators, form, advisor). A new risk starts without an assessment date. Import leaves an empty assessment date empty.
 
 ### Saving and clearing fields
 
@@ -705,6 +735,67 @@ Every risk write (REST, bulk `set_owner`, import, MCP, advisor, intake, AI Detec
 Ids fail closed: a value that is not a positive integer (for example `5.5`, which PostgreSQL would round to another id) is rejected, never skipped. The advisor's `agent_assign_risk_owner` and `agent_link_risk_to_project` run the same guard. Risk import reports a non-member or malformed owner or approver as a row error. REST create ignores a client-sent `is_demo`.
 
 `POST /riskHistory/snapshot` requires `risks.edit`.
+
+## Approval Status
+
+`approval_status` is one of `Pending`, `Approved`, `Rejected`, `Not required` (the incident approval values). The column is `NOT NULL DEFAULT 'Not required'` with the CHECK `risks_approval_status_check`. `risk_approval` holds the approver.
+
+### Rules
+
+`resolveRiskApproval` in `utils/riskApproval.utils.ts` decides the stored approver and status. It runs in `createRiskService` and `updateRiskService` (REST, MCP, advisor create) and in the advisor's update executor.
+
+- **Unknown values are ignored.** `/api/projectRisks` is frozen and unversioned. A submitted status that is not one of the four (after ignoring case, spaces, `_` and `-`) counts as not supplied: the stored value is kept on update, `Not required` is used on create. Old clients that send `"In Progress"` or `""` get no 400.
+- **Who decides.** "Decides" means an Admin (`organization.admin` via `roleHasPermission`) or the risk's saved approver. The approver named in the same request never counts.
+- **Status changes (R1).** While the risk has a saved approver, any change of `approval_status`, to any of the four values, needs a caller who decides. A status sent back unchanged is not a change. Other fields save normally for any editor.
+- **Approver changes (R2).** Changing `risk_approval` (to another user or to `null`) on an `Approved` or `Rejected` risk needs a caller who decides. On a `Pending` or `Not required` risk anyone with edit rights may change it. A new approver sets `Pending`; in that save only an Admin may set `Approved` or `Rejected` instead, and a non-Admin who asks for a decision gets the 403. Clearing the approver sets `Not required`.
+- **Naming yourself (R3).** A non-Admin cannot name themself as the new approver (403, "You can't name yourself as the approver. Ask an Admin or pick someone else."). Keeping yourself when you already are the saved approver is fine.
+- **No approver (R4).** On create, and when a save clears the approver, the status is `Not required`. When neither the approver nor the status changes, the stored status is kept, so a legacy `Approved` row whose approver is `NULL` (kept by the migration, or left by a deleted user) is not erased by an unrelated save. A status change on a risk with no approver before or after the save can only be `Not required`; `Pending`, `Approved` and `Rejected` are ignored there, with no 403.
+- **Concurrent saves.** `updateRiskService` and the advisor's update executor re-read `risk_approval` and `approval_status` with `SELECT ... FOR UPDATE` (scoped by `organization_id`, `lockRiskApprovalQuery`) inside the write transaction and resolve against that row, not the caller's earlier read.
+- **Notification.** A newly named approver who is not the caller gets the assignment notice (`notifyUserAssigned`, role `"Risk Approver"`, the Risk Owner notification type): an in-app notification and the assignment email. `notifyRiskAssignee` in `services/riskApproverNotification.service.ts` sends both the approver notice (`notifyNewRiskApprover`) and the owner notice on create, after commit, fire and forget, from REST create and update and from the advisor's create and update. The assigner's name is looked up through `organization_members` for the risk's organization.
+
+A refused change returns 403. `RiskApprovalForbiddenError` is a `ForbiddenException`, so the risk controllers and the AI Detection `handleException` map it to:
+
+```json
+{ "message": "Forbidden", "data": "Only the risk's approver or an Admin can change its approval." }
+```
+
+`data` is translated (en, de, fr). The advisor checks the same rule before it files an approval request (`advisor/aiActions/riskApprovalPrecheck.ts`) and tells the user the reason. It looks up the requester's role only when an approval field is sent.
+
+Bulk actions do not touch approval.
+
+Risk import (`extensions/risk-import/riskImport.service.ts`) stores `Pending` for a row with an approver and `Not required` for a row without one; `Approved` or `Rejected` from the file is kept only when an Admin imports (and the row names an approver). The two routes differ on input they cannot store as asked:
+
+- `POST /api/v1/risk-import/import` (strict) refuses the whole file, with keyed row errors from `approvalErrors`, when a row's approval status is not one of the four (`approvalStatusInvalid`), when a non-Admin imports `Approved` or `Rejected` (`approvalDecisionAdminOnly`, with or without an approver), or when a non-Admin names themself as the approver (`approverSelf`, R3). A blank status is not an error.
+- `POST /api/extensions/risk-import/import` (legacy, frozen) maps instead of refusing: an unknown status and a non-Admin's decision become `Pending` or `Not required`, and a non-Admin who names themself keeps the row as `Pending`. That last case is a legacy-only gap in R3.
+
+After the import commits, each approver it named, except the importing user, is notified once, fire and forget, on both routes (`notifyRiskApprovers`): one assignment notice listing all their imported risks (`notifyUserAssignedMany`), or the single-risk notice when they have one.
+
+### Migration
+
+`20261116120000-risk-approval-status-values` rewrote existing rows, matching case, whitespace, `_` and `-` insensitively:
+
+| Stored value | Becomes |
+|--------------|---------|
+| Approved, Rejected, Not required | the same value, canonical spelling |
+| Pending, Requires review, with an approver | Pending |
+| Pending, Requires review, without an approver | Not required |
+| anything else (`NULL`, `""`, mitigation values such as `In Progress`) | Not required |
+
+`Approved` and `Rejected` are kept even when the risk has no approver: the migration does not erase a recorded decision. Such a row keeps its status until someone clears it to `Not required` or an Admin names an approver (R4). It then sets the default, `NOT NULL` and the CHECK. It sends no notifications. `down()` drops the CHECK, `NOT NULL` and default only; the rewritten values are not restored.
+
+### Code
+
+- `domain.layer/enums/risk-approval-status.enum.ts`: the four values, `normalizeRiskApprovalStatus`, `isRiskApprovalDecision`
+- `utils/riskApproval.utils.ts`: `resolveRiskApproval`, `callerCanDecideAnyRisk`, `RiskApprovalForbiddenError`
+- `services/riskApproverNotification.service.ts`: `notifyRiskAssignee`, `notifyNewRiskApprover`, `notifyRiskApprovers`, `getUserNameById`
+- `utils/risk.utils.ts`: `lockRiskApprovalQuery`
+- `extensions/risk-import/riskImport.service.ts`: `importedApprovalStatus`, `approvalErrors`
+
+### Follow-ups
+
+- Editing a risk's content after approval does not reset the approval.
+- The MCP risk tools take no approver or approval status, so they never name one.
+- The legacy risk import route does not apply R3: a non-Admin importer can name themself as approver (the row gets `Pending`). The `/api/v1` route refuses it.
 
 ## Frontend Structure
 

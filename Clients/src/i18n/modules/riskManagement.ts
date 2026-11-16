@@ -230,6 +230,7 @@ export const de: Record<string, string> = {
   "Inherent level: Medium risk": "Inhärente Stufe: Mittleres Risiko",
   "Inherent level: High risk": "Inhärente Stufe: Hohes Risiko",
   "Inherent level: Very high risk": "Inhärente Stufe: Sehr hohes Risiko",
+  "Not required": "Nicht erforderlich",
 };
 
 export const fr: Record<string, string> = {
@@ -458,6 +459,7 @@ export const fr: Record<string, string> = {
   "Inherent level: Medium risk": "Niveau inhérent : risque moyen",
   "Inherent level: High risk": "Niveau inhérent : risque élevé",
   "Inherent level: Very high risk": "Niveau inhérent : risque très élevé",
+  "Not required": "Non requis",
 };
 
 export const es: Record<string, string> = {
@@ -685,4 +687,5 @@ export const es: Record<string, string> = {
   "Inherent level: Medium risk": "Nivel inherente: riesgo medio",
   "Inherent level: High risk": "Nivel inherente: riesgo alto",
   "Inherent level: Very high risk": "Nivel inherente: riesgo muy alto",
+  "Not required": "No requerido",
 };

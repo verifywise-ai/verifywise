@@ -247,4 +247,41 @@ describe("buildExcelTemplate user lists", () => {
     const sheet = workbook.getWorksheet("Risk Import")!;
     expect(sheet.getCell("B2").dataValidation).toBeFalsy();
   });
+
+  it("offers the four approval statuses, and the sample row uses one", async () => {
+    mockQuery.mockResolvedValue([]);
+    const { buffer } = await buildExcelTemplate(7);
+    const workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.load(buffer as never);
+    const sheet = workbook.getWorksheet("Risk Import")!;
+    expect(sheet.getCell("S1").value).toBe("Approval Status");
+    expect(sheet.getCell("S2").dataValidation?.formulae).toEqual([
+      '"Pending,Approved,Rejected,Not required"',
+    ]);
+    expect(["Pending", "Approved", "Rejected", "Not required"]).toContain(
+      sheet.getCell("S2").value,
+    );
+  });
+});
+
+describe("importRisks approval status", () => {
+  const insertedStatus = () =>
+    mockQuery.mock.calls.find(([sql]) => String(sql).trim().startsWith("INSERT"))![1].replacements
+      .approval_status;
+
+  it("imports a legacy or blank value as Not required", async () => {
+    const result = await importRisks([{ ...row("A"), approval_status: "In progress" }], 7, 1);
+    expect(result.success).toBe(true);
+    expect(insertedStatus()).toBe("Not required");
+  });
+
+  it("keeps an Approved row only when the importing user is an Admin", async () => {
+    const approved = { ...row("A"), risk_approval: 1, approval_status: "Approved" };
+    await importRisks([approved], 7, 1);
+    expect(insertedStatus()).toBe("Pending");
+
+    mockQuery.mockClear();
+    await importRisks([approved], 7, 1, { strict: false, callerIsAdmin: true });
+    expect(insertedStatus()).toBe("Approved");
+  });
 });

@@ -48,6 +48,7 @@ const AddNewRiskForm: FC<AddNewRiskFormProps> = (props) => {
     setRiskValues,
     mitigationValues,
     setMitigationValues,
+    originalMitigationValues,
     quantitativeValues,
     setQuantitativeValues,
     riskValidateRef,
@@ -186,6 +187,7 @@ const AddNewRiskForm: FC<AddNewRiskFormProps> = (props) => {
             compactMode={compactMode}
             serverErrors={mitigationServerErrors}
             onValidityChange={handleMitigationValidityChange}
+            savedApproval={originalMitigationValues}
           />
         </TabPanel>
         {isQuantitative && (

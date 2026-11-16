@@ -9370,7 +9370,7 @@ export const projectEndpoints: Endpoint[] = [
     method: 'DELETE',
     path: '/projects/{id}',
     summary: "Delete a project by ID",
-    description: "Deletes a project and all dependent entities (files, risks, members, framework data).",
+    description: "Deletes a project and its dependent entities (files, members, framework data, risk links). Its risks stay in the register and are never archived here. An active risk left with no use case link is visible to everyone in the organization; to archive those risks in the same transaction and keep them private, use DELETE /api/v1/projects/{id} with archive_risks_linked_only_here=true.",
     requiresAuth: true,
     responses: [
       { status: 202, description: "Project deleted successfully" },
@@ -9522,6 +9522,7 @@ export const projectRiskEndpoints: Endpoint[] = [
     responses: [
       { status: 201, description: "Created successfully" },
       { status: 401, description: "Unauthorized" },
+      { status: 403, description: "Only the risk's approver or an Admin can change its approval." },
       { status: 500, description: "Internal server error" },
     ],
     tag: "Project Risks",
@@ -9587,6 +9588,7 @@ export const projectRiskEndpoints: Endpoint[] = [
     responses: [
       { status: 200, description: "Success" },
       { status: 401, description: "Unauthorized" },
+      { status: 403, description: "Only the risk's approver or an Admin can change its approval." },
       { status: 500, description: "Internal server error" },
     ],
     tag: "Project Risks",
@@ -13398,6 +13400,25 @@ export const v1V1projectsEndpoints: Endpoint[] = [
     tag: "v1: V1/Projects",
   },
   {
+    method: 'DELETE',
+    path: '/v1/projects/{id}',
+    summary: "Delete Project By Id V1",
+    description: "Deletes a use case and, when archive_risks_linked_only_here is true, archives the active risks linked to it and to no other use case in the same transaction. An archived risk with no use case link is visible only to Admins, its owner and its approver, while an active one is visible to everyone in the organization, so archiving keeps them private. The set of risks is read at the moment of the delete, after the use case row is locked. Any failure rolls back the archive and the delete together. Each archived risk gets a deletion entry in its change history and loses its policy links, and the organization's risk deleted automation runs once for the batch, as with the bulk archive. Same access as DELETE /api/projects/{id} (useCase.edit and write access to the use case); archiving also needs risks.edit. The legacy DELETE /api/projects/{id} never archives.",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The use case id" },
+      { name: 'archive_risks_linked_only_here', in: 'query', type: 'string', required: true, description: "true archives the active risks linked only to this use case; false keeps them active (they then become visible to everyone in the organization). Required, given once." },
+    ],
+    responses: [
+      { status: 202, description: "Deleted. Body data: { deleted: true, archived_risk_ids: number[] } (empty unless archiving was asked for)" },
+      { status: 400, description: "Invalid id, or archive_risks_linked_only_here missing, repeated or not true/false" },
+      { status: 403, description: "No useCase.edit permission, no write access to the use case, or archiving asked without risks.edit" },
+      { status: 404, description: "Use case not found in the organization" },
+      { status: 500, description: "Internal server error; nothing was archived or deleted" },
+    ],
+    tag: "v1: V1/Projects",
+  },
+  {
     method: 'GET',
     path: '/v1/projects/{id}/ai-apps',
     summary: "List Use Case Ai Apps",
@@ -13448,6 +13469,23 @@ export const v1V1projectsEndpoints: Endpoint[] = [
     requiresAuth: true,
     responses: [
       { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Projects",
+  },
+  {
+    method: 'GET',
+    path: '/v1/projects/{id}/risks-linked-only-here',
+    summary: "Get Risks Linked Only To Project",
+    description: "The active (not archived) risks linked to this use case and to no other use case, as { count, risks: [{ id, risk_name }] }. Deleting the use case removes its risk links, and an active risk with no use case link is visible to everyone in the organization (an archived one only to Admins, its owner and its approver), so the delete dialog reads this first and offers to archive them through DELETE /api/v1/projects/{id}. Same access as that delete: useCase.edit and write access to the use case (an Admin, its owner, a member or a member of one of its groups).",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The use case id" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 403, description: "No useCase.edit permission, or no write access to the use case" },
+      { status: 404, description: "Use case not found in the organization" },
       { status: 500, description: "Internal server error" },
     ],
     tag: "v1: V1/Projects",
