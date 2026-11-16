@@ -2,6 +2,7 @@
 // Spread into ../translations.ts. Other areas stay in that file for now.
 
 export const de: Record<string, string> = {
+  "Risk analytics & trends": "Risikoanalysen und Trends",
   "Add a new risk": "Neues Risiko hinzufügen",
   "Create a detailed breakdown of risks and their mitigation strategies to assist in documenting your risk management activities effectively.":
     "Erstellen Sie eine detaillierte Aufschlüsselung der Risiken und ihrer Minderungsstrategien, um Ihre Risikomanagement-Aktivitäten wirksam zu dokumentieren.",
@@ -9,7 +10,6 @@ export const de: Record<string, string> = {
   "Add new risk manually": "Neues Risiko manuell hinzufügen",
   "Add new risk menu": "Menü für neues Risiko",
   "Target Date": "Zieltermin",
-  "Linked Controls": "Verknüpfte Kontrollen",
   "Mitigation Status": "Minderungsstatus",
   "signal": "Signal",
   "reasons": "Gründen",
@@ -22,7 +22,6 @@ export const de: Record<string, string> = {
   "Review and edit the selected risk from the AI database before saving.":
     "Prüfen und bearbeiten Sie das ausgewählte Risiko aus der KI-Datenbank, bevor Sie speichern.",
   "Risk distribution overview": "Übersicht der Risikoverteilung",
-  "Risk Analytics & Trends": "Risikoanalysen und Trends",
   "Use selected risks": "Ausgewählte Risiken verwenden",
   "Add new risk tabs": "Tabs für neue Risiken",
   "Potential impact": "Potenzielle Auswirkung",
@@ -234,6 +233,7 @@ export const de: Record<string, string> = {
 };
 
 export const fr: Record<string, string> = {
+  "Risk analytics & trends": "Analyses et tendances des risques",
   "Add a new risk": "Ajouter un nouveau risque",
   "Create a detailed breakdown of risks and their mitigation strategies to assist in documenting your risk management activities effectively.":
     "Créez une description détaillée des risques et de leurs stratégies d'atténuation afin de documenter efficacement vos activités de gestion des risques.",
@@ -241,7 +241,6 @@ export const fr: Record<string, string> = {
   "Add new risk manually": "Ajouter un risque manuellement",
   "Add new risk menu": "Menu nouveau risque",
   "Target Date": "Date cible",
-  "Linked Controls": "Contrôles liés",
   "Mitigation Status": "Statut d'atténuation",
   "signal": "signal",
   "reasons": "raisons",
@@ -254,7 +253,6 @@ export const fr: Record<string, string> = {
   "Review and edit the selected risk from the AI database before saving.":
     "Examinez et modifiez le risque sélectionné depuis la base IA avant d'enregistrer.",
   "Risk distribution overview": "Vue d'ensemble de la répartition des risques",
-  "Risk Analytics & Trends": "Analyses et tendances des risques",
   "Use selected risks": "Utiliser les risques sélectionnés",
   "Add new risk tabs": "Onglets nouveau risque",
   "Potential impact": "Impact potentiel",
@@ -463,6 +461,7 @@ export const fr: Record<string, string> = {
 };
 
 export const es: Record<string, string> = {
+  "Risk analytics & trends": "Analíticas y tendencias de riesgos",
   "Add a new risk": "Añadir un nuevo riesgo",
   "Create a detailed breakdown of risks and their mitigation strategies to assist in documenting your risk management activities effectively.":
     "Cree un desglose detallado de los riesgos y sus estrategias de mitigación para documentar eficazmente sus actividades de gestión de riesgos.",
@@ -470,7 +469,6 @@ export const es: Record<string, string> = {
   "Add new risk manually": "Añadir nuevo riesgo manualmente",
   "Add new risk menu": "Menú de nuevo riesgo",
   "Target Date": "Fecha objetivo",
-  "Linked Controls": "Controles vinculados",
   "Mitigation Status": "Estado de mitigación",
   "signal": "señal",
   "reasons": "motivos",
@@ -483,7 +481,6 @@ export const es: Record<string, string> = {
   "Review and edit the selected risk from the AI database before saving.":
     "Revise y edite el riesgo seleccionado de la base de datos de IA antes de guardar.",
   "Risk distribution overview": "Resumen de la distribución de riesgos",
-  "Risk Analytics & Trends": "Analíticas y tendencias de riesgos",
   "Use selected risks": "Usar los riesgos seleccionados",
   "Add new risk tabs": "Pestañas de añadir nuevo riesgo",
   "Potential impact": "Impacto potencial",

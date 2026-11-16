@@ -696,7 +696,12 @@ export const de: Record<string, string> = {
   "Maximum 20 files allowed. Extra files were not added.":
     "Maximal 20 Dateien erlaubt. Weitere Dateien wurden nicht hinzugefügt.",
   "Import completed": "Import abgeschlossen",
-  "Import completed with errors": "Import mit Fehlern abgeschlossen",
+  "Nothing was imported": "Es wurde nichts importiert",
+  "Fix the rows below in your file and upload it again.":
+    "Korrigieren Sie die unten aufgeführten Zeilen in Ihrer Datei und laden Sie sie erneut hoch.",
+  "Failed to import risks": "Risiken konnten nicht importiert werden",
+  "Check the risks list before you import this file again.":
+    "Prüfen Sie die Risikoliste, bevor Sie diese Datei erneut importieren.",
   "Import risks": "Risiken importieren",
   "Review the preview above, then select Import risks to create them.":
     "Prüfen Sie die Vorschau oben und wählen Sie dann Risiken importieren, um sie anzulegen.",
@@ -760,8 +765,6 @@ export const de: Record<string, string> = {
   "Error parsing Excel file": "Fehler beim Lesen der Excel-Datei",
   "{count} risk imported": "{count} Risiko importiert",
   "{count} risks imported": "{count} Risiken importiert",
-  "{count} risk failed": "{count} Risiko fehlgeschlagen",
-  "{count} risks failed": "{count} Risiken fehlgeschlagen",
   "Showing the first 10 of {count} errors": "Die ersten 10 von {count} Fehlern werden angezeigt",
   "Preview ({count} risk found)": "Vorschau ({count} Risiko gefunden)",
   "Preview ({count} risks found)": "Vorschau ({count} Risiken gefunden)",
@@ -1468,7 +1471,12 @@ export const fr: Record<string, string> = {
   "Maximum 20 files allowed. Extra files were not added.":
     "20 fichiers au maximum. Les fichiers en trop n'ont pas été ajoutés.",
   "Import completed": "Import terminé",
-  "Import completed with errors": "Import terminé avec des erreurs",
+  "Nothing was imported": "Rien n'a été importé",
+  "Fix the rows below in your file and upload it again.":
+    "Corrigez les lignes ci-dessous dans votre fichier et téléversez-le à nouveau.",
+  "Failed to import risks": "Échec de l'import des risques",
+  "Check the risks list before you import this file again.":
+    "Vérifiez la liste des risques avant d'importer ce fichier à nouveau.",
   "Import risks": "Importer les risques",
   "Review the preview above, then select Import risks to create them.":
     "Vérifiez l'aperçu ci-dessus, puis sélectionnez Importer les risques pour les créer.",
@@ -1531,8 +1539,6 @@ export const fr: Record<string, string> = {
   "Error parsing Excel file": "Erreur lors de la lecture du fichier Excel",
   "{count} risk imported": "{count} risque importé",
   "{count} risks imported": "{count} risques importés",
-  "{count} risk failed": "{count} risque en échec",
-  "{count} risks failed": "{count} risques en échec",
   "Showing the first 10 of {count} errors": "Affichage des 10 premières erreurs sur {count}",
   "Preview ({count} risk found)": "Aperçu ({count} risque trouvé)",
   "Preview ({count} risks found)": "Aperçu ({count} risques trouvés)",
@@ -2232,7 +2238,12 @@ export const es: Record<string, string> = {
   "Maximum 20 files allowed. Extra files were not added.":
     "Se permiten como máximo 20 archivos. Los archivos adicionales no se añadieron.",
   "Import completed": "Importación completada",
-  "Import completed with errors": "Importación completada con errores",
+  "Nothing was imported": "No se importó nada",
+  "Fix the rows below in your file and upload it again.":
+    "Corrija las filas siguientes en su archivo y vuelva a subirlo.",
+  "Failed to import risks": "No se pudieron importar los riesgos",
+  "Check the risks list before you import this file again.":
+    "Revise la lista de riesgos antes de volver a importar este archivo.",
   "Import risks": "Importar riesgos",
   "Review the preview above, then select Import risks to create them.":
     "Revise la vista previa anterior y, a continuación, seleccione Importar riesgos para crearlos.",
@@ -2296,8 +2307,6 @@ export const es: Record<string, string> = {
   "Error parsing Excel file": "Error al leer el archivo Excel",
   "{count} risk imported": "{count} riesgo importado",
   "{count} risks imported": "{count} riesgos importados",
-  "{count} risk failed": "{count} riesgo con error",
-  "{count} risks failed": "{count} riesgos con error",
   "Showing the first 10 of {count} errors": "Se muestran los primeros 10 de {count} errores",
   "Preview ({count} risk found)": "Vista previa ({count} riesgo encontrado)",
   "Preview ({count} risks found)": "Vista previa ({count} riesgos encontrados)",

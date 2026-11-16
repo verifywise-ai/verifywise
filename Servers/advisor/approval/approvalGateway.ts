@@ -701,10 +701,14 @@ async function approveActionImpl(
     approvedAt: new Date().toISOString(),
   });
 
-  // Execute — re-inject _userId so executors that need author_id/created_by can use it
+  // Execute — re-inject _userId so executors that need author_id/created_by can use it,
+  // and _requesterId (who asked for the action) for checks that must run as the
+  // requester, such as risk visibility. Never taken from the stored params.
   const inputParams =
     typeof record.input_params === "string" ? JSON.parse(record.input_params) : record.input_params;
   inputParams._userId = userId;
+  delete inputParams._requesterId;
+  if (Number(record.requested_by) > 0) inputParams._requesterId = Number(record.requested_by);
 
   let result: unknown;
   try {

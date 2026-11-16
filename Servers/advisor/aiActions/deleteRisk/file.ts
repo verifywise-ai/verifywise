@@ -12,6 +12,7 @@ import logger from "../../../utils/logger/fileLogger";
 import { createApprovalRequestQuery } from "../../../utils/approvalRequest.utils";
 import { getWorkflowStepsQuery } from "../../../utils/approvalWorkflow.utils";
 import { getRiskByIdQuery } from "../../../utils/risk.utils";
+import { riskViewerForUserQuery } from "../../../utils/riskVisibility.utils";
 import {
   ApprovalRequestStatus,
   EntityType,
@@ -51,7 +52,12 @@ export async function fileDeleteRisk(
     );
   }
 
-  const currentRisk = await getRiskByIdQuery(parsed.data.risk_id, organizationId, false);
+  const currentRisk = await getRiskByIdQuery(
+    parsed.data.risk_id,
+    organizationId,
+    // A risk the requester cannot see is a missing one to them.
+    await riskViewerForUserQuery(userId, organizationId),
+  );
 
   if (!currentRisk) {
     return {

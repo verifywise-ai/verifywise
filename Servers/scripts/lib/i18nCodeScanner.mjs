@@ -603,6 +603,11 @@ export function scanServerMessages({ root = SERVERS_ROOT } = {}) {
       if (ts.isObjectLiteralExpression(e)) {
         const out = [];
         for (const p of e.properties) {
+          // `{ ...GROUP_A, ...GROUP_B }`: the members of each spread object.
+          if (ts.isSpreadAssignment(p)) {
+            out.push(...valuesOf(p.expression, pathIn, next));
+            continue;
+          }
           const name = propName(p.name);
           if (head !== "*" && name !== head) continue;
           if (ts.isPropertyAssignment(p)) out.push(...valuesOf(p.initializer, rest, next));

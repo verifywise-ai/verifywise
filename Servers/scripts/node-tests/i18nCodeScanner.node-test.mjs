@@ -107,6 +107,22 @@ test("helpers, lookup maps and keyed notification fields resolve to keys", () =>
   }
 });
 
+test("a lookup map built by spreading other maps resolves to their members", () => {
+  const scan = scanFixture({
+    "controllers/d.ctrl.ts": `
+      const FILE_MESSAGES = { tooMany: "Too many rows in this file" } as const;
+      const FIELD_MESSAGES = { nameRequired: "Name is required" } as const;
+      const MESSAGES = { ...FILE_MESSAGES, ...FIELD_MESSAGES } as const;
+      export function handler(req: any, key: keyof typeof MESSAGES) {
+        req.t(MESSAGES[key]);
+      }
+    `,
+  });
+  for (const k of ["Too many rows in this file", "Name is required"]) {
+    assert.ok(scan.keys.has(k), k);
+  }
+});
+
 test("bare STATUS_CODE literals and template messages are reported", () => {
   const scan = scanFixture({
     "controllers/d.ctrl.ts": `

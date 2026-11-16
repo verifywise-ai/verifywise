@@ -90,6 +90,7 @@ import {
 } from "../../services/inAppNotification.service";
 import { enqueueRiskLinkRecompute } from "../../services/automations/automationProducer";
 import { sequelize } from "../../database/db";
+import { SYSTEM_RISK_VIEWER } from "../../utils/riskVisibility.utils";
 import {
   ForbiddenException,
   ValidationException,
@@ -197,7 +198,8 @@ describe("bulkUpdateProjectRisks", () => {
         1,
         { risk_owner: 7 },
         expect.objectContaining({ id: 1, risk_owner: 3 }),
-        { userId: 9, organizationId: 4 },
+        // The batch check already rejected hidden ids, so each edit runs as the system.
+        { userId: 9, organizationId: 4, viewer: SYSTEM_RISK_VIEWER },
         TX,
         { recordSnapshots: false, runAutomations: false },
       );
@@ -378,7 +380,8 @@ describe("bulkUpdateProjectRisks", () => {
         1,
         { risk_category: ["Strategic risk", "Operational risk"] },
         expect.objectContaining({ id: 1 }),
-        { userId: 9, organizationId: 4 },
+        // The batch check already rejected hidden ids, so each edit runs as the system.
+        { userId: 9, organizationId: 4, viewer: SYSTEM_RISK_VIEWER },
         TX,
         { recordSnapshots: false, runAutomations: false },
       );
@@ -492,7 +495,10 @@ describe("bulkUpdateProjectRisks", () => {
 
       expect(mockArchive).toHaveBeenCalledTimes(3);
       for (const id of [10, 11, 12]) {
+        // The batch check already rejected hidden ids, so each archive runs
+        // as the system.
         expect(mockArchive).toHaveBeenCalledWith(id, 4, 9, TX, {
+          viewer: SYSTEM_RISK_VIEWER,
           recordSnapshots: false,
           runAutomations: false,
         });

@@ -293,7 +293,7 @@ export const extensionsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Columns marked with * in the template are required: Risk Name, Risk Owner, AI Lifecycle Phase, Risk Description, Likelihood and Severity. The import is all or nothing. If any row has a problem, such as a missing required value, a value that is not in the allowed list or a date that is not valid, nothing is imported and the dialog lists the error for every row. Fix the file and upload it again. A file can have up to 5,000 rows. The template keeps the list of users for the owner and approval dropdowns on a hidden sheet, so you do not need to touch it. Admins and Editors can import risks.',
+      text: 'Columns marked with * in the template are required: Risk Name, Risk Owner, AI Lifecycle Phase, Risk Description, Likelihood and Severity. A row is rejected when a required value is missing, when a value is not in the allowed list (risk category included), when a date is not valid, or when its risk name already exists in your organization or appears twice in the file. The import is all or nothing. If any row has a problem, nothing is imported and the dialog lists the error for every row, with its row number as it appears in your sheet. Fix the file and upload it again. A file can have up to 5,000 rows. The template keeps the list of users for the owner and approval dropdowns on a hidden sheet, so you do not need to touch it. Each imported risk gets a creation entry in its change history, under your name. Admins and Editors can import risks.',
     },
     {
       type: 'heading',

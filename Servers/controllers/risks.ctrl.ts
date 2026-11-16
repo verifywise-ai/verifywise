@@ -43,6 +43,7 @@ import {
   suggestRisksForUseCase,
 } from "../services/riskSuggestions/riskSuggestions.service";
 
+import { riskViewer, riskVisibilitySql, SYSTEM_RISK_VIEWER } from "../utils/riskVisibility.utils";
 import { translateError } from "../utils/i18n.utils";
 import { IRisk } from "../domain.layer/interfaces/I.risk";
 import { BulkRiskChange } from "../utils/automation/risk.automation.utils";
@@ -159,7 +160,7 @@ export async function getAllRisks(req: Request, res: Response): Promise<any> {
   );
   logger.debug(`🔍 Fetching all project risks with filter: ${filter}`);
   try {
-    const projectRisks = await getAllRisksQuery(req.organizationId!, filter);
+    const projectRisks = await getAllRisksQuery(req.organizationId!, filter, riskViewer(req));
 
     if (projectRisks) {
       logStructured(
@@ -208,7 +209,12 @@ export async function getRisksByProject(req: Request, res: Response): Promise<an
   );
   logger.debug(`🔍 Fetching risks for project ID: ${projectId} with filter: ${filter}`);
   try {
-    const risks = await getRisksByProjectQuery(projectId, req.organizationId!, filter);
+    const risks = await getRisksByProjectQuery(
+      projectId,
+      req.organizationId!,
+      filter,
+      riskViewer(req),
+    );
 
     if (risks) {
       logStructured(
@@ -257,7 +263,12 @@ export async function getRisksByFramework(req: Request, res: Response): Promise<
   );
   logger.debug(`🔍 Fetching risks for framework ID: ${frameworkId} with filter: ${filter}`);
   try {
-    const risks = await getRisksByFrameworkQuery(frameworkId, req.organizationId!, filter);
+    const risks = await getRisksByFrameworkQuery(
+      frameworkId,
+      req.organizationId!,
+      filter,
+      riskViewer(req),
+    );
 
     if (risks) {
       logStructured(
@@ -308,7 +319,8 @@ export async function getRiskById(req: Request, res: Response): Promise<any> {
   );
   logger.debug(`🔍 Looking up project risk with ID: ${projectRiskId}`);
   try {
-    const projectRisk = await getRiskByIdQuery(projectRiskId, req.organizationId!);
+    // A risk the viewer cannot see answers like a missing one.
+    const projectRisk = await getRiskByIdQuery(projectRiskId, req.organizationId!, riskViewer(req));
 
     if (projectRisk) {
       logStructured(
@@ -434,7 +446,7 @@ export async function createRisk(req: Request, res: Response): Promise<any> {
         // Only the demo seed creates demo risks; "Delete demo data" removes them.
         is_demo: false,
       },
-      { userId: req.userId!, organizationId: req.organizationId! },
+      { userId: req.userId!, organizationId: req.organizationId!, viewer: riskViewer(req) },
       transaction,
     );
 
@@ -523,8 +535,13 @@ export async function updateRiskById(req: Request, res: Response): Promise<any> 
   );
   logger.debug(`✏️ Update requested for project risk ID: ${projectRiskId}`);
   try {
-    // Find existing risk to track changes
-    const existingProjectRisk = await getRiskByIdQuery(projectRiskId, req.organizationId!);
+    // Find existing risk to track changes. A risk the viewer cannot see
+    // answers like a missing one.
+    const existingProjectRisk = await getRiskByIdQuery(
+      projectRiskId,
+      req.organizationId!,
+      riskViewer(req),
+    );
 
     if (!existingProjectRisk) {
       logStructured(
@@ -547,7 +564,7 @@ export async function updateRiskById(req: Request, res: Response): Promise<any> 
       projectRiskId,
       updateData,
       existingProjectRisk,
-      { userId: req.userId!, organizationId: req.organizationId! },
+      { userId: req.userId!, organizationId: req.organizationId!, viewer: riskViewer(req) },
       transaction,
     );
 
@@ -685,12 +702,14 @@ export async function deleteRiskById(req: Request, res: Response): Promise<any> 
   );
   logger.debug(`🗑️ Delete request for project risk ID ${projectRiskId}`);
   try {
-    // Soft delete + automation + change history + policy unlinks (R-M8)
+    // Soft delete + automation + change history + policy unlinks (R-M8). A
+    // risk the viewer cannot see answers like a missing one.
     const deletedProjectRisk = await archiveRiskQuery(
       projectRiskId,
       req.organizationId!,
       req.userId,
       transaction,
+      { viewer: riskViewer(req) },
     );
 
     if (deletedProjectRisk) {
@@ -820,7 +839,14 @@ export async function bulkUpdateProjectRisks(req: Request, res: Response): Promi
         },
       },
       async (transaction) => {
-        await assertOrgOwnsIds({ table: "risks", ids, organizationId, transaction });
+        // A risk the user cannot see counts as an id that is not theirs.
+        await assertOrgOwnsIds({
+          table: "risks",
+          ids,
+          organizationId,
+          transaction,
+          extra: riskVisibilitySql("risks", riskViewer(req)),
+        });
 
         const updatedIds: number[] = [];
         const newOwnerRisks: AssignedRisk[] = [];
@@ -828,8 +854,12 @@ export async function bulkUpdateProjectRisks(req: Request, res: Response): Promi
 
         if (action === "archive") {
           for (const id of ids) {
-            // The archived row, for the automation's summary.
+            // The archived row, for the automation's summary. The batch
+            // check above already rejected any id the user cannot see, in
+            // this transaction, so archive as the system rather than repeat
+            // the visibility check once per id.
             const archived = await archiveRiskQuery(id, organizationId, userId, transaction, {
+              viewer: SYSTEM_RISK_VIEWER,
               recordSnapshots: false,
               runAutomations: false,
             });
@@ -867,11 +897,15 @@ export async function bulkUpdateProjectRisks(req: Request, res: Response): Promi
 
           const input =
             action === "set_owner" ? { risk_owner: ownerId } : { risk_category: categories };
+          // The batch check above already rejected any id the user cannot
+          // see, in this transaction, so update as the system rather than
+          // repeat the visibility check once per id. The input names no use
+          // case, so no link is touched (ruling J3 is not in play).
           const updated = await updateRiskService(
             risk.id!,
             input,
             risk,
-            { userId, organizationId },
+            { userId, organizationId, viewer: SYSTEM_RISK_VIEWER },
             transaction,
             { recordSnapshots: false, runAutomations: false },
           );
@@ -1010,7 +1044,9 @@ export async function suggestRisksWithAI(req: Request, res: Response): Promise<a
         ? req.body.technologySummary.trim()
         : undefined;
 
-    const existingRisks = (await getRisksByProjectQuery(projectId, organizationId)) ?? [];
+    // Only the risks the user can see are named to the model as existing ones.
+    const existingRisks =
+      (await getRisksByProjectQuery(projectId, organizationId, "active", riskViewer(req))) ?? [];
     const existingRiskNames = existingRisks
       .map((risk) => risk.risk_name)
       .filter((name): name is string => Boolean(name));

@@ -24,6 +24,7 @@ import {
   PROJECT_RISK_CATEGORIES,
 } from "../../utils/risk.utils";
 import { createRiskService, updateRiskService } from "../../services/risk.service";
+import { SYSTEM_RISK_VIEWER } from "../../utils/riskVisibility.utils";
 import { normalizeCurrentRiskLevel } from "../../utils/riskLevel.utils";
 import { enqueueRiskLinkRecompute } from "../../services/automations/automationProducer";
 import { notifyUserAssigned } from "../../services/inAppNotification.service";
@@ -125,10 +126,16 @@ const listRisks: ToolDef = {
   handler: async (args) => {
     await requireOrganization(args.organizationId);
 
+    // MCP is open to Admins and super admins only (ruling J6): every risk.
     const risks =
       args.useCaseId === undefined
-        ? await getAllRisksQuery(args.organizationId, "active")
-        : ((await getRisksByProjectQuery(args.useCaseId, args.organizationId, "active")) ?? []);
+        ? await getAllRisksQuery(args.organizationId, "active", SYSTEM_RISK_VIEWER)
+        : ((await getRisksByProjectQuery(
+            args.useCaseId,
+            args.organizationId,
+            "active",
+            SYSTEM_RISK_VIEWER,
+          )) ?? []);
 
     return result({
       organizationId: args.organizationId,
@@ -150,7 +157,7 @@ const getRisk: ToolDef = {
   },
   handler: async (args) => {
     await requireOrganization(args.organizationId);
-    const risk = await getRiskByIdQuery(args.riskId, args.organizationId);
+    const risk = await getRiskByIdQuery(args.riskId, args.organizationId, SYSTEM_RISK_VIEWER);
     if (!risk) {
       throw new Error(`No risk with id ${args.riskId} in organization ${args.organizationId}.`);
     }
@@ -226,7 +233,7 @@ const createRisk: ToolDef = {
           projects: args.useCaseIds ?? [],
           frameworks: frameworkIds,
         },
-        { userId: caller.userId, organizationId: args.organizationId },
+        { userId: caller.userId, organizationId: args.organizationId, viewer: SYSTEM_RISK_VIEWER },
         transaction,
       );
       await transaction.commit();
@@ -294,7 +301,7 @@ const updateRisk: ToolDef = {
   handler: async (args, caller) => {
     await requireOrganization(args.organizationId);
 
-    const existing = await getRiskByIdQuery(args.riskId, args.organizationId);
+    const existing = await getRiskByIdQuery(args.riskId, args.organizationId, SYSTEM_RISK_VIEWER);
     if (!existing) {
       throw new Error(`No risk with id ${args.riskId} in organization ${args.organizationId}.`);
     }
@@ -337,7 +344,7 @@ const updateRisk: ToolDef = {
         args.riskId,
         input,
         existing,
-        { userId: caller.userId, organizationId: args.organizationId },
+        { userId: caller.userId, organizationId: args.organizationId, viewer: SYSTEM_RISK_VIEWER },
         transaction,
       );
       if (!risk) {

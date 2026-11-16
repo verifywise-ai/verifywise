@@ -1,6 +1,6 @@
 # Risk Management Domain
 
-**Last Updated:** 2026-11-14
+**Last Updated:** 2026-11-15
 
 ## Overview
 
@@ -50,7 +50,7 @@ project_risks
 ├── impact
 ├── review_notes
 ├── assessment_mapping
-├── controls_mapping
+├── controls_mapping                  # free-text legacy field; the risk form does not set it
 ├── date_of_assessment
 │
 ├── likelihood (ENUM)                 # current risk
@@ -312,6 +312,8 @@ Result: High risk
 
 ## Risk-Control Linking
 
+The real control links are the junction tables below. `controls_mapping` on the risk row is a free-text legacy field that the risk form does not set. The risk table's Controls column does not show it: its "View controls" link opens the linked controls, so the column is not sortable, and the risk register export has no controls column.
+
 ### Relationship Structure
 
 Risks can be linked to multiple framework controls through junction tables:
@@ -459,7 +461,131 @@ Removing a use case or framework from a risk removes the risk's mappings in ever
 
 The report's Severity column shows the inherent severity, not the post-mitigation severity.
 
-The risk register export uses the filtered list. With a filter or search that matches nothing, the export is empty and the export button is disabled.
+The Owner column sorts by the owner's display name (name and surname, case-insensitive), not by user id (`riskSort.ts`, `userSortName` and `compareNames` in `Clients/src/application/utils/userSort.ts`). A risk with no known owner sorts as an empty name. The risk register export uses the filtered list. With a filter or search that matches nothing, the export is empty and the export button is disabled.
+
+## Visibility
+
+Which project risks a user can see depends on the use cases each risk is linked to. Vendor risks and model risks are outside this rule.
+
+### The rule
+
+Admins and SuperAdmins (`seesAllProjects` in `utils/projectVisibility.utils.ts`) see every risk in the organization. Other users see a risk when at least one of these holds:
+
+- it has no `projects_risks` row. A link to a framework or one of its elements does not tie a risk to a use case, so a risk linked only to frameworks counts as unlinked;
+- it is linked to at least one use case the user can access as owner, team member or member of a group attached to the use case (`projectAccessSql`, the rule behind the use case list);
+- the user is its action owner (`risk_owner`) or approver (`risk_approval`), so an assignee can act on it.
+
+Task assignees and workflow approvers can open a use case read-only (`getProjectReadAccessQuery`). That access does not show them the use case's risks.
+
+A risk whose last use case link is removed becomes visible to everyone in the organization. This includes deleting the use case, which deletes its `projects_risks` rows and keeps the risks.
+
+The check is a pair of `EXISTS` subqueries, so it decides which risks a user sees without narrowing their aggregates. The use cases a visible risk names are narrowed separately. For a non-Admin, the `projects` array of the list, by-use-case, by-framework and by-id reads, and the framework mapping rows of the by-id read, list only the use cases the user can access (`accessibleProjectIdSql`). The by-id mapping queries join a mapping to every use case that runs its framework, so for a non-Admin each mapping is kept only under its own use case, the one its element row belongs to (`projects_frameworks_id` on the ISO 42001, ISO 27001 and EU AI Act control rows, and on the assessment of an EU AI Act answer), and only when that use case is accessible. A mapping on a hidden use case never shows, not even under an accessible use case on the same framework. Admins and the system viewer get the mapping rows exactly as before, one per use case running the framework. An owner of a risk whose only use case is hidden from them gets an empty `projects` array. Admins and the system viewer get every use case. Because an edit keeps links to hidden use cases (see Writes), sending the narrowed array back loses nothing.
+
+The "no `projects_risks` row" test does not filter on `projects_risks.organization_id`. That column is nullable, and a row with NULL there still counts as a link, so a linked risk never looks unlinked. The risk id already ties the row to the organization. The "linked to a use case the user can access" test keeps the filter, so a NULL row hides the risk there.
+
+### Risks of one use case
+
+`GET /projectRisks/by-projid/:id` adds a second condition (`projectRiskVisibilitySql`). A user who cannot access that use case gets only the risks they own or approve on it. This holds even when a risk is shared with another use case they can access, so the list never reveals what a hidden use case holds. The route filters in the query instead of using `requireProjectAccess`, which keeps its status codes unchanged. The per-use-case quantitative portfolio and the AI advisor's `get_risk_analytics` for one use case use the same condition. Every caller already joins the risk to the use case, so the condition is only "the user can access this use case, or owns or approves the risk": under that join it implies the general rule.
+
+### Writes
+
+A risk the user cannot see answers like a missing one, with the existing status and message. The legacy routes gained no new status codes.
+
+| Action | Hidden risk answers |
+|--------|--------------------|
+| `GET /projectRisks/:id` | 204, as a missing risk |
+| `PUT` and `DELETE /projectRisks/:id` | 404 "Project risk not found" |
+| `PATCH /projectRisks/bulk` | 403 "One or more ids are not accessible" (`assertOrgOwnsIds` with the visibility fragment as `extra`) |
+| Risk change history | 200 with an empty page |
+| `POST /quantitative-risks/:riskId/apply-benchmark/:benchmarkId` | 404 "Risk not found", nothing written |
+| `POST /riskLinks` with a hidden source or target | 404 "Risk not found" (`getLiveRiskIdsQuery` leaves the hidden id out) |
+| `PATCH /riskLinks/:id` and `POST /riskLinks/:id/acknowledge-parent-change` on a link with a hidden source or target | 404 "Risk link not found", nothing written |
+| `POST /policy-linked/:policyId/linked-objects` with a hidden risk id | 403 "One or more ids are not accessible" (`assertOrgOwnsIds` with the visibility fragment as `extra`), nothing linked |
+| `DELETE /policy-linked/risk/:riskId/unlink-all` | 200, as for an unknown id, and the risk keeps its policy links |
+| `DELETE /policy-linked/:policyId/linked-objects` (the id is the link row's id) on a link to a hidden risk | 200 "Unlinked successfully", as for a missing row, and the link is kept |
+
+`getRiskByIdQuery`, `archiveRiskQuery` and `updateRiskByIdQuery` take a required viewer and answer a hidden risk like a missing one, so the by-id routes, `PUT`, `DELETE`, the bulk archive and the advisor need no separate visibility check. `updateRiskByIdQuery` checks visibility in its transaction before it validates anything, so a hidden risk returns `null` and never a validation error, and its `UPDATE` repeats the rule in the `WHERE`. Callers map `null` to their missing-risk answer. Every bulk action checks every id at once (`assertOrgOwnsIds`) and then archives or edits each risk as the system viewer, since the hidden ids were already rejected in the same transaction.
+
+Linking a risk to a use case needs write access to that use case: owner, team member or group member, or an Admin. A use case the user cannot access gets 400 "Linked use cases must belong to this organization", the error for a use case outside the organization (`assertRiskReferencesInOrganization` in `utils/risk.utils.ts`). Only newly added links are checked.
+
+When a non-Admin edits a risk, links to use cases they cannot access are kept. The update replaces only the links among use cases they can see, so an edit never unlinks a use case hidden from the editor. The risk form's **Applicable use cases** field lists only the use cases `GET /projects` returns for the user, so those hidden links do not appear in it.
+
+### Secondary reads covered
+
+The rule also applies to:
+
+- search (`utils/search.utils.ts`, `riskVisibilityCondition` on the risks entity);
+- risk change history (`controllers/projectRiskChangeHistory.ctrl.ts`);
+- risk links of a risk or a vendor risk, plus the shared-project candidates (`utils/riskLink.utils.ts`). A hidden subject returns an empty list. A hidden related risk drops out;
+- the vendor risk link picker (`getVendorRiskChildCandidatesQuery`). It lists a project risk under the titles of the use cases it shares with the vendor, and only the ones the user can access. A risk reached only through hidden use cases is left out, even one the user owns;
+- the shared-project candidates of a risk (`getSharedProjectCandidatesQuery`), which use only the subject's use cases the user can access. A vendor or model risk reached only through a hidden use case is left out, and no hidden use case title is named;
+- the vendor exposure report (`GET /riskLinks/vendor-exposure`, `getVendorExposureRowsQuery`). For a non-Admin it counts only the inheriting project risks they can see, confirmed and suggested, and names only the use cases they can access. Vendor risks are outside the rule and are all listed. Same response shape and status;
+- the per-use-case quantitative portfolio and its trend. Use case snapshots total every risk on the use case, so a non-Admin without access to the use case gets an empty trend;
+- policy linked objects (`utils/policyLinkedObject.utils.ts`), which leave out links to hidden risks, and the AI advisor's `get_policy_linked_objects`, which applies the same filter (`hiddenRiskLinksFilter`) for the chatting user and counts only the links it returns in `total_count`;
+- apply benchmark (`controllers/quantitativeRisk.ctrl.ts`);
+- AI risk suggestions for a use case, which pass the model only the existing risks the user can see;
+- the AI advisor's read tools `fetch_risks` and `get_executive_summary` (which names its most urgent risks, so its counts cover only visible risks too), and its search tools `global_search` and `search_within_entity`. They run for the chatting user (`_userId`, which `toolBridge` adds to every tool call), and with no user they fail closed (`UNKNOWN_RISK_VIEWER`). `get_risk_analytics` for the whole organization returns counts only and stays organization-wide, like the dashboard (see Aggregates). For one use case it runs for the chatting user under the by use case rule, and with no user it fails closed;
+- the AI advisor's write tools: create, update, delete, link to a use case, link to a policy, unlink from a policy, assign owner, change status and bulk status change. They run for the user who asked for the action. After an approval that is the requester stored on the approval record (`requested_by`, passed to the tool as `_requesterId`), not the approver; when the record has no requester, the approver. With no user at all the tool fails closed (`UNKNOWN_RISK_VIEWER`): it sees only risks linked to no use case. A hidden risk is a missing one to them. Update, delete, assign owner and change status report "Risk not found" when nothing was written. Unlinking a hidden risk from a policy deletes nothing and answers as for a link that does not exist. Bulk status change reports the ids it updated in `updated_ids` and the rest in `not_found_ids`.
+
+### Helpers
+
+All in `Servers/utils/riskVisibility.utils.ts`:
+
+| Helper | Use |
+|--------|-----|
+| `riskVisibilitySql(alias, viewer)` | `" AND ..."` fragment for a risk query, empty for a viewer who sees every risk. The query must bind `:organizationId` |
+| `riskVisibilityCondition(alias, viewer)` | The same condition without the leading `AND`, or `null` |
+| `riskIdVisibilitySql(column, viewer)` | `EXISTS (...)` over the risk with the id in `column`, in the organization, that the viewer can see. Empty for a viewer who sees every risk. A NULL id matches nothing, so a nullable column needs its own `IS NULL OR`. Used for policy links and risk link ends |
+| `accessibleProjectIdSql(column, viewer)` | `" AND EXISTS (...)"` keeping only use case ids the viewer can access. Narrows the use cases a risk names. Empty for a viewer who sees every use case |
+| `projectRiskVisibilitySql(alias, viewer)` | The rule for the risks of one use case (binds `:projectId`). Only for a query that already joins the risk to that use case |
+| `isRiskVisibleQuery(riskId, orgId, viewer)` | Whether one risk is visible. Admins skip the query |
+| `getAccessibleProjectIdsQuery(ids, orgId, viewer)` | Which of these use cases the viewer can access and write to |
+| `riskViewer(req)` | The signed-in user as a viewer |
+| `riskViewerForUserQuery(userId, orgId)` | A viewer for a user known only by id (advisor), with their role in the organization from `organization_members` (`getUserRoleInOrganization`) |
+| `UNKNOWN_RISK_VIEWER` | The viewer for a write that names no user. User id 0 matches no owner, approver or member, so it sees only risks linked to no use case |
+| `scopedRiskViewer(viewer)` | The user to scope by, or `null` when the viewer sees every risk |
+
+### The system viewer
+
+The risk list, by-id, archive and link queries take a `viewer` with no default. A new caller must pass a user or `SYSTEM_RISK_VIEWER`, so leaving the argument out fails the build instead of returning every risk. `SYSTEM_RISK_VIEWER` is for callers that act on the whole organization with no user to scope by:
+
+| Caller | Why |
+|--------|-----|
+| MCP risk tools (`mcp/tools/risks.ts`) | MCP is open only to Admins and super admins |
+| Demo seed (`infrastructure.layer/driver/autoDriver.driver.ts`) | Links its risks to the use cases it creates in the same run |
+| Intake approval (`controllers/intakeForm.ctrl.ts`) | Links the risk to the use case the same approval creates, which the approver may not be a member of |
+| Risk link hierarchy pass (`controllers/riskLinks.ctrl.ts`, `services/riskLinks/direction/candidates.ts`) | An organization-wide `riskLinks.admin` job |
+| Portfolio snapshots (`recordPortfolioSnapshot` in `utils/quantitativeRisk.utils.ts`) | Snapshots are organization data, not one user's view |
+| `get_risk_analytics` for the whole organization (`advisor/functions/riskFunctions.ts`) | Counts only, organization-wide like the dashboard |
+| `updateRiskByIdQuery`'s read of the risk before the update | Only feeds the change diff. The visibility check runs in the transaction before it |
+| Bulk archive, set owner and set category (`bulkUpdateProjectRisks`), per id | The batch check already rejected hidden ids in the same transaction. Set owner and set category name no use case, so they touch no link |
+
+Accepting an AI Detection suggested risk runs for the signed-in user.
+
+### SuperAdmins
+
+REST routes treat the SuperAdmin role like Admin. The advisor looks up the user's role in the organization (`riskViewerForUserQuery`). A SuperAdmin with no role there gets an empty role and is scoped like a non-Admin. A SuperAdmin is a cross-tenant organization and user admin, never an in-org Admin. One who is also a member of the organization follows their role in it.
+
+### Aggregates are organization-wide
+
+These totals count every risk in the organization for every user:
+
+- dashboard and compliance risk counts;
+- risk history snapshots and the timeseries (`/riskHistory/*`);
+- the organization quantitative portfolio and its trend;
+- the home queue's untreated risk count;
+- the AI advisor's risk analytics for the whole organization (`get_risk_analytics` with no use case), which return counts only.
+
+### Not scoped yet
+
+These read every risk in the organization. A follow-up will scope them:
+
+- the organization section of reports;
+- deadlines;
+- the evidence hub;
+- FRIA;
+- risk names shown in approvals;
+- the home queue's list of risks the user owns.
 
 ## Risk History Tracking
 
@@ -643,6 +769,7 @@ recordProjectRiskDeletion(riskId, userId, tenant)
 | `domain.layer/models/modelRisk/modelRisk.model.ts` | Model risk model |
 | `domain.layer/models/riskHistory/riskHistory.model.ts` | History model |
 | `utils/risk.utils.ts` | Risk queries |
+| `utils/riskVisibility.utils.ts` | Risk visibility rule (see [Visibility](#visibility)) |
 | `utils/history/riskHistory.utils.ts` | History queries |
 | `controllers/projectRisk.ctrl.ts` | Risk controller |
 | `routes/risks.route.ts` | Route definitions |

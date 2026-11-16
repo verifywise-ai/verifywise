@@ -8,6 +8,7 @@ import {
   getConfirmedHierarchyEdgesQuery,
   getRiskLinksForRiskQuery,
 } from "../../utils/riskLink.utils";
+import { SYSTEM_RISK_VIEWER } from "../../utils/riskVisibility.utils";
 
 afterEach(async () => {
   await cleanupDatabase();
@@ -180,7 +181,12 @@ describe("getRiskLinksForRiskQuery with cross-entity parents", () => {
       { replacements: { orgId: owner.orgId, child, modelRisk } },
     );
 
-    const rows = await getRiskLinksForRiskQuery(owner.orgId, child, ["suggested"]);
+    const rows = await getRiskLinksForRiskQuery(
+      owner.orgId,
+      child,
+      ["suggested"],
+      SYSTEM_RISK_VIEWER,
+    );
 
     expect(rows).toHaveLength(1);
     expect(rows[0].related_risk_name).toBe("Untitled model risk");
@@ -197,7 +203,12 @@ describe("getRiskLinksForRiskQuery with cross-entity parents", () => {
       { replacements: { orgId: owner.orgId, child, vendorRisk } },
     );
 
-    const rows = await getRiskLinksForRiskQuery(owner.orgId, child, ["suggested"]);
+    const rows = await getRiskLinksForRiskQuery(
+      owner.orgId,
+      child,
+      ["suggested"],
+      SYSTEM_RISK_VIEWER,
+    );
 
     expect(rows).toHaveLength(1);
     expect(rows[0].related_risk_name).toBe("Untitled vendor risk");
@@ -217,7 +228,12 @@ describe("getRiskLinksForRiskQuery with cross-entity parents", () => {
       { replacements: { orgId: owner.orgId, child, vendorRisk } },
     );
 
-    const rows = await getRiskLinksForRiskQuery(owner.orgId, child, ["confirmed"]);
+    const rows = await getRiskLinksForRiskQuery(
+      owner.orgId,
+      child,
+      ["confirmed"],
+      SYSTEM_RISK_VIEWER,
+    );
 
     // Assert the row arrived before reading fields off it: today it does not,
     // and `rows[0].related_entity_type` would crash instead of failing.
@@ -241,7 +257,9 @@ describe("getRiskLinksForRiskQuery with cross-entity parents", () => {
       { replacements: { orgId: owner.orgId, child, foreignModelRisk } },
     );
 
-    expect(await getRiskLinksForRiskQuery(owner.orgId, child, ["confirmed"])).toEqual([]);
+    expect(
+      await getRiskLinksForRiskQuery(owner.orgId, child, ["confirmed"], SYSTEM_RISK_VIEWER),
+    ).toEqual([]);
   });
 
   it("hides a soft-deleted parent", async () => {
@@ -258,7 +276,9 @@ describe("getRiskLinksForRiskQuery with cross-entity parents", () => {
       replacements: { modelRisk },
     });
 
-    expect(await getRiskLinksForRiskQuery(owner.orgId, child, ["confirmed"])).toEqual([]);
+    expect(
+      await getRiskLinksForRiskQuery(owner.orgId, child, ["confirmed"], SYSTEM_RISK_VIEWER),
+    ).toEqual([]);
   });
 
   it("still returns plain project-risk parents", async () => {
@@ -272,7 +292,12 @@ describe("getRiskLinksForRiskQuery with cross-entity parents", () => {
       { replacements: { orgId: owner.orgId, child, parent } },
     );
 
-    const rows = await getRiskLinksForRiskQuery(owner.orgId, child, ["confirmed"]);
+    const rows = await getRiskLinksForRiskQuery(
+      owner.orgId,
+      child,
+      ["confirmed"],
+      SYSTEM_RISK_VIEWER,
+    );
     expect(rows).toHaveLength(1);
     expect(rows[0].related_entity_type).toBe("risk");
     expect(rows[0].related_id).toBe(parent);

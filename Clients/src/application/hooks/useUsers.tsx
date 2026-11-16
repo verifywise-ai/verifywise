@@ -18,13 +18,15 @@ interface ApiResponse {
 }
 
 const USERS_QUERY_KEY = ["users"] as const;
+// One shared empty list, so memos keyed on `users` do not rebuild on every render while loading.
+const NO_USERS: User[] = [];
 
 const useUsers = () => {
   const { userId, organizationId } = useAuth();
   const queryClient = useQueryClient();
 
   const {
-    data: users = [],
+    data: users = NO_USERS,
     isLoading: loading,
     error,
   } = useQuery({

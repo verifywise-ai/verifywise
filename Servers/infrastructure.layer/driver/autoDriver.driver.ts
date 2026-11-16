@@ -34,6 +34,7 @@ import { ModelRiskStatus } from "../../domain.layer/enums/model-risk-status.enum
 import { TaskPriority, TaskStatus } from "../../domain.layer/enums/task-priority.enum";
 import { ModelInventoryModel } from "../../domain.layer/models/modelInventory/modelInventory.model";
 import { DatasetModel } from "../../domain.layer/models/dataset/dataset.model";
+import { SYSTEM_RISK_VIEWER } from "../../utils/riskVisibility.utils";
 import { AiAppStatus, AiAppDiscoveredSource } from "../../domain.layer/enums/ai-app-status.enum";
 import {
   IncidentType,
@@ -181,6 +182,8 @@ export async function insertMockData(
         },
         organizationId,
         transaction,
+        // The demo seed links its risks to the use cases it just created.
+        { viewer: SYSTEM_RISK_VIEWER },
       );
 
       // Create second project risk - Data Privacy Risk
@@ -218,6 +221,8 @@ export async function insertMockData(
         },
         organizationId,
         transaction,
+        // The demo seed links its risks to the use cases it just created.
+        { viewer: SYSTEM_RISK_VIEWER },
       );
 
       // create vendor
@@ -695,6 +700,8 @@ export async function insertMockData(
         },
         organizationId,
         transaction,
+        // The demo seed links its risks to the use cases it just created.
+        { viewer: SYSTEM_RISK_VIEWER },
       );
 
       await createRiskQuery(
@@ -734,6 +741,8 @@ export async function insertMockData(
         },
         organizationId,
         transaction,
+        // The demo seed links its risks to the use cases it just created.
+        { viewer: SYSTEM_RISK_VIEWER },
       );
 
       // =====================================================

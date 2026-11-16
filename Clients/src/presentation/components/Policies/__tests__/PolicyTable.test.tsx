@@ -9,6 +9,7 @@ vi.mock("../../../../application/hooks/useUsers", () => ({
     users: [
       { id: 1, name: "John", surname: "Doe" },
       { id: 2, name: "Jane", surname: "Smith" },
+      { id: 3, name: "Ana", surname: null },
     ],
   }),
 }));
@@ -91,5 +92,20 @@ describe("PolicyTable", () => {
     ] as any;
     renderWithProviders(<PolicyTable {...defaultProps} data={data} />);
     expect(screen.getByText("Draft")).toBeInTheDocument();
+  });
+
+  it("shows a user with no surname by first name, and unknown users as a dash", () => {
+    const base = {
+      content_html: "",
+      status: "Draft",
+      next_review_date: null,
+      last_updated_at: null,
+      created_at: "2026-01-01T00:00:00Z",
+    };
+    const data = [{ ...base, id: 1, title: "A", author_id: 3, last_updated_by: 99 }] as any;
+    renderWithProviders(<PolicyTable {...defaultProps} data={data} />);
+    expect(screen.getByText("Ana")).toBeInTheDocument();
+    expect(screen.queryByText(/null/)).not.toBeInTheDocument();
+    expect(screen.getAllByText("-").length).toBeGreaterThan(0);
   });
 });

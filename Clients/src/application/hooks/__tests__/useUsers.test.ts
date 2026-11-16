@@ -64,4 +64,13 @@ describe("useUsers", () => {
 
     await waitFor(() => expect(result.current.error).toBe("Server error"));
   });
+
+  it("returns the same empty array on every render while loading", async () => {
+    mockGetAll.mockReturnValue(new Promise(() => undefined));
+    const { result, rerender } = renderHook(() => useUsers(), { wrapper: createWrapper() });
+    const first = result.current.users;
+    rerender();
+    expect(first).toEqual([]);
+    expect(result.current.users).toBe(first);
+  });
 });

@@ -6,6 +6,7 @@ jest.mock("../../../utils/logger/fileLogger", () => ({
   __esModule: true,
   default: { error: jest.fn(), warn: jest.fn(), info: jest.fn() },
   logStructured: jest.fn(),
+  logStructuredError: jest.fn(),
 }));
 
 import { Request } from "express";
@@ -48,5 +49,51 @@ describe("translateImportError", () => {
   it("leaves a validation message without a key as it is", () => {
     const error = { row: 2, field: "risk_name", message: "Risk name is required" };
     expect(translateImportError(reqIn("de"), error)).toEqual(error);
+  });
+
+  const likelihoodError = {
+    row: 3,
+    field: "likelihood",
+    message: "Invalid likelihood. Must be one of: Rare, Likely",
+    messageKey: RISK_IMPORT_MESSAGES.likelihoodInvalid,
+    params: { values: "Rare, Likely" },
+  };
+
+  it("legacy: keeps a per-field validation message in English and drops its key", () => {
+    expect(translateImportError(reqIn("de"), likelihoodError)).toEqual({
+      row: 3,
+      field: "likelihood",
+      message: "Invalid likelihood. Must be one of: Rare, Likely",
+    });
+  });
+
+  it("v1: translates a validation message and returns its key and params", () => {
+    const out = translateImportError(reqIn("de"), likelihoodError, true);
+    expect(out).toMatchObject({
+      row: 3,
+      field: "likelihood",
+      key: RISK_IMPORT_MESSAGES.likelihoodInvalid,
+      params: { values: "Rare, Likely" },
+    });
+    expect(out.message).not.toBe(likelihoodError.message);
+    expect(out.message).toContain("Rare, Likely");
+    expect(out).not.toHaveProperty("messageKey");
+  });
+
+  it("v1: translates the row cap too", () => {
+    const out = translateImportError(
+      reqIn("fr"),
+      {
+        row: 0,
+        field: "file",
+        message: "English text",
+        messageKey: RISK_IMPORT_MESSAGES.tooManyRows,
+        params: { max: MAX_IMPORT_ROWS },
+      },
+      true,
+    );
+    expect(out.message).toContain(String(MAX_IMPORT_ROWS));
+    expect(out.message).not.toBe("English text");
+    expect(out).toMatchObject({ key: RISK_IMPORT_MESSAGES.tooManyRows });
   });
 });
