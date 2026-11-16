@@ -1,8 +1,9 @@
-import React, { type ReactNode, useState, useCallback } from "react";
+import React, { useState, useCallback, useEffect, useRef } from "react";
 import {
   Box,
   Typography,
   Alert,
+  AlertTitle,
   Table,
   TableBody,
   TableCell,
@@ -18,6 +19,8 @@ import { Download, Upload, CheckCircle, XCircle } from "lucide-react";
 import { apiServices } from "../../../../infrastructure/api/networkServices";
 import StandardModal from "../../../components/Modals/StandardModal";
 import { CustomizableButton } from "../../../components/button/customizable-button";
+import useTranslation from "../../../../application/hooks/useTranslation";
+import { fill, pluralKey } from "../../../../i18n/fill";
 
 /**
  * Most rows one import may hold. Mirrors MAX_IMPORT_ROWS in
@@ -69,18 +72,25 @@ function importResultFromError(err: any): ImportResult | null {
 }
 
 export default function RiskImportModal({ open, onClose, onImportComplete }: RiskImportModalProps) {
-  const [loading, setLoading] = useState(false);
+  // The template download and the import are tracked apart: only an import in
+  // flight holds the modal open.
+  const [downloadingTemplate, setDownloadingTemplate] = useState(false);
+  const [importing, setImporting] = useState(false);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [excelData, setExcelData] = useState<any[]>([]);
   const [importResult, setImportResult] = useState<ImportResult | null>(null);
-  // A cause from the parser or server is its own text node, apart from the
-  // static prefix, so the prefix translates.
-  const [error, setError] = useState<ReactNode>(null);
+  // Same shape as the MLflow and Azure tabs: an optional title, and the cause
+  // from the parser or server as the body, so the title translates whole.
+  const [error, setError] = useState<{ title?: string; body: string } | null>(null);
+  const { t, lang } = useTranslation();
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Once an import succeeds the same rows must not be sent again.
+  const importSucceeded = importResult?.success === true;
 
   const handleDownloadTemplate = async () => {
     try {
-      setLoading(true);
+      setDownloadingTemplate(true);
       setError(null);
 
       const response = await apiServices.get("/extensions/risk-import/template", {
@@ -99,14 +109,9 @@ export default function RiskImportModal({ open, onClose, onImportComplete }: Ris
       link.remove();
       window.URL.revokeObjectURL(url);
     } catch (err: any) {
-      setError(
-        <>
-          {"Failed to download template: "}
-          {err.message || "Unknown error"}
-        </>,
-      );
+      setError({ title: "Failed to download template", body: err.message || "Unknown error" });
     } finally {
-      setLoading(false);
+      setDownloadingTemplate(false);
     }
   };
 
@@ -115,7 +120,7 @@ export default function RiskImportModal({ open, onClose, onImportComplete }: Ris
     if (!file) return;
 
     if (!file.name.endsWith(".xlsx")) {
-      setError("Please upload an Excel file (.xlsx)");
+      setError({ body: "Please upload an Excel file (.xlsx)" });
       return;
     }
 
@@ -132,7 +137,7 @@ export default function RiskImportModal({ open, onClose, onImportComplete }: Ris
 
       const worksheet = workbook.getWorksheet(1);
       if (!worksheet) {
-        setError("Excel file is empty or invalid");
+        setError({ body: "Excel file is empty or invalid" });
         setExcelData([]);
         return;
       }
@@ -172,29 +177,25 @@ export default function RiskImportModal({ open, onClose, onImportComplete }: Ris
 
       setExcelData(data);
     } catch (err: any) {
-      setError(
-        <>
-          {"Error parsing Excel file: "}
-          {err.message}
-        </>,
-      );
+      setError({ title: "Error parsing Excel file", body: err.message || "Unknown error" });
       setExcelData([]);
     }
   }, []);
 
   const handleImport = async () => {
+    if (importing || importSucceeded) return;
     if (excelData.length === 0) {
-      setError("No data to import. Please upload a valid Excel file.");
+      setError({ body: "No data to import. Please upload a valid Excel file." });
       return;
     }
     if (excelData.length > MAX_RISK_IMPORT_ROWS) {
       setImportResult(null);
-      setError(TOO_MANY_ROWS_MESSAGE);
+      setError({ body: TOO_MANY_ROWS_MESSAGE });
       return;
     }
 
     try {
-      setLoading(true);
+      setImporting(true);
       setError(null);
       setImportResult(null);
 
@@ -210,10 +211,14 @@ export default function RiskImportModal({ open, onClose, onImportComplete }: Ris
       if (payload) {
         setImportResult(payload);
 
-        if (payload.success && onImportComplete) {
-          setTimeout(() => {
-            onImportComplete();
-            onClose();
+        if (payload.success) {
+          // Leave the success message up for a moment, then close through the
+          // same reset as Cancel: the modal stays mounted, so state left here
+          // would let a reopen send the same rows again.
+          closeTimerRef.current = setTimeout(() => {
+            closeTimerRef.current = null;
+            onImportComplete?.();
+            closeAndReset();
           }, 1000);
         }
       }
@@ -221,18 +226,22 @@ export default function RiskImportModal({ open, onClose, onImportComplete }: Ris
       const rowResult = importResultFromError(err);
       const fileErrors = rowResult?.errors.filter(isFileError) ?? [];
       if (fileErrors.length > 0) {
-        setError(fileErrors.map((e) => e.message).join(" "));
+        setError({ body: fileErrors.map((e) => e.message).join(" ") });
       } else if (rowResult) {
         setImportResult(rowResult);
       } else {
-        setError(err?.message || "Failed to import risks");
+        setError({ body: err?.message || "Failed to import risks" });
       }
     } finally {
-      setLoading(false);
+      setImporting(false);
     }
   };
 
-  const handleReset = () => {
+  const resetState = () => {
+    if (closeTimerRef.current) {
+      clearTimeout(closeTimerRef.current);
+      closeTimerRef.current = null;
+    }
     setUploadedFile(null);
     setExcelData([]);
     setImportResult(null);
@@ -242,13 +251,36 @@ export default function RiskImportModal({ open, onClose, onImportComplete }: Ris
     }
   };
 
+  function closeAndReset() {
+    resetState();
+    onClose();
+  }
+
+  const handleReset = () => {
+    if (importing) return;
+    resetState();
+  };
+
   const handleClose = () => {
     // Cancel, the close icon and Escape wait for an import in flight, so the
-    // outcome is not lost.
-    if (loading) return;
-    handleReset();
-    onClose();
+    // outcome is not lost. A template download does not hold the modal.
+    if (importing) return;
+    closeAndReset();
   };
+
+  // The parent keeps this modal mounted and only flips `open`: start every
+  // opening (and end every closing) from a clean state.
+  useEffect(() => {
+    resetState();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
+
+  useEffect(
+    () => () => {
+      if (closeTimerRef.current) clearTimeout(closeTimerRef.current);
+    },
+    [],
+  );
 
   return (
     <StandardModal
@@ -257,14 +289,15 @@ export default function RiskImportModal({ open, onClose, onImportComplete }: Ris
       title="Import risks from Excel"
       description="Download the template, fill it with your risk data, and upload to create risks in bulk"
       onSubmit={handleImport}
-      submitButtonText={loading ? "Importing..." : "Import risks"}
-      isSubmitting={loading}
-      isSubmitDisabled={excelData.length === 0}
+      submitButtonText={importing ? "Importing..." : "Import risks"}
+      isSubmitting={importing}
+      isSubmitDisabled={excelData.length === 0 || importing || importSucceeded}
       maxWidth="900px"
     >
       {error && (
         <Alert severity="error" sx={{ mb: "6px" }} onClose={() => setError(null)}>
-          {error}
+          {error.title && <AlertTitle>{error.title}</AlertTitle>}
+          {error.body}
         </Alert>
       )}
 
@@ -278,15 +311,29 @@ export default function RiskImportModal({ open, onClose, onImportComplete }: Ris
             {importResult.success ? "Import completed" : "Import completed with errors"}
           </Typography>
           <Typography variant="body2">
-            {"Successfully imported: "}
-            {importResult.imported} risk(s)
-            {importResult.failed > 0 && (
-              <>
-                {" | "}
-                {"Failed: "}
-                {importResult.failed} risk(s)
-              </>
+            {fill(
+              t(
+                pluralKey(
+                  lang,
+                  importResult.imported,
+                  "{count} risk imported",
+                  "{count} risks imported",
+                ),
+              ),
+              { count: importResult.imported },
             )}
+            {importResult.failed > 0 &&
+              `, ${fill(
+                t(
+                  pluralKey(
+                    lang,
+                    importResult.failed,
+                    "{count} risk failed",
+                    "{count} risks failed",
+                  ),
+                ),
+                { count: importResult.failed },
+              )}`}
           </Typography>
 
           {importResult.errors && importResult.errors.length > 0 && (
@@ -316,7 +363,9 @@ export default function RiskImportModal({ open, onClose, onImportComplete }: Ris
               </TableContainer>
               {importResult.errors.length > 10 && (
                 <Typography variant="caption" color="text.secondary" sx={{ mt: "2px" }}>
-                  Showing first 10 of {importResult.errors.length} errors
+                  {fill(t("Showing the first 10 of {count} errors"), {
+                    count: importResult.errors.length,
+                  })}
                 </Typography>
               )}
             </Box>
@@ -337,7 +386,7 @@ export default function RiskImportModal({ open, onClose, onImportComplete }: Ris
             icon={<Download size={16} />}
             text="Download template"
             onClick={handleDownloadTemplate}
-            isDisabled={loading}
+            isDisabled={downloadingTemplate}
             testId="risk-import-download-template"
           />
         </CardContent>
@@ -358,7 +407,7 @@ export default function RiskImportModal({ open, onClose, onImportComplete }: Ris
               icon={<Upload size={16} />}
               text="Choose file"
               onClick={() => fileInputRef.current?.click()}
-              isDisabled={loading}
+              isDisabled={importing || importSucceeded}
               testId="risk-import-choose-file"
             />
             <input
@@ -373,7 +422,7 @@ export default function RiskImportModal({ open, onClose, onImportComplete }: Ris
             {uploadedFile && (
               <Chip
                 label={uploadedFile.name}
-                onDelete={handleReset}
+                onDelete={importing ? undefined : handleReset}
                 color="primary"
                 variant="outlined"
               />
@@ -383,7 +432,17 @@ export default function RiskImportModal({ open, onClose, onImportComplete }: Ris
           {excelData.length > 0 && (
             <Box sx={{ mt: "6px" }}>
               <Typography variant="body2" sx={{ mb: "2px", fontWeight: 600 }}>
-                Preview ({excelData.length} risk(s) found):
+                {fill(
+                  t(
+                    pluralKey(
+                      lang,
+                      excelData.length,
+                      "Preview ({count} risk found)",
+                      "Preview ({count} risks found)",
+                    ),
+                  ),
+                  { count: excelData.length },
+                )}
               </Typography>
               <TableContainer component={Paper} sx={{ maxHeight: 300 }}>
                 <Table size="small" stickyHeader>
@@ -419,7 +478,7 @@ export default function RiskImportModal({ open, onClose, onImportComplete }: Ris
                   color="text.secondary"
                   sx={{ mt: "2px", display: "block" }}
                 >
-                  Showing first 5 of {excelData.length} risks
+                  {fill(t("Showing the first 5 of {count} risks"), { count: excelData.length })}
                 </Typography>
               )}
             </Box>

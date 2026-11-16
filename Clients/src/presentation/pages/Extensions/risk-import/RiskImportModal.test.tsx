@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { renderWithProviders } from "../../../../test/renderWithProviders";
 import CustomException from "../../../../infrastructure/exceptions/customeException";
@@ -108,7 +109,7 @@ describe("RiskImportModal import errors", () => {
 
     expect(await screen.findByText("Too many rows in this file.")).toBeInTheDocument();
     expect(screen.queryByText("Error details")).not.toBeInTheDocument();
-    expect(screen.queryByText(/Failed:/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/risks? failed/)).not.toBeInTheDocument();
   });
 });
 
@@ -160,6 +161,102 @@ describe("RiskImportModal layout", () => {
     await waitFor(() => expect(screen.getByRole("button", { name: "Cancel" })).toBeEnabled());
     fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
     expect(onClose).toHaveBeenCalledTimes(1);
+  });
+});
+
+/** Like RiskManagement: the modal stays mounted and only `open` flips. */
+function Harness({ onImportComplete }: { onImportComplete?: () => void }) {
+  const [open, setOpen] = useState(true);
+  return (
+    <>
+      <button type="button" onClick={() => setOpen(true)}>
+        Reopen
+      </button>
+      <RiskImportModal
+        open={open}
+        onClose={() => setOpen(false)}
+        onImportComplete={onImportComplete}
+      />
+    </>
+  );
+}
+
+async function chooseFile() {
+  const fileInput = screen.getByTestId("risk-import-file-input") as HTMLInputElement;
+  const file = new File(["x"], "risks.xlsx");
+  Object.defineProperty(file, "arrayBuffer", { value: async () => new ArrayBuffer(1) });
+  fireEvent.change(fileInput, { target: { files: [file] } });
+  const importButton = await screen.findByRole("button", { name: "Import risks" });
+  await waitFor(() => expect(importButton).toBeEnabled());
+  return importButton;
+}
+
+const SUCCESS = {
+  data: {
+    data: {
+      success: true,
+      imported: 1,
+      failed: 0,
+      errors: [],
+      importedAt: "2026-11-15T00:00:00.000Z",
+    },
+  },
+};
+
+describe("RiskImportModal after a successful import", () => {
+  it("does not import the same rows twice during the success delay", async () => {
+    api.post.mockResolvedValue(SUCCESS);
+    renderWithProviders(<Harness />);
+    const importButton = await chooseFile();
+
+    fireEvent.click(importButton);
+    expect(await screen.findByText("Import completed")).toBeInTheDocument();
+
+    expect(screen.getByRole("button", { name: "Import risks" })).toBeDisabled();
+    fireEvent.click(screen.getByRole("button", { name: "Import risks" }));
+    expect(api.post).toHaveBeenCalledTimes(1);
+  });
+
+  it("closes and reopens empty, so the rows cannot be sent again", async () => {
+    api.post.mockResolvedValue(SUCCESS);
+    const onImportComplete = vi.fn();
+    renderWithProviders(<Harness onImportComplete={onImportComplete} />);
+    fireEvent.click(await chooseFile());
+
+    await waitFor(() => expect(onImportComplete).toHaveBeenCalledTimes(1), { timeout: 2500 });
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+
+    fireEvent.click(screen.getByRole("button", { name: "Reopen" }));
+    expect(await screen.findByRole("dialog")).toBeInTheDocument();
+    expect(screen.queryByText("risks.xlsx")).not.toBeInTheDocument();
+    expect(screen.queryByText("Import completed")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Import risks" })).toBeDisabled();
+    expect(api.post).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("RiskImportModal busy states", () => {
+  it("lets Cancel close while the template is still downloading", async () => {
+    api.get.mockReturnValue(new Promise(() => undefined));
+    const onClose = vi.fn();
+    renderWithProviders(<RiskImportModal open onClose={onClose} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Download template" }));
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps the chosen file while an import is in flight", async () => {
+    api.post.mockReturnValue(new Promise(() => undefined));
+    renderWithProviders(<RiskImportModal open onClose={vi.fn()} />);
+    fireEvent.click(await chooseFile());
+
+    const chip = await screen.findByText("risks.xlsx");
+    // MUI renders the delete icon only when onDelete is set.
+    await waitFor(() =>
+      expect(chip.closest(".MuiChip-root")?.querySelector(".MuiChip-deleteIcon")).toBeNull(),
+    );
   });
 });
 
