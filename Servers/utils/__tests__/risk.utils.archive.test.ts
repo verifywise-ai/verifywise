@@ -76,7 +76,7 @@ describe("archiveRiskQuery", () => {
     arrange(true);
 
     // The archived row comes back for the caller (the bulk archive's summary).
-    await expect(archiveRiskQuery(5, 4, 9, TX)).resolves.toEqual({
+    await expect(archiveRiskQuery(5, 4, 9, TX, { viewer: SYSTEM_RISK_VIEWER })).resolves.toEqual({
       id: 5,
       risk_owner: 2,
       risk_approval: 3,
@@ -103,7 +103,7 @@ describe("archiveRiskQuery", () => {
   it("skips the snapshots when asked, for a bulk archive", async () => {
     arrange(true);
 
-    await archiveRiskQuery(5, 4, 9, TX, { recordSnapshots: false });
+    await archiveRiskQuery(5, 4, 9, TX, { viewer: SYSTEM_RISK_VIEWER, recordSnapshots: false });
 
     expect(mockSnapshot).not.toHaveBeenCalled();
     expect(deletesFrom("policy_linked_objects")).toHaveLength(1);
@@ -112,7 +112,7 @@ describe("archiveRiskQuery", () => {
   it("does nothing else when no active risk matched", async () => {
     arrange(false);
 
-    await expect(archiveRiskQuery(5, 4, 9, TX)).resolves.toBeNull();
+    await expect(archiveRiskQuery(5, 4, 9, TX, { viewer: SYSTEM_RISK_VIEWER })).resolves.toBeNull();
 
     expect(mockRecordDeletion).not.toHaveBeenCalled();
     expect(deletesFrom("policy_linked_objects")).toHaveLength(0);
@@ -122,7 +122,7 @@ describe("archiveRiskQuery", () => {
   it("records no change history without a user", async () => {
     arrange(true);
 
-    await archiveRiskQuery(5, 4, undefined, TX);
+    await archiveRiskQuery(5, 4, undefined, TX, { viewer: SYSTEM_RISK_VIEWER });
 
     expect(mockRecordDeletion).not.toHaveBeenCalled();
     expect(deletesFrom("policy_linked_objects")).toHaveLength(1);
@@ -345,7 +345,7 @@ describe("risk automations wait for the commit", () => {
     arrange("risk_deleted");
     const tx = makeTransaction();
 
-    await deleteRiskByIdQuery(5, 4, tx as never);
+    await deleteRiskByIdQuery(5, 4, tx as never, { viewer: SYSTEM_RISK_VIEWER });
     expect(tx.afterCommit).toHaveBeenCalledTimes(1);
     expect(mockEnqueue).not.toHaveBeenCalled();
 
@@ -390,7 +390,10 @@ describe("risk automations wait for the commit", () => {
     const tx = makeTransaction();
 
     for (const id of [5, 6, 7]) {
-      await archiveRiskQuery(id, 4, 9, tx as never, { recordSnapshots: false });
+      await archiveRiskQuery(id, 4, 9, tx as never, {
+        viewer: SYSTEM_RISK_VIEWER,
+        recordSnapshots: false,
+      });
     }
     expect(tx.afterCommit).toHaveBeenCalledTimes(3);
 
@@ -403,7 +406,7 @@ describe("risk automations wait for the commit", () => {
     mockEnqueue.mockRejectedValueOnce(new Error("redis down"));
     const tx = makeTransaction();
 
-    await deleteRiskByIdQuery(5, 4, tx as never);
+    await deleteRiskByIdQuery(5, 4, tx as never, { viewer: SYSTEM_RISK_VIEWER });
 
     expect(() => tx.commit()).not.toThrow();
     await new Promise((resolve) => setImmediate(resolve));
@@ -413,7 +416,7 @@ describe("risk automations wait for the commit", () => {
   it("enqueues at once without a transaction", async () => {
     arrange("risk_deleted");
 
-    await deleteRiskByIdQuery(5, 4, undefined as never);
+    await deleteRiskByIdQuery(5, 4, undefined as never, { viewer: SYSTEM_RISK_VIEWER });
 
     expect(mockEnqueue).toHaveBeenCalledTimes(1);
   });
@@ -422,7 +425,10 @@ describe("risk automations wait for the commit", () => {
     arrange("risk_updated");
     const tx = makeTransaction();
 
-    await archiveRiskQuery(5, 4, 9, tx as never, { runAutomations: false });
+    await archiveRiskQuery(5, 4, 9, tx as never, {
+      viewer: SYSTEM_RISK_VIEWER,
+      runAutomations: false,
+    });
     await updateRiskByIdQuery(5, { risk_name: "Renamed" } as never, 4, tx as never, {
       runAutomations: false,
       viewer: SYSTEM_RISK_VIEWER,
@@ -502,7 +508,7 @@ describe("risk automations wait for the commit", () => {
     mockEnqueue.mockResolvedValueOnce(undefined).mockRejectedValueOnce(new Error("redis down"));
     const tx = makeTransaction();
 
-    await deleteRiskByIdQuery(5, 4, tx as never);
+    await deleteRiskByIdQuery(5, 4, tx as never, { viewer: SYSTEM_RISK_VIEWER });
     expect(() => tx.commit()).not.toThrow();
     await new Promise((resolve) => setImmediate(resolve));
 
@@ -524,7 +530,9 @@ describe("risk automations wait for the commit", () => {
     mockEnqueue.mockClear();
     arrangeFourActions("risk_deleted");
     mockEnqueue.mockRejectedValueOnce(new Error("redis down"));
-    await expect(deleteRiskByIdQuery(5, 4, undefined as never)).resolves.toBeTruthy();
+    await expect(
+      deleteRiskByIdQuery(5, 4, undefined as never, { viewer: SYSTEM_RISK_VIEWER }),
+    ).resolves.toBeTruthy();
     expect(mockEnqueue).toHaveBeenCalledTimes(4);
   });
 });

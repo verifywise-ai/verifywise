@@ -157,7 +157,7 @@ const getRisk: ToolDef = {
   },
   handler: async (args) => {
     await requireOrganization(args.organizationId);
-    const risk = await getRiskByIdQuery(args.riskId, args.organizationId);
+    const risk = await getRiskByIdQuery(args.riskId, args.organizationId, SYSTEM_RISK_VIEWER);
     if (!risk) {
       throw new Error(`No risk with id ${args.riskId} in organization ${args.organizationId}.`);
     }
@@ -301,7 +301,7 @@ const updateRisk: ToolDef = {
   handler: async (args, caller) => {
     await requireOrganization(args.organizationId);
 
-    const existing = await getRiskByIdQuery(args.riskId, args.organizationId);
+    const existing = await getRiskByIdQuery(args.riskId, args.organizationId, SYSTEM_RISK_VIEWER);
     if (!existing) {
       throw new Error(`No risk with id ${args.riskId} in organization ${args.organizationId}.`);
     }

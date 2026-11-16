@@ -4,18 +4,16 @@ jest.mock("../../../../utils/risk.utils", () => ({
 }));
 
 jest.mock("../../../../utils/riskVisibility.utils", () => ({
-  isRiskVisibleQuery: jest.fn(),
   riskViewerForUserQuery: jest.fn(),
 }));
 
-import { isRiskVisibleQuery, riskViewerForUserQuery } from "../../../../utils/riskVisibility.utils";
+import { riskViewerForUserQuery } from "../../../../utils/riskVisibility.utils";
 import { getRiskByIdQuery, updateRiskByIdQuery } from "../../../../utils/risk.utils";
 import { executeUpdateRisk } from "../execute";
 
 const mockGet = getRiskByIdQuery as jest.Mock;
 const mockUpdate = updateRiskByIdQuery as jest.Mock;
 
-const mockVisible = isRiskVisibleQuery as jest.Mock;
 const mockViewer = riskViewerForUserQuery as jest.Mock;
 const viewer = { userId: 2, role: "Editor" };
 
@@ -31,14 +29,15 @@ describe("executeUpdateRisk visibility", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockViewer.mockResolvedValue(viewer);
-    mockVisible.mockResolvedValue(true);
     mockGet.mockResolvedValue({ id: 7, severity: "Major", likelihood: "Rare" });
     mockUpdate.mockResolvedValue({ id: 7 });
   });
 
   it("treats a risk the requester cannot see as missing", async () => {
-    mockVisible.mockResolvedValue(false);
+    // getRiskByIdQuery answers a hidden risk with null, as a missing one.
+    mockGet.mockResolvedValue(null);
     await expect(run({ risk_id: 7, project_ids: [3] })).rejects.toThrow("no longer exists");
+    expect(mockGet).toHaveBeenCalledWith(7, 1, viewer);
     expect(mockUpdate).not.toHaveBeenCalled();
   });
 
@@ -52,7 +51,6 @@ describe("executeUpdateRisk risk level", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockViewer.mockResolvedValue(viewer);
-    mockVisible.mockResolvedValue(true);
     mockUpdate.mockResolvedValue({ id: 7 });
   });
 

@@ -16,10 +16,6 @@ jest.mock("../../utils/risk.utils", () => ({
   PROJECT_RISK_CATEGORIES_SET: new Set(["financial", "operational", "strategic", "compliance"]),
   enqueueBulkRiskAutomation: jest.fn(),
 }));
-jest.mock("../../utils/riskVisibility.utils", () => ({
-  ...jest.requireActual<any>("../../utils/riskVisibility.utils"),
-  isRiskVisibleQuery: jest.fn(),
-}));
 jest.mock("../../domain.layer/models/risks/risk.model", () => ({
   RiskModel: jest.fn(),
 }));
@@ -110,7 +106,6 @@ import {
   updateRiskByIdQuery,
   archiveRiskQuery,
 } from "../../utils/risk.utils";
-import { isRiskVisibleQuery } from "../../utils/riskVisibility.utils";
 import { createRiskService } from "../../services/risk.service";
 import {
   ValidationException,
@@ -128,7 +123,6 @@ const mockGetByProject = getRisksByProjectQuery as jest.MockedFunction<
 >;
 const mockUpdate = updateRiskByIdQuery as jest.MockedFunction<typeof updateRiskByIdQuery>;
 const mockDelete = archiveRiskQuery as jest.MockedFunction<typeof archiveRiskQuery>;
-const mockVisible = isRiskVisibleQuery as jest.MockedFunction<typeof isRiskVisibleQuery>;
 const mockCreateService = createRiskService as jest.MockedFunction<typeof createRiskService>;
 function createReq(overrides?: Partial<Request>): any {
   return {
@@ -152,7 +146,6 @@ function createRes(): any {
 describe("risks.ctrl", () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    mockVisible.mockResolvedValue(true);
   });
   afterEach(() => jest.restoreAllMocks());
 
@@ -276,13 +269,12 @@ describe("risks.ctrl", () => {
       expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ data: risk }));
     });
     it("answers a risk the viewer cannot see like a missing one", async () => {
-      mockVisible.mockResolvedValue(false);
-      mockGetById.mockResolvedValue(buildRisk() as any);
+      // getRiskByIdQuery answers a hidden risk with null, as a missing one.
+      mockGetById.mockResolvedValue(null as any);
       const req = createReq({ params: { id: "1" }, role: "Auditor", userId: 7 });
       const res = createRes();
       await getRiskById(req, res);
-      expect(mockVisible).toHaveBeenCalledWith(1, 1, { userId: 7, role: "Auditor" });
-      expect(mockGetById).not.toHaveBeenCalled();
+      expect(mockGetById).toHaveBeenCalledWith(1, 1, { userId: 7, role: "Auditor" });
       expect(res.status).toHaveBeenCalledWith(204);
     });
     it("returns a visible risk to a non-Admin", async () => {
@@ -372,8 +364,7 @@ describe("risks.ctrl", () => {
       expect(res.status).toHaveBeenCalledWith(404);
     });
     it("answers a risk the viewer cannot see like a missing one (404, nothing written)", async () => {
-      mockVisible.mockResolvedValue(false);
-      mockGetById.mockResolvedValue(buildRisk() as any);
+      mockGetById.mockResolvedValue(null as any);
       const req = createReq({
         params: { id: "1" },
         body: { risk_name: "R2" },
@@ -382,7 +373,7 @@ describe("risks.ctrl", () => {
       });
       const res = createRes();
       await updateRiskById(req, res);
-      expect(mockVisible).toHaveBeenCalledWith(1, 1, { userId: 7, role: "Editor" });
+      expect(mockGetById).toHaveBeenCalledWith(1, 1, { userId: 7, role: "Editor" });
       expect(mockUpdate).not.toHaveBeenCalled();
       expect(res.status).toHaveBeenCalledWith(404);
       expect(res.json).toHaveBeenCalledWith(
@@ -522,7 +513,9 @@ describe("risks.ctrl", () => {
       const res = createRes();
       await deleteRiskById(req, res);
       // userId 1 from createReq, so the shared path records the deletion.
-      expect(mockDelete).toHaveBeenCalledWith(1, 1, 1, expect.anything());
+      expect(mockDelete).toHaveBeenCalledWith(1, 1, 1, expect.anything(), {
+        viewer: { userId: 1, role: "Admin" },
+      });
       expect(res.status).toHaveBeenCalledWith(200);
       expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ data: true }));
     });
@@ -534,11 +527,13 @@ describe("risks.ctrl", () => {
       expect(res.status).toHaveBeenCalledWith(404);
     });
     it("answers a risk the viewer cannot see like a missing one (404, not archived)", async () => {
-      mockVisible.mockResolvedValue(false);
-      mockDelete.mockResolvedValue({ id: 1 } as any);
+      // The archive matches no row for a hidden risk, as for a missing one.
+      mockDelete.mockResolvedValue(null);
       const res = createRes();
       await deleteRiskById(createReq({ params: { id: "1" }, role: "Editor", userId: 7 }), res);
-      expect(mockDelete).not.toHaveBeenCalled();
+      expect(mockDelete).toHaveBeenCalledWith(1, 1, 7, expect.anything(), {
+        viewer: { userId: 7, role: "Editor" },
+      });
       expect(res.status).toHaveBeenCalledWith(404);
     });
     it("should return 500 on error", async () => {

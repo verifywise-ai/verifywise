@@ -18,7 +18,7 @@ import {
 } from "../domain.layer/exceptions/custom.exception";
 
 import { translateError } from "../utils/i18n.utils";
-import { riskViewer } from "../utils/riskVisibility.utils";
+import { isRiskVisibleQuery, riskViewer } from "../utils/riskVisibility.utils";
 
 /** Most ids one link request may carry (evidence lists can be long). */
 const MAX_LINK_IDS = 1000;
@@ -182,6 +182,7 @@ export async function createLinkedObject(req: Request, res: Response) {
       ids,
       req.organizationId!,
       transaction,
+      riskViewer(req),
     );
     await transaction.commit();
 
@@ -224,7 +225,11 @@ export async function deleteRiskFromAllPolicies(req: Request, res: Response) {
     const organizationId = req.organizationId!;
     transaction = await sequelize.transaction();
 
-    await unlinkRiskFromAllPoliciesQuery(riskId, organizationId, transaction);
+    // A risk the user cannot see is left linked and answered like an unknown
+    // id: nothing to unlink, same success response.
+    if (await isRiskVisibleQuery(riskId, organizationId, riskViewer(req), transaction)) {
+      await unlinkRiskFromAllPoliciesQuery(riskId, organizationId, transaction);
+    }
 
     await transaction.commit();
 

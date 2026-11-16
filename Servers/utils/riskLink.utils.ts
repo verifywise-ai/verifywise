@@ -263,16 +263,23 @@ export async function upsertRiskLinkQuery(
  * catches is an id that exists and belongs to another org, or one that is
  * soft-deleted — so both clauses below are load-bearing, and neither has a
  * safety net behind it. Callers compare the result length against the input.
+ * A risk the viewer cannot see (risk visibility rule) is left out, so it is
+ * answered like a missing one.
  */
 export async function getLiveRiskIdsQuery(
   ids: number[],
   organizationId: number,
+  viewer: RiskViewer,
 ): Promise<number[]> {
   if (ids.length === 0) return [];
+  const visibility = riskVisibilitySql("risks", viewer);
   const rows = await sequelize.query(
     `SELECT id FROM risks
-      WHERE id IN (:ids) AND organization_id = :organizationId AND is_deleted = false`,
-    { replacements: { ids, organizationId }, type: QueryTypes.SELECT },
+      WHERE id IN (:ids) AND organization_id = :organizationId AND is_deleted = false${visibility.sql}`,
+    {
+      replacements: { ids, organizationId, ...visibility.replacements },
+      type: QueryTypes.SELECT,
+    },
   );
   return (rows as { id: number }[]).map((row) => row.id);
 }
@@ -1192,13 +1199,42 @@ export async function getDismissalAnalyticsQuery(
   };
 }
 
+/**
+ * Leaves out a link with a project risk end (source or target) the viewer
+ * cannot see (risk visibility rule), so it is answered like a missing link.
+ * Bound against risk_links (unaliased). Empty for a viewer who sees every risk.
+ */
+function linkEndsVisibilitySql(viewer: RiskViewer): {
+  sql: string;
+  replacements: Record<string, unknown>;
+} {
+  const source = riskVisibilityCondition("lsr", viewer);
+  const target = riskVisibilityCondition("ltr", viewer);
+  if (!source || !target) return { sql: "", replacements: {} };
+  return {
+    sql: ` AND (risk_links.source_risk_id IS NULL OR EXISTS (
+             SELECT 1 FROM risks lsr
+              WHERE lsr.id = risk_links.source_risk_id AND ${source.sql}))
+           AND (risk_links.target_risk_id IS NULL OR EXISTS (
+             SELECT 1 FROM risks ltr
+              WHERE ltr.id = risk_links.target_risk_id AND ${target.sql}))`,
+    replacements: { ...source.replacements, ...target.replacements },
+  };
+}
+
+/** One link of the organization, or null when missing or when the viewer cannot see one of its risks. */
 export async function getRiskLinkByIdQuery(
   id: number,
   organizationId: number,
+  viewer: RiskViewer,
 ): Promise<RiskLinkRow | null> {
+  const visibility = linkEndsVisibilitySql(viewer);
   const rows = await sequelize.query(
-    `SELECT * FROM risk_links WHERE id = :id AND organization_id = :organizationId`,
-    { replacements: { id, organizationId }, type: QueryTypes.SELECT },
+    `SELECT * FROM risk_links WHERE id = :id AND organization_id = :organizationId${visibility.sql}`,
+    {
+      replacements: { id, organizationId, ...visibility.replacements },
+      type: QueryTypes.SELECT,
+    },
   );
   const row = (rows as any[])[0];
   return row ? toLinkRow(row) : null;
@@ -1891,11 +1927,14 @@ export interface StaleChildRow {
  * it so a later move re-notifies. Org-scoped and idempotent: only a link whose
  * flag is currently set is touched, so a second click (or a link already
  * reviewed) is a no-op rather than an error. Returns true when a row changed.
+ * A link with a risk the viewer cannot see is left alone.
  */
 export async function acknowledgeParentLevelChangeQuery(
   organizationId: number,
   linkId: number,
+  viewer: RiskViewer,
 ): Promise<boolean> {
+  const visibility = linkEndsVisibilitySql(viewer);
   // RETURNING, not the UPDATE's metadata: on Postgres that is the driver's
   // result object, not a row count, so counting it always gave false.
   const rows = await sequelize.query(
@@ -1905,9 +1944,12 @@ export async function acknowledgeParentLevelChangeQuery(
             updated_at = NOW()
       WHERE id = :linkId
         AND organization_id = :organizationId
-        AND parent_level_changed_at IS NOT NULL
+        AND parent_level_changed_at IS NOT NULL${visibility.sql}
       RETURNING id`,
-    { replacements: { organizationId, linkId }, type: QueryTypes.SELECT },
+    {
+      replacements: { organizationId, linkId, ...visibility.replacements },
+      type: QueryTypes.SELECT,
+    },
   );
   return rows.length > 0;
 }

@@ -38,6 +38,7 @@ import {
   updateRiskLinkStatus,
   recomputeAllRiskLinks,
   createRiskLink,
+  acknowledgeParentLevelChange,
 } from "../riskLinks.ctrl";
 
 const mockUtils = utils as jest.Mocked<typeof utils>;
@@ -358,6 +359,22 @@ describe("updateRiskLinkStatus", () => {
     expect(r.status).toHaveBeenCalledWith(404);
   });
 
+  it("reads the link as the signed-in user, so a hidden risk end answers like a missing link", async () => {
+    mockUtils.getRiskLinkByIdQuery.mockResolvedValue(null);
+    const r = res();
+    await updateRiskLinkStatus(
+      req({ params: { id: "100" }, body: { status: "confirmed" }, role: "Editor" }) as any,
+      r as any,
+    );
+    expect(mockUtils.getRiskLinkByIdQuery).toHaveBeenCalledWith(100, 7, {
+      userId: 5,
+      role: "Editor",
+    });
+    expect(r.status).toHaveBeenCalledWith(404);
+    expect(r.json).toHaveBeenCalledWith(expect.objectContaining({ data: "Risk link not found" }));
+    expect(mockUtils.updateRiskLinkStatusQuery).not.toHaveBeenCalled();
+  });
+
   it("rejects an unknown target status with 400", async () => {
     mockUtils.getRiskLinkByIdQuery.mockResolvedValue(suggested);
     const r = res();
@@ -566,7 +583,10 @@ describe("createRiskLink", () => {
     mockUtils.getLiveRiskIdsQuery.mockResolvedValue([4, 9]);
     mockUtils.createUserRiskLinkQuery.mockResolvedValue(77);
     await createRiskLink(req({ body: body() }) as any, res() as any);
-    expect(mockUtils.getLiveRiskIdsQuery).toHaveBeenCalledWith([4, 9], 7);
+    expect(mockUtils.getLiveRiskIdsQuery).toHaveBeenCalledWith([4, 9], 7, {
+      userId: 5,
+      role: "",
+    });
   });
 
   // Unknown, cross-org and soft-deleted ids are one code path: the store returns
@@ -1243,5 +1263,48 @@ describe("per-risk link reads pass the signed-in viewer", () => {
       userId: 5,
       role: "Editor",
     });
+  });
+});
+
+describe("acknowledgeParentLevelChange", () => {
+  it("answers a link with a hidden risk end like a missing link", async () => {
+    mockUtils.acknowledgeParentLevelChangeQuery.mockResolvedValue(false);
+    mockUtils.getRiskLinkByIdQuery.mockResolvedValue(null);
+    const r = res();
+    await acknowledgeParentLevelChange(req({ params: { id: "100" }, role: "Editor" }) as any, r);
+    const viewer = { userId: 5, role: "Editor" };
+    expect(mockUtils.acknowledgeParentLevelChangeQuery).toHaveBeenCalledWith(7, 100, viewer);
+    expect(mockUtils.getRiskLinkByIdQuery).toHaveBeenCalledWith(100, 7, viewer);
+    expect(r.status).toHaveBeenCalledWith(404);
+    expect(r.json).toHaveBeenCalledWith(expect.objectContaining({ data: "Risk link not found" }));
+  });
+
+  it("clears the flag on a link the user can see", async () => {
+    mockUtils.acknowledgeParentLevelChangeQuery.mockResolvedValue(true);
+    const r = res();
+    await acknowledgeParentLevelChange(req({ params: { id: "100" } }) as any, r);
+    expect(r.status).toHaveBeenCalledWith(200);
+  });
+});
+
+describe("createRiskLink visibility", () => {
+  it("answers a hidden source or target like a missing risk (404 Risk not found)", async () => {
+    // getLiveRiskIdsQuery drops a hidden id, as it drops a missing one.
+    mockUtils.getLiveRiskIdsQuery.mockResolvedValue([4]);
+    const r = res();
+    await createRiskLink(
+      req({
+        body: { sourceRiskId: 4, targetRiskId: 9, relationType: "related_to" },
+        role: "Editor",
+      }) as any,
+      r as any,
+    );
+    expect(mockUtils.getLiveRiskIdsQuery).toHaveBeenCalledWith([4, 9], 7, {
+      userId: 5,
+      role: "Editor",
+    });
+    expect(r.status).toHaveBeenCalledWith(404);
+    expect(r.json).toHaveBeenCalledWith(expect.objectContaining({ data: "Risk not found" }));
+    expect(mockUtils.createUserRiskLinkQuery).not.toHaveBeenCalled();
   });
 });

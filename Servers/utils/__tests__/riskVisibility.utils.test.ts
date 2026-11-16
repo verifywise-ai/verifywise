@@ -1,8 +1,10 @@
 import { describe, it, expect } from "@jest/globals";
 
 jest.mock("../../database/db", () => ({ sequelize: { query: jest.fn() } }));
+jest.mock("../userPermission.utils", () => ({ getUserRoleInOrganization: jest.fn() }));
 
 import { sequelize } from "../../database/db";
+import { getUserRoleInOrganization } from "../userPermission.utils";
 import {
   getAccessibleProjectIdsQuery,
   isRiskVisibleQuery,
@@ -13,9 +15,11 @@ import {
   riskVisibilitySql,
   scopedRiskViewer,
   SYSTEM_RISK_VIEWER,
+  UNKNOWN_RISK_VIEWER,
 } from "../riskVisibility.utils";
 
 const mockQuery = sequelize.query as jest.Mock;
+const mockRole = getUserRoleInOrganization as jest.Mock;
 
 describe("riskVisibilitySql", () => {
   it.each(["Admin", "SuperAdmin"])("adds nothing for %s", (role) => {
@@ -119,17 +123,36 @@ describe("projectRiskVisibilitySql", () => {
 });
 
 describe("riskViewerForUserQuery", () => {
-  beforeEach(() => mockQuery.mockReset());
+  beforeEach(() => mockRole.mockReset());
 
-  it("reads the user's role in the organization", async () => {
-    mockQuery.mockResolvedValue([{ name: "Admin" }]);
+  it("reads the user's role in the organization from its membership", async () => {
+    mockRole.mockResolvedValue({ id: 1, name: "Admin", organizationId: null });
     expect(await riskViewerForUserQuery(3, 1)).toEqual({ userId: 3, role: "Admin" });
+    expect(mockRole).toHaveBeenCalledWith(1, 3);
   });
 
   it("scopes a user with no role in the organization, a SuperAdmin included (ruling J9)", async () => {
-    mockQuery.mockResolvedValue([]);
+    mockRole.mockResolvedValue(undefined);
     const viewer = await riskViewerForUserQuery(3, 1);
     expect(viewer).toEqual({ userId: 3, role: "" });
     expect(scopedRiskViewer(viewer)).toEqual(viewer);
+  });
+});
+
+describe("the not-linked test", () => {
+  it("counts a projects_risks row whatever its organization_id, so a NULL one still hides", () => {
+    const { sql } = riskVisibilitySql("r", { userId: 5, role: "Editor" });
+    const notExists = sql.slice(sql.indexOf("NOT EXISTS"), sql.indexOf("OR EXISTS"));
+    expect(notExists).toContain("prv.risk_id = r.id");
+    expect(notExists).not.toContain("organization_id");
+  });
+});
+
+describe("UNKNOWN_RISK_VIEWER", () => {
+  it("is a scoped viewer no user id matches, so it fails closed", () => {
+    expect(scopedRiskViewer(UNKNOWN_RISK_VIEWER)).toEqual({ userId: 0, role: "" });
+    expect(riskVisibilitySql("r", UNKNOWN_RISK_VIEWER).replacements).toEqual({
+      visibilityUserId: 0,
+    });
   });
 });

@@ -1,6 +1,7 @@
 import { QueryTypes, Transaction } from "sequelize";
 import { sequelize } from "../database/db";
 import { projectAccessSql, seesAllProjects } from "./projectVisibility.utils";
+import { getUserRoleInOrganization } from "./userPermission.utils";
 
 /** A user, with their role in the organization, as the risk visibility rule sees them. */
 export type UserRiskViewer = { userId: number; role: string };
@@ -47,6 +48,13 @@ export function scopedRiskViewer(viewer: RiskViewer): UserRiskViewer | null {
  * and the replacements it needs. The caller's query must bind :organizationId.
  * The check is a pair of EXISTS subqueries, so a risk's own aggregates (the
  * `projects` array of a list query) are never narrowed by it.
+ *
+ * The "not linked" test does not filter projects_risks.organization_id: the
+ * column is nullable, and a row with NULL there must still count as a link,
+ * or a linked risk would look unlinked and show to everyone. risk_id already
+ * pins the organization (the risk itself is filtered by it). The "linked to a
+ * use case they can see" test keeps the filter, where a NULL row hides the
+ * risk, which is the safe side.
  */
 export function riskVisibilitySql(
   riskAlias: string,
@@ -73,8 +81,7 @@ export function riskVisibilityCondition(
   return {
     sql: `(NOT EXISTS (
              SELECT 1 FROM projects_risks prv
-              WHERE prv.risk_id = ${riskAlias}.id
-                AND prv.organization_id = :organizationId)
+              WHERE prv.risk_id = ${riskAlias}.id)
            OR EXISTS (
              SELECT 1 FROM projects_risks prv
              JOIN projects pv
@@ -139,8 +146,9 @@ export async function isRiskVisibleQuery(
 
 /**
  * The viewer for a user known only by id (advisor tools, which carry no
- * request): their role in the organization. A user with no role in it is
- * a plain non-Admin, so the visibility rule applies to them.
+ * request): their role in the organization, read from organization_members
+ * by getUserRoleInOrganization. A user with no role in it is a plain
+ * non-Admin, so the visibility rule applies to them.
  * Ruling J9: a SuperAdmin with no role in this organization is scoped like a
  * non-Admin too: a SuperAdmin is a cross-tenant org/user admin, never an
  * in-org Admin, and an elected SuperAdmin follows their role in the org.
@@ -148,16 +156,17 @@ export async function isRiskVisibleQuery(
 export async function riskViewerForUserQuery(
   userId: number,
   organizationId: number,
-  transaction?: Transaction,
 ): Promise<UserRiskViewer> {
-  const rows = await sequelize.query<{ name: string }>(
-    `SELECT r.name FROM organization_members om
-       JOIN roles r ON r.id = om.role_id
-      WHERE om.user_id = :userId AND om.organization_id = :organizationId`,
-    { replacements: { userId, organizationId }, type: QueryTypes.SELECT, transaction },
-  );
-  return { userId, role: rows[0]?.name ?? "" };
+  const role = await getUserRoleInOrganization(organizationId, userId);
+  return { userId, role: role?.name ?? "" };
 }
+
+/**
+ * The viewer for a write that names no user. It fails closed: user id 0
+ * matches no owner, approver or use case member, so it sees only the risks
+ * that are linked to no use case and can link a risk to none.
+ */
+export const UNKNOWN_RISK_VIEWER: UserRiskViewer = Object.freeze({ userId: 0, role: "" });
 
 /**
  * Which of these use cases of the organization the viewer can see and write

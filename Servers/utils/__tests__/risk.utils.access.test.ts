@@ -25,7 +25,9 @@ jest.mock("../riskVisibility.utils", () => ({
 
 import { sequelize } from "../../database/db";
 import {
+  archiveRiskQuery,
   assertRiskReferencesInOrganization,
+  getRiskByIdQuery,
   linkRiskToProjectQuery,
   updateRiskByIdQuery,
 } from "../risk.utils";
@@ -169,5 +171,63 @@ describe("updateRiskByIdQuery link replacement", () => {
       viewer: SYSTEM_RISK_VIEWER,
     });
     expect(deleteSql()![0]).not.toContain("NOT IN");
+  });
+});
+
+describe("updateRiskByIdQuery reads the links once", () => {
+  // Reads in the update's transaction (the change-diff read of the risk
+  // itself runs outside it and is not part of the link edit).
+  const linkReads = () =>
+    mockQuery.mock.calls.filter(
+      (c) =>
+        String(c[0]).includes("SELECT project_id FROM projects_risks") && c[1]?.transaction === tx,
+    );
+
+  it.each([
+    ["a non-Admin", editor],
+    ["an Admin", admin],
+  ])("reads the risk's use case links once for %s", async (_label, viewer) => {
+    answerSql([3], [3, 8]);
+    mockAccessible.mockImplementation(async (ids: number[]) => ids.filter((i) => i === 3));
+    await updateRiskByIdQuery(5, { projects: [3] } as any, 1, tx, { viewer, ...quiet });
+    expect(linkReads()).toHaveLength(1);
+  });
+
+  it("does not read the links when they are not edited", async () => {
+    answerSql([], []);
+    await updateRiskByIdQuery(5, { risk_name: "R" } as any, 1, tx, { viewer: editor, ...quiet });
+    expect(linkReads()).toHaveLength(0);
+  });
+});
+
+describe("getRiskByIdQuery and archiveRiskQuery take a viewer", () => {
+  beforeEach(() => mockQuery.mockReset());
+
+  it("answers a risk hidden from a non-Admin like a missing one", async () => {
+    mockQuery.mockResolvedValue([[], 0]);
+    await expect(getRiskByIdQuery(5, 1, editor)).resolves.toBeNull();
+    const [sql, options] = mockQuery.mock.calls[0];
+    expect(sql).toContain("prv.risk_id = risks.id");
+    expect(options.replacements).toMatchObject({ id: 5, organizationId: 1, visibilityUserId: 7 });
+  });
+
+  it("reads any risk of the organization for an Admin or the system viewer", async () => {
+    mockQuery.mockResolvedValue([[], 0]);
+    await getRiskByIdQuery(5, 1, admin);
+    await getRiskByIdQuery(5, 1, SYSTEM_RISK_VIEWER, true);
+    expect(mockQuery.mock.calls[0][0]).not.toContain("visibilityUserId");
+    expect(mockQuery.mock.calls[1][0]).not.toContain("visibilityUserId");
+    expect(mockQuery.mock.calls[1][0]).not.toContain("is_deleted");
+  });
+
+  it("archives nothing, and answers like a missing risk, when the risk is hidden", async () => {
+    // the soft-delete UPDATE matches no row
+    mockQuery.mockResolvedValue([[], 0]);
+    await expect(archiveRiskQuery(5, 1, 7, tx, { viewer: editor })).resolves.toBeNull();
+    const [sql, options] = mockQuery.mock.calls[0];
+    expect(sql).toMatch(/^UPDATE risks SET is_deleted = true/);
+    expect(sql).toContain("prv.risk_id = risks.id");
+    expect(options.replacements).toMatchObject({ id: 5, organizationId: 1, visibilityUserId: 7 });
+    expect(mockQuery).toHaveBeenCalledTimes(1);
   });
 });

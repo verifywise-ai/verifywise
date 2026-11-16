@@ -493,6 +493,7 @@ describe("bulkUpdateProjectRisks", () => {
       expect(mockArchive).toHaveBeenCalledTimes(3);
       for (const id of [10, 11, 12]) {
         expect(mockArchive).toHaveBeenCalledWith(id, 4, 9, TX, {
+          viewer: expect.objectContaining({ userId: 9 }),
           recordSnapshots: false,
           runAutomations: false,
         });

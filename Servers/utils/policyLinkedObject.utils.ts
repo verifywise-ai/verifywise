@@ -4,7 +4,7 @@ import logger from "../utils/logger/fileLogger";
 import { PolicyLinkedObjectsModel } from "../domain.layer/models/policy/policy_linked_objects.model";
 import { assertOrgOwnsIds } from "./bulkAction.utils";
 import { policyExistsInOrganizationQuery } from "./policyManager.utils";
-import { riskVisibilityCondition, RiskViewer } from "./riskVisibility.utils";
+import { riskVisibilityCondition, riskVisibilitySql, RiskViewer } from "./riskVisibility.utils";
 import {
   NotFoundException,
   ValidationException,
@@ -21,7 +21,9 @@ const LINKABLE_OBJECT_TABLES = new Map<string, string>([
  * The object type must be risk or evidence, the policy and every object must
  * belong to the organization, and ids already linked are skipped. The policy
  * row is locked for the rest of the transaction, so two concurrent requests
- * cannot both insert the same link.
+ * cannot both insert the same link. A risk the viewer cannot see (risk
+ * visibility rule) counts as one outside the organization, so it gets the
+ * answer an unknown id gets.
  *
  * @returns The number of links actually created.
  * @throws ValidationException for an unknown object type.
@@ -34,6 +36,7 @@ export const linkObjectsToPolicyQuery = async (
   objectIds: number[],
   organizationId: number,
   transaction: Transaction,
+  viewer: RiskViewer,
 ): Promise<number> => {
   const table = LINKABLE_OBJECT_TABLES.get(String(objectType));
   if (!table) {
@@ -48,7 +51,13 @@ export const linkObjectsToPolicyQuery = async (
   }
   if (objectIds.length === 0) return 0;
 
-  await assertOrgOwnsIds({ table, ids: objectIds, organizationId, transaction });
+  await assertOrgOwnsIds({
+    table,
+    ids: objectIds,
+    organizationId,
+    transaction,
+    extra: table === "risks" ? riskVisibilitySql(table, viewer) : undefined,
+  });
 
   const existingRows = (await sequelize.query(
     `SELECT object_id FROM policy_linked_objects

@@ -17,6 +17,9 @@ import {
   getModelRiskCandidatesQuery,
   getVendorRiskCandidatesQuery,
   upsertRiskLinkQuery,
+  getLiveRiskIdsQuery,
+  getRiskLinkByIdQuery,
+  acknowledgeParentLevelChangeQuery,
 } from "../riskLink.utils";
 import { upsertVendorRiskLinkQuery } from "../vendorRiskLink.utils";
 import { SYSTEM_RISK_VIEWER } from "../riskVisibility.utils";
@@ -317,5 +320,53 @@ describe("risk link reads follow the risk visibility rule", () => {
       riskId: 99,
       visibilityUserId: 9,
     });
+  });
+});
+
+describe("risk link writes treat a hidden risk as a missing one", () => {
+  const editor = { userId: 9, role: "Editor" };
+
+  beforeEach(() => {
+    mockQuery.mockReset();
+    mockQuery.mockResolvedValue([]);
+  });
+
+  it("leaves a hidden risk out of the live ids a new link is checked against", async () => {
+    await getLiveRiskIdsQuery([4, 9], 7, editor);
+    const [sql, options] = mockQuery.mock.calls[0];
+    expect(sql).toContain("prv.risk_id = risks.id");
+    expect(options.replacements).toMatchObject({
+      ids: [4, 9],
+      organizationId: 7,
+      visibilityUserId: 9,
+    });
+  });
+
+  it.each([
+    ["reading a link", () => getRiskLinkByIdQuery(100, 7, editor)],
+    [
+      "acknowledging a parent level change",
+      () => acknowledgeParentLevelChangeQuery(7, 100, editor),
+    ],
+  ])("drops a link with a hidden source or target risk when %s", async (_label, run) => {
+    await run();
+    const [sql, options] = mockQuery.mock.calls[0];
+    expect(sql).toContain("risk_links.source_risk_id IS NULL OR EXISTS");
+    expect(sql).toContain("prv.risk_id = lsr.id");
+    expect(sql).toContain("risk_links.target_risk_id IS NULL OR EXISTS");
+    expect(sql).toContain("prv.risk_id = ltr.id");
+    expect(options.replacements.visibilityUserId).toBe(9);
+  });
+
+  it.each([
+    ["getLiveRiskIdsQuery", () => getLiveRiskIdsQuery([4], 7, SYSTEM_RISK_VIEWER)],
+    ["getRiskLinkByIdQuery", () => getRiskLinkByIdQuery(100, 7, SYSTEM_RISK_VIEWER)],
+    [
+      "acknowledgeParentLevelChangeQuery",
+      () => acknowledgeParentLevelChangeQuery(7, 100, SYSTEM_RISK_VIEWER),
+    ],
+  ])("adds nothing to %s for the system viewer", async (_label, run) => {
+    await run();
+    expect(mockQuery.mock.calls[0][0]).not.toContain("visibilityUserId");
   });
 });

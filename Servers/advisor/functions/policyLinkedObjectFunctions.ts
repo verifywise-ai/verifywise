@@ -3,6 +3,7 @@ import { QueryTypes } from "sequelize";
 import { createWriteToolFn } from "../confirmation/createWriteTool";
 import logger from "../../utils/logger/fileLogger";
 import { linkObjectsToPolicyQuery } from "../../utils/policyLinkedObject.utils";
+import { actingRiskViewer } from "./riskFunctions";
 import { parseBulkIds } from "../../utils/bulkAction.utils";
 
 // --- Read Tools ---
@@ -60,6 +61,8 @@ const agentLinkObjectToPolicy = createWriteToolFn({
   executeFn: async (params, organizationId) => {
     // Same checks as the REST endpoint: type, policy and object in the org, no duplicates.
     const objectIds = parseBulkIds([params.object_id], { field: "object_id" });
+    // A risk the acting user cannot see is answered like an unknown id.
+    const viewer = await actingRiskViewer(params, organizationId);
     const transaction = await sequelize.transaction();
     try {
       await linkObjectsToPolicyQuery(
@@ -68,6 +71,7 @@ const agentLinkObjectToPolicy = createWriteToolFn({
         objectIds,
         organizationId,
         transaction,
+        viewer,
       );
       await transaction.commit();
     } catch (error) {

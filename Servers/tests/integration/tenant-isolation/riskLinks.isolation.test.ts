@@ -74,8 +74,8 @@ describe("risk_links tenant isolation", () => {
 
     const [rows] = await sequelize.query(`SELECT id FROM risk_links LIMIT 1`);
     const linkId = (rows as any[])[0].id;
-    expect(await getRiskLinkByIdQuery(linkId, attacker.orgId)).toBeNull();
-    expect(await getRiskLinkByIdQuery(linkId, owner.orgId)).not.toBeNull();
+    expect(await getRiskLinkByIdQuery(linkId, attacker.orgId, SYSTEM_RISK_VIEWER)).toBeNull();
+    expect(await getRiskLinkByIdQuery(linkId, owner.orgId, SYSTEM_RISK_VIEWER)).not.toBeNull();
   });
 
   it("keeps the edge but hides it once the partner risk is soft-deleted (R7)", async () => {
@@ -251,7 +251,11 @@ describe("manual risk links respect the tenant boundary", () => {
     // test would pass against a query that has no tenant scoping at all.
     const attackerRisk = await createTestRisk(attacker.orgId);
 
-    const live = await getLiveRiskIdsQuery([ownerRisk, attackerRisk], owner.orgId);
+    const live = await getLiveRiskIdsQuery(
+      [ownerRisk, attackerRisk],
+      owner.orgId,
+      SYSTEM_RISK_VIEWER,
+    );
 
     expect(live).toEqual([ownerRisk]);
   });
@@ -264,7 +268,11 @@ describe("manual risk links respect the tenant boundary", () => {
       replacements: { id: deletedRisk },
     });
 
-    const live = await getLiveRiskIdsQuery([ownerRisk, deletedRisk], owner.orgId);
+    const live = await getLiveRiskIdsQuery(
+      [ownerRisk, deletedRisk],
+      owner.orgId,
+      SYSTEM_RISK_VIEWER,
+    );
 
     expect(live).toEqual([ownerRisk]);
   });

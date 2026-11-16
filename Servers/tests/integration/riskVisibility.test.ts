@@ -26,7 +26,9 @@ import {
   linkVendorToProject,
 } from "../factories";
 import {
+  archiveRiskQuery,
   getAllRisksQuery,
+  getRiskByIdQuery,
   getRisksByFrameworkQuery,
   getRisksByProjectQuery,
 } from "../../utils/risk.utils";
@@ -48,6 +50,7 @@ import { getPolicyLinkedObjectByIdQuery } from "../../utils/policyLinkedObject.u
 import { writeToolExecutors } from "../../advisor/confirmation/createWriteTool";
 // Importing the module registers the risk write tools with the executor map.
 import "../../advisor/functions/riskFunctions";
+import "../../advisor/functions/policyLinkedObjectFunctions";
 
 const ROLE = { Admin: 1, Editor: 3 } as const;
 const FRAMEWORK_ID = 1;
@@ -702,11 +705,21 @@ describe("advisor raw-SQL writes leave a hidden risk unchanged", () => {
   it("agent_assign_risk_owner", async () => {
     const { memberA, admin } = seed.users;
     const before = await riskRow(seed.risks.onlyB);
-    await run("agent_assign_risk_owner", {
-      risk_id: seed.risks.onlyB,
-      owner_user_id: memberA.userId,
-      _userId: memberA.userId,
-    });
+    // A hidden risk reports the same not-found error as a missing one.
+    await expect(
+      run("agent_assign_risk_owner", {
+        risk_id: seed.risks.onlyB,
+        owner_user_id: memberA.userId,
+        _userId: memberA.userId,
+      }),
+    ).rejects.toThrow("Risk not found");
+    await expect(
+      run("agent_assign_risk_owner", {
+        risk_id: MISSING_ID,
+        owner_user_id: memberA.userId,
+        _userId: memberA.userId,
+      }),
+    ).rejects.toThrow("Risk not found");
     expect(await riskRow(seed.risks.onlyB)).toEqual(before);
 
     await run("agent_assign_risk_owner", {
@@ -727,11 +740,13 @@ describe("advisor raw-SQL writes leave a hidden risk unchanged", () => {
   it("agent_change_risk_status", async () => {
     const { memberA, admin } = seed.users;
     const before = await riskRow(seed.risks.onlyB);
-    await run("agent_change_risk_status", {
-      risk_id: seed.risks.onlyB,
-      status: "Completed",
-      _userId: memberA.userId,
-    });
+    await expect(
+      run("agent_change_risk_status", {
+        risk_id: seed.risks.onlyB,
+        status: "Completed",
+        _userId: memberA.userId,
+      }),
+    ).rejects.toThrow("Risk not found");
     expect(await riskRow(seed.risks.onlyB)).toEqual(before);
 
     await run("agent_change_risk_status", {
@@ -742,15 +757,305 @@ describe("advisor raw-SQL writes leave a hidden risk unchanged", () => {
     expect((await riskRow(seed.risks.onlyB)).mitigation_status).toBe("Completed");
   });
 
-  it("agent_bulk_update_risk_status", async () => {
+  it("agent_bulk_update_risk_status reports only what it updated", async () => {
     const { memberA } = seed.users;
     const before = await riskRow(seed.risks.onlyB);
-    await run("agent_bulk_update_risk_status", {
-      risk_ids: [seed.risks.onlyA, seed.risks.onlyB],
+    const result = await run("agent_bulk_update_risk_status", {
+      risk_ids: [seed.risks.onlyA, seed.risks.onlyB, MISSING_ID],
       status: "Completed",
       _userId: memberA.userId,
     });
+    expect(result).toMatchObject({
+      updated_ids: [seed.risks.onlyA],
+      not_found_ids: [seed.risks.onlyB, MISSING_ID],
+    });
     expect((await riskRow(seed.risks.onlyA)).mitigation_status).toBe("Completed");
     expect(await riskRow(seed.risks.onlyB)).toEqual(before);
+  });
+
+  it("agent_delete_risk reports a hidden risk as not found and archives nothing", async () => {
+    const { memberA } = seed.users;
+    await expect(
+      run("agent_delete_risk", { risk_id: seed.risks.onlyB, _userId: memberA.userId }),
+    ).rejects.toThrow("Risk not found");
+    await expect(
+      run("agent_delete_risk", { risk_id: MISSING_ID, _userId: memberA.userId }),
+    ).rejects.toThrow("Risk not found");
+    expect((await riskRow(seed.risks.onlyB)).is_deleted).toBe(false);
+
+    await run("agent_delete_risk", { risk_id: seed.risks.onlyA, _userId: memberA.userId });
+    expect((await riskRow(seed.risks.onlyA)).is_deleted).toBe(true);
+  });
+
+  it("after an approval, checks visibility as the requester, not the approver", async () => {
+    const { memberA, admin } = seed.users;
+    const before = await riskRow(seed.risks.onlyB);
+    await expect(
+      run("agent_change_risk_status", {
+        risk_id: seed.risks.onlyB,
+        status: "Completed",
+        _userId: admin.userId,
+        _requesterId: memberA.userId,
+      }),
+    ).rejects.toThrow("Risk not found");
+    expect(await riskRow(seed.risks.onlyB)).toEqual(before);
+  });
+
+  it("with no user at all, touches only risks linked to no use case", async () => {
+    await expect(
+      run("agent_change_risk_status", { risk_id: seed.risks.onlyA, status: "Completed" }),
+    ).rejects.toThrow("Risk not found");
+    expect((await riskRow(seed.risks.onlyA)).mitigation_status).not.toBe("Completed");
+
+    await run("agent_change_risk_status", { risk_id: seed.risks.unlinked, status: "Completed" });
+    expect((await riskRow(seed.risks.unlinked)).mitigation_status).toBe("Completed");
+  });
+});
+
+describe("risk link writes treat a hidden risk as a missing one", () => {
+  async function insertLink(
+    source: number,
+    target: number,
+    relation: "related_to" | "inherits_from",
+    status: "suggested" | "confirmed",
+    staleParent = false,
+  ): Promise<number> {
+    const [row] = await sequelize.query<{ id: number }>(
+      `INSERT INTO risk_links (organization_id, source_risk_id, target_risk_id, relation_type, status, source, reasons, parent_level_changed_at)
+       VALUES (:orgId, :source, :target, :relation, :status, 'derived', '[]'::jsonb, ${
+         staleParent ? "NOW()" : "NULL"
+       })
+       RETURNING id`,
+      {
+        replacements: { orgId: seed.orgId, source, target, relation, status },
+        type: QueryTypes.SELECT,
+      },
+    );
+    return Number(row.id);
+  }
+
+  const linkCount = async () => {
+    const [row] = await sequelize.query<{ count: string }>(
+      `SELECT COUNT(*)::text AS count FROM risk_links WHERE organization_id = :orgId`,
+      { replacements: { orgId: seed.orgId }, type: QueryTypes.SELECT },
+    );
+    return Number(row.count);
+  };
+
+  it("creating a link with a hidden source or target answers like a missing risk", async () => {
+    const api = await apiAs(seed.users.memberA);
+    const r = seed.risks;
+    const post = (sourceRiskId: number, targetRiskId: number) =>
+      api.post("/api/riskLinks").send({ sourceRiskId, targetRiskId, relationType: "related_to" });
+
+    const hiddenTarget = await post(r.onlyA, r.onlyB);
+    const missingTarget = await post(r.onlyA, MISSING_ID);
+    expect(hiddenTarget.status).toBe(404);
+    expect(hiddenTarget.body).toEqual(missingTarget.body);
+
+    const hiddenSource = await post(r.onlyB, r.onlyA);
+    const missingSource = await post(MISSING_ID, r.onlyA);
+    expect(hiddenSource.status).toBe(404);
+    expect(hiddenSource.body).toEqual(missingSource.body);
+    expect(await linkCount()).toBe(0);
+
+    const visible = await post(r.onlyA, r.unlinked);
+    expect(visible.status).toBe(201);
+    const asAdmin = await (
+      await apiAs(seed.users.admin)
+    )
+      .post("/api/riskLinks")
+      .send({ sourceRiskId: r.onlyA, targetRiskId: r.onlyB, relationType: "related_to" });
+    expect(asAdmin.status).toBe(201);
+  });
+
+  it("changing the status of a link with a hidden end answers like a missing link", async () => {
+    const linkId = await insertLink(seed.risks.onlyA, seed.risks.onlyB, "related_to", "suggested");
+    const api = await apiAs(seed.users.memberA);
+    const hidden = await api.patch(`/api/riskLinks/${linkId}`).send({ status: "confirmed" });
+    const missing = await api.patch(`/api/riskLinks/${MISSING_ID}`).send({ status: "confirmed" });
+    expect(hidden.status).toBe(404);
+    expect(hidden.body).toEqual(missing.body);
+
+    const [row] = await sequelize.query<{ status: string }>(
+      `SELECT status FROM risk_links WHERE id = :linkId`,
+      { replacements: { linkId }, type: QueryTypes.SELECT },
+    );
+    expect(row.status).toBe("suggested");
+
+    const asAdmin = await (
+      await apiAs(seed.users.admin)
+    )
+      .patch(`/api/riskLinks/${linkId}`)
+      .send({ status: "confirmed" });
+    expect(asAdmin.status).toBe(200);
+  });
+
+  it("acknowledging a parent level change on a link with a hidden end answers like a missing link", async () => {
+    const linkId = await insertLink(
+      seed.risks.onlyA,
+      seed.risks.onlyB,
+      "inherits_from",
+      "confirmed",
+      true,
+    );
+    const api = await apiAs(seed.users.memberA);
+    const hidden = await api.post(`/api/riskLinks/${linkId}/acknowledge-parent-change`);
+    const missing = await api.post(`/api/riskLinks/${MISSING_ID}/acknowledge-parent-change`);
+    expect(hidden.status).toBe(404);
+    expect(hidden.body).toEqual(missing.body);
+
+    const flag = async () =>
+      (
+        await sequelize.query<{ changed: string | null }>(
+          `SELECT parent_level_changed_at AS changed FROM risk_links WHERE id = :linkId`,
+          { replacements: { linkId }, type: QueryTypes.SELECT },
+        )
+      )[0].changed;
+    expect(await flag()).not.toBeNull();
+
+    const asAdmin = await (
+      await apiAs(seed.users.admin)
+    ).post(`/api/riskLinks/${linkId}/acknowledge-parent-change`);
+    expect(asAdmin.status).toBe(200);
+    expect(await flag()).toBeNull();
+  });
+});
+
+describe("policy link writes treat a hidden risk as an unknown id", () => {
+  let policyId: number;
+
+  beforeEach(async () => {
+    const created = await (await apiAs(seed.users.admin)).post("/api/policies").send({
+      title: `Visibility link policy ${Date.now()}`,
+      content_html: "<p>Body</p>",
+      tags: ["Privacy"],
+      next_review_date: "2030-01-15",
+    });
+    expect(created.status).toBe(201);
+    policyId = created.body.data.id as number;
+  });
+
+  const linkedRisks = async () =>
+    sorted(
+      (
+        await sequelize.query<{ object_id: number }>(
+          `SELECT object_id FROM policy_linked_objects
+            WHERE policy_id = :policyId AND object_type = 'risk'`,
+          { replacements: { policyId }, type: QueryTypes.SELECT },
+        )
+      ).map((row) => Number(row.object_id)),
+    );
+
+  it("linking a hidden risk gets the unknown-id response and links nothing", async () => {
+    const api = await apiAs(seed.users.memberA);
+    const link = (ids: number[]) =>
+      api
+        .post(`/api/policy-linked/${policyId}/linked-objects`)
+        .send({ object_type: "risk", object_ids: ids });
+
+    const hidden = await link([seed.risks.onlyA, seed.risks.onlyB]);
+    const missing = await link([seed.risks.onlyA, MISSING_ID]);
+    expect(hidden.status).toBe(403);
+    expect(hidden.body).toEqual(missing.body);
+    expect(await linkedRisks()).toEqual([]);
+
+    expect((await link([seed.risks.onlyA])).status).toBe(201);
+    const asAdmin = await (
+      await apiAs(seed.users.admin)
+    )
+      .post(`/api/policy-linked/${policyId}/linked-objects`)
+      .send({ object_type: "risk", object_ids: [seed.risks.onlyB] });
+    expect(asAdmin.status).toBe(201);
+    expect(await linkedRisks()).toEqual(sorted([seed.risks.onlyA, seed.risks.onlyB]));
+  });
+
+  it("the advisor link tool answers a hidden risk like an unknown one", async () => {
+    const execute = writeToolExecutors.get("agent_link_object_to_policy");
+    if (!execute) throw new Error("agent_link_object_to_policy is not registered");
+    const params = (objectId: number) => ({
+      policy_id: policyId,
+      object_type: "risk",
+      object_id: objectId,
+      _userId: seed.users.memberA.userId,
+    });
+    const hidden = await execute(params(seed.risks.onlyB), seed.orgId).catch((e: Error) => e);
+    const missing = await execute(params(MISSING_ID), seed.orgId).catch((e: Error) => e);
+    expect(hidden).toBeInstanceOf(Error);
+    expect((hidden as Error).message).toBe((missing as Error).message);
+    expect(await linkedRisks()).toEqual([]);
+  });
+
+  it("unlink-all of a hidden risk answers like an unknown id and keeps its links", async () => {
+    await sequelize.query(
+      `INSERT INTO policy_linked_objects (organization_id, policy_id, object_type, object_id)
+       VALUES (:orgId, :policyId, 'risk', :b)`,
+      { replacements: { orgId: seed.orgId, policyId, b: seed.risks.onlyB } },
+    );
+    const api = await apiAs(seed.users.memberA);
+    const hidden = await api.delete(`/api/policy-linked/risk/${seed.risks.onlyB}/unlink-all`);
+    const missing = await api.delete(`/api/policy-linked/risk/${MISSING_ID}/unlink-all`);
+    expect(hidden.status).toBe(missing.status);
+    expect(hidden.body).toEqual(missing.body);
+    expect(await linkedRisks()).toEqual([seed.risks.onlyB]);
+
+    const asAdmin = await (
+      await apiAs(seed.users.admin)
+    ).delete(`/api/policy-linked/risk/${seed.risks.onlyB}/unlink-all`);
+    expect(asAdmin.status).toBe(200);
+    expect(await linkedRisks()).toEqual([]);
+  });
+});
+
+describe("a projects_risks row with NULL organization_id", () => {
+  it("still counts as a link, so the risk stays hidden", async () => {
+    const id = await risk(seed.orgId, "null org link", []);
+    await sequelize.query(
+      `INSERT INTO projects_risks (project_id, risk_id, organization_id)
+       VALUES (:projectB, :id, NULL)`,
+      { replacements: { projectB: seed.projectB, id } },
+    );
+    for (const viewer of [seed.users.memberA, seed.users.noAccess]) {
+      expect(await isRiskVisibleQuery(id, seed.orgId, viewer)).toBe(false);
+      expect(ids(await getAllRisksQuery(seed.orgId, "active", viewer))).not.toContain(id);
+    }
+    expect(await isRiskVisibleQuery(id, seed.orgId, seed.users.admin)).toBe(true);
+  });
+});
+
+describe("getRiskByIdQuery and archiveRiskQuery with a viewer", () => {
+  it("a hidden risk reads like a missing one", async () => {
+    const { memberA, admin } = seed.users;
+    expect(await getRiskByIdQuery(seed.risks.onlyB, seed.orgId, memberA)).toBeNull();
+    expect(await getRiskByIdQuery(MISSING_ID, seed.orgId, memberA)).toBeNull();
+    expect(Number((await getRiskByIdQuery(seed.risks.onlyA, seed.orgId, memberA))?.id)).toBe(
+      seed.risks.onlyA,
+    );
+    expect(Number((await getRiskByIdQuery(seed.risks.onlyB, seed.orgId, admin))?.id)).toBe(
+      seed.risks.onlyB,
+    );
+  });
+
+  it("archiving a hidden risk matches nothing and changes nothing", async () => {
+    const { memberA } = seed.users;
+    const transaction = await sequelize.transaction();
+    try {
+      expect(
+        await archiveRiskQuery(seed.risks.onlyB, seed.orgId, memberA.userId, transaction, {
+          viewer: memberA,
+        }),
+      ).toBeNull();
+      expect(
+        await archiveRiskQuery(seed.risks.onlyA, seed.orgId, memberA.userId, transaction, {
+          viewer: memberA,
+        }),
+      ).not.toBeNull();
+      await transaction.commit();
+    } catch (error) {
+      await transaction.rollback();
+      throw error;
+    }
+    expect((await riskRow(seed.risks.onlyB)).is_deleted).toBe(false);
+    expect((await riskRow(seed.risks.onlyA)).is_deleted).toBe(true);
   });
 });

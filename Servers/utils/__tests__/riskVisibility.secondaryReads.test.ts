@@ -1,13 +1,18 @@
 import { describe, it, expect, beforeEach } from "@jest/globals";
 
 jest.mock("../../database/db", () => ({ sequelize: { query: jest.fn() } }));
+jest.mock("../policyManager.utils", () => ({
+  policyExistsInOrganizationQuery: jest.fn().mockResolvedValue(true),
+}));
 
 import { sequelize } from "../../database/db";
 import { getPortfolioByProject, recordPortfolioSnapshot } from "../quantitativeRisk.utils";
 import {
   getAllPolicyLinkedObjectsQuery,
   getPolicyLinkedObjectByIdQuery,
+  linkObjectsToPolicyQuery,
 } from "../policyLinkedObject.utils";
+import { ForbiddenException } from "../../domain.layer/exceptions/custom.exception";
 import { wiseSearch } from "../search.utils";
 import { SYSTEM_RISK_VIEWER } from "../riskVisibility.utils";
 
@@ -64,6 +69,42 @@ describe("policy linked objects", () => {
     const [sql, options] = mockQuery.mock.calls[0];
     expect(sql).not.toContain("object_type <> 'risk'");
     expect(options.replacements).toEqual({ organizationId: 4, policy_id: 2 });
+  });
+});
+
+describe("linking objects to a policy", () => {
+  const TX = { id: "tx" } as never;
+  const ownershipCheck = () =>
+    mockQuery.mock.calls.find(([sql]) => String(sql).includes("SELECT COUNT(*)")) as [
+      string,
+      { replacements: Record<string, unknown> },
+    ];
+
+  it("counts a risk a non-Admin cannot see as one outside the organization", async () => {
+    // One of the two ids is hidden, so only one is counted: the same 403 an
+    // unknown id gets.
+    mockQuery.mockResolvedValueOnce([{ count: "1" }]);
+    await expect(linkObjectsToPolicyQuery(2, "risk", [7, 8], 4, TX, editor)).rejects.toThrow(
+      ForbiddenException,
+    );
+    const [sql, { replacements }] = ownershipCheck();
+    expect(sql).toContain("prv.risk_id = risks.id");
+    expect(replacements).toMatchObject({ organizationId: 4, visibilityUserId: 9 });
+  });
+
+  it.each([
+    ["an Admin", admin],
+    ["the system viewer", SYSTEM_RISK_VIEWER],
+  ])("checks only the organization for %s", async (_label, viewer) => {
+    mockQuery.mockResolvedValueOnce([{ count: "1" }]);
+    await linkObjectsToPolicyQuery(2, "risk", [7], 4, TX, viewer);
+    expect(ownershipCheck()[0]).not.toContain("visibilityUserId");
+  });
+
+  it("does not apply the risk rule to evidence", async () => {
+    mockQuery.mockResolvedValueOnce([{ count: "1" }]);
+    await linkObjectsToPolicyQuery(2, "evidence", [7], 4, TX, editor);
+    expect(ownershipCheck()[0]).not.toContain("visibilityUserId");
   });
 });
 

@@ -33,6 +33,7 @@ import {
   riskVisibilitySql,
   RiskViewer,
   scopedRiskViewer,
+  SYSTEM_RISK_VIEWER,
 } from "./riskVisibility.utils";
 
 type RiskAutomationTrigger = "risk_added" | "risk_updated" | "risk_deleted";
@@ -625,16 +626,23 @@ export const getRisksByFrameworkQuery = async (
   return result;
 };
 
+/**
+ * One risk with its links and mappings, or null when it is missing, archived
+ * (unless includeDeleted) or hidden from the viewer (risk visibility rule):
+ * a hidden risk is answered exactly like a missing one.
+ */
 export const getRiskByIdQuery = async (
   id: number,
   organizationId: number,
+  viewer: RiskViewer,
   includeDeleted: boolean = false,
 ): Promise<IRisk | null> => {
+  const visibility = riskVisibilitySql("risks", viewer);
   const whereClause = includeDeleted
     ? "WHERE id = :id AND organization_id = :organizationId"
     : "WHERE id = :id AND organization_id = :organizationId AND is_deleted = false";
-  const result = (await sequelize.query(`SELECT * FROM risks ${whereClause}`, {
-    replacements: { id, organizationId },
+  const result = (await sequelize.query(`SELECT * FROM risks ${whereClause}${visibility.sql}`, {
+    replacements: { id, organizationId, ...visibility.replacements },
   })) as [IRisk[], number];
   const projectRisk = result[0][0];
   if (!projectRisk) return null;
@@ -1056,13 +1064,17 @@ export const updateRiskByIdQuery = async (
     viewer,
   }: { recordSnapshots?: boolean; runAutomations?: boolean; viewer: RiskViewer },
 ): Promise<RiskModel | null> => {
-  const existingRisk = await getRiskByIdQuery(id, organizationId, true);
+  // Only feeds the change diff (automation, snapshots). Every caller has
+  // already checked the viewer can see this risk, so read it as the system.
+  const existingRisk = await getRiskByIdQuery(id, organizationId, SYSTEM_RISK_VIEWER, true);
   const scopedViewer = scopedRiskViewer(viewer) ?? undefined;
-  // Only an edit of the use case links needs the links as they were.
-  const linkedBefore =
-    scopedViewer && projectRisk.projects
-      ? await getLinkedProjectIdsQuery(id, organizationId, transaction)
-      : [];
+  // The use case links as they were, read once: the viewer check skips the
+  // ones already linked, and the link edit below diffs against them.
+  const editsProjectLinks =
+    (projectRisk.projects && projectRisk.projects.length > 0) || projectRisk.deletedLinkedProject;
+  const linkedBefore = editsProjectLinks
+    ? await getLinkedProjectIdsQuery(id, organizationId, transaction)
+    : [];
   // Unchanged owner/approver are not re-checked, so a risk whose owner has
   // left the organization can still be edited.
   await assertRiskReferencesInOrganization(
@@ -1182,20 +1194,8 @@ export const updateRiskByIdQuery = async (
   });
 
   // Handle project links - delete if explicitly flagged as deleted or if new projects are provided
-  if (
-    (projectRisk.projects && projectRisk.projects.length > 0) ||
-    projectRisk.deletedLinkedProject
-  ) {
-    // First, get the current projects linked to this risk to identify deleted ones
-    const currentProjectsResult = (await sequelize.query(
-      `SELECT project_id FROM projects_risks WHERE risk_id = :riskId AND organization_id = :organizationId`,
-      {
-        replacements: { riskId: id, organizationId },
-        transaction,
-      },
-    )) as [{ project_id: number }[], number];
-
-    const currentProjectIds = currentProjectsResult[0].map((row) => row.project_id);
+  if (editsProjectLinks) {
+    const currentProjectIds = linkedBefore;
     const newProjectIds = projectRisk.projects || [];
 
     // A non-Admin only replaces links among the use cases they can see. Links
@@ -1357,16 +1357,19 @@ export const deleteRiskByIdQuery = async (
   organizationId: number,
   transaction: Transaction,
   {
+    viewer,
     recordSnapshots = true,
     runAutomations = true,
-  }: { recordSnapshots?: boolean; runAutomations?: boolean } = {},
+  }: { viewer: RiskViewer; recordSnapshots?: boolean; runAutomations?: boolean },
 ): Promise<RiskModel | null> => {
   // Soft delete. Custom field values stay with the archived risk, and nothing
-  // else runs when no active risk matched (R-M7).
+  // else runs when no active risk matched (R-M7). A risk hidden from the
+  // viewer does not match, so it is answered like a missing one.
+  const visibility = riskVisibilitySql("risks", viewer);
   const result = (await sequelize.query(
-    `UPDATE risks SET is_deleted = true, deleted_at = NOW(), updated_at = NOW() WHERE id = :id AND organization_id = :organizationId AND is_deleted = false RETURNING *`,
+    `UPDATE risks SET is_deleted = true, deleted_at = NOW(), updated_at = NOW() WHERE id = :id AND organization_id = :organizationId AND is_deleted = false${visibility.sql} RETURNING *`,
     {
-      replacements: { id, organizationId },
+      replacements: { id, organizationId, ...visibility.replacements },
       mapToModel: true,
       // model: RiskModel,
       // type: QueryTypes.UPDATE,
@@ -1512,7 +1515,8 @@ export const enqueueBulkRiskAutomation = async (
  * and runs the automation once for the whole batch.
  *
  * Returns the archived row (the bulk archive uses it for its automation
- * summary), or null, doing nothing else, when no active risk matched.
+ * summary), or null, doing nothing else, when no active risk matched. A risk
+ * the viewer cannot see does not match (risk visibility rule).
  */
 export const archiveRiskQuery = async (
   id: number,
@@ -1520,11 +1524,13 @@ export const archiveRiskQuery = async (
   userId: number | undefined,
   transaction: Transaction,
   {
+    viewer,
     recordSnapshots = true,
     runAutomations = true,
-  }: { recordSnapshots?: boolean; runAutomations?: boolean } = {},
+  }: { viewer: RiskViewer; recordSnapshots?: boolean; runAutomations?: boolean },
 ): Promise<RiskModel | null> => {
   const archived = await deleteRiskByIdQuery(id, organizationId, transaction, {
+    viewer,
     recordSnapshots,
     runAutomations,
   });

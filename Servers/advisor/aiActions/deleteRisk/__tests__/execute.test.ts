@@ -3,11 +3,9 @@ jest.mock("../../../../utils/risk.utils", () => ({
 }));
 
 jest.mock("../../../../utils/riskVisibility.utils", () => ({
-  isRiskVisibleQuery: jest.fn(),
   riskViewerForUserQuery: jest.fn().mockResolvedValue({ userId: 9, role: "Editor" }),
 }));
 
-import { isRiskVisibleQuery } from "../../../../utils/riskVisibility.utils";
 import { archiveRiskQuery } from "../../../../utils/risk.utils";
 import { executeDeleteRisk } from "../execute";
 
@@ -26,19 +24,23 @@ const run = () =>
 describe("executeDeleteRisk", () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    (isRiskVisibleQuery as jest.Mock).mockResolvedValue(true);
   });
 
   it("answers a risk the requester cannot see like a missing one", async () => {
-    (isRiskVisibleQuery as jest.Mock).mockResolvedValue(false);
+    // The archive matches no row for a hidden risk, as for a missing one.
+    mockArchive.mockResolvedValue(null);
     await expect(run()).rejects.toThrow("could not be deleted");
-    expect(mockArchive).not.toHaveBeenCalled();
+    expect(mockArchive).toHaveBeenCalledWith(7, 4, 9, TX, {
+      viewer: { userId: 9, role: "Editor" },
+    });
   });
 
   it("archives through the shared path with the requester as the actor", async () => {
     mockArchive.mockResolvedValue(true);
     await expect(run()).resolves.toEqual({ entityId: 7 });
-    expect(mockArchive).toHaveBeenCalledWith(7, 4, 9, TX);
+    expect(mockArchive).toHaveBeenCalledWith(7, 4, 9, TX, {
+      viewer: { userId: 9, role: "Editor" },
+    });
   });
 
   it("throws when no active risk matched", async () => {

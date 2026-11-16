@@ -151,7 +151,7 @@ export async function executeCreateRisk(
     {
       userId: ctx.requesterId,
       organizationId: ctx.organizationId,
-      viewer: await riskViewerForUserQuery(ctx.requesterId, ctx.organizationId, ctx.transaction),
+      viewer: await riskViewerForUserQuery(ctx.requesterId, ctx.organizationId),
     },
     ctx.transaction,
   );

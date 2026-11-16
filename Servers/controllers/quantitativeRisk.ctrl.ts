@@ -190,7 +190,7 @@ export async function applyBenchmark(req: Request, res: Response): Promise<any> 
     );
 
     // Return the updated risk
-    const updatedRisk = await getRiskByIdQuery(riskId, req.organizationId!);
+    const updatedRisk = await getRiskByIdQuery(riskId, req.organizationId!, riskViewer(req));
     return res.status(200).json(STATUS_CODE[200](updatedRisk));
   } catch (error) {
     logStructured(

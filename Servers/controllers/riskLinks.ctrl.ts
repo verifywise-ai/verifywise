@@ -946,7 +946,8 @@ export async function updateRiskLinkStatus(req: Request, res: Response): Promise
       return res.status(400).json(STATUS_CODE[400](req.t!("Invalid status")));
     }
 
-    const link = await getRiskLinkByIdQuery(id, req.organizationId!);
+    // A link with a risk end the user cannot see answers like a missing link.
+    const link = await getRiskLinkByIdQuery(id, req.organizationId!, riskViewer(req));
     if (!link) {
       return res.status(404).json(STATUS_CODE[404](req.t!("Risk link not found")));
     }
@@ -1073,11 +1074,13 @@ export async function acknowledgeParentLevelChange(req: Request, res: Response):
       return res.status(400).json(STATUS_CODE[400](req.t!("Invalid link ID")));
     }
 
-    const cleared = await acknowledgeParentLevelChangeQuery(req.organizationId!, id);
+    // A link with a risk end the user cannot see answers like a missing link.
+    const viewer = riskViewer(req);
+    const cleared = await acknowledgeParentLevelChangeQuery(req.organizationId!, id, viewer);
     if (!cleared) {
       // No flag to clear: distinguish a missing/foreign link (404) from one
       // that was already reviewed (200, idempotent).
-      const link = await getRiskLinkByIdQuery(id, req.organizationId!);
+      const link = await getRiskLinkByIdQuery(id, req.organizationId!, viewer);
       if (!link) {
         return res.status(404).json(STATUS_CODE[404](req.t!("Risk link not found")));
       }
@@ -1144,13 +1147,19 @@ export async function createRiskLink(req: Request, res: Response): Promise<any> 
       return res.status(400).json(STATUS_CODE[400](req.t!("A risk cannot link to itself")));
     }
 
+    // A risk the user cannot see answers like a missing one.
+    const viewer = riskViewer(req);
     if (parent.entityType === "risk") {
-      const live = await getLiveRiskIdsQuery([sourceRiskId, parent.id], req.organizationId!);
+      const live = await getLiveRiskIdsQuery(
+        [sourceRiskId, parent.id],
+        req.organizationId!,
+        viewer,
+      );
       if (live.length !== 2) {
         return res.status(404).json(STATUS_CODE[404](req.t!("Risk not found")));
       }
     } else {
-      const childLive = await getLiveRiskIdsQuery([sourceRiskId], req.organizationId!);
+      const childLive = await getLiveRiskIdsQuery([sourceRiskId], req.organizationId!, viewer);
       if (childLive.length !== 1) {
         return res.status(404).json(STATUS_CODE[404](req.t!("Risk not found")));
       }

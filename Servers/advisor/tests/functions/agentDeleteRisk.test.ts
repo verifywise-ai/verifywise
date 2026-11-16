@@ -3,7 +3,6 @@ import { beforeEach, describe, expect, it, jest } from "@jest/globals";
 jest.mock("../../../utils/risk.utils");
 jest.mock("../../../utils/riskVisibility.utils", () => ({
   ...(jest.requireActual("../../../utils/riskVisibility.utils") as object),
-  isRiskVisibleQuery: jest.fn(),
   riskViewerForUserQuery: jest.fn(),
 }));
 jest.mock("../../../database/db", () => ({
@@ -28,31 +27,44 @@ describe("agent_delete_risk executor", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockTransaction.mockResolvedValue(tx);
-    mockArchive.mockResolvedValue(true);
+    mockArchive.mockResolvedValue({ id: 7 } as never);
     (visibility.riskViewerForUserQuery as jest.Mock<any>).mockResolvedValue({
       userId: 9,
       role: "Editor",
     });
-    (visibility.isRiskVisibleQuery as jest.Mock<any>).mockResolvedValue(true);
   });
 
-  it("leaves a risk the acting user cannot see alone, as a missing one", async () => {
-    (visibility.isRiskVisibleQuery as jest.Mock<any>).mockResolvedValue(false);
-    await execute({ risk_id: 7, _userId: 9 }, 4);
-    expect(mockArchive).not.toHaveBeenCalled();
+  it("reports a risk the acting user cannot see as not found, as a missing one", async () => {
+    mockArchive.mockResolvedValue(null);
+    await expect(execute({ risk_id: 7, _userId: 9 }, 4)).rejects.toThrow("Risk not found");
+    expect(mockArchive).toHaveBeenCalledWith(7, 4, 9, tx, {
+      viewer: { userId: 9, role: "Editor" },
+    });
+    expect(tx.commit).not.toHaveBeenCalled();
+    expect(tx.rollback).toHaveBeenCalled();
   });
 
   it("archives through the shared path with the acting user and commits", async () => {
     const result = await execute({ risk_id: 7, _userId: 9 }, 4);
 
-    expect(mockArchive).toHaveBeenCalledWith(7, 4, 9, tx);
+    expect(mockArchive).toHaveBeenCalledWith(7, 4, 9, tx, {
+      viewer: { userId: 9, role: "Editor" },
+    });
     expect(tx.commit).toHaveBeenCalled();
     expect(result).toEqual({ id: 7, deleted: true, message: "Risk deleted successfully" });
   });
 
-  it("passes no user when the gateway set none", async () => {
+  it("checks visibility as the requester after an approval", async () => {
+    await execute({ risk_id: 7, _userId: 9, _requesterId: 5 }, 4);
+    expect(visibility.riskViewerForUserQuery).toHaveBeenCalledWith(5, 4);
+  });
+
+  it("fails closed with no user when the gateway set none", async () => {
     await execute({ risk_id: 7 }, 4);
-    expect(mockArchive).toHaveBeenCalledWith(7, 4, undefined, tx);
+    expect(visibility.riskViewerForUserQuery).not.toHaveBeenCalled();
+    expect(mockArchive).toHaveBeenCalledWith(7, 4, undefined, tx, {
+      viewer: visibility.UNKNOWN_RISK_VIEWER,
+    });
   });
 
   it("rolls back when the archive fails", async () => {
