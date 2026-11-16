@@ -24,7 +24,7 @@ jest.mock("../../../utils/logger/fileLogger", () => ({
   logStructuredError: (...args: unknown[]) => mockLogError(...args),
 }));
 jest.mock("../../../utils/changeHistory.base.utils", () => ({
-  recordEntityCreation: (...args: unknown[]) => mockRecordCreation(...args),
+  recordEntityCreationBulk: (...args: unknown[]) => mockRecordCreation(...args),
 }));
 
 import {
@@ -52,6 +52,10 @@ const validRow = (overrides: Partial<RiskImportRow> = {}): RiskImportRow => ({
 });
 
 const sqlOf = (call: unknown[]): string => String(call[0]);
+
+/** The parsed data the creation history received for the nth imported risk. */
+const historyData = (n = 0) =>
+  (mockRecordCreation.mock.calls[0][1] as Array<{ data: Record<string, unknown> }>)[n].data;
 
 describe("importRisks", () => {
   beforeEach(() => {
@@ -228,12 +232,62 @@ describe("importRisks", () => {
       const sqls = mockQuery.mock.calls.map((c) => sqlOf(c));
       expect(sqls.filter((q) => q === "SAVEPOINT risk_import_row;")).toHaveLength(3);
       expect(sqls.filter((q) => q === "ROLLBACK TO SAVEPOINT risk_import_row;")).toHaveLength(1);
-      expect(sqls.filter((q) => q === "RELEASE SAVEPOINT risk_import_row;")).toHaveLength(2);
+      // Every savepoint is released, the failed one after its rollback, so none nest.
+      expect(sqls.filter((q) => q === "RELEASE SAVEPOINT risk_import_row;")).toHaveLength(3);
+      const rollbackAt = sqls.indexOf("ROLLBACK TO SAVEPOINT risk_import_row;");
+      expect(sqls[rollbackAt + 1]).toBe("RELEASE SAVEPOINT risk_import_row;");
       expect(mockTransaction.rollback).toHaveBeenCalledTimes(1);
       expect(mockTransaction.commit).not.toHaveBeenCalled();
     });
 
-    it("writes a creation history entry per imported risk, attributed to the importer", async () => {
+    it("reports every failed row, sorted by sheet row", async () => {
+      mockQuery.mockImplementation(async (sql: string) => {
+        if (sql.includes("INSERT INTO risks")) throw new Error("boom");
+        return [];
+      });
+      const result = await strictImport(
+        [
+          validRow({ risk_name: "A", row_number: 9 }),
+          validRow({ risk_name: "B", row_number: 3 }),
+          validRow({ risk_name: "C", row_number: 5 }),
+        ],
+        1,
+        5,
+      );
+      expect(result).toMatchObject({ success: false, imported: 0, failed: 3 });
+      expect(result.errors.map((e) => e.row)).toEqual([3, 5, 9]);
+      const sqls = mockQuery.mock.calls.map((c) => sqlOf(c));
+      expect(sqls.filter((q) => q === "ROLLBACK TO SAVEPOINT risk_import_row;")).toHaveLength(3);
+      expect(sqls.filter((q) => q === "RELEASE SAVEPOINT risk_import_row;")).toHaveLength(3);
+    });
+
+    it("logs a refused insert with its code, constraint, column and original stack", async () => {
+      const dbError = Object.assign(new Error("null value in column\nforged line"), {
+        original: { code: "23502", constraint: "risks_x_check", column: "risk_name" },
+      });
+      mockQuery.mockImplementation(async (sql: string) => {
+        if (sql.includes("INSERT INTO risks")) throw dbError;
+        return [];
+      });
+      await strictImport([validRow()], 1, 5);
+      const logged = mockLogError.mock.calls[0][1] as Error;
+      expect(logged).toBeInstanceOf(Error);
+      expect(logged.message).toBe(
+        "null value in column forged line code=23502 constraint=risks_x_check column=risk_name",
+      );
+      const frames = dbError.stack!.split("\n").filter((l) => /^\s+at \S/.test(l));
+      expect(frames.length).toBeGreaterThan(0);
+      expect(logged.stack).toBe([`Error: ${logged.message}`, ...frames].join("\n"));
+    });
+
+    it("fails the request when the creation history cannot be written", async () => {
+      mockRecordCreation.mockRejectedValueOnce(new Error("history column missing"));
+      await expect(strictImport([validRow()], 1, 5)).rejects.toThrow("history column missing");
+      expect(mockTransaction.rollback).toHaveBeenCalledTimes(1);
+      expect(mockTransaction.commit).not.toHaveBeenCalled();
+    });
+
+    it("writes the creation history for all imported risks at once, attributed to the importer", async () => {
       let id = 40;
       mockQuery.mockImplementation(async (sql: string) =>
         sql.includes("INSERT INTO risks") ? [{ id: ++id }] : [],
@@ -244,17 +298,26 @@ describe("importRisks", () => {
         77,
       );
       expect(result).toMatchObject({ success: true, imported: 2 });
-      expect(mockRecordCreation).toHaveBeenCalledTimes(2);
-      expect(mockRecordCreation).toHaveBeenNthCalledWith(
-        1,
+      expect(mockRecordCreation).toHaveBeenCalledTimes(1);
+      expect(mockRecordCreation).toHaveBeenCalledWith(
         "risk",
-        41,
+        [
+          { id: 41, data: expect.objectContaining({ risk_name: "A", likelihood: "Possible" }) },
+          { id: 42, data: expect.objectContaining({ risk_name: "B" }) },
+        ],
         77,
         3,
-        expect.objectContaining({ risk_name: "A", likelihood: "Possible" }),
         mockTransaction,
       );
-      expect(mockRecordCreation.mock.calls[1][1]).toBe(42);
+      // Written after the last row, before the commit.
+      const historyOrder = mockRecordCreation.mock.invocationCallOrder[0];
+      const lastInsert = Math.max(
+        ...mockQuery.mock.calls.map((c, i) =>
+          sqlOf(c).includes("INSERT INTO risks") ? mockQuery.mock.invocationCallOrder[i] : 0,
+        ),
+      );
+      expect(historyOrder).toBeGreaterThan(lastInsert);
+      expect(historyOrder).toBeLessThan(mockTransaction.commit.mock.invocationCallOrder[0]);
       expect(mockTransaction.commit).toHaveBeenCalledTimes(1);
     });
   });
@@ -273,7 +336,7 @@ describe("importRisks", () => {
         5,
       );
       expect(result).toMatchObject({ success: true, imported: 1 });
-      expect(mockRecordCreation.mock.calls[0][4]).toMatchObject({
+      expect(historyData()).toMatchObject({
         risk_name: "2024",
         risk_description: "Accuracy drops",
         impact: "5",
@@ -329,7 +392,7 @@ describe("importRisks", () => {
   });
 
   describe("insert failures", () => {
-    it("skips the creation history for rows after the first failed insert", async () => {
+    it("writes no creation history when any row fails", async () => {
       let inserts = 0;
       mockQuery.mockImplementation(async (sql: string) => {
         if (sql.includes("INSERT INTO risks")) {
@@ -346,8 +409,8 @@ describe("importRisks", () => {
       );
       expect(result.errors).toHaveLength(1);
       expect(inserts).toBe(3);
-      // Row A was written before the failure; row C comes after it and is rolled back anyway.
-      expect(mockRecordCreation).toHaveBeenCalledTimes(1);
+      // The import rolls back, so rows A and C get no history either.
+      expect(mockRecordCreation).not.toHaveBeenCalled();
     });
   });
 
@@ -454,7 +517,7 @@ describe("importRisks", () => {
         5,
       );
       expect(result.success).toBe(true);
-      expect(mockRecordCreation.mock.calls[0][4]).toMatchObject({
+      expect(historyData()).toMatchObject({
         risk_category: ["Operational risk"],
       });
     });
@@ -482,7 +545,7 @@ describe("importRisks", () => {
     it("keeps the bug fixes: string coercion and creation history", async () => {
       const result = await legacyImport([sparse({ impact: 5 as never })], 1, 5);
       expect(result.success).toBe(true);
-      expect(mockRecordCreation.mock.calls[0][4]).toMatchObject({ impact: "5" });
+      expect(historyData()).toMatchObject({ impact: "5" });
     });
   });
 });

@@ -1,7 +1,7 @@
 import ExcelJS from "exceljs";
 import { QueryTypes, Transaction } from "sequelize";
 import { sequelize } from "../../database/db";
-import { recordEntityCreation } from "../../utils/changeHistory.base.utils";
+import { recordEntityCreationBulk } from "../../utils/changeHistory.base.utils";
 import { findUsersNotInOrganization } from "../../utils/user.utils";
 import { translate } from "../../utils/i18n.utils";
 import { logStructuredError } from "../../utils/logger/fileLogger";
@@ -572,6 +572,35 @@ export function rowInsertError(row: number, err: unknown): RiskImportError {
   return keyedError(row, column ?? "general", key ?? "rowNotSaved");
 }
 
+/** Joins a value onto one line, so text from a crafted cell cannot forge extra log lines. */
+const oneLine = (value: unknown): string => String(value).replace(/[\r\n\t\u2028\u2029]+/g, " ");
+
+/**
+ * The error logged for a refused row insert: the database's message on one
+ * line plus its code, constraint and column as fields, with the original
+ * error's stack frames. The stack's own first line repeats the raw message,
+ * so it is replaced rather than kept.
+ */
+export function insertFailureForLog(err: unknown): Error {
+  const source = err as {
+    message?: unknown;
+    stack?: unknown;
+    original?: { code?: unknown; constraint?: unknown; column?: unknown };
+  } | null;
+  const original = source?.original;
+  const fields = (["code", "constraint", "column"] as const)
+    .filter((name) => typeof original?.[name] === "string")
+    .map((name) => `${name}=${oneLine(original![name])}`);
+  const message = [oneLine(source?.message ?? err), ...fields].join(" ");
+  const logged = new Error(message);
+  const frames =
+    typeof source?.stack === "string"
+      ? source.stack.split("\n").filter((line) => /^\s+at \S/.test(line))
+      : [];
+  if (frames.length > 0) logged.stack = [`Error: ${message}`, ...frames].join("\n");
+  return logged;
+}
+
 /** Advisory-lock class for pg_advisory_xact_lock(class, org): one risk import commit per org at a time. */
 const RISK_IMPORT_LOCK_CLASS = 5301;
 
@@ -728,7 +757,6 @@ export async function importRisks(
     return rejected(errors);
   }
 
-  let imported = 0;
   const insertErrors: RiskImportError[] = [];
   const transaction = await sequelize.transaction();
 
@@ -749,15 +777,19 @@ export async function importRisks(
       return rejected(nameErrors);
     }
 
+    const created: Array<{ id: number; data: Record<string, unknown> }> = [];
     for (let i = 0; i < rows.length; i++) {
       const data = parseRow(rows[i]);
       const rowIndex = rowNumbers[i];
       // A failed statement aborts the whole transaction; rolling back to the
       // row's savepoint keeps it usable, so the later rows still report
       // their own result instead of "current transaction is aborted".
+      // Only the risks INSERT runs in here: any other failure is not the
+      // row's data and fails the whole request.
       await sequelize.query(`SAVEPOINT ${ROW_SAVEPOINT};`, { transaction });
+      let inserted: { id: number }[];
       try {
-        const inserted = (await sequelize.query(
+        inserted = (await sequelize.query(
           `INSERT INTO risks (
              organization_id, risk_name, risk_owner, ai_lifecycle_phase, risk_description,
              risk_category, impact, assessment_mapping, controls_mapping,
@@ -790,55 +822,39 @@ export async function importRisks(
             transaction,
           },
         )) as { id: number }[];
-        // Same creation entries the risk form writes, on the same transaction.
-        // Once a row has failed the whole import rolls back, so later rows skip
-        // the history write; their INSERTs still run to report their own errors.
-        if (insertErrors.length === 0) {
-          await recordEntityCreation(
-            "risk",
-            inserted[0].id,
-            userId,
-            organizationId,
-            data,
-            transaction,
-          );
-        }
-        await sequelize.query(`RELEASE SAVEPOINT ${ROW_SAVEPOINT};`, { transaction });
-        imported++;
       } catch (err) {
+        // Released as well, so failed rows do not leave nested savepoints.
         await sequelize.query(`ROLLBACK TO SAVEPOINT ${ROW_SAVEPOINT};`, { transaction });
+        await sequelize.query(`RELEASE SAVEPOINT ${ROW_SAVEPOINT};`, { transaction });
         // The database's own text can name tables and columns and carry cell
-        // values: it goes to the log only, on one line so a crafted cell cannot
-        // forge extra log lines. The caller gets a fixed, translated message.
-        const detail = String((err as { message?: unknown })?.message ?? err).replace(
-          /[\r\n\t\u2028\u2029]+/g,
-          " ",
-        );
+        // values: it goes to the log only. The caller gets a fixed, translated message.
         logStructuredError(
           `Risk import row ${rowIndex} could not be saved`,
-          detail,
+          insertFailureForLog(err),
           "importRisks",
           FILE_NAME,
         );
         insertErrors.push(rowInsertError(rowIndex, err));
+        continue;
       }
+      await sequelize.query(`RELEASE SAVEPOINT ${ROW_SAVEPOINT};`, { transaction });
+      created.push({ id: inserted[0].id, data });
     }
 
     if (insertErrors.length > 0) {
       await transaction.rollback();
-      return {
-        success: false,
-        imported: 0,
-        failed: rows.length,
-        errors: insertErrors,
-        importedAt: new Date().toISOString(),
-      };
+      return rejected(insertErrors);
     }
+
+    // Same creation entries the risk form writes, under the importing user, on
+    // the import's transaction: written only when every row went in, and a
+    // failure here fails the request (the catch below rolls everything back).
+    await recordEntityCreationBulk("risk", created, userId, organizationId, transaction);
 
     await transaction.commit();
     return {
       success: true,
-      imported,
+      imported: created.length,
       failed: 0,
       errors: [],
       importedAt: new Date().toISOString(),

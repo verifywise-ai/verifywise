@@ -7,7 +7,9 @@ jest.mock("../../../utils/logger/fileLogger", () => ({
   default: { error: jest.fn(), warn: jest.fn(), info: jest.fn() },
   logStructuredError: jest.fn(),
 }));
-jest.mock("../../../utils/changeHistory.base.utils", () => ({ recordEntityCreation: jest.fn() }));
+jest.mock("../../../utils/changeHistory.base.utils", () => ({
+  recordEntityCreationBulk: jest.fn(),
+}));
 
 import ExcelJS from "exceljs";
 import { sequelize } from "../../../database/db";
@@ -138,12 +140,14 @@ describe("importRisks savepoints", () => {
       "SAVEPOINT",
       "INSERT",
       "ROLLBACK",
+      "RELEASE",
       "SAVEPOINT",
       "INSERT",
       "RELEASE",
       "SAVEPOINT",
       "INSERT",
       "ROLLBACK",
+      "RELEASE",
     ]);
     expect(mockQuery.mock.calls[2][0]).toContain("ROLLBACK TO SAVEPOINT");
     expect(result).toMatchObject({
