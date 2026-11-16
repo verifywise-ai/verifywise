@@ -47,6 +47,9 @@ jest.mock("../../utils/refreshToken.utils", () => ({
   revokeTokenFamily: jest.fn().mockResolvedValue(undefined),
   revokeAllUserTokens: jest.fn().mockResolvedValue(undefined),
 }));
+jest.mock("../../utils/oneTimeToken.utils", () => ({
+  consumeOneTimeToken: jest.fn().mockResolvedValue({ id: 1 }),
+}));
 jest.mock("../../utils/logger/fileLogger", () => ({
   __esModule: true,
   default: { debug: jest.fn(), error: jest.fn(), info: jest.fn() },
@@ -248,6 +251,7 @@ import {
   acceptInvitationAsExistingUser,
   loginUserWithMicrosoft,
 } from "../user.ctrl";
+import resetPasswordMiddleware from "../../middleware/resetPassword.middleware";
 import {
   getAllUsersQuery,
   getUserByEmailQuery,
@@ -276,7 +280,8 @@ import { isUserSuperAdmin } from "../../utils/superAdmin.utils";
 import { getRoleNameById } from "../../utils/roleMap";
 import { generateUserTokens } from "../../utils/auth.utils";
 import { getTokenPayload } from "../../utils/jwt.utils";
-import { revokeTokenFamily } from "../../utils/refreshToken.utils";
+import { revokeAllUserTokens, revokeTokenFamily } from "../../utils/refreshToken.utils";
+import { consumeOneTimeToken } from "../../utils/oneTimeToken.utils";
 import bcrypt from "bcrypt";
 import { sequelize } from "../../database/db";
 import {
@@ -304,6 +309,12 @@ const mockAddMember = addOrganizationMemberQuery as jest.MockedFunction<
 >;
 const mockIsSuperAdmin = isUserSuperAdmin as jest.MockedFunction<typeof isUserSuperAdmin>;
 const mockTokenPayload = getTokenPayload as jest.MockedFunction<typeof getTokenPayload>;
+const mockConsumeOneTimeToken = consumeOneTimeToken as jest.MockedFunction<
+  typeof consumeOneTimeToken
+>;
+const mockRevokeAllUserTokens = revokeAllUserTokens as jest.MockedFunction<
+  typeof revokeAllUserTokens
+>;
 
 const ACME = { organization_id: 1, organization_name: "Acme", role_id: 1, role_name: "Admin" };
 const GLOBEX = { organization_id: 2, organization_name: "Globex", role_id: 3, role_name: "Editor" };
@@ -343,7 +354,7 @@ function createReq(overrides?: Partial<Request>): any {
   };
 }
 function createRes(): any {
-  const res: any = {};
+  const res: any = { locals: {} };
   res.status = jest.fn<any>().mockReturnValue(res);
   res.json = jest.fn<any>().mockReturnValue(res);
   res.send = jest.fn<any>().mockReturnValue(res);
@@ -682,54 +693,200 @@ describe("user.ctrl", () => {
   });
 
   describe("resetPassword", () => {
-    it("should return 202 on success", async () => {
+    function createResetRes(): any {
+      const res = createRes();
+      res.locals.oneTimeToken = "reset-token";
+      return res;
+    }
+
+    function mockResetUser(userMock: any, updatePassword = jest.fn().mockResolvedValue(undefined)) {
+      const UserModel = require("../../domain.layer/models/user/user.model").UserModel;
+      UserModel.createNewUser.mockResolvedValueOnce({
+        ...userMock,
+        updatePassword,
+        password_hash: "newhash",
+      });
+    }
+
+    it("consumes the token, updates the password, and revokes sessions in one transaction", async () => {
       const userMock = mockUser(buildUser({ name: "A", surname: "B", password_hash: "old" }));
       mockGetByEmail.mockResolvedValue(userMock as any);
-      const UserModel = require("../../domain.layer/models/user/user.model").UserModel;
-      UserModel.createNewUser.mockResolvedValueOnce({
-        ...userMock,
-        updatePassword: jest.fn().mockResolvedValue(undefined),
-        password_hash: "newhash",
-      });
+      mockResetUser(userMock);
       const resetMock = resetPasswordQuery as jest.MockedFunction<typeof resetPasswordQuery>;
       resetMock.mockResolvedValue(mockUser(buildUser()) as any);
-      const req = createReq({ body: { email: "a@b.com", newPassword: "newpass" } });
-      const res = createRes();
+      const req = createReq({ body: { email: "a@b.com", newPassword: "Password1!" } });
+      const res = createResetRes();
+
       await resetPassword(req, res);
+
+      const transaction = await (sequelize.transaction as jest.Mock).mock.results[0].value;
       expect(res.status).toHaveBeenCalledWith(202);
+      expect(mockConsumeOneTimeToken).toHaveBeenCalledWith(
+        "reset-token",
+        "password_reset",
+        transaction,
+      );
+      expect(resetMock).toHaveBeenCalledWith("a@b.com", "newhash", transaction);
+      expect(mockRevokeAllUserTokens).toHaveBeenCalledWith(userMock.id, transaction);
+      expect(transaction.commit).toHaveBeenCalled();
+      expect(transaction.rollback).not.toHaveBeenCalled();
     });
+
     it("updates by the stored email, not the raw request email", async () => {
-      // Stored email is canonical "a@b.com"; the request types a different
-      // case/whitespace variant. The case-sensitive UPDATE must target the
-      // stored value, or it would match zero rows and silently no-op.
       const userMock = mockUser(buildUser({ email: "a@b.com", password_hash: "old" }));
       mockGetByEmail.mockResolvedValue(userMock as any);
-      const UserModel = require("../../domain.layer/models/user/user.model").UserModel;
-      UserModel.createNewUser.mockResolvedValueOnce({
-        ...userMock,
-        updatePassword: jest.fn().mockResolvedValue(undefined),
-        password_hash: "newhash",
-      });
+      mockResetUser(userMock);
       const resetMock = resetPasswordQuery as jest.MockedFunction<typeof resetPasswordQuery>;
       resetMock.mockResolvedValue(mockUser(buildUser()) as any);
-      const req = createReq({ body: { email: "  A@B.COM  ", newPassword: "newpass" } });
-      const res = createRes();
+      const req = createReq({ body: { email: "  A@B.COM  ", newPassword: "Password1!" } });
+      const res = createResetRes();
+
       await resetPassword(req, res);
+
       expect(resetMock).toHaveBeenCalledWith("a@b.com", expect.anything(), expect.anything());
     });
+
+    it("does not consume the token when password validation fails", async () => {
+      const { ValidationException } = require("../../domain.layer/exceptions/custom.exception");
+      const userMock = mockUser(buildUser({ password_hash: "old" }));
+      const updatePassword = jest
+        .fn()
+        .mockRejectedValue(new ValidationException("Password requirements not met"));
+      mockGetByEmail.mockResolvedValue(userMock as any);
+      mockResetUser(userMock, updatePassword);
+      const resetMock = resetPasswordQuery as jest.MockedFunction<typeof resetPasswordQuery>;
+      const req = createReq({ body: { email: "a@b.com", newPassword: "PASSWORD1!" } });
+      const res = createResetRes();
+
+      await resetPassword(req, res);
+
+      const transaction = await (sequelize.transaction as jest.Mock).mock.results[0].value;
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(mockConsumeOneTimeToken).not.toHaveBeenCalled();
+      expect(resetMock).not.toHaveBeenCalled();
+      expect(mockRevokeAllUserTokens).not.toHaveBeenCalled();
+      expect(transaction.rollback).toHaveBeenCalled();
+      expect(transaction.commit).not.toHaveBeenCalled();
+    });
+
+    it("rejects a used token without updating the password", async () => {
+      const userMock = mockUser(buildUser({ password_hash: "old" }));
+      mockGetByEmail.mockResolvedValue(userMock as any);
+      mockResetUser(userMock);
+      mockConsumeOneTimeToken.mockResolvedValueOnce(null);
+      const resetMock = resetPasswordQuery as jest.MockedFunction<typeof resetPasswordQuery>;
+      const req = createReq({ body: { email: "a@b.com", newPassword: "Password1!" } });
+      const res = createResetRes();
+
+      await resetPassword(req, res);
+
+      const transaction = await (sequelize.transaction as jest.Mock).mock.results[0].value;
+      expect(res.status).toHaveBeenCalledWith(401);
+      expect(resetMock).not.toHaveBeenCalled();
+      expect(mockRevokeAllUserTokens).not.toHaveBeenCalled();
+      expect(transaction.rollback).toHaveBeenCalled();
+      expect(transaction.commit).not.toHaveBeenCalled();
+    });
+
+    it("rolls back token consumption when the password update fails", async () => {
+      const userMock = mockUser(buildUser({ password_hash: "old" }));
+      mockGetByEmail.mockResolvedValue(userMock as any);
+      mockResetUser(userMock);
+      const resetMock = resetPasswordQuery as jest.MockedFunction<typeof resetPasswordQuery>;
+      resetMock.mockRejectedValueOnce(new Error("DB update failed"));
+      const req = createReq({ body: { email: "a@b.com", newPassword: "Password1!" } });
+      const res = createResetRes();
+
+      await resetPassword(req, res);
+
+      const transaction = await (sequelize.transaction as jest.Mock).mock.results[0].value;
+      expect(res.status).toHaveBeenCalledWith(500);
+      expect(mockConsumeOneTimeToken).toHaveBeenCalledWith(
+        "reset-token",
+        "password_reset",
+        transaction,
+      );
+      expect(mockRevokeAllUserTokens).not.toHaveBeenCalled();
+      expect(transaction.rollback).toHaveBeenCalled();
+      expect(transaction.commit).not.toHaveBeenCalled();
+    });
+
     it("should return 500 when user is not found (null access before check)", async () => {
       mockGetByEmail.mockResolvedValue(null as any);
-      const req = createReq({ body: { email: "a@b.com", newPassword: "newpass" } });
-      const res = createRes();
+      const req = createReq({ body: { email: "a@b.com", newPassword: "Password1!" } });
+      const res = createResetRes();
       await resetPassword(req, res);
       expect(res.status).toHaveBeenCalledWith(500);
+      expect(mockConsumeOneTimeToken).not.toHaveBeenCalled();
     });
+
     it("should return 500 on error", async () => {
       mockGetByEmail.mockRejectedValue(new Error("DB error"));
-      const req = createReq({ body: { email: "a@b.com", newPassword: "newpass" } });
-      const res = createRes();
+      const req = createReq({ body: { email: "a@b.com", newPassword: "Password1!" } });
+      const res = createResetRes();
       await resetPassword(req, res);
       expect(res.status).toHaveBeenCalledWith(500);
+      expect(mockConsumeOneTimeToken).not.toHaveBeenCalled();
+    });
+
+    it("allows a corrected retry with the same token and rejects replay after success", async () => {
+      const { ValidationException } = require("../../domain.layer/exceptions/custom.exception");
+      const userMock = mockUser(buildUser({ password_hash: "old" }));
+      const updatePassword = jest
+        .fn()
+        .mockRejectedValueOnce(new ValidationException("Password requirements not met"))
+        .mockResolvedValueOnce(undefined)
+        .mockResolvedValueOnce(undefined);
+      const resettableUser = { ...userMock, updatePassword, password_hash: "newhash" };
+      const UserModel = require("../../domain.layer/models/user/user.model").UserModel;
+      UserModel.createNewUser
+        .mockResolvedValueOnce(resettableUser)
+        .mockResolvedValueOnce(resettableUser)
+        .mockResolvedValueOnce(resettableUser);
+      mockGetByEmail
+        .mockResolvedValueOnce(userMock as any)
+        .mockResolvedValueOnce(userMock as any)
+        .mockResolvedValueOnce(userMock as any);
+      mockTokenPayload
+        .mockReturnValueOnce({ expire: Date.now() + 3600000, email: "a@b.com" } as any)
+        .mockReturnValueOnce({ expire: Date.now() + 3600000, email: "a@b.com" } as any)
+        .mockReturnValueOnce({ expire: Date.now() + 3600000, email: "a@b.com" } as any);
+
+      let consumed = false;
+      mockConsumeOneTimeToken
+        .mockImplementationOnce(async () => {
+          consumed = true;
+          return { id: 1 } as any;
+        })
+        .mockImplementationOnce(async () => (consumed ? null : ({ id: 1 } as any)));
+      const resetMock = resetPasswordQuery as jest.MockedFunction<typeof resetPasswordQuery>;
+      resetMock.mockResolvedValueOnce(mockUser(buildUser()) as any);
+
+      const attempt = async (newPassword: string) => {
+        const req = createReq({
+          headers: { authorization: "Bearer reset-token" },
+          body: { email: "a@b.com", newPassword },
+        });
+        const res = createRes();
+        const next = jest.fn();
+        await resetPasswordMiddleware(req, res, next);
+        expect(next).toHaveBeenCalledTimes(1);
+        await resetPassword(req, res);
+        return res;
+      };
+
+      const invalidResponse = await attempt("PASSWORD1!");
+      expect(invalidResponse.status).toHaveBeenCalledWith(400);
+      expect(consumed).toBe(false);
+
+      const retryResponse = await attempt("Password1!");
+      expect(retryResponse.status).toHaveBeenCalledWith(202);
+      expect(consumed).toBe(true);
+
+      const replayResponse = await attempt("Password2!");
+      expect(replayResponse.status).toHaveBeenCalledWith(401);
+      expect(resetMock).toHaveBeenCalledTimes(1);
+      expect(mockRevokeAllUserTokens).toHaveBeenCalledTimes(1);
     });
   });
 
