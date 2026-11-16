@@ -11,7 +11,7 @@ vi.mock("../../../../application/hooks/useAuth", () => ({
   useAuth: () => ({ userRoleName: "Admin" }),
 }));
 vi.mock("../../../../application/repository/project.repository", () => ({
-  deleteProject: vi.fn(),
+  deleteUseCase: vi.fn(),
 }));
 vi.mock("../../ViewRelationshipsButton", () => ({
   default: () => null,

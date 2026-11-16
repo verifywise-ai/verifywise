@@ -256,7 +256,9 @@ describe("updateRiskByIdQuery guards the write itself", () => {
     answerSql([], []);
     await updateRiskByIdQuery(5, { risk_name: "R" } as any, 1, tx, { viewer: editor, ...quiet });
     const [sql, options] = updateSql()!;
-    expect(sql).toContain("WHERE id = :id AND organization_id = :organizationId AND (NOT EXISTS");
+    expect(sql).toContain(
+      "WHERE id = :id AND organization_id = :organizationId AND ((risks.is_deleted = false AND NOT EXISTS",
+    );
     expect(sql).toContain("prv.risk_id = risks.id");
     expect(options.replacements).toMatchObject({ id: 5, organizationId: 1, visibilityUserId: 7 });
   });

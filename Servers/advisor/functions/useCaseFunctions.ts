@@ -1,4 +1,5 @@
-import { getUserProjects } from "../../utils/project.utils";
+import { getUserProjects, lockProjectForDelete } from "../../utils/project.utils";
+import { archiveRisksInBulkQuery, getRisksLinkedOnlyToProjectQuery } from "../../utils/risk.utils";
 import { calculateProjectRisks } from "../../utils/project.utils";
 import { findUsersNotInOrganization } from "../../utils/user.utils";
 import logger from "../../utils/logger/fileLogger";
@@ -361,31 +362,64 @@ const agentDeleteUseCase = createWriteToolFn({
   toolName: "agent_delete_use_case",
   warningLevel: "danger",
   descriptionFn: (params) =>
-    `Permanently delete use case #${params.use_case_id} and all associated data`,
+    `Permanently delete use case #${params.use_case_id} and all associated data. Risks linked only to this use case are archived.`,
   executeFn: async (params, organizationId) => {
     const transaction = await sequelize.transaction();
     try {
+      // Lock the use case first, as every project delete does, so the risks
+      // read below are the ones linked to it at the moment of the delete.
+      const useCaseId = params.use_case_id as number;
+      if (!(await lockProjectForDelete(useCaseId, organizationId, transaction))) {
+        await transaction.rollback();
+        return { success: false, message: `Use case #${useCaseId} not found` };
+      }
+
+      // Archive the active risks linked to this use case and to no other
+      // before their links go: an archived risk with no use case link stays
+      // private (Admins, owner, approver), an active one would be visible to
+      // everyone. Recorded in the risk history as the user who asked.
+      let archivedRiskIds: number[] = [];
+      const risks = await getRisksLinkedOnlyToProjectQuery(useCaseId, organizationId, transaction);
+      if (risks && risks.length > 0) {
+        const userId = Number(params._requesterId) || Number(params._userId);
+        const archived = await archiveRisksInBulkQuery(
+          risks.map((risk) => risk.id),
+          organizationId,
+          userId > 0 ? userId : undefined,
+          transaction,
+        );
+        archivedRiskIds = archived.map((row) => Number(row.id));
+      }
+
       // Delete dependent records first
       await sequelize.query(
         `DELETE FROM projects_members WHERE organization_id = :organizationId AND project_id = :id`,
-        { replacements: { organizationId, id: params.use_case_id }, transaction },
+        { replacements: { organizationId, id: useCaseId }, transaction },
       );
       await sequelize.query(
         `DELETE FROM files WHERE organization_id = :organizationId AND project_id = :id`,
-        { replacements: { organizationId, id: params.use_case_id }, transaction },
+        { replacements: { organizationId, id: useCaseId }, transaction },
       );
       await sequelize.query(
         `DELETE FROM projects_risks WHERE organization_id = :organizationId AND project_id = :id`,
-        { replacements: { organizationId, id: params.use_case_id }, transaction },
+        { replacements: { organizationId, id: useCaseId }, transaction },
       );
 
       const result = await sequelize.query(
         `DELETE FROM projects WHERE organization_id = :organizationId AND id = :id RETURNING id, project_title`,
-        { replacements: { organizationId, id: params.use_case_id }, transaction },
+        { replacements: { organizationId, id: useCaseId }, transaction },
       );
       await transaction.commit();
       const deleted = (result as any)[0]?.[0] || (result as any)[0];
-      return { success: true, deleted_use_case: deleted };
+      return {
+        success: true,
+        deleted_use_case: deleted,
+        archived_risk_ids: archivedRiskIds,
+        message:
+          archivedRiskIds.length > 0
+            ? `Use case #${useCaseId} deleted. ${archivedRiskIds.length} risk(s) linked only to it were archived so they stay private; they can be found in the archived risks view.`
+            : `Use case #${useCaseId} deleted. No risks were linked only to it, so none were archived.`,
+      };
     } catch (error) {
       await transaction.rollback();
       throw error;

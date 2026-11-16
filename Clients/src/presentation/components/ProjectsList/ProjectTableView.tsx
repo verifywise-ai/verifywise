@@ -38,7 +38,6 @@ import { TableEmptyStateLayout } from "../Table/TableEmptyStateLayout";
 import { IProjectTableViewProps } from "../../../domain/interfaces/i.project";
 import { Project } from "../../../domain/types/Project";
 import useFormattedDate from "../../../application/hooks/useFormattedDate";
-import { deleteProject } from "../../../application/repository/project.repository";
 import { VerifyWiseContext } from "../../../application/contexts/VerifyWise.context";
 import Alert from "../Alert";
 import { useCanCheck } from "../../../application/hooks/useCan";
@@ -308,42 +307,24 @@ const ProjectTableView: React.FC<IProjectTableViewProps> = ({
     [navigate],
   );
 
-  const handleDeleteProject = useCallback(
-    async (projectId: number) => {
-      try {
-        const response = await deleteProject({ id: projectId });
-        const isError = response.status === 404 || response.status === 500;
-
-        setAlert({
-          variant: isError ? "error" : "success",
-          title: isError ? "Error" : "Success",
-          body: isError
-            ? "Failed to delete use case. Please try again."
-            : "Use case deleted successfully.",
-        });
-
-        if (!isError) {
-          setProjects((prevProjects) => prevProjects.filter((project) => project.id !== projectId));
-          // Call the callback if provided to refresh the parent component
-          if (onProjectDeleted) {
-            onProjectDeleted();
-          }
-        }
-
-        setTimeout(() => {
-          setAlert(null);
-        }, 3000);
-      } catch (error) {
-        console.error("Error deleting project:", error);
-        setAlert({
-          variant: "error",
-          title: "Error",
-          body: "Failed to delete use case. Please try again.",
-        });
-        setTimeout(() => {
-          setAlert(null);
-        }, 3000);
+  // The dialog has already deleted the use case (and archived its risks when
+  // asked) in one request; a failure stays in the dialog and never gets here.
+  const handleProjectDeleted = useCallback(
+    (projectId: number) => {
+      setProjectIdToDelete(null);
+      setAlert({
+        variant: "success",
+        title: "Success",
+        body: "Use case deleted successfully.",
+      });
+      setProjects((prevProjects) => prevProjects.filter((project) => project.id !== projectId));
+      // Call the callback if provided to refresh the parent component
+      if (onProjectDeleted) {
+        onProjectDeleted();
       }
+      setTimeout(() => {
+        setAlert(null);
+      }, 3000);
     },
     [setProjects, onProjectDeleted],
   );
@@ -741,11 +722,7 @@ const ProjectTableView: React.FC<IProjectTableViewProps> = ({
           message="Note that deleting a use case will remove all data related to that use case from your system. This is permanent and non-recoverable."
           proceedText="Delete use case"
           onCancel={() => setProjectIdToDelete(null)}
-          onDelete={async () => {
-            const id = projectIdToDelete;
-            setProjectIdToDelete(null);
-            await handleDeleteProject(id);
-          }}
+          onDeleted={() => handleProjectDeleted(projectIdToDelete)}
         />
       )}
     </>

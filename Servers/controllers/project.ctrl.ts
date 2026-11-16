@@ -796,7 +796,39 @@ export async function updateProjectById(req: Request, res: Response): Promise<an
   }
 }
 
+/**
+ * DELETE /api/projects/:id (legacy, frozen): deletes the use case and keeps
+ * its risks. A risk left with no use case link is visible to everyone in the
+ * organization while it is active; API callers that want those risks kept
+ * private use DELETE /api/v1/projects/:id with archive_risks_linked_only_here.
+ */
 export async function deleteProjectById(req: Request, res: Response): Promise<any> {
+  return deleteProject(req, res, null);
+}
+
+/**
+ * DELETE /api/v1/projects/:id?archive_risks_linked_only_here=true|false.
+ * With true, the active risks linked to this use case and to no other are
+ * archived in the delete's transaction (so they stay private: an archived risk
+ * with no use case link is visible only to Admins, its owner and its
+ * approver). The route has already checked risks.edit for that case and
+ * parsed the flag into res.locals.archiveRisksLinkedOnlyHere.
+ */
+export async function deleteProjectByIdV1(req: Request, res: Response): Promise<any> {
+  return deleteProject(req, res, res.locals.archiveRisksLinkedOnlyHere === true);
+}
+
+/**
+ * The one body of both delete routes. `archiveRisks` null is the legacy
+ * route: no archive and its frozen response (202 with `true`). A boolean is
+ * the v1 route: 202 with { deleted: true, archived_risk_ids }. Anything that
+ * fails rolls back the archive and the delete together.
+ */
+async function deleteProject(
+  req: Request,
+  res: Response,
+  archiveRisks: boolean | null,
+): Promise<any> {
   const transaction = await sequelize.transaction();
   const projectId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id, 10);
 
@@ -811,12 +843,14 @@ export async function deleteProjectById(req: Request, res: Response): Promise<an
   try {
     // Lock, withdraw a pending approval, record the deletion, delete: one
     // shared order for every path that deletes a project.
-    const { deleted: deletedProject, withdrawnApprovalId } = await deleteProjectWithSideEffects(
-      projectId,
-      req.organizationId!,
-      transaction,
-      { userId: req.userId ?? null },
-    );
+    const {
+      deleted: deletedProject,
+      withdrawnApprovalId,
+      archivedRiskIds,
+    } = await deleteProjectWithSideEffects(projectId, req.organizationId!, transaction, {
+      userId: req.userId ?? null,
+      archiveRisksLinkedOnlyHere: archiveRisks === true,
+    });
     if (withdrawnApprovalId) {
       await logSuccess({
         eventType: "Update",
@@ -833,14 +867,21 @@ export async function deleteProjectById(req: Request, res: Response): Promise<an
 
       await logSuccess({
         eventType: "Delete",
-        description: `Deleted project ID ${projectId}`,
+        description: archivedRiskIds.length
+          ? `Deleted project ID ${projectId} and archived ${archivedRiskIds.length} risks linked only to it`
+          : `Deleted project ID ${projectId}`,
         functionName: "deleteProjectById",
         fileName: "project.ctrl.ts",
         userId: req.userId!,
         organizationId: req.organizationId!,
       });
 
-      return res.status(202).json(STATUS_CODE[202](deletedProject));
+      if (archiveRisks === null) {
+        return res.status(202).json(STATUS_CODE[202](deletedProject));
+      }
+      return res
+        .status(202)
+        .json(STATUS_CODE[202]({ deleted: true, archived_risk_ids: archivedRiskIds }));
     }
 
     await transaction.rollback();
@@ -874,7 +915,8 @@ export async function deleteProjectById(req: Request, res: Response): Promise<an
 /**
  * GET /api/v1/projects/:id/risks-linked-only-here: the active risks that
  * deleting this use case would leave linked to no use case, which makes them
- * visible to everyone in the organization. The delete dialog asks first. The
+ * visible to everyone in the organization unless the delete archives them
+ * (DELETE /api/v1/projects/:id). The delete dialog asks first. The
  * route lets through only callers who could delete the use case, and every
  * such caller can see these risks (they are linked to a use case the caller
  * has write access to).

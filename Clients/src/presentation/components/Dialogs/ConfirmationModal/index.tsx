@@ -13,6 +13,7 @@ interface ConfirmationModalProps {
   TitleFontSize?: number;
   confirmBtnSx?: SxProps<Theme> | undefined;
   isOpen?: boolean;
+  /** The action is running: both buttons are disabled and the dialog cannot be closed. */
   isLoading?: boolean;
   /** Disables only the proceed button, for example while the dialog loads what it asks about. */
   isProceedDisabled?: boolean;
@@ -36,7 +37,9 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
   return (
     <Modal
       open={isOpen}
-      onClose={onCancel}
+      // While the action runs, Escape and a backdrop click do nothing, like
+      // the Cancel button, which is disabled then.
+      onClose={isLoading ? undefined : onCancel}
       aria-labelledby="confirmation-modal-title"
       aria-describedby="confirmation-modal-body"
       slotProps={{

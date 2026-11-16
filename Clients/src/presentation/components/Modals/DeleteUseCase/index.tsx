@@ -4,14 +4,13 @@ import { ChevronDown } from "lucide-react";
 import ConfirmationModal from "../../Dialogs/ConfirmationModal";
 import Radio from "../../Inputs/Radio";
 import { status, text, radiusPx } from "../../../themes/palette";
+import { fontSize } from "../../../themes/typography";
 import { useTranslation } from "../../../../application/hooks/useTranslation";
 import { useCan } from "../../../../application/hooks/useCan";
 import { useRisksLinkedOnlyToProject } from "../../../../application/hooks/useRisksLinkedOnlyToProject";
-import { useBulkUpdateProjectRisks } from "../../../../application/hooks/useBulkUpdateProjectRisks";
+import { useDeleteUseCase } from "../../../../application/hooks/useDeleteUseCase";
+import type { DeleteUseCaseResult } from "../../../../application/repository/project.repository";
 import { fill, pluralKey } from "../../../../i18n/fill";
-
-/** The bulk route takes at most this many ids per request. */
-const ARCHIVE_BATCH_SIZE = 200;
 
 type RiskChoice = "archive" | "keep";
 
@@ -20,23 +19,31 @@ interface DeleteUseCaseModalProps {
   /** The dialog's usual text, shown in every state. */
   message: string;
   proceedText: string;
-  /** Deletes the use case. Runs after the archive, and never if it failed. */
-  onDelete: () => Promise<void> | void;
+  /**
+   * Runs once the use case is deleted, with what the server archived. The
+   * dialog stays open (and cannot be closed) until it returns; the caller
+   * closes it there. Never called when the delete failed.
+   */
+  onDeleted: (result: DeleteUseCaseResult) => Promise<void> | void;
   onCancel: () => void;
 }
 
 /**
  * The use case delete confirmation. A risk linked only to this use case is
- * linked to none once it is deleted, and a risk linked to no use case is
- * visible to everyone in the organization. When there are such risks the
- * dialog says so and offers to archive them first (the default) through the
- * bulk archive route. When there are none it is the plain confirmation.
+ * linked to none once it is deleted, and an active risk linked to no use case
+ * is visible to everyone in the organization (an archived one is not). When
+ * there are such risks the dialog says so and offers to archive them (the
+ * default). The delete is one request (DELETE /api/v1/projects/:id) carrying
+ * that choice: the server works out the risks again at that moment and
+ * archives them in the delete's transaction, so a failure changes nothing and
+ * the dialog stays open with an error. While it runs the dialog cannot be
+ * closed. When there are no such risks it is the plain confirmation.
  */
 function DeleteUseCaseModal({
   projectId,
   message,
   proceedText,
-  onDelete,
+  onDeleted,
   onCancel,
 }: DeleteUseCaseModalProps) {
   const { t, lang } = useTranslation();
@@ -44,45 +51,46 @@ function DeleteUseCaseModal({
   const { data, isLoading, isError, refetch } = useRisksLinkedOnlyToProject(projectId);
   const [choice, setChoice] = useState<RiskChoice>("archive");
   const [showNames, setShowNames] = useState(false);
-  const bulkUpdate = useBulkUpdateProjectRisks();
-  // Covers the archive and the delete, so neither can be sent twice.
+  const deleteUseCase = useDeleteUseCase();
+  // Covers the delete and the caller's follow-up, so neither runs twice and
+  // the dialog cannot close in between.
   const [isWorking, setIsWorking] = useState(false);
-  const [archiveError, setArchiveError] = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const count = data?.count ?? 0;
   const willArchive = count > 0 && canArchive && choice === "archive";
   const plural = (one: string, other: string) => t(pluralKey(lang, count, one, other));
 
   const handleProceed = async () => {
-    setArchiveError(null);
+    if (isWorking) return;
+    setDeleteError(null);
     setIsWorking(true);
+    let result: DeleteUseCaseResult;
     try {
-      if (willArchive && data) {
-        try {
-          const ids = data.risks.map((risk) => risk.id);
-          for (let i = 0; i < ids.length; i += ARCHIVE_BATCH_SIZE) {
-            await bulkUpdate.mutateAsync({
-              ids: ids.slice(i, i + ARCHIVE_BATCH_SIZE),
-              action: "archive",
-            });
-          }
-        } catch {
-          setArchiveError(
-            t("The risks could not be archived, so the use case was not deleted. Try again."),
-          );
-          // A batch may have gone through: read the list again so a retry
-          // sends only the risks that are still active.
-          void refetch();
-          return;
-        }
-      }
-      await onDelete();
+      result = await deleteUseCase.mutateAsync({
+        id: projectId,
+        archiveRisksLinkedOnlyHere: willArchive,
+      });
+    } catch {
+      // The server rolled back the archive and the delete together.
+      setDeleteError(t("The use case could not be deleted. Nothing was changed. Try again."));
+      // The linked risks may have changed since the dialog opened.
+      void refetch();
+      setIsWorking(false);
+      return;
+    }
+    try {
+      await onDeleted(result);
     } finally {
       setIsWorking(false);
     }
   };
 
-  const bodyText = { fontSize: "13px", color: text.primary };
+  const handleCancel = () => {
+    if (!isWorking) onCancel();
+  };
+
+  const bodyText = { fontSize: fontSize.base, color: text.primary };
 
   const body = (
     <Stack sx={{ gap: "12px" }} data-testid="delete-use-case-modal">
@@ -171,7 +179,7 @@ function DeleteUseCaseModal({
                 border: "none",
                 background: "none",
                 cursor: "pointer",
-                fontSize: "13px",
+                fontSize: fontSize.base,
                 color: text.primary,
               }}
             >
@@ -206,13 +214,13 @@ function DeleteUseCaseModal({
         </Stack>
       )}
 
-      {archiveError && (
+      {deleteError && (
         <Typography
           role="alert"
           sx={{ ...bodyText, color: status.error.text }}
-          data-testid="delete-use-case-archive-error"
+          data-testid="delete-use-case-error"
         >
-          {archiveError}
+          {deleteError}
         </Typography>
       )}
     </Stack>
@@ -224,7 +232,7 @@ function DeleteUseCaseModal({
       body={body}
       cancelText="Cancel"
       proceedText={proceedText}
-      onCancel={onCancel}
+      onCancel={handleCancel}
       onProceed={handleProceed}
       proceedButtonColor="error"
       proceedButtonVariant="contained"

@@ -196,7 +196,9 @@ Read models: `GET /api/v1/use-case-lifecycle/summary` (stale ids and the interva
 | POST | `/projects` | Create project |
 | PATCH | `/projects/:id` | Update project |
 | PATCH | `/projects/:id/status` | Update status |
-| DELETE | `/projects/:id` | Delete project |
+| DELETE | `/projects/:id` | Delete project (legacy, frozen: never archives risks) |
+| DELETE | `/v1/projects/:id?archive_risks_linked_only_here=true\|false` | Delete project, optionally archiving the risks linked only to it |
+| GET | `/v1/projects/:id/risks-linked-only-here` | Active risks linked only to this use case |
 
 ### Progress Endpoints
 
@@ -354,7 +356,11 @@ When a project is deleted, the following are removed:
 
 ### Risks linked only to the deleted use case
 
-A risk with no use case link is visible to everyone in the organization (see [Visibility](./risk-management.md#visibility)), so deleting a use case reveals the risks linked to it and to no other use case. The delete dialog (`presentation/components/Modals/DeleteUseCase`, used by the use case table and the use case settings page) reads them from `GET /api/v1/projects/:id/risks-linked-only-here` when it opens. When there are some, it says how many, offers to archive them first (the default) or keep them visible, and can list their names. Archiving uses the existing bulk archive route before the delete, and a failed archive stops the delete. The route has the delete route's gate: `useCase.edit` plus write access to the use case. The organizational project deleted from the Framework page uses its own dialog and does not ask.
+An active risk with no use case link is visible to everyone in the organization, while an archived one is visible only to Admins, its owner and its approver (see [Visibility](./risk-management.md#visibility)). Deleting a use case therefore reveals its active risks that are linked to no other use case, unless the delete archives them.
+
+`DELETE /api/v1/projects/:id?archive_risks_linked_only_here=true|false` (flag required) deletes the use case and, with `true`, archives those risks in the same transaction, after locking the use case and before removing its links. Any failure rolls back both. It answers 202 with `{ deleted: true, archived_risk_ids }`. Its gate is the legacy delete's (`useCase.edit` plus write access to the use case) and, with `true`, `risks.edit` too (403 without it). The legacy `DELETE /api/projects/:id` is frozen: it never archives, so API clients that want these risks kept private use the v1 route. The advisor's `agent_delete_use_case` archives them by default and says so in its result.
+
+The delete dialog (`presentation/components/Modals/DeleteUseCase`, used by the use case table and the use case settings page) reads the risks from `GET /api/v1/projects/:id/risks-linked-only-here` when it opens. When there are some, it says how many, offers to archive them (the default) or keep them visible, and can list their names. It then sends one request to the v1 delete with the choice; the server works the set out again at that moment. The dialog cannot be closed while the request runs, and a failure keeps it open with an error and changes nothing. The organizational project deleted from the Framework page uses its own dialog and the legacy route, and does not ask.
 
 ## Stakeholder Management
 
@@ -530,7 +536,8 @@ getAllProjects({signal?})
 getProjectById({id, signal?})
 createProject({body})
 updateProject({id, body})
-deleteProject({id})
+deleteProject({id})                              // legacy DELETE /projects/:id
+deleteUseCase({id, archiveRisksLinkedOnlyHere})  // DELETE /v1/projects/:id
 getProjectProgressData({routeUrl, signal?})
 ```
 

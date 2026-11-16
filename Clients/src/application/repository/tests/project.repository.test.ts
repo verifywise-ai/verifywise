@@ -3,6 +3,7 @@ import { apiServices } from "../../../infrastructure/api/networkServices";
 import {
   createProject,
   deleteProject,
+  deleteUseCase,
   getAllProjects,
   getProjectById,
   getProjectProgressData,
@@ -476,6 +477,43 @@ describe("project.repository", () => {
       vi.mocked(apiServices.delete).mockRejectedValue(error);
 
       await expect(deleteProject({ id: 1 })).rejects.toEqual(error);
+    });
+  });
+
+  describe("deleteUseCase", () => {
+    const options = (archive: boolean) => ({
+      params: { archive_risks_linked_only_here: String(archive) },
+      suppressGlobalErrorToast: true,
+    });
+
+    it("deletes through the v1 route and passes the archive choice", async () => {
+      const data = { deleted: true, archived_risk_ids: [3, 5] };
+      vi.mocked(apiServices.delete).mockResolvedValue({ status: 202, data } as any);
+
+      const result = await deleteUseCase({ id: 1, archiveRisksLinkedOnlyHere: true });
+
+      expect(apiServices.delete).toHaveBeenCalledWith("/v1/projects/1", options(true));
+      expect(result).toEqual(data);
+    });
+
+    it("sends false when the risks are kept", async () => {
+      vi.mocked(apiServices.delete).mockResolvedValue({
+        status: 202,
+        data: { deleted: true, archived_risk_ids: [] },
+      } as any);
+
+      await deleteUseCase({ id: 25, archiveRisksLinkedOnlyHere: false });
+
+      expect(apiServices.delete).toHaveBeenCalledWith("/v1/projects/25", options(false));
+    });
+
+    it.each([403, 404, 500])("rethrows a %s", async (status) => {
+      const error = { response: { status, data: { message: "x" } }, message: "x" };
+      vi.mocked(apiServices.delete).mockRejectedValue(error);
+
+      await expect(deleteUseCase({ id: 1, archiveRisksLinkedOnlyHere: true })).rejects.toEqual(
+        error,
+      );
     });
   });
 

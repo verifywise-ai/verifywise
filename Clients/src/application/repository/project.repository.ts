@@ -52,6 +52,33 @@ export async function deleteProject({ id }: { id: number }): Promise<any> {
   return response;
 }
 
+export interface DeleteUseCaseResult {
+  deleted: boolean;
+  /** The risks the delete archived (none unless archiving was asked for). */
+  archived_risk_ids: number[];
+}
+
+/**
+ * Delete a use case through the v1 route, in one request. With
+ * archiveRisksLinkedOnlyHere the server archives the active risks linked only
+ * to this use case in the same transaction, so they stay private; anything
+ * that fails rolls both back. The caller shows its own error, so the global
+ * error toast is skipped.
+ */
+export async function deleteUseCase({
+  id,
+  archiveRisksLinkedOnlyHere,
+}: {
+  id: number;
+  archiveRisksLinkedOnlyHere: boolean;
+}): Promise<DeleteUseCaseResult> {
+  const response = await apiServices.delete<DeleteUseCaseResult>(`/v1/projects/${id}`, {
+    params: { archive_risks_linked_only_here: String(archiveRisksLinkedOnlyHere) },
+    suppressGlobalErrorToast: true,
+  });
+  return response.data;
+}
+
 export interface RisksLinkedOnlyToProject {
   count: number;
   risks: { id: number; risk_name: string }[];

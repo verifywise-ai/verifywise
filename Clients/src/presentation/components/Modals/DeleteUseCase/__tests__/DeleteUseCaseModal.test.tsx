@@ -1,18 +1,16 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { screen, waitFor } from "@testing-library/react";
+import { screen, waitFor, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { renderWithProviders } from "../../../../../test/renderWithProviders";
 import DeleteUseCaseModal from "..";
 
 const mockGetRisks = vi.fn();
-const mockBulkUpdate = vi.fn();
+const mockDeleteUseCase = vi.fn();
 const mockCan = vi.fn(() => true);
 
 vi.mock("../../../../../application/repository/project.repository", () => ({
   getRisksLinkedOnlyToProject: (...args: unknown[]) => mockGetRisks(...args),
-}));
-vi.mock("../../../../../application/repository/projectRisk.repository", () => ({
-  bulkUpdateProjectRisks: (...args: unknown[]) => mockBulkUpdate(...args),
+  deleteUseCase: (...args: unknown[]) => mockDeleteUseCase(...args),
 }));
 vi.mock("../../../../../application/hooks/useCan", () => ({
   useCan: () => mockCan(),
@@ -29,18 +27,18 @@ const RISKS = {
 };
 
 function renderModal() {
-  const onDelete = vi.fn().mockResolvedValue(undefined);
+  const onDeleted = vi.fn().mockResolvedValue(undefined);
   const onCancel = vi.fn();
   renderWithProviders(
     <DeleteUseCaseModal
       projectId={7}
       message="This deletes the use case."
       proceedText="Delete"
-      onDelete={onDelete}
+      onDeleted={onDeleted}
       onCancel={onCancel}
     />,
   );
-  return { onDelete, onCancel };
+  return { onDeleted, onCancel };
 }
 
 const deleteButton = () => screen.getByRole("button", { name: "Delete" });
@@ -49,12 +47,12 @@ describe("DeleteUseCaseModal", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockCan.mockReturnValue(true);
-    mockBulkUpdate.mockResolvedValue({ data: { updated: 2, action: "archive" } });
+    mockDeleteUseCase.mockResolvedValue({ deleted: true, archived_risk_ids: [] });
   });
 
   it("is the plain confirmation when no risk is linked only to this use case", async () => {
     mockGetRisks.mockResolvedValue({ count: 0, risks: [] });
-    const { onDelete } = renderModal();
+    const { onDeleted } = renderModal();
 
     await waitFor(() => expect(deleteButton()).toBeEnabled());
     expect(screen.getByText("This deletes the use case.")).toBeInTheDocument();
@@ -62,14 +60,16 @@ describe("DeleteUseCaseModal", () => {
     expect(screen.queryByRole("radio")).not.toBeInTheDocument();
 
     await userEvent.click(deleteButton());
-    expect(onDelete).toHaveBeenCalledTimes(1);
-    expect(mockBulkUpdate).not.toHaveBeenCalled();
+    await waitFor(() => expect(onDeleted).toHaveBeenCalledTimes(1));
+    expect(mockDeleteUseCase).toHaveBeenCalledTimes(1);
+    expect(mockDeleteUseCase).toHaveBeenCalledWith({ id: 7, archiveRisksLinkedOnlyHere: false });
     expect(mockGetRisks).toHaveBeenCalledWith(expect.objectContaining({ id: 7 }));
   });
 
-  it("warns, archives the risks by default, then deletes", async () => {
+  it("warns and sends one delete that archives the risks by default", async () => {
     mockGetRisks.mockResolvedValue(RISKS);
-    const { onDelete } = renderModal();
+    mockDeleteUseCase.mockResolvedValue({ deleted: true, archived_risk_ids: [11, 12] });
+    const { onDeleted } = renderModal();
 
     expect(await screen.findByTestId("delete-use-case-risks-warning")).toHaveTextContent(
       "2 risks are linked only to this use case. After you delete it, everyone in the organization can see them.",
@@ -84,42 +84,75 @@ describe("DeleteUseCaseModal", () => {
     expect(screen.getByText("Biased scoring")).toBeVisible();
 
     await userEvent.click(deleteButton());
-    await waitFor(() => expect(onDelete).toHaveBeenCalledTimes(1));
-    expect(mockBulkUpdate).toHaveBeenCalledWith({ ids: [11, 12], action: "archive" });
-    expect(mockBulkUpdate.mock.invocationCallOrder[0]).toBeLessThan(
-      onDelete.mock.invocationCallOrder[0],
-    );
+    await waitFor(() => expect(onDeleted).toHaveBeenCalledTimes(1));
+    expect(mockDeleteUseCase).toHaveBeenCalledTimes(1);
+    expect(mockDeleteUseCase).toHaveBeenCalledWith({ id: 7, archiveRisksLinkedOnlyHere: true });
+    expect(onDeleted).toHaveBeenCalledWith({ deleted: true, archived_risk_ids: [11, 12] });
   });
 
-  it("keeps the risks when asked and only deletes", async () => {
+  it("keeps the risks when asked", async () => {
     mockGetRisks.mockResolvedValue(RISKS);
-    const { onDelete } = renderModal();
+    const { onDeleted } = renderModal();
 
     await userEvent.click(await screen.findByTestId("radio-delete-use-case-keep-risks"));
     await userEvent.click(deleteButton());
 
-    await waitFor(() => expect(onDelete).toHaveBeenCalledTimes(1));
-    expect(mockBulkUpdate).not.toHaveBeenCalled();
+    await waitFor(() => expect(onDeleted).toHaveBeenCalledTimes(1));
+    expect(mockDeleteUseCase).toHaveBeenCalledWith({ id: 7, archiveRisksLinkedOnlyHere: false });
   });
 
-  it("does not delete when the archive fails and says why", async () => {
+  it("stays open with an error when the delete fails, and lets the user retry", async () => {
     mockGetRisks.mockResolvedValue(RISKS);
-    mockBulkUpdate.mockRejectedValue(new Error("403"));
-    const { onDelete } = renderModal();
+    mockDeleteUseCase.mockRejectedValueOnce(new Error("500"));
+    const { onDeleted, onCancel } = renderModal();
 
     await screen.findByTestId("delete-use-case-risks-warning");
     await userEvent.click(deleteButton());
 
-    expect(await screen.findByTestId("delete-use-case-archive-error")).toHaveTextContent(
-      "The risks could not be archived, so the use case was not deleted. Try again.",
+    expect(await screen.findByTestId("delete-use-case-error")).toHaveTextContent(
+      "The use case could not be deleted. Nothing was changed. Try again.",
     );
-    expect(onDelete).not.toHaveBeenCalled();
-    expect(deleteButton()).toBeEnabled();
+    expect(onDeleted).not.toHaveBeenCalled();
+    expect(onCancel).not.toHaveBeenCalled();
+    expect(screen.getByTestId("delete-use-case-modal")).toBeInTheDocument();
+    // The list is read again, since it may have changed.
+    await waitFor(() => expect(mockGetRisks).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(deleteButton()).toBeEnabled());
+
+    await userEvent.click(deleteButton());
+    await waitFor(() => expect(onDeleted).toHaveBeenCalledTimes(1));
+    expect(screen.queryByTestId("delete-use-case-error")).not.toBeInTheDocument();
   });
 
-  it("shows a neutral line and still lets the user delete when the count fails", async () => {
+  it("cannot be closed or sent twice while the delete runs", async () => {
+    mockGetRisks.mockResolvedValue(RISKS);
+    let finish: (value: unknown) => void = () => {};
+    mockDeleteUseCase.mockReturnValue(new Promise((resolve) => (finish = resolve)));
+    const { onDeleted, onCancel } = renderModal();
+
+    await screen.findByTestId("delete-use-case-risks-warning");
+    await userEvent.click(deleteButton());
+
+    const cancel = screen.getByRole("button", { name: "Cancel" });
+    await waitFor(() => expect(cancel).toBeDisabled());
+    fireEvent.click(cancel);
+    fireEvent.keyDown(screen.getByTestId("delete-use-case-modal"), { key: "Escape" });
+    const backdrop = document.querySelector(".confirmation-backdrop");
+    expect(backdrop).not.toBeNull();
+    fireEvent.click(backdrop!);
+    fireEvent.click(screen.getByRole("button", { name: "Processing..." }));
+
+    expect(onCancel).not.toHaveBeenCalled();
+    expect(mockDeleteUseCase).toHaveBeenCalledTimes(1);
+    expect(screen.getByTestId("radio-delete-use-case-archive-risks")).toBeDisabled();
+
+    finish({ deleted: true, archived_risk_ids: [11, 12] });
+    await waitFor(() => expect(onDeleted).toHaveBeenCalledTimes(1));
+  });
+
+  it("shows a neutral line and deletes without archiving when the count fails", async () => {
     mockGetRisks.mockRejectedValue(new Error("500"));
-    const { onDelete } = renderModal();
+    const { onDeleted } = renderModal();
 
     expect(await screen.findByTestId("delete-use-case-risks-unknown")).toHaveTextContent(
       "Risks linked only to this use case may become visible to everyone in the organization.",
@@ -127,14 +160,14 @@ describe("DeleteUseCaseModal", () => {
     expect(screen.queryByRole("radio")).not.toBeInTheDocument();
 
     await userEvent.click(deleteButton());
-    await waitFor(() => expect(onDelete).toHaveBeenCalledTimes(1));
-    expect(mockBulkUpdate).not.toHaveBeenCalled();
+    await waitFor(() => expect(onDeleted).toHaveBeenCalledTimes(1));
+    expect(mockDeleteUseCase).toHaveBeenCalledWith({ id: 7, archiveRisksLinkedOnlyHere: false });
   });
 
   it("offers no archive to a role without risks.edit and keeps the warning", async () => {
     mockCan.mockReturnValue(false);
     mockGetRisks.mockResolvedValue({ count: 1, risks: [{ id: 11, risk_name: "Biased scoring" }] });
-    const { onDelete } = renderModal();
+    const { onDeleted } = renderModal();
 
     expect(await screen.findByTestId("delete-use-case-risks-warning")).toHaveTextContent(
       "1 risk is linked only to this use case.",
@@ -143,24 +176,7 @@ describe("DeleteUseCaseModal", () => {
     expect(screen.getByText("Your role does not allow archiving risks.")).toBeInTheDocument();
 
     await userEvent.click(deleteButton());
-    await waitFor(() => expect(onDelete).toHaveBeenCalledTimes(1));
-    expect(mockBulkUpdate).not.toHaveBeenCalled();
-  });
-
-  it("archives in batches of 200, the bulk route's limit", async () => {
-    const risks = Array.from({ length: 250 }, (_, i) => ({
-      id: i + 1,
-      risk_name: `Risk ${i + 1}`,
-    }));
-    mockGetRisks.mockResolvedValue({ count: 250, risks });
-    const { onDelete } = renderModal();
-
-    await screen.findByTestId("delete-use-case-risks-warning");
-    await userEvent.click(deleteButton());
-
-    await waitFor(() => expect(onDelete).toHaveBeenCalledTimes(1));
-    expect(mockBulkUpdate).toHaveBeenCalledTimes(2);
-    expect(mockBulkUpdate.mock.calls[0][0].ids).toHaveLength(200);
-    expect(mockBulkUpdate.mock.calls[1][0].ids).toHaveLength(50);
+    await waitFor(() => expect(onDeleted).toHaveBeenCalledTimes(1));
+    expect(mockDeleteUseCase).toHaveBeenCalledWith({ id: 7, archiveRisksLinkedOnlyHere: false });
   });
 });

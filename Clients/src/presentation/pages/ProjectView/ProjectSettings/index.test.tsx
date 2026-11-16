@@ -45,10 +45,10 @@ vi.mock("../../../../application/repository/entity.repository", () => ({
 }));
 
 const mockUpdateProject = vi.fn();
-const mockDeleteProject = vi.fn();
+const mockDeleteUseCase = vi.fn();
 vi.mock("../../../../application/repository/project.repository", () => ({
   updateProject: (...args: any[]) => mockUpdateProject(...args),
-  deleteProject: (...args: any[]) => mockDeleteProject(...args),
+  deleteUseCase: (...args: any[]) => mockDeleteUseCase(...args),
   // The delete dialog asks which risks the delete would reveal; none here.
   getRisksLinkedOnlyToProject: async () => ({ count: 0, risks: [] }),
 }));
@@ -495,7 +495,7 @@ describe("ProjectSettings", () => {
   });
 
   it("opens the delete confirmation dialog and deletes the project on confirm", async () => {
-    mockDeleteProject.mockResolvedValue({ status: 200 });
+    mockDeleteUseCase.mockResolvedValue({ deleted: true, archived_risk_ids: [] });
     renderWithProviders(<ProjectSettings />);
     await waitFor(() => expect(screen.getByDisplayValue("Chatbot Assistant")).toBeInTheDocument());
 
@@ -507,15 +507,15 @@ describe("ProjectSettings", () => {
     fireEvent.click(screen.getByRole("button", { name: "Delete" }));
 
     await waitFor(() => {
-      expect(mockDeleteProject).toHaveBeenCalledWith({ id: 5 });
+      expect(mockDeleteUseCase).toHaveBeenCalledWith({ id: 5, archiveRisksLinkedOnlyHere: false });
     });
     await waitFor(() => {
       expect(mockNavigate).toHaveBeenCalledWith("/overview");
     });
   });
 
-  it("shows an error alert when project deletion fails", async () => {
-    mockDeleteProject.mockResolvedValue({ status: 500 });
+  it("keeps the dialog open with an error when project deletion fails", async () => {
+    mockDeleteUseCase.mockRejectedValue(new Error("500"));
     renderWithProviders(<ProjectSettings />);
     await waitFor(() => expect(screen.getByDisplayValue("Chatbot Assistant")).toBeInTheDocument());
 
@@ -523,9 +523,10 @@ describe("ProjectSettings", () => {
     await waitFor(() => expect(screen.getByRole("button", { name: "Delete" })).toBeEnabled());
     fireEvent.click(screen.getByRole("button", { name: "Delete" }));
 
-    expect(
-      await screen.findByText("Failed to delete use case. Please try again."),
-    ).toBeInTheDocument();
+    expect(await screen.findByTestId("delete-use-case-error")).toHaveTextContent(
+      "The use case could not be deleted. Nothing was changed. Try again.",
+    );
+    expect(screen.getByText("Delete this use case?")).toBeInTheDocument();
     expect(mockNavigate).not.toHaveBeenCalled();
   });
 

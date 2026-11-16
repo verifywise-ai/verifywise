@@ -756,8 +756,8 @@ export const de: Record<string, string> = {
     "Risiken, die nur mit diesem Anwendungsfall verknüpft sind, können für alle in der Organisation sichtbar werden.",
   "Your role does not allow archiving risks.":
     "Ihre Rolle erlaubt das Archivieren von Risiken nicht.",
-  "The risks could not be archived, so the use case was not deleted. Try again.":
-    "Die Risiken konnten nicht archiviert werden, daher wurde der Anwendungsfall nicht gelöscht. Versuchen Sie es erneut.",
+  "The use case could not be deleted. Nothing was changed. Try again.":
+    "Der Anwendungsfall konnte nicht gelöscht werden. Es wurde nichts geändert. Versuchen Sie es erneut.",
   "Hide risk names": "Risikonamen ausblenden",
   "Show risk names": "Risikonamen anzeigen",
   "Archive this risk": "Dieses Risiko archivieren",
@@ -1523,8 +1523,8 @@ export const fr: Record<string, string> = {
   "Risks linked only to this use case may become visible to everyone in the organization.":
     "Les risques liés uniquement à ce cas d'usage peuvent devenir visibles par tous les membres de l'organisation.",
   "Your role does not allow archiving risks.": "Votre rôle ne permet pas d'archiver des risques.",
-  "The risks could not be archived, so the use case was not deleted. Try again.":
-    "Les risques n'ont pas pu être archivés, le cas d'usage n'a donc pas été supprimé. Réessayez.",
+  "The use case could not be deleted. Nothing was changed. Try again.":
+    "Le cas d'usage n'a pas pu être supprimé. Rien n'a été modifié. Réessayez.",
   "Hide risk names": "Masquer les noms des risques",
   "Show risk names": "Afficher les noms des risques",
   "Archive this risk": "Archiver ce risque",
@@ -2287,8 +2287,8 @@ export const es: Record<string, string> = {
   "Risks linked only to this use case may become visible to everyone in the organization.":
     "Los riesgos vinculados solo a este caso de uso pueden quedar visibles para todos en la organización.",
   "Your role does not allow archiving risks.": "Su rol no permite archivar riesgos.",
-  "The risks could not be archived, so the use case was not deleted. Try again.":
-    "No se pudieron archivar los riesgos, así que el caso de uso no se eliminó. Inténtelo de nuevo.",
+  "The use case could not be deleted. Nothing was changed. Try again.":
+    "No se pudo eliminar el caso de uso. No se ha cambiado nada. Inténtelo de nuevo.",
   "Hide risk names": "Ocultar los nombres de los riesgos",
   "Show risk names": "Mostrar los nombres de los riesgos",
   "Archive this risk": "Archivar este riesgo",

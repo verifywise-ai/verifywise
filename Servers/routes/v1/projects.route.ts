@@ -12,9 +12,11 @@ import {
 } from "../../middleware/validators/raci.validator";
 import {
   createProject,
+  deleteProjectByIdV1,
   getRisksLinkedOnlyToProject,
   updateProjectById,
 } from "../../controllers/project.ctrl";
+import { STATUS_CODE } from "../../utils/statusCode.utils";
 import { validateProjectIdParam } from "../../middleware/validators/project.validator";
 import { requireProjectAccess } from "../../middleware/projectAccess.middleware";
 import { getRaciMatrix, updateRaciUserRoles } from "../../controllers/raci.ctrl";
@@ -60,6 +62,43 @@ router.get(
   validateProjectIdParam,
   requireProjectAccess("id", "params", "write"),
   getRisksLinkedOnlyToProject,
+);
+
+const ARCHIVE_FLAG = "archive_risks_linked_only_here";
+
+/**
+ * The delete's archive choice, required so an API caller decides what happens
+ * to the risks linked only to this use case: "true" archives them (kept
+ * private), "false" keeps them active (visible to everyone once unlinked).
+ * Anything else, a missing or repeated value included, is a 400.
+ */
+const parseArchiveFlag = (req: Request, res: Response, next: NextFunction) => {
+  const raw = req.query[ARCHIVE_FLAG];
+  if (raw !== "true" && raw !== "false") {
+    return res.status(400).json(STATUS_CODE[400](`${ARCHIVE_FLAG} must be "true" or "false"`));
+  }
+  res.locals.archiveRisksLinkedOnlyHere = raw === "true";
+  return next();
+};
+
+// Archiving is the bulk risk archive, so it needs that route's permission too.
+const requireRiskArchivePermission = authorize("risks.edit");
+const requireRiskArchiveWhenAsked = (req: Request, res: Response, next: NextFunction) =>
+  res.locals.archiveRisksLinkedOnlyHere ? requireRiskArchivePermission(req, res, next) : next();
+
+// Delete a use case and, when asked, archive the risks linked only to it in
+// the same transaction. Same gate as DELETE /api/projects/:id (useCase.edit
+// plus write access), and risks.edit when archiving. The legacy route is
+// frozen and never archives.
+router.delete(
+  "/:id",
+  authenticateJWT,
+  authorize("useCase.edit"),
+  validateProjectIdParam,
+  parseArchiveFlag,
+  requireProjectAccess(),
+  requireRiskArchiveWhenAsked,
+  deleteProjectByIdV1,
 );
 
 router.get("/:id/raci", authenticateJWT, validateRaciProjectId, getRaciMatrix);

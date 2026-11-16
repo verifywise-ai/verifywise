@@ -1388,6 +1388,44 @@ export const archiveRiskQuery = async (
 };
 
 /**
+ * Archive several risks as one bulk action: each goes through archiveRiskQuery
+ * (change history, policy unlinks), then the history snapshots are recorded
+ * and the org's "risk deleted" automation runs once for the batch. Shared by
+ * the bulk archive (PATCH /projectRisks/bulk), the v1 use case delete and the
+ * advisor's use case delete.
+ *
+ * Runs as the system viewer: every caller has already decided which ids the
+ * user may archive, in the same transaction. Returns the archived rows; an id
+ * that is missing or already archived is skipped.
+ */
+export const archiveRisksInBulkQuery = async (
+  ids: number[],
+  organizationId: number,
+  userId: number | undefined,
+  transaction: Transaction,
+): Promise<RiskModel[]> => {
+  const archivedRows: RiskModel[] = [];
+  for (const id of ids) {
+    const archived = await archiveRiskQuery(id, organizationId, userId, transaction, {
+      viewer: SYSTEM_RISK_VIEWER,
+      recordSnapshots: false,
+      runAutomations: false,
+    });
+    if (archived) archivedRows.push(archived);
+  }
+  if (archivedRows.length > 0) {
+    await recordRiskSnapshots(organizationId, transaction);
+    await enqueueBulkRiskAutomation(
+      "risk_deleted",
+      archivedRows.map((row) => ({ before: row, after: row })),
+      organizationId,
+      transaction,
+    );
+  }
+  return archivedRows;
+};
+
+/**
  * One mapping table family: the risk junction, its impl-id column, and the
  * subquery that selects the impl rows belonging to :pfIds. Every name here is
  * a literal or comes from the Servers/structures registry, never from input.
@@ -1603,41 +1641,47 @@ export type ProjectRiskCategory = (typeof PROJECT_RISK_CATEGORIES)[number];
 export const PROJECT_RISK_CATEGORIES_SET: Set<string> = new Set(PROJECT_RISK_CATEGORIES);
 
 /**
- * The active risks that deleting a use case would leave linked to no use case
- * at all. Deleting a use case removes its projects_risks rows and keeps the
- * risks, and a risk with no projects_risks row is visible to everyone in the
- * organization (riskVisibilitySql), so these are the risks the deletion would
- * reveal.
+ * The active risks linked to this use case and to no other: deleting the use
+ * case removes its projects_risks rows and keeps the risks, so these would be
+ * left with no use case link. An active risk with no link is visible to
+ * everyone in the organization (riskVisibilitySql); an archived one is not, so
+ * the delete can archive these to keep them private
+ * (deleteProjectWithSideEffects with archiveRisksLinkedOnlyHere).
  *
- * Returns null when the use case is not in the organization. The "no other
- * use case" test ignores projects_risks.organization_id for the same reason
- * riskVisibilitySql does: a row with a NULL organization still counts as a
- * link. Archived (soft deleted) risks are left out.
+ * One query: the use case row is the outer side of a LEFT JOIN, so no row at
+ * all means the use case is not in the organization (null) and a single row
+ * with no risk means none. projects_risks.project_id is NOT NULL (part of the
+ * key), so `<>` is enough. The "no other use case" test ignores
+ * projects_risks.organization_id for the same reason riskVisibilitySql does: a
+ * row with a NULL organization still counts as a link. Archived risks are left
+ * out: they are already private once unlinked.
+ *
+ * Pass the delete's transaction (after the use case row is locked) to read the
+ * set at the moment of the delete.
  */
 export const getRisksLinkedOnlyToProjectQuery = async (
   projectId: number,
   organizationId: number,
+  transaction?: Transaction,
 ): Promise<{ id: number; risk_name: string }[] | null> => {
-  const [project] = await sequelize.query<{ id: number }>(
-    `SELECT id FROM projects WHERE id = :projectId AND organization_id = :organizationId`,
-    { replacements: { projectId, organizationId }, type: QueryTypes.SELECT },
-  );
-  if (!project) return null;
-
-  const rows = await sequelize.query<{ id: number; risk_name: string }>(
-    `SELECT r.id, r.risk_name
-       FROM risks r
-      WHERE r.organization_id = :organizationId
+  const rows = await sequelize.query<{ project_id: number; id: number | null; risk_name: string }>(
+    `SELECT p.id AS project_id, r.id, r.risk_name
+       FROM projects p
+       LEFT JOIN risks r
+         ON r.organization_id = p.organization_id
         AND r.is_deleted = false
         AND EXISTS (
           SELECT 1 FROM projects_risks pr
-           WHERE pr.risk_id = r.id AND pr.project_id = :projectId)
+           WHERE pr.risk_id = r.id AND pr.project_id = p.id)
         AND NOT EXISTS (
           SELECT 1 FROM projects_risks other
-           WHERE other.risk_id = r.id
-             AND other.project_id IS DISTINCT FROM :projectId)
+           WHERE other.risk_id = r.id AND other.project_id <> p.id)
+      WHERE p.id = :projectId AND p.organization_id = :organizationId
       ORDER BY r.risk_name, r.id`,
-    { replacements: { projectId, organizationId }, type: QueryTypes.SELECT },
+    { replacements: { projectId, organizationId }, type: QueryTypes.SELECT, transaction },
   );
-  return rows.map((row) => ({ id: Number(row.id), risk_name: row.risk_name }));
+  if (rows.length === 0) return null;
+  return rows
+    .filter((row) => row.id !== null)
+    .map((row) => ({ id: Number(row.id), risk_name: row.risk_name }));
 };

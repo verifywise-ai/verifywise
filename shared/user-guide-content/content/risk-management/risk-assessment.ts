@@ -259,14 +259,14 @@ export const riskAssessmentContent: ArticleContent = {
     {
       type: 'bullet-list',
       items: [
-        { text: 'The risk is not linked to a use case. A risk linked only to frameworks counts as not linked.' },
+        { text: 'The risk is not archived and not linked to a use case. A risk linked only to frameworks counts as not linked.' },
         { text: 'The risk is linked to a use case you own, are a team member of or reach through a group.' },
         { text: 'You are the risk\'s action owner or its approver.' },
       ],
     },
     {
       type: 'paragraph',
-      text: 'When the last use case link of a risk is removed, everyone in the organization can see the risk. This also happens when that use case is deleted. Before you delete a use case, the delete dialog tells you how many of its risks are linked to no other use case and lets you archive them or keep them visible to everyone. Archiving is selected by default. To keep such a risk private instead, cancel and link it to another use case first.',
+      text: 'When the last use case link of an active risk is removed, everyone in the organization can see the risk. This also happens when that use case is deleted. An archived risk with no use case link stays private: only Admins, its action owner and its approver can see it. Before you delete a use case, the delete dialog tells you how many of its risks are linked to no other use case and lets you archive them or keep them visible to everyone. Archiving is selected by default, and the risks are archived and the use case deleted together, so if something goes wrong nothing changes. Deleting a use case through the AI advisor archives these risks too. To keep such a risk active and private instead, cancel and link it to another use case first. If an archived risk with no use case link is ever restored, everyone in the organization can see it again.',
     },
     {
       type: 'paragraph',
