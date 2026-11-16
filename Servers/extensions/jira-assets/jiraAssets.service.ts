@@ -202,14 +202,14 @@ export class JiraConfigValidationError extends Error {
 
 /** Why a connection could not be saved. Each is a key in locales/en.json. */
 type JiraConnectionMessage =
-  | "JIRA Base URL is required"
+  | "Jira base URL is required"
   | "Workspace ID is required"
   | "Email is required"
   | "API Token is required"
   | "Jira connection fields must be text"
-  | "JIRA Base URL must be a valid http or https URL"
-  | "JIRA Base URL must not include a user name or password"
-  | "JIRA Base URL points to an address that is not allowed"
+  | "Jira base URL must be a valid http or https URL"
+  | "Jira base URL must not include a user name or password"
+  | "Jira base URL points to an address that is not allowed"
   | "Workspace ID may only contain letters, numbers and hyphens, up to 64 characters"
   | "Deployment type must be cloud or datacenter"
   | "Email must be a valid email address";
@@ -228,10 +228,10 @@ function connectionText(value: unknown): string | undefined {
 
 /** The save message for each reason the outbound URL policy refuses a URL. */
 const BASE_URL_MESSAGES: Record<UnsafeOutboundUrlCode, JiraConnectionMessage> = {
-  "invalid-url": "JIRA Base URL must be a valid http or https URL",
-  credentials: "JIRA Base URL must not include a user name or password",
-  "blocked-address": "JIRA Base URL points to an address that is not allowed",
-  redirect: "JIRA Base URL points to an address that is not allowed",
+  "invalid-url": "Jira base URL must be a valid http or https URL",
+  credentials: "Jira base URL must not include a user name or password",
+  "blocked-address": "Jira base URL points to an address that is not allowed",
+  redirect: "Jira base URL points to an address that is not allowed",
 };
 
 /**
@@ -270,7 +270,7 @@ export interface JiraConnectionFields {
  */
 export function parseJiraConnection(body: JiraAssetsConfig): JiraConnectionFields {
   const jiraBaseUrl = connectionText(body.jira_base_url);
-  if (!jiraBaseUrl) throw invalidConnection("JIRA Base URL is required");
+  if (!jiraBaseUrl) throw invalidConnection("Jira base URL is required");
   checkJiraBaseUrl(jiraBaseUrl);
 
   const workspaceId = connectionText(body.workspace_id);
@@ -715,13 +715,13 @@ function describeObject(
   attrIdToName: Record<string, string>,
 ): DescribedObject {
   const transformedAttrs = transformAttributes(jiraObj.attributes || [], attrIdToName);
-  const name = jiraObj.label || transformedAttrs["Name"] || `JIRA-${jiraObj.objectKey}`;
+  const name = jiraObj.label || transformedAttrs["Name"] || `Jira-${jiraObj.objectKey}`;
   const description =
     transformedAttrs["Description / Purpose"] || transformedAttrs["Description"] || "";
   return {
     jiraObjectId: String(jiraObj.id),
     name,
-    goal: description || "Imported from JIRA Assets",
+    goal: description || "Imported from Jira Assets",
     data: {
       id: jiraObj.id,
       objectKey: jiraObj.objectKey,

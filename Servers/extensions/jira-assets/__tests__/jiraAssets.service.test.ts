@@ -1716,21 +1716,21 @@ describe("saveConfig checks the connection fields before reading or writing", ()
   };
 
   it.each([
-    ["jira_base_url", undefined, "JIRA Base URL is required"],
-    ["jira_base_url", "   ", "JIRA Base URL is required"],
+    ["jira_base_url", undefined, "Jira base URL is required"],
+    ["jira_base_url", "   ", "Jira base URL is required"],
     ["jira_base_url", 42, "Jira connection fields must be text"],
-    ["jira_base_url", "x.atlassian.net", "JIRA Base URL must be a valid http or https URL"],
-    ["jira_base_url", "ftp://x.atlassian.net", "JIRA Base URL must be a valid http or https URL"],
-    ["jira_base_url", "javascript:alert(1)", "JIRA Base URL must be a valid http or https URL"],
+    ["jira_base_url", "x.atlassian.net", "Jira base URL must be a valid http or https URL"],
+    ["jira_base_url", "ftp://x.atlassian.net", "Jira base URL must be a valid http or https URL"],
+    ["jira_base_url", "javascript:alert(1)", "Jira base URL must be a valid http or https URL"],
     [
       "jira_base_url",
       "https://me:pw@x.atlassian.net",
-      "JIRA Base URL must not include a user name or password",
+      "Jira base URL must not include a user name or password",
     ],
     [
       "jira_base_url",
       "http://169.254.169.254/latest",
-      "JIRA Base URL points to an address that is not allowed",
+      "Jira base URL points to an address that is not allowed",
     ],
     ["workspace_id", "", "Workspace ID is required"],
     ["workspace_id", { id: 1 }, "Jira connection fields must be text"],

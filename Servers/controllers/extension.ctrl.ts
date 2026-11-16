@@ -132,7 +132,7 @@ const TEST_CONNECTION_DISPATCH: Record<string, TestConnectionRunner> = {
     return {
       success: result.success,
       message: result.success
-        ? "Successfully connected to JIRA Assets"
+        ? "Successfully connected to Jira Assets"
         : `Connection failed: ${result.error ?? "unknown error"}`,
       testedAt: new Date().toISOString(),
     };

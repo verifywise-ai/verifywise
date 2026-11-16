@@ -176,7 +176,7 @@ export class JiraAssetsClient {
     deploymentType: JiraDeploymentType = "cloud",
   ) {
     if (!WORKSPACE_ID_PATTERN.test(workspaceId)) {
-      throw new Error("JIRA workspace ID has an invalid format");
+      throw new Error("Jira workspace ID has an invalid format");
     }
     // For datacenter, validate baseUrl now so the constructor fails fast
     // instead of every request. Cloud ignores baseUrl but we still normalize

@@ -86,16 +86,16 @@ describe("POST /api/extensions/jira-assets/test-connection", () => {
     expect(status).toBe(200);
     expect(body.data).toMatchObject({
       success: false,
-      message: "JIRA Base URL points to an address that is not allowed",
+      message: "Jira base URL points to an address that is not allowed",
     });
     expect(mockClientFromConfig).not.toHaveBeenCalled();
   });
 
   it.each([
-    [{ jira_base_url: "jira.example.com" }, "JIRA Base URL must be a valid http or https URL"],
+    [{ jira_base_url: "jira.example.com" }, "Jira base URL must be a valid http or https URL"],
     [
       { jira_base_url: "https://u:p@jira.example.com" },
-      "JIRA Base URL must not include a user name or password",
+      "Jira base URL must not include a user name or password",
     ],
     [
       { workspace_id: "a/b" },
@@ -157,7 +157,7 @@ describe("jira-assets test connection with a missing configuration", () => {
     expect(status).toBe(200);
     expect(body.data).toMatchObject({
       success: false,
-      message: "JIRA Base URL is required",
+      message: "Jira base URL is required",
     });
     expect(mockClientFromConfig).not.toHaveBeenCalled();
   });
