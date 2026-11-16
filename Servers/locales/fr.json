@@ -1504,5 +1504,6 @@
   "A required value in this row is empty.": "Une valeur obligatoire de cette ligne est vide.",
   "A value in this row is too long.": "Une valeur de cette ligne est trop longue.",
   "A date in this row is not valid. Use YYYY-MM-DD.": "Une date de cette ligne n'est pas valide. Utilisez AAAA-MM-JJ.",
-  "This row could not be saved.": "Cette ligne n'a pas pu être enregistrée."
+  "This row could not be saved.": "Cette ligne n'a pas pu être enregistrée.",
+  "Only the risk's approver or an Admin can approve or reject it.": "Seul l'approbateur du risque ou un Admin peut l'approuver ou le rejeter."
 }

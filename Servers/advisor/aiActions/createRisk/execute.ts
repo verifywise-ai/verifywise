@@ -25,6 +25,7 @@
 import { QueryTypes } from "sequelize";
 import { sequelize } from "../../../database/db";
 import { createRiskService } from "../../../services/risk.service";
+import { callerCanDecideAnyRisk } from "../../../utils/riskApproval.utils";
 import { riskViewerForUserQuery } from "../../../utils/riskVisibility.utils";
 import { enqueueRiskLinkRecompute } from "../../../services/automations/automationProducer";
 import { createNewTaskQuery } from "../../../utils/task.utils";
@@ -126,6 +127,7 @@ export async function executeCreateRisk(
   // 1. Create the risk
   // ═══════════════════════════════════════════════════════
 
+  const viewer = await riskViewerForUserQuery(ctx.requesterId, ctx.organizationId);
   const newRisk = await createRiskService(
     {
       risk_name: input.risk_name,
@@ -151,7 +153,8 @@ export async function executeCreateRisk(
     {
       userId: ctx.requesterId,
       organizationId: ctx.organizationId,
-      viewer: await riskViewerForUserQuery(ctx.requesterId, ctx.organizationId),
+      viewer,
+      callerIsAdmin: await callerCanDecideAnyRisk(ctx.organizationId, viewer.role),
     },
     ctx.transaction,
   );

@@ -233,7 +233,13 @@ const createRisk: ToolDef = {
           projects: args.useCaseIds ?? [],
           frameworks: frameworkIds,
         },
-        { userId: caller.userId, organizationId: args.organizationId, viewer: SYSTEM_RISK_VIEWER },
+        // MCP risk tools are Admin-only (toolsFor), so the caller decides.
+        {
+          userId: caller.userId,
+          organizationId: args.organizationId,
+          viewer: SYSTEM_RISK_VIEWER,
+          callerIsAdmin: true,
+        },
         transaction,
       );
       await transaction.commit();
@@ -344,7 +350,13 @@ const updateRisk: ToolDef = {
         args.riskId,
         input,
         existing,
-        { userId: caller.userId, organizationId: args.organizationId, viewer: SYSTEM_RISK_VIEWER },
+        // MCP risk tools are Admin-only (toolsFor), so the caller decides.
+        {
+          userId: caller.userId,
+          organizationId: args.organizationId,
+          viewer: SYSTEM_RISK_VIEWER,
+          callerIsAdmin: true,
+        },
         transaction,
       );
       if (!risk) {
