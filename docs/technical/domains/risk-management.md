@@ -1,6 +1,6 @@
 # Risk Management Domain
 
-**Last Updated:** 2026-11-15
+**Last Updated:** 2026-11-16
 
 ## Overview
 
@@ -673,7 +673,7 @@ The validator (`middleware/validators/risks.validator.ts`) enforces the column l
 - `risk_name` - non-empty string (create). An empty `risk_name` on update is ignored.
 - `risk_owner` - positive user id (create)
 
-The risk form requires approver, approval status and assessment date only once an approver or an approval status is set. A new risk starts without an assessment date, and import leaves an empty assessment date empty.
+Approver, approval status and assessment date are optional everywhere (validators, form, advisor). A new risk starts without an assessment date. Import leaves an empty assessment date empty.
 
 ### Saving and clearing fields
 
@@ -705,6 +705,67 @@ Every risk write (REST, bulk `set_owner`, import, MCP, advisor, intake, AI Detec
 Ids fail closed: a value that is not a positive integer (for example `5.5`, which PostgreSQL would round to another id) is rejected, never skipped. The advisor's `agent_assign_risk_owner` and `agent_link_risk_to_project` run the same guard. Risk import reports a non-member or malformed owner or approver as a row error. REST create ignores a client-sent `is_demo`.
 
 `POST /riskHistory/snapshot` requires `risks.edit`.
+
+## Approval Status
+
+`approval_status` is one of `Pending`, `Approved`, `Rejected`, `Not required` (the incident approval values). The column is `NOT NULL DEFAULT 'Not required'` with the CHECK `risks_approval_status_check`. `risk_approval` holds the approver.
+
+### Rules
+
+`resolveRiskApproval` in `utils/riskApproval.utils.ts` decides the stored approver and status. It runs in `createRiskService` and `updateRiskService` (REST, MCP, advisor create) and in the advisor's update executor.
+
+- **Unknown values are ignored.** `/api/projectRisks` is frozen and unversioned. A submitted status that is not one of the four (after ignoring case, spaces, `_` and `-`) counts as not supplied: the stored value is kept on update, `Not required` is used on create. Old clients that send `"In Progress"` or `""` get no 400.
+- **Who decides.** "Decides" means an Admin (`organization.admin` via `roleHasPermission`) or the risk's saved approver. The approver named in the same request never counts.
+- **Status changes (R1).** While the risk has a saved approver, any change of `approval_status`, to any of the four values, needs a caller who decides. A status sent back unchanged is not a change. Other fields save normally for any editor.
+- **Approver changes (R2).** Changing `risk_approval` (to another user or to `null`) on an `Approved` or `Rejected` risk needs a caller who decides. On a `Pending` or `Not required` risk anyone with edit rights may change it. A new approver sets `Pending`; in that save only an Admin may set `Approved` or `Rejected` instead, and a non-Admin who asks for a decision gets the 403. Clearing the approver sets `Not required`.
+- **Naming yourself (R3).** A non-Admin cannot name themself as the new approver (403, "You can't name yourself as the approver. Ask an Admin or pick someone else."). Keeping yourself when you already are the saved approver is fine.
+- **No approver (R4).** On create, and when a save clears the approver, the status is `Not required`. When neither the approver nor the status changes, the stored status is kept, so a legacy `Approved` row whose approver is `NULL` (kept by the migration, or left by a deleted user) is not erased by an unrelated save. A status change on a risk with no approver before or after the save can only be `Not required`; `Pending`, `Approved` and `Rejected` are ignored there, with no 403.
+- **Concurrent saves.** `updateRiskService` and the advisor's update executor re-read `risk_approval` and `approval_status` with `SELECT ... FOR UPDATE` (scoped by `organization_id`, `lockRiskApprovalQuery`) inside the write transaction and resolve against that row, not the caller's earlier read.
+- **Notification.** A newly named approver who is not the caller gets the assignment notice (`notifyUserAssigned`, role `"Risk Approver"`, the Risk Owner notification type): an in-app notification and the assignment email. `notifyRiskAssignee` in `services/riskApproverNotification.service.ts` sends both the approver notice (`notifyNewRiskApprover`) and the owner notice on create, after commit, fire and forget, from REST create and update and from the advisor's create and update. The assigner's name is looked up through `organization_members` for the risk's organization.
+
+A refused change returns 403. `RiskApprovalForbiddenError` is a `ForbiddenException`, so the risk controllers and the AI Detection `handleException` map it to:
+
+```json
+{ "message": "Forbidden", "data": "Only the risk's approver or an Admin can change its approval." }
+```
+
+`data` is translated (en, de, fr). The advisor checks the same rule before it files an approval request (`advisor/aiActions/riskApprovalPrecheck.ts`) and tells the user the reason. It looks up the requester's role only when an approval field is sent.
+
+Bulk actions do not touch approval.
+
+Risk import (`extensions/risk-import/riskImport.service.ts`) stores `Pending` for a row with an approver and `Not required` for a row without one; `Approved` or `Rejected` from the file is kept only when an Admin imports (and the row names an approver). The two routes differ on input they cannot store as asked:
+
+- `POST /api/v1/risk-import/import` (strict) refuses the whole file, with keyed row errors from `approvalErrors`, when a row's approval status is not one of the four (`approvalStatusInvalid`), when a non-Admin imports `Approved` or `Rejected` (`approvalDecisionAdminOnly`, with or without an approver), or when a non-Admin names themself as the approver (`approverSelf`, R3). A blank status is not an error.
+- `POST /api/extensions/risk-import/import` (legacy, frozen) maps instead of refusing: an unknown status and a non-Admin's decision become `Pending` or `Not required`, and a non-Admin who names themself keeps the row as `Pending`. That last case is a legacy-only gap in R3.
+
+After the import commits, each approver it named, except the importing user, is notified once, fire and forget, on both routes (`notifyRiskApprovers`): one assignment notice listing all their imported risks (`notifyUserAssignedMany`), or the single-risk notice when they have one.
+
+### Migration
+
+`20261116120000-risk-approval-status-values` rewrote existing rows, matching case, whitespace, `_` and `-` insensitively:
+
+| Stored value | Becomes |
+|--------------|---------|
+| Approved, Rejected, Not required | the same value, canonical spelling |
+| Pending, Requires review, with an approver | Pending |
+| Pending, Requires review, without an approver | Not required |
+| anything else (`NULL`, `""`, mitigation values such as `In Progress`) | Not required |
+
+`Approved` and `Rejected` are kept even when the risk has no approver: the migration does not erase a recorded decision. Such a row keeps its status until someone clears it to `Not required` or an Admin names an approver (R4). It then sets the default, `NOT NULL` and the CHECK. It sends no notifications. `down()` drops the CHECK, `NOT NULL` and default only; the rewritten values are not restored.
+
+### Code
+
+- `domain.layer/enums/risk-approval-status.enum.ts`: the four values, `normalizeRiskApprovalStatus`, `isRiskApprovalDecision`
+- `utils/riskApproval.utils.ts`: `resolveRiskApproval`, `callerCanDecideAnyRisk`, `RiskApprovalForbiddenError`
+- `services/riskApproverNotification.service.ts`: `notifyRiskAssignee`, `notifyNewRiskApprover`, `notifyRiskApprovers`, `getUserNameById`
+- `utils/risk.utils.ts`: `lockRiskApprovalQuery`
+- `extensions/risk-import/riskImport.service.ts`: `importedApprovalStatus`, `approvalErrors`
+
+### Follow-ups
+
+- Editing a risk's content after approval does not reset the approval.
+- The MCP risk tools take no approver or approval status, so they never name one.
+- The legacy risk import route does not apply R3: a non-Admin importer can name themself as approver (the row gets `Pending`). The `/api/v1` route refuses it.
 
 ## Frontend Structure
 

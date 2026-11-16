@@ -7,6 +7,7 @@ import { sequelize } from "../../database/db";
 import { createNewProjectQuery, lockProjectForDelete } from "../../utils/project.utils";
 import { deleteProjectWithSideEffects } from "../../utils/projectDeletion.utils";
 import { createRiskQuery } from "../../utils/risk.utils";
+import { RISK_APPROVAL_PENDING } from "../../domain.layer/enums/risk-approval-status.enum";
 import { createNewVendorQuery } from "../../utils/vendor.utils";
 import { createNewVendorRiskQuery } from "../../utils/vendorRisk.utils";
 import { deleteDemoUsersQuery } from "../../utils/user.utils";
@@ -174,7 +175,7 @@ export async function insertMockData(
           risk_severity: "Moderate",
           final_risk_level: "Medium risk",
           risk_approval: userId,
-          approval_status: "In Progress",
+          approval_status: RISK_APPROVAL_PENDING,
           date_of_assessment: new Date(Date.now()),
           projects: [project.id!],
           frameworks: [1], // EU AI Act framework
@@ -213,7 +214,7 @@ export async function insertMockData(
           risk_severity: "Moderate",
           final_risk_level: "Medium risk",
           risk_approval: userId,
-          approval_status: "In Progress",
+          approval_status: RISK_APPROVAL_PENDING,
           date_of_assessment: new Date(Date.now()),
           projects: [project.id!],
           frameworks: [1],
@@ -692,7 +693,7 @@ export async function insertMockData(
           risk_severity: "Moderate",
           final_risk_level: "Medium risk",
           risk_approval: userId,
-          approval_status: "In Progress",
+          approval_status: RISK_APPROVAL_PENDING,
           date_of_assessment: new Date(Date.now()),
           projects: [codingAssistantProject.id!],
           frameworks: [1], // EU AI Act framework
@@ -733,7 +734,7 @@ export async function insertMockData(
           risk_severity: "Moderate",
           final_risk_level: "Medium risk",
           risk_approval: userId,
-          approval_status: "In Progress",
+          approval_status: RISK_APPROVAL_PENDING,
           date_of_assessment: new Date(Date.now()),
           projects: [demandForecastProject.id!],
           frameworks: [1], // EU AI Act framework

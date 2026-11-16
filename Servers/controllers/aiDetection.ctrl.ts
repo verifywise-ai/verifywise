@@ -16,6 +16,7 @@ import {
   BusinessLogicException,
   ConflictException,
   ExternalServiceException,
+  ForbiddenException,
 } from "../domain.layer/exceptions/custom.exception";
 import {
   startScan,
@@ -83,6 +84,9 @@ export function handleException(req: Request, res: Response, error: unknown): Re
   }
   if (error instanceof ConflictException) {
     return res.status(409).json(STATUS_CODE[409](translateError(req, error)));
+  }
+  if (error instanceof ForbiddenException) {
+    return res.status(403).json(STATUS_CODE[403](translateError(req, error)));
   }
   if (error instanceof BusinessLogicException) {
     return res.status(422).json(STATUS_CODE[422](translateError(req, error)));

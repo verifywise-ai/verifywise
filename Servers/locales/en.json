@@ -1527,5 +1527,11 @@
   "A required value in this row is empty.": "A required value in this row is empty.",
   "A value in this row is too long.": "A value in this row is too long.",
   "A date in this row is not valid. Use YYYY-MM-DD.": "A date in this row is not valid. Use YYYY-MM-DD.",
-  "This row could not be saved.": "This row could not be saved."
+  "This row could not be saved.": "This row could not be saved.",
+  "Only the risk's approver or an Admin can change its approval.": "Only the risk's approver or an Admin can change its approval.",
+  "You can't name yourself as the approver. Ask an Admin or pick someone else.": "You can't name yourself as the approver. Ask an Admin or pick someone else.",
+  "Invalid approval status. Must be one of: {values}": "Invalid approval status. Must be one of: {values}",
+  "Only an Admin can import a risk as Approved or Rejected": "Only an Admin can import a risk as Approved or Rejected",
+  "{assigner} assigned you as Risk Approver for {count} risks: {names}": "{assigner} assigned you as Risk Approver for {count} risks: {names}",
+  "{assigner} assigned you as Risk Approver for {count} risks: {names} and {more} more": "{assigner} assigned you as Risk Approver for {count} risks: {names} and {more} more"
 }

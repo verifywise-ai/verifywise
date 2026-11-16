@@ -26,6 +26,10 @@ jest.mock("../../../utils/logger/fileLogger", () => ({
 jest.mock("../../../utils/changeHistory.base.utils", () => ({
   recordEntityCreationBulk: (...args: unknown[]) => mockRecordCreation(...args),
 }));
+const mockNotifyApprovers = jest.fn();
+jest.mock("../../../services/riskApproverNotification.service", () => ({
+  notifyRiskApprovers: (...args: unknown[]) => mockNotifyApprovers(...args),
+}));
 
 import {
   buildExcelTemplate,
@@ -36,10 +40,10 @@ import {
 import { MAX_IMPORT_ROWS } from "../../importLimits";
 
 // The /api/v1 contract; the legacy rules are covered in the "legacy" block.
-const strictImport = (rows: RiskImportRow[], org: number, user: number) =>
-  importRisks(rows, org, user, { strict: true });
-const legacyImport = (rows: RiskImportRow[], org: number, user: number) =>
-  importRisks(rows, org, user, { strict: false });
+const strictImport = (rows: RiskImportRow[], org: number, user: number, callerIsAdmin = false) =>
+  importRisks(rows, org, user, { strict: true, callerIsAdmin });
+const legacyImport = (rows: RiskImportRow[], org: number, user: number, callerIsAdmin = false) =>
+  importRisks(rows, org, user, { strict: false, callerIsAdmin });
 
 const validRow = (overrides: Partial<RiskImportRow> = {}): RiskImportRow => ({
   risk_name: "Model drift",
@@ -61,6 +65,7 @@ describe("importRisks", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockNotInOrg.mockResolvedValue([]);
+    mockNotifyApprovers.mockResolvedValue(undefined);
     mockQuery.mockImplementation(async (sql: string) => {
       if (sql.includes("INSERT INTO risks")) return [{ id: 100 }];
       if (sql.includes("FROM risks")) return [];
@@ -546,6 +551,160 @@ describe("importRisks", () => {
       const result = await legacyImport([sparse({ impact: 5 as never })], 1, 5);
       expect(result.success).toBe(true);
       expect(historyData()).toMatchObject({ impact: "5" });
+    });
+  });
+
+  describe("approval (decision 5, K9)", () => {
+    // Importing user 5; user 7 owns, user 8 approves.
+    const approvalRow = (overrides: Partial<RiskImportRow> = {}) =>
+      validRow({ risk_approval: 8, ...overrides });
+    const statusError = (result: { errors: Array<{ field: string }> }, field: string) =>
+      result.errors.find((e) => e.field === field);
+
+    describe("strict (/api/v1)", () => {
+      it.each(["In progress", "Maybe", "Completed"])(
+        "rejects the file when a row's status is %p",
+        async (status) => {
+          const result = await strictImport([approvalRow({ approval_status: status })], 1, 5);
+          expect(result.success).toBe(false);
+          expect(statusError(result, "approval_status")).toMatchObject({
+            row: 2,
+            messageKey: RISK_IMPORT_MESSAGES.approvalStatusInvalid,
+            params: { values: "Pending, Approved, Rejected, Not required" },
+          });
+          expect(mockQuery.mock.calls.some((c) => sqlOf(c).includes("INSERT INTO risks"))).toBe(
+            false,
+          );
+        },
+      );
+
+      it("accepts the four values however they are spelled", async () => {
+        const result = await strictImport(
+          [
+            approvalRow({ risk_name: "A", approval_status: "pending" }),
+            approvalRow({ risk_name: "B", approval_status: "NOT_REQUIRED" }),
+          ],
+          1,
+          5,
+        );
+        expect(result.success).toBe(true);
+      });
+
+      it.each(["Approved", "rejected"])(
+        "rejects %p from an importer who is not an Admin, approver or not",
+        async (status) => {
+          for (const approver of [8, undefined]) {
+            const result = await strictImport(
+              [validRow({ risk_approval: approver, approval_status: status })],
+              1,
+              5,
+            );
+            expect(result.success).toBe(false);
+            expect(statusError(result, "approval_status")).toMatchObject({
+              messageKey: RISK_IMPORT_MESSAGES.approvalDecisionAdminOnly,
+            });
+          }
+        },
+      );
+
+      it("rejects a non-Admin naming themself as the approver", async () => {
+        const result = await strictImport([approvalRow({ risk_approval: 5 })], 1, 5);
+        expect(result.success).toBe(false);
+        expect(statusError(result, "risk_approval")).toMatchObject({
+          messageKey: RISK_IMPORT_MESSAGES.approverSelf,
+        });
+      });
+
+      it("lets an Admin import a decision and name themself", async () => {
+        const result = await strictImport(
+          [approvalRow({ risk_approval: 5, approval_status: "Approved" })],
+          1,
+          5,
+          true,
+        );
+        expect(result.success).toBe(true);
+        expect(historyData()).toMatchObject({ risk_approval: 5, approval_status: "Approved" });
+      });
+
+      it("stores a blank status as Pending with an approver, Not required without", async () => {
+        const result = await strictImport(
+          [approvalRow({ risk_name: "A" }), validRow({ risk_name: "B" })],
+          1,
+          5,
+        );
+        expect(result.success).toBe(true);
+        expect(historyData(0)).toMatchObject({ approval_status: "Pending" });
+        expect(historyData(1)).toMatchObject({ approval_status: "Not required" });
+      });
+    });
+
+    describe("legacy (strict: false) keeps its accept rules (K2)", () => {
+      it("maps an unknown status and a non-Admin decision silently", async () => {
+        const result = await legacyImport(
+          [
+            approvalRow({ risk_name: "A", approval_status: "In progress" }),
+            validRow({ risk_name: "B", approval_status: "Maybe" }),
+            approvalRow({ risk_name: "C", approval_status: "Approved" }),
+          ],
+          1,
+          5,
+        );
+        expect(result.success).toBe(true);
+        expect(historyData(0)).toMatchObject({ approval_status: "Pending" });
+        expect(historyData(1)).toMatchObject({ approval_status: "Not required" });
+        expect(historyData(2)).toMatchObject({ approval_status: "Pending" });
+      });
+
+      it("keeps a row where a non-Admin names themself, as Pending", async () => {
+        const result = await legacyImport(
+          [approvalRow({ risk_approval: 5, approval_status: "Approved" })],
+          1,
+          5,
+        );
+        expect(result.success).toBe(true);
+        expect(historyData()).toMatchObject({ risk_approval: 5, approval_status: "Pending" });
+      });
+    });
+
+    describe("approver notices", () => {
+      it("hands every imported risk with an approver to the notifier after commit", async () => {
+        let id = 100;
+        mockQuery.mockImplementation(async (sql: string) =>
+          sql.includes("INSERT INTO risks") ? [{ id: id++ }] : [],
+        );
+        mockNotifyApprovers.mockImplementation(async () => {
+          expect(mockTransaction.commit).toHaveBeenCalled();
+        });
+        const result = await strictImport(
+          [
+            approvalRow({ risk_name: "A" }),
+            validRow({ risk_name: "B" }),
+            approvalRow({ risk_name: "C", risk_approval: 9 }),
+          ],
+          1,
+          5,
+        );
+        expect(result.success).toBe(true);
+        expect(mockNotifyApprovers).toHaveBeenCalledTimes(1);
+        const [org, assigner, risks] = mockNotifyApprovers.mock.calls[0];
+        expect(org).toBe(1);
+        expect(assigner).toBe(5);
+        expect(risks).toEqual([
+          expect.objectContaining({ id: 100, risk_name: "A", risk_approval: 8 }),
+          expect.objectContaining({ id: 102, risk_name: "C", risk_approval: 9 }),
+        ]);
+      });
+
+      it("does not fail the import when the notifier fails", async () => {
+        mockNotifyApprovers.mockRejectedValue(new Error("smtp down"));
+        const result = await strictImport([approvalRow()], 1, 5);
+        expect(result.success).toBe(true);
+      });
+
+      it("sends nothing for a rejected import", async () => {
+        await strictImport([approvalRow({ approval_status: "Maybe" })], 1, 5);
+        expect(mockNotifyApprovers).not.toHaveBeenCalled();
+      });
     });
   });
 });

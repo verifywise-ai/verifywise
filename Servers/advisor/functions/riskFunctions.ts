@@ -1,3 +1,4 @@
+import { RISK_APPROVAL_NOT_REQUIRED } from "../../domain.layer/enums/risk-approval-status.enum";
 import { IRisk } from "../../domain.layer/interfaces/I.risk";
 import {
   getAllRisksQuery,
@@ -481,7 +482,7 @@ const agentCreateRisk = createWriteToolFn({
         risk_severity: "Moderate",
         final_risk_level: "",
         risk_approval: null,
-        approval_status: "",
+        approval_status: RISK_APPROVAL_NOT_REQUIRED,
         date_of_assessment: new Date(),
         deadline: params.deadline || null,
         assessment_mapping: "",

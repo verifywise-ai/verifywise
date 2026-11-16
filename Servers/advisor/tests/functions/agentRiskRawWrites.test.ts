@@ -130,3 +130,27 @@ describe("agent_bulk_update_risk_status results", () => {
     expect(result.message).toBe("2 risk(s) updated successfully");
   });
 });
+
+describe("agent_create_risk approval status", () => {
+  it("stores Not required, a valid approval status, with no approver", async () => {
+    const riskUtils = jest.requireMock("../../../utils/risk.utils") as {
+      createRiskQuery: jest.Mock<any>;
+    };
+    riskUtils.createRiskQuery.mockResolvedValue({ id: 1, risk_name: "R" });
+    (sequelize.transaction as unknown as jest.Mock<any>).mockResolvedValue({
+      commit: jest.fn(),
+      rollback: jest.fn(),
+    });
+    mockViewer.mockResolvedValue({ userId: 9, role: "Editor" });
+
+    await writeToolExecutors.get("agent_create_risk")!(
+      { risk_name: "R", project_id: 3, _userId: 9 },
+      4,
+    );
+
+    expect(riskUtils.createRiskQuery.mock.calls[0][0]).toMatchObject({
+      risk_approval: null,
+      approval_status: "Not required",
+    });
+  });
+});

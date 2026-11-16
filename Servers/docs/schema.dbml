@@ -140,7 +140,7 @@ Table project_risks {
   risk_severity varchar
   final_risk_level varchar
   risk_approval integer
-  approval_status varchar
+  approval_status varchar [not null, default: 'Not required', note: 'Pending | Approved | Rejected | Not required']
   date_of_assessment timestamp
   is_demo boolean [not null, default: 'false']
   created_at timestamp

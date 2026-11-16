@@ -29,6 +29,8 @@ import {
 } from "../../../domain.layer/enums/approval-workflow.enum";
 import type { AiActionFileResult } from "../types";
 import { ensureAiActionWorkflow } from "../workflow";
+import { riskApprovalRefusal } from "../riskApprovalPrecheck";
+import { riskViewerForUserQuery } from "../../../utils/riskVisibility.utils";
 import { AgentCreateRiskSchema } from "./schema";
 import { renderCreateRiskPreview } from "./preview";
 
@@ -69,6 +71,15 @@ export async function fileCreateRisk(
       `agent_create_risk validation failed. You MUST tell the user verbatim that the following fields had invalid values and ask them for corrected values for each one before retrying. DO NOT call this tool again until every error below is addressed:\n${errorList}`,
     );
   }
+
+  const approvalRefusal = await riskApprovalRefusal({
+    existing: null,
+    input: parsed.data,
+    userId,
+    organizationId,
+    role: async () => (await riskViewerForUserQuery(userId, organizationId)).role,
+  });
+  if (approvalRefusal) return { status: "error", message: approvalRefusal };
 
   // 2. Open a transaction so workflow lazy-creation + approval-request
   //    insert commit atomically.

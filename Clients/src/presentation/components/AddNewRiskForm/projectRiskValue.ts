@@ -1,5 +1,6 @@
 import { RiskLikelihood, MitigationStatus, RiskSeverity } from "../RiskLevel/riskValues";
 import { RISK_LABELS, Likelihood, Severity } from "../RiskLevel/constants";
+import type { RiskApprovalStatus } from "../../../domain/types/ProjectRisk";
 
 // Setting up risk-type
 export type riskType = {
@@ -55,14 +56,26 @@ export const riskLevelItems: riskType[] = [
   { _id: 5, name: RISK_LABELS.noRisk.text },
 ];
 
-export const approvalStatusItems: riskType[] = [
-  { _id: 1, name: MitigationStatus.NotStarted },
-  { _id: 2, name: MitigationStatus.InProgress },
-  { _id: 3, name: MitigationStatus.Completed },
-  { _id: 4, name: MitigationStatus.OnHold },
-  { _id: 5, name: MitigationStatus.Deferred },
-  { _id: 6, name: MitigationStatus.Canceled },
-  { _id: 7, name: MitigationStatus.RequiresReview },
+/** Select ids of the four risk approval statuses. */
+export const RISK_APPROVAL_STATUS = {
+  Pending: 1,
+  Approved: 2,
+  Rejected: 3,
+  NotRequired: 4,
+} as const;
+
+/** Approved and Rejected: only the risk's approver or an Admin may set them or move off them. */
+export const RISK_APPROVAL_DECISION_IDS: readonly number[] = [
+  RISK_APPROVAL_STATUS.Approved,
+  RISK_APPROVAL_STATUS.Rejected,
+];
+
+// The names are the stored values (the server allows only these four).
+export const approvalStatusItems: { _id: number; name: RiskApprovalStatus }[] = [
+  { _id: RISK_APPROVAL_STATUS.Pending, name: "Pending" },
+  { _id: RISK_APPROVAL_STATUS.Approved, name: "Approved" },
+  { _id: RISK_APPROVAL_STATUS.Rejected, name: "Rejected" },
+  { _id: RISK_APPROVAL_STATUS.NotRequired, name: "Not required" },
 ];
 
 export const likelihoodItems: riskType[] = [
