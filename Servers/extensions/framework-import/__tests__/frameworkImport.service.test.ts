@@ -7,7 +7,6 @@ import {
 import {
   asText,
   buildExcelTemplate,
-  MAX_IMPORT_ROWS,
   normalizePatch,
   sheetRowNumber,
   validateStructure,
@@ -18,6 +17,7 @@ import {
   validateRow,
   FrameworkImportRow,
 } from "../frameworkImport.service";
+import { MAX_IMPORT_ROWS } from "../../importLimits";
 import { sequelize } from "../../../database/db";
 
 jest.mock("../../../database/db", () => ({

@@ -79,6 +79,9 @@ function useUsers(enabled = true) {
         const usersArray = data?.data || data || [];
         if (!cancelled) setUsers(Array.isArray(usersArray) ? usersArray : []);
       } catch (err) {
+        // A read, not a write: nothing the user entered is lost. The picker
+        // falls back to an empty list and the global error toast reports the
+        // failed request.
         console.error("Failed to fetch users:", err);
         if (!cancelled) setUsers([]);
       } finally {
@@ -136,6 +139,19 @@ function ReadOnlyValue({ children }: { children?: React.ReactNode }) {
       }}
     >
       {empty ? "Not set" : children}
+    </Typography>
+  );
+}
+
+/**
+ * Shown under a field whose last write failed. The field keeps what the user
+ * entered, so trying again (blur, click, select) resends it. The global error
+ * toast already carries the server's reason.
+ */
+function NotSavedMessage() {
+  return (
+    <Typography role="alert" sx={{ ...textStyles.body, color: VW_COLORS.error }}>
+      Not saved. Try again.
     </Typography>
   );
 }
@@ -262,11 +278,17 @@ function TextFieldRenderer({
   const config = item.config as { placeholder?: string; maxLength?: number };
   const [text, setText] = useState(value?.value_text ?? "");
   const [saving, setSaving] = useState(false);
+  const [saveFailed, setSaveFailed] = useState(false);
   const savedRef = useRef(value?.value_text ?? "");
 
   const handleBlur = useCallback(async () => {
-    if (text === savedRef.current) return;
+    if (text === savedRef.current) {
+      // Back to the saved text (e.g. the user undid a failed edit): nothing is unsaved.
+      setSaveFailed(false);
+      return;
+    }
     setSaving(true);
+    setSaveFailed(false);
     try {
       await apiServices.put(
         `/extensions/model-lifecycle/models/${modelId}/lifecycle/items/${item.id}`,
@@ -275,7 +297,8 @@ function TextFieldRenderer({
       savedRef.current = text;
       onValueChanged?.();
     } catch {
-      /* keep current text */
+      // Keep the typed text; the next blur sends it again.
+      setSaveFailed(true);
     } finally {
       setSaving(false);
     }
@@ -284,22 +307,25 @@ function TextFieldRenderer({
   if (readOnly) return <ReadOnlyValue>{value?.value_text}</ReadOnlyValue>;
 
   return (
-    <Field
-      placeholder={config?.placeholder || `Enter ${item.name.toLowerCase()}`}
-      value={text}
-      onChange={(e) => {
-        if (config?.maxLength && e.target.value.length > config.maxLength) return;
-        setText(e.target.value);
-      }}
-      onBlur={handleBlur}
-      rows={multiline ? 3 : undefined}
-      width="100%"
-      InputProps={{
-        endAdornment: saving ? (
-          <CircularProgress size={14} sx={{ color: icon.brand }} />
-        ) : undefined,
-      }}
-    />
+    <Stack sx={{ gap: "4px" }}>
+      <Field
+        placeholder={config?.placeholder || `Enter ${item.name.toLowerCase()}`}
+        value={text}
+        onChange={(e) => {
+          if (config?.maxLength && e.target.value.length > config.maxLength) return;
+          setText(e.target.value);
+        }}
+        onBlur={handleBlur}
+        rows={multiline ? 3 : undefined}
+        width="100%"
+        InputProps={{
+          endAdornment: saving ? (
+            <CircularProgress size={14} sx={{ color: icon.brand }} />
+          ) : undefined,
+        }}
+      />
+      {saveFailed && <NotSavedMessage />}
+    </Stack>
   );
 }
 
@@ -400,20 +426,20 @@ function DocumentsFieldRenderer({
   }
 
   return (
-    <Stack sx={{ gap: 6 }}>
+    <Stack sx={{ gap: "12px" }}>
       {files.length > 0 && (
-        <Stack sx={{ gap: 4 }}>
+        <Stack sx={{ gap: "8px" }}>
           {files.map((file) => (
             <Stack
               key={file.id}
               direction="row"
               alignItems="center"
               sx={{
-                gap: 4,
-                pt: 4,
-                pb: 4,
-                pl: 6,
-                pr: 6,
+                gap: "8px",
+                pt: "8px",
+                pb: "8px",
+                pl: "12px",
+                pr: "12px",
                 borderRadius: radiusPx.sm,
                 border: `1px solid ${border.light}`,
                 backgroundColor: background.alt,
@@ -463,10 +489,10 @@ function DocumentsFieldRenderer({
           sx={{
             "border": `1px dashed ${VW_COLORS.borderDark}`,
             "borderRadius": radiusPx.sm,
-            "pt": 4,
-            "pb": 4,
-            "pl": 6,
-            "pr": 6,
+            "pt": "8px",
+            "pb": "8px",
+            "pl": "12px",
+            "pr": "12px",
             "textAlign": "center",
             "cursor": "pointer",
             "transition": "all 0.15s ease",
@@ -480,7 +506,10 @@ function DocumentsFieldRenderer({
           {uploading ? (
             <CircularProgress size={20} sx={{ color: VW_COLORS.primary }} />
           ) : (
-            <Stack direction="row" sx={{ gap: 4, justifyContent: "center", alignItems: "center" }}>
+            <Stack
+              direction="row"
+              sx={{ gap: "8px", justifyContent: "center", alignItems: "center" }}
+            >
               <Upload size={16} color={text.icon} />
               <Typography
                 sx={{
@@ -538,6 +567,7 @@ function PeopleFieldRenderer({
     : [];
   const [selectedUserId, setSelectedUserId] = useState<number | "">("");
   const [saving, setSaving] = useState(false);
+  const [saveFailed, setSaveFailed] = useState(false);
 
   // Filter out already-added users from the dropdown
   const availableUsers = users.filter((u) => !currentPeople.some((p) => p.user_id === u.id));
@@ -551,6 +581,7 @@ function PeopleFieldRenderer({
   const handleAdd = useCallback(async () => {
     if (!selectedUserId) return;
     setSaving(true);
+    setSaveFailed(false);
     try {
       await apiServices.post(
         `/extensions/model-lifecycle/models/${modelId}/lifecycle/items/${item.id}/people`,
@@ -559,7 +590,8 @@ function PeopleFieldRenderer({
       setSelectedUserId("");
       onValueChanged?.();
     } catch {
-      /* retry */
+      // Keep the picked user selected so Add can be pressed again.
+      setSaveFailed(true);
     } finally {
       setSaving(false);
     }
@@ -568,13 +600,14 @@ function PeopleFieldRenderer({
   const handleRemove = useCallback(
     async (userId: number) => {
       setSaving(true);
+      setSaveFailed(false);
       try {
         await apiServices.delete(
           `/extensions/model-lifecycle/models/${modelId}/lifecycle/items/${item.id}/people/${userId}`,
         );
         onValueChanged?.();
       } catch {
-        /* retry */
+        setSaveFailed(true);
       } finally {
         setSaving(false);
       }
@@ -585,9 +618,9 @@ function PeopleFieldRenderer({
   if (readOnly && currentPeople.length === 0) return <ReadOnlyValue />;
 
   return (
-    <Stack sx={{ gap: 4 }}>
+    <Stack sx={{ gap: "8px" }}>
       {currentPeople.length > 0 && (
-        <Stack direction="row" flexWrap="wrap" sx={{ gap: 4 }}>
+        <Stack direction="row" flexWrap="wrap" sx={{ gap: "8px" }}>
           {currentPeople.map((p) => (
             <Chip
               key={p.user_id}
@@ -609,7 +642,7 @@ function PeopleFieldRenderer({
         </Stack>
       )}
       {!readOnly && (
-        <Stack direction="row" alignItems="center" sx={{ gap: 4 }}>
+        <Stack direction="row" alignItems="center" sx={{ gap: "8px" }}>
           <Select
             id={`lifecycle-people-${item.id}`}
             ariaLabel={item.name}
@@ -622,15 +655,15 @@ function PeopleFieldRenderer({
           <CustomizableButton
             variant="outlined"
             color="secondary"
-            size="small"
             onClick={handleAdd}
-            disabled={saving || !selectedUserId}
+            isDisabled={saving || !selectedUserId}
           >
             Add
           </CustomizableButton>
         </Stack>
       )}
       {saving && <CircularProgress size={14} sx={{ color: VW_COLORS.primary }} />}
+      {!readOnly && saveFailed && <NotSavedMessage />}
     </Stack>
   );
 }
@@ -657,19 +690,27 @@ function ClassificationFieldRenderer({
   const currentValue = (value?.value_json as { level?: string })?.level ?? "";
   const [selected, setSelected] = useState(currentValue);
   const [saving, setSaving] = useState(false);
+  const [saveFailed, setSaveFailed] = useState(false);
+  const savedRef = useRef(currentValue);
 
   const handleChange = useCallback(
     async (level: string) => {
       setSelected(level);
       setSaving(true);
+      setSaveFailed(false);
       try {
         await apiServices.put(
           `/extensions/model-lifecycle/models/${modelId}/lifecycle/items/${item.id}`,
           { value_json: { level } },
         );
+        savedRef.current = level;
         onValueChanged?.();
       } catch {
-        /* keep selection */
+        // Show the last saved level again. A radio fires no change event when
+        // its checked option is clicked, so leaving the failed pick checked
+        // would make it impossible to retry; picking it again now resends it.
+        setSelected(savedRef.current);
+        setSaveFailed(true);
       } finally {
         setSaving(false);
       }
@@ -680,7 +721,7 @@ function ClassificationFieldRenderer({
   if (readOnly) return <ReadOnlyValue>{currentValue}</ReadOnlyValue>;
 
   return (
-    <Stack sx={{ gap: 4 }}>
+    <Stack sx={{ gap: "8px" }}>
       <RadioGroup value={selected} onChange={(e) => handleChange(e.target.value)}>
         {levels.map((level) => (
           <FormControlLabel
@@ -710,6 +751,7 @@ function ClassificationFieldRenderer({
         ))}
       </RadioGroup>
       {saving && <CircularProgress size={14} sx={{ color: icon.brand }} />}
+      {saveFailed && <NotSavedMessage />}
     </Stack>
   );
 }
@@ -746,11 +788,13 @@ function ChecklistFieldRenderer({
     savedItems.length > 0 ? savedItems : defaultItems,
   );
   const [saving, setSaving] = useState(false);
+  const [saveFailed, setSaveFailed] = useState(false);
   const [newItemText, setNewItemText] = useState("");
 
   const saveItems = useCallback(
     async (updatedItems: ChecklistValue[]) => {
       setSaving(true);
+      setSaveFailed(false);
       try {
         await apiServices.put(
           `/extensions/model-lifecycle/models/${modelId}/lifecycle/items/${item.id}`,
@@ -758,7 +802,8 @@ function ChecklistFieldRenderer({
         );
         onValueChanged?.();
       } catch {
-        /* keep state */
+        // Keep the list as edited; the next change sends the whole list.
+        setSaveFailed(true);
       } finally {
         setSaving(false);
       }
@@ -795,9 +840,9 @@ function ChecklistFieldRenderer({
   if (readOnly && items.length === 0) return <ReadOnlyValue />;
 
   return (
-    <Stack sx={{ gap: 4 }}>
+    <Stack sx={{ gap: "8px" }}>
       {items.map((it, index) => (
-        <Stack key={index} direction="row" alignItems="center" sx={{ gap: 4 }}>
+        <Stack key={index} direction="row" alignItems="center" sx={{ gap: "8px" }}>
           <Checkbox
             checked={it.checked}
             onChange={() => toggleItem(index)}
@@ -807,7 +852,7 @@ function ChecklistFieldRenderer({
             sx={{
               "color": border.dark,
               "&.Mui-checked": { color: brand.primary },
-              "padding": 2,
+              "padding": "4px",
             }}
           />
           <Typography
@@ -836,7 +881,7 @@ function ChecklistFieldRenderer({
         </Stack>
       ))}
       {!readOnly && (
-        <Stack direction="row" alignItems="center" sx={{ gap: 4 }}>
+        <Stack direction="row" alignItems="center" sx={{ gap: "8px" }}>
           <Field
             placeholder="Add checklist item..."
             value={newItemText}
@@ -849,7 +894,6 @@ function ChecklistFieldRenderer({
           <CustomizableButton
             variant="outlined"
             color="secondary"
-            size="small"
             onClick={addItem}
             loading={saving}
           >
@@ -857,6 +901,7 @@ function ChecklistFieldRenderer({
           </CustomizableButton>
         </Stack>
       )}
+      {!readOnly && saveFailed && <NotSavedMessage />}
     </Stack>
   );
 }
@@ -896,6 +941,7 @@ function ApprovalFieldRenderer({
     ? (value as any).approvals
     : [];
   const [saving, setSaving] = useState(false);
+  const [saveFailed, setSaveFailed] = useState(false);
   const [selectedUserId, setSelectedUserId] = useState<number | "">("");
 
   // Filter out already-added approvers from the dropdown
@@ -910,6 +956,7 @@ function ApprovalFieldRenderer({
   const handleStatusChange = useCallback(
     async (userId: number, status: "approved" | "rejected") => {
       setSaving(true);
+      setSaveFailed(false);
       try {
         await apiServices.put(
           `/extensions/model-lifecycle/models/${modelId}/lifecycle/items/${item.id}/approvals/${userId}`,
@@ -917,7 +964,7 @@ function ApprovalFieldRenderer({
         );
         onValueChanged?.();
       } catch {
-        /* retry */
+        setSaveFailed(true);
       } finally {
         setSaving(false);
       }
@@ -928,6 +975,7 @@ function ApprovalFieldRenderer({
   const addApprover = useCallback(async () => {
     if (!selectedUserId) return;
     setSaving(true);
+    setSaveFailed(false);
     try {
       await apiServices.post(
         `/extensions/model-lifecycle/models/${modelId}/lifecycle/items/${item.id}/approvals`,
@@ -936,7 +984,8 @@ function ApprovalFieldRenderer({
       setSelectedUserId("");
       onValueChanged?.();
     } catch {
-      /* retry */
+      // Keep the picked approver selected so Add approver can be pressed again.
+      setSaveFailed(true);
     } finally {
       setSaving(false);
     }
@@ -945,13 +994,14 @@ function ApprovalFieldRenderer({
   const removeApprover = useCallback(
     async (userId: number) => {
       setSaving(true);
+      setSaveFailed(false);
       try {
         await apiServices.delete(
           `/extensions/model-lifecycle/models/${modelId}/lifecycle/items/${item.id}/approvals/${userId}`,
         );
         onValueChanged?.();
       } catch {
-        /* retry */
+        setSaveFailed(true);
       } finally {
         setSaving(false);
       }
@@ -984,7 +1034,7 @@ function ApprovalFieldRenderer({
   if (readOnly && currentApprovals.length === 0) return <ReadOnlyValue />;
 
   return (
-    <Stack sx={{ gap: 6 }}>
+    <Stack sx={{ gap: "12px" }}>
       {currentApprovals.map((approval) => (
         <Stack
           key={approval.user_id}
@@ -992,11 +1042,11 @@ function ApprovalFieldRenderer({
           direction="row"
           alignItems="center"
           sx={{
-            gap: 4,
-            pt: 6,
-            pb: 6,
-            pr: 8,
-            pl: 8,
+            gap: "8px",
+            pt: "12px",
+            pb: "12px",
+            pr: "16px",
+            pl: "16px",
             borderRadius: radiusPx.sm,
             border: `1px solid ${border.light}`,
             background: background.main,
@@ -1062,7 +1112,7 @@ function ApprovalFieldRenderer({
         </Stack>
       ))}
       {!readOnly && (
-        <Stack direction="row" alignItems="center" sx={{ gap: 4 }}>
+        <Stack direction="row" alignItems="center" sx={{ gap: "8px" }}>
           <Select
             id={`lifecycle-approval-${item.id}`}
             ariaLabel={item.name}
@@ -1075,15 +1125,15 @@ function ApprovalFieldRenderer({
           <CustomizableButton
             variant="outlined"
             color="secondary"
-            size="small"
             onClick={addApprover}
-            disabled={saving || !selectedUserId}
+            isDisabled={saving || !selectedUserId}
             loading={saving}
           >
-            Add Approver
+            Add approver
           </CustomizableButton>
         </Stack>
       )}
+      {saveFailed && <NotSavedMessage />}
     </Stack>
   );
 }

@@ -136,17 +136,17 @@ export const modelLifecycleContent: ArticleContent = {
       type: 'callout',
       variant: 'tip',
       title: 'Custom lifecycle phases',
-      text: 'To track your own phases for each model, with items such as approvals, documents and responsible people, an Admin can enable the Model Lifecycle extension. Models then get a **View lifecycle** button in Model inventory. See **Extensions**.',
+      text: 'To track your own phases for each model, with items such as approvals, documents and responsible people, an Admin can enable the Model lifecycle extension. Each row in Model inventory then gets an icon button with the tooltip **View lifecycle**. See **Extensions**.',
     },
     {
       type: 'heading',
       id: 'mlflow-lifecycle',
       level: 2,
-      text: 'MLFlow lifecycle integration',
+      text: 'MLflow lifecycle integration',
     },
     {
       type: 'paragraph',
-      text: 'For teams using MLFlow, VerifyWise imports lifecycle stage information directly from your ML platform once the MLflow extension is enabled:',
+      text: 'For teams using MLflow, VerifyWise imports lifecycle stage information directly from your ML platform once the MLflow extension is enabled:',
     },
     {
       type: 'bullet-list',

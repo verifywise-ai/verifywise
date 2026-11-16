@@ -39,7 +39,7 @@ export default function LifecycleStepperLayout({
 
   if (loading && phases.length === 0) {
     return (
-      <Stack alignItems="center" sx={{ py: 4 }}>
+      <Stack alignItems="center" sx={{ py: "8px" }}>
         <CircularProgress size={24} />
       </Stack>
     );
@@ -47,7 +47,7 @@ export default function LifecycleStepperLayout({
 
   if (phases.length === 0) {
     return (
-      <Typography sx={{ textAlign: "center", color: text.icon, py: 4 }}>
+      <Typography sx={{ textAlign: "center", color: text.icon, py: "8px" }}>
         No lifecycle phases configured. Contact an administrator to set up the model lifecycle.
       </Typography>
     );
@@ -79,7 +79,7 @@ export default function LifecycleStepperLayout({
             onValueChanged={onValueChanged}
           />
         ) : (
-          <Stack alignItems="center" justifyContent="center" sx={{ flex: 1, p: 12 }}>
+          <Stack alignItems="center" justifyContent="center" sx={{ flex: 1, p: "24px" }}>
             <Typography sx={{ color: text.icon }}>Select a phase from the sidebar</Typography>
           </Stack>
         )}

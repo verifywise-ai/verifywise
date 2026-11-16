@@ -2,6 +2,8 @@ import { Box, Typography, Stack, LinearProgress, Chip } from "@mui/material";
 import { keyframes } from "@mui/system";
 import { CheckCircle2, XCircle, Loader2, FileSpreadsheet } from "lucide-react";
 import { brand, text, palette as vwPalette, radiusPx } from "../../../themes/palette";
+import useTranslation from "../../../../application/hooks/useTranslation";
+import { fill, pluralKey } from "../../../../i18n/fill";
 
 const spin = keyframes`
   from { transform: rotate(0deg); }
@@ -24,6 +26,7 @@ interface UploadProgressProps {
 }
 
 export default function UploadProgress({ results, totalFiles }: UploadProgressProps) {
+  const { t, lang } = useTranslation();
   const completed = results.filter((r) => r.status === "success" || r.status === "error").length;
   const successCount = results.filter((r) => r.status === "success").length;
   const errorCount = results.filter((r) => r.status === "error").length;
@@ -31,12 +34,13 @@ export default function UploadProgress({ results, totalFiles }: UploadProgressPr
   const isComplete = completed === totalFiles;
 
   return (
-    <Stack spacing={2}>
+    <Stack spacing="4px">
       {/* Overall progress */}
       <Box>
-        <Stack direction="row" justifyContent="space-between" sx={{ mb: 0.5 }}>
+        <Stack direction="row" justifyContent="space-between" sx={{ mb: "1px" }}>
           <Typography sx={{ fontSize: 13, fontWeight: 500, color: "text.secondary" }}>
-            {isComplete ? "Upload complete" : `Uploading ${completed + 1} of ${totalFiles}...`}
+            {/* The counter on the right shows the numbers. */}
+            {isComplete ? "Upload complete" : "Uploading files..."}
           </Typography>
           <Typography sx={{ fontSize: 13, color: "text.tertiary" }}>
             {completed}/{totalFiles}
@@ -59,10 +63,13 @@ export default function UploadProgress({ results, totalFiles }: UploadProgressPr
 
       {/* Summary chips */}
       {isComplete && (
-        <Stack direction="row" spacing={1}>
+        <Stack direction="row" spacing="2px">
           <Chip
             icon={<CheckCircle2 size={14} />}
-            label={`${successCount} succeeded`}
+            label={fill(
+              t(pluralKey(lang, successCount, "{count} file uploaded", "{count} files uploaded")),
+              { count: successCount },
+            )}
             size="small"
             variant="outlined"
             sx={{
@@ -75,7 +82,17 @@ export default function UploadProgress({ results, totalFiles }: UploadProgressPr
           {errorCount > 0 && (
             <Chip
               icon={<XCircle size={14} />}
-              label={`${errorCount} failed`}
+              label={fill(
+                t(
+                  pluralKey(
+                    lang,
+                    errorCount,
+                    "{count} file failed to upload",
+                    "{count} files failed to upload",
+                  ),
+                ),
+                { count: errorCount },
+              )}
               size="small"
               variant="outlined"
               sx={{
@@ -96,7 +113,7 @@ export default function UploadProgress({ results, totalFiles }: UploadProgressPr
             key={result.fileName}
             direction="row"
             alignItems="center"
-            spacing={1}
+            spacing="2px"
             sx={{
               p: "10px 12px",
               borderRadius: radiusPx.md,
@@ -126,7 +143,7 @@ export default function UploadProgress({ results, totalFiles }: UploadProgressPr
               <CheckCircle2 size={16} color={vwPalette.status.success.text} />
             )}
             {result.status === "error" && (
-              <Stack direction="row" alignItems="center" spacing={0.5}>
+              <Stack direction="row" alignItems="center" spacing="1px">
                 <XCircle size={16} color={vwPalette.status.error.text} />
                 <Typography sx={{ fontSize: 12, color: vwPalette.status.error.text }}>
                   {result.error || "Failed"}

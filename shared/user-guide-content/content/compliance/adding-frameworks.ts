@@ -218,7 +218,7 @@ export const addingFrameworksContent: ArticleContent = {
     {
       type: 'callout',
       variant: 'info',
-      text: 'If you need a framework that isn\'t listed, you can import your own from an Excel file once an Admin enables the Framework Import extension. See Importing your own framework.',
+      text: 'If you need a framework that isn\'t listed, you can import your own from an Excel file once an Admin enables the Framework import extension. See Importing your own framework.',
     },
     {
       type: 'article-links',

@@ -434,6 +434,41 @@ export const tenantIsolationRegistry: IsolationEntity[] = [
     ],
     baseRoute: "/api/extensions/model-lifecycle",
   },
+  {
+    // MLflow extension. Sync, list and read are keyed by the caller's
+    // organization (its own tracking server and records). mlflow_integrations
+    // is the pre-extension config table no route uses any more; the file
+    // checks nothing another organization does touches the owner's row.
+    name: "mlflow",
+    tables: ["mlflow_integrations", "mlflow_model_records"],
+    baseRoute: "/api/extensions/mlflow",
+  },
+  {
+    // Azure AI Foundry extension. Sync, discovery, list and read are keyed by
+    // the caller's organization (its own endpoint, key and records).
+    name: "azure-ai-foundry",
+    tables: ["azure_ai_model_records"],
+    baseRoute: "/api/extensions/azure-ai-foundry",
+  },
+  {
+    // Jira Assets extension. Config, schedule and selection writes are keyed
+    // by the caller's organization; use case removal and delete take ids. One
+    // file covers use case visibility and the writes across organizations.
+    // jira_assets_sync_history stays deferred: it is no longer written and a
+    // follow-up migration drops it.
+    name: "jira-assets",
+    tables: ["jira_assets_config", "jira_assets_use_cases"],
+    baseRoute: "/api/extensions/jira-assets",
+    testFile: "jira-assets-use-cases.isolation.test.ts",
+  },
+  {
+    // Extension catalog enablement. Enable, disable and configuration are
+    // keyed by extension key and always act on the caller's organization's
+    // row, so a hand-written file covers them.
+    name: "extension-enablements",
+    tables: ["extension_enablements"],
+    baseRoute: "/api/extensions/:key",
+  },
 ];
 
 /** Flat set of all tenant-scoped tables declared in the registry. */

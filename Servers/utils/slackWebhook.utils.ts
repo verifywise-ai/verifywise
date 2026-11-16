@@ -2,7 +2,12 @@ import { sequelize } from "../database/db";
 import { QueryTypes, Transaction } from "sequelize";
 import { ISlackWebhook } from "../domain.layer/interfaces/i.slackWebhook";
 import { SlackWebhookModel } from "../domain.layer/models/slackNotification/slackWebhook.model";
-import { SlackDeliveryScope, SlackNotificationRoutingType } from "../domain.layer/enums/slack.enum";
+import {
+  SlackDeliveryScope,
+  SlackNotificationRoutingType,
+  isSlackRoutingType,
+} from "../domain.layer/enums/slack.enum";
+import { ValidationException } from "../domain.layer/exceptions/custom.exception";
 
 /*
  * Management reads and writes below filter by the caller's organization in
@@ -183,10 +188,18 @@ export const updateSlackWebhookByIdQuery = async (
   const replacements: Record<string, unknown> = { id, organizationId };
 
   if (updateData.routing_type !== undefined) {
-    sets.push("routing_type = :routing_type", "delivery_scope = :organizationScope");
-    // Postgres array literal: {"a","b"}. Values are known enum strings, and the
-    // literal is bound as a replacement, never interpolated into the SQL.
-    replacements.routing_type = `{${updateData.routing_type.map((item) => `"${item}"`).join(",")}}`;
+    const routing: unknown = updateData.routing_type;
+    // The controller checks this too; the write refuses anything else on its own.
+    if (!Array.isArray(routing) || !routing.every(isSlackRoutingType)) {
+      throw new ValidationException(
+        "routing_type must be a list of notification types",
+        "routing_type",
+      );
+    }
+    // Each value bound as its own parameter: ARRAY['a', 'b']::text[] (an empty
+    // list is ARRAY[]::text[], an empty array, as before).
+    sets.push("routing_type = ARRAY[:routing_type]::text[]", "delivery_scope = :organizationScope");
+    replacements.routing_type = routing;
     replacements.organizationScope = SlackDeliveryScope.ORGANIZATION;
   }
   if (updateData.is_active !== undefined) {

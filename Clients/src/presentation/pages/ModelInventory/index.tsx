@@ -183,7 +183,7 @@ const ModelInventory: React.FC = () => {
   const extensionTabs = useMemo(
     () => [
       ...(isEnabled("mlflow")
-        ? [{ label: "MLFlow", value: "mlflow", icon: "Database" as const }]
+        ? [{ label: "MLflow", value: "mlflow", icon: "Database" as const }]
         : []),
       ...(isEnabled("azure-ai-foundry")
         ? [

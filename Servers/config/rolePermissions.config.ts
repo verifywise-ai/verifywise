@@ -105,7 +105,7 @@ export const ROLE_PERMISSIONS = {
   },
   "extension.admin": {
     module: "Extensions",
-    description: "Install, configure and remove extensions",
+    description: "Enable, configure and disable extensions",
     legacyRoles: ADMIN,
   },
   "file.admin": {

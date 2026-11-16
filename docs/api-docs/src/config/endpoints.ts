@@ -3502,7 +3502,7 @@ export const extensionEndpoints: Endpoint[] = [
     method: 'POST',
     path: '/extensions/{key}/enable',
     summary: "Enable extension",
-    description: "Enables the extension for the caller's organization. Optional body { configuration } is validated against the extension's config fields; secret fields are encrypted at rest. Admin only. Requires role: Admin",
+    description: "Enables the extension for the caller's organization. Optional body { configuration } is merged onto any stored configuration and validated against the extension's config fields: a field left out keeps its stored value, null clears it, an empty string clears a non-secret field and keeps a secret one. Secret fields are encrypted at rest. Admin only. Requires role: Admin",
     requiresAuth: true,
     parameters: [
       { name: 'key', in: 'path', type: 'string', required: true, description: "Extension key: slack, mlflow, azure-ai-foundry, model-lifecycle, risk-import, jira-assets or dataset-bulk-upload" },
@@ -3543,7 +3543,7 @@ export const extensionEndpoints: Endpoint[] = [
     method: 'PATCH',
     path: '/extensions/{key}/configuration',
     summary: "Update extension configuration",
-    description: "Updates the stored configuration. Body { configuration }. Secret fields left out of the body keep their existing encrypted value. Admin only. Requires role: Admin",
+    description: "Updates the stored configuration. Body { configuration } holds only the fields to change: a field left out keeps its stored value, null clears it (a required field cannot be cleared), and an empty string clears a non-secret field but keeps a secret one. A stored secret is never kept for a changed address (400 asking for the secret again). Admin only. Requires role: Admin",
     requiresAuth: true,
     parameters: [
       { name: 'key', in: 'path', type: 'string', required: true, description: "Extension key: slack, mlflow, azure-ai-foundry, model-lifecycle, risk-import, jira-assets or dataset-bulk-upload" },

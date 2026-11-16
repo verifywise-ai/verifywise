@@ -2595,7 +2595,6 @@ export const de: Record<string, string> = {
   "Departments": "Abteilungen",
   "Details": "Details",
   "Download results as JSON": "Ergebnisse als JSON herunterladen",
-  "EU AI Act Completion Status": "Fertigstellungsstatus EU-KI-Verordnung",
   "EXPLORE VERIFYWISE": "VERIFYWISE ERKUNDEN",
   "Each AI tool receives a risk score from 0 to 100, recalculated nightly. The score is a weighted composite of four factors:":
     "Jedes KI-Tool erhält eine Risikobewertung von 0 bis 100, die nächtlich neu berechnet wird. Die Bewertung ist eine gewichtete Zusammensetzung aus vier Faktoren:",
@@ -2672,7 +2671,6 @@ export const de: Record<string, string> = {
     "Wie möchten Sie beginnen? Sie können mit Beispieldaten erkunden oder mit einem leeren Dashboard starten.",
   "IMPACT ASSESSMENT": "FOLGENABSCHÄTZUNG",
   "INCIDENT INFORMATION": "VORFALLSINFORMATIONEN",
-  "ISO 42001 Completion Status": "Fertigstellungsstatus ISO 42001",
   "ISO 42001, ISO 27001, NIST AI RMF": "ISO 42001, ISO 27001, NIST AI RMF",
   "Icon Buttons": "Symbolschaltflächen",
   "Implementation description:": "Implementierungsbeschreibung:",
@@ -3073,8 +3071,8 @@ export const de: Record<string, string> = {
   "Active incidents": "Aktive Vorfälle",
   "SOC 2, GDPR, HIPAA, DORA, and 17 more frameworks are built in, with requirements, evidence, and risk tracking.":
     "SOC 2, GDPR, HIPAA, DORA und 17 weitere Rahmenwerke sind integriert, mit Anforderungen, Nachweisen und Risikoverfolgung.",
-  "Slack, MLflow, Azure AI Foundry, Jira Assets, Model Lifecycle, Risk Import, and Dataset Bulk Upload.":
-    "Slack, MLflow, Azure AI Foundry, Jira Assets, Model Lifecycle, Risk Import und Dataset Bulk Upload.",
+  "Slack, MLflow, Azure AI Foundry, Jira Assets, Jira incidents, Model lifecycle, Risk import, Dataset bulk upload, and Framework import.":
+    "Slack, MLflow, Azure AI Foundry, Jira Assets, Jira-Vorfälle, Modelllebenszyklus, Risikoimport, Massen-Upload von Datensätzen und Rahmenwerk-Import.",
   "Admins enable, configure, and disable extensions from the Extensions page. Nothing to install.":
     "Administratoren aktivieren, konfigurieren und deaktivieren Extensions auf der Seite Extensions. Keine Installation erforderlich.",
   "Import risks from Excel, bulk upload datasets with PII detection, and define model lifecycle phases.":
@@ -5452,8 +5450,6 @@ export const de: Record<string, string> = {
   "Extension settings": "Erweiterungseinstellungen",
   "Extensions": "Erweiterungen",
   "Key": "Schlüssel",
-  "Password/token fields are stored encrypted. Leave blank to keep the existing value.":
-    "Passwort-/Token-Felder werden verschlüsselt gespeichert. Leer lassen, um den vorhandenen Wert beizubehalten.",
   "Specific extension settings page": "Spezifische Erweiterungseinstellungsseite",
   "Sync Interval": "Synchronisierungsintervall",
   "This extension has no configuration.": "Diese Erweiterung hat keine Konfiguration.",
@@ -8183,7 +8179,6 @@ export const fr: Record<string, string> = {
   "Departments": "Départements",
   "Details": "Détails",
   "Download results as JSON": "Télécharger les résultats au format JSON",
-  "EU AI Act Completion Status": "Statut d'achèvement du Règlement IA de l'UE",
   "EXPLORE VERIFYWISE": "EXPLORER VERIFYWISE",
   "Each AI tool receives a risk score from 0 to 100, recalculated nightly. The score is a weighted composite of four factors:":
     "Chaque outil IA reçoit un score de risque de 0 à 100, recalculé chaque nuit. Le score est une combinaison pondérée de quatre facteurs :",
@@ -8260,7 +8255,6 @@ export const fr: Record<string, string> = {
     "Comment souhaitez-vous commencer ? Vous pouvez explorer avec des données d'exemple ou démarrer à zéro.",
   "IMPACT ASSESSMENT": "ANALYSE D'IMPACT",
   "INCIDENT INFORMATION": "INFORMATIONS SUR L'INCIDENT",
-  "ISO 42001 Completion Status": "Statut d'achèvement ISO 42001",
   "ISO 42001, ISO 27001, NIST AI RMF": "ISO 42001, ISO 27001, NIST AI RMF",
   "Icon Buttons": "Boutons d'icône",
   "Implementation description:": "Description de l'implémentation :",
@@ -8657,8 +8651,8 @@ export const fr: Record<string, string> = {
   "Active incidents": "Incidents actifs",
   "SOC 2, GDPR, HIPAA, DORA, and 17 more frameworks are built in, with requirements, evidence, and risk tracking.":
     "SOC 2, RGPD, HIPAA, DORA et 17 autres référentiels sont intégrés, avec exigences, preuves et suivi des risques.",
-  "Slack, MLflow, Azure AI Foundry, Jira Assets, Model Lifecycle, Risk Import, and Dataset Bulk Upload.":
-    "Slack, MLflow, Azure AI Foundry, Jira Assets, Model Lifecycle, Risk Import et Dataset Bulk Upload.",
+  "Slack, MLflow, Azure AI Foundry, Jira Assets, Jira incidents, Model lifecycle, Risk import, Dataset bulk upload, and Framework import.":
+    "Slack, MLflow, Azure AI Foundry, Jira Assets, Incidents Jira, Cycle de vie du modèle, Import de risques, Téléversement en masse de jeux de données et Import de référentiels.",
   "Admins enable, configure, and disable extensions from the Extensions page. Nothing to install.":
     "Les administrateurs activent, configurent et désactivent les extensions depuis la page Extensions. Rien à installer.",
   "Import risks from Excel, bulk upload datasets with PII detection, and define model lifecycle phases.":
@@ -11037,8 +11031,6 @@ export const fr: Record<string, string> = {
   "Extension settings": "Paramètres de l'extension",
   "Extensions": "Extensions",
   "Key": "Clé",
-  "Password/token fields are stored encrypted. Leave blank to keep the existing value.":
-    "Les champs mot de passe/jeton sont stockés chiffrés. Laissez vide pour conserver la valeur existante.",
   "Specific extension settings page": "Page de paramètres d'extension spécifique",
   "Sync Interval": "Intervalle de synchronisation",
   "This extension has no configuration.": "Cette extension n'a pas de configuration.",
@@ -12981,7 +12973,6 @@ export const es: Record<string, string> = {
   "Departments": "Departamentos",
   "Details": "Detalles",
   "Download results as JSON": "Descargar resultados como JSON",
-  "EU AI Act Completion Status": "Estado de finalización del EU AI Act",
   "EXPLORE VERIFYWISE": "EXPLORA VERIFYWISE",
   "Edit dataset": "Editar conjunto de datos",
   "Edit selection": "Editar selección",
@@ -13030,7 +13021,6 @@ export const es: Record<string, string> = {
   "How is this calculated?": "¿Cómo se calcula esto?",
   "IMPACT ASSESSMENT": "EVALUACIÓN DE IMPACTO",
   "INCIDENT INFORMATION": "INFORMACIÓN DEL INCIDENTE",
-  "ISO 42001 Completion Status": "Estado de finalización de ISO 42001",
   "ISO 42001, ISO 27001, NIST AI RMF": "ISO 42001, ISO 27001, NIST AI RMF",
   "Icon Buttons": "Botones de icono",
   "Implementation description:": "Descripción de la implementación:",
@@ -15019,8 +15009,8 @@ export const es: Record<string, string> = {
     "Los registros precisos garantizan la responsabilidad y respaldan las auditorías, la resolución de problemas y el cumplimiento normativo.",
   "SOC 2, GDPR, HIPAA, DORA, and 17 more frameworks are built in, with requirements, evidence, and risk tracking.":
     "SOC 2, GDPR, HIPAA, DORA y 17 marcos más están integrados, con requisitos, evidencias y seguimiento de riesgos.",
-  "Slack, MLflow, Azure AI Foundry, Jira Assets, Model Lifecycle, Risk Import, and Dataset Bulk Upload.":
-    "Slack, MLflow, Azure AI Foundry, Jira Assets, Model Lifecycle, Risk Import y Dataset Bulk Upload.",
+  "Slack, MLflow, Azure AI Foundry, Jira Assets, Jira incidents, Model lifecycle, Risk import, Dataset bulk upload, and Framework import.":
+    "Slack, MLflow, Azure AI Foundry, Jira Assets, Incidentes de Jira, Ciclo de vida del modelo, Importación de riesgos, Subida masiva de conjuntos de datos e Importación de marcos.",
   "Admins enable, configure, and disable extensions from the Extensions page. Nothing to install.":
     "Los administradores activan, configuran y desactivan extensiones desde la página Extensions. No hay nada que instalar.",
   "Import risks from Excel, bulk upload datasets with PII detection, and define model lifecycle phases.":
@@ -16510,8 +16500,6 @@ export const es: Record<string, string> = {
   "Extension settings": "Configuración de la extensión",
   "Extensions": "Extensiones",
   "Key": "Clave",
-  "Password/token fields are stored encrypted. Leave blank to keep the existing value.":
-    "Los campos de contraseña/token se almacenan cifrados. Deje en blanco para mantener el valor existente.",
   "Specific extension settings page": "Página de configuración de extensión específica",
   "Sync Interval": "Intervalo de sincronización",
   "This extension has no configuration.": "Esta extensión no tiene configuración.",

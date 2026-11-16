@@ -7745,6 +7745,54 @@ components:
           example: OK
         data:
           $ref: '#/components/schemas/GitHubTokenTestResult'
+    Extension:
+      type: object
+      description: 'One extension as every catalog endpoint returns it (list, get, enable, disable, update configuration). Secret field values are never returned.'
+      properties:
+        id:
+          type: integer
+        key:
+          type: string
+          example: mlflow
+        name:
+          type: string
+        displayName:
+          type: string
+        description:
+          type: string
+        category:
+          type: string
+        requiresConfiguration:
+          type: boolean
+        configFields:
+          type: array
+          description: 'Config field definitions (field_key, field_type, is_required, is_secret, options, validation)'
+          items:
+            type: object
+        enabled:
+          type: boolean
+        configuration:
+          type: object
+          description: 'Stored configuration with every secret field removed'
+        secretsSet:
+          type: array
+          description: 'Keys of the secret fields that hold a stored value. The values themselves are never returned.'
+          items:
+            type: string
+          example:
+            - api_token
+        enablement:
+          type: object
+          nullable: true
+          description: 'The organization''s enablement row without its configuration column, or null when the extension was never enabled'
+    SuccessResponse_Extension:
+      type: object
+      properties:
+        message:
+          type: string
+          example: OK
+        data:
+          $ref: '#/components/schemas/Extension'
 tags:
   -
     name: 'AI Advisor'
@@ -13805,6 +13853,13 @@ paths:
       responses:
         '200':
           description: 'List of extensions'
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: {type: string, example: OK}
+                  data: {type: array, items: {$ref: '#/components/schemas/Extension'}}
         '401':
           description: 'Not authenticated'
         '500':
@@ -13830,6 +13885,10 @@ paths:
       responses:
         '200':
           description: 'Extension detail'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse_Extension'
         '400':
           description: 'Invalid extension key format'
         '401':
@@ -13859,6 +13918,10 @@ paths:
       responses:
         '200':
           description: 'Extension enabled'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse_Extension'
         '400':
           description: 'Invalid key or configuration'
         '401':
@@ -13875,7 +13938,7 @@ paths:
       security:
         -
           bearerAuth: []
-      description: 'Enables the extension for the caller''s organization. Optional body { configuration } is validated against the extension''s config fields; secret fields are encrypted at rest. Admin only. Requires role: Admin'
+      description: 'Enables the extension for the caller''s organization. Optional body { configuration } is merged onto any stored configuration and validated against the extension''s config fields: a field left out keeps its stored value, null clears it, an empty string clears a non-secret field and keeps a secret one. Secret fields are encrypted at rest. Admin only. Requires role: Admin'
       parameters:
         -
           name: key
@@ -13899,6 +13962,10 @@ paths:
       responses:
         '200':
           description: 'Extension disabled'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse_Extension'
         '400':
           description: 'Invalid extension key format'
         '401':
@@ -13930,6 +13997,10 @@ paths:
       responses:
         '200':
           description: 'Configuration updated'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse_Extension'
         '400':
           description: 'Invalid key or configuration'
         '401':
@@ -13946,7 +14017,7 @@ paths:
       security:
         -
           bearerAuth: []
-      description: 'Updates the stored configuration. Body { configuration }. Secret fields left out of the body keep their existing encrypted value. Admin only. Requires role: Admin'
+      description: 'Updates the stored configuration. Body { configuration } holds only the fields to change: a field left out keeps its stored value, null clears it (a required field cannot be cleared), and an empty string clears a non-secret field but keeps a secret one. A stored secret is never kept for a changed address (400 asking for the secret again). Admin only. Requires role: Admin'
       parameters:
         -
           name: key
