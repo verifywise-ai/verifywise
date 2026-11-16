@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { ReactNode, useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import {
   Box,
   Typography,
@@ -27,6 +27,7 @@ import useFormattedDate from "../../../../application/hooks/useFormattedDate";
 import { palette } from "../../../themes/palette";
 import { useCan } from "../../../../application/hooks/useCan";
 import ExtensionSetupNotice from "../ExtensionSetupNotice";
+import Alert from "../../../components/Alert";
 
 const SelectorVertical = (props: any) => <ChevronsUpDown size={16} {...props} />;
 
@@ -49,16 +50,6 @@ interface AzureModel {
   created_at: string;
   updated_at: string;
 }
-
-const warningBoxSx = {
-  p: "12px 16px",
-  mb: "16px",
-  borderRadius: borderRadius.sm,
-  backgroundColor: palette.status.warning.bg,
-  border: `1px solid ${palette.status.warning.border}`,
-};
-
-const warningTextSx = { fontSize: 13, color: palette.status.warning.text };
 
 const DetailRow = ({ label, value }: { label: string; value: string }) => (
   <Box>
@@ -92,7 +83,8 @@ export default function AzureAIFoundryTab() {
   // Sync writes model records, so the server requires model.edit for it.
   const canSync = useCan("model.edit");
   const [loading, setLoading] = useState(false);
-  const [warning, setWarning] = useState<ReactNode>(null);
+  // Same shape as the MLflow tab: an optional title, and the reason as the body.
+  const [warning, setWarning] = useState<{ title?: string; body: string } | null>(null);
   const [notConfigured, setNotConfigured] = useState(false);
   const [selectedModel, setSelectedModel] = useState<AzureModel | null>(null);
   const [models, setModels] = useState<AzureModel[]>([]);
@@ -129,7 +121,7 @@ export default function AzureAIFoundryTab() {
         setModels([]);
       }
     } catch {
-      setWarning("Unable to reach the Azure AI Foundry backend.");
+      setWarning({ body: "Unable to reach the Azure AI Foundry backend." });
       setModels([]);
     } finally {
       setLoading(false);
@@ -151,16 +143,10 @@ export default function AzureAIFoundryTab() {
       // Refresh first: fetchModels clears the warning when it starts.
       await fetchModels();
       const reason = getApiErrorReason(error);
-      // The reason is its own text node so "Sync failed:" translates.
       setWarning(
-        reason ? (
-          <>
-            {"Sync failed: "}
-            {reason}
-          </>
-        ) : (
-          "Sync failed. Showing cached data."
-        ),
+        reason
+          ? { title: "Sync failed", body: reason }
+          : { body: "Sync failed. Showing cached data." },
       );
     }
   };
@@ -203,9 +189,13 @@ export default function AzureAIFoundryTab() {
         />
       )}
       {warning && (
-        <Box sx={warningBoxSx}>
-          <Typography sx={warningTextSx}>{warning}</Typography>
-        </Box>
+        <Alert
+          variant="warning"
+          inline
+          title={warning.title}
+          body={warning.body}
+          sx={{ mb: "16px" }}
+        />
       )}
 
       {canSync && (
