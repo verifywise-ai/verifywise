@@ -57,7 +57,7 @@ packaging==25.0
 pandas==2.3.3
 passlib==1.7.4
 portalocker==4.4.0
-posthog==7.45.3
+posthog==7.89.0
 prompt-toolkit==3.0.52
 propcache==0.4.1
 proto-plus==1.28.4
