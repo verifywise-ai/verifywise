@@ -1399,7 +1399,7 @@ async function resetPassword(req: Request, res: Response) {
       await user.updatePassword(newPassword);
 
       const consumed = await consumeOneTimeToken(
-        res.locals.passwordResetToken,
+        res.locals.oneTimeToken,
         "password_reset",
         transaction,
       );

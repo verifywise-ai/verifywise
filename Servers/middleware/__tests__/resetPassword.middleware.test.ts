@@ -112,7 +112,7 @@ describe("resetPassword middleware", () => {
     await resetPassword(req, res as Response, next);
 
     expect(next).toHaveBeenCalled();
-    expect(res.locals?.passwordResetToken).toBe("valid");
+    expect(res.locals?.oneTimeToken).toBe("valid");
     expect(mockConsume).not.toHaveBeenCalled();
     expect(res.status).not.toHaveBeenCalled();
   });

@@ -695,7 +695,7 @@ describe("user.ctrl", () => {
   describe("resetPassword", () => {
     function createResetRes(): any {
       const res = createRes();
-      res.locals.passwordResetToken = "reset-token";
+      res.locals.oneTimeToken = "reset-token";
       return res;
     }
 

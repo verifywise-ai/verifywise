@@ -55,7 +55,7 @@ const resetPassword = async (
     }
 
     // The controller consumes the token only after password validation succeeds.
-    res.locals.passwordResetToken = token;
+    res.locals.oneTimeToken = token;
 
     // Proceed to next middleware or route handler
     next();
