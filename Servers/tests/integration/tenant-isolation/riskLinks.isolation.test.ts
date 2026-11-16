@@ -14,6 +14,7 @@ import {
   riskLinkPairExistsQuery,
   getRelatedPairsQuery,
 } from "../../../utils/riskLink.utils";
+import { SYSTEM_RISK_VIEWER } from "../../../utils/riskVisibility.utils";
 
 afterEach(async () => {
   await cleanupDatabase();
@@ -64,13 +65,17 @@ describe("risk_links tenant isolation", () => {
     });
     await recomputeRiskLinks(owner.orgId, riskA);
 
-    expect(await getRiskLinksForRiskQuery(owner.orgId, riskA, ["suggested"])).toHaveLength(1);
-    expect(await getRiskLinksForRiskQuery(attacker.orgId, riskA, ["suggested"])).toHaveLength(0);
+    expect(
+      await getRiskLinksForRiskQuery(owner.orgId, riskA, ["suggested"], SYSTEM_RISK_VIEWER),
+    ).toHaveLength(1);
+    expect(
+      await getRiskLinksForRiskQuery(attacker.orgId, riskA, ["suggested"], SYSTEM_RISK_VIEWER),
+    ).toHaveLength(0);
 
     const [rows] = await sequelize.query(`SELECT id FROM risk_links LIMIT 1`);
     const linkId = (rows as any[])[0].id;
-    expect(await getRiskLinkByIdQuery(linkId, attacker.orgId)).toBeNull();
-    expect(await getRiskLinkByIdQuery(linkId, owner.orgId)).not.toBeNull();
+    expect(await getRiskLinkByIdQuery(linkId, attacker.orgId, SYSTEM_RISK_VIEWER)).toBeNull();
+    expect(await getRiskLinkByIdQuery(linkId, owner.orgId, SYSTEM_RISK_VIEWER)).not.toBeNull();
   });
 
   it("keeps the edge but hides it once the partner risk is soft-deleted (R7)", async () => {
@@ -89,7 +94,9 @@ describe("risk_links tenant isolation", () => {
       replacements: { id: riskB },
     });
 
-    expect(await getRiskLinksForRiskQuery(owner.orgId, riskA, ["suggested"])).toHaveLength(0);
+    expect(
+      await getRiskLinksForRiskQuery(owner.orgId, riskA, ["suggested"], SYSTEM_RISK_VIEWER),
+    ).toHaveLength(0);
     const [rows] = await sequelize.query(`SELECT COUNT(*)::int AS n FROM risk_links`);
     expect((rows as any[])[0].n).toBe(1);
   });
@@ -130,7 +137,9 @@ describe("risk_links tenant isolation", () => {
 
     const [rows] = await sequelize.query(`SELECT COUNT(*)::int AS n FROM risk_links`);
     expect((rows as any[])[0].n).toBe(0);
-    expect(await getRiskLinksForRiskQuery(owner.orgId, ownerRisk, ["suggested"])).toHaveLength(0);
+    expect(
+      await getRiskLinksForRiskQuery(owner.orgId, ownerRisk, ["suggested"], SYSTEM_RISK_VIEWER),
+    ).toHaveLength(0);
   });
 
   it("scores on this org's own element degrees, ignoring another org's volume", async () => {
@@ -242,7 +251,11 @@ describe("manual risk links respect the tenant boundary", () => {
     // test would pass against a query that has no tenant scoping at all.
     const attackerRisk = await createTestRisk(attacker.orgId);
 
-    const live = await getLiveRiskIdsQuery([ownerRisk, attackerRisk], owner.orgId);
+    const live = await getLiveRiskIdsQuery(
+      [ownerRisk, attackerRisk],
+      owner.orgId,
+      SYSTEM_RISK_VIEWER,
+    );
 
     expect(live).toEqual([ownerRisk]);
   });
@@ -255,7 +268,11 @@ describe("manual risk links respect the tenant boundary", () => {
       replacements: { id: deletedRisk },
     });
 
-    const live = await getLiveRiskIdsQuery([ownerRisk, deletedRisk], owner.orgId);
+    const live = await getLiveRiskIdsQuery(
+      [ownerRisk, deletedRisk],
+      owner.orgId,
+      SYSTEM_RISK_VIEWER,
+    );
 
     expect(live).toEqual([ownerRisk]);
   });

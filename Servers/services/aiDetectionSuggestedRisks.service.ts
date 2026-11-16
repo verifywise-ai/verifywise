@@ -34,6 +34,7 @@ import {
   upsertSuggestedRiskActionQuery,
 } from "../utils/aiDetectionDecisions.utils";
 import { createRiskService, CreateRiskServiceInput } from "./risk.service";
+import { riskViewer } from "../utils/riskVisibility.utils";
 
 const IGNORE_REASONS: SuggestedRiskIgnoreReason[] = ["already_added", "not_real_risk"];
 
@@ -118,7 +119,11 @@ export async function addSuggestedRiskToRegister(
 
     const risk = await createRiskService(
       { ...riskInput, projects: riskInput.projects || [], frameworks: riskInput.frameworks || [] },
-      { userId: ctx.userId, organizationId: ctx.organizationId },
+      {
+        userId: ctx.userId,
+        organizationId: ctx.organizationId,
+        viewer: riskViewer(ctx),
+      },
       transaction,
     );
     if (!risk?.id) {

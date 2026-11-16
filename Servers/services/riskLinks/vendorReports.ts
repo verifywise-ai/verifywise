@@ -5,6 +5,7 @@ import {
   UseCaseRef,
   VendorCoverageScanRow,
 } from "../../utils/vendorRiskReport.utils";
+import { RiskViewer } from "../../utils/riskVisibility.utils";
 import {
   DUPLICATE_SIMILARITY_THRESHOLD,
   jaccard,
@@ -54,9 +55,14 @@ export interface VendorExposureReport {
  * How far each vendor risk reaches through value-chain inheritance. A project
  * risk counts once per vendor even when it inherits through two of the
  * vendor's risks, and a use case counts once however many children sit in it.
+ * A non-Admin viewer's report counts and names only the project risks and use
+ * cases they can see (getVendorExposureRowsQuery).
  */
-export async function findVendorExposure(organizationId: number): Promise<VendorExposureReport> {
-  const rows = await getVendorExposureRowsQuery(organizationId);
+export async function findVendorExposure(
+  organizationId: number,
+  viewer: RiskViewer,
+): Promise<VendorExposureReport> {
+  const rows = await getVendorExposureRowsQuery(organizationId, viewer);
 
   const risks: VendorRiskExposure[] = rows.map((row) => ({
     vendor_risk_id: row.vendor_risk_id,

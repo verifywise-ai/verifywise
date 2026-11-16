@@ -19,6 +19,7 @@ import logger from "../../../utils/logger/fileLogger";
 import { createApprovalRequestQuery } from "../../../utils/approvalRequest.utils";
 import { getWorkflowStepsQuery } from "../../../utils/approvalWorkflow.utils";
 import { getRiskByIdQuery } from "../../../utils/risk.utils";
+import { riskViewerForUserQuery } from "../../../utils/riskVisibility.utils";
 import {
   ApprovalRequestStatus,
   EntityType,
@@ -64,7 +65,12 @@ export async function fileUpdateRisk(
   //    confirm the target exists. `getRiskByIdQuery` runs outside any
   //    transaction, which is fine at file-time — the actual update
   //    re-reads inside the approve transaction.
-  const currentRisk = await getRiskByIdQuery(parsed.data.risk_id, organizationId, false);
+  const currentRisk = await getRiskByIdQuery(
+    parsed.data.risk_id,
+    organizationId,
+    // A risk the requester cannot see is a missing one to them.
+    await riskViewerForUserQuery(userId, organizationId),
+  );
 
   if (!currentRisk) {
     return {

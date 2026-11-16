@@ -70,6 +70,8 @@ interface AssertOrgOwnsIdsParams {
   ids: number[];
   organizationId: number;
   transaction?: Transaction;
+  /** Extra row filter (an SQL fragment starting with " AND ", on `table`) and its replacements. */
+  extra?: { sql: string; replacements: Record<string, unknown> };
 }
 
 /**
@@ -83,6 +85,7 @@ export async function assertOrgOwnsIds({
   ids,
   organizationId,
   transaction,
+  extra,
 }: AssertOrgOwnsIdsParams): Promise<void> {
   if (ids.length === 0) return;
 
@@ -90,9 +93,9 @@ export async function assertOrgOwnsIds({
 
   const result = await sequelize.query<{ count: string }>(
     `SELECT COUNT(*)::text AS count FROM ${safeTable}
-     WHERE id IN (:ids) AND organization_id = :organizationId`,
+     WHERE id IN (:ids) AND organization_id = :organizationId${extra?.sql ?? ""}`,
     {
-      replacements: { ids, organizationId },
+      replacements: { ids, organizationId, ...extra?.replacements },
       type: QueryTypes.SELECT,
       transaction,
     },

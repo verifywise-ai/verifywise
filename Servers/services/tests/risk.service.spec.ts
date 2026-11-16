@@ -77,7 +77,14 @@ describe("risk.service", () => {
         expect.objectContaining({ risk_name: "Test Risk" }),
         ctx.organizationId,
         mockTransaction,
+        { viewer: undefined },
       );
+    });
+
+    it("passes the acting viewer to the query layer", async () => {
+      const viewer = { userId: 7, role: "Editor" };
+      await createRiskService(baseInput, { ...ctx, viewer }, mockTransaction);
+      expect(mockCreateRiskQuery.mock.calls[0][3]).toEqual({ viewer });
     });
 
     it("should record creation in change history", async () => {
@@ -100,6 +107,7 @@ describe("risk.service", () => {
         expect.objectContaining({ risk_owner: null }),
         ctx.organizationId,
         mockTransaction,
+        expect.anything(),
       );
     });
 
@@ -111,6 +119,7 @@ describe("risk.service", () => {
         expect.objectContaining({ risk_owner: null }),
         ctx.organizationId,
         mockTransaction,
+        expect.anything(),
       );
     });
 
@@ -121,6 +130,7 @@ describe("risk.service", () => {
         expect.objectContaining({ risk_owner: 5 }),
         ctx.organizationId,
         mockTransaction,
+        expect.anything(),
       );
     });
 
@@ -161,6 +171,7 @@ describe("risk.service", () => {
         expect.objectContaining({ ale_estimate: 5000, total_loss_likely: 2500 }),
         ctx.organizationId,
         mockTransaction,
+        expect.anything(),
       );
     });
 
@@ -211,6 +222,7 @@ describe("risk.service", () => {
           expect.objectContaining({ risk_level_autocalculated: "No risk" }),
           ctx.organizationId,
           mockTransaction,
+          expect.anything(),
         );
       });
 
@@ -224,6 +236,7 @@ describe("risk.service", () => {
           expect.objectContaining({ risk_level_autocalculated: null }),
           ctx.organizationId,
           mockTransaction,
+          expect.anything(),
         );
       });
 
@@ -242,6 +255,7 @@ describe("risk.service", () => {
           expect.objectContaining({ final_risk_level: "Very high risk" }),
           ctx.organizationId,
           mockTransaction,
+          expect.anything(),
         );
       });
 
@@ -255,6 +269,7 @@ describe("risk.service", () => {
           expect.objectContaining({ final_risk_level: null }),
           ctx.organizationId,
           mockTransaction,
+          expect.anything(),
         );
       });
     });
@@ -276,6 +291,20 @@ describe("risk.service", () => {
       beforeEach(() => {
         mockUpdateRiskByIdQuery.mockResolvedValue(mockRisk);
         (trackProjectRiskChanges as jest.Mock).mockResolvedValue([]);
+      });
+
+      it("passes the acting viewer to the update query", async () => {
+        const viewer = { userId: 7, role: "Editor" };
+        await updateRiskService(
+          42,
+          { projects: [3] } as any,
+          existing,
+          { ...ctx, viewer },
+          mockTransaction,
+        );
+        expect(mockUpdateRiskByIdQuery.mock.calls[0][4]).toEqual(
+          expect.objectContaining({ viewer }),
+        );
       });
 
       it("recomputes from sent likelihood and severity, ignoring a client level", async () => {

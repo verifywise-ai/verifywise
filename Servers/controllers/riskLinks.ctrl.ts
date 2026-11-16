@@ -13,6 +13,7 @@ import {
   getLiveVendorRiskIdsQuery,
 } from "../utils/vendorRiskLink.utils";
 import { getLLMKeysQuery } from "../utils/llmKey.utils";
+import { riskViewer, SYSTEM_RISK_VIEWER } from "../utils/riskVisibility.utils";
 import {
   connectedComponents,
   MAX_COMPONENT_SIZE,
@@ -324,7 +325,12 @@ export async function getRiskLinks(req: Request, res: Response): Promise<any> {
     }
     const statuses = requested ? [requested] : DEFAULT_STATUSES;
 
-    const links = await getRiskLinksForRiskQuery(req.organizationId!, riskId, statuses);
+    const links = await getRiskLinksForRiskQuery(
+      req.organizationId!,
+      riskId,
+      statuses,
+      riskViewer(req),
+    );
 
     logSuccess({
       eventType: "Read",
@@ -405,7 +411,7 @@ export async function getVendorExposure(req: Request, res: Response): Promise<an
     res,
     "getVendorExposure",
     "vendor exposure report",
-    findVendorExposure,
+    (organizationId) => findVendorExposure(organizationId, riskViewer(req)),
   );
 }
 
@@ -457,7 +463,12 @@ export async function getVendorRiskLinks(req: Request, res: Response): Promise<a
     }
     const statuses = requested ? [requested] : DEFAULT_STATUSES;
 
-    const links = await getRiskLinksForVendorRiskQuery(req.organizationId!, vendorRiskId, statuses);
+    const links = await getRiskLinksForVendorRiskQuery(
+      req.organizationId!,
+      vendorRiskId,
+      statuses,
+      riskViewer(req),
+    );
 
     logSuccess({
       eventType: "Read",
@@ -499,7 +510,11 @@ export async function getVendorRiskSharedProjects(req: Request, res: Response): 
       return res.status(400).json(STATUS_CODE[400](req.t!("Invalid vendor risk ID")));
     }
 
-    const candidates = await getVendorRiskChildCandidatesQuery(req.organizationId!, vendorRiskId);
+    const candidates = await getVendorRiskChildCandidatesQuery(
+      req.organizationId!,
+      vendorRiskId,
+      riskViewer(req),
+    );
 
     logSuccess({
       eventType: "Read",
@@ -777,7 +792,11 @@ export async function getSharedProjects(req: Request, res: Response): Promise<an
       return res.status(400).json(STATUS_CODE[400](req.t!("Invalid risk ID")));
     }
 
-    const candidates = await getSharedProjectCandidatesQuery(req.organizationId!, riskId);
+    const candidates = await getSharedProjectCandidatesQuery(
+      req.organizationId!,
+      riskId,
+      riskViewer(req),
+    );
 
     logSuccess({
       eventType: "Read",
@@ -868,9 +887,13 @@ async function runHierarchyPass(
     let components = connectedComponents(await getRelatedPairsQuery(req.organizationId!));
     if (vendorRiskId !== undefined) {
       const inScope = new Set(
-        (await getVendorRiskChildCandidatesQuery(req.organizationId!, vendorRiskId)).map(
-          (candidate) => candidate.id,
-        ),
+        (
+          await getVendorRiskChildCandidatesQuery(
+            req.organizationId!,
+            vendorRiskId,
+            SYSTEM_RISK_VIEWER,
+          )
+        ).map((candidate) => candidate.id),
       );
       components = components.filter((ids) => ids.some((id) => inScope.has(id)));
     }
@@ -923,7 +946,8 @@ export async function updateRiskLinkStatus(req: Request, res: Response): Promise
       return res.status(400).json(STATUS_CODE[400](req.t!("Invalid status")));
     }
 
-    const link = await getRiskLinkByIdQuery(id, req.organizationId!);
+    // A link with a risk end the user cannot see answers like a missing link.
+    const link = await getRiskLinkByIdQuery(id, req.organizationId!, riskViewer(req));
     if (!link) {
       return res.status(404).json(STATUS_CODE[404](req.t!("Risk link not found")));
     }
@@ -1050,11 +1074,13 @@ export async function acknowledgeParentLevelChange(req: Request, res: Response):
       return res.status(400).json(STATUS_CODE[400](req.t!("Invalid link ID")));
     }
 
-    const cleared = await acknowledgeParentLevelChangeQuery(req.organizationId!, id);
+    // A link with a risk end the user cannot see answers like a missing link.
+    const viewer = riskViewer(req);
+    const cleared = await acknowledgeParentLevelChangeQuery(req.organizationId!, id, viewer);
     if (!cleared) {
       // No flag to clear: distinguish a missing/foreign link (404) from one
       // that was already reviewed (200, idempotent).
-      const link = await getRiskLinkByIdQuery(id, req.organizationId!);
+      const link = await getRiskLinkByIdQuery(id, req.organizationId!, viewer);
       if (!link) {
         return res.status(404).json(STATUS_CODE[404](req.t!("Risk link not found")));
       }
@@ -1121,13 +1147,19 @@ export async function createRiskLink(req: Request, res: Response): Promise<any> 
       return res.status(400).json(STATUS_CODE[400](req.t!("A risk cannot link to itself")));
     }
 
+    // A risk the user cannot see answers like a missing one.
+    const viewer = riskViewer(req);
     if (parent.entityType === "risk") {
-      const live = await getLiveRiskIdsQuery([sourceRiskId, parent.id], req.organizationId!);
+      const live = await getLiveRiskIdsQuery(
+        [sourceRiskId, parent.id],
+        req.organizationId!,
+        viewer,
+      );
       if (live.length !== 2) {
         return res.status(404).json(STATUS_CODE[404](req.t!("Risk not found")));
       }
     } else {
-      const childLive = await getLiveRiskIdsQuery([sourceRiskId], req.organizationId!);
+      const childLive = await getLiveRiskIdsQuery([sourceRiskId], req.organizationId!, viewer);
       if (childLive.length !== 1) {
         return res.status(404).json(STATUS_CODE[404](req.t!("Risk not found")));
       }

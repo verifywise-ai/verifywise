@@ -15,6 +15,7 @@
  */
 
 import { updateRiskByIdQuery, getRiskByIdQuery } from "../../../utils/risk.utils";
+import { riskViewerForUserQuery } from "../../../utils/riskVisibility.utils";
 import { computeRiskLevelUpdates, normalizeCurrentRiskLevel } from "../../../utils/riskLevel.utils";
 import type { AiActionExecuteContext, AiActionExecuteResult } from "../types";
 import type { AgentUpdateRiskInput } from "./schema";
@@ -27,7 +28,9 @@ export async function executeUpdateRisk(
   // Load current row so we can merge the level inputs for the
   // risk-level recompute and so the mutation fails fast if the row
   // disappeared between file-time and approve-time.
-  const current = await getRiskByIdQuery(input.risk_id, ctx.organizationId, false);
+  // A risk the requester cannot see is a missing one to them.
+  const viewer = await riskViewerForUserQuery(ctx.requesterId, ctx.organizationId);
+  const current = await getRiskByIdQuery(input.risk_id, ctx.organizationId, viewer);
 
   if (!current) {
     throw new Error(`Risk #${input.risk_id} no longer exists — cannot apply update.`);
@@ -77,6 +80,7 @@ export async function executeUpdateRisk(
     partial,
     ctx.organizationId,
     ctx.transaction,
+    { viewer },
   );
 
   if (!updated || updated.id == null) {

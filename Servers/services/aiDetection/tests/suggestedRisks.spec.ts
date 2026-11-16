@@ -101,7 +101,7 @@ describe("aiDetectionSuggestedRisks.service", () => {
       expect(mockGet).toHaveBeenCalledWith(10, "prompt injection", 3, tx);
       expect(mockCreateRisk).toHaveBeenCalledWith(
         { ...riskInput, projects: [], frameworks: [] },
-        { userId: 7, organizationId: 3 },
+        { userId: 7, organizationId: 3, viewer: { userId: 7, role: "Admin" } },
         tx,
       );
       expect(mockUpsert).toHaveBeenCalledWith(

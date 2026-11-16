@@ -1,10 +1,11 @@
 import { wiseSearch, GroupedSearchResults } from "../../utils/search.utils";
 import logger from "../../utils/logger/fileLogger";
+import { actingRiskViewer } from "./riskFunctions";
 
 // --- Read Tools ---
 
 const globalSearch = async (
-  params: { query: string; entity_types?: string[]; limit?: number },
+  params: { query: string; entity_types?: string[]; limit?: number } & Record<string, unknown>,
   organizationId: number,
 ): Promise<any> => {
   try {
@@ -12,6 +13,8 @@ const globalSearch = async (
       query: params.query,
       organizationId,
       userId: 0, // Advisor uses org-level access
+      // Risks: only the ones the chatting user can see (risk visibility rule).
+      riskViewer: await actingRiskViewer(params, organizationId),
       limit: params.limit || 20,
     });
 
@@ -49,7 +52,7 @@ const searchWithinEntity = async (
     query: string;
     filters?: { review_status?: string };
     limit?: number;
-  },
+  } & Record<string, unknown>,
   organizationId: number,
 ): Promise<any> => {
   try {
@@ -57,6 +60,8 @@ const searchWithinEntity = async (
       query: params.query,
       organizationId,
       userId: 0, // Advisor uses org-level access
+      // Risks: only the ones the chatting user can see (risk visibility rule).
+      riskViewer: await actingRiskViewer(params, organizationId),
       limit: params.limit || 20,
       reviewStatus: params.filters?.review_status,
     });
