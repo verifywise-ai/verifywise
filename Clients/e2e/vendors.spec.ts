@@ -90,7 +90,9 @@ test.describe("Vendors Page", () => {
     await expect(findingsTab).toBeVisible({ timeout: 10_000 });
     await findingsTab.click();
     await expect(page).toHaveURL(/\/vendors\/research-findings/, { timeout: 10_000 });
-    await expect(findingsTab).toHaveAttribute("aria-selected", "true");
+    // Not found by name again: while the pointer rests on a tab, its tooltip is open and the tab's
+    // accessible name is the tooltip's text, so the name locator above no longer matches it.
+    await expect(page.getByRole("tab", { selected: true })).toContainText(/research findings/i);
   });
 
   test("clicking Insights tab navigates to /vendors/insights", async ({ authedPage: page }) => {
@@ -99,7 +101,8 @@ test.describe("Vendors Page", () => {
     await expect(insightsTab).toBeVisible({ timeout: 10_000 });
     await insightsTab.click();
     await expect(page).toHaveURL(/\/vendors\/insights/, { timeout: 10_000 });
-    await expect(insightsTab).toHaveAttribute("aria-selected", "true");
+    // Not found by name again: see the Research findings tab above.
+    await expect(page.getByRole("tab", { selected: true })).toContainText(/insights/i);
   });
 
   test("a notification link to the Risks tab with findings lands on the Research findings tab", async ({

@@ -47,6 +47,13 @@ function pdfOf(objects: Array<{ dictionary: string; data?: Buffer } | string>): 
   return Buffer.concat(parts);
 }
 
+/**
+ * A clock that does not move. The tests that count work (the budget, the pauses) must not depend on
+ * how long a slow runner takes to do it: on CI with coverage a file of several megabytes outlasted
+ * the 20 seconds of LIMITS, and the count was refused for time instead of for work.
+ */
+const stoppedClock = () => 0;
+
 const check = (body: Buffer, over: Partial<PdfStreamOptions> = {}) =>
   checkPdfStreams(body, { ...LIMITS, ...over });
 
@@ -465,7 +472,7 @@ describe("checkPdfStreams: the work on the event loop", () => {
   it("allows each file WORK_PER_FILE_BYTE times its length, plus WORK_FLOOR_BYTES", async () => {
     const body = pdfOf([{ dictionary: "<< /Length LENGTH /Filter /Fl >>", data: deflate(KIB) }]);
     const stats = statsOf();
-    expect(await check(body, { stats })).toBe("fits");
+    expect(await check(body, { stats, now: stoppedClock })).toBe("fits");
     expect(stats.budget).toBe(WORK_PER_FILE_BYTE * body.length + WORK_FLOOR_BYTES);
     expect([WORK_PER_FILE_BYTE, WORK_FLOOR_BYTES, WORK_PER_STREAM_BYTES]).toEqual([
       4,
@@ -486,7 +493,7 @@ describe("checkPdfStreams: the work on the event loop", () => {
     }
     const body = pdfOf(objects);
     const stats = statsOf();
-    expect(await check(body, { stats })).toBe("fits");
+    expect(await check(body, { stats, now: stoppedClock })).toBe("fits");
     expect(stats.streams).toBe(2000);
     expect(stats.work).toBeLessThan(3 * body.length);
   });
@@ -515,7 +522,7 @@ describe("checkPdfStreams: the work on the event loop", () => {
     }
     const body = Buffer.from(parts.join(""), "latin1");
     const stats = statsOf();
-    expect(await check(body, { stats })).toBe("too_slow");
+    expect(await check(body, { stats, now: stoppedClock })).toBe("too_slow");
     expect(stats.work).toBeGreaterThan(stats.budget);
     expect(stats.pauses).toBeGreaterThan(0);
   });
@@ -535,7 +542,7 @@ describe("checkPdfStreams: the work on the event loop", () => {
     parts.push(" ".repeat(MIB), "x");
     const body = Buffer.from(parts.join(""), "latin1");
     const stats = statsOf();
-    expect(await check(body, { stats })).toBe("too_slow");
+    expect(await check(body, { stats, now: stoppedClock })).toBe("too_slow");
     expect(stats.work).toBeGreaterThan(stats.budget);
   });
 
@@ -553,7 +560,7 @@ describe("checkPdfStreams: the work on the event loop", () => {
         ran = true;
       });
       const stats = statsOf();
-      expect(await check(body, { stats })).toBe("fits");
+      expect(await check(body, { stats, now: stoppedClock })).toBe("fits");
       expect(ran).toBe(true);
       expect(stats.pauses).toBeGreaterThanOrEqual(2);
     });
