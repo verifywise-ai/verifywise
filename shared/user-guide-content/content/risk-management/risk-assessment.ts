@@ -266,6 +266,10 @@ export const riskAssessmentContent: ArticleContent = {
     },
     {
       type: 'paragraph',
+      text: 'When the last use case link of a risk is removed, everyone in the organization can see the risk. This also happens when that use case is deleted.',
+    },
+    {
+      type: 'paragraph',
       text: 'A risk you cannot see is left out of the risk register, search results, change history, linked risks and policy links. Opening it directly behaves as if the risk does not exist.',
     },
     {

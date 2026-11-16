@@ -475,7 +475,11 @@ Admins and SuperAdmins (`seesAllProjects` in `utils/projectVisibility.utils.ts`)
 
 Task assignees and workflow approvers can open a use case read-only (`getProjectReadAccessQuery`). That access does not show them the use case's risks.
 
+A risk whose last use case link is removed becomes visible to everyone in the organization. This includes deleting the use case, which deletes its `projects_risks` rows and keeps the risks.
+
 The check is a pair of `EXISTS` subqueries, so a risk's own `projects` array is never narrowed. A visible risk lists every use case it is linked to.
+
+The "no `projects_risks` row" test does not filter on `projects_risks.organization_id`. That column is nullable, and a row with NULL there still counts as a link, so a linked risk never looks unlinked. The risk id already ties the row to the organization. The "linked to a use case the user can access" test keeps the filter, so a NULL row hides the risk there.
 
 ### Risks of one use case
 
@@ -492,6 +496,12 @@ A risk the user cannot see answers like a missing one, with the existing status 
 | `PATCH /projectRisks/bulk` | 403 "One or more ids are not accessible" (`assertOrgOwnsIds` with the visibility fragment as `extra`) |
 | Risk change history | 200 with an empty page |
 | `POST /quantitative-risks/:riskId/apply-benchmark/:benchmarkId` | 404 "Risk not found", nothing written |
+| `POST /riskLinks` with a hidden source or target | 404 "Risk not found" (`getLiveRiskIdsQuery` leaves the hidden id out) |
+| `PATCH /riskLinks/:id` and `POST /riskLinks/:id/acknowledge-parent-change` on a link with a hidden source or target | 404 "Risk link not found", nothing written |
+| `POST /policy-linked/:policyId/linked-objects` with a hidden risk id | 403 "One or more ids are not accessible" (`assertOrgOwnsIds` with the visibility fragment as `extra`), nothing linked |
+| `DELETE /policy-linked/risk/:riskId/unlink-all` | 200, as for an unknown id, and the risk keeps its policy links |
+
+`getRiskByIdQuery` and `archiveRiskQuery` take a required viewer and answer a hidden risk like a missing one, so the by-id routes, `PUT`, `DELETE`, the bulk archive and the advisor need no separate visibility check.
 
 Linking a risk to a use case needs write access to that use case: owner, team member or group member, or an Admin. A use case the user cannot access gets 400 "Linked use cases must belong to this organization", the error for a use case outside the organization (`assertRiskReferencesInOrganization` in `utils/risk.utils.ts`). Only newly added links are checked.
 
@@ -509,7 +519,7 @@ The rule also applies to:
 - policy linked objects (`utils/policyLinkedObject.utils.ts`), which leave out links to hidden risks;
 - apply benchmark (`controllers/quantitativeRisk.ctrl.ts`);
 - AI risk suggestions for a use case, which pass the model only the existing risks the user can see;
-- the AI advisor's write tools. Update, delete, link to a use case, assign owner, change status and bulk status change run for the requesting user (`riskViewerForUserQuery`). A hidden risk is a missing one to them.
+- the AI advisor's write tools: create, update, delete, link to a use case, link to a policy, assign owner, change status and bulk status change. They run for the user who asked for the action. After an approval that is the requester stored on the approval record (`requested_by`, passed to the tool as `_requesterId`), not the approver; when the record has no requester, the approver. With no user at all the tool fails closed (`UNKNOWN_RISK_VIEWER`): it sees only risks linked to no use case. A hidden risk is a missing one to them. Delete, assign owner and change status report "Risk not found" when nothing was written. Bulk status change reports the ids it updated in `updated_ids` and the rest in `not_found_ids`.
 
 ### Helpers
 
@@ -523,12 +533,13 @@ All in `Servers/utils/riskVisibility.utils.ts`:
 | `isRiskVisibleQuery(riskId, orgId, viewer)` | Whether one risk is visible. Admins skip the query |
 | `getAccessibleProjectIdsQuery(ids, orgId, viewer)` | Which of these use cases the viewer can access and write to |
 | `riskViewer(req)` | The signed-in user as a viewer |
-| `riskViewerForUserQuery(userId, orgId)` | A viewer for a user known only by id (advisor), with their role in the organization |
+| `riskViewerForUserQuery(userId, orgId)` | A viewer for a user known only by id (advisor), with their role in the organization from `organization_members` (`getUserRoleInOrganization`) |
+| `UNKNOWN_RISK_VIEWER` | The viewer for a write that names no user. User id 0 matches no owner, approver or member, so it sees only risks linked to no use case |
 | `scopedRiskViewer(viewer)` | The user to scope by, or `null` when the viewer sees every risk |
 
 ### The system viewer
 
-The risk list, by-id and link queries take a `viewer` with no default. A new caller must pass a user or `SYSTEM_RISK_VIEWER`, so leaving the argument out fails the build instead of returning every risk. `SYSTEM_RISK_VIEWER` is for callers that act on the whole organization with no user to scope by:
+The risk list, by-id, archive and link queries take a `viewer` with no default. A new caller must pass a user or `SYSTEM_RISK_VIEWER`, so leaving the argument out fails the build instead of returning every risk. `SYSTEM_RISK_VIEWER` is for callers that act on the whole organization with no user to scope by:
 
 | Caller | Why |
 |--------|-----|
@@ -538,7 +549,7 @@ The risk list, by-id and link queries take a `viewer` with no default. A new cal
 | Risk link hierarchy pass (`controllers/riskLinks.ctrl.ts`, `services/riskLinks/direction/candidates.ts`) | An organization-wide `riskLinks.admin` job |
 | Portfolio snapshots (`recordPortfolioSnapshot` in `utils/quantitativeRisk.utils.ts`) | Snapshots are organization data, not one user's view |
 | Advisor read and search tools (`advisor/functions/riskFunctions.ts`, `searchFunctions.ts`) | Not scoped yet, see below |
-| Advisor write tools when the gateway sends no user id | No user to scope by |
+| `updateRiskByIdQuery`'s read of the risk before the update | Only feeds the change diff. Every caller has checked visibility first |
 
 Accepting an AI Detection suggested risk runs for the signed-in user.
 
