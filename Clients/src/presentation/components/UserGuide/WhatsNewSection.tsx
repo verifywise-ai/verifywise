@@ -11,6 +11,29 @@ interface ChangelogEntry {
 
 const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "v2.6.9",
+    date: "November 16, 2026",
+    title: "A new look with a Home page, risk approvals and safer extensions",
+    summary:
+      "VerifyWise has a new look with one sidebar and a Home page that lists what needs you today. You can switch back to the classic look until January 2027. Risks now follow use case access and have an approval step. An internal audit also brought fixes to extensions, policies and AI Detection.",
+    items: [
+      "New look: new colours, type and icons, with one sidebar in place of the app switcher and module sidebars. You can switch back in Settings → Preferences → Interface style until January 2027",
+      "Home: the Today tab lists what needs your attention, with counts for your organization. Start here is now on the Get started tab",
+      "What's changed: a card tells you what changed when you open a page whose place or layout changed in the new look. Accounts created after the update don't see these cards",
+      "Tables: the group-by control is removed from every table",
+      "Risk approval: approval status is Pending, Approved, Rejected or Not required. Naming an approver sets it to Pending and notifies them. Only the approver or an Admin can approve or reject. Approver and assessment date are optional",
+      "Risk visibility: Admins see every risk. Other users see risks linked to use cases they can access, risks linked to no use case and risks they own or approve. Archived risks linked to no use case are visible only to Admins and the risk's owner or approver",
+      "Deleting a use case: you choose whether to archive the risks linked only to that use case, which keeps them from becoming visible to the whole organization",
+      "Risk levels: one effective risk level and one formula across the app. Reports leave out archived risks. Bulk actions notify owners and run automations, as single edits do",
+      "Risk import: a file with an invalid row is rejected with that row's errors, and nothing is imported",
+      "Policies: approval goes through approval workflows. Review reminders cover overdue policies and skip archived ones",
+      "AI Detection: every scan gets a governance score and says when a check didn't run. The CI gate fails only when the score is below your threshold. Review decisions carry over to new scans. CI/CD setup works end to end",
+      "Extensions: you can connect Slack from the app, and Slack connections belong to the organization. Only the named approvers decide Model Lifecycle approvals. Stored secrets are no longer sent to the browser. Turning an extension off asks for confirmation",
+      "Security: the server now checks the framework, audit and evals permissions that only the screens checked before. Every owner, approver, folder and link must belong to your organization",
+      "Fixes: the AI Advisor links risks to use cases again. Submitting a post-market monitoring cycle works. Imported frameworks are managed on the Frameworks settings tab. Folder controls follow permissions instead of role names",
+    ],
+  },
+  {
     version: "v2.6.8",
     date: "November 13, 2026",
     title: "Training assignments, groups and custom roles, and framework import",
