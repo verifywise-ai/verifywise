@@ -471,6 +471,10 @@ export const useCasesContent: ArticleContent = {
       text: 'Other users cannot open or change the use case, including Editors. Assignees and approvers do not see it in their use case list. To link a task to a framework control, you need access to that control\'s use case.',
     },
     {
+      type: 'paragraph',
+      text: 'Access to a use case also decides which of its risks you see. Owners, team members and group members see the risks linked to it. On that use case, task assignees and approvers see only the risks they own or approve. See **Who can see a risk** in Risk assessment.',
+    },
+    {
       type: 'heading',
       id: 'notifications',
       level: 2,

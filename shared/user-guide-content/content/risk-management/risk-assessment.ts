@@ -248,6 +248,42 @@ export const riskAssessmentContent: ArticleContent = {
     },
     {
       type: 'heading',
+      id: 'who-can-see-a-risk',
+      level: 2,
+      text: 'Who can see a risk',
+    },
+    {
+      type: 'paragraph',
+      text: 'Admins see every risk in the organization. Other users see a risk when any of these applies:',
+    },
+    {
+      type: 'bullet-list',
+      items: [
+        { text: 'The risk is not linked to a use case. A risk linked only to frameworks counts as not linked.' },
+        { text: 'The risk is linked to a use case you own, are a team member of or reach through a group.' },
+        { text: 'You are the risk\'s action owner or its approver.' },
+      ],
+    },
+    {
+      type: 'paragraph',
+      text: 'A risk you cannot see is left out of the risk register, search results, change history, linked risks and policy links. Opening it directly behaves as if the risk does not exist.',
+    },
+    {
+      type: 'paragraph',
+      text: 'Being assigned a task on a use case, or approving its workflow, lets you open the use case. It does not show you its risks. On such a use case you see only the risks you own or approve.',
+    },
+    {
+      type: 'paragraph',
+      text: 'To link a risk to a use case, you need access to that use case. The **Applicable use cases** field lists only the use cases you can access. When you edit a risk that is also linked to a use case you cannot access, that link is hidden from you. Saving the risk keeps it.',
+    },
+    {
+      type: 'callout',
+      variant: 'info',
+      title: 'Totals count every risk',
+      text: 'Dashboard counts, risk history over time and the organization\'s quantitative risk totals include every risk in the organization. A few places don\'t apply this rule yet and can show risks you otherwise can\'t see: the AI advisor, organization reports, deadlines, the evidence hub, FRIA and approval requests.',
+    },
+    {
+      type: 'heading',
       id: 'archiving-and-bulk-edits',
       level: 2,
       text: 'Archiving, bulk edits and export',
