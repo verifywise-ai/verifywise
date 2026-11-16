@@ -43,7 +43,7 @@
 | T3 | Senior Frontend Developer | 6B | Align reset-page checks and messages with server policy | Complete | Reset page, validation, frontend tests |
 | T4 | QA + Test Automation | 6C | Prove retry, rollback, success, and replay behavior | Complete | Backend/frontend regression tests |
 | T5 | AppSec + Technical Lead | 7/8 | Review security invariants and implementation | Complete | Approved; QA retry gap addressed |
-| T6 | DevOps / Orchestrator | 9 | Run local checks, open PR, and monitor CI | In progress | PR and CI evidence |
+| T6 | DevOps / Orchestrator | 9 | Run local checks, open PR, and monitor CI | Complete | PR #5414; all checks passed |
 
 ## API Contracts
 
@@ -72,7 +72,7 @@ No contract changes. The existing endpoint, bearer token, request body, and succ
 | Clients typecheck | Passed |
 | Clients build | Passed |
 | Security review | Approved; no blocking findings |
-| Pull-request CI | Pending |
+| Pull-request CI | Passed — all checks on PR #5414 |
 
 ## Change Log
 
@@ -83,7 +83,11 @@ No contract changes. The existing endpoint, bearer token, request body, and succ
 - Added the missing lowercase rule to the reset-page validation and checklist.
 - Added direct invalid → corrected retry → replay coverage with the same token.
 - AppSec/Technical Lead approved the implementation; QA's requested cross-layer retry test was added.
+- Opened PR #5414: https://github.com/verifywise-ai/verifywise/pull/5414
+- Fixed initial CI findings (missing translations and CodeQL token naming); all final checks passed.
 
 ## Retrospective Notes
 
-To be completed after CI and review.
+- Token consumption belongs in the same transaction as the state change it authorizes, not in pre-validation middleware.
+- Cross-layer reproduction tests should cover the full failed-attempt → corrected-retry → replay sequence.
+- New user-facing strings require all client translations before pushing; security-focused variable naming can avoid misleading CodeQL data-flow classifications.
