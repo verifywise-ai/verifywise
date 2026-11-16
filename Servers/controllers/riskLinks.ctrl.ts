@@ -13,7 +13,7 @@ import {
   getLiveVendorRiskIdsQuery,
 } from "../utils/vendorRiskLink.utils";
 import { getLLMKeysQuery } from "../utils/llmKey.utils";
-import { riskViewer } from "../utils/riskVisibility.utils";
+import { riskViewer, SYSTEM_RISK_VIEWER } from "../utils/riskVisibility.utils";
 import {
   connectedComponents,
   MAX_COMPONENT_SIZE,
@@ -510,7 +510,11 @@ export async function getVendorRiskSharedProjects(req: Request, res: Response): 
       return res.status(400).json(STATUS_CODE[400](req.t!("Invalid vendor risk ID")));
     }
 
-    const candidates = await getVendorRiskChildCandidatesQuery(req.organizationId!, vendorRiskId);
+    const candidates = await getVendorRiskChildCandidatesQuery(
+      req.organizationId!,
+      vendorRiskId,
+      riskViewer(req),
+    );
 
     logSuccess({
       eventType: "Read",
@@ -883,9 +887,13 @@ async function runHierarchyPass(
     let components = connectedComponents(await getRelatedPairsQuery(req.organizationId!));
     if (vendorRiskId !== undefined) {
       const inScope = new Set(
-        (await getVendorRiskChildCandidatesQuery(req.organizationId!, vendorRiskId)).map(
-          (candidate) => candidate.id,
-        ),
+        (
+          await getVendorRiskChildCandidatesQuery(
+            req.organizationId!,
+            vendorRiskId,
+            SYSTEM_RISK_VIEWER,
+          )
+        ).map((candidate) => candidate.id),
       );
       components = components.filter((ids) => ids.some((id) => inScope.has(id)));
     }

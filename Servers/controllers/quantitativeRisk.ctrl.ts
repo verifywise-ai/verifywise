@@ -9,7 +9,12 @@ import {
 } from "../utils/quantitativeRisk.utils";
 import { applyBenchmarkToRiskQuery, getBenchmarkByIdQuery } from "../utils/riskBenchmark.utils";
 import { getRiskByIdQuery } from "../utils/risk.utils";
-import { riskViewer } from "../utils/riskVisibility.utils";
+import {
+  getAccessibleProjectIdsQuery,
+  isRiskVisibleQuery,
+  riskViewer,
+  scopedRiskViewer,
+} from "../utils/riskVisibility.utils";
 import { sequelize } from "../database/db";
 import { QueryTypes } from "sequelize";
 import { logStructured } from "../utils/logger/fileLogger";
@@ -86,6 +91,23 @@ export async function getPortfolioTrendHandler(req: Request, res: Response): Pro
   );
 
   try {
+    // Use case snapshots are recorded with every risk on the use case. A
+    // viewer who can see the use case sees every risk on it, so their totals
+    // are right; anyone else (other than an Admin) would see totals that
+    // include risks hidden from them, so they get no snapshots (ruling J7).
+    // The organization trend stays organization-wide (ruling J4).
+    const viewer = riskViewer(req);
+    if (projectId && scopedRiskViewer(viewer)) {
+      const accessible = await getAccessibleProjectIdsQuery(
+        [projectId],
+        req.organizationId!,
+        viewer,
+      );
+      if (accessible.length === 0) {
+        return res.status(200).json(STATUS_CODE[200]([]));
+      }
+    }
+
     const snapshots = await getPortfolioTrend(req.organizationId!, days, projectId);
     return res.status(200).json(STATUS_CODE[200](snapshots));
   } catch (error) {
@@ -118,6 +140,12 @@ export async function applyBenchmark(req: Request, res: Response): Promise<any> 
     const benchmark = await getBenchmarkByIdQuery(benchmarkId);
     if (!benchmark) {
       return res.status(404).json(STATUS_CODE[404](req.t!("Benchmark not found")));
+    }
+
+    // A risk the viewer cannot see answers exactly like a missing one
+    // (ruling J2), and nothing is written.
+    if (!(await isRiskVisibleQuery(riskId, req.organizationId!, riskViewer(req)))) {
+      return res.status(404).json(STATUS_CODE[404](req.t!("Risk not found")));
     }
 
     // Apply benchmark values to risk

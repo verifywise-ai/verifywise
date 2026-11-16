@@ -899,11 +899,17 @@ export interface VendorRiskChildCandidate {
  * projects this vendor serves, with those project titles. The mirror of
  * getSharedProjectCandidatesQuery, which ranks vendor parents for a project
  * risk over the same `vendors_projects` join.
+ *
+ * A project risk the viewer cannot see (risk visibility rule) is left out, so
+ * the picker never names a hidden risk. The admin hierarchy pass passes
+ * SYSTEM_RISK_VIEWER.
  */
 export async function getVendorRiskChildCandidatesQuery(
   organizationId: number,
   vendorRiskId: number,
+  viewer: RiskViewer,
 ): Promise<VendorRiskChildCandidate[]> {
+  const childVisibility = riskVisibilitySql("child", viewer);
   const rows = await sequelize.query(
     `SELECT DISTINCT child.id AS id, p.project_title AS project_title
        FROM vendorrisks vr
@@ -920,9 +926,12 @@ export async function getVendorRiskChildCandidatesQuery(
        JOIN projects p ON p.id = vp.project_id
       WHERE vr.id = :vendorRiskId
         AND vr.organization_id = :organizationId
-        AND vr.is_deleted = false
+        AND vr.is_deleted = false${childVisibility.sql}
       ORDER BY child.id, p.project_title`,
-    { replacements: { organizationId, vendorRiskId }, type: QueryTypes.SELECT },
+    {
+      replacements: { organizationId, vendorRiskId, ...childVisibility.replacements },
+      type: QueryTypes.SELECT,
+    },
   );
 
   const grouped = new Map<number, VendorRiskChildCandidate>();

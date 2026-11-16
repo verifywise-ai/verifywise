@@ -34,6 +34,7 @@ import {
   getRiskGraph,
   getSharedProjects,
   getVendorRiskLinks,
+  getVendorRiskSharedProjects,
   updateRiskLinkStatus,
   recomputeAllRiskLinks,
   createRiskLink,
@@ -1230,5 +1231,17 @@ describe("per-risk link reads pass the signed-in viewer", () => {
       ["suggested", "confirmed"],
       { userId: 5, role: "Editor" },
     );
+  });
+
+  it("the vendor panel's child candidates are read for the viewer", async () => {
+    mockUtils.getVendorRiskChildCandidatesQuery.mockResolvedValue([]);
+    await getVendorRiskSharedProjects(
+      req({ params: { vendorRiskId: "9" }, role: "Editor" }) as any,
+      res() as any,
+    );
+    expect(mockUtils.getVendorRiskChildCandidatesQuery).toHaveBeenCalledWith(7, 9, {
+      userId: 5,
+      role: "Editor",
+    });
   });
 });

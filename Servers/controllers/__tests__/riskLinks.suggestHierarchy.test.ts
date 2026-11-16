@@ -13,6 +13,7 @@ import {
   getVendorRiskChildCandidatesQuery,
 } from "../../utils/riskLink.utils";
 import { getLLMKeysQuery } from "../../utils/llmKey.utils";
+import { SYSTEM_RISK_VIEWER } from "../../utils/riskVisibility.utils";
 import { enqueueRiskLinkDirection } from "../../services/automations/automationProducer";
 
 const mockGetRelatedPairs = getRelatedPairsQuery as jest.Mock;
@@ -127,7 +128,7 @@ describe("suggestVendorRiskHierarchy", () => {
 
     await suggestVendorRiskHierarchy(vendorReq("5"), r);
 
-    expect(mockGetVendorCandidates).toHaveBeenCalledWith(42, 5);
+    expect(mockGetVendorCandidates).toHaveBeenCalledWith(42, 5, SYSTEM_RISK_VIEWER);
     expect(mockEnqueue).toHaveBeenCalledTimes(2);
     expect(mockEnqueue).toHaveBeenCalledWith(42, [1, 2, 3]);
     expect(mockEnqueue).toHaveBeenCalledWith(42, [20, 21]);
