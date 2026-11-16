@@ -83,6 +83,7 @@ export const de: Record<string, string> = {
   "Attestation": "Attestierung",
   "Could not load the portfolio summary. Try again shortly.":
     "Portfolioübersicht konnte nicht geladen werden. Bitte versuchen Sie es in Kürze erneut.",
+  "Could not load the model lifecycle.": "Der Modelllebenszyklus konnte nicht geladen werden.",
   "Fleet attestation status": "Attestierungsstatus des Bestands",
   "Generate attestation report": "Attestierungsbericht erstellen",
   "Advance this validation to In validation to begin writing the report.":
@@ -354,6 +355,7 @@ export const fr: Record<string, string> = {
   "Attestation": "Attestation",
   "Could not load the portfolio summary. Try again shortly.":
     "Impossible de charger le résumé du portefeuille. Réessayez sous peu.",
+  "Could not load the model lifecycle.": "Impossible de charger le cycle de vie du modèle.",
   "Fleet attestation status": "Statut d’attestation du parc",
   "Generate attestation report": "Générer le rapport d’attestation",
   "Advance this validation to In validation to begin writing the report.":
@@ -625,6 +627,7 @@ export const es: Record<string, string> = {
   "Attestation": "Atestación",
   "Could not load the portfolio summary. Try again shortly.":
     "No se pudo cargar el resumen de la cartera. Vuelva a intentarlo en breve.",
+  "Could not load the model lifecycle.": "No se pudo cargar el ciclo de vida del modelo.",
   "Fleet attestation status": "Estado de atestación de la flota",
   "Generate attestation report": "Generar informe de atestación",
   "Advance this validation to In validation to begin writing the report.":

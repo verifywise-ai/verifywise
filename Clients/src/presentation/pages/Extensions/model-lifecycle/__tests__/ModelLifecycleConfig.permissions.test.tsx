@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import ModelLifecycleConfig from "../ModelLifecycleConfig";
 
 const api = vi.hoisted(() => ({ delete: vi.fn(), get: vi.fn(), post: vi.fn(), put: vi.fn() }));
@@ -55,5 +55,39 @@ describe("ModelLifecycleConfig setup entry", () => {
       await screen.findByText("No lifecycle phases yet. An Admin can add them."),
     ).toBeInTheDocument();
     expect(screen.queryByText(/Click the button below/)).not.toBeInTheDocument();
+  });
+});
+
+describe("ModelLifecycleConfig failed writes", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    api.get.mockResolvedValue({ data: { data: phases } });
+    auth.keys = new Set(["extension.admin"]);
+  });
+
+  it("keeps the new phase name and says it was not saved when creating a phase fails", async () => {
+    api.post.mockRejectedValueOnce(new Error("Bad Request"));
+    render(<ModelLifecycleConfig />);
+    fireEvent.click(await screen.findByRole("button", { name: "Configure Phases" }));
+
+    const name = screen.getByPlaceholderText("Phase name");
+    fireEvent.change(name, { target: { value: "Monitoring" } });
+    fireEvent.click(screen.getByRole("button", { name: "Create phase" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("Not saved. Try again.");
+    expect(name).toHaveValue("Monitoring");
+  });
+
+  it("rolls the switch back and says it was not saved when deactivating a phase fails", async () => {
+    api.put.mockRejectedValueOnce(new Error("Bad Request"));
+    render(<ModelLifecycleConfig />);
+    fireEvent.click(await screen.findByRole("button", { name: "Configure Phases" }));
+
+    const active = screen.getByRole("switch", { name: "Active" });
+    expect(active).toBeChecked();
+    fireEvent.click(active);
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("Not saved. Try again.");
+    expect(active).toBeChecked();
   });
 });

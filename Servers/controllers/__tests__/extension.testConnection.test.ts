@@ -12,6 +12,7 @@ jest.mock("../../extensions/jira-incidents/jiraIncidents.config", () => ({
   testConnection: jest.fn(),
 }));
 jest.mock("../../extensions/jira-assets/jiraAssets.service", () => ({
+  JiraNotConfiguredError: class JiraNotConfiguredError extends Error {},
   clientFromConfig: jest.fn(),
   loadFullConfig: jest.fn(),
 }));
@@ -23,7 +24,11 @@ jest.mock("../../utils/logger/fileLogger", () => ({
 
 import { Request, Response } from "express";
 import { testExtensionConnection } from "../extension.ctrl";
-import { clientFromConfig, loadFullConfig } from "../../extensions/jira-assets/jiraAssets.service";
+import {
+  JiraNotConfiguredError,
+  clientFromConfig,
+  loadFullConfig,
+} from "../../extensions/jira-assets/jiraAssets.service";
 import { ExtensionService } from "../../services/extension/extensionService";
 import { testConnection as mlflowTest } from "../../extensions/mlflow/mlflow.service";
 import { testConnection as azureTest } from "../../extensions/azure-ai-foundry/azureAiFoundry.service";
@@ -87,6 +92,30 @@ describe("POST /api/extensions/jira-assets/test-connection", () => {
       success: false,
       message: "The URL resolves to a link-local address, which is not allowed",
     });
+  });
+});
+
+describe("jira-assets test connection with a missing configuration", () => {
+  afterEach(() => jest.resetAllMocks());
+
+  it("answers a failed test, not a 500, when nothing is submitted or stored", async () => {
+    mockLoadFullConfig.mockResolvedValue(null);
+    mockClientFromConfig.mockImplementation(() => {
+      throw new JiraNotConfiguredError("Jira connection is not fully configured");
+    });
+    const { status, body } = await call({});
+    expect(status).toBe(200);
+    expect(body.data).toMatchObject({
+      success: false,
+      message: "Save the Jira Assets connection first.",
+    });
+    expect(body.data.message).not.toContain("not fully configured");
+  });
+
+  it("keeps the 500 for a real fault", async () => {
+    mockLoadFullConfig.mockRejectedValue(new Error("connection terminated"));
+    const { status } = await call({});
+    expect(status).toBe(500);
   });
 });
 

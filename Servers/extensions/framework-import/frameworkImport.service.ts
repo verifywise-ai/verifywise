@@ -12,6 +12,7 @@ import {
   seedImplRowsQuery,
   structIdsWithDataQuery,
 } from "./importedAssessment.service";
+import { MAX_IMPORT_ROWS } from "../importLimits";
 
 /**
  * Server-side framework-import extension logic (#5254). Two entry points:
@@ -31,9 +32,6 @@ import {
  * 20261111092002-imported-framework-storage.js and
  * 20261111094001-imported-framework-assessment.js.
  */
-
-/** Upper bound on rows per upload; keeps one transaction and one request bounded. */
-export const MAX_IMPORT_ROWS = 5000;
 
 /** Rows per multi-row INSERT (7 bind parameters each, far below Postgres' 65535 cap). */
 const INSERT_CHUNK_SIZE = 1000;
