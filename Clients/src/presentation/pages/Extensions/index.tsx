@@ -113,7 +113,7 @@ function ExtensionCard({
       }}
     >
       <Stack direction="row" justifyContent="space-between" alignItems="flex-start" gap="8px">
-        <Stack direction="row" spacing={1.5} alignItems="center" sx={{ minWidth: 0, flex: 1 }}>
+        <Stack direction="row" spacing="3px" alignItems="center" sx={{ minWidth: 0, flex: 1 }}>
           {extension.iconPath && (
             <Box
               component="img"
@@ -207,7 +207,7 @@ function ExtensionCard({
         </Stack>
       )}
 
-      <Stack direction="row" spacing={1} sx={{ mt: "16px" }}>
+      <Stack direction="row" spacing="2px" sx={{ mt: "16px" }}>
         {showPrimary && (
           <CustomizableButton
             variant={isEnabled ? "outlined" : "contained"}
@@ -294,7 +294,7 @@ export default function ExtensionsPage() {
       helpArticlePath="integrations/extensions"
     >
       {loading ? (
-        <Box display="flex" justifyContent="center" py={6}>
+        <Box display="flex" justifyContent="center" py="12px">
           <CircularProgress size={24} sx={{ color: theme.palette.primary.main }} />
         </Box>
       ) : error ? (

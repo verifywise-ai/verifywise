@@ -1,5 +1,5 @@
 /**
- * JIRA Use Case Overview
+ * Jira use case overview
  * Uses EXACT same styling as native VWProjectOverview
  * Includes Completion Status for assigned frameworks
  */
@@ -72,14 +72,14 @@ const formatValue = (value: any): string => {
 const rowStyle = {
   display: "flex",
   flexDirection: "row" as const,
-  gap: 10,
-  mb: 10,
+  gap: "20px",
+  mb: "20px",
 };
 
 const columnStyle = {
   display: "flex",
   flexDirection: "column" as const,
-  gap: 10,
+  gap: "20px",
   width: "100%",
 };
 
@@ -100,7 +100,7 @@ const groupStatsCardFrame = {
   minWidth: "300px",
   maxWidth: "100%",
   gap: "40px",
-  backgroundColor: "white",
+  backgroundColor: palette.background.main,
   padding: "10px 25px",
   border: `1px solid ${palette.border.dark}`,
   borderRadius: radiusPx.sm,
@@ -205,12 +205,12 @@ function GroupStatsCard({
           width: "100%",
           display: "flex",
           justifyContent: "space-between",
-          gap: 8,
+          gap: "16px",
           mt: "10px",
         }}
       >
         {stats.map((stat) => (
-          <Stack key={stat.label} sx={{ gap: 1 }}>
+          <Stack key={stat.label} sx={{ gap: "2px" }}>
             <ProgressBar progress={stat.progress} />
             <Typography sx={{ color: palette.text.accent, fontSize: 13 }}>
               {`${stat.completed} ${stat.label} out of ${stat.total} is completed`}
@@ -266,7 +266,7 @@ export const JiraUseCaseOverview: React.FC<JiraUseCaseOverviewProps> = ({ projec
     return fw?.project_framework_id;
   }, [project?.framework]);
 
-  // Fetch JIRA data
+  // Fetch Jira data
   useEffect(() => {
     if (!project?.id) {
       setLoading(false);
@@ -350,7 +350,7 @@ export const JiraUseCaseOverview: React.FC<JiraUseCaseOverviewProps> = ({ projec
           }
         }
 
-        // Custom frameworks progress - fetch from JIRA plugin's endpoint
+        // Custom frameworks progress, from the Jira Assets extension's endpoint
         try {
           const customFwRes: any = await apiServices.get(
             `/extensions/jira-assets/projects/${project.id}/custom-frameworks-progress`,
@@ -384,14 +384,14 @@ export const JiraUseCaseOverview: React.FC<JiraUseCaseOverviewProps> = ({ projec
 
   if (loading) {
     return (
-      <Box sx={{ display: "flex", justifyContent: "center", p: 4 }}>
+      <Box sx={{ display: "flex", justifyContent: "center", p: "8px" }}>
         <CircularProgress size={24} />
       </Box>
     );
   }
 
   if (error) {
-    return <Typography color="error">Error loading JIRA data: {error}</Typography>;
+    return <Typography color="error">Error loading Jira data: {error}</Typography>;
   }
 
   const attributes = jiraData?.attributes || {};
@@ -404,11 +404,11 @@ export const JiraUseCaseOverview: React.FC<JiraUseCaseOverviewProps> = ({ projec
   return (
     <Stack sx={{ width: "100%" }}>
       <Stack className="vw-project-overview" sx={{ width: "100%" }}>
-        {/* JIRA Source Badge */}
-        <Box sx={{ mb: 10, display: "flex", gap: "8px", flexWrap: "wrap" }}>
+        {/* Jira source badge */}
+        <Box sx={{ mb: "20px", display: "flex", gap: "8px", flexWrap: "wrap" }}>
           <Chip
             icon={<Database size={14} />}
-            label="Imported from JIRA Assets"
+            label="Imported from Jira Assets"
             size="small"
             sx={{
               "backgroundColor": palette.status.info.bg,
@@ -429,7 +429,7 @@ export const JiraUseCaseOverview: React.FC<JiraUseCaseOverviewProps> = ({ projec
         {/* First row - Use case info */}
         <Stack className="vw-project-overview-row" sx={rowStyle}>
           <InfoCard
-            title="JIRA Object Key"
+            title="Jira object key"
             body={jiraData?.objectKey || "-"}
             icon={<KeyIcon size={16} />}
           />
@@ -439,7 +439,7 @@ export const JiraUseCaseOverview: React.FC<JiraUseCaseOverviewProps> = ({ projec
             icon={<ActivityIcon size={16} />}
           />
           <InfoCard
-            title="Sync Status"
+            title="Sync status"
             body={syncStatus.charAt(0).toUpperCase() + syncStatus.slice(1)}
             icon={<SyncIcon size={16} />}
           />
@@ -448,26 +448,26 @@ export const JiraUseCaseOverview: React.FC<JiraUseCaseOverviewProps> = ({ projec
         {/* Second row - dates */}
         <Stack className="vw-project-overview-row" sx={rowStyle}>
           <InfoCard
-            title="Created in JIRA"
+            title="Created in Jira"
             body={jiraData?.created ? formatDate(new Date(jiraData.created)) : "—"}
             icon={<CalendarIcon size={16} />}
           />
           <InfoCard
-            title="Last Updated in JIRA"
+            title="Last updated in Jira"
             body={jiraData?.updated ? formatDate(new Date(jiraData.updated)) : "—"}
             icon={<ClockIcon size={16} />}
           />
           <InfoCard
-            title="Object Type"
+            title="Object type"
             body={jiraData?.objectType?.name || "-"}
             icon={<BoxIcon size={16} />}
           />
         </Stack>
 
-        {/* Key Attributes Section - First 5 attributes */}
+        {/* Key attributes: the first 5 */}
         {attributeEntries.length > 0 && (
-          <Stack sx={{ mb: 10 }}>
-            <Typography sx={projectRiskSection}>Key Attributes</Typography>
+          <Stack sx={{ mb: "20px" }}>
+            <Typography sx={projectRiskSection}>Key attributes</Typography>
             <Stack className="vw-project-overview-row" sx={rowStyle}>
               {attributeEntries.map(([key, value]) => (
                 <InfoCard key={key} title={key} body={formatValue(value)} />
@@ -477,11 +477,14 @@ export const JiraUseCaseOverview: React.FC<JiraUseCaseOverviewProps> = ({ projec
         )}
 
         {/* Framework Completion Status */}
-        <Stack className="vw-project-overview-frameworks" sx={{ width: "100%", gap: 10, mb: 10 }}>
+        <Stack
+          className="vw-project-overview-frameworks"
+          sx={{ width: "100%", gap: "20px", mb: "20px" }}
+        >
           {/* EU AI Act */}
           {euAiActProgress && (
             <Stack sx={columnStyle}>
-              <Typography sx={projectRiskSection}>EU AI Act Completion Status</Typography>
+              <Typography sx={projectRiskSection}>EU AI Act completion status</Typography>
               <GroupStatsCard
                 title={["Subcontrols", "Assessments"]}
                 completed={[euAiActProgress.subcontrols.done, euAiActProgress.assessments.done]}
@@ -493,7 +496,7 @@ export const JiraUseCaseOverview: React.FC<JiraUseCaseOverviewProps> = ({ projec
           {/* ISO 42001 */}
           {iso42001Progress && (
             <Stack sx={columnStyle}>
-              <Typography sx={projectRiskSection}>ISO 42001 Completion Status</Typography>
+              <Typography sx={projectRiskSection}>ISO 42001 completion status</Typography>
               <GroupStatsCard
                 title={["Clauses", "Annexes"]}
                 completed={[iso42001Progress.clauses.done, iso42001Progress.annexes.done]}
@@ -505,7 +508,10 @@ export const JiraUseCaseOverview: React.FC<JiraUseCaseOverviewProps> = ({ projec
           {/* Custom Frameworks */}
           {customFrameworks.map((fw) => (
             <Stack key={fw.name} sx={columnStyle}>
-              <Typography sx={projectRiskSection}>{fw.name} Completion Status</Typography>
+              <Typography sx={projectRiskSection}>
+                {/* The framework name, then the static words in their own node. */}
+                <span>{fw.name}</span> <span>completion status</span>
+              </Typography>
               <GroupStatsCard
                 title={["Progress"]}
                 completed={[fw.progress.done]}
@@ -519,8 +525,8 @@ export const JiraUseCaseOverview: React.FC<JiraUseCaseOverviewProps> = ({ projec
 
         {/* Note if no frameworks assigned */}
         {!hasFrameworks && (
-          <Stack sx={{ gap: 10, mt: 10 }}>
-            <Typography sx={projectRiskSection}>Framework Completion Status</Typography>
+          <Stack sx={{ gap: "20px", mt: "20px" }}>
+            <Typography sx={projectRiskSection}>Framework completion status</Typography>
             <Box
               sx={{
                 ...infoCardStyle,

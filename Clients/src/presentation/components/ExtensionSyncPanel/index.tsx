@@ -32,8 +32,6 @@ export const SYNC_STALLED_MESSAGE = "The sync stopped responding. Try again.";
 export const SYNC_NOT_STARTED_MESSAGE = "The sync did not start. Try again.";
 const SYNC_FAILED_MESSAGE = "Sync failed";
 const SYNC_COMPLETED_MESSAGE = "Sync completed.";
-/** Desktop control height for the panel's button. */
-const CONTROL_HEIGHT_SX = { height: "30px", minHeight: "30px" };
 
 type PanelMessage = { type: "success" | "error"; text: ReactNode };
 
@@ -263,7 +261,6 @@ export function ExtensionSyncPanel({
             onClick={handleSyncNow}
             isDisabled={!canManage || running || syncNowDisabled}
             testId={`${extensionKey}-sync-now`}
-            sx={CONTROL_HEIGHT_SX}
           />
         </Box>
       )}

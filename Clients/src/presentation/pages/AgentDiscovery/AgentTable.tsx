@@ -218,14 +218,12 @@ const AgentTable: React.FC<AgentTableProps> = ({
                     style={isSyncing ? { animation: "spin 1s linear infinite" } : undefined}
                   />
                 }
-                sx={{ height: 34 }}
               />
               <CustomizableButton
                 text="Configure"
                 variant="outlined"
                 onClick={() => navigate("/extensions/azure-ai-foundry/settings")}
                 startIcon={<Settings size={14} />}
-                sx={{ height: 34 }}
               />
             </>
           ) : (
@@ -234,7 +232,6 @@ const AgentTable: React.FC<AgentTableProps> = ({
               variant="contained"
               onClick={() => navigate("/extensions/azure-ai-foundry/settings")}
               startIcon={<Plug size={14} />}
-              sx={{ height: 34 }}
             />
           )}
           {canManage && onAddAgent && (
@@ -243,7 +240,6 @@ const AgentTable: React.FC<AgentTableProps> = ({
               variant="outlined"
               onClick={onAddAgent}
               startIcon={<CirclePlus size={14} />}
-              sx={{ height: 34 }}
             />
           )}
         </Box>

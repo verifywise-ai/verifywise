@@ -6,8 +6,6 @@ import {
   IconButton,
   Tooltip,
   CircularProgress,
-  Button,
-  Grid,
   CardContent,
   Card,
   Table,
@@ -20,18 +18,8 @@ import {
   TablePagination,
   Chip,
 } from "@mui/material";
-import type { GridProps } from "@mui/material";
-import { RefreshCw, XCircle, Eye, ChevronsUpDown } from "lucide-react";
-import {
-  colors,
-  typography,
-  borderRadius,
-  cardStyles,
-  tableStyles,
-  chipStyles,
-  buttonStyles,
-  modalStyles,
-} from "../theme";
+import { RefreshCw, Eye, ChevronsUpDown } from "lucide-react";
+import { colors, typography, borderRadius, cardStyles, tableStyles, chipStyles } from "../theme";
 import { apiServices } from "../../../../infrastructure/api/networkServices";
 import { getApiErrorReason } from "../../../../application/utils/apiErrorReason";
 import useFormattedDate from "../../../../application/hooks/useFormattedDate";
@@ -40,8 +28,13 @@ import { palette, radiusPx } from "../../../themes/palette";
 import { useCan } from "../../../../application/hooks/useCan";
 import ExtensionSetupNotice from "../ExtensionSetupNotice";
 import Alert from "../../../components/Alert";
+import StandardModal from "../../../components/Modals/StandardModal";
+import { CustomizableButton } from "../../../components/button/customizable-button";
 
 const SelectorVertical = (props: any) => <ChevronsUpDown size={16} {...props} />;
+
+const sectionTitleSx = { fontWeight: typography.weights.semibold, mb: "2px" };
+const detailListSx = { display: "flex", flexDirection: "column", gap: "2px" } as const;
 
 interface MLFlowModel {
   id: number;
@@ -174,15 +167,15 @@ export default function MLFlowTab() {
         sx={{ display: "flex", justifyContent: "center", alignItems: "center", height: "400px" }}
       >
         <CircularProgress />
-        <Typography variant="body2" sx={{ ml: 2 }}>
-          Loading MLFlow data...
+        <Typography variant="body2" sx={{ ml: "4px" }}>
+          Loading MLflow data...
         </Typography>
       </Box>
     );
   }
 
   return (
-    <Box sx={{ p: 3, maxWidth: "100%", overflowX: "hidden" }}>
+    <Box sx={{ p: "6px", maxWidth: "100%", overflowX: "hidden" }}>
       {notConfigured && (
         <ExtensionSetupNotice
           extensionKey="mlflow"
@@ -203,32 +196,26 @@ export default function MLFlowTab() {
       {canSync && (
         <Box
           sx={{
-            mb: 2,
+            mb: "4px",
             display: "flex",
             justifyContent: "flex-end",
             alignItems: "center",
-            gap: 2,
+            gap: "4px",
             width: "100%",
           }}
         >
-          <Button
+          <CustomizableButton
             variant="outlined"
             startIcon={<RefreshCw size={16} />}
             onClick={handleRefresh}
-            disabled={loading}
-            sx={{
-              ...buttonStyles.base,
-              ...buttonStyles.sizes.medium,
-              ...buttonStyles.primary.outlined,
-              textTransform: "none",
-            }}
-          >
-            Sync
-          </Button>
+            isDisabled={loading}
+            text="Sync"
+            testId="mlflow-sync"
+          />
         </Box>
       )}
 
-      <Box sx={{ display: "flex", gap: 2, mb: 4, flexWrap: "wrap" }}>
+      <Box sx={{ display: "flex", gap: "4px", mb: "8px", flexWrap: "wrap" }}>
         <Card sx={{ flex: "1 1 200px", minWidth: 150, ...cardStyles.base }}>
           <CardContent>
             <Typography
@@ -295,12 +282,12 @@ export default function MLFlowTab() {
         </Card>
       </Box>
 
-      <Box sx={{ mt: 8, mb: 2 }}>
+      <Box sx={{ mt: "16px", mb: "4px" }}>
         {mlflowData.length === 0 && !loading ? (
-          <Box sx={{ textAlign: "center", py: 4, color: colors.textTertiary }}>
+          <Box sx={{ textAlign: "center", py: "8px", color: colors.textTertiary }}>
             <Typography sx={{ fontSize: typography.sizes.md }}>
               {canSync
-                ? "No MLFlow runs have been synced yet. Configure the integration and click Sync to pull the latest models."
+                ? "No MLflow models have been synced yet. Configure the integration and click Sync to pull the latest models."
                 : "No MLflow models have been synced yet."}
             </Typography>
           </Box>
@@ -369,9 +356,9 @@ export default function MLFlowTab() {
                       {model.description || "No description"}
                     </TableCell>
                     <TableCell>
-                      <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                      <Box sx={{ display: "flex", alignItems: "center", gap: "2px" }}>
                         <Tooltip title="View details">
-                          <IconButton size="small" sx={{ mr: 1 }}>
+                          <IconButton size="small" sx={{ mr: "2px" }}>
                             <Eye size={16} />
                           </IconButton>
                         </Tooltip>
@@ -413,160 +400,110 @@ export default function MLFlowTab() {
         )}
       </Box>
 
-      {selectedModel && (
-        <Box
-          sx={{
-            position: "fixed",
-            top: 0,
-            left: 0,
-            width: "100%",
-            height: "100%",
-            ...modalStyles.overlay,
-            display: "flex",
-            justifyContent: "center",
-            alignItems: "center",
-          }}
-        >
-          <Card sx={{ ...modalStyles.content }}>
-            <CardContent>
-              <Box
-                sx={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  mb: 2,
-                }}
-              >
-                <Typography
-                  variant="h6"
-                  sx={{ ...modalStyles.title, fontSize: typography.sizes.xl }}
-                >
-                  {selectedModel.model_name}
+      <StandardModal
+        isOpen={selectedModel !== null}
+        onClose={handleCloseModal}
+        title={selectedModel?.model_name ?? ""}
+        description="Details synced from MLflow for this model version."
+        cancelButtonText="Close"
+      >
+        {selectedModel && (
+          <Box
+            sx={{
+              display: "grid",
+              gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" },
+              gap: "16px",
+            }}
+          >
+            <Box>
+              <Typography variant="subtitle2" sx={sectionTitleSx}>
+                Basic information
+              </Typography>
+              <Box sx={detailListSx}>
+                <Typography variant="body2">
+                  <strong>Version:</strong> {selectedModel.version}
                 </Typography>
-                <IconButton onClick={handleCloseModal} sx={{ color: colors.textTertiary }}>
-                  <XCircle size={20} />
-                </IconButton>
+                <Typography variant="body2">
+                  <strong>Status:</strong> {selectedModel.status || selectedModel.lifecycle_stage}
+                </Typography>
+                <Typography variant="body2">
+                  <strong>Run ID:</strong> {selectedModel.run_id}
+                </Typography>
+                <Typography variant="body2">
+                  <strong>Created:</strong> {formatDate(new Date(selectedModel.creation_timestamp))}
+                </Typography>
               </Box>
-
-              <Grid container spacing={2}>
-                <Grid
-                  {...({ item: true, xs: 12, sm: 6 } as GridProps & {
-                    item: boolean;
-                    xs: number;
-                    sm: number;
-                  })}
-                >
-                  <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>
-                    Basic Information
+            </Box>
+            <Box>
+              <Typography variant="subtitle2" sx={sectionTitleSx}>
+                Description
+              </Typography>
+              <Typography variant="body2">
+                {selectedModel.description || "No description available"}
+              </Typography>
+            </Box>
+            <Box sx={{ gridColumn: "1 / -1" }}>
+              <Typography variant="subtitle2" sx={sectionTitleSx}>
+                Tags
+              </Typography>
+              <Box sx={{ display: "flex", flexWrap: "wrap", gap: "2px" }}>
+                {Object.entries(selectedModel.tags || {}).map(([key, value]) => (
+                  <Chip
+                    key={key}
+                    label={`${key}: ${value}`}
+                    size="small"
+                    sx={{
+                      backgroundColor: palette.accent.indigo.bg,
+                      color: palette.text.primary,
+                      borderRadius: radiusPx.sm,
+                    }}
+                  />
+                ))}
+              </Box>
+            </Box>
+            <Box>
+              <Typography variant="subtitle2" sx={sectionTitleSx}>
+                Metrics
+              </Typography>
+              <Box sx={detailListSx}>
+                {Object.entries(selectedModel.metrics || {}).map(([key, value]) => (
+                  <Typography variant="body2" key={key}>
+                    <strong>{key}:</strong> {typeof value === "number" ? value.toFixed(4) : value}
                   </Typography>
-                  <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
-                    <Typography variant="body2">
-                      <strong>Version:</strong> {selectedModel.version}
-                    </Typography>
-                    <Typography variant="body2">
-                      <strong>Status:</strong>{" "}
-                      {selectedModel.status || selectedModel.lifecycle_stage}
-                    </Typography>
-                    <Typography variant="body2">
-                      <strong>Run ID:</strong> {selectedModel.run_id}
-                    </Typography>
-                    <Typography variant="body2">
-                      <strong>Created:</strong>{" "}
-                      {formatDate(new Date(selectedModel.creation_timestamp))}
-                    </Typography>
-                  </Box>
-                </Grid>
-                <Grid
-                  {...({ item: true, xs: 12, sm: 6 } as GridProps & {
-                    item: boolean;
-                    xs: number;
-                    sm: number;
-                  })}
-                >
-                  <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>
-                    Description
+                ))}
+              </Box>
+            </Box>
+            <Box>
+              <Typography variant="subtitle2" sx={sectionTitleSx}>
+                Parameters
+              </Typography>
+              <Box sx={detailListSx}>
+                {Object.entries(selectedModel.parameters || {}).map(([key, value]) => (
+                  <Typography variant="body2" key={key}>
+                    <strong>{key}:</strong> {String(value)}
                   </Typography>
-                  <Typography variant="body2">
-                    {selectedModel.description || "No description available"}
-                  </Typography>
-                </Grid>
-                <Grid {...({ item: true, xs: 12 } as GridProps & { item: boolean; xs: number })}>
-                  <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>
-                    Tags
-                  </Typography>
-                  <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
-                    {Object.entries(selectedModel.tags || {}).map(([key, value]) => (
-                      <Chip
-                        key={key}
-                        label={`${key}: ${value}`}
-                        size="small"
-                        sx={{
-                          backgroundColor: palette.accent.indigo.bg,
-                          color: palette.text.primary,
-                          borderRadius: radiusPx.sm,
-                        }}
-                      />
-                    ))}
-                  </Box>
-                </Grid>
-                <Grid
-                  {...({ item: true, xs: 12, sm: 6 } as GridProps & {
-                    item: boolean;
-                    xs: number;
-                    sm: number;
-                  })}
-                >
-                  <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>
-                    Metrics
-                  </Typography>
-                  <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
-                    {Object.entries(selectedModel.metrics || {}).map(([key, value]) => (
-                      <Typography variant="body2" key={key}>
-                        <strong>{key}:</strong>{" "}
-                        {typeof value === "number" ? value.toFixed(4) : value}
-                      </Typography>
-                    ))}
-                  </Box>
-                </Grid>
-                <Grid
-                  {...({ item: true, xs: 12, sm: 6 } as GridProps & {
-                    item: boolean;
-                    xs: number;
-                    sm: number;
-                  })}
-                >
-                  <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>
-                    Parameters
-                  </Typography>
-                  <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
-                    {Object.entries(selectedModel.parameters || {}).map(([key, value]) => (
-                      <Typography variant="body2" key={key}>
-                        <strong>{key}:</strong> {String(value)}
-                      </Typography>
-                    ))}
-                  </Box>
-                </Grid>
-                <Grid {...({ item: true, xs: 12 } as GridProps & { item: boolean; xs: number })}>
-                  <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>
-                    Experiment Information
-                  </Typography>
-                  <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
-                    <Typography variant="body2">
-                      <strong>Experiment ID:</strong> {selectedModel.experiment_id}
-                    </Typography>
-                    <Typography variant="body2">
-                      <strong>Experiment Name:</strong> {selectedModel.experiment_name}
-                    </Typography>
-                    <Typography variant="body2">
-                      <strong>Artifact Location:</strong> {selectedModel.artifact_location}
-                    </Typography>
-                  </Box>
-                </Grid>
-              </Grid>
-            </CardContent>
-          </Card>
-        </Box>
-      )}
+                ))}
+              </Box>
+            </Box>
+            <Box sx={{ gridColumn: "1 / -1" }}>
+              <Typography variant="subtitle2" sx={sectionTitleSx}>
+                Experiment information
+              </Typography>
+              <Box sx={detailListSx}>
+                <Typography variant="body2">
+                  <strong>Experiment ID:</strong> {selectedModel.experiment_id}
+                </Typography>
+                <Typography variant="body2">
+                  <strong>Experiment name:</strong> {selectedModel.experiment_name}
+                </Typography>
+                <Typography variant="body2">
+                  <strong>Artifact location:</strong> {selectedModel.artifact_location}
+                </Typography>
+              </Box>
+            </Box>
+          </Box>
+        )}
+      </StandardModal>
     </Box>
   );
 }

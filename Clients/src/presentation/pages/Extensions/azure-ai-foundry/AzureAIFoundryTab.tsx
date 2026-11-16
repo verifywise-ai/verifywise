@@ -19,7 +19,8 @@ import {
   Divider,
 } from "@mui/material";
 import { RefreshCw, X, ChevronsUpDown } from "lucide-react";
-import { colors, borderRadius, chipStyles, buttonStyles, tableStyles } from "../theme";
+import { colors, borderRadius, chipStyles, tableStyles } from "../theme";
+import { CustomizableButton } from "../../../components/button/customizable-button";
 import { apiServices } from "../../../../infrastructure/api/networkServices";
 import { getApiErrorReason } from "../../../../application/utils/apiErrorReason";
 import useFormattedDate from "../../../../application/hooks/useFormattedDate";
@@ -209,26 +210,14 @@ export default function AzureAIFoundryTab() {
 
       {canSync && (
         <Box sx={{ display: "flex", justifyContent: "flex-end", mb: "16px" }}>
-          <button
+          <CustomizableButton
+            variant="outlined"
             onClick={handleRefresh}
-            disabled={loading}
-            style={{
-              ...buttonStyles.base,
-              ...buttonStyles.sizes.medium,
-              ...buttonStyles.primary.outlined,
-              border: `1px solid ${colors.border}`,
-              color: colors.textSecondary,
-              backgroundColor: "transparent",
-              cursor: loading ? "not-allowed" : "pointer",
-              opacity: loading ? 0.6 : 1,
-            }}
-          >
-            <RefreshCw
-              size={14}
-              style={loading ? { animation: "spin 1s linear infinite" } : undefined}
-            />
-            {loading ? "Syncing..." : "Sync"}
-          </button>
+            isDisabled={loading}
+            startIcon={<RefreshCw size={16} />}
+            text={loading ? "Syncing..." : "Sync"}
+            testId="azure-ai-foundry-sync"
+          />
         </Box>
       )}
 
