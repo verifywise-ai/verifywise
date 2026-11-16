@@ -14,11 +14,14 @@ module.exports = {
     // ai >= 7 and its transitive deps ship ESM-only builds, so Jest must
     // transform them. sanitize-html >= 2.17.7 pulls in ESM-only builds of
     // htmlparser2 v12 and its dom* / entities deps, so those need the same
-    // treatment. transformIgnorePatterns below allowlists those packages.
+    // treatment. @ai-sdk/provider-utils (via ai >= 7.0.171) imports
+    // zod/v4/locales/en, which is ESM because zod is a type:module package,
+    // so zod needs transforming too. transformIgnorePatterns below
+    // allowlists those packages.
     "node_modules[\\\\/].+\\.js$": ["ts-jest", { diagnostics: false }],
   },
   transformIgnorePatterns: [
-    "/node_modules/(?!(ai|@ai-sdk|@workflow|@standard-schema|sanitize-html|htmlparser2|domhandler|domutils|dom-serializer|entities|domelementtype)/)",
+    "/node_modules/(?!(ai|@ai-sdk|@workflow|@standard-schema|sanitize-html|htmlparser2|domhandler|domutils|dom-serializer|entities|domelementtype|zod)/)",
   ],
   modulePathIgnorePatterns: ["<rootDir>/dist/"],
   testPathIgnorePatterns: ["/helpers/"],
