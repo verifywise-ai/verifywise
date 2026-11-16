@@ -1230,7 +1230,7 @@ const ProjectSettings = React.memo(
                           <span style={{ width: "400px" }}>
                             <Autocomplete
                               multiple
-                              disabled={hasPendingApproval}
+                              disabled={hasPendingApproval || !can("framework.edit")}
                               id="monitored-regulations-and-standards-input"
                               size="small"
                               value={values.monitoredRegulationsAndStandards}
