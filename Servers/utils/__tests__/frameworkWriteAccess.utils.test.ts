@@ -11,10 +11,16 @@ import {
   detectEuAnswerChanges,
   detectEuControlChanges,
   detectFlatChanges,
+  euAnswerChanges,
+  euControlChanges,
+  frameworkImplChanges,
   IMPL_RULES,
+  iso42001SubclauseChanges,
   ISO42001_ANNEX_RULES,
   ISO_NIST_RULES,
   normalizeText,
+  restoreEuControlFields,
+  restoreFlatFields,
   riskLinksChanged,
 } from "../frameworkWriteAccess.utils";
 
@@ -152,6 +158,21 @@ describe("detectFlatChanges (ISO, NIST)", () => {
     ).toBe(true);
   });
 
+  it("counts a JSON null as clearing the field (the ISO and NIST queries write it)", () => {
+    for (const field of ["due_date", "status"]) {
+      expect(
+        detectFlatChanges(drawerSave({ [field]: null }), [], stored, ISO_NIST_RULES).edit,
+      ).toBe(true);
+    }
+    const annex = { ...stored, is_applicable: true, justification_for_exclusion: null };
+    expect(
+      detectFlatChanges(drawerSave({ is_applicable: null }), [], annex, ISO42001_ANNEX_RULES).edit,
+    ).toBe(true);
+    expect(detectFlatChanges(drawerSave({ reviewer: null }), [], stored, ISO_NIST_RULES).edit).toBe(
+      false,
+    );
+  });
+
   it("fails closed on an unreadable unlink list", () => {
     expect(detectFlatChanges(drawerSave({ delete: "{" }), [], stored, ISO_NIST_RULES).edit).toBe(
       true,
@@ -255,6 +276,16 @@ describe("detectEuControlChanges", () => {
   it("fails closed on unreadable subcontrols", () => {
     expect(detectEuControlChanges(save({}, { subControls: "{" }), [], snapshot).edit).toBe(true);
   });
+
+  it.each(["+21", "0x15", "21.0"])(
+    "fails closed on a subcontrol id Postgres may still read (%s)",
+    (id) => {
+      expect(detectEuControlChanges(save({ id }), [], snapshot)).toEqual({
+        edit: true,
+        audit: true,
+      });
+    },
+  );
 });
 
 describe("detectEuAnswerChanges", () => {
@@ -269,5 +300,46 @@ describe("detectEuAnswerChanges", () => {
     expect(detectEuAnswerChanges({ answer: "No" }, [], answer).edit).toBe(true);
     expect(detectEuAnswerChanges({}, [{ fieldname: "files" }], answer).edit).toBe(true);
     expect(detectEuAnswerChanges({ risksDelete: "[4]" }, [], answer).edit).toBe(true);
+  });
+});
+
+describe("route ids the detector cannot read", () => {
+  // The controllers parseInt the id ("21x" and "+21" both save row 21), so
+  // an id toId rejects must not read as "no change".
+  const req = (params: Record<string, string>) => ({ params, body: {}, organizationId: 1 }) as any;
+
+  it.each(["21x", "+21"])("fails closed on :id %s", async (id) => {
+    const all = { edit: true, audit: true };
+    await expect(iso42001SubclauseChanges(req({ id }))).resolves.toEqual(all);
+    await expect(euControlChanges(req({ id }))).resolves.toEqual(all);
+    await expect(euAnswerChanges(req({ id }))).resolves.toEqual(all);
+    await expect(frameworkImplChanges(req({ frameworkId: "5", level: "l2", id }))).resolves.toEqual(
+      all,
+    );
+  });
+});
+
+describe("restoring unchanged fields", () => {
+  it("removes only the flat fields of the class", () => {
+    const body: Record<string, unknown> = drawerSave({ is_applicable: "true" });
+    restoreFlatFields(body, ISO42001_ANNEX_RULES, "audit");
+    expect(body).not.toHaveProperty("auditor_feedback");
+    expect(body.implementation_description).toBeDefined();
+    restoreFlatFields(body, ISO42001_ANNEX_RULES, "edit");
+    for (const field of ["implementation_description", "status", "owner", "due_date"]) {
+      expect(body).not.toHaveProperty(field);
+    }
+    expect(body).not.toHaveProperty("is_applicable");
+    expect(body.risksMitigated).toBe("[]");
+  });
+
+  it("keeps an array subControls an array and leaves control fields alone without a stored control", () => {
+    const body: Record<string, unknown> = {
+      owner: "9",
+      subControls: [{ id: 1, implementation_details: "x", feedback_description: "y" }],
+    };
+    const snapshot = { control: null, subcontrols: new Map(), feedbackFileIds: new Set<number>() };
+    restoreEuControlFields(body, snapshot, "edit");
+    expect(body).toEqual({ owner: "9", subControls: [{ id: 1, feedback_description: "y" }] });
   });
 });

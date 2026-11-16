@@ -24,6 +24,14 @@
  *   falls back to.
  * Anything the detector cannot parse counts as a change (fail closed).
  *
+ * Because the comparisons are tolerant, a save judged "unchanged" can still
+ * carry different bytes (other HTML around the same text, a date a day off).
+ * So each detector also returns `restore`: for a field class the caller may
+ * not change, the middleware calls it and the request's fields of that class
+ * are removed (the update query skips an absent field) or, where the query
+ * writes every field (EU AI Act control rows), set to the stored values.
+ * What reaches the update query for that class is the stored row.
+ *
  * @module utils/frameworkWriteAccess
  */
 
@@ -45,13 +53,28 @@ export interface FrameworkChanges {
   audit: boolean;
 }
 
-export type FrameworkChangeDetector = (req: Request) => Promise<FrameworkChanges>;
+/**
+ * A detector's verdict. `restore(cls)` rewrites the request so the save
+ * leaves every field of `cls` as stored; absent when there is no stored row
+ * in the caller's organization (the save then writes nothing).
+ */
+export interface FrameworkCheck extends FrameworkChanges {
+  restore?: (cls: FrameworkFieldClass) => void;
+}
+
+export type FrameworkChangeDetector = (req: Request) => Promise<FrameworkCheck>;
 
 type Row = Record<string, unknown>;
 type RowWithRisks = Row & { risks: number[] };
 type UploadedFiles = Array<{ fieldname?: string }>;
 
 const noChanges = (): FrameworkChanges => ({ edit: false, audit: false });
+
+/**
+ * For a request the detector cannot read, e.g. an id `toId` rejects but the
+ * route's parseInt or Postgres accepts ("21x", "+21"): fail closed.
+ */
+const allChanges = (): FrameworkChanges => ({ edit: true, audit: true });
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const DEFAULT_STATUS = "Not started";
@@ -281,6 +304,9 @@ export const IMPL_RULES: FlatRowRules = {
 };
 
 const fieldChanged = (spec: FlatField, sent: unknown, current: unknown, rules: FlatRowRules) => {
+  // The update queries skip only "" (and undefined); a JSON null is written
+  // as null, so it clears the stored value.
+  if (sent === null && spec.kind !== "text") return !isBlank(current);
   switch (spec.kind) {
     case "text":
       return textChanged(sent, current, rules.emptyClears);
@@ -321,6 +347,21 @@ export function detectFlatChanges(
   }
   return changes;
 }
+
+/**
+ * Remove a flat save's fields of class `cls`. The ISO, NIST, bundled and
+ * imported update queries skip an absent field, so the stored value stays.
+ */
+export function restoreFlatFields(body: Row, rules: FlatRowRules, cls: FrameworkFieldClass): void {
+  for (const spec of rules.fields) {
+    if (spec.cls === cls) delete body[spec.field];
+  }
+}
+
+const withRestore = (changes: FrameworkChanges, restore: FrameworkCheck["restore"]) => ({
+  ...changes,
+  restore,
+});
 
 // ── Stored rows ─────────────────────────────────────────────────────────────
 
@@ -406,15 +447,20 @@ const requestBody = (req: Request): Row => (req.body ?? {}) as Row;
 
 /**
  * Detector for a built-in framework row saved by `:id`. A row that does not
- * exist in the caller's organization changes nothing (the route answers it).
+ * exist in the caller's organization changes nothing (the route answers it);
+ * an id the detector cannot read counts as every change.
  */
 function flatRowDetector(table: FlatTable, rules: FlatRowRules): FrameworkChangeDetector {
   return async (req) => {
+    if (!req.organizationId) return noChanges();
     const id = routeId(req, "id");
-    if (!Number.isInteger(id) || !req.organizationId) return noChanges();
+    if (!Number.isInteger(id)) return allChanges();
     const current = await loadFlatRow(table, id, req.organizationId);
     if (!current) return noChanges();
-    return detectFlatChanges(requestBody(req), uploadedFiles(req), current, rules);
+    const body = requestBody(req);
+    return withRestore(detectFlatChanges(body, uploadedFiles(req), current, rules), (cls) =>
+      restoreFlatFields(body, rules, cls),
+    );
   };
 }
 
@@ -441,19 +487,22 @@ export const frameworkImplChanges: FrameworkChangeDetector = async (req) => {
   const frameworkId = routeId(req, "frameworkId");
   const id = routeId(req, "id");
   const level = req.params.level;
+  if (!req.organizationId) return noChanges();
   if (
     !Number.isInteger(frameworkId) ||
     !Number.isInteger(id) ||
-    (level !== "l2" && level !== "l3") ||
-    !req.organizationId
+    (level !== "l2" && level !== "l3")
   ) {
-    return noChanges();
+    return allChanges();
   }
   const current = asRowWithRisks(
     (await getImplByIdQuery(frameworkId, level as ImplLevel, id, req.organizationId)) as Row | null,
   );
   if (!current) return noChanges();
-  return detectFlatChanges(requestBody(req), uploadedFiles(req), current, IMPL_RULES);
+  const body = requestBody(req);
+  return withRestore(detectFlatChanges(body, uploadedFiles(req), current, IMPL_RULES), (cls) =>
+    restoreFlatFields(body, IMPL_RULES, cls),
+  );
 };
 
 /** PATCH /api/v1/imported-framework-assessments/links/:linkId/impl/:level/:implId. */
@@ -461,14 +510,16 @@ export const importedImplChanges: FrameworkChangeDetector = async (req) => {
   const linkId = routeId(req, "linkId");
   const implId = routeId(req, "implId");
   const level = parseImportedLevel(req.params.level);
-  if (!Number.isInteger(linkId) || !Number.isInteger(implId) || !level || !req.organizationId) {
-    return noChanges();
-  }
+  if (!req.organizationId) return noChanges();
+  if (!Number.isInteger(linkId) || !Number.isInteger(implId) || !level) return allChanges();
   const current = asRowWithRisks(
     await getImportedImplQuery(linkId, level, implId, req.organizationId),
   );
   if (!current) return noChanges();
-  return detectFlatChanges(requestBody(req), uploadedFiles(req), current, IMPL_RULES);
+  const body = requestBody(req);
+  return withRestore(detectFlatChanges(body, uploadedFiles(req), current, IMPL_RULES), (cls) =>
+    restoreFlatFields(body, IMPL_RULES, cls),
+  );
 };
 
 // ── EU AI Act controls (PATCH /api/eu-ai-act/saveControls/:id) ──────────────
@@ -476,7 +527,7 @@ export const importedImplChanges: FrameworkChangeDetector = async (req) => {
 export interface EuControlSnapshot {
   control: Row | null;
   subcontrols: Map<number, RowWithRisks>;
-  /** Ids of files linked as auditor feedback to the subcontrols in the request. */
+  /** Ids of files linked only as auditor feedback to the subcontrols in the request. */
   feedbackFileIds: Set<number>;
 }
 
@@ -538,7 +589,10 @@ export function detectEuControlChanges(
   const savedIds: number[] = [];
   for (const sc of subcontrols) {
     const id = toId(sc?.id);
-    const current = Number.isInteger(id) ? snapshot.subcontrols.get(id) : undefined;
+    // saveControls binds the raw id, and Postgres reads "+21" or "0x15" as a
+    // row id that toId rejects: fail closed.
+    if (!Number.isInteger(id)) return allChanges();
+    const current = snapshot.subcontrols.get(id);
     if (!current) continue;
     savedIds.push(id);
     if (
@@ -577,10 +631,46 @@ export function detectEuControlChanges(
   return changes;
 }
 
+const EU_CONTROL_EDIT_FIELDS = ["owner", "reviewer", "approver", "due_date", "risk_review"];
+const EU_SUBCONTROL_FIELDS: Record<FrameworkFieldClass, string[]> = {
+  edit: ["status", "implementation_details", "evidence_description"],
+  audit: ["feedback_description"],
+};
+
+/**
+ * Make a control save leave the fields of class `cls` as stored. saveControls
+ * writes the control fields on every save (absent = null), so they get the
+ * stored values; the subcontrol query skips an absent field, so those are
+ * removed from every subControls entry. A body whose subControls cannot be
+ * read never gets here (it counts as an edit).
+ */
+export function restoreEuControlFields(
+  body: Row,
+  snapshot: EuControlSnapshot,
+  cls: FrameworkFieldClass,
+): void {
+  if (cls === "edit" && snapshot.control) {
+    for (const field of EU_CONTROL_EDIT_FIELDS) {
+      body[field] = isBlank(snapshot.control[field]) ? null : snapshot.control[field];
+    }
+  }
+  const subcontrols = parseSubcontrols(body.subControls);
+  if (!subcontrols || subcontrols.length === 0) return;
+  for (const sc of subcontrols) {
+    if (!sc || typeof sc !== "object") continue;
+    for (const field of EU_SUBCONTROL_FIELDS[cls]) {
+      delete (sc as Row)[field];
+    }
+  }
+  body.subControls =
+    typeof body.subControls === "string" ? JSON.stringify(subcontrols) : subcontrols;
+}
+
 export const euControlChanges: FrameworkChangeDetector = async (req) => {
   const controlId = routeId(req, "id");
   const organizationId = req.organizationId;
   if (!organizationId) return noChanges();
+  if (!Number.isInteger(controlId)) return allChanges();
   const body = requestBody(req);
 
   const subcontrolIds = Array.from(
@@ -591,14 +681,15 @@ export const euControlChanges: FrameworkChangeDetector = async (req) => {
     ),
   );
 
-  const [controlRows, subcontrolRows, feedbackRows, risks] = await Promise.all([
-    Number.isInteger(controlId)
-      ? (sequelize.query(
-          `SELECT owner, reviewer, approver, due_date, risk_review FROM controls_eu
-            WHERE organization_id = :organizationId AND id = :controlId;`,
-          { replacements: { organizationId, controlId }, type: QueryTypes.SELECT },
-        ) as Promise<Row[]>)
-      : Promise.resolve([] as Row[]),
+  const [controlRows, subcontrolRows, linkRows, risks] = await Promise.all([
+    sequelize.query(
+      // A calendar day string, so a restored due date binds to the DATE
+      // column as stored, whatever the server's time zone.
+      `SELECT owner, reviewer, approver, to_char(due_date, 'YYYY-MM-DD') AS due_date, risk_review
+         FROM controls_eu
+        WHERE organization_id = :organizationId AND id = :controlId;`,
+      { replacements: { organizationId, controlId }, type: QueryTypes.SELECT },
+    ) as Promise<Row[]>,
     subcontrolIds.length > 0
       ? (sequelize.query(
           `SELECT id, status, implementation_details, evidence_description, feedback_description
@@ -609,15 +700,14 @@ export const euControlChanges: FrameworkChangeDetector = async (req) => {
       : Promise.resolve([] as Row[]),
     subcontrolIds.length > 0
       ? (sequelize.query(
-          `SELECT file_id FROM file_entity_links
+          `SELECT file_id, link_type FROM file_entity_links
             WHERE organization_id = :organizationId
               AND framework_type = 'eu_ai_act'
               AND entity_type = 'subcontrol'
-              AND link_type = 'feedback'
               AND entity_id IN (:subcontrolIds);`,
           { replacements: { organizationId, subcontrolIds }, type: QueryTypes.SELECT },
-        ) as Promise<Array<{ file_id: number }>>)
-      : Promise.resolve([] as Array<{ file_id: number }>),
+        ) as Promise<Array<{ file_id: number; link_type: string | null }>>)
+      : Promise.resolve([] as Array<{ file_id: number; link_type: string | null }>),
     loadRiskIds("subcontrols_eu__risks", "subcontrol_id", subcontrolIds, organizationId),
   ]);
 
@@ -627,11 +717,23 @@ export const euControlChanges: FrameworkChangeDetector = async (req) => {
     subcontrols.set(id, { ...row, risks: risks.get(id) ?? [] });
   });
 
-  return detectEuControlChanges(body, uploadedFiles(req), {
+  // The unlink is not filtered by link type, so a file that is also evidence
+  // on a saved subcontrol is not feedback only.
+  const feedbackFileIds = new Set<number>();
+  const otherFileIds = new Set<number>();
+  linkRows.forEach((r) =>
+    (r.link_type === "feedback" ? feedbackFileIds : otherFileIds).add(Number(r.file_id)),
+  );
+  otherFileIds.forEach((id) => feedbackFileIds.delete(id));
+
+  const snapshot: EuControlSnapshot = {
     control: controlRows[0] ?? null,
     subcontrols,
-    feedbackFileIds: new Set(feedbackRows.map((r) => Number(r.file_id))),
-  });
+    feedbackFileIds,
+  };
+  return withRestore(detectEuControlChanges(body, uploadedFiles(req), snapshot), (cls) =>
+    restoreEuControlFields(body, snapshot, cls),
+  );
 };
 
 // ── EU AI Act assessment answers (PATCH /api/eu-ai-act/saveAnswer/:id) ──────
@@ -659,15 +761,21 @@ export function detectEuAnswerChanges(
 export const euAnswerChanges: FrameworkChangeDetector = async (req) => {
   const id = routeId(req, "id");
   const organizationId = req.organizationId;
-  if (!Number.isInteger(id) || !organizationId) return noChanges();
+  if (!organizationId) return noChanges();
+  if (!Number.isInteger(id)) return allChanges();
   const rows = (await sequelize.query(
     `SELECT answer FROM answers_eu WHERE organization_id = :organizationId AND id = :id;`,
     { replacements: { organizationId, id }, type: QueryTypes.SELECT },
   )) as Row[];
   if (!rows[0]) return noChanges();
   const risks = await loadRiskIds("answers_eu__risks", "answer_id", [id], organizationId);
-  return detectEuAnswerChanges(requestBody(req), uploadedFiles(req), {
+  const body = requestBody(req);
+  const changes = detectEuAnswerChanges(body, uploadedFiles(req), {
     ...rows[0],
     risks: risks.get(id) ?? [],
+  });
+  // The answer query skips an absent answer; the status stays open to all.
+  return withRestore(changes, (cls) => {
+    if (cls === "edit") delete body.answer;
   });
 };

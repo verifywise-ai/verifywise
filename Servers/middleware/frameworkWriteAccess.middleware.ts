@@ -12,6 +12,12 @@
  * - auditor feedback (and its files) needs framework.audit;
  * - a save that changes nothing passes, as it always has.
  *
+ * The comparisons are tolerant (rich text by its text, due dates within a
+ * day), so a passing save can still carry other bytes for a field it "did
+ * not change". For each class the caller lacks, the detector's `restore`
+ * rewrites the request so that class is saved as stored: an Auditor cannot
+ * slip a link into implementation HTML or move a due date by a day.
+ *
  * So an Auditor can still record audit results through the drawer it shares
  * with Editors, and a Reviewer's unchanged save still succeeds.
  *
@@ -44,6 +50,8 @@ export const requireFrameworkWriteAccess =
       if ((changes.edit && !canEdit) || (changes.audit && !canAudit)) {
         return res.status(403).json(STATUS_CODE[403](req.t!("Access denied")));
       }
+      if (!canEdit) changes.restore?.("edit");
+      if (!canAudit) changes.restore?.("audit");
       return next();
     } catch (error) {
       return next(error);
