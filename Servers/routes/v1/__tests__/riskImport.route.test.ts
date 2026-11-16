@@ -35,6 +35,7 @@ jest.mock("../../../utils/logger/fileLogger", () => ({
   logStructured: jest.fn(),
 }));
 jest.mock("../../../extensions/risk-import/riskImport.service", () => ({
+  ...jest.requireActual("../../../extensions/risk-import/riskImport.service"),
   buildExcelTemplate: jest.fn(),
   importRisks: jest.fn(),
 }));
@@ -131,14 +132,20 @@ describe("POST /api/v1/risk-import/import", () => {
           row: 3,
           field: "likelihood",
           message: "Likelihood is required",
-          i18nKey: "Likelihood is required",
+          messageKey: "Likelihood is required",
         },
         {
           row: 4,
           field: "risk_name",
           message: 'A risk named "A" already exists',
-          i18nKey: 'A risk named "{name}" already exists',
-          i18nVars: { name: "A" },
+          messageKey: 'A risk named "{name}" already exists',
+          params: { name: "A" },
+        },
+        {
+          row: 5,
+          field: "general",
+          message: "This row could not be saved.",
+          messageKey: "This row could not be saved.",
         },
       ],
     };
@@ -156,10 +163,10 @@ describe("POST /api/v1/risk-import/import", () => {
       expect(first).toMatchObject({ row: 3, field: "likelihood", key: "Likelihood is required" });
       expect(second.params).toEqual({ name: "A" });
       expect(second.message).toBe("Ein Risiko mit dem Namen „A“ existiert bereits");
-      expect(first).not.toHaveProperty("i18nKey");
+      expect(first).not.toHaveProperty("messageKey");
     });
 
-    it("keeps the legacy contract: English message, no key or params", async () => {
+    it("keeps the legacy contract: English validation messages, no key or params", async () => {
       (importRisks as jest.Mock).mockResolvedValue(keyed);
       const res = await request(app)
         .post(LEGACY)
@@ -172,6 +179,8 @@ describe("POST /api/v1/risk-import/import", () => {
       }
       expect(res.body.data.errors[0].message).toBe("Likelihood is required");
       expect(res.body.data.errors[1].message).toBe('A risk named "A" already exists');
+      // Messages the import itself words (row cap, refused inserts) are translated there too.
+      expect(res.body.data.errors[2].message).toBe("Diese Zeile konnte nicht gespeichert werden.");
     });
   });
 });
