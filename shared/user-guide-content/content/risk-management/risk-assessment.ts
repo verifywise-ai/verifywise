@@ -270,7 +270,7 @@ export const riskAssessmentContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'A risk you cannot see is left out of the risk register, search results, change history, linked risks and policy links. Opening it directly behaves as if the risk does not exist.',
+      text: 'A risk you cannot see is left out of the risk register, search results, change history, linked risks, policy links, the vendor exposure report and the AI advisor\'s answers. Opening it directly behaves as if the risk does not exist.',
     },
     {
       type: 'paragraph',
@@ -278,13 +278,13 @@ export const riskAssessmentContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'To link a risk to a use case, you need access to that use case. The **Applicable use cases** field lists only the use cases you can access. When you edit a risk that is also linked to a use case you cannot access, that link is hidden from you. Saving the risk keeps it.',
+      text: 'A risk you can see names only the use cases you can access, in the risk register, on the risk itself and in the link pickers. To link a risk to a use case, you need access to that use case. The **Applicable use cases** field lists only the use cases you can access. When you edit a risk that is also linked to a use case you cannot access, that link is hidden from you. Saving the risk keeps it.',
     },
     {
       type: 'callout',
       variant: 'info',
       title: 'Totals count every risk',
-      text: 'Dashboard counts, risk history over time and the organization\'s quantitative risk totals include every risk in the organization. A few places don\'t apply this rule yet and can show risks you otherwise can\'t see: the AI advisor, organization reports, deadlines, the evidence hub, FRIA and approval requests.',
+      text: 'Dashboard counts, risk history over time and the organization\'s quantitative risk totals include every risk in the organization. So do the AI advisor\'s risk analytics, which give counts only. A few places don\'t apply this rule yet and can show risks you otherwise can\'t see: organization reports, deadlines, the evidence hub, FRIA and approval requests.',
     },
     {
       type: 'heading',
