@@ -69,6 +69,8 @@ export type ReviewStatus =
 export interface File {
   filename: string;
   content: Buffer;
+  storage_provider?: string | null;
+  storage_key?: string | null;
   project_id?: number;
   uploaded_by: number;
   uploaded_time: Date;
@@ -94,6 +96,8 @@ export interface File {
 export interface FileType {
   id: string;
   fileName: string;
+  storage_provider?: string | null;
+  storage_key?: string | null;
   project_id?: number;
   uploaded_by: number;
   uploaded_time: Date;
@@ -148,6 +152,22 @@ export class FileModel extends Model<File> {
     type: DataType.BLOB,
   })
   content!: Buffer;
+
+  // Pointer to externally stored bytes (S3-compatible object storage). Both
+  // NULL means the bytes are in `content` (the default for all existing rows).
+  // When set, readers fetch bytes via the recorded provider, not the globally
+  // configured one, so provider switches never orphan files.
+  @Column({
+    type: DataType.STRING(20),
+    allowNull: true,
+  })
+  storage_provider?: string | null;
+
+  @Column({
+    type: DataType.STRING(1024),
+    allowNull: true,
+  })
+  storage_key?: string | null;
 
   @ForeignKey(() => ProjectModel)
   @Column({
