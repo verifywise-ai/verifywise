@@ -44,6 +44,15 @@ Browser ──► ExtensionsProvider (GET /api/extensions, once per session)
 All three catalog tables are created by
 `Servers/database/migrations/20260811102307-extensions-migration.js`.
 
+Catalog text is changed by a new migration that updates the rows by `key`,
+never by editing the seed migration. `20261116005338-extension-catalog-copy.js`
+set the names in sentence case with product names kept ("Model lifecycle",
+"Risk import", "Dataset bulk upload", "Framework import", "Jira Assets", was
+"Jira Assets Integration"), made the Slack description list what the server
+actually sends, and fixed "use-cases" in the Jira Assets description. Its
+`down()` restores the previous text exactly. `name` and `display_name` carry
+the same value; the UI shows `display_name`.
+
 ### `extensions` (catalog, one row per extension)
 
 | Column | Notes |
@@ -326,8 +335,12 @@ Keys are checked against `EXTENSION_KEY_PATTERN`, so a malformed key gets a 400.
 An unknown key gets a 404 ("Extension not found"). A `ValidationException` gets
 a 400.
 
-**Mount order matters.** In `Servers/app.ts` the catalog router is registered
-before the seven per-extension routers. Otherwise a per-extension mount such as
+**Mount order matters.** In `Servers/routes/legacy/aiPlatform.routes.ts`
+(`registerAiPlatformRoutes`, called from `Servers/app.ts`) the catalog router
+and the sync-run router are registered at `/api/extensions` before the eight
+per-extension routers (dataset bulk upload, risk import, Slack, MLflow, Azure
+AI Foundry, Jira Assets, Jira incidents, model lifecycle). Framework import has
+no router there: its routers are under `/api/v1`. Otherwise a per-extension mount such as
 `/api/extensions/slack` would catch `GET /api/extensions/slack` and return 403
 through the gate. Per-extension sub-paths are all multi-segment (`/models`,
 `/oauth/workspaces`, ...), so they never collide with `/:key`.
@@ -383,15 +396,19 @@ would be shadowed by the catalog router.
 | Settings page | `Clients/src/presentation/pages/Extensions/Settings/index.tsx`, route `/extensions/:key/settings` |
 | Generic config form | `Clients/src/presentation/components/ExtensionConfigForm` |
 | Per-extension UI | `Clients/src/presentation/pages/Extensions/<key>/` |
-| Header entry point | `Clients/src/presentation/components/Layout/DashboardActionButtons.tsx` (disabled for non-Admins) |
+| Header entry point | `Clients/src/presentation/components/Layout/DashboardActionButtons.tsx` (disabled without `extension.admin`) |
 | Icons | `Clients/public/assets/extensions/<key>.svg` (Azure uses `.jpg`) |
 
 The provider fetches `/api/extensions` once the user has a token and an
 organization, and clears it on logout. Mutations update the local cache, so
 gated UI re-renders straight away.
 
-Both pages redirect non-Admins to `/` (`userRoleName !== "Admin"`). The old
-`/plugins` route has no redirect.
+Both pages redirect to `/` when the user lacks the `extension.admin`
+permission (`useCan("extension.admin")` in `Extensions/index.tsx` and
+`Extensions/Settings/index.tsx`). The same check disables the header entry
+point (`DashboardActionButtons.tsx`) and picks the wording of
+`Extensions/ExtensionSetupNotice.tsx` (an **Open settings** action, or "Ask an
+Admin to set up ..."). The old `/plugins` route has no redirect.
 
 **Catalog card buttons** (`Extensions/index.tsx`): **Enable** when there are no
 pre-enable fields; **Configure to enable** when there are; **Configure** when
