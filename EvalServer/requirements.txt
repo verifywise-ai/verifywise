@@ -71,7 +71,7 @@ pydantic_core==2.50.0
 Pygments==2.20.0
 pyparsing==3.3.3
 python-dateutil==2.9.0.post0
-python-dotenv==1.2.2
+python-dotenv==1.2.4
 python-multipart==0.0.32
 pytz==2026.5
 PyYAML==6.0.3
