@@ -2,7 +2,10 @@ import { sequelize } from "../../database/db";
 import { QueryTypes } from "sequelize";
 import { createWriteToolFn } from "../confirmation/createWriteTool";
 import logger from "../../utils/logger/fileLogger";
-import { linkObjectsToPolicyQuery } from "../../utils/policyLinkedObject.utils";
+import {
+  hiddenRiskLinksFilter,
+  linkObjectsToPolicyQuery,
+} from "../../utils/policyLinkedObject.utils";
 import { actingRiskViewer } from "./riskFunctions";
 import { parseBulkIds } from "../../utils/bulkAction.utils";
 import { riskIdVisibilitySql } from "../../utils/riskVisibility.utils";
@@ -10,18 +13,20 @@ import { riskIdVisibilitySql } from "../../utils/riskVisibility.utils";
 // --- Read Tools ---
 
 const getPolicyLinkedObjects = async (
-  params: { policy_id: number },
+  params: { policy_id: number; _userId?: number },
   organizationId: number,
 ): Promise<any> => {
   try {
-    // Get all linked objects for the policy
+    // Get all linked objects for the policy. Like the REST read, a link to a
+    // risk the acting user cannot see is left out, from the count too.
+    const hidden = hiddenRiskLinksFilter(await actingRiskViewer(params, organizationId));
     const linkedObjects = (await sequelize.query(
       `SELECT id, policy_id, object_type, object_id, created_at
        FROM policy_linked_objects
-       WHERE policy_id = :policy_id AND organization_id = :organization_id
+       WHERE policy_id = :policy_id AND organization_id = :organizationId${hidden.sql}
        ORDER BY created_at DESC`,
       {
-        replacements: { policy_id: params.policy_id, organization_id: organizationId },
+        replacements: { policy_id: params.policy_id, organizationId, ...hidden.replacements },
         type: QueryTypes.SELECT,
       },
     )) as any[];

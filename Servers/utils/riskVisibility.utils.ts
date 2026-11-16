@@ -146,10 +146,15 @@ export function accessibleProjectIdSql(
 }
 
 /**
- * The rule for the risks of one use case (bound as :projectId). On top of
- * riskVisibilitySql, a viewer who cannot see that use case gets only the risks
- * they own or approve there, so a risk shared with another use case they can
- * see does not expose the hidden use case's list (ruling J7).
+ * The rule for the risks of one use case (bound as :projectId). A viewer who
+ * can see that use case gets all its risks; one who cannot gets only the
+ * risks they own or approve there, so a risk shared with another use case
+ * they can see does not expose the hidden use case's list (ruling J7).
+ *
+ * Only for a query that already joins the risk to :projectId through
+ * projects_risks. Under that join this is the whole risk rule: a risk linked
+ * to an accessible use case, or owned or approved by the viewer, passes
+ * riskVisibilitySql too, so that check is not repeated.
  */
 export function projectRiskVisibilitySql(
   riskAlias: string,
@@ -157,14 +162,13 @@ export function projectRiskVisibilitySql(
 ): { sql: string; replacements: Record<string, unknown> } {
   const scoped = scopedRiskViewer(viewer);
   if (!scoped) return { sql: "", replacements: {} };
-  const visibility = riskVisibilitySql(riskAlias, scoped);
   const access = projectAccessSql("pvs", scoped.userId);
   return {
-    sql: `${visibility.sql} AND (EXISTS (
+    sql: ` AND (EXISTS (
         SELECT 1 FROM projects pvs
          WHERE pvs.id = :projectId AND pvs.organization_id = :organizationId${access.sql})
       OR ${riskAlias}.risk_owner = :visibilityUserId OR ${riskAlias}.risk_approval = :visibilityUserId)`,
-    replacements: { ...visibility.replacements, ...access.replacements },
+    replacements: access.replacements,
   };
 }
 

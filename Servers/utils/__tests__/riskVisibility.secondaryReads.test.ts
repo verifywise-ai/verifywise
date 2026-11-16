@@ -31,9 +31,13 @@ describe("getPortfolioByProject", () => {
   it("sums only the use case's risks a non-Admin can see", async () => {
     await getPortfolioByProject(4, 12, editor);
     const [sql, options] = mockQuery.mock.calls[0];
-    expect(sql).toContain("prv.risk_id = r.id");
-    // a hidden use case gives only the risks the viewer owns or approves
+    // The query joins the risk to the use case, so the use case rule alone
+    // decides: access to the use case, or the viewer owns or approves the risk.
+    expect(sql).toContain("pr.project_id = :projectId");
     expect(sql).toContain("pvs.id = :projectId");
+    expect(sql).toContain(
+      "r.risk_owner = :visibilityUserId OR r.risk_approval = :visibilityUserId",
+    );
     expect(options.replacements).toEqual({ organizationId: 4, projectId: 12, visibilityUserId: 9 });
   });
 

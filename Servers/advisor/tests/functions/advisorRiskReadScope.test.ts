@@ -16,7 +16,7 @@ import { wiseSearch } from "../../../utils/search.utils";
 import { sequelize } from "../../../database/db";
 import { availableRiskTools } from "../../functions/riskFunctions";
 import { availableSearchTools } from "../../functions/searchFunctions";
-import "../../functions/policyLinkedObjectFunctions";
+import { availablePolicyLinkedObjectTools } from "../../functions/policyLinkedObjectFunctions";
 import { writeToolExecutors } from "../../confirmation/createWriteTool";
 
 const mockViewer = visibility.riskViewerForUserQuery as jest.Mock<any>;
@@ -61,6 +61,31 @@ describe("advisor risk reads run as the chatting user", () => {
   it("get_risk_analytics stays organization-wide: counts only (ruling J4)", async () => {
     await availableRiskTools.get_risk_analytics({ _userId: 9 }, 4);
     expect(mockAll).toHaveBeenCalledWith(4, "active", visibility.SYSTEM_RISK_VIEWER);
+  });
+
+  it("get_risk_analytics for one use case applies the use case rule for the user (J7)", async () => {
+    await availableRiskTools.get_risk_analytics({ projectId: 3, _userId: 9 }, 4);
+    expect(mockByProject).toHaveBeenCalledWith(3, 4, "active", EDITOR);
+  });
+
+  it("get_risk_analytics for one use case fails closed with no user", async () => {
+    await availableRiskTools.get_risk_analytics({ projectId: 3 }, 4);
+    expect(mockViewer).not.toHaveBeenCalled();
+    expect(mockByProject).toHaveBeenCalledWith(3, 4, "active", visibility.UNKNOWN_RISK_VIEWER);
+  });
+
+  it("get_policy_linked_objects leaves out links to risks the user cannot see", async () => {
+    mockQuery.mockResolvedValueOnce([{ id: 1, object_type: "risk", object_id: 7 }]);
+    const result = (await availablePolicyLinkedObjectTools.get_policy_linked_objects(
+      { policy_id: 2, _userId: 9 },
+      4,
+    )) as { total_count: number };
+    const [sql, options] = mockQuery.mock.calls[0] as [string, any];
+    expect(sql).toContain("policy_linked_objects.object_type <> 'risk'");
+    expect(sql).toContain("rvid.id = policy_linked_objects.object_id");
+    expect(options.replacements).toMatchObject({ organizationId: 4, visibilityUserId: 9 });
+    // The count is the rows the filtered query returned.
+    expect(result.total_count).toBe(1);
   });
 
   it.each(["global_search", "search_within_entity"])(

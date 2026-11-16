@@ -89,7 +89,7 @@ export const linkObjectsToPolicyQuery = async (
  * so a policy's links never name a hidden risk. Empty for a viewer who sees
  * every risk. Bound against policy_linked_objects (unaliased).
  */
-const hiddenRiskLinksFilter = (
+export const hiddenRiskLinksFilter = (
   viewer: RiskViewer,
 ): { sql: string; replacements: Record<string, unknown> } => {
   // object_type and object_id are NOT NULL, so `<>` needs no NULL case.
@@ -220,7 +220,7 @@ export const updatePolicyLinkedObjectQuery = async (
 
 /**
  * DELETE linked object (by id). A link to a risk the viewer cannot see (risk
- * visibility rule) does not match, so it is deleted and answered exactly like
+ * visibility rule) does not match, so it is not deleted and is answered exactly like
  * a missing row.
  */
 export const deletePolicyLinkedObjectQuery = async (

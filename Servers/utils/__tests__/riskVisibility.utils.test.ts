@@ -106,9 +106,11 @@ describe("riskVisibilityCondition", () => {
 });
 
 describe("projectRiskVisibilitySql", () => {
-  it("adds the hidden-use-case rule on top of the risk rule for a non-Admin", () => {
+  it("is the use case's access or the viewer's own risk for a non-Admin", () => {
     const { sql, replacements } = projectRiskVisibilitySql("r", { userId: 5, role: "Auditor" });
-    expect(sql.startsWith(riskVisibilitySql("r", { userId: 5, role: "Auditor" }).sql)).toBe(true);
+    // The caller joins the risk to :projectId, so the risk rule is implied.
+    expect(sql).not.toContain("projects_risks prv");
+    expect(sql.startsWith(" AND (EXISTS (")).toBe(true);
     expect(sql).toContain("pvs.id = :projectId");
     expect(sql).toContain(
       "r.risk_owner = :visibilityUserId OR r.risk_approval = :visibilityUserId",

@@ -191,18 +191,21 @@ export interface RiskAnalytics {
 }
 
 const getRiskAnalytics = async (
-  params: { projectId?: number },
+  params: { projectId?: number; _userId?: number },
   organizationId: number,
 ): Promise<RiskAnalytics> => {
   try {
-    // Fetch risks for analysis. Counts only, no per-risk detail, so like the
-    // dashboard counts they stay organization-wide (ruling J4).
+    // Fetch risks for analysis. The organization-wide figures are counts only,
+    // so like the dashboard counts they stay organization-wide (ruling J4).
+    // The figures for one use case follow the by use case rule (ruling J7):
+    // they run as the acting user, so a use case they cannot see counts only
+    // the risks they own or approve there (no user: fails closed).
     const risks = params.projectId
       ? (await getRisksByProjectQuery(
           params.projectId,
           organizationId,
           "active",
-          SYSTEM_RISK_VIEWER,
+          await actingRiskViewer(params, organizationId),
         )) || []
       : await getAllRisksQuery(organizationId, "active", SYSTEM_RISK_VIEWER);
 

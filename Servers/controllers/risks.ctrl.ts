@@ -897,11 +897,15 @@ export async function bulkUpdateProjectRisks(req: Request, res: Response): Promi
 
           const input =
             action === "set_owner" ? { risk_owner: ownerId } : { risk_category: categories };
+          // The batch check above already rejected any id the user cannot
+          // see, in this transaction, so update as the system rather than
+          // repeat the visibility check once per id. The input names no use
+          // case, so no link is touched (ruling J3 is not in play).
           const updated = await updateRiskService(
             risk.id!,
             input,
             risk,
-            { userId, organizationId, viewer: riskViewer(req) },
+            { userId, organizationId, viewer: SYSTEM_RISK_VIEWER },
             transaction,
             { recordSnapshots: false, runAutomations: false },
           );

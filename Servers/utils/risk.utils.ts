@@ -309,227 +309,6 @@ export const getAllRisksQuery = async (
   return risks as IRisk[];
 };
 
-/**
- * PRESERVED: Original complex query with all relationships
- * This query fetches all risk data including subClauses, annexCategories, controls, assessments, etc.
- * It's slow due to 12+ LEFT JOINs and subqueries in JOIN conditions.
- * Use getAllRisksQuery for list views and getRiskByIdQuery for single risk with full relationships.
- */
-export const getAllRisksQueryWithRelationships = async (
-  organizationId: number,
-  filter: "active" | "deleted" | "all" = "active",
-): Promise<IRisk[]> => {
-  let whereClause = "WHERE r.organization_id = :organizationId";
-  switch (filter) {
-    case "active":
-      whereClause += " AND is_deleted = false";
-      break;
-    case "deleted":
-      whereClause += " AND is_deleted = true";
-      break;
-    case "all":
-      // No additional filter
-      break;
-  }
-
-  const query = `
-    SELECT
-      r.*,
-      COALESCE(
-        JSON_AGG(DISTINCT pr.project_id) FILTER (WHERE pr.project_id IS NOT NULL),
-        '[]'
-      ) as projects,
-      COALESCE(
-        JSON_AGG(DISTINCT fr.framework_id) FILTER (WHERE fr.framework_id IS NOT NULL),
-        '[]'
-      ) as frameworks,
-      COALESCE(
-        JSON_AGG(DISTINCT JSONB_BUILD_OBJECT(
-          'id', scr.subclause_id,
-          'meta_id', sc.subclause_meta_id,
-          'sup_id', csi.clause_no,
-          'title', scs.title,
-          'sub_id', scs.order_no,
-          'parent_id', csi.id,
-          'project_id', pf_sc.project_id
-        )) FILTER (WHERE scr.subclause_id IS NOT NULL),
-        '[]'
-      ) as sub_clauses,
-      COALESCE(
-        JSON_AGG(DISTINCT JSONB_BUILD_OBJECT(
-          'id', acr.annexcategory_id,
-          'meta_id', ac.annexcategory_meta_id,
-          'sup_id', asi.annex_no,
-          'sub_id', acs.sub_id,
-          'title', acs.title,
-          'parent_id', asi.id,
-          'project_id', pf_ac.project_id
-        )) FILTER (WHERE acr.annexcategory_id IS NOT NULL),
-        '[]'
-      ) as annex_categories,
-      COALESCE(
-        JSON_AGG(DISTINCT JSONB_BUILD_OBJECT(
-          'id', cr.control_id,
-          'meta_id', ac_eu.control_meta_id,
-          'sup_id', ccs.id,
-          'sub_id', cse.id,
-          'title', cse.title,
-          'parent_id', cse.id,
-          'project_id', pf_cr.project_id
-        )) FILTER (WHERE cr.control_id IS NOT NULL),
-        '[]'
-      ) as controls,
-      COALESCE(
-        JSON_AGG(DISTINCT JSONB_BUILD_OBJECT(
-          'id', ans.id,
-          'meta_id', ans.question_id,
-          'sup_id', ts.id,
-          'sub_id', sts.id,
-          'title', ts.title || '. ' || sts.title || '. ' || qse.question,
-          'parent_id', qse.id,
-          'project_id', pf_ans.project_id
-        )) FILTER (WHERE ans.id IS NOT NULL),
-        '[]'
-      ) as assessments,
-      COALESCE(
-        JSON_AGG(DISTINCT JSONB_BUILD_OBJECT(
-          'id', acr_27001.annexcontrol_id,
-          'meta_id', ac_27001.annexcontrol_meta_id,
-          'sup_id', ccs_27001.id,
-          'sub_id', cse_27001.id,
-          'title', cse_27001.title,
-          'parent_id', cse_27001.id,
-          'project_id', pf_ac27001.project_id
-        )) FILTER (WHERE acr_27001.annexcontrol_id IS NOT NULL),
-        '[]'
-      ) as annex_controls_27001,
-      COALESCE(
-        JSON_AGG(DISTINCT JSONB_BUILD_OBJECT(
-          'id', scr_27001.subclause_id,
-          'meta_id', sc_27001.subclause_meta_id,
-          'sup_id', csi_27001.order_no,
-          'title', scs_27001.title,
-          'sub_id', scs_27001.order_no,
-          'parent_id', csi_27001.id,
-          'project_id', pf_sc27001.project_id
-        )) FILTER (WHERE scr_27001.subclause_id IS NOT NULL),
-        '[]'
-      ) as sub_clauses_27001
-    FROM risks r
-
-    -- Projects relationship
-    LEFT JOIN projects_risks pr ON r.id = pr.risk_id AND pr.organization_id = :organizationId
-
-    -- Frameworks relationship
-    LEFT JOIN frameworks_risks fr ON r.id = fr.risk_id AND fr.organization_id = :organizationId
-
-    -- SubClauses ISO relationship
-    LEFT JOIN subclauses_iso__risks scr ON r.id = scr.projects_risks_id AND scr.organization_id = :organizationId
-    LEFT JOIN subclauses_iso sc ON scr.subclause_id = sc.id AND sc.organization_id = :organizationId
-    LEFT JOIN subclauses_struct_iso scs ON scs.id = sc.subclause_meta_id
-    LEFT JOIN clauses_struct_iso csi ON csi.id = scs.clause_id
-    LEFT JOIN projects_frameworks pf_sc ON pf_sc.framework_id = csi.framework_id AND pf_sc.organization_id = :organizationId
-      AND pf_sc.project_id IN (SELECT project_id FROM projects_risks WHERE risk_id = r.id AND organization_id = :organizationId)
-
-    -- Annex Categories relationship
-    LEFT JOIN annexcategories_iso__risks acr ON r.id = acr.projects_risks_id AND acr.organization_id = :organizationId
-    LEFT JOIN annexcategories_iso ac ON acr.annexcategory_id = ac.id AND ac.organization_id = :organizationId
-    LEFT JOIN annexcategories_struct_iso acs ON acs.id = ac.annexcategory_meta_id
-    LEFT JOIN annex_struct_iso asi ON asi.id = acs.annex_id
-    LEFT JOIN projects_frameworks pf_ac ON pf_ac.framework_id = asi.framework_id AND pf_ac.organization_id = :organizationId
-      AND pf_ac.project_id IN (SELECT project_id FROM projects_risks WHERE risk_id = r.id AND organization_id = :organizationId)
-
-    -- Controls EU relationship
-    LEFT JOIN controls_eu__risks cr ON r.id = cr.projects_risks_id AND cr.organization_id = :organizationId
-    LEFT JOIN controls_eu ac_eu ON cr.control_id = ac_eu.id AND ac_eu.organization_id = :organizationId
-    LEFT JOIN controls_struct_eu cse ON cse.id = ac_eu.control_meta_id
-    LEFT JOIN controlcategories_struct_eu ccs ON ccs.id = cse.control_category_id
-    LEFT JOIN projects_frameworks pf_cr ON pf_cr.framework_id = ccs.framework_id AND pf_cr.organization_id = :organizationId
-      AND pf_cr.project_id IN (SELECT project_id FROM projects_risks WHERE risk_id = r.id AND organization_id = :organizationId)
-
-    -- Answers/Assessments EU relationship
-    LEFT JOIN answers_eu__risks aur ON r.id = aur.projects_risks_id AND aur.organization_id = :organizationId
-    LEFT JOIN answers_eu ans ON aur.answer_id = ans.id AND ans.organization_id = :organizationId
-    LEFT JOIN questions_struct_eu qse ON qse.id = ans.question_id
-    LEFT JOIN subtopics_struct_eu sts ON sts.id = qse.subtopic_id
-    LEFT JOIN topics_struct_eu ts ON ts.id = sts.topic_id
-    LEFT JOIN projects_frameworks pf_ans ON pf_ans.framework_id = ts.framework_id AND pf_ans.organization_id = :organizationId
-      AND pf_ans.project_id IN (SELECT project_id FROM projects_risks WHERE risk_id = r.id AND organization_id = :organizationId)
-
-    -- Annex Controls ISO 27001 relationship
-    LEFT JOIN annexcontrols_iso27001__risks acr_27001 ON r.id = acr_27001.projects_risks_id AND acr_27001.organization_id = :organizationId
-    LEFT JOIN annexcontrols_iso27001 ac_27001 ON acr_27001.annexcontrol_id = ac_27001.id AND ac_27001.organization_id = :organizationId
-    LEFT JOIN annexcontrols_struct_iso27001 cse_27001 ON cse_27001.id = ac_27001.annexcontrol_meta_id
-    LEFT JOIN annex_struct_iso27001 ccs_27001 ON ccs_27001.id = cse_27001.annex_id
-    LEFT JOIN projects_frameworks pf_ac27001 ON pf_ac27001.framework_id = ccs_27001.framework_id AND pf_ac27001.organization_id = :organizationId
-      AND pf_ac27001.project_id IN (SELECT project_id FROM projects_risks WHERE risk_id = r.id AND organization_id = :organizationId)
-
-    -- SubClauses ISO 27001 relationship
-    LEFT JOIN subclauses_iso27001__risks scr_27001 ON r.id = scr_27001.projects_risks_id AND scr_27001.organization_id = :organizationId
-    LEFT JOIN subclauses_iso27001 sc_27001 ON scr_27001.subclause_id = sc_27001.id AND sc_27001.organization_id = :organizationId
-    LEFT JOIN subclauses_struct_iso27001 scs_27001 ON scs_27001.id = sc_27001.subclause_meta_id
-    LEFT JOIN clauses_struct_iso27001 csi_27001 ON csi_27001.id = scs_27001.clause_id
-    LEFT JOIN projects_frameworks pf_sc27001 ON pf_sc27001.framework_id = csi_27001.framework_id AND pf_sc27001.organization_id = :organizationId
-      AND pf_sc27001.project_id IN (SELECT project_id FROM projects_risks WHERE risk_id = r.id AND organization_id = :organizationId)
-
-    ${whereClause}
-    GROUP BY r.id
-    ORDER BY r.created_at DESC, r.id ASC
-  `;
-
-  const result = (await sequelize.query(query, { replacements: { organizationId } })) as [
-    any[],
-    number,
-  ];
-  const risks = result[0];
-
-  // Helper function to transform arrays - hoisted outside loop for performance
-  const transformArray = (arr: any[]) => {
-    if (typeof arr === "string") {
-      arr = JSON.parse(arr);
-    }
-
-    // Filter out empty objects and transform keys
-    const filtered = arr.filter((item: any) => item && item.id != null);
-
-    return filtered.map((item: any) => ({
-      id: item.id,
-      meta_id: item.meta_id,
-      parent_id: item.parent_id,
-      sup_id: item.sup_id,
-      title: item.title,
-      sub_id: item.sub_id,
-      project_id: item.project_id,
-    }));
-  };
-
-  // Transform the aggregated JSON arrays back to the expected format
-  for (let risk of risks) {
-    // Parse JSON strings if needed
-    if (typeof risk.projects === "string") {
-      risk.projects = JSON.parse(risk.projects);
-    }
-    if (typeof risk.frameworks === "string") {
-      risk.frameworks = JSON.parse(risk.frameworks);
-    }
-
-    risk.subClauses = transformArray(risk.sub_clauses || []);
-    risk.annexCategories = transformArray(risk.annex_categories || []);
-    risk.controls = transformArray(risk.controls || []);
-    risk.assessments = transformArray(risk.assessments || []);
-    risk.annexControls_27001 = transformArray(risk.annex_controls_27001 || []);
-    risk.subClauses_27001 = transformArray(risk.sub_clauses_27001 || []);
-
-    // Clean up the snake_case versions
-    delete risk.sub_clauses;
-    delete risk.annex_categories;
-    delete risk.annex_controls_27001;
-    delete risk.sub_clauses_27001;
-  }
-
-  return risks as IRisk[];
-};
-
 export const getRisksByProjectQuery = async (
   projectId: number,
   organizationId: number,
@@ -651,8 +430,9 @@ export const getRisksByFrameworkQuery = async (
  * One risk with its links and mappings, or null when it is missing, archived
  * (unless includeDeleted) or hidden from the viewer (risk visibility rule):
  * a hidden risk is answered exactly like a missing one. For a non-Admin the
- * use case ids it carries (`projects` and the `project_id` of each mapping
- * row) are narrowed to the use cases they can access.
+ * use case ids it carries are narrowed to the use cases they can access:
+ * `projects`, and the mapping rows, each kept once under its own use case
+ * and only when that use case is accessible.
  */
 export const getRiskByIdQuery = async (
   id: number,
@@ -677,6 +457,15 @@ export const getRiskByIdQuery = async (
     organizationId,
     ...mappingAccess.replacements,
   };
+  // Each mapping query joins projects_frameworks on the framework alone, so a
+  // mapping comes back once per use case using that framework. Admins and the
+  // system viewer keep that output as it is. For anyone else the row is kept
+  // only when pf is the mapping's own use case (the element row's
+  // projects_frameworks_id, given as `realPf`) and that use case is accessible,
+  // so a mapping on a hidden use case never shows under an accessible one.
+  const scopedMappings = scopedRiskViewer(viewer) !== null;
+  const mappingScope = (realPf: string): string =>
+    scopedMappings ? ` AND pf.id = ${realPf}${mappingAccess.sql}` : "";
 
   let ownerFullName = "";
 
@@ -739,7 +528,7 @@ export const getRiskByIdQuery = async (
       JOIN subclauses_struct_iso scs ON scs.id = sc.subclause_meta_id
       JOIN clauses_struct_iso csi ON csi.id = scs.clause_id
       JOIN projects_frameworks pf ON pf.framework_id = csi.framework_id AND pf.organization_id = :organizationId
-      WHERE scr.projects_risks_id = :riskId AND scr.organization_id = :organizationId${mappingAccess.sql}`,
+      WHERE scr.projects_risks_id = :riskId AND scr.organization_id = :organizationId${mappingScope("sc.projects_frameworks_id")}`,
     { replacements: mappingReplacements },
   )) as [Mitigation[], number];
   if (attachedSubClauses[0].length > 0) {
@@ -753,7 +542,7 @@ export const getRiskByIdQuery = async (
       JOIN annexcategories_struct_iso acs ON acs.id = ac.annexcategory_meta_id
       JOIN annex_struct_iso asi ON asi.id = acs.annex_id
       JOIN projects_frameworks pf ON pf.framework_id = asi.framework_id AND pf.organization_id = :organizationId
-      WHERE acr.projects_risks_id = :riskId AND acr.organization_id = :organizationId${mappingAccess.sql}`,
+      WHERE acr.projects_risks_id = :riskId AND acr.organization_id = :organizationId${mappingScope("ac.projects_frameworks_id")}`,
     { replacements: mappingReplacements },
   )) as [Mitigation[], number];
   if (attachedAnnexCategories[0].length > 0) {
@@ -766,7 +555,7 @@ export const getRiskByIdQuery = async (
       JOIN controls_struct_eu cse ON cse.id = ac.control_meta_id
       JOIN controlcategories_struct_eu ccs ON ccs.id = cse.control_category_id
       JOIN projects_frameworks pf ON pf.framework_id = ccs.framework_id AND pf.organization_id = :organizationId
-      WHERE cr.projects_risks_id = :riskId AND cr.organization_id = :organizationId${mappingAccess.sql}`,
+      WHERE cr.projects_risks_id = :riskId AND cr.organization_id = :organizationId${mappingScope("ac.projects_frameworks_id")}`,
     { replacements: mappingReplacements },
   )) as [Mitigation[], number];
   if (attachedControls[0].length > 0) {
@@ -782,7 +571,9 @@ export const getRiskByIdQuery = async (
       JOIN subtopics_struct_eu sts ON sts.id = qse.subtopic_id
       JOIN topics_struct_eu ts ON ts.id = sts.topic_id
       JOIN projects_frameworks pf ON pf.framework_id = ts.framework_id AND pf.organization_id = :organizationId
-      WHERE aur.projects_risks_id = :riskId AND aur.organization_id = :organizationId${mappingAccess.sql}`,
+      WHERE aur.projects_risks_id = :riskId AND aur.organization_id = :organizationId${mappingScope(
+        "(SELECT asm.projects_frameworks_id FROM assessments asm WHERE asm.id = ans.assessment_id AND asm.organization_id = :organizationId)",
+      )}`,
     { replacements: mappingReplacements },
   )) as [Mitigation[], number];
   if (attachedAssessments[0].length > 0) {
@@ -795,7 +586,7 @@ export const getRiskByIdQuery = async (
       JOIN annexcontrols_struct_iso27001 cse ON cse.id = ac.annexcontrol_meta_id
       JOIN annex_struct_iso27001 ccs ON ccs.id = cse.annex_id
       JOIN projects_frameworks pf ON pf.framework_id = ccs.framework_id AND pf.organization_id = :organizationId
-      WHERE acr.projects_risks_id = :riskId AND acr.organization_id = :organizationId${mappingAccess.sql}`,
+      WHERE acr.projects_risks_id = :riskId AND acr.organization_id = :organizationId${mappingScope("ac.projects_frameworks_id")}`,
     { replacements: mappingReplacements },
   )) as [Mitigation[], number];
   if (attachedAnnexControls_27001[0].length > 0) {
@@ -809,7 +600,7 @@ export const getRiskByIdQuery = async (
       JOIN subclauses_struct_iso27001 scs ON scs.id = sc.subclause_meta_id
       JOIN clauses_struct_iso27001 csi ON csi.id = scs.clause_id
       JOIN projects_frameworks pf ON pf.framework_id = csi.framework_id AND pf.organization_id = :organizationId
-      WHERE scr.projects_risks_id = :riskId AND scr.organization_id = :organizationId${mappingAccess.sql}`,
+      WHERE scr.projects_risks_id = :riskId AND scr.organization_id = :organizationId${mappingScope("sc.projects_frameworks_id")}`,
     { replacements: mappingReplacements },
   )) as [Mitigation[], number];
   if (attachedSubClauses_27001[0].length > 0) {

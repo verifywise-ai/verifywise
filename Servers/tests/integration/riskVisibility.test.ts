@@ -19,6 +19,7 @@ import { cleanupDatabase, createTestOrganization, createTestUser, seedFrameworks
 import { createTestApp, testRequest } from "./setup";
 import {
   createTestProject,
+  createTestProjectFramework,
   createTestRisk,
   createTestVendor,
   createTestVendorRisk,
@@ -52,7 +53,7 @@ import { writeToolExecutors } from "../../advisor/confirmation/createWriteTool";
 // Importing the module registers the risk write tools with the executor map.
 import { availableRiskTools } from "../../advisor/functions/riskFunctions";
 import { availableSearchTools } from "../../advisor/functions/searchFunctions";
-import "../../advisor/functions/policyLinkedObjectFunctions";
+import { availablePolicyLinkedObjectTools } from "../../advisor/functions/policyLinkedObjectFunctions";
 
 const ROLE = { Admin: 1, Editor: 3 } as const;
 const FRAMEWORK_ID = 1;
@@ -1488,5 +1489,242 @@ describe("round 2: advisor reads and tools run as the chatting user", () => {
     expect(await linked()).toEqual([seed.risks.onlyB]);
     await unlink(seed.risks.onlyB, seed.users.admin.userId);
     expect(await linked()).toEqual([]);
+  });
+});
+
+describe("round 3: mappings name their own use case", () => {
+  // Struct rows live outside the organization and are not truncated between
+  // tests, so this block adds its own and removes them afterwards.
+  const struct = { clause: 0, subclause: 0, category: 0, control: 0, topic: 0 };
+  const insertId = async (sql: string, replacements: Record<string, unknown> = {}) =>
+    Number(
+      (
+        await sequelize.query<{ id: number }>(`${sql} RETURNING id`, {
+          replacements,
+          type: QueryTypes.SELECT,
+        })
+      )[0].id,
+    );
+
+  beforeAll(async () => {
+    await seedFrameworks();
+    struct.clause = await insertId(
+      `INSERT INTO clauses_struct_iso (framework_id, clause_id, title, clause_no)
+       VALUES (2, 'R3', 'Round 3 clause', 99)`,
+    );
+    struct.subclause = await insertId(
+      `INSERT INTO subclauses_struct_iso (clause_id, subclause_id, title, order_no)
+       VALUES (:clause, 'R3.1', 'Round 3 subclause', 1)`,
+      { clause: struct.clause },
+    );
+    struct.category = await insertId(
+      `INSERT INTO controlcategories_struct_eu (framework_id, title) VALUES (1, 'Round 3 category')`,
+    );
+    struct.control = await insertId(
+      `INSERT INTO controls_struct_eu (control_category_id, title) VALUES (:category, 'Round 3 control')`,
+      { category: struct.category },
+    );
+    struct.topic = await insertId(
+      `INSERT INTO topics_struct_eu (framework_id, title) VALUES (1, 'Round 3 topic')`,
+    );
+  });
+
+  afterAll(async () => {
+    // Cascades to the subclause, control, subtopic and question structs.
+    await sequelize.query(`DELETE FROM clauses_struct_iso WHERE id = :id`, {
+      replacements: { id: struct.clause },
+    });
+    await sequelize.query(`DELETE FROM controlcategories_struct_eu WHERE id = :id`, {
+      replacements: { id: struct.category },
+    });
+    await sequelize.query(`DELETE FROM topics_struct_eu WHERE id = :id`, {
+      replacements: { id: struct.topic },
+    });
+  });
+
+  /**
+   * Use cases A (visible to memberA) and B (hidden from memberA) both run ISO
+   * 42001 and the EU AI Act. The risk shared by A and B is mapped to A's ISO
+   * subclause, and to B's subclause, control and assessment answer.
+   */
+  async function seedMappings() {
+    const orgId = seed.orgId;
+    const pf = {
+      isoA: await createTestProjectFramework(orgId, seed.projectA, 2),
+      isoB: await createTestProjectFramework(orgId, seed.projectB, 2),
+      euA: await createTestProjectFramework(orgId, seed.projectA, 1),
+      euB: await createTestProjectFramework(orgId, seed.projectB, 1),
+    };
+    const subclause = async (projectFrameworkId: number) =>
+      insertId(
+        `INSERT INTO subclauses_iso (organization_id, subclause_meta_id, projects_frameworks_id)
+         VALUES (:orgId, :meta, :projectFrameworkId)`,
+        { orgId, meta: struct.subclause, projectFrameworkId },
+      );
+    const subclauseA = await subclause(pf.isoA);
+    const subclauseB = await subclause(pf.isoB);
+    const controlB = await insertId(
+      `INSERT INTO controls_eu (organization_id, control_meta_id, projects_frameworks_id)
+       VALUES (:orgId, :meta, :projectFrameworkId)`,
+      { orgId, meta: struct.control, projectFrameworkId: pf.euB },
+    );
+    const subtopic = await insertId(
+      `INSERT INTO subtopics_struct_eu (topic_id, title) VALUES (:topic, 'Round 3 subtopic')`,
+      { topic: struct.topic },
+    );
+    const question = await insertId(
+      `INSERT INTO questions_struct_eu (subtopic_id, question) VALUES (:subtopic, 'Round 3 question')`,
+      { subtopic },
+    );
+    const assessmentB = await insertId(
+      `INSERT INTO assessments (organization_id, projects_frameworks_id)
+       VALUES (:orgId, :projectFrameworkId)`,
+      { orgId, projectFrameworkId: pf.euB },
+    );
+    const answerB = await insertId(
+      `INSERT INTO answers_eu (organization_id, assessment_id, question_id)
+       VALUES (:orgId, :assessment, :question)`,
+      { orgId, assessment: assessmentB, question },
+    );
+    const riskId = seed.risks.both;
+    await sequelize.query(
+      `INSERT INTO subclauses_iso__risks (organization_id, subclause_id, projects_risks_id)
+       VALUES (:orgId, :subclauseA, :riskId), (:orgId, :subclauseB, :riskId),
+              (:orgId, :subclauseB, :ownedOnB);
+       INSERT INTO controls_eu__risks (organization_id, control_id, projects_risks_id)
+       VALUES (:orgId, :controlB, :riskId);
+       INSERT INTO answers_eu__risks (organization_id, answer_id, projects_risks_id)
+       VALUES (:orgId, :answerB, :riskId);`,
+      {
+        replacements: {
+          orgId,
+          subclauseA,
+          subclauseB,
+          controlB,
+          answerB,
+          riskId,
+          ownedOnB: seed.risks.ownedOnB,
+        },
+      },
+    );
+    return { subclauseA, subclauseB, controlB, answerB };
+  }
+
+  const mappings = (rows: { id: number; project_id: number }[]) =>
+    rows.map((r) => `${Number(r.id)}@${Number(r.project_id)}`).sort();
+
+  it("a non-Admin gets none of the hidden use case's mappings", async () => {
+    const { subclauseA } = await seedMappings();
+    const risk = (await getRiskByIdQuery(seed.risks.both, seed.orgId, seed.users.memberA)) as any;
+    // A's subclause once, labelled with A; nothing of B, under either label.
+    expect(mappings(risk.subClauses)).toEqual([`${subclauseA}@${seed.projectA}`]);
+    expect(risk.controls).toEqual([]);
+    expect(risk.assessments).toEqual([]);
+    // The owner of a risk on a use case hidden from them sees the risk (J1)
+    // but none of that use case's mappings.
+    const owned = (await getRiskByIdQuery(
+      seed.risks.ownedOnB,
+      seed.orgId,
+      seed.users.noAccess,
+    )) as any;
+    expect(owned).not.toBeNull();
+    expect(owned.subClauses).toEqual([]);
+    const ownedAsAdmin = (await getRiskByIdQuery(
+      seed.risks.ownedOnB,
+      seed.orgId,
+      seed.users.admin,
+    )) as any;
+    expect(ownedAsAdmin.subClauses.length).toBe(2);
+  });
+
+  it("an Admin and the system viewer keep the existing output", async () => {
+    const { subclauseA, subclauseB, controlB, answerB } = await seedMappings();
+    const A = seed.projectA;
+    const B = seed.projectB;
+    for (const viewer of [seed.users.admin, SYSTEM_RISK_VIEWER] as RiskViewer[]) {
+      const risk = (await getRiskByIdQuery(seed.risks.both, seed.orgId, viewer)) as any;
+      // The join on the framework alone repeats each mapping once per use
+      // case running that framework, as before.
+      expect(mappings(risk.subClauses)).toEqual(
+        [
+          `${subclauseA}@${A}`,
+          `${subclauseA}@${B}`,
+          `${subclauseB}@${A}`,
+          `${subclauseB}@${B}`,
+        ].sort(),
+      );
+      expect(mappings(risk.controls)).toEqual([`${controlB}@${A}`, `${controlB}@${B}`].sort());
+      expect(mappings(risk.assessments)).toEqual([`${answerB}@${A}`, `${answerB}@${B}`].sort());
+    }
+  });
+
+  it("an owner who can see the use case gets its mappings under it", async () => {
+    const { subclauseA, subclauseB, controlB, answerB } = await seedMappings();
+    // memberA joins B: every mapping now shows once, under its own use case.
+    await sequelize.query(
+      `INSERT INTO projects_members (organization_id, project_id, user_id)
+       VALUES (:orgId, :projectB, :userId)`,
+      {
+        replacements: {
+          orgId: seed.orgId,
+          projectB: seed.projectB,
+          userId: seed.users.memberA.userId,
+        },
+      },
+    );
+    const risk = (await getRiskByIdQuery(seed.risks.both, seed.orgId, seed.users.memberA)) as any;
+    expect(mappings(risk.subClauses)).toEqual(
+      [`${subclauseA}@${seed.projectA}`, `${subclauseB}@${seed.projectB}`].sort(),
+    );
+    expect(mappings(risk.controls)).toEqual([`${controlB}@${seed.projectB}`]);
+    expect(mappings(risk.assessments)).toEqual([`${answerB}@${seed.projectB}`]);
+  });
+});
+
+describe("round 3: advisor analytics and policy links", () => {
+  it("risk analytics for one use case follows the by use case rule (J7)", async () => {
+    const total = async (params: Record<string, unknown>) =>
+      (
+        (await availableRiskTools.get_risk_analytics(
+          { projectId: seed.projectB, ...params },
+          seed.orgId,
+        )) as any
+      ).totalRisks;
+    expect(await total({ _userId: seed.users.admin.userId })).toBe(4);
+    expect(await total({ _userId: seed.users.memberA.userId })).toBe(0);
+    // Only the two they own or approve there.
+    expect(await total({ _userId: seed.users.noAccess.userId })).toBe(2);
+    // No user: fails closed.
+    expect(await total({})).toBe(0);
+  });
+
+  it("get_policy_linked_objects leaves out links to hidden risks, count included", async () => {
+    const created = await (await apiAs(seed.users.admin)).post("/api/policies").send({
+      title: `Advisor read policy ${Date.now()}`,
+      content_html: "<p>Body</p>",
+      tags: ["Privacy"],
+      next_review_date: "2030-01-15",
+    });
+    const policyId = created.body.data.id as number;
+    await sequelize.query(
+      `INSERT INTO policy_linked_objects (organization_id, policy_id, object_type, object_id)
+       VALUES (:orgId, :policyId, 'risk', :a), (:orgId, :policyId, 'risk', :b)`,
+      { replacements: { orgId: seed.orgId, policyId, a: seed.risks.onlyA, b: seed.risks.onlyB } },
+    );
+    const read = async (userId?: number) =>
+      (await availablePolicyLinkedObjectTools.get_policy_linked_objects(
+        { policy_id: policyId, ...(userId ? { _userId: userId } : {}) },
+        seed.orgId,
+      )) as { total_count: number; linked_objects: Record<string, { object_id: number }[]> };
+    const riskIds = (result: Awaited<ReturnType<typeof read>>) =>
+      sorted((result.linked_objects.risk ?? []).map((o) => Number(o.object_id)));
+
+    const member = await read(seed.users.memberA.userId);
+    expect(riskIds(member)).toEqual([seed.risks.onlyA]);
+    expect(member.total_count).toBe(1);
+    const admin = await read(seed.users.admin.userId);
+    expect(riskIds(admin)).toEqual(sorted([seed.risks.onlyA, seed.risks.onlyB]));
+    expect(admin.total_count).toBe(2);
+    expect((await read()).total_count).toBe(0);
   });
 });
