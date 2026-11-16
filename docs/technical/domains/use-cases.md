@@ -249,6 +249,8 @@ The guard reads the id from the same place the handler does: `requireProjectAcce
 - **A refused or failed `GET /api/projects/:id`** shows the empty state in `ProjectView`.
 - **MCP tools** call services directly and are not behind this guard.
 
+**Use case access also decides which risks a non-Admin sees.** A user sees the risks linked to a use case they own, are a team member of or reach through a group. Read access as a task assignee or workflow approver does not count. Linking a risk to a use case needs that access too. See [Visibility](./risk-management.md#visibility) in the risk management doc.
+
 ## Create Project
 
 ### Request

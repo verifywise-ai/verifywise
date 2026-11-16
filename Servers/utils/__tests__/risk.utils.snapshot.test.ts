@@ -14,6 +14,7 @@ jest.mock("../user.utils", () => ({
 import { sequelize } from "../../database/db";
 import { recordSnapshotIfChanged } from "../history/riskHistory.utils";
 import { updateRiskByIdQuery } from "../risk.utils";
+import { SYSTEM_RISK_VIEWER } from "../riskVisibility.utils";
 
 const mockQuery = sequelize.query as jest.Mock;
 const mockSnapshot = recordSnapshotIfChanged as jest.Mock;
@@ -36,7 +37,9 @@ describe("updateRiskByIdQuery risk_level snapshot", () => {
       { risk_level_autocalculated: "Low risk", current_risk_level: null },
       { risk_level_autocalculated: "Low risk", current_risk_level: "High risk" },
     );
-    await updateRiskByIdQuery(1, { current_risk_level: "High risk" }, 3, {} as never);
+    await updateRiskByIdQuery(1, { current_risk_level: "High risk" }, 3, {} as never, {
+      viewer: SYSTEM_RISK_VIEWER,
+    });
     expect(mockSnapshot.mock.calls.map((c) => c[0])).toEqual(["risk_level"]);
   });
 
@@ -45,7 +48,9 @@ describe("updateRiskByIdQuery risk_level snapshot", () => {
       { risk_level_autocalculated: "Low risk", current_risk_level: "High risk" },
       { risk_level_autocalculated: "Medium risk", current_risk_level: "High risk" },
     );
-    await updateRiskByIdQuery(1, { likelihood: "Rare" } as never, 3, {} as never);
+    await updateRiskByIdQuery(1, { likelihood: "Rare" } as never, 3, {} as never, {
+      viewer: SYSTEM_RISK_VIEWER,
+    });
     expect(mockSnapshot).not.toHaveBeenCalled();
   });
 });

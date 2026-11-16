@@ -40,8 +40,14 @@ describe("advisor: link a risk to a project", () => {
     const projectId = await createTestProject(owner.orgId, owner.userId);
     const riskId = await createTestRisk(owner.orgId);
 
-    await linkRiskToProject({ risk_id: riskId, project_id: projectId }, owner.orgId);
-    await linkRiskToProject({ risk_id: riskId, project_id: projectId }, owner.orgId);
+    await linkRiskToProject(
+      { risk_id: riskId, project_id: projectId, _userId: owner.userId },
+      owner.orgId,
+    );
+    await linkRiskToProject(
+      { risk_id: riskId, project_id: projectId, _userId: owner.userId },
+      owner.orgId,
+    );
 
     expect(await projectRiskLinks(riskId)).toEqual([
       { organization_id: owner.orgId, project_id: projectId },
@@ -57,7 +63,10 @@ describe("advisor: link a risk to a project", () => {
     });
 
     await expect(
-      linkRiskToProject({ risk_id: riskId, project_id: projectId }, owner.orgId),
+      linkRiskToProject(
+        { risk_id: riskId, project_id: projectId, _userId: owner.userId },
+        owner.orgId,
+      ),
     ).rejects.toThrow("Risk not found");
     expect(await projectRiskLinks(riskId)).toEqual([]);
   });
@@ -68,7 +77,10 @@ describe("advisor: link a risk to a project", () => {
     const riskId = await createTestRisk(owner.orgId);
 
     await expect(
-      linkRiskToProject({ risk_id: riskId, project_id: theirProject }, owner.orgId),
+      linkRiskToProject(
+        { risk_id: riskId, project_id: theirProject, _userId: owner.userId },
+        owner.orgId,
+      ),
     ).rejects.toThrow();
     expect(await projectRiskLinks(riskId)).toEqual([]);
   });
@@ -81,8 +93,14 @@ describe("advisor: project risk counts", () => {
     const otherProject = await createTestProject(owner.orgId, owner.userId);
     const linked = await createTestRisk(owner.orgId);
     const elsewhere = await createTestRisk(owner.orgId);
-    await linkRiskToProject({ risk_id: linked, project_id: projectId }, owner.orgId);
-    await linkRiskToProject({ risk_id: elsewhere, project_id: otherProject }, owner.orgId);
+    await linkRiskToProject(
+      { risk_id: linked, project_id: projectId, _userId: owner.userId },
+      owner.orgId,
+    );
+    await linkRiskToProject(
+      { risk_id: elsewhere, project_id: otherProject, _userId: owner.userId },
+      owner.orgId,
+    );
 
     const stats = await availableComplianceTools.get_project_stats(
       { project_id: projectId },

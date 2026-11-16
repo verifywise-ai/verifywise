@@ -9,6 +9,7 @@
 
 import { Transaction } from "sequelize";
 import { createRiskQuery, updateRiskByIdQuery } from "../utils/risk.utils";
+import type { RiskViewer } from "../utils/riskVisibility.utils";
 import { writtenValues } from "../utils/changeHistory.base.utils";
 import { RiskModel } from "../domain.layer/models/risks/risk.model";
 import { IRisk } from "../domain.layer/interfaces/I.risk";
@@ -35,6 +36,13 @@ export type CreateRiskServiceInput = Partial<RiskModel> & {
 export interface CreateRiskServiceContext {
   userId: number;
   organizationId: number;
+  /**
+   * The acting user as the risk visibility rule sees them. Unless they see
+   * every risk, the use cases a risk is linked to must be ones they can write
+   * to. MCP (Admin-only) and intake approval (ruling J8) pass
+   * SYSTEM_RISK_VIEWER.
+   */
+  viewer: RiskViewer;
 }
 
 /**
@@ -155,6 +163,7 @@ export async function createRiskService(
     normalized as unknown as Partial<RiskModel & { projects: number[]; frameworks: number[] }>,
     ctx.organizationId,
     transaction,
+    { viewer: ctx.viewer },
   );
 
   if (!newRisk) {
@@ -297,7 +306,7 @@ export async function updateRiskService(
     },
     ctx.organizationId,
     transaction,
-    { recordSnapshots, runAutomations },
+    { recordSnapshots, runAutomations, viewer: ctx.viewer },
   );
 
   // 4. Change history (in the same transaction). Diff the row as written:

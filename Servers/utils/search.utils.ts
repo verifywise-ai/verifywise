@@ -18,6 +18,7 @@
 import { sequelize } from "../database/db";
 import { QueryTypes } from "sequelize";
 import { projectAccessSql } from "./projectVisibility.utils";
+import { riskVisibilityCondition, RiskViewer } from "./riskVisibility.utils";
 
 /**
  * Search constants
@@ -113,6 +114,8 @@ export interface SearchOptions {
   query: string;
   organizationId: number;
   userId: number;
+  /** Who the risk results are for: only the risks they can see are returned. */
+  riskViewer: RiskViewer;
   limit?: number;
   offset?: number;
   /** Optional review status filter (e.g. "draft", "pending_review", "approved", "rejected", "expired", "superseded") */
@@ -215,8 +218,8 @@ const ENTITY_CONFIGS: Record<string, EntityConfig> = {
     subtitleColumn: "risk_description",
     icon: "AlertTriangle",
     route: (id) => `/risk-management?riskId=${id}`,
-    // Note: risks table contains actual risk data; projects_risks is a junction table
-    // Tenant schema isolation provides security
+    // Note: risks table contains actual risk data; projects_risks is a junction table.
+    // Results follow the risk visibility rule (riskVisibilityCondition in searchEntity).
   },
   file_manager: {
     tableName: "files",
@@ -452,6 +455,16 @@ async function searchEntity(
     if (vendorIds.length === 0) return [];
     conditions.push(`vendor_id IN (:vendorIds)`);
     replacements.vendorIds = vendorIds;
+  }
+
+  // Risks follow the risk visibility rule: a non-Admin finds only the risks
+  // they can see in the risk list.
+  if (entityType === "project_risks") {
+    const visibility = riskVisibilityCondition(config.tableName, options.riskViewer);
+    if (visibility) {
+      conditions.push(visibility.sql);
+      Object.assign(replacements, visibility.replacements);
+    }
   }
 
   // Add review status exact-match filter if provided
