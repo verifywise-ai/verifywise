@@ -4,7 +4,7 @@ export const bulkImportDatasetsContent: ArticleContent = {
   blocks: [
     { type: 'heading', id: 'overview', level: 2, text: 'Bulk importing datasets' },
     { type: 'paragraph', text: 'You can register a dataset by uploading its file directly through the API. This is the same upload the Datasets page uses, exposed for scripts and data pipelines. The endpoint stores the file and creates a dataset record from the metadata you send with it.' },
-    { type: 'callout', variant: 'info', title: 'This needs an extension', text: 'Bulk upload belongs to the Dataset Bulk Upload extension (key dataset-bulk-upload). If it is not enabled for your organization, the endpoint returns 403. An Admin can enable it from the Extensions page.' },
+    { type: 'callout', variant: 'info', title: 'This needs an extension', text: 'Bulk upload belongs to the Dataset bulk upload extension (key dataset-bulk-upload). If it is not enabled for your organization, the endpoint returns 403. An Admin can enable it from the Extensions page.' },
 
     { type: 'heading', id: 'endpoint', level: 2, text: 'The endpoint' },
     { type: 'table', columns: [
@@ -13,7 +13,7 @@ export const bulkImportDatasetsContent: ArticleContent = {
     ], rows: [
       { k: 'Method and path', v: 'POST /api/extensions/dataset-bulk-upload/upload' },
       { k: 'Content type', v: 'multipart/form-data' },
-      { k: 'Access', v: 'Admin or Editor, with the Dataset Bulk Upload extension enabled' },
+      { k: 'Access', v: 'Admin or Editor, with the Dataset bulk upload extension enabled' },
     ]},
     { type: 'paragraph', text: 'The request has two parts: the file itself in a form field named file, and an optional metadata field carrying a JSON object that describes the dataset.' },
 
@@ -50,7 +50,7 @@ export const bulkImportDatasetsContent: ArticleContent = {
     ], rows: [
       { code: '400', when: 'No file was sent, or the metadata field was not valid JSON.' },
       { code: '401', when: 'Missing or invalid token.' },
-      { code: '403', when: 'The Dataset Bulk Upload extension is not enabled for your organization, or your role is not Admin or Editor.' },
+      { code: '403', when: 'The Dataset bulk upload extension is not enabled for your organization, or your role is not Admin or Editor.' },
       { code: '413', when: 'The file is larger than 30 MB.' },
       { code: '415', when: 'The file is not a CSV, XLS or XLSX.' },
     ]},
@@ -58,7 +58,7 @@ export const bulkImportDatasetsContent: ArticleContent = {
     { type: 'article-links', title: 'Related articles', items: [
       { collectionId: 'developers', articleId: 'platform-rest-api', title: 'Platform REST API', description: 'Auth, base URL, response shape and limits.' },
       { collectionId: 'ai-governance', articleId: 'datasets', title: 'Datasets', description: 'Managing datasets in the app.' },
-      { collectionId: 'integrations', articleId: 'extensions', title: 'Extensions', description: 'Enabling the Dataset Bulk Upload extension.' },
+      { collectionId: 'integrations', articleId: 'extensions', title: 'Extensions', description: 'Enabling the Dataset bulk upload extension.' },
     ]},
   ],
 };

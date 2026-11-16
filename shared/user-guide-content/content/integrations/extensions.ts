@@ -10,7 +10,7 @@ export const extensionsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Extensions are optional features built into VerifyWise. Some connect VerifyWise to tools you already use (Slack, MLflow, Azure AI Foundry, Jira Assets, Jira incidents). Others add extra tools inside the app (Model Lifecycle, Risk Import, Dataset Bulk Upload).',
+      text: 'Extensions are optional features built into VerifyWise. Some connect VerifyWise to tools you already use (Slack, MLflow, Azure AI Foundry, Jira Assets, Jira incidents). Others add extra tools inside the app (Model lifecycle, Risk import, Dataset bulk upload, Framework import).',
     },
     {
       type: 'paragraph',
@@ -80,7 +80,7 @@ export const extensionsContent: ArticleContent = {
       type: 'bullet-list',
       items: [
         { bold: 'Configuration', text: 'A form with the extension\'s connection settings. Password and token fields are stored encrypted. A secret that is already saved shows "Stored. Leave blank to keep it." Leave the field blank to keep it, or type a new value to replace it. An optional secret can also be removed with **Clear** (**Undo** takes that back until you save); a required one can only be replaced. Other fields start with their saved values, and emptying one clears it when you save. If you change the server URL or endpoint, enter the token, key or password again; if you change the username, enter the password again. A saved secret is never sent to a changed address.' },
-        { bold: 'Extension panel', text: 'Slack, Model Lifecycle, Jira Assets and Jira incidents show their own setup panel here once enabled.' },
+        { bold: 'Extension panel', text: 'Slack, Model lifecycle, Jira Assets and Jira incidents show their own setup panel here once enabled.' },
         { bold: 'Enable / Disable', text: 'Turns the extension on or off.' },
         { bold: 'Save configuration', text: 'Saves changes to the Configuration form after the extension is enabled. You see "Configuration saved." when it works.' },
         { bold: 'Test connection', text: 'Checks the settings against the external service. The settings page has this button for MLflow and Azure AI Foundry only, and it works before you enable the extension as well as after. The result appears under the buttons and clears when you edit a field. Jira Assets and Jira incidents have their own **Test connection** button in their panels. If the service answers with an error, the result shows only its HTTP status code, not the reply.' },
@@ -123,12 +123,12 @@ export const extensionsContent: ArticleContent = {
         { name: 'Slack', category: 'Communication', summary: 'Sends VerifyWise notifications to Slack channels' },
         { name: 'MLflow', category: 'ML Ops', summary: 'Pulls models and runs from an MLflow tracking server' },
         { name: 'Azure AI Foundry', category: 'ML Ops', summary: 'Imports model deployments from an Azure AI Foundry project' },
-        { name: 'Model Lifecycle', category: 'ML Ops', summary: 'Adds configurable lifecycle phases to each model' },
-        { name: 'Risk Import', category: 'Data management', summary: 'Creates risks in bulk from an Excel template' },
-        { name: 'Jira Assets Integration', category: 'Data management', summary: 'Imports "AI System" objects from Jira Service Management Assets as use cases' },
+        { name: 'Model lifecycle', category: 'ML Ops', summary: 'Adds configurable lifecycle phases to each model' },
+        { name: 'Risk import', category: 'Data management', summary: 'Creates risks in bulk from an Excel template' },
+        { name: 'Jira Assets', category: 'Data management', summary: 'Imports "AI System" objects from Jira Service Management Assets as use cases' },
         { name: 'Jira incidents', category: 'Data management', summary: 'Imports new Jira issues as incidents and keeps their status in sync both ways' },
-        { name: 'Dataset Bulk Upload', category: 'Data management', summary: 'Uploads many dataset files at once, with PII detection' },
-        { name: 'Framework Import', category: 'Data management', summary: 'Imports a compliance framework from an Excel file' },
+        { name: 'Dataset bulk upload', category: 'Data management', summary: 'Uploads many dataset files at once, with PII detection' },
+        { name: 'Framework import', category: 'Data management', summary: 'Imports a compliance framework from an Excel file' },
       ],
     },
     {
@@ -156,7 +156,7 @@ export const extensionsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: '**Older connections:** a connection added before this change only posts events of the person who added it. Once an Admin saves **Notification Routing**, every connection posts the organization\'s events.',
+      text: '**Older connections:** a connection added before this change only posts events of the person who added it. Once an Admin saves a connection\'s **Notification routing**, that connection posts the organization\'s events.',
     },
     {
       type: 'callout',
@@ -199,7 +199,7 @@ export const extensionsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: '**Where it shows up:** an **MLFlow** tab in **Model inventory**. Admins and Editors can click **Sync** there to pull the latest runs. Syncing is manual; nothing syncs on a schedule.',
+      text: '**Where it shows up:** an **MLflow** tab in **Model inventory**. Admins and Editors can click **Sync** there to pull the latest models. Syncing is manual; nothing syncs on a schedule.',
     },
     {
       type: 'heading',
@@ -241,7 +241,7 @@ export const extensionsContent: ArticleContent = {
       type: 'heading',
       id: 'model-lifecycle',
       level: 3,
-      text: 'Model Lifecycle',
+      text: 'Model lifecycle',
     },
     {
       type: 'paragraph',
@@ -250,10 +250,10 @@ export const extensionsContent: ArticleContent = {
     {
       type: 'ordered-list',
       items: [
-        { text: 'Click **Enable** on the Model Lifecycle card, then **Configure**.' },
-        { text: 'Click **Configure Phases** to open **Configure Model Lifecycle**.' },
+        { text: 'Click **Enable** on the Model lifecycle card, then **Configure**.' },
+        { text: 'Click **Configure phases** to open **Configure model lifecycle**.' },
         { text: 'Click **Add new phase**, give it a name and an optional description.' },
-        { text: 'Inside a phase, click **Add item**, name it and pick its type: Text, Text Area, Documents, People, Classification, Checklist or Approval.' },
+        { text: 'Inside a phase, click **Add item**, name it and pick its type: Text, Text area, Documents, People, Classification, Checklist or Approval.' },
       ],
     },
     {
@@ -263,7 +263,7 @@ export const extensionsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: '**Where it shows up:** a **View lifecycle** button on each row in **Model inventory** opens the model\'s lifecycle page. While the extension is disabled, the link opens the model in **Model inventory** instead. If a change to a phase, item or answer does not save, the page says "Not saved. Try again." and keeps what you typed.',
+      text: '**Where it shows up:** each row in **Model inventory** gets an icon button with the tooltip **View lifecycle**, which opens the model\'s lifecycle page. While the extension is disabled, the button is hidden and a link to a lifecycle page opens the model in **Model inventory** instead. If a change to a phase, item or answer does not save, the page says "Not saved. Try again." and keeps what you typed.',
     },
     {
       type: 'paragraph',
@@ -273,7 +273,7 @@ export const extensionsContent: ArticleContent = {
       type: 'heading',
       id: 'risk-import',
       level: 3,
-      text: 'Risk Import',
+      text: 'Risk import',
     },
     {
       type: 'paragraph',
@@ -281,14 +281,14 @@ export const extensionsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: '**Where it shows up:** in **Risk management**, click **Add new risk** and choose **Import from Excel**. The **Import Risks from Excel** dialog walks you through three steps:',
+      text: '**Where it shows up:** in **Risk management**, click **Add new risk** and choose **Import from Excel**. The **Import risks from Excel** dialog walks you through three steps:',
     },
     {
       type: 'ordered-list',
       items: [
-        { text: 'Step 1: click **Download Template**.' },
-        { text: 'Step 2: fill in the template and upload it with **Choose File**.' },
-        { text: 'Step 3: click **Import Risks**.' },
+        { text: 'Step 1: click **Download template**.' },
+        { text: 'Step 2: fill in the template and upload it with **Choose file**. The dialog previews the first rows. To start over with another file, remove the file name next to the button.' },
+        { text: 'Step 3: check the preview, then click **Import risks** at the bottom of the dialog.' },
       ],
     },
     {
@@ -299,7 +299,7 @@ export const extensionsContent: ArticleContent = {
       type: 'heading',
       id: 'jira-assets',
       level: 3,
-      text: 'Jira Assets Integration',
+      text: 'Jira Assets',
     },
     {
       type: 'paragraph',
@@ -308,23 +308,23 @@ export const extensionsContent: ArticleContent = {
     {
       type: 'ordered-list',
       items: [
-        { text: 'Click **Enable** on the Jira Assets Integration card, then **Configure**.' },
-        { text: 'Choose a **Deployment Type**: JIRA Cloud (Atlassian-hosted) or JIRA Data Center / Server (Self-hosted).' },
-        { text: 'Fill in **JIRA Base URL**, then **Workspace ID** (Cloud) or **Insight Object Schema ID** (Data Center), then **Email** and **API Token** (Cloud) or **Username** and **Password / Token** (Data Center).' },
-        { text: 'Click **Test Connection**, then **Save Configuration**. If you later change the deployment type, base URL, workspace or schema ID, or email or username, enter the token or password again. Test Connection and saving both check the values first: the base URL must be a full http:// or https:// address with no user name or password in it, the workspace or schema ID may only contain letters, numbers and hyphens, and on Cloud the email must be a valid email address. If a value is wrong, the panel shows why, the test does not contact Jira and a save stores nothing.' },
-        { text: 'Pick the **Schema** and the **Object Type (AI Systems)** to import from.' },
-        { text: 'In the **Import & Sync** section, click **Import**, select the objects you want and click **Import N Selected**. The list shows up to 1,000 objects at a time; if Jira has more, click **Load more**.' },
+        { text: 'Click **Enable** on the Jira Assets card, then **Configure**.' },
+        { text: 'Under **Step 1: Connection settings**, choose a **Deployment type**: Jira Cloud (Atlassian-hosted) or Jira Data Center / Server (self-hosted).' },
+        { text: 'Fill in **Jira base URL**, then **Workspace ID** (Cloud) or **Insight object schema ID** (Data Center), then **Email** and **API token** (Cloud) or **Username** and **Password / token** (Data Center).' },
+        { text: 'Click **Test connection**, then **Save configuration**. If you later change the deployment type, base URL, workspace or schema ID, or email or username, enter the token or password again. Test connection and saving both check the values first: the base URL must be a full http:// or https:// address with no user name or password in it, the workspace or schema ID may only contain letters, numbers and hyphens, and on Cloud the email must be a valid email address. If a value is wrong, the panel shows why, the test does not contact Jira and a save stores nothing.' },
+        { text: 'Under **Step 2: Select schema & object type**, pick the **Schema** and the **Object type (AI systems)** to import from.' },
+        { text: 'In the **Import & sync** section, click **Import**, select the objects you want and click **Import selected**, which shows how many you picked, for example **Import selected (3)**. The list shows up to 1,000 objects at a time; if Jira has more, click **Load more**.' },
       ],
     },
     {
       type: 'paragraph',
-      text: '**Where it shows up:** imported objects appear as use cases under **Use cases**. The list shows members the imported use cases that appear in their use case list, and opening one follows the same access rules as any other use case page; Admins see all of them. Only Admins can pick the schema and object type. To refresh imported use cases later, click **Sync Now** in the **Import & Sync** section.',
+      text: '**Where it shows up:** imported objects appear as use cases under **Use cases**. The list shows members the imported use cases that appear in their use case list, and opening one follows the same access rules as any other use case page; Admins see all of them. Only Admins can pick the schema and object type. To refresh imported use cases later, click **Sync now** under **Step 3: Sync settings**. Imported use cases are listed under **Imported use cases** in the **Import & sync** section.',
     },
     {
       type: 'callout',
       variant: 'info',
       title: 'Automatic sync',
-      text: 'Under **Step 3: Sync Settings**, turn on **Enable automatic sync** and pick a **Sync Interval** (every hour up to every 48 hours). Both are saved as soon as you change them; if saving fails, the settings switch back to what was last saved and an error appears. On that interval, counted from the last sync, VerifyWise refreshes the use cases you have imported with their latest details from Jira. Automatic sync never imports new objects. **Sync Now** runs in the background (the button shows progress and the result appears when it finishes) and also imports new objects of the selected type. Automatic sync starts after at least one use case has been imported and stops while the extension is disabled. Only one sync or import runs at a time; if one is already running you see "A sync is already running". Only Admins can change these settings or run a sync.',
+      text: 'Under **Step 3: Sync settings**, turn on **Enable automatic sync** and pick a **Sync interval** (every hour up to every 48 hours). Both are saved as soon as you change them; if saving fails, the settings switch back to what was last saved and an error appears. On that interval, counted from the last sync, VerifyWise refreshes the use cases you have imported with their latest details from Jira. Automatic sync never imports new objects. **Sync now** runs in the background (the button shows progress and the result appears when it finishes) and also imports new objects of the selected type. Automatic sync starts after at least one use case has been imported and stops while the extension is disabled. Only one sync or import runs at a time; if one is already running you see "A sync is already running". Only Admins can change these settings or run a sync.',
     },
     {
       type: 'callout',
@@ -410,7 +410,7 @@ export const extensionsContent: ArticleContent = {
       type: 'heading',
       id: 'dataset-bulk-upload',
       level: 3,
-      text: 'Dataset Bulk Upload',
+      text: 'Dataset bulk upload',
     },
     {
       type: 'paragraph',
@@ -424,7 +424,7 @@ export const extensionsContent: ArticleContent = {
       type: 'heading',
       id: 'framework-import',
       level: 3,
-      text: 'Framework Import',
+      text: 'Framework import',
     },
     {
       type: 'paragraph',
@@ -450,12 +450,12 @@ export const extensionsContent: ArticleContent = {
         { action: 'Open the Extensions page', roles: 'Admin' },
         { action: 'Enable, configure or disable an extension', roles: 'Admin' },
         { action: 'See, add, route, turn off or remove Slack connections (Slack)', roles: 'Admin' },
-        { action: 'Import risks from Excel (Risk Import)', roles: 'Admin, Editor' },
-        { action: 'Bulk upload datasets (Dataset Bulk Upload)', roles: 'Admin, Editor' },
+        { action: 'Import risks from Excel (Risk import)', roles: 'Admin, Editor' },
+        { action: 'Bulk upload datasets (Dataset bulk upload)', roles: 'Admin, Editor' },
         { action: 'Sync models from MLflow or Azure AI Foundry', roles: 'Admin, Editor' },
-        { action: 'Set up lifecycle phases and items (Model Lifecycle)', roles: 'Admin' },
-        { action: 'Fill in a model\'s lifecycle: answers, documents, people, approvers (Model Lifecycle)', roles: 'Admin, Editor' },
-        { action: 'Approve or reject a lifecycle approval (Model Lifecycle)', roles: 'The named approver only' },
+        { action: 'Set up lifecycle phases and items (Model lifecycle)', roles: 'Admin' },
+        { action: 'Fill in a model\'s lifecycle: answers, documents, people, approvers (Model lifecycle)', roles: 'Admin, Editor' },
+        { action: 'Approve or reject a lifecycle approval (Model lifecycle)', roles: 'The named approver only' },
         { action: 'See the Jira key on imported incidents (Jira incidents)', roles: 'Anyone who can see incidents' },
       ],
     },

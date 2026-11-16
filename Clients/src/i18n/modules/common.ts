@@ -3071,8 +3071,8 @@ export const de: Record<string, string> = {
   "Active incidents": "Aktive Vorfälle",
   "SOC 2, GDPR, HIPAA, DORA, and 17 more frameworks are built in, with requirements, evidence, and risk tracking.":
     "SOC 2, GDPR, HIPAA, DORA und 17 weitere Rahmenwerke sind integriert, mit Anforderungen, Nachweisen und Risikoverfolgung.",
-  "Slack, MLflow, Azure AI Foundry, Jira Assets, Model Lifecycle, Risk Import, and Dataset Bulk Upload.":
-    "Slack, MLflow, Azure AI Foundry, Jira Assets, Model Lifecycle, Risk Import und Dataset Bulk Upload.",
+  "Slack, MLflow, Azure AI Foundry, Jira Assets, Jira incidents, Model lifecycle, Risk import, Dataset bulk upload, and Framework import.":
+    "Slack, MLflow, Azure AI Foundry, Jira Assets, Jira-Vorfälle, Modelllebenszyklus, Risikoimport, Massen-Upload von Datensätzen und Rahmenwerk-Import.",
   "Admins enable, configure, and disable extensions from the Extensions page. Nothing to install.":
     "Administratoren aktivieren, konfigurieren und deaktivieren Extensions auf der Seite Extensions. Keine Installation erforderlich.",
   "Import risks from Excel, bulk upload datasets with PII detection, and define model lifecycle phases.":
@@ -8651,8 +8651,8 @@ export const fr: Record<string, string> = {
   "Active incidents": "Incidents actifs",
   "SOC 2, GDPR, HIPAA, DORA, and 17 more frameworks are built in, with requirements, evidence, and risk tracking.":
     "SOC 2, RGPD, HIPAA, DORA et 17 autres référentiels sont intégrés, avec exigences, preuves et suivi des risques.",
-  "Slack, MLflow, Azure AI Foundry, Jira Assets, Model Lifecycle, Risk Import, and Dataset Bulk Upload.":
-    "Slack, MLflow, Azure AI Foundry, Jira Assets, Model Lifecycle, Risk Import et Dataset Bulk Upload.",
+  "Slack, MLflow, Azure AI Foundry, Jira Assets, Jira incidents, Model lifecycle, Risk import, Dataset bulk upload, and Framework import.":
+    "Slack, MLflow, Azure AI Foundry, Jira Assets, Incidents Jira, Cycle de vie du modèle, Import de risques, Téléversement en masse de jeux de données et Import de référentiels.",
   "Admins enable, configure, and disable extensions from the Extensions page. Nothing to install.":
     "Les administrateurs activent, configurent et désactivent les extensions depuis la page Extensions. Rien à installer.",
   "Import risks from Excel, bulk upload datasets with PII detection, and define model lifecycle phases.":
@@ -15009,8 +15009,8 @@ export const es: Record<string, string> = {
     "Los registros precisos garantizan la responsabilidad y respaldan las auditorías, la resolución de problemas y el cumplimiento normativo.",
   "SOC 2, GDPR, HIPAA, DORA, and 17 more frameworks are built in, with requirements, evidence, and risk tracking.":
     "SOC 2, GDPR, HIPAA, DORA y 17 marcos más están integrados, con requisitos, evidencias y seguimiento de riesgos.",
-  "Slack, MLflow, Azure AI Foundry, Jira Assets, Model Lifecycle, Risk Import, and Dataset Bulk Upload.":
-    "Slack, MLflow, Azure AI Foundry, Jira Assets, Model Lifecycle, Risk Import y Dataset Bulk Upload.",
+  "Slack, MLflow, Azure AI Foundry, Jira Assets, Jira incidents, Model lifecycle, Risk import, Dataset bulk upload, and Framework import.":
+    "Slack, MLflow, Azure AI Foundry, Jira Assets, Incidentes de Jira, Ciclo de vida del modelo, Importación de riesgos, Subida masiva de conjuntos de datos e Importación de marcos.",
   "Admins enable, configure, and disable extensions from the Extensions page. Nothing to install.":
     "Los administradores activan, configuran y desactivan extensiones desde la página Extensions. No hay nada que instalar.",
   "Import risks from Excel, bulk upload datasets with PII detection, and define model lifecycle phases.":
