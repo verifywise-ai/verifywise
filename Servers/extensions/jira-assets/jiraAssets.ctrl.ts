@@ -96,7 +96,7 @@ async function requireClient(organizationId: number): Promise<JiraAssetsClient> 
  * 5xx in `error` (STATUS_CODE shapes) — the panel reads both through
  * getApiErrorReason, as the MLflow tab does.
  *
- * - JiraConfigValidationError → 400
+ * - JiraConfigValidationError → 400 (translated when it has an i18nKey)
  * - JiraInvalidIdError (nothing sent to Jira or saved) → 400, translated
  * - JiraNotConfiguredError, JiraUseCaseNotFoundError → 404
  * - SyncNotReadyError (Jira readiness for "Sync now") → its status (404 or 400) with the reason
@@ -115,7 +115,8 @@ function sendError(req: Request, res: Response, err: unknown, functionName: stri
     return res.status(400).json(STATUS_CODE[400](translateError(req, err)));
   }
   if (err instanceof JiraConfigValidationError) {
-    return res.status(400).json(STATUS_CODE[400](err.message));
+    // The i18nKey when it has one; otherwise the message, unchanged unless it is a key.
+    return res.status(400).json(STATUS_CODE[400](translateError(req, err)));
   }
   if (err instanceof JiraNotConfiguredError || err instanceof JiraUseCaseNotFoundError) {
     return res.status(404).json(STATUS_CODE[404](err.message));

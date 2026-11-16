@@ -83,5 +83,7 @@ export interface Extension {
   configFields: ExtensionConfigField[];
   enabled: boolean;
   configuration: Record<string, unknown>;
+  /** Keys of the secret fields that hold a stored value; the values are never sent. */
+  secretsSet: string[];
   enablement: ExtensionEnablementRow | null;
 }

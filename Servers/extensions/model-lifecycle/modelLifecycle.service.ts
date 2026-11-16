@@ -1,5 +1,7 @@
-import { QueryTypes } from "sequelize";
+import { QueryTypes, Transaction } from "sequelize";
 import { sequelize } from "../../database/db";
+import { isExtensionEnabledForOrganization } from "../../middleware/requireExtensionEnabled.middleware";
+import { logStructuredError } from "../../utils/logger/fileLogger";
 import { appendToAuditLedger } from "../../utils/auditLedger.utils";
 import { GENERIC_FORMATTERS } from "../../config/changeHistory.config";
 import { findUsersNotInOrganization, parseReferencedIds } from "../../utils/user.utils";
@@ -7,6 +9,8 @@ import {
   ForbiddenException,
   ValidationException,
 } from "../../domain.layer/exceptions/custom.exception";
+
+const fileName = "modelLifecycle.service.ts";
 
 /**
  * DB helpers for the model-lifecycle extension.
@@ -450,6 +454,77 @@ async function assertMemberOfOrganization(
       ? [userId]
       : await findUsersNotInOrganization(ids, organizationId);
   if (outside.length > 0) throw new ValidationException(message, "userId", userId);
+}
+
+// ---------------------------------------------------------------------------
+// Starting a model's lifecycle from another feature
+// ---------------------------------------------------------------------------
+
+/**
+ * Whether a model's lifecycle may be started for this organization: it has
+ * model-lifecycle enabled. Call it before opening the transaction that will
+ * call `startLifecycleForModel`, so the lookup does not hold a second pooled
+ * connection while that transaction holds the first. A failed lookup is logged
+ * and answers false: starting the lifecycle is never worth failing the caller.
+ */
+export async function canStartLifecycle(organizationId: number): Promise<boolean> {
+  try {
+    return await isExtensionEnabledForOrganization("model-lifecycle", organizationId);
+  } catch (err) {
+    logStructuredError(
+      `Model lifecycle: enablement lookup failed for org ${organizationId}, not starting a lifecycle`,
+      err,
+      "canStartLifecycle",
+      fileName,
+    );
+    return false;
+  }
+}
+
+/**
+ * Give a new model an empty answer row for every active item in an active
+ * phase, inside the caller's transaction (Shadow AI "start governance"). The
+ * caller checks `canStartLifecycle` first, before its transaction, so a
+ * disabled extension never gets rows written behind its gate.
+ *
+ * One INSERT ... SELECT, under a savepoint: rows that already exist are left
+ * alone (ON CONFLICT DO NOTHING). Returns true only when at least one row was
+ * inserted. Best effort: a failure is logged, rolled back to the savepoint and
+ * reported as false, so the caller's transaction carries on without it.
+ */
+export async function startLifecycleForModel(
+  organizationId: number,
+  modelId: number,
+  userId: number,
+  transaction: Transaction,
+): Promise<boolean> {
+  try {
+    await sequelize.query("SAVEPOINT lifecycle_init", { transaction });
+    const [inserted] = (await sequelize.query(
+      `INSERT INTO model_lifecycle_values
+         (organization_id, model_inventory_id, item_id, updated_by)
+       SELECT :organizationId, :modelId, i.id, :userId
+         FROM model_lifecycle_items i
+         INNER JOIN model_lifecycle_phases p ON i.phase_id = p.id
+        WHERE i.organization_id = :organizationId
+          AND p.organization_id = :organizationId
+          AND i.is_active = true AND p.is_active = true
+       ON CONFLICT (organization_id, model_inventory_id, item_id) DO NOTHING
+       RETURNING id`,
+      { replacements: { organizationId, modelId, userId }, transaction },
+    )) as [Array<{ id: number }>, unknown];
+    await sequelize.query("RELEASE SAVEPOINT lifecycle_init", { transaction });
+    return Array.isArray(inserted) && inserted.length > 0;
+  } catch (err) {
+    await sequelize.query("ROLLBACK TO SAVEPOINT lifecycle_init", { transaction }).catch(() => {});
+    logStructuredError(
+      `Model lifecycle: initialization failed for model ${modelId}, continuing without it`,
+      err,
+      "startLifecycleForModel",
+      fileName,
+    );
+    return false;
+  }
 }
 
 // ---------------------------------------------------------------------------

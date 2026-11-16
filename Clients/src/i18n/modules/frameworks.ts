@@ -25,7 +25,7 @@ export const de: Record<string, string> = {
   "Context of the organization": "Kontext der Organisation",
   "Framework dashboard": "Rahmenwerk-Dashboard",
   "Framework visibility and configuration": "Sichtbarkeit und Konfiguration des Rahmenwerks",
-  "items": "Elementen",
+  "items": "Elemente",
   "Loading status data...": "Statusdaten werden geladen...",
   "No AI models linked to this framework yet":
     "Noch keine KI-Modelle mit diesem Rahmenwerk verknüpft",

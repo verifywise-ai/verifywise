@@ -1,4 +1,4 @@
-import { fireEvent, screen } from "@testing-library/react";
+import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { renderWithProviders } from "../../../../test/renderWithProviders";
 import MLFlowTab from "../mlflow/MLFlowTab";
 import AzureAIFoundryTab from "../azure-ai-foundry/AzureAIFoundryTab";
@@ -72,7 +72,51 @@ describe.each(tabs)("%s tab", (_name, Tab, askText) => {
 
     fireEvent.click(await screen.findByRole("button", { name: /sync/i }));
 
-    expect(await screen.findByText("Sync failed: connection failed")).toBeInTheDocument();
+    // Both tabs show "Sync failed" as the alert title and the reason as its
+    // body, so the title translates as a whole.
+    expect(await screen.findByText("connection failed")).toBeInTheDocument();
+    expect(screen.getByText("Sync failed")).toBeInTheDocument();
     expect(mockGet.mock.calls.length).toBeGreaterThanOrEqual(2);
+  });
+});
+
+describe("MLflow model details", () => {
+  beforeEach(() => {
+    granted.clear();
+    mockGet.mockReset();
+    mockGet.mockResolvedValue({
+      data: {
+        data: {
+          configured: true,
+          models: [
+            {
+              id: 1,
+              model_name: "churn-model",
+              version: "3",
+              lifecycle_stage: "Production",
+              run_id: "run-1",
+              experiment_id: "7",
+              experiment_name: "churn",
+              artifact_location: "s3://bucket/churn",
+              creation_timestamp: 0,
+              last_updated_timestamp: 0,
+            },
+          ],
+        },
+      },
+    });
+  });
+
+  it("opens the details in a modal with sentence-case headings and closes it", async () => {
+    renderWithProviders(<MLFlowTab />);
+    fireEvent.click(await screen.findByText("churn-model"));
+
+    expect(await screen.findByText("Basic information")).toBeInTheDocument();
+    expect(screen.getByText("Experiment information")).toBeInTheDocument();
+    expect(screen.getByText("Experiment name:")).toBeInTheDocument();
+    expect(screen.getByText("Artifact location:")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Close" }));
+    await waitFor(() => expect(screen.queryByText("Basic information")).toBeNull());
   });
 });

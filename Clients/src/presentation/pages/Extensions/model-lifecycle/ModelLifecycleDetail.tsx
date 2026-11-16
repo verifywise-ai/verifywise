@@ -108,7 +108,7 @@ export default function ModelLifecycleDetail({ modelId }: ModelLifecycleDetailPr
             }}
           >
             <ArrowLeft size={16} />
-            Back to Model Inventory
+            Back to model inventory
           </Box>
 
           <Stack

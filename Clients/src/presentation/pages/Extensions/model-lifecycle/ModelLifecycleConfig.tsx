@@ -7,11 +7,6 @@ import { useState, useCallback } from "react";
 import {
   Stack,
   Typography,
-  IconButton,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
   FormControlLabel,
   Box,
   CircularProgress,
@@ -30,7 +25,6 @@ import {
   ArrowUp,
   ArrowDown,
   ChevronRight,
-  X,
   Pencil,
   Check,
   Settings,
@@ -38,42 +32,12 @@ import {
 import { LifecycleItem, useLifecycleConfig } from "./useModelLifecycle";
 import { useCan } from "../../../../application/hooks/useCan";
 import { apiServices } from "../../../../infrastructure/api/networkServices";
-import {
-  background,
-  border,
-  brand,
-  editor,
-  icon,
-  status,
-  text,
-  radiusPx,
-} from "../../../themes/palette";
+import { background, border, brand, status, text, radiusPx } from "../../../themes/palette";
 import { textStyles } from "../../../../presentation/themes/typography";
 import { CustomizableButton } from "../../../components/button/customizable-button";
-
-// ============================================================================
-// VerifyWise Theme Constants
-// ============================================================================
-
-const VW_COLORS = {
-  primary: brand.primary,
-  primaryDark: brand.primaryHover,
-  textPrimary: text.primary,
-  textSecondary: text.secondary,
-  textTertiary: text.tertiary,
-  textAccent: text.accent,
-  bgMain: background.main,
-
-  bgAccent: background.alt,
-  error: icon.error,
-  errorBg: editor.imageErrorBg,
-  success: status.success.strong,
-};
-
-const VW_TYPOGRAPHY = {
-  fontFamily: "'Inter', system-ui, -apple-system, sans-serif",
-  fontSize: 13,
-};
+import StandardModal from "../../../components/Modals/StandardModal";
+import useTranslation from "../../../../application/hooks/useTranslation";
+import { fill, pluralKey } from "../../../../i18n/fill";
 
 // ============================================================================
 // Styled Components
@@ -81,7 +45,7 @@ const VW_TYPOGRAPHY = {
 
 const vwTextField = {
   "& .MuiOutlinedInput-root": {
-    "backgroundColor": VW_COLORS.bgMain,
+    "backgroundColor": background.main,
     "borderRadius": radiusPx.sm,
     ...textStyles.body,
     "& .MuiOutlinedInput-notchedOutline": {
@@ -92,14 +56,14 @@ const vwTextField = {
       borderColor: border.dark,
     },
     "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
-      borderColor: VW_COLORS.primary,
+      borderColor: brand.primary,
       borderWidth: "1px",
     },
   },
 };
 
 const vwSelect = {
-  "backgroundColor": VW_COLORS.bgMain,
+  "backgroundColor": background.main,
   "borderRadius": radiusPx.sm,
   ...textStyles.body,
   "& .MuiOutlinedInput-notchedOutline": {
@@ -109,7 +73,16 @@ const vwSelect = {
     borderColor: border.dark,
   },
   "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
-    borderColor: VW_COLORS.primary,
+    borderColor: brand.primary,
+  },
+};
+
+const vwSwitch = {
+  "& .MuiSwitch-switchBase.Mui-checked": {
+    color: brand.primary,
+  },
+  "& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track": {
+    backgroundColor: brand.primary,
   },
 };
 
@@ -122,27 +95,29 @@ const vwAccordion = {
 };
 
 const vwAccordionSummary = {
-  "backgroundColor": VW_COLORS.bgAccent,
-  "px": 8,
-  "py": 4,
+  "backgroundColor": background.alt,
+  "px": "16px",
+  "py": "8px",
   "minHeight": 20,
   "& .MuiAccordionSummary-expandIconWrapper": {
     transform: "none !important",
     order: -1,
-    mr: 4,
+    mr: "8px",
   },
   "& .MuiAccordionSummary-content": {
     margin: 0,
     alignItems: "center",
-    gap: 4,
+    gap: "8px",
   },
 };
 
-const vwDialog = {
-  "& .MuiDialog-paper": {
-    borderRadius: radiusPx.lg,
-  },
+const vwChip = {
+  ...textStyles.caption,
+  borderRadius: radiusPx.sm,
 };
+
+const iconButtonSx = { color: text.tertiary };
+const deleteIconButtonSx = { color: status.error.text };
 
 // ============================================================================
 // Component
@@ -150,7 +125,7 @@ const vwDialog = {
 
 const ITEM_TYPES = [
   { value: "text", label: "Text" },
-  { value: "textarea", label: "Text Area" },
+  { value: "textarea", label: "Text area" },
   { value: "documents", label: "Documents" },
   { value: "people", label: "People" },
   { value: "classification", label: "Classification" },
@@ -158,11 +133,18 @@ const ITEM_TYPES = [
   { value: "approval", label: "Approval" },
 ];
 
+const itemTypeLabel = (value: string) => ITEM_TYPES.find((t) => t.value === value)?.label ?? value;
+
 export default function ModelLifecycleConfig() {
   const { phases, loading, refresh, setPhases } = useLifecycleConfig(true);
   // Phase and item setup is an extension.admin action on the server.
   const canConfigure = useCan("extension.admin");
+  const { t, lang } = useTranslation();
   const [saving, setSaving] = useState(false);
+  // Set when a phase or item write fails, shown at the top of the dialog
+  // until the next write starts. The global error toast carries the reason;
+  // the forms keep what was typed and optimistic edits are rolled back.
+  const [saveFailed, setSaveFailed] = useState(false);
   const [configOpen, setConfigOpen] = useState(false);
 
   // New phase form
@@ -199,6 +181,7 @@ export default function ModelLifecycleConfig() {
   const handleCreatePhase = useCallback(async () => {
     if (!newPhaseName.trim()) return;
     setSaving(true);
+    setSaveFailed(false);
     try {
       await apiServices.post("/extensions/model-lifecycle/phases", {
         name: newPhaseName.trim(),
@@ -208,7 +191,8 @@ export default function ModelLifecycleConfig() {
       setNewPhaseDesc("");
       refresh();
     } catch {
-      /* error */
+      // The name and description stay in the form for another try.
+      setSaveFailed(true);
     } finally {
       setSaving(false);
     }
@@ -217,11 +201,12 @@ export default function ModelLifecycleConfig() {
   const confirmDeletePhase = useCallback(async () => {
     if (deletePhaseId === null) return;
     setSaving(true);
+    setSaveFailed(false);
     try {
       await apiServices.delete(`/extensions/model-lifecycle/phases/${deletePhaseId}`);
       refresh();
     } catch {
-      /* error */
+      setSaveFailed(true);
     } finally {
       setSaving(false);
       setDeletePhaseId(null);
@@ -242,11 +227,13 @@ export default function ModelLifecycleConfig() {
       setPhases(newPhases);
 
       const orderedIds = newPhases.map((p) => p.id);
+      setSaveFailed(false);
       try {
         await apiServices.put("/extensions/model-lifecycle/phases/reorder", { orderedIds });
       } catch {
         // Revert on error
         setPhases(oldPhases);
+        setSaveFailed(true);
       }
     },
     [phases, setPhases],
@@ -267,10 +254,12 @@ export default function ModelLifecycleConfig() {
 
       setPhases((prev) => prev.map((p) => (p.id === phaseId ? { ...p, name: trimmed } : p)));
       setEditingPhaseId(null);
+      setSaveFailed(false);
       try {
         await apiServices.put(`/extensions/model-lifecycle/phases/${phaseId}`, { name: trimmed });
       } catch {
         setPhases((prev) => prev.map((p) => (p.id === phaseId ? { ...p, name: oldName } : p)));
+        setSaveFailed(true);
       }
     },
     [phases, setPhases],
@@ -279,6 +268,7 @@ export default function ModelLifecycleConfig() {
   const handleTogglePhaseActive = useCallback(
     async (phaseId: number, isActive: boolean) => {
       setPhases((prev) => prev.map((p) => (p.id === phaseId ? { ...p, is_active: isActive } : p)));
+      setSaveFailed(false);
       try {
         await apiServices.put(`/extensions/model-lifecycle/phases/${phaseId}`, {
           is_active: isActive,
@@ -287,6 +277,7 @@ export default function ModelLifecycleConfig() {
         setPhases((prev) =>
           prev.map((p) => (p.id === phaseId ? { ...p, is_active: !isActive } : p)),
         );
+        setSaveFailed(true);
       }
     },
     [setPhases],
@@ -297,6 +288,7 @@ export default function ModelLifecycleConfig() {
     async (phaseId: number) => {
       if (!newItemName.trim()) return;
       setSaving(true);
+      setSaveFailed(false);
       try {
         await apiServices.post(`/extensions/model-lifecycle/phases/${phaseId}/items`, {
           name: newItemName.trim(),
@@ -309,7 +301,8 @@ export default function ModelLifecycleConfig() {
         setAddingItemForPhase(null);
         refresh();
       } catch {
-        /* error */
+        // The new item form stays open with what was entered.
+        setSaveFailed(true);
       } finally {
         setSaving(false);
       }
@@ -320,11 +313,12 @@ export default function ModelLifecycleConfig() {
   const confirmDeleteItem = useCallback(async () => {
     if (deleteItemId === null) return;
     setSaving(true);
+    setSaveFailed(false);
     try {
       await apiServices.delete(`/extensions/model-lifecycle/items/${deleteItemId}`);
       refresh();
     } catch {
-      /* error */
+      setSaveFailed(true);
     } finally {
       setSaving(false);
       setDeleteItemId(null);
@@ -339,6 +333,7 @@ export default function ModelLifecycleConfig() {
           items: p.items?.map((i) => (i.id === itemId ? { ...i, is_required: isRequired } : i)),
         })),
       );
+      setSaveFailed(false);
       try {
         await apiServices.put(`/extensions/model-lifecycle/items/${itemId}`, {
           is_required: isRequired,
@@ -350,6 +345,7 @@ export default function ModelLifecycleConfig() {
             items: p.items?.map((i) => (i.id === itemId ? { ...i, is_required: !isRequired } : i)),
           })),
         );
+        setSaveFailed(true);
       }
     },
     [setPhases],
@@ -369,6 +365,7 @@ export default function ModelLifecycleConfig() {
       setPhases((prev) => prev.map((p) => (p.id === phaseId ? { ...p, items: newItems } : p)));
 
       const orderedIds = newItems.map((i) => i.id);
+      setSaveFailed(false);
       try {
         await apiServices.put(`/extensions/model-lifecycle/phases/${phaseId}/items/reorder`, {
           orderedIds,
@@ -376,24 +373,36 @@ export default function ModelLifecycleConfig() {
       } catch {
         // Revert on error
         setPhases((prev) => prev.map((p) => (p.id === phaseId ? { ...p, items } : p)));
+        setSaveFailed(true);
       }
     },
     [setPhases],
   );
 
+  // Cancel, the close icon and Escape wait while a write is in flight.
+  const closeConfig = () => {
+    if (!saving) setConfigOpen(false);
+  };
+  const cancelDeletePhase = () => {
+    if (!saving) setDeletePhaseId(null);
+  };
+  const cancelDeleteItem = () => {
+    if (!saving) setDeleteItemId(null);
+  };
+
   return (
     <>
-      <Stack sx={{ gap: 8 }}>
-        {/* Phases Summary */}
+      <Stack sx={{ gap: "16px" }}>
+        {/* Phases summary */}
         {loading ? (
-          <Stack alignItems="center" sx={{ py: 2 }}>
-            <CircularProgress size={24} sx={{ color: VW_COLORS.primary }} />
+          <Stack alignItems="center" sx={{ py: "4px" }}>
+            <CircularProgress size={24} sx={{ color: brand.primary }} />
           </Stack>
         ) : phases.length === 0 ? (
           <Typography
             sx={{
               ...textStyles.body,
-              color: VW_COLORS.textTertiary,
+              color: text.tertiary,
             }}
           >
             {canConfigure
@@ -401,14 +410,16 @@ export default function ModelLifecycleConfig() {
               : "No lifecycle phases yet. An Admin can add them."}
           </Typography>
         ) : (
-          <Stack sx={{ gap: 4 }}>
+          <Stack sx={{ gap: "8px" }}>
             <Typography
               sx={{
                 ...textStyles.subsectionTitle,
                 color: text.primary,
               }}
             >
-              Configured Phases ({phases.filter((p) => p.is_active).length} active)
+              {fill(t("Configured phases ({count} active)"), {
+                count: phases.filter((p) => p.is_active).length,
+              })}
             </Typography>
             {phases.map((phase, idx) => (
               <Box
@@ -416,10 +427,10 @@ export default function ModelLifecycleConfig() {
                 sx={{
                   display: "flex",
                   alignItems: "center",
-                  gap: 6,
-                  py: 4,
-                  px: 6,
-                  backgroundColor: phase.is_active ? VW_COLORS.bgAccent : background.main,
+                  gap: "12px",
+                  py: "8px",
+                  px: "12px",
+                  backgroundColor: phase.is_active ? background.alt : background.main,
                   borderRadius: radiusPx.sm,
                   border: `1px solid ${border.light}`,
                   opacity: phase.is_active ? 1 : 0.6,
@@ -428,7 +439,6 @@ export default function ModelLifecycleConfig() {
                 <Typography
                   sx={{
                     ...textStyles.formLabel,
-
                     color: text.subdued,
                     minWidth: 10,
                   }}
@@ -437,25 +447,24 @@ export default function ModelLifecycleConfig() {
                 </Typography>
                 <Typography
                   sx={{
+                    ...textStyles.body,
                     flex: 1,
-                    fontSize: "13px",
                     fontWeight: 500,
-                    fontFamily: VW_TYPOGRAPHY.fontFamily,
-                    color: VW_COLORS.textPrimary,
+                    color: text.primary,
                   }}
                 >
                   {phase.name}
                 </Typography>
                 <Chip
-                  label={`${phase.items?.length || 0} items`}
+                  label={fill(
+                    t(pluralKey(lang, phase.items?.length ?? 0, "{count} item", "{count} items")),
+                    { count: phase.items?.length ?? 0 },
+                  )}
                   size="small"
                   sx={{
-                    fontSize: "11px",
-                    fontFamily: VW_TYPOGRAPHY.fontFamily,
-                    height: 10,
+                    ...vwChip,
                     backgroundColor: background.main,
-                    color: VW_COLORS.textTertiary,
-                    borderRadius: radiusPx.sm,
+                    color: text.tertiary,
                   }}
                 />
                 {!phase.is_active && (
@@ -463,12 +472,9 @@ export default function ModelLifecycleConfig() {
                     label="Inactive"
                     size="small"
                     sx={{
-                      fontSize: "11px",
-                      fontFamily: VW_TYPOGRAPHY.fontFamily,
-                      height: 10,
+                      ...vwChip,
                       backgroundColor: status.error.bg,
                       color: status.error.text,
-                      borderRadius: radiusPx.sm,
                     }}
                   />
                 )}
@@ -477,66 +483,45 @@ export default function ModelLifecycleConfig() {
           </Stack>
         )}
 
-        {/* Configure Button */}
         {canConfigure && (
           <CustomizableButton
             variant="outlined"
             color="secondary"
             startIcon={<Settings size={16} />}
-            onClick={() => setConfigOpen(true)}
+            testId="model-lifecycle-configure-phases"
+            onClick={() => {
+              setSaveFailed(false);
+              setConfigOpen(true);
+            }}
             sx={{ alignSelf: "flex-start" }}
           >
-            Configure Phases
+            Configure phases
           </CustomizableButton>
         )}
       </Stack>
 
-      {/* Configuration Dialog */}
-      <Dialog
-        open={configOpen && canConfigure}
-        onClose={() => setConfigOpen(false)}
-        maxWidth="md"
-        fullWidth
-        sx={vwDialog}
-        PaperProps={{ sx: { maxHeight: "85vh" } }}
+      {/* Configuration modal. Every change saves as it is made, so the footer
+          only closes it. */}
+      <StandardModal
+        isOpen={configOpen && canConfigure}
+        onClose={closeConfig}
+        title="Configure model lifecycle"
+        description="Set the phases and items each model goes through. Changes save as you make them."
+        cancelButtonText="Close"
+        maxWidth="900px"
       >
-        <DialogTitle
-          sx={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            borderBottom: `1px solid ${border.light}`,
-            py: 6,
-            px: 10,
-          }}
-        >
-          <Typography
-            sx={{
-              fontWeight: 600,
-              fontSize: "16px",
-              fontFamily: VW_TYPOGRAPHY.fontFamily,
-              color: VW_COLORS.textPrimary,
-            }}
-          >
-            Configure Model Lifecycle
-          </Typography>
-          <IconButton
-            onClick={() => setConfigOpen(false)}
-            size="small"
-            aria-label="Close"
-            sx={{ color: VW_COLORS.textTertiary }}
-          >
-            <X size={18} />
-          </IconButton>
-        </DialogTitle>
-
-        <DialogContent sx={{ p: 10 }}>
+        <Stack sx={{ gap: "12px" }}>
+          {saveFailed && (
+            <Typography role="alert" sx={{ ...textStyles.body, color: status.error.text }}>
+              Not saved. Try again.
+            </Typography>
+          )}
           {loading && phases.length === 0 ? (
-            <Stack alignItems="center" sx={{ py: 4 }}>
-              <CircularProgress sx={{ color: VW_COLORS.primary }} />
+            <Stack alignItems="center" sx={{ py: "8px" }}>
+              <CircularProgress sx={{ color: brand.primary }} />
             </Stack>
           ) : (
-            <Stack sx={{ gap: 6 }}>
+            <>
               {phases.map((phase, phaseIdx) => (
                 <Accordion
                   key={phase.id}
@@ -551,7 +536,7 @@ export default function ModelLifecycleConfig() {
                   <AccordionSummary sx={vwAccordionSummary}>
                     <ChevronRight
                       size={16}
-                      color={VW_COLORS.textTertiary}
+                      color={text.tertiary}
                       style={{
                         transform: expandedPhases.has(phase.id) ? "rotate(90deg)" : "rotate(0deg)",
                         transition: "transform 0.2s ease",
@@ -561,7 +546,7 @@ export default function ModelLifecycleConfig() {
                       <Stack
                         direction="row"
                         alignItems="center"
-                        sx={{ flex: 1, gap: 2, mr: 4 }}
+                        sx={{ flex: 1, gap: "4px", mr: "8px" }}
                         onClick={(e) => e.stopPropagation()}
                       >
                         <TextField
@@ -569,35 +554,46 @@ export default function ModelLifecycleConfig() {
                           onChange={(e) => setEditingPhaseName(e.target.value)}
                           onBlur={() => handleRenamePhaseSave(phase.id, editingPhaseName)}
                           onKeyDown={(e) => {
-                            if (e.key === "Enter")
+                            if (e.key === "Enter") {
+                              // Saves the name; does not submit the modal's form.
+                              e.preventDefault();
                               handleRenamePhaseSave(phase.id, editingPhaseName);
-                            else if (e.key === "Escape") setEditingPhaseId(null);
+                            } else if (e.key === "Escape") {
+                              // Cancels the rename only; the modal stays open.
+                              e.stopPropagation();
+                              setEditingPhaseId(null);
+                            }
                           }}
                           autoFocus
                           size="small"
                           sx={{ ...vwTextField, flex: 1 }}
                         />
-                        <IconButton
+                        <CustomizableButton
+                          iconOnly
+                          variant="text"
                           size="small"
+                          ariaLabel="Save phase name"
                           onClick={() => handleRenamePhaseSave(phase.id, editingPhaseName)}
-                          aria-label="Save phase name"
-                          sx={{ color: VW_COLORS.primary }}
+                          sx={{ color: brand.primary }}
                         >
                           <Check size={16} />
-                        </IconButton>
+                        </CustomizableButton>
                       </Stack>
                     ) : (
                       <Stack
                         direction="row"
                         alignItems="center"
-                        sx={{ "flex": 1, "gap": 4, "&:hover .phase-edit-icon": { opacity: 1 } }}
+                        sx={{
+                          "flex": 1,
+                          "gap": "8px",
+                          "&:hover .phase-edit-icon": { opacity: 1 },
+                        }}
                       >
                         <Typography
                           sx={{
+                            ...textStyles.body,
                             fontWeight: 600,
-                            fontSize: "13px",
-                            fontFamily: VW_TYPOGRAPHY.fontFamily,
-                            color: VW_COLORS.textPrimary,
+                            color: text.primary,
                             cursor: "text",
                           }}
                           onDoubleClick={(e) => {
@@ -608,24 +604,21 @@ export default function ModelLifecycleConfig() {
                         >
                           {phase.name}
                         </Typography>
-                        <IconButton
-                          className="phase-edit-icon"
+                        <CustomizableButton
+                          iconOnly
+                          variant="text"
                           size="small"
-                          sx={{
-                            opacity: 0,
-                            transition: "opacity 0.2s",
-                            p: 1,
-                            color: VW_COLORS.textTertiary,
-                          }}
+                          className="phase-edit-icon"
+                          ariaLabel="Edit phase name"
                           onClick={(e) => {
                             e.stopPropagation();
                             setEditingPhaseId(phase.id);
                             setEditingPhaseName(phase.name);
                           }}
-                          aria-label="Edit phase name"
+                          sx={{ ...iconButtonSx, opacity: 0, transition: "opacity 0.2s" }}
                         >
                           <Pencil size={14} />
-                        </IconButton>
+                        </CustomizableButton>
                       </Stack>
                     )}
                     <FormControlLabel
@@ -637,71 +630,63 @@ export default function ModelLifecycleConfig() {
                             e.stopPropagation();
                             handleTogglePhaseActive(phase.id, e.target.checked);
                           }}
-                          sx={{
-                            "& .MuiSwitch-switchBase.Mui-checked": {
-                              color: VW_COLORS.primary,
-                            },
-                            "& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track": {
-                              backgroundColor: VW_COLORS.primary,
-                            },
-                          }}
+                          sx={vwSwitch}
                         />
                       }
                       label={
-                        <Typography
-                          sx={{
-                            fontSize: "12px",
-                            fontFamily: VW_TYPOGRAPHY.fontFamily,
-                            color: VW_COLORS.textTertiary,
-                          }}
-                        >
+                        <Typography sx={{ ...textStyles.bodySmall, color: text.tertiary }}>
                           Active
                         </Typography>
                       }
                       onClick={(e) => e.stopPropagation()}
                       sx={{ mr: 0 }}
                     />
-                    <IconButton
+                    <CustomizableButton
+                      iconOnly
+                      variant="text"
                       size="small"
-                      disabled={phaseIdx === 0}
+                      ariaLabel="Move phase up"
+                      isDisabled={phaseIdx === 0}
                       onClick={(e) => {
                         e.stopPropagation();
                         handleMovePhase(phase.id, "up");
                       }}
-                      aria-label="Move phase up"
-                      sx={{ opacity: phaseIdx === 0 ? 0.4 : 1, color: VW_COLORS.textTertiary }}
+                      sx={iconButtonSx}
                     >
                       <ArrowUp size={16} />
-                    </IconButton>
-                    <IconButton
+                    </CustomizableButton>
+                    <CustomizableButton
+                      iconOnly
+                      variant="text"
                       size="small"
-                      disabled={phaseIdx === phases.length - 1}
+                      ariaLabel="Move phase down"
+                      isDisabled={phaseIdx === phases.length - 1}
                       onClick={(e) => {
                         e.stopPropagation();
                         handleMovePhase(phase.id, "down");
                       }}
-                      aria-label="Move phase down"
-                      sx={{
-                        opacity: phaseIdx === phases.length - 1 ? 0.4 : 1,
-                        color: VW_COLORS.textTertiary,
-                      }}
+                      sx={iconButtonSx}
                     >
                       <ArrowDown size={16} />
-                    </IconButton>
-                    <IconButton
+                    </CustomizableButton>
+                    <CustomizableButton
+                      iconOnly
+                      variant="text"
                       size="small"
+                      ariaLabel="Delete phase"
                       onClick={(e) => {
                         e.stopPropagation();
                         setDeletePhaseId(phase.id);
                       }}
-                      sx={{ color: VW_COLORS.error }}
-                      aria-label="Delete phase"
+                      sx={deleteIconButtonSx}
                     >
                       <Trash2 size={16} />
-                    </IconButton>
+                    </CustomizableButton>
                   </AccordionSummary>
 
-                  <AccordionDetails sx={{ px: 8, py: 6, backgroundColor: VW_COLORS.bgMain }}>
+                  <AccordionDetails
+                    sx={{ px: "16px", py: "12px", backgroundColor: background.main }}
+                  >
                     <Stack spacing={0}>
                       {(Array.isArray(phase.items) ? phase.items : []).map((item, itemIdx) => (
                         <Stack
@@ -709,31 +694,28 @@ export default function ModelLifecycleConfig() {
                           direction="row"
                           alignItems="center"
                           sx={{
-                            gap: 6,
-                            py: 4,
+                            gap: "12px",
+                            py: "8px",
                             borderBottom: `1px solid ${border.light}`,
                           }}
                         >
                           <Typography
                             sx={{
+                              ...textStyles.body,
                               flex: 1,
-                              fontSize: "13px",
-                              fontFamily: VW_TYPOGRAPHY.fontFamily,
-                              color: VW_COLORS.textSecondary,
+                              color: text.secondary,
                             }}
                           >
                             {item.name}
                           </Typography>
                           <Chip
-                            label={item.item_type}
+                            label={itemTypeLabel(item.item_type)}
                             size="small"
                             variant="outlined"
                             sx={{
-                              fontSize: "11px",
-                              fontFamily: VW_TYPOGRAPHY.fontFamily,
+                              ...vwChip,
                               borderColor: border.dark,
-                              color: VW_COLORS.textTertiary,
-                              borderRadius: radiusPx.sm,
+                              color: text.tertiary,
                             }}
                           />
                           <FormControlLabel
@@ -744,24 +726,11 @@ export default function ModelLifecycleConfig() {
                                 onChange={(e) =>
                                   handleToggleItemRequired(item.id, e.target.checked)
                                 }
-                                sx={{
-                                  "& .MuiSwitch-switchBase.Mui-checked": {
-                                    color: VW_COLORS.primary,
-                                  },
-                                  "& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track": {
-                                    backgroundColor: VW_COLORS.primary,
-                                  },
-                                }}
+                                sx={vwSwitch}
                               />
                             }
                             label={
-                              <Typography
-                                sx={{
-                                  fontSize: "11px",
-                                  fontFamily: VW_TYPOGRAPHY.fontFamily,
-                                  color: VW_COLORS.textTertiary,
-                                }}
-                              >
+                              <Typography sx={{ ...textStyles.caption, color: text.tertiary }}>
                                 Required
                               </Typography>
                             }
@@ -771,53 +740,53 @@ export default function ModelLifecycleConfig() {
                             direction="row"
                             alignItems="center"
                             sx={{
-                              gap: 2,
-                              pl: 6,
+                              gap: "4px",
+                              pl: "12px",
                               borderLeft: `1px solid ${border.light}`,
                             }}
                           >
-                            <IconButton
+                            <CustomizableButton
+                              iconOnly
+                              variant="text"
                               size="small"
-                              disabled={itemIdx === 0}
+                              ariaLabel="Move item up"
+                              isDisabled={itemIdx === 0}
                               onClick={() =>
                                 handleMoveItem(phase.id, phase.items ?? [], item.id, "up")
                               }
-                              aria-label="Move item up"
-                              sx={{
-                                opacity: itemIdx === 0 ? 0.4 : 1,
-                                color: VW_COLORS.textTertiary,
-                              }}
+                              sx={iconButtonSx}
                             >
                               <ArrowUp size={14} />
-                            </IconButton>
-                            <IconButton
+                            </CustomizableButton>
+                            <CustomizableButton
+                              iconOnly
+                              variant="text"
                               size="small"
-                              disabled={itemIdx === (phase.items?.length ?? 0) - 1}
+                              ariaLabel="Move item down"
+                              isDisabled={itemIdx === (phase.items?.length ?? 0) - 1}
                               onClick={() =>
                                 handleMoveItem(phase.id, phase.items ?? [], item.id, "down")
                               }
-                              aria-label="Move item down"
-                              sx={{
-                                opacity: itemIdx === (phase.items?.length ?? 0) - 1 ? 0.4 : 1,
-                                color: VW_COLORS.textTertiary,
-                              }}
+                              sx={iconButtonSx}
                             >
                               <ArrowDown size={14} />
-                            </IconButton>
-                            <IconButton
+                            </CustomizableButton>
+                            <CustomizableButton
+                              iconOnly
+                              variant="text"
                               size="small"
+                              ariaLabel="Delete item"
                               onClick={() => setDeleteItemId(item.id)}
-                              sx={{ color: VW_COLORS.error }}
-                              aria-label="Delete item"
+                              sx={deleteIconButtonSx}
                             >
                               <Trash2 size={14} />
-                            </IconButton>
+                            </CustomizableButton>
                           </Stack>
                         </Stack>
                       ))}
 
                       {addingItemForPhase === phase.id ? (
-                        <Stack direction="row" sx={{ gap: 4, pt: 6 }} alignItems="center">
+                        <Stack direction="row" sx={{ gap: "8px", pt: "12px" }} alignItems="center">
                           <TextField
                             placeholder="Item name"
                             value={newItemName}
@@ -832,7 +801,7 @@ export default function ModelLifecycleConfig() {
                             sx={{ ...vwSelect, minWidth: 120 }}
                           >
                             {ITEM_TYPES.map((t) => (
-                              <MenuItem key={t.value} value={t.value} sx={{ fontSize: "13px" }}>
+                              <MenuItem key={t.value} value={t.value} sx={textStyles.body}>
                                 {t.label}
                               </MenuItem>
                             ))}
@@ -843,41 +812,28 @@ export default function ModelLifecycleConfig() {
                                 size="small"
                                 checked={newItemRequired}
                                 onChange={(e) => setNewItemRequired(e.target.checked)}
-                                sx={{
-                                  "& .MuiSwitch-switchBase.Mui-checked": {
-                                    color: VW_COLORS.primary,
-                                  },
-                                  "& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track": {
-                                    backgroundColor: VW_COLORS.primary,
-                                  },
-                                }}
+                                sx={vwSwitch}
                               />
                             }
                             label={
-                              <Typography
-                                sx={{
-                                  fontSize: "11px",
-                                  fontFamily: VW_TYPOGRAPHY.fontFamily,
-                                  color: VW_COLORS.textTertiary,
-                                }}
-                              >
-                                Req
+                              <Typography sx={{ ...textStyles.caption, color: text.tertiary }}>
+                                Required
                               </Typography>
                             }
                             sx={{ ml: "4px" }}
                           />
                           <CustomizableButton
                             variant="contained"
-                            size="small"
+                            testId="model-lifecycle-add-item-submit"
                             onClick={() => handleCreateItem(phase.id)}
-                            disabled={!newItemName.trim() || saving}
+                            isDisabled={!newItemName.trim()}
+                            loading={saving}
                           >
                             Add
                           </CustomizableButton>
                           <CustomizableButton
                             variant="text"
                             color="secondary"
-                            size="small"
                             onClick={() => {
                               setAddingItemForPhase(null);
                               setNewItemName("");
@@ -890,14 +846,10 @@ export default function ModelLifecycleConfig() {
                         <CustomizableButton
                           variant="text"
                           color="primary"
-                          size="small"
                           startIcon={<Plus size={14} />}
+                          testId="model-lifecycle-add-item"
                           onClick={() => setAddingItemForPhase(phase.id)}
-                          sx={{
-                            alignSelf: "flex-start",
-                            mt: 6,
-                            textTransform: "none",
-                          }}
+                          sx={{ alignSelf: "flex-start", mt: "12px" }}
                         >
                           Add item
                         </CustomizableButton>
@@ -912,21 +864,21 @@ export default function ModelLifecycleConfig() {
                 sx={{
                   border: `1px dashed ${border.dark}`,
                   borderRadius: radiusPx.sm,
-                  p: 8,
-                  backgroundColor: VW_COLORS.bgMain,
+                  p: "16px",
+                  backgroundColor: background.main,
                 }}
               >
                 <Typography
                   sx={{
                     ...textStyles.subsectionTitle,
-                    fontSize: "13px",
+                    fontSize: textStyles.body.fontSize,
                     color: text.primary,
-                    mb: 6,
+                    mb: "12px",
                   }}
                 >
                   Add new phase
                 </Typography>
-                <Stack sx={{ gap: 4 }}>
+                <Stack sx={{ gap: "8px" }}>
                   <TextField
                     placeholder="Phase name"
                     value={newPhaseName}
@@ -947,114 +899,49 @@ export default function ModelLifecycleConfig() {
                   />
                   <CustomizableButton
                     variant="contained"
-                    size="medium"
                     startIcon={<Plus size={14} />}
+                    testId="model-lifecycle-create-phase"
                     onClick={handleCreatePhase}
-                    disabled={!newPhaseName.trim() || saving}
+                    isDisabled={!newPhaseName.trim()}
+                    loading={saving}
                     sx={{ alignSelf: "flex-start" }}
                   >
                     Create phase
                   </CustomizableButton>
                 </Stack>
               </Box>
-            </Stack>
+            </>
           )}
-        </DialogContent>
-
-        <DialogActions
-          sx={{
-            px: 10,
-            py: 6,
-            borderTop: `1px solid ${border.light}`,
-          }}
-        >
-          <CustomizableButton
-            variant="outlined"
-            color="secondary"
-            onClick={() => setConfigOpen(false)}
-          >
-            Close
-          </CustomizableButton>
-        </DialogActions>
-      </Dialog>
+        </Stack>
+      </StandardModal>
 
       {/* Delete phase confirmation */}
-      <Dialog open={deletePhaseId !== null} onClose={() => setDeletePhaseId(null)} sx={vwDialog}>
-        <DialogTitle
-          sx={{
-            ...textStyles.cardTitle,
-            color: text.primary,
-          }}
-        >
-          Delete phase
-        </DialogTitle>
-        <DialogContent>
-          <Typography
-            sx={{
-              ...textStyles.body,
-              color: text.primary,
-            }}
-          >
-            Delete this phase and all its items? This cannot be undone.
-          </Typography>
-        </DialogContent>
-        <DialogActions sx={{ px: 10, py: 6 }}>
-          <CustomizableButton
-            onClick={() => setDeletePhaseId(null)}
-            variant="text"
-            color="secondary"
-          >
-            Cancel
-          </CustomizableButton>
-          <CustomizableButton
-            onClick={confirmDeletePhase}
-            variant="contained"
-            color="error"
-            disabled={saving}
-          >
-            Delete
-          </CustomizableButton>
-        </DialogActions>
-      </Dialog>
+      <StandardModal
+        isOpen={deletePhaseId !== null}
+        onClose={cancelDeletePhase}
+        title="Delete phase"
+        description="Delete this phase and all its items? This cannot be undone."
+        onSubmit={confirmDeletePhase}
+        submitButtonText="Delete"
+        submitButtonColor={status.error.text}
+        isSubmitting={saving}
+        fitContent
+        maxWidth="480px"
+      />
 
       {/* Delete item confirmation */}
-      <Dialog open={deleteItemId !== null} onClose={() => setDeleteItemId(null)} sx={vwDialog}>
-        <DialogTitle
-          sx={{
-            ...textStyles.cardTitle,
-            color: text.primary,
-          }}
-        >
-          Delete item
-        </DialogTitle>
-        <DialogContent>
-          <Typography
-            sx={{
-              ...textStyles.body,
-              color: text.primary,
-            }}
-          >
-            Delete this item? This cannot be undone.
-          </Typography>
-        </DialogContent>
-        <DialogActions sx={{ px: 6, py: 6 }}>
-          <CustomizableButton
-            onClick={() => setDeleteItemId(null)}
-            variant="text"
-            color="secondary"
-          >
-            Cancel
-          </CustomizableButton>
-          <CustomizableButton
-            onClick={confirmDeleteItem}
-            variant="contained"
-            color="error"
-            disabled={saving}
-          >
-            Delete
-          </CustomizableButton>
-        </DialogActions>
-      </Dialog>
+      <StandardModal
+        isOpen={deleteItemId !== null}
+        onClose={cancelDeleteItem}
+        title="Delete item"
+        description="Delete this item? This cannot be undone."
+        onSubmit={confirmDeleteItem}
+        submitButtonText="Delete"
+        submitButtonColor={status.error.text}
+        isSubmitting={saving}
+        fitContent
+        maxWidth="480px"
+      />
     </>
   );
 }

@@ -7,7 +7,7 @@
 
 import { Request, Response } from "express";
 import { sequelize } from "../database/db";
-import { Transaction, QueryTypes } from "sequelize";
+import { Transaction } from "sequelize";
 import { STATUS_CODE } from "../utils/statusCode.utils";
 import {
   logProcessing,
@@ -67,6 +67,10 @@ import {
   appendRetentionChangeToLedger,
   canChangeRetentionPeriods,
 } from "../utils/retentionAudit.utils";
+import {
+  canStartLifecycle,
+  startLifecycleForModel,
+} from "../extensions/model-lifecycle/modelLifecycle.service";
 const FILE_NAME = "shadowAi.ctrl.ts";
 
 // ─── Helpers ────────────────────────────────────────────────────────────
@@ -673,6 +677,12 @@ export async function startGovernance(req: Request, res: Response) {
         .json(STATUS_CODE[400](req.t!("The governance owner must be a user in your organization")));
     }
 
+    // Checked before the transaction opens, so the lookup never waits on a
+    // second pooled connection while the transaction holds one.
+    const startLifecycle = req.body.start_lifecycle
+      ? await canStartLifecycle(organizationId)
+      : false;
+
     let transaction: Transaction | null = null;
 
     try {
@@ -755,56 +765,10 @@ export async function startGovernance(req: Request, res: Response) {
         },
       );
 
-      // Initialize lifecycle review if requested
-      let lifecycleInitialized = false;
-      if (req.body.start_lifecycle) {
-        try {
-          await sequelize.query("SAVEPOINT lifecycle_init", { transaction });
-
-          const activeItems = (await sequelize.query(
-            `SELECT i.id
-             FROM model_lifecycle_items i
-             INNER JOIN model_lifecycle_phases p ON i.phase_id = p.id
-             WHERE i.organization_id = :organizationId
-               AND p.organization_id = :organizationId
-               AND i.is_active = true AND p.is_active = true`,
-            { type: QueryTypes.SELECT, transaction, replacements: { organizationId } },
-          )) as { id: number }[];
-
-          if (activeItems.length > 0) {
-            const valueTuples = activeItems
-              .map((_, idx) => `(:organizationId, :modelInventoryId, :itemId${idx}, :userId)`)
-              .join(", ");
-            const replacements: Record<string, unknown> = {
-              organizationId,
-              modelInventoryId,
-              userId,
-            };
-            activeItems.forEach((item, idx) => {
-              replacements[`itemId${idx}`] = item.id;
-            });
-
-            await sequelize.query(
-              `INSERT INTO model_lifecycle_values
-                 (organization_id, model_inventory_id, item_id, updated_by)
-               VALUES ${valueTuples}
-               ON CONFLICT (organization_id, model_inventory_id, item_id) DO NOTHING`,
-              { replacements, transaction },
-            );
-            lifecycleInitialized = true;
-          }
-
-          await sequelize.query("RELEASE SAVEPOINT lifecycle_init", { transaction });
-        } catch (lcError) {
-          await sequelize
-            .query("ROLLBACK TO SAVEPOINT lifecycle_init", { transaction })
-            .catch(() => {});
-          console.error(
-            `[startGovernance] Lifecycle initialization failed for tool ${toolId}, continuing without it:`,
-            lcError,
-          );
-        }
-      }
+      // Start the lifecycle review if requested and model-lifecycle is enabled
+      const lifecycleInitialized = startLifecycle
+        ? await startLifecycleForModel(organizationId, modelInventoryId, userId, transaction)
+        : false;
 
       await transaction.commit();
 

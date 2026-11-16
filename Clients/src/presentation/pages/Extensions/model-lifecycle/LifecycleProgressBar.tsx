@@ -2,6 +2,8 @@ import { Stack, Typography, Box, Tooltip } from "@mui/material";
 import { LifecycleProgress } from "./useModelLifecycle";
 import { accent, background, status, text, radiusPx } from "../../../themes/palette";
 import { textStyles } from "../../../themes";
+import useTranslation from "../../../../application/hooks/useTranslation";
+import { fill } from "../../../../i18n/fill";
 
 interface LifecycleProgressBarProps {
   progress: LifecycleProgress | null;
@@ -12,6 +14,7 @@ export default function LifecycleProgressBar({
   progress,
   onPhaseClick,
 }: LifecycleProgressBarProps) {
+  const { t } = useTranslation();
   const phases = Array.isArray(progress?.phases) ? progress.phases : [];
   if (!progress || phases.length === 0) {
     return null;
@@ -25,18 +28,21 @@ export default function LifecycleProgressBar({
   };
 
   return (
-    <Stack sx={{ gap: 6 }}>
+    <Stack sx={{ gap: "12px" }}>
       <Stack direction="row" alignItems="center" justifyContent="space-between">
         <Typography sx={{ ...textStyles.cardTitle, color: text.secondary }}>
-          Lifecycle Progress
+          Lifecycle progress
         </Typography>
         <Typography sx={{ ...textStyles.caption, color: text.secondary }}>
-          {progress.completion_percentage}% complete ({progress.filled_items}/{progress.total_items}{" "}
-          items)
+          {fill(t("{percent}% complete ({filled}/{total} items)"), {
+            percent: progress.completion_percentage,
+            filled: progress.filled_items,
+            total: progress.total_items,
+          })}
         </Typography>
       </Stack>
 
-      <Stack direction="row" sx={{ gap: 3, width: "100%" }}>
+      <Stack direction="row" sx={{ gap: "6px", width: "100%" }}>
         {phases.map((phase) => {
           const pct = phase.total_items > 0 ? (phase.filled_items / phase.total_items) * 100 : 0;
           const color = getPhaseColor(phase.filled_items, phase.total_items);
@@ -44,7 +50,11 @@ export default function LifecycleProgressBar({
           return (
             <Tooltip
               key={phase.phase_id}
-              title={`${phase.phase_name}: ${phase.filled_items}/${phase.total_items} items`}
+              title={fill(t("{phase}: {filled}/{total} items"), {
+                phase: phase.phase_name,
+                filled: phase.filled_items,
+                total: phase.total_items,
+              })}
               arrow
             >
               <Box
@@ -75,7 +85,7 @@ export default function LifecycleProgressBar({
         })}
       </Stack>
 
-      <Stack direction="row" sx={{ gap: 3, width: "100%" }}>
+      <Stack direction="row" sx={{ gap: "6px", width: "100%" }}>
         {phases.map((phase) => (
           <Typography
             key={phase.phase_id}

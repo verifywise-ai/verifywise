@@ -2,9 +2,27 @@ import { Request, Response } from "express";
 import { STATUS_CODE } from "../../utils/statusCode.utils";
 import logger, { logStructured } from "../../utils/logger/fileLogger";
 import { translateError } from "../../utils/i18n.utils";
-import { buildExcelTemplate, importRisks, RiskImportRow } from "./riskImport.service";
+import {
+  buildExcelTemplate,
+  importRisks,
+  RiskImportError,
+  RiskImportRow,
+} from "./riskImport.service";
 
 const fileName = "riskImport.ctrl.ts";
+
+/**
+ * Translate the messages the import itself words (row cap, refused inserts),
+ * which carry their `messageKey`. The per-field validation messages are left
+ * as they are. The key and params are internal and not sent.
+ */
+export function translateImportError(
+  req: Request,
+  error: RiskImportError,
+): Pick<RiskImportError, "row" | "field" | "message"> {
+  const { messageKey, params, ...rest } = error;
+  return messageKey ? { ...rest, message: req.t!(messageKey, params) } : rest;
+}
 
 export async function downloadExcelTemplate(req: Request, res: Response): Promise<void> {
   const organizationId = (req as any).organizationId as number;
@@ -47,7 +65,8 @@ export async function bulkImportRisks(req: Request, res: Response): Promise<any>
     // partially-successful batch also come back with success=false and are
     // returned as 400 for the client to display per-row errors.
     const status = result.success ? 200 : 400;
-    return res.status(status).json(STATUS_CODE[status](result));
+    const body = { ...result, errors: result.errors.map((e) => translateImportError(req, e)) };
+    return res.status(status).json(STATUS_CODE[status](body));
   } catch (error) {
     logStructured("error", "risk-import bulk insert failed", "bulkImportRisks", fileName);
     logger.error("❌ Error in bulkImportRisks:", error);

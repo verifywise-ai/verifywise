@@ -156,7 +156,7 @@ export const modelInventoryContent: ArticleContent = {
       type: 'heading',
       id: 'mlflow-integration',
       level: 2,
-      text: 'MLFlow integration',
+      text: 'MLflow integration',
     },
     {
       type: 'paragraph',
@@ -164,7 +164,7 @@ export const modelInventoryContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Once an Admin enables and configures the MLflow extension, an **MLFlow** tab appears in Model inventory. Click **Sync** there to pull the latest runs; syncing is manual. The Azure AI Foundry extension works the same way with its own **Azure AI Foundry** tab. See **Extensions** for setup.',
+      text: 'Once an Admin enables and configures the MLflow extension, an **MLflow** tab appears in Model inventory. Click **Sync** there to pull the latest models; syncing is manual. The Azure AI Foundry extension works the same way with its own **Azure AI Foundry** tab. See **Extensions** for setup.',
     },
     {
       type: 'heading',

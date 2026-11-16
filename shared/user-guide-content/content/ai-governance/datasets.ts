@@ -91,7 +91,7 @@ export const datasetsContent: ArticleContent = {
     {
       type: 'callout',
       variant: 'info',
-      text: 'The **Bulk upload** button only appears once an Admin enables the Dataset Bulk Upload extension. See **Extensions**.',
+      text: 'The **Bulk upload** button only appears once an Admin enables the Dataset bulk upload extension. See **Extensions**.',
     },
     {
       type: 'ordered-list',

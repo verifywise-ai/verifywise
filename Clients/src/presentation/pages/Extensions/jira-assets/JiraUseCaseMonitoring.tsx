@@ -1,6 +1,6 @@
 /**
- * Monitoring tab for JIRA-imported use cases
- * Shows a message that PMM is not available for JIRA imports
+ * Monitoring tab for Jira-imported use cases
+ * Shows a message that PMM is not available for Jira imports
  */
 
 import React from "react";
@@ -17,8 +17,8 @@ interface JiraUseCaseMonitoringProps {
 
 export const JiraUseCaseMonitoring: React.FC<JiraUseCaseMonitoringProps> = () => {
   return (
-    <Box sx={{ p: 4 }}>
-      <Stack alignItems="center" spacing={3}>
+    <Box sx={{ p: "8px" }}>
+      <Stack alignItems="center" spacing="6px">
         <Box
           sx={{
             width: 80,
@@ -34,12 +34,14 @@ export const JiraUseCaseMonitoring: React.FC<JiraUseCaseMonitoringProps> = () =>
         </Box>
 
         <Box sx={{ textAlign: "center" }}>
-          <Typography sx={{ fontSize: 18, fontWeight: 600, color: palette.text.secondary, mb: 1 }}>
-            Post-Market Monitoring
+          <Typography
+            sx={{ fontSize: 18, fontWeight: 600, color: palette.text.secondary, mb: "2px" }}
+          >
+            Post-market monitoring
           </Typography>
           <Typography sx={{ fontSize: 14, color: palette.text.icon, maxWidth: 450 }}>
-            Post-market monitoring is managed through your JIRA workflow. This use case was imported
-            from JIRA Assets and monitoring data should be tracked in your JIRA instance.
+            Post-market monitoring is managed through your Jira workflow. This use case was imported
+            from Jira Assets and monitoring data should be tracked in your Jira instance.
           </Typography>
         </Box>
 
@@ -47,11 +49,11 @@ export const JiraUseCaseMonitoring: React.FC<JiraUseCaseMonitoringProps> = () =>
           sx={{
             display: "flex",
             alignItems: "flex-start",
-            gap: 1.5,
+            gap: "3px",
             backgroundColor: palette.status.info.bg,
             border: `1px solid ${palette.status.info.border}`,
             borderRadius: radiusPx.sm,
-            p: 2,
+            p: "4px",
             maxWidth: 450,
           }}
         >
@@ -62,7 +64,7 @@ export const JiraUseCaseMonitoring: React.FC<JiraUseCaseMonitoringProps> = () =>
           />
           <Typography sx={{ fontSize: 13, color: palette.status.info.text }}>
             To configure post-market monitoring for this AI system, update the monitoring attributes
-            in JIRA Assets. Changes will sync automatically.
+            in Jira Assets. Changes will sync automatically.
           </Typography>
         </Box>
       </Stack>

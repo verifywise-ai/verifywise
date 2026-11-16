@@ -138,7 +138,7 @@ describe("LifecycleItemField without model.edit (Auditor)", () => {
   it("hides add and remove approver, but keeps approve and reject on the user's own row", () => {
     renderField(makeItem("approval", { approvals } as any));
     expect(screen.queryByRole("button", { name: "Remove approver" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Add Approver" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Add approver" })).not.toBeInTheDocument();
     expect(screen.getAllByRole("button", { name: "Approve" })).toHaveLength(1);
     expect(screen.getAllByRole("button", { name: "Reject" })).toHaveLength(1);
   });
@@ -188,6 +188,13 @@ describe("LifecycleItemField approvals with model.edit (Editor)", () => {
   it("keeps text fields editable", () => {
     renderField(makeItem("text", { value_text: "Fraud scoring" }));
     expect(screen.getByRole("textbox")).toHaveValue("Fraud scoring");
+  });
+
+  // Sentence case, and the house disabled state until someone is picked.
+  it("offers Add approver, disabled until an approver is selected", () => {
+    auth.userId = 7;
+    renderField(makeItem("approval", { approvals } as any));
+    expect(screen.getByRole("button", { name: "Add approver" })).toBeDisabled();
   });
 });
 
