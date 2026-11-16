@@ -10370,7 +10370,7 @@ paths:
         '401':
           description: Unauthorized
         '403':
-          description: 'Only the risk''s approver or an Admin can approve or reject it.'
+          description: 'Only the risk''s approver or an Admin can change its approval.'
         '500':
           description: 'Internal server error'
   '/projectRisks/by-projid/{id}':
@@ -10519,7 +10519,7 @@ paths:
         '401':
           description: Unauthorized
         '403':
-          description: 'Only the risk''s approver or an Admin can approve or reject it.'
+          description: 'Only the risk''s approver or an Admin can change its approval.'
         '500':
           description: 'Internal server error'
     delete:

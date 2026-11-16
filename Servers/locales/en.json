@@ -1505,6 +1505,6 @@
   "A value in this row is too long.": "A value in this row is too long.",
   "A date in this row is not valid. Use YYYY-MM-DD.": "A date in this row is not valid. Use YYYY-MM-DD.",
   "This row could not be saved.": "This row could not be saved.",
-  "Only the risk's approver or an Admin can approve or reject it.": "Only the risk's approver or an Admin can approve or reject it.",
+  "Only the risk's approver or an Admin can change its approval.": "Only the risk's approver or an Admin can change its approval.",
   "You can't name yourself as the approver. Ask an Admin or pick someone else.": "You can't name yourself as the approver. Ask an Admin or pick someone else."
 }

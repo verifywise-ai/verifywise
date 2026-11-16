@@ -294,7 +294,7 @@ describe("Risk save correctness", () => {
       );
       expect(create.status).toBe(403);
       expect(create.body.data).toBe(
-        "Only the risk's approver or an Admin can approve or reject it.",
+        "Only the risk's approver or an Admin can change its approval.",
       );
 
       const riskId = await createRisk(editor, { risk_approval: approver.userId });

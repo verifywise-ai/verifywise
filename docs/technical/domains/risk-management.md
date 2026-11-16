@@ -724,7 +724,7 @@ Ids fail closed: a value that is not a positive integer (for example `5.5`, whic
 A refused change returns 403. `RiskApprovalForbiddenError` is a `ForbiddenException`, so the risk controllers and the AI Detection `handleException` map it to:
 
 ```json
-{ "message": "Forbidden", "data": "Only the risk's approver or an Admin can approve or reject it." }
+{ "message": "Forbidden", "data": "Only the risk's approver or an Admin can change its approval." }
 ```
 
 `data` is translated (en, de, fr). The advisor checks the same rule before it files an approval request (`advisor/aiActions/riskApprovalPrecheck.ts`) and tells the user the reason. It looks up the requester's role only when an approval field is sent.

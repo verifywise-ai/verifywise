@@ -33,7 +33,7 @@ import {
 import { roleHasPermission } from "./rolePermissions.utils";
 
 export const RISK_APPROVAL_FORBIDDEN_MESSAGE =
-  "Only the risk's approver or an Admin can approve or reject it.";
+  "Only the risk's approver or an Admin can change its approval.";
 
 export const RISK_APPROVAL_SELF_APPROVER_MESSAGE =
   "You can't name yourself as the approver. Ask an Admin or pick someone else.";

@@ -190,7 +190,7 @@ describe("useRiskForm", () => {
   });
 
   it("shows the server's reason when the approver rule refuses the save (403)", async () => {
-    const reason = "Only the risk's approver or an Admin can approve or reject it.";
+    const reason = "Only the risk's approver or an Admin can change its approval.";
     // apiServices puts the envelope's `data` reason in the exception message.
     const createRisk = vi
       .fn()

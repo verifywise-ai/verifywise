@@ -225,7 +225,7 @@ export const riskMitigationContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Once a risk has an approver, only that approver or an Admin can change its approval status. That covers every change, including moving a Pending risk to Not required. Other users who can edit the risk can still save its other fields. If they change the status, the save fails with "Only the risk\'s approver or an Admin can approve or reject it."',
+      text: 'Once a risk has an approver, only that approver or an Admin can change its approval status. That covers every change, including moving a Pending risk to Not required. Other users who can edit the risk can still save its other fields. If they change the status, the save fails with "Only the risk\'s approver or an Admin can change its approval."',
     },
     {
       type: 'bullet-list',

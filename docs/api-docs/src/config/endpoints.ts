@@ -9522,7 +9522,7 @@ export const projectRiskEndpoints: Endpoint[] = [
     responses: [
       { status: 201, description: "Created successfully" },
       { status: 401, description: "Unauthorized" },
-      { status: 403, description: "Only the risk's approver or an Admin can approve or reject it." },
+      { status: 403, description: "Only the risk's approver or an Admin can change its approval." },
       { status: 500, description: "Internal server error" },
     ],
     tag: "Project Risks",
@@ -9588,7 +9588,7 @@ export const projectRiskEndpoints: Endpoint[] = [
     responses: [
       { status: 200, description: "Success" },
       { status: 401, description: "Unauthorized" },
-      { status: 403, description: "Only the risk's approver or an Admin can approve or reject it." },
+      { status: 403, description: "Only the risk's approver or an Admin can change its approval." },
       { status: 500, description: "Internal server error" },
     ],
     tag: "Project Risks",
