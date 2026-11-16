@@ -715,13 +715,16 @@ function describeObject(
   attrIdToName: Record<string, string>,
 ): DescribedObject {
   const transformedAttrs = transformAttributes(jiraObj.attributes || [], attrIdToName);
-  const name = jiraObj.label || transformedAttrs["Name"] || `Jira-${jiraObj.objectKey}`;
+  // The fallback title and goal are stored on the project and rewritten on
+  // every sync, so they keep the original "JIRA" spelling: changing them would
+  // silently rename existing use cases.
+  const name = jiraObj.label || transformedAttrs["Name"] || `JIRA-${jiraObj.objectKey}`;
   const description =
     transformedAttrs["Description / Purpose"] || transformedAttrs["Description"] || "";
   return {
     jiraObjectId: String(jiraObj.id),
     name,
-    goal: description || "Imported from Jira Assets",
+    goal: description || "Imported from JIRA Assets",
     data: {
       id: jiraObj.id,
       objectKey: jiraObj.objectKey,
