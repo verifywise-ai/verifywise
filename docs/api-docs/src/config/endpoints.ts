@@ -12534,6 +12534,21 @@ export const v1PoliciesEndpoints: Endpoint[] = [
   },
 ];
 
+// v1: Risk import endpoints
+export const v1RiskImportEndpoints: Endpoint[] = [
+  {
+    method: 'POST',
+    path: '/v1/risk-import/import',
+    summary: "Bulk Import Risks Strict",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: Risk import",
+  },
+];
+
 // v1: Use Case Settings endpoints
 export const v1UseCaseSettingsEndpoints: Endpoint[] = [
   {
@@ -13975,6 +13990,7 @@ export const allEndpoints = {
   v1IntakeForms: v1IntakeFormsEndpoints,
   v1IntakeSubmissions: v1IntakeSubmissionsEndpoints,
   v1Policies: v1PoliciesEndpoints,
+  v1RiskImport: v1RiskImportEndpoints,
   v1UseCaseSettings: v1UseCaseSettingsEndpoints,
   v1V1aiAppLifecycle: v1V1aiAppLifecycleEndpoints,
   v1V1aiApps: v1V1aiAppsEndpoints,

@@ -143,9 +143,12 @@ export class PolicyController {
   static async getPolicyById(req: Request, res: Response) {
     try {
       const policyId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
+      if (isNaN(policyId)) {
+        return res.status(400).json(STATUS_CODE[400](req.t!("Invalid policy ID")));
+      }
       const policy = await getPolicyByIdQuery(req.organizationId!, policyId);
 
-      if (policy) {
+      if (policy && policy.length > 0) {
         return res.status(200).json(STATUS_CODE[200](policy));
       }
 
@@ -337,8 +340,10 @@ export class PolicyController {
 
       const filename = generateFilename(policy.title, "pdf");
 
+      // attachment() writes Content-Disposition (ASCII fallback + filename*) and
+      // guesses the type from the extension; the explicit type goes after it.
+      res.attachment(filename);
       res.setHeader("Content-Type", "application/pdf");
-      res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
       res.setHeader("Content-Length", pdfBuffer.length);
 
       return res.send(pdfBuffer);
@@ -374,11 +379,11 @@ export class PolicyController {
 
       const filename = generateFilename(policy.title, "docx");
 
+      res.attachment(filename);
       res.setHeader(
         "Content-Type",
         "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
       );
-      res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
       res.setHeader("Content-Length", docxBuffer.length);
 
       return res.send(docxBuffer);

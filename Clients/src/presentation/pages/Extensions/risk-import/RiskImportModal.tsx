@@ -17,6 +17,10 @@ import {
 } from "@mui/material";
 import { Download, Upload, CheckCircle, XCircle } from "lucide-react";
 import { apiServices } from "../../../../infrastructure/api/networkServices";
+import {
+  importRisks,
+  type RiskImportResult,
+} from "../../../../application/repository/riskImport.repository";
 import StandardModal from "../../../components/Modals/StandardModal";
 import { CustomizableButton } from "../../../components/button/customizable-button";
 import useTranslation from "../../../../application/hooks/useTranslation";
@@ -40,36 +44,13 @@ interface RiskImportModalProps {
   onImportComplete?: () => void;
 }
 
-interface ImportResult {
-  success: boolean;
-  imported: number;
-  failed: number;
-  errors: Array<{ row: number; field: string; message: string }>;
-  importedAt: string;
-}
+type ImportResult = RiskImportResult;
 
-/**
- * The import result the server sends with a 400 when rows fail validation or
- * insert (`riskImport.ctrl.ts`: STATUS_CODE[400](result)), or with the
- * row-cap error. `apiServices` throws a CustomException whose `response` is
- * the `{ message, data }` envelope, so the result is `response.data`; a raw
- * axios error has it one level deeper, under `response.data.data`.
- */
 /**
  * A server error about the whole file (the row cap) comes as row 0, field
  * "file". It is a message for the file, not a row in the error table.
  */
 const isFileError = (e: { row: number; field: string }) => e.row === 0 && e.field === "file";
-
-function importResultFromError(err: any): ImportResult | null {
-  const candidates = [err?.response?.data, err?.response?.data?.data];
-  for (const candidate of candidates) {
-    if (candidate && typeof candidate === "object" && Array.isArray(candidate.errors)) {
-      return candidate as ImportResult;
-    }
-  }
-  return null;
-}
 
 export default function RiskImportModal({ open, onClose, onImportComplete }: RiskImportModalProps) {
   // The template download and the import are tracked apart: only an import in
@@ -82,6 +63,9 @@ export default function RiskImportModal({ open, onClose, onImportComplete }: Ris
   // Same shape as the MLflow and Azure tabs: an optional title, and the cause
   // from the parser or server as the body, so the title translates whole.
   const [error, setError] = useState<{ title?: string; body: string } | null>(null);
+  // The server answered without a result, so whether the rows went in is
+  // unknown: Import stays off until another file is chosen or the modal closes.
+  const [outcomeUnknown, setOutcomeUnknown] = useState(false);
   const { t, lang } = useTranslation();
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -127,6 +111,7 @@ export default function RiskImportModal({ open, onClose, onImportComplete }: Ris
     setUploadedFile(file);
     setError(null);
     setImportResult(null);
+    setOutcomeUnknown(false);
 
     try {
       // Loaded on demand: exceljs is ~280 KiB gz, only needed to parse an upload.
@@ -162,7 +147,13 @@ export default function RiskImportModal({ open, onClose, onImportComplete }: Ris
           row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
             const key = headers[colNumber - 1];
             if (key) {
-              rowData[key] = cell.value;
+              // Rich text, hyperlinks and formulas are objects; send what the cell shows.
+              rowData[key] =
+                cell.value !== null &&
+                typeof cell.value === "object" &&
+                !(cell.value instanceof Date)
+                  ? cell.text
+                  : cell.value;
             }
           });
 
@@ -170,7 +161,8 @@ export default function RiskImportModal({ open, onClose, onImportComplete }: Ris
             (val) => val !== null && val !== undefined && val !== "",
           );
           if (hasData) {
-            data.push(rowData);
+            // Blank rows are dropped, so keep the real sheet row for error messages.
+            data.push({ ...rowData, row_number: rowNumber });
           }
         }
       });
@@ -183,7 +175,7 @@ export default function RiskImportModal({ open, onClose, onImportComplete }: Ris
   }, []);
 
   const handleImport = async () => {
-    if (importing || importSucceeded) return;
+    if (importing || importSucceeded || outcomeUnknown) return;
     if (excelData.length === 0) {
       setError({ body: "No data to import. Please upload a valid Excel file." });
       return;
@@ -199,39 +191,36 @@ export default function RiskImportModal({ open, onClose, onImportComplete }: Ris
       setError(null);
       setImportResult(null);
 
-      // This modal shows the server's answer itself (row errors or message),
-      // so the global error toast would repeat it.
-      const response = await apiServices.post(
-        "/extensions/risk-import/import",
-        { csvData: excelData },
-        { suppressGlobalErrorToast: true },
-      );
-
-      const payload = (response.data as any)?.data as ImportResult | undefined;
-      if (payload) {
-        setImportResult(payload);
-
-        if (payload.success) {
-          // Leave the success message up for a moment, then close through the
-          // same reset as Cancel: the modal stays mounted, so state left here
-          // would let a reopen send the same rows again.
-          closeTimerRef.current = setTimeout(() => {
-            closeTimerRef.current = null;
-            onImportComplete?.();
-            closeAndReset();
-          }, 1000);
-        }
+      // The strict /api/v1 import. A rejected import (400: row errors or the
+      // row cap) resolves with its result instead of throwing, and the global
+      // error toast is suppressed because this modal shows the answer itself.
+      const payload = await importRisks(excelData);
+      if (!payload) {
+        setOutcomeUnknown(true);
+        setError({
+          title: "Failed to import risks",
+          body: "Check the risks list before you import this file again.",
+        });
+        return;
       }
-    } catch (err: any) {
-      const rowResult = importResultFromError(err);
-      const fileErrors = rowResult?.errors.filter(isFileError) ?? [];
+      const fileErrors = payload.errors?.filter(isFileError) ?? [];
       if (fileErrors.length > 0) {
         setError({ body: fileErrors.map((e) => e.message).join(" ") });
-      } else if (rowResult) {
-        setImportResult(rowResult);
-      } else {
-        setError({ body: err?.message || "Failed to import risks" });
+        return;
       }
+      setImportResult(payload);
+      if (payload.success) {
+        // Leave the success message up for a moment, then close through the
+        // same reset as Cancel: the modal stays mounted, so state left here
+        // would let a reopen send the same rows again.
+        closeTimerRef.current = setTimeout(() => {
+          closeTimerRef.current = null;
+          onImportComplete?.();
+          closeAndReset();
+        }, 1000);
+      }
+    } catch (err: any) {
+      setError({ body: err?.message || "Failed to import risks" });
     } finally {
       setImporting(false);
     }
@@ -246,6 +235,7 @@ export default function RiskImportModal({ open, onClose, onImportComplete }: Ris
     setExcelData([]);
     setImportResult(null);
     setError(null);
+    setOutcomeUnknown(false);
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
@@ -291,7 +281,7 @@ export default function RiskImportModal({ open, onClose, onImportComplete }: Ris
       onSubmit={handleImport}
       submitButtonText={importing ? "Importing..." : "Import risks"}
       isSubmitting={importing}
-      isSubmitDisabled={excelData.length === 0 || importing || importSucceeded}
+      isSubmitDisabled={excelData.length === 0 || importing || importSucceeded || outcomeUnknown}
       maxWidth="900px"
     >
       {error && (
@@ -303,37 +293,28 @@ export default function RiskImportModal({ open, onClose, onImportComplete }: Ris
 
       {importResult && (
         <Alert
-          severity={importResult.success ? "success" : "warning"}
+          severity={importResult.success ? "success" : "error"}
           sx={{ mb: "6px" }}
           icon={importResult.success ? <CheckCircle /> : <XCircle />}
         >
           <Typography variant="body2" sx={{ fontWeight: 600, mb: "2px" }}>
-            {importResult.success ? "Import completed" : "Import completed with errors"}
+            {importResult.success ? t("Import completed") : t("Nothing was imported")}
           </Typography>
+          {/* The import is all or nothing: counts only mean something once it committed. */}
           <Typography variant="body2">
-            {fill(
-              t(
-                pluralKey(
-                  lang,
-                  importResult.imported,
-                  "{count} risk imported",
-                  "{count} risks imported",
-                ),
-              ),
-              { count: importResult.imported },
-            )}
-            {importResult.failed > 0 &&
-              `, ${fill(
-                t(
-                  pluralKey(
-                    lang,
-                    importResult.failed,
-                    "{count} risk failed",
-                    "{count} risks failed",
+            {importResult.success
+              ? fill(
+                  t(
+                    pluralKey(
+                      lang,
+                      importResult.imported,
+                      "{count} risk imported",
+                      "{count} risks imported",
+                    ),
                   ),
-                ),
-                { count: importResult.failed },
-              )}`}
+                  { count: importResult.imported },
+                )
+              : t("Fix the rows below in your file and upload it again.")}
           </Typography>
 
           {importResult.errors && importResult.errors.length > 0 && (

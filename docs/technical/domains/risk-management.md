@@ -50,7 +50,7 @@ project_risks
 ├── impact
 ├── review_notes
 ├── assessment_mapping
-├── controls_mapping
+├── controls_mapping                  # free-text legacy field; the risk form does not set it
 ├── date_of_assessment
 │
 ├── likelihood (ENUM)                 # current risk
@@ -312,6 +312,8 @@ Result: High risk
 
 ## Risk-Control Linking
 
+The real control links are the junction tables below. `controls_mapping` on the risk row is a free-text legacy field that the risk form does not set. The risk table's Controls column does not show it: its "View controls" link opens the linked controls, so the column is not sortable, and the risk register export has no controls column.
+
 ### Relationship Structure
 
 Risks can be linked to multiple framework controls through junction tables:
@@ -459,7 +461,7 @@ Removing a use case or framework from a risk removes the risk's mappings in ever
 
 The report's Severity column shows the inherent severity, not the post-mitigation severity.
 
-The risk register export uses the filtered list. With a filter or search that matches nothing, the export is empty and the export button is disabled.
+The Owner column sorts by the owner's display name (name and surname, case-insensitive), not by user id (`riskSort.ts`, `userSortName` and `compareNames` in `Clients/src/application/utils/userSort.ts`). A risk with no known owner sorts as an empty name. The risk register export uses the filtered list. With a filter or search that matches nothing, the export is empty and the export button is disabled.
 
 ## Visibility
 

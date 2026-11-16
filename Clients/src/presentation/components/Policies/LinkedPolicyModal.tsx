@@ -144,7 +144,7 @@ const LinkedPolicyModal: React.FC<LinkedPolicyModalProps> = ({ onClose, policyId
 
     setAlert({
       variant: "success",
-      body: `${type} unlinked successfully!`,
+      body: type === "evidence" ? "Evidence unlinked" : "Risk unlinked",
     });
   };
 
@@ -191,7 +191,12 @@ const LinkedPolicyModal: React.FC<LinkedPolicyModalProps> = ({ onClose, policyId
 
     setAlert({
       variant: "success",
-      body: `${objectType} linked successfully!`,
+      body:
+        objectType === "evidence"
+          ? "Evidence linked"
+          : objectIds.length === 1
+            ? "Risk linked"
+            : "Risks linked",
     });
   };
 
@@ -236,7 +241,7 @@ const LinkedPolicyModal: React.FC<LinkedPolicyModalProps> = ({ onClose, policyId
       <StandardModal
         isOpen={isOpen}
         onClose={onClose}
-        title="Linked Operational Objects"
+        title="Linked risks and evidence"
         description="View or remove linked items"
         hideFooter={true}
       >

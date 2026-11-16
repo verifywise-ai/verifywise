@@ -90,7 +90,7 @@ export const policyManagementContent: ArticleContent = {
     {
       type: 'image',
       src: '/images/user-guide/policy-manager.png',
-      alt: 'Policy Manager page showing status cards for Draft, Under Review, Approved, Published, Archived, and Deprecated policies, along with a table listing organizational policies with their status, tags, next review date, and author',
+      alt: 'Policy manager page showing status cards for Draft, Under Review, Approved, Published, Archived, and Deprecated policies, along with a table listing organizational policies with their status, tags, next review date, and author',
       caption: 'The policy manager shows all organizational policies and their current status.',
     },
     {

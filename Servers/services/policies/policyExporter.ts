@@ -750,8 +750,6 @@ async function parseImage(imgEl: Element, organizationId: number): Promise<Parag
     return null;
   }
 
-  console.log("Processing image with src:", src.substring(0, 100) + "...");
-
   let imageBuffer: Buffer | null = null;
 
   // Check if it's a file-manager URL (various patterns)
@@ -852,13 +850,8 @@ export async function generatePolicyDOCX(
   contentHtml: string,
   organizationId: number,
 ): Promise<Buffer> {
-  console.log("Generating DOCX for policy:", title);
-  console.log("Content HTML length:", contentHtml.length);
-  console.log("Content HTML preview:", contentHtml.substring(0, 500));
-
   // Parse HTML content to DOCX elements
   const contentElements = await parseHtmlToDocxElements(contentHtml, organizationId);
-  console.log("Generated", contentElements.length, "DOCX elements");
 
   // Build document
   const doc = new Document({
@@ -956,11 +949,10 @@ export async function generatePolicyDOCX(
  * Generate sanitized filename from title
  */
 export function generateFilename(title: string, extension: "pdf" | "docx"): string {
-  const sanitized = title
-    .replace(/[^a-zA-Z0-9\s-]/g, "")
-    .replace(/\s+/g, "_")
-    .substring(0, 50);
+  const sanitized = title.replace(/[^\p{L}\p{M}\p{N}\s-]/gu, "").replace(/\s+/g, "_");
+  // Cut by code point so a surrogate pair is never split in half.
+  const shortened = Array.from(sanitized).slice(0, 50).join("");
 
   const date = new Date().toISOString().split("T")[0];
-  return `${sanitized}_${date}.${extension}`;
+  return `${shortened}_${date}.${extension}`;
 }

@@ -40,6 +40,11 @@ import { isPolicyFormDirty } from "./PolicyEditor/policyFormDirty";
 import { radiusPx } from "../../themes/palette";
 import { fill, pluralKey } from "../../../i18n/fill";
 import { toDateOnlyString } from "../../tools/isoDateToString";
+import {
+  filenameFromContentDisposition,
+  policyDownloadFallbackName,
+  triggerBrowserDownload,
+} from "../../utils/browserDownload.utils";
 
 // ── Component ─────────────────────────────────────────────────────────
 export default function PolicyEditorPage() {
@@ -432,12 +437,10 @@ export default function PolicyEditorPage() {
 
       const blob = await response.blob();
       const contentDisposition = response.headers.get("Content-Disposition");
-      let filename = `${formData.title.replace(/[^a-zA-Z0-9\s-]/g, "").replace(/\s+/g, "_")}_${new Date().toISOString().split("T")[0]}.${format}`;
-
-      if (contentDisposition) {
-        const match = contentDisposition.match(/filename="?([^"]+)"?/);
-        if (match) filename = match[1];
-      }
+      const filename = filenameFromContentDisposition(
+        contentDisposition,
+        policyDownloadFallbackName(formData.title, format),
+      );
 
       const finalBlob =
         format === "docx"
@@ -446,14 +449,7 @@ export default function PolicyEditorPage() {
             })
           : blob;
 
-      const url = window.URL.createObjectURL(finalBlob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      window.URL.revokeObjectURL(url);
+      triggerBrowserDownload(finalBlob, filename);
     } catch (error: any) {
       clearTimeout(timeout);
       setExportError(
