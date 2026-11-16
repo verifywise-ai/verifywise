@@ -31,10 +31,10 @@ export default function UploadProgress({ results, totalFiles }: UploadProgressPr
   const isComplete = completed === totalFiles;
 
   return (
-    <Stack spacing={2}>
+    <Stack spacing="4px">
       {/* Overall progress */}
       <Box>
-        <Stack direction="row" justifyContent="space-between" sx={{ mb: 0.5 }}>
+        <Stack direction="row" justifyContent="space-between" sx={{ mb: "1px" }}>
           <Typography sx={{ fontSize: 13, fontWeight: 500, color: "text.secondary" }}>
             {/* The counter on the right shows the numbers. */}
             {isComplete ? "Upload complete" : "Uploading files..."}
@@ -60,7 +60,7 @@ export default function UploadProgress({ results, totalFiles }: UploadProgressPr
 
       {/* Summary chips */}
       {isComplete && (
-        <Stack direction="row" spacing={1}>
+        <Stack direction="row" spacing="2px">
           <Chip
             icon={<CheckCircle2 size={14} />}
             label={<>{successCount} uploaded</>}
@@ -97,7 +97,7 @@ export default function UploadProgress({ results, totalFiles }: UploadProgressPr
             key={result.fileName}
             direction="row"
             alignItems="center"
-            spacing={1}
+            spacing="2px"
             sx={{
               p: "10px 12px",
               borderRadius: radiusPx.md,
@@ -127,7 +127,7 @@ export default function UploadProgress({ results, totalFiles }: UploadProgressPr
               <CheckCircle2 size={16} color={vwPalette.status.success.text} />
             )}
             {result.status === "error" && (
-              <Stack direction="row" alignItems="center" spacing={0.5}>
+              <Stack direction="row" alignItems="center" spacing="1px">
                 <XCircle size={16} color={vwPalette.status.error.text} />
                 <Typography sx={{ fontSize: 12, color: vwPalette.status.error.text }}>
                   {result.error || "Failed"}

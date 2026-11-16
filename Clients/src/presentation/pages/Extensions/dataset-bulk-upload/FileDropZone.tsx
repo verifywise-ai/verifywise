@@ -98,7 +98,7 @@ export default function FileDropZone({ files, onFilesChange }: FileDropZoneProps
   );
 
   return (
-    <Stack spacing={2}>
+    <Stack spacing="4px">
       {/* Drop zone */}
       <Box
         onDragOver={(e) => {
@@ -123,7 +123,7 @@ export default function FileDropZone({ files, onFilesChange }: FileDropZoneProps
         <Upload size={32} color={text.icon} />
         <Typography
           sx={{
-            mt: 1,
+            mt: "2px",
             fontSize: 13,
             fontWeight: 500,
             color: "text.secondary",

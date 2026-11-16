@@ -13,7 +13,6 @@ export default function BulkUploadButton({ onClick }: BulkUploadButtonProps) {
     <CustomizableButton
       variant="outlined"
       color="primary"
-      size="small"
       icon={<Upload size={16} />}
       text="Bulk upload"
       onClick={onClick}

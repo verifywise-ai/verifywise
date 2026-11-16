@@ -37,7 +37,7 @@ async function uploadAndImport() {
   const file = new File(["x"], "risks.xlsx");
   Object.defineProperty(file, "arrayBuffer", { value: async () => new ArrayBuffer(1) });
   fireEvent.change(fileInput, { target: { files: [file] } });
-  const importButton = await screen.findByRole("button", { name: "Import Risks" });
+  const importButton = await screen.findByRole("button", { name: "Import risks" });
   await waitFor(() => expect(importButton).toBeEnabled());
   fireEvent.click(importButton);
 }
@@ -87,7 +87,7 @@ describe("RiskImportModal import errors", () => {
     await uploadAndImport();
 
     expect(await screen.findByText("No rows to import")).toBeInTheDocument();
-    expect(screen.queryByText("Error Details:")).not.toBeInTheDocument();
+    expect(screen.queryByText("Error details")).not.toBeInTheDocument();
   });
 
   it("shows a server file-level error as a message, not as a table row", async () => {
@@ -107,8 +107,59 @@ describe("RiskImportModal import errors", () => {
     await uploadAndImport();
 
     expect(await screen.findByText("Too many rows in this file.")).toBeInTheDocument();
-    expect(screen.queryByText("Error Details:")).not.toBeInTheDocument();
+    expect(screen.queryByText("Error details")).not.toBeInTheDocument();
     expect(screen.queryByText(/Failed:/)).not.toBeInTheDocument();
+  });
+});
+
+describe("RiskImportModal layout", () => {
+  it("renders as a StandardModal with sentence-case copy", () => {
+    renderWithProviders(<RiskImportModal open onClose={vi.fn()} />);
+
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    expect(screen.getByText("Import risks from Excel")).toBeInTheDocument();
+    expect(screen.getByText("Step 1: Download the Excel template")).toBeInTheDocument();
+    expect(screen.getByText("Step 2: Upload the filled Excel file")).toBeInTheDocument();
+    expect(screen.getByText("Step 3: Import risks")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Download template" })).toBeInTheDocument();
+  });
+
+  it("keeps Import risks disabled until a file is parsed", () => {
+    renderWithProviders(<RiskImportModal open onClose={vi.fn()} />);
+
+    expect(screen.getByRole("button", { name: "Import risks" })).toBeDisabled();
+  });
+
+  it("opens the hidden file input from the Choose file button", () => {
+    renderWithProviders(<RiskImportModal open onClose={vi.fn()} />);
+    const fileInput = screen.getByTestId("risk-import-file-input") as HTMLInputElement;
+    const click = vi.spyOn(fileInput, "click");
+
+    fireEvent.click(screen.getByTestId("risk-import-choose-file"));
+
+    expect(click).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not close while an import is in flight", async () => {
+    let finish: (value: unknown) => void = () => undefined;
+    api.post.mockReturnValue(new Promise((resolve) => (finish = resolve)));
+    const onClose = vi.fn();
+    renderWithProviders(<RiskImportModal open onClose={onClose} />);
+    const fileInput = screen.getByTestId("risk-import-file-input") as HTMLInputElement;
+    const file = new File(["x"], "risks.xlsx");
+    Object.defineProperty(file, "arrayBuffer", { value: async () => new ArrayBuffer(1) });
+    fireEvent.change(fileInput, { target: { files: [file] } });
+    const importButton = await screen.findByRole("button", { name: "Import risks" });
+    await waitFor(() => expect(importButton).toBeEnabled());
+    fireEvent.click(importButton);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Cancel" }));
+    expect(onClose).not.toHaveBeenCalled();
+
+    finish({ data: { data: { success: false, imported: 0, failed: 0, errors: [] } } });
+    await waitFor(() => expect(screen.getByRole("button", { name: "Cancel" })).toBeEnabled());
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    expect(onClose).toHaveBeenCalledTimes(1);
   });
 });
 

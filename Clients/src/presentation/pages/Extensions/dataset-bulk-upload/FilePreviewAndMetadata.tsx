@@ -15,13 +15,13 @@ import {
   TableHead,
   TableRow,
   Divider,
-  Button,
   useTheme,
 } from "@mui/material";
 import { ChevronDown, FileSpreadsheet, AlertTriangle } from "lucide-react";
 import Field from "../../../components/Inputs/Field";
 import Select from "../../../components/Inputs/Select";
 import Toggle from "../../../components/Inputs/Toggle";
+import { CustomizableButton } from "../../../components/button/customizable-button";
 import { FileAnalysis, DatasetMetadata } from "./useFileAnalysis";
 import { radiusPx } from "../../../themes/palette";
 
@@ -80,19 +80,19 @@ export default function FilePreviewAndMetadata({
   };
 
   return (
-    <Stack spacing={2}>
+    <Stack spacing="4px">
       {/* Batch defaults */}
       <Box
         sx={{
           border: `1px solid ${theme.palette.border.light}`,
           borderRadius: radiusPx.sm,
-          p: 2,
+          p: "4px",
           backgroundColor: theme.palette.background.accent,
         }}
       >
         <Typography
           sx={{
-            mb: 1.5,
+            mb: "3px",
             fontSize: 13,
             fontWeight: 600,
             color: theme.palette.text.secondary,
@@ -100,7 +100,7 @@ export default function FilePreviewAndMetadata({
         >
           Batch defaults (apply to all files)
         </Typography>
-        <Stack direction="row" spacing={3} alignItems="flex-end">
+        <Stack direction="row" spacing="6px" alignItems="flex-end">
           <Select
             id="batch-type"
             label="Type"
@@ -128,26 +128,20 @@ export default function FilePreviewAndMetadata({
             width="140px"
             sx={fieldStyle}
           />
-          <Button
+          <CustomizableButton
             variant="outlined"
-            size="small"
+            text="Apply"
             onClick={handleApplyBatch}
+            testId="dataset-bulk-upload-apply-defaults"
             sx={{
               "border": `1px solid ${theme.palette.border.dark}`,
               "color": theme.palette.text.secondary,
-              "height": 34,
-              "fontSize": 13,
-              "fontWeight": 500,
-              "textTransform": "none",
-              "borderRadius": `${theme.shape.borderRadius}px`,
               "&:hover": {
                 backgroundColor: theme.palette.background.accent,
                 border: `1px solid ${theme.palette.border.dark}`,
               },
             }}
-          >
-            Apply
-          </Button>
+          />
         </Stack>
       </Box>
 
@@ -171,7 +165,7 @@ export default function FilePreviewAndMetadata({
             expandIcon={<ChevronDown size={18} color={theme.palette.text.tertiary} />}
             sx={{ padding: "8px 16px" }}
           >
-            <Stack direction="row" alignItems="center" spacing={1} sx={{ flex: 1 }}>
+            <Stack direction="row" alignItems="center" spacing="2px" sx={{ flex: 1 }}>
               <FileSpreadsheet size={18} color={theme.palette.primary.main} />
               <Typography
                 sx={{
@@ -242,7 +236,7 @@ export default function FilePreviewAndMetadata({
             </Stack>
           </AccordionSummary>
           <AccordionDetails>
-            <Stack spacing={2}>
+            <Stack spacing="4px">
               {/* Skip toggle */}
               <FormControlLabel
                 control={<Toggle checked={analysis.skipped} onChange={() => onToggleSkip(index)} />}
@@ -267,7 +261,7 @@ export default function FilePreviewAndMetadata({
                     <Box>
                       <Typography
                         sx={{
-                          mb: 1,
+                          mb: "2px",
                           fontSize: 13,
                           fontWeight: 600,
                           color: theme.palette.text.secondary,
@@ -353,9 +347,9 @@ export default function FilePreviewAndMetadata({
                   >
                     Dataset metadata
                   </Typography>
-                  <Stack spacing={3}>
+                  <Stack spacing="6px">
                     {/* Row 1: Name, Version */}
-                    <Stack direction="row" justifyContent="space-between" spacing={6}>
+                    <Stack direction="row" justifyContent="space-between" spacing="12px">
                       <Field
                         id={`name-${index}`}
                         label="Name"
@@ -390,7 +384,7 @@ export default function FilePreviewAndMetadata({
                     />
 
                     {/* Row 2: Type, Classification, Format */}
-                    <Stack direction="row" justifyContent="space-between" spacing={6}>
+                    <Stack direction="row" justifyContent="space-between" spacing="12px">
                       <Select
                         id={`type-${index}`}
                         label="Type"
@@ -426,7 +420,7 @@ export default function FilePreviewAndMetadata({
                     </Stack>
 
                     {/* Row 3: Owner, Source */}
-                    <Stack direction="row" justifyContent="space-between" spacing={6}>
+                    <Stack direction="row" justifyContent="space-between" spacing="12px">
                       <Field
                         id={`owner-${index}`}
                         label="Owner"
