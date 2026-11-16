@@ -1,6 +1,6 @@
 # Risk Management Domain
 
-**Last Updated:** 2026-11-15
+**Last Updated:** 2026-11-16
 
 ## Overview
 
@@ -671,7 +671,7 @@ The validator (`middleware/validators/risks.validator.ts`) enforces the column l
 - `risk_name` - non-empty string (create). An empty `risk_name` on update is ignored.
 - `risk_owner` - positive user id (create)
 
-The risk form requires approver, approval status and assessment date only once an approver or an approval status is set. A new risk starts without an assessment date, and import leaves an empty assessment date empty.
+Approver, approval status and assessment date are optional everywhere (validators, form, advisor). A new risk starts without an assessment date. Import leaves an empty assessment date empty.
 
 ### Saving and clearing fields
 
@@ -703,6 +703,55 @@ Every risk write (REST, bulk `set_owner`, import, MCP, advisor, intake, AI Detec
 Ids fail closed: a value that is not a positive integer (for example `5.5`, which PostgreSQL would round to another id) is rejected, never skipped. The advisor's `agent_assign_risk_owner` and `agent_link_risk_to_project` run the same guard. Risk import reports a non-member or malformed owner or approver as a row error. REST create ignores a client-sent `is_demo`.
 
 `POST /riskHistory/snapshot` requires `risks.edit`.
+
+## Approval Status
+
+`approval_status` is one of `Pending`, `Approved`, `Rejected`, `Not required` (the incident approval values). The column is `NOT NULL DEFAULT 'Not required'` with the CHECK `risks_approval_status_check`. `risk_approval` holds the approver.
+
+### Rules
+
+`resolveRiskApproval` in `utils/riskApproval.utils.ts` decides the stored approver and status. It runs in `createRiskService` and `updateRiskService` (REST, MCP, advisor create) and in the advisor's update executor.
+
+- **Unknown values are ignored.** `/api/projectRisks` is frozen and unversioned. A submitted status that is not one of the four (after ignoring case, spaces, `_` and `-`) counts as not supplied: the stored value is kept on update, `Not required` is used on create. Old clients that send `"In Progress"` or `""` get no 400.
+- **Who decides.** Setting `Approved` or `Rejected`, or changing a status away from either, needs the approver as saved by this request or an Admin (`organization.admin` via `roleHasPermission`). A status sent back unchanged is not checked. Other fields save normally for any editor.
+- **Approver change.** Naming a different approver sets `Pending` with no permission check. In that save only an Admin can also set `Approved` or `Rejected`. A non-Admin who asks for a decision gets the 403, including the newly named approver: naming yourself and approving in one save is not allowed. The new approver decides in a later save.
+- **No approver, no approval.** Clearing the approver, or any save that leaves the risk without one, stores `Not required`.
+- **Notification.** A newly named approver who is not the caller gets the assignment notice (`notifyUserAssigned`, role `"Risk Approver"`, the Risk Owner notification type): an in-app notification and the assignment email. `notifyNewRiskApprover` in `services/riskApproverNotification.service.ts` sends it after commit, fire and forget, from REST create and update and from the advisor's create and update.
+
+A refused decision returns 403:
+
+```json
+{ "message": "Forbidden", "data": "Only the risk's approver or an Admin can approve or reject it." }
+```
+
+`data` is translated (en, de, fr). The advisor checks the same rule before it files an approval request (`advisor/aiActions/riskApprovalPrecheck.ts`) and tells the user when the decision is not theirs to make.
+
+Bulk actions do not touch approval. Risk import keeps `Approved` or `Rejected` from the file only when an Admin imports. Other rows get `Pending` with an approver and `Not required` without one, whatever the cell says.
+
+### Migration
+
+`20261116120000-risk-approval-status-values` rewrote existing rows, matching case, whitespace, `_` and `-` insensitively:
+
+| Stored value | Becomes |
+|--------------|---------|
+| Approved, Rejected, Not required | the same value, canonical spelling |
+| Pending, Requires review, with an approver | Pending |
+| Pending, Requires review, without an approver | Not required |
+| anything else (`NULL`, `""`, mitigation values such as `In Progress`) | Not required |
+
+It then sets the default, `NOT NULL` and the CHECK. It sends no notifications. `down()` drops the CHECK, `NOT NULL` and default only; the rewritten values are not restored.
+
+### Code
+
+- `domain.layer/enums/risk-approval-status.enum.ts`: the four values, `normalizeRiskApprovalStatus`, `isRiskApprovalDecision`
+- `utils/riskApproval.utils.ts`: `resolveRiskApproval`, `callerCanDecideAnyRisk`, `RiskApprovalForbiddenError`
+- `services/riskApproverNotification.service.ts`: `notifyNewRiskApprover`
+- `extensions/risk-import/riskImport.service.ts`: `importedApprovalStatus`
+
+### Follow-ups
+
+- Editing a risk's content after approval does not reset the approval.
+- Approvers named in a risk import or through MCP are not notified.
 
 ## Frontend Structure
 

@@ -110,7 +110,7 @@ export const riskMitigationContent: ArticleContent = {
         { bold: 'Mitigation plan', text: 'Describe the specific actions to reduce the risk' },
         { bold: 'Implementation strategy', text: 'Outline how the mitigation will be executed' },
         { bold: 'Deadline', text: 'Set a target date for completing the mitigation' },
-        { bold: 'Approver', text: 'Assign responsibility for approving the mitigation' },
+        { bold: 'Approver', text: 'Optionally, pick the person who approves the risk and its mitigation. See Risk approval below' },
       ],
     },
     {
@@ -190,20 +190,69 @@ export const riskMitigationContent: ArticleContent = {
       type: 'heading',
       id: 'approval-workflow',
       level: 2,
-      text: 'Risk approval workflow',
+      text: 'Risk approval',
     },
     {
       type: 'paragraph',
-      text: 'For bigger risks, VerifyWise has an approval process:',
+      text: 'A risk can go to one person for approval. Approver, approval status and assessment date are optional. A new risk starts at **Not required**. The approval status is one of these:',
+    },
+    {
+      type: 'bullet-list',
+      items: [
+        { bold: 'Not required', text: 'The risk has no approver.' },
+        { bold: 'Pending', text: 'An approver is named and has not decided yet.' },
+        { bold: 'Approved', text: 'The approver or an Admin approved the risk.' },
+        { bold: 'Rejected', text: 'The approver or an Admin rejected the risk.' },
+      ],
     },
     {
       type: 'ordered-list',
       items: [
-        { text: 'Action owner completes the mitigation plan' },
-        { text: 'Risk is assigned to an approver for review' },
-        { text: 'Approver reviews the mitigation approach and evidence' },
-        { text: 'Approval status is updated to reflect the decision' },
+        { text: 'On the risk form, pick an approver. The approval status changes to Pending. The approver gets an in-app notification and an assignment email.' },
+        { text: 'The approver opens the risk to review the mitigation plan and its evidence. Then they set the approval status to Approved or Rejected.' },
+        { text: 'To take a risk out of approval, set the approver to **None**. The status goes back to Not required.' },
       ],
+    },
+    {
+      type: 'paragraph',
+      text: 'The approval status field is greyed out until the risk has an approver.',
+    },
+    {
+      type: 'heading',
+      id: 'approval-who-decides',
+      level: 3,
+      text: 'Who can approve or reject',
+    },
+    {
+      type: 'paragraph',
+      text: 'Only the risk\'s approver or an Admin can set Approved or Rejected. The same rule applies to changing a status that is already Approved or Rejected. Other users who can edit the risk can save its other fields. When they try to make the decision, the save fails with "Only the risk\'s approver or an Admin can approve or reject it."',
+    },
+    {
+      type: 'paragraph',
+      text: 'Changing the approver sets the status back to Pending, even on a risk that was approved. In that same save only an Admin can set Approved or Rejected. The new approver decides in a later edit.',
+    },
+    {
+      type: 'callout',
+      variant: 'info',
+      text: 'Editing a risk after it is approved does not reset its approval. If the mitigation changes, the approver or an Admin can set the status back to Pending.',
+    },
+    {
+      type: 'heading',
+      id: 'approval-other-paths',
+      level: 3,
+      text: 'Bulk actions, import and the AI advisor',
+    },
+    {
+      type: 'bullet-list',
+      items: [
+        { bold: 'Bulk actions', text: 'Bulk actions on the risk list do not change a risk\'s approval.' },
+        { bold: 'Risk import', text: 'The Approval Status column takes the four values above. A row without an approver gets Not required. A row with an approver gets Pending, unless an Admin imports it with Approved or Rejected. Approvers named in an import are not notified.' },
+        { bold: 'AI advisor', text: 'The advisor follows the same rules. It tells you when you cannot make the approval decision you asked for.' },
+      ],
+    },
+    {
+      type: 'paragraph',
+      text: 'Risks created before these rules kept Approved, Rejected and Not required. Pending and Requires review became Pending when the risk had an approver, or Not required when it had none. Other values, such as In Progress, became Not required.',
     },
     {
       type: 'heading',

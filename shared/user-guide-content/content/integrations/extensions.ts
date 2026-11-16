@@ -296,6 +296,10 @@ export const extensionsContent: ArticleContent = {
       text: 'Columns marked with * in the template are required: Risk Name, Risk Owner, AI Lifecycle Phase, Risk Description, Likelihood and Severity. The import is all or nothing. If any row has a problem, such as a missing required value, a value that is not in the allowed list or a date that is not valid, nothing is imported and the dialog lists the error for every row. Fix the file and upload it again. A file can have up to 5,000 rows. The template keeps the list of users for the owner and approval dropdowns on a hidden sheet, so you do not need to touch it. Admins and Editors can import risks.',
     },
     {
+      type: 'paragraph',
+      text: 'The Approval Status column takes Pending, Approved, Rejected or Not required. A row without an approver gets Not required. A row with an approver gets Pending, unless an Admin imports it with Approved or Rejected. Any other value in this column is treated the same way and does not fail the row. Approvers named in an import are not notified.',
+    },
+    {
       type: 'heading',
       id: 'jira-assets',
       level: 3,
