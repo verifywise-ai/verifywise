@@ -331,6 +331,37 @@ describe("Risk save correctness", () => {
       expect(undo.status).toBe(403);
     });
 
+    it("refuses naming yourself approver and approving in one save", async () => {
+      const editor = await buildTenantContext(3);
+
+      const create = await editor.request.post("/api/projectRisks").send(
+        riskPayload(editor.userId, {
+          risk_approval: editor.userId,
+          approval_status: "Approved",
+        }),
+      );
+      expect(create.status).toBe(403);
+
+      const riskId = await createRisk(editor);
+      const selfApprove = await editor.request
+        .put(`/api/projectRisks/${riskId}`)
+        .send({ risk_approval: editor.userId, approval_status: "Approved" });
+      expect(selfApprove.status).toBe(403);
+      expect((await readRisk(riskId)).approval_status).toBe("Not required");
+
+      // Named in one save, the approver decides in the next.
+      const name = await editor.request
+        .put(`/api/projectRisks/${riskId}`)
+        .send({ risk_approval: editor.userId });
+      expect(name.status).toBe(200);
+      expect((await readRisk(riskId)).approval_status).toBe("Pending");
+      const approve = await editor.request
+        .put(`/api/projectRisks/${riskId}`)
+        .send({ approval_status: "Approved" });
+      expect(approve.status).toBe(200);
+      expect((await readRisk(riskId)).approval_status).toBe("Approved");
+    });
+
     it("lets an Admin reject", async () => {
       const admin = await buildTenantContext(1);
       const approver = await memberOf(admin, 3, "approver");

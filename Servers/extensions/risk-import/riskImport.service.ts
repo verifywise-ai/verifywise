@@ -16,6 +16,13 @@ import { isInvalidDateCell, riskCalendarDateFromCell } from "../../utils/riskCal
 import logger from "../../utils/logger/fileLogger";
 import { translate } from "../../utils/i18n.utils";
 import { MAX_IMPORT_ROWS } from "../importLimits";
+import {
+  isRiskApprovalDecision,
+  normalizeRiskApprovalStatus,
+  RISK_APPROVAL_NOT_REQUIRED,
+  RISK_APPROVAL_PENDING,
+  RISK_APPROVAL_STATUSES,
+} from "../../domain.layer/enums/risk-approval-status.enum";
 
 /**
  * Server-side risk-import extension logic. Two entry points:
@@ -213,6 +220,7 @@ export async function buildExcelTemplate(
   addDropdown(8, SEVERITY_VALUES);
   addDropdown(10, MITIGATION_STATUS_VALUES);
   addDropdown(11, CURRENT_RISK_LEVEL_VALUES);
+  addDropdown(19, RISK_APPROVAL_STATUSES);
   addDropdown(15, LIKELIHOOD_VALUES);
   addDropdown(16, RISK_SEVERITY_VALUES);
   addDateValidation(12); // deadline
@@ -391,7 +399,21 @@ function validateRow(row: RiskImportRow, rowIndex: number): RiskImportError[] {
   return errors;
 }
 
-export function parseRow(row: RiskImportRow): Record<string, unknown> {
+/**
+ * A row's approval status (decision 5): Not required without an approver,
+ * otherwise Pending. Approved or Rejected from the file is kept only when the
+ * importing user is an Admin.
+ */
+function importedApprovalStatus(row: RiskImportRow, callerIsAdmin: boolean): string {
+  if (parseUserId(row.risk_approval) === null) return RISK_APPROVAL_NOT_REQUIRED;
+  const status = normalizeRiskApprovalStatus(row.approval_status);
+  return status && isRiskApprovalDecision(status) && callerIsAdmin ? status : RISK_APPROVAL_PENDING;
+}
+
+export function parseRow(
+  row: RiskImportRow,
+  { callerIsAdmin = false }: { callerIsAdmin?: boolean } = {},
+): Record<string, unknown> {
   const riskCategory = row.risk_category
     ? row.risk_category
         .split(",")
@@ -423,7 +445,7 @@ export function parseRow(row: RiskImportRow): Record<string, unknown> {
     // Derived like the inherent level; the sheet value is ignored.
     final_risk_level: calculateRiskLevel(likelihoodMitigation, row.risk_severity ?? null),
     risk_approval: parseUserId(row.risk_approval),
-    approval_status: row.approval_status ?? null,
+    approval_status: importedApprovalStatus(row, callerIsAdmin),
     // An empty cell stays empty: the import time is not an assessment date.
     date_of_assessment: row.date_of_assessment
       ? riskCalendarDateFromCell(row.date_of_assessment)
@@ -458,6 +480,7 @@ export function rowInsertError(row: number, err: unknown): RiskImportError {
 export async function importRisks(
   rows: RiskImportRow[],
   organizationId: number,
+  options: { callerIsAdmin?: boolean } = {},
 ): Promise<RiskImportResult> {
   if (rows.length > MAX_IMPORT_ROWS) {
     return {
@@ -517,7 +540,7 @@ export async function importRisks(
 
   try {
     for (let i = 0; i < rows.length; i++) {
-      const data = parseRow(rows[i]);
+      const data = parseRow(rows[i], options);
       const rowIndex = i + 2;
       // A failed statement aborts the whole transaction; rolling back to the
       // row's savepoint keeps it usable, so the later rows still report

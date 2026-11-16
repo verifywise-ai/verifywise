@@ -48,17 +48,10 @@ import { translateError } from "../utils/i18n.utils";
 import { IRisk } from "../domain.layer/interfaces/I.risk";
 import { BulkRiskChange } from "../utils/automation/risk.automation.utils";
 import { callerCanDecideAnyRisk, RiskApprovalForbiddenError } from "../utils/riskApproval.utils";
-// Helper function to get user name
-async function getUserNameById(userId: number): Promise<string> {
-  const result = await sequelize.query<{ name: string; surname: string }>(
-    `SELECT name, surname FROM users WHERE id = :userId`,
-    { replacements: { userId }, type: QueryTypes.SELECT },
-  );
-  if (result[0]) {
-    return `${result[0].name} ${result[0].surname}`.trim();
-  }
-  return "Someone";
-}
+import {
+  getUserNameById,
+  notifyNewRiskApprover,
+} from "../services/riskApproverNotification.service";
 
 type AssignedRisk = Pick<IRisk, "id" | "risk_owner" | "risk_name" | "risk_description">;
 
@@ -148,40 +141,6 @@ async function notifyNewRiskOwners(
       logger.error("Failed to send risk owner notification:", err);
     }
   }
-}
-
-/**
- * Tell a risk's newly named approver they were assigned (ruling K5). Not sent
- * when the caller named themselves. Run it after commit and do not await it:
- * a failed notification must not fail the save.
- */
-async function notifyNewRiskApprover(
-  organizationId: number,
-  assignerUserId: number,
-  risk: AssignedRisk & { risk_approval?: number | null },
-): Promise<void> {
-  const approverId = risk.risk_approval;
-  if (!approverId || approverId === assignerUserId) return;
-  const baseUrl = process.env.FRONTEND_URL || "http://localhost:3000";
-  const assignerName = await getUserNameById(assignerUserId);
-  const projectTitles = await getProjectTitlesByRiskIdsQuery([risk.id!], organizationId);
-  await notifyUserAssigned(
-    organizationId,
-    approverId,
-    {
-      entityType: "project_risk",
-      entityId: risk.id!,
-      entityName: risk.risk_name,
-      roleType: "Risk Approver",
-      entityUrl: `/risk-management?riskId=${risk.id}`,
-    },
-    assignerName,
-    baseUrl,
-    {
-      projectName: projectTitles.get(risk.id!),
-      description: risk.risk_description,
-    },
-  );
 }
 
 /** Whether the signed-in user may decide any risk's approval (an Admin). */

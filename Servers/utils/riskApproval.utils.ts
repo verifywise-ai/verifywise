@@ -2,8 +2,11 @@
  * Who may decide a risk's approval, and what its approval status becomes on a
  * save (audit decision 5, rulings K2-K4).
  *
- * - Naming an approver sets the status to Pending, unless the caller is that
- *   approver or an Admin and asks for Approved or Rejected in the same save.
+ * - Naming an approver sets the status to Pending. Only an Admin may name an
+ *   approver and set Approved or Rejected in the same save; anyone else,
+ *   including the newly named approver, gets a 403 for asking. The new
+ *   approver decides in a later save, so nobody can name themself and approve
+ *   in one step.
  * - Clearing the approver sets Not required. A risk with no approver is always
  *   Not required: an approval needs an approver.
  * - Setting Approved or Rejected, or moving away from either, needs the
@@ -80,8 +83,9 @@ export function resolveRiskApproval({
   let status: RiskApprovalStatus;
   if (approverChanged) {
     // K4: a new approver resets the status; the reset needs no permission.
+    // Deciding in the same save is for an Admin only, not the new approver.
     if (statusChangeRequested && isRiskApprovalDecision(requested!)) {
-      if (!callerDecides) throw new RiskApprovalForbiddenError();
+      if (!callerIsAdmin) throw new RiskApprovalForbiddenError();
       status = requested!;
     } else {
       status = RISK_APPROVAL_PENDING;

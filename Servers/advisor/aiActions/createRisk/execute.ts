@@ -26,6 +26,7 @@ import { QueryTypes } from "sequelize";
 import { sequelize } from "../../../database/db";
 import { createRiskService } from "../../../services/risk.service";
 import { callerCanDecideAnyRisk } from "../../../utils/riskApproval.utils";
+import { notifyNewRiskApprover } from "../../../services/riskApproverNotification.service";
 import { riskViewerForUserQuery } from "../../../utils/riskVisibility.utils";
 import { enqueueRiskLinkRecompute } from "../../../services/automations/automationProducer";
 import { createNewTaskQuery } from "../../../utils/task.utils";
@@ -148,7 +149,7 @@ export async function executeCreateRisk(
       deadline: new Date(input.deadline),
       risk_approval: input.approver,
       approval_status: input.approval_status,
-      date_of_assessment: new Date(input.date_of_assessment),
+      date_of_assessment: input.date_of_assessment ? new Date(input.date_of_assessment) : undefined,
     },
     {
       userId: ctx.requesterId,
@@ -177,6 +178,15 @@ export async function executeCreateRisk(
       console.error("Failed to enqueue risk link recompute:", err),
     );
   });
+
+  // Tell a named approver once the risk is committed, as the REST create does.
+  if (newRisk.risk_approval) {
+    ctx.transaction.afterCommit(() => {
+      void notifyNewRiskApprover(ctx.organizationId, ctx.requesterId, newRisk).catch((err) =>
+        logger.error("Failed to send risk approver notification:", err),
+      );
+    });
+  }
 
   // ═══════════════════════════════════════════════════════
   // 2. Auto-create a review task for the risk owner

@@ -12,11 +12,19 @@
  *     `computeRiskLevelUpdates` merge the new values with the stored ones.
  *   - ISO date strings need to be converted to `Date` objects before
  *     hitting Sequelize, same as in the create executor.
+ *   - Approver and approval status go through `resolveRiskApproval`, the
+ *     same rule as a REST save, with the requester as the caller: only the
+ *     approver or an Admin decides, and a new approver resets to Pending and
+ *     is notified after commit. A refused decision throws, which rolls the
+ *     approval back and shows the message to whoever approved the action.
  */
 
 import { updateRiskByIdQuery, getRiskByIdQuery } from "../../../utils/risk.utils";
 import { riskViewerForUserQuery } from "../../../utils/riskVisibility.utils";
 import { computeRiskLevelUpdates, normalizeCurrentRiskLevel } from "../../../utils/riskLevel.utils";
+import { callerCanDecideAnyRisk, resolveRiskApproval } from "../../../utils/riskApproval.utils";
+import { notifyNewRiskApprover } from "../../../services/riskApproverNotification.service";
+import logger from "../../../utils/logger/fileLogger";
 import type { AiActionExecuteContext, AiActionExecuteResult } from "../types";
 import type { AgentUpdateRiskInput } from "./schema";
 
@@ -57,8 +65,21 @@ export async function executeUpdateRisk(
   if (input.implementation_strategy !== undefined)
     partial.implementation_strategy = input.implementation_strategy;
   if (input.deadline !== undefined) partial.deadline = new Date(input.deadline);
-  if (input.approver !== undefined) partial.risk_approval = input.approver;
-  if (input.approval_status !== undefined) partial.approval_status = input.approval_status;
+  let approverChangedTo: number | null = null;
+  if (input.approver !== undefined || input.approval_status !== undefined) {
+    const approval = resolveRiskApproval({
+      existing: {
+        risk_approval: current.risk_approval ?? null,
+        approval_status: current.approval_status ?? null,
+      },
+      submitted: { risk_approval: input.approver, approval_status: input.approval_status },
+      callerId: ctx.requesterId,
+      callerIsAdmin: await callerCanDecideAnyRisk(ctx.organizationId, viewer.role),
+    });
+    partial.risk_approval = approval.risk_approval;
+    partial.approval_status = approval.approval_status;
+    approverChangedTo = approval.approverChangedTo;
+  }
   if (input.date_of_assessment !== undefined)
     partial.date_of_assessment = new Date(input.date_of_assessment);
 
@@ -87,6 +108,15 @@ export async function executeUpdateRisk(
     throw new Error(
       `updateRiskByIdQuery returned no row for risk #${input.risk_id} — refusing to record an empty execution result.`,
     );
+  }
+
+  // Tell a newly named approver once the update is committed.
+  if (approverChangedTo !== null) {
+    ctx.transaction.afterCommit(() => {
+      void notifyNewRiskApprover(ctx.organizationId, ctx.requesterId, updated).catch((err) =>
+        logger.error("Failed to send risk approver notification:", err),
+      );
+    });
   }
 
   return { entityId: updated.id };

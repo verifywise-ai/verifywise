@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import { STATUS_CODE } from "../../utils/statusCode.utils";
 import logger, { logStructured } from "../../utils/logger/fileLogger";
 import { translateError } from "../../utils/i18n.utils";
+import { callerCanDecideAnyRisk } from "../../utils/riskApproval.utils";
 import {
   buildExcelTemplate,
   importRisks,
@@ -60,7 +61,9 @@ export async function bulkImportRisks(req: Request, res: Response): Promise<any>
   }
 
   try {
-    const result = await importRisks(csvData, organizationId);
+    const result = await importRisks(csvData, organizationId, {
+      callerIsAdmin: await callerCanDecideAnyRisk(organizationId, req.role ?? ""),
+    });
     // Validation-only failure = 400 (client error). Insert failures during a
     // partially-successful batch also come back with success=false and are
     // returned as 400 for the client to display per-row errors.

@@ -1,3 +1,4 @@
+import { RISK_APPROVAL_NOT_REQUIRED } from "../domain.layer/enums/risk-approval-status.enum";
 import { RiskModel } from "../domain.layer/models/risks/risk.model";
 import { getEffectiveRiskLevel } from "./riskLevel.utils";
 import { sequelize } from "../database/db";
@@ -776,7 +777,9 @@ export const createRiskQuery = async (
         risk_severity: projectRisk.risk_severity,
         final_risk_level: projectRisk.final_risk_level,
         risk_approval: projectRisk.risk_approval,
-        approval_status: projectRisk.approval_status,
+        // An omitted value would bind NULL, which the column refuses; store
+        // the column default instead.
+        approval_status: projectRisk.approval_status ?? RISK_APPROVAL_NOT_REQUIRED,
         date_of_assessment: toRiskCalendarDate(projectRisk.date_of_assessment ?? null),
         is_demo: projectRisk.is_demo || false,
         event_frequency_min: projectRisk.event_frequency_min ?? null,
