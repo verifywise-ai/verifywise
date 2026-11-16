@@ -14,6 +14,7 @@ jest.mock("../useCaseChangeHistory.utils", () => ({
 jest.mock("../risk.utils", () => ({
   getRisksLinkedOnlyToProjectQuery: jest.fn(),
   archiveRisksInBulkQuery: jest.fn(),
+  lockRiskLinksOfProjectQuery: jest.fn(),
 }));
 
 import { deleteProjectWithSideEffects } from "../projectDeletion.utils";
@@ -23,7 +24,11 @@ import {
   withdrawApprovalRequestQuery,
 } from "../approvalRequest.utils";
 import { recordUseCaseDeletion } from "../useCaseChangeHistory.utils";
-import { archiveRisksInBulkQuery, getRisksLinkedOnlyToProjectQuery } from "../risk.utils";
+import {
+  archiveRisksInBulkQuery,
+  getRisksLinkedOnlyToProjectQuery,
+  lockRiskLinksOfProjectQuery,
+} from "../risk.utils";
 
 const lock = lockProjectForDelete as unknown as jest.Mock<(...a: any[]) => Promise<any>>;
 const del = deleteProjectByIdQuery as unknown as jest.Mock<(...a: any[]) => Promise<any>>;
@@ -38,6 +43,9 @@ const linkedOnly = getRisksLinkedOnlyToProjectQuery as unknown as jest.Mock<
   (...a: any[]) => Promise<any>
 >;
 const bulkArchive = archiveRisksInBulkQuery as unknown as jest.Mock<(...a: any[]) => Promise<any>>;
+const lockLinks = lockRiskLinksOfProjectQuery as unknown as jest.Mock<
+  (...a: any[]) => Promise<any>
+>;
 const tx = { id: "tx" } as any;
 
 beforeEach(() => {
@@ -52,6 +60,7 @@ beforeEach(() => {
     { id: 4, risk_name: "Drift" },
   ]);
   bulkArchive.mockResolvedValue([{ id: 3 }, { id: 4 }]);
+  lockLinks.mockResolvedValue(undefined);
 });
 
 const order = (m: jest.Mock) => m.mock.invocationCallOrder[0];
@@ -64,6 +73,7 @@ describe("deleteProjectWithSideEffects", () => {
     // No archive unless asked.
     expect(linkedOnly).not.toHaveBeenCalled();
     expect(bulkArchive).not.toHaveBeenCalled();
+    expect(lockLinks).not.toHaveBeenCalled();
     expect(lock).toHaveBeenCalledWith(111, 5, tx);
     expect(withdraw).toHaveBeenCalledWith(900, 5, tx, { releaseUseCase: false });
     expect(record).toHaveBeenCalledWith(111, 8, 5, tx);
@@ -129,7 +139,10 @@ describe("deleteProjectWithSideEffects", () => {
     // Read in the delete's transaction, so it is the set at the moment of the delete.
     expect(linkedOnly).toHaveBeenCalledWith(111, 5, tx);
     expect(bulkArchive).toHaveBeenCalledWith([3, 4], 5, 8, tx);
-    expect(order(lock)).toBeLessThan(order(linkedOnly));
+    // Every link of every risk linked here is locked before the set is read.
+    expect(lockLinks).toHaveBeenCalledWith(111, 5, tx);
+    expect(order(lock)).toBeLessThan(order(lockLinks));
+    expect(order(lockLinks)).toBeLessThan(order(linkedOnly));
     expect(order(bulkArchive)).toBeLessThan(order(del));
   });
 
@@ -159,6 +172,7 @@ describe("deleteProjectWithSideEffects", () => {
 
     await deleteProjectWithSideEffects(111, 5, tx, { archiveRisksLinkedOnlyHere: true });
 
+    expect(lockLinks).not.toHaveBeenCalled();
     expect(linkedOnly).not.toHaveBeenCalled();
     expect(bulkArchive).not.toHaveBeenCalled();
   });

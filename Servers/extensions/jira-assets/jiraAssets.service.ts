@@ -942,7 +942,8 @@ type LinkRow = { id: number; project_id: number | null; missing_in_jira_since: D
  *
  * Lock order: a project row before anything that references it. Every path
  * deletes a project through deleteProjectWithSideEffects (lock, approval
- * withdrawal, change history, delete — in that order); the core "Delete use
+ * withdrawal, change history, archive of the risks linked only to it, delete,
+ * in that order); the core "Delete use
  * case" lets it take the lock as the first statement of its transaction, and
  * this flow takes the project locks itself before any link row and passes
  * alreadyLocked. Every path takes the project lock first.
@@ -1124,11 +1125,18 @@ async function deleteUseCasesUnderClaim(
             }
           }
           // Same order as the core delete; the project is already locked.
+          // The risks linked only to this use case are archived (recorded as
+          // the Admin who asked), so they stay private once unlinked.
           const { deleted } = await deleteProjectWithSideEffects(
             projectId,
             organizationId,
             transaction,
-            { userId, alreadyLocked: true, enqueueAutomationAfterCommit: true },
+            {
+              userId,
+              alreadyLocked: true,
+              enqueueAutomationAfterCommit: true,
+              archiveRisksLinkedOnlyHere: true,
+            },
           );
           if (!deleted) {
             throw await deleteFailedError(linkIds[0], projectId, organizationId, transaction);

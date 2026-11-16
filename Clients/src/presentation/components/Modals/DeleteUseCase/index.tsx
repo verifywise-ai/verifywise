@@ -16,6 +16,8 @@ type RiskChoice = "archive" | "keep";
 
 interface DeleteUseCaseModalProps {
   projectId: number;
+  /** Defaults to "Delete this use case?". */
+  title?: string;
   /** The dialog's usual text, shown in every state. */
   message: string;
   proceedText: string;
@@ -38,9 +40,16 @@ interface DeleteUseCaseModalProps {
  * archives them in the delete's transaction, so a failure changes nothing and
  * the dialog stays open with an error. While it runs the dialog cannot be
  * closed. When there are no such risks it is the plain confirmation.
+ *
+ * The archive flag does not depend on the count read when the dialog opened:
+ * with risks.edit and "archive" chosen (the default, and the only state when
+ * the count was 0) it is always sent, and the server archives whatever set it
+ * finds at that moment, which may be empty. When the count could not be read,
+ * the choice is still offered next to a neutral warning.
  */
 function DeleteUseCaseModal({
   projectId,
+  title = "Delete this use case?",
   message,
   proceedText,
   onDeleted,
@@ -58,8 +67,10 @@ function DeleteUseCaseModal({
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const count = data?.count ?? 0;
-  const willArchive = count > 0 && canArchive && choice === "archive";
-  const plural = (one: string, other: string) => t(pluralKey(lang, count, one, other));
+  const willArchive = canArchive && choice === "archive";
+  // An unknown count (the request failed) reads as plural ("these risks").
+  const pluralCount = data ? count : 2;
+  const plural = (one: string, other: string) => t(pluralKey(lang, pluralCount, one, other));
 
   const handleProceed = async () => {
     if (isWorking) return;
@@ -92,6 +103,34 @@ function DeleteUseCaseModal({
 
   const bodyText = { fontSize: fontSize.base, color: text.primary };
 
+  // Offered when there are risks to archive, and when the count is unknown.
+  const riskChoice = (
+    <Stack role="radiogroup" sx={{ gap: "8px" }}>
+      <Radio
+        id="delete-use-case-archive-risks"
+        name="delete-use-case-risks"
+        value="archive"
+        size="small"
+        checked={choice === "archive"}
+        onChange={() => setChoice("archive")}
+        title={plural("Archive this risk", "Archive these risks")}
+        testId="radio-delete-use-case-archive-risks"
+        disabled={isWorking}
+      />
+      <Radio
+        id="delete-use-case-keep-risks"
+        name="delete-use-case-risks"
+        value="keep"
+        size="small"
+        checked={choice === "keep"}
+        onChange={() => setChoice("keep")}
+        title={plural("Keep it visible to everyone", "Keep them visible to everyone")}
+        testId="radio-delete-use-case-keep-risks"
+        disabled={isWorking}
+      />
+    </Stack>
+  );
+
   const body = (
     <Stack sx={{ gap: "12px" }} data-testid="delete-use-case-modal">
       <Typography sx={bodyText}>{message}</Typography>
@@ -105,6 +144,8 @@ function DeleteUseCaseModal({
           Risks linked only to this use case may become visible to everyone in the organization.
         </Typography>
       )}
+
+      {isError && canArchive && riskChoice}
 
       {count > 0 && data && (
         <Stack sx={{ gap: "12px" }}>
@@ -129,30 +170,7 @@ function DeleteUseCaseModal({
           </Box>
 
           {canArchive ? (
-            <Stack role="radiogroup" sx={{ gap: "8px" }}>
-              <Radio
-                id="delete-use-case-archive-risks"
-                name="delete-use-case-risks"
-                value="archive"
-                size="small"
-                checked={choice === "archive"}
-                onChange={() => setChoice("archive")}
-                title={plural("Archive this risk", "Archive these risks")}
-                testId="radio-delete-use-case-archive-risks"
-                disabled={isWorking}
-              />
-              <Radio
-                id="delete-use-case-keep-risks"
-                name="delete-use-case-risks"
-                value="keep"
-                size="small"
-                checked={choice === "keep"}
-                onChange={() => setChoice("keep")}
-                title={plural("Keep it visible to everyone", "Keep them visible to everyone")}
-                testId="radio-delete-use-case-keep-risks"
-                disabled={isWorking}
-              />
-            </Stack>
+            riskChoice
           ) : (
             <Typography sx={bodyText}>Your role does not allow archiving risks.</Typography>
           )}
@@ -228,7 +246,7 @@ function DeleteUseCaseModal({
 
   return (
     <ConfirmationModal
-      title="Delete this use case?"
+      title={title}
       body={body}
       cancelText="Cancel"
       proceedText={proceedText}

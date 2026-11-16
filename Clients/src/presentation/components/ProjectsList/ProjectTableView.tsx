@@ -719,7 +719,7 @@ const ProjectTableView: React.FC<IProjectTableViewProps> = ({
       {projectIdToDelete !== null && (
         <DeleteUseCaseModal
           projectId={projectIdToDelete}
-          message="Note that deleting a use case will remove all data related to that use case from your system. This is permanent and non-recoverable."
+          message="This deletes the use case, its framework progress and its files. Its risks stay in the risk register but are no longer linked to it. This cannot be undone."
           proceedText="Delete use case"
           onCancel={() => setProjectIdToDelete(null)}
           onDeleted={() => handleProjectDeleted(projectIdToDelete)}

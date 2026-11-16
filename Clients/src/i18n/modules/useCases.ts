@@ -750,8 +750,6 @@ export const de: Record<string, string> = {
   "People could not be loaded.": "Die Personen konnten nicht geladen werden.",
   "No people found.": "Keine Personen gefunden.",
   "Checking linked risks...": "Verknüpfte Risiken werden geprüft...",
-  "Note that deleting a use case will remove all data related to that use case from your system. This is permanent and non-recoverable.":
-    "Beim Löschen eines Anwendungsfalls werden alle zugehörigen Daten aus Ihrem System entfernt. Dies ist endgültig und kann nicht rückgängig gemacht werden.",
   "Risks linked only to this use case may become visible to everyone in the organization.":
     "Risiken, die nur mit diesem Anwendungsfall verknüpft sind, können für alle in der Organisation sichtbar werden.",
   "Your role does not allow archiving risks.":
@@ -1518,8 +1516,6 @@ export const fr: Record<string, string> = {
   "People could not be loaded.": "Les personnes n'ont pas pu être chargées.",
   "No people found.": "Aucune personne trouvée.",
   "Checking linked risks...": "Vérification des risques liés...",
-  "Note that deleting a use case will remove all data related to that use case from your system. This is permanent and non-recoverable.":
-    "La suppression d'un cas d'usage retire de votre système toutes les données qui s'y rapportent. Cette action est définitive et irréversible.",
   "Risks linked only to this use case may become visible to everyone in the organization.":
     "Les risques liés uniquement à ce cas d'usage peuvent devenir visibles par tous les membres de l'organisation.",
   "Your role does not allow archiving risks.": "Votre rôle ne permet pas d'archiver des risques.",
@@ -2282,8 +2278,6 @@ export const es: Record<string, string> = {
   "People could not be loaded.": "No se pudieron cargar las personas.",
   "No people found.": "No se encontraron personas.",
   "Checking linked risks...": "Comprobando los riesgos vinculados...",
-  "Note that deleting a use case will remove all data related to that use case from your system. This is permanent and non-recoverable.":
-    "Al eliminar un caso de uso se eliminan de su sistema todos los datos relacionados con él. Esta acción es permanente y no se puede deshacer.",
   "Risks linked only to this use case may become visible to everyone in the organization.":
     "Los riesgos vinculados solo a este caso de uso pueden quedar visibles para todos en la organización.",
   "Your role does not allow archiving risks.": "Su rol no permite archivar riesgos.",

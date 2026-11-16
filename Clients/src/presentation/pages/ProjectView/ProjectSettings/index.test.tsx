@@ -501,13 +501,16 @@ describe("ProjectSettings", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Delete use case" }));
     expect(screen.getByText("Delete this use case?")).toBeInTheDocument();
-    expect(screen.getByText(/This cannot be undone\./)).toBeInTheDocument();
+    expect(screen.getByTestId("delete-use-case-modal")).toHaveTextContent(
+      "Its risks stay in the risk register",
+    );
 
     await waitFor(() => expect(screen.getByRole("button", { name: "Delete" })).toBeEnabled());
     fireEvent.click(screen.getByRole("button", { name: "Delete" }));
 
     await waitFor(() => {
-      expect(mockDeleteUseCase).toHaveBeenCalledWith({ id: 5, archiveRisksLinkedOnlyHere: false });
+      // The server archives whatever is linked only here at that moment.
+      expect(mockDeleteUseCase).toHaveBeenCalledWith({ id: 5, archiveRisksLinkedOnlyHere: true });
     });
     await waitFor(() => {
       expect(mockNavigate).toHaveBeenCalledWith("/overview");

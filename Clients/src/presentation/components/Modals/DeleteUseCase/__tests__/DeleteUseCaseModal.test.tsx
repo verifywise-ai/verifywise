@@ -50,7 +50,7 @@ describe("DeleteUseCaseModal", () => {
     mockDeleteUseCase.mockResolvedValue({ deleted: true, archived_risk_ids: [] });
   });
 
-  it("is the plain confirmation when no risk is linked only to this use case", async () => {
+  it("is the plain confirmation when no risk is linked only to this use case, and still asks the server to archive", async () => {
     mockGetRisks.mockResolvedValue({ count: 0, risks: [] });
     const { onDeleted } = renderModal();
 
@@ -62,7 +62,9 @@ describe("DeleteUseCaseModal", () => {
     await userEvent.click(deleteButton());
     await waitFor(() => expect(onDeleted).toHaveBeenCalledTimes(1));
     expect(mockDeleteUseCase).toHaveBeenCalledTimes(1);
-    expect(mockDeleteUseCase).toHaveBeenCalledWith({ id: 7, archiveRisksLinkedOnlyHere: false });
+    // The server works the set out again; a risk that became linked only here
+    // after the dialog opened is archived too, and an empty set does nothing.
+    expect(mockDeleteUseCase).toHaveBeenCalledWith({ id: 7, archiveRisksLinkedOnlyHere: true });
     expect(mockGetRisks).toHaveBeenCalledWith(expect.objectContaining({ id: 7 }));
   });
 
@@ -150,18 +152,58 @@ describe("DeleteUseCaseModal", () => {
     await waitFor(() => expect(onDeleted).toHaveBeenCalledTimes(1));
   });
 
-  it("shows a neutral line and deletes without archiving when the count fails", async () => {
+  it("offers the choice next to a neutral line when the count fails, archive selected", async () => {
     mockGetRisks.mockRejectedValue(new Error("500"));
     const { onDeleted } = renderModal();
 
     expect(await screen.findByTestId("delete-use-case-risks-unknown")).toHaveTextContent(
       "Risks linked only to this use case may become visible to everyone in the organization.",
     );
+    expect(screen.getByTestId("radio-delete-use-case-archive-risks")).toBeChecked();
+    expect(screen.getByText("Archive these risks")).toBeInTheDocument();
+
+    await userEvent.click(deleteButton());
+    await waitFor(() => expect(onDeleted).toHaveBeenCalledTimes(1));
+    expect(mockDeleteUseCase).toHaveBeenCalledWith({ id: 7, archiveRisksLinkedOnlyHere: true });
+  });
+
+  it("lets the user keep the risks when the count fails", async () => {
+    mockGetRisks.mockRejectedValue(new Error("500"));
+    renderModal();
+
+    await userEvent.click(await screen.findByTestId("radio-delete-use-case-keep-risks"));
+    await userEvent.click(deleteButton());
+    await waitFor(() =>
+      expect(mockDeleteUseCase).toHaveBeenCalledWith({ id: 7, archiveRisksLinkedOnlyHere: false }),
+    );
+  });
+
+  it("shows only the neutral line when the count fails and the role cannot archive", async () => {
+    mockCan.mockReturnValue(false);
+    mockGetRisks.mockRejectedValue(new Error("500"));
+    const { onDeleted } = renderModal();
+
+    expect(await screen.findByTestId("delete-use-case-risks-unknown")).toBeInTheDocument();
     expect(screen.queryByRole("radio")).not.toBeInTheDocument();
 
     await userEvent.click(deleteButton());
     await waitFor(() => expect(onDeleted).toHaveBeenCalledTimes(1));
     expect(mockDeleteUseCase).toHaveBeenCalledWith({ id: 7, archiveRisksLinkedOnlyHere: false });
+  });
+
+  it("uses the caller's title", async () => {
+    mockGetRisks.mockResolvedValue({ count: 0, risks: [] });
+    renderWithProviders(
+      <DeleteUseCaseModal
+        projectId={7}
+        title="Confirm delete"
+        message="Body"
+        proceedText="Delete"
+        onDeleted={vi.fn()}
+        onCancel={vi.fn()}
+      />,
+    );
+    expect(await screen.findByText("Confirm delete")).toBeInTheDocument();
   });
 
   it("offers no archive to a role without risks.edit and keeps the warning", async () => {

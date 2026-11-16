@@ -47,11 +47,6 @@ export async function updateProject({ id, body }: { id: number; body: any }): Pr
   return response;
 }
 
-export async function deleteProject({ id }: { id: number }): Promise<any> {
-  const response = await apiServices.delete(`/projects/${id}`);
-  return response;
-}
-
 export interface DeleteUseCaseResult {
   deleted: boolean;
   /** The risks the delete archived (none unless archiving was asked for). */

@@ -2,7 +2,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { apiServices } from "../../../infrastructure/api/networkServices";
 import {
   createProject,
-  deleteProject,
   deleteUseCase,
   getAllProjects,
   getProjectById,
@@ -404,79 +403,6 @@ describe("project.repository", () => {
       vi.mocked(apiServices.patch).mockRejectedValue(error);
 
       await expect(updateProject({ id: 1, body: {} })).rejects.toEqual(error);
-    });
-  });
-
-  describe("deleteProject", () => {
-    it("should delete a project", async () => {
-      const response = { status: 204, data: null };
-      vi.mocked(apiServices.delete).mockResolvedValue(response as any);
-
-      const result = await deleteProject({ id: 1 });
-
-      expect(apiServices.delete).toHaveBeenCalledWith("/projects/1");
-      expect(result).toEqual(response);
-    });
-
-    it("should return response object on delete", async () => {
-      const response = { status: 200, data: { message: "Deleted" } };
-      vi.mocked(apiServices.delete).mockResolvedValue(response as any);
-
-      const result = await deleteProject({ id: 1 });
-
-      expect(result).toEqual(response);
-    });
-
-    it("should handle different project IDs on delete", async () => {
-      const response = { status: 204 };
-      vi.mocked(apiServices.delete).mockResolvedValue(response as any);
-
-      await deleteProject({ id: 25 });
-
-      expect(apiServices.delete).toHaveBeenCalledWith("/projects/25");
-    });
-
-    it("should handle project not found on delete", async () => {
-      const error = {
-        response: { status: 404, data: { message: "Project not found" } },
-        message: "Not Found",
-      };
-      vi.mocked(apiServices.delete).mockRejectedValue(error);
-
-      await expect(deleteProject({ id: 999 })).rejects.toEqual(error);
-    });
-
-    it("should handle 403 forbidden on delete", async () => {
-      const error = {
-        response: { status: 403, data: { message: "Forbidden" } },
-        message: "Forbidden",
-      };
-      vi.mocked(apiServices.delete).mockRejectedValue(error);
-
-      await expect(deleteProject({ id: 1 })).rejects.toEqual(error);
-    });
-
-    it("should handle 409 conflict on delete (project has dependencies)", async () => {
-      const error = {
-        response: {
-          status: 409,
-          data: { message: "Cannot delete, project has active assessments" },
-        },
-        message: "Conflict",
-      };
-      vi.mocked(apiServices.delete).mockRejectedValue(error);
-
-      await expect(deleteProject({ id: 1 })).rejects.toEqual(error);
-    });
-
-    it("should handle 500 server error on delete", async () => {
-      const error = {
-        response: { status: 500, data: { message: "Internal Server Error" } },
-        message: "Server Error",
-      };
-      vi.mocked(apiServices.delete).mockRejectedValue(error);
-
-      await expect(deleteProject({ id: 1 })).rejects.toEqual(error);
     });
   });
 

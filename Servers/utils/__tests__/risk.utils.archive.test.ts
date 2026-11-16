@@ -27,6 +27,7 @@ import {
   archiveRiskQuery,
   archiveRisksInBulkQuery,
   getRisksLinkedOnlyToProjectQuery,
+  lockRiskLinksOfProjectQuery,
   createRiskQuery,
   deleteRiskByIdQuery,
   enqueueBulkRiskAutomation,
@@ -209,10 +210,37 @@ describe("getRisksLinkedOnlyToProjectQuery", () => {
     const [sql, opts] = mockQuery.mock.calls[0];
     expect(opts).toEqual(expect.objectContaining({ transaction: TX }));
     expect(opts.replacements).toEqual({ projectId: 7, organizationId: 4 });
-    expect(String(sql)).toContain("LEFT JOIN risks r");
+    // Driven from this use case's links, under a LEFT JOIN from the use case.
+    expect(String(sql)).toContain("FROM projects_risks pr");
+    expect(String(sql)).toContain("WHERE pr.project_id = :projectId");
+    expect(String(sql)).toContain(") only_here ON true");
     expect(String(sql)).toContain("r.is_deleted = false");
-    expect(String(sql)).toContain("other.project_id <> p.id");
+    expect(String(sql)).toContain("other.project_id <> pr.project_id");
     expect(String(sql)).not.toContain("IS DISTINCT FROM");
+  });
+});
+
+describe("lockRiskLinksOfProjectQuery", () => {
+  it("locks the risks linked here, then every link of them, in key order", async () => {
+    mockQuery.mockResolvedValue([]);
+
+    await lockRiskLinksOfProjectQuery(7, 4, TX);
+
+    expect(mockQuery).toHaveBeenCalledTimes(2);
+    const [[risksSql, risksOpts], [linksSql, linksOpts]] = mockQuery.mock.calls;
+    expect(String(risksSql)).toMatch(/FROM risks r[\s\S]*ORDER BY r\.id\s+FOR UPDATE/);
+    expect(risksOpts).toEqual(
+      expect.objectContaining({
+        transaction: TX,
+        replacements: { projectId: 7, organizationId: 4 },
+      }),
+    );
+    // All links of those risks, not only this use case's.
+    expect(String(linksSql)).toContain(
+      "WHERE pr.risk_id IN (SELECT risk_id FROM projects_risks WHERE project_id = :projectId)",
+    );
+    expect(String(linksSql)).toMatch(/ORDER BY pr\.risk_id, pr\.project_id\s+FOR UPDATE/);
+    expect(linksOpts).toEqual(expect.objectContaining({ transaction: TX }));
   });
 });
 

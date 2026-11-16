@@ -188,7 +188,7 @@ export const toolsDefinition: any[] = [
     function: {
       name: "agent_delete_use_case",
       description:
-        "Permanently delete a use case (project) and all associated data. Risks linked only to this use case are archived (not deleted) so they stay private; risks also linked to another use case are kept. This action is irreversible. Requires human confirmation before execution.",
+        "Permanently delete a use case (project) and all associated data. Risks linked only to this use case are archived (not deleted) so they stay private; risks also linked to another use case are kept. The user needs permission to archive risks, otherwise nothing is deleted. This action is irreversible. Requires human confirmation before execution.",
       parameters: {
         type: "object",
         properties: {
