@@ -7,10 +7,9 @@ import {
   getDeliverableSlackWebhooksQuery,
 } from "../../utils/slackWebhook.utils";
 import { isExtensionEnabledForOrganization } from "../../middleware/requireExtensionEnabled.middleware";
-import { SlackNotificationRoutingType } from "../../domain.layer/enums/slack.enum";
+import { isSlackRoutingType } from "../../domain.layer/enums/slack.enum";
 
 const SLACK_EXTENSION_KEY = "slack";
-const ROUTING_TYPES = new Set<string>(Object.values(SlackNotificationRoutingType));
 
 export const inviteBotToChannel = async (
   accessToken: string,
@@ -106,7 +105,7 @@ export const sendSlackNotification = async (
     }
     // Only the types a connection can be routed for. Anything else never
     // matched a connection the UI can create, so it stays undelivered.
-    if (!ROUTING_TYPES.has(routingType)) {
+    if (!isSlackRoutingType(routingType)) {
       logger.debug(`Slack notification skipped: unknown routing type "${routingType}"`);
       return NOT_SENT;
     }

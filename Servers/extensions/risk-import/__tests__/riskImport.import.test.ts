@@ -21,12 +21,19 @@ jest.mock("../../../utils/logger/fileLogger", () => ({
     info: jest.fn(),
     warn: jest.fn(),
   },
+  logStructuredError: (...args: unknown[]) => mockLogError(...args),
 }));
 jest.mock("../../../utils/changeHistory.base.utils", () => ({
   recordEntityCreation: (...args: unknown[]) => mockRecordCreation(...args),
 }));
 
-import { buildExcelTemplate, importRisks, RiskImportRow } from "../riskImport.service";
+import {
+  buildExcelTemplate,
+  importRisks,
+  RISK_IMPORT_MESSAGES,
+  RiskImportRow,
+} from "../riskImport.service";
+import { MAX_IMPORT_ROWS } from "../../importLimits";
 
 // The /api/v1 contract; the legacy rules are covered in the "legacy" block.
 const strictImport = (rows: RiskImportRow[], org: number, user: number) =>
@@ -210,7 +217,8 @@ describe("importRisks", () => {
         {
           row: 2,
           field: "general",
-          message: "This row could not be saved. Check its values and try again.",
+          message: RISK_IMPORT_MESSAGES.rowNotSaved,
+          messageKey: RISK_IMPORT_MESSAGES.rowNotSaved,
         },
       ]);
       expect(JSON.stringify(result)).not.toContain("value too long");
@@ -218,9 +226,9 @@ describe("importRisks", () => {
       // Rows 2 and 3 were attempted after the failure instead of tripping on an aborted transaction.
       expect(inserts).toBe(3);
       const sqls = mockQuery.mock.calls.map((c) => sqlOf(c));
-      expect(sqls).toContain("ROLLBACK TO SAVEPOINT risk_import_row_0");
-      expect(sqls).toContain("RELEASE SAVEPOINT risk_import_row_1");
-      expect(sqls).toContain("RELEASE SAVEPOINT risk_import_row_2");
+      expect(sqls.filter((q) => q === "SAVEPOINT risk_import_row;")).toHaveLength(3);
+      expect(sqls.filter((q) => q === "ROLLBACK TO SAVEPOINT risk_import_row;")).toHaveLength(1);
+      expect(sqls.filter((q) => q === "RELEASE SAVEPOINT risk_import_row;")).toHaveLength(2);
       expect(mockTransaction.rollback).toHaveBeenCalledTimes(1);
       expect(mockTransaction.commit).not.toHaveBeenCalled();
     });
@@ -343,6 +351,46 @@ describe("importRisks", () => {
     });
   });
 
+  describe("message keys", () => {
+    it("carries the en.json key and its params on a validation error", async () => {
+      const result = await strictImport([validRow({ likelihood: "x" })], 1, 5);
+      expect(result.errors[0]).toMatchObject({
+        field: "likelihood",
+        messageKey: RISK_IMPORT_MESSAGES.likelihoodInvalid,
+        params: { values: expect.stringContaining("Possible") },
+      });
+    });
+
+    it("carries the duplicate-in-file key with the first row", async () => {
+      const result = await strictImport([validRow(), validRow()], 1, 5);
+      expect(result.errors[0]).toMatchObject({
+        row: 3,
+        messageKey: RISK_IMPORT_MESSAGES.duplicateInFile,
+        params: { name: "Model drift", row: 2 },
+      });
+    });
+  });
+
+  describe("row cap", () => {
+    it.each([
+      ["strict", strictImport],
+      ["legacy", legacyImport],
+    ])("%s: refuses more than the cap before validating or writing anything", async (_, run) => {
+      const rows = Array.from({ length: MAX_IMPORT_ROWS + 1 }, () => ({}));
+      const result = await run(rows, 1, 5);
+      expect(result).toMatchObject({ success: false, imported: 0, failed: MAX_IMPORT_ROWS + 1 });
+      expect(result.errors).toEqual([
+        expect.objectContaining({
+          row: 0,
+          field: "file",
+          messageKey: RISK_IMPORT_MESSAGES.tooManyRows,
+        }),
+      ]);
+      expect(mockNotInOrg).not.toHaveBeenCalled();
+      expect(mockQuery).not.toHaveBeenCalled();
+    });
+  });
+
   describe("legacy (strict: false)", () => {
     it("takes no advisory lock, since it checks no existing names", async () => {
       await legacyImport([{ risk_name: "A", risk_owner: 7, risk_description: "d" }], 1, 5);
@@ -361,9 +409,7 @@ describe("importRisks", () => {
         1,
         5,
       );
-      expect(result.errors[0].message).toBe(
-        "This row could not be saved. Check its values and try again.",
-      );
+      expect(result.errors[0].message).toBe(RISK_IMPORT_MESSAGES.rowNotSaved);
       expect(JSON.stringify(result)).not.toContain("violates");
     });
 

@@ -14,6 +14,7 @@ import Field from "../../components/Inputs/Field";
 import Select from "../../components/Inputs/Select";
 import Toggle from "../../components/Inputs/Toggle";
 import useUsers from "../../../application/hooks/useUsers";
+import { useExtensions } from "../../../application/contexts/Extensions.context";
 import { palette } from "../../themes/palette";
 
 type DataSensitivity = NonNullable<
@@ -37,6 +38,9 @@ export default function GovernanceWizardModal({
   onSuccess,
 }: GovernanceWizardModalProps) {
   const { users } = useUsers();
+  // The server starts a lifecycle only when Model Lifecycle is enabled, so the
+  // option is offered only then (false while the extensions list loads).
+  const lifecycleAvailable = useExtensions().isEnabled("model-lifecycle");
   const [provider, setProvider] = useState(tool.vendor || tool.name);
   const [model, setModel] = useState(tool.name);
   const [version, setVersion] = useState("");
@@ -85,7 +89,7 @@ export default function GovernanceWizardModal({
                 description: riskDescription.trim() || undefined,
               }
             : undefined,
-        start_lifecycle: startLifecycle,
+        ...(lifecycleAvailable ? { start_lifecycle: startLifecycle } : {}),
       };
 
       await startGovernance(tool.id, request);
@@ -185,20 +189,22 @@ export default function GovernanceWizardModal({
           rows={3}
         />
 
-        {/* Lifecycle option */}
-        <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mt: 1 }}>
-          <Stack>
-            <Typography sx={{ fontSize: 13, fontWeight: 500 }}>Start lifecycle review</Typography>
-            <Typography sx={{ fontSize: 11, color: palette.text.disabled }}>
-              Automatically create a lifecycle entry for this model
-            </Typography>
+        {/* Lifecycle option: only when the Model Lifecycle extension is enabled */}
+        {lifecycleAvailable && (
+          <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mt: 1 }}>
+            <Stack>
+              <Typography sx={{ fontSize: 13, fontWeight: 500 }}>Start lifecycle review</Typography>
+              <Typography sx={{ fontSize: 11, color: palette.text.disabled }}>
+                Automatically create a lifecycle entry for this model
+              </Typography>
+            </Stack>
+            <Toggle
+              checked={startLifecycle}
+              onChange={(e) => setStartLifecycle(e.target.checked)}
+              size="small"
+            />
           </Stack>
-          <Toggle
-            checked={startLifecycle}
-            onChange={(e) => setStartLifecycle(e.target.checked)}
-            size="small"
-          />
-        </Stack>
+        )}
       </Stack>
     </StandardModal>
   );

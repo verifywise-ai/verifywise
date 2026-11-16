@@ -4,7 +4,7 @@ import { sequelize } from "../../database/db";
 import { recordEntityCreation } from "../../utils/changeHistory.base.utils";
 import { findUsersNotInOrganization } from "../../utils/user.utils";
 import { translate } from "../../utils/i18n.utils";
-import logger from "../../utils/logger/fileLogger";
+import { logStructuredError } from "../../utils/logger/fileLogger";
 import {
   AI_LIFECYCLE_PHASES,
   CURRENT_RISK_LEVEL_VALUES,
@@ -16,6 +16,7 @@ import {
 } from "./risks.enums";
 import { calculateRiskLevel, normalizeCurrentRiskLevel } from "../../utils/riskLevel.utils";
 import { isInvalidDateCell, riskCalendarDateFromCell } from "../../utils/riskCalendarDate.utils";
+import { MAX_IMPORT_ROWS } from "../importLimits";
 
 /**
  * Server-side risk-import extension logic. Two entry points:
@@ -24,8 +25,68 @@ import { isInvalidDateCell, riskCalendarDateFromCell } from "../../utils/riskCal
  *   - importRisks() → validates every row against the same enums and
  *     bulk-inserts into verifywise.risks. Errors are collected and
  *     returned as an atomic batch — the migration file's contract is
- *     that a batch with any validation error inserts nothing.
+ *     that a batch with any validation error inserts nothing. Each insert
+ *     runs inside its own savepoint, so a row the database refuses does not
+ *     abort the rows after it: every row's error is reported, then the whole
+ *     import is rolled back.
  */
+
+const FILE_NAME = "riskImport.service.ts";
+
+/** Hidden sheet in the template that holds the user list for the owner and approver dropdowns. */
+export const LISTS_SHEET_NAME = "Lists";
+
+/**
+ * Every message the import adds to its result. An error carries one of these
+ * as `messageKey` (the en.json key) and `params` for its placeholders; the
+ * controller translates from the key. Kept in this map so the i18n scanner
+ * sees each one.
+ */
+export const RISK_IMPORT_MESSAGES = {
+  // Worded by the import itself: the row cap and refused inserts.
+  tooManyRows:
+    "This file has more than {max} rows. Split it into smaller files and import each one.",
+  enumValue: "A value in this row is not one of the allowed options.",
+  requiredValue: "A required value in this row is empty.",
+  valueTooLong: "A value in this row is too long.",
+  invalidDate: "A date in this row is not valid. Use YYYY-MM-DD.",
+  rowNotSaved: "This row could not be saved.",
+  // Per-field validation.
+  riskNameRequired: "Risk name is required",
+  riskOwnerInvalid: "Risk owner must be a valid user ID or selected from dropdown",
+  riskDescriptionRequired: "Risk description is required",
+  lifecyclePhaseRequired: "AI lifecycle phase is required",
+  lifecyclePhaseInvalid: "Invalid AI lifecycle phase. Must be one of: {values}",
+  likelihoodRequired: "Likelihood is required",
+  likelihoodInvalid: "Invalid likelihood. Must be one of: {values}",
+  severityRequired: "Severity is required",
+  severityInvalid: "Invalid severity. Must be one of: {values}",
+  categoryInvalid: "Invalid risk category: {invalid}. Must be one of: {values}",
+  mitigationStatusInvalid: "Invalid mitigation status. Must be one of: {values}",
+  currentRiskLevelInvalid: "Invalid current risk level. Must be one of: {values}",
+  likelihoodMitigationInvalid: "Invalid likelihood mitigation. Must be one of: {values}",
+  riskSeverityInvalid: "Invalid risk severity. Must be one of: {values}",
+  deadlineInvalid: "Invalid deadline date format. Use YYYY-MM-DD",
+  assessmentDateInvalid: "Invalid assessment date format. Use YYYY-MM-DD",
+  userNotMember: "User must be a member of this organization",
+  duplicateInFile: 'A risk named "{name}" already appears on row {row} of this file',
+  nameExists: 'A risk named "{name}" already exists',
+} as const;
+
+export type RiskImportMessage = keyof typeof RISK_IMPORT_MESSAGES;
+
+/**
+ * The messages the legacy route translates. Its per-field validation messages
+ * are a frozen contract and stay in English there; /api/v1 translates all.
+ */
+export const LEGACY_TRANSLATED_MESSAGES: ReadonlySet<string> = new Set([
+  RISK_IMPORT_MESSAGES.tooManyRows,
+  RISK_IMPORT_MESSAGES.enumValue,
+  RISK_IMPORT_MESSAGES.requiredValue,
+  RISK_IMPORT_MESSAGES.valueTooLong,
+  RISK_IMPORT_MESSAGES.invalidDate,
+  RISK_IMPORT_MESSAGES.rowNotSaved,
+]);
 
 // ---------------------------------------------------------------------------
 // EXCEL TEMPLATE
@@ -61,6 +122,15 @@ export async function buildExcelTemplate(
 
   const users = await fetchOrgUsers(organizationId);
   const userOptions = users.map((u) => `${u.name} ${u.surname} - ${u.email} (ID: ${u.id})`);
+
+  // An inline list validation holds at most 255 characters, which a handful
+  // of users already exceeds. The user names go on a hidden sheet and the
+  // owner and approver dropdowns point at that range instead.
+  const listsSheet = workbook.addWorksheet(LISTS_SHEET_NAME, { state: "veryHidden" });
+  userOptions.forEach((option, i) => {
+    listsSheet.getCell(i + 1, 1).value = option;
+  });
+  const userListRange = `${LISTS_SHEET_NAME}!$A$1:$A$${userOptions.length}`;
 
   const headers = [
     { key: "risk_name", header: "Risk Name *", width: 30 },
@@ -122,12 +192,13 @@ export async function buildExcelTemplate(
 
   const DATA_ROWS_END = 1000;
 
-  const addDropdown = (colIndex: number, values: readonly string[]) => {
+  const addDropdown = (colIndex: number, values: readonly string[] | { range: string }) => {
+    const formula = "range" in values ? values.range : `"${values.join(",")}"`;
     for (let rowNum = 2; rowNum <= DATA_ROWS_END; rowNum++) {
       worksheet.getCell(rowNum, colIndex).dataValidation = {
         type: "list",
         allowBlank: true,
-        formulae: [`"${values.join(",")}"`],
+        formulae: [formula],
         showErrorMessage: true,
         errorStyle: "error",
         errorTitle: "Invalid Value",
@@ -170,8 +241,8 @@ export async function buildExcelTemplate(
   };
 
   if (userOptions.length > 0) {
-    addDropdown(2, userOptions); // risk_owner
-    addDropdown(18, userOptions); // risk_approval
+    addDropdown(2, { range: userListRange }); // risk_owner
+    addDropdown(18, { range: userListRange }); // risk_approval
   }
   addDropdown(3, AI_LIFECYCLE_PHASES);
   addMultiSelectDropdown(5, RISK_CATEGORY_VALUES);
@@ -225,24 +296,25 @@ export interface RiskImportRow {
 export interface RiskImportError {
   row: number;
   field: string;
-  /** English text. The controller re-translates it from i18nKey for the caller's language. */
+  /** English text. The controller re-translates it from messageKey for the caller's language. */
   message: string;
-  /** Key in locales/en.json (named placeholders), with its values in i18nVars. */
-  i18nKey?: string;
-  i18nVars?: Record<string, string | number>;
+  /** The en.json key (one of RISK_IMPORT_MESSAGES) `message` was made from; the controller translates from it. */
+  messageKey?: (typeof RISK_IMPORT_MESSAGES)[RiskImportMessage];
+  /** Values for the placeholders in that message. */
+  params?: Record<string, string | number>;
 }
 
-/**
- * A row error. Call sites write the key as a literal `i18nKey` so that
- * `npm run i18n:check-en` finds it; `message` is the English text for callers
- * without a request translator, and the controller translates from the key.
- */
-function rowError(
+/** A row error, carrying its message key for translation. */
+function keyedError(
   row: number,
   field: string,
-  { i18nKey, i18nVars }: { i18nKey: string; i18nVars?: Record<string, string | number> },
+  key: RiskImportMessage,
+  params?: Record<string, string | number>,
 ): RiskImportError {
-  return { row, field, message: translate("en", i18nKey, i18nVars), i18nKey, i18nVars };
+  const messageKey = RISK_IMPORT_MESSAGES[key];
+  // The English text, placeholders filled; the controller re-translates from the key.
+  const message = translate("en", messageKey, params);
+  return { row, field, message, messageKey, ...(params ? { params } : {}) };
 }
 
 export interface RiskImportResult {
@@ -344,78 +416,61 @@ function validateRow(row: RiskImportRow, rowIndex: number, strict: boolean): Ris
   const errors: RiskImportError[] = [];
 
   if (!row.risk_name || row.risk_name.trim().length === 0) {
-    errors.push(rowError(rowIndex, "risk_name", { i18nKey: "Risk name is required" }));
+    errors.push(keyedError(rowIndex, "risk_name", "riskNameRequired"));
   }
   if (!parseUserId(row.risk_owner)) {
-    errors.push(
-      rowError(rowIndex, "risk_owner", {
-        i18nKey: "Risk owner must be a valid user ID or selected from dropdown",
-      }),
-    );
+    errors.push(keyedError(rowIndex, "risk_owner", "riskOwnerInvalid"));
   }
   if (!row.risk_description || row.risk_description.trim().length === 0) {
-    errors.push(
-      rowError(rowIndex, "risk_description", { i18nKey: "Risk description is required" }),
-    );
+    errors.push(keyedError(rowIndex, "risk_description", "riskDescriptionRequired"));
   }
   // Strict mode requires these like the normal risk form (createRiskSchema):
   // the template marks them with * and likelihood + severity drive the
   // calculated risk level.
   if (!row.ai_lifecycle_phase) {
     if (strict) {
-      errors.push(
-        rowError(rowIndex, "ai_lifecycle_phase", { i18nKey: "AI lifecycle phase is required" }),
-      );
+      errors.push(keyedError(rowIndex, "ai_lifecycle_phase", "lifecyclePhaseRequired"));
     }
   } else if (!inEnum(row.ai_lifecycle_phase, AI_LIFECYCLE_PHASES)) {
     errors.push(
-      rowError(rowIndex, "ai_lifecycle_phase", {
-        i18nKey: "Invalid AI lifecycle phase. Must be one of: {values}",
-        i18nVars: { values: AI_LIFECYCLE_PHASES.join(", ") },
+      keyedError(rowIndex, "ai_lifecycle_phase", "lifecyclePhaseInvalid", {
+        values: AI_LIFECYCLE_PHASES.join(", "),
       }),
     );
   }
   if (!row.likelihood) {
     if (strict) {
-      errors.push(rowError(rowIndex, "likelihood", { i18nKey: "Likelihood is required" }));
+      errors.push(keyedError(rowIndex, "likelihood", "likelihoodRequired"));
     }
   } else if (!inEnum(row.likelihood, LIKELIHOOD_VALUES)) {
     errors.push(
-      rowError(rowIndex, "likelihood", {
-        i18nKey: "Invalid likelihood. Must be one of: {values}",
-        i18nVars: { values: LIKELIHOOD_VALUES.join(", ") },
+      keyedError(rowIndex, "likelihood", "likelihoodInvalid", {
+        values: LIKELIHOOD_VALUES.join(", "),
       }),
     );
   }
   if (!row.severity) {
     if (strict) {
-      errors.push(rowError(rowIndex, "severity", { i18nKey: "Severity is required" }));
+      errors.push(keyedError(rowIndex, "severity", "severityRequired"));
     }
   } else if (!inEnum(row.severity, SEVERITY_VALUES)) {
     errors.push(
-      rowError(rowIndex, "severity", {
-        i18nKey: "Invalid severity. Must be one of: {values}",
-        i18nVars: { values: SEVERITY_VALUES.join(", ") },
-      }),
+      keyedError(rowIndex, "severity", "severityInvalid", { values: SEVERITY_VALUES.join(", ") }),
     );
   }
   const categories = splitCategories(row.risk_category);
   if (strict && categories.invalid.length > 0) {
     errors.push(
-      rowError(rowIndex, "risk_category", {
-        i18nKey: "Invalid risk category: {invalid}. Must be one of: {values}",
-        i18nVars: {
-          invalid: categories.invalid.join(", "),
-          values: RISK_CATEGORY_VALUES.join(", "),
-        },
+      keyedError(rowIndex, "risk_category", "categoryInvalid", {
+        invalid: categories.invalid.join(", "),
+        values: RISK_CATEGORY_VALUES.join(", "),
       }),
     );
   }
   if (row.mitigation_status && !inEnum(row.mitigation_status, MITIGATION_STATUS_VALUES)) {
     errors.push(
-      rowError(rowIndex, "mitigation_status", {
-        i18nKey: "Invalid mitigation status. Must be one of: {values}",
-        i18nVars: { values: MITIGATION_STATUS_VALUES.join(", ") },
+      keyedError(rowIndex, "mitigation_status", "mitigationStatusInvalid", {
+        values: MITIGATION_STATUS_VALUES.join(", "),
       }),
     );
   }
@@ -424,39 +479,30 @@ function validateRow(row: RiskImportRow, rowIndex: number, strict: boolean): Ris
     !inEnum(normalizeCurrentRiskLevel(row.current_risk_level), CURRENT_RISK_LEVEL_VALUES)
   ) {
     errors.push(
-      rowError(rowIndex, "current_risk_level", {
-        i18nKey: "Invalid current risk level. Must be one of: {values}",
-        i18nVars: { values: CURRENT_RISK_LEVEL_VALUES.join(", ") },
+      keyedError(rowIndex, "current_risk_level", "currentRiskLevelInvalid", {
+        values: CURRENT_RISK_LEVEL_VALUES.join(", "),
       }),
     );
   }
   if (row.likelihood_mitigation && !inEnum(row.likelihood_mitigation, LIKELIHOOD_VALUES)) {
     errors.push(
-      rowError(rowIndex, "likelihood_mitigation", {
-        i18nKey: "Invalid likelihood mitigation. Must be one of: {values}",
-        i18nVars: { values: LIKELIHOOD_VALUES.join(", ") },
+      keyedError(rowIndex, "likelihood_mitigation", "likelihoodMitigationInvalid", {
+        values: LIKELIHOOD_VALUES.join(", "),
       }),
     );
   }
   if (row.risk_severity && !inEnum(row.risk_severity, RISK_SEVERITY_VALUES)) {
     errors.push(
-      rowError(rowIndex, "risk_severity", {
-        i18nKey: "Invalid risk severity. Must be one of: {values}",
-        i18nVars: { values: RISK_SEVERITY_VALUES.join(", ") },
+      keyedError(rowIndex, "risk_severity", "riskSeverityInvalid", {
+        values: RISK_SEVERITY_VALUES.join(", "),
       }),
     );
   }
   if (row.deadline && isInvalidDateCell(row.deadline)) {
-    errors.push(
-      rowError(rowIndex, "deadline", { i18nKey: "Invalid deadline date format. Use YYYY-MM-DD" }),
-    );
+    errors.push(keyedError(rowIndex, "deadline", "deadlineInvalid"));
   }
   if (row.date_of_assessment && isInvalidDateCell(row.date_of_assessment)) {
-    errors.push(
-      rowError(rowIndex, "date_of_assessment", {
-        i18nKey: "Invalid assessment date format. Use YYYY-MM-DD",
-      }),
-    );
+    errors.push(keyedError(rowIndex, "date_of_assessment", "assessmentDateInvalid"));
   }
   return errors;
 }
@@ -495,6 +541,30 @@ export function parseRow(row: RiskImportRow): Record<string, unknown> {
       ? riskCalendarDateFromCell(row.date_of_assessment)
       : null,
   };
+}
+
+const ROW_SAVEPOINT = "risk_import_row";
+
+/** PostgreSQL error codes a row insert can hit, mapped to the message the user sees. */
+const DB_ERROR_MESSAGES: Record<string, RiskImportMessage> = {
+  "22P02": "enumValue", // invalid_text_representation (bad enum label)
+  "23502": "requiredValue", // not_null_violation
+  "22001": "valueTooLong", // string_data_right_truncation
+  "22007": "invalidDate", // invalid_datetime_format
+  "22008": "invalidDate", // datetime_field_overflow
+};
+
+/**
+ * The row error for a refused insert. Never carries the database's own text
+ * (it can name tables, constraints and values); the caller logs that.
+ */
+export function rowInsertError(row: number, err: unknown): RiskImportError {
+  const original = (err as { original?: { code?: unknown; column?: unknown } } | null)?.original;
+  const code = typeof original?.code === "string" ? original.code : undefined;
+  const key = code ? DB_ERROR_MESSAGES[code] : undefined;
+  const column =
+    key === "requiredValue" && typeof original?.column === "string" ? original.column : undefined;
+  return keyedError(row, column ?? "general", key ?? "rowNotSaved");
 }
 
 /** Advisory-lock class for pg_advisory_xact_lock(class, org): one risk import commit per org at a time. */
@@ -550,10 +620,7 @@ async function existingNameErrors(
     const key = nameKey(row.risk_name);
     if (key && existingNames.has(key)) {
       errors.push(
-        rowError(rowNumbers[i], "risk_name", {
-          i18nKey: 'A risk named "{name}" already exists',
-          i18nVars: { name: row.risk_name!.trim() },
-        }),
+        keyedError(rowNumbers[i], "risk_name", "nameExists", { name: row.risk_name!.trim() }),
       );
     }
   });
@@ -576,6 +643,17 @@ export async function importRisks(
   userId: number,
   { strict }: ImportRisksOptions = { strict: false },
 ): Promise<RiskImportResult> {
+  // Checked before anything else, so an oversized file is never validated or written.
+  if (rawRows.length > MAX_IMPORT_ROWS) {
+    return {
+      success: false,
+      imported: 0,
+      failed: rawRows.length,
+      errors: [keyedError(0, "file", "tooManyRows", { max: MAX_IMPORT_ROWS })],
+      importedAt: new Date().toISOString(),
+    };
+  }
+
   const errors: RiskImportError[] = [];
   const rows = rawRows.map(normalizeRow);
   // The client sends each row's real sheet row (blank rows are dropped before
@@ -606,9 +684,7 @@ export async function importRisks(
     for (const field of userFields) {
       const id = parseUserId(row[field]);
       if (id !== null && (!isValidUserId(id) || outsideUserIds.has(id))) {
-        errors.push(
-          rowError(rowNumbers[i], field, { i18nKey: "User must be a member of this organization" }),
-        );
+        errors.push(keyedError(rowNumbers[i], field, "userNotMember"));
       }
     }
   });
@@ -625,9 +701,9 @@ export async function importRisks(
       firstRowByName.set(key, rowNumbers[i]);
     } else {
       errors.push(
-        rowError(rowNumbers[i], "risk_name", {
-          i18nKey: 'A risk named "{name}" already appears on row {row} of this file',
-          i18nVars: { name: row.risk_name!.trim(), row: firstRow },
+        keyedError(rowNumbers[i], "risk_name", "duplicateInFile", {
+          name: row.risk_name!.trim(),
+          row: firstRow,
         }),
       );
     }
@@ -671,10 +747,10 @@ export async function importRisks(
     for (let i = 0; i < rows.length; i++) {
       const data = parseRow(rows[i]);
       const rowIndex = rowNumbers[i];
-      // One savepoint per row: a failed INSERT aborts only that row's work, so
-      // every later row still runs and reports its own error.
-      const savepoint = `risk_import_row_${i}`;
-      await sequelize.query(`SAVEPOINT ${savepoint}`, { transaction });
+      // A failed statement aborts the whole transaction; rolling back to the
+      // row's savepoint keeps it usable, so the later rows still report
+      // their own result instead of "current transaction is aborted".
+      await sequelize.query(`SAVEPOINT ${ROW_SAVEPOINT};`, { transaction });
       try {
         const inserted = (await sequelize.query(
           `INSERT INTO risks (
@@ -722,19 +798,24 @@ export async function importRisks(
             transaction,
           );
         }
-        await sequelize.query(`RELEASE SAVEPOINT ${savepoint}`, { transaction });
+        await sequelize.query(`RELEASE SAVEPOINT ${ROW_SAVEPOINT};`, { transaction });
         imported++;
-      } catch (err: any) {
-        await sequelize.query(`ROLLBACK TO SAVEPOINT ${savepoint}`, { transaction });
-        // The database's own text can name tables and columns: keep it in the
-        // log and give the caller a fixed message.
-        const detail = String(err?.message ?? err).replace(/[\r\n\t\u2028\u2029]+/g, " ");
-        logger.error(`Risk import row ${rowIndex} could not be saved: ${detail}`);
-        insertErrors.push(
-          rowError(rowIndex, "general", {
-            i18nKey: "This row could not be saved. Check its values and try again.",
-          }),
+      } catch (err) {
+        await sequelize.query(`ROLLBACK TO SAVEPOINT ${ROW_SAVEPOINT};`, { transaction });
+        // The database's own text can name tables and columns and carry cell
+        // values: it goes to the log only, on one line so a crafted cell cannot
+        // forge extra log lines. The caller gets a fixed, translated message.
+        const detail = String((err as { message?: unknown })?.message ?? err).replace(
+          /[\r\n\t\u2028\u2029]+/g,
+          " ",
         );
+        logStructuredError(
+          `Risk import row ${rowIndex} could not be saved`,
+          detail,
+          "importRisks",
+          FILE_NAME,
+        );
+        insertErrors.push(rowInsertError(rowIndex, err));
       }
     }
 

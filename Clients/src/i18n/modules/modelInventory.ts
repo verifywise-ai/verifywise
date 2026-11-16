@@ -83,6 +83,7 @@ export const de: Record<string, string> = {
   "Attestation": "Attestierung",
   "Could not load the portfolio summary. Try again shortly.":
     "Portfolioübersicht konnte nicht geladen werden. Bitte versuchen Sie es in Kürze erneut.",
+  "Could not load the model lifecycle.": "Der Modelllebenszyklus konnte nicht geladen werden.",
   "Fleet attestation status": "Attestierungsstatus des Bestands",
   "Generate attestation report": "Attestierungsbericht erstellen",
   "Advance this validation to In validation to begin writing the report.":
@@ -267,7 +268,6 @@ export const de: Record<string, string> = {
     "Erfassen Sie den Status jedes Modells: genehmigt, eingeschränkt, ausstehend, blockiert oder abgelehnt. Dies gibt Auditoren Einblick in Ihre Governance-Abdeckung.",
   "Set expiry dates on evidence so you're reminded to update or re-certify documents before they become stale.":
     "Legen Sie Ablaufdaten für Nachweise fest, damit Sie daran erinnert werden, Dokumente zu aktualisieren oder neu zu zertifizieren, bevor sie veralten.",
-  "MLFlow": "MLFlow",
   "MLflow": "MLflow",
   "Only admins can change retention periods":
     "Nur Administratoren können Aufbewahrungsfristen ändern",
@@ -354,6 +354,7 @@ export const fr: Record<string, string> = {
   "Attestation": "Attestation",
   "Could not load the portfolio summary. Try again shortly.":
     "Impossible de charger le résumé du portefeuille. Réessayez sous peu.",
+  "Could not load the model lifecycle.": "Impossible de charger le cycle de vie du modèle.",
   "Fleet attestation status": "Statut d’attestation du parc",
   "Generate attestation report": "Générer le rapport d’attestation",
   "Advance this validation to In validation to begin writing the report.":
@@ -538,7 +539,6 @@ export const fr: Record<string, string> = {
     "Enregistrez le statut de chaque modèle : approuvé, restreint, en attente, bloqué ou rejeté. Cela offre aux auditeurs une visibilité sur votre couverture de gouvernance.",
   "Set expiry dates on evidence so you're reminded to update or re-certify documents before they become stale.":
     "Définissez des dates d'expiration sur les preuves afin d'être averti de mettre à jour ou de recertifier les documents avant qu'ils ne deviennent obsolètes.",
-  "MLFlow": "MLFlow",
   "MLflow": "MLflow",
   "Only admins can change retention periods":
     "Seuls les administrateurs peuvent modifier les durées de conservation",
@@ -625,6 +625,7 @@ export const es: Record<string, string> = {
   "Attestation": "Atestación",
   "Could not load the portfolio summary. Try again shortly.":
     "No se pudo cargar el resumen de la cartera. Vuelva a intentarlo en breve.",
+  "Could not load the model lifecycle.": "No se pudo cargar el ciclo de vida del modelo.",
   "Fleet attestation status": "Estado de atestación de la flota",
   "Generate attestation report": "Generar informe de atestación",
   "Advance this validation to In validation to begin writing the report.":
@@ -809,7 +810,6 @@ export const es: Record<string, string> = {
     "Registre el estado de cada modelo: aprobado, restringido, pendiente, bloqueado o rechazado. Esto ofrece a los auditores visibilidad sobre su cobertura de gobernanza.",
   "Set expiry dates on evidence so you're reminded to update or re-certify documents before they become stale.":
     "Establezca fechas de caducidad en las evidencias para que se le recuerde actualizar o recertificar los documentos antes de que queden obsoletos.",
-  "MLFlow": "MLFlow",
   "MLflow": "MLflow",
   "Only admins can change retention periods":
     "Solo los administradores pueden cambiar los periodos de retención",

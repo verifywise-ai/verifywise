@@ -4,6 +4,8 @@ import { Check } from "lucide-react";
 import { LifecyclePhase, LifecycleProgress } from "./useModelLifecycle";
 import { background, border, brand, text } from "../../../themes/palette";
 import { textStyles } from "../../../../presentation/themes/typography";
+import useTranslation from "../../../../application/hooks/useTranslation";
+import { fill } from "../../../../i18n/fill";
 
 interface LifecycleSidebarProps {
   phases: LifecyclePhase[];
@@ -18,6 +20,7 @@ export default function LifecycleSidebar({
   activePhaseId,
   onPhaseSelect,
 }: LifecycleSidebarProps) {
+  const { t } = useTranslation();
   const progressPhases = Array.isArray(progress?.phases) ? progress.phases : [];
 
   const phaseData = useMemo(() => {
@@ -48,17 +51,22 @@ export default function LifecycleSidebar({
         backgroundColor: background.main,
       }}
     >
-      <Box sx={{ px: 10, py: 8, borderBottom: `1px solid ${border.light}` }}>
-        <Typography sx={{ ...textStyles.cardTitle, color: text.secondary, mb: 2 }}>
-          Lifecycle Progress
+      <Box sx={{ px: "20px", py: "16px", borderBottom: `1px solid ${border.light}` }}>
+        <Typography sx={{ ...textStyles.cardTitle, color: text.secondary, mb: "4px" }}>
+          Lifecycle progress
         </Typography>
         <Typography sx={{ ...textStyles.caption, color: text.secondary }}>
-          {progress?.completion_percentage ?? 0}% complete
-          {progress ? ` (${progress.filled_items}/${progress.total_items} items)` : ""}
+          {progress
+            ? fill(t("{percent}% complete ({filled}/{total} items)"), {
+                percent: progress.completion_percentage,
+                filled: progress.filled_items,
+                total: progress.total_items,
+              })
+            : fill(t("{percent}% complete"), { percent: 0 })}
         </Typography>
       </Box>
 
-      <Stack sx={{ py: 4 }}>
+      <Stack sx={{ py: "8px" }}>
         {phaseData.map((phase, index) => {
           const isActive = phase.id === activePhaseId;
           const isComplete = phase.totalItems > 0 && phase.filledItems === phase.totalItems;
@@ -71,14 +79,14 @@ export default function LifecycleSidebar({
               alignItems="center"
               onClick={() => handleClick(phase.id)}
               sx={{
-                "px": 10,
-                "py": 4,
-                "gap": 6,
+                "px": "20px",
+                "py": "8px",
+                "gap": "12px",
                 "cursor": "pointer",
                 "borderLeft": isActive ? `3px solid ${brand.primary}` : "3px solid transparent",
-                "backgroundColor": isActive ? "rgba(19,113,91,0.06)" : "transparent",
+                "backgroundColor": isActive ? background.selected : "transparent",
                 "&:hover": {
-                  backgroundColor: isActive ? "rgba(19,113,91,0.06)" : background.alt,
+                  backgroundColor: isActive ? background.selected : background.alt,
                 },
                 "transition": "background-color 0.15s ease",
               }}

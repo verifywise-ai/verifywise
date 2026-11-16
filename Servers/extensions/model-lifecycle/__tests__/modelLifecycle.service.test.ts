@@ -18,8 +18,19 @@ jest.mock("../../../utils/auditLedger.utils", () => ({
   appendToAuditLedger: jest.fn().mockResolvedValue(undefined),
 }));
 
+jest.mock("../../../middleware/requireExtensionEnabled.middleware", () => ({
+  isExtensionEnabledForOrganization: jest.fn(),
+}));
+
+jest.mock("../../../utils/logger/fileLogger", () => ({
+  __esModule: true,
+  logStructuredError: jest.fn(),
+}));
+
 import { sequelize } from "../../../database/db";
+import { isExtensionEnabledForOrganization } from "../../../middleware/requireExtensionEnabled.middleware";
 import { appendToAuditLedger } from "../../../utils/auditLedger.utils";
+import { logStructuredError } from "../../../utils/logger/fileLogger";
 import {
   ForbiddenException,
   ValidationException,
@@ -32,8 +43,10 @@ import {
   deletePhase,
   detachFile,
   formatLifecycleSnapshot,
+  canStartLifecycle,
   itemInOrganization,
   modelInOrganization,
+  startLifecycleForModel,
   updateApprovalStatus,
   updateItem,
   upsertValue,
@@ -595,5 +608,103 @@ describe("people and approvers must be organization members", () => {
       expect.objectContaining({ value_id: 3, user_id: 55 }),
     );
     expect(inserts().some((call) => String(call[0]).includes(table))).toBe(true);
+  });
+});
+
+describe("canStartLifecycle", () => {
+  const mockEnabled = isExtensionEnabledForOrganization as jest.Mock;
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockQuery.mockReset();
+    mockEnabled.mockReset();
+  });
+
+  it.each([true, false])("answers the enablement lookup (%p)", async (enabled) => {
+    mockEnabled.mockResolvedValue(enabled);
+
+    await expect(canStartLifecycle(7)).resolves.toBe(enabled);
+    expect(mockEnabled).toHaveBeenCalledWith("model-lifecycle", 7);
+    expect(mockQuery).not.toHaveBeenCalled();
+  });
+
+  it("answers false and logs the cause when the lookup fails", async () => {
+    const cause = new Error("db blip");
+    mockEnabled.mockRejectedValue(cause);
+
+    await expect(canStartLifecycle(7)).resolves.toBe(false);
+    expect(logStructuredError).toHaveBeenCalledWith(
+      expect.stringContaining("org 7"),
+      cause,
+      "canStartLifecycle",
+      "modelLifecycle.service.ts",
+    );
+  });
+});
+
+describe("startLifecycleForModel", () => {
+  const transaction = { id: "t" } as any;
+  const sqlCalls = () => mockQuery.mock.calls.map((call) => String(call[0]));
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockQuery.mockReset();
+  });
+
+  it("inserts one value per active item with one INSERT ... SELECT under a savepoint", async () => {
+    mockQuery
+      .mockResolvedValueOnce(undefined) // SAVEPOINT
+      .mockResolvedValueOnce([[{ id: 31 }, { id: 32 }], 2]) // INSERT ... RETURNING id
+      .mockResolvedValueOnce(undefined); // RELEASE
+
+    await expect(startLifecycleForModel(7, 10, 3, transaction)).resolves.toBe(true);
+
+    const sql = sqlCalls();
+    expect(sql).toHaveLength(3);
+    expect(sql[0]).toBe("SAVEPOINT lifecycle_init");
+    const insert = sql[1].replace(/\s+/g, " ");
+    expect(insert).toContain("INSERT INTO model_lifecycle_values");
+    expect(insert).toContain("SELECT :organizationId, :modelId, i.id, :userId");
+    expect(insert).toContain(
+      "FROM model_lifecycle_items i INNER JOIN model_lifecycle_phases p ON i.phase_id = p.id",
+    );
+    expect(insert).toContain("WHERE i.organization_id = :organizationId");
+    expect(insert).toContain("AND p.organization_id = :organizationId");
+    expect(insert).toContain("AND i.is_active = true AND p.is_active = true");
+    expect(insert).toContain(
+      "ON CONFLICT (organization_id, model_inventory_id, item_id) DO NOTHING RETURNING id",
+    );
+    expect(mockQuery.mock.calls[1][1]).toEqual({
+      replacements: { organizationId: 7, modelId: 10, userId: 3 },
+      transaction,
+    });
+    expect(sql[2]).toBe("RELEASE SAVEPOINT lifecycle_init");
+  });
+
+  it("reports false when no row was inserted (no active items, or all existed)", async () => {
+    mockQuery
+      .mockResolvedValueOnce(undefined)
+      .mockResolvedValueOnce([[], 0])
+      .mockResolvedValueOnce(undefined);
+
+    await expect(startLifecycleForModel(7, 10, 3, transaction)).resolves.toBe(false);
+    expect(sqlCalls()).toContain("RELEASE SAVEPOINT lifecycle_init");
+  });
+
+  it("rolls back to the savepoint, logs and reports false when the write fails", async () => {
+    const cause = new Error("insert failed");
+    mockQuery
+      .mockResolvedValueOnce(undefined) // SAVEPOINT
+      .mockRejectedValueOnce(cause) // INSERT
+      .mockResolvedValueOnce(undefined); // ROLLBACK TO SAVEPOINT
+
+    await expect(startLifecycleForModel(7, 10, 3, transaction)).resolves.toBe(false);
+    expect(sqlCalls()).toContain("ROLLBACK TO SAVEPOINT lifecycle_init");
+    expect(logStructuredError).toHaveBeenCalledWith(
+      expect.stringContaining("model 10"),
+      cause,
+      "startLifecycleForModel",
+      "modelLifecycle.service.ts",
+    );
   });
 });

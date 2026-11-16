@@ -5,11 +5,35 @@ import { translateError } from "../../utils/i18n.utils";
 import {
   buildExcelTemplate,
   importRisks,
-  RiskImportResult,
+  LEGACY_TRANSLATED_MESSAGES,
+  RiskImportError,
   RiskImportRow,
 } from "./riskImport.service";
 
 const fileName = "riskImport.ctrl.ts";
+
+/**
+ * Shape one row error for the response. /api/v1 (strict) translates every
+ * message from its `messageKey` and also returns that `key` and its `params`.
+ * The legacy route is a frozen contract: it keeps its old shape (no key or
+ * params) and its per-field validation messages in English, translating only
+ * the messages the import itself words (row cap, refused inserts).
+ */
+export function translateImportError(req: Request, error: RiskImportError, strict = false) {
+  const { messageKey, params, ...rest } = error;
+  if (!messageKey) return rest;
+  if (strict) {
+    return {
+      ...rest,
+      message: req.t!(messageKey, params),
+      key: messageKey,
+      ...(params ? { params } : {}),
+    };
+  }
+  return LEGACY_TRANSLATED_MESSAGES.has(messageKey)
+    ? { ...rest, message: req.t!(messageKey, params) }
+    : rest;
+}
 
 export async function downloadExcelTemplate(req: Request, res: Response): Promise<void> {
   const organizationId = (req as any).organizationId as number;
@@ -33,30 +57,6 @@ export async function downloadExcelTemplate(req: Request, res: Response): Promis
   }
 }
 
-/**
- * Shape row errors for the response. The legacy route is a frozen contract: it
- * keeps the English `message` the service builds and its old shape. /api/v1
- * translates each message from its `i18nKey` (found by `npm run i18n:check-en`
- * where the service writes it) and also returns that `key` and its `params`.
- */
-function translateRowErrors(req: Request, result: RiskImportResult, strict: boolean) {
-  if (!strict) {
-    return {
-      ...result,
-      errors: result.errors.map(({ i18nKey: _key, i18nVars: _vars, ...error }) => error),
-    };
-  }
-  return {
-    ...result,
-    errors: result.errors.map(({ i18nKey, i18nVars, ...error }) => {
-      const message = i18nKey ? req.t!(i18nKey, i18nVars) : error.message;
-      return i18nKey
-        ? { ...error, message, key: i18nKey, ...(i18nVars ? { params: i18nVars } : {}) }
-        : { ...error, message };
-    }),
-  };
-}
-
 async function handleBulkImport(req: Request, res: Response, strict: boolean): Promise<any> {
   const organizationId = (req as any).organizationId as number;
   const csvData = (req.body?.csvData ?? []) as RiskImportRow[];
@@ -76,7 +76,11 @@ async function handleBulkImport(req: Request, res: Response, strict: boolean): P
     // partially-successful batch also come back with success=false and are
     // returned as 400 for the client to display per-row errors.
     const status = result.success ? 200 : 400;
-    return res.status(status).json(STATUS_CODE[status](translateRowErrors(req, result, strict)));
+    const body = {
+      ...result,
+      errors: result.errors.map((e) => translateImportError(req, e, strict)),
+    };
+    return res.status(status).json(STATUS_CODE[status](body));
   } catch (error) {
     logStructured("error", "risk-import bulk insert failed", "bulkImportRisks", fileName);
     logger.error("❌ Error in bulkImportRisks:", error);

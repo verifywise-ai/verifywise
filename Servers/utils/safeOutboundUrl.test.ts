@@ -210,6 +210,30 @@ describe("assertSafeOutboundUrl", () => {
   });
 });
 
+describe("UnsafeOutboundUrlError code", () => {
+  const codeOf = (url: string) => {
+    try {
+      assertSafeOutboundUrl(url);
+    } catch (err) {
+      return (err as UnsafeOutboundUrlError).code;
+    }
+    return null;
+  };
+
+  it.each([
+    ["", "invalid-url"],
+    ["not a url", "invalid-url"],
+    ["ftp://jira.example.com", "invalid-url"],
+    ["https://user:pass@jira.example.com", "credentials"],
+    ["http://127.0.0.1", "blocked-address"],
+    ["http://169.254.169.254", "blocked-address"],
+    ["http://metadata.google.internal", "blocked-address"],
+    ["https://jira.example.com", null],
+  ])("%p refused as %p", (url, code) => {
+    expect(codeOf(url)).toBe(code);
+  });
+});
+
 describe("blockedAddressReason", () => {
   it("classifies addresses", () => {
     expect(blockedAddressReason("127.0.0.1", {})).toBe("loopback");
@@ -328,6 +352,7 @@ describe("safeFetch", () => {
         await expect(safeFetch(`http://mlflow.test:${port}/`)).rejects.toThrow(
           new UnsafeOutboundUrlError(
             "The URL resolves to a loopback address, which is not allowed",
+            "blocked-address",
           ),
         );
 
@@ -356,6 +381,7 @@ describe("safeFetch", () => {
         await expect(safeFetch(`http://127.0.0.1:${port}/start`)).rejects.toThrow(
           new UnsafeOutboundUrlError(
             "The server answered with a redirect (HTTP 307), which is not followed",
+            "redirect",
           ),
         );
         expect(hits).toBe(1);

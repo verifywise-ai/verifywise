@@ -33,18 +33,34 @@ export async function getExtensionByKey({
 export async function enableExtension({
   key,
   configuration,
+  suppressGlobalErrorToast,
 }: {
   key: string;
   configuration?: Record<string, unknown>;
+  /** Set when the caller shows the error itself. */
+  suppressGlobalErrorToast?: boolean;
 }): Promise<Extension> {
-  const response = await apiServices.post(`/extensions/${key}/enable`, {
-    configuration: configuration ?? {},
-  });
+  const response = await apiServices.post(
+    `/extensions/${key}/enable`,
+    { configuration: configuration ?? {} },
+    suppressGlobalErrorToast ? { suppressGlobalErrorToast } : {},
+  );
   return (response.data as any).data as Extension;
 }
 
-export async function disableExtension({ key }: { key: string }): Promise<Extension> {
-  const response = await apiServices.post(`/extensions/${key}/disable`, {});
+export async function disableExtension({
+  key,
+  suppressGlobalErrorToast,
+}: {
+  key: string;
+  /** Set when the caller shows the error itself. */
+  suppressGlobalErrorToast?: boolean;
+}): Promise<Extension> {
+  const response = await apiServices.post(
+    `/extensions/${key}/disable`,
+    {},
+    suppressGlobalErrorToast ? { suppressGlobalErrorToast } : {},
+  );
   return (response.data as any).data as Extension;
 }
 

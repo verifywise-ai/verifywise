@@ -44,6 +44,15 @@ Browser ──► ExtensionsProvider (GET /api/extensions, once per session)
 All three catalog tables are created by
 `Servers/database/migrations/20260811102307-extensions-migration.js`.
 
+Catalog text is changed by a new migration that updates the rows by `key`,
+never by editing the seed migration. `20261116005338-extension-catalog-copy.js`
+set the names in sentence case with product names kept ("Model lifecycle",
+"Risk import", "Dataset bulk upload", "Framework import", "Jira Assets", was
+"Jira Assets Integration"), made the Slack description list what the server
+actually sends, and fixed "use-cases" in the Jira Assets description. Its
+`down()` restores the previous text exactly. `name` and `display_name` carry
+the same value; the UI shows `display_name`.
+
 ### `extensions` (catalog, one row per extension)
 
 | Column | Notes |
@@ -54,7 +63,7 @@ All three catalog tables are created by
 | `category` | `CHECK` limited to `communication`, `ml_ops`, `data_management`, `version_control`, `monitoring`, `security`, `analytics`. A new category is a schema change. |
 | `icon_path` | Path under `Clients/public/assets/extensions/` (set by `20260818124348-extension-icon-paths.js`) |
 | `documentation_url`, `support_url` | Optional links |
-| `requires_configuration` | Drives the "Configuration required" label and the **Test connection** button |
+| `requires_configuration` | Drives the "Configuration required" label. The page **Test connection** button is keyed on having config fields, not on this flag |
 | `features` (JSONB array), `tags` (TEXT[]) | Catalog metadata |
 
 The catalog is not tenant-scoped. It is the same for every organization.
@@ -111,6 +120,20 @@ enabled the extension. All are tenant-scoped by `organization_id`.
 | risk-import, dataset-bulk-upload | None. They write to the core `risks` and `datasets` / `files` tables. |
 | framework-import | `imported_frameworks`, `imported_framework_topics`, `imported_framework_subtopics`, plus the use case tables `projects_imported_frameworks`, `imported_framework_topic_impl`, `imported_framework_subtopic_impl`, `imported_framework_topic_impl__risks`, `imported_framework_subtopic_impl__risks` (all eight with the `tenant_isolation` RLS policy). Imported frameworks are **not** rows in the global `frameworks` catalog or `projects_frameworks`; use cases attach them through `projects_imported_frameworks`. See [Imported frameworks](../domains/compliance-frameworks.md#imported-frameworks). |
 
+Every table above, and `extension_enablements`, has an entry in the
+tenant-isolation registry (`Servers/tests/integration/tenant-isolation/tenantIsolation.registry.ts`)
+with cross-organization tests. The one exception is `jira_assets_sync_history`,
+which stays on the deferred list in `Servers/scripts/auditTenantIsolationCoverage.ts`
+until a follow-up migration drops it. The extension suites are
+`mlflow.isolation.test.ts` (`mlflow_integrations`, `mlflow_model_records`),
+`azure-ai-foundry.isolation.test.ts` (`azure_ai_model_records`),
+`jira-assets-use-cases.isolation.test.ts` (`jira_assets_config`,
+`jira_assets_use_cases`) and `extension-enablements.isolation.test.ts`. In each,
+the second organization's syncs, config writes, enable, disable and removals
+leave the first organization's rows unchanged. Its lists show none of the
+first organization's rows, and requests by id for them answer 404 (a
+remove-missing request skips them as `not_found`). Outbound calls are stubbed.
+
 ---
 
 ## Server
@@ -129,8 +152,9 @@ enabled the extension. All are tenant-scoped by `organization_id`.
 | `getRuntimeConfiguration(key, orgId)` | Full config with secrets **decrypted**, for server-side use only. Returns `{}` if there is no enablement row. |
 
 Every response body (`assemble`: list, get, enable, disable and update) contains
-the catalog fields, `configFields`, `enabled`, the redacted `configuration` and
-the `enablement` row. The `enablement` row is sent without its `configuration`
+the catalog fields, `configFields`, `enabled`, the redacted `configuration`,
+`secretsSet` (the keys of the secret fields that hold a stored value, never the
+value; `[]` when nothing is stored) and the `enablement` row. The `enablement` row is sent without its `configuration`
 (`publicEnablement`; `ExtensionEnablementModel.toJSON` leaves it out too),
 because that column holds the ciphertext of every secret field. The redacted
 top-level `configuration` is the only copy a client gets.
@@ -143,13 +167,21 @@ top-level `configuration` is the only copy a client gets.
   decrypt). With `NODE_ENV=production` the backend and the worker refuse to
   start when `ENCRYPTION_KEY` is unset or blank (`resolveEncryptionKey`; see
   [Configuration reference](../../deployment/CONFIGURATION_REFERENCE.md#data-encryption)).
-- If a secret field is missing or blank in the payload, the stored ciphertext
-  carries over. This is how the UI's "Leave blank to keep the existing value"
-  works. Non-secret fields that are missing from the payload are dropped,
-  because the caller sends the full non-secret shape each time.
-- `validate` enforces `is_required` (a required secret passes if a previous
-  value exists), type checks per `field_type`, `options` membership and the
-  `validation` rules. It rejects unknown keys.
+- A save (enable or update) is merged onto the stored configuration, so the
+  caller sends only the fields it changed:
+
+  | Value in the payload | Non-secret field | Secret field |
+  |----------------------|------------------|--------------|
+  | absent | stored value kept | stored ciphertext kept |
+  | `""` | cleared | stored ciphertext kept (the form shows "Stored. Leave blank to keep it.") |
+  | `null` | cleared | cleared |
+  | anything else | replaced | replaced, encrypted |
+
+  Re-enabling with `{}` therefore keeps the whole stored configuration.
+- `validate` runs on the merged result: `is_required` (so clearing a required
+  field, secret or not, is a 400 "Field '<key>' is required"), type checks per
+  `field_type`, `options` membership and the `validation` rules. It rejects
+  unknown keys.
 - On read, `redactSecrets` removes secret keys entirely. Masked values are not
   returned either.
 - Per-extension code must read config through `getRuntimeConfiguration`. Never
@@ -158,6 +190,36 @@ top-level `configuration` is the only copy a client gets.
 Jira Assets is the exception. It keeps its connection settings, including its
 own encrypted `api_token` (via `Servers/tools/createSecureValue`), in the
 `jira_assets_config` table. Its `extension_enablements.configuration` is empty.
+
+`POST /api/extensions/jira-assets/config` checks the connection fields itself
+(`parseJiraConnection` in `jiraAssets.service.ts`) before anything is read or
+written:
+
+- `jira_base_url`, `workspace_id`, `email`, `api_token` and `deployment_type`
+  must be strings when present (400 "Jira connection fields must be text"). They
+  are trimmed, and a blank value counts as missing. The trimmed values are what
+  is stored, compared by the stored-secret guard and encrypted.
+- `jira_base_url` must be an `http` or `https` URL with a host and no user name
+  or password in it, and must pass the static checks of `assertSafeOutboundUrl`
+  (no DNS lookup at save). The check is `assertSafeOutboundUrl` itself: the
+  `code` on its `UnsafeOutboundUrlError` (`invalid-url`, `credentials`,
+  `blocked-address`) picks the save message. The Jira client runs the same
+  checks before it connects. A loopback host such as `localhost` is refused unless
+  `OUTBOUND_ALLOW_LOOPBACK=true`. Link-local and cloud metadata addresses are
+  always refused.
+- `workspace_id` must match the client's `WORKSPACE_ID_PATTERN`
+  (`/^[a-zA-Z0-9-]{1,64}$/`, exported from `jira.client.ts`). On Data Center
+  the panel labels this field "Insight Object Schema ID" and the same pattern
+  applies.
+- `deployment_type` is `cloud` (the default when it is missing) or
+  `datacenter` (`JIRA_DEPLOYMENT_TYPES`).
+- On `cloud` the email must pass `isEmail`. On Data Center the field holds a
+  user name, so no format is checked there.
+- `api_token` is required only when no token is stored.
+
+Each refusal is a 400. Its message is a server locale key (en, de, fr) and the
+controller sends it translated. Other `JiraConfigValidationError` messages go
+out as before.
 
 ### Stored secrets and changed addresses
 
@@ -186,6 +248,9 @@ submitted:
   switching to token auth, or an `api_token` after switching to none or basic),
   the stale secret is dropped from the saved configuration instead.
 
+On a save the compared values are the ones the save would store, so a field
+left out of a partial payload keeps its stored value and is no change. A secret
+cleared with `null` in the same save is not carried over and does not block it.
 URLs are compared after `assertSafeOutboundUrl` normalization and other values
 are trimmed, so a trailing slash or whitespace is not a change. When none of
 the fields changed, the stored secret carries over as before.
@@ -270,8 +335,12 @@ Keys are checked against `EXTENSION_KEY_PATTERN`, so a malformed key gets a 400.
 An unknown key gets a 404 ("Extension not found"). A `ValidationException` gets
 a 400.
 
-**Mount order matters.** In `Servers/app.ts` the catalog router is registered
-before the seven per-extension routers. Otherwise a per-extension mount such as
+**Mount order matters.** In `Servers/routes/legacy/aiPlatform.routes.ts`
+(`registerAiPlatformRoutes`, called from `Servers/app.ts`) the catalog router
+and the sync-run router are registered at `/api/extensions` before the eight
+per-extension routers (dataset bulk upload, risk import, Slack, MLflow, Azure
+AI Foundry, Jira Assets, Jira incidents, model lifecycle). Framework import has
+no router there: its routers are under `/api/v1`. Otherwise a per-extension mount such as
 `/api/extensions/slack` would catch `GET /api/extensions/slack` and return 403
 through the gate. Per-extension sub-paths are all multi-segment (`/models`,
 `/oauth/workspaces`, ...), so they never collide with `/:key`.
@@ -292,7 +361,7 @@ router.use(requireExtensionEnabled("mlflow"));
 | No `req.organizationId` | 401 "User not authenticated" |
 | Key not in the catalog | 404 "Extension '`<key>`' not found in catalog" |
 | No enablement row, or `enabled = false` | 403 "Extension '`<key>`' is not enabled for this organization" |
-| Lookup error | 500 |
+| Lookup error | 500 with the translated generic "Internal server error". The cause is logged with the extension key and organization (`logStructuredError`: the structured log line plus the stack in the tenant log) and is not sent to the client. |
 
 The key → id lookup is cached in process. The catalog only changes through
 migrations.
@@ -306,7 +375,7 @@ to a runner that returns `{ success, message, testedAt }`:
 |-----|--------|
 | `mlflow` | Stored runtime config overlaid with the submitted config (`overlayOnStored`, which applies the [stored-secret rule](#stored-secrets-and-changed-addresses)) → `testConnection` in `extensions/mlflow/mlflow.service.ts`. Reports "The server answered HTTP <status>" or "Could not reach the server". |
 | `azure-ai-foundry` | Same pattern → `testConnection` in `extensions/azure-ai-foundry/azureAiFoundry.service.ts` |
-| `jira-assets` | Submitted config. If no `api_token` is submitted, the stored token comes from `jira_assets_config`, unless the base URL, workspace, email or deployment type changed (then a failed result asks for the token again). Then `clientFromConfig(...).testConnection()`. A refused base URL is a failed result, not a 500, and an error answer reads "Jira returned HTTP <status>" without Jira's reply (its start goes to the server log). |
+| `jira-assets` | Submitted config, first checked by `parseJiraConnection` as a save checks it (trimmed text, base URL, workspace ID, deployment type, email on cloud). An invalid field is a failed result with the translated save message, not a 400 or 500. If no `api_token` is submitted, the stored token comes from `jira_assets_config`, unless the base URL, workspace, email or deployment type changed (then a failed result asks for the token again); with no token either way the result is "API Token is required". Then `clientFromConfig(...).testConnection()` with the trimmed fields. A refused base URL is a failed result, not a 500; a client that still reports a missing field gives "Save the Jira Assets connection first." (no field names or raw error). A database or decryption fault is still a 500. An error answer reads "Jira returned HTTP <status>" without Jira's reply (its start goes to the server log). |
 | `jira-incidents` | `testConnection(orgId, submitted)` in `extensions/jira-incidents/jiraIncidents.config.ts`: submitted fields overlaid on `jira_incidents_config`; a changed site URL or email needs a submitted token; checks `/myself`, then the three project permissions when a project is known. Never throws. |
 
 Any other key returns **200** with `success: false` and "Test connection is not
@@ -327,33 +396,54 @@ would be shadowed by the catalog router.
 | Settings page | `Clients/src/presentation/pages/Extensions/Settings/index.tsx`, route `/extensions/:key/settings` |
 | Generic config form | `Clients/src/presentation/components/ExtensionConfigForm` |
 | Per-extension UI | `Clients/src/presentation/pages/Extensions/<key>/` |
-| Header entry point | `Clients/src/presentation/components/Layout/DashboardActionButtons.tsx` (disabled for non-Admins) |
+| Header entry point | `Clients/src/presentation/components/Layout/DashboardActionButtons.tsx` (disabled without `extension.admin`) |
 | Icons | `Clients/public/assets/extensions/<key>.svg` (Azure uses `.jpg`) |
 
 The provider fetches `/api/extensions` once the user has a token and an
 organization, and clears it on logout. Mutations update the local cache, so
 gated UI re-renders straight away.
 
-Both pages redirect non-Admins to `/` (`userRoleName !== "Admin"`). The old
-`/plugins` route has no redirect.
+Both pages redirect to `/` when the user lacks the `extension.admin`
+permission (`useCan("extension.admin")` in `Extensions/index.tsx` and
+`Extensions/Settings/index.tsx`). The same check disables the header entry
+point (`DashboardActionButtons.tsx`) and picks the wording of
+`Extensions/ExtensionSetupNotice.tsx` (an **Open settings** action, or "Ask an
+Admin to set up ..."). The old `/plugins` route has no redirect.
 
 **Catalog card buttons** (`Extensions/index.tsx`): **Enable** when there are no
 pre-enable fields; **Configure to enable** when there are; **Configure** when
-enabled and the extension has a settings surface; **Disable** when enabled. A
-settings surface is either config fields or membership in
-`KEYS_WITH_POST_ENABLE_UI` (`slack`, `model-lifecycle`, `jira-assets`,
-`jira-incidents`).
+enabled and the extension has a settings surface; **Disable** when enabled
+(it opens the confirmation). A settings surface is either config fields or
+membership in `KEYS_WITH_POST_ENABLE_UI` (`slack`, `model-lifecycle`,
+`jira-assets`, `jira-incidents`). A disabled card carries a **Disabled** pill.
+An enabled card with no settings surface (Risk Import, Dataset Bulk Upload,
+Framework Import) shows "Where it shows up" with a menu path. If an enable or
+disable fails, the server's message appears under the buttons; a failed catalog
+load has a **Try again** button.
+
+When Model Lifecycle is off, a model's lifecycle link
+(`ModelInventory/ModelLifecycleDetail`) opens the model in Model inventory
+(`/model-inventory?modelId=<id>`) instead of the lifecycle page.
 
 **Settings page** (`Extensions/Settings/index.tsx`): a **Configuration** card
 when `configFields.length > 0`. Then the extension's own panel for `slack`
 (`SlackConfiguration`), `model-lifecycle` (`ModelLifecycleConfig`),
 `jira-assets` (`JiraAssetsConfiguration`) or `jira-incidents`
 (`JiraIncidentsConfiguration`). Then the **Enable**/**Disable**,
-**Save configuration** and **Test connection** actions. **Test connection**
-appears for any enabled extension with `requires_configuration = true`. For
-Slack and Model Lifecycle it therefore shows the "not available" message. For
-Jira incidents it tests the saved connection (the panel has its own **Test
-connection** for unsaved values).
+**Save configuration** and **Test connection** actions, under a status label
+that always reads **Enabled** or **Disabled**.
+
+- The form is seeded from the stored values (`initialFormValues`). On submit
+  (`prepareSubmitValues`) a non-secret field emptied by the user goes as
+  `null`, a secret field left blank is left out (kept), and a secret cleared
+  with **Clear** goes as `null`. A secret with a stored value (`secretsSet`)
+  shows "Stored. Leave blank to keep it." with **Clear** and **Undo**.
+  Disabling does not reseed the form, so unsaved edits survive it.
+- **Test connection** is a page button only for extensions that have config
+  fields: MLflow and Azure AI Foundry. It shows before and after **Enable**,
+  and its result is a status line under the buttons. Editing any field clears
+  the last result. Slack, Model Lifecycle and both Jira extensions have no page
+  button (Jira Assets and Jira incidents test from their own panels).
 
 ---
 
@@ -384,8 +474,9 @@ Client dirs are relative to `Clients/src/presentation/pages/`.
 - Cell values: the client sends each cell as the sheet holds it (rich text, hyperlinks and formulas as their displayed text). `importRisks` turns every text field into a string before validation, so a numeric Risk Name (2024) is a name, not a 500. A number in a date field is still refused.
 - Row numbers in errors are the real sheet rows (strict mode only): the client sends `row_number` with each row (blank rows are dropped), and the server falls back to index + 2 when it is missing or not a positive integer.
 - Any validation error imports nothing.
-- Row messages: `POST /api/v1/risk-import/import` translates them with `req.t` and adds `key` and `params`; the legacy route is frozen and always returns the English `message` the service builds, with no `key` or `params`, whatever `Accept-Language` says.
-- When validation passes, the rows are inserted in one transaction, each inside its own savepoint. A failed insert rolls back only that row, so every row reports its own error; later rows still attempt their INSERT but skip the history write, since the batch is rolled back. Any error means nothing is imported. A failed row's message is generic on both paths ("This row could not be saved. Check its values and try again."); the database's own text is written to the server log only, so table and column names never reach the client.
+- Row cap: more than 5000 rows (`MAX_IMPORT_ROWS` in `Servers/extensions/importLimits.ts`) answers 400 with one row-0 error before any row is checked or written, on both paths.
+- Row messages: every error carries a `messageKey` from `RISK_IMPORT_MESSAGES` (each value is its en.json key) and `params` for its placeholders, built by `keyedError`. `translateImportError` in the controller shapes them. `POST /api/v1/risk-import/import` translates every message with `req.t` and returns `key` and `params`. The legacy route is frozen: no `key` or `params`, and its per-field validation messages stay in the English the service builds whatever `Accept-Language` says; only the messages the import itself words (row cap, refused inserts; `LEGACY_TRANSLATED_MESSAGES`) are translated there.
+- When validation passes, the rows are inserted in one transaction, each inside its own savepoint. A failed insert rolls back only that row, so every row reports its own error; later rows still attempt their INSERT but skip the history write, since the batch is rolled back. Any error means nothing is imported. A failed row's message is a short sentence chosen from the PostgreSQL error code by `rowInsertError` (22P02 not an allowed option, 23502 required value empty, 22001 value too long, 22007/22008 date not valid, anything else "This row could not be saved."), on both paths; the database's own text is written to the server log only (`logStructuredError`, on one line), so table and column names never reach the client.
 - Each imported risk gets a creation entry in the change history, attributed to the importing user (`recordEntityCreation` with `req.userId`).
 
 ### Per-extension routes
@@ -401,8 +492,8 @@ enabled can call the route.
 | `/api/extensions/mlflow` | `GET /models`, `GET /models/:modelId`, `POST /sync` | `model.edit` (Admin, Editor) on `POST /sync`: it writes model records and calls the server with the stored secret. The model reads are open. |
 | `/api/extensions/azure-ai-foundry` | `GET /models`, `GET /models/:deploymentId`, `POST /sync`, `GET /discover` | `model.edit` (Admin, Editor) on `POST /sync` and `GET /discover`. The model reads are open. `GET /discover` (agent discovery) has the same limits as sync and test connection: 30 seconds per request, 110 seconds overall. On failure it returns no agents and logs the reason. |
 | `/api/extensions/model-lifecycle` | `GET /config`; phases CRUD and reorder; items CRUD and reorder; `GET /models/:id/lifecycle`, `/progress`; item values, files, people and approvals under `/models/:id/lifecycle/items/:itemId/...` `POST .../items/:itemId/files` links only a file of the caller's organization (404 otherwise). | `extension.admin` (Admin) on phase and item create, update, delete and reorder. `model.edit` (Admin, Editor) on value, file, people and approver writes. `PUT .../approvals/:userId` is open to any role but only for the caller's own row (403 otherwise, Admins included; no override). Every `/models/:id/lifecycle...` route answers 404 for a model outside the caller's organization, and item routes 404 for an item outside it; people and approvers must be members of the organization (400). `DELETE .../items/:itemId/files/:fileId` only unlinks: the `files` row stays in the File Manager. Deleting a phase or item also keeps its files. 404 when the item has no link to the file, 400 when an id is not a positive integer up to 2147483647. |
-| `/api/extensions/risk-import` | `GET /template`, `POST /import` (legacy, frozen accept rules) | Admin, Editor |
-| `/api/v1/risk-import` | `POST /import` (strict rules, see [Risk import rules](#risk-import-rules)) | Admin, Editor (`ext.riskImport.edit`) |
+| `/api/extensions/risk-import` | `GET /template`, `POST /import` (legacy, frozen accept rules) | Admin, Editor. The template lists the organization's users on a very hidden `Lists` sheet and the Risk Owner and Risk Approval dropdowns point at that range, so the 255-character limit of an inline list never applies. `POST /import` takes at most 5000 rows (`MAX_IMPORT_ROWS`; more answers 400 with one row-0 error before anything is checked or written) and is all-or-nothing: any validation or insert error answers 400 with every row's error under `data.errors` and nothing is saved. Each insert runs in its own savepoint, so a row the database refuses does not abort the rows after it. A refused insert reads a short sentence (`RISK_IMPORT_MESSAGES`: not an allowed option, required value empty, value too long, date not valid, or "This row could not be saved."), translated by the controller; the database's own text goes to the server log only. Its per-field validation messages stay in English (see [Risk import rules](#risk-import-rules)). |
+| `/api/v1/risk-import` | `POST /import` (strict rules, see [Risk import rules](#risk-import-rules)) | Admin, Editor (`ext.riskImport.edit`). `POST /import` takes at most 5000 rows (`MAX_IMPORT_ROWS`; more answers 400 with one row-0 error before anything is checked or written) and is all-or-nothing: any validation or insert error answers 400 with every row's error under `data.errors` and nothing is saved. Each insert runs in its own savepoint, so a row the database refuses does not abort the rows after it. A refused insert reads a short sentence (`RISK_IMPORT_MESSAGES`: not an allowed option, required value empty, value too long, date not valid, or "This row could not be saved."), translated by the controller; the database's own text goes to the server log only. Every row message is translated and carries its `key` and `params`. |
 | `/api/extensions/jira-assets` | `GET/POST /config`, `PATCH /config/sync`, `PATCH /config/selection`, `GET /vw-attributes`, schema and object-type discovery (`GET /object-types/:id/objects?startAt=` is one page of up to 1000 for the import picker), `POST /import`, `POST /sync` (202, queued for the worker), `GET /sync/status`, `GET /sync/history`, `GET /use-cases`, `POST /use-cases/remove-missing`, `GET/DELETE /use-cases/:id`, `GET /projects/:projectId/custom-frameworks-progress` | `extension.admin` (Admin) on `POST /config`, `PATCH /config/sync`, `PATCH /config/selection`, `GET /schemas`, `GET /schemas/:schemaId/object-types`, `GET /object-types/:objectTypeId/objects`, `POST /import`, `POST /sync`, `POST /use-cases/remove-missing`, `DELETE /use-cases/:id`. `GET /object-types/:objectTypeId/attributes` stays open to members (the use case Jira settings tab reads it), but only for the organization's configured object type or the object type of one of its imported use cases; any other id is 403 "Access denied" (Admins read any). Schema, object type and object ids must be numeric (`/^\d{1,18}$/`) in paths and in the `selected_schema_id` / `selected_object_type_id` that `POST /config` and `PATCH /config/selection` save (empty clears); anything else is 400 "{field} must be a numeric Jira id" before Jira is called or anything is saved. `GET /use-cases` lists only the use cases in the caller's use case list (`projectVisibilitySql`; Admins see all). `GET /use-cases/:id` and `GET /projects/:projectId/custom-frameworks-progress` go through `requireProjectAccess` (read rule, the same as the use case's own page, so a task assignee or workflow approver can open one they do not see in the list): 403 "Access denied" without access, 404 when missing or in another organization. Errors: 400 bad input, 404 not configured, 409 a run is live or a sync job is waiting, 502 Jira or network failure (reason in `error`), 503 the job queue did not answer. |
 | `/api/extensions/jira-incidents` | `GET/PUT /config`, `GET /jira/projects`, `GET /jira/issue-types?project=`, `GET /jira/statuses?project=&issue_type=` (with `default_map_in` / `default_map_out`), `GET /jira/priorities` (with `default_severity_map`), `GET /jira/labels?query=`, `GET /events?limit=` (1–200, default 50), `GET /links?incident_ids=` (at most 500) | `extension.admin` (Admin) on every route, reads included, **except `GET /links`**: it is registered before the extension gate, open to any member, and returns `[]` when the extension is disabled. Errors: 400 bad input or "Connect to Jira first" on the pickers, 502 Jira's answer (401 from Jira included) or a network failure. |
 | `/api/extensions/dataset-bulk-upload` | `POST /upload` (multipart, one file per request, 30 MB, CSV/XLS/XLSX; 413/415 on error; 400 when the metadata links a model or use case outside the organization, checked in `dataset.utils.ts` for the core dataset routes too) | Admin, Editor |
@@ -437,12 +528,21 @@ and ignores it.
 
 - **Enable** upserts the enablement row with `enabled = true`, `enabled_at`
   and `enabled_by`. Any submitted `configuration` is merged into the stored
-  config and validated. Re-enabling keeps earlier config values.
+  config and validated. Re-enabling keeps earlier config values: the settings
+  page seeds its form from the stored values and sends only what was changed,
+  and a field left out of the payload keeps its stored value (see
+  [Secrets and validation](#secrets-and-validation)).
 - **Disable** sets `enabled = false`. Configuration, secrets and all
   extension-owned data (synced models, lifecycle phases, Jira use cases, Slack
-  webhooks) are **kept**. Re-enabling restores access to them. The UI shows no
-  confirmation dialog. While Slack is disabled, no Slack notification is sent
-  for that organization.
+  webhooks) are **kept**. Re-enabling restores access to them.
+- Both the catalog and the settings page ask for confirmation before a disable
+  (`ConfirmDisableModal`). It shows one sentence per extension on what stops
+  (`Extensions/disableCopy.ts`, with a generic fallback for a key that has no
+  entry). The sentences are checked against the code: the gate on the
+  extension's routes, the `isEnabled(key)` checks that hide its UI, and the jobs
+  that skip organizations where it is off. Cancel, the close button and Escape
+  do nothing while the disable request is in flight.
+- While Slack is disabled, no Slack notification is sent for that organization.
 - **There is no uninstall** and no way to purge an extension's data from the
   UI or API.
 - While disabled, the gate returns 403 on every `/api/extensions/<key>/...`
@@ -450,8 +550,26 @@ and ignores it.
 - MLflow and Azure AI Foundry sync is manual only. Jira Assets also refreshes
   its imported use cases on the configured interval (see
   [Scheduled sync](#scheduled-sync)). The scheduler skips organizations where
-  the extension is disabled. No Jira Assets sync ever deletes a use case:
-  objects gone from Jira are flagged, and an Admin removes them explicitly.
+  the extension is disabled, and a sync job queued before the extension was
+  disabled is dropped when the worker picks it up (see [Jobs](#jobs)). No Jira
+  Assets sync ever deletes a use case: objects gone from Jira are flagged, and
+  an Admin removes them explicitly.
+- Shadow AI **Start governance** with `start_lifecycle` set seeds the new
+  model's lifecycle only when model-lifecycle is enabled for the organization.
+  `startGovernance` (`shadowAi.ctrl.ts`) first calls `canStartLifecycle` in
+  `extensions/model-lifecycle/modelLifecycle.service.ts`, before it opens the
+  governance transaction, so the enablement lookup never waits for a second
+  pooled connection while the transaction holds one. It answers false when the
+  extension is disabled or the lookup fails (logged). Only on true does the
+  controller call `startLifecycleForModel` inside the transaction: one
+  `INSERT INTO model_lifecycle_values ... SELECT` over the organization's active
+  items of active phases, under a savepoint, with `ON CONFLICT DO NOTHING` and
+  `RETURNING id`. It returns true only when a row was inserted. A failure rolls
+  back to the savepoint and is logged, and governance still succeeds.
+  `lifecycle_initialized` in the response is its result. The **Start lifecycle
+  review** toggle in the Shadow AI form (`GovernanceWizardModal`) is shown only
+  when `useExtensions().isEnabled("model-lifecycle")` is true (hidden while the
+  extensions list loads), and the form sends `start_lifecycle` only then.
 
 ---
 
@@ -575,10 +693,20 @@ under jobId `ext-sync-<key>-<orgId>`, with one attempt, removed on complete and
 on fail. `enqueueExtensionSyncRun` adds nothing when a job for the pair is
 already waiting (`queued: false`); a queue call made for an HTTP request gives
 up after 5 seconds with `BackgroundJobsUnavailableError` (503). The worker
-(`runExtensionSyncJob`) validates the payload and claims at pickup. If a run is
-live, a manual job records a `skipped` row (no token, "Another sync or import
-was running, so this sync did not start.") and a scheduled job records nothing.
-Enablement is not checked at pickup.
+(`runExtensionSyncJob`) validates the payload, then checks enablement with
+`isExtensionEnabledForOrganization` (the lookup the gate uses). A job for an
+organization that disabled the extension after it was queued, manual or
+scheduled, is logged (`logStructured`) and returns `skipped` without claiming,
+so no run row is written. The extension's run routes are gated for that
+organization, so nobody waits on one. If the enablement lookup throws, the
+cause is logged with its stack (`logStructuredError`) and the job fails with
+nothing claimed and no run row: whether the extension is on is unknown, so
+nothing is written behind its gate. A client waiting on "Sync now" still
+resolves, because the failed job is removed: the status shows nothing queued,
+nothing running and no newer run, and `decidePoll` (`useExtensionSync.ts`)
+ends with "The sync did not start. Try again." after three polls. Otherwise the worker claims at pickup. If a run is live, a
+manual job records a `skipped` row (no token, "Another sync or import was
+running, so this sync did not start.") and a scheduled job records nothing.
 
 The worker also accepts the old Jira job names for one release:
 `jira_assets_scheduled_sync_check` runs the tick and `jira_assets_sync_run` runs

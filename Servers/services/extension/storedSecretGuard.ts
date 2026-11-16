@@ -131,7 +131,8 @@ export const STORED_SECRET_FIELDS: Record<string, GuardedSecret[]> = {
   ],
 };
 
-const isFilled = (v: unknown): boolean => v !== undefined && v !== null && v !== "";
+/** A config value counts as set unless it is undefined, null or "". */
+export const isFilled = (v: unknown): boolean => v !== undefined && v !== null && v !== "";
 
 function normalize(value: unknown, trigger: Trigger): string {
   const raw = isFilled(value) ? String(value).trim() : (trigger.fallback ?? "");

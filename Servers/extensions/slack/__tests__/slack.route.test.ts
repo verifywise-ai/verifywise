@@ -338,6 +338,20 @@ describe("PATCH body", () => {
     expect(res.status).toBe(400);
     expect(q.updateSlackWebhookByIdQuery).not.toHaveBeenCalled();
   });
+
+  it("answers 400, not 500, when the update's own routing check refuses", async () => {
+    const { ValidationException } = jest.requireActual(
+      "../../../domain.layer/exceptions/custom.exception",
+    );
+    q.updateSlackWebhookByIdQuery.mockRejectedValueOnce(
+      new ValidationException("routing_type must be a list of notification types", "routing_type"),
+    );
+
+    const res = await call("patch", `${BASE}/5`).send({ routing_type: [ROUTING] });
+
+    expect(res.status).toBe(400);
+    expect(res.body.data).toBe("routing_type must be a list of notification types");
+  });
 });
 
 describe("id parameter", () => {

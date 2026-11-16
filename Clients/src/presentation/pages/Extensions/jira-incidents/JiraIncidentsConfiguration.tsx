@@ -37,7 +37,6 @@ import { describeJiraIncidentsRun } from "./runOutcome";
 import { useCan } from "../../../../application/hooks/useCan";
 import { radiusPx } from "../../../themes/palette";
 
-const CONTROL_HEIGHT_SX = { height: 30, minHeight: 30 };
 const LABEL_DEBOUNCE_MS = 300;
 const MAX_LABEL_SUGGESTIONS = 10;
 const EVENTS_SHOWN = 50;
@@ -375,7 +374,6 @@ export function JiraIncidentsConfiguration() {
             onClick={handleTestConnection}
             loading={testing}
             isDisabled={testing}
-            sx={CONTROL_HEIGHT_SX}
           />
         </Box>
         {testResult && (
@@ -556,7 +554,6 @@ export function JiraIncidentsConfiguration() {
             onClick={handleSave}
             loading={saving}
             isDisabled={saving}
-            sx={CONTROL_HEIGHT_SX}
           />
         </Box>
       </Stack>
