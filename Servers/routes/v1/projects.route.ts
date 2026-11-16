@@ -75,7 +75,9 @@ const ARCHIVE_FLAG = "archive_risks_linked_only_here";
 const parseArchiveFlag = (req: Request, res: Response, next: NextFunction) => {
   const raw = req.query[ARCHIVE_FLAG];
   if (raw !== "true" && raw !== "false") {
-    return res.status(400).json(STATUS_CODE[400](`${ARCHIVE_FLAG} must be "true" or "false"`));
+    return res
+      .status(400)
+      .json(STATUS_CODE[400](req.t!('archive_risks_linked_only_here must be "true" or "false"')));
   }
   res.locals.archiveRisksLinkedOnlyHere = raw === "true";
   return next();
