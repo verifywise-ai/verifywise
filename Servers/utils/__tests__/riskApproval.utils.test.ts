@@ -14,7 +14,9 @@ import {
   resolveRiskApproval,
   RiskApprovalForbiddenError,
   RISK_APPROVAL_FORBIDDEN_MESSAGE,
+  RISK_APPROVAL_SELF_APPROVER_MESSAGE,
 } from "../riskApproval.utils";
+import { ForbiddenException } from "../../domain.layer/exceptions/custom.exception";
 
 const EDITOR = 10;
 const APPROVER = 20;
@@ -50,276 +52,365 @@ describe("normalizeRiskApprovalStatus", () => {
   );
 });
 
+type Existing = { risk_approval: number | null; approval_status: string | null } | null;
+
+const resolve = (
+  existing: Existing,
+  submitted: { risk_approval?: number | string | null; approval_status?: unknown },
+  callerId: number,
+  callerIsAdmin = false,
+) => resolveRiskApproval({ existing, submitted, callerId, callerIsAdmin });
+
+const forbidden = (fn: () => unknown, message = RISK_APPROVAL_FORBIDDEN_MESSAGE) => {
+  expect(fn).toThrow(RiskApprovalForbiddenError);
+  expect(fn).toThrow(message);
+};
+
+describe("RiskApprovalForbiddenError", () => {
+  it("is a ForbiddenException, so generic handlers answer 403", () => {
+    const error = new RiskApprovalForbiddenError();
+    expect(error).toBeInstanceOf(ForbiddenException);
+    expect(error).toBeInstanceOf(RiskApprovalForbiddenError);
+    expect(error.statusCode).toBe(403);
+    expect(error.message).toBe(RISK_APPROVAL_FORBIDDEN_MESSAGE);
+  });
+});
+
 describe("resolveRiskApproval on create", () => {
   it("defaults to Not required with no approver", () => {
-    expect(
-      resolveRiskApproval({
-        existing: null,
-        submitted: {},
-        callerId: EDITOR,
-        callerIsAdmin: false,
-      }),
-    ).toEqual({ risk_approval: null, approval_status: "Not required", approverChangedTo: null });
+    expect(resolve(null, {}, EDITOR)).toEqual({
+      risk_approval: null,
+      approval_status: "Not required",
+      approverChangedTo: null,
+    });
   });
 
   it("sets Pending when an approver is named", () => {
-    expect(
-      resolveRiskApproval({
-        existing: null,
-        submitted: { risk_approval: APPROVER },
-        callerId: EDITOR,
-        callerIsAdmin: false,
-      }),
-    ).toEqual({ risk_approval: APPROVER, approval_status: "Pending", approverChangedTo: APPROVER });
+    expect(resolve(null, { risk_approval: APPROVER }, EDITOR)).toEqual({
+      risk_approval: APPROVER,
+      approval_status: "Pending",
+      approverChangedTo: APPROVER,
+    });
   });
 
   it("sets Pending when an approver is named and the client sends Not required", () => {
     expect(
-      resolveRiskApproval({
-        existing: null,
-        submitted: { risk_approval: APPROVER, approval_status: "Not required" },
-        callerId: EDITOR,
-        callerIsAdmin: false,
-      }).approval_status,
+      resolve(null, { risk_approval: APPROVER, approval_status: "Not required" }, EDITOR)
+        .approval_status,
     ).toBe("Pending");
   });
 
   it("refuses Approved from an Editor who is not the approver", () => {
-    expect(() =>
-      resolveRiskApproval({
-        existing: null,
-        submitted: { risk_approval: APPROVER, approval_status: "Approved" },
-        callerId: EDITOR,
-        callerIsAdmin: false,
-      }),
-    ).toThrow(RiskApprovalForbiddenError);
+    forbidden(() =>
+      resolve(null, { risk_approval: APPROVER, approval_status: "Approved" }, EDITOR),
+    );
   });
 
-  it("refuses Approved from an Editor who names themself as approver", () => {
-    expect(() =>
-      resolveRiskApproval({
-        existing: null,
-        submitted: { risk_approval: EDITOR, approval_status: "Approved" },
-        callerId: EDITOR,
-        callerIsAdmin: false,
-      }),
-    ).toThrow(RiskApprovalForbiddenError);
+  it("refuses an Editor who names themself as approver", () => {
+    forbidden(
+      () => resolve(null, { risk_approval: EDITOR }, EDITOR),
+      RISK_APPROVAL_SELF_APPROVER_MESSAGE,
+    );
+    forbidden(
+      () => resolve(null, { risk_approval: EDITOR, approval_status: "Approved" }, EDITOR),
+      RISK_APPROVAL_SELF_APPROVER_MESSAGE,
+    );
   });
 
   it("honors Approved from an Admin", () => {
     expect(
-      resolveRiskApproval({
-        existing: null,
-        submitted: { risk_approval: APPROVER, approval_status: "Approved" },
-        callerId: EDITOR,
-        callerIsAdmin: true,
-      }).approval_status,
+      resolve(null, { risk_approval: APPROVER, approval_status: "Approved" }, EDITOR, true)
+        .approval_status,
     ).toBe("Approved");
   });
 
-  it("ignores a legacy value such as In Progress", () => {
-    expect(
-      resolveRiskApproval({
-        existing: null,
-        submitted: { approval_status: "In Progress" },
-        callerId: EDITOR,
-        callerIsAdmin: false,
-      }).approval_status,
-    ).toBe("Not required");
+  it("lets an Admin name themself", () => {
+    expect(resolve(null, { risk_approval: OTHER }, OTHER, true).approval_status).toBe("Pending");
   });
+
+  it.each([["Pending"], ["Approved"], ["Rejected"], ["In Progress"]])(
+    "stores Not required for %p with no approver",
+    (status) => {
+      expect(resolve(null, { approval_status: status }, EDITOR).approval_status).toBe(
+        "Not required",
+      );
+      expect(resolve(null, { approval_status: status }, OTHER, true).approval_status).toBe(
+        "Not required",
+      );
+    },
+  );
 
   it("treats approver 0 or empty as no approver", () => {
     for (const none of [0, "", null]) {
-      expect(
-        resolveRiskApproval({
-          existing: null,
-          submitted: { risk_approval: none as any },
-          callerId: EDITOR,
-          callerIsAdmin: false,
-        }),
-      ).toEqual({ risk_approval: null, approval_status: "Not required", approverChangedTo: null });
+      expect(resolve(null, { risk_approval: none as any }, EDITOR)).toEqual({
+        risk_approval: null,
+        approval_status: "Not required",
+        approverChangedTo: null,
+      });
     }
   });
 });
 
-describe("resolveRiskApproval on update", () => {
+describe("resolveRiskApproval on update: status changes (R1)", () => {
   const approved = { risk_approval: APPROVER, approval_status: "Approved" };
+  const pending = { risk_approval: APPROVER, approval_status: "Pending" };
 
   it("lets an Editor re-save an Approved risk without touching the status", () => {
     expect(
-      resolveRiskApproval({
-        existing: approved,
-        submitted: { risk_approval: APPROVER, approval_status: "Approved" },
-        callerId: EDITOR,
-        callerIsAdmin: false,
-      }),
+      resolve(approved, { risk_approval: APPROVER, approval_status: "Approved" }, EDITOR),
     ).toEqual({ risk_approval: APPROVER, approval_status: "Approved", approverChangedTo: null });
   });
 
   it("keeps the status when nothing approval-related is sent", () => {
-    expect(
-      resolveRiskApproval({
-        existing: approved,
-        submitted: {},
-        callerId: EDITOR,
-        callerIsAdmin: false,
-      }).approval_status,
-    ).toBe("Approved");
-  });
-
-  it("resets to Pending when an Editor changes the approver of an Approved risk", () => {
-    expect(
-      resolveRiskApproval({
-        existing: approved,
-        submitted: { risk_approval: OTHER, approval_status: "Approved" },
-        callerId: EDITOR,
-        callerIsAdmin: false,
-      }),
-    ).toEqual({ risk_approval: OTHER, approval_status: "Pending", approverChangedTo: OTHER });
-  });
-
-  it("sets Not required when the approver is cleared", () => {
-    expect(
-      resolveRiskApproval({
-        existing: approved,
-        submitted: { risk_approval: null, approval_status: "Approved" },
-        callerId: EDITOR,
-        callerIsAdmin: false,
-      }),
-    ).toEqual({ risk_approval: null, approval_status: "Not required", approverChangedTo: null });
+    expect(resolve(approved, {}, EDITOR).approval_status).toBe("Approved");
   });
 
   it("lets the approver approve", () => {
-    expect(
-      resolveRiskApproval({
-        existing: { risk_approval: APPROVER, approval_status: "Pending" },
-        submitted: { approval_status: "Approved" },
-        callerId: APPROVER,
-        callerIsAdmin: false,
-      }).approval_status,
-    ).toBe("Approved");
+    expect(resolve(pending, { approval_status: "Approved" }, APPROVER).approval_status).toBe(
+      "Approved",
+    );
   });
 
   it("lets an Admin reject", () => {
+    expect(resolve(pending, { approval_status: "rejected" }, OTHER, true).approval_status).toBe(
+      "Rejected",
+    );
+  });
+
+  it.each([
+    ["Pending", "Approved"],
+    ["Pending", "Rejected"],
+    ["Pending", "Not required"],
+    ["Approved", "Not required"],
+    ["Approved", "Pending"],
+    ["Rejected", "Pending"],
+    ["Not required", "Pending"],
+    ["Not required", "Approved"],
+  ])("refuses an Editor moving %p to %p while an approver is set", (from, to) => {
+    forbidden(() =>
+      resolve({ risk_approval: APPROVER, approval_status: from }, { approval_status: to }, EDITOR),
+    );
+  });
+
+  it.each([
+    ["Pending", "Not required"],
+    ["Approved", "Pending"],
+    ["Rejected", "Approved"],
+  ])("lets the saved approver move %p to %p", (from, to) => {
     expect(
-      resolveRiskApproval({
-        existing: { risk_approval: APPROVER, approval_status: "Pending" },
-        submitted: { approval_status: "rejected" },
-        callerId: OTHER,
-        callerIsAdmin: true,
-      }).approval_status,
-    ).toBe("Rejected");
-  });
-
-  it("refuses Rejected from an Editor", () => {
-    expect(() =>
-      resolveRiskApproval({
-        existing: { risk_approval: APPROVER, approval_status: "Pending" },
-        submitted: { approval_status: "Rejected" },
-        callerId: EDITOR,
-        callerIsAdmin: false,
-      }),
-    ).toThrow(RiskApprovalForbiddenError);
-  });
-
-  it("refuses Not required on an Approved risk from an Editor", () => {
-    expect(() =>
-      resolveRiskApproval({
-        existing: approved,
-        submitted: { approval_status: "Not required" },
-        callerId: EDITOR,
-        callerIsAdmin: false,
-      }),
-    ).toThrow(RISK_APPROVAL_FORBIDDEN_MESSAGE);
+      resolve({ risk_approval: APPROVER, approval_status: from }, { approval_status: to }, APPROVER)
+        .approval_status,
+    ).toBe(to);
   });
 
   it("ignores In Progress and keeps the current status", () => {
+    expect(resolve(pending, { approval_status: "In Progress" }, EDITOR).approval_status).toBe(
+      "Pending",
+    );
+  });
+
+  it("does not report an unchanged approver", () => {
     expect(
-      resolveRiskApproval({
-        existing: { risk_approval: APPROVER, approval_status: "Pending" },
-        submitted: { approval_status: "In Progress" },
-        callerId: EDITOR,
-        callerIsAdmin: false,
-      }).approval_status,
+      resolve(pending, { risk_approval: String(APPROVER) as any }, EDITOR).approverChangedTo,
+    ).toBeNull();
+  });
+});
+
+describe("resolveRiskApproval on update: approver changes (R2)", () => {
+  const approved = { risk_approval: APPROVER, approval_status: "Approved" };
+  const rejected = { risk_approval: APPROVER, approval_status: "Rejected" };
+  const pending = { risk_approval: APPROVER, approval_status: "Pending" };
+
+  it("refuses an Editor re-assigning an Approved risk", () => {
+    forbidden(() =>
+      resolve(approved, { risk_approval: OTHER, approval_status: "Approved" }, EDITOR),
+    );
+    forbidden(() => resolve(approved, { risk_approval: OTHER }, EDITOR));
+  });
+
+  it("refuses an Editor clearing the approver of a Rejected risk", () => {
+    forbidden(() => resolve(rejected, { risk_approval: null }, EDITOR));
+  });
+
+  it("lets the saved approver hand a decided risk on, which resets it to Pending", () => {
+    expect(resolve(approved, { risk_approval: OTHER }, APPROVER)).toEqual({
+      risk_approval: OTHER,
+      approval_status: "Pending",
+      approverChangedTo: OTHER,
+    });
+  });
+
+  it("lets an Admin re-assign an Approved risk", () => {
+    expect(resolve(approved, { risk_approval: OTHER }, EDITOR, true).approval_status).toBe(
+      "Pending",
+    );
+  });
+
+  it("lets an Editor change the approver of a Pending risk, resetting to Pending", () => {
+    expect(resolve(pending, { risk_approval: OTHER }, EDITOR)).toEqual({
+      risk_approval: OTHER,
+      approval_status: "Pending",
+      approverChangedTo: OTHER,
+    });
+  });
+
+  it("lets an Editor clear the approver of a Pending risk, which sets Not required", () => {
+    expect(resolve(pending, { risk_approval: null, approval_status: "Pending" }, EDITOR)).toEqual({
+      risk_approval: null,
+      approval_status: "Not required",
+      approverChangedTo: null,
+    });
+  });
+
+  it("lets an Editor name an approver on a Not required risk", () => {
+    expect(
+      resolve(
+        { risk_approval: null, approval_status: "Not required" },
+        { risk_approval: OTHER },
+        EDITOR,
+      ).approval_status,
     ).toBe("Pending");
   });
 
-  it("refuses a decision from the newly named approver in the same save", () => {
-    // Naming yourself and approving in one save is a self-attested approval.
-    expect(() =>
-      resolveRiskApproval({
-        existing: { risk_approval: null, approval_status: "Not required" },
-        submitted: { risk_approval: EDITOR, approval_status: "Approved" },
-        callerId: EDITOR,
-        callerIsAdmin: false,
-      }),
-    ).toThrow(RiskApprovalForbiddenError);
-  });
-
-  it("refuses a decision when an approver replaces another and approves in one save", () => {
-    expect(() =>
-      resolveRiskApproval({
-        existing: { risk_approval: APPROVER, approval_status: "Pending" },
-        submitted: { risk_approval: EDITOR, approval_status: "Rejected" },
-        callerId: EDITOR,
-        callerIsAdmin: false,
-      }),
-    ).toThrow(RiskApprovalForbiddenError);
-  });
-
-  it("lets the newly named approver decide in a later save", () => {
-    const named = resolveRiskApproval({
-      existing: { risk_approval: null, approval_status: "Not required" },
-      submitted: { risk_approval: EDITOR },
-      callerId: EDITOR,
-      callerIsAdmin: false,
-    });
-    expect(named.approval_status).toBe("Pending");
-    expect(
-      resolveRiskApproval({
-        existing: { risk_approval: named.risk_approval, approval_status: named.approval_status },
-        submitted: { approval_status: "Approved" },
-        callerId: EDITOR,
-        callerIsAdmin: false,
-      }).approval_status,
-    ).toBe("Approved");
+  it("refuses a decision from a non-Admin in the save that changes the approver", () => {
+    forbidden(() =>
+      resolve(pending, { risk_approval: OTHER, approval_status: "Rejected" }, APPROVER),
+    );
+    forbidden(() =>
+      resolve(
+        { risk_approval: null, approval_status: "Not required" },
+        { risk_approval: OTHER, approval_status: "Approved" },
+        EDITOR,
+      ),
+    );
   });
 
   it("lets an Admin name an approver and decide in the same save", () => {
     expect(
-      resolveRiskApproval({
-        existing: { risk_approval: null, approval_status: "Not required" },
-        submitted: { risk_approval: APPROVER, approval_status: "Rejected" },
-        callerId: OTHER,
-        callerIsAdmin: true,
-      }),
+      resolve(
+        { risk_approval: null, approval_status: "Not required" },
+        { risk_approval: APPROVER, approval_status: "Rejected" },
+        OTHER,
+        true,
+      ),
     ).toEqual({
       risk_approval: APPROVER,
       approval_status: "Rejected",
       approverChangedTo: APPROVER,
     });
   });
+});
 
-  it("needs an approver for a decision, even from an Admin", () => {
+describe("resolveRiskApproval on update: naming yourself (R3)", () => {
+  it("refuses an Editor naming themself as the new approver", () => {
+    forbidden(
+      () =>
+        resolve(
+          { risk_approval: null, approval_status: "Not required" },
+          { risk_approval: EDITOR },
+          EDITOR,
+        ),
+      RISK_APPROVAL_SELF_APPROVER_MESSAGE,
+    );
+    forbidden(
+      () =>
+        resolve(
+          { risk_approval: APPROVER, approval_status: "Pending" },
+          { risk_approval: EDITOR },
+          EDITOR,
+        ),
+      RISK_APPROVAL_SELF_APPROVER_MESSAGE,
+    );
+  });
+
+  it("lets the saved approver keep themself", () => {
     expect(
-      resolveRiskApproval({
-        existing: { risk_approval: null, approval_status: "Not required" },
-        submitted: { approval_status: "Approved" },
-        callerId: OTHER,
-        callerIsAdmin: true,
-      }).approval_status,
+      resolve(
+        { risk_approval: APPROVER, approval_status: "Pending" },
+        { risk_approval: APPROVER, approval_status: "Approved" },
+        APPROVER,
+      ).approval_status,
+    ).toBe("Approved");
+  });
+
+  it("lets an Admin name themself", () => {
+    expect(
+      resolve(
+        { risk_approval: APPROVER, approval_status: "Approved" },
+        { risk_approval: OTHER },
+        OTHER,
+        true,
+      ).approverChangedTo,
+    ).toBe(OTHER);
+  });
+});
+
+describe("resolveRiskApproval on update: no approver (R4)", () => {
+  const legacyApproved = { risk_approval: null, approval_status: "Approved" };
+
+  it("keeps a legacy Approved status with no approver on an unrelated save", () => {
+    expect(
+      resolve(legacyApproved, { risk_approval: null, approval_status: "Approved" }, EDITOR),
+    ).toEqual({
+      risk_approval: null,
+      approval_status: "Approved",
+      approverChangedTo: null,
+    });
+    expect(resolve(legacyApproved, { risk_approval: 0 }, EDITOR).approval_status).toBe("Approved");
+  });
+
+  it("allows Not required on a risk with no approver", () => {
+    expect(
+      resolve(legacyApproved, { approval_status: "Not required" }, EDITOR).approval_status,
     ).toBe("Not required");
   });
 
-  it("does not report an unchanged approver", () => {
-    expect(
-      resolveRiskApproval({
-        existing: { risk_approval: APPROVER, approval_status: "Pending" },
-        submitted: { risk_approval: String(APPROVER) as any },
-        callerId: EDITOR,
-        callerIsAdmin: false,
-      }).approverChangedTo,
-    ).toBeNull();
+  it.each([["Pending"], ["Approved"], ["Rejected"]])(
+    "ignores %p on a Not required risk with no approver",
+    (status) => {
+      expect(
+        resolve(
+          { risk_approval: null, approval_status: "Not required" },
+          { approval_status: status },
+          OTHER,
+          true,
+        ).approval_status,
+      ).toBe("Not required");
+    },
+  );
+
+  it("ignores Pending on a legacy Approved risk with no approver", () => {
+    expect(resolve(legacyApproved, { approval_status: "Pending" }, EDITOR).approval_status).toBe(
+      "Approved",
+    );
+  });
+});
+
+describe("resolveRiskApproval for an Admin", () => {
+  it.each([
+    [
+      { risk_approval: APPROVER, approval_status: "Approved" },
+      { approval_status: "Pending" },
+      "Pending",
+    ],
+    [{ risk_approval: APPROVER, approval_status: "Approved" }, { risk_approval: OTHER }, "Pending"],
+    [
+      { risk_approval: APPROVER, approval_status: "Rejected" },
+      { risk_approval: null },
+      "Not required",
+    ],
+    [
+      { risk_approval: APPROVER, approval_status: "Pending" },
+      { approval_status: "Not required" },
+      "Not required",
+    ],
+    [
+      { risk_approval: APPROVER, approval_status: "Pending" },
+      { risk_approval: OTHER, approval_status: "Approved" },
+      "Approved",
+    ],
+  ])("may change %p with %p", (existing, submitted, expected) => {
+    expect(resolve(existing, submitted, OTHER, true).approval_status).toBe(expected);
   });
 });
 

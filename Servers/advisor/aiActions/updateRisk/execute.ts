@@ -19,7 +19,11 @@
  *     approval back and shows the message to whoever approved the action.
  */
 
-import { updateRiskByIdQuery, getRiskByIdQuery } from "../../../utils/risk.utils";
+import {
+  updateRiskByIdQuery,
+  getRiskByIdQuery,
+  lockRiskApprovalQuery,
+} from "../../../utils/risk.utils";
 import { riskViewerForUserQuery } from "../../../utils/riskVisibility.utils";
 import { computeRiskLevelUpdates, normalizeCurrentRiskLevel } from "../../../utils/riskLevel.utils";
 import { callerCanDecideAnyRisk, resolveRiskApproval } from "../../../utils/riskApproval.utils";
@@ -67,10 +71,14 @@ export async function executeUpdateRisk(
   if (input.deadline !== undefined) partial.deadline = new Date(input.deadline);
   let approverChangedTo: number | null = null;
   if (input.approver !== undefined || input.approval_status !== undefined) {
+    // Resolve against the row as locked in this transaction, not the read
+    // above, so a concurrent approval change is not overwritten.
+    const stored =
+      (await lockRiskApprovalQuery(input.risk_id, ctx.organizationId, ctx.transaction)) ?? current;
     const approval = resolveRiskApproval({
       existing: {
-        risk_approval: current.risk_approval ?? null,
-        approval_status: current.approval_status ?? null,
+        risk_approval: stored.risk_approval ?? null,
+        approval_status: stored.approval_status ?? null,
       },
       submitted: { risk_approval: input.approver, approval_status: input.approval_status },
       callerId: ctx.requesterId,

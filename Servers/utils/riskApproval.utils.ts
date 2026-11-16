@@ -1,20 +1,28 @@
 /**
  * Who may decide a risk's approval, and what its approval status becomes on a
- * save (audit decision 5, rulings K2-K4).
+ * save (audit decision 5, rulings K2, K3, K4, K9). "Decides" means the
+ * caller is an Admin or the risk's SAVED approver, never the approver the
+ * same save names.
  *
- * - Naming an approver sets the status to Pending. Only an Admin may name an
- *   approver and set Approved or Rejected in the same save; anyone else,
- *   including the newly named approver, gets a 403 for asking. The new
- *   approver decides in a later save, so nobody can name themself and approve
- *   in one step.
- * - Clearing the approver sets Not required. A risk with no approver is always
- *   Not required: an approval needs an approver.
- * - Setting Approved or Rejected, or moving away from either, needs the
- *   approver or an Admin. A status sent back unchanged is not a decision.
+ * - R1: while the risk has a saved approver, any change of its approval
+ *   status needs a caller who decides. Sending the stored value back is not
+ *   a change.
+ * - R2: changing the approver (to someone else or to nobody) of an Approved
+ *   or Rejected risk needs a caller who decides; on a Pending or Not required
+ *   risk anyone who can edit it may. A new approver sets Pending; only an
+ *   Admin may set Approved or Rejected in that same save. Clearing the
+ *   approver sets Not required.
+ * - R3: a non-Admin may not name themself as the new approver. Keeping
+ *   yourself when you already are the saved approver is fine.
+ * - R4: with no approver before or after the save, Not required is the only
+ *   status a save can set; a request for another value is ignored. An
+ *   unrelated save keeps the stored status, so a legacy Approved risk whose
+ *   approver was deleted keeps it.
  * - A submitted value that is not one of the four is ignored, so old clients
  *   that send "In Progress" or "" keep working (the route is frozen).
  */
 
+import { ForbiddenException } from "../domain.layer/exceptions/custom.exception";
 import {
   isRiskApprovalDecision,
   normalizeRiskApprovalStatus,
@@ -27,10 +35,26 @@ import { roleHasPermission } from "./rolePermissions.utils";
 export const RISK_APPROVAL_FORBIDDEN_MESSAGE =
   "Only the risk's approver or an Admin can approve or reject it.";
 
-export class RiskApprovalForbiddenError extends Error {
-  constructor() {
-    super(RISK_APPROVAL_FORBIDDEN_MESSAGE);
+export const RISK_APPROVAL_SELF_APPROVER_MESSAGE =
+  "You can't name yourself as the approver. Ask an Admin or pick someone else.";
+
+const RISK_APPROVAL_FORBIDDEN_MESSAGES = {
+  /** R1, R2: the caller is neither the saved approver nor an Admin. */
+  decide: RISK_APPROVAL_FORBIDDEN_MESSAGE,
+  /** R3: a non-Admin named themself as the new approver. */
+  self: RISK_APPROVAL_SELF_APPROVER_MESSAGE,
+} as const;
+
+/**
+ * A refused approval change. A ForbiddenException, so a handler that maps
+ * those answers 403 with the (translated) message.
+ */
+export class RiskApprovalForbiddenError extends ForbiddenException {
+  constructor(reason: keyof typeof RISK_APPROVAL_FORBIDDEN_MESSAGES = "decide") {
+    const message = RISK_APPROVAL_FORBIDDEN_MESSAGES[reason];
+    super(message, "risk", "approval", { i18nKey: message });
     this.name = "RiskApprovalForbiddenError";
+    Object.setPrototypeOf(this, RiskApprovalForbiddenError.prototype);
   }
 }
 
@@ -59,7 +83,7 @@ function toApproverId(value: unknown): number | null {
 
 /**
  * The approver and approval status a save stores. Throws
- * RiskApprovalForbiddenError when the caller may not make the decision they
+ * RiskApprovalForbiddenError when the caller may not make the change they
  * asked for.
  */
 export function resolveRiskApproval({
@@ -78,32 +102,43 @@ export function resolveRiskApproval({
 
   const requested = normalizeRiskApprovalStatus(submitted.approval_status);
   const statusChangeRequested = requested !== undefined && requested !== currentStatus;
-  const callerDecides = callerIsAdmin || (nextApprover !== null && nextApprover === callerId);
+  // The saved approver, never the one this save names.
+  const callerDecides = callerIsAdmin || (currentApprover !== null && currentApprover === callerId);
 
   let status: RiskApprovalStatus;
   if (approverChanged) {
-    // K4: a new approver resets the status; the reset needs no permission.
-    // Deciding in the same save is for an Admin only, not the new approver.
-    if (statusChangeRequested && isRiskApprovalDecision(requested!)) {
+    // R3: naming yourself is self-attestation, unless you are an Admin.
+    if (nextApprover !== null && nextApprover === callerId && !callerIsAdmin) {
+      throw new RiskApprovalForbiddenError("self");
+    }
+    // R2: a decided risk changes hands only through someone who decides.
+    if (isRiskApprovalDecision(currentStatus) && !callerDecides) {
+      throw new RiskApprovalForbiddenError();
+    }
+    if (nextApprover === null) {
+      status = RISK_APPROVAL_NOT_REQUIRED;
+    } else if (statusChangeRequested && isRiskApprovalDecision(requested!)) {
+      // Deciding in the save that names the approver is for an Admin only.
       if (!callerIsAdmin) throw new RiskApprovalForbiddenError();
       status = requested!;
     } else {
       status = RISK_APPROVAL_PENDING;
     }
-  } else if (statusChangeRequested) {
-    // K3: a decision, or undoing one, needs the approver or an Admin.
-    if (
-      (isRiskApprovalDecision(requested!) || isRiskApprovalDecision(currentStatus)) &&
-      !callerDecides
-    ) {
-      throw new RiskApprovalForbiddenError();
-    }
-    status = requested!;
+  } else if (nextApprover !== null) {
+    // R1: with a saved approver, any status change needs someone who decides.
+    if (statusChangeRequested && !callerDecides) throw new RiskApprovalForbiddenError();
+    status = statusChangeRequested ? requested! : currentStatus;
+  } else if (
+    existing === null ||
+    (statusChangeRequested && requested === RISK_APPROVAL_NOT_REQUIRED)
+  ) {
+    // R4: without an approver a save can only set Not required.
+    status = RISK_APPROVAL_NOT_REQUIRED;
   } else {
+    // R4: no approver and no change asked for (or one that is ignored): keep
+    // the stored status, legacy Approved rows included.
     status = currentStatus;
   }
-
-  if (nextApprover === null) status = RISK_APPROVAL_NOT_REQUIRED;
 
   return {
     risk_approval: nextApprover,

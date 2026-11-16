@@ -69,6 +69,10 @@ import {
   ConflictException,
   NotFoundException,
 } from "../../../domain.layer/exceptions/custom.exception";
+import {
+  RiskApprovalForbiddenError,
+  RISK_APPROVAL_SELF_APPROVER_MESSAGE,
+} from "../../../utils/riskApproval.utils";
 
 const mockList = listSuggestedRiskActions as jest.MockedFunction<typeof listSuggestedRiskActions>;
 const mockRecord = recordSuggestedRiskAction as jest.MockedFunction<
@@ -184,6 +188,16 @@ describe("/api/v1/ai-detection suggested risks", () => {
     const res = await request(app).post(RISKS_URL).send(riskBody);
     expect(res.status).toBe(409);
     expect(res.body.risk_id).toBe(12);
+    expect(runRiskCreatedSideEffects).not.toHaveBeenCalled();
+  });
+
+  it("answers 403 with the reason when the approval rule refuses the risk", async () => {
+    mockAdd.mockRejectedValueOnce(new RiskApprovalForbiddenError("self"));
+    const res = await request(app)
+      .post(RISKS_URL)
+      .send({ ...riskBody, risk_approval: 9 });
+    expect(res.status).toBe(403);
+    expect(res.body).toEqual({ message: "Forbidden", data: RISK_APPROVAL_SELF_APPROVER_MESSAGE });
     expect(runRiskCreatedSideEffects).not.toHaveBeenCalled();
   });
 

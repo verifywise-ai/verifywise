@@ -26,7 +26,6 @@ import { logProcessing } from "../utils/logger/logHelper";
 import logger, { logStructured } from "../utils/logger/fileLogger";
 import { logEvent } from "../utils/logger/dbLogger";
 import { notifyUserAssigned, notifyUserAssignedMany } from "../services/inAppNotification.service";
-import { QueryTypes } from "sequelize";
 import { recordPortfolioSnapshot } from "../utils/quantitativeRisk.utils";
 import {
   createRiskService,
@@ -47,10 +46,11 @@ import { riskViewer, riskVisibilitySql, SYSTEM_RISK_VIEWER } from "../utils/risk
 import { translateError } from "../utils/i18n.utils";
 import { IRisk } from "../domain.layer/interfaces/I.risk";
 import { BulkRiskChange } from "../utils/automation/risk.automation.utils";
-import { callerCanDecideAnyRisk, RiskApprovalForbiddenError } from "../utils/riskApproval.utils";
+import { callerCanDecideAnyRisk } from "../utils/riskApproval.utils";
 import {
   getUserNameById,
   notifyNewRiskApprover,
+  notifyRiskAssignee,
 } from "../services/riskApproverNotification.service";
 
 type AssignedRisk = Pick<IRisk, "id" | "risk_owner" | "risk_name" | "risk_description">;
@@ -69,7 +69,7 @@ async function notifyNewRiskOwners(
 ): Promise<void> {
   if (risks.length === 0) return;
   const baseUrl = process.env.FRONTEND_URL || "http://localhost:3000";
-  const assignerName = await getUserNameById(assignerUserId);
+  const assignerName = await getUserNameById(assignerUserId, organizationId);
 
   const byOwner = new Map<number, AssignedRisk[]>();
   for (const risk of risks) {
@@ -399,39 +399,12 @@ export async function runRiskCreatedSideEffects(
 
   // Send risk owner assignment notification (fire-and-forget)
   if (newProjectRisk.risk_owner) {
-    const baseUrl = process.env.FRONTEND_URL || "http://localhost:3000";
-    const assignerName = await getUserNameById(req.userId!);
-
-    // Get project name for context (use first associated project if available)
-    let projectName: string | undefined;
-    const projects = req.body.projects || [];
-    if (projects.length > 0) {
-      const projectResult = await sequelize.query<{ project_title: string }>(
-        `SELECT project_title FROM projects WHERE id = :projectId AND organization_id = :organizationId`,
-        {
-          replacements: { projectId: projects[0], organizationId: req.organizationId! },
-          type: QueryTypes.SELECT,
-        },
-      );
-      projectName = projectResult[0]?.project_title;
-    }
-
-    notifyUserAssigned(
+    notifyRiskAssignee(
       req.organizationId!,
+      req.userId!,
+      newProjectRisk,
       newProjectRisk.risk_owner,
-      {
-        entityType: "project_risk",
-        entityId: newProjectRisk.id!,
-        entityName: newProjectRisk.risk_name,
-        roleType: "Risk Owner",
-        entityUrl: `/risk-management?riskId=${newProjectRisk.id}`,
-      },
-      assignerName,
-      baseUrl,
-      {
-        projectName,
-        description: newProjectRisk.risk_description,
-      },
+      "Risk Owner",
     ).catch((err) => logger.error("Failed to send risk owner notification:", err));
   }
 }
@@ -479,14 +452,9 @@ export async function createRisk(req: Request, res: Response): Promise<any> {
   } catch (error) {
     await transaction.rollback();
 
-    if (error instanceof RiskApprovalForbiddenError) {
-      return res
-        .status(403)
-        .json(
-          STATUS_CODE[403](
-            req.t!("Only the risk's approver or an Admin can approve or reject it."),
-          ),
-        );
+    // A refused approval change (RiskApprovalForbiddenError) among others.
+    if (error instanceof ForbiddenException) {
+      return res.status(403).json(STATUS_CODE[403](translateError(req, error)));
     }
 
     // Handle specific validation errors
@@ -656,14 +624,9 @@ export async function updateRiskById(req: Request, res: Response): Promise<any> 
   } catch (error) {
     await transaction.rollback();
 
-    if (error instanceof RiskApprovalForbiddenError) {
-      return res
-        .status(403)
-        .json(
-          STATUS_CODE[403](
-            req.t!("Only the risk's approver or an Admin can approve or reject it."),
-          ),
-        );
+    // A refused approval change (RiskApprovalForbiddenError) among others.
+    if (error instanceof ForbiddenException) {
+      return res.status(403).json(STATUS_CODE[403](translateError(req, error)));
     }
 
     // Raised by updateRiskService when the merged FAIR field set does not

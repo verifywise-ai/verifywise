@@ -1,6 +1,7 @@
 jest.mock("../../../../utils/risk.utils", () => ({
   getRiskByIdQuery: jest.fn(),
   updateRiskByIdQuery: jest.fn(),
+  lockRiskApprovalQuery: jest.fn().mockResolvedValue(null),
 }));
 
 jest.mock("../../../../utils/riskVisibility.utils", () => ({
@@ -16,7 +17,11 @@ jest.mock("../../../../services/riskApproverNotification.service", () => ({
 }));
 
 import { riskViewerForUserQuery } from "../../../../utils/riskVisibility.utils";
-import { getRiskByIdQuery, updateRiskByIdQuery } from "../../../../utils/risk.utils";
+import {
+  getRiskByIdQuery,
+  lockRiskApprovalQuery,
+  updateRiskByIdQuery,
+} from "../../../../utils/risk.utils";
 import { roleHasPermission } from "../../../../utils/rolePermissions.utils";
 import { notifyNewRiskApprover } from "../../../../services/riskApproverNotification.service";
 import { RISK_APPROVAL_FORBIDDEN_MESSAGE } from "../../../../utils/riskApproval.utils";
@@ -139,8 +144,29 @@ describe("executeUpdateRisk approval", () => {
     expect(mockUpdate.mock.calls[0][1].approval_status).toBe("Approved");
   });
 
-  it("sets Pending and notifies after commit when the approver changes", async () => {
+  it("refuses a requester who is not the approver re-assigning an Approved risk", async () => {
     mockGet.mockResolvedValue({ id: 7, risk_approval: 9, approval_status: "Approved" });
+    await expect(run({ risk_id: 7, approver: 11 })).rejects.toThrow(
+      RISK_APPROVAL_FORBIDDEN_MESSAGE,
+    );
+    expect(mockUpdate).not.toHaveBeenCalled();
+  });
+
+  it("resolves against the row locked in the approve transaction", async () => {
+    // Read as Pending before the transaction; approved by someone else since.
+    mockGet.mockResolvedValue({ id: 7, risk_approval: 9, approval_status: "Pending" });
+    (lockRiskApprovalQuery as jest.Mock).mockResolvedValueOnce({
+      risk_approval: 9,
+      approval_status: "Approved",
+    });
+    await expect(run({ risk_id: 7, approver: 11 })).rejects.toThrow(
+      RISK_APPROVAL_FORBIDDEN_MESSAGE,
+    );
+    expect(lockRiskApprovalQuery).toHaveBeenCalledWith(7, 1, { afterCommit });
+  });
+
+  it("sets Pending and notifies after commit when the approver changes", async () => {
+    mockGet.mockResolvedValue({ id: 7, risk_approval: 9, approval_status: "Pending" });
     await run({ risk_id: 7, approver: 11 });
     const partial = mockUpdate.mock.calls[0][1];
     expect(partial.risk_approval).toBe(11);

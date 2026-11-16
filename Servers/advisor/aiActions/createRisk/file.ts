@@ -77,7 +77,7 @@ export async function fileCreateRisk(
     input: parsed.data,
     userId,
     organizationId,
-    role: (await riskViewerForUserQuery(userId, organizationId)).role,
+    role: async () => (await riskViewerForUserQuery(userId, organizationId)).role,
   });
   if (approvalRefusal) return { status: "error", message: approvalRefusal };
 

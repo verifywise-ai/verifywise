@@ -22,6 +22,7 @@ jest.mock("../../../../utils/riskVisibility.utils", () => ({
 }));
 
 import { createRiskService } from "../../../../services/risk.service";
+import { roleHasPermission } from "../../../../utils/rolePermissions.utils";
 import { notifyNewRiskApprover } from "../../../../services/riskApproverNotification.service";
 import { executeCreateRisk } from "../execute";
 
@@ -74,6 +75,7 @@ describe("executeCreateRisk", () => {
   });
 
   it("creates a risk with no approver or assessment date", async () => {
+    (roleHasPermission as jest.Mock).mockClear();
     mockCreate.mockResolvedValue({ id: 3, risk_approval: null });
     const afterCommit = jest.fn();
     await executeCreateRisk({
@@ -92,6 +94,9 @@ describe("executeCreateRisk", () => {
     const payload = mockCreate.mock.calls.at(-1)[0];
     expect(payload.date_of_assessment).toBeUndefined();
     expect(payload.risk_approval).toBeUndefined();
+    // No approval field sent, so the Admin permission is not looked up.
+    expect(roleHasPermission).not.toHaveBeenCalled();
+    expect(mockCreate.mock.calls.at(-1)[1].callerIsAdmin).toBe(false);
     // Only the link recompute is queued; no approver to notify.
     expect(afterCommit).toHaveBeenCalledTimes(1);
   });

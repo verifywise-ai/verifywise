@@ -331,8 +331,10 @@ describe("Risk save correctness", () => {
       expect(undo.status).toBe(403);
     });
 
-    it("refuses naming yourself approver and approving in one save", async () => {
+    it("refuses an Editor naming themself as the approver", async () => {
       const editor = await buildTenantContext(3);
+      const selfMessage =
+        "You can't name yourself as the approver. Ask an Admin or pick someone else.";
 
       const create = await editor.request.post("/api/projectRisks").send(
         riskPayload(editor.userId, {
@@ -341,24 +343,91 @@ describe("Risk save correctness", () => {
         }),
       );
       expect(create.status).toBe(403);
+      expect(create.body).toEqual({ message: "Forbidden", data: selfMessage });
 
       const riskId = await createRisk(editor);
-      const selfApprove = await editor.request
-        .put(`/api/projectRisks/${riskId}`)
-        .send({ risk_approval: editor.userId, approval_status: "Approved" });
-      expect(selfApprove.status).toBe(403);
-      expect((await readRisk(riskId)).approval_status).toBe("Not required");
-
-      // Named in one save, the approver decides in the next.
       const name = await editor.request
         .put(`/api/projectRisks/${riskId}`)
         .send({ risk_approval: editor.userId });
-      expect(name.status).toBe(200);
-      expect((await readRisk(riskId)).approval_status).toBe("Pending");
-      const approve = await editor.request
+      expect(name.status).toBe(403);
+      expect(name.body.data).toBe(selfMessage);
+      const row = await readRisk(riskId);
+      expect(row.risk_approval).toBeNull();
+      expect(row.approval_status).toBe("Not required");
+    });
+
+    it("lets an Admin name themself and decide", async () => {
+      const admin = await buildTenantContext(1);
+      const riskId = await createRisk(admin);
+      const res = await admin.request
         .put(`/api/projectRisks/${riskId}`)
-        .send({ approval_status: "Approved" });
-      expect(approve.status).toBe(200);
+        .send({ risk_approval: admin.userId, approval_status: "Approved" });
+      expect(res.status).toBe(200);
+      expect(await readRisk(riskId)).toMatchObject({
+        risk_approval: admin.userId,
+        approval_status: "Approved",
+      });
+    });
+
+    it("refuses an Editor re-assigning an Approved risk", async () => {
+      const editor = await buildTenantContext(3);
+      const first = await memberOf(editor, 3, "first");
+      const second = await memberOf(editor, 3, "second");
+      const riskId = await createRisk(editor, { risk_approval: first.userId });
+      await sequelize.query(`UPDATE risks SET approval_status = 'Approved' WHERE id = :riskId`, {
+        replacements: { riskId },
+      });
+
+      for (const body of [
+        { risk_approval: second.userId, approval_status: "Approved" },
+        { risk_approval: null },
+      ]) {
+        const res = await editor.request.put(`/api/projectRisks/${riskId}`).send(body);
+        expect(res.status).toBe(403);
+      }
+      expect(await readRisk(riskId)).toMatchObject({
+        risk_approval: first.userId,
+        approval_status: "Approved",
+      });
+
+      // The saved approver may hand it on, which resets it to Pending.
+      const handOver = await first.request
+        .put(`/api/projectRisks/${riskId}`)
+        .send({ risk_approval: second.userId });
+      expect(handOver.status).toBe(200);
+      expect(await readRisk(riskId)).toMatchObject({
+        risk_approval: second.userId,
+        approval_status: "Pending",
+      });
+    });
+
+    it("refuses an Editor moving a Pending risk to Not required while an approver is set", async () => {
+      const editor = await buildTenantContext(3);
+      const approver = await memberOf(editor, 3, "approver");
+      const riskId = await createRisk(editor, { risk_approval: approver.userId });
+
+      const res = await editor.request
+        .put(`/api/projectRisks/${riskId}`)
+        .send({ risk_approval: approver.userId, approval_status: "Not required" });
+      expect(res.status).toBe(403);
+      expect((await readRisk(riskId)).approval_status).toBe("Pending");
+    });
+
+    it("keeps a legacy Approved status with no approver on an unrelated save", async () => {
+      const editor = await buildTenantContext(3);
+      const riskId = await createRisk(editor);
+      await sequelize.query(
+        `UPDATE risks SET approval_status = 'Approved', risk_approval = NULL WHERE id = :riskId`,
+        { replacements: { riskId } },
+      );
+
+      // The form sends the stored values back with the edit.
+      const res = await editor.request.put(`/api/projectRisks/${riskId}`).send({
+        review_notes: "Edited",
+        risk_approval: null,
+        approval_status: "Approved",
+      });
+      expect(res.status).toBe(200);
       expect((await readRisk(riskId)).approval_status).toBe("Approved");
     });
 
@@ -379,24 +448,29 @@ describe("Risk save correctness", () => {
       const first = await memberOf(editor, 3, "first");
       const second = await memberOf(editor, 3, "second");
       const riskId = await createRisk(editor, { risk_approval: first.userId });
-      await sequelize.query(`UPDATE risks SET approval_status = 'Approved' WHERE id = :riskId`, {
-        replacements: { riskId },
-      });
 
       const res = await editor.request
         .put(`/api/projectRisks/${riskId}`)
-        .send({ risk_approval: second.userId, approval_status: "Approved" });
+        .send({ risk_approval: second.userId, approval_status: "Pending" });
       expect(res.status).toBe(200);
       const row = await readRisk(riskId);
       expect(row.risk_approval).toBe(second.userId);
       expect(row.approval_status).toBe("Pending");
 
       // Sent after commit, without being awaited. The setup mocks the service.
+      // Ids restart after each cleanup, so a late notice from an earlier test
+      // can carry the same ids: match on this risk's unique name too.
       const mockNotify = notifyUserAssigned as jest.Mock;
+      const [{ risk_name: riskName }] = await sequelize.query<{ risk_name: string }>(
+        `SELECT risk_name FROM risks WHERE id = :riskId`,
+        { replacements: { riskId }, type: QueryTypes.SELECT },
+      );
       const approverNotices = () =>
         mockNotify.mock.calls.filter(
           ([, userId, assignment]) =>
-            userId === second.userId && assignment.roleType === "Risk Approver",
+            userId === second.userId &&
+            assignment.roleType === "Risk Approver" &&
+            assignment.entityName === riskName,
         );
       for (let i = 0; i < 20 && approverNotices().length === 0; i++) {
         await new Promise((r) => setTimeout(r, 100));

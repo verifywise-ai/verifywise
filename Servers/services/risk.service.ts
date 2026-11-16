@@ -8,7 +8,7 @@
  */
 
 import { Transaction } from "sequelize";
-import { createRiskQuery, updateRiskByIdQuery } from "../utils/risk.utils";
+import { createRiskQuery, lockRiskApprovalQuery, updateRiskByIdQuery } from "../utils/risk.utils";
 import type { RiskViewer } from "../utils/riskVisibility.utils";
 import { writtenValues } from "../utils/changeHistory.base.utils";
 import { RiskModel } from "../domain.layer/models/risks/risk.model";
@@ -322,7 +322,18 @@ export async function updateRiskService(
   // 2c. Approval. Only when the caller sent the approver or the status, so an
   //     edit that names neither (a bulk action, a partial MCP update) leaves
   //     them as stored. A status that is not one of the four is ignored.
+  //     The stored values are re-read under a row lock, so a concurrent save
+  //     that changed the approver is seen here (the caller's read happened
+  //     before the transaction).
   if (input.risk_approval !== undefined || input.approval_status !== undefined) {
+    const locked = await lockRiskApprovalQuery(riskId, ctx.organizationId, transaction);
+    if (locked) {
+      existingRisk = {
+        ...existingRisk,
+        risk_approval: locked.risk_approval as number,
+        approval_status: locked.approval_status as string,
+      };
+    }
     const approval = resolveRiskApproval({
       existing: {
         risk_approval: existingRisk.risk_approval ?? null,

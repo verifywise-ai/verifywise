@@ -155,7 +155,12 @@ export async function executeCreateRisk(
       userId: ctx.requesterId,
       organizationId: ctx.organizationId,
       viewer,
-      callerIsAdmin: await callerCanDecideAnyRisk(ctx.organizationId, viewer.role),
+      // Only asked when an approval field is sent; without one the risk is
+      // Not required whoever creates it.
+      callerIsAdmin:
+        input.approver !== undefined || input.approval_status !== undefined
+          ? await callerCanDecideAnyRisk(ctx.organizationId, viewer.role)
+          : false,
     },
     ctx.transaction,
   );

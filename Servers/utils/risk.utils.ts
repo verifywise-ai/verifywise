@@ -1293,6 +1293,29 @@ export const getProjectTitlesByRiskIdsQuery = async (
 };
 
 /**
+ * The stored approver and approval status of a risk, read with a row lock
+ * inside `transaction`, so two saves that both change the approval resolve
+ * one after the other instead of against the same stale read. Null when the
+ * risk is not in this organization.
+ */
+export const lockRiskApprovalQuery = async (
+  riskId: number,
+  organizationId: number,
+  transaction: Transaction,
+): Promise<{ risk_approval: number | null; approval_status: string | null } | null> => {
+  const rows = await sequelize.query<{
+    risk_approval: number | null;
+    approval_status: string | null;
+  }>(
+    `SELECT risk_approval, approval_status FROM risks
+      WHERE id = :riskId AND organization_id = :organizationId
+      FOR UPDATE`,
+    { replacements: { riskId, organizationId }, type: QueryTypes.SELECT, transaction },
+  );
+  return rows[0] ?? null;
+};
+
+/**
  * Record the four risk history snapshots. A bulk archive or edit records them
  * once after its loop. Failures are logged, never thrown: history must not
  * block the change.

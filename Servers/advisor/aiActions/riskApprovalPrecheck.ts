@@ -11,7 +11,6 @@ import {
   callerCanDecideAnyRisk,
   resolveRiskApproval,
   RiskApprovalForbiddenError,
-  RISK_APPROVAL_FORBIDDEN_MESSAGE,
 } from "../../utils/riskApproval.utils";
 
 export async function riskApprovalRefusal({
@@ -25,7 +24,8 @@ export async function riskApprovalRefusal({
   input: { approver?: number; approval_status?: string };
   userId: number;
   organizationId: number;
-  role: string;
+  /** The requester's role. Only looked up when an approval field is sent. */
+  role: () => Promise<string>;
 }): Promise<string | null> {
   if (input.approver === undefined && input.approval_status === undefined) return null;
   try {
@@ -38,11 +38,11 @@ export async function riskApprovalRefusal({
         : null,
       submitted: { risk_approval: input.approver, approval_status: input.approval_status },
       callerId: userId,
-      callerIsAdmin: await callerCanDecideAnyRisk(organizationId, role),
+      callerIsAdmin: await callerCanDecideAnyRisk(organizationId, await role()),
     });
     return null;
   } catch (error) {
     if (!(error instanceof RiskApprovalForbiddenError)) throw error;
-    return `${RISK_APPROVAL_FORBIDDEN_MESSAGE} Tell the user this. Naming an approver sets the status to Pending; the approver decides in a later change.`;
+    return `${error.message} Tell the user this. Naming an approver sets the status to Pending; the approver decides in a later change.`;
   }
 }

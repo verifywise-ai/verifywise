@@ -1,6 +1,7 @@
 jest.mock("../../utils/risk.utils", () => ({
   createRiskQuery: jest.fn(),
   updateRiskByIdQuery: jest.fn(),
+  lockRiskApprovalQuery: jest.fn(),
 }));
 jest.mock("../../utils/projectRiskChangeHistory.utils", () => ({
   recordMultipleFieldChanges: jest.fn(),
@@ -10,7 +11,11 @@ jest.mock("../../utils/projectRiskChangeHistory.utils", () => ({
 jest.mock("../../utils/changeHistory.base.utils", () => ({ writtenValues: jest.fn(() => ({})) }));
 jest.mock("../../utils/rolePermissions.utils", () => ({ roleHasPermission: jest.fn() }));
 
-import { createRiskQuery, updateRiskByIdQuery } from "../../utils/risk.utils";
+import {
+  createRiskQuery,
+  lockRiskApprovalQuery,
+  updateRiskByIdQuery,
+} from "../../utils/risk.utils";
 import { createRiskService, updateRiskService } from "../risk.service";
 import { RiskApprovalForbiddenError } from "../../utils/riskApproval.utils";
 
@@ -24,6 +29,7 @@ describe("risk service approval status", () => {
     jest.clearAllMocks();
     (createRiskQuery as jest.Mock).mockResolvedValue({ id: 5 });
     (updateRiskByIdQuery as jest.Mock).mockResolvedValue({ id: 5 });
+    (lockRiskApprovalQuery as jest.Mock).mockResolvedValue(null);
   });
 
   it("creates with Not required by default", async () => {
@@ -64,15 +70,59 @@ describe("risk service approval status", () => {
     expect(written()).not.toHaveProperty("approval_status");
   });
 
-  it("resets to Pending when an Editor changes the approver", async () => {
+  it("refuses an Editor changing the approver of an Approved risk", async () => {
+    await expect(
+      updateRiskService(
+        5,
+        { risk_approval: 30, approval_status: "Approved" } as never,
+        approved as never,
+        editor as never,
+        undefined as never,
+      ),
+    ).rejects.toBeInstanceOf(RiskApprovalForbiddenError);
+    expect(updateRiskByIdQuery).not.toHaveBeenCalled();
+  });
+
+  it("keeps Pending when an Editor changes the approver of a Pending risk", async () => {
     await updateRiskService(
       5,
-      { risk_approval: 30, approval_status: "Approved" } as never,
+      { risk_approval: 30, approval_status: "Pending" } as never,
+      { ...approved, approval_status: "Pending" } as never,
+      editor as never,
+      undefined as never,
+    );
+    // Pending already: only the approver is written.
+    expect(written()).toMatchObject({ risk_approval: 30 });
+    expect(written()).not.toHaveProperty("approval_status");
+  });
+
+  it("resolves against the locked row, not the caller's earlier read", async () => {
+    // The caller read Pending; another save approved the risk meanwhile.
+    (lockRiskApprovalQuery as jest.Mock).mockResolvedValue({
+      risk_approval: 20,
+      approval_status: "Approved",
+    });
+    await expect(
+      updateRiskService(
+        5,
+        { risk_approval: 30 } as never,
+        { ...approved, approval_status: "Pending" } as never,
+        editor as never,
+        "tx" as never,
+      ),
+    ).rejects.toBeInstanceOf(RiskApprovalForbiddenError);
+    expect(lockRiskApprovalQuery).toHaveBeenCalledWith(5, 1, "tx");
+  });
+
+  it("does not lock the row when no approval field is sent", async () => {
+    await updateRiskService(
+      5,
+      { risk_name: "x" } as never,
       approved as never,
       editor as never,
       undefined as never,
     );
-    expect(written()).toMatchObject({ risk_approval: 30, approval_status: "Pending" });
+    expect(lockRiskApprovalQuery).not.toHaveBeenCalled();
   });
 
   it("refuses an Editor's rejection before anything is written", async () => {

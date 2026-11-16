@@ -86,7 +86,7 @@ export async function fileUpdateRisk(
     input: parsed.data,
     userId,
     organizationId,
-    role: viewer.role,
+    role: async () => viewer.role,
   });
   if (approvalRefusal) return { status: "error", message: approvalRefusal };
 
