@@ -966,7 +966,6 @@ export const de: Record<string, string> = {
   "Invite User": "Benutzer einladen",
   "Keep risk as is": "Risiko unverändert lassen",
   "Link Evidence": "Nachweise verknüpfen",
-  "Link New Risks": "Neue Risiken verknüpfen",
   "Link tasks to controls or risks": "Aufgaben mit Kontrollen oder Risiken verknüpfen",
   "Link to governance artifacts": "Mit Governance-Artefakten verknüpfen",
   "Link to model": "Mit Modell verknüpfen",
@@ -1191,7 +1190,6 @@ export const de: Record<string, string> = {
   "Limitation": "Einschränkung",
   "Limitations": "Einschränkungen",
   "Line": "Zeile",
-  "Linked Operational Objects": "Verknüpfte operative Objekte",
   "Linked Policies Objects": "Verknüpfte Richtlinien-Objekte",
   "Configure an LLM API key to send messages.":
     "Konfigurieren Sie einen LLM-API-Schlüssel, um Nachrichten zu senden.",
@@ -4787,8 +4785,6 @@ export const de: Record<string, string> = {
   "Add tags": "Tags hinzufügen",
   "Adds to the chosen folder; existing assignments are preserved.":
     "Wird dem ausgewählten Ordner hinzugefügt; bestehende Zuordnungen bleiben erhalten.",
-  "Archived policies will be moved out of the active list. You can still find them via the Archived status filter.":
-    'Archivierte Richtlinien werden aus der aktiven Liste entfernt. Sie sind weiterhin über den Statusfilter "Archiviert" abrufbar.',
   "Archived risks are removed from the risk register, reports and linked policies. Their change history is kept.":
     "Archivierte Risiken werden aus dem Risikoregister, aus Berichten und aus verknüpften Richtlinien entfernt. Ihr Änderungsverlauf bleibt erhalten.",
   "Assign reviewer": "Prüfer zuweisen",
@@ -6685,7 +6681,6 @@ export const fr: Record<string, string> = {
   "Invite User": "Inviter un utilisateur",
   "Keep risk as is": "Conserver le risque en l'état",
   "Link Evidence": "Relier des preuves",
-  "Link New Risks": "Relier de nouveaux risques",
   "Link tasks to controls or risks": "Relier les tâches aux contrôles ou risques",
   "Link to governance artifacts": "Relier aux artefacts de gouvernance",
   "Link to model": "Relier au modèle",
@@ -6900,7 +6895,6 @@ export const fr: Record<string, string> = {
   "Limitation": "Limitation",
   "Limitations": "Limitations",
   "Line": "Ligne",
-  "Linked Operational Objects": "Objets opérationnels liés",
   "Linked Policies Objects": "Objets de politiques liés",
   "Configure an LLM API key to send messages.":
     "Configurez une clé API LLM pour envoyer des messages.",
@@ -10373,8 +10367,6 @@ export const fr: Record<string, string> = {
   "Add tags": "Ajouter des balises",
   "Adds to the chosen folder; existing assignments are preserved.":
     "Ajoute au dossier sélectionné ; les affectations existantes sont conservées.",
-  "Archived policies will be moved out of the active list. You can still find them via the Archived status filter.":
-    "Les politiques archivées seront retirées de la liste active. Vous pourrez toujours les retrouver via le filtre de statut Archivé.",
   "Archived risks are removed from the risk register, reports and linked policies. Their change history is kept.":
     "Les risques archivés sont retirés du registre des risques, des rapports et des politiques associées. Leur historique des modifications est conservé.",
   "Assign reviewer": "Attribuer un relecteur",
@@ -12051,7 +12043,6 @@ export const es: Record<string, string> = {
   "Invite User": "Invitar usuario",
   "Keep risk as is": "Mantener el riesgo tal cual",
   "Link Evidence": "Vincular evidencia",
-  "Link New Risks": "Vincular nuevos riesgos",
   "Link tasks to controls or risks": "Vincular tareas a controles o riesgos",
   "Link to governance artifacts": "Vincular a artefactos de gobernanza",
   "Link to model": "Vincular al modelo",
@@ -12273,7 +12264,6 @@ export const es: Record<string, string> = {
   "Limitation": "Limitación",
   "Limitations": "Limitaciones",
   "Line": "Línea",
-  "Linked Operational Objects": "Objetos operativos vinculados",
   "Linked Policies Objects": "Objetos de políticas vinculados",
   "Configure an LLM API key to send messages.":
     "Configure una clave de API de LLM para enviar mensajes.",
@@ -15972,8 +15962,6 @@ export const es: Record<string, string> = {
     "Tu plataforma de gobernanza y cumplimiento de IA. En 3 minutos,",
   "Adds to the chosen folder; existing assignments are preserved.":
     "Se añade a la carpeta elegida; se conservan las asignaciones existentes.",
-  "Archived policies will be moved out of the active list. You can still find them via the Archived status filter.":
-    "Las políticas archivadas se retirarán de la lista activa. Aún podrás encontrarlas mediante el filtro de estado Archivado.",
   "Archived risks are removed from the risk register, reports and linked policies. Their change history is kept.":
     "Los riesgos archivados se eliminan del registro de riesgos, de los informes y de las políticas vinculadas. Su historial de cambios se conserva.",
   "Replaces existing categories. Leave empty to clear.":

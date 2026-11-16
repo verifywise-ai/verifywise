@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { compareRisks } from "../riskSort";
+import { compareRisks, parseSavedRiskSort } from "../riskSort";
 import { RiskModel } from "../../../../../domain/models/Common/risks/risk.model";
 
 const risk = (fields: Record<string, unknown>) => fields as unknown as RiskModel;
@@ -33,7 +33,7 @@ describe("compareRisks", () => {
     }),
   ];
 
-  it.each(["controls_mapping", "mitigation_status", "severity", "risk_level_autocalculated"])(
+  it.each(["mitigation_status", "severity", "risk_level_autocalculated"])(
     "sorts %s without throwing when a value is null",
     (key) => {
       expect(() => sortIds(withNulls, key, "asc")).not.toThrow();
@@ -42,8 +42,8 @@ describe("compareRisks", () => {
   );
 
   it("puts null text first ascending and last descending", () => {
-    expect(sortIds(withNulls, "controls_mapping", "asc")).toEqual([2, 3, 1]);
-    expect(sortIds(withNulls, "controls_mapping", "desc")).toEqual([1, 3, 2]);
+    expect(sortIds(withNulls, "mitigation_status", "asc")).toEqual([2, 3, 1]);
+    expect(sortIds(withNulls, "mitigation_status", "desc")).toEqual([1, 3, 2]);
   });
 
   it("orders severity by rank, not alphabetically", () => {
@@ -89,5 +89,55 @@ describe("compareRisks", () => {
     ];
     expect(sortIds(rows, "risk_level_autocalculated", "asc")).toEqual([1, 2, 3]);
     expect(sortIds(rows, "risk_level_autocalculated", "desc")).toEqual([3, 2, 1]);
+  });
+});
+
+describe("compareRisks owner column", () => {
+  const names: Record<number, string> = { 1: "zoe Adams", 2: "Bob Young", 3: "alice Yu" };
+  const ownerName = (r: RiskModel) => names[(r as any).risk_owner] ?? "";
+  const rows = [
+    risk({ id: 1, risk_owner: 1 }),
+    risk({ id: 2, risk_owner: 2 }),
+    risk({ id: 3, risk_owner: 3 }),
+    risk({ id: 4, risk_owner: null }),
+  ];
+  const ids = (direction: "asc" | "desc") =>
+    [...rows]
+      .sort((a, b) => compareRisks(a, b, "risk_owner", direction, ownerName))
+      .map((r) => (r as any).id);
+
+  it("sorts by display name, ignoring case, not by user id", () => {
+    expect(ids("asc")).toEqual([4, 3, 2, 1]);
+  });
+
+  it("reverses for descending", () => {
+    expect(ids("desc")).toEqual([1, 2, 3, 4]);
+  });
+});
+
+describe("parseSavedRiskSort", () => {
+  const sortable = ["risk_name", "severity"];
+  const raw = (key: string, direction: unknown) => JSON.stringify({ key, direction });
+
+  it("keeps a saved sort on a sortable column", () => {
+    expect(parseSavedRiskSort(raw("severity", "desc"), sortable)).toEqual({
+      key: "severity",
+      direction: "desc",
+    });
+  });
+
+  it("ignores a saved sort on a column that is no longer sortable", () => {
+    expect(parseSavedRiskSort(raw("controls_mapping", "asc"), sortable)).toEqual({
+      key: "",
+      direction: null,
+    });
+  });
+
+  it("ignores unreadable or malformed values", () => {
+    const none = { key: "", direction: null };
+    expect(parseSavedRiskSort(null, sortable)).toEqual(none);
+    expect(parseSavedRiskSort("{oops", sortable)).toEqual(none);
+    expect(parseSavedRiskSort("null", sortable)).toEqual(none);
+    expect(parseSavedRiskSort(raw("severity", "sideways"), sortable)).toEqual(none);
   });
 });

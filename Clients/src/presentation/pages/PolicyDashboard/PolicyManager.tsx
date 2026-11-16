@@ -553,10 +553,10 @@ const PolicyManager: React.FC<PolicyManagerProps> = ({ tags: _tags }) => {
     return [
       { id: "title", label: "Title" },
       { id: "status", label: "Status" },
-      { id: "next_review", label: "Next Review" },
+      { id: "next_review", label: "Next review" },
       { id: "author", label: "Author" },
-      { id: "last_updated", label: "Last Updated" },
-      { id: "updated_by", label: "Updated By" },
+      { id: "last_updated", label: "Last updated" },
+      { id: "updated_by", label: "Updated by" },
     ];
   }, []);
 
@@ -671,7 +671,7 @@ const PolicyManager: React.FC<PolicyManagerProps> = ({ tags: _tags }) => {
               data={exportData}
               columns={exportColumns}
               filename="policy-manager"
-              title="Policy Manager"
+              title="Policy manager"
             />
             {canEditPolicies && (
               <Box data-joyride-id="add-policy-button">
@@ -772,8 +772,8 @@ const PolicyManager: React.FC<PolicyManagerProps> = ({ tags: _tags }) => {
                         />
                         <EmptyStateTip
                           icon={Shield}
-                          title="Link policies to controls"
-                          description="Each policy can be mapped to specific compliance controls, creating an audit trail showing which policies address which requirements."
+                          title="Link policies to risks and evidence"
+                          description="Link a policy to the risks it mitigates and the evidence that supports it, so reviewers can see what each policy covers."
                         />
                         <EmptyStateTip
                           icon={Link2}

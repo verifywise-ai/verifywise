@@ -78,7 +78,18 @@ describe("LinkedPolicyModal", () => {
         await riskSelectorProps.onSubmit([11]);
       });
 
-      expect(await screen.findByText("risk linked successfully!")).toBeInTheDocument();
+      expect(await screen.findByText("Risk linked")).toBeInTheDocument();
+    });
+
+    it("says risks, in the plural, when several are linked at once", async () => {
+      await renderModal();
+      mockCreateLinked.mockResolvedValue({});
+
+      await act(async () => {
+        await riskSelectorProps.onSubmit([11, 12]);
+      });
+
+      expect(await screen.findByText("Risks linked")).toBeInTheDocument();
     });
 
     it.each([
@@ -100,7 +111,7 @@ describe("LinkedPolicyModal", () => {
       // The selector modal needs the rejection to stay open and skip its success path.
       expect(rejected).toBe(true);
       expect(await screen.findAllByText(message)).toHaveLength(1);
-      expect(screen.queryByText(/linked successfully/)).not.toBeInTheDocument();
+      expect(screen.queryByText(/^(Risk|Evidence) linked$/)).not.toBeInTheDocument();
       expect(screen.queryByText(/boom/)).not.toBeInTheDocument();
     });
   });
@@ -125,7 +136,7 @@ describe("LinkedPolicyModal", () => {
       ),
     ).toBeInTheDocument();
     expect(screen.queryByText(/Couldn't link/)).not.toBeInTheDocument();
-    expect(screen.queryByText(/linked successfully/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/^(Risk|Evidence) linked$/)).not.toBeInTheDocument();
   });
 
   describe("unlinking", () => {
@@ -138,7 +149,7 @@ describe("LinkedPolicyModal", () => {
       });
 
       await waitFor(() => expect(screen.queryByText("item-1")).not.toBeInTheDocument());
-      expect(screen.getByText("risk unlinked successfully!")).toBeInTheDocument();
+      expect(screen.getByText("Risk unlinked")).toBeInTheDocument();
     });
 
     it("keeps the item and shows an error when the delete fails", async () => {
@@ -151,7 +162,7 @@ describe("LinkedPolicyModal", () => {
 
       expect(await screen.findByText("Couldn't unlink this item. Try again.")).toBeInTheDocument();
       expect(screen.getByText("item-1")).toBeInTheDocument();
-      expect(screen.queryByText(/unlinked successfully/)).not.toBeInTheDocument();
+      expect(screen.queryByText(/^(Risk|Evidence) unlinked$/)).not.toBeInTheDocument();
     });
   });
 });

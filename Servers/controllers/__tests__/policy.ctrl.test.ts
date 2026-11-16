@@ -134,6 +134,7 @@ function createRes(): any {
   res.json = jest.fn<any>().mockReturnValue(res);
   res.send = jest.fn<any>().mockReturnValue(res);
   res.setHeader = jest.fn<any>().mockReturnValue(res);
+  res.attachment = jest.fn<any>().mockReturnValue(res);
   return res;
 }
 
@@ -176,12 +177,27 @@ describe("policy.ctrl", () => {
       await PolicyController.getPolicyById(req, res);
       expect(res.status).toHaveBeenCalledWith(200);
     });
+    it("should return 404 when the query returns an empty array", async () => {
+      mockGetById.mockResolvedValue([] as any);
+      const req = createReq({ params: { id: "99" } });
+      const res = createRes();
+      await PolicyController.getPolicyById(req, res);
+      expect(res.status).toHaveBeenCalledWith(404);
+    });
     it("should return 404 when policy is not found", async () => {
       mockGetById.mockResolvedValue(null as any);
       const req = createReq({ params: { id: "99" } });
       const res = createRes();
       await PolicyController.getPolicyById(req, res);
       expect(res.status).toHaveBeenCalledWith(404);
+    });
+    it("should return 400 for a non-numeric id without querying", async () => {
+      mockGetById.mockClear();
+      const req = createReq({ params: { id: "abc" } });
+      const res = createRes();
+      await PolicyController.getPolicyById(req, res);
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(mockGetById).not.toHaveBeenCalled();
     });
     it("should return 500 on error", async () => {
       mockGetById.mockRejectedValue(new Error("DB error"));
@@ -751,6 +767,16 @@ describe("policy.ctrl", () => {
       const res = createRes();
       await PolicyController.exportPolicyPDF(req, res);
       expect(res.send).toHaveBeenCalled();
+    });
+    it("sets the download name with attachment() and the PDF type after it", async () => {
+      mockGetById.mockResolvedValue([{ id: 1, title: "P1", content_html: "<p>test</p>" }] as any);
+      const res = createRes();
+      await PolicyController.exportPolicyPDF(createReq({ params: { id: "1" } }), res);
+      expect(res.attachment).toHaveBeenCalledWith("file.pdf");
+      expect(res.setHeader).toHaveBeenCalledWith("Content-Type", "application/pdf");
+      expect(res.attachment.mock.invocationCallOrder[0]).toBeLessThan(
+        res.setHeader.mock.invocationCallOrder[0],
+      );
     });
     it("should return 500 on error", async () => {
       mockGetById.mockRejectedValue(new Error("DB error"));

@@ -7975,6 +7975,8 @@ tags:
   -
     name: 'v1: Policies'
   -
+    name: 'v1: Risk import'
+  -
     name: 'v1: Shadow AI'
   -
     name: 'v1: Use Case Settings'
@@ -29159,3 +29161,17 @@ paths:
           description: 'The connection id'
           schema:
             type: integer
+  /v1/risk-import/import:
+    post:
+      summary: 'Bulk Import Risks Strict'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: Risk import'
+      operationId: bulkImportRisksStrict
+      security:
+        -
+          bearerAuth: []

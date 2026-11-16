@@ -11,7 +11,7 @@ A Policy in VerifyWise is a rich-text governance document for establishing AI go
 - Approval through approval workflows, or by an Admin when the organization has none
 - 19 predefined governance tags
 - PDF and DOCX export
-- Link to risks, evidence, and controls
+- Link to risks and evidence. The link route accepts only these two types. `control` remains in the type enum, and the linked-objects response groups rows by `control`, `risk` or `evidence`
 - Change history tracking
 - Review date scheduling
 
@@ -194,10 +194,12 @@ enum LinkedObjectType {
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | GET | `/policies/` | List all policies |
-| GET | `/policies/:id` | Get policy by ID |
+| GET | `/policies/:id` | Get policy by ID. 404 when the policy does not exist or belongs to another organization (`getPolicyById` in `controllers/policy.ctrl.ts`) |
 | POST | `/policies/` | Create policy |
 | PUT | `/policies/:id` | Update policy |
 | DELETE | `/policies/:id` | Delete policy |
+
+The change history (`GET /policy-change-history/:id`) and linked-objects (`GET /policy-linked/:policyId/linked-objects`) reads do not check that the policy exists. For a policy outside the organization they answer 200 with empty data. That legacy contract is frozen.
 
 Deleting a policy rejects its pending approval request in the same transaction ("The policy was deleted."), and the requester is notified after the commit. The advisor's `agent_delete_policy` does the same. Both go through `rejectPendingPolicyRequestOnDelete`, which locks the policy row (`FOR UPDATE`, by organization) before it reads the pending request, as submit does, so a submit racing the delete cannot leave a pending request on a deleted policy.
 
@@ -264,7 +266,7 @@ These keep their old behaviour, frozen: they write only `review_status`, `review
 
 ### Bulk actions
 
-`PATCH /policies/bulk` takes `{ ids, action: "archive" | "set_reviewer" | "set_tags" }`. `set_reviewer` replaces each policy's team members (`policy_manager__assigned_reviewer_ids`) with the one user, skipping a policy that user owns, and no longer sets `review_status`. `archive` goes through the status gate. Bulk actions record one history entry per policy that actually changed, as the acting user: a Status change for archive (read under the row lock, so a policy that was already archived gets none), a Tags change for `set_tags` and a Reviewers change for `set_reviewer`. They start no automations.
+`PATCH /policies/bulk` takes `{ ids, action: "archive" | "set_reviewer" | "set_tags" }`. `set_reviewer` replaces each policy's team members (`policy_manager__assigned_reviewer_ids`) with the one user, skipping a policy that user owns, and no longer sets `review_status`. `archive` goes through the status gate. Archived policies remain in the list with the Archived status. Filtering by that status shows only them (the confirm dialog in `PolicyTable.tsx` says the same). Bulk actions record one history entry per policy that actually changed, as the acting user: a Status change for archive (read under the row lock, so a policy that was already archived gets none), a Tags change for `set_tags` and a Reviewers change for `set_reviewer`. They start no automations.
 
 ### Policy folder counts (v1)
 
@@ -286,6 +288,8 @@ Returns `{ data: { [folderId]: count } }`. Any member of the organization may re
 |--------|----------|-------------|
 | GET | `/policies/:id/export/pdf` | Download as PDF |
 | GET | `/policies/:id/export/docx` | Download as DOCX |
+
+Both exports keep non-Latin letters in the file name. `exportPolicyPDF` and `exportPolicyDOCX` in `controllers/policy.ctrl.ts` name the download with Express `res.attachment(filename)`, which builds `Content-Disposition` through the `content-disposition` package: a quoted ASCII `filename` for old clients (characters outside Latin-1 become `?`) plus `filename*=UTF-8''...` with the real name, and it never throws for names `generateFilename` produces (it drops lone surrogates). `attachment()` also sets `Content-Type` from the extension, so the controller sets the explicit PDF or DOCX type after it.
 
 ### Linked Objects
 
@@ -397,6 +401,8 @@ onerror, onload, onclick, onmouseover
 ```
 [sanitized_title]_[YYYY-MM-DD].[pdf|docx]
 ```
+
+The title keeps letters of any script (`\p{L}`), digits, spaces (turned into `_`) and hyphens, cut to 50 code points (`generateFilename` in `services/policies/policyExporter.ts`).
 
 ## Linked Objects
 

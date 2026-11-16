@@ -5,14 +5,21 @@ jest.mock("../../../utils/user.utils", () => ({ findUsersNotInOrganization: jest
 jest.mock("../../../utils/logger/fileLogger", () => ({
   __esModule: true,
   default: { error: jest.fn(), warn: jest.fn(), info: jest.fn() },
+  logStructuredError: jest.fn(),
+}));
+jest.mock("../../../utils/changeHistory.base.utils", () => ({
+  recordEntityCreationBulk: jest.fn(),
 }));
 
 import ExcelJS from "exceljs";
 import { sequelize } from "../../../database/db";
 import { findUsersNotInOrganization } from "../../../utils/user.utils";
 import {
+  LEGACY_TRANSLATED_MESSAGES,
   LISTS_SHEET_NAME,
+  RISK_IMPORT_FILE_MESSAGES,
   RISK_IMPORT_MESSAGES,
+  RISK_IMPORT_VALIDATION_MESSAGES,
   RiskImportRow,
   buildExcelTemplate,
   importRisks,
@@ -44,13 +51,36 @@ beforeEach(() => {
   jest.resetAllMocks();
   mockTransaction.mockResolvedValue(tx);
   mockOutsideUsers.mockResolvedValue([]);
-  mockQuery.mockResolvedValue([]);
+  // An INSERT returns the new id (the creation history entry needs it).
+  mockQuery.mockImplementation(async (sql: string) =>
+    sql.trim().startsWith("INSERT") ? [{ id: 1 }] : [],
+  );
+});
+
+describe("message groups", () => {
+  it("the legacy route translates exactly the messages worded by the import", () => {
+    expect([...LEGACY_TRANSLATED_MESSAGES].sort()).toEqual(
+      Object.values(RISK_IMPORT_FILE_MESSAGES).sort(),
+    );
+    for (const message of Object.values(RISK_IMPORT_VALIDATION_MESSAGES)) {
+      expect(LEGACY_TRANSLATED_MESSAGES.has(message)).toBe(false);
+    }
+  });
+
+  it("RISK_IMPORT_MESSAGES is both groups, with no key in both", () => {
+    const fileKeys = Object.keys(RISK_IMPORT_FILE_MESSAGES);
+    const validationKeys = Object.keys(RISK_IMPORT_VALIDATION_MESSAGES);
+    expect(fileKeys.filter((k) => validationKeys.includes(k))).toEqual([]);
+    expect(Object.keys(RISK_IMPORT_MESSAGES).sort()).toEqual(
+      [...fileKeys, ...validationKeys].sort(),
+    );
+  });
 });
 
 describe("importRisks row cap", () => {
   it(`refuses more than ${MAX_IMPORT_ROWS} rows before validating or inserting`, async () => {
     const rows = Array.from({ length: MAX_IMPORT_ROWS + 1 }, (_, i) => row(`Risk ${i}`));
-    const result = await importRisks(rows, 7);
+    const result = await importRisks(rows, 7, 1);
     expect(result).toMatchObject({
       success: false,
       imported: 0,
@@ -72,7 +102,7 @@ describe("importRisks row cap", () => {
 
   it(`accepts exactly ${MAX_IMPORT_ROWS} rows`, async () => {
     const rows = Array.from({ length: MAX_IMPORT_ROWS }, (_, i) => row(`Risk ${i}`));
-    const result = await importRisks(rows, 7);
+    const result = await importRisks(rows, 7, 1);
     expect(result.success).toBe(true);
     expect(result.imported).toBe(MAX_IMPORT_ROWS);
   });
@@ -80,7 +110,7 @@ describe("importRisks row cap", () => {
 
 describe("importRisks savepoints", () => {
   it("wraps each insert in its own savepoint and commits when every row saves", async () => {
-    const result = await importRisks([row("A"), row("B")], 7);
+    const result = await importRisks([row("A"), row("B")], 7, 1);
     expect(result).toMatchObject({ success: true, imported: 2, failed: 0, errors: [] });
     expect(statements()).toEqual([
       "SAVEPOINT",
@@ -102,20 +132,22 @@ describe("importRisks savepoints", () => {
       insert += 1;
       if (insert === 1) throw dbError("22P02");
       if (insert === 3) throw dbError("XX000");
-      return [];
+      return [{ id: insert }];
     });
-    const result = await importRisks([row("A"), row("B"), row("C")], 7);
+    const result = await importRisks([row("A"), row("B"), row("C")], 7, 1);
 
     expect(statements()).toEqual([
       "SAVEPOINT",
       "INSERT",
       "ROLLBACK",
+      "RELEASE",
       "SAVEPOINT",
       "INSERT",
       "RELEASE",
       "SAVEPOINT",
       "INSERT",
       "ROLLBACK",
+      "RELEASE",
     ]);
     expect(mockQuery.mock.calls[2][0]).toContain("ROLLBACK TO SAVEPOINT");
     expect(result).toMatchObject({
@@ -134,7 +166,7 @@ describe("importRisks savepoints", () => {
 
   it("rolls back and rethrows when a savepoint itself fails", async () => {
     mockQuery.mockRejectedValueOnce(new Error("connection lost"));
-    await expect(importRisks([row("A")], 7)).rejects.toThrow("connection lost");
+    await expect(importRisks([row("A")], 7, 1)).rejects.toThrow("connection lost");
     expect(tx.rollback).toHaveBeenCalled();
   });
 });

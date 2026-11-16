@@ -335,14 +335,13 @@ const RiskManagement = () => {
   // Define export columns for risk management table
   const exportColumns = useMemo(() => {
     return [
-      { id: "risk_name", label: "Risk Name" },
+      { id: "risk_name", label: "Risk name" },
       { id: "risk_owner", label: "Owner" },
       { id: "severity", label: "Severity" },
       { id: "likelihood", label: "Likelihood" },
-      { id: "mitigation_status", label: "Mitigation Status" },
-      { id: "risk_level", label: "Risk Level" },
-      { id: "deadline", label: "Target Date" },
-      { id: "controls_mapping", label: "Linked Controls" },
+      { id: "mitigation_status", label: "Mitigation status" },
+      { id: "risk_level", label: "Risk level" },
+      { id: "deadline", label: "Target date" },
     ];
   }, []);
 
@@ -360,7 +359,6 @@ const RiskManagement = () => {
         mitigation_status: risk.mitigation_status || "-",
         risk_level: getEffectiveRiskLevel(risk) || "-",
         deadline: toLocalDateOnly(riskCalendarDay(risk.deadline)) || "-",
-        controls_mapping: risk.controls_mapping || "-",
       };
     });
   }, [filteredRisks, users]);
@@ -599,7 +597,7 @@ const RiskManagement = () => {
 
   return (
     <PageHeaderExtended
-      title="Risk Management"
+      title="Risk management"
       description="Manage and monitor risks across all your projects"
       helpArticlePath="risk-management/risk-assessment"
       tipBoxEntity="risk-management"
@@ -703,7 +701,7 @@ const RiskManagement = () => {
               data={exportData}
               columns={exportColumns}
               filename="risk-management"
-              title="Risk Management"
+              title="Risk management"
             />
             {canViewRiskGraph && (
               <Tooltip title="Risk inheritance graph" arrow>
@@ -948,7 +946,7 @@ const RiskManagement = () => {
       <AnalyticsDrawer
         open={isAnalyticsDrawerOpen}
         onClose={() => setIsAnalyticsDrawerOpen(false)}
-        title="Risk Analytics & Trends"
+        title="Risk analytics & trends"
         description="Track your project risks history over time"
         entityName="Risk"
         chartType="risk"

@@ -32,7 +32,8 @@ import EmptyStateTip from "../../EmptyState/EmptyStateTip";
 import { TableEmptyStateLayout } from "../TableEmptyStateLayout";
 import { IVWProjectRisksTable } from "../../../types/interfaces/i.risk";
 import { RiskModel } from "../../../../domain/models/Common/risks/risk.model";
-import { compareRisks } from "./riskSort";
+import { compareRisks, parseSavedRiskSort } from "./riskSort";
+import { buildUserSortNames, userSortName } from "../../../../application/utils/userSort";
 import { text, border } from "../../../themes/palette";
 import Checkbox from "../../Inputs/Checkbox";
 import ConfirmationModal from "../../Dialogs/ConfirmationModal";
@@ -84,7 +85,7 @@ const columns = [
   { id: "mitigation_status", label: "MITIGATION STATUS", sortable: true }, // mitigation status
   { id: "risk_level_autocalculated", label: "RISK LEVEL", sortable: true }, // risk auto calculated value from risk tab
   { id: "deadline", label: "TARGET DATE", sortable: true }, // start date (deadline) value from mitigation tab
-  { id: "controls_mapping", label: "CONTROLS", sortable: true }, // controls mapping value from risk tab
+  { id: "controls_mapping", label: "CONTROLS", sortable: false }, // opens the linked controls, so it has no sort value
   { id: "actions", label: "", sortable: false },
 ];
 
@@ -236,15 +237,14 @@ const VWProjectRisksTable = ({
 
   // Initialize sorting state from localStorage or default to no sorting
   const [sortConfig, setSortConfig] = useState<SortConfig>(() => {
-    const saved = localStorage.getItem(RISKS_SORTING_KEY);
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch {
-        return { key: "", direction: null };
-      }
+    try {
+      return parseSavedRiskSort(
+        localStorage.getItem(RISKS_SORTING_KEY),
+        columns.filter((c) => c.sortable).map((c) => c.id),
+      );
+    } catch {
+      return { key: "", direction: null };
     }
-    return { key: "", direction: null };
   });
 
   // Save rowsPerPage to localStorage whenever it changes
@@ -273,6 +273,14 @@ const VWProjectRisksTable = ({
     });
   }, []);
 
+  const { users } = useUsers();
+
+  const userNames = useMemo(() => buildUserSortNames(users), [users]);
+  const ownerName = useCallback(
+    (risk: RiskModel) => userSortName(userNames, risk.risk_owner),
+    [userNames],
+  );
+
   // Sort the risks based on current sort configuration
   const sortedRows = useMemo(() => {
     if (!rows || !sortConfig.key || !sortConfig.direction) {
@@ -283,9 +291,9 @@ const VWProjectRisksTable = ({
 
     const direction = sortConfig.direction;
     return sortableRows.sort((a: RiskModel, b: RiskModel) =>
-      compareRisks(a, b, sortConfig.key, direction),
+      compareRisks(a, b, sortConfig.key, direction, ownerName),
     );
-  }, [rows, sortConfig]);
+  }, [rows, sortConfig, ownerName]);
 
   // Ensure page is valid when rows are empty
   const validPage =
@@ -342,7 +350,6 @@ const VWProjectRisksTable = ({
     [selectableRows],
   );
 
-  const { users } = useUsers();
   const [ownerDialogOpen, setOwnerDialogOpen] = useState(false);
   const [categoryDialogOpen, setCategoryDialogOpen] = useState(false);
   const [pendingOwnerId, setPendingOwnerId] = useState<string>("");

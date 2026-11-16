@@ -535,27 +535,134 @@ export const recordEntityCreation = async (
   transaction?: Transaction,
   changedBySystem = false,
 ): Promise<void> => {
-  const config = getEntityConfig(entityType);
+  // Tenant-scoped name lookups, on the creating transaction.
+  const changes = await creationChanges(entityType, entityData, { organizationId, transaction });
+  for (const change of changes) {
+    await recordEntityChange(
+      entityType,
+      entityId,
+      "created",
+      changedByUserId,
+      organizationId,
+      change.fieldName,
+      "-",
+      change.newValue,
+      transaction,
+      changedBySystem,
+    );
+  }
+};
 
-  // Record initial field values as changes
+/**
+ * The 'created' entries recordEntityCreation writes for one entity: each
+ * non-empty tracked field, labelled and formatted. `lookupCache` shares the
+ * results of formatters that look rows up (user names and the like) across
+ * calls, so a bulk caller resolves each distinct value once.
+ */
+const creationChanges = async (
+  entityType: EntityType,
+  entityData: Record<string, unknown>,
+  context: FormatterContext,
+  lookupCache?: Map<string, string>,
+): Promise<Array<{ fieldName: string; newValue: string }>> => {
+  const config = getEntityConfig(entityType);
+  const changes: Array<{ fieldName: string; newValue: string }> = [];
   for (const field of config.fieldsToTrack) {
     const value = entityData[field];
-    if (value !== undefined && value !== null && value !== "") {
-      await recordEntityChange(
-        entityType,
-        entityId,
-        "created",
-        changedByUserId,
-        organizationId,
-        getFieldLabel(entityType, field),
-        "-",
-        // Tenant-scoped name lookups, on the creating transaction.
-        await formatFieldValue(entityType, field, value, { organizationId, transaction }),
-        transaction,
-        changedBySystem,
-      );
+    if (value === undefined || value === null || value === "") continue;
+    const cacheKey =
+      lookupCache && config.fieldFormatters?.[field]
+        ? `${field}\u0000${JSON.stringify(value)}`
+        : undefined;
+    let newValue = cacheKey !== undefined ? lookupCache!.get(cacheKey) : undefined;
+    if (newValue === undefined) {
+      newValue = await formatFieldValue(entityType, field, value, context);
+      if (cacheKey !== undefined) lookupCache!.set(cacheKey, newValue);
+    }
+    changes.push({ fieldName: getFieldLabel(entityType, field), newValue });
+  }
+  return changes;
+};
+
+/** History rows per INSERT in recordEntityCreationBulk. */
+const CREATION_BULK_CHUNK = 1000;
+
+/**
+ * recordEntityCreation for many entities created by one user in one
+ * transaction (a spreadsheet import): the same rows, written with a few
+ * multi-row INSERTs instead of one statement per field. Each distinct
+ * looked-up value (an owner, an approver) is resolved once. Audit ledger
+ * entries are appended one at a time after the transaction commits, as in
+ * recordEntityFieldChangeBulk, so a rolled-back import leaves none and the
+ * ledger's per-org lock is not flooded.
+ *
+ * Errors propagate: the caller decides whether a failed history write fails
+ * its own work.
+ */
+export const recordEntityCreationBulk = async (
+  entityType: EntityType,
+  entities: Array<{ id: number; data: Record<string, unknown> }>,
+  changedByUserId: number,
+  organizationId: number,
+  transaction: Transaction,
+): Promise<void> => {
+  const config = getEntityConfig(entityType);
+  const tableName = escapePgName(config.tableName);
+  const foreignKey = escapePgName(config.foreignKeyField);
+  const context: FormatterContext = { organizationId, transaction };
+  const lookupCache = new Map<string, string>();
+
+  const rows: Array<{ entityId: number; fieldName: string; newValue: string | null }> = [];
+  for (const entity of entities) {
+    for (const change of await creationChanges(entityType, entity.data, context, lookupCache)) {
+      // recordEntityChange stores an empty value as NULL.
+      rows.push({
+        entityId: entity.id,
+        fieldName: change.fieldName,
+        newValue: change.newValue || null,
+      });
     }
   }
+  if (rows.length === 0) return;
+
+  for (let start = 0; start < rows.length; start += CREATION_BULK_CHUNK) {
+    const chunk = rows.slice(start, start + CREATION_BULK_CHUNK);
+    await sequelize.query(
+      `INSERT INTO ${tableName}
+       (organization_id, ${foreignKey}, action, field_name, old_value, new_value, changed_by_user_id, changed_at)
+       SELECT :organization_id, t.entity_id, 'created', t.field_name, '-', t.new_value, :changed_by_user_id, NOW()
+         FROM unnest(ARRAY[:entity_ids]::int[], ARRAY[:field_names]::text[], ARRAY[:new_values]::text[])
+           AS t(entity_id, field_name, new_value)`,
+      {
+        replacements: {
+          organization_id: organizationId,
+          changed_by_user_id: changedByUserId,
+          entity_ids: chunk.map((r) => r.entityId),
+          field_names: chunk.map((r) => r.fieldName),
+          new_values: chunk.map((r) => r.newValue),
+        },
+        transaction,
+      },
+    );
+  }
+
+  transaction.afterCommit(() => {
+    void (async () => {
+      for (const row of rows) {
+        await appendToAuditLedger({
+          organizationId,
+          entryType: "change_history",
+          userId: changedByUserId,
+          entityType,
+          entityId: row.entityId,
+          action: "created",
+          fieldName: row.fieldName,
+          oldValue: "-",
+          newValue: row.newValue,
+        }).catch((err) => logger.error(`[audit_ledger] write failed: ${err}`));
+      }
+    })();
+  });
 };
 
 /**
