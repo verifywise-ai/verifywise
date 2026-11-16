@@ -24,7 +24,7 @@ function createMockReq(token?: string, body?: Record<string, unknown>): Partial<
 }
 
 function createMockRes(): Partial<Response> {
-  const res: Partial<Response> = {};
+  const res: Partial<Response> = { locals: {} };
   res.status = jest.fn().mockReturnValue(res);
   res.json = jest.fn().mockReturnValue(res);
   return res;
@@ -112,23 +112,9 @@ describe("resetPassword middleware", () => {
     await resetPassword(req, res as Response, next);
 
     expect(next).toHaveBeenCalled();
+    expect(res.locals?.passwordResetToken).toBe("valid");
+    expect(mockConsume).not.toHaveBeenCalled();
     expect(res.status).not.toHaveBeenCalled();
-  });
-
-  it("should return 401 when the reset link was already used", async () => {
-    mockGetTokenPayload.mockReturnValue({
-      expire: Date.now() + 3600000,
-      email: "user@test.com",
-    } as any);
-    mockConsume.mockResolvedValue(null);
-    const req = createMockReq("used", { email: "user@test.com" }) as Request;
-    const res = createMockRes();
-
-    await resetPassword(req, res as Response, next);
-
-    expect(mockConsume).toHaveBeenCalledWith("used", "password_reset");
-    expect(res.status).toHaveBeenCalledWith(401);
-    expect(next).not.toHaveBeenCalled();
   });
 
   it("should return 500 on unexpected error", async () => {
