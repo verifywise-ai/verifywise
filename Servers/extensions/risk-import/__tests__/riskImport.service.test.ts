@@ -13,8 +13,11 @@ import ExcelJS from "exceljs";
 import { sequelize } from "../../../database/db";
 import { findUsersNotInOrganization } from "../../../utils/user.utils";
 import {
+  LEGACY_TRANSLATED_MESSAGES,
   LISTS_SHEET_NAME,
+  RISK_IMPORT_FILE_MESSAGES,
   RISK_IMPORT_MESSAGES,
+  RISK_IMPORT_VALIDATION_MESSAGES,
   RiskImportRow,
   buildExcelTemplate,
   importRisks,
@@ -50,6 +53,26 @@ beforeEach(() => {
   mockQuery.mockImplementation(async (sql: string) =>
     sql.trim().startsWith("INSERT") ? [{ id: 1 }] : [],
   );
+});
+
+describe("message groups", () => {
+  it("the legacy route translates exactly the messages worded by the import", () => {
+    expect([...LEGACY_TRANSLATED_MESSAGES].sort()).toEqual(
+      Object.values(RISK_IMPORT_FILE_MESSAGES).sort(),
+    );
+    for (const message of Object.values(RISK_IMPORT_VALIDATION_MESSAGES)) {
+      expect(LEGACY_TRANSLATED_MESSAGES.has(message)).toBe(false);
+    }
+  });
+
+  it("RISK_IMPORT_MESSAGES is both groups, with no key in both", () => {
+    const fileKeys = Object.keys(RISK_IMPORT_FILE_MESSAGES);
+    const validationKeys = Object.keys(RISK_IMPORT_VALIDATION_MESSAGES);
+    expect(fileKeys.filter((k) => validationKeys.includes(k))).toEqual([]);
+    expect(Object.keys(RISK_IMPORT_MESSAGES).sort()).toEqual(
+      [...fileKeys, ...validationKeys].sort(),
+    );
+  });
 });
 
 describe("importRisks row cap", () => {

@@ -37,13 +37,10 @@ const FILE_NAME = "riskImport.service.ts";
 export const LISTS_SHEET_NAME = "Lists";
 
 /**
- * Every message the import adds to its result. An error carries one of these
- * as `messageKey` (the en.json key) and `params` for its placeholders; the
- * controller translates from the key. Kept in this map so the i18n scanner
- * sees each one.
+ * Messages worded by the import itself: the row cap and refused inserts.
+ * Both routes translate these.
  */
-export const RISK_IMPORT_MESSAGES = {
-  // Worded by the import itself: the row cap and refused inserts.
+export const RISK_IMPORT_FILE_MESSAGES = {
   tooManyRows:
     "This file has more than {max} rows. Split it into smaller files and import each one.",
   enumValue: "A value in this row is not one of the allowed options.",
@@ -51,7 +48,13 @@ export const RISK_IMPORT_MESSAGES = {
   valueTooLong: "A value in this row is too long.",
   invalidDate: "A date in this row is not valid. Use YYYY-MM-DD.",
   rowNotSaved: "This row could not be saved.",
-  // Per-field validation.
+} as const;
+
+/**
+ * Per-field validation messages. /api/v1 translates them; on the legacy route
+ * they are a frozen contract and stay in English.
+ */
+export const RISK_IMPORT_VALIDATION_MESSAGES = {
   riskNameRequired: "Risk name is required",
   riskOwnerInvalid: "Risk owner must be a valid user ID or selected from dropdown",
   riskDescriptionRequired: "Risk description is required",
@@ -73,20 +76,22 @@ export const RISK_IMPORT_MESSAGES = {
   nameExists: 'A risk named "{name}" already exists',
 } as const;
 
+/**
+ * Every message the import adds to its result. An error carries one of these
+ * as `messageKey` (the en.json key) and `params` for its placeholders; the
+ * controller translates from the key.
+ */
+export const RISK_IMPORT_MESSAGES = {
+  ...RISK_IMPORT_FILE_MESSAGES,
+  ...RISK_IMPORT_VALIDATION_MESSAGES,
+} as const;
+
 export type RiskImportMessage = keyof typeof RISK_IMPORT_MESSAGES;
 
-/**
- * The messages the legacy route translates. Its per-field validation messages
- * are a frozen contract and stay in English there; /api/v1 translates all.
- */
-export const LEGACY_TRANSLATED_MESSAGES: ReadonlySet<string> = new Set([
-  RISK_IMPORT_MESSAGES.tooManyRows,
-  RISK_IMPORT_MESSAGES.enumValue,
-  RISK_IMPORT_MESSAGES.requiredValue,
-  RISK_IMPORT_MESSAGES.valueTooLong,
-  RISK_IMPORT_MESSAGES.invalidDate,
-  RISK_IMPORT_MESSAGES.rowNotSaved,
-]);
+/** The messages the legacy route translates: every message worded by the import itself. */
+export const LEGACY_TRANSLATED_MESSAGES: ReadonlySet<string> = new Set(
+  Object.values(RISK_IMPORT_FILE_MESSAGES),
+);
 
 // ---------------------------------------------------------------------------
 // EXCEL TEMPLATE
