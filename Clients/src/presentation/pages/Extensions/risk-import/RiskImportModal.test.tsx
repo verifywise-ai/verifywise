@@ -70,6 +70,12 @@ describe("RiskImportModal import errors", () => {
 
     expect(await screen.findByText("Unknown risk owner")).toBeInTheDocument();
     expect(screen.getByText("risk_owner")).toBeInTheDocument();
+    // All or nothing: a rejected import says nothing went in, with no counts.
+    expect(screen.getByText("Nothing was imported")).toBeInTheDocument();
+    expect(
+      screen.getByText("Fix the rows below in your file and upload it again."),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/imported,|failed|completed/i)).not.toBeInTheDocument();
     // Sent through the repository to the strict /api/v1 import, with the
     // sheet row of each row and the global error toast suppressed.
     expect(api.post).toHaveBeenCalledWith(
@@ -114,6 +120,24 @@ describe("RiskImportModal import errors", () => {
     expect(await screen.findByText("Too many rows in this file.")).toBeInTheDocument();
     expect(screen.queryByText("Error details")).not.toBeInTheDocument();
     expect(screen.queryByText(/risks? failed/)).not.toBeInTheDocument();
+  });
+});
+
+describe("RiskImportModal response without a result", () => {
+  it("shows the import error and keeps Import off, since the outcome is unknown", async () => {
+    api.post.mockResolvedValue({ data: { message: "OK" } });
+
+    await uploadAndImport();
+
+    expect(await screen.findByText("Failed to import risks")).toBeInTheDocument();
+    expect(
+      screen.getByText("Check the risks list before you import this file again."),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Import risks" })).toBeDisabled();
+    expect(screen.queryByText("Import completed")).not.toBeInTheDocument();
+    // The chosen file stays, so the user sees what was sent.
+    expect(screen.getByText("risks.xlsx")).toBeInTheDocument();
+    expect(api.post).toHaveBeenCalledTimes(1);
   });
 });
 

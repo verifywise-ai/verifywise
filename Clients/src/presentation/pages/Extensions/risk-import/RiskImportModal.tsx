@@ -63,6 +63,9 @@ export default function RiskImportModal({ open, onClose, onImportComplete }: Ris
   // Same shape as the MLflow and Azure tabs: an optional title, and the cause
   // from the parser or server as the body, so the title translates whole.
   const [error, setError] = useState<{ title?: string; body: string } | null>(null);
+  // The server answered without a result, so whether the rows went in is
+  // unknown: Import stays off until another file is chosen or the modal closes.
+  const [outcomeUnknown, setOutcomeUnknown] = useState(false);
   const { t, lang } = useTranslation();
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -108,6 +111,7 @@ export default function RiskImportModal({ open, onClose, onImportComplete }: Ris
     setUploadedFile(file);
     setError(null);
     setImportResult(null);
+    setOutcomeUnknown(false);
 
     try {
       // Loaded on demand: exceljs is ~280 KiB gz, only needed to parse an upload.
@@ -171,7 +175,7 @@ export default function RiskImportModal({ open, onClose, onImportComplete }: Ris
   }, []);
 
   const handleImport = async () => {
-    if (importing || importSucceeded) return;
+    if (importing || importSucceeded || outcomeUnknown) return;
     if (excelData.length === 0) {
       setError({ body: "No data to import. Please upload a valid Excel file." });
       return;
@@ -191,7 +195,14 @@ export default function RiskImportModal({ open, onClose, onImportComplete }: Ris
       // row cap) resolves with its result instead of throwing, and the global
       // error toast is suppressed because this modal shows the answer itself.
       const payload = await importRisks(excelData);
-      if (!payload) return;
+      if (!payload) {
+        setOutcomeUnknown(true);
+        setError({
+          title: "Failed to import risks",
+          body: "Check the risks list before you import this file again.",
+        });
+        return;
+      }
       const fileErrors = payload.errors?.filter(isFileError) ?? [];
       if (fileErrors.length > 0) {
         setError({ body: fileErrors.map((e) => e.message).join(" ") });
@@ -224,6 +235,7 @@ export default function RiskImportModal({ open, onClose, onImportComplete }: Ris
     setExcelData([]);
     setImportResult(null);
     setError(null);
+    setOutcomeUnknown(false);
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
@@ -269,7 +281,7 @@ export default function RiskImportModal({ open, onClose, onImportComplete }: Ris
       onSubmit={handleImport}
       submitButtonText={importing ? "Importing..." : "Import risks"}
       isSubmitting={importing}
-      isSubmitDisabled={excelData.length === 0 || importing || importSucceeded}
+      isSubmitDisabled={excelData.length === 0 || importing || importSucceeded || outcomeUnknown}
       maxWidth="900px"
     >
       {error && (
@@ -281,37 +293,28 @@ export default function RiskImportModal({ open, onClose, onImportComplete }: Ris
 
       {importResult && (
         <Alert
-          severity={importResult.success ? "success" : "warning"}
+          severity={importResult.success ? "success" : "error"}
           sx={{ mb: "6px" }}
           icon={importResult.success ? <CheckCircle /> : <XCircle />}
         >
           <Typography variant="body2" sx={{ fontWeight: 600, mb: "2px" }}>
-            {importResult.success ? "Import completed" : "Import completed with errors"}
+            {importResult.success ? t("Import completed") : t("Nothing was imported")}
           </Typography>
+          {/* The import is all or nothing: counts only mean something once it committed. */}
           <Typography variant="body2">
-            {fill(
-              t(
-                pluralKey(
-                  lang,
-                  importResult.imported,
-                  "{count} risk imported",
-                  "{count} risks imported",
-                ),
-              ),
-              { count: importResult.imported },
-            )}
-            {importResult.failed > 0 &&
-              `, ${fill(
-                t(
-                  pluralKey(
-                    lang,
-                    importResult.failed,
-                    "{count} risk failed",
-                    "{count} risks failed",
+            {importResult.success
+              ? fill(
+                  t(
+                    pluralKey(
+                      lang,
+                      importResult.imported,
+                      "{count} risk imported",
+                      "{count} risks imported",
+                    ),
                   ),
-                ),
-                { count: importResult.failed },
-              )}`}
+                  { count: importResult.imported },
+                )
+              : t("Fix the rows below in your file and upload it again.")}
           </Typography>
 
           {importResult.errors && importResult.errors.length > 0 && (
