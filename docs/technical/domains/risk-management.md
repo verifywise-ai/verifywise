@@ -731,7 +731,14 @@ A refused change returns 403. `RiskApprovalForbiddenError` is a `ForbiddenExcept
 
 `data` is translated (en, de, fr). The advisor checks the same rule before it files an approval request (`advisor/aiActions/riskApprovalPrecheck.ts`) and tells the user the reason. It looks up the requester's role only when an approval field is sent.
 
-Bulk actions do not touch approval. Risk import keeps `Approved` or `Rejected` from the file only when an Admin imports. Other rows get `Pending` with an approver and `Not required` without one, whatever the cell says.
+Bulk actions do not touch approval.
+
+Risk import (`extensions/risk-import/riskImport.service.ts`) stores `Pending` for a row with an approver and `Not required` for a row without one; `Approved` or `Rejected` from the file is kept only when an Admin imports (and the row names an approver). The two routes differ on input they cannot store as asked:
+
+- `POST /api/v1/risk-import/import` (strict) refuses the whole file, with keyed row errors from `approvalErrors`, when a row's approval status is not one of the four (`approvalStatusInvalid`), when a non-Admin imports `Approved` or `Rejected` (`approvalDecisionAdminOnly`, with or without an approver), or when a non-Admin names themself as the approver (`approverSelf`, R3). A blank status is not an error.
+- `POST /api/extensions/risk-import/import` (legacy, frozen) maps instead of refusing: an unknown status and a non-Admin's decision become `Pending` or `Not required`, and a non-Admin who names themself keeps the row as `Pending`. That last case is a legacy-only gap in R3.
+
+After the import commits, each approver it named, except the importing user, is notified once, fire and forget, on both routes (`notifyRiskApprovers`): one assignment notice listing all their imported risks (`notifyUserAssignedMany`), or the single-risk notice when they have one.
 
 ### Migration
 
@@ -750,15 +757,15 @@ Bulk actions do not touch approval. Risk import keeps `Approved` or `Rejected` f
 
 - `domain.layer/enums/risk-approval-status.enum.ts`: the four values, `normalizeRiskApprovalStatus`, `isRiskApprovalDecision`
 - `utils/riskApproval.utils.ts`: `resolveRiskApproval`, `callerCanDecideAnyRisk`, `RiskApprovalForbiddenError`
-- `services/riskApproverNotification.service.ts`: `notifyRiskAssignee`, `notifyNewRiskApprover`, `getUserNameById`
+- `services/riskApproverNotification.service.ts`: `notifyRiskAssignee`, `notifyNewRiskApprover`, `notifyRiskApprovers`, `getUserNameById`
 - `utils/risk.utils.ts`: `lockRiskApprovalQuery`
-- `extensions/risk-import/riskImport.service.ts`: `importedApprovalStatus`
+- `extensions/risk-import/riskImport.service.ts`: `importedApprovalStatus`, `approvalErrors`
 
 ### Follow-ups
 
 - Editing a risk's content after approval does not reset the approval.
-- Approvers named in a risk import are not notified. The MCP risk tools take no approver or approval status, so they never name one.
-- Risk import does not apply R3: a non-Admin importer can name themself as approver (the row gets `Pending`). Deferred with the import review.
+- The MCP risk tools take no approver or approval status, so they never name one.
+- The legacy risk import route does not apply R3: a non-Admin importer can name themself as approver (the row gets `Pending`). The `/api/v1` route refuses it.
 
 ## Frontend Structure
 

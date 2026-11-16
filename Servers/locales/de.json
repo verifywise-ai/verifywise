@@ -1529,5 +1529,9 @@
   "A date in this row is not valid. Use YYYY-MM-DD.": "Ein Datum in dieser Zeile ist ungültig. Verwenden Sie JJJJ-MM-TT.",
   "This row could not be saved.": "Diese Zeile konnte nicht gespeichert werden.",
   "Only the risk's approver or an Admin can change its approval.": "Nur die genehmigende Person des Risikos oder ein Admin kann die Genehmigung ändern.",
-  "You can't name yourself as the approver. Ask an Admin or pick someone else.": "Sie können sich nicht selbst als genehmigende Person eintragen. Wenden Sie sich an einen Admin oder wählen Sie eine andere Person."
+  "You can't name yourself as the approver. Ask an Admin or pick someone else.": "Sie können sich nicht selbst als genehmigende Person eintragen. Wenden Sie sich an einen Admin oder wählen Sie eine andere Person.",
+  "Invalid approval status. Must be one of: {values}": "Ungültiger Genehmigungsstatus. Erlaubt sind: {values}",
+  "Only an Admin can import a risk as Approved or Rejected": "Nur ein Admin kann ein Risiko als genehmigt oder abgelehnt importieren",
+  "{assigner} assigned you as Risk Approver for {count} risks: {names}": "{assigner} hat Sie als Risikogenehmiger für {count} Risiken zugewiesen: {names}",
+  "{assigner} assigned you as Risk Approver for {count} risks: {names} and {more} more": "{assigner} hat Sie als Risikogenehmiger für {count} Risiken zugewiesen: {names} und {more} weitere"
 }

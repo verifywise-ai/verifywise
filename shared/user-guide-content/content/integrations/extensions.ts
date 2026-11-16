@@ -297,7 +297,7 @@ export const extensionsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'The Approval Status column takes Pending, Approved, Rejected or Not required. A row without an approver gets Not required. A row with an approver gets Pending, unless an Admin imports it with Approved or Rejected. Any other value in this column is treated the same way and does not fail the row. Approvers named in an import are not notified.',
+      text: 'The Approval Status column takes Pending, Approved, Rejected or Not required. A row without an approver gets Not required. A row with an approver gets Pending, unless an Admin imports it as Approved or Rejected. Only Admins can import Approved or Rejected, and only Admins can name themselves as the approver. If a row breaks one of these rules or has any other value in this column, the dialog lists the error for that row and nothing is imported. After the import, each approver gets one notification listing their new risks to approve. If you name yourself, you are not notified.',
     },
     {
       type: 'heading',
