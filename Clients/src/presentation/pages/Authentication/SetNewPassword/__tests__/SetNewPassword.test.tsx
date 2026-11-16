@@ -18,7 +18,7 @@ vi.mock("../../../../../application/repository/auth.repository", () => ({
 }));
 
 const token = `header.${btoa(
-  JSON.stringify({ email: "user@example.com", expire: Date.now() + 60_000 }),
+  JSON.stringify({ email: "user@example.com", expire: 4_102_444_800_000 }),
 )}.signature`;
 const route = `/set-new-password?token=${token}`;
 

@@ -251,6 +251,7 @@ import {
   acceptInvitationAsExistingUser,
   loginUserWithMicrosoft,
 } from "../user.ctrl";
+import resetPasswordMiddleware from "../../middleware/resetPassword.middleware";
 import {
   getAllUsersQuery,
   getUserByEmailQuery,
@@ -826,6 +827,66 @@ describe("user.ctrl", () => {
       await resetPassword(req, res);
       expect(res.status).toHaveBeenCalledWith(500);
       expect(mockConsumeOneTimeToken).not.toHaveBeenCalled();
+    });
+
+    it("allows a corrected retry with the same token and rejects replay after success", async () => {
+      const { ValidationException } = require("../../domain.layer/exceptions/custom.exception");
+      const userMock = mockUser(buildUser({ password_hash: "old" }));
+      const updatePassword = jest
+        .fn()
+        .mockRejectedValueOnce(new ValidationException("Password requirements not met"))
+        .mockResolvedValueOnce(undefined)
+        .mockResolvedValueOnce(undefined);
+      const resettableUser = { ...userMock, updatePassword, password_hash: "newhash" };
+      const UserModel = require("../../domain.layer/models/user/user.model").UserModel;
+      UserModel.createNewUser
+        .mockResolvedValueOnce(resettableUser)
+        .mockResolvedValueOnce(resettableUser)
+        .mockResolvedValueOnce(resettableUser);
+      mockGetByEmail
+        .mockResolvedValueOnce(userMock as any)
+        .mockResolvedValueOnce(userMock as any)
+        .mockResolvedValueOnce(userMock as any);
+      mockTokenPayload
+        .mockReturnValueOnce({ expire: Date.now() + 3600000, email: "a@b.com" } as any)
+        .mockReturnValueOnce({ expire: Date.now() + 3600000, email: "a@b.com" } as any)
+        .mockReturnValueOnce({ expire: Date.now() + 3600000, email: "a@b.com" } as any);
+
+      let consumed = false;
+      mockConsumeOneTimeToken
+        .mockImplementationOnce(async () => {
+          consumed = true;
+          return { id: 1 } as any;
+        })
+        .mockImplementationOnce(async () => (consumed ? null : ({ id: 1 } as any)));
+      const resetMock = resetPasswordQuery as jest.MockedFunction<typeof resetPasswordQuery>;
+      resetMock.mockResolvedValueOnce(mockUser(buildUser()) as any);
+
+      const attempt = async (newPassword: string) => {
+        const req = createReq({
+          headers: { authorization: "Bearer reset-token" },
+          body: { email: "a@b.com", newPassword },
+        });
+        const res = createRes();
+        const next = jest.fn();
+        await resetPasswordMiddleware(req, res, next);
+        expect(next).toHaveBeenCalledTimes(1);
+        await resetPassword(req, res);
+        return res;
+      };
+
+      const invalidResponse = await attempt("PASSWORD1!");
+      expect(invalidResponse.status).toHaveBeenCalledWith(400);
+      expect(consumed).toBe(false);
+
+      const retryResponse = await attempt("Password1!");
+      expect(retryResponse.status).toHaveBeenCalledWith(202);
+      expect(consumed).toBe(true);
+
+      const replayResponse = await attempt("Password2!");
+      expect(replayResponse.status).toHaveBeenCalledWith(401);
+      expect(resetMock).toHaveBeenCalledTimes(1);
+      expect(mockRevokeAllUserTokens).toHaveBeenCalledTimes(1);
     });
   });
 
