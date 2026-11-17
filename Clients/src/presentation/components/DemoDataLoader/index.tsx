@@ -35,8 +35,13 @@ const pop = keyframes`from { opacity: 0; transform: translateX(-50%) translateY(
 // Moves the colours of the status text left to right; one full tile per loop
 // so the repeat is seamless.
 const sweep = keyframes`from { background-position: 200% 0; } to { background-position: 0% 0; }`;
-/** Brand greens that flow through the status text and the "Explore the demo" button. */
-const FLOWING_GREENS = `linear-gradient(90deg, ${brand.primary}, ${primitives.teal[500]}, ${primitives.green[400]}, ${primitives.teal[500]}, ${brand.primary})`;
+/**
+ * Brand greens that flow through the status text and the "Explore the demo"
+ * button. Every stop keeps at least 4.5:1 against white (green 800 8.9:1,
+ * teal 800 6.4:1, green 700 5.9:1), so the text and the white button label
+ * stay readable at every point of the loop.
+ */
+const FLOWING_GREENS = `linear-gradient(90deg, ${brand.primaryDark}, ${brand.primary}, ${primitives.teal[800]}, ${brand.primary}, ${brand.primaryDark})`;
 
 const hop = keyframes`0%, 100% { transform: translateY(0) scale(1, 1); } 15% { transform: scale(1.06, 0.92); } 45% { transform: translateY(-22px) scale(0.97, 1.04); } 75% { transform: translateY(0) scale(1.04, 0.95); }`;
 

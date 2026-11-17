@@ -149,6 +149,9 @@ const SetupModal: React.FC<SetupModalProps> = ({ onComplete, onSkip }) => {
     );
 
   const showDemoLoader = loadingOption === "demo" && !errorMessage;
+  let dialogLabel = "Welcome to VerifyWise";
+  if (showDemoLoader)
+    dialogLabel = demoReady ? "Your demo workspace is ready" : "Creating demo data";
 
   return (
     <Box
@@ -187,6 +190,7 @@ const SetupModal: React.FC<SetupModalProps> = ({ onComplete, onSkip }) => {
         <Box
           role="dialog"
           aria-modal="true"
+          aria-label={dialogLabel}
           sx={{
             backgroundColor: background.main,
             borderRadius: radiusPx.xl,

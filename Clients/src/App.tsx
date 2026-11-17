@@ -5,7 +5,7 @@ import light from "./presentation/themes/light";
 import { CssBaseline } from "@mui/material";
 import { VerifyWiseContext } from "./application/contexts/VerifyWise.context";
 import { useCallback, useMemo, useState, useEffect, Suspense } from "react";
-import { Provider } from "react-redux";
+import { Provider, useDispatch, useSelector } from "react-redux";
 import { PersistGate } from "redux-persist/integration/react";
 import { store, persistor } from "./application/redux/store";
 import { useAuth } from "./application/hooks/useAuth";
@@ -38,6 +38,7 @@ import useCommandPalette from "./application/hooks/useCommandPalette";
 import useUserPreferences from "./application/hooks/useUserPreferences";
 import { SetupModal, useOnboarding } from "./presentation/components/Onboarding";
 import { SETUP_MODAL_ROUTES } from "./application/hooks/useOnboarding";
+import { selectSetupModalOpen, setSetupModalOpen } from "./application/redux/ui/uiSlice";
 import { isClassicUi } from "./presentation/themes/uiStyle";
 import { lazyRoute } from "./application/utils/lazyRoute";
 import {
@@ -160,16 +161,19 @@ function App() {
   // Once open, the modal stays mounted until it calls back, even after it saves
   // "completed" to Redux itself: the demo loader saves it as soon as the data
   // is in, then waits for "Explore the demo".
-  const [setupModalOpen, setSetupModalOpen] = useState(false);
-  if (showModal && !setupModalOpen) setSetupModalOpen(true);
-  if (!token && setupModalOpen) setSetupModalOpen(false);
+  const dispatch = useDispatch();
+  const setupModalOpen = useSelector(selectSetupModalOpen);
+  useEffect(() => {
+    if (showModal && !setupModalOpen) dispatch(setSetupModalOpen(true));
+    else if (!token && setupModalOpen) dispatch(setSetupModalOpen(false));
+  }, [dispatch, showModal, setupModalOpen, token]);
 
   const handleOnboardingDone = useCallback(() => {
-    setSetupModalOpen(false);
+    dispatch(setSetupModalOpen(false));
     completeOnboarding();
     // The new look keeps Start here as Home's Get started tab.
     navigate(isClassicUi() ? "/start-here" : "/home?tab=get-started");
-  }, [completeOnboarding, navigate]);
+  }, [completeOnboarding, dispatch, navigate]);
 
   useEffect(() => {
     setShowAlertCallback((alertProps: AlertProps) => {

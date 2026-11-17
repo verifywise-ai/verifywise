@@ -34,7 +34,7 @@ const DemoDataLoaderOverlay: React.FC<DemoDataLoaderOverlayProps> = ({ status, o
     <Box
       role="dialog"
       aria-modal="true"
-      aria-label="Creating demo data"
+      aria-label={status === "done" ? "Your demo workspace is ready" : "Creating demo data"}
       sx={{
         width: "100%",
         maxWidth: "660px",

@@ -18,6 +18,10 @@ vi.mock("../../../../application/repository/organization.repository", () => ({
 }));
 
 describe("SetupModal", () => {
+  // Several tests swap window.location for a stub with reload(); put the real
+  // one back so later tests (and files sharing the worker) see a full Location.
+  const realLocation = window.location;
+
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(updateOnboardingStatus).mockReset().mockResolvedValue({});
@@ -27,6 +31,7 @@ describe("SetupModal", () => {
   });
 
   afterEach(() => {
+    Object.defineProperty(window, "location", { value: realLocation, writable: true });
     vi.useRealTimers();
     vi.restoreAllMocks();
   });
