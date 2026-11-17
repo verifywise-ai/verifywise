@@ -264,8 +264,14 @@ Routes keyed by something that belongs to a use case run the same rule through `
 | `/api/nist-ai-rmf/subcategories/byId/:id`, `/:id/risks`, `PATCH /:id`, `/:id/status` | subcategory | `useCaseOfNistSubcategory` |
 | `/api/frameworks/:fw/dashboard/:projectFrameworkId`; `impl/:level/:id` (`GET`, `PATCH`, risks) | `projects_frameworks` id, impl row | `useCaseOfProjectFramework`, `useCaseOfFrameworkImpl` |
 | every `/api/fria/:friaId/...` route | FRIA | `useCaseOfFria` |
+| `/api/pmm/config/:configId` (`PUT`, `DELETE`), `/config/:configId/questions` (`GET`, `POST`) | monitoring config | `useCaseOfPmmConfig` (`utils/pmmUseCaseAccess.utils.ts`) |
+| `/api/pmm/cycles/:cycleId` and its `responses` (`GET`, `POST`), `submit`, `flag`, `reassign` | monitoring cycle | `useCaseOfPmmCycle` |
+| `GET /api/pmm/reports/:reportId/download` | monitoring report | `useCaseOfPmmReport` |
+| `POST /api/pmm/config` | `project_id` in the JSON body | the id itself |
 
-`requireProjectAccess` also guards `GET /api/frameworks/:fw/tree/:projectId`, `GET /api/fria/:projectId`, `GET /api/ce-marking/:projectId` and `GET /api/use-case-change-history/:useCaseId`.
+**Monitoring stakeholders.** The guard's `orAllow` option is asked only when the use case rule refuses. The post-market monitoring routes use it so the stakeholder assigned to a cycle (`assigned_stakeholder_id`), who need not be on the use case, can still open the cycle, its responses, its config's questions and its report, and save, flag and submit it, as the monitoring email asks. Reassigning the stakeholder and changing the config need write access to the use case. Organization-wide question routes (`/org/questions`, `/questions/:questionId`, `/questions/reorder`) and the report list are not guarded.
+
+`requireProjectAccess` also guards `GET /api/pmm/config/:projectId`, `GET /api/pmm/active-cycle/:projectId`, `GET /api/frameworks/:fw/tree/:projectId`, `GET /api/fria/:projectId`, `GET /api/ce-marking/:projectId` and `GET /api/use-case-change-history/:useCaseId`.
 
 - **Not found:** a `GET` naming a child that is not in the caller's organization is passed on to the handler, as for use case ids. A write answers 404 "Record not found" from the guard: several legacy write handlers never check that the row exists, and wrote against another organization's id.
 - **Change history** outlives its use case (no foreign key), so `requireProjectAccess(..., "seesAll")` lets only a role that sees every use case read the history of a deleted one. `limit` is 1 to 100 (default 100), `offset` a whole number; anything else is a 400.

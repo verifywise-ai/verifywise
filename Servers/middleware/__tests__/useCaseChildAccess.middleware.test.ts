@@ -209,6 +209,56 @@ describe("requireUseCaseAccessVia", () => {
     expect(next).not.toHaveBeenCalled();
   });
 
+  it("reads the id from the body when asked", async () => {
+    readAccessQuery.mockResolvedValue("allowed");
+    accessQuery.mockResolvedValue("allowed");
+    const req = createReq({ method: "POST", params: {}, body: { project_id: 41 } });
+
+    await requireUseCaseAccessVia(resolve, { param: "project_id", source: "body" })(
+      req,
+      createRes(),
+      next,
+    );
+
+    expect(resolve).toHaveBeenCalledWith(41, 3, req);
+    expect(next).toHaveBeenCalledTimes(1);
+  });
+
+  describe("orAllow", () => {
+    it("lets a caller the use case rule refuses through when orAllow says so", async () => {
+      accessQuery.mockResolvedValue("denied");
+      const orAllow = jest.fn<(...args: any[]) => Promise<boolean>>().mockResolvedValue(true);
+      const req = createReq({ method: "POST" });
+      const res = createRes();
+
+      await requireUseCaseAccessVia(resolve, { orAllow })(req, res, next);
+
+      expect(orAllow).toHaveBeenCalledWith(40, 3, req);
+      expect(next).toHaveBeenCalledTimes(1);
+      expect(checkedUseCaseId(res)).toBe(12);
+    });
+
+    it("still refuses when orAllow says no", async () => {
+      accessQuery.mockResolvedValue("denied");
+      const res = createRes();
+
+      await requireUseCaseAccessVia(resolve, {
+        orAllow: async () => false,
+      })(createReq({ method: "POST" }), res, next);
+
+      expect(res.status).toHaveBeenCalledWith(403);
+    });
+
+    it("is not asked when the use case rule allows", async () => {
+      readAccessQuery.mockResolvedValue("allowed");
+      const orAllow = jest.fn<(...args: any[]) => Promise<boolean>>();
+
+      await requireUseCaseAccessVia(resolve, { orAllow })(createReq(), createRes(), next);
+
+      expect(orAllow).not.toHaveBeenCalled();
+    });
+  });
+
   describe('missing: "seesAll"', () => {
     const options = { missing: "seesAll" as const };
 

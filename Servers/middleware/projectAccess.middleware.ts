@@ -11,7 +11,7 @@ import { toId } from "../utils/validations/validation.utils";
 
 const FILE = "projectAccess.middleware.ts";
 
-type IdSource = "params" | "query";
+type IdSource = "params" | "query" | "body";
 type AccessRule = "method" | "write";
 
 /**
@@ -31,7 +31,8 @@ export interface UseCaseAccessOptions {
   /**
    * Where the handler reads that field. It must be the same place: a repeated
    * query field is refused rather than resolved, so the id checked here is the
-   * id the handler acts on. Default "params".
+   * id the handler acts on. "body" for a JSON body (mount after the parser).
+   * Default "params".
    */
   source?: IdSource;
   /**
@@ -52,6 +53,12 @@ export interface UseCaseAccessOptions {
    * for rows that outlive their use case (its change history).
    */
   missing?: "pass" | "refuseWrites" | "seesAll";
+  /**
+   * Asked only when the use case rule refuses: true lets the caller through
+   * anyway (the stakeholder assigned to a monitoring cycle, who need not be
+   * on the use case). Receives the same id and organization as the resolver.
+   */
+  orAllow?: (childId: number, organizationId: number, req: Request) => Promise<boolean>;
 }
 
 const eventTypeFor = (method: string): "Read" | "Delete" | "Update" => {
@@ -68,7 +75,14 @@ const buildGuard = (
   functionName: string,
   invalidIdMessage: string,
 ) => {
-  const { param = "id", source = "params", access = "method", optional = false, missing } = options;
+  const {
+    param = "id",
+    source = "params",
+    access = "method",
+    optional = false,
+    missing,
+    orAllow,
+  } = options;
   const label = resolveUseCase === sameUseCase ? "project ID" : `the use case of ${param}`;
 
   return async (req: Request, res: Response, next: NextFunction) => {
@@ -108,10 +122,13 @@ const buildGuard = (
           ? getProjectReadAccessQuery
           : getProjectAccessQuery;
       const projectId = await resolveUseCase(id, organizationId, req);
-      const result: ProjectAccess =
+      let result: ProjectAccess =
         projectId === null
           ? "not_found"
           : await accessQuery(projectId, { userId, role }, organizationId);
+      if (result === "denied" && orAllow && (await orAllow(id, organizationId, req))) {
+        result = "allowed";
+      }
 
       if (result === "denied") return await refuse("no access to");
       // The use case checked, for handlers that need its id: they use this,

@@ -8,7 +8,18 @@
 import express from "express";
 import authenticateJWT from "../middleware/auth.middleware";
 import authorize from "../middleware/accessControl.middleware";
-import { requireProjectAccess } from "../middleware/projectAccess.middleware";
+import {
+  requireProjectAccess,
+  requireUseCaseAccessVia,
+} from "../middleware/projectAccess.middleware";
+import {
+  isStakeholderOfPmmConfig,
+  isStakeholderOfPmmCycle,
+  isStakeholderOfPmmReport,
+  useCaseOfPmmConfig,
+  useCaseOfPmmCycle,
+  useCaseOfPmmReport,
+} from "../utils/pmmUseCaseAccess.utils";
 import {
   getConfigByProjectId,
   createConfig,
@@ -33,21 +44,54 @@ import {
 
 const router = express.Router();
 
+// Routes keyed by a config, cycle or report run the access rule of the use
+// case the config monitors (read rule on GET, write rule otherwise). The
+// stakeholder assigned to a cycle may also open, fill in, flag and submit it,
+// and read its questions and report, without being on the use case: the
+// monitoring email sends them there.
+const configUseCase = requireUseCaseAccessVia(useCaseOfPmmConfig, { param: "configId" });
+const configUseCaseOrStakeholder = requireUseCaseAccessVia(useCaseOfPmmConfig, {
+  param: "configId",
+  orAllow: isStakeholderOfPmmConfig,
+});
+const cycleUseCase = requireUseCaseAccessVia(useCaseOfPmmCycle, { param: "cycleId" });
+const cycleUseCaseOrStakeholder = requireUseCaseAccessVia(useCaseOfPmmCycle, {
+  param: "cycleId",
+  orAllow: isStakeholderOfPmmCycle,
+});
+// A new config names its use case in the body.
+const bodyUseCase = requireUseCaseAccessVia(async (id) => id, {
+  param: "project_id",
+  source: "body",
+});
+
 // ============================================================================
 // Configuration Routes
 // ============================================================================
 
 // GET /pmm/config/:projectId - Get config for a project
-router.get("/config/:projectId", authenticateJWT, getConfigByProjectId);
+router.get(
+  "/config/:projectId",
+  authenticateJWT,
+  requireProjectAccess("projectId"),
+  getConfigByProjectId,
+);
 
 // POST /pmm/config - Create new config
-router.post("/config", authenticateJWT, authorize("postMarketMonitoring.edit"), createConfig);
+router.post(
+  "/config",
+  authenticateJWT,
+  authorize("postMarketMonitoring.edit"),
+  bodyUseCase,
+  createConfig,
+);
 
 // PUT /pmm/config/:configId - Update config
 router.put(
   "/config/:configId",
   authenticateJWT,
   authorize("postMarketMonitoring.edit"),
+  configUseCase,
   updateConfig,
 );
 
@@ -56,6 +100,7 @@ router.delete(
   "/config/:configId",
   authenticateJWT,
   authorize("postMarketMonitoring.edit"),
+  configUseCase,
   deleteConfig,
 );
 
@@ -64,7 +109,12 @@ router.delete(
 // ============================================================================
 
 // GET /pmm/config/:configId/questions - Get questions for a config
-router.get("/config/:configId/questions", authenticateJWT, getQuestions);
+router.get(
+  "/config/:configId/questions",
+  authenticateJWT,
+  configUseCaseOrStakeholder,
+  getQuestions,
+);
 
 // GET /pmm/org/questions - Get global org questions (config_id = null)
 router.get("/org/questions", authenticateJWT, getQuestions);
@@ -74,6 +124,7 @@ router.post(
   "/config/:configId/questions",
   authenticateJWT,
   authorize("postMarketMonitoring.edit"),
+  configUseCase,
   addQuestion,
 );
 
@@ -106,22 +157,32 @@ router.post(
 // ============================================================================
 
 // GET /pmm/active-cycle/:projectId - Get active cycle for project
-router.get("/active-cycle/:projectId", authenticateJWT, getActiveCycle);
+router.get(
+  "/active-cycle/:projectId",
+  authenticateJWT,
+  requireProjectAccess("projectId"),
+  getActiveCycle,
+);
 
 // GET /pmm/cycles/:cycleId - Get cycle details
-router.get("/cycles/:cycleId", authenticateJWT, getCycleById);
+router.get("/cycles/:cycleId", authenticateJWT, cycleUseCaseOrStakeholder, getCycleById);
 
 // GET /pmm/cycles/:cycleId/responses - Get saved responses for a cycle
-router.get("/cycles/:cycleId/responses", authenticateJWT, getResponses);
+router.get("/cycles/:cycleId/responses", authenticateJWT, cycleUseCaseOrStakeholder, getResponses);
 
 // POST /pmm/cycles/:cycleId/responses - Save responses (partial save)
-router.post("/cycles/:cycleId/responses", authenticateJWT, saveResponses);
+router.post(
+  "/cycles/:cycleId/responses",
+  authenticateJWT,
+  cycleUseCaseOrStakeholder,
+  saveResponses,
+);
 
 // POST /pmm/cycles/:cycleId/submit - Submit cycle (final)
-router.post("/cycles/:cycleId/submit", authenticateJWT, submitCycle);
+router.post("/cycles/:cycleId/submit", authenticateJWT, cycleUseCaseOrStakeholder, submitCycle);
 
 // POST /pmm/cycles/:cycleId/flag - Flag concern (immediate notification)
-router.post("/cycles/:cycleId/flag", authenticateJWT, flagConcern);
+router.post("/cycles/:cycleId/flag", authenticateJWT, cycleUseCaseOrStakeholder, flagConcern);
 
 // ============================================================================
 // Report Routes
@@ -131,14 +192,22 @@ router.post("/cycles/:cycleId/flag", authenticateJWT, flagConcern);
 router.get("/reports", authenticateJWT, getReports);
 
 // GET /pmm/reports/:reportId/download - Download report PDF
-router.get("/reports/:reportId/download", authenticateJWT, downloadReport);
+router.get(
+  "/reports/:reportId/download",
+  authenticateJWT,
+  requireUseCaseAccessVia(useCaseOfPmmReport, {
+    param: "reportId",
+    orAllow: isStakeholderOfPmmReport,
+  }),
+  downloadReport,
+);
 
 // ============================================================================
 // Admin Routes
 // ============================================================================
 
 // POST /pmm/cycles/:cycleId/reassign - Reassign stakeholder
-router.post("/cycles/:cycleId/reassign", authenticateJWT, reassignStakeholder);
+router.post("/cycles/:cycleId/reassign", authenticateJWT, cycleUseCase, reassignStakeholder);
 
 // POST /pmm/projects/:projectId/start-cycle - Manually start new cycle
 router.post(
