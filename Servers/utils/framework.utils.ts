@@ -18,9 +18,17 @@ const CORE_FRAMEWORK_RESULT_KEYS: Record<number, string> = {
   4: "nist_ai_rmf",
 };
 
+/**
+ * The builders by framework id, as a Map so a request-supplied id can only
+ * reach a builder, never another property of the object.
+ */
+const FRAMEWORK_BUILDERS = new Map(
+  Object.entries(frameworkAdditionMap).map(([id, build]) => [Number(id), build] as const),
+);
+
 /** Whether a framework id has a builder that sets up its controls for a project. */
 export const hasFrameworkBuilder = (frameworkId: number): boolean =>
-  Object.prototype.hasOwnProperty.call(frameworkAdditionMap, frameworkId);
+  FRAMEWORK_BUILDERS.has(frameworkId);
 
 /**
  * The key a built framework is reported under: the historical key for the core
@@ -58,9 +66,8 @@ export const buildProjectFrameworkQuery = async (
   organizationId: number,
   transaction: Transaction,
 ): Promise<object> => {
-  // Own keys only, and a function: the id comes from the request.
-  const build = hasFrameworkBuilder(frameworkId) ? frameworkAdditionMap[frameworkId] : undefined;
-  if (typeof build !== "function") {
+  const build = FRAMEWORK_BUILDERS.get(frameworkId);
+  if (!build) {
     throw new ValidationException("Framework not found", "framework", frameworkId, {
       i18nKey: "Framework not found",
     });
