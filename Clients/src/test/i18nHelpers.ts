@@ -11,7 +11,7 @@
  */
 
 import { expect } from "vitest";
-import { initDomTranslator } from "../i18n/domTranslator";
+import { initDomTranslator, preloadAllI18nModules } from "../i18n/domTranslator";
 import { translations, type Lang } from "../i18n/translations";
 import { fill } from "../i18n/fill";
 import { storageService } from "../infrastructure/storage";
@@ -43,6 +43,7 @@ export const setLanguage = async (lang: Lang, audit = false): Promise<void> => {
   );
   initDomTranslator();
   await loaded;
+  await preloadAllI18nModules();
 };
 
 /** Start a test with a clean audit and no remembered expectations. */
