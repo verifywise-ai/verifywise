@@ -58,13 +58,14 @@ export const buildProjectFrameworkQuery = async (
   organizationId: number,
   transaction: Transaction,
 ): Promise<object> => {
-  assertFrameworksBuildable([frameworkId]);
-  return frameworkAdditionMap[frameworkId](
-    projectId,
-    enableAiDataInsertion,
-    organizationId,
-    transaction,
-  );
+  // Own keys only, and a function: the id comes from the request.
+  const build = hasFrameworkBuilder(frameworkId) ? frameworkAdditionMap[frameworkId] : undefined;
+  if (typeof build !== "function") {
+    throw new ValidationException("Framework not found", "framework", frameworkId, {
+      i18nKey: "Framework not found",
+    });
+  }
+  return build(projectId, enableAiDataInsertion, organizationId, transaction);
 };
 
 export const getAllFrameworksQuery = async (organizationId: number): Promise<FrameworkModel[]> => {
