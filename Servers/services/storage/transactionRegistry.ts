@@ -17,6 +17,25 @@ import { StorageObjectRef } from "./types";
 
 const pendingPuts = new WeakMap<Transaction, StorageObjectRef[]>();
 const pendingDeletes = new WeakMap<Transaction, StorageObjectRef[]>();
+const rollbackPatched = new WeakSet<Transaction>();
+
+/**
+ * Sequelize transactions expose afterCommit but no rollback hook. To make
+ * rollback cleanup automatic for every caller — including early
+ * `await transaction.rollback(); return ...` paths scattered through the
+ * controllers — the first pending put on a transaction wraps its rollback
+ * method so pending objects are removed before the rollback runs. The wrap
+ * is per transaction instance and idempotent; commit paths never call it.
+ */
+const attachRollbackCleanup = (transaction: Transaction): void => {
+  if (rollbackPatched.has(transaction)) return;
+  rollbackPatched.add(transaction);
+  const originalRollback = transaction.rollback.bind(transaction);
+  transaction.rollback = (async () => {
+    await cleanupPendingPuts(transaction);
+    return originalRollback();
+  }) as Transaction["rollback"];
+};
 
 const deleteRef = async (ref: StorageObjectRef): Promise<void> => {
   if (!ref.key) return; // local provider: bytes die with the row
@@ -54,6 +73,31 @@ export const registerPendingPut = (
   } else {
     pendingPuts.set(transaction, [ref]);
   }
+  attachRollbackCleanup(transaction);
+};
+
+/**
+ * Best-effort delete of every object registered via registerPendingPut for
+ * `transaction`. Call before rolling back a transaction that stored objects:
+ * either wrap work in withStorageCleanup, or invoke this directly in
+ * catch / early-rollback paths:
+ *
+ *   } catch (e) {
+ *     await cleanupPendingPuts(tx);
+ *     await tx.rollback();
+ *     throw e;
+ *   }
+ */
+export const cleanupPendingPuts = async (transaction: Transaction): Promise<void> => {
+  const refs = pendingPuts.get(transaction) ?? [];
+  pendingPuts.delete(transaction);
+  for (const ref of refs) {
+    try {
+      if (ref.key) await getStorageForProvider(ref.provider).delete(ref.key);
+    } catch (cleanupError) {
+      console.error("Failed to clean up storage object after rollback:", cleanupError);
+    }
+  }
 };
 
 /**
@@ -75,15 +119,7 @@ export const withStorageCleanup = async <T>(
   try {
     return await fn();
   } catch (error) {
-    const refs = pendingPuts.get(transaction) ?? [];
-    pendingPuts.delete(transaction);
-    for (const ref of refs) {
-      try {
-        if (ref.key) await getStorageForProvider(ref.provider).delete(ref.key);
-      } catch (cleanupError) {
-        console.error("Failed to clean up storage object after rollback:", cleanupError);
-      }
-    }
+    await cleanupPendingPuts(transaction);
     throw error;
   }
 };

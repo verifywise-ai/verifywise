@@ -6,6 +6,8 @@ import { createWriteToolFn } from "../confirmation/createWriteTool";
 import { sequelize } from "../../database/db";
 import { QueryTypes } from "sequelize";
 import { withLegacyHighRiskRole } from "../../utils/highRiskRoles.utils";
+import { deleteObjectOnCommit } from "../../services/storage/transactionRegistry";
+import { StorageObjectRef } from "../../services/storage/types";
 
 export interface FetchUseCasesParams {
   status?: string;
@@ -370,10 +372,24 @@ const agentDeleteUseCase = createWriteToolFn({
         `DELETE FROM projects_members WHERE organization_id = :organizationId AND project_id = :id`,
         { replacements: { organizationId, id: params.use_case_id }, transaction },
       );
-      await sequelize.query(
-        `DELETE FROM files WHERE organization_id = :organizationId AND project_id = :id`,
-        { replacements: { organizationId, id: params.use_case_id }, transaction },
-      );
+      const deletedFiles = (await sequelize.query(
+        `DELETE FROM files WHERE organization_id = :organizationId AND project_id = :id
+         RETURNING storage_provider, storage_key`,
+        {
+          replacements: { organizationId, id: params.use_case_id },
+          transaction,
+          type: QueryTypes.SELECT,
+        },
+      )) as unknown as { storage_provider: string | null; storage_key: string | null }[];
+      // Externally stored bytes are removed only after the deletes commit.
+      for (const row of deletedFiles) {
+        if (row.storage_key) {
+          deleteObjectOnCommit(transaction, {
+            provider: row.storage_provider as StorageObjectRef["provider"],
+            key: row.storage_key,
+          });
+        }
+      }
       await sequelize.query(
         `DELETE FROM projects_risks WHERE organization_id = :organizationId AND project_id = :id`,
         { replacements: { organizationId, id: params.use_case_id }, transaction },
