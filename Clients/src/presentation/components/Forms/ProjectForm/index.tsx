@@ -29,6 +29,7 @@ import useFrameworks from "../../../../application/hooks/useFrameworks";
 import { useUseCaseOrgSettings } from "../../../../application/hooks/useUseCaseOrgSettings";
 import { GEOGRAPHY_ITEMS } from "../../../../application/constants/geography";
 import DatePicker from "../../../components/Inputs/Datepicker";
+import { startDateCalendarDay } from "../../../tools/isoDateToString";
 import dayjs, { Dayjs } from "dayjs";
 import { checkStringValidation } from "../../../../application/validations/stringValidation";
 import selectValidation from "../../../../application/validations/selectValidation";
@@ -106,7 +107,9 @@ export const ProjectForm = ({
         external_owner_name: projectToEdit.external_owner_name || "",
         external_owner_email: projectToEdit.external_owner_email || "",
         members: [], // Will be populated in useEffect when users data is available
-        start_date: projectToEdit.start_date || "",
+        // Read as a calendar day: west of UTC a start date stored at 00:00 UTC
+        // would otherwise show the day before.
+        start_date: startDateCalendarDay(projectToEdit.start_date)?.toISOString() || "",
         ai_risk_classification: projectToEdit.ai_risk_classification || null,
         status: getStatusIdFromName(projectToEdit.status),
         high_risk_roles: projectHighRiskRoles(projectToEdit),

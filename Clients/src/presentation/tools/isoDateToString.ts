@@ -63,7 +63,21 @@ export const toDateOnlyString = (value: string | Date | null | undefined): strin
  *   the next day from UTC+12 and move the date forward on every save);
  * - anything else: the local date of the instant, as before.
  */
-export const riskCalendarDay = (value: unknown): Date | null => {
+export const riskCalendarDay = (value: unknown): Date | null => calendarDayOf(value, [12]);
+
+/**
+ * The calendar day of a use case start date, as local midnight of that day.
+ *
+ * The API, intake and MCP store a bare "YYYY-MM-DD" start date, which lands at
+ * 00:00 UTC; the console stores the browser's local midnight. So exactly 00:00
+ * or 12:00 UTC reads as the UTC date (west of UTC the instant falls on the day
+ * before), and anything else as the local date of the instant, as before.
+ */
+export const startDateCalendarDay = (value: unknown): Date | null =>
+  calendarDayOf(value, [0, 12]);
+
+/** A bare date is that day; an instant at one of `utcHours` sharp is its UTC date. */
+function calendarDayOf(value: unknown, utcHours: number[]): Date | null {
   if (!value || (typeof value !== "string" && !(value instanceof Date))) return null;
   if (typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value.trim())) {
     const parsed = parseISO(value.trim()); // a bare date parses as local midnight
@@ -72,15 +86,15 @@ export const riskCalendarDay = (value: unknown): Date | null => {
   const date = value instanceof Date ? value : new Date(value);
   if (!isValid(date)) return null;
 
-  const isStoredNoon =
-    date.getUTCHours() === 12 &&
+  const isStoredCalendarDay =
+    utcHours.includes(date.getUTCHours()) &&
     date.getUTCMinutes() === 0 &&
     date.getUTCSeconds() === 0 &&
     date.getUTCMilliseconds() === 0;
-  return isStoredNoon
+  return isStoredCalendarDay
     ? new Date(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate())
     : new Date(date.getFullYear(), date.getMonth(), date.getDate());
-};
+}
 
 /** A local date as "YYYY-MM-DD", or "" when there is none. */
 export const toLocalDateOnly = (date: Date | null | undefined): string =>

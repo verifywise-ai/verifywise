@@ -38,6 +38,7 @@ import { TableEmptyStateLayout } from "../Table/TableEmptyStateLayout";
 import { IProjectTableViewProps } from "../../../domain/interfaces/i.project";
 import { Project } from "../../../domain/types/Project";
 import useFormattedDate from "../../../application/hooks/useFormattedDate";
+import { startDateCalendarDay } from "../../tools/isoDateToString";
 import { VerifyWiseContext } from "../../../application/contexts/VerifyWise.context";
 import Alert from "../Alert";
 import { useCanCheck } from "../../../application/hooks/useCan";
@@ -567,7 +568,7 @@ const ProjectTableView: React.FC<IProjectTableViewProps> = ({
                         sortConfig.key === "startDate" ? "background.surface" : "inherit",
                     }}
                   >
-                    {formatDate(project.start_date)}
+                    {formatUserDate(startDateCalendarDay(project.start_date))}
                   </TableCell>
                 )}
 
