@@ -1534,5 +1534,8 @@
   "Only an Admin can import a risk as Approved or Rejected": "Seul un Admin peut importer un risque comme approuvé ou rejeté",
   "{assigner} assigned you as Risk Approver for {count} risks: {names}": "{assigner} vous a désigné approbateur de {count} risques : {names}",
   "{assigner} assigned you as Risk Approver for {count} risks: {names} and {more} more": "{assigner} vous a désigné approbateur de {count} risques : {names} et {more} autres",
-  "archive_risks_linked_only_here must be \"true\" or \"false\"": "archive_risks_linked_only_here doit valoir \"true\" ou \"false\""
+  "archive_risks_linked_only_here must be \"true\" or \"false\"": "archive_risks_linked_only_here doit valoir \"true\" ou \"false\"",
+  "Invalid ID": "Identifiant non valide",
+  "limit must be an integer from 1 to 100": "limit doit être un entier de 1 à 100",
+  "offset must be a whole number of 0 or more": "offset doit être un entier supérieur ou égal à 0"
 }

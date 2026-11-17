@@ -1534,5 +1534,8 @@
   "Only an Admin can import a risk as Approved or Rejected": "Only an Admin can import a risk as Approved or Rejected",
   "{assigner} assigned you as Risk Approver for {count} risks: {names}": "{assigner} assigned you as Risk Approver for {count} risks: {names}",
   "{assigner} assigned you as Risk Approver for {count} risks: {names} and {more} more": "{assigner} assigned you as Risk Approver for {count} risks: {names} and {more} more",
-  "archive_risks_linked_only_here must be \"true\" or \"false\"": "archive_risks_linked_only_here must be \"true\" or \"false\""
+  "archive_risks_linked_only_here must be \"true\" or \"false\"": "archive_risks_linked_only_here must be \"true\" or \"false\"",
+  "Invalid ID": "Invalid ID",
+  "limit must be an integer from 1 to 100": "limit must be an integer from 1 to 100",
+  "offset must be a whole number of 0 or more": "offset must be a whole number of 0 or more"
 }

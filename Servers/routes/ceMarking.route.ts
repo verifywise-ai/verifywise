@@ -8,7 +8,13 @@ import { requireProjectAccess } from "../middleware/projectAccess.middleware";
 import { validateId } from "../domain.layer/validations/id.valid";
 
 // GET CE Marking data for a project
-router.get("/:projectId", authenticateJWT, validateId("projectId"), getCEMarking);
+router.get(
+  "/:projectId",
+  authenticateJWT,
+  validateId("projectId"),
+  requireProjectAccess("projectId"),
+  getCEMarking,
+);
 
 // UPDATE CE Marking data for a project
 router.put(
