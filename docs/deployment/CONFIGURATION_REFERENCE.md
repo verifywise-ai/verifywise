@@ -94,6 +94,34 @@ REDIS_URL=redis://redis.internal:6379/0
 
 ---
 
+## File storage
+
+File bytes are stored by a provider selected with `STORAGE_PROVIDER`. See the
+[File Storage Migration Guide](./FILE_STORAGE_MIGRATION.md) for behavior,
+switching, and backup guidance.
+
+| Variable | Description | Default | Required |
+|----------|-------------|---------|----------|
+| `STORAGE_PROVIDER` | `local` (bytes in the `files.content` database column) or `s3` (S3-compatible object storage) | `local` | No |
+| `S3_BUCKET` | Target bucket | - | Yes, when `s3` |
+| `S3_ENDPOINT` | Custom S3-compatible endpoint (MinIO, Wasabi, R2). Omit for AWS S3 | - | No |
+| `S3_REGION` | Bucket/signing region | `us-east-1` | No |
+| `S3_ACCESS_KEY_ID` | Static access key; must be set together with `S3_SECRET_ACCESS_KEY`, or both unset to use the default AWS credential chain | - | No |
+| `S3_SECRET_ACCESS_KEY` | Static secret key (pair rule above) | - | No |
+| `S3_FORCE_PATH_STYLE` | `true`/`false`; most S3-compatible providers need path-style | `true` when `S3_ENDPOINT` set, else `false` | No |
+| `S3_KEY_PREFIX` | Key prefix for stored objects | `files/` | No |
+| `S3_SIGNED_URL_TTL_SECONDS` | Presigned URL lifetime (positive integer) | `900` | No |
+
+```bash
+STORAGE_PROVIDER=s3
+S3_BUCKET=verifywise-files
+S3_ENDPOINT=http://minio:9000
+S3_ACCESS_KEY_ID=minioadmin
+S3_SECRET_ACCESS_KEY=change-me
+```
+
+---
+
 ## Authentication
 
 ### JWT tokens
