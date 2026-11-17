@@ -18,7 +18,12 @@ import { createTestProject } from "../factories/test-entities.factory";
 let counter = 0;
 async function user(orgId: number, roleId = 1): Promise<number> {
   counter += 1;
-  return createTestUser(orgId, roleId, `uc-settings-${Date.now()}-${counter}@test.com`, "Pw123456!");
+  return createTestUser(
+    orgId,
+    roleId,
+    `uc-settings-${Date.now()}-${counter}@test.com`,
+    "Pw123456!",
+  );
 }
 
 async function apiAs(orgId: number, userId: number) {
@@ -145,7 +150,11 @@ describe("use case Settings saves", () => {
 
       await api
         .patch(`${base}/${id}`)
-        .send({ goal: "Stamped", last_updated: "2001-01-01T00:00:00.000Z", last_updated_by: otherId })
+        .send({
+          goal: "Stamped",
+          last_updated: "2001-01-01T00:00:00.000Z",
+          last_updated_by: otherId,
+        })
         .expect(202);
 
       const stored = await row(id);

@@ -921,7 +921,12 @@ describe("project.ctrl", () => {
       expect(res.status).toHaveBeenCalledWith(202);
     });
     it("returns the user who last updated it, read in this organization (U-L2)", async () => {
-      const project = { ...buildProject(), owner: null, last_updated: new Date(), last_updated_by: 3 };
+      const project = {
+        ...buildProject(),
+        owner: null,
+        last_updated: new Date(),
+        last_updated_by: 3,
+      };
       mockGetById.mockResolvedValue(project as any);
       mockGetUser.mockResolvedValue({
         id: 3,
