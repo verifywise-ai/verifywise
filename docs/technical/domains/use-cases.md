@@ -168,7 +168,7 @@ Transitions:
 | Approval request opened (`services/projects/approvalRequest.service.ts`) | `planned → in_review` |
 | Approval approved, auto-approved, rejected or withdrawn; workflow cleared or replaced by an approval workflow admin (`releaseUseCaseFromReview`) | `in_review → planned` |
 | Use case created (any path, incl. intake approval) | `planned`; the request body never sets the stage |
-| `POST /api/v1/use-case-lifecycle/:id/go-live` | `planned → live`, sets `go_live_date`, resets the confirmation period. Refused (409 "Approve this use case before marking it as live") while the latest approval request is pending or rejected (`goLiveCondition`) |
+| `POST /api/v1/use-case-lifecycle/:id/go-live` | `planned → live`, sets `go_live_date`, resets the confirmation period. Refused (409 "Approve this use case before marking it as live") unless the latest approval decision is approved, or the use case has no workflow and no decision (`goLiveCondition`). So a pending or rejected use case, and one with a workflow attached whose request was withdrawn, can't go live |
 | `POST /api/v1/use-case-lifecycle/:id/confirm` | live only; sets `last_confirmed_*` |
 | `POST /api/v1/use-case-lifecycle/:id/retire` | `planned`/`live → retired`, sets `retired_at` |
 | `PATCH /api/v1/use-case-lifecycle/:id/department` | sets `department` |
@@ -293,7 +293,7 @@ POST /projects
    - Create ApprovalRequest
    - Wait for approval before framework creation
 
-A framework of the wrong scope (an organization-wide framework on a use case, or the reverse) is a 400 on `framework`, and `project_title` is limited to 255 characters (400 on `project_title`). Validation errors that name a field are answered as `{ errors: [{ field, message, location }] }`, the shape the request validators use, so the use case form shows them on the field.
+A framework of the wrong scope (an organization-wide framework on a use case, or the reverse) is a 400 on `framework`, and `project_title` is limited to 255 characters (400 on `project_title`). On `/api/v1/projects`, validation errors that name a field are answered as `{ errors: [{ field, message, location }] }`, the shape the request validators use, so the use case form shows them on the field (the form shows a `framework` error on its regulations field, and any other error above the form). The legacy `/api/projects` contract is frozen: there the body stays the plain message.
 
 ### Changing the approval workflow
 
@@ -302,7 +302,8 @@ A framework of the wrong scope (an organization-wide framework on a use case, or
 - **Who may change it.** While the use case's approval status is pending or rejected, only holders of `approvalWorkflow.admin` may clear, replace or set the workflow; anyone else gets 403 and nothing is written. The requester withdraws a pending request through `POST /api/approval-requests/:id/withdraw` instead. With no pending or rejected request, anyone who may edit the use case may change it.
 - **Replaced.** The pending request (if any) is withdrawn and a request under the new workflow is opened. The new workflow must be usable (400 otherwise, as on create).
 - **Cleared.** The pending request (if any) is withdrawn, and the parked `pending_frameworks` are created, unless the latest decision (after that withdrawal) is a rejection: a rejected use case never gets its frameworks this way, and keeps them parked until a new review approves it.
-- **History.** Every change is recorded in `use_case_change_history` as "Approval workflow", with the workflow titles.
+- **History.** Every change is recorded in `use_case_change_history` as "Approval workflow", with the workflow titles. Changes are detected by id (`fieldComparators`), so a switch between two workflows with the same title is recorded and an unchanged save looks no title up.
+- **Concurrency.** The saved workflow is read with `SELECT ... FOR UPDATE` inside the update's transaction (`lockUseCaseWorkflowQuery`), so two saves that attach a workflow at once cannot each open a pending request.
 
 **Approval status.** `approval_status` on the use case (`getApprovalStatusQuery`) is the status of its newest pending, approved or rejected request (`latestApprovalStatusSql`, `utils/approvalState.utils.ts`); withdrawn requests are skipped. A rejection followed by an approved review is no longer rejected; a re-review that is withdrawn leaves the rejection. The go-live condition reads the same SQL. No other path changes a use case's workflow or live stage: the MCP use case tools and the advisor's use case tools accept neither, intake approval creates use cases without a workflow, and `PATCH /api/projects/:id/status` writes `status` only.
 6. Trigger `project_added` automation

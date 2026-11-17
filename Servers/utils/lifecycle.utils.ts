@@ -56,8 +56,9 @@ export interface LifecycleEntityConfig {
   scope?: string;
   /**
    * Extra condition (against the alias) a row must meet to go live, on top of
-   * being planned. AI apps must be approved first (#5193); use cases must not
-   * have a pending or rejected approval request (audit decision 2).
+   * being planned. AI apps must be approved first (#5193); a use case's latest
+   * approval decision must be Approved, unless it has no workflow and no
+   * decision (audit decision 2).
    */
   goLiveCondition?: (alias: string) => string;
 }
@@ -77,11 +78,12 @@ export const LIFECYCLE_ENTITIES: Record<LifecycleEntityConfig["key"], LifecycleE
     hasExternalOwner: true,
     hasDepartmentColumn: true,
     scope: "is_organizational = false",
-    // A use case whose latest approval request is pending or rejected has not
-    // been approved for use, so it can't be live. One with no request (no
-    // workflow) or an approved one can.
+    // Live needs an approval: the latest decision is Approved. A use case
+    // with no workflow and no decision needs none. One with a workflow
+    // attached but no decision (its request withdrawn, frameworks parked) has
+    // not been approved, and a pending or rejected one is never approved.
     goLiveCondition: (a) =>
-      `COALESCE(${latestApprovalStatusSql(`${a}.organization_id`, "'use_case'", `${a}.id`)}, '${ApprovalRequestStatus.APPROVED}') = '${ApprovalRequestStatus.APPROVED}'`,
+      `COALESCE(${latestApprovalStatusSql(`${a}.organization_id`, "'use_case'", `${a}.id`)}, CASE WHEN ${a}.approval_workflow_id IS NULL THEN '${ApprovalRequestStatus.APPROVED}' END) = '${ApprovalRequestStatus.APPROVED}'`,
   },
   // AI apps (#5193): same stages, columns and "still live?" interval.
   ai_app: {

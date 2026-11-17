@@ -128,13 +128,13 @@ export async function createUseCaseService(
   // 2. Insert. A workflow that cannot review a use case is refused first: a
   //    missing id would otherwise fail the foreign key (500), and another
   //    organization's would be saved and park the frameworks with no review.
-  if (newProject.approval_workflow_id) {
-    await getUsableUseCaseWorkflow(
-      Number(newProject.approval_workflow_id),
-      ctx.organizationId,
-      transaction,
-    );
-  }
+  const usableWorkflow = newProject.approval_workflow_id
+    ? await getUsableUseCaseWorkflow(
+        Number(newProject.approval_workflow_id),
+        ctx.organizationId,
+        transaction,
+      )
+    : null;
   const createdProject = await createNewProjectQuery(
     newProject,
     newProject.members ?? [],
@@ -207,13 +207,13 @@ export async function createUseCaseService(
     "project.ctrl.ts",
   );
 
-  // 5. An inactive or wrong-entity workflow throws ValidationException, which
-  //    the caller maps to 400 after rolling back.
+  // 5. Open the request under the workflow checked in step 2.
   const approvalResult = await createUseCaseApprovalRequest(
     createdProject,
     ctx.userId,
     ctx.organizationId,
     transaction,
+    usableWorkflow,
   );
 
   return { useCase: createdProject, frameworks, approvalResult };

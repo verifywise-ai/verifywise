@@ -13,7 +13,9 @@ import { createTestApp, testRequest } from "./setup";
  * - clearing the workflow of a rejected use case never attaches the parked
  *   frameworks;
  * - a workflow change is recorded in the use case's change history;
- * - a rejected use case cannot go live;
+ * - a use case goes live only once approved, or when it has no workflow and
+ *   no decision;
+ * - two saves attaching a workflow at once open one request;
  * - a workflow that is missing, from another organization, inactive, not a
  *   use case workflow, or has a step without approvers is a 400 on create
  *   and update, and nothing is written;
@@ -136,6 +138,21 @@ const useCaseBody = (owner: number, extra: Record<string, unknown> = {}) => ({
   members: [],
   ...extra,
 });
+
+/**
+ * The 400 for an unusable workflow. The legacy /api/projects contract is
+ * frozen, so it answers with the plain message; /api/v1 names the field.
+ */
+function expectWorkflowError(base: string, body: any) {
+  if (base === "/api/projects") {
+    expect(typeof body.data).toBe("string");
+    expect(body.data).toMatch(/approval workflow/);
+  } else {
+    expect(body.data.errors).toEqual([
+      expect.objectContaining({ field: "approval_workflow_id", location: "body" }),
+    ]);
+  }
+}
 
 describe("use case approval workflow", () => {
   let orgId: number;
@@ -284,6 +301,66 @@ describe("use case approval workflow", () => {
       expect(res.status).toBe(200);
       expect(await requests(projectId)).toEqual(["Withdrawn"]);
     });
+    // History compares the workflow by id: the same title on both sides is
+    // still a change.
+    it("records replacing it with another workflow of the same title", async () => {
+      const first = await insertWorkflow(orgId, { steps: [[adminId]], title: "Sign-off" });
+      const second = await insertWorkflow(orgId, { steps: [[adminId]], title: "Sign-off" });
+      const created = await editor
+        .post("/api/v1/projects")
+        .send(useCaseBody(editorId, { approval_workflow_id: first }));
+      expect(created.status).toBe(201);
+      const projectId = Number(created.body.data.project.id);
+
+      const res = await admin
+        .patch(`/api/v1/projects/${projectId}`)
+        .send({ approval_workflow_id: second });
+
+      expect(res.status).toBe(202);
+      const history = await select<{ old_value: string; new_value: string }>(
+        `SELECT old_value, new_value FROM use_case_change_history
+          WHERE use_case_id = :projectId AND field_name = 'Approval workflow'`,
+        { projectId },
+      );
+      expect(history).toEqual([{ old_value: "Sign-off", new_value: "Sign-off" }]);
+    });
+  });
+
+  // Two saves that attach a workflow at the same time each read "no workflow"
+  // and each opened a pending request. The workflow is now read under a row
+  // lock, so the second save sees the first one's workflow.
+  describe("attaching a workflow from two saves at once", () => {
+    it("opens one pending request when both send the same workflow", async () => {
+      const created = await editor
+        .post("/api/v1/projects")
+        .send(useCaseBody(editorId, { framework: [frameworkId] }));
+      expect(created.status).toBe(201);
+      const projectId = Number(created.body.data.project.id);
+
+      const results = await Promise.all([
+        editor.patch(`/api/v1/projects/${projectId}`).send({ approval_workflow_id: workflowId }),
+        editor.patch(`/api/v1/projects/${projectId}`).send({ approval_workflow_id: workflowId }),
+      ]);
+
+      expect(results.map((r) => r.status)).toEqual([202, 202]);
+      expect(await requests(projectId)).toEqual(["Pending"]);
+    });
+
+    it("refuses the second of two different workflows once the first is under review", async () => {
+      const created = await editor
+        .post("/api/v1/projects")
+        .send(useCaseBody(editorId, { framework: [frameworkId] }));
+      const projectId = Number(created.body.data.project.id);
+      const other = await insertWorkflow(orgId, { steps: [[adminId]] });
+
+      const results = await Promise.all([
+        editor.patch(`/api/v1/projects/${projectId}`).send({ approval_workflow_id: workflowId }),
+        editor.patch(`/api/v1/projects/${projectId}`).send({ approval_workflow_id: other }),
+      ]);
+
+      expect(results.map((r) => r.status).sort()).toEqual([202, 403]);
+      expect(await requests(projectId)).toEqual(["Pending"]);
+    });
   });
 
   describe("a rejected use case", () => {
@@ -357,6 +434,36 @@ describe("use case approval workflow", () => {
     });
   });
 
+  // Live needs an approval: the latest decision is Approved, or the use case
+  // has no workflow and no decision at all.
+  describe("going live", () => {
+    it("is refused while a workflow is attached and its request was withdrawn", async () => {
+      const { projectId, requestId } = await useCaseUnderReview();
+      const withdrawn = await editor.post(`/api/approval-requests/${requestId}/withdraw`);
+      expect(withdrawn.status).toBe(200);
+      const row = await project(projectId);
+      expect(row.lifecycle_stage).toBe("planned");
+      expect(row.approval_workflow_id).toBe(workflowId);
+
+      const res = await editor.post(`/api/v1/use-case-lifecycle/${projectId}/go-live`).send({});
+
+      expect(res.status).toBe(409);
+      expect(res.body.data).toBe("Approve this use case before marking it as live");
+      expect((await project(projectId)).lifecycle_stage).toBe("planned");
+    });
+
+    it("is allowed for a use case with no workflow that was never reviewed", async () => {
+      const created = await editor.post("/api/v1/projects").send(useCaseBody(editorId));
+      expect(created.status).toBe(201);
+      const projectId = Number(created.body.data.project.id);
+
+      const res = await editor.post(`/api/v1/use-case-lifecycle/${projectId}/go-live`).send({});
+
+      expect(res.status).toBe(200);
+      expect((await project(projectId)).lifecycle_stage).toBe("live");
+    });
+  });
+
   describe("workflows that cannot review a use case", () => {
     type Bad = [string, () => Promise<number>];
     const badWorkflows: Bad[] = [
@@ -393,7 +500,7 @@ describe("use case approval workflow", () => {
             .send(useCaseBody(editorId, { framework: [frameworkId], approval_workflow_id: bad }));
 
           expect(res.status).toBe(400);
-          expect(JSON.stringify(res.body)).toContain("approval_workflow_id");
+          expectWorkflowError(base, res.body);
           expect(await projectCount(orgId)).toBe(before);
         },
       );
@@ -413,7 +520,7 @@ describe("use case approval workflow", () => {
             .send({ approval_workflow_id: bad });
 
           expect(res.status).toBe(400);
-          expect(JSON.stringify(res.body)).toContain("approval_workflow_id");
+          expectWorkflowError(base, res.body);
           expect((await project(projectId)).approval_workflow_id).toBeNull();
           expect(await requests(projectId)).toEqual([]);
         },
@@ -443,7 +550,16 @@ describe("use case approval workflow", () => {
           .post(base)
           .send(useCaseBody(editorId, { framework: [organizationalFramework] }));
         expect(res.status).toBe(400);
-        expect(JSON.stringify(res.body)).toContain("framework");
+        if (base === "/api/projects") {
+          // Frozen legacy contract: the plain message.
+          expect(res.body.data).toBe(
+            `Framework ${organizationalFramework} can't be used for this kind of use case`,
+          );
+        } else {
+          expect(res.body.data.errors).toEqual([
+            expect.objectContaining({ field: "framework", location: "body" }),
+          ]);
+        }
         expect(await projectCount(orgId)).toBe(before);
       },
     );

@@ -9,6 +9,7 @@ import {
   countSubControlsByProjectId,
   getAllProjectsQuery,
   getProjectByIdQuery,
+  lockUseCaseWorkflowQuery,
   updateProjectByIdQuery,
 } from "../utils/project.utils";
 import { getUserByIdQuery } from "../utils/user.utils";
@@ -47,6 +48,7 @@ import {
   createUseCaseApprovalRequest,
   getUsableUseCaseWorkflow,
   notifyUseCaseApprovalRequested,
+  type UsableUseCaseWorkflow,
 } from "../services/projects/approvalRequest.service";
 import { roleHasPermission } from "../utils/rolePermissions.utils";
 import { createUseCaseService, updateUseCaseService } from "../services/useCase.service";
@@ -60,15 +62,17 @@ import {
 import { translateError } from "../utils/i18n.utils";
 
 /**
- * A ValidationException as a 400 body. One that names a field is answered in
- * the shape the request validators already use for these routes
+ * A ValidationException as a 400 body. On /api/v1/projects one that names a
+ * field is answered in the shape the request validators already use
  * ({ errors: [{ field, message, location }] }), so the use case form shows it
- * on that field; one without a field keeps the plain message.
+ * on that field. The legacy /api/projects contract is frozen, so there, and
+ * for an exception without a field, the body stays the plain message.
  */
-function validationErrorBody(req: Request, error: ValidationException) {
+function validationErrorBody(req: Request, res: Response, error: ValidationException) {
   const message = translateError(req, error);
   const field = error.metadata?.field;
-  return typeof field === "string"
+  const isV1 = res.locals?.acceptsExternalOwner === true;
+  return isV1 && typeof field === "string"
     ? STATUS_CODE[400]({ errors: [{ field, message, location: "body" }] })
     : STATUS_CODE[400](message);
 }
@@ -427,7 +431,7 @@ export async function createProject(req: Request, res: Response): Promise<any> {
         userId: req.userId!,
         organizationId: req.organizationId!,
       });
-      return res.status(400).json(validationErrorBody(req, error));
+      return res.status(400).json(validationErrorBody(req, res, error));
     }
 
     if (error instanceof BusinessLogicException) {
@@ -529,19 +533,27 @@ export async function updateProjectById(req: Request, res: Response): Promise<an
     // Only a body that carries the field changes the workflow. The update
     // query leaves an omitted column as it is, so reading "absent" as
     // "cleared" withdrew the request while the workflow stayed attached.
-    const previousWorkflowId =
-      existingProject.approval_workflow_id != null
-        ? Number(existingProject.approval_workflow_id)
-        : null;
     const nextWorkflowId = submittedWorkflowId(updateData);
+    let previousWorkflowId: number | null = null;
     if (nextWorkflowId !== undefined) {
       (updatedProject as { approval_workflow_id?: number | null }).approval_workflow_id =
         nextWorkflowId;
+      // The stored workflow is read under a row lock in this transaction, not
+      // from the unlocked read above: two saves attaching a workflow at once
+      // each saw none and each opened a pending request. The second now waits
+      // and sees the first one's workflow.
+      const locked = await lockUseCaseWorkflowQuery(projectId, req.organizationId!, transaction);
+      if (!locked) {
+        await transaction.rollback();
+        return res.status(404).json(STATUS_CODE[404]({}));
+      }
+      previousWorkflowId = locked.approval_workflow_id;
     }
     const workflowChanged = nextWorkflowId !== undefined && nextWorkflowId !== previousWorkflowId;
 
     // Pending or rejected: the latest decision on this use case (audit U-H2).
     let approvalStatus: Awaited<ReturnType<typeof getApprovalStatusQuery>> = null;
+    let usableWorkflow: UsableUseCaseWorkflow | null = null;
     if (workflowChanged) {
       approvalStatus = await getApprovalStatusQuery(
         projectId,
@@ -581,7 +593,11 @@ export async function updateProjectById(req: Request, res: Response): Promise<an
       // Refused before the write: a missing id fails the foreign key (500),
       // and another organization's would be saved with no review.
       if (nextWorkflowId !== null) {
-        await getUsableUseCaseWorkflow(nextWorkflowId, req.organizationId!, transaction);
+        usableWorkflow = await getUsableUseCaseWorkflow(
+          nextWorkflowId,
+          req.organizationId!,
+          transaction,
+        );
       }
     }
 
@@ -645,6 +661,7 @@ export async function updateProjectById(req: Request, res: Response): Promise<an
             req.userId!,
             req.organizationId!,
             transaction,
+            usableWorkflow,
           );
         }
       }
@@ -856,7 +873,7 @@ export async function updateProjectById(req: Request, res: Response): Promise<an
         userId: req.userId!,
         organizationId: req.organizationId!,
       });
-      return res.status(400).json(validationErrorBody(req, error));
+      return res.status(400).json(validationErrorBody(req, res, error));
     }
 
     if (error instanceof BusinessLogicException) {

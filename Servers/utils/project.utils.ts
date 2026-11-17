@@ -1016,6 +1016,29 @@ export const lockProjectForDelete = async (
 };
 
 /**
+ * A use case's stored approval workflow, read with a row lock inside
+ * `transaction`. Two saves that change the workflow then decide one after
+ * the other: the second waits for the first to commit and sees its workflow,
+ * so they cannot each open a pending request. Null when the use case is not
+ * in this organization.
+ */
+export const lockUseCaseWorkflowQuery = async (
+  projectId: number,
+  organizationId: number,
+  transaction: Transaction,
+): Promise<{ approval_workflow_id: number | null } | null> => {
+  const rows = (await sequelize.query(
+    `SELECT approval_workflow_id FROM projects
+      WHERE id = :id AND organization_id = :organizationId
+      FOR UPDATE`,
+    { replacements: { id: projectId, organizationId }, type: QueryTypes.SELECT, transaction },
+  )) as Array<{ approval_workflow_id: number | string | null }>;
+  if (rows.length === 0) return null;
+  const id = rows[0].approval_workflow_id;
+  return { approval_workflow_id: id == null ? null : Number(id) };
+};
+
+/**
  * Delete a project and everything that hangs off it. The project row is
  * locked (FOR UPDATE) before any child row is touched. Pass
  * `enqueueAutomationAfterCommit` when the caller's transaction may still roll

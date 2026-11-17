@@ -43,13 +43,19 @@ const unusableWorkflow = (message: string, workflowId: unknown) =>
  *   request, and the use case's frameworks would wait for it forever.
  *
  * Called before a use case is written (create and update), so a bad id never
- * reaches the foreign key, and again when the request is opened.
+ * reaches the foreign key; the result is handed to createUseCaseApprovalRequest
+ * so the request is opened without loading the workflow again.
  */
+export interface UsableUseCaseWorkflow {
+  workflow: ApprovalWorkflowModel;
+  steps: ApprovalWorkflowStepModel[];
+}
+
 export const getUsableUseCaseWorkflow = async (
   workflowId: number,
   organizationId: number,
   transaction: Transaction | null = null,
-): Promise<{ workflow: ApprovalWorkflowModel; steps: ApprovalWorkflowStepModel[] }> => {
+): Promise<UsableUseCaseWorkflow> => {
   const workflow = await getApprovalWorkflowByIdQuery(workflowId, organizationId, transaction);
   if (!workflow) {
     throw unusableWorkflow("The selected approval workflow does not exist", workflowId);
@@ -86,12 +92,15 @@ export const getUsableUseCaseWorkflow = async (
  *
  * Throws a ValidationException (surfaced as a 400, rolling the write back)
  * when the workflow cannot review a use case; see getUsableUseCaseWorkflow.
+ * Pass `usable` when the caller already checked the workflow in this
+ * transaction; it is used only when it is the use case's workflow.
  */
 export const createUseCaseApprovalRequest = async (
   project: ProjectModel,
   requestedBy: number,
   organizationId: number,
   transaction: Transaction,
+  usable?: UsableUseCaseWorkflow | null,
 ): Promise<UseCaseApprovalRequestResult | null> => {
   if (!project.approval_workflow_id || !project.id) {
     logStructured(
@@ -103,11 +112,10 @@ export const createUseCaseApprovalRequest = async (
     return null;
   }
 
-  const { workflow, steps: workflowSteps } = await getUsableUseCaseWorkflow(
-    project.approval_workflow_id,
-    organizationId,
-    transaction,
-  );
+  const { workflow, steps: workflowSteps } =
+    usable && Number(usable.workflow.id) === Number(project.approval_workflow_id)
+      ? usable
+      : await getUsableUseCaseWorkflow(project.approval_workflow_id, organizationId, transaction);
 
   const request = await createApprovalRequestQuery(
     {

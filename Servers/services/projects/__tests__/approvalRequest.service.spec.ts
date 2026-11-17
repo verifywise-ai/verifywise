@@ -170,6 +170,34 @@ describe("createUseCaseApprovalRequest", () => {
     expect(mockCreateRequest).not.toHaveBeenCalled();
   });
 
+  // The caller already checked the workflow (create and update refuse an
+  // unusable one before writing); loading it again was a second round trip.
+  it("uses the workflow the caller already loaded instead of reading it again", async () => {
+    const steps = [buildStep(1, [7])];
+    const usable = { workflow: buildWorkflow(steps), steps };
+
+    const result = await createUseCaseApprovalRequest(useCase, 2, 1, {} as any, usable);
+
+    expect(mockGetWorkflow).not.toHaveBeenCalled();
+    expect(mockCreateRequest).toHaveBeenCalledWith(
+      expect.objectContaining({ workflow_id: 1 }),
+      steps,
+      1,
+      expect.anything(),
+    );
+    expect(result).toEqual(expect.objectContaining({ workflowTitle: "Use case sign-off" }));
+  });
+
+  it("reads the workflow again when the one passed in is for another id", async () => {
+    const steps = [buildStep(1, [7])];
+    mockGetWorkflow.mockResolvedValue(buildWorkflow(steps));
+    const stale = { workflow: buildWorkflow(steps, { id: 99 }), steps };
+
+    await createUseCaseApprovalRequest(useCase, 2, 1, {} as any, stale);
+
+    expect(mockGetWorkflow).toHaveBeenCalledWith(1, 1, expect.anything());
+  });
+
   it("creates no request when the use case has no workflow", async () => {
     expect(
       await createUseCaseApprovalRequest(
