@@ -31,6 +31,7 @@ const insertLink = (org: number, model: number, project: number | null, framewor
 
 describe("model framework links migration", () => {
   let org: number;
+  let otherOrg: number;
   let p1: number;
   let p2: number;
   let model: number;
@@ -38,6 +39,7 @@ describe("model framework links migration", () => {
   beforeAll(async () => {
     await cleanupDatabase();
     org = await createTestOrganization("Migration org");
+    otherOrg = await createTestOrganization("Other migration org");
     const user = await createTestUser(org, 1, "mig-admin@test.local", "Passw0rd!");
     p1 = await createTestProject(org, user, {});
     p2 = await createTestProject(org, user, {});
@@ -46,6 +48,10 @@ describe("model framework links migration", () => {
     model = await createTestModelInventory(org, {});
     // Old shape: the migration already ran in global setup, so step back first.
     await migration.down(queryInterface);
+    // Another organization's row for this model, inserted first so it holds
+    // the lowest id: a dedup keyed on the organization kept it next to the
+    // model's own row, and the unique index then failed the deploy.
+    await insertLink(otherOrg, model, null, 1);
     await insertLink(org, model, p1, null); // direct use case link
     await insertLink(org, model, p1, 1); // framework 1 under use case 1
     await insertLink(org, model, p2, 1); // the same framework under use case 2
@@ -56,8 +62,14 @@ describe("model framework links migration", () => {
     await cleanupDatabase();
   });
 
-  it("up keeps one link per framework, without a use case, and keeps direct links", async () => {
+  it("up drops another organization's rows, keeps one link per framework without a use case, and keeps direct links", async () => {
     await migration.up(queryInterface);
+    const orgs = await sequelize.query<{ organization_id: number }>(
+      `SELECT DISTINCT organization_id FROM model_inventories_projects_frameworks
+        WHERE model_inventory_id = :model`,
+      { replacements: { model }, type: QueryTypes.SELECT },
+    );
+    expect(orgs.map((r) => r.organization_id)).toEqual([org]);
     expect(await linksOf(model)).toEqual([
       { project_id: p1, framework_id: null },
       { project_id: null, framework_id: 1 },
