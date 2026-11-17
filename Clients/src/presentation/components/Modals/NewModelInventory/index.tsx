@@ -329,6 +329,18 @@ const NewModelInventory: FC<NewModelInventoryProps> = ({
     return Array.from(frameworkIdToNameMap.values());
   }, [frameworkIdToNameMap]);
 
+  // Selected ids the pickers list. Kept links to use cases or frameworks a
+  // picker does not show must not count towards "all selected".
+  const selectedListedProjectCount = useMemo(() => {
+    const listedIds = new Set(projectList.map((p) => p.id));
+    return (values.projects || []).filter((id) => listedIds.has(id)).length;
+  }, [projectList, values.projects]);
+
+  const selectedListedFrameworkCount = useMemo(
+    () => (values.frameworks || []).filter((id) => frameworkIdToNameMap.has(id)).length,
+    [frameworkIdToNameMap, values.frameworks],
+  );
+
   // Transform users to the format expected by SelectComponent
   const userOptions = useMemo(() => {
     return users.map((user) => ({
@@ -413,7 +425,16 @@ const NewModelInventory: FC<NewModelInventoryProps> = ({
           return undefined;
         })
         .filter((id): id is number => id !== undefined);
-      setValues((prev) => ({ ...prev, frameworks: frameworkIds }));
+      // Keep links to frameworks this list does not show (EU AI Act, bundled
+      // frameworks, links made elsewhere): they are not part of this choice,
+      // and the server replaces the framework links with the list it gets.
+      setValues((prev) => ({
+        ...prev,
+        frameworks: [
+          ...(prev.frameworks || []).filter((id) => !frameworkIdToNameMap.has(id)),
+          ...frameworkIds,
+        ],
+      }));
       clearFieldError("frameworks");
     },
     [frameworkIdToNameMap, clearFieldError],
@@ -739,7 +760,7 @@ const NewModelInventory: FC<NewModelInventoryProps> = ({
         onChange={handleSelectUsedInProjectChange}
         getOptionLabel={(option) => option}
         noOptionsText={
-          (values.projects || []).length === projectsList.length
+          selectedListedProjectCount === projectsList.length
             ? "All projects selected"
             : "No options"
         }
@@ -772,7 +793,7 @@ const NewModelInventory: FC<NewModelInventoryProps> = ({
         onChange={handleSelectUsedInFrameworksChange}
         getOptionLabel={(option) => option}
         noOptionsText={
-          (values.frameworks || []).length === frameworksList.length
+          selectedListedFrameworkCount === frameworksList.length
             ? "All frameworks selected"
             : "No options"
         }
