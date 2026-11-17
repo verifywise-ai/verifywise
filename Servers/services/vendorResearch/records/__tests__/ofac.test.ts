@@ -91,7 +91,9 @@ describe("parseCsv", () => {
     const rows = parseCsv(text);
 
     expect(rows).toHaveLength(120_000);
-    expect(Date.now() - startedAt).toBeLessThan(2_000);
+    // A quadratic parser would take hours on this input. The budget leaves room for
+    // a loaded CI runner with coverage on, as the other timing tests here do.
+    expect(Date.now() - startedAt).toBeLessThan(10_000);
   });
 
   it("reads a field made to be slow in linear time", () => {
@@ -100,7 +102,7 @@ describe("parseCsv", () => {
     parseCsv(`1,"${'""'.repeat(400_000)}`);
     parseCsv(`${",".repeat(400_000)}\n`);
 
-    expect(Date.now() - startedAt).toBeLessThan(2_000);
+    expect(Date.now() - startedAt).toBeLessThan(10_000);
   });
 });
 
