@@ -50,6 +50,19 @@ describe("deleteModelInventoryByIdQuery", () => {
     expect(releasedBeforeDelete).toBe(true);
   });
 
+  it("removes the model from evidence links in the organization (M-L5)", async () => {
+    await deleteModelInventoryByIdQuery(50, false, 1, tx, 9);
+
+    const call = mockQuery.mock.calls.find((c) => /UPDATE evidence_hub/.test(String(c[0])))!;
+    expect(call).toBeDefined();
+    expect(String(call[0])).toMatch(/array_remove\(mapped_model_ids, :id\)/);
+    expect(String(call[0])).toMatch(/organization_id = :organization_id/);
+    expect(call[1]).toMatchObject({
+      replacements: { organization_id: 1, id: 50 },
+      transaction: tx,
+    });
+  });
+
   it("without a user (AI Advisor) passes null for the history", async () => {
     await deleteModelInventoryByIdQuery(50, true, 1, tx);
     expect(mockRelease).toHaveBeenCalledWith(50, true, 1, null, tx);

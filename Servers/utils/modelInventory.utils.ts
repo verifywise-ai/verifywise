@@ -568,7 +568,7 @@ export const updateModelInventoryByIdQuery = async (
 /**
  * Deletes a model. Its risks are never deleted with it: with `deleteRisks`
  * they are archived (as a model risk delete does), otherwise they stay, with
- * no model.
+ * no model. Evidence stops listing the model.
  *
  * `changedByUserId` is who the model risks' change history names; null
  * (AI Advisor) records it as the system's.
@@ -587,6 +587,16 @@ export const deleteModelInventoryByIdQuery = async (
       organizationId,
       changedByUserId,
       transaction,
+    );
+
+    await sequelize.query(
+      `UPDATE evidence_hub
+          SET mapped_model_ids = array_remove(mapped_model_ids, :id), updated_at = NOW()
+        WHERE organization_id = :organization_id AND :id = ANY(mapped_model_ids)`,
+      {
+        replacements: { organization_id: organizationId, id },
+        transaction,
+      },
     );
 
     await deleteAllCustomFieldValuesForEntityQuery(
