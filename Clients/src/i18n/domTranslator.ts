@@ -1,5 +1,6 @@
 import type { Lang } from "./translations";
 import { storageService } from "../infrastructure/storage";
+import { I18N_MODULE_IDS, modulesForPath, type I18nModuleId } from "./routeModules";
 
 const TRANSLATABLE_ATTRS = ["placeholder", "title", "aria-label", "alt"];
 const SKIP_TAGS = new Set(["SCRIPT", "STYLE", "NOSCRIPT", "TEXTAREA", "CODE", "PRE"]);
@@ -7,6 +8,15 @@ const SKIP_TAGS = new Set(["SCRIPT", "STYLE", "NOSCRIPT", "TEXTAREA", "CODE", "P
 let currentLang: Lang = "en";
 let observer: MutationObserver | null = null;
 let dict: Record<string, string> = {};
+/** `${lang}:${moduleId}` entries already merged into `dict`. */
+const loadedModules = new Set<string>();
+
+// Eager keys so Vite can split each module into its own async chunk.
+const moduleLoaders = import.meta.glob<{
+  de: Record<string, string>;
+  fr: Record<string, string>;
+  es: Record<string, string>;
+}>("./modules/*.ts");
 
 // ─── i18n gap audit ──────────────────────────────────────────────────────────
 // Enable with `localStorage.setItem("vw_audit", "1")` and reload. While active,
@@ -75,13 +85,61 @@ if (typeof window !== "undefined") {
 
 const SUPPORTED: Lang[] = ["en", "de", "fr", "es"];
 
-// The de/fr/es dictionaries live in a separate async chunk and are only
-// fetched when a non-English language is active. English keys pass through,
-// so the default language needs no dictionary bytes on the critical path.
-const loadDictionary = async (lang: Lang): Promise<Record<string, string>> => {
-  if (lang === "en") return {};
-  const { translations } = await import("./translations");
-  return translations[lang] || {};
+const moduleKey = (lang: Lang, name: I18nModuleId) => `${lang}:${name}`;
+
+const announceDictionary = (lang: Lang) => {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(new CustomEvent("vw:languagechange", { detail: { lang } }));
+};
+
+/**
+ * Merge the named area dictionaries into `dict` for `lang`. Already-loaded
+ * modules are skipped. Returns true when at least one new module was merged.
+ */
+const loadModules = async (lang: Lang, names: readonly I18nModuleId[]): Promise<boolean> => {
+  if (lang === "en" || names.length === 0) return false;
+
+  let changed = false;
+  await Promise.all(
+    names.map(async (name) => {
+      const key = moduleKey(lang, name);
+      if (loadedModules.has(key)) return;
+
+      const loader = moduleLoaders[`./modules/${name}.ts`];
+      if (!loader) {
+        throw new Error(`No i18n module loader for ${name}`);
+      }
+      const mod = await loader();
+      const slice = mod[lang];
+      if (slice) Object.assign(dict, slice);
+      loadedModules.add(key);
+      changed = true;
+    }),
+  );
+  return changed;
+};
+
+/** Load modules for a pathname when a non-English language is active. */
+export const ensureI18nModulesForPath = async (pathname: string): Promise<void> => {
+  if (currentLang === "en") return;
+  const changed = await loadModules(currentLang, modulesForPath(pathname));
+  if (changed) {
+    translateAll();
+    announceDictionary(currentLang);
+  }
+};
+
+/**
+ * Load every dictionary module for the active language. Used by i18n tests so
+ * screens that do not go through the router still see a full dictionary.
+ */
+export const preloadAllI18nModules = async (): Promise<void> => {
+  if (currentLang === "en") return;
+  const changed = await loadModules(currentLang, I18N_MODULE_IDS);
+  if (changed) {
+    translateAll();
+    announceDictionary(currentLang);
+  }
 };
 
 const getCurrentLang = (): Lang => {
@@ -89,13 +147,17 @@ const getCurrentLang = (): Lang => {
   return SUPPORTED.includes(stored) ? stored : "en";
 };
 
+const pathnameNow = (): string => (typeof window !== "undefined" ? window.location.pathname : "/");
+
 const setCurrentLang = async (lang: Lang) => {
   storageService.set("language", lang);
   currentLang = lang;
-  dict = await loadDictionary(lang);
-  if (typeof window !== "undefined") {
-    window.dispatchEvent(new CustomEvent("vw:languagechange", { detail: { lang } }));
+  dict = {};
+  loadedModules.clear();
+  if (lang !== "en") {
+    await loadModules(lang, modulesForPath(pathnameNow()));
   }
+  announceDictionary(lang);
 };
 
 const translate = (text: string): string | null => {
@@ -145,6 +207,7 @@ const walkTextNodes = (node: Node) => {
 
 const translateAll = () => {
   if (currentLang === "en") return;
+  if (typeof document === "undefined" || !document.body) return;
   walkTextNodes(document.body);
 };
 
@@ -192,7 +255,7 @@ export const initDomTranslator = () => {
     startObserver();
   };
 
-  // Load the active language's dictionary before the first translation pass.
+  // Load the active language's route modules before the first translation pass.
   setCurrentLang(getCurrentLang()).then(() => {
     if (document.readyState === "loading") {
       document.addEventListener("DOMContentLoaded", boot, { once: true });

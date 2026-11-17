@@ -6,6 +6,7 @@
  */
 
 import { Request, Response } from "express";
+import { NotFoundException } from "../domain.layer/exceptions/custom.exception";
 import { sequelize } from "../database/db";
 import { STATUS_CODE } from "../utils/statusCode.utils";
 import {
@@ -792,6 +793,9 @@ export async function saveResponses(req: Request, res: Response): Promise<any> {
       userId: req.userId!,
       organizationId: req.organizationId!,
     });
+    if (error instanceof NotFoundException) {
+      return res.status(404).json(STATUS_CODE[404](translateError(req, error)));
+    }
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }
@@ -844,12 +848,19 @@ export async function submitCycle(req: Request, res: Response): Promise<any> {
     await completeCycleQuery(cycleId, userId, req.organizationId!, transaction);
 
     // Get context snapshot
-    const contextSnapshot = await getContextSnapshotQuery(cycle.project_id!, req.organizationId!);
+    // Read inside the submit transaction so the report sees the responses
+    // saved above, which are not committed yet.
+    const contextSnapshot = await getContextSnapshotQuery(
+      cycle.project_id!,
+      req.organizationId!,
+      transaction,
+    );
 
     // Get all responses for report (includes question details from JOIN)
     const allResponses = (await getPMMResponsesQuery(
       cycleId,
       req.organizationId!,
+      transaction,
     )) as IPMMResponseWithQuestion[];
 
     // Get user info for report
@@ -927,6 +938,9 @@ export async function submitCycle(req: Request, res: Response): Promise<any> {
       userId: req.userId!,
       organizationId: req.organizationId!,
     });
+    if (error instanceof NotFoundException) {
+      return res.status(404).json(STATUS_CODE[404](translateError(req, error)));
+    }
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }
@@ -996,6 +1010,9 @@ export async function flagConcern(req: Request, res: Response): Promise<any> {
       userId: req.userId!,
       organizationId: req.organizationId!,
     });
+    if (error instanceof NotFoundException) {
+      return res.status(404).json(STATUS_CODE[404](translateError(req, error)));
+    }
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }

@@ -153,10 +153,7 @@ const ROUTES: Route[] = [
       a
         .post(`/api/pmm/cycles/${c.cycle}/responses`)
         .send({ responses: [{ question_id: c.question, response_value: true }] }),
-    // Past the guard the handler answers 500 until #5421 (the response
-    // upsert's ON CONFLICT target) is in develop, then 200. This suite checks
-    // the guard; tighten to 200 once #5421 is merged.
-    success: [200, 500],
+    success: 200,
     stakeholder: true,
     write: true,
   },
@@ -166,10 +163,7 @@ const ROUTES: Route[] = [
       a
         .post(`/api/pmm/cycles/${c.cycle}/flag`)
         .send({ question_id: c.question, response_value: true }),
-    // Past the guard the handler answers 500 until #5421 (the response
-    // upsert's ON CONFLICT target) is in develop, then 200. This suite checks
-    // the guard; tighten to 200 once #5421 is merged.
-    success: [200, 500],
+    success: 200,
     stakeholder: true,
     write: true,
   },
@@ -179,10 +173,7 @@ const ROUTES: Route[] = [
       a
         .post(`/api/pmm/cycles/${c.cycle}/submit`)
         .send({ responses: [{ question_id: c.question, response_value: true }] }),
-    // Past the guard the handler answers 500 until #5421 (the response
-    // upsert's ON CONFLICT target) is in develop, then 200. This suite checks
-    // the guard; tighten to 200 once #5421 is merged.
-    success: [200, 500],
+    success: 200,
     stakeholder: true,
     write: true,
   },
