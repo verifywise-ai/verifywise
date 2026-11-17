@@ -401,7 +401,8 @@ async function sendReportNotification() {
   }
 }
 
-async function sendReportNotificationEmail(jobData: any) {
+// Exported for unit tests (see __tests__/reportAttachments.test.ts).
+export async function sendReportNotificationEmail(jobData: any) {
   const { automation, organizationId, projectDetails, full_name, organization_name } = jobData;
   const [[{ exists }]] = (await sequelize.query(
     `SELECT EXISTS(SELECT 1 FROM automation_actions_data WHERE organization_id = :organizationId AND id = :actionId) AS exists;`,
