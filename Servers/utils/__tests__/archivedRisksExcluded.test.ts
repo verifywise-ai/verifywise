@@ -83,4 +83,29 @@ describe("getContextSnapshotQuery risk counts", () => {
     expect(snapshot.medium_risk_count).toBe(2);
     expect(snapshot.low_risk_count).toBe(1);
   });
+
+  it("counts models through their use case links and skips archived model and vendor risks", async () => {
+    mockQuery
+      .mockResolvedValueOnce([[{ project_title: "P", status: "Active" }], 1])
+      .mockResolvedValueOnce([
+        [{ total: "0", high_count: "0", medium_count: "0", low_count: "0" }],
+        1,
+      ])
+      .mockResolvedValue([[{ total: "0" }], 1]);
+
+    await getContextSnapshotQuery(1, 10);
+
+    const [, , modelSql, modelRiskSql, , vendorRiskSql] = mockQuery.mock.calls.map((c) =>
+      String(c[0]),
+    );
+    for (const sql of [modelSql, modelRiskSql]) {
+      expect(sql).toContain("JOIN model_inventories_projects_frameworks mpf");
+      expect(sql).toContain("mpf.project_id = :projectId");
+      expect(sql).toContain("mpf.framework_id IS NULL");
+      expect(sql).not.toContain("mi.project_id");
+      expect(sql).not.toMatch(/model_inventories\s+WHERE[^;]*\bproject_id/);
+    }
+    expect(modelRiskSql).toContain("mr.is_deleted = false");
+    expect(vendorRiskSql).toContain("vr.is_deleted = false");
+  });
 });

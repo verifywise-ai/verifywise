@@ -827,20 +827,33 @@ export const getContextSnapshotQuery = async (
     low_count: "0",
   };
 
-  // Get model counts
+  // Models linked to the use case. model_inventories has no project_id: links
+  // live in model_inventories_projects_frameworks. Only rows without a
+  // framework are direct use case links; framework rows carry an arbitrary
+  // use case of that framework.
   const modelResult = (await sequelize.query(
-    `SELECT COUNT(*) as total FROM model_inventories WHERE organization_id = :organizationId AND project_id = :projectId;`,
+    `SELECT COUNT(DISTINCT mi.id) as total
+     FROM model_inventories mi
+     JOIN model_inventories_projects_frameworks mpf
+       ON mpf.model_inventory_id = mi.id AND mpf.organization_id = :organizationId
+     WHERE mi.organization_id = :organizationId
+       AND mpf.project_id = :projectId
+       AND mpf.framework_id IS NULL;`,
     { replacements: { projectId, organizationId } },
   )) as [{ total: string }[], number];
 
   const models = parseInt(modelResult[0][0]?.total || "0", 10);
 
-  // Get model risks count
+  // Live risks of those models
   const modelRiskResult = (await sequelize.query(
-    `SELECT COUNT(*) as total
+    `SELECT COUNT(DISTINCT mr.id) as total
      FROM model_risks mr
-     JOIN model_inventories mi ON mr.model_id = mi.id AND mi.organization_id = :organizationId
-     WHERE mr.organization_id = :organizationId AND mi.project_id = :projectId;`,
+     JOIN model_inventories_projects_frameworks mpf
+       ON mpf.model_inventory_id = mr.model_id AND mpf.organization_id = :organizationId
+     WHERE mr.organization_id = :organizationId
+       AND mr.is_deleted = false
+       AND mpf.project_id = :projectId
+       AND mpf.framework_id IS NULL;`,
     { replacements: { projectId, organizationId } },
   )) as [{ total: string }[], number];
 
@@ -857,13 +870,15 @@ export const getContextSnapshotQuery = async (
 
   const vendors = parseInt(vendorResult[0][0]?.total || "0", 10);
 
-  // Get vendor risks count
+  // Live risks of the use case's vendors
   const vendorRiskResult = (await sequelize.query(
-    `SELECT COUNT(*) as total
+    `SELECT COUNT(DISTINCT vr.id) as total
      FROM vendorrisks vr
      JOIN vendors v ON vr.vendor_id = v.id AND v.organization_id = :organizationId
      JOIN vendors_projects vp ON v.id = vp.vendor_id AND vp.organization_id = :organizationId
-     WHERE vr.organization_id = :organizationId AND vp.project_id = :projectId;`,
+     WHERE vr.organization_id = :organizationId
+       AND vr.is_deleted = false
+       AND vp.project_id = :projectId;`,
     { replacements: { projectId, organizationId } },
   )) as [{ total: string }[], number];
 
