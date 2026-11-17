@@ -15,6 +15,9 @@ jest.mock("../../utils/project.utils", () => ({
   calculateVendirRisks: jest.fn(),
   countAnswersByProjectId: jest.fn(),
   countSubControlsByProjectId: jest.fn(),
+  // Pure column check: keep the real rule so the stamping tests exercise it.
+  hasProjectColumnUpdate: jest.requireActual<any>("../../utils/project.utils")
+    .hasProjectColumnUpdate,
 }));
 jest.mock("../../utils/user.utils", () => ({
   getUserByIdQuery: jest.fn(),
