@@ -154,19 +154,27 @@ enum ModelRiskStatus {
 |--------|----------|-------------|
 | GET | `/modelInventory/` | Get all models |
 | GET | `/modelInventory/:id` | Get model by ID |
-| GET | `/modelInventory/by-projectId/:id` | Get by project |
+| GET | `/modelInventory/by-projectId/:id` | Models linked directly to a use case the caller can open (`requireProjectAccess`) |
 | GET | `/modelInventory/by-frameworkId/:id` | Get by framework |
-| POST | `/modelInventory/` | Create model |
-| PATCH | `/modelInventory/:id` | Update model |
+| POST | `/modelInventory/` | Create model; each linked use case needs the caller's access |
+| PATCH | `/modelInventory/:id` | Update model; each use case linked or unlinked needs the caller's access |
 | DELETE | `/modelInventory/:id` | Delete model |
-| GET | `/v1/model-inventory/by-project/:projectId` | Models linked to a use case the caller can open (`requireProjectAccess`) |
-| POST | `/v1/model-inventory` | Create model; each linked use case needs the caller's write access |
-| PATCH | `/v1/model-inventory/:id` | Update model; each use case whose link is added or removed needs write access |
 
-The inventory itself stays visible to the whole organization (decision 8); the
-client uses the v1 routes above. Model risks follow their model (org-wide).
-Dataset and evidence writes and `POST /modelInventoryHistory/snapshot` need
-`model.edit`; an unknown snapshot `parameter` is a 400.
+The inventory itself stays visible to the whole organization (decision 8);
+what belongs to one use case needs access to that use case (Admin, owner or
+member, `getProjectAccessQuery`). These are access fixes on the existing
+routes, so there is no v1 copy. On update, use case links change by
+difference: an added use case needs access (403 otherwise, before anything is
+written), and a link to a use case the caller cannot open is kept when the
+submitted list leaves it out (the form only lists use cases the caller can
+see). Frameworks the model already links to are accepted unchanged on update;
+only added frameworks must be in use by a use case of the organization.
+Writes without a caller (AI Advisor, intake, seeds) skip the use case access
+check. Model risks follow their model (org-wide). Dataset writes and
+`POST /modelInventoryHistory/snapshot` need `model.edit`; an unknown snapshot
+`parameter` is a 400. Evidence writes need `model.edit` only when they link
+evidence to models or change or delete evidence linked to models: training
+evidence uses the same routes under `training.edit`.
 
 ### Model Risks
 

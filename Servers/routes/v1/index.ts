@@ -42,7 +42,6 @@ import aiDetectionRoutes from "./aiDetection.route";
 import aiDetectionRepositoriesRoutes from "./aiDetectionRepositories.route";
 import homeQueueRoutes from "./homeQueue.route";
 import changeNoticeRoutes from "./changeNotice.route";
-import modelInventoryRoutes from "./modelInventory.route";
 
 const router = express.Router();
 
@@ -118,9 +117,5 @@ router.use("/home", homeQueueRoutes);
 
 // "What's changed" notices: per-user seen state and show rules.
 router.use("/change-notices", changeNoticeRoutes);
-
-// Model inventory writes and the per-use-case model list, with use case
-// access (use cases and models audit, decision 8).
-router.use("/model-inventory", modelInventoryRoutes);
 
 export default router;

@@ -13,7 +13,7 @@ const LinkedModels = ({ project }: { project?: Project }) => {
 
     try {
       const response = await getAllEntities({
-        routeUrl: `/v1/model-inventory/by-project/${projectId}`,
+        routeUrl: `/modelInventory/by-projectId/${projectId}`,
       });
       return response?.data || [];
     } catch (error) {

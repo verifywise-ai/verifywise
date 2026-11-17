@@ -231,19 +231,11 @@ export async function getModelByFrameworkId(req: Request, res: Response) {
   }
 }
 
-export async function createNewModelInventory(req: Request, res: Response) {
-  return createModelInventory(req, res, false);
-}
-
 /**
- * POST /api/v1/model-inventory: as the legacy create, and each linked use
- * case needs the caller's write access (decision 8).
+ * POST /api/modelInventory. Each linked use case needs the caller's access
+ * to that use case (decision 8), checked in the write query.
  */
-export async function createNewModelInventoryV1(req: Request, res: Response) {
-  return createModelInventory(req, res, true);
-}
-
-async function createModelInventory(req: Request, res: Response, checkUseCaseAccess: boolean) {
+export async function createNewModelInventory(req: Request, res: Response) {
   const {
     provider_model,
     provider,
@@ -308,7 +300,7 @@ async function createModelInventory(req: Request, res: Response, checkUseCaseAcc
       projects || [],
       frameworks || [],
       transaction,
-      checkUseCaseAccess ? { userId: req.userId!, role: req.role! } : undefined,
+      { userId: req.userId!, role: req.role! },
     );
 
     // Record creation in change history
@@ -422,19 +414,12 @@ async function createModelInventory(req: Request, res: Response, checkUseCaseAcc
   }
 }
 
-export async function updateModelInventoryById(req: Request, res: Response) {
-  return updateModelInventory(req, res, false);
-}
-
 /**
- * PATCH /api/v1/model-inventory/:id: as the legacy update, and each use case
- * whose link changes needs the caller's write access (decision 8).
+ * PATCH /api/modelInventory/:id. Linking a use case, or unlinking one, needs
+ * the caller's access to that use case (decision 8); a link to a use case the
+ * caller cannot open is kept, never removed by its absence from the list.
  */
-export async function updateModelInventoryByIdV1(req: Request, res: Response) {
-  return updateModelInventory(req, res, true);
-}
-
-async function updateModelInventory(req: Request, res: Response, checkUseCaseAccess: boolean) {
+export async function updateModelInventoryById(req: Request, res: Response) {
   const modelInventoryId = parseInt(
     Array.isArray(req.params.id) ? req.params.id[0] : req.params.id,
   );
@@ -569,7 +554,7 @@ async function updateModelInventory(req: Request, res: Response, checkUseCaseAcc
       deleteFrameworks || false,
       req.organizationId!,
       transaction,
-      checkUseCaseAccess ? { userId: req.userId!, role: req.role! } : undefined,
+      { userId: req.userId!, role: req.role! },
     );
 
     // Record changes in change history

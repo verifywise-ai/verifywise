@@ -13305,43 +13305,6 @@ export const v1V1lifecycleSettingsEndpoints: Endpoint[] = [
   },
 ];
 
-// v1: V1/Model Inventory endpoints
-export const v1V1modelInventoryEndpoints: Endpoint[] = [
-  {
-    method: 'GET',
-    path: '/v1/model-inventory/by-project/{projectId}',
-    summary: "Get Model By Project Id",
-    requiresAuth: true,
-    responses: [
-      { status: 200, description: "Success" },
-      { status: 500, description: "Internal server error" },
-    ],
-    tag: "v1: V1/Model Inventory",
-  },
-  {
-    method: 'POST',
-    path: '/v1/model-inventory',
-    summary: "Create New Model Inventory V1",
-    requiresAuth: true,
-    responses: [
-      { status: 200, description: "Success" },
-      { status: 500, description: "Internal server error" },
-    ],
-    tag: "v1: V1/Model Inventory",
-  },
-  {
-    method: 'PATCH',
-    path: '/v1/model-inventory/{id}',
-    summary: "Update Model Inventory By Id V1",
-    requiresAuth: true,
-    responses: [
-      { status: 200, description: "Success" },
-      { status: 500, description: "Internal server error" },
-    ],
-    tag: "v1: V1/Model Inventory",
-  },
-];
-
 // v1: V1/Policy Templates endpoints
 export const v1V1policyTemplatesEndpoints: Endpoint[] = [
   {
@@ -14076,7 +14039,6 @@ export const allEndpoints = {
   v1V1importedFrameworkAssessments: v1V1importedFrameworkAssessmentsEndpoints,
   v1V1intakeFormReviewTime: v1V1intakeFormReviewTimeEndpoints,
   v1V1lifecycleSettings: v1V1lifecycleSettingsEndpoints,
-  v1V1modelInventory: v1V1modelInventoryEndpoints,
   v1V1policyTemplates: v1V1policyTemplatesEndpoints,
   v1V1projects: v1V1projectsEndpoints,
   v1V1training: v1V1trainingEndpoints,
