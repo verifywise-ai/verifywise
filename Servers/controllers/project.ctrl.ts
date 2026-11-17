@@ -991,7 +991,14 @@ export async function getProjectStatsById(req: Request, res: Response): Promise<
     const ownerUser: any = project.owner ? await getUserByIdQuery(project.owner) : null;
     const project_last_updated = project.last_updated;
     const project_last_updated_by = project.last_updated_by;
-    const userWhoUpdated: any = getUserByIdQuery(project_last_updated_by);
+    // Awaited (the unawaited promise serialised as {}), read within this
+    // organization, and only the fields a reader needs: never the user row.
+    const updater = project_last_updated_by
+      ? await getUserByIdQuery(project_last_updated_by, null, req.organizationId!)
+      : null;
+    const userWhoUpdated = updater
+      ? { id: updater.id, name: updater.name, surname: updater.surname, email: updater.email }
+      : null;
 
     const overviewDetails = {
       user: {

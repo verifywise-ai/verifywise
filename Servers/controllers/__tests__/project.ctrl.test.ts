@@ -920,6 +920,37 @@ describe("project.ctrl", () => {
       await getProjectStatsById(req, res);
       expect(res.status).toHaveBeenCalledWith(202);
     });
+    it("returns the user who last updated it, read in this organization (U-L2)", async () => {
+      const project = { ...buildProject(), owner: null, last_updated: new Date(), last_updated_by: 3 };
+      mockGetById.mockResolvedValue(project as any);
+      mockGetUser.mockResolvedValue({
+        id: 3,
+        name: "Ada",
+        surname: "Lovelace",
+        email: "ada@example.com",
+        password_hash: "secret",
+      } as any);
+      const req = createReq({ params: { id: "1" }, organizationId: 8 });
+      const res = createRes();
+      await getProjectStatsById(req, res);
+      expect(mockGetUser).toHaveBeenCalledWith(3, null, 8);
+      const body = res.json.mock.calls[0][0];
+      expect(body.data.user.userWhoUpdated).toEqual({
+        id: 3,
+        name: "Ada",
+        surname: "Lovelace",
+        email: "ada@example.com",
+      });
+    });
+    it("returns null for the updater when none is recorded", async () => {
+      const project = { ...buildProject(), owner: null, last_updated_by: null };
+      mockGetById.mockResolvedValue(project as any);
+      const req = createReq({ params: { id: "1" } });
+      const res = createRes();
+      await getProjectStatsById(req, res);
+      expect(mockGetUser).not.toHaveBeenCalled();
+      expect(res.json.mock.calls[0][0].data.user.userWhoUpdated).toBeNull();
+    });
     it("should return 500 on error", async () => {
       mockGetById.mockRejectedValue(new Error("DB error"));
       const req = createReq({ params: { id: "1" } });
