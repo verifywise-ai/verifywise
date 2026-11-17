@@ -13,95 +13,88 @@ import { sequelize } from "../database/db";
 import type { UseCaseOfChild } from "../middleware/projectAccess.middleware";
 import { getImplContextQuery, type ImplLevel } from "./frameworkImpl.utils";
 
-const firstProjectId = async (sql: string, id: number, organizationId: number) => {
+/** The project_id the query finds, or null; the query binds :id and :organizationId. */
+export const firstProjectId = async (
+  sql: string,
+  replacements: Record<string, unknown>,
+): Promise<number | null> => {
   const rows = await sequelize.query<{ project_id: number | null }>(sql, {
-    replacements: { id, organizationId },
+    replacements,
     type: QueryTypes.SELECT,
   });
   return rows[0]?.project_id ?? null;
 };
 
-/** A projects_frameworks row: a framework attached to a use case. */
-export const useCaseOfProjectFramework: UseCaseOfChild = (id, organizationId) =>
-  firstProjectId(
-    `SELECT project_id FROM projects_frameworks
-      WHERE organization_id = :organizationId AND id = :id`,
-    id,
-    organizationId,
-  );
+/** A resolver from a fixed query selecting project_id for :id in :organizationId. */
+export const resolverFromSql =
+  (sql: string): UseCaseOfChild =>
+  (id, organizationId) =>
+    firstProjectId(sql, { id, organizationId });
 
-/** The use case of a requirement row that names its projects_frameworks row. */
-const viaProjectFramework = (sql: string): UseCaseOfChild => {
-  return (id, organizationId) => firstProjectId(sql, id, organizationId);
-};
+/** A projects_frameworks row: a framework attached to a use case. */
+export const useCaseOfProjectFramework = resolverFromSql(
+  `SELECT project_id FROM projects_frameworks
+    WHERE organization_id = :organizationId AND id = :id`,
+);
 
 const joinProjectFramework = `JOIN projects_frameworks pf
          ON pf.organization_id = r.organization_id AND pf.id = r.projects_frameworks_id
       WHERE r.organization_id = :organizationId AND r.id = :id`;
 
 /** An EU AI Act control (controls_eu). */
-export const useCaseOfEuControl = viaProjectFramework(
+export const useCaseOfEuControl = resolverFromSql(
   `SELECT pf.project_id FROM controls_eu r ${joinProjectFramework}`,
 );
 
 /** An EU AI Act subcontrol (subcontrols_eu), through its control. */
-export const useCaseOfEuSubcontrol: UseCaseOfChild = (id, organizationId) =>
-  firstProjectId(
-    `SELECT pf.project_id FROM subcontrols_eu s
+export const useCaseOfEuSubcontrol = resolverFromSql(
+  `SELECT pf.project_id FROM subcontrols_eu s
        JOIN controls_eu c ON c.organization_id = s.organization_id AND c.id = s.control_id
        JOIN projects_frameworks pf
          ON pf.organization_id = c.organization_id AND pf.id = c.projects_frameworks_id
       WHERE s.organization_id = :organizationId AND s.id = :id`,
-    id,
-    organizationId,
-  );
+);
 
 /** An ISO 42001 subclause (subclauses_iso). */
-export const useCaseOfIso42001Subclause = viaProjectFramework(
+export const useCaseOfIso42001Subclause = resolverFromSql(
   `SELECT pf.project_id FROM subclauses_iso r ${joinProjectFramework}`,
 );
 
 /** An ISO 42001 annex category (annexcategories_iso). */
-export const useCaseOfIso42001AnnexCategory = viaProjectFramework(
+export const useCaseOfIso42001AnnexCategory = resolverFromSql(
   `SELECT pf.project_id FROM annexcategories_iso r ${joinProjectFramework}`,
 );
 
 /** An ISO 27001 subclause (subclauses_iso27001). */
-export const useCaseOfIso27001Subclause = viaProjectFramework(
+export const useCaseOfIso27001Subclause = resolverFromSql(
   `SELECT pf.project_id FROM subclauses_iso27001 r ${joinProjectFramework}`,
 );
 
 /** An ISO 27001 annex control (annexcontrols_iso27001). */
-export const useCaseOfIso27001AnnexControl = viaProjectFramework(
+export const useCaseOfIso27001AnnexControl = resolverFromSql(
   `SELECT pf.project_id FROM annexcontrols_iso27001 r ${joinProjectFramework}`,
 );
 
 /** A NIST AI RMF subcategory (nist_ai_rmf_subcategories). */
-export const useCaseOfNistSubcategory = viaProjectFramework(
+export const useCaseOfNistSubcategory = resolverFromSql(
   `SELECT pf.project_id FROM nist_ai_rmf_subcategories r ${joinProjectFramework}`,
 );
 
 /** An EU AI Act answer (answers_eu), through its assessment. */
-export const useCaseOfEuAnswer: UseCaseOfChild = (id, organizationId) =>
-  firstProjectId(
-    `SELECT pf.project_id FROM answers_eu a
+export const useCaseOfEuAnswer = resolverFromSql(
+  `SELECT pf.project_id FROM answers_eu a
        JOIN assessments s
          ON s.organization_id = a.organization_id AND s.id = a.assessment_id
        JOIN projects_frameworks pf
          ON pf.organization_id = s.organization_id AND pf.id = s.projects_frameworks_id
       WHERE a.organization_id = :organizationId AND a.id = :id`,
-    id,
-    organizationId,
-  );
+);
 
 /** A FRIA (fria_assessments). */
-export const useCaseOfFria: UseCaseOfChild = (id, organizationId) =>
-  firstProjectId(
-    `SELECT project_id FROM fria_assessments
+export const useCaseOfFria = resolverFromSql(
+  `SELECT project_id FROM fria_assessments
       WHERE organization_id = :organizationId AND id = :id`,
-    id,
-    organizationId,
-  );
+);
 
 const IMPL_LEVELS: ReadonlySet<string> = new Set<ImplLevel>(["l2", "l3"]);
 

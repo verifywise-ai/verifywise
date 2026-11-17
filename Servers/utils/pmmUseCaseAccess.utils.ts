@@ -11,61 +11,48 @@
 import { Request } from "express";
 import { QueryTypes } from "sequelize";
 import { sequelize } from "../database/db";
-import type { UseCaseOfChild } from "../middleware/projectAccess.middleware";
+import { resolverFromSql } from "./useCaseOfChild.utils";
 
-const first = async (sql: string, id: number, organizationId: number, userId?: number) => {
-  const rows = await sequelize.query<{ value: number | null }>(sql, {
-    replacements: { id, organizationId, userId: userId ?? null },
-    type: QueryTypes.SELECT,
-  });
-  return rows[0]?.value ?? null;
-};
+/** Whether the query finds a row; it binds :id, :organizationId and :userId. */
+const rowExists = async (sql: string, replacements: Record<string, unknown>) =>
+  (await sequelize.query(sql, { replacements, type: QueryTypes.SELECT })).length > 0;
 
 /** A monitoring config (post_market_monitoring_configs). */
-export const useCaseOfPmmConfig: UseCaseOfChild = (id, organizationId) =>
-  first(
-    `SELECT project_id AS value FROM post_market_monitoring_configs
+export const useCaseOfPmmConfig = resolverFromSql(
+  `SELECT project_id FROM post_market_monitoring_configs
       WHERE organization_id = :organizationId AND id = :id`,
-    id,
-    organizationId,
-  );
+);
 
 /** A monitoring cycle, through its config. */
-export const useCaseOfPmmCycle: UseCaseOfChild = (id, organizationId) =>
-  first(
-    `SELECT c.project_id AS value
+export const useCaseOfPmmCycle = resolverFromSql(
+  `SELECT c.project_id
        FROM post_market_monitoring_cycles cy
        JOIN post_market_monitoring_configs c
          ON c.organization_id = cy.organization_id AND c.id = cy.config_id
       WHERE cy.organization_id = :organizationId AND cy.id = :id`,
-    id,
-    organizationId,
-  );
+);
 
 /** A monitoring report, through its cycle and config. */
-export const useCaseOfPmmReport: UseCaseOfChild = (id, organizationId) =>
-  first(
-    `SELECT c.project_id AS value
+export const useCaseOfPmmReport = resolverFromSql(
+  `SELECT c.project_id
        FROM post_market_monitoring_reports r
        JOIN post_market_monitoring_cycles cy
          ON cy.organization_id = r.organization_id AND cy.id = r.cycle_id
        JOIN post_market_monitoring_configs c
          ON c.organization_id = cy.organization_id AND c.id = cy.config_id
       WHERE r.organization_id = :organizationId AND r.id = :id`,
-    id,
-    organizationId,
-  );
+);
 
 type StakeholderCheck = (id: number, organizationId: number, req: Request) => Promise<boolean>;
 
 const isStakeholder =
   (sql: string): StakeholderCheck =>
   async (id, organizationId, req) =>
-    !!req.userId && (await first(sql, id, organizationId, req.userId)) !== null;
+    !!req.userId && rowExists(sql, { id, organizationId, userId: req.userId });
 
 /** The caller is the stakeholder assigned to this cycle. */
 export const isStakeholderOfPmmCycle = isStakeholder(
-  `SELECT id AS value FROM post_market_monitoring_cycles
+  `SELECT 1 FROM post_market_monitoring_cycles
     WHERE organization_id = :organizationId AND id = :id
       AND assigned_stakeholder_id = :userId`,
 );
@@ -76,7 +63,7 @@ export const isStakeholderOfPmmCycle = isStakeholder(
  * past cycle gives no access to the config.
  */
 export const isStakeholderOfPmmConfig = isStakeholder(
-  `SELECT id AS value FROM post_market_monitoring_cycles
+  `SELECT 1 FROM post_market_monitoring_cycles
     WHERE organization_id = :organizationId AND config_id = :id
       AND assigned_stakeholder_id = :userId
       AND status IN ('pending', 'in_progress', 'escalated')
@@ -85,7 +72,7 @@ export const isStakeholderOfPmmConfig = isStakeholder(
 
 /** The caller is the stakeholder of the cycle this report was generated for. */
 export const isStakeholderOfPmmReport = isStakeholder(
-  `SELECT cy.id AS value
+  `SELECT 1
      FROM post_market_monitoring_reports r
      JOIN post_market_monitoring_cycles cy
        ON cy.organization_id = r.organization_id AND cy.id = r.cycle_id
@@ -97,16 +84,13 @@ export const isStakeholderOfPmmReport = isStakeholder(
  * A monitoring question's use case, through its config. Null for an
  * organization question (no config) as for an unknown id.
  */
-export const useCaseOfPmmQuestion: UseCaseOfChild = (id, organizationId) =>
-  first(
-    `SELECT c.project_id AS value
+export const useCaseOfPmmQuestion = resolverFromSql(
+  `SELECT c.project_id
        FROM post_market_monitoring_questions q
        JOIN post_market_monitoring_configs c
          ON c.organization_id = q.organization_id AND c.id = q.config_id
       WHERE q.organization_id = :organizationId AND q.id = :id`,
-    id,
-    organizationId,
-  );
+);
 
 /** The distinct use cases of these questions (organization questions have none). */
 export const useCasesOfPmmQuestionsQuery = async (
