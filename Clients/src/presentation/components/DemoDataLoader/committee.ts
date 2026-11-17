@@ -55,6 +55,20 @@ export const LINES: readonly CommitteeLine[] = [
   { who: "owl", text: "Model inventory checked. Zero excuses." },
 ];
 
+/**
+ * Played on a loop once LINES has run out, so a slow run never restarts the
+ * script (and the tortoise never goes back to article 3).
+ */
+export const FILLER_LINES: readonly CommitteeLine[] = [
+  { who: "owl", text: "Double-checking the double checks." },
+  { who: "beaver", text: "Stacking the last few records into place." },
+  { who: "raccoon", text: "One more box of receipts back here." },
+  { who: "tortoise", text: "Article 5. Nearly at the good part." },
+];
+
+/** The script followed by the filler; lineIndexAt indexes into this. */
+export const ALL_LINES: readonly CommitteeLine[] = [...LINES, ...FILLER_LINES];
+
 export const FINAL_SPEAKER = "The whole committee";
 export const FINAL_LINE = "All approved. Unanimously, for once.";
 
@@ -63,8 +77,13 @@ export const STEP_MS = 4600;
 /** Pause before the first line, while the cast rises into view. */
 export const FIRST_LINE_DELAY_MS = 1200;
 
-/** Index of the line showing after `elapsedMs`, looping on a slow run; -1 before the first line. */
+/**
+ * Index into ALL_LINES of the line showing after `elapsedMs`; -1 before the
+ * first line. Plays LINES once, then loops FILLER_LINES.
+ */
 export function lineIndexAt(elapsedMs: number): number {
-  if (elapsedMs < FIRST_LINE_DELAY_MS) return -1;
-  return Math.floor((elapsedMs - FIRST_LINE_DELAY_MS) / STEP_MS) % LINES.length;
+  if (!(elapsedMs >= FIRST_LINE_DELAY_MS)) return -1;
+  const step = Math.floor((elapsedMs - FIRST_LINE_DELAY_MS) / STEP_MS);
+  if (step < LINES.length) return step;
+  return LINES.length + ((step - LINES.length) % FILLER_LINES.length);
 }

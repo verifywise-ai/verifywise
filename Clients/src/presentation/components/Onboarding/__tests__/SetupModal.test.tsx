@@ -78,6 +78,36 @@ describe("SetupModal", () => {
     expect(reloadSpy).toHaveBeenCalledTimes(1);
   });
 
+  it("saves completed to Redux as soon as the demo data is in", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    const onComplete = vi.fn();
+    const { store } = renderWithProviders(<SetupModal onComplete={onComplete} onSkip={vi.fn()} />, {
+      preloadedAuth: { onboardingStatus: "pending" },
+    });
+    await user.click(screen.getByText("Add demo data"));
+    await screen.findByText("Explore the demo");
+
+    // A refresh now must not bring the modal back, so the persisted status is
+    // already completed before the user clicks Explore.
+    expect(store.getState().auth.onboardingStatus).toBe("completed");
+    expect(onComplete).not.toHaveBeenCalled();
+  });
+
+  it("completes and reloads only once on a double-click of Explore the demo", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    const reloadSpy = vi.fn();
+    Object.defineProperty(window, "location", { value: { reload: reloadSpy }, writable: true });
+    const onComplete = vi.fn();
+    renderWithProviders(<SetupModal onComplete={onComplete} onSkip={vi.fn()} />);
+    await user.click(screen.getByText("Add demo data"));
+    await user.dblClick(await screen.findByText("Explore the demo"));
+    act(() => {
+      vi.advanceTimersByTime(400);
+    });
+    expect(onComplete).toHaveBeenCalledTimes(1);
+    expect(reloadSpy).toHaveBeenCalledTimes(1);
+  });
+
   it("calls onComplete when Start blank is clicked", async () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const onComplete = vi.fn();

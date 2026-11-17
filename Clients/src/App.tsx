@@ -157,7 +157,15 @@ function App() {
     [token, userId, state.isComplete, isOnboardingRoute],
   );
 
+  // Once open, the modal stays mounted until it calls back, even after it saves
+  // "completed" to Redux itself: the demo loader saves it as soon as the data
+  // is in, then waits for "Explore the demo".
+  const [setupModalOpen, setSetupModalOpen] = useState(false);
+  if (showModal && !setupModalOpen) setSetupModalOpen(true);
+  if (!token && setupModalOpen) setSetupModalOpen(false);
+
   const handleOnboardingDone = useCallback(() => {
+    setSetupModalOpen(false);
     completeOnboarding();
     // The new look keeps Start here as Home's Get started tab.
     navigate(isClassicUi() ? "/start-here" : "/home?tab=get-started");
@@ -303,7 +311,7 @@ function App() {
                         onOpenChange={commandPalette.close}
                       />
                     </CommandPaletteErrorBoundary>
-                    {showModal && (
+                    {Boolean(token && userId) && (showModal || setupModalOpen) && (
                       <SetupModal onComplete={handleOnboardingDone} onSkip={handleOnboardingDone} />
                     )}
                     <ChunkErrorBoundary>

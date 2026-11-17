@@ -2,9 +2,12 @@
  * Full-screen version of DemoDataLoader, for creating demo data from the
  * dashboard. It cannot be dismissed while the run is in progress, because the
  * request keeps going on the server either way.
+ *
+ * Built on MUI Modal, which traps focus inside the card, locks page scroll and
+ * gives focus back when the overlay closes.
  */
 import React from "react";
-import { Box } from "@mui/material";
+import { Box, Modal } from "@mui/material";
 import { background, radiusPx } from "../../themes/palette";
 import DemoDataLoader, { type DemoDataLoaderStatus } from ".";
 
@@ -14,17 +17,18 @@ interface DemoDataLoaderOverlayProps {
 }
 
 const DemoDataLoaderOverlay: React.FC<DemoDataLoaderOverlayProps> = ({ status, onExplore }) => (
-  <Box
+  <Modal
+    open
+    disableEscapeKeyDown
     sx={{
-      position: "fixed",
-      inset: 0,
       zIndex: 9999,
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
       padding: "16px",
-      backgroundColor: "rgba(0, 0, 0, 0.4)",
-      backdropFilter: "blur(2px)",
+    }}
+    slotProps={{
+      backdrop: { sx: { backgroundColor: "rgba(0, 0, 0, 0.4)", backdropFilter: "blur(2px)" } },
     }}
   >
     <Box
@@ -38,11 +42,12 @@ const DemoDataLoaderOverlay: React.FC<DemoDataLoaderOverlayProps> = ({ status, o
         borderRadius: radiusPx.xl,
         boxShadow: "0 20px 60px rgba(0, 0, 0, 0.2)",
         overflow: "hidden",
+        outline: "none",
       }}
     >
       <DemoDataLoader status={status} onExplore={onExplore} />
     </Box>
-  </Box>
+  </Modal>
 );
 
 export default DemoDataLoaderOverlay;

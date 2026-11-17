@@ -5643,8 +5643,7 @@ export const de: Record<string, string> = {
 
   // Demo data loader (components/DemoDataLoader)
   "Setting up your demo workspace": "Ihr Demo-Arbeitsbereich wird eingerichtet",
-  "The governance committee is in session. This usually takes about a minute.":
-    "Das Governance-Komitee tagt. Das dauert meist etwa eine Minute.",
+  "The governance committee is in session.": "Das Governance-Komitee tagt.",
   "Your demo workspace is ready": "Ihr Demo-Arbeitsbereich ist bereit",
   "Use cases, risks, vendors, policies and 90 days of AI traffic are in place.":
     "Anwendungsfälle, Risiken, Anbieter, Richtlinien und 90 Tage KI-Traffic sind angelegt.",
@@ -5678,6 +5677,10 @@ export const de: Record<string, string> = {
     "Ein paar Schatten-KI-Tools entdeckt. Keiner will sie installiert haben.",
   "Article 4. Picking up speed now.": "Artikel 4. Jetzt nehme ich Fahrt auf.",
   "Model inventory checked. Zero excuses.": "Modellinventar geprüft. Null Ausreden.",
+  "Double-checking the double checks.": "Die doppelten Prüfungen werden doppelt geprüft.",
+  "Stacking the last few records into place.": "Die letzten Datensätze werden aufgestapelt.",
+  "One more box of receipts back here.": "Hier hinten noch eine Kiste mit Belegen.",
+  "Article 5. Nearly at the good part.": "Artikel 5. Gleich kommt der spannende Teil.",
   "All approved. Unanimously, for once.": "Alles genehmigt. Ausnahmsweise einstimmig.",
   "A couple of minutes left": "Noch ein paar Minuten",
   "About a minute left": "Noch etwa eine Minute",
@@ -11263,8 +11266,7 @@ export const fr: Record<string, string> = {
 
   // Demo data loader (components/DemoDataLoader)
   "Setting up your demo workspace": "Configuration de votre espace de démonstration",
-  "The governance committee is in session. This usually takes about a minute.":
-    "Le comité de gouvernance est en séance. Cela prend généralement environ une minute.",
+  "The governance committee is in session.": "Le comité de gouvernance est en séance.",
   "Your demo workspace is ready": "Votre espace de démonstration est prêt",
   "Use cases, risks, vendors, policies and 90 days of AI traffic are in place.":
     "Les cas d'usage, risques, fournisseurs, politiques et 90 jours de trafic IA sont en place.",
@@ -11299,6 +11301,10 @@ export const fr: Record<string, string> = {
     "Quelques outils d'IA fantôme repérés. Personne n'avoue les avoir installés.",
   "Article 4. Picking up speed now.": "Article 4. Je prends de la vitesse.",
   "Model inventory checked. Zero excuses.": "Inventaire des modèles vérifié. Zéro excuse.",
+  "Double-checking the double checks.": "Je revérifie les doubles vérifications.",
+  "Stacking the last few records into place.": "J'empile les derniers enregistrements.",
+  "One more box of receipts back here.": "Encore une boîte de justificatifs par ici.",
+  "Article 5. Nearly at the good part.": "Article 5. Bientôt le passage intéressant.",
   "All approved. Unanimously, for once.": "Tout est approuvé. À l'unanimité, pour une fois.",
   "A couple of minutes left": "Encore quelques minutes",
   "About a minute left": "Encore environ une minute",
@@ -16776,8 +16782,7 @@ export const es: Record<string, string> = {
 
   // Demo data loader (components/DemoDataLoader)
   "Setting up your demo workspace": "Preparando tu espacio de demostración",
-  "The governance committee is in session. This usually takes about a minute.":
-    "El comité de gobernanza está reunido. Suele tardar alrededor de un minuto.",
+  "The governance committee is in session.": "El comité de gobernanza está en sesión.",
   "Your demo workspace is ready": "Tu espacio de demostración está listo",
   "Use cases, risks, vendors, policies and 90 days of AI traffic are in place.":
     "Los casos de uso, riesgos, proveedores, políticas y 90 días de tráfico de IA ya están listos.",
@@ -16812,6 +16817,10 @@ export const es: Record<string, string> = {
     "Detecté algunas herramientas de IA en la sombra. Nadie admite haberlas instalado.",
   "Article 4. Picking up speed now.": "Artículo 4. Ahora cojo velocidad.",
   "Model inventory checked. Zero excuses.": "Inventario de modelos revisado. Cero excusas.",
+  "Double-checking the double checks.": "Revisando dos veces las revisiones dobles.",
+  "Stacking the last few records into place.": "Apilando los últimos registros en su sitio.",
+  "One more box of receipts back here.": "Otra caja de recibos por aquí atrás.",
+  "Article 5. Nearly at the good part.": "Artículo 5. Casi en la parte interesante.",
   "All approved. Unanimously, for once.": "Todo aprobado. Por unanimidad, para variar.",
   "A couple of minutes left": "Quedan un par de minutos",
   "About a minute left": "Queda alrededor de un minuto",

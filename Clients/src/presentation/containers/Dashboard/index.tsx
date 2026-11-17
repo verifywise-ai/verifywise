@@ -19,6 +19,7 @@ import StandardModal from "../../components/Modals/StandardModal";
 import CustomizableToast from "../../components/Toast";
 import DemoDataLoaderOverlay from "../../components/DemoDataLoader/DemoDataLoaderOverlay";
 import type { DemoDataLoaderStatus } from "../../components/DemoDataLoader";
+import { recordRunMs } from "../../components/DemoDataLoader/estimate";
 import Alert from "../../components/Alert";
 import { AlertState } from "../../../application/interfaces/appStates";
 import { useDashboard } from "../../../application/hooks/useDashboard";
@@ -110,8 +111,10 @@ const Dashboard: FC<DashboardProps> = ({ reloadTrigger }) => {
     };
 
     try {
+      const startedAt = Date.now();
       const response = await postAutoDrivers();
       if (response.status === 200 || response.status === 201) {
+        recordRunMs(Date.now() - startedAt);
         logEngine({
           type: "info",
           message: "Demo data generated successfully.",

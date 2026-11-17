@@ -12,7 +12,8 @@ import { storageService } from "../../../infrastructure/storage";
 export const DEFAULT_EXPECTED_MS = 60_000;
 
 const MIN_EXPECTED_MS = 15_000;
-const MAX_EXPECTED_MS = 5 * 60_000;
+/** The API client gives up after 120 s (customAxios timeout), so no run is longer. */
+const MAX_EXPECTED_MS = 120_000;
 
 /** Share of the bar reached at the expected time. */
 const ON_TIME_SHARE = 0.9;
@@ -56,7 +57,11 @@ export function readExpectedMs(): number {
   return DEFAULT_EXPECTED_MS;
 }
 
-/** Remembers how long a successful run took, so the next estimate is closer. */
+/**
+ * Remembers how long a successful demo data request took, so the next estimate
+ * is closer. Callers time the request itself, not the loader, so a retry that
+ * skips the request records nothing.
+ */
 export function recordRunMs(durationMs: number): void {
   if (!(durationMs > 0)) return;
   const clamped = Math.min(MAX_EXPECTED_MS, Math.max(MIN_EXPECTED_MS, Math.round(durationMs)));

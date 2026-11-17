@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { estimateProgress, remainingLabel } from "../estimate";
-import { FIRST_LINE_DELAY_MS, LINES, STEP_MS, lineIndexAt } from "../committee";
+import { estimateProgress, readExpectedMs, recordRunMs, remainingLabel } from "../estimate";
+import { FILLER_LINES, FIRST_LINE_DELAY_MS, LINES, STEP_MS, lineIndexAt } from "../committee";
 
 const MINUTE = 60_000;
 
@@ -43,10 +43,31 @@ describe("remainingLabel", () => {
 });
 
 describe("lineIndexAt", () => {
-  it("waits for the cast before the first line, then steps and loops", () => {
+  it("waits for the cast before the first line, then steps", () => {
     expect(lineIndexAt(0)).toBe(-1);
     expect(lineIndexAt(FIRST_LINE_DELAY_MS)).toBe(0);
     expect(lineIndexAt(FIRST_LINE_DELAY_MS + STEP_MS)).toBe(1);
-    expect(lineIndexAt(FIRST_LINE_DELAY_MS + STEP_MS * LINES.length)).toBe(0);
+  });
+
+  it("plays the script once, then loops the filler instead of starting over", () => {
+    const at = (step: number) => lineIndexAt(FIRST_LINE_DELAY_MS + STEP_MS * step);
+    expect(at(LINES.length - 1)).toBe(LINES.length - 1);
+    expect(at(LINES.length)).toBe(LINES.length);
+    expect(at(LINES.length + FILLER_LINES.length)).toBe(LINES.length);
+    for (let step = LINES.length; step < LINES.length * 4; step += 1) {
+      expect(at(step)).toBeGreaterThanOrEqual(LINES.length);
+    }
+  });
+});
+
+describe("learned run time", () => {
+  it("never expects longer than the request timeout", () => {
+    recordRunMs(10 * MINUTE);
+    expect(readExpectedMs()).toBe(120_000);
+  });
+
+  it("never expects less than 15 seconds", () => {
+    recordRunMs(200);
+    expect(readExpectedMs()).toBe(15_000);
   });
 });
