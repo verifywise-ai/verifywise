@@ -411,3 +411,102 @@ describe("post-market monitoring writes stay inside the config or cycle checked"
     expect(res.status).toBe(200);
   });
 });
+
+describe("post-market monitoring review fixes", () => {
+  let orgId: number;
+  let ownerId: number;
+  let api: Api;
+
+  beforeAll(async () => {
+    await cleanupDatabase();
+    orgId = await createTestOrganization();
+    ownerId = await user(orgId, "Editor");
+    api = await apiAs(orgId, ownerId, "Editor");
+  });
+
+  afterAll(async () => {
+    await cleanupDatabase();
+  });
+
+  const orderOf = async (id: number) =>
+    count(`SELECT display_order AS n FROM post_market_monitoring_questions WHERE id = :id`, { id });
+
+  it.each([
+    ["an array id", (q: number) => [{ id: [q], display_order: 99 }]],
+    ["a string id", (q: number) => [{ id: `${q}`, display_order: 99 }]],
+    ["a negative id", () => [{ id: -1, display_order: 99 }]],
+    ["a fractional display_order", (q: number) => [{ id: q, display_order: 1.5 }]],
+    ["a missing display_order", (q: number) => [{ id: q }]],
+    ["an empty list", () => []],
+    ["no list", () => undefined],
+  ])("POST /questions/reorder refuses %s with 400 and reorders nothing", async (_label, orders) => {
+    const other = await seedMonitoring(orgId, await user(orgId, "Editor"));
+
+    const res = await api
+      .post(`/api/pmm/questions/reorder`)
+      .send({ orders: orders(other.question) });
+
+    expect(res.status).toBe(400);
+    expect(await orderOf(other.question)).toBe(0);
+  });
+
+  it("POST /cycles/:cycleId/reassign needs postMarketMonitoring.edit, not only use case access", async () => {
+    const c = await seedMonitoring(orgId, ownerId);
+    const reviewer = await user(orgId, "Reviewer");
+    await sequelize.query(
+      `INSERT INTO projects_members (organization_id, project_id, user_id)
+       VALUES (:orgId, :project, :reviewer)`,
+      { replacements: { orgId, project: c.project, reviewer } },
+    );
+
+    const res = await (
+      await apiAs(orgId, reviewer, "Reviewer")
+    )
+      .post(`/api/pmm/cycles/${c.cycle}/reassign`)
+      .send({ stakeholder_id: reviewer });
+
+    expect(res.status).toBe(403);
+    expect(
+      await count(
+        `SELECT COUNT(*) AS n FROM post_market_monitoring_cycles
+          WHERE id = :cycle AND assigned_stakeholder_id IS NULL`,
+        { cycle: c.cycle },
+      ),
+    ).toBe(1);
+  });
+
+  it("a stakeholder of a completed cycle can no longer read the config's questions", async () => {
+    const stakeholder = await user(orgId, "Editor");
+    const c = await seedMonitoring(orgId, ownerId, stakeholder);
+    await sequelize.query(
+      `UPDATE post_market_monitoring_cycles SET status = 'completed' WHERE id = :cycle`,
+      { replacements: { cycle: c.cycle } },
+    );
+
+    const res = await (
+      await apiAs(orgId, stakeholder, "Editor")
+    ).get(`/api/pmm/config/${c.config}/questions`);
+
+    expect(res.status).toBe(403);
+  });
+
+  it.each(["pending", "in_progress", "escalated"])(
+    "a stakeholder of a %s cycle still reads the config's questions",
+    async (status) => {
+      const stakeholder = await user(orgId, "Editor");
+      const c = await seedMonitoring(orgId, ownerId, stakeholder);
+      await sequelize.query(
+        `UPDATE post_market_monitoring_cycles SET status = :status WHERE id = :cycle`,
+        {
+          replacements: { cycle: c.cycle, status },
+        },
+      );
+
+      const res = await (
+        await apiAs(orgId, stakeholder, "Editor")
+      ).get(`/api/pmm/config/${c.config}/questions`);
+
+      expect(res.status).toBe(200);
+    },
+  );
+});

@@ -8,7 +8,7 @@
  */
 import { NextFunction, Request, Response } from "express";
 import { STATUS_CODE } from "../utils/statusCode.utils";
-import { getProjectAccessQuery } from "../utils/project.utils";
+import { requireAccessToUseCases } from "./projectAccess.middleware";
 import { toId } from "../utils/validations/validation.utils";
 import {
   questionsBelongToPmmCycleQuery,
@@ -50,30 +50,49 @@ export const requirePmmCycleQuestions = async (req: Request, res: Response, next
   }
 };
 
+const isWhole = (value: unknown, min: number): value is number =>
+  typeof value === "number" && Number.isSafeInteger(value) && value >= min;
+
+/**
+ * A reorder body is `{ orders: [{ id, display_order }, ...] }`: a non-empty
+ * list of positive integer ids and whole display orders of 0 or more (JSON
+ * numbers, never strings or arrays). Anything else is a 400. The validated
+ * list replaces the body, so the handler binds exactly what was checked.
+ */
+export const validatePmmReorder = (req: Request, res: Response, next: NextFunction) => {
+  const orders = req.body?.orders;
+  const valid =
+    Array.isArray(orders) &&
+    orders.length > 0 &&
+    orders.every((o) => isWhole(o?.id, 1) && isWhole(o?.display_order, 0));
+  if (!valid) {
+    return res
+      .status(400)
+      .json(
+        STATUS_CODE[400](
+          req.t!("orders must list positive integer ids with display orders of 0 or more"),
+        ),
+      );
+  }
+  req.body = {
+    orders: orders.map((o: { id: number; display_order: number }) => ({
+      id: o.id,
+      display_order: o.display_order,
+    })),
+  };
+  return next();
+};
+
 /**
  * Reordering names questions in the body: every one that belongs to a use
- * case needs write access to it (organization questions have none). 403
- * otherwise, nothing reordered.
+ * case needs write access to it (organization questions have none). Mount
+ * after validatePmmReorder.
  */
-export const requirePmmReorderAccess = async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const orders = Array.isArray(req.body?.orders) ? req.body.orders : [];
-    const ids = orders
-      .map((o: any) => toId(o?.id))
-      .filter((id: number) => Number.isSafeInteger(id) && id > 0);
-    const { userId, role, organizationId } = req;
-    for (const projectId of await useCasesOfPmmQuestionsQuery(ids, organizationId!)) {
-      const access = await getProjectAccessQuery(
-        projectId,
-        { userId: userId!, role: role! },
-        organizationId!,
-      );
-      if (access !== "allowed") {
-        return res.status(403).json(STATUS_CODE[403](req.t!("Access denied")));
-      }
-    }
-    return next();
-  } catch (error) {
-    return next(error);
-  }
-};
+export const requirePmmReorderAccess = requireAccessToUseCases(
+  (req, organizationId) =>
+    useCasesOfPmmQuestionsQuery(
+      (req.body.orders as Array<{ id: number }>).map((o) => o.id),
+      organizationId,
+    ),
+  "requirePmmReorderAccess",
+);

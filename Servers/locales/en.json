@@ -1537,5 +1537,6 @@
   "archive_risks_linked_only_here must be \"true\" or \"false\"": "archive_risks_linked_only_here must be \"true\" or \"false\"",
   "Invalid ID": "Invalid ID",
   "limit must be an integer from 1 to 100": "limit must be an integer from 1 to 100",
-  "offset must be a whole number of 0 or more": "offset must be a whole number of 0 or more"
+  "offset must be a whole number of 0 or more": "offset must be a whole number of 0 or more",
+  "orders must list positive integer ids with display orders of 0 or more": "orders must list positive integer ids with display orders of 0 or more"
 }

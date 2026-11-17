@@ -4,19 +4,30 @@ import { Request, Response } from "express";
 jest.mock("../../utils/project.utils", () => ({
   getProjectAccessQuery: jest.fn(),
   getProjectReadAccessQuery: jest.fn(),
+  inaccessibleUseCasesQuery: jest.fn(),
 }));
 jest.mock("../../utils/logger/logHelper", () => ({
   logFailure: jest.fn(),
 }));
 
-import { checkedUseCaseId, requireUseCaseAccessVia } from "../projectAccess.middleware";
-import { getProjectAccessQuery, getProjectReadAccessQuery } from "../../utils/project.utils";
+import {
+  checkedUseCaseId,
+  requireAccessToUseCases,
+  requireUseCaseAccessVia,
+  sameUseCase,
+} from "../projectAccess.middleware";
+import {
+  getProjectAccessQuery,
+  getProjectReadAccessQuery,
+  inaccessibleUseCasesQuery,
+} from "../../utils/project.utils";
 import { logFailure } from "../../utils/logger/logHelper";
 
 type AsyncMock = jest.Mock<(...args: any[]) => Promise<any>>;
 const accessQuery = getProjectAccessQuery as unknown as AsyncMock;
 const readAccessQuery = getProjectReadAccessQuery as unknown as AsyncMock;
 const logged = logFailure as unknown as AsyncMock;
+const inaccessible = inaccessibleUseCasesQuery as unknown as AsyncMock;
 
 function createReq(overrides: Record<string, unknown> = {}): Request {
   return {
@@ -283,5 +294,72 @@ describe("requireUseCaseAccessVia", () => {
 
       expect(next).toHaveBeenCalledTimes(1);
     });
+  });
+});
+
+describe("sameUseCase", () => {
+  it("guards a use case id named directly, here in the body", async () => {
+    accessQuery.mockResolvedValue("denied");
+    const res = createRes();
+
+    await requireUseCaseAccessVia(sameUseCase, { param: "project_id", source: "body" })(
+      createReq({ method: "POST", params: {}, body: { project_id: 41 } }),
+      res,
+      jest.fn(),
+    );
+
+    expect(accessQuery).toHaveBeenCalledWith(41, { userId: 7, role: "Editor" }, 3);
+    expect(res.status).toHaveBeenCalledWith(403);
+  });
+});
+
+describe("requireAccessToUseCases", () => {
+  let next: jest.Mock;
+  beforeEach(() => {
+    jest.clearAllMocks();
+    logged.mockResolvedValue(undefined);
+    next = jest.fn();
+  });
+
+  const guard = (ids: number[]) => requireAccessToUseCases(async () => ids, "reorderTest");
+
+  it("checks every use case in one query with the write rule for a write", async () => {
+    inaccessible.mockResolvedValue([]);
+
+    await guard([4, 5])(createReq({ method: "POST" }), createRes(), next);
+
+    expect(inaccessible).toHaveBeenCalledWith([4, 5], { userId: 7, role: "Editor" }, 3);
+    expect(next).toHaveBeenCalledTimes(1);
+  });
+
+  it("refuses with 403 and logs like any other refusal", async () => {
+    inaccessible.mockResolvedValue([5]);
+    const res = createRes();
+
+    await guard([4, 5])(createReq({ method: "POST" }), res, next);
+
+    expect(res.status).toHaveBeenCalledWith(403);
+    expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ data: "Access denied" }));
+    expect(logged).toHaveBeenCalledWith(
+      expect.objectContaining({ eventType: "Update", functionName: "reorderTest" }),
+    );
+    expect(next).not.toHaveBeenCalled();
+  });
+
+  it("asks nothing when no use case is named", async () => {
+    await guard([])(createReq({ method: "POST" }), createRes(), next);
+
+    expect(inaccessible).not.toHaveBeenCalled();
+    expect(next).toHaveBeenCalledTimes(1);
+  });
+
+  it("answers 500 when the check fails, never allowing", async () => {
+    inaccessible.mockRejectedValue(new Error("db down"));
+    const res = createRes();
+
+    await guard([4])(createReq({ method: "POST" }), res, next);
+
+    expect(res.status).toHaveBeenCalledWith(500);
+    expect(next).not.toHaveBeenCalled();
   });
 });

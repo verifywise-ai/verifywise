@@ -4,6 +4,7 @@ import { logFailure } from "../utils/logger/logHelper";
 import {
   getProjectAccessQuery,
   getProjectReadAccessQuery,
+  inaccessibleUseCasesQuery,
   type ProjectAccess,
 } from "../utils/project.utils";
 import { seesAllProjects } from "../utils/projectVisibility.utils";
@@ -67,7 +68,31 @@ const eventTypeFor = (method: string): "Read" | "Delete" | "Update" => {
   return "Update";
 };
 
-const sameUseCase: UseCaseOfChild = async (id) => id;
+/**
+ * The resolver for a route that names the use case itself, for example a
+ * use case id in the body: requireUseCaseAccessVia(sameUseCase, {...}).
+ */
+export const sameUseCase: UseCaseOfChild = async (id) => id;
+
+/** The 403 every refusal answers, with the same audit entry. */
+const refuseAccess = async (
+  req: Request,
+  res: Response,
+  functionName: string,
+  description: string,
+) => {
+  await logFailure({
+    eventType: eventTypeFor(req.method),
+    description: `${req.method} refused, ${description}`,
+    functionName,
+    fileName: FILE,
+    error: new Error("Access denied"),
+    // Both guards answer 401 before refusing when there is no user.
+    userId: req.userId!,
+    organizationId: req.organizationId,
+  });
+  return res.status(403).json(STATUS_CODE[403](req.t!("Access denied")));
+};
 
 const buildGuard = (
   resolveUseCase: UseCaseOfChild,
@@ -100,18 +125,8 @@ const buildGuard = (
       return res.status(400).json(STATUS_CODE[400](req.t!(invalidIdMessage)));
     }
 
-    const refuse = async (reason: string) => {
-      await logFailure({
-        eventType,
-        description: `${req.method} refused, ${reason} ${label} ${id}`,
-        functionName,
-        fileName: FILE,
-        error: new Error("Access denied"),
-        userId,
-        organizationId,
-      });
-      return res.status(403).json(STATUS_CODE[403](req.t!("Access denied")));
-    };
+    const refuse = (reason: string) =>
+      refuseAccess(req, res, functionName, `${reason} ${label} ${id}`);
 
     try {
       // No organization means nothing to scope the check to (a pure SuperAdmin).
@@ -217,3 +232,45 @@ export const checkedUseCaseId = (res: Response): number | undefined => {
   const id = res.locals?.useCaseId;
   return typeof id === "number" ? id : undefined;
 };
+
+/**
+ * For a write that names several rows of possibly different use cases (a
+ * reorder): `useCasesOf` lists the use cases those rows belong to, and every
+ * one must pass the write rule, checked in one query. Refusals answer and log
+ * like requireUseCaseAccessVia; a failed check is a 500, never allowed.
+ * `useCasesOf` runs after any body validation, on the validated values.
+ */
+export const requireAccessToUseCases =
+  (useCasesOf: (req: Request, organizationId: number) => Promise<number[]>, functionName: string) =>
+  async (req: Request, res: Response, next: NextFunction) => {
+    const { userId, role, organizationId } = req;
+    if (!userId || !role) {
+      return res.status(401).json(STATUS_CODE[401](req.t!("Unauthorized")));
+    }
+    try {
+      if (!organizationId) return await refuseAccess(req, res, functionName, "no organization");
+      const projectIds = [...new Set(await useCasesOf(req, organizationId))];
+      if (projectIds.length === 0) return next();
+      const denied = await inaccessibleUseCasesQuery(projectIds, { userId, role }, organizationId);
+      if (denied.length > 0) {
+        return await refuseAccess(
+          req,
+          res,
+          functionName,
+          `no access to project IDs ${denied.join(", ")}`,
+        );
+      }
+      return next();
+    } catch (error) {
+      await logFailure({
+        eventType: eventTypeFor(req.method),
+        description: "Use case access check failed",
+        functionName,
+        fileName: FILE,
+        error: error as Error,
+        userId,
+        organizationId,
+      });
+      return res.status(500).json(STATUS_CODE[500](req.t!("Internal server error")));
+    }
+  };

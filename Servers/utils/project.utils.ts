@@ -274,6 +274,31 @@ const evaluateProjectAccess = async (
   return rows[0].can_view === true ? "allowed" : "denied";
 };
 
+/**
+ * Which of these use cases of the organization the user cannot change: the
+ * write rule of getProjectAccessQuery (projectVisibilitySql) for many ids in
+ * one query. Ids not in the organization are not listed (nothing to refuse).
+ */
+export const inaccessibleUseCasesQuery = async (
+  projectIds: number[],
+  viewer: ProjectViewer,
+  organizationId: number,
+): Promise<number[]> => {
+  if (projectIds.length === 0) return [];
+  const visibility = projectVisibilitySql("p", viewer);
+  if (!visibility.sql) return [];
+  const rows = await sequelize.query<{ id: number }>(
+    `SELECT p.id FROM projects p
+      WHERE p.organization_id = :organizationId AND p.id IN (:projectIds)
+        AND (TRUE${visibility.sql}) IS NOT TRUE`,
+    {
+      replacements: { organizationId, projectIds, ...visibility.replacements },
+      type: QueryTypes.SELECT,
+    },
+  );
+  return rows.map((r) => r.id);
+};
+
 /** Whether the user can see this use case, inside the caller's transaction. */
 export const canViewProjectQuery = async (
   projectId: number,

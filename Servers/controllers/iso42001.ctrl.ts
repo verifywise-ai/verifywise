@@ -793,7 +793,6 @@ export async function saveClauses(req: RequestWithFile, res: Response): Promise<
       delete: string;
       risksDelete: string;
       risksMitigated: string;
-      project_id: string;
     };
 
     // Files to unlink (not delete) - the actual file stays in file manager
@@ -942,7 +941,6 @@ export async function saveAnnexes(req: RequestWithFile, res: Response): Promise<
 
   try {
     const annexCategory = req.body as AnnexCategoryISO & {
-      project_id: string;
       delete: string;
       risksDelete: string;
       risksMitigated: string;

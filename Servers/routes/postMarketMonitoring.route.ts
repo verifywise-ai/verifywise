@@ -11,6 +11,7 @@ import authorize from "../middleware/accessControl.middleware";
 import {
   requireProjectAccess,
   requireUseCaseAccessVia,
+  sameUseCase,
 } from "../middleware/projectAccess.middleware";
 import {
   isStakeholderOfPmmConfig,
@@ -25,6 +26,7 @@ import {
   pinPmmConfigFromPath,
   requirePmmCycleQuestions,
   requirePmmReorderAccess,
+  validatePmmReorder,
 } from "../middleware/pmmRowScope.middleware";
 import {
   getConfigByProjectId,
@@ -72,7 +74,7 @@ const questionUseCase = requireUseCaseAccessVia(useCaseOfPmmQuestion, {
   missing: "pass",
 });
 // A new config names its use case in the body.
-const bodyUseCase = requireUseCaseAccessVia(async (id) => id, {
+const bodyUseCase = requireUseCaseAccessVia(sameUseCase, {
   param: "project_id",
   source: "body",
 });
@@ -164,6 +166,7 @@ router.post(
   "/questions/reorder",
   authenticateJWT,
   authorize("postMarketMonitoring.edit"),
+  validatePmmReorder,
   requirePmmReorderAccess,
   reorderQuestions,
 );
@@ -236,7 +239,13 @@ router.get(
 // ============================================================================
 
 // POST /pmm/cycles/:cycleId/reassign - Reassign stakeholder
-router.post("/cycles/:cycleId/reassign", authenticateJWT, cycleUseCase, reassignStakeholder);
+router.post(
+  "/cycles/:cycleId/reassign",
+  authenticateJWT,
+  authorize("postMarketMonitoring.edit"),
+  cycleUseCase,
+  reassignStakeholder,
+);
 
 // POST /pmm/projects/:projectId/start-cycle - Manually start new cycle
 router.post(

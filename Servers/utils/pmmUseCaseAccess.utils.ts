@@ -70,11 +70,16 @@ export const isStakeholderOfPmmCycle = isStakeholder(
       AND assigned_stakeholder_id = :userId`,
 );
 
-/** The caller is the stakeholder of a cycle of this config (to load its questions). */
+/**
+ * The caller is the stakeholder of an open cycle (pending, in progress or
+ * escalated) of this config, to load the questions they are answering. A
+ * past cycle gives no access to the config.
+ */
 export const isStakeholderOfPmmConfig = isStakeholder(
   `SELECT id AS value FROM post_market_monitoring_cycles
     WHERE organization_id = :organizationId AND config_id = :id
       AND assigned_stakeholder_id = :userId
+      AND status IN ('pending', 'in_progress', 'escalated')
     LIMIT 1`,
 );
 

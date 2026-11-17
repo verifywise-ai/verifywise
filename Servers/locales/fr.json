@@ -1537,5 +1537,6 @@
   "archive_risks_linked_only_here must be \"true\" or \"false\"": "archive_risks_linked_only_here doit valoir \"true\" ou \"false\"",
   "Invalid ID": "Identifiant non valide",
   "limit must be an integer from 1 to 100": "limit doit être un entier de 1 à 100",
-  "offset must be a whole number of 0 or more": "offset doit être un entier supérieur ou égal à 0"
+  "offset must be a whole number of 0 or more": "offset doit être un entier supérieur ou égal à 0",
+  "orders must list positive integer ids with display orders of 0 or more": "orders doit contenir des identifiants entiers positifs avec des ordres d'affichage de 0 ou plus"
 }
