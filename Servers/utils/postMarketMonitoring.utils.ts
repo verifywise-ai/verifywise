@@ -582,11 +582,12 @@ export const savePMMResponseQuery = async (
     ) VALUES (
       :organizationId, :cycle_id, :question_id, :response_value, :is_flagged
     )
-    ON CONFLICT (organization_id, cycle_id, question_id)
+    ON CONFLICT (cycle_id, question_id)
     DO UPDATE SET
       response_value = :response_value,
       is_flagged = :is_flagged,
       updated_at = NOW()
+    WHERE post_market_monitoring_responses.organization_id = :organizationId
     RETURNING *;`,
     {
       replacements: {
