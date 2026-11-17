@@ -20,17 +20,63 @@ import {
 import { runEvidenceFreshnessSweep } from "../services/automations/actions/evidenceFreshnessSweep";
 import { trackEntityChanges, recordMultipleFieldChanges } from "../utils/changeHistory.base.utils";
 import { requestHasPermission } from "../utils/rolePermissions.utils";
+import type { PermissionKey } from "../config/rolePermissions.config";
 
-const hasModelLinks = (ids: unknown): boolean => Array.isArray(ids) && ids.length > 0;
+const hasLinks = (ids: unknown): boolean => Array.isArray(ids) && ids.length > 0;
 
 /**
- * Evidence is written from the model pages and from the training registry
- * (under training.edit), so the routes check no permission of their own. A
- * write that links evidence to models, or changes evidence linked to models,
- * changes those models and needs model.edit.
+ * Each link field of a piece of evidence and the permission that changes
+ * what it links to. There is no evidence edit permission of its own
+ * (evidence.admin only runs the freshness sweep): evidence is written from the
+ * model pages, the training registry and the risk screens.
  */
-async function lacksModelEdit(req: Request, touchesModels: boolean): Promise<boolean> {
-  return touchesModels && !(await requestHasPermission(req, "model.edit"));
+const EVIDENCE_LINK_PERMISSIONS = [
+  ["mapped_model_ids", "model.edit"],
+  ["mapped_training_ids", "training.edit"],
+  ["mapped_risk_ids", "risks.edit"],
+] as const satisfies readonly (readonly [string, PermissionKey])[];
+
+/**
+ * Whether the caller may write evidence whose rows (the stored one and the
+ * request body) carry these links. Deny by default: at least one of the
+ * permissions above, and for every link field set on either row, its own.
+ */
+async function canWriteEvidence(
+  req: Request,
+  rows: (Record<string, unknown> | null | undefined)[],
+): Promise<boolean> {
+  const held = new Map<PermissionKey, boolean>();
+  for (const [, key] of EVIDENCE_LINK_PERMISSIONS) {
+    held.set(key, await requestHasPermission(req, key));
+  }
+  if (![...held.values()].some(Boolean)) return false;
+  return EVIDENCE_LINK_PERMISSIONS.every(
+    ([field, key]) => held.get(key) || !rows.some((row) => hasLinks(row?.[field])),
+  );
+}
+
+/** The fields a request may set on evidence; anything else in the body is ignored. */
+const EVIDENCE_WRITABLE_FIELDS = [
+  "evidence_name",
+  "evidence_type",
+  "description",
+  "mapped_model_ids",
+  "mapped_training_ids",
+  "mapped_risk_ids",
+  "evidence_files",
+  "deleteFiles",
+] as const;
+
+function pickEvidenceFields(body: unknown): Record<string, unknown> {
+  const source = (body && typeof body === "object" ? body : {}) as Record<string, unknown>;
+  const out: Record<string, unknown> = {};
+  for (const key of EVIDENCE_WRITABLE_FIELDS) {
+    if (Object.prototype.hasOwnProperty.call(source, key)) out[key] = source[key];
+  }
+  if (out.description !== undefined) {
+    out.description = sanitizeUserHtml(out.description as string);
+  }
+  return out;
 }
 
 export async function getAllEvidences(req: Request, res: Response) {
@@ -134,21 +180,22 @@ export async function getEvidenceById(req: Request, res: Response) {
  * Create new evidence
  */
 export async function createNewEvidence(req: Request, res: Response) {
-  if (await lacksModelEdit(req, hasModelLinks(req.body?.mapped_model_ids))) {
+  const fields = pickEvidenceFields(req.body);
+  if (!(await canWriteEvidence(req, [fields]))) {
     return res.status(403).json(STATUS_CODE[403](req.t!("Access denied")));
   }
   const transaction = await sequelize.transaction();
   try {
     const evidence = new EvidenceHubModel({
-      ...req.body,
+      ...fields,
       description: sanitizeUserHtml(req.body?.description),
       uploaded_at: new Date(),
       created_at: new Date(),
       updated_at: new Date(),
-    });
+    } as any);
     // evidence_files is not a @Column — Sequelize's constructor strips it.
     // Re-attach so createNewEvidenceQuery can create file_entity_links rows.
-    (evidence as any).evidence_files = req.body.evidence_files;
+    (evidence as any).evidence_files = fields.evidence_files;
 
     const savedEvidence = await createNewEvidenceQuery(evidence, req.organizationId!, transaction);
 
@@ -213,13 +260,8 @@ export async function updateEvidenceById(req: Request, res: Response) {
       await transaction.rollback();
       return res.status(404).json(STATUS_CODE[404](req.t!("Evidence not found")));
     }
-    if (
-      await lacksModelEdit(
-        req,
-        hasModelLinks(existingEvidence.mapped_model_ids) ||
-          hasModelLinks(req.body?.mapped_model_ids),
-      )
-    ) {
+    const fields = pickEvidenceFields(req.body);
+    if (!(await canWriteEvidence(req, [existingEvidence as any, fields]))) {
       await transaction.rollback();
       return res.status(403).json(STATUS_CODE[403](req.t!("Access denied")));
     }
@@ -234,7 +276,7 @@ export async function updateEvidenceById(req: Request, res: Response) {
 
     // Track model mapping changes
     const oldMappedModels = existingEvidence.mapped_model_ids || [];
-    const newMappedModels = req.body.mapped_model_ids || [];
+    const newMappedModels = (fields.mapped_model_ids as number[] | undefined) || [];
 
     // Models that were added
     const addedModels = newMappedModels.filter((id: number) => !oldMappedModels.includes(id));
@@ -244,13 +286,7 @@ export async function updateEvidenceById(req: Request, res: Response) {
     // Track field changes for models that remain mapped
     const continuingModels = newMappedModels.filter((id: number) => oldMappedModels.includes(id));
 
-    Object.assign(existingEvidence, {
-      ...req.body,
-      ...(req.body?.description !== undefined && {
-        description: sanitizeUserHtml(req.body.description),
-      }),
-      updated_at: new Date(),
-    });
+    Object.assign(existingEvidence, { ...fields, updated_at: new Date() });
     const updatedEvidence = await updateEvidenceByIdQuery(
       evidenceId,
       existingEvidence,
@@ -313,7 +349,7 @@ export async function updateEvidenceById(req: Request, res: Response) {
       for (const { field, label } of fieldsToTrack) {
         // From the snapshot: existingEvidence already holds the new values.
         const oldValue = (evidenceHubBefore as Record<string, unknown>)[field];
-        const newValue = req.body[field];
+        const newValue = fields[field];
 
         if (newValue !== undefined && oldValue !== newValue) {
           const oldStr = oldValue ? String(oldValue) : "-";
@@ -408,7 +444,7 @@ export async function deleteEvidenceById(req: Request, res: Response) {
       await transaction.rollback();
       return res.status(404).json(STATUS_CODE[404](req.t!("Evidence not found")));
     }
-    if (await lacksModelEdit(req, hasModelLinks(existingEvidence.mapped_model_ids))) {
+    if (!(await canWriteEvidence(req, [existingEvidence as any]))) {
       await transaction.rollback();
       return res.status(403).json(STATUS_CODE[403](req.t!("Access denied")));
     }

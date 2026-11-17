@@ -4,6 +4,8 @@ import { QueryTypes } from "sequelize";
 import { sequelize } from "../../database/db";
 import { cleanupDatabase, createTestOrganization, createTestUser, seedFrameworks } from "./helpers";
 import { createTestApp, testRequest } from "./setup";
+import { invalidateRolePermissionsCache } from "../../utils/rolePermissions.utils";
+import { invalidateRoleMapCache } from "../../utils/roleMap";
 import {
   createTestModelInventory,
   createTestModelRisk,
@@ -14,8 +16,9 @@ import {
 /**
  * Use cases and models audit, PR C: a model's approver, use cases and
  * frameworks, and a model risk's model and owner must be the organization's;
- * dataset and snapshot writes need model.edit, and evidence writes need it
- * when models are involved.
+ * dataset and snapshot writes need model.edit; an evidence write needs one of
+ * model.edit, training.edit or risks.edit, plus the key of each link it sets
+ * or the evidence already has.
  */
 
 const ROLE = { Admin: 1, Reviewer: 2, Editor: 3, Auditor: 4 } as const;
@@ -60,6 +63,26 @@ const riskBody = (extra: Record<string, unknown> = {}) => ({
   description: "d",
   ...extra,
 });
+
+/** A custom role of the organization holding only `permissions`. */
+async function customRole(orgId: number, name: string, permissions: string[]): Promise<string> {
+  const [{ id }] = await sequelize.query<{ id: number }>(
+    `INSERT INTO roles (name, description, organization_id, created_at)
+     VALUES (:name, 'Custom', :orgId, NOW()) RETURNING id`,
+    { replacements: { name, orgId }, type: QueryTypes.SELECT },
+  );
+  for (const key of permissions) {
+    await sequelize.query(
+      `INSERT INTO role_permissions (organization_id, role_id, permission_key, allowed)
+       VALUES (:orgId, :id, :key, TRUE)`,
+      { replacements: { orgId, id, key } },
+    );
+  }
+  // Inserting by SQL bypasses the role API, which clears both caches.
+  invalidateRoleMapCache();
+  invalidateRolePermissionsCache();
+  return name;
+}
 
 const notificationsFor = async (userId: number) =>
   (
@@ -289,19 +312,16 @@ describe("model tenant checks", () => {
       expect(res.status).toBe(403);
     });
 
-    it("evidence linked to a model needs model.edit to create, change or delete", async () => {
+    it("an Auditor cannot create, change or delete evidence, linked or not", async () => {
       const auditor = await as(orgA, auditorA, "Auditor");
-      const body = { evidence_name: `Model card ${++counter}`, evidence_type: "Model card" };
+      const body = { evidence_name: `Note ${++counter}`, evidence_type: "Other" };
+      expect((await auditor.post("/api/evidenceHub").send(body)).status).toBe(403);
       expect(
         (await auditor.post("/api/evidenceHub").send({ ...body, mapped_model_ids: [modelA] }))
           .status,
       ).toBe(403);
 
-      const created = await (
-        await as(orgA, editorA, "Editor")
-      )
-        .post("/api/evidenceHub")
-        .send({ ...body, mapped_model_ids: [modelA] });
+      const created = await (await as(orgA, editorA, "Editor")).post("/api/evidenceHub").send(body);
       expect(created.status).toBe(201);
       const id = created.body.data.id;
       expect(
@@ -310,15 +330,43 @@ describe("model tenant checks", () => {
       expect((await auditor.delete(`/api/evidenceHub/${id}`)).status).toBe(403);
     });
 
-    it("evidence without model links has no model.edit check (training evidence)", async () => {
-      // Training evidence is written under training.edit through these
-      // routes; the route itself checks no permission, as before.
-      const res = await (
-        await as(orgA, auditorA, "Auditor")
+    it("a training.edit-only role writes training evidence but not model evidence", async () => {
+      const role = await customRole(orgA, `Trainer ${++counter}`, ["training.edit"]);
+      const trainer = await userIn(orgA, "Editor");
+      const api = testRequest(
+        await createTestApp({
+          bypassAuth: true,
+          mockUser: { userId: trainer, organizationId: orgA, role },
+        }),
+      );
+      const training = { evidence_name: `Certificate ${++counter}`, evidence_type: "Training" };
+
+      const created = await api
+        .post("/api/evidenceHub")
+        .send({ ...training, mapped_training_ids: [1] });
+      expect(created.status).toBe(201);
+      const id = created.body.data.id;
+      expect(
+        (await api.patch(`/api/evidenceHub/${id}`).send({ evidence_name: "Renamed" })).status,
+      ).toBe(200);
+      // Adding a model link changes the model: model.edit.
+      expect(
+        (await api.patch(`/api/evidenceHub/${id}`).send({ mapped_model_ids: [modelA] })).status,
+      ).toBe(403);
+      expect(
+        (await api.post("/api/evidenceHub").send({ ...training, mapped_model_ids: [modelA] }))
+          .status,
+      ).toBe(403);
+      expect((await api.delete(`/api/evidenceHub/${id}`)).status).toBe(200);
+
+      // Evidence an Editor linked to a model stays out of the trainer's reach.
+      const modelEvidence = await (
+        await as(orgA, editorA, "Editor")
       )
         .post("/api/evidenceHub")
-        .send({ evidence_name: `Certificate ${++counter}`, evidence_type: "Training" });
-      expect(res.status).toBe(201);
+        .send({ ...training, mapped_model_ids: [modelA] });
+      expect(modelEvidence.status).toBe(201);
+      expect((await api.delete(`/api/evidenceHub/${modelEvidence.body.data.id}`)).status).toBe(403);
     });
 
     it("a snapshot of an unknown parameter is a 400 (was a 500)", async () => {

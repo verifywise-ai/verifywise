@@ -60,9 +60,8 @@ describe("core write routes require a permission", () => {
     ["model risk", modelRiskRouter, "patch", "/:id", "model.edit"],
     ["model risk", modelRiskRouter, "delete", "/:id", "model.edit"],
     // Datasets sit on the model pages and the screens gate them on model.edit,
-    // so the server checks the same key. Evidence is also written from the
-    // training registry: its controller checks model.edit when models are
-    // involved (evidenceHub.ctrl.test.ts).
+    // so the server checks the same key. Evidence is written from several
+    // modules: its controller checks the key of each link (evidenceHub.ctrl.test.ts).
     ["dataset", datasetRouter, "post", "/", "model.edit"],
     ["dataset", datasetRouter, "patch", "/:id", "model.edit"],
     ["dataset", datasetRouter, "delete", "/:id", "model.edit"],
@@ -109,8 +108,8 @@ describe("core write routes require a permission", () => {
     expect(permissionFor(shareLinkRouter, method, path)).toEqual([]);
   });
 
-  // Training evidence is written under training.edit, so the evidence routes
-  // carry no fixed key; the controller needs model.edit when models are involved.
+  // Evidence is written under model.edit, training.edit or risks.edit, so the
+  // routes carry no fixed key; the controller checks them per link field.
   it.each([
     ["post", "/"],
     ["patch", "/:id"],

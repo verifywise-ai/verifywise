@@ -172,9 +172,8 @@ only added frameworks must be in use by a use case of the organization.
 Writes without a caller (AI Advisor, intake, seeds) skip the use case access
 check. Model risks follow their model (org-wide). Dataset writes and
 `POST /modelInventoryHistory/snapshot` need `model.edit`; an unknown snapshot
-`parameter` is a 400. Evidence writes need `model.edit` only when they link
-evidence to models or change or delete evidence linked to models: training
-evidence uses the same routes under `training.edit`.
+`parameter` is a 400. Evidence writes are checked in the controller (see
+`evidence.md`): `model.edit` for evidence linked to models.
 
 ### Model Risks
 

@@ -134,22 +134,34 @@ describe("updateEvidenceById model history", () => {
   });
 });
 
-// Training evidence is written under training.edit, so the evidence routes
-// carry no permission; model.edit is needed only when models are involved.
-describe("evidence writes and model.edit", () => {
+// Evidence has no edit permission of its own: a write needs at least one of
+// model.edit, training.edit or risks.edit, and the permission of every link
+// field set on the stored row or in the request.
+describe("evidence write permissions", () => {
   const req = (extra: Record<string, unknown>): any => ({
     params: { id: "5" },
     body: {},
     userId: 3,
     organizationId: 9,
-    role: "Editor",
+    role: "Custom",
     t: (s: string) => s,
     ...extra,
   });
+  const grant = (...keys: string[]) =>
+    mockHasPermission.mockImplementation(async (_req: unknown, key: unknown) =>
+      keys.includes(key as string),
+    );
+  const stored = (links: Record<string, number[] | null>) =>
+    (getEvidenceByIdQuery as jest.Mock).mockResolvedValue({
+      ...existing(),
+      mapped_model_ids: null,
+      mapped_training_ids: null,
+      mapped_risk_ids: null,
+      ...links,
+    } as never);
 
   beforeEach(() => {
     jest.clearAllMocks();
-    mockHasPermission.mockResolvedValue(false);
     (createNewEvidenceQuery as jest.Mock).mockImplementation(async (row: any) => ({
       ...row,
       toSafeJSON: () => row,
@@ -160,66 +172,81 @@ describe("evidence writes and model.edit", () => {
     }));
   });
 
-  it("creates evidence linked to no model without model.edit (training evidence)", async () => {
-    const res = createRes();
-    await createNewEvidence(req({ body: { evidence_name: "Certificate" } }), res);
-    expect(res.status).toHaveBeenCalledWith(201);
-    expect(mockHasPermission).not.toHaveBeenCalled();
-  });
-
-  it("refuses evidence linked to a model without model.edit", async () => {
-    const res = createRes();
-    await createNewEvidence(req({ body: { mapped_model_ids: [1] } }), res);
-    expect(res.status).toHaveBeenCalledWith(403);
-    expect(mockHasPermission).toHaveBeenCalledWith(expect.anything(), "model.edit");
+  it("refuses a read-only role on unlinked evidence: create, update, delete", async () => {
+    grant();
+    const created = createRes();
+    await createNewEvidence(req({ body: { evidence_name: "Note" } }), created);
+    expect(created.status).toHaveBeenCalledWith(403);
     expect(createNewEvidenceQuery).not.toHaveBeenCalled();
+
+    stored({});
+    const updated = createRes();
+    await updateEvidenceById(req({ body: { evidence_name: "New" } }), updated);
+    expect(updated.status).toHaveBeenCalledWith(403);
+    expect(updateEvidenceByIdQuery).not.toHaveBeenCalled();
+
+    const deleted = createRes();
+    await deleteEvidenceById(req({}), deleted);
+    expect(deleted.status).toHaveBeenCalledWith(403);
+    expect(deleteEvidenceByIdQuery).not.toHaveBeenCalled();
   });
 
-  it("creates evidence linked to a model with model.edit", async () => {
-    mockHasPermission.mockResolvedValue(true);
-    const res = createRes();
-    await createNewEvidence(req({ body: { mapped_model_ids: [1] } }), res);
-    expect(res.status).toHaveBeenCalledWith(201);
-  });
+  it("lets training.edit alone write training-linked evidence", async () => {
+    grant("training.edit");
+    const created = createRes();
+    await createNewEvidence(req({ body: { mapped_training_ids: [4] } }), created);
+    expect(created.status).toHaveBeenCalledWith(201);
 
-  it("updates unlinked evidence without model.edit", async () => {
-    (getEvidenceByIdQuery as jest.Mock).mockResolvedValue({
-      ...existing(),
-      mapped_model_ids: [],
-    } as never);
-    const res = createRes();
-    await updateEvidenceById(req({ body: { evidence_name: "New" } }), res);
-    expect(res.status).toHaveBeenCalledWith(200);
+    stored({ mapped_training_ids: [4] });
+    const deleted = createRes();
+    await deleteEvidenceById(req({}), deleted);
+    expect(deleted.status).toHaveBeenCalledWith(200);
   });
 
   it.each([
-    ["evidence already linked to models", [1, 2], {}],
-    ["a write that adds a model link", [], { mapped_model_ids: [4] }],
-  ])("refuses an update of %s without model.edit", async (_label, mapped, body) => {
-    (getEvidenceByIdQuery as jest.Mock).mockResolvedValue({
-      ...existing(),
-      mapped_model_ids: mapped,
-    } as never);
+    ["model", "mapped_model_ids", "training.edit"],
+    ["risk", "mapped_risk_ids", "training.edit"],
+    ["training", "mapped_training_ids", "model.edit"],
+  ])("refuses %s links without that permission", async (_label, field, held) => {
+    grant(held);
     const res = createRes();
-    await updateEvidenceById(req({ body }), res);
+    await createNewEvidence(req({ body: { [field]: [1] } }), res);
     expect(res.status).toHaveBeenCalledWith(403);
-    expect(updateEvidenceByIdQuery).not.toHaveBeenCalled();
-    expect(transaction.rollback).toHaveBeenCalled();
   });
 
-  it("deletes unlinked evidence without model.edit, refuses linked evidence", async () => {
-    (getEvidenceByIdQuery as jest.Mock).mockResolvedValueOnce({
-      ...existing(),
-      mapped_model_ids: null,
-    } as never);
-    const ok = createRes();
-    await deleteEvidenceById(req({}), ok);
-    expect(ok.status).toHaveBeenCalledWith(200);
-
-    (getEvidenceByIdQuery as jest.Mock).mockResolvedValueOnce(existing() as never);
+  it("checks the stored row too: an update of model-linked evidence needs model.edit", async () => {
+    grant("training.edit");
+    stored({ mapped_model_ids: [1] });
     const refused = createRes();
-    await deleteEvidenceById(req({}), refused);
+    await updateEvidenceById(req({ body: { evidence_name: "x" } }), refused);
     expect(refused.status).toHaveBeenCalledWith(403);
-    expect(deleteEvidenceByIdQuery).toHaveBeenCalledTimes(1);
+    expect(transaction.rollback).toHaveBeenCalled();
+
+    grant("training.edit", "model.edit");
+    const ok = createRes();
+    await updateEvidenceById(req({ body: { evidence_name: "x" } }), ok);
+    expect(ok.status).toHaveBeenCalledWith(200);
+  });
+
+  it("refuses adding a model link to training evidence without model.edit", async () => {
+    grant("training.edit");
+    stored({ mapped_training_ids: [4] });
+    const res = createRes();
+    await updateEvidenceById(req({ body: { mapped_model_ids: [7] } }), res);
+    expect(res.status).toHaveBeenCalledWith(403);
+  });
+
+  it("writes only the whitelisted fields of the body", async () => {
+    grant("model.edit");
+    stored({});
+    await updateEvidenceById(
+      req({ body: { evidence_name: "New", id: 999, organization_id: 2, created_at: "x" } }),
+      createRes(),
+    );
+    const row = (updateEvidenceByIdQuery as jest.Mock).mock.calls[0][1] as any;
+    expect(row.evidence_name).toBe("New");
+    expect(row.id).toBe(5);
+    expect(row).not.toHaveProperty("organization_id");
+    expect(row.created_at).not.toBe("x");
   });
 });
