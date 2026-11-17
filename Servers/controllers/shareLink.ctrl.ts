@@ -22,7 +22,12 @@ import { logSuccess } from "../utils/logger/logHelper";
 import { withLegacyHighRiskRole } from "../utils/highRiskRoles.utils";
 import { translateError } from "../utils/i18n.utils";
 import { requestHasPermission } from "../utils/rolePermissions.utils";
-import { pickSharedFields, sharePermissionFor } from "../utils/shareLinkAccess.utils";
+import {
+  pickSharedFields,
+  isDisableOnlyUpdate,
+  sharePermissionFor,
+  withApproverName,
+} from "../utils/shareLinkAccess.utils";
 import { getProjectAccessQuery } from "../utils/project.utils";
 import { seesAllProjects } from "../utils/projectVisibility.utils";
 import { isRiskVisibleQuery, riskViewer } from "../utils/riskVisibility.utils";
@@ -450,8 +455,15 @@ export const updateShareLink = async (req: Request, res: Response) => {
 
     const shareLink = result[0];
 
-    // Check if user owns this share link
-    if (shareLink.created_by !== req.userId) {
+    // Turning a link off only takes it away from the public, like revoking
+    // it: the creator may, even after losing access to what it shares, and an
+    // Admin may for any link of the organization.
+    const disableOnly = isDisableOnlyUpdate(req.body);
+    const isCreator = shareLink.created_by === req.userId;
+    const allowed = disableOnly
+      ? isCreator || (await requestHasPermission(req, "organization.admin"))
+      : isCreator;
+    if (!allowed) {
       await transaction.rollback();
       logStructured(
         "error",
@@ -462,9 +474,12 @@ export const updateShareLink = async (req: Request, res: Response) => {
       return res.status(403).json(STATUS_CODE[403]({ message: req.t!("Unauthorized") }));
     }
 
-    // Changing a link (turning it back on, sharing all fields) takes the same
-    // permission as creating it.
-    if (!(await canShareResource(req, shareLink.resource_type, shareLink.resource_id))) {
+    // Any other change (turning it back on, sharing all fields) takes the
+    // same permission as creating it.
+    if (
+      !disableOnly &&
+      !(await canShareResource(req, shareLink.resource_type, shareLink.resource_id))
+    ) {
       await transaction.rollback();
       return res.status(403).json(STATUS_CODE[403](req.t!("Access denied")));
     }
@@ -759,8 +774,15 @@ export const getSharedDataByToken = async (req: Request, res: Response) => {
           LIMIT 100;
         `,
         singleRecord: `
-          SELECT * FROM model_inventories
-          WHERE id = $1 AND organization_id = $2
+          SELECT
+            mi.*,
+            COALESCE(
+              NULLIF(TRIM(CONCAT(COALESCE(u.name, ''), ' ', COALESCE(u.surname, ''))), ''),
+              NULL
+            ) as approver_name
+          FROM model_inventories mi
+          LEFT JOIN users u ON mi.approver = u.id
+          WHERE mi.id = $1 AND mi.organization_id = $2
           LIMIT 1;
         `,
       },
@@ -997,13 +1019,7 @@ export const getSharedDataByToken = async (req: Request, res: Response) => {
           result = { provider_model: result.provider_model, ...rest };
         }
 
-        // If we have approver_name from the JOIN, use it; otherwise keep the ID
-        if (result.approver_name !== undefined) {
-          const { approver_name, approver, ...rest } = result;
-          // Use the name if it exists, otherwise fallback to "User ID: {approver}"
-          return { ...rest, approver: approver_name || `User ID: ${approver}` };
-        }
-        return result;
+        return withApproverName(result);
       };
 
       if (Array.isArray(filteredData)) {

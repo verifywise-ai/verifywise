@@ -91,7 +91,7 @@ export const shareLinksContent: ArticleContent = {
       rows: [
         { action: 'Create or change share links', roles: 'Anyone who can edit what is shared (for example, edit models for the model list). A use case or risk link also needs access to that use case or risk; a link to the whole use case or risk list needs a role that sees every use case.' },
         { action: 'View active share links', roles: 'Any signed-in member' },
-        { action: 'Revoke share links', roles: 'The creator, or an Admin for any link in the organization' },
+        { action: 'Turn off or revoke share links', roles: 'The creator, even after losing edit access, or an Admin for any link in the organization' },
         { action: 'Access shared view (external)', roles: 'Anyone with the link' },
       ],
     },

@@ -20,6 +20,16 @@ export function sharePermissionFor(resourceType: string): PermissionKey | null {
 }
 
 /**
+ * True when a share link update only turns the link off: `is_enabled: false`
+ * and no other field it can change (settings, expires_at).
+ */
+export function isDisableOnlyUpdate(body: unknown): boolean {
+  if (!body || typeof body !== "object") return false;
+  const { is_enabled, settings, expires_at } = body as Record<string, unknown>;
+  return is_enabled === false && settings === undefined && expires_at === undefined;
+}
+
+/**
  * The columns "Share all fields" shows, per resource type. Anything not
  * listed (organization ids, external keys, user ids, MRM internals, security
  * assessment files, workflow and demo flags, contact emails) is never sent
@@ -136,5 +146,19 @@ export function pickSharedFields(
   for (const key of allowed) {
     if (Object.prototype.hasOwnProperty.call(record, key)) out[key] = record[key];
   }
+  return out;
+}
+
+/**
+ * A shared model record with its approver as a name. The approver's user id
+ * is never sent: without a name (no approver, or a user without one) the
+ * field is left out.
+ */
+export function withApproverName(record: Record<string, unknown>): Record<string, unknown> {
+  const out = { ...record };
+  const name = out.approver_name;
+  delete out.approver_name;
+  delete out.approver;
+  if (typeof name === "string" && name.trim() !== "") out.approver = name;
   return out;
 }

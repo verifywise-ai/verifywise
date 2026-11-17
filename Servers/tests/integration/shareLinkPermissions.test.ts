@@ -48,6 +48,8 @@ describe("share link permissions and fields", () => {
   let auditorA: number;
   let adminB: number;
   let projectA: number;
+  let model: number;
+  let modelWithoutApprover: number;
 
   beforeAll(async () => {
     await cleanupDatabase();
@@ -59,7 +61,8 @@ describe("share link permissions and fields", () => {
     adminB = await userIn(orgB, "Admin");
     // Owned by the Admin; the Editor is not a member.
     projectA = await createTestProject(orgA, adminA, {});
-    const model = await createTestModelInventory(orgA, {});
+    model = await createTestModelInventory(orgA, {});
+    modelWithoutApprover = await createTestModelInventory(orgA, {});
     await sequelize.query(
       `UPDATE model_inventories
           SET external_key = 'ext-1', security_assessment_data = '[{"id":1}]',
@@ -93,7 +96,7 @@ describe("share link permissions and fields", () => {
       await as(orgB, adminB, "Admin")
     ).get(`/api/shares/view/${res.body.data.share_token}`);
     expect(view.status).toBe(200);
-    const [row] = view.body.data.data;
+    const row = view.body.data.data.find((r: any) => r.id === model);
     for (const key of [
       "organization_id",
       "external_key",
@@ -155,5 +158,70 @@ describe("share link permissions and fields", () => {
       .patch(`/api/shares/${id}`)
       .send({ settings: { shareAllFields: true } });
     expect(res.status).toBe(403);
+  });
+
+  it("a single-model link shows the approver's name, never the user id", async () => {
+    const api = await as(orgA, editorA, "Editor");
+    const named = await api.post("/api/shares").send(link("model", model, true));
+    expect(named.status).toBe(201);
+    const view = await (
+      await as(orgB, adminB, "Admin")
+    ).get(`/api/shares/view/${named.body.data.share_token}`);
+    expect(view.status).toBe(200);
+    const row = view.body.data.data;
+    expect(typeof row.approver).toBe("string");
+    expect(row.approver).not.toMatch(/User ID|^\d+$/);
+    expect(row).not.toHaveProperty("approver_name");
+
+    const none = await api.post("/api/shares").send(link("model", modelWithoutApprover, true));
+    const noneView = await (
+      await as(orgB, adminB, "Admin")
+    ).get(`/api/shares/view/${none.body.data.share_token}`);
+    expect(noneView.status).toBe(200);
+    expect(noneView.body.data.data).not.toHaveProperty("approver");
+  });
+
+  it("the creator can still turn their link off after losing the edit permission, not back on", async () => {
+    const created = await (
+      await as(orgA, editorA, "Editor")
+    )
+      .post("/api/shares")
+      .send(link("model", 0));
+    const id = created.body.data.id;
+    const asAuditor = await as(orgA, editorA, "Auditor");
+    const off = await asAuditor.patch(`/api/shares/${id}`).send({ is_enabled: false });
+    expect(off.status).toBe(200);
+    expect(off.body.data.is_enabled).toBe(false);
+    expect((await asAuditor.patch(`/api/shares/${id}`).send({ is_enabled: true })).status).toBe(
+      403,
+    );
+  });
+
+  it("an Admin can turn off another user's link but not change it; an Auditor cannot", async () => {
+    const created = await (
+      await as(orgA, editorA, "Editor")
+    )
+      .post("/api/shares")
+      .send(link("model", 0));
+    const id = created.body.data.id;
+    expect(
+      (
+        await (await as(orgA, auditorA, "Auditor")).patch(`/api/shares/${id}`).send({
+          is_enabled: false,
+        })
+      ).status,
+    ).toBe(403);
+    const admin = await as(orgA, adminA, "Admin");
+    expect(
+      (await admin.patch(`/api/shares/${id}`).send({ settings: { shareAllFields: true } })).status,
+    ).toBe(403);
+    expect((await admin.patch(`/api/shares/${id}`).send({ is_enabled: false })).status).toBe(200);
+    expect(
+      (
+        await (await as(orgB, adminB, "Admin")).patch(`/api/shares/${id}`).send({
+          is_enabled: false,
+        })
+      ).status,
+    ).toBe(404);
   });
 });

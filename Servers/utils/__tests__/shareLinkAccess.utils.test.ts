@@ -1,5 +1,10 @@
 import { describe, it, expect } from "@jest/globals";
-import { sharePermissionFor, pickSharedFields } from "../shareLinkAccess.utils";
+import {
+  isDisableOnlyUpdate,
+  pickSharedFields,
+  sharePermissionFor,
+  withApproverName,
+} from "../shareLinkAccess.utils";
 
 describe("sharePermissionFor", () => {
   it.each([
@@ -59,5 +64,44 @@ describe("pickSharedFields", () => {
 
   it("returns nothing for an unknown type", () => {
     expect(pickSharedFields({ id: 1, secret: "s" }, "users")).toEqual({});
+  });
+});
+
+describe("withApproverName", () => {
+  it("replaces the approver id with the name", () => {
+    expect(withApproverName({ id: 1, approver: 7, approver_name: "Ada Lovelace" })).toEqual({
+      id: 1,
+      approver: "Ada Lovelace",
+    });
+  });
+
+  it.each([null, undefined, "", "  "])(
+    "never sends the approver id when there is no name (%p)",
+    (name) => {
+      const out = withApproverName({ id: 1, approver: 7, approver_name: name });
+      expect(out).toEqual({ id: 1 });
+    },
+  );
+
+  it("drops a bare approver id when the record has no name column", () => {
+    expect(withApproverName({ id: 1, approver: 7 })).toEqual({ id: 1 });
+  });
+});
+
+describe("isDisableOnlyUpdate", () => {
+  it("is true only for is_enabled: false alone", () => {
+    expect(isDisableOnlyUpdate({ is_enabled: false })).toBe(true);
+  });
+
+  it.each([
+    [{ is_enabled: true }],
+    [{ is_enabled: false, settings: { shareAllFields: true } }],
+    [{ is_enabled: false, expires_at: null }],
+    [{ is_enabled: "false" }],
+    [{}],
+    [null],
+    [undefined],
+  ])("is false for %p", (body) => {
+    expect(isDisableOnlyUpdate(body)).toBe(false);
   });
 });
