@@ -158,13 +158,33 @@ describe("createPendingFrameworksForApprovedUseCase builds every pending framewo
       .mockResolvedValueOnce([
         { id: 42, pending_frameworks: [1, 24, 99], enable_ai_data_insertion: true },
       ])
-      .mockResolvedValue([[]]);
+      .mockImplementation(async (sql: string) =>
+        String(sql).includes("INSERT INTO projects_frameworks") ? [[{ id: 500 }], 1] : [[]],
+      );
 
     await createPendingFrameworksForApprovedUseCase(42, 3, transaction, 7);
 
     expect(linkInserts()).toEqual([1, 24]);
     expect(mockBuilders[1]).toHaveBeenCalledWith(42, true, 3, transaction);
     expect(mockBuilders[24]).toHaveBeenCalledWith(42, true, 3, transaction);
+    const clear = mockQuery.mock.calls.find(([sql]) =>
+      String(sql).includes("SET pending_frameworks = NULL"),
+    );
+    expect(clear).toBeDefined();
+  });
+
+  it("neither fails nor builds again a framework attached since the request was made", async () => {
+    mockQuery
+      .mockResolvedValueOnce([
+        { id: 42, pending_frameworks: [24], enable_ai_data_insertion: false },
+      ])
+      // ON CONFLICT DO NOTHING: the link already exists, no row returned.
+      .mockResolvedValue([[], 0]);
+
+    await createPendingFrameworksForApprovedUseCase(42, 3, transaction, 7);
+
+    expect(linkInserts()).toEqual([24]);
+    expect(mockBuilders[24]).not.toHaveBeenCalled();
     const clear = mockQuery.mock.calls.find(([sql]) =>
       String(sql).includes("SET pending_frameworks = NULL"),
     );

@@ -228,8 +228,9 @@ const listFrameworks: ToolDef = {
         id: framework.id,
         name: framework.name,
         scope: framework.isOrganizational ? "organization wide" : "use case",
-        // Whether attaching this framework to a new use case builds out its
-        // controls, clauses and assessments, or only records the attachment.
+        // Whether attaching this framework to a use case builds out its
+        // controls, clauses and assessments. Every framework with a builder
+        // can be attached; creation refuses the others.
         buildsControls: hasFrameworkBuilder(framework.id),
       })),
     });

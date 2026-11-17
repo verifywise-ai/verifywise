@@ -238,10 +238,14 @@ export const createPendingFrameworksForApprovedUseCase = async (
       continue;
     }
 
-    // Create project_framework record FIRST (required by framework creation functions)
-    await sequelize.query(
+    // Create project_framework record FIRST (required by framework creation functions).
+    // A framework attached meanwhile (through "add framework" after a
+    // rejection) was built then, so it is neither linked nor built again.
+    const [inserted] = (await sequelize.query(
       `INSERT INTO projects_frameworks (organization_id, project_id, framework_id, is_demo)
-       VALUES (:organizationId, :project_id, :framework_id, false)`,
+       VALUES (:organizationId, :project_id, :framework_id, false)
+       ON CONFLICT (project_id, framework_id) DO NOTHING
+       RETURNING id`,
       {
         replacements: {
           organizationId,
@@ -250,7 +254,8 @@ export const createPendingFrameworksForApprovedUseCase = async (
         },
         transaction,
       },
-    );
+    )) as [{ id: number }[], number];
+    if (!inserted?.length) continue;
 
     // Create framework-specific records
     await buildProjectFrameworkQuery(

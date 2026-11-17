@@ -292,11 +292,11 @@ POST /projects
    - Store frameworks in `pending_frameworks`
    - Create ApprovalRequest
    - Wait for approval before framework creation
-
-Every picked framework, core (1–4) or bundled (5–25), is built through `frameworkAdditionMap` by `buildProjectFrameworkQuery` (`utils/framework.utils.ts`): at creation in `createUseCaseService` step 3 (`services/useCase.service.ts`, shared by `POST /api/projects`, `POST /api/v1/projects` and the MCP `create_use_case` tool), and after approval in `createPendingFrameworksForApprovedUseCase` (`utils/approvalRequest.utils.ts`, also run when an edit clears the workflow). An id with no builder is refused with 400 (`framework`, "Framework not found") before anything is written; a pending id with no builder is logged and left off at approval. Intake approval builds the EU AI Act and adds the organization's default frameworks through `addFrameworkToProjectQuery`, which uses the same builder. Before November 2026 only ids 1–4 were built, leaving bundled frameworks attached with no rows; migration `20261117140851-build-empty-bundled-frameworks.js` builds those links.
 6. Trigger `project_added` automation
 7. Send email to project owner
 8. Send Slack notification
+
+Every picked framework, core (1–4) or bundled (5–25), is built through `frameworkAdditionMap` by `buildProjectFrameworkQuery` (`utils/framework.utils.ts`): at creation in `createUseCaseService` step 3 (`services/useCase.service.ts`, shared by `POST /api/projects`, `POST /api/v1/projects` and the MCP `create_use_case` tool), and after approval in `createPendingFrameworksForApprovedUseCase` (`utils/approvalRequest.utils.ts`, also run when an edit clears the workflow). An id with no builder is refused with 400 (`framework`, "Framework not found") before anything is written; a pending id with no builder is logged and left off at approval, and one attached since the request was made (through "add framework" after a rejection) is neither linked nor built again. Intake approval builds the EU AI Act and adds the organization's default frameworks through `addFrameworkToProjectQuery`, which uses the same builder. Before November 2026 only ids 1–4 were built, leaving bundled frameworks attached with no rows; migration `20261117140851-build-empty-bundled-frameworks.js` builds those links.
 
 ### Response
 

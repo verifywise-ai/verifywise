@@ -5,6 +5,7 @@ import { sequelize } from "../../database/db";
 import { cleanupDatabase, createTestOrganization, createTestUser, seedFrameworks } from "./helpers";
 import { createTestApp, testRequest } from "./setup";
 import { getStructureById } from "../../structures";
+import { createPendingFrameworksForApprovedUseCase } from "../../utils/approvalRequest.utils";
 
 /**
  * A bundled framework picked when a use case or organizational project is
@@ -195,6 +196,41 @@ describe("bundled frameworks picked at creation are built", () => {
 
     expect(await hipaaStandards(projectId)).toBe(expectedStandards);
     expect(await hipaaSpecifications(projectId)).toBe(expectedSpecifications);
+  });
+
+  it("skips a pending framework attached since the request, instead of failing", async () => {
+    const { orgId, adminId, api } = await adminApi();
+    const res = await api.post("/api/projects").send(body(adminId, { framework: [HIPAA] }));
+    expect(res.status).toBe(201);
+    const projectId = projectIdOf(res);
+    // As after a rejection: HIPAA still pending, but added meanwhile through
+    // "add framework", so its link and rows exist.
+    await sequelize.query(
+      `UPDATE projects SET pending_frameworks = '[${HIPAA}]'::jsonb WHERE id = :projectId`,
+      {
+        replacements: { projectId },
+      },
+    );
+
+    await sequelize.transaction((transaction) =>
+      createPendingFrameworksForApprovedUseCase(projectId, orgId, transaction, adminId),
+    );
+
+    expect(
+      await count(
+        `SELECT COUNT(*) AS n FROM projects_frameworks WHERE project_id = :projectId AND framework_id = ${HIPAA}`,
+        { projectId },
+      ),
+    ).toBe(1);
+    expect(await hipaaStandards(projectId)).toBe(expectedStandards);
+    expect(
+      await count(
+        `SELECT COUNT(*) AS n FROM projects WHERE id = :projectId AND pending_frameworks IS NULL`,
+        {
+          projectId,
+        },
+      ),
+    ).toBe(1);
   });
 
   describe("backfill migration", () => {
