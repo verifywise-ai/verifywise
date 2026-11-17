@@ -564,12 +564,15 @@ describe("project.ctrl", () => {
       const existing = { ...buildProject(), owner: 1 };
       mockGetById.mockResolvedValue(existing as any);
       mockGetMembers.mockResolvedValue([7] as any);
-      mockUpdate.mockResolvedValue({ ...existing, members: [7] } as any);
+      mockUpdate.mockResolvedValue({ ...existing, project_title: "P2", members: [7] } as any);
       const req = createReq({ params: { id: "1" }, body: { project_title: "P2" } });
       const res = createRes();
       await updateProjectById(req, res);
       expect(mockTrackChanges).toHaveBeenCalledTimes(1);
-      expect(mockTrackChanges).toHaveBeenCalledWith(existing, { project_title: "P2" });
+      expect(mockTrackChanges).toHaveBeenCalledWith(
+        existing,
+        expect.objectContaining({ project_title: "P2" }),
+      );
     });
     it("looks up added members within the organization only", async () => {
       const existing = { ...buildProject(), owner: 1 };

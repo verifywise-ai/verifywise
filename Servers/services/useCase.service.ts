@@ -36,6 +36,7 @@ import { logStructured } from "../utils/logger/fileLogger";
 import { seesAllProjects } from "../utils/projectVisibility.utils";
 import { changesExternalOwner } from "../utils/externalOwner.utils";
 import { ForbiddenException } from "../domain.layer/exceptions/custom.exception";
+import { writtenValues } from "../utils/changeHistory.base.utils";
 
 export interface UseCaseServiceContext {
   userId: number;
@@ -321,7 +322,14 @@ export async function updateUseCaseService(
             { members: [...useCase.members].sort(byId) } as any,
           )
         : [];
-    const changes = [...(await trackUseCaseChanges(existingUseCase, input)), ...memberChanges];
+    // Diff what the UPDATE stored, not the request. Keys it never writes
+    // (framework, monitored_regulations_and_standards: frameworks change
+    // through their own endpoints) drop out, so a save cannot log a change
+    // that did not happen.
+    const changes = [
+      ...(await trackUseCaseChanges(existingUseCase, writtenValues(useCase, input))),
+      ...memberChanges,
+    ];
     if (changes.length > 0) {
       await recordMultipleFieldChanges(
         useCaseId,
