@@ -7,6 +7,65 @@ import {
   frameworkDeletionMap,
   frameworkFilesDeletionSourceMap,
 } from "../types/framework.type";
+import { ValidationException } from "../domain.layer/exceptions/custom.exception";
+import { getStructureById } from "../structures";
+
+/** Response keys the four core frameworks have always been reported under. */
+const CORE_FRAMEWORK_RESULT_KEYS: Record<number, string> = {
+  1: "eu",
+  2: "iso42001",
+  3: "iso27001",
+  4: "nist_ai_rmf",
+};
+
+/** Whether a framework id has a builder that sets up its controls for a project. */
+export const hasFrameworkBuilder = (frameworkId: number): boolean =>
+  Object.prototype.hasOwnProperty.call(frameworkAdditionMap, frameworkId);
+
+/**
+ * The key a built framework is reported under: the historical key for the core
+ * frameworks, the structure key (soc2, hipaa, ...) for the bundled ones.
+ */
+export const frameworkResultKey = (frameworkId: number): string =>
+  CORE_FRAMEWORK_RESULT_KEYS[frameworkId] ??
+  getStructureById(frameworkId)?.key ??
+  `framework_${frameworkId}`;
+
+/**
+ * Refuse a framework list holding an id that has no builder. Such a framework
+ * would be attached to the use case with nothing set up behind it, and could
+ * then not be added again because it is already attached.
+ */
+export const assertFrameworksBuildable = (frameworkIds: number[]): void => {
+  const unknown = frameworkIds.find((id) => !hasFrameworkBuilder(id));
+  if (unknown !== undefined) {
+    throw new ValidationException("Framework not found", "framework", unknown, {
+      i18nKey: "Framework not found",
+    });
+  }
+};
+
+/**
+ * Set up a framework's controls, clauses and assessments on a project whose
+ * projects_frameworks row already exists. Every framework, core or bundled,
+ * goes through frameworkAdditionMap, so creation, approval and "add framework"
+ * build the same thing.
+ */
+export const buildProjectFrameworkQuery = async (
+  frameworkId: number,
+  projectId: number,
+  enableAiDataInsertion: boolean,
+  organizationId: number,
+  transaction: Transaction,
+): Promise<object> => {
+  assertFrameworksBuildable([frameworkId]);
+  return frameworkAdditionMap[frameworkId](
+    projectId,
+    enableAiDataInsertion,
+    organizationId,
+    transaction,
+  );
+};
 
 export const getAllFrameworksQuery = async (organizationId: number): Promise<FrameworkModel[]> => {
   const frameworks = await sequelize.query(
@@ -153,8 +212,7 @@ export const addFrameworkToProjectQuery = async (
     return false;
   }
 
-  const addFn = frameworkAdditionMap[frameworkId];
-  if (!addFn) {
+  if (!hasFrameworkBuilder(frameworkId)) {
     return false;
   }
 
@@ -172,7 +230,7 @@ export const addFrameworkToProjectQuery = async (
     return false;
   }
 
-  await addFn(projectId, false, organizationId, transaction);
+  await buildProjectFrameworkQuery(frameworkId, projectId, false, organizationId, transaction);
   return true;
 };
 

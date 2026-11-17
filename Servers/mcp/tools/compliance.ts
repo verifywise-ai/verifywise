@@ -26,7 +26,7 @@ import {
 import { countNISTAIRMFSubcategoriesProgress } from "../../utils/nist_ai_rmf.subcategory.utils";
 import { requireOrganization } from "../scope";
 import { listFrameworkRefs } from "../frameworks";
-import { CREATE_TIME_FRAMEWORK_BUILDERS } from "../../services/useCase.service";
+import { hasFrameworkBuilder } from "../../utils/framework.utils";
 import { result, type ToolDef } from "../tool";
 
 const organizationIdArg = z
@@ -230,7 +230,7 @@ const listFrameworks: ToolDef = {
         scope: framework.isOrganizational ? "organization wide" : "use case",
         // Whether attaching this framework to a new use case builds out its
         // controls, clauses and assessments, or only records the attachment.
-        buildsControls: framework.id in CREATE_TIME_FRAMEWORK_BUILDERS,
+        buildsControls: hasFrameworkBuilder(framework.id),
       })),
     });
   },
