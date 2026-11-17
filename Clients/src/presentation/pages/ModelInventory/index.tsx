@@ -1431,7 +1431,7 @@ const ModelInventory: React.FC = () => {
       const deleteFrameworks = oldFrameworks.length > 0 && newFrameworks.length === 0;
 
       await updateEntityById({
-        routeUrl: `/modelInventory/${selectedModelInventory.id}`,
+        routeUrl: `/v1/model-inventory/${selectedModelInventory.id}`,
         body: {
           ...formData,
           deleteProjects,
@@ -1445,7 +1445,7 @@ const ModelInventory: React.FC = () => {
       });
     } else {
       // Create new model inventory
-      const response = await createModelInventory("/modelInventory", formData);
+      const response = await createModelInventory("/v1/model-inventory", formData);
       modelId = response?.data?.id || null;
       setAlert({
         variant: "success",

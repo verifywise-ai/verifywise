@@ -132,7 +132,7 @@ const VWProjectView = () => {
       setIsLoadingModels(true);
       try {
         const response = await getAllEntities({
-          routeUrl: `/modelInventory/by-projectId/${numericProjectId}`,
+          routeUrl: `/v1/model-inventory/by-project/${numericProjectId}`,
         });
         setLinkedModelsCount(response.data?.length || 0);
       } catch {

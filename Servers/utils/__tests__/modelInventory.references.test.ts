@@ -10,9 +10,16 @@ jest.mock("../../services/automations/automationProducer", () => ({
 jest.mock("../history/modelInventoryHistory.utils", () => ({
   recordSnapshotIfChanged: jest.fn(async () => undefined),
 }));
+const mockAccess = jest.fn<(...args: any[]) => Promise<string>>();
+jest.mock("../project.utils", () => ({
+  getProjectAccessQuery: (...args: any[]) => mockAccess(...args),
+}));
 
 import { createNewModelInventoryQuery, splitModelLinks } from "../modelInventory.utils";
-import { ValidationException } from "../../domain.layer/exceptions/custom.exception";
+import {
+  ForbiddenException,
+  ValidationException,
+} from "../../domain.layer/exceptions/custom.exception";
 
 const tx = { id: "tx" } as any;
 const sqls = () => mockQuery.mock.calls.map((c) => String(c[0]));
@@ -59,6 +66,31 @@ describe("createNewModelInventoryQuery checks its references first", () => {
     expect(frameworkInserts).toHaveLength(1);
     expect(String(frameworkInserts[0][0])).toMatch(/NULL, :framework_id/);
     expect(sqls().some((q) => /FROM projects_frameworks WHERE .* LIMIT 1/.test(q))).toBe(false);
+  });
+});
+
+describe("linking a use case on v1 needs write access to it", () => {
+  const viewer = { userId: 5, role: "Editor" };
+
+  it("refuses a use case the caller cannot open, before writing", async () => {
+    mockQuery.mockResolvedValueOnce([{ id: 4 }]); // projects of the org
+    mockAccess.mockResolvedValueOnce("denied");
+    const err = await createNewModelInventoryQuery({} as any, 1, [4], [], tx, viewer).catch(
+      (e) => e,
+    );
+    expect(err).toBeInstanceOf(ForbiddenException);
+    expect(mockAccess).toHaveBeenCalledWith(4, viewer, 1, tx);
+    expect(sqls().some((q) => /INSERT/.test(q))).toBe(false);
+  });
+
+  it("does not check access without a viewer (legacy route)", async () => {
+    mockAccess.mockReset();
+    mockQuery
+      .mockResolvedValueOnce([{ id: 4 }])
+      .mockResolvedValueOnce([{ id: 10, dataValues: {} }])
+      .mockResolvedValue([[], 0]);
+    await createNewModelInventoryQuery({} as any, 1, [4], [], tx).catch(() => undefined);
+    expect(mockAccess).not.toHaveBeenCalled();
   });
 });
 

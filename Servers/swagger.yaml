@@ -8009,6 +8009,8 @@ tags:
   -
     name: 'v1: V1/Lifecycle Settings'
   -
+    name: 'v1: V1/Model Inventory'
+  -
     name: 'v1: V1/Policy Templates'
   -
     name: 'v1: V1/Projects'
@@ -29247,6 +29249,48 @@ paths:
       tags:
         - 'v1: Risk import'
       operationId: bulkImportRisksStrict
+      security:
+        -
+          bearerAuth: []
+  '/v1/model-inventory/by-project/{projectId}':
+    get:
+      summary: 'Get Model By Project Id'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Model Inventory'
+      operationId: v1_model_inventory_getModelByProjectId
+      security:
+        -
+          bearerAuth: []
+  /v1/model-inventory:
+    post:
+      summary: 'Create New Model Inventory V1'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Model Inventory'
+      operationId: createNewModelInventoryV1
+      security:
+        -
+          bearerAuth: []
+  '/v1/model-inventory/{id}':
+    patch:
+      summary: 'Update Model Inventory By Id V1'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Model Inventory'
+      operationId: updateModelInventoryByIdV1
       security:
         -
           bearerAuth: []

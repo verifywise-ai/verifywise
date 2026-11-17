@@ -12,8 +12,10 @@ import { IModelInventoryProjectFramework } from "../domain.layer/interfaces/i.mo
 import { recordSnapshotIfChanged } from "./history/modelInventoryHistory.utils";
 import {
   assertOrganizationMember,
+  assertUseCaseWriteAccess,
   resolveModelLinkTargets,
   toPositiveId,
+  UseCaseViewer,
 } from "./modelReferences.utils";
 
 export const APPROVER_NOT_IN_ORGANIZATION = "The approver must be a member of this organization.";
@@ -218,6 +220,8 @@ export const createNewModelInventoryQuery = async (
   projects: number[],
   frameworks: number[],
   transaction: Transaction,
+  // Set on /api/v1: every linked use case needs the caller's write access.
+  useCaseViewer?: UseCaseViewer,
 ) => {
   const created_at = new Date();
 
@@ -236,6 +240,9 @@ export const createNewModelInventoryQuery = async (
     organizationId,
     transaction,
   );
+  if (useCaseViewer) {
+    await assertUseCaseWriteAccess(projectIds, useCaseViewer, organizationId, transaction);
+  }
 
   try {
     const result = await sequelize.query(
@@ -348,6 +355,8 @@ export const updateModelInventoryByIdQuery = async (
   deleteFrameworks: boolean,
   organizationId: number,
   transaction: Transaction,
+  // Set on /api/v1: each use case whose link changes needs write access.
+  useCaseViewer?: UseCaseViewer,
 ) => {
   const updated_at = new Date();
   const oldModel = await getModelInventoryByIdQuery(id, organizationId);
@@ -370,6 +379,20 @@ export const updateModelInventoryByIdQuery = async (
     organizationId,
     transaction,
   );
+  if (useCaseViewer && (projectIds.length > 0 || deleteProjects)) {
+    const before = (await sequelize.query(
+      `SELECT project_id FROM model_inventories_projects_frameworks
+        WHERE organization_id = :organization_id AND model_inventory_id = :id
+          AND framework_id IS NULL AND project_id IS NOT NULL`,
+      { replacements: { organization_id: organizationId, id }, transaction },
+    )) as [{ project_id: number }[], number];
+    const beforeIds = before[0].map((row) => row.project_id);
+    const changed = [
+      ...projectIds.filter((p) => !beforeIds.includes(p)),
+      ...beforeIds.filter((p) => !projectIds.includes(p)),
+    ];
+    await assertUseCaseWriteAccess(changed, useCaseViewer, organizationId, transaction);
+  }
 
   try {
     // First update the record

@@ -33,7 +33,10 @@ import { triggerModelDeployment } from "../services/workflows/triggers";
 import { logRollbackFailure } from "../utils/logger/logHelper";
 
 import { translateError } from "../utils/i18n.utils";
-import { ValidationException } from "../domain.layer/exceptions/custom.exception";
+import {
+  ForbiddenException,
+  ValidationException,
+} from "../domain.layer/exceptions/custom.exception";
 // Helper function to get user name
 async function getUserNameById(userId: number): Promise<string> {
   const result = await sequelize.query<{ name: string; surname: string }>(
@@ -229,6 +232,18 @@ export async function getModelByFrameworkId(req: Request, res: Response) {
 }
 
 export async function createNewModelInventory(req: Request, res: Response) {
+  return createModelInventory(req, res, false);
+}
+
+/**
+ * POST /api/v1/model-inventory: as the legacy create, and each linked use
+ * case needs the caller's write access (decision 8).
+ */
+export async function createNewModelInventoryV1(req: Request, res: Response) {
+  return createModelInventory(req, res, true);
+}
+
+async function createModelInventory(req: Request, res: Response, checkUseCaseAccess: boolean) {
   const {
     provider_model,
     provider,
@@ -293,6 +308,7 @@ export async function createNewModelInventory(req: Request, res: Response) {
       projects || [],
       frameworks || [],
       transaction,
+      checkUseCaseAccess ? { userId: req.userId!, role: req.role! } : undefined,
     );
 
     // Record creation in change history
@@ -377,6 +393,9 @@ export async function createNewModelInventory(req: Request, res: Response) {
     if (error instanceof ValidationException) {
       return res.status(400).json(STATUS_CODE[400](translateError(req, error)));
     }
+    if (error instanceof ForbiddenException) {
+      return res.status(403).json(STATUS_CODE[403](req.t!("Access denied")));
+    }
 
     // A duplicate external_key within the org violates the partial unique index.
     const code =
@@ -404,6 +423,18 @@ export async function createNewModelInventory(req: Request, res: Response) {
 }
 
 export async function updateModelInventoryById(req: Request, res: Response) {
+  return updateModelInventory(req, res, false);
+}
+
+/**
+ * PATCH /api/v1/model-inventory/:id: as the legacy update, and each use case
+ * whose link changes needs the caller's write access (decision 8).
+ */
+export async function updateModelInventoryByIdV1(req: Request, res: Response) {
+  return updateModelInventory(req, res, true);
+}
+
+async function updateModelInventory(req: Request, res: Response, checkUseCaseAccess: boolean) {
   const modelInventoryId = parseInt(
     Array.isArray(req.params.id) ? req.params.id[0] : req.params.id,
   );
@@ -538,6 +569,7 @@ export async function updateModelInventoryById(req: Request, res: Response) {
       deleteFrameworks || false,
       req.organizationId!,
       transaction,
+      checkUseCaseAccess ? { userId: req.userId!, role: req.role! } : undefined,
     );
 
     // Record changes in change history
@@ -674,6 +706,9 @@ export async function updateModelInventoryById(req: Request, res: Response) {
     // framework) or a malformed field.
     if (error instanceof ValidationException) {
       return res.status(400).json(STATUS_CODE[400](translateError(req, error)));
+    }
+    if (error instanceof ForbiddenException) {
+      return res.status(403).json(STATUS_CODE[403](req.t!("Access denied")));
     }
 
     // A duplicate external_key within the org violates the partial unique index.

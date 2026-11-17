@@ -43,7 +43,7 @@ describe("LinkedModels (V1.0ProjectView)", () => {
     const result = await capturedFetchModels!();
 
     expect(mockGetAllEntities).toHaveBeenCalledWith({
-      routeUrl: "/modelInventory/by-projectId/3",
+      routeUrl: "/v1/model-inventory/by-project/3",
     });
     expect(result).toEqual([{ id: 1, name: "Model A" }]);
   });
