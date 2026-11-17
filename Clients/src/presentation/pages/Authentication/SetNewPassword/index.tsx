@@ -74,6 +74,9 @@ const SetNewPassword: React.FC = () => {
     if (!passwordChecks.uppercase) {
       return "Password must contain at least one uppercase letter";
     }
+    if (!passwordChecks.lowercase) {
+      return "Password must contain at least one lowercase letter";
+    }
     if (!passwordChecks.number) {
       return "Password must contain at least one number";
     }
@@ -262,6 +265,10 @@ const SetNewPassword: React.FC = () => {
               <Check
                 text="Must contain at least one uppercase letter"
                 variant={passwordChecks.uppercase ? "success" : "info"}
+              />
+              <Check
+                text="Must contain at least one lowercase letter"
+                variant={passwordChecks.lowercase ? "success" : "info"}
               />
               <Check
                 text="Must contain atleast one number"
