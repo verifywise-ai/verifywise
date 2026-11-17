@@ -506,12 +506,17 @@ export const ProjectForm = ({
           ),
         };
 
-        // Add AI-specific fields only when EU AI Act is selected
+        // Add AI-specific fields only when EU AI Act is selected. An edit
+        // without it leaves them out, so a stored classification (set by an
+        // intake form or the API) is kept rather than cleared.
         const hasEuAiAct = values.monitored_regulations_and_standards.some((fw) => fw._id === 1);
-        body.high_risk_roles = highRiskRolesPayload(values.high_risk_roles, hasEuAiAct);
-        body.ai_risk_classification = hasEuAiAct
-          ? riskClassificationItems.find((item) => item._id === values.ai_risk_classification)?.name
-          : null;
+        if (hasEuAiAct || !projectToEdit) {
+          body.high_risk_roles = highRiskRolesPayload(values.high_risk_roles, hasEuAiAct);
+          body.ai_risk_classification = hasEuAiAct
+            ? riskClassificationItems.find((item) => item._id === values.ai_risk_classification)
+                ?.name
+            : null;
+        }
 
         if (values.framework_type === FrameworkTypeEnum.OrganizationWide) {
           body.is_organizational = true;
