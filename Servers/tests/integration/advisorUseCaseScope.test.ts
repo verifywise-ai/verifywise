@@ -9,6 +9,21 @@ import { availableProjectTools } from "../../advisor/functions/projectFunctions"
 import { availableComplianceTools } from "../../advisor/functions/complianceFunctions";
 import { availableModelInventoryTools } from "../../advisor/functions/modelInventoryFunctions";
 import { availableAdminTools } from "../../advisor/functions/adminFunctions";
+import { bridgeTools } from "../../advisor/toolBridge";
+import { availableCeMarkingTools } from "../../advisor/functions/ceMarkingFunctions";
+import { availableEuAiActTools } from "../../advisor/functions/euAiActFunctions";
+import { availableIso42001Tools } from "../../advisor/functions/iso42001Functions";
+import { availableNistAiRmfTools } from "../../advisor/functions/nistAiRmfFunctions";
+import { availablePmmTools } from "../../advisor/functions/pmmFunctions";
+import { availableRiskTools } from "../../advisor/functions/riskFunctions";
+import { availableReadinessTools } from "../../advisor/functions/readinessFunctions";
+import { toolsDefinition as ceMarkingDefs } from "../../advisor/tools/ceMarkingTools";
+import { toolsDefinition as euAiActDefs } from "../../advisor/tools/euAiActTools";
+import { toolsDefinition as iso42001Defs } from "../../advisor/tools/iso42001Tools";
+import { toolsDefinition as nistDefs } from "../../advisor/tools/nistAiRmfTools";
+import { toolsDefinition as pmmDefs } from "../../advisor/tools/pmmTools";
+import { toolsDefinition as riskDefs } from "../../advisor/tools/riskTools";
+import { toolsDefinition as readinessDefs } from "../../advisor/tools/readinessTools";
 import { writeToolExecutors } from "../../advisor/confirmation/createWriteTool";
 
 /**
@@ -204,5 +219,70 @@ describe("advisor use case tools run as the user", () => {
       expect(result.success).toBe(true);
       expect(await members(mine)).toEqual([auditor, stranger].sort((a, b) => a - b));
     });
+  });
+});
+
+describe("advisor tools that name a use case, through the tool bridge", () => {
+  let orgId: number;
+  let owner: number;
+  let admin: number;
+  let mine: number;
+  let theirs: number;
+
+  beforeAll(async () => {
+    await cleanupDatabase();
+    orgId = await createTestOrganization();
+    owner = await user(orgId, "Editor");
+    admin = await user(orgId, "Admin");
+    mine = await createTestProject(orgId, owner);
+    theirs = await createTestProject(orgId, await user(orgId, "Editor"));
+  });
+
+  afterAll(async () => {
+    await cleanupDatabase();
+  });
+
+  const TOOLS: Array<[string, any[], Record<string, any>, string]> = [
+    ["get_ce_marking_status", ceMarkingDefs, availableCeMarkingTools, "project_id"],
+    ["get_eu_ai_act_project_compliance", euAiActDefs, availableEuAiActTools, "project_id"],
+    ["get_iso42001_progress", iso42001Defs, availableIso42001Tools, "project_id"],
+    ["get_nist_progress", nistDefs, availableNistAiRmfTools, "project_id"],
+    ["get_pmm_config", pmmDefs, availablePmmTools, "project_id"],
+    ["fetch_risks", riskDefs, availableRiskTools, "projectId"],
+    ["generate_recommendations", readinessDefs, availableReadinessTools, "project_id"],
+  ];
+
+  const run = (
+    name: string,
+    defs: any[],
+    fns: Record<string, any>,
+    userId: number,
+    params: any,
+  ) => {
+    const tools = bridgeTools(
+      defs.filter((d) => d.function.name === name),
+      fns,
+      orgId,
+      userId,
+    ) as unknown as Record<string, { execute: (p: Record<string, unknown>) => Promise<any> }>;
+    return tools[name].execute(params);
+  };
+
+  it.each(TOOLS)("%s refuses a use case the user cannot open", async (name, defs, fns, param) => {
+    const result = await run(name, defs, fns, owner, { [param]: theirs });
+    expect(result).toEqual({ error: `You do not have access to use case ${theirs}` });
+  });
+
+  it.each(TOOLS)(
+    "%s is not refused for the user's own use case",
+    async (name, defs, fns, param) => {
+      const result = await run(name, defs, fns, owner, { [param]: mine });
+      expect(result?.error ?? "").not.toContain("You do not have access");
+    },
+  );
+
+  it.each(TOOLS)("%s is not refused for an Admin", async (name, defs, fns, param) => {
+    const result = await run(name, defs, fns, admin, { [param]: theirs });
+    expect(result?.error ?? "").not.toContain("You do not have access");
   });
 });

@@ -18,6 +18,12 @@ jest.mock("../../../utils/nistAiRmfCorrect.utils", () => ({
 
 jest.mock("../../approval/approvalGateway", () => ({ submitForApproval: jest.fn() }));
 // list_projects runs as the user; an Admin sees every use case.
+// The bridge's use case check is covered in toolBridge.useCaseAccess.test.ts;
+// here the user may open the use case.
+jest.mock("../../functions/useCaseScope", () => ({
+  ...(jest.requireActual("../../functions/useCaseScope") as object),
+  assertCanReadUseCase: jest.fn(async () => undefined),
+}));
 jest.mock("../../../utils/userPermission.utils", () => ({
   getUserRoleInOrganization: jest.fn(async () => ({ id: 1, name: "Admin", organizationId: null })),
   userHasPermission: jest.fn(async () => true),
