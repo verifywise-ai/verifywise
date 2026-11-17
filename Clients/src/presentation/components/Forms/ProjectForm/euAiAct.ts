@@ -18,9 +18,7 @@ export function includesEuAiAct(frameworks: unknown): boolean {
         name?: unknown;
       };
       return (
-        Number(_id) === EU_AI_ACT_ID ||
-        Number(framework_id) === EU_AI_ACT_ID ||
-        isEuAiActName(name)
+        Number(_id) === EU_AI_ACT_ID || Number(framework_id) === EU_AI_ACT_ID || isEuAiActName(name)
       );
     }
     if (typeof fw === "number") return fw === EU_AI_ACT_ID;
