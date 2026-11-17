@@ -96,4 +96,32 @@ describe("saving monitoring cycle answers", () => {
       await transaction.rollback();
     }
   });
+
+  it("refuses another organization's cycle or question and writes nothing", async () => {
+    const { owner, attacker } = await seedTwoTenantContexts();
+    const ownerProject = await createTestProject(owner.orgId, owner.userId);
+    const attackerProject = await createTestProject(attacker.orgId, attacker.userId);
+    const ours = await seedCycle(owner.orgId, ownerProject);
+    const theirs = await seedCycle(attacker.orgId, attackerProject);
+
+    // Their cycle, written as our org.
+    await expect(
+      savePMMResponsesQuery(
+        theirs.cycleId,
+        [{ question_id: theirs.questionId, response_value: true }],
+        owner.orgId,
+      ),
+    ).rejects.toThrow();
+    // Our cycle with their question.
+    await expect(
+      savePMMResponsesQuery(
+        ours.cycleId,
+        [{ question_id: theirs.questionId, response_value: true }],
+        owner.orgId,
+      ),
+    ).rejects.toThrow();
+
+    expect(await storedAnswers(theirs.cycleId)).toEqual([]);
+    expect(await storedAnswers(ours.cycleId)).toEqual([]);
+  });
 });

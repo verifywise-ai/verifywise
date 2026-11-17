@@ -1,4 +1,5 @@
 import { Transaction } from "sequelize";
+import { NotFoundException } from "../domain.layer/exceptions/custom.exception";
 import { sequelize } from "../database/db";
 import { effectiveRiskLevelSql, riskLevelRankSql } from "./riskLevel.utils";
 import {
@@ -579,9 +580,14 @@ export const savePMMResponseQuery = async (
   const result = (await sequelize.query(
     `INSERT INTO post_market_monitoring_responses (
       organization_id, cycle_id, question_id, response_value, is_flagged
-    ) VALUES (
-      :organizationId, :cycle_id, :question_id, :response_value, :is_flagged
     )
+    SELECT :organizationId, c.id, q.id, :response_value, :is_flagged
+    FROM post_market_monitoring_cycles c
+    JOIN post_market_monitoring_questions q
+      ON q.id = :question_id
+     AND q.organization_id = :organizationId
+     AND (q.config_id = c.config_id OR q.config_id IS NULL)
+    WHERE c.id = :cycle_id AND c.organization_id = :organizationId
     ON CONFLICT (cycle_id, question_id)
     DO UPDATE SET
       response_value = :response_value,
@@ -601,7 +607,17 @@ export const savePMMResponseQuery = async (
     },
   )) as [IPMMResponse[], number];
 
-  return result[0][0];
+  // The SELECT returns no row when the cycle or the question is not this
+  // organization's (or the question is not one of the cycle's): refuse it.
+  const saved = result[0][0];
+  if (!saved) {
+    throw new NotFoundException(
+      "Question not found in this cycle",
+      "PMMResponse",
+      responseData.question_id,
+    );
+  }
+  return saved;
 };
 
 export const savePMMResponsesQuery = async (
