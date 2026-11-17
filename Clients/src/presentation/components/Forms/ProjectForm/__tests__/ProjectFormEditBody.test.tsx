@@ -123,7 +123,7 @@ describe("ProjectForm edit body", () => {
       renderEdit(
         loadedUseCase({
           is_organizational: false,
-          ai_risk_classification: 2, // "High risk" item id in the form
+          ai_risk_classification: "High risk", // stored by name
           monitored_regulations_and_standards: ["EU AI Act"],
           framework: [{ project_framework_id: 4, framework_id: 1, name: "EU AI Act" }],
         }),

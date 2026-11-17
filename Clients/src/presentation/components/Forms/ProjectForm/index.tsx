@@ -68,7 +68,7 @@ import {
 } from "../../../../application/utils/highRiskRoles";
 import CustomException from "../../../../infrastructure/exceptions/customeException";
 import { applyApprovalWorkflowSelection } from "./approvalWorkflowField";
-import { includesEuAiAct } from "./euAiAct";
+import { includesEuAiAct } from "../../../../application/constants/frameworks";
 import { radiusPx } from "../../../themes/palette";
 
 const PROJECT_STATUS_ITEMS = [
@@ -89,10 +89,23 @@ const getStatusIdFromName = (statusName: string | undefined): number => {
 };
 
 /** Whether the start date picked in the form is a different day from the loaded one. */
-const startDateChanged = (initial: string, current: string): boolean => {
-  if (initial === current) return false;
-  const day = (value: string) => (value ? dayjs(value).format("YYYY-MM-DD") : "");
-  return day(initial) !== day(current);
+const startDateChanged = (initial: string, current: string): boolean =>
+  initial && current ? !dayjs(initial).isSame(current, "day") : initial !== current;
+
+const RISK_CLASSIFICATION_ITEMS = [
+  { _id: 1, name: AiRiskClassification.PROHIBITED },
+  { _id: 2, name: AiRiskClassification.HIGH_RISK },
+  { _id: 3, name: AiRiskClassification.LIMITED_RISK },
+  { _id: 4, name: AiRiskClassification.MINIMAL_RISK },
+  { _id: 5, name: AiRiskClassification.OUT_OF_SCOPE },
+];
+
+/** The form's item id for a stored classification, which is saved by name. */
+const riskClassificationIdFromName = (stored: unknown): number | null => {
+  if (typeof stored === "number") return stored;
+  if (typeof stored !== "string" || !stored) return null;
+  const key = stored.trim().toLowerCase();
+  return RISK_CLASSIFICATION_ITEMS.find((item) => item.name.toLowerCase() === key)?._id ?? null;
 };
 
 export const ProjectForm = ({
@@ -133,7 +146,7 @@ export const ProjectForm = ({
         // Read as a calendar day: west of UTC a start date stored at 00:00 UTC
         // would otherwise show the day before.
         start_date: startDateCalendarDay(projectToEdit.start_date)?.toISOString() || "",
-        ai_risk_classification: projectToEdit.ai_risk_classification || null,
+        ai_risk_classification: riskClassificationIdFromName(projectToEdit.ai_risk_classification),
         status: getStatusIdFromName(projectToEdit.status),
         high_risk_roles: projectHighRiskRoles(projectToEdit),
         goal: projectToEdit.goal || "",
@@ -380,16 +393,7 @@ export const ProjectForm = ({
     values.framework_type,
   ]);
 
-  const riskClassificationItems = useMemo(
-    () => [
-      { _id: 1, name: AiRiskClassification.PROHIBITED },
-      { _id: 2, name: AiRiskClassification.HIGH_RISK },
-      { _id: 3, name: AiRiskClassification.LIMITED_RISK },
-      { _id: 4, name: AiRiskClassification.MINIMAL_RISK },
-      { _id: 5, name: AiRiskClassification.OUT_OF_SCOPE },
-    ],
-    [],
-  );
+  const riskClassificationItems = RISK_CLASSIFICATION_ITEMS;
 
   const geographyItems = useMemo(() => [...GEOGRAPHY_ITEMS], []);
 

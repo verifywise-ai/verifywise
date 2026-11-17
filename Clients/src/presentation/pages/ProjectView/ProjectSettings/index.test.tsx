@@ -274,6 +274,20 @@ describe("ProjectSettings", () => {
     expect(mockUpdateProject).not.toHaveBeenCalled();
   });
 
+  it("enables Save on a use case stored with an empty title", async () => {
+    mockUseProjectData.mockReturnValue({ project: { ...baseProject, project_title: "" } });
+    renderWithProviders(<ProjectSettings />);
+    await waitFor(() =>
+      expect(screen.getByDisplayValue("Answer support questions")).toBeInTheDocument(),
+    );
+
+    fireEvent.change(screen.getByDisplayValue("Answer support questions"), {
+      target: { value: "Answer billing questions" },
+    });
+
+    await waitFor(() => expect(screen.getByRole("button", { name: "Save" })).not.toBeDisabled());
+  });
+
   it("enables Save when only a custom field answer changes", async () => {
     renderWithProviders(<ProjectSettings />);
     await waitFor(() => expect(screen.getByDisplayValue("Chatbot Assistant")).toBeInTheDocument());

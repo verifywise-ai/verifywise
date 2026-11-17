@@ -78,7 +78,7 @@ import { getAutocompleteStyles } from "../../../utils/inputStyles";
 import { useStyles } from "./styles";
 import { GEOGRAPHY_ITEMS } from "../../../../application/constants/geography";
 import { startDateCalendarDay } from "../../../tools/isoDateToString";
-import { includesEuAiAct } from "../../../components/Forms/ProjectForm/euAiAct";
+import { includesEuAiAct } from "../../../../application/constants/frameworks";
 
 // Every level the server accepts, so a use case classified by intake, MCP or
 // the API loads with its level. `name` is the label; `value` is what is stored.
@@ -330,10 +330,11 @@ const ProjectSettings = React.memo(
     // Modified exactly when Save has something to send: the same diff builds
     // the body, so the two cannot disagree. Frameworks are not part of it;
     // they are saved through their own endpoints as soon as they are picked.
-    const isModified = useMemo(() => {
-      if (!initialValuesRef.current.projectTitle) return false;
-      return Object.keys(changedProjectFields(initialValuesRef.current, values)).length > 0;
-    }, [values]);
+    // Before load both sides hold the initial state, so nothing differs.
+    const isModified = useMemo(
+      () => Object.keys(changedProjectFields(initialValuesRef.current, values)).length > 0,
+      [values],
+    );
 
     const customFieldsGate = useRequiredCustomFieldsGate(
       "project",

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { includesEuAiAct } from "../euAiAct";
+import { includesEuAiAct } from "../frameworks";
 
 describe("includesEuAiAct", () => {
   it("recognises form options, stored framework rows, ids and names", () => {

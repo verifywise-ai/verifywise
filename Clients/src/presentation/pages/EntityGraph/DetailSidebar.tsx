@@ -291,7 +291,10 @@ const DetailSidebar: React.FC<DetailSidebarProps> = ({ entity, onClose, onNaviga
                 <DetailRow
                   icon={<Calendar size={14} />}
                   label="Start date"
-                  value={formatDetailDate(startDateCalendarDay(rawData.start_date), formatDate)}
+                  value={formatDetailDate(
+                    startDateCalendarDay(rawData.start_date) ?? rawData.start_date,
+                    formatDate,
+                  )}
                 />
               )}
               {Boolean(rawData.last_updated) && (

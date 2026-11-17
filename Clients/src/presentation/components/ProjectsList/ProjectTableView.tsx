@@ -364,8 +364,9 @@ const ProjectTableView: React.FC<IProjectTableViewProps> = ({
           break;
 
         case "startDate":
-          aValue = startDateCalendarDay(a.start_date)?.getTime() ?? NaN;
-          bValue = startDateCalendarDay(b.start_date)?.getTime() ?? NaN;
+          // No start date sorts first, as before; NaN would break the comparator.
+          aValue = startDateCalendarDay(a.start_date)?.getTime() ?? 0;
+          bValue = startDateCalendarDay(b.start_date)?.getTime() ?? 0;
           break;
 
         case "lastUpdated":
