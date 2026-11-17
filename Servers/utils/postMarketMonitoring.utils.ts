@@ -622,6 +622,7 @@ export const savePMMResponsesQuery = async (
 export const getPMMResponsesQuery = async (
   cycleId: number,
   organizationId: number,
+  transaction?: Transaction,
 ): Promise<IPMMResponse[]> => {
   const result = (await sequelize.query(
     `SELECT
@@ -634,7 +635,7 @@ export const getPMMResponsesQuery = async (
     JOIN post_market_monitoring_questions q ON r.question_id = q.id AND q.organization_id = :organizationId
     WHERE r.organization_id = :organizationId AND r.cycle_id = :cycleId
     ORDER BY q.display_order ASC;`,
-    { replacements: { cycleId, organizationId } },
+    { replacements: { cycleId, organizationId }, transaction },
   )) as [IPMMResponse[], number];
 
   return result[0];
@@ -796,11 +797,12 @@ export const getPMMReportsQuery = async (
 export const getContextSnapshotQuery = async (
   projectId: number,
   organizationId: number,
+  transaction?: Transaction,
 ): Promise<IPMMContextSnapshot> => {
   // Get project details
   const projectResult = (await sequelize.query(
     `SELECT project_title, status FROM projects WHERE organization_id = :organizationId AND id = :projectId;`,
-    { replacements: { projectId, organizationId } },
+    { replacements: { projectId, organizationId }, transaction },
   )) as [{ project_title: string; status: string }[], number];
 
   const project = projectResult[0][0] || { project_title: "", status: "" };
@@ -817,7 +819,7 @@ export const getContextSnapshotQuery = async (
      WHERE r.organization_id = :organizationId
        AND r.is_deleted = false
        AND pr.project_id = :projectId;`,
-    { replacements: { projectId, organizationId } },
+    { replacements: { projectId, organizationId }, transaction },
   )) as [{ total: string; high_count: string; medium_count: string; low_count: string }[], number];
 
   const risks = riskResult[0][0] || {
@@ -839,7 +841,7 @@ export const getContextSnapshotQuery = async (
      WHERE mi.organization_id = :organizationId
        AND mpf.project_id = :projectId
        AND mpf.framework_id IS NULL;`,
-    { replacements: { projectId, organizationId } },
+    { replacements: { projectId, organizationId }, transaction },
   )) as [{ total: string }[], number];
 
   const models = parseInt(modelResult[0][0]?.total || "0", 10);
@@ -854,7 +856,7 @@ export const getContextSnapshotQuery = async (
        AND mr.is_deleted = false
        AND mpf.project_id = :projectId
        AND mpf.framework_id IS NULL;`,
-    { replacements: { projectId, organizationId } },
+    { replacements: { projectId, organizationId }, transaction },
   )) as [{ total: string }[], number];
 
   const modelRisks = parseInt(modelRiskResult[0][0]?.total || "0", 10);
@@ -865,7 +867,7 @@ export const getContextSnapshotQuery = async (
      FROM vendors v
      JOIN vendors_projects vp ON v.id = vp.vendor_id AND vp.organization_id = :organizationId
      WHERE v.organization_id = :organizationId AND vp.project_id = :projectId;`,
-    { replacements: { projectId, organizationId } },
+    { replacements: { projectId, organizationId }, transaction },
   )) as [{ total: string }[], number];
 
   const vendors = parseInt(vendorResult[0][0]?.total || "0", 10);
@@ -879,7 +881,7 @@ export const getContextSnapshotQuery = async (
      WHERE vr.organization_id = :organizationId
        AND vr.is_deleted = false
        AND vp.project_id = :projectId;`,
-    { replacements: { projectId, organizationId } },
+    { replacements: { projectId, organizationId }, transaction },
   )) as [{ total: string }[], number];
 
   const vendorRisks = parseInt(vendorRiskResult[0][0]?.total || "0", 10);

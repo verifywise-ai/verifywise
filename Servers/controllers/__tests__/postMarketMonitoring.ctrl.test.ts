@@ -720,6 +720,12 @@ describe("postMarketMonitoring.ctrl", () => {
       const res = createRes();
       await submitCycle(req, res);
       expect(mockCompleteCycle).toHaveBeenCalledWith(1, 1, 1, expect.any(Object));
+      // The report reads run in the submit transaction, so they see the
+      // responses saved in it before the commit.
+      const transaction = await mockTransaction.mock.results[0].value;
+      expect(mockSaveResponses).toHaveBeenCalledWith(1, expect.any(Array), 1, transaction);
+      expect(mockGetContextSnapshot).toHaveBeenCalledWith(1, 1, transaction);
+      expect(mockGetResponses).toHaveBeenCalledWith(1, 1, transaction);
       expect(mockGenerateReport).toHaveBeenCalled();
       expect(mockCreateReport).toHaveBeenCalled();
       expect(res.status).toHaveBeenCalledWith(200);

@@ -844,12 +844,19 @@ export async function submitCycle(req: Request, res: Response): Promise<any> {
     await completeCycleQuery(cycleId, userId, req.organizationId!, transaction);
 
     // Get context snapshot
-    const contextSnapshot = await getContextSnapshotQuery(cycle.project_id!, req.organizationId!);
+    // Read inside the submit transaction so the report sees the responses
+    // saved above, which are not committed yet.
+    const contextSnapshot = await getContextSnapshotQuery(
+      cycle.project_id!,
+      req.organizationId!,
+      transaction,
+    );
 
     // Get all responses for report (includes question details from JOIN)
     const allResponses = (await getPMMResponsesQuery(
       cycleId,
       req.organizationId!,
+      transaction,
     )) as IPMMResponseWithQuestion[];
 
     // Get user info for report

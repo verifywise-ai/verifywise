@@ -95,9 +95,15 @@ describe("getContextSnapshotQuery risk counts", () => {
 
     await getContextSnapshotQuery(1, 10);
 
-    const [, , modelSql, modelRiskSql, , vendorRiskSql] = mockQuery.mock.calls.map((c) =>
-      String(c[0]),
-    );
+    const sqls = mockQuery.mock.calls.map((c) => String(c[0]));
+    const find = (pattern: RegExp): string => {
+      const sql = sqls.find((q) => pattern.test(q));
+      if (!sql) throw new Error(`no snapshot query matches ${pattern}`);
+      return sql;
+    };
+    const modelSql = find(/COUNT\(DISTINCT mi\.id\)/);
+    const modelRiskSql = find(/FROM model_risks/);
+    const vendorRiskSql = find(/FROM vendorrisks/);
     for (const sql of [modelSql, modelRiskSql]) {
       expect(sql).toContain("JOIN model_inventories_projects_frameworks mpf");
       expect(sql).toContain("mpf.project_id = :projectId");
