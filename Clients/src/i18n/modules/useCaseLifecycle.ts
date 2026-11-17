@@ -2,6 +2,11 @@
 // Spread into ../translations.ts.
 
 export const de: Record<string, string> = {
+  // Use case approval before going live (audit decision 2)
+  "Approve this use case before marking it as live. Its last approval request was rejected.":
+    "Geben Sie diesen Anwendungsfall frei, bevor Sie ihn als live markieren. Seine letzte Freigabeanfrage wurde abgelehnt.",
+  "Approve this use case before marking it as live.":
+    "Geben Sie diesen Anwendungsfall frei, bevor Sie ihn als live markieren.",
   // AI app requests in In review, approval before going live (#5193)
   "Intake requests and AI apps waiting for an approval decision":
     "Intake-Anfragen und KI-Apps, die auf eine Freigabeentscheidung warten",
@@ -146,6 +151,11 @@ export const de: Record<string, string> = {
 };
 
 export const fr: Record<string, string> = {
+  // Use case approval before going live (audit decision 2)
+  "Approve this use case before marking it as live. Its last approval request was rejected.":
+    "Approuvez ce cas d'usage avant de le marquer comme en service. Sa dernière demande d'approbation a été refusée.",
+  "Approve this use case before marking it as live.":
+    "Approuvez ce cas d'usage avant de le marquer comme en service.",
   // AI app requests in In review, approval before going live (#5193)
   "Intake requests and AI apps waiting for an approval decision":
     "Demandes d'intake et applications IA en attente d'une décision d'approbation",
@@ -293,6 +303,11 @@ export const fr: Record<string, string> = {
 };
 
 export const es: Record<string, string> = {
+  // Use case approval before going live (audit decision 2)
+  "Approve this use case before marking it as live. Its last approval request was rejected.":
+    "Apruebe este caso de uso antes de marcarlo como en producción. Su última solicitud de aprobación fue rechazada.",
+  "Approve this use case before marking it as live.":
+    "Apruebe este caso de uso antes de marcarlo como en producción.",
   // AI app requests in In review, approval before going live (#5193)
   "Intake requests and AI apps waiting for an approval decision":
     "Solicitudes de intake y apps de IA a la espera de una decisión de aprobación",

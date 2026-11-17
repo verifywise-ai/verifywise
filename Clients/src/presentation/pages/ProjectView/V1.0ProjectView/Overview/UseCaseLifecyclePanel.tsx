@@ -70,6 +70,15 @@ const UseCaseLifecyclePanel = ({
         retiredAt={project.retired_at}
         canManage={canManage}
         isStale={!!summary?.stale_ids.includes(project.id)}
+        goLiveBlockedReason={
+          // The server refuses go-live while the latest approval request is
+          // pending or rejected (audit decision 2).
+          project.approval_status === "rejected"
+            ? "Approve this use case before marking it as live. Its last approval request was rejected."
+            : project.approval_status === "pending"
+              ? "Approve this use case before marking it as live."
+              : undefined
+        }
         goLive={goLive}
         retire={retire}
         confirm={confirm}

@@ -1540,5 +1540,6 @@
   "The selected approval workflow has no steps": "Le workflow d'approbation sélectionné n'a aucune étape",
   "Every step of the selected approval workflow needs an approver": "Chaque étape du workflow d'approbation sélectionné doit avoir un approbateur",
   "Only an approval workflow admin can change the workflow while its approval is pending or rejected": "Seul un administrateur des workflows d'approbation peut modifier le workflow tant que l'approbation est en attente ou refusée",
-  "Framework {id} can't be used for this kind of use case": "Le framework {id} ne peut pas être utilisé pour ce type de cas d'usage"
+  "Framework {id} can't be used for this kind of use case": "Le framework {id} ne peut pas être utilisé pour ce type de cas d'usage",
+  "Approve this use case before marking it as live": "Approuvez ce cas d'usage avant de le marquer comme en service"
 }

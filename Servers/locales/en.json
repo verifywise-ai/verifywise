@@ -1540,5 +1540,6 @@
   "The selected approval workflow has no steps": "The selected approval workflow has no steps",
   "Every step of the selected approval workflow needs an approver": "Every step of the selected approval workflow needs an approver",
   "Only an approval workflow admin can change the workflow while its approval is pending or rejected": "Only an approval workflow admin can change the workflow while its approval is pending or rejected",
-  "Framework {id} can't be used for this kind of use case": "Framework {id} can't be used for this kind of use case"
+  "Framework {id} can't be used for this kind of use case": "Framework {id} can't be used for this kind of use case",
+  "Approve this use case before marking it as live": "Approve this use case before marking it as live"
 }

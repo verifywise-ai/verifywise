@@ -131,4 +131,33 @@ describe("UseCaseLifecyclePanel", () => {
     expect(screen.queryByTestId("lifecycle-confirm-btn")).toBeNull();
     expect(screen.queryByTestId("lifecycle-retire-btn")).toBeNull();
   });
+
+  // The server refuses go-live while the approval is rejected (or pending).
+  it("keeps a rejected use case from going live and says why", () => {
+    renderWithProviders(
+      <UseCaseLifecyclePanel project={project({ approval_status: "rejected" })} />,
+    );
+    expect(screen.getByTestId("lifecycle-go-live-btn")).toBeDisabled();
+    expect(
+      screen.getByText(
+        "Approve this use case before marking it as live. Its last approval request was rejected.",
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it("keeps a use case with a pending approval from going live", () => {
+    renderWithProviders(
+      <UseCaseLifecyclePanel project={project({ approval_status: "pending" })} />,
+    );
+    expect(screen.getByTestId("lifecycle-go-live-btn")).toBeDisabled();
+    expect(
+      screen.getByText("Approve this use case before marking it as live."),
+    ).toBeInTheDocument();
+  });
+
+  it("lets a use case with no open or rejected approval go live", () => {
+    renderWithProviders(<UseCaseLifecyclePanel project={project({ approval_status: null })} />);
+    expect(screen.getByTestId("lifecycle-go-live-btn")).toBeEnabled();
+    expect(screen.queryByText(/Approve this use case before marking it as live/)).toBeNull();
+  });
 });
