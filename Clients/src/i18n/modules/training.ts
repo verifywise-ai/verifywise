@@ -39,7 +39,6 @@ export const de: Record<string, string> = {
   "Failed to load evidence details. Please try again.":
     "Nachweisdetails konnten nicht geladen werden. Bitte versuchen Sie es erneut.",
   "Mapped trainings": "Zugeordnete Schulungen",
-  "Quarter (year)": "Quartal (Jahr)",
   "This evidence has no file attached to preview.":
     "Diesem Nachweis ist keine Datei zur Vorschau angehängt.",
   "Training Evidence Hub": "Schulungsnachweiszentrale",
@@ -119,7 +118,6 @@ export const fr: Record<string, string> = {
   "Failed to load evidence details. Please try again.":
     "Échec du chargement des détails de la preuve. Veuillez réessayer.",
   "Mapped trainings": "Formations associées",
-  "Quarter (year)": "Trimestre (année)",
   "This evidence has no file attached to preview.":
     "Aucun fichier n'est attaché à cette preuve pour l'aperçu.",
   "Training Evidence Hub": "Centre de preuves de formation",
@@ -199,7 +197,6 @@ export const es: Record<string, string> = {
   "Failed to load evidence details. Please try again.":
     "No se pudieron cargar los detalles de la evidencia. Inténtalo de nuevo.",
   "Mapped trainings": "Formaciones asignadas",
-  "Quarter (year)": "Trimestre (año)",
   "This evidence has no file attached to preview.":
     "Esta evidencia no tiene ningún archivo adjunto para previsualizar.",
   "Training Evidence Hub": "Centro de evidencias de formación",
