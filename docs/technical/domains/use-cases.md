@@ -41,7 +41,7 @@ projects
 ├── goal
 ├── target_industry
 ├── description
-├── last_updated             # Set by the server on every update, never from the body
+├── last_updated             # Set by the server on every update of a project column, never from the body
 ├── last_updated_by (FK → users)  # The acting user; NULL for a system write
 ├── is_demo                  # Demo/test project flag
 ├── created_at
@@ -332,16 +332,16 @@ The caller needs the `useCase.edit` permission and must be able to see the use c
 ### Processing
 
 1. Get current project state
-2. Stamp `last_updated` (now) and `last_updated_by` (the caller), replacing any body values
+2. Drop any body `last_updated*`; when the body writes a project column, stamp `last_updated` (now) and `last_updated_by` (the caller)
 3. Compare member lists (old vs new)
 4. Add new members, remove deleted members
 5. Notify newly added members via email
 6. Record the changes in change history
-7. Trigger `project_updated` automation
+7. Trigger `project_updated` automation (only when a project column was written)
 
 A field missing from the body is left as it is, so a partial update never clears a value it does not send.
 
-**Last updated.** `updateUseCaseService` (`services/useCase.service.ts`) sets `last_updated` and `last_updated_by` on every update, on `PATCH /api/projects/:id` and `PATCH /api/v1/projects/:id` alike, and drops body values. The MCP `update_use_case` tool goes through the same service. The other writers stamp them too: `PATCH /api/projects/:id/status`, the EU AI Act classification (`setUseCaseClassificationQuery`) and the advisor's `agent_update_use_case` and `agent_update_use_case_status` (the requester, else the approver, else NULL). The Jira Assets sync sets only `last_updated`. Create sets both on the server, never from the body (the advisor's `agent_create_use_case` sets only `last_updated`).
+**Last updated.** `updateUseCaseService` (`services/useCase.service.ts`) sets `last_updated` and `last_updated_by` on every update that writes a project column, on `PATCH /api/projects/:id` and `PATCH /api/v1/projects/:id` alike, and drops body values. A members-only update (`hasProjectColumnUpdate` in `utils/project.utils.ts` is false) is not stamped and does not fire the `project_updated` automation. The MCP `update_use_case` tool goes through the same service. The other writers stamp them too: `PATCH /api/projects/:id/status`, the EU AI Act classification (`setUseCaseClassificationQuery`) and the advisor's `agent_update_use_case` and `agent_update_use_case_status` (the requester, else the approver, else NULL). The Jira Assets sync sets only `last_updated`. Create sets both on the server, never from the body (the advisor's `agent_create_use_case` sets only `last_updated`).
 
 **The Settings form sends only what changed** (`changedProjectFields` in `ProjectView/ProjectSettings`). It compares the form with the use case as loaded and leaves out unchanged fields, the fields it does not show (the AI risk classification and high-risk roles while EU AI Act is not selected), `last_updated*` and the frameworks, which are added and removed through `/frameworks/toProject` and `/frameworks/fromProject` as soon as they are picked. A use case classified by intake, MCP or the API therefore keeps its level and roles. The classification list offers every server level: Prohibited, High risk, Limited risk, Minimal risk, GPAI, General risk (stored as `General Risk`) and Out of scope.
 

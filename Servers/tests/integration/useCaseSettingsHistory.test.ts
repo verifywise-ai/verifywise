@@ -3,7 +3,13 @@ jest.setTimeout(60000);
 jest.mock("../../services/notificationService", () => ({
   notificationService: { sendEmailWithTemplate: jest.fn().mockResolvedValue(undefined) },
 }));
+const mockEnqueue = jest.fn();
+jest.mock("../../services/automations/automationProducer", () => ({
+  ...jest.requireActual("../../services/automations/automationProducer"),
+  enqueueAutomationAction: (...args: unknown[]) => mockEnqueue(...args),
+}));
 
+import { QueryTypes } from "sequelize";
 import { sequelize } from "../../database/db";
 import { cleanupDatabase, createTestOrganization, createTestUser } from "./helpers";
 import { createTestApp, testRequest } from "./setup";
@@ -65,7 +71,39 @@ async function classifiedUseCase(orgId: number, ownerId: number): Promise<number
   return id;
 }
 
+async function activateProjectUpdatedAutomation(orgId: number) {
+  const [trigger] = await sequelize.query<{ id: number }>(
+    `SELECT id FROM automation_triggers WHERE key = 'project_updated'`,
+    { type: QueryTypes.SELECT },
+  );
+  const [action] = await sequelize.query<{ id: number }>(
+    `SELECT id FROM automation_actions ORDER BY id LIMIT 1`,
+    { type: QueryTypes.SELECT },
+  );
+  const [automation] = await sequelize.query<{ id: number }>(
+    `INSERT INTO automations (organization_id, name, trigger_id, is_active)
+     VALUES (:orgId, 'Use case updated', :triggerId, true) RETURNING id`,
+    { replacements: { orgId, triggerId: trigger.id }, type: QueryTypes.SELECT },
+  );
+  await sequelize.query(
+    `INSERT INTO automation_actions_data (organization_id, automation_id, action_type_id, params, "order")
+     VALUES (:orgId, :automationId, :actionId, :params, 1)`,
+    {
+      replacements: {
+        orgId,
+        automationId: automation.id,
+        actionId: action.id,
+        params: JSON.stringify({ subject: "Use case updated", body: "Updated" }),
+      },
+    },
+  );
+}
+
 describe("use case Settings saves", () => {
+  beforeEach(() => {
+    mockEnqueue.mockReset();
+  });
+
   afterEach(async () => {
     await cleanupDatabase();
   });
@@ -162,6 +200,34 @@ describe("use case Settings saves", () => {
       expect(new Date(stored.last_updated).getTime()).toBeGreaterThanOrEqual(before - 1000);
     },
   );
+
+  it("does not stamp or fire the project-updated automation for a members-only update", async () => {
+    const orgId = await createTestOrganization();
+    const adminId = await user(orgId);
+    const memberId = await user(orgId, 3);
+    const id = await classifiedUseCase(orgId, adminId);
+    await sequelize.query(
+      `UPDATE projects SET last_updated = '2001-01-01T00:00:00Z', last_updated_by = :adminId
+        WHERE id = :id`,
+      { replacements: { id, adminId } },
+    );
+    await activateProjectUpdatedAutomation(orgId);
+    const api = await apiAs(orgId, adminId);
+
+    await api
+      .patch(`/api/v1/projects/${id}`)
+      .send({ members: [memberId] })
+      .expect(202);
+
+    const stored = await row(id);
+    expect(new Date(stored.last_updated).toISOString()).toBe("2001-01-01T00:00:00.000Z");
+    expect(mockEnqueue).not.toHaveBeenCalled();
+
+    // A real column change does stamp and fire it.
+    await api.patch(`/api/v1/projects/${id}`).send({ goal: "Changed" }).expect(202);
+    expect(new Date((await row(id)).last_updated).getFullYear()).toBeGreaterThan(2001);
+    expect(mockEnqueue).toHaveBeenCalledTimes(1);
+  });
 
   it("returns the user who last updated the use case from stats", async () => {
     const orgId = await createTestOrganization();
