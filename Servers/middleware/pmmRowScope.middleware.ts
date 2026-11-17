@@ -9,7 +9,7 @@
 import { NextFunction, Request, Response } from "express";
 import { STATUS_CODE } from "../utils/statusCode.utils";
 import { requireAccessToUseCases } from "./projectAccess.middleware";
-import { toId } from "../utils/validations/validation.utils";
+import { toStrictId } from "../utils/validations/validation.utils";
 import {
   questionsBelongToPmmCycleQuery,
   useCasesOfPmmQuestionsQuery,
@@ -21,7 +21,7 @@ import {
  * send none, or null).
  */
 export const pinPmmConfigFromPath = (req: Request, _res: Response, next: NextFunction) => {
-  req.body = { ...(req.body ?? {}), config_id: toId(req.params.configId) };
+  req.body = { ...(req.body ?? {}), config_id: toStrictId(req.params.configId) };
   next();
 };
 
@@ -39,7 +39,7 @@ const questionIdsOf = (body: any): unknown[] => {
 export const requirePmmCycleQuestions = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const ok = await questionsBelongToPmmCycleQuery(
-      toId(req.params.cycleId),
+      toStrictId(req.params.cycleId),
       questionIdsOf(req.body),
       req.organizationId!,
     );

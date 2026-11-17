@@ -325,6 +325,22 @@ describe("intake submissions in the In review tab", () => {
       expect(Number(all.body.data.total)).toBe(2);
     });
 
+    it.each([
+      ["exponent", (id: number) => `${id}e0`],
+      ["hex", (id: number) => `0x${id.toString(16)}`],
+      ["leading space", (id: number) => `%20${id}`],
+    ])("answers 400 for an id in %s form, never someone else's submission", async (_f, form) => {
+      const { viewer, theirs } = await seed();
+      for (const url of [
+        `/api/intake/submissions/${form(theirs)}`,
+        `/api/intake/submissions/${form(theirs)}/preview`,
+        `/api/v1/intake-submissions/${form(theirs)}/preview`,
+        `/api/v1/intake-tier-suggestion/submissions/${form(theirs)}`,
+      ]) {
+        expect([url, (await viewer.api.get(url)).status]).toEqual([url, 400]);
+      }
+    });
+
     it("GET /api/intake/submissions/:id opens anyone's submission for an Editor", async () => {
       const { editor, theirs } = await seed();
       expect((await editor.api.get(`/api/intake/submissions/${theirs}`)).status).toBe(200);

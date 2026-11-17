@@ -8,7 +8,7 @@ import {
   type ProjectAccess,
 } from "../utils/project.utils";
 import { seesAllProjects } from "../utils/projectVisibility.utils";
-import { toId } from "../utils/validations/validation.utils";
+import { toStrictId } from "../utils/validations/validation.utils";
 
 const FILE = "projectAccess.middleware.ts";
 
@@ -120,8 +120,10 @@ const buildGuard = (
     if (optional && raw === undefined) return next();
 
     const eventType = eventTypeFor(req.method);
-    const id = toId(raw);
-    if (!Number.isSafeInteger(id) || id <= 0) {
+    // Strict: an id the handler might parse differently (" 1", "1e0", "0x1")
+    // is refused here, never passed on unchecked.
+    const id = toStrictId(raw);
+    if (Number.isNaN(id)) {
       return res.status(400).json(STATUS_CODE[400](req.t!(invalidIdMessage)));
     }
 

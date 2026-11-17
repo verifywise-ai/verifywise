@@ -10,7 +10,7 @@ import { NextFunction, Request, Response } from "express";
 import { STATUS_CODE } from "../utils/statusCode.utils";
 import { requestHasPermission } from "../utils/rolePermissions.utils";
 import { isOwnSubmissionQuery } from "../utils/intakeForm.utils";
-import { toId } from "../utils/validations/validation.utils";
+import { toStrictId } from "../utils/validations/validation.utils";
 
 /**
  * The submitter a submission list or count is limited to: undefined for an
@@ -26,11 +26,16 @@ export const requireOwnSubmissionOrIntakeManager = async (
   next: NextFunction,
 ) => {
   try {
+    // Strict for everyone: an id the handler might parse differently
+    // (" 1", "1e0", "0x1") is a 400, never passed on unchecked. The parsed id
+    // is kept for the handler.
+    const submissionId = toStrictId(req.params.id);
+    if (Number.isNaN(submissionId)) {
+      return res.status(400).json(STATUS_CODE[400](req.t!("Invalid submission ID")));
+    }
+    res.locals.submissionId = submissionId;
     const submitter = await submitterScope(req);
     if (submitter === undefined) return next();
-    const submissionId = toId(req.params.id);
-    // A malformed id is left to the handler's own 400.
-    if (!Number.isSafeInteger(submissionId) || submissionId <= 0) return next();
     if (await isOwnSubmissionQuery(submissionId, submitter, req.organizationId!)) {
       return next();
     }

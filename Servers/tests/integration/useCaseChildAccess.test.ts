@@ -622,6 +622,21 @@ describe("use case access on routes keyed by a child id (U-H4)", () => {
     });
   });
 
+  describe("ids the guard cannot parse strictly", () => {
+    it.each([
+      ["exponent", (id: number) => `${id}e0`],
+      ["hex", (id: number) => `0x${id.toString(16)}`],
+      ["leading space", (id: number) => `%20${id}`],
+    ])("answers 400 for a %s id, on a child route and a use case route", async (_f, form) => {
+      const projectId = await createTestProject(orgId, ownerId);
+      const { fria: friaId } = await fria(orgId, projectId);
+      const api = await apiAs(orgId, await user(orgId, "Editor"), "Editor");
+
+      expect((await api.get(`/api/fria/${form(friaId)}/risk-items`)).status).toBe(400);
+      expect((await api.get(`/api/projects/${form(projectId)}`)).status).toBe(400);
+    });
+  });
+
   describe("requirement change history outlives its row", () => {
     it("is refused to a non-Admin once the control is deleted, and still open to an Admin", async () => {
       const projectId = await createTestProject(orgId, ownerId);

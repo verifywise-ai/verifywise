@@ -121,7 +121,7 @@ import {
   buildEntityDataFromSubmission,
   rescoreStoredRun,
 } from "../utils/intakeSubmissionData.utils";
-import { toId } from "../utils/validations/validation.utils";
+import { toId, toStrictId } from "../utils/validations/validation.utils";
 import { isEmail } from "../utils/validations/email.utils";
 import { isWebUrl } from "../utils/validations/url.utils";
 import {
@@ -1709,7 +1709,7 @@ export async function getFormSubmissions(req: Request, res: Response) {
  * Get submission by ID
  */
 export async function getSubmissionById(req: Request, res: Response) {
-  const submissionId = parseId(req.params.id);
+  const submissionId = toStrictId(paramStr(req.params.id));
   if (isNaN(submissionId)) {
     return res.status(400).json(STATUS_CODE[400](req.t!("Invalid submission ID")));
   }
@@ -1843,7 +1843,7 @@ async function submissionPreview(
   res: Response,
   { withCustomFields }: { withCustomFields: boolean },
 ) {
-  const submissionId = parseId(req.params.id);
+  const submissionId = toStrictId(paramStr(req.params.id));
   if (isNaN(submissionId)) {
     return res.status(400).json(STATUS_CODE[400](req.t!("Invalid submission ID")));
   }
