@@ -27,8 +27,7 @@ To use the MitigationSection component, import it and pass the required props:
 import MitigationSection from "./MitigationSection";
 
 const [mitigationValues, setMitigationValues] =
-  useState <
-  MitigationFormValues >
+  (useState < MitigationFormValues) >
   {
     mitigationStatus: 0,
     currentRiskLevel: 0,
@@ -43,7 +42,7 @@ const [mitigationValues, setMitigationValues] =
     recommendations: "",
   };
 
-const [mitigationErrors, setMitigationErrors] = useState < MitigationFormErrors > {};
+const [mitigationErrors, setMitigationErrors] = (useState < MitigationFormErrors) > {};
 
 return (
   <MitigationSection
