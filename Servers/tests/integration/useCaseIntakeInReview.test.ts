@@ -283,6 +283,63 @@ describe("intake submissions in the In review tab", () => {
     });
   });
 
+  describe("submissions read by id or by form follow the same rule", () => {
+    const seed = async () => {
+      const { orgId, formId } = await seedOrg("Admin");
+      const viewer = await seedUser(orgId, "Auditor");
+      const editor = await seedUser(orgId, "Editor");
+      const mine = await submission(orgId, formId, { submitterEmail: viewer.email });
+      const theirs = await submission(orgId, formId, { submitterEmail: "someone@else.test" });
+      return { orgId, formId, viewer, editor, mine, theirs };
+    };
+
+    it.each([
+      ["/api/intake/submissions/:id", (id: number) => `/api/intake/submissions/${id}`],
+      [
+        "/api/intake/submissions/:id/preview",
+        (id: number) => `/api/intake/submissions/${id}/preview`,
+      ],
+      [
+        "/api/v1/intake-submissions/:id/preview",
+        (id: number) => `/api/v1/intake-submissions/${id}/preview`,
+      ],
+    ])("GET %s answers 404 for someone else's submission and opens one's own", async (_l, url) => {
+      const { viewer, mine, theirs } = await seed();
+      expect((await viewer.api.get(url(theirs))).status).toBe(404);
+      expect((await viewer.api.get(url(mine))).status).toBe(200);
+    });
+
+    it("GET /api/intake/submissions/:id opens anyone's submission for an Editor", async () => {
+      const { editor, theirs } = await seed();
+      expect((await editor.api.get(`/api/intake/submissions/${theirs}`)).status).toBe(200);
+    });
+
+    it("GET /api/intake/forms/:id/submissions lists only the caller's own without intakeForm.edit", async () => {
+      const { viewer, editor, formId, mine, theirs } = await seed();
+      const own = await viewer.api.get(`/api/intake/forms/${formId}/submissions`);
+      expect(own.status).toBe(200);
+      expect(own.body.data.map((r: any) => r.id)).toEqual([mine]);
+      const all = await editor.api.get(`/api/intake/forms/${formId}/submissions`);
+      expect(all.body.data.map((r: any) => r.id).sort()).toEqual([mine, theirs].sort());
+    });
+
+    it("GET /api/intake/submissions/by-entity answers 404 for someone else's submission", async () => {
+      const { orgId, userId, formId } = await seedOrg("Admin");
+      const viewer = await seedUser(orgId, "Auditor");
+      const editor = await seedUser(orgId, "Editor");
+      const project = await createTestProject(orgId, userId);
+      await submission(orgId, formId, {
+        status: "approved",
+        entityId: project,
+        submitterEmail: "someone@else.test",
+      });
+      const url = `/api/intake/submissions/by-entity/use_case/${project}`;
+
+      expect((await viewer.api.get(url)).status).toBe(404);
+      expect((await editor.api.get(url)).status).toBe(200);
+    });
+  });
+
   it("dates a resubmission from the first submission of its chain", async () => {
     const { orgId, formId, api } = await seedOrg();
     const first = await submission(orgId, formId, {

@@ -11,6 +11,7 @@ import {
   deleteIntakeFormQuery,
   archiveIntakeFormQuery,
   getPendingSubmissionsQuery,
+  isOwnSubmissionQuery,
   getSubmissionByIdQuery,
   getSubmissionsByFormIdQuery,
   createSubmissionQuery,
@@ -1682,7 +1683,16 @@ export async function getFormSubmissions(req: Request, res: Response) {
   });
 
   try {
-    const submissions = await getSubmissionsByFormIdQuery(formId, req.organizationId!, status);
+    // Decision 5: intake managers see every submission, others their own.
+    const seesAll = await requestHasPermission(req, "intakeForm.edit");
+    const submissions = await getSubmissionsByFormIdQuery(
+      formId,
+      req.organizationId!,
+      status,
+      undefined,
+      undefined,
+      seesAll ? undefined : req.userId!,
+    );
     return res.status(200).json(STATUS_CODE[200](submissions));
   } catch (error) {
     await logFailure({
@@ -1990,6 +2000,18 @@ export async function getSubmissionByEntity(req: Request, res: Response) {
 
   try {
     const result = await getSubmissionByEntityQuery(entityType, entityId, req.organizationId!);
+
+    // Decision 5: someone else's submission reads as none, unless the caller
+    // manages intake.
+    if (
+      result &&
+      !(await requestHasPermission(req, "intakeForm.edit")) &&
+      !(await isOwnSubmissionQuery(result.submission.id!, req.userId!, req.organizationId!))
+    ) {
+      return res
+        .status(404)
+        .json(STATUS_CODE[404](req.t!("No intake submission found for this entity")));
+    }
 
     if (!result) {
       return res

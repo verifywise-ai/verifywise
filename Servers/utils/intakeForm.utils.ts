@@ -428,12 +428,23 @@ export const getSubmissionsByFormIdQuery = async (
   status?: IntakeSubmissionStatus,
   limit: number = 200,
   offset: number = 0,
+  submittedBy?: number,
 ): Promise<IIntakeSubmission[]> => {
+  // `submittedBy` keeps only that user's own submissions (a caller without
+  // intakeForm.edit); undefined lists the form's every submission.
   let query = `SELECT ${SUBMISSION_SELECT_COLUMNS}
-  FROM intake_submissions
-  WHERE organization_id = :organizationId AND form_id = :formId`;
+  FROM intake_submissions s
+  WHERE organization_id = :organizationId AND form_id = :formId${
+    submittedBy === undefined ? "" : submittedBySql("s")
+  }`;
 
-  const replacements: Record<string, unknown> = { organizationId, formId, limit, offset };
+  const replacements: Record<string, unknown> = {
+    organizationId,
+    formId,
+    limit,
+    offset,
+    ...(submittedBy === undefined ? {} : { submittedBy }),
+  };
 
   if (status) {
     query += " AND status = :status";
@@ -462,6 +473,23 @@ export const getSubmissionsByFormIdQuery = async (
 export const submittedBySql = (alias: string): string =>
   ` AND LOWER(TRIM(${alias}.submitter_email)) =
       (SELECT LOWER(TRIM(u.email)) FROM users u WHERE u.id = :submittedBy)`;
+
+/** Whether this submission was sent from the email address of user `userId`. */
+export const isOwnSubmissionQuery = async (
+  submissionId: number,
+  userId: number,
+  organizationId: number,
+): Promise<boolean> => {
+  const rows = await sequelize.query(
+    `SELECT 1 FROM intake_submissions s
+      WHERE s.organization_id = :organizationId AND s.id = :submissionId${submittedBySql("s")}`,
+    {
+      replacements: { organizationId, submissionId, submittedBy: userId },
+      type: QueryTypes.SELECT,
+    },
+  );
+  return rows.length > 0;
+};
 
 /**
  * Submissions for the Intake screen, newest first. `submittedBy` keeps only
