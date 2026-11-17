@@ -29,6 +29,7 @@ import Alert from "./presentation/components/Alert";
 import useUsers from "./application/hooks/useUsers";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { useLocation, useNavigate } from "react-router";
+import { ensureI18nModulesForPath } from "./i18n/domTranslator";
 import { clearChunkReloadFlag } from "./application/utils/deploymentHelpers";
 import ChunkErrorBoundary from "./presentation/components/ChunkErrorBoundary";
 import { CommandPalette } from "./presentation/components/CommandPalette";
@@ -176,6 +177,12 @@ function App() {
       setShowAlertCallback(() => {});
     };
   }, []);
+
+  // Non-English languages load only the dictionary modules for this route
+  // (plus shared chrome). English needs no dictionary chunks.
+  useEffect(() => {
+    void ensureI18nModulesForPath(location.pathname);
+  }, [location.pathname]);
 
   useEffect(() => {
     if (userPreferences) {
