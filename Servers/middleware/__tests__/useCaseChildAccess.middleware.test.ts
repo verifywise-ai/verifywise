@@ -9,7 +9,7 @@ jest.mock("../../utils/logger/logHelper", () => ({
   logFailure: jest.fn(),
 }));
 
-import { requireUseCaseAccessVia } from "../projectAccess.middleware";
+import { checkedUseCaseId, requireUseCaseAccessVia } from "../projectAccess.middleware";
 import { getProjectAccessQuery, getProjectReadAccessQuery } from "../../utils/project.utils";
 import { logFailure } from "../../utils/logger/logHelper";
 
@@ -32,7 +32,7 @@ function createReq(overrides: Record<string, unknown> = {}): Request {
 }
 
 function createRes(): Response {
-  const res: Partial<Response> = {};
+  const res: Partial<Response> = { locals: {} };
   res.status = jest.fn().mockReturnValue(res) as unknown as Response["status"];
   res.json = jest.fn().mockReturnValue(res) as unknown as Response["json"];
   return res as Response;
@@ -58,6 +58,24 @@ describe("requireUseCaseAccessVia", () => {
     expect(resolve).toHaveBeenCalledWith(40, 3, req);
     expect(readAccessQuery).toHaveBeenCalledWith(12, { userId: 7, role: "Editor" }, 3);
     expect(next).toHaveBeenCalledTimes(1);
+  });
+
+  it("records the use case it checked for the handler", async () => {
+    readAccessQuery.mockResolvedValue("allowed");
+    const res = createRes();
+
+    await requireUseCaseAccessVia(resolve)(createReq(), res, next);
+
+    expect(checkedUseCaseId(res)).toBe(12);
+  });
+
+  it("records nothing for a child that is not found", async () => {
+    resolve.mockResolvedValue(null);
+    const res = createRes();
+
+    await requireUseCaseAccessVia(resolve)(createReq(), res, next);
+
+    expect(checkedUseCaseId(res)).toBeUndefined();
   });
 
   it("applies the write rule to a write", async () => {

@@ -10,9 +10,9 @@ import {
   getEvidenceFilesForEntity,
   getEvidenceFilesForEntityTypes,
   createFileEntityLink,
-  deleteFileEntityLinkById,
 } from "../utils/files/evidenceFiles.utils";
 import {
+  deleteFriaEvidenceLinkQuery,
   getFriaByProjectIdQuery,
   getFriaByIdQuery,
   createFriaQuery,
@@ -526,7 +526,10 @@ export async function deleteRiskItem(req: Request, res: Response): Promise<Respo
       return res.status(400).json(STATUS_CODE[400](req.t!("Invalid item ID")));
     }
 
-    await deleteFriaRiskItemQuery(itemId, organizationId, undefined, friaId);
+    // Only an item of this FRIA: another FRIA's item id removes nothing.
+    if (!(await deleteFriaRiskItemQuery(itemId, organizationId, undefined, friaId))) {
+      return res.status(404).json(STATUS_CODE[404](req.t!("Risk item not found")));
+    }
 
     await recomputeAndPersistScore(friaId, organizationId, userId);
 
@@ -1067,7 +1070,7 @@ export async function unlinkFriaEvidence(req: Request, res: Response): Promise<R
       return res.status(400).json(STATUS_CODE[400](req.t!("Invalid link ID")));
     }
 
-    const deleted = await deleteFileEntityLinkById(linkId, organizationId);
+    const deleted = await deleteFriaEvidenceLinkQuery(linkId, friaId, organizationId);
 
     if (!deleted) {
       return res.status(404).json(STATUS_CODE[404](req.t!("Evidence link not found")));

@@ -114,6 +114,9 @@ const buildGuard = (
           : await accessQuery(projectId, { userId, role }, organizationId);
 
       if (result === "denied") return await refuse("no access to");
+      // The use case checked, for handlers that need its id: they use this,
+      // never a project_id from the body.
+      if (result === "allowed") res.locals.useCaseId = projectId;
       if (result === "not_found") {
         if (missing === "seesAll" && !seesAllProjects(role)) return await refuse("no use case for");
         if (missing === "refuseWrites" && req.method !== "GET") {
@@ -188,3 +191,12 @@ export const requireUseCaseAccessVia = (
     "requireUseCaseAccessVia",
     "Invalid ID",
   );
+
+/**
+ * The use case the guard on this route checked and allowed, or undefined
+ * when no guard ran or the row was not found (the handler then answers 404).
+ */
+export const checkedUseCaseId = (res: Response): number | undefined => {
+  const id = res.locals?.useCaseId;
+  return typeof id === "number" ? id : undefined;
+};
