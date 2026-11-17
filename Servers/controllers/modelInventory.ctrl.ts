@@ -777,6 +777,7 @@ export async function deleteModelInventoryById(req: Request, res: Response) {
       deleteRisks,
       req.organizationId!,
       transaction,
+      req.userId ?? null,
     );
     await transaction.commit();
 

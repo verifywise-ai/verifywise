@@ -10,6 +10,7 @@ import {
 } from "./automation/modelInventory.automation.utils";
 import { IModelInventoryProjectFramework } from "../domain.layer/interfaces/i.modelInventoryProjectFramework";
 import { recordSnapshotIfChanged } from "./history/modelInventoryHistory.utils";
+import { releaseModelRisksOfModelQuery } from "./modelRisk.utils";
 import {
   assertOrganizationMember,
   assertUseCaseWriteAccess,
@@ -564,23 +565,29 @@ export const updateModelInventoryByIdQuery = async (
   }
 };
 
+/**
+ * Deletes a model. Its risks are never deleted with it: with `deleteRisks`
+ * they are archived (as a model risk delete does), otherwise they stay, with
+ * no model.
+ *
+ * `changedByUserId` is who the model risks' change history names; null
+ * (AI Advisor) records it as the system's.
+ */
 export const deleteModelInventoryByIdQuery = async (
   id: number,
   deleteRisks: boolean,
   organizationId: number,
   transaction: Transaction,
+  changedByUserId: number | null = null,
 ) => {
   try {
-    if (deleteRisks) {
-      // Delete associated model risks first
-      await sequelize.query(
-        `DELETE FROM model_risks WHERE organization_id = :organization_id AND model_id = :id`,
-        {
-          replacements: { organization_id: organizationId, id },
-          transaction,
-        },
-      );
-    }
+    await releaseModelRisksOfModelQuery(
+      id,
+      deleteRisks,
+      organizationId,
+      changedByUserId,
+      transaction,
+    );
 
     await deleteAllCustomFieldValuesForEntityQuery(
       "model_inventory",
