@@ -1,6 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { estimateProgress, readExpectedMs, recordRunMs, remainingLabel } from "../estimate";
-import { FILLER_LINES, FIRST_LINE_DELAY_MS, LINES, STEP_MS, lineIndexAt } from "../committee";
+import { EXPECTED_MS, estimateProgress, remainingLabel } from "../estimate";
+import {
+  CAST,
+  FILLER_LINES,
+  FIRST_LINE_DELAY_MS,
+  LINES,
+  ONE_PASS_MS,
+  STEP_MS,
+  lineIndexAt,
+} from "../committee";
 
 const MINUTE = 60_000;
 
@@ -32,13 +40,23 @@ describe("estimateProgress", () => {
 
 describe("remainingLabel", () => {
   it("counts down in fixed phrases", () => {
-    expect(remainingLabel(0, 3 * MINUTE)).toBe("A couple of minutes left");
-    expect(remainingLabel(0, MINUTE)).toBe("About a minute left");
-    expect(remainingLabel(20_000, MINUTE)).toBe("Less than a minute left");
-    expect(remainingLabel(35_000, MINUTE)).toBe("About 30 seconds left");
-    expect(remainingLabel(50_000, MINUTE)).toBe("A few seconds left");
-    expect(remainingLabel(58_000, MINUTE)).toBe("Almost there");
-    expect(remainingLabel(5 * MINUTE, MINUTE)).toBe("Almost there");
+    expect(remainingLabel(0)).toBe("A few seconds left");
+    expect(remainingLabel(EXPECTED_MS - 6_000)).toBe("A few seconds left");
+    expect(remainingLabel(EXPECTED_MS - 4_000)).toBe("Almost there");
+    expect(remainingLabel(5 * MINUTE)).toBe("Almost there");
+  });
+});
+
+describe("expected run time", () => {
+  it("is one pass of the committee, 10 to 15 seconds", () => {
+    expect(EXPECTED_MS).toBe(ONE_PASS_MS);
+    expect(ONE_PASS_MS).toBe(FIRST_LINE_DELAY_MS + CAST.length * STEP_MS);
+    expect(ONE_PASS_MS).toBeGreaterThanOrEqual(10_000);
+    expect(ONE_PASS_MS).toBeLessThanOrEqual(15_000);
+  });
+
+  it("puts the bar at 90% when every animal has spoken once", () => {
+    expect(estimateProgress(ONE_PASS_MS)).toBeCloseTo(0.9, 5);
   });
 });
 
@@ -57,17 +75,5 @@ describe("lineIndexAt", () => {
     for (let step = LINES.length; step < LINES.length * 4; step += 1) {
       expect(at(step)).toBeGreaterThanOrEqual(LINES.length);
     }
-  });
-});
-
-describe("learned run time", () => {
-  it("never expects longer than the request timeout", () => {
-    recordRunMs(10 * MINUTE);
-    expect(readExpectedMs()).toBe(120_000);
-  });
-
-  it("never expects less than 15 seconds", () => {
-    recordRunMs(200);
-    expect(readExpectedMs()).toBe(15_000);
   });
 });

@@ -69,13 +69,14 @@ export const FILLER_LINES: readonly CommitteeLine[] = [
 /** The script followed by the filler; lineIndexAt indexes into this. */
 export const ALL_LINES: readonly CommitteeLine[] = [...LINES, ...FILLER_LINES];
 
-export const FINAL_SPEAKER = "The whole committee";
 export const FINAL_LINE = "All approved. Unanimously, for once.";
 
-/** Time each line stays up. 13 lines fill about a minute. */
-export const STEP_MS = 4600;
+/** Time each line stays up. */
+export const STEP_MS = 3200;
 /** Pause before the first line, while the cast rises into view. */
 export const FIRST_LINE_DELAY_MS = 1200;
+/** One pass: the cast rises and each of the four animals speaks once (about 14 s). */
+export const ONE_PASS_MS = FIRST_LINE_DELAY_MS + CAST.length * STEP_MS;
 
 /**
  * Index into ALL_LINES of the line showing after `elapsedMs`; -1 before the

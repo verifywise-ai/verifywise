@@ -33,7 +33,6 @@ import { useAuth } from "../../../application/hooks/useAuth";
 import { setOnboardingStatus } from "../../../application/redux/auth/authSlice";
 import { brand, text, background, border, accent, radiusPx } from "../../themes/palette";
 import DemoDataLoader from "../DemoDataLoader";
-import { recordRunMs } from "../DemoDataLoader/estimate";
 
 const SETUP_ERROR_MESSAGE =
   "Something went wrong while setting up your workspace. Try again, or skip for now.";
@@ -124,10 +123,8 @@ const SetupModal: React.FC<SetupModalProps> = ({ onComplete, onSkip }) => {
       "demo",
       async () => {
         if (!demoInserted.current) {
-          const startedAt = Date.now();
           await postAutoDrivers();
           demoInserted.current = true;
-          recordRunMs(Date.now() - startedAt);
         }
       },
       () => {

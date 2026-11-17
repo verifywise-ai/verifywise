@@ -13,8 +13,8 @@ import React, { memo, useEffect, useLayoutEffect, useRef, useState } from "react
 import { Box, LinearProgress, Typography, keyframes } from "@mui/material";
 import { CustomizableButton } from "../button/customizable-button";
 import { background, border, brand, radiusPx, text } from "../../themes/palette";
-import { ALL_LINES, CAST, FINAL_LINE, FINAL_SPEAKER, lineIndexAt } from "./committee";
-import { estimateProgress, readExpectedMs, remainingLabel } from "./estimate";
+import { ALL_LINES, CAST, FINAL_LINE, lineIndexAt } from "./committee";
+import { estimateProgress, remainingLabel } from "./estimate";
 
 export type DemoDataLoaderStatus = "running" | "done";
 
@@ -41,7 +41,7 @@ interface StageProps {
 }
 
 /**
- * The floor, the cast and the speech bubble. Memoized: it only changes when
+ * The cast and the speech bubble. Memoized: it only changes when
  * the line does, not on every progress tick.
  */
 const Stage = memo(function Stage({ lineIndex, isDone }: StageProps) {
@@ -98,18 +98,6 @@ const Stage = memo(function Stage({ lineIndex, isDone }: StageProps) {
       aria-hidden="true"
       sx={{ position: "relative", height: { xs: "232px", sm: "268px" }, marginTop: "8px" }}
     >
-      <Box
-        sx={{
-          position: "absolute",
-          left: 0,
-          right: 0,
-          bottom: 0,
-          height: "46px",
-          borderTop: `1px solid ${border.light}`,
-          background: `linear-gradient(to bottom, ${background.alt}, ${brand.primaryLight})`,
-        }}
-      />
-
       {showBubble && (
         <Box
           key={bubbleKey}
@@ -122,7 +110,7 @@ const Stage = memo(function Stage({ lineIndex, isDone }: StageProps) {
             "transform": "translateX(-50%)",
             "width": "max-content",
             "maxWidth": `min(320px, calc(100% - ${BUBBLE_EDGE_PX * 2}px))`,
-            "padding": "10px 14px 11px",
+            "padding": "10px 14px",
             "backgroundColor": background.main,
             "border": `1px solid ${border.light}`,
             "borderRadius": radiusPx.sm,
@@ -144,18 +132,6 @@ const Stage = memo(function Stage({ lineIndex, isDone }: StageProps) {
         >
           <Typography
             component="span"
-            sx={{
-              display: "block",
-              fontSize: 11,
-              fontWeight: 600,
-              color: brand.primary,
-              marginBottom: "2px",
-            }}
-          >
-            {isDone ? FINAL_SPEAKER : CAST[speakerIndex]?.name}
-          </Typography>
-          <Typography
-            component="span"
             sx={{ display: "block", fontSize: 14, lineHeight: 1.45, color: text.primary }}
           >
             {isDone ? FINAL_LINE : line?.text}
@@ -163,7 +139,7 @@ const Stage = memo(function Stage({ lineIndex, isDone }: StageProps) {
         </Box>
       )}
 
-      {/* Cast: each animal stands on the floor line, its name on the floor below it. */}
+      {/* Cast: each animal with its name directly below it. */}
       <Box
         sx={{
           position: "absolute",
@@ -197,7 +173,7 @@ const Stage = memo(function Stage({ lineIndex, isDone }: StageProps) {
                 transition: "opacity 0.35s ease, filter 0.35s ease",
               }}
             >
-              {/* Clips at the floor line so each animal rises up out of the floor. */}
+              {/* Clips at the bottom edge so each animal rises up into view. */}
               <Box
                 sx={{
                   width: "100%",
@@ -275,7 +251,6 @@ const Stage = memo(function Stage({ lineIndex, isDone }: StageProps) {
 const DemoDataLoader: React.FC<DemoDataLoaderProps> = ({ status, onExplore }) => {
   const isDone = status === "done";
   const [startedAt] = useState(() => Date.now());
-  const [expectedMs] = useState(readExpectedMs);
   const [elapsedMs, setElapsedMs] = useState(0);
 
   const rootRef = useRef<HTMLDivElement>(null);
@@ -296,7 +271,7 @@ const DemoDataLoader: React.FC<DemoDataLoaderProps> = ({ status, onExplore }) =>
   }, [isDone]);
 
   const lineIndex = isDone ? -1 : lineIndexAt(elapsedMs);
-  const progress = isDone ? 1 : estimateProgress(elapsedMs, expectedMs);
+  const progress = isDone ? 1 : estimateProgress(elapsedMs);
   const percent = Math.round(progress * 100);
 
   return (
@@ -361,7 +336,7 @@ const DemoDataLoader: React.FC<DemoDataLoaderProps> = ({ status, onExplore }) =>
           }}
         >
           <Typography sx={{ fontSize: 13, color: text.tertiary }}>
-            {isDone ? "Finished" : remainingLabel(elapsedMs, expectedMs)}
+            {isDone ? "Finished" : remainingLabel(elapsedMs)}
           </Typography>
           {isDone ? (
             <CustomizableButton

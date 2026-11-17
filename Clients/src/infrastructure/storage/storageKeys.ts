@@ -34,9 +34,6 @@ export const KEYS = {
     legacyKey: "hideDemoDataButton",
   },
 
-  // How long the last demo data run took (ms), for the loader's estimate
-  demoDataSeedMs: { key: "verifywise_demo_data_seed_ms" },
-
   // AI Gateway dashboards
   aiGatewayAnalyticsPeriod: {
     key: "verifywise_ai_gateway_analytics_period",

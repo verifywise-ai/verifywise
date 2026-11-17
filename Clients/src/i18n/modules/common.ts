@@ -5654,7 +5654,6 @@ export const de: Record<string, string> = {
   "Builder beaver": "Baumeister-Biber",
   "Vendor raccoon": "Anbieter-Waschbär",
   "Legal tortoise": "Juristen-Schildkröte",
-  "The whole committee": "Das ganze Komitee",
   "Who approved this model? Asking for an auditor.":
     "Wer hat dieses Modell freigegeben? Ich frage für einen Auditor.",
   "Building the risk register. One more risk and it holds water.":
@@ -5682,10 +5681,6 @@ export const de: Record<string, string> = {
   "One more box of receipts back here.": "Hier hinten noch eine Kiste mit Belegen.",
   "Article 5. Nearly at the good part.": "Artikel 5. Gleich kommt der spannende Teil.",
   "All approved. Unanimously, for once.": "Alles genehmigt. Ausnahmsweise einstimmig.",
-  "A couple of minutes left": "Noch ein paar Minuten",
-  "About a minute left": "Noch etwa eine Minute",
-  "Less than a minute left": "Noch weniger als eine Minute",
-  "About 30 seconds left": "Noch etwa 30 Sekunden",
   "A few seconds left": "Noch wenige Sekunden",
   "Almost there": "Gleich geschafft",
   "Finished": "Fertig",
@@ -11277,7 +11272,6 @@ export const fr: Record<string, string> = {
   "Builder beaver": "Castor bâtisseur",
   "Vendor raccoon": "Raton laveur des fournisseurs",
   "Legal tortoise": "Tortue juriste",
-  "The whole committee": "Tout le comité",
   "Who approved this model? Asking for an auditor.":
     "Qui a approuvé ce modèle ? C'est pour un auditeur.",
   "Building the risk register. One more risk and it holds water.":
@@ -11306,10 +11300,6 @@ export const fr: Record<string, string> = {
   "One more box of receipts back here.": "Encore une boîte de justificatifs par ici.",
   "Article 5. Nearly at the good part.": "Article 5. Bientôt le passage intéressant.",
   "All approved. Unanimously, for once.": "Tout est approuvé. À l'unanimité, pour une fois.",
-  "A couple of minutes left": "Encore quelques minutes",
-  "About a minute left": "Encore environ une minute",
-  "Less than a minute left": "Moins d'une minute restante",
-  "About 30 seconds left": "Encore environ 30 secondes",
   "A few seconds left": "Encore quelques secondes",
   "Almost there": "Presque terminé",
   "Finished": "Terminé",
@@ -16793,7 +16783,6 @@ export const es: Record<string, string> = {
   "Builder beaver": "Castor constructor",
   "Vendor raccoon": "Mapache de proveedores",
   "Legal tortoise": "Tortuga legal",
-  "The whole committee": "Todo el comité",
   "Who approved this model? Asking for an auditor.":
     "¿Quién aprobó este modelo? Pregunto para un auditor.",
   "Building the risk register. One more risk and it holds water.":
@@ -16822,10 +16811,6 @@ export const es: Record<string, string> = {
   "One more box of receipts back here.": "Otra caja de recibos por aquí atrás.",
   "Article 5. Nearly at the good part.": "Artículo 5. Casi en la parte interesante.",
   "All approved. Unanimously, for once.": "Todo aprobado. Por unanimidad, para variar.",
-  "A couple of minutes left": "Quedan un par de minutos",
-  "About a minute left": "Queda alrededor de un minuto",
-  "Less than a minute left": "Queda menos de un minuto",
-  "About 30 seconds left": "Quedan unos 30 segundos",
   "A few seconds left": "Quedan unos segundos",
   "Almost there": "Ya casi está",
   "Finished": "Terminado",

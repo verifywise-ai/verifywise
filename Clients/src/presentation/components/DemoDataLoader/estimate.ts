@@ -2,18 +2,15 @@
  * Progress estimate for the demo data loader.
  *
  * The demo data request reports nothing until it finishes, so the bar is an
- * estimate from elapsed time against how long a run usually takes. It eases
- * up to 90% at the expected time, then creeps toward 97% so it keeps moving
- * on a slow server but never claims to be done before the request is.
+ * estimate from elapsed time against one pass of the committee (each animal
+ * speaks once, about 14 s). It eases up to 90% by then, then creeps toward
+ * 97% so it keeps moving on a slow server but never claims to be done before
+ * the request is. The animals keep talking for as long as the request runs.
  */
-import { storageService } from "../../../infrastructure/storage";
+import { ONE_PASS_MS } from "./committee";
 
-/** How long seeding usually takes when this browser has never timed a run. */
-export const DEFAULT_EXPECTED_MS = 60_000;
-
-const MIN_EXPECTED_MS = 15_000;
-/** The API client gives up after 120 s (customAxios timeout), so no run is longer. */
-const MAX_EXPECTED_MS = 120_000;
+/** How long a run is expected to take. */
+export const EXPECTED_MS = ONE_PASS_MS;
 
 /** Share of the bar reached at the expected time. */
 const ON_TIME_SHARE = 0.9;
@@ -21,7 +18,7 @@ const ON_TIME_SHARE = 0.9;
 const CEILING = 0.97;
 
 /** Estimated share done, 0 to 0.97, after `elapsedMs` of a run expected to take `expectedMs`. */
-export function estimateProgress(elapsedMs: number, expectedMs: number): number {
+export function estimateProgress(elapsedMs: number, expectedMs: number = EXPECTED_MS): number {
   if (!(elapsedMs > 0) || !(expectedMs > 0)) return 0;
   const ratio = elapsedMs / expectedMs;
   if (ratio < 1) {
@@ -34,40 +31,6 @@ export function estimateProgress(elapsedMs: number, expectedMs: number): number 
  * Plain-language time left. Fixed phrases rather than a live count of seconds,
  * because the DOM translator matches whole strings.
  */
-export function remainingLabel(elapsedMs: number, expectedMs: number): string {
-  const left = expectedMs - Math.max(0, elapsedMs);
-  if (left > 90_000) return "A couple of minutes left";
-  if (left > 50_000) return "About a minute left";
-  if (left > 35_000) return "Less than a minute left";
-  if (left > 20_000) return "About 30 seconds left";
-  if (left > 5_000) return "A few seconds left";
-  return "Almost there";
-}
-
-/** Expected run time, from the last run this browser timed when there is one. */
-export function readExpectedMs(): number {
-  try {
-    const stored = storageService.get("demoDataSeedMs", 0);
-    if (typeof stored === "number" && stored >= MIN_EXPECTED_MS && stored <= MAX_EXPECTED_MS) {
-      return stored;
-    }
-  } catch {
-    // Storage can be blocked; the default is fine.
-  }
-  return DEFAULT_EXPECTED_MS;
-}
-
-/**
- * Remembers how long a successful demo data request took, so the next estimate
- * is closer. Callers time the request itself, not the loader, so a retry that
- * skips the request records nothing.
- */
-export function recordRunMs(durationMs: number): void {
-  if (!(durationMs > 0)) return;
-  const clamped = Math.min(MAX_EXPECTED_MS, Math.max(MIN_EXPECTED_MS, Math.round(durationMs)));
-  try {
-    storageService.set("demoDataSeedMs", clamped);
-  } catch {
-    // Not worth surfacing; the next run falls back to the default.
-  }
+export function remainingLabel(elapsedMs: number, expectedMs: number = EXPECTED_MS): string {
+  return expectedMs - Math.max(0, elapsedMs) > 5_000 ? "A few seconds left" : "Almost there";
 }
