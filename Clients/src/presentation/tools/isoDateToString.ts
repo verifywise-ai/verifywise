@@ -73,8 +73,7 @@ export const riskCalendarDay = (value: unknown): Date | null => calendarDayOf(va
  * or 12:00 UTC reads as the UTC date (west of UTC the instant falls on the day
  * before), and anything else as the local date of the instant, as before.
  */
-export const startDateCalendarDay = (value: unknown): Date | null =>
-  calendarDayOf(value, [0, 12]);
+export const startDateCalendarDay = (value: unknown): Date | null => calendarDayOf(value, [0, 12]);
 
 /** A bare date is that day; an instant at one of `utcHours` sharp is its UTC date. */
 function calendarDayOf(value: unknown, utcHours: number[]): Date | null {

@@ -217,8 +217,7 @@ const initialState: FormValues = {
 };
 
 /** The stored start date as local midnight of its calendar day, for the date picker. */
-const startDateIso = (value: unknown): string =>
-  startDateCalendarDay(value)?.toISOString() ?? "";
+const startDateIso = (value: unknown): string => startDateCalendarDay(value)?.toISOString() ?? "";
 
 const hasEuAiActSelected = (formValues: FormValues): boolean =>
   formValues.monitoredRegulationsAndStandards.some((fw) => fw._id === 1);

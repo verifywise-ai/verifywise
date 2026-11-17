@@ -13,9 +13,7 @@ describe("startDateCalendarDay", () => {
     // What the API, intake and MCP store for "2026-11-17". West of UTC the
     // instant is still 16 November locally.
     expect(localDay(startDateCalendarDay("2026-11-17T00:00:00.000Z"))).toBe("2026-11-17");
-    expect(localDay(startDateCalendarDay(new Date("2026-11-17T00:00:00.000Z")))).toBe(
-      "2026-11-17",
-    );
+    expect(localDay(startDateCalendarDay(new Date("2026-11-17T00:00:00.000Z")))).toBe("2026-11-17");
   });
 
   it("reads 12:00 UTC as that UTC date too", () => {

@@ -513,11 +513,17 @@ describe("ProjectSettings", () => {
   it("keeps a classification it does not show when EU AI Act is not selected (U-H3)", async () => {
     // Classified by intake, MCP or the API, without the EU AI Act framework.
     mockUseProjectData.mockReturnValue({
-      project: { ...baseProject, ai_risk_classification: "High risk", high_risk_roles: ["Provider"] },
+      project: {
+        ...baseProject,
+        ai_risk_classification: "High risk",
+        high_risk_roles: ["Provider"],
+      },
     });
     mockUpdateProject.mockResolvedValue({ status: 202 });
     renderWithProviders(<ProjectSettings />);
-    await waitFor(() => expect(screen.getByDisplayValue("Answer support questions")).toBeInTheDocument());
+    await waitFor(() =>
+      expect(screen.getByDisplayValue("Answer support questions")).toBeInTheDocument(),
+    );
 
     fireEvent.change(screen.getByDisplayValue("Answer support questions"), {
       target: { value: "Answer billing questions" },
@@ -553,7 +559,11 @@ describe("ProjectSettings", () => {
     renderWithProviders(<ProjectSettings />);
     await screen.findByText("AI risk classification *");
 
-    await user.click(within(document.getElementById("risk-classification-input")!.parentElement!).getByRole("combobox"));
+    await user.click(
+      within(document.getElementById("risk-classification-input")!.parentElement!).getByRole(
+        "combobox",
+      ),
+    );
     fireEvent.click(await screen.findByRole("option", { name: /General risk/ }));
     fireEvent.click(screen.getByRole("button", { name: "Save" }));
 
@@ -570,7 +580,9 @@ describe("ProjectSettings", () => {
     renderWithProviders(<ProjectSettings />);
     await waitFor(() => expect(screen.getByDisplayValue("Chatbot Assistant")).toBeInTheDocument());
 
-    expect(screen.getByDisplayValue(/11\/17\/2026|17\/11\/2026|2026-11-17|17-11-2026/)).toBeInTheDocument();
+    expect(
+      screen.getByDisplayValue(/11\/17\/2026|17\/11\/2026|2026-11-17|17-11-2026/),
+    ).toBeInTheDocument();
     // Read for display only: an untouched date is not sent.
     expect(screen.getByRole("button", { name: "Save" })).toBeDisabled();
   });
