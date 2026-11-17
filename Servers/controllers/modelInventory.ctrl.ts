@@ -599,7 +599,7 @@ export async function updateModelInventoryById(req: Request, res: Response) {
         modelInventoryId,
         modelName,
         savedModelInventory.version || undefined,
-      ).catch((err) => console.error("Failed to trigger model_deployment workflow:", err));
+      ).catch((err) => logger.error("Failed to trigger model_deployment workflow:", err));
     }
 
     // Notify approver if changed to a new user
