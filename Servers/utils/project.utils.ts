@@ -805,14 +805,13 @@ export const updateProjectByIdQuery = async (
   // Checked after the owner is resolved, which can add ownership columns.
   const changesProjectColumns = hasProjectColumnUpdate(project);
   const setParts = PROJECT_UPDATE_COLUMNS.filter((f) => {
-      // Include fields that are explicitly provided, including null, 0, or empty string
-      if (project[f as keyof ProjectModel] !== undefined) {
-        updateProject[f as keyof ProjectModel] = project[f as keyof ProjectModel];
-        return true;
-      }
-      return false;
-    })
-    .map((f) => `${f} = :${f}`);
+    // Include fields that are explicitly provided, including null, 0, or empty string
+    if (project[f as keyof ProjectModel] !== undefined) {
+      updateProject[f as keyof ProjectModel] = project[f as keyof ProjectModel];
+      return true;
+    }
+    return false;
+  }).map((f) => `${f} = :${f}`);
   if (project.high_risk_roles !== undefined) {
     // Sequelize would turn [] into NULL, so the roles go in as an SQL fragment.
     const roles = highRiskRolesArraySql(
