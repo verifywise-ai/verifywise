@@ -269,6 +269,11 @@ export async function updateUseCaseService(
   delete input.members;
   delete input.id;
 
+  // The server records who changed the use case and when. Values in the body
+  // (the org-wide framework form sent its start date) are never trusted.
+  input.last_updated = new Date();
+  input.last_updated_by = ctx.userId;
+
   // 1. Either role field may be sent. Resolve them against the stored list, so
   //    a client that writes back the derived single role cannot drop the other.
   const highRiskRoles = resolveHighRiskRolesWrite(input, existingUseCase.high_risk_roles);

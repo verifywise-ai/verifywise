@@ -359,8 +359,7 @@ const updateUseCase: ToolDef = {
     if (Object.keys(input).length === 0) {
       throw new Error("Provide at least one field to update.");
     }
-    input.last_updated = new Date();
-    input.last_updated_by = caller.userId;
+    // updateUseCaseService stamps last_updated and last_updated_by.
 
     const transaction = await sequelize.transaction();
     try {

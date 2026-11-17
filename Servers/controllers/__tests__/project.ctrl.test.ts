@@ -501,6 +501,51 @@ describe("project.ctrl", () => {
         { requireOwner: false },
       );
     });
+    it("sets last_updated and last_updated_by itself, ignoring the body (U-M4)", async () => {
+      const existing = { ...buildProject(), owner: 1 };
+      mockGetById.mockResolvedValue(existing as any);
+      mockGetMembers.mockResolvedValue([] as any);
+      mockUpdate.mockResolvedValue({ ...existing, members: [] } as any);
+      const before = Date.now();
+      const req = createReq({
+        params: { id: "1" },
+        userId: 4,
+        body: {
+          description: "New",
+          last_updated: "2001-01-01T00:00:00.000Z",
+          last_updated_by: 99,
+        },
+      });
+      const res = createRes();
+      await updateProjectById(req, res);
+      expect(res.status).toHaveBeenCalledWith(202);
+      const written = mockUpdate.mock.calls[0][1] as any;
+      expect(written.last_updated_by).toBe(4);
+      expect(written.last_updated).toBeInstanceOf(Date);
+      expect(written.last_updated.getTime()).toBeGreaterThanOrEqual(before);
+    });
+    it("diffs the stored values, so framework fields it never writes are not history (U-M3)", async () => {
+      const existing = { ...buildProject({ description: "Old" }), owner: 1 };
+      const stored = { ...existing, description: "New", members: [] };
+      mockGetById.mockResolvedValue(existing as any);
+      mockGetMembers.mockResolvedValue([] as any);
+      mockUpdate.mockResolvedValue(stored as any);
+      const req = createReq({
+        params: { id: "1" },
+        body: {
+          description: "New",
+          framework: [1],
+          monitored_regulations_and_standards: ["EU AI Act"],
+        },
+      });
+      const res = createRes();
+      await updateProjectById(req, res);
+      expect(res.status).toHaveBeenCalledWith(202);
+      const diffed = mockTrackChanges.mock.calls[0][1] as Record<string, unknown>;
+      expect(diffed).toMatchObject({ description: "New" });
+      expect(diffed).not.toHaveProperty("framework");
+      expect(diffed).not.toHaveProperty("monitored_regulations_and_standards");
+    });
     it("rolls back its transaction when the row is gone at update time", async () => {
       mockGetById.mockResolvedValue({ ...buildProject(), owner: 1 } as any);
       mockGetMembers.mockResolvedValue([] as any);

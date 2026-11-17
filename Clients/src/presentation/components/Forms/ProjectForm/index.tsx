@@ -34,8 +34,6 @@ import { checkStringValidation } from "../../../../application/validations/strin
 import selectValidation from "../../../../application/validations/selectValidation";
 import CustomizableToast from "../../Toast";
 import { ChevronDown as GreyDownArrowIcon } from "lucide-react";
-import { extractUserToken } from "../../../../application/tools/extractToken";
-import { useSelector } from "react-redux";
 import Checkbox from "../../../components/Inputs/Checkbox";
 import { Project } from "../../../../domain/types/Project";
 import { VerifyWiseContext } from "../../../../application/contexts/VerifyWise.context";
@@ -362,10 +360,6 @@ export const ProjectForm = ({
     values.framework_type,
   ]);
 
-  const authState = useSelector(
-    (state: { auth: { authToken: string; userExists: boolean } }) => state.auth,
-  );
-
   const riskClassificationItems = useMemo(
     () => [
       { _id: 1, name: AiRiskClassification.PROHIBITED },
@@ -483,7 +477,6 @@ export const ProjectForm = ({
   );
 
   const handleSubmit = useCallback(async () => {
-    const userInfo = extractUserToken(authState.authToken);
     const teamMember = values.members.map((user) => String(user._id));
 
     if (!validateAll(values, PROJECT_FORM_FIELD_ORDER)) {
@@ -501,8 +494,6 @@ export const ProjectForm = ({
         const body: any = {
           ...values,
           status: projectStatusItems.find((item) => item._id === values.status)?.name,
-          last_updated: values.start_date,
-          last_updated_by: userInfo?.id,
           members: teamMember,
           enable_ai_data_insertion: values.enable_ai_data_insertion,
           ...externalOwnerPayload(
@@ -632,7 +623,6 @@ export const ProjectForm = ({
   }, [
     values,
     projectToEdit,
-    authState.authToken,
     validateAll,
     setServerErrors,
     getFirstInvalidField,
