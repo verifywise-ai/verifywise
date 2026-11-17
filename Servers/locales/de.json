@@ -1535,5 +1535,6 @@
   "{assigner} assigned you as Risk Approver for {count} risks: {names}": "{assigner} hat Sie als Risikogenehmiger für {count} Risiken zugewiesen: {names}",
   "{assigner} assigned you as Risk Approver for {count} risks: {names} and {more} more": "{assigner} hat Sie als Risikogenehmiger für {count} Risiken zugewiesen: {names} und {more} weitere",
   "archive_risks_linked_only_here must be \"true\" or \"false\"": "archive_risks_linked_only_here muss \"true\" oder \"false\" sein",
-  "Question not found in this cycle": "Frage in diesem Zyklus nicht gefunden"
+  "Question not found in this cycle": "Frage in diesem Zyklus nicht gefunden",
+  "Invalid parameter": "Ungültiger Parameter"
 }
