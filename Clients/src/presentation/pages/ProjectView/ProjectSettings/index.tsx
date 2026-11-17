@@ -63,7 +63,6 @@ import { Framework } from "../../../../domain/types/Framework";
 import { useCanCheck, useCan } from "../../../../application/hooks/useCan";
 import { VerifyWiseContext } from "../../../../application/contexts/VerifyWise.context";
 import { updateProject } from "../../../../application/repository/project.repository";
-import { useAuth } from "../../../../application/hooks/useAuth";
 import { AiRiskClassification } from "../../../../domain/enums/aiRiskClassification.enum";
 import { HighRiskRole } from "../../../../domain/enums/highRiskRole.enum";
 import HighRiskRolesField from "../../../components/Inputs/HighRiskRolesField";
@@ -79,13 +78,18 @@ import type { ClassificationResult } from "../../../../domain/types/euAiActClass
 import { getAutocompleteStyles } from "../../../utils/inputStyles";
 import { useStyles } from "./styles";
 import { GEOGRAPHY_ITEMS } from "../../../../application/constants/geography";
+import { startDateCalendarDay } from "../../../tools/isoDateToString";
 
+// Every level the server accepts, so a use case classified by intake, MCP or
+// the API loads with its level. `name` is the label; `value` is what is stored.
 const riskClassificationItems = [
-  { _id: 1, name: AiRiskClassification.PROHIBITED },
-  { _id: 2, name: AiRiskClassification.HIGH_RISK },
-  { _id: 3, name: AiRiskClassification.LIMITED_RISK },
-  { _id: 4, name: AiRiskClassification.MINIMAL_RISK },
-  { _id: 5, name: AiRiskClassification.OUT_OF_SCOPE },
+  { _id: 1, name: AiRiskClassification.PROHIBITED, value: AiRiskClassification.PROHIBITED },
+  { _id: 2, name: AiRiskClassification.HIGH_RISK, value: AiRiskClassification.HIGH_RISK },
+  { _id: 3, name: AiRiskClassification.LIMITED_RISK, value: AiRiskClassification.LIMITED_RISK },
+  { _id: 4, name: AiRiskClassification.MINIMAL_RISK, value: AiRiskClassification.MINIMAL_RISK },
+  { _id: 6, name: AiRiskClassification.GPAI, value: AiRiskClassification.GPAI },
+  { _id: 7, name: "General risk", value: AiRiskClassification.GENERAL_RISK },
+  { _id: 5, name: AiRiskClassification.OUT_OF_SCOPE, value: AiRiskClassification.OUT_OF_SCOPE },
 ];
 
 const geographyItems = [...GEOGRAPHY_ITEMS];
@@ -212,13 +216,80 @@ const initialState: FormValues = {
   deploymentContext: null,
 };
 
+/** The stored start date as local midnight of its calendar day, for the date picker. */
+const startDateIso = (value: unknown): string =>
+  startDateCalendarDay(value)?.toISOString() ?? "";
+
+const hasEuAiActSelected = (formValues: FormValues): boolean =>
+  formValues.monitoredRegulationsAndStandards.some((fw) => fw._id === 1);
+
+const OWNER_FIELDS = ["owner", "external_owner_name", "external_owner_email"];
+
+/**
+ * The form as the use case update fields. Frameworks are left out: they change
+ * through their own endpoints as soon as they are picked. The classification
+ * and roles are only part of the form while EU AI Act is selected.
+ */
+const projectUpdateFields = (formValues: FormValues): Record<string, unknown> => {
+  const nameOf = (items: { _id: number; name: string }[], id: number | null) =>
+    items.find((item) => item._id === id)?.name || null;
+  const hasEuAiAct = hasEuAiActSelected(formValues);
+  return {
+    project_title: formValues.projectTitle,
+    ...externalOwnerPayload(
+      formValues.owner,
+      formValues.externalOwnerName,
+      formValues.externalOwnerEmail,
+    ),
+    members: formValues.members.map(String),
+    start_date: formValues.startDate,
+    ...(hasEuAiAct
+      ? {
+          ai_risk_classification:
+            riskClassificationItems.find((item) => item._id === formValues.riskClassification)
+              ?.value || null,
+          high_risk_roles: highRiskRolesPayload(formValues.highRiskRoles, hasEuAiAct),
+        }
+      : {}),
+    goal: formValues.goal,
+    geography: geographyItems.find((item) => item._id === formValues.geography)?._id || "",
+    target_industry: formValues.targetIndustry,
+    description: formValues.description,
+    status: nameOf(projectStatusItems, formValues.status) || "",
+    use_case_category: nameOf(useCaseCategoryItems, formValues.useCaseCategory),
+    use_case_purpose: nameOf(useCasePurposeItems, formValues.useCasePurpose),
+    use_case_audience: nameOf(useCaseAudienceItems, formValues.useCaseAudience),
+    deployment_context: nameOf(deploymentContextItems, formValues.deploymentContext),
+  };
+};
+
+/**
+ * Only the fields that differ from the use case as loaded. A field the user
+ * did not touch, or cannot see, is never sent, so a save cannot overwrite a
+ * value set elsewhere (intake, MCP, the API). The owner fields go together,
+ * since one kind of owner replaces the other.
+ */
+const changedProjectFields = (
+  initial: FormValues,
+  current: FormValues,
+): Record<string, unknown> => {
+  const before = projectUpdateFields(initial);
+  const after = projectUpdateFields(current);
+  const differs = (key: string) => JSON.stringify(after[key]) !== JSON.stringify(before[key]);
+  const ownerChanged = OWNER_FIELDS.some(differs);
+  return Object.fromEntries(
+    Object.entries(after).filter(([key]) =>
+      OWNER_FIELDS.includes(key) ? ownerChanged : differs(key),
+    ),
+  );
+};
+
 const OwnerPartyName = ({ party }: { party: OwnerParty }) =>
   party.external ? <ExternalOwnerName name={party.name} showIcon={false} /> : <>{party.name}</>;
 
 const ProjectSettings = React.memo(
   ({ triggerRefresh = () => {} }: { triggerRefresh?: (isUpdate: boolean) => void }) => {
     const { setProjects } = useContext(VerifyWiseContext);
-    const { userId } = useAuth();
     const can = useCanCheck();
     const [searchParams] = useSearchParams();
     const projectId = searchParams.get("projectId") ?? "1"; // default project ID is 2
@@ -370,12 +441,12 @@ const ProjectSettings = React.memo(
           owner: ownerSelectValue(project),
           externalOwnerName: project.external_owner_name ?? "",
           externalOwnerEmail: project.external_owner_email ?? "",
-          startDate: project.start_date ? dayjs(project.start_date).toISOString() : "",
+          startDate: startDateIso(project.start_date),
           members: project.members ? project.members.map(Number) : [],
           riskClassification:
             riskClassificationItems.find(
               (item) =>
-                item.name.toLowerCase() === (project.ai_risk_classification || "").toLowerCase(),
+                item.value.toLowerCase() === (project.ai_risk_classification || "").toLowerCase(),
             )?._id || null,
           highRiskRoles: projectHighRiskRoles(project),
           geography: project.geography ?? 1,
@@ -752,51 +823,10 @@ const ProjectSettings = React.memo(
 
     // saves the project
     const handleSaveConfirm = useCallback(async () => {
-      const hasEuAiAct = values.monitoredRegulationsAndStandards.some((fw) => fw._id === 1);
-      const selectedRiskClass = hasEuAiAct
-        ? riskClassificationItems.find((item) => item._id === values.riskClassification)?.name ||
-          null
-        : null;
-      const selectedStatus =
-        projectStatusItems.find((item) => item._id === values.status)?.name || "";
-      const selectedRegulations = values.monitoredRegulationsAndStandards.map((reg) => reg.name);
-
-      const selectedGeography =
-        geographyItems.find((item) => item._id === values.geography)?._id || "";
-
+      // The server sets last_updated and last_updated_by itself.
       await updateProject({
         id: Number(projectId),
-        body: {
-          id: projectId,
-          project_title: values.projectTitle,
-          ...externalOwnerPayload(
-            values.owner,
-            values.externalOwnerName,
-            values.externalOwnerEmail,
-          ),
-          members: values.members.map(String),
-          start_date: values.startDate,
-          ai_risk_classification: selectedRiskClass,
-          high_risk_roles: highRiskRolesPayload(values.highRiskRoles, hasEuAiAct),
-          goal: values.goal,
-          geography: selectedGeography,
-          target_industry: values.targetIndustry,
-          description: values.description,
-          status: selectedStatus,
-          monitored_regulations_and_standards: selectedRegulations,
-          last_updated: new Date().toISOString(),
-          last_updated_by: userId,
-          use_case_category:
-            useCaseCategoryItems.find((item) => item._id === values.useCaseCategory)?.name || null,
-          use_case_purpose:
-            useCasePurposeItems.find((item) => item._id === values.useCasePurpose)?.name || null,
-          use_case_audience:
-            useCaseAudienceItems.find((item) => item._id === values.useCaseAudience)?.name || null,
-          deployment_context:
-            deploymentContextItems.find((item) => item._id === values.deploymentContext)?.name ||
-            null,
-          framework: values.monitoredRegulationsAndStandards.map((fw) => fw._id),
-        },
+        body: changedProjectFields(initialValuesRef.current, values),
       })
         .then(async (response) => {
           if (response.status === 202) {
@@ -1841,7 +1871,7 @@ const ProjectSettings = React.memo(
           projectId={projectId}
           setAlert={setAlert}
           updateClassification={(result: ClassificationResult) => {
-            const level = riskClassificationItems.find((item) => item.name === result.level);
+            const level = riskClassificationItems.find((item) => item.value === result.level);
             if (!level) {
               console.error(`Unknown classification: ${result.level}`);
               return;
