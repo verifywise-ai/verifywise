@@ -19,6 +19,19 @@ import {
 } from "../utils/modelInventoryChangeHistory.utils";
 import { runEvidenceFreshnessSweep } from "../services/automations/actions/evidenceFreshnessSweep";
 import { trackEntityChanges, recordMultipleFieldChanges } from "../utils/changeHistory.base.utils";
+import { requestHasPermission } from "../utils/rolePermissions.utils";
+
+const hasModelLinks = (ids: unknown): boolean => Array.isArray(ids) && ids.length > 0;
+
+/**
+ * Evidence is written from the model pages and from the training registry
+ * (under training.edit), so the routes check no permission of their own. A
+ * write that links evidence to models, or changes evidence linked to models,
+ * changes those models and needs model.edit.
+ */
+async function lacksModelEdit(req: Request, touchesModels: boolean): Promise<boolean> {
+  return touchesModels && !(await requestHasPermission(req, "model.edit"));
+}
 
 export async function getAllEvidences(req: Request, res: Response) {
   logStructured(
@@ -121,7 +134,9 @@ export async function getEvidenceById(req: Request, res: Response) {
  * Create new evidence
  */
 export async function createNewEvidence(req: Request, res: Response) {
-  // You can add proper validation here if needed
+  if (await lacksModelEdit(req, hasModelLinks(req.body?.mapped_model_ids))) {
+    return res.status(403).json(STATUS_CODE[403](req.t!("Access denied")));
+  }
   const transaction = await sequelize.transaction();
   try {
     const evidence = new EvidenceHubModel({
@@ -197,6 +212,16 @@ export async function updateEvidenceById(req: Request, res: Response) {
     if (!existingEvidence) {
       await transaction.rollback();
       return res.status(404).json(STATUS_CODE[404](req.t!("Evidence not found")));
+    }
+    if (
+      await lacksModelEdit(
+        req,
+        hasModelLinks(existingEvidence.mapped_model_ids) ||
+          hasModelLinks(req.body?.mapped_model_ids),
+      )
+    ) {
+      await transaction.rollback();
+      return res.status(403).json(STATUS_CODE[403](req.t!("Access denied")));
     }
 
     // Snapshot the fields the evidence hub change history tracks, before
@@ -382,6 +407,10 @@ export async function deleteEvidenceById(req: Request, res: Response) {
     if (!existingEvidence) {
       await transaction.rollback();
       return res.status(404).json(STATUS_CODE[404](req.t!("Evidence not found")));
+    }
+    if (await lacksModelEdit(req, hasModelLinks(existingEvidence.mapped_model_ids))) {
+      await transaction.rollback();
+      return res.status(403).json(STATUS_CODE[403](req.t!("Access denied")));
     }
 
     // Track evidence removal for all mapped models

@@ -23,12 +23,12 @@ router.get("/", authenticateJWT, getAllEvidences);
 router.get("/:id", authenticateJWT, getEvidenceById);
 
 // POST create new evidence
-router.post("/", authenticateJWT, authorize("model.edit"), createNewEvidence);
+router.post("/", authenticateJWT, createNewEvidence);
 
 // PATCH update evidence by ID
-router.patch("/:id", authenticateJWT, authorize("model.edit"), updateEvidenceById);
+router.patch("/:id", authenticateJWT, updateEvidenceById);
 
 // DELETE evidence by ID
-router.delete("/:id", authenticateJWT, authorize("model.edit"), deleteEvidenceById);
+router.delete("/:id", authenticateJWT, deleteEvidenceById);
 
 export default router;

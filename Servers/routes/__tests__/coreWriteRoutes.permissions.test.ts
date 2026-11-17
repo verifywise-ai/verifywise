@@ -59,14 +59,13 @@ describe("core write routes require a permission", () => {
     ["model risk", modelRiskRouter, "put", "/:id", "model.edit"],
     ["model risk", modelRiskRouter, "patch", "/:id", "model.edit"],
     ["model risk", modelRiskRouter, "delete", "/:id", "model.edit"],
-    // Datasets and evidence sit on the model pages and the screens gate them on
-    // model.edit, so the server checks the same key.
+    // Datasets sit on the model pages and the screens gate them on model.edit,
+    // so the server checks the same key. Evidence is also written from the
+    // training registry: its controller checks model.edit when models are
+    // involved (evidenceHub.ctrl.test.ts).
     ["dataset", datasetRouter, "post", "/", "model.edit"],
     ["dataset", datasetRouter, "patch", "/:id", "model.edit"],
     ["dataset", datasetRouter, "delete", "/:id", "model.edit"],
-    ["evidence", evidenceHubRouter, "post", "/", "model.edit"],
-    ["evidence", evidenceHubRouter, "patch", "/:id", "model.edit"],
-    ["evidence", evidenceHubRouter, "delete", "/:id", "model.edit"],
     ["model history", modelInventoryHistoryRouter, "post", "/snapshot", "model.edit"],
     ["folder files", virtualFolderRouter, "post", "/:id/files", "file.edit"],
     ["folder files", virtualFolderRouter, "delete", "/:id/files/:fileId", "file.edit"],
@@ -108,6 +107,16 @@ describe("core write routes require a permission", () => {
     ["delete", "/:id"],
   ])("share link %s %s has no fixed route permission", (method, path) => {
     expect(permissionFor(shareLinkRouter, method, path)).toEqual([]);
+  });
+
+  // Training evidence is written under training.edit, so the evidence routes
+  // carry no fixed key; the controller needs model.edit when models are involved.
+  it.each([
+    ["post", "/"],
+    ["patch", "/:id"],
+    ["delete", "/:id"],
+  ])("evidence %s %s has no fixed route permission", (method, path) => {
+    expect(permissionFor(evidenceHubRouter, method, path)).toEqual([]);
   });
 
   // Assigned reviewers may be any role, so approve/reject is checked in the

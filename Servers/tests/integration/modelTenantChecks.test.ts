@@ -14,7 +14,8 @@ import {
 /**
  * Use cases and models audit, PR C: a model's approver, use cases and
  * frameworks, and a model risk's model and owner must be the organization's;
- * dataset, evidence and snapshot writes need model.edit.
+ * dataset and snapshot writes need model.edit, and evidence writes need it
+ * when models are involved.
  */
 
 const ROLE = { Admin: 1, Reviewer: 2, Editor: 3, Auditor: 4 } as const;
@@ -281,9 +282,6 @@ describe("model tenant checks", () => {
       ["post", "/api/datasets"],
       ["patch", "/api/datasets/1"],
       ["delete", "/api/datasets/1"],
-      ["post", "/api/evidenceHub"],
-      ["patch", "/api/evidenceHub/1"],
-      ["delete", "/api/evidenceHub/1"],
       ["post", "/api/modelInventoryHistory/snapshot"],
     ])("an Auditor gets 403 on %s %s", async (method, path) => {
       const api = (await as(orgA, auditorA, "Auditor")) as any;
@@ -291,9 +289,36 @@ describe("model tenant checks", () => {
       expect(res.status).toBe(403);
     });
 
-    it("an Editor passes the permission check on evidence create", async () => {
-      const res = await (await as(orgA, editorA, "Editor")).post("/api/evidenceHub").send({});
-      expect(res.status).not.toBe(403);
+    it("evidence linked to a model needs model.edit to create, change or delete", async () => {
+      const auditor = await as(orgA, auditorA, "Auditor");
+      const body = { evidence_name: `Model card ${++counter}`, evidence_type: "Model card" };
+      expect(
+        (await auditor.post("/api/evidenceHub").send({ ...body, mapped_model_ids: [modelA] }))
+          .status,
+      ).toBe(403);
+
+      const created = await (
+        await as(orgA, editorA, "Editor")
+      )
+        .post("/api/evidenceHub")
+        .send({ ...body, mapped_model_ids: [modelA] });
+      expect(created.status).toBe(201);
+      const id = created.body.data.id;
+      expect(
+        (await auditor.patch(`/api/evidenceHub/${id}`).send({ evidence_name: "x" })).status,
+      ).toBe(403);
+      expect((await auditor.delete(`/api/evidenceHub/${id}`)).status).toBe(403);
+    });
+
+    it("evidence without model links has no model.edit check (training evidence)", async () => {
+      // Training evidence is written under training.edit through these
+      // routes; the route itself checks no permission, as before.
+      const res = await (
+        await as(orgA, auditorA, "Auditor")
+      )
+        .post("/api/evidenceHub")
+        .send({ evidence_name: `Certificate ${++counter}`, evidence_type: "Training" });
+      expect(res.status).toBe(201);
     });
 
     it("a snapshot of an unknown parameter is a 400 (was a 500)", async () => {
