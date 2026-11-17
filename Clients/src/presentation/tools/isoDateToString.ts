@@ -70,10 +70,12 @@ export const riskCalendarDay = (value: unknown): Date | null => calendarDayOf(va
  *
  * The API, intake and MCP store a bare "YYYY-MM-DD" start date, which lands at
  * 00:00 UTC; the console stores the browser's local midnight. So exactly 00:00
- * or 12:00 UTC reads as the UTC date (west of UTC the instant falls on the day
- * before), and anything else as the local date of the instant, as before.
+ * UTC reads as the UTC date (west of UTC the instant falls on the day before),
+ * and anything else as the local date of the instant, as before. Unlike risk
+ * dates, 12:00 UTC is not a stored calendar day here: it is local midnight in
+ * UTC+12, which would otherwise read one day early.
  */
-export const startDateCalendarDay = (value: unknown): Date | null => calendarDayOf(value, [0, 12]);
+export const startDateCalendarDay = (value: unknown): Date | null => calendarDayOf(value, [0]);
 
 /** A bare date is that day; an instant at one of `utcHours` sharp is its UTC date. */
 function calendarDayOf(value: unknown, utcHours: number[]): Date | null {
