@@ -143,4 +143,36 @@ describe("useDashboard", () => {
 
     expect(typeof result.current.fetchDashboard).toBe("function");
   });
+
+  it("keeps fetchDashboard the same function across renders", async () => {
+    mockGetAllEntities.mockResolvedValue({ data: { projects_list: [] } });
+    const { result, rerender } = renderHook(() => useDashboard(), {
+      wrapper: createWrapper(),
+    });
+    const first = result.current.fetchDashboard;
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    rerender();
+    expect(result.current.fetchDashboard).toBe(first);
+  });
+
+  it("does not loop when an effect depends on fetchDashboard", async () => {
+    // The Home page pattern: refresh on mount, with fetchDashboard in the deps.
+    // Each response differs (as live counts do), so every refetch re-renders.
+    let calls = 0;
+    mockGetAllEntities.mockImplementation(async () => ({
+      data: { projects_list: [], generation: (calls += 1) },
+    }));
+    renderHook(
+      () => {
+        const { fetchDashboard } = useDashboard();
+        React.useEffect(() => {
+          void fetchDashboard();
+        }, [fetchDashboard]);
+      },
+      { wrapper: createWrapper() },
+    );
+    await waitFor(() => expect(mockGetAllEntities).toHaveBeenCalled());
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    expect(mockGetAllEntities.mock.calls.length).toBeLessThanOrEqual(2);
+  });
 });
