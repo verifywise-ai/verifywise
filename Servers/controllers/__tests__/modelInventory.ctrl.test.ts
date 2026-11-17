@@ -46,6 +46,9 @@ jest.mock("../../utils/i18n.utils", () => ({
 jest.mock("../../services/inAppNotification.service", () => ({
   notifyUserAssigned: jest.fn().mockResolvedValue(undefined),
 }));
+jest.mock("../../services/riskLinks/modelCandidates", () => ({
+  notifyModelRiskCandidates: jest.fn(async () => undefined),
+}));
 jest.mock("../../domain.layer/models/modelInventory/modelInventory.model", () => ({
   ModelInventoryModel: {
     createNewModelInventory: jest.fn().mockReturnValue({ provider_model: "pm" }),
@@ -71,6 +74,7 @@ import {
   getModelByProjectIdQuery,
   getModelByFrameworkIdQuery,
 } from "../../utils/modelInventory.utils";
+import { notifyModelRiskCandidates } from "../../services/riskLinks/modelCandidates";
 
 const mockGetAll = getAllModelInventoriesQuery as jest.MockedFunction<
   typeof getAllModelInventoriesQuery
@@ -265,6 +269,32 @@ describe("modelInventory.ctrl", () => {
       const res = createRes();
       await updateModelInventoryById(req, res);
       expect(res.status).toHaveBeenCalledWith(500);
+    });
+    // The update query reports the use cases it added; the controller no
+    // longer reads the links a second time to work them out.
+    it("notifies only the use cases the update query added", async () => {
+      (notifyModelRiskCandidates as jest.Mock).mockClear();
+      mockGetById.mockResolvedValue(mockModel({ id: 1, model: "M1" }) as any);
+      mockUpdate.mockResolvedValue({
+        ...mockModel({ id: 1, model: "M2" }),
+        addedProjectIds: [4],
+      } as any);
+      const req = createReq({ params: { id: "1" }, body: { model: "M2", projects: [3, 4] } });
+      await updateModelInventoryById(req, createRes());
+      expect(notifyModelRiskCandidates).toHaveBeenCalledWith(
+        expect.objectContaining({ modelInventoryId: 1, projectIds: [4] }),
+      );
+    });
+    it("sends no use case notice when the update added none", async () => {
+      (notifyModelRiskCandidates as jest.Mock).mockClear();
+      mockGetById.mockResolvedValue(mockModel({ id: 1, model: "M1" }) as any);
+      mockUpdate.mockResolvedValue({
+        ...mockModel({ id: 1, model: "M2" }),
+        addedProjectIds: [],
+      } as any);
+      const req = createReq({ params: { id: "1" }, body: { model: "M2" } });
+      await updateModelInventoryById(req, createRes());
+      expect(notifyModelRiskCandidates).not.toHaveBeenCalled();
     });
     it("should return 409 when external key violates the unique index (issue #4755)", async () => {
       const conflictError = Object.assign(new Error("duplicate key value"), {

@@ -17,7 +17,6 @@ import {
   deleteModelInventoryByIdQuery,
   getModelByProjectIdQuery,
   getModelByFrameworkIdQuery,
-  getModelInventoryProjectIdsQuery,
 } from "../utils/modelInventory.utils";
 import { notifyModelRiskCandidates } from "../services/riskLinks/modelCandidates";
 import {
@@ -529,20 +528,6 @@ export async function updateModelInventoryById(req: Request, res: Response) {
       external_key,
     });
 
-    // F6: capture the project list before the full-replacement update below
-    // overwrites it, so only newly added projects notify afterwards. A failed
-    // read falls back to the incoming list (empty diff, nothing fires) — an
-    // auxiliary read must never break the update.
-    let projectIdsBefore: number[] = projects || [];
-    try {
-      projectIdsBefore = await getModelInventoryProjectIdsQuery(
-        modelInventoryId,
-        req.organizationId!,
-      );
-    } catch (error) {
-      logger.error("Model risk candidate notice diff failed:", error);
-    }
-
     // Use the existing database query approach for updating
     transaction = await sequelize.transaction();
     const savedModelInventory = await updateModelInventoryByIdQuery(
@@ -650,11 +635,10 @@ export async function updateModelInventoryById(req: Request, res: Response) {
       ).catch((err) => console.error("Failed to send approver notification:", err));
     }
 
-    // F6: notify only for newly added projects. A plain field edit sends
-    // projects: undefined, so the diff is empty and nothing fires.
-    const savedProjectIds =
-      ((savedModelInventory as any).dataValues?.projects as number[] | undefined) ?? [];
-    const addedProjectIds = savedProjectIds.filter((id) => !projectIdsBefore.includes(id));
+    // F6: notify only for newly added projects. The update query changes use
+    // case links by difference and reports the ones it added; a plain field
+    // edit sends projects: undefined, so nothing is added and nothing fires.
+    const addedProjectIds = savedModelInventory.addedProjectIds ?? [];
     if (addedProjectIds.length > 0) {
       notifyModelRiskCandidates({
         organizationId: req.organizationId!,

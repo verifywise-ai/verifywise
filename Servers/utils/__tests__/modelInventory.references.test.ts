@@ -187,6 +187,34 @@ describe("updateModelInventoryByIdQuery links", () => {
     expect(calls(/^UPDATE model_inventories/)).toHaveLength(0);
   });
 
+  it("reads the linked frameworks only when the request sends frameworks", async () => {
+    db({ linkedProjects: [2], orgProjects: [2] });
+    await update([2], []);
+    expect(
+      calls(/SELECT DISTINCT framework_id FROM model_inventories_projects_frameworks/),
+    ).toHaveLength(0);
+    mockQuery.mockClear();
+    db({ linkedFrameworks: [7], usedFrameworks: [] });
+    await update([], [7]);
+    expect(
+      calls(/SELECT DISTINCT framework_id FROM model_inventories_projects_frameworks/),
+    ).toHaveLength(1);
+  });
+
+  it("reads the use case links once and reports the ones it added", async () => {
+    db({ linkedProjects: [2], orgProjects: [2, 4] });
+    const saved = await update([2, 4], []);
+    expect(
+      calls(/SELECT DISTINCT project_id FROM model_inventories_projects_frameworks/),
+    ).toHaveLength(1);
+    expect(saved.addedProjectIds).toEqual([4]);
+
+    mockQuery.mockClear();
+    db({ linkedProjects: [2] });
+    expect((await update([], [])).addedProjectIds).toEqual([]);
+    expect(calls(/SELECT DISTINCT project_id/)).toHaveLength(0);
+  });
+
   it("without a caller, replaces the use case links as sent", async () => {
     db({ linkedProjects: [3], orgProjects: [2] });
     await update([2], [], false);

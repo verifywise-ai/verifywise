@@ -384,13 +384,18 @@ export const updateModelInventoryByIdQuery = async (
       transaction,
     );
   }
-  // Frameworks already linked are accepted unchanged; only added ones are checked.
+  // Frameworks already linked are accepted unchanged; only added ones are
+  // checked. The linked ones are read only when the request sends frameworks.
+  const linkedFrameworkIds =
+    Array.isArray(frameworks) && frameworks.length > 0
+      ? await getModelInventoryFrameworkIdsQuery(id, organizationId, transaction)
+      : [];
   const { projectIds, frameworkIds } = await resolveModelLinkTargets(
     projects,
     frameworks,
     organizationId,
     transaction,
-    await getModelInventoryFrameworkIdsQuery(id, organizationId, transaction),
+    linkedFrameworkIds,
   );
 
   // Use case links change by difference. With a caller (REST), an added use
@@ -550,7 +555,9 @@ export const updateModelInventoryByIdQuery = async (
       // Don't throw - history recording failure shouldn't block model update
     }
 
-    return updatedModel;
+    // The use cases this update linked, for the caller's "added to a use
+    // case" notices (not a column: it stays out of the JSON response).
+    return Object.assign(updatedModel, { addedProjectIds });
   } catch (error) {
     console.error("Error updating model inventory:", error);
     throw error;
@@ -649,8 +656,7 @@ export const deleteModelInventoryByIdQuery = async (
 
 /**
  * Distinct use case ids a model inventory is linked to directly. Used by the
- * update query (link diff), the update-trigger project diff and the
- * new-model-risk trigger's project scope.
+ * update query (link diff) and the new-model-risk trigger's project scope.
  */
 export async function getModelInventoryProjectIdsQuery(
   modelInventoryId: number,

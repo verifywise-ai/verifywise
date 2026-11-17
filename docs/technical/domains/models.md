@@ -169,6 +169,9 @@ written), and a link to a use case the caller cannot open is kept when the
 submitted list leaves it out (the form only lists use cases the caller can
 see). Frameworks the model already links to are accepted unchanged on update;
 only added frameworks must be in use by a use case of the organization.
+A non-empty `frameworks` list replaces the model's framework links, so the
+model form sends back linked frameworks its picker does not list (EU AI Act,
+bundled frameworks, advisor links) along with the ones picked there.
 Writes without a caller (AI Advisor, intake, seeds) skip the use case access
 check. Model risks follow their model (org-wide). Dataset writes and
 `POST /modelInventoryHistory/snapshot` need `model.edit`; an unknown snapshot
