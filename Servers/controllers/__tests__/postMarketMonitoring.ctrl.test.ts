@@ -1,3 +1,4 @@
+import { NotFoundException } from "../../domain.layer/exceptions/custom.exception";
 import { afterEach, beforeEach, describe, expect, it, jest } from "@jest/globals";
 
 jest.mock("../../utils/postMarketMonitoring.utils", () => ({
@@ -536,6 +537,20 @@ describe("postMarketMonitoring.ctrl", () => {
       expect(res.status).toHaveBeenCalledWith(400);
     });
 
+    it("should return 404 when a question is not one of the cycle's", async () => {
+      mockGetCycleById.mockResolvedValue({ id: 1, status: "pending", project_id: 1 });
+      mockSaveResponses.mockRejectedValue(
+        new NotFoundException("Question not found in this cycle", "PMMResponse", 99),
+      );
+      const req = createReq({
+        params: { cycleId: "1" },
+        body: { responses: [{ question_id: 99, response_value: true }] },
+      });
+      const res = createRes();
+      await saveResponses(req, res);
+      expect(res.status).toHaveBeenCalledWith(404);
+    });
+
     it("should return 404 when cycle not found", async () => {
       mockGetCycleById.mockResolvedValue(null);
       const req = createReq({ params: { cycleId: "999" } });
@@ -720,6 +735,12 @@ describe("postMarketMonitoring.ctrl", () => {
       const res = createRes();
       await submitCycle(req, res);
       expect(mockCompleteCycle).toHaveBeenCalledWith(1, 1, 1, expect.any(Object));
+      // The report reads run in the submit transaction, so they see the
+      // responses saved in it before the commit.
+      const transaction = await mockTransaction.mock.results[0].value;
+      expect(mockSaveResponses).toHaveBeenCalledWith(1, expect.any(Array), 1, transaction);
+      expect(mockGetContextSnapshot).toHaveBeenCalledWith(1, 1, transaction);
+      expect(mockGetResponses).toHaveBeenCalledWith(1, 1, transaction);
       expect(mockGenerateReport).toHaveBeenCalled();
       expect(mockCreateReport).toHaveBeenCalled();
       expect(res.status).toHaveBeenCalledWith(200);
