@@ -319,7 +319,7 @@ export const useCasesContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Open a use case to move it along. On the Overview tab, choose **Mark as live** and pick the go-live date (today or earlier), or choose **Retire**. A planned use case that never launches can be retired too. A use case whose approval request is pending or was rejected can't be marked as live until a review approves it. The same panel holds the department. The dashboard uses it to group live use cases.',
+      text: 'Open a use case to move it along. On the Overview tab, choose **Mark as live** and pick the go-live date (today or earlier), or choose **Retire**. A planned use case that never launches can be retired too. A use case with an approval workflow cannot be marked as live until a review approves it, so not while its request is pending, was rejected or was withdrawn. A rejected use case stays rejected even if an admin removes its workflow: attach a workflow and get it approved first. The same panel holds the department. The dashboard uses it to group live use cases.',
     },
     {
       type: 'image',

@@ -72,9 +72,12 @@ const UseCaseLifecyclePanel = ({
         isStale={!!summary?.stale_ids.includes(project.id)}
         goLiveBlockedReason={
           // The server refuses go-live while the latest approval request is
-          // pending or rejected (audit decision 2).
+          // pending or rejected (audit decision 2). A rejected use case whose
+          // workflow an admin cleared stays rejected until a new approval.
           project.approval_status === "rejected"
-            ? "Approve this use case before marking it as live. Its last approval request was rejected."
+            ? project.approval_workflow_id == null
+              ? "Its last approval request was rejected. Attach an approval workflow and get it approved before marking it as live."
+              : "Approve this use case before marking it as live. Its last approval request was rejected."
             : project.approval_status === "pending"
               ? "Approve this use case before marking it as live."
               : undefined
