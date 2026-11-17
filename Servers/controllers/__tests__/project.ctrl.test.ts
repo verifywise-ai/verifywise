@@ -923,6 +923,15 @@ describe("project.ctrl", () => {
       await getProjectStatsById(req, res);
       expect(res.status).toHaveBeenCalledWith(202);
     });
+    it("reads the owner within this organization", async () => {
+      const project = { ...buildProject(), owner: 4, last_updated_by: null };
+      mockGetById.mockResolvedValue(project as any);
+      mockGetUser.mockResolvedValue(null as any);
+      const req = createReq({ params: { id: "1" }, organizationId: 8 });
+      const res = createRes();
+      await getProjectStatsById(req, res);
+      expect(mockGetUser).toHaveBeenCalledWith(4, null, 8);
+    });
     it("returns the user who last updated it, read in this organization (U-L2)", async () => {
       const project = {
         ...buildProject(),

@@ -359,7 +359,8 @@ const updateUseCase: ToolDef = {
     if (Object.keys(input).length === 0) {
       throw new Error("Provide at least one field to update.");
     }
-    // updateUseCaseService stamps last_updated and last_updated_by.
+    // updateUseCaseService stamps last_updated and last_updated_by when a use
+    // case column is written; a members-only update is not stamped.
 
     const transaction = await sequelize.transaction();
     try {
