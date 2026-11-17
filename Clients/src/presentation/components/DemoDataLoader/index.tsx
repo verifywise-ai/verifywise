@@ -12,7 +12,7 @@
 import React, { memo, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Box, LinearProgress, Typography, keyframes } from "@mui/material";
 import { CustomizableButton } from "../button/customizable-button";
-import { background, border, brand, radiusPx, text } from "../../themes/palette";
+import { background, border, brand, primitives, radiusPx, text } from "../../themes/palette";
 import { ALL_LINES, CAST, FINAL_LINE, lineIndexAt } from "./committee";
 import { estimateProgress, remainingLabel } from "./estimate";
 
@@ -32,6 +32,12 @@ const breathe = keyframes`0%, 100% { transform: scale(1, 1); } 50% { transform: 
 const chatter = keyframes`from { transform: rotate(-2deg) scale(1, 1); } to { transform: rotate(2deg) scale(1.02, 0.98); }`;
 const look = keyframes`0%, 100% { transform: rotate(0deg); } 30%, 70% { transform: rotate(var(--lean)); }`;
 const pop = keyframes`from { opacity: 0; transform: translateX(-50%) translateY(8px) scale(0.92); } to { opacity: 1; transform: translateX(-50%); }`;
+// Moves the colours of the status text left to right; one full tile per loop
+// so the repeat is seamless.
+const sweep = keyframes`from { background-position: 200% 0; } to { background-position: 0% 0; }`;
+/** Brand greens that flow through the status text and the "Explore the demo" button. */
+const FLOWING_GREENS = `linear-gradient(90deg, ${brand.primary}, ${primitives.teal[500]}, ${primitives.green[400]}, ${primitives.teal[500]}, ${brand.primary})`;
+
 const hop = keyframes`0%, 100% { transform: translateY(0) scale(1, 1); } 15% { transform: scale(1.06, 0.92); } 45% { transform: translateY(-22px) scale(0.97, 1.04); } 75% { transform: translateY(0) scale(1.04, 0.95); }`;
 
 interface StageProps {
@@ -335,7 +341,18 @@ const DemoDataLoader: React.FC<DemoDataLoaderProps> = ({ status, onExplore }) =>
             minHeight: "34px",
           }}
         >
-          <Typography sx={{ fontSize: 13, color: text.tertiary }}>
+          <Typography
+            sx={{
+              fontSize: 13,
+              fontWeight: 500,
+              color: "transparent",
+              backgroundImage: FLOWING_GREENS,
+              backgroundSize: "200% 100%",
+              backgroundClip: "text",
+              WebkitBackgroundClip: "text",
+              animation: `${sweep} 2.4s linear infinite`,
+            }}
+          >
             {isDone ? "Finished" : remainingLabel(elapsedMs)}
           </Typography>
           {isDone ? (
@@ -345,6 +362,12 @@ const DemoDataLoader: React.FC<DemoDataLoaderProps> = ({ status, onExplore }) =>
               text="Explore the demo"
               onClick={onExplore}
               testId="demo-data-loader-explore"
+              sx={{
+                "backgroundImage": FLOWING_GREENS,
+                "backgroundSize": "200% 100%",
+                "animation": `${sweep} 3s linear infinite`,
+                "&:hover": { animationDuration: "1.4s" },
+              }}
             />
           ) : (
             <Typography
