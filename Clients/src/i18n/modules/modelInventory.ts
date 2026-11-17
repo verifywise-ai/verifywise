@@ -271,6 +271,8 @@ export const de: Record<string, string> = {
   "MLflow": "MLflow",
   "Only admins can change retention periods":
     "Nur Administratoren können Aufbewahrungsfristen ändern",
+  "Only users who can edit models can share this view":
+    "Nur Benutzer, die Modelle bearbeiten können, können diese Ansicht teilen",
 };
 
 export const fr: Record<string, string> = {
@@ -542,6 +544,8 @@ export const fr: Record<string, string> = {
   "MLflow": "MLflow",
   "Only admins can change retention periods":
     "Seuls les administrateurs peuvent modifier les durées de conservation",
+  "Only users who can edit models can share this view":
+    "Seuls les utilisateurs qui peuvent modifier les modèles peuvent partager cette vue",
 };
 
 export const es: Record<string, string> = {
@@ -813,4 +817,6 @@ export const es: Record<string, string> = {
   "MLflow": "MLflow",
   "Only admins can change retention periods":
     "Solo los administradores pueden cambiar los periodos de retención",
+  "Only users who can edit models can share this view":
+    "Solo los usuarios que pueden editar modelos pueden compartir esta vista",
 };

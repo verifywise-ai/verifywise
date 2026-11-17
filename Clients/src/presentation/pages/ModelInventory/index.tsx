@@ -2219,7 +2219,17 @@ const ModelInventory: React.FC = () => {
 
               {/* Right side: Share, Export, Analytics & Add Model buttons */}
               <Stack direction="row" gap="8px" alignItems="center">
-                <ShareButton onClick={handleShareClick} size="medium" tooltip="Share view" />
+                {/* Creating a share link takes model.edit on the server. */}
+                <ShareButton
+                  onClick={handleShareClick}
+                  size="medium"
+                  disabled={isCreatingDisabled}
+                  tooltip={
+                    isCreatingDisabled
+                      ? "Only users who can edit models can share this view"
+                      : "Share view"
+                  }
+                />
                 <ExportMenu
                   data={exportData}
                   columns={exportColumns}

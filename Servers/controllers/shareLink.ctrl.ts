@@ -17,10 +17,14 @@ import {
   isValidShareToken,
   sanitizeErrorMessage,
 } from "../utils/security.utils";
-import { logProcessing, logSuccess } from "../utils/logger/logHelper";
+import { logSuccess } from "../utils/logger/logHelper";
 
 import { withLegacyHighRiskRole } from "../utils/highRiskRoles.utils";
 import { translateError } from "../utils/i18n.utils";
+import { requestHasPermission } from "../utils/rolePermissions.utils";
+import { pickSharedFields, sharePermissionFor } from "../utils/shareLinkAccess.utils";
+import { getProjectAccessQuery } from "../utils/project.utils";
+import { seesAllProjects } from "../utils/projectVisibility.utils";
 /**
  * The share link's warnings as translated messages. Each key is a literal so
  * the i18n key scanner sees it.
@@ -43,6 +47,28 @@ const shareLinkWarningMessages = (
         return req.t!("Data export is on: anyone with this link can download what it shows.");
     }
   });
+
+/**
+ * Whether the caller may create or change a link to this resource: the edit
+ * permission of its type and, for a use case, write access to that use case
+ * (a link to the whole use case list: a role that sees every use case).
+ */
+const canShareResource = async (
+  req: Request,
+  resourceType: string,
+  resourceId: number,
+): Promise<boolean> => {
+  const permission = sharePermissionFor(resourceType);
+  if (!permission || !(await requestHasPermission(req, permission))) return false;
+  if (resourceType !== "project") return true;
+  if (isTableViewLink(resourceId)) return seesAllProjects(req.role);
+  const access = await getProjectAccessQuery(
+    resourceId,
+    { userId: req.userId!, role: req.role! },
+    req.organizationId!,
+  );
+  return access === "allowed";
+};
 
 /**
  * Create a new share link
@@ -76,6 +102,11 @@ export const createShareLink = async (req: Request, res: Response) => {
     // Note: resource_id can be 0 to share entire table/list view
     if (typeof resource_id !== "number" || resource_id < 0 || !Number.isInteger(resource_id)) {
       throw new ValidationException("Invalid resource ID");
+    }
+
+    if (!(await canShareResource(req, resource_type, resource_id))) {
+      await transaction.rollback();
+      return res.status(403).json(STATUS_CODE[403](req.t!("Access denied")));
     }
 
     // Generate unique share token
@@ -387,20 +418,8 @@ export const updateShareLink = async (req: Request, res: Response) => {
   const { settings, is_enabled, expires_at }: IShareLinkUpdate = req.body;
   const organizationId = req.organizationId!;
 
-  logStructured(
-    "processing",
-    `updating share link ${id} with body: ${JSON.stringify(req.body)}`,
-    "updateShareLink",
-    "shareLink.ctrl.ts",
-  );
+  logStructured("processing", `updating share link ${id}`, "updateShareLink", "shareLink.ctrl.ts");
   logger.debug(`🛠️ Updating share link: ${id} for organization ${organizationId}`);
-  logProcessing({
-    description: `UPDATE DEBUG | ID=${id}, is_enabled=${is_enabled} (type=${typeof is_enabled}), settings=${JSON.stringify(settings)}`,
-    functionName: "updateShareLink",
-    fileName: "shareLink.ctrl.ts",
-    userId: req.userId!,
-    organizationId: req.organizationId!,
-  });
 
   try {
     // First, fetch the share link to verify ownership
@@ -423,13 +442,6 @@ export const updateShareLink = async (req: Request, res: Response) => {
     }
 
     const shareLink = result[0];
-    logProcessing({
-      description: `[UPDATE DEBUG] Current state before update - ID: ${shareLink.id}, is_enabled: ${shareLink.is_enabled}`,
-      functionName: "updateShareLink",
-      fileName: "shareLink.ctrl.ts",
-      userId: req.userId!,
-      organizationId: req.organizationId!,
-    });
 
     // Check if user owns this share link
     if (shareLink.created_by !== req.userId) {
@@ -441,6 +453,13 @@ export const updateShareLink = async (req: Request, res: Response) => {
         "shareLink.ctrl.ts",
       );
       return res.status(403).json(STATUS_CODE[403]({ message: req.t!("Unauthorized") }));
+    }
+
+    // Changing a link (turning it back on, sharing all fields) takes the same
+    // permission as creating it.
+    if (!(await canShareResource(req, shareLink.resource_type, shareLink.resource_id))) {
+      await transaction.rollback();
+      return res.status(403).json(STATUS_CODE[403](req.t!("Access denied")));
     }
 
     // Build update query dynamically based on provided fields
@@ -489,7 +508,7 @@ export const updateShareLink = async (req: Request, res: Response) => {
 
     logSuccess({
       eventType: "Update",
-      description: `[UPDATE DEBUG] After update - ID: ${updatedLink.id}, is_enabled: ${updatedLink.is_enabled} (type: ${typeof updatedLink.is_enabled})`,
+      description: `share link updated: ID ${updatedLink.id}`,
       functionName: "updateShareLink",
       fileName: "shareLink.ctrl.ts",
       userId: req.userId!,
@@ -581,8 +600,12 @@ export const deleteShareLink = async (req: Request, res: Response) => {
 
     const shareLink = result[0];
 
-    // Check if user owns this share link
-    if (shareLink.created_by !== req.userId) {
+    // The creator may revoke their link; an Admin may revoke any link of
+    // the organization.
+    if (
+      shareLink.created_by !== req.userId &&
+      !(await requestHasPermission(req, "organization.admin"))
+    ) {
       await transaction.rollback();
       logStructured(
         "error",
@@ -861,54 +884,16 @@ export const getSharedDataByToken = async (req: Request, res: Response) => {
     // Apply settings-based filtering
     const settings = shareLink.settings || {};
 
-    logProcessing({
-      description: `[SHARE VIEW DEBUG] Settings from DB: ${JSON.stringify(settings)}`,
-      functionName: "getSharedDataByToken",
-      fileName: "shareLink.ctrl.ts",
-      userId: req.userId!,
-      organizationId: req.organizationId!,
-    });
-
-    logProcessing({
-      description: `[SHARE VIEW DEBUG] shareAllFields value: ${settings.shareAllFields} (type: ${typeof settings.shareAllFields})`,
-      functionName: "getSharedDataByToken",
-      fileName: "shareLink.ctrl.ts",
-      userId: req.userId!,
-      organizationId: req.organizationId!,
-    });
-
-    logProcessing({
-      description: `[SHARE VIEW DEBUG] Resource data sample (first record): ${JSON.stringify(
-        Array.isArray(resourceData) && resourceData[0] ? Object.keys(resourceData[0]) : "no data",
-      )}`,
-      functionName: "getSharedDataByToken",
-      fileName: "shareLink.ctrl.ts",
-      userId: req.userId!,
-      organizationId: req.organizationId!,
-    });
-
     // If shareAllFields is false, filter fields shown
     let filteredData;
 
     if (settings.shareAllFields === true) {
-      // Show all fields
-      logProcessing({
-        description: `[SHARE VIEW DEBUG] Showing ALL fields (shareAllFields is true)`,
-        functionName: "getSharedDataByToken",
-        fileName: "shareLink.ctrl.ts",
-        userId: req.userId!,
-        organizationId: req.organizationId!,
-      });
-      filteredData = resourceData;
+      // "All fields" is still the allow-listed fields of the type.
+      filteredData = Array.isArray(resourceData)
+        ? resourceData.map((record) => pickSharedFields(record, resourceType))
+        : pickSharedFields(resourceData, resourceType);
     } else {
       // Show only essential fields based on resource type
-      logProcessing({
-        description: `[SHARE VIEW DEBUG] Filtering to essential fields (shareAllFields is ${settings.shareAllFields})`,
-        functionName: "getSharedDataByToken",
-        fileName: "shareLink.ctrl.ts",
-        userId: req.userId!,
-        organizationId: req.organizationId!,
-      });
       const getEssentialFields = (record: any, resourceType: string) => {
         // Resource-specific essential fields
         switch (resourceType) {
@@ -975,28 +960,6 @@ export const getSharedDataByToken = async (req: Request, res: Response) => {
       }
     }
 
-    logProcessing({
-      description: `[SHARE VIEW DEBUG] Filtered data sample (first record): ${JSON.stringify(
-        Array.isArray(filteredData) && filteredData[0] ? Object.keys(filteredData[0]) : "no data",
-      )}`,
-      functionName: "getSharedDataByToken",
-      fileName: "shareLink.ctrl.ts",
-      userId: req.userId!,
-      organizationId: req.organizationId!,
-    });
-
-    logProcessing({
-      description: `[SHARE VIEW DEBUG] Column count - Original: ${
-        Array.isArray(resourceData) && resourceData[0] ? Object.keys(resourceData[0]).length : 0
-      }, Filtered: ${
-        Array.isArray(filteredData) && filteredData[0] ? Object.keys(filteredData[0]).length : 0
-      }`,
-      functionName: "getSharedDataByToken",
-      fileName: "shareLink.ctrl.ts",
-      userId: req.userId!,
-      organizationId: req.organizationId!,
-    });
-
     // Post-process: For models, consolidate provider_model and replace approver ID
     if (resourceType === "model" && filteredData) {
       const processRecord = (record: any) => {
@@ -1041,16 +1004,6 @@ export const getSharedDataByToken = async (req: Request, res: Response) => {
       } else {
         filteredData = processRecord(filteredData);
       }
-
-      logProcessing({
-        description: `[SHARE VIEW DEBUG] After approver name replacement, sample: ${JSON.stringify(
-          Array.isArray(filteredData) && filteredData[0] ? filteredData[0] : filteredData,
-        )}`,
-        functionName: "getSharedDataByToken",
-        fileName: "shareLink.ctrl.ts",
-        userId: req.userId!,
-        organizationId: req.organizationId!,
-      });
     }
 
     logStructured(
