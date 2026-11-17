@@ -1562,24 +1562,23 @@ const ModelInventory: React.FC = () => {
         return newData;
       });
 
-      // If deleting risks, also optimistically remove related risks from the risks table
-      if (deleteRisks) {
-        setModelRisksData((prevData) =>
-          prevData.filter((risk) => risk.model_id?.toString() !== id),
-        );
-      }
+      // The model's risks either go (archived) or stay with no model.
+      setModelRisksData((prevData) =>
+        deleteRisks
+          ? prevData.filter((risk) => risk.model_id?.toString() !== id)
+          : prevData.map((risk) =>
+              risk.model_id?.toString() === id ? { ...risk, model_id: null } : risk,
+            ),
+      );
 
       await deleteEntityById({
         routeUrl: `/modelInventory/${id}${deleteRisks ? "?deleteRisks=true" : ""}`,
       });
 
-      // Fetch fresh data to ensure consistency with server (without loading state)
+      // Fetch fresh data to ensure consistency with server (without loading state).
+      // Both choices change the model's risks, so they are refetched too.
       await fetchModelInventoryData(false);
-
-      // If risks were deleted, also refresh the model risks data
-      if (deleteRisks) {
-        await fetchModelRisksData(false);
-      }
+      await fetchModelRisksData(false);
 
       // Force a smooth table re-render after the data update
       setTableKey((prev) => prev + 1);
@@ -1595,9 +1594,7 @@ const ModelInventory: React.FC = () => {
 
       // If delete failed, revert the optimistic update by fetching fresh data (without loading state)
       await fetchModelInventoryData(false);
-      if (deleteRisks) {
-        await fetchModelRisksData(false);
-      }
+      await fetchModelRisksData(false);
 
       setAlert({
         variant: "error",

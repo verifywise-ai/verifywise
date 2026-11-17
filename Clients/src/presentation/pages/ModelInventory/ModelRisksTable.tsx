@@ -174,7 +174,8 @@ const ModelRisksTable: React.FC<ModelRisksTableProps> = ({
 
   const getModelName = useCallback(
     (modelId: number | null | undefined) => {
-      if (!modelId) return "N/A";
+      // A risk whose model was deleted with "Keep risks" has no model.
+      if (!modelId) return "No model";
       const model = models.find((m) => m.id == modelId);
       return model?.model || "Unknown";
     },
@@ -359,9 +360,12 @@ const ModelRisksTable: React.FC<ModelRisksTableProps> = ({
                   ...(row.is_deleted && {
                     opacity: 0.7,
                     backgroundColor: palette.background.accent,
+                    cursor: "default",
                   }),
                 }}
-                onClick={() => onEdit(row.id!)}
+                // A deleted (archived) risk cannot be edited: the server
+                // refuses the update, so its row opens nothing.
+                onClick={row.is_deleted ? undefined : () => onEdit(row.id!)}
               >
                 {isColVisible("risk_name") && (
                   <TableCell
@@ -468,16 +472,18 @@ const ModelRisksTable: React.FC<ModelRisksTableProps> = ({
                     minWidth: "50px",
                   }}
                 >
-                  <IconButton
-                    id={row.id!}
-                    onDelete={() => onDelete(row.id!)}
-                    onEdit={() => onEdit(row.id!)}
-                    onMouseEvent={() => {}}
-                    warningTitle="Delete this model risk?"
-                    warningMessage="This action is non-recoverable."
-                    type="model risk"
-                    canDelete={canDeleteRisks}
-                  />
+                  {!row.is_deleted && (
+                    <IconButton
+                      id={row.id!}
+                      onDelete={() => onDelete(row.id!)}
+                      onEdit={() => onEdit(row.id!)}
+                      onMouseEvent={() => {}}
+                      warningTitle="Delete this model risk?"
+                      warningMessage="This action is non-recoverable."
+                      type="model risk"
+                      canDelete={canDeleteRisks}
+                    />
+                  )}
                 </TableCell>
               </TableRow>
             ))}

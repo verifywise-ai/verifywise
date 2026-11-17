@@ -345,6 +345,27 @@ describe("ModelInventory interactions", () => {
     });
   });
 
+  it("refetches the model risks after a delete that keeps them", async () => {
+    mockDeleteEntityById.mockResolvedValue({ status: 200 });
+    renderWithProviders(<ModelInventory />);
+    await waitFor(() => expect(screen.getByTestId("model-inventory-table")).toBeInTheDocument());
+    const riskFetches = () =>
+      mockGetAllEntities.mock.calls.filter(([arg]) =>
+        String((arg as { routeUrl: string }).routeUrl).startsWith("/modelRisks"),
+      ).length;
+    await waitFor(() => expect(riskFetches()).toBeGreaterThan(0));
+    const before = riskFetches();
+
+    fireEvent.click(screen.getByText("delete-model-1"));
+
+    await waitFor(() => {
+      expect(mockDeleteEntityById).toHaveBeenCalledWith({ routeUrl: "/modelInventory/1" });
+    });
+    // The kept risks now have no model; the list must show that, not the
+    // deleted model.
+    await waitFor(() => expect(riskFetches()).toBeGreaterThan(before));
+  });
+
   it("shows an error alert when the initial fetch fails", async () => {
     mockGetAllEntities.mockImplementation(({ routeUrl }: { routeUrl: string }) =>
       routeUrl === "/modelInventory"
