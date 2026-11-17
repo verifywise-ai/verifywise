@@ -3,6 +3,7 @@ import { STATUS_CODE } from "../utils/statusCode.utils";
 import { logStructured } from "../utils/logger/fileLogger";
 import { sequelize } from "../database/db";
 import { toId } from "../utils/validations/validation.utils";
+import { requestHasPermission } from "../utils/rolePermissions.utils";
 import {
   LIFECYCLE_ENTITIES,
   getLifecycleOrgSettings,
@@ -59,12 +60,18 @@ export async function getLifecycleDashboardHandler(req: Request, res: Response) 
 }
 
 /** Pending use case intake submissions for the In review tab (#5188). */
+/**
+ * Pending use case requests for the In review tab. Whoever manages intake
+ * (intakeForm.edit) sees every one; anyone else sees only their own.
+ */
 export async function getPendingSubmissionsHandler(req: Request, res: Response) {
   const fn = "getPendingSubmissionsHandler";
   try {
+    const seesAll = await requestHasPermission(req, "intakeForm.edit");
     const submissions = await getPendingIntakeSubmissions(
       req.organizationId!,
       IntakeEntityType.USE_CASE,
+      seesAll ? undefined : req.userId!,
     );
     return res.status(200).json(STATUS_CODE[200](submissions));
   } catch (error) {

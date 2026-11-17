@@ -19,17 +19,21 @@ async function appFor(orgId: number, userId: number, role: string) {
   );
 }
 
-async function seedOrg(role: "Admin" | "Reviewer" = "Admin") {
+const ROLE_IDS = { Admin: 1, Reviewer: 2, Editor: 3, Auditor: 4 } as const;
+type RoleName = keyof typeof ROLE_IDS;
+
+async function seedUser(orgId: number, role: RoleName) {
   counter += 1;
+  const email = `intake-${Date.now()}-${counter}@test.com`;
+  const userId = await createTestUser(orgId, ROLE_IDS[role], email, "Pw123456!");
+  return { userId, email, api: await appFor(orgId, userId, role) };
+}
+
+async function seedOrg(role: RoleName = "Admin") {
   const orgId = await createTestOrganization();
-  const userId = await createTestUser(
-    orgId,
-    role === "Admin" ? 1 : 2,
-    `intake-${Date.now()}-${counter}@test.com`,
-    "Pw123456!",
-  );
+  const { userId, email, api } = await seedUser(orgId, role);
   const formId = await form(orgId, userId, "AI use case request", "f_title");
-  return { orgId, userId, formId, api: await appFor(orgId, userId, role) };
+  return { orgId, userId, email, formId, api };
 }
 
 /**
@@ -81,13 +85,14 @@ async function submission(
     reviewedAgo?: string;
     originalId?: number;
     entityId?: number;
+    submitterEmail?: string;
   } = {},
 ): Promise<number> {
   const [rows] = await sequelize.query(
     `INSERT INTO intake_submissions
-       (organization_id, form_id, submitter_name, data, entity_type, status, created_at,
-        reviewed_at, original_submission_id, entity_id)
-     VALUES (:orgId, :formId, 'Sam', :data, :entityType, :status,
+       (organization_id, form_id, submitter_name, submitter_email, data, entity_type, status,
+        created_at, reviewed_at, original_submission_id, entity_id)
+     VALUES (:orgId, :formId, 'Sam', :submitterEmail, :data, :entityType, :status,
              NOW() - CAST(:createdAgo AS interval),
              NOW() - CAST(:reviewedAgo AS interval), :originalId, :entityId)
      RETURNING id`,
@@ -102,6 +107,7 @@ async function submission(
         reviewedAgo: opts.reviewedAgo ?? null,
         originalId: opts.originalId ?? null,
         entityId: opts.entityId ?? null,
+        submitterEmail: opts.submitterEmail ?? null,
       },
     },
   );
@@ -114,7 +120,7 @@ describe("intake submissions in the In review tab", () => {
   });
 
   it("lists only pending use case submissions, oldest first, with each form's title answer", async () => {
-    const { orgId, userId, formId, api } = await seedOrg("Reviewer");
+    const { orgId, userId, formId, api } = await seedOrg("Editor");
     const otherForm = await form(orgId, userId, "Second form", "f_name");
     const untitledForm = await form(orgId, userId, "No title form", null);
     const newer = await submission(orgId, formId, {
@@ -150,7 +156,7 @@ describe("intake submissions in the In review tab", () => {
   });
 
   it("lists pending AI app requests on their own endpoint, named by the AI app name answer", async () => {
-    const { orgId, userId, formId, api } = await seedOrg("Reviewer");
+    const { orgId, userId, formId, api } = await seedOrg("Editor");
     const aiForm = await form(orgId, userId, "AI app request", "f_app", "ai_app");
     const app = await submission(orgId, aiForm, {
       data: { f_app: "Meeting notes assistant" },
@@ -178,6 +184,52 @@ describe("intake submissions in the In review tab", () => {
 
     const uc = await api.get("/api/v1/use-case-lifecycle/intake-submissions");
     expect(uc.body.data.items.map((r: any) => r.id)).toEqual([useCase]);
+  });
+
+  it.each(["Auditor", "Reviewer"] as const)(
+    "shows a %s without intakeForm.edit only their own pending submissions",
+    async (role) => {
+      const { orgId, formId } = await seedOrg("Admin");
+      const viewer = await seedUser(orgId, role);
+      const mine = await submission(orgId, formId, {
+        data: { f_title: "Mine" },
+        // Matched without regard to case or surrounding spaces.
+        submitterEmail: `  ${viewer.email.toUpperCase()} `,
+      });
+      await submission(orgId, formId, {
+        data: { f_title: "Someone else's" },
+        submitterEmail: "someone@else.test",
+      });
+      await submission(orgId, formId, { data: { f_title: "Anonymous" } });
+
+      const res = await viewer.api.get("/api/v1/use-case-lifecycle/intake-submissions");
+
+      expect(res.status).toBe(200);
+      expect(res.body.data.total).toBe(1);
+      expect(res.body.data.items.map((r: any) => r.id)).toEqual([mine]);
+    },
+  );
+
+  it("shows a user without intakeForm.edit an empty list when they submitted nothing", async () => {
+    const { orgId, formId } = await seedOrg("Admin");
+    const viewer = await seedUser(orgId, "Auditor");
+    await submission(orgId, formId, { submitterEmail: "someone@else.test" });
+
+    const res = await viewer.api.get("/api/v1/use-case-lifecycle/intake-submissions");
+
+    expect(res.status).toBe(200);
+    expect(res.body.data).toEqual({ total: 0, items: [], limit: 500 });
+  });
+
+  it("shows an Editor (intakeForm.edit) every pending submission", async () => {
+    const { orgId, formId } = await seedOrg("Admin");
+    const editor = await seedUser(orgId, "Editor");
+    await submission(orgId, formId, { submitterEmail: "someone@else.test" });
+    await submission(orgId, formId, { submitterEmail: editor.email });
+
+    const res = await editor.api.get("/api/v1/use-case-lifecycle/intake-submissions");
+
+    expect(res.body.data.total).toBe(2);
   });
 
   it("dates a resubmission from the first submission of its chain", async () => {
