@@ -149,6 +149,12 @@ const namedRowFormatter =
     }
   };
 
+/** Comparison key for a nullable id column: "" for none, else the number as text. */
+const nullableIdKey = (value: unknown): string =>
+  value === null || value === undefined || value === "" || Number(value) === 0
+    ? ""
+    : String(Number(value));
+
 /**
  * Entity configuration interface
  */
@@ -568,6 +574,9 @@ export const ENTITY_CONFIGS: { [key in EntityType]: EntityConfig } = {
         "Approval workflow",
       ),
     },
+    // By id, not by title: two workflows may share a title, and an unchanged
+    // save (also "5" for 5) looks no name up.
+    fieldComparators: { approval_workflow_id: nullableIdKey },
   },
 
   // AI apps (#5193). Written by the lifecycle actions

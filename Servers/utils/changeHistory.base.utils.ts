@@ -382,14 +382,17 @@ export const trackEntityChanges = async (
     // Skip if field is not being updated
     if (newValue === undefined) continue;
 
+    // A field with a comparison key is compared on it before anything is
+    // formatted, so an unchanged value runs no formatter lookups.
+    const compare = config.fieldComparators?.[field];
+    if (compare && compare(oldValue) === compare(newValue)) continue;
+
     // Format values for comparison
     const oldValueStr = await formatFieldValue(entityType, field, oldValue, context);
     const newValueStr = await formatFieldValue(entityType, field, newValue, context);
 
     // Record change if values differ (by the field's comparison key when it has one)
-    const compare = config.fieldComparators?.[field];
-    const differs = compare ? compare(oldValue) !== compare(newValue) : oldValueStr !== newValueStr;
-    if (differs) {
+    if (compare || oldValueStr !== newValueStr) {
       changes.push({
         fieldName: getFieldLabel(entityType, field),
         oldValue: oldValueStr,
