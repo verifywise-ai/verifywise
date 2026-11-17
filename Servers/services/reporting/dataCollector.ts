@@ -1223,12 +1223,15 @@ export class ReportDataCollector {
       let replacements: Record<string, any>;
 
       if (isOrganizational) {
-        // For organizational reports, get ALL model risks
+        // For organizational reports, every live model risk, with or
+        // without a model (a model deleted with "Keep risks" leaves them).
+        // Archived (deleted) risks are not open risks: they stay out.
         modelRisksQuery = `
           SELECT mr.*, mi.model as model_name
           FROM model_risks mr
-          JOIN model_inventories mi ON mr.model_id = mi.id AND mi.organization_id = mr.organization_id
+          LEFT JOIN model_inventories mi ON mr.model_id = mi.id AND mi.organization_id = mr.organization_id
           WHERE mr.organization_id = :organizationId
+            AND mr.is_deleted = false
           ORDER BY mr.id ASC
         `;
         replacements = { organizationId: this.organizationId };
@@ -1243,6 +1246,7 @@ export class ReportDataCollector {
           JOIN model_inventories_projects_frameworks mip ON mi.id = mip.model_inventory_id AND mip.organization_id = mi.organization_id
           WHERE mr.organization_id = :organizationId AND mip.project_id = :projectId
             AND mip.framework_id IS NULL
+            AND mr.is_deleted = false
           ORDER BY mr.id ASC
         `;
         replacements = { organizationId: this.organizationId, projectId: this.projectId };
@@ -1257,7 +1261,7 @@ export class ReportDataCollector {
         totalRisks: modelRisks.length,
         risks: modelRisks.map((mr) => ({
           id: mr.id,
-          modelName: mr.model_name || "Unknown Model",
+          modelName: mr.model_id ? mr.model_name || "Unknown Model" : "No model",
           riskName: mr.risk_name || "Unnamed Risk",
           riskLevel: mr.risk_level || "Unknown",
           // model_risks has `status`, not `mitigation_status`. The old read
