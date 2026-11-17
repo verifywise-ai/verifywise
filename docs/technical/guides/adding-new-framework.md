@@ -1,7 +1,7 @@
 # Adding a New Compliance Framework
 
 This guide covers adding a framework to the **structure registry** in
-`Servers/structures/`. The 22 bundled frameworks (ids 5–26: SOC 2, GDPR, HIPAA,
+`Servers/structures/`. The 23 bundled frameworks (ids 5–27: SOC 2, GDPR, HIPAA,
 ...) work this way. A registry framework needs no custom tables, routes,
 controllers or UI. You declare its hierarchy in one TypeScript file, and the
 generic endpoints (`/api/frameworks/:frameworkId/...`) and the generic UI
@@ -15,7 +15,7 @@ generic endpoints (`/api/frameworks/:frameworkId/...`) and the generic UI
 
 | | Core (hand-built) | Registry (structure file) |
 |---|---|---|
-| Frameworks | EU AI Act (1), ISO 42001 (2), ISO 27001 (3), NIST AI RMF (4) | 22 frameworks, ids 5–26 |
+| Frameworks | EU AI Act (1), ISO 42001 (2), ISO 27001 (3), NIST AI RMF (4) | 23 frameworks, ids 5–27 |
 | Structure | Hand-written files in `Servers/structures/{EU-AI-Act,ISO-42001,ISO-27001,NIST-AI-RMF}/`, not in the registry | One `*.structure.ts` per framework, listed in `FRAMEWORK_STRUCTURES` |
 | Tables | Bespoke (`controls_eu`, `subclauses_iso`, `subclauses_iso27001`, `nist_ai_rmf_subcategories`, ...) | Generated from the structure's `tables` / `cols` |
 | API | Per-framework routers (`/api/eu-ai-act`, `/api/iso-42001`, `/api/iso-27001`, `/api/nist-ai-rmf`) | Generic `/api/frameworks/:frameworkId/...` |
@@ -158,7 +158,7 @@ Three-level frameworks also set:
 ### 1. Write the structure file
 
 Create `Servers/structures/<Name>/<key>.structure.ts` with a default export.
-Use the next unused id. Ids 1–26 are taken, so the next is **27**. Check the
+Use the next unused id. Ids 1–27 are taken, so the next is **28**. Check the
 registry and `SELECT max(id) FROM verifywise.frameworks` first. Table names
 must not collide with existing tables.
 
@@ -172,7 +172,7 @@ Add the import and the entry to `FRAMEWORK_STRUCTURES` in
 In `Servers/utils/frameworkRegistry.utils.ts`:
 
 ```ts
-// <Name> (id=27)
+// <Name> (id=28)
 export const create<Name>FrameworkQuery = makeCreate("<key>");
 export const deleteProjectFramework<Name>Query = makeDelete("<key>");
 ```
@@ -181,9 +181,9 @@ export const deleteProjectFramework<Name>Query = makeDelete("<key>");
 
 In `Servers/types/framework.type.ts`, import the two wrappers and add:
 
-- `27: create<Name>FrameworkQuery` to `frameworkAdditionMap`
-- `27: deleteProjectFramework<Name>Query` to `frameworkDeletionMap`
-- `27: []` to `frameworkFilesDeletionSourceMap`. Registry frameworks clean up
+- `28: create<Name>FrameworkQuery` to `frameworkAdditionMap`
+- `28: deleteProjectFramework<Name>Query` to `frameworkDeletionMap`
+- `28: []` to `frameworkFilesDeletionSourceMap`. Registry frameworks clean up
   their own `file_entity_links`.
 
 ### 5. File source labels

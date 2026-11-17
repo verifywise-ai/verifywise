@@ -205,9 +205,9 @@ Tokens are obtained via `/api/users/login` and refreshed via `/api/users/refresh
 | POST | `/toProject` | Add to project | JWT |
 | DELETE | `/fromProject` | Remove from project | JWT |
 
-### Bundled frameworks (ids 5–25)
+### Bundled frameworks (ids 5–27)
 
-Generic implementation endpoints for the frameworks declared in `Servers/structures/` (`frameworkImpl.route.ts`). `:level` is `l2` or `l3`. See [Compliance Frameworks](../domains/compliance-frameworks.md#bundled-frameworks-ids-525).
+Generic implementation endpoints for the frameworks declared in `Servers/structures/` (`frameworkImpl.route.ts`). `:level` is `l2` or `l3`. See [Compliance Frameworks](../domains/compliance-frameworks.md#bundled-frameworks-ids-527).
 
 | Method | Endpoint | Description | Auth |
 |--------|----------|-------------|------|

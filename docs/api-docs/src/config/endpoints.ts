@@ -5189,7 +5189,7 @@ export const frameworkEndpoints: Endpoint[] = [
     description: "Returns the framework metadata (id, key, framework_type, display_name, entity_types, hierarchy_type) and the full structure tree with the project's implementation rows. Generic endpoint for the bundled frameworks declared in Servers/structures.",
     requiresAuth: true,
     parameters: [
-      { name: 'frameworkId', in: 'path', type: 'integer', required: true, description: "Framework id (the bundled frameworks use ids 5-25)" },
+      { name: 'frameworkId', in: 'path', type: 'integer', required: true, description: "Framework id (the bundled frameworks use ids 5-27)" },
       { name: 'projectId', in: 'path', type: 'integer', required: true, description: "Project (use case) id, or the organizational project id" },
     ],
     responses: [
@@ -5207,7 +5207,7 @@ export const frameworkEndpoints: Endpoint[] = [
     description: "Returns status counts for the framework's implementation rows in the given project.",
     requiresAuth: true,
     parameters: [
-      { name: 'frameworkId', in: 'path', type: 'integer', required: true, description: "Framework id (the bundled frameworks use ids 5-25)" },
+      { name: 'frameworkId', in: 'path', type: 'integer', required: true, description: "Framework id (the bundled frameworks use ids 5-27)" },
       { name: 'projectFrameworkId', in: 'path', type: 'integer', required: true, description: "projects_frameworks row id linking the framework to the project" },
     ],
     responses: [
@@ -5225,7 +5225,7 @@ export const frameworkEndpoints: Endpoint[] = [
     description: "Returns one implementation row (status, owner, reviewer, approver, due date, notes, evidence).",
     requiresAuth: true,
     parameters: [
-      { name: 'frameworkId', in: 'path', type: 'integer', required: true, description: "Framework id (the bundled frameworks use ids 5-25)" },
+      { name: 'frameworkId', in: 'path', type: 'integer', required: true, description: "Framework id (the bundled frameworks use ids 5-27)" },
       { name: 'level', in: 'path', type: 'string', required: true, description: "Implementation level: l2 (two-level frameworks) or l3 (leaf level of three-level frameworks)" },
       { name: 'id', in: 'path', type: 'integer', required: true, description: "Implementation row id" },
     ],
@@ -5244,7 +5244,7 @@ export const frameworkEndpoints: Endpoint[] = [
     description: "Multipart form. Fields: status, implementation_description, owner, reviewer, approver, due_date, auditor_feedback, risksMitigated (JSON array), risksDelete (JSON array), delete (JSON array of file ids to detach), user_id; attach evidence as file parts.",
     requiresAuth: true,
     parameters: [
-      { name: 'frameworkId', in: 'path', type: 'integer', required: true, description: "Framework id (the bundled frameworks use ids 5-25)" },
+      { name: 'frameworkId', in: 'path', type: 'integer', required: true, description: "Framework id (the bundled frameworks use ids 5-27)" },
       { name: 'level', in: 'path', type: 'string', required: true, description: "Implementation level: l2 (two-level frameworks) or l3 (leaf level of three-level frameworks)" },
       { name: 'id', in: 'path', type: 'integer', required: true, description: "Implementation row id" },
     ],
@@ -5276,7 +5276,7 @@ export const frameworkEndpoints: Endpoint[] = [
     description: "Returns the risks linked to one implementation row.",
     requiresAuth: true,
     parameters: [
-      { name: 'frameworkId', in: 'path', type: 'integer', required: true, description: "Framework id (the bundled frameworks use ids 5-25)" },
+      { name: 'frameworkId', in: 'path', type: 'integer', required: true, description: "Framework id (the bundled frameworks use ids 5-27)" },
       { name: 'level', in: 'path', type: 'string', required: true, description: "Implementation level: l2 (two-level frameworks) or l3 (leaf level of three-level frameworks)" },
       { name: 'id', in: 'path', type: 'integer', required: true, description: "Implementation row id" },
     ],

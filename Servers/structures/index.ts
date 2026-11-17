@@ -22,11 +22,12 @@ import coloradoAiActStructure from "./Colorado-AI-Act/colorado-ai-act.structure"
 import hipaaStructure from "./HIPAA/hipaa.structure";
 import nistCsfStructure from "./NIST-CSF/nist-csf.structure";
 import en18286Structure from "./EN-18286/en-18286.structure";
+import en18286AiSystemsStructure from "./EN-18286/en-18286-ai-systems.structure";
 
 export * from "./types";
 
 /**
- * Registry of the 22 registry frameworks. Built-ins (EU AI Act, ISO 42001,
+ * Registry of the 23 registry frameworks. Built-ins (EU AI Act, ISO 42001,
  * ISO 27001, NIST AI RMF) are not in this list — they keep their bespoke
  * struct/impl tables and endpoints.
  */
@@ -53,6 +54,7 @@ export const FRAMEWORK_STRUCTURES: FrameworkStructure[] = [
   hipaaStructure,
   nistCsfStructure,
   en18286Structure,
+  en18286AiSystemsStructure,
 ];
 
 const BY_KEY = new Map<string, FrameworkStructure>();

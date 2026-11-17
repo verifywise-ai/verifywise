@@ -5,7 +5,7 @@
 VerifyWise ships 25 compliance frameworks, all available to every organization. None of them needs to be installed or enabled.
 
 - **4 core frameworks** (ids 1–4): EU AI Act, ISO 42001, ISO 27001 and NIST AI RMF. Each has hand-built tables, endpoints and pages. Most of this document describes these.
-- **22 bundled frameworks** (ids 5–26): SOC 2, GDPR, HIPAA and others. They are declared in the structure registry (`Servers/structures/`) and served by generic endpoints and a generic UI. See [Bundled frameworks (ids 5–25)](#bundled-frameworks-ids-525).
+- **23 bundled frameworks** (ids 5–27): SOC 2, GDPR, HIPAA and others. They are declared in the structure registry (`Servers/structures/`) and served by generic endpoints and a generic UI. See [Bundled frameworks (ids 5–27)](#bundled-frameworks-ids-527).
 
 All frameworks share the same patterns for progress tracking, status management and risk linking. Users cannot create, import or export their own frameworks. New frameworks are added in code. See [Adding a New Compliance Framework](../guides/adding-new-framework.md).
 
@@ -17,7 +17,7 @@ All frameworks share the same patterns for progress tracking, status management 
 | ISO 42001 | 2 | AI management system |
 | ISO 27001 | 3 | Information security management |
 | NIST AI RMF | 4 | AI risk management |
-| 22 bundled frameworks | 5–26 | See [Bundled frameworks](#bundled-frameworks-ids-525) |
+| 23 bundled frameworks | 5–27 | See [Bundled frameworks](#bundled-frameworks-ids-527) |
 
 ## Framework Structures
 
@@ -478,7 +478,7 @@ DELETE /frameworks/fromProject?frameworkId=2&projectId=5
 
 Calls `frameworkDeletionMap[frameworkId]` and deletes all of that project's implementation data for the framework (status, assignments, risk links, evidence links). The UI asks for confirmation ("Confirm framework removal") first.
 
-## Bundled frameworks (ids 5–25)
+## Bundled frameworks (ids 5–27)
 
 These frameworks shipped as plugins until PR #4443 (August 2026). They are now core and are declared in TypeScript:
 
@@ -508,7 +508,7 @@ Names and flags come from each structure's `seed.name` and `seed.is_organization
 | 25 | `nist-csf` | NIST Cybersecurity Framework | 3 |
 | 26 | `en-18286` | EN 18286 | 2 |
 
-**Use-case-level (9)**: added from a use case's **Frameworks/regulations** tab
+**Use-case-level (10)**: added from a use case's **Frameworks/regulations** tab
 
 | ID | Key | Name | Levels |
 |----|-----|------|--------|
@@ -521,10 +521,11 @@ Names and flags come from each structure's `seed.name` and `seed.is_organization
 | 22 | `texas-ai-act` | Texas Responsible AI Governance Act Framework | 2 |
 | 23 | `colorado-ai-act` | Colorado Artificial Intelligence Act Framework | 2 |
 | 24 | `hipaa` | HIPAA Security Rule Framework | 3 |
+| 27 | `en-18286-ai-systems` | EN 18286 AI systems | 2 |
 
-Total: 4 core + 22 bundled = **26 frameworks**.
+Total: 4 core + 23 bundled = **27 frameworks**.
 
-EN 18286 (id 26) was added after the August 2026 migrations, by `20261110121006-add-en-18286-framework.js`. That migration returns early on databases where the `20260805*` migrations already created it.
+EN 18286 is split into two frameworks: `en-18286` (id 26, organization level: clauses 4–7, 9.6, 9.7 and 10) and `en-18286-ai-systems` (id 27, use-case level: clause 8 and 9.1–9.5, tracked per AI system). The standard defines one QMS; the split follows the organization / AI system division Modulos uses. Both were added after the August 2026 migrations, by `20261110121006-add-en-18286-framework.js`, which skips each framework whose `frameworks` row the `20260805*` migrations already created.
 
 ### Tables
 
@@ -586,7 +587,7 @@ Generated reports cover only the four core frameworks. `Servers/services/reporti
 | `routes/iso-42001.route.ts` | ISO 42001 routes |
 | `routes/nist-ai-rmf.route.ts` | NIST routes |
 | `routes/eu-ai-act.route.ts` | EU AI Act routes |
-| `structures/index.ts`, `structures/<Name>/*.structure.ts` | Bundled framework registry (ids 5–25) |
+| `structures/index.ts`, `structures/<Name>/*.structure.ts` | Bundled framework registry (ids 5–27) |
 | `utils/frameworkRegistry.utils.ts` | Add/remove bundled frameworks on a project |
 | `routes/frameworkImpl.route.ts`, `controllers/frameworkImpl.ctrl.ts`, `utils/frameworkImpl.utils.ts` | Generic implementation endpoints |
 | `types/framework.type.ts` | `frameworkAdditionMap` / `frameworkDeletionMap` by framework id |

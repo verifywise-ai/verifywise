@@ -20,6 +20,7 @@ const FRAMEWORK_BADGE_SLUGS: Record<string, string> = {
   "Data Governance Framework": "data_governance",
   "DORA Compliance Framework": "dora",
   "EN 18286": "en_18286",
+  "EN 18286 AI systems": "en_18286",
   "FTC AI Guidelines": "ftc_ai_guidelines",
   "NIST Cybersecurity Framework": "nist_csf",
   "NYC Local Law 144 - Automated Employment Decision Tools": "nyc_local_law_144",
