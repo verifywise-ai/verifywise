@@ -369,6 +369,21 @@ export const tenantIsolationRegistry: IsolationEntity[] = [
     testFile: "imported-framework-assessment.isolation.test.ts",
   },
   {
+    // EN 18286 and EN 18286 AI systems (framework ids 26 and 27). Impl rows
+    // and risk links are only reachable through a project's framework on the
+    // generic registry framework routes, so a hand-written file covers all
+    // four tables.
+    name: "en_18286_requirements",
+    tables: [
+      "en_18286_requirements",
+      "en_18286_requirements__risks",
+      "en_18286_ai_systems_requirements",
+      "en_18286_ai_systems_requirements__risks",
+    ],
+    baseRoute: "/api/frameworks",
+    testFile: "en-18286.isolation.test.ts",
+  },
+  {
     // Slack extension connections. Every connection belongs to an
     // organization; management routes and delivery filter by it, so a
     // hand-written file covers the routes and the delivery query.
