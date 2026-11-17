@@ -58,7 +58,9 @@
   "dependencies": {
     "@ai-sdk/anthropic": "^4.0.97",
     "@ai-sdk/openai": "^4.0.109",
+    "@aws-sdk/client-s3": "^3.1170.0",
     "@aws-sdk/client-ses": "^3.1163.0",
+    "@aws-sdk/s3-request-presigner": "^3.1170.0",
     "@azure/communication-email": "^1.1.0",
     "@azure/msal-node": "^7.2.0",
     "@daytonaio/sdk": "^0.230.0",
