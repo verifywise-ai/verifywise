@@ -510,3 +510,98 @@ describe("post-market monitoring review fixes", () => {
     },
   );
 });
+
+describe("GET /api/pmm/reports lists only reports of visible use cases", () => {
+  let orgId: number;
+  let ownerId: number;
+  let adminId: number;
+  let mine: Ctx;
+  let other: Ctx;
+
+  beforeAll(async () => {
+    await cleanupDatabase();
+    orgId = await createTestOrganization();
+    ownerId = await user(orgId, "Editor");
+    adminId = await user(orgId, "Admin");
+    mine = await seedMonitoring(orgId, ownerId);
+    other = await seedMonitoring(orgId, await user(orgId, "Editor"));
+  });
+
+  afterAll(async () => {
+    await cleanupDatabase();
+  });
+
+  const reportIds = (res: any) =>
+    (res.body.data.reports as Array<{ id: number }>).map((r) => r.id).sort((a, b) => a - b);
+
+  it("shows a non-Admin only the reports of use cases they can see, and counts only those", async () => {
+    const res = await (await apiAs(orgId, ownerId, "Editor")).get(`/api/pmm/reports`);
+    expect(res.status).toBe(200);
+    expect(reportIds(res)).toEqual([mine.report]);
+    expect(res.body.data.total).toBe(1);
+  });
+
+  it("returns an empty list when filtered to a use case the caller cannot see", async () => {
+    const res = await (
+      await apiAs(orgId, ownerId, "Editor")
+    ).get(`/api/pmm/reports?project_id=${other.project}`);
+    expect(res.status).toBe(200);
+    expect(reportIds(res)).toEqual([]);
+    expect(res.body.data.total).toBe(0);
+  });
+
+  it("shows an Admin every report", async () => {
+    const res = await (await apiAs(orgId, adminId, "Admin")).get(`/api/pmm/reports`);
+    expect(reportIds(res)).toEqual([mine.report, other.report].sort((a, b) => a - b));
+  });
+});
+
+describe("POST /api/pmm/projects/:projectId/start-cycle needs postMarketMonitoring.edit", () => {
+  let orgId: number;
+  let ownerId: number;
+
+  beforeAll(async () => {
+    await cleanupDatabase();
+    orgId = await createTestOrganization();
+    ownerId = await user(orgId, "Editor");
+  });
+
+  afterAll(async () => {
+    await cleanupDatabase();
+  });
+
+  const cyclesOf = (config: number) =>
+    count(`SELECT COUNT(*) AS n FROM post_market_monitoring_cycles WHERE config_id = :config`, {
+      config,
+    });
+
+  const memberApi = async (c: Ctx, role: RoleName) => {
+    const member = await user(orgId, role);
+    await sequelize.query(
+      `INSERT INTO projects_members (organization_id, project_id, user_id)
+       VALUES (:orgId, :project, :member)`,
+      { replacements: { orgId, project: c.project, member } },
+    );
+    return apiAs(orgId, member, role);
+  };
+
+  it.each(["Reviewer", "Auditor"] as const)(
+    "refuses a %s on the use case with 403 and starts no cycle",
+    async (role) => {
+      const c = await seedMonitoring(orgId, ownerId);
+      const res = await (
+        await memberApi(c, role)
+      ).post(`/api/pmm/projects/${c.project}/start-cycle`);
+      expect(res.status).toBe(403);
+      expect(await cyclesOf(c.config)).toBe(1);
+    },
+  );
+
+  it("lets an Editor on the use case past both checks", async () => {
+    const c = await seedMonitoring(orgId, ownerId);
+    const res = await (
+      await memberApi(c, "Editor")
+    ).post(`/api/pmm/projects/${c.project}/start-cycle`);
+    expect(res.status).not.toBe(403);
+  });
+});

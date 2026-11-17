@@ -1,3 +1,4 @@
+import { actingProjectViewer } from "./useCaseScope";
 import {
   getPMMConfigByProjectIdQuery,
   getPMMQuestionsQuery,
@@ -108,16 +109,18 @@ const getPmmQuestions = async (params: { config_id?: number }, organizationId: n
 };
 
 const fetchPmmReports = async (
-  params: { project_id?: number; limit?: number },
+  params: { project_id?: number; limit?: number } & Record<string, unknown>,
   organizationId: number,
 ) => {
   try {
     if (!params.project_id) {
       return { message: "project_id is recommended to filter PMM reports." };
     }
+    // Only reports of use cases the user can see (none without a user).
     const reportsResult = await getPMMReportsQuery(
       { projectId: params.project_id, limit: params.limit },
       organizationId,
+      await actingProjectViewer(params, organizationId),
     );
     return {
       project_id: params.project_id,

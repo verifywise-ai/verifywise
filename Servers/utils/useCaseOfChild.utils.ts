@@ -44,6 +44,18 @@ export const useCaseOfEuControl = viaProjectFramework(
   `SELECT pf.project_id FROM controls_eu r ${joinProjectFramework}`,
 );
 
+/** An EU AI Act subcontrol (subcontrols_eu), through its control. */
+export const useCaseOfEuSubcontrol: UseCaseOfChild = (id, organizationId) =>
+  firstProjectId(
+    `SELECT pf.project_id FROM subcontrols_eu s
+       JOIN controls_eu c ON c.organization_id = s.organization_id AND c.id = s.control_id
+       JOIN projects_frameworks pf
+         ON pf.organization_id = c.organization_id AND pf.id = c.projects_frameworks_id
+      WHERE s.organization_id = :organizationId AND s.id = :id`,
+    id,
+    organizationId,
+  );
+
 /** An ISO 42001 subclause (subclauses_iso). */
 export const useCaseOfIso42001Subclause = viaProjectFramework(
   `SELECT pf.project_id FROM subclauses_iso r ${joinProjectFramework}`,

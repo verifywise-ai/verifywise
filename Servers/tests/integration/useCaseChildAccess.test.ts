@@ -73,7 +73,11 @@ const euFramework = async (orgId: number, projectId: number): Promise<Ctx> => {
     `INSERT INTO answers_eu (organization_id, assessment_id) VALUES (:orgId, :assessment) RETURNING id`,
     { orgId, assessment },
   );
-  return { pf, control, answer, controlMeta: meta.id };
+  const subcontrol = await insertId(
+    `INSERT INTO subcontrols_eu (organization_id, control_id) VALUES (:orgId, :control) RETURNING id`,
+    { orgId, control },
+  );
+  return { pf, control, answer, controlMeta: meta.id, subcontrol };
 };
 
 interface IsoTables {
@@ -277,6 +281,28 @@ const ROUTES: Route[] = [
     call: (api, c) => api.delete(`/api/eu-ai-act/assessments/byProjectId/${c.pf}`),
     success: 200,
     unchanged: euRows,
+  },
+  // ---- change history of requirement rows ----
+  {
+    name: "GET /api/v1/control-eu-change-history/:id",
+    prepare: euFramework,
+    call: (api, c) => api.get(`/api/v1/control-eu-change-history/${c.control}`),
+    success: 200,
+    missing: 200,
+  },
+  {
+    name: "GET /api/v1/subcontrol-eu-change-history/:id",
+    prepare: euFramework,
+    call: (api, c) => api.get(`/api/v1/subcontrol-eu-change-history/${c.subcontrol}`),
+    success: 200,
+    missing: 200,
+  },
+  {
+    name: "GET /api/v1/annex-category-change-history/:id",
+    prepare: iso42001,
+    call: (api, c) => api.get(`/api/v1/annex-category-change-history/${c.annex}`),
+    success: 200,
+    missing: 200,
   },
   // ---- bundled frameworks (frameworkImpl) ----
   {
@@ -593,6 +619,24 @@ describe("use case access on routes keyed by a child id (U-H4)", () => {
 
       expect(res.status).toBe(route.missing ?? 404);
       if (route.unchanged) expect(await route.unchanged(ctx)).toBe(before);
+    });
+  });
+
+  describe("requirement change history outlives its row", () => {
+    it("is refused to a non-Admin once the control is deleted, and still open to an Admin", async () => {
+      const projectId = await createTestProject(orgId, ownerId);
+      const ctx = await euFramework(orgId, projectId);
+      await sequelize.query(`DELETE FROM controls_eu WHERE id = :id`, {
+        replacements: { id: ctx.control },
+      });
+      const owner = await apiAs(orgId, ownerId, "Editor");
+      expect((await owner.get(`/api/v1/control-eu-change-history/${ctx.control}`)).status).toBe(
+        403,
+      );
+      const admin = await apiAs(orgId, adminId, "Admin");
+      expect((await admin.get(`/api/v1/control-eu-change-history/${ctx.control}`)).status).toBe(
+        200,
+      );
     });
   });
 

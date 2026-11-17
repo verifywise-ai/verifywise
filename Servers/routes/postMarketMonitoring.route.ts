@@ -251,6 +251,7 @@ router.post(
 router.post(
   "/projects/:projectId/start-cycle",
   authenticateJWT,
+  authorize("postMarketMonitoring.edit"),
   requireProjectAccess("projectId"),
   startNewCycle,
 );
