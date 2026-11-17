@@ -3,6 +3,13 @@ import { IModelRisk } from "../domain.layer/interfaces/i.modelRisk";
 import { sequelize } from "../database/db";
 import { QueryTypes, Transaction } from "sequelize";
 import {
+  assertModelInOrganization,
+  assertOrganizationMember,
+  toPositiveId,
+} from "./modelReferences.utils";
+
+export const OWNER_NOT_IN_ORGANIZATION = "The owner must be a member of this organization.";
+import {
   deleteAllCustomFieldValuesForEntityQuery,
   fetchCustomFieldsForEntities,
 } from "./customField.utils";
@@ -75,6 +82,20 @@ export async function createNewModelRiskQuery(
   transaction?: import("sequelize").Transaction,
 ): Promise<ModelRiskModel> {
   const created_at = new Date();
+  // The model and the owner must be the organization's, checked in the
+  // transaction that stores them. Every caller (REST, advisor, intake, Shadow
+  // AI, seeds) goes through here.
+  const modelId =
+    data.model_id === undefined || data.model_id === null || (data.model_id as unknown) === ""
+      ? null
+      : await assertModelInOrganization(data.model_id, organizationId, transaction ?? null);
+  const ownerId = await assertOrganizationMember(
+    data.owner,
+    organizationId,
+    "owner",
+    OWNER_NOT_IN_ORGANIZATION,
+    transaction ?? null,
+  );
   const result = await sequelize.query(
     `INSERT INTO model_risks (organization_id, risk_name, risk_category, risk_level, status, owner, target_date, description, mitigation_plan, impact, likelihood, key_metrics, current_values, threshold, model_id, created_at, updated_at, is_demo)
         VALUES (:organization_id, :risk_name, :risk_category, :risk_level, :status, :owner, :target_date, :description, :mitigation_plan, :impact, :likelihood, :key_metrics, :current_values, :threshold, :model_id, :created_at, :updated_at, :is_demo) RETURNING *`,
@@ -85,7 +106,7 @@ export async function createNewModelRiskQuery(
         risk_category: data.risk_category,
         risk_level: data.risk_level,
         status: data.status || "Open",
-        owner: data.owner,
+        owner: ownerId,
         target_date: data.target_date,
         description: data.description || "",
         mitigation_plan: data.mitigation_plan || "",
@@ -94,7 +115,7 @@ export async function createNewModelRiskQuery(
         key_metrics: data.key_metrics || "",
         current_values: data.current_values || "",
         threshold: data.threshold || "",
-        model_id: data.model_id || null,
+        model_id: modelId,
         created_at: created_at,
         updated_at: created_at,
         is_demo: data.is_demo || false,
@@ -118,6 +139,41 @@ export async function updateModelRiskByIdQuery(
   transaction?: import("sequelize").Transaction,
 ): Promise<ModelRiskModel | null> {
   const updated_at = new Date();
+
+  // A changed model or owner must be the organization's. Unchanged values are
+  // not re-checked, so a risk whose owner has since left can still be edited.
+  const current = (await sequelize.query(
+    `SELECT owner, model_id FROM model_risks WHERE organization_id = :organizationId AND id = :id`,
+    { replacements: { organizationId, id }, type: QueryTypes.SELECT, transaction },
+  )) as { owner: number | null; model_id: number | null }[];
+  if (current.length === 0) return null;
+  const checked: Partial<IModelRisk> = { ...updatedModelRisk };
+  if (updatedModelRisk.model_id !== undefined) {
+    const raw = updatedModelRisk.model_id as unknown;
+    if (raw === null || raw === "") {
+      checked.model_id = null as any;
+    } else if (toPositiveId(raw) !== current[0].model_id) {
+      checked.model_id = await assertModelInOrganization(raw, organizationId, transaction ?? null);
+    } else {
+      checked.model_id = current[0].model_id as number;
+    }
+  }
+  if (updatedModelRisk.owner !== undefined) {
+    const raw = updatedModelRisk.owner as unknown;
+    if (raw !== null && raw !== "" && toPositiveId(raw) === current[0].owner) {
+      checked.owner = current[0].owner as any;
+    } else {
+      checked.owner = (await assertOrganizationMember(
+        raw,
+        organizationId,
+        "owner",
+        OWNER_NOT_IN_ORGANIZATION,
+        transaction ?? null,
+      )) as any;
+    }
+  }
+  updatedModelRisk = checked;
+
   const updateModelRisk: Partial<IModelRisk> & { organization_id?: number } = { updated_at };
   const setClause = [
     "risk_name",

@@ -8,6 +8,7 @@
 
 import { sequelize } from "../../../database/db";
 import { createNewModelRiskQuery } from "../../../utils/modelRisk.utils";
+import { assertModelInOrganization } from "../../../utils/modelReferences.utils";
 import { TransientApprovalError } from "../../approval/approvalGateway";
 import type { AiActionExecuteContext, AiActionExecuteResult } from "../types";
 import type { AgentCreateModelRiskInput } from "./schema";
@@ -63,21 +64,12 @@ export async function executeCreateModelRisk(
     resolvedModelId = approval.entity_id;
   }
 
-  // Re-check the model FK at execute time. Between file-time and
-  // execute-time the model could have been deleted.
+  // Re-check the model at execute time with the check every model risk write
+  // uses: between file-time and execute-time the model could have been deleted.
   if (resolvedModelId !== undefined) {
-    const [modelRows] = (await sequelize.query(
-      `SELECT id FROM model_inventories
-         WHERE id = :model_id AND organization_id = :organization_id`,
-      {
-        replacements: {
-          model_id: resolvedModelId,
-          organization_id: ctx.organizationId,
-        },
-        transaction: ctx.transaction,
-      },
-    )) as [Array<{ id: number }>, unknown];
-    if (!modelRows || modelRows.length === 0) {
+    try {
+      await assertModelInOrganization(resolvedModelId, ctx.organizationId, ctx.transaction);
+    } catch {
       throw new Error(
         `Model #${resolvedModelId} no longer exists in this organization — cannot link the new model risk.`,
       );
