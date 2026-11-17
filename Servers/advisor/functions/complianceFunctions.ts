@@ -11,6 +11,22 @@ import { actingProjectViewer, NO_PROJECT_VIEWER } from "./useCaseScope";
 
 // --- Read Tools ---
 
+/**
+ * Refuses a project_id outside the organization, so a mistyped or invented
+ * id is reported as not found instead of as a use case with nothing in it.
+ * Access to the use case is checked once, in bridgeTools.
+ */
+const assertProjectInOrganization = async (
+  projectId: number,
+  organizationId: number,
+): Promise<void> => {
+  const rows = await sequelize.query(
+    `SELECT id FROM projects WHERE id = :projectId AND organization_id = :organizationId`,
+    { replacements: { projectId, organizationId }, type: QueryTypes.SELECT },
+  );
+  if (rows.length === 0) throw new Error(`Use case ${projectId} not found`);
+};
+
 const getComplianceScore = async (
   _params: { project_id?: number },
   organizationId: number,
@@ -63,6 +79,7 @@ const getComplianceDetails = async (
   organizationId: number,
 ): Promise<any> => {
   try {
+    await assertProjectInOrganization(params.project_id, organizationId);
     const score = await calculateComplianceScore(organizationId);
 
     // Get project-specific framework data if framework_id is provided
@@ -269,6 +286,7 @@ const getProjectStats = async (
 ): Promise<any> => {
   try {
     const projectId = params.project_id;
+    await assertProjectInOrganization(projectId, organizationId);
     // taskLinkReachesProjectSql binds :organizationId; the other queries use
     // :organization_id. One object carries both names.
     const replacements = {

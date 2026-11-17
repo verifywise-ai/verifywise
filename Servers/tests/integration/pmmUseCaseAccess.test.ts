@@ -63,10 +63,19 @@ async function seedMonitoring(orgId: number, ownerId: number, stakeholder?: numb
      VALUES (:orgId, :config, 1, NOW() + INTERVAL '7 days', :stakeholder) RETURNING id`,
     { orgId, config, stakeholder: stakeholder ?? null },
   );
+  // The report belongs to an earlier, completed cycle: a cycle has at most
+  // one report, written when it is submitted, so the open cycle has none.
+  const pastCycle = await insertId(
+    `INSERT INTO post_market_monitoring_cycles
+       (organization_id, config_id, cycle_number, status, due_at, completed_at, assigned_stakeholder_id)
+     VALUES (:orgId, :config, 0, 'completed', NOW() - INTERVAL '30 days', NOW() - INTERVAL '29 days', :stakeholder)
+     RETURNING id`,
+    { orgId, config, stakeholder: stakeholder ?? null },
+  );
   const report = await insertId(
     `INSERT INTO post_market_monitoring_reports (organization_id, cycle_id)
-     VALUES (:orgId, :cycle) RETURNING id`,
-    { orgId, cycle },
+     VALUES (:orgId, :pastCycle) RETURNING id`,
+    { orgId, pastCycle },
   );
   return { project, config, question, cycle, report };
 }
@@ -590,11 +599,12 @@ describe("POST /api/pmm/projects/:projectId/start-cycle needs postMarketMonitori
     "refuses a %s on the use case with 403 and starts no cycle",
     async (role) => {
       const c = await seedMonitoring(orgId, ownerId);
+      const before = await cyclesOf(c.config);
       const res = await (
         await memberApi(c, role)
       ).post(`/api/pmm/projects/${c.project}/start-cycle`);
       expect(res.status).toBe(403);
-      expect(await cyclesOf(c.config)).toBe(1);
+      expect(await cyclesOf(c.config)).toBe(before);
     },
   );
 
