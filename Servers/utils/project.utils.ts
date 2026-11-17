@@ -494,7 +494,17 @@ export const createNewProjectQuery = async (
   }
   for (let framework of projectFrameworks) {
     if (!allowedFrameworks.includes(framework)) {
-      throw new Error(`Framework with ID ${framework} is not allowed for this project.`);
+      // An organization-wide framework on a use case, or the reverse (or an
+      // id that is no framework at all): the caller's input, so a 400.
+      throw new ValidationException(
+        `Framework with ID ${framework} is not allowed for this project.`,
+        "framework",
+        framework,
+        {
+          i18nKey: "Framework {id} can't be used for this kind of use case",
+          i18nVars: { id: String(framework) },
+        },
+      );
     }
   }
 

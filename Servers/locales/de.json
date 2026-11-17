@@ -1535,5 +1535,10 @@
   "{assigner} assigned you as Risk Approver for {count} risks: {names}": "{assigner} hat Sie als Risikogenehmiger für {count} Risiken zugewiesen: {names}",
   "{assigner} assigned you as Risk Approver for {count} risks: {names} and {more} more": "{assigner} hat Sie als Risikogenehmiger für {count} Risiken zugewiesen: {names} und {more} weitere",
   "archive_risks_linked_only_here must be \"true\" or \"false\"": "archive_risks_linked_only_here muss \"true\" oder \"false\" sein",
-  "Question not found in this cycle": "Frage in diesem Zyklus nicht gefunden"
+  "Question not found in this cycle": "Frage in diesem Zyklus nicht gefunden",
+  "The selected approval workflow does not exist": "Der ausgewählte Freigabe-Workflow existiert nicht",
+  "The selected approval workflow has no steps": "Der ausgewählte Freigabe-Workflow hat keine Schritte",
+  "Every step of the selected approval workflow needs an approver": "Jeder Schritt des ausgewählten Freigabe-Workflows braucht eine freigebende Person",
+  "Only an approval workflow admin can change the workflow while its approval is pending or rejected": "Nur Administratoren von Freigabe-Workflows können den Workflow ändern, solange die Freigabe aussteht oder abgelehnt wurde",
+  "Framework {id} can't be used for this kind of use case": "Framework {id} kann für diese Art von Anwendungsfall nicht verwendet werden"
 }

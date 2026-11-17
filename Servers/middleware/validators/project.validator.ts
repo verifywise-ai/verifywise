@@ -8,6 +8,11 @@ import { EXTERNAL_OWNER_NAME_MAX_LENGTH } from "../../utils/externalOwner.utils"
 
 const projectIdParam = param("id").isInt({ min: 1 }).withMessage("id must be a positive integer");
 
+/** projects.project_title is VARCHAR(255): a longer title failed the INSERT with a 500. */
+export const PROJECT_TITLE_MAX_LENGTH = 255;
+/** Largest id a Postgres INTEGER column holds; a larger one failed the query with a 500. */
+const MAX_INT_ID = 2147483647;
+
 // Fields that are typed-checked whenever they are present (create + update).
 const optionalProjectBodyFields = [
   body("project_title")
@@ -15,7 +20,9 @@ const optionalProjectBodyFields = [
     .isString()
     .trim()
     .notEmpty()
-    .withMessage("project_title must be a non-empty string"),
+    .withMessage("project_title must be a non-empty string")
+    .isLength({ max: PROJECT_TITLE_MAX_LENGTH })
+    .withMessage(`project_title must be at most ${PROJECT_TITLE_MAX_LENGTH} characters`),
   body("owner")
     .optional({ nullable: true })
     .isInt({ min: 1 })
@@ -68,7 +75,7 @@ const optionalProjectBodyFields = [
   body("uc_id").optional({ nullable: true }).isString().withMessage("uc_id must be a string"),
   body("approval_workflow_id")
     .optional({ checkFalsy: true })
-    .isInt({ min: 1 })
+    .isInt({ min: 1, max: MAX_INT_ID })
     .withMessage("approval_workflow_id must be a positive integer"),
   body("members")
     .optional({ nullable: true })

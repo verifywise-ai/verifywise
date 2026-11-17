@@ -36,6 +36,7 @@ import { SlackNotificationRoutingType } from "../domain.layer/enums/slack.enum";
 import { recordMultipleFieldChanges } from "../utils/useCaseChangeHistory.utils";
 import {
   hasPendingApprovalQuery,
+  getApprovalStatusQuery,
   getPendingApprovalRequestIdQuery,
   withdrawApprovalRequestQuery,
   createPendingFrameworksForApprovedUseCase,
@@ -44,8 +45,10 @@ import { deleteProjectWithSideEffects } from "../utils/projectDeletion.utils";
 import { getRisksLinkedOnlyToProjectQuery } from "../utils/risk.utils";
 import {
   createUseCaseApprovalRequest,
+  getUsableUseCaseWorkflow,
   notifyUseCaseApprovalRequested,
 } from "../services/projects/approvalRequest.service";
+import { roleHasPermission } from "../utils/rolePermissions.utils";
 import { createUseCaseService, updateUseCaseService } from "../services/useCase.service";
 import { notifyExternalOwnerAssigned } from "../services/externalOwnerNotification.service";
 import { stripExternalOwnerFields } from "../utils/externalOwner.utils";
@@ -55,6 +58,36 @@ import {
 } from "../services/inAppNotification.service";
 
 import { translateError } from "../utils/i18n.utils";
+
+/**
+ * A ValidationException as a 400 body. One that names a field is answered in
+ * the shape the request validators already use for these routes
+ * ({ errors: [{ field, message, location }] }), so the use case form shows it
+ * on that field; one without a field keeps the plain message.
+ */
+function validationErrorBody(req: Request, error: ValidationException) {
+  const message = translateError(req, error);
+  const field = error.metadata?.field;
+  return typeof field === "string"
+    ? STATUS_CODE[400]({ errors: [{ field, message, location: "body" }] })
+    : STATUS_CODE[400](message);
+}
+
+/**
+ * The approval_workflow_id a PATCH body sets, or undefined when the body does
+ * not carry the field. The validator has already checked it is a positive
+ * integer or empty; empty values (null, 0, "") clear the workflow, and a
+ * numeric string becomes a number, so "5" never reads as a change from 5.
+ */
+export function submittedWorkflowId(body: unknown): number | null | undefined {
+  if (!body || typeof body !== "object") return undefined;
+  if (!Object.prototype.hasOwnProperty.call(body, "approval_workflow_id")) return undefined;
+  const raw = (body as { approval_workflow_id?: unknown }).approval_workflow_id;
+  if (raw === null || raw === undefined || raw === "" || raw === 0 || raw === false) return null;
+  const id = Number(raw);
+  return Number.isSafeInteger(id) && id > 0 ? id : null;
+}
+
 export async function getAllProjects(req: Request, res: Response): Promise<any> {
   logProcessing({
     description: "starting getAllProjects",
@@ -76,7 +109,6 @@ export async function getAllProjects(req: Request, res: Response): Promise<any> 
     )) as IProjectAttributes[];
 
     // Add approval status fields to each project
-    const { getApprovalStatusQuery } = require("../utils/approvalRequest.utils");
 
     await Promise.all(
       projects.map(async (project) => {
@@ -150,7 +182,6 @@ export async function getProjectById(req: Request, res: Response): Promise<any> 
       );
 
       // Get the approval status (pending, rejected, or null)
-      const { getApprovalStatusQuery } = require("../utils/approvalRequest.utils");
       const approvalStatus = await getApprovalStatusQuery(
         projectId,
         "use_case",
@@ -396,7 +427,7 @@ export async function createProject(req: Request, res: Response): Promise<any> {
         userId: req.userId!,
         organizationId: req.organizationId!,
       });
-      return res.status(400).json(STATUS_CODE[400](translateError(req, error)));
+      return res.status(400).json(validationErrorBody(req, error));
     }
 
     if (error instanceof BusinessLogicException) {
@@ -495,6 +526,65 @@ export async function updateProjectById(req: Request, res: Response): Promise<an
     const acceptsExternalOwner = res.locals?.acceptsExternalOwner === true;
     if (!acceptsExternalOwner) stripExternalOwnerFields(updatedProject);
 
+    // Only a body that carries the field changes the workflow. The update
+    // query leaves an omitted column as it is, so reading "absent" as
+    // "cleared" withdrew the request while the workflow stayed attached.
+    const previousWorkflowId =
+      existingProject.approval_workflow_id != null
+        ? Number(existingProject.approval_workflow_id)
+        : null;
+    const nextWorkflowId = submittedWorkflowId(updateData);
+    if (nextWorkflowId !== undefined) {
+      (updatedProject as { approval_workflow_id?: number | null }).approval_workflow_id =
+        nextWorkflowId;
+    }
+    const workflowChanged = nextWorkflowId !== undefined && nextWorkflowId !== previousWorkflowId;
+
+    // Pending or rejected: the latest decision on this use case (audit U-H2).
+    let approvalStatus: Awaited<ReturnType<typeof getApprovalStatusQuery>> = null;
+    if (workflowChanged) {
+      approvalStatus = await getApprovalStatusQuery(
+        projectId,
+        "use_case",
+        req.organizationId!,
+        transaction,
+      );
+      // Clearing the workflow under review withdrew the request and attached
+      // the frameworks it held back, and replacing it let the editor pick a
+      // workflow they approve themselves. While a request is pending or
+      // rejected only an approval workflow admin may change it; the requester
+      // withdraws through the approval request route instead.
+      if (
+        approvalStatus &&
+        !(await roleHasPermission(req.organizationId ?? null, role, "approvalWorkflow.admin"))
+      ) {
+        await transaction.rollback();
+        await logFailure({
+          eventType: "Update",
+          description: `Workflow change refused on use case ${projectId}: approval ${approvalStatus}`,
+          functionName: "updateProjectById",
+          fileName: "project.ctrl.ts",
+          error: new Error("Access denied"),
+          userId,
+          organizationId: req.organizationId!,
+        });
+        return res
+          .status(403)
+          .json(
+            STATUS_CODE[403](
+              req.t!(
+                "Only an approval workflow admin can change the workflow while its approval is pending or rejected",
+              ),
+            ),
+          );
+      }
+      // Refused before the write: a missing id fails the foreign key (500),
+      // and another organization's would be saved with no review.
+      if (nextWorkflowId !== null) {
+        await getUsableUseCaseWorkflow(nextWorkflowId, req.organizationId!, transaction);
+      }
+    }
+
     const { useCase: project, currentMembers } = await updateUseCaseService(
       projectId,
       updatedProject,
@@ -512,17 +602,8 @@ export async function updateProjectById(req: Request, res: Response): Promise<an
       // #4904: a workflow attached on edit (not set before) starts an approval
       // request, exactly as create does. An inactive or wrong-entity workflow
       // throws ValidationException, which rolls back and maps to 400.
-      const previousWorkflowId = existingProject.approval_workflow_id ?? null;
-      const submittedWorkflowId = (updatedProject.approval_workflow_id as number | null) ?? null;
-      // Only a body that carries the field changes the workflow. The update
-      // query leaves an omitted column as it is, so reading "absent" as
-      // "cleared" withdrew the request while the workflow stayed attached.
-      const workflowSubmitted = Object.prototype.hasOwnProperty.call(
-        updateData ?? {},
-        "approval_workflow_id",
-      );
       let updateApprovalResult: Awaited<ReturnType<typeof createUseCaseApprovalRequest>> = null;
-      if (workflowSubmitted && submittedWorkflowId !== previousWorkflowId) {
+      if (workflowChanged) {
         // Replacing or clearing the workflow makes any pending request under
         // the old workflow obsolete (review: A→B left A pending). Withdraw it
         // in the same transaction so a use case never has two pending
@@ -540,15 +621,24 @@ export async function updateProjectById(req: Request, res: Response): Promise<an
             changedBy: req.userId!,
           });
         }
-        if (!submittedWorkflowId) {
+        if (nextWorkflowId === null) {
           // Cleared: the frameworks chosen at creation waited for an approval
-          // that no longer exists, so create them now rather than never.
-          await createPendingFrameworksForApprovedUseCase(
-            projectId,
-            req.organizationId!,
-            transaction,
-            req.userId!,
-          );
+          // that no longer exists, so create them now rather than never. Not
+          // for a rejected use case: a rejection never attaches them, and they
+          // stay parked until a new review approves it. Read after the
+          // withdrawal: a re-review withdrawn here leaves the rejection
+          // before it as the latest decision.
+          const statusAfter = staleRequestId
+            ? await getApprovalStatusQuery(projectId, "use_case", req.organizationId!, transaction)
+            : approvalStatus;
+          if (statusAfter !== "rejected") {
+            await createPendingFrameworksForApprovedUseCase(
+              projectId,
+              req.organizationId!,
+              transaction,
+              req.userId!,
+            );
+          }
         } else {
           updateApprovalResult = await createUseCaseApprovalRequest(
             project as unknown as ProjectModel,
@@ -766,7 +856,7 @@ export async function updateProjectById(req: Request, res: Response): Promise<an
         userId: req.userId!,
         organizationId: req.organizationId!,
       });
-      return res.status(400).json(STATUS_CODE[400](translateError(req, error)));
+      return res.status(400).json(validationErrorBody(req, error));
     }
 
     if (error instanceof BusinessLogicException) {

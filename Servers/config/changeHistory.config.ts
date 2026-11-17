@@ -527,6 +527,7 @@ export const ENTITY_CONFIGS: { [key in EntityType]: EntityConfig } = {
       "status",
       "framework",
       "monitored_regulations_and_standards",
+      "approval_workflow_id",
     ],
     fieldLabels: {
       project_title: "Name",
@@ -544,6 +545,7 @@ export const ENTITY_CONFIGS: { [key in EntityType]: EntityConfig } = {
       status: "Status",
       framework: "Frameworks",
       monitored_regulations_and_standards: "Monitored regulations and standards",
+      approval_workflow_id: "Approval workflow",
       // Lifecycle (#5187); recorded by controllers/useCaseLifecycle.ctrl.ts.
       lifecycle_stage: "Lifecycle stage",
       go_live_date: "Go-live date",
@@ -559,6 +561,12 @@ export const ENTITY_CONFIGS: { [key in EntityType]: EntityConfig } = {
       high_risk_roles: async (value: unknown): Promise<string> => formatHighRiskRoles(value) || "-",
       framework: GENERIC_FORMATTERS.frameworkArray,
       monitored_regulations_and_standards: GENERIC_FORMATTERS.array,
+      // Clearing or replacing the workflow ends or restarts the review, so the
+      // change is part of the record (audit U-H2).
+      approval_workflow_id: namedRowFormatter(
+        "SELECT workflow_title AS name FROM approval_workflows WHERE id = :id AND organization_id = :organizationId",
+        "Approval workflow",
+      ),
     },
   },
 

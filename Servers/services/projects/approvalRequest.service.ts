@@ -2,6 +2,7 @@ import { Transaction } from "sequelize";
 
 import { ProjectModel } from "../../domain.layer/models/project/project.model";
 import { ApprovalRequestModel } from "../../domain.layer/models/approvalWorkflow/approvalRequest.model";
+import { ApprovalWorkflowModel } from "../../domain.layer/models/approvalWorkflow/approvalWorkflow.model";
 import { ApprovalWorkflowStepModel } from "../../domain.layer/models/approvalWorkflow/approvalWorkflowStep.model";
 import { ApprovalRequestStatus, EntityType } from "../../domain.layer/enums/approval-workflow.enum";
 import { ValidationException } from "../../domain.layer/exceptions/custom.exception";
@@ -25,17 +26,66 @@ export interface UseCaseApprovalRequestResult {
   steps: ApprovalWorkflowStepModel[];
 }
 
+/** A 400 on approval_workflow_id; the message is also its i18n key. */
+const unusableWorkflow = (message: string, workflowId: unknown) =>
+  new ValidationException(message, "approval_workflow_id", workflowId, { i18nKey: message });
+
 /**
- * Create an approval request for a newly created use-case (project).
+ * The workflow a use case may be reviewed under, with its steps, or a
+ * ValidationException (400 on approval_workflow_id) when it cannot review one:
+ *
+ * - it does not exist in this organization (missing, or another
+ *   organization's id);
+ * - it is inactive. Deleting a workflow is a soft delete, so the row is still
+ *   readable;
+ * - it is defined for another entity type;
+ * - it has no steps, or a step without approvers. Nobody could decide such a
+ *   request, and the use case's frameworks would wait for it forever.
+ *
+ * Called before a use case is written (create and update), so a bad id never
+ * reaches the foreign key, and again when the request is opened.
+ */
+export const getUsableUseCaseWorkflow = async (
+  workflowId: number,
+  organizationId: number,
+  transaction: Transaction | null = null,
+): Promise<{ workflow: ApprovalWorkflowModel; steps: ApprovalWorkflowStepModel[] }> => {
+  const workflow = await getApprovalWorkflowByIdQuery(workflowId, organizationId, transaction);
+  if (!workflow) {
+    throw unusableWorkflow("The selected approval workflow does not exist", workflowId);
+  }
+  if (workflow.is_active === false) {
+    throw unusableWorkflow("The selected approval workflow is no longer active", workflowId);
+  }
+  if (workflow.entity_type !== EntityType.USE_CASE) {
+    throw unusableWorkflow("The selected approval workflow is not a use case workflow", workflowId);
+  }
+  // getApprovalWorkflowByIdQuery attaches the steps (and each step's
+  // approvers) with setDataValue, and these instances come from a raw query —
+  // so the @HasMany properties are always undefined and only the data values
+  // hold them.
+  const steps: ApprovalWorkflowStepModel[] = workflow.getDataValue("steps") ?? [];
+  if (steps.length === 0) {
+    throw unusableWorkflow("The selected approval workflow has no steps", workflowId);
+  }
+  if (steps.some((step) => !(step.getDataValue("approvers") ?? []).length)) {
+    throw unusableWorkflow(
+      "Every step of the selected approval workflow needs an approver",
+      workflowId,
+    );
+  }
+  return { workflow, steps };
+};
+
+/**
+ * Create an approval request for a use case (on create, or when a workflow is
+ * attached on edit).
  *
  * Returns the created approval request and its auto-approval outcome, or
- * `null` when no request is needed — i.e. the project has no approval
- * workflow assigned, or the assigned workflow has no steps.
+ * `null` when the use case has no approval workflow.
  *
- * Throws a ValidationException (surfaced as a 400, rolling the use case back)
- * when the submitted workflow is one nobody may start a use case approval
- * with: a deleted one — deletion is a soft delete, so the row is still
- * readable — or one defined for a different entity type.
+ * Throws a ValidationException (surfaced as a 400, rolling the write back)
+ * when the workflow cannot review a use case; see getUsableUseCaseWorkflow.
  */
 export const createUseCaseApprovalRequest = async (
   project: ProjectModel,
@@ -53,43 +103,11 @@ export const createUseCaseApprovalRequest = async (
     return null;
   }
 
-  const workflow = await getApprovalWorkflowByIdQuery(
+  const { workflow, steps: workflowSteps } = await getUsableUseCaseWorkflow(
     project.approval_workflow_id,
     organizationId,
     transaction,
   );
-
-  if (workflow && workflow.is_active === false) {
-    throw new ValidationException(
-      "The selected approval workflow is no longer active",
-      "approval_workflow_id",
-      project.approval_workflow_id,
-      { i18nKey: "The selected approval workflow is no longer active" },
-    );
-  }
-
-  if (workflow && workflow.entity_type !== EntityType.USE_CASE) {
-    throw new ValidationException(
-      "The selected approval workflow is not a use case workflow",
-      "approval_workflow_id",
-      project.approval_workflow_id,
-      { i18nKey: "The selected approval workflow is not a use case workflow" },
-    );
-  }
-
-  // getApprovalWorkflowByIdQuery attaches the steps with setDataValue, and these
-  // instances come from a raw query — so the @HasMany `steps` property is always
-  // undefined and only the data value holds them.
-  const workflowSteps = workflow?.getDataValue("steps");
-  if (!workflow || !workflowSteps || workflowSteps.length === 0) {
-    logStructured(
-      "error",
-      `approval workflow ${project.approval_workflow_id} for use case ${project.id} is missing or has no steps — no approval request created`,
-      "createUseCaseApprovalRequest",
-      "approvalRequest.service.ts",
-    );
-    return null;
-  }
 
   const request = await createApprovalRequestQuery(
     {

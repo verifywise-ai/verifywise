@@ -1,5 +1,6 @@
 import { QueryTypes, Transaction } from "sequelize";
 import { releaseUseCaseFromReview } from "./lifecycle.utils";
+import { latestApprovalStatusSql } from "./approvalState.utils";
 import { sequelize } from "../database/db";
 import { ApprovalRequestModel } from "../domain.layer/models/approvalWorkflow/approvalRequest.model";
 import { ApprovalRequestStepModel } from "../domain.layer/models/approvalWorkflow/approvalRequestStep.model";
@@ -1281,8 +1282,10 @@ export const hasPendingApprovalQuery = async (
 };
 
 /**
- * Get the approval status for a use-case
- * Returns 'pending', 'rejected', or null if no pending/rejected approval
+ * The approval status of a use case (or another entity): 'pending' while a
+ * request is open, 'rejected' when the latest decided request was rejected,
+ * otherwise null. A rejection followed by a new review that is approved is no
+ * longer rejected; a re-review that is withdrawn leaves the rejection.
  */
 export const getApprovalStatusQuery = async (
   entityId: number,
@@ -1291,38 +1294,17 @@ export const getApprovalStatusQuery = async (
   transaction: Transaction | null = null,
 ): Promise<"pending" | "rejected" | null> => {
   const results = (await sequelize.query(
-    `SELECT status
-     FROM approval_requests
-     WHERE organization_id = :organizationId
-       AND entity_id = :entityId
-       AND entity_type = :entityType
-       AND status IN (:pendingStatus, :rejectedStatus)
-     ORDER BY updated_at DESC
-     LIMIT 1`,
+    `SELECT ${latestApprovalStatusSql(":organizationId", ":entityType", ":entityId")} AS status`,
     {
-      replacements: {
-        organizationId,
-        entityId,
-        entityType,
-        pendingStatus: ApprovalRequestStatus.PENDING,
-        rejectedStatus: ApprovalRequestStatus.REJECTED,
-      },
-      type: "SELECT",
+      replacements: { organizationId, entityId, entityType },
+      type: QueryTypes.SELECT,
       ...(transaction && { transaction }),
     },
-  )) as any[];
+  )) as { status: string | null }[];
 
-  if (results.length === 0 || !results[0]) {
-    return null;
-  }
-
-  const status = (results[0] as any).status;
-  if (status === ApprovalRequestStatus.PENDING) {
-    return "pending";
-  } else if (status === ApprovalRequestStatus.REJECTED) {
-    return "rejected";
-  }
-
+  const status = results[0]?.status;
+  if (status === ApprovalRequestStatus.PENDING) return "pending";
+  if (status === ApprovalRequestStatus.REJECTED) return "rejected";
   return null;
 };
 

@@ -1535,5 +1535,10 @@
   "{assigner} assigned you as Risk Approver for {count} risks: {names}": "{assigner} vous a désigné approbateur de {count} risques : {names}",
   "{assigner} assigned you as Risk Approver for {count} risks: {names} and {more} more": "{assigner} vous a désigné approbateur de {count} risques : {names} et {more} autres",
   "archive_risks_linked_only_here must be \"true\" or \"false\"": "archive_risks_linked_only_here doit valoir \"true\" ou \"false\"",
-  "Question not found in this cycle": "Question introuvable dans ce cycle"
+  "Question not found in this cycle": "Question introuvable dans ce cycle",
+  "The selected approval workflow does not exist": "Le workflow d'approbation sélectionné n'existe pas",
+  "The selected approval workflow has no steps": "Le workflow d'approbation sélectionné n'a aucune étape",
+  "Every step of the selected approval workflow needs an approver": "Chaque étape du workflow d'approbation sélectionné doit avoir un approbateur",
+  "Only an approval workflow admin can change the workflow while its approval is pending or rejected": "Seul un administrateur des workflows d'approbation peut modifier le workflow tant que l'approbation est en attente ou refusée",
+  "Framework {id} can't be used for this kind of use case": "Le framework {id} ne peut pas être utilisé pour ce type de cas d'usage"
 }

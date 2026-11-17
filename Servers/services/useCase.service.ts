@@ -31,7 +31,10 @@ import {
   recordUseCaseCreation,
   trackUseCaseChanges,
 } from "../utils/useCaseChangeHistory.utils";
-import { createUseCaseApprovalRequest } from "./projects/approvalRequest.service";
+import {
+  createUseCaseApprovalRequest,
+  getUsableUseCaseWorkflow,
+} from "./projects/approvalRequest.service";
 import { logStructured } from "../utils/logger/fileLogger";
 import { seesAllProjects } from "../utils/projectVisibility.utils";
 import { changesExternalOwner } from "../utils/externalOwner.utils";
@@ -122,7 +125,16 @@ export async function createUseCaseService(
     enable_ai_data_insertion: boolean;
   };
 
-  // 2. Insert.
+  // 2. Insert. A workflow that cannot review a use case is refused first: a
+  //    missing id would otherwise fail the foreign key (500), and another
+  //    organization's would be saved and park the frameworks with no review.
+  if (newProject.approval_workflow_id) {
+    await getUsableUseCaseWorkflow(
+      Number(newProject.approval_workflow_id),
+      ctx.organizationId,
+      transaction,
+    );
+  }
   const createdProject = await createNewProjectQuery(
     newProject,
     newProject.members ?? [],
@@ -321,7 +333,15 @@ export async function updateUseCaseService(
             { members: [...useCase.members].sort(byId) } as any,
           )
         : [];
-    const changes = [...(await trackUseCaseChanges(existingUseCase, input)), ...memberChanges];
+    // The context lets the workflow formatter show the workflow's name, read
+    // inside this organization and on this transaction.
+    const changes = [
+      ...(await trackUseCaseChanges(existingUseCase, input, {
+        organizationId: ctx.organizationId,
+        transaction,
+      })),
+      ...memberChanges,
+    ];
     if (changes.length > 0) {
       await recordMultipleFieldChanges(
         useCaseId,
