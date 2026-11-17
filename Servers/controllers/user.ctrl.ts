@@ -75,6 +75,7 @@ import {
   revokeRefreshTokenByHash,
   revokeTokenFamily,
 } from "../utils/refreshToken.utils";
+import { consumeOneTimeToken } from "../utils/oneTimeToken.utils";
 import { sendSlackNotification } from "../services/slack/slackNotificationService";
 import { SlackNotificationRoutingType } from "../domain.layer/enums/slack.enum";
 import { getRoleByIdQuery } from "../utils/role.utils";
@@ -1397,6 +1398,20 @@ async function resetPassword(req: Request, res: Response) {
     if (user) {
       await user.updatePassword(newPassword);
 
+      const consumed = await consumeOneTimeToken(
+        res.locals.oneTimeToken,
+        "password_reset",
+        transaction,
+      );
+      if (!consumed) {
+        await transaction.rollback();
+        return res.status(401).json(
+          STATUS_CODE[401]({
+            message: req.t!("This password reset link has already been used or is invalid"),
+          }),
+        );
+      }
+
       // Update by the canonical stored email, not the raw request email. The
       // lookup above (getUserByEmailQuery) is case-insensitive, but
       // resetPasswordQuery's UPDATE matches `email` exactly. If the stored value
@@ -1411,7 +1426,7 @@ async function resetPassword(req: Request, res: Response) {
 
       // Invalidate every existing session: a password reset must log the
       // user out everywhere (revokes all unexpired refresh tokens).
-      await revokeAllUserTokens(_user.id!);
+      await revokeAllUserTokens(_user.id!, transaction);
 
       await transaction.commit();
       logStructured("successful", `password reset for ${email}`, "resetPassword", "user.ctrl.ts");
