@@ -15,7 +15,11 @@ jest.mock("../project.utils", () => ({
   getProjectAccessQuery: (...args: any[]) => mockAccess(...args),
 }));
 
-import { createNewModelInventoryQuery, splitModelLinks } from "../modelInventory.utils";
+import {
+  createNewModelInventoryQuery,
+  splitModelLinks,
+  updateModelInventoryByIdQuery,
+} from "../modelInventory.utils";
 import {
   ForbiddenException,
   ValidationException,
@@ -69,7 +73,7 @@ describe("createNewModelInventoryQuery checks its references first", () => {
   });
 });
 
-describe("linking a use case on v1 needs write access to it", () => {
+describe("linking a use case needs access to it", () => {
   const viewer = { userId: 5, role: "Editor" };
 
   it("refuses a use case the caller cannot open, before writing", async () => {
@@ -83,7 +87,7 @@ describe("linking a use case on v1 needs write access to it", () => {
     expect(sqls().some((q) => /INSERT/.test(q))).toBe(false);
   });
 
-  it("does not check access without a viewer (legacy route)", async () => {
+  it("does not check access without a viewer (advisor, intake, seeds)", async () => {
     mockAccess.mockReset();
     mockQuery
       .mockResolvedValueOnce([{ id: 4 }])
@@ -91,6 +95,103 @@ describe("linking a use case on v1 needs write access to it", () => {
       .mockResolvedValue([[], 0]);
     await createNewModelInventoryQuery({} as any, 1, [4], [], tx).catch(() => undefined);
     expect(mockAccess).not.toHaveBeenCalled();
+  });
+});
+
+describe("updateModelInventoryByIdQuery links", () => {
+  const viewer = { userId: 5, role: "Editor" };
+
+  /**
+   * Answers each query by its SQL: the model is linked to use cases
+   * `linkedProjects` and frameworks `linkedFrameworks`; the organization owns
+   * use cases `orgProjects`, and its use cases use frameworks `usedFrameworks`.
+   */
+  const db = (state: {
+    linkedProjects?: number[];
+    linkedFrameworks?: number[];
+    orgProjects?: number[];
+    usedFrameworks?: number[];
+  }) =>
+    mockQuery.mockImplementation(async (sql: string) => {
+      if (/^SELECT \* FROM model_inventories/.test(sql)) return [{ id: 10, dataValues: {} }];
+      if (/SELECT DISTINCT framework_id FROM model_inventories_projects_frameworks/.test(sql)) {
+        return [(state.linkedFrameworks ?? []).map((framework_id) => ({ framework_id })), 0];
+      }
+      if (/SELECT DISTINCT project_id FROM model_inventories_projects_frameworks/.test(sql)) {
+        return [(state.linkedProjects ?? []).map((project_id) => ({ project_id })), 0];
+      }
+      if (/SELECT id FROM projects WHERE/.test(sql)) {
+        return (state.orgProjects ?? []).map((id) => ({ id }));
+      }
+      if (/FROM projects_frameworks/.test(sql)) {
+        return (state.usedFrameworks ?? []).map((id) => ({ id }));
+      }
+      return [[], 0];
+    });
+  const calls = (re: RegExp) => mockQuery.mock.calls.filter((c) => re.test(String(c[0])));
+  const update = (projects: number[], frameworks: number[], withViewer = true) =>
+    updateModelInventoryByIdQuery(
+      10,
+      {} as any,
+      projects,
+      frameworks,
+      false,
+      false,
+      1,
+      tx,
+      withViewer ? viewer : undefined,
+    );
+
+  beforeEach(() => {
+    mockAccess.mockReset();
+    // Use case 3 is hidden from the caller; every other one is theirs.
+    mockAccess.mockImplementation(async (projectId: number) =>
+      projectId === 3 ? "denied" : "allowed",
+    );
+  });
+
+  it("saves a framework the model already links to, though no use case uses it any more", async () => {
+    db({ linkedFrameworks: [7], usedFrameworks: [] });
+    await expect(update([], [7])).resolves.toBeDefined();
+    expect(calls(/FROM projects_frameworks/)).toHaveLength(0);
+  });
+
+  it("still refuses an added framework no use case uses", async () => {
+    db({ linkedFrameworks: [7], usedFrameworks: [] });
+    await expect(update([], [7, 8])).rejects.toBeInstanceOf(ValidationException);
+    expect(calls(/^UPDATE model_inventories/)).toHaveLength(0);
+  });
+
+  it("keeps a link to a use case the caller cannot open when the list leaves it out", async () => {
+    db({ linkedProjects: [3], orgProjects: [2] });
+    await update([2], []);
+    expect(calls(/DELETE FROM model_inventories_projects_frameworks .*project_id IN/)).toHaveLength(
+      0,
+    );
+    const inserts = calls(/INSERT INTO model_inventories_projects_frameworks/);
+    expect(inserts.map((c) => c[1].replacements.project_id)).toEqual([2]);
+  });
+
+  it("removes a link to a use case the caller can open", async () => {
+    db({ linkedProjects: [2, 3], orgProjects: [] });
+    // deleteProjects: the caller cleared the list; the hidden use case 3 stays.
+    await updateModelInventoryByIdQuery(10, {} as any, [], [], true, false, 1, tx, viewer);
+    const deletes = calls(/project_id IN \(:project_ids\)/);
+    expect(deletes).toHaveLength(1);
+    expect(deletes[0][1].replacements.project_ids).toEqual([2]);
+  });
+
+  it("refuses adding a use case the caller cannot open, before writing", async () => {
+    db({ linkedProjects: [], orgProjects: [3] });
+    await expect(update([3], [])).rejects.toBeInstanceOf(ForbiddenException);
+    expect(calls(/^UPDATE model_inventories/)).toHaveLength(0);
+  });
+
+  it("without a caller, replaces the use case links as sent", async () => {
+    db({ linkedProjects: [3], orgProjects: [2] });
+    await update([2], [], false);
+    expect(mockAccess).not.toHaveBeenCalled();
+    expect(calls(/project_id IN/)[0][1].replacements.project_ids).toEqual([3]);
   });
 });
 

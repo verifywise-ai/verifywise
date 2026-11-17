@@ -97,15 +97,22 @@ function parseIdList(value: unknown, field: string, messageKey: string): number[
  * Parses the use case and framework ids a model is linked to, dedupes them,
  * and checks each against the organization: a use case must be one of its
  * projects, a framework must be in use by at least one of its projects.
+ *
+ * `linkedFrameworkIds` are the frameworks the model is already linked to
+ * (on update). They are accepted unchanged: a framework link carries no use
+ * case, so it outlives the last use case that used the framework, and the
+ * model form sends every current framework back on each save.
  */
 export async function resolveModelLinkTargets(
   projects: unknown,
   frameworks: unknown,
   organizationId: number,
   transaction: Transaction | null,
+  linkedFrameworkIds: readonly number[] = [],
 ): Promise<{ projectIds: number[]; frameworkIds: number[] }> {
   const projectIds = parseIdList(projects, "projects", USE_CASE_NOT_IN_ORGANIZATION);
   const frameworkIds = parseIdList(frameworks, "frameworks", FRAMEWORK_NOT_IN_ORGANIZATION);
+  const addedFrameworkIds = frameworkIds.filter((id) => !linkedFrameworkIds.includes(id));
 
   if (projectIds.length > 0) {
     const rows = (await sequelize.query(
@@ -117,27 +124,49 @@ export async function resolveModelLinkTargets(
     }
   }
 
-  if (frameworkIds.length > 0) {
+  if (addedFrameworkIds.length > 0) {
     const rows = (await sequelize.query(
       `SELECT DISTINCT framework_id AS id FROM projects_frameworks
         WHERE organization_id = :organizationId AND framework_id IN (:ids)`,
-      { replacements: { organizationId, ids: frameworkIds }, type: QueryTypes.SELECT, transaction },
+      {
+        replacements: { organizationId, ids: addedFrameworkIds },
+        type: QueryTypes.SELECT,
+        transaction,
+      },
     )) as { id: number }[];
-    if (rows.length !== frameworkIds.length) {
-      throw new ValidationException(FRAMEWORK_NOT_IN_ORGANIZATION, "frameworks", frameworkIds);
+    if (rows.length !== addedFrameworkIds.length) {
+      throw new ValidationException(FRAMEWORK_NOT_IN_ORGANIZATION, "frameworks", addedFrameworkIds);
     }
   }
 
   return { projectIds, frameworkIds };
 }
 
-/** The caller whose use case access a v1 model write checks. */
+/** The caller whose use case access a model write checks. */
 export type UseCaseViewer = { userId: number; role: string };
 
 /**
- * Linking a model to a use case, or unlinking it, changes that use case: on
- * /api/v1 the caller needs write access to each use case whose link changes
- * (decision 8). The ids are already checked against the organization.
+ * The use cases among `projectIds` the viewer cannot open (the rule that
+ * scopes the use case list: Admin, owner or member). The ids are already
+ * checked against the organization.
+ */
+export async function useCasesWithoutAccess(
+  projectIds: number[],
+  viewer: UseCaseViewer,
+  organizationId: number,
+  transaction: Transaction,
+): Promise<number[]> {
+  const denied: number[] = [];
+  for (const projectId of projectIds) {
+    const access = await getProjectAccessQuery(projectId, viewer, organizationId, transaction);
+    if (access !== "allowed") denied.push(projectId);
+  }
+  return denied;
+}
+
+/**
+ * Linking a model to a use case changes that use case, so the caller needs
+ * access to each use case linked (decision 8).
  */
 export async function assertUseCaseWriteAccess(
   projectIds: number[],
@@ -145,8 +174,6 @@ export async function assertUseCaseWriteAccess(
   organizationId: number,
   transaction: Transaction,
 ): Promise<void> {
-  for (const projectId of projectIds) {
-    const access = await getProjectAccessQuery(projectId, viewer, organizationId, transaction);
-    if (access !== "allowed") throw new ForbiddenException("Access denied", "project", "link");
-  }
+  const denied = await useCasesWithoutAccess(projectIds, viewer, organizationId, transaction);
+  if (denied.length > 0) throw new ForbiddenException("Access denied", "project", "link");
 }

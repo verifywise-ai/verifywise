@@ -387,7 +387,13 @@ const NewModelInventory: FC<NewModelInventoryProps> = ({
       const projectIds = newValue
         .map((title) => projectList.find((p) => p.project_title === title)?.id)
         .filter((id): id is number => id !== undefined);
-      setValues((prev) => ({ ...prev, projects: projectIds }));
+      // Keep links to use cases this list does not show (ones the user cannot
+      // see, or not approved yet): they are not part of this choice.
+      const listedIds = new Set(projectList.map((p) => p.id));
+      setValues((prev) => ({
+        ...prev,
+        projects: [...(prev.projects || []).filter((id) => !listedIds.has(id)), ...projectIds],
+      }));
       clearFieldError("projects");
     },
     [projectList, clearFieldError],

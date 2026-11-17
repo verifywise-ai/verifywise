@@ -119,3 +119,19 @@ describe("resolveModelLinkTargets", () => {
     );
   });
 });
+describe("resolveModelLinkTargets with frameworks already linked", () => {
+  it("accepts linked frameworks without a query, checks only the added ones", async () => {
+    mockQuery.mockResolvedValueOnce([{ id: 9 }]);
+    await expect(resolveModelLinkTargets([], [7, 9], 1, tx, [7])).resolves.toEqual({
+      projectIds: [],
+      frameworkIds: [7, 9],
+    });
+    expect(mockQuery).toHaveBeenCalledTimes(1);
+    expect(mockQuery.mock.calls[0][1].replacements.ids).toEqual([9]);
+  });
+
+  it("makes no query when every framework is already linked", async () => {
+    await resolveModelLinkTargets([], [7], 1, tx, [7]);
+    expect(mockQuery).not.toHaveBeenCalled();
+  });
+});

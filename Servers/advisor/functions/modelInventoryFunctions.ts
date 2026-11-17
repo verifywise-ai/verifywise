@@ -6,10 +6,11 @@ import {
   getModelByFrameworkIdQuery,
   getModelInventoryByIdQuery,
   deleteModelInventoryByIdQuery,
+  insertModelFrameworkLinks,
+  insertModelProjectLinks,
 } from "../../utils/modelInventory.utils";
 import { createWriteToolFn } from "../confirmation/createWriteTool";
 import { sequelize } from "../../database/db";
-import { QueryTypes } from "sequelize";
 import {
   assertModelInOrganization,
   resolveModelLinkTargets,
@@ -490,34 +491,8 @@ const agentLinkModelToProject = createWriteToolFn({
       const {
         projectIds: [projectId],
       } = await resolveModelLinkTargets([params.project_id], [], organizationId, transaction);
-      const existing = (await sequelize.query(
-        `SELECT 1 FROM model_inventories_projects_frameworks
-          WHERE organization_id = :organization_id AND model_inventory_id = :model_inventory_id
-            AND project_id = :project_id AND framework_id IS NULL`,
-        {
-          replacements: {
-            organization_id: organizationId,
-            model_inventory_id: modelId,
-            project_id: projectId,
-          },
-          type: QueryTypes.SELECT,
-          transaction,
-        },
-      )) as unknown[];
-      if (existing.length === 0) {
-        await sequelize.query(
-          `INSERT INTO model_inventories_projects_frameworks (organization_id, model_inventory_id, project_id)
-           VALUES (:organization_id, :model_inventory_id, :project_id)`,
-          {
-            replacements: {
-              organization_id: organizationId,
-              model_inventory_id: modelId,
-              project_id: projectId,
-            },
-            transaction,
-          },
-        );
-      }
+      // Skips a link that already exists, as the model form's write does.
+      await insertModelProjectLinks(modelId, [projectId], organizationId, transaction);
       await transaction.commit();
       return {
         model_id: modelId,
@@ -683,36 +658,9 @@ const agentLinkModelToFramework = createWriteToolFn({
       const {
         frameworkIds: [frameworkId],
       } = await resolveModelLinkTargets([], [params.framework_id], organizationId, transaction);
-      // A framework link carries no use case (project_id NULL). NULLs never
-      // conflict on the unique constraint, so check for an existing link.
-      const existing = (await sequelize.query(
-        `SELECT 1 FROM model_inventories_projects_frameworks
-          WHERE organization_id = :organization_id AND model_inventory_id = :model_inventory_id
-            AND framework_id = :framework_id`,
-        {
-          replacements: {
-            organization_id: organizationId,
-            model_inventory_id: modelId,
-            framework_id: frameworkId,
-          },
-          type: QueryTypes.SELECT,
-          transaction,
-        },
-      )) as unknown[];
-      if (existing.length === 0) {
-        await sequelize.query(
-          `INSERT INTO model_inventories_projects_frameworks (organization_id, model_inventory_id, project_id, framework_id)
-           VALUES (:organization_id, :model_inventory_id, NULL, :framework_id)`,
-          {
-            replacements: {
-              organization_id: organizationId,
-              model_inventory_id: modelId,
-              framework_id: frameworkId,
-            },
-            transaction,
-          },
-        );
-      }
+      // A framework link carries no use case (project_id NULL); an existing
+      // link is skipped, as the model form's write does.
+      await insertModelFrameworkLinks(modelId, [frameworkId], organizationId, transaction);
       await transaction.commit();
       return {
         model_id: modelId,
