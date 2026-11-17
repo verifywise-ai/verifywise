@@ -87,7 +87,7 @@ const snapshot = async (c: Ctx) =>
 interface Route {
   name: string;
   call: (api: Api, c: Ctx, users: { other: number }) => any;
-  success: number;
+  success: number | number[];
   /** Another organization's Admin; default 404. */
   missing?: number;
   /** The cycle's stakeholder may use it without use case access. */
@@ -153,9 +153,10 @@ const ROUTES: Route[] = [
       a
         .post(`/api/pmm/cycles/${c.cycle}/responses`)
         .send({ responses: [{ question_id: c.question, response_value: true }] }),
-    // The response upsert's ON CONFLICT has no matching constraint: past the
-    // guard the handler fails with 500 for everyone.
-    success: 500,
+    // Past the guard the handler answers 500 until #5421 (the response
+    // upsert's ON CONFLICT target) is in develop, then 200. This suite checks
+    // the guard; tighten to 200 once #5421 is merged.
+    success: [200, 500],
     stakeholder: true,
     write: true,
   },
@@ -165,9 +166,10 @@ const ROUTES: Route[] = [
       a
         .post(`/api/pmm/cycles/${c.cycle}/flag`)
         .send({ question_id: c.question, response_value: true }),
-    // The response upsert's ON CONFLICT has no matching constraint: past the
-    // guard the handler fails with 500 for everyone.
-    success: 500,
+    // Past the guard the handler answers 500 until #5421 (the response
+    // upsert's ON CONFLICT target) is in develop, then 200. This suite checks
+    // the guard; tighten to 200 once #5421 is merged.
+    success: [200, 500],
     stakeholder: true,
     write: true,
   },
@@ -177,9 +179,10 @@ const ROUTES: Route[] = [
       a
         .post(`/api/pmm/cycles/${c.cycle}/submit`)
         .send({ responses: [{ question_id: c.question, response_value: true }] }),
-    // The response upsert's ON CONFLICT has no matching constraint: past the
-    // guard the handler fails with 500 for everyone.
-    success: 500,
+    // Past the guard the handler answers 500 until #5421 (the response
+    // upsert's ON CONFLICT target) is in develop, then 200. This suite checks
+    // the guard; tighten to 200 once #5421 is merged.
+    success: [200, 500],
     stakeholder: true,
     write: true,
   },
@@ -203,6 +206,11 @@ const ROUTES: Route[] = [
     write: true,
   },
 ];
+
+const expectSuccess = (status: number, success: number | number[]) => {
+  if (Array.isArray(success)) expect(success).toContain(status);
+  else expect(status).toBe(success);
+};
 
 describe("post-market monitoring routes run the use case access rule", () => {
   let orgId: number;
@@ -245,13 +253,13 @@ describe("post-market monitoring routes run the use case access rule", () => {
         { replacements: { orgId, project: c.project, member } },
       );
       const res = await route.call(await apiAs(orgId, member, "Editor"), c, { other: otherId });
-      expect(res.status).toBe(route.success);
+      expectSuccess(res.status, route.success);
     });
 
     it("lets an Admin who is not on the use case through", async () => {
       const c = await seedMonitoring(orgId, ownerId);
       const res = await route.call(await apiAs(orgId, adminId, "Admin"), c, { other: otherId });
-      expect(res.status).toBe(route.success);
+      expectSuccess(res.status, route.success);
     });
 
     it("gives another organization's Admin the handler's usual answer", async () => {
@@ -270,7 +278,8 @@ describe("post-market monitoring routes run the use case access rule", () => {
       const res = await route.call(await apiAs(orgId, stakeholder, "Editor"), c, {
         other: otherId,
       });
-      expect(res.status).toBe(route.stakeholder ? route.success : 403);
+      if (route.stakeholder) expectSuccess(res.status, route.success);
+      else expect(res.status).toBe(403);
     });
   });
 });
