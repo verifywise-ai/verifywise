@@ -28,8 +28,7 @@ To use the RiskSection component, import it and pass the required props:
 import RiskSection from "./RiskSection";
 
 const [riskValues, setRiskValues] =
-  useState <
-  RiskFormValues >
+  (useState < RiskFormValues) >
   {
     riskName: "",
     riskDescription: "",
@@ -42,7 +41,7 @@ const [riskValues, setRiskValues] =
     riskSeverity: 0,
   };
 
-const [riskErrors, setRiskErrors] = useState < RiskFormErrors > {};
+const [riskErrors, setRiskErrors] = (useState < RiskFormErrors) > {};
 
 return (
   <RiskSection riskValues={riskValues} setRiskValues={setRiskValues} riskErrors={riskErrors} />
