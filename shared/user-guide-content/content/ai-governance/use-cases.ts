@@ -279,6 +279,14 @@ export const useCasesContent: ArticleContent = {
       text: 'After approval, the deferred frameworks get created and all tabs open up.',
     },
     {
+      type: 'paragraph',
+      text: 'The workflow must be active, made for use cases, and have an approver on every step. Otherwise the use case is not saved and the form shows why on the **Approval workflow** field.',
+    },
+    {
+      type: 'paragraph',
+      text: 'While a request is pending or after it is rejected, only people who manage approval workflows can change or remove the workflow. If you sent the request, withdraw it from the approval request instead. Removing the workflow from a rejected use case does not create its frameworks. They wait until a new review approves it. Workflow changes show up in the use case\'s history.',
+    },
+    {
       type: 'heading',
       id: 'lifecycle',
       level: 2,
@@ -311,7 +319,7 @@ export const useCasesContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Open a use case to move it along. On the Overview tab, choose **Mark as live** and pick the go-live date (today or earlier), or choose **Retire**. A planned use case that never launches can be retired too. The same panel holds the department. The dashboard uses it to group live use cases.',
+      text: 'Open a use case to move it along. On the Overview tab, choose **Mark as live** and pick the go-live date (today or earlier), or choose **Retire**. A planned use case that never launches can be retired too. A use case whose approval request is pending or was rejected can't be marked as live until a review approves it. The same panel holds the department. The dashboard uses it to group live use cases.',
     },
     {
       type: 'image',
