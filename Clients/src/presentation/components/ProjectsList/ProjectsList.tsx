@@ -200,7 +200,7 @@ const ProjectList = ({
         case "status":
           return item.status?.toLowerCase();
         case "start_date":
-          return item.start_date;
+          return startDateCalendarDay(item.start_date);
         default:
           return null;
       }

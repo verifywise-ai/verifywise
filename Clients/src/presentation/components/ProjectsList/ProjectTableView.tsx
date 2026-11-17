@@ -364,8 +364,8 @@ const ProjectTableView: React.FC<IProjectTableViewProps> = ({
           break;
 
         case "startDate":
-          aValue = new Date(a.start_date).getTime();
-          bValue = new Date(b.start_date).getTime();
+          aValue = startDateCalendarDay(a.start_date)?.getTime() ?? NaN;
+          bValue = startDateCalendarDay(b.start_date)?.getTime() ?? NaN;
           break;
 
         case "lastUpdated":
