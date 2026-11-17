@@ -5,6 +5,7 @@ import {
 } from "../../utils/project.utils";
 import { deleteProjectWithSideEffects } from "../../utils/projectDeletion.utils";
 import { getUserRoleInOrganization, userHasPermission } from "../../utils/userPermission.utils";
+import { actingProjectViewer, actingUserId, NO_PROJECT_VIEWER } from "./useCaseScope";
 import { calculateProjectRisks } from "../../utils/project.utils";
 import { findUsersNotInOrganization } from "../../utils/user.utils";
 import logger from "../../utils/logger/fileLogger";
@@ -20,25 +21,14 @@ export interface FetchUseCasesParams {
 }
 
 /**
- * Who the tool runs for: the user who asked (an approved write carries them
- * as _requesterId), else the chatting or approving user (_userId, injected by
- * toolBridge and the approval gateway). Undefined when neither is known.
- */
-const actingUserId = (params: Record<string, unknown>): number | undefined => {
-  const id = Number(params._requesterId) || Number(params._userId);
-  return Number.isSafeInteger(id) && id > 0 ? id : undefined;
-};
-
-/**
  * The use cases the acting user's use case list shows (getUserProjects, the
  * projectVisibilitySql rule behind GET /api/projects). None when the user is
  * unknown or not a member of the organization: it fails closed.
  */
 const getVisibleProjects = async (params: Record<string, unknown>, organizationId: number) => {
-  const userId = actingUserId(params);
-  const role = userId ? await getUserRoleInOrganization(organizationId, userId) : undefined;
-  if (!userId || !role) return [];
-  const projects = await getUserProjects({ userId, role: role.name }, organizationId);
+  const viewer = await actingProjectViewer(params, organizationId);
+  if (viewer === NO_PROJECT_VIEWER) return [];
+  const projects = await getUserProjects(viewer, organizationId);
   return projects || [];
 };
 

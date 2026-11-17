@@ -17,6 +17,11 @@ jest.mock("../../../utils/nistAiRmfCorrect.utils", () => ({
 }));
 
 jest.mock("../../approval/approvalGateway", () => ({ submitForApproval: jest.fn() }));
+// list_projects runs as the user; an Admin sees every use case.
+jest.mock("../../../utils/userPermission.utils", () => ({
+  getUserRoleInOrganization: jest.fn(async () => ({ id: 1, name: "Admin", organizationId: null })),
+  userHasPermission: jest.fn(async () => true),
+}));
 
 jest.mock("../../../utils/logger/fileLogger", () => ({
   __esModule: true,
@@ -267,7 +272,7 @@ describe("Advisor Functions: NIST AI RMF org perspective", () => {
         },
       ]);
 
-      const projects = await availableProjectTools["list_projects"]({}, ORG_ID);
+      const projects = await availableProjectTools["list_projects"]({ _userId: 1 }, ORG_ID);
 
       expect(projects[0]).toMatchObject({ id: 7, is_organizational: true });
     });

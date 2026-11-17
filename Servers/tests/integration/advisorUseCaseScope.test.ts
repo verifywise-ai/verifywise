@@ -3,8 +3,12 @@ jest.setTimeout(60000);
 import { QueryTypes } from "sequelize";
 import { sequelize } from "../../database/db";
 import { cleanupDatabase, createTestOrganization, createTestUser } from "./helpers";
-import { createTestProject } from "../factories";
+import { createTestModelInventory, createTestProject } from "../factories";
 import { availableUseCaseTools } from "../../advisor/functions/useCaseFunctions";
+import { availableProjectTools } from "../../advisor/functions/projectFunctions";
+import { availableComplianceTools } from "../../advisor/functions/complianceFunctions";
+import { availableModelInventoryTools } from "../../advisor/functions/modelInventoryFunctions";
+import { availableAdminTools } from "../../advisor/functions/adminFunctions";
 import { writeToolExecutors } from "../../advisor/confirmation/createWriteTool";
 
 /**
@@ -89,6 +93,83 @@ describe("advisor use case tools run as the user", () => {
       orgId,
     )) as any[];
     expect(rows).toEqual([]);
+  });
+
+  describe("other advisor reads that list or open use cases", () => {
+    it("list_projects lists only the use cases a non-Admin can see", async () => {
+      const rows = (await availableProjectTools.list_projects({ _userId: owner }, orgId)) as any[];
+      expect(ids(rows)).toEqual([mine]);
+    });
+
+    it("list_projects lists every use case for an Admin", async () => {
+      const rows = (await availableProjectTools.list_projects({ _userId: admin }, orgId)) as any[];
+      expect(ids(rows)).toEqual([mine, theirs].sort((a, b) => a - b));
+    });
+
+    it("list_projects lists nothing without a user", async () => {
+      expect(await availableProjectTools.list_projects({}, orgId)).toEqual([]);
+    });
+
+    it("get_all_projects_compliance covers only the visible use cases", async () => {
+      const result = (await availableComplianceTools.get_all_projects_compliance(
+        { _userId: owner },
+        orgId,
+      )) as any;
+      const listed = JSON.stringify(result);
+      expect(listed).toContain(`"id":${mine}`);
+      expect(listed).not.toContain(`"id":${theirs}`);
+    });
+
+    it("list_use_cases_for_model lists only the visible use cases", async () => {
+      const model = await createTestModelInventory(orgId);
+      await sequelize.query(
+        `INSERT INTO model_inventories_projects_frameworks (organization_id, model_inventory_id, project_id)
+         VALUES (:orgId, :model, :mine), (:orgId, :model, :theirs)`,
+        { replacements: { orgId, model, mine, theirs } },
+      );
+      const rows = (await availableModelInventoryTools.list_use_cases_for_model(
+        { model_id: model, _userId: owner },
+        orgId,
+      )) as any[];
+      expect(rows.map((r) => r.project_id)).toEqual([mine]);
+    });
+
+    it("get_user_detail leaves out the use cases the caller cannot see", async () => {
+      const detail = (await availableAdminTools.get_user_detail(
+        { user_id: auditor, _userId: stranger },
+        orgId,
+      )) as any;
+      expect(JSON.stringify(detail)).not.toContain(`"id":${mine}`);
+    });
+
+    it.each(["get_project_stats", "get_project_compliance_progress", "get_compliance_details"])(
+      "%s refuses a use case the user cannot see",
+      async (tool) => {
+        await expect(
+          availableComplianceTools[tool]({ project_id: theirs, _userId: owner }, orgId),
+        ).rejects.toThrow(`You do not have access to use case ${theirs}`);
+      },
+    );
+
+    it("list_models_for_use_case refuses a use case the user cannot see", async () => {
+      await expect(
+        availableModelInventoryTools.list_models_for_use_case(
+          { project_id: theirs, _userId: owner },
+          orgId,
+        ),
+      ).rejects.toThrow(`You do not have access to use case ${theirs}`);
+    });
+
+    // get_project_compliance_progress reads the dropped legacy "controls" table and
+    // fails for every use case, so only get_project_stats can show the allowed path.
+    it.each(["get_project_stats"])(
+      "%s still answers for a use case the user can see",
+      async (tool) => {
+        await expect(
+          availableComplianceTools[tool]({ project_id: mine, _userId: owner }, orgId),
+        ).resolves.toBeDefined();
+      },
+    );
   });
 
   describe("agent_add_member_to_use_case", () => {

@@ -6,23 +6,10 @@ import logger from "../../utils/logger/fileLogger";
 import { taskLinkReachesProjectSql } from "../../utils/taskEntityLink.utils";
 import { TaskStatus } from "../../domain.layer/enums/task-status.enum";
 import { effectiveRiskLevelSql } from "../../utils/riskLevel.utils";
+import { projectVisibilitySql } from "../../utils/projectVisibility.utils";
+import { actingProjectViewer, assertCanReadUseCase, NO_PROJECT_VIEWER } from "./useCaseScope";
 
 // --- Read Tools ---
-
-/**
- * Refuses a project_id outside the organization, so a mistyped or invented
- * id is reported as not found instead of as a use case with nothing in it.
- */
-const assertProjectInOrganization = async (
-  projectId: number,
-  organizationId: number,
-): Promise<void> => {
-  const rows = await sequelize.query(
-    `SELECT id FROM projects WHERE id = :projectId AND organization_id = :organizationId`,
-    { replacements: { projectId, organizationId }, type: QueryTypes.SELECT },
-  );
-  if (rows.length === 0) throw new Error(`Use case ${projectId} not found`);
-};
 
 const getComplianceScore = async (
   _params: { project_id?: number },
@@ -76,7 +63,7 @@ const getComplianceDetails = async (
   organizationId: number,
 ): Promise<any> => {
   try {
-    await assertProjectInOrganization(params.project_id, organizationId);
+    await assertCanReadUseCase(params, params.project_id, organizationId);
     const score = await calculateComplianceScore(organizationId);
 
     // Get project-specific framework data if framework_id is provided
@@ -154,6 +141,7 @@ const getProjectComplianceProgress = async (
   organizationId: number,
 ): Promise<any> => {
   try {
+    await assertCanReadUseCase(params, params.project_id, organizationId);
     // Get frameworks for project
     const frameworks = (await sequelize.query(
       `SELECT pf.framework_id, f.name as framework_name
@@ -215,17 +203,27 @@ const getProjectComplianceProgress = async (
   }
 };
 
-const getAllProjectsCompliance = async (_params: {}, organizationId: number): Promise<any> => {
+const getAllProjectsCompliance = async (
+  params: Record<string, unknown>,
+  organizationId: number,
+): Promise<any> => {
   try {
-    // Get all projects
+    // The use cases the user's use case list shows (none without a user).
+    const viewer = await actingProjectViewer(params, organizationId);
+    if (viewer === NO_PROJECT_VIEWER) return { total_projects: 0, projects: [] };
+    const visibility = projectVisibilitySql("projects", viewer);
     const projects = (await sequelize.query(
       `SELECT id, project_title, status, created_at
        FROM projects
        WHERE organization_id = :organization_id
-       AND (is_organizational = false OR is_organizational IS NULL)
+       AND (is_organizational = false OR is_organizational IS NULL)${visibility.sql}
        ORDER BY created_at DESC`,
       {
-        replacements: { organization_id: organizationId },
+        replacements: {
+          organization_id: organizationId,
+          organizationId,
+          ...visibility.replacements,
+        },
         type: QueryTypes.SELECT,
       },
     )) as any[];
@@ -273,7 +271,7 @@ const getProjectStats = async (
 ): Promise<any> => {
   try {
     const projectId = params.project_id;
-    await assertProjectInOrganization(projectId, organizationId);
+    await assertCanReadUseCase(params, projectId, organizationId);
     // taskLinkReachesProjectSql binds :organizationId; the other queries use
     // :organization_id. One object carries both names.
     const replacements = {
