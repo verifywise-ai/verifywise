@@ -291,7 +291,7 @@ export const useCasesContent: ArticleContent = {
     {
       type: 'bullet-list',
       items: [
-        { bold: 'In review', text: 'An approval request is open, or an intake request is waiting for a decision. Intake requests are listed under the search bar, and **Review** opens the submission. The search covers them too, but the export leaves them out. The use case is created only when the request is approved. It then arrives as planned. Rejected and superseded requests are not shown. Days in review count from the first time a request was submitted.' },
+        { bold: 'In review', text: 'An approval request is open, or an intake request is waiting for a decision. Intake requests are listed under the search bar, and **Review** opens the submission. People who can manage intake forms see every request; everyone else sees only the requests they submitted. The search covers them too, but the export leaves them out. The use case is created only when the request is approved. It then arrives as planned. Rejected and superseded requests are not shown. Days in review count from the first time a request was submitted.' },
         { bold: 'Planned', text: 'Approved, or created without an approval workflow, but not in use yet.' },
         { bold: 'Live', text: 'In use. The owner recorded a go-live date.' },
         { bold: 'Retired', text: 'No longer in use. It stays in the inventory with its history.' },
