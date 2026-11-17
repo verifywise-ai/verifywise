@@ -68,6 +68,7 @@ import {
 } from "../../../../application/utils/highRiskRoles";
 import CustomException from "../../../../infrastructure/exceptions/customeException";
 import { applyApprovalWorkflowSelection } from "./approvalWorkflowField";
+import { includesEuAiAct } from "./euAiAct";
 import { radiusPx } from "../../../themes/palette";
 
 const PROJECT_STATUS_ITEMS = [
@@ -87,6 +88,13 @@ const getStatusIdFromName = (statusName: string | undefined): number => {
   return statusItem?._id || 1;
 };
 
+/** Whether the start date picked in the form is a different day from the loaded one. */
+const startDateChanged = (initial: string, current: string): boolean => {
+  if (initial === current) return false;
+  const day = (value: string) => (value ? dayjs(value).format("YYYY-MM-DD") : "");
+  return day(initial) !== day(current);
+};
+
 export const ProjectForm = ({
   sx,
   onClose,
@@ -97,6 +105,21 @@ export const ProjectForm = ({
 }: ProjectFormProps) => {
   const theme = useTheme();
   const { setProjects } = useContext(VerifyWiseContext);
+
+  // An edited use case has EU AI Act when its stored frameworks include it;
+  // the edit form does not change frameworks.
+  const storedHasEuAiAct = useMemo(
+    () =>
+      !!projectToEdit &&
+      (includesEuAiAct(projectToEdit.monitored_regulations_and_standards) ||
+        includesEuAiAct(projectToEdit.framework)),
+    [projectToEdit],
+  );
+  const formHasEuAiAct = useCallback(
+    (vals: FormValues) =>
+      includesEuAiAct(vals.monitored_regulations_and_standards) || storedHasEuAiAct,
+    [storedHasEuAiAct],
+  );
 
   // Initialize form values based on whether we're editing or creating
   const [values, setValues] = useState<FormValues>(() => {
@@ -135,6 +158,7 @@ export const ProjectForm = ({
       framework_type: defaultFrameworkType || FrameworkTypeEnum.ProjectBased,
     };
   });
+  const initialStartDate = useRef(values.start_date);
   const { users } = useUsers();
   const { allFrameworks, loading: frameworksLoading } = useFrameworks({ listOfFrameworks: [] });
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -179,8 +203,7 @@ export const ProjectForm = ({
         return r.accepted ? "" : r.message;
       },
       ai_risk_classification: (v: unknown, vals: FormValues) => {
-        const hasEuAiAct = vals.monitored_regulations_and_standards.some((fw) => fw._id === 1);
-        if (!hasEuAiAct) return "";
+        if (!formHasEuAiAct(vals)) return "";
         if (v === null || v === undefined || v === 0) {
           return "AI risk classification is required when EU AI Act is selected.";
         }
@@ -188,16 +211,13 @@ export const ProjectForm = ({
         return r.accepted ? "" : r.message;
       },
       high_risk_roles: (v: unknown, vals: FormValues) =>
-        highRiskRolesError(
-          v,
-          vals.monitored_regulations_and_standards.some((fw) => fw._id === 1),
-        ),
+        highRiskRolesError(v, formHasEuAiAct(vals)),
       monitored_regulations_and_standards: () => {
         // Framework selection is optional for use cases
         return "";
       },
     }),
-    [projectToEdit],
+    [formHasEuAiAct],
   );
   const {
     errors,
@@ -284,10 +304,7 @@ export const ProjectForm = ({
   }, []);
 
   // True when EU AI Act (framework ID 1) is selected
-  const hasEuAiAct = useMemo(
-    () => values.monitored_regulations_and_standards.some((fw) => fw._id === 1),
-    [values.monitored_regulations_and_standards],
-  );
+  const hasEuAiAct = useMemo(() => formHasEuAiAct(values), [formHasEuAiAct, values]);
 
   // Filter frameworks based on framework type
   const filteredFrameworks = useMemo(() => {
@@ -506,16 +523,27 @@ export const ProjectForm = ({
           ),
         };
 
-        // Add AI-specific fields only when EU AI Act is selected. An edit
-        // without it leaves them out, so a stored classification (set by an
-        // intake form or the API) is kept rather than cleared.
-        const hasEuAiAct = values.monitored_regulations_and_standards.some((fw) => fw._id === 1);
+        // The AI Act fields are sent only when EU AI Act applies (and as
+        // null on create without it). An edit without it removes them from
+        // the body, which otherwise carries them as loaded, so a
+        // classification an intake form or the API stored meanwhile is kept.
+        const hasEuAiAct = formHasEuAiAct(values);
         if (hasEuAiAct || !projectToEdit) {
           body.high_risk_roles = highRiskRolesPayload(values.high_risk_roles, hasEuAiAct);
           body.ai_risk_classification = hasEuAiAct
             ? riskClassificationItems.find((item) => item._id === values.ai_risk_classification)
                 ?.name
             : null;
+        } else {
+          delete body.high_risk_roles;
+          delete body.ai_risk_classification;
+        }
+
+        // The edit form shows the stored start date as local midnight; an
+        // untouched date is not sent, so the stored value and the history
+        // stay as they are.
+        if (projectToEdit && !startDateChanged(initialStartDate.current, values.start_date)) {
+          delete body.start_date;
         }
 
         if (values.framework_type === FrameworkTypeEnum.OrganizationWide) {
@@ -631,6 +659,7 @@ export const ProjectForm = ({
   }, [
     values,
     projectToEdit,
+    formHasEuAiAct,
     validateAll,
     setServerErrors,
     getFirstInvalidField,
