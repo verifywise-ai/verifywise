@@ -1,3 +1,4 @@
+import { actingRequesterId } from "./actingRequester";
 import { getUserProjects, lockProjectForDelete } from "../../utils/project.utils";
 import { deleteProjectWithSideEffects } from "../../utils/projectDeletion.utils";
 import { userHasPermission } from "../../utils/userPermission.utils";
@@ -234,14 +235,6 @@ const agentCreateUseCase = createWriteToolFn({
   },
 });
 
-/**
- * The user a use case write is recorded as: the one who asked, else the
- * approver. Null when neither is known, so a write never keeps showing the
- * previous editor as the last one.
- */
-const actingUserId = (params: Record<string, unknown>): number | null =>
-  Number(params._requesterId) || Number(params._userId) || null;
-
 const agentUpdateUseCase = createWriteToolFn({
   toolName: "agent_update_use_case",
   warningLevel: "warning",
@@ -262,7 +255,9 @@ const agentUpdateUseCase = createWriteToolFn({
       organizationId,
       id: params.use_case_id,
       last_updated: new Date(),
-      last_updated_by: actingUserId(params),
+      // The one who asked, else the approver; NULL when neither is known, so a
+      // write never keeps showing the previous editor as the last one.
+      last_updated_by: actingRequesterId(params) ?? null,
     };
 
     for (const [key, { column, value }] of Object.entries(fields)) {
@@ -300,7 +295,7 @@ const agentUpdateUseCaseStatus = createWriteToolFn({
           id: params.use_case_id,
           status: params.status,
           last_updated: new Date(),
-          last_updated_by: actingUserId(params),
+          last_updated_by: actingRequesterId(params) ?? null,
         },
       },
     );
@@ -377,7 +372,7 @@ const agentDeleteUseCase = createWriteToolFn({
   executeFn: async (params, organizationId) => {
     const useCaseId = params.use_case_id as number;
     // Recorded as the user who asked for the delete, else the approver.
-    const userId = actingUserId(params) ?? undefined;
+    const userId = actingRequesterId(params);
 
     // The delete always archives the risks linked only to this use case,
     // which takes the same permission as archiving them in the console

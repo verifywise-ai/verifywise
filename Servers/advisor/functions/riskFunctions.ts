@@ -12,6 +12,7 @@ import {
 } from "../../utils/risk.utils";
 import { getTimeseriesForTimeframe } from "../../utils/history/riskHistory.utils";
 import { createWriteToolFn } from "../confirmation/createWriteTool";
+import { actingRequesterId } from "./actingRequester";
 import { sequelize } from "../../database/db";
 import logger from "../../utils/logger/fileLogger";
 import { getEffectiveRiskLevel } from "../../utils/riskLevel.utils";
@@ -445,8 +446,8 @@ export const actingRiskViewer = async (
   params: Record<string, unknown>,
   organizationId: number,
 ): Promise<RiskViewer> => {
-  const userId = Number(params._requesterId) || Number(params._userId);
-  if (!userId || userId < 0) return UNKNOWN_RISK_VIEWER;
+  const userId = actingRequesterId(params);
+  if (userId === undefined) return UNKNOWN_RISK_VIEWER;
   return riskViewerForUserQuery(userId, organizationId);
 };
 
