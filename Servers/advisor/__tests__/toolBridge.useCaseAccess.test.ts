@@ -1,79 +1,78 @@
 /**
- * toolBridge — decision 7 at dispatch: a tool call that names a use case
- * (project_id, projectId, use_case_id) runs only when the calling user may
- * open that use case; otherwise the tool is not called and the model gets the
- * refusal. Tools that name no use case run as before.
+ * toolBridge — decision 7 at dispatch: every tool call goes through
+ * useCaseRefusalForTool once (its rules are tested in
+ * useCaseScope.tool.test.ts). A refused call never reaches the tool and the
+ * model gets the refusal; write tools are checked with the write rule.
  */
 import { beforeEach, describe, expect, it, jest } from "@jest/globals";
 
 jest.mock("../functions/useCaseScope", () => ({
-  assertCanReadUseCase: jest.fn(),
+  useCaseRefusalForTool: jest.fn(),
 }));
 
 import { bridgeTools } from "../toolBridge";
-import { assertCanReadUseCase } from "../functions/useCaseScope";
+import { useCaseRefusalForTool } from "../functions/useCaseScope";
+import { writeToolExecutors } from "../confirmation/createWriteTool";
 
-const assertRead = assertCanReadUseCase as unknown as jest.Mock<(...args: any[]) => Promise<void>>;
-
-const def = (name: string, properties: Record<string, unknown>) => ({
-  type: "function",
-  function: { name, description: name, parameters: { type: "object", properties } },
-});
+const refusalFor = useCaseRefusalForTool as unknown as jest.Mock<
+  (...args: any[]) => Promise<string | null>
+>;
 
 const ORG = 4;
 const USER = 9;
 
-function bridged(name: string, properties: Record<string, unknown>) {
+function bridged(name: string) {
   const fn = jest.fn<(...args: any[]) => Promise<unknown>>().mockResolvedValue({ ok: true });
-  const tools = bridgeTools([def(name, properties)], { [name]: fn }, ORG, USER);
+  const def = {
+    type: "function",
+    function: {
+      name,
+      description: name,
+      parameters: { type: "object", properties: { project_id: { type: "number" } } },
+    },
+  };
+  const tools = bridgeTools([def], { [name]: fn }, ORG, USER);
   const tool = tools[name] as unknown as { execute: (p: Record<string, unknown>) => Promise<any> };
   return { fn, run: (params: Record<string, unknown>) => tool.execute(params) };
 }
 
 beforeEach(() => {
   jest.clearAllMocks();
-  assertRead.mockResolvedValue(undefined);
+  refusalFor.mockResolvedValue(null);
 });
 
-describe("toolBridge checks the use case a tool names", () => {
-  it.each(["project_id", "projectId", "use_case_id"])(
-    "refuses %s of a use case the user cannot open, without calling the tool",
-    async (param) => {
-      assertRead.mockRejectedValue(new Error("You do not have access to use case 12"));
-      const { fn, run } = bridged("get_something", { [param]: { type: "number" } });
-
-      const result = await run({ [param]: 12 });
-
-      expect(assertRead).toHaveBeenCalledWith(expect.objectContaining({ _userId: USER }), 12, ORG);
-      expect(result).toEqual({ error: "You do not have access to use case 12" });
-      expect(fn).not.toHaveBeenCalled();
-    },
-  );
-
-  it("calls the tool when the user may open the use case", async () => {
-    const { fn, run } = bridged("get_something", { project_id: { type: "number" } });
+describe("toolBridge checks the use cases a tool call names", () => {
+  it("returns the refusal without calling the tool", async () => {
+    refusalFor.mockResolvedValue("You do not have access to use case 12");
+    const { fn, run } = bridged("get_something");
 
     const result = await run({ project_id: 12 });
 
-    expect(fn).toHaveBeenCalledTimes(1);
-    expect(result).toEqual({ ok: true });
+    expect(result).toEqual({ error: "You do not have access to use case 12" });
+    expect(fn).not.toHaveBeenCalled();
   });
 
-  it("leaves a tool that names no use case alone", async () => {
-    const { fn, run } = bridged("get_org_summary", { limit: { type: "number" } });
+  it("checks a read tool with the read rule, as the calling user", async () => {
+    const { fn, run } = bridged("get_something");
 
-    await run({ limit: 5 });
+    await run({ project_id: 12 });
 
-    expect(assertRead).not.toHaveBeenCalled();
+    expect(refusalFor).toHaveBeenCalledWith(
+      "get_something",
+      expect.objectContaining({ project_id: 12, _userId: USER }),
+      ORG,
+      false,
+    );
     expect(fn).toHaveBeenCalledTimes(1);
   });
 
-  it("does not check a use case id the model left empty", async () => {
-    const { fn, run } = bridged("get_something", { project_id: { type: "number" } });
+  it("checks a write tool with the write rule", async () => {
+    writeToolExecutors.set("agent_do_something", async () => ({}));
+    const { run } = bridged("agent_do_something");
 
-    await run({ project_id: 0 });
+    await run({ project_id: 12 });
 
-    expect(assertRead).not.toHaveBeenCalled();
-    expect(fn).toHaveBeenCalledTimes(1);
+    expect(refusalFor).toHaveBeenCalledWith("agent_do_something", expect.anything(), ORG, true);
+    writeToolExecutors.delete("agent_do_something");
   });
 });

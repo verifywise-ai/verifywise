@@ -3,7 +3,12 @@ jest.setTimeout(60000);
 import { QueryTypes } from "sequelize";
 import { sequelize } from "../../database/db";
 import { cleanupDatabase, createTestOrganization, createTestUser } from "./helpers";
-import { createTestModelInventory, createTestProject } from "../factories";
+import {
+  createTestControlEU,
+  createTestModelInventory,
+  createTestProject,
+  createTestProjectFramework,
+} from "../factories";
 import { availableUseCaseTools } from "../../advisor/functions/useCaseFunctions";
 import { availableProjectTools } from "../../advisor/functions/projectFunctions";
 import { availableComplianceTools } from "../../advisor/functions/complianceFunctions";
@@ -24,6 +29,8 @@ import { toolsDefinition as nistDefs } from "../../advisor/tools/nistAiRmfTools"
 import { toolsDefinition as pmmDefs } from "../../advisor/tools/pmmTools";
 import { toolsDefinition as riskDefs } from "../../advisor/tools/riskTools";
 import { toolsDefinition as readinessDefs } from "../../advisor/tools/readinessTools";
+import { toolsDefinition as complianceDefs } from "../../advisor/tools/complianceTools";
+import { toolsDefinition as modelDefs } from "../../advisor/tools/modelInventoryTools";
 import { writeToolExecutors } from "../../advisor/confirmation/createWriteTool";
 
 /**
@@ -157,24 +164,6 @@ describe("advisor use case tools run as the user", () => {
       expect(JSON.stringify(detail)).not.toContain(`"id":${mine}`);
     });
 
-    it.each(["get_project_stats", "get_project_compliance_progress", "get_compliance_details"])(
-      "%s refuses a use case the user cannot see",
-      async (tool) => {
-        await expect(
-          availableComplianceTools[tool]({ project_id: theirs, _userId: owner }, orgId),
-        ).rejects.toThrow(`You do not have access to use case ${theirs}`);
-      },
-    );
-
-    it("list_models_for_use_case refuses a use case the user cannot see", async () => {
-      await expect(
-        availableModelInventoryTools.list_models_for_use_case(
-          { project_id: theirs, _userId: owner },
-          orgId,
-        ),
-      ).rejects.toThrow(`You do not have access to use case ${theirs}`);
-    });
-
     // get_project_compliance_progress reads the dropped legacy "controls" table and
     // fails for every use case, so only get_project_stats can show the allowed path.
     it.each(["get_project_stats"])(
@@ -250,6 +239,9 @@ describe("advisor tools that name a use case, through the tool bridge", () => {
     ["get_pmm_config", pmmDefs, availablePmmTools, "project_id"],
     ["fetch_risks", riskDefs, availableRiskTools, "projectId"],
     ["generate_recommendations", readinessDefs, availableReadinessTools, "project_id"],
+    ["get_project_stats", complianceDefs, availableComplianceTools, "project_id"],
+    ["get_compliance_details", complianceDefs, availableComplianceTools, "project_id"],
+    ["list_models_for_use_case", modelDefs, availableModelInventoryTools, "project_id"],
   ];
 
   const run = (
@@ -284,5 +276,80 @@ describe("advisor tools that name a use case, through the tool bridge", () => {
   it.each(TOOLS)("%s is not refused for an Admin", async (name, defs, fns, param) => {
     const result = await run(name, defs, fns, admin, { [param]: theirs });
     expect(result?.error ?? "").not.toContain("You do not have access");
+  });
+
+  describe("rows of a use case named by id", () => {
+    /** A new use case the owner cannot see, so each test seeds its own rows. */
+    const hidden = async () => createTestProject(orgId, await user(orgId, "Editor"));
+
+    const euControlOf = async (projectId: number) =>
+      createTestControlEU(orgId, {
+        projects_frameworks_id: await createTestProjectFramework(orgId, projectId, 1),
+      });
+
+    const cycleOf = async (projectId: number, stakeholder: number | null) => {
+      const [[config]] = (await sequelize.query(
+        `INSERT INTO post_market_monitoring_configs (organization_id, project_id, is_active)
+         VALUES (:orgId, :projectId, TRUE) RETURNING id`,
+        { replacements: { orgId, projectId } },
+      )) as any;
+      const [[cycle]] = (await sequelize.query(
+        `INSERT INTO post_market_monitoring_cycles
+           (organization_id, config_id, cycle_number, due_at, assigned_stakeholder_id)
+         VALUES (:orgId, :config, 1, NOW() + INTERVAL '7 days', :stakeholder) RETURNING id`,
+        { replacements: { orgId, config: config.id, stakeholder } },
+      )) as any;
+      return cycle.id as number;
+    };
+
+    it("agent_save_eu_ai_act_control refuses a control of a use case the user cannot change", async () => {
+      const other = await hidden();
+      const control = await euControlOf(other);
+      const result = await run(
+        "agent_save_eu_ai_act_control",
+        euAiActDefs,
+        availableEuAiActTools,
+        owner,
+        {
+          project_id: other,
+          control_id: control,
+          status: "Done",
+        },
+      );
+      expect(result).toEqual({ error: `You do not have access to use case ${other}` });
+    });
+
+    it("agent_save_eu_ai_act_control refuses a control of another use case than the one named", async () => {
+      const control = await euControlOf(await hidden());
+      const result = await run(
+        "agent_save_eu_ai_act_control",
+        euAiActDefs,
+        availableEuAiActTools,
+        admin,
+        {
+          project_id: mine,
+          control_id: control,
+          status: "Done",
+        },
+      );
+      expect(result).toEqual({ error: `You do not have access to use case ${mine}` });
+    });
+
+    it("get_pmm_cycle_detail refuses a cycle of a use case the user cannot see", async () => {
+      const other = await hidden();
+      const cycle = await cycleOf(other, null);
+      const result = await run("get_pmm_cycle_detail", pmmDefs, availablePmmTools, owner, {
+        cycle_id: cycle,
+      });
+      expect(result).toEqual({ error: `You do not have access to use case ${other}` });
+    });
+
+    it("get_pmm_cycle_detail opens the cycle for its stakeholder", async () => {
+      const cycle = await cycleOf(await hidden(), owner);
+      const result = await run("get_pmm_cycle_detail", pmmDefs, availablePmmTools, owner, {
+        cycle_id: cycle,
+      });
+      expect(result?.error ?? "").not.toContain("You do not have access");
+    });
   });
 });

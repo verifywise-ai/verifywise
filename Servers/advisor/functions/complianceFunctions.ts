@@ -7,7 +7,7 @@ import { taskLinkReachesProjectSql } from "../../utils/taskEntityLink.utils";
 import { TaskStatus } from "../../domain.layer/enums/task-status.enum";
 import { effectiveRiskLevelSql } from "../../utils/riskLevel.utils";
 import { projectVisibilitySql } from "../../utils/projectVisibility.utils";
-import { actingProjectViewer, assertCanReadUseCase, NO_PROJECT_VIEWER } from "./useCaseScope";
+import { actingProjectViewer, NO_PROJECT_VIEWER } from "./useCaseScope";
 
 // --- Read Tools ---
 
@@ -63,7 +63,6 @@ const getComplianceDetails = async (
   organizationId: number,
 ): Promise<any> => {
   try {
-    await assertCanReadUseCase(params, params.project_id, organizationId);
     const score = await calculateComplianceScore(organizationId);
 
     // Get project-specific framework data if framework_id is provided
@@ -141,7 +140,6 @@ const getProjectComplianceProgress = async (
   organizationId: number,
 ): Promise<any> => {
   try {
-    await assertCanReadUseCase(params, params.project_id, organizationId);
     // Get frameworks for project
     const frameworks = (await sequelize.query(
       `SELECT pf.framework_id, f.name as framework_name
@@ -271,7 +269,6 @@ const getProjectStats = async (
 ): Promise<any> => {
   try {
     const projectId = params.project_id;
-    await assertCanReadUseCase(params, projectId, organizationId);
     // taskLinkReachesProjectSql binds :organizationId; the other queries use
     // :organization_id. One object carries both names.
     const replacements = {

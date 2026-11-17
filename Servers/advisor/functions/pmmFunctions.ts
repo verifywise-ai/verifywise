@@ -15,6 +15,7 @@ import {
 } from "../../utils/postMarketMonitoring.utils";
 import type { QuestionType } from "../../domain.layer/interfaces/i.postMarketMonitoring";
 import { createWriteToolFn } from "../confirmation/createWriteTool";
+import { questionsBelongToPmmCycleQuery } from "../../utils/pmmUseCaseAccess.utils";
 import { sequelize } from "../../database/db";
 import logger from "../../utils/logger/fileLogger";
 
@@ -399,11 +400,18 @@ const agentSubmitPmmResponses = createWriteToolFn({
     return `Submit ${responses.length} response(s) for PMM cycle #${params.cycle_id}`;
   },
   executeFn: async (params, organizationId) => {
+    const cycleId = params.cycle_id as number;
+    const responses = params.responses as Array<{ question_id: number; response_value: string }>;
+    // As POST /api/pmm/cycles/:cycleId/responses: only the cycle's own questions.
+    const questionIds = responses.map((r) => r.question_id);
+    if (!(await questionsBelongToPmmCycleQuery(cycleId, questionIds, organizationId))) {
+      return {
+        success: false,
+        message: `question_id ${questionIds.join(", ")} not found in cycle ${cycleId}`,
+      };
+    }
     const transaction = await sequelize.transaction();
     try {
-      const cycleId = params.cycle_id as number;
-      const responses = params.responses as Array<{ question_id: number; response_value: string }>;
-
       await savePMMResponsesQuery(
         cycleId,
         responses.map((r) => ({

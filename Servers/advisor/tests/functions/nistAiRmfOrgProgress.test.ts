@@ -22,7 +22,7 @@ jest.mock("../../approval/approvalGateway", () => ({ submitForApproval: jest.fn(
 // here the user may open the use case.
 jest.mock("../../functions/useCaseScope", () => ({
   ...(jest.requireActual("../../functions/useCaseScope") as object),
-  assertCanReadUseCase: jest.fn(async () => undefined),
+  useCaseRefusalForTool: jest.fn(async () => null),
 }));
 jest.mock("../../../utils/userPermission.utils", () => ({
   getUserRoleInOrganization: jest.fn(async () => ({ id: 1, name: "Admin", organizationId: null })),

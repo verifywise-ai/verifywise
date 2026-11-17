@@ -2,30 +2,8 @@ import { tool } from "ai";
 import type { ToolSet } from "ai";
 import { z, ZodTypeAny } from "zod";
 import logger from "../utils/logger/fileLogger";
-import { assertCanReadUseCase } from "./functions/useCaseScope";
-
-/**
- * Tool parameters that name a use case (checked against every tool schema).
- * A call naming one runs only when the calling user may open that use case
- * (decision 7); the tool's own checks still apply on top.
- */
-const USE_CASE_PARAMS = ["project_id", "projectId", "use_case_id"] as const;
-
-/** The refusal to return instead of calling the tool, or null when it may run. */
-const useCaseRefusal = async (
-  params: Record<string, unknown>,
-  tenant: number,
-): Promise<string | null> => {
-  for (const key of USE_CASE_PARAMS) {
-    if (params[key] === undefined) continue;
-    try {
-      await assertCanReadUseCase(params, params[key], tenant);
-    } catch (error) {
-      return error instanceof Error ? error.message : "Use case not found";
-    }
-  }
-  return null;
-};
+import { useCaseRefusalForTool } from "./functions/useCaseScope";
+import { writeToolExecutors } from "./confirmation/createWriteTool";
 
 /**
  * Make a tool's return value safe for the AI SDK's JSON message schema.
@@ -220,7 +198,15 @@ export function bridgeTools(
 
           // Inject userId for write tools that need it (confirmation flow)
           const enrichedParams = userId !== undefined ? { ...cleaned, _userId: userId } : cleaned;
-          const refusal = await useCaseRefusal(enrichedParams, tenant);
+          // Decision 7, checked once here for every tool: the use cases the
+          // call names must pass the read rule, or the write rule for a write
+          // tool (one registered for the approval flow).
+          const refusal = await useCaseRefusalForTool(
+            name,
+            enrichedParams,
+            tenant,
+            writeToolExecutors.has(name),
+          );
           if (refusal) {
             logger.info(`[toolBridge] Refused "${name}": ${refusal}`);
             return { error: refusal };

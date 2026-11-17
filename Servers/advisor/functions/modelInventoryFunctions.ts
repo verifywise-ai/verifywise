@@ -1,6 +1,6 @@
 import { IModelInventory } from "../../domain.layer/interfaces/i.modelInventory";
 import { projectVisibilitySql } from "../../utils/projectVisibility.utils";
-import { actingProjectViewer, assertCanReadUseCase, NO_PROJECT_VIEWER } from "./useCaseScope";
+import { actingProjectViewer, NO_PROJECT_VIEWER } from "./useCaseScope";
 import { ModelInventoryStatus } from "../../domain.layer/enums/model-inventory-status.enum";
 import {
   getAllModelInventoriesQuery,
@@ -508,7 +508,6 @@ const listModelsForUseCase = async (
   organizationId: number,
 ): Promise<Array<Record<string, unknown>>> => {
   try {
-    await assertCanReadUseCase(params, params.project_id, organizationId);
     const [rows] = (await sequelize.query(
       `SELECT DISTINCT mi.id, mi.provider_model, mi.provider, mi.model, mi.version,
               mi.status, mi.security_assessment, mi.hosting_provider, mi.created_at
