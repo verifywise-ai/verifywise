@@ -462,9 +462,6 @@ export const getSubmissionsByFormIdQuery = async (
 };
 
 /**
- * Get pending submissions for an organization (for dashboard, capped at 500)
- */
-/**
  * SQL condition: the submission on `alias` was sent from the email address of
  * user :submittedBy, compared without case or surrounding spaces. Submissions
  * store no user id, so this is how "my submissions" is decided; a NULL email
@@ -492,7 +489,7 @@ export const isOwnSubmissionQuery = async (
 };
 
 /**
- * Submissions for the Intake screen, newest first. `submittedBy` keeps only
+ * Submissions for the Intake screen, newest first, capped at 500. `submittedBy` keeps only
  * that user's own submissions (the controller passes it for a caller without
  * intakeForm.edit); undefined lists every submission.
  */
@@ -1200,10 +1197,12 @@ export const updateSubmissionRiskOverrideQuery = async (
 };
 
 /**
- * Get submission stats for dashboard
+ * Submission counts by status for the Intake screen. `submittedBy` counts only
+ * that user's own submissions (a caller without intakeForm.edit).
  */
 export const getSubmissionStatsQuery = async (
   organizationId: number,
+  submittedBy?: number,
 ): Promise<IIntakeSubmissionStats> => {
   const result = await sequelize.query(
     `SELECT
@@ -1212,11 +1211,12 @@ export const getSubmissionStatsQuery = async (
       COUNT(*) FILTER (WHERE status = :rejected) as rejected,
       COUNT(*) FILTER (WHERE status = :superseded) as superseded,
       COUNT(*) as total
-    FROM intake_submissions
-    WHERE organization_id = :organizationId`,
+    FROM intake_submissions s
+    WHERE organization_id = :organizationId${submittedBy === undefined ? "" : submittedBySql("s")}`,
     {
       replacements: {
         organizationId,
+        ...(submittedBy === undefined ? {} : { submittedBy }),
         pending: IntakeSubmissionStatus.PENDING,
         approved: IntakeSubmissionStatus.APPROVED,
         rejected: IntakeSubmissionStatus.REJECTED,

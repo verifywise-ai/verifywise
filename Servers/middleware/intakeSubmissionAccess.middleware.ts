@@ -12,17 +12,26 @@ import { requestHasPermission } from "../utils/rolePermissions.utils";
 import { isOwnSubmissionQuery } from "../utils/intakeForm.utils";
 import { toId } from "../utils/validations/validation.utils";
 
+/**
+ * The submitter a submission list or count is limited to: undefined for an
+ * intake manager (intakeForm.edit), who sees every submission; otherwise the
+ * caller, who sees only their own (submittedBySql).
+ */
+export const submitterScope = async (req: Request): Promise<number | undefined> =>
+  (await requestHasPermission(req, "intakeForm.edit")) ? undefined : req.userId!;
+
 export const requireOwnSubmissionOrIntakeManager = async (
   req: Request,
   res: Response,
   next: NextFunction,
 ) => {
   try {
-    if (await requestHasPermission(req, "intakeForm.edit")) return next();
+    const submitter = await submitterScope(req);
+    if (submitter === undefined) return next();
     const submissionId = toId(req.params.id);
     // A malformed id is left to the handler's own 400.
     if (!Number.isSafeInteger(submissionId) || submissionId <= 0) return next();
-    if (await isOwnSubmissionQuery(submissionId, req.userId!, req.organizationId!)) {
+    if (await isOwnSubmissionQuery(submissionId, submitter, req.organizationId!)) {
       return next();
     }
     return res.status(404).json(STATUS_CODE[404](req.t!("Submission not found")));

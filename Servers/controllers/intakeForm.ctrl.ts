@@ -90,7 +90,7 @@ import {
   type CustomFieldDisplay,
 } from "../utils/intakeCustomFields.utils";
 import { llmKeyExistsQuery } from "../utils/llmKey.utils";
-import { requestHasPermission } from "../utils/rolePermissions.utils";
+import { submitterScope } from "../middleware/intakeSubmissionAccess.middleware";
 import { sanitizeUserHtml } from "../utils/sanitization.utils";
 import logger from "../utils/logger/fileLogger";
 import { logProcessing, logSuccess, logFailure } from "../utils/logger/logHelper";
@@ -1612,14 +1612,13 @@ export async function getPendingSubmissions(req: Request, res: Response) {
 
   try {
     const status = req.query.status as IntakeSubmissionStatus | undefined;
-    // Whoever manages intake (intakeForm.edit, which every lane and senior
-    // reviewer holds) sees every submission; anyone else only their own, which
-    // the In review lists link to.
-    const seesAll = await requestHasPermission(req, "intakeForm.edit");
+    // Decision 5: intake managers (every lane and senior reviewer holds
+    // intakeForm.edit) see every submission; anyone else only their own,
+    // which the In review lists link to.
     const rows = await getPendingSubmissionsQuery(
       req.organizationId!,
       status,
-      seesAll ? undefined : req.userId!,
+      await submitterScope(req),
     );
     // The list shows who can decide each row's stored lane, not the form's whole routing.
     // Senior reviewers who can still act on a second review that is open, or
@@ -1683,15 +1682,13 @@ export async function getFormSubmissions(req: Request, res: Response) {
   });
 
   try {
-    // Decision 5: intake managers see every submission, others their own.
-    const seesAll = await requestHasPermission(req, "intakeForm.edit");
     const submissions = await getSubmissionsByFormIdQuery(
       formId,
       req.organizationId!,
       status,
       undefined,
       undefined,
-      seesAll ? undefined : req.userId!,
+      await submitterScope(req),
     );
     return res.status(200).json(STATUS_CODE[200](submissions));
   } catch (error) {
@@ -1760,7 +1757,7 @@ export async function getSubmissionStats(req: Request, res: Response) {
   });
 
   try {
-    const stats = await getSubmissionStatsQuery(req.organizationId!);
+    const stats = await getSubmissionStatsQuery(req.organizationId!, await submitterScope(req));
     return res.status(200).json(STATUS_CODE[200](stats));
   } catch (error) {
     await logFailure({
@@ -2003,10 +2000,11 @@ export async function getSubmissionByEntity(req: Request, res: Response) {
 
     // Decision 5: someone else's submission reads as none, unless the caller
     // manages intake.
+    const submitter = await submitterScope(req);
     if (
       result &&
-      !(await requestHasPermission(req, "intakeForm.edit")) &&
-      !(await isOwnSubmissionQuery(result.submission.id!, req.userId!, req.organizationId!))
+      submitter !== undefined &&
+      !(await isOwnSubmissionQuery(result.submission.id!, submitter, req.organizationId!))
     ) {
       return res
         .status(404)

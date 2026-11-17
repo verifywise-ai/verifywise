@@ -309,6 +309,22 @@ describe("intake submissions in the In review tab", () => {
       expect((await viewer.api.get(url(mine))).status).toBe(200);
     });
 
+    it("GET /api/v1/intake-tier-suggestion/submissions/:id answers 404 for someone else's submission", async () => {
+      const { viewer, editor, theirs } = await seed();
+      const url = `/api/v1/intake-tier-suggestion/submissions/${theirs}`;
+      expect((await viewer.api.get(url)).status).toBe(404);
+      expect((await editor.api.get(url)).status).not.toBe(404);
+    });
+
+    it("GET /api/intake/submissions/stats counts only the caller's own without intakeForm.edit", async () => {
+      const { viewer, editor } = await seed();
+      const own = await viewer.api.get(`/api/intake/submissions/stats`);
+      expect(own.status).toBe(200);
+      expect(Number(own.body.data.total)).toBe(1);
+      const all = await editor.api.get(`/api/intake/submissions/stats`);
+      expect(Number(all.body.data.total)).toBe(2);
+    });
+
     it("GET /api/intake/submissions/:id opens anyone's submission for an Editor", async () => {
       const { editor, theirs } = await seed();
       expect((await editor.api.get(`/api/intake/submissions/${theirs}`)).status).toBe(200);
