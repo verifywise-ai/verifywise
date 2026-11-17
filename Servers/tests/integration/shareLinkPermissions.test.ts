@@ -3,7 +3,12 @@ jest.setTimeout(60000);
 import { sequelize } from "../../database/db";
 import { cleanupDatabase, createTestOrganization, createTestUser } from "./helpers";
 import { createTestApp, testRequest } from "./setup";
-import { createTestModelInventory, createTestProject } from "../factories/test-entities.factory";
+import {
+  createTestModelInventory,
+  createTestProject,
+  createTestRisk,
+  linkRiskToProject,
+} from "../factories/test-entities.factory";
 
 /**
  * Share links (audit M-L6): creating or changing a link takes the edit
@@ -109,6 +114,17 @@ describe("share link permissions and fields", () => {
     expect((await api.post("/api/shares").send(link("project", 0))).status).toBe(403);
     const admin = await as(orgA, adminA, "Admin");
     expect((await admin.post("/api/shares").send(link("project", projectA))).status).toBe(201);
+  });
+
+  it("an Editor cannot share a risk they cannot see, nor the whole risk list", async () => {
+    // Linked only to a use case the Editor is not a member of.
+    const risk = await createTestRisk(orgA, {});
+    await linkRiskToProject(orgA, risk, projectA);
+    const api = await as(orgA, editorA, "Editor");
+    expect((await api.post("/api/shares").send(link("risk", risk))).status).toBe(403);
+    expect((await api.post("/api/shares").send(link("risk", 0))).status).toBe(403);
+    const admin = await as(orgA, adminA, "Admin");
+    expect((await admin.post("/api/shares").send(link("risk", risk))).status).toBe(201);
   });
 
   it("an Admin can revoke an Editor's link; an Auditor cannot; another org's Admin gets 404", async () => {

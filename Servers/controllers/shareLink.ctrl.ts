@@ -25,6 +25,7 @@ import { requestHasPermission } from "../utils/rolePermissions.utils";
 import { pickSharedFields, sharePermissionFor } from "../utils/shareLinkAccess.utils";
 import { getProjectAccessQuery } from "../utils/project.utils";
 import { seesAllProjects } from "../utils/projectVisibility.utils";
+import { isRiskVisibleQuery, riskViewer } from "../utils/riskVisibility.utils";
 /**
  * The share link's warnings as translated messages. Each key is a literal so
  * the i18n key scanner sees it.
@@ -50,8 +51,8 @@ const shareLinkWarningMessages = (
 
 /**
  * Whether the caller may create or change a link to this resource: the edit
- * permission of its type and, for a use case, write access to that use case
- * (a link to the whole use case list: a role that sees every use case).
+ * permission of its type and, for a use case or a risk, the caller's access
+ * to that record (a link to the whole list: a role that sees every use case).
  */
 const canShareResource = async (
   req: Request,
@@ -60,8 +61,14 @@ const canShareResource = async (
 ): Promise<boolean> => {
   const permission = sharePermissionFor(resourceType);
   if (!permission || !(await requestHasPermission(req, permission))) return false;
-  if (resourceType !== "project") return true;
+  // Models, vendors and policies are visible to the whole organization.
+  // Use cases and risks follow their visibility rules: a list link needs a
+  // role that sees every use case, a single record the caller's access.
+  if (resourceType !== "project" && resourceType !== "risk") return true;
   if (isTableViewLink(resourceId)) return seesAllProjects(req.role);
+  if (resourceType === "risk") {
+    return isRiskVisibleQuery(resourceId, req.organizationId!, riskViewer(req));
+  }
   const access = await getProjectAccessQuery(
     resourceId,
     { userId: req.userId!, role: req.role! },
