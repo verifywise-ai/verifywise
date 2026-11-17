@@ -274,3 +274,131 @@ describe("post-market monitoring routes run the use case access rule", () => {
     });
   });
 });
+
+describe("post-market monitoring writes stay inside the config or cycle checked", () => {
+  let orgId: number;
+  let ownerId: number;
+  let api: Api;
+
+  beforeAll(async () => {
+    await cleanupDatabase();
+    orgId = await createTestOrganization();
+    ownerId = await user(orgId, "Editor");
+    api = await apiAs(orgId, ownerId, "Editor");
+  });
+
+  afterAll(async () => {
+    await cleanupDatabase();
+  });
+
+  /** A monitored use case the owner cannot see. */
+  const theirs = async () => seedMonitoring(orgId, await user(orgId, "Editor"));
+  const questionsOf = (config: number) =>
+    count(`SELECT COUNT(*) AS n FROM post_market_monitoring_questions WHERE config_id = :config`, {
+      config,
+    });
+
+  it("adds a question to the config in the path, never the body's config_id", async () => {
+    const mine = await seedMonitoring(orgId, ownerId);
+    const other = await theirs();
+
+    const res = await api
+      .post(`/api/pmm/config/${mine.config}/questions`)
+      .send({ config_id: other.config, question_text: "Smuggled?", question_type: "yes_no" });
+
+    expect(res.status).toBe(201);
+    expect(await questionsOf(other.config)).toBe(1);
+    expect(await questionsOf(mine.config)).toBe(2);
+  });
+
+  it.each([
+    ["responses", (q: number) => ({ responses: [{ question_id: q, response_value: true }] })],
+    ["flag", (q: number) => ({ question_id: q, response_value: true })],
+    ["submit", (q: number) => ({ responses: [{ question_id: q, response_value: true }] })],
+  ])(
+    "POST /cycles/:cycleId/%s refuses a question of another config with 404",
+    async (path, body) => {
+      const mine = await seedMonitoring(orgId, ownerId);
+      const other = await theirs();
+
+      const res = await api
+        .post(`/api/pmm/cycles/${mine.cycle}/${path}`)
+        .send(body(other.question));
+
+      expect(res.status).toBe(404);
+      expect(
+        await count(
+          `SELECT COUNT(*) AS n FROM post_market_monitoring_responses WHERE cycle_id = :cycle`,
+          { cycle: mine.cycle },
+        ),
+      ).toBe(0);
+      expect(
+        await count(
+          `SELECT COUNT(*) AS n FROM post_market_monitoring_cycles WHERE id = :cycle AND status = 'pending'`,
+          { cycle: mine.cycle },
+        ),
+      ).toBe(1);
+    },
+  );
+
+  it.each([
+    [
+      "PUT",
+      (a: Api, q: number) => a.put(`/api/pmm/questions/${q}`).send({ question_text: "Changed" }),
+    ],
+    ["DELETE", (a: Api, q: number) => a.delete(`/api/pmm/questions/${q}`)],
+  ])(
+    "%s /questions/:questionId refuses a question of a use case the caller cannot see",
+    async (_m, call) => {
+      const other = await theirs();
+
+      const res = await call(api, other.question);
+
+      expect(res.status).toBe(403);
+      expect(
+        await count(
+          `SELECT COUNT(*) AS n FROM post_market_monitoring_questions
+          WHERE id = :q AND question_text = 'Any incidents?'`,
+          { q: other.question },
+        ),
+      ).toBe(1);
+    },
+  );
+
+  it("PUT /questions/:questionId still lets the use case's owner edit its question", async () => {
+    const mine = await seedMonitoring(orgId, ownerId);
+    const res = await api
+      .put(`/api/pmm/questions/${mine.question}`)
+      .send({ question_text: "Changed" });
+    expect(res.status).toBe(200);
+  });
+
+  it("POST /questions/reorder refuses a question of a use case the caller cannot see", async () => {
+    const mine = await seedMonitoring(orgId, ownerId);
+    const other = await theirs();
+
+    const res = await api.post(`/api/pmm/questions/reorder`).send({
+      orders: [
+        { id: mine.question, display_order: 5 },
+        { id: other.question, display_order: 9 },
+      ],
+    });
+
+    expect(res.status).toBe(403);
+    expect(
+      await count(
+        `SELECT COUNT(*) AS n FROM post_market_monitoring_questions
+          WHERE id IN (:ids) AND display_order = 0`,
+        { ids: [mine.question, other.question] },
+      ),
+    ).toBe(2);
+  });
+
+  it("POST /questions/reorder still reorders the caller's own questions", async () => {
+    const mine = await seedMonitoring(orgId, ownerId);
+    const res = await api
+      .post(`/api/pmm/questions/reorder`)
+      .send({ orders: [{ id: mine.question, display_order: 5 }] });
+    expect(res.status).toBe(200);
+  });
+});

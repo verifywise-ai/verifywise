@@ -18,8 +18,14 @@ import {
   isStakeholderOfPmmReport,
   useCaseOfPmmConfig,
   useCaseOfPmmCycle,
+  useCaseOfPmmQuestion,
   useCaseOfPmmReport,
 } from "../utils/pmmUseCaseAccess.utils";
+import {
+  pinPmmConfigFromPath,
+  requirePmmCycleQuestions,
+  requirePmmReorderAccess,
+} from "../middleware/pmmRowScope.middleware";
 import {
   getConfigByProjectId,
   createConfig,
@@ -58,6 +64,12 @@ const cycleUseCase = requireUseCaseAccessVia(useCaseOfPmmCycle, { param: "cycleI
 const cycleUseCaseOrStakeholder = requireUseCaseAccessVia(useCaseOfPmmCycle, {
   param: "cycleId",
   orAllow: isStakeholderOfPmmCycle,
+});
+// A question of a config belongs to that config's use case; an organization
+// question (no config) is passed on as before.
+const questionUseCase = requireUseCaseAccessVia(useCaseOfPmmQuestion, {
+  param: "questionId",
+  missing: "pass",
 });
 // A new config names its use case in the body.
 const bodyUseCase = requireUseCaseAccessVia(async (id) => id, {
@@ -125,6 +137,7 @@ router.post(
   authenticateJWT,
   authorize("postMarketMonitoring.edit"),
   configUseCase,
+  pinPmmConfigFromPath,
   addQuestion,
 );
 
@@ -133,6 +146,7 @@ router.put(
   "/questions/:questionId",
   authenticateJWT,
   authorize("postMarketMonitoring.edit"),
+  questionUseCase,
   updateQuestion,
 );
 
@@ -141,6 +155,7 @@ router.delete(
   "/questions/:questionId",
   authenticateJWT,
   authorize("postMarketMonitoring.edit"),
+  questionUseCase,
   deleteQuestion,
 );
 
@@ -149,6 +164,7 @@ router.post(
   "/questions/reorder",
   authenticateJWT,
   authorize("postMarketMonitoring.edit"),
+  requirePmmReorderAccess,
   reorderQuestions,
 );
 
@@ -175,14 +191,27 @@ router.post(
   "/cycles/:cycleId/responses",
   authenticateJWT,
   cycleUseCaseOrStakeholder,
+  requirePmmCycleQuestions,
   saveResponses,
 );
 
 // POST /pmm/cycles/:cycleId/submit - Submit cycle (final)
-router.post("/cycles/:cycleId/submit", authenticateJWT, cycleUseCaseOrStakeholder, submitCycle);
+router.post(
+  "/cycles/:cycleId/submit",
+  authenticateJWT,
+  cycleUseCaseOrStakeholder,
+  requirePmmCycleQuestions,
+  submitCycle,
+);
 
 // POST /pmm/cycles/:cycleId/flag - Flag concern (immediate notification)
-router.post("/cycles/:cycleId/flag", authenticateJWT, cycleUseCaseOrStakeholder, flagConcern);
+router.post(
+  "/cycles/:cycleId/flag",
+  authenticateJWT,
+  cycleUseCaseOrStakeholder,
+  requirePmmCycleQuestions,
+  flagConcern,
+);
 
 // ============================================================================
 // Report Routes

@@ -87,3 +87,58 @@ export const isStakeholderOfPmmReport = isStakeholder(
     WHERE r.organization_id = :organizationId AND r.id = :id
       AND cy.assigned_stakeholder_id = :userId`,
 );
+
+/**
+ * A monitoring question's use case, through its config. Null for an
+ * organization question (no config) as for an unknown id.
+ */
+export const useCaseOfPmmQuestion: UseCaseOfChild = (id, organizationId) =>
+  first(
+    `SELECT c.project_id AS value
+       FROM post_market_monitoring_questions q
+       JOIN post_market_monitoring_configs c
+         ON c.organization_id = q.organization_id AND c.id = q.config_id
+      WHERE q.organization_id = :organizationId AND q.id = :id`,
+    id,
+    organizationId,
+  );
+
+/** The distinct use cases of these questions (organization questions have none). */
+export const useCasesOfPmmQuestionsQuery = async (
+  questionIds: number[],
+  organizationId: number,
+): Promise<number[]> => {
+  if (questionIds.length === 0) return [];
+  const rows = await sequelize.query<{ project_id: number }>(
+    `SELECT DISTINCT c.project_id
+       FROM post_market_monitoring_questions q
+       JOIN post_market_monitoring_configs c
+         ON c.organization_id = q.organization_id AND c.id = q.config_id
+      WHERE q.organization_id = :organizationId AND q.id IN (:questionIds)`,
+    { replacements: { organizationId, questionIds }, type: QueryTypes.SELECT },
+  );
+  return rows.map((r) => r.project_id);
+};
+
+/**
+ * Whether every id is a question of the config this cycle runs. A malformed id
+ * is false; an empty list is true.
+ */
+export const questionsBelongToPmmCycleQuery = async (
+  cycleId: number,
+  questionIds: unknown[],
+  organizationId: number,
+): Promise<boolean> => {
+  const ids = [...new Set(questionIds.map((id) => Number(id)))];
+  if (ids.length === 0) return true;
+  if (ids.some((id) => !Number.isSafeInteger(id) || id <= 0)) return false;
+  const rows = await sequelize.query<{ n: number }>(
+    `SELECT COUNT(*)::int AS n
+       FROM post_market_monitoring_questions q
+       JOIN post_market_monitoring_cycles cy
+         ON cy.organization_id = q.organization_id AND cy.config_id = q.config_id
+      WHERE q.organization_id = :organizationId AND cy.id = :cycleId AND q.id IN (:ids)`,
+    { replacements: { organizationId, cycleId, ids }, type: QueryTypes.SELECT },
+  );
+  return rows[0]?.n === ids.length;
+};
