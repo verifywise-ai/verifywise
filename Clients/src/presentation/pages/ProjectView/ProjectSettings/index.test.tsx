@@ -257,6 +257,23 @@ describe("ProjectSettings", () => {
     });
   });
 
+  it("disables Save again and sends nothing when a change is reverted", async () => {
+    renderWithProviders(<ProjectSettings />);
+    await waitFor(() => expect(screen.getByDisplayValue("Chatbot Assistant")).toBeInTheDocument());
+
+    fireEvent.change(screen.getByDisplayValue("Chatbot Assistant"), {
+      target: { value: "Renamed Assistant" },
+    });
+    await waitFor(() => expect(screen.getByRole("button", { name: "Save" })).not.toBeDisabled());
+    fireEvent.change(screen.getByDisplayValue("Renamed Assistant"), {
+      target: { value: "Chatbot Assistant" },
+    });
+
+    await waitFor(() => expect(screen.getByRole("button", { name: "Save" })).toBeDisabled());
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+    expect(mockUpdateProject).not.toHaveBeenCalled();
+  });
+
   it("enables Save when only a custom field answer changes", async () => {
     renderWithProviders(<ProjectSettings />);
     await waitFor(() => expect(screen.getByDisplayValue("Chatbot Assistant")).toBeInTheDocument());

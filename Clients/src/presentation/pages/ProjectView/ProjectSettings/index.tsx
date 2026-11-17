@@ -68,7 +68,6 @@ import { HighRiskRole } from "../../../../domain/enums/highRiskRole.enum";
 import HighRiskRolesField from "../../../components/Inputs/HighRiskRolesField";
 import {
   classificationRoles,
-  formatHighRiskRoles,
   highRiskRolesError,
   highRiskRolesPayload,
   projectHighRiskRoles,
@@ -79,6 +78,7 @@ import { getAutocompleteStyles } from "../../../utils/inputStyles";
 import { useStyles } from "./styles";
 import { GEOGRAPHY_ITEMS } from "../../../../application/constants/geography";
 import { startDateCalendarDay } from "../../../tools/isoDateToString";
+import { includesEuAiAct } from "../../../components/Forms/ProjectForm/euAiAct";
 
 // Every level the server accepts, so a use case classified by intake, MCP or
 // the API loads with its level. `name` is the label; `value` is what is stored.
@@ -220,7 +220,7 @@ const initialState: FormValues = {
 const startDateIso = (value: unknown): string => startDateCalendarDay(value)?.toISOString() ?? "";
 
 const hasEuAiActSelected = (formValues: FormValues): boolean =>
-  formValues.monitoredRegulationsAndStandards.some((fw) => fw._id === 1);
+  includesEuAiAct(formValues.monitoredRegulationsAndStandards);
 
 const OWNER_FIELDS = ["owner", "external_owner_name", "external_owner_email"];
 
@@ -327,38 +327,13 @@ const ProjectSettings = React.memo(
     const [customFieldsDirty, setCustomFieldsDirty] = useState(false);
     // Set for the whole save, so a double-click cannot send it twice.
     const [isSaving, setIsSaving] = useState(false);
+    // Modified exactly when Save has something to send: the same diff builds
+    // the body, so the two cannot disagree. Frameworks are not part of it;
+    // they are saved through their own endpoints as soon as they are picked.
     const isModified = useMemo(() => {
       if (!initialValuesRef.current.projectTitle) return false;
-
-      // Check all fields except monitoredRegulationsAndStandards
-      const basicFieldsModified =
-        values.projectTitle !== initialValuesRef.current.projectTitle ||
-        values.goal !== initialValuesRef.current.goal ||
-        values.status !== initialValuesRef.current.status ||
-        values.owner !== initialValuesRef.current.owner ||
-        values.externalOwnerName !== initialValuesRef.current.externalOwnerName ||
-        values.externalOwnerEmail !== initialValuesRef.current.externalOwnerEmail ||
-        JSON.stringify(values.members) !== JSON.stringify(initialValuesRef.current.members) ||
-        values.startDate !== initialValuesRef.current.startDate ||
-        values.riskClassification !== initialValuesRef.current.riskClassification ||
-        formatHighRiskRoles(values.highRiskRoles) !==
-          formatHighRiskRoles(initialValuesRef.current.highRiskRoles) ||
-        values.geography !== initialValuesRef.current.geography ||
-        values.targetIndustry !== initialValuesRef.current.targetIndustry ||
-        values.description !== initialValuesRef.current.description ||
-        values.useCaseCategory !== initialValuesRef.current.useCaseCategory ||
-        values.useCasePurpose !== initialValuesRef.current.useCasePurpose ||
-        values.useCaseAudience !== initialValuesRef.current.useCaseAudience ||
-        values.deploymentContext !== initialValuesRef.current.deploymentContext;
-
-      // Only consider framework changes if we're not in the middle of a framework operation
-      const frameworksModified =
-        !isFrameworkOperationInProgress &&
-        JSON.stringify(values.monitoredRegulationsAndStandards) !==
-          JSON.stringify(initialValuesRef.current.monitoredRegulationsAndStandards);
-
-      return basicFieldsModified || frameworksModified;
-    }, [values, isFrameworkOperationInProgress]);
+      return Object.keys(changedProjectFields(initialValuesRef.current, values)).length > 0;
+    }, [values]);
 
     const customFieldsGate = useRequiredCustomFieldsGate(
       "project",
@@ -734,7 +709,7 @@ const ProjectSettings = React.memo(
 
       // Framework selection is optional for use cases
       // Risk tier and role are required only when EU AI Act (ID 1) is selected
-      const hasEuAiAct = values.monitoredRegulationsAndStandards.some((fw) => fw._id === 1);
+      const hasEuAiAct = hasEuAiActSelected(values);
       if (hasEuAiAct) {
         if (!values.riskClassification) {
           newErrors.riskClassification =
@@ -822,10 +797,17 @@ const ProjectSettings = React.memo(
 
     // saves the project
     const handleSaveConfirm = useCallback(async () => {
-      // The server sets last_updated and last_updated_by itself.
+      // The server sets last_updated and last_updated_by itself. An empty body
+      // is never sent: with no project field changed, only custom field
+      // values (if any) are saved.
+      const body = changedProjectFields(initialValuesRef.current, values);
+      if (Object.keys(body).length === 0) {
+        if (customFieldsRef.current?.hasPendingValues()) await saveCustomFieldsOnly();
+        return;
+      }
       await updateProject({
         id: Number(projectId),
-        body: changedProjectFields(initialValuesRef.current, values),
+        body,
       })
         .then(async (response) => {
           if (response.status === 202) {
@@ -881,7 +863,7 @@ const ProjectSettings = React.memo(
           // A refused save (403, for one) rejects, and the API layer shows the error.
           setIsLoading(false);
         });
-    }, [values, projectId]);
+    }, [values, projectId, saveCustomFieldsOnly]);
 
     const handleOwnershipChangeAcknowledge = () => {
       if (!pendingOwnerChange) return;
@@ -1605,7 +1587,7 @@ const ProjectSettings = React.memo(
                     }}
                   />
 
-                  {values.monitoredRegulationsAndStandards.some((fw) => fw._id === 1) && (
+                  {hasEuAiActSelected(values) && (
                     <>
                       {/* AI risk classification Row */}
                       <Box>
