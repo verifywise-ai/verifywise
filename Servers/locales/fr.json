@@ -1541,5 +1541,8 @@
   "The owner must be a member of this organization.": "Le responsable doit être membre de cette organisation.",
   "The model was not found in this organization.": "Le modèle est introuvable dans cette organisation.",
   "A selected use case was not found in this organization.": "Un cas d'usage sélectionné est introuvable dans cette organisation.",
-  "A selected framework is not used by any use case in this organization.": "Un référentiel sélectionné n'est utilisé par aucun cas d'usage de cette organisation."
+  "A selected framework is not used by any use case in this organization.": "Un référentiel sélectionné n'est utilisé par aucun cas d'usage de cette organisation.",
+  "A linked model was not found in this organization.": "Un modèle lié est introuvable dans cette organisation.",
+  "A linked risk was not found in this organization.": "Un risque lié est introuvable dans cette organisation.",
+  "A linked training was not found in this organization.": "Une formation liée est introuvable dans cette organisation."
 }

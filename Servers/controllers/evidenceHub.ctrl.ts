@@ -1,4 +1,5 @@
 import { Request, Response } from "express";
+import { Transaction } from "sequelize";
 import { sequelize } from "../database/db";
 import { EvidenceHubModel } from "../domain.layer/models/evidenceHub/evidenceHub.model";
 import {
@@ -7,6 +8,7 @@ import {
   createNewEvidenceQuery,
   updateEvidenceByIdQuery,
   deleteEvidenceByIdQuery,
+  assertEvidenceLinksInOrganization,
 } from "../utils/evidenceHub.utils";
 import { STATUS_CODE } from "../utils/statusCode.utils";
 import logger, { logStructured } from "../utils/logger/fileLogger";
@@ -19,8 +21,10 @@ import {
 } from "../utils/modelInventoryChangeHistory.utils";
 import { runEvidenceFreshnessSweep } from "../services/automations/actions/evidenceFreshnessSweep";
 import { trackEntityChanges, recordMultipleFieldChanges } from "../utils/changeHistory.base.utils";
-import { requestHasPermission } from "../utils/rolePermissions.utils";
+import { requestEffectivePermissions } from "../utils/rolePermissions.utils";
 import type { PermissionKey } from "../config/rolePermissions.config";
+import { ValidationException } from "../domain.layer/exceptions/custom.exception";
+import { toPositiveId } from "../utils/modelReferences.utils";
 
 const hasLinks = (ids: unknown): boolean => Array.isArray(ids) && ids.length > 0;
 
@@ -45,13 +49,11 @@ async function canWriteEvidence(
   req: Request,
   rows: (Record<string, unknown> | null | undefined)[],
 ): Promise<boolean> {
-  const held = new Map<PermissionKey, boolean>();
-  for (const [, key] of EVIDENCE_LINK_PERMISSIONS) {
-    held.set(key, await requestHasPermission(req, key));
-  }
-  if (![...held.values()].some(Boolean)) return false;
+  // One role lookup for the three keys.
+  const held = await requestEffectivePermissions(req);
+  if (!EVIDENCE_LINK_PERMISSIONS.some(([, key]) => held.has(key))) return false;
   return EVIDENCE_LINK_PERMISSIONS.every(
-    ([field, key]) => held.get(key) || !rows.some((row) => hasLinks(row?.[field])),
+    ([field, key]) => held.has(key) || !rows.some((row) => hasLinks(row?.[field])),
   );
 }
 
@@ -67,17 +69,61 @@ const EVIDENCE_WRITABLE_FIELDS = [
   "deleteFiles",
 ] as const;
 
-function pickEvidenceFields(body: unknown): Record<string, unknown> {
-  const source = (body && typeof body === "object" ? body : {}) as Record<string, unknown>;
-  const out: Record<string, unknown> = {};
-  for (const key of EVIDENCE_WRITABLE_FIELDS) {
-    if (Object.prototype.hasOwnProperty.call(source, key)) out[key] = source[key];
-  }
-  if (out.description !== undefined) {
-    out.description = sanitizeUserHtml(out.description as string);
-  }
-  return out;
+const MAX_INT4 = 2147483647;
+const isPositiveInt = (value: unknown): value is number =>
+  typeof value === "number" && Number.isInteger(value) && value > 0 && value <= MAX_INT4;
+
+/**
+ * Parses an id list of the body: absent and null pass as they are, an array
+ * of positive integers is deduped. Anything else is undefined (malformed).
+ * `parseId` decides what one id may be.
+ */
+function parseIdList(
+  value: unknown,
+  parseId: (id: unknown) => number | null,
+): number[] | null | undefined {
+  if (value === null) return null;
+  if (!Array.isArray(value)) return undefined;
+  const ids = value.map(parseId);
+  if (ids.some((id) => id === null)) return undefined;
+  return Array.from(new Set(ids as number[]));
 }
+
+/**
+ * The fields a request may set on evidence (anything else in the body is
+ * ignored), with every id list checked. `invalidField` names the first
+ * malformed id list; the caller answers 400 before any permission check, so
+ * a malformed link field can never read as "no links".
+ */
+function pickEvidenceFields(body: unknown): {
+  fields: Record<string, unknown>;
+  invalidField: string | null;
+} {
+  const source = (body && typeof body === "object" ? body : {}) as Record<string, unknown>;
+  const fields: Record<string, unknown> = {};
+  for (const key of EVIDENCE_WRITABLE_FIELDS) {
+    if (Object.prototype.hasOwnProperty.call(source, key)) fields[key] = source[key];
+  }
+  const linkId = (id: unknown) => (isPositiveInt(id) ? id : null);
+  const idLists: [string, (id: unknown) => number | null][] = [
+    ...EVIDENCE_LINK_PERMISSIONS.map(([field]): [string, typeof linkId] => [field, linkId]),
+    // File ids come back from the file API as strings too.
+    ["deleteFiles", toPositiveId],
+  ];
+  for (const [field, parseId] of idLists) {
+    if (!Object.prototype.hasOwnProperty.call(fields, field)) continue;
+    const parsed = parseIdList(fields[field], parseId);
+    if (parsed === undefined) return { fields, invalidField: field };
+    fields[field] = parsed;
+  }
+  if (fields.description !== undefined) {
+    fields.description = sanitizeUserHtml(fields.description as string);
+  }
+  return { fields, invalidField: null };
+}
+
+const invalidIdList = (req: Request, res: Response, field: string) =>
+  res.status(400).json(STATUS_CODE[400](req.t!("{field} must be a list of ids", { field })));
 
 export async function getAllEvidences(req: Request, res: Response) {
   logStructured(
@@ -180,12 +226,15 @@ export async function getEvidenceById(req: Request, res: Response) {
  * Create new evidence
  */
 export async function createNewEvidence(req: Request, res: Response) {
-  const fields = pickEvidenceFields(req.body);
-  if (!(await canWriteEvidence(req, [fields]))) {
-    return res.status(403).json(STATUS_CODE[403](req.t!("Access denied")));
-  }
-  const transaction = await sequelize.transaction();
+  const { fields, invalidField } = pickEvidenceFields(req.body);
+  if (invalidField) return invalidIdList(req, res, invalidField);
+  let transaction: Transaction | null = null;
   try {
+    if (!(await canWriteEvidence(req, [fields]))) {
+      return res.status(403).json(STATUS_CODE[403](req.t!("Access denied")));
+    }
+    transaction = await sequelize.transaction();
+    await assertEvidenceLinksInOrganization(fields, req.organizationId!, transaction);
     const evidence = new EvidenceHubModel({
       ...fields,
       description: sanitizeUserHtml(req.body?.description),
@@ -223,7 +272,10 @@ export async function createNewEvidence(req: Request, res: Response) {
     );
     return res.status(201).json(STATUS_CODE[201](savedEvidence.toSafeJSON()));
   } catch (error) {
-    await transaction.rollback();
+    await transaction?.rollback();
+    if (error instanceof ValidationException) {
+      return res.status(400).json(STATUS_CODE[400](translateError(req, error)));
+    }
     logStructured(
       "error",
       "failed to create new evidence",
@@ -260,11 +312,21 @@ export async function updateEvidenceById(req: Request, res: Response) {
       await transaction.rollback();
       return res.status(404).json(STATUS_CODE[404](req.t!("Evidence not found")));
     }
-    const fields = pickEvidenceFields(req.body);
+    const { fields, invalidField } = pickEvidenceFields(req.body);
+    if (invalidField) {
+      await transaction.rollback();
+      return invalidIdList(req, res, invalidField);
+    }
     if (!(await canWriteEvidence(req, [existingEvidence as any, fields]))) {
       await transaction.rollback();
       return res.status(403).json(STATUS_CODE[403](req.t!("Access denied")));
     }
+    await assertEvidenceLinksInOrganization(
+      fields,
+      req.organizationId!,
+      transaction,
+      existingEvidence as any,
+    );
 
     // Snapshot the fields the evidence hub change history tracks, before
     // the Object.assign below replaces them (#4915).
@@ -274,9 +336,13 @@ export async function updateEvidenceById(req: Request, res: Response) {
       description: existingEvidence.description,
     };
 
-    // Track model mapping changes
+    // Track model mapping changes. A body without mapped_model_ids leaves
+    // the links as they are, so nothing is added or removed.
     const oldMappedModels = existingEvidence.mapped_model_ids || [];
-    const newMappedModels = (fields.mapped_model_ids as number[] | undefined) || [];
+    const newMappedModels =
+      fields.mapped_model_ids === undefined
+        ? oldMappedModels
+        : (fields.mapped_model_ids as number[] | null) || [];
 
     // Models that were added
     const addedModels = newMappedModels.filter((id: number) => !oldMappedModels.includes(id));
@@ -379,6 +445,9 @@ export async function updateEvidenceById(req: Request, res: Response) {
     return res.status(200).json(STATUS_CODE[200](updatedEvidence.toSafeJSON()));
   } catch (error) {
     await transaction.rollback();
+    if (error instanceof ValidationException) {
+      return res.status(400).json(STATUS_CODE[400](translateError(req, error)));
+    }
     logger.error("❌ Error in updateEvidenceById:", error);
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }

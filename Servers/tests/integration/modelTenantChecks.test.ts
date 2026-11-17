@@ -11,6 +11,7 @@ import {
   createTestModelRisk,
   createTestProject,
   createTestProjectFramework,
+  createTestRisk,
 } from "../factories/test-entities.factory";
 
 /**
@@ -84,6 +85,24 @@ async function customRole(orgId: number, name: string, permissions: string[]): P
   return name;
 }
 
+async function createTraining(orgId: number): Promise<number> {
+  const [{ id }] = await sequelize.query<{ id: number }>(
+    `INSERT INTO trainingregistar (organization_id, training_name)
+     VALUES (:orgId, :name) RETURNING id`,
+    { replacements: { orgId, name: `Training ${++counter}` }, type: QueryTypes.SELECT },
+  );
+  return id;
+}
+
+const evidenceRemovedRows = async (modelId: number) =>
+  (
+    await sequelize.query<{ n: string }>(
+      `SELECT COUNT(*) AS n FROM model_inventory_change_history
+        WHERE model_inventory_id = :modelId AND field_name = 'Evidence removed'`,
+      { replacements: { modelId }, type: QueryTypes.SELECT },
+    )
+  )[0].n;
+
 const notificationsFor = async (userId: number) =>
   (
     await sequelize.query<{ n: string }>(
@@ -103,6 +122,10 @@ describe("model tenant checks", () => {
   let projectB: number;
   let modelA: number;
   let modelB: number;
+  let riskA: number;
+  let riskB: number;
+  let trainingA: number;
+  let trainingB: number;
 
   beforeAll(async () => {
     await cleanupDatabase();
@@ -119,6 +142,10 @@ describe("model tenant checks", () => {
     await createTestProjectFramework(orgB, projectB, 2);
     modelA = await createTestModelInventory(orgA, {});
     modelB = await createTestModelInventory(orgB, {});
+    riskA = await createTestRisk(orgA, {});
+    riskB = await createTestRisk(orgB, {});
+    trainingA = await createTraining(orgA);
+    trainingB = await createTraining(orgB);
   });
 
   afterAll(async () => {
@@ -343,7 +370,7 @@ describe("model tenant checks", () => {
 
       const created = await api
         .post("/api/evidenceHub")
-        .send({ ...training, mapped_training_ids: [1] });
+        .send({ ...training, mapped_training_ids: [trainingA] });
       expect(created.status).toBe(201);
       const id = created.body.data.id;
       expect(
@@ -367,6 +394,103 @@ describe("model tenant checks", () => {
         .send({ ...training, mapped_model_ids: [modelA] });
       expect(modelEvidence.status).toBe(201);
       expect((await api.delete(`/api/evidenceHub/${modelEvidence.body.data.id}`)).status).toBe(403);
+    });
+
+    it.each([
+      ["mapped_model_ids", "1"],
+      ["mapped_model_ids", ["1"]],
+      ["mapped_risk_ids", [0]],
+      ["mapped_training_ids", [-1]],
+      ["mapped_model_ids", [1.5]],
+    ])("refuses a malformed %s (%j) with 400, even for an Auditor", async (field, value) => {
+      const body = { evidence_name: `Bad ${++counter}`, evidence_type: "Other", [field]: value };
+      for (const [user, role] of [
+        [editorA, "Editor"],
+        [auditorA, "Auditor"],
+      ] as const) {
+        const res = await (await as(orgA, user, role)).post("/api/evidenceHub").send(body);
+        expect(res.status).toBe(400);
+        expect(JSON.stringify(res.body)).toMatch(new RegExp(`${field} must be a list of ids`));
+      }
+    });
+
+    it("refuses linking evidence to another organization's model, risk or training", async () => {
+      const api = await as(orgA, adminA, "Admin");
+      const name = () => `Linked ${++counter}`;
+      for (const [field, id] of [
+        ["mapped_model_ids", modelB],
+        ["mapped_risk_ids", riskB],
+        ["mapped_training_ids", trainingB],
+      ] as const) {
+        const res = await api
+          .post("/api/evidenceHub")
+          .send({ evidence_name: name(), evidence_type: "Other", [field]: [id] });
+        expect(res.status).toBe(400);
+        expect(JSON.stringify(res.body)).toMatch(/was not found in this organization/);
+      }
+      const [{ n }] = await sequelize.query<{ n: string }>(
+        `SELECT COUNT(*) AS n FROM evidence_hub
+          WHERE :modelB = ANY(mapped_model_ids) OR :riskB = ANY(mapped_risk_ids)
+             OR :trainingB = ANY(mapped_training_ids)`,
+        { replacements: { modelB, riskB, trainingB }, type: QueryTypes.SELECT },
+      );
+      expect(Number(n)).toBe(0);
+
+      // The organization's own ids are accepted.
+      for (const [field, id] of [
+        ["mapped_model_ids", modelA],
+        ["mapped_risk_ids", riskA],
+        ["mapped_training_ids", trainingA],
+      ] as const) {
+        const res = await api
+          .post("/api/evidenceHub")
+          .send({ evidence_name: name(), evidence_type: "Other", [field]: [id] });
+        expect(res.status).toBe(201);
+      }
+    });
+
+    it("refuses adding another organization's model on update, and keeps the links", async () => {
+      const api = await as(orgA, adminA, "Admin");
+      const created = await api.post("/api/evidenceHub").send({
+        evidence_name: `Update ${++counter}`,
+        evidence_type: "Other",
+        mapped_model_ids: [modelA],
+      });
+      expect(created.status).toBe(201);
+      const id = created.body.data.id;
+
+      const res = await api
+        .patch(`/api/evidenceHub/${id}`)
+        .send({ mapped_model_ids: [modelA, modelB] });
+      expect(res.status).toBe(400);
+      const [row] = await sequelize.query<{ mapped_model_ids: number[] }>(
+        `SELECT mapped_model_ids FROM evidence_hub WHERE id = :id`,
+        { replacements: { id }, type: QueryTypes.SELECT },
+      );
+      expect(row.mapped_model_ids).toEqual([modelA]);
+    });
+
+    it("a rename without mapped_model_ids keeps the links and records no removal", async () => {
+      const api = await as(orgA, adminA, "Admin");
+      const model = await createTestModelInventory(orgA, {});
+      const created = await api.post("/api/evidenceHub").send({
+        evidence_name: `History ${++counter}`,
+        evidence_type: "Other",
+        mapped_model_ids: [model],
+      });
+      expect(created.status).toBe(201);
+      const id = created.body.data.id;
+
+      const res = await api.patch(`/api/evidenceHub/${id}`).send({ evidence_name: "Renamed" });
+      expect(res.status).toBe(200);
+      expect(res.body.data.mapped_model_ids).toEqual([model]);
+      expect(Number(await evidenceRemovedRows(model))).toBe(0);
+
+      // Clearing the links does record the removal.
+      expect(
+        (await api.patch(`/api/evidenceHub/${id}`).send({ mapped_model_ids: null })).status,
+      ).toBe(200);
+      expect(Number(await evidenceRemovedRows(model))).toBe(1);
     });
 
     it("a snapshot of an unknown parameter is a 400 (was a 500)", async () => {
