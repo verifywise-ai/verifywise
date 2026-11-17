@@ -33,6 +33,7 @@ import { triggerModelDeployment } from "../services/workflows/triggers";
 import { logRollbackFailure } from "../utils/logger/logHelper";
 
 import { translateError } from "../utils/i18n.utils";
+import { ValidationException } from "../domain.layer/exceptions/custom.exception";
 // Helper function to get user name
 async function getUserNameById(userId: number): Promise<string> {
   const result = await sequelize.query<{ name: string; surname: string }>(
@@ -305,8 +306,10 @@ export async function createNewModelInventory(req: Request, res: Response) {
 
     await transaction.commit();
 
-    // Notify approver if assigned
-    if (approver) {
+    // Notify approver if assigned. The stored value is the one the write
+    // checked against the organization.
+    const savedApprover = savedModelInventory.approver;
+    if (savedApprover) {
       const assignerName = await getUserNameById(req.userId!);
       const baseUrl = process.env.FRONTEND_URL || "http://localhost:5173";
 
@@ -320,7 +323,7 @@ export async function createNewModelInventory(req: Request, res: Response) {
 
       notifyUserAssigned(
         req.organizationId!,
-        approver,
+        savedApprover,
         {
           entityType: "Model Inventory",
           entityId: savedModelInventory.id!,
@@ -342,7 +345,7 @@ export async function createNewModelInventory(req: Request, res: Response) {
       organizationId: req.organizationId!,
       modelInventoryId: savedModelInventory.id!,
       modelName: savedModelInventory.model || `Model #${savedModelInventory.id}`,
-      projectIds: projects || [],
+      projectIds: ((savedModelInventory.dataValues as any).projects as number[]) ?? [],
     }).catch((err) => logger.error("Model risk candidate notice failed:", err));
 
     logStructured(
@@ -367,6 +370,12 @@ export async function createNewModelInventory(req: Request, res: Response) {
           rollbackError,
         });
       }
+    }
+
+    // A reference the organization does not own (approver, use case,
+    // framework) or a malformed field.
+    if (error instanceof ValidationException) {
+      return res.status(400).json(STATUS_CODE[400](translateError(req, error)));
     }
 
     // A duplicate external_key within the org violates the partial unique index.
@@ -593,7 +602,8 @@ export async function updateModelInventoryById(req: Request, res: Response) {
 
     // Notify approver if changed to a new user
     const oldApprover = (currentModelInventory as any).approver;
-    if (approver && approver !== oldApprover) {
+    const savedApprover = savedModelInventory.approver;
+    if (savedApprover && Number(savedApprover) !== Number(oldApprover)) {
       const assignerName = await getUserNameById(req.userId!);
       const baseUrl = process.env.FRONTEND_URL || "http://localhost:5173";
 
@@ -607,7 +617,7 @@ export async function updateModelInventoryById(req: Request, res: Response) {
 
       notifyUserAssigned(
         req.organizationId!,
-        approver,
+        savedApprover,
         {
           entityType: "Model Inventory",
           entityId: modelInventoryId,
@@ -625,7 +635,8 @@ export async function updateModelInventoryById(req: Request, res: Response) {
 
     // F6: notify only for newly added projects. A plain field edit sends
     // projects: undefined, so the diff is empty and nothing fires.
-    const addedProjectIds = (projects || []).filter((id: number) => !projectIdsBefore.includes(id));
+    const savedProjectIds = ((savedModelInventory.dataValues as any).projects as number[]) ?? [];
+    const addedProjectIds = savedProjectIds.filter((id) => !projectIdsBefore.includes(id));
     if (addedProjectIds.length > 0) {
       notifyModelRiskCandidates({
         organizationId: req.organizationId!,
@@ -657,6 +668,12 @@ export async function updateModelInventoryById(req: Request, res: Response) {
           rollbackError,
         });
       }
+    }
+
+    // A reference the organization does not own (approver, use case,
+    // framework) or a malformed field.
+    if (error instanceof ValidationException) {
+      return res.status(400).json(STATUS_CODE[400](translateError(req, error)));
     }
 
     // A duplicate external_key within the org violates the partial unique index.

@@ -1170,17 +1170,17 @@ export class ReportDataCollector {
       } else {
         // Get only project-linked models for use case reports.
         //
-        // DISTINCT because model_inventories_projects_frameworks is not one
-        // row per (model, project): the same model is linked once with a
-        // framework and once without, so a plain JOIN listed every model
-        // twice. Measured on 2026-07-29 — one model in the database, two in
-        // the report.
+        // Direct use case links only (framework_id IS NULL): a framework
+        // link carries no use case. DISTINCT guards against duplicate rows
+        // (before framework links lost their project id, a plain JOIN listed
+        // a model twice).
         modelsQuery = `
           SELECT DISTINCT mi.*, u.name as approver_name, u.surname as approver_surname
           FROM model_inventories mi
           JOIN model_inventories_projects_frameworks mip ON mi.id = mip.model_inventory_id AND mip.organization_id = mi.organization_id
           LEFT JOIN users u ON mi.approver = u.id
           WHERE mi.organization_id = :organizationId AND mip.project_id = :projectId
+            AND mip.framework_id IS NULL
           ORDER BY mi.model ASC
         `;
         replacements = { organizationId: this.organizationId, projectId: this.projectId };
@@ -1242,6 +1242,7 @@ export class ReportDataCollector {
           JOIN model_inventories mi ON mr.model_id = mi.id AND mi.organization_id = mr.organization_id
           JOIN model_inventories_projects_frameworks mip ON mi.id = mip.model_inventory_id AND mip.organization_id = mi.organization_id
           WHERE mr.organization_id = :organizationId AND mip.project_id = :projectId
+            AND mip.framework_id IS NULL
           ORDER BY mr.id ASC
         `;
         replacements = { organizationId: this.organizationId, projectId: this.projectId };

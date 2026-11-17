@@ -313,7 +313,7 @@ const getProjectStats = async (
         `SELECT COUNT(*) as total
          FROM model_inventories
          WHERE organization_id = :organization_id
-         AND id IN (SELECT model_inventory_id FROM model_inventories_projects_frameworks WHERE project_id = :project_id AND organization_id = :organization_id)`,
+         AND id IN (SELECT model_inventory_id FROM model_inventories_projects_frameworks WHERE project_id = :project_id AND framework_id IS NULL AND organization_id = :organization_id)`,
         {
           replacements,
           type: QueryTypes.SELECT,

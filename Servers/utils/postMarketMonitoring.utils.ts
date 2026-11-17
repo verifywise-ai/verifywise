@@ -848,8 +848,7 @@ export const getContextSnapshotQuery = async (
 
   // Models linked to the use case. model_inventories has no project_id: links
   // live in model_inventories_projects_frameworks. Only rows without a
-  // framework are direct use case links; framework rows carry an arbitrary
-  // use case of that framework.
+  // framework are direct use case links; framework rows carry no use case.
   const modelResult = (await sequelize.query(
     `SELECT COUNT(DISTINCT mi.id) as total
      FROM model_inventories mi
