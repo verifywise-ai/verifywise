@@ -361,7 +361,7 @@ async function createModelInventory(req: Request, res: Response, checkUseCaseAcc
       organizationId: req.organizationId!,
       modelInventoryId: savedModelInventory.id!,
       modelName: savedModelInventory.model || `Model #${savedModelInventory.id}`,
-      projectIds: ((savedModelInventory.dataValues as any).projects as number[]) ?? [],
+      projectIds: ((savedModelInventory as any).dataValues?.projects as number[] | undefined) ?? [],
     }).catch((err) => logger.error("Model risk candidate notice failed:", err));
 
     logStructured(
@@ -667,7 +667,8 @@ async function updateModelInventory(req: Request, res: Response, checkUseCaseAcc
 
     // F6: notify only for newly added projects. A plain field edit sends
     // projects: undefined, so the diff is empty and nothing fires.
-    const savedProjectIds = ((savedModelInventory.dataValues as any).projects as number[]) ?? [];
+    const savedProjectIds =
+      ((savedModelInventory as any).dataValues?.projects as number[] | undefined) ?? [];
     const addedProjectIds = savedProjectIds.filter((id) => !projectIdsBefore.includes(id));
     if (addedProjectIds.length > 0) {
       notifyModelRiskCandidates({
