@@ -67,7 +67,7 @@ export const buildProjectFrameworkQuery = async (
   transaction: Transaction,
 ): Promise<object> => {
   const build = FRAMEWORK_BUILDERS.get(frameworkId);
-  if (!build) {
+  if (typeof build !== "function") {
     throw new ValidationException("Framework not found", "framework", frameworkId, {
       i18nKey: "Framework not found",
     });
