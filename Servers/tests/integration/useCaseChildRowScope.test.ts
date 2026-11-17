@@ -216,6 +216,54 @@ describe("guarded handlers stay inside the checked use case", () => {
         })
       ).length === 1;
 
+    const linksOf = async (friaId: number) =>
+      (
+        await sequelize.query(
+          `SELECT 1 FROM file_entity_links WHERE framework_type = 'fria' AND entity_id = :friaId`,
+          { replacements: { friaId }, type: QueryTypes.SELECT },
+        )
+      ).length;
+
+    it("refuses to link a file of a use case the caller cannot see with 404", async () => {
+      const mine = await friaOf(await createTestProject(orgId, ownerId));
+      const hiddenProject = await createTestProject(orgId, await editor(orgId));
+      const hiddenFile = await createTestFile(orgId, await editor(orgId), {
+        project_id: hiddenProject,
+      });
+
+      const res = await api
+        .post(`/api/fria/${mine}/evidence`)
+        .send({ file_id: hiddenFile, entity_type: "section_1" });
+
+      expect(res.status).toBe(404);
+      expect(await linksOf(mine)).toBe(0);
+    });
+
+    it("refuses to link another organization's file with 404", async () => {
+      const mine = await friaOf(await createTestProject(orgId, ownerId));
+      const otherOrg = await createTestOrganization();
+      const foreignFile = await createTestFile(otherOrg, await editor(otherOrg));
+
+      const res = await api
+        .post(`/api/fria/${mine}/evidence`)
+        .send({ file_id: foreignFile, entity_type: "section_1" });
+
+      expect(res.status).toBe(404);
+      expect(await linksOf(mine)).toBe(0);
+    });
+
+    it("still links a file the caller uploaded", async () => {
+      const mine = await friaOf(await createTestProject(orgId, ownerId));
+      const myFile = await createTestFile(orgId, ownerId);
+
+      const res = await api
+        .post(`/api/fria/${mine}/evidence`)
+        .send({ file_id: myFile, entity_type: "section_1" });
+
+      expect(res.status).toBe(201);
+      expect(await linksOf(mine)).toBe(1);
+    });
+
     it("refuses to unlink another FRIA's evidence with 404 and keeps the link", async () => {
       const mine = await friaOf(await createTestProject(orgId, ownerId));
       const theirs = await friaOf(await createTestProject(orgId, await editor(orgId)));

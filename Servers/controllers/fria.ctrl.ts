@@ -3,6 +3,7 @@ import { sequelize } from "../database/db";
 import { QueryTypes } from "sequelize";
 import { FriaStatus } from "../domain.layer/enums/fria-status.enum";
 import { STATUS_CODE } from "../utils/statusCode.utils";
+import { canUserAccessFile } from "../utils/fileUpload.utils";
 import { logProcessing, logSuccess, logFailure } from "../utils/logger/logHelper";
 import { appendToAuditLedger } from "../utils/auditLedger.utils";
 import { translateError } from "../utils/i18n.utils";
@@ -1009,9 +1010,21 @@ export async function linkFriaEvidence(req: Request, res: Response): Promise<Res
       return res.status(404).json(STATUS_CODE[404](req.t!("FRIA not found")));
     }
 
+    // Only a file of this organization the caller may open (the file
+    // manager's rule): another organization's file, or one of a use case the
+    // caller cannot see, reads as missing.
+    const fileId = Number(file_id);
+    if (
+      !Number.isSafeInteger(fileId) ||
+      fileId <= 0 ||
+      !(await canUserAccessFile(fileId, userId, req.role!, organizationId, organizationId))
+    ) {
+      return res.status(404).json(STATUS_CODE[404](req.t!("File not found")));
+    }
+
     await createFileEntityLink(
       organizationId,
-      file_id,
+      fileId,
       "fria",
       entity_type,
       friaId,
