@@ -550,9 +550,19 @@ describe("GET /api/pmm/reports lists only reports of visible use cases", () => {
     expect(res.body.data.total).toBe(0);
   });
 
+  it("also lists the report of a cycle the caller is the stakeholder of", async () => {
+    const stakeholder = await user(orgId, "Editor");
+    const theirs = await seedMonitoring(orgId, await user(orgId, "Editor"), stakeholder);
+
+    const res = await (await apiAs(orgId, stakeholder, "Editor")).get(`/api/pmm/reports`);
+
+    expect(reportIds(res)).toEqual([theirs.report]);
+    expect(res.body.data.total).toBe(1);
+  });
+
   it("shows an Admin every report", async () => {
     const res = await (await apiAs(orgId, adminId, "Admin")).get(`/api/pmm/reports`);
-    expect(reportIds(res)).toEqual([mine.report, other.report].sort((a, b) => a - b));
+    expect(reportIds(res)).toEqual(expect.arrayContaining([mine.report, other.report]));
   });
 });
 

@@ -727,17 +727,20 @@ export const getPMMReportsQuery = async (
   const limit = filters.limit || 10;
   const offset = (page - 1) * limit;
 
-  // Only reports of use cases the viewer's use case list shows.
+  // Only reports of use cases the viewer's use case list shows, and of
+  // cycles the viewer is the stakeholder of (who may download that report).
   const visibility = projectVisibilitySql("vp", viewer);
   const whereClauses: string[] = [
     "r.organization_id = :organizationId",
-    `EXISTS (SELECT 1 FROM projects vp
-              WHERE vp.organization_id = :organizationId AND vp.id = cfg.project_id${visibility.sql})`,
+    `(EXISTS (SELECT 1 FROM projects vp
+               WHERE vp.organization_id = :organizationId AND vp.id = cfg.project_id${visibility.sql})
+      OR c.assigned_stakeholder_id = :reportViewerId)`,
   ];
   const replacements: Record<string, any> = {
     limit,
     offset,
     organizationId,
+    reportViewerId: viewer.userId,
     ...visibility.replacements,
   };
 
