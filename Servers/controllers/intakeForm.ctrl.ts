@@ -89,6 +89,7 @@ import {
   type CustomFieldDisplay,
 } from "../utils/intakeCustomFields.utils";
 import { llmKeyExistsQuery } from "../utils/llmKey.utils";
+import { requestHasPermission } from "../utils/rolePermissions.utils";
 import { sanitizeUserHtml } from "../utils/sanitization.utils";
 import logger from "../utils/logger/fileLogger";
 import { logProcessing, logSuccess, logFailure } from "../utils/logger/logHelper";
@@ -1610,7 +1611,15 @@ export async function getPendingSubmissions(req: Request, res: Response) {
 
   try {
     const status = req.query.status as IntakeSubmissionStatus | undefined;
-    const rows = await getPendingSubmissionsQuery(req.organizationId!, status);
+    // Whoever manages intake (intakeForm.edit, which every lane and senior
+    // reviewer holds) sees every submission; anyone else only their own, which
+    // the In review lists link to.
+    const seesAll = await requestHasPermission(req, "intakeForm.edit");
+    const rows = await getPendingSubmissionsQuery(
+      req.organizationId!,
+      status,
+      seesAll ? undefined : req.userId!,
+    );
     // The list shows who can decide each row's stored lane, not the form's whole routing.
     // Senior reviewers who can still act on a second review that is open, or
     // missed and not yet resolved, other than the approver. They stay senior

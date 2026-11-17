@@ -232,6 +232,57 @@ describe("intake submissions in the In review tab", () => {
     expect(res.body.data.total).toBe(2);
   });
 
+  describe("the AI app list and the intake submissions list follow the same rule", () => {
+    const seed = async () => {
+      const { orgId, userId, formId } = await seedOrg("Admin");
+      const aiForm = await form(orgId, userId, "AI app request", "f_app", "ai_app");
+      const viewer = await seedUser(orgId, "Auditor");
+      const editor = await seedUser(orgId, "Editor");
+      const ids = {
+        myApp: await submission(orgId, aiForm, {
+          data: { f_app: "Mine" },
+          entityType: "ai_app",
+          submitterEmail: viewer.email.toUpperCase(),
+        }),
+        theirApp: await submission(orgId, aiForm, {
+          data: { f_app: "Theirs" },
+          entityType: "ai_app",
+          submitterEmail: "someone@else.test",
+        }),
+        myUseCase: await submission(orgId, formId, { submitterEmail: viewer.email }),
+        theirUseCase: await submission(orgId, formId, { submitterEmail: "someone@else.test" }),
+      };
+      return { viewer, editor, ids };
+    };
+
+    it("GET /api/v1/ai-app-lifecycle/intake-submissions shows a user without intakeForm.edit only their own", async () => {
+      const { viewer, ids } = await seed();
+      const res = await viewer.api.get("/api/v1/ai-app-lifecycle/intake-submissions");
+      expect(res.status).toBe(200);
+      expect(res.body.data.total).toBe(1);
+      expect(res.body.data.items.map((r: any) => r.id)).toEqual([ids.myApp]);
+    });
+
+    it("GET /api/v1/ai-app-lifecycle/intake-submissions shows an Editor every request", async () => {
+      const { editor } = await seed();
+      const res = await editor.api.get("/api/v1/ai-app-lifecycle/intake-submissions");
+      expect(res.body.data.total).toBe(2);
+    });
+
+    it("GET /api/intake/submissions shows a user without intakeForm.edit only their own", async () => {
+      const { viewer, ids } = await seed();
+      const res = await viewer.api.get("/api/intake/submissions");
+      expect(res.status).toBe(200);
+      expect(res.body.data.map((r: any) => r.id).sort()).toEqual([ids.myApp, ids.myUseCase].sort());
+    });
+
+    it("GET /api/intake/submissions shows an Editor every submission", async () => {
+      const { editor, ids } = await seed();
+      const res = await editor.api.get("/api/intake/submissions");
+      expect(res.body.data.map((r: any) => r.id).sort()).toEqual(Object.values(ids).sort());
+    });
+  });
+
   it("dates a resubmission from the first submission of its chain", async () => {
     const { orgId, formId, api } = await seedOrg();
     const first = await submission(orgId, formId, {

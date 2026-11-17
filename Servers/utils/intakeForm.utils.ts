@@ -453,11 +453,28 @@ export const getSubmissionsByFormIdQuery = async (
 /**
  * Get pending submissions for an organization (for dashboard, capped at 500)
  */
+/**
+ * SQL condition: the submission on `alias` was sent from the email address of
+ * user :submittedBy, compared without case or surrounding spaces. Submissions
+ * store no user id, so this is how "my submissions" is decided; a NULL email
+ * on either side matches nothing. The caller binds :submittedBy.
+ */
+export const submittedBySql = (alias: string): string =>
+  ` AND LOWER(TRIM(${alias}.submitter_email)) =
+      (SELECT LOWER(TRIM(u.email)) FROM users u WHERE u.id = :submittedBy)`;
+
+/**
+ * Submissions for the Intake screen, newest first. `submittedBy` keeps only
+ * that user's own submissions (the controller passes it for a caller without
+ * intakeForm.edit); undefined lists every submission.
+ */
 export const getPendingSubmissionsQuery = async (
   organizationId: number,
   status?: IntakeSubmissionStatus,
+  submittedBy?: number,
 ): Promise<Array<IIntakeSubmission & { formRouting: IFormRouting | null }>> => {
   const statusFilter = status ? "AND s.status = :status" : "";
+  const ownOnly = submittedBy === undefined ? "" : submittedBySql("s");
   const submissions = await sequelize.query(
     `SELECT
       s.id, s.form_id as "formId", s.submitter_email as "submitterEmail",
@@ -478,11 +495,15 @@ export const getPendingSubmissionsQuery = async (
     FROM intake_submissions s
     JOIN intake_forms f ON s.organization_id = f.organization_id AND s.form_id = f.id
     WHERE s.organization_id = :organizationId
-    ${statusFilter}
+    ${statusFilter}${ownOnly}
     ORDER BY s.created_at DESC
     LIMIT 500`,
     {
-      replacements: status ? { organizationId, status } : { organizationId },
+      replacements: {
+        organizationId,
+        ...(status ? { status } : {}),
+        ...(submittedBy === undefined ? {} : { submittedBy }),
+      },
       type: QueryTypes.SELECT,
     },
   );

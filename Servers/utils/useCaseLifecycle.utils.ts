@@ -8,6 +8,7 @@ import {
   staleSql,
 } from "./lifecycle.utils";
 import { projectVisibilitySql } from "./projectVisibility.utils";
+import { submittedBySql } from "./intakeForm.utils";
 import { IntakeSubmissionStatus } from "../domain.layer/enums/intake-submission-status.enum";
 import { IntakeEntityType } from "../domain.layer/enums/intake-entity-type.enum";
 import type { IIntakeFormSchema } from "../domain.layer/interfaces/i.intakeForm";
@@ -307,7 +308,7 @@ async function titleFieldIdsByForm(
  *
  * `submittedBy` narrows both to the submissions sent from that user's email
  * address (compared without case or surrounding spaces); submissions store
- * no user id. The use case list passes it for a caller without
+ * no user id. The In review lists pass it for a caller without
  * intakeForm.edit. Undefined lists every pending submission.
  */
 export async function getPendingIntakeSubmissions(
@@ -324,12 +325,7 @@ export async function getPendingIntakeSubmissions(
     titleFields: JSON.stringify(titleFields),
     submittedBy: submittedBy ?? null,
   };
-  // A NULL email on either side matches nothing.
-  const ownOnly =
-    submittedBy === undefined
-      ? ""
-      : ` AND LOWER(TRIM(s.submitter_email)) =
-            (SELECT LOWER(TRIM(u.email)) FROM users u WHERE u.id = :submittedBy)`;
+  const ownOnly = submittedBy === undefined ? "" : submittedBySql("s");
   const pendingWhere = `s.organization_id = :organizationId
         AND s.status = :pending AND s.entity_type = :entityType${ownOnly}`;
 
