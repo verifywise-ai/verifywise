@@ -2,7 +2,9 @@
  * SetupModal - A simple modal shown to the org creator on their first login
  *
  * This modal offers two choices:
- * - Add demo data (helpful for navigation)
+ * - Add demo data (helpful for navigation). While it is created the modal
+ *   shows DemoDataLoader, and the page reloads from its "Explore the demo"
+ *   button.
  * - Start with a blank dashboard
  *
  * The modal is only shown when:
@@ -21,6 +23,7 @@ import { updateOnboardingStatus } from "../../../application/repository/organiza
 import { useAuth } from "../../../application/hooks/useAuth";
 import { setOnboardingStatus } from "../../../application/redux/auth/authSlice";
 import { brand, text, background, border, accent, radiusPx } from "../../themes/palette";
+import DemoDataLoader from "../DemoDataLoader";
 
 const SETUP_ERROR_MESSAGE =
   "Something went wrong while setting up your workspace. Try again, or skip for now.";
@@ -39,6 +42,7 @@ const SetupModal: React.FC<SetupModalProps> = ({ onComplete, onSkip }) => {
   const [loadingOption, setLoadingOption] = useState<"demo" | "blank" | null>(null);
   const [isClosing, setIsClosing] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [demoReady, setDemoReady] = useState(false);
 
   // Set once the demo data call succeeds, so a retry after a failed status
   // save does not send it again.
@@ -52,14 +56,14 @@ const SetupModal: React.FC<SetupModalProps> = ({ onComplete, onSkip }) => {
   };
 
   /**
-   * Runs one setup choice, saves the onboarding status and closes the modal.
+   * Runs one setup choice, saves the onboarding status, then calls onSuccess.
    * If anything fails, the modal stays open and shows an error so the user can
    * retry or skip.
    */
   const runChoice = async (
     option: "demo" | "blank",
     work: () => Promise<void>,
-    onDone: () => void,
+    onSuccess: () => void,
   ) => {
     if (isLoading) return;
 
@@ -72,7 +76,7 @@ const SetupModal: React.FC<SetupModalProps> = ({ onComplete, onSkip }) => {
       if (organizationId) {
         await updateOnboardingStatus(organizationId);
       }
-      finish(onDone);
+      onSuccess();
     } catch (error) {
       console.error("Error completing setup:", error);
       setIsLoading(false);
@@ -110,14 +114,24 @@ const SetupModal: React.FC<SetupModalProps> = ({ onComplete, onSkip }) => {
           demoInserted.current = true;
         }
       },
-      () => {
-        onComplete();
-        // Reload the page to show the newly created demo data
-        window.location.reload();
-      },
+      () => setDemoReady(true),
     );
 
-  const handleSelectBlank = () => runChoice("blank", async () => {}, onComplete);
+  const handleExploreDemo = () =>
+    finish(() => {
+      onComplete();
+      // Reload the page to show the newly created demo data
+      window.location.reload();
+    });
+
+  const handleSelectBlank = () =>
+    runChoice(
+      "blank",
+      async () => {},
+      () => finish(onComplete),
+    );
+
+  const showDemoLoader = loadingOption === "demo" && !errorMessage;
 
   return (
     <Box
@@ -160,208 +174,210 @@ const SetupModal: React.FC<SetupModalProps> = ({ onComplete, onSkip }) => {
           borderRadius: radiusPx.xl,
           boxShadow: "0 20px 60px rgba(0, 0, 0, 0.2)",
           width: "100%",
-          maxWidth: "520px",
+          maxWidth: showDemoLoader ? "660px" : "520px",
           overflow: "hidden",
         }}
       >
-        {/* Header */}
-        <Stack
-          sx={{
-            padding: "32px 32px 24px",
-            textAlign: "center",
-          }}
-        >
-          <Typography
-            sx={{
-              fontSize: 22,
-              fontWeight: 600,
-              color: text.primary,
-              marginBottom: "8px",
-            }}
-          >
-            Welcome to VerifyWise
-          </Typography>
-          <Typography
-            sx={{
-              fontSize: 14,
-              color: `${text.tertiary}`,
-              lineHeight: 1.5,
-            }}
-          >
-            How would you like to get started? You can explore with sample data or begin with a
-            clean slate.
-          </Typography>
-        </Stack>
-
-        {/* Options */}
-        <Stack
-          direction="row"
-          spacing={4}
-          sx={{
-            padding: "0 32px 32px",
-          }}
-        >
-          {/* Demo Data Option */}
-          <Box
-            onClick={handleSelectDemo}
-            sx={{
-              "flex": 1,
-              "padding": "24px 20px",
-              "border": `1px solid ${border.light}`,
-              "borderRadius": radiusPx.sm,
-              "cursor": isLoading ? "not-allowed" : "pointer",
-              "opacity": isLoading && loadingOption !== "demo" ? 0.5 : 1,
-              "transition": "all 0.2s ease",
-              "&:hover": {
-                borderColor: isLoading ? border.light : `${brand.primary}`,
-                backgroundColor: isLoading ? "transparent" : alpha(brand.primary, 0.03),
-              },
-            }}
-          >
-            <Stack alignItems="center" spacing={2}>
-              <Box
-                sx={{
-                  width: 48,
-                  height: 48,
-                  borderRadius: radiusPx.lg,
-                  backgroundColor: background.fill,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-              >
-                {loadingOption === "demo" ? (
-                  <CircularProgress size={24} sx={{ color: `${brand.primary}` }} />
-                ) : (
-                  <Database size={24} color={brand.primary} />
-                )}
-              </Box>
-              <Stack spacing={0.5} alignItems="center">
-                <Typography
-                  sx={{
-                    fontSize: 15,
-                    fontWeight: 600,
-                    color: text.primary,
-                  }}
-                >
-                  Add demo data
-                </Typography>
-                <Typography
-                  sx={{
-                    fontSize: 13,
-                    color: `${text.tertiary}`,
-                    textAlign: "center",
-                    lineHeight: 1.4,
-                  }}
-                >
-                  Explore with sample projects and controls
-                </Typography>
-              </Stack>
-            </Stack>
-          </Box>
-
-          {/* Blank Dashboard Option */}
-          <Box
-            onClick={handleSelectBlank}
-            sx={{
-              "flex": 1,
-              "padding": "24px 20px",
-              "border": `1px solid ${border.light}`,
-              "borderRadius": radiusPx.sm,
-              "cursor": isLoading ? "not-allowed" : "pointer",
-              "opacity": isLoading && loadingOption !== "blank" ? 0.5 : 1,
-              "transition": "all 0.2s ease",
-              "&:hover": {
-                borderColor: isLoading ? border.light : `${brand.primary}`,
-                backgroundColor: isLoading ? "transparent" : alpha(brand.primary, 0.03),
-              },
-            }}
-          >
-            <Stack alignItems="center" spacing={2}>
-              <Box
-                sx={{
-                  width: 48,
-                  height: 48,
-                  borderRadius: radiusPx.lg,
-                  backgroundColor: background.surface,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-              >
-                {loadingOption === "blank" ? (
-                  <CircularProgress size={24} sx={{ color: `${text.tertiary}` }} />
-                ) : (
-                  <LayoutDashboard size={24} color={text.tertiary} />
-                )}
-              </Box>
-              <Stack spacing={0.5} alignItems="center">
-                <Typography
-                  sx={{
-                    fontSize: 15,
-                    fontWeight: 600,
-                    color: text.primary,
-                  }}
-                >
-                  Start blank
-                </Typography>
-                <Typography
-                  sx={{
-                    fontSize: 13,
-                    color: `${text.tertiary}`,
-                    textAlign: "center",
-                    lineHeight: 1.4,
-                  }}
-                >
-                  Begin with a clean dashboard
-                </Typography>
-              </Stack>
-            </Stack>
-          </Box>
-        </Stack>
-
-        {errorMessage && (
-          <Box
-            role="alert"
-            sx={{
-              margin: "-16px 32px 24px",
-              padding: "10px 12px",
-              borderRadius: radiusPx.sm,
-              border: `1px solid ${accent.red.border}`,
-              backgroundColor: accent.red.bg,
-            }}
-          >
-            <Typography sx={{ fontSize: 13, color: accent.red.text, lineHeight: 1.5 }}>
-              {errorMessage}
-            </Typography>
-          </Box>
-        )}
-
-        {/* Footer */}
-        <Box
-          sx={{
-            padding: "16px 32px",
-            borderTop: `1px solid ${border.light}`,
-            backgroundColor: `${background.accent}`,
-          }}
-        >
-          <Stack direction="row" justifyContent="flex-end">
-            <CustomizableButton
-              variant="text"
-              text="Skip for now"
-              onClick={handleClose}
-              isDisabled={isLoading}
+        {showDemoLoader ? (
+          <DemoDataLoader status={demoReady ? "done" : "running"} onExplore={handleExploreDemo} />
+        ) : (
+          <>
+            {/* Header */}
+            <Stack
               sx={{
-                "color": `${text.tertiary}`,
-                "fontSize": 13,
-                "&:hover": {
-                  backgroundColor: "transparent",
-                  color: text.primary,
-                },
+                padding: "32px 32px 24px",
+                textAlign: "center",
               }}
-            />
-          </Stack>
-        </Box>
+            >
+              <Typography
+                sx={{
+                  fontSize: 22,
+                  fontWeight: 600,
+                  color: text.primary,
+                  marginBottom: "8px",
+                }}
+              >
+                Welcome to VerifyWise
+              </Typography>
+              <Typography
+                sx={{
+                  fontSize: 14,
+                  color: `${text.tertiary}`,
+                  lineHeight: 1.5,
+                }}
+              >
+                How would you like to get started? You can explore with sample data or begin with a
+                clean slate.
+              </Typography>
+            </Stack>
+
+            {/* Options */}
+            <Stack
+              direction="row"
+              spacing={4}
+              sx={{
+                padding: "0 32px 32px",
+              }}
+            >
+              {/* Demo Data Option */}
+              <Box
+                onClick={handleSelectDemo}
+                sx={{
+                  "flex": 1,
+                  "padding": "24px 20px",
+                  "border": `1px solid ${border.light}`,
+                  "borderRadius": radiusPx.sm,
+                  "cursor": isLoading ? "not-allowed" : "pointer",
+                  "opacity": isLoading && loadingOption !== "demo" ? 0.5 : 1,
+                  "transition": "all 0.2s ease",
+                  "&:hover": {
+                    borderColor: isLoading ? border.light : `${brand.primary}`,
+                    backgroundColor: isLoading ? "transparent" : alpha(brand.primary, 0.03),
+                  },
+                }}
+              >
+                <Stack alignItems="center" spacing={2}>
+                  <Box
+                    sx={{
+                      width: 48,
+                      height: 48,
+                      borderRadius: radiusPx.lg,
+                      backgroundColor: background.fill,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  >
+                    <Database size={24} color={brand.primary} />
+                  </Box>
+                  <Stack spacing={0.5} alignItems="center">
+                    <Typography
+                      sx={{
+                        fontSize: 15,
+                        fontWeight: 600,
+                        color: text.primary,
+                      }}
+                    >
+                      Add demo data
+                    </Typography>
+                    <Typography
+                      sx={{
+                        fontSize: 13,
+                        color: `${text.tertiary}`,
+                        textAlign: "center",
+                        lineHeight: 1.4,
+                      }}
+                    >
+                      Explore with sample projects and controls
+                    </Typography>
+                  </Stack>
+                </Stack>
+              </Box>
+
+              {/* Blank Dashboard Option */}
+              <Box
+                onClick={handleSelectBlank}
+                sx={{
+                  "flex": 1,
+                  "padding": "24px 20px",
+                  "border": `1px solid ${border.light}`,
+                  "borderRadius": radiusPx.sm,
+                  "cursor": isLoading ? "not-allowed" : "pointer",
+                  "opacity": isLoading && loadingOption !== "blank" ? 0.5 : 1,
+                  "transition": "all 0.2s ease",
+                  "&:hover": {
+                    borderColor: isLoading ? border.light : `${brand.primary}`,
+                    backgroundColor: isLoading ? "transparent" : alpha(brand.primary, 0.03),
+                  },
+                }}
+              >
+                <Stack alignItems="center" spacing={2}>
+                  <Box
+                    sx={{
+                      width: 48,
+                      height: 48,
+                      borderRadius: radiusPx.lg,
+                      backgroundColor: background.surface,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  >
+                    {loadingOption === "blank" ? (
+                      <CircularProgress size={24} sx={{ color: `${text.tertiary}` }} />
+                    ) : (
+                      <LayoutDashboard size={24} color={text.tertiary} />
+                    )}
+                  </Box>
+                  <Stack spacing={0.5} alignItems="center">
+                    <Typography
+                      sx={{
+                        fontSize: 15,
+                        fontWeight: 600,
+                        color: text.primary,
+                      }}
+                    >
+                      Start blank
+                    </Typography>
+                    <Typography
+                      sx={{
+                        fontSize: 13,
+                        color: `${text.tertiary}`,
+                        textAlign: "center",
+                        lineHeight: 1.4,
+                      }}
+                    >
+                      Begin with a clean dashboard
+                    </Typography>
+                  </Stack>
+                </Stack>
+              </Box>
+            </Stack>
+
+            {errorMessage && (
+              <Box
+                role="alert"
+                sx={{
+                  margin: "-16px 32px 24px",
+                  padding: "10px 12px",
+                  borderRadius: radiusPx.sm,
+                  border: `1px solid ${accent.red.border}`,
+                  backgroundColor: accent.red.bg,
+                }}
+              >
+                <Typography sx={{ fontSize: 13, color: accent.red.text, lineHeight: 1.5 }}>
+                  {errorMessage}
+                </Typography>
+              </Box>
+            )}
+
+            {/* Footer */}
+            <Box
+              sx={{
+                padding: "16px 32px",
+                borderTop: `1px solid ${border.light}`,
+                backgroundColor: `${background.accent}`,
+              }}
+            >
+              <Stack direction="row" justifyContent="flex-end">
+                <CustomizableButton
+                  variant="text"
+                  text="Skip for now"
+                  onClick={handleClose}
+                  isDisabled={isLoading}
+                  sx={{
+                    "color": `${text.tertiary}`,
+                    "fontSize": 13,
+                    "&:hover": {
+                      backgroundColor: "transparent",
+                      color: text.primary,
+                    },
+                  }}
+                />
+              </Stack>
+            </Box>
+          </>
+        )}
       </Box>
     </Box>
   );

@@ -66,6 +66,9 @@ export interface StorageValueMap {
   // Dashboard demo data button dismissal
   dashboardDemoHidden: boolean;
 
+  // How long the last demo data run took (ms), for the loader's estimate
+  demoDataSeedMs: number;
+
   // AI Gateway dashboards
   aiGatewayAnalyticsPeriod: string;
 

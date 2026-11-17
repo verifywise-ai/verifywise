@@ -58,7 +58,7 @@ describe("SetupModal", () => {
     expect(onSkip).toHaveBeenCalledTimes(1);
   });
 
-  it("calls onComplete and reloads when Add demo data is clicked", async () => {
+  it("waits for Explore the demo before completing and reloading", async () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const reloadSpy = vi.fn();
     Object.defineProperty(window, "location", {
@@ -68,6 +68,9 @@ describe("SetupModal", () => {
     const onComplete = vi.fn();
     renderWithProviders(<SetupModal onComplete={onComplete} onSkip={vi.fn()} />);
     await user.click(screen.getByText("Add demo data"));
+
+    await user.click(await screen.findByText("Explore the demo"));
+    expect(onComplete).not.toHaveBeenCalled();
     act(() => {
       vi.advanceTimersByTime(400);
     });
@@ -86,11 +89,14 @@ describe("SetupModal", () => {
     expect(onComplete).toHaveBeenCalledTimes(1);
   });
 
-  it("shows spinner when Add demo data is clicked", async () => {
+  it("shows the demo data loader while demo data is created", async () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    vi.mocked(postAutoDrivers).mockReturnValueOnce(new Promise(() => {}));
     renderWithProviders(<SetupModal onComplete={vi.fn()} onSkip={vi.fn()} />);
     await user.click(screen.getByText("Add demo data"));
-    expect(document.querySelector(".MuiCircularProgress-root")).toBeInTheDocument();
+    expect(screen.getByTestId("demo-data-loader")).toBeInTheDocument();
+    expect(screen.getByText("Setting up your demo workspace")).toBeInTheDocument();
+    expect(screen.queryByText("Start blank")).not.toBeInTheDocument();
   });
 
   it("shows spinner when Start blank is clicked", async () => {
@@ -177,6 +183,7 @@ describe("SetupModal", () => {
     expect(await screen.findByRole("alert")).toBeInTheDocument();
 
     await user.click(screen.getByText("Add demo data"));
+    await user.click(await screen.findByText("Explore the demo"));
     act(() => {
       vi.advanceTimersByTime(400);
     });
