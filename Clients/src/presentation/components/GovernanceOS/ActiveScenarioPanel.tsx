@@ -19,7 +19,14 @@ import {
 import FrameworkChip from "./FrameworkChip";
 import GovernanceTooltip from "./GovernanceTooltip";
 import { CustomizableButton } from "../button/customizable-button";
-import { border as borderPalette, background, text, brand, status } from "../../themes/palette";
+import {
+  border as borderPalette,
+  background,
+  text,
+  brand,
+  status,
+  radiusPx,
+} from "../../themes/palette";
 import useFormattedDate from "../../../application/hooks/useFormattedDate";
 
 interface ActiveScenarioPanelProps {
@@ -58,7 +65,7 @@ const ActiveScenarioPanel: React.FC<ActiveScenarioPanelProps> = ({
       <Box
         sx={{
           border: `1px dashed ${borderPalette.light}`,
-          borderRadius: "4px",
+          borderRadius: radiusPx.sm,
           p: "16px",
           background: background.main,
         }}
@@ -98,7 +105,7 @@ const ActiveScenarioPanel: React.FC<ActiveScenarioPanelProps> = ({
     <Box
       sx={{
         border: `1px solid ${brand.primary}`,
-        borderRadius: "4px",
+        borderRadius: radiusPx.sm,
         p: "16px",
         background: `linear-gradient(135deg, ${background.main} 0%, ${alpha(brand.primary, 0.06)} 100%)`,
       }}
@@ -136,7 +143,7 @@ const ActiveScenarioPanel: React.FC<ActiveScenarioPanelProps> = ({
                   alignItems: "center",
                   height: 20,
                   px: 1,
-                  borderRadius: "4px",
+                  borderRadius: radiusPx.sm,
                   fontSize: 11,
                   fontWeight: 500,
                   backgroundColor: alpha(brand.primary, 0.12),
@@ -279,7 +286,7 @@ const ActiveScenarioPanel: React.FC<ActiveScenarioPanelProps> = ({
                     value={percent}
                     sx={{
                       "height": 6,
-                      "borderRadius": "4px",
+                      "borderRadius": radiusPx.sm,
                       "backgroundColor": background.hover,
                       "& .MuiLinearProgress-bar": {
                         backgroundColor:
@@ -288,7 +295,7 @@ const ActiveScenarioPanel: React.FC<ActiveScenarioPanelProps> = ({
                             : percent >= 40
                               ? status.warning.text
                               : status.error.text,
-                        borderRadius: "4px",
+                        borderRadius: radiusPx.sm,
                       },
                     }}
                   />

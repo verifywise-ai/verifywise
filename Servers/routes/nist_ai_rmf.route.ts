@@ -2,6 +2,9 @@ import express from "express";
 const router = express.Router();
 import { validateId } from "../domain.layer/validations/id.valid";
 import authenticateJWT from "../middleware/auth.middleware";
+import authorize from "../middleware/accessControl.middleware";
+import { requireFrameworkWriteAccess } from "../middleware/frameworkWriteAccess.middleware";
+import { nistSubcategoryChanges } from "../utils/frameworkWriteAccess.utils";
 import {
   getAllNISTAIRMFfunctions,
   getNISTAIRMFfunctionById,
@@ -55,12 +58,14 @@ router.patch(
   authenticateJWT,
   validateId("id"),
   upload.any(),
+  requireFrameworkWriteAccess(nistSubcategoryChanges),
   updateNISTAIRMFSubcategoryById,
 ); // updating a specific NIST AI RMF subcategory by id
 router.patch(
   "/subcategories/:id/status",
   authenticateJWT,
   validateId("id"),
+  authorize("framework.edit"),
   updateNISTAIRMFSubcategoryStatus,
 ); // updating status of a specific NIST AI RMF subcategory by id
 

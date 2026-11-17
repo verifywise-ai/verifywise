@@ -34,6 +34,12 @@ export interface TriggeredByUser {
   surname?: string;
 }
 
+/**
+ * Whether LLM vulnerability checks ran for a scan. null/undefined on scans
+ * made before this was recorded.
+ */
+export type VulnerabilityCheckStatus = "ran" | "off" | "failed" | "incremental";
+
 export interface Scan {
   id: number;
   repository_url: string;
@@ -53,6 +59,7 @@ export interface Scan {
   risk_score_grade?: RiskGrade | null;
   risk_score_details?: RiskScoreDetails | null;
   risk_score_calculated_at?: string | null;
+  vulnerability_check_status?: VulnerabilityCheckStatus | null;
   // Incremental scan fields
   scan_mode?: ScanMode;
   base_commit_sha?: string | null;
@@ -106,6 +113,8 @@ export interface Finding {
   governance_status?: GovernanceStatus | null;
   governance_updated_at?: string;
   governance_updated_by?: number;
+  /** Name of the user who set the status (may be from an earlier scan of the repository). */
+  governance_updated_by_name?: string | null;
   // License information
   license_id?: string | null;
   license_name?: string | null;
@@ -301,6 +310,11 @@ export interface Pagination {
 export interface FindingsResponse {
   findings: Finding[];
   pagination: Pagination;
+  /**
+   * Whether this is the repository's latest completed scan. Status changes on
+   * any other scan apply to that scan only.
+   */
+  is_latest_scan?: boolean;
 }
 
 export interface ScansResponse {
@@ -392,8 +406,40 @@ export interface UpdateGovernanceStatusRequest {
 export interface UpdateGovernanceStatusResponse {
   id: number;
   governance_status: GovernanceStatus | null;
-  governance_updated_at: string;
-  governance_updated_by: number;
+  governance_updated_at: string | null;
+  governance_updated_by: number | null;
+  governance_updated_by_name: string | null;
+  /**
+   * "repository" when the status is kept for later scans of the repository,
+   * "scan" when it changed only this scan (an older scan of the repository).
+   */
+  decision_scope: "repository" | "scan";
+}
+
+/** Why a suggested risk was ignored. */
+export type SuggestedRiskIgnoreReason = "already_added" | "not_real_risk";
+
+/** What a user did with one LLM-suggested risk on a scan. */
+export interface SuggestedRiskAction {
+  id: number;
+  scan_id: number;
+  suggestion_key: string;
+  risk_name: string;
+  action: "added" | "ignored";
+  risk_id: number | null;
+  ignore_reason: SuggestedRiskIgnoreReason | null;
+  acted_by: number | null;
+  acted_by_name: string | null;
+  acted_at: string;
+  /** True when the risk created from this suggestion was deleted since. */
+  risk_deleted: boolean;
+}
+
+/** Ignore a suggested risk. Adding one goes through addSuggestedRiskToRegister. */
+export interface RecordSuggestedRiskActionRequest {
+  risk_name: string;
+  action: "ignored";
+  reason: SuggestedRiskIgnoreReason;
 }
 
 // ============================================================================

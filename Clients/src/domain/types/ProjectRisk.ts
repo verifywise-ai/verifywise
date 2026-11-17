@@ -1,3 +1,6 @@
+/** A risk's approval status. Only the risk's approver or an Admin sets Approved or Rejected. */
+export type RiskApprovalStatus = "Pending" | "Approved" | "Rejected" | "Not required";
+
 // projectRisk.model.ts
 
 export type ProjectRiskMitigation = {
@@ -53,7 +56,7 @@ export type ProjectRisk = {
   likelihood: "Rare" | "Unlikely" | "Possible" | "Likely" | "Almost Certain";
   severity: "Negligible" | "Minor" | "Moderate" | "Major" | "Critical";
   risk_level_autocalculated:
-    "No risk" | "Low risk" | "Medium risk" | "High risk" | "Very high risk";
+    "No risk" | "Very low risk" | "Low risk" | "Medium risk" | "High risk" | "Very high risk";
   review_notes: string;
   mitigation_status:
     | "Not Started"
@@ -63,7 +66,7 @@ export type ProjectRisk = {
     | "Deferred"
     | "Canceled"
     | "Requires review";
-  current_risk_level: "Very Low risk" | "Low risk" | "Medium risk" | "High risk" | "Very high risk";
+  current_risk_level: "Very low risk" | "Low risk" | "Medium risk" | "High risk" | "Very high risk";
   deadline: Date;
   mitigation_plan: string;
   implementation_strategy: string;
@@ -72,7 +75,7 @@ export type ProjectRisk = {
   risk_severity: "Negligible" | "Minor" | "Moderate" | "Major" | "Catastrophic";
   final_risk_level: string;
   risk_approval: string;
-  approval_status: string;
+  approval_status: RiskApprovalStatus;
   date_of_assessment: Date;
   annexCategories?: ProjectRiskMitigation[];
   subClauses?: ProjectRiskMitigation[];

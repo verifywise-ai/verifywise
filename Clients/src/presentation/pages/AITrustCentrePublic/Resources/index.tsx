@@ -19,7 +19,13 @@ import {
 } from "lucide-react";
 import { downloadResource } from "../../../../application/tools/downloadResource";
 import { aiTrustCenterTableCell } from "../style";
-import { brand, text, background, border as borderPalette } from "../../../themes/palette";
+import {
+  brand,
+  text,
+  background,
+  border as borderPalette,
+  palette as vwPalette,
+} from "../../../themes/palette";
 
 const RESOURCES_SORTING_KEY = "verifywise_resources_sorting";
 
@@ -116,11 +122,11 @@ const Resources = ({
       </Typography>
       <TableContainer
         component={Paper}
-        sx={{ border: "1px solid #EEEEEE", borderRadius: 1, boxShadow: "none" }}
+        sx={{ border: `1px solid ${vwPalette.border.light}`, borderRadius: 1, boxShadow: "none" }}
       >
         <Table>
           <TableHead>
-            <TableRow sx={{ background: "#FAFAFA" }}>
+            <TableRow sx={{ background: vwPalette.background.alt }}>
               <TableCell
                 sx={{
                   "fontWeight": 400,
@@ -142,7 +148,10 @@ const Resources = ({
                     sx={{
                       display: "flex",
                       alignItems: "center",
-                      color: sortConfig.key === "document name" ? "#1976D2" : `${text.disabled}`,
+                      color:
+                        sortConfig.key === "document name"
+                          ? vwPalette.status.info.text
+                          : `${text.disabled}`,
                     }}
                   >
                     {sortConfig.key === "document name" && sortConfig.direction === "asc" && (
@@ -175,11 +184,17 @@ const Resources = ({
                 <TableCell
                   sx={{
                     ...aiTrustCenterTableCell,
-                    backgroundColor: sortConfig.key === "document name" ? "#e8e8e8" : "#fafafa",
+                    backgroundColor:
+                      sortConfig.key === "document name"
+                        ? vwPalette.border.light
+                        : vwPalette.background.alt,
                   }}
                 >
                   <Box display="flex" alignItems="center" gap={1}>
-                    <CheckCircleOutlineIcon size={24} style={{ color: "#10B981" }} />
+                    <CheckCircleOutlineIcon
+                      size={24}
+                      style={{ color: vwPalette.status.success.strong }}
+                    />
                     <Typography color={text.secondary} sx={{ fontSize: 13 }}>
                       {resource.name}
                     </Typography>

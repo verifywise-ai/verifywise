@@ -27,12 +27,13 @@ import { useNavigate } from "react-router";
 
 import { EntityType } from "./EntityNode";
 import { VWLink } from "../../components/Link";
-import { text } from "../../themes/palette";
+import { text, palette as vwPalette, radiusPx } from "../../themes/palette";
 import useFormattedDate from "../../../application/hooks/useFormattedDate";
 import {
   formatHighRiskRoles,
   projectHighRiskRoles,
 } from "../../../application/utils/highRiskRoles";
+import { riskCalendarDay } from "../../tools/isoDateToString";
 
 export interface EntityDetails {
   id: string;
@@ -84,7 +85,7 @@ const formatDetailDate = (
 ): string => {
   if (!dateValue) return "";
   try {
-    const date = new Date(String(dateValue));
+    const date = dateValue instanceof Date ? dateValue : new Date(String(dateValue));
     if (isNaN(date.getTime())) return String(dateValue);
     return formatDate(date);
   } catch {
@@ -165,7 +166,7 @@ const DetailSidebar: React.FC<DetailSidebarProps> = ({ entity, onClose, onNaviga
         width: 410,
         height: "100%",
         backgroundColor: "white",
-        borderLeft: "1px solid #d0d5dd",
+        borderLeft: `1px solid ${vwPalette.border.dark}`,
         zIndex: 1000,
         display: "flex",
         flexDirection: "column",
@@ -176,7 +177,7 @@ const DetailSidebar: React.FC<DetailSidebarProps> = ({ entity, onClose, onNaviga
       <Box
         sx={{
           p: 2,
-          borderBottom: "1px solid #d0d5dd",
+          borderBottom: `1px solid ${vwPalette.border.dark}`,
           display: "flex",
           alignItems: "flex-start",
           gap: 1.5,
@@ -186,7 +187,7 @@ const DetailSidebar: React.FC<DetailSidebarProps> = ({ entity, onClose, onNaviga
           sx={{
             width: 40,
             height: 40,
-            borderRadius: "4px",
+            borderRadius: radiusPx.sm,
             backgroundColor: entity.color,
             display: "flex",
             alignItems: "center",
@@ -214,7 +215,7 @@ const DetailSidebar: React.FC<DetailSidebarProps> = ({ entity, onClose, onNaviga
             sx={{
               fontSize: 16,
               fontWeight: 600,
-              color: "#101828",
+              color: vwPalette.text.primary,
               wordBreak: "break-word",
               whiteSpace: "normal",
               overflow: "visible",
@@ -533,7 +534,10 @@ const DetailSidebar: React.FC<DetailSidebarProps> = ({ entity, onClose, onNaviga
                 <DetailRow
                   icon={<Calendar size={14} />}
                   label="Deadline"
-                  value={formatDetailDate(rawData.deadline, formatDate)}
+                  value={formatDetailDate(
+                    riskCalendarDay(rawData.deadline) ?? rawData.deadline,
+                    formatDate,
+                  )}
                 />
               )}
               {Boolean(rawData.approval_status) && (
@@ -645,7 +649,7 @@ const DetailSidebar: React.FC<DetailSidebarProps> = ({ entity, onClose, onNaviga
                   sx={{
                     p: 1.5,
                     backgroundColor: "background.accent",
-                    borderRadius: "4px",
+                    borderRadius: radiusPx.sm,
                     border: "1px solid status.default.border",
                   }}
                 >
@@ -703,7 +707,7 @@ const DetailSidebar: React.FC<DetailSidebarProps> = ({ entity, onClose, onNaviga
       <Box
         sx={{
           p: 2,
-          borderTop: "1px solid #d0d5dd",
+          borderTop: `1px solid ${vwPalette.border.dark}`,
           display: "flex",
           gap: 1,
         }}
@@ -733,7 +737,7 @@ const DetailSidebar: React.FC<DetailSidebarProps> = ({ entity, onClose, onNaviga
             "backgroundColor": "brand.primary",
             "textTransform": "none",
             "height": 34,
-            "&:hover": { backgroundColor: "#0f5a48" },
+            "&:hover": { backgroundColor: vwPalette.brand.primaryHover },
           }}
         >
           Go to {entityTypeLabels[entity.entityType].toLowerCase()}

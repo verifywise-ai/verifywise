@@ -16,7 +16,7 @@ import type { FormErrors } from "../../../../application/validations/formValidat
 import { extractUserToken } from "../../../../application/tools/extractToken";
 import { resetPassword } from "../../../../application/repository/auth.repository";
 import CustomizableSkeleton from "../../../components/Skeletons";
-import { background, border as borderPalette } from "../../../themes/palette";
+import { background, border as borderPalette, radiusPx } from "../../../themes/palette";
 
 interface ResetPasswordFormValues {
   password: string;
@@ -73,6 +73,9 @@ const SetNewPassword: React.FC = () => {
     }
     if (!passwordChecks.uppercase) {
       return "Password must contain at least one uppercase letter";
+    }
+    if (!passwordChecks.lowercase) {
+      return "Password must contain at least one lowercase letter";
     }
     if (!passwordChecks.number) {
       return "Password must contain at least one number";
@@ -219,7 +222,7 @@ const SetNewPassword: React.FC = () => {
               display: "flex",
               justifyContent: "center",
               alignItems: "center",
-              borderRadius: "12px",
+              borderRadius: radiusPx.xl,
               border: `2px solid ${borderPalette.light}`,
               gap: theme.spacing(12),
             }}
@@ -262,6 +265,10 @@ const SetNewPassword: React.FC = () => {
               <Check
                 text="Must contain at least one uppercase letter"
                 variant={passwordChecks.uppercase ? "success" : "info"}
+              />
+              <Check
+                text="Must contain at least one lowercase letter"
+                variant={passwordChecks.lowercase ? "success" : "info"}
               />
               <Check
                 text="Must contain atleast one number"

@@ -1,4 +1,3 @@
-import allowedRoles from "../constants/permissions";
 import {
   LIFECYCLE_STAGES,
   LifecycleStage,
@@ -11,7 +10,7 @@ import type { Project } from "../../domain/types/Project";
  * the entity's edit permission (useCase.edit, aiApp.edit), or the owner.
  * Auditors never. Mirrors canManageLifecycle in
  * Servers/controllers/lifecycle.ctrl.ts; `canEdit` comes from
- * useMyPermissions, the same per-org matrix the server checks, so custom
+ * useCan, the same per-org matrix the server checks, so custom
  * roles get the same answer as on the server.
  */
 export function canManageLifecycle(
@@ -24,9 +23,6 @@ export function canManageLifecycle(
   if (userId !== null && ownerId !== undefined && Number(ownerId) === userId) return true;
   return canEdit;
 }
-
-/** Built-in fallback while the permission list loads or fails. */
-export const canEditUseCasesByRole = (role: string) => allowedRoles.projects.edit.includes(role);
 
 /** A lifecycle tab's count: entities in the stage plus extra rows (e.g. intake submissions). */
 export function lifecycleTabCount(

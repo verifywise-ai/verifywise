@@ -11,6 +11,7 @@
 import { SxProps, Theme } from "@mui/material";
 import singleTheme from "../../../themes/v1SingleTheme";
 import { textStyles } from "../../../themes/typography";
+import { radiusPx } from "../../../themes/palette";
 
 /**
  * MUI's Accordion is a Paper: it ships an elevation shadow and a ::before
@@ -20,7 +21,7 @@ export const sectionSx: SxProps<Theme> = {
   "mt": 4,
   "border": 1,
   "borderColor": "border.light",
-  "borderRadius": "4px",
+  "borderRadius": radiusPx.sm,
   "boxShadow": "none",
   "&:before": { display: "none" },
 };
@@ -105,7 +106,7 @@ export const rateCellSx: SxProps<Theme> = {
 export const barTrackSx: SxProps<Theme> = {
   flex: 1,
   height: 6,
-  borderRadius: "4px",
+  borderRadius: radiusPx.sm,
   bgcolor: "other.fill",
   overflow: "hidden",
 };
@@ -114,7 +115,7 @@ export const barFillSx = (percent: number): SxProps<Theme> => ({
   height: "100%",
   width: `${Math.min(100, Math.max(0, percent))}%`,
   bgcolor: "status.warning.main",
-  borderRadius: "4px",
+  borderRadius: radiusPx.sm,
 });
 
 /** A group header is metadata about the rows below it, not a heading. 12 / 400 */
@@ -165,7 +166,7 @@ export const errorAlertSx: SxProps<Theme> = {
   gap: 6, // 12px
   py: 6, // 12px
   px: 8, // 16px
-  borderRadius: "4px",
+  borderRadius: radiusPx.sm,
   border: 1,
   borderColor: "status.error.main",
   backgroundColor: "status.error.bg",

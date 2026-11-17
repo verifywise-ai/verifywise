@@ -32,7 +32,7 @@ import {
   type CreateBiasAuditConfig,
 } from "../../../application/repository/deepEval.repository";
 import { getAllEntities } from "../../../application/repository/entity.repository";
-import { palette } from "../../themes/palette";
+import { palette, radiusPx } from "../../themes/palette";
 
 /** Parse a single CSV row handling quoted fields (RFC 4180). */
 function parseCSVRow(line: string): string[] {
@@ -131,7 +131,7 @@ function PresetCard({
       onClick={onClick}
       sx={{
         "border": `1px solid ${selected ? theme.palette.primary.main : theme.palette.border.dark}`,
-        "borderRadius": "4px",
+        "borderRadius": radiusPx.sm,
         "p": "8px",
         "cursor": "pointer",
         "backgroundColor": selected ? palette.brand.primaryLight : theme.palette.background.paper,
@@ -683,7 +683,7 @@ const NewBiasAuditModal: React.FC<NewBiasAuditModalProps> = ({
         <Box
           sx={{
             border: `1px solid ${palette.border.dark}`,
-            borderRadius: "4px",
+            borderRadius: radiusPx.sm,
             p: "12px",
             backgroundColor: palette.background.accent,
           }}
@@ -786,7 +786,7 @@ const NewBiasAuditModal: React.FC<NewBiasAuditModalProps> = ({
         <Box
           sx={{
             "border": `2px dashed ${palette.border.dark}`,
-            "borderRadius": "4px",
+            "borderRadius": radiusPx.sm,
             "p": 4,
             "textAlign": "center",
             "cursor": "pointer",
@@ -946,7 +946,7 @@ const NewBiasAuditModal: React.FC<NewBiasAuditModalProps> = ({
             <Box
               sx={{
                 border: `1px solid ${palette.border.dark}`,
-                borderRadius: "4px",
+                borderRadius: radiusPx.sm,
                 overflow: "auto",
               }}
             >
@@ -1034,7 +1034,7 @@ const NewBiasAuditModal: React.FC<NewBiasAuditModalProps> = ({
       )}
 
       {/* Summary */}
-      <Box sx={{ border: `1px solid ${palette.border.dark}`, borderRadius: "4px", p: "8px" }}>
+      <Box sx={{ border: `1px solid ${palette.border.dark}`, borderRadius: radiusPx.sm, p: "8px" }}>
         <Typography sx={{ fontSize: 13, fontWeight: 600, color: palette.text.secondary, mb: 1 }}>
           Summary
         </Typography>

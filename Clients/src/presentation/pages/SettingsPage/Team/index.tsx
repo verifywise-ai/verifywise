@@ -54,6 +54,7 @@ interface AlertState {
 import Alert from "../../../components/Alert";
 import { pageOfLabel } from "../../../components/Table/pageOfLabel";
 import InviteLinkModal from "./InviteLinkModal";
+import { palette } from "../../../themes/palette";
 
 interface FallbackLinkState {
   link: string;
@@ -66,6 +67,8 @@ const TABLE_COLUMNS = [
   { id: "name", label: "NAME" },
   { id: "email", label: "EMAIL" },
   { id: "role", label: "ROLE" },
+  { id: "createdAt", label: "CREATED AT" },
+  { id: "lastLogin", label: "LAST LOGGED IN" },
   { id: "action", label: "ACTION" },
 ];
 
@@ -317,6 +320,21 @@ const TeamManagement: React.FC = (): JSX.Element => {
         const bRole = roles.find((r) => r.id.toString() === b.roleId?.toString());
         aValue = aRole?.name?.toLowerCase() || "";
         bValue = bRole?.name?.toLowerCase() || "";
+      } else if (sortKey.includes("created") || sortKey.includes("logged")) {
+        // Date columns: "created at" and "last logged in". Members without
+        // a value sort last in both directions.
+        const getTime = (member: any): number => {
+          const raw = sortKey.includes("created") ? member.created_at : member.last_login;
+          return raw ? new Date(raw).getTime() : 0;
+        };
+        const aTime = getTime(a);
+        const bTime = getTime(b);
+        if (aTime === 0 || bTime === 0) {
+          const nullsComparison = (aTime === 0 ? 1 : 0) - (bTime === 0 ? 1 : 0);
+          return sortConfig.direction === "asc" ? nullsComparison : -nullsComparison;
+        }
+        const comparison = aTime - bTime;
+        return sortConfig.direction === "asc" ? comparison : -comparison;
       } else {
         // Try to handle unknown columns by checking if they're properties of the member
         if (sortKey && sortKey in a && sortKey in b) {
@@ -474,7 +492,7 @@ const TeamManagement: React.FC = (): JSX.Element => {
         >
           Team members
         </Typography>
-        <Typography sx={{ fontSize: 13, color: "#666666", mb: 2 }}>
+        <Typography sx={{ fontSize: 13, color: palette.text.tertiary, mb: 2 }}>
           Invite people and set each member's role. Admins manage the whole workspace and its
           settings. Editors can create and edit governance records. Reviewers can review and approve
           or reject. Auditors have read-only access.
@@ -607,8 +625,8 @@ const TeamManagement: React.FC = (): JSX.Element => {
                                 ...singleTheme.tableStyles.primary.body.cell,
                                 backgroundColor:
                                   sortConfig.key && sortConfig.key.toLowerCase().includes("name")
-                                    ? "#e8e8e8"
-                                    : "#fafafa",
+                                    ? palette.border.light
+                                    : palette.background.alt,
                               }}
                             >
                               {[member.name, member.surname].filter(Boolean).join(" ")}
@@ -669,6 +687,28 @@ const TeamManagement: React.FC = (): JSX.Element => {
                                   </MenuItem>
                                 ))}
                               </Select>
+                            </TableCell>
+                            <TableCell
+                              sx={{
+                                ...singleTheme.tableStyles.primary.body.cell,
+                                backgroundColor:
+                                  sortConfig.key && sortConfig.key.toLowerCase().includes("created")
+                                    ? "background.surface"
+                                    : "inherit",
+                              }}
+                            >
+                              {member.created_at ? formatRelativeDate(member.created_at) : "-"}
+                            </TableCell>
+                            <TableCell
+                              sx={{
+                                ...singleTheme.tableStyles.primary.body.cell,
+                                backgroundColor:
+                                  sortConfig.key && sortConfig.key.toLowerCase().includes("logged")
+                                    ? "background.surface"
+                                    : "inherit",
+                              }}
+                            >
+                              {member.last_login ? formatRelativeDate(member.last_login) : "Never"}
                             </TableCell>
                             <TableCell
                               sx={{

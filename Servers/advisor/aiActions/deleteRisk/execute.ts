@@ -1,14 +1,15 @@
 /**
  * Post-approval executor for `agent_delete_risk`.
  *
- * Delegates to `deleteRiskByIdQuery` which runs the soft-delete UPDATE
- * (`is_deleted = true, deleted_at = NOW()`) inside the approve
- * transaction. If the row is already deleted or doesn't exist, the
+ * Delegates to `archiveRiskQuery`, the console's archive: the soft-delete
+ * UPDATE (`is_deleted = true, deleted_at = NOW()`), the change-history
+ * entry and the risk's policy unlinks, all inside the approve transaction. If the row is already deleted or doesn't exist, the
  * underlying query returns without an affected row and we surface an
  * error — the approval rolls back.
  */
 
-import { deleteRiskByIdQuery } from "../../../utils/risk.utils";
+import { archiveRiskQuery } from "../../../utils/risk.utils";
+import { riskViewerForUserQuery } from "../../../utils/riskVisibility.utils";
 import type { AiActionExecuteContext, AiActionExecuteResult } from "../types";
 import type { AgentDeleteRiskInput } from "./schema";
 
@@ -17,7 +18,15 @@ export async function executeDeleteRisk(
 ): Promise<AiActionExecuteResult> {
   const input = ctx.inputParams;
 
-  const success = await deleteRiskByIdQuery(input.risk_id, ctx.organizationId, ctx.transaction);
+  // A risk the requester cannot see is a missing one to them.
+  const viewer = await riskViewerForUserQuery(ctx.requesterId, ctx.organizationId);
+  const success = await archiveRiskQuery(
+    input.risk_id,
+    ctx.organizationId,
+    ctx.requesterId,
+    ctx.transaction,
+    { viewer },
+  );
 
   if (!success) {
     throw new Error(

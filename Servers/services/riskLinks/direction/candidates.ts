@@ -1,4 +1,5 @@
 import { getSharedProjectCandidatesQuery, HierarchyParent } from "../../../utils/riskLink.utils";
+import { SYSTEM_RISK_VIEWER } from "../../../utils/riskVisibility.utils";
 
 /** One vendor or model risk offered to the model as a possible parent. */
 export interface CrossEntityCandidate {
@@ -32,7 +33,12 @@ export async function gatherCrossEntityCandidates(
   const merged = new Map<string, CrossEntityCandidate>();
 
   for (const riskId of riskIds) {
-    for (const row of await getSharedProjectCandidatesQuery(organizationId, riskId)) {
+    // The hierarchy pass is an organization-wide admin job (riskLinks.admin).
+    for (const row of await getSharedProjectCandidatesQuery(
+      organizationId,
+      riskId,
+      SYSTEM_RISK_VIEWER,
+    )) {
       const parent: HierarchyParent = { id: row.id, entityType: row.entityType };
       const key = candidateKey(parent);
       const existing = merged.get(key);

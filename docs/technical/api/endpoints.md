@@ -666,7 +666,7 @@ Every per-extension route returns **403** "Extension '`<key>`' is not enabled fo
 
 | Base Path | Endpoints | Role |
 |-----------|-----------|------|
-| `/api/extensions/slack` | `GET`, `POST /oauth/workspaces`; `GET`, `PATCH`, `DELETE /oauth/workspaces/:id`; `POST /oauth/workspaces/:id/send` | Any |
+| `/api/extensions/slack` | `GET`, `POST /oauth/workspaces`; `GET`, `PATCH`, `DELETE /oauth/workspaces/:id`; `POST /oauth/workspaces/:id/send`. The organization's Slack connections; another organization's id answers 404. `PATCH` takes only `routing_type` and/or `is_active`. | Admin (`extension.admin`) |
 | `/api/extensions/mlflow` | `GET /models`, `GET /models/:modelId`, `POST /sync` | Any |
 | `/api/extensions/azure-ai-foundry` | `GET /models`, `GET /models/:deploymentId`, `POST /sync`, `GET /discover` | Any |
 | `/api/extensions/model-lifecycle` | `GET /config`; `POST /phases`, `PUT /phases/reorder`, `PUT`, `DELETE /phases/:id`; `POST /phases/:phaseId/items`, `PUT /phases/:phaseId/items/reorder`, `PUT`, `DELETE /items/:id`; `GET /models/:id/lifecycle`, `GET /models/:id/lifecycle/progress`; `PUT /models/:id/lifecycle/items/:itemId`; files, people and approvals under `/models/:id/lifecycle/items/:itemId/...` | Any |
@@ -731,18 +731,8 @@ All change history endpoints follow the same pattern:
 | DELETE | `/:id` | Delete note | JWT |
 
 ### Slack Webhooks
-**Base Path:** `/api/slackWebhooks`
 
-> Legacy mount, kept alongside `/api/extensions/slack/oauth/workspaces` (same handlers). Unlike the extension routes, it is **not** gated by the Slack extension being enabled.
-
-| Method | Endpoint | Description | Auth |
-|--------|----------|-------------|------|
-| GET | `/` | Get webhooks | JWT |
-| GET | `/:id` | Get by ID | JWT |
-| POST | `/` | Create webhook | JWT |
-| PATCH | `/:id` | Update webhook | JWT |
-| DELETE | `/:id` | Delete webhook | JWT |
-| POST | `/:id/send` | Send message | JWT |
+`/api/slackWebhooks` is a deprecated legacy alias of `/api/extensions/slack/oauth/workspaces` (see [Per-extension routes](#per-extension-routes)), kept per ADR 0001 and slated for removal in a dedicated PR. It has the same six operations (`GET /`, `GET /:id`, `POST /`, `PATCH /:id`, `DELETE /:id`, `POST /:id/send`), the same handlers and the same Admin-only, organization-scoped behaviour: JWT, the Slack extension enabled, `extension.admin`, and `slackWorkspaceCreateLimiter` on create. The client uses the extension path.
 
 ---
 

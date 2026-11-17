@@ -2,6 +2,7 @@ import React from "react";
 import { Box, Typography, Button, useTheme } from "@mui/material";
 import { useNavigate } from "react-router";
 import { LLM_KEY_CREATE_PATH } from "../../../../../application/constants/llmKeyDeepLink";
+import { radiusPx } from "../../../../themes/palette";
 
 interface AIKeyBannerProps {
   onClose: () => void;
@@ -21,7 +22,7 @@ const AIKeyBanner: React.FC<AIKeyBannerProps> = ({ onClose }) => {
       sx={{
         display: "flex",
         p: "8px",
-        borderRadius: "4px",
+        borderRadius: radiusPx.sm,
         backgroundColor: theme.palette.background.fill,
         border: `1px solid ${theme.palette.primary.main}`,
       }}

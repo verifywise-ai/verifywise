@@ -15,9 +15,8 @@ import {
 // Import the table and modal components specific to Training
 import TrainingTable from "./trainingTable";
 import NewTraining from "../../../presentation/components/Modals/NewTraining";
-import allowedRoles from "../../../application/constants/permissions";
+import { useCanCheck } from "../../../application/hooks/useCan";
 import { createTraining } from "../../../application/repository/trainingregistar.repository";
-import { useAuth } from "../../../application/hooks/useAuth";
 import { PageHeaderExtended } from "../../components/Layout/PageHeaderExtended";
 import { SearchBox } from "../../components/Search";
 import PageTour from "../../components/PageTour";
@@ -26,11 +25,9 @@ import {
   TrainingRegistarModel,
   TrainingRegistarDTO,
 } from "../../../domain/models/Common/trainingRegistar/trainingRegistar.model";
-import { GroupBy } from "../../components/Table/GroupBy";
-import { useTableGrouping, useGroupByState } from "../../../application/hooks/useTableGrouping";
-import { GroupedTableView } from "../../components/Table/GroupedTableView";
 import { ExportMenu } from "../../components/Table/ExportMenu";
-import { FilterBy, FilterColumn } from "../../components/Table/FilterBy";
+import { FilterColumn } from "../../components/Table/FilterBy";
+import { TableFilter } from "../../components/Table/TableFilter";
 import { useFilterBy } from "../../../application/hooks/useFilterBy";
 import { ColumnSelector } from "../../components/Table/ColumnSelector";
 import { useColumnVisibility, ColumnConfig } from "../../../application/hooks/useColumnVisibility";
@@ -83,15 +80,6 @@ const createAlert = (variant: AlertVariant, body: string, title?: string): Alert
   body,
   title,
 });
-
-// Year-first format ("2026 Q1") keeps chronological order under localeCompare.
-const getQuarterLabel = (raw: unknown): string => {
-  if (!raw) return "Undated";
-  const d = new Date(raw as string | number | Date);
-  if (Number.isNaN(d.getTime())) return "Undated";
-  const quarter = Math.floor(d.getMonth() / 3) + 1;
-  return `${d.getFullYear()} Q${quarter}`;
-};
 
 // Column type for Training table
 type TrainingColumn =
@@ -158,8 +146,8 @@ const Training: React.FC = () => {
   const [selectedTraining, setSelectedTraining] = useState<TrainingRegistarModel | null>(null);
   const [showAlert, setShowAlert] = useState(false);
 
-  const { userRoleName } = useAuth();
-  const isCreatingDisabled = !userRoleName || !allowedRoles.training.create.includes(userRoleName);
+  const can = useCanCheck();
+  const isCreatingDisabled = !can("training.edit");
   const [alert, setAlert] = useState<{
     variant: "success" | "info" | "warning" | "error";
     title?: string;
@@ -186,16 +174,6 @@ const Training: React.FC = () => {
     tableId: "training-evidence-hub-table",
     columns: EVIDENCE_COLUMNS,
   });
-
-  // GroupBy state
-  const { groupBy, groupSortOrder, handleGroupChange } = useGroupByState();
-
-  // GroupBy state - evidence tab
-  const {
-    groupBy: groupByEvidence,
-    groupSortOrder: groupSortOrderEvidence,
-    handleGroupChange: handleGroupChangeEvidence,
-  } = useGroupByState();
 
   // Tabs
   const [activeTab, setActiveTab] = useState<TrainingTab>(() => getTabFromPath(location.pathname));
@@ -703,8 +681,12 @@ const Training: React.FC = () => {
   );
 
   // FilterBy - Initialize hook
-  const { filterData: filterTrainingData, handleFilterChange: handleTrainingFilterChange } =
-    useFilterBy<TrainingRegistarModel>(getTrainingFieldValue);
+  const {
+    filterData: filterTrainingData,
+    handleFilterChange: handleTrainingFilterChange,
+    conditions: trainingFilterConditions,
+    logic: trainingFilterLogic,
+  } = useFilterBy<TrainingRegistarModel>(getTrainingFieldValue);
 
   // Evidence filter
   const evidenceFilterColumns: FilterColumn[] = useMemo(() => {
@@ -739,8 +721,12 @@ const Training: React.FC = () => {
     [],
   );
 
-  const { filterData: filterEvidenceData, handleFilterChange: handleEvidenceFilterChange } =
-    useFilterBy<EvidenceHubModel>(getEvidenceFieldValue);
+  const {
+    filterData: filterEvidenceData,
+    handleFilterChange: handleEvidenceFilterChange,
+    conditions: evidenceFilterConditions,
+    logic: evidenceFilterLogic,
+  } = useFilterBy<EvidenceHubModel>(getEvidenceFieldValue);
 
   // Filtered trainings using FilterBy and search
   const filteredTraining = useMemo(() => {
@@ -759,38 +745,7 @@ const Training: React.FC = () => {
     return result;
   }, [filterTrainingData, trainingData, searchTerm]);
 
-  // Define how to get the group key for each training
-  const getTrainingGroupKey = (
-    training: TrainingRegistarModel,
-    field: string,
-  ): string | string[] => {
-    switch (field) {
-      case "status":
-        return training.status || "Unknown Status";
-      case "provider":
-        return training.provider || "Unknown Provider";
-      case "department":
-        return training.department || "Unknown Department";
-      case "quarter": {
-        // created_at is included in the API response but absent from the client model class.
-        const raw =
-          (training as any).created_at ?? (training as any).createdAt ?? (training as any).created;
-        return getQuarterLabel(raw);
-      }
-      default:
-        return "Other";
-    }
-  };
-
-  // Apply grouping to filtered training data
-  const groupedTraining = useTableGrouping({
-    data: filteredTraining,
-    groupByField: groupBy,
-    sortOrder: groupSortOrder,
-    getGroupKey: getTrainingGroupKey,
-  });
-
-  // Filter + group evidence
+  // Filter evidence
   const filteredEvidence = useMemo(() => {
     let result = filterEvidenceData(evidenceHubData);
     if (evidenceSearchTerm.trim()) {
@@ -814,30 +769,6 @@ const Training: React.FC = () => {
     });
     return map;
   }, [trainingData]);
-
-  const getEvidenceGroupKey = useCallback(
-    (item: EvidenceHubModel, field: string): string | string[] => {
-      switch (field) {
-        case "evidence_type":
-          return item.evidence_type || "Unknown type";
-        case "training": {
-          const ids = item.mapped_training_ids || [];
-          if (ids.length === 0) return "Unmapped";
-          return ids.map((id) => trainingNameById.get(id) || `Training ${id}`);
-        }
-        default:
-          return "Other";
-      }
-    },
-    [trainingNameById],
-  );
-
-  const groupedEvidence = useTableGrouping({
-    data: filteredEvidence,
-    groupByField: groupByEvidence,
-    sortOrder: groupSortOrderEvidence,
-    getGroupKey: getEvidenceGroupKey,
-  });
 
   // Define export columns for training table
   const exportColumns = useMemo(() => {
@@ -892,25 +823,18 @@ const Training: React.FC = () => {
     });
   }, [filteredEvidence, trainingNameById, formatDate]);
 
-  // GroupedTableView renders the table's own placeholder for an empty list, so the
+  // The table renders its own placeholder for an empty list, so the
   // same element serves as the empty state and the table stays mounted (keeping
   // its page and sort) when a search briefly matches nothing.
   const trainingList = (
-    <GroupedTableView
-      groupedData={groupedTraining}
-      ungroupedData={filteredTraining}
-      renderTable={(data, options) => (
-        <TrainingTable
-          data={data}
-          isLoading={false}
-          onEdit={handleEditTraining}
-          onDelete={handleDeleteTraining}
-          hidePagination={options?.hidePagination}
-          visibleColumns={visibleColumns as Set<string>}
-          assignmentSummaries={assignmentSummaries}
-          onOpenAssignments={setAssignmentsTraining}
-        />
-      )}
+    <TrainingTable
+      data={filteredTraining}
+      isLoading={false}
+      onEdit={handleEditTraining}
+      onDelete={handleDeleteTraining}
+      visibleColumns={visibleColumns as Set<string>}
+      assignmentSummaries={assignmentSummaries}
+      onOpenAssignments={setAssignmentsTraining}
     />
   );
 
@@ -994,21 +918,15 @@ const Training: React.FC = () => {
             justifyContent="space-between"
             sx={{ gap: "20px" }}
           >
-            {/* Left side: FilterBy, GroupBy, Search */}
+            {/* Left side: FilterBy, Search */}
             <Stack direction="row" spacing={2} alignItems="center">
-              <FilterBy
+              <TableFilter
                 columns={trainingFilterColumns}
                 onFilterChange={handleTrainingFilterChange}
-              />
-
-              <GroupBy
-                options={[
-                  { id: "status", label: "Status" },
-                  { id: "provider", label: "Provider" },
-                  { id: "department", label: "Department" },
-                  { id: "quarter", label: "Quarter (year)" },
-                ]}
-                onGroupChange={handleGroupChange}
+                defaultConditions={trainingFilterConditions}
+                defaultLogic={trainingFilterLogic}
+                data={trainingData}
+                getFieldValue={getTrainingFieldValue}
               />
 
               <ColumnSelector
@@ -1077,16 +995,13 @@ const Training: React.FC = () => {
             sx={{ gap: "20px" }}
           >
             <Stack direction="row" spacing={2} alignItems="center">
-              <FilterBy
+              <TableFilter
                 columns={evidenceFilterColumns}
                 onFilterChange={handleEvidenceFilterChange}
-              />
-              <GroupBy
-                options={[
-                  { id: "evidence_type", label: "Evidence type" },
-                  { id: "training", label: "Training" },
-                ]}
-                onGroupChange={handleGroupChangeEvidence}
+                defaultConditions={evidenceFilterConditions}
+                defaultLogic={evidenceFilterLogic}
+                data={evidenceHubData}
+                getFieldValue={getEvidenceFieldValue}
               />
               <ColumnSelector
                 columns={evidenceAllColumns}
@@ -1125,23 +1040,16 @@ const Training: React.FC = () => {
             </Stack>
           </Stack>
 
-          <GroupedTableView
-            groupedData={groupedEvidence}
-            ungroupedData={filteredEvidence}
-            renderTable={(data, options) => (
-              <EvidenceHubTable
-                data={data}
-                isLoading={isEvidenceLoading}
-                onEdit={handleEditEvidence}
-                onDelete={handleDeleteEvidence}
-                onPreview={handlePreviewEvidence}
-                modelInventoryData={[]}
-                trainingData={trainingData as any}
-                deletingId={deletingEvidenceId}
-                hidePagination={options?.hidePagination}
-                visibleColumns={evidenceVisibleColumns as Set<string>}
-              />
-            )}
+          <EvidenceHubTable
+            data={filteredEvidence}
+            isLoading={isEvidenceLoading}
+            onEdit={handleEditEvidence}
+            onDelete={handleDeleteEvidence}
+            onPreview={handlePreviewEvidence}
+            modelInventoryData={[]}
+            trainingData={trainingData as any}
+            deletingId={deletingEvidenceId}
+            visibleColumns={evidenceVisibleColumns as Set<string>}
           />
         </>
       )}

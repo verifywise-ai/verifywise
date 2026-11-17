@@ -7,6 +7,7 @@ import PageTour from "../../components/PageTour";
 import { PageHeaderExtended } from "../../components/Layout/PageHeaderExtended";
 import { usePolicies } from "../../../application/hooks/usePolicies";
 import { useTags } from "../../../application/hooks/useTags";
+import { usePolicyTemplates } from "../../../application/hooks/usePolicyTemplates";
 import PolicyManager from "./PolicyManager";
 import PolicyTemplates from "./PolicyTemplates";
 import PolicySteps from "./PolicySteps";
@@ -14,24 +15,17 @@ import PolicySteps from "./PolicySteps";
 const PolicyDashboard: React.FC = () => {
   const { data: policies = [], isLoading: isPoliciesLoading } = usePolicies();
   const { data: tags = [], isLoading: isTagsLoading } = useTags();
-  const [isTemplatesLoading, setIsTemplatesLoading] = useState(true);
   const [isInitialLoadComplete, setIsInitialLoadComplete] = useState(false);
-  const [templateCount, setTemplateCount] = useState(0);
+  // Template count for the tab badge now comes from the policy_templates
+  // table (#5261) instead of the static JSON file.
+  const { data: templates = [], isLoading: isTemplatesLoading } = usePolicyTemplates();
+  const templateCount = templates.length;
 
   const navigate = useNavigate();
   const location = useLocation();
   const currentPath = location.pathname;
   const isPolicyTemplateTab = currentPath.includes("/policies/templates");
   const activeTab = isPolicyTemplateTab ? "templates" : "policies";
-
-  useEffect(() => {
-    setIsTemplatesLoading(true);
-    fetch("/data/PolicyTemplates.json")
-      .then((res) => res.json())
-      .then((data: unknown[]) => setTemplateCount(data.length))
-      .catch(() => {})
-      .finally(() => setIsTemplatesLoading(false));
-  }, []);
 
   useEffect(() => {
     if (!isPoliciesLoading && !isTagsLoading) {

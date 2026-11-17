@@ -172,7 +172,7 @@ cd EvaluationModule && python -m pytest tests/ -m "not integration"
 | `test_evaluation_modes.py` | `evaluationMode = standard / scorer / both`; `selectedScorers` filtering |
 | `test_metrics_and_usecases.py` | All 20 metric mappings; default metric sets per task type (chatbot/rag/agent); RAG context-missing skip; multi-turn fixed metric set; known `metric_thresholds` vs `thresholds` mismatch |
 | `test_custom_scorers.py` | Object vs legacy string `judgeModel`; `{{input}}/{{output}}/{{expected}}` template rendering; PASS/FAIL boundary; provider client dispatch (OpenAI / Anthropic / Mistral / self-hosted) |
-| `test_run_evaluation_unit.py` | Provider → `runner_provider` mapping (all 10 aliases); `scorerApiKeys` env injection; legacy `scorerApiKey`; judge LLM env injection (`OPENAI_API_BASE` for self-hosted); `_upsert_judge_scorer` |
+| `test_run_evaluation_unit.py` | Provider → `runner_provider` mapping (all 10 aliases); `scorerApiKeys` env injection; legacy `scorerApiKey`; judge LLM env injection (`OPENAI_API_BASE` for self-hosted) |
 | `test_api_experiments.py` | FastAPI experiments CRUD via `TestClient`; middleware org-id propagation; model-validation endpoint |
 | `test_integration_openrouter.py` | **Opt-in.** Real API smoke per provider |
 

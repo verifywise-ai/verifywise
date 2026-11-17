@@ -12,7 +12,12 @@ import {
   type OnConnect,
   BackgroundVariant,
 } from "@xyflow/react";
-import { brand, background, border as borderPalette } from "../themes/palette";
+import {
+  brand,
+  background,
+  border as borderPalette,
+  palette as vwPalette,
+} from "../themes/palette";
 import "@xyflow/react/dist/style.css";
 
 const initialNodes: Node[] = [
@@ -52,7 +57,7 @@ const initialNodes: Node[] = [
     type: "output",
     data: { label: "Governance Report" },
     position: { x: 250, y: 300 },
-    style: { background: "#4CAF93", color: "white", border: "none" },
+    style: { background: vwPalette.brand.primary, color: "white", border: "none" },
   },
 ];
 

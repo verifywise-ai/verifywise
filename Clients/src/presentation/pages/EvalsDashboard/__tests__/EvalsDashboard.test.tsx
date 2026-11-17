@@ -1,10 +1,15 @@
 import { screen } from "@testing-library/react";
+import { Route, Routes } from "react-router";
 import { renderWithProviders } from "../../../../test/renderWithProviders";
+
+const mockGetArenaSetting = vi.hoisted(() => vi.fn());
+const mockGetProject = vi.hoisted(() => vi.fn());
+const mockGetAllProjects = vi.hoisted(() => vi.fn());
 
 // Mock the deepEval repository
 vi.mock("../../../../application/repository/deepEval.repository", () => ({
-  getAllProjects: vi.fn().mockResolvedValue([]),
-  getProject: vi.fn().mockResolvedValue(null),
+  getAllProjects: (...args: unknown[]) => mockGetAllProjects(...args),
+  getProject: (...args: unknown[]) => mockGetProject(...args),
   createProject: vi.fn(),
   updateProject: vi.fn(),
   deleteProject: vi.fn(),
@@ -23,6 +28,8 @@ vi.mock("../../../../application/repository/deepEval.repository", () => ({
   deleteLlmApiKey: vi.fn(),
   addLlmApiKey: vi.fn(),
   verifyLlmApiKey: vi.fn(),
+  getArenaSetting: (...args: unknown[]) => mockGetArenaSetting(...args),
+  updateArenaSetting: vi.fn(),
 }));
 
 // Mock evalModelsService
@@ -76,14 +83,6 @@ vi.mock("../../../../application/contexts/EvalsSidebar.context", () => ({
 }));
 
 // Mock permissions
-vi.mock("../../../../application/constants/permissions", () => ({
-  default: {
-    evals: {
-      manageApiKeys: ["Admin"],
-    },
-  },
-}));
-
 // Mock env vars
 vi.mock("../../../../../env.vars", () => ({
   ENV_VARs: {
@@ -181,6 +180,9 @@ describe("EvalsDashboard", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     localStorage.clear();
+    mockGetProject.mockResolvedValue(null);
+    mockGetAllProjects.mockResolvedValue([]);
+    mockGetArenaSetting.mockResolvedValue({ enabled: false, configured: false });
   });
 
   it("renders without crashing", async () => {
@@ -189,5 +191,45 @@ describe("EvalsDashboard", () => {
     // The component should render its root layout (breadcrumbs + content area)
     expect(container.firstChild).toBeInTheDocument();
     expect(screen.getByTestId("breadcrumbs")).toBeInTheDocument();
+  });
+
+  describe("Arena deep link", () => {
+    const renderArenaTab = () =>
+      renderWithProviders(
+        <Routes>
+          <Route path="/evals/:projectId" element={<EvalsDashboard />} />
+        </Routes>,
+        { route: "/evals/p1#arena" },
+      );
+
+    beforeEach(() => {
+      const project = { id: "p1", name: "Project 1", orgId: "org-1", useCase: "chatbot" };
+      mockGetProject.mockResolvedValue({ project });
+      mockGetAllProjects.mockResolvedValue({ projects: [project] });
+    });
+
+    it("shows the turned-off state instead of the Arena page when Arena is off", async () => {
+      renderArenaTab();
+      expect(
+        await screen.findByText(/Arena is turned off for your organization/),
+      ).toBeInTheDocument();
+      expect(screen.queryByTestId("arena-page")).not.toBeInTheDocument();
+    });
+
+    it("shows a load error, not the turned-off state, when the setting can't be loaded", async () => {
+      mockGetArenaSetting.mockRejectedValue(new Error("500"));
+      renderArenaTab();
+      expect(
+        await screen.findByText("Could not load the Arena setting.", undefined, { timeout: 5000 }),
+      ).toBeInTheDocument();
+      expect(screen.queryByText(/Arena is turned off/)).not.toBeInTheDocument();
+      expect(screen.queryByTestId("arena-page")).not.toBeInTheDocument();
+    });
+
+    it("shows the Arena page when Arena is on", async () => {
+      mockGetArenaSetting.mockResolvedValue({ enabled: true, configured: false });
+      renderArenaTab();
+      expect(await screen.findByTestId("arena-page")).toBeInTheDocument();
+    });
   });
 });

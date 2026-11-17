@@ -1,10 +1,10 @@
 import { Transaction, QueryTypes } from "sequelize";
 import { sequelize } from "../database/db";
 import { IPolicy, PolicyTag, PolicyTagsSet } from "../domain.layer/interfaces/i.policy";
-import { PolicyManagerModel } from "../domain.layer/models/policy/policy.model";
-import { TenantAutomationActionModel } from "../domain.layer/models/tenantAutomationAction/tenantAutomationAction.model";
-import { replaceTemplateVariables } from "./automation/automation.utils";
-import { enqueueAutomationAction } from "../services/automations/automationProducer";
+import {
+  enqueueAutomationActions,
+  getEventAutomationActionsQuery,
+} from "./automation/automationActions.utils";
 import {
   buildPolicyReplacements,
   buildPolicyUpdateReplacements,
@@ -13,6 +13,72 @@ import {
   deleteAllCustomFieldValuesForEntityQuery,
   fetchCustomFieldsForEntities,
 } from "./customField.utils";
+import { findUsersNotInOrganization, parseReferencedIds } from "./user.utils";
+import {
+  CLEAR_REVIEW_REMINDERS_ON_DATE_CHANGE_SQL,
+  POLICY_REVIEW_DATE_SQL,
+  toReviewDateValue,
+} from "./policyReviewDate.utils";
+import { runInSavepoint } from "../config/changeHistory.config";
+import logger from "./logger/fileLogger";
+import { recordEntityDeletion, recordUpdateChanges } from "./changeHistory.base.utils";
+import { recordPolicyStatusChange } from "./policyApprovalDecision.utils";
+import { ValidationException } from "../domain.layer/exceptions/custom.exception";
+import { deleteNotificationsByEntityQuery } from "./notification.utils";
+import { NotificationEntityType } from "../domain.layer/interfaces/i.notification";
+
+/**
+ * Tenant guard for policy owners and reviewers: every id must be a member of
+ * the organization, so names and notifications never cross tenants.
+ *
+ * @throws ValidationException when any id belongs to no member of the organization.
+ */
+export const assertPolicyUsersInOrganization = async (
+  userIds: Array<number | string | null | undefined>,
+  field: "policy_owner_id" | "assigned_reviewer_ids" | "reviewer_ids" | "reviewerId",
+  organizationId: number,
+  transaction?: Transaction,
+): Promise<void> => {
+  // Fails closed: a malformed id (5.5, "5x") is rejected, never skipped.
+  const ids = parseReferencedIds(userIds);
+  if (ids !== null && ids.length === 0) return;
+  const outside =
+    ids === null
+      ? userIds
+      : await findUsersNotInOrganization(ids, organizationId, transaction ?? null);
+  if (outside.length === 0) return;
+  if (field === "policy_owner_id") {
+    throw new ValidationException(
+      "The policy owner must be a member of this organization",
+      field,
+      outside,
+    );
+  }
+  throw new ValidationException("Reviewers must be members of this organization", field, outside);
+};
+
+/**
+ * True when the policy exists in the organization. With `lock`, the row is
+ * locked FOR UPDATE until the transaction ends, so concurrent writes that
+ * depend on the policy (e.g. linking objects) run one after another.
+ */
+export const policyExistsInOrganizationQuery = async (
+  organizationId: number,
+  policyId: number,
+  transaction?: Transaction,
+  lock = false,
+): Promise<boolean> => {
+  if (!Number.isInteger(policyId) || policyId <= 0) return false;
+  const sql = lock
+    ? "SELECT id FROM policy_manager WHERE id = :policyId AND organization_id = :organizationId FOR UPDATE"
+    : "SELECT id FROM policy_manager WHERE id = :policyId AND organization_id = :organizationId";
+  const rows = await sequelize.query(sql, {
+    replacements: { policyId, organizationId },
+    type: QueryTypes.SELECT,
+    transaction,
+  });
+  return rows.length > 0;
+};
 
 export type PolicyReviewStatus = "pending_review" | "approved" | "changes_requested";
 
@@ -50,10 +116,25 @@ export const updatePolicyReviewStatusQuery = async (
   );
 };
 
+/**
+ * A policy row without the review reminder stamps (P-H3). They are the daily
+ * sweep's bookkeeping, not policy data: rows read with `pm.*` or
+ * `RETURNING *` pass through here before they leave for the API or the
+ * advisor, so responses keep their shape.
+ */
+export const omitReminderStamps = <T extends Record<string, any>>(
+  row: T,
+): Omit<T, "due_soon_reminded_at" | "overdue_reminded_at"> => {
+  if (!row || typeof row !== "object") return row;
+  const { due_soon_reminded_at: _dueSoon, overdue_reminded_at: _overdue, ...rest } = row;
+  return rest;
+};
+
 export const getAllPoliciesQuery = async (organizationId: number) => {
   const result = (await sequelize.query(
     `SELECT
       pm.*,
+      ${POLICY_REVIEW_DATE_SQL},
       COALESCE(
         ARRAY_AGG(DISTINCT pmr.user_id) FILTER (WHERE pmr.user_id IS NOT NULL),
         ARRAY[]::INTEGER[]
@@ -71,38 +152,142 @@ export const getAllPoliciesQuery = async (organizationId: number) => {
 
   const ids = result.map((p) => p.id).filter((id): id is number => typeof id === "number");
   const customFieldsByPolicy = await fetchCustomFieldsForEntities("policy", ids, organizationId);
-  for (const p of result) {
-    p.custom_fields = customFieldsByPolicy.get(p.id) ?? [];
-  }
-  return result;
+  return result.map((p): any => ({
+    ...omitReminderStamps(p),
+    custom_fields: customFieldsByPolicy.get(p.id) ?? [],
+  }));
 };
 
-export const getAllPoliciesDueSoonQuery = async (organizationId: number, daysAhead: number = 7) => {
-  const result = (await sequelize.query(
-    `SELECT 
-        pm.*,
-        array_agg(pm_rev.user_id) AS reviewer_ids
-      FROM verifywise.policy_manager AS pm
-      INNER JOIN verifywise.policy_manager__assigned_reviewer_ids AS pm_rev
-        ON pm.id = pm_rev.policy_manager_id
-      WHERE pm.organization_id = :organizationId
-        AND pm.next_review_date IS NOT NULL
-        AND pm.next_review_date <= NOW() + INTERVAL '${daysAhead} days'
-        AND pm.next_review_date >= NOW()
-      GROUP BY pm.id
-      ORDER BY pm.next_review_date ASC;`,
-    {
-      replacements: { organizationId },
-    },
-  )) as [(PolicyManagerModel & { reviewer_ids: number[] })[], number];
+export type PolicyReminderKind = "due_soon" | "overdue";
 
-  return result[0];
+export interface PolicyReminderDue {
+  id: number;
+  title: string;
+  /** The review day, "YYYY-MM-DD". */
+  review_date: string;
+  kind: PolicyReminderKind;
+  recipient_ids: number[];
+}
+
+/** Days before the review date in which a policy counts as due soon. */
+export const POLICY_REVIEW_DUE_SOON_DAYS = 7;
+
+const POLICY_REMINDER_COLUMNS: Record<PolicyReminderKind, string> = {
+  due_soon: "due_soon_reminded_at",
+  overdue: "overdue_reminded_at",
 };
 
-export const getPolicyByIdQuery = async (organizationId: number, id: number) => {
+const isOrgMember = (userIdSql: string) => `EXISTS (
+  SELECT 1 FROM organization_members om
+   WHERE om.organization_id = pm.organization_id AND om.user_id = ${userIdSql}
+)`;
+
+/**
+ * Policies of the organization with a review reminder waiting (P-H3, P-M2):
+ * not retired, review day within the next seven days or passed, and that
+ * kind not sent yet. The review date is a calendar day stored at midnight, so
+ * it is compared by day against CURRENT_DATE, as the training sweep does.
+ *
+ * Recipients are the owner and the assigned reviewers who are still members
+ * of the organization; when there is none, the author, if still a member. A
+ * policy nobody can be told about is not returned.
+ */
+export const findPolicyRemindersDueQuery = async (
+  organizationId: number,
+): Promise<PolicyReminderDue[]> => {
+  return (await sequelize.query(
+    `SELECT due.id, due.title, due.review_date, due.kind, due.recipient_ids
+       FROM (
+         SELECT pm.id, pm.title,
+                to_char(pm.next_review_date, 'YYYY-MM-DD') AS review_date,
+                CASE WHEN pm.next_review_date::date < CURRENT_DATE
+                     THEN 'overdue' ELSE 'due_soon' END AS kind,
+                COALESCE(
+                  (SELECT array_agg(assigned.user_id ORDER BY assigned.user_id)
+                     FROM (
+                       SELECT pm.policy_owner_id AS user_id
+                       UNION
+                       SELECT r.user_id
+                         FROM policy_manager__assigned_reviewer_ids r
+                        WHERE r.organization_id = pm.organization_id
+                          AND r.policy_manager_id = pm.id
+                     ) assigned
+                    WHERE ${isOrgMember("assigned.user_id")}),
+                  (SELECT ARRAY[pm.author_id] WHERE ${isOrgMember("pm.author_id")})
+                ) AS recipient_ids
+           FROM policy_manager pm
+          WHERE pm.organization_id = :organizationId
+            AND pm.status IS DISTINCT FROM 'Archived'
+            AND pm.status IS DISTINCT FROM 'Deprecated'
+            AND pm.next_review_date IS NOT NULL
+            AND (
+              (pm.next_review_date::date < CURRENT_DATE AND pm.overdue_reminded_at IS NULL)
+              OR (
+                pm.next_review_date::date BETWEEN CURRENT_DATE
+                  AND CURRENT_DATE + ${POLICY_REVIEW_DUE_SOON_DAYS}
+                AND pm.due_soon_reminded_at IS NULL
+              )
+            )
+       ) due
+      WHERE due.recipient_ids IS NOT NULL
+      ORDER BY due.id`,
+    { replacements: { organizationId }, type: QueryTypes.SELECT },
+  )) as PolicyReminderDue[];
+};
+
+/**
+ * Record that the reminder of this kind went out for the policy. Stamps only
+ * while the row still has the review day the sweep selected (`reviewDate`,
+ * "YYYY-MM-DD") and the kind is unstamped, so a date changed mid-sweep is not
+ * marked reminded. Returns whether the policy was stamped.
+ */
+export const markPolicyReminderSentQuery = async (
+  id: number,
+  kind: PolicyReminderKind,
+  reviewDate: string,
+  organizationId: number,
+): Promise<boolean> => {
+  const column = POLICY_REMINDER_COLUMNS[kind];
+  const [, affected] = (await sequelize.query(
+    `UPDATE policy_manager
+        SET ${column} = now()
+      WHERE organization_id = :organizationId AND id = :id
+        AND next_review_date::date = CAST(:reviewDate AS date)
+        AND ${column} IS NULL`,
+    { replacements: { organizationId, id, reviewDate }, type: QueryTypes.UPDATE },
+  )) as unknown as [unknown, number];
+  return affected > 0;
+};
+
+/**
+ * Full names of the given users, for automation templates. Returns [] without
+ * querying when there are no ids: `IN ()` is a SQL syntax error (P-H2).
+ */
+const getReviewerNamesQuery = async (
+  reviewerIds: number[] | null | undefined,
+  transaction?: Transaction,
+): Promise<{ full_name: string }[]> => {
+  const ids = reviewerIds ?? [];
+  if (ids.length === 0) return [];
+  return (await sequelize.query(
+    `SELECT name || ' ' || surname AS full_name FROM users WHERE id IN (:reviewer_ids);`,
+    { replacements: { reviewer_ids: ids }, transaction, type: QueryTypes.SELECT },
+  )) as { full_name: string }[];
+};
+
+/**
+ * A policy with its assigned reviewer ids. Pass the transaction when reading
+ * inside a write, or the read misses the uncommitted change (P-H1).
+ */
+export const getPolicyByIdQuery = async (
+  organizationId: number,
+  id: number,
+  transaction?: Transaction,
+) => {
   const result = (await sequelize.query(
     `SELECT
       pm.*,
+      ${POLICY_REVIEW_DATE_SQL},
       COALESCE(
         ARRAY_AGG(DISTINCT pmr.user_id) FILTER (WHERE pmr.user_id IS NOT NULL),
         ARRAY[]::INTEGER[]
@@ -115,17 +300,17 @@ export const getPolicyByIdQuery = async (organizationId: number, id: number) => 
     {
       replacements: { organizationId, id },
       type: QueryTypes.SELECT,
+      transaction,
     },
   )) as any[];
 
-  return result;
+  return result.map((row): any => omitReminderStamps(row));
 };
 
-const verifyPolicyTags = (policyTags: PolicyTag[]) => {
-  for (const tag of policyTags) {
-    if (!PolicyTagsSet.has(tag)) {
-      throw new Error(`Invalid policy tag: ${tag}`);
-    }
+/** @throws ValidationException (400) for a non-array or an unknown tag, instead of a 500 (P-L6). */
+const verifyPolicyTags = (policyTags: unknown) => {
+  if (!Array.isArray(policyTags) || policyTags.some((tag) => !PolicyTagsSet.has(tag))) {
+    throw new ValidationException("Choose tags from the list", "tags", policyTags);
   }
 };
 
@@ -139,22 +324,31 @@ export const createPolicyQuery = async (
 
   const ownerId = policy.policy_owner_id ?? null;
   const reviewerIds = (policy.assigned_reviewer_ids || []).filter((id) => id !== ownerId);
+  await assertPolicyUsersInOrganization([ownerId], "policy_owner_id", organizationId, transaction);
+  await assertPolicyUsersInOrganization(
+    reviewerIds,
+    "assigned_reviewer_ids",
+    organizationId,
+    transaction,
+  );
 
   // Insert policy without assigned_reviewer_ids
   const result = (await sequelize.query(
-    `INSERT INTO policy_manager (
+    `INSERT INTO policy_manager AS pm (
       organization_id, title, content_html, status, tags, next_review_date, author_id, policy_owner_id, last_updated_by, last_updated_at, is_demo
     ) VALUES (
-      :organization_id, :title, :content_html, :status, ARRAY[:tags], :next_review_date, :author_id, :policy_owner_id, :last_updated_by, :last_updated_at, :is_demo
-    ) RETURNING *`,
+      :organization_id, :title, :content_html, :status, ARRAY(SELECT jsonb_array_elements_text(CAST(:tags AS jsonb))), :next_review_date, :author_id, :policy_owner_id, :last_updated_by, :last_updated_at, :is_demo
+    ) RETURNING *, ${POLICY_REVIEW_DATE_SQL}`,
     {
       replacements: {
         organization_id: organizationId,
         title: policy.title,
         content_html: policy.content_html,
-        status: policy.status,
-        tags: policy.tags,
-        next_review_date: policy.next_review_date,
+        // New policies start as Draft when no status is sent.
+        status: policy.status ?? "Draft",
+        // JSON-bound so an empty list stores '{}' (ARRAY[] has no type, P-L6).
+        tags: JSON.stringify(policy.tags ?? []),
+        next_review_date: toReviewDateValue(policy.next_review_date),
         author_id: userId,
         policy_owner_id: ownerId,
         last_updated_by: userId,
@@ -166,7 +360,7 @@ export const createPolicyQuery = async (
     },
   )) as any;
 
-  const createdPolicy = result[0][0] as any;
+  const createdPolicy = omitReminderStamps(result[0][0]) as any;
   const policyId = createdPolicy.id;
 
   // Insert assigned reviewers into mapping table
@@ -187,60 +381,18 @@ export const createPolicyQuery = async (
   // Add assigned_reviewer_ids to the returned object for consistency
   createdPolicy.assigned_reviewer_ids = reviewerIds;
 
-  const automations = (await sequelize.query(
-    `SELECT
-      pat.key AS trigger_key,
-      paa.key AS action_key,
-      a.id AS automation_id,
-      aa.*
-    FROM automation_triggers pat JOIN automations a ON a.trigger_id = pat.id AND a.organization_id = :organizationId JOIN automation_actions_data aa ON a.id = aa.automation_id AND aa.organization_id = :organizationId JOIN automation_actions paa ON aa.action_type_id = paa.id WHERE pat.key = 'policy_added' AND a.is_active ORDER BY aa."order" ASC;`,
-    { replacements: { organizationId }, transaction },
-  )) as [
-    (TenantAutomationActionModel & {
-      trigger_key: string;
-      action_key: string;
-      automation_id: number;
-    })[],
-    number,
-  ];
-  if (automations[0].length > 0) {
-    const automation = automations[0][0];
-    if (automation["trigger_key"] === "policy_added") {
-      const reviewer_names = (await sequelize.query(
-        `SELECT name || ' ' || surname AS full_name FROM users WHERE id IN(:reviewer_ids);`,
-        {
-          replacements: {
-            reviewer_ids: createdPolicy.assigned_reviewer_ids || [],
-          },
-          transaction,
-          type: QueryTypes.SELECT,
-        },
-      )) as { full_name: string }[];
-
-      const params = automation.params!;
-
-      // Build replacements
-      const replacements = buildPolicyReplacements({
-        ...createdPolicy,
-        reviewer_names: reviewer_names.map((r) => r.full_name).join(", "),
-      });
-
-      // Replace variables in subject and body
-      const processedParams = {
-        ...params,
-        subject: replaceTemplateVariables(params.subject || "", replacements),
-        body: replaceTemplateVariables(params.body || "", replacements),
-        automation_id: automation.automation_id,
-      };
-
-      // Enqueue with processed params
-      await enqueueAutomationAction(automation.action_key, {
-        ...processedParams,
-        organizationId,
-      });
-    } else {
-      console.warn(`No matching trigger found for key: ${automation["trigger_key"]}`);
-    }
+  // Every action of every active automation (legacy ones: the first only), after commit (P-L12).
+  const actions = await getEventAutomationActionsQuery(organizationId, "policy_added", transaction);
+  if (actions.length > 0) {
+    const reviewerNames = await getReviewerNamesQuery(
+      createdPolicy.assigned_reviewer_ids,
+      transaction,
+    );
+    const replacements = buildPolicyReplacements({
+      ...createdPolicy,
+      reviewer_names: reviewerNames.map((r) => r.full_name).join(", "),
+    });
+    await enqueueAutomationActions(actions, replacements, organizationId, transaction);
   }
 
   return createdPolicy;
@@ -253,7 +405,32 @@ export const updatePolicyByIdQuery = async (
   userId: number,
   transaction: Transaction,
 ) => {
-  const existingPolicy = await getPolicyByIdQuery(organizationId, id);
+  const existingPolicy = await getPolicyByIdQuery(organizationId, id, transaction);
+
+  // Only newly named users are checked, so a policy whose owner or reviewer
+  // has left the organization can still be saved.
+  const existingRow = (existingPolicy?.[0] ?? {}) as Partial<IPolicy>;
+  if (
+    policy.policy_owner_id !== undefined &&
+    Number(policy.policy_owner_id) !== Number(existingRow.policy_owner_id)
+  ) {
+    await assertPolicyUsersInOrganization(
+      [policy.policy_owner_id],
+      "policy_owner_id",
+      organizationId,
+      transaction,
+    );
+  }
+  if (policy.assigned_reviewer_ids) {
+    const alreadyAssigned = new Set((existingRow.assigned_reviewer_ids || []).map(Number));
+    await assertPolicyUsersInOrganization(
+      policy.assigned_reviewer_ids.filter((rid) => !alreadyAssigned.has(Number(rid))),
+      "assigned_reviewer_ids",
+      organizationId,
+      transaction,
+    );
+  }
+
   const updatePolicy: Partial<Record<keyof IPolicy, any>> & { organizationId?: number } = {};
   const setClause = [
     "title",
@@ -270,6 +447,15 @@ export const updatePolicyByIdQuery = async (
         return true;
       }
 
+      // next_review_date is nullable: null or "" clears it.
+      if (f === "next_review_date") {
+        if (policy.next_review_date !== undefined) {
+          updatePolicy.next_review_date = toReviewDateValue(policy.next_review_date);
+          return true;
+        }
+        return false;
+      }
+
       // policy_owner_id is nullable — accept null/undefined explicitly so the caller can clear it
       if (f === "policy_owner_id") {
         if (policy.policy_owner_id !== undefined) {
@@ -281,7 +467,9 @@ export const updatePolicyByIdQuery = async (
 
       if (policy[f as keyof IPolicy] !== undefined && policy[f as keyof IPolicy]) {
         if (f === "tags") {
-          verifyPolicyTags(policy[f as keyof IPolicy] as PolicyTag[]);
+          verifyPolicyTags(policy.tags);
+          updatePolicy.tags = JSON.stringify(policy.tags);
+          return true;
         }
         updatePolicy[f as keyof IPolicy] = policy[f as keyof IPolicy];
         return true;
@@ -290,7 +478,10 @@ export const updatePolicyByIdQuery = async (
     })
     .map((f) => {
       if (f === "tags") {
-        return `${f} = ARRAY[:${f}]`;
+        return "tags = ARRAY(SELECT jsonb_array_elements_text(CAST(:tags AS jsonb)))";
+      }
+      if (f === "next_review_date") {
+        return `next_review_date = :next_review_date, ${CLEAR_REVIEW_REMINDERS_ON_DATE_CHANGE_SQL}`;
       }
       return `${f} = :${f}`;
     })
@@ -361,76 +552,73 @@ export const updatePolicyByIdQuery = async (
   }
 
   // Get the updated policy with reviewer IDs
-  const updatedPolicyResult = await getPolicyByIdQuery(organizationId, id);
+  const updatedPolicyResult = await getPolicyByIdQuery(organizationId, id, transaction);
   if (!updatedPolicyResult || updatedPolicyResult.length === 0) {
     throw new Error("Policy not found after update");
   }
   const updatedPolicy = updatedPolicyResult[0];
-  const automations = (await sequelize.query(
-    `SELECT
-      pat.key AS trigger_key,
-      paa.key AS action_key,
-      a.id AS automation_id,
-      aa.*
-    FROM automation_triggers pat JOIN automations a ON a.trigger_id = pat.id AND a.organization_id = :organizationId JOIN automation_actions_data aa ON a.id = aa.automation_id AND aa.organization_id = :organizationId JOIN automation_actions paa ON aa.action_type_id = paa.id WHERE pat.key = 'policy_updated' AND a.is_active ORDER BY aa."order" ASC;`,
-    { replacements: { organizationId }, transaction },
-  )) as [
-    (TenantAutomationActionModel & {
-      trigger_key: string;
-      action_key: string;
-      automation_id: number;
-    })[],
-    number,
-  ];
-  if (automations[0].length > 0) {
-    const automation = automations[0][0];
-    if (automation["trigger_key"] === "policy_updated") {
-      const reviewer_names = (await sequelize.query(
-        `SELECT name || ' ' || surname AS full_name FROM users WHERE id IN(:reviewer_ids);`,
-        {
-          replacements: {
-            reviewer_ids: (updatedPolicy as any).assigned_reviewer_ids || [],
-          },
-          transaction,
-          type: QueryTypes.SELECT,
-        },
-      )) as { full_name: string }[];
-
-      const params = automation.params!;
-
-      // Build replacements
-      const replacements = buildPolicyUpdateReplacements(existingPolicy[0], {
-        ...updatedPolicy,
-        reviewer_names: reviewer_names.map((r) => r.full_name).join(", "),
-      });
-
-      // Replace variables in subject and body
-      const processedParams = {
-        ...params,
-        subject: replaceTemplateVariables(params.subject || "", replacements),
-        body: replaceTemplateVariables(params.body || "", replacements),
-        automation_id: automation.automation_id,
-      };
-
-      // Enqueue with processed params
-      await enqueueAutomationAction(automation.action_key, {
-        ...processedParams,
-        organizationId,
-      });
-    } else {
-      console.warn(`No matching trigger found for key: ${automation["trigger_key"]}`);
-    }
+  // Every action of every active automation (legacy ones: the first only), after commit (P-L12).
+  const actions = await getEventAutomationActionsQuery(
+    organizationId,
+    "policy_updated",
+    transaction,
+  );
+  if (actions.length > 0) {
+    const reviewerNames = await getReviewerNamesQuery(
+      (updatedPolicy as any).assigned_reviewer_ids,
+      transaction,
+    );
+    const replacements = buildPolicyUpdateReplacements(existingPolicy[0], {
+      ...updatedPolicy,
+      reviewer_names: reviewerNames.map((r) => r.full_name).join(", "),
+    });
+    await enqueueAutomationActions(actions, replacements, organizationId, transaction);
   }
   return updatedPolicy;
+};
+
+/**
+ * Removes the rows that point at policies without a foreign key, which would
+ * otherwise survive the policies' delete: custom field values, folder
+ * mappings, CE marking links, task links, share links and in-app
+ * notifications. Run it in the delete's transaction, before the policies go.
+ * policy_change_history is kept on purpose. Shared by the single policy delete
+ * and the demo data delete.
+ */
+export const deletePolicyLeftoversQuery = async (
+  organizationId: number,
+  policyIds: number[],
+  transaction: Transaction,
+): Promise<void> => {
+  if (policyIds.length === 0) return;
+  for (const id of policyIds) {
+    await deleteAllCustomFieldValuesForEntityQuery("policy", id, organizationId, transaction);
+    await deleteNotificationsByEntityQuery(
+      NotificationEntityType.POLICY,
+      id,
+      organizationId,
+      transaction,
+    );
+  }
+  const leftovers = [
+    `DELETE FROM policy_folder_mappings WHERE organization_id = :organizationId AND policy_id IN (:ids)`,
+    `DELETE FROM ce_marking_policies WHERE organization_id = :organizationId AND policy_id IN (:ids)`,
+    `DELETE FROM task_entity_links WHERE organization_id = :organizationId AND entity_type = 'policy' AND entity_id IN (:ids)`,
+    `DELETE FROM share_links WHERE organization_id = :organizationId AND resource_type = 'policy' AND resource_id IN (:ids)`,
+  ];
+  for (const sql of leftovers) {
+    await sequelize.query(sql, { replacements: { organizationId, ids: policyIds }, transaction });
+  }
 };
 
 export const deletePolicyByIdQuery = async (
   organizationId: number,
   id: number,
+  userId: number | null,
   transaction: Transaction,
 ) => {
   // Get policy data with reviewer IDs BEFORE deleting (CASCADE will delete mappings)
-  const policyToDelete = await getPolicyByIdQuery(organizationId, id);
+  const policyToDelete = await getPolicyByIdQuery(organizationId, id, transaction);
 
   if (!policyToDelete || policyToDelete.length === 0) {
     return false;
@@ -438,7 +626,7 @@ export const deletePolicyByIdQuery = async (
 
   const deletedPolicyData = policyToDelete[0] as any;
 
-  await deleteAllCustomFieldValuesForEntityQuery("policy", id, organizationId, transaction);
+  await deletePolicyLeftoversQuery(organizationId, [id], transaction);
 
   // Delete the policy (CASCADE will handle mapping table deletion)
   await sequelize.query(
@@ -450,60 +638,37 @@ export const deletePolicyByIdQuery = async (
     },
   );
 
-  const automations = (await sequelize.query(
-    `SELECT
-      pat.key AS trigger_key,
-      paa.key AS action_key,
-      a.id AS automation_id,
-      aa.*
-    FROM automation_triggers pat JOIN automations a ON a.trigger_id = pat.id AND a.organization_id = :organizationId JOIN automation_actions_data aa ON a.id = aa.automation_id AND aa.organization_id = :organizationId JOIN automation_actions paa ON aa.action_type_id = paa.id WHERE pat.key = 'policy_deleted' AND a.is_active ORDER BY aa."order" ASC;`,
-    { replacements: { organizationId }, transaction },
-  )) as [
-    (TenantAutomationActionModel & {
-      trigger_key: string;
-      action_key: string;
-      automation_id: number;
-    })[],
-    number,
-  ];
-  if (automations[0].length > 0) {
-    const automation = automations[0][0];
-    if (automation["trigger_key"] === "policy_deleted") {
-      const reviewer_names = (await sequelize.query(
-        `SELECT name || ' ' || surname AS full_name FROM users WHERE id IN(:reviewer_ids);`,
-        {
-          replacements: {
-            reviewer_ids: deletedPolicyData.assigned_reviewer_ids || [],
-          },
-          transaction,
-          type: QueryTypes.SELECT,
-        },
-      )) as { full_name: string }[];
-
-      const params = automation.params!;
-
-      // Build replacements
-      const replacements = buildPolicyReplacements({
-        ...deletedPolicyData,
-        reviewer_names: reviewer_names.map((r) => r.full_name).join(", "),
-      });
-
-      // Replace variables in subject and body
-      const processedParams = {
-        ...params,
-        subject: replaceTemplateVariables(params.subject || "", replacements),
-        body: replaceTemplateVariables(params.body || "", replacements),
-        automation_id: automation.automation_id,
-      };
-
-      // Enqueue with processed params
-      await enqueueAutomationAction(automation.action_key, {
-        ...processedParams,
-        organizationId,
-      });
-    } else {
-      console.warn(`No matching trigger found for key: ${automation["trigger_key"]}`);
+  // Best-effort and savepointed: a failed history write never fails the delete.
+  // No acting user means no entry: recordEntityDeletion takes a user id and has
+  // no system flag, so a null actor would read as an anonymous user's change
+  // rather than a system one.
+  if (userId) {
+    try {
+      await runInSavepoint(
+        () => recordEntityDeletion("policy", id, userId, organizationId, transaction),
+        transaction,
+      );
+    } catch (error) {
+      logger.error(`Error recording policy deletion history: ${error}`);
     }
+  }
+
+  // Every action of every active automation (legacy ones: the first only), after commit (P-L12).
+  const actions = await getEventAutomationActionsQuery(
+    organizationId,
+    "policy_deleted",
+    transaction,
+  );
+  if (actions.length > 0) {
+    const reviewerNames = await getReviewerNamesQuery(
+      deletedPolicyData.assigned_reviewer_ids,
+      transaction,
+    );
+    const replacements = buildPolicyReplacements({
+      ...deletedPolicyData,
+      reviewer_names: reviewerNames.map((r) => r.full_name).join(", "),
+    });
+    await enqueueAutomationActions(actions, replacements, organizationId, transaction);
   }
 
   return true;
@@ -530,6 +695,7 @@ export const bulkArchivePoliciesQuery = async (
   ids: number[],
   userId: number,
   transaction: Transaction,
+  previousStatuses: Array<{ id: number; status: string }> = [],
 ): Promise<void> => {
   if (ids.length === 0) return;
 
@@ -550,21 +716,115 @@ export const bulkArchivePoliciesQuery = async (
       transaction,
     },
   );
+
+  // One status-change entry per policy whose status actually changed, from the
+  // status read under the row lock. Best-effort and savepointed.
+  for (const { id, status } of previousStatuses) {
+    if (status === "Archived") continue;
+    try {
+      await runInSavepoint(
+        () => recordPolicyStatusChange(organizationId, id, userId, status, "Archived", transaction),
+        transaction,
+      );
+    } catch (error) {
+      logger.error(`Error recording policy archive history: ${error}`);
+    }
+  }
+};
+
+type PolicyBulkValues = {
+  tags: string[];
+  assigned_reviewer_ids: number[];
+  policy_owner_id: number | null;
+};
+type PolicyBulkSnapshot = Map<number, PolicyBulkValues>;
+
+/**
+ * The tracked bulk-editable values (tags, reviewers) of the policies, by id,
+ * with the owner the reviewer rule needs.
+ */
+const snapshotPolicyBulkValues = async (
+  organizationId: number,
+  ids: number[],
+  transaction: Transaction,
+): Promise<PolicyBulkSnapshot> => {
+  const rows = (await sequelize.query(
+    `SELECT pm.id,
+            pm.policy_owner_id,
+            COALESCE(pm.tags, ARRAY[]::text[]) AS tags,
+            COALESCE(
+              ARRAY(
+                SELECT r.user_id FROM policy_manager__assigned_reviewer_ids r
+                WHERE r.organization_id = pm.organization_id AND r.policy_manager_id = pm.id
+                ORDER BY r.user_id
+              ),
+              ARRAY[]::int[]
+            ) AS assigned_reviewer_ids
+     FROM policy_manager pm
+     WHERE pm.organization_id = :organizationId AND pm.id IN (:ids)`,
+    { replacements: { organizationId, ids }, type: QueryTypes.SELECT, transaction },
+  )) as Array<{
+    id: number;
+    tags: string[];
+    assigned_reviewer_ids: number[];
+    policy_owner_id: number | null;
+  }>;
+  return new Map(
+    rows.map((r) => [
+      Number(r.id),
+      {
+        tags: r.tags,
+        assigned_reviewer_ids: r.assigned_reviewer_ids.map(Number),
+        policy_owner_id: r.policy_owner_id === null ? null : Number(r.policy_owner_id),
+      },
+    ]),
+  );
 };
 
 /**
- * Bulk-replace assigned reviewers for the given policies with a single reviewer.
- * Existing assignments for these (policy_id) rows are removed and one row per
- * policy is inserted, so every selected policy ends up with exactly one
- * assigned reviewer (the supplied `reviewerId`).
+ * Records one history entry per policy whose `field` changed, as the acting
+ * user: `afterValue` derives the written value from the policy's prior values,
+ * so no second read is needed. Policies with equal values get none.
+ */
+const recordBulkFieldHistory = async <F extends "tags" | "assigned_reviewer_ids">(
+  field: F,
+  organizationId: number,
+  userId: number,
+  before: PolicyBulkSnapshot,
+  afterValue: (prior: PolicyBulkValues) => PolicyBulkValues[F],
+  transaction: Transaction,
+): Promise<void> => {
+  for (const [id, prior] of before) {
+    await recordUpdateChanges(
+      "policy",
+      id,
+      { [field]: prior[field] },
+      { [field]: afterValue(prior) },
+      userId,
+      organizationId,
+      transaction,
+    );
+  }
+};
+
+/**
+ * Bulk-replace the team members (assigned reviewers) of the given policies
+ * with a single user. Existing assignments for these policies are removed and
+ * the user is added to each one, except a policy the user owns: create and
+ * update never keep the owner among the reviewers, so that policy is left
+ * with no team members. review_status is not touched: approval runs through
+ * the approval workflow, not through team membership.
  */
 export const bulkSetPoliciesReviewerQuery = async (
   organizationId: number,
   ids: number[],
   reviewerId: number,
+  userId: number,
   transaction: Transaction,
 ): Promise<void> => {
   if (ids.length === 0) return;
+  await assertPolicyUsersInOrganization([reviewerId], "reviewerId", organizationId, transaction);
+  const before = await snapshotPolicyBulkValues(organizationId, ids, transaction);
 
   await sequelize.query(
     `DELETE FROM policy_manager__assigned_reviewer_ids
@@ -573,34 +833,25 @@ export const bulkSetPoliciesReviewerQuery = async (
     { replacements: { organizationId, ids }, transaction },
   );
 
-  // Build a multi-row VALUES list, one per policy id, using indexed bindings.
-  const values = ids.map((_, i) => `(:organizationId, :pid_${i}, :reviewerId)`).join(", ");
-  const replacements: Record<string, unknown> = { organizationId, reviewerId };
-  ids.forEach((id, i) => {
-    replacements[`pid_${i}`] = id;
-  });
-
   await sequelize.query(
     `INSERT INTO policy_manager__assigned_reviewer_ids (organization_id, policy_manager_id, user_id)
-     VALUES ${values}
+     SELECT pm.organization_id, pm.id, :reviewerId
+     FROM policy_manager pm
+     WHERE pm.organization_id = :organizationId
+       AND pm.id IN (:ids)
+       AND pm.policy_owner_id IS DISTINCT FROM :reviewerId
      ON CONFLICT (policy_manager_id, user_id) DO NOTHING`,
-    { replacements, transaction },
+    { replacements: { organizationId, ids, reviewerId }, transaction },
   );
 
-  // Move each policy into "pending_review" so the new reviewer sees it on their queue.
-  await sequelize.query(
-    `UPDATE policy_manager
-       SET review_status = :reviewStatus
-     WHERE organization_id = :organizationId
-       AND id IN (:ids)`,
-    {
-      replacements: {
-        organizationId,
-        ids,
-        reviewStatus: "pending_review",
-      },
-      transaction,
-    },
+  // The insert above skips a policy the reviewer owns, leaving it with none.
+  await recordBulkFieldHistory(
+    "assigned_reviewer_ids",
+    organizationId,
+    userId,
+    before,
+    (prior) => (prior.policy_owner_id === reviewerId ? [] : [reviewerId]),
+    transaction,
   );
 };
 
@@ -615,9 +866,11 @@ export const bulkSetPoliciesTagsQuery = async (
   organizationId: number,
   ids: number[],
   tags: PolicyTag[],
+  userId: number,
   transaction: Transaction,
 ): Promise<void> => {
   if (ids.length === 0) return;
+  const before = await snapshotPolicyBulkValues(organizationId, ids, transaction);
 
   await sequelize.query(
     `UPDATE policy_manager
@@ -633,4 +886,7 @@ export const bulkSetPoliciesTagsQuery = async (
       transaction,
     },
   );
+
+  // The update writes the sent list as is, in order.
+  await recordBulkFieldHistory("tags", organizationId, userId, before, () => tags, transaction);
 };

@@ -37,6 +37,7 @@ import dayjs, { Dayjs } from "dayjs";
 import useFormattedDate from "../../../../application/hooks/useFormattedDate";
 import { AlertState } from "../../../../application/interfaces/appStates";
 import useProjectData from "../../../../application/hooks/useProjectData";
+import { radiusPx } from "../../../themes/palette";
 
 interface LocalAlertState extends AlertState {
   isToast: boolean;
@@ -187,7 +188,7 @@ const ReportsArchive: React.FC = () => {
   const cardStyle = {
     backgroundColor: theme.palette.background.main,
     border: `1px solid ${theme.palette.border.dark}`,
-    borderRadius: "4px",
+    borderRadius: radiusPx.sm,
     padding: "24px",
   };
 

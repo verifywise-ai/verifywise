@@ -1,6 +1,6 @@
 # VerifyWise - Development Guide
 
-> **Last Updated:** 2026-11-11
+> **Last Updated:** 2026-11-17
 
 This document contains cross-cutting rules for the VerifyWise codebase. Directory-scoped guides load automatically when working in each area:
 
@@ -36,7 +36,7 @@ Everything is in this repository. There is no separate plugin repository. The fo
 |------|-------|-----------|
 | Core frameworks (EU AI Act, ISO 42001, ISO 27001, NIST AI RMF; ids 1–4) | Hand-built tables, routes and pages | `docs/technical/domains/compliance-frameworks.md` |
 | 23 bundled frameworks (SOC 2, GDPR, HIPAA, EN 18286, ...; ids 5–27) | `Servers/structures/<Name>/*.structure.ts`, registry `Servers/structures/index.ts` | `docs/technical/guides/adding-new-framework.md` |
-| 8 extensions (Slack, MLflow, Azure AI Foundry, Model Lifecycle, Risk Import, Jira Assets, Jira incidents, Dataset Bulk Upload) | `Servers/extensions/<key>/` + `Clients/src/presentation/pages/Extensions/` | `docs/technical/infrastructure/extensions.md` |
+| 9 extensions (Slack, MLflow, Azure AI Foundry, Model lifecycle, Risk import, Jira Assets, Jira incidents, Dataset bulk upload, Framework import) | `Servers/extensions/<key>/` + `Clients/src/presentation/pages/Extensions/` (Framework import: `Framework/Components/FrameworkImportModal.tsx`) | `docs/technical/infrastructure/extensions.md` |
 
 ---
 
@@ -191,10 +191,15 @@ Check for an existing pattern before implementing a new one — these are alread
 used across most of `Clients/src`, so a bespoke version is nearly always a
 duplicate.
 
-House UI rules: sentence case for all screen text; border `#d0d5dd`; border
-radius 4px; green primary `#13715B`; 30px control height on desktop (buttons,
-inputs, selects, dropdown triggers) — mobile/touch primitives keep their larger
-sizes.
+House UI rules: sentence case for all screen text; colours, corners and fonts
+from tokens only (`themes/palette`: `border.*`, `brand.primary`, `radiusPx.*`,
+never a hex or `"4px"` typed into a screen — the phase 1 restyle values are
+`border.dark` `#D1D5D5`, `radiusPx.sm` 2px, `brand.primary` `#14715B`, and the
+classic look stays switchable until January 2027, see
+`docs/technical/guides/design-tokens.md`); 34px control height on desktop (buttons,
+inputs, selects, search boxes, dropdown triggers). That is the default of the
+house components (`CustomizableButton` medium, `Field`, `Select`, `SearchBox`),
+so use the defaults and don't force another height per page.
 
 ---
 
@@ -226,6 +231,7 @@ Read the relevant file BEFORE implementing changes in that area:
 | AI Apps bulk import and bulk assessment (spreadsheet import, questionnaires, worksheets) | `docs/technical/domains/ai-apps-bulk.md` |
 | Datasets | `docs/technical/domains/datasets.md` |
 | Tasks | `docs/technical/domains/tasks.md` |
+| Home queue (`/home` Today tab: "needs your attention" sources, counts, failure semantics, adding a source) | `docs/technical/domains/home-queue.md` |
 | Incidents | `docs/technical/domains/incidents.md` |
 | Intake forms (AI scoring with rule minimums, suggested risks, assessment job, one-time email, approval risks) | `docs/technical/domains/intake-forms.md` |
 | Evidence hub | `docs/technical/domains/evidence.md` |
@@ -242,6 +248,7 @@ Read the relevant file BEFORE implementing changes in that area:
 | Database schema | `docs/technical/architecture/database-schema.md` |
 | Authentication architecture | `docs/technical/architecture/authentication.md` |
 | Multi-tenancy architecture | `docs/technical/architecture/multi-tenancy.md` |
+| Change notices (what's changed card for restyles and moves; add an entry in every PR that moves or renames a page) | `docs/technical/frontend/change-notice.md` |
 
 > Backend-specific refs (middleware, logging, BullMQ, email, PDF) are in `Servers/CLAUDE.md`.
 > Frontend-specific refs (styling, components, design tokens) are in `Clients/CLAUDE.md`.

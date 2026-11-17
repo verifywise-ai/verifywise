@@ -158,7 +158,65 @@ export interface EntityConfig {
   fieldsToTrack: string[];
   fieldLabels: { [key: string]: string };
   fieldFormatters?: { [key: string]: FieldFormatter };
+  /**
+   * Per-field comparison key. When set, a change is recorded only if the key
+   * differs between the old and new value, instead of the formatted strings.
+   * For fields whose formatted value is a lossy summary (e.g. a text excerpt).
+   */
+  fieldComparators?: { [key: string]: (value: unknown) => string };
 }
+
+/** Longest excerpt of rich text kept in a history entry. */
+export const HISTORY_EXCERPT_LENGTH = 120;
+
+/** Tags that separate words; any other tag (b, i, span, a...) is dropped without a space. */
+const BLOCK_TAG =
+  /<\/?(?:p|div|li|ul|ol|br|hr|h[1-6]|tr|td|th|table|thead|tbody|blockquote|pre|section|article|header|footer)\b[^<>]*>/gi;
+
+const BASIC_ENTITIES: { [key: string]: string } = {
+  "&nbsp;": " ",
+  "&amp;": "&",
+  "&lt;": "<",
+  "&gt;": ">",
+  "&quot;": '"',
+  "&#39;": "'",
+  "&apos;": "'",
+};
+
+/**
+ * Strip the HTML's tags until none is left, so removing one can't join the
+ * rest into a new tag. A tag can't contain "<", so each match stops at the
+ * next one: linear work per pass even with many unclosed "<".
+ */
+const stripTags = (html: string): string => {
+  let previous: string;
+  let text = html;
+  do {
+    previous = text;
+    text = text.replace(BLOCK_TAG, " ").replace(/<[^<>]*>/g, "");
+  } while (text !== previous);
+  return text;
+};
+
+/**
+ * A readable one-line plain-text excerpt of an HTML value: tags stripped,
+ * then basic entities decoded in one pass (so nothing is decoded twice),
+ * whitespace collapsed, cut to HISTORY_EXCERPT_LENGTH characters with a
+ * trailing ellipsis when cut. The excerpt is text, not HTML: an encoded
+ * "&lt;" in the policy becomes "<" and must be shown as text. An empty
+ * result is "-".
+ */
+export const htmlExcerpt = (value: unknown): string => {
+  const text = stripTags(String(value ?? ""))
+    .replace(/&(?:nbsp|amp|lt|gt|quot|apos|#39);/g, (m) => BASIC_ENTITIES[m])
+    .replace(/\s+/g, " ")
+    .trim();
+  if (!text) return "-";
+  return text.length > HISTORY_EXCERPT_LENGTH ? `${text.slice(0, HISTORY_EXCERPT_LENGTH)}…` : text;
+};
+
+/** The HTML as stored, compared without surrounding whitespace; null equals empty. */
+const normalizedHtml = (value: unknown): string => String(value ?? "").trim();
 
 /**
  * Generic field formatters that can be reused across entities
@@ -188,6 +246,20 @@ export const GENERIC_FORMATTERS: { [key: string]: FieldFormatter } = {
       return Number.isNaN(parsed.getTime()) ? value : parsed.toISOString().slice(0, 10);
     }
     return String(value);
+  },
+
+  // Calendar-date formatter for TIMESTAMP (no time zone) columns that hold a
+  // day, e.g. a policy's next review date. Policy reads return it as a
+  // "YYYY-MM-DDT00:00:00.000Z" string (POLICY_REVIEW_DATE_SQL), which the date
+  // formatter slices. A raw node-pg read is a Date at local midnight; its local
+  // date parts are the stored day on any server time zone, where toISOString()
+  // would give the previous day east of UTC and record a change on every save.
+  calendarDate: async (value: unknown): Promise<string> => {
+    if (value instanceof Date && !Number.isNaN(value.getTime())) {
+      const pad = (n: number) => String(n).padStart(2, "0");
+      return `${value.getFullYear()}-${pad(value.getMonth() + 1)}-${pad(value.getDate())}`;
+    }
+    return GENERIC_FORMATTERS.date(value);
   },
 
   // Array formatter (preserves order - IMPORTANT for tracking reordering)
@@ -686,9 +758,11 @@ export const ENTITY_CONFIGS: { [key in EntityType]: EntityConfig } = {
       "next_review_date",
       "policy_owner_id",
       "assigned_reviewer_ids",
+      "content_html",
     ],
     fieldLabels: {
       title: "Title",
+      content_html: "Content",
       status: "Status",
       tags: "Tags",
       next_review_date: "Next review date",
@@ -697,10 +771,14 @@ export const ENTITY_CONFIGS: { [key in EntityType]: EntityConfig } = {
     },
     fieldFormatters: {
       tags: GENERIC_FORMATTERS.array,
-      next_review_date: GENERIC_FORMATTERS.date,
+      next_review_date: GENERIC_FORMATTERS.calendarDate,
       policy_owner_id: GENERIC_FORMATTERS.user,
       assigned_reviewer_ids: GENERIC_FORMATTERS.userArray,
+      content_html: async (value: unknown): Promise<string> => htmlExcerpt(value),
     },
+    // The excerpt is a summary: compare the HTML so an edit past the excerpt
+    // is still recorded.
+    fieldComparators: { content_html: normalizedHtml },
   },
 
   incident: {

@@ -32,6 +32,7 @@ import {
 import { useSsoFeatureEnabled } from "../../../../application/hooks/useSsoFeatureEnabled";
 import { MicrosoftSignIn } from "../../../components/MicrosoftSignIn";
 import Select from "../../../components/Inputs/Select";
+import { palette } from "../../../themes/palette";
 
 // Animated loading component specifically for login
 const LoginLoadingOverlay: React.FC = () => {
@@ -529,7 +530,7 @@ const Login: React.FC = () => {
                         top: "50%",
                         left: "50%",
                         transform: "translate(-50%, -50%)",
-                        backgroundColor: "#fff",
+                        backgroundColor: palette.background.main,
                         px: 2,
                         fontSize: 14,
                         color: theme.palette.text.secondary,

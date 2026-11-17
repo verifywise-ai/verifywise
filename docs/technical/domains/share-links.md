@@ -58,7 +58,7 @@ CREATE INDEX share_links_created_by_idx ON share_links(created_by);
 | `model` | model_inventories | AI/ML model inventory |
 | `vendor` | vendors | Vendor records |
 | `project` | projects | Project records |
-| `policy` | policies | Policy documents |
+| `policy` | policy_manager | Policy documents |
 | `risk` | projectrisks | Risk records |
 
 ## API Endpoints
@@ -108,10 +108,33 @@ CREATE INDEX share_links_created_by_idx ON share_links(created_by);
     },
     "is_enabled": true,
     "expires_at": null,
-    "shareable_url": "https://app.verifywise.ai/shared/models/abc123def456789..."
+    "shareable_url": "https://app.verifywise.ai/shared/models/abc123def456789...",
+    "warnings": []
   }
 }
 ```
+
+### Exposure warnings
+
+The create (`POST /shares`), update (`PATCH /shares/:id`) and list
+(`GET /shares/:resourceType/:resourceId`) responses carry a `warnings` array of
+translated messages (`shareLinkWarnings` in `utils/shareLinkWarnings.utils.ts`,
+translated in `shareLink.ctrl.ts`). Policy links can only be created through
+the API, so the response is where the caller learns what a link exposes. For an
+enabled, unexpired policy link:
+
+- A list link (`resource_id` 0, `isTableViewLink`, the same rule the shared view
+  uses) lists the organization's 100 most recently created policies (`id DESC`),
+  whatever their status.
+- `shareAllFields: true` shows every `policy_manager` column of each policy it
+  shows, the full policy text included (not joined data such as assigned
+  reviewers or tags).
+- Data export is on when `allowDataExport` is truthy, as the shared view decides. A
+  link created without `settings` gets the default, which turns it on.
+
+A disabled or expired link, and every other resource type, returns an empty
+array. Model, vendor, project and risk list links expose their records the same
+way but carry no warnings yet.
 
 ### Shared Data Response
 

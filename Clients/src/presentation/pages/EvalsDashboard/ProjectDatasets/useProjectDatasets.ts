@@ -18,10 +18,8 @@ import {
   isMultiTurnConversation,
 } from "../../../../application/repository/deepEval.repository";
 import type { FilterColumn } from "../../../components/Table/FilterBy";
-import { useTableGrouping, useGroupByState } from "../../../../application/hooks/useTableGrouping";
 import { useFilterBy } from "../../../../application/hooks/useFilterBy";
-import { useAuth } from "../../../../application/hooks/useAuth";
-import allowedRoles from "../../../../application/constants/permissions";
+import { useCanCheck } from "../../../../application/hooks/useCan";
 import type { ExampleTurnType, ExampleUseCase } from "./exampleDatasetPayloads";
 import type { BuiltInDataset, TemplateWithCategory } from "./types";
 
@@ -31,9 +29,9 @@ export type UseProjectDatasetsArgs = {
 
 export function useProjectDatasets({ orgId }: UseProjectDatasetsArgs) {
   // RBAC permissions
-  const { userRoleName } = useAuth();
-  const canUploadDataset = allowedRoles.evals.uploadDataset.includes(userRoleName);
-  const canDeleteDataset = allowedRoles.evals.deleteDataset.includes(userRoleName);
+  const can = useCanCheck();
+  const canUploadDataset = can("evals.edit");
+  const canDeleteDataset = can("evals.edit");
 
   // Tab state: "my" for user datasets, "templates" for built-in datasets
   const [activeTab, setActiveTab] = useState<"my" | "templates">("my");
@@ -43,11 +41,6 @@ export function useProjectDatasets({ orgId }: UseProjectDatasetsArgs) {
   const [loading, setLoading] = useState(false);
   const [loadingTemplatesList, setLoadingTemplatesList] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-  const {
-    groupBy: datasetsGroupBy,
-    groupSortOrder: datasetsGroupSortOrder,
-    handleGroupChange: handleDatasetsGroupChange,
-  } = useGroupByState();
   const [alert, setAlert] = useState<{ variant: "success" | "error"; body: string } | null>(null);
   const [uploading, setUploading] = useState(false);
   const [uploadModalOpen, setUploadModalOpen] = useState(false);
@@ -198,8 +191,12 @@ export function useProjectDatasets({ orgId }: UseProjectDatasetsArgs) {
   );
 
   // useFilterBy hook for templates
-  const { filterData: filterTemplateData, handleFilterChange: handleTemplateFilterChange } =
-    useFilterBy<TemplateWithCategory>(getTemplateFieldValue);
+  const {
+    filterData: filterTemplateData,
+    handleFilterChange: handleTemplateFilterChange,
+    conditions: templateFilterConditions,
+    logic: templateFilterLogic,
+  } = useFilterBy<TemplateWithCategory>(getTemplateFieldValue);
 
   // Filtered templates (sorting and pagination handled by TemplatesTable component)
   const filteredAndSortedTemplates = useMemo(() => {
@@ -319,7 +316,12 @@ export function useProjectDatasets({ orgId }: UseProjectDatasetsArgs) {
     [],
   );
 
-  const { filterData, handleFilterChange } = useFilterBy<BuiltInDataset>(getFieldValue);
+  const {
+    filterData,
+    handleFilterChange,
+    conditions: filterConditions,
+    logic: filterLogic,
+  } = useFilterBy<BuiltInDataset>(getFieldValue);
 
   const filteredDatasets = useMemo(() => {
     const afterFilter = filterData(datasets);
@@ -329,43 +331,6 @@ export function useProjectDatasets({ orgId }: UseProjectDatasetsArgs) {
       [d.name, d.path, d.use_case].filter(Boolean).join(" ").toLowerCase().includes(q),
     );
   }, [datasets, filterData, searchTerm]);
-
-  // Datasets grouping
-  const getDatasetGroupKey = useCallback((dataset: BuiltInDataset, field: string): string => {
-    switch (field) {
-      case "name":
-        // Group by first letter
-        return dataset.name?.charAt(0).toUpperCase() || "Other";
-      case "prompts": {
-        const count = dataset.promptCount ?? 0;
-        if (count === 0) return "No prompts";
-        if (count <= 10) return "1-10 prompts";
-        if (count <= 50) return "11-50 prompts";
-        if (count <= 100) return "51-100 prompts";
-        return "100+ prompts";
-      }
-      case "createdAt": {
-        if (!dataset.createdAt) return "Unknown";
-        const date = new Date(dataset.createdAt);
-        const now = new Date();
-        const diffDays = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
-        if (diffDays === 0) return "Today";
-        if (diffDays === 1) return "Yesterday";
-        if (diffDays <= 7) return "This week";
-        if (diffDays <= 30) return "This month";
-        return "Older";
-      }
-      default:
-        return "Other";
-    }
-  }, []);
-
-  const groupedDatasets = useTableGrouping({
-    data: filteredDatasets,
-    groupByField: datasetsGroupBy,
-    sortOrder: datasetsGroupSortOrder,
-    getGroupKey: getDatasetGroupKey,
-  });
 
   const handleViewPrompts = async (dataset: BuiltInDataset) => {
     setSelectedDataset(dataset);
@@ -607,16 +572,19 @@ export function useProjectDatasets({ orgId }: UseProjectDatasetsArgs) {
     setSearchTerm,
     filterColumns,
     handleFilterChange,
-    handleDatasetsGroupChange,
+    filterConditions,
+    filterLogic,
     filteredDatasets,
-    groupedDatasets,
 
     // Templates
     loadingTemplatesList,
     templateGroups,
     flattenedTemplates,
     templateFilterColumns,
+    getTemplateFieldValue,
     handleTemplateFilterChange,
+    templateFilterConditions,
+    templateFilterLogic,
     templateSearchTerm,
     setTemplateSearchTerm,
     filteredAndSortedTemplates,

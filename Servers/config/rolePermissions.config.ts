@@ -31,6 +31,8 @@ const EDITOR = ["Admin", "Editor"] as const;
 const CONTRIBUTOR = ["Admin", "Reviewer", "Editor"] as const;
 const READER = ["Admin", "Editor", "Reviewer", "Auditor"] as const;
 const SUPER = ["Admin", "SuperAdmin"] as const;
+/** Editors plus Auditors, who record audit results on framework controls. */
+const AUDIT = ["Admin", "Editor", "Auditor"] as const;
 
 export const ROLE_PERMISSIONS = {
   // ── Admin tier (was authorize(["Admin"])) ────────────────────────────────
@@ -62,6 +64,13 @@ export const ROLE_PERMISSIONS = {
   "aiAudit.admin": {
     module: "AI audit",
     description: "Run and view AI audits",
+    legacyRoles: ADMIN,
+  },
+  "aiTrustIndex.admin": {
+    module: "AI Trust Index",
+    description: "View and choose who receives AI Trust Index alerts",
+    // Replaced an Admin/SuperAdmin role-name check; SuperAdmin is dropped on
+    // purpose (a pure super admin has no organization's settings to manage).
     legacyRoles: ADMIN,
   },
   "aiConfirmation.admin": {
@@ -96,7 +105,7 @@ export const ROLE_PERMISSIONS = {
   },
   "extension.admin": {
     module: "Extensions",
-    description: "Install, configure and remove extensions",
+    description: "Enable, configure and disable extensions",
     legacyRoles: ADMIN,
   },
   "file.admin": {
@@ -116,7 +125,8 @@ export const ROLE_PERMISSIONS = {
   },
   "llmKeys.admin": {
     module: "LLM keys",
-    description: "Add, edit and delete LLM API keys",
+    description:
+      "Add, edit and delete LLM API keys, including the AI Gateway provider keys LLM Evals uses",
     legacyRoles: ADMIN,
   },
   "logs.admin": {
@@ -139,6 +149,16 @@ export const ROLE_PERMISSIONS = {
     description: "Create, update and delete custom organization roles",
     legacyRoles: ADMIN,
   },
+  "groups.manage": {
+    module: "Groups",
+    description: "Create, update and delete groups and manage their membership",
+    legacyRoles: ADMIN,
+  },
+  "policyTemplate.edit": {
+    module: "Policy templates",
+    description: "Create, update and delete organization policy templates",
+    legacyRoles: EDITOR,
+  },
   "ssoConfig.admin": {
     module: "SSO",
     description: "Configure SSO",
@@ -147,6 +167,11 @@ export const ROLE_PERMISSIONS = {
   "training.admin": {
     module: "Training registry",
     description: "Delete training records",
+    legacyRoles: ADMIN,
+  },
+  "evidence.admin": {
+    module: "Evidence",
+    description: "Run the evidence freshness check on demand",
     legacyRoles: ADMIN,
   },
 
@@ -181,9 +206,14 @@ export const ROLE_PERMISSIONS = {
     description: "Import risks",
     legacyRoles: EDITOR,
   },
+  "ext.frameworkImport.edit": {
+    module: "Extensions",
+    description: "Import frameworks from a spreadsheet",
+    legacyRoles: EDITOR,
+  },
   "file.edit": {
     module: "Files",
-    description: "Bulk-tag files",
+    description: "Bulk-tag files and manage folders",
     legacyRoles: EDITOR,
   },
   "intakeForm.edit": {
@@ -256,6 +286,16 @@ export const ROLE_PERMISSIONS = {
     description: "Create and update tasks",
     legacyRoles: EDITOR,
   },
+  "incident.create": {
+    module: "Incidents",
+    description: "Report new AI incidents",
+    legacyRoles: EDITOR,
+  },
+  "riskLinks.edit": {
+    module: "Risks",
+    description: "Link related risks and acknowledge inherited risk level changes",
+    legacyRoles: EDITOR,
+  },
 
   // ── Contributor tier (was authorize(["Admin", "Reviewer", "Editor"])) ────
   "file.contribute": {
@@ -266,6 +306,11 @@ export const ROLE_PERMISSIONS = {
   "fileManager.contribute": {
     module: "File manager",
     description: "Manage files and folders",
+    legacyRoles: CONTRIBUTOR,
+  },
+  "riskLinks.review": {
+    module: "Risks",
+    description: "Confirm or dismiss suggested risk links",
     legacyRoles: CONTRIBUTOR,
   },
 
@@ -296,6 +341,64 @@ export const ROLE_PERMISSIONS = {
     module: "Users",
     description: "Delete users",
     legacyRoles: SUPER,
+  },
+  "riskLinks.admin": {
+    module: "Risks",
+    description:
+      "View the organization-wide risk link graph and reports, and rerun link suggestions",
+    legacyRoles: SUPER,
+  },
+
+  // ── Keys from the client's role-name gates (issue #5314) ─────────────────
+  // These replace the client's role-name allowlists (the old
+  // Clients/src/application/constants/permissions.ts `allowedRoles`);
+  // `legacyRoles` is the client allowlist each one replaced, so built-in roles
+  // see exactly what they saw before. postMarketMonitoring.edit (config and
+  // question writes) and apiKeys.admin (token create/revoke/delete, plus any
+  // super admin) are enforced by the server, and so are:
+  // - framework.edit and framework.audit: the framework save routes check
+  //   which fields a save changes (middleware/frameworkWriteAccess), so an
+  //   Auditor still records audit results through the drawer it shares with
+  //   Editors; adding and removing frameworks needs framework.edit. One
+  //   exception: an EU AI Act answer's status, which the assessment tracker
+  //   lets every role change.
+  // - evals.edit, partly: the EvalServer writes listed in EVALS_EDIT_WRITES
+  //   (routes/deepEvalRoutes.route.ts). The app lets every role create and
+  //   change projects and experiments and upload datasets, so those stay open.
+  // useCase.members is screen only: the use case form lets anyone with
+  // useCase.edit (Editors included) choose team members, so the server
+  // cannot refuse it without taking that away.
+  "useCase.members": {
+    module: "Use cases",
+    description:
+      "Choose team members in a use case's settings (screen only, not checked by the server)",
+    legacyRoles: ADMIN,
+  },
+  "framework.edit": {
+    module: "Frameworks",
+    description: "Edit framework controls and answers, and add or remove frameworks",
+    legacyRoles: EDITOR,
+  },
+  "framework.audit": {
+    module: "Frameworks",
+    description: "Record audit results on framework controls",
+    legacyRoles: AUDIT,
+  },
+  "postMarketMonitoring.edit": {
+    module: "Post-market monitoring",
+    description: "Configure post-market monitoring and its questions",
+    legacyRoles: EDITOR,
+  },
+  "evals.edit": {
+    module: "LLM evals",
+    description:
+      "Create and change eval projects, experiments, scorers and datasets (the server checks deleting projects, experiments and datasets, and scorer and saved model changes)",
+    legacyRoles: EDITOR,
+  },
+  "apiKeys.admin": {
+    module: "API keys",
+    description: "Create, revoke and delete API keys",
+    legacyRoles: ADMIN,
   },
 } satisfies Record<string, PermissionMeta>;
 

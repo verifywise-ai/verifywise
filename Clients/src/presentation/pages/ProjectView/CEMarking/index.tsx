@@ -21,8 +21,16 @@ import { useNavigate } from "react-router";
 import dayjs, { Dayjs } from "dayjs";
 import { Info as GreyCircleInfoIcon } from "lucide-react";
 import { cardStyles } from "../../../themes";
-import { green, yellow } from "@design-tokens/primitives";
-import { background, border, status, text } from "../../../themes/palette";
+import { green, yellow } from "../../../themes";
+import {
+  background,
+  border,
+  status,
+  text,
+  palette as vwPalette,
+  radiusPx,
+} from "../../../themes/palette";
+import { chartTheme } from "../../../themes/chartTheme";
 import {
   CEMarkingData,
   ConformityStepStatus,
@@ -200,7 +208,7 @@ const getStatusColor = (stepStatus: ConformityStepStatus): string => {
     case ConformityStepStatus.Completed:
       return green[500];
     case ConformityStepStatus.InProgress:
-      return "#3B82F6";
+      return vwPalette.status.info.text;
     case ConformityStepStatus.NotStarted:
       return status.default.text;
     case ConformityStepStatus.NotNeeded:
@@ -215,7 +223,7 @@ const getStatusBgColor = (stepStatus: ConformityStepStatus): string => {
     case ConformityStepStatus.Completed:
       return `${green[500]}20`;
     case ConformityStepStatus.InProgress:
-      return "#3B82F620";
+      return `${chartTheme.entity.blue}20`;
     case ConformityStepStatus.NotStarted:
       return `${status.default.text}20`;
     case ConformityStepStatus.NotNeeded:
@@ -912,11 +920,11 @@ const CEMarking: React.FC<CEMarkingProps> = ({ projectId }) => {
                   }
                   sx={{
                     "height": 8,
-                    "borderRadius": 4,
+                    "borderRadius": radiusPx.lg,
                     "backgroundColor": "background.hover",
                     "& .MuiLinearProgress-bar": {
                       backgroundColor: yellow[600],
-                      borderRadius: 4,
+                      borderRadius: radiusPx.lg,
                     },
                   }}
                 />
@@ -952,11 +960,11 @@ const CEMarking: React.FC<CEMarkingProps> = ({ projectId }) => {
                   }
                   sx={{
                     "height": 8,
-                    "borderRadius": 4,
+                    "borderRadius": radiusPx.lg,
                     "backgroundColor": "background.hover",
                     "& .MuiLinearProgress-bar": {
                       backgroundColor: yellow[600],
-                      borderRadius: 4,
+                      borderRadius: radiusPx.lg,
                     },
                   }}
                 />
@@ -1006,11 +1014,11 @@ const CEMarking: React.FC<CEMarkingProps> = ({ projectId }) => {
               value={(data.completedStepsCount / data.totalStepsCount) * 100}
               sx={{
                 "height": 6,
-                "borderRadius": 3,
+                "borderRadius": radiusPx.md,
                 "backgroundColor": "background.hover",
                 "& .MuiLinearProgress-bar": {
                   backgroundColor: yellow[600],
-                  borderRadius: 3,
+                  borderRadius: radiusPx.md,
                 },
               }}
             />
@@ -1055,7 +1063,7 @@ const CEMarking: React.FC<CEMarkingProps> = ({ projectId }) => {
                         sx={{
                           backgroundColor: getStatusBgColor(step.status),
                           color: getStatusColor(step.status),
-                          borderRadius: "4px !important",
+                          borderRadius: `${radiusPx.sm} !important`,
                           fontWeight: 600,
                           fontSize: "0.75rem",
                           textTransform: "uppercase",

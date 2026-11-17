@@ -3,7 +3,6 @@ import { Alert, Box, Chip, CircularProgress, Divider, Stack, Typography } from "
 import { VWField, VWSelect } from "../../../components/VWComponents";
 import { CustomizableButton } from "../../../components/button/customizable-button";
 import ExtensionSyncPanel from "../../../components/ExtensionSyncPanel";
-import { useAuth } from "../../../../application/hooks/useAuth";
 import { getApiErrorReason } from "../../../../application/utils/apiErrorReason";
 import { getAllProjects } from "../../../../application/repository/project.repository";
 import {
@@ -35,8 +34,9 @@ import {
 import { MappingTable } from "./MappingTable";
 import { SyncActivity } from "./SyncActivity";
 import { describeJiraIncidentsRun } from "./runOutcome";
+import { useCan } from "../../../../application/hooks/useCan";
+import { radiusPx } from "../../../themes/palette";
 
-const CONTROL_HEIGHT_SX = { height: 30, minHeight: 30 };
 const LABEL_DEBOUNCE_MS = 300;
 const MAX_LABEL_SUGGESTIONS = 10;
 const EVENTS_SHOWN = 50;
@@ -62,8 +62,8 @@ function Caption({ children }: { children: React.ReactNode }) {
 }
 
 export function JiraIncidentsConfiguration() {
-  const { userRoleName } = useAuth();
-  const isAdmin = userRoleName === "Admin";
+  // The extension's routes authorize on extension.admin.
+  const isAdmin = useCan("extension.admin");
 
   const [view, setView] = useState<JiraIncidentsConfigView | null>(null);
   const [loadFailed, setLoadFailed] = useState(false);
@@ -374,7 +374,6 @@ export function JiraIncidentsConfiguration() {
             onClick={handleTestConnection}
             loading={testing}
             isDisabled={testing}
-            sx={CONTROL_HEIGHT_SX}
           />
         </Box>
         {testResult && (
@@ -435,7 +434,7 @@ export function JiraIncidentsConfiguration() {
                     update({ label });
                     setLabelSuggestions([]);
                   }}
-                  sx={{ borderRadius: "4px" }}
+                  sx={{ borderRadius: radiusPx.sm }}
                 />
               ))}
             </Stack>
@@ -555,7 +554,6 @@ export function JiraIncidentsConfiguration() {
             onClick={handleSave}
             loading={saving}
             isDisabled={saving}
-            sx={CONTROL_HEIGHT_SX}
           />
         </Box>
       </Stack>

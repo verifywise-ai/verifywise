@@ -1,14 +1,5 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from "react";
-import {
-  Box,
-  Card,
-  CardContent,
-  Typography,
-  Stack,
-  FormControl,
-  Select,
-  MenuItem,
-} from "@mui/material";
+import { Box, Card, CardContent, Typography, Stack } from "@mui/material";
 import { Play, Clock } from "lucide-react";
 import {
   getAllExperiments,
@@ -30,15 +21,15 @@ import PerformanceChart, {
 } from "./components/PerformanceChart";
 import type { IExperimentRow } from "../../types/interfaces/i.table";
 import SearchBox from "../../components/Search/SearchBox";
-import { FilterBy, type FilterColumn } from "../../components/Table/FilterBy";
-import { GroupBy } from "../../components/Table/GroupBy";
-import { GroupedTableView } from "../../components/Table/GroupedTableView";
-import { useTableGrouping, useGroupByState } from "../../../application/hooks/useTableGrouping";
+import { type FilterColumn } from "../../components/Table/FilterBy";
+import { TableFilter } from "../../components/Table/TableFilter";
 import { useFilterBy } from "../../../application/hooks/useFilterBy";
 import HelperIcon from "../../components/HelperIcon";
+import Select from "../../components/Inputs/Select";
+import { palette, radiusPx } from "../../themes/palette";
+import { countLabel } from "../../tools/countLabel";
 import TipBox from "../../components/TipBox";
-import { useAuth } from "../../../application/hooks/useAuth";
-import allowedRoles from "../../../application/constants/permissions";
+import { useCanCheck } from "../../../application/hooks/useCan";
 import useFormattedDate from "../../../application/hooks/useFormattedDate";
 import { displayFormattedTime } from "../../tools/isoDateToString";
 import { experimentPromptCount } from "./experimentPromptCount";
@@ -49,6 +40,8 @@ interface ProjectExperimentsProps {
   onViewExperiment?: (experimentId: string) => void;
   /** Project's use case for the experiment modal (required) */
   useCase: "chatbot" | "rag" | "agent";
+  /** Called with the number of experiments once loaded and whenever it changes. */
+  onExperimentsCountChange?: (count: number) => void;
 }
 
 interface ExperimentWithMetrics extends Experiment {
@@ -78,11 +71,16 @@ export default function ProjectExperiments({
   orgId,
   onViewExperiment,
   useCase,
+  onExperimentsCountChange,
 }: ProjectExperimentsProps) {
   const formatDate = useFormattedDate();
   const navigate = useNavigate();
   const [experiments, setExperiments] = useState<ExperimentWithMetrics[]>([]);
   const [, setLoading] = useState(true);
+  const [hasLoaded, setHasLoaded] = useState(false);
+  // The project the latest load belongs to; a slower load (or a poll) for a
+  // previous project must not overwrite the current list.
+  const projectIdRef = useRef(projectId);
   const [newEvalModalOpen, setNewEvalModalOpen] = useState(false);
   const [alert, setAlert] = useState<AlertState | null>(null);
   const alertTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -101,12 +99,9 @@ export default function ProjectExperiments({
   const prevRunningIdsRef = useRef<Set<string>>(new Set());
 
   // RBAC permissions
-  const { userRoleName } = useAuth();
-  const canCreateExperiment = allowedRoles.evals.createExperiment.includes(userRoleName);
-  const canDeleteExperiment = allowedRoles.evals.deleteExperiment.includes(userRoleName);
-
-  // GroupBy state
-  const { groupBy, groupSortOrder, handleGroupChange } = useGroupByState();
+  const can = useCanCheck();
+  const canCreateExperiment = can("evals.edit");
+  const canDeleteExperiment = can("evals.edit");
 
   // Helper function to estimate experiment duration based on prompt count
   // Each prompt takes ~20-30 seconds (model call + judge evaluations for each metric)
@@ -145,6 +140,8 @@ export default function ProjectExperiments({
   }, []);
 
   useEffect(() => {
+    projectIdRef.current = projectId;
+    setHasLoaded(false);
     loadExperiments();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId]);
@@ -231,12 +228,19 @@ export default function ProjectExperiments({
     }
   }, [experiments]);
 
+  // Keep the sidebar count in step with the list (new runs, reruns, deletes).
+  useEffect(() => {
+    if (hasLoaded) onExperimentsCountChange?.(experiments.length);
+  }, [hasLoaded, experiments.length, onExperimentsCountChange]);
+
   const loadExperiments = async () => {
+    const requestedProjectId = projectId;
     try {
       setLoading(true);
       const data = await getAllExperiments({
-        project_id: projectId,
+        project_id: requestedProjectId,
       });
+      if (projectIdRef.current !== requestedProjectId) return;
 
       // Use pre-computed avg_scores from experiment results (no need to fetch logs)
       const experimentsWithMetrics = (data.experiments || []).map((exp: Experiment) => {
@@ -254,6 +258,7 @@ export default function ProjectExperiments({
       });
 
       setExperiments(experimentsWithMetrics);
+      setHasLoaded(true);
     } catch (err) {
       console.error("Failed to load experiments:", err);
     } finally {
@@ -495,8 +500,12 @@ export default function ProjectExperiments({
     [],
   );
 
-  const { filterData, handleFilterChange } =
-    useFilterBy<ExperimentWithMetrics>(getExperimentFieldValue);
+  const {
+    filterData,
+    handleFilterChange,
+    conditions: filterConditions,
+    logic: filterLogic,
+  } = useFilterBy<ExperimentWithMetrics>(getExperimentFieldValue);
 
   const filteredExperiments = useMemo(() => {
     const afterFilter = filterData(experiments);
@@ -594,28 +603,6 @@ export default function ProjectExperiments({
     };
   });
 
-  // Define how to get the group key for each row
-  const getRowGroupKey = useCallback((row: IExperimentRow, field: string): string => {
-    switch (field) {
-      case "status":
-        return row.status || "Unknown";
-      case "model":
-        return row.model || "Unknown";
-      case "judge":
-        return row.judge || "Unknown";
-      default:
-        return "Other";
-    }
-  }, []);
-
-  // Apply grouping to table rows
-  const groupedRows = useTableGrouping({
-    data: tableRows,
-    groupByField: groupBy,
-    sortOrder: groupSortOrder,
-    getGroupKey: getRowGroupKey,
-  });
-
   return (
     <Box>
       {alert && <Alert variant={alert.variant} body={alert.body} />}
@@ -626,7 +613,9 @@ export default function ProjectExperiments({
           title="Rerun experiment"
           body={
             <Box>
-              <Typography sx={{ fontSize: "14px", color: "#475467", lineHeight: 1.6, mb: 2 }}>
+              <Typography
+                sx={{ fontSize: "14px", color: palette.text.tertiary, lineHeight: 1.6, mb: "12px" }}
+              >
                 This will create a new experiment run using the same configuration as "
                 {rerunConfirm.experiment.name}".
               </Typography>
@@ -636,20 +625,21 @@ export default function ProjectExperiments({
                     display: "flex",
                     alignItems: "center",
                     gap: "8px",
-                    p: "8px",
-                    borderRadius: "4px",
-                    backgroundColor: "#F0FDF4",
-                    border: "1px solid #BBF7D0",
+                    p: "8px 10px",
+                    borderRadius: radiusPx.sm,
+                    backgroundColor: palette.status.success.bg,
+                    border: `1px solid ${palette.status.success.border}`,
                   }}
                 >
-                  <Clock size={16} color="#13715B" />
+                  <Clock size={16} color={palette.brand.primary} />
                   <Box>
-                    <Typography sx={{ fontSize: "13px", fontWeight: 500, color: "#13715B" }}>
+                    <Typography
+                      sx={{ fontSize: "13px", fontWeight: 500, color: palette.brand.primary }}
+                    >
                       Estimated time: {getEstimatedTimeRange(rerunConfirm.promptCount)}
                     </Typography>
-                    <Typography sx={{ fontSize: "11px", color: "#16A34A" }}>
-                      Based on {rerunConfirm.promptCount} prompt
-                      {rerunConfirm.promptCount !== 1 ? "s" : ""} from the original run
+                    <Typography sx={{ fontSize: "12px", color: palette.status.success.text }}>
+                      {`Based on ${countLabel(rerunConfirm.promptCount, "prompt")} from the original run`}
                     </Typography>
                   </Box>
                 </Box>
@@ -674,7 +664,7 @@ export default function ProjectExperiments({
         <ConfirmationModal
           title="API key may not be configured"
           body={
-            <Typography sx={{ fontSize: "14px", color: "#475467", lineHeight: 1.6 }}>
+            <Typography sx={{ fontSize: "14px", color: palette.text.tertiary, lineHeight: 1.6 }}>
               {apiKeyWarning.message}
               <br />
               <br />
@@ -695,9 +685,9 @@ export default function ProjectExperiments({
       )}
 
       {/* Header + description */}
-      <Stack spacing={1} mb={4}>
-        <Box display="flex" alignItems="center" gap={1}>
-          <Typography variant="h6" fontSize={15} fontWeight="600" color="#111827">
+      <Stack spacing="4px" mb="16px">
+        <Box display="flex" alignItems="center" gap="4px">
+          <Typography variant="h6" fontSize={15} fontWeight="600" color={palette.text.primary}>
             Experiments
           </Typography>
           <HelperIcon articlePath="llm-evals/running-experiments" />
@@ -717,43 +707,36 @@ export default function ProjectExperiments({
       <Card
         sx={{
           marginBottom: "16px",
-          border: "1px solid #d0d5dd",
-          borderRadius: "4px",
+          border: `1px solid ${palette.border.dark}`,
+          borderRadius: radiusPx.sm,
           boxShadow: "none",
         }}
       >
-        <CardContent sx={{ py: 2 }}>
-          <Box mb={1}>
+        <CardContent sx={{ "p": "16px", "&:last-child": { pb: "16px" } }}>
+          <Box mb="4px">
             <Typography variant="h6" sx={{ fontSize: "14px", fontWeight: 600 }}>
               Performance tracking
             </Typography>
           </Box>
           <Box
-            sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2 }}
+            sx={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              mb: "12px",
+            }}
           >
             <Typography variant="body2" color="text.secondary" sx={{ fontSize: "13px" }}>
               Track metric scores across eval runs
             </Typography>
-            <FormControl size="small">
-              <Select
-                value={chartTimeRange}
-                onChange={(e) => setChartTimeRange(e.target.value as TimeRange)}
-                sx={{
-                  "fontSize": "12px",
-                  "height": "28px",
-                  "& .MuiSelect-select": { py: 0.5, px: 1.5 },
-                  "& .MuiOutlinedInput-notchedOutline": { borderColor: "#E5E7EB" },
-                  "&:hover .MuiOutlinedInput-notchedOutline": { borderColor: "#D1D5DB" },
-                  "&.Mui-focused .MuiOutlinedInput-notchedOutline": { borderColor: "#13715B" },
-                }}
-              >
-                {TIME_RANGE_OPTIONS.map((opt) => (
-                  <MenuItem key={opt.value} value={opt.value} sx={{ fontSize: "12px" }}>
-                    {opt.label}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
+            <Select
+              id="experiments-chart-time-range"
+              ariaLabel="Time range"
+              value={chartTimeRange}
+              onChange={(e) => setChartTimeRange(e.target.value as TimeRange)}
+              items={TIME_RANGE_OPTIONS.map((opt) => ({ _id: opt.value, name: opt.label }))}
+              sx={{ width: "150px" }}
+            />
           </Box>
 
           <Box sx={{ position: "relative" }}>
@@ -788,12 +771,12 @@ export default function ProjectExperiments({
                   sx={{
                     fontSize: "14px",
                     fontWeight: 500,
-                    color: "#374151",
+                    color: palette.text.secondary,
                     textAlign: "center",
-                    px: 3,
+                    px: "12px",
                   }}
                 >
-                  You can start tracking metrics once you define your experiments
+                  Run your first experiment to start tracking scores
                 </Typography>
               </Box>
             )}
@@ -801,23 +784,22 @@ export default function ProjectExperiments({
         </CardContent>
       </Card>
 
-      {/* Filters + Search + Group directly above the table */}
+      {/* Filters + Search directly above the table */}
       <Stack
         direction="row"
         justifyContent="space-between"
         alignItems="center"
         sx={{ marginBottom: "18px" }}
-        gap={2}
+        gap="4px"
       >
-        <Stack direction="row" alignItems="center" gap={2}>
-          <FilterBy columns={experimentFilterColumns} onFilterChange={handleFilterChange} />
-          <GroupBy
-            options={[
-              { id: "status", label: "Status" },
-              { id: "model", label: "Model" },
-              { id: "judge", label: "Judge" },
-            ]}
-            onGroupChange={handleGroupChange}
+        <Stack direction="row" alignItems="center" gap="4px">
+          <TableFilter
+            columns={experimentFilterColumns}
+            onFilterChange={handleFilterChange}
+            defaultConditions={filterConditions}
+            defaultLogic={filterLogic}
+            data={experiments}
+            getFieldValue={getExperimentFieldValue}
           />
           <SearchBox
             placeholder="Search experiments..."
@@ -831,32 +813,21 @@ export default function ProjectExperiments({
           variant="contained"
           text="New experiment"
           icon={<Play size={16} />}
-          sx={{
-            backgroundColor: "#13715B",
-            border: "1px solid #13715B",
-            gap: 2,
-          }}
+          sx={{ gap: "4px" }}
           onClick={() => setNewEvalModalOpen(true)}
           isDisabled={!canCreateExperiment}
         />
       </Stack>
 
       {/* Experiments Table with Pagination */}
-      <Box mb={4}>
-        <GroupedTableView
-          groupedData={groupedRows}
-          ungroupedData={tableRows}
-          renderTable={(data, options) => (
-            <ExperimentTable
-              rows={data}
-              onRowClick={handleViewExperiment}
-              onRerun={canCreateExperiment ? handleRerunExperiment : undefined}
-              onDownload={handleDownloadExperiment}
-              onCopy={handleCopyExperiment}
-              onDelete={canDeleteExperiment ? handleDeleteExperiment : undefined}
-              hidePagination={options?.hidePagination}
-            />
-          )}
+      <Box mb="8px">
+        <ExperimentTable
+          rows={tableRows}
+          onRowClick={handleViewExperiment}
+          onRerun={canCreateExperiment ? handleRerunExperiment : undefined}
+          onDownload={handleDownloadExperiment}
+          onCopy={handleCopyExperiment}
+          onDelete={canDeleteExperiment ? handleDeleteExperiment : undefined}
         />
       </Box>
 

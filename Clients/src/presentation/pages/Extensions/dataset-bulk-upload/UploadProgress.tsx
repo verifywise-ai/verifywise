@@ -1,7 +1,9 @@
 import { Box, Typography, Stack, LinearProgress, Chip } from "@mui/material";
 import { keyframes } from "@mui/system";
 import { CheckCircle2, XCircle, Loader2, FileSpreadsheet } from "lucide-react";
-import { brand, text } from "../../../themes/palette";
+import { brand, text, palette as vwPalette, radiusPx } from "../../../themes/palette";
+import useTranslation from "../../../../application/hooks/useTranslation";
+import { fill, pluralKey } from "../../../../i18n/fill";
 
 const spin = keyframes`
   from { transform: rotate(0deg); }
@@ -24,6 +26,7 @@ interface UploadProgressProps {
 }
 
 export default function UploadProgress({ results, totalFiles }: UploadProgressProps) {
+  const { t, lang } = useTranslation();
   const completed = results.filter((r) => r.status === "success" || r.status === "error").length;
   const successCount = results.filter((r) => r.status === "success").length;
   const errorCount = results.filter((r) => r.status === "error").length;
@@ -31,12 +34,13 @@ export default function UploadProgress({ results, totalFiles }: UploadProgressPr
   const isComplete = completed === totalFiles;
 
   return (
-    <Stack spacing={2}>
+    <Stack spacing="4px">
       {/* Overall progress */}
       <Box>
-        <Stack direction="row" justifyContent="space-between" sx={{ mb: 0.5 }}>
+        <Stack direction="row" justifyContent="space-between" sx={{ mb: "1px" }}>
           <Typography sx={{ fontSize: 13, fontWeight: 500, color: "text.secondary" }}>
-            {isComplete ? "Upload complete" : `Uploading ${completed + 1} of ${totalFiles}...`}
+            {/* The counter on the right shows the numbers. */}
+            {isComplete ? "Upload complete" : "Uploading files..."}
           </Typography>
           <Typography sx={{ fontSize: 13, color: "text.tertiary" }}>
             {completed}/{totalFiles}
@@ -48,9 +52,9 @@ export default function UploadProgress({ results, totalFiles }: UploadProgressPr
           sx={{
             "height": 6,
             "borderRadius": "3px",
-            "backgroundColor": "#E0E4E9",
+            "backgroundColor": vwPalette.border.light,
             "& .MuiLinearProgress-bar": {
-              backgroundColor: errorCount > 0 ? "#DC6803" : "brand.primary",
+              backgroundColor: errorCount > 0 ? vwPalette.riskMark.high : "brand.primary",
               borderRadius: "3px",
             },
           }}
@@ -59,30 +63,43 @@ export default function UploadProgress({ results, totalFiles }: UploadProgressPr
 
       {/* Summary chips */}
       {isComplete && (
-        <Stack direction="row" spacing={1}>
+        <Stack direction="row" spacing="2px">
           <Chip
             icon={<CheckCircle2 size={14} />}
-            label={`${successCount} succeeded`}
+            label={fill(
+              t(pluralKey(lang, successCount, "{count} file uploaded", "{count} files uploaded")),
+              { count: successCount },
+            )}
             size="small"
             variant="outlined"
             sx={{
-              "color": "#079455",
-              "borderColor": "#079455",
-              "backgroundColor": "#ECFDF3",
-              "& .MuiChip-icon": { color: "#079455" },
+              "color": vwPalette.status.success.text,
+              "borderColor": vwPalette.status.success.text,
+              "backgroundColor": vwPalette.status.success.bg,
+              "& .MuiChip-icon": { color: vwPalette.status.success.text },
             }}
           />
           {errorCount > 0 && (
             <Chip
               icon={<XCircle size={14} />}
-              label={`${errorCount} failed`}
+              label={fill(
+                t(
+                  pluralKey(
+                    lang,
+                    errorCount,
+                    "{count} file failed to upload",
+                    "{count} files failed to upload",
+                  ),
+                ),
+                { count: errorCount },
+              )}
               size="small"
               variant="outlined"
               sx={{
-                "color": "#F04438",
-                "borderColor": "#FDA29B",
-                "backgroundColor": "#F9ECED",
-                "& .MuiChip-icon": { color: "#F04438" },
+                "color": vwPalette.status.error.text,
+                "borderColor": vwPalette.status.error.border,
+                "backgroundColor": vwPalette.accent.red.bg,
+                "& .MuiChip-icon": { color: vwPalette.status.error.text },
               }}
             />
           )}
@@ -96,15 +113,15 @@ export default function UploadProgress({ results, totalFiles }: UploadProgressPr
             key={result.fileName}
             direction="row"
             alignItems="center"
-            spacing={1}
+            spacing="2px"
             sx={{
               p: "10px 12px",
-              borderRadius: "6px",
+              borderRadius: radiusPx.md,
               backgroundColor:
                 result.status === "error"
-                  ? "#F9ECED"
+                  ? vwPalette.accent.red.bg
                   : result.status === "success"
-                    ? "#ECFDF3"
+                    ? vwPalette.status.success.bg
                     : "background.accent",
             }}
           >
@@ -122,11 +139,13 @@ export default function UploadProgress({ results, totalFiles }: UploadProgressPr
                 style={{ animation: `${spin} 1s linear infinite` }}
               />
             )}
-            {result.status === "success" && <CheckCircle2 size={16} color="#079455" />}
+            {result.status === "success" && (
+              <CheckCircle2 size={16} color={vwPalette.status.success.text} />
+            )}
             {result.status === "error" && (
-              <Stack direction="row" alignItems="center" spacing={0.5}>
-                <XCircle size={16} color="#F04438" />
-                <Typography sx={{ fontSize: 12, color: "#F04438" }}>
+              <Stack direction="row" alignItems="center" spacing="1px">
+                <XCircle size={16} color={vwPalette.status.error.text} />
+                <Typography sx={{ fontSize: 12, color: vwPalette.status.error.text }}>
                   {result.error || "Failed"}
                 </Typography>
               </Stack>

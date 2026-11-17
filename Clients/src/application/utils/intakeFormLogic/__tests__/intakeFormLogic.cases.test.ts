@@ -9,6 +9,7 @@ import {
   firstMissingVisibleInput,
   parseFormula,
   validateSchemaLogic,
+  unmatchedCustomFieldOptions,
   REQUIRED_ENTITY_FIELDS,
 } from "..";
 import { ENTITY_FIELD_MAPPINGS } from "../../../../presentation/pages/IntakeFormBuilder/types";
@@ -112,6 +113,17 @@ describe("intake form logic cases (client copy)", () => {
       for (const message of c.messages ?? []) {
         expect(errors.map((e) => e.message)).toContain(message);
       }
+    });
+  });
+  describe("unmatchedCustomFieldOptions", () => {
+    it.each(cases.unmatchedCustomFieldOptions)("$name", (c) => {
+      const unmatched = unmatchedCustomFieldOptions(
+        c.questionType,
+        c.questionOptions,
+        c.fieldType,
+        c.fieldOptions,
+      );
+      expect(unmatched.map((option: { value: string }) => option.value)).toEqual(c.unmatched);
     });
   });
 });

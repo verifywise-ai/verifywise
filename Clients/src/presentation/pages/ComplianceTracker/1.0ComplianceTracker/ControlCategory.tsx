@@ -15,7 +15,12 @@ import { ControlCategory as ControlCategoryModel } from "../../../../domain/type
 import { useState, useEffect, useRef } from "react";
 import { ChevronRight } from "lucide-react";
 import ControlsTable from "./ControlsTable";
-import { border as borderPalette, status } from "../../../themes/palette";
+import {
+  border as borderPalette,
+  status,
+  palette as vwPalette,
+  radiusPx,
+} from "../../../themes/palette";
 
 const Table_Columns = [
   { id: 1, name: "Requirement Name" },
@@ -79,8 +84,8 @@ const ControlCategoryTile: React.FC<ControlCategoryProps> = ({
 
   const chipColor =
     filteredControlsCount !== null && filteredControlsCount > 0
-      ? { bg: "#E6F4EA", color: `${status.success.text}` }
-      : { bg: "#FFF8E1", color: "#795548" };
+      ? { bg: vwPalette.status.success.bg, color: `${status.success.text}` }
+      : { bg: vwPalette.risk.medium.bg, color: vwPalette.risk.medium.text };
 
   return (
     <Stack className="control-category" ref={accordionRef}>
@@ -93,7 +98,7 @@ const ControlCategoryTile: React.FC<ControlCategoryProps> = ({
           border: `1px solid ${borderPalette.light}`,
           width: "100%",
           marginLeft: "1.5px",
-          borderRadius: "4px",
+          borderRadius: radiusPx.sm,
           overflow: "hidden",
           position: "relative",
           margin: 0,

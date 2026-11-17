@@ -48,6 +48,7 @@ const AddNewRiskForm: FC<AddNewRiskFormProps> = (props) => {
     setRiskValues,
     mitigationValues,
     setMitigationValues,
+    originalMitigationValues,
     quantitativeValues,
     setQuantitativeValues,
     riskValidateRef,
@@ -63,7 +64,6 @@ const AddNewRiskForm: FC<AddNewRiskFormProps> = (props) => {
     handleRiskValidityChange,
     handleMitigationValidityChange,
     usersLoading,
-    userRoleName,
     isEditingDisabled,
     isCreatingDisabled,
     isQuantitative,
@@ -162,7 +162,6 @@ const AddNewRiskForm: FC<AddNewRiskFormProps> = (props) => {
             setRiskValues={setRiskValues}
             validateRef={riskValidateRef}
             firstInvalidFieldRef={riskFirstInvalidFieldRef}
-            userRoleName={userRoleName}
             disableInternalScroll={!!onSubmitRef}
             compactMode={compactMode}
             serverErrors={riskServerErrors}
@@ -184,11 +183,11 @@ const AddNewRiskForm: FC<AddNewRiskFormProps> = (props) => {
             setMitigationValues={setMitigationValues}
             validateRef={mitigateValidateRef}
             firstInvalidFieldRef={mitigationFirstInvalidFieldRef}
-            userRoleName={userRoleName}
             disableInternalScroll={!!onSubmitRef}
             compactMode={compactMode}
             serverErrors={mitigationServerErrors}
             onValidityChange={handleMitigationValidityChange}
+            savedApproval={originalMitigationValues}
           />
         </TabPanel>
         {isQuantitative && (

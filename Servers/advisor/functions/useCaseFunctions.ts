@@ -1,4 +1,6 @@
-import { getUserProjects } from "../../utils/project.utils";
+import { getUserProjects, lockProjectForDelete } from "../../utils/project.utils";
+import { deleteProjectWithSideEffects } from "../../utils/projectDeletion.utils";
+import { userHasPermission } from "../../utils/userPermission.utils";
 import { calculateProjectRisks } from "../../utils/project.utils";
 import { findUsersNotInOrganization } from "../../utils/user.utils";
 import logger from "../../utils/logger/fileLogger";
@@ -361,31 +363,69 @@ const agentDeleteUseCase = createWriteToolFn({
   toolName: "agent_delete_use_case",
   warningLevel: "danger",
   descriptionFn: (params) =>
-    `Permanently delete use case #${params.use_case_id} and all associated data`,
+    `Permanently delete use case #${params.use_case_id} and all associated data. Risks linked only to this use case are archived.`,
   executeFn: async (params, organizationId) => {
+    const useCaseId = params.use_case_id as number;
+    // Recorded as the user who asked for the delete, else the approver.
+    const userId = Number(params._requesterId) || Number(params._userId) || undefined;
+
+    // The delete always archives the risks linked only to this use case,
+    // which takes the same permission as archiving them in the console
+    // (risks.edit, as DELETE /api/v1/projects/:id with the archive choice).
+    // Without it nothing is deleted: deleting without archiving would show
+    // those risks to everyone.
+    if (!(await userHasPermission(organizationId, userId, "risks.edit"))) {
+      return {
+        success: false,
+        message: `Use case #${useCaseId} was not deleted. Deleting it archives the risks linked only to it, and your role does not allow archiving risks.`,
+      };
+    }
+
     const transaction = await sequelize.transaction();
     try {
-      // Delete dependent records first
-      await sequelize.query(
-        `DELETE FROM projects_members WHERE organization_id = :organizationId AND project_id = :id`,
-        { replacements: { organizationId, id: params.use_case_id }, transaction },
-      );
-      await sequelize.query(
-        `DELETE FROM files WHERE organization_id = :organizationId AND project_id = :id`,
-        { replacements: { organizationId, id: params.use_case_id }, transaction },
-      );
-      await sequelize.query(
-        `DELETE FROM projects_risks WHERE organization_id = :organizationId AND project_id = :id`,
-        { replacements: { organizationId, id: params.use_case_id }, transaction },
-      );
+      // Lock the use case first, as every project delete does; a use case not
+      // in this organization changes nothing.
+      if (!(await lockProjectForDelete(useCaseId, organizationId, transaction))) {
+        await transaction.rollback();
+        return { success: false, message: `Use case #${useCaseId} not found` };
+      }
+      const [useCase] = (await sequelize.query(
+        `SELECT id, project_title FROM projects WHERE organization_id = :organizationId AND id = :id`,
+        {
+          replacements: { organizationId, id: useCaseId },
+          type: QueryTypes.SELECT,
+          transaction,
+        },
+      )) as Array<{ id: number; project_title: string }>;
 
-      const result = await sequelize.query(
-        `DELETE FROM projects WHERE organization_id = :organizationId AND id = :id RETURNING id, project_title`,
-        { replacements: { organizationId, id: params.use_case_id }, transaction },
+      // The shared delete: approval withdrawal, change history, the archive
+      // of the risks linked only to this use case (so they stay private once
+      // unlinked), the delete and the project_deleted automation.
+      const { deleted, archivedRiskIds } = await deleteProjectWithSideEffects(
+        useCaseId,
+        organizationId,
+        transaction,
+        {
+          userId: userId ?? null,
+          alreadyLocked: true,
+          archiveRisksLinkedOnlyHere: true,
+          enqueueAutomationAfterCommit: true,
+        },
       );
+      if (!deleted) {
+        await transaction.rollback();
+        return { success: false, message: `Use case #${useCaseId} not found` };
+      }
       await transaction.commit();
-      const deleted = (result as any)[0]?.[0] || (result as any)[0];
-      return { success: true, deleted_use_case: deleted };
+      return {
+        success: true,
+        deleted_use_case: useCase,
+        archived_risk_ids: archivedRiskIds,
+        message:
+          archivedRiskIds.length > 0
+            ? `Use case #${useCaseId} deleted. ${archivedRiskIds.length} risk(s) linked only to it were archived. An archived risk with no use case is visible only to Admins and to its owner and approver.`
+            : `Use case #${useCaseId} deleted. No risks were linked only to it, so none were archived.`,
+      };
     } catch (error) {
       await transaction.rollback();
       throw error;

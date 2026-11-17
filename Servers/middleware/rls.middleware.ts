@@ -78,7 +78,7 @@ export const rlsEnforcement = async (
     // Fail closed: an authenticated non-super-admin request without an org
     // context must never reach the query layer unscoped.
     logger.error("RLS enforcement enabled but the request has no organization context");
-    return res.status(500).json(STATUS_CODE[500]("Missing organization context"));
+    return res.status(500).json(STATUS_CODE[500](req.t!("Missing organization context")));
   }
 
   // Lazy require: the Sequelize pool must not be initialized when the flag
@@ -96,7 +96,9 @@ export const rlsEnforcement = async (
     });
   } catch (error) {
     logger.error(`Failed to establish RLS tenant context: ${(error as Error).message}`);
-    return res.status(500).json(STATUS_CODE[500]("Failed to establish tenant security context"));
+    return res
+      .status(500)
+      .json(STATUS_CODE[500](req.t!("Failed to establish tenant security context")));
   }
 
   req.rlsTransaction = transaction;

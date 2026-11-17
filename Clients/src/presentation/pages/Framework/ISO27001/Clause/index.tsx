@@ -22,11 +22,12 @@ import { useSearchParams } from "react-router";
 import StatusDropdown from "../../../../components/StatusDropdown";
 import { updateISO27001ClauseStatus } from "../../../../components/StatusDropdown/statusUpdateApi";
 import { useAuth } from "../../../../../application/hooks/useAuth";
-import allowedRoles from "../../../../../application/constants/permissions";
+import { useCanCheck } from "../../../../../application/hooks/useCan";
 import { Project } from "../../../../../domain/types/Project";
 import { useModalKeyHandling } from "../../../../../application/hooks/useModalKeyHandling";
 import { TabFilterBar } from "../../../../components/FrameworkFilter/TabFilterBar";
 import { StatsCard } from "../../../../components/Cards/StatsCard";
+import { palette } from "../../../../themes/palette";
 
 const ISO27001Clause = ({
   project,
@@ -65,7 +66,8 @@ const ISO27001Clause = ({
   ownerOptions?: { label: string; value: string }[];
   reviewerOptions?: { label: string; value: string }[];
 }) => {
-  const { userId, userRoleName } = useAuth();
+  const { userId } = useAuth();
+  const can = useCanCheck();
   const [clauses, setClauses] = useState<ClauseStructISO[]>([]);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [selectedSubClause, setSelectedSubClause] = useState<any>(null);
@@ -366,15 +368,15 @@ const ISO27001Clause = ({
                     flexDirection: "row",
                     alignItems: "center",
                     padding: "10px 16px",
-                    backgroundColor: "#fafbfc",
-                    borderBottom: "1px solid #eaecf0",
+                    backgroundColor: palette.background.alt,
+                    borderBottom: `1px solid ${palette.border.light}`,
                   }}
                 >
                   <Typography
                     fontSize={11}
                     fontWeight={600}
                     sx={{
-                      color: "#57606a",
+                      color: palette.text.tertiary,
                       textTransform: "uppercase",
                       letterSpacing: "0.04em",
                     }}
@@ -405,7 +407,7 @@ const ISO27001Clause = ({
                           top: "50%",
                           width: "12px",
                           height: "1px",
-                          backgroundColor: "#c9d1d9",
+                          backgroundColor: palette.border.dark,
                         },
                       }
                     : {}),
@@ -419,8 +421,7 @@ const ISO27001Clause = ({
                   currentStatus={subClause.status ?? "Not started"}
                   onStatusChange={(newStatus) => handleStatusChange(subClause, newStatus)}
                   size="small"
-                  allowedRoles={allowedRoles.frameworks.edit}
-                  userRole={userRoleName}
+                  canEdit={can("framework.edit")}
                 />
               </Stack>
             );
@@ -506,8 +507,8 @@ const ISO27001Clause = ({
           const count = filteredSubClausesCountMemo[clause.id ?? 0];
           const chipColor =
             count !== undefined && count > 0
-              ? { bg: "#E6F4EA", color: "status.success.text" }
-              : { bg: "#FFF8E1", color: "#795548" };
+              ? { bg: palette.status.success.bg, color: "status.success.text" }
+              : { bg: palette.risk.medium.bg, color: palette.risk.medium.text };
           return (
             <Stack key={clause.id} sx={styles.container}>
               <Accordion

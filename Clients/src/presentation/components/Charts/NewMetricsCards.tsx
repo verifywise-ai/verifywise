@@ -13,7 +13,7 @@ import { StatusDonutChart } from "./StatusDonutChart";
 import { DashboardChartLayout, DASHBOARD_CHART_SIZE } from "./DashboardChartLayout";
 import { vwTooltipStyle, ChartOutlineWrapper } from "./VWCharts";
 import { DASHBOARD_COLORS, TEXT_STYLES } from "../../styles/colors";
-import { border as borderPalette } from "../../themes/palette";
+import { border as borderPalette, radiusPx } from "../../themes/palette";
 
 const C = DASHBOARD_COLORS;
 
@@ -177,10 +177,10 @@ export function EvidenceCoverageCard({
         aria-label="model coverage"
         sx={{
           "height": 8,
-          "borderRadius": 4,
+          "borderRadius": radiusPx.lg,
           "backgroundColor": C.progressBackground,
           "mb": "32px",
-          "& .MuiLinearProgress-bar": { backgroundColor: C.primary, borderRadius: 4 },
+          "& .MuiLinearProgress-bar": { backgroundColor: C.primary, borderRadius: radiusPx.lg },
         }}
       />
       <Stack direction="row" justifyContent="space-between">

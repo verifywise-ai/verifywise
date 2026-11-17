@@ -88,7 +88,7 @@ describe("proactiveNotify", () => {
     expect(mockSendTeams).not.toHaveBeenCalled();
     expect(mockSendSlack).toHaveBeenCalledTimes(1);
     expect(mockSendSlack).toHaveBeenCalledWith(
-      { userId: 7, routingType: "approval" },
+      { organizationId: 42, userId: 7, routingType: "approval" },
       expect.objectContaining({ title: "Hello", message: "World" }),
     );
   });

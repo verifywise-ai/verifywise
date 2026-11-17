@@ -25,6 +25,12 @@ export type Project = {
     framework_id: number;
     name: string;
   }[];
+  /** Organization-imported frameworks attached to this use case (#5254). */
+  imported_frameworks?: {
+    project_imported_framework_id: number;
+    imported_framework_id: number;
+    name: string;
+  }[];
   monitored_regulations_and_standards: string[];
   geography?: number;
   target_industry?: string;

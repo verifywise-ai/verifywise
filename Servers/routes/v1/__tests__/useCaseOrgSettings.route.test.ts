@@ -29,6 +29,22 @@ jest.mock("../../../utils/useCaseOrgSettings.utils", () => ({
   })),
   projectLevelFrameworkIdsQuery: jest.fn(async (ids: number[]) => ids),
 }));
+// authorize("organization.admin") runs the real permission matrix: built-in
+// roles from the static matrix, the custom role below from its (mocked) rows.
+const CUSTOM_ROLE = { id: 50, name: "Settings lead", organizationId: 42 };
+let mockCustomRows: Array<{ permission_key: string; allowed: boolean }> = [];
+jest.mock("../../../utils/roleMap", () => ({
+  getRoleByName: jest.fn(async (_orgId: number | null, name: string) =>
+    name === "Settings lead"
+      ? { id: 50, name: "Settings lead", organizationId: 42 }
+      : ["Admin", "Editor", "Reviewer", "Auditor"].includes(name)
+        ? { id: 1, name, organizationId: null }
+        : undefined,
+  ),
+}));
+jest.mock("../../../database/db", () => ({
+  sequelize: { query: jest.fn(async () => mockCustomRows) },
+}));
 jest.mock("../../../utils/logger/fileLogger", () => ({
   __esModule: true,
   default: { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() },
@@ -36,6 +52,7 @@ jest.mock("../../../utils/logger/fileLogger", () => ({
 }));
 
 import routes from "../useCaseOrgSettings.route";
+import { invalidateRolePermissionsCache } from "../../../utils/rolePermissions.utils";
 import {
   getUseCaseOrgSettings,
   upsertUseCaseOrgSettings,
@@ -88,5 +105,31 @@ describe("/api/v1/use-case-org-settings", () => {
     expect(res.status).toBe(200);
     expect(upsertUseCaseOrgSettings).toHaveBeenCalledWith(7, { default_geography: 2 });
     expect(res.body.data.organization_id).toBe(7);
+  });
+
+  // Issue #5314: this route used authorize(["Admin"]), which refused every
+  // custom role. It now follows the organization.admin permission.
+  it("lets a custom role with organization.admin change them", async () => {
+    invalidateRolePermissionsCache(42, CUSTOM_ROLE.id);
+    mockCustomRows = [{ permission_key: "organization.admin", allowed: true }];
+    const res = await request(app)
+      .put(ROUTE)
+      .set("Authorization", "Bearer t")
+      .set("x-role", CUSTOM_ROLE.name)
+      .send({ default_geography: 2 });
+    expect(res.status).toBe(200);
+    expect(upsertUseCaseOrgSettings).toHaveBeenCalledWith(42, { default_geography: 2 });
+  });
+
+  it("refuses a custom role without organization.admin", async () => {
+    invalidateRolePermissionsCache(42, CUSTOM_ROLE.id);
+    mockCustomRows = [{ permission_key: "useCase.edit", allowed: true }];
+    const res = await request(app)
+      .put(ROUTE)
+      .set("Authorization", "Bearer t")
+      .set("x-role", CUSTOM_ROLE.name)
+      .send({ default_geography: 2 });
+    expect(res.status).toBe(403);
+    expect(upsertUseCaseOrgSettings).not.toHaveBeenCalled();
   });
 });

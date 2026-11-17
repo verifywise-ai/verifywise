@@ -24,7 +24,13 @@ import {
   setPaginationRowCount,
 } from "../../../../application/utils/paginationStorage";
 import { ITableProps } from "../../../types/interfaces/i.table";
-import { text, border } from "../../../themes/palette";
+import { text, border, radiusPx } from "../../../themes/palette";
+import useUsers from "../../../../application/hooks/useUsers";
+import {
+  buildUserSortNames,
+  compareNames,
+  userSortName,
+} from "../../../../application/utils/userSort";
 
 const POLICY_TABLE_SORTING_KEY = "verifywise_policy_table_sorting";
 
@@ -55,6 +61,8 @@ const CustomizablePolicyTable = ({
     getPaginationRowCount("policyManager", DEFAULT_ROWS_PER_PAGE),
   );
   const { setInputValues } = useContext(VerifyWiseContext);
+  const { users } = useUsers();
+  const userSortNames = useMemo(() => buildUserSortNames(users), [users]);
 
   // Initialize sorting state from localStorage or default to no sorting
   const [sortConfig, setSortConfig] = useState<SortConfig>(() => {
@@ -124,25 +132,26 @@ const CustomizablePolicyTable = ({
 
       // Handle different column types for policies
       if (sortKey.includes("title")) {
-        aValue = a.title?.toLowerCase() || "";
-        bValue = b.title?.toLowerCase() || "";
+        aValue = a.title || "";
+        bValue = b.title || "";
       } else if (sortKey.includes("status")) {
-        aValue = a.status?.toLowerCase() || "";
-        bValue = b.status?.toLowerCase() || "";
+        aValue = a.status || "";
+        bValue = b.status || "";
       } else if (sortKey.includes("tags")) {
-        aValue = a.tags?.join(", ")?.toLowerCase() || "";
-        bValue = b.tags?.join(", ")?.toLowerCase() || "";
+        aValue = a.tags?.join(", ") || "";
+        bValue = b.tags?.join(", ") || "";
       } else if (sortKey.includes("next") || sortKey.includes("review")) {
         aValue = a.next_review_date ? new Date(a.next_review_date).getTime() : 0;
         bValue = b.next_review_date ? new Date(b.next_review_date).getTime() : 0;
       } else if (sortKey.includes("author")) {
-        aValue = a.author_id?.toString() || "";
-        bValue = b.author_id?.toString() || "";
+        // The column shows names, so sort by name rather than by user id.
+        aValue = userSortName(userSortNames, a.author_id);
+        bValue = userSortName(userSortNames, b.author_id);
       } else if (sortKey.includes("last") || sortKey.includes("updated")) {
         // Handle both "last updated" and "updated by" columns
         if (sortKey.includes("by")) {
-          aValue = a.last_updated_by?.toString() || "";
-          bValue = b.last_updated_by?.toString() || "";
+          aValue = userSortName(userSortNames, a.last_updated_by);
+          bValue = userSortName(userSortNames, b.last_updated_by);
         } else {
           aValue = a.last_updated_at ? new Date(a.last_updated_at).getTime() : 0;
           bValue = b.last_updated_at ? new Date(b.last_updated_at).getTime() : 0;
@@ -152,9 +161,9 @@ const CustomizablePolicyTable = ({
         if (sortKey && sortKey in a && sortKey in b) {
           const aVal = (a as Record<string, unknown>)[sortKey];
           const bVal = (b as Record<string, unknown>)[sortKey];
-          aValue = String(aVal).toLowerCase();
-          bValue = String(bVal).toLowerCase();
-          const comparison = aValue.localeCompare(bValue);
+          aValue = String(aVal);
+          bValue = String(bVal);
+          const comparison = compareNames(aValue, bValue);
           return sortConfig.direction === "asc" ? comparison : -comparison;
         }
         return 0;
@@ -162,7 +171,7 @@ const CustomizablePolicyTable = ({
 
       // Handle string comparisons
       if (typeof aValue === "string" && typeof bValue === "string") {
-        const comparison = aValue.localeCompare(bValue);
+        const comparison = compareNames(aValue, bValue);
         return sortConfig.direction === "asc" ? comparison : -comparison;
       }
 
@@ -171,7 +180,7 @@ const CustomizablePolicyTable = ({
       if (aValue > bValue) return sortConfig.direction === "asc" ? 1 : -1;
       return 0;
     });
-  }, [data.rows, sortConfig]);
+  }, [data.rows, sortConfig, userSortNames]);
 
   const tableHeader = (
     <TableHead
@@ -318,7 +327,7 @@ const CustomizablePolicyTable = ({
           justifyContent="center"
           sx={{
             border: `1px solid ${border.light}`,
-            borderRadius: "4px",
+            borderRadius: radiusPx.sm,
             padding: theme.spacing(15, 5),
             paddingBottom: theme.spacing(20),
             gap: theme.spacing(10),

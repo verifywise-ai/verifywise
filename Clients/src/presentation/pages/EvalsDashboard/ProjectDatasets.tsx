@@ -120,7 +120,8 @@ export function ProjectDatasets({ projectId, orgId }: ProjectDatasetsProps) {
         <MyDatasetsTab
           filterColumns={ds.filterColumns}
           onFilterChange={ds.handleFilterChange}
-          onGroupChange={ds.handleDatasetsGroupChange}
+          filterConditions={ds.filterConditions}
+          filterLogic={ds.filterLogic}
           searchTerm={ds.searchTerm}
           onSearchTermChange={ds.setSearchTerm}
           uploading={ds.uploading}
@@ -128,7 +129,6 @@ export function ProjectDatasets({ projectId, orgId }: ProjectDatasetsProps) {
           canDeleteDataset={ds.canDeleteDataset}
           onUploadClick={ds.handleUploadClick}
           onCreateClick={() => ds.setCreateDatasetModalOpen(true)}
-          groupedDatasets={ds.groupedDatasets}
           filteredDatasets={ds.filteredDatasets}
           loading={ds.loading}
           onRowClick={ds.handleRowClick}
@@ -143,6 +143,10 @@ export function ProjectDatasets({ projectId, orgId }: ProjectDatasetsProps) {
         <TemplatesTab
           filterColumns={ds.templateFilterColumns}
           onFilterChange={ds.handleTemplateFilterChange}
+          filterConditions={ds.templateFilterConditions}
+          filterLogic={ds.templateFilterLogic}
+          filterRows={ds.flattenedTemplates}
+          getFilterFieldValue={ds.getTemplateFieldValue}
           templateSearchTerm={ds.templateSearchTerm}
           onTemplateSearchTermChange={ds.setTemplateSearchTerm}
           filteredTemplates={ds.filteredAndSortedTemplates}

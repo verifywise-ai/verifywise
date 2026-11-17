@@ -45,6 +45,7 @@ import { suggestDirectionForComponent } from "../riskLinks/direction/direction.s
 import { runFileExpirySweepAllOrgs } from "./actions/fileExpirySweep";
 import { runLifecycleConfirmationSweepAllOrgs } from "./actions/lifecycleConfirmationSweep";
 import { runTrainingAssignmentReminderSweepAllOrgs } from "./actions/trainingAssignmentReminderSweep";
+import { runPolicyReviewReminderSweepAllOrgs } from "./actions/policyReviewReminderSweep";
 import { aiGatewayRequest } from "../../utils/aiGatewayInternal.utils";
 import { handleExtensionSyncJob, isExtensionSyncJob } from "../../extensions/sync-engine/jobs";
 import {
@@ -93,8 +94,7 @@ async function runRiskDetection(): Promise<void> {
 import { compileMjmlToHtml } from "../../tools/mjmlCompiler";
 import { readFileSync } from "fs";
 import { join } from "path";
-import { notifyVendorReviewDue, notifyPolicyDueSoon } from "../inAppNotification.service";
-import { getAllPoliciesDueSoonQuery } from "../../utils/policyManager.utils";
+import { notifyVendorReviewDue } from "../inAppNotification.service";
 import {
   detectRiskAnomaly,
   findOverdueTasks,
@@ -214,53 +214,6 @@ async function sendVendorReviewDateNotification() {
           );
         }
       }
-    }
-  }
-}
-
-async function sendPolicyDueSoonEmailNotification() {
-  const organizations = await getAllOrganizationsQuery();
-  const baseUrl = process.env.FRONTEND_URL || "http://localhost:3000";
-
-  for (const org of organizations) {
-    const organizationId = org.id!;
-    try {
-      const policies = await getAllPoliciesDueSoonQuery(organizationId);
-
-      for (const policy of policies) {
-        if (!policy.author_id) continue;
-
-        const reviewDate = policy.next_review_date
-          ? new Date(policy.next_review_date).toLocaleDateString("en-US", {
-              year: "numeric",
-              month: "long",
-              day: "numeric",
-            })
-          : "Not set";
-
-        try {
-          for (let user_id of policy.reviewer_ids || []) {
-            await notifyPolicyDueSoon(
-              organizationId,
-              user_id,
-              {
-                id: policy.id!,
-                name: policy.title,
-                projectName: "",
-                dueDate: reviewDate,
-              },
-              baseUrl,
-            );
-          }
-        } catch (notifyError) {
-          console.error(
-            `Failed to send policy due soon notification for policy ${policy.id}:`,
-            notifyError,
-          );
-        }
-      }
-    } catch (orgError) {
-      console.error(`Error processing org ${org.id} for policy due soon:`, orgError);
     }
   }
 }
@@ -658,7 +611,10 @@ export const createAutomationWorker = () => {
         if (name === "send_vendor_notification") {
           await sendVendorReviewDateNotification();
         } else if (name === "send_policy_due_soon_notification") {
-          await sendPolicyDueSoonEmailNotification();
+          // Retired (P-H3): policy_review_reminder_sweep replaced it. Kept so a
+          // job queued before the deploy completes without sending anything.
+          // Can be removed one release after the sweep ships.
+          logger.info("Skipping retired job send_policy_due_soon_notification");
         } else if (name === "send_report_notification") {
           await sendReportNotification();
         } else if (name === "send_report_notification_daily") {
@@ -766,6 +722,8 @@ export const createAutomationWorker = () => {
           await runLifecycleConfirmationSweepAllOrgs();
         } else if (name === "training_assignment_reminder_sweep") {
           await runTrainingAssignmentReminderSweepAllOrgs();
+        } else if (name === "policy_review_reminder_sweep") {
+          await runPolicyReviewReminderSweepAllOrgs();
         } else if (name === "mcp_audit_cleanup") {
           try {
             const [auditResult, approvalResult] = await Promise.all([

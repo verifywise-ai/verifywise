@@ -18,7 +18,14 @@
 
 import { crudEntity } from "./tenantIsolation.matrix";
 import type { MatrixSpec } from "./tenantIsolation.matrix";
-import { fileFixture, projectFixture, riskFixture, taskFixture } from "./tenantIsolation.fixtures";
+import {
+  fileFixture,
+  groupFixture,
+  policyTemplateFixture,
+  projectFixture,
+  riskFixture,
+  taskFixture,
+} from "./tenantIsolation.fixtures";
 
 export interface IsolationEntity {
   /** Human-readable entity name (kebab-case). */
@@ -84,6 +91,29 @@ export const tenantIsolationRegistry: IsolationEntity[] = [
   crudEntity("tasks", "/api/tasks", ["tasks", "task_assignees"], taskFixture, {
     updateVerb: "PUT",
   }),
+  // Groups / teams with group-level use-case access (#5253). The group itself
+  // runs through the matrix; its members and its use case links are
+  // sub-resources with no read-by-id route, covered by a hand-written test.
+  crudEntity("groups", "/api/v1/groups", ["groups"], groupFixture),
+  {
+    name: "group_members",
+    tables: ["group_members"],
+    baseRoute: "/api/v1/groups/:id/members",
+    testFile: "groups-sub-resources.isolation.test.ts",
+  },
+  {
+    name: "project_groups",
+    tables: ["project_groups"],
+    baseRoute: "/api/v1/groups/projects/:projectId/groups",
+    testFile: "groups-sub-resources.isolation.test.ts",
+  },
+  // Organisation-owned policy templates (#5261).
+  crudEntity(
+    "policy_templates",
+    "/api/v1/policy-templates",
+    ["policy_templates"],
+    policyTemplateFixture,
+  ),
   {
     name: "ai_incidents",
     tables: ["ai_incident_managements"],
@@ -198,6 +228,14 @@ export const tenantIsolationRegistry: IsolationEntity[] = [
     testFile: "eu-ai-act-classifications.isolation.test.ts",
   },
   {
+    // AI Detection review decisions kept per repository, and what was done with
+    // a scan's suggested risks. Routes are nested under a scan, so a hand-written file covers them.
+    name: "ai_detection_decisions",
+    tables: ["ai_detection_governance_decisions", "ai_detection_suggested_risk_actions"],
+    baseRoute: "/api/ai-detection/scans",
+    testFile: "ai-detection-decisions.isolation.test.ts",
+  },
+  {
     name: "file_change_history",
     tables: ["file_change_history"],
     baseRoute: "/api/file-change-history",
@@ -305,6 +343,91 @@ export const tenantIsolationRegistry: IsolationEntity[] = [
     tables: ["risk_links"],
     baseRoute: "/api/riskLinks",
     testFile: "riskLinks.isolation.test.ts",
+  },
+  {
+    // Framework import extension (#5254). The list is keyed by the caller's
+    // organization and topics/subtopics are only reachable through their
+    // framework, so a hand-written file covers all three tables.
+    name: "imported_frameworks",
+    tables: ["imported_frameworks", "imported_framework_topics", "imported_framework_subtopics"],
+    baseRoute: "/api/v1/framework-import/imported",
+    testFile: "framework-import.isolation.test.ts",
+  },
+  {
+    // Imported frameworks attached to use cases and assessed (#5254). Impl
+    // rows and their risk links are only reachable through their link, so a
+    // hand-written file covers all five tables.
+    name: "imported_framework_assessments",
+    tables: [
+      "projects_imported_frameworks",
+      "imported_framework_topic_impl",
+      "imported_framework_subtopic_impl",
+      "imported_framework_topic_impl__risks",
+      "imported_framework_subtopic_impl__risks",
+    ],
+    baseRoute: "/api/v1/imported-framework-assessments",
+    testFile: "imported-framework-assessment.isolation.test.ts",
+  },
+  {
+    // Slack extension connections. Every connection belongs to an
+    // organization; management routes and delivery filter by it, so a
+    // hand-written file covers the routes and the delivery query.
+    name: "slack-webhooks",
+    tables: ["slack_webhooks"],
+    baseRoute: "/api/extensions/slack",
+    testFile: "slack-webhooks.isolation.test.ts",
+  },
+  {
+    // Model Lifecycle extension. Setup rows are keyed by the caller's
+    // organization; every per-model row is reached through a model and an
+    // item that must both be in the organization, so a hand-written file
+    // covers all seven tables.
+    name: "model-lifecycle",
+    tables: [
+      "model_lifecycle_phases",
+      "model_lifecycle_items",
+      "model_lifecycle_values",
+      "model_lifecycle_item_files",
+      "model_lifecycle_item_people",
+      "model_lifecycle_item_approvals",
+      "model_lifecycle_change_history",
+    ],
+    baseRoute: "/api/extensions/model-lifecycle",
+  },
+  {
+    // MLflow extension. Sync, list and read are keyed by the caller's
+    // organization (its own tracking server and records). mlflow_integrations
+    // is the pre-extension config table no route uses any more; the file
+    // checks nothing another organization does touches the owner's row.
+    name: "mlflow",
+    tables: ["mlflow_integrations", "mlflow_model_records"],
+    baseRoute: "/api/extensions/mlflow",
+  },
+  {
+    // Azure AI Foundry extension. Sync, discovery, list and read are keyed by
+    // the caller's organization (its own endpoint, key and records).
+    name: "azure-ai-foundry",
+    tables: ["azure_ai_model_records"],
+    baseRoute: "/api/extensions/azure-ai-foundry",
+  },
+  {
+    // Jira Assets extension. Config, schedule and selection writes are keyed
+    // by the caller's organization; use case removal and delete take ids. One
+    // file covers use case visibility and the writes across organizations.
+    // jira_assets_sync_history stays deferred: it is no longer written and a
+    // follow-up migration drops it.
+    name: "jira-assets",
+    tables: ["jira_assets_config", "jira_assets_use_cases"],
+    baseRoute: "/api/extensions/jira-assets",
+    testFile: "jira-assets-use-cases.isolation.test.ts",
+  },
+  {
+    // Extension catalog enablement. Enable, disable and configuration are
+    // keyed by extension key and always act on the caller's organization's
+    // row, so a hand-written file covers them.
+    name: "extension-enablements",
+    tables: ["extension_enablements"],
+    baseRoute: "/api/extensions/:key",
   },
 ];
 

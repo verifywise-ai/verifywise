@@ -24,7 +24,7 @@ export const watchtowerContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Navigate to **Event Tracker** from the main sidebar. The page is organized into two tabs: Events and Logs. Every member sees the Events tab. The Logs tab is shown only to Admins.',
+      text: 'Navigate to **Workspace > Settings > Event tracker** in the sidebar. The page is organized into two tabs: Events and Logs. Every member sees the Events tab. The Logs tab is shown only to Admins.',
     },
     {
       type: 'heading',

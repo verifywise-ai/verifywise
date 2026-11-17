@@ -14,6 +14,12 @@ vi.mock("../../../components/ExtensionSyncPanel", () => ({
 vi.mock("../../../../application/hooks/useAuth", () => ({
   useAuth: () => ({ userRoleName: "Admin" }),
 }));
+// The signed-in Admin holds extension.admin.
+vi.mock("../../../../application/hooks/useCan", () => ({
+  useCan: () => true,
+  useCanCheck: () => () => true,
+  usePermissionsSettled: () => true,
+}));
 vi.mock("../../../../application/hooks/useFormattedDate", () => ({
   default: () => () => "14-10-2026",
 }));
@@ -221,8 +227,9 @@ describe("JiraIncidentsConfiguration", () => {
     await waitFor(() => expect(panelProps).toHaveBeenCalled());
     const props = panelProps.mock.calls[panelProps.mock.calls.length - 1][0];
     expect(props).toMatchObject({ extensionKey: "jira-incidents", showSyncNow: false });
-    expect(props.describeCompletedRun({ counts: { imported: 1 } })).toBe(
-      "Sync completed: imported 1",
+    const identity = (key: string) => key;
+    expect(props.describeCompletedRun({ counts: { imported: 1 } }, identity, "en")).toBe(
+      "Sync completed: 1 incident imported",
     );
   });
 

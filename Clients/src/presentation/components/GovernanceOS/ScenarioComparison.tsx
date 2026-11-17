@@ -5,7 +5,14 @@ import Checkbox from "../Inputs/Checkbox";
 import FrameworkChip from "./FrameworkChip";
 import GovernanceTooltip from "./GovernanceTooltip";
 import { IGovernanceScenario } from "../../../domain/interfaces/i.governanceOs";
-import { border as borderPalette, background, text, accent, brand } from "../../themes/palette";
+import {
+  border as borderPalette,
+  background,
+  text,
+  accent,
+  brand,
+  radiusPx,
+} from "../../themes/palette";
 
 interface ScenarioComparisonProps {
   scenarios: IGovernanceScenario[];
@@ -78,7 +85,7 @@ const ScenarioComparison: React.FC<ScenarioComparisonProps> = ({
     <Box
       sx={{
         border: `1px solid ${borderPalette.dark}`,
-        borderRadius: "4px",
+        borderRadius: radiusPx.sm,
         p: "16px",
         background: `linear-gradient(135deg, ${background.main} 0%, ${background.gradientStop} 100%)`,
       }}
@@ -112,7 +119,7 @@ const ScenarioComparison: React.FC<ScenarioComparisonProps> = ({
                 gap: 1,
                 px: 1.5,
                 py: 0.75,
-                borderRadius: "4px",
+                borderRadius: radiusPx.sm,
                 border: `1px solid ${isSelected ? brand.primary : borderPalette.light}`,
                 backgroundColor: isSelected ? alpha(brand.primary, 0.08) : background.main,
                 opacity: disabled ? 0.5 : 1,
@@ -139,7 +146,7 @@ const ScenarioComparison: React.FC<ScenarioComparisonProps> = ({
               gridTemplateColumns: `140px repeat(${comparedScenarios.length}, minmax(180px, 1fr))`,
               minWidth: comparedScenarios.length * 200 + 140,
               border: `1px solid ${borderPalette.light}`,
-              borderRadius: "4px",
+              borderRadius: radiusPx.sm,
               overflow: "hidden",
             }}
           >
@@ -293,7 +300,7 @@ const ScenarioComparison: React.FC<ScenarioComparisonProps> = ({
                       alignItems: "center",
                       height: 20,
                       px: "8px",
-                      borderRadius: "4px",
+                      borderRadius: radiusPx.sm,
                       fontSize: 11,
                       fontWeight: 500,
                       backgroundColor: scenario.is_builtin ? background.hover : accent.indigo.bg,
@@ -313,7 +320,7 @@ const ScenarioComparison: React.FC<ScenarioComparisonProps> = ({
             p: 4,
             textAlign: "center",
             border: `1px dashed ${borderPalette.light}`,
-            borderRadius: "4px",
+            borderRadius: radiusPx.sm,
             background: background.main,
           }}
         >
@@ -382,7 +389,7 @@ const PriorityBadge: React.FC<{ priority: string }> = ({ priority }) => {
         alignItems: "center",
         height: 20,
         px: "8px",
-        borderRadius: "4px",
+        borderRadius: radiusPx.sm,
         fontSize: 11,
         fontWeight: 500,
         textTransform: "capitalize",

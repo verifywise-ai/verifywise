@@ -4,6 +4,7 @@ import { Check, X, User, Mail, LayoutTemplate } from "lucide-react";
 import { FormField } from "./types";
 import { FieldCard } from "./FieldCard";
 import { EuAiActStepCard } from "./EuAiActStepCard";
+import { radiusPx } from "../../themes/palette";
 
 function EmptyState() {
   const theme = useTheme();
@@ -100,7 +101,7 @@ function EditableFormTitle({
             fontWeight: 600,
             color: theme.palette.text.primary,
             border: `1px solid ${theme.palette.primary.main}`,
-            borderRadius: "4px",
+            borderRadius: radiusPx.sm,
             padding: "4px 8px",
             outline: "none",
             fontFamily: "inherit",
@@ -117,7 +118,7 @@ function EditableFormTitle({
               "p": "4px",
               "color": theme.palette.background.main,
               "backgroundColor": theme.palette.primary.main,
-              "borderRadius": "4px",
+              "borderRadius": radiusPx.sm,
               "&:hover": { backgroundColor: "brand.primaryHover" },
             }}
           >
@@ -132,7 +133,7 @@ function EditableFormTitle({
               "p": "4px",
               "color": theme.palette.other.icon,
               "backgroundColor": theme.palette.background.accent,
-              "borderRadius": "4px",
+              "borderRadius": radiusPx.sm,
               "&:hover": { backgroundColor: theme.palette.border.light },
             }}
           >
@@ -152,7 +153,7 @@ function EditableFormTitle({
       sx={{
         "display": "inline-flex",
         "alignItems": "center",
-        "borderRadius": "4px",
+        "borderRadius": radiusPx.sm,
         "border": "1px solid transparent",
         "px": "8px",
         "py": "4px",
@@ -233,7 +234,7 @@ function EditableFormDescription({
             fontSize: "13px",
             color: theme.palette.other.icon,
             border: `1px solid ${theme.palette.primary.main}`,
-            borderRadius: "4px",
+            borderRadius: radiusPx.sm,
             padding: "4px 8px",
             outline: "none",
             fontFamily: "inherit",
@@ -252,7 +253,7 @@ function EditableFormDescription({
               "p": "4px",
               "color": theme.palette.background.main,
               "backgroundColor": theme.palette.primary.main,
-              "borderRadius": "4px",
+              "borderRadius": radiusPx.sm,
               "&:hover": { backgroundColor: "brand.primaryHover" },
             }}
           >
@@ -267,7 +268,7 @@ function EditableFormDescription({
               "p": "4px",
               "color": theme.palette.other.icon,
               "backgroundColor": theme.palette.background.accent,
-              "borderRadius": "4px",
+              "borderRadius": radiusPx.sm,
               "&:hover": { backgroundColor: theme.palette.border.light },
             }}
           >
@@ -287,7 +288,7 @@ function EditableFormDescription({
       sx={{
         "display": "inline-flex",
         "alignItems": "center",
-        "borderRadius": "4px",
+        "borderRadius": radiusPx.sm,
         "border": "1px solid transparent",
         "px": "8px",
         "py": "2px",
@@ -354,7 +355,7 @@ function ContactInfoPreview() {
               flex: 1,
               height: 32,
               border: `1px solid ${theme.palette.border.light}`,
-              borderRadius: "4px",
+              borderRadius: radiusPx.sm,
               backgroundColor: theme.palette.background.main,
               display: "flex",
               alignItems: "center",
@@ -453,7 +454,7 @@ export const FormCanvas = forwardRef<FormCanvasHandle, FormCanvasProps>(function
             mt: "16px",
             backgroundColor: theme.palette.background.main,
             border: `1px solid ${theme.palette.border.dark}`,
-            borderRadius: "4px",
+            borderRadius: radiusPx.sm,
             minHeight: 400,
           }}
         >

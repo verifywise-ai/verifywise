@@ -4,7 +4,7 @@ import { useNavigate } from "react-router";
 import { GitCompareArrows, BarChart3, ArrowRight, Sparkles } from "lucide-react";
 import { useGovernancePreferences } from "../../../application/hooks/useGovernanceOs";
 import { CustomizableButton } from "../button/customizable-button";
-import { text, brand, background, border as borderPalette } from "../../themes/palette";
+import { text, brand, background, border as borderPalette, radiusPx } from "../../themes/palette";
 
 interface GovernanceIntelligenceContextBarProps {
   frameworkCount: number;
@@ -24,7 +24,7 @@ const GovernanceIntelligenceContextBar: React.FC<GovernanceIntelligenceContextBa
       sx={{
         mb: "16px",
         p: "16px",
-        borderRadius: "4px",
+        borderRadius: radiusPx.sm,
         border: `1px solid ${borderPalette.dark}`,
         background: `linear-gradient(135deg, ${background.main} 0%, ${background.gradientStop} 100%)`,
       }}

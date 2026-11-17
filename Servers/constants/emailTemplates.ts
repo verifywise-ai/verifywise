@@ -29,7 +29,7 @@ export const EMAIL_TEMPLATES = {
   MEMBER_ROLE_CHANGED_EDITOR_TO_ADMIN: "member-role-changed-editor-to-admin.mjml",
 
   // Policy templates
-  POLICY_DUE_SOON: "policy-due-soon.mjml",
+  POLICY_REVIEW_REMINDER: "policy-review-reminder.mjml",
 
   // Task templates
   TASK_ASSIGNED: "task-assigned.mjml",
@@ -59,6 +59,9 @@ export const EMAIL_TEMPLATES = {
 
   // Shadow AI templates
   SHADOW_AI_ALERT: "shadow-ai-alert.mjml",
+
+  // AI Detection templates
+  AI_DETECTION_SCAN_ALERT: "ai-detection-scan-alert.mjml",
 
   // MRM templates
   MRM_BREACH_ALERT: "mrm-breach-alert.mjml",

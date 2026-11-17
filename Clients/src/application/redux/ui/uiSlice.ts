@@ -28,6 +28,9 @@ const uiSlice = createSlice({
     toggleSidebar: (state) => {
       state.sidebar.collapsed = !state.sidebar.collapsed;
     },
+    setSidebarCollapsed: (state, action: PayloadAction<boolean>) => {
+      state.sidebar.collapsed = action.payload;
+    },
     setModelInventoryStatusFilter: (state, action) => {
       state.modelInventory.statusFilter = action.payload;
     },
@@ -42,5 +45,10 @@ const uiSlice = createSlice({
 });
 
 export default uiSlice.reducer;
-export const { setRowsPerPage, toggleSidebar, setModelInventoryStatusFilter, setActiveModule } =
-  uiSlice.actions;
+export const {
+  setRowsPerPage,
+  toggleSidebar,
+  setSidebarCollapsed,
+  setModelInventoryStatusFilter,
+  setActiveModule,
+} = uiSlice.actions;

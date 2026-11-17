@@ -4,10 +4,16 @@ import reportingRoutes from "../../routes/reporting.route";
 import { BUILTIN_ROLE_PERMISSIONS } from "../../config/rolePermissions.config";
 
 // Back the route guard with the real static built-in matrix (no DB).
-jest.mock("../../utils/rolePermissions.utils", () => ({
-  roleHasPermission: async (_orgId: number | null, role: string, key: string) =>
-    BUILTIN_ROLE_PERMISSIONS[role]?.has(key as never) ?? false,
-}));
+jest.mock("../../utils/rolePermissions.utils", () => {
+  const roleHasPermission = async (_orgId: number | null, role: string, key: string) =>
+    BUILTIN_ROLE_PERMISSIONS[role]?.has(key as never) ?? false;
+  return {
+    roleHasPermission,
+    // authorize() resolves through the request (#5314); same answer here.
+    requestHasPermission: async (req: any, key: string) =>
+      roleHasPermission(req.organizationId ?? null, req.role, key),
+  };
+});
 
 // x-test-role sets req.role.
 jest.mock("../../middleware/auth.middleware", () => ({

@@ -6,7 +6,7 @@
 
 import { Box } from "@mui/material";
 import VWTooltip from "../../../components/VWTooltip";
-import { palette } from "../../../themes/palette";
+import { palette, radiusPx } from "../../../themes/palette";
 
 interface FilePathItemProps {
   path: string;
@@ -34,7 +34,7 @@ export function FilePathItem({ path, lineNumber, matchedText, fileUrl }: FilePat
         "&:hover": {
           backgroundColor: palette.background.hover,
         },
-        "borderRadius": "4px",
+        "borderRadius": radiusPx.sm,
       }}
     >
       {fileUrl ? (

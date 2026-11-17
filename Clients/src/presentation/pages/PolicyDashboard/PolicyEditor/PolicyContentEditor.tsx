@@ -2,12 +2,14 @@ import { ChangeEvent, ReactNode, RefObject } from "react";
 import type { Editor } from "@tiptap/react";
 import { EditorContent } from "@tiptap/react";
 import { Box, GlobalStyles, Stack, Typography, useTheme } from "@mui/material";
+import { Lock } from "lucide-react";
 import InsertLinkModal from "../../../components/Modals/InsertLinkModal/InsertLinkModal";
 import { policyEditorStyles } from "./editorStyles";
 import { usePolicyFindReplace } from "./usePolicyFindReplace";
 import { FindReplacePopover } from "./FindReplacePopover";
 import { PolicyTableBubbleMenu } from "./PolicyTableBubbleMenu";
 import { PolicyToolbar } from "./PolicyToolbar";
+import { radiusPx } from "../../../themes/palette";
 
 export interface PolicyContentEditorProps {
   editor: Editor | null;
@@ -25,6 +27,8 @@ export interface PolicyContentEditorProps {
   children?: ReactNode;
   /** Hides the formatting toolbar for roles that cannot edit policies. */
   readOnly?: boolean;
+  /** Shown above the editor when the content is locked (a pending approval request). */
+  lockedNote?: string;
 }
 
 /** TipTap editor region: toolbar, find/replace, link modal, editor surface. */
@@ -42,6 +46,7 @@ export function PolicyContentEditor({
   findReplace,
   children,
   readOnly = false,
+  lockedNote,
 }: PolicyContentEditorProps) {
   const theme = useTheme();
 
@@ -72,6 +77,19 @@ export function PolicyContentEditor({
         />
       )}
 
+      {lockedNote && (
+        <Stack
+          direction="row"
+          alignItems="center"
+          gap="8px"
+          data-testid="policy-content-locked-note"
+          sx={{ mb: "8px", color: "text.secondary", flexShrink: 0 }}
+        >
+          <Lock size={14} strokeWidth={1.5} />
+          <Typography sx={{ fontSize: "13px", color: "text.secondary" }}>{lockedNote}</Typography>
+        </Stack>
+      )}
+
       <FindReplacePopover
         anchorEl={findReplace.searchAnchorEl}
         onClose={findReplace.closeFindReplace}
@@ -97,7 +115,7 @@ export function PolicyContentEditor({
             overflow: "auto",
             border: "1px solid",
             borderColor: "border.dark",
-            borderRadius: "4px",
+            borderRadius: radiusPx.sm,
           }}
         >
           <EditorContent editor={editor} className="policy-tiptap-editor" />

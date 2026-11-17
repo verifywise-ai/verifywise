@@ -21,7 +21,7 @@ export const reportsContent: ArticleContent = {
     {
       type: 'ordered-list',
       items: [
-        { text: 'Go to the **Reports** tab in your project.' },
+        { text: 'In the sidebar, open **Enforce > LLM Evals**, select your project and click **Reports**.' },
         { text: 'Click **Generate report** to open the configuration modal.' },
         { text: 'Give your report a title. The project name is pre-filled as a default.' },
         { text: 'Choose a format: **PDF** for a full document or **CSV** for raw data.' },

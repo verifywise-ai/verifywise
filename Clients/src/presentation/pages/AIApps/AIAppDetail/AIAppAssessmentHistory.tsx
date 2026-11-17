@@ -3,7 +3,7 @@ import { Box, Collapse, IconButton, Stack, Typography } from "@mui/material";
 import { ChevronDown, ChevronRight, History } from "lucide-react";
 import Alert from "../../../components/Alert";
 import { CustomizableButton } from "../../../components/button/customizable-button";
-import { palette } from "../../../themes/palette";
+import { palette, radiusPx } from "../../../themes/palette";
 import useFormattedDate from "../../../../application/hooks/useFormattedDate";
 import { useTranslation } from "../../../../application/hooks/useTranslation";
 import {
@@ -48,7 +48,7 @@ export default function AIAppAssessmentHistory({ appId }: { appId: number }) {
           No questionnaire assessments yet.
         </Typography>
       ) : (
-        <Stack sx={{ border: `1px solid ${palette.border.dark}`, borderRadius: "4px" }}>
+        <Stack sx={{ border: `1px solid ${palette.border.dark}`, borderRadius: radiusPx.sm }}>
           {assessments.map((assessment, index) => {
             const isCompleted = assessment.status === "completed";
             const isExpanded = expandedId === assessment.id;

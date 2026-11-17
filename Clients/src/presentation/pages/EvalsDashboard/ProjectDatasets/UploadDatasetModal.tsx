@@ -10,7 +10,7 @@ import { Download, Upload } from "lucide-react";
 import { CustomizableButton } from "../../../components/button/customizable-button";
 import Chip from "../../../components/Chip";
 import ModalStandard from "../../../components/Modals/StandardModal";
-import { palette } from "../../../themes/palette";
+import { palette, radiusPx } from "../../../themes/palette";
 import {
   getExampleDatasetPayload,
   type ExampleTurnType,
@@ -25,6 +25,13 @@ export type UploadDatasetModalProps = {
   useCase: ExampleUseCase;
   onUseCaseChange: (useCase: ExampleUseCase) => void;
   onUploadClick: () => void;
+};
+
+// Whole sentences per type, so the DOM translator can match each heading.
+const TURN_TYPE_HEADINGS: Record<ExampleTurnType, { format: string; fields: string }> = {
+  "single-turn": { format: "Single-turn JSON format", fields: "Single-turn fields" },
+  "multi-turn": { format: "Multi-turn JSON format", fields: "Multi-turn fields" },
+  "simulated": { format: "Simulated JSON format", fields: "Simulated fields" },
 };
 
 const handleDownloadExample = (turnType: ExampleTurnType, useCase: ExampleUseCase) => {
@@ -100,7 +107,7 @@ export default function UploadDatasetModal({
           <Stack direction="row" spacing={1}>
             <Box onClick={() => onTurnTypeChange("single-turn")} sx={{ cursor: "pointer" }}>
               <Chip
-                label="Single-Turn"
+                label="Single-turn"
                 uppercase={false}
                 backgroundColor={
                   turnType === "single-turn" ? palette.status.warning.bg : palette.background.hover
@@ -112,7 +119,7 @@ export default function UploadDatasetModal({
             </Box>
             <Box onClick={() => onTurnTypeChange("multi-turn")} sx={{ cursor: "pointer" }}>
               <Chip
-                label="Multi-Turn"
+                label="Multi-turn"
                 uppercase={false}
                 backgroundColor={
                   turnType === "multi-turn" || turnType === "simulated"
@@ -235,33 +242,22 @@ export default function UploadDatasetModal({
             sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: 1 }}
           >
             <Typography variant="subtitle2" sx={{ fontWeight: 600, fontSize: "13px" }}>
-              {turnType === "single-turn"
-                ? "Single-Turn"
-                : turnType === "multi-turn"
-                  ? "Multi-Turn"
-                  : "Simulated"}{" "}
-              JSON format
+              {TURN_TYPE_HEADINGS[turnType].format}
             </Typography>
             <CustomizableButton
               size="small"
               variant="text"
+              color="primary"
               startIcon={<Download size={14} />}
               onClick={() => handleDownloadExample(turnType, useCase)}
               text="Download example"
-              sx={{
-                "fontSize": "12px",
-                "color": palette.brand.primary,
-                "&:hover": {
-                  backgroundColor: "rgba(19, 113, 91, 0.08)",
-                },
-              }}
             />
           </Box>
           <Box
             sx={{
               backgroundColor: palette.background.accent,
               border: `1px solid ${palette.border.dark}`,
-              borderRadius: "6px",
+              borderRadius: radiusPx.md,
               p: 2,
               fontFamily: "monospace",
               fontSize: "11px",
@@ -337,7 +333,7 @@ export default function UploadDatasetModal({
                 mt: 1.5,
                 p: 1.5,
                 backgroundColor: palette.accent.purple.bg,
-                borderRadius: "6px",
+                borderRadius: radiusPx.md,
                 border: `1px solid ${palette.accent.purple.border}`,
               }}
             >
@@ -360,12 +356,7 @@ export default function UploadDatasetModal({
         {/* Field descriptions based on turn type */}
         <Box>
           <Typography variant="subtitle2" sx={{ fontWeight: 600, fontSize: "13px", mb: 1 }}>
-            {turnType === "single-turn"
-              ? "Single-Turn"
-              : turnType === "multi-turn"
-                ? "Multi-Turn"
-                : "Simulated"}{" "}
-            fields
+            {TURN_TYPE_HEADINGS[turnType].fields}
           </Typography>
           <Stack spacing={0.75}>
             <Box>

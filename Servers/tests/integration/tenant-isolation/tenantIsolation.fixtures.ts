@@ -51,6 +51,49 @@ export const taskFixture: EntityFixture = {
   }),
 };
 
+/**
+ * Groups / teams (#5253): seeded straight into the org-scoped tables — the
+ * groups API only writes through verifywise.groups, so the fixture mirrors a
+ * direct INSERT. Membership and project links are covered by
+ * groups-sub-resources.isolation.test.ts.
+ */
+export const groupFixture: EntityFixture = {
+  seed: async (ctx) => {
+    const [rows] = await sequelize.query(
+      `INSERT INTO verifywise.groups (organization_id, name, description, created_by)
+       VALUES (:orgId, 'Isolation group', NULL, :userId) RETURNING id`,
+      { replacements: { orgId: ctx.orgId, userId: ctx.userId } },
+    );
+    return (rows as any[])[0].id;
+  },
+  updatePayload: () => ({ name: "Updated by isolation matrix" }),
+  createPayload: (_owner, foreignOrgId) => ({
+    name: "Cross-tenant group",
+    description: "Should be stamped with the caller's organization",
+    organization_id: foreignOrgId,
+  }),
+};
+
+/** Organisation-owned policy templates (#5261), mirroring the report-templates pattern. */
+export const policyTemplateFixture: EntityFixture = {
+  seed: async (ctx) => {
+    const [rows] = await sequelize.query(
+      `INSERT INTO verifywise.policy_templates
+         (organization_id, name, category, description, content, tags, is_system_template)
+       VALUES (:orgId, 'Isolation template', 'Legal and compliance', NULL, '<p>x</p>', '{}', false)
+       RETURNING id`,
+      { replacements: { orgId: ctx.orgId } },
+    );
+    return (rows as any[])[0].id;
+  },
+  updatePayload: () => ({ name: "Updated by isolation matrix" }),
+  createPayload: (_owner, foreignOrgId) => ({
+    name: "Cross-tenant policy template",
+    category: "Legal and compliance",
+    organization_id: foreignOrgId,
+  }),
+};
+
 export const riskFixture: EntityFixture = {
   seed: (ctx) => createTestRisk(ctx.orgId, { risk_owner: ctx.userId }),
   updatePayload: () => ({ risk_name: "Updated by isolation matrix" }),

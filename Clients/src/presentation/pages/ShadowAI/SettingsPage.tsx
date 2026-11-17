@@ -50,7 +50,7 @@ import Field from "../../components/Inputs/Field";
 import Select from "../../components/Inputs/Select";
 import { PageHeaderExtended } from "../../components/Layout/PageHeaderExtended";
 import { useUserGuideSidebarContext } from "../../components/UserGuide/UserGuideSidebarContext";
-import { palette } from "../../themes/palette";
+import { palette, radiusPx } from "../../themes/palette";
 import useFormattedDate from "../../../application/hooks/useFormattedDate";
 import { useTranslation } from "../../../application/hooks/useTranslation";
 import { formatRelativeDate } from "../../../application/utils/dateFormatter";
@@ -277,7 +277,7 @@ function ApiKeysSection() {
                     backgroundColor: palette.background.hover,
                     px: 1.5,
                     py: 0.5,
-                    borderRadius: "4px",
+                    borderRadius: radiusPx.sm,
                     border: `1px solid ${palette.border.dark}`,
                     wordBreak: "break-all",
                     flex: 1,
@@ -298,14 +298,14 @@ function ApiKeysSection() {
         )}
 
         {loading ? (
-          <Skeleton variant="rectangular" height={150} sx={{ borderRadius: "4px" }} />
+          <Skeleton variant="rectangular" height={150} sx={{ borderRadius: radiusPx.sm }} />
         ) : keys.length === 0 ? (
           <Box
             sx={{
               py: 4,
               textAlign: "center",
               border: `1px dashed ${palette.border.dark}`,
-              borderRadius: "4px",
+              borderRadius: radiusPx.sm,
             }}
           >
             <Typography sx={{ fontSize: 13, color: palette.text.disabled }}>
@@ -471,7 +471,7 @@ const keyBoxSx = {
   backgroundColor: palette.background.hover,
   px: "12px",
   py: "6px",
-  borderRadius: "4px",
+  borderRadius: radiusPx.sm,
   border: `1px solid ${palette.border.dark}`,
   wordBreak: "break-all" as const,
   flex: 1,
@@ -764,14 +764,14 @@ function SyslogConfigSection() {
         )}
 
         {loading ? (
-          <Skeleton variant="rectangular" height={100} sx={{ borderRadius: "4px" }} />
+          <Skeleton variant="rectangular" height={100} sx={{ borderRadius: radiusPx.sm }} />
         ) : configs.length === 0 ? (
           <Box
             sx={{
               py: 4,
               textAlign: "center",
               border: `1px dashed ${palette.border.dark}`,
-              borderRadius: "4px",
+              borderRadius: radiusPx.sm,
             }}
           >
             <Typography sx={{ fontSize: 13, color: palette.text.disabled }}>
@@ -1193,7 +1193,7 @@ const codeBoxSx = {
   fontSize: 12,
   backgroundColor: palette.background.accent,
   border: `1px solid ${palette.border.dark}`,
-  borderRadius: "4px",
+  borderRadius: radiusPx.sm,
   p: 2,
   whiteSpace: "pre-wrap" as const,
   wordBreak: "break-all" as const,
@@ -1397,7 +1397,11 @@ function RateLimitSection({
         </Typography>
 
         {loading ? (
-          <Skeleton variant="rectangular" height={40} sx={{ borderRadius: "4px", maxWidth: 300 }} />
+          <Skeleton
+            variant="rectangular"
+            height={40}
+            sx={{ borderRadius: radiusPx.sm, maxWidth: 300 }}
+          />
         ) : (
           <Stack direction="row" alignItems="flex-end" gap="12px">
             <Field
@@ -1539,7 +1543,7 @@ function DataRetentionSection({
         </Typography>
 
         {loading ? (
-          <Skeleton variant="rectangular" height={120} sx={{ borderRadius: "4px" }} />
+          <Skeleton variant="rectangular" height={120} sx={{ borderRadius: radiusPx.sm }} />
         ) : (
           <Stack gap="16px">
             {RETENTION_FIELDS.map((field) => (
@@ -1626,7 +1630,7 @@ function RiskScoreSection() {
               sx={{
                 p: "12px 16px",
                 border: `1px solid ${palette.border.dark}`,
-                borderRadius: "4px",
+                borderRadius: radiusPx.sm,
                 alignItems: "flex-start",
               }}
             >

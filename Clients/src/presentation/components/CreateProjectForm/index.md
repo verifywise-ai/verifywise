@@ -240,7 +240,7 @@ fieldStyle: (theme: Theme) => ({
 
 ### Role-Based Access Control
 
-- **Team Member Editing**: Controlled by `allowedRoles.projects.editTeamMembers`
+- **Team Member Editing**: Controlled by the `useCase.members` permission (`useCan`)
 - **User Role Integration**: Uses `useAuth` hook for current user role
 - **Dynamic UI**: Form elements adapt based on user permissions
 - **Read-Only States**: Automatic disabling of restricted fields

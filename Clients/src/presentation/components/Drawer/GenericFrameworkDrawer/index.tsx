@@ -8,6 +8,9 @@
  *   GET   /api/frameworks/:frameworkId/impl/:level/:id
  *   GET   /api/frameworks/:frameworkId/impl/:level/:id/risks
  *   PATCH /api/frameworks/:frameworkId/impl/:level/:id  (multipart)
+ * Imported frameworks (#5254) pass `implBaseUrl` to swap the
+ * `/frameworks/:frameworkId/impl` prefix for their own endpoints; the rest of
+ * the path and the request shapes are the same.
  *
  * Notes tab: NotesAttachedToEnum currently only carries values for the
  * built-in frameworks (EU AI Act, ISO 27001, ISO 42001, NIST AI RMF). The
@@ -40,7 +43,7 @@ import {
   updateEntityById,
 } from "../../../../application/repository/entity.repository";
 import { attachFilesToEntity } from "../../../../application/repository/file.repository";
-import allowedRoles from "../../../../application/constants/permissions";
+import { useCanCheck } from "../../../../application/hooks/useCan";
 
 // Default 8-value status enum shared by every generic impl table.
 const DEFAULT_STATUS_OPTIONS: StatusOption[] = [
@@ -85,6 +88,8 @@ export interface GenericFrameworkDrawerProps {
   isOrganizational?: boolean;
 
   // Optional overrides.
+  /** Impl endpoint prefix, up to and including `/impl`. Defaults to `/frameworks/:frameworkId/impl`. */
+  implBaseUrl?: string;
   statusOptions?: StatusOption[];
   notesAttachedTo?: string; // enables Notes tab when provided
   drawerClassName?: string;
@@ -107,12 +112,14 @@ const GenericFrameworkDrawer: React.FC<GenericFrameworkDrawerProps> = ({
   questions,
   evidenceExamples,
   isOrganizational = false,
+  implBaseUrl,
   statusOptions = DEFAULT_STATUS_OPTIONS,
   notesAttachedTo,
   drawerClassName,
   onSaveSuccess,
 }) => {
-  const { userRoleName, userId } = useAuth();
+  const { userId } = useAuth();
+  const can = useCanCheck();
   const { users } = useUsers();
 
   const [isLoading, setIsLoading] = useState(false);
@@ -158,10 +165,10 @@ const GenericFrameworkDrawer: React.FC<GenericFrameworkDrawerProps> = ({
     [users],
   );
 
-  const isEditingDisabled = !allowedRoles.frameworks.edit.includes(userRoleName);
-  const isAuditingDisabled = !allowedRoles.frameworks.audit.includes(userRoleName);
+  const isEditingDisabled = !can("framework.edit");
+  const isAuditingDisabled = !can("framework.audit");
 
-  const baseUrl = `/frameworks/${frameworkId}/impl/${level}/${entityId}`;
+  const baseUrl = `${implBaseUrl ?? `/frameworks/${frameworkId}/impl`}/${level}/${entityId}`;
 
   const fetchImpl = async () => {
     if (!entityId) return;

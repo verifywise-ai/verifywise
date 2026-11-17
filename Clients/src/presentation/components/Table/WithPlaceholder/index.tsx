@@ -31,8 +31,7 @@ import {
   AlertCircle,
 } from "lucide-react";
 import VendorRisksDialog from "../../VendorRisksDialog";
-import allowedRoles from "../../../../application/constants/permissions";
-import { useAuth } from "../../../../application/hooks/useAuth";
+import { useCanCheck } from "../../../../application/hooks/useCan";
 import { VendorModel } from "../../../../domain/models/Common/vendor/vendor.model";
 import { User } from "../../../../domain/types/User";
 import { ITableWithPlaceholderProps } from "../../../types/interfaces/i.table";
@@ -40,7 +39,7 @@ import { ReviewStatus } from "../../../../domain/enums/status.enum";
 import { getRiskScoreColor } from "../../../../domain/utils/vendorScorecard.utils";
 import { VWLink } from "../../Link";
 import VendorLogo from "../../VendorLogo";
-import { text } from "../../../themes/palette";
+import { text, palette as vwPalette, radiusPx } from "../../../themes/palette";
 import { useCustomFieldDefinitions } from "../../../../application/hooks/useCustomFields";
 import { formatCustomFieldValue } from "../../CustomFieldsSection/formatCustomFieldValue";
 import { pageOfLabel } from "../pageOfLabel";
@@ -153,7 +152,7 @@ const TableWithPlaceholder: React.FC<ITableWithPlaceholderProps> = ({
 }) => {
   const formatDate = useFormattedDate();
   const theme = useTheme();
-  const { userRoleName } = useAuth();
+  const can = useCanCheck();
   const [page, setPage] = useState(0);
 
   // Initialize rowsPerPage from localStorage or default to 5
@@ -206,7 +205,7 @@ const TableWithPlaceholder: React.FC<ITableWithPlaceholderProps> = ({
 
   const cellStyle = singleTheme.tableStyles.primary.body.cell;
 
-  const isDeletingAllowed = allowedRoles.vendors.delete.includes(userRoleName);
+  const isDeletingAllowed = can("vendor.edit");
 
   const isVisible = useCallback(
     (key: string) => {
@@ -384,7 +383,10 @@ const TableWithPlaceholder: React.FC<ITableWithPlaceholderProps> = ({
                 <TableCell
                   sx={{
                     ...singleTheme.tableStyles.primary.body.cell,
-                    backgroundColor: sortConfig.key === "vendor_name" ? "#e8e8e8" : "#fafafa",
+                    backgroundColor:
+                      sortConfig.key === "vendor_name"
+                        ? vwPalette.border.light
+                        : vwPalette.background.alt,
                   }}
                 >
                   <VendorLogo
@@ -468,7 +470,7 @@ const TableWithPlaceholder: React.FC<ITableWithPlaceholderProps> = ({
                               alignItems: "center",
                               gap: 1,
                               padding: "4px 8px",
-                              borderRadius: "4px",
+                              borderRadius: radiusPx.sm,
                               backgroundColor: `${riskColor}20`,
                               border: `1px solid ${riskColor}`,
                               minWidth: "50px",

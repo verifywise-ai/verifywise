@@ -85,11 +85,14 @@ export async function revokeTokenFamily(familyId: string): Promise<void> {
 }
 
 /** Revokes all of a user's refresh tokens (password change/reset). */
-export async function revokeAllUserTokens(userId: number): Promise<void> {
+export async function revokeAllUserTokens(
+  userId: number,
+  transaction?: Transaction,
+): Promise<void> {
   await sequelize.query(
     `UPDATE refresh_tokens SET revoked_at = now()
      WHERE user_id = :userId AND revoked_at IS NULL`,
-    { replacements: { userId } },
+    { replacements: { userId }, transaction },
   );
 }
 

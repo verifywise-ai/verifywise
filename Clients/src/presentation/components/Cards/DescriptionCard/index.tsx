@@ -3,6 +3,7 @@ import { ReactNode } from "react";
 import { Stack, Typography, Box } from "@mui/material";
 
 import { descCardbodyStyle, infoCardStyle, infoCardTitleStyle } from "./style";
+import { palette } from "../../../themes/palette";
 
 interface DescriptionCardProps {
   title: string;
@@ -19,7 +20,7 @@ export function DescriptionCard({ title, body, icon }: DescriptionCardProps) {
             position: "absolute",
             top: 8,
             right: 8,
-            color: "#8594AC",
+            color: palette.text.accent,
             opacity: 0.7,
           }}
         >

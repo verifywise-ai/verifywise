@@ -7,16 +7,23 @@ jest.mock("../../database/db", () => ({
 import { sequelize } from "../../database/db";
 import {
   getRiskLinksForRiskQuery,
+  getRiskLinksForVendorRiskQuery,
+  getRiskGraphQuery,
   getRiskScoringRowsQuery,
   getRecomputeOwnedLinksQuery,
   getStructuralNeighboursQuery,
   getConfirmedHierarchyEdgesQuery,
   getSharedProjectCandidatesQuery,
+  getVendorRiskChildCandidatesQuery,
   getModelRiskCandidatesQuery,
   getVendorRiskCandidatesQuery,
   upsertRiskLinkQuery,
+  getLiveRiskIdsQuery,
+  getRiskLinkByIdQuery,
+  acknowledgeParentLevelChangeQuery,
 } from "../riskLink.utils";
 import { upsertVendorRiskLinkQuery } from "../vendorRiskLink.utils";
+import { SYSTEM_RISK_VIEWER } from "../riskVisibility.utils";
 
 const mockQuery = sequelize.query as jest.Mock;
 
@@ -84,7 +91,7 @@ describe("riskLink.utils", () => {
   });
 
   it("filters soft-deleted risks on BOTH endpoints when reading a risk's links", async () => {
-    await getRiskLinksForRiskQuery(7, 42, ["suggested", "confirmed"]);
+    await getRiskLinksForRiskQuery(7, 42, ["suggested", "confirmed"], SYSTEM_RISK_VIEWER);
     const [sql, options] = mockQuery.mock.calls[0];
     expect(sql).toContain("related.is_deleted = false");
     expect(sql).toContain("subject.is_deleted = false");
@@ -111,7 +118,7 @@ describe("riskLink.utils", () => {
         related_risk_owner: null,
       },
     ]);
-    const [link] = await getRiskLinksForRiskQuery(7, 42, ["suggested"]);
+    const [link] = await getRiskLinksForRiskQuery(7, 42, ["suggested"], SYSTEM_RISK_VIEWER);
     expect(link.score).toBe(5);
     expect(link.reasons).toEqual([{ signal: "shared_category", weight: 3 }]);
   });
@@ -178,14 +185,14 @@ describe("riskLink.utils", () => {
       { entity_type: "model_risk", id: 7, project_title: "Fraud Detection" },
     ]);
 
-    expect(await getSharedProjectCandidatesQuery(3, 99)).toEqual([
+    expect(await getSharedProjectCandidatesQuery(3, 99, SYSTEM_RISK_VIEWER)).toEqual([
       { entityType: "vendor_risk", id: 12, projects: ["Fraud Detection", "KYC"] },
       { entityType: "model_risk", id: 7, projects: ["Fraud Detection"] },
     ]);
   });
 
   it("scopes both branches and the subject risk to the org", async () => {
-    await getSharedProjectCandidatesQuery(3, 99);
+    await getSharedProjectCandidatesQuery(3, 99, SYSTEM_RISK_VIEWER);
     const [sql, options] = mockQuery.mock.calls[0];
     expect(sql).toContain("vr.organization_id = :organizationId");
     expect(sql).toContain("mr.organization_id = :organizationId");
@@ -195,7 +202,7 @@ describe("riskLink.utils", () => {
   });
 
   it("keeps DISTINCT on the model branch so one model is not repeated per framework", async () => {
-    await getSharedProjectCandidatesQuery(3, 99);
+    await getSharedProjectCandidatesQuery(3, 99, SYSTEM_RISK_VIEWER);
     expect(mockQuery.mock.calls[0][0]).toContain("SELECT DISTINCT 'model_risk'");
   });
 
@@ -236,5 +243,167 @@ describe("riskLink.utils", () => {
       expect(modelBlock).toBeDefined();
       expect(modelBlock).toBe(hierarchyBlock(mockQuery.mock.calls[1][0]));
     });
+  });
+
+  // Linked-risk panels show the effective level (current when set, else inherent).
+  it.each([
+    [
+      "risk panel",
+      () => getRiskLinksForRiskQuery(7, 42, ["confirmed"], SYSTEM_RISK_VIEWER),
+      "related",
+    ],
+    [
+      "vendor-risk panel",
+      () => getRiskLinksForVendorRiskQuery(7, 9, ["confirmed"], SYSTEM_RISK_VIEWER),
+      "child",
+    ],
+    ["graph source", () => getRiskGraphQuery(7, ["confirmed"]), "src"],
+    ["graph target", () => getRiskGraphQuery(7, ["confirmed"]), "tgt"],
+  ])("selects the effective level for the %s", async (_name, run, alias) => {
+    await run();
+    const sql = mockQuery.mock.calls[0][0] as string;
+    expect(sql).toContain(
+      `COALESCE(${alias}.current_risk_level::text, ${alias}.risk_level_autocalculated::text)`,
+    );
+    expect(sql).not.toMatch(new RegExp(`(?<!, )${alias}\\.risk_level_autocalculated::text(,| AS)`));
+  });
+});
+
+describe("risk link reads follow the risk visibility rule", () => {
+  const editor = { userId: 9, role: "Editor" };
+  const admin = { userId: 1, role: "Admin" };
+
+  beforeEach(() => {
+    mockQuery.mockReset();
+    mockQuery.mockResolvedValue([]);
+  });
+
+  it("narrows the subject and drops hidden related project risks for a non-Admin", async () => {
+    await getRiskLinksForRiskQuery(7, 42, ["confirmed"], editor);
+    const [sql, options] = mockQuery.mock.calls[0];
+    // a hidden subject answers like a missing one: no rows
+    expect(sql).toContain("prv.risk_id = subject.id");
+    expect(sql).toContain("subject.risk_owner = :visibilityUserId");
+    // a hidden related project risk drops out; vendor and model parents stay
+    expect(sql).toContain("related.id IS NULL OR");
+    expect(sql).toContain("prv.risk_id = related.id");
+    expect(options.replacements.visibilityUserId).toBe(9);
+  });
+
+  it.each([
+    ["an Admin", admin],
+    ["the system viewer", SYSTEM_RISK_VIEWER],
+  ])("adds nothing for %s", async (_label, viewer) => {
+    await getRiskLinksForRiskQuery(7, 42, ["confirmed"], viewer);
+    const [sql, options] = mockQuery.mock.calls[0];
+    expect(sql).not.toContain("visibilityUserId");
+    expect(options.replacements).toEqual({
+      organizationId: 7,
+      riskId: 42,
+      statuses: ["confirmed"],
+    });
+  });
+
+  it("drops child project risks a non-Admin cannot see from a vendor risk's links", async () => {
+    await getRiskLinksForVendorRiskQuery(7, 9, ["confirmed"], editor);
+    const [sql, options] = mockQuery.mock.calls[0];
+    expect(sql).toContain("prv.risk_id = child.id");
+    expect(sql).toContain("child.risk_approval = :visibilityUserId");
+    expect(options.replacements.visibilityUserId).toBe(9);
+  });
+
+  it("names only the subject's use cases a non-Admin can access in shared-project candidates", async () => {
+    await getSharedProjectCandidatesQuery(3, 99, editor);
+    const [sql] = mockQuery.mock.calls[0];
+    // subject_projects keeps only accessible use cases, so a vendor or model
+    // risk reached only through a hidden one, and its title, drop out.
+    expect(sql).toMatch(
+      /pr\.organization_id = :organizationId AND EXISTS \(\s*SELECT 1 FROM projects pacc/,
+    );
+    expect(sql).toContain("pacc.id = pr.project_id");
+  });
+
+  it("does not narrow shared-project candidates for the system viewer", async () => {
+    await getSharedProjectCandidatesQuery(3, 99, SYSTEM_RISK_VIEWER);
+    expect(mockQuery.mock.calls[0][0]).not.toContain("pacc");
+  });
+
+  it("names only use cases a non-Admin can access in the vendor risk link picker", async () => {
+    await getVendorRiskChildCandidatesQuery(3, 12, editor);
+    const [sql, options] = mockQuery.mock.calls[0];
+    expect(sql).toContain("prv.risk_id = child.id");
+    expect(sql).toContain("pacc.id = p.id");
+    expect(options.replacements).toMatchObject({
+      organizationId: 3,
+      vendorRiskId: 12,
+      visibilityUserId: 9,
+    });
+  });
+
+  it("does not narrow the vendor risk link picker for the system viewer", async () => {
+    await getVendorRiskChildCandidatesQuery(3, 12, SYSTEM_RISK_VIEWER);
+    expect(mockQuery.mock.calls[0][0]).not.toContain("pacc");
+  });
+
+  it("gives no shared-project candidates for a subject a non-Admin cannot see", async () => {
+    await getSharedProjectCandidatesQuery(3, 99, editor);
+    const [sql, options] = mockQuery.mock.calls[0];
+    expect(sql).toContain("prv.risk_id = subject.id");
+    expect(options.replacements).toMatchObject({
+      organizationId: 3,
+      riskId: 99,
+      visibilityUserId: 9,
+    });
+  });
+});
+
+describe("risk link writes treat a hidden risk as a missing one", () => {
+  const editor = { userId: 9, role: "Editor" };
+
+  beforeEach(() => {
+    mockQuery.mockReset();
+    mockQuery.mockResolvedValue([]);
+  });
+
+  it("leaves a hidden risk out of the live ids a new link is checked against", async () => {
+    await getLiveRiskIdsQuery([4, 9], 7, editor);
+    const [sql, options] = mockQuery.mock.calls[0];
+    expect(sql).toContain("prv.risk_id = risks.id");
+    expect(options.replacements).toMatchObject({
+      ids: [4, 9],
+      organizationId: 7,
+      visibilityUserId: 9,
+    });
+  });
+
+  it.each([
+    ["reading a link", () => getRiskLinkByIdQuery(100, 7, editor)],
+    [
+      "acknowledging a parent level change",
+      () => acknowledgeParentLevelChangeQuery(7, 100, editor),
+    ],
+  ])("drops a link with a hidden source or target risk when %s", async (_label, run) => {
+    await run();
+    const [sql, options] = mockQuery.mock.calls[0];
+    expect(sql).toContain("risk_links.source_risk_id IS NULL OR EXISTS");
+    expect(sql).toContain("rvid.id = risk_links.source_risk_id");
+    expect(sql).toContain("risk_links.target_risk_id IS NULL OR EXISTS");
+    expect(sql).toContain("rvid.id = risk_links.target_risk_id");
+    // Both ends keep the organization filter (riskIdVisibilitySql).
+    expect(sql.match(/rvid\.organization_id = :organizationId/g)).toHaveLength(2);
+    expect(sql).toContain("prv.risk_id = rvid.id");
+    expect(options.replacements.visibilityUserId).toBe(9);
+  });
+
+  it.each([
+    ["getLiveRiskIdsQuery", () => getLiveRiskIdsQuery([4], 7, SYSTEM_RISK_VIEWER)],
+    ["getRiskLinkByIdQuery", () => getRiskLinkByIdQuery(100, 7, SYSTEM_RISK_VIEWER)],
+    [
+      "acknowledgeParentLevelChangeQuery",
+      () => acknowledgeParentLevelChangeQuery(7, 100, SYSTEM_RISK_VIEWER),
+    ],
+  ])("adds nothing to %s for the system viewer", async (_label, run) => {
+    await run();
+    expect(mockQuery.mock.calls[0][0]).not.toContain("visibilityUserId");
   });
 });

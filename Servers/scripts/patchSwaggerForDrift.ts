@@ -26,7 +26,6 @@ const nullableProjectRiskFields = [
   "risk_severity",
   "final_risk_level",
   "risk_approval",
-  "approval_status",
   "date_of_assessment",
 ];
 

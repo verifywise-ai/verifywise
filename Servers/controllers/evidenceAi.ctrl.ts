@@ -142,7 +142,7 @@ export async function analyzeFile(req: Request, res: Response) {
   );
 
   if (isNaN(fileId)) {
-    return res.status(400).json(STATUS_CODE[400]("Invalid file ID"));
+    return res.status(400).json(STATUS_CODE[400](req.t!("Invalid file ID")));
   }
 
   logStructured("processing", `analyzing file ${fileId}`, functionName, fileName);
@@ -158,7 +158,7 @@ export async function analyzeFile(req: Request, res: Response) {
     if (clients.length === 0) {
       return res
         .status(400)
-        .json(STATUS_CODE[400]("No LLM keys configured for this organization."));
+        .json(STATUS_CODE[400](req.t!("No LLM keys configured for this organization.")));
     }
 
     // ---- File metadata + content ---------------------------------
@@ -169,7 +169,7 @@ export async function analyzeFile(req: Request, res: Response) {
     );
     const file = (fileRows as any[])[0];
     if (!file) {
-      return res.status(404).json(STATUS_CODE[404]("File not found"));
+      return res.status(404).json(STATUS_CODE[404](req.t!("File not found")));
     }
 
     const [contentRows] = await sequelize.query(
@@ -211,7 +211,7 @@ export async function analyzeFile(req: Request, res: Response) {
       }
     }
     if (!documentText || documentText.trim().length === 0) {
-      return res.status(422).json(STATUS_CODE[422]("File has no extractable text content"));
+      return res.status(422).json(STATUS_CODE[422](req.t!("File has no extractable text content")));
     }
 
     // ---- Run the analyzer ------------------------------------------
@@ -362,7 +362,7 @@ export async function getAnalysis(req: Request, res: Response) {
   );
 
   if (isNaN(fileId)) {
-    return res.status(400).json(STATUS_CODE[400]("Invalid file ID"));
+    return res.status(400).json(STATUS_CODE[400](req.t!("Invalid file ID")));
   }
 
   try {
@@ -481,7 +481,7 @@ export async function getSuggestions(req: Request, res: Response) {
   );
 
   if (isNaN(fileId)) {
-    return res.status(400).json(STATUS_CODE[400]("Invalid file ID"));
+    return res.status(400).json(STATUS_CODE[400](req.t!("Invalid file ID")));
   }
 
   try {
@@ -511,14 +511,14 @@ export async function applySuggestions(req: Request, res: Response) {
   );
 
   if (isNaN(fileId)) {
-    return res.status(400).json(STATUS_CODE[400]("Invalid file ID"));
+    return res.status(400).json(STATUS_CODE[400](req.t!("Invalid file ID")));
   }
 
   try {
     const { suggestions } = req.body;
 
     if (!suggestions || !Array.isArray(suggestions) || suggestions.length === 0) {
-      return res.status(400).json(STATUS_CODE[400]("Suggestions array is required"));
+      return res.status(400).json(STATUS_CODE[400](req.t!("Suggestions array is required")));
     }
 
     const userId = req.userId ? Number(req.userId) : undefined;

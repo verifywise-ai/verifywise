@@ -144,6 +144,18 @@ Before delivering notifications:
 | `risk_deadline_due_soon` | Project risk deadline within 7 days (in-app + email) or 1 day (Slack) | In-app + Email / Slack |
 | `model_risk_due_soon` | Model risk target date within 7 days (in-app + email) or 1 day (Slack) | In-app + Email / Slack |
 
+### AI Detection Notifications
+
+Sent by `services/aiDetection/scanNotifications.ts` when a scan ends. Entity type `ai_detection_scan`; the link opens `/ai-detection/scans/:id`. Full rules in [AI Detection](./ai-detection.md#notifications).
+
+| Type | Trigger | Delivery | Recipients |
+|------|---------|----------|------------|
+| `ai_detection_scan_completed` | Scan completed | In-app | Triggering user |
+| `ai_detection_scan_attention` | New exposed secrets, new high-risk findings, or a lower governance grade than the previous scan of the repository | In-app + Email | Triggering user + org Admins |
+| `ai_detection_scan_failed` | Scan failed (not cancelled) | In-app; also Email for scheduled and webhook scans | Triggering user; plus org Admins for scheduled and webhook scans |
+
+A scan is announced once: the notifier claims it by setting `ai_detection_scans.notified_at` in one conditional UPDATE before sending anything. Scans marked failed as stale after a crash or restart are announced too. The platform has no per-user email opt-out, so these emails go to every recipient listed.
+
 #### Deadline escalation dedup
 
 The nightly deadline sweep notifies the owner plus every org admin, so the
@@ -185,6 +197,15 @@ enum SlackNotificationRoutingType {
 }
 ```
 
+Only these five types are delivered. An event posts to a Slack connection
+only when Slack is enabled for the event's organization, the connection
+belongs to that organization, is active and is routed for the type, and the
+connection is organization-wide or the event's user is its owner. Events
+without an organization are dropped. Connections belong to the organization
+and are managed by its Admins. The 1-day deadline leg posts once per risk or
+model risk to organization-wide connections. Details:
+[Extensions → Slack connections and delivery](../infrastructure/extensions.md#slack-connections-and-delivery).
+
 ## Email Notifications
 
 ### Rate Limiting
@@ -208,7 +229,8 @@ const rateLimitConfig = {
 | `PROJECT_CREATED_ADMIN` | Project creation |
 | `USER_ADDED_PROJECT_*` | Member addition (by role) |
 | `MEMBER_ROLE_CHANGED_*` | Role changes |
-| `POLICY_DUE_SOON` | Policy review reminders |
+| `POLICY_REVIEW_REMINDER` | Policy review due soon or overdue (daily sweep) |
+| `AI_DETECTION_SCAN_ALERT` | AI Detection scan needs attention, or a scheduled/webhook scan failed |
 
 ### Queue Processing
 
@@ -281,8 +303,8 @@ sendUserAddedToProjectNotification(userId, projectId, role)
 sendMemberRoleChangedEditorToAdminNotification(userId, projectId)
 sendProjectCreatedNotification(adminId, projectId)
 
-// Policy notifications
-sendPolicyDueSoonNotification(policyId, dueDate)
+// Policy notifications (daily review reminder sweep)
+notifyPolicyReviewReminder(organizationId, userId, policy, kind, baseUrl)
 ```
 
 ## Post-Market Monitoring Notifications
@@ -362,6 +384,7 @@ const key = `${tenantId}:${userId}`;
 | `services/userNotification/projectNotifications.ts` | Project emails |
 | `services/slack/slackNotificationService.ts` | Slack integration |
 | `services/postMarketMonitoring/pmmScheduler.ts` | PMM notifications |
+| `services/aiDetection/scanNotifications.ts` | AI Detection scan notifications |
 
 ### Frontend
 
@@ -426,6 +449,8 @@ enum NotificationEntityType {
   TRAINING = "training",
   MODEL = "model",
   INCIDENT = "incident",
+  AI_DETECTION_SCAN = "ai_detection_scan",
+  // ... more types
 }
 ```
 

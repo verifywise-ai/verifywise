@@ -30,9 +30,9 @@ export async function getAllAiApps(
   filters: IGetAiAppsFilters = {},
   signal?: AbortSignal,
 ): Promise<IAIAppListResponse> {
-  // The lifecycle stage filter and columns are only on the v1 list (#5193).
-  const base = filters.lifecycleStage ? "/v1/ai-apps" : "/ai-apps";
-  const response = await apiServices.get(`${base}${buildQueryString(filters)}`, {
+  // The v1 list is the legacy list plus the lifecycle stage filter and columns
+  // (#5193), search, and each app's custom field values (#5262).
+  const response = await apiServices.get(`/v1/ai-apps${buildQueryString(filters)}`, {
     signal,
   });
   // Backend wraps payloads as STATUS_CODE[200]({ ai_apps, total }) → { message, data },

@@ -4,6 +4,8 @@ const router = express.Router();
 import { validateId } from "../domain.layer/validations/id.valid";
 import { createMemoryUpload } from "../utils/upload.utils";
 import authenticateJWT from "../middleware/auth.middleware";
+import { requireFrameworkWriteAccess } from "../middleware/frameworkWriteAccess.middleware";
+import { frameworkImplChanges } from "../utils/frameworkWriteAccess.utils";
 import {
   getFrameworkDashboard,
   getFrameworkTree,
@@ -64,6 +66,7 @@ router.patch(
   validateId("frameworkId"),
   validateId("id"),
   upload.any(),
+  requireFrameworkWriteAccess(frameworkImplChanges),
   updateImpl,
 );
 

@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import { Route, Navigate } from "react-router";
 import { lazyRoute, LazyFallback } from "../utils/lazyRoute";
 import { SHOW_AI_GATEWAY_PROMPTS } from "./featureFlags";
+import { isClassicUi } from "../../presentation/themes/uiStyle";
 
 // Eager imports — app shell and route guard
 import Dashboard from "../../presentation/containers/Dashboard";
@@ -43,6 +44,7 @@ const IntegratedDashboard = lazyRoute(
   () => import("../../presentation/pages/DashboardOverview/IntegratedDashboard"),
 );
 const StartHere = lazyRoute(() => import("../../presentation/pages/StartHere"));
+const HomePage = lazyRoute(() => import("../../presentation/pages/HomeQueue"));
 const VWProjectView = lazyRoute(
   () => import("../../presentation/pages/ProjectView/V1.0ProjectView"),
 );
@@ -57,6 +59,9 @@ const PolicyDashboard = lazyRoute(
 );
 const PolicyEditorPage = lazyRoute(
   () => import("../../presentation/pages/PolicyDashboard/PolicyEditorPage"),
+);
+const PolicyTemplateEditorPage = lazyRoute(
+  () => import("../../presentation/pages/PolicyDashboard/PolicyTemplateEditorPage"),
 );
 const WatchTower = lazyRoute(() => import("../../presentation/pages/WatchTower"));
 const RiskManagement = lazyRoute(() => import("../../presentation/pages/RiskManagement"));
@@ -228,7 +233,7 @@ const isDev = import.meta.env.DEV;
 
 export const createRoutes = (
   triggerSidebar: boolean,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+
   _triggerSidebarReload: () => void,
 ) => [
   // ReactFlow Demo - Development only (must be before dashboard route)
@@ -358,11 +363,24 @@ export const createRoutes = (
       }
     />
     <Route
-      path="/start-here"
+      path="/home"
       element={
         <Suspense fallback={<LazyFallback />}>
-          <StartHere />
+          <HomePage />
         </Suspense>
+      }
+    />
+    {/* The new look moved Start here into Home's Get started tab; classic keeps the page. */}
+    <Route
+      path="/start-here"
+      element={
+        isClassicUi() ? (
+          <Suspense fallback={<LazyFallback />}>
+            <StartHere />
+          </Suspense>
+        ) : (
+          <Navigate to="/home?tab=get-started" replace />
+        )
       }
     />
     <Route
@@ -562,6 +580,14 @@ export const createRoutes = (
       }
     />
     <Route
+      path="/policies/templates/:templateId/edit"
+      element={
+        <Suspense fallback={<LazyFallback />}>
+          <PolicyTemplateEditorPage />
+        </Suspense>
+      }
+    />
+    <Route
       path="/policies"
       element={
         <Suspense fallback={<LazyFallback />}>
@@ -728,6 +754,8 @@ export const createRoutes = (
         </Suspense>
       }
     />
+    {/* Groups moved to a Settings tab; keep old links working. */}
+    <Route path="/groups" element={<Navigate to="/settings/groups" replace />} />
     <Route
       path="/automations"
       element={

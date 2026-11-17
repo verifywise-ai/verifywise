@@ -35,6 +35,7 @@ import {
   border as borderPalette,
   brand,
   status,
+  radiusPx,
 } from "../../themes/palette";
 import Chip from "../../components/Chip";
 import { useTraces, useObservabilityMetrics } from "../../../application/hooks/useObservability";
@@ -44,7 +45,7 @@ import { getTraceDetail } from "../../../application/repository/observability.re
 // Consistent card style matching AIAuditDashboard / DashboardCard
 const cardSx = {
   border: `1px solid ${borderPalette.dark}`,
-  borderRadius: "4px",
+  borderRadius: radiusPx.sm,
   background: `linear-gradient(135deg, ${background.main} 0%, ${background.gradientStop} 100%)`,
 };
 
@@ -258,7 +259,7 @@ export default function AIObservability() {
               key={card.label}
               sx={{
                 ...cardSx,
-                borderRadius: 2,
+                borderRadius: radiusPx.sm,
                 padding: "8px 14px 14px 14px",
               }}
             >
@@ -475,7 +476,7 @@ export default function AIObservability() {
         maxWidth="md"
         fullWidth
         PaperProps={{
-          sx: { borderRadius: "4px", border: `1px solid ${borderPalette.dark}` },
+          sx: { borderRadius: radiusPx.sm, border: `1px solid ${borderPalette.dark}` },
         }}
       >
         <DialogTitle
@@ -521,7 +522,7 @@ export default function AIObservability() {
                     <Box
                       sx={{
                         height: 8,
-                        borderRadius: "4px",
+                        borderRadius: radiusPx.sm,
                         backgroundColor: background.hover,
                         overflow: "hidden",
                       }}

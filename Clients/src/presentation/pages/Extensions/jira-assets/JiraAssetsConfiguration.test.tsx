@@ -16,6 +16,12 @@ vi.mock("../../../../application/hooks/useExtensionSync", () => ({
 vi.mock("../../../../application/hooks/useAuth", () => ({
   useAuth: () => ({ userRoleName: "Admin" }),
 }));
+// The signed-in Admin holds extension.admin.
+vi.mock("../../../../application/hooks/useCan", () => ({
+  useCan: () => true,
+  useCanCheck: () => () => true,
+  usePermissionsSettled: () => true,
+}));
 vi.mock("../../../../application/hooks/useFormattedDate", () => ({
   default: () => () => "12-10-2026",
 }));
@@ -113,12 +119,41 @@ describe("JiraAssetsConfiguration sync section", () => {
       lastPanelProps().onScheduleChange({ enabled: true, interval_hours: 6 });
     });
     await act(async () => {
-      fireEvent.click(screen.getByRole("button", { name: "Save Configuration" }));
+      fireEvent.click(screen.getByRole("button", { name: "Save configuration" }));
     });
 
     expect(mockPost).toHaveBeenCalledWith(
       "/extensions/jira-assets/config",
       expect.objectContaining({ sync_enabled: true, sync_interval_hours: 6 }),
     );
+  });
+});
+
+describe("JiraAssetsConfiguration copy", () => {
+  beforeEach(() => {
+    panelProps.mockReset();
+    mockGet.mockImplementation(async (url: string) => ({
+      data: { data: url.endsWith("/config") ? SAVED : [] },
+    }));
+  });
+
+  it("uses sentence case and the Jira spelling for its steps, fields and buttons", async () => {
+    renderPage();
+    await screen.findByTestId("shared-sync-panel");
+    for (const text of [
+      "Step 1: Connection settings",
+      "Step 2: Select schema & object type",
+      "Step 3: Sync settings",
+      "Import & sync",
+    ]) {
+      expect(screen.getByText(text)).toBeInTheDocument();
+    }
+    expect(screen.getByText("Jira base URL")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Test connection" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Save configuration" })).toBeInTheDocument();
+    expect(lastPanelProps().scheduleDescription).toBe(
+      "Automatically sync data from Jira on a schedule",
+    );
+    expect(screen.queryByText(/JIRA/)).toBeNull();
   });
 });

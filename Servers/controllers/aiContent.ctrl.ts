@@ -22,7 +22,7 @@ export async function getBadges(req: Request, res: Response) {
   const parsedEntityId = parseInt(entityId);
 
   if (!entityType || isNaN(parsedEntityId)) {
-    return res.status(400).json(STATUS_CODE[400]("Invalid entity type or ID"));
+    return res.status(400).json(STATUS_CODE[400](req.t!("Invalid entity type or ID")));
   }
 
   try {
@@ -58,14 +58,16 @@ export async function reviewContent(req: Request, res: Response) {
   const id = toId(req.params.id);
 
   if (isNaN(id)) {
-    return res.status(400).json(STATUS_CODE[400]("Invalid content ID"));
+    return res.status(400).json(STATUS_CODE[400](req.t!("Invalid content ID")));
   }
 
   const { review_action } = req.body;
   if (!review_action || !["approved", "modified", "rejected"].includes(review_action)) {
     return res
       .status(400)
-      .json(STATUS_CODE[400]("review_action must be 'approved', 'modified', or 'rejected'"));
+      .json(
+        STATUS_CODE[400](req.t!("review_action must be 'approved', 'modified', or 'rejected'")),
+      );
   }
 
   logStructured("processing", `reviewing AI content ${id}`, functionName, fileName);
@@ -78,7 +80,7 @@ export async function reviewContent(req: Request, res: Response) {
     });
 
     if (!result) {
-      return res.status(404).json(STATUS_CODE[404]("AI content not found"));
+      return res.status(404).json(STATUS_CODE[404](req.t!("AI content not found")));
     }
 
     logStructured(

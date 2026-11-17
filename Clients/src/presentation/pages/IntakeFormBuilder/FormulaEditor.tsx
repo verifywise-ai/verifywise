@@ -31,6 +31,7 @@ import {
   type FormulaSegment,
 } from "../../../application/utils/intakeAnswerFormat";
 import { useTranslation } from "../../../application/hooks/useTranslation";
+import { radiusPx } from "../../themes/palette";
 
 interface FormulaEditorProps {
   formula: string;
@@ -619,7 +620,7 @@ export function FormulaEditor({
         sx={{
           "position": "relative",
           "border": `1px solid ${theme.palette.border.dark}`,
-          "borderRadius": "4px",
+          "borderRadius": radiusPx.sm,
           "backgroundColor": theme.palette.background.main,
           "transition": "border-color 150ms ease-in-out, box-shadow 150ms ease-in-out",
           "&:focus-within": {
@@ -630,7 +631,7 @@ export function FormulaEditor({
             display: "inline-block",
             padding: "0 6px",
             margin: "0 2px",
-            borderRadius: "4px",
+            borderRadius: radiusPx.sm,
             lineHeight: "20px",
             fontSize: "13px",
             whiteSpace: "nowrap",
@@ -738,7 +739,7 @@ export function FormulaEditor({
             sx={{
               mt: "4px",
               border: `1px solid ${theme.palette.border.dark}`,
-              borderRadius: "4px",
+              borderRadius: radiusPx.sm,
               maxHeight: "240px",
               overflowY: "auto",
             }}

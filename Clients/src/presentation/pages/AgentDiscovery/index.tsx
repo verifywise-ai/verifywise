@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
+import { useCan } from "../../../application/hooks/useCan";
 import { useNavigate } from "react-router";
 import { Box, Stack, Fade } from "@mui/material";
 import { RefreshCw, CirclePlus } from "lucide-react";
@@ -11,17 +12,14 @@ import ManualAgentModal from "../../components/Modals/AgentDiscovery/ManualAgent
 import { agentToastContainer, addAgentButton, syncButton } from "./style";
 import { apiServices } from "../../../infrastructure/api/networkServices";
 import { PageHeaderExtended } from "../../components/Layout/PageHeaderExtended";
-import { FilterBy, FilterColumn, FilterCondition } from "../../components/Table/FilterBy";
+import { FilterColumn, FilterCondition } from "../../components/Table/FilterBy";
+import { TableFilter } from "../../components/Table/TableFilter";
 import { useFilterBy } from "../../../application/hooks/useFilterBy";
-import { GroupBy } from "../../components/Table/GroupBy";
-import { useTableGrouping, useGroupByState } from "../../../application/hooks/useTableGrouping";
-import { GroupedTableView } from "../../components/Table/GroupedTableView";
 import { useColumnVisibility, ColumnConfig } from "../../../application/hooks/useColumnVisibility";
 import { ColumnSelector } from "../../components/Table/ColumnSelector";
 import { AgentPrimitiveRow } from "src/domain/interfaces/i.agentDiscovery";
 import AgentTable from "./AgentTable";
-import { getAgentSourceLabel, getReviewStatusDisplay, getSourceFilterOptions } from "./agentLabels";
-import { useHasPermission } from "../../../application/hooks/useMyPermissions";
+import { getReviewStatusDisplay, getSourceFilterOptions } from "./agentLabels";
 import { palette } from "../../themes/palette";
 
 import Alert from "../../components/Alert";
@@ -38,7 +36,7 @@ const AgentDiscovery: React.FC = () => {
   const navigate = useNavigate();
   // Changing agents (sync, add, edit, review, delete) needs the
   // agentDiscovery.admin permission (Admins by default).
-  const canManage = useHasPermission("agentDiscovery.admin", { fallbackToAdmin: true });
+  const canManage = useCan("agentDiscovery.admin");
   const [agents, setAgents] = useState<AgentPrimitiveRow[]>([]);
   const [stats, setStats] = useState<AgentStats>({
     total: 0,
@@ -53,9 +51,6 @@ const AgentDiscovery: React.FC = () => {
 
   // Search
   const [searchTerm, setSearchTerm] = useState("");
-
-  // GroupBy state
-  const { groupBy, groupSortOrder, handleGroupChange } = useGroupByState();
 
   // Column visibility
   type AgentColumn =
@@ -220,8 +215,12 @@ const AgentDiscovery: React.FC = () => {
   );
 
   // FilterBy hook
-  const { filterData, handleFilterChange: handleFilterChangeBase } =
-    useFilterBy<AgentPrimitiveRow>(getFieldValue);
+  const {
+    filterData,
+    handleFilterChange: handleFilterChangeBase,
+    conditions: filterConditions,
+    logic: filterLogic,
+  } = useFilterBy<AgentPrimitiveRow>(getFieldValue);
 
   const handleFilterChange = useCallback(
     (conditions: FilterCondition[], logic: "and" | "or") => {
@@ -248,31 +247,6 @@ const AgentDiscovery: React.FC = () => {
 
     return filtered;
   }, [filterData, agents, searchTerm]);
-
-  // GroupBy - get group key
-  const getGroupKey = (agent: AgentPrimitiveRow, field: string): string | string[] => {
-    switch (field) {
-      case "review_status":
-        return getReviewStatusDisplay(agent.review_status).label;
-      case "source_system":
-        // The Source column's label, not the raw key.
-        return getAgentSourceLabel(agent);
-      case "primitive_type":
-        return agent.primitive_type || "Unknown";
-      case "is_stale":
-        return agent.is_stale ? "Stale" : "Active";
-      default:
-        return "Other";
-    }
-  };
-
-  // Apply grouping
-  const groupedAgents = useTableGrouping({
-    data: filteredAgents,
-    groupByField: groupBy,
-    sortOrder: groupSortOrder,
-    getGroupKey,
-  });
 
   const handleSync = async () => {
     setIsSyncing(true);
@@ -409,15 +383,13 @@ const AgentDiscovery: React.FC = () => {
         <Stack spacing={2}>
           <Stack direction="row" justifyContent="space-between" alignItems="center">
             <Stack direction="row" gap={2} alignItems="center">
-              <FilterBy columns={filterColumns} onFilterChange={handleFilterChange} />
-              <GroupBy
-                options={[
-                  { id: "review_status", label: "Status" },
-                  { id: "source_system", label: "Source" },
-                  { id: "primitive_type", label: "Type" },
-                  { id: "is_stale", label: "Stale" },
-                ]}
-                onGroupChange={handleGroupChange}
+              <TableFilter
+                columns={filterColumns}
+                onFilterChange={handleFilterChange}
+                defaultConditions={filterConditions}
+                defaultLogic={filterLogic}
+                data={agents}
+                getFieldValue={getFieldValue}
               />
               <ColumnSelector
                 columns={allColumns}
@@ -467,24 +439,18 @@ const AgentDiscovery: React.FC = () => {
       )}
 
       {/* Table */}
-      <GroupedTableView
-        groupedData={groupedAgents}
-        ungroupedData={filteredAgents}
-        renderTable={(data) => (
-          <AgentTable
-            agents={data}
-            isLoading={isLoading}
-            onRowClick={handleRowClick}
-            onReview={handleReviewAgent}
-            onEdit={handleEditAgent}
-            onDelete={handleDeleteAgent}
-            canManage={canManage}
-            onSync={handleSync}
-            onAddAgent={() => setIsManualModalOpen(true)}
-            isSyncing={isSyncing}
-            visibleColumns={visibleColumns}
-          />
-        )}
+      <AgentTable
+        agents={filteredAgents}
+        isLoading={isLoading}
+        onRowClick={handleRowClick}
+        onReview={handleReviewAgent}
+        onEdit={handleEditAgent}
+        onDelete={handleDeleteAgent}
+        canManage={canManage}
+        onSync={handleSync}
+        onAddAgent={() => setIsManualModalOpen(true)}
+        isSyncing={isSyncing}
+        visibleColumns={visibleColumns}
       />
 
       {/* Review modal */}

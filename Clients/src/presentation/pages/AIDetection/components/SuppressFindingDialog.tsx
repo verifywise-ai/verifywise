@@ -15,6 +15,7 @@ import Radio from "../../../components/Inputs/Radio";
 import DatePicker from "../../../components/Inputs/Datepicker";
 import { createSuppression } from "../../../../application/repository/aiDetection.repository";
 import { CreateSuppressionRequest, Finding } from "../../../../domain/ai-detection/types";
+import { palette } from "../../../themes/palette";
 
 type SuppressionScope = "by_name" | "by_type";
 
@@ -114,7 +115,7 @@ function SuppressFindingDialog({
       isOpen={isOpen}
       onClose={handleClose}
       title="Suppress finding"
-      description="Create a rule that hides matching findings from future scans and excludes them from risk scores."
+      description="Create a rule that hides matching findings from future scans and excludes them from governance scores."
       onSubmit={handleSubmit}
       submitButtonText="Suppress"
       isSubmitting={isSubmitting}
@@ -133,7 +134,7 @@ function SuppressFindingDialog({
 
         <Stack spacing={2}>
           <Typography sx={{ fontSize: 13, fontWeight: 500, color: "text.secondary" }}>
-            Scope <span style={{ color: "#d32f2f" }}>*</span>
+            Scope <span style={{ color: palette.status.error.text }}>*</span>
           </Typography>
           <Stack spacing={4}>
             <Radio

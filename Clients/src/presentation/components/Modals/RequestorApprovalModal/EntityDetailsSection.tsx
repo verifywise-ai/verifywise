@@ -15,7 +15,7 @@ import {
   EntityTypeConfig,
   DetailFieldConfig,
 } from "./entityTypeConfig";
-import { background, status } from "../../../themes/palette";
+import { background, status, palette as vwPalette, radiusPx } from "../../../themes/palette";
 
 interface EntityDetailsSectionProps {
   details: Record<string, any>;
@@ -30,16 +30,16 @@ const EntityDetailsSection: React.FC<EntityDetailsSectionProps> = ({ details }) 
   const containerStyles = {
     backgroundColor: `${background.accent}`,
     border: `1px solid ${status.default.border}`,
-    borderRadius: "8px",
+    borderRadius: radiusPx.lg,
     padding: "16px",
   };
 
   // Deleted entity message styles
   const deletedMessageStyles = {
-    backgroundColor: "#FDECEA",
+    backgroundColor: vwPalette.accent.red.bg,
     padding: "12px",
-    borderRadius: "6px",
-    border: "1px solid #F5C6CB",
+    borderRadius: radiusPx.md,
+    border: `1px solid ${vwPalette.status.error.border}`,
   };
 
   const renderFieldValue = (field: DetailFieldConfig) => {
@@ -57,10 +57,15 @@ const EntityDetailsSection: React.FC<EntityDetailsSectionProps> = ({ details }) 
   if (isEntityDeleted(details)) {
     return (
       <Stack spacing={8} sx={containerStyles}>
-        <Typography fontWeight={600} fontSize={14} color="#374151" mb={2}>
+        <Typography fontWeight={600} fontSize={14} color={vwPalette.text.secondary} mb={2}>
           {config.title}
         </Typography>
-        <Typography fontSize={13} color="#C62828" fontStyle="italic" sx={deletedMessageStyles}>
+        <Typography
+          fontSize={13}
+          color={vwPalette.status.error.text}
+          fontStyle="italic"
+          sx={deletedMessageStyles}
+        >
           {config.deletedMessage}
         </Typography>
       </Stack>
@@ -72,7 +77,7 @@ const EntityDetailsSection: React.FC<EntityDetailsSectionProps> = ({ details }) 
 
   return (
     <Stack spacing={8} sx={containerStyles}>
-      <Typography fontWeight={600} fontSize={14} color="#374151" mb={2}>
+      <Typography fontWeight={600} fontSize={14} color={vwPalette.text.secondary} mb={2}>
         {config.title}
       </Typography>
       {fieldsWithValues.length > 0 ? (

@@ -27,6 +27,7 @@ import type { StandardColumn } from "../../../domain/types/standardTable";
 import StandardTableHead from "../../components/Table/StandardTableHead";
 import StandardTablePagination from "../../components/Table/StandardTablePagination";
 import { TableEmptyStateLayout } from "../../components/Table/TableEmptyStateLayout";
+import { palette } from "../../themes/palette";
 
 dayjs.extend(utc);
 
@@ -67,7 +68,6 @@ const IncidentTable: React.FC<IncidentTableProps> = ({
   onArchive,
   paginated = true,
   archivedId,
-  hidePagination = false,
   visibleColumns,
   jiraLinks,
 }) => {
@@ -164,12 +164,7 @@ const IncidentTable: React.FC<IncidentTableProps> = ({
       <TableBody>
         {sortedRows?.length > 0
           ? sortedRows
-              .slice(
-                hidePagination ? 0 : validPage * rowsPerPage,
-                hidePagination
-                  ? Math.min(sortedRows.length, 100)
-                  : validPage * rowsPerPage + rowsPerPage,
-              )
+              .slice(validPage * rowsPerPage, validPage * rowsPerPage + rowsPerPage)
               .map((incident) => (
                 <TableRow
                   key={incident.id}
@@ -186,7 +181,10 @@ const IncidentTable: React.FC<IncidentTableProps> = ({
                         ...cellStyle,
                         width: "110px",
                         maxWidth: "110px",
-                        backgroundColor: sortConfig.key === "incident_id" ? "#e8e8e8" : "#fafafa",
+                        backgroundColor:
+                          sortConfig.key === "incident_id"
+                            ? palette.border.light
+                            : palette.background.alt,
                       }}
                     >
                       {jiraLinks?.get(incident.id) ? (
@@ -325,7 +323,6 @@ const IncidentTable: React.FC<IncidentTableProps> = ({
       isVisible,
       sortConfig.key,
       visibleTableColumns.length,
-      hidePagination,
       formatDate,
     ],
   );
@@ -382,7 +379,7 @@ const IncidentTable: React.FC<IncidentTableProps> = ({
           onSort={handleSort}
         />
         {tableBody}
-        {paginated && !hidePagination && (
+        {paginated && (
           <StandardTablePagination
             totalCount={totalCount}
             page={validPage}

@@ -9,6 +9,7 @@ import { AiRiskClassification } from "../../../domain/enums/aiRiskClassification
 import type { EuAiActClassificationPreview } from "../../../application/repository/intakeForm.repository";
 import { visibleQuestions } from "../../../application/utils/euAiActQuestionnaire";
 import { classificationRoles } from "../../../application/utils/highRiskRoles";
+import { radiusPx } from "../../themes/palette";
 
 export type EuAiActClassificationData = EuAiActClassificationPreview;
 
@@ -60,7 +61,7 @@ export default function EuAiActClassificationPanel({
     <Box
       sx={{
         border: `1px solid ${theme.palette.border.dark}`,
-        borderRadius: "4px",
+        borderRadius: radiusPx.sm,
         p: "20px",
         backgroundColor: theme.palette.background.accent,
         display: "flex",

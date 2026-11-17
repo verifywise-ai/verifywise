@@ -9,7 +9,7 @@ import { Bot, Plus, Trash2, User, X } from "lucide-react";
 import { CustomizableButton } from "../../../components/button/customizable-button";
 import Chip from "../../../components/Chip";
 import Field from "../../../components/Inputs/Field";
-import { palette } from "../../../themes/palette";
+import { palette, radiusPx } from "../../../themes/palette";
 import {
   isMultiTurnConversation,
   type DatasetPromptRecord,
@@ -118,7 +118,7 @@ export default function PromptEditDrawer({
                   <Box
                     sx={{
                       border: `1px solid ${palette.accent.purple.border}`,
-                      borderRadius: "12px",
+                      borderRadius: radiusPx.xl,
                       backgroundColor: palette.accent.purple.bg,
                       p: 2,
                       minHeight: "200px",
@@ -163,7 +163,7 @@ export default function PromptEditDrawer({
                                   sx={{
                                     width: 20,
                                     height: 20,
-                                    borderRadius: "4px",
+                                    borderRadius: radiusPx.sm,
                                     backgroundColor:
                                       turn.role === "user"
                                         ? palette.status.success.text

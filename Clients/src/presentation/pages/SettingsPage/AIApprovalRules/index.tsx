@@ -28,6 +28,7 @@ import {
   deleteApprovalRule,
   type ApprovalRule,
 } from "../../../../application/repository/aiApprovalRules.repository";
+import { palette, radiusPx } from "../../../themes/palette";
 
 const EVENT_TYPE_COLORS: Record<string, "success" | "warning" | "error"> = {
   "auto-approve": "success",
@@ -156,9 +157,9 @@ export default function AIApprovalRules() {
             onClick={openCreateDialog}
             sx={{
               "bgcolor": theme.palette.primary.main,
-              "color": "#fff",
+              "color": palette.background.main,
               "&:hover": { bgcolor: theme.palette.primary.dark },
-              "borderRadius": 2,
+              "borderRadius": radiusPx.sm,
               "px": 2,
             }}
           >
@@ -188,7 +189,7 @@ export default function AIApprovalRules() {
             key={rule.id || `default-${idx}`}
             sx={{
               p: 2,
-              borderRadius: 2,
+              borderRadius: radiusPx.sm,
               border: `1px solid ${theme.palette.divider}`,
               bgcolor: rule.is_active
                 ? theme.palette.background.paper
@@ -347,7 +348,10 @@ export default function AIApprovalRules() {
           </Stack>
         </DialogContent>
         <DialogActions>
-          <IconButton onClick={() => setEditDialogOpen(false)} sx={{ borderRadius: 2, px: 2 }}>
+          <IconButton
+            onClick={() => setEditDialogOpen(false)}
+            sx={{ borderRadius: radiusPx.sm, px: 2 }}
+          >
             <Typography variant="body2">Cancel</Typography>
           </IconButton>
           <IconButton
@@ -355,9 +359,9 @@ export default function AIApprovalRules() {
             disabled={saving || !editingRule?.name}
             sx={{
               "bgcolor": theme.palette.primary.main,
-              "color": "#fff",
+              "color": palette.background.main,
               "&:hover": { bgcolor: theme.palette.primary.dark },
-              "borderRadius": 2,
+              "borderRadius": radiusPx.sm,
               "px": 2,
             }}
           >

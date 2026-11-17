@@ -34,6 +34,7 @@ import {
   LLMSuggestedQuestion,
 } from "../../../application/repository/intakeForm.repository";
 import { CustomizableButton } from "../../components/button/customizable-button";
+import { radiusPx, palette as vwPalette } from "../../themes/palette";
 
 // Sparkle shimmer animation
 const sparkleShimmer = keyframes`
@@ -81,7 +82,7 @@ function ClickablePaletteItem({ item, onAdd }: ClickablePaletteItemProps) {
         "display": "flex",
         "alignItems": "center",
         "gap": "8px",
-        "borderRadius": "4px",
+        "borderRadius": radiusPx.sm,
         "border": `1px solid ${theme.palette.border.light}`,
         "backgroundColor": theme.palette.background.main,
         "transition": "all 0.15s ease",
@@ -171,7 +172,7 @@ function SuggestedCategory({
           "px": "4px",
           "py": "6px",
           "cursor": "pointer",
-          "borderRadius": "4px",
+          "borderRadius": radiusPx.sm,
           "&:hover": { backgroundColor: theme.palette.background.accent },
         }}
       >
@@ -208,7 +209,7 @@ function SuggestedCategory({
                 "gap": "4px",
                 "py": "4px",
                 "px": "4px",
-                "borderRadius": "4px",
+                "borderRadius": radiusPx.sm,
                 "cursor": "pointer",
                 "&:hover": {
                   "backgroundColor": theme.palette.background.accent,
@@ -282,7 +283,7 @@ function LLMQuestionItem({ question, fieldCount, onAdd, onDismiss }: LLMQuestion
         "gap": "8px",
         "py": "6px",
         "px": "6px",
-        "borderRadius": "4px",
+        "borderRadius": radiusPx.sm,
         "cursor": "pointer",
         "&:hover": {
           "backgroundColor": theme.palette.background.fill,
@@ -315,7 +316,7 @@ function LLMQuestionItem({ question, fieldCount, onAdd, onDismiss }: LLMQuestion
           "display": "flex",
           "alignItems": "center",
           "color": theme.palette.text.accent,
-          "borderRadius": "4px",
+          "borderRadius": radiusPx.sm,
           "p": "2px",
           "&:hover": {
             color: theme.palette.status.error.text,
@@ -581,12 +582,12 @@ export const SuggestedQuestionsPanel = forwardRef<
                   : `${sparkleIdle} 3s ease-in-out infinite`,
               }}
             >
-              <Sparkles size={14} color="#7c3aed" />
+              <Sparkles size={14} color={vwPalette.accent.purple.text} />
             </Box>
             <Typography
               sx={{
                 fontWeight: 600,
-                color: "#7c3aed",
+                color: vwPalette.accent.purple.text,
                 fontSize: "13px",
                 ...(isSparkleAnimating
                   ? { animation: `${sparkleShimmer} 0.8s ease-in-out 3` }
@@ -601,7 +602,7 @@ export const SuggestedQuestionsPanel = forwardRef<
                   fontSize: "11px",
                   color: theme.palette.text.accent,
                   backgroundColor: theme.palette.background.fill,
-                  borderRadius: "10px",
+                  borderRadius: radiusPx.pill,
                   px: "6px",
                   py: "1px",
                   fontWeight: 500,
@@ -624,7 +625,7 @@ export const SuggestedQuestionsPanel = forwardRef<
                   "alignItems": "center",
                   "gap": "4px",
                   "color": theme.palette.text.accent,
-                  "borderRadius": "4px",
+                  "borderRadius": radiusPx.sm,
                   "px": "6px",
                   "py": "2px",
                   "&:hover": {

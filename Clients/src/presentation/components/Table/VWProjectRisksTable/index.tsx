@@ -32,6 +32,8 @@ import EmptyStateTip from "../../EmptyState/EmptyStateTip";
 import { TableEmptyStateLayout } from "../TableEmptyStateLayout";
 import { IVWProjectRisksTable } from "../../../types/interfaces/i.risk";
 import { RiskModel } from "../../../../domain/models/Common/risks/risk.model";
+import { compareRisks, parseSavedRiskSort } from "./riskSort";
+import { buildUserSortNames, userSortName } from "../../../../application/utils/userSort";
 import { text, border } from "../../../themes/palette";
 import Checkbox from "../../Inputs/Checkbox";
 import ConfirmationModal from "../../Dialogs/ConfirmationModal";
@@ -83,7 +85,7 @@ const columns = [
   { id: "mitigation_status", label: "MITIGATION STATUS", sortable: true }, // mitigation status
   { id: "risk_level_autocalculated", label: "RISK LEVEL", sortable: true }, // risk auto calculated value from risk tab
   { id: "deadline", label: "TARGET DATE", sortable: true }, // start date (deadline) value from mitigation tab
-  { id: "controls_mapping", label: "CONTROLS", sortable: true }, // controls mapping value from risk tab
+  { id: "controls_mapping", label: "CONTROLS", sortable: false }, // opens the linked controls, so it has no sort value
   { id: "actions", label: "", sortable: false },
 ];
 
@@ -235,15 +237,14 @@ const VWProjectRisksTable = ({
 
   // Initialize sorting state from localStorage or default to no sorting
   const [sortConfig, setSortConfig] = useState<SortConfig>(() => {
-    const saved = localStorage.getItem(RISKS_SORTING_KEY);
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch {
-        return { key: "", direction: null };
-      }
+    try {
+      return parseSavedRiskSort(
+        localStorage.getItem(RISKS_SORTING_KEY),
+        columns.filter((c) => c.sortable).map((c) => c.id),
+      );
+    } catch {
+      return { key: "", direction: null };
     }
-    return { key: "", direction: null };
   });
 
   // Save rowsPerPage to localStorage whenever it changes
@@ -272,6 +273,14 @@ const VWProjectRisksTable = ({
     });
   }, []);
 
+  const { users } = useUsers();
+
+  const userNames = useMemo(() => buildUserSortNames(users), [users]);
+  const ownerName = useCallback(
+    (risk: RiskModel) => userSortName(userNames, risk.risk_owner),
+    [userNames],
+  );
+
   // Sort the risks based on current sort configuration
   const sortedRows = useMemo(() => {
     if (!rows || !sortConfig.key || !sortConfig.direction) {
@@ -280,109 +289,11 @@ const VWProjectRisksTable = ({
 
     const sortableRows = [...rows];
 
-    return sortableRows.sort((a: RiskModel, b: RiskModel) => {
-      // Helper functions for sorting
-      // Severity values: Negligible, Minor, Moderate, Major, Catastrophic
-      const getSeverityValue = (severity: string) => {
-        const severityLower = severity.toLowerCase();
-        if (severityLower.includes("catastrophic")) return 5;
-        if (severityLower.includes("major")) return 4;
-        if (severityLower.includes("moderate")) return 3;
-        if (severityLower.includes("minor")) return 2;
-        if (severityLower.includes("negligible")) return 1;
-        return 0;
-      };
-
-      const getLikelihoodValue = (likelihood: string) => {
-        const likelihoodLower = likelihood.toLowerCase();
-        if (likelihoodLower.includes("very high")) return 5;
-        if (likelihoodLower.includes("high")) return 4;
-        if (likelihoodLower.includes("medium")) return 3;
-        if (likelihoodLower.includes("low")) return 2;
-        if (likelihoodLower.includes("very low")) return 1;
-        return 0;
-      };
-
-      // Risk level values: No risk, Very low risk, Low risk, Medium risk, High risk, Very high risk
-      const getRiskLevelValue = (riskLevel: string) => {
-        const riskLower = riskLevel.toLowerCase();
-        if (riskLower.includes("very high")) return 6;
-        if (riskLower.includes("high")) return 5;
-        if (riskLower.includes("medium")) return 4;
-        if (riskLower.includes("low") && !riskLower.includes("very low")) return 3;
-        if (riskLower.includes("very low")) return 2;
-        if (riskLower.includes("no risk")) return 1;
-        return 0;
-      };
-
-      let aValue: string | number;
-      let bValue: string | number;
-
-      switch (sortConfig.key) {
-        case "risk_name":
-          aValue = a.risk_name.toLowerCase();
-          bValue = b.risk_name.toLowerCase();
-          break;
-
-        case "risk_owner":
-          aValue = a.risk_owner;
-          bValue = b.risk_owner;
-          break;
-
-        case "severity":
-          // Severity order: Critical > High > Medium > Low
-          aValue = getSeverityValue(a.severity);
-          bValue = getSeverityValue(b.severity);
-          break;
-
-        case "likelihood":
-          // Likelihood order: Very High > High > Medium > Low > Very Low
-          aValue = getLikelihoodValue(a.likelihood);
-          bValue = getLikelihoodValue(b.likelihood);
-          break;
-
-        case "mitigation_status":
-          aValue = a.mitigation_status.toLowerCase();
-          bValue = b.mitigation_status.toLowerCase();
-          break;
-
-        case "risk_level_autocalculated":
-          // Risk level order: Critical > High > Medium > Low
-          aValue = getRiskLevelValue(a.risk_level_autocalculated);
-          bValue = getRiskLevelValue(b.risk_level_autocalculated);
-          break;
-
-        case "deadline":
-          aValue = new Date(a.deadline).getTime();
-          bValue = new Date(b.deadline).getTime();
-          break;
-
-        case "ale_estimate":
-          aValue = a.ale_estimate ?? 0;
-          bValue = b.ale_estimate ?? 0;
-          break;
-
-        case "controls_mapping":
-          aValue = a.controls_mapping.toLowerCase();
-          bValue = b.controls_mapping.toLowerCase();
-          break;
-
-        default:
-          return 0;
-      }
-
-      // Handle string comparisons
-      if (typeof aValue === "string" && typeof bValue === "string") {
-        const comparison = aValue.localeCompare(bValue);
-        return sortConfig.direction === "asc" ? comparison : -comparison;
-      }
-
-      // Handle number comparisons
-      if (aValue < bValue) return sortConfig.direction === "asc" ? -1 : 1;
-      if (aValue > bValue) return sortConfig.direction === "asc" ? 1 : -1;
-      return 0;
-    });
-  }, [rows, sortConfig]);
+    const direction = sortConfig.direction;
+    return sortableRows.sort((a: RiskModel, b: RiskModel) =>
+      compareRisks(a, b, sortConfig.key, direction, ownerName),
+    );
+  }, [rows, sortConfig, ownerName]);
 
   // Ensure page is valid when rows are empty
   const validPage =
@@ -439,20 +350,23 @@ const VWProjectRisksTable = ({
     [selectableRows],
   );
 
-  const { users } = useUsers();
   const [ownerDialogOpen, setOwnerDialogOpen] = useState(false);
   const [categoryDialogOpen, setCategoryDialogOpen] = useState(false);
   const [pendingOwnerId, setPendingOwnerId] = useState<string>("");
   const [pendingCategories, setPendingCategories] = useState<string[]>([]);
 
   const bulkMutation = useBulkUpdateProjectRisks({
-    onSuccess: (payload) => {
+    onSuccess: (payload, result) => {
       clearSelection();
       setOwnerDialogOpen(false);
       setCategoryDialogOpen(false);
       setPendingOwnerId("");
       setPendingCategories([]);
-      onBulkActionSuccess?.(payload.action, payload.ids.length);
+      // Risks that already had the value, or were archived, are not counted.
+      onBulkActionSuccess?.(
+        payload.action,
+        result?.changed ?? result?.updated ?? payload.ids.length,
+      );
     },
   });
 
@@ -509,7 +423,7 @@ const VWProjectRisksTable = ({
         disabled: bulkMutation.isPending,
         confirm: {
           title: `Archive ${selectionCount} project risk${selectionCount === 1 ? "" : "s"}?`,
-          body: "Archived risks are soft-deleted: they are hidden from the active risk register but remain available for audit history.",
+          body: "Archived risks are removed from the risk register, reports and linked policies. Their change history is kept.",
           confirmLabel: "Archive",
           danger: true,
         },

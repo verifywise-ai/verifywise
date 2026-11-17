@@ -97,6 +97,7 @@ function deriveActionType(toolName: string): string {
 function sanitizeParams(params: Record<string, unknown>): Record<string, unknown> {
   const sanitized = { ...params };
   delete sanitized._userId;
+  delete sanitized._requesterId;
   delete sanitized._organizationId;
   return sanitized;
 }

@@ -966,7 +966,6 @@ export const de: Record<string, string> = {
   "Invite User": "Benutzer einladen",
   "Keep risk as is": "Risiko unverändert lassen",
   "Link Evidence": "Nachweise verknüpfen",
-  "Link New Risks": "Neue Risiken verknüpfen",
   "Link tasks to controls or risks": "Aufgaben mit Kontrollen oder Risiken verknüpfen",
   "Link to governance artifacts": "Mit Governance-Artefakten verknüpfen",
   "Link to model": "Mit Modell verknüpfen",
@@ -1053,6 +1052,10 @@ export const de: Record<string, string> = {
   "AI-enhanced": "KI-gestützt",
   "Alert boxes": "Hinweisfelder",
   "All": "Alle",
+  "Clear filters": "Filter zurücksetzen",
+  "In 7 days": "In 7 Tagen",
+  "In 30 days": "In 30 Tagen",
+  "Past": "Vergangen",
   "All collections": "Alle Sammlungen",
   "Allow data to be exported": "Datenexport zulassen",
   "Allowed tools": "Zugelassene Tools",
@@ -1112,6 +1115,8 @@ export const de: Record<string, string> = {
   "Cost saved": "Eingesparte Kosten",
   "Count": "Anzahl",
   "Created": "Erstellt",
+  "CREATED AT": "ERSTELLT AM",
+  "LAST LOGGED IN": "LETZTE ANMELDUNG",
   "Created by": "Erstellt von",
   "Current": "Aktuell",
   "Current risk level": "Aktuelle Risikostufe",
@@ -1185,7 +1190,6 @@ export const de: Record<string, string> = {
   "Limitation": "Einschränkung",
   "Limitations": "Einschränkungen",
   "Line": "Zeile",
-  "Linked Operational Objects": "Verknüpfte operative Objekte",
   "Linked Policies Objects": "Verknüpfte Richtlinien-Objekte",
   "Configure an LLM API key to send messages.":
     "Konfigurieren Sie einen LLM-API-Schlüssel, um Nachrichten zu senden.",
@@ -1203,7 +1207,6 @@ export const de: Record<string, string> = {
   "Money saved by serving cached responses instead of calling the LLM":
     "Durch das Ausliefern gecachter Antworten statt LLM-Aufrufen eingesparte Kosten",
   "Most likely": "Wahrscheinlichstes",
-  "Multi-Turn": "Multi-Turn",
   "Multi-turn dataset detected": "Multi-Turn-Datensatz erkannt",
   "Multiple tags": "Mehrere Tags",
   "Name your organization": "Organisation benennen",
@@ -1299,13 +1302,14 @@ export const de: Record<string, string> = {
     "Plugins nach Name, Beschreibung oder Tags suchen...",
   "Search use cases...": "Anwendungsfälle suchen...",
   "Search...": "Suchen...",
+  "Search this list": "Diese Liste durchsuchen",
+  "Step {current} of {total}": "Schritt {current} von {total}",
   "Searching...": "Suche läuft...",
   "Selected": "Ausgewählt",
   "Server name": "Servername",
   "Shared specifications": "Geteilte Spezifikationen",
   "Simulated": "Simuliert",
   "Single tag": "Einzelnes Tag",
-  "Single-Turn": "Single-Turn",
   "Source identifier": "Quellkennung",
   "Source system": "Quellsystem",
   "Space between": "Abstand zwischen",
@@ -1962,10 +1966,10 @@ export const de: Record<string, string> = {
     "Die Statusverfolgung von Anwendungsfällen zeigt die Phasen Ihres KI-Lebenszyklus.",
   "Track use cases from planning through production to retirement. Status indicators help you see which AI systems are active, which are in development, and which need review. Regular status updates ensure governance stays current.":
     "Verfolgen Sie Anwendungsfälle von der Planung über die Produktion bis zur Außerbetriebnahme. Statusanzeigen zeigen, welche KI-Systeme aktiv sind, welche in Entwicklung sind und welche geprüft werden müssen. Regelmäßige Status-Updates halten die Governance aktuell.",
-  "Grouping use cases reveals patterns and shared risks.":
-    "Das Gruppieren von Anwendungsfällen zeigt Muster und gemeinsame Risiken.",
-  "Use the group-by feature to organize use cases by risk level or status. This reveals patterns like common risk factors across systems or lifecycle stage distribution. These insights inform governance strategy.":
-    "Nutzen Sie die Gruppierung, um Anwendungsfälle nach Risikostufe oder Status zu organisieren. Das zeigt Muster wie systemübergreifende Risikofaktoren oder die Verteilung der Lebenszyklusphasen. Diese Erkenntnisse fließen in die Governance-Strategie ein.",
+  "Filtering use cases reveals patterns and shared risks.":
+    "Das Filtern von Anwendungsfällen zeigt Muster und gemeinsame Risiken.",
+  "Filter use cases by risk level or status to spot patterns like common risk factors across systems or how use cases spread across lifecycle stages. These insights inform governance strategy.":
+    "Filtern Sie Anwendungsfälle nach Risikostufe oder Status, um Muster wie systemübergreifende Risikofaktoren oder die Verteilung auf die Lebenszyklusphasen zu erkennen. Diese Erkenntnisse fließen in die Governance-Strategie ein.",
 
   "Frameworks map your compliance requirements to actions.":
     "Rahmenwerke bilden Ihre Compliance-Anforderungen auf Aktionen ab.",
@@ -2589,7 +2593,6 @@ export const de: Record<string, string> = {
   "Departments": "Abteilungen",
   "Details": "Details",
   "Download results as JSON": "Ergebnisse als JSON herunterladen",
-  "EU AI Act Completion Status": "Fertigstellungsstatus EU-KI-Verordnung",
   "EXPLORE VERIFYWISE": "VERIFYWISE ERKUNDEN",
   "Each AI tool receives a risk score from 0 to 100, recalculated nightly. The score is a weighted composite of four factors:":
     "Jedes KI-Tool erhält eine Risikobewertung von 0 bis 100, die nächtlich neu berechnet wird. Die Bewertung ist eine gewichtete Zusammensetzung aus vier Faktoren:",
@@ -2666,7 +2669,6 @@ export const de: Record<string, string> = {
     "Wie möchten Sie beginnen? Sie können mit Beispieldaten erkunden oder mit einem leeren Dashboard starten.",
   "IMPACT ASSESSMENT": "FOLGENABSCHÄTZUNG",
   "INCIDENT INFORMATION": "VORFALLSINFORMATIONEN",
-  "ISO 42001 Completion Status": "Fertigstellungsstatus ISO 42001",
   "ISO 42001, ISO 27001, NIST AI RMF": "ISO 42001, ISO 27001, NIST AI RMF",
   "Icon Buttons": "Symbolschaltflächen",
   "Implementation description:": "Implementierungsbeschreibung:",
@@ -3067,8 +3069,8 @@ export const de: Record<string, string> = {
   "Active incidents": "Aktive Vorfälle",
   "SOC 2, GDPR, HIPAA, DORA, and 17 more frameworks are built in, with requirements, evidence, and risk tracking.":
     "SOC 2, GDPR, HIPAA, DORA und 17 weitere Rahmenwerke sind integriert, mit Anforderungen, Nachweisen und Risikoverfolgung.",
-  "Slack, MLflow, Azure AI Foundry, Jira Assets, Model Lifecycle, Risk Import, and Dataset Bulk Upload.":
-    "Slack, MLflow, Azure AI Foundry, Jira Assets, Model Lifecycle, Risk Import und Dataset Bulk Upload.",
+  "Slack, MLflow, Azure AI Foundry, Jira Assets, Jira incidents, Model lifecycle, Risk import, Dataset bulk upload, and Framework import.":
+    "Slack, MLflow, Azure AI Foundry, Jira Assets, Jira-Vorfälle, Modelllebenszyklus, Risikoimport, Massen-Upload von Datensätzen und Rahmenwerk-Import.",
   "Admins enable, configure, and disable extensions from the Extensions page. Nothing to install.":
     "Administratoren aktivieren, konfigurieren und deaktivieren Extensions auf der Seite Extensions. Keine Installation erforderlich.",
   "Import risks from Excel, bulk upload datasets with PII detection, and define model lifecycle phases.":
@@ -4353,6 +4355,8 @@ export const de: Record<string, string> = {
   "Single line text input": "Einzeilige Texteingabe",
   "Single selection dropdown": "Einzelauswahl-Dropdown",
   "Slack workspace connected successfully!": "Slack-Workspace erfolgreich verbunden!",
+  "Something went wrong while setting up your workspace. Try again, or skip for now.":
+    "Beim Einrichten Ihres Arbeitsbereichs ist ein Fehler aufgetreten. Versuchen Sie es erneut oder überspringen Sie es vorerst.",
   "Something went wrong, please try again": "Etwas ist schiefgegangen, bitte erneut versuchen",
   "South America": "Südamerika",
   "Special category data (racial, political)": "Daten besonderer Kategorien (rassisch, politisch)",
@@ -4781,10 +4785,8 @@ export const de: Record<string, string> = {
   "Add tags": "Tags hinzufügen",
   "Adds to the chosen folder; existing assignments are preserved.":
     "Wird dem ausgewählten Ordner hinzugefügt; bestehende Zuordnungen bleiben erhalten.",
-  "Archived policies will be moved out of the active list. You can still find them via the Archived status filter.":
-    'Archivierte Richtlinien werden aus der aktiven Liste entfernt. Sie sind weiterhin über den Statusfilter "Archiviert" abrufbar.',
-  "Archived risks are soft-deleted: they are hidden from the active risk register but remain available for audit history.":
-    "Archivierte Risiken werden weich gelöscht: Sie werden aus dem aktiven Risikoregister ausgeblendet, bleiben aber für die Audit-Historie verfügbar.",
+  "Archived risks are removed from the risk register, reports and linked policies. Their change history is kept.":
+    "Archivierte Risiken werden aus dem Risikoregister, aus Berichten und aus verknüpften Richtlinien entfernt. Ihr Änderungsverlauf bleibt erhalten.",
   "Assign reviewer": "Prüfer zuweisen",
   "Bulk actions": "Massenaktionen",
   "Clear selection": "Auswahl aufheben",
@@ -4795,7 +4797,6 @@ export const de: Record<string, string> = {
   "Replace tags": "Tags ersetzen",
   "Replaces existing categories. Leave empty to clear.":
     "Ersetzt vorhandene Kategorien. Leer lassen, um sie zu entfernen.",
-  "Replaces existing reviewer assignments.": "Ersetzt bestehende Prüferzuweisungen.",
   "Replaces existing tags. Leave empty to clear.":
     "Ersetzt vorhandene Tags. Leer lassen, um sie zu entfernen.",
   "Set categories": "Kategorien festlegen",
@@ -5445,8 +5446,6 @@ export const de: Record<string, string> = {
   "Extension settings": "Erweiterungseinstellungen",
   "Extensions": "Erweiterungen",
   "Key": "Schlüssel",
-  "Password/token fields are stored encrypted. Leave blank to keep the existing value.":
-    "Passwort-/Token-Felder werden verschlüsselt gespeichert. Leer lassen, um den vorhandenen Wert beizubehalten.",
   "Specific extension settings page": "Spezifische Erweiterungseinstellungsseite",
   "Sync Interval": "Synchronisierungsintervall",
   "This extension has no configuration.": "Diese Erweiterung hat keine Konfiguration.",
@@ -5625,6 +5624,22 @@ export const de: Record<string, string> = {
   "Use case and AI app lifecycles, intake form logic and MCP server auth":
     "Lebenszyklen für Anwendungsfälle und KI-Apps, Logik für Aufnahmeformulare und MCP-Server-Authentifizierung",
   "AI app bulk import and bulk assessment": "Massenimport und Massenbewertung von KI-Apps",
+  "Training assignments, groups and custom roles, and framework import":
+    "Schulungszuweisungen, Gruppen und benutzerdefinierte Rollen sowie Framework-Import",
+  // Unified sidebar (phase 2)
+  "Record": "Erfassen",
+  "Workspace": "Arbeitsbereich",
+  "Inventory": "Inventar",
+  "Evidence & reports": "Nachweise & Berichte",
+  "Intake": "Eingang",
+  "AI risks": "KI-Risiken",
+  "Agent controls": "Agentensteuerung",
+  "Event tracker": "Ereignisverfolgung",
+  "Super admin": "Super-Administrator",
+  "Trust Index settings": "Einstellungen des Vertrauensindex",
+  "Shadow AI settings": "Schatten-KI-Einstellungen",
+  "Scan settings": "Scan-Einstellungen",
+  "Admin access required.": "Administratorzugriff erforderlich.",
 };
 
 export const fr: Record<string, string> = {
@@ -5981,6 +5996,8 @@ export const fr: Record<string, string> = {
   "Selected": "Sélectionné",
   "Search": "Rechercher",
   "Search...": "Rechercher...",
+  "Search this list": "Rechercher dans cette liste",
+  "Step {current} of {total}": "Étape {current} sur {total}",
   "Searching...": "Recherche...",
   "Filters": "Filtres",
   "Sort": "Trier",
@@ -6664,7 +6681,6 @@ export const fr: Record<string, string> = {
   "Invite User": "Inviter un utilisateur",
   "Keep risk as is": "Conserver le risque en l'état",
   "Link Evidence": "Relier des preuves",
-  "Link New Risks": "Relier de nouveaux risques",
   "Link tasks to controls or risks": "Relier les tâches aux contrôles ou risques",
   "Link to governance artifacts": "Relier aux artefacts de gouvernance",
   "Link to model": "Relier au modèle",
@@ -6739,6 +6755,10 @@ export const fr: Record<string, string> = {
   "AI-enhanced": "Augmenté par l'IA",
   "Alert boxes": "Boîtes d'alerte",
   "All": "Tous",
+  "Clear filters": "Effacer les filtres",
+  "In 7 days": "Dans 7 jours",
+  "In 30 days": "Dans 30 jours",
+  "Past": "Passé",
   "All collections": "Toutes les collections",
   "Allow data to be exported": "Autoriser l'export des données",
   "Allowed tools": "Outils autorisés",
@@ -6801,6 +6821,8 @@ export const fr: Record<string, string> = {
   "Cost saved": "Coût économisé",
   "Count": "Nombre",
   "Created": "Créé",
+  "CREATED AT": "CRÉÉ LE",
+  "LAST LOGGED IN": "DERNIÈRE CONNEXION",
   "Created by": "Créé par",
   "Current": "Actuel",
   "Current risk level": "Niveau de risque actuel",
@@ -6873,7 +6895,6 @@ export const fr: Record<string, string> = {
   "Limitation": "Limitation",
   "Limitations": "Limitations",
   "Line": "Ligne",
-  "Linked Operational Objects": "Objets opérationnels liés",
   "Linked Policies Objects": "Objets de politiques liés",
   "Configure an LLM API key to send messages.":
     "Configurez une clé API LLM pour envoyer des messages.",
@@ -6892,7 +6913,6 @@ export const fr: Record<string, string> = {
 
   // Batch 04
   "Most likely": "Plus probable",
-  "Multi-Turn": "Multi-tours",
   "Multi-turn dataset detected": "Jeu de données multi-tours détecté",
   "Multiple tags": "Plusieurs étiquettes",
   "Name your organization": "Nommez votre organisation",
@@ -6990,7 +7010,6 @@ export const fr: Record<string, string> = {
   "Shared specifications": "Spécifications partagées",
   "Simulated": "Simulé",
   "Single tag": "Étiquette unique",
-  "Single-Turn": "Mono-tour",
   "Source identifier": "Identifiant de source",
   "Source system": "Système source",
   "Space between": "Espace entre",
@@ -7608,10 +7627,10 @@ export const fr: Record<string, string> = {
     "Le suivi du statut des cas d'usage montre les étapes de votre cycle de vie IA.",
   "Track use cases from planning through production to retirement. Status indicators help you see which AI systems are active, which are in development, and which need review. Regular status updates ensure governance stays current.":
     "Suivez les cas d'usage de la planification à la production puis au retrait. Les indicateurs de statut vous aident à voir quels systèmes IA sont actifs, en développement ou à relire. Des mises à jour régulières gardent la gouvernance à jour.",
-  "Grouping use cases reveals patterns and shared risks.":
-    "Grouper les cas d'usage fait apparaître des motifs et des risques communs.",
-  "Use the group-by feature to organize use cases by risk level or status. This reveals patterns like common risk factors across systems or lifecycle stage distribution. These insights inform governance strategy.":
-    "Utilisez la fonction de groupement pour organiser les cas d'usage par niveau de risque ou statut. Cela révèle des motifs comme des facteurs de risque communs entre systèmes ou la répartition des étapes du cycle de vie. Ces informations orientent la stratégie de gouvernance.",
+  "Filtering use cases reveals patterns and shared risks.":
+    "Filtrer les cas d'usage fait apparaître des motifs et des risques communs.",
+  "Filter use cases by risk level or status to spot patterns like common risk factors across systems or how use cases spread across lifecycle stages. These insights inform governance strategy.":
+    "Filtrez les cas d'usage par niveau de risque ou statut pour repérer des motifs comme des facteurs de risque communs entre systèmes ou la répartition entre les étapes du cycle de vie. Ces informations orientent la stratégie de gouvernance.",
   "Frameworks map your compliance requirements to actions.":
     "Les référentiels traduisent vos exigences de conformité en actions.",
   "Each framework (like NIST AI RMF or EU AI Act) contains controls that translate regulatory requirements into specific tasks and policies. Select frameworks relevant to your industry to automatically generate compliance workstreams.":
@@ -8154,7 +8173,6 @@ export const fr: Record<string, string> = {
   "Departments": "Départements",
   "Details": "Détails",
   "Download results as JSON": "Télécharger les résultats au format JSON",
-  "EU AI Act Completion Status": "Statut d'achèvement du Règlement IA de l'UE",
   "EXPLORE VERIFYWISE": "EXPLORER VERIFYWISE",
   "Each AI tool receives a risk score from 0 to 100, recalculated nightly. The score is a weighted composite of four factors:":
     "Chaque outil IA reçoit un score de risque de 0 à 100, recalculé chaque nuit. Le score est une combinaison pondérée de quatre facteurs :",
@@ -8231,7 +8249,6 @@ export const fr: Record<string, string> = {
     "Comment souhaitez-vous commencer ? Vous pouvez explorer avec des données d'exemple ou démarrer à zéro.",
   "IMPACT ASSESSMENT": "ANALYSE D'IMPACT",
   "INCIDENT INFORMATION": "INFORMATIONS SUR L'INCIDENT",
-  "ISO 42001 Completion Status": "Statut d'achèvement ISO 42001",
   "ISO 42001, ISO 27001, NIST AI RMF": "ISO 42001, ISO 27001, NIST AI RMF",
   "Icon Buttons": "Boutons d'icône",
   "Implementation description:": "Description de l'implémentation :",
@@ -8628,8 +8645,8 @@ export const fr: Record<string, string> = {
   "Active incidents": "Incidents actifs",
   "SOC 2, GDPR, HIPAA, DORA, and 17 more frameworks are built in, with requirements, evidence, and risk tracking.":
     "SOC 2, RGPD, HIPAA, DORA et 17 autres référentiels sont intégrés, avec exigences, preuves et suivi des risques.",
-  "Slack, MLflow, Azure AI Foundry, Jira Assets, Model Lifecycle, Risk Import, and Dataset Bulk Upload.":
-    "Slack, MLflow, Azure AI Foundry, Jira Assets, Model Lifecycle, Risk Import et Dataset Bulk Upload.",
+  "Slack, MLflow, Azure AI Foundry, Jira Assets, Jira incidents, Model lifecycle, Risk import, Dataset bulk upload, and Framework import.":
+    "Slack, MLflow, Azure AI Foundry, Jira Assets, Incidents Jira, Cycle de vie du modèle, Import de risques, Téléversement en masse de jeux de données et Import de référentiels.",
   "Admins enable, configure, and disable extensions from the Extensions page. Nothing to install.":
     "Les administrateurs activent, configurent et désactivent les extensions depuis la page Extensions. Rien à installer.",
   "Import risks from Excel, bulk upload datasets with PII detection, and define model lifecycle phases.":
@@ -9921,6 +9938,8 @@ export const fr: Record<string, string> = {
   "Single line text input": "Saisie de texte sur une ligne",
   "Single selection dropdown": "Liste déroulante à sélection unique",
   "Slack workspace connected successfully!": "Espace de travail Slack connecté avec succès !",
+  "Something went wrong while setting up your workspace. Try again, or skip for now.":
+    "Une erreur s'est produite lors de la configuration de votre espace de travail. Réessayez ou passez cette étape pour le moment.",
   "Something went wrong, please try again": "Quelque chose s'est mal passé, veuillez réessayer",
   "South America": "Amérique du Sud",
   "Special category data (racial, political)": "Données de catégorie spéciale (raciale, politique)",
@@ -10348,10 +10367,8 @@ export const fr: Record<string, string> = {
   "Add tags": "Ajouter des balises",
   "Adds to the chosen folder; existing assignments are preserved.":
     "Ajoute au dossier sélectionné ; les affectations existantes sont conservées.",
-  "Archived policies will be moved out of the active list. You can still find them via the Archived status filter.":
-    "Les politiques archivées seront retirées de la liste active. Vous pourrez toujours les retrouver via le filtre de statut Archivé.",
-  "Archived risks are soft-deleted: they are hidden from the active risk register but remain available for audit history.":
-    "Les risques archivés sont supprimés en douceur : ils sont masqués du registre des risques actifs mais restent disponibles dans l'historique d'audit.",
+  "Archived risks are removed from the risk register, reports and linked policies. Their change history is kept.":
+    "Les risques archivés sont retirés du registre des risques, des rapports et des politiques associées. Leur historique des modifications est conservé.",
   "Assign reviewer": "Attribuer un relecteur",
   "Bulk actions": "Actions groupées",
   "Clear selection": "Effacer la sélection",
@@ -10362,7 +10379,6 @@ export const fr: Record<string, string> = {
   "Replace tags": "Remplacer les balises",
   "Replaces existing categories. Leave empty to clear.":
     "Remplace les catégories existantes. Laisser vide pour effacer.",
-  "Replaces existing reviewer assignments.": "Remplace les affectations de relecteurs existantes.",
   "Replaces existing tags. Leave empty to clear.":
     "Remplace les balises existantes. Laisser vide pour effacer.",
   "Set categories": "Définir les catégories",
@@ -11007,8 +11023,6 @@ export const fr: Record<string, string> = {
   "Extension settings": "Paramètres de l'extension",
   "Extensions": "Extensions",
   "Key": "Clé",
-  "Password/token fields are stored encrypted. Leave blank to keep the existing value.":
-    "Les champs mot de passe/jeton sont stockés chiffrés. Laissez vide pour conserver la valeur existante.",
   "Specific extension settings page": "Page de paramètres d'extension spécifique",
   "Sync Interval": "Intervalle de synchronisation",
   "This extension has no configuration.": "Cette extension n'a pas de configuration.",
@@ -11182,8 +11196,24 @@ export const fr: Record<string, string> = {
   "Use case and AI app lifecycles, intake form logic and MCP server auth":
     "Cycles de vie des cas d'usage et des applications d'IA, logique des formulaires d'intake et authentification des serveurs MCP",
   "AI app bulk import and bulk assessment": "Import et évaluation en masse des applications d'IA",
+  "Training assignments, groups and custom roles, and framework import":
+    "Affectation des formations, groupes et rôles personnalisés, et import de référentiels",
 
   "Request": "Requête",
+  // Unified sidebar (phase 2)
+  "Record": "Enregistrer",
+  "Workspace": "Espace de travail",
+  "Inventory": "Inventaire",
+  "Evidence & reports": "Preuves et rapports",
+  "Intake": "Entrée",
+  "AI risks": "Risques IA",
+  "Agent controls": "Contrôles des agents",
+  "Event tracker": "Suivi des événements",
+  "Super admin": "Super administrateur",
+  "Trust Index settings": "Paramètres de l'index de confiance",
+  "Shadow AI settings": "Paramètres de l'IA fantôme",
+  "Scan settings": "Paramètres d'analyse",
+  "Admin access required.": "Accès administrateur requis.",
 };
 
 export const es: Record<string, string> = {
@@ -12013,7 +12043,6 @@ export const es: Record<string, string> = {
   "Invite User": "Invitar usuario",
   "Keep risk as is": "Mantener el riesgo tal cual",
   "Link Evidence": "Vincular evidencia",
-  "Link New Risks": "Vincular nuevos riesgos",
   "Link tasks to controls or risks": "Vincular tareas a controles o riesgos",
   "Link to governance artifacts": "Vincular a artefactos de gobernanza",
   "Link to model": "Vincular al modelo",
@@ -12097,6 +12126,10 @@ export const es: Record<string, string> = {
   "AI-enhanced": "Mejorado con IA",
   "Alert boxes": "Cuadros de alerta",
   "All": "Todos",
+  "Clear filters": "Borrar filtros",
+  "In 7 days": "En 7 días",
+  "In 30 days": "En 30 días",
+  "Past": "Pasado",
   "All collections": "Todas las colecciones",
   "Allow data to be exported": "Permitir la exportación de datos",
   "Allowed tools": "Herramientas permitidas",
@@ -12156,6 +12189,8 @@ export const es: Record<string, string> = {
   "Cost saved": "Coste ahorrado",
   "Count": "Recuento",
   "Created": "Creado",
+  "CREATED AT": "CREADO EL",
+  "LAST LOGGED IN": "ÚLTIMO INICIO DE SESIÓN",
   "Created by": "Creado por",
   "Current": "Actual",
   "Current risk level": "Nivel de riesgo actual",
@@ -12229,7 +12264,6 @@ export const es: Record<string, string> = {
   "Limitation": "Limitación",
   "Limitations": "Limitaciones",
   "Line": "Línea",
-  "Linked Operational Objects": "Objetos operativos vinculados",
   "Linked Policies Objects": "Objetos de políticas vinculados",
   "Configure an LLM API key to send messages.":
     "Configure una clave de API de LLM para enviar mensajes.",
@@ -12245,7 +12279,6 @@ export const es: Record<string, string> = {
   "Modal": "Modal",
   "Models covered": "Modelos cubiertos",
   "Most likely": "Más probable",
-  "Multi-Turn": "Multiturno",
   "Multi-turn dataset detected": "Conjunto de datos multiturno detectado",
   "Multiple tags": "Varias etiquetas",
   "Name your organization": "Asigna un nombre a tu organización",
@@ -12334,13 +12367,14 @@ export const es: Record<string, string> = {
   "Search icons...": "Buscar iconos...",
   "Search use cases...": "Buscar casos de uso...",
   "Search...": "Buscar...",
+  "Search this list": "Buscar en esta lista",
+  "Step {current} of {total}": "Paso {current} de {total}",
   "Searching...": "Buscando...",
   "Selected": "Seleccionado",
   "Server name": "Nombre del servidor",
   "Shared specifications": "Especificaciones compartidas",
   "Simulated": "Simulado",
   "Single tag": "Etiqueta única",
-  "Single-Turn": "Turno único",
   "Source identifier": "Identificador de origen",
   "Source system": "Sistema de origen",
   "Space between": "Espacio entre",
@@ -12929,7 +12963,6 @@ export const es: Record<string, string> = {
   "Departments": "Departamentos",
   "Details": "Detalles",
   "Download results as JSON": "Descargar resultados como JSON",
-  "EU AI Act Completion Status": "Estado de finalización del EU AI Act",
   "EXPLORE VERIFYWISE": "EXPLORA VERIFYWISE",
   "Edit dataset": "Editar conjunto de datos",
   "Edit selection": "Editar selección",
@@ -12978,7 +13011,6 @@ export const es: Record<string, string> = {
   "How is this calculated?": "¿Cómo se calcula esto?",
   "IMPACT ASSESSMENT": "EVALUACIÓN DE IMPACTO",
   "INCIDENT INFORMATION": "INFORMACIÓN DEL INCIDENTE",
-  "ISO 42001 Completion Status": "Estado de finalización de ISO 42001",
   "ISO 42001, ISO 27001, NIST AI RMF": "ISO 42001, ISO 27001, NIST AI RMF",
   "Icon Buttons": "Botones de icono",
   "Implementation description:": "Descripción de la implementación:",
@@ -13812,6 +13844,8 @@ export const es: Record<string, string> = {
   "Single selection dropdown": "Lista desplegable de selección única",
   "Slack workspace connected successfully!":
     "¡Espacio de trabajo de Slack conectado correctamente!",
+  "Something went wrong while setting up your workspace. Try again, or skip for now.":
+    "Se produjo un error al configurar su espacio de trabajo. Inténtelo de nuevo u omita este paso por ahora.",
   "Something went wrong, please try again": "Algo ha salido mal, inténtalo de nuevo",
   "South America": "Sudamérica",
   "Specific incident management information": "Información específica de gestión de incidentes",
@@ -13953,7 +13987,6 @@ export const es: Record<string, string> = {
   "Mark complete": "Marcar como completado",
   "Remove tags": "Eliminar etiquetas",
   "Replace tags": "Reemplazar etiquetas",
-  "Replaces existing reviewer assignments.": "Reemplaza las asignaciones de revisor existentes.",
   "Set categories": "Establecer categorías",
   "Set category": "Establecer categoría",
   "Set owner": "Establecer responsable",
@@ -14392,10 +14425,10 @@ export const es: Record<string, string> = {
     "El seguimiento del estado de los casos de uso muestra las etapas del ciclo de vida de su IA.",
   "Track use cases from planning through production to retirement. Status indicators help you see which AI systems are active, which are in development, and which need review. Regular status updates ensure governance stays current.":
     "Haga un seguimiento de los casos de uso desde la planificación hasta la producción y la retirada. Los indicadores de estado le ayudan a ver qué sistemas de IA están activos, cuáles están en desarrollo y cuáles necesitan revisión. Las actualizaciones de estado periódicas garantizan que la gobernanza se mantenga al día.",
-  "Grouping use cases reveals patterns and shared risks.":
-    "Agrupar los casos de uso revela patrones y riesgos compartidos.",
-  "Use the group-by feature to organize use cases by risk level or status. This reveals patterns like common risk factors across systems or lifecycle stage distribution. These insights inform governance strategy.":
-    "Utilice la función de agrupación para organizar los casos de uso por nivel de riesgo o estado. Esto revela patrones como factores de riesgo comunes entre sistemas o la distribución de las etapas del ciclo de vida. Estos hallazgos sirven de base para la estrategia de gobernanza.",
+  "Filtering use cases reveals patterns and shared risks.":
+    "Filtrar los casos de uso revela patrones y riesgos compartidos.",
+  "Filter use cases by risk level or status to spot patterns like common risk factors across systems or how use cases spread across lifecycle stages. These insights inform governance strategy.":
+    "Filtre los casos de uso por nivel de riesgo o estado para detectar patrones como factores de riesgo comunes entre sistemas o la distribución entre las etapas del ciclo de vida. Estos hallazgos sirven de base para la estrategia de gobernanza.",
   "Frameworks map your compliance requirements to actions.":
     "Los marcos asignan sus requisitos de cumplimiento a acciones.",
   "Each framework (like NIST AI RMF or EU AI Act) contains controls that translate regulatory requirements into specific tasks and policies. Select frameworks relevant to your industry to automatically generate compliance workstreams.":
@@ -14966,8 +14999,8 @@ export const es: Record<string, string> = {
     "Los registros precisos garantizan la responsabilidad y respaldan las auditorías, la resolución de problemas y el cumplimiento normativo.",
   "SOC 2, GDPR, HIPAA, DORA, and 17 more frameworks are built in, with requirements, evidence, and risk tracking.":
     "SOC 2, GDPR, HIPAA, DORA y 17 marcos más están integrados, con requisitos, evidencias y seguimiento de riesgos.",
-  "Slack, MLflow, Azure AI Foundry, Jira Assets, Model Lifecycle, Risk Import, and Dataset Bulk Upload.":
-    "Slack, MLflow, Azure AI Foundry, Jira Assets, Model Lifecycle, Risk Import y Dataset Bulk Upload.",
+  "Slack, MLflow, Azure AI Foundry, Jira Assets, Jira incidents, Model lifecycle, Risk import, Dataset bulk upload, and Framework import.":
+    "Slack, MLflow, Azure AI Foundry, Jira Assets, Incidentes de Jira, Ciclo de vida del modelo, Importación de riesgos, Subida masiva de conjuntos de datos e Importación de marcos.",
   "Admins enable, configure, and disable extensions from the Extensions page. Nothing to install.":
     "Los administradores activan, configuran y desactivan extensiones desde la página Extensions. No hay nada que instalar.",
   "Import risks from Excel, bulk upload datasets with PII detection, and define model lifecycle phases.":
@@ -15929,10 +15962,8 @@ export const es: Record<string, string> = {
     "Tu plataforma de gobernanza y cumplimiento de IA. En 3 minutos,",
   "Adds to the chosen folder; existing assignments are preserved.":
     "Se añade a la carpeta elegida; se conservan las asignaciones existentes.",
-  "Archived policies will be moved out of the active list. You can still find them via the Archived status filter.":
-    "Las políticas archivadas se retirarán de la lista activa. Aún podrás encontrarlas mediante el filtro de estado Archivado.",
-  "Archived risks are soft-deleted: they are hidden from the active risk register but remain available for audit history.":
-    "Los riesgos archivados se eliminan de forma reversible: quedan ocultos del registro de riesgos activo, pero siguen disponibles para el historial de auditoría.",
+  "Archived risks are removed from the risk register, reports and linked policies. Their change history is kept.":
+    "Los riesgos archivados se eliminan del registro de riesgos, de los informes y de las políticas vinculadas. Su historial de cambios se conserva.",
   "Replaces existing categories. Leave empty to clear.":
     "Sustituye las categorías existentes. Déjalo vacío para borrarlas.",
   "Replaces existing tags. Leave empty to clear.":
@@ -16457,8 +16488,6 @@ export const es: Record<string, string> = {
   "Extension settings": "Configuración de la extensión",
   "Extensions": "Extensiones",
   "Key": "Clave",
-  "Password/token fields are stored encrypted. Leave blank to keep the existing value.":
-    "Los campos de contraseña/token se almacenan cifrados. Deje en blanco para mantener el valor existente.",
   "Specific extension settings page": "Página de configuración de extensión específica",
   "Sync Interval": "Intervalo de sincronización",
   "This extension has no configuration.": "Esta extensión no tiene configuración.",
@@ -16631,8 +16660,24 @@ export const es: Record<string, string> = {
     "Ciclos de vida de casos de uso y aplicaciones de IA, lógica de formularios de solicitud y autenticación de servidores MCP",
   "AI app bulk import and bulk assessment":
     "Importación y evaluación masivas de aplicaciones de IA",
+  "Training assignments, groups and custom roles, and framework import":
+    "Asignación de formaciones, grupos y roles personalizados, e importación de marcos",
   "Enter a full web address starting with http:// or https://":
     "Introduzca una dirección web completa que empiece por http:// o https://",
   "Shown under the field on the public form":
     "Se muestra debajo del campo en el formulario público",
+  // Unified sidebar (phase 2)
+  "Record": "Registrar",
+  "Workspace": "Espacio de trabajo",
+  "Inventory": "Inventario",
+  "Evidence & reports": "Evidencia e informes",
+  "Intake": "Admisión",
+  "AI risks": "Riesgos de IA",
+  "Agent controls": "Controles de agentes",
+  "Event tracker": "Registro de eventos",
+  "Super admin": "Superadministrador",
+  "Trust Index settings": "Configuración del índice de confianza",
+  "Shadow AI settings": "Configuración de IA en la sombra",
+  "Scan settings": "Configuración de escaneo",
+  "Admin access required.": "Se requiere acceso de administrador.",
 };

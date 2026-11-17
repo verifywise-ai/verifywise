@@ -31,7 +31,7 @@ import {
 } from "lucide-react";
 import { CustomizableButton } from "../button/customizable-button";
 import singleTheme from "../../themes/v1SingleTheme";
-import { text, status } from "../../themes/palette";
+import { text, status, primitives, palette as vwPalette, radiusPx } from "../../themes/palette";
 
 // Types
 export interface UploadFile {
@@ -104,7 +104,7 @@ const formatFileSize = (bytes: number): string => {
 const BasicModalCancelButtonStyle = {
   "textTransform": "none",
   "fontSize": 13,
-  "borderRadius": "4px",
+  "borderRadius": radiusPx.sm,
   "color": `${text.secondary}`,
   "&:hover": {
     backgroundColor: "rgba(19, 113, 91, 0.04)",
@@ -113,10 +113,10 @@ const BasicModalCancelButtonStyle = {
 
 const BasicModalDeleteButtonStyle = {
   "fontSize": 13,
-  "backgroundColor": "#DB504A",
-  "border": "1px solid #DB504A",
+  "backgroundColor": vwPalette.riskMark.critical,
+  "border": `1px solid ${vwPalette.riskMark.critical}`,
   "boxShadow": "none",
-  "borderRadius": "4px",
+  "borderRadius": radiusPx.sm,
   "&:hover": {
     boxShadow: "none",
   },
@@ -224,22 +224,22 @@ const Uploader: React.FC<UploaderProps> = ({
         return {
           label: "Completed",
           icon: CheckIcon,
-          backgroundColor: "#ECFDF3",
-          color: "#027A48",
+          backgroundColor: vwPalette.status.success.bg,
+          color: vwPalette.status.success.text,
         };
       case "uploading":
         return {
           label: `Uploading ${file.progress}%`,
           icon: PendingIcon,
-          backgroundColor: "#F0F9FF",
-          color: "#026AA2",
+          backgroundColor: vwPalette.status.info.bg,
+          color: vwPalette.status.info.text,
         };
       case "error":
         return {
           label: file.error || "Failed",
           icon: ErrorIcon,
-          backgroundColor: "#FEF3F2",
-          color: "#DC2626",
+          backgroundColor: vwPalette.accent.red.bg,
+          color: vwPalette.riskMark.critical,
         };
       default:
         return {
@@ -491,11 +491,11 @@ const Uploader: React.FC<UploaderProps> = ({
   // Modern drop zone styles
   const dropZoneStyles: SxProps<Theme> = {
     "position": "relative",
-    "borderRadius": "4px",
+    "borderRadius": radiusPx.sm,
     "background": isDragging
       ? "linear-gradient(135deg, rgba(19, 113, 91, 0.05) 0%, rgba(19, 113, 91, 0.1) 100%)"
       : "background.main",
-    "border": `2px dashed ${isDragging ? singleTheme.buttons.primary.contained.backgroundColor : "#d0d5dd"}`,
+    "border": `2px dashed ${isDragging ? singleTheme.buttons.primary.contained.backgroundColor : vwPalette.border.dark}`,
     "boxShadow": "none",
     "transition": "all 0.2s ease",
     "cursor": "pointer",
@@ -521,7 +521,7 @@ const Uploader: React.FC<UploaderProps> = ({
       transition: "opacity 0.2s ease",
     },
     "&:hover": {
-      "borderColor": "#5FA896",
+      "borderColor": primitives.green[400],
       "backgroundColor": "rgba(19, 113, 91, 0.02)",
       "&::before": { opacity: 1 },
     },
@@ -529,9 +529,9 @@ const Uploader: React.FC<UploaderProps> = ({
 
   // Modern file card styles
   const fileCardStyles: SxProps<Theme> = {
-    "borderRadius": "4px",
+    "borderRadius": radiusPx.sm,
     "background": "background.main",
-    "border": `1px solid #EAECF0`,
+    "border": `1px solid ${vwPalette.border.light}`,
     "boxShadow": "none",
     "transition": "all 0.2s ease",
     "overflow": "hidden",
@@ -549,16 +549,16 @@ const Uploader: React.FC<UploaderProps> = ({
           width: "100%",
           maxWidth: 800,
           mx: "auto",
-          borderRadius: "8px",
+          borderRadius: radiusPx.lg,
           background: "background.main",
-          border: `1px solid #EAECF0`,
+          border: `1px solid ${vwPalette.border.light}`,
           boxShadow: "none",
           overflow: "hidden",
           ...sx,
         }}
       >
         {/* Header */}
-        <Box sx={{ p: 3, borderBottom: `1px solid #EAECF0` }}>
+        <Box sx={{ p: 3, borderBottom: `1px solid ${vwPalette.border.light}` }}>
           <Stack direction="row" alignItems="center" spacing={2}>
             <Avatar
               sx={{
@@ -699,11 +699,11 @@ const Uploader: React.FC<UploaderProps> = ({
                 value={overallProgress}
                 sx={{
                   "height": 6,
-                  "borderRadius": 3,
+                  "borderRadius": radiusPx.md,
                   "backgroundColor": "background.hover",
                   "& .MuiLinearProgress-bar": {
                     backgroundColor: singleTheme.buttons.primary.contained.backgroundColor,
-                    borderRadius: 3,
+                    borderRadius: radiusPx.md,
                     transition: "all 0.2s ease",
                   },
                 }}
@@ -737,14 +737,14 @@ const Uploader: React.FC<UploaderProps> = ({
                             <Avatar
                               sx={{
                                 backgroundColor: file.type.startsWith("image/")
-                                  ? "#FEF3C7"
+                                  ? vwPalette.accent.amber.bg
                                   : file.type.includes("pdf")
-                                    ? "#DBEAFE"
+                                    ? vwPalette.accent.blue.bg
                                     : "background.hover",
                                 color: file.type.startsWith("image/")
-                                  ? "#D97706"
+                                  ? vwPalette.accent.amber.text
                                   : file.type.includes("pdf")
-                                    ? "#2563EB"
+                                    ? vwPalette.accent.blue.text
                                     : "status.default.text",
                                 width: 40,
                                 height: 40,
@@ -810,12 +810,12 @@ const Uploader: React.FC<UploaderProps> = ({
                                     value={file.progress}
                                     sx={{
                                       "height": 4,
-                                      "borderRadius": 2,
+                                      "borderRadius": radiusPx.sm,
                                       "backgroundColor": "background.hover",
                                       "& .MuiLinearProgress-bar": {
                                         backgroundColor:
                                           singleTheme.buttons.primary.contained.backgroundColor,
-                                        borderRadius: 2,
+                                        borderRadius: radiusPx.sm,
                                       },
                                     }}
                                   />
@@ -900,7 +900,7 @@ const Uploader: React.FC<UploaderProps> = ({
         {/* Action Buttons */}
         {files.length > 0 && (
           <Fade in timeout={500}>
-            <Box sx={{ p: 3, borderTop: `1px solid #EAECF0` }}>
+            <Box sx={{ p: 3, borderTop: `1px solid ${vwPalette.border.light}` }}>
               <Stack direction="row" spacing={2} justifyContent="flex-end">
                 <CustomizableButton
                   variant="text"
@@ -939,9 +939,9 @@ const Uploader: React.FC<UploaderProps> = ({
               left: "50%",
               transform: "translate(-50%, -50%)",
               width: 450,
-              bgcolor: "#FCFCFD",
-              border: `1px solid #EAECF0`,
-              borderRadius: "4px",
+              bgcolor: vwPalette.background.main,
+              border: `1px solid ${vwPalette.border.light}`,
+              borderRadius: radiusPx.sm,
               boxShadow: "none",
               outline: "none",
               overflow: "hidden",
@@ -985,7 +985,7 @@ const Uploader: React.FC<UploaderProps> = ({
                 display: "flex",
                 justifyContent: "flex-end",
                 gap: 2,
-                borderTop: `1px solid #EAECF0`,
+                borderTop: `1px solid ${vwPalette.border.light}`,
               }}
             >
               <Button

@@ -30,7 +30,7 @@
 
 import React from "react";
 import { Tooltip, TooltipProps, Box, Typography } from "@mui/material";
-import { background } from "../../themes/palette";
+import { background, palette as vwPalette, radiusPx } from "../../themes/palette";
 
 interface VWTooltipProps {
   /** Optional header text displayed at the top (15px font) */
@@ -73,7 +73,7 @@ const VWTooltip: React.FC<VWTooltipProps> = ({
   children,
   maxWidth = 400,
   placement = "top",
-  backgroundColor = "#1F2937",
+  backgroundColor = vwPalette.text.primary,
   arrow = true,
   describeChild = false,
   open,
@@ -147,7 +147,7 @@ const VWTooltip: React.FC<VWTooltipProps> = ({
             "maxWidth": maxWidth,
             "backgroundColor": backgroundColor,
             "padding": "12px 16px",
-            "borderRadius": "4px",
+            "borderRadius": radiusPx.sm,
             "& *": {
               overflow: "visible !important",
               textOverflow: "clip !important",

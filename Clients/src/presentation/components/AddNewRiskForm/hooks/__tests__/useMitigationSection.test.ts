@@ -1,12 +1,19 @@
 import { describe, it, expect, vi } from "vitest";
 import { renderHook, act } from "@testing-library/react";
+import dayjs from "dayjs";
 import { useMitigationSection, mitigationInitialState } from "../useMitigationSection";
 import { MitigationFormValues } from "../../interface";
 
 vi.mock("../../projectRiskValue", () => ({
   mitigationStatusItems: [{ _id: 1, name: "Not Started" }],
   riskLevelItems: [{ _id: 2, name: "High" }],
-  approvalStatusItems: [{ _id: 3, name: "Completed" }],
+  approvalStatusItems: [
+    { _id: 1, name: "Pending" },
+    { _id: 2, name: "Approved" },
+    { _id: 3, name: "Rejected" },
+    { _id: 4, name: "Not required" },
+  ],
+  RISK_APPROVAL_STATUS: { Pending: 1, Approved: 2, Rejected: 3, NotRequired: 4 },
   likelihoodItems: [
     { _id: 1, name: "Rare" },
     { _id: 2, name: "Unlikely" },
@@ -58,13 +65,13 @@ describe("useMitigationSection", () => {
       mitigation_plan: "Plan A",
       current_risk_level: "High",
       implementation_strategy: "Strategy A",
-      deadline: "2024-01-15T00:00:00.000Z",
+      deadline: "2024-01-15T12:00:00.000Z",
       mitigation_evidence_document: "doc.pdf",
       likelihood_mitigation: "Rare",
       risk_severity: "Catastrophic",
       risk_approval: 42,
-      approval_status: "Completed",
-      date_of_assessment: "2024-02-01T00:00:00.000Z",
+      approval_status: "Rejected",
+      date_of_assessment: "2024-02-01T12:00:00.000Z",
     };
 
     const mapped = result.current.mapFromInputValues(inputValues);
@@ -73,13 +80,14 @@ describe("useMitigationSection", () => {
     expect(mapped.mitigationPlan).toBe("Plan A");
     expect(mapped.currentRiskLevel).toBe(2);
     expect(mapped.implementationStrategy).toBe("Strategy A");
-    expect(mapped.deadline).toBe("2024-01-15T00:00:00.000Z");
+    // A stored noon UTC opens as local midnight of that day, in any time zone.
+    expect(mapped.deadline).toBe(dayjs("2024-01-15").toISOString());
     expect(mapped.doc).toBe("doc.pdf");
     expect(mapped.likelihood).toBe(1);
     expect(mapped.riskSeverity).toBe(5);
     expect(mapped.approver).toBe(42);
     expect(mapped.approvalStatus).toBe(3);
-    expect(mapped.dateOfAssessment).toBe("2024-02-01T00:00:00.000Z");
+    expect(mapped.dateOfAssessment).toBe(dayjs("2024-02-01").toISOString());
   });
 
   it("maps Catastrophic severity to Critical in backend data", () => {
@@ -115,13 +123,14 @@ describe("useMitigationSection", () => {
       mitigationPlan: "Plan",
       currentRiskLevel: 2,
       implementationStrategy: "Strategy",
-      deadline: "2024-01-01T00:00:00.000Z",
+      // Local midnight on the picked day, as the date picker sends it.
+      deadline: dayjs("2024-01-01").toISOString(),
       doc: "doc.pdf",
       likelihood: 2,
       riskSeverity: 1,
       approver: 10,
       approvalStatus: 3,
-      dateOfAssessment: "2024-06-01T00:00:00.000Z",
+      dateOfAssessment: dayjs("2024-06-01").toISOString(),
     };
 
     const backendData = result.current.buildBackendData(values);
@@ -131,12 +140,102 @@ describe("useMitigationSection", () => {
       mitigation_plan: "Plan",
       current_risk_level: "High",
       implementation_strategy: "Strategy",
-      deadline: "2024-01-01T00:00:00.000Z",
+      deadline: "2024-01-01",
       mitigation_evidence_document: "doc.pdf",
       likelihood_mitigation: "Unlikely",
       risk_approval: 10,
-      approval_status: "Completed",
-      date_of_assessment: "2024-06-01T00:00:00.000Z",
+      approval_status: "Rejected",
+      date_of_assessment: "2024-06-01",
     });
+  });
+
+  it("maps a stored residual severity of Critical back to Catastrophic (R-H1)", () => {
+    const { result } = renderHook(() => useMitigationSection());
+
+    const mapped = result.current.mapFromInputValues({ risk_severity: "Critical" });
+    expect(mapped.riskSeverity).toBe(5);
+    // A save without changes sends the same stored value back.
+    expect(result.current.buildBackendData(mapped).risk_severity).toBe("Critical");
+  });
+
+  it("leaves values the risk never had empty instead of prefilling them (R-M12)", () => {
+    const { result } = renderHook(() => useMitigationSection());
+
+    const mapped = result.current.mapFromInputValues({
+      mitigation_status: null,
+      current_risk_level: null,
+      deadline: null,
+      risk_approval: null,
+      approval_status: null,
+      date_of_assessment: null,
+    });
+
+    expect(mapped.mitigationStatus).toBe(0);
+    expect(mapped.currentRiskLevel).toBe(0);
+    expect(mapped.deadline).toBe("");
+    expect(mapped.approver).toBe(0);
+    // A risk always has an approval status; none stored opens as Not required.
+    expect(mapped.approvalStatus).toBe(4);
+    expect(mapped.dateOfAssessment).toBe("");
+  });
+
+  it("sends unset selects, dates and approver as null so the server clears them (R-M12)", () => {
+    const { result } = renderHook(() => useMitigationSection());
+
+    const backendData = result.current.buildBackendData({
+      ...mitigationInitialState,
+      mitigationStatus: 0,
+      currentRiskLevel: 0,
+      deadline: "",
+      approver: 0,
+      approvalStatus: 0,
+      dateOfAssessment: "",
+    });
+
+    expect(backendData).toMatchObject({
+      mitigation_status: null,
+      current_risk_level: null,
+      deadline: null,
+      risk_approval: null,
+      approval_status: "Not required",
+      date_of_assessment: null,
+    });
+  });
+
+  it("round-trips a stored date without drifting a day (UTC+12 and beyond)", () => {
+    const { result } = renderHook(() => useMitigationSection());
+    const mapped = result.current.mapFromInputValues({
+      deadline: "2026-05-01T12:00:00.000Z",
+      date_of_assessment: "2026-05-01T12:00:00.000Z",
+    });
+    const backend = result.current.buildBackendData(mapped);
+    expect(backend.deadline).toBe("2026-05-01");
+    expect(backend.date_of_assessment).toBe("2026-05-01");
+  });
+
+  it("starts a new risk as Not required", () => {
+    expect(mitigationInitialState.approvalStatus).toBe(4);
+    expect(mitigationInitialState.approver).toBe(0);
+  });
+
+  it("opens a legacy approval value as Not required", () => {
+    const { result } = renderHook(() => useMitigationSection());
+    for (const legacy of ["In Progress", "Completed", "Requires review", ""]) {
+      expect(result.current.mapFromInputValues({ approval_status: legacy }).approvalStatus).toBe(4);
+    }
+  });
+
+  it("sends each approval status by its stored name", () => {
+    const { result } = renderHook(() => useMitigationSection());
+    const sent = [1, 2, 3, 4].map(
+      (id) =>
+        result.current.buildBackendData({ ...mitigationInitialState, approvalStatus: id })
+          .approval_status,
+    );
+    expect(sent).toEqual(["Pending", "Approved", "Rejected", "Not required"]);
+  });
+
+  it("starts a new risk without an assessment date", () => {
+    expect(mitigationInitialState.dateOfAssessment).toBe("");
   });
 });

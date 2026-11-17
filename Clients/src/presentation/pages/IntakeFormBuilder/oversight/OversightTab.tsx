@@ -30,7 +30,7 @@ import Chip from "../../../components/Chip";
 import Select from "../../../components/Inputs/Select";
 import { EmptyState } from "../../../components/EmptyState";
 import singleTheme from "../../../themes/v1SingleTheme";
-import palette, { chart as chartPalette } from "../../../themes/palette";
+import palette, { chart as chartPalette, radiusPx } from "../../../themes/palette";
 import useFormattedDate from "../../../../application/hooks/useFormattedDate";
 import {
   getIntakeOversight,
@@ -134,7 +134,7 @@ export function OversightTab({
   const cardSx = {
     background: theme.palette.background.paper,
     border: `1px solid ${theme.palette.border.light}`,
-    borderRadius: "4px",
+    borderRadius: radiusPx.sm,
     p: "16px",
   };
   const headerCell = singleTheme.tableStyles.primary.header.cell;

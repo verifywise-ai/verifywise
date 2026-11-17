@@ -229,6 +229,10 @@ export const useCasesContent: ArticleContent = {
       text: 'Deleting a use case cannot be undone. Any pending approval requests get withdrawn automatically.',
     },
     {
+      type: 'paragraph',
+      text: 'Deleting a use case keeps its risks in the risk register. A risk that was linked only to this use case is then linked to none, so everyone in the organization can see it while it is active. When there are such risks, the delete dialog says how many and gives you a choice. **Archive these risks** is selected by default: the risks are archived as the use case is deleted, and an archived risk with no use case link is visible only to Admins, its action owner and its approver. **Keep them visible to everyone** deletes the use case and leaves the risks active. **Show risk names** lists them. To keep a risk active and private, cancel and link it to another use case first. If the dialog cannot check the risks, it says that risks linked only to this use case may become visible to everyone and still offers the same choice. The archive and the delete happen together, so if either fails, nothing changes and the dialog shows an error. Deleting an organizational project from the Framework page uses the same dialog. Deleting a use case through the AI advisor or the Jira Assets integration archives these risks as well. The AI advisor deletes a use case only for a user whose role can archive risks.',
+    },
+    {
       type: 'heading',
       id: 'risk-classification-wizard',
       level: 2,
@@ -369,8 +373,7 @@ export const useCasesContent: ArticleContent = {
       type: 'bullet-list',
       items: [
         { bold: 'Search', text: 'Looks through use case titles and UC IDs.' },
-        { bold: 'Filter', text: 'Narrow by name, risk level, owner, status, or start date.' },
-        { bold: 'Group', text: 'Organize by risk level, role, owner, or status. Groups collapse and sort.' },
+        { bold: 'Filter', text: 'Narrow by risk level, owner, status, or start date. In the new look, pick a filter chip above the table and choose a value, and use the search box to find a use case by name; in the classic look, the Filter button also filters by name.' },
         { bold: 'Columns', text: 'Show or hide columns: UC ID, title, risk classification, role, start date, last updated.' },
       ],
     },
@@ -470,6 +473,10 @@ export const useCasesContent: ArticleContent = {
     {
       type: 'paragraph',
       text: 'Other users cannot open or change the use case, including Editors. Assignees and approvers do not see it in their use case list. To link a task to a framework control, you need access to that control\'s use case.',
+    },
+    {
+      type: 'paragraph',
+      text: 'Access to a use case also decides which of its risks you see. Owners, team members and group members see the risks linked to it. On that use case, task assignees and approvers see only the risks they own or approve. See **Who can see a risk** in Risk assessment.',
     },
     {
       type: 'heading',

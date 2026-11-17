@@ -11,6 +11,12 @@ import {
   ValidationException,
 } from "../../domain.layer/exceptions/custom.exception";
 import { decrypt, encrypt } from "../../utils/encryption.utils";
+import {
+  STORED_SECRET_MESSAGES,
+  checkStoredSecrets,
+  isFilled,
+  withoutKeys,
+} from "./storedSecretGuard";
 
 /**
  * Registry-layer service. Reads the extensions catalog + per-org enablements,
@@ -67,15 +73,19 @@ export class ExtensionService {
     const configFields = await ExtensionConfigFieldModel.findByExtensionId(extension.id);
     const existing = await ExtensionEnablementModel.findByExtensionId(extension.id, organizationId);
 
-    // Merge input with any previously-stored config so re-enable preserves
-    // fields the caller didn't repeat in the enable payload (matches the
-    // update-configuration semantics).
-    const merged = this.mergeAndEncrypt(
-      inputConfiguration,
-      existing?.configuration ?? {},
-      configFields,
-    );
-    this.validate(merged, configFields, existing?.configuration ?? null);
+    // Merge input with any previously-stored config so re-enable keeps the
+    // fields the caller didn't repeat in the enable payload (same rules as
+    // updateConfiguration, see mergeAndEncrypt).
+    const previous = existing
+      ? this.reusableConfiguration(
+          key,
+          inputConfiguration,
+          existing.configuration ?? {},
+          configFields,
+        )
+      : null;
+    const merged = this.mergeAndEncrypt(inputConfiguration, previous ?? {}, configFields);
+    this.validate(merged, configFields);
 
     const enablement = await ExtensionEnablementModel.enable(
       extension.id,
@@ -122,12 +132,14 @@ export class ExtensionService {
       );
     }
     const configFields = await ExtensionConfigFieldModel.findByExtensionId(extension.id);
-    const merged = this.mergeAndEncrypt(
+    const previous = this.reusableConfiguration(
+      key,
       inputConfiguration,
       existing.configuration ?? {},
       configFields,
     );
-    this.validate(merged, configFields, existing.configuration ?? null);
+    const merged = this.mergeAndEncrypt(inputConfiguration, previous, configFields);
+    this.validate(merged, configFields);
     const enablement = await ExtensionEnablementModel.updateConfiguration(
       extension.id,
       organizationId,
@@ -177,7 +189,9 @@ export class ExtensionService {
 
   /**
    * Build the outward-facing JSON for one extension: catalog metadata,
-   * config field definitions, per-org state, and a redacted configuration.
+   * config field definitions, per-org state, a redacted configuration, and
+   * `secretsSet`: the keys of the secret fields that hold a stored value
+   * (never the value), so a form can say a secret is set and offer to clear it.
    */
   private static assemble(
     extension: IExtension,
@@ -190,6 +204,12 @@ export class ExtensionService {
       configFields: configFields.map((f) => ExtensionConfigFieldModel.toJSON(f)),
       enabled: enablement?.enabled ?? false,
       configuration: this.redactSecrets(configuration, configFields),
+      secretsSet: configFields
+        .filter((f) => f.is_secret && isFilled(configuration[f.field_key]))
+        .map((f) => f.field_key),
+      // toJSON leaves out the stored configuration (it holds the secrets as
+      // ciphertext); the redacted top-level `configuration` is the only copy
+      // clients get.
       enablement: enablement ? ExtensionEnablementModel.toJSON(enablement) : null,
     };
   }
@@ -213,68 +233,100 @@ export class ExtensionService {
   }
 
   /**
-   * Merge incoming config with existing stored config and encrypt any
-   * secret values the caller supplied. Secret fields absent from the input
-   * fall through to the previously-stored (already-encrypted) value —
-   * this is the standard "leave blank to keep unchanged" flow for passwords.
-   * Non-secret fields absent from input are dropped (caller controls the
-   * full non-secret shape on every write).
+   * The stored configuration a save may carry secrets over from. A stored
+   * secret is never kept for a changed address or identity (see
+   * storedSecretGuard.ts): the save is refused with "Enter the <secret> again:
+   * the <field> changed." when the new configuration would send it, and the
+   * stale secret is dropped when it would not.
+   *
+   * The fields compared are the ones the save would store: a field missing
+   * from the input keeps its stored value, so it is no change; `null` or ""
+   * clears it. A secret the input clears (`null`) is never carried over, so
+   * it cannot block the save.
+   *
+   * Only the extension's current config fields are checked. Jira Assets keeps
+   * its connection in `jira_assets_config` (guarded by its own `saveConfig`)
+   * and has no config fields here, so an old enablement row still holding
+   * `api_token` / `jira_base_url` does not block re-enabling it; those keys
+   * are not carried over by mergeAndEncrypt either.
+   */
+  private static reusableConfiguration(
+    key: string,
+    input: Record<string, unknown>,
+    stored: Record<string, unknown>,
+    configFields: IExtensionConfigField[],
+  ): Record<string, unknown> {
+    const submitted = input ?? {};
+    const fieldKeys = new Set(configFields.map((f) => f.field_key));
+    const cleared = configFields
+      .filter((f) => f.is_secret && submitted[f.field_key] === null)
+      .map((f) => f.field_key);
+    const reusable = withoutKeys(stored, cleared);
+    const next: Record<string, unknown> = { ...reusable };
+    for (const [k, v] of Object.entries(submitted)) {
+      if (v !== undefined) next[k] = v;
+    }
+    const check = checkStoredSecrets(key, reusable, next, submitted, fieldKeys);
+    if (check.blocked) throw new ValidationException(STORED_SECRET_MESSAGES[check.blocked]);
+    return withoutKeys(reusable, check.drop);
+  }
+
+  /**
+   * Merge the incoming config onto the stored one and encrypt any secret the
+   * caller supplied. Only the extension's config fields are kept. A field
+   * absent from the input keeps its stored value, so a caller may send only
+   * the fields it changed:
+   *
+   * | Input value      | Non-secret field | Secret field                   |
+   * |------------------|------------------|--------------------------------|
+   * | absent           | stored value     | stored ciphertext              |
+   * | `""`             | cleared          | stored ciphertext ("leave blank to keep") |
+   * | `null`           | cleared          | cleared                        |
+   * | anything else    | the new value    | the new value, encrypted       |
+   *
+   * `existing` is the stored configuration after reusableConfiguration, so a
+   * secret the stored-secret rule dropped is not carried over.
    */
   private static mergeAndEncrypt(
     input: Record<string, unknown>,
     existing: Record<string, unknown>,
     configFields: IExtensionConfigField[],
   ): Record<string, unknown> {
-    const byKey = new Map(configFields.map((f) => [f.field_key, f]));
+    const submitted = input ?? {};
     const merged: Record<string, unknown> = {};
-    // Start with all non-secret input values that correspond to known fields.
-    for (const [k, v] of Object.entries(input ?? {})) {
-      const field = byKey.get(k);
-      if (!field) continue;
-      if (field.is_secret) {
-        if (v === undefined || v === null || v === "") continue;
-        merged[k] = encrypt(String(v));
-      } else {
-        merged[k] = v;
-      }
-    }
-    // For secret fields NOT present in input, carry over the existing
-    // encrypted value so PATCH doesn't wipe the credential.
     for (const field of configFields) {
-      if (!field.is_secret) continue;
-      if (Object.prototype.hasOwnProperty.call(merged, field.field_key)) continue;
-      if (Object.prototype.hasOwnProperty.call(existing, field.field_key)) {
-        merged[field.field_key] = existing[field.field_key];
+      const k = field.field_key;
+      const sent = Object.prototype.hasOwnProperty.call(submitted, k) && submitted[k] !== undefined;
+      const value = sent ? submitted[k] : undefined;
+      if (sent && value === null) continue;
+      if (sent && field.is_secret && value !== "") {
+        merged[k] = encrypt(String(value));
+        continue;
       }
+      if (sent && !field.is_secret) {
+        if (value !== "") merged[k] = value;
+        continue;
+      }
+      // Absent, or a blank secret: keep what is stored.
+      if (isFilled(existing[k])) merged[k] = existing[k];
     }
     return merged;
   }
 
   /**
-   * Validate a config payload against the extension's config field schema.
-   * `previous` lets required-secret checks pass when the caller intends to
-   * keep the previously-stored value (present in existing, absent from input).
+   * Validate a merged config payload against the extension's config field
+   * schema. The merge already carries kept secrets over, so a required secret
+   * the caller cleared (`null`) fails here as missing.
    */
   private static validate(
     configuration: Record<string, unknown>,
     configFields: IExtensionConfigField[],
-    previous: Record<string, unknown> | null,
   ): void {
     for (const field of configFields) {
       const value = configuration[field.field_key];
-      const isPresent = value !== undefined && value !== null && value !== "";
+      const isPresent = isFilled(value);
 
       if (field.is_required && !isPresent) {
-        // Secret: required is satisfied if the previous value carries through.
-        if (
-          field.is_secret &&
-          previous &&
-          Object.prototype.hasOwnProperty.call(previous, field.field_key) &&
-          previous[field.field_key] !== null &&
-          previous[field.field_key] !== ""
-        ) {
-          continue;
-        }
         throw new ValidationException(
           `Field '${field.field_key}' is required`,
           field.field_key,

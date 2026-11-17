@@ -126,7 +126,7 @@ export const riskAssessmentContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Each risk gets analyzed using likelihood and severity. VerifyWise calculates the overall risk level automatically from these inputs.',
+      text: 'Each risk gets analyzed using likelihood and severity. VerifyWise calculates the inherent risk level automatically from these inputs, on the server, every time you save a risk.',
     },
     {
       type: 'heading',
@@ -184,21 +184,42 @@ export const riskAssessmentContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'VerifyWise calculates the risk level from your likelihood and severity ratings:',
+      text: 'Each rating counts from 1 to 5 (Rare to Almost certain, Negligible to Catastrophic). VerifyWise adds the likelihood once and the severity three times: score = likelihood + 3 × severity. The score decides the level:',
     },
     {
       type: 'table',
       columns: [
+        { key: 'score', label: 'Score', width: '1fr' },
         { key: 'level', label: 'Risk level', width: '1fr' },
         { key: 'action', label: 'Recommended action', width: '2fr' },
       ],
       rows: [
-        { level: 'No risk', action: 'No action required' },
-        { level: 'Very low', action: 'Monitor periodically' },
-        { level: 'Low', action: 'Standard monitoring and review' },
-        { level: 'Medium', action: 'Active management required' },
-        { level: 'High', action: 'Priority attention needed' },
-        { level: 'Very high', action: 'Immediate action required' },
+        { score: '4', level: 'No risk', action: 'No action required' },
+        { score: '5 to 8', level: 'Low risk', action: 'Standard monitoring and review' },
+        { score: '9 to 12', level: 'Medium risk', action: 'Active management required' },
+        { score: '13 to 16', level: 'High risk', action: 'Priority attention needed' },
+        { score: '17 to 20', level: 'Very high risk', action: 'Immediate action required' },
+      ],
+    },
+    {
+      type: 'paragraph',
+      text: 'The same formula applies everywhere a level is calculated: the risk form, imports, the AI advisor, intake forms and AI suggestions. After mitigation, the residual level uses the same formula on the mitigated likelihood and severity.',
+    },
+    {
+      type: 'heading',
+      id: 'which-level-is-shown',
+      level: 3,
+      text: 'Which level a risk shows',
+    },
+    {
+      type: 'paragraph',
+      text: 'A risk can have two levels. The inherent level is calculated from likelihood and severity. The current level is one you pick by hand in the Mitigation tab. VerifyWise shows the current level when you have set one and the inherent level otherwise. This level drives the chip in the risks table, sorting, the summary cards, filters, exports, reports, the dashboard and the compliance score.',
+    },
+    {
+      type: 'bullet-list',
+      items: [
+        { bold: 'Table chip', text: 'Hover over the chip to see the inherent level' },
+        { bold: 'Heat map', text: 'The heat map plots likelihood against severity, so it always shows the inherent level. Its tab reads "Heat map (inherent level)"' },
       ],
     },
     {
@@ -224,6 +245,61 @@ export const riskAssessmentContent: ArticleContent = {
       variant: 'tip',
       title: 'Best practice',
       text: 'Link each risk to its relevant use case and any applicable compliance frameworks. That way, risks show up in both use case reviews and compliance assessments.',
+    },
+    {
+      type: 'heading',
+      id: 'who-can-see-a-risk',
+      level: 2,
+      text: 'Who can see a risk',
+    },
+    {
+      type: 'paragraph',
+      text: 'Admins see every risk in the organization. Other users see a risk when any of these applies:',
+    },
+    {
+      type: 'bullet-list',
+      items: [
+        { text: 'The risk is not archived and not linked to a use case. A risk linked only to frameworks counts as not linked.' },
+        { text: 'The risk is linked to a use case you own, are a team member of or reach through a group.' },
+        { text: 'You are the risk\'s action owner or its approver.' },
+      ],
+    },
+    {
+      type: 'paragraph',
+      text: 'When the last use case link of an active risk is removed, everyone in the organization can see the risk. This also happens when that use case is deleted. An archived risk with no use case link stays private: only Admins, its action owner and its approver can see it. Before you delete a use case, the delete dialog tells you how many of its risks are linked to no other use case and lets you archive them or keep them visible to everyone. Archiving is selected by default, and the risks are archived and the use case deleted together, so if something goes wrong nothing changes. Deleting a use case through the AI advisor or the Jira Assets integration archives these risks too, and the AI advisor deletes a use case only for a user whose role can archive risks. To keep such a risk active and private instead, cancel and link it to another use case first. If an archived risk with no use case link is ever restored, everyone in the organization can see it again.',
+    },
+    {
+      type: 'paragraph',
+      text: 'A risk you cannot see is left out of the risk register, search results, change history, linked risks, policy links, the vendor exposure report and the AI advisor\'s answers. Opening it directly behaves as if the risk does not exist.',
+    },
+    {
+      type: 'paragraph',
+      text: 'Being assigned a task on a use case, or approving its workflow, lets you open the use case. It does not show you its risks. On such a use case you see only the risks you own or approve.',
+    },
+    {
+      type: 'paragraph',
+      text: 'A risk you can see names only the use cases you can access, in the risk register, on the risk itself and in the link pickers. To link a risk to a use case, you need access to that use case. The **Applicable use cases** field lists only the use cases you can access. When you edit a risk that is also linked to a use case you cannot access, that link is hidden from you. Saving the risk keeps it.',
+    },
+    {
+      type: 'callout',
+      variant: 'info',
+      title: 'Totals count every risk',
+      text: 'Dashboard counts, risk history over time and the organization\'s quantitative risk totals include every risk in the organization. So do the AI advisor\'s risk analytics, which give counts only. A few places don\'t apply this rule yet and can show risks you otherwise can\'t see: organization reports, deadlines, the evidence hub, FRIA and approval requests.',
+    },
+    {
+      type: 'heading',
+      id: 'archiving-and-bulk-edits',
+      level: 2,
+      text: 'Archiving, bulk edits and export',
+    },
+    {
+      type: 'bullet-list',
+      items: [
+        { bold: 'Archiving', text: 'Archiving a risk, one at a time, in bulk or through the AI advisor, removes it from the risk register, from reports and from every policy it was linked to. Its change history keeps a deletion entry. Archived risks no longer count towards use case totals, framework control panels or post-market monitoring cycle snapshots' },
+        { bold: 'Bulk owner and category', text: 'Setting the owner or category on several risks records change history on each changed risk. A new owner gets one notification listing the risks assigned to them, and automations run once for the whole bulk action, with a summary of the changes. Risks that already have the value are skipped' },
+        { bold: 'Removing a use case or framework', text: 'When you remove a use case or framework from a risk, the risk\'s links to controls in every framework of that use case are removed too' },
+        { bold: 'Export', text: 'Export includes the risks that match your current filters and search. If nothing matches, there is nothing to export and the export button is disabled' },
+      ],
     },
     {
       type: 'heading',

@@ -24,7 +24,8 @@ import {
   PROJECT_RISK_CATEGORIES,
 } from "../../utils/risk.utils";
 import { createRiskService, updateRiskService } from "../../services/risk.service";
-import { calculateRiskLevel } from "../../utils/validations/riskValidation.utils";
+import { SYSTEM_RISK_VIEWER } from "../../utils/riskVisibility.utils";
+import { normalizeCurrentRiskLevel } from "../../utils/riskLevel.utils";
 import { enqueueRiskLinkRecompute } from "../../services/automations/automationProducer";
 import { notifyUserAssigned } from "../../services/inAppNotification.service";
 import { getUserByIdQuery } from "../../utils/user.utils";
@@ -45,7 +46,8 @@ const MITIGATION_STATUSES = [
   "Requires review",
 ] as const;
 const CURRENT_RISK_LEVELS = [
-  "Very Low risk",
+  "Very low risk",
+  "Very Low risk", // legacy spelling, normalized before save
   "Low risk",
   "Medium risk",
   "High risk",
@@ -124,10 +126,16 @@ const listRisks: ToolDef = {
   handler: async (args) => {
     await requireOrganization(args.organizationId);
 
+    // MCP is open to Admins and super admins only (ruling J6): every risk.
     const risks =
       args.useCaseId === undefined
-        ? await getAllRisksQuery(args.organizationId, "active")
-        : ((await getRisksByProjectQuery(args.useCaseId, args.organizationId, "active")) ?? []);
+        ? await getAllRisksQuery(args.organizationId, "active", SYSTEM_RISK_VIEWER)
+        : ((await getRisksByProjectQuery(
+            args.useCaseId,
+            args.organizationId,
+            "active",
+            SYSTEM_RISK_VIEWER,
+          )) ?? []);
 
     return result({
       organizationId: args.organizationId,
@@ -149,7 +157,7 @@ const getRisk: ToolDef = {
   },
   handler: async (args) => {
     await requireOrganization(args.organizationId);
-    const risk = await getRiskByIdQuery(args.riskId, args.organizationId);
+    const risk = await getRiskByIdQuery(args.riskId, args.organizationId, SYSTEM_RISK_VIEWER);
     if (!risk) {
       throw new Error(`No risk with id ${args.riskId} in organization ${args.organizationId}.`);
     }
@@ -204,11 +212,6 @@ const createRisk: ToolDef = {
 
     const frameworkIds = await resolveFrameworkIds(args.frameworks ?? []);
 
-    // Derived server-side from the same helper the AI action executor uses, so
-    // the stored level can never disagree with the likelihood and severity
-    // beside it.
-    const riskLevel = calculateRiskLevel(args.severity, args.likelihood);
-
     const transaction = await sequelize.transaction();
     let risk;
     try {
@@ -221,23 +224,22 @@ const createRisk: ToolDef = {
           impact: args.impact,
           likelihood: args.likelihood,
           severity: args.severity,
-          risk_level_autocalculated: riskLevel as
-            | "No risk"
-            | "Very low risk"
-            | "Low risk"
-            | "Medium risk"
-            | "High risk"
-            | "Very high risk",
           risk_owner: args.riskOwner,
           mitigation_status: args.mitigationStatus,
           mitigation_plan: args.mitigationPlan,
-          current_risk_level: args.currentRiskLevel,
+          current_risk_level: normalizeCurrentRiskLevel(args.currentRiskLevel),
           deadline: args.deadline ? new Date(args.deadline) : undefined,
           review_notes: args.reviewNotes,
           projects: args.useCaseIds ?? [],
           frameworks: frameworkIds,
         },
-        { userId: caller.userId, organizationId: args.organizationId },
+        // MCP risk tools are Admin-only (toolsFor), so the caller decides.
+        {
+          userId: caller.userId,
+          organizationId: args.organizationId,
+          viewer: SYSTEM_RISK_VIEWER,
+          callerIsAdmin: true,
+        },
         transaction,
       );
       await transaction.commit();
@@ -254,7 +256,8 @@ const createRisk: ToolDef = {
     );
     await notifyRiskOwnerAssigned(risk, caller.userId, args.organizationId);
 
-    return result({ risk, riskLevelCalculated: riskLevel });
+    // The service derives the level from likelihood and severity.
+    return result({ risk, riskLevelCalculated: risk.risk_level_autocalculated });
   },
 };
 
@@ -304,7 +307,7 @@ const updateRisk: ToolDef = {
   handler: async (args, caller) => {
     await requireOrganization(args.organizationId);
 
-    const existing = await getRiskByIdQuery(args.riskId, args.organizationId);
+    const existing = await getRiskByIdQuery(args.riskId, args.organizationId, SYSTEM_RISK_VIEWER);
     if (!existing) {
       throw new Error(`No risk with id ${args.riskId} in organization ${args.organizationId}.`);
     }
@@ -320,7 +323,8 @@ const updateRisk: ToolDef = {
     if (args.impact !== undefined) input.impact = args.impact;
     if (args.mitigationStatus !== undefined) input.mitigation_status = args.mitigationStatus;
     if (args.mitigationPlan !== undefined) input.mitigation_plan = args.mitigationPlan;
-    if (args.currentRiskLevel !== undefined) input.current_risk_level = args.currentRiskLevel;
+    if (args.currentRiskLevel !== undefined)
+      input.current_risk_level = normalizeCurrentRiskLevel(args.currentRiskLevel);
     if (args.deadline !== undefined) input.deadline = new Date(args.deadline);
     if (args.reviewNotes !== undefined) input.review_notes = args.reviewNotes;
 
@@ -330,17 +334,6 @@ const updateRisk: ToolDef = {
       args.frameworks === undefined
     ) {
       throw new Error("Provide at least one field to update.");
-    }
-
-    // The stored level is derived, so a change to either input recalculates it
-    // against whichever value is not being changed.
-    let riskLevel: string | undefined;
-    if (args.likelihood !== undefined || args.severity !== undefined) {
-      riskLevel = calculateRiskLevel(
-        args.severity ?? existing.severity,
-        args.likelihood ?? existing.likelihood,
-      );
-      input.risk_level_autocalculated = riskLevel;
     }
 
     // Links are only rewritten when a list is sent. The update query leaves the
@@ -357,7 +350,13 @@ const updateRisk: ToolDef = {
         args.riskId,
         input,
         existing,
-        { userId: caller.userId, organizationId: args.organizationId },
+        // MCP risk tools are Admin-only (toolsFor), so the caller decides.
+        {
+          userId: caller.userId,
+          organizationId: args.organizationId,
+          viewer: SYSTEM_RISK_VIEWER,
+          callerIsAdmin: true,
+        },
         transaction,
       );
       if (!risk) {
@@ -376,7 +375,12 @@ const updateRisk: ToolDef = {
       await notifyRiskOwnerAssigned(risk, caller.userId, args.organizationId);
     }
 
-    return result(riskLevel ? { risk, riskLevelCalculated: riskLevel } : { risk });
+    const levelInputChanged = args.likelihood !== undefined || args.severity !== undefined;
+    return result(
+      levelInputChanged && risk.risk_level_autocalculated
+        ? { risk, riskLevelCalculated: risk.risk_level_autocalculated }
+        : { risk },
+    );
   },
 };
 

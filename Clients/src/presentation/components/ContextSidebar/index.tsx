@@ -1,6 +1,7 @@
 import { useLocation, useNavigate } from "react-router";
 import { AppModule } from "../../../application/redux/ui/uiSlice";
 import { useAuth } from "../../../application/hooks/useAuth";
+import { isGlobalPath } from "../../../application/utils/appModule";
 import { useEvalsSidebarContextSafe } from "../../../application/contexts/EvalsSidebar.context";
 import { useAIDetectionSidebarContextSafe } from "../../../application/contexts/AIDetectionSidebar.context";
 import { useShadowAISidebarContextSafe } from "../../../application/contexts/ShadowAISidebar.context";
@@ -13,6 +14,8 @@ import AIDetectionSidebar from "../../pages/AIDetection/AIDetectionSidebar";
 import ShadowAISidebar from "../../pages/ShadowAI/ShadowAISidebar";
 import AIGatewaySidebar from "../../pages/AIGateway/AIGatewaySidebar";
 import AITrustIndexSidebar from "../../pages/AITrustIndex/AITrustIndexSidebar";
+import UnifiedSidebar from "../UnifiedSidebar";
+import { isClassicUi } from "../../themes/uiStyle";
 
 interface ContextSidebarProps {
   activeModule: AppModule;
@@ -27,10 +30,13 @@ interface ContextSidebarProps {
 }
 
 /**
- * ContextSidebar renders the appropriate sidebar based on the active module.
- * - 'main': Renders the main VerifyWise sidebar
- * - 'evals': Renders EvalsSidebar (state provided via EvalsSidebarContext)
- * - 'ai-detection': Renders AIDetectionSidebar
+ * ContextSidebar renders the sidebar of the tenant layout.
+ * - Phase 1 look: one UnifiedSidebar for every module (super admins in the
+ *   'super-admin' module keep SuperAdminSidebar).
+ * - Classic look: the sidebar of the active module:
+ *   - 'main': the main VerifyWise sidebar
+ *   - 'evals': EvalsSidebar (state provided via EvalsSidebarContext)
+ *   - 'ai-detection', 'shadow-ai', 'ai-gateway', 'ai-trust-index': their module sidebars
  */
 export function ContextSidebar({
   activeModule,
@@ -50,12 +56,22 @@ export function ContextSidebar({
   const navigate = useNavigate();
   const { isSuperAdmin } = useAuth();
 
+  // On Settings and Event tracker the module's sidebar stays, but none of its
+  // pages is open: nothing is selected, and its items leave the global page.
+  const onGlobalPage = isGlobalPath(location.pathname);
+  const activeItem = (tab: string) => (onGlobalPage ? "" : tab);
+
   // Get active tab from URL hash for evals
-  const activeTab = location.hash.replace("#", "") || "overview";
+  const activeTab = activeItem(location.hash.replace("#", "") || "overview");
 
   // Handle tab change by navigating to the new hash
   // If we have a selected project but aren't on a project-specific URL, navigate to the project
   const handleTabChange = (newTab: string) => {
+    if (onGlobalPage) {
+      const projectId = evalsSidebarContext?.currentProject?.id;
+      navigate(projectId ? `/evals/${projectId}#${newTab}` : `/evals#${newTab}`);
+      return;
+    }
     const pathParts = location.pathname.split("/");
     const hasProjectInUrl = pathParts.length > 2 && pathParts[2]; // /evals/:projectId
 
@@ -66,6 +82,19 @@ export function ContextSidebar({
       navigate(`${location.pathname}#${newTab}`);
     }
   };
+
+  if (!isClassicUi() && !(activeModule === "super-admin" && isSuperAdmin)) {
+    return (
+      <UnifiedSidebar
+        onOpenCreateDemoData={onOpenCreateDemoData}
+        onOpenDeleteDemoData={onOpenDeleteDemoData}
+        onDismissDemoDataButton={onDismissDemoDataButton}
+        showDemoDataButton={showDemoDataButton}
+        hasDemoData={hasDemoData}
+        isAdmin={isAdmin}
+      />
+    );
+  }
 
   switch (activeModule) {
     case "main":
@@ -126,7 +155,7 @@ export function ContextSidebar({
 
       return (
         <AIDetectionSidebar
-          activeTab={aiDetectionTab}
+          activeTab={activeItem(aiDetectionTab)}
           onTabChange={handleAIDetectionTabChange}
           historyCount={aiDetectionSidebarContext?.historyCount ?? 0}
           repositoryCount={aiDetectionSidebarContext?.repositoryCount ?? 0}
@@ -158,7 +187,7 @@ export function ContextSidebar({
 
       return (
         <ShadowAISidebar
-          activeTab={shadowAiTab}
+          activeTab={activeItem(shadowAiTab)}
           onTabChange={handleShadowAiTabChange}
           toolsCount={shadowAiSidebarContext?.toolsCount ?? 0}
           alertsCount={shadowAiSidebarContext?.alertsCount ?? 0}
@@ -197,7 +226,7 @@ export function ContextSidebar({
 
       return (
         <AIGatewaySidebar
-          activeTab={gatewayTab}
+          activeTab={activeItem(gatewayTab)}
           onTabChange={handleGatewayTabChange}
           endpointsCount={aiGatewaySidebarContext?.endpointsCount ?? 0}
           promptsCount={aiGatewaySidebarContext?.promptsCount ?? 0}
@@ -218,10 +247,9 @@ export function ContextSidebar({
 
       return (
         <AITrustIndexSidebar
-          activeTab={trustIndexTab}
+          activeTab={activeItem(trustIndexTab)}
           onTabChange={handleTrustIndexTabChange}
           trackedCount={aiTrustIndexSidebarContext?.trackedCount ?? 0}
-          isAdmin={isAdmin}
         />
       );
     }

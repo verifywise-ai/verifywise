@@ -5,8 +5,22 @@ import { validateTokenCreation, validateTokenDeletion } from "../tokens.middlewa
 jest.mock("../../utils/tokens.utils", () => ({
   getNumberOfApiTokensQuery: jest.fn(),
 }));
+// The permission check runs for real; the role map resolves names as in
+// production (built-ins are global rows, "Key keeper" is a custom role in org 1).
+let mockCustomRows: Array<{ permission_key: string; allowed: boolean }> = [];
+jest.mock("../../utils/roleMap", () => ({
+  getRoleByName: jest.fn(async (orgId: number | null, name: string) => {
+    if (name === "Key keeper" && orgId === 1) return { id: 90, name, organizationId: 1 };
+    const ids: Record<string, number> = { Admin: 1, Reviewer: 2, Editor: 3, Auditor: 4 };
+    return ids[name] ? { id: ids[name], name, organizationId: null } : undefined;
+  }),
+}));
+jest.mock("../../database/db", () => ({
+  sequelize: { query: jest.fn(async () => mockCustomRows) },
+}));
 
 import { getNumberOfApiTokensQuery } from "../../utils/tokens.utils";
+import { invalidateRolePermissionsCache } from "../../utils/rolePermissions.utils";
 
 const mockGetNumberOfApiTokensQuery = getNumberOfApiTokensQuery as jest.MockedFunction<
   typeof getNumberOfApiTokensQuery
@@ -130,6 +144,49 @@ describe("tokens.middleware", () => {
 
       expect(next).toHaveBeenCalled();
       expect(res.status).not.toHaveBeenCalled();
+    });
+  });
+
+  // Issue #5314: create/revoke/delete follow apiKeys.admin (Admin by default)
+  // instead of the Admin role name; any super admin is still allowed.
+  describe("apiKeys.admin", () => {
+    beforeEach(() => {
+      mockCustomRows = [];
+      invalidateRolePermissionsCache();
+      mockGetNumberOfApiTokensQuery.mockResolvedValue(0);
+    });
+
+    it("lets a custom role granted apiKeys.admin create and delete tokens", async () => {
+      mockCustomRows = [{ permission_key: "apiKeys.admin", allowed: true }];
+      const res = createMockRes();
+      await validateTokenCreation(createMockReq("Key keeper", 1) as Request, res as Response, next);
+      await validateTokenDeletion(createMockReq("Key keeper", 1) as Request, res as Response, next);
+      expect(next).toHaveBeenCalledTimes(2);
+      expect(res.status).not.toHaveBeenCalled();
+    });
+
+    it("refuses a custom role without apiKeys.admin", async () => {
+      mockCustomRows = [{ permission_key: "useCase.edit", allowed: true }];
+      const res = createMockRes();
+      await validateTokenCreation(createMockReq("Key keeper", 1) as Request, res as Response, next);
+      expect(res.status).toHaveBeenCalledWith(403);
+      expect(next).not.toHaveBeenCalled();
+    });
+
+    it.each(["Editor", "Reviewer", "Auditor"])("still refuses a built-in %s", async (role) => {
+      const res = createMockRes();
+      await validateTokenDeletion(createMockReq(role, 1) as Request, res as Response, next);
+      expect(res.status).toHaveBeenCalledWith(403);
+    });
+
+    it("still allows an elected super admin whose org role is Editor", async () => {
+      const res = createMockRes();
+      await validateTokenCreation(
+        createMockReq("Editor", 1, true) as Request,
+        res as Response,
+        next,
+      );
+      expect(next).toHaveBeenCalled();
     });
   });
 });

@@ -25,7 +25,7 @@ export const virtualKeysContent: ArticleContent = {
     {
       type: 'ordered-list',
       items: [
-        { text: 'Open the **Virtual keys** page from the AI Gateway sidebar.' },
+        { text: 'In the sidebar, open **Enforce > AI Gateway > Settings** and click the **Virtual keys** tab.' },
         { text: 'Click **Create key**.' },
         { text: 'Give it a name that tells you what it\'s for (e.g., "chatbot-prod" or "analytics-team").' },
         { text: 'Optionally set a monthly budget, rate limit (RPM) and expiry date.' },

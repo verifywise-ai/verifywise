@@ -40,7 +40,7 @@ export const evalsSettingsContent: ArticleContent = {
     {
       type: 'ordered-list',
       items: [
-        { text: 'Click **Settings** at the bottom of the LLM Evals sidebar.' },
+        { text: 'In the sidebar, open **Enforce > LLM Evals** and click **Settings**.' },
         { text: 'Click **Add API key**.' },
         { text: 'Select a provider from the list.' },
         { text: 'Paste your API key. The format is validated automatically (e.g., OpenAI keys must start with `sk-`).' },
@@ -65,6 +65,20 @@ export const evalsSettingsContent: ArticleContent = {
       type: 'callout',
       variant: 'warning',
       text: 'Removing an API key will prevent experiments from running against that provider. Make sure no active experiments depend on the key before deleting it.',
+    },
+    {
+      type: 'heading',
+      id: 'arena',
+      level: 2,
+      text: 'Arena',
+    },
+    {
+      type: 'paragraph',
+      text: 'The **Arena** section turns LLM Arena on or off for the whole organization. It is off by default. Organizations that already have Arena comparisons start with it on. Once an Admin saves the setting, the saved value applies.',
+    },
+    {
+      type: 'paragraph',
+      text: 'Admins can change it, as can custom roles with the **Update organization settings** permission. Other users see the current value but can\'t change it.',
     },
     {
       type: 'heading',

@@ -75,6 +75,7 @@ import {
   revokeRefreshTokenByHash,
   revokeTokenFamily,
 } from "../utils/refreshToken.utils";
+import { consumeOneTimeToken } from "../utils/oneTimeToken.utils";
 import { sendSlackNotification } from "../services/slack/slackNotificationService";
 import { SlackNotificationRoutingType } from "../domain.layer/enums/slack.enum";
 import { getRoleByIdQuery } from "../utils/role.utils";
@@ -817,7 +818,7 @@ async function completeOrganizationLogin(
  * - Refresh token stored in HTTP-only cookie (Secure flag in production only)
  * - Cookie uses SameSite attribute and path restriction (/api/users)
  * - Access token returned in JSON response
- * - Last login timestamp updated in memory (not persisted immediately)
+ * - Last login timestamp persisted on successful authentication (failure is logged, login proceeds)
  * - Failed attempts logged for security monitoring
  *
  * @example
@@ -875,6 +876,13 @@ async function loginUser(req: Request, res: Response): Promise<any> {
 
       if (passwordIsMatched) {
         user.updateLastLogin();
+        // The team settings table surfaces last_login, so persist it. A
+        // failure here must not block the login itself.
+        try {
+          await updateUserByIdQuery(user.id!, { last_login: user.last_login ?? new Date() });
+        } catch (lastLoginError) {
+          logger.error("❌ Failed to persist last_login in loginUser:", lastLoginError);
+        }
 
         const organizations = await getUserOrganizationsQuery(user.id!);
 
@@ -999,7 +1007,7 @@ const SSO_ROLE_MAP = new Map<string, number>([
 
 async function loginUserWithMicrosoft(req: Request, res: Response): Promise<any> {
   if (!isSSOFeatureEnabled()) {
-    return res.status(404).json(STATUS_CODE[404]("SSO feature is not enabled"));
+    return res.status(404).json(STATUS_CODE[404](req.t!("SSO feature is not enabled")));
   }
   const transaction = await sequelize.transaction();
   const { code, organizationId, redirectUri } = req.body as {
@@ -1018,15 +1026,15 @@ async function loginUserWithMicrosoft(req: Request, res: Response): Promise<any>
   try {
     if (!code) {
       await transaction.rollback();
-      return res.status(400).json(STATUS_CODE[400]("Authorization code is required"));
+      return res.status(400).json(STATUS_CODE[400](req.t!("Authorization code is required")));
     }
     if (!organizationId || isNaN(Number(organizationId))) {
       await transaction.rollback();
-      return res.status(400).json(STATUS_CODE[400]("organizationId is required"));
+      return res.status(400).json(STATUS_CODE[400](req.t!("organizationId is required")));
     }
     if (!redirectUri) {
       await transaction.rollback();
-      return res.status(400).json(STATUS_CODE[400]("redirectUri is required"));
+      return res.status(400).json(STATUS_CODE[400](req.t!("redirectUri is required")));
     }
 
     const azureADConfig = await getAzureADConfigForLoginQuery(Number(organizationId), transaction);
@@ -1052,7 +1060,9 @@ async function loginUserWithMicrosoft(req: Request, res: Response): Promise<any>
         "loginUserWithMicrosoft",
         "user.ctrl.ts",
       );
-      return res.status(401).json(STATUS_CODE[401]("Failed to acquire token from Microsoft"));
+      return res
+        .status(401)
+        .json(STATUS_CODE[401](req.t!("Failed to acquire token from Microsoft")));
     }
 
     const userInfoResponse = await fetch("https://graph.microsoft.com/v1.0/me", {
@@ -1062,7 +1072,7 @@ async function loginUserWithMicrosoft(req: Request, res: Response): Promise<any>
       await transaction.rollback();
       return res
         .status(401)
-        .json(STATUS_CODE[401]("Failed to fetch user profile from Microsoft Graph"));
+        .json(STATUS_CODE[401](req.t!("Failed to fetch user profile from Microsoft Graph")));
     }
     const userInfo = (await userInfoResponse.json()) as {
       id: string;
@@ -1078,7 +1088,7 @@ async function loginUserWithMicrosoft(req: Request, res: Response): Promise<any>
       await transaction.rollback();
       return res
         .status(401)
-        .json(STATUS_CODE[401]("Microsoft account did not return an email address"));
+        .json(STATUS_CODE[401](req.t!("Microsoft account did not return an email address")));
     }
 
     const roleClaim = ((tokenResponse.idTokenClaims as Record<string, any>)?.roles ?? [])[0] as
@@ -1185,6 +1195,14 @@ async function loginUserWithMicrosoft(req: Request, res: Response): Promise<any>
     );
 
     await transaction.commit();
+
+    // Surface the sign-in in the team settings table. Outside the
+    // transaction and guarded, so a failure cannot roll the login back.
+    try {
+      await updateUserByIdQuery(user.id!, { last_login: new Date() });
+    } catch (lastLoginError) {
+      logger.error("❌ Failed to persist last_login in loginUserWithMicrosoft:", lastLoginError);
+    }
 
     if (joinedThroughInvitation) {
       await logEvent(
@@ -1380,6 +1398,20 @@ async function resetPassword(req: Request, res: Response) {
     if (user) {
       await user.updatePassword(newPassword);
 
+      const consumed = await consumeOneTimeToken(
+        res.locals.oneTimeToken,
+        "password_reset",
+        transaction,
+      );
+      if (!consumed) {
+        await transaction.rollback();
+        return res.status(401).json(
+          STATUS_CODE[401]({
+            message: req.t!("This password reset link has already been used or is invalid"),
+          }),
+        );
+      }
+
       // Update by the canonical stored email, not the raw request email. The
       // lookup above (getUserByEmailQuery) is case-insensitive, but
       // resetPasswordQuery's UPDATE matches `email` exactly. If the stored value
@@ -1394,7 +1426,7 @@ async function resetPassword(req: Request, res: Response) {
 
       // Invalidate every existing session: a password reset must log the
       // user out everywhere (revokes all unexpired refresh tokens).
-      await revokeAllUserTokens(_user.id!);
+      await revokeAllUserTokens(_user.id!, transaction);
 
       await transaction.commit();
       logStructured("successful", `password reset for ${email}`, "resetPassword", "user.ctrl.ts");
@@ -1610,6 +1642,7 @@ async function updateUserById(req: Request, res: Response) {
 
       await sendSlackNotification(
         {
+          organizationId: req.organizationId!,
           userId: actor.id!,
           routingType: SlackNotificationRoutingType.MEMBERSHIP_AND_ROLES,
         },
@@ -1852,11 +1885,11 @@ async function deleteUserById(req: Request, res: Response) {
 /**
  * Checks if any user exists in the database.
  *
- * @param {Request} _req - Express request object.
+ * @param {Request} req - Express request object.
  * @param {Response} res - Express response object.
  * @returns {Promise<Response>} A promise that resolves when the response is sent.
  */
-async function checkUserExists(_req: Request, res: Response): Promise<Response> {
+async function checkUserExists(req: Request, res: Response): Promise<Response> {
   logStructured("processing", "checking if any user exists", "checkUserExists", "user.ctrl.ts");
   logger.debug("🔍 Checking for existing users");
 
@@ -1874,7 +1907,7 @@ async function checkUserExists(_req: Request, res: Response): Promise<Response> 
   } catch (error) {
     logStructured("error", "failed to check user existence", "checkUserExists", "user.ctrl.ts");
     logger.error("❌ Error in checkUserExists:", error);
-    return res.status(500).json(STATUS_CODE[500](_req.t!("Internal server error")));
+    return res.status(500).json(STATUS_CODE[500](req.t!("Internal server error")));
   }
 }
 

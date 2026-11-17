@@ -4,7 +4,6 @@ import {
   Typography,
   Stack,
   Alert,
-  CircularProgress,
   Divider,
   Chip,
   Table,
@@ -15,7 +14,6 @@ import {
   TableRow,
   Paper,
   Checkbox,
-  Button,
   FormControlLabel,
   useTheme,
 } from "@mui/material";
@@ -23,11 +21,17 @@ import { Download } from "lucide-react";
 import { VWField, VWSelect } from "../../../components/VWComponents";
 import { apiServices } from "../../../../infrastructure/api/networkServices";
 import useFormattedDate from "../../../../application/hooks/useFormattedDate";
+import useTranslation from "../../../../application/hooks/useTranslation";
+import { fill, pluralKey } from "../../../../i18n/fill";
+import { syncStatusLabel } from "./syncStatusLabel";
 import StandardModal from "../../../components/Modals/StandardModal";
-import { useAuth } from "../../../../application/hooks/useAuth";
 import { getApiErrorReason } from "../../../../application/utils/apiErrorReason";
 import { CustomizableButton } from "../../../components/button/customizable-button";
 import ExtensionSyncPanel from "../../../components/ExtensionSyncPanel";
+import {
+  describeRunCounts,
+  type Translate,
+} from "../../../components/ExtensionSyncPanel/runCounts";
 import {
   useExtensionSyncStatus,
   type ScheduleState,
@@ -48,6 +52,8 @@ import {
   removeInBatches,
   summaryMessage,
 } from "./batching";
+import { useCan } from "../../../../application/hooks/useCan";
+import { palette } from "../../../themes/palette";
 
 /** A panel message: the text, then each count with its own label (each translatable). */
 function MessageBody({ message }: { message: PanelMessage }) {
@@ -67,7 +73,7 @@ function MessageBody({ message }: { message: PanelMessage }) {
 /** "Importing objects 101–200 / 250" while a batched run is going. */
 function BatchProgressLine({ label, progress }: { label: string; progress: BatchProgress }) {
   return (
-    <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 1 }}>
+    <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: "2px" }}>
       <span>{label}</span>{" "}
       <span>
         {progress.from}–{progress.to} / {progress.total}
@@ -79,11 +85,24 @@ function BatchProgressLine({ label, progress }: { label: string; progress: Batch
 const SELECTION_SAVE_FAILED = "Could not save the schema and object type. Try again.";
 const IMPORT_PROGRESS_LABEL = "Importing objects";
 const REMOVE_PROGRESS_LABEL = "Removing use cases";
-/** Desktop control height for the panel's action buttons. */
-const CONTROL_HEIGHT_SX = { height: 30, minHeight: 30 };
 /** The "Sync now" success line, as the page showed it before the shared panel. */
-function describeJiraSync(run: ExtensionRun): string {
-  return `Sync completed: ${run.counts.created ?? 0} created, ${run.counts.updated ?? 0} updated`;
+function describeJiraSync(run: ExtensionRun, t: Translate, lang: string): string {
+  return describeRunCounts(
+    [
+      {
+        count: run.counts.created ?? 0,
+        one: "{count} use case created",
+        other: "{count} use cases created",
+      },
+      {
+        count: run.counts.updated ?? 0,
+        one: "{count} use case updated",
+        other: "{count} use cases updated",
+      },
+    ],
+    t,
+    lang,
+  );
 }
 const MISSING_EXPLAINER =
   "Jira no longer returns these objects. Syncs keep their use cases; remove them here if they should go.";
@@ -125,11 +144,11 @@ interface ImportedUseCase {
 export const JiraAssetsConfiguration: React.FC = () => {
   const theme = useTheme();
   const formatDate = useFormattedDate();
+  const { t, lang } = useTranslation();
   // The settings page already redirects non-Admins; this keeps the sync
   // controls read-only if the panel is ever shown to anyone else.
-  const { userRoleName } = useAuth();
-  const canManageSync = userRoleName === "Admin";
-  // The "Last sync" date in the Import & Sync header comes from the sync engine.
+  const canManageSync = useCan("extension.admin");
+  // The "Last sync" date in the Import & sync header comes from the sync engine.
   const syncStatus = useExtensionSyncStatus("jira-assets");
   const lastSyncAt = syncStatus.data?.last_finished_run?.completed_at ?? null;
   // Before the connection is saved, the panel's schedule is a draft sent with it.
@@ -250,7 +269,7 @@ export const JiraAssetsConfiguration: React.FC = () => {
         }
         setConfigLoadFailed(false);
       } catch (error) {
-        console.error("Failed to load JIRA config:", error);
+        console.error("Failed to load Jira config:", error);
         setConfigLoadFailed(true);
       } finally {
         setConfigLoaded(true);
@@ -322,7 +341,7 @@ export const JiraAssetsConfiguration: React.FC = () => {
     setSelectedObjects(new Set());
   }, []);
 
-  // Load JIRA objects for import, one page at a time (`append` = "Load more").
+  // Load Jira objects for import, one page at a time (`append` = "Load more").
   const loadJiraObjects = useCallback(
     async (append = false) => {
       if (!localConfig.selected_object_type_id) return;
@@ -378,7 +397,7 @@ export const JiraAssetsConfiguration: React.FC = () => {
           if (!append) resetPicker();
           setImportMessage({
             type: "error",
-            text: getApiErrorReason(error) || error?.message || "Failed to load JIRA objects",
+            text: getApiErrorReason(error) || error?.message || "Failed to load Jira objects",
           });
         },
       });
@@ -543,7 +562,7 @@ export const JiraAssetsConfiguration: React.FC = () => {
         setConnectionStatus("success");
         setConnectionMessage(
           response.message ||
-            "Connection successful. Click 'Save Configuration' to proceed to Step 2.",
+            "Connection successful. Click 'Save configuration' to proceed to step 2.",
         );
       } else {
         setConnectionStatus("error");
@@ -576,7 +595,7 @@ export const JiraAssetsConfiguration: React.FC = () => {
 
       const data = response.data?.data ?? response.data;
       if (data?.success) {
-        setSaveMessage({ type: "success", text: "Configuration saved successfully!" });
+        setSaveMessage({ type: "success", text: "Configuration saved." });
         // Update localConfig with has_api_token flag so schemas can load
         setLocalConfig((prev) => ({ ...prev, has_api_token: true }));
         // Reload config to get full updated data
@@ -596,7 +615,7 @@ export const JiraAssetsConfiguration: React.FC = () => {
   };
 
   // Persist the schema / object-type pick at once (PATCH /config/selection,
-  // only those two fields), so users don't have to click Save Configuration
+  // only those two fields), so users don't have to click Save configuration
   // to keep their picks. Saves run in order; only the newest one's failure is
   // shown.
   const persistSelection = (patch: {
@@ -682,37 +701,37 @@ export const JiraAssetsConfiguration: React.FC = () => {
 
   return (
     <Box>
-      <Typography variant="body2" color="text.secondary" fontSize={13} sx={{ mb: 3 }}>
-        Connect to your Jira Service Management Assets to import AI Systems as use-cases.
+      <Typography variant="body2" color="text.secondary" fontSize={13} sx={{ mb: "6px" }}>
+        Connect to your Jira Service Management Assets to import AI systems as use cases.
       </Typography>
 
-      {/* Step 1: Connection Settings */}
-      <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 2, color: "#344054" }}>
-        Step 1: Connection Settings
+      {/* Step 1: Connection settings */}
+      <Typography variant="subtitle2" fontWeight={600} sx={{ mb: "4px", color: "text.secondary" }}>
+        Step 1: Connection settings
       </Typography>
 
-      <Stack spacing={2.5}>
+      <Stack spacing="5px">
         <Box>
           <VWSelect
             id="deployment_type"
-            label="Deployment Type"
+            label="Deployment type"
             isRequired
             value={localConfig.deployment_type || "cloud"}
             onChange={(e) => handleChange("deployment_type", e.target.value)}
             items={[
-              { _id: "cloud", name: "JIRA Cloud (Atlassian-hosted)" },
-              { _id: "datacenter", name: "JIRA Data Center / Server (Self-hosted)" },
+              { _id: "cloud", name: "Jira Cloud (Atlassian-hosted)" },
+              { _id: "datacenter", name: "Jira Data Center / Server (self-hosted)" },
             ]}
           />
-          <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: "block" }}>
-            Select Cloud for *.atlassian.net, or Data Center for self-hosted JIRA
+          <Typography variant="caption" color="text.secondary" sx={{ mt: "1px", display: "block" }}>
+            Select Cloud for *.atlassian.net, or Data Center for self-hosted Jira
           </Typography>
         </Box>
 
         <Box>
           <VWField
             id="jira_base_url"
-            label="JIRA Base URL"
+            label="Jira base URL"
             isRequired
             placeholder={
               localConfig.deployment_type === "datacenter"
@@ -729,7 +748,7 @@ export const JiraAssetsConfiguration: React.FC = () => {
             id="workspace_id"
             label={
               localConfig.deployment_type === "datacenter"
-                ? "Insight Object Schema ID"
+                ? "Insight object schema ID"
                 : "Workspace ID"
             }
             isRequired
@@ -741,7 +760,7 @@ export const JiraAssetsConfiguration: React.FC = () => {
             value={localConfig.workspace_id || ""}
             onChange={(e) => handleChange("workspace_id", e.target.value)}
           />
-          <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: "block" }}>
+          <Typography variant="caption" color="text.secondary" sx={{ mt: "1px", display: "block" }}>
             {localConfig.deployment_type === "datacenter"
               ? "For Data Center: Use object schema ID from Insight settings"
               : "Found in Assets settings or the URL when viewing Assets"}
@@ -767,7 +786,7 @@ export const JiraAssetsConfiguration: React.FC = () => {
         <Box>
           <VWField
             id="api_token"
-            label={localConfig.deployment_type === "datacenter" ? "Password / Token" : "API Token"}
+            label={localConfig.deployment_type === "datacenter" ? "Password / token" : "API token"}
             isRequired={!localConfig.has_api_token}
             type="password"
             placeholder={
@@ -780,11 +799,11 @@ export const JiraAssetsConfiguration: React.FC = () => {
             value={localConfig.api_token || ""}
             onChange={(e) => handleChange("api_token", e.target.value)}
           />
-          <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: "block" }}>
+          <Typography variant="caption" color="text.secondary" sx={{ mt: "1px", display: "block" }}>
             {localConfig.has_api_token && !localConfig.api_token
               ? "API token is saved. Leave empty to keep current token, or enter a new value to update."
               : localConfig.deployment_type === "datacenter"
-                ? "Use your JIRA password or personal access token"
+                ? "Use your Jira password or personal access token"
                 : "Generate at id.atlassian.com/manage-profile/security/api-tokens"}
           </Typography>
         </Box>
@@ -792,7 +811,7 @@ export const JiraAssetsConfiguration: React.FC = () => {
 
       {/* Connection Status */}
       {connectionStatus !== "idle" && (
-        <Box sx={{ mt: 2 }}>
+        <Box sx={{ mt: "4px" }}>
           <Alert
             severity={
               connectionStatus === "success"
@@ -810,7 +829,7 @@ export const JiraAssetsConfiguration: React.FC = () => {
 
       {/* Save Message */}
       {saveMessage && (
-        <Box sx={{ mt: 2 }}>
+        <Box sx={{ mt: "4px" }}>
           <Alert
             severity={saveMessage.type}
             sx={{ fontSize: "13px" }}
@@ -822,74 +841,43 @@ export const JiraAssetsConfiguration: React.FC = () => {
       )}
 
       {/* Test Connection & Save Configuration Buttons - Side by Side */}
-      <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 2, mt: 2 }}>
-        <Button
+      <Box sx={{ display: "flex", justifyContent: "flex-end", gap: "4px", mt: "4px" }}>
+        <CustomizableButton
           variant="outlined"
           onClick={handleTestConnection}
-          disabled={
+          isDisabled={
             connectionStatus === "testing" ||
             !localConfig.jira_base_url ||
             !localConfig.workspace_id ||
             !localConfig.email ||
             (!localConfig.api_token && !localConfig.has_api_token)
           }
-          sx={{
-            "borderColor": "#13715B",
-            "color": "#13715B",
-            "textTransform": "none",
-            "fontSize": "13px",
-            "fontWeight": 500,
-            "&:hover": { borderColor: "#0F5A47", backgroundColor: "rgba(19, 113, 91, 0.04)" },
-            "&:disabled": { borderColor: "#d0d5dd", color: "#98a2b3" },
-          }}
-        >
-          {connectionStatus === "testing" ? (
-            <>
-              <CircularProgress size={16} sx={{ mr: 1 }} />
-              Testing...
-            </>
-          ) : (
-            "Test Connection"
-          )}
-        </Button>
-        <Button
+          text={connectionStatus === "testing" ? "Testing..." : "Test connection"}
+          testId="jira-test-connection"
+        />
+        <CustomizableButton
           variant="contained"
           onClick={handleSaveConfig}
-          disabled={
+          isDisabled={
             isSaving ||
             !localConfig.jira_base_url ||
             !localConfig.workspace_id ||
             !localConfig.email ||
             (!localConfig.api_token && !localConfig.has_api_token)
           }
-          sx={{
-            "backgroundColor": "#13715B",
-            "textTransform": "none",
-            "fontSize": "13px",
-            "fontWeight": 500,
-            "&:hover": { backgroundColor: "#0F5A47" },
-            "&:disabled": { backgroundColor: "#d0d5dd" },
-          }}
-        >
-          {isSaving ? (
-            <>
-              <CircularProgress size={16} sx={{ mr: 1, color: "white" }} />
-              Saving...
-            </>
-          ) : (
-            "Save Configuration"
-          )}
-        </Button>
+          text={isSaving ? "Saving..." : "Save configuration"}
+          testId="jira-save-configuration"
+        />
       </Box>
 
-      <Divider sx={{ my: 3 }} />
+      <Divider sx={{ my: "6px" }} />
 
       {/* Step 2: Schema & Object Type Selection */}
-      <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 2, color: "#344054" }}>
-        Step 2: Select Schema & Object Type
+      <Typography variant="subtitle2" fontWeight={600} sx={{ mb: "4px", color: "text.secondary" }}>
+        Step 2: Select schema & object type
       </Typography>
 
-      <Stack spacing={2.5}>
+      <Stack spacing="5px">
         <Box>
           <VWSelect
             id="selected_schema_id"
@@ -908,7 +896,7 @@ export const JiraAssetsConfiguration: React.FC = () => {
         <Box>
           <VWSelect
             id="selected_object_type_id"
-            label="Object Type (AI Systems)"
+            label="Object type (AI systems)"
             placeholder={isLoadingObjectTypes ? "Loading object types..." : "Select an object type"}
             value={localConfig.selected_object_type_id || ""}
             onChange={(e) => handleObjectTypeChange(String(e.target.value))}
@@ -917,22 +905,22 @@ export const JiraAssetsConfiguration: React.FC = () => {
             }
             items={objectTypes.map((ot) => ({
               _id: ot.id,
-              name:
-                ot.objectCount !== undefined ? `${ot.name} (${ot.objectCount} objects)` : ot.name,
+              // Name and count only: a select option is one string, so no word to translate.
+              name: ot.objectCount !== undefined ? `${ot.name} (${ot.objectCount})` : ot.name,
             }))}
           />
         </Box>
       </Stack>
 
-      <Divider sx={{ my: 3 }} />
+      <Divider sx={{ my: "6px" }} />
 
       {/* Step 3: Sync Settings */}
-      <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 2, color: "#344054" }}>
-        Step 3: Sync Settings
+      <Typography variant="subtitle2" fontWeight={600} sx={{ mb: "4px", color: "text.secondary" }}>
+        Step 3: Sync settings
       </Typography>
 
       {configLoadFailed && (
-        <Box sx={{ mb: 2 }}>
+        <Box sx={{ mb: "4px" }}>
           <Alert severity="error" sx={{ fontSize: "13px" }}>
             Could not load the saved Jira connection. Reload the page to change the sync settings.
           </Alert>
@@ -943,7 +931,7 @@ export const JiraAssetsConfiguration: React.FC = () => {
         extensionKey="jira-assets"
         // Until GET /config answers, a schedule change could be kept as a draft by mistake.
         canManage={canManageSync && configLoaded && !configLoadFailed}
-        scheduleDescription="Automatically sync data from JIRA on a schedule"
+        scheduleDescription="Automatically sync data from Jira on a schedule"
         scheduleHelp="Automatic sync refreshes use cases you have imported. It does not import new objects or remove any."
         persistSchedule={!!localConfig.has_api_token}
         onScheduleChange={handleScheduleDraft}
@@ -958,42 +946,45 @@ export const JiraAssetsConfiguration: React.FC = () => {
       {/* Import Section - Only show if config is saved and object type is selected */}
       {localConfig.has_api_token && localConfig.selected_object_type_id && (
         <>
-          <Divider sx={{ my: 3 }} />
+          <Divider sx={{ my: "6px" }} />
 
-          {/* Import & Sync */}
+          {/* Import & sync */}
           <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <Box>
-              <Typography variant="subtitle2" fontWeight={600} sx={{ color: "#344054" }}>
-                Import & Sync
+              <Typography variant="subtitle2" fontWeight={600} sx={{ color: "text.secondary" }}>
+                Import & sync
               </Typography>
               <Typography variant="body2" fontSize={12} color="text.secondary">
-                {importedUseCases.length} use cases imported
-                {lastSyncAt &&
-                  ` • Last sync: ${formatDate(new Date(lastSyncAt), { includeTime: true })}`}
+                {fill(
+                  t(
+                    pluralKey(
+                      lang,
+                      importedUseCases.length,
+                      "{count} use case imported",
+                      "{count} use cases imported",
+                    ),
+                  ),
+                  { count: importedUseCases.length },
+                )}
+                {lastSyncAt && (
+                  <>
+                    {" • "}
+                    {fill(t("Last sync: {date}"), {
+                      date: formatDate(new Date(lastSyncAt), { includeTime: true }),
+                    })}
+                  </>
+                )}
               </Typography>
             </Box>
-            <Box sx={{ display: "flex", gap: 1 }}>
-              <Button
+            <Box sx={{ display: "flex", gap: "2px" }}>
+              <CustomizableButton
                 variant="contained"
-                startIcon={
-                  isImporting ? (
-                    <CircularProgress size={14} sx={{ color: "white" }} />
-                  ) : (
-                    <Download size={14} />
-                  )
-                }
+                startIcon={<Download size={14} />}
                 onClick={() => loadJiraObjects()}
-                disabled={isImporting || isLoadingObjects}
-                sx={{
-                  "backgroundColor": "#13715B",
-                  "textTransform": "none",
-                  "fontSize": "13px",
-                  "&:hover": { backgroundColor: "#0F5A47" },
-                  "&:disabled": { backgroundColor: "#d0d5dd" },
-                }}
-              >
-                {isLoadingObjects ? "Loading..." : "Import"}
-              </Button>
+                isDisabled={isImporting || isLoadingObjects}
+                text={isLoadingObjects ? "Loading..." : "Import"}
+                testId="jira-load-objects"
+              />
             </Box>
           </Box>
 
@@ -1001,7 +992,7 @@ export const JiraAssetsConfiguration: React.FC = () => {
           {importMessage && (
             <Alert
               severity={importMessage.type}
-              sx={{ mt: 2, fontSize: "13px" }}
+              sx={{ mt: "4px", fontSize: "13px" }}
               onClose={() => setImportMessage(null)}
             >
               <MessageBody message={importMessage} />
@@ -1010,22 +1001,22 @@ export const JiraAssetsConfiguration: React.FC = () => {
           {syncMessage && (
             <Alert
               severity={syncMessage.type}
-              sx={{ mt: 2, fontSize: "13px" }}
+              sx={{ mt: "4px", fontSize: "13px" }}
               onClose={() => setSyncMessage(null)}
             >
               <MessageBody message={syncMessage} />
             </Alert>
           )}
 
-          {/* JIRA Objects Selection Modal/Table - show when objects are loaded */}
+          {/* Jira objects selection Modal/Table - show when objects are loaded */}
           {jiraObjects.length > 0 && (
-            <Box sx={{ mt: 2 }}>
+            <Box sx={{ mt: "4px" }}>
               <Box
                 sx={{
                   display: "flex",
                   justifyContent: "space-between",
                   alignItems: "center",
-                  mb: 1,
+                  mb: "2px",
                 }}
               >
                 <FormControlLabel
@@ -1043,7 +1034,7 @@ export const JiraAssetsConfiguration: React.FC = () => {
                   }
                   label={
                     <Typography variant="body2" fontSize={13}>
-                      Select All ({jiraObjects.length} available)
+                      {fill(t("Select all ({count} available)"), { count: jiraObjects.length })}
                     </Typography>
                   }
                 />
@@ -1054,9 +1045,10 @@ export const JiraAssetsConfiguration: React.FC = () => {
                   loading={isImporting}
                   startIcon={<Download size={14} />}
                   testId="jira-import-selected"
-                  sx={CONTROL_HEIGHT_SX}
                 >
-                  {isImporting ? "Importing..." : `Import ${selectedObjects.size} selected`}
+                  {isImporting
+                    ? "Importing..."
+                    : fill(t("Import selected ({count})"), { count: selectedObjects.size })}
                 </CustomizableButton>
               </Box>
 
@@ -1074,7 +1066,7 @@ export const JiraAssetsConfiguration: React.FC = () => {
               >
                 <Table size="small" stickyHeader>
                   <TableHead>
-                    <TableRow sx={{ backgroundColor: "#f9fafb" }}>
+                    <TableRow sx={{ backgroundColor: palette.background.alt }}>
                       <TableCell padding="checkbox" />
                       <TableCell sx={{ fontWeight: 600, fontSize: "12px" }}>Key</TableCell>
                       <TableCell sx={{ fontWeight: 600, fontSize: "12px" }}>Name</TableCell>
@@ -1108,7 +1100,7 @@ export const JiraAssetsConfiguration: React.FC = () => {
           {jiraHasMore && (
             <Box
               sx={{
-                mt: 1,
+                mt: "2px",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "space-between",
@@ -1124,24 +1116,23 @@ export const JiraAssetsConfiguration: React.FC = () => {
                 onClick={() => loadJiraObjects(true)}
                 isDisabled={isLoadingObjects}
                 testId="jira-objects-load-more"
-                sx={CONTROL_HEIGHT_SX}
               />
             </Box>
           )}
 
           {/* Use cases flagged as missing in Jira: listed, removed only on request */}
           {missingUseCases.length > 0 && (
-            <Box sx={{ mt: 3 }}>
+            <Box sx={{ mt: "6px" }}>
               <Box
                 sx={{
                   display: "flex",
                   justifyContent: "space-between",
                   alignItems: "center",
                   gap: "8px",
-                  mb: 1,
+                  mb: "2px",
                 }}
               >
-                <Typography variant="subtitle2" fontWeight={600} sx={{ color: "#344054" }}>
+                <Typography variant="subtitle2" fontWeight={600} sx={{ color: "text.secondary" }}>
                   <span>Missing in Jira</span> <span>({missingUseCases.length})</span>
                 </Typography>
                 <CustomizableButton
@@ -1151,7 +1142,6 @@ export const JiraAssetsConfiguration: React.FC = () => {
                   isDisabled={!canManageSync || isRemovingMissing || selectedMissing.length === 0}
                   testId="jira-remove-missing"
                   sx={{
-                    ...CONTROL_HEIGHT_SX,
                     "borderColor": theme.palette.status.error.text,
                     "color": theme.palette.status.error.text,
                     "&:hover": {
@@ -1172,7 +1162,7 @@ export const JiraAssetsConfiguration: React.FC = () => {
                 variant="body2"
                 fontSize={12}
                 color="text.secondary"
-                sx={{ mb: 1.5, display: "block" }}
+                sx={{ mb: "3px", display: "block" }}
               >
                 {MISSING_EXPLAINER}
               </Typography>
@@ -1190,7 +1180,10 @@ export const JiraAssetsConfiguration: React.FC = () => {
                 <Table size="small" stickyHeader>
                   <TableHead>
                     <TableRow>
-                      <TableCell padding="checkbox" sx={{ backgroundColor: "#f9fafb" }}>
+                      <TableCell
+                        padding="checkbox"
+                        sx={{ backgroundColor: palette.background.alt }}
+                      >
                         <Checkbox
                           size="small"
                           checked={
@@ -1207,17 +1200,29 @@ export const JiraAssetsConfiguration: React.FC = () => {
                         />
                       </TableCell>
                       <TableCell
-                        sx={{ fontWeight: 600, fontSize: "12px", backgroundColor: "#f9fafb" }}
+                        sx={{
+                          fontWeight: 600,
+                          fontSize: "12px",
+                          backgroundColor: palette.background.alt,
+                        }}
                       >
                         Key
                       </TableCell>
                       <TableCell
-                        sx={{ fontWeight: 600, fontSize: "12px", backgroundColor: "#f9fafb" }}
+                        sx={{
+                          fontWeight: 600,
+                          fontSize: "12px",
+                          backgroundColor: palette.background.alt,
+                        }}
                       >
                         Name
                       </TableCell>
                       <TableCell
-                        sx={{ fontWeight: 600, fontSize: "12px", backgroundColor: "#f9fafb" }}
+                        sx={{
+                          fontWeight: 600,
+                          fontSize: "12px",
+                          backgroundColor: palette.background.alt,
+                        }}
                       >
                         Missing since
                       </TableCell>
@@ -1265,7 +1270,7 @@ export const JiraAssetsConfiguration: React.FC = () => {
             isSubmitting={isRemovingMissing}
             fitContent
           >
-            <Stack spacing={1}>
+            <Stack spacing="2px">
               <Typography variant="body2" fontSize={13} fontWeight={600}>
                 <span>Use cases to remove:</span> <span>{selectedMissing.length}</span>
               </Typography>
@@ -1283,9 +1288,13 @@ export const JiraAssetsConfiguration: React.FC = () => {
 
           {/* Imported Use Cases Table */}
           {importedUseCases.length > 0 && (
-            <Box sx={{ mt: 3 }}>
-              <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 1.5, color: "#344054" }}>
-                Imported Use Cases
+            <Box sx={{ mt: "6px" }}>
+              <Typography
+                variant="subtitle2"
+                fontWeight={600}
+                sx={{ mb: "3px", color: "text.secondary" }}
+              >
+                Imported use cases
               </Typography>
               <TableContainer
                 component={Paper}
@@ -1299,22 +1308,38 @@ export const JiraAssetsConfiguration: React.FC = () => {
                   <TableHead>
                     <TableRow>
                       <TableCell
-                        sx={{ fontWeight: 600, fontSize: "12px", backgroundColor: "#f9fafb" }}
+                        sx={{
+                          fontWeight: 600,
+                          fontSize: "12px",
+                          backgroundColor: palette.background.alt,
+                        }}
                       >
                         UC-ID
                       </TableCell>
                       <TableCell
-                        sx={{ fontWeight: 600, fontSize: "12px", backgroundColor: "#f9fafb" }}
+                        sx={{
+                          fontWeight: 600,
+                          fontSize: "12px",
+                          backgroundColor: palette.background.alt,
+                        }}
                       >
                         Name
                       </TableCell>
                       <TableCell
-                        sx={{ fontWeight: 600, fontSize: "12px", backgroundColor: "#f9fafb" }}
+                        sx={{
+                          fontWeight: 600,
+                          fontSize: "12px",
+                          backgroundColor: palette.background.alt,
+                        }}
                       >
-                        JIRA Key
+                        Jira key
                       </TableCell>
                       <TableCell
-                        sx={{ fontWeight: 600, fontSize: "12px", backgroundColor: "#f9fafb" }}
+                        sx={{
+                          fontWeight: 600,
+                          fontSize: "12px",
+                          backgroundColor: palette.background.alt,
+                        }}
                       >
                         Status
                       </TableCell>
@@ -1337,13 +1362,13 @@ export const JiraAssetsConfiguration: React.FC = () => {
                           </TableCell>
                           <TableCell>
                             <Chip
-                              label={uc.sync_status}
+                              label={syncStatusLabel(uc.sync_status, t)}
                               size="small"
                               color={
                                 uc.sync_status === "synced"
                                   ? "success"
-                                  : uc.sync_status === "updated"
-                                    ? "info"
+                                  : uc.sync_status === "failed"
+                                    ? "error"
                                     : "default"
                               }
                               sx={{ fontSize: "11px" }}

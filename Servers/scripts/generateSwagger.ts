@@ -20,6 +20,13 @@ import * as fs from "fs";
 import * as path from "path";
 import YAML from "yamljs";
 
+import {
+  API_DEPRECATIONS,
+  ApiDeprecation,
+  DEPRECATION_NOTICE_PREFIX,
+  deprecationNotice,
+} from "./apiDeprecations";
+
 const SERVERS_DIR = path.resolve(__dirname, "..");
 const APP_FILE = path.join(SERVERS_DIR, "app.ts");
 const ROUTES_DIR = path.join(SERVERS_DIR, "routes");
@@ -554,7 +561,11 @@ export function deriveTag(basePath: string): string {
     "/api/v1/shadow-ai": "Shadow AI",
     "/api/v1/shadow-ai-syslog": "Shadow AI",
     "/api/v1/intake-tier-suggestion": "Intake Forms",
+    "/api/v1/intake-submissions": "Intake submissions",
     "/api/v1/use-case-org-settings": "Use Case Settings",
+    "/api/v1/framework-import": "Extensions",
+    "/api/v1/risk-import": "Risk import",
+    "/api/v1/policies": "Policies",
     "/api/ai-incident-managements": "Incidents",
     "/api/approval-workflows": "Approval Workflows",
     "/api/approval-requests": "Approval Workflows",
@@ -653,7 +664,56 @@ endpoints and changed contracts are introduced under \`/api/v1\`.
 **Tags:** versioned operations are tagged \`v1: <Resource>\`; legacy
 operations keep their historical tags.`;
 
-export function mergeSwagger(endpoints: Endpoint[], existing: any): any {
+const deprecationKey = (method: string, openApiPath: string) =>
+  `${method.toLowerCase()} ${openApiPath}`;
+
+/**
+ * Applies the deprecation list (scripts/apiDeprecations.ts, ADR 0001 §7) to one
+ * operation: a listed operation gets `deprecated: true` and the Sunset notice
+ * as the first paragraph of its description. A notice from an earlier run is
+ * always stripped first, so the output is stable across regenerations, and an
+ * operation taken off the list loses both the notice and the flag. Runs before
+ * the role note is appended, so the notice stays ahead of `Requires role: ...`.
+ */
+export function applyDeprecation(operation: any, entry: ApiDeprecation | undefined): void {
+  const current = typeof operation.description === "string" ? operation.description : "";
+  let rest = current;
+  let hadNotice = false;
+  if (current.startsWith(DEPRECATION_NOTICE_PREFIX)) {
+    hadNotice = true;
+    const end = current.indexOf("\n\n");
+    rest = end === -1 ? "" : current.slice(end + 2).replace(/^\n+/, "");
+  }
+
+  if (entry) {
+    const notice = deprecationNotice(entry);
+    operation.description = rest.trim() ? `${notice}\n\n${rest}` : notice;
+    operation.deprecated = true;
+    return;
+  }
+
+  if (hadNotice) {
+    if (rest.trim()) operation.description = rest;
+    else delete operation.description;
+    delete operation.deprecated;
+  }
+}
+
+/** Deprecation entries that match no discovered endpoint (a stale list). */
+export function findUnmatchedDeprecations(
+  endpoints: Endpoint[],
+  deprecations: ApiDeprecation[] = API_DEPRECATIONS,
+): ApiDeprecation[] {
+  const known = new Set(endpoints.map((ep) => deprecationKey(ep.method, ep.openApiPath)));
+  return deprecations.filter((d) => !known.has(deprecationKey(d.method, d.path)));
+}
+
+export function mergeSwagger(
+  endpoints: Endpoint[],
+  existing: any,
+  deprecations: ApiDeprecation[] = API_DEPRECATIONS,
+): any {
+  const deprecationsByKey = new Map(deprecations.map((d) => [deprecationKey(d.method, d.path), d]));
   const doc = JSON.parse(JSON.stringify(existing));
 
   // Ensure top-level structure
@@ -726,6 +786,8 @@ export function mergeSwagger(endpoints: Endpoint[], existing: any): any {
       delete operation.security;
     }
 
+    applyDeprecation(operation, deprecationsByKey.get(deprecationKey(method, openApiPath)));
+
     // Append (never overwrite) the role note, so hand-written descriptions in
     // swagger.yaml survive regeneration. Any previous role note is stripped
     // first to keep the output stable across runs.
@@ -780,6 +842,13 @@ function main() {
   if (unresolved.length > 0) {
     console.warn(`\nWarning: ${unresolved.length} endpoints with unresolved handlers:`);
     unresolved.forEach((e) => console.warn(`  ${e.method.toUpperCase()} ${e.path}`));
+  }
+
+  const unmatched = findUnmatchedDeprecations(endpoints);
+  if (unmatched.length > 0) {
+    console.error("\nscripts/apiDeprecations.ts lists endpoints that no route defines:");
+    unmatched.forEach((d) => console.error(`  ${d.method.toUpperCase()} ${d.path}`));
+    process.exit(1);
   }
 
   console.log("\nLoading existing swagger.yaml...");

@@ -1,4 +1,4 @@
-import { palette } from "../../themes/palette";
+import { palette, radiusPx } from "../../themes/palette";
 
 // PageHeaderExtended styles
 export const pageHeaderSummaryCardsStyle = {
@@ -14,7 +14,7 @@ export const approvalButtonStyle = {
   "height": "32px",
   "minHeight": "32px",
   "padding": "8px 16px",
-  "borderRadius": "4px",
+  "borderRadius": radiusPx.sm,
   "textTransform": "none" as const,
   "boxShadow": "none !important",
   "&:hover": { color: palette.brand.primary },
@@ -27,7 +27,7 @@ export const approvalCountBadgeStyle = {
   px: "6px",
   py: "4px",
   ml: "8px",
-  borderRadius: "12px",
+  borderRadius: radiusPx.pill,
   fontSize: "11px",
   fontWeight: 600,
   lineHeight: 1,

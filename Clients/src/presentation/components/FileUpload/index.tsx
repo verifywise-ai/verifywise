@@ -14,6 +14,7 @@ import {
   useTheme,
 } from "@mui/material";
 import { Upload as UploadIcon, Trash2 as DeleteIconGrey } from "lucide-react";
+import { palette } from "../../themes/palette";
 
 export const FileUploadComponent = ({
   onClose,
@@ -126,7 +127,8 @@ export const FileUploadComponent = ({
             <div className="drop-file-input__label">
               <UploadIcon size={24} style={{ marginBottom: 16, color: theme.palette.other.icon }} />
               <Typography variant="body2">
-                <span style={{ color: "#3b82f6" }}>Click to upload</span> or drag and drop
+                <span style={{ color: palette.status.info.text }}>Click to upload</span> or drag and
+                drop
               </Typography>
             </div>
             <input type="file" value="" onChange={onFileDrop} />

@@ -45,7 +45,7 @@ import {
 import StandardModal from "../StandardModal";
 import { useTheme } from "@mui/material";
 import type { FC } from "react";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   ApprovalStatus,
   ApprovalStepStatus,
@@ -82,6 +82,7 @@ import DetailField from "./DetailField";
 import EntityDetailsSection from "./EntityDetailsSection";
 import { extractEntityDetails } from "./entityTypeConfig";
 import { dispatchFileApprovalChanged } from "../../../../application/events/fileEvents";
+import { dispatchPolicyApprovalChanged } from "../../../../application/events/policyEvents";
 import { dispatchAiActionCompleted } from "../../../../application/events/aiActionEvents";
 import CustomException from "../../../../infrastructure/exceptions/customeException";
 import Alert from "../../Alert";
@@ -108,37 +109,40 @@ function extractApprovalValidationErrors(error: unknown): ValidationFieldError[]
   )?.response?.data;
   return collect(axiosBody?.data?.errors ?? axiosBody?.errors);
 }
-import { background } from "../../../themes/palette";
+import { accent, background, status, text, radiusPx } from "../../../themes/palette";
 
 const getWorkflowChipProps = (value: string) => {
   const styles: Record<string, { bg: string; color: string }> = {
     [ApprovalStatus.APPROVED.toLowerCase()]: {
-      bg: "#E6F4EA",
-      color: "#2E7D32",
+      bg: status.success.bg,
+      color: accent.primary.text,
     },
     [ApprovalStatus.REJECTED.toLowerCase()]: {
-      bg: "#FDECEA",
-      color: "#C62828",
+      bg: status.error.bg,
+      color: status.error.text,
     },
     [ApprovalStatus.PENDING.toLowerCase()]: {
-      bg: "#FFF9E6",
-      color: "#F57C00",
+      bg: status.warning.bg,
+      color: status.warning.text,
     },
     overdue: {
-      bg: "#FDECEA",
-      color: "#C62828",
+      bg: status.error.bg,
+      color: status.error.text,
     },
     escalated: {
-      bg: "#F3E8FF",
-      color: "#7C3AED",
+      bg: accent.purple.bg,
+      color: accent.purple.text,
     },
     withdrawn: {
-      bg: `${background.surface}`,
-      color: "#616161",
+      bg: status.default.bg,
+      color: status.default.text,
     },
   };
 
-  const style = styles[value.toLowerCase()] || { bg: `${background.surface}`, color: "#616161" };
+  const style = styles[value.toLowerCase()] || {
+    bg: `${background.surface}`,
+    color: status.default.text,
+  };
 
   return {
     label: value.charAt(0).toUpperCase() + value.slice(1),
@@ -150,7 +154,7 @@ const getWorkflowChipProps = (value: string) => {
       "fontSize": "11px",
       "textTransform": "uppercase",
       "letterSpacing": "0.5px",
-      "borderRadius": "4px",
+      "borderRadius": radiusPx.sm,
       "height": "22px",
       "& .MuiChip-label": {
         padding: "0 8px",
@@ -159,7 +163,12 @@ const getWorkflowChipProps = (value: string) => {
   };
 };
 
-const RequestorApprovalModal: FC<IRequestorApprovalProps> = ({ isOpen, onClose, onRefresh }) => {
+const RequestorApprovalModal: FC<IRequestorApprovalProps> = ({
+  isOpen,
+  onClose,
+  onRefresh,
+  initialRequestId = null,
+}) => {
   const formatDate = useFormattedDate();
   const { t } = useTranslation();
   const [selectedItem, setSelectedItem] = useState<IMenuItemExtended | null>(null);
@@ -180,6 +189,12 @@ const RequestorApprovalModal: FC<IRequestorApprovalProps> = ({ isOpen, onClose, 
   const [requestsToApprove, setRequestsToApprove] = useState<IMenuItemExtended[]>([]);
   const [myPendingRequests, setMyPendingRequests] = useState<IMenuItemExtended[]>([]);
   const [timelineData, setTimelineData] = useState<ITimelineStep[]>([]);
+  // A linked request (initialRequestId) waits until both lists have loaded
+  // since the modal opened: it may be in the second one. Each open is a new
+  // load generation; a fetch reports the generation it finished for.
+  const pendingInitialId = useRef<number | null>(null);
+  const loadGeneration = useRef(0);
+  const [loadedGeneration, setLoadedGeneration] = useState(-1);
   const [requestDetails, setRequestDetails] = useState<any>(null);
 
   const theme = useTheme();
@@ -319,6 +334,11 @@ const RequestorApprovalModal: FC<IRequestorApprovalProps> = ({ isOpen, onClose, 
       dispatchFileApprovalChanged({ status: "approved" });
     }
 
+    // A policy's final approval sets it to Approved: refresh the policy pages.
+    if (entityChanged && requestDetails?.entityType === "policy") {
+      dispatchPolicyApprovalChanged({ policyId: requestDetails?.policyId, status: "approved" });
+    }
+
     // If this was an AI write action (e.g. agent_create_risk), tell
     // any background page showing that entity's table to refetch.
     // The AI executor runs inside the approve transaction that completes
@@ -354,6 +374,11 @@ const RequestorApprovalModal: FC<IRequestorApprovalProps> = ({ isOpen, onClose, 
       // If this was a file rejection, dispatch event to refresh file lists
       if (requestDetails?.entityType === "file") {
         dispatchFileApprovalChanged({ status: "rejected" });
+      }
+
+      // A rejected policy request moves the policy back to Draft.
+      if (requestDetails?.entityType === "policy") {
+        dispatchPolicyApprovalChanged({ policyId: requestDetails?.policyId, status: "rejected" });
       }
 
       // Rejected AI actions still dispatch — the toolName lets a
@@ -394,6 +419,11 @@ const RequestorApprovalModal: FC<IRequestorApprovalProps> = ({ isOpen, onClose, 
         message: "Request withdrawn successfully!",
       });
 
+      // A withdrawn policy request moves the policy back to Draft.
+      if (requestDetails?.entityType === "policy") {
+        dispatchPolicyApprovalChanged({ policyId: requestDetails?.policyId, status: "withdrawn" });
+      }
+
       fetchRequestsData();
 
       // Refresh the count in the header
@@ -419,6 +449,7 @@ const RequestorApprovalModal: FC<IRequestorApprovalProps> = ({ isOpen, onClose, 
   };
 
   const fetchRequestsData = async () => {
+    const generation = loadGeneration.current;
     try {
       // Fetch requests to approve
       const approvalsResponse = await getPendingApprovals();
@@ -443,6 +474,9 @@ const RequestorApprovalModal: FC<IRequestorApprovalProps> = ({ isOpen, onClose, 
           status: req.status?.toLowerCase() || "pending",
         })),
       );
+      // Only a load that finished can say a linked request is gone: after a
+      // failed fetch the lists are empty for another reason.
+      setLoadedGeneration(generation);
     } catch (error) {
       logEngine({
         type: "error",
@@ -558,17 +592,41 @@ const RequestorApprovalModal: FC<IRequestorApprovalProps> = ({ isOpen, onClose, 
 
   useEffect(() => {
     if (isOpen) {
+      pendingInitialId.current = initialRequestId;
+      loadGeneration.current += 1;
       fetchRequestsData();
     }
-  }, [isOpen]);
+  }, [isOpen, initialRequestId]);
 
   useEffect(() => {
+    // A linked request opens first, in whichever tab lists it. If neither
+    // list has it once both have loaded, fall back to the first item.
+    const linkedId = pendingInitialId.current;
+    if (linkedId !== null) {
+      const toApprove = requestsToApprove.find((r) => r.id === linkedId);
+      const mine = toApprove ? undefined : myPendingRequests.find((r) => r.id === linkedId);
+      if (toApprove || mine) {
+        pendingInitialId.current = null;
+        setActiveTab(toApprove ? "approvals" : "pending");
+        setSelectedItem(toApprove ?? mine ?? null);
+        return;
+      }
+      if (loadedGeneration !== loadGeneration.current) return;
+      pendingInitialId.current = null;
+      // Decided meanwhile (by someone else, or by the user in another tab).
+      showAlert({
+        variant: "info",
+        body: t("That request is no longer waiting on you."),
+        isToast: true,
+      });
+    }
+
     // Auto-select first item when data is loaded
     const currentList = activeTab === "approvals" ? requestsToApprove : myPendingRequests;
     if (currentList.length > 0 && !selectedItem) {
       setSelectedItem(currentList[0]);
     }
-  }, [activeTab, requestsToApprove, myPendingRequests, selectedItem]);
+  }, [activeTab, requestsToApprove, myPendingRequests, selectedItem, loadedGeneration]);
 
   useEffect(() => {
     if (selectedItem?.id) {
@@ -836,11 +894,11 @@ const RequestorApprovalModal: FC<IRequestorApprovalProps> = ({ isOpen, onClose, 
                       sx={{
                         backgroundColor: "background.accent",
                         border: "1px solid status.default.border",
-                        borderRadius: "8px",
+                        borderRadius: radiusPx.lg,
                         padding: "16px",
                       }}
                     >
-                      <Typography fontWeight={600} fontSize={14} color="#374151" mb={2}>
+                      <Typography fontWeight={600} fontSize={14} color={text.primary} mb={2}>
                         Request Information
                       </Typography>
                       {requestDetails.requester && (
@@ -886,7 +944,7 @@ const RequestorApprovalModal: FC<IRequestorApprovalProps> = ({ isOpen, onClose, 
                             {step.status === ApprovalStepStatus.Completed ? (
                               <Check size={12} color={background.main} />
                             ) : (
-                              <Check size={12} color="#CCCCCC" strokeWidth={3} />
+                              <Check size={12} color={text.secondary} strokeWidth={3} />
                             )}
                           </Box>
                           <Stack direction="column" sx={stepContainerStyle} flex={1}>
@@ -905,7 +963,7 @@ const RequestorApprovalModal: FC<IRequestorApprovalProps> = ({ isOpen, onClose, 
                                 <Typography
                                   sx={{
                                     ...stepDateStyle,
-                                    ...(step.isOverdue && { color: "#C62828", fontWeight: 600 }),
+                                    ...(step.isOverdue && { color: text.error, fontWeight: 600 }),
                                   }}
                                 >
                                   Due {formatDate(step.dueAt, { includeTime: true })}

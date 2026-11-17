@@ -72,7 +72,7 @@ export async function getApprovalDetailCtrl(req: Request, res: Response) {
   try {
     const record = await getApproval(organizationId, id);
     if (!record) {
-      return res.status(404).json(STATUS_CODE[404]("Approval not found"));
+      return res.status(404).json(STATUS_CODE[404](req.t!("Approval not found")));
     }
 
     logStructured("successful", `fetched approval ${id}`, functionName, fileName);

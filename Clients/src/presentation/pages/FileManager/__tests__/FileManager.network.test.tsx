@@ -64,15 +64,6 @@ vi.mock("../../../../application/hooks/useFileColumnVisibility", () => ({
   }),
 }));
 
-vi.mock("../../../../application/hooks/useTableGrouping", () => ({
-  useTableGrouping: () => [],
-  useGroupByState: () => ({
-    groupBy: null,
-    groupSortOrder: "asc",
-    handleGroupChange: vi.fn(),
-  }),
-}));
-
 vi.mock("../../../../application/hooks/useFilterBy", () => ({
   useFilterBy: () => ({
     filterData: (data: unknown[]) => data,
@@ -97,10 +88,10 @@ vi.mock("../../../components/PageTour", () => ({ default: () => null }));
 
 // Rendered with the rows it receives, so the assertion follows real data from
 // the HTTP response through useFiles and transformFilesData into the table.
-vi.mock("../../../components/Table/GroupedTableView", () => ({
-  GroupedTableView: ({ ungroupedData }: any) => (
-    <div data-testid="grouped-table-view">
-      {(ungroupedData ?? []).map((file: any) => (
+vi.mock("../../../components/Table/FileTable/FileTable", () => ({
+  default: ({ files }: any) => (
+    <div data-testid="file-table">
+      {(files ?? []).map((file: any) => (
         <span key={file.id}>{file.fileName}</span>
       ))}
     </div>
@@ -186,7 +177,7 @@ describe("FileManager (network-backed)", () => {
     await waitFor(() => {
       expect(document.querySelector(".MuiSkeleton-root")).toBeFalsy();
     });
-    expect(screen.getByTestId("grouped-table-view")).toBeEmptyDOMElement();
+    expect(screen.getByTestId("file-table")).toBeEmptyDOMElement();
     expect(screen.queryByText("Unable to load files")).not.toBeInTheDocument();
   });
 });

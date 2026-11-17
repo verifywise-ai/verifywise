@@ -21,7 +21,7 @@ export const shareLinksContent: ArticleContent = {
     {
       type: 'ordered-list',
       items: [
-        { text: 'Navigate to the resource you want to share (e.g., a project, risk, or report).' },
+        { text: 'Open **Model inventory**, where the app offers share links.' },
         { text: 'Click the **Share** button.' },
         { text: 'Choose what fields to include in the shared view.' },
         { text: 'Set an expiration date (how long the link stays active).' },
@@ -48,6 +48,22 @@ export const shareLinksContent: ArticleContent = {
     },
     {
       type: 'heading',
+      id: 'policy-links',
+      level: 2,
+      text: 'Policy share links',
+    },
+    {
+      type: 'paragraph',
+      text: 'Policy share links can only be created through the API. A link to the policy list shows your organization\'s 100 most recently created policies, whatever their status, drafts and archived policies included. With **Share all fields** on, the link also shows the full text of every policy it covers. If data export is on (the default when a link is created without settings), anyone with the link can download what it shows.',
+    },
+    {
+      type: 'callout',
+      variant: 'warning',
+      title: 'Check the warnings',
+      text: 'When you create, update or list a policy share link through the API, the response includes a `warnings` list that says what the link exposes. Read it before you send the link to anyone.',
+    },
+    {
+      type: 'heading',
       id: 'managing',
       level: 2,
       text: 'Managing share links',
@@ -69,8 +85,8 @@ export const shareLinksContent: ArticleContent = {
         { key: 'roles', label: 'Required role', width: '50%' },
       ],
       rows: [
-        { action: 'Create share links', roles: 'Admin or Editor' },
-        { action: 'View active share links', roles: 'Admin or Editor' },
+        { action: 'Create share links', roles: 'Any signed-in member' },
+        { action: 'View active share links', roles: 'Any signed-in member' },
         { action: 'Revoke share links', roles: 'Creator (any role can revoke a link they created)' },
         { action: 'Access shared view (external)', roles: 'Anyone with the link' },
       ],

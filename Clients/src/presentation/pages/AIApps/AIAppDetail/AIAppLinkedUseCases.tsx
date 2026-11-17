@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useCan } from "../../../../application/hooks/useCan";
 import { Link } from "react-router";
 import { Box, IconButton, Stack, Typography } from "@mui/material";
 import { CirclePlus, FolderTree, X } from "lucide-react";
@@ -13,7 +14,6 @@ import {
   useLinkUseCaseToAiApp,
   useUnlinkUseCaseFromAiApp,
 } from "../../../../application/hooks/useAiApps";
-import { useCanEditAiApps } from "../../../../application/hooks/useCanEditAiApps";
 import { useProjects } from "../../../../application/hooks/useProjects";
 import { useTranslation } from "../../../../application/hooks/useTranslation";
 import { isClientError } from "../../../../application/utils/apiErrorReason";
@@ -27,7 +27,7 @@ interface UseCaseOption {
 /** AI app detail section: the use cases this app serves (#5259). */
 export default function AIAppLinkedUseCases({ appId }: { appId: number }) {
   const { t } = useTranslation();
-  const canEdit = useCanEditAiApps();
+  const canEdit = useCan("aiApp.edit");
   const { data, refetch } = useAiAppUseCases(appId);
   const linkMutation = useLinkUseCaseToAiApp(appId);
   const unlinkMutation = useUnlinkUseCaseFromAiApp(appId);

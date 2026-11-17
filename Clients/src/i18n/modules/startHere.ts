@@ -7,6 +7,8 @@ export const de: Record<string, string> = {
   "Invite a team member": "Teammitglied einladen",
   "Set up your organization": "Organisation einrichten",
   "Complete a risk assessment": "Risikobewertung abschließen",
+  "EN 18286 explained: EU AI Act vs. ISO 42001":
+    "EN 18286 erklärt: EU AI Act und ISO 42001 im Vergleich",
   "A lifecycle for every AI system you run":
     "Ein Lebenszyklus für jedes KI-System, das Sie betreiben",
   "New Jersey tenant screening AI: the rules already in force":
@@ -165,6 +167,8 @@ export const fr: Record<string, string> = {
   "Invite a team member": "Inviter un membre",
   "Set up your organization": "Configurer votre organisation",
   "Complete a risk assessment": "Compléter une évaluation des risques",
+  "EN 18286 explained: EU AI Act vs. ISO 42001":
+    "EN 18286 expliquée : AI Act de l'UE et ISO 42001 comparés",
   "A lifecycle for every AI system you run":
     "Un cycle de vie pour chaque système d'IA que vous exploitez",
   "New Jersey tenant screening AI: the rules already in force":
@@ -324,6 +328,8 @@ export const es: Record<string, string> = {
   "Invite a team member": "Invitar a un miembro del equipo",
   "Set up your organization": "Configura tu organización",
   "Complete a risk assessment": "Completar una evaluación de riesgos",
+  "EN 18286 explained: EU AI Act vs. ISO 42001":
+    "EN 18286 explicada: Ley de IA de la UE frente a ISO 42001",
   "A lifecycle for every AI system you run": "Un ciclo de vida para cada sistema de IA que opera",
   "New Jersey tenant screening AI: the rules already in force":
     "IA para la selección de inquilinos en Nueva Jersey: las normas ya vigentes",

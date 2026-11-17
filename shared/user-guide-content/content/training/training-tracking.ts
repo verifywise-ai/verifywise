@@ -44,7 +44,7 @@ export const trainingTrackingContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'The Training registry, found under Assurance in the sidebar, shows all training programs in a table. Each row is a training program with key info visible at a glance.',
+      text: 'The Training registry, found under **Enforce > Policy** in the sidebar, shows all training programs in a table. Each row is a training program with key info visible at a glance.',
     },
     {
       type: 'paragraph',
@@ -246,7 +246,6 @@ export const trainingTrackingContent: ArticleContent = {
       type: 'bullet-list',
       items: [
         { bold: 'Filter', text: 'Filter by training name, status, provider, department or duration' },
-        { bold: 'Group by', text: 'Group programs by status, provider or department' },
         { bold: 'Search', text: 'Search for programs by name' },
       ],
     },
@@ -254,7 +253,7 @@ export const trainingTrackingContent: ArticleContent = {
       type: 'callout',
       variant: 'tip',
       title: 'Finding relevant training',
-      text: 'Use "Group by" to organize training by department and quickly see what each team has completed. Group by status to find planned training that needs scheduling or in-progress training that needs monitoring.',
+      text: 'Filter by department to see what each team has completed. Filter by status to find planned training that needs scheduling or in-progress training that needs monitoring.',
     },
     {
       type: 'heading',

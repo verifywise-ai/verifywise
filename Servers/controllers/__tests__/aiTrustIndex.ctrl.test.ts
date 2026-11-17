@@ -18,17 +18,21 @@ function mockRes() {
 }
 
 describe("updateSettings", () => {
-  it("rejects non-admins with 403 and does not write", async () => {
+  beforeEach(() => jest.clearAllMocks());
+  // Who may save is decided by the route's authorize("aiTrustIndex.admin")
+  // (roleNameRoutes.permissions.test.ts), not by the role name here, so a
+  // custom role granted the key gets through.
+  it("does not check the role name: a request past the route's key check saves", async () => {
     const req: any = {
-      role: "Editor",
+      role: "Compliance lead",
       organizationId: 7,
       userId: 1,
       body: { recipientUserIds: [], recipientEmails: [] },
     };
     const res = mockRes();
     await updateSettings(req, res);
-    expect(res.status).toHaveBeenCalledWith(403);
-    expect(upsertSettingsQuery).not.toHaveBeenCalled();
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(upsertSettingsQuery).toHaveBeenCalledWith(7, 1, [], []);
   });
   it("rejects malformed emails with 400", async () => {
     const req: any = {

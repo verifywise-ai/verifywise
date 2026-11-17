@@ -47,7 +47,7 @@ SELECT id, 1, risk_name, 1, phase::enum_projectrisks_ai_lifecycle_phase, descrip
        'Medium risk', NOW() + INTERVAL '60 days',
        'Tracked in the project mitigation plan.',
        'Unlikely'::enum_projectrisks_likelihood_mitigation, 'Minor'::enum_projectrisks_risk_severity,
-       'Low risk', 1, 'In Review', NOW() - INTERVAL '20 days', true, false,
+       'Low risk', 1, 'Pending', NOW() - INTERVAL '20 days', true, false,
        NOW() - INTERVAL '30 days', NOW() - INTERVAL '30 days'
 FROM scored;
 

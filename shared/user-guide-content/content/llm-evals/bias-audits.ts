@@ -28,7 +28,7 @@ export const biasAuditsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Open LLM Evals from the flask icon in the sidebar and click **Bias audits**. You\'ll see a list of all audits for your organization, sortable by date, status, framework or mode. Running audits update automatically every few seconds.',
+      text: 'In the sidebar, open **Enforce > LLM Evals** and click **Bias audits**. You\'ll see a list of all audits for your organization, sortable by date, status, framework or mode. Running audits update automatically every few seconds.',
     },
     {
       type: 'heading',

@@ -2,8 +2,9 @@ import { Box, Typography, Stack } from "@mui/material";
 import { DollarSign, Hash, Layers, Clock } from "lucide-react";
 import { StatCard } from "../../../components/Cards/StatCard";
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip } from "recharts";
-import palette, { chart as chartPalette } from "../../../themes/palette";
+import palette, { chart as chartPalette, radiusPx } from "../../../themes/palette";
 import { sectionTitleSx, useCardSx } from "../shared";
+import { seriesColor } from "../../../themes/chartTheme";
 
 const MOCK_BY_DAY = [
   { day: "Mar 9", total_cost: 5.24 },
@@ -115,7 +116,7 @@ export default function MockDashboard() {
                     alignItems="center"
                     sx={{
                       p: "22px 14px",
-                      borderRadius: "4px",
+                      borderRadius: radiusPx.sm,
                       border: `1px solid ${palette.border.light}`,
                       position: "relative",
                       overflow: "hidden",
@@ -143,7 +144,7 @@ export default function MockDashboard() {
                           width: 8,
                           height: 8,
                           borderRadius: "50%",
-                          backgroundColor: chartPalette[i % chartPalette.length],
+                          backgroundColor: seriesColor(i),
                           flexShrink: 0,
                         }}
                       />
@@ -198,7 +199,7 @@ export default function MockDashboard() {
                     alignItems="center"
                     sx={{
                       p: "22px 14px",
-                      borderRadius: "4px",
+                      borderRadius: radiusPx.sm,
                       border: `1px solid ${palette.border.light}`,
                       position: "relative",
                       overflow: "hidden",
@@ -226,7 +227,7 @@ export default function MockDashboard() {
                           width: 8,
                           height: 8,
                           borderRadius: "50%",
-                          backgroundColor: chartPalette[i % chartPalette.length],
+                          backgroundColor: seriesColor(i),
                           flexShrink: 0,
                         }}
                       />

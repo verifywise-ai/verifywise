@@ -11,13 +11,12 @@ import {
 import "../../components/Table/index.css";
 import singleTheme from "../../themes/v1SingleTheme";
 import CustomIconButton from "../../components/IconButton";
-import allowedRoles from "../../../application/constants/permissions";
+import { useCanCheck } from "../../../application/hooks/useCan";
 import { GraduationCap, Users, Calendar, Award } from "lucide-react";
 import { EmptyState } from "../../components/EmptyState";
 import CustomizableSkeleton from "../../components/Skeletons";
 import EmptyStateTip from "../../components/EmptyState/EmptyStateTip";
 import { TableEmptyStateLayout } from "../../components/Table/TableEmptyStateLayout";
-import { useAuth } from "../../../application/hooks/useAuth";
 import { TrainingRegistarModel } from "../../../domain/models/Common/trainingRegistar/trainingRegistar.model";
 import { TrainingStatus } from "../../../domain/enums/status.enum";
 import Chip from "../../components/Chip";
@@ -29,6 +28,7 @@ import StandardTablePagination from "../../components/Table/StandardTablePaginat
 import { CustomizableButton } from "../../components/button/customizable-button";
 import { useTranslation } from "../../../application/hooks/useTranslation";
 import type { TrainingAssignmentSummary } from "../../../application/repository/trainingAssignment.repository";
+import { palette } from "../../themes/palette";
 
 const TABLE_COLUMNS: StandardColumn[] = [
   { id: "training_name", label: "TRAINING NAME", sortable: true },
@@ -117,13 +117,12 @@ const TrainingTable: React.FC<TrainingTableProps> = ({
   onEdit,
   onDelete,
   paginated = true,
-  hidePagination = false,
   visibleColumns,
   assignmentSummaries,
   onOpenAssignments,
 }) => {
-  const { userRoleName } = useAuth();
-  const canEditAssignments = allowedRoles.training.edit.includes(userRoleName);
+  const can = useCanCheck();
+  const canEditAssignments = can("training.edit");
 
   const isVisible = useCallback(
     (id: string) => !visibleColumns || visibleColumns.size === 0 || visibleColumns.has(id),
@@ -135,7 +134,7 @@ const TrainingTable: React.FC<TrainingTableProps> = ({
     [isVisible],
   );
 
-  const isDeletingAllowed = allowedRoles.training?.delete?.includes(userRoleName);
+  const isDeletingAllowed = can("training.admin");
 
   const sortComparator = useCallback(
     (a: TrainingRegistarModel, b: TrainingRegistarModel, key: string): number => {
@@ -204,12 +203,7 @@ const TrainingTable: React.FC<TrainingTableProps> = ({
       <TableBody>
         {sortedRows?.length > 0 ? (
           sortedRows
-            .slice(
-              hidePagination ? 0 : validPage * rowsPerPage,
-              hidePagination
-                ? Math.min(sortedRows.length, 100)
-                : validPage * rowsPerPage + rowsPerPage,
-            )
+            .slice(validPage * rowsPerPage, validPage * rowsPerPage + rowsPerPage)
             // Defensive: Filter out invalid records early (fail fast)
             .filter((training) => {
               const isValid = training.id !== undefined && training.id !== null;
@@ -229,7 +223,7 @@ const TrainingTable: React.FC<TrainingTableProps> = ({
                   sx={{
                     ...singleTheme.tableStyles.primary.body.row,
                     "&:hover": {
-                      backgroundColor: "#FBFBFB",
+                      backgroundColor: palette.background.alt,
                       cursor: "pointer",
                     },
                   }}
@@ -243,7 +237,10 @@ const TrainingTable: React.FC<TrainingTableProps> = ({
                         ...singleTheme.tableStyles.primary.body.cell,
                         cursor: "pointer",
                         textTransform: "none !important",
-                        backgroundColor: sortConfig.key === "training_name" ? "#e8e8e8" : "#fafafa",
+                        backgroundColor:
+                          sortConfig.key === "training_name"
+                            ? palette.border.light
+                            : palette.background.alt,
                       }}
                     >
                       {training.training_name}
@@ -380,7 +377,6 @@ const TrainingTable: React.FC<TrainingTableProps> = ({
       isVisible,
       visibleTableColumns,
       sortConfig.key,
-      hidePagination,
       assignmentSummaries,
       onOpenAssignments,
       canEditAssignments,
@@ -439,7 +435,7 @@ const TrainingTable: React.FC<TrainingTableProps> = ({
           onSort={handleSort}
         />
         {tableBody}
-        {paginated && !hidePagination && (
+        {paginated && (
           <StandardTablePagination
             totalCount={totalCount}
             page={validPage}

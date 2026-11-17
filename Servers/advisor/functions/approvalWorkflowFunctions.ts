@@ -12,7 +12,12 @@ import {
   processApprovalQuery,
   withdrawApprovalRequestQuery,
 } from "../../utils/approvalRequest.utils";
-import { ApprovalResult, EntityType } from "../../domain.layer/enums/approval-workflow.enum";
+import {
+  ApprovalRequestStatus,
+  ApprovalResult,
+  EntityType,
+} from "../../domain.layer/enums/approval-workflow.enum";
+import { POLICY_REQUEST_ELSEWHERE_MESSAGE } from "../../constants/policyApproval";
 import { createWriteToolFn } from "../confirmation/createWriteTool";
 import { sequelize } from "../../database/db";
 import logger from "../../utils/logger/fileLogger";
@@ -338,6 +343,11 @@ const agentCreateApprovalRequest = createWriteToolFn({
   descriptionFn: (params) =>
     `Create approval request for ${params.entity_type} #${params.entity_id} using workflow #${params.workflow_id}`,
   executeFn: async (params, organizationId) => {
+    // Policy requests come only from submit for approval (policy status,
+    // usable workflow and pending checks live there).
+    if (params.entity_type === EntityType.POLICY) {
+      throw new Error(POLICY_REQUEST_ELSEWHERE_MESSAGE);
+    }
     const transaction = await sequelize.transaction();
     try {
       const workflow = await getApprovalWorkflowByIdQuery(
@@ -453,14 +463,37 @@ const agentRejectApprovalStep = createWriteToolFn({
   },
 });
 
+/** The REST withdraw endpoint's refusals, worded the same. */
+const WITHDRAW_MESSAGES = {
+  requesterOnly: "Only the requestor can withdraw this request",
+  pendingOnly: "Only a pending request can be withdrawn",
+} as const;
+
 const agentWithdrawApprovalRequest = createWriteToolFn({
   toolName: "agent_withdraw_approval_request",
   warningLevel: "warning",
   descriptionFn: (params) => `Withdraw approval request #${params.request_id}`,
   executeFn: async (params, organizationId) => {
+    // Same rules as POST /approval-requests/:id/withdraw: only the requester,
+    // and only while the request is pending.
+    const userId = params._userId as number;
+    const requestId = params.request_id as number;
     const transaction = await sequelize.transaction();
     try {
-      await withdrawApprovalRequestQuery(params.request_id as number, organizationId, transaction);
+      const request = await getApprovalRequestByIdQuery(requestId, organizationId, transaction);
+      if (!userId || !request || Number(request.requested_by) !== Number(userId)) {
+        throw new Error(WITHDRAW_MESSAGES.requesterOnly);
+      }
+      if (request.status !== ApprovalRequestStatus.PENDING) {
+        throw new Error(WITHDRAW_MESSAGES.pendingOnly);
+      }
+      const withdrawn = await withdrawApprovalRequestQuery(requestId, organizationId, transaction, {
+        changedBy: userId,
+      });
+      // Decided between the read and the update.
+      if (!withdrawn) {
+        throw new Error(WITHDRAW_MESSAGES.pendingOnly);
+      }
       await transaction.commit();
       return {
         id: params.request_id,

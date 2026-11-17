@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Dialog, DialogTitle, DialogContent, DialogActions, Typography, Box } from "@mui/material";
 import Field from "../../Inputs/Field";
 import { CustomizableButton } from "../../button/customizable-button";
+import { accent, icon, text as textPalette, radiusPx } from "../../../themes/palette";
 
 interface InsertLinkModalProps {
   open: boolean;
@@ -49,7 +50,7 @@ const InsertLinkModal: React.FC<InsertLinkModalProps> = ({
       disablePortal={false}
       sx={{ zIndex: 1400 }}
       PaperProps={{
-        sx: { borderRadius: 3, p: 1.5 },
+        sx: { borderRadius: radiusPx.md, p: 1.5 },
       }}
     >
       <DialogTitle>Insert link</DialogTitle>
@@ -60,13 +61,15 @@ const InsertLinkModal: React.FC<InsertLinkModalProps> = ({
             sx={{
               mb: 2,
               p: 1.5,
-              backgroundColor: "#F5F7F6",
-              borderRadius: "4px",
-              border: "1px solid #D9E0DD",
+              backgroundColor: accent.primary.bg,
+              borderRadius: radiusPx.sm,
+              border: `1px solid ${accent.primary.border}`,
             }}
           >
-            <Typography sx={{ fontSize: 12, color: "#667085", mb: 0.5 }}>Selected text</Typography>
-            <Typography sx={{ fontSize: 13, color: "#344054", fontWeight: 500 }}>
+            <Typography sx={{ fontSize: 12, color: icon.default, mb: 0.5 }}>
+              Selected text
+            </Typography>
+            <Typography sx={{ fontSize: 13, color: textPalette.secondary, fontWeight: 500 }}>
               {selectedText}
             </Typography>
           </Box>
@@ -96,7 +99,7 @@ const InsertLinkModal: React.FC<InsertLinkModalProps> = ({
         <CustomizableButton
           text="Cancel"
           variant="text"
-          sx={{ color: "#344054", px: "32px", width: 120 }}
+          sx={{ color: textPalette.secondary, px: "32px", width: 120 }}
           onClick={onClose}
         />
         <CustomizableButton

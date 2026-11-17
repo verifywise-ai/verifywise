@@ -18,6 +18,7 @@ export function PolicyHeader(props: PolicyHeaderProps) {
     onSaveTitle,
     onCancelEditTitle,
     readOnly,
+    titleLocked,
     ...actionsProps
   } = props;
 
@@ -40,6 +41,7 @@ export function PolicyHeader(props: PolicyHeaderProps) {
         onSaveTitle={onSaveTitle}
         onCancelEditTitle={onCancelEditTitle}
         readOnly={readOnly}
+        titleLocked={titleLocked}
       />
       <PolicyEditorActionsBar {...actionsProps} readOnly={readOnly} />
     </Stack>

@@ -20,9 +20,17 @@ import { createFieldBlurHandler } from "../../../../application/utils/formValida
 import { checkStringValidation } from "../../../../application/validations/stringValidation";
 import selectValidation from "../../../../application/validations/selectValidation";
 import useUsers from "../../../../application/hooks/useUsers";
-import { mitigationStatusItems, riskLevelItems, approvalStatusItems } from "../projectRiskValue";
+import {
+  mitigationStatusItems,
+  riskLevelItems,
+  approvalStatusItems,
+  RISK_APPROVAL_STATUS,
+  RISK_APPROVAL_DECISION_IDS,
+} from "../projectRiskValue";
 import { alertState } from "../../../../domain/interfaces/i.alert";
-import allowedRoles from "../../../../application/constants/permissions";
+import { useCanCheck } from "../../../../application/hooks/useCan";
+import { useAuth } from "../../../../application/hooks/useAuth";
+import { useTranslation } from "../../../../application/hooks/useTranslation";
 
 // Layout constants - matching RisksSection
 const LAYOUT = {
@@ -53,14 +61,22 @@ interface MitigationSectionProps {
   setMitigationValues: Dispatch<SetStateAction<MitigationFormValues>>;
   validateRef?: React.MutableRefObject<((values: MitigationFormValues) => boolean) | null>;
   firstInvalidFieldRef?: React.MutableRefObject<keyof MitigationFormValues | null>;
-  userRoleName: string;
   disableInternalScroll?: boolean;
   compactMode?: boolean;
   /** Backend validation errors to display inline (keyed by MitigationFormValues field). */
   serverErrors?: Partial<Record<keyof MitigationFormValues, string>>;
   /** Reports live client-side validity (drives the submit button's disabled state). */
   onValidityChange?: (isValid: boolean) => void;
+  /** The approver and approval status the risk has saved (none for a new risk). */
+  savedApproval?: Pick<MitigationFormValues, "approver" | "approvalStatus">;
 }
+
+const NO_SAVED_APPROVAL: Pick<MitigationFormValues, "approver" | "approvalStatus"> = {
+  approver: 0,
+  approvalStatus: RISK_APPROVAL_STATUS.NotRequired,
+};
+
+const isDecision = (statusId: number) => RISK_APPROVAL_DECISION_IDS.includes(statusId);
 /**
  * MitigationSection component manages mitigation details for risk assessment.
  *
@@ -72,7 +88,6 @@ interface MitigationSectionProps {
  * @param {MitigationFormValues} props.mitigationValues - Current form values
  * @param {function} props.setMitigationValues - State setter for form values
  * @param {MitigationFormErrors} [props.mitigationErrors] - Form validation errors (optional)
- * @param {string} props.userRoleName - Current user's role for permission checks
  * @returns {JSX.Element} Rendered mitigation form section
  */
 const MitigationSection: FC<MitigationSectionProps> = ({
@@ -80,14 +95,18 @@ const MitigationSection: FC<MitigationSectionProps> = ({
   setMitigationValues,
   validateRef,
   firstInvalidFieldRef,
-  userRoleName,
   disableInternalScroll = false,
   compactMode = false,
   serverErrors,
   onValidityChange,
+  savedApproval = NO_SAVED_APPROVAL,
 }) => {
   const theme = useTheme();
-  const isEditingDisabled = !allowedRoles.projectRisks.edit.includes(userRoleName);
+  const can = useCanCheck();
+  const { userId } = useAuth();
+  const isEditingDisabled = !can("risks.edit");
+  const isAdmin = can("organization.admin");
+  const { t } = useTranslation();
 
   const [alert, setAlert] = useState<alertState | null>(null);
 
@@ -107,6 +126,34 @@ const MitigationSection: FC<MitigationSectionProps> = ({
     width: "100%",
     maxWidth: contentWidth,
   };
+
+  // Mirrors the server rule. "Decides" means an Admin or the risk's SAVED
+  // approver, never the approver picked in this form.
+  // - With a saved approver, only someone who decides changes the status.
+  // - A new approver sets Pending; only an Admin may decide in that save.
+  // - An Approved or Rejected risk changes approver only through someone who
+  //   decides.
+  // - A non-Admin cannot pick themself as a new approver.
+  // - Without an approver the status is always Not required.
+  const savedApprover = savedApproval.approver;
+  const hasApprover = Boolean(mitigationValues.approver);
+  const approverUnchanged = mitigationValues.approver === savedApprover;
+  const callerDecides = isAdmin || (Boolean(savedApprover) && userId === savedApprover);
+  const approverLocked = !callerDecides && isDecision(savedApproval.approvalStatus);
+  const statusLocked = !hasApprover || !(approverUnchanged ? callerDecides : isAdmin);
+
+  // Option names are translated for display only; the value sent to the
+  // server is looked up from approvalStatusItems by id, so it stays English.
+  const approvalStatusOptions = useMemo(
+    () =>
+      approvalStatusItems.map((item) => ({
+        ...item,
+        name: t(item.name),
+        // A new approver always means Pending unless an Admin decides.
+        disabled: !approverUnchanged && item._id === RISK_APPROVAL_STATUS.NotRequired,
+      })),
+    [t, approverUnchanged],
+  );
 
   const validators = useMemo<FieldValidators<MitigationFormValues>>(
     () => ({
@@ -130,18 +177,7 @@ const MitigationSection: FC<MitigationSectionProps> = ({
         const r = checkStringValidation("Implementation strategy", v as string, 1, 1024);
         return r.accepted ? "" : r.message;
       },
-      approver: (v: unknown) => {
-        const r = selectValidation("Approver", v as number);
-        return r.accepted ? "" : r.message;
-      },
-      approvalStatus: (v: unknown) => {
-        const r = selectValidation("Approval status", v as number);
-        return r.accepted ? "" : r.message;
-      },
-      dateOfAssessment: (v: unknown) => {
-        const r = checkStringValidation("Date of assessment", v as string, 1);
-        return r.accepted ? "" : r.message;
-      },
+      // Approver, approval status and assessment date are optional.
     }),
     [],
   );
@@ -156,6 +192,19 @@ const MitigationSection: FC<MitigationSectionProps> = ({
   } = useFormValidation<MitigationFormValues>(validators);
   const mitigationValuesRef = useRef(mitigationValues);
   mitigationValuesRef.current = mitigationValues;
+
+  // Once the approver is cleared, drop server errors about the approver and
+  // the status it set, and about an assessment date that is now empty. A date
+  // left filled in keeps its error, since the value it describes is unchanged.
+  // serverErrors is deliberately not a dependency: this runs only when the
+  // approver is cleared, so a server error that arrives afterwards is merged
+  // by the effect below and kept.
+  useEffect(() => {
+    if (hasApprover) return;
+    clearFieldError("approver");
+    clearFieldError("approvalStatus");
+    if (!mitigationValuesRef.current.dateOfAssessment) clearFieldError("dateOfAssessment");
+  }, [hasApprover, clearFieldError]);
 
   // Merge backend validation errors into the inline error state.
   useEffect(() => {
@@ -192,14 +241,18 @@ const MitigationSection: FC<MitigationSectionProps> = ({
     };
   }, [validateRef, firstInvalidFieldRef, validateAll, getFirstInvalidField]);
 
-  // Memoized values
+  // Memoized values. "None" (id 0) clears the approver. A non-Admin sees
+  // their own name but cannot pick it, unless they already are the approver.
   const userOptions = useMemo(
-    () =>
-      users?.map((user) => ({
+    () => [
+      { _id: 0, name: t("None") },
+      ...(users?.map((user) => ({
         _id: user.id,
         name: `${user.name} ${user.surname}`,
-      })) || [],
-    [users],
+        disabled: !isAdmin && user.id === userId && user.id !== savedApprover,
+      })) || []),
+    ],
+    [users, t, isAdmin, userId, savedApprover],
   );
 
   const formFieldStyles = useMemo(
@@ -221,12 +274,33 @@ const MitigationSection: FC<MitigationSectionProps> = ({
     [setMitigationValues, clearFieldError],
   );
 
+  // A new approver resets the status to Pending, no approver means Not
+  // required, and going back to the saved approver restores the saved status.
+  const handleApproverChange = useCallback(
+    (event: SelectChangeEvent<string | number>) => {
+      const approver = Number(event.target.value) || 0;
+      const approvalStatus =
+        approver === savedApproval.approver
+          ? savedApproval.approvalStatus
+          : approver
+            ? RISK_APPROVAL_STATUS.Pending
+            : RISK_APPROVAL_STATUS.NotRequired;
+      setMitigationValues((prevValues) => ({ ...prevValues, approver, approvalStatus }));
+      clearFieldError("approver");
+      clearFieldError("approvalStatus");
+    },
+    [savedApproval, setMitigationValues, clearFieldError],
+  );
+
   const handleDateChange = useCallback(
     (
       field: keyof Pick<MitigationFormValues, "deadline" | "dateOfAssessment">,
       newDate: Dayjs | null,
     ) => {
-      if (newDate?.isValid()) {
+      if (newDate === null) {
+        // Cleared by the user: keep it empty.
+        setMitigationValues((prevValues) => ({ ...prevValues, [field]: "" }));
+      } else if (newDate.isValid()) {
         setMitigationValues((prevValues) => ({
           ...prevValues,
           [field]: newDate.toISOString(),
@@ -302,9 +376,7 @@ const MitigationSection: FC<MitigationSectionProps> = ({
               <DatePicker
                 id="mitigation-deadline-input"
                 label="Deadline"
-                date={
-                  mitigationValues.deadline ? dayjs(mitigationValues.deadline) : dayjs(new Date())
-                }
+                date={mitigationValues.deadline ? dayjs(mitigationValues.deadline) : null}
                 handleDateChange={(e) => handleDateChange("deadline", e)}
                 onBlur={handleFieldBlur("deadline")}
                 sx={{ flex: 1 }}
@@ -361,8 +433,8 @@ const MitigationSection: FC<MitigationSectionProps> = ({
             Calculate residual risk level
           </Typography>
           <Typography sx={{ fontSize: theme.typography.fontSize }}>
-            The Risk Level is calculated by multiplying the Likelihood and Severity scores. By
-            assigning these scores, the risk level will be determined based on your inputs.
+            The risk level is a weighted score: likelihood plus three times severity, so severity
+            counts more. Pick a likelihood and a severity and the level follows from the score.
           </Typography>
         </Stack>
         <Stack sx={{ mt: `${LAYOUT.VERTICAL_GAP}px`, width: "100%", maxWidth: contentWidth }}>
@@ -389,13 +461,14 @@ const MitigationSection: FC<MitigationSectionProps> = ({
                   ? ""
                   : mitigationValues.approver
             }
-            onChange={handleOnSelectChange("approver")}
+            onChange={handleApproverChange}
             onBlur={handleFieldBlur("approver")}
             items={userOptions}
             sx={formFieldStyles}
-            isRequired
             error={errors.approver}
-            disabled={isEditingDisabled || usersLoading}
+            // Only an Admin or the saved approver re-assigns a decided risk.
+            disabled={isEditingDisabled || usersLoading || approverLocked}
+            dataTestId="approver-select"
           />
           <Select
             id="approval-status-input"
@@ -404,24 +477,21 @@ const MitigationSection: FC<MitigationSectionProps> = ({
             value={mitigationValues.approvalStatus === 0 ? "" : mitigationValues.approvalStatus}
             onChange={handleOnSelectChange("approvalStatus")}
             onBlur={handleFieldBlur("approvalStatus")}
-            items={approvalStatusItems}
+            items={approvalStatusOptions}
             sx={formFieldStyles}
-            isRequired
             error={errors.approvalStatus}
-            disabled={isEditingDisabled}
+            disabled={isEditingDisabled || statusLocked}
+            dataTestId="approval-status-select"
           />
           <DatePicker
             id="mitigation-assessment-date-input"
             label="Assessment date"
             date={
-              mitigationValues.dateOfAssessment
-                ? dayjs(mitigationValues.dateOfAssessment)
-                : dayjs(new Date())
+              mitigationValues.dateOfAssessment ? dayjs(mitigationValues.dateOfAssessment) : null
             }
             handleDateChange={(e) => handleDateChange("dateOfAssessment", e)}
             onBlur={handleFieldBlur("dateOfAssessment")}
             sx={{ flex: 1 }}
-            isRequired
             error={errors.dateOfAssessment}
             disabled={isEditingDisabled}
           />

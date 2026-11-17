@@ -1,3 +1,5 @@
+import { storedRiskCategories } from "../riskCategory.utils";
+
 // Build replacement dict for risk
 export function buildRiskReplacements(risk: any): Record<string, any> {
   return {
@@ -209,4 +211,84 @@ export function buildRiskUpdateReplacements(oldRisk: any, newRisk: any): Record<
       timeStyle: "short",
     }),
   };
+}
+
+/** One risk changed by a bulk action, with owner/approver names attached. */
+export type BulkRiskChange = { before: any; after: any };
+
+/** Names listed in a bulk `risk.name` before "and <k> more". */
+export const BULK_RISK_NAME_LIMIT = 10;
+/** Lines listed in a bulk `changes_summary` before "• and <k> more". */
+export const BULK_RISK_CHANGE_LINE_LIMIT = 50;
+
+/** Categories as display text; a Postgres array literal reads like an array. */
+const categoryText = (risk: any): string => storedRiskCategories(risk?.risk_category).join(", ");
+const sortedCategories = (risk: any): string =>
+  [...new Set(storedRiskCategories(risk?.risk_category))].sort().join("\n");
+
+/**
+ * "• <name>: Owner: A → B; Category: x → y" for what a bulk edit changed. A
+ * risk whose owner and category both read the same (the edit changed
+ * something else) gets "• <name>: updated", so every changed risk has a line.
+ */
+function bulkChangeLine({ before, after }: BulkRiskChange): string {
+  const parts: string[] = [];
+  // Decide on the ids (two users can share a name); names are for display.
+  const ownerId = (risk: any) => (risk.risk_owner ? Number(risk.risk_owner) : null);
+  const ownerLabel = (risk: any) => risk.owner_name || risk.risk_owner || "(empty)";
+  if (ownerId(before) !== ownerId(after)) {
+    parts.push(`Owner: ${ownerLabel(before)} → ${ownerLabel(after)}`);
+  }
+  if (sortedCategories(before) !== sortedCategories(after)) {
+    parts.push(
+      `Category: ${categoryText(before) || "(empty)"} → ${categoryText(after) || "(empty)"}`,
+    );
+  }
+  return `• ${after.risk_name}: ${parts.length > 0 ? parts.join("; ") : "updated"}`;
+}
+
+/**
+ * Replacements for one automation run that covers a whole bulk action
+ * (`risk_deleted` for an archive, `risk_updated` for set owner/category).
+ *
+ * One risk: exactly the single-risk replacements. Several: `risk.name` (and
+ * `old_risk.name`) is "<n> risks: <names>", `risk.id` is empty, every other
+ * variable keeps a value only when all the risks share it, and
+ * `changes_summary` lists one line per risk.
+ */
+export function buildBulkRiskReplacements(
+  trigger: "risk_deleted" | "risk_updated",
+  changes: BulkRiskChange[],
+): Record<string, any> {
+  const single = ({ before, after }: BulkRiskChange) =>
+    trigger === "risk_updated"
+      ? buildRiskUpdateReplacements(before, after)
+      : buildRiskReplacements(after);
+
+  if (changes.length === 1) return single(changes[0]);
+
+  const perRisk = changes.map(single);
+  const merged: Record<string, any> = {};
+  for (const key of Object.keys(perRisk[0])) {
+    const first = String(perRisk[0][key] ?? "");
+    merged[key] = perRisk.every((r) => String(r[key] ?? "") === first) ? perRisk[0][key] : "";
+  }
+
+  const names = changes.map((c) => c.after.risk_name);
+  const shown = names.slice(0, BULK_RISK_NAME_LIMIT).join(", ");
+  const hidden = names.length - BULK_RISK_NAME_LIMIT;
+  const summaryName = `${names.length} risks: ${shown}${hidden > 0 ? ` and ${hidden} more` : ""}`;
+
+  merged["risk.id"] = "";
+  merged["risk.name"] = summaryName;
+  if (trigger === "risk_updated") {
+    merged["old_risk.id"] = "";
+    merged["old_risk.name"] = summaryName;
+    const lines = changes.slice(0, BULK_RISK_CHANGE_LINE_LIMIT).map(bulkChangeLine);
+    const more = changes.length - BULK_RISK_CHANGE_LINE_LIMIT;
+    if (more > 0) lines.push(`• and ${more} more`);
+    merged.changes_summary = lines.join("\n");
+  }
+  merged.date_and_time = perRisk[0].date_and_time;
+  return merged;
 }

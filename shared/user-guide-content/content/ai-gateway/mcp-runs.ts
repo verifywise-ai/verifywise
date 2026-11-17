@@ -14,7 +14,7 @@ export const mcpRunsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'You\'ll find it at **AI Gateway > Agent Control > Runs**.',
+      text: 'You\'ll find it at **Enforce > Agent controls > Runs**.',
     },
     {
       type: 'heading',

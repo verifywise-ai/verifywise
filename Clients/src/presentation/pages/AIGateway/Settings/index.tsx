@@ -31,6 +31,7 @@ import { apiServices } from "../../../../infrastructure/api/networkServices";
 import { useTranslation } from "../../../../application/hooks/useTranslation";
 import { fill } from "../../../../i18n/fill";
 import palette from "../../../themes/palette";
+import { palette as vwPalette, radiusPx } from "../../../themes/palette";
 import { sectionTitleSx, useCardSx, ProviderIcon, API_KEY_PROVIDERS } from "../shared";
 import CustomizableSkeleton from "../../../components/Skeletons";
 import VirtualKeysTab from "../VirtualKeys/index";
@@ -54,10 +55,10 @@ const TABS = [
 ];
 
 const SEVERITY_COLORS: Record<string, string> = {
-  critical: "#DC2626",
-  high: "#EA580C",
-  medium: "#D97706",
-  low: "#2563EB",
+  critical: vwPalette.riskMark.critical,
+  high: vwPalette.riskMark.high,
+  medium: vwPalette.riskMark.medium,
+  low: vwPalette.riskMark.low,
 };
 
 /** Metadata for each risk condition — description + human-readable threshold labels */
@@ -646,7 +647,7 @@ export default function AIGatewaySettingsPage() {
                           sx={{
                             p: "12px 16px",
                             border: `1px solid ${palette.border.dark}`,
-                            borderRadius: "4px",
+                            borderRadius: radiusPx.sm,
                           }}
                         >
                           <Stack direction="row" alignItems="center" gap="10px">
@@ -729,7 +730,7 @@ export default function AIGatewaySettingsPage() {
                         <Box
                           sx={{
                             height: 6,
-                            borderRadius: 3,
+                            borderRadius: radiusPx.md,
                             backgroundColor: palette.border.light,
                             overflow: "hidden",
                           }}
@@ -745,7 +746,7 @@ export default function AIGatewaySettingsPage() {
                                 budget.alert_threshold_pct
                                   ? palette.status.error.text
                                   : palette.brand.primary,
-                              borderRadius: 3,
+                              borderRadius: radiusPx.md,
                               transition: "width 0.3s",
                             }}
                           />
@@ -1237,7 +1238,7 @@ export default function AIGatewaySettingsPage() {
                                   backgroundColor: `${SEVERITY_COLORS[s.severity] || palette.text.tertiary}1a`,
                                   px: "8px",
                                   py: "2px",
-                                  borderRadius: "4px",
+                                  borderRadius: radiusPx.sm,
                                   textTransform: "uppercase",
                                 }}
                               >
@@ -1336,7 +1337,7 @@ export default function AIGatewaySettingsPage() {
                             sx={{
                               p: "8px 12px",
                               border: `1px solid ${palette.border.light}`,
-                              borderRadius: "4px",
+                              borderRadius: radiusPx.sm,
                               opacity: 0.7,
                             }}
                           >

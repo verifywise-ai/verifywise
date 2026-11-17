@@ -146,6 +146,7 @@ const analyzeRiskStatus = async (
          COUNT(*) FILTER (WHERE r.final_risk_level IS NULL OR LOWER(r.final_risk_level) = 'high') AS unmitigated_risks
        FROM risks r
        WHERE r.organization_id = :organizationId
+         AND r.is_deleted = false
          AND r.id IN (
            SELECT fel_r.entity_id FROM file_entity_links fel_r
            WHERE fel_r.entity_type = 'risk'

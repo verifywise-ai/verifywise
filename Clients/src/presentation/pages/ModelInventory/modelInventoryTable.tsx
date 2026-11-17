@@ -15,8 +15,7 @@ import CustomIconButton from "../../components/IconButton";
 import ViewRelationshipsButton from "../../components/ViewRelationshipsButton";
 import { useExtensions } from "../../../application/contexts/Extensions.context";
 import ViewLifecycleButton from "../Extensions/model-lifecycle/ViewLifecycleButton";
-import allowedRoles from "../../../application/constants/permissions";
-import { useAuth } from "../../../application/hooks/useAuth";
+import { useCanCheck } from "../../../application/hooks/useCan";
 import { Cpu, Layers, BarChart3, Link2 } from "lucide-react";
 import { EmptyState } from "../../components/EmptyState";
 import CustomizableSkeleton from "../../components/Skeletons";
@@ -90,13 +89,12 @@ const ModelInventoryTable: React.FC<ModelInventoryTableProps> = ({
   onViewDetails,
   paginated = true,
   deletingId,
-  hidePagination = false,
   modelRisks = [],
   flashRowId,
   visibleColumns,
 }) => {
   const formatDate = useFormattedDate();
-  const { userRoleName } = useAuth();
+  const can = useCanCheck();
   const { isEnabled } = useExtensions();
   const [users, setUsers] = useState<User[]>([]);
 
@@ -160,7 +158,7 @@ const ModelInventoryTable: React.FC<ModelInventoryTableProps> = ({
     return map;
   }, [users]);
 
-  const isDeletingAllowed = allowedRoles.modelInventory?.delete?.includes(userRoleName);
+  const isDeletingAllowed = can("model.edit");
 
   // Get risk count for a specific model
   const getModelRiskCount = useCallback(
@@ -276,12 +274,7 @@ const ModelInventoryTable: React.FC<ModelInventoryTableProps> = ({
       <TableBody>
         {sortedRows?.length > 0 ? (
           sortedRows
-            .slice(
-              hidePagination ? 0 : validPage * rowsPerPage,
-              hidePagination
-                ? Math.min(sortedRows.length, 100)
-                : validPage * rowsPerPage + rowsPerPage,
-            )
+            .slice(validPage * rowsPerPage, validPage * rowsPerPage + rowsPerPage)
             .map((modelInventory) => (
               <TableRow
                 key={modelInventory.id}
@@ -545,7 +538,6 @@ const ModelInventoryTable: React.FC<ModelInventoryTableProps> = ({
       deletingId,
       userMap,
       getModelRiskCount,
-      hidePagination,
       openModelRisksDialog,
       flashRowId,
       isColVisible,
@@ -607,7 +599,7 @@ const ModelInventoryTable: React.FC<ModelInventoryTableProps> = ({
             onSort={handleSort}
           />
           {tableBody}
-          {paginated && !hidePagination && (
+          {paginated && (
             <StandardTablePagination
               totalCount={totalCount}
               page={validPage}

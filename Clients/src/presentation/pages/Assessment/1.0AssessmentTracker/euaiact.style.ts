@@ -1,4 +1,5 @@
 import { SxProps, Theme, keyframes } from "@mui/material";
+import { palette, radiusPx } from "../../../themes/palette";
 
 /**
  * Flash animation for saved rows
@@ -23,9 +24,9 @@ export const flashAnimation = keyframes`
 export const getPriorityColors = (priority: string): { bg: string; text: string } => {
   switch (priority?.toLowerCase()) {
     case "high priority":
-      return { bg: "#FEE2E2", text: "#EF4444" }; // Error/Critical
+      return { bg: palette.status.error.bg, text: palette.riskMark.critical }; // Error/Critical
     case "medium priority":
-      return { bg: "#FEF3C7", text: "#F59E0B" }; // Warning/Pending
+      return { bg: palette.risk.medium.bg, text: palette.riskMark.medium }; // Warning/Pending
     case "low priority":
       return { bg: "background.hover", text: "status.default.text" }; // Neutral
     default:
@@ -44,9 +45,9 @@ export const styles = {
    */
   accordion: {
     "marginTop": "9px",
-    "border": "1px solid #d0d5dd",
+    "border": `1px solid ${palette.border.dark}`,
     "width": "100%",
-    "borderRadius": "4px",
+    "borderRadius": radiusPx.sm,
     "overflow": "hidden",
     "position": "relative",
     "margin": 0,
@@ -60,7 +61,7 @@ export const styles = {
    * Light background (#fafafa) with reverse flex direction for icon on left
    */
   accordionSummary: {
-    "backgroundColor": "#fafafa",
+    "backgroundColor": palette.background.alt,
     "flexDirection": "row-reverse",
     "paddingLeft": "16px",
     "paddingRight": "16px",
@@ -91,7 +92,7 @@ export const styles = {
       "justifyContent": "space-between",
       "alignItems": "center",
       "padding": "16px",
-      "borderBottom": isLast ? "none" : "1px solid #d0d5dd",
+      "borderBottom": isLast ? "none" : `1px solid ${palette.border.dark}`,
       "cursor": "pointer",
       "fontSize": 13,
       "animation": isFlashing ? `${flashAnimation} 2s ease-in-out` : "none",

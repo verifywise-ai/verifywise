@@ -237,3 +237,47 @@ export function listPermissionCatalog() {
     description: ROLE_PERMISSIONS[key].description,
   }));
 }
+
+/** The request fields the permission checks read (set by authenticateJWT). */
+export interface PermissionRequest {
+  role?: string;
+  organizationId?: number | null;
+  isSuperAdmin?: boolean;
+}
+
+/**
+ * True for a pure super admin: signed in without an organization, carrying
+ * the "SuperAdmin" role name that loginUser mints. authenticateJWT only lets
+ * that name through after checking the super_admins row. There is no
+ * SuperAdmin row in `roles` any more (migration 20260813133028), so the role
+ * map cannot resolve it; it answers from the built-in SuperAdmin matrix,
+ * which keeps the old authorize(["Admin", "SuperAdmin"]) lists working.
+ */
+export function isPureSuperAdmin(req: PermissionRequest): boolean {
+  return req.role === "SuperAdmin" && req.isSuperAdmin === true && req.organizationId == null;
+}
+
+/**
+ * Whether the authenticated request holds `permissionKey`: the single check
+ * behind authorize() and the in-code checks that need the same answer.
+ */
+export async function requestHasPermission(
+  req: PermissionRequest,
+  permissionKey: PermissionKey,
+): Promise<boolean> {
+  assertValidPermissionKey(permissionKey);
+  if (!req.role) return false;
+  if (isPureSuperAdmin(req)) {
+    return BUILTIN_ROLE_PERMISSIONS.SuperAdmin?.has(permissionKey) ?? false;
+  }
+  return roleHasPermission(req.organizationId ?? null, req.role, permissionKey);
+}
+
+/** All permission keys the request holds (the client's permission context). */
+export async function requestEffectivePermissions(
+  req: PermissionRequest,
+): Promise<ReadonlySet<string>> {
+  if (!req.role) return new Set<string>();
+  if (isPureSuperAdmin(req)) return BUILTIN_ROLE_PERMISSIONS.SuperAdmin ?? new Set<string>();
+  return getEffectivePermissions(req.organizationId ?? null, req.role);
+}

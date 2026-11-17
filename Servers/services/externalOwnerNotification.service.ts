@@ -4,6 +4,7 @@ import { EMAIL_TEMPLATES } from "../constants/emailTemplates";
 import { notificationService } from "./notificationService";
 import { getOrganizationByIdQuery } from "../utils/organization.utils";
 import logger from "../utils/logger/fileLogger";
+import { translate } from "../utils/i18n.utils";
 import redisClient from "../database/redis";
 import { TIMED_OUT, withDeadline } from "./intakeLiveChecks/deadline";
 import { REDIS_TIMEOUT_MS } from "./intakeLiveChecks/formBudget";
@@ -174,13 +175,16 @@ export async function notifyExternalOwnerConfirmationDue(params: {
   const organization = await organizationName(organizationId);
   const contact = await resolveContact(organizationId, organization, contactUserId);
 
+  // External owners have no saved language, so the email stays English. The
+  // subject shares its key with the in-app "still live?" notice.
+  const subject = translate("en", 'Is "{title}" still live?', { title: entryTitle });
   await notificationService.sendEmailWithTemplate(
     recipient.email,
-    `Is "${entryTitle}" still live?`,
+    subject,
     EMAIL_TEMPLATES.EXTERNAL_OWNER_NOTICE,
     {
       recipient_name: recipient.name,
-      heading: `Is "${entryTitle}" still live?`,
+      heading: subject,
       message: `You own the ${noun} ${entryTitle}. It has not been confirmed as live since ${since}, and ${organization} asks owners to confirm every ${intervalDays} days.`,
       action_message: ACCOUNT_NOTE,
       contact_message: `Please tell ${contact} whether it is still in use, so they can confirm it or retire it.`,

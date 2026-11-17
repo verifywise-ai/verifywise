@@ -65,7 +65,7 @@ export const userManagementContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'The Profile tab is where you manage your personal account information.',
+      text: 'The Profile section is where you manage your personal account information.',
     },
     {
       type: 'heading',
@@ -115,7 +115,7 @@ export const userManagementContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'You can permanently delete your account from the Profile tab. This removes all your data from the system and can\'t be undone.',
+      text: 'You can permanently delete your account from the Profile section. This removes all your data from the system and can\'t be undone.',
     },
     {
       type: 'callout',
@@ -130,12 +130,12 @@ export const userManagementContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'The Password tab lets you update your account password.',
+      text: 'The Password section lets you update your account password.',
     },
     {
       type: 'ordered-list',
       items: [
-        { text: 'Go to Settings and select the Password tab' },
+        { text: 'Go to Settings and select the Password section' },
         { text: 'Enter your current password' },
         { text: 'Enter your new password' },
         { text: 'Confirm your new password' },
@@ -156,7 +156,7 @@ export const userManagementContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'The Team tab lets admins manage users in your organization.',
+      text: 'The Team section lets admins manage users in your organization.',
     },
     {
       type: 'heading',
@@ -181,7 +181,7 @@ export const userManagementContent: ArticleContent = {
       type: 'image',
       src: '/images/user-guide/team-members.png',
       alt: 'Team members table showing users with their names, email addresses, roles, and action buttons, with filter tabs for All, Admin, Reviewer, Editor, and Auditor',
-      caption: 'The Team tab shows all team members with role filters and an option to invite new members.',
+      caption: 'The Team section shows all team members with role filters and an option to invite new members.',
     },
     {
       type: 'paragraph',
@@ -260,7 +260,7 @@ export const userManagementContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Removed users lose access to the platform right away. You can\'t delete your own account from the Team tab.',
+      text: 'Removed users lose access to the platform right away. You can\'t delete your own account from the Team section.',
     },
     {
       type: 'heading',
@@ -270,7 +270,7 @@ export const userManagementContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'The Preferences tab lets you customize how information is displayed for your account.',
+      text: 'The Preferences section lets you customize how information is displayed for your account.',
     },
     {
       type: 'bullet-list',
@@ -281,6 +281,24 @@ export const userManagementContent: ArticleContent = {
     {
       type: 'paragraph',
       text: 'Click Save after changing your preferences. Settings are stored and applied whenever you log in.',
+    },
+    {
+      type: 'heading',
+      id: 'interface-style',
+      level: 3,
+      text: 'Interface style',
+    },
+    {
+      type: 'paragraph',
+      text: 'VerifyWise has a new look: updated colours, icons, corners and tabs. If you prefer the previous look, pick Classic under Interface style. The classic look stays available until January 2027.',
+    },
+    {
+      type: 'paragraph',
+      text: 'Two things work differently in the new look. Tables filter with chips above the list: click a chip, pick a value, and click the chip again to change or clear it. The classic look keeps the Filter button. Click a column heading to sort by it: one click sorts ascending, a second sorts descending, a third restores the original order. Group and Columns are the same in both looks.',
+    },
+    {
+      type: 'paragraph',
+      text: 'This setting applies straight away and reloads the page; you don\'t need to click Save. It is kept in this browser, so set it again on another browser or device.',
     },
     {
       type: 'heading',
@@ -325,7 +343,7 @@ export const userManagementContent: ArticleContent = {
         {
           collectionId: 'settings',
           articleId: 'role-configuration',
-          title: 'Role configuration',
+          title: 'Roles and permissions',
           description: 'Understand roles and permissions',
         },
         {

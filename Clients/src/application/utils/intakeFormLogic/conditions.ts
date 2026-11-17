@@ -1,4 +1,5 @@
 import type { Condition, LogicField } from "./types";
+import { normalizeText } from "./types";
 import { toNumber } from "./formula";
 
 /** undefined, null, blank strings and empty arrays are empty; false is an answer. */
@@ -8,8 +9,6 @@ export function isEmptyAnswer(value: unknown): boolean {
   if (Array.isArray(value)) return value.length === 0;
   return false;
 }
-
-const normalizeText = (value: string): string => value.trim().toLowerCase();
 
 /**
  * Whether one condition holds. `answer` is the referenced field's effective

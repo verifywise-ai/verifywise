@@ -25,9 +25,12 @@
 import { QueryTypes } from "sequelize";
 import { sequelize } from "../../../database/db";
 import { createRiskService } from "../../../services/risk.service";
+import { callerCanDecideAnyRisk } from "../../../utils/riskApproval.utils";
+import { notifyNewRiskApprover } from "../../../services/riskApproverNotification.service";
+import { riskViewerForUserQuery } from "../../../utils/riskVisibility.utils";
 import { enqueueRiskLinkRecompute } from "../../../services/automations/automationProducer";
 import { createNewTaskQuery } from "../../../utils/task.utils";
-import { calculateRiskLevel } from "../../../utils/validations/riskValidation.utils";
+import { normalizeCurrentRiskLevel } from "../../../utils/riskLevel.utils";
 import { sendInAppNotification } from "../../../services/inAppNotification.service";
 import {
   NotificationType,
@@ -119,13 +122,13 @@ export async function executeCreateRisk(
 
   const severity = input.severity ?? DEFAULT_SEVERITY;
   const likelihood = input.likelihood ?? DEFAULT_LIKELIHOOD;
-  const riskLevelAutocalculated = calculateRiskLevel(severity, likelihood);
   const riskOwner = input.risk_owner ?? ctx.requesterId;
 
   // ═══════════════════════════════════════════════════════
   // 1. Create the risk
   // ═══════════════════════════════════════════════════════
 
+  const viewer = await riskViewerForUserQuery(ctx.requesterId, ctx.organizationId);
   const newRisk = await createRiskService(
     {
       risk_name: input.risk_name,
@@ -135,24 +138,29 @@ export async function executeCreateRisk(
       impact: input.impact,
       severity,
       likelihood,
-      risk_level_autocalculated: riskLevelAutocalculated as
-        "No risk" | "Very low risk" | "Low risk" | "Medium risk" | "High risk" | "Very high risk",
       review_notes: input.review_notes,
       risk_owner: riskOwner,
       projects: input.project_ids ?? [],
       frameworks: input.framework_ids ?? [],
       mitigation_status: input.mitigation_status,
       mitigation_plan: input.mitigation_plan,
-      current_risk_level: input.current_risk_level,
+      current_risk_level: normalizeCurrentRiskLevel(input.current_risk_level),
       implementation_strategy: input.implementation_strategy,
       deadline: new Date(input.deadline),
       risk_approval: input.approver,
       approval_status: input.approval_status,
-      date_of_assessment: new Date(input.date_of_assessment),
+      date_of_assessment: input.date_of_assessment ? new Date(input.date_of_assessment) : undefined,
     },
     {
       userId: ctx.requesterId,
       organizationId: ctx.organizationId,
+      viewer,
+      // Only asked when an approval field is sent; without one the risk is
+      // Not required whoever creates it.
+      callerIsAdmin:
+        input.approver !== undefined || input.approval_status !== undefined
+          ? await callerCanDecideAnyRisk(ctx.organizationId, viewer.role)
+          : false,
     },
     ctx.transaction,
   );
@@ -175,6 +183,15 @@ export async function executeCreateRisk(
       console.error("Failed to enqueue risk link recompute:", err),
     );
   });
+
+  // Tell a named approver once the risk is committed, as the REST create does.
+  if (newRisk.risk_approval) {
+    ctx.transaction.afterCommit(() => {
+      void notifyNewRiskApprover(ctx.organizationId, ctx.requesterId, newRisk).catch((err) =>
+        logger.error("Failed to send risk approver notification:", err),
+      );
+    });
+  }
 
   // ═══════════════════════════════════════════════════════
   // 2. Auto-create a review task for the risk owner

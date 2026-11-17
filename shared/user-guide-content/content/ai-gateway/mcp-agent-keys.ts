@@ -14,7 +14,7 @@ export const mcpAgentKeysContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'You\'ll find them at **AI Gateway > Agent Control > Agent keys**.',
+      text: 'You\'ll find them at **Enforce > Agent controls > Agent keys**.',
     },
     {
       type: 'paragraph',

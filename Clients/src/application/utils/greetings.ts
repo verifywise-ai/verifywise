@@ -207,6 +207,18 @@ export const getSpecialDayGreeting = (
 };
 
 /**
+ * Plain time-of-day greeting (no special days, no late-night jokes): every
+ * value is a translated dictionary key, for screens that translate it.
+ */
+export const getDaypartGreeting = (now: Date = new Date()): string => {
+  const hour = now.getHours();
+  if (hour >= 5 && hour < 12) return "Good morning";
+  if (hour >= 12 && hour < 17) return "Good afternoon";
+  if (hour >= 17 && hour < 22) return "Good evening";
+  return "Good night";
+};
+
+/**
  * Get time-based greeting with special occasions
  */
 export const getTimeBasedGreeting = (

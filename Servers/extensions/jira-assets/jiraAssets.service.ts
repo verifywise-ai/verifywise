@@ -2,13 +2,23 @@ import { QueryTypes, Transaction } from "sequelize";
 import { sequelize } from "../../database/db";
 import { encryptText, decryptText } from "../../tools/createSecureValue";
 import {
+  JIRA_DEPLOYMENT_TYPES,
   JiraAssetsClient,
+  JiraDeploymentType,
   JiraObject,
   JiraUpstreamError,
+  jiraId,
   MAX_PAGES,
   PAGE_SIZE,
   WORKER_SYNC_DEADLINE_MS,
+  WORKSPACE_ID_PATTERN,
 } from "./jira.client";
+import {
+  assertSafeOutboundUrl,
+  UnsafeOutboundUrlError,
+  type UnsafeOutboundUrlCode,
+} from "../../utils/safeOutboundUrl";
+import { isEmail } from "../../utils/validations/email.utils";
 import { transformAttributes } from "./jira.constants";
 import { logStructured } from "../../utils/logger/fileLogger";
 import { SQL_NOW_UTC } from "../scheduledSync.utils";
@@ -23,9 +33,14 @@ import {
 import { parseIntervalHours, saveSchedule } from "../sync-engine/schedule";
 import { sqlLastFinishedRun } from "../sync-engine/sql";
 import { legacyHighRiskRole, normalizeHighRiskRoles } from "../../utils/highRiskRoles.utils";
+import { projectVisibilitySql } from "../../utils/projectVisibility.utils";
 import { getRunStatus, listRuns, type RunListRow, type RunView } from "../sync-engine/status";
 import { ABANDONED_RUN_MESSAGE, SKIPPED_RUN_MESSAGE } from "../sync-engine/types";
 import type { Readiness, RunContext, RunResult, RunStatus } from "../sync-engine/types";
+import {
+  STORED_SECRET_MESSAGES,
+  checkStoredSecrets,
+} from "../../services/extension/storedSecretGuard";
 
 export { ABANDONED_RUN_MESSAGE, errorMessage, RunSupersededError, SKIPPED_RUN_MESSAGE };
 
@@ -171,12 +186,123 @@ async function deleteFailedError(
   );
 }
 
-/** Thrown for bad input; the controller maps it to 400. */
+/**
+ * Thrown for bad input; the controller maps it to 400. One with an `i18nKey`
+ * (a server message key) is sent translated.
+ */
 export class JiraConfigValidationError extends Error {
-  constructor(message: string) {
+  readonly i18nKey?: string;
+
+  constructor(message: string, options: { i18nKey?: string } = {}) {
     super(message);
     this.name = "JiraConfigValidationError";
+    this.i18nKey = options.i18nKey;
   }
+}
+
+/** Why a connection could not be saved. Each is a key in locales/en.json. */
+type JiraConnectionMessage =
+  | "Jira base URL is required"
+  | "Workspace ID is required"
+  | "Email is required"
+  | "API Token is required"
+  | "Jira connection fields must be text"
+  | "Jira base URL must be a valid http or https URL"
+  | "Jira base URL must not include a user name or password"
+  | "Jira base URL points to an address that is not allowed"
+  | "Workspace ID may only contain letters, numbers and hyphens, up to 64 characters"
+  | "Deployment type must be cloud or datacenter"
+  | "Email must be a valid email address";
+
+function invalidConnection(i18nKey: JiraConnectionMessage): JiraConfigValidationError {
+  return new JiraConfigValidationError(i18nKey, { i18nKey });
+}
+
+/** A connection text field, trimmed. Missing, null or blank is undefined; not a string is refused. */
+function connectionText(value: unknown): string | undefined {
+  if (value === undefined || value === null) return undefined;
+  if (typeof value !== "string") throw invalidConnection("Jira connection fields must be text");
+  const trimmed = value.trim();
+  return trimmed === "" ? undefined : trimmed;
+}
+
+/** The save message for each reason the outbound URL policy refuses a URL. */
+const BASE_URL_MESSAGES: Record<UnsafeOutboundUrlCode, JiraConnectionMessage> = {
+  "invalid-url": "Jira base URL must be a valid http or https URL",
+  credentials: "Jira base URL must not include a user name or password",
+  "blocked-address": "Jira base URL points to an address that is not allowed",
+  redirect: "Jira base URL points to an address that is not allowed",
+};
+
+/**
+ * Syntax and address policy of a base URL, with no DNS lookup: the check the
+ * Jira client runs before it connects (`assertSafeOutboundUrl`: an http(s) URL
+ * with a host, no embedded credentials, and no host the policy always refuses),
+ * with its reason worded as a save message.
+ */
+function checkJiraBaseUrl(url: string): void {
+  try {
+    assertSafeOutboundUrl(url);
+  } catch (err) {
+    if (err instanceof UnsafeOutboundUrlError) throw invalidConnection(BASE_URL_MESSAGES[err.code]);
+    throw err;
+  }
+}
+
+/** The connection fields of a saved config, trimmed and checked. */
+export interface JiraConnectionFields {
+  jiraBaseUrl: string;
+  workspaceId: string;
+  email: string;
+  /** Undefined keeps the stored token (when there is one). */
+  apiToken: string | undefined;
+  deploymentType: JiraDeploymentType;
+}
+
+/**
+ * Check the connection fields of a `POST /config` body before anything is
+ * read or written. Text fields are trimmed; the base URL must be a usable
+ * http(s) URL; the workspace ID follows the client's format; the deployment
+ * type is cloud (the default when missing) or datacenter; on cloud the email
+ * must look like an email address (on Data Center the field is a user name).
+ * Whether a token is required depends on the stored row, so that is checked
+ * by the caller.
+ */
+export function parseJiraConnection(body: JiraAssetsConfig): JiraConnectionFields {
+  const jiraBaseUrl = connectionText(body.jira_base_url);
+  if (!jiraBaseUrl) throw invalidConnection("Jira base URL is required");
+  checkJiraBaseUrl(jiraBaseUrl);
+
+  const workspaceId = connectionText(body.workspace_id);
+  if (!workspaceId) throw invalidConnection("Workspace ID is required");
+  if (!WORKSPACE_ID_PATTERN.test(workspaceId)) {
+    throw invalidConnection(
+      "Workspace ID may only contain letters, numbers and hyphens, up to 64 characters",
+    );
+  }
+
+  const rawDeploymentType = body.deployment_type as unknown;
+  const deploymentType =
+    rawDeploymentType === undefined || rawDeploymentType === null
+      ? "cloud"
+      : connectionText(rawDeploymentType);
+  if (!JIRA_DEPLOYMENT_TYPES.includes(deploymentType as JiraDeploymentType)) {
+    throw invalidConnection("Deployment type must be cloud or datacenter");
+  }
+
+  const email = connectionText(body.email);
+  if (!email) throw invalidConnection("Email is required");
+  if (deploymentType === "cloud" && !isEmail(email)) {
+    throw invalidConnection("Email must be a valid email address");
+  }
+
+  return {
+    jiraBaseUrl,
+    workspaceId,
+    email,
+    apiToken: connectionText(body.api_token),
+    deploymentType: deploymentType as JiraDeploymentType,
+  };
 }
 
 /**
@@ -279,19 +405,33 @@ export async function saveConfig(
   userId: number,
   body: JiraAssetsConfig,
 ): Promise<void> {
+  const connection = parseJiraConnection(body);
   const existing = (await sequelize.query(
-    `SELECT id, api_token_encrypted FROM jira_assets_config
+    `SELECT id, api_token_encrypted, jira_base_url, workspace_id, email, deployment_type
+       FROM jira_assets_config
       WHERE organization_id = :organizationId LIMIT 1;`,
     { replacements: { organizationId }, type: QueryTypes.SELECT },
-  )) as Array<{ id: number; api_token_encrypted: string | null }>;
+  )) as Array<{ id: number; api_token_encrypted: string | null } & Record<string, unknown>>;
   const row = existing[0];
   const hasExistingToken = !!(row && row.api_token_encrypted);
 
-  if (!body.jira_base_url) throw new JiraConfigValidationError("JIRA Base URL is required");
-  if (!body.workspace_id) throw new JiraConfigValidationError("Workspace ID is required");
-  if (!body.email) throw new JiraConfigValidationError("Email is required");
-  if (!body.api_token && !hasExistingToken) {
-    throw new JiraConfigValidationError("API Token is required");
+  if (!connection.apiToken && !hasExistingToken) {
+    throw invalidConnection("API Token is required");
+  }
+  // The stored token is never kept for a changed base URL, workspace, email or
+  // deployment type (services/extension/storedSecretGuard.ts).
+  const submitted = {
+    ...body,
+    jira_base_url: connection.jiraBaseUrl,
+    workspace_id: connection.workspaceId,
+    email: connection.email,
+    api_token: connection.apiToken,
+    deployment_type: connection.deploymentType,
+  };
+  const storedToken = row && { ...row, api_token: row.api_token_encrypted };
+  const tokenCheck = checkStoredSecrets("jira-assets", storedToken, submitted, submitted);
+  if (tokenCheck.blocked) {
+    throw new JiraConfigValidationError(STORED_SECRET_MESSAGES[tokenCheck.blocked]);
   }
   if (body.sync_enabled !== undefined && typeof body.sync_enabled !== "boolean") {
     throw new JiraConfigValidationError("sync_enabled must be true or false");
@@ -303,20 +443,20 @@ export async function saveConfig(
 
   const commonReplacements = {
     organizationId,
-    jiraBaseUrl: body.jira_base_url,
-    workspaceId: body.workspace_id,
-    email: body.email,
-    deploymentType: body.deployment_type ?? "cloud",
-    selectedSchemaId: body.selected_schema_id ?? null,
-    selectedObjectTypeId: body.selected_object_type_id ?? null,
+    jiraBaseUrl: connection.jiraBaseUrl,
+    workspaceId: connection.workspaceId,
+    email: connection.email,
+    deploymentType: connection.deploymentType,
+    selectedSchemaId: parseSelectionId(body.selected_schema_id, "selected_schema_id"),
+    selectedObjectTypeId: parseSelectionId(body.selected_object_type_id, "selected_object_type_id"),
     userId,
   };
 
   // The connection and its schedule are saved together or not at all.
   await sequelize.transaction(async (transaction) => {
     if (row) {
-      if (body.api_token) {
-        const { value, iv } = encryptText(body.api_token);
+      if (connection.apiToken) {
+        const { value, iv } = encryptText(connection.apiToken);
         await sequelize.query(
           `UPDATE jira_assets_config
               SET jira_base_url = :jiraBaseUrl, workspace_id = :workspaceId, email = :email,
@@ -349,7 +489,7 @@ export async function saveConfig(
         );
       }
     } else {
-      const { value, iv } = encryptText(body.api_token as string);
+      const { value, iv } = encryptText(connection.apiToken as string);
       await sequelize.query(
         `INSERT INTO jira_assets_config
            (organization_id, jira_base_url, workspace_id, email,
@@ -414,15 +554,15 @@ export async function updateSyncSettings(
   return { sync_enabled: saved.enabled, sync_interval_hours: saved.interval_hours };
 }
 
-const JIRA_ID_PATTERN = /^[A-Za-z0-9:_-]{1,100}$/;
-
+/**
+ * A selected schema or object type id as stored: null for a cleared or
+ * missing selection (undefined, null or ""), otherwise the numeric Jira id
+ * the client accepts (jiraId). Anything else is JiraInvalidIdError (400),
+ * so no id the client would refuse is ever saved.
+ */
 function parseSelectionId(raw: unknown, field: string): string | null {
-  if (raw === null || raw === "") return null;
-  const value = typeof raw === "number" ? String(raw) : raw;
-  if (typeof value !== "string" || !JIRA_ID_PATTERN.test(value)) {
-    throw new JiraConfigValidationError(`${field} must be a Jira id or empty`);
-  }
-  return value;
+  if (raw === undefined || raw === null || raw === "") return null;
+  return jiraId(raw, field);
 }
 
 /**
@@ -575,6 +715,9 @@ function describeObject(
   attrIdToName: Record<string, string>,
 ): DescribedObject {
   const transformedAttrs = transformAttributes(jiraObj.attributes || [], attrIdToName);
+  // The fallback title and goal are stored on the project and rewritten on
+  // every sync, so they keep the original "JIRA" spelling: changing them would
+  // silently rename existing use cases.
   const name = jiraObj.label || transformedAttrs["Name"] || `JIRA-${jiraObj.objectKey}`;
   const description =
     transformedAttrs["Description / Purpose"] || transformedAttrs["Description"] || "";
@@ -928,7 +1071,8 @@ type LinkRow = { id: number; project_id: number | null; missing_in_jira_since: D
  *
  * Lock order: a project row before anything that references it. Every path
  * deletes a project through deleteProjectWithSideEffects (lock, approval
- * withdrawal, change history, delete — in that order); the core "Delete use
+ * withdrawal, change history, archive of the risks linked only to it, delete,
+ * in that order); the core "Delete use
  * case" lets it take the lock as the first statement of its transaction, and
  * this flow takes the project locks itself before any link row and passes
  * alreadyLocked. Every path takes the project lock first.
@@ -1110,11 +1254,18 @@ async function deleteUseCasesUnderClaim(
             }
           }
           // Same order as the core delete; the project is already locked.
+          // The risks linked only to this use case are archived (recorded as
+          // the Admin who asked), so they stay private once unlinked.
           const { deleted } = await deleteProjectWithSideEffects(
             projectId,
             organizationId,
             transaction,
-            { userId, alreadyLocked: true, enqueueAutomationAfterCommit: true },
+            {
+              userId,
+              alreadyLocked: true,
+              enqueueAutomationAfterCommit: true,
+              archiveRisksLinkedOnlyHere: true,
+            },
           );
           if (!deleted) {
             throw await deleteFailedError(linkIds[0], projectId, organizationId, transaction);
@@ -1364,14 +1515,54 @@ export async function runJiraSync(ctx: RunContext): Promise<RunResult> {
 // Use-case reads / delete
 // ---------------------------------------------------------------------------
 
-export async function listUseCases(organizationId: number): Promise<any[]> {
+/**
+ * Whether members may read this object type's attribute schema: it is the
+ * organization's configured object type, or the type of one of its imported
+ * use cases (`data->'objectType'->>'id'`, the id the use case Settings tab
+ * passes). Any other id would let a member make arbitrary live Jira calls
+ * with the organization's stored credentials.
+ */
+export async function isObjectTypeInUse(
+  organizationId: number,
+  objectTypeId: string,
+): Promise<boolean> {
+  const rows = (await sequelize.query(
+    `SELECT 1
+       FROM jira_assets_config c
+      WHERE c.organization_id = :organizationId
+        AND c.selected_object_type_id = :objectTypeId
+     UNION ALL
+     SELECT 1
+       FROM jira_assets_use_cases j
+      WHERE j.organization_id = :organizationId
+        AND j.data->'objectType'->>'id' = :objectTypeId
+      LIMIT 1;`,
+    { replacements: { organizationId, objectTypeId }, type: QueryTypes.SELECT },
+  )) as unknown[];
+  return rows.length > 0;
+}
+
+/**
+ * The organization's Jira-linked use cases the viewer can see, by the rule
+ * that scopes the core use case list (projectVisibilitySql): Admins every
+ * one, everyone else those they own, are a member of or reach through a
+ * group. A link whose project is gone is visible to Admins only.
+ */
+export async function listUseCases(
+  organizationId: number,
+  viewer: { userId: number; role: string },
+): Promise<any[]> {
+  const visibility = projectVisibilitySql("p", viewer);
   return (await sequelize.query(
     `SELECT j.*, p.uc_id, p.project_title AS name
        FROM jira_assets_use_cases j
   LEFT JOIN projects p ON j.project_id = p.id AND p.organization_id = :organizationId
-      WHERE j.organization_id = :organizationId
+      WHERE j.organization_id = :organizationId${visibility.sql}
       ORDER BY j.created_at DESC;`,
-    { replacements: { organizationId }, type: QueryTypes.SELECT },
+    {
+      replacements: { organizationId, ...visibility.replacements },
+      type: QueryTypes.SELECT,
+    },
   )) as any[];
 }
 

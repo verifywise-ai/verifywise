@@ -5,15 +5,16 @@
  */
 
 import { Box, Typography } from "@mui/material";
-import { Info, ShieldCheck } from "lucide-react";
+import { FileQuestion, Info, ShieldCheck } from "lucide-react";
 import { CustomizableButton } from "../../../components/button/customizable-button";
 import {
   SecurityFinding,
   SecuritySeverity,
   SecuritySummary,
 } from "../../../../domain/ai-detection/types";
-import { palette } from "../../../themes/palette";
+import { palette, radiusPx } from "../../../themes/palette";
 import { SecurityFindingRow } from "./SecurityFindingRow";
+import { hasNoModelFiles } from "../components/governanceScore";
 
 interface SecurityFindingsTabProps {
   summary: SecuritySummary | null;
@@ -40,6 +41,10 @@ export function SecurityFindingsTab({
   repositoryOwner,
   repositoryName,
 }: SecurityFindingsTabProps) {
+  // Nothing to check: say so instead of "No security issues detected". Same
+  // check as the tab badge, so the two agree with or without a severity filter.
+  const noModelFiles = hasNoModelFiles(summary);
+
   return (
     <Box sx={{ mt: "8px" }}>
       <Typography sx={{ fontSize: "13px", color: palette.text.tertiary, mb: 2 }}>
@@ -60,7 +65,7 @@ export function SecurityFindingsTab({
             sx={{
               backgroundColor: palette.background.main,
               border: `1px solid ${palette.border.dark}`,
-              borderRadius: "4px",
+              borderRadius: radiusPx.sm,
               p: 2,
               textAlign: "center",
             }}
@@ -76,7 +81,7 @@ export function SecurityFindingsTab({
             sx={{
               backgroundColor: palette.status.error.bg,
               border: `1px solid ${palette.status.error.border}`,
-              borderRadius: "4px",
+              borderRadius: radiusPx.sm,
               p: 2,
               textAlign: "center",
               cursor: "pointer",
@@ -101,7 +106,7 @@ export function SecurityFindingsTab({
             sx={{
               backgroundColor: palette.risk.high.bg,
               border: `1px solid ${palette.risk.high.border}`,
-              borderRadius: "4px",
+              borderRadius: radiusPx.sm,
               p: 2,
               textAlign: "center",
               cursor: "pointer",
@@ -123,7 +128,7 @@ export function SecurityFindingsTab({
             sx={{
               backgroundColor: palette.status.warning.bg,
               border: `1px solid ${palette.status.warning.border}`,
-              borderRadius: "4px",
+              borderRadius: radiusPx.sm,
               p: 2,
               textAlign: "center",
               cursor: "pointer",
@@ -146,7 +151,7 @@ export function SecurityFindingsTab({
             sx={{
               backgroundColor: palette.status.info.bg,
               border: `1px solid ${palette.status.info.border}`,
-              borderRadius: "4px",
+              borderRadius: radiusPx.sm,
               p: 2,
               textAlign: "center",
               cursor: "pointer",
@@ -173,12 +178,35 @@ export function SecurityFindingsTab({
           Security findings
         </Typography>
 
-        {findings.length === 0 ? (
+        {noModelFiles ? (
+          <Box
+            sx={{
+              backgroundColor: palette.background.accent,
+              border: `1px solid ${palette.border.dark}`,
+              borderRadius: radiusPx.sm,
+              p: "16px",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              textAlign: "center",
+              gap: "8px",
+            }}
+          >
+            <FileQuestion size={32} color={palette.text.tertiary} strokeWidth={1.5} />
+            <Typography sx={{ fontSize: "13px", fontWeight: 500, color: palette.text.primary }}>
+              No model files found in this repository
+            </Typography>
+            <Typography sx={{ fontSize: "13px", color: palette.text.tertiary }}>
+              This tab checks serialized model files for malicious code. The scan found none, so
+              there was nothing to check.
+            </Typography>
+          </Box>
+        ) : findings.length === 0 ? (
           <Box
             sx={{
               backgroundColor: palette.status.success.bg,
               border: `1px solid ${palette.status.success.border}`,
-              borderRadius: "4px",
+              borderRadius: radiusPx.sm,
               p: 4,
               textAlign: "center",
             }}
@@ -274,7 +302,7 @@ export function SecurityFindingsTab({
       </Box>
 
       {/* Model files scanned info */}
-      {summary && (
+      {summary && !noModelFiles && (
         <Box sx={{ mt: 4 }}>
           <Typography sx={{ fontSize: "13px", color: palette.text.tertiary }}>
             {summary.model_files_scanned} model{" "}

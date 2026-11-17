@@ -1,17 +1,25 @@
-import { brand, text, background, border as borderPalette } from "../../../themes/palette";
+import {
+  brand,
+  text,
+  background,
+  border as borderPalette,
+  palette as vwPalette,
+  radiusPx,
+} from "../../../themes/palette";
+import { chartTheme } from "../../../themes/chartTheme";
 export const projectCardStyle = {
   border: `1px solid ${borderPalette.dark}`,
-  borderRadius: "4px",
+  borderRadius: radiusPx.sm,
   padding: "16px",
   minWidth: 300,
   width: "100%",
   maxWidth: "100&",
-  background: "linear-gradient(135deg, #FEFFFE 0%, #F8F9FA 100%)",
+  background: `linear-gradient(135deg, ${vwPalette.background.main} 0%, ${vwPalette.background.alt} 100%)`,
 };
 
 export const projectCardTitleStyle = {
   fontSize: 13,
-  color: "#2D3748",
+  color: vwPalette.text.secondary,
   fontWeight: 600,
 };
 
@@ -22,7 +30,7 @@ export const frameworkLogo = {
 };
 
 export const progressStyle = {
-  color: "#8594AC",
+  color: vwPalette.text.accent,
   fontSize: 11,
   fontWeight: 400,
 };
@@ -34,7 +42,7 @@ export const projectCardSpecsStyle = {
   alignItems: "center",
 };
 
-export const projectCardSpecKeyStyle = { fontSize: 11, color: "#8594AC" };
+export const projectCardSpecKeyStyle = { fontSize: 11, color: vwPalette.text.accent };
 
 export const projectCardSpecValueStyle = { fontSize: 13, color: `${text.secondary}` };
 
@@ -47,33 +55,33 @@ export const viewProjectButtonStyle = {
   "mt": 1,
   "height": 34,
   "&:hover": {
-    backgroundColor: "#0e5c47",
+    backgroundColor: vwPalette.brand.primaryHover,
   },
   "border": "none",
 };
 
 export const euAiActChipStyle = {
-  "backgroundColor": "#014576",
+  "backgroundColor": chartTheme.frameworkChip,
   "color": `${background.main}`,
   "fontWeight": 600,
   "fontSize": 11,
   "height": 28,
-  "borderRadius": "4px",
+  "borderRadius": radiusPx.sm,
   "mb": 1,
   "textTransform": "none",
   "minWidth": "auto",
   "padding": "0 6px 0 10px",
   "boxShadow": "none",
   "&:hover": {
-    backgroundColor: "#014576",
+    backgroundColor: chartTheme.frameworkChip,
     boxShadow: "none",
   },
   "&:active": {
-    backgroundColor: "#014576",
+    backgroundColor: chartTheme.frameworkChip,
     boxShadow: "none",
   },
   "&:focus": {
-    backgroundColor: "#014576",
+    backgroundColor: chartTheme.frameworkChip,
     boxShadow: "none",
   },
   "& .MuiButton-endIcon": {
@@ -82,27 +90,27 @@ export const euAiActChipStyle = {
 };
 
 export const iso42001ChipStyle = {
-  "backgroundColor": "#0ca5af",
+  "backgroundColor": chartTheme.entity.teal,
   "color": `${background.main}`,
   "fontWeight": 600,
   "fontSize": 11,
   "height": 28,
-  "borderRadius": "4px",
+  "borderRadius": radiusPx.sm,
   "mb": 1,
   "textTransform": "none",
   "minWidth": "auto",
   "padding": "0 6px 0 10px",
   "boxShadow": "none",
   "&:hover": {
-    backgroundColor: "#0ca5af",
+    backgroundColor: chartTheme.entity.teal,
     boxShadow: "none",
   },
   "&:active": {
-    backgroundColor: "#0ca5af",
+    backgroundColor: chartTheme.entity.teal,
     boxShadow: "none",
   },
   "&:focus": {
-    backgroundColor: "#0ca5af",
+    backgroundColor: chartTheme.entity.teal,
     boxShadow: "none",
   },
   "& .MuiButton-endIcon": {

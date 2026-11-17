@@ -3,7 +3,7 @@ import type { GridProps } from "@mui/material";
 import { Gauge as SpeedGreenIcon } from "lucide-react";
 
 import { RiskMetrics } from "../../../../domain/interfaces/i.riskSummary";
-import { background, status } from "../../../themes/palette";
+import { background, status, palette as vwPalette } from "../../../themes/palette";
 
 interface RiskMetricsCardProps {
   metrics: RiskMetrics;
@@ -35,8 +35,8 @@ const gridItemProps = {
 
 export function RiskMetricsCard({ metrics, velocity }: RiskMetricsCardProps) {
   const getVelocityColor = (velocity: number): string => {
-    if (velocity > 0) return "#EF4444"; // Red - increasing risks
-    if (velocity < 0) return "#10B981"; // Green - decreasing risks
+    if (velocity > 0) return vwPalette.riskMark.critical; // Red - increasing risks
+    if (velocity < 0) return vwPalette.status.success.strong; // Green - decreasing risks
     return `${status.default.text}`; // Gray - stable
   };
 
@@ -54,7 +54,7 @@ export function RiskMetricsCard({ metrics, velocity }: RiskMetricsCardProps) {
           fontSize: 16,
           fontWeight: 600,
           marginBottom: 2,
-          color: "#111827",
+          color: vwPalette.text.primary,
           display: "flex",
           alignItems: "center",
           gap: 1,
@@ -118,7 +118,7 @@ export function RiskMetricsCard({ metrics, velocity }: RiskMetricsCardProps) {
               variant="h6"
               sx={{
                 fontWeight: 700,
-                color: "#111827",
+                color: vwPalette.text.primary,
                 fontSize: 18,
               }}
             >
@@ -148,7 +148,7 @@ export function RiskMetricsCard({ metrics, velocity }: RiskMetricsCardProps) {
                 variant="h6"
                 sx={{
                   fontWeight: 700,
-                  color: "#111827",
+                  color: vwPalette.text.primary,
                   fontSize: 18,
                 }}
               >
@@ -179,7 +179,7 @@ export function RiskMetricsCard({ metrics, velocity }: RiskMetricsCardProps) {
                 variant="h6"
                 sx={{
                   fontWeight: 700,
-                  color: "#111827",
+                  color: vwPalette.text.primary,
                   fontSize: 18,
                 }}
               >

@@ -11,6 +11,7 @@ import {
   evaluateFormula,
   firstMissingVisibleInput,
   parseFormula,
+  unmatchedCustomFieldOptions,
   validateSchemaLogic,
 } from "..";
 
@@ -82,6 +83,17 @@ describe("intake form logic cases", () => {
         expect(errors.map((e) => e.message)).toContain(message);
       }
       for (const error of errors) expect(error.message).toMatch(/^Field "/);
+    });
+  });
+  describe("unmatchedCustomFieldOptions", () => {
+    it.each(cases.unmatchedCustomFieldOptions)("$name", (c: any) => {
+      const unmatched = unmatchedCustomFieldOptions(
+        c.questionType,
+        c.questionOptions,
+        c.fieldType,
+        c.fieldOptions,
+      );
+      expect(unmatched.map((option: { value: string }) => option.value)).toEqual(c.unmatched);
     });
   });
 });

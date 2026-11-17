@@ -61,12 +61,12 @@ const upload = multer({
 /**
  * Multer error handling middleware
  */
-const handleMulterError = (err: any, _req: Request, res: Response, next: NextFunction) => {
+const handleMulterError = (err: any, req: Request, res: Response, next: NextFunction) => {
   if (err instanceof multer.MulterError) {
     if (err.code === "LIMIT_FILE_SIZE") {
       return res
         .status(413)
-        .json(STATUS_CODE[413]("File size exceeds maximum allowed size of 30MB"));
+        .json(STATUS_CODE[413](req.t!("File size exceeds maximum allowed size of 30MB")));
     }
     return res.status(400).json(STATUS_CODE[400](err.message));
   }
@@ -74,7 +74,7 @@ const handleMulterError = (err: any, _req: Request, res: Response, next: NextFun
   if (err && err.message === "UNSUPPORTED_FILE_TYPE") {
     return res
       .status(415)
-      .json(STATUS_CODE[415]("Unsupported file type. Allowed types: CSV, XLS, XLSX"));
+      .json(STATUS_CODE[415](req.t!("Unsupported file type. Allowed types: CSV, XLS, XLSX")));
   }
 
   return next(err);

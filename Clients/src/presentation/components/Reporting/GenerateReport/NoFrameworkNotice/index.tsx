@@ -1,5 +1,6 @@
 import React from "react";
 import { Box, Typography, useTheme } from "@mui/material";
+import { palette, radiusPx } from "../../../../themes/palette";
 
 /**
  * Shown on the report wizard's first page when the selected use case has no
@@ -19,9 +20,9 @@ const NoFrameworkNotice: React.FC = () => {
       sx={{
         display: "flex",
         p: "8px",
-        borderRadius: "4px",
+        borderRadius: radiusPx.sm,
         backgroundColor: theme.palette.background.fill,
-        border: "1px solid #d0d5dd",
+        border: `1px solid ${palette.border.dark}`,
       }}
     >
       <Box>

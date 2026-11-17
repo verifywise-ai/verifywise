@@ -21,8 +21,8 @@ export const de: Record<string, string> = {
   "Modalities": "Modalitäten",
   "No apps match your filters.": "Keine Apps entsprechen Ihren Filtern.",
   "No longer in index": "Nicht mehr im Index",
-  "Only administrators can change AI Trust Index notification settings.":
-    "Nur Administratoren können die Benachrichtigungseinstellungen des KI-Vertrauensindex ändern.",
+  "You do not have permission to view or change AI Trust Index notification settings.":
+    "Sie haben keine Berechtigung, die Benachrichtigungseinstellungen des KI-Vertrauensindex anzuzeigen oder zu ändern.",
   "Policy details": "Richtliniendetails",
   "Policy last updated": "Richtlinie zuletzt aktualisiert",
   "Processes biometrics": "Verarbeitet biometrische Daten",
@@ -67,8 +67,8 @@ export const fr: Record<string, string> = {
   "Modalities": "Modalités",
   "No apps match your filters.": "Aucune application ne correspond à vos filtres.",
   "No longer in index": "Plus dans l'index",
-  "Only administrators can change AI Trust Index notification settings.":
-    "Seuls les administrateurs peuvent modifier les paramètres de notification de l'index de confiance IA.",
+  "You do not have permission to view or change AI Trust Index notification settings.":
+    "Vous n'avez pas l'autorisation d'afficher ou de modifier les paramètres de notification de l'index de confiance IA.",
   "Policy details": "Détails de la politique",
   "Policy last updated": "Politique mise à jour le",
   "Processes biometrics": "Traite des données biométriques",
@@ -114,8 +114,8 @@ export const es: Record<string, string> = {
   "Modalities": "Modalidades",
   "No apps match your filters.": "Ninguna aplicación coincide con sus filtros.",
   "No longer in index": "Ya no está en el índice",
-  "Only administrators can change AI Trust Index notification settings.":
-    "Solo los administradores pueden cambiar la configuración de notificaciones del índice de confianza de IA.",
+  "You do not have permission to view or change AI Trust Index notification settings.":
+    "No tiene permiso para ver ni cambiar la configuración de notificaciones del índice de confianza de IA.",
   "Policy details": "Detalles de la política",
   "Policy last updated": "Política actualizada por última vez",
   "Processes biometrics": "Procesa datos biométricos",

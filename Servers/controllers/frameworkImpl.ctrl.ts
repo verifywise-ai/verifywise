@@ -57,19 +57,19 @@ export async function getImplById(req: Request, res: Response): Promise<any> {
   try {
     if (!frameworkId || !level || !id) {
       logger.debug(`[fw] getImplById → 400 invalid params`);
-      return res.status(400).json(STATUS_CODE[400]("Invalid parameters"));
+      return res.status(400).json(STATUS_CODE[400](req.t!("Invalid parameters")));
     }
     if (!resolveLevel(frameworkId, level)) {
       logger.debug(
         `[fw] getImplById → 404 framework not found (frameworkId=${frameworkId}, level=${level})`,
       );
-      return res.status(404).json(STATUS_CODE[404]("Framework not found"));
+      return res.status(404).json(STATUS_CODE[404](req.t!("Framework not found")));
     }
 
     const row = await getImplByIdQuery(frameworkId, level, id, req.organizationId!);
     if (!row) {
       logger.debug(`[fw] getImplById → 404 row not found`);
-      return res.status(404).json(STATUS_CODE[404]("Record not found"));
+      return res.status(404).json(STATUS_CODE[404](req.t!("Record not found")));
     }
     logger.debug(
       `[fw] getImplById → 200 status=${(row as any).status} risks=${((row as any).risks || []).length}`,
@@ -116,11 +116,11 @@ export async function getImplRisks(req: Request, res: Response): Promise<any> {
   try {
     if (!frameworkId || !level || !id) {
       logger.debug(`[fw] getImplRisks → 400 invalid params`);
-      return res.status(400).json(STATUS_CODE[400]("Invalid parameters"));
+      return res.status(400).json(STATUS_CODE[400](req.t!("Invalid parameters")));
     }
     if (!resolveLevel(frameworkId, level)) {
       logger.debug(`[fw] getImplRisks → 404 framework not resolvable`);
-      return res.status(404).json(STATUS_CODE[404]("Framework not found"));
+      return res.status(404).json(STATUS_CODE[404](req.t!("Framework not found")));
     }
 
     const risks = await getImplLinkedRisksQuery(frameworkId, level, id, req.organizationId!);
@@ -175,12 +175,12 @@ export async function updateImpl(req: RequestWithFile, res: Response): Promise<a
   try {
     if (!frameworkId || !level || !id) {
       await transaction.rollback();
-      return res.status(400).json(STATUS_CODE[400]("Invalid parameters"));
+      return res.status(400).json(STATUS_CODE[400](req.t!("Invalid parameters")));
     }
     const resolved = resolveLevel(frameworkId, level);
     if (!resolved) {
       await transaction.rollback();
-      return res.status(404).json(STATUS_CODE[404]("Framework not found"));
+      return res.status(404).json(STATUS_CODE[404](req.t!("Framework not found")));
     }
     const uploadLabel = resolved.cfg.source_labels[resolved.tables.entityType];
     if (!uploadLabel) {
@@ -199,7 +199,7 @@ export async function updateImpl(req: RequestWithFile, res: Response): Promise<a
     );
     if (!context) {
       await transaction.rollback();
-      return res.status(404).json(STATUS_CODE[404]("Record not found"));
+      return res.status(404).json(STATUS_CODE[404](req.t!("Record not found")));
     }
 
     const body = req.body as Record<string, string> & { user_id?: string };
@@ -300,7 +300,7 @@ export async function getFrameworkTree(req: Request, res: Response): Promise<any
   try {
     if (!frameworkId || !projectId) {
       logger.debug(`[fw] getFrameworkTree → 400 invalid params`);
-      return res.status(400).json(STATUS_CODE[400]("Invalid parameters"));
+      return res.status(400).json(STATUS_CODE[400](req.t!("Invalid parameters")));
     }
 
     const pfRow = (await sequelize.query(
@@ -321,13 +321,15 @@ export async function getFrameworkTree(req: Request, res: Response): Promise<any
     const projectFrameworkId = pfRow[0]?.[0]?.id;
     if (!projectFrameworkId) {
       logger.debug(`[fw] getFrameworkTree → 404 framework not attached to project`);
-      return res.status(404).json(STATUS_CODE[404]("Framework not attached to this project"));
+      return res
+        .status(404)
+        .json(STATUS_CODE[404](req.t!("Framework not attached to this project")));
     }
 
     const cfg = getConfigById(frameworkId);
     if (!cfg) {
       logger.debug(`[fw] getFrameworkTree → 404 no structure for frameworkId=${frameworkId}`);
-      return res.status(404).json(STATUS_CODE[404]("Framework not found"));
+      return res.status(404).json(STATUS_CODE[404](req.t!("Framework not found")));
     }
     logger.debug(
       `[fw] getFrameworkTree resolved: key=${cfg.key} type=${cfg.framework_type} pfId=${projectFrameworkId}`,
@@ -336,7 +338,7 @@ export async function getFrameworkTree(req: Request, res: Response): Promise<any
     const tree = await getFrameworkTreeQuery(frameworkId, projectFrameworkId, req.organizationId!);
     if (!tree) {
       logger.debug(`[fw] getFrameworkTree → 404 tree query returned null`);
-      return res.status(404).json(STATUS_CODE[404]("Framework not found"));
+      return res.status(404).json(STATUS_CODE[404](req.t!("Framework not found")));
     }
     const totalL2 = tree.reduce((sum, l1) => sum + ((l1 as any).children?.length || 0), 0);
     const totalL3 = tree.reduce(
@@ -410,7 +412,7 @@ export async function getFrameworkDashboard(req: Request, res: Response): Promis
 
   try {
     if (!frameworkId || !projectFrameworkId) {
-      return res.status(400).json(STATUS_CODE[400]("Invalid parameters"));
+      return res.status(400).json(STATUS_CODE[400](req.t!("Invalid parameters")));
     }
 
     const pfRow = (await sequelize.query(
@@ -429,7 +431,9 @@ export async function getFrameworkDashboard(req: Request, res: Response): Promis
     )) as [Array<{ id: number }>, unknown];
 
     if (!pfRow[0]?.[0]?.id) {
-      return res.status(404).json(STATUS_CODE[404]("Framework not attached to this project"));
+      return res
+        .status(404)
+        .json(STATUS_CODE[404](req.t!("Framework not attached to this project")));
     }
 
     const counts = await getFrameworkDashboardQuery(
@@ -438,7 +442,7 @@ export async function getFrameworkDashboard(req: Request, res: Response): Promis
       req.organizationId!,
     );
     if (!counts) {
-      return res.status(404).json(STATUS_CODE[404]("Framework not found"));
+      return res.status(404).json(STATUS_CODE[404](req.t!("Framework not found")));
     }
 
     await logSuccess({

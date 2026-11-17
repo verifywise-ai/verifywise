@@ -78,7 +78,17 @@ export async function rejectRequest({
   return response;
 }
 
-export async function withdrawRequest({ id }: { id: number }): Promise<any> {
-  const response = await apiServices.post(`/approval-requests/${id}/withdraw`, {});
+export async function withdrawRequest({
+  id,
+  suppressGlobalErrorToast,
+}: {
+  id: number;
+  /** Skip the global error toast; the caller shows its own message. */
+  suppressGlobalErrorToast?: boolean;
+}): Promise<any> {
+  const url = `/approval-requests/${id}/withdraw`;
+  const response = suppressGlobalErrorToast
+    ? await apiServices.post(url, {}, { suppressGlobalErrorToast })
+    : await apiServices.post(url, {});
   return response;
 }

@@ -1,13 +1,15 @@
 import { describe, it, expect, jest, beforeEach } from "@jest/globals";
 import { Request, Response } from "express";
 import authorize from "../accessControl.middleware";
-import { roleHasPermission } from "../../utils/rolePermissions.utils";
+import { requestHasPermission } from "../../utils/rolePermissions.utils";
 
 jest.mock("../../utils/rolePermissions.utils", () => ({
-  roleHasPermission: jest.fn(),
+  requestHasPermission: jest.fn(),
 }));
 
-const mockRoleHasPermission = roleHasPermission as jest.MockedFunction<typeof roleHasPermission>;
+const mockRoleHasPermission = requestHasPermission as jest.MockedFunction<
+  typeof requestHasPermission
+>;
 
 function createMockReq(role?: string): Partial<Request> {
   // The i18nMiddleware always runs before access-control middleware in the
@@ -29,6 +31,7 @@ describe("accessControl.middleware (authorize)", () => {
 
   beforeEach(() => {
     next = jest.fn();
+    mockRoleHasPermission.mockReset();
     // Suppress expected console.error from "no role" test path
     jest.spyOn(console, "error").mockImplementation(() => {});
   });
@@ -37,30 +40,11 @@ describe("accessControl.middleware (authorize)", () => {
     jest.restoreAllMocks();
   });
 
-  it("should call next() when role is in allowedRoles", () => {
-    const req = createMockReq("Admin");
-    const res = createMockRes();
-
-    authorize(["Admin"])(req as Request, res as Response, next);
-
-    expect(next).toHaveBeenCalled();
-    expect(res.status).not.toHaveBeenCalled();
-  });
-
-  it("should allow when role is one of multiple allowed roles", () => {
-    const req = createMockReq("Editor");
-    const res = createMockRes();
-
-    authorize(["Admin", "Editor"])(req as Request, res as Response, next);
-
-    expect(next).toHaveBeenCalled();
-  });
-
-  it("should return 401 when no role is set on request", () => {
+  it("should return 401 when no role is set on request", async () => {
     const req = createMockReq(undefined);
     const res = createMockRes();
 
-    authorize(["Admin"])(req as Request, res as Response, next);
+    await authorize("risks.edit")(req as Request, res as Response, next);
 
     expect(res.status).toHaveBeenCalledWith(401);
     expect(res.json).toHaveBeenCalledWith({
@@ -68,33 +52,8 @@ describe("accessControl.middleware (authorize)", () => {
       data: "Authentication required",
     });
     expect(next).not.toHaveBeenCalled();
+    expect(mockRoleHasPermission).not.toHaveBeenCalled();
   });
-
-  it("should return 403 when role is not in allowed list", () => {
-    const req = createMockReq("Auditor");
-    const res = createMockRes();
-
-    authorize(["Admin", "Editor"])(req as Request, res as Response, next);
-
-    expect(res.status).toHaveBeenCalledWith(403);
-    expect(res.json).toHaveBeenCalledWith({
-      message: "Forbidden",
-      data: "Access denied",
-    });
-    expect(next).not.toHaveBeenCalled();
-  });
-
-  it.each(["Admin", "Reviewer", "Editor", "Auditor"])(
-    "should allow %s when all roles are permitted",
-    (role) => {
-      const req = createMockReq(role);
-      const res = createMockRes();
-
-      authorize(["Admin", "Reviewer", "Editor", "Auditor"])(req as Request, res as Response, next);
-
-      expect(next).toHaveBeenCalled();
-    },
-  );
 
   describe("permission keys (issue #4588)", () => {
     beforeEach(() => {
@@ -108,7 +67,7 @@ describe("accessControl.middleware (authorize)", () => {
 
       await authorize("risks.edit")(req as Request, res as Response, next);
 
-      expect(mockRoleHasPermission).toHaveBeenCalledWith(1, "AI Engineer", "risks.edit");
+      expect(mockRoleHasPermission).toHaveBeenCalledWith(req, "risks.edit");
       expect(next).toHaveBeenCalled();
       expect(res.status).not.toHaveBeenCalled();
     });
@@ -125,14 +84,14 @@ describe("accessControl.middleware (authorize)", () => {
       expect(next).not.toHaveBeenCalled();
     });
 
-    it("should pass null organizationId when the request has none", async () => {
+    it("should hand the whole request to the resolver (role, org, super admin)", async () => {
       mockRoleHasPermission.mockResolvedValue(true);
-      const req = createMockReq("SuperAdmin") as any;
+      const req = { ...createMockReq("SuperAdmin"), isSuperAdmin: true } as any;
       const res = createMockRes();
 
       await authorize("auditLedger.super")(req as Request, res as Response, next);
 
-      expect(mockRoleHasPermission).toHaveBeenCalledWith(null, "SuperAdmin", "auditLedger.super");
+      expect(mockRoleHasPermission).toHaveBeenCalledWith(req, "auditLedger.super");
       expect(next).toHaveBeenCalled();
     });
 

@@ -24,7 +24,7 @@ import {
 import { ChevronDown as WhiteDownArrowIcon } from "lucide-react";
 import { getStatusColor } from "../../pages/ISO/style";
 import { IStatusDropdownProps } from "../../../domain/interfaces/i.widget";
-import { text, background } from "../../themes/palette";
+import { text, background, radiusPx } from "../../themes/palette";
 
 const STATUS_OPTIONS = [
   "Not started",
@@ -42,8 +42,7 @@ const StatusDropdown: React.FC<IStatusDropdownProps> = ({
   onStatusChange,
   disabled = false,
   size = "small",
-  allowedRoles = [],
-  userRole = "",
+  canEdit = true,
 }) => {
   const theme = useTheme();
   const [isUpdating, setIsUpdating] = useState(false);
@@ -52,8 +51,6 @@ const StatusDropdown: React.FC<IStatusDropdownProps> = ({
   const normalizedStatus = currentStatus || "Not started";
   const statusColor = getStatusColor(normalizedStatus);
 
-  // Check if user has permission to edit
-  const canEdit = allowedRoles.length === 0 || allowedRoles.includes(userRole);
   const isDisabled = disabled || !canEdit;
 
   const handleStatusChange = async (event: SelectChangeEvent<string>) => {
@@ -153,7 +150,7 @@ const StatusDropdown: React.FC<IStatusDropdownProps> = ({
         "fontSize": fontSize,
         "backgroundColor": statusColor,
         "color": `${background.main}`,
-        "borderRadius": "4px",
+        "borderRadius": radiusPx.sm,
         "& .MuiSelect-select": {
           padding: padding,
           display: "flex",

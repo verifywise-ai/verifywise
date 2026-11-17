@@ -239,9 +239,9 @@ assert results.passed, f"Failed: {[m.name for m in results.metrics if not m.pass
     {
       type: 'ordered-list',
       items: [
-        { text: '**Project ID**: Open LLM Evals in the sidebar, click on your project. The ID is in the URL.' },
+        { text: '**Project ID**: Open **Enforce > LLM Evals** in the sidebar and click on your project. The ID is in the URL.' },
         { text: '**Dataset ID**: Go to the Datasets tab in your project. Click any dataset to see its ID.' },
-        { text: '**API token**: Go to Settings > API tokens in the main VerifyWise sidebar.' },
+        { text: '**API token**: Go to **Workspace > Settings** in the sidebar, then API tokens.' },
       ],
     },
     {

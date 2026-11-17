@@ -10,8 +10,7 @@ import ListStateWrapper from "../../ListStateWrapper";
 import StandardModal from "../StandardModal";
 import StandardTableHead from "../../Table/StandardTableHead";
 import singleTheme from "../../../themes/v1SingleTheme";
-import allowedRoles from "../../../../application/constants/permissions";
-import { useAuth } from "../../../../application/hooks/useAuth";
+import { useCanCheck } from "../../../../application/hooks/useCan";
 import useFormattedDate from "../../../../application/hooks/useFormattedDate";
 import { useTranslation } from "../../../../application/hooks/useTranslation";
 import {
@@ -97,10 +96,10 @@ const TrainingAssignmentsModal: FC<TrainingAssignmentsModalProps> = ({
   trainingId,
   trainingName,
 }) => {
-  const { userRoleName } = useAuth();
+  const can = useCanCheck();
   const { t } = useTranslation();
   const formatDate = useFormattedDate();
-  const canEdit = allowedRoles.training.edit.includes(userRoleName);
+  const canEdit = can("training.edit");
 
   const { users, loading: usersLoading, error: usersError } = useUsers();
   const { data, isLoading, isError } = useTrainingAssignments(trainingId);

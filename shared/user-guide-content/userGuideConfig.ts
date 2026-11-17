@@ -45,7 +45,7 @@ export const collections: Collection[] = [
     title: 'Getting started',
     description: 'Learn the basics of VerifyWise and get up and running quickly with your AI governance journey.',
     icon: 'Rocket',
-    articleCount: 4,
+    articleCount: 5,
     articles: [
       {
         id: 'welcome',
@@ -64,6 +64,12 @@ export const collections: Collection[] = [
         title: 'Navigating the dashboard',
         description: 'Understand the main dashboard and how to find what you need.',
         keywords: ['dashboard', 'navigation', 'interface', 'home'],
+      },
+      {
+        id: 'home',
+        title: 'Home',
+        description: 'See what needs your attention today and where each item comes from.',
+        keywords: ['home', 'today', 'queue', 'needs attention', 'approvals', 'tasks', 'review', 'counts', 'get started', 'start here'],
       },
       {
         id: 'quick-start',
@@ -96,7 +102,7 @@ export const collections: Collection[] = [
         id: 'intake-form-fields',
         title: 'Intake form fields',
         description: 'Every intake form field type, its settings and what is checked when a form is submitted.',
-        keywords: ['intake', 'field', 'field type', 'short text', 'long text', 'email', 'url', 'number', 'date', 'dropdown', 'multi-select', 'checkbox', 'calculated', 'validation', 'required', 'options', 'placeholder', 'help text', 'guidance', 'risk dimension'],
+        keywords: ['intake', 'field', 'field type', 'short text', 'long text', 'email', 'url', 'number', 'date', 'dropdown', 'multi-select', 'checkbox', 'calculated', 'validation', 'required', 'options', 'placeholder', 'help text', 'guidance', 'risk dimension', 'custom field', 'map to entity field'],
       },
       {
         id: 'intake-calculated-values',
@@ -126,7 +132,7 @@ export const collections: Collection[] = [
         id: 'ai-apps',
         title: 'Managing the AI apps inventory',
         description: 'Track the AI applications your teams use, with owners, approvals, policies, and risk.',
-        keywords: ['ai app', 'application', 'inventory', 'shadow ai', 'approval', 'governance'],
+        keywords: ['ai app', 'application', 'inventory', 'shadow ai', 'approval', 'governance', 'custom field'],
       },
       {
         id: 'model-lifecycle',
@@ -323,8 +329,8 @@ export const collections: Collection[] = [
       {
         id: 'risk-scoring',
         title: 'Risk scoring',
-        description: 'Understand the AI Governance Risk Score, LLM-enhanced analysis, and suggested risks.',
-        keywords: ['risk', 'score', 'grade', 'agrs', 'dimension', 'llm', 'analysis', 'suggested', 'governance'],
+        description: 'Understand the governance score, partial scores, LLM-enhanced analysis, and suggested risks.',
+        keywords: ['risk', 'score', 'grade', 'agrs', 'dimension', 'llm', 'analysis', 'suggested', 'governance', 'governance score', 'partial', 'recalculate'],
       },
       {
         id: 'repositories',
@@ -390,7 +396,7 @@ export const collections: Collection[] = [
     title: 'Compliance frameworks',
     description: 'Stay compliant with AI regulations including EU AI Act, ISO 42001, and more.',
     icon: 'Shield',
-    articleCount: 9,
+    articleCount: 10,
     articles: [
       {
         id: 'assessments',
@@ -403,6 +409,12 @@ export const collections: Collection[] = [
         title: 'Adding frameworks',
         description: 'Add any of the 25 built-in frameworks to your organization or a use case, and work through their requirements.',
         keywords: ['framework', 'add framework', 'remove framework', 'manage frameworks', 'organizational', 'use case', 'soc 2', 'gdpr', 'ccpa', 'dora', 'hipaa', 'pci-dss', 'cis controls', 'nist csf', 'cybersecurity', 'nyc local law 144', 'altai', 'oecd', 'ftc', 'colorado', 'texas', 'quebec', 'pdpl', 'data governance', 'ai ethics', 'custom framework', 'requirement'],
+      },
+      {
+        id: 'framework-import',
+        title: 'Importing your own framework',
+        description: 'Import your own framework from an Excel file, add it to use cases and assess it topic by topic.',
+        keywords: ['framework import', 'import framework', 'excel', 'xlsx', 'spreadsheet', 'template', 'custom framework', 'internal policy', 'topics', 'subtopics', 're-import', 'retired', 'extension', 'use case', 'assessment'],
       },
       {
         id: 'eu-ai-act',
@@ -469,15 +481,15 @@ export const collections: Collection[] = [
       },
       {
         id: 'policy-approval',
-        title: 'Policy templates',
-        description: 'Use pre-built templates to create common governance policies.',
-        keywords: ['template', 'pre-built', 'ethics', 'compliance', 'starter'],
+        title: 'Policy approval',
+        description: 'Submit policies for approval through an approval workflow, or approve them as an Admin when there is none.',
+        keywords: ['approval', 'approve', 'submit', 'workflow', 'reject', 'withdraw', 'under review', 'approved', 'publish', 'status'],
       },
       {
         id: 'policy-templates',
         title: 'Policy templates library',
-        description: 'Browse, filter and create policies from the full template library with categories, tags and the rich text editor.',
-        keywords: ['template', 'library', 'category', 'filter', 'group', 'editor', 'rich text', 'tiptap', 'copy', 'customize'],
+        description: 'Browse the built-in policy templates, keep your organization\'s own templates, and create policies from either.',
+        keywords: ['template', 'library', 'category', 'filter', 'group', 'editor', 'rich text', 'copy', 'duplicate', 'save as template', 'our templates', 'system templates', 'customize'],
       },
     ],
   },
@@ -551,8 +563,8 @@ export const collections: Collection[] = [
       {
         id: 'extensions',
         title: 'Extensions',
-        description: 'Enable, configure and disable the built-in extensions: Slack, MLflow, Azure AI Foundry, Model Lifecycle, Risk Import, Jira Assets, Jira incidents and Dataset Bulk Upload.',
-        keywords: ['extension', 'extensions', 'enable', 'disable', 'configure', 'integration', 'slack', 'mlflow', 'azure ai foundry', 'model lifecycle', 'risk import', 'excel', 'jira', 'jira assets', 'jira incidents', 'incident sync', 'dataset bulk upload', 'bulk upload', 'plugin', 'marketplace'],
+        description: 'Enable, configure and disable the built-in extensions: Slack, MLflow, Azure AI Foundry, Model lifecycle, Risk import, Jira Assets, Jira incidents, Dataset bulk upload and Framework import.',
+        keywords: ['extension', 'extensions', 'enable', 'disable', 'configure', 'integration', 'slack', 'mlflow', 'azure ai foundry', 'model lifecycle', 'risk import', 'excel', 'jira', 'jira assets', 'jira incidents', 'incident sync', 'dataset bulk upload', 'bulk upload', 'framework import', 'plugin', 'marketplace'],
       },
     ],
   },
@@ -727,7 +739,7 @@ export const collections: Collection[] = [
     title: 'Settings & configuration',
     description: 'Configure VerifyWise to match your organization\'s needs.',
     icon: 'Settings',
-    articleCount: 5,
+    articleCount: 6,
     articles: [
       {
         id: 'organization-settings',
@@ -743,9 +755,15 @@ export const collections: Collection[] = [
       },
       {
         id: 'role-configuration',
-        title: 'Role configuration',
-        description: 'Understand the Admin, Reviewer, Editor and Auditor roles.',
-        keywords: ['role', 'permission', 'admin', 'reviewer', 'editor', 'auditor', 'access'],
+        title: 'Roles and permissions',
+        description: 'Understand the built-in roles and create custom roles with their own permissions.',
+        keywords: ['role', 'roles', 'custom role', 'permission', 'permissions', 'allow', 'deny', 'admin', 'reviewer', 'editor', 'auditor', 'access'],
+      },
+      {
+        id: 'user-groups',
+        title: 'Groups',
+        description: 'Create groups of users and give a whole team access to a use case.',
+        keywords: ['group', 'groups', 'team', 'teams', 'members', 'use case access', 'project access', 'permission'],
       },
       {
         id: 'notifications',

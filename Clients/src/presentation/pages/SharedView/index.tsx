@@ -18,6 +18,8 @@ import {
 import { Download, ShieldX } from "lucide-react";
 import { ENV_VARs } from "../../../../env.vars";
 import useFormattedDate from "../../../application/hooks/useFormattedDate";
+import { palette } from "../../themes/palette";
+import { radiusPx } from "../../themes/palette";
 
 /**
  * SharedView page component for displaying publicly shared data
@@ -155,18 +157,18 @@ const SharedView: React.FC = () => {
                 width: 64,
                 height: 64,
                 borderRadius: "50%",
-                backgroundColor: "#FFEBEE",
+                backgroundColor: palette.status.error.bg,
                 mb: 2,
               }}
             >
-              <ShieldX size={32} color="#C62828" />
+              <ShieldX size={32} color={palette.status.error.text} />
             </Box>
             <Typography
               variant="h6"
               component="h1"
               sx={{
                 fontWeight: 600,
-                color: "#C62828",
+                color: palette.status.error.text,
                 mb: 1,
               }}
             >
@@ -222,11 +224,11 @@ const SharedView: React.FC = () => {
           sx={{
             display: "inline-block",
             padding: "4px 12px",
-            borderRadius: "12px",
+            borderRadius: radiusPx.pill,
             fontSize: "12px",
             fontWeight: 500,
-            backgroundColor: value ? "#E8F5E9" : "#FFEBEE",
-            color: value ? "#2E7D32" : "#C62828",
+            backgroundColor: value ? palette.status.success.bg : palette.status.error.bg,
+            color: value ? palette.status.success.text : palette.status.error.text,
           }}
         >
           {value ? "Yes" : "No"}
@@ -237,19 +239,22 @@ const SharedView: React.FC = () => {
     // Status - show with badge
     if (key === "status") {
       const statusColors: { [key: string]: { bg: string; text: string } } = {
-        "Approved": { bg: "#E8F5E9", text: "#2E7D32" },
-        "Pending": { bg: "#FFF3E0", text: "#E65100" },
-        "Rejected": { bg: "#FFEBEE", text: "#C62828" },
-        "Under Review": { bg: "#E3F2FD", text: "#1565C0" },
+        "Approved": { bg: palette.status.success.bg, text: palette.status.success.text },
+        "Pending": { bg: palette.status.warning.bg, text: palette.status.warning.text },
+        "Rejected": { bg: palette.status.error.bg, text: palette.status.error.text },
+        "Under Review": { bg: palette.status.info.bg, text: palette.status.info.text },
       };
-      const colorScheme = statusColors[value] || { bg: "background.surface", text: "#666" };
+      const colorScheme = statusColors[value] || {
+        bg: "background.surface",
+        text: palette.text.tertiary,
+      };
       return (
         <Box
           component="span"
           sx={{
             display: "inline-block",
             padding: "4px 12px",
-            borderRadius: "12px",
+            borderRadius: radiusPx.pill,
             fontSize: "12px",
             fontWeight: 500,
             backgroundColor: colorScheme.bg,
@@ -343,8 +348,8 @@ const SharedView: React.FC = () => {
         <Paper sx={{ overflow: "hidden" }}>
           <Toolbar
             sx={{
-              backgroundColor: "#fafafa",
-              borderBottom: "1px solid #e0e0e0",
+              backgroundColor: palette.background.alt,
+              borderBottom: `1px solid ${palette.border.light}`,
               minHeight: "48px !important",
             }}
           >
@@ -411,7 +416,7 @@ const SharedView: React.FC = () => {
                   <TableBody>
                     {Object.entries(data).map(([key, value]) => (
                       <TableRow key={key} hover>
-                        <TableCell sx={{ fontWeight: 500, color: "#666" }}>
+                        <TableCell sx={{ fontWeight: 500, color: palette.text.tertiary }}>
                           {key
                             .split("_")
                             .map((word) => word.charAt(0).toUpperCase() + word.slice(1))

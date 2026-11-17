@@ -77,6 +77,12 @@ import {
 import { de as evidenceDe, fr as evidenceFr, es as evidenceEs } from "./modules/evidence";
 import { de as frameworksDe, fr as frameworksFr, es as frameworksEs } from "./modules/frameworks";
 import { de as governanceDe, fr as governanceFr, es as governanceEs } from "./modules/governance";
+import {
+  de as changeNoticeDe,
+  fr as changeNoticeFr,
+  es as changeNoticeEs,
+} from "./modules/changeNotice";
+import { de as homeQueueDe, fr as homeQueueFr, es as homeQueueEs } from "./modules/homeQueue";
 import { de as incidentsDe, fr as incidentsFr, es as incidentsEs } from "./modules/incidents";
 import {
   de as intakeLiveChecksDe,
@@ -138,6 +144,7 @@ export const translations: Record<string, Record<string, string>> = {
     ...approvalsDe,
     ...authenticationDe,
     ...automationsDe,
+    ...changeNoticeDe,
     ...dashboardDe,
     ...datasetsDe,
     ...evalsDe,
@@ -145,6 +152,7 @@ export const translations: Record<string, Record<string, string>> = {
     ...evidenceDe,
     ...frameworksDe,
     ...governanceDe,
+    ...homeQueueDe,
     ...incidentsDe,
     ...intakeLiveChecksDe,
     ...intakeLogicDe,
@@ -180,6 +188,7 @@ export const translations: Record<string, Record<string, string>> = {
     ...approvalsFr,
     ...authenticationFr,
     ...automationsFr,
+    ...changeNoticeFr,
     ...dashboardFr,
     ...datasetsFr,
     ...evalsFr,
@@ -187,6 +196,7 @@ export const translations: Record<string, Record<string, string>> = {
     ...evidenceFr,
     ...frameworksFr,
     ...governanceFr,
+    ...homeQueueFr,
     ...incidentsFr,
     ...intakeLiveChecksFr,
     ...intakeLogicFr,
@@ -222,6 +232,7 @@ export const translations: Record<string, Record<string, string>> = {
     ...approvalsEs,
     ...authenticationEs,
     ...automationsEs,
+    ...changeNoticeEs,
     ...dashboardEs,
     ...datasetsEs,
     ...evalsEs,
@@ -229,6 +240,7 @@ export const translations: Record<string, Record<string, string>> = {
     ...evidenceEs,
     ...frameworksEs,
     ...governanceEs,
+    ...homeQueueEs,
     ...incidentsEs,
     ...intakeLiveChecksEs,
     ...intakeLogicEs,

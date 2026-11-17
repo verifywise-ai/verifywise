@@ -114,11 +114,6 @@ const PRODUCTION = {
     maxRequests: 5,
     message: "Too many resend requests from this IP, please try again later",
   },
-  slackWebhookCreate: {
-    windowMinutes: 60,
-    maxRequests: 10,
-    message: "Too many webhook creation requests from this IP, please try again after an hour",
-  },
   slackWorkspaceCreate: {
     windowMinutes: 60,
     maxRequests: 10,
@@ -165,7 +160,6 @@ const RELAXED_MAX_REQUESTS: Record<string, number> = {
   passwordResetEmail: 5, // deliberately not relaxed
   inviteEmail: 5, // deliberately not relaxed
   invitationResend: 5, // deliberately not relaxed
-  slackWebhookCreate: 10, // deliberately not relaxed
   slackWorkspaceCreate: 10, // deliberately not relaxed
   riskSuggestionsAi: 10, // deliberately not relaxed — every call is a paid LLM request
   healthCheck: 100000,
@@ -229,7 +223,6 @@ describe("dev/test relaxation surface", () => {
       "passwordResetEmail",
       "inviteEmail",
       "invitationResend",
-      "slackWebhookCreate",
       "slackWorkspaceCreate",
       "intakeLiveChecksVisitor",
       "intakePrefillVisitor",

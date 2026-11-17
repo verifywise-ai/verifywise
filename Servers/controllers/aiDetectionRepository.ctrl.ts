@@ -18,12 +18,14 @@ import {
   deleteRepositoryQuery,
   updateRepositoryNextScanAtQuery,
   computeNextScanAt,
+  toRepositoryResponse,
 } from "../utils/aiDetectionRepository.utils";
 import { getScansListQuery, getActiveScanForRepoQuery } from "../utils/aiDetection.utils";
 import { startScan } from "../services/aiDetection.service";
 import { IServiceContext } from "../domain.layer/interfaces/i.aiDetection";
 import { ScheduleFrequency } from "../domain.layer/interfaces/i.aiDetectionRepository";
-import { generateWebhookSecret } from "../services/webhook.service";
+import { generateWebhookSecret, buildGitHubWebhookUrl } from "../services/webhook.service";
+import { getPublicBaseUrl } from "../utils/publicUrl.utils";
 
 import { translateError } from "../utils/i18n.utils";
 const GITHUB_SSH_PREFIX = "git@github.com:";
@@ -67,6 +69,64 @@ function parseGitHubUrl(url: string): { owner: string; name: string } | null {
   return { owner, name };
 }
 
+/** Values a repository gets for CI/CD fields that are left out or sent as null. */
+export const CI_DEFAULTS = {
+  ci_enabled: false,
+  ci_min_score: 70,
+  ci_max_critical: 0,
+  ci_post_comments: true,
+  ci_status_checks: true,
+} as const;
+
+type CiField = keyof typeof CI_DEFAULTS;
+
+/**
+ * Replace CI/CD fields sent as null with their defaults. Older clients send
+ * null for "use the default", and these legacy routes accepted that before
+ * the fields were validated. Absent fields stay absent, so partial updates
+ * leave them unchanged.
+ */
+export function applyCiDefaults<T extends Partial<Record<CiField, unknown>>>(body: T): T {
+  const result = { ...body };
+  for (const key of Object.keys(CI_DEFAULTS) as CiField[]) {
+    if (result[key] === null) {
+      (result as Record<CiField, unknown>)[key] = CI_DEFAULTS[key];
+    }
+  }
+  return result;
+}
+
+/**
+ * Validate CI/CD threshold fields. Only fields that are present are checked,
+ * so partial updates keep working. Returns an error message or null.
+ */
+export function validateCiSettings(body: {
+  ci_enabled?: unknown;
+  ci_min_score?: unknown;
+  ci_max_critical?: unknown;
+  ci_post_comments?: unknown;
+  ci_status_checks?: unknown;
+}): string | null {
+  for (const key of ["ci_enabled", "ci_post_comments", "ci_status_checks"] as const) {
+    if (body[key] !== undefined && typeof body[key] !== "boolean") {
+      return "ci_enabled, ci_post_comments and ci_status_checks must be true or false";
+    }
+  }
+  if (body.ci_min_score !== undefined) {
+    const score = body.ci_min_score;
+    if (typeof score !== "number" || !Number.isInteger(score) || score < 0 || score > 100) {
+      return "ci_min_score must be a whole number from 0 to 100";
+    }
+  }
+  if (body.ci_max_critical !== undefined) {
+    const max = body.ci_max_critical;
+    if (typeof max !== "number" || !Number.isInteger(max) || max < 0) {
+      return "ci_max_critical must be a whole number of 0 or more";
+    }
+  }
+  return null;
+}
+
 // ============================================================================
 // List Repositories
 // ============================================================================
@@ -88,7 +148,7 @@ export async function listRepositories(req: Request, res: Response): Promise<any
 
     return res.status(200).json(
       STATUS_CODE[200]({
-        repositories: result.repositories,
+        repositories: result.repositories.map((repository) => toRepositoryResponse(repository)),
         pagination: {
           total: result.total,
           page,
@@ -135,7 +195,7 @@ export async function getRepository(req: Request, res: Response): Promise<any> {
       return res.status(404).json(STATUS_CODE[404]({ message: req.t!("Repository not found") }));
     }
 
-    return res.status(200).json(STATUS_CODE[200](repository));
+    return res.status(200).json(STATUS_CODE[200](toRepositoryResponse(repository)));
   } catch (error) {
     await logFailure({
       eventType: "Read",
@@ -164,6 +224,7 @@ export async function createRepository(req: Request, res: Response): Promise<any
   });
 
   try {
+    const body = applyCiDefaults(req.body ?? {});
     const {
       repository_url,
       display_name,
@@ -175,7 +236,12 @@ export async function createRepository(req: Request, res: Response): Promise<any
       schedule_day_of_month,
       schedule_hour,
       schedule_minute,
-    } = req.body;
+      ci_enabled,
+      ci_min_score,
+      ci_max_critical,
+      ci_post_comments,
+      ci_status_checks,
+    } = body;
 
     if (!repository_url) {
       return res
@@ -251,6 +317,11 @@ export async function createRepository(req: Request, res: Response): Promise<any
       }
     }
 
+    const ciError = validateCiSettings(body);
+    if (ciError) {
+      return res.status(400).json(STATUS_CODE[400]({ message: req.t!(ciError) }));
+    }
+
     const repository = await createRepositoryQuery(
       {
         repository_url: `https://github.com/${parsed.owner}/${parsed.name}`,
@@ -265,6 +336,14 @@ export async function createRepository(req: Request, res: Response): Promise<any
         schedule_day_of_month: schedule_day_of_month ?? null,
         schedule_hour: schedule_hour ?? 2,
         schedule_minute: schedule_minute ?? 0,
+        ci_enabled: ci_enabled ?? CI_DEFAULTS.ci_enabled,
+        ci_min_score: ci_min_score ?? CI_DEFAULTS.ci_min_score,
+        ci_max_critical: ci_max_critical ?? CI_DEFAULTS.ci_max_critical,
+        ci_post_comments: ci_post_comments ?? CI_DEFAULTS.ci_post_comments,
+        ci_status_checks: ci_status_checks ?? CI_DEFAULTS.ci_status_checks,
+        // The webhook endpoint rejects every delivery until a secret exists,
+        // so a repository saved with CI/CD on gets one straight away.
+        webhook_secret: ci_enabled ? generateWebhookSecret() : null,
         created_by: req.userId!,
       },
       req.organizationId!,
@@ -279,7 +358,11 @@ export async function createRepository(req: Request, res: Response): Promise<any
       organizationId: req.organizationId!,
     });
 
-    return res.status(201).json(STATUS_CODE[201](repository));
+    // The secret was generated by this request: return it once so the editor
+    // can copy it into GitHub. Reads never include it.
+    return res
+      .status(201)
+      .json(STATUS_CODE[201](toRepositoryResponse(repository, { revealSecret: true })));
   } catch (error) {
     await logFailure({
       eventType: "Create",
@@ -318,6 +401,7 @@ export async function updateRepository(req: Request, res: Response): Promise<any
       return res.status(404).json(STATUS_CODE[404]({ message: req.t!("Repository not found") }));
     }
 
+    const body = applyCiDefaults(req.body ?? {});
     const {
       display_name,
       default_branch,
@@ -334,7 +418,12 @@ export async function updateRepository(req: Request, res: Response): Promise<any
       ci_max_critical,
       ci_post_comments,
       ci_status_checks,
-    } = req.body;
+    } = body;
+
+    const ciError = validateCiSettings(body);
+    if (ciError) {
+      return res.status(400).json(STATUS_CODE[400]({ message: req.t!(ciError) }));
+    }
 
     // Validate schedule fields if enabling
     const willBeEnabled =
@@ -354,6 +443,10 @@ export async function updateRepository(req: Request, res: Response): Promise<any
       }
     }
 
+    // Turning CI/CD on for a repository that never had a secret creates one,
+    // so webhook deliveries are not rejected.
+    const generatesSecret = ci_enabled === true && !existing.webhook_secret;
+
     const updated = await updateRepositoryQuery(
       id,
       {
@@ -371,6 +464,7 @@ export async function updateRepository(req: Request, res: Response): Promise<any
         ci_max_critical,
         ci_post_comments,
         ci_status_checks,
+        ...(generatesSecret ? { webhook_secret: generateWebhookSecret() } : {}),
         is_enabled,
       },
       req.organizationId!,
@@ -406,7 +500,10 @@ export async function updateRepository(req: Request, res: Response): Promise<any
       organizationId: req.organizationId!,
     });
 
-    return res.status(200).json(STATUS_CODE[200](updated));
+    // Only a secret generated by this request is returned, once.
+    return res
+      .status(200)
+      .json(STATUS_CODE[200](toRepositoryResponse(updated, { revealSecret: generatesSecret })));
   } catch (error) {
     await logFailure({
       eventType: "Update",
@@ -666,7 +763,7 @@ export async function generateWebhookSecretController(req: Request, res: Respons
 
     const secret = generateWebhookSecret();
 
-    await updateRepositoryQuery(id, { webhook_secret: secret } as any, req.organizationId!);
+    await updateRepositoryQuery(id, { webhook_secret: secret }, req.organizationId!);
 
     await logSuccess({
       eventType: "Update",
@@ -683,6 +780,38 @@ export async function generateWebhookSecretController(req: Request, res: Respons
       eventType: "Update",
       description: "Failed to generate webhook secret",
       functionName: "generateWebhookSecretController",
+      fileName: "aiDetectionRepository.ctrl.ts",
+      error: error as Error,
+      userId: req.userId!,
+      organizationId: req.organizationId!,
+    });
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
+  }
+}
+
+// ============================================================================
+// Webhook Config
+// ============================================================================
+
+/**
+ * The URL GitHub should send webhooks to, built from the API's public address
+ * (`getPublicBaseUrl`: API_PUBLIC_URL, then the address the browser app talks
+ * to when it is public, then FRONTEND_URL). The app passes its own API base
+ * as `api_base_url`; it is only used to build the URL returned to this caller.
+ * `is_public` is false when no address is set or the one found is not
+ * reachable from the internet, so the UI can warn before setup.
+ */
+export async function getWebhookConfigController(req: Request, res: Response): Promise<any> {
+  try {
+    const clientApiBaseUrl =
+      typeof req.query.api_base_url === "string" ? req.query.api_base_url : undefined;
+    const base = getPublicBaseUrl({ clientApiBaseUrl });
+    return res.status(200).json(STATUS_CODE[200](buildGitHubWebhookUrl(base?.url)));
+  } catch (error) {
+    await logFailure({
+      eventType: "Read",
+      description: "Failed to build webhook config",
+      functionName: "getWebhookConfigController",
       fileName: "aiDetectionRepository.ctrl.ts",
       error: error as Error,
       userId: req.userId!,

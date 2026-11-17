@@ -122,7 +122,7 @@ aside .MuiListSubheader-root {
 
 nav .selected-path .MuiListItemIcon-root svg {
   path {
-    stroke: #344054;
+    stroke: var(--vw-text-secondary, #344054);
   }
 }
 

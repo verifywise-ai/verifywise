@@ -105,6 +105,13 @@ jobs:
       - name: i18n audit (catch dictionary drift)
         run: npm run i18n:audit:strict
 
+      # de/fr are checked against en.json above; this checks en.json against the
+      # code: every server message needs a key, and no message may skip req.t.
+      - name: i18n en.json check (catch server messages without a key)
+        run: |
+          npm run test:i18n-scripts
+          npm run i18n:check-en
+
       - name: API documentation drift check
         run: npm run check:api-drift
 
@@ -239,7 +246,7 @@ jobs:
       - name: Run database-backed regression suites
         if: matrix.suite == 'regression-suites'
         run: |
-          npm run test:integration -- --testPathPatterns='tests/integration/(login|projects|tasks|vendors|workflow-audit-log|user-deletion-fks|reporting-rls-policies|report-run-visibility|framework-gap-workflow|report-scope-membership|report-scope-authorization|workflow-approval-gate|audit-ledger-retention|file-manager|approval-workflows|rate-limiting/limiter-wiring|governance-os\.cross-tenant)\.test\.ts'
+          npm run test:integration -- --testPathPatterns='tests/integration/(login|projects|tasks|vendors|workflow-audit-log|user-deletion-fks|reporting-rls-policies|report-run-visibility|framework-gap-workflow|report-scope-membership|report-scope-authorization|workflow-approval-gate|audit-ledger-retention|file-manager|approval-workflows|rate-limiting/limiter-wiring|governance-os\.cross-tenant|home-queue-sources)\.test\.ts'
 
       - name: Run deadline-summary smoke test
         if: matrix.suite == 'smoke-and-audit'

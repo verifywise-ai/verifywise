@@ -34,6 +34,7 @@ import { checkStringValidation } from "../../../../application/validations/strin
 import selectValidation from "../../../../application/validations/selectValidation";
 import Alert from "../../../components/Alert";
 import ConfirmationModal from "../../../components/Dialogs/ConfirmationModal";
+import DeleteUseCaseModal from "../../../components/Modals/DeleteUseCase";
 import {
   assignFrameworkToProject,
   deleteEntityById,
@@ -42,8 +43,13 @@ import { logEngine } from "../../../../application/tools/log.engine";
 import { useNavigate, useSearchParams } from "react-router";
 import useProjectData from "../../../../application/hooks/useProjectData";
 import useUsers from "../../../../application/hooks/useUsers";
+import {
+  useGroups,
+  useProjectGroups,
+  useSetProjectGroups,
+} from "../../../../application/hooks/useGroups";
 import { CustomizableButton } from "../../../components/button/customizable-button";
-import { border, text } from "../../../themes/palette";
+import { border, text, radiusPx } from "../../../themes/palette";
 import { Save as SaveIcon, Trash2 as DeleteIcon } from "lucide-react";
 import CustomizableToast from "../../../components/Toast";
 import CustomizableSkeleton from "../../../components/Skeletons";
@@ -54,12 +60,9 @@ import CustomFieldsSection, {
 import { useRequiredCustomFieldsGate } from "../../../components/CustomFieldsSection/RequiredCustomFieldsGate";
 import useFrameworks from "../../../../application/hooks/useFrameworks";
 import { Framework } from "../../../../domain/types/Framework";
-import allowedRoles from "../../../../application/constants/permissions";
+import { useCanCheck, useCan } from "../../../../application/hooks/useCan";
 import { VerifyWiseContext } from "../../../../application/contexts/VerifyWise.context";
-import {
-  deleteProject,
-  updateProject,
-} from "../../../../application/repository/project.repository";
+import { updateProject } from "../../../../application/repository/project.repository";
 import { useAuth } from "../../../../application/hooks/useAuth";
 import { AiRiskClassification } from "../../../../domain/enums/aiRiskClassification.enum";
 import { HighRiskRole } from "../../../../domain/enums/highRiskRole.enum";
@@ -215,14 +218,15 @@ const OwnerPartyName = ({ party }: { party: OwnerParty }) =>
 const ProjectSettings = React.memo(
   ({ triggerRefresh = () => {} }: { triggerRefresh?: (isUpdate: boolean) => void }) => {
     const { setProjects } = useContext(VerifyWiseContext);
-    const { userRoleName, userId } = useAuth();
+    const { userId } = useAuth();
+    const can = useCanCheck();
     const [searchParams] = useSearchParams();
     const projectId = searchParams.get("projectId") ?? "1"; // default project ID is 2
     const theme = useTheme();
     const styles = useStyles();
     const [pendingOwnerChange, setPendingOwnerChange] = useState<PendingOwnerChange | null>(null);
     const [isRiskModalOpen, setIsRiskModalOpen] = useState(false);
-    const canClassify = allowedRoles.projects.classify.includes(userRoleName);
+    const canClassify = can("useCase.classify");
 
     const { project } = useProjectData({ projectId });
     const navigate = useNavigate();
@@ -319,6 +323,14 @@ const ProjectSettings = React.memo(
     }, [project]);
 
     const { users } = useUsers();
+
+    // Groups attached to this use case (#5253).
+    const { data: groups } = useGroups();
+    const { data: projectGroups } = useProjectGroups(Number(projectId));
+    const setProjectGroupsMutation = useSetProjectGroups(Number(projectId));
+    // The groups route checks useCase.edit, so the picker does too.
+    const canEditProjectGroups = useCan("useCase.edit");
+    const selectedGroupIds = (projectGroups ?? []).map((g) => g.id);
 
     const { filteredFrameworks: monitoredFrameworks, allFrameworks } = useFrameworks({
       listOfFrameworks: project?.framework || [],
@@ -870,51 +882,24 @@ const ProjectSettings = React.memo(
       }));
     };
 
-    const handleConfirmDelete = useCallback(async () => {
-      setIsLoading(true);
-      try {
-        const response = await deleteProject({
-          id: Number(projectId),
-        });
-        const isError = response.status === 404 || response.status === 500;
-        setAlert({
-          variant: isError ? "error" : "success",
-          title: isError ? "Error" : "Success",
-          body: isError
-            ? "Failed to delete use case. Please try again."
-            : "Use case deleted successfully.",
-          isToast: true,
-          visible: true,
-        });
-        if (!isError) {
-          setProjects((prevProjects) =>
-            prevProjects.filter((project) => project.id !== Number(projectId)),
-          );
-          navigate("/overview");
-          setTimeout(() => {
-            setAlert(null);
-          }, 3000);
-        } else {
-          setTimeout(() => {
-            setAlert(null);
-          }, 3000);
-        }
-      } catch (_error) {
-        logEngine({
-          type: "error",
-          message: "An error occured while deleting the project.",
-        });
-        setAlert({
-          variant: "error",
-          title: "Error",
-          body: "Failed to delete use case. Please try again.",
-          isToast: true,
-          visible: true,
-        });
-      } finally {
-        setIsDeleteModalOpen(false);
-        setIsLoading(false);
-      }
+    // The dialog has already deleted the use case (and archived its risks when
+    // asked) in one request; a failure stays in the dialog and never gets here.
+    const handleUseCaseDeleted = useCallback(() => {
+      setIsDeleteModalOpen(false);
+      setAlert({
+        variant: "success",
+        title: "Success",
+        body: "Use case deleted successfully.",
+        isToast: true,
+        visible: true,
+      });
+      setProjects((prevProjects) =>
+        prevProjects.filter((project) => project.id !== Number(projectId)),
+      );
+      navigate("/overview");
+      setTimeout(() => {
+        setAlert(null);
+      }, 3000);
     }, [navigate, projectId]);
 
     return (
@@ -1245,7 +1230,7 @@ const ProjectSettings = React.memo(
                           <span style={{ width: "400px" }}>
                             <Autocomplete
                               multiple
-                              disabled={hasPendingApproval}
+                              disabled={hasPendingApproval || !can("framework.edit")}
                               id="monitored-regulations-and-standards-input"
                               size="small"
                               value={values.monitoredRegulationsAndStandards}
@@ -1340,10 +1325,10 @@ const ProjectSettings = React.memo(
                                   ...getAutocompleteStyles(theme, {
                                     hasError: !!errors.monitoredRegulationsAndStandards,
                                   })["& .MuiOutlinedInput-root"],
-                                  borderRadius: "4px",
+                                  borderRadius: radiusPx.sm,
                                 },
                                 "& .MuiChip-root": {
-                                  "borderRadius": "4px",
+                                  "borderRadius": radiusPx.sm,
                                   "& .MuiChip-deleteIcon": {
                                     display:
                                       values.monitoredRegulationsAndStandards.length === 1
@@ -1392,7 +1377,7 @@ const ProjectSettings = React.memo(
                   </Box>
                   <Autocomplete
                     multiple
-                    readOnly={!allowedRoles.projects.editTeamMembers.includes(userRoleName)}
+                    readOnly={!can("useCase.members")}
                     id="users-input"
                     size="small"
                     value={users.filter((user) => values.members.includes(Number(user.id)))}
@@ -1475,10 +1460,10 @@ const ProjectSettings = React.memo(
                         ...getAutocompleteStyles(theme, { hasError: !!errors.members })[
                           "& .MuiOutlinedInput-root"
                         ],
-                        borderRadius: "4px",
+                        borderRadius: radiusPx.sm,
                       },
                       "& .MuiChip-root": {
-                        borderRadius: "4px",
+                        borderRadius: radiusPx.sm,
                       },
                     }}
                     slotProps={{
@@ -1501,6 +1486,92 @@ const ProjectSettings = React.memo(
                             paddingRight: "9px",
                           },
                         },
+                      },
+                    }}
+                  />
+
+                  {/* Groups Row (#5253): attaching a group grants every member access. */}
+                  <Box>
+                    <Typography sx={{ fontSize: 13, fontWeight: 500 }}>Groups</Typography>
+                    <Typography sx={{ fontSize: 12, color: text.subdued, whiteSpace: "nowrap" }}>
+                      Add a whole group to the use case in one step.
+                      <br />
+                      Every group member can see and work on the use case.
+                    </Typography>
+                  </Box>
+                  <Autocomplete
+                    multiple
+                    readOnly={!canEditProjectGroups}
+                    id="groups-input"
+                    size="small"
+                    value={(projectGroups ?? []).filter((g) => selectedGroupIds.includes(g.id))}
+                    options={(groups ?? []).filter((g) => !selectedGroupIds.includes(g.id))}
+                    getOptionLabel={(group) => group.name}
+                    isOptionEqualToValue={(option, value) => option.id === value.id}
+                    noOptionsText={
+                      (groups ?? []).length === 0
+                        ? "No groups yet. Groups are managed in Settings → Groups."
+                        : "All groups selected"
+                    }
+                    onChange={(_event, selected) => {
+                      setProjectGroupsMutation.mutate(
+                        selected.map((g) => g.id),
+                        {
+                          onError: () => {
+                            setAlert({
+                              variant: "error",
+                              body: "Could not update the use case's groups. Please try again.",
+                              isToast: true,
+                              visible: true,
+                            });
+                            setTimeout(() => setAlert(null), 3000);
+                          },
+                        },
+                      );
+                    }}
+                    popupIcon={<ChevronDown size={16} color={theme.palette.text.tertiary} />}
+                    renderInput={(params) => (
+                      <TextField
+                        {...params}
+                        placeholder="Select groups"
+                        sx={{
+                          "& .MuiOutlinedInput-root": {
+                            height: "34px",
+                            padding: "0 10px",
+                            display: "flex",
+                            alignItems: "center",
+                          },
+                          "& .MuiInputBase-root": {
+                            height: "34px !important",
+                            padding: "0 10px !important",
+                            display: "flex !important",
+                            alignItems: "center !important",
+                            justifyContent: "flex-start !important",
+                          },
+                          "& .MuiInputBase-input": {
+                            padding: "0 !important",
+                            margin: "0 !important",
+                            fontSize: "13px",
+                            lineHeight: "1 !important",
+                          },
+                          "& ::placeholder": {
+                            fontSize: "13px",
+                          },
+                        }}
+                      />
+                    )}
+                    sx={{
+                      ...getAutocompleteStyles(theme, { hasError: false }),
+                      "width": "400px",
+                      "backgroundColor": theme.palette.background.main,
+                      "& .MuiOutlinedInput-root": {
+                        ...getAutocompleteStyles(theme, { hasError: false })[
+                          "& .MuiOutlinedInput-root"
+                        ],
+                        borderRadius: radiusPx.sm,
+                      },
+                      "& .MuiChip-root": {
+                        borderRadius: radiusPx.sm,
                       },
                     }}
                   />
@@ -1714,8 +1785,8 @@ const ProjectSettings = React.memo(
                     mb: 8,
                   }}
                 >
-                  Note that deleting a use case will remove all data related to that use case from
-                  your system. This is permanent and non-recoverable.
+                  This deletes the use case, its framework progress and its files. Its risks stay in
+                  the risk register but are no longer linked to it. This cannot be undone.
                 </Typography>
                 <CustomizableButton
                   sx={{
@@ -1728,7 +1799,7 @@ const ProjectSettings = React.memo(
                   color="error"
                   onClick={handleOpenDeleteDialog}
                   text="Delete use case"
-                  isDisabled={!allowedRoles.projects.delete.includes(userRoleName)}
+                  isDisabled={!can("useCase.edit")}
                 />
               </Stack>
             </Stack>
@@ -1736,21 +1807,12 @@ const ProjectSettings = React.memo(
         )}
 
         {isDeleteModalOpen && (
-          <ConfirmationModal
-            title="Delete this use case?"
-            body={
-              <Typography fontSize={13}>
-                This deletes the use case, its framework progress and its files. Its risks stay in
-                the risk register but are no longer linked to it. This cannot be undone.
-              </Typography>
-            }
-            cancelText="Cancel"
+          <DeleteUseCaseModal
+            projectId={Number(projectId)}
+            message="This deletes the use case, its framework progress and its files. Its risks stay in the risk register but are no longer linked to it. This cannot be undone."
             proceedText="Delete"
             onCancel={handleCloseDeleteDialog}
-            onProceed={handleConfirmDelete}
-            proceedButtonColor="error"
-            proceedButtonVariant="contained"
-            TitleFontSize={0}
+            onDeleted={handleUseCaseDeleted}
           />
         )}
 

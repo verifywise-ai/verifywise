@@ -21,11 +21,12 @@ import Alert from "../../../../components/Alert";
 import StatusDropdown from "../../../../components/StatusDropdown";
 import { updateISO27001AnnexStatus } from "../../../../components/StatusDropdown/statusUpdateApi";
 import { useAuth } from "../../../../../application/hooks/useAuth";
-import allowedRoles from "../../../../../application/constants/permissions";
+import { useCanCheck } from "../../../../../application/hooks/useCan";
 import { Project } from "../../../../../domain/types/Project";
 import { useSearchParams } from "react-router";
 import { TabFilterBar } from "../../../../components/FrameworkFilter/TabFilterBar";
 import { StatsCard } from "../../../../components/Cards/StatsCard";
+import { palette } from "../../../../themes/palette";
 
 const ISO27001Annex = ({
   project,
@@ -68,7 +69,8 @@ const ISO27001Annex = ({
   ownerOptions?: { label: string; value: string }[];
   reviewerOptions?: { label: string; value: string }[];
 }) => {
-  const { userId, userRoleName } = useAuth();
+  const { userId } = useAuth();
+  const can = useCanCheck();
   const [expanded, setExpanded] = useState<number | false>(false);
   const [annexesProgress, setAnnexesProgress] = useState<{
     totalAnnexControls?: number;
@@ -367,8 +369,8 @@ const ISO27001Annex = ({
               const count = filteredControlsCountMemo[annex.id ?? 0];
               const chipColor =
                 count !== undefined && count > 0
-                  ? { bg: "#E6F4EA", color: "status.success.text" }
-                  : { bg: "#FFF8E1", color: "#795548" };
+                  ? { bg: palette.status.success.bg, color: "status.success.text" }
+                  : { bg: palette.risk.medium.bg, color: palette.risk.medium.text };
               return (
                 <Stack key={annex.id} sx={styles.container}>
                   <Accordion
@@ -431,8 +433,7 @@ const ISO27001Annex = ({
                                   handleStatusChange(control, newStatus)
                                 }
                                 size="small"
-                                allowedRoles={allowedRoles.frameworks.edit}
-                                userRole={userRoleName}
+                                canEdit={can("framework.edit")}
                               />
                             </Stack>
                           ))

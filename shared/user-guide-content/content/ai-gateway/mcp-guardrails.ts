@@ -14,7 +14,7 @@ export const mcpGuardrailsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'You\'ll find them at **AI Gateway > Agent Control > Guardrails**.',
+      text: 'You\'ll find them at **Enforce > Agent controls > Guardrails**.',
     },
     {
       type: 'paragraph',

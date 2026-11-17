@@ -12,6 +12,7 @@ import { getAllEntities } from "../../../../application/repository/entity.reposi
 import { VendorRisk } from "../../../../domain/types/VendorRisk";
 import { StatusTileCards, StatusTileItem } from "../../../components/Cards/StatusTileCards";
 import useFormattedDate from "../../../../application/hooks/useFormattedDate";
+import { chartTheme } from "../../../themes/chartTheme";
 
 const projectRisksColNames = [
   {
@@ -163,21 +164,41 @@ const RisksView: FC<RisksViewProps> = memo(({ risksSummary, risksData, title, pr
       <StatusTileCards
         items={
           [
-            { key: "Total", label: "Total", count: risksSummary.total, color: "#4B5563" },
+            {
+              key: "Total",
+              label: "Total",
+              count: risksSummary.total,
+              color: chartTheme.riskSummary.total,
+            },
             {
               key: "Very high",
               label: "Very high",
               count: risksSummary.veryHighRisks,
-              color: "#C63622",
+              color: chartTheme.riskSummary.veryHigh,
             },
-            { key: "High", label: "High", count: risksSummary.highRisks, color: "#D68B61" },
-            { key: "Medium", label: "Medium", count: risksSummary.mediumRisks, color: "#D6B971" },
-            { key: "Low", label: "Low", count: risksSummary.lowRisks, color: "#52AB43" },
+            {
+              key: "High",
+              label: "High",
+              count: risksSummary.highRisks,
+              color: chartTheme.riskSummary.high,
+            },
+            {
+              key: "Medium",
+              label: "Medium",
+              count: risksSummary.mediumRisks,
+              color: chartTheme.riskSummary.medium,
+            },
+            {
+              key: "Low",
+              label: "Low",
+              count: risksSummary.lowRisks,
+              color: chartTheme.riskSummary.low,
+            },
             {
               key: "Very low",
               label: "Very low",
               count: risksSummary.veryLowRisks,
-              color: "#B8D39C",
+              color: chartTheme.riskSummary.veryLow,
             },
           ] satisfies StatusTileItem[]
         }

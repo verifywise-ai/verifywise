@@ -171,7 +171,7 @@ async def run_arena_comparison_task(
     """
     logger.info(f"[ARENA] Background task STARTING for {comparison_id}")
     try:
-        from deepeval.test_case import LLMTestCase, LLMTestCaseParams
+        from deepeval.test_case import LLMTestCase
         from deepeval.metrics import GEval
 
         logger.debug(f"[ARENA] {comparison_id}: Imports successful")

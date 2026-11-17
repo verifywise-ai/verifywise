@@ -1,12 +1,15 @@
 /**
- * JIRA Use Case Settings
- * Shows all JIRA attributes in a two-column grid (matching native ProjectSettings)
+ * Jira use case settings
+ * Shows all Jira attributes in a two-column grid (matching native ProjectSettings)
  */
 
 import React, { useEffect, useState } from "react";
 import { Stack, Typography, Box, Chip, useTheme, CircularProgress } from "@mui/material";
 import { Database } from "lucide-react";
 import { apiServices } from "../../../../infrastructure/api/networkServices";
+import { palette } from "../../../themes/palette";
+import useTranslation from "../../../../application/hooks/useTranslation";
+import { fill } from "../../../../i18n/fill";
 
 interface JiraUseCaseSettingsProps {
   project: {
@@ -33,14 +36,14 @@ const formatValue = (value: any): string => {
 // Styles matching ProjectSettings exactly
 const useStyles = () => {
   const theme = useTheme();
-  const borderLight = (theme.palette as any).border?.light || "#E5E7EB";
-  const borderDark = (theme.palette as any).border?.dark || "#D0D5DD";
+  const borderLight = (theme.palette as any).border?.light || palette.border.light;
+  const borderDark = (theme.palette as any).border?.dark || palette.border.dark;
 
   return {
     root: {
       display: "flex",
       flexDirection: "column" as const,
-      gap: theme.spacing(4),
+      gap: "8px",
       fontSize: 13,
       width: "100%",
       margin: "0 auto",
@@ -49,15 +52,15 @@ const useStyles = () => {
       background: theme.palette.background.paper,
       border: `1.5px solid ${borderLight}`,
       borderRadius: theme.shape.borderRadius,
-      padding: theme.spacing(5, 6),
-      marginBottom: theme.spacing(4),
+      padding: "10px 12px",
+      marginBottom: "8px",
       boxShadow: "none",
       width: "100%",
     },
     sectionTitle: {
       fontWeight: 600,
       fontSize: 16,
-      marginBottom: theme.spacing(10),
+      marginBottom: "20px",
       color: theme.palette.text.primary,
     },
     // Two-column grid matching native ProjectSettings
@@ -67,7 +70,7 @@ const useStyles = () => {
       rowGap: "25px",
       columnGap: "250px",
       alignItems: "start",
-      mt: 2,
+      mt: "4px",
     },
     labelCell: {
       fontSize: 13,
@@ -78,7 +81,7 @@ const useStyles = () => {
     valueBox: {
       width: 400,
       padding: "10px 14px",
-      backgroundColor: (theme.palette as any).background?.fill || "#F9FAFB",
+      backgroundColor: (theme.palette as any).background?.fill || palette.background.alt,
       border: `1px solid ${borderDark}`,
       borderRadius: theme.shape.borderRadius,
       fontSize: 13,
@@ -92,7 +95,7 @@ const useStyles = () => {
     valueBoxMultiline: {
       width: 400,
       padding: "10px 14px",
-      backgroundColor: (theme.palette as any).background?.fill || "#F9FAFB",
+      backgroundColor: (theme.palette as any).background?.fill || palette.background.alt,
       border: `1px solid ${borderDark}`,
       borderRadius: theme.shape.borderRadius,
       fontSize: 13,
@@ -106,6 +109,7 @@ const useStyles = () => {
 
 export const JiraUseCaseSettings: React.FC<JiraUseCaseSettingsProps> = ({ project }) => {
   const styles = useStyles();
+  const { t } = useTranslation();
   const [jiraData, setJiraData] = useState<Record<string, any> | null>(null);
   const [schema, setSchema] = useState<JiraAttributeSchema[]>([]);
   const [loading, setLoading] = useState(true);
@@ -171,14 +175,14 @@ export const JiraUseCaseSettings: React.FC<JiraUseCaseSettingsProps> = ({ projec
 
   if (loading) {
     return (
-      <Box sx={{ display: "flex", justifyContent: "center", p: 4 }}>
+      <Box sx={{ display: "flex", justifyContent: "center", p: "8px" }}>
         <CircularProgress size={24} />
       </Box>
     );
   }
 
   if (error) {
-    return <Typography color="error">Error loading JIRA data: {error}</Typography>;
+    return <Typography color="error">Error loading Jira data: {error}</Typography>;
   }
 
   const attributes = jiraData?.attributes || {};
@@ -235,35 +239,39 @@ export const JiraUseCaseSettings: React.FC<JiraUseCaseSettingsProps> = ({ projec
 
   return (
     <Stack sx={styles.root}>
-      {/* JIRA Source Badge */}
-      <Box sx={{ display: "flex", gap: 2, alignItems: "center" }}>
+      {/* Jira source badge */}
+      <Box sx={{ display: "flex", gap: "4px", alignItems: "center" }}>
         <Chip
           icon={<Database size={14} />}
-          label="JIRA Assets Object"
+          label="Jira Assets object"
           size="small"
           sx={{
-            "backgroundColor": "#E3F2FD",
-            "color": "#1565C0",
-            "& .MuiChip-icon": { color: "#1565C0" },
+            "backgroundColor": palette.status.info.bg,
+            "color": palette.status.info.text,
+            "& .MuiChip-icon": { color: palette.status.info.text },
           }}
         />
-        <Typography sx={{ fontSize: 13, color: "#6B7280" }}>
-          This use case is imported from JIRA and is read-only
+        <Typography sx={{ fontSize: 13, color: palette.text.icon }}>
+          This use case is imported from Jira and is read-only
         </Typography>
       </Box>
 
       {/* All Attributes - Two Column Grid */}
       <Box sx={styles.card}>
         <Typography sx={styles.sectionTitle}>
-          JIRA Attributes ({rows.length}
-          {schema.length > 0 ? ` — ${setCount} set` : ""})
+          {schema.length > 0
+            ? fill(t("Jira attributes ({count}, {filled} with a value)"), {
+                count: rows.length,
+                filled: setCount,
+              })
+            : fill(t("Jira attributes ({count})"), { count: rows.length })}
         </Typography>
         {rows.length > 0 ? (
           <Box sx={styles.gridContainer}>
             {rows.map(({ key, value, hasValue }) => renderRow(key, value, hasValue))}
           </Box>
         ) : (
-          <Typography sx={{ color: "#6B7280", fontStyle: "italic" }}>
+          <Typography sx={{ color: palette.text.icon, fontStyle: "italic" }}>
             No attributes available
           </Typography>
         )}

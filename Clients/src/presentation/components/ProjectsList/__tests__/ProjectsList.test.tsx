@@ -1,9 +1,5 @@
 import { vi } from "vitest";
 
-const { useTableGroupingMock } = vi.hoisted(() => ({
-  useTableGroupingMock: vi.fn(() => ({ groups: new Map() })),
-}));
-
 vi.mock("../../Cards/ProjectCard", () => ({
   ProjectCard: () => <div data-testid="project-card" />,
 }));
@@ -24,20 +20,6 @@ vi.mock("../../../../application/repository/user.repository", () => ({
 }));
 vi.mock("../../Search", () => ({
   SearchBox: () => <div data-testid="search-box" />,
-}));
-vi.mock("../../Table/GroupBy", () => ({
-  GroupBy: () => <div data-testid="group-by" />,
-}));
-vi.mock("../../../../application/hooks/useTableGrouping", () => ({
-  useTableGrouping: useTableGroupingMock,
-  useGroupByState: () => ({
-    groupBy: null,
-    groupSortOrder: "asc",
-    handleGroupChange: vi.fn(),
-  }),
-}));
-vi.mock("../../Table/GroupedTableView", () => ({
-  GroupedTableView: () => <div data-testid="grouped-table-view" />,
 }));
 vi.mock("../../Table/ExportMenu", () => ({
   ExportMenu: () => <div data-testid="export-menu" />,
@@ -84,15 +66,6 @@ describe("ProjectsList", () => {
   it("renders without crashing with empty projects", () => {
     renderWithProviders(<ProjectList projects={[]} />);
     expect(document.body).toBeTruthy();
-  });
-
-  it("groups a use case under each of its high-risk roles", () => {
-    renderWithProviders(<ProjectList projects={[]} />);
-    const options = (useTableGroupingMock.mock.calls as any[][])[0][0];
-    const key = (roles: string[]) => options.getGroupKey({ high_risk_roles: roles }, "role");
-    expect(key(["Provider", "Deployer"])).toEqual(["Provider", "Deployer"]);
-    expect(key(["Deployer"])).toEqual(["Deployer"]);
-    expect(key([])).toBe("Unknown");
   });
 
   it("offers every AI risk classification in the risk level filter", () => {

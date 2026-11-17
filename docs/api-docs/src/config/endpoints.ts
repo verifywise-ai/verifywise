@@ -2600,6 +2600,7 @@ export const customFieldsEndpoints: Endpoint[] = [
     requiresAuth: true,
     responses: [
       { status: 200, description: "Success" },
+      { status: 403, description: "Forbidden - the user lacks edit permission on the record the custom field belongs to (for a task: the people who may change its status, that is its creator, an assignee, an admin, or anyone with task.edit)" },
       { status: 500, description: "Internal server error" },
     ],
     tag: "Custom Fields",
@@ -2611,6 +2612,7 @@ export const customFieldsEndpoints: Endpoint[] = [
     requiresAuth: true,
     responses: [
       { status: 200, description: "Success" },
+      { status: 403, description: "Forbidden - the user lacks edit permission on the record the custom field belongs to (for a task: the people who may change its status, that is its creator, an assignee, an admin, or anyone with task.edit)" },
       { status: 500, description: "Internal server error" },
     ],
     tag: "Custom Fields",
@@ -3500,7 +3502,7 @@ export const extensionEndpoints: Endpoint[] = [
     method: 'POST',
     path: '/extensions/{key}/enable',
     summary: "Enable extension",
-    description: "Enables the extension for the caller's organization. Optional body { configuration } is validated against the extension's config fields; secret fields are encrypted at rest. Admin only. Requires role: Admin",
+    description: "Enables the extension for the caller's organization. Optional body { configuration } is merged onto any stored configuration and validated against the extension's config fields: a field left out keeps its stored value, null clears it, an empty string clears a non-secret field and keeps a secret one. Secret fields are encrypted at rest. Admin only. Requires role: Admin",
     requiresAuth: true,
     parameters: [
       { name: 'key', in: 'path', type: 'string', required: true, description: "Extension key: slack, mlflow, azure-ai-foundry, model-lifecycle, risk-import, jira-assets or dataset-bulk-upload" },
@@ -3541,7 +3543,7 @@ export const extensionEndpoints: Endpoint[] = [
     method: 'PATCH',
     path: '/extensions/{key}/configuration',
     summary: "Update extension configuration",
-    description: "Updates the stored configuration. Body { configuration }. Secret fields left out of the body keep their existing encrypted value. Admin only. Requires role: Admin",
+    description: "Updates the stored configuration. Body { configuration } holds only the fields to change: a field left out keeps its stored value, null clears it (a required field cannot be cleared), and an empty string clears a non-secret field but keeps a secret one. A stored secret is never kept for a changed address (400 asking for the secret again). Admin only. Requires role: Admin",
     requiresAuth: true,
     parameters: [
       { name: 'key', in: 'path', type: 'string', required: true, description: "Extension key: slack, mlflow, azure-ai-foundry, model-lifecycle, risk-import, jira-assets or dataset-bulk-upload" },
@@ -3692,6 +3694,7 @@ export const extensionEndpoints: Endpoint[] = [
     requiresAuth: true,
     responses: [
       { status: 200, description: "Success" },
+      { status: 400, description: "code is missing, not a string, blank or over 512 characters; Slack did not accept it; Slack rejected the redirect URI (FRONTEND_URL does not match the address VerifyWise is opened at); or Slack returned no user token (the user scopes were not granted)" },
       { status: 403, description: "Extension not enabled for this organization, or role not allowed" },
       { status: 500, description: "Internal server error" },
     ],
@@ -4449,6 +4452,37 @@ export const extensionEndpoints: Endpoint[] = [
     responses: [
       { status: 200, description: "Success" },
       { status: 403, description: "Extension not enabled for this organization, or role not allowed" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Extensions",
+  },
+  {
+    method: 'GET',
+    path: '/extensions/slack/oauth/unlinked',
+    summary: "Get Unlinked Slack Connections",
+    description: "Requires the slack extension to be enabled for the organization (403 otherwise). Lists the caller's own Slack connections that belong to no organization (created before connections belonged to an organization). They send nothing; they can only be removed.",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "The caller's own connections with no organization: id, team_name, channel, created_at. No token or webhook URL." },
+      { status: 403, description: "Extension not enabled for this organization, or role not allowed" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Extensions",
+  },
+  {
+    method: 'DELETE',
+    path: '/extensions/slack/oauth/unlinked/{id}',
+    summary: "Delete Unlinked Slack Connection",
+    description: "Requires the slack extension to be enabled for the organization (403 otherwise). Removes one of the caller's own Slack connections that belong to no organization. Another user's connection and an organization's connection answer 404.",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The connection id" },
+    ],
+    responses: [
+      { status: 204, description: "Deleted" },
+      { status: 400, description: "Invalid id" },
+      { status: 403, description: "Extension not enabled for this organization, or role not allowed" },
+      { status: 404, description: "No connection with this id that belongs to no organization and to the caller" },
       { status: 500, description: "Internal server error" },
     ],
     tag: "Extensions",
@@ -6186,7 +6220,7 @@ export const intakeFormEndpoints: Endpoint[] = [
     method: 'POST',
     path: '/intake/submissions/{id}/approve',
     summary: "Approve Submission",
-    description: "With routing on, only a reviewer of the lane the approval would make true, or an Admin, can approve (403 otherwise). A standard-lane approval by a non-senior reviewer may be picked for a second review.",
+    description: "With routing on, only a reviewer of the lane the approval would make true, or an Admin, can approve (403 otherwise). A standard-lane approval by a non-senior reviewer may be picked for a second review. Answers mapped to entity custom fields are written on the new entity in the approval transaction; custom_field:* keys in confirmedEntityData are ignored. The response data is the approved submission; POST /api/v1/intake-submissions/{id}/approve also reports the custom field values it could not write.",
     requiresAuth: true,
     parameters: [
       { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
@@ -8769,7 +8803,7 @@ export const policyEndpoints: Endpoint[] = [
     method: 'POST',
     path: '/policies/{id}/review/request',
     summary: "Request review for a policy",
-    description: "Sets the policy review status to pending_review and sends in-app notifications to each specified reviewer.",
+    description: "**Deprecated.** Sunset: not before v2.7.0. Submit with POST /v1/policies/{id}/submit-for-approval and decide through the approval requests endpoints (/approval-requests), or, when the organization has no policy approval workflow, an Admin approves with POST /v1/policies/{id}/approve.  Sets the policy review status to pending_review and sends in-app notifications to each specified reviewer.",
     requiresAuth: true,
     requestBody: {
       "reviewer_ids": "array (required)",
@@ -8787,7 +8821,7 @@ export const policyEndpoints: Endpoint[] = [
     method: 'PUT',
     path: '/policies/{id}/review/approve',
     summary: "Approve a policy review",
-    description: "Sets the policy review status to approved and sends an in-app notification to the policy author.",
+    description: "**Deprecated.** Sunset: not before v2.7.0. Submit with POST /v1/policies/{id}/submit-for-approval and decide through the approval requests endpoints (/approval-requests), or, when the organization has no policy approval workflow, an Admin approves with POST /v1/policies/{id}/approve.  Sets the policy review status to approved and sends an in-app notification to the policy author.",
     requiresAuth: true,
     requestBody: {
       "comment": "string (optional)",
@@ -8804,7 +8838,7 @@ export const policyEndpoints: Endpoint[] = [
     method: 'PUT',
     path: '/policies/{id}/review/reject',
     summary: "Reject a policy review (request changes)",
-    description: "Sets the policy review status to changes_requested and sends an in-app notification to the policy author. A comment is required.",
+    description: "**Deprecated.** Sunset: not before v2.7.0. Submit with POST /v1/policies/{id}/submit-for-approval and decide through the approval requests endpoints (/approval-requests), or, when the organization has no policy approval workflow, an Admin approves with POST /v1/policies/{id}/approve.  Sets the policy review status to changes_requested and sends an in-app notification to the policy author. A comment is required.",
     requiresAuth: true,
     requestBody: {
       "comment": "string (required)",
@@ -9336,7 +9370,7 @@ export const projectEndpoints: Endpoint[] = [
     method: 'DELETE',
     path: '/projects/{id}',
     summary: "Delete a project by ID",
-    description: "Deletes a project and all dependent entities (files, risks, members, framework data).",
+    description: "Deletes a project and its dependent entities (files, members, framework data, risk links). Its risks stay in the register and are never archived here. An active risk left with no use case link is visible to everyone in the organization; to archive those risks in the same transaction and keep them private, use DELETE /api/v1/projects/{id} with archive_risks_linked_only_here=true.",
     requiresAuth: true,
     responses: [
       { status: 202, description: "Project deleted successfully" },
@@ -9488,6 +9522,7 @@ export const projectRiskEndpoints: Endpoint[] = [
     responses: [
       { status: 201, description: "Created successfully" },
       { status: 401, description: "Unauthorized" },
+      { status: 403, description: "Only the risk's approver or an Admin can change its approval." },
       { status: 500, description: "Internal server error" },
     ],
     tag: "Project Risks",
@@ -9553,6 +9588,7 @@ export const projectRiskEndpoints: Endpoint[] = [
     responses: [
       { status: 200, description: "Success" },
       { status: 401, description: "Unauthorized" },
+      { status: 403, description: "Only the risk's approver or an Admin can change its approval." },
       { status: 500, description: "Internal server error" },
     ],
     tag: "Project Risks",
@@ -12270,6 +12306,65 @@ export const v1ChangeHistoryEndpoints: Endpoint[] = [
   },
 ];
 
+// v1: Extensions endpoints
+export const v1ExtensionsEndpoints: Endpoint[] = [
+  {
+    method: 'GET',
+    path: '/v1/framework-import/template',
+    summary: "Download Excel Template",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: Extensions",
+  },
+  {
+    method: 'POST',
+    path: '/v1/framework-import/import',
+    summary: "Bulk Import Frameworks",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: Extensions",
+  },
+  {
+    method: 'GET',
+    path: '/v1/framework-import/imported',
+    summary: "List Imported Frameworks",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: Extensions",
+  },
+  {
+    method: 'PATCH',
+    path: '/v1/framework-import/imported/{id}',
+    summary: "Update Imported Framework",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: Extensions",
+  },
+  {
+    method: 'DELETE',
+    path: '/v1/framework-import/imported/{id}',
+    summary: "Delete Imported Framework",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: Extensions",
+  },
+];
+
 // v1: Intake Forms endpoints
 export const v1IntakeFormsEndpoints: Endpoint[] = [
   {
@@ -12348,6 +12443,109 @@ export const v1IntakeFormsEndpoints: Endpoint[] = [
       { status: 500, description: "Internal server error" },
     ],
     tag: "v1: Intake Forms",
+  },
+];
+
+// v1: Intake submissions endpoints
+export const v1IntakeSubmissionsEndpoints: Endpoint[] = [
+  {
+    method: 'GET',
+    path: '/v1/intake-submissions/{id}/preview',
+    summary: "Get Submission Preview V1",
+    description: "The legacy GET /api/intake/submissions/{id}/preview response plus customFields, for a pending submission: in question order, the entity custom field values approval would write from answers mapped to custom fields, as { label, displayValue, skipped? }. For a value that would not be written, displayValue is the answer as submitted and skipped is the translated reason. customFields is null when the custom field definitions could not be read, and absent once the submission is decided.",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 400, description: "Invalid submission ID" },
+      { status: 404, description: "Submission or form not found" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: Intake submissions",
+  },
+  {
+    method: 'POST',
+    path: '/v1/intake-submissions/{id}/approve',
+    summary: "Approve Submission V1",
+    description: "Same request, checks and effects as the legacy POST /api/intake/submissions/{id}/approve. Answers mapped to entity custom fields are written on the new entity in the approval transaction; custom_field:* keys in confirmedEntityData are ignored. The response data is the approved submission plus customFieldSkips: [{ label, reason }], the values not written and the translated reason (an empty array when none were skipped).",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 400, description: "Invalid submission ID, a submission that is not pending, or invalid entity data" },
+      { status: 403, description: "Forbidden - the caller lacks intakeForm.edit, or routing is on and the caller may not decide this lane" },
+      { status: 404, description: "Submission or form not found" },
+      { status: 409, description: "Conflict - the submission changed while it was being approved, or an AI app with this name already exists" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: Intake submissions",
+  },
+];
+
+// v1: Policies endpoints
+export const v1PoliciesEndpoints: Endpoint[] = [
+  {
+    method: 'GET',
+    path: '/v1/policies/{id}/approval',
+    summary: "Get Policy Approval State",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: Policies",
+  },
+  {
+    method: 'POST',
+    path: '/v1/policies/{id}/submit-for-approval',
+    summary: "Submit Policy For Approval",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: Policies",
+  },
+  {
+    method: 'POST',
+    path: '/v1/policies/{id}/approve',
+    summary: "Approve Policy Directly",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: Policies",
+  },
+  {
+    method: 'GET',
+    path: '/v1/policies/folder-counts',
+    summary: "Get Policy Folder Counts",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: Policies",
+  },
+];
+
+// v1: Risk import endpoints
+export const v1RiskImportEndpoints: Endpoint[] = [
+  {
+    method: 'POST',
+    path: '/v1/risk-import/import',
+    summary: "Bulk Import Risks Strict",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: Risk import",
   },
 ];
 
@@ -12465,6 +12663,7 @@ export const v1V1aiAppsEndpoints: Endpoint[] = [
     method: 'GET',
     path: '/v1/ai-apps',
     summary: "Get All Ai Apps V1",
+    description: "The legacy GET /api/ai-apps list plus the lifecycle columns, an optional ?lifecycle_stage= filter, ?search= on name or description, and each app's custom_fields: [{ definition_id, field_key, label, field_type, value }].",
     requiresAuth: true,
     responses: [
       { status: 200, description: "Success" },
@@ -12661,6 +12860,129 @@ export const v1V1aiAppsEndpoints: Endpoint[] = [
   },
 ];
 
+// v1: V1/Ai Detection endpoints
+export const v1V1aiDetectionEndpoints: Endpoint[] = [
+  {
+    method: 'GET',
+    path: '/v1/ai-detection/scans/{scanId}/suggested-risks/actions',
+    summary: "List Suggested Risk Actions Controller",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+    ],
+    tag: "v1: V1/Ai Detection",
+  },
+  {
+    method: 'PUT',
+    path: '/v1/ai-detection/scans/{scanId}/suggested-risks/actions',
+    summary: "Record Suggested Risk Action Controller",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Ai Detection",
+  },
+  {
+    method: 'DELETE',
+    path: '/v1/ai-detection/scans/{scanId}/suggested-risks/actions/{actionId}',
+    summary: "Delete Suggested Risk Action Controller",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Ai Detection",
+  },
+  {
+    method: 'GET',
+    path: '/v1/ai-detection/scans/{scanId}/findings',
+    summary: "Get Scan Findings V1 Controller",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Ai Detection",
+  },
+  {
+    method: 'PATCH',
+    path: '/v1/ai-detection/scans/{scanId}/findings/{findingId}/governance',
+    summary: "Update Governance Status V1 Controller",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Ai Detection",
+  },
+  {
+    method: 'POST',
+    path: '/v1/ai-detection/scans/{scanId}/suggested-risks/risks',
+    summary: "Add Suggested Risk To Register Controller",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Ai Detection",
+  },
+];
+
+// v1: V1/Ai Detection Repositories endpoints
+export const v1V1aiDetectionRepositoriesEndpoints: Endpoint[] = [
+  {
+    method: 'GET',
+    path: '/v1/ai-detection-repositories/webhook-config',
+    summary: "Get Webhook Config Controller",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Ai Detection Repositories",
+  },
+];
+
+// v1: V1/Change Notices endpoints
+export const v1V1changeNoticesEndpoints: Endpoint[] = [
+  {
+    method: 'POST',
+    path: '/v1/change-notices/{id}/view',
+    summary: "View Change Notice Handler",
+    description: "Counts a visit to a page's change notice and says whether to show it. Stops after the user dismisses it, after 3 visits, or 90 days after the user first saw it; skipped for accounts created after the first time anyone in the organization saw it. A refusal writes nothing. A token with no organization always gets show false.",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'string', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 400, description: "Invalid notice id" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Change Notices",
+  },
+  {
+    method: 'PUT',
+    path: '/v1/change-notices/{id}/dismissed',
+    summary: "Set Change Notice Dismissed Handler",
+    description: "Dismisses the signed-in user's change notice, or restores it when dismissed is false (Undo).",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'string', required: true, description: "The id" },
+    ],
+    requestBody: {
+      "dismissed": "boolean (required)",
+    },
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 400, description: "Invalid notice id or body" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Change Notices",
+  },
+];
+
 // v1: V1/Dashboard endpoints
 export const v1V1dashboardEndpoints: Endpoint[] = [
   {
@@ -12684,6 +13006,250 @@ export const v1V1dashboardEndpoints: Endpoint[] = [
       { status: 500, description: "Internal server error" },
     ],
     tag: "v1: V1/Dashboard",
+  },
+];
+
+// v1: V1/Groups endpoints
+export const v1V1groupsEndpoints: Endpoint[] = [
+  {
+    method: 'GET',
+    path: '/v1/groups',
+    summary: "List Groups",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Groups",
+  },
+  {
+    method: 'POST',
+    path: '/v1/groups',
+    summary: "Create Group",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Groups",
+  },
+  {
+    method: 'GET',
+    path: '/v1/groups/{id}',
+    summary: "Get Group By Id",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Groups",
+  },
+  {
+    method: 'PATCH',
+    path: '/v1/groups/{id}',
+    summary: "Update Group By Id",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Groups",
+  },
+  {
+    method: 'DELETE',
+    path: '/v1/groups/{id}',
+    summary: "Delete Group By Id",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Groups",
+  },
+  {
+    method: 'GET',
+    path: '/v1/groups/{id}/members',
+    summary: "List Group Members",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Groups",
+  },
+  {
+    method: 'POST',
+    path: '/v1/groups/{id}/members',
+    summary: "Add Group Members",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Groups",
+  },
+  {
+    method: 'PUT',
+    path: '/v1/groups/{id}/members',
+    summary: "Set Group Members",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Groups",
+  },
+  {
+    method: 'DELETE',
+    path: '/v1/groups/{id}/members/{userId}',
+    summary: "Remove Group Member",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Groups",
+  },
+  {
+    method: 'GET',
+    path: '/v1/groups/projects/{projectId}/groups',
+    summary: "List Project Groups",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Groups",
+  },
+  {
+    method: 'PUT',
+    path: '/v1/groups/projects/{projectId}/groups',
+    summary: "Set Project Groups",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Groups",
+  },
+];
+
+// v1: V1/Home endpoints
+export const v1V1homeEndpoints: Endpoint[] = [
+  {
+    method: 'GET',
+    path: '/v1/home/queue',
+    summary: "Get Home Queue Handler",
+    description: "Everything that needs the signed-in user's action in the token's organization, merged and sorted (overdue first, then due soonest, then oldest waiting). A source that failed is reported as `unavailable` with no items, never as an empty list; a source or count the user may not see is absent, as is the prompts count when no AI Gateway is configured. Titles are built on the client from these structured fields.",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Home",
+  },
+];
+
+// v1: V1/Imported Framework Assessments endpoints
+export const v1V1importedFrameworkAssessmentsEndpoints: Endpoint[] = [
+  {
+    method: 'GET',
+    path: '/v1/imported-framework-assessments/projects/{projectId}',
+    summary: "List Project Links",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Imported Framework Assessments",
+  },
+  {
+    method: 'POST',
+    path: '/v1/imported-framework-assessments/projects/{projectId}',
+    summary: "Attach To Project",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Imported Framework Assessments",
+  },
+  {
+    method: 'DELETE',
+    path: '/v1/imported-framework-assessments/projects/{projectId}/{linkId}',
+    summary: "Detach From Project",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Imported Framework Assessments",
+  },
+  {
+    method: 'GET',
+    path: '/v1/imported-framework-assessments/links/{linkId}/tree',
+    summary: "Get Link Tree",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Imported Framework Assessments",
+  },
+  {
+    method: 'GET',
+    path: '/v1/imported-framework-assessments/links/{linkId}/dashboard',
+    summary: "Get Link Dashboard",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Imported Framework Assessments",
+  },
+  {
+    method: 'GET',
+    path: '/v1/imported-framework-assessments/links/{linkId}/impl/{level}/{implId}',
+    summary: "Get Impl",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Imported Framework Assessments",
+  },
+  {
+    method: 'PATCH',
+    path: '/v1/imported-framework-assessments/links/{linkId}/impl/{level}/{implId}',
+    summary: "Update Impl",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Imported Framework Assessments",
+  },
+  {
+    method: 'GET',
+    path: '/v1/imported-framework-assessments/links/{linkId}/impl/{level}/{implId}/risks',
+    summary: "Get Impl Risks",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Imported Framework Assessments",
+  },
+  {
+    method: 'PUT',
+    path: '/v1/imported-framework-assessments/links/{linkId}/impl/{level}/{implId}/risks',
+    summary: "Replace Impl Risks",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Imported Framework Assessments",
   },
 ];
 
@@ -12739,6 +13305,76 @@ export const v1V1lifecycleSettingsEndpoints: Endpoint[] = [
   },
 ];
 
+// v1: V1/Policy Templates endpoints
+export const v1V1policyTemplatesEndpoints: Endpoint[] = [
+  {
+    method: 'GET',
+    path: '/v1/policy-templates',
+    summary: "List Policy Templates",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Policy Templates",
+  },
+  {
+    method: 'POST',
+    path: '/v1/policy-templates',
+    summary: "Create Policy Template",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Policy Templates",
+  },
+  {
+    method: 'GET',
+    path: '/v1/policy-templates/{id}',
+    summary: "Get Policy Template",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Policy Templates",
+  },
+  {
+    method: 'PATCH',
+    path: '/v1/policy-templates/{id}',
+    summary: "Update Policy Template",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Policy Templates",
+  },
+  {
+    method: 'DELETE',
+    path: '/v1/policy-templates/{id}',
+    summary: "Delete Policy Template",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Policy Templates",
+  },
+  {
+    method: 'POST',
+    path: '/v1/policy-templates/from-policy',
+    summary: "Create Policy Template From Policy",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Policy Templates",
+  },
+];
+
 // v1: V1/Projects endpoints
 export const v1V1projectsEndpoints: Endpoint[] = [
   {
@@ -12760,6 +13396,25 @@ export const v1V1projectsEndpoints: Endpoint[] = [
     responses: [
       { status: 200, description: "Success" },
       { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Projects",
+  },
+  {
+    method: 'DELETE',
+    path: '/v1/projects/{id}',
+    summary: "Delete Project By Id V1",
+    description: "Deletes a use case and, when archive_risks_linked_only_here is true, archives the active risks linked to it and to no other use case in the same transaction. An archived risk with no use case link is visible only to Admins, its owner and its approver, while an active one is visible to everyone in the organization, so archiving keeps them private. The set of risks is read at the moment of the delete, after the use case row is locked. Any failure rolls back the archive and the delete together. Each archived risk gets a deletion entry in its change history and loses its policy links, and the organization's risk deleted automation runs once for the batch, as with the bulk archive. Same access as DELETE /api/projects/{id} (useCase.edit and write access to the use case); archiving also needs risks.edit. The legacy DELETE /api/projects/{id} never archives.",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The use case id" },
+      { name: 'archive_risks_linked_only_here', in: 'query', type: 'string', required: true, description: "true archives the active risks linked only to this use case; false keeps them active (they then become visible to everyone in the organization). Required, given once." },
+    ],
+    responses: [
+      { status: 202, description: "Deleted. Body data: { deleted: true, archived_risk_ids: number[] } (empty unless archiving was asked for)" },
+      { status: 400, description: "Invalid id, or archive_risks_linked_only_here missing, repeated or not true/false" },
+      { status: 403, description: "No useCase.edit permission, no write access to the use case, or archiving asked without risks.edit" },
+      { status: 404, description: "Use case not found in the organization" },
+      { status: 500, description: "Internal server error; nothing was archived or deleted" },
     ],
     tag: "v1: V1/Projects",
   },
@@ -12814,6 +13469,23 @@ export const v1V1projectsEndpoints: Endpoint[] = [
     requiresAuth: true,
     responses: [
       { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Projects",
+  },
+  {
+    method: 'GET',
+    path: '/v1/projects/{id}/risks-linked-only-here',
+    summary: "Get Risks Linked Only To Project",
+    description: "The active (not archived) risks linked to this use case and to no other use case, as { count, risks: [{ id, risk_name }] }. Deleting the use case removes its risk links, and an active risk with no use case link is visible to everyone in the organization (an archived one only to Admins, its owner and its approver), so the delete dialog reads this first and offers to archive them through DELETE /api/v1/projects/{id}. Same access as that delete: useCase.edit and write access to the use case (an Admin, its owner, a member or a member of one of its groups).",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The use case id" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 403, description: "No useCase.edit permission, or no write access to the use case" },
+      { status: 404, description: "Use case not found in the organization" },
       { status: 500, description: "Internal server error" },
     ],
     tag: "v1: V1/Projects",
@@ -13350,13 +14022,24 @@ export const allEndpoints = {
   training: trainingEndpoints,
   user: userEndpoints,
   v1ChangeHistory: v1ChangeHistoryEndpoints,
+  v1Extensions: v1ExtensionsEndpoints,
   v1IntakeForms: v1IntakeFormsEndpoints,
+  v1IntakeSubmissions: v1IntakeSubmissionsEndpoints,
+  v1Policies: v1PoliciesEndpoints,
+  v1RiskImport: v1RiskImportEndpoints,
   v1UseCaseSettings: v1UseCaseSettingsEndpoints,
   v1V1aiAppLifecycle: v1V1aiAppLifecycleEndpoints,
   v1V1aiApps: v1V1aiAppsEndpoints,
+  v1V1aiDetection: v1V1aiDetectionEndpoints,
+  v1V1aiDetectionRepositories: v1V1aiDetectionRepositoriesEndpoints,
+  v1V1changeNotices: v1V1changeNoticesEndpoints,
   v1V1dashboard: v1V1dashboardEndpoints,
+  v1V1groups: v1V1groupsEndpoints,
+  v1V1home: v1V1homeEndpoints,
+  v1V1importedFrameworkAssessments: v1V1importedFrameworkAssessmentsEndpoints,
   v1V1intakeFormReviewTime: v1V1intakeFormReviewTimeEndpoints,
   v1V1lifecycleSettings: v1V1lifecycleSettingsEndpoints,
+  v1V1policyTemplates: v1V1policyTemplatesEndpoints,
   v1V1projects: v1V1projectsEndpoints,
   v1V1training: v1V1trainingEndpoints,
   v1V1useCaseLifecycle: v1V1useCaseLifecycleEndpoints,

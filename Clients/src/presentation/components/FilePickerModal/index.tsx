@@ -25,6 +25,8 @@ import {
 import { FileData } from "../../../domain/types/File";
 import useFormattedDate from "../../../application/hooks/useFormattedDate";
 import { FileExpiryChip } from "../FileExpiryChip";
+import { palette, radiusPx } from "../../themes/palette";
+import { chartTheme } from "../../themes/chartTheme";
 
 interface FilePickerModalProps {
   open: boolean;
@@ -37,12 +39,14 @@ interface FilePickerModalProps {
 
 const getFileIcon = (filename: string) => {
   const ext = filename?.split(".").pop()?.toLowerCase() || "";
-  if (["pdf"].includes(ext)) return <FileIcon size={20} color="#E53935" />;
+  if (["pdf"].includes(ext)) return <FileIcon size={20} color={chartTheme.fileTypes.pdf} />;
   if (["jpg", "jpeg", "png", "gif", "bmp", "webp"].includes(ext))
-    return <ImageIcon size={20} color="#1E88E5" />;
-  if (["doc", "docx", "txt", "rtf"].includes(ext)) return <FileIcon size={20} color="#00ACC1" />;
-  if (["xls", "xlsx", "csv"].includes(ext)) return <FileIcon size={20} color="#43A047" />;
-  return <DefaultFileIcon size={20} color="#757575" />;
+    return <ImageIcon size={20} color={chartTheme.fileTypes.image} />;
+  if (["doc", "docx", "txt", "rtf"].includes(ext))
+    return <FileIcon size={20} color={chartTheme.fileTypes.doc} />;
+  if (["xls", "xlsx", "csv"].includes(ext))
+    return <FileIcon size={20} color={chartTheme.fileTypes.sheet} />;
+  return <DefaultFileIcon size={20} color={palette.text.icon} />;
 };
 
 const formatFileSize = (bytes?: number): string => {
@@ -181,7 +185,7 @@ export const FilePickerModal: FC<FilePickerModalProps> = ({
           sx={{
             "& .MuiOutlinedInput-root": {
               "backgroundColor": theme.palette.background.accent,
-              "borderRadius": "8px",
+              "borderRadius": radiusPx.lg,
               "fontSize": theme.typography.fontSize,
               "& fieldset": {
                 borderColor: theme.palette.border.light,
@@ -190,7 +194,7 @@ export const FilePickerModal: FC<FilePickerModalProps> = ({
                 borderColor: theme.palette.border.dark,
               },
               "&.Mui-focused fieldset": {
-                borderColor: "#4C7BF4",
+                borderColor: palette.brand.primary,
                 borderWidth: 1,
               },
             },
@@ -209,9 +213,9 @@ export const FilePickerModal: FC<FilePickerModalProps> = ({
               sx={{
                 "fontSize": 12,
                 "fontWeight": 500,
-                "color": "#4C7BF4",
+                "color": palette.status.info.text,
                 "cursor": "pointer",
-                "&:hover": { color: "#3D62C3" },
+                "&:hover": { color: palette.accent.indigo.text },
               }}
             >
               {selectedIds.size === filteredFiles.length ? "Deselect all" : "Select all"}
@@ -225,8 +229,8 @@ export const FilePickerModal: FC<FilePickerModalProps> = ({
                 label={`${selectedIds.size} selected`}
                 size="small"
                 sx={{
-                  "backgroundColor": "#EEF4FF",
-                  "color": "#3B5BDB",
+                  "backgroundColor": palette.status.info.bg,
+                  "color": palette.accent.indigo.text,
                   "fontSize": 11,
                   "fontWeight": 500,
                   "height": 24,
@@ -246,13 +250,13 @@ export const FilePickerModal: FC<FilePickerModalProps> = ({
             maxHeight: "320px",
             overflowY: "auto",
             border: `1px solid ${theme.palette.border.light}`,
-            borderRadius: "8px",
+            borderRadius: radiusPx.lg,
             backgroundColor: theme.palette.background.main,
           }}
         >
           {loading ? (
             <Box display="flex" justifyContent="center" alignItems="center" py={5}>
-              <CircularProgress size={24} sx={{ color: "#4C7BF4" }} />
+              <CircularProgress size={24} sx={{ color: palette.status.info.text }} />
             </Box>
           ) : error ? (
             <Box display="flex" justifyContent="center" alignItems="center" py={4}>
@@ -298,10 +302,12 @@ export const FilePickerModal: FC<FilePickerModalProps> = ({
                     "px": 2,
                     "py": 1.5,
                     "cursor": "pointer",
-                    "backgroundColor": selectedIds.has(file.id) ? "#F0F7FF" : "transparent",
+                    "backgroundColor": selectedIds.has(file.id)
+                      ? palette.status.info.bg
+                      : "transparent",
                     "&:hover": {
                       backgroundColor: selectedIds.has(file.id)
-                        ? "#E3EFFD"
+                        ? palette.status.info.bg
                         : theme.palette.background.accent,
                     },
                     "transition": "background-color 0.12s ease",
@@ -313,7 +319,7 @@ export const FilePickerModal: FC<FilePickerModalProps> = ({
                     sx={{
                       "p": 0.5,
                       "color": theme.palette.border.dark,
-                      "&.Mui-checked": { color: "#4C7BF4" },
+                      "&.Mui-checked": { color: palette.status.info.text },
                     }}
                   />
 
@@ -321,7 +327,7 @@ export const FilePickerModal: FC<FilePickerModalProps> = ({
                     sx={{
                       width: 36,
                       height: 36,
-                      borderRadius: "6px",
+                      borderRadius: radiusPx.md,
                       backgroundColor: theme.palette.background.fill,
                       display: "flex",
                       alignItems: "center",

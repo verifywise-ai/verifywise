@@ -16,6 +16,7 @@ import AITrustCentreHeader from "./Components/Header/AITrustCentreHeader";
 import axios from "axios";
 import { useParams } from "react-router";
 import { ENV_VARs } from "../../../../env.vars";
+import { palette } from "../../themes/palette";
 
 const AITrustCentrePublic: React.FC = () => {
   const [tabValue, setTabValue] = React.useState("overview");
@@ -58,7 +59,7 @@ const AITrustCentrePublic: React.FC = () => {
     <Stack
       overflow={"hidden"}
       sx={{
-        backgroundColor: "#FCFCFD",
+        backgroundColor: palette.background.main,
         minHeight: "100vh",
         display: "flex",
         flexDirection: "column",
@@ -69,7 +70,7 @@ const AITrustCentrePublic: React.FC = () => {
         sx={{
           width: "100%",
           height: 180,
-          background: data?.info?.header_color || "#D6E4F9",
+          background: data?.info?.header_color || palette.accent.indigo.bg,
           position: "relative",
           px: 10,
         }}

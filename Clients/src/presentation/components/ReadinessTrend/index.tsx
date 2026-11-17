@@ -1,6 +1,6 @@
 import { Box, Typography, LinearProgress } from "@mui/material";
 import { TrendingUp } from "lucide-react";
-import { status, text as textColors, background } from "../../themes/palette";
+import { status, text as textColors, background, radiusPx } from "../../themes/palette";
 import CustomizableSkeleton from "../Skeletons";
 import { EmptyState } from "../EmptyState";
 import type { FrameworkReadinessScore } from "../../../domain/interfaces/i.readiness";
@@ -86,7 +86,7 @@ export default function ReadinessTrend({ data, isLoading }: ReadinessTrendProps)
           "&::-webkit-scrollbar-track": { backgroundColor: "transparent" },
           "&::-webkit-scrollbar-thumb": {
             "backgroundColor": background.hover,
-            "borderRadius": "4px",
+            "borderRadius": radiusPx.sm,
             "&:hover": { backgroundColor: textColors.muted },
           },
         }}
@@ -112,10 +112,10 @@ export default function ReadinessTrend({ data, isLoading }: ReadinessTrendProps)
                   sx={{
                     "flex": 1,
                     "height": 8,
-                    "borderRadius": "4px",
+                    "borderRadius": radiusPx.sm,
                     "backgroundColor": background.hover,
                     "& .MuiLinearProgress-bar": {
-                      borderRadius: "4px",
+                      borderRadius: radiusPx.sm,
                       backgroundColor: getScoreColor(score),
                     },
                   }}

@@ -1,3 +1,4 @@
+import { radiusPx } from "../../themes/palette";
 export const mainStackStyle = {
   display: "flex",
   flexDirection: "column",
@@ -40,7 +41,7 @@ export const catalogGridStyle = {
 
 export const catalogCardStyle = {
   "padding": "16px",
-  "borderRadius": "4px",
+  "borderRadius": radiusPx.sm,
   "border": "1px solid",
   "borderColor": "border.light",
   "backgroundColor": "background.main",

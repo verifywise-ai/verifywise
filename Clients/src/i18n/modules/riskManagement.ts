@@ -2,6 +2,7 @@
 // Spread into ../translations.ts. Other areas stay in that file for now.
 
 export const de: Record<string, string> = {
+  "Risk analytics & trends": "Risikoanalysen und Trends",
   "Add a new risk": "Neues Risiko hinzufügen",
   "Create a detailed breakdown of risks and their mitigation strategies to assist in documenting your risk management activities effectively.":
     "Erstellen Sie eine detaillierte Aufschlüsselung der Risiken und ihrer Minderungsstrategien, um Ihre Risikomanagement-Aktivitäten wirksam zu dokumentieren.",
@@ -9,7 +10,6 @@ export const de: Record<string, string> = {
   "Add new risk manually": "Neues Risiko manuell hinzufügen",
   "Add new risk menu": "Menü für neues Risiko",
   "Target Date": "Zieltermin",
-  "Linked Controls": "Verknüpfte Kontrollen",
   "Mitigation Status": "Minderungsstatus",
   "signal": "Signal",
   "reasons": "Gründen",
@@ -22,7 +22,6 @@ export const de: Record<string, string> = {
   "Review and edit the selected risk from the AI database before saving.":
     "Prüfen und bearbeiten Sie das ausgewählte Risiko aus der KI-Datenbank, bevor Sie speichern.",
   "Risk distribution overview": "Übersicht der Risikoverteilung",
-  "Risk Analytics & Trends": "Risikoanalysen und Trends",
   "Use selected risks": "Ausgewählte Risiken verwenden",
   "Add new risk tabs": "Tabs für neue Risiken",
   "Potential impact": "Potenzielle Auswirkung",
@@ -136,8 +135,6 @@ export const de: Record<string, string> = {
     "Die beiden Risiken sind jetzt als verwandt verknüpft.",
   "Failed to link the risks.": "Die Risiken konnten nicht verknüpft werden.",
   "Failed to delete the risk.": "Das Risiko konnte nicht gelöscht werden.",
-  "Risk deleted but failed to remove it from some linked policies.":
-    "Risiko gelöscht, konnte aber nicht aus einigen verknüpften Richtlinien entfernt werden.",
   'Deleted "{name}".': "„{name}“ wurde gelöscht.",
   "Parent risk": "Übergeordnetes Risiko",
   "Child risks": "Untergeordnete Risiken",
@@ -205,9 +202,20 @@ export const de: Record<string, string> = {
   "Search vendor risks": "Anbieterrisiken suchen",
   "Why are you dismissing {name}?": "Warum verwerfen Sie {name}?",
   "What happened?": "Was ist passiert?",
+  "The risk level is a weighted score: likelihood plus three times severity, so severity counts more. Pick a likelihood and a severity and the level follows from the score.":
+    "Die Risikostufe ist ein gewichteter Wert: Eintrittswahrscheinlichkeit plus das Dreifache der Schwere, die Schwere zählt also stärker. Wählen Sie Wahrscheinlichkeit und Schwere, und die Stufe ergibt sich aus dem Wert.",
+  "Heat map (inherent level)": "Heatmap (inhärente Stufe)",
+  "Inherent level: No risk": "Inhärente Stufe: Kein Risiko",
+  "Inherent level: Very low risk": "Inhärente Stufe: Sehr geringes Risiko",
+  "Inherent level: Low risk": "Inhärente Stufe: Geringes Risiko",
+  "Inherent level: Medium risk": "Inhärente Stufe: Mittleres Risiko",
+  "Inherent level: High risk": "Inhärente Stufe: Hohes Risiko",
+  "Inherent level: Very high risk": "Inhärente Stufe: Sehr hohes Risiko",
+  "Not required": "Nicht erforderlich",
 };
 
 export const fr: Record<string, string> = {
+  "Risk analytics & trends": "Analyses et tendances des risques",
   "Add a new risk": "Ajouter un nouveau risque",
   "Create a detailed breakdown of risks and their mitigation strategies to assist in documenting your risk management activities effectively.":
     "Créez une description détaillée des risques et de leurs stratégies d'atténuation afin de documenter efficacement vos activités de gestion des risques.",
@@ -215,7 +223,6 @@ export const fr: Record<string, string> = {
   "Add new risk manually": "Ajouter un risque manuellement",
   "Add new risk menu": "Menu nouveau risque",
   "Target Date": "Date cible",
-  "Linked Controls": "Contrôles liés",
   "Mitigation Status": "Statut d'atténuation",
   "signal": "signal",
   "reasons": "raisons",
@@ -228,7 +235,6 @@ export const fr: Record<string, string> = {
   "Review and edit the selected risk from the AI database before saving.":
     "Examinez et modifiez le risque sélectionné depuis la base IA avant d'enregistrer.",
   "Risk distribution overview": "Vue d'ensemble de la répartition des risques",
-  "Risk Analytics & Trends": "Analyses et tendances des risques",
   "Use selected risks": "Utiliser les risques sélectionnés",
   "Add new risk tabs": "Onglets nouveau risque",
   "Potential impact": "Impact potentiel",
@@ -339,8 +345,6 @@ export const fr: Record<string, string> = {
     "Les deux risques sont maintenant liés comme connexes.",
   "Failed to link the risks.": "Impossible de lier les risques.",
   "Failed to delete the risk.": "Impossible de supprimer le risque.",
-  "Risk deleted but failed to remove it from some linked policies.":
-    "Risque supprimé, mais impossible de le retirer de certaines politiques liées.",
   'Deleted "{name}".': "« {name} » a été supprimé.",
   "Parent risk": "Risque parent",
   "Child risks": "Risques enfants",
@@ -407,9 +411,20 @@ export const fr: Record<string, string> = {
   "Search vendor risks": "Rechercher des risques fournisseurs",
   "Why are you dismissing {name}?": "Pourquoi rejetez-vous {name} ?",
   "What happened?": "Que s'est-il passé ?",
+  "The risk level is a weighted score: likelihood plus three times severity, so severity counts more. Pick a likelihood and a severity and the level follows from the score.":
+    "Le niveau de risque est un score pondéré : la probabilité plus trois fois la gravité, la gravité compte donc davantage. Choisissez une probabilité et une gravité, et le niveau découle du score.",
+  "Heat map (inherent level)": "Carte thermique (niveau inhérent)",
+  "Inherent level: No risk": "Niveau inhérent : aucun risque",
+  "Inherent level: Very low risk": "Niveau inhérent : risque très faible",
+  "Inherent level: Low risk": "Niveau inhérent : risque faible",
+  "Inherent level: Medium risk": "Niveau inhérent : risque moyen",
+  "Inherent level: High risk": "Niveau inhérent : risque élevé",
+  "Inherent level: Very high risk": "Niveau inhérent : risque très élevé",
+  "Not required": "Non requis",
 };
 
 export const es: Record<string, string> = {
+  "Risk analytics & trends": "Analíticas y tendencias de riesgos",
   "Add a new risk": "Añadir un nuevo riesgo",
   "Create a detailed breakdown of risks and their mitigation strategies to assist in documenting your risk management activities effectively.":
     "Cree un desglose detallado de los riesgos y sus estrategias de mitigación para documentar eficazmente sus actividades de gestión de riesgos.",
@@ -417,7 +432,6 @@ export const es: Record<string, string> = {
   "Add new risk manually": "Añadir nuevo riesgo manualmente",
   "Add new risk menu": "Menú de nuevo riesgo",
   "Target Date": "Fecha objetivo",
-  "Linked Controls": "Controles vinculados",
   "Mitigation Status": "Estado de mitigación",
   "signal": "señal",
   "reasons": "motivos",
@@ -430,7 +444,6 @@ export const es: Record<string, string> = {
   "Review and edit the selected risk from the AI database before saving.":
     "Revise y edite el riesgo seleccionado de la base de datos de IA antes de guardar.",
   "Risk distribution overview": "Resumen de la distribución de riesgos",
-  "Risk Analytics & Trends": "Analíticas y tendencias de riesgos",
   "Use selected risks": "Usar los riesgos seleccionados",
   "Add new risk tabs": "Pestañas de añadir nuevo riesgo",
   "Potential impact": "Impacto potencial",
@@ -541,8 +554,6 @@ export const es: Record<string, string> = {
     "Los dos riesgos ahora están vinculados como relacionados.",
   "Failed to link the risks.": "No se pudieron vincular los riesgos.",
   "Failed to delete the risk.": "No se pudo eliminar el riesgo.",
-  "Risk deleted but failed to remove it from some linked policies.":
-    "Riesgo eliminado, pero no se pudo quitar de algunas políticas vinculadas.",
   'Deleted "{name}".': "«{name}» eliminado.",
   "Parent risk": "Riesgo principal",
   "Child risks": "Riesgos dependientes",
@@ -609,4 +620,14 @@ export const es: Record<string, string> = {
   "Search vendor risks": "Buscar riesgos de proveedor",
   "Why are you dismissing {name}?": "¿Por qué descartas {name}?",
   "What happened?": "¿Qué ocurrió?",
+  "The risk level is a weighted score: likelihood plus three times severity, so severity counts more. Pick a likelihood and a severity and the level follows from the score.":
+    "El nivel de riesgo es una puntuación ponderada: la probabilidad más tres veces la gravedad, por lo que la gravedad pesa más. Elija una probabilidad y una gravedad, y el nivel se deduce de la puntuación.",
+  "Heat map (inherent level)": "Mapa de calor (nivel inherente)",
+  "Inherent level: No risk": "Nivel inherente: sin riesgo",
+  "Inherent level: Very low risk": "Nivel inherente: riesgo muy bajo",
+  "Inherent level: Low risk": "Nivel inherente: riesgo bajo",
+  "Inherent level: Medium risk": "Nivel inherente: riesgo medio",
+  "Inherent level: High risk": "Nivel inherente: riesgo alto",
+  "Inherent level: Very high risk": "Nivel inherente: riesgo muy alto",
+  "Not required": "No requerido",
 };

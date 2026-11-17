@@ -1,6 +1,7 @@
 import express from "express";
 const router = express.Router();
 import authenticateJWT from "../middleware/auth.middleware";
+import authorize from "../middleware/accessControl.middleware";
 import {
   archiveIncidentById,
   createNewIncident,
@@ -17,7 +18,7 @@ router.get("/", authenticateJWT, getAllIncidents);
 router.get("/:id", authenticateJWT, getIncidentById);
 
 // POST create new incident
-router.post("/", authenticateJWT, createNewIncident);
+router.post("/", authenticateJWT, authorize("incident.create"), createNewIncident);
 
 // PATCH update incident by ID
 router.patch("/:id", authenticateJWT, updateIncidentById);

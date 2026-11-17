@@ -1,5 +1,10 @@
 import { Theme } from "@mui/material/styles";
-import { brand, background, border as borderPalette } from "../../themes/palette";
+import {
+  brand,
+  background,
+  border as borderPalette,
+  palette as vwPalette,
+} from "../../themes/palette";
 
 export const agentMainStack = {
   gap: "16px",
@@ -63,7 +68,7 @@ export const permissionChip = {
   height: "20px",
   backgroundColor: `${background.surface}`,
   borderRadius: 4,
-  color: "#666",
+  color: vwPalette.text.tertiary,
   margin: 0,
   fontWeight: 500,
 };

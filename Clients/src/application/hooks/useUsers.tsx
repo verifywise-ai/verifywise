@@ -10,19 +10,23 @@ interface ApiUser {
   surname: string;
   email: string;
   role_id?: number;
+  created_at?: string;
+  last_login?: string | null;
 }
 interface ApiResponse {
   data: ApiUser[];
 }
 
 const USERS_QUERY_KEY = ["users"] as const;
+// One shared empty list, so memos keyed on `users` do not rebuild on every render while loading.
+const NO_USERS: User[] = [];
 
 const useUsers = () => {
   const { userId, organizationId } = useAuth();
   const queryClient = useQueryClient();
 
   const {
-    data: users = [],
+    data: users = NO_USERS,
     isLoading: loading,
     error,
   } = useQuery({
@@ -36,6 +40,8 @@ const useUsers = () => {
         surname: user.surname,
         email: user.email,
         roleId: user.role_id,
+        created_at: user.created_at ? new Date(user.created_at) : undefined,
+        last_login: user.last_login ? new Date(user.last_login) : undefined,
       }));
       return formattedUsers;
     },

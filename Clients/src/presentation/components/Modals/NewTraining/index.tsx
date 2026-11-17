@@ -45,9 +45,9 @@ import {
 } from "../../../../application/repository/entity.repository";
 import { createEvidenceHub } from "../../../../application/repository/evidenceHub.repository";
 import { CustomizableButton } from "../../button/customizable-button";
-import { useAuth } from "../../../../application/hooks/useAuth";
-import allowedRoles from "../../../../application/constants/permissions";
+import { useCanCheck } from "../../../../application/hooks/useCan";
 import ReadOnlyFieldset from "../../ReadOnlyFieldset";
+import { radiusPx } from "../../../themes/palette";
 
 type TrainingFormState = Omit<Partial<TrainingRegistarDTO>, "status"> & {
   status: TrainingStatus;
@@ -79,8 +79,8 @@ const NewTraining: FC<NewTrainingProps> = ({
 }) => {
   const theme = useTheme();
   // Roles without edit rights can open an existing record but not change it.
-  const { userRoleName } = useAuth();
-  const isReadOnly = isEdit && !allowedRoles.training.edit.includes(userRoleName);
+  const can = useCanCheck();
+  const isReadOnly = isEdit && !can("training.edit");
   const [values, setValues] = useState<TrainingFormState>(initialData || initialState);
   const validators = useMemo(
     () => ({
@@ -466,7 +466,7 @@ const NewTraining: FC<NewTrainingProps> = ({
                 sx={{
                   border: "1px solid",
                   borderColor: "border.light",
-                  borderRadius: "4px",
+                  borderRadius: radiusPx.sm,
                 }}
               >
                 <Table size="small">

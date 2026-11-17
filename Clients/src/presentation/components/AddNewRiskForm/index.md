@@ -82,8 +82,8 @@ return (
       likelihood: 1,
       riskSeverity: 1,
       approver: 0,
-      approvalStatus: 0,
-      dateOfAssessment: new Date().toISOString(),
+      approvalStatus: RISK_APPROVAL_STATUS.NotRequired,
+      dateOfAssessment: "",
       recommendations: "",
     }}
   />
@@ -123,7 +123,7 @@ The component is organized into several key sections:
 
 ### Permission System
 
-- **Role-Based Access**: Uses `allowedRoles.projectRisks` for create/edit permissions
+- **Role-Based Access**: Uses the `risks.edit` permission (`useCan`) for create/edit permissions
 - **Dynamic Button States**: Disables save/update button based on user permissions
 - **Context-Aware**: Integrates with authentication context for user role
 
@@ -201,7 +201,7 @@ const COMPONENT_CONSTANTS = {
 - `useAuth` - Authentication hook for user role
 - `useUsers` - Users data hook
 - `VerifyWiseContext` - Application context for data access
-- `allowedRoles` - Permission constants
+- `useCanCheck` - Permission checks (application/hooks/useCan)
 
 ### Validation
 
@@ -219,7 +219,7 @@ const COMPONENT_CONSTANTS = {
 - `aiLifecyclePhase` - AI lifecycle phase options
 - `riskCategoryItems` - Risk category options
 - `mitigationStatusItems` - Mitigation status options
-- `approvalStatusItems` - Approval status options
+- `approvalStatusItems` - Approval status options (Pending, Approved, Rejected, Not required; ids in `RISK_APPROVAL_STATUS`)
 - `riskLevelItems` - Risk level options
 - `likelihoodItems` - Likelihood options
 - `riskSeverityItems` - Risk severity options

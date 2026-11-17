@@ -18,7 +18,6 @@ The MitigationSection component is a crucial part of the AddNewRiskForm componen
 - `mitigationValues`: `MitigationFormValues` - Current form values containing all mitigation data
 - `setMitigationValues`: `Dispatch<SetStateAction<MitigationFormValues>>` - State setter function for updating form values
 - `mitigationErrors`: `MitigationFormErrors` (optional) - Form validation errors object, defaults to empty object
-- `userRoleName`: `string` - Current user's role name for permission-based editing restrictions
 
 ## Usage
 
@@ -28,8 +27,7 @@ To use the MitigationSection component, import it and pass the required props:
 import MitigationSection from "./MitigationSection";
 
 const [mitigationValues, setMitigationValues] =
-  useState <
-  MitigationFormValues >
+  (useState < MitigationFormValues) >
   {
     mitigationStatus: 0,
     currentRiskLevel: 0,
@@ -39,19 +37,18 @@ const [mitigationValues, setMitigationValues] =
     likelihood: 0,
     riskSeverity: 0,
     approver: 0,
-    approvalStatus: 0,
+    approvalStatus: RISK_APPROVAL_STATUS.NotRequired,
     dateOfAssessment: "",
     recommendations: "",
   };
 
-const [mitigationErrors, setMitigationErrors] = useState < MitigationFormErrors > {};
+const [mitigationErrors, setMitigationErrors] = (useState < MitigationFormErrors) > {};
 
 return (
   <MitigationSection
     mitigationValues={mitigationValues}
     setMitigationValues={setMitigationValues}
     mitigationErrors={mitigationErrors}
-    userRoleName="project_manager"
   />
 );
 ```
@@ -65,10 +62,35 @@ The component is organized into several logical sections:
    - Row 1: Mitigation status, current risk level, deadline
    - Row 2: Mitigation plan and implementation strategy
 3. **Risk Level Calculation**: Interactive risk level calculator
-4. **Risk Approval**: Approver selection, approval status, and assessment date
+4. **Risk Approval**: Approver selection, approval status, and assessment date (all optional)
 5. **Recommendations**: Optional recommendations field
 
 ## Key Features
+
+### Risk approval
+
+Approver, approval status and assessment date are optional. The status is one of
+Pending, Approved, Rejected or Not required (the default), and the form mirrors the
+server rule (`Servers/utils/riskApproval.utils.ts`):
+
+- The Approver select has a "None" option. Choosing a different approver sets the
+  status to Pending; choosing None sets Not required; choosing the saved approver
+  again restores the saved status.
+- "Decides" means the user holds `organization.admin` or is the saved approver
+  (never the approver picked in this edit).
+- The Approval status select is disabled with no approver (always Not required),
+  when a saved approver exists and the user does not decide, and when the approver
+  was changed in this edit unless the user is an Admin. After an approver change,
+  Not required is disabled (a new approver means Pending unless an Admin decides).
+- The Approver select is disabled when the saved status is Approved or Rejected and
+  the user does not decide. A non-Admin's own name is listed but disabled, unless
+  they already are the saved approver.
+- The "None" and status option names are translated for display (`useTranslation`);
+  the value sent to the server comes from `approvalStatusItems` by id, so it stays
+  English.
+- Pass `savedApproval` (the risk's stored approver and status; `AddNewRiskForm`
+  passes its original mitigation values). A server refusal (403) reaches the form's
+  `onError` with the server's reason.
 
 ### Form Validation
 
@@ -78,7 +100,7 @@ The component is organized into several logical sections:
 
 ### Permission System
 
-- Uses `allowedRoles.projectRisks.edit` to determine editing permissions
+- Uses the `risks.edit` permission (`useCan`) to determine editing permissions
 - Disables form fields when user lacks appropriate role
 
 ### Performance Optimizations
@@ -123,7 +145,7 @@ The component is organized into several logical sections:
 ### Hooks and Utilities
 
 - `useUsers` - Hook for fetching user data
-- `allowedRoles` - Permission constants
+- `useCanCheck` - Permission checks (application/hooks/useCan)
 - `alertState` - Alert state interface
 - Form value and error interfaces from parent component
 

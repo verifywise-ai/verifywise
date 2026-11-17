@@ -7,6 +7,7 @@
 
 import express from "express";
 import authenticateJWT from "../middleware/auth.middleware";
+import authorize from "../middleware/accessControl.middleware";
 import { requireProjectAccess } from "../middleware/projectAccess.middleware";
 import {
   getConfigByProjectId,
@@ -40,13 +41,23 @@ const router = express.Router();
 router.get("/config/:projectId", authenticateJWT, getConfigByProjectId);
 
 // POST /pmm/config - Create new config
-router.post("/config", authenticateJWT, createConfig);
+router.post("/config", authenticateJWT, authorize("postMarketMonitoring.edit"), createConfig);
 
 // PUT /pmm/config/:configId - Update config
-router.put("/config/:configId", authenticateJWT, updateConfig);
+router.put(
+  "/config/:configId",
+  authenticateJWT,
+  authorize("postMarketMonitoring.edit"),
+  updateConfig,
+);
 
 // DELETE /pmm/config/:configId - Delete config
-router.delete("/config/:configId", authenticateJWT, deleteConfig);
+router.delete(
+  "/config/:configId",
+  authenticateJWT,
+  authorize("postMarketMonitoring.edit"),
+  deleteConfig,
+);
 
 // ============================================================================
 // Question Routes
@@ -59,16 +70,36 @@ router.get("/config/:configId/questions", authenticateJWT, getQuestions);
 router.get("/org/questions", authenticateJWT, getQuestions);
 
 // POST /pmm/config/:configId/questions - Add question to config
-router.post("/config/:configId/questions", authenticateJWT, addQuestion);
+router.post(
+  "/config/:configId/questions",
+  authenticateJWT,
+  authorize("postMarketMonitoring.edit"),
+  addQuestion,
+);
 
 // PUT /pmm/questions/:questionId - Update question
-router.put("/questions/:questionId", authenticateJWT, updateQuestion);
+router.put(
+  "/questions/:questionId",
+  authenticateJWT,
+  authorize("postMarketMonitoring.edit"),
+  updateQuestion,
+);
 
 // DELETE /pmm/questions/:questionId - Delete question
-router.delete("/questions/:questionId", authenticateJWT, deleteQuestion);
+router.delete(
+  "/questions/:questionId",
+  authenticateJWT,
+  authorize("postMarketMonitoring.edit"),
+  deleteQuestion,
+);
 
 // POST /pmm/questions/reorder - Reorder questions
-router.post("/questions/reorder", authenticateJWT, reorderQuestions);
+router.post(
+  "/questions/reorder",
+  authenticateJWT,
+  authorize("postMarketMonitoring.edit"),
+  reorderQuestions,
+);
 
 // ============================================================================
 // Cycle and Form Routes

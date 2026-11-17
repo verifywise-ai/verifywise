@@ -13,6 +13,7 @@ import {
   getUnnotifiedStaleChildrenQuery,
   markParentLevelNotifiedQuery,
 } from "../../utils/riskLink.utils";
+import { SYSTEM_RISK_VIEWER } from "../../utils/riskVisibility.utils";
 
 afterEach(async () => {
   await cleanupDatabase();
@@ -309,9 +310,13 @@ describe("stale-inheritance flag", () => {
     );
     const linkId = await linkIdFor(child, parent);
 
-    expect(await acknowledgeParentLevelChangeQuery(owner.orgId, linkId)).toBe(true);
+    expect(await acknowledgeParentLevelChangeQuery(owner.orgId, linkId, SYSTEM_RISK_VIEWER)).toBe(
+      true,
+    );
     // Nothing left to clear the second time.
-    expect(await acknowledgeParentLevelChangeQuery(owner.orgId, linkId)).toBe(false);
+    expect(await acknowledgeParentLevelChangeQuery(owner.orgId, linkId, SYSTEM_RISK_VIEWER)).toBe(
+      false,
+    );
   });
 
   it("404s acknowledging a link that does not exist in the org", async () => {

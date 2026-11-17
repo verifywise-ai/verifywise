@@ -1,7 +1,16 @@
-import { QueryTypes } from "sequelize";
+import { QueryTypes, Transaction } from "sequelize";
 import { sequelize } from "../../database/db";
+import { isExtensionEnabledForOrganization } from "../../middleware/requireExtensionEnabled.middleware";
+import { logStructuredError } from "../../utils/logger/fileLogger";
 import { appendToAuditLedger } from "../../utils/auditLedger.utils";
 import { GENERIC_FORMATTERS } from "../../config/changeHistory.config";
+import { findUsersNotInOrganization, parseReferencedIds } from "../../utils/user.utils";
+import {
+  ForbiddenException,
+  ValidationException,
+} from "../../domain.layer/exceptions/custom.exception";
+
+const fileName = "modelLifecycle.service.ts";
 
 /**
  * DB helpers for the model-lifecycle extension.
@@ -390,6 +399,131 @@ export async function reorderItems(
         WHERE organization_id = :organizationId AND id = :id AND phase_id = :phaseId;`,
       { replacements: { organizationId, order: i + 1, id: orderedIds[i], phaseId } },
     );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Organization scope
+// ---------------------------------------------------------------------------
+
+/**
+ * True when the model is in the organization. The per-model routes answer 404
+ * otherwise, before any read or write, so another organization's model id
+ * never reaches the lifecycle tables (whose foreign key alone accepts it).
+ */
+export async function modelInOrganization(
+  organizationId: number,
+  modelId: number,
+): Promise<boolean> {
+  const rows = (await sequelize.query(
+    `SELECT 1 FROM model_inventories WHERE id = :modelId AND organization_id = :organizationId;`,
+    { replacements: { organizationId, modelId }, type: QueryTypes.SELECT },
+  )) as unknown[];
+  return rows.length > 0;
+}
+
+/**
+ * True when the lifecycle item is in the organization, active or not: an
+ * inactive item keeps its answers, files, people and approvers.
+ */
+export async function itemInOrganization(organizationId: number, itemId: number): Promise<boolean> {
+  const rows = (await sequelize.query(
+    `SELECT 1 FROM model_lifecycle_items WHERE id = :itemId AND organization_id = :organizationId;`,
+    { replacements: { organizationId, itemId }, type: QueryTypes.SELECT },
+  )) as unknown[];
+  return rows.length > 0;
+}
+
+/**
+ * Tenant guard for people and approvers: the user must be a member of the
+ * organization, so names and approvals never cross tenants. Fails closed on a
+ * malformed id (NaN, 5.5), which is rejected rather than skipped.
+ *
+ * @throws ValidationException when the id is malformed or not a member.
+ */
+async function assertMemberOfOrganization(
+  organizationId: number,
+  userId: number,
+  message:
+    | "Every person must be a member of this organization"
+    | "Every approver must be a member of this organization",
+): Promise<void> {
+  const ids = parseReferencedIds([userId]);
+  const outside =
+    ids === null || ids.length === 0
+      ? [userId]
+      : await findUsersNotInOrganization(ids, organizationId);
+  if (outside.length > 0) throw new ValidationException(message, "userId", userId);
+}
+
+// ---------------------------------------------------------------------------
+// Starting a model's lifecycle from another feature
+// ---------------------------------------------------------------------------
+
+/**
+ * Whether a model's lifecycle may be started for this organization: it has
+ * model-lifecycle enabled. Call it before opening the transaction that will
+ * call `startLifecycleForModel`, so the lookup does not hold a second pooled
+ * connection while that transaction holds the first. A failed lookup is logged
+ * and answers false: starting the lifecycle is never worth failing the caller.
+ */
+export async function canStartLifecycle(organizationId: number): Promise<boolean> {
+  try {
+    return await isExtensionEnabledForOrganization("model-lifecycle", organizationId);
+  } catch (err) {
+    logStructuredError(
+      `Model lifecycle: enablement lookup failed for org ${organizationId}, not starting a lifecycle`,
+      err,
+      "canStartLifecycle",
+      fileName,
+    );
+    return false;
+  }
+}
+
+/**
+ * Give a new model an empty answer row for every active item in an active
+ * phase, inside the caller's transaction (Shadow AI "start governance"). The
+ * caller checks `canStartLifecycle` first, before its transaction, so a
+ * disabled extension never gets rows written behind its gate.
+ *
+ * One INSERT ... SELECT, under a savepoint: rows that already exist are left
+ * alone (ON CONFLICT DO NOTHING). Returns true only when at least one row was
+ * inserted. Best effort: a failure is logged, rolled back to the savepoint and
+ * reported as false, so the caller's transaction carries on without it.
+ */
+export async function startLifecycleForModel(
+  organizationId: number,
+  modelId: number,
+  userId: number,
+  transaction: Transaction,
+): Promise<boolean> {
+  try {
+    await sequelize.query("SAVEPOINT lifecycle_init", { transaction });
+    const [inserted] = (await sequelize.query(
+      `INSERT INTO model_lifecycle_values
+         (organization_id, model_inventory_id, item_id, updated_by)
+       SELECT :organizationId, :modelId, i.id, :userId
+         FROM model_lifecycle_items i
+         INNER JOIN model_lifecycle_phases p ON i.phase_id = p.id
+        WHERE i.organization_id = :organizationId
+          AND p.organization_id = :organizationId
+          AND i.is_active = true AND p.is_active = true
+       ON CONFLICT (organization_id, model_inventory_id, item_id) DO NOTHING
+       RETURNING id`,
+      { replacements: { organizationId, modelId, userId }, transaction },
+    )) as [Array<{ id: number }>, unknown];
+    await sequelize.query("RELEASE SAVEPOINT lifecycle_init", { transaction });
+    return Array.isArray(inserted) && inserted.length > 0;
+  } catch (err) {
+    await sequelize.query("ROLLBACK TO SAVEPOINT lifecycle_init", { transaction }).catch(() => {});
+    logStructuredError(
+      `Model lifecycle: initialization failed for model ${modelId}, continuing without it`,
+      err,
+      "startLifecycleForModel",
+      fileName,
+    );
+    return false;
   }
 }
 
@@ -839,6 +973,11 @@ export async function addPerson(
   userId: number,
   personUserId: number,
 ): Promise<any> {
+  await assertMemberOfOrganization(
+    organizationId,
+    personUserId,
+    "Every person must be a member of this organization",
+  );
   const valueId = await ensureValueRow(organizationId, modelId, itemId, userId);
   const rows = (await sequelize.query(
     `INSERT INTO model_lifecycle_item_people (organization_id, value_id, user_id)
@@ -916,6 +1055,11 @@ export async function addApprover(
   userId: number,
   approverUserId: number,
 ): Promise<any> {
+  await assertMemberOfOrganization(
+    organizationId,
+    approverUserId,
+    "Every approver must be a member of this organization",
+  );
   const valueId = await ensureValueRow(organizationId, modelId, itemId, userId);
   const rows = (await sequelize.query(
     `INSERT INTO model_lifecycle_item_approvals (organization_id, value_id, user_id, status)
@@ -984,14 +1128,27 @@ export async function removeApprover(
 
 export type ApprovalStatus = "pending" | "approved" | "rejected";
 
+/**
+ * Records the named approver's own decision. Only that approver may decide
+ * their row (no Admin override); the controller checks the same rule first.
+ *
+ * @throws ForbiddenException when `actorId` is not `approverUserId`.
+ */
 export async function updateApprovalStatus(
   organizationId: number,
   modelId: number,
   itemId: number,
   approverUserId: number,
   status: ApprovalStatus,
-  actorId: number | null = null,
+  actorId: number,
 ): Promise<any | null> {
+  if (actorId !== approverUserId) {
+    throw new ForbiddenException(
+      "Only the assigned approver can record this decision",
+      "model_lifecycle_item_approvals",
+      "decide",
+    );
+  }
   // decided_at is NULL only when the reviewer walks the decision back to
   // "pending"; otherwise we stamp NOW(). The CTE locks the row and reads the
   // previous status in the same statement, for the change history.

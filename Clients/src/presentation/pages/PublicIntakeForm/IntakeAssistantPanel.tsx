@@ -1,7 +1,7 @@
 import { Box, ButtonBase, Typography } from "@mui/material";
 import { Sparkles } from "lucide-react";
 import { HINT_KIND_ORDER, type LiveCheckHint } from "../../../domain/types/intakeLiveChecks";
-import { border } from "../../themes/palette";
+import { border, radiusPx } from "../../themes/palette";
 import { HINT_KIND_COLORS, HINT_KIND_LABELS } from "../../components/IntakeLiveChecks/hintKinds";
 import { CustomizableButton } from "../../components/button/customizable-button";
 import type { AiCheckBlock, AiCheckStatus } from "../../../application/hooks/useIntakeLiveChecks";
@@ -71,7 +71,7 @@ export function IntakeAssistantPanel({
       sx={{
         p: "16px",
         border: `1px solid ${border.dark}`,
-        borderRadius: "4px",
+        borderRadius: radiusPx.sm,
         backgroundColor: "background.main",
         display: "flex",
         flexDirection: "column",
@@ -136,7 +136,7 @@ export function IntakeAssistantPanel({
                   "justifyContent": "flex-start",
                   "textAlign": "left",
                   "p": "6px 8px",
-                  "borderRadius": "4px",
+                  "borderRadius": radiusPx.sm,
                   "gap": "8px",
                   "&:hover": { backgroundColor: "background.accent" },
                 }}

@@ -292,7 +292,7 @@ export class RoleModel extends Model<RoleModel> implements IRole {
 
 ### Authorization Middleware
 
-`authorize()` (`Servers/middleware/accessControl.middleware.ts`) takes a permission key from the catalog in `Servers/config/rolePermissions.config.ts`. Built-in roles resolve against a static matrix; custom organization roles resolve against the `role_permissions` table, and a missing row denies. A legacy role-name array (`authorize(["Admin"])`) is still accepted while old call sites migrate; new code must use keys.
+`authorize()` (`Servers/middleware/accessControl.middleware.ts`) takes a permission key from the catalog in `Servers/config/rolePermissions.config.ts`. Built-in roles resolve against a static matrix; custom organization roles resolve against the `role_permissions` table, and a missing row denies. Role-name arrays (`authorize(["Admin"])`) are no longer accepted: a custom role can never match a built-in name, so every route authorizes on a key (#5314; `Servers/routes/__tests__/roleNameRoutes.permissions.test.ts` fails if one comes back).
 
 Each key sits in one tier, and the tier decides which built-in roles hold it:
 
@@ -300,9 +300,30 @@ Each key sits in one tier, and the tier decides which built-in roles hold it:
 |------|----------------|----------|
 | Admin | Admin | `organization.admin`, `llmKeys.admin`, `auditLedger.admin`, `logs.admin`, `training.admin` |
 | Editor | Admin, Editor | `useCase.edit`, `vendor.edit`, `model.edit`, `risks.edit`, `policy.edit`, `task.edit`, `training.edit`, `intakeForm.edit` |
-| Contributor | Admin, Reviewer, Editor | `file.contribute`, `fileManager.contribute` |
+| Contributor | Admin, Reviewer, Editor | `file.contribute`, `fileManager.contribute`, `riskLinks.review` |
+| Audit | Admin, Editor, Auditor | `framework.audit` |
 | Reader | all four | `aiDetection.read` |
-| Super | Admin, SuperAdmin | `auditLedger.super`, `invitation.super`, `user.deleteSuper` |
+| Super | Admin, SuperAdmin | `auditLedger.super`, `invitation.super`, `user.deleteSuper`, `riskLinks.admin` |
+
+### Permission-based UI gating (#5314)
+
+The client decides which controls to show from the same keys, through one hook: `useCan(key)` / `useCanCheck()` in `Clients/src/application/hooks/useCan.ts` (the old `useHasPermission` and `useCanEditAiApps` are gone). Once `GET /roles/my-permissions` has loaded, the answer is that list. While it loads, or if it fails, a built-in role falls back to the static table in `Clients/src/application/constants/permissions.ts` (a copy of the server's built-in matrix for the keys the UI uses, parity-tested against `rolePermissions.config.ts`), and a custom role is denied. Built-in roles therefore never see a control flicker, and a custom role never sees a control before it is known to be allowed. Pages that redirect or refuse when a key is missing wait for `usePermissionsSettled()` first, so a custom role is not sent away while its permissions load.
+
+**Super admins.** A pure super admin (signed in without an organization, role name `SuperAdmin`) has no row in `roles`, so `requestHasPermission` (behind `authorize()`) and `GET /roles/my-permissions` answer for them from the built-in SuperAdmin matrix. That keeps every route that used to list `"SuperAdmin"` working for them.
+
+**AI Gateway provider keys.** The gateway's key routes accept the built-in role names as before (Admin; Admin or Editor to create or verify a saved key) or a caller holding `llmKeys.admin`. The gateway has no permission table, so the Express proxy resolves the key for writes under `/api/ai-gateway/keys` and sends `x-can-manage-llm-keys: true`; it always strips a client-supplied value, and a failed lookup leaves the header off. The LLM Evals key controls use `useCan("llmKeys.admin")`. The proxy-to-service permission headers (this one and `x-can-manage-org-settings` for EvalServer settings) share `createPermissionFlagMiddleware` in `Servers/utils/proxyPermissionFlag.utils.ts`, which matches the path by segment and never matches `.` or `..`.
+
+**Enforced on the server since #5314:** `postMarketMonitoring.edit` (post-market monitoring config and question writes), `apiKeys.admin` (API token create, revoke and delete; any super admin is still allowed), `incident.create` (`POST /ai-incident-managements`). Existing custom roles that held any `*.edit` key were granted `postMarketMonitoring.edit` and `incident.create` by migration `20261111120001`.
+
+**`aiTrustIndex.admin`** (`GET` and `PUT /ai-trust-index/settings`, the AI Trust Index settings page and its sidebar entries) replaced an Admin/SuperAdmin role-name check on the write; the read needed only a login, so any member could see the recipient list. SuperAdmin is dropped on purpose (`legacyRoles` builds the built-in matrix). Custom roles could never pass that check, so no grant migration was needed; an Admin grants the key to a custom role. A pure super admin has no organization and so no settings to change.
+
+**`framework.edit` and `framework.audit`** are checked by what a save changes. The framework save routes (EU AI Act controls and answers, ISO 42001 / 27001 clauses and annexes, NIST AI RMF subcategories, bundled and imported framework impl rows) run `requireFrameworkWriteAccess` (`Servers/middleware/frameworkWriteAccess.middleware.ts`) after the multipart parser. A caller holding both keys passes; anyone else gets a per-route detector (`Servers/utils/frameworkWriteAccess.utils.ts`) that compares the request with the stored row. Implementation fields, evidence files and linked risks need `framework.edit`, auditor feedback and its files need `framework.audit`, and an unchanged save passes. Anything a detector cannot read (a body it cannot parse, an id `toId` rejects) counts as a change. The comparisons are tolerant (rich text by its text, due dates within a day), so for each class the caller lacks, the detector's `restore` then rewrites the request: fields the update query skips when absent are removed, and the EU AI Act control fields, which saveControls always writes, get the stored values. A save that passes the check therefore writes that class as stored, so an Auditor cannot change implementation HTML behind equal text or move a due date by a day. An EU AI Act answer's status stays open to every role, since the assessment tracker offers it to everyone. Adding and removing frameworks, the per-project framework deletes, the NIST status route and the imported risk replace use `authorize("framework.edit")`.
+
+**`evals.edit`, partly:** `requireEvalsEditForChanges` (`Servers/routes/deepEvalRoutes.route.ts`) refuses the EvalServer writes in `EVALS_EDIT_WRITES` (deleting projects, experiments and datasets; experiment status; scorer and saved model writes) before the catch-all proxy. Creating and changing projects and experiments and uploading datasets stay open, because the app offers them to every role.
+
+**Screen only** (the key decides what the app offers; the server does not check it): `useCase.members` (members are also saved through the project form, which Editors use). Its catalog description says so.
+
+**Still on the built-in role name**, because the server check is a role-name check too, or no key covers it: Settings > Team, Settings > Features, Settings > MCP, intake review lanes and routing, file downloads (Admin only on screen; the download route needs only a login), the demo data menu, and the "all tasks" Admin view. Folders (`/api/virtual-folders`, shared by the File manager and the Policies page) are created and renamed with `file.edit` or `policy.edit`. Deleting one cascades to its subfolders and both mapping tables, so it also needs `file.edit` when files are inside and `policy.edit` when policies are. Files are put into folders with `file.edit` (`authorize()` on the routes). `Servers/routes/__tests__/roleNameRoutes.permissions.test.ts` lists every remaining server-side role-name check with its reason and fails if one is added.
 
 ### Core governance writes
 

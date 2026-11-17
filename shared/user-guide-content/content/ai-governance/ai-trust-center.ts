@@ -39,7 +39,7 @@ export const aiTrustCenterContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Go to **Assurance > AI trust center** in the sidebar to configure your public transparency portal. You can customize what information to display and generate a shareable link for external stakeholders.',
+      text: 'Go to **Record > Evidence & reports > AI trust center** in the sidebar to configure your public transparency portal. You can customize what information to display and generate a shareable link for external stakeholders.',
     },
     {
       type: 'heading',

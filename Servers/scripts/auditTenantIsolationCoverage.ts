@@ -44,7 +44,8 @@ const sharedTables: SharedTableEntry[] = [
   },
   {
     name: "frameworks",
-    justification: "Global framework catalog; per-tenant linkage is projects_frameworks.",
+    justification:
+      "Global framework catalog; per-tenant linkage is projects_frameworks. Org-owned frameworks from the framework-import extension (#5254) are not stored here but in the registered imported_frameworks / imported_framework_* tables.",
   },
   {
     name: "subscription_history",
@@ -132,59 +133,9 @@ const deferredScopedTables: SharedTableEntry[] = [
       "Deferred to a future isolation wave; not covered by the first-pass matrix. See runbook section 2.4.",
   },
   {
-    name: "azure_ai_model_records",
-    justification:
-      "Extension-owned table (azure-ai-foundry). Every SELECT/INSERT/UPDATE/DELETE in Servers/extensions/azure-ai-foundry/azureAiFoundry.service.ts filters by organization_id. Access is additionally gated by requireExtensionEnabled('azure-ai-foundry'). Deferred pending matrix coverage.",
-  },
-  {
-    name: "jira_assets_config",
-    justification:
-      "Extension-owned table (jira-assets). Every query in Servers/extensions/jira-assets/jiraAssets.service.ts filters by organization_id. UNIQUE(organization_id) on the table enforces one config per org. Deferred pending matrix coverage.",
-  },
-  {
     name: "jira_assets_sync_history",
     justification:
       "Extension-owned table (jira-assets), being replaced by the sync engine's extension_sync_runs (migration 20261013105301 copied every row with its organization_id). Every query on it filters by organization_id; once the engine tasks land it is no longer written or read. Kept for one release so a rollback restores the old behaviour; a follow-up migration drops it.",
-  },
-  {
-    name: "jira_assets_use_cases",
-    justification:
-      "Extension-owned table (jira-assets). Every query in Servers/extensions/jira-assets/jiraAssets.service.ts filters by organization_id. UNIQUE(organization_id, jira_object_id). project_id references projects through a composite FK (project_id, organization_id), so a link cannot point at another organization's project. Deferred pending matrix coverage.",
-  },
-  {
-    name: "model_lifecycle_change_history",
-    justification:
-      "Extension-owned table (model-lifecycle). Every INSERT/SELECT in Servers/extensions/model-lifecycle/modelLifecycle.service.ts filters by organization_id. Deferred pending matrix coverage.",
-  },
-  {
-    name: "model_lifecycle_item_approvals",
-    justification:
-      "Extension-owned table (model-lifecycle). Access is org-scoped via the parent lifecycle_values row and enforced in Servers/extensions/model-lifecycle/modelLifecycle.service.ts. Deferred pending matrix coverage.",
-  },
-  {
-    name: "model_lifecycle_item_files",
-    justification:
-      "Extension-owned table (model-lifecycle). Access is org-scoped via the parent lifecycle_values row and enforced in Servers/extensions/model-lifecycle/modelLifecycle.service.ts. Deferred pending matrix coverage.",
-  },
-  {
-    name: "model_lifecycle_item_people",
-    justification:
-      "Extension-owned table (model-lifecycle). Access is org-scoped via the parent lifecycle_values row and enforced in Servers/extensions/model-lifecycle/modelLifecycle.service.ts. Deferred pending matrix coverage.",
-  },
-  {
-    name: "model_lifecycle_items",
-    justification:
-      "Extension-owned table (model-lifecycle). Every query in Servers/extensions/model-lifecycle/modelLifecycle.service.ts filters by organization_id. Deferred pending matrix coverage.",
-  },
-  {
-    name: "model_lifecycle_phases",
-    justification:
-      "Extension-owned table (model-lifecycle). Every query in Servers/extensions/model-lifecycle/modelLifecycle.service.ts filters by organization_id. Deferred pending matrix coverage.",
-  },
-  {
-    name: "model_lifecycle_values",
-    justification:
-      "Extension-owned table (model-lifecycle). Every query in Servers/extensions/model-lifecycle/modelLifecycle.service.ts filters by organization_id. UNIQUE(organization_id, model_inventory_id, item_id). Deferred pending matrix coverage.",
   },
   {
     name: "ai_action_audit_log",
@@ -868,16 +819,6 @@ const deferredScopedTables: SharedTableEntry[] = [
       "Deferred to a future isolation wave; not covered by the first-pass matrix. See runbook section 2.4.",
   },
   {
-    name: "mlflow_integrations",
-    justification:
-      "Deferred to a future isolation wave; not covered by the first-pass matrix. See runbook section 2.4.",
-  },
-  {
-    name: "mlflow_model_records",
-    justification:
-      "Deferred to a future isolation wave; not covered by the first-pass matrix. See runbook section 2.4.",
-  },
-  {
     name: "model_inventories",
     justification:
       "Deferred to a future isolation wave; not covered by the first-pass matrix. See runbook section 2.4.",
@@ -926,11 +867,6 @@ const deferredScopedTables: SharedTableEntry[] = [
     name: "notifications",
     justification:
       "Deferred to a future isolation wave; not covered by the first-pass matrix. See runbook section 2.4.",
-  },
-  {
-    name: "extension_enablements",
-    justification:
-      "Deferred to a future isolation wave; not covered by the first-pass matrix. See runbook section 2.4. Replaces the legacy plugin_installations entry (extensions migration 20260811102307).",
   },
   {
     name: "policy_change_history",
@@ -1069,11 +1005,6 @@ const deferredScopedTables: SharedTableEntry[] = [
   },
   {
     name: "share_links",
-    justification:
-      "Deferred to a future isolation wave; not covered by the first-pass matrix. See runbook section 2.4.",
-  },
-  {
-    name: "slack_webhooks",
     justification:
       "Deferred to a future isolation wave; not covered by the first-pass matrix. See runbook section 2.4.",
   },

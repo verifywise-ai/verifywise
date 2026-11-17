@@ -1,4 +1,4 @@
-import { text } from "../../themes/palette";
+import { text, radiusPx } from "../../themes/palette";
 export const vwfileHeading = {
   color: `${text.primary}`,
   fontSize: 16,
@@ -20,7 +20,7 @@ export const filesTableFrame = {
   width: "100%",
   maxWidth: "100%",
   position: "relative",
-  borderRadius: "4px",
+  borderRadius: radiusPx.sm,
   overflow: "hidden",
   transition: "opacity 0.3s ease-in-out",
 };

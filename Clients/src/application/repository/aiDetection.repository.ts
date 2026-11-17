@@ -30,6 +30,8 @@ import {
   VULNERABILITY_FINDING_TYPES,
   SuppressionRule,
   CreateSuppressionRequest,
+  SuggestedRiskAction,
+  RecordSuggestedRiskActionRequest,
 } from "../../domain/ai-detection/types";
 import {
   RiskScore,
@@ -38,6 +40,8 @@ import {
 } from "../../domain/ai-detection/riskScoringTypes";
 
 const BASE_URL = "/ai-detection";
+/** API v1 endpoints; the legacy /ai-detection router is frozen. */
+const V1_BASE_URL = "/v1/ai-detection";
 
 // ============================================================================
 // Scan Operations
@@ -127,7 +131,8 @@ export async function getScanFindings(
   if (params.finding_type) queryParams.append("finding_type", params.finding_type);
 
   const queryString = queryParams.toString();
-  const url = `${BASE_URL}/scans/${scanId}/findings${queryString ? `?${queryString}` : ""}`;
+  // API v1: adds who set each status and whether this is the latest scan
+  const url = `${V1_BASE_URL}/scans/${scanId}/findings${queryString ? `?${queryString}` : ""}`;
 
   const response = await apiServices.get<{ data: FindingsResponse }>(url, {
     signal,
@@ -386,8 +391,9 @@ export async function updateFindingGovernanceStatus(
   governanceStatus: GovernanceStatus | null,
   signal?: AbortSignal,
 ): Promise<UpdateGovernanceStatusResponse> {
+  // API v1: adds who set the status and where the change applies
   const response = await apiServices.patch<{ data: UpdateGovernanceStatusResponse }>(
-    `${BASE_URL}/scans/${scanId}/findings/${findingId}/governance`,
+    `${V1_BASE_URL}/scans/${scanId}/findings/${findingId}/governance`,
     { governance_status: governanceStatus },
     {
       signal,
@@ -639,4 +645,76 @@ export async function deleteSuppression(id: number, signal?: AbortSignal): Promi
   await apiServices.delete<{ data: { id: number } }>(`${BASE_URL}/suppressions/${id}`, {
     signal,
   });
+}
+
+// ============================================================================
+// Suggested Risk Actions
+// ============================================================================
+
+/**
+ * List what was done with a scan's suggested risks (added to the risk register or ignored).
+ */
+export async function getSuggestedRiskActions(
+  scanId: number,
+  signal?: AbortSignal,
+): Promise<SuggestedRiskAction[]> {
+  const response = await apiServices.get<{ data: SuggestedRiskAction[] }>(
+    `${V1_BASE_URL}/scans/${scanId}/suggested-risks/actions`,
+    { signal },
+  );
+  return response.data.data;
+}
+
+/**
+ * Create a risk from a suggested risk and link it to the suggestion, in one
+ * request. The body is the risk as for POST /projectRisks. Answers 201 with
+ * the created risk, or 409 (with the linked risk's id) when the suggestion is
+ * already in the risk register.
+ *
+ * Returns the raw response, as createProjectRisk does, for the risk form.
+ */
+export async function addSuggestedRiskToRegister(
+  scanId: number,
+  suggestionName: string,
+  riskBody: Record<string, unknown>,
+) {
+  return apiServices.post<{ data: { id: number } }>(
+    `${V1_BASE_URL}/scans/${scanId}/suggested-risks/risks`,
+    { ...riskBody, suggestion_name: suggestionName },
+  );
+}
+
+/**
+ * Record that a suggested risk was ignored.
+ *
+ * @returns All actions for the scan after the change
+ */
+export async function recordSuggestedRiskAction(
+  scanId: number,
+  input: RecordSuggestedRiskActionRequest,
+  signal?: AbortSignal,
+): Promise<SuggestedRiskAction[]> {
+  const response = await apiServices.put<{ data: SuggestedRiskAction[] }>(
+    `${V1_BASE_URL}/scans/${scanId}/suggested-risks/actions`,
+    input,
+    { signal },
+  );
+  return response.data.data;
+}
+
+/**
+ * Restore an ignored suggested risk.
+ *
+ * @returns All actions for the scan after the change
+ */
+export async function restoreSuggestedRisk(
+  scanId: number,
+  actionId: number,
+  signal?: AbortSignal,
+): Promise<SuggestedRiskAction[]> {
+  const response = await apiServices.delete<{ data: SuggestedRiskAction[] }>(
+    `${V1_BASE_URL}/scans/${scanId}/suggested-risks/actions/${actionId}`,
+    { signal },
+  );
+  return response.data.data;
 }

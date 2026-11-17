@@ -24,7 +24,7 @@ import {
 } from "lucide-react";
 import { IFolderTreeNode, SelectedFolder } from "../../../../../domain/interfaces/i.virtualFolder";
 import { CustomizableButton } from "../../../../components/button/customizable-button";
-import { brand, text } from "../../../../themes/palette";
+import { brand, text, palette as vwPalette, radiusPx } from "../../../../themes/palette";
 
 interface FolderTreeProps {
   folders: IFolderTreeNode[];
@@ -43,6 +43,12 @@ interface FolderTreeProps {
   showUncategorized?: boolean;
   /** Whether to show the "Expired files" item. Defaults to true. */
   showExpired?: boolean;
+  /**
+   * Count to show per folder id, in place of the folder's own file_count.
+   * A folder missing from the map shows 0. Absent: file_count is shown.
+   * null: no count is shown (the counts are loading or failed to load).
+   */
+  countByFolderId?: Record<number, number> | null;
 }
 
 interface FolderItemProps {
@@ -56,6 +62,7 @@ interface FolderItemProps {
   onEditFolder?: (folder: IFolderTreeNode) => void;
   onDeleteFolder?: (folder: IFolderTreeNode) => void;
   canManage?: boolean;
+  countByFolderId?: Record<number, number> | null;
 }
 
 /**
@@ -72,6 +79,7 @@ const FolderItem: React.FC<FolderItemProps> = ({
   onEditFolder,
   onDeleteFolder,
   canManage,
+  countByFolderId,
 }) => {
   const [showActions, setShowActions] = useState(false);
   const isSelected = selectedFolder === folder.id;
@@ -117,10 +125,10 @@ const FolderItem: React.FC<FolderItemProps> = ({
           "padding": "6px 8px",
           "paddingLeft": `${8 + level * 16}px`,
           "cursor": "pointer",
-          "borderRadius": "4px",
-          "backgroundColor": isSelected ? "#E8F5F1" : "transparent",
+          "borderRadius": radiusPx.sm,
+          "backgroundColor": isSelected ? vwPalette.background.fill : "transparent",
           "&:hover": {
-            backgroundColor: isSelected ? "#E8F5F1" : "#F0F2F5",
+            backgroundColor: isSelected ? vwPalette.background.fill : vwPalette.background.hover,
           },
           "transition": "background-color 0.15s ease",
         }}
@@ -175,16 +183,18 @@ const FolderItem: React.FC<FolderItemProps> = ({
         </Typography>
 
         {/* File count */}
-        <Typography
-          sx={{
-            fontSize: 12,
-            color: "text.muted",
-            marginLeft: "4px",
-            flexShrink: 0,
-          }}
-        >
-          ({folder.file_count})
-        </Typography>
+        {countByFolderId !== null && (
+          <Typography
+            sx={{
+              fontSize: 12,
+              color: "text.muted",
+              marginLeft: "4px",
+              flexShrink: 0,
+            }}
+          >
+            ({countByFolderId ? (countByFolderId[folder.id] ?? 0) : folder.file_count})
+          </Typography>
+        )}
 
         {/* Action buttons (shown on hover) */}
         {canManage && showActions && (
@@ -194,7 +204,7 @@ const FolderItem: React.FC<FolderItemProps> = ({
               onClick={handleCreateSubfolder}
               sx={{
                 "padding": "2px",
-                "&:hover": { backgroundColor: "#E8F5F1" },
+                "&:hover": { backgroundColor: vwPalette.background.fill },
               }}
               title="Create subfolder"
               aria-label={`Create subfolder in ${folder.name}`}
@@ -206,7 +216,7 @@ const FolderItem: React.FC<FolderItemProps> = ({
               onClick={handleEdit}
               sx={{
                 "padding": "2px",
-                "&:hover": { backgroundColor: "#E8F5F1" },
+                "&:hover": { backgroundColor: vwPalette.background.fill },
               }}
               title="Edit folder"
               aria-label={`Edit folder ${folder.name}`}
@@ -218,12 +228,12 @@ const FolderItem: React.FC<FolderItemProps> = ({
               onClick={handleDelete}
               sx={{
                 "padding": "2px",
-                "&:hover": { backgroundColor: "#FEE2E2" },
+                "&:hover": { backgroundColor: vwPalette.status.error.bg },
               }}
               title="Delete folder"
               aria-label={`Delete folder ${folder.name}`}
             >
-              <DeleteIcon size={12} color="#EF4444" />
+              <DeleteIcon size={12} color={vwPalette.riskMark.critical} />
             </IconButton>
           </Box>
         )}
@@ -245,6 +255,7 @@ const FolderItem: React.FC<FolderItemProps> = ({
               onEditFolder={onEditFolder}
               onDeleteFolder={onDeleteFolder}
               canManage={canManage}
+              countByFolderId={countByFolderId}
             />
           ))}
         </Box>
@@ -270,6 +281,7 @@ export const FolderTree: React.FC<FolderTreeProps> = ({
   allLabel = "All files",
   showUncategorized = true,
   showExpired = true,
+  countByFolderId,
 }) => {
   const [expandedFolders, setExpandedFolders] = useState<Set<number>>(new Set());
 
@@ -290,8 +302,8 @@ export const FolderTree: React.FC<FolderTreeProps> = ({
       sx={{
         width: collapsed ? "48px" : "240px",
         minWidth: collapsed ? "48px" : "200px",
-        borderRight: "1px solid #E0E4E9",
-        backgroundColor: "#FAFBFC",
+        borderRight: `1px solid ${vwPalette.border.light}`,
+        backgroundColor: vwPalette.background.alt,
         alignSelf: "stretch",
         overflow: "hidden",
         transition: "width 300ms ease, min-width 300ms ease",
@@ -313,7 +325,7 @@ export const FolderTree: React.FC<FolderTreeProps> = ({
             onClick={onToggleCollapse}
             sx={{
               "padding": "4px",
-              "&:hover": { backgroundColor: "#E8F5F1" },
+              "&:hover": { backgroundColor: vwPalette.background.fill },
             }}
             title="Expand sidebar"
             aria-label="Expand folder sidebar"
@@ -328,7 +340,7 @@ export const FolderTree: React.FC<FolderTreeProps> = ({
                 onClick={onToggleCollapse}
                 sx={{
                   "padding": "4px",
-                  "&:hover": { backgroundColor: "#E8F5F1" },
+                  "&:hover": { backgroundColor: vwPalette.background.fill },
                 }}
                 title="Collapse sidebar"
                 aria-label="Collapse folder sidebar"
@@ -353,7 +365,7 @@ export const FolderTree: React.FC<FolderTreeProps> = ({
                 onClick={() => onCreateFolder?.(null)}
                 sx={{
                   "padding": "4px",
-                  "&:hover": { backgroundColor: "#E8F5F1" },
+                  "&:hover": { backgroundColor: vwPalette.background.fill },
                 }}
                 title="Create folder"
                 aria-label="Create new folder"
@@ -408,10 +420,14 @@ export const FolderTree: React.FC<FolderTreeProps> = ({
                   "alignItems": "center",
                   "padding": "6px 8px",
                   "cursor": "pointer",
-                  "borderRadius": "4px",
-                  "backgroundColor": selectedFolder === "all" ? "#E8F5F1" : "transparent",
+                  "borderRadius": radiusPx.sm,
+                  "backgroundColor":
+                    selectedFolder === "all" ? vwPalette.background.fill : "transparent",
                   "&:hover": {
-                    backgroundColor: selectedFolder === "all" ? "#E8F5F1" : "#F0F2F5",
+                    backgroundColor:
+                      selectedFolder === "all"
+                        ? vwPalette.background.fill
+                        : vwPalette.background.hover,
                   },
                   "marginBottom": "4px",
                 }}
@@ -441,11 +457,16 @@ export const FolderTree: React.FC<FolderTreeProps> = ({
                     "alignItems": "center",
                     "padding": "6px 8px",
                     "cursor": "pointer",
-                    "borderRadius": "4px",
+                    "borderRadius": radiusPx.sm,
                     "backgroundColor":
-                      selectedFolder === "uncategorized" ? "#E8F5F1" : "transparent",
+                      selectedFolder === "uncategorized"
+                        ? vwPalette.background.fill
+                        : "transparent",
                     "&:hover": {
-                      backgroundColor: selectedFolder === "uncategorized" ? "#E8F5F1" : "#F0F2F5",
+                      backgroundColor:
+                        selectedFolder === "uncategorized"
+                          ? vwPalette.background.fill
+                          : vwPalette.background.hover,
                     },
                     "marginBottom": showExpired ? "4px" : "8px",
                   }}
@@ -477,10 +498,14 @@ export const FolderTree: React.FC<FolderTreeProps> = ({
                     "alignItems": "center",
                     "padding": "6px 8px",
                     "cursor": "pointer",
-                    "borderRadius": "4px",
-                    "backgroundColor": selectedFolder === "expired" ? "#E8F5F1" : "transparent",
+                    "borderRadius": radiusPx.sm,
+                    "backgroundColor":
+                      selectedFolder === "expired" ? vwPalette.background.fill : "transparent",
                     "&:hover": {
-                      backgroundColor: selectedFolder === "expired" ? "#E8F5F1" : "#F0F2F5",
+                      backgroundColor:
+                        selectedFolder === "expired"
+                          ? vwPalette.background.fill
+                          : vwPalette.background.hover,
                     },
                     "marginBottom": "8px",
                   }}
@@ -516,6 +541,7 @@ export const FolderTree: React.FC<FolderTreeProps> = ({
                   onEditFolder={onEditFolder}
                   onDeleteFolder={onDeleteFolder}
                   canManage={canManage}
+                  countByFolderId={countByFolderId}
                 />
               ))}
 

@@ -2,7 +2,14 @@ import React, { useMemo } from "react";
 import { Box, Typography, Stack } from "@mui/material";
 import { IGovernanceControlMapping } from "../../../../domain/interfaces/i.governanceOs";
 import GovernanceTooltip from "../../../components/GovernanceOS/GovernanceTooltip";
-import { border as borderPalette, background, text, chart } from "../../../themes/palette";
+import {
+  border as borderPalette,
+  background,
+  text,
+  chart,
+  radiusPx,
+  palette as vwPalette,
+} from "../../../themes/palette";
 
 interface MappingMatrixViewProps {
   mappings: IGovernanceControlMapping[];
@@ -52,7 +59,7 @@ const MappingMatrixView: React.FC<MappingMatrixViewProps> = ({ mappings, onCellC
   const getTextColor = (count: number, max: number) => {
     if (max === 0) return text.tertiary;
     const intensity = count / max;
-    return intensity > 0.5 ? "#fff" : text.primary;
+    return intensity > 0.5 ? vwPalette.background.main : text.primary;
   };
 
   return (
@@ -89,7 +96,7 @@ const MappingMatrixView: React.FC<MappingMatrixViewProps> = ({ mappings, onCellC
                       alignItems: "center",
                       height: 22,
                       px: "8px",
-                      borderRadius: "4px",
+                      borderRadius: radiusPx.sm,
                       fontSize: 11,
                       fontWeight: 600,
                       maxWidth: 100,
@@ -131,7 +138,7 @@ const MappingMatrixView: React.FC<MappingMatrixViewProps> = ({ mappings, onCellC
                       alignItems: "center",
                       height: 22,
                       px: "8px",
-                      borderRadius: "4px",
+                      borderRadius: radiusPx.sm,
                       fontSize: 11,
                       fontWeight: 600,
                       maxWidth: 130,
@@ -163,7 +170,7 @@ const MappingMatrixView: React.FC<MappingMatrixViewProps> = ({ mappings, onCellC
                         ? background.hover
                         : getCellColor(count, matrix.maxCount),
                       "border": `1px solid ${borderPalette.light}`,
-                      "borderRadius": "4px",
+                      "borderRadius": radiusPx.sm,
                       "cursor": !isDiagonal && count > 0 ? "pointer" : "default",
                       "transition": "all 150ms ease",
                       "flexShrink": 0,
@@ -220,7 +227,7 @@ const MappingMatrixView: React.FC<MappingMatrixViewProps> = ({ mappings, onCellC
                   height: 16,
                   backgroundColor: getCellColor(intensity * matrix.maxCount, matrix.maxCount || 1),
                   border: `1px solid ${borderPalette.light}`,
-                  borderRadius: "4px",
+                  borderRadius: radiusPx.sm,
                 }}
               />
             ))}

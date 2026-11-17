@@ -1,6 +1,6 @@
 import LifecyclePanel from "../../../components/LifecycleTabs/LifecyclePanel";
+import { useCan } from "../../../../application/hooks/useCan";
 import { useAuth } from "../../../../application/hooks/useAuth";
-import { useCanEditAiApps } from "../../../../application/hooks/useCanEditAiApps";
 import {
   useAiAppLifecycle,
   useAiAppLifecycleActions,
@@ -15,7 +15,7 @@ const AIAppLifecyclePanel = ({ appId }: { appId: number }) => {
   const { userRoleName, userId } = useAuth();
   const { data: lifecycle } = useAiAppLifecycle(appId);
   const { goLive, retire, confirm } = useAiAppLifecycleActions(appId);
-  const canEdit = useCanEditAiApps();
+  const canEdit = useCan("aiApp.edit");
 
   if (!lifecycle) return null;
 

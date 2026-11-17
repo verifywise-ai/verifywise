@@ -6,6 +6,7 @@ import ProgressBar from "../../ProjectCard/ProgressBar";
 import { GroupStatsCardFrame, GroupStatsCardRate } from "./style";
 
 import { GroupStatsCardProps } from "../../../types/interfaces/i.groupStatsCard";
+import { palette } from "../../../themes/palette";
 
 export function GroupStatsCard({ title, completed, total }: GroupStatsCardProps) {
   const stats = useMemo(() => {
@@ -45,7 +46,7 @@ export function GroupStatsCard({ title, completed, total }: GroupStatsCardProps)
             <ProgressBar progress={stat.progress} />
             <Typography
               sx={{
-                color: "#8594AC",
+                color: palette.text.accent,
                 fontSize: 13,
               }}
             >

@@ -151,15 +151,16 @@ const PROTECTED_ROUTES = [
     limiter: "invitationResendLimiter",
   },
   {
-    mount: "/api/slackWebhooks",
-    method: "post",
-    path: "/",
-    limiter: "slackWebhookCreateLimiter",
-  },
-  {
     mount: "/api/extensions/slack",
     method: "post",
     path: "/oauth/workspaces",
+    limiter: "slackWorkspaceCreateLimiter",
+  },
+  // Deprecated alias of the route above; same limiter until it is removed.
+  {
+    mount: "/api/slackWebhooks",
+    method: "post",
+    path: "/",
     limiter: "slackWorkspaceCreateLimiter",
   },
 ] as const;

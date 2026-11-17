@@ -7,6 +7,7 @@ import { CustomizableButton } from "../../../components/button/customizable-butt
 import { escalateSubmission } from "../../../../application/repository/intakeForm.repository";
 import type { SubmissionRouting } from "../types";
 import { serverErrorMessage } from "./serverErrorMessage";
+import { radiusPx } from "../../../themes/palette";
 
 const REASON_MAX = 1000;
 
@@ -122,7 +123,7 @@ const LaneSection = ({
       data-testid="lane-section"
       sx={{
         border: `1px solid ${theme.palette.border.dark}`,
-        borderRadius: "4px",
+        borderRadius: radiusPx.sm,
         p: "16px",
         display: "flex",
         flexDirection: "column",

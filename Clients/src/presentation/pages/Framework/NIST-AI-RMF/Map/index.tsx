@@ -14,7 +14,7 @@ import { ArrowRight as RightArrowBlack } from "lucide-react";
 import { useSearchParams } from "react-router";
 import StatusDropdown from "../../../../components/StatusDropdown";
 import { useAuth } from "../../../../../application/hooks/useAuth";
-import allowedRoles from "../../../../../application/constants/permissions";
+import { useCanCheck } from "../../../../../application/hooks/useCan";
 import { Project } from "../../../../../domain/types/Project";
 import { handleAlert } from "../../../../../application/tools/alertUtils";
 import Alert from "../../../../components/Alert";
@@ -23,6 +23,7 @@ import NISTAIRMFDrawerDialog from "../../../../components/Drawer/NISTAIRMFDashbo
 import { NISTAIRMFFunction } from "../types";
 import { TabFilterBar } from "../../../../components/FrameworkFilter/TabFilterBar";
 import { StatsCard } from "../../../../components/Cards/StatsCard";
+import { palette } from "../../../../themes/palette";
 
 interface NISTAIRMFMapProps {
   project: Project;
@@ -47,7 +48,8 @@ const NISTAIRMFMap = ({
   initialCategoryId,
   initialSubcategoryId,
 }: NISTAIRMFMapProps) => {
-  const { userId: _userId, userRoleName } = useAuth();
+  const { userId: _userId } = useAuth();
+  const can = useCanCheck();
   const [categories, setCategories] = useState<any[]>([]);
   const [expanded, setExpanded] = useState<number | false>(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
@@ -357,7 +359,7 @@ const NISTAIRMFMap = ({
               )}
             >
               <Stack sx={{ flex: 1, pr: 2 }}>
-                <Typography fontSize={13} fontWeight={600} color="#1a1a1a">
+                <Typography fontSize={13} fontWeight={600} color={palette.text.primary}>
                   {category.title} {category.index}.{index + 1}
                 </Typography>
                 {subcategory.description && (
@@ -365,7 +367,7 @@ const NISTAIRMFMap = ({
                     fontSize={12}
                     sx={{
                       mt: 1,
-                      color: "#666",
+                      color: palette.text.tertiary,
                       lineHeight: 1.4,
                       fontWeight: 400,
                     }}
@@ -378,8 +380,7 @@ const NISTAIRMFMap = ({
                 currentStatus={subcategory.status ?? "Not started"}
                 onStatusChange={(newStatus) => handleStatusUpdate(newStatus, subcategory, index)}
                 size="small"
-                allowedRoles={allowedRoles.frameworks.edit}
-                userRole={userRoleName}
+                canEdit={can("framework.edit")}
               />
             </Stack>
           ))
@@ -412,7 +413,7 @@ const NISTAIRMFMap = ({
           mb: 3,
           fontSize: 15,
           fontWeight: 600,
-          color: "#1a1a1a",
+          color: palette.text.primary,
         }}
       >
         NIST AI RMF - Map categories
@@ -460,7 +461,7 @@ const NISTAIRMFMap = ({
                   <Typography
                     fontSize={13}
                     fontWeight={600}
-                    color="#1a1a1a"
+                    color={palette.text.primary}
                     sx={{ lineHeight: 1.3 }}
                   >
                     {category.title}
@@ -473,7 +474,7 @@ const NISTAIRMFMap = ({
                       fontSize={12}
                       sx={{
                         mt: 1,
-                        color: "#666",
+                        color: palette.text.tertiary,
                         lineHeight: 1.4,
                         fontWeight: 400,
                       }}

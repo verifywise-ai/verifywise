@@ -4,7 +4,6 @@ Unit tests for the helper logic inside ``run_evaluation``:
   - ``scorerApiKeys`` env-var injection for all providers (and "***" mask)
   - Legacy ``scorerApiKey`` (single key copied to all providers)
   - Judge-LLM env-var injection (incl. self-hosted base URL)
-  - ``_upsert_judge_scorer`` create vs update branch
 """
 
 from __future__ import annotations
@@ -56,8 +55,12 @@ def _patch_run_eval_dependencies(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(crud_module, "create_metric", AsyncMock(return_value=None))
     monkeypatch.setattr(crud_module, "update_log_metadata", AsyncMock(return_value=None))
     monkeypatch.setattr(run_eval_module, "list_scorers", AsyncMock(return_value=[]))
-    monkeypatch.setattr(run_eval_module, "create_scorer", AsyncMock(return_value=None))
-    monkeypatch.setattr(run_eval_module, "update_scorer", AsyncMock(return_value=None))
+    from crud import deepeval_scorers as scorers_crud_module
+
+    # A run must never add rows to the Scorers list (the judge is kept on the experiment)
+    create_scorer_mock = AsyncMock(return_value=None)
+    monkeypatch.setattr(scorers_crud_module, "create_scorer", create_scorer_mock)
+    monkeypatch.setattr(run_eval_module, "create_scorer", create_scorer_mock, raising=False)
     monkeypatch.setattr(run_eval_module, "touch_scorer_updated_at", AsyncMock(return_value=None))
     monkeypatch.setattr(
         evaluator_module.DeepEvalEvaluator, "run_evaluation", lambda self, **kwargs: []
@@ -494,129 +497,6 @@ async def test_judge_max_tokens_default_is_512(
 
 
 # --------------------------------------------------------------------------- #
-# _upsert_judge_scorer                                                         #
-# --------------------------------------------------------------------------- #
-
-
-@pytest.mark.asyncio
-async def test_upsert_judge_scorer_creates_when_absent(
-    mock_db_session: AsyncMock, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    from utils import run_evaluation as run_eval_module
-
-    list_mock = AsyncMock(return_value=[])
-    create_mock = AsyncMock(return_value={"id": "j1"})
-    update_mock = AsyncMock()
-    touch_mock = AsyncMock()
-
-    monkeypatch.setattr(run_eval_module, "list_scorers", list_mock)
-    monkeypatch.setattr(run_eval_module, "create_scorer", create_mock)
-    monkeypatch.setattr(run_eval_module, "update_scorer", update_mock)
-    monkeypatch.setattr(run_eval_module, "touch_scorer_updated_at", touch_mock)
-
-    await run_eval_module._upsert_judge_scorer(
-        db=mock_db_session,
-        config={"judgeLlm": {"provider": "openai", "model": "gpt-4o"}},
-        organization_id=1,
-    )
-    create_mock.assert_called_once()
-    update_mock.assert_not_called()
-    touch_mock.assert_not_called()
-
-
-@pytest.mark.asyncio
-async def test_upsert_judge_scorer_touches_when_present_with_choice_scores(
-    mock_db_session: AsyncMock, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    from utils import run_evaluation as run_eval_module
-
-    existing = [
-        {
-            "id": "scorer-1",
-            "name": "Judge: gpt-4o",
-            "config": {
-                "judgeModel": {"name": "gpt-4o", "provider": "openai"},
-                "choiceScores": [{"label": "PASS", "score": 1}],
-            },
-        }
-    ]
-
-    list_mock = AsyncMock(return_value=existing)
-    create_mock = AsyncMock()
-    update_mock = AsyncMock()
-    touch_mock = AsyncMock()
-    monkeypatch.setattr(run_eval_module, "list_scorers", list_mock)
-    monkeypatch.setattr(run_eval_module, "create_scorer", create_mock)
-    monkeypatch.setattr(run_eval_module, "update_scorer", update_mock)
-    monkeypatch.setattr(run_eval_module, "touch_scorer_updated_at", touch_mock)
-
-    await run_eval_module._upsert_judge_scorer(
-        db=mock_db_session,
-        config={"judgeLlm": {"provider": "openai", "model": "gpt-4o"}},
-        organization_id=1,
-    )
-    create_mock.assert_not_called()
-    update_mock.assert_not_called()
-    touch_mock.assert_called_once()
-
-
-@pytest.mark.asyncio
-async def test_upsert_judge_scorer_backfills_missing_choice_scores(
-    mock_db_session: AsyncMock, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    from utils import run_evaluation as run_eval_module
-
-    existing = [
-        {
-            "id": "scorer-1",
-            "name": "Judge: gpt-4o",
-            "config": {"judgeModel": {"name": "gpt-4o"}},  # no choiceScores
-        }
-    ]
-
-    list_mock = AsyncMock(return_value=existing)
-    create_mock = AsyncMock()
-    update_mock = AsyncMock()
-    touch_mock = AsyncMock()
-    monkeypatch.setattr(run_eval_module, "list_scorers", list_mock)
-    monkeypatch.setattr(run_eval_module, "create_scorer", create_mock)
-    monkeypatch.setattr(run_eval_module, "update_scorer", update_mock)
-    monkeypatch.setattr(run_eval_module, "touch_scorer_updated_at", touch_mock)
-
-    await run_eval_module._upsert_judge_scorer(
-        db=mock_db_session,
-        config={"judgeLlm": {"provider": "openai", "model": "gpt-4o"}},
-        organization_id=1,
-    )
-    update_mock.assert_called_once()
-    create_mock.assert_not_called()
-
-
-@pytest.mark.asyncio
-async def test_upsert_judge_scorer_noop_without_judge_model(
-    mock_db_session: AsyncMock, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    from utils import run_evaluation as run_eval_module
-
-    list_mock = AsyncMock(return_value=[])
-    create_mock = AsyncMock()
-    update_mock = AsyncMock()
-    touch_mock = AsyncMock()
-    monkeypatch.setattr(run_eval_module, "list_scorers", list_mock)
-    monkeypatch.setattr(run_eval_module, "create_scorer", create_mock)
-    monkeypatch.setattr(run_eval_module, "update_scorer", update_mock)
-    monkeypatch.setattr(run_eval_module, "touch_scorer_updated_at", touch_mock)
-
-    await run_eval_module._upsert_judge_scorer(
-        db=mock_db_session,
-        config={"judgeLlm": {}},  # No model specified
-        organization_id=1,
-    )
-    list_mock.assert_not_called()
-    create_mock.assert_not_called()
-
-
-# --------------------------------------------------------------------------- #
 # Failure reason when no prompt produced a response                            #
 # --------------------------------------------------------------------------- #
 
@@ -875,7 +755,7 @@ async def test_run_with_no_scores_fails_and_keeps_its_results(
 
 @pytest.mark.asyncio
 async def test_run_with_one_scored_metric_still_completes(
-    inline_prompts_config: Dict[str, Any],
+    standard_mode_config: Dict[str, Any],
     mock_db_session: AsyncMock,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -899,9 +779,13 @@ async def test_run_with_one_scored_metric_still_completes(
     result = await run_evaluation(
         db=mock_db_session,
         experiment_id="exp-some-scores",
-        config=dict(inline_prompts_config),
+        config=dict(standard_mode_config),
         organization_id=1,
     )
 
     assert "error" not in result
     assert crud_module.update_experiment_status.call_args_list[-1].kwargs["status"] == "completed"
+    # The judge used by the run is not saved as a scorer
+    from crud import deepeval_scorers as scorers_crud_module
+
+    scorers_crud_module.create_scorer.assert_not_awaited()

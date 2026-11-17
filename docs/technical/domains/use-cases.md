@@ -196,7 +196,9 @@ Read models: `GET /api/v1/use-case-lifecycle/summary` (stale ids and the interva
 | POST | `/projects` | Create project |
 | PATCH | `/projects/:id` | Update project |
 | PATCH | `/projects/:id/status` | Update status |
-| DELETE | `/projects/:id` | Delete project |
+| DELETE | `/projects/:id` | Delete project (legacy, frozen: never archives risks) |
+| DELETE | `/v1/projects/:id?archive_risks_linked_only_here=true\|false` | Delete project, optionally archiving the risks linked only to it |
+| GET | `/v1/projects/:id/risks-linked-only-here` | Active risks linked only to this use case |
 
 ### Progress Endpoints
 
@@ -248,6 +250,8 @@ The guard reads the id from the same place the handler does: `requireProjectAcce
 - **`PATCH /api/projects/:id` and `PATCH /api/v1/projects/:id`** keep their own check in `updateProjectById` (`canViewProjectQuery`), inside the update's transaction.
 - **A refused or failed `GET /api/projects/:id`** shows the empty state in `ProjectView`.
 - **MCP tools** call services directly and are not behind this guard.
+
+**Use case access also decides which risks a non-Admin sees.** A user sees the risks linked to a use case they own, are a team member of or reach through a group. Read access as a task assignee or workflow approver does not count. Linking a risk to a use case needs that access too. See [Visibility](./risk-management.md#visibility) in the risk management doc.
 
 ## Create Project
 
@@ -342,13 +346,23 @@ When a project is deleted, the following are removed:
 
 1. Withdraw pending approval requests
 2. Record deletion in change history
-3. Delete associated risks (`projects_risks`)
+3. Delete risk links (`projects_risks`). The risks stay in the register
 4. Delete members (`projects_members`)
 5. Delete framework-specific data (controls, assessments)
 6. Delete framework associations (`projects_frameworks`)
 7. Delete associated files
 8. Delete project record
 9. Trigger `project_deleted` automation
+
+### Risks linked only to the deleted use case
+
+An active risk with no use case link is visible to everyone in the organization, while an archived one is visible only to Admins, its owner and its approver (see [Visibility](./risk-management.md#visibility)). Deleting a use case therefore reveals its active risks that are linked to no other use case, unless the delete archives them.
+
+`DELETE /api/v1/projects/:id?archive_risks_linked_only_here=true|false` (flag required) deletes the use case and, with `true`, archives those risks in the same transaction, after locking the use case and before removing its links. Any failure rolls back both. It answers 202 with `{ deleted: true, archived_risk_ids }`. Its gate is the legacy delete's (`useCase.edit` plus write access to the use case) and, with `true`, `risks.edit` too (403 without it). Before reading the set it locks the risks linked to the use case and every link of those risks, also to other use cases, so a concurrent unlink waits and the set cannot change before the commit (see [Visibility](./risk-management.md#visibility)). The legacy `DELETE /api/projects/:id` is frozen: it never archives, so API clients that want these risks kept private use the v1 route.
+
+Every other path that deletes a use case archives them: the advisor's `agent_delete_use_case` (through the same `deleteProjectWithSideEffects`, so it also withdraws a pending approval, records the deletion and runs the `project_deleted` automation) and the Jira Assets removals. The advisor acts as the user who asked: without `risks.edit` it refuses the delete and changes nothing, and it never deletes without archiving. The demo data removal deletes the demo risks first and does not archive.
+
+The delete dialog (`presentation/components/Modals/DeleteUseCase`, used by the use case table, the use case settings page and the Framework page's organizational project delete, in its menu and its Settings tab) reads the risks from `GET /api/v1/projects/:id/risks-linked-only-here` when it opens. When there are some, it says how many, offers to archive them (the default) or keep them visible, and can list their names. It then sends one request to the v1 delete with the choice; the server works the set out again at that moment. The archive flag does not depend on the count read when the dialog opened: with `risks.edit` and archive chosen it is always sent, and an empty set archives nothing. When the count request fails the dialog still offers the choice, next to a neutral warning. The dialog cannot be closed while the request runs, and a failure keeps it open with an error and changes nothing. Every successful delete refreshes the cached project risk queries and the project lists.
 
 ## Stakeholder Management
 
@@ -524,7 +538,7 @@ getAllProjects({signal?})
 getProjectById({id, signal?})
 createProject({body})
 updateProject({id, body})
-deleteProject({id})
+deleteUseCase({id, archiveRisksLinkedOnlyHere})  // DELETE /v1/projects/:id
 getProjectProgressData({routeUrl, signal?})
 ```
 

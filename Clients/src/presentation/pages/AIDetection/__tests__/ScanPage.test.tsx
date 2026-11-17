@@ -1,4 +1,4 @@
-import { screen, fireEvent, waitFor } from "@testing-library/react";
+import { screen, fireEvent, waitFor, act } from "@testing-library/react";
 import { renderWithProviders } from "../../../../test/renderWithProviders";
 import ScanPage from "../ScanPage";
 import type {
@@ -237,7 +237,13 @@ describe("ScanPage", () => {
       } as ScanStatusResponse);
       return { id: 55, status: "completed", progress: 100, files_scanned: 40, findings_count: 5 };
     });
-    mockGetScan.mockResolvedValue(makeScanResponse());
+    mockGetScan.mockResolvedValue(
+      makeScanResponse({
+        risk_score: 91.4,
+        risk_score_grade: "A",
+        vulnerability_check_status: "off",
+      }),
+    );
 
     renderWithProviders(<ScanPage />);
 
@@ -263,7 +269,146 @@ describe("ScanPage", () => {
       expect(screen.getByText("Scan completed")).toBeInTheDocument();
     });
     expect(screen.getByText("acme/widgets")).toBeInTheDocument();
+    // The governance score is part of the completion card, marked partial
+    expect(screen.getByText("Governance score")).toBeInTheDocument();
+    expect(screen.getByText("91 · A")).toBeInTheDocument();
+    expect(screen.getByText("Partial")).toBeInTheDocument();
     expect(mockRefreshRecentScans).toHaveBeenCalled();
+  });
+
+  it("shows Calculating… on the completion card while the score is not stored yet", async () => {
+    mockStartScan.mockResolvedValue({ id: 55 });
+    mockPollScanStatus.mockResolvedValue({
+      id: 55,
+      status: "completed",
+      progress: 100,
+      files_scanned: 40,
+      findings_count: 5,
+    });
+    mockGetScan.mockResolvedValue(makeScanResponse({ risk_score: null, risk_score_grade: null }));
+
+    renderWithProviders(<ScanPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Scan repository")).toBeInTheDocument();
+    });
+    fireEvent.change(
+      screen.getByPlaceholderText("e.g., https://github.com/owner/repo or owner/repo"),
+      { target: { value: "acme/widgets" } },
+    );
+    fireEvent.click(screen.getByText("Scan"));
+
+    await waitFor(() => {
+      expect(screen.getByText("Scan completed")).toBeInTheDocument();
+    });
+    expect(screen.getByText("Calculating…")).toBeInTheDocument();
+  });
+
+  describe("while the background AI analysis runs", () => {
+    const pendingDetails = { llm_status: "pending" } as unknown as Scan["risk_score_details"];
+    const doneDetails = { llm_status: "done" } as unknown as Scan["risk_score_details"];
+
+    const completeScan = async () => {
+      mockStartScan.mockResolvedValue({ id: 55 });
+      mockPollScanStatus.mockResolvedValue({
+        id: 55,
+        status: "completed",
+        progress: 100,
+        files_scanned: 40,
+        findings_count: 5,
+      });
+      renderWithProviders(<ScanPage />);
+      await waitFor(() => {
+        expect(screen.getByText("Scan repository")).toBeInTheDocument();
+      });
+      fireEvent.change(
+        screen.getByPlaceholderText("e.g., https://github.com/owner/repo or owner/repo"),
+        { target: { value: "acme/widgets" } },
+      );
+      fireEvent.click(screen.getByText("Scan"));
+      await waitFor(() => {
+        expect(screen.getByText("AI analysis running")).toBeInTheDocument();
+      });
+    };
+
+    beforeEach(() => {
+      vi.useFakeTimers({ shouldAdvanceTime: true });
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it("keeps reading the scan and shows the final score when the analysis finishes", async () => {
+      mockGetScan
+        .mockResolvedValueOnce(
+          makeScanResponse({
+            risk_score: 70,
+            risk_score_grade: "C",
+            risk_score_details: pendingDetails,
+          }),
+        )
+        .mockResolvedValue(
+          makeScanResponse({
+            risk_score: 82,
+            risk_score_grade: "B",
+            risk_score_details: doneDetails,
+          }),
+        );
+
+      await completeScan();
+      expect(screen.getByText("70 · C")).toBeInTheDocument();
+
+      await act(() => vi.advanceTimersByTimeAsync(5000));
+
+      await waitFor(() => {
+        expect(screen.getByText("82 · B")).toBeInTheDocument();
+      });
+      expect(screen.queryByText("AI analysis running")).not.toBeInTheDocument();
+
+      // Finished: no more reads
+      const calls = mockGetScan.mock.calls.length;
+      await act(() => vi.advanceTimersByTimeAsync(15000));
+      expect(mockGetScan.mock.calls.length).toBe(calls);
+    });
+
+    it("stops reading and ignores an in-flight read once the user starts over", async () => {
+      let resolveStale: (value: ScanResponse) => void = () => {};
+      mockGetScan
+        .mockResolvedValueOnce(
+          makeScanResponse({
+            risk_score: 70,
+            risk_score_grade: "C",
+            risk_score_details: pendingDetails,
+          }),
+        )
+        .mockImplementationOnce(
+          () =>
+            new Promise<ScanResponse>((resolve) => {
+              resolveStale = resolve;
+            }),
+        );
+
+      await completeScan();
+      await act(() => vi.advanceTimersByTimeAsync(5000));
+      expect(mockGetScan).toHaveBeenCalledTimes(2);
+
+      fireEvent.click(screen.getByText("Scan another"));
+      await act(async () => {
+        resolveStale(
+          makeScanResponse({
+            risk_score: 82,
+            risk_score_grade: "B",
+            risk_score_details: doneDetails,
+          }),
+        );
+      });
+
+      expect(screen.queryByText("Scan completed")).not.toBeInTheDocument();
+      expect(screen.queryByText("82 · B")).not.toBeInTheDocument();
+      await act(() => vi.advanceTimersByTimeAsync(15000));
+      expect(mockGetScan).toHaveBeenCalledTimes(2);
+    });
   });
 
   it("normalizes a full https URL without modification", async () => {

@@ -1,6 +1,7 @@
 import { QueryTypes } from "sequelize";
 import { sequelize } from "../database/db";
 import { toJsonArray, toNumber } from "./pgRow.utils";
+import { accessibleProjectIdSql, riskVisibilitySql, RiskViewer } from "./riskVisibility.utils";
 
 /**
  * Reads behind the vendor risk insights on the Vendors page: exposure (blast
@@ -29,10 +30,18 @@ export interface VendorExposureRow {
  * One row per active vendor risk: who inherits from it, and where those
  * children live. Vendor risks with no children are included with empty lists,
  * so the caller can count "risks with no reach" without a second query.
+ *
+ * For a non-Admin, children are only the project risks they can see (risk
+ * visibility rule) and use cases only the ones they can access, so the report
+ * never counts or names a risk or use case hidden from them. Vendor risks are
+ * outside the rule and are all listed.
  */
 export async function getVendorExposureRowsQuery(
   organizationId: number,
+  viewer: RiskViewer,
 ): Promise<VendorExposureRow[]> {
+  const childVisibility = riskVisibilitySql("child", viewer);
+  const projectAccess = accessibleProjectIdSql("p.id", viewer);
   const rows = await sequelize.query(
     `WITH children AS (
        SELECT l.target_vendor_risk_id AS vendor_risk_id, l.status, child.id AS child_id
@@ -40,7 +49,7 @@ export async function getVendorExposureRowsQuery(
          JOIN risks child
            ON child.id = l.source_risk_id
           AND child.organization_id = :organizationId
-          AND child.is_deleted = false
+          AND child.is_deleted = false${childVisibility.sql}
         WHERE l.organization_id = :organizationId
           AND l.target_vendor_risk_id IS NOT NULL
           AND l.relation_type = 'inherits_from'
@@ -69,12 +78,19 @@ export async function getVendorExposureRowsQuery(
              AND pr.organization_id = :organizationId
        LEFT JOIN projects p
               ON p.id = pr.project_id
-             AND p.organization_id = :organizationId
+             AND p.organization_id = :organizationId${projectAccess.sql}
       WHERE vr.organization_id = :organizationId
         AND vr.is_deleted = false
       GROUP BY vr.id, vr.vendor_id, v.vendor_name
       ORDER BY vr.id`,
-    { replacements: { organizationId }, type: QueryTypes.SELECT },
+    {
+      replacements: {
+        organizationId,
+        ...childVisibility.replacements,
+        ...projectAccess.replacements,
+      },
+      type: QueryTypes.SELECT,
+    },
   );
 
   return (rows as any[]).map((row) => ({

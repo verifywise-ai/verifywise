@@ -6,6 +6,7 @@ import { CustomizableButton } from "../../../components/button/customizable-butt
 import { FilePickerModal } from "../../../components/FilePickerModal";
 import FileUploadModal from "../../../components/Modals/FileUpload";
 import { friaRepository } from "../../../../application/repository/fria.repository";
+import { radiusPx } from "../../../themes/palette";
 
 interface FriaEvidenceButtonProps {
   friaId: number;
@@ -125,7 +126,7 @@ const FriaEvidenceButton = ({
                   alignItems: "center",
                   gap: "4px",
                   padding: "2px 8px",
-                  borderRadius: "4px",
+                  borderRadius: radiusPx.sm,
                   border: `1px solid ${theme.palette.divider}`,
                   backgroundColor: theme.palette.background.default,
                 }}

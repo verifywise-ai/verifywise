@@ -20,8 +20,11 @@ import {
   getDomainByPath,
 } from "../AdvisorChat/advisorConfig";
 import AdvisorHeader from "./AdvisorHeader";
+import { getGuideTargetForLocation } from "./guideRouteMap";
+import { useLocation } from "react-router";
 import { useOverlayAccessibility } from "../../../application/hooks/useOverlayAccessibility";
 import "./SidebarWrapper.css";
+import { palette } from "../../themes/palette";
 
 type Tab = "user-guide" | "advisor" | "help" | "whats-new";
 
@@ -50,6 +53,7 @@ const SidebarWrapper: React.FC<SidebarWrapperProps> = ({
     requestedTab,
     clearRequestedTab,
   } = useUserGuideSidebarContext();
+  const routerLocation = useLocation();
   const [activeTab, setActiveTab] = useState<Tab>("user-guide");
   const [collectionId, setCollectionId] = useState<string | undefined>();
   const [articleId, setArticleId] = useState<string | undefined>();
@@ -410,6 +414,22 @@ const SidebarWrapper: React.FC<SidebarWrapperProps> = ({
     });
   }, [setContentWidth]);
 
+  // Open the guide on the page that documents where the user is. Pages with no
+  // mapped guide page keep whatever the guide last showed.
+  // Only jump when the page changed since the last jump, so switching tabs or
+  // reopening on the same page keeps the reader's place.
+  const lastGuidePageRef = useRef<string | undefined>(undefined);
+  const showGuideForCurrentPage = () => {
+    const pageKey = `${routerLocation.pathname}${routerLocation.hash}`;
+    if (lastGuidePageRef.current === pageKey) return;
+    lastGuidePageRef.current = pageKey;
+    const target = getGuideTargetForLocation(routerLocation.pathname, routerLocation.hash);
+    if (!target) return;
+    handleNavigate(target.collectionId, target.articleId);
+    setTargetSectionId(undefined);
+    handleClearSearch();
+  };
+
   // Guard against rapid open/close during CSS transition
   const tabClickLockRef = useRef(false);
 
@@ -421,10 +441,15 @@ const SidebarWrapper: React.FC<SidebarWrapperProps> = ({
       tabClickLockRef.current = false;
     }, 350);
 
+    const isClosing = isOpen && activeTab === tab;
+    if (tab === "user-guide" && !isClosing) {
+      showGuideForCurrentPage();
+    }
+
     if (!isOpen) {
       onOpen();
       setActiveTab(tab);
-    } else if (activeTab === tab) {
+    } else if (isClosing) {
       // Clicking the already-active tab closes the sidebar
       onClose();
     } else {
@@ -530,7 +555,8 @@ const SidebarWrapper: React.FC<SidebarWrapperProps> = ({
           style={{
             width: isResizing ? 2 : 1,
             height: "100%",
-            backgroundColor: isResizing || isHoveringHandle ? "#4CAF93" : colors.border.default,
+            backgroundColor:
+              isResizing || isHoveringHandle ? palette.brand.primary : colors.border.default,
             transition: isResizing ? "none" : "all 150ms ease",
             position: "relative",
           }}
@@ -544,7 +570,7 @@ const SidebarWrapper: React.FC<SidebarWrapperProps> = ({
                 top: mouseY - 10,
                 width: 3,
                 height: 20,
-                backgroundColor: "#555",
+                backgroundColor: palette.text.tertiary,
                 borderRadius: 1,
               }}
             />

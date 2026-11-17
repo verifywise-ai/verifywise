@@ -25,6 +25,7 @@ Search and list endpoints default to 50 results per page.
 
 ## Pointing a local VerifyWise at it
 
-The site URL rule only accepts `https://*.atlassian.net`. To accept
-`http://localhost:4010`, run the backend with `NODE_ENV=development` and
-`JIRA_INCIDENTS_ALLOW_LOCAL_SITE_URL=true`.
+The site URL rule only accepts `https://*.atlassian.net`, and outbound calls
+never go to loopback addresses. To accept `http://localhost:4010`, run the
+backend with `NODE_ENV=development`, `JIRA_INCIDENTS_ALLOW_LOCAL_SITE_URL=true`
+and `OUTBOUND_ALLOW_LOOPBACK=true`.

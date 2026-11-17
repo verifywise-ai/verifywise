@@ -28,6 +28,7 @@ from crud.deepeval_scorers import (
     get_scorer_by_id,
 )
 from utils.run_custom_scorer import run_custom_scorer
+from utils.scenario_rows import is_scenario_row
 
 METRICS = [
     {
@@ -228,7 +229,7 @@ async def upload_deepeval_dataset_controller(
             dataset_type = "chatbot"
         
         # Validate turn_type
-        valid_turn_types = ["single-turn", "multi-turn"]
+        valid_turn_types = ["single-turn", "multi-turn", "simulated"]
         if turn_type not in valid_turn_types:
             turn_type = "single-turn"
 
@@ -247,6 +248,23 @@ async def upload_deepeval_dataset_controller(
         # Minimal schema check: expect a list of prompt objects
         if not isinstance(data, list):
             raise HTTPException(status_code=400, detail="Dataset JSON must be an array of prompt objects")
+
+        # Simulated datasets: only scenario rows (the runner runs a file with any other
+        # row as plain prompts), and each needs the outcome the simulator works toward
+        if turn_type == "simulated":
+            if not data:
+                raise HTTPException(status_code=400, detail="A simulated dataset needs at least one scenario.")
+            for index, item in enumerate(data, 1):
+                if not is_scenario_row(item):
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"Row {index} is not a scenario. Each row needs a scenario and no prompt or turns.",
+                    )
+                if not str(item.get("expected_outcome") or "").strip():
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"Scenario {index} has no expected_outcome. Each scenario needs one.",
+                    )
 
         # Build upload path (Docker: /app/data/uploads, Local: EvaluationModule/data/uploads)
         uploads_root = _get_uploads_root()
@@ -282,7 +300,10 @@ async def upload_deepeval_dataset_controller(
                         )
                         if has_content:
                             prompt_count += 1
-        
+                    # Simulated: a scenario the runner turns into a conversation
+                    elif turn_type == "simulated" and str(item.get("scenario") or "").strip():
+                        prompt_count += 1
+
         # Use original filename without timestamp prefix
         filename = f"{original_name}.json"
         full_path = uploads_dir / filename

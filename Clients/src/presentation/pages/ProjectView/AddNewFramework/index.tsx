@@ -4,7 +4,15 @@ import { Check as CheckGreenIcon, Shield as ShieldIcon } from "lucide-react";
 import { getFrameworkBadgePath } from "../../../tools/frameworkBadge";
 import StandardModal from "../../../components/Modals/StandardModal";
 import { CustomizableButton } from "../../../components/button/customizable-button";
-import { accent, background, brand, icon, text } from "../../../themes/palette";
+import {
+  accent,
+  background,
+  brand,
+  icon,
+  text,
+  palette as vwPalette,
+  radiusPx,
+} from "../../../themes/palette";
 import { Project } from "../../../../domain/types/Project";
 import { Framework } from "../../../../domain/types/Framework";
 import {
@@ -24,6 +32,8 @@ import { AlertProps } from "../../../types/alert.types";
 import CustomizableToast from "../../../components/Toast";
 import ConfirmationModal from "../../../components/Dialogs/ConfirmationModal";
 import { useModalKeyHandling } from "../../../../application/hooks/useModalKeyHandling";
+import { useExtensions } from "../../../../application/contexts/Extensions.context";
+import ImportedFrameworksSection from "./ImportedFrameworksSection";
 // Governance OS prompt imports removed while the module is not broadly released.
 // The module remains reachable by direct URL for authorized users.
 
@@ -32,7 +42,8 @@ interface AddFrameworkModalProps {
   onClose: () => void;
   frameworks: Framework[];
   project: Project;
-  onFrameworksChanged?: (action: "add" | "remove", frameworkId?: number) => void;
+  /** "removeImported" carries no framework id: imported frameworks are not in the frameworks table. */
+  onFrameworksChanged?: (action: "add" | "remove" | "removeImported", frameworkId?: number) => void;
 }
 
 const AddFrameworkModal: React.FC<AddFrameworkModalProps> = ({
@@ -46,6 +57,9 @@ const AddFrameworkModal: React.FC<AddFrameworkModalProps> = ({
   const [alert, setAlert] = useState<AlertProps | null>(null);
   const [frameworkToRemove, setFrameworkToRemove] = useState<Framework | null>(null);
   const [isRemoveModalOpen, setIsRemoveModalOpen] = useState(false);
+  const { isEnabled } = useExtensions();
+  // Imported frameworks attach to use cases only, and only while the extension is on.
+  const showImported = open && isEnabled("framework-import") && !project.is_organizational;
 
   const showToast = (variant: AlertProps["variant"], body: string) => {
     handleAlert({ variant, body, setAlert, alertTimeout: 3000 });
@@ -179,7 +193,7 @@ const AddFrameworkModal: React.FC<AddFrameworkModalProps> = ({
                           alignItems: "center",
                           justifyContent: "center",
                           backgroundColor: background.surface,
-                          borderRadius: "4px",
+                          borderRadius: radiusPx.sm,
                           flexShrink: 0,
                         }}
                       >
@@ -208,12 +222,12 @@ const AddFrameworkModal: React.FC<AddFrameworkModalProps> = ({
                       }}
                       sx={{
                         "minWidth": "100px",
-                        "borderColor": "#F87171",
+                        "borderColor": vwPalette.status.error.border,
                         "color": accent.red.text,
                         "fontWeight": 600,
                         "textTransform": "none",
                         "&:hover": {
-                          borderColor: "#EF4444",
+                          borderColor: vwPalette.riskMark.critical,
                           backgroundColor: accent.red.bg,
                         },
                       }}
@@ -243,6 +257,15 @@ const AddFrameworkModal: React.FC<AddFrameworkModalProps> = ({
             );
           })}
         </Box>
+        {showImported && (
+          <ImportedFrameworksSection
+            project={project}
+            disabled={isLoading}
+            onBusyChange={setIsLoading}
+            onResult={showToast}
+            onChanged={(action) => onFrameworksChanged?.(action)}
+          />
+        )}
         {isRemoveModalOpen && frameworkToRemove && (
           <ConfirmationModal
             title="Confirm framework removal"

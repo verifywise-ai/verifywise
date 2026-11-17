@@ -11,13 +11,13 @@ import { handleAlert } from "../../../application/tools/alertUtils";
 import { FileData } from "../../../domain/types/File";
 import { Button } from "../button";
 import Select from "../Inputs/Select";
-import allowedRoles from "../../../application/constants/permissions";
+import { useCanCheck } from "../../../application/hooks/useCan";
 import { LinkedRisksPopup } from "../LinkedRisks";
 import AuditRiskPopup from "../RiskPopup/AuditRiskPopup";
 import { updateEUAIActAnswerById } from "../../../application/repository/question.repository";
 import { useAuth } from "../../../application/hooks/useAuth";
 import { IQuestionProps } from "../../../domain/interfaces/i.question";
-import { border as borderPalette } from "../../themes/palette";
+import { border as borderPalette, palette as vwPalette, radiusPx } from "../../themes/palette";
 
 /**
  * QuestionFrame Component
@@ -36,7 +36,8 @@ import { border as borderPalette } from "../../themes/palette";
  */
 const QuestionFrame = ({ question, setRefreshKey, currentProjectId }: IQuestionProps) => {
   const theme = useTheme();
-  const { userRoleName, userId } = useAuth();
+  const { userId } = useAuth();
+  const can = useCanCheck();
   const [values, setValues] = useState<Question>({
     ...question,
     risks: question.risks || [],
@@ -53,7 +54,7 @@ const QuestionFrame = ({ question, setRefreshKey, currentProjectId }: IQuestionP
   const [pendingFiles, setPendingFiles] = useState<FileData[]>([]);
   const [deletedFileIds, setDeletedFileIds] = useState<number[]>([]);
 
-  const isEditingDisabled = !(allowedRoles?.frameworks?.edit || []).includes(userRoleName || "");
+  const isEditingDisabled = !can("framework.edit");
 
   const STATUS_OPTIONS = [
     { _id: "notStarted", name: "Not started" },
@@ -202,7 +203,7 @@ const QuestionFrame = ({ question, setRefreshKey, currentProjectId }: IQuestionP
           padding: 5,
           justifyContent: "space-between",
           alignItems: "center",
-          backgroundColor: "#FBFAFA",
+          backgroundColor: vwPalette.background.alt,
           border: `1px solid ${borderPalette.dark}`,
           borderBottom: "none",
           borderRadius: `${theme.shape.borderRadius}px ${theme.shape.borderRadius}px 0 0`,
@@ -247,7 +248,7 @@ const QuestionFrame = ({ question, setRefreshKey, currentProjectId }: IQuestionP
             sx={{
               backgroundColor:
                 priorities[(question.priority_level || "low priority") as PriorityLevel]?.color ||
-                "#666",
+                vwPalette.text.tertiary,
               color: "background.main",
               borderRadius: theme.shape.borderRadius,
             }}
@@ -302,13 +303,13 @@ const QuestionFrame = ({ question, setRefreshKey, currentProjectId }: IQuestionP
             variant="contained"
             sx={{
               "minWidth": 155, // minimum width
-              "border": "1px solid #d0d5dd",
+              "border": `1px solid ${vwPalette.border.dark}`,
               "backgroundColor": "white",
               "color": "text.secondary",
               "flexShrink": 0, //  prevent shrinking in flex layouts
               "&:hover": {
                 backgroundColor: "background.accent",
-                border: "1px solid #d0d5dd",
+                border: `1px solid ${vwPalette.border.dark}`,
               },
             }}
             disableRipple
@@ -361,16 +362,16 @@ const QuestionFrame = ({ question, setRefreshKey, currentProjectId }: IQuestionP
               variant="contained"
               sx={{
                 "mt": 2,
-                "borderRadius": 2,
+                "borderRadius": radiusPx.sm,
                 "width": 155,
                 "height": 25,
                 "fontSize": 11,
-                "border": "1px solid #d0d5dd",
+                "border": `1px solid ${vwPalette.border.dark}`,
                 "backgroundColor": "white",
                 "color": "text.secondary",
                 "&:hover": {
                   backgroundColor: "background.accent",
-                  border: "1px solid #d0d5dd",
+                  border: `1px solid ${vwPalette.border.dark}`,
                 },
               }}
               disableRipple

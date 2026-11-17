@@ -45,7 +45,8 @@ router.delete(
   deleteCustomFieldDefinition,
 );
 
-// Values — any authenticated user with access to the parent entity.
+// Values — reads need login; writes need the parent entity's edit permission,
+// checked in the controller once the definition's entity type is known.
 router.get(
   "/values/:entityType/:entityId/missing-required",
   authenticateJWT,

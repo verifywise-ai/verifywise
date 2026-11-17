@@ -13,8 +13,6 @@ import {
 } from "../utils/aiTrustIndex.utils";
 import { isEmail } from "../utils/validations/email.utils";
 
-const isAdmin = (role?: string) => role === "Admin" || role === "SuperAdmin";
-
 export async function getApps(req: Request, res: Response): Promise<any> {
   const fn = "getApps",
     file = "aiTrustIndex.ctrl.ts";
@@ -62,7 +60,7 @@ export async function getApps(req: Request, res: Response): Promise<any> {
 export async function getApp(req: Request, res: Response): Promise<any> {
   try {
     const app = await getAppBySlugQuery(req.organizationId!, req.params.slug as string);
-    if (!app) return res.status(404).json(STATUS_CODE[404]("App not found"));
+    if (!app) return res.status(404).json(STATUS_CODE[404](req.t!("App not found")));
     return res.status(200).json(STATUS_CODE[200](app));
   } catch (error) {
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
@@ -90,10 +88,10 @@ export async function trackApp(req: Request, res: Response): Promise<any> {
   });
   try {
     const slug = req.body?.slug;
-    if (!slug) return res.status(400).json(STATUS_CODE[400]("slug is required"));
+    if (!slug) return res.status(400).json(STATUS_CODE[400](req.t!("slug is required")));
     const result = await trackAppQuery(req.organizationId!, slug, req.userId!);
     if (!result.tracked)
-      return res.status(400).json(STATUS_CODE[400]("App not found or not active"));
+      return res.status(400).json(STATUS_CODE[400](req.t!("App not found or not active")));
     await logSuccess({
       eventType: "Create",
       description: "tracked app",
@@ -130,9 +128,9 @@ export async function trackAppsBulk(req: Request, res: Response): Promise<any> {
   try {
     const slugs = req.body?.slugs;
     if (!Array.isArray(slugs) || slugs.length === 0)
-      return res.status(400).json(STATUS_CODE[400]("slugs must be a non-empty array"));
+      return res.status(400).json(STATUS_CODE[400](req.t!("slugs must be a non-empty array")));
     if (slugs.length > 200)
-      return res.status(400).json(STATUS_CODE[400]("too many slugs (max 200)"));
+      return res.status(400).json(STATUS_CODE[400](req.t!("too many slugs (max 200)")));
     const result = await trackAppsBulkQuery(req.organizationId!, slugs, req.userId!);
     await logSuccess({
       eventType: "Create",
@@ -212,19 +210,22 @@ export async function updateSettings(req: Request, res: Response): Promise<any> 
     organizationId: req.organizationId!,
   });
   try {
-    if (!isAdmin(req.role)) return res.status(403).json(STATUS_CODE[403]("Admin access required"));
     const recipientUserIds = req.body?.recipientUserIds ?? [];
     const recipientEmails = req.body?.recipientEmails ?? [];
     if (!Array.isArray(recipientUserIds) || !Array.isArray(recipientEmails))
       return res
         .status(400)
-        .json(STATUS_CODE[400]("recipientUserIds and recipientEmails must be arrays"));
+        .json(STATUS_CODE[400](req.t!("recipientUserIds and recipientEmails must be arrays")));
     const badUserId = recipientUserIds.find((id: unknown) => !Number.isInteger(id));
     if (badUserId !== undefined)
-      return res.status(400).json(STATUS_CODE[400](`Invalid user id: ${String(badUserId)}`));
+      return res
+        .status(400)
+        .json(STATUS_CODE[400](req.t!("Invalid user id: {id}", { id: String(badUserId) })));
     const badEmail = recipientEmails.find((e: unknown) => !isEmail(e));
     if (badEmail !== undefined)
-      return res.status(400).json(STATUS_CODE[400](`Invalid email: ${String(badEmail)}`));
+      return res
+        .status(400)
+        .json(STATUS_CODE[400](req.t!("Invalid email: {email}", { email: String(badEmail) })));
     await upsertSettingsQuery(req.organizationId!, req.userId!, recipientUserIds, recipientEmails);
     await logSuccess({
       eventType: "Update",

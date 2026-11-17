@@ -377,7 +377,9 @@ export async function createNewModelInventory(req: Request, res: Response) {
       return res
         .status(409)
         .json(
-          STATUS_CODE[409]("A model with this external key already exists in your organization."),
+          STATUS_CODE[409](
+            req.t!("A model with this external key already exists in your organization."),
+          ),
         );
     }
 
@@ -665,7 +667,9 @@ export async function updateModelInventoryById(req: Request, res: Response) {
       return res
         .status(409)
         .json(
-          STATUS_CODE[409]("A model with this external key already exists in your organization."),
+          STATUS_CODE[409](
+            req.t!("A model with this external key already exists in your organization."),
+          ),
         );
     }
 

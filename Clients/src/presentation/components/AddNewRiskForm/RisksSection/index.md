@@ -19,7 +19,6 @@ The RiskSection component is a crucial part of the AddNewRiskForm component, des
 - `riskValues`: `RiskFormValues` - Current form values containing all risk data
 - `setRiskValues`: `Dispatch<SetStateAction<RiskFormValues>>` - State setter function for updating form values
 - `riskErrors`: `RiskFormErrors` - Form validation errors object
-- `userRoleName`: `string` - Current user's role name for permission-based editing restrictions
 
 ## Usage
 
@@ -29,8 +28,7 @@ To use the RiskSection component, import it and pass the required props:
 import RiskSection from "./RiskSection";
 
 const [riskValues, setRiskValues] =
-  useState <
-  RiskFormValues >
+  (useState < RiskFormValues) >
   {
     riskName: "",
     riskDescription: "",
@@ -43,15 +41,10 @@ const [riskValues, setRiskValues] =
     riskSeverity: 0,
   };
 
-const [riskErrors, setRiskErrors] = useState < RiskFormErrors > {};
+const [riskErrors, setRiskErrors] = (useState < RiskFormErrors) > {};
 
 return (
-  <RiskSection
-    riskValues={riskValues}
-    setRiskValues={setRiskValues}
-    riskErrors={riskErrors}
-    userRoleName="project_manager"
-  />
+  <RiskSection riskValues={riskValues} setRiskValues={setRiskValues} riskErrors={riskErrors} />
 );
 ```
 
@@ -76,7 +69,7 @@ The component is organized into several logical sections:
 
 ### Permission System
 
-- Uses `allowedRoles.projectRisks.edit` to determine editing permissions
+- Uses the `risks.edit` permission (`useCan`) to determine editing permissions
 - Disables form fields when user lacks appropriate role
 - Read-only mode for autocomplete when editing is disabled
 
@@ -144,7 +137,7 @@ const FORM_CONSTANTS = {
 ### Hooks and Utilities
 
 - `useUsers` - Hook for fetching user data
-- `allowedRoles` - Permission constants
+- `useCanCheck` - Permission checks (application/hooks/useCan)
 - `alertState` - Alert state interface
 - Form value and error interfaces from parent component
 

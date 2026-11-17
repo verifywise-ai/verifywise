@@ -169,7 +169,8 @@ CREATE TABLE projectrisks (
   risk_severity VARCHAR(255),
   final_risk_level VARCHAR(255),
   risk_approval INTEGER REFERENCES users(id),
-  approval_status VARCHAR(255),
+  approval_status VARCHAR(255) NOT NULL DEFAULT 'Not required'
+    CHECK (approval_status IN ('Pending', 'Approved', 'Rejected', 'Not required')),
   date_of_assessment DATE,
   is_demo BOOLEAN
 );

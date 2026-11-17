@@ -1,5 +1,6 @@
 import { Box, IconButton, Typography, useTheme } from "@mui/material";
 import { Eye, X } from "lucide-react";
+import { radiusPx } from "../../themes/palette";
 
 interface PreviewBannerProps {
   onDismiss: () => void;
@@ -23,7 +24,7 @@ export const PreviewBanner = ({ onDismiss }: PreviewBannerProps) => {
         mb: "16px",
         p: "12px 16px",
         border: `1px solid ${info.border ?? theme.palette.border.dark}`,
-        borderRadius: "4px",
+        borderRadius: radiusPx.sm,
         backgroundColor: info.bg ?? theme.palette.background.accent,
       }}
     >
@@ -44,7 +45,7 @@ export const PreviewBanner = ({ onDismiss }: PreviewBannerProps) => {
         data-testid="public-preview-banner-dismiss"
         onClick={onDismiss}
         size="small"
-        sx={{ p: "4px", borderRadius: "4px" }}
+        sx={{ p: "4px", borderRadius: radiusPx.sm }}
       >
         <X size={16} strokeWidth={1.5} color={theme.palette.text.tertiary} />
       </IconButton>

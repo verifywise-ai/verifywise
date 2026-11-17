@@ -182,6 +182,20 @@ export const updateAutomationByIdQuery = async (
   }
 
   if (actions && actions.length > 0) {
+    // A save from the editor (it always sends the actions) means the user has
+    // reviewed the automation: it now runs every action, not the legacy first
+    // one only (migration 20261114200100). The active toggle sends no actions
+    // and keeps the flag.
+    await sequelize.query(
+      `UPDATE automations SET legacy_first_action_only = false
+        WHERE organization_id = :organizationId AND id = :id;`,
+      {
+        replacements: { organizationId, id },
+        transaction,
+      },
+    );
+    if (automation) (automation as any).legacy_first_action_only = false;
+
     await sequelize.query(
       `DELETE FROM automation_actions_data WHERE organization_id = :organizationId AND automation_id = :id;`,
       {

@@ -19,6 +19,12 @@ vi.mock("../../../../application/repository/riskLink.repository", () => ({
 vi.mock("../../../../application/hooks/useIsAdmin", () => ({
   useIsAdmin: () => true,
 }));
+// The screen gates on a permission key (#5314); same flag as useIsAdmin.
+vi.mock("../../../../application/hooks/useCan", () => ({
+  useCan: () => true,
+  useCanCheck: () => () => true,
+  usePermissionsSettled: () => true,
+}));
 
 // The report sections below the map have their own tests.
 vi.mock("../DismissalAnalytics", () => ({ default: () => null }));

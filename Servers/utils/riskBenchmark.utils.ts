@@ -122,6 +122,10 @@ export async function applyBenchmarkToRiskQuery(
         loss_reputational_likely: benchmark.loss_reputational_likely,
         loss_reputational_max: benchmark.loss_reputational_max,
       },
+      // As a raw query sequelize returns [rows, pg result], and the result
+      // object is never > 0, so a matched risk read as not found. UPDATE
+      // returns [rows, rowCount].
+      type: QueryTypes.UPDATE,
     },
   );
 

@@ -12,6 +12,7 @@
  */
 
 import type { AiActionToolDefinition } from "../types";
+import { RISK_APPROVAL_STATUSES } from "../../../domain.layer/enums/risk-approval-status.enum";
 
 const AI_LIFECYCLE_PHASES = [
   "Problem definition & planning",
@@ -57,7 +58,7 @@ const CURRENT_RISK_LEVELS = [
   "High risk",
   "Medium risk",
   "Low risk",
-  "Very Low risk",
+  "Very low risk",
 ];
 
 export const createRiskToolDefinition: AiActionToolDefinition = {
@@ -65,7 +66,7 @@ export const createRiskToolDefinition: AiActionToolDefinition = {
   function: {
     name: "agent_create_risk",
     description:
-      "Propose creating a new project risk. This is a WRITE action — it does NOT execute immediately. Instead, it files an approval request and returns a pending_approval status. A human Admin must approve before the risk is actually created.\n\nIMPORTANT — collecting required fields:\n1. Use this tool ONLY when the user explicitly asks to create, add, or log a new risk.\n2. Parse the user's first prompt for every required field listed below. Do NOT invent or default values you cannot derive from what the user actually said.\n3. If ANY required field is missing after parsing the first prompt, do NOT call this tool. Instead, send ONE message listing every missing field and asking the user to provide them all in their next reply. Group related fields together for clarity.\n4. For user-id fields (`approver`, `risk_owner`): if the user mentions a person by name or email, call `list_users` first to resolve the id, then include the numeric id here. If the user did not mention anyone, ask them in the same batch as the other missing fields.\n5. Once you have ALL required fields, call this tool exactly once. Then tell the user to open Pending Approvals to approve or reject.\n\nIf this tool returns a validation_failed error, read the error messages, ask the user for the specific values that failed, and retry — do not loop.",
+      "Propose creating a new project risk. This is a WRITE action — it does NOT execute immediately. Instead, it files an approval request and returns a pending_approval status. A human Admin must approve before the risk is actually created.\n\nIMPORTANT — collecting required fields:\n1. Use this tool ONLY when the user explicitly asks to create, add, or log a new risk.\n2. Parse the user's first prompt for every required field listed below. Do NOT invent or default values you cannot derive from what the user actually said.\n3. If ANY required field is missing after parsing the first prompt, do NOT call this tool. Instead, send ONE message listing every missing field and asking the user to provide them all in their next reply. Group related fields together for clarity.\n4. For user-id fields (`approver`, `risk_owner`): if the user mentions a person by name or email, call `list_users` first to resolve the id, then include the numeric id here. If the user did not mention anyone, leave the field out: both are optional.\n5. Once you have ALL required fields, call this tool exactly once. Then tell the user to open Pending Approvals to approve or reject.\n\nIf this tool returns a validation_failed error, read the error messages, ask the user for the specific values that failed, and retry — do not loop.",
     parameters: {
       type: "object",
       properties: {
@@ -157,16 +158,17 @@ export const createRiskToolDefinition: AiActionToolDefinition = {
         approver: {
           type: "number",
           description:
-            "User id of the person who approves the mitigation. Required. Resolve from `list_users` if the user mentions a name — do not guess.",
+            "User id of the person who approves the risk. Optional. Resolve from `list_users` if the user mentions a name — do not guess. Naming an approver sets the approval status to Pending and notifies them.",
         },
         approval_status: {
           type: "string",
-          enum: MITIGATION_STATUSES,
-          description: "Status of the approval workflow for this risk's mitigation. Required.",
+          enum: [...RISK_APPROVAL_STATUSES],
+          description:
+            "Approval status of the risk. Optional; defaults to Not required, or Pending when an approver is named. Only an Admin may set Approved or Rejected while naming the approver; otherwise the approver decides later.",
         },
         date_of_assessment: {
           type: "string",
-          description: "When the risk was assessed. Required. ISO date string (YYYY-MM-DD).",
+          description: "When the risk was assessed. Optional. ISO date string (YYYY-MM-DD).",
         },
       },
       required: [
@@ -180,9 +182,6 @@ export const createRiskToolDefinition: AiActionToolDefinition = {
         "current_risk_level",
         "implementation_strategy",
         "deadline",
-        "approver",
-        "approval_status",
-        "date_of_assessment",
       ],
     },
   },

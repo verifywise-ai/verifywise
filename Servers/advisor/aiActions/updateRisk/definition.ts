@@ -11,6 +11,7 @@
  */
 
 import type { AiActionToolDefinition } from "../types";
+import { RISK_APPROVAL_STATUSES } from "../../../domain.layer/enums/risk-approval-status.enum";
 
 const AI_LIFECYCLE_PHASES = [
   "Problem definition & planning",
@@ -56,7 +57,7 @@ const CURRENT_RISK_LEVELS = [
   "High risk",
   "Medium risk",
   "Low risk",
-  "Very Low risk",
+  "Very low risk",
 ];
 
 export const updateRiskToolDefinition: AiActionToolDefinition = {
@@ -160,8 +161,9 @@ export const updateRiskToolDefinition: AiActionToolDefinition = {
         },
         approval_status: {
           type: "string",
-          enum: MITIGATION_STATUSES,
-          description: "New approval workflow status. Optional.",
+          enum: [...RISK_APPROVAL_STATUSES],
+          description:
+            "New approval status. Optional. Only the risk's approver or an Admin can set Approved or Rejected, or move away from either. Naming a new approver resets it to Pending.",
         },
         date_of_assessment: {
           type: "string",

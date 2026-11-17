@@ -1,10 +1,12 @@
 /**
- * @fileoverview "Option 2: Your datasets" list for the Dataset wizard step.
+ * @fileoverview "Your datasets" list for the Dataset wizard step.
  *
  * @module pages/EvalsDashboard/NewExperiment/MyDatasetsSection
  */
 
-import { Box, Button, Stack, Typography } from "@mui/material";
+import { Box, Stack, Typography } from "@mui/material";
+import { CustomizableButton } from "../../../components/button/customizable-button";
+import SectionLabel from "./SectionLabel";
 import { Database, ExternalLink } from "lucide-react";
 import SelectableCard from "../../../components/SelectableCard";
 import { palette } from "../../../themes/palette";
@@ -37,7 +39,7 @@ export default function MyDatasetsSection({
 }: MyDatasetsSectionProps) {
   if (loading) {
     return (
-      <Box sx={{ py: 2, textAlign: "center" }}>
+      <Box sx={{ py: "4px", textAlign: "center" }}>
         <Typography sx={{ fontSize: "13px", color: palette.text.tertiary }}>
           Loading your datasets...
         </Typography>
@@ -49,34 +51,15 @@ export default function MyDatasetsSection({
 
   return (
     <Box>
-      <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1 }}>
-        <Typography
-          sx={{
-            fontSize: "12px",
-            fontWeight: 600,
-            color: palette.text.disabled,
-            textTransform: "uppercase",
-            letterSpacing: "0.5px",
-          }}
-        >
-          Option 2: Your datasets
-        </Typography>
-        <Button
+      <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: "8px" }}>
+        <SectionLabel noMargin>Your datasets</SectionLabel>
+        <CustomizableButton
           size="small"
           variant="text"
-          startIcon={<ExternalLink size={12} />}
+          startIcon={<ExternalLink size={14} strokeWidth={1.5} />}
           onClick={() => window.open(`/evals/${projectId}#datasets`, "_blank")}
-          sx={{
-            "textTransform": "none",
-            "fontSize": "11px",
-            "color": palette.text.tertiary,
-            "p": 0.5,
-            "minWidth": "auto",
-            "&:hover": { color: palette.brand.primary },
-          }}
-        >
-          Manage
-        </Button>
+          text="Manage datasets"
+        />
       </Stack>
       <Stack spacing="8px">
         {userDatasets.slice(0, 4).map((dataset) => {
@@ -104,7 +87,7 @@ export default function MyDatasetsSection({
                       ? palette.status.error.text
                       : isSelected
                         ? palette.brand.primary
-                        : palette.text.disabled
+                        : palette.text.tertiary
                   }
                 />
               }

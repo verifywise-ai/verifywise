@@ -68,6 +68,11 @@ export enum NotificationType {
   AI_GATEWAY_VIRTUAL_KEY_BUDGET_EXHAUSTED = "ai_gateway_virtual_key_budget_exhausted",
   AI_GATEWAY_APPROVAL_PENDING = "ai_gateway_approval_pending",
 
+  // AI Detection notifications (services/aiDetection/scanNotifications.ts)
+  AI_DETECTION_SCAN_COMPLETED = "ai_detection_scan_completed",
+  AI_DETECTION_SCAN_FAILED = "ai_detection_scan_failed",
+  AI_DETECTION_SCAN_ATTENTION = "ai_detection_scan_attention",
+
   // System notifications
   SYSTEM = "system",
 
@@ -102,6 +107,7 @@ export enum NotificationEntityType {
   AI_GATEWAY = "ai_gateway",
   AI_ACTION = "ai_action",
   EVIDENCE = "evidence",
+  AI_DETECTION_SCAN = "ai_detection_scan",
 }
 
 /**
@@ -220,15 +226,44 @@ export interface IBulkNotification {
   metadata?: Record<string, any>;
 }
 
+/** Values for the {placeholders} in a translation key. */
+export type ITranslationVars = Record<string, string | number>;
+
 /**
  * Email notification configuration
- * Used when a notification should also trigger an email
+ * Used when a notification should also trigger an email.
+ *
+ * The subject is either fixed English text (`subject`) or a dictionary key
+ * (`subjectKey` + `subjectVars`) that sendInAppNotification translates into the
+ * recipient's saved language. The template body stays English.
  */
-export interface IEmailNotificationConfig {
+export type IEmailNotificationConfig = {
   template: string;
-  subject: string;
   variables: Record<string, string>;
-}
+} & (
+  | { subject: string; subjectKey?: never; subjectVars?: never }
+  | { subject?: never; subjectKey: string; subjectVars?: ITranslationVars }
+);
+
+/** Title of an in-app notification: English text, or a key translated per recipient. */
+export type INotificationTitle =
+  | { title: string; titleKey?: never; titleVars?: never }
+  | { title?: never; titleKey: string; titleVars?: ITranslationVars };
+
+/** Message of an in-app notification: English text, or a key translated per recipient. */
+export type INotificationMessage =
+  | { message: string; messageKey?: never; messageVars?: never }
+  | { message?: never; messageKey: string; messageVars?: ITranslationVars };
+
+/**
+ * What sendInAppNotification accepts. Keys (`titleKey`, `messageKey`, and the
+ * email's `subjectKey`) are translated with the recipient's saved language,
+ * read once per recipient. A caller that already knows that language (because
+ * it needs it for its own vars) passes it as `lang` to skip the lookup.
+ */
+export type IInAppNotificationInput = Omit<ICreateNotification, "title" | "message"> &
+  INotificationTitle &
+  INotificationMessage & { lang?: string };
 
 /**
  * Notification with optional email

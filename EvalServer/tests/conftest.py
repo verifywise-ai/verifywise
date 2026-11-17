@@ -231,6 +231,8 @@ def simulated_config() -> Dict[str, Any]:
         ],
         "maxTurns": 4,
     }
+    # The judge plays the simulated user
+    cfg["judgeLlm"] = {"provider": "openai", "model": "gpt-4o-mini"}
     return cfg
 
 

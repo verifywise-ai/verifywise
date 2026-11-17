@@ -34,6 +34,12 @@ function ruleMatches(rule: ISuppression, finding: ICreateFindingInput): boolean 
   if (value === undefined || value === null) return false;
 
   if (rule.match_type === "exact") {
+    // Findings are identified by name and provider case-insensitively (see
+    // findingMergeKey), so "qdrant" and "Qdrant" are one finding and an exact
+    // rule on either spelling matches it.
+    if (rule.field === "name" || rule.field === "provider") {
+      return value.trim().toLowerCase() === rule.value.trim().toLowerCase();
+    }
     return value === rule.value;
   }
 

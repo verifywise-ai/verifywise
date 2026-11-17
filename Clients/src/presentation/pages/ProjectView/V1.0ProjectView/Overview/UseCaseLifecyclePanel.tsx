@@ -10,11 +10,8 @@ import {
   lifecycleValueSx,
 } from "../../../../components/LifecycleTabs/lifecyclePanelStyles";
 import { useAuth } from "../../../../../application/hooks/useAuth";
-import {
-  canEditUseCasesByRole,
-  canManageLifecycle,
-} from "../../../../../application/utils/useCaseLifecycle";
-import { useMyPermissions } from "../../../../../application/hooks/useMyPermissions";
+import { canManageLifecycle } from "../../../../../application/utils/useCaseLifecycle";
+import { useCan } from "../../../../../application/hooks/useCan";
 import {
   useUseCaseLifecycleActions,
   useUseCaseLifecycleSummary,
@@ -43,10 +40,7 @@ const UseCaseLifecyclePanel = ({
 
   // Same per-org permission matrix the server checks (custom roles included);
   // the built-in role rule only stands in until the list has loaded.
-  const { permissions } = useMyPermissions();
-  const canEditUseCases = permissions
-    ? permissions.includes("useCase.edit")
-    : canEditUseCasesByRole(userRoleName);
+  const canEditUseCases = useCan("useCase.edit");
   const canManage = canManageLifecycle(
     userRoleName,
     userId,

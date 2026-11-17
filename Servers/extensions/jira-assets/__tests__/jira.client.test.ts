@@ -1,6 +1,8 @@
 import {
   JiraAssetsClient,
+  JiraInvalidIdError,
   JiraUpstreamError,
+  jiraId,
   MAX_PAGES,
   PAGE_SIZE,
   PICKER_MAX_RESULTS,
@@ -411,12 +413,20 @@ describe("import picker page", () => {
 });
 
 describe("errors", () => {
-  it("turns a non-2xx response into a JiraUpstreamError with the status", async () => {
-    mockFetch.mockResolvedValueOnce({ ok: false, status: 401, text: async () => "bad creds" });
+  it("turns a non-2xx response into a JiraUpstreamError with the status only", async () => {
+    const cancel = jest.fn().mockResolvedValue(undefined);
+    const text = jest.fn(async () => "<html>internal page</html>");
+    const answer = () => ({ ok: false, status: 401, text, body: { cancel } });
 
+    mockFetch.mockResolvedValueOnce(answer());
     await expect(cloud().getSchemas()).rejects.toThrow(JiraUpstreamError);
-    mockFetch.mockResolvedValueOnce({ ok: false, status: 401, text: async () => "bad creds" });
-    await expect(cloud().getSchemas()).rejects.toThrow("Jira returned 401: bad creds");
+    mockFetch.mockResolvedValueOnce(answer());
+    const err = await cloud()
+      .getSchemas()
+      .catch((e: Error) => e);
+    expect((err as Error).message).toBe("Jira returned HTTP 401");
+    expect(text).not.toHaveBeenCalled();
+    expect(cancel).toHaveBeenCalled();
   });
 
   it("turns an unreadable response body into a JiraUpstreamError", async () => {
@@ -475,13 +485,120 @@ describe("errors", () => {
     expect(result).toMatchObject({ complete: false, stoppedReason: "deadline" });
   });
 
-  it("turns a network failure into a JiraUpstreamError with the cause", async () => {
+  it("turns a network failure into a JiraUpstreamError without the cause", async () => {
     mockFetch.mockRejectedValueOnce(
       Object.assign(new TypeError("fetch failed"), { cause: { code: "ECONNREFUSED" } }),
     );
 
-    await expect(cloud().getSchemas()).rejects.toThrow(
-      "Could not reach Jira: fetch failed (ECONNREFUSED)",
+    await expect(cloud().getSchemas()).rejects.toThrow("Could not reach Jira: connection failed");
+  });
+});
+
+// E-H3: an id from a request path used to be pasted into the Jira path as is,
+// so "../../../api/2/project#" sent the stored credentials to another Jira API.
+describe("Jira id validation", () => {
+  const bad = [
+    ["a traversal", "../../../api/2/project#"],
+    ["a decoded %2F traversal", "..%2F..%2Fapi"],
+    ["a fragment", "12#"],
+    ["a dot segment", ".."],
+    ["a query", "12?x=1"],
+    ["letters", "abc"],
+    ["a negative number", "-1"],
+    ["a decimal", "1.5"],
+    ["an empty id", ""],
+    ["whitespace", " 12"],
+    ["more than 18 digits", "1".repeat(19)],
+    ["an AQL injection", "1 OR objectTypeId > 0"],
+  ] as const;
+
+  const calls: Array<[string, (c: JiraAssetsClient, id: string) => Promise<unknown>]> = [
+    ["getObjectTypes", (c, id) => c.getObjectTypes(id)],
+    ["getAttributes", (c, id) => c.getAttributes(id)],
+    ["getObjectsPage", (c, id) => c.getObjectsPage(id)],
+    ["getAllObjects", (c, id) => c.getAllObjects(id)],
+    ["getObjectById", (c, id) => c.getObjectById(id)],
+  ];
+
+  describe.each([
+    ["cloud", cloud],
+    ["data center", datacenter],
+  ] as const)("on %s", (_deployment, make) => {
+    describe.each(calls)("%s", (_name, call) => {
+      it.each(bad)("rejects %s without calling Jira", async (_label, id) => {
+        const err = await call(make(), id).catch((e) => e);
+
+        expect(err).toBeInstanceOf(JiraInvalidIdError);
+        expect(mockFetch).not.toHaveBeenCalled();
+      });
+    });
+  });
+
+  it("passes numeric ids through to the path", async () => {
+    mockFetch.mockResolvedValue(ok([]));
+
+    await datacenter().getObjectTypes("7");
+    await datacenter().getAttributes("123456789012345678");
+    await cloud().getObjectById("99");
+    // Data Center sends object ids as JSON numbers; the import passes them on.
+    await datacenter().getObjectById(5 as unknown as string);
+
+    const urls = mockFetch.mock.calls.map(([url]) => String(url));
+    expect(urls[0]).toBe(
+      "https://jira.example.com/rest/insight/1.0/objectschema/7/objecttypes/flat",
     );
+    expect(urls[1]).toBe(
+      "https://jira.example.com/rest/insight/1.0/objecttype/123456789012345678/attributes",
+    );
+    expect(urls[2]).toBe("https://api.atlassian.com/jsm/assets/workspace/ws-1/v1/object/99");
+    expect(urls[3]).toBe("https://jira.example.com/rest/insight/1.0/object/5");
+  });
+});
+
+describe("jiraId", () => {
+  it("returns the raw numeric string, encoding nothing", () => {
+    expect(jiraId("123456789012345678", "objectTypeId")).toBe("123456789012345678");
+    expect(jiraId(42, "objectId")).toBe("42");
+  });
+
+  it("names the field in a translatable error", () => {
+    const err = (() => {
+      try {
+        return jiraId("../x", "schemaId");
+      } catch (e) {
+        return e;
+      }
+    })() as JiraInvalidIdError;
+
+    expect(err).toBeInstanceOf(JiraInvalidIdError);
+    expect(err.message).toBe("schemaId must be a numeric Jira id");
+    expect(err.i18nKey).toBe("{field} must be a numeric Jira id");
+    expect(err.i18nVars).toEqual({ field: "schemaId" });
+  });
+
+  it("refuses an unsafe integer", () => {
+    expect(() => jiraId(2 ** 60, "objectId")).toThrow(JiraInvalidIdError);
+  });
+});
+
+describe("where the object type id goes", () => {
+  it("cloud: one attribute lookup in the path and the raw id in the AQL body", async () => {
+    cloudPages({ values: [], isLast: true });
+
+    await cloud().getObjectsPage("12");
+
+    const urls = mockFetch.mock.calls.map(([url]) => String(url));
+    expect(urls.filter((u) => u.includes("/attributes"))).toEqual([
+      "https://api.atlassian.com/jsm/assets/workspace/ws-1/v1/objecttype/12/attributes",
+    ]);
+    expect(JSON.parse(objectCalls()[0][1].body)).toEqual({ qlQuery: "objectTypeId = 12" });
+  });
+
+  it("data center: the IQL query is encoded once", async () => {
+    mockFetch.mockResolvedValueOnce(ok({ objectEntries: [], pageSize: 1 }));
+
+    await datacenter().getObjectsPage("12");
+
+    expect(String(objectCalls()[0][0])).toContain("&iql=objectTypeId%3D12&");
   });
 });

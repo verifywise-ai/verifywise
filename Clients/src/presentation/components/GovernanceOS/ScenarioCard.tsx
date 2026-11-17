@@ -24,6 +24,7 @@ import {
   accent,
   brand,
   status,
+  radiusPx,
 } from "../../themes/palette";
 
 const FRAMEWORK_NAMES: Record<number, string> = {
@@ -65,7 +66,7 @@ const ScenarioCard = ({
       <Box
         sx={{
           "border": `1px solid ${isSelected ? brand.primary : borderPalette.light}`,
-          "borderRadius": "4px",
+          "borderRadius": radiusPx.sm,
           "p": "16px",
           "background": isSelected ? background.accent : background.main,
           "transition": "all 0.2s ease",
@@ -245,7 +246,7 @@ const ScenarioCard = ({
                 alignItems: "center",
                 height: 22,
                 px: "8px",
-                borderRadius: "4px",
+                borderRadius: radiusPx.sm,
                 fontSize: 11,
                 fontWeight: 400,
                 textTransform: "capitalize",
@@ -265,7 +266,7 @@ const ScenarioCard = ({
                 alignItems: "center",
                 height: 22,
                 px: "8px",
-                borderRadius: "4px",
+                borderRadius: radiusPx.sm,
                 fontSize: 11,
                 fontWeight: 400,
                 backgroundColor: background.hover,
@@ -284,7 +285,7 @@ const ScenarioCard = ({
                 alignItems: "center",
                 height: 22,
                 px: "8px",
-                borderRadius: "4px",
+                borderRadius: radiusPx.sm,
                 fontSize: 11,
                 fontWeight: 400,
                 textTransform: "capitalize",
@@ -438,7 +439,7 @@ const ScenarioCard = ({
                 <Box
                   sx={{
                     p: "16px",
-                    borderRadius: "4px",
+                    borderRadius: radiusPx.sm,
                     border: `1px solid ${accent.primary.border}`,
                     background: accent.primary.bg,
                   }}
@@ -460,7 +461,7 @@ const ScenarioCard = ({
                 <Box
                   sx={{
                     p: "16px",
-                    borderRadius: "4px",
+                    borderRadius: radiusPx.sm,
                     border: `1px solid ${accent.indigo.border}`,
                     background: accent.indigo.bg,
                   }}
@@ -482,7 +483,7 @@ const ScenarioCard = ({
                 <Box
                   sx={{
                     p: "16px",
-                    borderRadius: "4px",
+                    borderRadius: radiusPx.sm,
                     border: `1px solid ${borderPalette.light}`,
                     background: background.hover,
                   }}

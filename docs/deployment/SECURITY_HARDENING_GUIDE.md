@@ -40,7 +40,7 @@ openssl rand -base64 32
 |----------|---------|----------------|
 | `JWT_SECRET` | Signs access tokens | 64 hex characters |
 | `REFRESH_TOKEN_SECRET` | Signs refresh tokens | 64 hex characters |
-| `ENCRYPTION_KEY` | Encrypts sensitive data (LLM API keys) | 32 characters |
+| `ENCRYPTION_KEY` | Encrypts stored credentials (LLM API keys, extension secrets). The backend and worker do not start in production without it | 32 characters |
 | `DB_PASSWORD` | Database authentication | 16 characters |
 
 ### Secret management recommendations
@@ -271,6 +271,10 @@ CORS is configured to allow requests from:
 Requests without an origin (mobile apps, curl, server-to-server) are allowed.
 
 For production with a custom domain, ensure your reverse proxy (nginx) handles CORS headers appropriately, or configure the `HOST` environment variable to match your domain.
+
+### Outbound requests from extensions
+
+The MLflow, Azure AI Foundry and Jira extensions call addresses an Admin configures. The backend always refuses loopback, link-local (including 169.254.169.254), unspecified and cloud metadata addresses, after DNS resolution, and does not follow redirects. Private networks are allowed by default for on-prem servers. On a hosted deployment where extensions should only reach the internet, set `OUTBOUND_BLOCK_PRIVATE_NETWORKS=true`. Never set `OUTBOUND_ALLOW_LOOPBACK` outside local development. See [Configuration reference](./CONFIGURATION_REFERENCE.md#extension-outbound-requests).
 
 ---
 

@@ -13,6 +13,7 @@ import { startScan } from "./aiDetection.service";
 import { IServiceContext, ScanMode } from "../domain.layer/interfaces/i.aiDetection";
 import { IAIDetectionRepository } from "../domain.layer/interfaces/i.aiDetectionRepository";
 import logger from "../utils/logger/fileLogger";
+import { isPublicHostname } from "../utils/publicUrl.utils";
 
 // ============================================================================
 // Types
@@ -73,6 +74,42 @@ export function verifyGitHubSignature(payload: Buffer, signature: string, secret
  */
 export function generateWebhookSecret(): string {
   return crypto.randomBytes(32).toString("hex");
+}
+
+// ============================================================================
+// Webhook URL
+// ============================================================================
+
+/** Path the GitHub webhook router is mounted on (see app.ts). */
+export const GITHUB_WEBHOOK_PATH = "/api/webhooks/github";
+
+/**
+ * Build the URL GitHub should deliver webhooks to from the API's public base
+ * address (see `getPublicBaseUrl`). A base that already ends in /api is
+ * accepted too. When the base is missing, or on a host GitHub cannot reach
+ * (localhost, a private network, a Docker-only name), the caller is told so
+ * it can warn the user instead of handing out a dead URL.
+ */
+export function buildGitHubWebhookUrl(publicBaseUrl: string | undefined): {
+  webhook_url: string | null;
+  is_public: boolean;
+} {
+  const base = publicBaseUrl?.trim();
+  if (!base) {
+    return { webhook_url: null, is_public: false };
+  }
+
+  let parsed: URL;
+  try {
+    parsed = new URL(base);
+  } catch {
+    return { webhook_url: null, is_public: false };
+  }
+
+  const path = parsed.pathname.replace(/\/+$/, "").replace(/\/api$/i, "");
+  const webhookUrl = `${parsed.origin}${path}${GITHUB_WEBHOOK_PATH}`;
+
+  return { webhook_url: webhookUrl, is_public: isPublicHostname(parsed.hostname) };
 }
 
 // ============================================================================

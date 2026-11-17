@@ -7,6 +7,7 @@ import {
 } from "../../../../application/utils/intakeRouting/previewRole";
 import { RoleSwitch } from "./PreviewMenu";
 import { outlinedButtonSx } from "./previewStyles";
+import { radiusPx } from "../../../themes/palette";
 
 interface PreviewRoleBannerProps {
   role: PreviewRole;
@@ -31,7 +32,7 @@ export const PreviewRoleBanner = ({ role, note, onRoleChange, onExit }: PreviewR
         gap: "8px 12px",
         p: "8px 12px",
         border: `1px solid ${info.border ?? theme.palette.border.dark}`,
-        borderRadius: "4px",
+        borderRadius: radiusPx.sm,
         backgroundColor: info.bg ?? theme.palette.background.accent,
       }}
     >

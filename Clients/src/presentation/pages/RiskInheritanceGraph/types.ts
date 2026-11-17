@@ -7,6 +7,7 @@
  */
 
 import type { RiskLinkEntityType } from "../../../domain/interfaces/i.riskLink";
+import { palette } from "../../themes/palette";
 
 // ReactFlow node data with index signature for compatibility
 export interface RiskInheritanceNodeData {
@@ -21,9 +22,9 @@ export interface RiskInheritanceNodeData {
 
 // Node border colors per entity type
 export const ENTITY_TYPE_COLORS: Record<RiskLinkEntityType, string> = {
-  risk: "#3b82f6", // Blue
-  model_risk: "#8b5cf6", // Purple
-  vendor_risk: "#f59e0b", // Amber
+  risk: palette.status.info.text, // Blue
+  model_risk: palette.accent.purple.text, // Purple
+  vendor_risk: palette.riskMark.medium, // Amber
 };
 
 // Edge labels shown on the canvas

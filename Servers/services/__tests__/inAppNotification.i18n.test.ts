@@ -168,8 +168,9 @@ describe.each<[SupportedLang, string]>([
   });
 
   // The email template is English, so translated variables would drop foreign
-  // words into an English sentence. Only the in-app row follows the recipient.
-  it("leaves the email in English", async () => {
+  // words into an English sentence: the body stays English. The subject stands
+  // on its own and follows the recipient, like the in-app row.
+  it("translates the email subject and leaves the email body in English", async () => {
     const deadline = inDays(3);
     await notifyRiskDeadlineDueSoon(
       1,
@@ -182,7 +183,7 @@ describe.each<[SupportedLang, string]>([
     expect(stored().title).toBe(t("Risk deadline approaching"));
     expect(mockSendTemplate).toHaveBeenCalledWith(
       "ada@x.io",
-      "Risk deadline approaching: Zebra stall",
+      t("Risk deadline approaching: {name}", { name: "Zebra stall" }),
       expect.anything(),
       expect.objectContaining({
         entity_kind: "Risk",

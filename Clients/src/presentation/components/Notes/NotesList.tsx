@@ -17,6 +17,7 @@
 import React from "react";
 import { Box, Stack, Typography, useTheme, CircularProgress } from "@mui/material";
 import NoteItem from "./NoteItem";
+import { radiusPx } from "../../themes/palette";
 
 interface NotesListProps {
   notes: Array<{
@@ -83,7 +84,7 @@ const NotesList: React.FC<NotesListProps> = ({
           textAlign: "center",
           padding: theme.spacing(4, 2),
           backgroundColor: theme.palette.background.paper,
-          borderRadius: "4px",
+          borderRadius: radiusPx.sm,
           border: `1px dashed ${theme.palette.border.light}`,
         }}
       >

@@ -2,6 +2,7 @@ import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { renderWithProviders } from "../../../../../test/renderWithProviders";
 import Field from "../index";
+import { status } from "../../../../themes/palette";
 
 describe("Field Component", () => {
   it("renders a text input with label", () => {
@@ -17,7 +18,7 @@ describe("Field Component", () => {
     expect(screen.getByText("Email")).toBeInTheDocument();
     const asterisk = screen.getByText("*");
     expect(asterisk).toBeInTheDocument();
-    expect(asterisk).toHaveStyle({ color: "#D32F2F" });
+    expect(asterisk).toHaveStyle({ color: status.error.text });
   });
 
   it("shows (optional) label when isOptional is true", () => {

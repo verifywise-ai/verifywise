@@ -7,7 +7,7 @@ import UploadProgress, { FileUploadResult } from "./UploadProgress";
 import { useFileAnalysis } from "./useFileAnalysis";
 import { useAuth } from "../../../../application/hooks/useAuth";
 import { apiServices } from "../../../../infrastructure/api/networkServices";
-import { brand, text } from "../../../themes/palette";
+import { brand, text, palette as vwPalette } from "../../../themes/palette";
 
 interface BulkUploadModalProps {
   open: boolean;
@@ -15,7 +15,7 @@ interface BulkUploadModalProps {
   onSuccess?: () => void;
 }
 
-const STEPS = ["Select Files", "Review Metadata", "Upload"];
+const STEPS = ["Select files", "Review metadata", "Upload"];
 
 export default function BulkUploadModal({ open, onClose, onSuccess }: BulkUploadModalProps) {
   const [activeStep, setActiveStep] = useState(0);
@@ -141,11 +141,11 @@ export default function BulkUploadModal({ open, onClose, onSuccess }: BulkUpload
             display: "flex",
             flexDirection: "column",
             alignItems: "center",
-            py: 4,
+            py: "8px",
           }}
         >
-          <CircularProgress size={32} sx={{ color: `${brand.primary}` }} />
-          <Typography sx={{ mt: 1, fontSize: 13, color: `${text.tertiary}` }}>
+          <CircularProgress size={32} sx={{ color: brand.primary }} />
+          <Typography sx={{ mt: "2px", fontSize: 13, color: text.tertiary }}>
             Analyzing files...
           </Typography>
         </Box>
@@ -153,7 +153,11 @@ export default function BulkUploadModal({ open, onClose, onSuccess }: BulkUpload
     }
 
     if (activeStep === 1 && !analyzing && analysisError) {
-      return <Typography sx={{ fontSize: 13, color: "#F04438" }}>{analysisError}</Typography>;
+      return (
+        <Typography sx={{ fontSize: 13, color: vwPalette.status.error.text }}>
+          {analysisError}
+        </Typography>
+      );
     }
 
     if (activeStep === 1 && !analyzing && analyses.length > 0) {
@@ -183,7 +187,7 @@ export default function BulkUploadModal({ open, onClose, onSuccess }: BulkUpload
     <StepperModal
       isOpen={open}
       onClose={isUploading ? () => {} : handleClose}
-      title="Dataset Bulk Upload"
+      title="Dataset bulk upload"
       steps={STEPS}
       activeStep={activeStep}
       onNext={handleNext}

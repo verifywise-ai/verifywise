@@ -94,8 +94,6 @@ def patched_crud(monkeypatch: pytest.MonkeyPatch) -> Dict[str, Any]:
     monkeypatch.setattr(crud_module, "update_log_metadata", AsyncMock(return_value=None))
 
     # The scorer crud helpers are imported by NAME in run_evaluation, so patch the names there.
-    monkeypatch.setattr(run_eval_module, "create_scorer", AsyncMock(return_value={"id": "s1"}))
-    monkeypatch.setattr(run_eval_module, "update_scorer", AsyncMock(return_value=None))
     monkeypatch.setattr(run_eval_module, "touch_scorer_updated_at", AsyncMock(return_value=None))
     return {"create_log": log_create, "module": run_eval_module}
 

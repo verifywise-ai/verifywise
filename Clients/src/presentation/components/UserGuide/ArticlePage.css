@@ -6,7 +6,7 @@
 }
 
 .breadcrumb-link:hover {
-  color: #13715b;
+  color: var(--vw-brand-primary, #13715b);
 }
 
 /* ToC link hover */
@@ -15,7 +15,7 @@
 }
 
 .toc-link:hover {
-  color: #13715b;
+  color: var(--vw-brand-primary, #13715b);
   text-decoration: underline !important;
 }
 
@@ -25,14 +25,14 @@
 }
 
 .nav-button:hover .nav-text {
-  color: #13715b;
+  color: var(--vw-brand-primary, #13715b);
 }
 
 /* Article body typography */
 .article-body h2 {
   font-size: 18px;
   font-weight: 600;
-  color: #1a1a1a;
+  color: var(--vw-text-primary, #1a1a1a);
   margin-top: 32px;
   margin-bottom: 16px;
   line-height: 1.4;
@@ -41,7 +41,7 @@
 .article-body h3 {
   font-size: 14px;
   font-weight: 600;
-  color: #1a1a1a;
+  color: var(--vw-text-primary, #1a1a1a);
   margin-top: 24px;
   margin-bottom: 12px;
   line-height: 1.4;
@@ -49,7 +49,7 @@
 
 .article-body p {
   font-size: 13px;
-  color: #1a1a1a;
+  color: var(--vw-text-primary, #1a1a1a);
   line-height: 1.5;
   margin-bottom: 16px;
   margin-top: 0;
@@ -64,13 +64,13 @@
 
 .article-body li {
   font-size: 13px;
-  color: #1a1a1a;
+  color: var(--vw-text-primary, #1a1a1a);
   line-height: 1.5;
   margin-bottom: 8px;
 }
 
 .article-body a {
-  color: #13715b;
+  color: var(--vw-brand-primary, #13715b);
   text-decoration: none;
   font-weight: 500;
 }
@@ -82,15 +82,15 @@
 .article-body code {
   background-color: #f1f3f4;
   padding: 2px 6px;
-  border-radius: 4px;
+  border-radius: var(--vw-radius-sm, 4px);
   font-size: 10px;
   font-family: "Geist Mono", "Fira Code", "Consolas", monospace;
-  color: #1a1a1a;
+  color: var(--vw-text-primary, #1a1a1a);
 }
 
 .article-body pre {
-  background-color: #1c2130;
-  border-radius: 4px;
+  background-color: var(--vw-text-primary, #1c2130);
+  border-radius: var(--vw-radius-sm, 4px);
   padding: 16px;
   overflow: auto;
   margin-bottom: 16px;
@@ -100,12 +100,12 @@
 .article-body pre code {
   background-color: transparent;
   padding: 0;
-  color: #e5e7eb;
+  color: var(--vw-border-light, #e5e7eb);
 }
 
 .article-body blockquote {
-  border-left: 3px solid #13715b;
-  background-color: #f9fafb;
+  border-left: 3px solid var(--vw-brand-primary, #13715b);
+  background-color: var(--vw-background-alt, #f9fafb);
   padding: 12px 16px;
   border-radius: 0 4px 4px 0;
   margin-bottom: 16px;
@@ -116,7 +116,7 @@
 
 .article-body blockquote p {
   margin-bottom: 0;
-  color: #1a1a1a;
+  color: var(--vw-text-primary, #1a1a1a);
 }
 
 .article-body table {
@@ -127,31 +127,31 @@
 
 .article-body th,
 .article-body td {
-  border: 1px solid #d0d5dd;
+  border: 1px solid var(--vw-border-dark, #d0d5dd);
   padding: 12px;
   text-align: left;
   font-size: 10px;
 }
 
 .article-body th {
-  background-color: #f9fafb;
+  background-color: var(--vw-background-alt, #f9fafb);
   font-weight: 600;
-  color: #1a1a1a;
+  color: var(--vw-text-primary, #1a1a1a);
 }
 
 .article-body td {
-  color: #1a1a1a;
+  color: var(--vw-text-primary, #1a1a1a);
 }
 
 .article-body img {
   max-width: 100%;
-  border-radius: 4px;
-  border: 1px solid #d0d5dd;
+  border-radius: var(--vw-radius-sm, 4px);
+  border: 1px solid var(--vw-border-dark, #d0d5dd);
   margin-bottom: 16px;
 }
 
 .article-body hr {
   border: none;
-  border-top: 1px solid #d0d5dd;
+  border-top: 1px solid var(--vw-border-dark, #d0d5dd);
   margin: 32px 0;
 }

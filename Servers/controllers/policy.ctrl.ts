@@ -16,6 +16,7 @@ import {
   bulkArchivePoliciesQuery,
   bulkSetPoliciesReviewerQuery,
   bulkSetPoliciesTagsQuery,
+  assertPolicyUsersInOrganization,
 } from "../utils/policyManager.utils";
 import { parseBulkIds, assertOrgOwnsIds, withBulkTransaction } from "../utils/bulkAction.utils";
 import {
@@ -46,6 +47,17 @@ import { translateError } from "../utils/i18n.utils";
 import { roleHasPermission } from "../utils/rolePermissions.utils";
 import { logProcessing, logSuccess, logFailure } from "../utils/logger/logHelper";
 import { sanitizeUserHtml } from "../utils/sanitization.utils";
+import {
+  getPolicyFieldErrors,
+  PolicyFieldError,
+} from "../utils/validations/policiesValidation.utils";
+import { rejectPendingPolicyRequestOnDelete } from "../services/policies/policyApproval.service";
+import {
+  assertPoliciesCanBeArchived,
+  assertPolicyStatusChange,
+  assertPolicyUpdateAllowed,
+  policyFieldsWritten,
+} from "../utils/policyStatus.utils";
 
 /**
  * Only a reviewer assigned to the policy, or an Admin, may approve or reject
@@ -58,6 +70,61 @@ async function canDecideReview(req: Request, policy: any): Promise<boolean> {
   if (Number(policy.author_id) === req.userId) return false;
   const reviewerIds: number[] = (policy.assigned_reviewer_ids || []).map(Number);
   return reviewerIds.includes(req.userId!);
+}
+
+/**
+ * The fields a caller may set on create and update. Everything else in the
+ * body (is_demo, review_status, author_id, organization_id, ...) is dropped,
+ * so a client cannot mark a real policy as demo data. HTML is sanitized.
+ */
+const EDITABLE_POLICY_FIELDS = [
+  "title",
+  "content_html",
+  "status",
+  "tags",
+  "next_review_date",
+  "policy_owner_id",
+  "assigned_reviewer_ids",
+] as const;
+
+/**
+ * Field checks for create (`isCreate`: title required) and update (only the
+ * fields sent), translated for the editor. The rules are shared with the
+ * advisor's policy tools (getPolicyFieldErrors).
+ */
+const policyFieldErrors = (req: Request, data: Partial<IPolicy>, isCreate: boolean) =>
+  getPolicyFieldErrors(data, isCreate, req.t!);
+
+/** 400 body carrying field errors, in the shape other controllers use. */
+export const policyValidationResponse = (errors: PolicyFieldError[]) =>
+  STATUS_CODE[400]({ message: errors[0].message, errors });
+
+/** 400 body for a ValidationException from the write path (tags, owner, reviewers). */
+export const policyValidationExceptionResponse = (req: Request, error: ValidationException) =>
+  policyValidationResponse([
+    {
+      field: (error.metadata?.field as string | undefined) ?? "body",
+      message: translateError(req, error),
+    },
+  ]);
+
+function pickEditablePolicyFields(body: unknown): Partial<IPolicy> {
+  const source = (body && typeof body === "object" ? body : {}) as Record<string, unknown>;
+  const picked: Record<string, unknown> = {};
+  for (const field of EDITABLE_POLICY_FIELDS) {
+    if (source[field] !== undefined) picked[field] = source[field];
+  }
+  if (picked.assigned_reviewer_ids !== undefined && !Array.isArray(picked.assigned_reviewer_ids)) {
+    throw new ValidationException(
+      "assigned_reviewer_ids must be an array",
+      "assigned_reviewer_ids",
+      picked.assigned_reviewer_ids,
+    );
+  }
+  if (picked.content_html !== undefined) {
+    picked.content_html = sanitizeUserHtml(picked.content_html);
+  }
+  return picked as Partial<IPolicy>;
 }
 
 export class PolicyController {
@@ -76,9 +143,12 @@ export class PolicyController {
   static async getPolicyById(req: Request, res: Response) {
     try {
       const policyId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
+      if (isNaN(policyId)) {
+        return res.status(400).json(STATUS_CODE[400](req.t!("Invalid policy ID")));
+      }
       const policy = await getPolicyByIdQuery(req.organizationId!, policyId);
 
-      if (policy) {
+      if (policy && policy.length > 0) {
         return res.status(200).json(STATUS_CODE[200](policy));
       }
 
@@ -94,13 +164,18 @@ export class PolicyController {
     try {
       const userId = req.userId!;
       const policyData = {
-        ...req.body,
-        ...(req.body?.content_html !== undefined && {
-          content_html: sanitizeUserHtml(req.body.content_html),
-        }),
+        ...pickEditablePolicyFields(req.body),
         author_id: userId,
         last_updated_by: userId,
       } as IPolicy;
+
+      const fieldErrors = policyFieldErrors(req, policyData, true);
+      if (fieldErrors.length > 0) {
+        await transaction.rollback();
+        return res.status(400).json(policyValidationResponse(fieldErrors));
+      }
+      // Under Review, Approved and Published come only from the approval flow.
+      assertPolicyStatusChange({ currentStatus: null, nextStatus: policyData.status });
 
       const policy = await createPolicyQuery(policyData, req.organizationId!, userId, transaction);
 
@@ -123,6 +198,9 @@ export class PolicyController {
       return res.status(503).json(STATUS_CODE[503]({}));
     } catch (error) {
       await transaction.rollback();
+      if (error instanceof ValidationException) {
+        return res.status(400).json(policyValidationExceptionResponse(req, error));
+      }
       return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
     }
   }
@@ -133,23 +211,37 @@ export class PolicyController {
     try {
       const policyId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
       const userId = req.userId!;
-      // Get existing policy for change tracking
-      const existingPolicyResult = await getPolicyByIdQuery(req.organizationId!, policyId);
 
-      if (!existingPolicyResult || existingPolicyResult.length === 0) {
+      const policyData = {
+        ...pickEditablePolicyFields(req.body),
+        last_updated_by: userId,
+      } as Partial<IPolicy>;
+
+      const fieldErrors = policyFieldErrors(req, policyData, false);
+      if (fieldErrors.length > 0) {
+        await transaction.rollback();
+        return res.status(400).json(policyValidationResponse(fieldErrors));
+      }
+      // Status moves by hand only within the rules (pending request, workflow-only
+      // statuses); title and content are locked while a request is pending.
+      // An empty title or content is not written, so it is not a change.
+      const written = policyFieldsWritten(policyData);
+      await assertPolicyUpdateAllowed({
+        organizationId: req.organizationId!,
+        policyId,
+        nextStatus: written.status,
+        nextTitle: written.title,
+        nextContentHtml: written.content_html,
+        transaction,
+      });
+
+      // The stored row for change tracking, read in the transaction after the
+      // lock above, so the history compares against what this update replaces.
+      const [existingPolicy] = await getPolicyByIdQuery(req.organizationId!, policyId, transaction);
+      if (!existingPolicy) {
         await transaction.rollback();
         return res.status(404).json(STATUS_CODE[404]({}));
       }
-
-      const existingPolicy = existingPolicyResult[0];
-
-      const policyData = {
-        ...req.body,
-        ...(req.body?.content_html !== undefined && {
-          content_html: sanitizeUserHtml(req.body.content_html),
-        }),
-        last_updated_by: userId,
-      } as Partial<IPolicy>;
 
       const policy = await updatePolicyByIdQuery(
         policyId,
@@ -160,8 +252,8 @@ export class PolicyController {
       );
 
       if (policy) {
-        // Track and record changes
-        const changes = await trackPolicyChanges(existingPolicy as unknown as IPolicy, policyData);
+        // Track what was written, not what was sent.
+        const changes = await trackPolicyChanges(existingPolicy as unknown as IPolicy, written);
         if (changes.length > 0) {
           await recordMultipleFieldChanges(
             policyId,
@@ -179,6 +271,9 @@ export class PolicyController {
       return res.status(404).json(STATUS_CODE[404]({}));
     } catch (error) {
       await transaction.rollback();
+      if (error instanceof ValidationException) {
+        return res.status(400).json(policyValidationExceptionResponse(req, error));
+      }
       logger.error("Error updating policy:", error);
       return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
     }
@@ -199,7 +294,15 @@ export class PolicyController {
     try {
       const policyId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
 
-      const deleted = await deletePolicyByIdQuery(req.organizationId!, policyId, transaction);
+      // A pending approval request on the policy is rejected with the delete.
+      await rejectPendingPolicyRequestOnDelete(req.organizationId!, policyId, transaction);
+
+      const deleted = await deletePolicyByIdQuery(
+        req.organizationId!,
+        policyId,
+        req.userId!,
+        transaction,
+      );
 
       if (deleted) {
         await transaction.commit();
@@ -237,8 +340,10 @@ export class PolicyController {
 
       const filename = generateFilename(policy.title, "pdf");
 
+      // attachment() writes Content-Disposition (ASCII fallback + filename*) and
+      // guesses the type from the extension; the explicit type goes after it.
+      res.attachment(filename);
       res.setHeader("Content-Type", "application/pdf");
-      res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
       res.setHeader("Content-Length", pdfBuffer.length);
 
       return res.send(pdfBuffer);
@@ -274,11 +379,11 @@ export class PolicyController {
 
       const filename = generateFilename(policy.title, "docx");
 
+      res.attachment(filename);
       res.setHeader(
         "Content-Type",
         "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
       );
-      res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
       res.setHeader("Content-Length", docxBuffer.length);
 
       return res.send(docxBuffer);
@@ -315,7 +420,7 @@ export class PolicyController {
         return res.status(400).json(STATUS_CODE[400](req.t!("Only .docx files are supported")));
       }
 
-      const { html, warnings } = await convertDocxToHtml(req.file.buffer);
+      const { html, warnings, skippedImages } = await convertDocxToHtml(req.file.buffer);
 
       await logSuccess({
         eventType: "Read",
@@ -326,7 +431,7 @@ export class PolicyController {
         organizationId,
       });
 
-      return res.status(200).json(STATUS_CODE[200]({ html, warnings }));
+      return res.status(200).json(STATUS_CODE[200]({ html, warnings, skippedImages }));
     } catch (error) {
       await logFailure({
         eventType: "Read",
@@ -365,6 +470,20 @@ export class PolicyController {
         return res.status(404).json(STATUS_CODE[404](null));
       }
       const policy = policyResult[0] as any;
+
+      const reviewerIds = reviewer_ids.map(Number);
+      if (reviewerIds.some((rid: number) => !Number.isInteger(rid) || rid <= 0)) {
+        await transaction.rollback();
+        return res
+          .status(400)
+          .json(STATUS_CODE[400](req.t!("reviewer_ids must be positive integers")));
+      }
+      await assertPolicyUsersInOrganization(
+        reviewerIds,
+        "reviewer_ids",
+        req.organizationId!,
+        transaction,
+      );
 
       // Update review status to pending_review
       await updatePolicyReviewStatusQuery(
@@ -414,6 +533,9 @@ export class PolicyController {
       return res.status(200).json(STATUS_CODE[200](updatedPolicy?.[0] || null));
     } catch (error) {
       await transaction.rollback();
+      if (error instanceof ValidationException) {
+        return res.status(400).json(STATUS_CODE[400](translateError(req, error)));
+      }
       logger.error("Error requesting policy review:", error);
       return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
     }
@@ -655,11 +777,34 @@ export class PolicyController {
           });
 
           if (action === "archive") {
-            await bulkArchivePoliciesQuery(req.organizationId!, ids, req.userId!, transaction);
+            const previous = await assertPoliciesCanBeArchived(
+              req.organizationId!,
+              ids,
+              transaction,
+            );
+            await bulkArchivePoliciesQuery(
+              req.organizationId!,
+              ids,
+              req.userId!,
+              transaction,
+              previous,
+            );
           } else if (action === "set_reviewer") {
-            await bulkSetPoliciesReviewerQuery(req.organizationId!, ids, reviewerId!, transaction);
+            await bulkSetPoliciesReviewerQuery(
+              req.organizationId!,
+              ids,
+              reviewerId!,
+              req.userId!,
+              transaction,
+            );
           } else {
-            await bulkSetPoliciesTagsQuery(req.organizationId!, ids, tags!, transaction);
+            await bulkSetPoliciesTagsQuery(
+              req.organizationId!,
+              ids,
+              tags!,
+              req.userId!,
+              transaction,
+            );
           }
         },
       );
@@ -667,7 +812,7 @@ export class PolicyController {
       return res.status(200).json(STATUS_CODE[200]({ updated: ids.length, action }));
     } catch (error) {
       if (error instanceof ValidationException) {
-        return res.status(400).json(STATUS_CODE[400](error.message));
+        return res.status(400).json(STATUS_CODE[400](translateError(req, error)));
       }
       if (error instanceof ForbiddenException) {
         return res.status(403).json(STATUS_CODE[403](error.message));

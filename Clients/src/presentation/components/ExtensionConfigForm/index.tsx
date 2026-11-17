@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { Box, Stack, Typography, useTheme } from "@mui/material";
 import Field from "../Inputs/Field";
+import { CustomizableButton } from "../button/customizable-button";
 import Select from "../Inputs/Select";
 import Checkbox from "../Inputs/Checkbox";
 import { ExtensionConfigField, ExtensionFieldType } from "../../../domain/types/extensions";
@@ -9,8 +10,10 @@ import { ExtensionConfigField, ExtensionFieldType } from "../../../domain/types/
  * Generic renderer for `extension_config_fields` rows returned by the API.
  *
  * `initialValues` is the redacted `configuration` blob from the backend —
- * secret fields are absent by design. The form treats a blank secret input
- * as "keep the existing stored value"; only non-empty secrets are submitted.
+ * secret fields are absent by design; `secretsSet` names the secret fields
+ * that hold a stored value. A secret's form value is a string (blank keeps
+ * the stored value, typed text replaces it) or `null` once the user clears
+ * it with the Clear action. See `prepareSubmitValues` for what is sent.
  *
  * Uses the house Inputs/{Field,Select,Checkbox} components so the visual
  * language matches every other configuration surface in the app (labels above
@@ -24,6 +27,8 @@ export interface ExtensionConfigFormValues {
 interface ExtensionConfigFormProps {
   fields: ExtensionConfigField[];
   initialValues: Record<string, unknown>;
+  /** Secret field keys with a stored value (`Extension.secretsSet`). */
+  secretsSet?: string[];
   disabled?: boolean;
   onChange?: (values: ExtensionConfigFormValues) => void;
 }
@@ -51,9 +56,28 @@ function initialValueFor(field: ExtensionConfigField, stored: Record<string, unk
   return coerceDefault(field.defaultValue, field.fieldType);
 }
 
+/**
+ * The values the form starts with: the stored value (or the field default)
+ * for every non-secret field, and a blank string for every secret so a
+ * stored secret is kept unless the user types a new one or clears it.
+ * The settings page seeds its own copy with this so an untouched form still
+ * sends the stored values.
+ */
+export function initialFormValues(
+  fields: ExtensionConfigField[],
+  stored: Record<string, unknown>,
+): ExtensionConfigFormValues {
+  const seed: ExtensionConfigFormValues = {};
+  for (const field of fields) {
+    seed[field.fieldKey] = field.isSecret ? "" : initialValueFor(field, stored);
+  }
+  return seed;
+}
+
 export function ExtensionConfigForm({
   fields,
   initialValues,
+  secretsSet = [],
   disabled,
   onChange,
 }: ExtensionConfigFormProps) {
@@ -63,15 +87,9 @@ export function ExtensionConfigForm({
     [fields],
   );
 
-  const [values, setValues] = useState<ExtensionConfigFormValues>(() => {
-    const seed: ExtensionConfigFormValues = {};
-    for (const field of sortedFields) {
-      // Secrets: leave blank in the form so the user can either type a new
-      // value or leave it empty to preserve whatever's stored on the server.
-      seed[field.fieldKey] = field.isSecret ? "" : initialValueFor(field, initialValues);
-    }
-    return seed;
-  });
+  const [values, setValues] = useState<ExtensionConfigFormValues>(() =>
+    initialFormValues(sortedFields, initialValues),
+  );
 
   const update = (fieldKey: string, value: unknown) => {
     setValues((prev) => {
@@ -98,6 +116,7 @@ export function ExtensionConfigForm({
           value={values[field.fieldKey]}
           onChange={(v) => update(field.fieldKey, v)}
           disabled={disabled}
+          isStored={field.isSecret && secretsSet.includes(field.fieldKey)}
         />
       ))}
     </Stack>
@@ -109,10 +128,23 @@ interface FieldRowProps {
   value: unknown;
   onChange: (v: unknown) => void;
   disabled?: boolean;
+  /** Secret fields only: the server holds a value for this field. */
+  isStored?: boolean;
 }
 
-function FieldRow({ field, value, onChange, disabled }: FieldRowProps) {
+function FieldRow({ field, value, onChange, disabled, isStored }: FieldRowProps) {
   const theme = useTheme();
+  if (field.isSecret) {
+    return (
+      <SecretFieldRow
+        field={field}
+        value={value}
+        onChange={onChange}
+        disabled={disabled}
+        isStored={isStored === true}
+      />
+    );
+  }
   const stringValue = typeof value === "string" ? value : "";
   const numberValue = value === "" || value === undefined || value === null ? "" : String(value);
 
@@ -229,10 +261,7 @@ function FieldRow({ field, value, onChange, disabled }: FieldRowProps) {
           id={`ext-field-${field.fieldKey}`}
           type="password"
           label={field.label}
-          placeholder={
-            field.placeholder ??
-            (field.isSecret ? "Leave blank to keep the existing value" : undefined)
-          }
+          placeholder={field.placeholder ?? undefined}
           value={stringValue}
           isRequired={field.isRequired}
           disabled={disabled}
@@ -262,11 +291,73 @@ function FieldRow({ field, value, onChange, disabled }: FieldRowProps) {
   }
 }
 
+interface SecretFieldRowProps {
+  field: ExtensionConfigField;
+  value: unknown;
+  onChange: (v: unknown) => void;
+  disabled?: boolean;
+  isStored: boolean;
+}
+
 /**
- * Prepare form values for submission — drop keys with empty strings for
- * `is_secret` fields so the "leave blank = keep existing" contract is
- * honoured. Also drops empty-string values for non-secret optional fields
- * so they store as absent rather than `""`.
+ * A secret input. When the server holds a value the field says so and offers
+ * Clear, which marks the value for removal (`null`) until the next save;
+ * Undo goes back to keeping it. Nothing stored: a plain password input.
+ * A required secret has no Clear (the server rejects a save without it); it
+ * is replaced by typing a new value.
+ */
+function SecretFieldRow({ field, value, onChange, disabled, isStored }: SecretFieldRowProps) {
+  const theme = useTheme();
+  const isCleared = value === null;
+  const stringValue = typeof value === "string" ? value : "";
+  const placeholder =
+    isStored && !isCleared ? "Stored. Leave blank to keep it." : (field.placeholder ?? undefined);
+
+  return (
+    <Box>
+      <Field
+        id={`ext-field-${field.fieldKey}`}
+        type="password"
+        label={field.label}
+        placeholder={placeholder}
+        value={stringValue}
+        isRequired={field.isRequired}
+        disabled={disabled || isCleared}
+        onChange={(e) => onChange(e.target.value)}
+        autoComplete="new-password"
+        helperText={field.helpText ?? undefined}
+      />
+      {isStored && !field.isRequired && (
+        <Stack direction="row" alignItems="center" spacing="8px" sx={{ mt: "4px" }}>
+          {isCleared && (
+            <Typography sx={{ fontSize: 12, color: theme.palette.text.tertiary }}>
+              Will be removed when you save.
+            </Typography>
+          )}
+          <CustomizableButton
+            variant="text"
+            color="primary"
+            size="small"
+            isDisabled={disabled}
+            onClick={() => onChange(isCleared ? "" : null)}
+            testId={`ext-field-${field.fieldKey}-${isCleared ? "undo" : "clear"}`}
+            sx={{ px: "4px", minWidth: 0 }}
+          >
+            {isCleared ? "Undo" : "Clear"}
+          </CustomizableButton>
+        </Stack>
+      )}
+    </Box>
+  );
+}
+
+/**
+ * Prepare form values for submission. The server keeps the stored value of
+ * any field left out of the payload and clears a field sent as `null`, so:
+ * - secret: typed text is sent; `null` (cleared with the Clear action) is
+ *   sent as `null`; blank (untouched) is left out so the stored value stays.
+ * - non-secret: an emptied value ("" or an empty list) is sent as `null` so
+ *   the stored value is cleared; anything else is sent as is.
  */
 export function prepareSubmitValues(
   fields: ExtensionConfigField[],
@@ -274,13 +365,16 @@ export function prepareSubmitValues(
 ): Record<string, unknown> {
   const out: Record<string, unknown> = {};
   for (const field of fields) {
+    if (!Object.prototype.hasOwnProperty.call(values, field.fieldKey)) continue;
     const v = values[field.fieldKey];
     if (field.isSecret) {
-      if (typeof v === "string" && v.length > 0) out[field.fieldKey] = v;
+      if (v === null) out[field.fieldKey] = null;
+      else if (typeof v === "string" && v.length > 0) out[field.fieldKey] = v;
       continue;
     }
-    if (v === "" || v === undefined || v === null) continue;
-    out[field.fieldKey] = v;
+    if (v === undefined) continue;
+    const isEmpty = v === "" || v === null || (Array.isArray(v) && v.length === 0);
+    out[field.fieldKey] = isEmpty ? null : v;
   }
   return out;
 }
@@ -288,7 +382,7 @@ export function prepareSubmitValues(
 export function OptionalNotice() {
   return (
     <Typography sx={{ fontSize: 12, color: "text.tertiary" }}>
-      Password/token fields are stored encrypted. Leave blank to keep the existing value.
+      Password and token fields are stored encrypted.
     </Typography>
   );
 }

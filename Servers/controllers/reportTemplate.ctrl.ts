@@ -42,7 +42,7 @@ export async function listTemplates(req: Request, res: Response): Promise<any> {
 export async function getTemplate(req: Request, res: Response): Promise<any> {
   try {
     const tpl = await getTemplateByIdQuery(Number(req.params.id), req.organizationId!);
-    if (!tpl) return res.status(404).json(STATUS_CODE[404]("not found"));
+    if (!tpl) return res.status(404).json(STATUS_CODE[404](req.t!("not found")));
     const version = await getLatestVersionQuery(tpl.id, req.organizationId!);
     return res.status(200).json(STATUS_CODE[200]({ ...tpl, latestVersion: version }));
   } catch (e) {
@@ -171,7 +171,7 @@ export async function updateTemplate(req: Request, res: Response): Promise<any> 
 
     const versionChanged = hasVersionConfig(req.body);
     if (!metadataChanged && !versionChanged) {
-      return res.status(400).json(STATUS_CODE[400]("no updatable fields supplied"));
+      return res.status(400).json(STATUS_CODE[400](req.t!("no updatable fields supplied")));
     }
 
     // A PATCH carrying both metadata and config is two writes; they share one
@@ -237,7 +237,7 @@ export async function archiveTemplate(req: Request, res: Response): Promise<any>
   });
   try {
     const row = await archiveTemplateQuery(id, req.organizationId!);
-    if (!row) return res.status(404).json(STATUS_CODE[404]("not found"));
+    if (!row) return res.status(404).json(STATUS_CODE[404](req.t!("not found")));
     await logSuccess({
       eventType: "Delete",
       description: `Archived report template ${id}`,
@@ -295,11 +295,11 @@ export async function runTemplateNow(req: Request, res: Response): Promise<any> 
     const userId = req.userId ?? null;
 
     const template = await getTemplateByIdQuery(templateId, organizationId);
-    if (!template) return res.status(404).json(STATUS_CODE[404]("template not found"));
+    if (!template) return res.status(404).json(STATUS_CODE[404](req.t!("template not found")));
 
     const version = await getVersionByIdQuery(Number(req.body.templateVersionId), organizationId);
     if (!version || Number(version.template_id) !== templateId) {
-      return res.status(404).json(STATUS_CODE[404]("template version not found"));
+      return res.status(404).json(STATUS_CODE[404](req.t!("template version not found")));
     }
 
     const isProjectScope = req.body.scope === "project";
@@ -311,7 +311,7 @@ export async function runTemplateNow(req: Request, res: Response): Promise<any> 
     if (isProjectScope && projectId === null) {
       return res
         .status(400)
-        .json(STATUS_CODE[400]("a project-scoped run requires a numeric projectId"));
+        .json(STATUS_CODE[400](req.t!("a project-scoped run requires a numeric projectId")));
     }
 
     // Reject an unparseable entry rather than silently widening the report to
@@ -326,18 +326,20 @@ export async function runTemplateNow(req: Request, res: Response): Promise<any> 
       req.body.frameworkIds !== null &&
       !Array.isArray(req.body.frameworkIds)
     ) {
-      return res.status(400).json(STATUS_CODE[400]("frameworkIds must be an array"));
+      return res.status(400).json(STATUS_CODE[400](req.t!("frameworkIds must be an array")));
     }
     const frameworkIds: string[] = Array.isArray(req.body.frameworkIds)
       ? req.body.frameworkIds
       : [];
     const selection = parseFrameworkSelection(frameworkIds);
     if (selection.invalid.length > 0) {
-      return res
-        .status(400)
-        .json(
-          STATUS_CODE[400](`unrecognised framework selection: ${selection.invalid.join(", ")}`),
-        );
+      return res.status(400).json(
+        STATUS_CODE[400](
+          req.t!("unrecognised framework selection: {selection}", {
+            selection: selection.invalid.join(", "),
+          }),
+        ),
+      );
     }
 
     // An omitted scope resolves to "organization" here, so this endpoint is the

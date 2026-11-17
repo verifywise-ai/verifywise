@@ -12,6 +12,14 @@ import { act, fireEvent, screen, waitFor, within } from "@testing-library/react"
 import { renderWithProviders } from "../../../../test/renderWithProviders";
 import ArenaPage from "../ArenaPage";
 
+// TableFilter shows filter chips in phase 1 and the rule-builder popover in the
+// classic look. The popover tests below switch to classic; the chip test stays in phase 1.
+const ui = vi.hoisted(() => ({ classic: false }));
+vi.mock("../../../themes/uiStyle", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../../themes/uiStyle")>()),
+  isClassicUi: () => ui.classic,
+}));
+
 // ── Module mocks ─────────────────────────────────────────────────────────────
 // PageHeader has a named export; HelperIcon needs the UserGuide sidebar
 // provider and TipBox fetches tips — all shared chrome, not coverage targets.
@@ -196,6 +204,7 @@ function mockDatasets() {
 
 describe("ArenaPage", () => {
   beforeEach(() => {
+    ui.classic = false;
     installBrowserStubs();
     resetDeepEvalMocks();
     vi.spyOn(console, "error").mockImplementation(() => {});
@@ -288,7 +297,25 @@ describe("ArenaPage", () => {
       expect(screen.queryByTestId("arena-row-battle-2")).not.toBeInTheDocument();
     });
 
+    it("filters rows by status through a filter chip (phase 1)", async () => {
+      mockComparisons(mockArenaComparisons);
+      renderArena();
+      await screen.findByTestId("arena-row-battle-1");
+
+      // Text columns (battle name) get no chip; the search box covers them.
+      expect(screen.queryByTestId("filter-chip-name")).not.toBeInTheDocument();
+      fireEvent.click(screen.getByTestId("filter-chip-status"));
+      fireEvent.click(await screen.findByTestId("filter-chip-option-status-completed"));
+
+      await waitFor(() =>
+        expect(screen.queryByTestId("arena-row-battle-2")).not.toBeInTheDocument(),
+      );
+      expect(screen.getByTestId("arena-row-battle-1")).toBeInTheDocument();
+      expect(screen.getByTestId("filter-chip-status")).toHaveTextContent("Status: Completed");
+    });
+
     it("filters rows by status through the Filter popover", async () => {
+      ui.classic = true;
       mockComparisons(mockArenaComparisons);
       renderArena();
       await screen.findByTestId("arena-row-battle-1");
@@ -309,6 +336,7 @@ describe("ArenaPage", () => {
     });
 
     it("filters by battle name using the contains operator", async () => {
+      ui.classic = true;
       mockComparisons(mockArenaComparisons);
       renderArena();
       await screen.findByTestId("arena-row-battle-1");
@@ -318,7 +346,7 @@ describe("ArenaPage", () => {
 
       let comboboxes = within(popover).getAllByRole("combobox");
       fireEvent.mouseDown(comboboxes[0]);
-      fireEvent.click(screen.getByRole("option", { name: "Battle Name" }));
+      fireEvent.click(screen.getByRole("option", { name: "Battle name" }));
 
       comboboxes = within(popover).getAllByRole("combobox");
       fireEvent.mouseDown(comboboxes[1]);
@@ -333,6 +361,7 @@ describe("ArenaPage", () => {
     });
 
     it("combines multiple filters with OR logic", async () => {
+      ui.classic = true;
       mockComparisons(mockArenaComparisons);
       renderArena();
       await screen.findByTestId("arena-row-battle-1");
@@ -353,25 +382,12 @@ describe("ArenaPage", () => {
       popover = document.querySelector(".MuiPopover-paper") as HTMLElement;
       const allComboboxes = within(popover).getAllByRole("combobox");
       fireEvent.mouseDown(allComboboxes[3]);
-      fireEvent.click(screen.getByRole("option", { name: "Battle Name" }));
+      fireEvent.click(screen.getByRole("option", { name: "Battle name" }));
       fireEvent.change(within(popover).getByPlaceholderText("Enter text here..."), {
         target: { value: "Running battle" },
       });
 
       await waitFor(() => expect(screen.getByTestId("arena-row-battle-2")).toBeInTheDocument());
-      expect(screen.getByTestId("arena-row-battle-1")).toBeInTheDocument();
-    });
-
-    it("handles group selection without errors", async () => {
-      mockComparisons(mockArenaComparisons);
-      renderArena();
-      await screen.findByTestId("arena-row-battle-1");
-
-      fireEvent.click(screen.getByRole("button", { name: /Group/ }));
-      const popover = document.querySelector(".MuiPopover-paper") as HTMLElement;
-      fireEvent.mouseDown(within(popover).getByRole("combobox"));
-      fireEvent.click(screen.getByRole("option", { name: "Status" }));
-
       expect(screen.getByTestId("arena-row-battle-1")).toBeInTheDocument();
     });
   });
@@ -613,7 +629,7 @@ describe("ArenaPage", () => {
       // criterion twice so nothing stays selected
       fireEvent.click(screen.getByText("Accuracy"));
       fireEvent.click(screen.getByText("Coherence"));
-      ["Conciseness", "Relevance", "Safety", "Creativity", "Instruction Following"].forEach(
+      ["Conciseness", "Relevance", "Safety", "Creativity", "Instruction following"].forEach(
         (name) => {
           fireEvent.click(screen.getByText(name));
           fireEvent.click(screen.getByText(name));
@@ -673,7 +689,8 @@ describe("ArenaPage", () => {
       let selectors = screen.getAllByTestId("contestant-model-selector");
       fireEvent.click(within(selectors[0]).getByText("set-model-gpt-4o"));
 
-      expect(screen.getByText("Gpt-4o")).toBeInTheDocument();
+      // badge + the selector's own value
+      expect(screen.getAllByText("gpt-4o")).toHaveLength(2);
 
       fireEvent.click(within(selectors[0]).getByText("set-provider-anthropic"));
 
@@ -682,7 +699,7 @@ describe("ArenaPage", () => {
       expect(within(selectors[0]).getByTestId("model-value")).toHaveTextContent("");
     });
 
-    it("formats contestant names from the selected model", async () => {
+    it("names contestants with the model ID exactly as stored", async () => {
       renderArena();
       await goToContestantsStep();
 
@@ -690,8 +707,11 @@ describe("ArenaPage", () => {
       fireEvent.click(within(selectors[0]).getByText("set-model-gpt-4o"));
       fireEvent.click(within(selectors[1]).getByText("set-model-claude-sonnet-4"));
 
-      expect(screen.getByText("Gpt-4o")).toBeInTheDocument();
-      expect(screen.getByText("Claude-Sonnet-4")).toBeInTheDocument();
+      // badge + the selector's own value; no title-casing of model IDs
+      expect(screen.getAllByText("gpt-4o")).toHaveLength(2);
+      expect(screen.getAllByText("claude-sonnet-4")).toHaveLength(2);
+      expect(screen.queryByText("Gpt-4o")).not.toBeInTheDocument();
+      expect(screen.queryByText("Claude-Sonnet-4")).not.toBeInTheDocument();
     });
 
     it("keeps Start battle disabled until every contestant has a model", async () => {
@@ -743,6 +763,8 @@ describe("ArenaPage", () => {
       expect(payload.contestants).toHaveLength(2);
       expect(payload.contestants[0].hyperparameters.model).toBe("gpt-4o");
       expect(payload.contestants[1].hyperparameters.model).toBe("claude-sonnet-4");
+      expect(payload.contestants[0].name).toBe("gpt-4o");
+      expect(payload.contestants[1].name).toBe("claude-sonnet-4");
 
       expect(await screen.findByText("Arena battle started!")).toBeInTheDocument();
       await waitFor(() => expect(screen.queryByTestId("stepper-modal")).not.toBeInTheDocument());

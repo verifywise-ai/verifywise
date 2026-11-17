@@ -72,6 +72,13 @@ spec:
             secretKeyRef:
               name: verifywise-secrets
               key: REFRESH_TOKEN_SECRET
+        # Same key as the backend: jobs decrypt stored extension credentials,
+        # and the app refuses to start in production without it.
+        - name: ENCRYPTION_KEY
+          valueFrom:
+            secretKeyRef:
+              name: verifywise-secrets
+              key: ENCRYPTION_KEY
 
         # Redis Configuration
         - name: REDIS_URL

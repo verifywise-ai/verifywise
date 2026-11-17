@@ -1,6 +1,6 @@
 import { SxProps, Theme } from "@mui/material";
 import { commonStyles, flashAnimation } from "../style";
-import { border as borderPalette } from "../../../themes/palette";
+import { border as borderPalette, palette as vwPalette } from "../../../themes/palette";
 
 // Component styles
 export const styles = {
@@ -22,7 +22,7 @@ export const styles = {
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    color: "#666",
+    color: vwPalette.text.tertiary,
   } as SxProps<Theme>,
 
   controlRow: (isLast: boolean, isFlashing: boolean) =>

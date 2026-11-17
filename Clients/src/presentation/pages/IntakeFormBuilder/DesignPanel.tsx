@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import Select from "../../components/Inputs/Select";
 import { FormDesignSettings, DEFAULT_DESIGN_SETTINGS } from "./types";
-import { brand, text, background } from "../../themes/palette";
+import { brand, text, background, radiusPx } from "../../themes/palette";
 
 interface DesignPanelProps {
   settings: FormDesignSettings;
@@ -87,7 +87,7 @@ function IconToggleButton({
           "display": "flex",
           "alignItems": "center",
           "justifyContent": "center",
-          "borderRadius": "4px",
+          "borderRadius": radiusPx.sm,
           "cursor": "pointer",
           "border": active
             ? `1px solid ${theme.palette.primary.main}80`
@@ -133,7 +133,7 @@ function CustomizeRow({
         "justifyContent": "space-between",
         "py": "8px",
         "px": "4px",
-        "borderRadius": "4px",
+        "borderRadius": radiusPx.sm,
         "cursor": "pointer",
         "&:hover": { backgroundColor: theme.palette.background.accent },
       }}
@@ -163,7 +163,7 @@ function ColorSwatch({ color }: { color: string }) {
       sx={{
         width: 16,
         height: 16,
-        borderRadius: "4px",
+        borderRadius: radiusPx.sm,
         backgroundColor: color,
         border: `1px solid ${theme.palette.border.dark}`,
         flexShrink: 0,
@@ -205,7 +205,7 @@ function ColorGrid({
             sx={{
               "width": 24,
               "height": 24,
-              "borderRadius": "4px",
+              "borderRadius": radiusPx.sm,
               "backgroundColor": color,
               "border":
                 selected === color
@@ -233,7 +233,7 @@ function ColorGrid({
               "width": 28,
               "height": 22,
               "border": `1px solid ${theme.palette.border.dark}`,
-              "borderRadius": "4px",
+              "borderRadius": radiusPx.sm,
               "cursor": "pointer",
               "padding": 0,
               "backgroundColor": "transparent",

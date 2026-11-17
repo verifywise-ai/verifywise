@@ -123,7 +123,7 @@ describe("ProjectDatasets", () => {
 
       expect(await screen.findByText("Alpha Dataset")).toBeInTheDocument();
       expect(screen.getByText("Beta Dataset")).toBeInTheDocument();
-      expect(screen.getAllByText("Single-Turn")).toHaveLength(2);
+      expect(screen.getAllByText("Single-turn")).toHaveLength(2);
       expect(screen.getAllByText("Chatbot")).toHaveLength(2);
       expect(screen.getAllByText("3")).toHaveLength(2);
 
@@ -149,7 +149,7 @@ describe("ProjectDatasets", () => {
       fireEvent.click(screen.getByRole("button", { name: "Upload dataset" }));
       expect(await screen.findByText("Conversation type")).toBeInTheDocument();
 
-      fireEvent.click(screen.getByText("Multi-Turn"));
+      fireEvent.click(screen.getByText("Multi-turn"));
       fireEvent.click(screen.getByText("Simulated"));
       fireEvent.click(screen.getByRole("button", { name: "Download example" }));
       fireEvent.click(screen.getByRole("button", { name: "Upload file" }));

@@ -24,6 +24,7 @@ import { PageHeaderExtended } from "../../../components/Layout/PageHeaderExtende
 import { apiServices } from "../../../../infrastructure/api/networkServices";
 import { getGatewayErrorText } from "../../../../application/utils/apiErrorReason";
 import palette from "../../../themes/palette";
+import { palette as vwPalette, radiusPx } from "../../../themes/palette";
 import { useTranslation } from "../../../../application/hooks/useTranslation";
 import { fill } from "../../../../i18n/fill";
 import MCPTable from "../MCPTable";
@@ -309,7 +310,7 @@ export default function MCPGuardrailsPage() {
             alignItems: "center",
             height: 20,
             px: "6px",
-            borderRadius: "4px",
+            borderRadius: radiusPx.sm,
             border: `1px solid ${palette.border.light}`,
             backgroundColor: palette.background.alt,
             fontSize: 11,
@@ -636,7 +637,7 @@ export default function MCPGuardrailsPage() {
         description={`Are you sure you want to remove "${deleteTarget?.name}"?`}
         onSubmit={handleDeleteConfirm}
         submitButtonText="Remove rule"
-        submitButtonColor="#D32F2F"
+        submitButtonColor={vwPalette.status.error.text}
         isSubmitting={deleteSubmitting}
         maxWidth="480px"
       >
