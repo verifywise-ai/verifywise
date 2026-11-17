@@ -987,15 +987,18 @@ export async function getProjectStatsById(req: Request, res: Response): Promise<
       });
       return res.status(404).json(STATUS_CODE[404]({}));
     }
-    // owner is NULL for an external owner; there is no user row to look up.
-    const ownerUser: any = project.owner ? await getUserByIdQuery(project.owner) : null;
     const project_last_updated = project.last_updated;
     const project_last_updated_by = project.last_updated_by;
-    // Awaited (the unawaited promise serialised as {}), read within this
-    // organization, and only the fields a reader needs: never the user row.
-    const updater = project_last_updated_by
-      ? await getUserByIdQuery(project_last_updated_by, null, req.organizationId!)
-      : null;
+    // owner is NULL for an external owner; there is no user row to look up.
+    // The updater is awaited (the unawaited promise serialised as {}) and read
+    // within this organization, since older rows can hold a client-set
+    // last_updated_by; only the fields a reader needs are returned.
+    const [ownerUser, updater]: [any, any] = await Promise.all([
+      project.owner ? getUserByIdQuery(project.owner) : null,
+      project_last_updated_by
+        ? getUserByIdQuery(project_last_updated_by, null, req.organizationId!)
+        : null,
+    ]);
     const userWhoUpdated = updater
       ? { id: updater.id, name: updater.name, surname: updater.surname, email: updater.email }
       : null;
