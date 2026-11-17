@@ -68,7 +68,7 @@ export const modelInventoryContent: ArticleContent = {
         { bold: 'Provider', text: '— The organization or service that provides the model (e.g., OpenAI, Anthropic, internal team)' },
         { bold: 'Model name', text: '— The specific model identifier (e.g., GPT-4, Claude 3, custom-classifier-v2)' },
         { bold: 'Version', text: '— The version number or release identifier' },
-        { bold: 'Approver', text: '— The person responsible for approving this model for use' },
+        { bold: 'Approver', text: '— The person responsible for approving this model for use. It must be a member of your organization.' },
       ],
     },
     {

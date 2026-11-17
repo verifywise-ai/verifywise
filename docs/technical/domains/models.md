@@ -74,7 +74,30 @@ model_inventories_projects_frameworks
 └── updated_at
 ```
 
-At least one of `project_id` or `framework_id` must be present.
+A row is either a direct use case link (`project_id` set, `framework_id` NULL)
+or a framework link (`framework_id` set, `project_id` NULL). Framework links
+carried an arbitrary use case until migration
+`20261117061642-model-framework-links-without-use-case`, which cleared it,
+deduped them and added the partial unique index
+`mipf_model_framework_link_unique (model_inventory_id, framework_id) WHERE
+framework_id IS NOT NULL`. Use case reads (by-project lists, reports, risk
+link candidates, PMM, AI app links, advisor tools) count only
+`framework_id IS NULL` rows.
+
+### Organization checks on writes
+
+`utils/modelReferences.utils.ts` holds the checks every model and model risk
+write runs in its own transaction (REST, advisor, intake, Shadow AI, seeds go
+through `createNewModelInventoryQuery` / `updateModelInventoryByIdQuery` /
+`createNewModelRiskQuery` / `updateModelRiskByIdQuery`):
+
+- the model approver and the model risk owner are members of the
+  organization (on update, only a changed value is checked);
+- linked use cases are the organization's projects, linked frameworks are in
+  use by one of them, and a model risk's model is the organization's.
+
+A failure is a `ValidationException` (400). Assignment notices are only sent
+to members (`sendAssignmentNotification` joins `organization_members`).
 
 ## Enumerations
 
@@ -136,6 +159,14 @@ enum ModelRiskStatus {
 | POST | `/modelInventory/` | Create model |
 | PATCH | `/modelInventory/:id` | Update model |
 | DELETE | `/modelInventory/:id` | Delete model |
+| GET | `/v1/model-inventory/by-project/:projectId` | Models linked to a use case the caller can open (`requireProjectAccess`) |
+| POST | `/v1/model-inventory` | Create model; each linked use case needs the caller's write access |
+| PATCH | `/v1/model-inventory/:id` | Update model; each use case whose link is added or removed needs write access |
+
+The inventory itself stays visible to the whole organization (decision 8); the
+client uses the v1 routes above. Model risks follow their model (org-wide).
+Dataset and evidence writes and `POST /modelInventoryHistory/snapshot` need
+`model.edit`; an unknown snapshot `parameter` is a 400.
 
 ### Model Risks
 
@@ -187,16 +218,16 @@ Models can be linked to projects and frameworks:
 
 ```
 Model ─────┬───── Project A (direct)
-           ├───── Project A + Framework (ISO 42001)
-           └───── Project B + Framework (EU AI Act)
+           ├───── Framework (ISO 42001)
+           └───── Framework (EU AI Act)
 ```
 
 ### Association Types
 
 | Type | project_id | framework_id | Meaning |
 |------|------------|--------------|---------|
-| Project only | Set | NULL | Model used in project |
-| Full | Set | Set | Model for framework compliance |
+| Use case | Set | NULL | Model used in the use case |
+| Framework | NULL | Set | Model in the framework's scope |
 
 ## Model Risks
 
