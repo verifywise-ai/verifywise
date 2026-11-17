@@ -10,6 +10,7 @@
  */
 
 import crypto from "crypto";
+import { Transaction } from "sequelize";
 import { sequelize } from "../database/db";
 
 export type OneTimeTokenPurpose = "password_reset";
@@ -58,6 +59,7 @@ export async function storeOneTimeToken(params: {
 export async function consumeOneTimeToken(
   token: string,
   purpose: OneTimeTokenPurpose,
+  transaction?: Transaction,
 ): Promise<StoredOneTimeToken | null> {
   const [rows] = (await sequelize.query(
     `UPDATE one_time_tokens SET consumed_at = now()
@@ -66,7 +68,7 @@ export async function consumeOneTimeToken(
        AND consumed_at IS NULL
        AND expires_at > now()
      RETURNING *`,
-    { replacements: { tokenHash: hashToken(token), purpose } },
+    { replacements: { tokenHash: hashToken(token), purpose }, transaction },
   )) as [StoredOneTimeToken[], unknown];
   return rows.length > 0 ? rows[0] : null;
 }
