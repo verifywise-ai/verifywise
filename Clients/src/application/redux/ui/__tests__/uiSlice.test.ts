@@ -3,6 +3,8 @@ import uiReducer, {
   setModelInventoryStatusFilter,
   setActiveModule,
   setRowsPerPage,
+  setSetupModalOpen,
+  selectSetupModalOpen,
 } from "../uiSlice";
 import type { AppModule } from "../uiSlice";
 
@@ -65,6 +67,16 @@ describe("uiSlice", () => {
     it("should be a no-op for an unknown table key", () => {
       const state = uiReducer(initialState, setRowsPerPage({ table: "nonexistent", value: 50 }));
       expect(state).toEqual(initialState);
+    });
+  });
+
+  describe("setSetupModalOpen", () => {
+    it("is closed until set, then follows the flag", () => {
+      expect(selectSetupModalOpen({ ui: initialState })).toBe(false);
+      const open = uiReducer(initialState, setSetupModalOpen(true));
+      expect(selectSetupModalOpen({ ui: open })).toBe(true);
+      const closed = uiReducer(open, setSetupModalOpen(false));
+      expect(selectSetupModalOpen({ ui: closed })).toBe(false);
     });
   });
 });
