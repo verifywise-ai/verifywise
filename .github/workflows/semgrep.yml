@@ -44,9 +44,10 @@ on:
   workflow_dispatch:
 
 # A newer push to the same PR cancels the older run (the org's Free plan runs
-# at most 20 jobs at once). Pushes and scheduled runs are never cancelled.
+# at most 20 jobs at once). Any other run is grouped by its own commit and
+# event, so it neither cancels nor replaces a queued run of another commit.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.sha }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:

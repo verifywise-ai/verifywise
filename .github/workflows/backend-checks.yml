@@ -27,10 +27,10 @@ on:
 
 # The org's Free plan runs at most 20 jobs at once, so every job here also
 # makes other PRs wait. A newer push to the same PR cancels the older run.
-# Pushes and the nightly run are never cancelled; event_name keeps them in
-# separate groups so a queued nightly run is not replaced by a push.
+# Every other run (push, nightly, manual) gets a group of its own commit and
+# event, so it neither cancels nor replaces a queued run of another commit.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.sha }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
@@ -43,6 +43,8 @@ jobs:
       run:
         working-directory: Servers
 
+    # Each check runs as long as npm ci succeeded, even after an earlier check
+    # failed, so one run reports every failure (as separate jobs did).
     steps:
       - uses: actions/checkout@v7
         with:
@@ -56,21 +58,25 @@ jobs:
           cache-dependency-path: Servers/package-lock.json
 
       - name: Install dependencies
+        id: install
         run: npm ci
 
       # Runs before the build so the diff below sees only what the generators
       # changed.
       - name: Regenerate OpenAPI spec and endpoint registry
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         run: |
           npm run generate:swagger
           npm run generate:endpoints
 
       - name: Fail if the committed generated files are stale
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         run: |
           git diff --exit-code -- swagger.yaml ../docs/api-docs/src/config/endpoints.ts \
             || { echo "::error::swagger.yaml / endpoints.ts are out of sync with the route layer. Run 'npm run generate:swagger && npm run generate:endpoints' in Servers/ and commit the result."; exit 1; }
 
       - name: Get changed files
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         id: changed-files
         run: |
           if [ "${{ github.event_name }}" = "pull_request" ]; then
@@ -80,10 +86,11 @@ jobs:
           fi
 
       - name: Prettier format check
-        if: steps.changed-files.outputs.files != ''
+        if: ${{ !cancelled() && steps.install.outcome == 'success' && steps.changed-files.outputs.files != '' }}
         run: npx prettier --check ${{ steps.changed-files.outputs.files }}
 
       - name: TypeScript type check
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         run: npm run build
 
       # ESLint gate (#4617-3). Blocking: `npm run lint` currently reports 0 errors
@@ -91,6 +98,7 @@ jobs:
       # and are being burned down separately). eslint exits non-zero on any error,
       # so a green step here means no lint errors were introduced.
       - name: ESLint
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         run: npm run lint
 
       # The unit suite runs once, with coverage, in the Coverage Gate job below.
@@ -103,33 +111,38 @@ jobs:
       # because it builds the real app, which needs ENCRYPTION_KEY at module load —
       # it runs in tenant-isolation-tests instead.
       - name: Rate-limiter verification suite
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         run: npm run test:ratelimit
 
       - name: i18n audit (catch dictionary drift)
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         run: npm run i18n:audit:strict
 
       # de/fr are checked against en.json above; this checks en.json against the
       # code: every server message needs a key, and no message may skip req.t.
       - name: i18n en.json check (catch server messages without a key)
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         run: |
           npm run test:i18n-scripts
           npm run i18n:check-en
 
       - name: API documentation drift check
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         run: npm run check:api-drift
 
       - name: Dependency vulnerability audit
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         run: |
           npm audit --audit-level=high --omit=dev || true
           node $GITHUB_WORKSPACE/scripts/security/npm-audit-gate.js .
 
       # Full report (dev dependencies included) for review; never blocks.
       - name: npm audit report (JSON)
-        if: always()
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         run: npm audit --json > ../audit-results.json || true
 
       - name: Upload audit results
-        if: always()
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         uses: actions/upload-artifact@v7
         with:
           name: backend-npm-audit-results
@@ -137,7 +150,7 @@ jobs:
           retention-days: 30
 
       - name: Dependency Review
-        if: github.event_name == 'pull_request'
+        if: ${{ !cancelled() && github.event_name == 'pull_request' }}
         uses: actions/dependency-review-action@v5
         with:
           fail-on-severity: high
@@ -289,7 +302,7 @@ jobs:
         run: npm run test:coverage
 
       - name: Upload coverage report
-        if: always()
+        if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v7
         with:
           name: backend-coverage-report

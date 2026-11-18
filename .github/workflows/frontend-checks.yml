@@ -31,10 +31,10 @@ on:
 
 # The org's Free plan runs at most 20 jobs at once, so every job here also
 # makes other PRs wait. A newer push to the same PR cancels the older run.
-# Pushes and the nightly run are never cancelled; event_name keeps them in
-# separate groups so a queued nightly run is not replaced by a push.
+# Every other run (push, nightly, manual) gets a group of its own commit and
+# event, so it neither cancels nor replaces a queued run of another commit.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.sha }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
@@ -47,6 +47,8 @@ jobs:
       run:
         working-directory: Clients
 
+    # Each check runs as long as npm ci succeeded, even after an earlier check
+    # failed, so one run reports every failure (as separate jobs did).
     steps:
       - uses: actions/checkout@v7
 
@@ -58,35 +60,41 @@ jobs:
           cache-dependency-path: Clients/package-lock.json
 
       - name: Install dependencies
+        id: install
         run: npm ci --legacy-peer-deps
 
       - name: Prettier format check
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         run: npm run format-check
 
       - name: TypeScript type check
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         run: npm run typecheck
 
       - name: ESLint (errors only)
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         # (#4617-3) Frontend ESLint gate. Already enforced here via --quiet
         # (errors fail the job); warnings are left non-blocking while the
         # backlog is burned down.
         run: npm run lint -- --quiet
 
       - name: i18n audit (catch dictionary drift)
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         run: npm run i18n:audit:strict
 
       - name: Dependency vulnerability audit
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         run: |
           npm audit --audit-level=high --omit=dev || true
           node $GITHUB_WORKSPACE/scripts/security/npm-audit-gate.js .
 
       # Full report (dev dependencies included) for review; never blocks.
       - name: npm audit report (JSON)
-        if: always()
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         run: npm audit --json > ../audit-results.json || true
 
       - name: Upload audit results
-        if: always()
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         uses: actions/upload-artifact@v7
         with:
           name: frontend-npm-audit-results
@@ -97,12 +105,12 @@ jobs:
       # Builds only the Dockerfile's nginx stage (no npm build), so it takes
       # seconds.
       - name: Frontend nginx proxies /api and /v1
-        if: always()
+        if: ${{ !cancelled() }}
         working-directory: ${{ github.workspace }}
         run: Clients/scripts/test-nginx-proxy.sh
 
       - name: Dependency Review
-        if: always() && github.event_name == 'pull_request'
+        if: ${{ !cancelled() && github.event_name == 'pull_request' }}
         uses: actions/dependency-review-action@v5
         with:
           fail-on-severity: high
