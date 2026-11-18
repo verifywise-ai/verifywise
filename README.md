@@ -227,10 +227,11 @@ Download the required files using wget:
 
 ```
 curl -O https://raw.githubusercontent.com/bluewave-labs/verifywise/develop/install.sh
-curl -O https://raw.githubusercontent.com/bluewave-labs/verifywise/develop/.env.prod
 ```
 
-Make sure to change the JWT_SECRET variable to your liking, set your super admin credentials (`SUPERADMIN_EMAIL` and `SUPERADMIN_PASSWORD`), and change `localhost` to the IP of the server. An example is shown below:
+`.env.prod` is not published in the repository. Create it next to `install.sh`, starting from the example in the [installation guide](https://verifywise.ai/user-guide/getting-started/installing).
+
+Set your super admin credentials (`SUPERADMIN_EMAIL` and `SUPERADMIN_PASSWORD`), and change `localhost` to the IP of the server. An example is shown below:
 
 ```
 BACKEND_URL=http://64.23.242.4:3000
@@ -239,7 +240,7 @@ SUPERADMIN_EMAIL=admin@verifywise.com
 SUPERADMIN_PASSWORD=YourStr0ngPassword!
 ```
 
-Set every secret in the file as well (`JWT_SECRET`, `REFRESH_TOKEN_SECRET`, `ENCRYPTION_KEY`, `ENCRYPTION_PASSWORD`, `AI_GATEWAY_INTERNAL_KEY`, `EVAL_SERVER_INTERNAL_KEY`). Generate each with `openssl rand -base64 32` and write it without quotes. `install.sh` stops before starting any container if one is missing. The backend refuses to start without `ENCRYPTION_KEY`. If you are upgrading an install that ran without it, `install.sh` prints the old default key to set so your stored credentials keep decrypting.
+Set every secret in the file as well: `DB_PASSWORD`, `JWT_SECRET`, `REFRESH_TOKEN_SECRET`, `ENCRYPTION_KEY`, `ENCRYPTION_PASSWORD`, `AI_GATEWAY_INTERNAL_KEY` and `EVAL_SERVER_INTERNAL_KEY`, plus `ENCRYPTION_ALGORITHM=aes-256-cbc`. Generate each secret with `openssl rand -base64 32` and write it without quotes. `install.sh` stops before starting any container if one is missing. The backend refuses to start without `ENCRYPTION_KEY`. If you are upgrading an install that ran without it, `install.sh` prints the old default key to set so your stored credentials keep decrypting.
 
 Note: CORS is automatically configured to allow requests from the same host where the backend is running.
 

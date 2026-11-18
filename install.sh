@@ -124,6 +124,19 @@ check_required_secrets() {
         echo "Aborting: no Docker services were started."
         exit 1
     fi
+
+    # load_env exports values as written, so quotes around ENCRYPTION_KEY reach the
+    # backend as part of the key. Warn only: an install that has always run with the
+    # quotes encrypted its credentials with them, and removing them would break that.
+    RAW_KEY=$(grep -E "^[[:space:]]*ENCRYPTION_KEY=" "$ENV_FILE" | tail -n1 \
+        | sed -E "s/^[[:space:]]*ENCRYPTION_KEY=//; s/[[:space:]]+#.*$//; s/^[[:space:]]+//; s/[[:space:]]+$//")
+    case "$RAW_KEY" in
+        \"*\"|\'*\')
+            echo "Warning: ENCRYPTION_KEY in $ENV_FILE is wrapped in quotes. install.sh passes the"
+            echo "  quotes to the backend as part of the key. Keep them only if this install has"
+            echo "  always run with them. Otherwise remove them, or stored credentials won't decrypt."
+            ;;
+    esac
 }
 
 # Function to read environment variables from .env file

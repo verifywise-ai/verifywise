@@ -39,6 +39,8 @@
         # Missing line -> '' so the check below can explain it, instead of a Jinja error.
         # A value passed with -e encryption_key=... wins over this (extra vars beat set_fact).
         encryption_key: "{{ existing_env.content | b64decode | regex_search('^ENCRYPTION_KEY=(.*)$', '\\1', multiline=True) | default([''], true) | first }}"
+        # Optional; kept so a pinned token hash secret survives the re-render below.
+        api_token_hash_secret: "{{ existing_env.content | b64decode | regex_search('^API_TOKEN_HASH_SECRET=(.*)$', '\\1', multiline=True) | default([''], true) | first }}"
         ai_gateway_internal_key: "{{ existing_env.content | b64decode | regex_search('^AI_GATEWAY_INTERNAL_KEY=(.*)$', '\\1', multiline=True) | first }}"
         eval_server_internal_key: "{{ existing_env.content | b64decode | regex_search('^EVAL_SERVER_INTERNAL_KEY=(.*)$', '\\1', multiline=True) | default([''], true) | first | default(lookup('password', '/dev/null length=32 chars=ascii_letters,digits'), true) }}"
         encryption_password: "{{ existing_env.content | b64decode | regex_search('^ENCRYPTION_PASSWORD=(.*)$', '\\1', multiline=True) | default([''], true) | first | default(lookup('password', '/dev/null length=32 chars=ascii_letters,digits'), true) }}"
@@ -48,17 +50,21 @@
     - name: Require ENCRYPTION_KEY before updating
       ansible.builtin.assert:
         that:
-          - encryption_key | string | trim | length > 0
+          - encryption_key | string | trim | regex_replace('^([\"\'])(.*)\\1$', '\\2') | trim | length > 0
         quiet: true
         fail_msg: |
           ENCRYPTION_KEY is missing or empty in {{ install_dir }}/.env.prod on {{ inventory_hostname }}.
           Nothing on this server was changed. VerifyWise refuses to start in production without it.
-          Re-run with -e encryption_key=<value>, or add ENCRYPTION_KEY to .env.prod (no quotes):
+          Add ENCRYPTION_KEY to that .env.prod (no quotes), or re-run for this server only:
+            --limit {{ inventory_hostname }} -e 'encryption_key=<value>'
+          Keep --limit: -e applies to every host and would replace other servers' keys.
+          Keep the single quotes: the old default key ends in !!, which a shell would expand.
           - Install that ran without ENCRYPTION_KEY: its stored credentials were encrypted with the
             old default key. Use default-key-change-this-in-production-32chars!! to keep them readable.
           - New key: openssl rand -base64 32 (stored credentials must then be saved again).
-          Before rotating ENCRYPTION_KEY later: if API_TOKEN_HASH_SECRET is unset, set it to the current
-          ENCRYPTION_KEY value first, or every API and MCP token stops working.
+          Before rotating ENCRYPTION_KEY later: if API_TOKEN_HASH_SECRET is unset, add it to .env.prod
+          with the current ENCRYPTION_KEY value first (updates keep it), or every API and MCP token
+          stops working.
 
     - name: Sync docker-compose files from local repo
       ansible.builtin.copy:
