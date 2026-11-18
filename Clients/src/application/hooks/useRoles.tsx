@@ -1,3 +1,4 @@
+import { useCallback } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getEntityById } from "../repository/entity.repository";
 
@@ -28,9 +29,10 @@ export const useRoles = () => {
     gcTime: 15 * 60 * 1000, // Keep in cache for 15 minutes
   });
 
-  const refreshRoles = async () => {
+  // Stable across renders, so callers can use it in effect dependencies.
+  const refreshRoles = useCallback(async () => {
     await queryClient.invalidateQueries({ queryKey: ROLES_QUERY_KEY });
-  };
+  }, [queryClient]);
 
   return { roles, loading, error: error as Error | null, refreshRoles };
 };
