@@ -174,7 +174,7 @@ export const useCasesContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'A chronological log of every change made to the use case: who changed what, when, and the old and new values. Useful for audits and internal reviews.',
+      text: 'A chronological log of every change made to the use case: who changed what, when, and the old and new values. Changes to the use case category, purpose, audience and deployment context are logged too. A save only logs the fields whose values changed. Useful for audits and internal reviews.',
     },
     {
       type: 'heading',
@@ -222,6 +222,10 @@ export const useCasesContent: ArticleContent = {
     {
       type: 'paragraph',
       text: 'Change the basics (title, goal, status), transfer ownership, manage team members, add or remove frameworks, or delete the use case. Every edit gets recorded in the activity log.',
+    },
+    {
+      type: 'paragraph',
+      text: 'Saving only changes the fields you edited. The AI risk classification and high-risk roles show only while the EU AI Act is selected. When it is not, saving keeps them as they are, so a classification set by an intake form or the API is not lost. The classification list has Prohibited, High risk, Limited risk, Minimal risk, GPAI, General risk and Out of scope.',
     },
     {
       type: 'callout',

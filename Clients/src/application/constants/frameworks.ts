@@ -6,12 +6,14 @@
  */
 
 export const FRAMEWORK_IDS = {
+  EU_AI_ACT: 1,
   ISO_42001: 2,
   ISO_27001: 3,
   NIST_AI_RMF: 4,
 } as const;
 
 export const FRAMEWORK_NAMES = {
+  EU_AI_ACT: "EU AI Act",
   ISO_42001: "ISO 42001",
   ISO_27001: "ISO 27001",
   NIST_AI_RMF: "NIST AI RMF",
@@ -86,4 +88,35 @@ export const isNISTAIRMF = (frameworkId: number, frameworkName?: string): boolea
     frameworkId === FRAMEWORK_IDS.NIST_AI_RMF ||
     (frameworkName ? getFrameworkType(frameworkName) === "NIST_AI_RMF" : false)
   );
+};
+
+const isEuAiActName = (name: unknown): boolean =>
+  typeof name === "string" && name.trim().toLowerCase() === FRAMEWORK_NAMES.EU_AI_ACT.toLowerCase();
+
+/**
+ * True when a list of frameworks includes the EU AI Act.
+ *
+ * The create form holds `{ _id, name }` options, a loaded use case holds
+ * `{ framework_id, name }` rows, and older callers pass plain ids or names,
+ * so each shape is recognised.
+ */
+export const includesEuAiAct = (frameworks: unknown): boolean => {
+  if (!Array.isArray(frameworks)) return false;
+  return frameworks.some((fw) => {
+    if (fw && typeof fw === "object") {
+      const { _id, framework_id, name } = fw as {
+        _id?: unknown;
+        framework_id?: unknown;
+        name?: unknown;
+      };
+      return (
+        Number(_id) === FRAMEWORK_IDS.EU_AI_ACT ||
+        Number(framework_id) === FRAMEWORK_IDS.EU_AI_ACT ||
+        isEuAiActName(name)
+      );
+    }
+    if (typeof fw === "number") return fw === FRAMEWORK_IDS.EU_AI_ACT;
+    if (typeof fw === "string") return Number(fw) === FRAMEWORK_IDS.EU_AI_ACT || isEuAiActName(fw);
+    return false;
+  });
 };
