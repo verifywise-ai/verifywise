@@ -3,7 +3,7 @@ import authenticateJWT from "../../middleware/auth.middleware";
 import authorize from "../../middleware/accessControl.middleware";
 import { requireExtensionEnabled } from "../../middleware/requireExtensionEnabled.middleware";
 import { requireProjectAccess } from "../../middleware/projectAccess.middleware";
-import { createMemoryUpload } from "../../utils/upload.utils";
+import { createMemoryUpload, handleUploadError } from "../../utils/upload.utils";
 import { requireFrameworkWriteAccess } from "../../middleware/frameworkWriteAccess.middleware";
 import { importedImplChanges } from "../../utils/frameworkWriteAccess.utils";
 import {
@@ -71,6 +71,7 @@ router.get("/links/:linkId/impl/:level/:implId", getImpl);
 router.patch(
   "/links/:linkId/impl/:level/:implId",
   upload.any(),
+  handleUploadError,
   requireFrameworkWriteAccess(importedImplChanges),
   updateImpl,
 );

@@ -12,7 +12,7 @@ import {
 } from "../controllers/file.ctrl";
 import authenticateJWT from "../middleware/auth.middleware";
 import authorize from "../middleware/accessControl.middleware";
-import { createMemoryUpload } from "../utils/upload.utils";
+import { createMemoryUpload, handleUploadError } from "../utils/upload.utils";
 
 // Security: the previous config had a typo'd `Storage` key, so multer ran
 // with zero limits and no type validation (memory-exhaustion DoS vector).
@@ -40,6 +40,7 @@ router.post(
   authenticateJWT,
   authorize("file.contribute"),
   upload.any("files"),
+  handleUploadError,
   postFileContent,
 );
 

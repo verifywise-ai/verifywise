@@ -25,7 +25,7 @@ import {
   getNISTAIRMFStatusBreakdown,
   getNISTAIRMFOverview,
 } from "../controllers/nist_ai_rmf.subcategory.ctrl";
-import { createMemoryUpload } from "../utils/upload.utils";
+import { createMemoryUpload, handleUploadError } from "../utils/upload.utils";
 // Security: bounded upload config (30MB/file, 10 files, MIME allowlist).
 const upload = createMemoryUpload();
 
@@ -67,6 +67,7 @@ router.patch(
   validateId("id"),
   subcategoryUseCase,
   upload.any(),
+  handleUploadError,
   requireFrameworkWriteAccess(nistSubcategoryChanges),
   updateNISTAIRMFSubcategoryById,
 ); // updating a specific NIST AI RMF subcategory by id
