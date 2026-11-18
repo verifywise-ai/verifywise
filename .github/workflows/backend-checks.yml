@@ -11,11 +11,13 @@ on:
     paths:
       - "Servers/**"
       - ".github/workflows/backend-checks.yml"
+      - "scripts/security/**"
   push:
     branches: ["master", "develop"]
     paths:
       - "Servers/**"
       - ".github/workflows/backend-checks.yml"
+      - "scripts/security/**"
 
 jobs:
   security-audit:

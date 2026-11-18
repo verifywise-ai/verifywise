@@ -1,3 +1,4 @@
+import { useCallback } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getInvitations, Invitation } from "../repository/invitation.repository";
 import { useAuth } from "./useAuth";
@@ -23,9 +24,10 @@ const useInvitations = () => {
     gcTime: 5 * 60 * 1000,
   });
 
-  const refreshInvitations = async () => {
+  // Stable across renders, so callers can use it in effect dependencies.
+  const refreshInvitations = useCallback(async () => {
     await queryClient.invalidateQueries({ queryKey: INVITATIONS_QUERY_KEY });
-  };
+  }, [queryClient]);
 
   return {
     invitations,
