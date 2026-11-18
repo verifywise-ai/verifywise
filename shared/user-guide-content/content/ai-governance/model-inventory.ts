@@ -126,7 +126,7 @@ export const modelInventoryContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Approved, Restricted, Blocked and Rejected are decisions. Once a model has an approver, only that approver or an Admin can move it to or from a decision, or change or remove its approver. Moving between Pending and Retired is open to anyone who can edit models.',
+      text: 'Approved, Restricted, Blocked and Rejected are decisions. Once a model has an approver, only that approver or an Admin can move it to or from a decision, change or remove its approver, or delete the model. Moving between Pending and Retired is open to anyone who can edit models.',
     },
     {
       type: 'bullet-list',
@@ -140,7 +140,7 @@ export const modelInventoryContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'The form shows the statuses you can\'t set as unavailable. If a save is refused, you see "Only the model\'s approver or an Admin can change its approval."',
+      text: 'The form shows the statuses you can\'t set as unavailable. If a save is refused, you see "Only the model\'s approver or an Admin can change its approval." A refused delete leaves the model in place.',
     },
     {
       type: 'paragraph',

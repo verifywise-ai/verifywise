@@ -7648,6 +7648,7 @@ export const modelInventoryEndpoints: Endpoint[] = [
     responses: [
       { status: 200, description: "Model inventory deleted" },
       { status: 401, description: "Missing or invalid JWT" },
+      { status: 403, description: "The model has a saved approver and the caller is neither that approver nor an Admin" },
       { status: 404, description: "Model inventory not found" },
       { status: 500, description: "Internal server error" },
     ],

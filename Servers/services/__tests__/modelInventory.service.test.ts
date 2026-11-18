@@ -290,14 +290,14 @@ describe("malformed status or approver", () => {
 
 describe("deleteModelInventoryService", () => {
   it("throws NotFoundException for a model the organization does not have", async () => {
-    mockLock.mockResolvedValue(false);
+    mockGetById.mockResolvedValue(null);
     await expect(
       deleteModelInventoryService(7, { deleteRisks: false }, ctx, fakeTx() as any),
     ).rejects.toBeInstanceOf(NotFoundException);
   });
 
   it("throws ConflictException for a model with MRM history", async () => {
-    mockLock.mockResolvedValue(true);
+    mockGetById.mockResolvedValue(storedRow({ approver: null }));
     mockMrm.mockResolvedValue(true);
     await expect(
       deleteModelInventoryService(7, { deleteRisks: false }, ctx, fakeTx() as any),
@@ -305,11 +305,12 @@ describe("deleteModelInventoryService", () => {
     expect(mockDeleteQuery).not.toHaveBeenCalled();
   });
 
-  it("records the deletion and deletes", async () => {
+  it("reads the model locked, in the transaction, and records the deletion and deletes", async () => {
     const tx = fakeTx();
-    mockLock.mockResolvedValue(true);
+    mockGetById.mockResolvedValue(storedRow({ approver: null }));
     mockMrm.mockResolvedValue(false);
     await deleteModelInventoryService(7, { deleteRisks: true }, ctx, tx as any);
+    expect(mockGetById).toHaveBeenCalledWith(7, 1, { transaction: tx, forUpdate: true });
     expect(mockRecordDeletion).toHaveBeenCalledWith("model_inventory", 7, EDITOR, 1, tx);
     expect(mockDeleteQuery).toHaveBeenCalledWith(7, true, 1, tx, EDITOR);
   });
@@ -335,5 +336,38 @@ describe("linkModelToUseCaseService", () => {
     mockProjectIds.mockResolvedValue([3]);
     expect(await linkModelToUseCaseService(7, 3, ctx, fakeTx() as any)).toBe(false);
     expect(mockInsertLinks).not.toHaveBeenCalled();
+  });
+
+  // An Editor the approval rule refuses must not delete the model and add
+  // it again, decided, with no approver.
+  it("refuses a caller who is not the saved approver or an Admin, whatever the status", async () => {
+    for (const status of ["Pending", "Approved"]) {
+      mockGetById.mockResolvedValue(storedRow({ approver: APPROVER, status }));
+      const refused = deleteModelInventoryService(7, { deleteRisks: true }, ctx, fakeTx() as any);
+      await expect(refused).rejects.toBeInstanceOf(ModelApprovalForbiddenError);
+      await expect(refused).rejects.toThrow(
+        "Only the model's approver or an Admin can change its approval.",
+      );
+    }
+    expect(mockRecordDeletion).not.toHaveBeenCalled();
+    expect(mockDeleteQuery).not.toHaveBeenCalled();
+  });
+
+  it("lets the saved approver or an Admin delete a model with an approver", async () => {
+    mockMrm.mockResolvedValue(false);
+    mockGetById.mockResolvedValue(storedRow({ approver: APPROVER, status: "Approved" }));
+    await deleteModelInventoryService(
+      7,
+      { deleteRisks: false },
+      { ...ctx, userId: APPROVER },
+      fakeTx() as any,
+    );
+    await deleteModelInventoryService(
+      7,
+      { deleteRisks: false },
+      { ...ctx, callerIsAdmin: true },
+      fakeTx() as any,
+    );
+    expect(mockDeleteQuery).toHaveBeenCalledTimes(2);
   });
 });

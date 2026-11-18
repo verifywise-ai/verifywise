@@ -42,7 +42,11 @@ import {
   recordMultipleFieldChanges,
   trackEntityChanges,
 } from "../utils/changeHistory.base.utils";
-import { assertModelApprovalAllowed, assertModelApprovalInput } from "../utils/modelApproval.utils";
+import {
+  assertModelApprovalAllowed,
+  assertModelApprovalInput,
+  assertModelDeleteAllowed,
+} from "../utils/modelApproval.utils";
 import { modelHasMrmHistoryQuery } from "../utils/mrm.utils";
 import { getUserNameById } from "./riskApproverNotification.service";
 import { notifyUserAssigned } from "./inAppNotification.service";
@@ -342,23 +346,34 @@ export async function updateModelInventoryService(
 
 /**
  * Delete a model. Throws NotFoundException (404) when the organization has
- * no such model and ConflictException (409) when it has model risk
- * management history. With `deleteRisks` its risks are archived, otherwise
- * they stay with no model.
+ * no such model, ModelApprovalForbiddenError (403) when it has a saved
+ * approver and the caller is neither that approver nor an Admin, and
+ * ConflictException (409) when it has model risk management history. With
+ * `deleteRisks` its risks are archived, otherwise they stay with no model.
  */
 export async function deleteModelInventoryService(
   id: number,
   options: { deleteRisks: boolean },
-  ctx: Pick<ModelWriteContext, "organizationId" | "userId">,
+  ctx: Pick<ModelWriteContext, "organizationId" | "userId" | "callerIsAdmin">,
   transaction?: Transaction,
 ): Promise<void> {
   const log = txContext("deleteModelInventoryService", "Delete", ctx);
   await inTransaction(transaction, log, async (tx) => {
     // Lock the model row first: from here no risk, validation or finding can
-    // join the model, so the checks below hold until the delete commits.
-    if (!(await lockModelInventoryQuery(id, ctx.organizationId, tx))) {
+    // join the model, and its approver cannot change, so the checks below
+    // hold until the delete commits.
+    const current = await getModelInventoryByIdQuery(id, ctx.organizationId, {
+      transaction: tx,
+      forUpdate: true,
+    });
+    if (!current) {
       throw new NotFoundException(MODEL_NOT_FOUND, "model_inventory", id);
     }
+    assertModelDeleteAllowed({
+      existing: { approver: current.approver ?? null },
+      callerId: ctx.userId,
+      callerIsAdmin: ctx.callerIsAdmin,
+    });
     // MRM protection (§7b): a model with validation or finding history must be
     // decommissioned, not deleted. Read under the lock.
     if (await modelHasMrmHistoryQuery(id, ctx.organizationId, tx)) {

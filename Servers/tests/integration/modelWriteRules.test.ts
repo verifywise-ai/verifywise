@@ -532,6 +532,67 @@ describe("model write rules", () => {
     });
   });
 
+  describe("deleting a model with an approver (decision 9)", () => {
+    const withApprover = async (status = "Pending") =>
+      (
+        await (
+          await as(org, admin, "Admin")
+        )
+          .post("/api/modelInventory")
+          .send(modelBody({ approver, status }))
+      ).body.data.id as number;
+    const exists = async (id: number) => (await modelRow(id)) !== undefined;
+
+    it("refuses an Editor who is not the approver (403, same message), whatever the status", async () => {
+      for (const status of ["Pending", "Approved"]) {
+        const id = await withApprover(status);
+        const res = await (await as(org, editor, "Editor")).delete(`/api/modelInventory/${id}`);
+        expect(res.status).toBe(403);
+        expect(res.body.data).toBe(
+          "Only the model's approver or an Admin can change its approval.",
+        );
+        expect(await exists(id)).toBe(true);
+      }
+    });
+
+    it("lets the approver or an Admin delete it", async () => {
+      const first = await withApprover("Approved");
+      expect(
+        (await (await as(org, approver, "Editor")).delete(`/api/modelInventory/${first}`)).status,
+      ).toBe(200);
+      expect(await exists(first)).toBe(false);
+      const second = await withApprover("Approved");
+      expect(
+        (await (await as(org, admin, "Admin")).delete(`/api/modelInventory/${second}`)).status,
+      ).toBe(200);
+      expect(await exists(second)).toBe(false);
+    });
+
+    it("lets an Editor delete a model with no approver, as before", async () => {
+      const id = (
+        await (await as(org, admin, "Admin")).post("/api/modelInventory").send(modelBody())
+      ).body.data.id as number;
+      expect(
+        (await (await as(org, editor, "Editor")).delete(`/api/modelInventory/${id}`)).status,
+      ).toBe(200);
+    });
+
+    it("applies to the advisor's agent_delete_model, which runs as the user", async () => {
+      // Registers the advisor's write tools.
+      await import("../../advisor/functions/modelInventoryFunctions");
+      const { writeToolExecutors } = await import("../../advisor/confirmation/createWriteTool");
+      const run = writeToolExecutors.get("agent_delete_model")!;
+      const id = await withApprover("Approved");
+      expect(await run({ model_id: id, _userId: editor }, org)).toEqual({
+        success: false,
+        message: "Only the model's approver or an Admin can change its approval.",
+      });
+      expect(await exists(id)).toBe(true);
+      expect(await run({ model_id: id, _userId: approver }, org)).toMatchObject({ deleted: true });
+      expect(await exists(id)).toBe(false);
+    });
+  });
+
   describe("deployment step (M-M5)", () => {
     it("runs for a model created as Approved", async () => {
       const res = await (

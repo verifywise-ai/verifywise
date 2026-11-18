@@ -166,6 +166,14 @@ describe("agent_delete_model", () => {
       message: "Model inventory not found",
     });
   });
+
+  it("reports the service's approval refusal (a model with another approver)", async () => {
+    mockDelete.mockRejectedValue(new ModelApprovalForbiddenError());
+    expect(await run("agent_delete_model", { model_id: 7, _userId: CHATTER })).toEqual({
+      success: false,
+      message: "Only the model's approver or an Admin can change its approval.",
+    });
+  });
 });
 
 describe("agent_link_model_to_project", () => {

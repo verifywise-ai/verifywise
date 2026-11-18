@@ -13717,6 +13717,15 @@ paths:
                   data: {type: string, example: 'Model inventory deleted successfully'}
         '401':
           description: 'Missing or invalid JWT'
+        '403':
+          description: 'The model has a saved approver and the caller is neither that approver nor an Admin'
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: {type: string, example: Forbidden}
+                  data: {type: string, example: 'Only the model''s approver or an Admin can change its approval.'}
         '404':
           description: 'Model inventory not found'
           content:

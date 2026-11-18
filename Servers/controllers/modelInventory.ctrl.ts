@@ -356,10 +356,15 @@ export async function deleteModelInventoryById(req: Request, res: Response) {
   );
 
   try {
+    // Deleting a model with a saved approver needs that approver or an Admin.
     await deleteModelInventoryService(
       modelInventoryId,
       { deleteRisks },
-      { organizationId: req.organizationId!, userId: req.userId! },
+      {
+        organizationId: req.organizationId!,
+        userId: req.userId!,
+        callerIsAdmin: await requestCallerIsAdmin(req),
+      },
     );
     logStructured(
       "successful",
@@ -371,6 +376,9 @@ export async function deleteModelInventoryById(req: Request, res: Response) {
   } catch (error) {
     if (error instanceof NotFoundException) {
       return res.status(404).json(STATUS_CODE[404](req.t!("Model inventory not found")));
+    }
+    if (error instanceof ModelApprovalForbiddenError) {
+      return res.status(403).json(STATUS_CODE[403](translateError(req, error)));
     }
     if (error instanceof ConflictException) {
       logStructured(

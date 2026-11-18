@@ -137,6 +137,26 @@ function toApproverId(value: unknown): number | null {
 }
 
 /**
+ * Deleting a model that has a saved approver needs that approver or an
+ * Admin, whatever its status. Otherwise a caller the approval rule refuses
+ * could delete the model and create it again, decided, with no approver.
+ * A model without an approver may be deleted by anyone who may edit models.
+ */
+export function assertModelDeleteAllowed({
+  existing,
+  callerId,
+  callerIsAdmin,
+}: {
+  existing: { approver: number | null };
+  callerId: number;
+  callerIsAdmin: boolean;
+}): void {
+  const savedApprover = toApproverId(existing.approver);
+  if (savedApprover === null || callerIsAdmin || savedApprover === callerId) return;
+  throw new ModelApprovalForbiddenError();
+}
+
+/**
  * Throws ModelApprovalForbiddenError when the caller may not make the
  * approval change they asked for. Returns nothing: the values are stored as
  * sent.
