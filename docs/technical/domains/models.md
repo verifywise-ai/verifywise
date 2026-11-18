@@ -506,10 +506,11 @@ Before the approval rule runs, the model create and update services
 (`assertModelApprovalInput`) answer 400 with a field message for a `status`
 that is sent but is not one of the model statuses (an array, an object, a
 number, an unknown name). The `approver` is normalized once, at the start
-of the service, with the house id parser (`toPositiveId`): null or "" is no
-approver, a positive int32 (a number or digits, leading zeros allowed on the
-legacy route, so "07" is 7) is that id, anything else (0, "0", "-1", "1e3",
-2147483648, an array) is a 400. The approval rule, the membership check, the
+of the service, with the house id parser (`toPositiveId`): null, "", 0 or "0"
+is no approver (the legacy meaning of `approver || undefined`; the v1
+validator refuses 0 and "0" first), a positive int32 (a number or digits,
+leading zeros allowed on the legacy route, so "07" is 7) is that id, anything
+else ("00", "-1", "1e3", 2147483648, an array) is a 400. The approval rule, the membership check, the
 notice and the write then all read that number, and approvers are compared
 as numbers. On v1 the approver, model risk owner and model id must already
 be what `toPositiveId` accepts (no leading zeros). On create, "" and null still mean "not sent"
@@ -543,8 +544,9 @@ the approver the same save names.
   risk whose approver is cleared falls back to Not required (R4), so it can no
   longer be decided, but models have no "Not required" status to fall back to.
   Clearing the approver of a Pending model would let an editor decide it in a
-  second save. A decided model with no approver (legacy) gets one only from an
-  Admin.
+  second save. A model with no saved approver, decided or not, may be given
+  one by any editor: without a saved approver any editor may set any status,
+  so there is nothing to protect.
 - **R3.** A non-Admin cannot name themself as the new approver. Keeping
   yourself as the saved approver is fine.
 - In a save that names a new approver, only an Admin also moves the status to
@@ -562,8 +564,11 @@ transaction and checks against that row.
 
 The model form mirrors the rule (`Clients/src/application/utils/modelApproval.ts`):
 statuses the user cannot set are listed but disabled, the approver select is
-disabled for a user who does not decide on a model that has an approver (or
-a decided one without), and a non-Admin's own name cannot be picked.
+disabled for a user who does not decide on a model that has an approver, and
+a non-Admin's own name cannot be picked. When a picked status becomes
+unavailable (a non-Admin names a new approver while a decision is selected),
+the form puts back the saved status, or Pending for a new model, instead of
+letting the save fail with a 403.
 
 ## Write services
 

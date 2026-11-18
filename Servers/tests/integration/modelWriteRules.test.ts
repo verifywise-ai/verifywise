@@ -294,7 +294,19 @@ describe("model write rules", () => {
       expect((await modelRow(id)).approver).toBe(approver);
     });
 
-    it.each([["0"], ["-1"], ["1e3"], [2147483648]])(
+    it("keeps 0 and \"0\" meaning no approver on legacy, refuses them on v1", async () => {
+      const api = await as(org, admin, "Admin");
+      for (const none of [0, "0"]) {
+        const created = await api.post("/api/modelInventory").send(modelBody({ approver: none }));
+        expect(created.status).toBe(201);
+        expect((await modelRow(created.body.data.id)).approver).toBeNull();
+        expect(
+          (await api.post("/api/v1/model-inventories").send(modelBody({ approver: none }))).status,
+        ).toBe(400);
+      }
+    });
+
+    it.each([["00"], ["-1"], ["1e3"], [2147483648]])(
       "answers 400 for approver %p on legacy and v1, and writes nothing",
       async (bad) => {
         const api = await as(org, admin, "Admin");

@@ -168,12 +168,12 @@ describe("assertModelApprovalAllowed: R2, approver changes on a decided model", 
     ).toBeNull();
   });
 
-  it("refuses naming an approver on a legacy Approved model with none", () => {
+  it("lets an Editor name an approver on a decided model with none (nothing to protect)", () => {
     expect(
       refusal(() =>
         run({ existing: { approver: null, status: "Approved" }, submitted: { approver: OTHER } }),
       ),
-    ).toBe(MODEL_APPROVAL_FORBIDDEN_MESSAGE);
+    ).toBeNull();
   });
 
   it("refuses an Editor re-assigning a Pending model with a saved approver", () => {
@@ -332,12 +332,13 @@ describe("approver ids are normalized once", () => {
     ).not.toThrow();
   });
 
-  it('reads "" and null as none', () => {
-    expect(assertModelApprovalInput({ approver: "" }, { creating: true }).approver).toBeNull();
-    expect(assertModelApprovalInput({ approver: null }, { creating: true }).approver).toBeNull();
+  it('reads "", null, 0 and "0" as none (the legacy meaning; v1 refuses 0 earlier)', () => {
+    for (const approver of ["", null, 0, "0"]) {
+      expect(assertModelApprovalInput({ approver }, { creating: true }).approver).toBeNull();
+    }
   });
 
-  it.each([["0"], ["00"], ["-1"], ["1e3"], [2147483648], ["2147483648"], [0], [-3]])(
+  it.each([["00"], ["-1"], ["1e3"], [2147483648], ["2147483648"], [-3]])(
     "refuses approver %p with a 400",
     (approver) => {
       expect(() => assertModelApprovalInput({ approver }, { creating: false })).toThrow(

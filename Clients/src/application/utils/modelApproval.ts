@@ -6,7 +6,6 @@
  * - Decisions are Approved, Restricted, Blocked and Rejected.
  * - With a saved approver, only someone who decides moves the status to or
  *   from a decision, and only they change or clear the approver.
- * - A decided model with no approver changes approver only through an Admin.
  * - In a save that names a new approver only an Admin also decides.
  * - A non-Admin cannot pick themself as a new approver.
  */
@@ -37,8 +36,7 @@ export function modelApprovalLocks(state: ModelApprovalState) {
   const approverChanged = nextApprover !== savedApprover;
   const callerDecides = state.isAdmin || (savedApprover !== null && savedApprover === state.userId);
 
-  const approverLocked =
-    !callerDecides && (savedApprover !== null || isModelDecision(state.savedStatus));
+  const approverLocked = !callerDecides && savedApprover !== null;
 
   const canPickStatus = (status: string): boolean => {
     const touchesDecision =

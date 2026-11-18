@@ -11,11 +11,13 @@
  * - R1: while the model has a saved approver, moving its status to or from a
  *   decision needs a caller who decides. Sending the stored value back is not
  *   a change. Moving between Pending and Retired is free.
- * - R2: changing the approver (to someone else or to nobody) of a model that
- *   has a saved approver needs a caller who decides, whatever the status.
- *   Without this, an editor could clear the approver of a Pending model and
- *   decide it in a second save. A legacy decided model with no approver
- *   needs the same, so there only an Admin names one.
+ * - R2: changing or clearing a SAVED approver needs a caller who decides,
+ *   whatever the status. Without this, an editor could clear the approver of
+ *   a Pending model and decide it in a second save. This is stricter than R2
+ *   for risks: a risk whose approver is cleared falls back to Not required,
+ *   but a model has no such status. A model with no saved approver (decided
+ *   or not) may be given one by any editor: without a saved approver any
+ *   editor may set any status anyway, so there is nothing to protect.
  * - R3: a non-Admin may not name themself as the new approver. Keeping
  *   yourself when you already are the saved approver is fine.
  * - In a save that names a new approver, only an Admin may also move the
@@ -64,9 +66,10 @@ export const MODEL_APPROVER_INVALID = "The approver must be a member of this org
  *
  * - `status`: absent, or one of the model statuses. On create, "" and null
  *   still mean "not sent" (Pending), as the legacy route always accepted.
- * - `approver`: absent; null or "" (none); or a positive int32 id, as a
- *   number or a string of digits (leading zeros allowed, so "07" is 7).
- *   Anything else, 0, "0", "-1", "1e3" and 2147483648 included, is refused.
+ * - `approver`: absent; null, "", 0 or "0" (none, the legacy meaning; the
+ *   v1 validator refuses 0 and "0" before this runs); or a positive int32
+ *   id, as a number or a string of digits (leading zeros allowed, so "07" is
+ *   7). Anything else, "00", "-1", "1e3" and 2147483648 included, is refused.
  *
  * Returns the input with a create's empty status removed and the approver
  * normalized once to a number or null: the approval rule, the membership
@@ -90,9 +93,9 @@ export function assertModelApprovalInput<T extends { status?: unknown; approver?
   return checked;
 }
 
-/** null for null or ""; the id for a positive int32 (see above); else a 400. */
+/** null for none (see above); the id for a positive int32; else a 400. */
 function normalizeApproverId(value: unknown): number | null {
-  if (value === null || value === "") return null;
+  if (value === null || value === "" || value === 0 || value === "0") return null;
   // "07" is 7: drop leading zeros, then the house id parser decides.
   const id = toPositiveId(typeof value === "string" ? value.replace(/^0+(?=\d)/, "") : value);
   if (id === null) throw new ValidationException(MODEL_APPROVER_INVALID, "approver", value);
@@ -168,11 +171,10 @@ export function assertModelApprovalAllowed({
     if (nextApprover !== null && nextApprover === callerId && !callerIsAdmin) {
       throw new ModelApprovalForbiddenError("self");
     }
-    // R2: a model with a saved approver changes hands only through someone
-    // who decides, whatever its status. Otherwise clearing the approver of a
-    // Pending model would leave a model no rule protects, decided in the next
-    // save. A decided model with no approver (legacy) needs the same.
-    if ((savedApprover !== null || isModelStatusDecision(savedStatus)) && !callerDecides) {
+    // R2: a saved approver changes only through someone who decides,
+    // whatever the status. Otherwise clearing the approver of a Pending model
+    // would leave a model no rule protects, decided in the next save.
+    if (savedApprover !== null && !callerDecides) {
       throw new ModelApprovalForbiddenError();
     }
     // Deciding in the save that names the approver is for an Admin only.

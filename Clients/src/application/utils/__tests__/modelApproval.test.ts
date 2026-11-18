@@ -94,13 +94,13 @@ describe("modelApprovalLocks", () => {
     ).toBe(true);
   });
 
-  it("locks the approver of a legacy decided model with none for a non-Admin", () => {
+  it("leaves the approver of a decided model with none open to an editor", () => {
     const locks = modelApprovalLocks({
       ...base,
       savedApprover: null,
       savedStatus: "Approved",
       approver: "",
     });
-    expect(locks.approverLocked).toBe(true);
+    expect(locks.approverLocked).toBe(false);
   });
 });

@@ -359,6 +359,19 @@ const NewModelInventory: FC<NewModelInventoryProps> = ({
     [isEdit, initialData?.approver, initialData?.status, values.approver, userId, isAdmin],
   );
 
+  // A status the user can no longer set (a non-Admin named a new approver
+  // while a decision was picked) goes back to the saved status, or Pending
+  // for a new model, instead of staying selected and failing on save.
+  const savedStatus = isEdit ? initialData?.status : undefined;
+  useEffect(() => {
+    if (values.status && !approvalLocks.canPickStatus(values.status)) {
+      setValues((prev) => ({
+        ...prev,
+        status: savedStatus ?? ModelInventoryStatus.PENDING,
+      }));
+    }
+  }, [approvalLocks, values.status, savedStatus]);
+
   const statusItems = useMemo(
     () =>
       statusOptions.map((option) => ({
