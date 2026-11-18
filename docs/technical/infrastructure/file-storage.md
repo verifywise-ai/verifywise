@@ -773,7 +773,7 @@ await sequelize.query(`
 `, { replacements: { organizationId, fileId, frameworkType, entityType, entityId }, transaction });
 ```
 
-The 22 bundled frameworks (ids 5–26) store all their evidence this way. `Servers/utils/frameworkImpl.utils.ts` writes the links using the structure's `framework_type` and `entity_types`. See [Compliance Frameworks](../domains/compliance-frameworks.md#bundled-frameworks-ids-525) and [Adding a New Compliance Framework](../guides/adding-new-framework.md).
+The 22 bundled frameworks (ids 5–26) store all their evidence this way. `Servers/utils/frameworkImpl.utils.ts` writes the links using the structure's `framework_type` and `entity_types`. See [Compliance Frameworks](../domains/compliance-frameworks.md#bundled-frameworks-ids-526) and [Adding a New Compliance Framework](../guides/adding-new-framework.md).
 
 ---
 
