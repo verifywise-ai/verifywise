@@ -10,7 +10,11 @@ jest.mock("../automation/project.automation.utils", () => ({
   buildProjectUpdateReplacements: jest.fn(() => ({})),
 }));
 
-import { createNewProjectQuery, updateProjectByIdQuery } from "../project.utils";
+import {
+  createNewProjectQuery,
+  hasProjectColumnUpdate,
+  updateProjectByIdQuery,
+} from "../project.utils";
 import { sequelize } from "../../database/db";
 import { enqueueAutomationAction } from "../../services/automations/automationProducer";
 import { ValidationException } from "../../domain.layer/exceptions/custom.exception";
@@ -261,9 +265,41 @@ describe("updateProjectByIdQuery members handling", () => {
     expect(enqueueAutomationAction).toHaveBeenCalledTimes(1);
   });
 
+  it("does not fire the project-updated automation for last updated stamps alone", async () => {
+    query.mockReset();
+    mockDb({ automationActive: true });
+    await updateProjectByIdQuery(
+      1,
+      { last_updated: new Date(), last_updated_by: 1 } as any,
+      [7],
+      1,
+      transaction,
+    );
+    expect(statements().some((s) => s.includes("FROM automation_triggers"))).toBe(false);
+    expect(enqueueAutomationAction).not.toHaveBeenCalled();
+  });
+
   it("reads the row instead of running an empty UPDATE when only members change", async () => {
     await updateProjectByIdQuery(1, {} as any, [7], 1, transaction);
     expect(statements().some((s) => s.startsWith("UPDATE projects SET"))).toBe(false);
     expect(deletes()).toHaveLength(1);
+  });
+});
+
+describe("hasProjectColumnUpdate", () => {
+  it("is false for members, the last updated stamps and unknown keys", () => {
+    expect(hasProjectColumnUpdate({})).toBe(false);
+    expect(hasProjectColumnUpdate({ members: [7] })).toBe(false);
+    expect(hasProjectColumnUpdate({ last_updated: new Date(), last_updated_by: 1 })).toBe(false);
+    expect(hasProjectColumnUpdate({ framework: [1], goal: undefined })).toBe(false);
+  });
+
+  it("is true for any written project column, null included", () => {
+    expect(hasProjectColumnUpdate({ goal: "G" })).toBe(true);
+    expect(hasProjectColumnUpdate({ description: null })).toBe(true);
+    expect(hasProjectColumnUpdate({ high_risk_roles: [] })).toBe(true);
+    expect(hasProjectColumnUpdate({ approval_workflow_id: null, last_updated: new Date() })).toBe(
+      true,
+    );
   });
 });

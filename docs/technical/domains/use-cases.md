@@ -41,8 +41,8 @@ projects
 ├── goal
 ├── target_industry
 ├── description
-├── last_updated
-├── last_updated_by (FK → users)
+├── last_updated             # Set by the server on every update of a project column, never from the body
+├── last_updated_by (FK → users)  # The acting user; NULL for a system write
 ├── is_demo                  # Demo/test project flag
 ├── created_at
 ├── is_organizational        # Org vs personal project
@@ -385,11 +385,22 @@ The caller needs the `useCase.edit` permission and must be able to see the use c
 ### Processing
 
 1. Get current project state
-2. Compare member lists (old vs new)
-3. Add new members, remove deleted members
-4. Notify newly added members via email
-5. Record all changes in change history
-6. Trigger `project_updated` automation
+2. Drop any body `last_updated*`; when the body writes a project column, stamp `last_updated` (now) and `last_updated_by` (the caller)
+3. Compare member lists (old vs new)
+4. Add new members, remove deleted members
+5. Notify newly added members via email
+6. Record the changes in change history
+7. Trigger `project_updated` automation (only when a project column was written)
+
+A field missing from the body is left as it is, so a partial update never clears a value it does not send.
+
+**Last updated.** `updateUseCaseService` (`services/useCase.service.ts`) sets `last_updated` and `last_updated_by` on every update that writes a project column, on `PATCH /api/projects/:id` and `PATCH /api/v1/projects/:id` alike, and drops body values. A members-only update (`hasProjectColumnUpdate` in `utils/project.utils.ts` is false) is not stamped and does not fire the `project_updated` automation. The MCP `update_use_case` tool goes through the same service. The other writers stamp them too: `PATCH /api/projects/:id/status`, the EU AI Act classification (`setUseCaseClassificationQuery`) and the advisor's `agent_update_use_case` and `agent_update_use_case_status` (the requester, else the approver, else NULL). The Jira Assets sync sets only `last_updated`. Create sets both on the server, never from the body (the advisor's `agent_create_use_case` sets only `last_updated`).
+
+**The Settings form sends only what changed** (`changedProjectFields` in `ProjectView/ProjectSettings`). It compares the form with the use case as loaded and leaves out unchanged fields, the fields it does not show (the AI risk classification and high-risk roles while EU AI Act is not selected), `last_updated*` and the frameworks, which are added and removed through `/frameworks/toProject` and `/frameworks/fromProject` as soon as they are picked. A use case classified by intake, MCP or the API therefore keeps its level and roles. The classification list offers every server level: Prohibited, High risk, Limited risk, Minimal risk, GPAI, General risk (stored as `General Risk`) and Out of scope.
+
+**Start dates are calendar days.** `start_date` is a timestamp: the API, intake and MCP store a bare date at 00:00 UTC, the console stores the browser's local midnight. Screens read it with `startDateCalendarDay` (`presentation/tools/isoDateToString.ts`): exactly 00:00 UTC is the UTC date, anything else the local date. 12:00 UTC is not special here (it is local midnight in UTC+12), unlike risk dates (`riskCalendarDay`). Used by the Settings tab, the use case form, the use case list and table (display, sort and the start date filter), the entity graph side panel and the approval request details. The edit form sends `start_date` only when the user picks another day, so an untouched date is never rewritten. The server's automation emails still format the raw instant.
+
+**Stats.** `GET /api/projects/stats/:id` (legacy, answers 202) returns `user.userWhoUpdated` as `{ id, name, surname, email }` of the last editor, read within the organization, or `null`.
 
 ## Delete Project
 
@@ -509,11 +520,13 @@ All project modifications are tracked in `use_case_change_history`:
 ### Tracked Changes
 
 - Project creation with initial values
-- Field modifications (old → new value)
+- Field modifications (old → new value), including use case category, purpose, audience and deployment context
 - Status changes
 - Member additions/removals
 - Framework additions
 - Project deletion
+
+An update is diffed against what the UPDATE stored (`writtenValues` of its `RETURNING` row), not against the request. Keys the update does not write, such as `framework` and `monitored_regulations_and_standards`, are never compared, so a save cannot log a framework change, and a value sent unchanged records nothing.
 
 ## Automation Triggers
 
