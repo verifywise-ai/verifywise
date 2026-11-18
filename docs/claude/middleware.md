@@ -10,7 +10,7 @@ value; email, Slack, file, scan and risk-suggestion limits never are.
 
 | Limiter | Window | Max Requests | Use Case |
 |---------|--------|--------------|----------|
-| `generalApiLimiter` | 1 min | 300 | Global per-IP ceiling, mounted ahead of all routes |
+| `generalApiLimiter` | 1 min | 600 | Global per-IP ceiling, mounted ahead of all routes |
 | `authLimiter` | 15 min | 5 | Register, password reset, change password |
 | `loginLimiter` | 1 min | 5 | Login and login-microsoft |
 | `tokenRefreshLimiter` | 15 min | 60 | Access-token refresh |
