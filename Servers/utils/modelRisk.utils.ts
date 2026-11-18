@@ -10,10 +10,16 @@ import {
 
 export const OWNER_NOT_IN_ORGANIZATION = "The owner must be a member of this organization.";
 import {
+  deleteAllCustomFieldValuesForEntitiesQuery,
   deleteAllCustomFieldValuesForEntityQuery,
   fetchCustomFieldsForEntities,
 } from "./customField.utils";
-import { getFieldLabel, recordEntityChange } from "./changeHistory.base.utils";
+import {
+  formatFieldValue,
+  getFieldLabel,
+  recordEntityChangeBulk,
+  recordEntityDeletionBulk,
+} from "./changeHistory.base.utils";
 
 /**
  * Get all model risks for an organization
@@ -244,11 +250,18 @@ export async function deleteModelRiskByIdQuery(
 
 /**
  * Before a model is deleted: its risks lose the model, and with `archive` its
- * live risks are archived first, each the way a single model risk delete is
- * (custom field values removed, deletion in change history). Kept live risks
- * get an "Associated model" change in their history. The foreign key
- * (ON DELETE SET NULL) clears model_id too; doing it here, scoped to the
- * organization, is what records the history.
+ * live risks are archived first, the way a single model risk delete archives
+ * one (custom field values removed, deletion in change history). Every risk
+ * that loses the model, kept or archived, gets an "Associated model" change
+ * in its history naming it. The foreign key (ON DELETE SET NULL) clears
+ * model_id too; doing it here, scoped to the organization, is what records
+ * the history.
+ *
+ * The model row is locked first: adding a risk to a model (or moving one onto
+ * it) takes a key-share lock on the model row, so no risk can join the model
+ * while this transaction runs, and every risk that joined before is seen by
+ * the statements below. A risk can therefore never end up kept when the user
+ * chose to delete the model's risks.
  *
  * `changedByUserId` null (AI Advisor) records the history as the system's.
  */
@@ -260,61 +273,65 @@ export async function releaseModelRisksOfModelQuery(
   transaction: Transaction,
 ): Promise<{ archived: number[]; kept: number[] }> {
   const bySystem = changedByUserId === null;
-  const archived: number[] = [];
+  await sequelize.query(
+    `SELECT id FROM model_inventories
+      WHERE organization_id = :organizationId AND id = :modelId
+      FOR UPDATE`,
+    { replacements: { organizationId, modelId }, type: QueryTypes.SELECT, transaction },
+  );
+  const byId = (a: number, b: number) => a - b;
+
+  let archived: number[] = [];
   if (archive) {
-    const live = (await sequelize.query(
-      `SELECT id FROM model_risks
+    const [rows] = (await sequelize.query(
+      `UPDATE model_risks SET is_deleted = true, deleted_at = NOW(), updated_at = NOW()
         WHERE organization_id = :organizationId AND model_id = :modelId AND is_deleted = false
-        ORDER BY id`,
-      { replacements: { organizationId, modelId }, type: QueryTypes.SELECT, transaction },
-    )) as { id: number }[];
-    for (const { id } of live) {
-      if (!(await deleteModelRiskByIdQuery(id, organizationId, transaction))) continue;
-      archived.push(id);
-      await recordEntityChange(
-        "model_risk",
-        id,
-        "deleted",
-        changedByUserId,
-        organizationId,
-        "Model Risk",
-        "Active",
-        "Deleted",
-        transaction,
-        bySystem,
-      );
-    }
+        RETURNING id`,
+      { replacements: { organizationId, modelId }, transaction },
+    )) as [{ id: number }[], unknown];
+    archived = rows.map((row) => row.id).sort(byId);
+    await deleteAllCustomFieldValuesForEntitiesQuery(
+      "model_risk",
+      archived,
+      organizationId,
+      transaction,
+    );
+    await recordEntityDeletionBulk(
+      "model_risk",
+      archived,
+      changedByUserId,
+      organizationId,
+      transaction,
+      bySystem,
+    );
   }
 
-  const models = (await sequelize.query(
-    `SELECT model FROM model_inventories WHERE organization_id = :organizationId AND id = :modelId`,
-    { replacements: { organizationId, modelId }, type: QueryTypes.SELECT, transaction },
-  )) as { model: string | null }[];
-  const modelName = models[0]?.model || `Model #${modelId}`;
-
+  // Formatted the way an edit of model_id is, before the model row goes.
+  const modelName = await formatFieldValue("model_risk", "model_id", modelId, {
+    organizationId,
+    transaction,
+  });
   const [detached] = (await sequelize.query(
     `UPDATE model_risks SET model_id = NULL, updated_at = NOW()
       WHERE organization_id = :organizationId AND model_id = :modelId
       RETURNING id, is_deleted`,
     { replacements: { organizationId, modelId }, transaction },
   )) as [{ id: number; is_deleted: boolean }[], unknown];
+  await recordEntityChangeBulk(
+    "model_risk",
+    detached.map((row) => row.id).sort(byId),
+    "updated",
+    changedByUserId,
+    organizationId,
+    getFieldLabel("model_risk", "model_id"),
+    modelName,
+    "-",
+    transaction,
+    bySystem,
+  );
   const kept = detached
     .filter((row) => !row.is_deleted)
     .map((row) => row.id)
-    .sort((a, b) => a - b);
-  for (const id of kept) {
-    await recordEntityChange(
-      "model_risk",
-      id,
-      "updated",
-      changedByUserId,
-      organizationId,
-      getFieldLabel("model_risk", "model_id"),
-      modelName,
-      "-",
-      transaction,
-      bySystem,
-    );
-  }
+    .sort(byId);
   return { archived, kept };
 }

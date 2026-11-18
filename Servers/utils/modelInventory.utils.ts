@@ -589,9 +589,11 @@ export const deleteModelInventoryByIdQuery = async (
       transaction,
     );
 
+    // updated_at stays: the evidence freshness sweep reads it as the last
+    // review of the evidence, which dropping a deleted model is not.
     await sequelize.query(
       `UPDATE evidence_hub
-          SET mapped_model_ids = array_remove(mapped_model_ids, :id), updated_at = NOW()
+          SET mapped_model_ids = array_remove(mapped_model_ids, :id)
         WHERE organization_id = :organization_id AND :id = ANY(mapped_model_ids)`,
       {
         replacements: { organization_id: organizationId, id },

@@ -14,6 +14,7 @@ import {
 import { ReportDataCollector } from "../../services/reporting/dataCollector";
 import { modelDeploymentWorkflow } from "../../services/workflows/definitions/modelDeployment.workflow";
 import { deleteMockData } from "../../infrastructure.layer/driver/autoDriver.driver";
+import { getStaleEvidenceRiskIdsQuery } from "../../utils/evidenceHub.utils";
 
 /**
  * Use cases and models audit, PR F: deleting a model never deletes its risks
@@ -123,14 +124,15 @@ describe("model data integrity", () => {
       expect(await riskRow(live)).toMatchObject({ model_id: null, is_deleted: false });
       expect(await riskRow(archived)).toMatchObject({ model_id: null, is_deleted: true });
       expect(await linkExists(link)).toBe(true);
-      expect(await historyOf(live)).toEqual([
-        {
-          action: "updated",
-          field_name: "Associated model",
-          old_value: "Keep model",
-          new_value: "-",
-        },
-      ]);
+      const lostModel = {
+        action: "updated",
+        field_name: "Associated model",
+        old_value: "Keep model",
+        new_value: "-",
+      };
+      expect(await historyOf(live)).toEqual([lostModel]);
+      // A risk archived earlier loses the model too, and its history says so.
+      expect(await historyOf(archived)).toEqual([lostModel]);
 
       // The list shows it, with no model.
       const list = await api.get(`/api/modelRisks`);
@@ -140,7 +142,7 @@ describe("model data integrity", () => {
 
     it("Delete risks too: the risks are archived with history, not removed", async () => {
       const api = await as(org, admin);
-      const model = await createTestModelInventory(org, {});
+      const model = await createTestModelInventory(org, { model: "Delete model" });
       const a = await createTestModelRisk(org, { model_id: model });
       const b = await createTestModelRisk(org, { model_id: model });
       const useCaseRisk = await createTestRisk(org, {});
@@ -158,12 +160,59 @@ describe("model data integrity", () => {
             old_value: "Active",
             new_value: "Deleted",
           },
+          // Which model the archived risk belonged to.
+          {
+            action: "updated",
+            field_name: "Associated model",
+            old_value: "Delete model",
+            new_value: "-",
+          },
         ]);
       }
       // The archived risk row is still there, so its link row is too.
       expect(await linkExists(link)).toBe(true);
       const deleted = await api.get(`/api/modelRisks?filter=deleted`);
       expect(deleted.body.data.map((r: any) => r.id)).toEqual(expect.arrayContaining([a, b]));
+    });
+
+    it("Delete risks too: a risk added while the delete runs is archived, not kept", async () => {
+      const api = await as(org, admin);
+      const model = await createTestModelInventory(org, {});
+      const existing = await createTestModelRisk(org, { model_id: model });
+
+      // Another request adds a risk to the model and has not committed yet.
+      const other = await sequelize.transaction();
+      let late: number;
+      let pending: Promise<any> | undefined;
+      try {
+        late = (
+          await sequelize.query<{ id: number }>(
+            `INSERT INTO model_risks (organization_id, model_id, risk_name, risk_level, created_at, updated_at, is_deleted)
+             VALUES (:org, :model, 'Late risk', 'Low', NOW(), NOW(), false) RETURNING id`,
+            { replacements: { org, model }, type: QueryTypes.SELECT, transaction: other },
+          )
+        )[0].id;
+
+        pending = api.delete(`/api/modelInventory/${model}?deleteRisks=true`).then((r) => r);
+        // Wait until the delete is blocked on the model row lock.
+        for (let i = 0; i < 100; i++) {
+          const [waiting] = await sequelize.query<{ n: number }>(
+            `SELECT COUNT(*)::int AS n FROM pg_locks WHERE NOT granted`,
+            { type: QueryTypes.SELECT },
+          );
+          if (waiting.n > 0) break;
+          await new Promise((resolve) => setTimeout(resolve, 50));
+        }
+        await other.commit();
+      } catch (error) {
+        await other.rollback();
+        throw error;
+      }
+
+      expect((await pending!).status).toBe(200);
+      for (const id of [existing, late]) {
+        expect(await riskRow(id)).toMatchObject({ is_deleted: true, model_id: null });
+      }
     });
 
     it("never touches another organization's risks", async () => {
@@ -182,6 +231,12 @@ describe("model data integrity", () => {
   });
 
   describe("the foreign key migration", () => {
+    // These tests change the shared schema: put the new key back whatever
+    // happens (up is idempotent), so a failure cannot leave CASCADE behind.
+    afterEach(async () => {
+      await migration.up(queryInterface);
+    });
+
     const fkDef = async () =>
       (
         await sequelize.query<{ def: string }>(
@@ -230,6 +285,26 @@ describe("model data integrity", () => {
         { type: QueryTypes.SELECT },
       );
       expect(names.map((n) => n.conname)).toEqual(["model_risks_model_id_fkey"]);
+    });
+  });
+
+  describe("model risk history names the model", () => {
+    it("an edit of the model records model names, like a model delete does", async () => {
+      const api = await as(org, admin);
+      const from = await createTestModelInventory(org, { model: "From model" });
+      const to = await createTestModelInventory(org, { model: "To model" });
+      const risk = await createTestModelRisk(org, { model_id: from });
+
+      const res = await api.patch(`/api/modelRisks/${risk}`).send({ model_id: to });
+      expect(res.status).toBe(200);
+      expect(await historyOf(risk)).toEqual([
+        {
+          action: "updated",
+          field_name: "Associated model",
+          old_value: "From model",
+          new_value: "To model",
+        },
+      ]);
     });
   });
 
@@ -347,6 +422,29 @@ describe("model data integrity", () => {
         )[0].mapped_model_ids;
       expect(await ids(ev.id)).toEqual([kept]);
       expect(await ids(foreignEv.id)).toEqual([model]);
+    });
+
+    it("stale evidence stays stale when a model it lists is deleted", async () => {
+      const api = await as(org, admin);
+      const model = await createTestModelInventory(org, {});
+      const risk = await createTestRisk(org, {});
+      const [ev] = await sequelize.query<{ id: number }>(
+        `INSERT INTO evidence_hub (organization_id, evidence_name, evidence_type, mapped_model_ids, mapped_risk_ids, updated_at)
+         VALUES (:org, 'Old ev', 'Doc', ARRAY[:model]::int[], ARRAY[:risk]::int[], NOW() - INTERVAL '400 days')
+         RETURNING id`,
+        { replacements: { org, model, risk }, type: QueryTypes.SELECT },
+      );
+      expect(await getStaleEvidenceRiskIdsQuery(org, new Date())).toContain(risk);
+
+      expect((await api.delete(`/api/modelInventory/${model}`)).status).toBe(200);
+
+      const [row] = await sequelize.query<{ mapped_model_ids: number[]; old: boolean }>(
+        `SELECT mapped_model_ids, updated_at < NOW() - INTERVAL '300 days' AS old
+           FROM evidence_hub WHERE id = :id`,
+        { replacements: { id: ev.id }, type: QueryTypes.SELECT },
+      );
+      expect(row).toEqual({ mapped_model_ids: [], old: true });
+      expect(await getStaleEvidenceRiskIdsQuery(org, new Date())).toContain(risk);
     });
   });
 

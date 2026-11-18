@@ -6,13 +6,20 @@ jest.mock("../../database/db", () => ({
 }));
 jest.mock("../../domain.layer/models/modelRisk/modelRisk.model", () => ({ ModelRiskModel: {} }));
 const mockDeleteCustomFields = jest.fn<(...args: any[]) => Promise<void>>();
+const mockDeleteCustomFieldsBulk = jest.fn<(...args: any[]) => Promise<void>>();
 jest.mock("../customField.utils", () => ({
   deleteAllCustomFieldValuesForEntityQuery: (...args: any[]) => mockDeleteCustomFields(...args),
+  deleteAllCustomFieldValuesForEntitiesQuery: (...args: any[]) =>
+    mockDeleteCustomFieldsBulk(...args),
   fetchCustomFieldsForEntities: jest.fn(),
 }));
-const mockRecordChange = jest.fn<(...args: any[]) => Promise<void>>();
+const mockRecordBulk = jest.fn<(...args: any[]) => Promise<void>>();
+const mockRecordDeletionBulk = jest.fn<(...args: any[]) => Promise<void>>();
+const mockFormat = jest.fn<(...args: any[]) => Promise<string>>();
 jest.mock("../changeHistory.base.utils", () => ({
-  recordEntityChange: (...args: any[]) => mockRecordChange(...args),
+  recordEntityChangeBulk: (...args: any[]) => mockRecordBulk(...args),
+  recordEntityDeletionBulk: (...args: any[]) => mockRecordDeletionBulk(...args),
+  formatFieldValue: (...args: any[]) => mockFormat(...args),
   getFieldLabel: () => "Associated model",
 }));
 
@@ -28,7 +35,11 @@ const sqls = () => mockQuery.mock.calls.map((c) => String(c[0]));
 beforeEach(() => {
   mockQuery.mockReset();
   mockDeleteCustomFields.mockReset();
-  mockRecordChange.mockReset();
+  mockDeleteCustomFieldsBulk.mockReset();
+  mockRecordBulk.mockReset();
+  mockRecordDeletionBulk.mockReset();
+  mockFormat.mockReset();
+  mockFormat.mockResolvedValue("Fraud model");
 });
 
 describe("a deleted model risk cannot be changed (M-M9)", () => {
@@ -65,19 +76,31 @@ describe("a deleted model risk cannot be changed (M-M9)", () => {
 describe("releaseModelRisksOfModelQuery (M-H1)", () => {
   /** Answers each query by its SQL. */
   const db = (state: { live: number[]; detached: { id: number; is_deleted: boolean }[] }) =>
-    mockQuery.mockImplementation(async (sql: string, opts: any) => {
-      if (/^SELECT id FROM model_risks/.test(sql.trim())) {
-        return state.live.map((id) => ({ id }));
-      }
-      if (/SET is_deleted = true/.test(sql)) return [[{ id: opts.replacements.id }], {}];
-      if (/FROM model_inventories/.test(sql)) return [{ model: "Fraud model" }];
+    mockQuery.mockImplementation(async (sql: string) => {
+      if (/FOR UPDATE/.test(sql)) return [{ id: 50 }];
+      if (/SET is_deleted = true/.test(sql)) return [state.live.map((id) => ({ id })), {}];
       if (/SET model_id = NULL/.test(sql)) return [state.detached, {}];
       return [[], {}];
     });
+  const indexOf = (re: RegExp) => sqls().findIndex((s) => re.test(s));
 
-  it("keep: no risk is archived; live ones lose the model with a history entry", async () => {
+  it("locks the model row first, in the organization", async () => {
+    db({ live: [7], detached: [{ id: 7, is_deleted: true }] });
+    await releaseModelRisksOfModelQuery(50, true, 1, 9, tx);
+
+    expect(indexOf(/FOR UPDATE/)).toBe(0);
+    expect(sqls()[0]).toMatch(
+      /FROM model_inventories\s+WHERE organization_id = :organizationId AND id = :modelId\s+FOR UPDATE/,
+    );
+    expect(mockQuery.mock.calls[0][1]).toMatchObject({
+      replacements: { organizationId: 1, modelId: 50 },
+      transaction: tx,
+    });
+  });
+
+  it("keep: no risk is archived; every risk that loses the model gets a history entry", async () => {
     db({
-      live: [7, 8],
+      live: [],
       detached: [
         { id: 8, is_deleted: false },
         { id: 7, is_deleted: false },
@@ -89,18 +112,23 @@ describe("releaseModelRisksOfModelQuery (M-H1)", () => {
     expect(result).toEqual({ archived: [], kept: [7, 8] });
     expect(sqls().some((s) => /DELETE FROM model_risks/.test(s))).toBe(false);
     expect(sqls().some((s) => /SET is_deleted = true/.test(s))).toBe(false);
+    expect(mockRecordDeletionBulk).not.toHaveBeenCalled();
     const detach = mockQuery.mock.calls.find((c) => /SET model_id = NULL/.test(String(c[0])))!;
     expect(String(detach[0])).toMatch(/organization_id = :organizationId AND model_id = :modelId/);
     expect(detach[1]).toMatchObject({ replacements: { organizationId: 1, modelId: 50 } });
-    expect(mockRecordChange.mock.calls.map((c) => c.slice(0, 8))).toEqual([
-      ["model_risk", 7, "updated", 9, 1, "Associated model", "Fraud model", "-"],
-      ["model_risk", 8, "updated", 9, 1, "Associated model", "Fraud model", "-"],
+    // The model name is formatted the way an edit of model_id records it.
+    expect(mockFormat).toHaveBeenCalledWith("model_risk", "model_id", 50, {
+      organizationId: 1,
+      transaction: tx,
+    });
+    expect(mockRecordBulk.mock.calls.map((c) => c.slice(0, 10))).toEqual([
+      ["model_risk", [3, 7, 8], "updated", 9, 1, "Associated model", "Fraud model", "-", tx, false],
     ]);
   });
 
-  it("delete: archives each live risk with a deletion in its history, never a hard delete", async () => {
+  it("delete: archives the live risks in one statement, with deletion and model in history", async () => {
     db({
-      live: [7, 8],
+      live: [8, 7],
       detached: [
         { id: 7, is_deleted: true },
         { id: 8, is_deleted: true },
@@ -110,17 +138,30 @@ describe("releaseModelRisksOfModelQuery (M-H1)", () => {
 
     expect(result).toEqual({ archived: [7, 8], kept: [] });
     expect(sqls().some((s) => /DELETE FROM model_risks/.test(s))).toBe(false);
-    expect(mockDeleteCustomFields.mock.calls.map((c) => c[1])).toEqual([7, 8]);
-    expect(mockRecordChange.mock.calls.map((c) => [c[1], c[2], c[3], c[9]])).toEqual([
-      [7, "deleted", 9, false],
-      [8, "deleted", 9, false],
+    // Set-based: no per-risk read or write.
+    expect(sqls().some((s) => /^SELECT id FROM model_risks/.test(s.trim()))).toBe(false);
+    expect(sqls().filter((s) => /SET is_deleted = true/.test(s))).toHaveLength(1);
+    const archiveSql = sqls()[indexOf(/SET is_deleted = true/)];
+    expect(archiveSql).toMatch(
+      /organization_id = :organizationId AND model_id = :modelId AND is_deleted = false/,
+    );
+    expect(archiveSql).toMatch(/deleted_at = NOW\(\)/);
+    expect(indexOf(/FOR UPDATE/)).toBeLessThan(indexOf(/SET is_deleted = true/));
+    expect(indexOf(/SET is_deleted = true/)).toBeLessThan(indexOf(/SET model_id = NULL/));
+    expect(mockDeleteCustomFields).not.toHaveBeenCalled();
+    expect(mockDeleteCustomFieldsBulk).toHaveBeenCalledWith("model_risk", [7, 8], 1, tx);
+    expect(mockRecordDeletionBulk).toHaveBeenCalledWith("model_risk", [7, 8], 9, 1, tx, false);
+    // The archived risks also say which model they belonged to.
+    expect(mockRecordBulk.mock.calls.map((c) => [c[1], c[2], c[6], c[7]])).toEqual([
+      [[7, 8], "updated", "Fraud model", "-"],
     ]);
   });
 
   it("records the history as the system's without a user (AI Advisor)", async () => {
     db({ live: [7], detached: [{ id: 7, is_deleted: true }] });
     await releaseModelRisksOfModelQuery(50, true, 1, null, tx);
-    expect(mockRecordChange.mock.calls[0][3]).toBe(null);
-    expect(mockRecordChange.mock.calls[0][9]).toBe(true);
+    expect(mockRecordDeletionBulk).toHaveBeenCalledWith("model_risk", [7], null, 1, tx, true);
+    expect(mockRecordBulk.mock.calls[0][3]).toBe(null);
+    expect(mockRecordBulk.mock.calls[0][9]).toBe(true);
   });
 });

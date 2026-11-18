@@ -57,6 +57,8 @@ describe("deleteModelInventoryByIdQuery", () => {
     expect(call).toBeDefined();
     expect(String(call[0])).toMatch(/array_remove\(mapped_model_ids, :id\)/);
     expect(String(call[0])).toMatch(/organization_id = :organization_id/);
+    // The freshness sweep reads updated_at as the evidence's last review.
+    expect(String(call[0])).not.toMatch(/updated_at/);
     expect(call[1]).toMatchObject({
       replacements: { organization_id: 1, id: 50 },
       transaction: tx,
