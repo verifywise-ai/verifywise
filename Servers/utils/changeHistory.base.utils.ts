@@ -315,7 +315,7 @@ export const getEntityChangeHistory = async (
        FROM ${tableName} ch
        LEFT JOIN users u ON ch.changed_by_user_id = u.id
        WHERE ch.organization_id = :organization_id AND ch.${foreignKey} = :entity_id
-       ORDER BY ch.changed_at DESC
+       ORDER BY ch.changed_at DESC, ch.id DESC
        LIMIT :limit OFFSET :offset`,
       {
         replacements: { organization_id: organizationId, entity_id: entityId, limit, offset },
