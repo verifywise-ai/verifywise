@@ -5,6 +5,12 @@ permissions:
 
 on:
   pull_request:
+    # Only PRs into develop or master: a PR stacked on another PR's branch gets
+    # its E2E run once its base is merged and it targets develop.
+    branches: ["master", "develop"]
+    # ready_for_review: draft PRs skip E2E (see the job's `if`), so it runs
+    # when the draft is marked ready.
+    types: [opened, synchronize, reopened, ready_for_review]
     paths:
       - "Clients/**"
       - "Servers/**"
@@ -17,9 +23,17 @@ on:
         default: false
         type: boolean
 
+# The org's Free plan runs at most 20 jobs at once, and this workflow takes 5.
+# A newer push to the same PR cancels the older run.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   e2e-tests:
     name: Playwright E2E Tests (shard ${{ matrix.shard }}/${{ matrix.total }})
+    # Draft PRs skip E2E; marking the PR ready for review runs it.
+    if: github.event.pull_request.draft != true
     runs-on: ubuntu-latest
     timeout-minutes: 60
     # Each shard is its own job with its own Postgres and Redis, so tests that

@@ -15,6 +15,12 @@ on:
 permissions:
   contents: read
 
+# A newer push to the same PR cancels the older run (the org's Free plan runs
+# at most 20 jobs at once). Pushes and scheduled runs are never cancelled.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   gitleaks:
     name: Scan for committed secrets
