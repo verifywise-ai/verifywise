@@ -1544,5 +1544,6 @@
   "A selected framework is not used by any use case in this organization.": "Ein ausgewähltes Framework wird von keinem Anwendungsfall dieser Organisation verwendet.",
   "A linked model was not found in this organization.": "Ein verknüpftes Modell wurde in dieser Organisation nicht gefunden.",
   "A linked risk was not found in this organization.": "Ein verknüpftes Risiko wurde in dieser Organisation nicht gefunden.",
-  "A linked training was not found in this organization.": "Eine verknüpfte Schulung wurde in dieser Organisation nicht gefunden."
+  "A linked training was not found in this organization.": "Eine verknüpfte Schulung wurde in dieser Organisation nicht gefunden.",
+  "Only the model's approver or an Admin can change its approval.": "Nur die genehmigende Person des Modells oder ein Admin kann die Genehmigung ändern."
 }

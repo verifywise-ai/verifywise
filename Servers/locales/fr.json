@@ -1544,5 +1544,6 @@
   "A selected framework is not used by any use case in this organization.": "Un référentiel sélectionné n'est utilisé par aucun cas d'usage de cette organisation.",
   "A linked model was not found in this organization.": "Un modèle lié est introuvable dans cette organisation.",
   "A linked risk was not found in this organization.": "Un risque lié est introuvable dans cette organisation.",
-  "A linked training was not found in this organization.": "Une formation liée est introuvable dans cette organisation."
+  "A linked training was not found in this organization.": "Une formation liée est introuvable dans cette organisation.",
+  "Only the model's approver or an Admin can change its approval.": "Seul l'approbateur du modèle ou un Admin peut modifier son approbation."
 }
