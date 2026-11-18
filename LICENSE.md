@@ -4,6 +4,8 @@
 
 Copyright © 2026 VerifyWise Ltd.
 
+VerifyWise Ltd. is registered in England and Wales (company number 17045757) and registered in Canada (business number 784371023).
+
 All rights reserved except as expressly licensed below.
 
 > **In short:** VerifyWise is source-available software. It is free for personal use by individuals and for training and demonstration purposes, and any organization may evaluate it for a limited period. All other use by or for an organization, including governmental, public-sector, educational, academic, research, nonprofit, and commercial organizations, requires separate written authorization, as do commercial hosting and commercial redistribution. This summary is for convenience; the sections below are the license terms.
@@ -48,13 +50,15 @@ The Licensor reserves the right to monetize the Software through separate commer
 
 This is a source-available license, not an Open Source Initiative-approved open-source license.
 
+Files or directories distributed with the Software that carry their own license file or license declaration, such as client software development kits, are governed by that license and not by this License, to the extent of that license's stated scope.
+
 Rights granted under this License are subject to its conditions. To the extent permitted by applicable law, exercising licensed rights constitutes acceptance of those conditions. Nothing in this License restricts rights that applicable law grants independently of the Licensor's permission.
 
 ## 2. Definitions
 
 For purposes of this License:
 
-**2.1 Licensor.** The legal entity identified as the copyright holder above, acting only to the extent it owns or is authorized to license the relevant rights in the Software.
+**2.1 Licensor.** VerifyWise Ltd., the copyright holder identified above, acting through any of its registered offices in the United Kingdom or Canada, and only to the extent it owns or is authorized to license the relevant rights in the Software.
 
 **2.2 You or Licensee.** The individual or legal entity exercising rights under this License.
 
@@ -69,6 +73,8 @@ For purposes of this License:
 - **e.** Research institutes, laboratories, think tanks, and academic or scientific bodies.
 - **f.** Nonprofit organizations, charities, foundations, non-governmental organizations, associations, professional and trade bodies, standards bodies, and cooperatives.
 - **g.** Hospitals, healthcare providers, libraries, museums, and other public-interest institutions.
+
+Individuals who collaborate informally on noncommercial development of, or contributions to, the Software, without acting for or forming an Organization, do not thereby constitute an Organization.
 
 **2.5 Commercial Organization.** A for-profit corporation, business partnership, sole proprietorship, commercial enterprise, or other entity primarily carrying out activities for private commercial benefit.
 
@@ -121,11 +127,11 @@ Individuals may use the Software free of charge, in a purely personal capacity, 
 - Noncommercial software development.
 - Management of personally operated AI models and projects.
 
-Use by an individual primarily for or on behalf of an Organization, an employer, an educational or research institution, or a paying client is not Personal Use. This applies whether or not the individual is paid and whether or not the Organization is commercial.
+Use by an individual primarily for or on behalf of an Organization, an employer, an educational or research institution, or a paying client is not permitted under this Section 4.1. This applies whether or not the individual is paid and whether or not the Organization is commercial.
 
 ### 4.2 Training and Demonstrations
 
-Individuals and Organizations may use the Software for Training Use, and may charge reasonable fees for training, education, workshops, technical demonstrations, or instruction concerning VerifyWise, provided that:
+Individuals and Organizations may use the Software for Training Use, and may charge reasonable fees for training, education, workshops, technical demonstrations, or instruction concerning VerifyWise or AI governance practice, provided that:
 
 - **a.** The Software is used solely for Training Use.
 - **b.** No operational AI governance, risk management, or compliance activity is carried out with the Software for the training provider, for any attendee's Organization, or for any other person or Organization.
@@ -160,6 +166,10 @@ The evaluation period applies once per Organization and its Affiliates for each 
 At the end of the evaluation period, the Licensee must stop the evaluation use, except as otherwise authorized by this License or a separate written agreement.
 
 The Licensor may grant a written extension at its discretion.
+
+### 4.4 Contributions
+
+Any individual or Organization may install, run, and modify the Software as reasonably necessary to develop, test, and submit contributions to the official VerifyWise codebase under Section 8, including when the contributor acts on behalf of an Organization. This permission does not authorize any other Organizational Use.
 
 ## 5. Organizational Use Restrictions
 
@@ -280,8 +290,6 @@ This Section does not itself constitute a CLA or grant commercial relicensing ri
 
 The Licensor may decline to merge contributions for which the required rights have not been obtained.
 
-Developing and submitting a contribution to the official VerifyWise codebase is a Permitted Use, including when the contributor acts on behalf of an Organization.
-
 ## 9. Ownership and Intellectual Property
 
 The original Software and its protected components remain the intellectual property of their respective owners.
@@ -336,7 +344,7 @@ Such licensing may include:
 - Enterprise support and maintenance.
 - Security updates and service-level commitments.
 
-Rights beyond the Permitted Uses arise only from an authorized written agreement and are subject to its terms. The Licensor may, at its sole discretion, offer different terms or pricing to different types of Organizations.
+Rights beyond the Permitted Uses arise only from an authorized written agreement with the Licensor, or with an Affiliate the Licensor authorizes to grant them, and are subject to its terms. The Licensor may, at its sole discretion, offer different terms or pricing to different types of Organizations.
 
 Requesting pricing, discussing an agreement, or submitting an order inquiry does not itself grant Organizational Use or Commercial Use rights.
 
@@ -466,6 +474,8 @@ This License is governed by the laws of England and Wales, without regard to con
 
 Subject to mandatory applicable law, the parties submit to the jurisdiction of the courts of England and Wales for disputes arising from this License.
 
+Nothing in this Section prevents the Licensor from seeking injunctive or other equitable relief, or enforcing its intellectual property rights, in any court of competent jurisdiction, including the courts of Canada and its provinces and territories.
+
 Nothing in this Section limits legal rights or remedies that cannot lawfully be excluded.
 
 ## 21. Severability
@@ -491,7 +501,7 @@ Organizational and commercial licenses, enterprise deployments, redistribution p
 **VerifyWise**
 
 - Website: https://verifywise.ai
-- Legal entity: VerifyWise Ltd. (United Kingdom)
+- Legal entity: VerifyWise Ltd., registered in England and Wales (company number 17045757) and in Canada (business number 784371023)
 - Licensing contact: hello@verifywise.ai
 
 ---

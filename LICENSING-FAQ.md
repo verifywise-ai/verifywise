@@ -4,13 +4,18 @@ This FAQ explains the VerifyWise Community & Evaluation License (VCEL) 1.1 in pl
 
 ### What license does VerifyWise use?
 
-The VerifyWise Community & Evaluation License (VCEL) 1.1. It is a source-available license, not an OSI-approved open-source license (Section 1). The copyright holder and Licensor is VerifyWise Ltd.
+The VerifyWise Community & Evaluation License (VCEL) 1.1. It is a source-available license, not an OSI-approved open-source license (Section 1). The copyright holder and Licensor is VerifyWise Ltd., registered in England and Wales and in Canada (Section 2.1).
+
+### Does VCEL cover everything in the repository?
+
+No. Parts that carry their own license file or declaration, such as the client SDKs, are covered by that license instead (Section 1). Third-party components keep their own licenses (Section 18).
 
 ### Who can use VerifyWise for free?
 
 - Individuals, for personal use in a personal capacity (Section 4.1)
 - Anyone using it for training and demonstrations, including paid courses and workshops, within the limits of Section 4.2
 - Any organization, for a 60-day evaluation (Section 4.3)
+- Anyone developing and testing a contribution to VerifyWise (Section 4.4)
 
 Everything else needs a license.
 
@@ -46,6 +51,10 @@ Not under VCEL. SaaS, hosting, managed services, white-label platforms, resale a
 
 Only for that organization's evaluation or training use. Installing, configuring or maintaining VerifyWise for an organization's production use needs a license (Section 5).
 
+### A few of us work on VerifyWise together in our spare time. Are we an organization?
+
+No. Individuals who collaborate informally on noncommercial development or contributions are not an Organization, as long as none of them is acting for one (Section 2.4).
+
 ### Can I fork or modify VerifyWise?
 
 Yes, for permitted uses. Public forks are allowed for noncommercial development, experimentation, personal research, bug fixing and contributions. Forks and redistributions must keep the license and copyright notices. A fork does not widen the permitted uses: it may not be used by an organization, or be commercially hosted, sold or rebranded, without authorization (Section 7).
@@ -60,7 +69,7 @@ Nothing for that release. Rights validly granted under earlier licensing arrange
 
 ### Do contributors need to sign anything?
 
-The Licensor may require a Contributor License Agreement before merging a contribution (Section 8). Contributing to VerifyWise is a permitted use, even when you do it for your employer.
+The Licensor may require a Contributor License Agreement before merging a contribution (Section 8). Running and modifying VerifyWise to develop and test a contribution is a permitted use, even when you do it for your employer (Section 4.4). It does not cover any other use by your employer.
 
 ### What about trademarks?
 
