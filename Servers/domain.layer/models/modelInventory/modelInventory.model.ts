@@ -542,7 +542,7 @@ export class ModelInventoryModel extends Model<ModelInventoryModel> implements I
       // Blank or whitespace-only values must become NULL (partial unique index,
       // issue #4755) — same normalization as createNewModelInventory.
       // null clears the key as an empty one does.
-      existingModel.external_key = (data.external_key?.trim() || null) as any;
+      existingModel.external_key = data.external_key?.trim() || undefined;
     }
 
     // Always update the updated_at timestamp
