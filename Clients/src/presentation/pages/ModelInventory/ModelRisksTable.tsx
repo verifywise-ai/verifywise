@@ -34,6 +34,7 @@ import { useCustomFieldDefinitions } from "../../../application/hooks/useCustomF
 import { formatCustomFieldValue } from "../../components/CustomFieldsSection/formatCustomFieldValue";
 import { pageOfLabel } from "../../components/Table/pageOfLabel";
 import { useCanCheck } from "../../../application/hooks/useCan";
+import { useTranslation } from "../../../application/hooks/useTranslation";
 
 // LocalStorage key for sorting
 const MODEL_RISKS_SORTING_KEY = "verifywise_model_risks_sorting";
@@ -65,6 +66,7 @@ const ModelRisksTable: React.FC<ModelRisksTableProps> = ({
   visibleColumns,
 }) => {
   const formatUserDate = useFormattedDate();
+  const { t } = useTranslation();
   const can = useCanCheck();
   const canDeleteRisks = can("model.edit");
   const theme = useTheme();
@@ -174,12 +176,13 @@ const ModelRisksTable: React.FC<ModelRisksTableProps> = ({
 
   const getModelName = useCallback(
     (modelId: number | null | undefined) => {
-      // A risk whose model was deleted with "Keep risks" has no model.
-      if (!modelId) return "No model";
+      // A risk whose model was deleted with "Keep risks" has no model. The
+      // export uses the same labels.
+      if (!modelId) return t("No model");
       const model = models.find((m) => m.id == modelId);
-      return model?.model || "Unknown";
+      return model?.model || t("Unknown");
     },
-    [models],
+    [models, t],
   );
 
   // Sorting handler

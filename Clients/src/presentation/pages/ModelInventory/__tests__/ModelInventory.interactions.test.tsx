@@ -408,6 +408,64 @@ describe("ModelInventory interactions", () => {
     expect(Object.fromEntries(riskChecks)).toEqual({ "1": true, "2": false });
   });
 
+  it("under Active only, asks the server, not the loaded (stale) list", async () => {
+    const live = { ...modelRisks[0], id: 1, model_id: 1, is_deleted: false };
+    // Loaded before the risk was added: the page's list has no risk.
+    let serverRisks: unknown[] = [];
+    mockGetAllEntities.mockImplementation(({ routeUrl }: { routeUrl: string }) => {
+      if (routeUrl === "/modelInventory") return Promise.resolve({ data: models });
+      if (routeUrl === "/modelRisks?filter=active") return Promise.resolve({ data: serverRisks });
+      return Promise.resolve({ data: [] });
+    });
+    renderWithProviders(<ModelInventory />);
+    await waitFor(() => expect(screen.getByTestId("model-inventory-table")).toBeInTheDocument());
+    await waitFor(() =>
+      expect(mockGetAllEntities).toHaveBeenCalledWith({ routeUrl: "/modelRisks?filter=active" }),
+    );
+
+    serverRisks = [live];
+    fireEvent.click(await screen.findByText("check-risks-1"));
+    await waitFor(() => expect(riskChecks).toHaveLength(1));
+    expect(riskChecks).toEqual([["1", true]]);
+  });
+
+  it("asks Keep or Delete when the live risks cannot be fetched", async () => {
+    let failRiskFetch = false;
+    mockGetAllEntities.mockImplementation(({ routeUrl }: { routeUrl: string }) => {
+      if (routeUrl === "/modelInventory") return Promise.resolve({ data: models });
+      if (routeUrl.startsWith("/modelRisks"))
+        return failRiskFetch
+          ? Promise.reject(new Error("network down"))
+          : Promise.resolve({ data: [] });
+      return Promise.resolve({ data: [] });
+    });
+    renderWithProviders(<ModelInventory />);
+    await waitFor(() => expect(screen.getByTestId("model-inventory-table")).toBeInTheDocument());
+
+    failRiskFetch = true;
+    fireEvent.click(await screen.findByText("check-risks-1"));
+    await waitFor(() => expect(riskChecks).toHaveLength(1));
+    expect(riskChecks).toEqual([["1", true]]);
+  });
+
+  it("exports a risk whose model is not loaded as Unknown, like the table", async () => {
+    mockGetAllEntities.mockImplementation(({ routeUrl }: { routeUrl: string }) => {
+      if (routeUrl === "/modelInventory") return Promise.resolve({ data: models });
+      if (routeUrl.startsWith("/modelRisks"))
+        return Promise.resolve({ data: [{ ...modelRisks[0], model_id: 999 }] });
+      return Promise.resolve({ data: [] });
+    });
+    renderWithProviders(<ModelInventory />);
+    await waitFor(() => expect(screen.getByTestId("model-inventory-table")).toBeInTheDocument());
+    fireEvent.click(screen.getByText("Model risks"));
+
+    await waitFor(() =>
+      expect(screen.getByTestId("export-menu-model-risks")).toHaveTextContent(
+        '"model_name":"Unknown"',
+      ),
+    );
+  });
+
   it("exports a risk with no model as No model, like the table", async () => {
     mockGetAllEntities.mockImplementation(({ routeUrl }: { routeUrl: string }) => {
       if (routeUrl === "/modelInventory") return Promise.resolve({ data: models });

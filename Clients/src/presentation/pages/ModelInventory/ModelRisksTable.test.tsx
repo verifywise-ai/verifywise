@@ -110,6 +110,20 @@ describe("ModelRisksTable", () => {
     expect(screen.getByText("Unknown")).toBeInTheDocument();
   });
 
+  it("shows 'Unknown' for a model id that is not in the loaded models", () => {
+    renderWithProviders(
+      <ModelRisksTable
+        data={[{ ...risks[0], model_id: 999 }]}
+        isLoading={false}
+        onEdit={vi.fn()}
+        onDelete={vi.fn()}
+        users={users}
+        models={models}
+      />,
+    );
+    expect(screen.getByText("Unknown")).toBeInTheDocument();
+  });
+
   it("calls onEdit when a row is clicked", () => {
     const onEdit = vi.fn();
     renderWithProviders(

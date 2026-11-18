@@ -1640,15 +1640,11 @@ const ModelInventory: React.FC = () => {
   };
 
   // Whether deleting the model should ask Keep / Delete: only live risks
-  // count. The loaded list follows the status filter (archived ones under
-  // "Deleted only" or "Active + deleted"), so for those filters ask the
-  // server for the live list.
+  // count. Always asked of the server, whatever the status filter: the loaded
+  // list can be filtered or stale. If the server cannot answer, ask the user
+  // anyway, so a risk is never decided for them by a guess.
   const handleCheckModelHasRisks = async (id: string): Promise<boolean> => {
     const numericId = parseInt(id);
-    const isLiveRiskOfModel = (risk: IModelRisk) => risk.model_id === numericId && !risk.is_deleted;
-    if (modelRiskStatusFilter === "active") {
-      return modelRisksData.some(isLiveRiskOfModel);
-    }
     try {
       const response = await getAllEntities({ routeUrl: "/modelRisks?filter=active" });
       const liveRisks: IModelRisk[] = Array.isArray(response)
@@ -1656,10 +1652,10 @@ const ModelInventory: React.FC = () => {
         : Array.isArray(response?.data)
           ? response.data
           : [];
-      return liveRisks.some(isLiveRiskOfModel);
+      return liveRisks.some((risk) => risk.model_id === numericId && !risk.is_deleted);
     } catch (error) {
       console.error("Error checking model risks:", error);
-      return modelRisksData.some(isLiveRiskOfModel);
+      return true;
     }
   };
 
@@ -1708,9 +1704,10 @@ const ModelInventory: React.FC = () => {
       const ownerUser = users.find((user: any) => user.id == risk.owner);
       const ownerName = ownerUser ? `${ownerUser.name} ${ownerUser.surname}` : "-";
 
-      // Same as the table: a risk kept from a deleted model has no model.
+      // The same label as the table: "No model" for a risk kept from a
+      // deleted model, "Unknown" for a model not in the loaded list.
       const model = modelInventoryData.find((m) => m.id === risk.model_id);
-      const modelName = !risk.model_id ? t("No model") : model ? model.model : "-";
+      const modelName = !risk.model_id ? t("No model") : model?.model || t("Unknown");
 
       return {
         risk_name: risk.risk_name || "-",
