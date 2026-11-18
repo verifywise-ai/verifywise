@@ -111,13 +111,21 @@ export const getModelsByOrganizationIdQuery = async (organizationId: number) => 
   return modelInventory;
 };
 
-export const getModelInventoryByIdQuery = async (id: number, organizationId: number) => {
+export const getModelInventoryByIdQuery = async (
+  id: number,
+  organizationId: number,
+  // forUpdate (inside a transaction) locks the row, so a save checks and
+  // diffs against the row it then changes.
+  options: { transaction?: Transaction; forUpdate?: boolean } = {},
+) => {
+  const lock = options.forUpdate ? " FOR UPDATE" : "";
   const modelInventory = await sequelize.query(
-    `SELECT * FROM model_inventories WHERE organization_id = :organizationId AND id = :id`,
+    `SELECT * FROM model_inventories WHERE organization_id = :organizationId AND id = :id${lock}`,
     {
       replacements: { organizationId, id },
       mapToModel: true,
       model: ModelInventoryModel,
+      transaction: options.transaction,
     },
   );
 
@@ -129,6 +137,7 @@ export const getModelInventoryByIdQuery = async (id: number, organizationId: num
     `SELECT project_id, framework_id FROM model_inventories_projects_frameworks WHERE organization_id = :organizationId AND model_inventory_id = :model_inventory_id`,
     {
       replacements: { organizationId, model_inventory_id: model.id },
+      transaction: options.transaction,
     },
   )) as [IModelInventoryProjectFramework[], number];
   assignModelLinks(model, projectFrameworks[0]);
@@ -371,7 +380,7 @@ export const updateModelInventoryByIdQuery = async (
   useCaseViewer?: UseCaseViewer,
 ) => {
   const updated_at = new Date();
-  const oldModel = await getModelInventoryByIdQuery(id, organizationId);
+  const oldModel = await getModelInventoryByIdQuery(id, organizationId, { transaction });
 
   // An unchanged approver is not re-checked, so a model whose approver has
   // since left the organization can still be edited. A new one must be a member.

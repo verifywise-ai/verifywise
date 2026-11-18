@@ -68,7 +68,11 @@ describe("assertModelApprovalAllowed: R1, status changes with a saved approver",
   it("lets an Admin set Blocked", () => {
     expect(
       refusal(() =>
-        run({ existing: pendingWithApprover, submitted: { status: "Blocked" }, callerIsAdmin: true }),
+        run({
+          existing: pendingWithApprover,
+          submitted: { status: "Blocked" },
+          callerIsAdmin: true,
+        }),
       ),
     ).toBeNull();
   });
@@ -76,7 +80,10 @@ describe("assertModelApprovalAllowed: R1, status changes with a saved approver",
   it("refuses moving an Approved model back to Pending", () => {
     expect(
       refusal(() =>
-        run({ existing: { approver: APPROVER, status: "Approved" }, submitted: { status: "Pending" } }),
+        run({
+          existing: { approver: APPROVER, status: "Approved" },
+          submitted: { status: "Pending" },
+        }),
       ),
     ).toBe(MODEL_APPROVAL_FORBIDDEN_MESSAGE);
   });
@@ -128,7 +135,10 @@ describe("assertModelApprovalAllowed: R2, approver changes on a decided model", 
   it("refuses an Editor re-assigning an Approved model", () => {
     expect(
       refusal(() =>
-        run({ existing: { approver: APPROVER, status: "Approved" }, submitted: { approver: OTHER } }),
+        run({
+          existing: { approver: APPROVER, status: "Approved" },
+          submitted: { approver: OTHER },
+        }),
       ),
     ).toBe(MODEL_APPROVAL_FORBIDDEN_MESSAGE);
   });
@@ -164,7 +174,10 @@ describe("assertModelApprovalAllowed: R2, approver changes on a decided model", 
   it("refuses an Editor re-assigning a Pending model with a saved approver", () => {
     expect(
       refusal(() =>
-        run({ existing: { approver: APPROVER, status: "Pending" }, submitted: { approver: OTHER } }),
+        run({
+          existing: { approver: APPROVER, status: "Pending" },
+          submitted: { approver: OTHER },
+        }),
       ),
     ).toBe(MODEL_APPROVAL_FORBIDDEN_MESSAGE);
   });
@@ -208,9 +221,9 @@ describe("assertModelApprovalAllowed: R3 and the naming save", () => {
   });
 
   it("refuses a non-Admin naming themself and deciding on create", () => {
-    expect(
-      refusal(() => run({ submitted: { approver: EDITOR, status: "Approved" } })),
-    ).toBe(RISK_APPROVAL_SELF_APPROVER_MESSAGE);
+    expect(refusal(() => run({ submitted: { approver: EDITOR, status: "Approved" } }))).toBe(
+      RISK_APPROVAL_SELF_APPROVER_MESSAGE,
+    );
   });
 
   it("refuses a non-Admin naming someone else and deciding in one save", () => {
