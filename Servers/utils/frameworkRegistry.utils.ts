@@ -11,7 +11,7 @@ import {
 } from "../structures";
 
 /**
- * Runtime CRUD for the 21 frameworks whose table + column layout is declared
+ * Runtime CRUD for the 22 frameworks whose table + column layout is declared
  * in Servers/structures/ (SOC2, GDPR, HIPAA, ...). Each framework gets a
  * named create/delete pair below that mirrors the built-in ones
  * (createEUFrameworkQuery, createISOFrameworkQuery, ...) and is wired into

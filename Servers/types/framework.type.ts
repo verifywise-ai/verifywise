@@ -130,7 +130,7 @@ export const frameworkFilesDeletionSourceMap: Record<number, string[]> = {
   2: ["Management system clauses group", "Reference controls group"],
   3: ["Main clauses group", "Annex controls group"],
   4: ["Subcategories group"], // Only subcategories are tenant-based and have files
-  // Frameworks 5-25 store file links in file_entity_links (not files.source),
+  // Frameworks 5-26 store file links in file_entity_links (not files.source),
   // so the source-based sweep in framework.utils.ts is a no-op. Their delete
   // functions handle file_entity_links cleanup themselves.
   5: [],

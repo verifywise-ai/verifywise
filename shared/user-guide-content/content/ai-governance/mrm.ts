@@ -17,6 +17,10 @@ export const mrmContent: ArticleContent = {
       text: 'The module maps to the ongoing-monitoring, tiering, independent-validation, findings, revalidation, and attestation expectations in the US Federal Reserve SR 26-2, UK PRA SS1/23, and OSFI E-23 supervisory standards.',
     },
     {
+      type: 'paragraph',
+      text: 'If you also want a principle-by-principle E-23 readiness checklist for your model risk program, add the OSFI E-23 Model Risk Management framework on the **Frameworks** page. It is an organization-level checklist that you assess yourself, separate from the model records in MRM.',
+    },
+    {
       type: 'callout',
       variant: 'info',
       text: 'MRM governs the process an examiner inspects: thresholds, evaluation, alerting, and the audit trail. It does not compute metrics for you. Your pipeline calculates drift, performance, and fairness numbers and pushes them in; VerifyWise owns the governance around them.',
