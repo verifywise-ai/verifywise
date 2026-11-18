@@ -227,9 +227,10 @@ check. Model risks follow their model (org-wide). Dataset writes and
 `model_risks.model_id` is `ON DELETE SET NULL` (migration
 `20261117160827-model-risks-keep-on-model-delete`; it was `CASCADE`, which
 deleted every risk of a model, archived ones and their links too, with no
-history). A model deleted outside this path (demo data clean-up, AI Advisor)
-leaves its risks the same way. The history of an AI Advisor delete is
-recorded as the system's (no user).
+history). A model deleted outside this path (demo data clean-up) leaves its
+risks the same way. The AI Advisor's `agent_delete_model` deletes through
+`deleteModelInventoryService` with "Delete risks too", as the acting user, so
+its history names that user and an MRM-protected model is refused.
 
 ### Model Risks
 
@@ -581,10 +582,12 @@ letting the save fail with a 403.
 `services/modelInventory.service.ts` and `services/modelRisk.service.ts`
 hold every model and model risk write with what goes with it. They take
 plain arguments (organization, user, data, optional transaction; no req or
-res), so the REST controllers, Shadow AI and, later, the AI advisor share
-them. With a caller's transaction, the notices run after it commits
-(`tx.afterCommit`); without one the service opens and commits its own
-(`utils/transaction.utils.ts` `inTransaction`).
+res), so the REST controllers, Shadow AI and the AI advisor share them. With
+a caller's transaction, the notices run after it commits (`tx.afterCommit`);
+without one the service opens and commits its own
+(`utils/transaction.utils.ts` `inTransaction`). The "model added / updated /
+deleted" automations in the model queries are enqueued after commit too, so
+a rolled-back write (a failed start governance, say) announces nothing.
 
 | Function | What it carries |
 |---|---|
@@ -601,6 +604,29 @@ row had been changed in place, so a move to Approved did not trigger it
 either. Shadow AI's start governance creates its model and model risk through
 the services, so the model now has a creation history row, runs the "model
 added" automation and, when added as Approved, the deployment step.
+
+### AI advisor
+
+The advisor's model and model risk write tools run as the acting user (the
+requester after an approval, else the chatting user, `actingUserId`) through
+`advisor/functions/modelWriteScope.ts`: they need `model.edit`, as the
+console's routes, and the user's role decides whether they are an Admin for
+the approval rule. A refusal (approval rule, a reference outside the
+organization, a missing row, an MRM-protected model) is the tool's failure
+message `{ success: false, message }`, not a thrown error.
+
+| Tool | Writes through |
+|---|---|
+| `agent_update_model` | `updateModelInventoryService` (status sets `status_date`; a name or provider change renames `provider_model`) |
+| `agent_retire_model` | `updateModelInventoryService` with status **Retired** (it used to set Blocked) |
+| `agent_update_model_lifecycle_phase` | nothing: it refuses. A model has no lifecycle phase field (the model-lifecycle extension keeps a checklist per phase); the tool used to write the phase into `status` |
+| `agent_delete_model` | `deleteModelInventoryService`, risks archived |
+| `agent_link_model_to_project` | `linkModelToUseCaseService`, after the use case write check (`refuseUseCaseWrite`: `useCase.edit` and write access to the use case) |
+| `agent_suggest_model_risk`, `agent_update_model_risk`, `agent_change_model_risk_status`, `agent_attach/detach_model_risk_to/from_model`, `agent_delete_model_risk` | the model risk service (history, owner notices) |
+
+`agent_restore_model_risk` still writes directly (there is no restore in the
+service). The model risk tools strip `_requesterId` before their strict
+schema check, which refused every approved card before.
 
 ## Model risk owner notices
 

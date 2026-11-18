@@ -12,7 +12,7 @@ import {
   getProjectReadAccessQuery,
   type ProjectAccess,
 } from "../../utils/project.utils";
-import { getUserRoleInOrganization } from "../../utils/userPermission.utils";
+import { getUserRoleInOrganization, userHasPermission } from "../../utils/userPermission.utils";
 import type { UseCaseOfChild } from "../../middleware/projectAccess.middleware";
 import {
   useCaseOfEuAnswer,
@@ -161,6 +161,38 @@ export const useCaseRefusalForTool = async (
     ) {
       return noAccess(projectId);
     }
+  }
+  return null;
+};
+
+export type Refusal = { success: false; message: string };
+
+/**
+ * The console's rule for a use case write: useCase.edit, and for an existing
+ * use case write access to it (getProjectAccessQuery: Admin, owner, member
+ * or group member, as PATCH /api/projects/:id). Returns the refusal to
+ * report, or null when the write may go ahead.
+ */
+export const refuseUseCaseWrite = async (
+  params: Record<string, unknown>,
+  organizationId: number,
+  useCaseId?: unknown,
+): Promise<Refusal | null> => {
+  const userId = actingUserId(params);
+  if (!userId || !(await userHasPermission(organizationId, userId, "useCase.edit"))) {
+    return { success: false, message: "Your role does not allow changing use cases" };
+  }
+  if (useCaseId === undefined) return null;
+  const id = Number(useCaseId);
+  const role = await getUserRoleInOrganization(organizationId, userId);
+  const access =
+    Number.isSafeInteger(id) && id > 0 && role
+      ? await getProjectAccessQuery(id, { userId, role: role.name }, organizationId)
+      : "not_found";
+  if (access === "not_found")
+    return { success: false, message: `Use case #${useCaseId} not found` };
+  if (access === "denied") {
+    return { success: false, message: `You do not have access to use case #${useCaseId}` };
   }
   return null;
 };
