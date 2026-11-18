@@ -28,7 +28,17 @@ export async function modelWriteContext(
   params: Record<string, unknown>,
   organizationId: number,
 ): Promise<ModelWriteContext | Refusal> {
-  const userId = actingUserId(params);
+  return modelWriteContextForUser(organizationId, actingUserId(params));
+}
+
+/**
+ * The same for a known user id: the requester of an approved AI action
+ * (`aiActions/registerModel`, `aiActions/createModelRisk`).
+ */
+export async function modelWriteContextForUser(
+  organizationId: number,
+  userId: number | undefined,
+): Promise<ModelWriteContext | Refusal> {
   const role = userId ? await getUserRoleInOrganization(organizationId, userId) : undefined;
   if (!userId || !role || !(await userHasPermission(organizationId, userId, "model.edit"))) {
     return { success: false, message: MODEL_WRITE_REFUSED };

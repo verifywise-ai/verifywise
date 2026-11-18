@@ -35,7 +35,10 @@ import {
   updateSubmissionRoutingQuery,
   updateSecondReviewQuery,
 } from "../utils/intakeForm.utils";
-import { createNewModelInventoryQuery } from "../utils/modelInventory.utils";
+import { createModelInventoryService } from "../services/modelInventory.service";
+import { createModelRiskService } from "../services/modelRisk.service";
+import { ModelApprovalForbiddenError } from "../utils/modelApproval.utils";
+import { requestCallerIsAdmin } from "../utils/organizationAdmin.utils";
 import { createNewProjectQuery } from "../utils/project.utils";
 import { setTierSuggestionResponseQuery } from "../utils/intakeTierSuggestion.utils";
 import type { ApplicantTierResponse } from "./intakeTierSuggestion.ctrl";
@@ -55,7 +58,6 @@ import { IntakeEntityType } from "../domain.layer/enums/intake-entity-type.enum"
 import { ModelInventoryStatus } from "../domain.layer/enums/model-inventory-status.enum";
 import { ProjectStatus } from "../domain.layer/enums/project-status.enum";
 import { AiRiskClassification } from "../domain.layer/enums/ai-risk-classification.enum";
-import { ModelInventoryModel } from "../domain.layer/models/modelInventory/modelInventory.model";
 import { IIntakeFormSchema } from "../domain.layer/interfaces/i.intakeForm";
 import {
   validateIntakeFormSchemaLabels,
@@ -149,7 +151,6 @@ import {
 } from "../services/intakeScoring/approvalRisks";
 import { createRiskService } from "../services/risk.service";
 import { SYSTEM_RISK_VIEWER } from "../utils/riskVisibility.utils";
-import { createNewModelRiskQuery } from "../utils/modelRisk.utils";
 import { LIKELIHOODS, SEVERITIES } from "../services/intakeScoring/riskMappers";
 import type { IntakeSuggestedRisk } from "../services/intakeScoring/intakeSuggestions";
 import { selectRetryStages } from "../services/intakeScoring/retry";
@@ -2624,7 +2625,11 @@ async function approve(
     );
 
     if (submission.entityType === IntakeEntityType.MODEL) {
-      const model = ModelInventoryModel.createNewModelInventory({
+      // Through the model service, as the approving user: the approval rule
+      // (a non-Admin may not approve a submission that names them the
+      // model's approver), the change history, the "model added" automation
+      // and the approver notice, sent after this transaction commits.
+      const modelInput = {
         provider: (entityData.provider as string) || "",
         model: (entityData.name as string) || (entityData.model as string) || "",
         version: (entityData.modelVersion as string) || (entityData.version as string) || "",
@@ -2638,16 +2643,31 @@ async function approve(
         hosting_provider:
           (entityData.hosting_provider as string) || (entityData.modelType as string) || "",
         status: ModelInventoryStatus.PENDING,
-      });
-
-      const createdModel = await createNewModelInventoryQuery(
-        model,
-        req.organizationId!,
-        [],
-        [],
-        transaction,
-      );
-      entityId = createdModel.id!;
+      };
+      try {
+        const createdModel = await createModelInventoryService(
+          modelInput,
+          {
+            organizationId: req.organizationId!,
+            userId: req.userId!,
+            callerIsAdmin: await requestCallerIsAdmin(req),
+          },
+          transaction,
+        );
+        entityId = createdModel.id!;
+      } catch (error) {
+        // The submission's approver is the approving user (R3), or is not a
+        // member of the organization.
+        if (error instanceof ModelApprovalForbiddenError) {
+          await transaction.rollback();
+          return res.status(403).json(STATUS_CODE[403](translateError(req, error)));
+        }
+        if (error instanceof ValidationException) {
+          await transaction.rollback();
+          return res.status(400).json(STATUS_CODE[400](translateError(req, error)));
+        }
+        throw error;
+      }
     } else if (submission.entityType === IntakeEntityType.USE_CASE) {
       // The organization's defaults for a new use case (#5192): its region
       // when the submission gave none, and its frameworks.
@@ -2815,9 +2835,11 @@ async function approve(
     for (const s of submission.suggestedRisks?.items ?? []) {
       if (s.state !== "accepted") continue;
       if (submission.entityType === IntakeEntityType.MODEL) {
-        await createNewModelRiskQuery(
+        // Through the model risk service: change history and the owner
+        // notice, after this transaction commits.
+        await createModelRiskService(
           buildModelRiskFromSuggestion(s, { ...approval, modelId: entityId }),
-          req.organizationId!,
+          { organizationId: req.organizationId!, userId: req.userId! },
           transaction,
         );
       } else {
