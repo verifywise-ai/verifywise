@@ -5,6 +5,13 @@ permissions:
 
 on:
   pull_request:
+    # Only PRs into develop or master: a PR stacked on another PR's branch gets
+    # its E2E run once its base is merged and it targets develop.
+    branches: ["master", "develop"]
+    # ready_for_review: draft PRs skip E2E (see the job's `if`), so it runs
+    # when the draft is marked ready. edited: a stacked PR is retargeted to
+    # develop when its base merges; the job's `if` ignores title/body edits.
+    types: [opened, synchronize, reopened, ready_for_review, edited]
     paths:
       - "Clients/**"
       - "Servers/**"
@@ -17,9 +24,20 @@ on:
         default: false
         type: boolean
 
+# The org's Free plan runs at most 20 jobs at once, and this workflow takes 5.
+# A newer push to the same PR cancels the older run; any other run is grouped
+# by its own commit. A title/body edit (an `edited` event without a base
+# change) gets a group of its own, so it does not cancel a running E2E run.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.sha }}${{ github.event.action == 'edited' && github.event.changes.base == null && format('-edit-{0}', github.run_id) || '' }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   e2e-tests:
     name: Playwright E2E Tests (shard ${{ matrix.shard }}/${{ matrix.total }})
+    # Draft PRs skip E2E; marking the PR ready for review runs it. An `edited`
+    # event runs it only when the base branch changed.
+    if: github.event.pull_request.draft != true && (github.event.action != 'edited' || github.event.changes.base != null)
     runs-on: ubuntu-latest
     timeout-minutes: 60
     # Each shard is its own job with its own Postgres and Redis, so tests that
@@ -327,14 +345,14 @@ jobs:
         run: npx playwright test --shard=${{ matrix.shard }}/${{ matrix.total }}
 
       - name: Save last-run metadata
-        if: always()
+        if: ${{ !cancelled() }}
         uses: actions/cache/save@v6
         with:
           path: Clients/test-results/.last-run.json
           key: playwright-last-run-${{ github.ref }}-shard${{ matrix.shard }}-${{ github.run_id }}-${{ github.run_attempt }}
 
       - name: Upload Playwright report
-        if: always()
+        if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v7
         with:
           name: playwright-report-shard${{ matrix.shard }}
@@ -347,7 +365,7 @@ jobs:
       # to the list of what was not checked. Written directly by the helper
       # rather than by a reporter, so it exists whatever the reporter config is.
       - name: Upload accessibility report
-        if: always()
+        if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v7
         with:
           name: accessibility-report-shard${{ matrix.shard }}
@@ -355,7 +373,7 @@ jobs:
           retention-days: 14
 
       - name: Upload test results
-        if: always()
+        if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v7
         with:
           name: playwright-results-shard${{ matrix.shard }}
@@ -363,7 +381,7 @@ jobs:
           retention-days: 7
 
       - name: Upload backend logs
-        if: always()
+        if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v7
         with:
           name: backend-logs-shard${{ matrix.shard }}
@@ -373,7 +391,7 @@ jobs:
           retention-days: 7
 
       - name: Upload AIGateway logs
-        if: always()
+        if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v7
         with:
           name: aigateway-logs-shard${{ matrix.shard }}

@@ -2,8 +2,10 @@ name: ZAP Baseline Scan
 
 # OWASP ZAP baseline (passive) scans of the running app.
 # - Nightly: catches regressions on develop
-# - PRs touching Servers/Clients: informational signal (does not block)
-# Reports are uploaded as artifacts.
+# - Manual: run it on a branch from the Actions tab when a change needs it
+# No longer on every PR (2026-11-18): it was informational only, yet started
+# the whole stack on a runner for each push while the org's 20-job limit kept
+# other PRs waiting. Reports are uploaded as artifacts.
 
 permissions:
   contents: read
@@ -11,11 +13,6 @@ permissions:
 on:
   schedule:
     - cron: '0 4 * * *' # nightly, after the test-image build
-  pull_request:
-    branches: [master, develop]
-    paths:
-      - 'Servers/**'
-      - 'Clients/**'
   workflow_dispatch:
 
 jobs:
