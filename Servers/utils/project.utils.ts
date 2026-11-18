@@ -274,6 +274,31 @@ const evaluateProjectAccess = async (
   return rows[0].can_view === true ? "allowed" : "denied";
 };
 
+/**
+ * Which of these use cases of the organization the user cannot change: the
+ * write rule of getProjectAccessQuery (projectVisibilitySql) for many ids in
+ * one query. Ids not in the organization are not listed (nothing to refuse).
+ */
+export const inaccessibleUseCasesQuery = async (
+  projectIds: number[],
+  viewer: ProjectViewer,
+  organizationId: number,
+): Promise<number[]> => {
+  if (projectIds.length === 0) return [];
+  const visibility = projectVisibilitySql("p", viewer);
+  if (!visibility.sql) return [];
+  const rows = await sequelize.query<{ id: number }>(
+    `SELECT p.id FROM projects p
+      WHERE p.organization_id = :organizationId AND p.id IN (:projectIds)
+        AND (TRUE${visibility.sql}) IS NOT TRUE`,
+    {
+      replacements: { organizationId, projectIds, ...visibility.replacements },
+      type: QueryTypes.SELECT,
+    },
+  );
+  return rows.map((r) => r.id);
+};
+
 /** Whether the user can see this use case, inside the caller's transaction. */
 export const canViewProjectQuery = async (
   projectId: number,
@@ -701,6 +726,46 @@ export const updateProjectUpdatedByIdQuery = async (
   }
 };
 
+/** The project columns updateProjectByIdQuery writes when the input holds them. */
+const PROJECT_UPDATE_COLUMNS = [
+  "project_title",
+  "owner",
+  "external_owner_name",
+  "external_owner_email",
+  "start_date",
+  "ai_risk_classification",
+  "goal",
+  "geography",
+  "target_industry",
+  "description",
+  "last_updated",
+  "last_updated_by",
+  "status",
+  "use_case_category",
+  "use_case_purpose",
+  "use_case_audience",
+  "deployment_context",
+  // #4904: without this, attaching an approval workflow on edit was
+  // silently dropped (the INSERT list has it; the update list did not).
+  "approval_workflow_id",
+] as const;
+
+/** Stamped by the server on an update; on their own they change nothing. */
+const UPDATE_STAMP_COLUMNS: readonly string[] = ["last_updated", "last_updated_by"];
+
+/**
+ * Whether an update input writes at least one real project column: not the
+ * members (a separate table) and not the last updated stamps. A members-only
+ * update is not a project update, so it is not stamped and does not fire
+ * the "project updated" automation.
+ */
+export function hasProjectColumnUpdate(input: object): boolean {
+  const fields = input as Record<string, unknown>;
+  return [...PROJECT_UPDATE_COLUMNS, "high_risk_roles"].some(
+    (column) => !UPDATE_STAMP_COLUMNS.includes(column) && fields[column] !== undefined,
+  );
+}
+
 export const updateProjectByIdQuery = async (
   id: number,
   project: Partial<ProjectModel>,
@@ -762,37 +827,16 @@ export const updateProjectByIdQuery = async (
   }
 
   const updateProject: Partial<Record<keyof ProjectModel, any>> & { organizationId?: number } = {};
-  const setParts = [
-    "project_title",
-    "owner",
-    "external_owner_name",
-    "external_owner_email",
-    "start_date",
-    "ai_risk_classification",
-    "goal",
-    "geography",
-    "target_industry",
-    "description",
-    "last_updated",
-    "last_updated_by",
-    "status",
-    "use_case_category",
-    "use_case_purpose",
-    "use_case_audience",
-    "deployment_context",
-    // #4904: without this, attaching an approval workflow on edit was
-    // silently dropped (the INSERT list has it; the update list did not).
-    "approval_workflow_id",
-  ]
-    .filter((f) => {
-      // Include fields that are explicitly provided, including null, 0, or empty string
-      if (project[f as keyof ProjectModel] !== undefined) {
-        updateProject[f as keyof ProjectModel] = project[f as keyof ProjectModel];
-        return true;
-      }
-      return false;
-    })
-    .map((f) => `${f} = :${f}`);
+  // Checked after the owner is resolved, which can add ownership columns.
+  const changesProjectColumns = hasProjectColumnUpdate(project);
+  const setParts = PROJECT_UPDATE_COLUMNS.filter((f) => {
+    // Include fields that are explicitly provided, including null, 0, or empty string
+    if (project[f as keyof ProjectModel] !== undefined) {
+      updateProject[f as keyof ProjectModel] = project[f as keyof ProjectModel];
+      return true;
+    }
+    return false;
+  }).map((f) => `${f} = :${f}`);
   if (project.high_risk_roles !== undefined) {
     // Sequelize would turn [] into NULL, so the roles go in as an SQL fragment.
     const roles = highRiskRolesArraySql(
@@ -844,8 +888,9 @@ export const updateProjectByIdQuery = async (
     })[],
     number,
   ];
-  // No project column changed (e.g. members only): nothing for "project updated" to report.
-  const automations: AutomationRows = setClause
+  // No project column changed (e.g. members only): nothing for "project updated"
+  // to report, even when a caller stamped last_updated.
+  const automations: AutomationRows = changesProjectColumns
     ? ((await sequelize.query(
         `SELECT
       pat.key AS trigger_key,

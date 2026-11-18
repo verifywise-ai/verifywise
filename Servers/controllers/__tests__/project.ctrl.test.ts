@@ -15,6 +15,9 @@ jest.mock("../../utils/project.utils", () => ({
   calculateVendirRisks: jest.fn(),
   countAnswersByProjectId: jest.fn(),
   countSubControlsByProjectId: jest.fn(),
+  // Pure column check: keep the real rule so the stamping tests exercise it.
+  hasProjectColumnUpdate: jest.requireActual<any>("../../utils/project.utils")
+    .hasProjectColumnUpdate,
 }));
 jest.mock("../../utils/user.utils", () => ({
   getUserByIdQuery: jest.fn(),
@@ -501,6 +504,51 @@ describe("project.ctrl", () => {
         { requireOwner: false },
       );
     });
+    it("sets last_updated and last_updated_by itself, ignoring the body (U-M4)", async () => {
+      const existing = { ...buildProject(), owner: 1 };
+      mockGetById.mockResolvedValue(existing as any);
+      mockGetMembers.mockResolvedValue([] as any);
+      mockUpdate.mockResolvedValue({ ...existing, members: [] } as any);
+      const before = Date.now();
+      const req = createReq({
+        params: { id: "1" },
+        userId: 4,
+        body: {
+          description: "New",
+          last_updated: "2001-01-01T00:00:00.000Z",
+          last_updated_by: 99,
+        },
+      });
+      const res = createRes();
+      await updateProjectById(req, res);
+      expect(res.status).toHaveBeenCalledWith(202);
+      const written = mockUpdate.mock.calls[0][1] as any;
+      expect(written.last_updated_by).toBe(4);
+      expect(written.last_updated).toBeInstanceOf(Date);
+      expect(written.last_updated.getTime()).toBeGreaterThanOrEqual(before);
+    });
+    it("diffs the stored values, so framework fields it never writes are not history (U-M3)", async () => {
+      const existing = { ...buildProject({ description: "Old" }), owner: 1 };
+      const stored = { ...existing, description: "New", members: [] };
+      mockGetById.mockResolvedValue(existing as any);
+      mockGetMembers.mockResolvedValue([] as any);
+      mockUpdate.mockResolvedValue(stored as any);
+      const req = createReq({
+        params: { id: "1" },
+        body: {
+          description: "New",
+          framework: [1],
+          monitored_regulations_and_standards: ["EU AI Act"],
+        },
+      });
+      const res = createRes();
+      await updateProjectById(req, res);
+      expect(res.status).toHaveBeenCalledWith(202);
+      const diffed = mockTrackChanges.mock.calls[0][1] as Record<string, unknown>;
+      expect(diffed).toMatchObject({ description: "New" });
+      expect(diffed).not.toHaveProperty("framework");
+      expect(diffed).not.toHaveProperty("monitored_regulations_and_standards");
+    });
     it("rolls back its transaction when the row is gone at update time", async () => {
       mockGetById.mockResolvedValue({ ...buildProject(), owner: 1 } as any);
       mockGetMembers.mockResolvedValue([] as any);
@@ -564,12 +612,15 @@ describe("project.ctrl", () => {
       const existing = { ...buildProject(), owner: 1 };
       mockGetById.mockResolvedValue(existing as any);
       mockGetMembers.mockResolvedValue([7] as any);
-      mockUpdate.mockResolvedValue({ ...existing, members: [7] } as any);
+      mockUpdate.mockResolvedValue({ ...existing, project_title: "P2", members: [7] } as any);
       const req = createReq({ params: { id: "1" }, body: { project_title: "P2" } });
       const res = createRes();
       await updateProjectById(req, res);
       expect(mockTrackChanges).toHaveBeenCalledTimes(1);
-      expect(mockTrackChanges).toHaveBeenCalledWith(existing, { project_title: "P2" });
+      expect(mockTrackChanges).toHaveBeenCalledWith(
+        existing,
+        expect.objectContaining({ project_title: "P2" }),
+      );
     });
     it("looks up added members within the organization only", async () => {
       const existing = { ...buildProject(), owner: 1 };
@@ -871,6 +922,51 @@ describe("project.ctrl", () => {
       const res = createRes();
       await getProjectStatsById(req, res);
       expect(res.status).toHaveBeenCalledWith(202);
+    });
+    it("reads the owner within this organization", async () => {
+      const project = { ...buildProject(), owner: 4, last_updated_by: null };
+      mockGetById.mockResolvedValue(project as any);
+      mockGetUser.mockResolvedValue(null as any);
+      const req = createReq({ params: { id: "1" }, organizationId: 8 });
+      const res = createRes();
+      await getProjectStatsById(req, res);
+      expect(mockGetUser).toHaveBeenCalledWith(4, null, 8);
+    });
+    it("returns the user who last updated it, read in this organization (U-L2)", async () => {
+      const project = {
+        ...buildProject(),
+        owner: null,
+        last_updated: new Date(),
+        last_updated_by: 3,
+      };
+      mockGetById.mockResolvedValue(project as any);
+      mockGetUser.mockResolvedValue({
+        id: 3,
+        name: "Ada",
+        surname: "Lovelace",
+        email: "ada@example.com",
+        password_hash: "secret",
+      } as any);
+      const req = createReq({ params: { id: "1" }, organizationId: 8 });
+      const res = createRes();
+      await getProjectStatsById(req, res);
+      expect(mockGetUser).toHaveBeenCalledWith(3, null, 8);
+      const body = res.json.mock.calls[0][0];
+      expect(body.data.user.userWhoUpdated).toEqual({
+        id: 3,
+        name: "Ada",
+        surname: "Lovelace",
+        email: "ada@example.com",
+      });
+    });
+    it("returns null for the updater when none is recorded", async () => {
+      const project = { ...buildProject(), owner: null, last_updated_by: null };
+      mockGetById.mockResolvedValue(project as any);
+      const req = createReq({ params: { id: "1" } });
+      const res = createRes();
+      await getProjectStatsById(req, res);
+      expect(mockGetUser).not.toHaveBeenCalled();
+      expect(res.json.mock.calls[0][0].data.user.userWhoUpdated).toBeNull();
     });
     it("should return 500 on error", async () => {
       mockGetById.mockRejectedValue(new Error("DB error"));

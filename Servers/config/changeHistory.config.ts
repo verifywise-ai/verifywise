@@ -524,6 +524,10 @@ export const ENTITY_CONFIGS: { [key in EntityType]: EntityConfig } = {
       "goal",
       "target_industry",
       "description",
+      "use_case_category",
+      "use_case_purpose",
+      "use_case_audience",
+      "deployment_context",
       "status",
       "framework",
       "monitored_regulations_and_standards",
@@ -541,6 +545,10 @@ export const ENTITY_CONFIGS: { [key in EntityType]: EntityConfig } = {
       goal: "Goal",
       target_industry: "Target industry",
       description: "Description",
+      use_case_category: "Use case category",
+      use_case_purpose: "Use case purpose",
+      use_case_audience: "Use case audience",
+      deployment_context: "Deployment context",
       status: "Status",
       framework: "Frameworks",
       monitored_regulations_and_standards: "Monitored regulations and standards",
@@ -944,7 +952,15 @@ export const ENTITY_CONFIGS: { [key in EntityType]: EntityConfig } = {
     },
     fieldFormatters: {
       target_date: GENERIC_FORMATTERS.date,
+      // Provider and model, as the incident's affected model is named.
+      model_id: namedRowFormatter(
+        "SELECT CONCAT_WS(' ', provider, model) AS name FROM model_inventories WHERE id = :id AND organization_id = :organizationId",
+        "Model",
+      ),
     },
+    // Compared by id: two models can share a name, and a move between them
+    // is still a change.
+    fieldComparators: { model_id: (value: unknown) => String(value ?? "") },
   },
 
   dataset: {

@@ -18,6 +18,10 @@ vi.mock("../../../../application/repository/organization.repository", () => ({
 }));
 
 describe("SetupModal", () => {
+  // Several tests swap window.location for a stub with reload(); put the real
+  // one back so later tests (and files sharing the worker) see a full Location.
+  const realLocation = window.location;
+
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(updateOnboardingStatus).mockReset().mockResolvedValue({});
@@ -27,6 +31,7 @@ describe("SetupModal", () => {
   });
 
   afterEach(() => {
+    Object.defineProperty(window, "location", { value: realLocation, writable: true });
     vi.useRealTimers();
     vi.restoreAllMocks();
   });
@@ -58,7 +63,7 @@ describe("SetupModal", () => {
     expect(onSkip).toHaveBeenCalledTimes(1);
   });
 
-  it("calls onComplete and reloads when Add demo data is clicked", async () => {
+  it("waits for Explore the demo before completing and reloading", async () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const reloadSpy = vi.fn();
     Object.defineProperty(window, "location", {
@@ -68,6 +73,39 @@ describe("SetupModal", () => {
     const onComplete = vi.fn();
     renderWithProviders(<SetupModal onComplete={onComplete} onSkip={vi.fn()} />);
     await user.click(screen.getByText("Add demo data"));
+
+    await user.click(await screen.findByText("Explore the demo"));
+    expect(onComplete).not.toHaveBeenCalled();
+    act(() => {
+      vi.advanceTimersByTime(400);
+    });
+    expect(onComplete).toHaveBeenCalledTimes(1);
+    expect(reloadSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it("saves completed to Redux as soon as the demo data is in", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    const onComplete = vi.fn();
+    const { store } = renderWithProviders(<SetupModal onComplete={onComplete} onSkip={vi.fn()} />, {
+      preloadedAuth: { onboardingStatus: "pending" },
+    });
+    await user.click(screen.getByText("Add demo data"));
+    await screen.findByText("Explore the demo");
+
+    // A refresh now must not bring the modal back, so the persisted status is
+    // already completed before the user clicks Explore.
+    expect(store.getState().auth.onboardingStatus).toBe("completed");
+    expect(onComplete).not.toHaveBeenCalled();
+  });
+
+  it("completes and reloads only once on a double-click of Explore the demo", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    const reloadSpy = vi.fn();
+    Object.defineProperty(window, "location", { value: { reload: reloadSpy }, writable: true });
+    const onComplete = vi.fn();
+    renderWithProviders(<SetupModal onComplete={onComplete} onSkip={vi.fn()} />);
+    await user.click(screen.getByText("Add demo data"));
+    await user.dblClick(await screen.findByText("Explore the demo"));
     act(() => {
       vi.advanceTimersByTime(400);
     });
@@ -86,11 +124,14 @@ describe("SetupModal", () => {
     expect(onComplete).toHaveBeenCalledTimes(1);
   });
 
-  it("shows spinner when Add demo data is clicked", async () => {
+  it("shows the demo data loader while demo data is created", async () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    vi.mocked(postAutoDrivers).mockReturnValueOnce(new Promise(() => {}));
     renderWithProviders(<SetupModal onComplete={vi.fn()} onSkip={vi.fn()} />);
     await user.click(screen.getByText("Add demo data"));
-    expect(document.querySelector(".MuiCircularProgress-root")).toBeInTheDocument();
+    expect(screen.getByTestId("demo-data-loader")).toBeInTheDocument();
+    expect(screen.getByText("Setting up your demo workspace")).toBeInTheDocument();
+    expect(screen.queryByText("Start blank")).not.toBeInTheDocument();
   });
 
   it("shows spinner when Start blank is clicked", async () => {
@@ -177,6 +218,7 @@ describe("SetupModal", () => {
     expect(await screen.findByRole("alert")).toBeInTheDocument();
 
     await user.click(screen.getByText("Add demo data"));
+    await user.click(await screen.findByText("Explore the demo"));
     act(() => {
       vi.advanceTimersByTime(400);
     });

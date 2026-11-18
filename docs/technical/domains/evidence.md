@@ -505,7 +505,29 @@ Evidence files attached to assessment answers via:
 
 ### Evidence Hub Endpoints
 
-All endpoints require JWT authentication.
+All endpoints require JWT authentication. There is no evidence edit
+permission of its own (`evidence.admin` only runs the freshness sweep), so
+`evidenceHub.ctrl.ts` checks writes (create, update, delete), deny by default:
+
+- the caller needs at least one of `model.edit`, `training.edit`,
+  `risks.edit` (an Auditor or Reviewer cannot write evidence);
+- for each link field set on the stored row or in the request, its own key:
+  `mapped_model_ids` → `model.edit`, `mapped_training_ids` → `training.edit`,
+  `mapped_risk_ids` → `risks.edit`. A row holds one link type
+  (`evidence_hub_single_mapping_check`).
+
+Only `evidence_name`, `evidence_type`, `description`, the three link fields,
+`evidence_files` and `deleteFiles` are read from the body; anything else is
+ignored. Each link field and `deleteFiles` must be absent, `null`, or an array
+of positive integer ids (`deleteFiles` also takes digit strings); anything else
+is a 400 (`{field} must be a list of ids`), answered before the permission
+check. A body without a link field leaves those links unchanged, and the model
+change history records no added or removed model for it.
+
+Every model, risk and training id the write adds must be the organization's
+(`assertEvidenceLinksInOrganization` in `evidenceHub.utils.ts`, run in the
+write transaction); otherwise 400. Ids the stored row already links to are not
+re-checked, so evidence that points at a since-deleted record stays editable.
 
 ### File Manager
 

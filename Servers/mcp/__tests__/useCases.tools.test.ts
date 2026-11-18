@@ -288,7 +288,9 @@ describe("update_use_case", () => {
     );
 
     const sent = mockUpdate.mock.calls[0][1];
-    expect(sent).toMatchObject({ project_title: "New", last_updated_by: 7 });
+    expect(sent).toMatchObject({ project_title: "New" });
+    // The service stamps the update as made by this caller.
+    expect(mockUpdate.mock.calls[0][3]).toMatchObject({ userId: 7 });
     expect(sent).not.toHaveProperty("status");
     expect(sent).not.toHaveProperty("members");
     expect(sent).not.toHaveProperty("goal");

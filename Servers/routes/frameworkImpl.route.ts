@@ -5,6 +5,11 @@ import { validateId } from "../domain.layer/validations/id.valid";
 import { createMemoryUpload } from "../utils/upload.utils";
 import authenticateJWT from "../middleware/auth.middleware";
 import { requireFrameworkWriteAccess } from "../middleware/frameworkWriteAccess.middleware";
+import {
+  requireProjectAccess,
+  requireUseCaseAccessVia,
+} from "../middleware/projectAccess.middleware";
+import { useCaseOfFrameworkImpl, useCaseOfProjectFramework } from "../utils/useCaseOfChild.utils";
 import { frameworkImplChanges } from "../utils/frameworkWriteAccess.utils";
 import {
   getFrameworkDashboard,
@@ -21,7 +26,10 @@ const upload = createMemoryUpload();
  * Generic impl endpoints for the 21 migrated frameworks. Mounted at
  * /api/frameworks in app.ts. Table + column names come from
  * Servers/structures/ via the dispatch inside frameworkImpl.utils.ts.
+ * Each route runs the access rule of the use case it reads or writes.
  */
+
+const implUseCase = requireUseCaseAccessVia(useCaseOfFrameworkImpl);
 
 // GET /api/frameworks/:frameworkId/tree/:projectId
 router.get(
@@ -29,6 +37,7 @@ router.get(
   authenticateJWT,
   validateId("frameworkId"),
   validateId("projectId"),
+  requireProjectAccess("projectId"),
   getFrameworkTree,
 );
 
@@ -38,6 +47,7 @@ router.get(
   authenticateJWT,
   validateId("frameworkId"),
   validateId("projectFrameworkId"),
+  requireUseCaseAccessVia(useCaseOfProjectFramework, { param: "projectFrameworkId" }),
   getFrameworkDashboard,
 );
 
@@ -47,6 +57,7 @@ router.get(
   authenticateJWT,
   validateId("frameworkId"),
   validateId("id"),
+  implUseCase,
   getImplById,
 );
 
@@ -56,6 +67,7 @@ router.get(
   authenticateJWT,
   validateId("frameworkId"),
   validateId("id"),
+  implUseCase,
   getImplRisks,
 );
 
@@ -65,6 +77,7 @@ router.patch(
   authenticateJWT,
   validateId("frameworkId"),
   validateId("id"),
+  implUseCase,
   upload.any(),
   requireFrameworkWriteAccess(frameworkImplChanges),
   updateImpl,

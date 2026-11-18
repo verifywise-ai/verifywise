@@ -8,6 +8,7 @@ import {
   staleSql,
 } from "./lifecycle.utils";
 import { projectVisibilitySql } from "./projectVisibility.utils";
+import { submittedBySql } from "./intakeForm.utils";
 import { IntakeSubmissionStatus } from "../domain.layer/enums/intake-submission-status.enum";
 import { IntakeEntityType } from "../domain.layer/enums/intake-entity-type.enum";
 import type { IIntakeFormSchema } from "../domain.layer/interfaces/i.intakeForm";
@@ -303,13 +304,17 @@ async function titleFieldIdsByForm(
 /**
  * Pending submissions of one entity type (use cases #5188, AI apps #5193),
  * oldest first by first submission, plus the total. Approved, rejected and
- * superseded submissions never appear. Every signed-in member of the org can
- * already list submissions (GET /api/intake/submissions), so no further
- * visibility rule applies.
+ * superseded submissions never appear.
+ *
+ * `submittedBy` narrows both to the submissions sent from that user's email
+ * address (compared without case or surrounding spaces); submissions store
+ * no user id. The In review lists pass it for a caller without
+ * intakeForm.edit. Undefined lists every pending submission.
  */
 export async function getPendingIntakeSubmissions(
   organizationId: number,
   entityType: InReviewIntakeEntity,
+  submittedBy?: number,
 ): Promise<PendingIntakeSubmissions> {
   const titleFields = await titleFieldIdsByForm(organizationId, entityType);
   const replacements = {
@@ -318,9 +323,11 @@ export async function getPendingIntakeSubmissions(
     entityType,
     limit: PENDING_SUBMISSIONS_LIMIT,
     titleFields: JSON.stringify(titleFields),
+    submittedBy: submittedBy ?? null,
   };
+  const ownOnly = submittedBy === undefined ? "" : submittedBySql("s");
   const pendingWhere = `s.organization_id = :organizationId
-        AND s.status = :pending AND s.entity_type = :entityType`;
+        AND s.status = :pending AND s.entity_type = :entityType${ownOnly}`;
 
   const [totalRows, rows] = await Promise.all([
     sequelize.query(

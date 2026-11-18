@@ -1535,5 +1535,18 @@
   "{assigner} assigned you as Risk Approver for {count} risks: {names}": "{assigner} vous a désigné approbateur de {count} risques : {names}",
   "{assigner} assigned you as Risk Approver for {count} risks: {names} and {more} more": "{assigner} vous a désigné approbateur de {count} risques : {names} et {more} autres",
   "archive_risks_linked_only_here must be \"true\" or \"false\"": "archive_risks_linked_only_here doit valoir \"true\" ou \"false\"",
-  "Question not found in this cycle": "Question introuvable dans ce cycle"
+  "Question not found in this cycle": "Question introuvable dans ce cycle",
+  "Invalid parameter": "Paramètre non valide",
+  "The approver must be a member of this organization.": "L'approbateur doit être membre de cette organisation.",
+  "The owner must be a member of this organization.": "Le responsable doit être membre de cette organisation.",
+  "The model was not found in this organization.": "Le modèle est introuvable dans cette organisation.",
+  "A selected use case was not found in this organization.": "Un cas d'usage sélectionné est introuvable dans cette organisation.",
+  "A selected framework is not used by any use case in this organization.": "Un référentiel sélectionné n'est utilisé par aucun cas d'usage de cette organisation.",
+  "A linked model was not found in this organization.": "Un modèle lié est introuvable dans cette organisation.",
+  "A linked risk was not found in this organization.": "Un risque lié est introuvable dans cette organisation.",
+  "A linked training was not found in this organization.": "Une formation liée est introuvable dans cette organisation.",
+  "Invalid ID": "Identifiant non valide",
+  "limit must be an integer from 1 to 100": "limit doit être un entier de 1 à 100",
+  "offset must be a whole number of 0 or more": "offset doit être un entier supérieur ou égal à 0",
+  "orders must list positive integer ids with display orders of 0 or more": "orders doit contenir des identifiants entiers positifs avec des ordres d'affichage de 0 ou plus"
 }

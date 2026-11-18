@@ -1,6 +1,7 @@
 import express from "express";
 const router = express.Router();
 import authenticateJWT from "../middleware/auth.middleware";
+import authorize from "../middleware/accessControl.middleware";
 import {
   getAllDatasets,
   getDatasetById,
@@ -20,12 +21,12 @@ router.get("/by-project/:projectId", authenticateJWT, getDatasetsByProjectId);
 router.get("/:id/history", authenticateJWT, getDatasetHistory);
 
 // POST
-router.post("/", authenticateJWT, createNewDataset);
+router.post("/", authenticateJWT, authorize("model.edit"), createNewDataset);
 
 // PATCH (Update)
-router.patch("/:id", authenticateJWT, updateDatasetById);
+router.patch("/:id", authenticateJWT, authorize("model.edit"), updateDatasetById);
 
 // DELETE
-router.delete("/:id", authenticateJWT, deleteDatasetById);
+router.delete("/:id", authenticateJWT, authorize("model.edit"), deleteDatasetById);
 
 export default router;

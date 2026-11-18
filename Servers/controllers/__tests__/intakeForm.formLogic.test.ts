@@ -31,6 +31,10 @@ jest.mock("../../utils/euAiActClassification.utils", () => ({
   getLatestRunForSubmissionQuery: jest.fn(),
 }));
 jest.mock("../../utils/project.utils", () => ({ createNewProjectQuery: jest.fn() }));
+// The caller manages intake, so the by-entity read shows any submission.
+jest.mock("../../utils/rolePermissions.utils", () => ({
+  requestHasPermission: jest.fn(async () => true),
+}));
 jest.mock("../../utils/eu.utils", () => ({ createEUFrameworkQuery: jest.fn() }));
 jest.mock("../../utils/modelInventory.utils", () => ({ createNewModelInventoryQuery: jest.fn() }));
 jest.mock("../../utils/useCaseChangeHistory.utils", () => ({

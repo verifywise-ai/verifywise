@@ -41,6 +41,7 @@
 
 import { sequelize } from "../../database/db";
 import { LLM_EVALS_PROJECTS, loadGoldenSet, seededExperimentConfig } from "./demoOrgLlmEvalsData";
+import { EXTRA_MODELS } from "./demoOrgModelsData";
 import bcrypt from "bcrypt";
 
 const API_BASE = process.env.API_BASE || "http://localhost:3000";
@@ -536,67 +537,6 @@ async function seedIntakeForm(ctx: Ctx) {
   );
   log("added 1 pending intake submission (GenAI marketing assistant — the triage beat)");
 }
-
-// The extra models this step owns, keyed by provider_model. Kept as a constant
-// so both the insert and the idempotent pre-delete reference the same set.
-const EXTRA_MODELS = [
-  {
-    provider_model: "GPT-4o",
-    model: "GPT-4o",
-    provider: "OpenAI",
-    version: "2024-08",
-    status: "Approved",
-    hosting_provider: "Azure",
-  },
-  {
-    provider_model: "GPT-4o mini",
-    model: "GPT-4o mini",
-    provider: "OpenAI",
-    version: "2024-07",
-    status: "Approved",
-    hosting_provider: "Azure",
-  },
-  {
-    provider_model: "o1",
-    model: "o1",
-    provider: "OpenAI",
-    version: "1",
-    status: "Approved",
-    hosting_provider: "Azure",
-  },
-  {
-    provider_model: "GPT-4.1",
-    model: "GPT-4.1",
-    provider: "OpenAI",
-    version: "2025-04",
-    status: "Pending",
-    hosting_provider: "Azure",
-  },
-  {
-    provider_model: "Claude Sonnet 4.5",
-    model: "Claude Sonnet 4.5",
-    provider: "Anthropic",
-    version: "4.5",
-    status: "Approved",
-    hosting_provider: "AWS Bedrock",
-  },
-  {
-    provider_model: "Claude Opus 4.1",
-    model: "Claude Opus 4.1",
-    provider: "Anthropic",
-    version: "4.1",
-    status: "Approved",
-    hosting_provider: "AWS Bedrock",
-  },
-  {
-    provider_model: "Llama 3.1 70B",
-    model: "Llama 3.1 70B",
-    provider: "Meta",
-    version: "3.1",
-    status: "Restricted",
-    hosting_provider: "Self-hosted",
-  },
-];
 
 async function addExtraModels(ctx: Ctx) {
   // Runbook wants 6-10 models across 2-3 providers, one provider on several

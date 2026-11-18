@@ -320,7 +320,7 @@ export const toolsDefinition: any[] = [
     function: {
       name: "agent_link_model_to_framework",
       description:
-        "Map a model into a compliance framework's scope under a specific use case (project). Inserts (model_id, project_id, framework_id) into the join table. The project context is required because the link table's UNIQUE constraint covers all three. Requires user confirmation before executing.",
+        "Map a model into a compliance framework's scope. The framework must be in use by at least one use case of the organization. A framework link is not tied to a use case. Requires user confirmation before executing.",
       parameters: {
         type: "object",
         properties: {
@@ -328,17 +328,12 @@ export const toolsDefinition: any[] = [
             type: "number",
             description: "The model ID.",
           },
-          project_id: {
-            type: "number",
-            description:
-              "The use case (project) ID providing the context for this framework mapping.",
-          },
           framework_id: {
             type: "number",
             description: "The framework ID to link the model to.",
           },
         },
-        required: ["model_id", "project_id", "framework_id"],
+        required: ["model_id", "framework_id"],
       },
     },
   },
@@ -347,7 +342,7 @@ export const toolsDefinition: any[] = [
     function: {
       name: "agent_unlink_model_from_framework",
       description:
-        "Remove a model from a compliance framework's scope. Deletes rows from the join table matching (model_id, framework_id). If project_id is provided, deletion is scoped to that single project context; otherwise removes all framework links for the model. Requires user confirmation before executing.",
+        "Remove a model from a compliance framework's scope. Requires user confirmation before executing.",
       parameters: {
         type: "object",
         properties: {
@@ -358,11 +353,6 @@ export const toolsDefinition: any[] = [
           framework_id: {
             type: "number",
             description: "The framework ID to unlink from.",
-          },
-          project_id: {
-            type: "number",
-            description:
-              "Optional. If provided, scopes the unlink to this single use case (project). If omitted, unlinks the model from this framework across all projects.",
           },
         },
         required: ["model_id", "framework_id"],
