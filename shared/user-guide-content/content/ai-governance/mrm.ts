@@ -18,7 +18,7 @@ export const mrmContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'If you also want a principle-by-principle E-23 readiness checklist for your model risk program, add the OSFI E-23 Model Risk Management framework on the **Frameworks** page. It is an organization-level checklist that you assess yourself, separate from the model records in MRM.',
+      text: 'If you also want a principle-by-principle E-23 readiness checklist for your model risk program, add the OSFI E-23 Model Risk Management framework on the **Frameworks** page. It is an organization-level checklist that you assess yourself, separate from the model records in MRM. The checklist paraphrases OSFI Guideline E-23 – Model Risk Management (2027), published September 11, 2025, effective May 1, 2027. The official text is at https://www.osfi-bsif.gc.ca/en/guidance/guidance-library/guideline-e-23-model-risk-management-2027.',
     },
     {
       type: 'callout',

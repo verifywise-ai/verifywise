@@ -2,8 +2,8 @@ import { FRAMEWORK_STRUCTURES, getStructureById, requireStructureByKey } from ".
 
 const EXPECTED = [5, 7, 3, 6, 8, 3, 7, 3, 6, 6, 6, 3, 6, 7, 5, 2];
 
-const ATTRIBUTION =
-  "Based on OSFI Guideline E-23 – Model Risk Management (2027), published September 11, 2025, effective May 1, 2027. Requirements are paraphrased; see https://www.osfi-bsif.gc.ca/en/guidance/guidance-library/guideline-e-23-model-risk-management-2027 for the official text.";
+const SEED_DESCRIPTION =
+  "Enterprise-wide model risk management expectations for federally regulated financial institutions in Canada, based on OSFI Guideline E-23 (2027). Requirements are paraphrased.";
 
 describe("OSFI E-23 structure", () => {
   const fw = getStructureById(26)!;
@@ -55,8 +55,8 @@ describe("OSFI E-23 structure", () => {
     }
   });
 
-  it("ends the seed description with the attribution sentence", () => {
-    expect(fw.seed.description!.endsWith(ATTRIBUTION)).toBe(true);
+  it("uses the short card description", () => {
+    expect(fw.seed.description).toBe(SEED_DESCRIPTION);
   });
 
   it("contains no product name in content", () => {

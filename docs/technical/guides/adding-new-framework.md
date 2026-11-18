@@ -269,6 +269,11 @@ bare `npm run migrate-db` on a stale `dist/` won't see your framework.
   tab if false. `GenericFramework` (`Clients/src/presentation/pages/Framework/Generic/`)
   and `GenericFrameworkDrawer` (`Clients/src/presentation/components/Drawer/GenericFrameworkDrawer/`)
   render it.
+- The generic list prefixes each group with its position ("1 ") and each item
+  with "<group>.<item> ". If your titles already carry the official numbers,
+  add the `framework_type` to `FRAMEWORKS_WITH_OWN_NUMBERING` in
+  `Clients/src/application/constants/frameworks.ts` and the list shows the
+  titles as written.
 
 ### 11. API docs
 

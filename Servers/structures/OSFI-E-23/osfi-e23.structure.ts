@@ -25,7 +25,7 @@ export const osfiE23Structure: FrameworkStructure = {
   seed: {
     name: "OSFI E-23 Model Risk Management",
     description:
-      "Enterprise-wide, risk-based expectations for governing models across their lifecycle, including AI and machine learning models, at federally regulated financial institutions in Canada. Based on OSFI Guideline E-23 – Model Risk Management (2027), published September 11, 2025, effective May 1, 2027. Requirements are paraphrased; see https://www.osfi-bsif.gc.ca/en/guidance/guidance-library/guideline-e-23-model-risk-management-2027 for the official text.",
+      "Enterprise-wide model risk management expectations for federally regulated financial institutions in Canada, based on OSFI Guideline E-23 (2027). Requirements are paraphrased.",
     version: "2027",
     is_organizational: true,
     hierarchy: {
@@ -509,7 +509,7 @@ export const osfiE23Structure: FrameworkStructure = {
           {
             title: "2.2.5 Approved and tracked negligible-risk exemptions",
             description:
-              "An institution may define a rating tier for models whose inherent risk is negligible, freeing them from the full lifecycle requirements. Where it does, each exemption passes through a sound approval step and stays on record so it can be followed over time.",
+              "Some institutions set aside a risk rating for models that pose almost no inherent risk and treat those models as outside full lifecycle governance. Putting a model in that category should be a rigorous, documented decision, and every exemption granted is logged and followed up.",
             order_no: 5,
             summary: "Each negligible-risk exemption is formally approved and kept on record",
             questions: [
@@ -727,7 +727,7 @@ export const osfiE23Structure: FrameworkStructure = {
             ],
             evidence_examples: [
               "Independence requirements in policy",
-              "Organization chart showing separation of duties",
+              "Organization chart showing reporting lines for review and oversight roles",
               "Conflict of interest declarations",
             ],
           },
