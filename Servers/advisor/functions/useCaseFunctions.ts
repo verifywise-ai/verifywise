@@ -1,6 +1,11 @@
-import { getUserProjects, lockProjectForDelete } from "../../utils/project.utils";
+import {
+  getProjectAccessQuery,
+  getUserProjects,
+  lockProjectForDelete,
+} from "../../utils/project.utils";
 import { deleteProjectWithSideEffects } from "../../utils/projectDeletion.utils";
-import { userHasPermission } from "../../utils/userPermission.utils";
+import { getUserRoleInOrganization, userHasPermission } from "../../utils/userPermission.utils";
+import { actingProjectViewer, actingUserId, NO_PROJECT_VIEWER } from "./useCaseScope";
 import { calculateProjectRisks } from "../../utils/project.utils";
 import { findUsersNotInOrganization } from "../../utils/user.utils";
 import logger from "../../utils/logger/fileLogger";
@@ -16,13 +21,47 @@ export interface FetchUseCasesParams {
 }
 
 /**
- * Fetch all projects as use cases. Uses Admin role to get all projects
- * since the advisor operates at the tenant level.
+ * The use cases the acting user's use case list shows (getUserProjects, the
+ * projectVisibilitySql rule behind GET /api/projects). None when the user is
+ * unknown or not a member of the organization: it fails closed.
  */
-const getAllProjects = async (organizationId: number) => {
-  // Use a high-privilege view (Admin role, userId=0) so the advisor can see all projects
-  const projects = await getUserProjects({ userId: 0, role: "Admin" }, organizationId);
+const getVisibleProjects = async (params: Record<string, unknown>, organizationId: number) => {
+  const viewer = await actingProjectViewer(params, organizationId);
+  if (viewer === NO_PROJECT_VIEWER) return [];
+  const projects = await getUserProjects(viewer, organizationId);
   return projects || [];
+};
+
+type Refusal = { success: false; message: string };
+
+/**
+ * The console's rule for a use case write: useCase.edit, and for an existing
+ * use case write access to it (getProjectAccessQuery: Admin, owner, member
+ * or group member, as PATCH /api/projects/:id). Returns the refusal to
+ * report, or null when the write may go ahead.
+ */
+const refuseUseCaseWrite = async (
+  params: Record<string, unknown>,
+  organizationId: number,
+  useCaseId?: unknown,
+): Promise<Refusal | null> => {
+  const userId = actingUserId(params);
+  if (!userId || !(await userHasPermission(organizationId, userId, "useCase.edit"))) {
+    return { success: false, message: "Your role does not allow changing use cases" };
+  }
+  if (useCaseId === undefined) return null;
+  const id = Number(useCaseId);
+  const role = await getUserRoleInOrganization(organizationId, userId);
+  const access =
+    Number.isSafeInteger(id) && id > 0 && role
+      ? await getProjectAccessQuery(id, { userId, role: role.name }, organizationId)
+      : "not_found";
+  if (access === "not_found")
+    return { success: false, message: `Use case #${useCaseId} not found` };
+  if (access === "denied") {
+    return { success: false, message: `You do not have access to use case #${useCaseId}` };
+  }
+  return null;
 };
 
 const fetchUseCases = async (
@@ -30,7 +69,7 @@ const fetchUseCases = async (
   organizationId: number,
 ): Promise<any[]> => {
   try {
-    let projects = await getAllProjects(organizationId);
+    let projects = await getVisibleProjects(params as Record<string, unknown>, organizationId);
 
     // Apply filters
     if (params.status) {
@@ -70,11 +109,11 @@ const fetchUseCases = async (
 };
 
 const getUseCaseAnalytics = async (
-  _params: Record<string, unknown>,
+  params: Record<string, unknown>,
   organizationId: number,
 ): Promise<any> => {
   try {
-    const projects = await getAllProjects(organizationId);
+    const projects = await getVisibleProjects(params, organizationId);
     const total = projects.length;
 
     // Status distribution
@@ -116,11 +155,11 @@ const getUseCaseAnalytics = async (
 };
 
 const getUseCaseExecutiveSummary = async (
-  _params: Record<string, unknown>,
+  params: Record<string, unknown>,
   organizationId: number,
 ): Promise<any> => {
   try {
-    const projects = await getAllProjects(organizationId);
+    const projects = await getVisibleProjects(params, organizationId);
     const total = projects.length;
 
     const activeCount = projects.filter(
@@ -188,6 +227,8 @@ const agentCreateUseCase = createWriteToolFn({
   descriptionFn: (params) =>
     `Create use case "${params.name}"${params.risk_classification ? ` with risk classification "${params.risk_classification}"` : ""}`,
   executeFn: async (params, organizationId) => {
+    const refusal = await refuseUseCaseWrite(params, organizationId);
+    if (refusal) return refusal;
     const transaction = await sequelize.transaction();
     try {
       // Generate next UC ID
@@ -240,6 +281,8 @@ const agentUpdateUseCase = createWriteToolFn({
   descriptionFn: (params) =>
     `Update use case #${params.use_case_id}${params.name ? ` — rename to "${params.name}"` : ""}`,
   executeFn: async (params, organizationId) => {
+    const refusal = await refuseUseCaseWrite(params, organizationId, params.use_case_id);
+    if (refusal) return refusal;
     const fields: Record<string, { column: string; value: unknown }> = {
       name: { column: "project_title", value: params.name },
       description: { column: "description", value: params.description },
@@ -283,6 +326,8 @@ const agentUpdateUseCaseStatus = createWriteToolFn({
   warningLevel: "warning",
   descriptionFn: (params) => `Update use case #${params.use_case_id} status to "${params.status}"`,
   executeFn: async (params, organizationId) => {
+    const refusal = await refuseUseCaseWrite(params, organizationId, params.use_case_id);
+    if (refusal) return refusal;
     const result = await sequelize.query(
       `UPDATE projects SET status = :status, last_updated = :last_updated WHERE organization_id = :organizationId AND id = :id RETURNING *`,
       {
@@ -299,23 +344,18 @@ const agentUpdateUseCaseStatus = createWriteToolFn({
   },
 });
 
+// Adding a member grants that person access to the use case, so it always
+// waits for a person's approval ("warning" is never auto-approved).
 const agentAddMemberToUseCase = createWriteToolFn({
   toolName: "agent_add_member_to_use_case",
-  warningLevel: "info",
+  warningLevel: "warning",
   descriptionFn: (params) =>
     `Add user #${params.user_id} as member to use case #${params.use_case_id}`,
   executeFn: async (params, organizationId) => {
-    // Both ids come from the model: only link a use case and a user of this organization
-    const useCase = await sequelize.query(
-      `SELECT id FROM projects WHERE organization_id = :organizationId AND id = :project_id`,
-      {
-        replacements: { organizationId, project_id: params.use_case_id },
-        type: QueryTypes.SELECT,
-      },
-    );
-    if (useCase.length === 0) {
-      return { success: false, message: `Use case #${params.use_case_id} not found` };
-    }
+    // The members path of PATCH /api/projects/:id: useCase.edit and write
+    // access to the use case (which also proves it is in this organization).
+    const refusal = await refuseUseCaseWrite(params, organizationId, params.use_case_id);
+    if (refusal) return refusal;
     const userId = Number(params.user_id);
     if (
       !Number.isInteger(userId) ||
@@ -327,7 +367,7 @@ const agentAddMemberToUseCase = createWriteToolFn({
 
     // Check if membership already exists
     const existing = await sequelize.query(
-      `SELECT id FROM projects_members WHERE organization_id = :organizationId AND project_id = :project_id AND user_id = :user_id`,
+      `SELECT user_id FROM projects_members WHERE organization_id = :organizationId AND project_id = :project_id AND user_id = :user_id`,
       {
         replacements: {
           organizationId,
@@ -380,6 +420,9 @@ const agentDeleteUseCase = createWriteToolFn({
         message: `Use case #${useCaseId} was not deleted. Deleting it archives the risks linked only to it, and your role does not allow archiving risks.`,
       };
     }
+    // The console's delete gate: useCase.edit and write access to the use case.
+    const refusal = await refuseUseCaseWrite(params, organizationId, useCaseId);
+    if (refusal) return refusal;
 
     const transaction = await sequelize.transaction();
     try {

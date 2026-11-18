@@ -1,8 +1,25 @@
 import { Request, Response } from "express";
 import { getUseCaseChangeHistory } from "../utils/useCaseChangeHistory.utils";
 import { STATUS_CODE } from "../utils/statusCode.utils";
-
 import { translateError } from "../utils/i18n.utils";
+
+/** The most history entries one request returns (the client asks for 100). */
+export const MAX_HISTORY_LIMIT = 100;
+
+/**
+ * A paging field: `fallback` when absent, null when it is not a whole number
+ * from `min` to `max`. A repeated field is invalid.
+ */
+const pageNumber = (
+  raw: unknown,
+  { fallback, min, max }: { fallback: number; min: number; max: number },
+): number | null => {
+  if (raw === undefined || raw === "") return fallback;
+  if (typeof raw !== "string" || !/^\d+$/.test(raw.trim())) return null;
+  const value = Number(raw.trim());
+  return Number.isSafeInteger(value) && value >= min && value <= max ? value : null;
+};
+
 /**
  * Get change history for a specific use case
  */
@@ -12,23 +29,29 @@ export const getUseCaseHistory = async (req: Request, res: Response) => {
       Array.isArray(req.params.useCaseId) ? req.params.useCaseId[0] : req.params.useCaseId,
       10,
     );
-    const limit =
-      parseInt(
-        Array.isArray(req.query.limit)
-          ? String(req.query.limit[0])
-          : String(req.query.limit || "100"),
-        10,
-      ) || 100;
-    const offset =
-      parseInt(
-        Array.isArray(req.query.offset)
-          ? String(req.query.offset[0])
-          : String(req.query.offset || "0"),
-        10,
-      ) || 0;
-
     if (isNaN(useCaseId)) {
       return res.status(400).json(STATUS_CODE[400](req.t!("Invalid use case ID")));
+    }
+
+    const limit = pageNumber(req.query.limit, {
+      fallback: MAX_HISTORY_LIMIT,
+      min: 1,
+      max: MAX_HISTORY_LIMIT,
+    });
+    if (limit === null) {
+      return res
+        .status(400)
+        .json(STATUS_CODE[400](req.t!("limit must be an integer from 1 to 100")));
+    }
+    const offset = pageNumber(req.query.offset, {
+      fallback: 0,
+      min: 0,
+      max: Number.MAX_SAFE_INTEGER,
+    });
+    if (offset === null) {
+      return res
+        .status(400)
+        .json(STATUS_CODE[400](req.t!("offset must be a whole number of 0 or more")));
     }
 
     const result = await getUseCaseChangeHistory(useCaseId, req.organizationId!, limit, offset);

@@ -5,11 +5,13 @@ jest.mock("../../../utils/projectDeletion.utils", () => ({
 }));
 jest.mock("../../../utils/userPermission.utils", () => ({
   userHasPermission: jest.fn(),
+  getUserRoleInOrganization: jest.fn(),
 }));
 jest.mock("../../../utils/project.utils", () => ({
   getUserProjects: jest.fn(),
   calculateProjectRisks: jest.fn(),
   lockProjectForDelete: jest.fn(),
+  getProjectAccessQuery: jest.fn(),
 }));
 jest.mock("../../../database/db", () => ({
   sequelize: { transaction: jest.fn(), query: jest.fn() },
@@ -26,6 +28,8 @@ import { toolsDefinition } from "../../tools/useCaseTools";
 const deleteShared = projectDeletion.deleteProjectWithSideEffects as unknown as jest.Mock<any>;
 const hasPermission = userPermission.userHasPermission as unknown as jest.Mock<any>;
 const lock = projectUtils.lockProjectForDelete as unknown as jest.Mock<any>;
+const access = projectUtils.getProjectAccessQuery as unknown as jest.Mock<any>;
+const roleOf = userPermission.getUserRoleInOrganization as unknown as jest.Mock<any>;
 const mockTransaction = sequelize.transaction as unknown as jest.Mock<any>;
 const mockQuery = sequelize.query as unknown as jest.Mock<any>;
 
@@ -37,6 +41,8 @@ describe("agent_delete_use_case executor", () => {
     jest.clearAllMocks();
     mockTransaction.mockResolvedValue(tx);
     hasPermission.mockResolvedValue(true);
+    roleOf.mockResolvedValue({ id: 3, name: "Editor", organizationId: null });
+    access.mockResolvedValue("allowed");
     lock.mockResolvedValue(true);
     mockQuery.mockResolvedValue([{ id: 12, project_title: "Chatbot" }]);
     deleteShared.mockResolvedValue({
@@ -131,6 +137,26 @@ describe("agent_delete_use_case executor", () => {
     await expect(execute({ use_case_id: 12, _userId: 9 }, 4)).rejects.toThrow("db down");
     expect(tx.rollback).toHaveBeenCalledTimes(1);
     expect(tx.commit).not.toHaveBeenCalled();
+  });
+
+  it("refuses and changes nothing without useCase.edit", async () => {
+    hasPermission.mockImplementation(async (...args: any[]) => args[2] === "risks.edit");
+
+    const result = (await execute({ use_case_id: 12, _userId: 9, _requesterId: 5 }, 4)) as any;
+
+    expect(hasPermission).toHaveBeenCalledWith(4, 5, "useCase.edit");
+    expect(result.success).toBe(false);
+    expect(mockTransaction).not.toHaveBeenCalled();
+  });
+
+  it("refuses and changes nothing for a use case the requester cannot see", async () => {
+    access.mockResolvedValue("denied");
+
+    const result = (await execute({ use_case_id: 12, _userId: 9, _requesterId: 5 }, 4)) as any;
+
+    expect(access).toHaveBeenCalledWith(12, { userId: 5, role: "Editor" }, 4);
+    expect(result).toEqual({ success: false, message: "You do not have access to use case #12" });
+    expect(mockTransaction).not.toHaveBeenCalled();
   });
 
   it("tells the model and the approver that the risks are archived", () => {
