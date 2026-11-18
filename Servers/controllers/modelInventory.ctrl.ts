@@ -13,7 +13,7 @@ import {
   updateModelInventoryService,
 } from "../services/modelInventory.service";
 import { ModelApprovalForbiddenError } from "../utils/modelApproval.utils";
-import { roleHasPermission } from "../utils/rolePermissions.utils";
+import { requestCallerIsAdmin } from "../utils/organizationAdmin.utils";
 import { STATUS_CODE } from "../utils/statusCode.utils";
 import logger, { logStructured } from "../utils/logger/fileLogger";
 import { translateError } from "../utils/i18n.utils";
@@ -207,10 +207,6 @@ export async function getModelByFrameworkId(req: Request, res: Response) {
 
 /** invalid_text_representation (enums), invalid_datetime_format, datetime_field_overflow. */
 const DATABASE_BAD_VALUE_CODES = new Set(["22P02", "22007", "22008"]);
-
-/** Whether the signed-in user is an Admin (decides any model's approval). */
-const requestCallerIsAdmin = (req: Request): Promise<boolean> =>
-  roleHasPermission(req.organizationId ?? null, req.role ?? "", "organization.admin");
 
 const writeContext = async (req: Request): Promise<ModelWriteContext> => ({
   organizationId: req.organizationId!,
