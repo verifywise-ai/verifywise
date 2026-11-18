@@ -4,6 +4,7 @@ import { QueryTypes, Transaction } from "sequelize";
 import { TenantAutomationActionModel } from "../domain.layer/models/tenantAutomationAction/tenantAutomationAction.model";
 import { replaceTemplateVariables } from "./automation/automation.utils";
 import { enqueueAutomationAction } from "../services/automations/automationProducer";
+import logger from "./logger/fileLogger";
 import {
   buildModelReplacements,
   buildModelUpdateReplacements,
@@ -54,6 +55,24 @@ function assignModelLinks(
   const { projects, frameworks } = splitModelLinks(rows);
   (model.dataValues as any).projects = projects;
   (model.dataValues as any).frameworks = frameworks;
+}
+
+/**
+ * Enqueue an automation action after `transaction` commits (at once without
+ * one). A failure is logged: the write it follows has already committed.
+ */
+function enqueueAutomationAfterCommit(
+  transaction: Transaction | null | undefined,
+  actionKey: string,
+  payload: Record<string, unknown>,
+): void {
+  const run = () => {
+    enqueueAutomationAction(actionKey, payload).catch((err) =>
+      logger.error(`Failed to enqueue model automation ${actionKey}:`, err),
+    );
+  };
+  if (transaction) transaction.afterCommit(run);
+  else run();
 }
 
 export const getAllModelInventoriesQuery = async (organizationId: number) => {
@@ -342,8 +361,9 @@ export const createNewModelInventoryQuery = async (
           automation_id: automation.automation_id,
         };
 
-        // Enqueue with processed params
-        await enqueueAutomationAction(automation.action_key, {
+        // Enqueued once the transaction commits: a rolled-back write
+        // announces nothing.
+        enqueueAutomationAfterCommit(transaction, automation.action_key, {
           ...processedParams,
           organizationId,
         });
@@ -545,8 +565,9 @@ export const updateModelInventoryByIdQuery = async (
           automation_id: automation.automation_id,
         };
 
-        // Enqueue with processed params
-        await enqueueAutomationAction(automation.action_key, {
+        // Enqueued once the transaction commits: a rolled-back write
+        // announces nothing.
+        enqueueAutomationAfterCommit(transaction, automation.action_key, {
           ...processedParams,
           organizationId,
         });
@@ -683,8 +704,9 @@ export const deleteModelInventoryByIdQuery = async (
           automation_id: automation.automation_id,
         };
 
-        // Enqueue with processed params
-        await enqueueAutomationAction(automation.action_key, {
+        // Enqueued once the transaction commits: a rolled-back write
+        // announces nothing.
+        enqueueAutomationAfterCommit(transaction, automation.action_key, {
           ...processedParams,
           organizationId,
         });
