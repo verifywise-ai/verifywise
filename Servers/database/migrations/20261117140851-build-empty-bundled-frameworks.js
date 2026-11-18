@@ -42,12 +42,19 @@ module.exports = {
         // A framework registered after this migration (OSFI E-23, id 26) gets
         // its tables from its own, later migration. On a database upgrading
         // from an older release those tables do not exist yet when this runs,
-        // and such a framework has no links to build, so skip it.
+        // and such a framework has no links to build, so skip it. Log every
+        // skip: for an older framework it means the database is missing a
+        // table it should have, and that must not pass silently.
         const [[{ l2Impl }]] = await sequelize.query(`SELECT to_regclass(:table) AS "l2Impl";`, {
           replacements: { table: `verifywise.${tables.l2_impl}` },
           transaction,
         });
-        if (l2Impl === null) continue;
+        if (l2Impl === null) {
+          console.log(
+            `[build-empty-bundled-frameworks] ${key}: skipped, table verifywise.${tables.l2_impl} does not exist`,
+          );
+          continue;
+        }
 
         const [emptyLinks] = await sequelize.query(
           `SELECT pf.id FROM verifywise.projects_frameworks pf

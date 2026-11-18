@@ -9,7 +9,7 @@ export type { RetentionPolicy };
 /**
  * Every allowed value for `files.source`. Built-in labels (from EU AI Act /
  * ISO 42001 / ISO 27001 / NIST AI RMF controllers, plus report + file-
- * manager paths) come first; per-framework generic labels for the 21
+ * manager paths) come first; per-framework generic labels for the 22
  * frameworks in `Servers/structures/` follow. Any new generic-framework
  * label added to a structure's `source_labels` must also be added here.
  */

@@ -27,7 +27,7 @@ type Ctx = Record<string, number>;
 
 /** The first bundled framework (ids 5–26) the registry knows. */
 const BUNDLED_FRAMEWORK_ID = (() => {
-  for (let id = 5; id <= 25; id++) if (getConfigById(id)) return id;
+  for (let id = 5; id <= 26; id++) if (getConfigById(id)) return id;
   throw new Error("no bundled framework in the registry");
 })();
 
