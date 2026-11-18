@@ -538,9 +538,13 @@ the approver the same save names.
   a decision needs someone who decides. Sending the stored status back is not
   a change. Moving between Pending and Retired is free.
 - **R2.** While the model has a saved approver, changing or clearing it needs
-  someone who decides, whatever the status. (Allowing it on an undecided model
-  would let an editor clear the approver and decide in a second save.) A
-  decided model with no approver (legacy) gets one only from an Admin.
+  someone who decides, whatever the status. This is stricter than R2 for
+  risks, which lets any editor re-assign a Pending or Not required risk: a
+  risk whose approver is cleared falls back to Not required (R4), so it can no
+  longer be decided, but models have no "Not required" status to fall back to.
+  Clearing the approver of a Pending model would let an editor decide it in a
+  second save. A decided model with no approver (legacy) gets one only from an
+  Admin.
 - **R3.** A non-Admin cannot name themself as the new approver. Keeping
   yourself as the saved approver is fine.
 - In a save that names a new approver, only an Admin also moves the status to
