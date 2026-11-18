@@ -271,9 +271,8 @@ const createUseCase: ToolDef = {
     return result({
       useCase: created.toJSON(),
       frameworksAttached: args.frameworks ?? [],
-      // Only the four core frameworks build out controls and assessments. The
-      // rest are recorded against the use case and tracked through their own
-      // structures, which is also how the console treats them.
+      // Every attached framework has its controls and assessments built; this
+      // lists them by key (eu, iso42001, soc2, hipaa, ...).
       frameworksWithStructures: frameworksCreated,
     });
   },
