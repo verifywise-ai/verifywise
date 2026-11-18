@@ -560,14 +560,30 @@ the approver the same save names.
   approver, R2 already asks for the approver or an Admin).
 - With no approver saved or named, any editor sets any status, as before.
   (Risks differ here: a risk with no approver is always Not required.)
+- **Delete.** Deleting a model that has a saved approver needs that approver
+  or an Admin, whatever its status (`assertModelDeleteAllowed`, read under the
+  delete's row lock). Without this, an editor the rule refuses could delete
+  the model and add it again, decided, with no approver. A model with no
+  approver is deleted by anyone with `model.edit`, as before. It applies to
+  `DELETE /api/modelInventory/:id` (v1 has no model delete) and the advisor's
+  `agent_delete_model`, both through `deleteModelInventoryService`; the
+  refusal is the same 403 message.
 
 The rule never rewrites the status; a refused change is a 403
 `{ "message": "Forbidden", "data": "Only the model's approver or an Admin can change its approval." }`
 (R3 reuses the risk wording, "You can't name yourself as the approver. Ask an
 Admin or pick someone else."), translated en/de/fr. It applies on the legacy
-and v1 routes, as #5418 did for risks, and in Shadow AI's start governance
-(which names no approver). The update reads the model `FOR UPDATE` in its
-transaction and checks against that row.
+and v1 routes, as #5418 did for risks, in Shadow AI's start governance
+(which names no approver), in the advisor's model tools and
+`agent_register_model`, and in an intake approval that creates a model (as
+the approving user: a non-Admin cannot approve a submission that names them
+the model's approver, R3, 403; an approver outside the organization is a
+400). The update reads the model `FOR UPDATE` in its transaction and checks
+against that row.
+
+The controller asks for the caller's Admin role only when the body sends a
+`status` or an `approver` (the only fields the rule reads it for); a delete
+always asks.
 
 The model form mirrors the rule (`Clients/src/application/utils/modelApproval.ts`):
 statuses the user cannot set are listed but disabled, the approver select is
@@ -585,15 +601,26 @@ plain arguments (organization, user, data, optional transaction; no req or
 res), so the REST controllers, Shadow AI and the AI advisor share them. With
 a caller's transaction, the notices run after it commits (`tx.afterCommit`);
 without one the service opens and commits its own
-(`utils/transaction.utils.ts` `inTransaction`). The "model added / updated /
+(`utils/transaction.utils.ts` `inTransaction`, which logs a rollback that
+fails through `logRollbackFailure` with the function, file, user and
+organization, then throws the original error). The "model added / updated /
 deleted" automations in the model queries are enqueued after commit too, so
 a rolled-back write (a failed start governance, say) announces nothing.
+
+Every model write goes through these services: the REST controllers, Shadow
+AI's start governance, the advisor's model and model risk tools, the
+advisor's approved `agent_register_model` and `agent_create_model_risk`
+actions (as the requester, who needs `model.edit`; in the approval's
+transaction, so the notices follow its commit), and an intake approval that
+creates a model and its accepted model risks (as the approving user). Links
+in the approver and owner notices use `utils/frontendUrl.utils.ts`
+`frontendBaseUrl` (FRONTEND_URL, else the local frontend on port 5173).
 
 | Function | What it carries |
 |---|---|
 | `createModelInventoryService` | approval rule, `is_demo` false, insert + "model added" automation (in the query), creation history, after commit: approver notice, **deployment step when created as Approved**, model risk candidate notice |
-| `updateModelInventoryService` | row lock, approval rule, history diff against the locked row, after commit: deployment step when the status moves to Approved, approver notice for a new approver, candidate notice for added use cases |
-| `deleteModelInventoryService` | row lock, 404 (`NotFoundException`), MRM 409 (`ConflictException`), deletion history, risk release |
+| `updateModelInventoryService` | row lock, approval rule, history diff against the locked row, after commit: deployment step when the status moves to Approved, approver notice for a new approver, candidate notice for added use cases. Takes the fields, or a function that builds them from the locked row (the advisor's `provider_model`) |
+| `deleteModelInventoryService` | row lock, 404 (`NotFoundException`), approver or Admin for a model with an approver (403, `ModelApprovalForbiddenError`), MRM 409 (`ConflictException`), deletion history, risk release |
 | `linkModelToUseCaseService` | link one use case (no-op if linked), candidate notice; use case links are not tracked history fields |
 | `createModelRiskService` / `updateModelRiskService` / `deleteModelRiskService` | history, owner notices, candidate notice on create |
 
@@ -617,12 +644,18 @@ message `{ success: false, message }`, not a thrown error.
 
 | Tool | Writes through |
 |---|---|
-| `agent_update_model` | `updateModelInventoryService` (status sets `status_date`; a name or provider change renames `provider_model`) |
+| `agent_update_model` | `updateModelInventoryService` (status sets `status_date`; a name or provider change renames `provider_model`, built from the row the service locked) |
 | `agent_retire_model` | `updateModelInventoryService` with status **Retired** (it used to set Blocked) |
-| `agent_update_model_lifecycle_phase` | nothing: it refuses. A model has no lifecycle phase field (the model-lifecycle extension keeps a checklist per phase); the tool used to write the phase into `status` |
-| `agent_delete_model` | `deleteModelInventoryService`, risks archived |
-| `agent_link_model_to_project` | `linkModelToUseCaseService`, after the use case write check (`refuseUseCaseWrite`: `useCase.edit` and write access to the use case) |
+| `agent_delete_model` | `deleteModelInventoryService`, risks archived; a model with an approver needs that approver or an Admin |
+| `agent_link_model_to_project` | `linkModelToUseCaseService`, which checks write access to the use case, as the console's model save does (`model.edit` and use case access; no `useCase.edit`) |
+| `agent_register_model` (approved action) | `createModelInventoryService`, and `linkModelToUseCaseService` for a model it reuses |
+| `agent_create_model_risk` (approved action) | `createModelRiskService` |
 | `agent_suggest_model_risk`, `agent_update_model_risk`, `agent_change_model_risk_status`, `agent_attach/detach_model_risk_to/from_model`, `agent_delete_model_risk` | the model risk service (history, owner notices) |
+
+`agent_update_model_lifecycle_phase` was removed: a model has no lifecycle
+phase field (the model-lifecycle extension keeps a checklist per phase), so it
+could only refuse, after a human had confirmed it. Use `agent_update_model`
+with `status`.
 
 `agent_restore_model_risk` still writes directly (there is no restore in the
 service). The model risk tools strip `_requesterId` before their strict
