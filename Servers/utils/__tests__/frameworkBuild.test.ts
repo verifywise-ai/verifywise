@@ -48,6 +48,8 @@ jest.mock("../useCaseChangeHistory.utils", () => ({
 }));
 jest.mock("../../services/projects/approvalRequest.service", () => ({
   createUseCaseApprovalRequest: jest.fn().mockResolvedValue(null),
+  // Creation checks the picked workflow before saving; treat it as usable.
+  getUsableUseCaseWorkflow: jest.fn().mockResolvedValue({ workflow: { id: 9 } }),
 }));
 
 import { sequelize } from "../../database/db";

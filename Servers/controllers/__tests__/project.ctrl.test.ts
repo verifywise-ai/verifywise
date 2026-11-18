@@ -7,6 +7,7 @@ jest.mock("../../utils/project.utils", () => ({
   createNewProjectQuery: jest.fn(),
   updateProjectByIdQuery: jest.fn(),
   canViewProjectQuery: jest.fn(),
+  lockUseCaseWorkflowQuery: jest.fn(),
   deleteProjectByIdQuery: jest.fn(),
   lockProjectForDelete: jest.fn(),
   getCurrentProjectMembers: jest.fn(),
@@ -111,7 +112,11 @@ jest.mock("../../domain.layer/exceptions/custom.exception", () => ({
 jest.mock("../../services/projects/approvalRequest.service", () => ({
   ...jest.requireActual("../../services/projects/approvalRequest.service"),
   createUseCaseApprovalRequest: jest.fn().mockResolvedValue(null),
+  getUsableUseCaseWorkflow: jest.fn().mockResolvedValue({ workflow: {}, steps: [] }),
   notifyUseCaseApprovalRequested: jest.fn().mockResolvedValue(undefined),
+}));
+jest.mock("../../utils/rolePermissions.utils", () => ({
+  roleHasPermission: jest.fn(async (_org: unknown, role: string) => role === "Admin"),
 }));
 
 import { buildProject, buildManyProject } from "../../tests/factories/project.factory";
@@ -434,9 +439,64 @@ describe("project.ctrl", () => {
 
   describe("updateProjectById", () => {
     const mockCanView = jest.requireMock<any>("../../utils/project.utils").canViewProjectQuery;
+    const mockLockWorkflow = jest.requireMock<any>("../../utils/project.utils")
+      .lockUseCaseWorkflowQuery as jest.Mock<any>;
 
     beforeEach(() => {
       mockCanView.mockResolvedValue(true);
+      // By default the locked row holds what the unlocked read returned.
+      mockLockWorkflow.mockImplementation(async (id: number, org: number) => {
+        const row: any = await (mockGetById as jest.Mock<any>)(id, org);
+        return row ? { approval_workflow_id: row.approval_workflow_id ?? null } : null;
+      });
+    });
+
+    // Two saves that both attach a workflow each read "no workflow" outside
+    // the transaction and each opened a pending request. The stored workflow
+    // is now read under a row lock inside the transaction, so the second save
+    // waits and sees the first one's workflow.
+    it("decides a workflow change on the row read under a lock in the transaction", async () => {
+      const existing = { ...buildProject(), owner: 1, approval_workflow_id: null };
+      mockGetById.mockResolvedValue(existing as any);
+      mockGetMembers.mockResolvedValue([] as any);
+      mockUpdate.mockResolvedValue({ ...existing, approval_workflow_id: 5, members: [] } as any);
+      mockGetUser.mockResolvedValue({ id: 1, name: "A", surname: "B", role_id: 1 } as any);
+      // A concurrent save committed workflow 5 after the unlocked read.
+      mockLockWorkflow.mockResolvedValue({ approval_workflow_id: 5 });
+      const req = createReq({ params: { id: "1" }, body: { approval_workflow_id: 5 } });
+      const res = createRes();
+      await updateProjectById(req, res);
+      expect(res.status).toHaveBeenCalledWith(202);
+      expect(mockLockWorkflow).toHaveBeenCalledWith(1, 1, await openedTransaction());
+      expect(mockCreateApproval).not.toHaveBeenCalled();
+    });
+
+    it("takes no lock when the body does not carry the workflow", async () => {
+      const existing = { ...buildProject(), owner: 1, approval_workflow_id: 5 };
+      mockGetById.mockResolvedValue(existing as any);
+      mockGetMembers.mockResolvedValue([] as any);
+      mockUpdate.mockResolvedValue({ ...existing, members: [] } as any);
+      mockGetUser.mockResolvedValue({ id: 1, name: "A", surname: "B", role_id: 1 } as any);
+      const req = createReq({ params: { id: "1" }, body: { project_title: "Renamed" } });
+      const res = createRes();
+      await updateProjectById(req, res);
+      expect(res.status).toHaveBeenCalledWith(202);
+      expect(mockLockWorkflow).not.toHaveBeenCalled();
+    });
+
+    it("answers 404 when the use case is gone by the time it is locked", async () => {
+      mockGetById.mockResolvedValue({
+        ...buildProject(),
+        owner: 1,
+        approval_workflow_id: null,
+      } as any);
+      mockLockWorkflow.mockResolvedValue(null);
+      const req = createReq({ params: { id: "1" }, body: { approval_workflow_id: 5 } });
+      const res = createRes();
+      await updateProjectById(req, res);
+      expect(res.status).toHaveBeenCalledWith(404);
+      expect(mockUpdate).not.toHaveBeenCalled();
+      expect((await openedTransaction()).rollback).toHaveBeenCalled();
     });
 
     it("returns 403 and writes nothing when the caller cannot see the use case", async () => {
@@ -617,9 +677,11 @@ describe("project.ctrl", () => {
       const res = createRes();
       await updateProjectById(req, res);
       expect(mockTrackChanges).toHaveBeenCalledTimes(1);
+      // The context lets the workflow formatter read names in this organization.
       expect(mockTrackChanges).toHaveBeenCalledWith(
         existing,
         expect.objectContaining({ project_title: "P2" }),
+        expect.objectContaining({ organizationId: 1 }),
       );
     });
     it("looks up added members within the organization only", async () => {
@@ -739,6 +801,170 @@ describe("project.ctrl", () => {
       });
       expect(mockCreatePendingFrameworks).toHaveBeenCalledWith(1, 1, expect.anything(), 1);
       expect(mockCreateApproval).not.toHaveBeenCalled();
+    });
+    // Audit U-H2: clearing or replacing the workflow under review skipped it.
+    describe("workflow changes while the approval is pending or rejected", () => {
+      const approvalStatus = jest.requireMock<any>("../../utils/approvalRequest.utils")
+        .getApprovalStatusQuery as jest.Mock<any>;
+      const usableWorkflow = jest.requireMock<any>(
+        "../../services/projects/approvalRequest.service",
+      ).getUsableUseCaseWorkflow as jest.Mock<any>;
+
+      function arrange(status: "pending" | "rejected" | null, workflowId: number | null = 3) {
+        const existing = { ...buildProject(), owner: 1, approval_workflow_id: workflowId };
+        mockGetById.mockResolvedValue(existing as any);
+        mockGetMembers.mockResolvedValue([] as any);
+        mockUpdate.mockResolvedValue({
+          ...existing,
+          approval_workflow_id: null,
+          members: [],
+        } as any);
+        mockGetUser.mockResolvedValue({ id: 1, name: "A", surname: "B", role_id: 3 } as any);
+        approvalStatus.mockResolvedValue(status);
+      }
+
+      afterEach(() => approvalStatus.mockReset());
+
+      it.each([
+        ["pending", null],
+        ["pending", 8],
+        ["rejected", null],
+        ["rejected", 8],
+      ] as const)(
+        "refuses an Editor (%s, to %s) with 403 and writes nothing",
+        async (status, next) => {
+          arrange(status);
+          const req = createReq({
+            role: "Editor",
+            params: { id: "1" },
+            body: { approval_workflow_id: next },
+          });
+          const res = createRes();
+          await updateProjectById(req, res);
+          expect(res.status).toHaveBeenCalledWith(403);
+          expect(mockUpdate).not.toHaveBeenCalled();
+          expect(mockWithdrawApproval).not.toHaveBeenCalled();
+          expect(mockCreatePendingFrameworks).not.toHaveBeenCalled();
+          expect((await openedTransaction()).rollback).toHaveBeenCalled();
+        },
+      );
+
+      it("lets an Editor send the saved workflow again, as a string", async () => {
+        arrange("pending");
+        const req = createReq({
+          role: "Editor",
+          params: { id: "1" },
+          body: { approval_workflow_id: "3" },
+        });
+        const res = createRes();
+        await updateProjectById(req, res);
+        expect(res.status).toHaveBeenCalledWith(202);
+        expect(approvalStatus).not.toHaveBeenCalled();
+        expect(mockWithdrawApproval).not.toHaveBeenCalled();
+      });
+
+      it("lets an approval workflow admin clear a pending review", async () => {
+        arrange("pending");
+        approvalStatus.mockResolvedValueOnce("pending").mockResolvedValueOnce(null);
+        mockGetPendingApproval.mockResolvedValue(77 as any);
+        const req = createReq({ params: { id: "1" }, body: { approval_workflow_id: null } });
+        const res = createRes();
+        await updateProjectById(req, res);
+        expect(res.status).toHaveBeenCalledWith(202);
+        expect(mockWithdrawApproval).toHaveBeenCalled();
+        expect(mockCreatePendingFrameworks).toHaveBeenCalled();
+      });
+
+      it("never attaches the frameworks when an admin clears a rejected use case", async () => {
+        arrange("rejected");
+        mockGetPendingApproval.mockResolvedValue(null as any);
+        const req = createReq({ params: { id: "1" }, body: { approval_workflow_id: null } });
+        const res = createRes();
+        await updateProjectById(req, res);
+        expect(res.status).toHaveBeenCalledWith(202);
+        expect(mockCreatePendingFrameworks).not.toHaveBeenCalled();
+      });
+
+      it("keeps a re-review's rejection when the admin withdraws the re-review", async () => {
+        arrange("pending");
+        approvalStatus.mockResolvedValueOnce("pending").mockResolvedValueOnce("rejected");
+        mockGetPendingApproval.mockResolvedValue(77 as any);
+        const req = createReq({ params: { id: "1" }, body: { approval_workflow_id: null } });
+        const res = createRes();
+        await updateProjectById(req, res);
+        expect(res.status).toHaveBeenCalledWith(202);
+        expect(mockWithdrawApproval).toHaveBeenCalled();
+        expect(mockCreatePendingFrameworks).not.toHaveBeenCalled();
+      });
+
+      // The workflow checked before the write is the one the request is
+      // opened under; it used to be loaded a second time.
+      it("opens the request with the workflow it already checked", async () => {
+        arrange(null, null);
+        const checked = { workflow: { id: 8 }, steps: [] };
+        usableWorkflow.mockResolvedValueOnce(checked);
+        mockUpdate.mockResolvedValue({
+          ...buildProject(),
+          approval_workflow_id: 8,
+          members: [],
+        } as any);
+        const req = createReq({ params: { id: "1" }, body: { approval_workflow_id: 8 } });
+        const res = createRes();
+        await updateProjectById(req, res);
+        expect(res.status).toHaveBeenCalledWith(202);
+        expect(usableWorkflow).toHaveBeenCalledTimes(1);
+        expect(mockCreateApproval).toHaveBeenCalledWith(
+          expect.objectContaining({ approval_workflow_id: 8 }),
+          1,
+          1,
+          expect.anything(),
+          checked,
+        );
+      });
+
+      const unusable = () =>
+        Object.assign(new ValidationException("The selected approval workflow does not exist"), {
+          metadata: { field: "approval_workflow_id" },
+        });
+
+      // The legacy /api/projects contract is frozen: its 400 body stays the
+      // plain message. Only /api/v1 answers in the field-error shape.
+      it("answers an unusable workflow on the legacy route with the plain message", async () => {
+        arrange(null, null);
+        usableWorkflow.mockRejectedValueOnce(unusable());
+        const req = createReq({ params: { id: "1" }, body: { approval_workflow_id: 99 } });
+        const res = createRes();
+        await updateProjectById(req, res);
+        expect(res.status).toHaveBeenCalledWith(400);
+        expect(res.json).toHaveBeenCalledWith({
+          message: "Bad Request",
+          data: "The selected approval workflow does not exist",
+        });
+        expect(mockUpdate).not.toHaveBeenCalled();
+      });
+
+      it("answers an unusable workflow on v1 as a field error and writes nothing", async () => {
+        arrange(null, null);
+        usableWorkflow.mockRejectedValueOnce(unusable());
+        const req = createReq({ params: { id: "1" }, body: { approval_workflow_id: 99 } });
+        const res = createRes();
+        res.locals = { acceptsExternalOwner: true };
+        await updateProjectById(req, res);
+        expect(res.status).toHaveBeenCalledWith(400);
+        expect(res.json).toHaveBeenCalledWith({
+          message: "Bad Request",
+          data: {
+            errors: [
+              {
+                field: "approval_workflow_id",
+                message: "The selected approval workflow does not exist",
+                location: "body",
+              },
+            ],
+          },
+        });
+        expect(mockUpdate).not.toHaveBeenCalled();
+      });
     });
     it("starts no request when the attached workflow is unchanged (#4904)", async () => {
       const existing = { ...buildProject(), owner: 1, approval_workflow_id: 5 };

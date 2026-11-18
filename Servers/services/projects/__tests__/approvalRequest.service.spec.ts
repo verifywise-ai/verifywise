@@ -133,12 +133,20 @@ describe("createUseCaseApprovalRequest", () => {
     expect(moveUseCaseIntoReview).toHaveBeenCalledWith(1, 11, 2, expect.anything());
   });
 
-  it("creates no request when the workflow has no steps", async () => {
-    mockGetWorkflow.mockResolvedValue(buildWorkflow([]));
+  // A workflow nobody can decide would park the use case's frameworks forever
+  // (audit U-M2): each is a 400 on approval_workflow_id, and nothing is opened.
+  it.each([
+    ["missing or in another organization", () => null],
+    ["without steps", () => buildWorkflow([])],
+    ["with a step without approvers", () => buildWorkflow([buildStep(1, [7]), buildStep(2, [])])],
+  ])("rejects a workflow %s", async (_label, workflow) => {
+    mockGetWorkflow.mockResolvedValue(workflow() as any);
 
-    expect(await createUseCaseApprovalRequest(useCase, 2, 1, {} as any)).toBeNull();
+    const error = await createUseCaseApprovalRequest(useCase, 2, 1, {} as any).catch((e) => e);
+
+    expect(error).toBeInstanceOf(ValidationException);
+    expect(error.metadata).toEqual(expect.objectContaining({ field: "approval_workflow_id" }));
     expect(mockCreateRequest).not.toHaveBeenCalled();
-    // No request, so the use case must not be stranded in review.
     expect(moveUseCaseIntoReview).not.toHaveBeenCalled();
   });
 
@@ -160,6 +168,34 @@ describe("createUseCaseApprovalRequest", () => {
       ValidationException,
     );
     expect(mockCreateRequest).not.toHaveBeenCalled();
+  });
+
+  // The caller already checked the workflow (create and update refuse an
+  // unusable one before writing); loading it again was a second round trip.
+  it("uses the workflow the caller already loaded instead of reading it again", async () => {
+    const steps = [buildStep(1, [7])];
+    const usable = { workflow: buildWorkflow(steps), steps };
+
+    const result = await createUseCaseApprovalRequest(useCase, 2, 1, {} as any, usable);
+
+    expect(mockGetWorkflow).not.toHaveBeenCalled();
+    expect(mockCreateRequest).toHaveBeenCalledWith(
+      expect.objectContaining({ workflow_id: 1 }),
+      steps,
+      1,
+      expect.anything(),
+    );
+    expect(result).toEqual(expect.objectContaining({ workflowTitle: "Use case sign-off" }));
+  });
+
+  it("reads the workflow again when the one passed in is for another id", async () => {
+    const steps = [buildStep(1, [7])];
+    mockGetWorkflow.mockResolvedValue(buildWorkflow(steps));
+    const stale = { workflow: buildWorkflow(steps, { id: 99 }), steps };
+
+    await createUseCaseApprovalRequest(useCase, 2, 1, {} as any, stale);
+
+    expect(mockGetWorkflow).toHaveBeenCalledWith(1, 1, expect.anything());
   });
 
   it("creates no request when the use case has no workflow", async () => {
