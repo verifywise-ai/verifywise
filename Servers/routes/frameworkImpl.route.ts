@@ -2,7 +2,7 @@ import express from "express";
 const router = express.Router();
 
 import { validateId } from "../domain.layer/validations/id.valid";
-import { createMemoryUpload } from "../utils/upload.utils";
+import { createMemoryUpload, handleUploadError } from "../utils/upload.utils";
 import authenticateJWT from "../middleware/auth.middleware";
 import { requireFrameworkWriteAccess } from "../middleware/frameworkWriteAccess.middleware";
 import {
@@ -79,6 +79,7 @@ router.patch(
   validateId("id"),
   implUseCase,
   upload.any(),
+  handleUploadError,
   requireFrameworkWriteAccess(frameworkImplChanges),
   updateImpl,
 );
