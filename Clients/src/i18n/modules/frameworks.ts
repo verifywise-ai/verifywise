@@ -102,8 +102,6 @@ export const de: Record<string, string> = {
   "Accountability for AI systems": "Rechenschaftspflicht für KI-Systeme",
   "Actions to address risks and opportunities (Includes Risk Assessment, Treatment, Impact Assessment)":
     "Maßnahmen zur Behandlung von Risiken und Chancen (umfasst Risikobewertung, -behandlung, Folgenabschätzung)",
-  "An unexpected error occurred while deleting the project":
-    "Beim Löschen des Projekts ist ein unerwarteter Fehler aufgetreten",
   "Assessment topics": "Bewertungsthemen",
   "Assessments progress": "Bewertungsfortschritt",
   "Assessments status overview": "Statusübersicht der Bewertungen",
@@ -129,7 +127,6 @@ export const de: Record<string, string> = {
   "Documented information": "Dokumentierte Informationen",
   "Emotion recognition": "Emotionserkennung",
   "Error updating status": "Fehler beim Aktualisieren des Status",
-  "Failed to delete framework": "Löschen des Rahmenwerks fehlgeschlagen",
   "Failed to update status. Please try again.":
     "Aktualisieren des Status fehlgeschlagen. Bitte erneut versuchen.",
   "Framework deleted successfully": "Rahmenwerk erfolgreich gelöscht",
@@ -440,7 +437,6 @@ export const de: Record<string, string> = {
     "Erfüllen Sie die KI-Anforderungen, die über die sektoralen Rechtsvorschriften für das Produkt festgelegt werden.",
   "From 2 December 2026, do not place this system on the market, put it into service or use it in the EU.":
     "Bringen Sie dieses System ab dem 2. Dezember 2026 in der EU nicht in Verkehr, nehmen Sie es nicht in Betrieb und verwenden Sie es nicht.",
-  // Framework import extension (#5254)
   "Delete this imported framework?": "Dieses importierte Framework löschen?",
   "Import a framework from Excel": "Framework aus Excel importieren",
   "Import errors": "Importfehler",
@@ -449,11 +445,7 @@ export const de: Record<string, string> = {
     "Es wurde nichts importiert. Korrigieren Sie die unten aufgeführten Zeilen in Ihrer Datei und laden Sie sie erneut hoch.",
   "Step 1: Download the Excel template": "Schritt 1: Excel-Vorlage herunterladen",
   "Step 2: Upload the filled Excel file": "Schritt 2: Ausgefüllte Excel-Datei hochladen",
-  "Store your own framework, such as an internal policy, as topics and subtopics. Imported frameworks are a reference list: they cannot be added to use cases yet.":
-    "Speichern Sie Ihr eigenes Framework, etwa eine interne Richtlinie, als Themen und Unterthemen. Importierte Frameworks sind eine Referenzliste: Sie können noch nicht zu Anwendungsfällen hinzugefügt werden.",
   "Subtopic": "Unterthema",
-  "This removes the imported framework with all its topics and subtopics. You can import it again from your file later.":
-    "Dadurch wird das importierte Framework mit allen Themen und Unterthemen entfernt. Sie können es später erneut aus Ihrer Datei importieren.",
   "Topic": "Thema",
   "Failed to delete the imported framework. Please try again.":
     "Das importierte Rahmenwerk konnte nicht gelöscht werden. Bitte versuchen Sie es erneut.",
@@ -464,8 +456,6 @@ export const de: Record<string, string> = {
     "Aus der importierten Datei entfernt. Beibehalten, weil Bewertungsdaten vorhanden sind.",
   "Store your own framework, such as an internal policy, as topics and subtopics. Once imported, add it to a use case from the Frameworks tab of that use case. Uploading a file with the same framework name again updates the existing framework.":
     "Speichern Sie Ihr eigenes Rahmenwerk, etwa eine interne Richtlinie, als Themen und Unterthemen. Fügen Sie es nach dem Import einem Anwendungsfall über dessen Tab „Rahmenwerke“ hinzu. Wenn Sie erneut eine Datei mit demselben Rahmenwerknamen hochladen, wird das vorhandene Rahmenwerk aktualisiert.",
-  "All rows must describe the same framework. Re-uploading a framework name updates it and keeps the topics and subtopics that have assessment data. A file can have at most 5,000 rows.":
-    "Alle Zeilen müssen dasselbe Rahmenwerk beschreiben. Wenn Sie einen Rahmenwerknamen erneut hochladen, wird das Rahmenwerk aktualisiert; Themen und Unterthemen mit Bewertungsdaten bleiben erhalten. Eine Datei darf höchstens 5.000 Zeilen enthalten.",
   "Loading imported frameworks...": "Importierte Frameworks werden geladen...",
   "Could not load imported frameworks. Refresh the page to try again.":
     "Importierte Frameworks konnten nicht geladen werden. Laden Sie die Seite neu, um es erneut zu versuchen.",
@@ -578,8 +568,6 @@ export const fr: Record<string, string> = {
   "Accountability for AI systems": "Responsabilité des systèmes IA",
   "Actions to address risks and opportunities (Includes Risk Assessment, Treatment, Impact Assessment)":
     "Mesures pour traiter les risques et les opportunités (inclut évaluation, traitement et analyse d'impact des risques)",
-  "An unexpected error occurred while deleting the project":
-    "Une erreur inattendue s'est produite lors de la suppression du projet",
   "Assessment topics": "Thèmes d'évaluation",
   "Assessments progress": "Progression des évaluations",
   "Assessments status overview": "Aperçu du statut des évaluations",
@@ -605,7 +593,6 @@ export const fr: Record<string, string> = {
   "Documented information": "Informations documentées",
   "Emotion recognition": "Reconnaissance des émotions",
   "Error updating status": "Erreur lors de la mise à jour du statut",
-  "Failed to delete framework": "Échec de la suppression du référentiel",
   "Failed to update status. Please try again.":
     "Échec de la mise à jour du statut. Veuillez réessayer.",
   "Framework deleted successfully": "Référentiel supprimé avec succès",
@@ -918,7 +905,6 @@ export const fr: Record<string, string> = {
     "Respectez les exigences en matière d'IA fixées par la législation sectorielle applicable au produit.",
   "From 2 December 2026, do not place this system on the market, put it into service or use it in the EU.":
     "À partir du 2 décembre 2026, ne mettez pas ce système sur le marché, ne le mettez pas en service et ne l'utilisez pas dans l'UE.",
-  // Framework import extension (#5254)
   "Delete this imported framework?": "Supprimer ce référentiel importé ?",
   "Import a framework from Excel": "Importer un référentiel depuis Excel",
   "Import errors": "Erreurs d'importation",
@@ -927,11 +913,7 @@ export const fr: Record<string, string> = {
     "Rien n'a été importé. Corrigez les lignes ci-dessous dans votre fichier et importez-le à nouveau.",
   "Step 1: Download the Excel template": "Étape 1 : Télécharger le modèle Excel",
   "Step 2: Upload the filled Excel file": "Étape 2 : Importer le fichier Excel rempli",
-  "Store your own framework, such as an internal policy, as topics and subtopics. Imported frameworks are a reference list: they cannot be added to use cases yet.":
-    "Enregistrez votre propre référentiel, comme une politique interne, sous forme de thèmes et sous-thèmes. Les référentiels importés sont une liste de référence : ils ne peuvent pas encore être ajoutés aux cas d'usage.",
   "Subtopic": "Sous-thème",
-  "This removes the imported framework with all its topics and subtopics. You can import it again from your file later.":
-    "Cette action supprime le référentiel importé avec tous ses thèmes et sous-thèmes. Vous pourrez le réimporter plus tard depuis votre fichier.",
   "Topic": "Thème",
   "Failed to delete the imported framework. Please try again.":
     "Impossible de supprimer le référentiel importé. Veuillez réessayer.",
@@ -942,8 +924,6 @@ export const fr: Record<string, string> = {
     "Retiré du fichier importé. Conservé car il contient des données d'évaluation.",
   "Store your own framework, such as an internal policy, as topics and subtopics. Once imported, add it to a use case from the Frameworks tab of that use case. Uploading a file with the same framework name again updates the existing framework.":
     "Enregistrez votre propre référentiel, comme une politique interne, sous forme de thèmes et de sous-thèmes. Une fois importé, ajoutez-le à un cas d'usage depuis l'onglet Référentiels de ce cas d'usage. Importer à nouveau un fichier portant le même nom de référentiel met à jour le référentiel existant.",
-  "All rows must describe the same framework. Re-uploading a framework name updates it and keeps the topics and subtopics that have assessment data. A file can have at most 5,000 rows.":
-    "Toutes les lignes doivent décrire le même référentiel. Importer à nouveau un nom de référentiel le met à jour et conserve les thèmes et sous-thèmes qui ont des données d'évaluation. Un fichier peut contenir au plus 5 000 lignes.",
   "Loading imported frameworks...": "Chargement des référentiels importés...",
   "Could not load imported frameworks. Refresh the page to try again.":
     "Impossible de charger les référentiels importés. Actualisez la page pour réessayer.",
@@ -1053,8 +1033,6 @@ export const es: Record<string, string> = {
   "Accountability for AI systems": "Responsabilidad de los sistemas de IA",
   "Actions to address risks and opportunities (Includes Risk Assessment, Treatment, Impact Assessment)":
     "Acciones para abordar riesgos y oportunidades (incluye evaluación de riesgos, tratamiento y evaluación de impacto)",
-  "An unexpected error occurred while deleting the project":
-    "Se produjo un error inesperado al eliminar el proyecto",
   "Assessment topics": "Temas de la evaluación",
   "Assessments progress": "Progreso de las evaluaciones",
   "Assessments status overview": "Resumen del estado de las evaluaciones",
@@ -1080,7 +1058,6 @@ export const es: Record<string, string> = {
   "Documented information": "Información documentada",
   "Emotion recognition": "Reconocimiento de emociones",
   "Error updating status": "Error al actualizar el estado",
-  "Failed to delete framework": "Error al eliminar el marco",
   "Failed to update status. Please try again.":
     "No se pudo actualizar el estado. Inténtelo de nuevo.",
   "Framework deleted successfully": "Marco eliminado correctamente",
@@ -1387,7 +1364,6 @@ export const es: Record<string, string> = {
     "Cumpla los requisitos de IA establecidos a través de la legislación sectorial del producto.",
   "From 2 December 2026, do not place this system on the market, put it into service or use it in the EU.":
     "A partir del 2 de diciembre de 2026, no introduzca este sistema en el mercado, no lo ponga en servicio ni lo utilice en la UE.",
-  // Framework import extension (#5254)
   "Delete this imported framework?": "¿Eliminar este marco importado?",
   "Import a framework from Excel": "Importar un marco desde Excel",
   "Import errors": "Errores de importación",
@@ -1396,11 +1372,7 @@ export const es: Record<string, string> = {
     "No se importó nada. Corrija las filas siguientes en su archivo y vuelva a subirlo.",
   "Step 1: Download the Excel template": "Paso 1: Descargar la plantilla de Excel",
   "Step 2: Upload the filled Excel file": "Paso 2: Subir el archivo de Excel completado",
-  "Store your own framework, such as an internal policy, as topics and subtopics. Imported frameworks are a reference list: they cannot be added to use cases yet.":
-    "Guarde su propio marco, como una política interna, en forma de temas y subtemas. Los marcos importados son una lista de referencia: todavía no se pueden agregar a casos de uso.",
   "Subtopic": "Subtema",
-  "This removes the imported framework with all its topics and subtopics. You can import it again from your file later.":
-    "Esto elimina el marco importado con todos sus temas y subtemas. Puede volver a importarlo más tarde desde su archivo.",
   "Topic": "Tema",
   "Failed to delete the imported framework. Please try again.":
     "No se pudo eliminar el marco importado. Inténtelo de nuevo.",
@@ -1411,8 +1383,6 @@ export const es: Record<string, string> = {
     "Eliminado del archivo importado. Se conserva porque tiene datos de evaluación.",
   "Store your own framework, such as an internal policy, as topics and subtopics. Once imported, add it to a use case from the Frameworks tab of that use case. Uploading a file with the same framework name again updates the existing framework.":
     "Guarde su propio marco, como una política interna, en forma de temas y subtemas. Una vez importado, añádalo a un caso de uso desde la pestaña Marcos de ese caso de uso. Si vuelve a subir un archivo con el mismo nombre de marco, se actualiza el marco existente.",
-  "All rows must describe the same framework. Re-uploading a framework name updates it and keeps the topics and subtopics that have assessment data. A file can have at most 5,000 rows.":
-    "Todas las filas deben describir el mismo marco. Si vuelve a subir un nombre de marco, se actualiza y se conservan los temas y subtemas que tienen datos de evaluación. Un archivo puede tener como máximo 5.000 filas.",
   "Loading imported frameworks...": "Cargando marcos importados...",
   "Could not load imported frameworks. Refresh the page to try again.":
     "No se pudieron cargar los marcos importados. Actualice la página para volver a intentarlo.",
