@@ -1,8 +1,8 @@
 > [!NOTE]
 > **VerifyWise has a new license.** New releases are licensed under the [VerifyWise Community & Evaluation License (VCEL) 1.0](LICENSE.md), which replaces the Business Source License 1.1.
 >
-> - **Free** for personal use, schools and universities, public sector institutions and noncommercial research. Schools and public bodies can also run it in production for their own work.
-> - **Companies** can evaluate VerifyWise free for 60 days. Running it inside a company after that needs a commercial license.
+> - **Free** for personal use.
+> - **Any other organizations** can evaluate VerifyWise free for 60 days. Running it inside a company after that needs a commercial license.
 > - **Releases you already use** keep the license they were released under.
 >
 > Questions? See the [licensing FAQ](LICENSING-FAQ.md) or write to hello@verifywise.ai. Thank you for using and supporting VerifyWise.
