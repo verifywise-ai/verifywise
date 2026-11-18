@@ -1,6 +1,6 @@
 import { FRAMEWORK_STRUCTURES, getStructureById, requireStructureByKey } from "../index";
 
-const EXPECTED = [5, 7, 3, 6, 8, 3, 7];
+const EXPECTED = [5, 7, 3, 6, 8, 3, 7, 3, 6, 6, 6, 3, 6, 7, 5, 2];
 
 const ATTRIBUTION =
   "Based on OSFI Guideline E-23 – Model Risk Management (2027), published September 11, 2025, effective May 1, 2027. Requirements are paraphrased; see https://www.osfi-bsif.gc.ca/en/guidance/guidance-library/guideline-e-23-model-risk-management-2027 for the official text.";
@@ -27,6 +27,11 @@ describe("OSFI E-23 structure", () => {
 
   it("has the expected group and item counts", () => {
     expect(fw.seed.structure.map((g) => g.items?.length)).toEqual(EXPECTED);
+  });
+
+  it("has 83 items in total", () => {
+    const total = fw.seed.structure.reduce((n, g) => n + (g.items?.length ?? 0), 0);
+    expect(total).toBe(83);
   });
 
   it("sets explicit order_no equal to the 1-based index", () => {

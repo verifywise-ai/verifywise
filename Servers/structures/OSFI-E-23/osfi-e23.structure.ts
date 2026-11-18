@@ -768,6 +768,859 @@ export const osfiE23Structure: FrameworkStructure = {
           },
         ],
       },
+      {
+        title: "Model design – rationale (D.2)",
+        description:
+          "Before a model is built or changed, its owner makes the case for it: what it is for, which business problem it addresses and what could go wrong in that use.",
+        order_no: 8,
+        items: [
+          {
+            title: "3.1.8 Defined purpose, scope, coverage and output use",
+            description:
+              "The model owner writes down why a model is being introduced or changed, what it covers and how its results will feed decisions. For a modification, the write-up explains what drives the change.",
+            order_no: 1,
+            summary:
+              "Purpose, scope, coverage and output use are defined before building or changing a model",
+            questions: [
+              "Is there a written statement of purpose for each new or modified model?",
+              "Does it set out scope and the population or portfolio covered?",
+              "Does it say how outputs will be consumed and by whom?",
+              "For a modification, is the reason for the change explained?",
+            ],
+            evidence_examples: [
+              "Model proposal or business case",
+              "Model change request",
+              "Scope and intended-use statement",
+            ],
+          },
+          {
+            title: "3.1.9 Business use case and intended-use risk",
+            description:
+              "Each model is tied to a concrete business use case, and the risk that comes with using it in that way is assessed up front.",
+            order_no: 2,
+            summary: "The business use case is identified and the risk of intended use is assessed",
+            questions: [
+              "Which business use case does the model support?",
+              "Who assessed the risk of the intended usage, and when?",
+              "How does that assessment feed the model risk rating?",
+            ],
+            evidence_examples: [
+              "Use case description",
+              "Intended-use risk assessment",
+              "Rationale sign-off by the model owner",
+            ],
+          },
+          {
+            title:
+              "3.1.10 AI/ML considerations: explainability, alternative controls, bias, ethics, privacy",
+            description:
+              "When the rationale involves advanced techniques such as AI/ML, owners weigh extra questions: how transparent the model must be, whether opaque or autonomous behaviour calls for compensating controls, and whether it could produce biased results, harm society or expose personal information.",
+            order_no: 3,
+            summary:
+              "Rationale for AI/ML models covers explainability, alternative controls, bias, ethics and privacy",
+            questions: [
+              "What level of transparency and explainability does the use case demand?",
+              "Are alternative controls needed for black-box or autonomous models?",
+              "Could the model create biased outcomes or adverse social or ethical effects?",
+              "Have privacy risks been assessed?",
+            ],
+            evidence_examples: [
+              "AI/ML rationale addendum",
+              "Explainability requirements statement",
+              "Bias, ethics and privacy assessment",
+              "Alternative control design",
+            ],
+          },
+        ],
+      },
+      {
+        title: "Principle 3.2 – Model data (D.2)",
+        description:
+          "Whatever feeds a model has to suit the job it was built for. This group looks at how that data is governed, vetted for quality and bias, and cleaned before it shapes a model.",
+        order_no: 9,
+        items: [
+          {
+            title: "3.2.1 Data governance integrated with enterprise data governance",
+            description:
+              "Standards for gathering, storing and accessing model data exist and sit within the institution's wider data governance, strategy and management.",
+            order_no: 1,
+            summary: "Model data standards are part of enterprise data governance",
+            questions: [
+              "Are there standards for collecting, storing and accessing model data?",
+              "How are they connected to enterprise data governance and strategy?",
+              "Who owns data standards that affect models?",
+            ],
+            evidence_examples: [
+              "Data governance policy covering models",
+              "Data standards for model inputs",
+              "Data ownership assignments",
+            ],
+          },
+          {
+            title: "3.2.2 Development data accurate, relevant, compliant, traceable and timely",
+            description:
+              "Data used to build a model should be free of material errors with bias understood, representative of the population the model targets, lawful and ethical in use and privacy-respecting, backed by documented lineage and refreshed often enough.",
+            order_no: 2,
+            summary:
+              "Development data is accurate, representative, compliant, traceable and timely",
+            questions: [
+              "How is accuracy and fitness for use of development data confirmed?",
+              "Does the data reflect the intended target population?",
+              "Does its use meet statutory, regulatory and internal data ethics and privacy requirements?",
+              "Is lineage and provenance documented?",
+              "Is the refresh frequency appropriate for the use?",
+            ],
+            evidence_examples: [
+              "Data fitness assessment",
+              "Data lineage documentation",
+              "Privacy and compliance checks",
+              "Data refresh schedule",
+            ],
+          },
+          {
+            title: "3.2.3 Data bias identified and managed",
+            description:
+              "Unwanted bias in data can carry through into unfair outputs and reputational harm, so it should be looked for and handled, particularly for AI/ML models that readily reproduce unjustified patterns.",
+            order_no: 3,
+            summary: "Bias in model data is identified and managed",
+            questions: [
+              "How is bias in the data detected?",
+              "What actions follow when bias is found?",
+              "Is residual bias recorded and made visible to reviewers?",
+            ],
+            evidence_examples: [
+              "Data bias testing results",
+              "Bias remediation log",
+              "Reviewer notes on residual data bias",
+            ],
+          },
+          {
+            title: "3.2.4 Regular data quality checks",
+            description:
+              "Thorough checks run on a recurring basis, for instance looking for outliers, gaps in values and inconsistencies.",
+            order_no: 4,
+            summary: "Data quality checks are performed regularly and thoroughly",
+            questions: [
+              "Which checks are performed (outliers, missing values, consistency)?",
+              "How often do they run?",
+              "Where are results recorded and who acts on them?",
+            ],
+            evidence_examples: [
+              "Data quality check procedure",
+              "Data quality reports",
+              "Issue tracking records",
+            ],
+          },
+          {
+            title: "3.2.5 Controls and provenance for synthetic and proxy data",
+            description:
+              "Where synthetic data or proxy sources stand in for real data, controls assure its quality, and its origin and how it is used are documented.",
+            order_no: 5,
+            summary:
+              "Quality controls and provenance documentation exist for synthetic and proxy data",
+            questions: [
+              "Is synthetic or proxy data used in any model?",
+              "What controls assure its quality?",
+              "How are its origin and use documented?",
+            ],
+            evidence_examples: [
+              "Synthetic data generation records",
+              "Proxy data justification",
+              "Provenance log",
+            ],
+          },
+          {
+            title: "3.2.6 Data cleansing controls",
+            description:
+              "Controls make sure cleansing steps, such as treating wrong or missing values, are applied appropriately.",
+            order_no: 6,
+            summary: "Controls ensure data cleansing is applied appropriately",
+            questions: [
+              "How are inaccurate and missing values handled?",
+              "Are cleansing rules documented and approved?",
+              "Is the effect of cleansing on the data checked?",
+            ],
+            evidence_examples: [
+              "Data cleansing procedures",
+              "Cleansing rule documentation",
+              "Before and after cleansing comparison",
+            ],
+          },
+        ],
+      },
+      {
+        title: "Principle 3.3 – Model development (D.2)",
+        description:
+          "Building a model should follow repeatable practices with defined bars for performance and record-keeping. This covers methodology choices, selection criteria and what is set in advance for later monitoring.",
+        order_no: 10,
+        items: [
+          {
+            title: "3.3.1 Model documentation standards",
+            description:
+              "A documentation standard spells out what developers must record: how the model is set up and run, its limits and usage restrictions, how its data is created, accessed and maintained, assumptions and method, the part played by expert judgment, and the analyses and tests the developers carried out.",
+            order_no: 1,
+            summary: "Documentation standards define what developers must record about each model",
+            questions: [
+              "Does the standard cover setup and operation of the model?",
+              "Does it require limitations and usage restrictions to be recorded?",
+              "Does it require descriptions of data creation, access and maintenance?",
+              "Does it require assumptions, methodology and expert judgment to be documented?",
+              "Does it require developer analyses and performance tests to be included?",
+            ],
+            evidence_examples: [
+              "Model documentation standard",
+              "Sample completed model documentation",
+              "Documentation completeness checklist",
+            ],
+          },
+          {
+            title: "3.3.2 Methodology, data and algorithm selection guidelines",
+            description:
+              "Guidelines help developers choose methods, data (including variable transformations) and algorithms that are conceptually sound.",
+            order_no: 2,
+            summary: "Guidelines support sound choices of methodology, data and algorithms",
+            questions: [
+              "Are there guidelines for choosing methodologies and algorithms?",
+              "Do they cover data selection and variable transformations?",
+              "How is conceptual soundness demonstrated?",
+            ],
+            evidence_examples: [
+              "Development guidelines",
+              "Methodology justification in model documents",
+              "Algorithm selection records",
+            ],
+          },
+          {
+            title: "3.3.3 Explainability requirements",
+            description:
+              "Explainability expectations are set per model and can differ with its purpose, degree of autonomy, regulatory demands or likely effect on customers and other stakeholders.",
+            order_no: 3,
+            summary:
+              "Explainability requirements are defined and vary by purpose, autonomy and impact",
+            questions: [
+              "How are explainability requirements determined for each model?",
+              "Do they account for autonomy, regulation and stakeholder impact?",
+              "How does the developer show the requirement is met?",
+            ],
+            evidence_examples: [
+              "Explainability standard",
+              "Model-level explainability requirements",
+              "Explainability test results",
+            ],
+          },
+          {
+            title: "3.3.4 Model selection criteria",
+            description:
+              "Performance and other criteria are fixed for choosing between candidate models.",
+            order_no: 4,
+            summary: "Performance and other criteria guide model selection",
+            questions: [
+              "What performance measures decide between candidate models?",
+              "What non-performance criteria apply?",
+              "Is the selection decision documented?",
+            ],
+            evidence_examples: [
+              "Model selection criteria",
+              "Candidate model comparison",
+              "Selection decision record",
+            ],
+          },
+          {
+            title: "3.3.5 Standards for output use and reporting",
+            description:
+              "Standards govern the way model results are used downstream and communicated in reports.",
+            order_no: 5,
+            summary: "Standards govern how model outputs are used and reported",
+            questions: [
+              "Are rules in place for how outputs may be used?",
+              "How are outputs reported and to whom?",
+              "How is misuse of outputs prevented or detected?",
+            ],
+            evidence_examples: [
+              "Output use standard",
+              "Model output reporting templates",
+              "User guidance for model results",
+            ],
+          },
+          {
+            title: "3.3.6 Monitoring criteria set at development",
+            description:
+              "Performance and other yardsticks for later monitoring are agreed while the model is still being built.",
+            order_no: 6,
+            summary: "Monitoring criteria are defined during development",
+            questions: [
+              "Which performance and other criteria will be monitored?",
+              "Who agrees the criteria before deployment?",
+              "How are they handed to the monitoring function?",
+            ],
+            evidence_examples: [
+              "Monitoring plan in model documentation",
+              "Monitoring criteria sign-off",
+              "Hand-over notes to monitoring owners",
+            ],
+          },
+        ],
+      },
+      {
+        title: "Principle 3.4 – Model review (D.2)",
+        description:
+          "Someone other than the builders should test whether a model is correctly specified, works as intended and suits its purpose. This group covers who reviews, how deeply and how often, when a review is forced, what it examines and how the verdict is passed on.",
+        order_no: 11,
+        items: [
+          {
+            title: "3.4.1 Review independent of development",
+            description:
+              "The review function operates separately from development and confirms that models are specified correctly, behave as designed and are fit for purpose. Reviewers can be in-house or objective outside parties.",
+            order_no: 1,
+            summary:
+              "Model review is independent of development and checks specification, behaviour and fitness",
+            questions: [
+              "How is independence from developers assured?",
+              "Does review confirm specification, intended operation and fitness for purpose?",
+              "When are internal versus third-party reviewers used?",
+            ],
+            evidence_examples: [
+              "Model review policy",
+              "Reviewer independence attestations",
+              "Third-party reviewer engagement terms",
+            ],
+          },
+          {
+            title: "3.4.2 Review depth and frequency set by rating",
+            description:
+              "How far a review goes and how often it recurs is scaled to the model's risk rating.",
+            order_no: 2,
+            summary: "Review extent and frequency match the model risk rating",
+            questions: [
+              "How does the rating determine review depth?",
+              "How does it determine review frequency?",
+              "Who approves exceptions to the schedule?",
+            ],
+            evidence_examples: [
+              "Review standard by risk rating",
+              "Model review schedule",
+              "Exception approvals",
+            ],
+          },
+          {
+            title: "3.4.3 Review triggers",
+            description:
+              "Certain events set a review in motion: a new model, a modification to algorithms, parameters or operational components, a performance breach such as material errors, drift or threshold violations, a significant data change such as new sources, redefined fields or a shift in quality, and scheduled periodic reviews.",
+            order_no: 3,
+            summary: "Defined events trigger model review",
+            questions: [
+              "Are triggers defined for new models and modifications?",
+              "Do performance breaches initiate review?",
+              "Do significant data changes initiate review?",
+              "Are periodic risk-based reviews scheduled?",
+            ],
+            evidence_examples: ["Review trigger procedure", "Trigger log", "Review schedule"],
+          },
+          {
+            title: "3.4.4 Review scope",
+            description:
+              "A review may challenge the risk rating, examine purpose, scope, conceptual soundness, limitations, mitigants and the reasonableness of results, and assess data. It may also look at new methods and tools, test explainability against the intended use, examine third-party elements, and record assessments with the follow-up taken.",
+            order_no: 4,
+            summary:
+              "Review scope covers rating, soundness, data, novel techniques, explainability and documentation",
+            questions: [
+              "Does the review confirm or challenge the risk rating?",
+              "Does it assess purpose, scope, soundness, limitations and mitigants?",
+              "Does it cover data quality and appropriateness?",
+              "Does it cover novel methods and explainability against intended use?",
+              "Are assessments and responding actions documented?",
+            ],
+            evidence_examples: [
+              "Review scope template",
+              "Completed review report",
+              "Action tracking log",
+            ],
+          },
+          {
+            title: "3.4.5 Review of third-party models, platforms and components",
+            description:
+              "Reviewers also look at vendor models and platforms, and at the components inside them, including data and libraries used in development.",
+            order_no: 5,
+            summary:
+              "Third-party models, platforms and sub-components, including data and libraries, are reviewed",
+            questions: [
+              "Are vendor models and platforms in scope of review?",
+              "Are sub-components such as data and libraries examined?",
+              "How is limited vendor transparency handled?",
+            ],
+            evidence_examples: [
+              "Third-party model review reports",
+              "Component inventory",
+              "Vendor documentation assessment",
+            ],
+          },
+          {
+            title: "3.4.6 Documented results and recommendation to the approver",
+            description:
+              "The review outcome, including findings, recommendations and an overall view on whether to approve, is written up and delivered to the approver.",
+            order_no: 6,
+            summary: "Review results, findings and an approval recommendation go to the approver",
+            questions: [
+              "Are findings and recommendations documented?",
+              "Is an overall recommendation on approval given?",
+              "How is it delivered to the approver?",
+            ],
+            evidence_examples: [
+              "Review report with recommendation",
+              "Findings register",
+              "Approver acknowledgement",
+            ],
+          },
+        ],
+      },
+      {
+        title: "Model approval (D.2)",
+        description:
+          "A formal decision gates a model's entry into production and its continued use. The decision rests on suitability and on a confirmed risk position, and it can accommodate known weaknesses when they are justified.",
+        order_no: 12,
+        items: [
+          {
+            title: "3.4.7 Suitability approval throughout the lifecycle",
+            description:
+              "Approval is not a one-off gate. It recurs across the lifecycle and asks whether the model is suitable to go live, or to stay in use, given what it is meant to do.",
+            order_no: 1,
+            summary:
+              "Approval assesses suitability for production or continued use throughout the lifecycle",
+            questions: [
+              "At which lifecycle points is approval required?",
+              "What criteria determine suitability for intended use?",
+              "Who holds approval authority at each point?",
+            ],
+            evidence_examples: [
+              "Model approval procedure",
+              "Approval records",
+              "Approval authority matrix",
+            ],
+          },
+          {
+            title: "3.4.8 Rating and residual risk affirmed at approval",
+            description:
+              "The approver reconfirms the model's risk rating and its residual risk assessment as part of the decision.",
+            order_no: 2,
+            summary: "The approval decision affirms the risk rating and residual risk assessment",
+            questions: [
+              "Does the approver confirm the assigned rating?",
+              "Is the residual risk assessment reviewed and affirmed?",
+              "How are disagreements recorded?",
+            ],
+            evidence_examples: [
+              "Approval record showing rating and residual risk",
+              "Residual risk assessment",
+              "Approver sign-off",
+            ],
+          },
+          {
+            title: "3.4.9 Approval with known limitations backed by mitigants or justification",
+            description:
+              "A model with identified weaknesses can still be approved if compensating mitigants are in place or the stakeholder group justifies using it despite the known limitations.",
+            order_no: 3,
+            summary:
+              "Models with known limitations are approved only with mitigants or documented justification",
+            questions: [
+              "How are limitations and weaknesses recorded at approval?",
+              "What mitigants are required?",
+              "Who gives justification when mitigants are absent, and how is it documented?",
+            ],
+            evidence_examples: [
+              "Limitations register",
+              "Mitigation plan",
+              "Stakeholder justification memo",
+            ],
+          },
+        ],
+      },
+      {
+        title: "Principle 3.5 – Model deployment (D.2)",
+        description:
+          "Moving a model into production demands quality and change controls so that it keeps its integrity once embedded. This group covers coordination, data consistency, testing, procedures, adjacent risk checks and explainability hand-off.",
+        order_no: 13,
+        items: [
+          {
+            title: "3.5.1 Collaboration across stakeholders and technology teams",
+            description:
+              "Developers, owners, reviewers, users and technology or operations teams work together when a model is deployed.",
+            order_no: 1,
+            summary:
+              "Deployment involves collaboration among model stakeholders and technology teams",
+            questions: [
+              "Which roles take part in deployment?",
+              "How is coordination with technology and operations teams organized?",
+              "Where are deployment responsibilities recorded?",
+            ],
+            evidence_examples: [
+              "Deployment plan",
+              "Stakeholder participation records",
+              "Deployment responsibility matrix",
+            ],
+          },
+          {
+            title: "3.5.2 Development and production data consistency",
+            description:
+              "The data the model meets in production should line up with what it was developed on.",
+            order_no: 2,
+            summary: "Production data is consistent with development data",
+            questions: [
+              "How is consistency between development and production data verified?",
+              "How are differences handled?",
+              "Who signs off on data readiness?",
+            ],
+            evidence_examples: [
+              "Data consistency comparison",
+              "Production data readiness checklist",
+              "Difference resolution log",
+            ],
+          },
+          {
+            title: "3.5.3 Production testing",
+            description: "Tests show that the model behaves as expected in the live environment.",
+            order_no: 3,
+            summary: "Tests demonstrate the model works as expected in production",
+            questions: [
+              "What tests run in the production environment?",
+              "What results are required before go-live?",
+              "How are test failures handled?",
+            ],
+            evidence_examples: [
+              "Production test plan",
+              "Test results",
+              "Go-live acceptance record",
+            ],
+          },
+          {
+            title:
+              "3.5.4 Documented deployment procedures (approvals, change control, exceptions, overlays)",
+            description:
+              "Written procedures lay out deployment steps, who is responsible, approval hierarchies, change control, monitoring arrangements, and how exceptions are handled, overlays included.",
+            order_no: 4,
+            summary:
+              "Deployment procedures document steps, responsibilities, approvals, change control, monitoring and exceptions",
+            questions: [
+              "Do procedures define steps and stakeholder responsibilities?",
+              "Do they set approval hierarchies and change control?",
+              "Do they address monitoring arrangements?",
+              "How are exceptions and overlays handled and approved?",
+            ],
+            evidence_examples: [
+              "Deployment procedure document",
+              "Change control records",
+              "Exception and overlay register",
+            ],
+          },
+          {
+            title: "3.5.5 Pre-deployment assessment of related risks (B-13, E-21)",
+            description:
+              "Before go-live, related risks such as cybersecurity, infrastructure weaknesses and other operational exposures are assessed, with reference to OSFI Guidelines B-13 and E-21.",
+            order_no: 5,
+            summary:
+              "Related cyber, infrastructure and operational risks are assessed before deployment",
+            questions: [
+              "Is a cybersecurity assessment completed before deployment?",
+              "Are infrastructure vulnerabilities and operational risks assessed?",
+              "How are B-13 and E-21 considered?",
+            ],
+            evidence_examples: [
+              "Pre-deployment risk assessment",
+              "Security review results",
+              "Operational readiness assessment",
+            ],
+          },
+          {
+            title: "3.5.6 Explainability reviewed and communicated",
+            description:
+              "Explainability requirements are revisited at deployment, and explanatory outputs are shared with the right stakeholders.",
+            order_no: 6,
+            summary:
+              "Explainability requirements are reviewed and explanatory outputs communicated",
+            questions: [
+              "Are explainability requirements checked at deployment?",
+              "Which stakeholders receive explanatory outputs?",
+              "How is delivery confirmed?",
+            ],
+            evidence_examples: [
+              "Explainability review record",
+              "Explanatory output distribution list",
+              "User briefing materials",
+            ],
+          },
+        ],
+      },
+      {
+        title: "Principle 3.6 – Model monitoring (D.2)",
+        description:
+          "Once a model is live, ongoing checks confirm it still does its job and flag problems early. This group describes what those checks cover, when they trip and who hears about it.",
+        order_no: 14,
+        items: [
+          {
+            title: "3.6.1 Monitoring standards by rating and model type",
+            description:
+              "Standards set how often monitoring occurs, what it covers and how results are judged, differentiated across risk ratings and kinds of model.",
+            order_no: 1,
+            summary:
+              "Monitoring standards define frequency, scope and evaluation criteria by rating and model type",
+            questions: [
+              "Do standards define monitoring frequency and scope?",
+              "Do they set evaluation criteria?",
+              "Are they differentiated by risk rating and model type?",
+            ],
+            evidence_examples: [
+              "Model monitoring standard",
+              "Monitoring plan per model",
+              "Monitoring frequency matrix",
+            ],
+          },
+          {
+            title: "3.6.2 Quantitative and qualitative criteria",
+            description:
+              "Evaluation draws on numbers such as performance metrics and on judgments such as whether the model is still being used within its original scope.",
+            order_no: 2,
+            summary: "Monitoring uses both quantitative measures and qualitative assessments",
+            questions: [
+              "Which performance metrics are tracked?",
+              "Which qualitative checks are applied, such as scope adherence?",
+              "How are the two combined in an overall assessment?",
+            ],
+            evidence_examples: [
+              "Monitoring metric definitions",
+              "Qualitative assessment checklist",
+              "Monitoring reports",
+            ],
+          },
+          {
+            title: "3.6.3 Tracking operational factors",
+            description:
+              "Monitoring follows shifts in how the model performs and is used, in its inputs, in external dependencies such as version updates, and in what is being modelled, for example new product features.",
+            order_no: 3,
+            summary:
+              "Operational factors such as performance, usage, inputs, dependencies and modelled characteristics are tracked",
+            questions: [
+              "Are changes in performance and usage tracked?",
+              "Are input data changes tracked?",
+              "Are external dependency updates tracked?",
+              "Are changes in what is being modelled tracked?",
+            ],
+            evidence_examples: [
+              "Operational factor tracking log",
+              "Dependency version records",
+              "Input data change reports",
+            ],
+          },
+          {
+            title: "3.6.4 Breach thresholds and material-modification criteria",
+            description:
+              "Thresholds define what counts as a breach, and criteria define when a change, including one in operational factors, is a material modification.",
+            order_no: 4,
+            summary: "Breach thresholds and criteria for material modifications are defined",
+            questions: [
+              "How are breach thresholds set per model?",
+              "What criteria define a material modification?",
+              "How do operational factor changes feed into those criteria?",
+            ],
+            evidence_examples: [
+              "Threshold definitions",
+              "Material modification criteria",
+              "Breach and modification log",
+            ],
+          },
+          {
+            title: "3.6.5 Contingency plans and escalation",
+            description:
+              "Plans exist for a model that becomes unavailable, deteriorates or fails outright, along with escalation routes for dealing with such events.",
+            order_no: 5,
+            summary:
+              "Contingency plans and escalation procedures cover unavailability, deterioration and failure",
+            questions: [
+              "Are contingency plans defined for model unavailability, deterioration and failure?",
+              "Who is notified and in what order?",
+              "Are plans tested?",
+            ],
+            evidence_examples: [
+              "Contingency plans",
+              "Escalation procedure",
+              "Contingency test results",
+            ],
+          },
+          {
+            title: "3.6.6 Controls for AI/ML autonomy, re-parametrization and drift",
+            description:
+              "AI/ML models raise distinctive monitoring problems: decisions made autonomously, models that re-tune their own parameters, and a heightened chance of drift. Processes should address each of them.",
+            order_no: 6,
+            summary:
+              "Processes address AI/ML autonomous decisions, autonomous re-parametrization and drift",
+            questions: [
+              "How are autonomous decisions monitored?",
+              "How is autonomous re-parametrization controlled?",
+              "How is model drift detected and handled?",
+            ],
+            evidence_examples: [
+              "AI/ML monitoring procedures",
+              "Drift monitoring reports",
+              "Re-parametrization control records",
+            ],
+          },
+          {
+            title: "3.6.7 Issues shared promptly with stakeholders",
+            description:
+              "Problems found are passed quickly to the people who need to know, through the proper escalation routes.",
+            order_no: 7,
+            summary:
+              "Issues are promptly shared with relevant stakeholders through escalation procedures",
+            questions: [
+              "Who counts as a relevant stakeholder for monitoring issues?",
+              "What timelines apply to notification?",
+              "How is escalation recorded?",
+            ],
+            evidence_examples: [
+              "Issue communication records",
+              "Escalation log",
+              "Stakeholder notification procedure",
+            ],
+          },
+        ],
+      },
+      {
+        title: "Model decommission (D.2)",
+        description:
+          "Retiring a model is a managed step, not just switching it off. This group looks at why models are retired, how the retirement is run and what is left to watch afterwards.",
+        order_no: 15,
+        items: [
+          {
+            title: "3.6.8 Decommission criteria",
+            description:
+              "Reasons to retire a model include performance problems such as severe failure, repeated breaches or excessive overrides, shifts in business, regulatory or strategic direction, and obsolete data or methods or an unfavourable cost-benefit picture.",
+            order_no: 1,
+            summary:
+              "Criteria cover performance, business or regulatory change and obsolescence or cost-benefit",
+            questions: [
+              "Are criteria defined for performance-based decommission?",
+              "Do they cover business, regulatory or strategic change?",
+              "Do they cover obsolete data, methodology and cost-benefit?",
+            ],
+            evidence_examples: [
+              "Decommission policy",
+              "Decommission decision records",
+              "Trigger criteria checklist",
+            ],
+          },
+          {
+            title: "3.6.9 Disciplined process with stakeholder notice",
+            description:
+              "Retirement follows an orderly process, and everyone affected is told about the plan beforehand.",
+            order_no: 2,
+            summary:
+              "Decommission follows a disciplined process with advance notice to stakeholders",
+            questions: [
+              "Is there a defined decommission procedure?",
+              "Who is notified before retirement?",
+              "How is completion confirmed?",
+            ],
+            evidence_examples: [
+              "Decommission procedure",
+              "Stakeholder notification records",
+              "Decommission completion sign-off",
+            ],
+          },
+          {
+            title: "3.6.10 Retired model and documentation retained",
+            description:
+              "The retired model and its documents are kept for a set period so they can serve as a benchmark or a fallback.",
+            order_no: 3,
+            summary: "The retired model and its documentation are retained for a set period",
+            questions: [
+              "How long are retired models and documents kept?",
+              "Where are they stored?",
+              "Under what circumstances may they be used as a benchmark or fallback?",
+            ],
+            evidence_examples: [
+              "Retention schedule",
+              "Archive location records",
+              "Fallback use criteria",
+            ],
+          },
+          {
+            title: "3.6.11 Third-party decommission actions",
+            description:
+              "For vendor-supplied models, the extra steps needed on retirement are worked out.",
+            order_no: 4,
+            summary: "Additional actions for decommissioning third-party models are determined",
+            questions: [
+              "What extra steps apply to retiring a vendor model?",
+              "How are contract terms and data return or deletion handled?",
+              "Who owns these actions?",
+            ],
+            evidence_examples: [
+              "Third-party exit plan",
+              "Contract termination records",
+              "Data return or deletion confirmation",
+            ],
+          },
+          {
+            title: "3.6.12 Downstream effects monitored",
+            description:
+              "After retirement, effects further along the chain are watched to be sure nothing lingers.",
+            order_no: 5,
+            summary: "Downstream effects are monitored after decommission",
+            questions: [
+              "Which downstream processes depend on the retired model?",
+              "How long are effects monitored?",
+              "How are residual impacts handled?",
+            ],
+            evidence_examples: [
+              "Downstream dependency analysis",
+              "Post-decommission monitoring report",
+              "Residual impact log",
+            ],
+          },
+        ],
+      },
+      {
+        title: "Appendix 1 – Model information tracking",
+        description:
+          "Appendix 1 names the minimum facts to keep about models, split into a baseline for every identified model and a larger set for those held in the inventory.",
+        order_no: 16,
+        items: [
+          {
+            title: "A.1 Minimum information for every identified model",
+            description:
+              "For each model that has been identified, the institution keeps at least an ID, a name with a description of key features and use, a risk rating, an owner, a developer and the model's origin, such as in-house or vendor.",
+            order_no: 1,
+            summary: "Minimum record held for each identified model",
+            questions: [
+              "Does every identified model have an ID?",
+              "Is a name and description of key features and use recorded?",
+              "Are the risk rating, owner and developer recorded?",
+              "Is the origin (internal or vendor) recorded?",
+            ],
+            evidence_examples: [
+              "Model identification register",
+              "Sample model record",
+              "Data completeness report",
+            ],
+          },
+          {
+            title: "A.2 Additional information for inventoried models",
+            description:
+              "Models of non-negligible risk that sit in the inventory carry more detail: version, production deployment date, reviewer, approver, dependencies, data sources with a description, approved uses, limitations including exceptions and additional requirements, date of last review, monitoring status including exceptions, and next review date.",
+            order_no: 2,
+            summary: "Further record held for models in the inventory",
+            questions: [
+              "Are version, deployment date, reviewer and approver recorded?",
+              "Are dependencies, data sources and their description recorded?",
+              "Are approved uses and limitations (with exceptions) recorded?",
+              "Are last review date, monitoring status (with exceptions) and next review date recorded?",
+            ],
+            evidence_examples: [
+              "Model inventory extract",
+              "Inventory field specification",
+              "Inventory completeness check",
+            ],
+          },
+        ],
+      },
     ],
   },
 };
