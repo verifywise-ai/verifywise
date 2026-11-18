@@ -944,6 +944,10 @@ export const ENTITY_CONFIGS: { [key in EntityType]: EntityConfig } = {
     },
     fieldFormatters: {
       target_date: GENERIC_FORMATTERS.date,
+      model_id: namedRowFormatter(
+        "SELECT model AS name FROM model_inventories WHERE id = :id AND organization_id = :organizationId",
+        "Model",
+      ),
     },
   },
 

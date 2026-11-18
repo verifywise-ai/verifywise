@@ -249,7 +249,11 @@ export async function updateModelRiskById(req: Request, res: Response) {
 
     // Record changes in change history
     if (existingModelRiskData && req.userId) {
-      const changes = await trackEntityChanges("model_risk", existingModelRiskData, req.body);
+      // Org-scoped, on the transaction: the model id is recorded by name.
+      const changes = await trackEntityChanges("model_risk", existingModelRiskData, req.body, {
+        organizationId: req.organizationId!,
+        transaction,
+      });
       if (changes.length > 0) {
         await recordMultipleFieldChanges(
           "model_risk",
