@@ -5,8 +5,10 @@ jest.mock("../../../utils/projectDeletion.utils", () => ({
 }));
 jest.mock("../../../utils/userPermission.utils", () => ({
   userHasPermission: jest.fn(),
+  getUserRoleInOrganization: jest.fn(),
 }));
 jest.mock("../../../utils/project.utils", () => ({
+  getProjectAccessQuery: jest.fn(),
   getUserProjects: jest.fn(),
   calculateProjectRisks: jest.fn(),
   lockProjectForDelete: jest.fn(),
@@ -16,6 +18,8 @@ jest.mock("../../../database/db", () => ({
 }));
 
 import { sequelize } from "../../../database/db";
+import { getUserRoleInOrganization, userHasPermission } from "../../../utils/userPermission.utils";
+import { getProjectAccessQuery } from "../../../utils/project.utils";
 import "../../functions/useCaseFunctions";
 import { writeToolExecutors } from "../../confirmation/createWriteTool";
 
@@ -31,6 +35,12 @@ describe.each(["agent_update_use_case", "agent_update_use_case_status"])(
     beforeEach(() => {
       jest.clearAllMocks();
       mockQuery.mockResolvedValue([[{ id: 12 }]]);
+      // The acting user may edit use cases and can access this one.
+      (userHasPermission as unknown as jest.Mock<any>).mockResolvedValue(true);
+      (getUserRoleInOrganization as unknown as jest.Mock<any>).mockResolvedValue({
+        name: "Editor",
+      });
+      (getProjectAccessQuery as unknown as jest.Mock<any>).mockResolvedValue("allowed");
     });
 
     it("records the requester as the last updater", async () => {
@@ -41,11 +51,14 @@ describe.each(["agent_update_use_case", "agent_update_use_case_status"])(
       expect(options.replacements.last_updated).toBeInstanceOf(Date);
     });
 
-    it("falls back to the approver, then to no one", async () => {
+    it("falls back to the approver", async () => {
       await execute({ ...params, _userId: 9 }, 4);
       expect((mockQuery.mock.calls[0][1] as any).replacements.last_updated_by).toBe(9);
+    });
+
+    it("writes nothing without an acting user", async () => {
       await execute({ ...params }, 4);
-      expect((mockQuery.mock.calls[1][1] as any).replacements.last_updated_by).toBeNull();
+      expect(mockQuery).not.toHaveBeenCalled();
     });
   },
 );
