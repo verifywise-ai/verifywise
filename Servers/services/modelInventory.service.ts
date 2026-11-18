@@ -12,7 +12,7 @@
  */
 
 import { Transaction } from "sequelize";
-import { inTransaction } from "../utils/transaction.utils";
+import { inTransaction, TransactionContext } from "../utils/transaction.utils";
 import { ModelInventoryModel } from "../domain.layer/models/modelInventory/modelInventory.model";
 import { ModelInventoryStatus } from "../domain.layer/enums/model-inventory-status.enum";
 import { IModelInventory } from "../domain.layer/interfaces/i.modelInventory";
@@ -88,6 +88,19 @@ function modelFields(input: ModelInventoryInput): Partial<IModelInventory> {
 }
 
 const modelDisplayName = (model: ModelInventoryModel, id: number) => model.model || `Model #${id}`;
+
+/** For the log of a rollback that fails. */
+const txContext = (
+  functionName: string,
+  eventType: TransactionContext["eventType"],
+  ctx: Pick<ModelWriteContext, "organizationId" | "userId">,
+): TransactionContext => ({
+  functionName,
+  fileName: "modelInventory.service.ts",
+  eventType,
+  organizationId: ctx.organizationId,
+  userId: ctx.userId,
+});
 
 /** Tell a newly named approver. Never awaited by a save; never throws. */
 async function notifyModelApprover(
@@ -198,7 +211,8 @@ export async function createModelInventoryService(
     is_demo: false,
   });
 
-  return inTransaction(transaction, async (tx) => {
+  const log = txContext("createModelInventoryService", "Create", ctx);
+  return inTransaction(transaction, log, async (tx) => {
     const saved = await createNewModelInventoryQuery(
       model,
       ctx.organizationId,
@@ -252,7 +266,8 @@ export async function updateModelInventoryService(
 ): Promise<ModelInventoryModel | null> {
   const input = assertModelApprovalInput(rawInput, { creating: false });
   const fields = modelFields(input);
-  return inTransaction(transaction, async (tx) => {
+  const log = txContext("updateModelInventoryService", "Update", ctx);
+  return inTransaction(transaction, log, async (tx) => {
     const current = await getModelInventoryByIdQuery(id, ctx.organizationId, {
       transaction: tx,
       forUpdate: true,
@@ -336,7 +351,8 @@ export async function deleteModelInventoryService(
   ctx: Pick<ModelWriteContext, "organizationId" | "userId">,
   transaction?: Transaction,
 ): Promise<void> {
-  await inTransaction(transaction, async (tx) => {
+  const log = txContext("deleteModelInventoryService", "Delete", ctx);
+  await inTransaction(transaction, log, async (tx) => {
     // Lock the model row first: from here no risk, validation or finding can
     // join the model, so the checks below hold until the delete commits.
     if (!(await lockModelInventoryQuery(id, ctx.organizationId, tx))) {
@@ -370,7 +386,8 @@ export async function linkModelToUseCaseService(
   ctx: ModelWriteContext,
   transaction?: Transaction,
 ): Promise<boolean> {
-  return inTransaction(transaction, async (tx) => {
+  const log = txContext("linkModelToUseCaseService", "Update", ctx);
+  return inTransaction(transaction, log, async (tx) => {
     if (!(await lockModelInventoryQuery(modelId, ctx.organizationId, tx))) {
       throw new NotFoundException(MODEL_NOT_FOUND, "model_inventory", modelId);
     }

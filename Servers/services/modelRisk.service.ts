@@ -13,7 +13,7 @@
  */
 
 import { Transaction } from "sequelize";
-import { inTransaction } from "../utils/transaction.utils";
+import { inTransaction, TransactionContext } from "../utils/transaction.utils";
 import { ModelRiskModel } from "../domain.layer/models/modelRisk/modelRisk.model";
 import { IModelRisk } from "../domain.layer/interfaces/i.modelRisk";
 import {
@@ -44,6 +44,19 @@ export interface ModelRiskWriteContext {
 }
 
 type ModelRiskInput = Partial<IModelRisk> & Record<string, unknown>;
+
+/** For the log of a rollback that fails. */
+const txContext = (
+  functionName: string,
+  eventType: TransactionContext["eventType"],
+  ctx: ModelRiskWriteContext,
+): TransactionContext => ({
+  functionName,
+  fileName: "modelRisk.service.ts",
+  eventType,
+  organizationId: ctx.organizationId,
+  userId: ctx.userId,
+});
 
 /** The request without is_demo: only the demo seed creates demo risks. */
 function withoutDemoFlag(input: ModelRiskInput): ModelRiskInput {
@@ -118,7 +131,8 @@ export async function createModelRiskService(
   transaction?: Transaction,
 ): Promise<ModelRiskModel> {
   const data = withoutDemoFlag(input);
-  return inTransaction(transaction, async (tx) => {
+  const log = txContext("createModelRiskService", "Create", ctx);
+  return inTransaction(transaction, log, async (tx) => {
     const risk = await createNewModelRiskQuery(
       { ...data, is_demo: false } as Partial<IModelRisk>,
       ctx.organizationId,
@@ -144,7 +158,8 @@ export async function updateModelRiskService(
   transaction?: Transaction,
 ): Promise<ModelRiskModel | null> {
   const data = withoutDemoFlag(input);
-  return inTransaction(transaction, async (tx) => {
+  const log = txContext("updateModelRiskService", "Update", ctx);
+  return inTransaction(transaction, log, async (tx) => {
     const existing = await getModelRiskByIdQuery(id, ctx.organizationId, false, {
       transaction: tx,
       forUpdate: true,
@@ -189,7 +204,8 @@ export async function deleteModelRiskService(
   ctx: ModelRiskWriteContext,
   transaction?: Transaction,
 ): Promise<boolean> {
-  return inTransaction(transaction, async (tx) => {
+  const log = txContext("deleteModelRiskService", "Delete", ctx);
+  return inTransaction(transaction, log, async (tx) => {
     const deleted = await deleteModelRiskByIdQuery(id, ctx.organizationId, tx);
     if (!deleted) return false;
     await recordEntityDeletion("model_risk", id, ctx.userId, ctx.organizationId, tx);
