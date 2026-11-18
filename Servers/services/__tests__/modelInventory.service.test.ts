@@ -189,6 +189,15 @@ describe("updateModelInventoryService", () => {
     expect(mockUpdateQuery).not.toHaveBeenCalled();
   });
 
+  it("hands the locked row, as it was before the save, to the update query", async () => {
+    const tx = fakeTx();
+    mockGetById.mockResolvedValue(storedRow({ status: "Pending", approver: null }));
+    mockUpdateQuery.mockImplementation(async (_id: number, row: any) => row);
+    await updateModelInventoryService(7, { status: "Approved" as any }, ctx, tx as any);
+    const previous = mockUpdateQuery.mock.calls[0][9];
+    expect(previous).toMatchObject({ id: 7, status: "Pending" });
+  });
+
   it("reads the row locked, in the transaction", async () => {
     const tx = fakeTx();
     mockGetById.mockResolvedValue(storedRow({ status: "Pending", approver: null }));

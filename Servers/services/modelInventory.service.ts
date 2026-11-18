@@ -289,6 +289,8 @@ export async function updateModelInventoryService(
       ctx.organizationId,
       tx,
       ctx.useCaseViewer,
+      // The locked row, as read before updateModelInventory changed it.
+      before,
     );
     if (changes.length > 0) {
       await recordMultipleFieldChanges(

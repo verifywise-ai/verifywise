@@ -398,9 +398,13 @@ export const updateModelInventoryByIdQuery = async (
   transaction: Transaction,
   // Set for a REST caller: see the use case link rules below.
   useCaseViewer?: UseCaseViewer,
+  // The row as the caller read it under its lock, before the save changed
+  // it; read here when not given.
+  previous?: Record<string, any> | null,
 ) => {
   const updated_at = new Date();
-  const oldModel = await getModelInventoryByIdQuery(id, organizationId, { transaction });
+  const oldModel =
+    previous ?? (await getModelInventoryByIdQuery(id, organizationId, { transaction }));
 
   // An unchanged approver is not re-checked, so a model whose approver has
   // since left the organization can still be edited. A new one must be a member.

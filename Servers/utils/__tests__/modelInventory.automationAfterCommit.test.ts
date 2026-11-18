@@ -106,3 +106,29 @@ describe("model automations wait for the commit", () => {
     expect(mockEnqueue).toHaveBeenCalledTimes(1);
   });
 });
+
+describe("updateModelInventoryByIdQuery with the caller's locked row", () => {
+  it("does not read the model again", async () => {
+    const tx = fakeTx();
+    await updateModelInventoryByIdQuery(
+      50,
+      row({ status: "Approved" }) as any,
+      [],
+      [],
+      false,
+      false,
+      1,
+      tx as any,
+      undefined,
+      row({ status: "Pending" }),
+    );
+    // getModelInventoryByIdQuery's read (the row after the UPDATE is still
+    // read back, to return it).
+    const reads = mockQuery.mock.calls.filter(([sql]) =>
+      /FROM model_inventories WHERE organization_id = :organizationId AND id = :id/.test(
+        String(sql),
+      ),
+    );
+    expect(reads).toHaveLength(0);
+  });
+});
