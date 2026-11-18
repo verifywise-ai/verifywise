@@ -314,6 +314,41 @@ describe("model write rules", () => {
     );
   });
 
+  describe("empty type and null external key", () => {
+    const typeAndKey = async (id: number) =>
+      (
+        await sequelize.query<{ type: string | null; external_key: string | null }>(
+          `SELECT type::text AS type, external_key FROM model_inventories WHERE id = :id`,
+          { replacements: { id }, type: QueryTypes.SELECT },
+        )
+      )[0];
+
+    it('stores type "" as unclassified on create and update, legacy and v1', async () => {
+      const api = await as(org, admin, "Admin");
+      for (const path of ["/api/modelInventory", "/api/v1/model-inventories"]) {
+        const created = await api.post(path).send(modelBody({ type: "" }));
+        expect(created.status).toBe(201);
+        expect((await typeAndKey(created.body.data.id)).type).toBeNull();
+        await api.patch(`${path}/${created.body.data.id}`).send({ type: "RAG" });
+        const cleared = await api.patch(`${path}/${created.body.data.id}`).send({ type: "" });
+        expect(cleared.status).toBe(200);
+        expect((await typeAndKey(created.body.data.id)).type).toBeNull();
+      }
+    });
+
+    it("clears the external key with null on v1 update (was a 500)", async () => {
+      const api = await as(org, admin, "Admin");
+      const id = (
+        await api
+          .post("/api/v1/model-inventories")
+          .send(modelBody({ external_key: `key-${++counter}` }))
+      ).body.data.id as number;
+      const res = await api.patch(`/api/v1/model-inventories/${id}`).send({ external_key: null });
+      expect(res.status).toBe(200);
+      expect((await typeAndKey(id)).external_key).toBeNull();
+    });
+  });
+
   describe("is_demo never comes from the body", () => {
     it("ignores it on model create and update, legacy and v1", async () => {
       const api = await as(org, admin, "Admin");
