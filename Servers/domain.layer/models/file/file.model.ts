@@ -52,6 +52,7 @@ export type FileSource =
   | "NIST CSF subcategories"
   | "NYC Local Law 144 requirements"
   | "OECD AI Principles requirements"
+  | "OSFI E-23 requirements"
   | "PCI DSS requirements"
   | "Qatar PDPL articles"
   | "Quebec Law 25 articles"
@@ -243,6 +244,7 @@ export class FileModel extends Model<File> {
       "NIST CSF subcategories",
       "NYC Local Law 144 requirements",
       "OECD AI Principles requirements",
+      "OSFI E-23 requirements",
       "PCI DSS requirements",
       "Qatar PDPL articles",
       "Quebec Law 25 articles",
