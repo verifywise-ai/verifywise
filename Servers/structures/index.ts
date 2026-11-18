@@ -21,11 +21,12 @@ import texasAiActStructure from "./Texas-AI-Act/texas-ai-act.structure";
 import coloradoAiActStructure from "./Colorado-AI-Act/colorado-ai-act.structure";
 import hipaaStructure from "./HIPAA/hipaa.structure";
 import nistCsfStructure from "./NIST-CSF/nist-csf.structure";
+import osfiE23Structure from "./OSFI-E-23/osfi-e23.structure";
 
 export * from "./types";
 
 /**
- * Registry of the 21 migrated frameworks. Built-ins (EU AI Act, ISO 42001,
+ * Registry of the 22 migrated frameworks. Built-ins (EU AI Act, ISO 42001,
  * ISO 27001, NIST AI RMF) are not in this list — they keep their bespoke
  * struct/impl tables and endpoints.
  */
@@ -51,6 +52,7 @@ export const FRAMEWORK_STRUCTURES: FrameworkStructure[] = [
   coloradoAiActStructure,
   hipaaStructure,
   nistCsfStructure,
+  osfiE23Structure,
 ];
 
 const BY_KEY = new Map<string, FrameworkStructure>();

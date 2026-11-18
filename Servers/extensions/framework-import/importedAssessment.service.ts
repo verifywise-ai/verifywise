@@ -20,7 +20,7 @@ import {
  * An organization's imported framework (imported_frameworks + topics +
  * subtopics) is attached to a use case through projects_imported_frameworks,
  * and assessed through one impl row per topic (L2) and per subtopic (L3),
- * exactly like the bundled frameworks 5-25 are assessed through their impl
+ * exactly like the bundled frameworks 5-26 are assessed through their impl
  * tables. Shapes mirror utils/frameworkImpl.utils.ts so the client reuses the
  * generic framework page and drawer.
  *

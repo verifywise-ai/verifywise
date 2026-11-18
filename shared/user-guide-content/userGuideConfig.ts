@@ -407,8 +407,8 @@ export const collections: Collection[] = [
       {
         id: 'adding-frameworks',
         title: 'Adding frameworks',
-        description: 'Add any of the 25 built-in frameworks to your organization or a use case, and work through their requirements.',
-        keywords: ['framework', 'add framework', 'remove framework', 'manage frameworks', 'organizational', 'use case', 'soc 2', 'gdpr', 'ccpa', 'dora', 'hipaa', 'pci-dss', 'cis controls', 'nist csf', 'cybersecurity', 'nyc local law 144', 'altai', 'oecd', 'ftc', 'colorado', 'texas', 'quebec', 'pdpl', 'data governance', 'ai ethics', 'custom framework', 'requirement'],
+        description: 'Add any of the 26 built-in frameworks to your organization or a use case, and work through their requirements.',
+        keywords: ['framework', 'add framework', 'remove framework', 'manage frameworks', 'organizational', 'use case', 'soc 2', 'gdpr', 'ccpa', 'dora', 'hipaa', 'pci-dss', 'cis controls', 'nist csf', 'cybersecurity', 'nyc local law 144', 'altai', 'oecd', 'ftc', 'colorado', 'texas', 'quebec', 'osfi', 'e-23', 'model risk', 'pdpl', 'data governance', 'ai ethics', 'custom framework', 'requirement'],
       },
       {
         id: 'framework-import',

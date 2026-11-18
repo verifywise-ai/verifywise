@@ -11,7 +11,7 @@ import {
 } from "../structures";
 
 /**
- * Runtime CRUD for the 21 frameworks whose table + column layout is declared
+ * Runtime CRUD for the 22 frameworks whose table + column layout is declared
  * in Servers/structures/ (SOC2, GDPR, HIPAA, ...). Each framework gets a
  * named create/delete pair below that mirrors the built-in ones
  * (createEUFrameworkQuery, createISOFrameworkQuery, ...) and is wired into
@@ -386,3 +386,7 @@ export const deleteProjectFrameworkHIPAAQuery = makeDelete("hipaa");
 // NIST CSF (id=25)
 export const createNISTCSFFrameworkQuery = makeCreate("nist-csf");
 export const deleteProjectFrameworkNISTCSFQuery = makeDelete("nist-csf");
+
+// OSFI E-23 (id=26)
+export const createOSFIE23FrameworkQuery = makeCreate("osfi-e23");
+export const deleteProjectFrameworkOSFIE23Query = makeDelete("osfi-e23");
