@@ -39,6 +39,16 @@ module.exports = {
     const { sequelize } = queryInterface;
     await sequelize.transaction(async (transaction) => {
       for (const { id: frameworkId, key, tables, cols } of FRAMEWORK_STRUCTURES) {
+        // A framework registered after this migration (OSFI E-23, id 26) gets
+        // its tables from its own, later migration. On a database upgrading
+        // from an older release those tables do not exist yet when this runs,
+        // and such a framework has no links to build, so skip it.
+        const [[{ l2Impl }]] = await sequelize.query(`SELECT to_regclass(:table) AS "l2Impl";`, {
+          replacements: { table: `verifywise.${tables.l2_impl}` },
+          transaction,
+        });
+        if (l2Impl === null) continue;
+
         const [emptyLinks] = await sequelize.query(
           `SELECT pf.id FROM verifywise.projects_frameworks pf
             WHERE pf.framework_id = :frameworkId
