@@ -12,11 +12,12 @@ interface ChangelogEntry {
 const CHANGELOG: ChangelogEntry[] = [
   {
     version: "v2.6.9",
-    date: "November 16, 2026",
-    title: "A new look with a Home page, risk approvals and safer extensions",
+    date: "November 18, 2026",
+    title: "A new look, a Home page, OSFI E-23 and risk approvals",
     summary:
-      "VerifyWise has a new look with one sidebar and a Home page that lists what needs you today. You can switch back to the classic look until January 2027. Risks now follow use case access and have an approval step. An internal audit also brought fixes to extensions, policies and AI Detection.",
+      "VerifyWise has a new look with one sidebar and a Home page that lists what needs you today. You can switch back to the classic look until January 2027. OSFI Guideline E-23 on model risk management is now a built-in framework. Risks now follow use case access and have an approval step. An internal audit also brought fixes to use cases, models, extensions, policies and AI Detection.",
     items: [
+      "OSFI E-23: OSFI's Guideline E-23 on model risk management is a new built-in framework, with 16 groups and 83 requirements that keep OSFI's own numbering. Add it on the Frameworks page. It is an organization-level checklist you assess yourself, separate from the model records in Model Risk Management",
       "New look: new colours, type and icons, with one sidebar in place of the app switcher and module sidebars. You can switch back in Settings → Preferences → Interface style until January 2027",
       "Home: the Today tab lists what needs your attention, with counts for your organization. Start here is now on the Get started tab",
       "What's changed: a card tells you what changed when you open a page whose place or layout changed in the new look. Accounts created after the update don't see these cards",
@@ -26,11 +27,18 @@ const CHANGELOG: ChangelogEntry[] = [
       "Deleting a use case: you choose whether to archive the risks linked only to that use case, which keeps them from becoming visible to the whole organization",
       "Risk levels: one effective risk level and one formula across the app. Reports leave out archived risks. Bulk actions notify owners and run automations, as single edits do",
       "Risk import: a file with an invalid row is rejected with that row's errors, and nothing is imported",
+      "Use case approval: while a use case's approval is pending or rejected, only an Admin can change its approval workflow, and it can't be marked live. The lifecycle panel says why",
+      "Use case frameworks: a built-in framework such as SOC 2 or GDPR picked when you create a use case, or added at approval, now comes with editable controls. The update fills in the ones that were attached empty before",
+      "Use case settings: Save sends only the fields you changed, so a classification set by an intake form or the API is kept. Change history records only real changes, and the server sets who last updated a use case",
+      "Models: a model's approver, use cases and frameworks must belong to your organization. Seeing a use case's models, or linking a model to a use case, needs access to that use case",
+      "Demo data: creating demo data shows a progress screen while it runs, in place of a toast",
       "Policies: approval goes through approval workflows. Review reminders cover overdue policies and skip archived ones",
       "AI Detection: every scan gets a governance score and says when a check didn't run. The CI gate fails only when the score is below your threshold. Review decisions carry over to new scans. CI/CD setup works end to end",
       "Extensions: you can connect Slack from the app, and Slack connections belong to the organization. Only the named approvers decide Model Lifecycle approvals. Stored secrets are no longer sent to the browser. Turning an extension off asks for confirmation",
-      "Security: the server now checks the framework, audit and evals permissions that only the screens checked before. Every owner, approver, folder and link must belong to your organization",
-      "Fixes: the AI Advisor links risks to use cases again. Submitting a post-market monitoring cycle works. Imported frameworks are managed on the Frameworks settings tab. Folder controls follow permissions instead of role names",
+      "Security: the server now checks the framework, audit and evals permissions that only the screens checked before. Every owner, approver, folder and link must belong to your organization. A use case's compliance answers, FRIA, change history and monitoring check access to that use case",
+      'Too many requests: pages no longer reload data in a loop, which caused "Too many requests" errors and empty screens in v2.6.8. Requests refused this way are no longer retried, and the per-address limit is now 600 requests a minute',
+      "Fixes: the AI Advisor links risks to use cases again. Saving and submitting a post-market monitoring cycle works. Imported frameworks are managed on the Frameworks settings tab. Folder controls follow permissions instead of role names",
+      "More fixes: the password reset page lists every rule the server checks, and a rejected password no longer uses up the reset link. An upload of the wrong file type or size says why instead of showing a general error. In German, French and Spanish, the app loads only the translations the current page needs",
     ],
   },
   {
