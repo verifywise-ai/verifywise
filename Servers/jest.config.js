@@ -1,8 +1,11 @@
 const { createDefaultPreset } = require("ts-jest");
 
-const tsJestTransformCfg = createDefaultPreset({
-  diagnostics: false,
-}).transform;
+// Transpile-only: tsconfig.jest.json sets isolatedModules, so ts-jest compiles
+// each file on its own instead of building a TypeScript program per worker.
+// Type errors are caught by `npm run build`, not by the test run.
+const tsJestOptions = { diagnostics: false, tsconfig: "<rootDir>/tsconfig.jest.json" };
+
+const tsJestTransformCfg = createDefaultPreset(tsJestOptions).transform;
 
 /** @type {import("jest").Config} **/
 module.exports = {
@@ -18,7 +21,7 @@ module.exports = {
     // zod/v4/locales/en, which is ESM because zod is a type:module package,
     // so zod needs transforming too. transformIgnorePatterns below
     // allowlists those packages.
-    "node_modules[\\\\/].+\\.js$": ["ts-jest", { diagnostics: false }],
+    "node_modules[\\\\/].+\\.js$": ["ts-jest", tsJestOptions],
   },
   transformIgnorePatterns: [
     "/node_modules/(?!(ai|@ai-sdk|@workflow|@standard-schema|sanitize-html|htmlparser2|domhandler|domutils|dom-serializer|entities|domelementtype|zod)/)",

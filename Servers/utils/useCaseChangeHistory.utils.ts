@@ -25,6 +25,7 @@ import {
   recordEntityCreation,
   recordEntityDeletion,
 } from "./changeHistory.base.utils";
+import type { FormatterContext } from "../config/changeHistory.config";
 
 /**
  * Record a change in use case
@@ -94,8 +95,9 @@ export const getUseCaseChangeHistory = async (
 export const trackUseCaseChanges = async (
   oldModel: IProjectAttributes,
   newModel: Partial<IProjectAttributes>,
+  context?: FormatterContext,
 ): Promise<Array<{ fieldName: string; oldValue: string; newValue: string }>> => {
-  return trackEntityChanges("use_case", oldModel, newModel);
+  return trackEntityChanges("use_case", oldModel, newModel, context);
 };
 
 /**

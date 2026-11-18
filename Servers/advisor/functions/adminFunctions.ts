@@ -1,4 +1,6 @@
 import { getAllUsersQuery, getUserByIdQuery } from "../../utils/user.utils";
+import { projectVisibilitySql } from "../../utils/projectVisibility.utils";
+import { actingProjectViewer } from "./useCaseScope";
 import { getAllRolesQuery } from "../../utils/role.utils";
 import { getOrganizationByIdQuery } from "../../utils/organization.utils";
 import { getSubscription } from "../../utils/subscription.util";
@@ -57,21 +59,30 @@ const fetchUsers = async (
   }
 };
 
-const getUserDetail = async (params: { user_id: number }, organizationId: number): Promise<any> => {
+const getUserDetail = async (
+  params: { user_id: number } & Record<string, unknown>,
+  organizationId: number,
+): Promise<any> => {
   try {
     const user = await getUserByIdQuery(params.user_id, null, organizationId);
     if (!user) {
       return { error: "User not found", user_id: params.user_id };
     }
 
-    // Get user's projects
+    // The user's use cases, limited to those the caller's use case list shows.
+    const visibility = projectVisibilitySql("p", await actingProjectViewer(params, organizationId));
     const projects = (await sequelize.query(
       `SELECT p.id, p.project_title, p.status
        FROM projects p
        INNER JOIN projects_members pm ON p.id = pm.project_id AND pm.organization_id = :organization_id
-       WHERE pm.user_id = :user_id AND p.organization_id = :organization_id`,
+       WHERE pm.user_id = :user_id AND p.organization_id = :organization_id${visibility.sql}`,
       {
-        replacements: { user_id: params.user_id, organization_id: organizationId },
+        replacements: {
+          user_id: params.user_id,
+          organization_id: organizationId,
+          organizationId,
+          ...visibility.replacements,
+        },
         type: QueryTypes.SELECT,
       },
     )) as any[];

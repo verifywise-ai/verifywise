@@ -441,12 +441,13 @@ export const deleteFriaRiskItemQuery = async (
     WHERE id = :itemId AND organization_id = :organizationId${friaId ? " AND fria_id = :friaId" : ""}
     RETURNING id
   `;
-  const results = await sequelize.query(query, {
-    type: QueryTypes.DELETE,
+  // SELECT so the RETURNING rows come back: true when an item was removed.
+  const rows = await sequelize.query(query, {
+    type: QueryTypes.SELECT,
     replacements: { itemId, organizationId, ...(friaId ? { friaId } : {}) },
     transaction,
   });
-  return results;
+  return rows.length > 0;
 };
 
 // ========================================
@@ -691,4 +692,26 @@ export const recomputeAndPersistScore = async (
   if (!fria) return;
   const scores = computeFriaScore(fria, rights, riskItems);
   await updateFriaQuery(friaId, scores, organizationId, userId);
+};
+
+/**
+ * Remove one evidence link of this FRIA. Limited to links whose entity is the
+ * FRIA (framework_type 'fria', entity_id), so a link id of another FRIA or
+ * another kind of entity removes nothing. True when a link was removed.
+ */
+export const deleteFriaEvidenceLinkQuery = async (
+  linkId: number,
+  friaId: number,
+  organizationId: number,
+): Promise<boolean> => {
+  const rows = await sequelize.query(
+    `DELETE FROM file_entity_links
+      WHERE id = :linkId
+        AND organization_id = :organizationId
+        AND framework_type = 'fria'
+        AND entity_id = :friaId
+      RETURNING id`,
+    { replacements: { linkId, friaId, organizationId }, type: QueryTypes.SELECT },
+  );
+  return rows.length > 0;
 };

@@ -169,8 +169,7 @@ const IntegratedDashboard: React.FC = () => {
 
   useEffect(() => {
     fetchDashboard();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [fetchDashboard]);
 
   // Check for first login and show organization name modal
   useEffect(() => {

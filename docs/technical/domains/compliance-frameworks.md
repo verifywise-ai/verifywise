@@ -535,6 +535,8 @@ Evidence is stored in `file_entity_links` with `framework_type` set to the struc
 
 Adding and removing use the shared `POST /api/frameworks/toProject` and `DELETE /api/frameworks/fromProject`. `Servers/utils/frameworkRegistry.utils.ts` provides `makeCreate(key)` / `makeDelete(key)`, which are wired into `frameworkAdditionMap` / `frameworkDeletionMap`.
 
+A bundled framework picked when a use case or the organizational project is created is built the same way, at creation or, with an approval workflow, when the request is approved. Creation, approval and "add framework" all go through `buildProjectFrameworkQuery` (`Servers/utils/framework.utils.ts`), which calls `frameworkAdditionMap`; see [Use cases](./use-cases.md#processing). The builders are not idempotent (each call inserts a full set of rows), so they only run right after the `projects_frameworks` row is inserted. Links created before this, with no implementation rows, are built by migration `20261117140851-build-empty-bundled-frameworks.js`, which only touches links that have no level-2 rows.
+
 Implementation work goes through `Servers/routes/frameworkImpl.route.ts`, mounted at `/api/frameworks` next to `frameworks.route.ts`. It is handled by `Servers/controllers/frameworkImpl.ctrl.ts` and `Servers/utils/frameworkImpl.utils.ts`. All routes require JWT. `:level` is `l2` or `l3`.
 
 | Method | Endpoint | Description |

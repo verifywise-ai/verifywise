@@ -28,7 +28,7 @@ This document is a comprehensive catalog of the VerifyWise Node.js/Express/TypeS
 - **`/health` endpoint** with database, Redis, and AI Gateway checks + rate limiting.
 - **`requestMetricsMiddleware`** for request metrics/access logging.
 - **Webhook routes** mounted before the global rate limiter.
-- **`generalApiLimiter`** global rate ceiling (300 req/min in production, relaxed in dev/test).
+- **`generalApiLimiter`** global rate ceiling (600 req/min in production, relaxed in dev/test).
 - **Swagger UI** at `/api/docs` only in non-production.
 - Mounts 116 route modules under `/api/*`, `/v1`, and `/health`.
 

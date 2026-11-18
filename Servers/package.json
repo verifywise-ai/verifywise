@@ -4,7 +4,7 @@
   "main": "index.js",
   "scripts": {
     "test:unit": "jest --testPathIgnorePatterns=/tests/integration/ --testPathIgnorePatterns=/helpers/ --detectOpenHandles --forceExit",
-    "test:coverage": "jest --coverage --testPathIgnorePatterns=/tests/integration/ --testPathIgnorePatterns=/helpers/ --detectOpenHandles --forceExit",
+    "test:coverage": "jest --coverage --testPathIgnorePatterns=/tests/integration/ --testPathIgnorePatterns=/helpers/ --maxWorkers=3 --workerIdleMemoryLimit=1GB --forceExit",
     "test:smoke": "jest --config jest.config.js --globalSetup=\"<rootDir>/tests/integration/globalSetup.js\" --testPathPatterns=deadline-summary --runInBand",
     "test:ratelimit": "jest --config jest.config.js --testMatch=\"**/tests/integration/rate-limiting/**/*.test.ts\" --testPathIgnorePatterns=/helpers/ --testPathIgnorePatterns=limiter-wiring --runInBand --forceExit",
     "smoke:api-contract": "ts-node --transpile-only scripts/apiContractSmoke.ts",
@@ -50,7 +50,7 @@
     "prepare": "node -e \"try { require('fs').accessSync('.git'); require('child_process').spawnSync('husky', {stdio: 'inherit', shell: true}); } catch(e) {}\""
   },
   "author": "",
-  "license": "ISC",
+  "license": "SEE LICENSE IN ../LICENSE.md",
   "description": "",
   "engines": {
     "node": ">=22.23.4 <23 || >=24.22.1 <25 || >=26.12.1"

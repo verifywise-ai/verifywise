@@ -31,6 +31,7 @@ export const de: Record<string, string> = {
     "Noch keine Daten. Dieses Modell wartet auf seine erste Metrik aus Ihrem Monitoring-Feed.",
   "No ingestion tokens yet. Create one to start pushing metrics.":
     "Noch keine Ingestion-Token. Erstellen Sie einen, um mit dem Senden von Metriken zu beginnen.",
+  "No model": "Kein Modell",
   "No threshold defined": "Kein Schwellenwert definiert",
   "No thresholds defined yet. Add one so ingested metrics can be evaluated.":
     "Noch keine Schwellenwerte definiert. Fügen Sie einen hinzu, damit eingehende Metriken ausgewertet werden können.",
@@ -271,6 +272,8 @@ export const de: Record<string, string> = {
   "MLflow": "MLflow",
   "Only admins can change retention periods":
     "Nur Administratoren können Aufbewahrungsfristen ändern",
+  "Only users who can edit models can share this view":
+    "Nur Benutzer, die Modelle bearbeiten können, können diese Ansicht teilen",
 };
 
 export const fr: Record<string, string> = {
@@ -303,6 +306,7 @@ export const fr: Record<string, string> = {
     "Aucune donnée pour le moment. Ce modèle attend sa première métrique de votre flux de surveillance.",
   "No ingestion tokens yet. Create one to start pushing metrics.":
     "Aucun jeton d'ingestion pour le moment. Créez-en un pour commencer à envoyer des métriques.",
+  "No model": "Aucun modèle",
   "No threshold defined": "Aucun seuil défini",
   "No thresholds defined yet. Add one so ingested metrics can be evaluated.":
     "Aucun seuil défini pour le moment. Ajoutez-en un pour que les métriques ingérées puissent être évaluées.",
@@ -542,6 +546,8 @@ export const fr: Record<string, string> = {
   "MLflow": "MLflow",
   "Only admins can change retention periods":
     "Seuls les administrateurs peuvent modifier les durées de conservation",
+  "Only users who can edit models can share this view":
+    "Seuls les utilisateurs qui peuvent modifier les modèles peuvent partager cette vue",
 };
 
 export const es: Record<string, string> = {
@@ -574,6 +580,7 @@ export const es: Record<string, string> = {
     "Aún no hay datos. Este modelo está esperando su primera métrica de su flujo de monitoreo.",
   "No ingestion tokens yet. Create one to start pushing metrics.":
     "Aún no hay tokens de ingesta. Cree uno para empezar a enviar métricas.",
+  "No model": "Sin modelo",
   "No threshold defined": "Sin umbral definido",
   "No thresholds defined yet. Add one so ingested metrics can be evaluated.":
     "Aún no se han definido umbrales. Añada uno para que las métricas ingeridas puedan evaluarse.",
@@ -813,4 +820,6 @@ export const es: Record<string, string> = {
   "MLflow": "MLflow",
   "Only admins can change retention periods":
     "Solo los administradores pueden cambiar los periodos de retención",
+  "Only users who can edit models can share this view":
+    "Solo los usuarios que pueden editar modelos pueden compartir esta vista",
 };

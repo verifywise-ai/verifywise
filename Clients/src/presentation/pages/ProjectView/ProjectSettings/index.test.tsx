@@ -257,6 +257,37 @@ describe("ProjectSettings", () => {
     });
   });
 
+  it("disables Save again and sends nothing when a change is reverted", async () => {
+    renderWithProviders(<ProjectSettings />);
+    await waitFor(() => expect(screen.getByDisplayValue("Chatbot Assistant")).toBeInTheDocument());
+
+    fireEvent.change(screen.getByDisplayValue("Chatbot Assistant"), {
+      target: { value: "Renamed Assistant" },
+    });
+    await waitFor(() => expect(screen.getByRole("button", { name: "Save" })).not.toBeDisabled());
+    fireEvent.change(screen.getByDisplayValue("Renamed Assistant"), {
+      target: { value: "Chatbot Assistant" },
+    });
+
+    await waitFor(() => expect(screen.getByRole("button", { name: "Save" })).toBeDisabled());
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+    expect(mockUpdateProject).not.toHaveBeenCalled();
+  });
+
+  it("enables Save on a use case stored with an empty title", async () => {
+    mockUseProjectData.mockReturnValue({ project: { ...baseProject, project_title: "" } });
+    renderWithProviders(<ProjectSettings />);
+    await waitFor(() =>
+      expect(screen.getByDisplayValue("Answer support questions")).toBeInTheDocument(),
+    );
+
+    fireEvent.change(screen.getByDisplayValue("Answer support questions"), {
+      target: { value: "Answer billing questions" },
+    });
+
+    await waitFor(() => expect(screen.getByRole("button", { name: "Save" })).not.toBeDisabled());
+  });
+
   it("enables Save when only a custom field answer changes", async () => {
     renderWithProviders(<ProjectSettings />);
     await waitFor(() => expect(screen.getByDisplayValue("Chatbot Assistant")).toBeInTheDocument());
@@ -434,10 +465,8 @@ describe("ProjectSettings", () => {
     });
     fireEvent.click(screen.getByRole("button", { name: "Save" }));
     await waitFor(() => expect(mockUpdateProject).toHaveBeenCalled());
-    expect(mockUpdateProject.mock.calls[0][0].body).toMatchObject({
-      ai_risk_classification: "High risk",
-      high_risk_roles: ["Provider"],
-    });
+    // The wizard already stored the level and role; Save sends only the rename.
+    expect(mockUpdateProject.mock.calls[0][0].body).toEqual({ project_title: "Renamed Assistant" });
   });
 
   it("takes both roles from the wizard without marking the form as changed", async () => {
@@ -492,6 +521,101 @@ describe("ProjectSettings", () => {
     renderWithProviders(<ProjectSettings />);
     await screen.findByText("AI risk classification *");
     expect(screen.queryByText("Calculate your AI risk classification")).not.toBeInTheDocument();
+  });
+
+  it("sends only the fields that changed, never last updated or frameworks", async () => {
+    useEuAiAct();
+    mockUpdateProject.mockResolvedValue({ status: 202 });
+    renderWithProviders(<ProjectSettings />);
+    await screen.findByText("AI risk classification *");
+
+    fireEvent.change(screen.getByDisplayValue("Chatbot Assistant"), {
+      target: { value: "Renamed Assistant" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+
+    await waitFor(() => expect(mockUpdateProject).toHaveBeenCalled());
+    expect(mockUpdateProject.mock.calls[0][0]).toEqual({
+      id: 5,
+      body: { project_title: "Renamed Assistant" },
+    });
+  });
+
+  it("keeps a classification it does not show when EU AI Act is not selected (U-H3)", async () => {
+    // Classified by intake, MCP or the API, without the EU AI Act framework.
+    mockUseProjectData.mockReturnValue({
+      project: {
+        ...baseProject,
+        ai_risk_classification: "High risk",
+        high_risk_roles: ["Provider"],
+      },
+    });
+    mockUpdateProject.mockResolvedValue({ status: 202 });
+    renderWithProviders(<ProjectSettings />);
+    await waitFor(() =>
+      expect(screen.getByDisplayValue("Answer support questions")).toBeInTheDocument(),
+    );
+
+    fireEvent.change(screen.getByDisplayValue("Answer support questions"), {
+      target: { value: "Answer billing questions" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+
+    await waitFor(() => expect(mockUpdateProject).toHaveBeenCalled());
+    const body = mockUpdateProject.mock.calls[0][0].body;
+    expect(body).toEqual({ goal: "Answer billing questions" });
+  });
+
+  it.each([
+    ["GPAI", "GPAI"],
+    ["General Risk", "General risk"],
+  ])("loads a stored %s classification", async (stored, label) => {
+    useEuAiAct();
+    mockUseProjectData.mockReturnValue({
+      project: { ...euAiActProject, ai_risk_classification: stored },
+    });
+    mockUpdateProject.mockResolvedValue({ status: 202 });
+    renderWithProviders(<ProjectSettings />);
+    await screen.findByText("AI risk classification *");
+
+    expect(await screen.findByText(label)).toBeInTheDocument();
+    // Loaded as a value, so the form is clean and a save keeps it as stored.
+    expect(screen.getByRole("button", { name: "Save" })).toBeDisabled();
+  });
+
+  it("saves General risk under the value the server stores", async () => {
+    useEuAiAct();
+    mockUpdateProject.mockResolvedValue({ status: 202 });
+    const user = userEvent.setup();
+    renderWithProviders(<ProjectSettings />);
+    await screen.findByText("AI risk classification *");
+
+    await user.click(
+      within(document.getElementById("risk-classification-input")!.parentElement!).getByRole(
+        "combobox",
+      ),
+    );
+    fireEvent.click(await screen.findByRole("option", { name: /General risk/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+
+    await waitFor(() => expect(mockUpdateProject).toHaveBeenCalled());
+    expect(mockUpdateProject.mock.calls[0][0].body).toEqual({
+      ai_risk_classification: "General Risk",
+    });
+  });
+
+  it("shows a start date stored at 00:00 UTC as that day (U-L10)", async () => {
+    mockUseProjectData.mockReturnValue({
+      project: { ...baseProject, start_date: "2026-11-17T00:00:00.000Z" },
+    });
+    renderWithProviders(<ProjectSettings />);
+    await waitFor(() => expect(screen.getByDisplayValue("Chatbot Assistant")).toBeInTheDocument());
+
+    expect(
+      screen.getByDisplayValue(/11\/17\/2026|17\/11\/2026|2026-11-17|17-11-2026/),
+    ).toBeInTheDocument();
+    // Read for display only: an untouched date is not sent.
+    expect(screen.getByRole("button", { name: "Save" })).toBeDisabled();
   });
 
   it("opens the delete confirmation dialog and deletes the project on confirm", async () => {

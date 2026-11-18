@@ -61,7 +61,7 @@ const PRODUCTION = {
   },
   generalApi: {
     windowMinutes: 1,
-    maxRequests: 300,
+    maxRequests: 600,
     message: "Too many requests from this IP, please slow down and retry",
   },
   auth: {
@@ -310,7 +310,7 @@ describe("NODE_ENV gate fails closed", () => {
     expect(mod.isNonProduction).toBe(false);
     expect(mod.RATE_LIMIT_CONFIGS.auth.maxRequests).toBe(5);
     expect(mod.RATE_LIMIT_CONFIGS.login.maxRequests).toBe(5);
-    expect(mod.RATE_LIMIT_CONFIGS.generalApi.maxRequests).toBe(300);
+    expect(mod.RATE_LIMIT_CONFIGS.generalApi.maxRequests).toBe(600);
     expect(mod.RATE_LIMIT_CONFIGS.tokenRefresh.maxRequests).toBe(60);
     expect(mod.RATE_LIMIT_CONFIGS.mrmIngestion.maxRequests).toBe(5000);
     expect(mod.RATE_LIMIT_CONFIGS.webhook.maxRequests).toBe(100);

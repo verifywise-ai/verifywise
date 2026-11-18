@@ -3,11 +3,7 @@ jest.setTimeout(60000);
 import { sequelize } from "../../database/db";
 import { cleanupDatabase, createTestOrganization, createTestUser, seedFrameworks } from "./helpers";
 import { createTestApp, testRequest } from "./setup";
-import {
-  createTestModelInventory,
-  createTestProject,
-  linkModelToProject,
-} from "../factories/test-entities.factory";
+import { createTestModelInventory, createTestProject } from "../factories/test-entities.factory";
 
 /**
  * Linking AI apps and use cases, and creating an AI app from a use case (#5259):
@@ -214,9 +210,15 @@ describe("AI app and use case links", () => {
       const modelB = await createTestModelInventory(orgId, { model: "Other" });
       await linkModelToUseCase(orgId, modelA, projectId);
       await linkModelToUseCase(orgId, modelB, projectId);
-      // A framework-level row names an arbitrary project using that framework.
+      // A framework link written before framework links lost their use case
+      // still names a project: it is not a use case link either way.
       const frameworkOnly = await createTestModelInventory(orgId, { model: "Framework only" });
-      await linkModelToProject(orgId, frameworkOnly, projectId, 1);
+      await sequelize.query(
+        `INSERT INTO model_inventories_projects_frameworks
+           (organization_id, model_inventory_id, project_id, framework_id)
+         VALUES (:orgId, :frameworkOnly, :projectId, 1)`,
+        { replacements: { orgId, frameworkOnly, projectId } },
+      );
       const api = await as(orgId, adminId, "Admin");
 
       const preview = await api.get(`/api/v1/projects/${projectId}/create-ai-app`);

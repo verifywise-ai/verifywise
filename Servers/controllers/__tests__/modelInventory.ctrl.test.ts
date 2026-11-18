@@ -7,8 +7,12 @@ jest.mock("../../utils/modelInventory.utils", () => ({
   createNewModelInventoryQuery: jest.fn(),
   updateModelInventoryByIdQuery: jest.fn(),
   deleteModelInventoryByIdQuery: jest.fn(),
+  lockModelInventoryQuery: jest.fn(),
   getModelByProjectIdQuery: jest.fn(),
   getModelByFrameworkIdQuery: jest.fn(),
+}));
+jest.mock("../../utils/mrm.utils", () => ({
+  modelHasMrmHistoryQuery: jest.fn(),
 }));
 jest.mock("../../utils/modelInventoryChangeHistory.utils", () => ({
   recordModelInventoryCreation: jest.fn().mockResolvedValue(undefined),
@@ -46,6 +50,9 @@ jest.mock("../../utils/i18n.utils", () => ({
 jest.mock("../../services/inAppNotification.service", () => ({
   notifyUserAssigned: jest.fn().mockResolvedValue(undefined),
 }));
+jest.mock("../../services/riskLinks/modelCandidates", () => ({
+  notifyModelRiskCandidates: jest.fn(async () => undefined),
+}));
 jest.mock("../../domain.layer/models/modelInventory/modelInventory.model", () => ({
   ModelInventoryModel: {
     createNewModelInventory: jest.fn().mockReturnValue({ provider_model: "pm" }),
@@ -68,9 +75,13 @@ import {
   createNewModelInventoryQuery,
   updateModelInventoryByIdQuery,
   deleteModelInventoryByIdQuery,
+  lockModelInventoryQuery,
   getModelByProjectIdQuery,
   getModelByFrameworkIdQuery,
 } from "../../utils/modelInventory.utils";
+import { modelHasMrmHistoryQuery } from "../../utils/mrm.utils";
+import { sequelize } from "../../database/db";
+import { notifyModelRiskCandidates } from "../../services/riskLinks/modelCandidates";
 
 const mockGetAll = getAllModelInventoriesQuery as jest.MockedFunction<
   typeof getAllModelInventoriesQuery
@@ -86,6 +97,10 @@ const mockUpdate = updateModelInventoryByIdQuery as jest.MockedFunction<
 >;
 const mockDelete = deleteModelInventoryByIdQuery as jest.MockedFunction<
   typeof deleteModelInventoryByIdQuery
+>;
+const mockLock = lockModelInventoryQuery as jest.MockedFunction<typeof lockModelInventoryQuery>;
+const mockMrmHistory = modelHasMrmHistoryQuery as jest.MockedFunction<
+  typeof modelHasMrmHistoryQuery
 >;
 const mockGetByProject = getModelByProjectIdQuery as jest.MockedFunction<
   typeof getModelByProjectIdQuery
@@ -266,6 +281,32 @@ describe("modelInventory.ctrl", () => {
       await updateModelInventoryById(req, res);
       expect(res.status).toHaveBeenCalledWith(500);
     });
+    // The update query reports the use cases it added; the controller no
+    // longer reads the links a second time to work them out.
+    it("notifies only the use cases the update query added", async () => {
+      (notifyModelRiskCandidates as jest.Mock).mockClear();
+      mockGetById.mockResolvedValue(mockModel({ id: 1, model: "M1" }) as any);
+      mockUpdate.mockResolvedValue({
+        ...mockModel({ id: 1, model: "M2" }),
+        addedProjectIds: [4],
+      } as any);
+      const req = createReq({ params: { id: "1" }, body: { model: "M2", projects: [3, 4] } });
+      await updateModelInventoryById(req, createRes());
+      expect(notifyModelRiskCandidates).toHaveBeenCalledWith(
+        expect.objectContaining({ modelInventoryId: 1, projectIds: [4] }),
+      );
+    });
+    it("sends no use case notice when the update added none", async () => {
+      (notifyModelRiskCandidates as jest.Mock).mockClear();
+      mockGetById.mockResolvedValue(mockModel({ id: 1, model: "M1" }) as any);
+      mockUpdate.mockResolvedValue({
+        ...mockModel({ id: 1, model: "M2" }),
+        addedProjectIds: [],
+      } as any);
+      const req = createReq({ params: { id: "1" }, body: { model: "M2" } });
+      await updateModelInventoryById(req, createRes());
+      expect(notifyModelRiskCandidates).not.toHaveBeenCalled();
+    });
     it("should return 409 when external key violates the unique index (issue #4755)", async () => {
       const conflictError = Object.assign(new Error("duplicate key value"), {
         parent: { code: "23505" },
@@ -281,27 +322,54 @@ describe("modelInventory.ctrl", () => {
   });
 
   describe("deleteModelInventoryById", () => {
+    const tx = { commit: jest.fn(), rollback: jest.fn() };
+    beforeEach(() => {
+      (sequelize.transaction as jest.Mock<any>).mockResolvedValue(tx);
+      mockLock.mockResolvedValue(true);
+      mockMrmHistory.mockResolvedValue(false);
+    });
+
     it("should return 404 when model is not found", async () => {
-      mockGetById.mockResolvedValue(null as any);
+      mockLock.mockResolvedValue(false);
       const req = createReq({ params: { id: "99" } });
       const res = createRes();
       await deleteModelInventoryById(req, res);
       expect(res.status).toHaveBeenCalledWith(404);
+      expect(tx.rollback).toHaveBeenCalled();
+      expect(mockDelete).not.toHaveBeenCalled();
     });
     it("should return 200 when model is deleted", async () => {
-      mockGetById.mockResolvedValue(mockModel({ id: 1, model: "M1" }) as any);
       mockDelete.mockResolvedValue(undefined);
       const req = createReq({ params: { id: "1" } });
       const res = createRes();
       await deleteModelInventoryById(req, res);
       expect(res.status).toHaveBeenCalledWith(200);
+      expect(tx.commit).toHaveBeenCalled();
+    });
+    it("locks the model row, then checks MRM history in the same transaction", async () => {
+      mockDelete.mockResolvedValue(undefined);
+      await deleteModelInventoryById(createReq({ params: { id: "1" } }), createRes());
+      expect(mockLock).toHaveBeenCalledWith(1, 1, tx);
+      expect(mockMrmHistory).toHaveBeenCalledWith(1, 1, tx);
+      expect(mockLock.mock.invocationCallOrder[0]).toBeLessThan(
+        mockMrmHistory.mock.invocationCallOrder[0],
+      );
+    });
+    it("answers 409 for a model with MRM history, rolling back without deleting", async () => {
+      mockMrmHistory.mockResolvedValue(true);
+      const res = createRes();
+      await deleteModelInventoryById(createReq({ params: { id: "1" } }), res);
+      expect(res.status).toHaveBeenCalledWith(409);
+      expect(tx.rollback).toHaveBeenCalled();
+      expect(mockDelete).not.toHaveBeenCalled();
     });
     it("should return 500 on error", async () => {
-      mockGetById.mockRejectedValue(new Error("DB error"));
+      mockLock.mockRejectedValue(new Error("DB error"));
       const req = createReq({ params: { id: "1" } });
       const res = createRes();
       await deleteModelInventoryById(req, res);
       expect(res.status).toHaveBeenCalledWith(500);
+      expect(tx.rollback).toHaveBeenCalled();
     });
   });
 });

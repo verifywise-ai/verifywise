@@ -1,4 +1,5 @@
 import { Transaction } from "sequelize";
+import { projectVisibilitySql } from "./projectVisibility.utils";
 import { NotFoundException } from "../domain.layer/exceptions/custom.exception";
 import { sequelize } from "../database/db";
 import { effectiveRiskLevelSql, riskLevelRankSql } from "./riskLevel.utils";
@@ -738,13 +739,28 @@ export const getPMMReportsQuery = async (
     limit?: number;
   },
   organizationId: number,
+  viewer: { userId: number; role: string },
 ): Promise<{ reports: any[]; total: number }> => {
   const page = filters.page || 1;
   const limit = filters.limit || 10;
   const offset = (page - 1) * limit;
 
-  const whereClauses: string[] = ["r.organization_id = :organizationId"];
-  const replacements: Record<string, any> = { limit, offset, organizationId };
+  // Only reports of use cases the viewer's use case list shows, and of
+  // cycles the viewer is the stakeholder of (who may download that report).
+  const visibility = projectVisibilitySql("vp", viewer);
+  const whereClauses: string[] = [
+    "r.organization_id = :organizationId",
+    `(EXISTS (SELECT 1 FROM projects vp
+               WHERE vp.organization_id = :organizationId AND vp.id = cfg.project_id${visibility.sql})
+      OR c.assigned_stakeholder_id = :reportViewerId)`,
+  ];
+  const replacements: Record<string, any> = {
+    limit,
+    offset,
+    organizationId,
+    reportViewerId: viewer.userId,
+    ...visibility.replacements,
+  };
 
   if (filters.projectId) {
     whereClauses.push("cfg.project_id = :projectId");
@@ -848,8 +864,7 @@ export const getContextSnapshotQuery = async (
 
   // Models linked to the use case. model_inventories has no project_id: links
   // live in model_inventories_projects_frameworks. Only rows without a
-  // framework are direct use case links; framework rows carry an arbitrary
-  // use case of that framework.
+  // framework are direct use case links; framework rows carry no use case.
   const modelResult = (await sequelize.query(
     `SELECT COUNT(DISTINCT mi.id) as total
      FROM model_inventories mi

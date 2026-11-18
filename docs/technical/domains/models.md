@@ -56,7 +56,7 @@ model_risks
 ├── key_metrics
 ├── current_values
 ├── threshold
-├── model_id (FK → model_inventories)
+├── model_id (FK → model_inventories, ON DELETE SET NULL; nullable)
 ├── is_deleted
 ├── deleted_at
 ├── created_at
@@ -74,7 +74,30 @@ model_inventories_projects_frameworks
 └── updated_at
 ```
 
-At least one of `project_id` or `framework_id` must be present.
+A row is either a direct use case link (`project_id` set, `framework_id` NULL)
+or a framework link (`framework_id` set, `project_id` NULL). Framework links
+carried an arbitrary use case until migration
+`20261117061642-model-framework-links-without-use-case`, which cleared it,
+deduped them and added the partial unique index
+`mipf_model_framework_link_unique (model_inventory_id, framework_id) WHERE
+framework_id IS NOT NULL`. Use case reads (by-project lists, reports, risk
+link candidates, PMM, AI app links, advisor tools) count only
+`framework_id IS NULL` rows.
+
+### Organization checks on writes
+
+`utils/modelReferences.utils.ts` holds the checks every model and model risk
+write runs in its own transaction (REST, advisor, intake, Shadow AI, seeds go
+through `createNewModelInventoryQuery` / `updateModelInventoryByIdQuery` /
+`createNewModelRiskQuery` / `updateModelRiskByIdQuery`):
+
+- the model approver and the model risk owner are members of the
+  organization (on update, only a changed value is checked);
+- linked use cases are the organization's projects, linked frameworks are in
+  use by one of them, and a model risk's model is the organization's.
+
+A failure is a `ValidationException` (400). Assignment notices are only sent
+to members (`sendAssignmentNotification` joins `organization_members`).
 
 ## Enumerations
 
@@ -131,11 +154,73 @@ enum ModelRiskStatus {
 |--------|----------|-------------|
 | GET | `/modelInventory/` | Get all models |
 | GET | `/modelInventory/:id` | Get model by ID |
-| GET | `/modelInventory/by-projectId/:id` | Get by project |
+| GET | `/modelInventory/by-projectId/:id` | Models linked directly to a use case the caller can open (`requireProjectAccess`) |
 | GET | `/modelInventory/by-frameworkId/:id` | Get by framework |
-| POST | `/modelInventory/` | Create model |
-| PATCH | `/modelInventory/:id` | Update model |
-| DELETE | `/modelInventory/:id` | Delete model |
+| POST | `/modelInventory/` | Create model; each linked use case needs the caller's access |
+| PATCH | `/modelInventory/:id` | Update model; each use case linked or unlinked needs the caller's access |
+| DELETE | `/modelInventory/:id` | Delete model; `?deleteRisks=true` archives its risks (see below) |
+
+The inventory itself stays visible to the whole organization (decision 8);
+what belongs to one use case needs access to that use case (Admin, owner or
+member, `getProjectAccessQuery`). These are access fixes on the existing
+routes, so there is no v1 copy. On update, use case links change by
+difference: an added use case needs access (403 otherwise, before anything is
+written), and a link to a use case the caller cannot open is kept when the
+submitted list leaves it out (the form only lists use cases the caller can
+see). Frameworks the model already links to are accepted unchanged on update;
+only added frameworks must be in use by a use case of the organization.
+A non-empty `frameworks` list replaces the model's framework links, so the
+model form sends back linked frameworks its picker does not list (EU AI Act,
+bundled frameworks, advisor links) along with the ones picked there.
+Writes without a caller (AI Advisor, intake, seeds) skip the use case access
+check. Model risks follow their model (org-wide). Dataset writes and
+`POST /modelInventoryHistory/snapshot` need `model.edit`; an unknown snapshot
+`parameter` is a 400. Evidence writes are checked in the controller (see
+`evidence.md`): `model.edit` for evidence linked to models.
+
+**Deleting a model never deletes its risks** (`deleteModelInventoryByIdQuery`
+→ `releaseModelRisksOfModelQuery`, one transaction):
+
+- **Keep risks** (default): the risks stay, with `model_id = NULL`. The model
+  risks list and its export show them as "No model"; their risk links survive.
+- **Delete risks too** (`?deleteRisks=true`): the live risks are archived the
+  way `DELETE /modelRisks/:id` archives one (`is_deleted`, `deleted_at`,
+  custom field values removed, a deletion in its history), in set-based
+  statements, then lose the model like kept ones. Archived risks show under
+  `filter=deleted`.
+- Every risk that loses the model, kept or archived, gets an "Associated
+  model" change (model name → `-`) in its history. The name comes from the
+  `model_id` formatter in `config/changeHistory.config.ts` (provider and
+  model, as an incident's affected model is named), the same one an edit of a
+  risk's model uses, so both record names, not ids. Whether `model_id`
+  changed is decided by id (`fieldComparators`), so a move between two models
+  with the same name is still recorded.
+- The single risk delete and the model release archive through one helper,
+  `archiveModelRisksQuery` (by risk id or by model id).
+- The model row is locked (`lockModelInventoryQuery`, `FOR UPDATE`) at the
+  start of the transaction, before the 404 and MRM history checks, and again
+  by `deleteModelInventoryByIdQuery` for callers that skip the controller (AI
+  Advisor). A risk, validation or finding being added to the model waits for
+  the delete: a risk can never end up kept when the user chose to delete the
+  risks, and a validation added meanwhile still gets the friendly 409.
+- Evidence drops the model id from `mapped_model_ids` (organization-scoped
+  `array_remove`). `updated_at` is left alone: the evidence freshness sweep
+  reads it as the evidence's last review.
+- The screen asks Keep / Delete only when the model has live risks. It always
+  asks the server (`GET /modelRisks?filter=active`), whatever the status
+  filter, since the loaded list can be filtered or stale; if that request
+  fails it asks Keep / Delete anyway. (This downloads every live risk for a
+  yes/no answer; a per-model count would be a new contract on a legacy
+  route.)
+- The model risks table and its export label a risk with no model "No
+  model" and one whose model is not in the loaded list "Unknown".
+
+`model_risks.model_id` is `ON DELETE SET NULL` (migration
+`20261117160827-model-risks-keep-on-model-delete`; it was `CASCADE`, which
+deleted every risk of a model, archived ones and their links too, with no
+history). A model deleted outside this path (demo data clean-up, AI Advisor)
+leaves its risks the same way. The history of an AI Advisor delete is
+recorded as the system's (no user).
 
 ### Model Risks
 
@@ -144,10 +229,23 @@ enum ModelRiskStatus {
 | GET | `/modelRisks/` | Get all risks |
 | GET | `/modelRisks/:id` | Get risk by ID |
 | POST | `/modelRisks/` | Create risk |
-| PUT | `/modelRisks/:id` | Update risk |
+| PUT | `/modelRisks/:id` | Update risk (PATCH too) |
 | DELETE | `/modelRisks/:id` | Soft delete |
 
 Query parameter: `filter=active|deleted|all`
+
+An archived (deleted) model risk is read-only: `GET /:id`, `PUT`/`PATCH` and
+`DELETE` answer 404 for it, and the model risks table opens no form for it.
+An update reads the risk `FOR UPDATE` inside its transaction and diffs the
+values as written (`writtenValues`) against that row, so its history shows
+what this update changed even when another write landed just before it.
+History lists (`getEntityChangeHistory`, every entity) order by
+`changed_at DESC, id DESC`: entries written in one transaction share a
+`changed_at`.
+Reports (`dataCollector.collectModelRisks`), the PMM snapshot and the model
+deployment workflow (`risk_level` High or Critical counts as critical) count
+live risks only; the organization report lists risks with no model as
+"No model".
 
 ### Model History
 
@@ -187,16 +285,16 @@ Models can be linked to projects and frameworks:
 
 ```
 Model ─────┬───── Project A (direct)
-           ├───── Project A + Framework (ISO 42001)
-           └───── Project B + Framework (EU AI Act)
+           ├───── Framework (ISO 42001)
+           └───── Framework (EU AI Act)
 ```
 
 ### Association Types
 
 | Type | project_id | framework_id | Meaning |
 |------|------------|--------------|---------|
-| Project only | Set | NULL | Model used in project |
-| Full | Set | Set | Model for framework compliance |
+| Use case | Set | NULL | Model used in the use case |
+| Framework | NULL | Set | Model in the framework's scope |
 
 ## Model Risks
 
