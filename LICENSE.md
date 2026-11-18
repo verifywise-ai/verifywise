@@ -1,12 +1,12 @@
 # VerifyWise Community & Evaluation License (VCEL)
 
-**Version 1.0 | October 2026**
+**Version 1.1 | November 2026**
 
 Copyright © 2026 VerifyWise Ltd.
 
 All rights reserved except as expressly licensed below.
 
-> **In short:** VerifyWise is source-available software. It is free for qualifying personal, educational, governmental, noncommercial research, training, and evaluation uses. Commercial organizational production use, commercial hosting, and commercial redistribution require separate written authorization. This summary is for convenience; the sections below are the license terms.
+> **In short:** VerifyWise is source-available software. It is free for personal use by individuals and for training and demonstration purposes, and any organization may evaluate it for a limited period. All other use by or for an organization, including governmental, public-sector, educational, academic, research, nonprofit, and commercial organizations, requires separate written authorization, as do commercial hosting and commercial redistribution. This summary is for convenience; the sections below are the license terms.
 
 ## Contents
 
@@ -14,7 +14,7 @@ All rights reserved except as expressly licensed below.
 2. [Definitions](#2-definitions)
 3. [License Grant](#3-license-grant)
 4. [Permitted Uses](#4-permitted-uses)
-5. [Commercial Use Restrictions](#5-commercial-use-restrictions)
+5. [Organizational Use Restrictions](#5-organizational-use-restrictions)
 6. [Protection of Commercial Rights](#6-protection-of-commercial-rights)
 7. [Redistribution, Forks, and Modifications](#7-redistribution-forks-and-modifications)
 8. [External Contributions](#8-external-contributions)
@@ -40,7 +40,9 @@ All rights reserved except as expressly licensed below.
 
 This VerifyWise Community & Evaluation License ("License") governs the use of the VerifyWise software and those associated source files, object-code files, documentation, and other materials expressly distributed under this License (collectively, the "Software").
 
-This License makes the Software's source code available for inspection, personal use, qualifying institutional use, research, development, and evaluation.
+This License makes the Software's source code available for inspection, personal use, training, and evaluation.
+
+All other use by or on behalf of an Organization, whether commercial, governmental, educational, academic, research, nonprofit, or otherwise, requires a separate written license from the Licensor.
 
 The Licensor reserves the right to monetize the Software through separate commercial licenses.
 
@@ -58,31 +60,35 @@ For purposes of this License:
 
 **2.3 Permitted Use.** A use expressly authorized by Section 4.
 
-**2.4 Commercial Organization.** A for-profit corporation, business partnership, sole proprietorship, commercial enterprise, or other entity primarily carrying out activities for private commercial benefit.
+**2.4 Organization.** Any legal entity, body, institution, or group other than an individual acting in a purely personal capacity, whether for-profit or not-for-profit, and whether publicly or privately owned, operated, controlled, or funded. Organizations include, without limitation:
 
-**2.5 Commercial Use.** Use of the Software in connection with the ordinary operations, revenue-generating activities, paid service delivery, or contractual or compliance obligations of a Commercial Organization, other than evaluation or other activities expressly permitted by Section 4.
+- **a.** Commercial Organizations.
+- **b.** Governmental departments, ministries, agencies, municipalities, regulators, courts, legislatures, armed forces, and other public-sector bodies at any level, including intergovernmental and supranational bodies.
+- **c.** State-owned, state-controlled, or publicly funded enterprises and entities.
+- **d.** Schools, colleges, universities, academies, training institutes, and other educational institutions, whether publicly or privately operated.
+- **e.** Research institutes, laboratories, think tanks, and academic or scientific bodies.
+- **f.** Nonprofit organizations, charities, foundations, non-governmental organizations, associations, professional and trade bodies, standards bodies, and cooperatives.
+- **g.** Hospitals, healthcare providers, libraries, museums, and other public-interest institutions.
+
+**2.5 Commercial Organization.** A for-profit corporation, business partnership, sole proprietorship, commercial enterprise, or other entity primarily carrying out activities for private commercial benefit.
+
+**2.6 Organizational Use.** Any use of the Software by, for, or on behalf of an Organization, including use by its employees, officers, members, students, volunteers, researchers, agents, or contractors acting in that capacity. Organizational Use does not require the Software to generate revenue and does not depend on the Organization's legal form, funding, tax status, or charitable or public purpose.
+
+**2.7 Commercial Use.** Use of the Software in connection with the ordinary operations, revenue-generating activities, paid service delivery, or contractual or compliance obligations of a Commercial Organization or of an individual acting for a paying client, other than activities expressly permitted by Section 4.
 
 Commercial Use does not require the Software itself to generate revenue.
 
-**2.6 Production Use.** Use of the Software to operate, maintain, record, assess, or support actual organizational activities, systems, decisions, business records, governance obligations, compliance obligations, or services.
+**2.8 Production Use.** Use of the Software to operate, maintain, record, assess, or support actual organizational activities, systems, decisions, business records, governance obligations, compliance obligations, or services.
 
 Production Use is determined by the Software's actual purpose and reliance upon its outputs, rather than solely by the technical classification of the server or environment where it runs.
 
-**2.7 Evaluation Use.** Temporary, non-operational use of the Software for assessment, testing, proof-of-concept work, integration evaluation, or demonstrations, without reliance upon it for actual organizational obligations.
+**2.9 Evaluation Use.** Temporary, non-operational use of the Software for assessment, testing, proof-of-concept work, integration evaluation, or demonstrations, without reliance upon it for actual organizational obligations.
 
-**2.8 Eligible Educational Institution.** A bona fide school, college, university, or other established educational institution, whether publicly or privately operated, whose primary institutional function is education rather than selling commercial software or technology services.
+**2.10 Training Use.** Use of the Software solely as a teaching or demonstration tool in courses, workshops, tutorials, lessons, technical demonstrations, or other instruction concerning VerifyWise or AI governance practice, using sample, synthetic, anonymized, or fictional data, and without reliance upon the Software or its outputs for any actual organizational activity, obligation, or decision.
 
-**2.9 Eligible Research Organization.** A nonprofit organization whose primary activities include independent scientific, academic, or public-interest research, and whose proposed use of the Software is noncommercial research rather than paid operational services for commercial customers.
+**2.11 Affiliate.** An entity controlling, controlled by, or under common control with another entity. Control means the direct or indirect power to direct the entity's management or policies.
 
-**2.10 Eligible Public Institution.** A governmental department, ministry, municipality, regulator, public agency, or other public-sector institution performing public functions.
-
-An entity principally operating as a commercial enterprise, including a commercially operated state-owned enterprise, is not automatically an Eligible Public Institution merely because a government owns, controls, or funds it.
-
-**2.11 Authorized Contractor.** A person or organization engaged by an Eligible Educational Institution, Eligible Research Organization, or Eligible Public Institution to install, configure, maintain, support, or administer the Software solely on behalf of that institution.
-
-**2.12 Affiliate.** An entity controlling, controlled by, or under common control with another entity. Control means the direct or indirect power to direct the entity's management or policies.
-
-**2.13 Derivative Work.** A modification or work incorporating copyright-protected portions of the Software and requiring permission under applicable copyright law.
+**2.12 Derivative Work.** A modification or work incorporating copyright-protected portions of the Software and requiring permission under applicable copyright law.
 
 Independently developed software does not become a Derivative Work merely because it communicates with VerifyWise through a documented interface.
 
@@ -95,86 +101,43 @@ Subject to compliance with this License, the Licensor grants You a worldwide, no
 - **c.** Copy the Software as reasonably necessary for Permitted Uses.
 - **d.** Modify the Software and create Derivative Works for Permitted Uses.
 - **e.** Publish and distribute the Software, modifications, and Derivative Works solely in accordance with Section 7.
-- **f.** Permit authorized employees, students, researchers, and contractors to access and operate the Software on the Licensee's behalf within the applicable Permitted Use.
+- **f.** Where the Licensee is an Organization, permit its employees and contractors to access and operate the Software on the Licensee's behalf solely within the applicable Permitted Use.
 
 These rights extend only to rights the Licensor has authority to grant.
 
-No rights are granted to commercially exploit the Software except where explicitly provided by this License or by a separate written agreement.
+No rights are granted to use the Software for Organizational Use or to commercially exploit the Software except where explicitly provided by this License or by a separate written agreement.
 
 ## 4. Permitted Uses
 
 ### 4.1 Personal and Individual Use
 
-Individuals may use the Software free of charge for:
+Individuals may use the Software free of charge, in a purely personal capacity, for:
 
 - Personal projects and personal AI governance activities.
 - Learning and self-education.
 - Independent experimentation and testing.
 - Hobby projects.
-- Personal research.
+- Personal research that is not carried out for or on behalf of an Organization.
 - Noncommercial software development.
 - Management of personally operated AI models and projects.
 
-Use by an individual primarily on behalf of a Commercial Organization, employer, or paying client is not Personal Use.
+Use by an individual primarily for or on behalf of an Organization, an employer, an educational or research institution, or a paying client is not Personal Use. This applies whether or not the individual is paid and whether or not the Organization is commercial.
 
-### 4.2 Educational Use
+### 4.2 Training and Demonstrations
 
-Eligible Educational Institutions may use the Software free of charge for:
+Individuals and Organizations may use the Software for Training Use, and may charge reasonable fees for training, education, workshops, technical demonstrations, or instruction concerning VerifyWise, provided that:
 
-- Teaching, training, and academic instruction.
-- Student and faculty projects.
-- Academic research.
-- Institutional administration.
-- Internal AI governance, risk management, and compliance.
-- Production deployments supporting the institution's own activities.
+- **a.** The Software is used solely for Training Use.
+- **b.** No operational AI governance, risk management, or compliance activity is carried out with the Software for the training provider, for any attendee's Organization, or for any other person or Organization.
+- **c.** The Software is not supplied as a commercial hosted platform, managed service, or licensed product.
+- **d.** Training environments are not retained or repurposed for Production Use or other Organizational Use.
+- **e.** The training provider does not claim endorsement or certification by VerifyWise without authorization.
 
-This permission includes internal use by authorized employees, students, and contractors acting on behalf of the institution.
+This exception does not authorize an Organization's internal use of the Software for its own administration, governance, risk management, compliance, or research, and does not authorize paid consulting, compliance assessments, ongoing governance operations, or production deployments using VerifyWise.
 
-The permission does not extend to offering VerifyWise as a commercial managed service or operating it primarily for unrelated commercial customers.
+### 4.3 Organizational Evaluation
 
-### 4.3 Government and Public Sector Use
-
-Eligible Public Institutions may use the Software free of charge for their own institutional purposes, including:
-
-- Public administration.
-- Internal governance and compliance.
-- AI model inventories, assessments, and risk management.
-- Regulatory activities.
-- Public-sector research.
-- Internal operational and Production Use.
-
-No commercial license fee is required solely because an Eligible Public Institution uses the Software in production.
-
-A commercially operated state-owned enterprise or an otherwise ineligible organization must obtain a commercial license for Commercial Use.
-
-### 4.4 Authorized Government and Institutional Contractors
-
-An Authorized Contractor may install, configure, administer, and maintain the Software solely for an eligible institution's own Permitted Use.
-
-The contractor must:
-
-- **a.** Act under the eligible institution's authorization.
-- **b.** Limit the deployment to the eligible institution's activities.
-- **c.** Avoid independently offering the Software as a commercial SaaS, managed software platform, or multi-customer service.
-- **d.** Not reuse the Software for unrelated commercial customers except under a separate commercial license or another applicable Permitted Use.
-
-A contractor may receive compensation for deployment, configuration, training, and maintenance services performed on behalf of an eligible institution.
-
-The contractor does not thereby receive a general license for its own Commercial Use.
-
-### 4.5 Noncommercial Research
-
-Eligible Research Organizations and independent researchers may use the Software for noncommercial scientific, educational, or public-interest research.
-
-They may publish research findings, benchmarking results, academic papers, and original research artifacts, provided they comply with applicable intellectual property rights and the redistribution rules in Section 7.
-
-An organization does not qualify merely by being incorporated as a nonprofit or charity.
-
-Research performed primarily as paid operational AI governance, audit, or compliance services for commercial customers is not covered by this permission.
-
-### 4.6 Commercial Evaluation
-
-Commercial Organizations may use the Software for Evaluation Use for up to sixty (60) consecutive calendar days, beginning with the first installation or execution undertaken for the evaluation.
+Any Organization may use the Software for Evaluation Use for up to sixty (60) consecutive calendar days, beginning with the first installation or execution undertaken for the evaluation.
 
 Permitted activities include:
 
@@ -190,44 +153,38 @@ Evaluation Use must not:
 - **a.** Substitute for an operational AI governance or compliance system.
 - **b.** Be relied upon to fulfill real regulatory, legal, audit, or contractual obligations.
 - **c.** Provide ongoing production services.
-- **d.** Be used to deliver operational services to customers.
+- **d.** Be used to deliver operational services to customers, citizens, students, members, or other third parties.
 
-The evaluation period applies once per Commercial Organization and its Affiliates for each major Software version. Reinstallation, migration, user changes, or substantially equivalent deployments do not restart the evaluation period.
+The evaluation period applies once per Organization and its Affiliates for each major Software version. Reinstallation, migration, user changes, or substantially equivalent deployments do not restart the evaluation period.
 
-At the end of the evaluation period, the Licensee must stop the evaluation use, except as otherwise authorized by this License or a separate commercial agreement.
+At the end of the evaluation period, the Licensee must stop the evaluation use, except as otherwise authorized by this License or a separate written agreement.
 
 The Licensor may grant a written extension at its discretion.
 
-### 4.7 Paid Training and Demonstrations
+## 5. Organizational Use Restrictions
 
-Individuals and organizations may charge reasonable fees for training, education, workshops, technical demonstrations, or instruction concerning VerifyWise, provided that:
+Except as expressly permitted in Section 4, all Organizational Use and all Commercial Use require prior authorization through a separate written license from the Licensor.
 
-- **a.** The Software is used solely for training or demonstration.
-- **b.** No operational AI governance or compliance service is delivered to a commercial customer under this exception.
-- **c.** The Software is not supplied as a commercial hosted platform, managed service, or licensed product.
-- **d.** The training provider does not claim endorsement or certification by VerifyWise without authorization.
+This restriction applies to every type of Organization, including governmental and public-sector bodies, educational and academic institutions, research organizations, and nonprofit and charitable organizations. No Organization qualifies for free use because of its public, educational, research, charitable, or not-for-profit status, its tax status, or the source of its funding.
 
-This exception does not authorize general paid consulting, compliance assessments, ongoing governance operations, or customer production deployments using VerifyWise.
+Use requiring a separate written license includes, without limitation:
 
-## 5. Commercial Use Restrictions
-
-Except as expressly permitted in Section 4, Commercial Use requires prior authorization through a separate written commercial license.
-
-Commercial Use includes, without limitation:
-
-- **a.** Internal business operations of a Commercial Organization.
-- **b.** Commercial production deployments, whether on-premises, in a private cloud, or in a public cloud.
-- **c.** Internal AI governance, risk management, compliance, model inventories, or audit workflows used by a Commercial Organization.
-- **d.** Use to meet a Commercial Organization's actual regulatory or contractual requirements.
-- **e.** Providing customer-facing AI governance, auditing, assessments, risk management, or compliance services using the Software.
-- **f.** Offering the Software as SaaS, hosted software, a managed service, or a white-label platform.
-- **g.** Commercial redistribution, licensing, sublicensing, resale, or incorporation of protected Software code into commercial products.
-- **h.** Commercial exploitation of a modified, forked, or rebranded version of the Software.
-- **i.** Operating a competing commercial product or platform using the Software or its Derivative Works.
+- **a.** Internal operations, administration, or activities of any Organization.
+- **b.** Production deployments by or for any Organization, whether on-premises, in a private cloud, or in a public cloud.
+- **c.** Internal AI governance, risk management, compliance, model inventories, or audit workflows used by any Organization.
+- **d.** Use to meet any Organization's actual regulatory, legal, or contractual requirements.
+- **e.** Public administration, regulatory, supervisory, or other public-sector functions.
+- **f.** Institutional teaching administration, academic research, or student and faculty projects carried out for or on behalf of an educational or research institution, other than Training Use under Section 4.2.
+- **g.** Installation, configuration, administration, or maintenance of the Software by a contractor, consultant, or service provider for any Organization's use, other than for that Organization's Evaluation Use or Training Use.
+- **h.** Providing customer-facing AI governance, auditing, assessments, risk management, or compliance services using the Software.
+- **i.** Offering the Software as SaaS, hosted software, a managed service, or a white-label platform.
+- **j.** Commercial redistribution, licensing, sublicensing, resale, or incorporation of protected Software code into commercial products.
+- **k.** Commercial exploitation of a modified, forked, or rebranded version of the Software.
+- **l.** Operating a competing commercial product or platform using the Software or its Derivative Works.
 
 For clarity:
 
-**Internal business use by a Commercial Organization is Commercial Use, even when the Software is self-hosted, used only by employees, and generates no direct revenue.**
+**Internal use by any Organization is Organizational Use requiring a separate written license, even when the Software is self-hosted, used only by employees, students, or members, and generates no revenue.**
 
 The exceptions expressly stated in Section 4 take precedence over this general restriction.
 
@@ -237,8 +194,8 @@ No provision of this License grants permission to:
 
 - **a.** Sell or license the Software as a commercial software product.
 - **b.** Offer the Software or a Derivative Work as a commercial hosted service.
-- **c.** Use the Software as the operational platform for a paid AI governance, compliance, risk management, or auditing service, except for the limited institutional contractor permissions in Section 4.4.
-- **d.** Circumvent the Commercial Use restrictions by using a fork, modification, integration, affiliate, contractor, or intermediary.
+- **c.** Use the Software as the operational platform for a paid AI governance, compliance, risk management, or auditing service.
+- **d.** Circumvent the restrictions in Section 5 by using a fork, modification, integration, affiliate, contractor, employee, student, member, or other individual or intermediary.
 - **e.** Rebrand the Software and commercially distribute or host it.
 - **f.** Represent the Software or a Derivative Work as an independently licensed commercial product where that activity requires rights not granted by this License.
 
@@ -257,7 +214,7 @@ All such distributions must:
 - **a.** Include this License.
 - **b.** Preserve applicable copyright notices.
 - **c.** Identify material modifications where reasonably practicable.
-- **d.** Make clear that redistribution does not grant unrestricted commercial-use rights.
+- **d.** Make clear that redistribution does not grant Organizational Use or unrestricted commercial-use rights.
 - **e.** Not impose terms purporting to override this License for protected portions of the Software.
 
 The Software may not be redistributed as a commercial product without written authorization.
@@ -268,14 +225,14 @@ Public forks, including forks hosted on GitHub or comparable code-hosting platfo
 
 - Noncommercial development.
 - Experimentation.
-- Research.
+- Personal research.
 - Bug fixing.
 - Community collaboration.
 - Contributions to VerifyWise.
 
 Forks must retain the applicable license and copyright notices.
 
-Public availability of a fork does not authorize commercial operation or exploitation.
+Public availability of a fork does not authorize Organizational Use, commercial operation, or commercial exploitation, and does not expand the Permitted Uses in Section 4.
 
 ### 7.3 Modifications and Derivative Works
 
@@ -285,7 +242,7 @@ Copyright in original modifications remains with the relevant contributor or own
 
 Distribution of Derivative Works incorporating protected VerifyWise code must preserve the restrictions of this License for those protected portions.
 
-The Software and its Derivative Works may not be commercially hosted, sold, rebranded, or otherwise commercially exploited without separate authorization.
+The Software and its Derivative Works may not be used for Organizational Use, or commercially hosted, sold, rebranded, or otherwise commercially exploited, without separate authorization.
 
 ### 7.4 Downstream Recipients
 
@@ -322,6 +279,8 @@ Submitting a contribution does not by itself transfer copyright ownership to the
 This Section does not itself constitute a CLA or grant commercial relicensing rights in independently owned contributions.
 
 The Licensor may decline to merge contributions for which the required rights have not been obtained.
+
+Developing and submitting a contribution to the official VerifyWise codebase is a Permitted Use, including when the contributor acts on behalf of an Organization.
 
 ## 9. Ownership and Intellectual Property
 
@@ -362,12 +321,13 @@ This License does not grant rights under patents owned by third parties unless t
 
 ## 12. Commercial Licensing
 
-Organizations requiring rights beyond the Permitted Uses must obtain a separate written commercial license from the Licensor.
+Individuals and Organizations requiring rights beyond the Permitted Uses must obtain a separate written license from the Licensor.
 
-Commercial licensing may include:
+Such licensing may include:
 
-- Production deployment by Commercial Organizations.
+- Production and internal use by any Organization, including governmental, public-sector, educational, academic, research, nonprofit, and commercial Organizations.
 - Enterprise and multi-entity use.
+- Deployment, administration, and support by contractors on behalf of an Organization.
 - Managed services and commercial hosting.
 - Customer-facing AI governance services.
 - Commercial redistribution.
@@ -376,11 +336,11 @@ Commercial licensing may include:
 - Enterprise support and maintenance.
 - Security updates and service-level commitments.
 
-Commercial rights arise only from an authorized written agreement and are subject to its terms.
+Rights beyond the Permitted Uses arise only from an authorized written agreement and are subject to its terms. The Licensor may, at its sole discretion, offer different terms or pricing to different types of Organizations.
 
-Requesting pricing, discussing an agreement, or submitting an order inquiry does not itself grant Commercial Use rights.
+Requesting pricing, discussing an agreement, or submitting an order inquiry does not itself grant Organizational Use or Commercial Use rights.
 
-Where a separate commercial agreement governs a particular deployment or use, that agreement prevails over conflicting provisions of this License within its expressly agreed scope.
+Where a separate written agreement governs a particular deployment or use, that agreement prevails over conflicting provisions of this License within its expressly agreed scope.
 
 Nothing in this License obligates the Licensor to provide support, maintenance, hosted services, updates, or a commercial license.
 
@@ -388,7 +348,7 @@ Nothing in this License obligates the Licensor to provide support, maintenance, 
 
 Licensees are responsible for determining whether their use qualifies as a Permitted Use.
 
-Where the Licensor has a reasonable, good-faith basis to believe that an organizational Licensee is using the Software outside the scope of this License, the Licensor may request written confirmation of the Licensee's eligibility and use.
+Where the Licensor has a reasonable, good-faith basis to believe that a Licensee is using the Software outside the scope of this License, the Licensor may request written confirmation of the Licensee's use.
 
 Such requests must be proportionate and limited to information reasonably necessary to assess license compliance.
 
@@ -416,9 +376,9 @@ If the violation is fully cured within that period, the license rights remain in
 
 If the violation is not cured, rights under this License terminate at the end of the cure period.
 
-### 14.2 Deliberate Commercial Violations
+### 14.2 Deliberate Violations
 
-For deliberate unauthorized commercial redistribution, deliberate circumvention of Commercial Use restrictions, or continued unauthorized commercial exploitation after written notice, the Licensor may terminate the relevant licensed rights immediately by written notice, to the extent permitted by applicable law.
+For deliberate unauthorized commercial redistribution, deliberate circumvention of the restrictions in Section 5, or continued unauthorized Organizational Use or commercial exploitation after written notice, the Licensor may terminate the relevant licensed rights immediately by written notice, to the extent permitted by applicable law.
 
 ### 14.3 Consequences of Termination
 
@@ -498,7 +458,7 @@ This License contains no automatic conversion to an open-source license.
 
 The Licensor is not required to publish future versions, updates, or modifications.
 
-Rights validly granted under earlier licensing arrangements, including any applicable Business Source License, remain governed by the terms of those arrangements.
+Rights validly granted under earlier licensing arrangements, including any applicable Business Source License and VerifyWise Community & Evaluation License version 1.0, remain governed by the terms of those arrangements for the Software versions released under them. Version 1.1 of this License applies to Software versions released under version 1.1.
 
 ## 20. Governing Law and Jurisdiction
 
@@ -520,13 +480,13 @@ This License constitutes the complete terms of the rights granted under it, exce
 
 The Licensor may grant additional rights or exceptions through a written authorization issued by a person with authority to bind the Licensor.
 
-A separate written commercial agreement supersedes conflicting provisions of this License only for the rights and activities that agreement expressly covers.
+A separate written agreement supersedes conflicting provisions of this License only for the rights and activities that agreement expressly covers.
 
 No failure to enforce a provision constitutes a waiver of future enforcement.
 
 ## 23. Contact and Licensing Inquiries
 
-Commercial licenses, enterprise deployments, redistribution permissions, written exceptions, and other licensing inquiries should be directed to:
+Organizational and commercial licenses, enterprise deployments, redistribution permissions, written exceptions, and other licensing inquiries should be directed to:
 
 **VerifyWise**
 
@@ -536,12 +496,12 @@ Commercial licenses, enterprise deployments, redistribution permissions, written
 
 ---
 
-**VerifyWise Community & Evaluation License (VCEL) 1.0**
+**VerifyWise Community & Evaluation License (VCEL) 1.1**
 
 Source-available software.
 
-Free for qualifying personal, educational, governmental, noncommercial research, training, and evaluation uses.
+Free for personal use by individuals, for training and demonstration purposes, and for time-limited evaluation.
 
-Commercial organizational production use, commercial hosting, and commercial redistribution require separate written authorization.
+Use by or for any Organization, including governmental, public-sector, educational, academic, research, nonprofit, and commercial Organizations, as well as commercial hosting and commercial redistribution, requires separate written authorization.
 
 Copyright © 2026 VerifyWise Ltd. All rights reserved except as expressly licensed.
