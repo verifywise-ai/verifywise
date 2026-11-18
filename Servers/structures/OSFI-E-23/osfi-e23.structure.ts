@@ -321,7 +321,7 @@ export const osfiE23Structure: FrameworkStructure = {
       {
         title: "Principle 2.1 – Model identification (C.1)",
         description:
-          "Institutions should identify and keep track of every model in use or recently decommissioned.",
+          "Every model that is currently in use, or was retired not long ago, should be found and kept on the institution's radar.",
         order_no: 4,
         items: [
           {
@@ -434,7 +434,7 @@ export const osfiE23Structure: FrameworkStructure = {
       {
         title: "Principle 2.2 – Model risk rating (C.2)",
         description:
-          "Institutions should use a rating approach that assesses the key dimensions of model risk.",
+          "A rating method is needed that scores each model against the main dimensions along which model risk arises.",
         order_no: 5,
         items: [
           {
@@ -643,7 +643,7 @@ export const osfiE23Structure: FrameworkStructure = {
       {
         title: "Principle 3.1 – Policies, procedures and controls (D.1)",
         description:
-          "MRM policies, procedures and controls should be robust and flexible, and lead to effective requirements across the model lifecycle.",
+          "Written policies, procedures and controls need to be sturdy yet adaptable, so that what they require works well at every lifecycle stage.",
         order_no: 7,
         items: [
           {
