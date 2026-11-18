@@ -1345,9 +1345,9 @@ export interface SharedProjectCandidate {
  * none of the fields the tier-0 scorer compares, and the two `risk_category`
  * enums are disjoint vocabularies.
  *
- * `DISTINCT` is load-bearing on the model branch —
- * `model_inventories_projects_frameworks` is keyed per framework, so one model
- * in one project under three frameworks would otherwise appear three times.
+ * The model branch reads direct use case links only (`framework_id IS NULL`):
+ * a framework link carries no use case. `DISTINCT` stays as a guard against
+ * duplicate link rows.
  *
  * The org filters on the junction tables sit on nullable columns on purpose.
  * A NULL there makes the row invisible, which is the correct direction for a
@@ -1397,6 +1397,7 @@ export async function getSharedProjectCandidatesQuery(
        JOIN model_inventories_projects_frameworks mp
          ON mp.model_inventory_id = mr.model_id
         AND mp.organization_id = :organizationId
+        AND mp.framework_id IS NULL
        JOIN subject_projects sp ON sp.project_id = mp.project_id
        JOIN projects p          ON p.id          = mp.project_id
       WHERE mr.organization_id = :organizationId
@@ -1497,9 +1498,8 @@ export async function updateRiskLinkStatusQuery(
  * NOT EXISTS is status-agnostic on purpose: a dismissed link is a human saying
  * no, and re-proposing it is exactly what the dismissal analytics discourage.
  *
- * `COUNT(DISTINCT mr.id)` absorbs the two row shapes of
- * `model_inventories_projects_frameworks` (with and without framework_id); a
- * naive COUNT(*) would double-count. `risk_owner` is selected but not filtered
+ * Only direct use case links count (`framework_id IS NULL`): a framework link
+ * carries no use case. `COUNT(DISTINCT mr.id)` guards against duplicate rows. `risk_owner` is selected but not filtered
  * — an ownerless risk is a real candidate, it just cannot be notified.
  *
  * A risk that cannot take a model-risk parent is left out — one that already
@@ -1562,6 +1562,7 @@ export async function getModelRiskCandidatesQuery(input: {
          ON mp.project_id = pr.project_id
         AND mp.organization_id = :organizationId
         AND mp.model_inventory_id = :modelInventoryId
+        AND mp.framework_id IS NULL
        JOIN model_risks mr
          ON mr.model_id = mp.model_inventory_id
         AND mr.organization_id = :organizationId

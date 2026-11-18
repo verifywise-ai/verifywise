@@ -71,7 +71,7 @@ describe("model risk candidate notices", () => {
     await linkRiskToProject(seed.orgA, riskA, project);
     await linkRiskToProject(seed.orgA, riskB, project);
     const model = await createTestModelInventory(seed.orgA, { model: "Scorecard v1" });
-    await linkModelToProject(seed.orgA, model, project, 1);
+    await linkModelToProject(seed.orgA, model, project);
     await createTestModelRisk(seed.orgA, { model_id: model });
     await createTestModelRisk(seed.orgA, { model_id: model });
 
@@ -110,7 +110,7 @@ describe("model risk candidate notices", () => {
     await linkRiskToProject(seed.orgA, dismissed, project);
     await linkRiskToProject(seed.orgA, fresh, project);
     const model = await createTestModelInventory(seed.orgA, {});
-    await linkModelToProject(seed.orgA, model, project, 1);
+    await linkModelToProject(seed.orgA, model, project);
     const modelRisk = await createTestModelRisk(seed.orgA, { model_id: model });
     await insertDismissedModelLink(seed.orgA, dismissed, modelRisk);
 
@@ -142,8 +142,8 @@ describe("model risk candidate notices", () => {
     await linkRiskToProject(seed.orgA, risk, projectOne);
     await linkRiskToProject(seed.orgA, risk, projectTwo);
     const model = await createTestModelInventory(seed.orgA, {});
-    await linkModelToProject(seed.orgA, model, projectOne, 1);
-    await linkModelToProject(seed.orgA, model, projectTwo, 1);
+    await linkModelToProject(seed.orgA, model, projectOne);
+    await linkModelToProject(seed.orgA, model, projectTwo);
     await createTestModelRisk(seed.orgA, { model_id: model });
 
     const first = await notifyModelRiskCandidates({
@@ -174,7 +174,7 @@ describe("model risk candidate notices", () => {
     const risk = await createTestRisk(seed.orgA, { risk_owner: seed.userA });
     await linkRiskToProject(seed.orgA, risk, project);
     const model = await createTestModelInventory(seed.orgA, {});
-    await linkModelToProject(seed.orgA, model, project, 1);
+    await linkModelToProject(seed.orgA, model, project);
     await createTestModelRisk(seed.orgA, { model_id: model });
 
     const first = await notifyModelRiskCandidates({
@@ -213,7 +213,7 @@ describe("model risk candidate notices", () => {
     const risk = await createTestRisk(seed.orgA, { risk_owner: seed.userA });
     await linkRiskToProject(seed.orgA, risk, project);
     const model = await createTestModelInventory(seed.orgA, {});
-    await linkModelToProject(seed.orgA, model, project, 1);
+    await linkModelToProject(seed.orgA, model, project);
     await createTestModelRisk(seed.orgA, { model_id: model });
 
     const riskRef = { id: risk, risk_name: "R", risk_owner: seed.userA };
@@ -235,7 +235,7 @@ describe("model risk candidate notices", () => {
     const risk = await createTestRisk(seed.orgA, { risk_owner: seed.userA });
     await linkRiskToProject(seed.orgA, risk, project);
     const model = await createTestModelInventory(seed.orgA, {});
-    await linkModelToProject(seed.orgA, model, project, 1);
+    await linkModelToProject(seed.orgA, model, project);
 
     const summary = await notifyModelRiskCandidates({
       organizationId: seed.orgA,
@@ -269,8 +269,8 @@ describe("model risk candidate notices", () => {
     await linkRiskToProject(seed.orgB, riskB, projectB);
     const modelA = await createTestModelInventory(seed.orgA, {});
     const modelB = await createTestModelInventory(seed.orgB, {});
-    await linkModelToProject(seed.orgA, modelA, projectA, 1);
-    await linkModelToProject(seed.orgB, modelB, projectB, 1);
+    await linkModelToProject(seed.orgA, modelA, projectA);
+    await linkModelToProject(seed.orgB, modelB, projectB);
     await createTestModelRisk(seed.orgA, { model_id: modelA });
     await createTestModelRisk(seed.orgB, { model_id: modelB });
 

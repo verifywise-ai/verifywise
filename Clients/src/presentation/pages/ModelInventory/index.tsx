@@ -18,6 +18,7 @@ import { createModelInventory } from "../../../application/repository/modelInven
 import { onAiActionCompleted } from "../../../application/events/aiActionEvents";
 import { getShareLinksForResource } from "../../../application/repository/share.repository";
 import { useAuth } from "../../../application/hooks/useAuth";
+import { useTranslation } from "../../../application/hooks/useTranslation";
 import { useExtensions } from "../../../application/contexts/Extensions.context";
 import MLFlowTab from "../Extensions/mlflow/MLFlowTab";
 import AzureAIFoundryTab from "../Extensions/azure-ai-foundry/AzureAIFoundryTab";
@@ -176,6 +177,7 @@ const ModelInventory: React.FC = () => {
   const [showAlert, setShowAlert] = useState(false);
 
   const { userId } = useAuth();
+  const { t } = useTranslation();
   const isCreatingDisabled = !useCan("model.edit");
   const theme = useTheme();
 
@@ -1562,24 +1564,23 @@ const ModelInventory: React.FC = () => {
         return newData;
       });
 
-      // If deleting risks, also optimistically remove related risks from the risks table
-      if (deleteRisks) {
-        setModelRisksData((prevData) =>
-          prevData.filter((risk) => risk.model_id?.toString() !== id),
-        );
-      }
+      // The model's risks either go (archived) or stay with no model.
+      setModelRisksData((prevData) =>
+        deleteRisks
+          ? prevData.filter((risk) => risk.model_id?.toString() !== id)
+          : prevData.map((risk) =>
+              risk.model_id?.toString() === id ? { ...risk, model_id: null } : risk,
+            ),
+      );
 
       await deleteEntityById({
         routeUrl: `/modelInventory/${id}${deleteRisks ? "?deleteRisks=true" : ""}`,
       });
 
-      // Fetch fresh data to ensure consistency with server (without loading state)
+      // Fetch fresh data to ensure consistency with server (without loading state).
+      // Both choices change the model's risks, so they are refetched too.
       await fetchModelInventoryData(false);
-
-      // If risks were deleted, also refresh the model risks data
-      if (deleteRisks) {
-        await fetchModelRisksData(false);
-      }
+      await fetchModelRisksData(false);
 
       // Force a smooth table re-render after the data update
       setTableKey((prev) => prev + 1);
@@ -1595,9 +1596,7 @@ const ModelInventory: React.FC = () => {
 
       // If delete failed, revert the optimistic update by fetching fresh data (without loading state)
       await fetchModelInventoryData(false);
-      if (deleteRisks) {
-        await fetchModelRisksData(false);
-      }
+      await fetchModelRisksData(false);
 
       setAlert({
         variant: "error",
@@ -1640,20 +1639,23 @@ const ModelInventory: React.FC = () => {
     }
   };
 
+  // Whether deleting the model should ask Keep / Delete: only live risks
+  // count. Always asked of the server, whatever the status filter: the loaded
+  // list can be filtered or stale. If the server cannot answer, ask the user
+  // anyway, so a risk is never decided for them by a guess.
   const handleCheckModelHasRisks = async (id: string): Promise<boolean> => {
+    const numericId = parseInt(id);
     try {
-      // First check local data for immediate response
-      const numericId = parseInt(id);
-      const hasLocalRisks = modelRisksData.some((risk) => risk.model_id === numericId);
-
-      // If local data shows risks, return true immediately
-      if (hasLocalRisks) {
-        return true;
-      }
-      return false;
+      const response = await getAllEntities({ routeUrl: "/modelRisks?filter=active" });
+      const liveRisks: IModelRisk[] = Array.isArray(response)
+        ? response
+        : Array.isArray(response?.data)
+          ? response.data
+          : [];
+      return liveRisks.some((risk) => risk.model_id === numericId && !risk.is_deleted);
     } catch (error) {
       console.error("Error checking model risks:", error);
-      return false;
+      return true;
     }
   };
 
@@ -1702,8 +1704,10 @@ const ModelInventory: React.FC = () => {
       const ownerUser = users.find((user: any) => user.id == risk.owner);
       const ownerName = ownerUser ? `${ownerUser.name} ${ownerUser.surname}` : "-";
 
+      // The same label as the table: "No model" for a risk kept from a
+      // deleted model, "Unknown" for a model not in the loaded list.
       const model = modelInventoryData.find((m) => m.id === risk.model_id);
-      const modelName = model ? model.model : "-";
+      const modelName = !risk.model_id ? t("No model") : model?.model || t("Unknown");
 
       return {
         risk_name: risk.risk_name || "-",
@@ -1715,7 +1719,7 @@ const ModelInventory: React.FC = () => {
         target_date: risk.target_date || "-",
       };
     });
-  }, [filteredModelRisks, users, modelInventoryData]);
+  }, [filteredModelRisks, users, modelInventoryData, t]);
 
   // Export columns and data for Evidence Hub
   const evidenceHubExportColumns = useMemo(() => {
@@ -2219,7 +2223,17 @@ const ModelInventory: React.FC = () => {
 
               {/* Right side: Share, Export, Analytics & Add Model buttons */}
               <Stack direction="row" gap="8px" alignItems="center">
-                <ShareButton onClick={handleShareClick} size="medium" tooltip="Share view" />
+                {/* Creating a share link takes model.edit on the server. */}
+                <ShareButton
+                  onClick={handleShareClick}
+                  size="medium"
+                  disabled={isCreatingDisabled}
+                  tooltip={
+                    isCreatingDisabled
+                      ? "Only users who can edit models can share this view"
+                      : "Share view"
+                  }
+                />
                 <ExportMenu
                   data={exportData}
                   columns={exportColumns}

@@ -23,6 +23,7 @@ export {
   linkRiskToProject,
   linkVendorToProject,
   linkModelToProject,
+  linkModelToFramework,
   assignTaskToUser,
   createTestModelInventory,
   createTestModelRisk,

@@ -8,9 +8,15 @@ import {
   getModelByFrameworkIdQuery,
   getModelInventoryByIdQuery,
   deleteModelInventoryByIdQuery,
+  insertModelFrameworkLinks,
+  insertModelProjectLinks,
 } from "../../utils/modelInventory.utils";
 import { createWriteToolFn } from "../confirmation/createWriteTool";
 import { sequelize } from "../../database/db";
+import {
+  assertModelInOrganization,
+  resolveModelLinkTargets,
+} from "../../utils/modelReferences.utils";
 import logger from "../../utils/logger/fileLogger";
 
 export interface FetchModelInventoriesParams {
@@ -479,25 +485,26 @@ const agentLinkModelToProject = createWriteToolFn({
   warningLevel: "warning",
   descriptionFn: (params) => `Link model #${params.model_id} to project #${params.project_id}`,
   executeFn: async (params, organizationId) => {
-    const modelId = params.model_id as number;
-    const projectId = params.project_id as number;
-    await sequelize.query(
-      `INSERT INTO model_inventories_projects_frameworks (organization_id, model_inventory_id, project_id)
-       VALUES (:organization_id, :model_inventory_id, :project_id)
-       ON CONFLICT DO NOTHING`,
-      {
-        replacements: {
-          organization_id: organizationId,
-          model_inventory_id: modelId,
-          project_id: projectId,
-        },
-      },
-    );
-    return {
-      model_id: modelId,
-      project_id: projectId,
-      message: "Model linked to project successfully",
-    };
+    const transaction = await sequelize.transaction();
+    try {
+      // The model and the use case must both be this organization's, checked
+      // in the transaction that writes the link.
+      const modelId = await assertModelInOrganization(params.model_id, organizationId, transaction);
+      const {
+        projectIds: [projectId],
+      } = await resolveModelLinkTargets([params.project_id], [], organizationId, transaction);
+      // Skips a link that already exists, as the model form's write does.
+      await insertModelProjectLinks(modelId, [projectId], organizationId, transaction);
+      await transaction.commit();
+      return {
+        model_id: modelId,
+        project_id: projectId,
+        message: "Model linked to project successfully",
+      };
+    } catch (error) {
+      await transaction.rollback();
+      throw error;
+    }
   },
 });
 
@@ -515,6 +522,7 @@ const listModelsForUseCase = async (
        INNER JOIN model_inventories_projects_frameworks link
          ON link.model_inventory_id = mi.id
        WHERE link.project_id = :project_id
+         AND link.framework_id IS NULL
          AND mi.organization_id = :organization_id
          AND link.organization_id = :organization_id
        ORDER BY mi.created_at DESC`,
@@ -546,6 +554,7 @@ const listUseCasesForModel = async (
        INNER JOIN model_inventories_projects_frameworks link
          ON link.project_id = p.id
        WHERE link.model_inventory_id = :model_id
+         AND link.framework_id IS NULL
          AND p.organization_id = :organization_id
          AND link.organization_id = :organization_id${visibility.sql}
        ORDER BY p.project_title`,
@@ -578,6 +587,7 @@ const agentUnlinkModelFromUseCase = createWriteToolFn({
       `DELETE FROM model_inventories_projects_frameworks
        WHERE model_inventory_id = :model_id
          AND project_id = :project_id
+         AND framework_id IS NULL
          AND organization_id = :organization_id`,
       {
         replacements: { model_id: modelId, project_id: projectId, organization_id: organizationId },
@@ -651,31 +661,27 @@ const listFrameworksForModel = async (
 const agentLinkModelToFramework = createWriteToolFn({
   toolName: "agent_link_model_to_framework",
   warningLevel: "warning",
-  descriptionFn: (params) =>
-    `Link model #${params.model_id} to framework #${params.framework_id} under use case #${params.project_id}`,
+  descriptionFn: (params) => `Link model #${params.model_id} to framework #${params.framework_id}`,
   executeFn: async (params, organizationId) => {
-    const modelId = params.model_id as number;
-    const projectId = params.project_id as number;
-    const frameworkId = params.framework_id as number;
-    await sequelize.query(
-      `INSERT INTO model_inventories_projects_frameworks (organization_id, model_inventory_id, project_id, framework_id)
-       VALUES (:organization_id, :model_inventory_id, :project_id, :framework_id)
-       ON CONFLICT DO NOTHING`,
-      {
-        replacements: {
-          organization_id: organizationId,
-          model_inventory_id: modelId,
-          project_id: projectId,
-          framework_id: frameworkId,
-        },
-      },
-    );
-    return {
-      model_id: modelId,
-      project_id: projectId,
-      framework_id: frameworkId,
-      message: "Model linked to framework successfully",
-    };
+    const transaction = await sequelize.transaction();
+    try {
+      const modelId = await assertModelInOrganization(params.model_id, organizationId, transaction);
+      const {
+        frameworkIds: [frameworkId],
+      } = await resolveModelLinkTargets([], [params.framework_id], organizationId, transaction);
+      // A framework link carries no use case (project_id NULL); an existing
+      // link is skipped, as the model form's write does.
+      await insertModelFrameworkLinks(modelId, [frameworkId], organizationId, transaction);
+      await transaction.commit();
+      return {
+        model_id: modelId,
+        framework_id: frameworkId,
+        message: "Model linked to framework successfully",
+      };
+    } catch (error) {
+      await transaction.rollback();
+      throw error;
+    }
   },
 });
 
@@ -683,15 +689,11 @@ const agentUnlinkModelFromFramework = createWriteToolFn({
   toolName: "agent_unlink_model_from_framework",
   warningLevel: "warning",
   descriptionFn: (params) =>
-    params.project_id !== undefined
-      ? `Unlink model #${params.model_id} from framework #${params.framework_id} (use case #${params.project_id})`
-      : `Unlink model #${params.model_id} from framework #${params.framework_id} (all use cases)`,
+    `Unlink model #${params.model_id} from framework #${params.framework_id}`,
   executeFn: async (params, organizationId) => {
     const modelId = params.model_id as number;
     const frameworkId = params.framework_id as number;
-    const projectId = params.project_id as number | undefined;
-
-    let sql = `DELETE FROM model_inventories_projects_frameworks
+    const sql = `DELETE FROM model_inventories_projects_frameworks
                WHERE model_inventory_id = :model_id
                  AND framework_id = :framework_id
                  AND organization_id = :organization_id`;
@@ -700,16 +702,10 @@ const agentUnlinkModelFromFramework = createWriteToolFn({
       framework_id: frameworkId,
       organization_id: organizationId,
     };
-    if (projectId !== undefined) {
-      sql += ` AND project_id = :project_id`;
-      replacements.project_id = projectId;
-    }
-
     const [, rowCount] = (await sequelize.query(sql, { replacements })) as [unknown, number];
     return {
       model_id: modelId,
       framework_id: frameworkId,
-      project_id: projectId ?? null,
       removed: rowCount || 0,
       message: `Unlinked model from framework (${rowCount || 0} link row(s) removed)`,
     };

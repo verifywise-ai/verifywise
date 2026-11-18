@@ -7,9 +7,101 @@ import {
   createFileEntityLink,
   deleteFileEntityLink,
 } from "./files/evidenceFiles.utils";
+import { ValidationException } from "../domain.layer/exceptions/custom.exception";
 
 /** Days without an update after which mapped evidence counts as stale. */
 export const EVIDENCE_FRESHNESS_DAYS = 90;
+
+export const EVIDENCE_MODEL_NOT_IN_ORGANIZATION =
+  "A linked model was not found in this organization.";
+export const EVIDENCE_RISK_NOT_IN_ORGANIZATION =
+  "A linked risk was not found in this organization.";
+export const EVIDENCE_TRAINING_NOT_IN_ORGANIZATION =
+  "A linked training was not found in this organization.";
+
+/** The link field's ids the stored row does not hold yet. */
+function addedLinkIds(
+  next: Record<string, unknown>,
+  stored: Record<string, unknown> | null | undefined,
+  field: string,
+): number[] {
+  const ids = next[field];
+  if (!Array.isArray(ids)) return [];
+  const before = Array.isArray(stored?.[field]) ? (stored![field] as number[]) : [];
+  return Array.from(new Set(ids as number[])).filter((id) => !before.includes(id));
+}
+
+/** How many of `ids` the query finds in the organization. */
+async function countInOrganization(
+  sql: string,
+  ids: number[],
+  organizationId: number,
+  transaction: Transaction,
+): Promise<number> {
+  const rows = (await sequelize.query(sql, {
+    replacements: { organizationId, ids },
+    type: QueryTypes.SELECT,
+    transaction,
+  })) as { id: number }[];
+  return rows.length;
+}
+
+/**
+ * Checks that every model, risk and training id the evidence links to is the
+ * organization's, in the transaction that stores the links. Ids the stored
+ * row already links to (`stored`, on update) are not re-checked, so evidence
+ * that points at a since-deleted record can still be edited. The ids are
+ * already parsed as positive integers. Throws a ValidationException (400).
+ */
+export async function assertEvidenceLinksInOrganization(
+  links: Record<string, unknown>,
+  organizationId: number,
+  transaction: Transaction,
+  stored?: Record<string, unknown> | null,
+): Promise<void> {
+  const modelIds = addedLinkIds(links, stored, "mapped_model_ids");
+  if (
+    modelIds.length > 0 &&
+    (await countInOrganization(
+      `SELECT id FROM model_inventories WHERE organization_id = :organizationId AND id IN (:ids)`,
+      modelIds,
+      organizationId,
+      transaction,
+    )) !== modelIds.length
+  ) {
+    throw new ValidationException(EVIDENCE_MODEL_NOT_IN_ORGANIZATION, "mapped_model_ids", modelIds);
+  }
+
+  const riskIds = addedLinkIds(links, stored, "mapped_risk_ids");
+  if (
+    riskIds.length > 0 &&
+    (await countInOrganization(
+      `SELECT id FROM risks WHERE organization_id = :organizationId AND id IN (:ids)`,
+      riskIds,
+      organizationId,
+      transaction,
+    )) !== riskIds.length
+  ) {
+    throw new ValidationException(EVIDENCE_RISK_NOT_IN_ORGANIZATION, "mapped_risk_ids", riskIds);
+  }
+
+  const trainingIds = addedLinkIds(links, stored, "mapped_training_ids");
+  if (
+    trainingIds.length > 0 &&
+    (await countInOrganization(
+      `SELECT id FROM trainingregistar WHERE organization_id = :organizationId AND id IN (:ids)`,
+      trainingIds,
+      organizationId,
+      transaction,
+    )) !== trainingIds.length
+  ) {
+    throw new ValidationException(
+      EVIDENCE_TRAINING_NOT_IN_ORGANIZATION,
+      "mapped_training_ids",
+      trainingIds,
+    );
+  }
+}
 
 // Helper to normalize a date value to an ISO string or null
 const toISO = (d: any): string | null => {

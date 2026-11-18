@@ -1535,9 +1535,18 @@
   "{assigner} assigned you as Risk Approver for {count} risks: {names}": "{assigner} assigned you as Risk Approver for {count} risks: {names}",
   "{assigner} assigned you as Risk Approver for {count} risks: {names} and {more} more": "{assigner} assigned you as Risk Approver for {count} risks: {names} and {more} more",
   "archive_risks_linked_only_here must be \"true\" or \"false\"": "archive_risks_linked_only_here must be \"true\" or \"false\"",
+  "Question not found in this cycle": "Question not found in this cycle",
+  "Invalid parameter": "Invalid parameter",
+  "The approver must be a member of this organization.": "The approver must be a member of this organization.",
+  "The owner must be a member of this organization.": "The owner must be a member of this organization.",
+  "The model was not found in this organization.": "The model was not found in this organization.",
+  "A selected use case was not found in this organization.": "A selected use case was not found in this organization.",
+  "A selected framework is not used by any use case in this organization.": "A selected framework is not used by any use case in this organization.",
+  "A linked model was not found in this organization.": "A linked model was not found in this organization.",
+  "A linked risk was not found in this organization.": "A linked risk was not found in this organization.",
+  "A linked training was not found in this organization.": "A linked training was not found in this organization.",
   "Invalid ID": "Invalid ID",
   "limit must be an integer from 1 to 100": "limit must be an integer from 1 to 100",
   "offset must be a whole number of 0 or more": "offset must be a whole number of 0 or more",
-  "orders must list positive integer ids with display orders of 0 or more": "orders must list positive integer ids with display orders of 0 or more",
-  "Question not found in this cycle": "Question not found in this cycle"
+  "orders must list positive integer ids with display orders of 0 or more": "orders must list positive integer ids with display orders of 0 or more"
 }

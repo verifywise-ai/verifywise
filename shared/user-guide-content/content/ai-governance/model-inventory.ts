@@ -68,7 +68,7 @@ export const modelInventoryContent: ArticleContent = {
         { bold: 'Provider', text: '— The organization or service that provides the model (e.g., OpenAI, Anthropic, internal team)' },
         { bold: 'Model name', text: '— The specific model identifier (e.g., GPT-4, Claude 3, custom-classifier-v2)' },
         { bold: 'Version', text: '— The version number or release identifier' },
-        { bold: 'Approver', text: '— The person responsible for approving this model for use' },
+        { bold: 'Approver', text: '— The person responsible for approving this model for use. It must be a member of your organization.' },
       ],
     },
     {
@@ -188,6 +188,27 @@ export const modelInventoryContent: ArticleContent = {
     {
       type: 'paragraph',
       text: 'Auditors typically ask for this when reviewing how your organization tracks AI system changes over time.',
+    },
+    {
+      type: 'heading',
+      id: 'deleting-model',
+      level: 2,
+      text: 'Deleting a model',
+    },
+    {
+      type: 'paragraph',
+      text: 'When a model you delete has risks, VerifyWise asks what to do with them:',
+    },
+    {
+      type: 'bullet-list',
+      items: [
+        { bold: 'Keep risks', text: 'The risks stay in the model risks list, shown with **No model**, and keep their links to use case risks. Each risk\'s history records that it lost its model.' },
+        { bold: 'Delete risks too', text: 'The risks are archived, as if you had deleted each one yourself. Pick **Deleted only** in the model risks status filter to see them.' },
+      ],
+    },
+    {
+      type: 'paragraph',
+      text: 'Evidence linked to the model stops listing it. Archived risks are read-only and stay out of reports.',
     },
     {
       type: 'heading',

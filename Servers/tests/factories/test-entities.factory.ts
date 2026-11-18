@@ -270,18 +270,31 @@ export async function linkVendorToProject(
   );
 }
 
+/** A direct use case link: project set, framework NULL. */
 export async function linkModelToProject(
   orgId: number,
   modelInventoryId: number,
   projectId: number,
+): Promise<void> {
+  await sequelize.query(
+    `INSERT INTO model_inventories_projects_frameworks
+       (organization_id, model_inventory_id, project_id, framework_id)
+     VALUES (:orgId, :modelInventoryId, :projectId, NULL)`,
+    { replacements: { orgId, modelInventoryId, projectId } },
+  );
+}
+
+/** A framework link: framework set, no use case (project NULL). */
+export async function linkModelToFramework(
+  orgId: number,
+  modelInventoryId: number,
   frameworkId: number,
 ): Promise<void> {
   await sequelize.query(
     `INSERT INTO model_inventories_projects_frameworks
        (organization_id, model_inventory_id, project_id, framework_id)
-     VALUES (:orgId, :modelInventoryId, :projectId, :frameworkId)
-     ON CONFLICT (model_inventory_id, project_id, framework_id) DO NOTHING`,
-    { replacements: { orgId, modelInventoryId, projectId, frameworkId } },
+     VALUES (:orgId, :modelInventoryId, NULL, :frameworkId)`,
+    { replacements: { orgId, modelInventoryId, frameworkId } },
   );
 }
 
