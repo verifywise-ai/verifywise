@@ -12,12 +12,14 @@ on:
       - 'Clients/**'
       - 'ansible/templates/verifywise-nginx.conf.j2'
       - '.github/workflows/frontend-checks.yml'
+      - 'scripts/security/**'
   push:
     branches: ['master', 'develop']
     paths:
       - 'Clients/**'
       - 'ansible/templates/verifywise-nginx.conf.j2'
       - '.github/workflows/frontend-checks.yml'
+      - 'scripts/security/**'
   # Manual trigger only: used by the flake-check job (#4503-CI), which runs the
   # unit suite three consecutive times and is too heavy for PR CI.
   workflow_dispatch:
