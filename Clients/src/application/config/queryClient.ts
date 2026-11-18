@@ -4,13 +4,17 @@ import {
   LLM_KEY_STATUS_QUERY_KEY,
   retryLLMKeyQuery,
 } from "../constants/llmKeyQueries";
+import { retryUpTo } from "../utils/queryRetry";
+
+/** Default query retry: up to three times for a server or network failure, never after a 4xx but 408. */
+export const retryQuery = retryUpTo(3);
 
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       staleTime: 2 * 1000, // 2 seconds - data considered fresh for 2 seconds
       gcTime: 10 * 60 * 1000, // 10 minutes - cache kept in memory for 10 minutes
-      retry: 3, // Retry failed requests 3 times
+      retry: retryQuery, // Up to 3 retries, none after a 4xx but 408
       refetchOnWindowFocus: false, // Don't refetch when window regains focus
       refetchOnMount: true, // Refetch when component mounts
       refetchOnReconnect: true, // Refetch when internet reconnects
