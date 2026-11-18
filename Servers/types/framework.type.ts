@@ -52,6 +52,8 @@ import {
   deleteProjectFrameworkHIPAAQuery,
   createNISTCSFFrameworkQuery,
   deleteProjectFrameworkNISTCSFQuery,
+  createOSFIE23FrameworkQuery,
+  deleteProjectFrameworkOSFIE23Query,
 } from "../utils/frameworkRegistry.utils";
 
 export const frameworkAdditionMap: Record<
@@ -88,6 +90,7 @@ export const frameworkAdditionMap: Record<
   23: createColoradoAIActFrameworkQuery,
   24: createHIPAAFrameworkQuery,
   25: createNISTCSFFrameworkQuery,
+  26: createOSFIE23FrameworkQuery,
 };
 
 export const frameworkDeletionMap: Record<
@@ -119,6 +122,7 @@ export const frameworkDeletionMap: Record<
   23: deleteProjectFrameworkColoradoAIActQuery,
   24: deleteProjectFrameworkHIPAAQuery,
   25: deleteProjectFrameworkNISTCSFQuery,
+  26: deleteProjectFrameworkOSFIE23Query,
 };
 
 export const frameworkFilesDeletionSourceMap: Record<number, string[]> = {
@@ -150,4 +154,5 @@ export const frameworkFilesDeletionSourceMap: Record<number, string[]> = {
   23: [],
   24: [],
   25: [],
+  26: [],
 };

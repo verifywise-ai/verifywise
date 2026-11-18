@@ -386,3 +386,7 @@ export const deleteProjectFrameworkHIPAAQuery = makeDelete("hipaa");
 // NIST CSF (id=25)
 export const createNISTCSFFrameworkQuery = makeCreate("nist-csf");
 export const deleteProjectFrameworkNISTCSFQuery = makeDelete("nist-csf");
+
+// OSFI E-23 (id=26)
+export const createOSFIE23FrameworkQuery = makeCreate("osfi-e23");
+export const deleteProjectFrameworkOSFIE23Query = makeDelete("osfi-e23");
