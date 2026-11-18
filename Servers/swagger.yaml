@@ -8009,6 +8009,10 @@ tags:
   -
     name: 'v1: V1/Lifecycle Settings'
   -
+    name: 'v1: V1/Model Inventories'
+  -
+    name: 'v1: V1/Model Risks'
+  -
     name: 'v1: V1/Policy Templates'
   -
     name: 'v1: V1/Projects'
@@ -29247,6 +29251,62 @@ paths:
       tags:
         - 'v1: Risk import'
       operationId: bulkImportRisksStrict
+      security:
+        -
+          bearerAuth: []
+  /v1/model-inventories:
+    post:
+      summary: 'Create New Model Inventory'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Model Inventories'
+      operationId: v1_model_inventories_createNewModelInventory
+      security:
+        -
+          bearerAuth: []
+  '/v1/model-inventories/{id}':
+    patch:
+      summary: 'Update Model Inventory By Id'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Model Inventories'
+      operationId: v1_model_inventories_updateModelInventoryById
+      security:
+        -
+          bearerAuth: []
+  /v1/model-risks:
+    post:
+      summary: 'Create New Model Risk'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Model Risks'
+      operationId: v1_model_risks_createNewModelRisk
+      security:
+        -
+          bearerAuth: []
+  '/v1/model-risks/{id}':
+    patch:
+      summary: 'Update Model Risk By Id'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Model Risks'
+      operationId: v1_model_risks_updateModelRiskById
       security:
         -
           bearerAuth: []
