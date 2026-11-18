@@ -161,10 +161,38 @@ describe("assertModelApprovalAllowed: R2, approver changes on a decided model", 
     ).toBe(MODEL_APPROVAL_FORBIDDEN_MESSAGE);
   });
 
-  it("lets an Editor re-assign a Pending model", () => {
+  it("refuses an Editor re-assigning a Pending model with a saved approver", () => {
     expect(
       refusal(() =>
         run({ existing: { approver: APPROVER, status: "Pending" }, submitted: { approver: OTHER } }),
+      ),
+    ).toBe(MODEL_APPROVAL_FORBIDDEN_MESSAGE);
+  });
+
+  it("refuses an Editor clearing the approver of a Pending model (step one of two)", () => {
+    expect(
+      refusal(() =>
+        run({ existing: { approver: APPROVER, status: "Pending" }, submitted: { approver: null } }),
+      ),
+    ).toBe(MODEL_APPROVAL_FORBIDDEN_MESSAGE);
+  });
+
+  it("lets an Admin clear the approver of a Pending model", () => {
+    expect(
+      refusal(() =>
+        run({
+          existing: { approver: APPROVER, status: "Pending" },
+          submitted: { approver: null },
+          callerIsAdmin: true,
+        }),
+      ),
+    ).toBeNull();
+  });
+
+  it("lets an Editor name a first approver on a Pending model", () => {
+    expect(
+      refusal(() =>
+        run({ existing: { approver: null, status: "Pending" }, submitted: { approver: OTHER } }),
       ),
     ).toBeNull();
   });

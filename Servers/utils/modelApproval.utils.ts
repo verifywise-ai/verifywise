@@ -11,9 +11,11 @@
  * - R1: while the model has a saved approver, moving its status to or from a
  *   decision needs a caller who decides. Sending the stored value back is not
  *   a change. Moving between Pending and Retired is free.
- * - R2: changing the approver (to someone else or to nobody) of a model whose
- *   status is a decision needs a caller who decides. That includes a legacy
- *   decided model with no approver, where only an Admin decides.
+ * - R2: changing the approver (to someone else or to nobody) of a model that
+ *   has a saved approver needs a caller who decides, whatever the status.
+ *   Without this, an editor could clear the approver of a Pending model and
+ *   decide it in a second save. A legacy decided model with no approver
+ *   needs the same, so there only an Admin names one.
  * - R3: a non-Admin may not name themself as the new approver. Keeping
  *   yourself when you already are the saved approver is fine.
  * - In a save that names a new approver, only an Admin may also move the
@@ -107,8 +109,11 @@ export function assertModelApprovalAllowed({
     if (nextApprover !== null && nextApprover === callerId && !callerIsAdmin) {
       throw new ModelApprovalForbiddenError("self");
     }
-    // R2: a decided model changes hands only through someone who decides.
-    if (isModelStatusDecision(savedStatus) && !callerDecides) {
+    // R2: a model with a saved approver changes hands only through someone
+    // who decides, whatever its status. Otherwise clearing the approver of a
+    // Pending model would leave a model no rule protects, decided in the next
+    // save. A decided model with no approver (legacy) needs the same.
+    if ((savedApprover !== null || isModelStatusDecision(savedStatus)) && !callerDecides) {
       throw new ModelApprovalForbiddenError();
     }
     // Deciding in the save that names the approver is for an Admin only.
