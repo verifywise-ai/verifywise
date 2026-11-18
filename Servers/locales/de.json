@@ -492,7 +492,6 @@
   "file missing": "Datei fehlt",
   "File not found": "Datei nicht gefunden",
   "File not found after update": "Datei nach der Aktualisierung nicht gefunden",
-  "File size exceeds maximum allowed size of 30MB": "Dateigröße überschreitet die maximal zulässige Größe von 30 MB",
   "File size exceeds maximum allowed size of {limit}": "Dateigröße überschreitet die maximal zulässige Größe von {limit}",
   "File too large for preview": "Datei zu groß für die Vorschau",
   "File upload failed": "Datei-Upload fehlgeschlagen",

@@ -34,6 +34,12 @@ describe("upload error handler", () => {
     const small = run(createUploadErrorHandler(5 * 1024 * 1024), err);
     expect(small.res.status).toHaveBeenCalledWith(413);
     expect(small.res.json.mock.calls[0][0].data).toContain('"limit":"5MB"');
+
+    const partial = run(createUploadErrorHandler(2.5 * 1024 * 1024), err);
+    expect(partial.res.json.mock.calls[0][0].data).toContain('"limit":"2.5MB"');
+
+    const tiny = run(createUploadErrorHandler(512 * 1024), err);
+    expect(tiny.res.json.mock.calls[0][0].data).toContain('"limit":"512KB"');
   });
 
   it("answers too many files with 400", () => {

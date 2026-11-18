@@ -492,7 +492,6 @@
   "file missing": "file missing",
   "File not found": "File not found",
   "File not found after update": "File not found after update",
-  "File size exceeds maximum allowed size of 30MB": "File size exceeds maximum allowed size of 30MB",
   "File size exceeds maximum allowed size of {limit}": "File size exceeds maximum allowed size of {limit}",
   "File too large for preview": "File too large for preview",
   "File upload failed": "File upload failed",

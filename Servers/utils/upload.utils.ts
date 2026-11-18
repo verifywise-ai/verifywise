@@ -42,21 +42,30 @@ export function createMemoryUpload(options: MemoryUploadOptions = {}) {
   });
 }
 
+/** Unsupported-type messages, one per kind of upload. Default: files the file manager accepts. */
+export const DOCUMENT_UNSUPPORTED_MESSAGE =
+  "Unsupported file type. Allowed types: Documents (PDF, DOC, DOCX, XLS, XLSX, CSV, MD), Images (JPEG, PNG, GIF, WEBP, SVG, BMP, TIFF), Videos (MP4, MPEG, MOV, AVI, WMV, WEBM, MKV)";
+export const IMAGE_ONLY_UNSUPPORTED_MESSAGE = "Unsupported file type. Please upload an image";
+export const SPREADSHEET_UNSUPPORTED_MESSAGE =
+  "Unsupported file type. Allowed types: CSV, XLS, XLSX";
+
+/** A byte limit as the 413 message shows it: "30MB", "2.5MB", "512KB". */
+function formatLimit(bytes: number): string {
+  const mb = bytes / (1024 * 1024);
+  if (mb >= 1) return `${Number(mb.toFixed(1))}MB`;
+  return `${Math.round(bytes / 1024)}KB`;
+}
+
 /**
- * Express error middleware for uploads made with createMemoryUpload(). Place it
- * right after the upload middleware in the route chain: multer reports a
- * rejected file (unsupported type) or a breached limit through next(err), and
- * without this the request ends in a bare 500.
+ * Express error middleware for multer uploads. Place it right after the upload
+ * middleware in the route chain: multer reports a rejected file (unsupported
+ * type) or a breached limit through next(err), and without this the request
+ * ends in a bare 500.
  *
  * Pass the limit the upload was created with when it is not the default, so the
  * 413 message names the real limit, and an unsupported-type message when the
  * upload accepts other types than the default.
  */
-/** Unsupported-type messages, one per kind of upload. Default: files the file manager accepts. */
-export const DOCUMENT_UNSUPPORTED_MESSAGE =
-  "Unsupported file type. Allowed types: Documents (PDF, DOC, DOCX, XLS, XLSX, CSV, MD), Images (JPEG, PNG, GIF, WEBP, SVG, BMP, TIFF), Videos (MP4, MPEG, MOV, AVI, WMV, WEBM, MKV)";
-export const IMAGE_ONLY_UNSUPPORTED_MESSAGE = "Unsupported file type. Please upload an image";
-
 export function createUploadErrorHandler(
   fileSizeBytes: number = DEFAULT_FILE_SIZE,
   unsupportedTypeMessage: string = DOCUMENT_UNSUPPORTED_MESSAGE,
@@ -65,7 +74,7 @@ export function createUploadErrorHandler(
     if (err instanceof multer.MulterError) {
       const code = (err as { code?: string }).code;
       if (code === "LIMIT_FILE_SIZE") {
-        const limit = `${Math.round(fileSizeBytes / (1024 * 1024))}MB`;
+        const limit = formatLimit(fileSizeBytes);
         return res
           .status(413)
           .json(
