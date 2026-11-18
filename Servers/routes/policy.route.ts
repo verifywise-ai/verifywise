@@ -4,11 +4,14 @@ import authenticateJWT from "../middleware/auth.middleware";
 import authorize from "../middleware/accessControl.middleware";
 import multer from "multer";
 import { DOCX_MAX_FILE_SIZE_BYTES } from "../services/policies/policyImporter";
+import { createUploadErrorHandler } from "../utils/upload.utils";
 
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: DOCX_MAX_FILE_SIZE_BYTES },
 });
+
+const handleDocxUploadError = createUploadErrorHandler(DOCX_MAX_FILE_SIZE_BYTES);
 
 const router = Router();
 
@@ -18,6 +21,7 @@ router.post(
   authenticateJWT,
   authorize("policy.edit"),
   upload.single("file"),
+  handleDocxUploadError,
   PolicyController.importDocx,
 );
 

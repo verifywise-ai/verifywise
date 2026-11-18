@@ -5640,6 +5640,50 @@ export const de: Record<string, string> = {
   "Shadow AI settings": "Schatten-KI-Einstellungen",
   "Scan settings": "Scan-Einstellungen",
   "Admin access required.": "Administratorzugriff erforderlich.",
+
+  // Demo data loader (components/DemoDataLoader)
+  "Setting up your demo workspace": "Ihr Demo-Arbeitsbereich wird eingerichtet",
+  "The governance committee is in session.": "Das Governance-Komitee tagt.",
+  "Your demo workspace is ready": "Ihr Demo-Arbeitsbereich ist bereit",
+  "Use cases, risks, vendors, policies and 90 days of AI traffic are in place.":
+    "Anwendungsfälle, Risiken, Anbieter, Richtlinien und 90 Tage KI-Traffic sind angelegt.",
+  "Explore the demo": "Demo erkunden",
+  "Demo data progress": "Fortschritt der Demodaten",
+  "Creating demo data": "Demodaten werden erstellt",
+  "Auditor owl": "Auditor-Eule",
+  "Builder beaver": "Baumeister-Biber",
+  "Vendor raccoon": "Anbieter-Waschbär",
+  "Legal tortoise": "Juristen-Schildkröte",
+  "Who approved this model? Asking for an auditor.":
+    "Wer hat dieses Modell freigegeben? Ich frage für einen Auditor.",
+  "Building the risk register. One more risk and it holds water.":
+    "Ich baue das Risikoregister. Noch ein Risiko, dann ist es dicht.",
+  "Found a vendor called TalentAI Solutions. Going through their paperwork.":
+    "Einen Anbieter namens TalentAI Solutions gefunden. Ich wühle mich durch die Unterlagen.",
+  "Reading the EU AI Act. On article 3. Go on without me.":
+    "Ich lese die EU-KI-Verordnung. Artikel 3. Macht ohne mich weiter.",
+  "Algorithmic bias in candidate screening. Writing that one down.":
+    "Algorithmischer Bias bei der Bewerberauswahl. Das notiere ich mir.",
+  "Two policies drafted. Nobody will read them. Beautiful, though.":
+    "Zwei Richtlinien entworfen. Niemand wird sie lesen. Trotzdem wunderschön.",
+  "Rummaging through 90 days of AI gateway traffic.":
+    "Ich durchstöbere 90 Tage AI-Gateway-Traffic.",
+  "Still on article 3.": "Immer noch bei Artikel 3.",
+  "New task: complete the bias audit. Not it.": "Neue Aufgabe: Bias-Audit abschließen. Ich nicht.",
+  "Training plans ready. Attendance mandatory, snacks optional.":
+    "Schulungspläne stehen. Teilnahme Pflicht, Snacks freiwillig.",
+  "Spotted some shadow AI tools. Nobody admits to installing them.":
+    "Ein paar Schatten-KI-Tools entdeckt. Keiner will sie installiert haben.",
+  "Article 4. Picking up speed now.": "Artikel 4. Jetzt nehme ich Fahrt auf.",
+  "Model inventory checked. Zero excuses.": "Modellinventar geprüft. Null Ausreden.",
+  "Double-checking the double checks.": "Die doppelten Prüfungen werden doppelt geprüft.",
+  "Stacking the last few records into place.": "Die letzten Datensätze werden aufgestapelt.",
+  "One more box of receipts back here.": "Hier hinten noch eine Kiste mit Belegen.",
+  "Article 5. Nearly at the good part.": "Artikel 5. Gleich kommt der spannende Teil.",
+  "All approved. Unanimously, for once.": "Alles genehmigt. Ausnahmsweise einstimmig.",
+  "A few seconds left": "Noch wenige Sekunden",
+  "Almost there": "Gleich geschafft",
+  "Finished": "Fertig",
 };
 
 export const fr: Record<string, string> = {
@@ -11214,6 +11258,51 @@ export const fr: Record<string, string> = {
   "Shadow AI settings": "Paramètres de l'IA fantôme",
   "Scan settings": "Paramètres d'analyse",
   "Admin access required.": "Accès administrateur requis.",
+
+  // Demo data loader (components/DemoDataLoader)
+  "Setting up your demo workspace": "Configuration de votre espace de démonstration",
+  "The governance committee is in session.": "Le comité de gouvernance est en séance.",
+  "Your demo workspace is ready": "Votre espace de démonstration est prêt",
+  "Use cases, risks, vendors, policies and 90 days of AI traffic are in place.":
+    "Les cas d'usage, risques, fournisseurs, politiques et 90 jours de trafic IA sont en place.",
+  "Explore the demo": "Explorer la démo",
+  "Demo data progress": "Progression des données de démonstration",
+  "Creating demo data": "Création des données de démonstration",
+  "Auditor owl": "Hibou auditeur",
+  "Builder beaver": "Castor bâtisseur",
+  "Vendor raccoon": "Raton laveur des fournisseurs",
+  "Legal tortoise": "Tortue juriste",
+  "Who approved this model? Asking for an auditor.":
+    "Qui a approuvé ce modèle ? C'est pour un auditeur.",
+  "Building the risk register. One more risk and it holds water.":
+    "Je construis le registre des risques. Encore un risque et il sera étanche.",
+  "Found a vendor called TalentAI Solutions. Going through their paperwork.":
+    "J'ai trouvé un fournisseur nommé TalentAI Solutions. J'épluche leurs documents.",
+  "Reading the EU AI Act. On article 3. Go on without me.":
+    "Je lis le Règlement IA de l'UE. Article 3. Continuez sans moi.",
+  "Algorithmic bias in candidate screening. Writing that one down.":
+    "Biais algorithmique dans la sélection des candidats. Je le note.",
+  "Two policies drafted. Nobody will read them. Beautiful, though.":
+    "Deux politiques rédigées. Personne ne les lira. Magnifiques, pourtant.",
+  "Rummaging through 90 days of AI gateway traffic.":
+    "Je fouille 90 jours de trafic de l'AI Gateway.",
+  "Still on article 3.": "Toujours à l'article 3.",
+  "New task: complete the bias audit. Not it.":
+    "Nouvelle tâche : terminer l'audit des biais. Pas moi.",
+  "Training plans ready. Attendance mandatory, snacks optional.":
+    "Plans de formation prêts. Présence obligatoire, collations facultatives.",
+  "Spotted some shadow AI tools. Nobody admits to installing them.":
+    "Quelques outils d'IA fantôme repérés. Personne n'avoue les avoir installés.",
+  "Article 4. Picking up speed now.": "Article 4. Je prends de la vitesse.",
+  "Model inventory checked. Zero excuses.": "Inventaire des modèles vérifié. Zéro excuse.",
+  "Double-checking the double checks.": "Je revérifie les doubles vérifications.",
+  "Stacking the last few records into place.": "J'empile les derniers enregistrements.",
+  "One more box of receipts back here.": "Encore une boîte de justificatifs par ici.",
+  "Article 5. Nearly at the good part.": "Article 5. Bientôt le passage intéressant.",
+  "All approved. Unanimously, for once.": "Tout est approuvé. À l'unanimité, pour une fois.",
+  "A few seconds left": "Encore quelques secondes",
+  "Almost there": "Presque terminé",
+  "Finished": "Terminé",
 };
 
 export const es: Record<string, string> = {
@@ -16680,4 +16769,49 @@ export const es: Record<string, string> = {
   "Shadow AI settings": "Configuración de IA en la sombra",
   "Scan settings": "Configuración de escaneo",
   "Admin access required.": "Se requiere acceso de administrador.",
+
+  // Demo data loader (components/DemoDataLoader)
+  "Setting up your demo workspace": "Preparando tu espacio de demostración",
+  "The governance committee is in session.": "El comité de gobernanza está en sesión.",
+  "Your demo workspace is ready": "Tu espacio de demostración está listo",
+  "Use cases, risks, vendors, policies and 90 days of AI traffic are in place.":
+    "Los casos de uso, riesgos, proveedores, políticas y 90 días de tráfico de IA ya están listos.",
+  "Explore the demo": "Explorar la demo",
+  "Demo data progress": "Progreso de los datos de demostración",
+  "Creating demo data": "Creando datos de demostración",
+  "Auditor owl": "Búho auditor",
+  "Builder beaver": "Castor constructor",
+  "Vendor raccoon": "Mapache de proveedores",
+  "Legal tortoise": "Tortuga legal",
+  "Who approved this model? Asking for an auditor.":
+    "¿Quién aprobó este modelo? Pregunto para un auditor.",
+  "Building the risk register. One more risk and it holds water.":
+    "Construyendo el registro de riesgos. Un riesgo más y ya no hace agua.",
+  "Found a vendor called TalentAI Solutions. Going through their paperwork.":
+    "Encontré un proveedor llamado TalentAI Solutions. Revisando su papeleo.",
+  "Reading the EU AI Act. On article 3. Go on without me.":
+    "Leyendo el EU AI Act. Artículo 3. Sigan sin mí.",
+  "Algorithmic bias in candidate screening. Writing that one down.":
+    "Sesgo algorítmico en la selección de candidatos. Lo apunto.",
+  "Two policies drafted. Nobody will read them. Beautiful, though.":
+    "Dos políticas redactadas. Nadie las leerá. Preciosas, eso sí.",
+  "Rummaging through 90 days of AI gateway traffic.":
+    "Revisando 90 días de tráfico del AI Gateway.",
+  "Still on article 3.": "Sigo en el artículo 3.",
+  "New task: complete the bias audit. Not it.":
+    "Nueva tarea: completar la auditoría de sesgos. Yo no.",
+  "Training plans ready. Attendance mandatory, snacks optional.":
+    "Planes de formación listos. Asistencia obligatoria, aperitivos opcionales.",
+  "Spotted some shadow AI tools. Nobody admits to installing them.":
+    "Detecté algunas herramientas de IA en la sombra. Nadie admite haberlas instalado.",
+  "Article 4. Picking up speed now.": "Artículo 4. Ahora cojo velocidad.",
+  "Model inventory checked. Zero excuses.": "Inventario de modelos revisado. Cero excusas.",
+  "Double-checking the double checks.": "Revisando dos veces las revisiones dobles.",
+  "Stacking the last few records into place.": "Apilando los últimos registros en su sitio.",
+  "One more box of receipts back here.": "Otra caja de recibos por aquí atrás.",
+  "Article 5. Nearly at the good part.": "Artículo 5. Casi en la parte interesante.",
+  "All approved. Unanimously, for once.": "Todo aprobado. Por unanimidad, para variar.",
+  "A few seconds left": "Quedan unos segundos",
+  "Almost there": "Ya casi está",
+  "Finished": "Terminado",
 };

@@ -1,6 +1,6 @@
-// Prototype Turkish translation dictionary for VerifyWise.
-// Maps English source text → Turkish. DOM translator looks up by source string.
-// Missing keys fall back to the English source.
+// Merge-only barrel of area dictionaries. Runtime loading is route-scoped in
+// domTranslator.ts (import.meta.glob of ./modules). Tests and the i18n audit
+// still use this full merge. Missing keys fall back to the English source.
 //
 // Glossary (for consistency):
 //   use case       → kullanım senaryosu

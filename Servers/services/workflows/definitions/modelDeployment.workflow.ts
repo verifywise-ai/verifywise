@@ -22,6 +22,7 @@ import {
 } from "../../../domain.layer/interfaces/i.notification";
 import { StepResult, WorkflowContext, WorkflowDefinition } from "../types";
 import { requestGateApproval } from "../approvalGate";
+import { ModelRiskLevel } from "../../../domain.layer/enums/model-risk-level.enum";
 
 /** Controls gap count at/above this threshold → evidence gap branch. */
 const MISSING_EVIDENCE_THRESHOLD = 5;
@@ -38,16 +39,27 @@ interface ControlCoverage {
   gapControls: number;
 }
 
-/** Count of model-scoped risks (and the critical subset) for the snapshot. */
+/** model_risks.risk_level values counted as critical: the top two of four. */
+const CRITICAL_MODEL_RISK_LEVELS: string[] = [ModelRiskLevel.HIGH, ModelRiskLevel.CRITICAL];
+
+/**
+ * Count of the model's live (not archived) risks, and the critical subset,
+ * for the snapshot. Model risks carry `risk_level`; there is no `severity`
+ * column (that is the use case risk scale), and reading it failed the step.
+ */
 async function fetchRiskSnapshot(orgId: number, modelId: unknown): Promise<RiskSnapshot> {
   if (!modelId) return { count: 0, criticalCount: 0 };
   const rows = (await sequelize.query(
     `SELECT COUNT(*)::int AS total,
-            COUNT(*) FILTER (WHERE severity IN ('Major','Catastrophic'))::int AS critical
+            COUNT(*) FILTER (WHERE mr.risk_level::text IN (:criticalLevels))::int AS critical
        FROM model_risks mr
       WHERE mr.organization_id = :orgId
-        AND mr.model_id = :modelId`,
-    { replacements: { orgId, modelId }, type: QueryTypes.SELECT },
+        AND mr.model_id = :modelId
+        AND mr.is_deleted = false`,
+    {
+      replacements: { orgId, modelId, criticalLevels: CRITICAL_MODEL_RISK_LEVELS },
+      type: QueryTypes.SELECT,
+    },
   )) as Array<{ total: number; critical: number }>;
   const r = rows[0] || { total: 0, critical: 0 };
   return { count: Number(r.total) || 0, criticalCount: Number(r.critical) || 0 };

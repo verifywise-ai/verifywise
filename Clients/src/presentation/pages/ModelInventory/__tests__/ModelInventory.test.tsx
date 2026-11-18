@@ -2,11 +2,12 @@ import { screen, within } from "@testing-library/react";
 import { renderWithProviders } from "../../../../test/renderWithProviders";
 
 // Mock hooks
+const authState = vi.hoisted(() => ({ role: "Admin" }));
 vi.mock("../../../../application/hooks/useAuth", () => ({
   useAuth: () => ({
     userToken: { name: "Test User" },
     userId: 1,
-    userRoleName: "Admin",
+    userRoleName: authState.role,
   }),
 }));
 
@@ -122,7 +123,9 @@ vi.mock("../../../components/PageTour", () => ({
 }));
 
 vi.mock("../../../components/ShareViewDropdown/ShareButton", () => ({
-  default: () => <div data-testid="share-button" />,
+  default: ({ disabled, tooltip }: { disabled?: boolean; tooltip?: string }) => (
+    <button data-testid="share-button" disabled={disabled} title={tooltip} />
+  ),
 }));
 
 vi.mock("../../../components/ShareViewDropdown", () => ({
@@ -174,6 +177,23 @@ describe("ModelInventory", () => {
 
   afterEach(() => {
     vi.restoreAllMocks();
+  });
+
+  it("disables Share view without model.edit (the server refuses the link)", () => {
+    authState.role = "Auditor";
+    try {
+      renderWithProviders(<ModelInventory />);
+      const button = screen.getByTestId("share-button");
+      expect(button).toBeDisabled();
+      expect(button).toHaveAttribute("title", "Only users who can edit models can share this view");
+    } finally {
+      authState.role = "Admin";
+    }
+  });
+
+  it("enables Share view with model.edit", () => {
+    renderWithProviders(<ModelInventory />);
+    expect(screen.getByTestId("share-button")).not.toBeDisabled();
   });
 
   it("renders without crashing", () => {

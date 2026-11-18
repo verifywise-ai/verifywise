@@ -46,6 +46,10 @@ export const approvalWorkflowsContent: ArticleContent = {
       text: 'Policies are submitted from the **Approval** section of the policy editor. A policy workflow is used only when it is active and every step has at least one approver. The policy approval article explains what each decision does to the policy.',
     },
     {
+      type: 'paragraph',
+      text: 'A use case workflow follows the same rule: it must be active and have at least one approver on every step, or the use case is not saved. While a use case\'s request is pending or rejected, only people who manage approval workflows can change or remove its workflow.',
+    },
+    {
       type: 'heading',
       id: 'statuses',
       level: 2,

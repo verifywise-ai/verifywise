@@ -55,6 +55,7 @@ vi.mock("../../../../../application/repository/approvalWorkflow.repository", () 
 }));
 
 import { act, fireEvent, screen, within } from "@testing-library/react";
+import CustomException from "../../../../../infrastructure/exceptions/customeException";
 import { updateProject } from "../../../../../application/repository/project.repository";
 import { renderWithProviders } from "../../../../../test/renderWithProviders";
 import { ProjectForm } from "../index";
@@ -175,5 +176,71 @@ describe("ProjectForm high-risk roles", () => {
       screen.getByText("Select at least one high-risk role when EU AI Act is selected."),
     ).toBeInTheDocument();
     expect(updateProject).not.toHaveBeenCalled();
+  });
+});
+
+// A refused save used to do nothing at all: only a 400 with field errors was
+// shown. The server's message now shows above the form, which stays open.
+describe("ProjectForm server errors", () => {
+  beforeEach(() => {
+    vi.mocked(updateProject).mockReset();
+    Element.prototype.scrollIntoView = vi.fn();
+  });
+
+  const renderEdit = (onClose = vi.fn()) => {
+    const submitRef = { current: undefined } as React.MutableRefObject<(() => void) | undefined>;
+    renderWithProviders(
+      <ProjectForm
+        onClose={onClose}
+        projectToEdit={euAiActUseCase(["Deployer"])}
+        useStandardModal
+        onSubmitRef={submitRef}
+      />,
+    );
+    return submitRef;
+  };
+
+  it("shows a 403 message and keeps the form open", async () => {
+    const message =
+      "Only an approval workflow admin can change the workflow while its approval is pending or rejected";
+    vi.mocked(updateProject).mockRejectedValue(
+      new CustomException(message, 403, { message: "Forbidden", data: message }),
+    );
+    const onClose = vi.fn();
+    await submit(renderEdit(onClose));
+    expect(screen.getByRole("alert")).toHaveTextContent(message);
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it("shows a 400 without field errors as a form message", async () => {
+    const message = "The selected approval workflow does not exist";
+    vi.mocked(updateProject).mockRejectedValue(
+      new CustomException(message, 400, { message: "Bad Request", data: message }),
+    );
+    await submit(renderEdit());
+    expect(screen.getByRole("alert")).toHaveTextContent(message);
+  });
+
+  it("shows a field error for a field the form has no input for as a form message", async () => {
+    vi.mocked(updateProject).mockRejectedValue(
+      new CustomException("Bad Request", 400, {
+        message: "Bad Request",
+        data: { errors: [{ field: "uc_id", message: "uc_id must be a string", location: "body" }] },
+      }),
+    );
+    await submit(renderEdit());
+    expect(screen.getByRole("alert")).toHaveTextContent("uc_id must be a string");
+  });
+
+  it("clears the message when the next save succeeds", async () => {
+    const message = "Access denied";
+    vi.mocked(updateProject)
+      .mockRejectedValueOnce(new CustomException(message, 403, { data: message }))
+      .mockResolvedValueOnce({ status: 202, data: { data: euAiActUseCase(["Deployer"]) } } as any);
+    const submitRef = renderEdit();
+    await submit(submitRef);
+    expect(screen.getByRole("alert")).toHaveTextContent(message);
+    await submit(submitRef);
+    expect(screen.queryByRole("alert")).toBeNull();
   });
 });
