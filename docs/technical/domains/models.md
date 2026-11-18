@@ -190,17 +190,30 @@ check. Model risks follow their model (org-wide). Dataset writes and
   `filter=deleted`.
 - Every risk that loses the model, kept or archived, gets an "Associated
   model" change (model name → `-`) in its history. The name comes from the
-  `model_id` formatter in `config/changeHistory.config.ts`, the same one an
-  edit of a risk's model uses, so both record names, not ids.
-- The model row is locked (`FOR UPDATE`) first: a risk being added to the
-  model waits for the delete, so it can never end up kept when the user chose
-  to delete the risks.
+  `model_id` formatter in `config/changeHistory.config.ts` (provider and
+  model, as an incident's affected model is named), the same one an edit of a
+  risk's model uses, so both record names, not ids. Whether `model_id`
+  changed is decided by id (`fieldComparators`), so a move between two models
+  with the same name is still recorded.
+- The single risk delete and the model release archive through one helper,
+  `archiveModelRisksQuery` (by risk id or by model id).
+- The model row is locked (`lockModelInventoryQuery`, `FOR UPDATE`) at the
+  start of the transaction, before the 404 and MRM history checks, and again
+  by `deleteModelInventoryByIdQuery` for callers that skip the controller (AI
+  Advisor). A risk, validation or finding being added to the model waits for
+  the delete: a risk can never end up kept when the user chose to delete the
+  risks, and a validation added meanwhile still gets the friendly 409.
 - Evidence drops the model id from `mapped_model_ids` (organization-scoped
   `array_remove`). `updated_at` is left alone: the evidence freshness sweep
   reads it as the evidence's last review.
-- The screen asks Keep / Delete only when the model has live risks; with the
-  model risks status filter on "Deleted only" or "Active + deleted" it asks
-  the server for the live list.
+- The screen asks Keep / Delete only when the model has live risks. It always
+  asks the server (`GET /modelRisks?filter=active`), whatever the status
+  filter, since the loaded list can be filtered or stale; if that request
+  fails it asks Keep / Delete anyway. (This downloads every live risk for a
+  yes/no answer; a per-model count would be a new contract on a legacy
+  route.)
+- The model risks table and its export label a risk with no model "No
+  model" and one whose model is not in the loaded list "Unknown".
 
 `model_risks.model_id` is `ON DELETE SET NULL` (migration
 `20261117160827-model-risks-keep-on-model-delete`; it was `CASCADE`, which
@@ -223,6 +236,12 @@ Query parameter: `filter=active|deleted|all`
 
 An archived (deleted) model risk is read-only: `GET /:id`, `PUT`/`PATCH` and
 `DELETE` answer 404 for it, and the model risks table opens no form for it.
+An update reads the risk `FOR UPDATE` inside its transaction and diffs the
+values as written (`writtenValues`) against that row, so its history shows
+what this update changed even when another write landed just before it.
+History lists (`getEntityChangeHistory`, every entity) order by
+`changed_at DESC, id DESC`: entries written in one transaction share a
+`changed_at`.
 Reports (`dataCollector.collectModelRisks`), the PMM snapshot and the model
 deployment workflow (`risk_level` High or Critical counts as critical) count
 live risks only; the organization report lists risks with no model as
