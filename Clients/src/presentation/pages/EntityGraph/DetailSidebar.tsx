@@ -33,7 +33,7 @@ import {
   formatHighRiskRoles,
   projectHighRiskRoles,
 } from "../../../application/utils/highRiskRoles";
-import { riskCalendarDay } from "../../tools/isoDateToString";
+import { riskCalendarDay, startDateCalendarDay } from "../../tools/isoDateToString";
 
 export interface EntityDetails {
   id: string;
@@ -291,7 +291,10 @@ const DetailSidebar: React.FC<DetailSidebarProps> = ({ entity, onClose, onNaviga
                 <DetailRow
                   icon={<Calendar size={14} />}
                   label="Start date"
-                  value={formatDetailDate(rawData.start_date, formatDate)}
+                  value={formatDetailDate(
+                    startDateCalendarDay(rawData.start_date) ?? rawData.start_date,
+                    formatDate,
+                  )}
                 />
               )}
               {Boolean(rawData.last_updated) && (

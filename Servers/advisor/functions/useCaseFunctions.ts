@@ -1,3 +1,4 @@
+import { actingRequesterId } from "./actingRequester";
 import { getUserProjects, lockProjectForDelete } from "../../utils/project.utils";
 import { deleteProjectWithSideEffects } from "../../utils/projectDeletion.utils";
 import { userHasPermission } from "../../utils/userPermission.utils";
@@ -261,6 +262,9 @@ const agentUpdateUseCase = createWriteToolFn({
       organizationId,
       id: params.use_case_id,
       last_updated: new Date(),
+      // The one who asked, else the approver; NULL when neither is known, so a
+      // write never keeps showing the previous editor as the last one.
+      last_updated_by: actingRequesterId(params) ?? null,
     };
 
     for (const [key, { column, value }] of Object.entries(fields)) {
@@ -274,7 +278,7 @@ const agentUpdateUseCase = createWriteToolFn({
       return { success: false, message: "No fields to update" };
     }
 
-    setClauses.push("last_updated = :last_updated");
+    setClauses.push("last_updated = :last_updated", "last_updated_by = :last_updated_by");
 
     const result = await sequelize.query(
       `UPDATE projects SET ${setClauses.join(", ")} WHERE organization_id = :organizationId AND id = :id RETURNING *`,
@@ -293,13 +297,14 @@ const agentUpdateUseCaseStatus = createWriteToolFn({
     const refusal = await refuseUseCaseWrite(params, organizationId, params.use_case_id);
     if (refusal) return refusal;
     const result = await sequelize.query(
-      `UPDATE projects SET status = :status, last_updated = :last_updated WHERE organization_id = :organizationId AND id = :id RETURNING *`,
+      `UPDATE projects SET status = :status, last_updated = :last_updated, last_updated_by = :last_updated_by WHERE organization_id = :organizationId AND id = :id RETURNING *`,
       {
         replacements: {
           organizationId,
           id: params.use_case_id,
           status: params.status,
           last_updated: new Date(),
+          last_updated_by: actingRequesterId(params) ?? null,
         },
       },
     );
@@ -371,7 +376,7 @@ const agentDeleteUseCase = createWriteToolFn({
   executeFn: async (params, organizationId) => {
     const useCaseId = params.use_case_id as number;
     // Recorded as the user who asked for the delete, else the approver.
-    const userId = Number(params._requesterId) || Number(params._userId) || undefined;
+    const userId = actingRequesterId(params);
 
     // The delete always archives the risks linked only to this use case,
     // which takes the same permission as archiving them in the console

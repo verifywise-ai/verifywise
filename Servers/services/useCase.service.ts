@@ -18,6 +18,7 @@ import {
   createNewProjectQuery,
   ensureProjectMemberQuery,
   getCurrentProjectMembers,
+  hasProjectColumnUpdate,
   keepPreviousOwnerAsMemberQuery,
   updateProjectByIdQuery,
 } from "../utils/project.utils";
@@ -32,11 +33,15 @@ import {
   recordUseCaseCreation,
   trackUseCaseChanges,
 } from "../utils/useCaseChangeHistory.utils";
-import { createUseCaseApprovalRequest } from "./projects/approvalRequest.service";
+import {
+  createUseCaseApprovalRequest,
+  getUsableUseCaseWorkflow,
+} from "./projects/approvalRequest.service";
 import { logStructured } from "../utils/logger/fileLogger";
 import { seesAllProjects } from "../utils/projectVisibility.utils";
 import { changesExternalOwner } from "../utils/externalOwner.utils";
 import { ForbiddenException } from "../domain.layer/exceptions/custom.exception";
+import { writtenValues } from "../utils/changeHistory.base.utils";
 
 export interface UseCaseServiceContext {
   userId: number;
@@ -99,7 +104,16 @@ export async function createUseCaseService(
     enable_ai_data_insertion: boolean;
   };
 
-  // 2. Insert.
+  // 2. Insert. A workflow that cannot review a use case is refused first: a
+  //    missing id would otherwise fail the foreign key (500), and another
+  //    organization's would be saved and park the frameworks with no review.
+  const usableWorkflow = newProject.approval_workflow_id
+    ? await getUsableUseCaseWorkflow(
+        Number(newProject.approval_workflow_id),
+        ctx.organizationId,
+        transaction,
+      )
+    : null;
   const createdProject = await createNewProjectQuery(
     newProject,
     newProject.members ?? [],
@@ -172,13 +186,13 @@ export async function createUseCaseService(
     "project.ctrl.ts",
   );
 
-  // 5. An inactive or wrong-entity workflow throws ValidationException, which
-  //    the caller maps to 400 after rolling back.
+  // 5. Open the request under the workflow checked in step 2.
   const approvalResult = await createUseCaseApprovalRequest(
     createdProject,
     ctx.userId,
     ctx.organizationId,
     transaction,
+    usableWorkflow,
   );
 
   return { useCase: createdProject, frameworks, approvalResult };
@@ -252,6 +266,16 @@ export async function updateUseCaseService(
   if (highRiskRoles === undefined) delete input.high_risk_roles;
   else input.high_risk_roles = highRiskRoles;
 
+  // The server records who changed the use case and when. Values in the body
+  // (the org-wide framework form sent its start date) are never trusted. A
+  // members-only update writes no project column, so it is not stamped.
+  delete input.last_updated;
+  delete input.last_updated_by;
+  if (hasProjectColumnUpdate(input)) {
+    input.last_updated = new Date();
+    input.last_updated_by = ctx.userId;
+  }
+
   // 2. Members before the update, to identify the newly added ones.
   const currentMembers = await getCurrentProjectMembers(useCaseId, ctx.organizationId, transaction);
 
@@ -298,7 +322,18 @@ export async function updateUseCaseService(
             { members: [...useCase.members].sort(byId) } as any,
           )
         : [];
-    const changes = [...(await trackUseCaseChanges(existingUseCase, input)), ...memberChanges];
+    // Diff what the UPDATE stored, not the request. Keys it never writes
+    // (framework, monitored_regulations_and_standards: frameworks change
+    // through their own endpoints) drop out, so a save cannot log a change
+    // that did not happen. The context lets the workflow formatter show the
+    // workflow's name, read inside this organization and on this transaction.
+    const changes = [
+      ...(await trackUseCaseChanges(existingUseCase, writtenValues(useCase, input), {
+        organizationId: ctx.organizationId,
+        transaction,
+      })),
+      ...memberChanges,
+    ];
     if (changes.length > 0) {
       await recordMultipleFieldChanges(
         useCaseId,
