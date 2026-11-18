@@ -49,9 +49,18 @@ export function createMemoryUpload(options: MemoryUploadOptions = {}) {
  * without this the request ends in a bare 500.
  *
  * Pass the limit the upload was created with when it is not the default, so the
- * 413 message names the real limit.
+ * 413 message names the real limit, and an unsupported-type message when the
+ * upload accepts other types than the default.
  */
-export function createUploadErrorHandler(fileSizeBytes: number = DEFAULT_FILE_SIZE) {
+/** Unsupported-type messages, one per kind of upload. Default: files the file manager accepts. */
+export const DOCUMENT_UNSUPPORTED_MESSAGE =
+  "Unsupported file type. Allowed types: Documents (PDF, DOC, DOCX, XLS, XLSX, CSV, MD), Images (JPEG, PNG, GIF, WEBP, SVG, BMP, TIFF), Videos (MP4, MPEG, MOV, AVI, WMV, WEBM, MKV)";
+export const IMAGE_ONLY_UNSUPPORTED_MESSAGE = "Unsupported file type. Please upload an image";
+
+export function createUploadErrorHandler(
+  fileSizeBytes: number = DEFAULT_FILE_SIZE,
+  unsupportedTypeMessage: string = DOCUMENT_UNSUPPORTED_MESSAGE,
+) {
   return (err: unknown, req: Request, res: Response, next: NextFunction) => {
     if (err instanceof multer.MulterError) {
       const code = (err as { code?: string }).code;
@@ -74,15 +83,7 @@ export function createUploadErrorHandler(fileSizeBytes: number = DEFAULT_FILE_SI
     }
 
     if (err instanceof Error && err.message === "UNSUPPORTED_FILE_TYPE") {
-      return res
-        .status(415)
-        .json(
-          STATUS_CODE[415](
-            req.t!(
-              "Unsupported file type. Allowed types: Documents (PDF, DOC, DOCX, XLS, XLSX, CSV, MD), Images (JPEG, PNG, GIF, WEBP, SVG, BMP, TIFF), Videos (MP4, MPEG, MOV, AVI, WMV, WEBM, MKV)",
-            ),
-          ),
-        );
+      return res.status(415).json(STATUS_CODE[415](req.t!(unsupportedTypeMessage)));
     }
 
     return next(err);

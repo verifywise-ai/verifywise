@@ -4,6 +4,7 @@ import { sequelize } from "../../database/db";
 import { cleanupDatabase, createTestOrganization, createTestUser, seedFrameworks } from "./helpers";
 import { createTestApp, testRequest } from "./setup";
 import { getStructureById } from "../../structures";
+import { DOCX_MAX_FILE_SIZE_BYTES } from "../../services/policies/policyImporter";
 
 /**
  * A rejected upload answers with a 4xx and a message, not a bare 500. Covers a
@@ -75,5 +76,44 @@ describe("rejected uploads", () => {
 
     expect(res.status).toBe(415);
     expect(res.body.data).toMatch(/^Unsupported file type/);
+  });
+
+  it("POST a profile photo that is not an image answers 415 with the image-only message", async () => {
+    const { adminId, api } = await setup();
+
+    const res = await api
+      .post(`/api/users/${adminId}/profile-photo`)
+      .attach("photo", Buffer.from("notes"), { filename: "notes.txt", contentType: "text/plain" });
+
+    expect(res.status).toBe(415);
+    expect(res.body.data).toBe("Unsupported file type. Please upload an image");
+  });
+
+  it("POST a profile photo over 5MB answers 413 naming the limit", async () => {
+    const { adminId, api } = await setup();
+
+    const res = await api
+      .post(`/api/users/${adminId}/profile-photo`)
+      .attach("photo", Buffer.alloc(5 * 1024 * 1024 + 1), {
+        filename: "big.png",
+        contentType: "image/png",
+      });
+
+    expect(res.status).toBe(413);
+    expect(res.body.data).toBe("File size exceeds maximum allowed size of 5MB");
+  });
+
+  it("POST a policy DOCX over the limit answers 413 naming the limit", async () => {
+    const { api } = await setup();
+
+    const res = await api
+      .post("/api/policies/import/docx")
+      .attach("file", Buffer.alloc(DOCX_MAX_FILE_SIZE_BYTES + 1), {
+        filename: "policy.docx",
+        contentType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      });
+
+    expect(res.status).toBe(413);
+    expect(res.body.data).toBe("File size exceeds maximum allowed size of 10MB");
   });
 });

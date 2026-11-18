@@ -1380,6 +1380,7 @@
   "Unsupported field_type": "Nicht unterstützter field_type",
   "Unsupported file type. Allowed types: CSV, XLS, XLSX": "Nicht unterstützter Dateityp. Erlaubte Typen: CSV, XLS, XLSX",
   "Unsupported file type. Allowed types: Documents (PDF, DOC, DOCX, XLS, XLSX, CSV, MD), Images (JPEG, PNG, GIF, WEBP, SVG, BMP, TIFF), Videos (MP4, MPEG, MOV, AVI, WMV, WEBM, MKV)": "Nicht unterstützter Dateityp. Erlaubte Typen: Dokumente (PDF, DOC, DOCX, XLS, XLSX, CSV, MD), Bilder (JPEG, PNG, GIF, WEBP, SVG, BMP, TIFF), Videos (MP4, MPEG, MOV, AVI, WMV, WEBM, MKV)",
+  "Unsupported file type. Please upload an image": "Nicht unterstützter Dateityp. Bitte laden Sie ein Bild hoch",
   "Use case not found": "Anwendungsfall nicht gefunden",
   "Use cases that are waiting for approval or were rejected cannot be linked to an AI app": "Anwendungsfälle, die auf Genehmigung warten oder abgelehnt wurden, können nicht mit einer KI-App verknüpft werden",
   "Use the approval workflow": "Verwenden Sie den Genehmigungsworkflow",

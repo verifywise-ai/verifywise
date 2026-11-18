@@ -1,5 +1,9 @@
 const multer = require("multer");
-import { createUploadErrorHandler, handleUploadError } from "./upload.utils";
+import {
+  createUploadErrorHandler,
+  handleUploadError,
+  IMAGE_ONLY_UNSUPPORTED_MESSAGE,
+} from "./upload.utils";
 
 function run(handler: any, err: unknown) {
   const res: any = {};
@@ -39,7 +43,7 @@ describe("upload error handler", () => {
   });
 
   it("answers any other multer error with 400 and a translated message, not the raw one", () => {
-    const err = new multer.MulterError("LIMIT_UNEXPECTED_FILE", "secret");
+    const err = new multer.MulterError("LIMIT_UNEXPECTED_FILE", "internal-detail");
     const { res } = run(handleUploadError, err);
     expect(res.status).toHaveBeenCalledWith(400);
     expect(res.json.mock.calls[0][0].data).toBe("The file upload could not be processed");
@@ -50,5 +54,16 @@ describe("upload error handler", () => {
     const { res, next } = run(handleUploadError, err);
     expect(next).toHaveBeenCalledWith(err);
     expect(res.status).not.toHaveBeenCalled();
+  });
+
+  it("uses the message given for an unsupported type, and still names the limit", () => {
+    const handler = createUploadErrorHandler(5 * 1024 * 1024, IMAGE_ONLY_UNSUPPORTED_MESSAGE);
+    const type = run(handler, new Error("UNSUPPORTED_FILE_TYPE"));
+    expect(type.res.status).toHaveBeenCalledWith(415);
+    expect(type.res.json.mock.calls[0][0].data).toBe(
+      "Unsupported file type. Please upload an image",
+    );
+    const size = run(handler, new multer.MulterError("LIMIT_FILE_SIZE"));
+    expect(size.res.json.mock.calls[0][0].data).toContain('"limit":"5MB"');
   });
 });

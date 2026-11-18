@@ -49,7 +49,7 @@ import {
   validateUpdateFileMetadata,
 } from "../middleware/validators/fileManager.validator";
 import multer from "multer";
-import { handleUploadError } from "../utils/upload.utils";
+import { createUploadErrorHandler } from "../utils/upload.utils";
 import * as path from "path";
 import { ALLOWED_MIME_TYPES } from "../utils/validations/fileManagerValidation.utils";
 
@@ -78,10 +78,13 @@ const fileFilter = (
   }
 };
 
+const FILE_MANAGER_MAX_BYTES = 30 * 1024 * 1024; // 30MB
+const handleUploadError = createUploadErrorHandler(FILE_MANAGER_MAX_BYTES);
+
 const upload = multer({
   storage: storage,
   limits: {
-    fileSize: 30 * 1024 * 1024, // 30MB
+    fileSize: FILE_MANAGER_MAX_BYTES,
   },
   fileFilter: fileFilter,
 });
