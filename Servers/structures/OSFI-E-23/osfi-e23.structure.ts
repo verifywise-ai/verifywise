@@ -157,7 +157,7 @@ export const osfiE23Structure: FrameworkStructure = {
             description:
               "The framework expresses how much model risk the institution is willing to accept, so that its requirements and limits follow from that appetite.",
             order_no: 2,
-            summary: "MRM framework reflects the institution's risk appetite for model risk",
+            summary: "MRM framework is anchored in how much model risk the institution will accept",
             questions: [
               "Is there a stated appetite or tolerance for model risk?",
               "Who approved it and how often is it revisited?",
@@ -267,7 +267,7 @@ export const osfiE23Structure: FrameworkStructure = {
           {
             title: "1.3.1 Models used only where they add value and are reliable",
             description:
-              "A model should be deployed only when it genuinely contributes to decisions, risk assessment or another business purpose, and produces reliable results for its intended use.",
+              "Before a model is put to work, the institution should be satisfied that it adds real value to a decision, a risk assessment or another business need, and that its results can be relied on for the use it was built for.",
             order_no: 1,
             summary: "Models are used only where they contribute value and perform reliably",
             questions: [
@@ -284,7 +284,7 @@ export const osfiE23Structure: FrameworkStructure = {
           {
             title: "1.3.2 Clear purpose backed by adequate data, systems and technology",
             description:
-              "Building, deploying and using a model rests on a clear purpose plus adequate data, systems and technology. These foundations should be part of every discussion of model risk.",
+              "No model can be built, put into production or relied on without a well-defined purpose and enough data, systems and technology behind it. Any conversation about model risk should take these foundations into account.",
             order_no: 2,
             summary:
               "Model purpose is clear and supported by adequate data, systems and technology",
@@ -302,9 +302,9 @@ export const osfiE23Structure: FrameworkStructure = {
           {
             title: "1.3.3 Unfit models modified, replaced or decommissioned",
             description:
-              "As the organization's needs change, a model that no longer suits its purpose is changed, replaced or retired.",
+              "When business needs shift and a model stops serving its purpose well, it should be reworked, swapped for another or taken out of use.",
             order_no: 3,
-            summary: "Models that are no longer fit for purpose are modified, replaced or retired",
+            summary: "Models that stop meeting their purpose are reworked, replaced or retired",
             questions: [
               "How are models checked for continued fitness for purpose?",
               "What process leads to modification, replacement or decommissioning?",
@@ -415,7 +415,7 @@ export const osfiE23Structure: FrameworkStructure = {
           {
             title: "2.1.6 Decommissioned models kept in the inventory",
             description:
-              "Models that have been retired remain in the inventory for a period the institution considers reasonable.",
+              "Models that have been retired remain in the inventory for as long as the institution judges reasonable.",
             order_no: 6,
             summary: "Decommissioned models stay in the inventory for a defined period",
             questions: [
@@ -457,11 +457,11 @@ export const osfiE23Structure: FrameworkStructure = {
           {
             title: "2.2.2 Measurable quantitative and qualitative criteria",
             description:
-              "Each risk dimension has clear, measurable criteria that blend quantitative factors, such as portfolio size or potential financial impact, and qualitative ones, such as use, complexity, autonomy, data reliability, customer impact or regulatory exposure.",
+              "Each risk dimension is scored against clear, measurable criteria. Quantitative inputs cover how important the covered portfolio is, how large it is and how fast it grows, plus the operational, security or financial harm the model could cause; qualitative inputs cover business use, complexity or autonomy, input data reliability, customer impact and regulatory exposure.",
             order_no: 2,
             summary: "Rating uses clear quantitative and qualitative criteria for each dimension",
             questions: [
-              "Which quantitative factors are used, such as portfolio size, growth or potential impact?",
+              "Which quantitative factors are used, such as the portfolio's importance, size and growth, or possible operational, security or financial harm?",
               "Which qualitative factors are used, such as complexity, autonomy, data reliability, customer or regulatory impact?",
               "Are the criteria measurable and applied consistently?",
               "Are risk dimensions organized in a way that suits the institution?",
@@ -475,7 +475,7 @@ export const osfiE23Structure: FrameworkStructure = {
           {
             title: "2.2.3 Every model rated through a defined process",
             description:
-              "Each model is assigned a rating through a defined process. A temporary rating may be used first and then confirmed at model review or approval.",
+              "No model goes without a risk rating, and the institution follows a set process to give one. That process can begin with an interim rating that is settled once the model is reviewed or approved.",
             order_no: 3,
             summary: "Every model receives a rating through a defined process",
             questions: [
@@ -492,7 +492,7 @@ export const osfiE23Structure: FrameworkStructure = {
           {
             title: "2.2.4 Regular and trigger-based rating review",
             description:
-              "Ratings are looked at on a regular basis and updated when needed, including after trigger events such as weaker performance or a material change in the model's use, data or infrastructure.",
+              "Ratings are revisited on a schedule and adjusted where warranted. Some events also prompt an out-of-cycle reassessment, for example a material shift in the infrastructure, data or purpose a model is put to, or a drop in how well it performs.",
             order_no: 4,
             summary: "Ratings are reviewed regularly and when trigger events occur",
             questions: [
@@ -509,9 +509,9 @@ export const osfiE23Structure: FrameworkStructure = {
           {
             title: "2.2.5 Approved and tracked negligible-risk exemptions",
             description:
-              "If a rating category implies negligible inherent risk and so exempts a model from full lifecycle governance, the institution has a robust process to approve and track each exemption.",
+              "An institution may define a rating tier for models whose inherent risk is negligible, freeing them from the full lifecycle requirements. Where it does, each exemption passes through a sound approval step and stays on record so it can be followed over time.",
             order_no: 5,
-            summary: "Negligible-risk exemptions are approved through a robust process and tracked",
+            summary: "Each negligible-risk exemption is formally approved and kept on record",
             questions: [
               "Is there a negligible-risk category and what are its criteria?",
               "Who approves an exemption?",
@@ -586,17 +586,17 @@ export const osfiE23Structure: FrameworkStructure = {
             title:
               "2.3.1 Rating drives review, documentation, approval authority, monitoring and re-rating interval",
             description:
-              "The inherent risk rating sets how often and how deeply a model is reviewed and monitored, how much documentation is needed, who has authority to approve it, and how often its rating is reassessed.",
+              "The inherent risk rating sets how often and how deeply a model is reviewed and monitored, how much documentation is needed, how senior the sign-off must be for the model and for any exemption, and how often its rating is reassessed.",
             order_no: 1,
             summary: "Inherent risk rating sets the intensity of governance across the lifecycle",
             questions: [
               "Does the rating determine review frequency, depth and scope?",
-              "Does it determine documentation and approval authority?",
+              "Does it determine documentation needs and who may sign off the model or grant an exemption?",
               "Does it determine monitoring intensity and the re-rating interval?",
             ],
             evidence_examples: [
               "Requirements matrix by risk rating",
-              "Approval authority table",
+              "Approval authority table covering models and exemptions",
               "Review and monitoring schedules by rating",
             ],
           },
@@ -666,9 +666,9 @@ export const osfiE23Structure: FrameworkStructure = {
           {
             title: "3.1.2 Consistent governance across the enterprise",
             description:
-              "Governance structures and practices remain sound and are applied in the same way across all parts of the enterprise.",
+              "Every business line and legal entity works under one sound set of model governance structures and practices, so oversight does not vary from one part of the enterprise to another.",
             order_no: 2,
-            summary: "Governance structures and practices are sound and consistent enterprise-wide",
+            summary: "Model governance is sound and applied the same way enterprise-wide",
             questions: [
               "How is consistency ensured between business lines and entities?",
               "How are deviations from standard practice identified?",
@@ -717,13 +717,13 @@ export const osfiE23Structure: FrameworkStructure = {
           {
             title: "3.1.5 Independence and objectivity",
             description:
-              "Appropriate independence and objectivity are preserved across lifecycle activities, so that those challenging a model are not the same people who built or rely on it.",
+              "Policies and procedures make sure that lifecycle activities are carried out with a suitable degree of independence and objectivity.",
             order_no: 5,
             summary: "Independence and objectivity are maintained across the lifecycle",
             questions: [
               "Where is independence required, and how is it ensured?",
               "How are conflicts of interest identified and managed?",
-              "Do reviewers have authority and reporting lines free of influence from developers or users?",
+              "Do authority and reporting lines allow objective challenge of models?",
             ],
             evidence_examples: [
               "Independence requirements in policy",
@@ -957,14 +957,15 @@ export const osfiE23Structure: FrameworkStructure = {
           {
             title: "3.3.1 Model documentation standards",
             description:
-              "A documentation standard spells out what developers must record: how the model is set up and run, its limits and usage restrictions, how its data is created, accessed and maintained, assumptions and method, the part played by expert judgment, and the analyses and tests the developers carried out.",
+              "A documentation standard spells out what developers must record: how the model is set up and run, its limits and usage restrictions, how its data is created, accessed and maintained, assumptions and method, which experts exercised judgment and how that shaped the output, and the analyses and tests the developers carried out.",
             order_no: 1,
             summary: "Documentation standards define what developers must record about each model",
             questions: [
               "Does the standard cover setup and operation of the model?",
               "Does it require limitations and usage restrictions to be recorded?",
               "Does it require descriptions of data creation, access and maintenance?",
-              "Does it require assumptions, methodology and expert judgment to be documented?",
+              "Does it require assumptions and methodology to be documented?",
+              "Does it name the experts whose judgment was used and explain how it affected the output?",
               "Does it require developer analyses and performance tests to be included?",
             ],
             evidence_examples: [
@@ -983,6 +984,7 @@ export const osfiE23Structure: FrameworkStructure = {
               "Are there guidelines for choosing methodologies and algorithms?",
               "Do they cover data selection and variable transformations?",
               "How is conceptual soundness demonstrated?",
+              "For AI/ML models, how are training and parameter tuning carried out and checked?",
             ],
             evidence_examples: [
               "Development guidelines",
@@ -1119,7 +1121,7 @@ export const osfiE23Structure: FrameworkStructure = {
           {
             title: "3.4.4 Review scope",
             description:
-              "A review may challenge the risk rating, examine purpose, scope, conceptual soundness, limitations, mitigants and the reasonableness of results, and assess data. It may also look at new methods and tools, test explainability against the intended use, examine third-party elements, and record assessments with the follow-up taken.",
+              "A review may confirm or challenge the risk rating; examine the model's purpose and scope, its conceptual soundness, its limitations with their mitigants, and whether its results are reasonable; and assess data. It may also scrutinize new methodologies, algorithms, tools and procedures, check that outputs can be explained as the intended use requires while still meeting performance expectations, examine third-party elements, and record assessments with the follow-up taken.",
             order_no: 4,
             summary:
               "Review scope covers rating, soundness, data, novel techniques, explainability and documentation",
@@ -1127,7 +1129,8 @@ export const osfiE23Structure: FrameworkStructure = {
               "Does the review confirm or challenge the risk rating?",
               "Does it assess purpose, scope, soundness, limitations and mitigants?",
               "Does it cover data quality and appropriateness?",
-              "Does it cover novel methods and explainability against intended use?",
+              "Does it cover new methodologies, algorithms, tools and procedures, such as those used in AI/ML models?",
+              "Does it confirm that outputs are explainable for the intended use and meet performance expectations?",
               "Are assessments and responding actions documented?",
             ],
             evidence_examples: [
@@ -1217,7 +1220,7 @@ export const osfiE23Structure: FrameworkStructure = {
           {
             title: "3.4.9 Approval with known limitations backed by mitigants or justification",
             description:
-              "A model with identified weaknesses can still be approved if compensating mitigants are in place or the stakeholder group justifies using it despite the known limitations.",
+              "Known weaknesses or limitations need not block approval. They can be accepted where offsetting controls exist, or where the model's stakeholder group sets out why using the model anyway is justified.",
             order_no: 3,
             summary:
               "Models with known limitations are approved only with mitigants or documented justification",
@@ -1591,7 +1594,7 @@ export const osfiE23Structure: FrameworkStructure = {
             summary: "Minimum record held for each identified model",
             questions: [
               "Does every identified model have an ID?",
-              "Is a name and description of key features and use recorded?",
+              "Are a name and a description of the model's key features and use recorded?",
               "Are the risk rating, owner and developer recorded?",
               "Is the origin (internal or vendor) recorded?",
             ],
@@ -1604,13 +1607,13 @@ export const osfiE23Structure: FrameworkStructure = {
           {
             title: "A.2 Additional information for inventoried models",
             description:
-              "Models of non-negligible risk that sit in the inventory carry more detail: version, production deployment date, reviewer, approver, dependencies, data sources with a description, approved uses, limitations including exceptions and additional requirements, date of last review, monitoring status including exceptions, and next review date.",
+              "Models of non-negligible risk that sit in the inventory carry more detail: version, production deployment date, reviewer, approver, dependencies, data sources with a description, approved uses, limitations along with any exceptions and additional requirements, date of last review, monitoring status including exceptions, and next review date.",
             order_no: 2,
             summary: "Further record held for models in the inventory",
             questions: [
               "Are version, deployment date, reviewer and approver recorded?",
               "Are dependencies, data sources and their description recorded?",
-              "Are approved uses and limitations (with exceptions) recorded?",
+              "Are approved uses and limitations (with exceptions and additional requirements) recorded?",
               "Are last review date, monitoring status (with exceptions) and next review date recorded?",
             ],
             evidence_examples: [
