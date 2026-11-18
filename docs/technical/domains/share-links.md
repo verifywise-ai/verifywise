@@ -183,6 +183,22 @@ function isValidShareToken(token: string): boolean {
 }
 ```
 
+## Who can create, change and revoke
+
+Creating or changing (PATCH) a link takes the edit permission of the shared
+type (`utils/shareLinkAccess.utils.ts`): `model` → `model.edit`, `vendor` →
+`vendor.edit`, `project` → `useCase.edit`, `policy` → `policy.edit`, `risk` →
+`risks.edit`. A `project` or `risk` link also needs the caller's access to
+that record (use case access, risk visibility rule); a list link (`resource_id`
+0) to either needs a role that sees every use case. Models are org-wide;
+vendors and policies have no per-user visibility rule. PATCH is still limited to
+the creator, with one exception: a PATCH that only sets `is_enabled: false`
+(no `settings`, no `expires_at`) needs neither the edit permission nor access
+to the record, and is allowed for the creator or `organization.admin`, so a
+creator who lost access can still turn their link off. DELETE: the creator,
+or `organization.admin` for any link in the organization. The client disables
+Share view without `model.edit`.
+
 ## Resource ID Semantics
 
 | resource_id | Behavior |
@@ -219,7 +235,12 @@ function isValidShareToken(token: string): boolean {
 
 ### When `shareAllFields = true`
 
-All database fields are returned as-is.
+The allow-listed columns of the type (`pickSharedFields`). Never returned:
+`organization_id`, `external_key`, user ids (a model's approver is replaced by
+a name, on list and single-model links; without a name the field is left
+out), MRM fields, `security_assessment_data`, workflow/demo flags,
+external owner contact details. A new column stays private until added to the
+allow-list.
 
 ## Public Access Flow
 

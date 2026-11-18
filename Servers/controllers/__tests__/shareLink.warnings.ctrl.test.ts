@@ -17,6 +17,10 @@ jest.mock("../../utils/logger/logHelper", () => ({
   logSuccess: jest.fn(),
 }));
 jest.mock("../../utils/i18n.utils", () => ({ translateError: jest.fn() }));
+// The caller may share policies; the permission check has its own tests.
+jest.mock("../../utils/rolePermissions.utils", () => ({
+  requestHasPermission: jest.fn(async () => true),
+}));
 
 import { createShareLink, getShareLinksForResource, updateShareLink } from "../shareLink.ctrl";
 import { sequelize } from "../../database/db";

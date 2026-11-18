@@ -1,7 +1,10 @@
 import {
+  formatFieldValue,
   recordEntityChange,
   recordEntityCreation,
   recordEntityCreationBulk,
+  recordEntityDeletion,
+  recordEntityDeletionBulk,
   recordEntityFieldChangeBulk,
   trackEntityChanges,
 } from "../changeHistory.base.utils";
@@ -127,6 +130,98 @@ describe("recordEntityFieldChangeBulk", () => {
     await recordEntityFieldChangeBulk("risk", [], 1, "f", "a", "b", tx as any);
     expect(mockQuery).not.toHaveBeenCalled();
     expect(tx.afterCommit).not.toHaveBeenCalled();
+  });
+});
+
+describe("recordEntityDeletion and recordEntityDeletionBulk", () => {
+  it("records a user's deletion as before", async () => {
+    await recordEntityDeletion("model_risk", 7, 9, 1);
+    const [sql, opts] = mockQuery.mock.calls[0];
+    expect(sql).not.toContain("changed_by_system");
+    expect(opts.replacements).toMatchObject({
+      entity_id: 7,
+      action: "deleted",
+      field_name: "Model Risk",
+      old_value: "Active",
+      new_value: "Deleted",
+      changed_by_user_id: 9,
+    });
+  });
+
+  it("records a deletion as the system's, with no actor", async () => {
+    await recordEntityDeletion("model_risk", 7, null, 1, undefined, true);
+    const [sql, opts] = mockQuery.mock.calls[0];
+    expect(sql).toContain("changed_by_system");
+    expect(opts.replacements.changed_by_user_id).toBe(null);
+  });
+
+  it("the bulk variant writes one INSERT for a user, with the same row values", async () => {
+    const tx = makeTransaction();
+    await recordEntityDeletionBulk("model_risk", [7, 8], 9, 1, tx as any);
+
+    expect(mockQuery).toHaveBeenCalledTimes(1);
+    const [sql, opts] = mockQuery.mock.calls[0];
+    expect(sql).toContain("unnest(ARRAY[:entity_ids]::int[])");
+    expect(sql).not.toContain("changed_by_system");
+    expect(opts.transaction).toBe(tx);
+    expect(opts.replacements).toMatchObject({
+      organization_id: 1,
+      entity_ids: [7, 8],
+      action: "deleted",
+      field_name: "Model Risk",
+      old_value: "Active",
+      new_value: "Deleted",
+      changed_by_user_id: 9,
+    });
+
+    tx.hooks.forEach((hook) => hook());
+    for (let i = 0; i < 4; i++) await flush();
+    expect(mockAppend.mock.calls.map(([entry]) => [entry.entityId, entry.userId])).toEqual([
+      [7, 9],
+      [8, 9],
+    ]);
+  });
+
+  it("the bulk variant records the system's deletions with a null actor", async () => {
+    const tx = makeTransaction();
+    await recordEntityDeletionBulk("model_risk", [7], null, 1, tx as any, true);
+    const [sql] = mockQuery.mock.calls[0];
+    expect(sql).toContain("changed_by_system");
+    expect(sql).toContain("NULL, true, NOW()");
+  });
+});
+
+describe("model risk model_id history values", () => {
+  it("formats a model id as the model's name, looked up in the organization", async () => {
+    mockQuery.mockImplementation(async (sql: string) =>
+      /FROM model_inventories/.test(sql) ? [{ name: "Fraud model" }] : [[], 0],
+    );
+    await expect(
+      formatFieldValue("model_risk", "model_id", 5, { organizationId: 1 }),
+    ).resolves.toBe("Fraud model");
+    const lookup = mockQuery.mock.calls.find(([sql]) => /FROM model_inventories/.test(sql))!;
+    expect(lookup[0]).toContain("organization_id = :organizationId");
+    expect(lookup[1].replacements).toEqual({ id: 5, organizationId: 1 });
+  });
+
+  it("an edit of the model records names, not ids", async () => {
+    mockQuery.mockImplementation(async (sql: string, opts: any) =>
+      /FROM model_inventories/.test(sql) ? [{ name: `Model ${opts.replacements.id}` }] : [[], 0],
+    );
+    const changes = await trackEntityChanges(
+      "model_risk",
+      { model_id: 5 },
+      { model_id: 6 },
+      { organizationId: 1 },
+    );
+    expect(changes).toEqual([
+      { fieldName: "Associated model", oldValue: "Model 5", newValue: "Model 6" },
+    ]);
+  });
+
+  it("without an organization it never looks a name up", async () => {
+    await expect(formatFieldValue("model_risk", "model_id", 5)).resolves.toBe("Model #5");
+    expect(mockQuery).not.toHaveBeenCalled();
   });
 });
 

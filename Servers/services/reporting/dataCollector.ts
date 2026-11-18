@@ -1170,17 +1170,17 @@ export class ReportDataCollector {
       } else {
         // Get only project-linked models for use case reports.
         //
-        // DISTINCT because model_inventories_projects_frameworks is not one
-        // row per (model, project): the same model is linked once with a
-        // framework and once without, so a plain JOIN listed every model
-        // twice. Measured on 2026-07-29 — one model in the database, two in
-        // the report.
+        // Direct use case links only (framework_id IS NULL): a framework
+        // link carries no use case. DISTINCT guards against duplicate rows
+        // (before framework links lost their project id, a plain JOIN listed
+        // a model twice).
         modelsQuery = `
           SELECT DISTINCT mi.*, u.name as approver_name, u.surname as approver_surname
           FROM model_inventories mi
           JOIN model_inventories_projects_frameworks mip ON mi.id = mip.model_inventory_id AND mip.organization_id = mi.organization_id
           LEFT JOIN users u ON mi.approver = u.id
           WHERE mi.organization_id = :organizationId AND mip.project_id = :projectId
+            AND mip.framework_id IS NULL
           ORDER BY mi.model ASC
         `;
         replacements = { organizationId: this.organizationId, projectId: this.projectId };
@@ -1223,12 +1223,15 @@ export class ReportDataCollector {
       let replacements: Record<string, any>;
 
       if (isOrganizational) {
-        // For organizational reports, get ALL model risks
+        // For organizational reports, every live model risk, with or
+        // without a model (a model deleted with "Keep risks" leaves them).
+        // Archived (deleted) risks are not open risks: they stay out.
         modelRisksQuery = `
           SELECT mr.*, mi.model as model_name
           FROM model_risks mr
-          JOIN model_inventories mi ON mr.model_id = mi.id AND mi.organization_id = mr.organization_id
+          LEFT JOIN model_inventories mi ON mr.model_id = mi.id AND mi.organization_id = mr.organization_id
           WHERE mr.organization_id = :organizationId
+            AND mr.is_deleted = false
           ORDER BY mr.id ASC
         `;
         replacements = { organizationId: this.organizationId };
@@ -1242,6 +1245,8 @@ export class ReportDataCollector {
           JOIN model_inventories mi ON mr.model_id = mi.id AND mi.organization_id = mr.organization_id
           JOIN model_inventories_projects_frameworks mip ON mi.id = mip.model_inventory_id AND mip.organization_id = mi.organization_id
           WHERE mr.organization_id = :organizationId AND mip.project_id = :projectId
+            AND mip.framework_id IS NULL
+            AND mr.is_deleted = false
           ORDER BY mr.id ASC
         `;
         replacements = { organizationId: this.organizationId, projectId: this.projectId };
@@ -1256,7 +1261,7 @@ export class ReportDataCollector {
         totalRisks: modelRisks.length,
         risks: modelRisks.map((mr) => ({
           id: mr.id,
-          modelName: mr.model_name || "Unknown Model",
+          modelName: mr.model_id ? mr.model_name || "Unknown Model" : "No model",
           riskName: mr.risk_name || "Unnamed Risk",
           riskLevel: mr.risk_level || "Unknown",
           // model_risks has `status`, not `mitigation_status`. The old read

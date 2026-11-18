@@ -28,6 +28,10 @@ import taskRouter from "../task.route";
 import trainingRouter from "../trainingRegistar.route";
 import quantitativeRiskRouter from "../quantitativeRisk.route";
 import virtualFolderRouter, { filesFolderRouter } from "../virtualFolder.route";
+import datasetRouter from "../dataset.route";
+import evidenceHubRouter from "../evidenceHub.route";
+import modelInventoryHistoryRouter from "../modelInventoryHistory.route";
+import shareLinkRouter from "../shareLink.route";
 
 const permissionFor = (router: any, method: string, path: string) => {
   const layer = router.stack.find((l: any) => l.route?.path === path && l.route.methods[method]);
@@ -55,6 +59,13 @@ describe("core write routes require a permission", () => {
     ["model risk", modelRiskRouter, "put", "/:id", "model.edit"],
     ["model risk", modelRiskRouter, "patch", "/:id", "model.edit"],
     ["model risk", modelRiskRouter, "delete", "/:id", "model.edit"],
+    // Datasets sit on the model pages and the screens gate them on model.edit,
+    // so the server checks the same key. Evidence is written from several
+    // modules: its controller checks the key of each link (evidenceHub.ctrl.test.ts).
+    ["dataset", datasetRouter, "post", "/", "model.edit"],
+    ["dataset", datasetRouter, "patch", "/:id", "model.edit"],
+    ["dataset", datasetRouter, "delete", "/:id", "model.edit"],
+    ["model history", modelInventoryHistoryRouter, "post", "/snapshot", "model.edit"],
     ["folder files", virtualFolderRouter, "post", "/:id/files", "file.edit"],
     ["folder files", virtualFolderRouter, "delete", "/:id/files/:fileId", "file.edit"],
     ["folder files", filesFolderRouter, "patch", "/:id/folders", "file.edit"],
@@ -85,6 +96,26 @@ describe("core write routes require a permission", () => {
     ["training", trainingRouter, "delete", "/:id", "training.admin"],
   ])("%s: %s %s requires %s", (_label, router, method, path, key) => {
     expect(permissionFor(router, method as string, path as string)).toEqual([key]);
+  });
+
+  // A share link's permission depends on the resource type in the body or on
+  // the stored link, so the controller checks it, not a fixed route key.
+  it.each([
+    ["post", "/"],
+    ["patch", "/:id"],
+    ["delete", "/:id"],
+  ])("share link %s %s has no fixed route permission", (method, path) => {
+    expect(permissionFor(shareLinkRouter, method, path)).toEqual([]);
+  });
+
+  // Evidence is written under model.edit, training.edit or risks.edit, so the
+  // routes carry no fixed key; the controller checks them per link field.
+  it.each([
+    ["post", "/"],
+    ["patch", "/:id"],
+    ["delete", "/:id"],
+  ])("evidence %s %s has no fixed route permission", (method, path) => {
+    expect(permissionFor(evidenceHubRouter, method, path)).toEqual([]);
   });
 
   // Assigned reviewers may be any role, so approve/reject is checked in the

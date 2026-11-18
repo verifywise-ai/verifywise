@@ -4,6 +4,7 @@ import {
   getTimeseriesWithInterpolation,
   getCurrentParameterCounts,
   recordHistorySnapshot,
+  isSnapshotParameter,
 } from "../utils/history/modelInventoryHistory.utils";
 import { STATUS_CODE } from "../utils/statusCode.utils";
 import logger, { logStructured } from "../utils/logger/fileLogger";
@@ -168,6 +169,9 @@ export async function getCurrentCounts(req: Request, res: Response) {
       );
       return res.status(400).json(STATUS_CODE[400](req.t!("Parameter is required")));
     }
+    if (!isSnapshotParameter(parameter)) {
+      return res.status(400).json(STATUS_CODE[400](req.t!("Invalid parameter")));
+    }
 
     const counts = await getCurrentParameterCounts(parameter, req.organizationId!);
 
@@ -222,6 +226,9 @@ export async function createSnapshot(req: Request, res: Response) {
         "modelInventoryHistory.ctrl.ts",
       );
       return res.status(400).json(STATUS_CODE[400](req.t!("Parameter is required")));
+    }
+    if (!isSnapshotParameter(parameter)) {
+      return res.status(400).json(STATUS_CODE[400](req.t!("Invalid parameter")));
     }
 
     const userId = req.userId!;
