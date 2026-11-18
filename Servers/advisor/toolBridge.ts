@@ -2,6 +2,8 @@ import { tool } from "ai";
 import type { ToolSet } from "ai";
 import { z, ZodTypeAny } from "zod";
 import logger from "../utils/logger/fileLogger";
+import { useCaseRefusalForTool } from "./functions/useCaseScope";
+import { writeToolExecutors } from "./confirmation/createWriteTool";
 
 /**
  * Make a tool's return value safe for the AI SDK's JSON message schema.
@@ -196,6 +198,19 @@ export function bridgeTools(
 
           // Inject userId for write tools that need it (confirmation flow)
           const enrichedParams = userId !== undefined ? { ...cleaned, _userId: userId } : cleaned;
+          // Decision 7, checked once here for every tool: the use cases the
+          // call names must pass the read rule, or the write rule for a write
+          // tool (one registered for the approval flow).
+          const refusal = await useCaseRefusalForTool(
+            name,
+            enrichedParams,
+            tenant,
+            writeToolExecutors.has(name),
+          );
+          if (refusal) {
+            logger.info(`[toolBridge] Refused "${name}": ${refusal}`);
+            return { error: refusal };
+          }
           logger.info(`[toolBridge] Calling "${name}" with params: ${JSON.stringify(cleaned)}`);
           const result = await fn(enrichedParams, tenant, userId);
           const resultSize = Array.isArray(result) ? result.length : typeof result;

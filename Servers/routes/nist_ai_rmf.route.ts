@@ -5,6 +5,8 @@ import authenticateJWT from "../middleware/auth.middleware";
 import authorize from "../middleware/accessControl.middleware";
 import { requireFrameworkWriteAccess } from "../middleware/frameworkWriteAccess.middleware";
 import { nistSubcategoryChanges } from "../utils/frameworkWriteAccess.utils";
+import { requireUseCaseAccessVia } from "../middleware/projectAccess.middleware";
+import { useCaseOfNistSubcategory } from "../utils/useCaseOfChild.utils";
 import {
   getAllNISTAIRMFfunctions,
   getNISTAIRMFfunctionById,
@@ -27,6 +29,10 @@ import { createMemoryUpload } from "../utils/upload.utils";
 // Security: bounded upload config (30MB/file, 10 files, MIME allowlist).
 const upload = createMemoryUpload();
 
+// A subcategory row belongs to the use case its projects_frameworks row names
+// (the organizational use case): the routes keyed by one run its access rule.
+const subcategoryUseCase = requireUseCaseAccessVia(useCaseOfNistSubcategory);
+
 // CRUD requests for NIST AI RMF functions
 router.get("/functions", authenticateJWT, getAllNISTAIRMFfunctions); // getting all NIST AI RMF functions of the organization
 router.get("/functions/:id", authenticateJWT, validateId("id"), getNISTAIRMFfunctionById); // getting a specific NIST AI RMF function by id
@@ -39,12 +45,14 @@ router.get(
   "/subcategories/byId/:id",
   authenticateJWT,
   validateId("id"),
+  subcategoryUseCase,
   getNISTAIRMFSubcategoryById,
 ); // getting a specific NIST AI RMF subcategory by id
 router.get(
   "/subcategories/:id/risks",
   authenticateJWT,
   validateId("id"),
+  subcategoryUseCase,
   getNISTAIRMFSubcategoryRisks,
 ); // getting all risks linked to a specific NIST AI RMF subcategory
 router.get(
@@ -57,6 +65,7 @@ router.patch(
   "/subcategories/:id",
   authenticateJWT,
   validateId("id"),
+  subcategoryUseCase,
   upload.any(),
   requireFrameworkWriteAccess(nistSubcategoryChanges),
   updateNISTAIRMFSubcategoryById,
@@ -66,6 +75,7 @@ router.patch(
   authenticateJWT,
   validateId("id"),
   authorize("framework.edit"),
+  subcategoryUseCase,
   updateNISTAIRMFSubcategoryStatus,
 ); // updating status of a specific NIST AI RMF subcategory by id
 

@@ -790,11 +790,9 @@ export async function saveClauses(req: RequestWithFile, res: Response): Promise<
 
   try {
     const subClause = req.body as SubClauseISO & {
-      user_id: string;
       delete: string;
       risksDelete: string;
       risksMitigated: string;
-      project_id: string;
     };
 
     // Files to unlink (not delete) - the actual file stays in file manager
@@ -837,7 +835,7 @@ export async function saveClauses(req: RequestWithFile, res: Response): Promise<
     if (req.files && Array.isArray(req.files) && req.files.length > 0) {
       uploadedFiles = await uploadFiles(
         req.files as UploadedFile[],
-        parseInt(subClause.user_id),
+        req.userId!,
         projectId,
         "Management system clauses group",
         req.organizationId!,
@@ -943,8 +941,6 @@ export async function saveAnnexes(req: RequestWithFile, res: Response): Promise<
 
   try {
     const annexCategory = req.body as AnnexCategoryISO & {
-      user_id: string;
-      project_id: string;
       delete: string;
       risksDelete: string;
       risksMitigated: string;
@@ -990,7 +986,7 @@ export async function saveAnnexes(req: RequestWithFile, res: Response): Promise<
     if (req.files && Array.isArray(req.files) && req.files.length > 0) {
       uploadedFiles = await uploadFiles(
         req.files as UploadedFile[],
-        parseInt(annexCategory.user_id),
+        req.userId!,
         projectId,
         "Reference controls group",
         req.organizationId!,

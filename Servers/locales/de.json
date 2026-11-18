@@ -1544,5 +1544,9 @@
   "A selected framework is not used by any use case in this organization.": "Ein ausgewähltes Framework wird von keinem Anwendungsfall dieser Organisation verwendet.",
   "A linked model was not found in this organization.": "Ein verknüpftes Modell wurde in dieser Organisation nicht gefunden.",
   "A linked risk was not found in this organization.": "Ein verknüpftes Risiko wurde in dieser Organisation nicht gefunden.",
-  "A linked training was not found in this organization.": "Eine verknüpfte Schulung wurde in dieser Organisation nicht gefunden."
+  "A linked training was not found in this organization.": "Eine verknüpfte Schulung wurde in dieser Organisation nicht gefunden.",
+  "Invalid ID": "Ungültige ID",
+  "limit must be an integer from 1 to 100": "limit muss eine ganze Zahl von 1 bis 100 sein",
+  "offset must be a whole number of 0 or more": "offset muss eine ganze Zahl ab 0 sein",
+  "orders must list positive integer ids with display orders of 0 or more": "orders muss positive ganzzahlige IDs mit Anzeigereihenfolgen ab 0 enthalten"
 }

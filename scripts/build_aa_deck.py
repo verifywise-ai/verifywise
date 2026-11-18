@@ -232,7 +232,7 @@ s = prs.slides.add_slide(BLANK)
 add_header(s, "The product", kicker="Section 4")
 
 add_text(s, Inches(0.6), Inches(1.4), Inches(12), Inches(0.5),
-         "VerifyWise is the open-source AI governance platform for the regulatory era.",
+         "VerifyWise is the source-available AI governance platform for the regulatory era.",
          size=18, bold=True, color=DARK)
 
 caps = [
@@ -298,7 +298,7 @@ add_header(s, "Traction to date", kicker="Section 6")
 tiles = [
     ("Revenue", "[Current MRR / ARR]\nLast 12 months: [£]\nGrowth: [%]"),
     ("Customers and pilots", "[# paying customers]\n[# active pilots]\nNamed logos: [list]"),
-    ("Open-source adoption", "GitHub stars: [#]\nContributors: [#]\nDeployments: [estimated]"),
+    ("Community adoption", "GitHub stars: [#]\nContributors: [#]\nDeployments: [estimated]"),
     ("Partnerships", "Responsible AI Institute\n[Other named partners]\n[SI relationships]"),
 ]
 x0, y0 = Inches(0.6), Inches(1.4)
@@ -318,7 +318,7 @@ add_text(s, Inches(0.8), Inches(4.35), Inches(11.7), Inches(0.4),
 add_bullets(s, Inches(0.8), Inches(4.7), Inches(11.7), Inches(1.9), [
     "[Revenue milestone — e.g. first £X of ARR achieved in Q# 202#]",
     "[Notable customer or design partner won, with sector and use case]",
-    "[Open-source community milestone — stars threshold, key external contributors]",
+    "[Community milestone — stars threshold, key external contributors]",
     "[Inbound demand signal — pipeline value, demo requests/month]",
     "[Industry recognition — Gartner mentions, analyst briefings, awards]",
 ])

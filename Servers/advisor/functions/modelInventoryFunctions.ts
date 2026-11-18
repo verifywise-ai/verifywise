@@ -1,4 +1,6 @@
 import { IModelInventory } from "../../domain.layer/interfaces/i.modelInventory";
+import { projectVisibilitySql } from "../../utils/projectVisibility.utils";
+import { actingProjectViewer, NO_PROJECT_VIEWER } from "./useCaseScope";
 import { ModelInventoryStatus } from "../../domain.layer/enums/model-inventory-status.enum";
 import {
   getAllModelInventoriesQuery,
@@ -509,7 +511,7 @@ const agentLinkModelToProject = createWriteToolFn({
 // --- Cross-entity: Use cases (projects) ---
 
 const listModelsForUseCase = async (
-  params: { project_id: number },
+  params: { project_id: number } & Record<string, unknown>,
   organizationId: number,
 ): Promise<Array<Record<string, unknown>>> => {
   try {
@@ -538,10 +540,14 @@ const listModelsForUseCase = async (
 };
 
 const listUseCasesForModel = async (
-  params: { model_id: number },
+  params: { model_id: number } & Record<string, unknown>,
   organizationId: number,
 ): Promise<Array<Record<string, unknown>>> => {
   try {
+    // Only the use cases the user's use case list shows; none without a user.
+    const viewer = await actingProjectViewer(params, organizationId);
+    if (viewer === NO_PROJECT_VIEWER) return [];
+    const visibility = projectVisibilitySql("p", viewer);
     const [rows] = (await sequelize.query(
       `SELECT DISTINCT p.id AS project_id, p.project_title, p.goal, p.status
        FROM projects p
@@ -550,10 +556,15 @@ const listUseCasesForModel = async (
        WHERE link.model_inventory_id = :model_id
          AND link.framework_id IS NULL
          AND p.organization_id = :organization_id
-         AND link.organization_id = :organization_id
+         AND link.organization_id = :organization_id${visibility.sql}
        ORDER BY p.project_title`,
       {
-        replacements: { model_id: params.model_id, organization_id: organizationId },
+        replacements: {
+          model_id: params.model_id,
+          organization_id: organizationId,
+          organizationId,
+          ...visibility.replacements,
+        },
       },
     )) as [Array<Record<string, unknown>>, unknown];
     return rows;
