@@ -12,7 +12,7 @@ import { QueryTypes } from "sequelize";
 import { sequelize } from "../../database/db";
 import { cleanupDatabase, createTestOrganization, createTestUser } from "./helpers";
 import { createTestApp, testRequest } from "./setup";
-import { createTestModelInventory } from "../factories/test-entities.factory";
+import { createTestModelInventory, createTestModelRisk } from "../factories/test-entities.factory";
 import { triggerModelDeployment } from "../../services/workflows/triggers";
 import { notifyUserAssigned } from "../../services/inAppNotification.service";
 
@@ -590,6 +590,97 @@ describe("model write rules", () => {
       expect(await exists(id)).toBe(true);
       expect(await run({ model_id: id, _userId: approver }, org)).toMatchObject({ deleted: true });
       expect(await exists(id)).toBe(false);
+    });
+  });
+
+  describe("v1 /api/v1/model-risks (Servers/CLAUDE.md v1 router rule)", () => {
+    const riskBody = (extra: Record<string, unknown> = {}) => ({
+      risk_name: `V1 risk ${++counter}`,
+      risk_category: "Performance",
+      risk_level: "High",
+      owner: String(owner),
+      target_date: "2027-01-31",
+      ...extra,
+    });
+    const riskRow = async (id: number) =>
+      (
+        await sequelize.query<{ risk_name: string; risk_level: string; organization_id: number }>(
+          `SELECT risk_name, risk_level, organization_id FROM model_risks WHERE id = :id`,
+          { replacements: { id }, type: QueryTypes.SELECT },
+        )
+      )[0];
+    const riskCount = async () =>
+      (
+        await sequelize.query<{ n: number }>(
+          `SELECT COUNT(*)::int AS n FROM model_risks WHERE organization_id = :org`,
+          { replacements: { org }, type: QueryTypes.SELECT },
+        )
+      )[0].n;
+
+    it("answers a request without a token with the house auth answer: 400 Token not found", async () => {
+      const anonymous = testRequest(await createTestApp());
+      const before = await riskCount();
+      const created = await anonymous.post("/api/v1/model-risks").send(riskBody());
+      expect(created.status).toBe(400);
+      expect(created.body.data).toEqual({ message: "Token not found" });
+      const id = await createTestModelRisk(org, { risk_name: "Untouched" });
+      const patched = await anonymous
+        .patch(`/api/v1/model-risks/${id}`)
+        .send({ risk_level: "Low" });
+      expect(patched.status).toBe(400);
+      expect(patched.body.data).toEqual({ message: "Token not found" });
+      expect(await riskCount()).toBe(before + 1);
+      expect((await riskRow(id)).risk_level).toBe("High");
+    });
+
+    it("answers 403 to an Auditor (no model.edit) and writes nothing", async () => {
+      const api = await as(org, auditor, "Auditor");
+      const before = await riskCount();
+      expect((await api.post("/api/v1/model-risks").send(riskBody())).status).toBe(403);
+      expect(await riskCount()).toBe(before);
+      const id = await createTestModelRisk(org, { risk_name: "Auditor target" });
+      expect(
+        (await api.patch(`/api/v1/model-risks/${id}`).send({ risk_level: "Low" })).status,
+      ).toBe(403);
+      expect((await riskRow(id)).risk_level).toBe("High");
+    });
+
+    it("answers 404 to a PATCH of another organization's model risk and leaves it alone", async () => {
+      const foreign = await createTestModelRisk(otherOrg, { risk_name: "Foreign risk" });
+      const res = await (
+        await as(org, admin, "Admin")
+      )
+        .patch(`/api/v1/model-risks/${foreign}`)
+        .send({ risk_level: "Low", risk_name: "Taken" });
+      expect(res.status).toBe(404);
+      expect(await riskRow(foreign)).toMatchObject({
+        risk_name: "Foreign risk",
+        risk_level: "High",
+        organization_id: otherOrg,
+      });
+    });
+
+    it("creates and updates a model risk for an Editor, with change history", async () => {
+      const api = await as(org, editor, "Editor");
+      const created = await api.post("/api/v1/model-risks").send(riskBody());
+      expect(created.status).toBe(201);
+      const id = created.body.data.id as number;
+      expect(created.body.data).toMatchObject({
+        risk_category: "Performance",
+        risk_level: "High",
+        status: "Open",
+      });
+      const updated = await api
+        .patch(`/api/v1/model-risks/${id}`)
+        .send({ risk_level: "Low", status: "In Progress" });
+      expect(updated.status).toBe(200);
+      expect(updated.body.data).toMatchObject({ id, risk_level: "Low", status: "In Progress" });
+      expect((await riskRow(id)).risk_level).toBe("Low");
+      const history = await sequelize.query<{ field_name: string }>(
+        `SELECT field_name FROM model_risk_change_history WHERE model_risk_id = :id`,
+        { replacements: { id }, type: QueryTypes.SELECT },
+      );
+      expect(history.length).toBeGreaterThan(1);
     });
   });
 
