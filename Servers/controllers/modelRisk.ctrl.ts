@@ -22,6 +22,7 @@ import {
   trackEntityChanges,
   recordMultipleFieldChanges,
   recordEntityDeletion,
+  writtenValues,
 } from "../utils/changeHistory.base.utils";
 
 export async function getAllModelRisks(req: Request, res: Response) {
@@ -202,19 +203,6 @@ export async function updateModelRiskById(req: Request, res: Response) {
   const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
   const modelRiskId = parseInt(id, 10);
 
-  // Get existing model risk for change tracking
-  let existingModelRiskData: Record<string, unknown> | null = null;
-  try {
-    const existingModelRisk = await getModelRiskByIdQuery(modelRiskId, req.organizationId!);
-    if (existingModelRisk) {
-      existingModelRiskData = existingModelRisk.toSafeJSON
-        ? existingModelRisk.toSafeJSON()
-        : existingModelRisk;
-    }
-  } catch (error) {
-    // Continue without existing data if query fails
-  }
-
   logProcessing({
     description: `updating model risk: ID ${id}`,
     functionName: "updateModelRiskById",
@@ -225,35 +213,48 @@ export async function updateModelRiskById(req: Request, res: Response) {
 
   const transaction: Transaction = await sequelize.transaction();
 
+  const notFound = async () => {
+    await transaction.rollback();
+    await logFailure({
+      eventType: "Update",
+      description: `model risk not found for update: ID ${id}`,
+      functionName: "updateModelRiskById",
+      fileName: "modelRisk.ctrl.ts",
+      error: new Error("Model risk not found"),
+      userId: req.userId!,
+      organizationId: req.organizationId!,
+    });
+    return res.status(404).json(STATUS_CODE[404](req.t!("Model risk not found.")));
+  };
+
   try {
+    // The row as it is now, locked for this transaction, so the history
+    // diffs against what this update actually changes. An archived risk is
+    // not found: it cannot be edited.
+    const existing = await getModelRiskByIdQuery(modelRiskId, req.organizationId!, false, {
+      transaction,
+      forUpdate: true,
+    });
+    if (!existing) return await notFound();
+
     const modelRisk = await updateModelRiskByIdQuery(
       modelRiskId,
       req.body,
       req.organizationId!,
       transaction,
     );
+    if (!modelRisk) return await notFound();
 
-    if (!modelRisk) {
-      await transaction.rollback();
-      await logFailure({
-        eventType: "Update",
-        description: `model risk not found for update: ID ${id}`,
-        functionName: "updateModelRiskById",
-        fileName: "modelRisk.ctrl.ts",
-        error: new Error("Model risk not found"),
-        userId: req.userId!,
-        organizationId: req.organizationId!,
-      });
-      return res.status(404).json(STATUS_CODE[404](req.t!("Model risk not found.")));
-    }
-
-    // Record changes in change history
-    if (existingModelRiskData && req.userId) {
+    // Record changes in change history: the values as written (the update
+    // casts and normalizes the request values), against the locked row.
+    if (req.userId) {
       // Org-scoped, on the transaction: the model id is recorded by name.
-      const changes = await trackEntityChanges("model_risk", existingModelRiskData, req.body, {
-        organizationId: req.organizationId!,
-        transaction,
-      });
+      const changes = await trackEntityChanges(
+        "model_risk",
+        existing.get({ plain: true }),
+        writtenValues(modelRisk, req.body ?? {}),
+        { organizationId: req.organizationId!, transaction },
+      );
       if (changes.length > 0) {
         await recordMultipleFieldChanges(
           "model_risk",

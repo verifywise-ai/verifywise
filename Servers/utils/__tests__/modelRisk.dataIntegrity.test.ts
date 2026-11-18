@@ -5,10 +5,8 @@ jest.mock("../../database/db", () => ({
   sequelize: { query: (...args: any[]) => mockQuery(...args) },
 }));
 jest.mock("../../domain.layer/models/modelRisk/modelRisk.model", () => ({ ModelRiskModel: {} }));
-const mockDeleteCustomFields = jest.fn<(...args: any[]) => Promise<void>>();
 const mockDeleteCustomFieldsBulk = jest.fn<(...args: any[]) => Promise<void>>();
 jest.mock("../customField.utils", () => ({
-  deleteAllCustomFieldValuesForEntityQuery: (...args: any[]) => mockDeleteCustomFields(...args),
   deleteAllCustomFieldValuesForEntitiesQuery: (...args: any[]) =>
     mockDeleteCustomFieldsBulk(...args),
   fetchCustomFieldsForEntities: jest.fn(),
@@ -24,6 +22,7 @@ jest.mock("../changeHistory.base.utils", () => ({
 }));
 
 import {
+  archiveModelRisksQuery,
   deleteModelRiskByIdQuery,
   releaseModelRisksOfModelQuery,
   updateModelRiskByIdQuery,
@@ -34,7 +33,6 @@ const sqls = () => mockQuery.mock.calls.map((c) => String(c[0]));
 
 beforeEach(() => {
   mockQuery.mockReset();
-  mockDeleteCustomFields.mockReset();
   mockDeleteCustomFieldsBulk.mockReset();
   mockRecordBulk.mockReset();
   mockRecordDeletionBulk.mockReset();
@@ -62,14 +60,53 @@ describe("a deleted model risk cannot be changed (M-M9)", () => {
     // A raw UPDATE ... RETURNING that matched nothing.
     mockQuery.mockResolvedValueOnce([[], { rowCount: 0 }]);
     await expect(deleteModelRiskByIdQuery(4, 1, tx)).resolves.toBe(false);
-    expect(mockDeleteCustomFields).not.toHaveBeenCalled();
+    expect(mockDeleteCustomFieldsBulk).toHaveBeenCalledWith("model_risk", [], 1, tx);
   });
 
   it("delete archives a live risk and clears its custom field values", async () => {
     mockQuery.mockResolvedValueOnce([[{ id: 4 }], { rowCount: 1 }]);
     await expect(deleteModelRiskByIdQuery(4, 1, tx)).resolves.toBe(true);
-    expect(sqls()[0]).toMatch(/SET is_deleted = true.*AND is_deleted = false/);
-    expect(mockDeleteCustomFields).toHaveBeenCalledWith("model_risk", 4, 1, tx);
+    expect(sqls()[0]).toMatch(/SET is_deleted = true[\s\S]*AND is_deleted = false/);
+    expect(mockDeleteCustomFieldsBulk).toHaveBeenCalledWith("model_risk", [4], 1, tx);
+  });
+});
+
+describe("archiveModelRisksQuery: one archive for a risk and for a model's risks", () => {
+  const archiveSql =
+    /^UPDATE model_risks SET is_deleted = true, deleted_at = NOW\(\), updated_at = NOW\(\)\s+WHERE organization_id = :organizationId AND (id = :id|model_id = :modelId) AND is_deleted = false\s+RETURNING id$/;
+
+  it("by id: the organization's live risk, ids ascending", async () => {
+    mockQuery.mockResolvedValueOnce([[{ id: 4 }], {}]);
+    await expect(archiveModelRisksQuery(1, { id: 4 }, tx)).resolves.toEqual([4]);
+    expect(sqls()[0].trim()).toMatch(archiveSql);
+    expect(sqls()[0]).toMatch(/id = :id/);
+    expect(mockQuery.mock.calls[0][1]).toEqual({
+      replacements: { organizationId: 1, id: 4 },
+      transaction: tx,
+    });
+  });
+
+  it("by model: every live risk of the model, ids ascending, custom fields cleared", async () => {
+    mockQuery.mockResolvedValueOnce([[{ id: 9 }, { id: 2 }], {}]);
+    await expect(archiveModelRisksQuery(1, { modelId: 50 }, tx)).resolves.toEqual([2, 9]);
+    expect(sqls()[0].trim()).toMatch(archiveSql);
+    expect(sqls()[0]).toMatch(/model_id = :modelId/);
+    expect(mockQuery.mock.calls[0][1]).toEqual({
+      replacements: { organizationId: 1, modelId: 50 },
+      transaction: tx,
+    });
+    expect(mockDeleteCustomFieldsBulk).toHaveBeenCalledWith("model_risk", [2, 9], 1, tx);
+  });
+
+  it("the single delete and the model release run the same statement", async () => {
+    mockQuery.mockImplementation(async () => [[], {}]);
+    await deleteModelRiskByIdQuery(4, 1, tx);
+    await releaseModelRisksOfModelQuery(50, true, 1, 9, tx);
+    const archives = sqls().filter((s) => /SET is_deleted = true/.test(s));
+    expect(archives).toHaveLength(2);
+    expect(archives[0].replace("id = :id", "X")).toBe(
+      archives[1].replace("model_id = :modelId", "X"),
+    );
   });
 });
 
@@ -77,25 +114,16 @@ describe("releaseModelRisksOfModelQuery (M-H1)", () => {
   /** Answers each query by its SQL. */
   const db = (state: { live: number[]; detached: { id: number; is_deleted: boolean }[] }) =>
     mockQuery.mockImplementation(async (sql: string) => {
-      if (/FOR UPDATE/.test(sql)) return [{ id: 50 }];
       if (/SET is_deleted = true/.test(sql)) return [state.live.map((id) => ({ id })), {}];
       if (/SET model_id = NULL/.test(sql)) return [state.detached, {}];
       return [[], {}];
     });
   const indexOf = (re: RegExp) => sqls().findIndex((s) => re.test(s));
 
-  it("locks the model row first, in the organization", async () => {
+  it("takes no lock itself: the model delete holds it", async () => {
     db({ live: [7], detached: [{ id: 7, is_deleted: true }] });
     await releaseModelRisksOfModelQuery(50, true, 1, 9, tx);
-
-    expect(indexOf(/FOR UPDATE/)).toBe(0);
-    expect(sqls()[0]).toMatch(
-      /FROM model_inventories\s+WHERE organization_id = :organizationId AND id = :modelId\s+FOR UPDATE/,
-    );
-    expect(mockQuery.mock.calls[0][1]).toMatchObject({
-      replacements: { organizationId: 1, modelId: 50 },
-      transaction: tx,
-    });
+    expect(sqls().some((s) => /FOR UPDATE/.test(s))).toBe(false);
   });
 
   it("keep: no risk is archived; every risk that loses the model gets a history entry", async () => {
@@ -146,9 +174,7 @@ describe("releaseModelRisksOfModelQuery (M-H1)", () => {
       /organization_id = :organizationId AND model_id = :modelId AND is_deleted = false/,
     );
     expect(archiveSql).toMatch(/deleted_at = NOW\(\)/);
-    expect(indexOf(/FOR UPDATE/)).toBeLessThan(indexOf(/SET is_deleted = true/));
     expect(indexOf(/SET is_deleted = true/)).toBeLessThan(indexOf(/SET model_id = NULL/));
-    expect(mockDeleteCustomFields).not.toHaveBeenCalled();
     expect(mockDeleteCustomFieldsBulk).toHaveBeenCalledWith("model_risk", [7, 8], 1, tx);
     expect(mockRecordDeletionBulk).toHaveBeenCalledWith("model_risk", [7, 8], 9, 1, tx, false);
     // The archived risks also say which model they belonged to.

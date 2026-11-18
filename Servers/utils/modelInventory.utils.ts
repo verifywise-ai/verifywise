@@ -1,6 +1,6 @@
 import { ModelInventoryModel } from "../domain.layer/models/modelInventory/modelInventory.model";
 import { sequelize } from "../database/db";
-import { Transaction } from "sequelize";
+import { QueryTypes, Transaction } from "sequelize";
 import { TenantAutomationActionModel } from "../domain.layer/models/tenantAutomationAction/tenantAutomationAction.model";
 import { replaceTemplateVariables } from "./automation/automation.utils";
 import { enqueueAutomationAction } from "../services/automations/automationProducer";
@@ -566,6 +566,28 @@ export const updateModelInventoryByIdQuery = async (
 };
 
 /**
+ * Locks the organization's model row for the rest of the transaction (FOR
+ * UPDATE). Anything that adds a risk, validation or finding to the model
+ * takes a key-share lock on that row through its foreign key, so once this
+ * returns, nothing can join the model until the transaction ends and every
+ * row that joined before is visible. False when the organization has no such
+ * model.
+ */
+export const lockModelInventoryQuery = async (
+  id: number,
+  organizationId: number,
+  transaction: Transaction,
+): Promise<boolean> => {
+  const rows = await sequelize.query(
+    `SELECT id FROM model_inventories
+      WHERE organization_id = :organizationId AND id = :id
+      FOR UPDATE`,
+    { replacements: { organizationId, id }, type: QueryTypes.SELECT, transaction },
+  );
+  return rows.length > 0;
+};
+
+/**
  * Deletes a model. Its risks are never deleted with it: with `deleteRisks`
  * they are archived (as a model risk delete does), otherwise they stay, with
  * no model. Evidence stops listing the model.
@@ -581,6 +603,10 @@ export const deleteModelInventoryByIdQuery = async (
   changedByUserId: number | null = null,
 ) => {
   try {
+    // First, so no risk joins the model while its risks are released. A
+    // caller that checked the model under this lock already holds it;
+    // locking again in the same transaction is a no-op.
+    await lockModelInventoryQuery(id, organizationId, transaction);
     await releaseModelRisksOfModelQuery(
       id,
       deleteRisks,

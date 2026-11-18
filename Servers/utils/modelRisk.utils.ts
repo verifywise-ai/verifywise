@@ -11,7 +11,6 @@ import {
 export const OWNER_NOT_IN_ORGANIZATION = "The owner must be a member of this organization.";
 import {
   deleteAllCustomFieldValuesForEntitiesQuery,
-  deleteAllCustomFieldValuesForEntityQuery,
   fetchCustomFieldsForEntities,
 } from "./customField.utils";
 import {
@@ -65,14 +64,19 @@ export async function getModelRiskByIdQuery(
   id: number,
   organizationId: number,
   includeDeleted: boolean = false,
+  options: { transaction?: Transaction; forUpdate?: boolean } = {},
 ): Promise<ModelRiskModel | null> {
   const whereClause = includeDeleted
     ? "WHERE organization_id = :organizationId AND id = :id"
     : "WHERE organization_id = :organizationId AND id = :id AND is_deleted = false";
-  const modelRisk = await sequelize.query(`SELECT * FROM model_risks ${whereClause}`, {
+  // forUpdate (inside a transaction) locks the row, so what is read is what
+  // the transaction's own update then changes.
+  const lock = options.forUpdate ? " FOR UPDATE" : "";
+  const modelRisk = await sequelize.query(`SELECT * FROM model_risks ${whereClause}${lock}`, {
     replacements: { organizationId, id },
     mapToModel: true,
     model: ModelRiskModel,
+    transaction: options.transaction,
   });
 
   if (!modelRisk.length) return null;
@@ -228,6 +232,42 @@ export async function updateModelRiskByIdQuery(
 }
 
 /**
+ * Archives (soft-deletes) the organization's live model risks that match
+ * `criteria`, one risk by id or every risk of a model, in one statement, and
+ * clears their custom field values. Returns the archived ids, ascending; an
+ * already archived risk is not matched. Change history is the caller's.
+ */
+export async function archiveModelRisksQuery(
+  organizationId: number,
+  criteria: { id: number } | { modelId: number },
+  transaction?: Transaction,
+): Promise<number[]> {
+  const byId = "id" in criteria;
+  // A raw query returns [rows, result]: the RETURNING rows say which rows
+  // were archived. (QueryTypes.UPDATE returned [rows, rowCount], a pair that
+  // always has length 2, so an archived or unknown risk read as deleted.)
+  const [rows] = (await sequelize.query(
+    `UPDATE model_risks SET is_deleted = true, deleted_at = NOW(), updated_at = NOW()
+      WHERE organization_id = :organizationId AND ${byId ? "id = :id" : "model_id = :modelId"} AND is_deleted = false
+      RETURNING id`,
+    {
+      replacements: byId
+        ? { organizationId, id: criteria.id }
+        : { organizationId, modelId: criteria.modelId },
+      transaction,
+    },
+  )) as [{ id: number }[], unknown];
+  const archived = rows.map((row) => row.id).sort((a, b) => a - b);
+  await deleteAllCustomFieldValuesForEntitiesQuery(
+    "model_risk",
+    archived,
+    organizationId,
+    transaction,
+  );
+  return archived;
+}
+
+/**
  * Delete a model risk by ID (soft delete). False when the organization has no
  * such risk or it is already archived.
  */
@@ -236,16 +276,8 @@ export async function deleteModelRiskByIdQuery(
   organizationId: number,
   transaction?: Transaction,
 ): Promise<boolean> {
-  // A raw query returns [rows, result]: the RETURNING rows say whether a row
-  // was archived. (QueryTypes.UPDATE returned [rows, rowCount], a pair that
-  // always has length 2, so an archived or unknown risk read as deleted.)
-  const [rows] = (await sequelize.query(
-    `UPDATE model_risks SET is_deleted = true, deleted_at = NOW(), updated_at = NOW() WHERE organization_id = :organizationId AND id = :id AND is_deleted = false RETURNING id`,
-    { replacements: { organizationId, id }, transaction },
-  )) as [{ id: number }[], unknown];
-  if (rows.length === 0) return false;
-  await deleteAllCustomFieldValuesForEntityQuery("model_risk", id, organizationId, transaction);
-  return true;
+  const archived = await archiveModelRisksQuery(organizationId, { id }, transaction);
+  return archived.length > 0;
 }
 
 /**
@@ -257,11 +289,12 @@ export async function deleteModelRiskByIdQuery(
  * model_id too; doing it here, scoped to the organization, is what records
  * the history.
  *
- * The model row is locked first: adding a risk to a model (or moving one onto
- * it) takes a key-share lock on the model row, so no risk can join the model
- * while this transaction runs, and every risk that joined before is seen by
- * the statements below. A risk can therefore never end up kept when the user
- * chose to delete the model's risks.
+ * The caller must hold the model row lock (`lockModelInventoryQuery`, taken
+ * first by `deleteModelInventoryByIdQuery`): adding a risk to a model (or
+ * moving one onto it) takes a key-share lock on the model row, so no risk can
+ * join the model while the transaction runs, and every risk that joined
+ * before is seen by the statements below. A risk can therefore never end up
+ * kept when the user chose to delete the model's risks.
  *
  * `changedByUserId` null (AI Advisor) records the history as the system's.
  */
@@ -273,29 +306,11 @@ export async function releaseModelRisksOfModelQuery(
   transaction: Transaction,
 ): Promise<{ archived: number[]; kept: number[] }> {
   const bySystem = changedByUserId === null;
-  await sequelize.query(
-    `SELECT id FROM model_inventories
-      WHERE organization_id = :organizationId AND id = :modelId
-      FOR UPDATE`,
-    { replacements: { organizationId, modelId }, type: QueryTypes.SELECT, transaction },
-  );
   const byId = (a: number, b: number) => a - b;
 
   let archived: number[] = [];
   if (archive) {
-    const [rows] = (await sequelize.query(
-      `UPDATE model_risks SET is_deleted = true, deleted_at = NOW(), updated_at = NOW()
-        WHERE organization_id = :organizationId AND model_id = :modelId AND is_deleted = false
-        RETURNING id`,
-      { replacements: { organizationId, modelId }, transaction },
-    )) as [{ id: number }[], unknown];
-    archived = rows.map((row) => row.id).sort(byId);
-    await deleteAllCustomFieldValuesForEntitiesQuery(
-      "model_risk",
-      archived,
-      organizationId,
-      transaction,
-    );
+    archived = await archiveModelRisksQuery(organizationId, { modelId }, transaction);
     await recordEntityDeletionBulk(
       "model_risk",
       archived,

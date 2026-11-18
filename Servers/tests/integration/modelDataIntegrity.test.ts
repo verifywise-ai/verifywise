@@ -15,6 +15,7 @@ import { ReportDataCollector } from "../../services/reporting/dataCollector";
 import { modelDeploymentWorkflow } from "../../services/workflows/definitions/modelDeployment.workflow";
 import { deleteMockData } from "../../infrastructure.layer/driver/autoDriver.driver";
 import { getStaleEvidenceRiskIdsQuery } from "../../utils/evidenceHub.utils";
+import { getEntityChangeHistory } from "../../utils/changeHistory.base.utils";
 
 /**
  * Use cases and models audit, PR F: deleting a model never deletes its risks
@@ -83,6 +84,27 @@ const linkExists = async (id: number) =>
     })
   ).length === 1;
 
+/**
+ * Waits until another session is blocked on a lock while running a statement
+ * that matches `pattern` (ILIKE), and fails if none does within ~5 s. Only
+ * then may the test release the lock it holds: a wait anywhere else (or none,
+ * if the statement does not lock) must not count.
+ */
+const waitForLockWait = async (pattern: string) => {
+  for (let i = 0; i < 100; i++) {
+    const [row] = await sequelize.query<{ n: number }>(
+      `SELECT COUNT(*)::int AS n FROM pg_stat_activity
+        WHERE datname = current_database() AND pid <> pg_backend_pid()
+          AND wait_event_type = 'Lock' AND query ILIKE :pattern`,
+      { replacements: { pattern }, type: QueryTypes.SELECT },
+    );
+    if (row.n > 0) return;
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  }
+  throw new Error(`no session waited on a lock running ${pattern}`);
+};
+const MODEL_ROW_LOCK = "%FROM model_inventories%FOR UPDATE%";
+
 const archive = (id: number) =>
   sequelize.query(`UPDATE model_risks SET is_deleted = true, deleted_at = NOW() WHERE id = :id`, {
     replacements: { id },
@@ -111,7 +133,7 @@ describe("model data integrity", () => {
   describe("deleting a model (M-H1)", () => {
     it("Keep risks: the risks stay with no model, their links survive, history says so", async () => {
       const api = await as(org, admin);
-      const model = await createTestModelInventory(org, { model: "Keep model" });
+      const model = await createTestModelInventory(org, { provider: "Acme", model: "Keep model" });
       const live = await createTestModelRisk(org, { model_id: model });
       const archived = await createTestModelRisk(org, { model_id: model });
       await archive(archived);
@@ -127,7 +149,7 @@ describe("model data integrity", () => {
       const lostModel = {
         action: "updated",
         field_name: "Associated model",
-        old_value: "Keep model",
+        old_value: "Acme Keep model",
         new_value: "-",
       };
       expect(await historyOf(live)).toEqual([lostModel]);
@@ -142,7 +164,10 @@ describe("model data integrity", () => {
 
     it("Delete risks too: the risks are archived with history, not removed", async () => {
       const api = await as(org, admin);
-      const model = await createTestModelInventory(org, { model: "Delete model" });
+      const model = await createTestModelInventory(org, {
+        provider: "Acme",
+        model: "Delete model",
+      });
       const a = await createTestModelRisk(org, { model_id: model });
       const b = await createTestModelRisk(org, { model_id: model });
       const useCaseRisk = await createTestRisk(org, {});
@@ -164,7 +189,7 @@ describe("model data integrity", () => {
           {
             action: "updated",
             field_name: "Associated model",
-            old_value: "Delete model",
+            old_value: "Acme Delete model",
             new_value: "-",
           },
         ]);
@@ -194,15 +219,10 @@ describe("model data integrity", () => {
         )[0].id;
 
         pending = api.delete(`/api/modelInventory/${model}?deleteRisks=true`).then((r) => r);
-        // Wait until the delete is blocked on the model row lock.
-        for (let i = 0; i < 100; i++) {
-          const [waiting] = await sequelize.query<{ n: number }>(
-            `SELECT COUNT(*)::int AS n FROM pg_locks WHERE NOT granted`,
-            { type: QueryTypes.SELECT },
-          );
-          if (waiting.n > 0) break;
-          await new Promise((resolve) => setTimeout(resolve, 50));
-        }
+        // The delete must be blocked on its own model row lock (the insert's
+        // foreign key holds a key-share lock on the row) before the insert
+        // commits; no other wait counts.
+        await waitForLockWait(MODEL_ROW_LOCK);
         await other.commit();
       } catch (error) {
         await other.rollback();
@@ -213,6 +233,34 @@ describe("model data integrity", () => {
       for (const id of [existing, late]) {
         expect(await riskRow(id)).toMatchObject({ is_deleted: true, model_id: null });
       }
+    });
+
+    it("a validation added while the delete waits still answers 409, model kept", async () => {
+      const api = await as(org, admin);
+      const model = await createTestModelInventory(org, {});
+
+      // Another request starts a validation of the model, not committed yet.
+      const other = await sequelize.transaction();
+      let pending: Promise<any> | undefined;
+      try {
+        await sequelize.query(
+          `INSERT INTO mrm_validations (organization_id, model_inventory_id) VALUES (:org, :model)`,
+          { replacements: { org, model }, transaction: other },
+        );
+        pending = api.delete(`/api/modelInventory/${model}`).then((r) => r);
+        await waitForLockWait(MODEL_ROW_LOCK);
+        await other.commit();
+      } catch (error) {
+        await other.rollback();
+        throw error;
+      }
+
+      expect((await pending!).status).toBe(409);
+      const left = await sequelize.query(`SELECT 1 FROM model_inventories WHERE id = :model`, {
+        replacements: { model },
+        type: QueryTypes.SELECT,
+      });
+      expect(left).toHaveLength(1);
     });
 
     it("never touches another organization's risks", async () => {
@@ -291,8 +339,8 @@ describe("model data integrity", () => {
   describe("model risk history names the model", () => {
     it("an edit of the model records model names, like a model delete does", async () => {
       const api = await as(org, admin);
-      const from = await createTestModelInventory(org, { model: "From model" });
-      const to = await createTestModelInventory(org, { model: "To model" });
+      const from = await createTestModelInventory(org, { provider: "Acme", model: "From model" });
+      const to = await createTestModelInventory(org, { provider: "Acme", model: "To model" });
       const risk = await createTestModelRisk(org, { model_id: from });
 
       const res = await api.patch(`/api/modelRisks/${risk}`).send({ model_id: to });
@@ -301,9 +349,90 @@ describe("model data integrity", () => {
         {
           action: "updated",
           field_name: "Associated model",
-          old_value: "From model",
-          new_value: "To model",
+          old_value: "Acme From model",
+          new_value: "Acme To model",
         },
+      ]);
+    });
+
+    it("a move between two models with the same name is still recorded", async () => {
+      const api = await as(org, admin);
+      const from = await createTestModelInventory(org, { provider: "Acme", model: "Twin" });
+      const to = await createTestModelInventory(org, { provider: "Acme", model: "Twin" });
+      const risk = await createTestModelRisk(org, { model_id: from });
+
+      expect((await api.patch(`/api/modelRisks/${risk}`).send({ model_id: to })).status).toBe(200);
+      expect(await riskRow(risk)).toMatchObject({ model_id: to });
+      expect(await historyOf(risk)).toEqual([
+        {
+          action: "updated",
+          field_name: "Associated model",
+          old_value: "Acme Twin",
+          new_value: "Acme Twin",
+        },
+      ]);
+      // Sending the same model again is not a change, whatever its type.
+      expect(
+        (await api.patch(`/api/modelRisks/${risk}`).send({ model_id: String(to) })).status,
+      ).toBe(200);
+      expect(await historyOf(risk)).toHaveLength(1);
+    });
+
+    it("lists entries written in one transaction newest first", async () => {
+      // One transaction writes its entries with the same changed_at (deleting
+      // a model with its risks records the deletion and the lost model): the
+      // list breaks the tie by id, newest first.
+      const risk = await createTestModelRisk(org, {});
+      const inserted = await sequelize.query<{ id: number }>(
+        `INSERT INTO model_risk_change_history
+           (organization_id, model_risk_id, field_name, old_value, new_value, action, changed_by_user_id, changed_at)
+         SELECT :org, :risk, 'Risk name', 'v' || g, 'v' || (g + 1), 'updated', :admin, TIMESTAMP '2026-01-01 12:00:00'
+           FROM generate_series(1, 12) g
+         RETURNING id`,
+        { replacements: { org, risk, admin }, type: QueryTypes.SELECT },
+      );
+      const newestFirst = inserted.map((row) => row.id).sort((a, b) => b - a);
+      // Rewrite the older half under the same ids, so storage order no longer
+      // follows id order and only the id tie-break gives newest first.
+      const older = newestFirst.slice(6);
+      await sequelize.query(
+        `WITH gone AS (DELETE FROM model_risk_change_history WHERE id IN (:older) RETURNING *)
+         INSERT INTO model_risk_change_history SELECT * FROM gone`,
+        { replacements: { older } },
+      );
+
+      const { data } = await getEntityChangeHistory("model_risk", risk, org);
+      expect(data.map((row: any) => row.id)).toEqual(newestFirst);
+      const page = await getEntityChangeHistory("model_risk", risk, org, 5, 5);
+      expect(page.data.map((row: any) => row.id)).toEqual(newestFirst.slice(5, 10));
+    });
+
+    it("diffs against the row as the update locked it, not as it was before", async () => {
+      const api = await as(org, admin);
+      const risk = await createTestModelRisk(org, { risk_name: "A" });
+
+      // Another request renames the risk and has not committed yet.
+      const other = await sequelize.transaction();
+      let pending: Promise<any> | undefined;
+      try {
+        await sequelize.query(`UPDATE model_risks SET risk_name = 'B' WHERE id = :risk`, {
+          replacements: { risk },
+          transaction: other,
+        });
+        pending = api
+          .patch(`/api/modelRisks/${risk}`)
+          .send({ risk_name: "C" })
+          .then((r) => r);
+        await waitForLockWait("%model_risks%");
+        await other.commit();
+      } catch (error) {
+        await other.rollback();
+        throw error;
+      }
+
+      expect((await pending!).status).toBe(200);
+      expect(await historyOf(risk)).toEqual([
+        { action: "updated", field_name: "Risk name", old_value: "B", new_value: "C" },
       ]);
     });
   });

@@ -7,8 +7,12 @@ jest.mock("../../utils/modelInventory.utils", () => ({
   createNewModelInventoryQuery: jest.fn(),
   updateModelInventoryByIdQuery: jest.fn(),
   deleteModelInventoryByIdQuery: jest.fn(),
+  lockModelInventoryQuery: jest.fn(),
   getModelByProjectIdQuery: jest.fn(),
   getModelByFrameworkIdQuery: jest.fn(),
+}));
+jest.mock("../../utils/mrm.utils", () => ({
+  modelHasMrmHistoryQuery: jest.fn(),
 }));
 jest.mock("../../utils/modelInventoryChangeHistory.utils", () => ({
   recordModelInventoryCreation: jest.fn().mockResolvedValue(undefined),
@@ -71,9 +75,12 @@ import {
   createNewModelInventoryQuery,
   updateModelInventoryByIdQuery,
   deleteModelInventoryByIdQuery,
+  lockModelInventoryQuery,
   getModelByProjectIdQuery,
   getModelByFrameworkIdQuery,
 } from "../../utils/modelInventory.utils";
+import { modelHasMrmHistoryQuery } from "../../utils/mrm.utils";
+import { sequelize } from "../../database/db";
 import { notifyModelRiskCandidates } from "../../services/riskLinks/modelCandidates";
 
 const mockGetAll = getAllModelInventoriesQuery as jest.MockedFunction<
@@ -90,6 +97,10 @@ const mockUpdate = updateModelInventoryByIdQuery as jest.MockedFunction<
 >;
 const mockDelete = deleteModelInventoryByIdQuery as jest.MockedFunction<
   typeof deleteModelInventoryByIdQuery
+>;
+const mockLock = lockModelInventoryQuery as jest.MockedFunction<typeof lockModelInventoryQuery>;
+const mockMrmHistory = modelHasMrmHistoryQuery as jest.MockedFunction<
+  typeof modelHasMrmHistoryQuery
 >;
 const mockGetByProject = getModelByProjectIdQuery as jest.MockedFunction<
   typeof getModelByProjectIdQuery
@@ -311,27 +322,54 @@ describe("modelInventory.ctrl", () => {
   });
 
   describe("deleteModelInventoryById", () => {
+    const tx = { commit: jest.fn(), rollback: jest.fn() };
+    beforeEach(() => {
+      (sequelize.transaction as jest.Mock<any>).mockResolvedValue(tx);
+      mockLock.mockResolvedValue(true);
+      mockMrmHistory.mockResolvedValue(false);
+    });
+
     it("should return 404 when model is not found", async () => {
-      mockGetById.mockResolvedValue(null as any);
+      mockLock.mockResolvedValue(false);
       const req = createReq({ params: { id: "99" } });
       const res = createRes();
       await deleteModelInventoryById(req, res);
       expect(res.status).toHaveBeenCalledWith(404);
+      expect(tx.rollback).toHaveBeenCalled();
+      expect(mockDelete).not.toHaveBeenCalled();
     });
     it("should return 200 when model is deleted", async () => {
-      mockGetById.mockResolvedValue(mockModel({ id: 1, model: "M1" }) as any);
       mockDelete.mockResolvedValue(undefined);
       const req = createReq({ params: { id: "1" } });
       const res = createRes();
       await deleteModelInventoryById(req, res);
       expect(res.status).toHaveBeenCalledWith(200);
+      expect(tx.commit).toHaveBeenCalled();
+    });
+    it("locks the model row, then checks MRM history in the same transaction", async () => {
+      mockDelete.mockResolvedValue(undefined);
+      await deleteModelInventoryById(createReq({ params: { id: "1" } }), createRes());
+      expect(mockLock).toHaveBeenCalledWith(1, 1, tx);
+      expect(mockMrmHistory).toHaveBeenCalledWith(1, 1, tx);
+      expect(mockLock.mock.invocationCallOrder[0]).toBeLessThan(
+        mockMrmHistory.mock.invocationCallOrder[0],
+      );
+    });
+    it("answers 409 for a model with MRM history, rolling back without deleting", async () => {
+      mockMrmHistory.mockResolvedValue(true);
+      const res = createRes();
+      await deleteModelInventoryById(createReq({ params: { id: "1" } }), res);
+      expect(res.status).toHaveBeenCalledWith(409);
+      expect(tx.rollback).toHaveBeenCalled();
+      expect(mockDelete).not.toHaveBeenCalled();
     });
     it("should return 500 on error", async () => {
-      mockGetById.mockRejectedValue(new Error("DB error"));
+      mockLock.mockRejectedValue(new Error("DB error"));
       const req = createReq({ params: { id: "1" } });
       const res = createRes();
       await deleteModelInventoryById(req, res);
       expect(res.status).toHaveBeenCalledWith(500);
+      expect(tx.rollback).toHaveBeenCalled();
     });
   });
 });

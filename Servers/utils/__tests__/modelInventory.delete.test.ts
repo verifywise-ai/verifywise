@@ -50,6 +50,23 @@ describe("deleteModelInventoryByIdQuery", () => {
     expect(releasedBeforeDelete).toBe(true);
   });
 
+  it("locks the model row in the organization before releasing its risks", async () => {
+    await deleteModelInventoryByIdQuery(50, true, 1, tx, 9);
+
+    const lockIndex = sqls().findIndex((s) => /FOR UPDATE/.test(s));
+    expect(lockIndex).toBe(0);
+    expect(sqls()[0]).toMatch(
+      /FROM model_inventories\s+WHERE organization_id = :organizationId AND id = :id\s+FOR UPDATE/,
+    );
+    expect(mockQuery.mock.calls[0][1]).toMatchObject({
+      replacements: { organizationId: 1, id: 50 },
+      transaction: tx,
+    });
+    expect(mockQuery.mock.invocationCallOrder[0]).toBeLessThan(
+      mockRelease.mock.invocationCallOrder[0],
+    );
+  });
+
   it("removes the model from evidence links in the organization (M-L5)", async () => {
     await deleteModelInventoryByIdQuery(50, false, 1, tx, 9);
 
