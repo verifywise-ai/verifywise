@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { renderHook, waitFor } from "@testing-library/react";
+import { act, renderHook, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import React from "react";
 import { buildUser } from "../../../test/factories/user.factory";
@@ -16,6 +16,18 @@ import useUsers from "../useUsers";
 import { getAllUsers } from "../../repository/user.repository";
 
 const mockGetAll = vi.mocked(getAllUsers);
+
+/** A /users row as the API sends it: plain JSON, dates as ISO strings. */
+const apiRow = (overrides: Record<string, unknown> = {}) => ({
+  id: 1,
+  name: "John",
+  surname: "Doe",
+  email: "john.doe@example.com",
+  role_id: 1,
+  created_at: "2026-01-01T00:00:00.000Z",
+  last_login: "2026-06-10T00:00:00.000Z",
+  ...overrides,
+});
 
 function createWrapper() {
   const queryClient = new QueryClient({
@@ -72,5 +84,52 @@ describe("useUsers", () => {
     rerender();
     expect(first).toEqual([]);
     expect(result.current.users).toBe(first);
+  });
+
+  it("keeps the same users array after a refetch that returns the same rows", async () => {
+    mockGetAll.mockImplementation(async () => ({ status: 200, data: [apiRow()] }) as any);
+    const { result } = renderHook(() => useUsers(), { wrapper: createWrapper() });
+    await waitFor(() => expect(result.current.users).toHaveLength(1));
+    const first = result.current.users;
+
+    await act(() => result.current.refreshUsers());
+    // Let React Query hand the refetched result to the hook before comparing.
+    await act(() => new Promise((resolve) => setTimeout(resolve, 50)));
+
+    expect(mockGetAll).toHaveBeenCalledTimes(2);
+    expect(result.current.users).toBe(first);
+  });
+
+  it("returns a new users array when a refetch changes the rows", async () => {
+    mockGetAll.mockResolvedValueOnce({ status: 200, data: [apiRow({ name: "Ada" })] } as any);
+    const { result } = renderHook(() => useUsers(), { wrapper: createWrapper() });
+    await waitFor(() => expect(result.current.users).toHaveLength(1));
+    const first = result.current.users;
+
+    mockGetAll.mockResolvedValueOnce({ status: 200, data: [apiRow({ name: "Grace" })] } as any);
+    await act(() => result.current.refreshUsers());
+
+    await waitFor(() => expect(result.current.users[0].name).toBe("Grace"));
+    expect(result.current.users).not.toBe(first);
+    expect(result.current.users[0].created_at).toEqual(new Date("2026-01-01T00:00:00Z"));
+  });
+
+  it("does not refetch in a loop from an effect keyed on users that refreshes them", async () => {
+    // The Home page pattern: an effect that refreshes users and lists them
+    // (directly or through a parent re-render) among its dependencies.
+    mockGetAll.mockImplementation(async () => ({ status: 200, data: [apiRow()] }) as any);
+    renderHook(
+      () => {
+        const { users, refreshUsers } = useUsers();
+        React.useEffect(() => {
+          void refreshUsers();
+        }, [users, refreshUsers]);
+      },
+      { wrapper: createWrapper() },
+    );
+
+    await waitFor(() => expect(mockGetAll).toHaveBeenCalled());
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    expect(mockGetAll.mock.calls.length).toBeLessThanOrEqual(3);
   });
 });
