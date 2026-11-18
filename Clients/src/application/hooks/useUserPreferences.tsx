@@ -1,3 +1,4 @@
+import { useCallback } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { UserPreferencesModel } from "../../domain/models/Common/userPreferences/userPreferences.model";
 import { getCurrentUserPreferences } from "../repository/userPreferences.repository";
@@ -38,9 +39,10 @@ const useUserPreferences = () => {
     gcTime: 10 * 60 * 1000, // Keep in cache for 10 minutes
   });
 
-  const refreshUserPreferences = async () => {
+  // Stable across renders, so callers can use it in effect dependencies.
+  const refreshUserPreferences = useCallback(async () => {
     await queryClient.invalidateQueries({ queryKey: [...USER_PREFERENCES_QUERY_KEY, userId] });
-  };
+  }, [queryClient, userId]);
 
   return {
     userPreferences: data ?? defaultUserPreferences,

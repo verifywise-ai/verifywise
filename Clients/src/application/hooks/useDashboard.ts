@@ -1,3 +1,4 @@
+import { useCallback } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getAllEntities } from "../repository/entity.repository";
 import { Dashboard } from "../../domain/types/Dashboard";
@@ -21,9 +22,10 @@ export const useDashboard = () => {
     gcTime: 10 * 60 * 1000, // Keep in cache for 10 minutes
   });
 
-  const fetchDashboard = async () => {
+  // Stable across renders, so callers can use it in effect dependencies.
+  const fetchDashboard = useCallback(async () => {
     await queryClient.invalidateQueries({ queryKey: DASHBOARD_QUERY_KEY });
-  };
+  }, [queryClient]);
 
   return { dashboard, loading, isPending, fetchDashboard };
 };
