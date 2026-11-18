@@ -16,6 +16,7 @@
  */
 import { body, param, ValidationChain } from "express-validator";
 import { handleValidationErrors } from "../validate.middleware";
+import { toPositiveId } from "../../utils/modelReferences.utils";
 import { ModelInventoryStatus } from "../../domain.layer/enums/model-inventory-status.enum";
 import { ModelInventoryType } from "../../domain.layer/enums/model-inventory-type.enum";
 import { ModelRiskCategory } from "../../domain.layer/enums/model-risk-category.enum";
@@ -57,26 +58,23 @@ const nonEmptyTextIfSent = (field: string) =>
 const optionalText = (field: string) =>
   body(field).optional({ values: "null" }).isString().withMessage(`${field} must be a string`);
 
-/** isInt checks array elements one by one, so [5] would pass it: refuse non-scalars. */
-const isScalar = (value: unknown) => typeof value === "number" || typeof value === "string";
+/**
+ * A positive int32 id, as a number or a string of digits without leading
+ * zeros: the house parser (toPositiveId), so the validator, the membership
+ * check and the write read the value the same way. isInt alone would accept
+ * [5] (element by element), "07" and "+5".
+ */
+const isRefId = (value: unknown) => toPositiveId(value) !== null;
 
-/** "", 0 and null mean "none"; anything else must be a positive integer. */
+/** "" and null mean "none"; anything else must be a positive integer id. */
 const optionalRefId = (field: string) =>
   body(field)
-    .optional({ values: "falsy" })
-    .custom(isScalar)
-    .withMessage(`${field} must be a positive integer`)
-    .bail()
-    .isInt({ min: 1, max: MAX_ID })
+    .optional({ values: "null" })
+    .custom((value) => value === "" || isRefId(value))
     .withMessage(`${field} must be a positive integer`);
 
 const requiredRefId = (field: string, message: string) =>
-  body(field)
-    .custom(isScalar)
-    .withMessage(message)
-    .bail()
-    .isInt({ min: 1, max: MAX_ID })
-    .withMessage(message);
+  body(field).custom(isRefId).withMessage(message);
 
 const idList = (field: string): ValidationChain[] => [
   body(field)

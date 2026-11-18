@@ -143,3 +143,20 @@ describe("enum fields must be strings", () => {
     ).toEqual(["risk_level"]);
   });
 });
+
+describe("ids use the house parser", () => {
+  it.each([["07"], ["0"], ["-1"], ["1e3"], [2147483648], ["+5"]])(
+    "refuses approver %p on v1",
+    async (approver) => {
+      expect((await run(validateCreateModelInventoryV1, { ...model, approver })).fields).toEqual([
+        "approver",
+      ]);
+    },
+  );
+
+  it.each([["07"], [2147483648]])("refuses model risk owner %p on v1", async (owner) => {
+    expect((await run(validateUpdateModelRiskV1, { owner }, { id: "1" })).fields).toEqual([
+      "owner",
+    ]);
+  });
+});

@@ -19,7 +19,9 @@ describe("createNewModelRiskQuery with only a name", () => {
     mockQuery.mockResolvedValueOnce([{ id: 1 }]);
     await createNewModelRiskQuery({ risk_name: "Drift" } as any, 1);
     expect(mockQuery).toHaveBeenCalledTimes(1);
-    const { replacements } = mockQuery.mock.calls[0][1] as { replacements: Record<string, unknown> };
+    const { replacements } = mockQuery.mock.calls[0][1] as {
+      replacements: Record<string, unknown>;
+    };
     for (const [key, value] of Object.entries(replacements)) {
       expect([key, value]).not.toEqual([key, undefined]);
     }
@@ -35,7 +37,9 @@ describe("createNewModelRiskQuery with only a name", () => {
   it("stores an empty target date as null", async () => {
     mockQuery.mockResolvedValueOnce([{ id: 1 }]);
     await createNewModelRiskQuery({ risk_name: "Drift", target_date: "" } as any, 1);
-    const { replacements } = mockQuery.mock.calls[0][1] as { replacements: Record<string, unknown> };
+    const { replacements } = mockQuery.mock.calls[0][1] as {
+      replacements: Record<string, unknown>;
+    };
     expect(replacements.target_date).toBeNull();
   });
 });

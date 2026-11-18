@@ -64,9 +64,13 @@ export const MODEL_APPROVER_INVALID = "The approver must be a member of this org
  *
  * - `status`: absent, or one of the model statuses. On create, "" and null
  *   still mean "not sent" (Pending), as the legacy route always accepted.
- * - `approver`: absent, null, "" (none), an integer or a string of digits.
+ * - `approver`: absent; null or "" (none); or a positive int32 id, as a
+ *   number or a string of digits (leading zeros allowed, so "07" is 7).
+ *   Anything else, 0, "0", "-1", "1e3" and 2147483648 included, is refused.
  *
- * Returns the input with a create's empty status removed.
+ * Returns the input with a create's empty status removed and the approver
+ * normalized once to a number or null: the approval rule, the membership
+ * check, the notice and the write all read that same value.
  */
 export function assertModelApprovalInput<T extends { status?: unknown; approver?: unknown }>(
   input: T,
@@ -80,17 +84,19 @@ export function assertModelApprovalInput<T extends { status?: unknown; approver?
   if (checked.status !== undefined && !isModelStatus(checked.status)) {
     throw new ValidationException(MODEL_STATUS_INVALID, "status", checked.status);
   }
-  const approver = checked.approver;
-  const approverOk =
-    approver === undefined ||
-    approver === null ||
-    approver === "" ||
-    (typeof approver === "number" && Number.isInteger(approver)) ||
-    (typeof approver === "string" && /^[0-9]+$/.test(approver));
-  if (!approverOk) {
-    throw new ValidationException(MODEL_APPROVER_INVALID, "approver", approver);
+  if (checked.approver !== undefined) {
+    checked = { ...checked, approver: normalizeApproverId(checked.approver) };
   }
   return checked;
+}
+
+/** null for null or ""; the id for a positive int32 (see above); else a 400. */
+function normalizeApproverId(value: unknown): number | null {
+  if (value === null || value === "") return null;
+  // "07" is 7: drop leading zeros, then the house id parser decides.
+  const id = toPositiveId(typeof value === "string" ? value.replace(/^0+(?=\d)/, "") : value);
+  if (id === null) throw new ValidationException(MODEL_APPROVER_INVALID, "approver", value);
+  return id;
 }
 
 const MODEL_APPROVAL_FORBIDDEN_MESSAGES = {
@@ -119,9 +125,9 @@ export interface ModelApprovalArgs {
   callerIsAdmin: boolean;
 }
 
-/** null for none ("", 0, null), else the id (validation has already run). */
+/** The approver as a number, or null for none (the input is normalized first). */
 function toApproverId(value: unknown): number | null {
-  if (value === null || value === undefined || value === "" || value === 0) return null;
+  if (value === null || value === undefined || value === "") return null;
   return toPositiveId(value);
 }
 

@@ -317,3 +317,32 @@ describe("assertModelApprovalAllowed fails closed on a malformed status", () => 
     ).toBe(MODEL_APPROVAL_FORBIDDEN_MESSAGE);
   });
 });
+
+describe("approver ids are normalized once", () => {
+  it('reads "07" as 7, so a saved approver 7 sent as "07" is unchanged', () => {
+    const input = assertModelApprovalInput({ approver: "07" }, { creating: false });
+    expect(input.approver).toBe(7);
+    expect(() =>
+      assertModelApprovalAllowed({
+        existing: { approver: 7, status: "Approved" },
+        submitted: { approver: input.approver, status: "Approved" },
+        callerId: EDITOR,
+        callerIsAdmin: false,
+      }),
+    ).not.toThrow();
+  });
+
+  it('reads "" and null as none', () => {
+    expect(assertModelApprovalInput({ approver: "" }, { creating: true }).approver).toBeNull();
+    expect(assertModelApprovalInput({ approver: null }, { creating: true }).approver).toBeNull();
+  });
+
+  it.each([["0"], ["00"], ["-1"], ["1e3"], [2147483648], ["2147483648"], [0], [-3]])(
+    "refuses approver %p with a 400",
+    (approver) => {
+      expect(() => assertModelApprovalInput({ approver }, { creating: false })).toThrow(
+        ValidationException,
+      );
+    },
+  );
+});

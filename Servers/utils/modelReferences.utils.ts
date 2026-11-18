@@ -18,7 +18,7 @@ import { getProjectAccessQuery } from "./project.utils";
 /** A positive integer, or a string of digits. Anything else is null. */
 export function toPositiveId(value: unknown): number | null {
   if (typeof value === "number") {
-    return Number.isInteger(value) && value > 0 ? value : null;
+    return Number.isInteger(value) && value > 0 && value <= 2147483647 ? value : null;
   }
   if (typeof value === "string" && /^[1-9][0-9]{0,9}$/.test(value)) {
     const n = Number(value);
