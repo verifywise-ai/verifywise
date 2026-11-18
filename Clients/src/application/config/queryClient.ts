@@ -4,29 +4,17 @@ import {
   LLM_KEY_STATUS_QUERY_KEY,
   retryLLMKeyQuery,
 } from "../constants/llmKeyQueries";
+import { retryUpTo } from "../utils/queryRetry";
 
-/** Retries for a query that failed with anything but a rate limit. */
-const MAX_QUERY_RETRIES = 3;
-
-/**
- * Default query retry: up to three times, but never after a 429. The rate
- * limit counts every request from the client's address, so a retry spends
- * the same budget again and keeps it exhausted for everyone behind that
- * address.
- */
-export const retryQuery = (failureCount: number, error: unknown) => {
-  const err = error as { status?: number; response?: { status?: number } } | null;
-  const status = err?.status ?? err?.response?.status;
-  if (status === 429) return false;
-  return failureCount < MAX_QUERY_RETRIES;
-};
+/** Default query retry: up to three times for a server or network failure, never after a 4xx but 408. */
+export const retryQuery = retryUpTo(3);
 
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       staleTime: 2 * 1000, // 2 seconds - data considered fresh for 2 seconds
       gcTime: 10 * 60 * 1000, // 10 minutes - cache kept in memory for 10 minutes
-      retry: retryQuery, // Up to 3 retries, none after a 429
+      retry: retryQuery, // Up to 3 retries, none after a 4xx but 408
       refetchOnWindowFocus: false, // Don't refetch when window regains focus
       refetchOnMount: true, // Refetch when component mounts
       refetchOnReconnect: true, // Refetch when internet reconnects

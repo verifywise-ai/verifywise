@@ -27,8 +27,9 @@ const NO_USERS: User[] = [];
  * selected array while the cached rows are unchanged, and memos or effects
  * keyed on `users` do not run again after a refetch that changed nothing.
  */
-const toUsers = (response: ApiResponse): User[] =>
-  response.data.map((user: ApiUser): User => ({
+const toUsers = (response: ApiResponse | undefined): User[] =>
+  // GET /users answers 204 with no body when the organization has no users.
+  (Array.isArray(response?.data) ? response.data : []).map((user: ApiUser): User => ({
     id: user.id,
     name: user.name,
     surname: user.surname,

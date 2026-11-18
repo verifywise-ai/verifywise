@@ -37,18 +37,20 @@ describe("queryClient config", () => {
   });
 
   describe("retryQuery", () => {
-    it("retries other failures up to three times", () => {
+    it("retries server, network and timeout failures up to three times", () => {
       const serverError = { status: 500 };
       expect(retryQuery(0, serverError)).toBe(true);
       expect(retryQuery(2, serverError)).toBe(true);
       expect(retryQuery(3, serverError)).toBe(false);
       expect(retryQuery(0, new Error("Network Error"))).toBe(true);
       expect(retryQuery(0, null)).toBe(true);
+      expect(retryQuery(0, { status: 408 })).toBe(true);
     });
 
-    it("never retries a rate-limited request", () => {
+    it("never retries a rate-limited request or another 4xx", () => {
       expect(retryQuery(0, { status: 429 })).toBe(false);
       expect(retryQuery(0, { response: { status: 429 } })).toBe(false);
+      expect(retryQuery(0, { status: 404 })).toBe(false);
     });
   });
 });

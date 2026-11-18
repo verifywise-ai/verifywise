@@ -29,10 +29,9 @@ const apiRow = (overrides: Record<string, unknown> = {}) => ({
   ...overrides,
 });
 
-function createWrapper() {
-  const queryClient = new QueryClient({
-    defaultOptions: { queries: { retry: false } },
-  });
+function createWrapper(
+  queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } }),
+) {
   return ({ children }: { children: React.ReactNode }) =>
     React.createElement(QueryClientProvider, { client: queryClient }, children);
 }
@@ -88,13 +87,14 @@ describe("useUsers", () => {
 
   it("keeps the same users array after a refetch that returns the same rows", async () => {
     mockGetAll.mockImplementation(async () => ({ status: 200, data: [apiRow()] }) as any);
-    const { result } = renderHook(() => useUsers(), { wrapper: createWrapper() });
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const { result } = renderHook(() => useUsers(), { wrapper: createWrapper(client) });
     await waitFor(() => expect(result.current.users).toHaveLength(1));
     const first = result.current.users;
 
     await act(() => result.current.refreshUsers());
-    // Let React Query hand the refetched result to the hook before comparing.
-    await act(() => new Promise((resolve) => setTimeout(resolve, 50)));
+    // The second fetch has been stored, and the hook has rendered with it.
+    await waitFor(() => expect(client.getQueryState(["users"])?.dataUpdateCount).toBe(2));
 
     expect(mockGetAll).toHaveBeenCalledTimes(2);
     expect(result.current.users).toBe(first);
@@ -118,7 +118,7 @@ describe("useUsers", () => {
     // The Home page pattern: an effect that refreshes users and lists them
     // (directly or through a parent re-render) among its dependencies.
     mockGetAll.mockImplementation(async () => ({ status: 200, data: [apiRow()] }) as any);
-    renderHook(
+    const { unmount } = renderHook(
       () => {
         const { users, refreshUsers } = useUsers();
         React.useEffect(() => {
@@ -130,6 +130,17 @@ describe("useUsers", () => {
 
     await waitFor(() => expect(mockGetAll).toHaveBeenCalled());
     await new Promise((resolve) => setTimeout(resolve, 200));
-    expect(mockGetAll.mock.calls.length).toBeLessThanOrEqual(3);
+    const calls = mockGetAll.mock.calls.length;
+    unmount();
+    expect(calls).toBeLessThanOrEqual(3);
+  });
+
+  it("returns no users when GET /users answers 204 with no body", async () => {
+    mockGetAll.mockResolvedValue("" as any);
+    const { result } = renderHook(() => useUsers(), { wrapper: createWrapper() });
+
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    expect(result.current.users).toEqual([]);
+    expect(result.current.error).toBeNull();
   });
 });
