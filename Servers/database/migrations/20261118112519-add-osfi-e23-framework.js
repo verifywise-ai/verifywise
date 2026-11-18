@@ -18,6 +18,7 @@
  *
  * Idempotent: on a fresh database the 20260805* migrations already create
  * E-23 from the registry, so this returns early when frameworks row 26 exists.
+ * down() is a no-op (see below).
  */
 
 const { requireStructureByKey } = require("../../dist/structures");
@@ -219,36 +220,12 @@ module.exports = {
     }
   },
 
-  async down(queryInterface) {
-    const sequelize = queryInterface.sequelize;
-    const { id: frameworkId, tables } = requireStructureByKey(FRAMEWORK_KEY);
-    const transaction = await sequelize.transaction();
-
-    try {
-      await sequelize.query(`DROP TABLE IF EXISTS verifywise.${tables.l2_risks} CASCADE;`, {
-        transaction,
-      });
-      await sequelize.query(`DROP TABLE IF EXISTS verifywise.${tables.l2_impl} CASCADE;`, {
-        transaction,
-      });
-      await sequelize.query(`DROP TYPE IF EXISTS verifywise.enum_${tables.l2_impl}_status;`, {
-        transaction,
-      });
-      await sequelize.query(`DROP TABLE IF EXISTS verifywise.${tables.l2_struct} CASCADE;`, {
-        transaction,
-      });
-      await sequelize.query(`DROP TABLE IF EXISTS verifywise.${tables.l1_struct} CASCADE;`, {
-        transaction,
-      });
-      await sequelize.query(`DELETE FROM verifywise.frameworks WHERE id = :id;`, {
-        replacements: { id: frameworkId },
-        transaction,
-      });
-
-      await transaction.commit();
-    } catch (err) {
-      await transaction.rollback();
-      throw err;
-    }
-  },
+  /**
+   * No-op on purpose. On a fresh install the 20260805* migrations create E-23
+   * and up() above does nothing, so dropping the tables here would delete
+   * every organization's E-23 work (removing frameworks row 26 cascades
+   * through projects_frameworks) while those migrations still count as
+   * applied. The same reasoning keeps 20261117140851's down() a no-op.
+   */
+  async down() {},
 };

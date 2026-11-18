@@ -1,7 +1,7 @@
 "use strict";
 
 /**
- * Build the bundled frameworks (ids 5-25: SOC 2, GDPR, HIPAA, ...) that were
+ * Build the bundled frameworks (ids 5-26: SOC 2, GDPR, HIPAA, ...) that were
  * attached to a use case or organizational project without being set up.
  *
  * Until this release, creating a use case (or approving one) built only the
@@ -40,20 +40,27 @@ module.exports = {
     await sequelize.transaction(async (transaction) => {
       for (const { id: frameworkId, key, tables, cols } of FRAMEWORK_STRUCTURES) {
         // A framework registered after this migration (OSFI E-23, id 26) gets
-        // its tables from its own, later migration. On a database upgrading
-        // from an older release those tables do not exist yet when this runs,
-        // and such a framework has no links to build, so skip it. Log every
-        // skip: for an older framework it means the database is missing a
-        // table it should have, and that must not pass silently.
-        const [[{ l2Impl }]] = await sequelize.query(`SELECT to_regclass(:table) AS "l2Impl";`, {
-          replacements: { table: `verifywise.${tables.l2_impl}` },
-          transaction,
-        });
-        if (l2Impl === null) {
-          console.log(
-            `[build-empty-bundled-frameworks] ${key}: skipped, table verifywise.${tables.l2_impl} does not exist`,
-          );
+        // its frameworks row and tables from its own, later migration. On a
+        // database upgrading from an older release neither exists yet when
+        // this runs, and such a framework has no links to build, so skip it.
+        // A framework whose row exists but whose table is missing is a broken
+        // database, and must fail here rather than pass silently.
+        const [[{ installed, l2Impl }]] = await sequelize.query(
+          `SELECT EXISTS (SELECT 1 FROM verifywise.frameworks WHERE id = :frameworkId) AS installed,
+                  to_regclass(:table) AS "l2Impl";`,
+          {
+            replacements: { frameworkId, table: `verifywise.${tables.l2_impl}` },
+            transaction,
+          },
+        );
+        if (!installed) {
+          console.log(`[build-empty-bundled-frameworks] ${key}: skipped, not installed yet`);
           continue;
+        }
+        if (l2Impl === null) {
+          throw new Error(
+            `[build-empty-bundled-frameworks] ${key}: framework ${frameworkId} exists but verifywise.${tables.l2_impl} does not`,
+          );
         }
 
         const [emptyLinks] = await sequelize.query(
