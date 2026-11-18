@@ -19,10 +19,14 @@
 import { sequelize } from "../../database/db";
 import { QueryTypes } from "sequelize";
 import logger from "../../utils/logger/fileLogger";
+import { projectVisibilitySql } from "../../utils/projectVisibility.utils";
+import { actingProjectViewer, NO_PROJECT_VIEWER } from "./useCaseScope";
 
 export interface ListProjectsParams {
   search?: string;
   limit?: number;
+  _userId?: number;
+  _requesterId?: number;
 }
 
 export interface AdvisorProjectSummary {
@@ -47,12 +51,20 @@ const listProjects = async (
     MAX_LIMIT,
   );
 
+  // Only the use cases the user's use case list shows; none without a user.
+  const viewer = await actingProjectViewer(params as Record<string, unknown>, organizationId);
+  if (viewer === NO_PROJECT_VIEWER) return [];
+  const visibility = projectVisibilitySql("projects", viewer);
+
   const replacements: Record<string, unknown> = {
     organization_id: organizationId,
+    // projectVisibilitySql binds :organizationId.
+    organizationId,
     limit,
+    ...visibility.replacements,
   };
 
-  let whereClause = "projects.organization_id = :organization_id";
+  let whereClause = `projects.organization_id = :organization_id${visibility.sql}`;
   if (params.search && params.search.trim().length > 0) {
     replacements.search = `%${params.search.trim()}%`;
     whereClause += `

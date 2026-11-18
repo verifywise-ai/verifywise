@@ -490,15 +490,15 @@ export async function updateImplQuery(
 
 /**
  * Look up the project_id that an impl row belongs to (used by the PATCH
- * controller to bump projects.updated_at inside the transaction). Returns
- * null if the row doesn't exist for this org.
+ * controller to bump projects.updated_at inside the transaction, and by the
+ * use case access guard). Returns null if the row doesn't exist for this org.
  */
 export async function getImplContextQuery(
   frameworkId: number,
   level: ImplLevel,
   implId: number,
   organizationId: number,
-  transaction: Transaction,
+  transaction?: Transaction,
 ) {
   const resolved = resolveLevel(frameworkId, level);
   if (!resolved) return null;

@@ -32,7 +32,7 @@ function createReq(overrides: Record<string, unknown> = {}): Request {
 }
 
 function createRes(): Response {
-  const res: Partial<Response> = {};
+  const res: Partial<Response> = { locals: {} };
   res.status = jest.fn().mockReturnValue(res) as unknown as Response["status"];
   res.json = jest.fn().mockReturnValue(res) as unknown as Response["json"];
   return res as Response;

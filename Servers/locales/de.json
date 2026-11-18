@@ -1535,5 +1535,9 @@
   "{assigner} assigned you as Risk Approver for {count} risks: {names}": "{assigner} hat Sie als Risikogenehmiger für {count} Risiken zugewiesen: {names}",
   "{assigner} assigned you as Risk Approver for {count} risks: {names} and {more} more": "{assigner} hat Sie als Risikogenehmiger für {count} Risiken zugewiesen: {names} und {more} weitere",
   "archive_risks_linked_only_here must be \"true\" or \"false\"": "archive_risks_linked_only_here muss \"true\" oder \"false\" sein",
+  "Invalid ID": "Ungültige ID",
+  "limit must be an integer from 1 to 100": "limit muss eine ganze Zahl von 1 bis 100 sein",
+  "offset must be a whole number of 0 or more": "offset muss eine ganze Zahl ab 0 sein",
+  "orders must list positive integer ids with display orders of 0 or more": "orders muss positive ganzzahlige IDs mit Anzeigereihenfolgen ab 0 enthalten",
   "Question not found in this cycle": "Frage in diesem Zyklus nicht gefunden"
 }
