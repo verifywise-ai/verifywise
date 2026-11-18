@@ -114,7 +114,35 @@ export const modelInventoryContent: ArticleContent = {
         { bold: 'Approved', text: 'Model has been reviewed and authorized for production use' },
         { bold: 'Restricted', text: 'Model is approved for limited use cases or specific projects only' },
         { bold: 'Blocked', text: 'Model is not authorized for use in the organization' },
+        { bold: 'Rejected', text: 'Model was reviewed and turned down' },
+        { bold: 'Retired', text: 'Model has been decommissioned and is no longer in use' },
       ],
+    },
+    {
+      type: 'heading',
+      id: 'who-can-approve',
+      level: 3,
+      text: 'Who can approve a model',
+    },
+    {
+      type: 'paragraph',
+      text: 'Approved, Restricted, Blocked and Rejected are decisions. Once a model has an approver, only that approver or an Admin can move it to or from a decision, or change or remove its approver. Moving between Pending and Retired is open to anyone who can edit models.',
+    },
+    {
+      type: 'bullet-list',
+      items: [
+        { text: 'You can\'t pick yourself as a model\'s approver unless you are an Admin.' },
+        { text: 'When you name a new approver, only an Admin can also set a decision in the same save. The new approver decides afterwards.' },
+        { text: 'A model with no approver can be given any status by anyone who can edit models.' },
+      ],
+    },
+    {
+      type: 'paragraph',
+      text: 'The form shows the statuses you can\'t set as unavailable. If a save is refused, you see "Only the model\'s approver or an Admin can change its approval."',
+    },
+    {
+      type: 'paragraph',
+      text: 'Setting a model to Approved, when you add it or later, sends the "risk assessment required" notice and starts the model deployment workflow.',
     },
     {
       type: 'callout',
@@ -209,6 +237,16 @@ export const modelInventoryContent: ArticleContent = {
     {
       type: 'paragraph',
       text: 'Evidence linked to the model stops listing it. Archived risks are read-only and stay out of reports.',
+    },
+    {
+      type: 'heading',
+      id: 'model-risk-owners',
+      level: 2,
+      text: 'Model risk owners',
+    },
+    {
+      type: 'paragraph',
+      text: 'When you add a model risk with an owner, or give an existing risk a new owner, the owner gets an in-app notification and an email with a link to the risk. Saving a risk without changing its owner sends nothing.',
     },
     {
       type: 'heading',
