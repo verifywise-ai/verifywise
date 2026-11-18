@@ -56,7 +56,7 @@ model_risks
 ├── key_metrics
 ├── current_values
 ├── threshold
-├── model_id (FK → model_inventories)
+├── model_id (FK → model_inventories, ON DELETE SET NULL; nullable)
 ├── is_deleted
 ├── deleted_at
 ├── created_at
@@ -158,7 +158,7 @@ enum ModelRiskStatus {
 | GET | `/modelInventory/by-frameworkId/:id` | Get by framework |
 | POST | `/modelInventory/` | Create model; each linked use case needs the caller's access |
 | PATCH | `/modelInventory/:id` | Update model; each use case linked or unlinked needs the caller's access |
-| DELETE | `/modelInventory/:id` | Delete model |
+| DELETE | `/modelInventory/:id` | Delete model; `?deleteRisks=true` archives its risks (see below) |
 
 The inventory itself stays visible to the whole organization (decision 8);
 what belongs to one use case needs access to that use case (Admin, owner or
@@ -178,6 +178,50 @@ check. Model risks follow their model (org-wide). Dataset writes and
 `parameter` is a 400. Evidence writes are checked in the controller (see
 `evidence.md`): `model.edit` for evidence linked to models.
 
+**Deleting a model never deletes its risks** (`deleteModelInventoryByIdQuery`
+→ `releaseModelRisksOfModelQuery`, one transaction):
+
+- **Keep risks** (default): the risks stay, with `model_id = NULL`. The model
+  risks list and its export show them as "No model"; their risk links survive.
+- **Delete risks too** (`?deleteRisks=true`): the live risks are archived the
+  way `DELETE /modelRisks/:id` archives one (`is_deleted`, `deleted_at`,
+  custom field values removed, a deletion in its history), in set-based
+  statements, then lose the model like kept ones. Archived risks show under
+  `filter=deleted`.
+- Every risk that loses the model, kept or archived, gets an "Associated
+  model" change (model name → `-`) in its history. The name comes from the
+  `model_id` formatter in `config/changeHistory.config.ts` (provider and
+  model, as an incident's affected model is named), the same one an edit of a
+  risk's model uses, so both record names, not ids. Whether `model_id`
+  changed is decided by id (`fieldComparators`), so a move between two models
+  with the same name is still recorded.
+- The single risk delete and the model release archive through one helper,
+  `archiveModelRisksQuery` (by risk id or by model id).
+- The model row is locked (`lockModelInventoryQuery`, `FOR UPDATE`) at the
+  start of the transaction, before the 404 and MRM history checks, and again
+  by `deleteModelInventoryByIdQuery` for callers that skip the controller (AI
+  Advisor). A risk, validation or finding being added to the model waits for
+  the delete: a risk can never end up kept when the user chose to delete the
+  risks, and a validation added meanwhile still gets the friendly 409.
+- Evidence drops the model id from `mapped_model_ids` (organization-scoped
+  `array_remove`). `updated_at` is left alone: the evidence freshness sweep
+  reads it as the evidence's last review.
+- The screen asks Keep / Delete only when the model has live risks. It always
+  asks the server (`GET /modelRisks?filter=active`), whatever the status
+  filter, since the loaded list can be filtered or stale; if that request
+  fails it asks Keep / Delete anyway. (This downloads every live risk for a
+  yes/no answer; a per-model count would be a new contract on a legacy
+  route.)
+- The model risks table and its export label a risk with no model "No
+  model" and one whose model is not in the loaded list "Unknown".
+
+`model_risks.model_id` is `ON DELETE SET NULL` (migration
+`20261117160827-model-risks-keep-on-model-delete`; it was `CASCADE`, which
+deleted every risk of a model, archived ones and their links too, with no
+history). A model deleted outside this path (demo data clean-up, AI Advisor)
+leaves its risks the same way. The history of an AI Advisor delete is
+recorded as the system's (no user).
+
 ### Model Risks
 
 | Method | Endpoint | Description |
@@ -185,10 +229,23 @@ check. Model risks follow their model (org-wide). Dataset writes and
 | GET | `/modelRisks/` | Get all risks |
 | GET | `/modelRisks/:id` | Get risk by ID |
 | POST | `/modelRisks/` | Create risk |
-| PUT | `/modelRisks/:id` | Update risk |
+| PUT | `/modelRisks/:id` | Update risk (PATCH too) |
 | DELETE | `/modelRisks/:id` | Soft delete |
 
 Query parameter: `filter=active|deleted|all`
+
+An archived (deleted) model risk is read-only: `GET /:id`, `PUT`/`PATCH` and
+`DELETE` answer 404 for it, and the model risks table opens no form for it.
+An update reads the risk `FOR UPDATE` inside its transaction and diffs the
+values as written (`writtenValues`) against that row, so its history shows
+what this update changed even when another write landed just before it.
+History lists (`getEntityChangeHistory`, every entity) order by
+`changed_at DESC, id DESC`: entries written in one transaction share a
+`changed_at`.
+Reports (`dataCollector.collectModelRisks`), the PMM snapshot and the model
+deployment workflow (`risk_level` High or Critical counts as critical) count
+live risks only; the organization report lists risks with no model as
+"No model".
 
 ### Model History
 

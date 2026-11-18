@@ -1,6 +1,6 @@
 import { ModelInventoryModel } from "../domain.layer/models/modelInventory/modelInventory.model";
 import { sequelize } from "../database/db";
-import { Transaction } from "sequelize";
+import { QueryTypes, Transaction } from "sequelize";
 import { TenantAutomationActionModel } from "../domain.layer/models/tenantAutomationAction/tenantAutomationAction.model";
 import { replaceTemplateVariables } from "./automation/automation.utils";
 import { enqueueAutomationAction } from "../services/automations/automationProducer";
@@ -10,6 +10,7 @@ import {
 } from "./automation/modelInventory.automation.utils";
 import { IModelInventoryProjectFramework } from "../domain.layer/interfaces/i.modelInventoryProjectFramework";
 import { recordSnapshotIfChanged } from "./history/modelInventoryHistory.utils";
+import { releaseModelRisksOfModelQuery } from "./modelRisk.utils";
 import {
   assertOrganizationMember,
   assertUseCaseWriteAccess,
@@ -564,23 +565,67 @@ export const updateModelInventoryByIdQuery = async (
   }
 };
 
+/**
+ * Locks the organization's model row for the rest of the transaction (FOR
+ * UPDATE). Anything that adds a risk, validation or finding to the model
+ * takes a key-share lock on that row through its foreign key, so once this
+ * returns, nothing can join the model until the transaction ends and every
+ * row that joined before is visible. False when the organization has no such
+ * model.
+ */
+export const lockModelInventoryQuery = async (
+  id: number,
+  organizationId: number,
+  transaction: Transaction,
+): Promise<boolean> => {
+  const rows = await sequelize.query(
+    `SELECT id FROM model_inventories
+      WHERE organization_id = :organizationId AND id = :id
+      FOR UPDATE`,
+    { replacements: { organizationId, id }, type: QueryTypes.SELECT, transaction },
+  );
+  return rows.length > 0;
+};
+
+/**
+ * Deletes a model. Its risks are never deleted with it: with `deleteRisks`
+ * they are archived (as a model risk delete does), otherwise they stay, with
+ * no model. Evidence stops listing the model.
+ *
+ * `changedByUserId` is who the model risks' change history names; null
+ * (AI Advisor) records it as the system's.
+ */
 export const deleteModelInventoryByIdQuery = async (
   id: number,
   deleteRisks: boolean,
   organizationId: number,
   transaction: Transaction,
+  changedByUserId: number | null = null,
 ) => {
   try {
-    if (deleteRisks) {
-      // Delete associated model risks first
-      await sequelize.query(
-        `DELETE FROM model_risks WHERE organization_id = :organization_id AND model_id = :id`,
-        {
-          replacements: { organization_id: organizationId, id },
-          transaction,
-        },
-      );
-    }
+    // First, so no risk joins the model while its risks are released. A
+    // caller that checked the model under this lock already holds it;
+    // locking again in the same transaction is a no-op.
+    await lockModelInventoryQuery(id, organizationId, transaction);
+    await releaseModelRisksOfModelQuery(
+      id,
+      deleteRisks,
+      organizationId,
+      changedByUserId,
+      transaction,
+    );
+
+    // updated_at stays: the evidence freshness sweep reads it as the last
+    // review of the evidence, which dropping a deleted model is not.
+    await sequelize.query(
+      `UPDATE evidence_hub
+          SET mapped_model_ids = array_remove(mapped_model_ids, :id)
+        WHERE organization_id = :organization_id AND :id = ANY(mapped_model_ids)`,
+      {
+        replacements: { organization_id: organizationId, id },
+        transaction,
+      },
+    );
 
     await deleteAllCustomFieldValuesForEntityQuery(
       "model_inventory",

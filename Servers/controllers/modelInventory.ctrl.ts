@@ -15,6 +15,7 @@ import {
   createNewModelInventoryQuery,
   updateModelInventoryByIdQuery,
   deleteModelInventoryByIdQuery,
+  lockModelInventoryQuery,
   getModelByProjectIdQuery,
   getModelByFrameworkIdQuery,
 } from "../utils/modelInventory.utils";
@@ -599,7 +600,7 @@ export async function updateModelInventoryById(req: Request, res: Response) {
         modelInventoryId,
         modelName,
         savedModelInventory.version || undefined,
-      ).catch((err) => console.error("Failed to trigger model_deployment workflow:", err));
+      ).catch((err) => logger.error("Failed to trigger model_deployment workflow:", err));
     }
 
     // Notify approver if changed to a new user
@@ -722,13 +723,18 @@ export async function deleteModelInventoryById(req: Request, res: Response) {
   let transaction: Transaction | null = null;
 
   try {
-    // Check if model inventory exists
-    const existingModelInventory = (await getModelInventoryByIdQuery(
+    transaction = await sequelize.transaction();
+
+    // Lock the model row first: from here no risk, validation or finding can
+    // join the model, so the checks below hold until the delete commits.
+    const exists = await lockModelInventoryQuery(
       modelInventoryId,
       req.organizationId!,
-    )) as unknown as ModelInventoryModel;
-
-    if (!existingModelInventory) {
+      transaction,
+    );
+    if (!exists) {
+      await transaction.rollback();
+      transaction = null;
       logStructured(
         "successful",
         "no model inventory found",
@@ -741,9 +747,16 @@ export async function deleteModelInventoryById(req: Request, res: Response) {
     // MRM protection (§7b): a model with validation or finding history cannot be
     // hard-deleted — it must be decommissioned so the audit trail survives. The
     // DB's ON DELETE RESTRICT is the backstop; this returns a friendly message
-    // instead of a raw FK error.
-    const hasMrmHistory = await modelHasMrmHistoryQuery(modelInventoryId, req.organizationId!);
+    // instead of a raw FK error. Read under the lock, so a validation added
+    // while the delete waited still answers 409.
+    const hasMrmHistory = await modelHasMrmHistoryQuery(
+      modelInventoryId,
+      req.organizationId!,
+      transaction,
+    );
     if (hasMrmHistory) {
+      await transaction.rollback();
+      transaction = null;
       logStructured(
         "error",
         `model ${modelInventoryId} has MRM history — delete blocked`,
@@ -761,9 +774,6 @@ export async function deleteModelInventoryById(req: Request, res: Response) {
         );
     }
 
-    // Use the existing database query approach for deleting
-    transaction = await sequelize.transaction();
-
     // Record deletion in change history before deleting
     await recordModelInventoryDeletion(
       modelInventoryId,
@@ -777,6 +787,7 @@ export async function deleteModelInventoryById(req: Request, res: Response) {
       deleteRisks,
       req.organizationId!,
       transaction,
+      req.userId ?? null,
     );
     await transaction.commit();
 

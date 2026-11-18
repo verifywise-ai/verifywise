@@ -63,6 +63,8 @@ vi.mock("../../../../application/repository/evidenceHub.repository", () => ({
 }));
 
 const mockGetAllEntities = vi.fn();
+// What the model table's "has risks?" check answered, per model id.
+const riskChecks = vi.hoisted(() => [] as Array<[string, boolean]>);
 const mockDeleteEntityById = vi.fn();
 
 vi.mock("../../../../application/repository/entity.repository", () => ({
@@ -101,7 +103,9 @@ vi.mock("../../../components/PluginSlot", () => ({
   PluginSlot: () => null,
 }));
 vi.mock("../../../components/Table/ExportMenu", () => ({
-  ExportMenu: () => <div data-testid="export-menu" />,
+  ExportMenu: ({ data, filename }: any) => (
+    <div data-testid={`export-menu-${filename}`}>{JSON.stringify(data)}</div>
+  ),
 }));
 vi.mock("../../../components/Table/FilterBy", () => ({
   FilterBy: () => <div data-testid="filter-by" />,
@@ -125,7 +129,7 @@ vi.mock("../../../components/Layout/PageHeaderExtended", () => ({
 // ---- Tables: exposed as thin stubs that surface the props index.tsx wires up ----
 
 vi.mock("../modelInventoryTable", () => ({
-  default: ({ data, onEdit, onDelete }: any) => (
+  default: ({ data, onEdit, onDelete, onCheckModelHasRisks }: any) => (
     <div data-testid="model-inventory-table">
       <span data-testid="model-inventory-count">{data.length}</span>
       {data.map((row: any) => (
@@ -133,6 +137,14 @@ vi.mock("../modelInventoryTable", () => ({
       ))}
       <button onClick={() => onEdit?.("1")}>edit-model-1</button>
       <button onClick={() => onDelete?.("1", false)}>delete-model-1</button>
+      {["1", "2"].map((id) => (
+        <button
+          key={id}
+          onClick={async () => riskChecks.push([id, await onCheckModelHasRisks(id)])}
+        >
+          check-risks-{id}
+        </button>
+      ))}
     </div>
   ),
 }));
@@ -226,6 +238,7 @@ function mockEntities() {
 describe("ModelInventory interactions", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    riskChecks.length = 0;
     mockEntities();
     vi.spyOn(console, "error").mockImplementation(() => {});
     vi.spyOn(console, "warn").mockImplementation(() => {});
@@ -343,6 +356,133 @@ describe("ModelInventory interactions", () => {
     await waitFor(() => {
       expect(screen.getByText(/deleted successfully/)).toBeInTheDocument();
     });
+  });
+
+  it("refetches the model risks after a delete that keeps them", async () => {
+    mockDeleteEntityById.mockResolvedValue({ status: 200 });
+    renderWithProviders(<ModelInventory />);
+    await waitFor(() => expect(screen.getByTestId("model-inventory-table")).toBeInTheDocument());
+    const riskFetches = () =>
+      mockGetAllEntities.mock.calls.filter(([arg]) =>
+        String((arg as { routeUrl: string }).routeUrl).startsWith("/modelRisks"),
+      ).length;
+    await waitFor(() => expect(riskFetches()).toBeGreaterThan(0));
+    const before = riskFetches();
+
+    fireEvent.click(screen.getByText("delete-model-1"));
+
+    await waitFor(() => {
+      expect(mockDeleteEntityById).toHaveBeenCalledWith({ routeUrl: "/modelInventory/1" });
+    });
+    // The kept risks now have no model; the list must show that, not the
+    // deleted model.
+    await waitFor(() => expect(riskFetches()).toBeGreaterThan(before));
+  });
+
+  it("asks Keep or Delete only for a model with live risks, whatever the status filter", async () => {
+    const live = { ...modelRisks[0], id: 1, model_id: 1, is_deleted: false };
+    const archived = { ...modelRisks[0], id: 2, model_id: 2, is_deleted: true };
+    mockGetAllEntities.mockImplementation(({ routeUrl }: { routeUrl: string }) => {
+      if (routeUrl === "/modelInventory") return Promise.resolve({ data: models });
+      if (routeUrl === "/modelRisks?filter=active") return Promise.resolve({ data: [live] });
+      if (routeUrl === "/modelRisks?filter=deleted") return Promise.resolve({ data: [archived] });
+      if (routeUrl === "/modelRisks?filter=all") return Promise.resolve({ data: [live, archived] });
+      return Promise.resolve({ data: [] });
+    });
+    renderWithProviders(<ModelInventory />);
+    await waitFor(() => expect(screen.getByTestId("model-inventory-table")).toBeInTheDocument());
+
+    // Show only deleted model risks.
+    fireEvent.click(screen.getByText("Model risks"));
+    const statusFilter = await screen.findByText("Active only");
+    fireEvent.mouseDown(statusFilter.closest('[role="combobox"]') ?? statusFilter);
+    fireEvent.click(await screen.findByRole("option", { name: "Deleted only" }));
+    await waitFor(() =>
+      expect(mockGetAllEntities).toHaveBeenCalledWith({ routeUrl: "/modelRisks?filter=deleted" }),
+    );
+
+    fireEvent.click(screen.getByText("Models"));
+    fireEvent.click(await screen.findByText("check-risks-1"));
+    fireEvent.click(screen.getByText("check-risks-2"));
+    await waitFor(() => expect(riskChecks).toHaveLength(2));
+    expect(Object.fromEntries(riskChecks)).toEqual({ "1": true, "2": false });
+  });
+
+  it("under Active only, asks the server, not the loaded (stale) list", async () => {
+    const live = { ...modelRisks[0], id: 1, model_id: 1, is_deleted: false };
+    // Loaded before the risk was added: the page's list has no risk.
+    let serverRisks: unknown[] = [];
+    mockGetAllEntities.mockImplementation(({ routeUrl }: { routeUrl: string }) => {
+      if (routeUrl === "/modelInventory") return Promise.resolve({ data: models });
+      if (routeUrl === "/modelRisks?filter=active") return Promise.resolve({ data: serverRisks });
+      return Promise.resolve({ data: [] });
+    });
+    renderWithProviders(<ModelInventory />);
+    await waitFor(() => expect(screen.getByTestId("model-inventory-table")).toBeInTheDocument());
+    await waitFor(() =>
+      expect(mockGetAllEntities).toHaveBeenCalledWith({ routeUrl: "/modelRisks?filter=active" }),
+    );
+
+    serverRisks = [live];
+    fireEvent.click(await screen.findByText("check-risks-1"));
+    await waitFor(() => expect(riskChecks).toHaveLength(1));
+    expect(riskChecks).toEqual([["1", true]]);
+  });
+
+  it("asks Keep or Delete when the live risks cannot be fetched", async () => {
+    let failRiskFetch = false;
+    mockGetAllEntities.mockImplementation(({ routeUrl }: { routeUrl: string }) => {
+      if (routeUrl === "/modelInventory") return Promise.resolve({ data: models });
+      if (routeUrl.startsWith("/modelRisks"))
+        return failRiskFetch
+          ? Promise.reject(new Error("network down"))
+          : Promise.resolve({ data: [] });
+      return Promise.resolve({ data: [] });
+    });
+    renderWithProviders(<ModelInventory />);
+    await waitFor(() => expect(screen.getByTestId("model-inventory-table")).toBeInTheDocument());
+
+    failRiskFetch = true;
+    fireEvent.click(await screen.findByText("check-risks-1"));
+    await waitFor(() => expect(riskChecks).toHaveLength(1));
+    expect(riskChecks).toEqual([["1", true]]);
+  });
+
+  it("exports a risk whose model is not loaded as Unknown, like the table", async () => {
+    mockGetAllEntities.mockImplementation(({ routeUrl }: { routeUrl: string }) => {
+      if (routeUrl === "/modelInventory") return Promise.resolve({ data: models });
+      if (routeUrl.startsWith("/modelRisks"))
+        return Promise.resolve({ data: [{ ...modelRisks[0], model_id: 999 }] });
+      return Promise.resolve({ data: [] });
+    });
+    renderWithProviders(<ModelInventory />);
+    await waitFor(() => expect(screen.getByTestId("model-inventory-table")).toBeInTheDocument());
+    fireEvent.click(screen.getByText("Model risks"));
+
+    await waitFor(() =>
+      expect(screen.getByTestId("export-menu-model-risks")).toHaveTextContent(
+        '"model_name":"Unknown"',
+      ),
+    );
+  });
+
+  it("exports a risk with no model as No model, like the table", async () => {
+    mockGetAllEntities.mockImplementation(({ routeUrl }: { routeUrl: string }) => {
+      if (routeUrl === "/modelInventory") return Promise.resolve({ data: models });
+      if (routeUrl.startsWith("/modelRisks"))
+        return Promise.resolve({ data: [{ ...modelRisks[0], model_id: null }] });
+      return Promise.resolve({ data: [] });
+    });
+    renderWithProviders(<ModelInventory />);
+    await waitFor(() => expect(screen.getByTestId("model-inventory-table")).toBeInTheDocument());
+
+    fireEvent.click(screen.getByText("Model risks"));
+
+    await waitFor(() =>
+      expect(screen.getByTestId("export-menu-model-risks")).toHaveTextContent(
+        '"model_name":"No model"',
+      ),
+    );
   });
 
   it("shows an error alert when the initial fetch fails", async () => {
