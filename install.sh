@@ -74,7 +74,8 @@ check_and_download_compose_files() {
 }
 
 # Secrets that must be set (non-empty) before any container starts.
-# Keep in sync with the blanked values in .env.dev / .env.prod.
+# Keep in sync with the `${VAR:?...}` guards in docker-compose.yml and the
+# .env.prod example in shared/user-guide-content/content/getting-started/installing.ts.
 # ENCRYPTION_KEY: the backend and worker images run with NODE_ENV=production and
 # refuse to start without it (Servers/utils/encryption.utils.ts).
 REQUIRED_SECRETS="DB_PASSWORD SUPERADMIN_PASSWORD JWT_SECRET REFRESH_TOKEN_SECRET ENCRYPTION_ALGORITHM ENCRYPTION_PASSWORD ENCRYPTION_KEY AI_GATEWAY_INTERNAL_KEY EVAL_SERVER_INTERNAL_KEY"
@@ -93,7 +94,7 @@ check_required_secrets() {
     for KEY in $REQUIRED_SECRETS; do
         # Last assignment for KEY, stripped of inline comment, surrounding whitespace and quotes
         VALUE=$(grep -E "^[[:space:]]*${KEY}=" "$ENV_FILE" | tail -n1 \
-            | sed -E "s/^[[:space:]]*${KEY}=//; s/[[:space:]]+#.*$//; s/^[[:space:]]+//; s/[[:space:]]+$//; s/^[\"']//; s/[\"']$//")
+            | sed -E "s/^[[:space:]]*${KEY}=//; s/[[:space:]]+#.*$//; s/^[[:space:]]+//; s/[[:space:]]+$//; s/^[\"']//; s/[\"']$//; s/^[[:space:]]+//; s/[[:space:]]+$//")
         if [ -z "$VALUE" ]; then
             MISSING="$MISSING $KEY"
         fi
@@ -109,8 +110,13 @@ check_required_secrets() {
             *" ENCRYPTION_KEY "*)
                 echo "ENCRYPTION_KEY: for a new install, generate one with: openssl rand -base64 32"
                 echo "  If this install ran before without ENCRYPTION_KEY, its stored credentials were"
-                echo "  encrypted with the old default key. Set ENCRYPTION_KEY=\"$LEGACY_DEFAULT_ENCRYPTION_KEY\""
-                echo "  to keep them readable, then rotate to a new key and save each credential again."
+                echo "  encrypted with the old default key. To keep them readable, add this line exactly,"
+                echo "  without quotes (quotes would become part of the key):"
+                echo "    ENCRYPTION_KEY=$LEGACY_DEFAULT_ENCRYPTION_KEY"
+                echo "  Before rotating ENCRYPTION_KEY later: if API_TOKEN_HASH_SECRET is unset, set it to"
+                echo "  the current ENCRYPTION_KEY value first. API and MCP tokens are hashed with"
+                echo "  ENCRYPTION_KEY when API_TOKEN_HASH_SECRET is unset, so rotating would break them all."
+                echo "  Then rotate and save each credential again."
                 echo ""
                 ;;
         esac

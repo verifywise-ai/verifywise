@@ -239,6 +239,8 @@ SUPERADMIN_EMAIL=admin@verifywise.com
 SUPERADMIN_PASSWORD=YourStr0ngPassword!
 ```
 
+Set every secret in the file as well (`JWT_SECRET`, `REFRESH_TOKEN_SECRET`, `ENCRYPTION_KEY`, `ENCRYPTION_PASSWORD`, `AI_GATEWAY_INTERNAL_KEY`, `EVAL_SERVER_INTERNAL_KEY`). Generate each with `openssl rand -base64 32` and write it without quotes. `install.sh` stops before starting any container if one is missing. The backend refuses to start without `ENCRYPTION_KEY`. If you are upgrading an install that ran without it, `install.sh` prints the old default key to set so your stored credentials keep decrypting.
+
 Note: CORS is automatically configured to allow requests from the same host where the backend is running.
 
 Change the permissions of the `install.sh` script to make it executable, and then execute it.
