@@ -297,6 +297,27 @@ describe("modelInventory.ctrl", () => {
       expect(mockUpdate).not.toHaveBeenCalled();
     });
 
+    it("looks up the caller's Admin role only for a body that sends status or approver", async () => {
+      const { roleHasPermission } = jest.requireMock("../../utils/rolePermissions.utils") as {
+        roleHasPermission: jest.Mock<any>;
+      };
+      mockGetById.mockResolvedValue(
+        mockModel({ id: 1, model: "M1", status: "Pending", approver: 5 }) as any,
+      );
+      mockUpdate.mockResolvedValue(mockModel({ id: 1, model: "M2" }) as any);
+      roleHasPermission.mockClear();
+      await updateModelInventoryById(
+        createReq({ role: "Editor", params: { id: "1" }, body: { model: "M2" } }),
+        createRes(),
+      );
+      expect(roleHasPermission).not.toHaveBeenCalled();
+      await updateModelInventoryById(
+        createReq({ role: "Editor", params: { id: "1" }, body: { status: "Pending" } }),
+        createRes(),
+      );
+      expect(roleHasPermission).toHaveBeenCalledWith(1, "Editor", "organization.admin");
+    });
+
     it("answers 400, not 500, for a value the database cannot store", async () => {
       mockCreate.mockRejectedValue(
         Object.assign(new Error("invalid input value for enum"), { parent: { code: "22P02" } }),

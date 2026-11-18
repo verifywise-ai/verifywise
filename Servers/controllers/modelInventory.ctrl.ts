@@ -208,10 +208,22 @@ export async function getModelByFrameworkId(req: Request, res: Response) {
 /** invalid_text_representation (enums), invalid_datetime_format, datetime_field_overflow. */
 const DATABASE_BAD_VALUE_CODES = new Set(["22P02", "22007", "22008"]);
 
+/**
+ * The approval rule reads callerIsAdmin only for a body that sends a status
+ * or an approver; any other save is allowed whoever sends it. So the role
+ * lookup runs only for those bodies (any value, even an empty one, counts as
+ * sent and is looked up).
+ */
+const sendsApprovalField = (body: unknown): boolean =>
+  typeof body === "object" &&
+  body !== null &&
+  ((body as Record<string, unknown>).status !== undefined ||
+    (body as Record<string, unknown>).approver !== undefined);
+
 const writeContext = async (req: Request): Promise<ModelWriteContext> => ({
   organizationId: req.organizationId!,
   userId: req.userId!,
-  callerIsAdmin: await requestCallerIsAdmin(req),
+  callerIsAdmin: sendsApprovalField(req.body) ? await requestCallerIsAdmin(req) : false,
   useCaseViewer: { userId: req.userId!, role: req.role! },
 });
 
