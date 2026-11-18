@@ -182,14 +182,25 @@ check. Model risks follow their model (org-wide). Dataset writes and
 → `releaseModelRisksOfModelQuery`, one transaction):
 
 - **Keep risks** (default): the risks stay, with `model_id = NULL`. The model
-  risks list shows them as "No model"; their risk links survive; each live one
-  gets an "Associated model" change (model name → `-`) in its history.
-- **Delete risks too** (`?deleteRisks=true`): each live risk is archived the
-  way `DELETE /modelRisks/:id` archives it (`is_deleted`, custom field values
-  removed, a deletion in its history), then loses the model like a kept one.
-  Archived risks show under `filter=deleted`.
+  risks list and its export show them as "No model"; their risk links survive.
+- **Delete risks too** (`?deleteRisks=true`): the live risks are archived the
+  way `DELETE /modelRisks/:id` archives one (`is_deleted`, `deleted_at`,
+  custom field values removed, a deletion in its history), in set-based
+  statements, then lose the model like kept ones. Archived risks show under
+  `filter=deleted`.
+- Every risk that loses the model, kept or archived, gets an "Associated
+  model" change (model name → `-`) in its history. The name comes from the
+  `model_id` formatter in `config/changeHistory.config.ts`, the same one an
+  edit of a risk's model uses, so both record names, not ids.
+- The model row is locked (`FOR UPDATE`) first: a risk being added to the
+  model waits for the delete, so it can never end up kept when the user chose
+  to delete the risks.
 - Evidence drops the model id from `mapped_model_ids` (organization-scoped
-  `array_remove`).
+  `array_remove`). `updated_at` is left alone: the evidence freshness sweep
+  reads it as the evidence's last review.
+- The screen asks Keep / Delete only when the model has live risks; with the
+  model risks status filter on "Deleted only" or "Active + deleted" it asks
+  the server for the live list.
 
 `model_risks.model_id` is `ON DELETE SET NULL` (migration
 `20261117160827-model-risks-keep-on-model-delete`; it was `CASCADE`, which
