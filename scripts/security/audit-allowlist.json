@@ -48,6 +48,12 @@
       "package": "seroval",
       "title": "Seroval: Memory exhaustion via unchecked TypedArray length in JSON deserialization",
       "justification": "Same unreachable-fix situation as ghsa-p6vx-979v-rg4c: seroval <=1.6.2 comes only via @tanstack/react-query-devtools -> @tanstack/query-devtools -> solid-js, and the latest solid-js (1.9.15) still pins seroval ~1.5.4. Exposure is limited to the local-development React Query devtools panel; the deserialization path is not exposed to untrusted production input. The exception will be removed once a compatible upstream chain depending on seroval >=1.6.3 is available."
+    },
+    {
+      "id": "ghsa-fc5q-39xc-vjpf",
+      "package": "picomatch",
+      "title": "picomatch vulnerable to ReDoS through single-branch repeated extglobs",
+      "justification": "No upstream fix: the advisory covers every published version (<=4.0.7, the latest) and lists no patched release. In Clients, picomatch is reached only through build tooling (vite, tinyglobby/fdir, and @svgr/rollup via @rollup/pluginutils), which matches glob patterns written in the repository at build time and is not part of the browser bundle. In Servers, it is reached only through @daytonaio/sdk -> tinyglobby, used by the SDK's Image builder for local Docker build context; advisor/sandbox/daytonaSandbox.ts creates sandboxes from a language preset and never builds an Image, so no user input reaches a glob pattern. The exception will be removed once a patched picomatch is published."
     }
   ]
 }
