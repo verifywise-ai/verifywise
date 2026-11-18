@@ -182,6 +182,10 @@ describe("bundled frameworks picked at creation are built", () => {
 
   it("refuses OSFI E-23 on a use case", async () => {
     const { adminId, api } = await adminApi();
+    const [[fw]] = (await sequelize.query(
+      `SELECT is_organizational FROM frameworks WHERE id = ${OSFI_E23}`,
+    )) as [Array<{ is_organizational: boolean }>, unknown];
+    expect(fw.is_organizational).toBe(true);
     const created = await api.post("/api/projects").send(body(adminId, { framework: [1] }));
     expect(created.status).toBe(201);
     const projectId = projectIdOf(created);
@@ -190,9 +194,19 @@ describe("bundled frameworks picked at creation are built", () => {
       `/api/frameworks/toProject?frameworkId=${OSFI_E23}&projectId=${projectId}`,
     );
 
-    expect(res.status).toBeGreaterThanOrEqual(400);
-    expect(res.status).toBeLessThan(500);
-    expect(await count(`SELECT COUNT(*) AS n FROM osfi_e23_requirements`, {})).toBe(0);
+    // The organizational mismatch branch (not the "Framework not found" one).
+    expect(res.status).toBe(404);
+    expect(JSON.stringify(res.body)).toContain(
+      "Framework not found or could not be added to the project.",
+    );
+    expect(
+      await count(
+        `SELECT COUNT(*) AS n FROM osfi_e23_requirements i
+           JOIN projects_frameworks pf ON pf.id = i.projects_frameworks_id
+          WHERE pf.project_id = :projectId`,
+        { projectId },
+      ),
+    ).toBe(0);
   });
 
   it("removing OSFI E-23 deletes its requirement rows", async () => {
