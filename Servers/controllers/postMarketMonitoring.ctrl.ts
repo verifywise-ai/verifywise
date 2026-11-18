@@ -1090,6 +1090,7 @@ export async function getReports(req: Request, res: Response): Promise<any> {
         limit: filters.limit,
       },
       req.organizationId!,
+      { userId: req.userId!, role: req.role! },
     );
 
     await logSuccess({

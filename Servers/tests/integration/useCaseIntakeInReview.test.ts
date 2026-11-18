@@ -19,17 +19,21 @@ async function appFor(orgId: number, userId: number, role: string) {
   );
 }
 
-async function seedOrg(role: "Admin" | "Reviewer" = "Admin") {
+const ROLE_IDS = { Admin: 1, Reviewer: 2, Editor: 3, Auditor: 4 } as const;
+type RoleName = keyof typeof ROLE_IDS;
+
+async function seedUser(orgId: number, role: RoleName) {
   counter += 1;
+  const email = `intake-${Date.now()}-${counter}@test.com`;
+  const userId = await createTestUser(orgId, ROLE_IDS[role], email, "Pw123456!");
+  return { userId, email, api: await appFor(orgId, userId, role) };
+}
+
+async function seedOrg(role: RoleName = "Admin") {
   const orgId = await createTestOrganization();
-  const userId = await createTestUser(
-    orgId,
-    role === "Admin" ? 1 : 2,
-    `intake-${Date.now()}-${counter}@test.com`,
-    "Pw123456!",
-  );
+  const { userId, email, api } = await seedUser(orgId, role);
   const formId = await form(orgId, userId, "AI use case request", "f_title");
-  return { orgId, userId, formId, api: await appFor(orgId, userId, role) };
+  return { orgId, userId, email, formId, api };
 }
 
 /**
@@ -81,13 +85,14 @@ async function submission(
     reviewedAgo?: string;
     originalId?: number;
     entityId?: number;
+    submitterEmail?: string;
   } = {},
 ): Promise<number> {
   const [rows] = await sequelize.query(
     `INSERT INTO intake_submissions
-       (organization_id, form_id, submitter_name, data, entity_type, status, created_at,
-        reviewed_at, original_submission_id, entity_id)
-     VALUES (:orgId, :formId, 'Sam', :data, :entityType, :status,
+       (organization_id, form_id, submitter_name, submitter_email, data, entity_type, status,
+        created_at, reviewed_at, original_submission_id, entity_id)
+     VALUES (:orgId, :formId, 'Sam', :submitterEmail, :data, :entityType, :status,
              NOW() - CAST(:createdAgo AS interval),
              NOW() - CAST(:reviewedAgo AS interval), :originalId, :entityId)
      RETURNING id`,
@@ -102,6 +107,7 @@ async function submission(
         reviewedAgo: opts.reviewedAgo ?? null,
         originalId: opts.originalId ?? null,
         entityId: opts.entityId ?? null,
+        submitterEmail: opts.submitterEmail ?? null,
       },
     },
   );
@@ -114,7 +120,7 @@ describe("intake submissions in the In review tab", () => {
   });
 
   it("lists only pending use case submissions, oldest first, with each form's title answer", async () => {
-    const { orgId, userId, formId, api } = await seedOrg("Reviewer");
+    const { orgId, userId, formId, api } = await seedOrg("Editor");
     const otherForm = await form(orgId, userId, "Second form", "f_name");
     const untitledForm = await form(orgId, userId, "No title form", null);
     const newer = await submission(orgId, formId, {
@@ -150,7 +156,7 @@ describe("intake submissions in the In review tab", () => {
   });
 
   it("lists pending AI app requests on their own endpoint, named by the AI app name answer", async () => {
-    const { orgId, userId, formId, api } = await seedOrg("Reviewer");
+    const { orgId, userId, formId, api } = await seedOrg("Editor");
     const aiForm = await form(orgId, userId, "AI app request", "f_app", "ai_app");
     const app = await submission(orgId, aiForm, {
       data: { f_app: "Meeting notes assistant" },
@@ -178,6 +184,192 @@ describe("intake submissions in the In review tab", () => {
 
     const uc = await api.get("/api/v1/use-case-lifecycle/intake-submissions");
     expect(uc.body.data.items.map((r: any) => r.id)).toEqual([useCase]);
+  });
+
+  it.each(["Auditor", "Reviewer"] as const)(
+    "shows a %s without intakeForm.edit only their own pending submissions",
+    async (role) => {
+      const { orgId, formId } = await seedOrg("Admin");
+      const viewer = await seedUser(orgId, role);
+      const mine = await submission(orgId, formId, {
+        data: { f_title: "Mine" },
+        // Matched without regard to case or surrounding spaces.
+        submitterEmail: `  ${viewer.email.toUpperCase()} `,
+      });
+      await submission(orgId, formId, {
+        data: { f_title: "Someone else's" },
+        submitterEmail: "someone@else.test",
+      });
+      await submission(orgId, formId, { data: { f_title: "Anonymous" } });
+
+      const res = await viewer.api.get("/api/v1/use-case-lifecycle/intake-submissions");
+
+      expect(res.status).toBe(200);
+      expect(res.body.data.total).toBe(1);
+      expect(res.body.data.items.map((r: any) => r.id)).toEqual([mine]);
+    },
+  );
+
+  it("shows a user without intakeForm.edit an empty list when they submitted nothing", async () => {
+    const { orgId, formId } = await seedOrg("Admin");
+    const viewer = await seedUser(orgId, "Auditor");
+    await submission(orgId, formId, { submitterEmail: "someone@else.test" });
+
+    const res = await viewer.api.get("/api/v1/use-case-lifecycle/intake-submissions");
+
+    expect(res.status).toBe(200);
+    expect(res.body.data).toEqual({ total: 0, items: [], limit: 500 });
+  });
+
+  it("shows an Editor (intakeForm.edit) every pending submission", async () => {
+    const { orgId, formId } = await seedOrg("Admin");
+    const editor = await seedUser(orgId, "Editor");
+    await submission(orgId, formId, { submitterEmail: "someone@else.test" });
+    await submission(orgId, formId, { submitterEmail: editor.email });
+
+    const res = await editor.api.get("/api/v1/use-case-lifecycle/intake-submissions");
+
+    expect(res.body.data.total).toBe(2);
+  });
+
+  describe("the AI app list and the intake submissions list follow the same rule", () => {
+    const seed = async () => {
+      const { orgId, userId, formId } = await seedOrg("Admin");
+      const aiForm = await form(orgId, userId, "AI app request", "f_app", "ai_app");
+      const viewer = await seedUser(orgId, "Auditor");
+      const editor = await seedUser(orgId, "Editor");
+      const ids = {
+        myApp: await submission(orgId, aiForm, {
+          data: { f_app: "Mine" },
+          entityType: "ai_app",
+          submitterEmail: viewer.email.toUpperCase(),
+        }),
+        theirApp: await submission(orgId, aiForm, {
+          data: { f_app: "Theirs" },
+          entityType: "ai_app",
+          submitterEmail: "someone@else.test",
+        }),
+        myUseCase: await submission(orgId, formId, { submitterEmail: viewer.email }),
+        theirUseCase: await submission(orgId, formId, { submitterEmail: "someone@else.test" }),
+      };
+      return { viewer, editor, ids };
+    };
+
+    it("GET /api/v1/ai-app-lifecycle/intake-submissions shows a user without intakeForm.edit only their own", async () => {
+      const { viewer, ids } = await seed();
+      const res = await viewer.api.get("/api/v1/ai-app-lifecycle/intake-submissions");
+      expect(res.status).toBe(200);
+      expect(res.body.data.total).toBe(1);
+      expect(res.body.data.items.map((r: any) => r.id)).toEqual([ids.myApp]);
+    });
+
+    it("GET /api/v1/ai-app-lifecycle/intake-submissions shows an Editor every request", async () => {
+      const { editor } = await seed();
+      const res = await editor.api.get("/api/v1/ai-app-lifecycle/intake-submissions");
+      expect(res.body.data.total).toBe(2);
+    });
+
+    it("GET /api/intake/submissions shows a user without intakeForm.edit only their own", async () => {
+      const { viewer, ids } = await seed();
+      const res = await viewer.api.get("/api/intake/submissions");
+      expect(res.status).toBe(200);
+      expect(res.body.data.map((r: any) => r.id).sort()).toEqual([ids.myApp, ids.myUseCase].sort());
+    });
+
+    it("GET /api/intake/submissions shows an Editor every submission", async () => {
+      const { editor, ids } = await seed();
+      const res = await editor.api.get("/api/intake/submissions");
+      expect(res.body.data.map((r: any) => r.id).sort()).toEqual(Object.values(ids).sort());
+    });
+  });
+
+  describe("submissions read by id or by form follow the same rule", () => {
+    const seed = async () => {
+      const { orgId, formId } = await seedOrg("Admin");
+      const viewer = await seedUser(orgId, "Auditor");
+      const editor = await seedUser(orgId, "Editor");
+      const mine = await submission(orgId, formId, { submitterEmail: viewer.email });
+      const theirs = await submission(orgId, formId, { submitterEmail: "someone@else.test" });
+      return { orgId, formId, viewer, editor, mine, theirs };
+    };
+
+    it.each([
+      ["/api/intake/submissions/:id", (id: number) => `/api/intake/submissions/${id}`],
+      [
+        "/api/intake/submissions/:id/preview",
+        (id: number) => `/api/intake/submissions/${id}/preview`,
+      ],
+      [
+        "/api/v1/intake-submissions/:id/preview",
+        (id: number) => `/api/v1/intake-submissions/${id}/preview`,
+      ],
+    ])("GET %s answers 404 for someone else's submission and opens one's own", async (_l, url) => {
+      const { viewer, mine, theirs } = await seed();
+      expect((await viewer.api.get(url(theirs))).status).toBe(404);
+      expect((await viewer.api.get(url(mine))).status).toBe(200);
+    });
+
+    it("GET /api/v1/intake-tier-suggestion/submissions/:id answers 404 for someone else's submission", async () => {
+      const { viewer, editor, theirs } = await seed();
+      const url = `/api/v1/intake-tier-suggestion/submissions/${theirs}`;
+      expect((await viewer.api.get(url)).status).toBe(404);
+      expect((await editor.api.get(url)).status).not.toBe(404);
+    });
+
+    it("GET /api/intake/submissions/stats counts only the caller's own without intakeForm.edit", async () => {
+      const { viewer, editor } = await seed();
+      const own = await viewer.api.get(`/api/intake/submissions/stats`);
+      expect(own.status).toBe(200);
+      expect(Number(own.body.data.total)).toBe(1);
+      const all = await editor.api.get(`/api/intake/submissions/stats`);
+      expect(Number(all.body.data.total)).toBe(2);
+    });
+
+    it.each([
+      ["exponent", (id: number) => `${id}e0`],
+      ["hex", (id: number) => `0x${id.toString(16)}`],
+      ["leading space", (id: number) => `%20${id}`],
+    ])("answers 400 for an id in %s form, never someone else's submission", async (_f, form) => {
+      const { viewer, theirs } = await seed();
+      for (const url of [
+        `/api/intake/submissions/${form(theirs)}`,
+        `/api/intake/submissions/${form(theirs)}/preview`,
+        `/api/v1/intake-submissions/${form(theirs)}/preview`,
+        `/api/v1/intake-tier-suggestion/submissions/${form(theirs)}`,
+      ]) {
+        expect([url, (await viewer.api.get(url)).status]).toEqual([url, 400]);
+      }
+    });
+
+    it("GET /api/intake/submissions/:id opens anyone's submission for an Editor", async () => {
+      const { editor, theirs } = await seed();
+      expect((await editor.api.get(`/api/intake/submissions/${theirs}`)).status).toBe(200);
+    });
+
+    it("GET /api/intake/forms/:id/submissions lists only the caller's own without intakeForm.edit", async () => {
+      const { viewer, editor, formId, mine, theirs } = await seed();
+      const own = await viewer.api.get(`/api/intake/forms/${formId}/submissions`);
+      expect(own.status).toBe(200);
+      expect(own.body.data.map((r: any) => r.id)).toEqual([mine]);
+      const all = await editor.api.get(`/api/intake/forms/${formId}/submissions`);
+      expect(all.body.data.map((r: any) => r.id).sort()).toEqual([mine, theirs].sort());
+    });
+
+    it("GET /api/intake/submissions/by-entity answers 404 for someone else's submission", async () => {
+      const { orgId, userId, formId } = await seedOrg("Admin");
+      const viewer = await seedUser(orgId, "Auditor");
+      const editor = await seedUser(orgId, "Editor");
+      const project = await createTestProject(orgId, userId);
+      await submission(orgId, formId, {
+        status: "approved",
+        entityId: project,
+        submitterEmail: "someone@else.test",
+      });
+      const url = `/api/intake/submissions/by-entity/use_case/${project}`;
+
+      expect((await viewer.api.get(url)).status).toBe(404);
+      expect((await editor.api.get(url)).status).toBe(200);
+    });
   });
 
   it("dates a resubmission from the first submission of its chain", async () => {

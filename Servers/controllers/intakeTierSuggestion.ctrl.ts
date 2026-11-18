@@ -3,6 +3,7 @@
 // under /api/v1 (ADR 0001). Public routes run behind resolvePublicIntakeForm,
 // which sets res.locals.intakeForm.
 import { NextFunction, Request, Response } from "express";
+import { toStrictId } from "../utils/validations/validation.utils";
 import { explainTier, suggestTier } from "../services/intakeTierSuggestion";
 import { toLiveCheckLanguage } from "../services/intakeLiveChecks/aiChecks";
 import { loadFormModel, resolvedForm, spendFormBudget } from "./intakePublicAi";
@@ -115,7 +116,8 @@ export function takeTierSuggestionResponse(req: Request, res: Response, next: Ne
 
 /** GET .../intake-tier-suggestion/submissions/:id — the applicant's response, or null. */
 export async function getSubmissionTierSuggestionResponse(req: Request, res: Response) {
-  const submissionId = Number(req.params.id);
+  // The same strict parse as the guard in front of it.
+  const submissionId = toStrictId(req.params.id);
   if (!Number.isSafeInteger(submissionId) || submissionId <= 0) {
     return res.status(400).json(STATUS_CODE[400](req.t!("Invalid submission ID")));
   }
