@@ -75,7 +75,11 @@ check_and_download_compose_files() {
 
 # Secrets that must be set (non-empty) before any container starts.
 # Keep in sync with the blanked values in .env.dev / .env.prod.
-REQUIRED_SECRETS="DB_PASSWORD SUPERADMIN_PASSWORD JWT_SECRET REFRESH_TOKEN_SECRET ENCRYPTION_ALGORITHM ENCRYPTION_PASSWORD AI_GATEWAY_INTERNAL_KEY EVAL_SERVER_INTERNAL_KEY"
+# ENCRYPTION_KEY: the backend and worker images run with NODE_ENV=production and
+# refuse to start without it (Servers/utils/encryption.utils.ts).
+REQUIRED_SECRETS="DB_PASSWORD SUPERADMIN_PASSWORD JWT_SECRET REFRESH_TOKEN_SECRET ENCRYPTION_ALGORITHM ENCRYPTION_PASSWORD ENCRYPTION_KEY AI_GATEWAY_INTERNAL_KEY EVAL_SERVER_INTERNAL_KEY"
+# Key the backend used when ENCRYPTION_KEY was unset (DEFAULT_DEVELOPMENT_ENCRYPTION_KEY).
+LEGACY_DEFAULT_ENCRYPTION_KEY="default-key-change-this-in-production-32chars!!"
 
 # Function to verify all required secrets are set before starting Docker
 check_required_secrets() {
@@ -101,6 +105,15 @@ check_required_secrets() {
             echo "  - $KEY"
         done
         echo ""
+        case " $MISSING " in
+            *" ENCRYPTION_KEY "*)
+                echo "ENCRYPTION_KEY: for a new install, generate one with: openssl rand -base64 32"
+                echo "  If this install ran before without ENCRYPTION_KEY, its stored credentials were"
+                echo "  encrypted with the old default key. Set ENCRYPTION_KEY=\"$LEGACY_DEFAULT_ENCRYPTION_KEY\""
+                echo "  to keep them readable, then rotate to a new key and save each credential again."
+                echo ""
+                ;;
+        esac
         echo "Set them (see the comments in $ENV_FILE for how to generate each value) and re-run."
         echo "Aborting: no Docker services were started."
         exit 1
