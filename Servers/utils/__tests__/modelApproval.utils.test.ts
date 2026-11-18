@@ -168,10 +168,46 @@ describe("assertModelApprovalAllowed: R2, approver changes on a decided model", 
     ).toBeNull();
   });
 
-  it("lets an Editor name an approver on a decided model with none (nothing to protect)", () => {
+  it("refuses a non-Admin naming an approver on an Approved model with none", () => {
     expect(
       refusal(() =>
         run({ existing: { approver: null, status: "Approved" }, submitted: { approver: OTHER } }),
+      ),
+    ).toBe(MODEL_APPROVAL_FORBIDDEN_MESSAGE);
+  });
+
+  it("refuses it when the same save keeps or picks another decision", () => {
+    for (const status of ["Approved", "Blocked"]) {
+      expect(
+        refusal(() =>
+          run({
+            existing: { approver: null, status: "Approved" },
+            submitted: { approver: OTHER, status },
+          }),
+        ),
+      ).toBe(MODEL_APPROVAL_FORBIDDEN_MESSAGE);
+    }
+  });
+
+  it("lets a non-Admin name one in the save that moves it back to Pending", () => {
+    expect(
+      refusal(() =>
+        run({
+          existing: { approver: null, status: "Approved" },
+          submitted: { approver: OTHER, status: "Pending" },
+        }),
+      ),
+    ).toBeNull();
+  });
+
+  it("lets an Admin name one on a decided model with none", () => {
+    expect(
+      refusal(() =>
+        run({
+          existing: { approver: null, status: "Approved" },
+          submitted: { approver: OTHER },
+          callerIsAdmin: true,
+        }),
       ),
     ).toBeNull();
   });

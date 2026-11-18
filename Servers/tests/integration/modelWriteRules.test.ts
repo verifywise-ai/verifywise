@@ -294,7 +294,7 @@ describe("model write rules", () => {
       expect((await modelRow(id)).approver).toBe(approver);
     });
 
-    it("keeps 0 and \"0\" meaning no approver on legacy, refuses them on v1", async () => {
+    it('keeps 0 and "0" meaning no approver on legacy, refuses them on v1', async () => {
       const api = await as(org, admin, "Admin");
       for (const none of [0, "0"]) {
         const created = await api.post("/api/modelInventory").send(modelBody({ approver: none }));
@@ -480,6 +480,41 @@ describe("model write rules", () => {
         .post("/api/modelInventory")
         .send(modelBody({ approver: editor, status: "Approved" }));
       expect(res.status).toBe(403);
+    });
+
+    it("names an approver on an Approved model with none only while moving it to Pending", async () => {
+      const id = (
+        await (
+          await as(org, admin, "Admin")
+        )
+          .post("/api/modelInventory")
+          .send(modelBody({ status: "Approved" }))
+      ).body.data.id as number;
+      const api = await as(org, editor, "Editor");
+      expect((await api.patch(`/api/modelInventory/${id}`).send({ approver })).status).toBe(403);
+      expect((await modelRow(id)).approver).toBeNull();
+      const res = await api
+        .patch(`/api/modelInventory/${id}`)
+        .send({ approver, status: "Pending" });
+      expect(res.status).toBe(200);
+      expect(await modelRow(id)).toMatchObject({ approver, status: "Pending" });
+
+      const other = (
+        await (
+          await as(org, admin, "Admin")
+        )
+          .post("/api/modelInventory")
+          .send(modelBody({ status: "Approved" }))
+      ).body.data.id as number;
+      expect(
+        (
+          await (
+            await as(org, admin, "Admin")
+          )
+            .patch(`/api/modelInventory/${other}`)
+            .send({ approver })
+        ).status,
+      ).toBe(200);
     });
 
     it("closes the two-step bypass: an Editor cannot clear the approver, then decide", async () => {

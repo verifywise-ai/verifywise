@@ -544,13 +544,19 @@ the approver the same save names.
   risk whose approver is cleared falls back to Not required (R4), so it can no
   longer be decided, but models have no "Not required" status to fall back to.
   Clearing the approver of a Pending model would let an editor decide it in a
-  second save. A model with no saved approver, decided or not, may be given
-  one by any editor: without a saved approver any editor may set any status,
-  so there is nothing to protect.
+  second save.
+- **R2b.** A decided model with no saved approver (a legacy row, or one an
+  editor decided before naming anyone) may be given an approver by a
+  non-Admin only in a save that also moves it out of the decisions, to
+  Pending or Retired. Otherwise the model would show a decision next to an
+  approver who never made it (403). An Admin may name one any time. Moving it
+  to Pending first and naming an approver in a later save is allowed too: it
+  ends in Pending.
 - **R3.** A non-Admin cannot name themself as the new approver. Keeping
   yourself as the saved approver is fine.
 - In a save that names a new approver, only an Admin also moves the status to
-  or from a decision.
+  a decision. Leaving a decision in that save is allowed (with a saved
+  approver, R2 already asks for the approver or an Admin).
 - With no approver saved or named, any editor sets any status, as before.
   (Risks differ here: a risk with no approver is always Not required.)
 

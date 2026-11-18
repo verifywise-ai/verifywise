@@ -7,6 +7,8 @@
  * - With a saved approver, only someone who decides moves the status to or
  *   from a decision, and only they change or clear the approver.
  * - In a save that names a new approver only an Admin also decides.
+ * - A decided model with no approver gets one from a non-Admin only in a
+ *   save that moves it to Pending or Retired.
  * - A non-Admin cannot pick themself as a new approver.
  */
 
@@ -38,13 +40,26 @@ export function modelApprovalLocks(state: ModelApprovalState) {
 
   const approverLocked = !callerDecides && savedApprover !== null;
 
+  const namingNew = approverChanged && nextApprover !== null && !state.isAdmin;
+
   const canPickStatus = (status: string): boolean => {
+    // Naming the first approver of a decided model: only while leaving the
+    // decisions, so the saved decision itself is not available either.
+    if (
+      namingNew &&
+      savedApprover === null &&
+      isModelDecision(state.savedStatus) &&
+      isModelDecision(status)
+    ) {
+      return false;
+    }
     const touchesDecision =
       status !== state.savedStatus &&
       (isModelDecision(status) || isModelDecision(state.savedStatus));
     if (!touchesDecision) return true;
     if (savedApprover !== null && !callerDecides) return false;
-    if (approverChanged && nextApprover !== null && !state.isAdmin) return false;
+    // Deciding in the save that names an approver is for an Admin only.
+    if (namingNew && isModelDecision(status)) return false;
     return true;
   };
 

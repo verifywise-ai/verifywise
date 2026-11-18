@@ -133,7 +133,8 @@ export const modelInventoryContent: ArticleContent = {
       items: [
         { text: 'You can\'t pick yourself as a model\'s approver unless you are an Admin.' },
         { text: 'When you name a new approver, only an Admin can also set a decision in the same save. The new approver decides afterwards.' },
-        { text: 'A model with no approver can be given any status, and an approver, by anyone who can edit models.' },
+        { text: 'A model with no approver can be given any status by anyone who can edit models.' },
+        { text: 'To name an approver on a model that already has a decision but no approver, set it back to Pending in the same save, or ask an Admin.' },
         { text: 'If you name a new approver while a decision is selected, the status goes back to Pending (or the saved status) so the new approver can decide.' },
       ],
     },

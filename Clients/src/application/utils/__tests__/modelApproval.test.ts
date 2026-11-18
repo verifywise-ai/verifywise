@@ -103,4 +103,24 @@ describe("modelApprovalLocks", () => {
     });
     expect(locks.approverLocked).toBe(false);
   });
+
+  it("on a decided model with no approver, naming one leaves only non-decisions", () => {
+    const locks = modelApprovalLocks({
+      ...base,
+      savedApprover: null,
+      savedStatus: "Approved",
+      approver: 30,
+    });
+    expect(locks.canPickStatus("Approved")).toBe(false);
+    expect(locks.canPickStatus("Blocked")).toBe(false);
+    expect(locks.canPickStatus("Pending")).toBe(true);
+    const admin = modelApprovalLocks({
+      ...base,
+      isAdmin: true,
+      savedApprover: null,
+      savedStatus: "Approved",
+      approver: 30,
+    });
+    expect(admin.canPickStatus("Approved")).toBe(true);
+  });
 });

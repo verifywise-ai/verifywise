@@ -98,4 +98,34 @@ describe("NewModelInventory approval rule", () => {
     ).find((o) => o.value === "1");
     expect(self?.disabled).toBe(true);
   });
+
+  it("moves an Approved model with no approver to Pending when a non-Admin names one", async () => {
+    renderWithProviders(
+      <NewModelInventory
+        isOpen={true}
+        setIsOpen={vi.fn()}
+        isEdit={true}
+        selectedModelInventoryId={7}
+        initialData={
+          {
+            provider: "OpenAI",
+            model: "GPT-4",
+            version: "1",
+            approver: "",
+            status: "Approved",
+            status_date: "2026-09-01",
+            projects: [],
+            frameworks: [],
+            capabilities: [],
+          } as any
+        }
+        evidenceData={[]}
+        modelInventoryData={[]}
+      />,
+    );
+    expect(statusSelect().value).toBe("Approved");
+    await waitFor(() => expect(screen.getByText("Ann Prover")).toBeInTheDocument());
+    fireEvent.change(screen.getByTestId("select-approver"), { target: { value: "2" } });
+    await waitFor(() => expect(statusSelect().value).toBe("Pending"));
+  });
 });

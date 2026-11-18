@@ -15,13 +15,15 @@
  *   whatever the status. Without this, an editor could clear the approver of
  *   a Pending model and decide it in a second save. This is stricter than R2
  *   for risks: a risk whose approver is cleared falls back to Not required,
- *   but a model has no such status. A model with no saved approver (decided
- *   or not) may be given one by any editor: without a saved approver any
- *   editor may set any status anyway, so there is nothing to protect.
+ *   but a model has no such status.
+ * - R2b: a decided model with no saved approver may be given one by a
+ *   non-Admin only in a save that also moves it out of the decisions (to
+ *   Pending or Retired). Otherwise the model would show a decision next to
+ *   an approver who never made it. An Admin may name one any time.
  * - R3: a non-Admin may not name themself as the new approver. Keeping
  *   yourself when you already are the saved approver is fine.
  * - In a save that names a new approver, only an Admin may also move the
- *   status to or from a decision; the new approver decides in a later save.
+ *   status to a decision; the new approver decides in a later save.
  *
  * Without a saved approver and without naming one, any editor may set any
  * status, as before. Unlike risks, the rule never rewrites the status: a
@@ -163,6 +165,10 @@ export function assertModelApprovalAllowed({
       isModelStatusDecision(submitted.status as string) ||
       isModelStatusDecision(savedStatus));
 
+  // A valid move from any status to Pending or Retired.
+  const leavesDecisions =
+    statusChanged && statusValid && !isModelStatusDecision(submitted.status as string);
+
   // The saved approver, never the one this save names.
   const callerDecides = callerIsAdmin || (savedApprover !== null && savedApprover === callerId);
 
@@ -177,9 +183,16 @@ export function assertModelApprovalAllowed({
     if (savedApprover !== null && !callerDecides) {
       throw new ModelApprovalForbiddenError();
     }
-    // Deciding in the save that names the approver is for an Admin only.
-    if (nextApprover !== null && touchesDecision && !callerIsAdmin) {
-      throw new ModelApprovalForbiddenError();
+    if (nextApprover !== null && !callerIsAdmin) {
+      // Deciding in the save that names the approver is for an Admin only.
+      // Leaving a decision is not deciding (and with a saved approver R2
+      // already asked for someone who decides).
+      if (statusChanged && !leavesDecisions) throw new ModelApprovalForbiddenError();
+      // R2b: no approver on a decided model: name one only while leaving
+      // the decisions.
+      if (savedApprover === null && isModelStatusDecision(savedStatus) && !leavesDecisions) {
+        throw new ModelApprovalForbiddenError();
+      }
     }
   }
 
