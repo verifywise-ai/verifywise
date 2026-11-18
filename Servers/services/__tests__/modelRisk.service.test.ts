@@ -92,6 +92,23 @@ describe("createModelRiskService", () => {
     );
   });
 
+  // The notice links to the app, as the model approver notice does, never to
+  // the backend's port.
+  it("links the owner notice to the frontend when FRONTEND_URL is not set", async () => {
+    const saved = process.env.FRONTEND_URL;
+    delete process.env.FRONTEND_URL;
+    try {
+      const tx = fakeTx();
+      mockCreate.mockResolvedValue(row({ owner: OWNER }));
+      await createModelRiskService({ risk_name: "Drift", owner: OWNER } as any, ctx, tx as any);
+      tx.commit();
+      await flush();
+      expect(mockAssigned.mock.calls[0][4]).toBe("http://localhost:5173");
+    } finally {
+      if (saved !== undefined) process.env.FRONTEND_URL = saved;
+    }
+  });
+
   it("sends nothing for a risk with no owner", async () => {
     const tx = fakeTx();
     mockCreate.mockResolvedValue(row({ owner: null }));

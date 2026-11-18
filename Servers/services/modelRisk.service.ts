@@ -14,6 +14,7 @@
 
 import { Transaction } from "sequelize";
 import { inTransaction, TransactionContext } from "../utils/transaction.utils";
+import { frontendBaseUrl } from "../utils/frontendUrl.utils";
 import { ModelRiskModel } from "../domain.layer/models/modelRisk/modelRisk.model";
 import { IModelRisk } from "../domain.layer/interfaces/i.modelRisk";
 import {
@@ -74,7 +75,7 @@ export async function notifyModelRiskOwner(
   risk: Pick<IModelRisk, "id" | "risk_name" | "description">,
   ownerId: number,
 ): Promise<void> {
-  const baseUrl = process.env.FRONTEND_URL || "http://localhost:3000";
+  const baseUrl = frontendBaseUrl();
   const assignerName = await getUserNameById(assignerUserId, organizationId);
   await notifyUserAssigned(
     organizationId,

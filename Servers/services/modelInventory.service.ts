@@ -13,6 +13,7 @@
 
 import { Transaction } from "sequelize";
 import { inTransaction, TransactionContext } from "../utils/transaction.utils";
+import { frontendBaseUrl } from "../utils/frontendUrl.utils";
 import { ModelInventoryModel } from "../domain.layer/models/modelInventory/modelInventory.model";
 import { ModelInventoryStatus } from "../domain.layer/enums/model-inventory-status.enum";
 import { IModelInventory } from "../domain.layer/interfaces/i.modelInventory";
@@ -111,7 +112,7 @@ async function notifyModelApprover(
   const approverId = model.approver;
   if (!approverId) return;
   const assignerName = await getUserNameById(ctx.userId, ctx.organizationId);
-  const baseUrl = process.env.FRONTEND_URL || "http://localhost:5173";
+  const baseUrl = frontendBaseUrl();
   const modelDetails = [
     model.provider ? `Provider: ${model.provider}` : null,
     model.version ? `Version: ${model.version}` : null,
