@@ -144,29 +144,6 @@ export const toolsDefinition: any[] = [
   {
     type: "function",
     function: {
-      name: "agent_update_model_lifecycle_phase",
-      description:
-        "Not supported: a model has no lifecycle phase field to set (the model lifecycle is a checklist on the model's Lifecycle tab). This tool changes nothing. To change a model's approval status, use agent_update_model with status.",
-      parameters: {
-        type: "object",
-        properties: {
-          model_id: {
-            type: "number",
-            description: "The ID of the model to update.",
-          },
-          lifecycle_phase: {
-            type: "string",
-            enum: ["Approved", "Restricted", "Pending", "Blocked", "Retired"],
-            description: "The new lifecycle phase/status for the model.",
-          },
-        },
-        required: ["model_id", "lifecycle_phase"],
-      },
-    },
-  },
-  {
-    type: "function",
-    function: {
       name: "agent_retire_model",
       description:
         "Retire a model by setting its status to 'Retired'. This indicates the model is decommissioned and no longer in use but preserves the record. Requires user confirmation before executing.",

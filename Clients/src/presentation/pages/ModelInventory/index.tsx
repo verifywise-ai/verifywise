@@ -930,7 +930,6 @@ const ModelInventory: React.FC = () => {
     const MODEL_INVENTORY_TOOLS = new Set([
       "agent_register_model",
       "agent_update_model",
-      "agent_update_model_lifecycle_phase",
       "agent_retire_model",
       "agent_delete_model",
       "agent_link_model_to_project",

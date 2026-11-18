@@ -262,15 +262,20 @@ export async function createModelInventoryService(
 /**
  * Update a model, or null when the organization has no such model. The row
  * is locked first; the approval rule and the history diff use that row.
+ *
+ * `update` is the fields to write, or a function that builds them from the
+ * locked row (a caller whose values depend on the stored ones, such as the
+ * advisor's provider_model, reads them there, never from an earlier read).
  */
 export async function updateModelInventoryService(
   id: number,
-  rawInput: ModelInventoryInput,
+  update: ModelInventoryInput | ((current: ModelInventoryModel) => ModelInventoryInput),
   ctx: ModelWriteContext,
   transaction?: Transaction,
 ): Promise<ModelInventoryModel | null> {
-  const input = assertModelApprovalInput(rawInput, { creating: false });
-  const fields = modelFields(input);
+  // A plain body is checked before the transaction opens.
+  const checkedInput =
+    typeof update === "function" ? null : assertModelApprovalInput(update, { creating: false });
   const log = txContext("updateModelInventoryService", "Update", ctx);
   return inTransaction(transaction, log, async (tx) => {
     const current = await getModelInventoryByIdQuery(id, ctx.organizationId, {
@@ -278,6 +283,13 @@ export async function updateModelInventoryService(
       forUpdate: true,
     });
     if (!current) return null;
+    const input =
+      checkedInput ??
+      assertModelApprovalInput(
+        (update as (current: ModelInventoryModel) => ModelInventoryInput)(current),
+        { creating: false },
+      );
+    const fields = modelFields(input);
 
     // Read before updateModelInventory, which changes `current` in place.
     const previousStatus = current.status;

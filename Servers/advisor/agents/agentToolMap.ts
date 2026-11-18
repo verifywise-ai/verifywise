@@ -249,7 +249,6 @@ export const AGENT_TOOL_MAP: AgentToolEntry[] = [
       "agent_update_model",
       "agent_retire_model",
       "agent_delete_model",
-      "agent_update_model_lifecycle_phase",
       "agent_link_model_to_project",
       "agent_register_dataset",
       "agent_update_dataset",

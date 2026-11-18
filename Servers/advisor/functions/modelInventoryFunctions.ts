@@ -1,6 +1,6 @@
 import { IModelInventory } from "../../domain.layer/interfaces/i.modelInventory";
 import { projectVisibilitySql } from "../../utils/projectVisibility.utils";
-import { actingProjectViewer, NO_PROJECT_VIEWER, refuseUseCaseWrite } from "./useCaseScope";
+import { actingProjectViewer, NO_PROJECT_VIEWER } from "./useCaseScope";
 import { ModelInventoryStatus } from "../../domain.layer/enums/model-inventory-status.enum";
 import {
   getAllModelInventoriesQuery,
@@ -404,7 +404,8 @@ const modelNotFound = (modelId: unknown) => ({
 /**
  * Update a model through the model service, as the acting user: the approval
  * rule (a refusal is the tool's failure message), change history, the
- * deployment step for a move to Approved and the approver notice.
+ * deployment step for a move to Approved and the approver notice. `input`
+ * reads the model the service locked, so a rename in between is never lost.
  */
 async function updateModelAsActingUser(
   params: Record<string, unknown>,
@@ -415,10 +416,8 @@ async function updateModelAsActingUser(
   if (isRefusal(ctx)) return ctx;
   const modelId = toPositiveId(params.model_id);
   if (modelId === null) return modelNotFound(params.model_id);
-  const current = await getModelInventoryByIdQuery(modelId, organizationId);
-  if (!current) return modelNotFound(modelId);
   try {
-    const saved = await updateModelInventoryService(modelId, input(current), ctx);
+    const saved = await updateModelInventoryService(modelId, input, ctx);
     return saved ?? modelNotFound(modelId);
   } catch (error) {
     return refusalFrom(error);
@@ -451,23 +450,6 @@ const agentUpdateModel = createWriteToolFn({
     if (isRefusal(result)) return result;
     return { id: params.model_id, updated: true, message: "Model updated successfully" };
   },
-});
-
-export const MODEL_LIFECYCLE_PHASE_REFUSAL =
-  "A model has no lifecycle phase field this tool could set: the model lifecycle is a checklist of phases on the model's Lifecycle tab, and approval is the model's status. Nothing was changed. To change the approval status, use agent_update_model with status.";
-
-/**
- * Models have no "current lifecycle phase": the model-lifecycle extension
- * keeps a checklist per phase (model_lifecycle_phases / _items / _values).
- * This tool used to write the phase into `status`, bypassing the approval
- * rule, so it now refuses and points at agent_update_model.
- */
-const agentUpdateModelLifecyclePhase = createWriteToolFn({
-  toolName: "agent_update_model_lifecycle_phase",
-  warningLevel: "warning",
-  descriptionFn: (params) =>
-    `Update model #${params.model_id} lifecycle phase to "${params.lifecycle_phase}"`,
-  executeFn: async () => ({ success: false, message: MODEL_LIFECYCLE_PHASE_REFUSAL }),
 });
 
 const agentRetireModel = createWriteToolFn({
@@ -512,12 +494,11 @@ const agentLinkModelToProject = createWriteToolFn({
   warningLevel: "warning",
   descriptionFn: (params) => `Link model #${params.model_id} to project #${params.project_id}`,
   executeFn: async (params, organizationId) => {
+    // The console's rule (PATCH of a model's use cases): model.edit, checked
+    // here, and write access to the use case, checked by the service under
+    // the model's lock.
     const ctx = await modelWriteContext(params, organizationId);
     if (isRefusal(ctx)) return ctx;
-    // The console's rule for writing to a use case: useCase.edit and write
-    // access to that use case.
-    const useCaseRefusal = await refuseUseCaseWrite(params, organizationId, params.project_id);
-    if (useCaseRefusal) return useCaseRefusal;
     const modelId = toPositiveId(params.model_id);
     if (modelId === null) return modelNotFound(params.model_id);
     try {
@@ -1060,7 +1041,6 @@ const availableModelInventoryTools: any = {
   get_model_inventory_analytics: getModelInventoryAnalytics,
   get_model_inventory_executive_summary: getModelInventoryExecutiveSummary,
   agent_update_model: agentUpdateModel,
-  agent_update_model_lifecycle_phase: agentUpdateModelLifecyclePhase,
   agent_retire_model: agentRetireModel,
   agent_delete_model: agentDeleteModel,
   agent_link_model_to_project: agentLinkModelToProject,

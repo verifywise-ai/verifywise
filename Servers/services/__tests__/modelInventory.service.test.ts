@@ -242,6 +242,35 @@ describe("updateModelInventoryService", () => {
     expect(mockUpdateQuery).not.toHaveBeenCalled();
   });
 
+  // The advisor renames provider_model from the stored provider and name:
+  // they must come from the row the service locked, not an earlier read.
+  it("builds the fields from the locked row when given a function", async () => {
+    const tx = fakeTx();
+    mockGetById.mockResolvedValue(
+      storedRow({ status: "Pending", approver: null, provider: "Renamed", model: "GPT" }),
+    );
+    mockUpdateQuery.mockImplementation(async (_id: number, row: any) => row);
+    const build = jest.fn((current: any) => ({
+      model: "GPT-5",
+      provider_model: `${current.provider} / GPT-5`,
+    }));
+    await updateModelInventoryService(7, build, ctx, tx as any);
+    expect(build).toHaveBeenCalledWith(expect.objectContaining({ provider: "Renamed" }));
+    expect(mockGetById.mock.invocationCallOrder[0]).toBeLessThan(build.mock.invocationCallOrder[0]);
+    expect(mockUpdateQuery.mock.calls[0][1]).toMatchObject({
+      model: "GPT-5",
+      provider_model: "Renamed / GPT-5",
+    });
+  });
+
+  it("applies the approval rule to fields built from the locked row", async () => {
+    mockGetById.mockResolvedValue(storedRow({ status: "Pending", approver: APPROVER }));
+    await expect(
+      updateModelInventoryService(7, () => ({ status: "Approved" as any }), ctx, fakeTx() as any),
+    ).rejects.toBeInstanceOf(ModelApprovalForbiddenError);
+    expect(mockUpdateQuery).not.toHaveBeenCalled();
+  });
+
   it("tells a newly named approver, after commit", async () => {
     const tx = fakeTx();
     mockGetById.mockResolvedValue(storedRow({ status: "Pending", approver: null }));
@@ -314,29 +343,6 @@ describe("deleteModelInventoryService", () => {
     expect(mockRecordDeletion).toHaveBeenCalledWith("model_inventory", 7, EDITOR, 1, tx);
     expect(mockDeleteQuery).toHaveBeenCalledWith(7, true, 1, tx, EDITOR);
   });
-});
-
-describe("linkModelToUseCaseService", () => {
-  it("adds a missing link and tells the use case about candidates after commit", async () => {
-    const tx = fakeTx();
-    mockLock.mockResolvedValue(true);
-    mockResolveTargets.mockResolvedValue({ projectIds: [3], frameworkIds: [] });
-    mockProjectIds.mockResolvedValue([]);
-    mockGetById.mockResolvedValue(storedRow({}));
-    expect(await linkModelToUseCaseService(7, 3, ctx, tx as any)).toBe(true);
-    expect(mockInsertLinks).toHaveBeenCalledWith(7, [3], 1, tx);
-    tx.commit();
-    await new Promise((r) => setImmediate(r));
-    expect(mockCandidates).toHaveBeenCalledWith(expect.objectContaining({ projectIds: [3] }));
-  });
-
-  it("does nothing for an existing link", async () => {
-    mockLock.mockResolvedValue(true);
-    mockResolveTargets.mockResolvedValue({ projectIds: [3], frameworkIds: [] });
-    mockProjectIds.mockResolvedValue([3]);
-    expect(await linkModelToUseCaseService(7, 3, ctx, fakeTx() as any)).toBe(false);
-    expect(mockInsertLinks).not.toHaveBeenCalled();
-  });
 
   // An Editor the approval rule refuses must not delete the model and add
   // it again, decided, with no approver.
@@ -369,5 +375,28 @@ describe("linkModelToUseCaseService", () => {
       fakeTx() as any,
     );
     expect(mockDeleteQuery).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe("linkModelToUseCaseService", () => {
+  it("adds a missing link and tells the use case about candidates after commit", async () => {
+    const tx = fakeTx();
+    mockLock.mockResolvedValue(true);
+    mockResolveTargets.mockResolvedValue({ projectIds: [3], frameworkIds: [] });
+    mockProjectIds.mockResolvedValue([]);
+    mockGetById.mockResolvedValue(storedRow({}));
+    expect(await linkModelToUseCaseService(7, 3, ctx, tx as any)).toBe(true);
+    expect(mockInsertLinks).toHaveBeenCalledWith(7, [3], 1, tx);
+    tx.commit();
+    await new Promise((r) => setImmediate(r));
+    expect(mockCandidates).toHaveBeenCalledWith(expect.objectContaining({ projectIds: [3] }));
+  });
+
+  it("does nothing for an existing link", async () => {
+    mockLock.mockResolvedValue(true);
+    mockResolveTargets.mockResolvedValue({ projectIds: [3], frameworkIds: [] });
+    mockProjectIds.mockResolvedValue([3]);
+    expect(await linkModelToUseCaseService(7, 3, ctx, fakeTx() as any)).toBe(false);
+    expect(mockInsertLinks).not.toHaveBeenCalled();
   });
 });

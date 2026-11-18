@@ -18,12 +18,16 @@ import * as admin from "../../../utils/organizationAdmin.utils";
 import * as modelService from "../../../services/modelInventory.service";
 import * as riskService from "../../../services/modelRisk.service";
 import { ModelApprovalForbiddenError } from "../../../utils/modelApproval.utils";
-import { NotFoundException } from "../../../domain.layer/exceptions/custom.exception";
+import {
+  ForbiddenException,
+  NotFoundException,
+} from "../../../domain.layer/exceptions/custom.exception";
 import "../../functions/modelInventoryFunctions";
 import "../../functions/modelRiskFunctions";
-import { MODEL_LIFECYCLE_PHASE_REFUSAL } from "../../functions/modelInventoryFunctions";
 import { MODEL_WRITE_REFUSED } from "../../functions/modelWriteScope";
 import { writeToolExecutors } from "../../confirmation/createWriteTool";
+import { availableModelInventoryTools } from "../../functions/modelInventoryFunctions";
+import { toolsDefinition as modelInventoryTools } from "../../tools/modelInventoryTools";
 
 const ORG = 4;
 const CHATTER = 9;
@@ -57,7 +61,11 @@ beforeEach(() => {
   mockHas.mockResolvedValue(true);
   mockAdmin.mockResolvedValue(false);
   mockGetModel.mockResolvedValue({ id: 7, provider: "OpenAI", model: "GPT" });
-  mockUpdate.mockResolvedValue({ id: 7 });
+  // The service hands its builder the row it locked.
+  mockUpdate.mockImplementation(async (_id: number, input: any) => {
+    if (typeof input === "function") input({ id: 7, provider: "OpenAI", model: "GPT" });
+    return { id: 7 };
+  });
   mockLink.mockResolvedValue(true);
   mockAccess.mockResolvedValue("write");
   mockRiskCreate.mockResolvedValue({ id: 11 });
@@ -78,22 +86,30 @@ describe("agent_update_model", () => {
     });
     expect(result).toMatchObject({ updated: true });
     expect(mockAdmin).toHaveBeenCalledWith(ORG, "Admin");
-    expect(mockUpdate).toHaveBeenCalledWith(
-      7,
-      expect.objectContaining({
-        status: "Approved",
-        model: "GPT-5",
-        provider_model: "OpenAI / GPT-5",
-        status_date: expect.any(Date),
-      }),
-      {
-        organizationId: ORG,
-        userId: REQUESTER,
-        callerIsAdmin: true,
-        useCaseViewer: { userId: REQUESTER, role: "Admin" },
-      },
-    );
+    expect(mockUpdate).toHaveBeenCalledWith(7, expect.any(Function), {
+      organizationId: ORG,
+      userId: REQUESTER,
+      callerIsAdmin: true,
+      useCaseViewer: { userId: REQUESTER, role: "Admin" },
+    });
+    expect(mockUpdate.mock.calls[0][1]({ provider: "OpenAI", model: "GPT" })).toMatchObject({
+      status: "Approved",
+      model: "GPT-5",
+      provider_model: "OpenAI / GPT-5",
+      status_date: expect.any(Date),
+    });
     expect(sequelize.query).not.toHaveBeenCalled();
+  });
+
+  // Item 4: no unlocked read before the save; provider_model comes from the
+  // row the service locked, so a rename in between is kept.
+  it("builds provider_model from the service's locked row, with no read of its own", async () => {
+    await run("agent_update_model", { model_id: 7, name: "GPT-5", _userId: CHATTER });
+    expect(mockGetModel).not.toHaveBeenCalled();
+    const build = mockUpdate.mock.calls[0][1];
+    expect(build({ provider: "Renamed", model: "GPT" })).toMatchObject({
+      provider_model: "Renamed / GPT-5",
+    });
   });
 
   it("reports a refused approval as the tool's failure, not a throw", async () => {
@@ -126,16 +142,13 @@ describe("agent_update_model", () => {
 describe("agent_retire_model", () => {
   it("sets the real Retired status through the service", async () => {
     const result = await run("agent_retire_model", { model_id: 7, _userId: CHATTER });
-    expect(mockUpdate).toHaveBeenCalledWith(
-      7,
-      expect.objectContaining({ status: "Retired" }),
-      editorCtx(CHATTER),
-    );
+    expect(mockUpdate).toHaveBeenCalledWith(7, expect.any(Function), editorCtx(CHATTER));
+    expect(mockUpdate.mock.calls[0][1]({})).toMatchObject({ status: "Retired" });
     expect(result).toMatchObject({ status: "Retired" });
   });
 
   it("reports a model that is not there", async () => {
-    mockGetModel.mockResolvedValue(null);
+    mockUpdate.mockResolvedValue(null);
     expect(await run("agent_retire_model", { model_id: 7, _userId: CHATTER })).toEqual({
       success: false,
       message: "Model #7 not found",
@@ -143,16 +156,15 @@ describe("agent_retire_model", () => {
   });
 });
 
+// Item 5: the tool only ever refused, after a human had confirmed it.
 describe("agent_update_model_lifecycle_phase", () => {
-  it("refuses and writes nothing: a model has no lifecycle phase field", async () => {
-    const result = await run("agent_update_model_lifecycle_phase", {
-      model_id: 7,
-      lifecycle_phase: "Approved",
-      _userId: CHATTER,
-    });
-    expect(result).toEqual({ success: false, message: MODEL_LIFECYCLE_PHASE_REFUSAL });
-    expect(mockUpdate).not.toHaveBeenCalled();
-    expect(sequelize.query).not.toHaveBeenCalled();
+  it("is gone: no definition, no tool function, no executor", () => {
+    const names = (modelInventoryTools as Array<{ function: { name: string } }>).map(
+      (t) => t.function.name,
+    );
+    expect(names).not.toContain("agent_update_model_lifecycle_phase");
+    expect(availableModelInventoryTools).not.toHaveProperty("agent_update_model_lifecycle_phase");
+    expect(writeToolExecutors.has("agent_update_model_lifecycle_phase")).toBe(false);
   });
 });
 
@@ -177,29 +189,20 @@ describe("agent_delete_model", () => {
 });
 
 describe("agent_link_model_to_project", () => {
-  it("links through the service when the user may write to the use case", async () => {
+  // Item 3: one check, the console's: model.edit here, use case write access
+  // in the service (with the use case viewer in the context).
+  it("links through the service, which checks use case write access", async () => {
     const result = await run("agent_link_model_to_project", {
       model_id: 7,
       project_id: 3,
       _userId: CHATTER,
     });
-    expect(mockAccess).toHaveBeenCalledWith(3, { userId: CHATTER, role: "Editor" }, ORG);
     expect(mockLink).toHaveBeenCalledWith(7, 3, editorCtx(CHATTER));
+    expect(mockAccess).not.toHaveBeenCalled();
     expect(result).toMatchObject({ model_id: 7, project_id: 3 });
   });
 
-  it("refuses without write access to the use case", async () => {
-    mockAccess.mockResolvedValue("denied");
-    const result = await run("agent_link_model_to_project", {
-      model_id: 7,
-      project_id: 3,
-      _userId: CHATTER,
-    });
-    expect(result).toEqual({ success: false, message: "You do not have access to use case #3" });
-    expect(mockLink).not.toHaveBeenCalled();
-  });
-
-  it("refuses without useCase.edit", async () => {
+  it("does not ask for useCase.edit, which the console does not ask for", async () => {
     mockHas.mockImplementation(
       async (_o: number, _u: number, key: string) => key !== "useCase.edit",
     );
@@ -208,10 +211,29 @@ describe("agent_link_model_to_project", () => {
       project_id: 3,
       _userId: CHATTER,
     });
-    expect(result).toEqual({
-      success: false,
-      message: "Your role does not allow changing use cases",
+    expect(mockHas).not.toHaveBeenCalledWith(ORG, CHATTER, "useCase.edit");
+    expect(mockLink).toHaveBeenCalled();
+    expect(result).toMatchObject({ model_id: 7, project_id: 3 });
+  });
+
+  it("reports the service's refusal for a use case the user cannot write to", async () => {
+    mockLink.mockRejectedValue(new ForbiddenException("Access denied", "project", "link"));
+    const result = await run("agent_link_model_to_project", {
+      model_id: 7,
+      project_id: 3,
+      _userId: CHATTER,
     });
+    expect(result).toEqual({ success: false, message: "Access denied" });
+  });
+
+  it("refuses without model.edit", async () => {
+    mockHas.mockResolvedValue(false);
+    const result = await run("agent_link_model_to_project", {
+      model_id: 7,
+      project_id: 3,
+      _userId: CHATTER,
+    });
+    expect(result).toEqual({ success: false, message: MODEL_WRITE_REFUSED });
     expect(mockLink).not.toHaveBeenCalled();
   });
 });
