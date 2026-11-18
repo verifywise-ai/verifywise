@@ -694,8 +694,9 @@ export const euControlChanges: FrameworkChangeDetector = async (req) => {
       ? (sequelize.query(
           `SELECT id, status, implementation_details, evidence_description, feedback_description
              FROM subcontrols_eu
-            WHERE organization_id = :organizationId AND id IN (:subcontrolIds);`,
-          { replacements: { organizationId, subcontrolIds }, type: QueryTypes.SELECT },
+            WHERE organization_id = :organizationId AND control_id = :controlId
+              AND id IN (:subcontrolIds);`,
+          { replacements: { organizationId, controlId, subcontrolIds }, type: QueryTypes.SELECT },
         ) as Promise<Row[]>)
       : Promise.resolve([] as Row[]),
     subcontrolIds.length > 0

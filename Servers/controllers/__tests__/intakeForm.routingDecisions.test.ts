@@ -28,6 +28,10 @@ jest.mock("../../utils/intakeSubmissionData.utils", () => ({
   rescoreStoredRun: jest.fn(),
 }));
 jest.mock("../../utils/project.utils", () => ({ createNewProjectQuery: jest.fn() }));
+// The reviewers here manage intake: getPendingSubmissions lists every submission.
+jest.mock("../../utils/rolePermissions.utils", () => ({
+  requestHasPermission: jest.fn(async () => true),
+}));
 // Approving a use case reads the org's use case defaults (#5192): none set.
 jest.mock("../../utils/useCaseOrgSettings.utils", () => ({
   getUseCaseOrgSettings: async (organizationId: number) => ({
@@ -588,7 +592,7 @@ describe("getPendingSubmissions: lane reviewers", () => {
     ]);
     const r = await list();
     expect(r.status).toBe(200);
-    expect(intake.getPendingSubmissionsQuery).toHaveBeenCalledWith(ORG, undefined);
+    expect(intake.getPendingSubmissionsQuery).toHaveBeenCalledWith(ORG, undefined, undefined);
     expect(r.body.data).toEqual([
       {
         id: 1,

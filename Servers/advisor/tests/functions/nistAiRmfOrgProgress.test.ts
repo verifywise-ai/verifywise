@@ -17,6 +17,17 @@ jest.mock("../../../utils/nistAiRmfCorrect.utils", () => ({
 }));
 
 jest.mock("../../approval/approvalGateway", () => ({ submitForApproval: jest.fn() }));
+// list_projects runs as the user; an Admin sees every use case.
+// The bridge's use case check is covered in toolBridge.useCaseAccess.test.ts;
+// here the user may open the use case.
+jest.mock("../../functions/useCaseScope", () => ({
+  ...(jest.requireActual("../../functions/useCaseScope") as object),
+  useCaseRefusalForTool: jest.fn(async () => null),
+}));
+jest.mock("../../../utils/userPermission.utils", () => ({
+  getUserRoleInOrganization: jest.fn(async () => ({ id: 1, name: "Admin", organizationId: null })),
+  userHasPermission: jest.fn(async () => true),
+}));
 
 jest.mock("../../../utils/logger/fileLogger", () => ({
   __esModule: true,
@@ -267,7 +278,7 @@ describe("Advisor Functions: NIST AI RMF org perspective", () => {
         },
       ]);
 
-      const projects = await availableProjectTools["list_projects"]({}, ORG_ID);
+      const projects = await availableProjectTools["list_projects"]({ _userId: 1 }, ORG_ID);
 
       expect(projects[0]).toMatchObject({ id: 7, is_organizational: true });
     });

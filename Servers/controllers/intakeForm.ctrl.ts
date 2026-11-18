@@ -11,6 +11,7 @@ import {
   deleteIntakeFormQuery,
   archiveIntakeFormQuery,
   getPendingSubmissionsQuery,
+  isOwnSubmissionQuery,
   getSubmissionByIdQuery,
   getSubmissionsByFormIdQuery,
   createSubmissionQuery,
@@ -89,6 +90,7 @@ import {
   type CustomFieldDisplay,
 } from "../utils/intakeCustomFields.utils";
 import { llmKeyExistsQuery } from "../utils/llmKey.utils";
+import { submitterScope } from "../middleware/intakeSubmissionAccess.middleware";
 import { sanitizeUserHtml } from "../utils/sanitization.utils";
 import logger from "../utils/logger/fileLogger";
 import { logProcessing, logSuccess, logFailure } from "../utils/logger/logHelper";
@@ -119,7 +121,7 @@ import {
   buildEntityDataFromSubmission,
   rescoreStoredRun,
 } from "../utils/intakeSubmissionData.utils";
-import { toId } from "../utils/validations/validation.utils";
+import { toId, toStrictId } from "../utils/validations/validation.utils";
 import { isEmail } from "../utils/validations/email.utils";
 import { isWebUrl } from "../utils/validations/url.utils";
 import {
@@ -1610,7 +1612,14 @@ export async function getPendingSubmissions(req: Request, res: Response) {
 
   try {
     const status = req.query.status as IntakeSubmissionStatus | undefined;
-    const rows = await getPendingSubmissionsQuery(req.organizationId!, status);
+    // Decision 5: intake managers (every lane and senior reviewer holds
+    // intakeForm.edit) see every submission; anyone else only their own,
+    // which the In review lists link to.
+    const rows = await getPendingSubmissionsQuery(
+      req.organizationId!,
+      status,
+      await submitterScope(req),
+    );
     // The list shows who can decide each row's stored lane, not the form's whole routing.
     // Senior reviewers who can still act on a second review that is open, or
     // missed and not yet resolved, other than the approver. They stay senior
@@ -1673,7 +1682,14 @@ export async function getFormSubmissions(req: Request, res: Response) {
   });
 
   try {
-    const submissions = await getSubmissionsByFormIdQuery(formId, req.organizationId!, status);
+    const submissions = await getSubmissionsByFormIdQuery(
+      formId,
+      req.organizationId!,
+      status,
+      undefined,
+      undefined,
+      await submitterScope(req),
+    );
     return res.status(200).json(STATUS_CODE[200](submissions));
   } catch (error) {
     await logFailure({
@@ -1693,7 +1709,7 @@ export async function getFormSubmissions(req: Request, res: Response) {
  * Get submission by ID
  */
 export async function getSubmissionById(req: Request, res: Response) {
-  const submissionId = parseId(req.params.id);
+  const submissionId = toStrictId(paramStr(req.params.id));
   if (isNaN(submissionId)) {
     return res.status(400).json(STATUS_CODE[400](req.t!("Invalid submission ID")));
   }
@@ -1741,7 +1757,7 @@ export async function getSubmissionStats(req: Request, res: Response) {
   });
 
   try {
-    const stats = await getSubmissionStatsQuery(req.organizationId!);
+    const stats = await getSubmissionStatsQuery(req.organizationId!, await submitterScope(req));
     return res.status(200).json(STATUS_CODE[200](stats));
   } catch (error) {
     await logFailure({
@@ -1827,7 +1843,7 @@ async function submissionPreview(
   res: Response,
   { withCustomFields }: { withCustomFields: boolean },
 ) {
-  const submissionId = parseId(req.params.id);
+  const submissionId = toStrictId(paramStr(req.params.id));
   if (isNaN(submissionId)) {
     return res.status(400).json(STATUS_CODE[400](req.t!("Invalid submission ID")));
   }
@@ -1981,6 +1997,19 @@ export async function getSubmissionByEntity(req: Request, res: Response) {
 
   try {
     const result = await getSubmissionByEntityQuery(entityType, entityId, req.organizationId!);
+
+    // Decision 5: someone else's submission reads as none, unless the caller
+    // manages intake.
+    const submitter = await submitterScope(req);
+    if (
+      result &&
+      submitter !== undefined &&
+      !(await isOwnSubmissionQuery(result.submission.id!, submitter, req.organizationId!))
+    ) {
+      return res
+        .status(404)
+        .json(STATUS_CODE[404](req.t!("No intake submission found for this entity")));
+    }
 
     if (!result) {
       return res

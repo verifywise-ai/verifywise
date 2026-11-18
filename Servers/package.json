@@ -50,7 +50,7 @@
     "prepare": "node -e \"try { require('fs').accessSync('.git'); require('child_process').spawnSync('husky', {stdio: 'inherit', shell: true}); } catch(e) {}\""
   },
   "author": "",
-  "license": "ISC",
+  "license": "SEE LICENSE IN ../LICENSE.md",
   "description": "",
   "engines": {
     "node": ">=22.23.4 <23 || >=24.22.1 <25 || >=26.12.1"

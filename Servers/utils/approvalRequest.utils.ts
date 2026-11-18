@@ -1,5 +1,6 @@
 import { QueryTypes, Transaction } from "sequelize";
 import { releaseUseCaseFromReview } from "./lifecycle.utils";
+import { buildProjectFrameworkQuery, hasFrameworkBuilder } from "./framework.utils";
 import { sequelize } from "../database/db";
 import { ApprovalRequestModel } from "../domain.layer/models/approvalWorkflow/approvalRequest.model";
 import { ApprovalRequestStepModel } from "../domain.layer/models/approvalWorkflow/approvalRequestStep.model";
@@ -222,18 +223,29 @@ export const createPendingFrameworksForApprovedUseCase = async (
   const pendingFrameworks = (projectData as any).pending_frameworks as number[];
   const enableAiDataInsertion = (projectData as any).enable_ai_data_insertion || false;
 
-  // Import framework creation utilities
-  const { createEUFrameworkQuery } = require("./eu.utils");
-  const { createISOFrameworkQuery } = require("./iso42001.utils");
-  const { createISO27001FrameworkQuery } = require("./iso27001.utils");
-  const { createNISTAI_RMFFrameworkQuery } = require("./nistAiRmfCorrect.utils");
-
-  // Create frameworks
+  // Create frameworks. Core and bundled frameworks are built alike, the way
+  // creation without a workflow builds them.
   for (const frameworkId of pendingFrameworks) {
-    // Create project_framework record FIRST (required by framework creation functions)
-    await sequelize.query(
+    // A pending id with no builder (queued before creation checked for one)
+    // would be attached with nothing behind it, so it is left off instead.
+    if (!hasFrameworkBuilder(frameworkId)) {
+      logStructured(
+        "error",
+        `pending framework ${frameworkId} has no builder; not attached to use case ${entityId}`,
+        "createPendingFrameworksForApprovedUseCase",
+        "approvalRequest.utils.ts",
+      );
+      continue;
+    }
+
+    // Create project_framework record FIRST (required by framework creation functions).
+    // A framework attached meanwhile (through "add framework" after a
+    // rejection) was built then, so it is neither linked nor built again.
+    const [inserted] = (await sequelize.query(
       `INSERT INTO projects_frameworks (organization_id, project_id, framework_id, is_demo)
-       VALUES (:organizationId, :project_id, :framework_id, false)`,
+       VALUES (:organizationId, :project_id, :framework_id, false)
+       ON CONFLICT (project_id, framework_id) DO NOTHING
+       RETURNING id`,
       {
         replacements: {
           organizationId,
@@ -242,28 +254,17 @@ export const createPendingFrameworksForApprovedUseCase = async (
         },
         transaction,
       },
-    );
+    )) as [{ id: number }[], number];
+    if (!inserted?.length) continue;
 
     // Create framework-specific records
-    if (frameworkId === 1) {
-      await createEUFrameworkQuery(entityId, enableAiDataInsertion, organizationId, transaction);
-    } else if (frameworkId === 2) {
-      await createISOFrameworkQuery(entityId, enableAiDataInsertion, organizationId, transaction);
-    } else if (frameworkId === 3) {
-      await createISO27001FrameworkQuery(
-        entityId,
-        enableAiDataInsertion,
-        organizationId,
-        transaction,
-      );
-    } else if (frameworkId === 4) {
-      await createNISTAI_RMFFrameworkQuery(
-        entityId,
-        enableAiDataInsertion,
-        organizationId,
-        transaction,
-      );
-    }
+    await buildProjectFrameworkQuery(
+      frameworkId,
+      entityId,
+      enableAiDataInsertion,
+      organizationId,
+      transaction,
+    );
   }
 
   // Clear pending frameworks after creation

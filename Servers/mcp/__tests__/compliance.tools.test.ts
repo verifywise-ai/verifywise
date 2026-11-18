@@ -27,8 +27,9 @@ jest.mock("../scope", () => ({
 jest.mock("../frameworks", () => ({
   listFrameworkRefs: jest.fn(),
 }));
-jest.mock("../../services/useCase.service", () => ({
-  CREATE_TIME_FRAMEWORK_BUILDERS: { 1: {}, 2: {}, 3: {}, 4: {} },
+jest.mock("../../utils/framework.utils", () => ({
+  // Ids 1-25 have builders; anything else does not.
+  hasFrameworkBuilder: (id: number) => id >= 1 && id <= 25,
 }));
 
 import { sequelize } from "../../database/db";
@@ -127,9 +128,19 @@ describe("list_frameworks", () => {
     });
   });
 
-  it("marks a bundled framework as recording the attachment only", async () => {
+  it("marks a bundled framework as building its controls too", async () => {
     (listFrameworkRefs as unknown as jest.Mock).mockResolvedValue([
       { id: 10, name: "ALTAI", isOrganizational: false },
+    ] as never);
+
+    const res = await tool("list_frameworks").handler({}, CALLER);
+
+    expect(payload(res).frameworks[0].buildsControls).toBe(true);
+  });
+
+  it("marks a framework with no builder as recording the attachment only", async () => {
+    (listFrameworkRefs as unknown as jest.Mock).mockResolvedValue([
+      { id: 99, name: "Legacy", isOrganizational: false },
     ] as never);
 
     const res = await tool("list_frameworks").handler({}, CALLER);

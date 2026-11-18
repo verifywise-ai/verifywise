@@ -1547,5 +1547,9 @@
   "A linked training was not found in this organization.": "Une formation liée est introuvable dans cette organisation.",
   "Only the model's approver or an Admin can change its approval.": "Seul l'approbateur du modèle ou un Admin peut modifier son approbation.",
   "A value in this request is not valid.": "Une valeur de cette requête n'est pas valide.",
-  "Status must be one of the model statuses.": "Le statut doit être l'un des statuts de modèle."
+  "Status must be one of the model statuses.": "Le statut doit être l'un des statuts de modèle.",
+  "Invalid ID": "Identifiant non valide",
+  "limit must be an integer from 1 to 100": "limit doit être un entier de 1 à 100",
+  "offset must be a whole number of 0 or more": "offset doit être un entier supérieur ou égal à 0",
+  "orders must list positive integer ids with display orders of 0 or more": "orders doit contenir des identifiants entiers positifs avec des ordres d'affichage de 0 ou plus"
 }

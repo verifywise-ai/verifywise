@@ -22,10 +22,11 @@ import {
   updateProjectByIdQuery,
 } from "../utils/project.utils";
 import { resolveHighRiskRolesWrite } from "../utils/highRiskRoles.utils";
-import { createEUFrameworkQuery } from "../utils/eu.utils";
-import { createISOFrameworkQuery } from "../utils/iso42001.utils";
-import { createISO27001FrameworkQuery } from "../utils/iso27001.utils";
-import { createNISTAI_RMFFrameworkQuery } from "../utils/nistAiRmfCorrect.utils";
+import {
+  assertFrameworksBuildable,
+  buildProjectFrameworkQuery,
+  frameworkResultKey,
+} from "../utils/framework.utils";
 import {
   recordMultipleFieldChanges,
   recordUseCaseCreation,
@@ -52,34 +53,6 @@ const isExternallyOwned = (useCase: Pick<IProjectAttributes, "owner" | "external
 /** Non-Admins see a use case only as its owner or a member. */
 const needsMembershipForAccess = (actorRole: string | undefined): boolean =>
   actorRole !== undefined && !seesAllProjects(actorRole);
-
-/**
- * The frameworks whose controls, clauses, annexes and assessments are built out
- * when a use case is created, keyed by framework id.
- *
- * This is the chain project.ctrl.ts ran before the service existed, written as
- * a lookup so the set has one name. The other bundled frameworks are still
- * recorded against the use case by `createNewProjectQuery`; they are tracked
- * through their own structures rather than these tables, which is why creation
- * does not build anything for them.
- */
-export const CREATE_TIME_FRAMEWORK_BUILDERS: Record<
-  number,
-  {
-    key: string;
-    build: (
-      projectId: number,
-      enableAiDataInsertion: boolean,
-      organizationId: number,
-      transaction: Transaction,
-    ) => Promise<object>;
-  }
-> = {
-  1: { key: "eu", build: createEUFrameworkQuery },
-  2: { key: "iso42001", build: createISOFrameworkQuery },
-  3: { key: "iso27001", build: createISO27001FrameworkQuery },
-  4: { key: "nist_ai_rmf", build: createNISTAI_RMFFrameworkQuery },
-};
 
 export type CreateUseCaseServiceInput = Partial<ProjectModel> & {
   members?: number[];
@@ -113,6 +86,10 @@ export async function createUseCaseService(
 ): Promise<CreateUseCaseServiceResult> {
   const projectData = { ...input, framework: input.framework || [] };
 
+  // Every picked framework is built (now or after approval), so one with no
+  // builder is refused before anything is written.
+  assertFrameworksBuildable(projectData.framework);
+
   // 1. Either role field may be sent; store the resolved list only.
   const highRiskRoles = resolveHighRiskRolesWrite(projectData, []) ?? [];
   delete projectData.type_of_high_risk_role;
@@ -144,13 +121,13 @@ export async function createUseCaseService(
 
   // 3. Only create frameworks immediately if NO approval workflow is assigned.
   //    Otherwise they stay on the use case as pending_frameworks and are
-  //    created once the request is approved.
+  //    created once the request is approved. Core and bundled frameworks are
+  //    built alike; createNewProjectQuery has inserted their link rows.
   const frameworks: { [key: string]: object } = {};
   if (!createdProject.approval_workflow_id) {
     for (const framework of newProject.framework || []) {
-      const builder = CREATE_TIME_FRAMEWORK_BUILDERS[framework];
-      if (!builder) continue;
-      frameworks[builder.key] = await builder.build(
+      frameworks[frameworkResultKey(framework)] = await buildProjectFrameworkQuery(
+        framework,
         createdProject.id!,
         newProject.enable_ai_data_insertion,
         ctx.organizationId,

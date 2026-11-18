@@ -3,12 +3,25 @@ import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 export type AppModule =
   "main" | "evals" | "ai-detection" | "shadow-ai" | "ai-gateway" | "ai-trust-index" | "super-admin";
 
-const initialState = {
+interface UiState {
+  sidebar: { collapsed: boolean };
+  appModule: { active: AppModule };
+  modelInventory: { statusFilter: string };
+  /**
+   * modalOpen is true from the moment the first-login setup modal opens until
+   * it calls back, including after it has saved "completed" itself (the demo
+   * loader does that before "Explore the demo"). Absent until first set; the
+   * ui slice is not persisted.
+   */
+  setup?: { modalOpen: boolean };
+}
+
+const initialState: UiState = {
   sidebar: {
     collapsed: false,
   },
   appModule: {
-    active: "main" as AppModule,
+    active: "main",
   },
   modelInventory: {
     statusFilter: "all",
@@ -34,6 +47,9 @@ const uiSlice = createSlice({
     setModelInventoryStatusFilter: (state, action) => {
       state.modelInventory.statusFilter = action.payload;
     },
+    setSetupModalOpen: (state, action: PayloadAction<boolean>) => {
+      state.setup = { modalOpen: action.payload };
+    },
     setActiveModule: (state, action: PayloadAction<AppModule>) => {
       if (!state.appModule) {
         state.appModule = { active: action.payload };
@@ -51,4 +67,9 @@ export const {
   setSidebarCollapsed,
   setModelInventoryStatusFilter,
   setActiveModule,
+  setSetupModalOpen,
 } = uiSlice.actions;
+
+/** True while the first-login setup modal is on screen. */
+export const selectSetupModalOpen = (state: { ui?: UiState }): boolean =>
+  state.ui?.setup?.modalOpen === true;

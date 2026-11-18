@@ -1,0 +1,618 @@
+jest.setTimeout(120000);
+
+import { QueryTypes } from "sequelize";
+import { sequelize } from "../../database/db";
+import { cleanupDatabase, createTestOrganization, createTestUser } from "./helpers";
+import { createTestApp, testRequest } from "./setup";
+import { createTestProject } from "../factories";
+
+/**
+ * Post-market monitoring routes keyed by a config, cycle or report id run the
+ * access rule of the use case the config monitors. The stakeholder assigned to
+ * a cycle may open, fill in, flag and submit that cycle without being on the
+ * use case, as the monitoring email asks them to.
+ */
+
+const ROLE = { Admin: 1, Reviewer: 2, Editor: 3, Auditor: 4 } as const;
+type RoleName = keyof typeof ROLE;
+type Api = ReturnType<typeof testRequest>;
+interface Ctx {
+  project: number;
+  config: number;
+  question: number;
+  cycle: number;
+  report: number;
+}
+
+let counter = 0;
+async function user(orgId: number, role: RoleName): Promise<number> {
+  counter += 1;
+  return createTestUser(orgId, ROLE[role], `pmm-${Date.now()}-${counter}@test.com`, "Pw1!x");
+}
+
+async function apiAs(orgId: number, userId: number, role: RoleName): Promise<Api> {
+  return testRequest(
+    await createTestApp({ bypassAuth: true, mockUser: { userId, organizationId: orgId, role } }),
+  );
+}
+
+const insertId = async (sql: string, replacements: Record<string, unknown>) =>
+  (await sequelize.query<{ id: number }>(sql, { replacements, type: QueryTypes.SELECT }))[0].id;
+
+const count = async (sql: string, replacements: Record<string, unknown>) =>
+  Number(
+    (await sequelize.query<{ n: number }>(sql, { replacements, type: QueryTypes.SELECT }))[0].n,
+  );
+
+async function seedMonitoring(orgId: number, ownerId: number, stakeholder?: number): Promise<Ctx> {
+  const project = await createTestProject(orgId, ownerId);
+  const config = await insertId(
+    `INSERT INTO post_market_monitoring_configs (organization_id, project_id, is_active)
+     VALUES (:orgId, :project, TRUE) RETURNING id`,
+    { orgId, project },
+  );
+  const question = await insertId(
+    `INSERT INTO post_market_monitoring_questions
+       (organization_id, config_id, question_text, question_type, is_required)
+     VALUES (:orgId, :config, 'Any incidents?', 'yes_no', FALSE) RETURNING id`,
+    { orgId, config },
+  );
+  const cycle = await insertId(
+    `INSERT INTO post_market_monitoring_cycles
+       (organization_id, config_id, cycle_number, due_at, assigned_stakeholder_id)
+     VALUES (:orgId, :config, 1, NOW() + INTERVAL '7 days', :stakeholder) RETURNING id`,
+    { orgId, config, stakeholder: stakeholder ?? null },
+  );
+  // The report belongs to an earlier, completed cycle: a cycle has at most
+  // one report, written when it is submitted, so the open cycle has none.
+  const pastCycle = await insertId(
+    `INSERT INTO post_market_monitoring_cycles
+       (organization_id, config_id, cycle_number, status, due_at, completed_at, assigned_stakeholder_id)
+     VALUES (:orgId, :config, 0, 'completed', NOW() - INTERVAL '30 days', NOW() - INTERVAL '29 days', :stakeholder)
+     RETURNING id`,
+    { orgId, config, stakeholder: stakeholder ?? null },
+  );
+  const report = await insertId(
+    `INSERT INTO post_market_monitoring_reports (organization_id, cycle_id)
+     VALUES (:orgId, :pastCycle) RETURNING id`,
+    { orgId, pastCycle },
+  );
+  return { project, config, question, cycle, report };
+}
+
+/** Everything a refused write could have changed. */
+const snapshot = async (c: Ctx) =>
+  count(
+    `SELECT (SELECT COUNT(*) FROM post_market_monitoring_configs
+              WHERE id = :config AND reminder_days = 3)
+          + (SELECT COUNT(*) FROM post_market_monitoring_questions WHERE config_id = :config)
+          + (SELECT COUNT(*) FROM post_market_monitoring_responses WHERE cycle_id = :cycle)
+          + (SELECT COUNT(*) FROM post_market_monitoring_cycles
+              WHERE id = :cycle AND status = 'pending' AND assigned_stakeholder_id IS NULL)
+          + (SELECT COUNT(*) FROM post_market_monitoring_configs WHERE project_id = :project) AS n`,
+    c as unknown as Record<string, unknown>,
+  );
+
+interface Route {
+  name: string;
+  call: (api: Api, c: Ctx, users: { other: number }) => any;
+  success: number | number[];
+  /** Another organization's Admin; default 404. */
+  missing?: number;
+  /** The cycle's stakeholder may use it without use case access. */
+  stakeholder?: boolean;
+  write?: boolean;
+}
+
+const ROUTES: Route[] = [
+  {
+    name: "GET /api/pmm/config/:projectId",
+    call: (a, c) => a.get(`/api/pmm/config/${c.project}`),
+    success: 200,
+  },
+  {
+    name: "PUT /api/pmm/config/:configId",
+    call: (a, c) => a.put(`/api/pmm/config/${c.config}`).send({ reminder_days: 5 }),
+    success: 200,
+    write: true,
+  },
+  {
+    name: "DELETE /api/pmm/config/:configId",
+    call: (a, c) => a.delete(`/api/pmm/config/${c.config}`),
+    // The handler misreads the DELETE row count and answers 404 even when it deletes.
+    success: 404,
+    write: true,
+  },
+  {
+    name: "GET /api/pmm/config/:configId/questions",
+    call: (a, c) => a.get(`/api/pmm/config/${c.config}/questions`),
+    success: 200,
+    missing: 200,
+    stakeholder: true,
+  },
+  {
+    name: "POST /api/pmm/config/:configId/questions",
+    call: (a, c) =>
+      a
+        .post(`/api/pmm/config/${c.config}/questions`)
+        .send({ question_text: "New?", question_type: "yes_no" }),
+    success: 201,
+    write: true,
+  },
+  {
+    name: "GET /api/pmm/active-cycle/:projectId",
+    call: (a, c) => a.get(`/api/pmm/active-cycle/${c.project}`),
+    success: 200,
+  },
+  {
+    name: "GET /api/pmm/cycles/:cycleId",
+    call: (a, c) => a.get(`/api/pmm/cycles/${c.cycle}`),
+    success: 200,
+    stakeholder: true,
+  },
+  {
+    name: "GET /api/pmm/cycles/:cycleId/responses",
+    call: (a, c) => a.get(`/api/pmm/cycles/${c.cycle}/responses`),
+    success: 200,
+    stakeholder: true,
+  },
+  {
+    name: "POST /api/pmm/cycles/:cycleId/responses",
+    call: (a, c) =>
+      a
+        .post(`/api/pmm/cycles/${c.cycle}/responses`)
+        .send({ responses: [{ question_id: c.question, response_value: true }] }),
+    success: 200,
+    stakeholder: true,
+    write: true,
+  },
+  {
+    name: "POST /api/pmm/cycles/:cycleId/flag",
+    call: (a, c) =>
+      a
+        .post(`/api/pmm/cycles/${c.cycle}/flag`)
+        .send({ question_id: c.question, response_value: true }),
+    success: 200,
+    stakeholder: true,
+    write: true,
+  },
+  {
+    name: "POST /api/pmm/cycles/:cycleId/submit",
+    call: (a, c) =>
+      a
+        .post(`/api/pmm/cycles/${c.cycle}/submit`)
+        .send({ responses: [{ question_id: c.question, response_value: true }] }),
+    success: 200,
+    stakeholder: true,
+    write: true,
+  },
+  {
+    name: "POST /api/pmm/cycles/:cycleId/reassign",
+    call: (a, c, u) =>
+      a.post(`/api/pmm/cycles/${c.cycle}/reassign`).send({ stakeholder_id: u.other }),
+    success: 200,
+    write: true,
+  },
+  {
+    name: "GET /api/pmm/reports/:reportId/download",
+    call: (a, c) => a.get(`/api/pmm/reports/${c.report}/download`),
+    success: 404,
+    stakeholder: true,
+  },
+  {
+    name: "POST /api/pmm/config (project_id in the body)",
+    call: (a, c) => a.post(`/api/pmm/config`).send({ project_id: c.project }),
+    success: 409,
+    write: true,
+  },
+];
+
+const expectSuccess = (status: number, success: number | number[]) => {
+  if (Array.isArray(success)) expect(success).toContain(status);
+  else expect(status).toBe(success);
+};
+
+describe("post-market monitoring routes run the use case access rule", () => {
+  let orgId: number;
+  let ownerId: number;
+  let adminId: number;
+  let otherId: number;
+
+  beforeAll(async () => {
+    await cleanupDatabase();
+    orgId = await createTestOrganization();
+    ownerId = await user(orgId, "Editor");
+    adminId = await user(orgId, "Admin");
+    otherId = await user(orgId, "Editor");
+  });
+
+  afterAll(async () => {
+    await cleanupDatabase();
+  });
+
+  describe.each(ROUTES)("$name", (route) => {
+    it.each(["Editor", "Auditor"] as const)(
+      "refuses a %s who is not on the use case and changes nothing",
+      async (role) => {
+        const c = await seedMonitoring(orgId, ownerId);
+        const before = await snapshot(c);
+        const res = await route.call(await apiAs(orgId, await user(orgId, role), role), c, {
+          other: otherId,
+        });
+        expect(res.status).toBe(403);
+        expect(await snapshot(c)).toBe(before);
+      },
+    );
+
+    it("lets a member of the use case through", async () => {
+      const c = await seedMonitoring(orgId, ownerId);
+      const member = await user(orgId, "Editor");
+      await sequelize.query(
+        `INSERT INTO projects_members (organization_id, project_id, user_id)
+         VALUES (:orgId, :project, :member)`,
+        { replacements: { orgId, project: c.project, member } },
+      );
+      const res = await route.call(await apiAs(orgId, member, "Editor"), c, { other: otherId });
+      expectSuccess(res.status, route.success);
+    });
+
+    it("lets an Admin who is not on the use case through", async () => {
+      const c = await seedMonitoring(orgId, ownerId);
+      const res = await route.call(await apiAs(orgId, adminId, "Admin"), c, { other: otherId });
+      expectSuccess(res.status, route.success);
+    });
+
+    it("gives another organization's Admin the handler's usual answer", async () => {
+      const c = await seedMonitoring(orgId, ownerId);
+      const before = await snapshot(c);
+      const otherOrg = await createTestOrganization();
+      const api = await apiAs(otherOrg, await user(otherOrg, "Admin"), "Admin");
+      const res = await route.call(api, c, { other: otherId });
+      expect(res.status).toBe(route.missing ?? 404);
+      expect(await snapshot(c)).toBe(before);
+    });
+
+    it(`${route.stakeholder ? "lets" : "does not let"} the cycle's stakeholder who is not on the use case use it`, async () => {
+      const stakeholder = await user(orgId, "Editor");
+      const c = await seedMonitoring(orgId, ownerId, stakeholder);
+      const res = await route.call(await apiAs(orgId, stakeholder, "Editor"), c, {
+        other: otherId,
+      });
+      if (route.stakeholder) expectSuccess(res.status, route.success);
+      else expect(res.status).toBe(403);
+    });
+  });
+});
+
+describe("post-market monitoring writes stay inside the config or cycle checked", () => {
+  let orgId: number;
+  let ownerId: number;
+  let api: Api;
+
+  beforeAll(async () => {
+    await cleanupDatabase();
+    orgId = await createTestOrganization();
+    ownerId = await user(orgId, "Editor");
+    api = await apiAs(orgId, ownerId, "Editor");
+  });
+
+  afterAll(async () => {
+    await cleanupDatabase();
+  });
+
+  /** A monitored use case the owner cannot see. */
+  const theirs = async () => seedMonitoring(orgId, await user(orgId, "Editor"));
+  const questionsOf = (config: number) =>
+    count(`SELECT COUNT(*) AS n FROM post_market_monitoring_questions WHERE config_id = :config`, {
+      config,
+    });
+
+  it("adds a question to the config in the path, never the body's config_id", async () => {
+    const mine = await seedMonitoring(orgId, ownerId);
+    const other = await theirs();
+
+    const res = await api
+      .post(`/api/pmm/config/${mine.config}/questions`)
+      .send({ config_id: other.config, question_text: "Smuggled?", question_type: "yes_no" });
+
+    expect(res.status).toBe(201);
+    expect(await questionsOf(other.config)).toBe(1);
+    expect(await questionsOf(mine.config)).toBe(2);
+  });
+
+  it.each([
+    ["responses", (q: number) => ({ responses: [{ question_id: q, response_value: true }] })],
+    ["flag", (q: number) => ({ question_id: q, response_value: true })],
+    ["submit", (q: number) => ({ responses: [{ question_id: q, response_value: true }] })],
+  ])(
+    "POST /cycles/:cycleId/%s refuses a question of another config with 404",
+    async (path, body) => {
+      const mine = await seedMonitoring(orgId, ownerId);
+      const other = await theirs();
+
+      const res = await api
+        .post(`/api/pmm/cycles/${mine.cycle}/${path}`)
+        .send(body(other.question));
+
+      expect(res.status).toBe(404);
+      expect(
+        await count(
+          `SELECT COUNT(*) AS n FROM post_market_monitoring_responses WHERE cycle_id = :cycle`,
+          { cycle: mine.cycle },
+        ),
+      ).toBe(0);
+      expect(
+        await count(
+          `SELECT COUNT(*) AS n FROM post_market_monitoring_cycles WHERE id = :cycle AND status = 'pending'`,
+          { cycle: mine.cycle },
+        ),
+      ).toBe(1);
+    },
+  );
+
+  it.each([
+    [
+      "PUT",
+      (a: Api, q: number) => a.put(`/api/pmm/questions/${q}`).send({ question_text: "Changed" }),
+    ],
+    ["DELETE", (a: Api, q: number) => a.delete(`/api/pmm/questions/${q}`)],
+  ])(
+    "%s /questions/:questionId refuses a question of a use case the caller cannot see",
+    async (_m, call) => {
+      const other = await theirs();
+
+      const res = await call(api, other.question);
+
+      expect(res.status).toBe(403);
+      expect(
+        await count(
+          `SELECT COUNT(*) AS n FROM post_market_monitoring_questions
+          WHERE id = :q AND question_text = 'Any incidents?'`,
+          { q: other.question },
+        ),
+      ).toBe(1);
+    },
+  );
+
+  it("PUT /questions/:questionId still lets the use case's owner edit its question", async () => {
+    const mine = await seedMonitoring(orgId, ownerId);
+    const res = await api
+      .put(`/api/pmm/questions/${mine.question}`)
+      .send({ question_text: "Changed" });
+    expect(res.status).toBe(200);
+  });
+
+  it("POST /questions/reorder refuses a question of a use case the caller cannot see", async () => {
+    const mine = await seedMonitoring(orgId, ownerId);
+    const other = await theirs();
+
+    const res = await api.post(`/api/pmm/questions/reorder`).send({
+      orders: [
+        { id: mine.question, display_order: 5 },
+        { id: other.question, display_order: 9 },
+      ],
+    });
+
+    expect(res.status).toBe(403);
+    expect(
+      await count(
+        `SELECT COUNT(*) AS n FROM post_market_monitoring_questions
+          WHERE id IN (:ids) AND display_order = 0`,
+        { ids: [mine.question, other.question] },
+      ),
+    ).toBe(2);
+  });
+
+  it("POST /questions/reorder still reorders the caller's own questions", async () => {
+    const mine = await seedMonitoring(orgId, ownerId);
+    const res = await api
+      .post(`/api/pmm/questions/reorder`)
+      .send({ orders: [{ id: mine.question, display_order: 5 }] });
+    expect(res.status).toBe(200);
+  });
+});
+
+describe("post-market monitoring review fixes", () => {
+  let orgId: number;
+  let ownerId: number;
+  let api: Api;
+
+  beforeAll(async () => {
+    await cleanupDatabase();
+    orgId = await createTestOrganization();
+    ownerId = await user(orgId, "Editor");
+    api = await apiAs(orgId, ownerId, "Editor");
+  });
+
+  afterAll(async () => {
+    await cleanupDatabase();
+  });
+
+  const orderOf = async (id: number) =>
+    count(`SELECT display_order AS n FROM post_market_monitoring_questions WHERE id = :id`, { id });
+
+  it.each([
+    ["an array id", (q: number) => [{ id: [q], display_order: 99 }]],
+    ["a string id", (q: number) => [{ id: `${q}`, display_order: 99 }]],
+    ["a negative id", () => [{ id: -1, display_order: 99 }]],
+    ["a fractional display_order", (q: number) => [{ id: q, display_order: 1.5 }]],
+    ["a missing display_order", (q: number) => [{ id: q }]],
+    ["an empty list", () => []],
+    ["no list", () => undefined],
+  ])("POST /questions/reorder refuses %s with 400 and reorders nothing", async (_label, orders) => {
+    const other = await seedMonitoring(orgId, await user(orgId, "Editor"));
+
+    const res = await api
+      .post(`/api/pmm/questions/reorder`)
+      .send({ orders: orders(other.question) });
+
+    expect(res.status).toBe(400);
+    expect(await orderOf(other.question)).toBe(0);
+  });
+
+  it("POST /cycles/:cycleId/reassign needs postMarketMonitoring.edit, not only use case access", async () => {
+    const c = await seedMonitoring(orgId, ownerId);
+    const reviewer = await user(orgId, "Reviewer");
+    await sequelize.query(
+      `INSERT INTO projects_members (organization_id, project_id, user_id)
+       VALUES (:orgId, :project, :reviewer)`,
+      { replacements: { orgId, project: c.project, reviewer } },
+    );
+
+    const res = await (
+      await apiAs(orgId, reviewer, "Reviewer")
+    )
+      .post(`/api/pmm/cycles/${c.cycle}/reassign`)
+      .send({ stakeholder_id: reviewer });
+
+    expect(res.status).toBe(403);
+    expect(
+      await count(
+        `SELECT COUNT(*) AS n FROM post_market_monitoring_cycles
+          WHERE id = :cycle AND assigned_stakeholder_id IS NULL`,
+        { cycle: c.cycle },
+      ),
+    ).toBe(1);
+  });
+
+  it("a stakeholder of a completed cycle can no longer read the config's questions", async () => {
+    const stakeholder = await user(orgId, "Editor");
+    const c = await seedMonitoring(orgId, ownerId, stakeholder);
+    await sequelize.query(
+      `UPDATE post_market_monitoring_cycles SET status = 'completed' WHERE id = :cycle`,
+      { replacements: { cycle: c.cycle } },
+    );
+
+    const res = await (
+      await apiAs(orgId, stakeholder, "Editor")
+    ).get(`/api/pmm/config/${c.config}/questions`);
+
+    expect(res.status).toBe(403);
+  });
+
+  it.each(["pending", "in_progress", "escalated"])(
+    "a stakeholder of a %s cycle still reads the config's questions",
+    async (status) => {
+      const stakeholder = await user(orgId, "Editor");
+      const c = await seedMonitoring(orgId, ownerId, stakeholder);
+      await sequelize.query(
+        `UPDATE post_market_monitoring_cycles SET status = :status WHERE id = :cycle`,
+        {
+          replacements: { cycle: c.cycle, status },
+        },
+      );
+
+      const res = await (
+        await apiAs(orgId, stakeholder, "Editor")
+      ).get(`/api/pmm/config/${c.config}/questions`);
+
+      expect(res.status).toBe(200);
+    },
+  );
+});
+
+describe("GET /api/pmm/reports lists only reports of visible use cases", () => {
+  let orgId: number;
+  let ownerId: number;
+  let adminId: number;
+  let mine: Ctx;
+  let other: Ctx;
+
+  beforeAll(async () => {
+    await cleanupDatabase();
+    orgId = await createTestOrganization();
+    ownerId = await user(orgId, "Editor");
+    adminId = await user(orgId, "Admin");
+    mine = await seedMonitoring(orgId, ownerId);
+    other = await seedMonitoring(orgId, await user(orgId, "Editor"));
+  });
+
+  afterAll(async () => {
+    await cleanupDatabase();
+  });
+
+  const reportIds = (res: any) =>
+    (res.body.data.reports as Array<{ id: number }>).map((r) => r.id).sort((a, b) => a - b);
+
+  it("shows a non-Admin only the reports of use cases they can see, and counts only those", async () => {
+    const res = await (await apiAs(orgId, ownerId, "Editor")).get(`/api/pmm/reports`);
+    expect(res.status).toBe(200);
+    expect(reportIds(res)).toEqual([mine.report]);
+    expect(res.body.data.total).toBe(1);
+  });
+
+  it("returns an empty list when filtered to a use case the caller cannot see", async () => {
+    const res = await (
+      await apiAs(orgId, ownerId, "Editor")
+    ).get(`/api/pmm/reports?project_id=${other.project}`);
+    expect(res.status).toBe(200);
+    expect(reportIds(res)).toEqual([]);
+    expect(res.body.data.total).toBe(0);
+  });
+
+  it("also lists the report of a cycle the caller is the stakeholder of", async () => {
+    const stakeholder = await user(orgId, "Editor");
+    const theirs = await seedMonitoring(orgId, await user(orgId, "Editor"), stakeholder);
+
+    const res = await (await apiAs(orgId, stakeholder, "Editor")).get(`/api/pmm/reports`);
+
+    expect(reportIds(res)).toEqual([theirs.report]);
+    expect(res.body.data.total).toBe(1);
+  });
+
+  it("shows an Admin every report", async () => {
+    const res = await (await apiAs(orgId, adminId, "Admin")).get(`/api/pmm/reports`);
+    expect(reportIds(res)).toEqual(expect.arrayContaining([mine.report, other.report]));
+  });
+});
+
+describe("POST /api/pmm/projects/:projectId/start-cycle needs postMarketMonitoring.edit", () => {
+  let orgId: number;
+  let ownerId: number;
+
+  beforeAll(async () => {
+    await cleanupDatabase();
+    orgId = await createTestOrganization();
+    ownerId = await user(orgId, "Editor");
+  });
+
+  afterAll(async () => {
+    await cleanupDatabase();
+  });
+
+  const cyclesOf = (config: number) =>
+    count(`SELECT COUNT(*) AS n FROM post_market_monitoring_cycles WHERE config_id = :config`, {
+      config,
+    });
+
+  const memberApi = async (c: Ctx, role: RoleName) => {
+    const member = await user(orgId, role);
+    await sequelize.query(
+      `INSERT INTO projects_members (organization_id, project_id, user_id)
+       VALUES (:orgId, :project, :member)`,
+      { replacements: { orgId, project: c.project, member } },
+    );
+    return apiAs(orgId, member, role);
+  };
+
+  it.each(["Reviewer", "Auditor"] as const)(
+    "refuses a %s on the use case with 403 and starts no cycle",
+    async (role) => {
+      const c = await seedMonitoring(orgId, ownerId);
+      const before = await cyclesOf(c.config);
+      const res = await (
+        await memberApi(c, role)
+      ).post(`/api/pmm/projects/${c.project}/start-cycle`);
+      expect(res.status).toBe(403);
+      expect(await cyclesOf(c.config)).toBe(before);
+    },
+  );
+
+  it("lets an Editor on the use case past both checks", async () => {
+    const c = await seedMonitoring(orgId, ownerId);
+    const res = await (
+      await memberApi(c, "Editor")
+    ).post(`/api/pmm/projects/${c.project}/start-cycle`);
+    expect(res.status).not.toBe(403);
+  });
+});
