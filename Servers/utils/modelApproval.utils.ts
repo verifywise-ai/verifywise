@@ -26,7 +26,10 @@
  * refused change is a 403, an allowed one is stored as sent.
  */
 
-import { ForbiddenException } from "../domain.layer/exceptions/custom.exception";
+import {
+  ForbiddenException,
+  ValidationException,
+} from "../domain.layer/exceptions/custom.exception";
 import { ModelInventoryStatus } from "../domain.layer/enums/model-inventory-status.enum";
 import { RISK_APPROVAL_SELF_APPROVER_MESSAGE } from "./riskApproval.utils";
 import { toPositiveId } from "./modelReferences.utils";
@@ -44,6 +47,50 @@ export const MODEL_DECISION_STATUSES: readonly ModelInventoryStatus[] = [
 
 export function isModelStatusDecision(status: string | null | undefined): boolean {
   return MODEL_DECISION_STATUSES.includes(status as ModelInventoryStatus);
+}
+
+const MODEL_STATUSES = Object.values(ModelInventoryStatus) as string[];
+
+const isModelStatus = (value: unknown): value is ModelInventoryStatus =>
+  typeof value === "string" && MODEL_STATUSES.includes(value);
+
+export const MODEL_STATUS_INVALID = "Status must be one of the model statuses.";
+export const MODEL_APPROVER_INVALID = "The approver must be a member of this organization.";
+
+/**
+ * Refuses (ValidationException, 400) a status or approver of the wrong
+ * shape before the approval rule reads them, on every route: an array, an
+ * object or a number must never pass as "not sent" and skip the rule.
+ *
+ * - `status`: absent, or one of the model statuses. On create, "" and null
+ *   still mean "not sent" (Pending), as the legacy route always accepted.
+ * - `approver`: absent, null, "" (none), an integer or a string of digits.
+ *
+ * Returns the input with a create's empty status removed.
+ */
+export function assertModelApprovalInput<T extends { status?: unknown; approver?: unknown }>(
+  input: T,
+  { creating }: { creating: boolean },
+): T {
+  let checked = input;
+  if (creating && (input.status === "" || input.status === null)) {
+    const { status: _empty, ...rest } = input;
+    checked = rest as T;
+  }
+  if (checked.status !== undefined && !isModelStatus(checked.status)) {
+    throw new ValidationException(MODEL_STATUS_INVALID, "status", checked.status);
+  }
+  const approver = checked.approver;
+  const approverOk =
+    approver === undefined ||
+    approver === null ||
+    approver === "" ||
+    (typeof approver === "number" && Number.isInteger(approver)) ||
+    (typeof approver === "string" && /^[0-9]+$/.test(approver));
+  if (!approverOk) {
+    throw new ValidationException(MODEL_APPROVER_INVALID, "approver", approver);
+  }
+  return checked;
 }
 
 const MODEL_APPROVAL_FORBIDDEN_MESSAGES = {
@@ -96,10 +143,16 @@ export function assertModelApprovalAllowed({
     submitted.approver !== undefined ? toApproverId(submitted.approver) : savedApprover;
   const approverChanged = nextApprover !== savedApprover;
 
-  const requested = typeof submitted.status === "string" ? submitted.status : undefined;
-  const statusChanged = requested !== undefined && requested !== "" && requested !== savedStatus;
+  // Fail closed: a status that was sent but is not a model status counts as
+  // a change touching a decision (assertModelApprovalInput refuses it first).
+  const statusSent = submitted.status !== undefined;
+  const statusValid = isModelStatus(submitted.status);
+  const statusChanged = statusSent && (!statusValid || submitted.status !== savedStatus);
   const touchesDecision =
-    statusChanged && (isModelStatusDecision(requested) || isModelStatusDecision(savedStatus));
+    statusChanged &&
+    (!statusValid ||
+      isModelStatusDecision(submitted.status as string) ||
+      isModelStatusDecision(savedStatus));
 
   // The saved approver, never the one this save names.
   const callerDecides = callerIsAdmin || (savedApprover !== null && savedApprover === callerId);

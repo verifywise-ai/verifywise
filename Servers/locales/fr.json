@@ -1546,5 +1546,6 @@
   "A linked risk was not found in this organization.": "Un risque lié est introuvable dans cette organisation.",
   "A linked training was not found in this organization.": "Une formation liée est introuvable dans cette organisation.",
   "Only the model's approver or an Admin can change its approval.": "Seul l'approbateur du modèle ou un Admin peut modifier son approbation.",
-  "A value in this request is not valid.": "Une valeur de cette requête n'est pas valide."
+  "A value in this request is not valid.": "Une valeur de cette requête n'est pas valide.",
+  "Status must be one of the model statuses.": "Le statut doit être l'un des statuts de modèle."
 }

@@ -41,7 +41,7 @@ import {
   recordMultipleFieldChanges,
   trackEntityChanges,
 } from "../utils/changeHistory.base.utils";
-import { assertModelApprovalAllowed } from "../utils/modelApproval.utils";
+import { assertModelApprovalAllowed, assertModelApprovalInput } from "../utils/modelApproval.utils";
 import { modelHasMrmHistoryQuery } from "../utils/mrm.utils";
 import { getUserNameById } from "./riskApproverNotification.service";
 import { notifyUserAssigned } from "./inAppNotification.service";
@@ -181,10 +181,11 @@ function notifyCandidates(
  * unique violation for a duplicate external key.
  */
 export async function createModelInventoryService(
-  input: ModelInventoryInput,
+  rawInput: ModelInventoryInput,
   ctx: ModelWriteContext,
   transaction?: Transaction,
 ): Promise<ModelInventoryModel> {
+  const input = assertModelApprovalInput(rawInput, { creating: true });
   const fields = modelFields(input);
   assertModelApprovalAllowed({
     existing: null,
@@ -245,10 +246,11 @@ export async function createModelInventoryService(
  */
 export async function updateModelInventoryService(
   id: number,
-  input: ModelInventoryInput,
+  rawInput: ModelInventoryInput,
   ctx: ModelWriteContext,
   transaction?: Transaction,
 ): Promise<ModelInventoryModel | null> {
+  const input = assertModelApprovalInput(rawInput, { creating: false });
   const fields = modelFields(input);
   return inTransaction(transaction, async (tx) => {
     const current = await getModelInventoryByIdQuery(id, ctx.organizationId, {

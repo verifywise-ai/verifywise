@@ -84,6 +84,7 @@ import { ModelApprovalForbiddenError } from "../../utils/modelApproval.utils";
 import {
   NotFoundException,
   ConflictException,
+  ValidationException,
 } from "../../domain.layer/exceptions/custom.exception";
 
 const EDITOR = 10;
@@ -246,6 +247,34 @@ describe("updateModelInventoryService", () => {
       expect.any(String),
       expect.anything(),
     );
+  });
+});
+
+describe("malformed status or approver", () => {
+  it.each([[["Approved"]], [{}], [1]])(
+    "refuses status %p with a ValidationException before anything is read or written",
+    async (status) => {
+      await expect(
+        createModelInventoryService(
+          { provider: "p", model: "m", status } as any,
+          ctx,
+          fakeTx() as any,
+        ),
+      ).rejects.toBeInstanceOf(ValidationException);
+      await expect(
+        updateModelInventoryService(7, { status } as any, ctx, fakeTx() as any),
+      ).rejects.toBeInstanceOf(ValidationException);
+      expect(mockGetById).not.toHaveBeenCalled();
+      expect(mockCreateQuery).not.toHaveBeenCalled();
+      expect(mockUpdateQuery).not.toHaveBeenCalled();
+    },
+  );
+
+  it("refuses an approver sent as an array", async () => {
+    await expect(
+      updateModelInventoryService(7, { approver: [5] } as any, ctx, fakeTx() as any),
+    ).rejects.toBeInstanceOf(ValidationException);
+    expect(mockUpdateQuery).not.toHaveBeenCalled();
   });
 });
 

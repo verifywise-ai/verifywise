@@ -1546,5 +1546,6 @@
   "A linked risk was not found in this organization.": "A linked risk was not found in this organization.",
   "A linked training was not found in this organization.": "A linked training was not found in this organization.",
   "Only the model's approver or an Admin can change its approval.": "Only the model's approver or an Admin can change its approval.",
-  "A value in this request is not valid.": "A value in this request is not valid."
+  "A value in this request is not valid.": "A value in this request is not valid.",
+  "Status must be one of the model statuses.": "Status must be one of the model statuses."
 }

@@ -25,6 +25,10 @@ import { ModelRiskStatus } from "../../domain.layer/enums/model-risk-status.enum
 const MAX_ID = 2147483647;
 const oneOf = (field: string, values: string[]) => `${field} must be one of: ${values.join(", ")}`;
 
+/** One of `values`, as a string: isIn alone accepts ["Approved"], element by element. */
+const isOneOf = (chain: ValidationChain, values: string[], message: string) =>
+  chain.isString().withMessage(message).bail().isIn(values).withMessage(message);
+
 export const validateModelIdParam = [
   param("id").isInt({ min: 1, max: MAX_ID }).withMessage("id must be a positive integer"),
   handleValidationErrors,
@@ -90,17 +94,14 @@ const MODEL_STATUSES = Object.values(ModelInventoryStatus) as string[];
 const MODEL_TYPES = Object.values(ModelInventoryType) as string[];
 
 const optionalModelFields: ValidationChain[] = [
-  body("status").optional().isIn(MODEL_STATUSES).withMessage(oneOf("status", MODEL_STATUSES)),
+  isOneOf(body("status").optional(), MODEL_STATUSES, oneOf("status", MODEL_STATUSES)),
   body("status_date")
     .optional()
     .isISO8601()
     .withMessage("status_date must be a valid ISO 8601 date"),
   optionalRefId("approver"),
   // "" or null: unclassified.
-  body("type")
-    .optional({ values: "falsy" })
-    .isIn(MODEL_TYPES)
-    .withMessage(oneOf("type", MODEL_TYPES)),
+  isOneOf(body("type").optional({ values: "falsy" }), MODEL_TYPES, oneOf("type", MODEL_TYPES)),
   body("capabilities")
     .optional({ values: "null" })
     .custom((value) => {
@@ -163,7 +164,7 @@ const RISK_LEVELS = Object.values(ModelRiskLevel) as string[];
 const RISK_STATUSES = Object.values(ModelRiskStatus) as string[];
 
 const optionalModelRiskFields: ValidationChain[] = [
-  body("status").optional().isIn(RISK_STATUSES).withMessage(oneOf("status", RISK_STATUSES)),
+  isOneOf(body("status").optional(), RISK_STATUSES, oneOf("status", RISK_STATUSES)),
   // "" or null: no model.
   optionalRefId("model_id"),
   ...[
@@ -179,12 +180,16 @@ const optionalModelRiskFields: ValidationChain[] = [
 
 export const validateCreateModelRiskV1 = [
   requiredText("risk_name"),
-  body("risk_category")
-    .isIn(RISK_CATEGORIES)
-    .withMessage(`risk_category is required and must be one of: ${RISK_CATEGORIES.join(", ")}`),
-  body("risk_level")
-    .isIn(RISK_LEVELS)
-    .withMessage(`risk_level is required and must be one of: ${RISK_LEVELS.join(", ")}`),
+  isOneOf(
+    body("risk_category"),
+    RISK_CATEGORIES,
+    `risk_category is required and must be one of: ${RISK_CATEGORIES.join(", ")}`,
+  ),
+  isOneOf(
+    body("risk_level"),
+    RISK_LEVELS,
+    `risk_level is required and must be one of: ${RISK_LEVELS.join(", ")}`,
+  ),
   requiredRefId("owner", "owner is required and must be a positive integer"),
   body("target_date")
     .isISO8601()
@@ -196,11 +201,12 @@ export const validateCreateModelRiskV1 = [
 export const validateUpdateModelRiskV1 = [
   param("id").isInt({ min: 1, max: MAX_ID }).withMessage("id must be a positive integer"),
   nonEmptyTextIfSent("risk_name"),
-  body("risk_category")
-    .optional()
-    .isIn(RISK_CATEGORIES)
-    .withMessage(oneOf("risk_category", RISK_CATEGORIES)),
-  body("risk_level").optional().isIn(RISK_LEVELS).withMessage(oneOf("risk_level", RISK_LEVELS)),
+  isOneOf(
+    body("risk_category").optional(),
+    RISK_CATEGORIES,
+    oneOf("risk_category", RISK_CATEGORIES),
+  ),
+  isOneOf(body("risk_level").optional(), RISK_LEVELS, oneOf("risk_level", RISK_LEVELS)),
   requiredRefId("owner", "owner must be a positive integer").optional(),
   body("target_date")
     .optional()

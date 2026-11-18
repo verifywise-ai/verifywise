@@ -2,13 +2,18 @@ import { describe, it, expect } from "@jest/globals";
 
 import {
   assertModelApprovalAllowed,
+  assertModelApprovalInput,
   isModelStatusDecision,
   MODEL_APPROVAL_FORBIDDEN_MESSAGE,
   MODEL_DECISION_STATUSES,
+  MODEL_STATUS_INVALID,
   ModelApprovalForbiddenError,
 } from "../modelApproval.utils";
 import { RISK_APPROVAL_SELF_APPROVER_MESSAGE } from "../riskApproval.utils";
-import { ForbiddenException } from "../../domain.layer/exceptions/custom.exception";
+import {
+  ForbiddenException,
+  ValidationException,
+} from "../../domain.layer/exceptions/custom.exception";
 
 const EDITOR = 10;
 const APPROVER = 20;
@@ -258,5 +263,57 @@ describe("assertModelApprovalAllowed: R3 and the naming save", () => {
         }),
       ),
     ).toBeNull();
+  });
+});
+
+describe("assertModelApprovalInput: malformed status and approver", () => {
+  it.each([[["Approved"]], [{}], [1], [true]])("refuses status %p with a 400", (status) => {
+    for (const creating of [true, false]) {
+      expect(() => assertModelApprovalInput({ status }, { creating })).toThrow(ValidationException);
+    }
+  });
+
+  it("refuses a status that is not a model status", () => {
+    expect(() => assertModelApprovalInput({ status: "Deployed" }, { creating: true })).toThrow(
+      MODEL_STATUS_INVALID,
+    );
+  });
+
+  it("treats an empty or null status on create as not sent (legacy)", () => {
+    expect(assertModelApprovalInput({ status: "" }, { creating: true })).not.toHaveProperty(
+      "status",
+    );
+    expect(assertModelApprovalInput({ status: null }, { creating: true })).not.toHaveProperty(
+      "status",
+    );
+  });
+
+  it("refuses an empty or null status on update", () => {
+    expect(() => assertModelApprovalInput({ status: "" }, { creating: false })).toThrow(
+      ValidationException,
+    );
+    expect(() => assertModelApprovalInput({ status: null }, { creating: false })).toThrow(
+      ValidationException,
+    );
+  });
+
+  it.each([[[5]], [{ id: 5 }], ["5a"], [1.5], [true]])("refuses approver %p", (approver) => {
+    expect(() => assertModelApprovalInput({ approver }, { creating: false })).toThrow(
+      ValidationException,
+    );
+  });
+
+  it.each([[null], [""], [5], ["5"], [undefined]])("accepts approver %p", (approver) => {
+    expect(() => assertModelApprovalInput({ approver }, { creating: false })).not.toThrow();
+  });
+});
+
+describe("assertModelApprovalAllowed fails closed on a malformed status", () => {
+  it.each([[["Approved"]], [{}], [3]])("treats status %p as a decision change", (status) => {
+    expect(
+      refusal(() =>
+        run({ existing: { approver: APPROVER, status: "Pending" }, submitted: { status } }),
+      ),
+    ).toBe(MODEL_APPROVAL_FORBIDDEN_MESSAGE);
   });
 });

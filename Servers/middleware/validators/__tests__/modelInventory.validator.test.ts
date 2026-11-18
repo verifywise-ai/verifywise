@@ -123,3 +123,23 @@ describe("v1 model risk", () => {
     ).toBeUndefined();
   });
 });
+
+describe("enum fields must be strings", () => {
+  it.each([[["Approved"]], [{}], [1]])(
+    "refuses model status %p on create and update",
+    async (status) => {
+      expect((await run(validateCreateModelInventoryV1, { ...model, status })).fields).toEqual([
+        "status",
+      ]);
+      expect((await run(validateUpdateModelInventoryV1, { status }, { id: "1" })).fields).toEqual([
+        "status",
+      ]);
+    },
+  );
+
+  it("refuses a model risk level sent as an array", async () => {
+    expect(
+      (await run(validateUpdateModelRiskV1, { risk_level: ["High"] }, { id: "1" })).fields,
+    ).toEqual(["risk_level"]);
+  });
+});
