@@ -103,7 +103,8 @@ const ctx = { organizationId: 1, userId: EDITOR, callerIsAdmin: false };
 
 function storedRow(values: Record<string, unknown>) {
   const row: any = { id: 7, model: "GPT", version: "1", ...values };
-  row.get = () => ({ ...row });
+  // Like Sequelize without includes: get({ plain: true }) is the live dataValues.
+  row.get = () => row;
   return row;
 }
 

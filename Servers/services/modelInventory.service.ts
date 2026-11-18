@@ -262,7 +262,9 @@ export async function updateModelInventoryService(
     // Read before updateModelInventory, which changes `current` in place.
     const previousStatus = current.status;
     const previousApprover = current.approver ?? null;
-    const before = current.get({ plain: true });
+    // A copy: without includes, get({ plain: true }) is the live dataValues,
+    // which updateModelInventory changes below.
+    const before = { ...current.get({ plain: true }) };
 
     assertModelApprovalAllowed({
       existing: { approver: previousApprover, status: previousStatus },
