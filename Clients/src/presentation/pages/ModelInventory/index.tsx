@@ -1433,7 +1433,7 @@ const ModelInventory: React.FC = () => {
       const deleteFrameworks = oldFrameworks.length > 0 && newFrameworks.length === 0;
 
       await updateEntityById({
-        routeUrl: `/modelInventory/${selectedModelInventory.id}`,
+        routeUrl: `/v1/model-inventories/${selectedModelInventory.id}`,
         body: {
           ...formData,
           deleteProjects,
@@ -1447,7 +1447,7 @@ const ModelInventory: React.FC = () => {
       });
     } else {
       // Create new model inventory
-      const response = await createModelInventory("/modelInventory", formData);
+      const response = await createModelInventory("/v1/model-inventories", formData);
       modelId = response?.data?.id || null;
       setAlert({
         variant: "success",
@@ -1843,7 +1843,7 @@ const ModelInventory: React.FC = () => {
       if (selectedModelRisk) {
         // Update existing model risk
         await updateEntityById({
-          routeUrl: `/modelRisks/${selectedModelRisk.id}`,
+          routeUrl: `/v1/model-risks/${selectedModelRisk.id}`,
           body: formData,
         });
         savedId = selectedModelRisk.id ?? undefined;
@@ -1854,7 +1854,7 @@ const ModelInventory: React.FC = () => {
       } else {
         // Create new model risk using apiServices
         const response: any = await createNewUser({
-          routeUrl: "/modelRisks",
+          routeUrl: "/v1/model-risks",
           body: formData,
         });
         savedId = response?.data?.id;
