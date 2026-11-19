@@ -2,6 +2,7 @@ import React, { useMemo, useCallback } from "react";
 import { Breadcrumbs as MUIBreadcrumbs, Link, Typography, Stack, useTheme } from "@mui/material";
 import { useLocation, useNavigate } from "react-router";
 import { getRouteMapping, getRouteIcon } from "./routeMapping";
+import { resolveBreadcrumbPath } from "./resolveBreadcrumbPath";
 
 import { ChevronRight as ChevronRightGreyIcon } from "lucide-react";
 import { BreadcrumbItemPresentation } from "../../types/breadcrumbs.types";
@@ -98,13 +99,9 @@ function Breadcrumbs({
         return;
       }
 
-      // TODO: Hacky fix — /ai-detection/scans is auto-generated from URL segments
-      // of /ai-detection/scans/:scanId but has no route. The real fix is to restructure
-      // scan detail URLs to /ai-detection/history/:scanId so breadcrumbs work naturally.
-      const BREADCRUMB_PATH_REDIRECTS: Record<string, string> = {
-        "/ai-detection/scans": "/ai-detection/history",
-      };
-      const resolvedPath = BREADCRUMB_PATH_REDIRECTS[currentPath] || currentPath;
+      // A segment that is not a page (the static parent of a :param route, for
+      // example) links to the nav item that claims it. Real routes keep their URL.
+      const resolvedPath = resolveBreadcrumbPath(currentPath);
 
       breadcrumbs.push({
         label: pathToLabel(currentPath),
