@@ -166,9 +166,9 @@ describe("ExtensionService.enable / updateConfiguration validation", () => {
   it("rejects a long run of dots without backtracking (CodeQL polynomial regex)", async () => {
     // The old pattern /^[^\s@]+@[^\s@]+\.[^\s@]+$/ backtracks quadratically on
     // a long dotted domain that fails at the end (the trailing space): about
-    // 19 s here. isEmail caps the length and splits the domain on fixed dots,
-    // so it answers at once. The elapsed-time check is explicit because jest's
-    // timeout is a timer and cannot fire while a synchronous regex blocks.
+    // 19 s here. The check is linear now. The elapsed-time check is explicit
+    // because jest's timeout is a timer and cannot fire while a synchronous
+    // regex blocks.
     const started = Date.now();
     await expect(
       ExtensionService.enable("mlflow", 1, 1, {
@@ -179,6 +179,27 @@ describe("ExtensionService.enable / updateConfiguration validation", () => {
     ).rejects.toBeInstanceOf(ValidationException);
     expect(Date.now() - started).toBeLessThan(1000);
   }, 60000);
+
+  it("keeps accepting addresses the old check accepted, so saved configurations can be updated", async () => {
+    for (const notify_email of ["ops@example.com.", "ops@a..com", "ops@.example.com"]) {
+      await expect(
+        ExtensionService.enable("mlflow", 1, 1, {
+          tracking_server_url: "https://mlflow.example.com",
+          auth_method: "none",
+          notify_email,
+        }),
+      ).resolves.toBeDefined();
+    }
+    for (const notify_email of ["a@.c", "a@b.", "@b.c", "a@b@c.d", "a b@c.d"]) {
+      await expect(
+        ExtensionService.enable("mlflow", 1, 1, {
+          tracking_server_url: "https://mlflow.example.com",
+          auth_method: "none",
+          notify_email,
+        }),
+      ).rejects.toBeInstanceOf(ValidationException);
+    }
+  });
 
   it("rejects a select value that isn't in the declared options", async () => {
     await expect(
