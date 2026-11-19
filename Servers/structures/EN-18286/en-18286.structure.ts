@@ -1,7 +1,7 @@
 import type { FrameworkStructure } from "../types";
 
 export const en18286Structure: FrameworkStructure = {
-  id: 27,
+  id: 26,
   key: "en-18286",
   framework_type: "en_18286",
   displayName: "EN 18286",

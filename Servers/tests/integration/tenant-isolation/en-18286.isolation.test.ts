@@ -23,9 +23,9 @@ const countFor = async (table: string, orgId: number): Promise<number> => {
  * so this file covers all four tables by hand, once per framework.
  */
 describe.each([
-  { frameworkId: 27, impl: "en_18286_requirements", requirements: 18, organizational: true },
+  { frameworkId: 26, impl: "en_18286_requirements", requirements: 18, organizational: true },
   {
-    frameworkId: 28,
+    frameworkId: 27,
     impl: "en_18286_ai_systems_requirements",
     requirements: 14,
     organizational: false,
@@ -35,8 +35,8 @@ describe.each([
   ({ frameworkId, impl, requirements, organizational }) => {
     const risksTable = `${impl}__risks`;
 
-    // Framework 27 is organizational, so it can only be added to an
-    // organizational project (canAddFrameworkToProjectQuery); 28 to a use case.
+    // Framework 26 is organizational, so it can only be added to an
+    // organizational project (canAddFrameworkToProjectQuery); 27 to a use case.
     async function createProject(orgId: number, userId: number): Promise<number> {
       const projectId = await createTestProject(orgId, userId);
       await sequelize.query(
