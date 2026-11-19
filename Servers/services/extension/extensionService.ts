@@ -11,6 +11,7 @@ import {
   ValidationException,
 } from "../../domain.layer/exceptions/custom.exception";
 import { decrypt, encrypt } from "../../utils/encryption.utils";
+import { hasLegacyEmailShape } from "../../utils/validations/email.utils";
 import {
   STORED_SECRET_MESSAGES,
   checkStoredSecrets,
@@ -398,21 +399,9 @@ export class ExtensionService {
       throw new ValidationException(`Field '${key}' must be a valid URL`, key, value);
     }
   }
-  /**
-   * Accepts exactly what /^[^\s@]+@[^\s@]+\.[^\s@]+$/ accepted, because a
-   * saved configuration is re-validated on every update and a stricter check
-   * would lock out an extension whose stored address passed before. That regex
-   * backtracked quadratically on a long dotted domain (CodeQL), so the same
-   * shape is checked here without one: a non-empty local part, one @, no
-   * whitespace, and a dot inside the domain but not at either end.
-   */
+  /** Same acceptance as before the CodeQL fix: see hasLegacyEmailShape. */
   private static assertEmail(key: string, value: string): void {
-    const at = value.indexOf("@");
-    const local = value.slice(0, at);
-    const domain = value.slice(at + 1);
-    const valid =
-      at > 0 && !/\s/.test(local) && !/[\s@]/.test(domain) && domain.slice(1, -1).includes(".");
-    if (!valid) {
+    if (!hasLegacyEmailShape(value)) {
       throw new ValidationException(`Field '${key}' must be a valid email address`, key, value);
     }
   }

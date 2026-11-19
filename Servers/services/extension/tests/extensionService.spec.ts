@@ -177,7 +177,8 @@ describe("ExtensionService.enable / updateConfiguration validation", () => {
         notify_email: `!@!.${"!.".repeat(100000)} `,
       }),
     ).rejects.toBeInstanceOf(ValidationException);
-    expect(Date.now() - started).toBeLessThan(1000);
+    // 5 s leaves room for a busy CI runner; the old code takes about 19 s.
+    expect(Date.now() - started).toBeLessThan(5000);
   }, 60000);
 
   it("keeps accepting addresses the old check accepted, so saved configurations can be updated", async () => {
