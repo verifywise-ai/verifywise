@@ -27,6 +27,7 @@ import {
   formatHighRiskRoles,
   projectHighRiskRoles,
 } from "../../../../application/utils/highRiskRoles";
+import { startDateCalendarDay } from "../../../tools/isoDateToString";
 // Supported entity types
 export type EntityTypeKey =
   | "use_case"
@@ -356,7 +357,8 @@ export function extractEntityDetails(requestData: any): Record<string, any> {
         targetIndustry: requestData.target_industry,
         aiRiskClassification: requestData.ai_risk_classification,
         highRiskRoles: formatHighRiskRoles(projectHighRiskRoles(requestData)) || undefined,
-        startDate: requestData.start_date,
+        // A calendar day: read at 00:00 UTC it would show the day before west of UTC.
+        startDate: startDateCalendarDay(requestData.start_date) ?? undefined,
         geography: requestData.geography,
       };
   }

@@ -271,9 +271,8 @@ const createUseCase: ToolDef = {
     return result({
       useCase: created.toJSON(),
       frameworksAttached: args.frameworks ?? [],
-      // Only the four core frameworks build out controls and assessments. The
-      // rest are recorded against the use case and tracked through their own
-      // structures, which is also how the console treats them.
+      // Every attached framework has its controls and assessments built; this
+      // lists them by key (eu, iso42001, soc2, hipaa, ...).
       frameworksWithStructures: frameworksCreated,
     });
   },
@@ -359,8 +358,8 @@ const updateUseCase: ToolDef = {
     if (Object.keys(input).length === 0) {
       throw new Error("Provide at least one field to update.");
     }
-    input.last_updated = new Date();
-    input.last_updated_by = caller.userId;
+    // updateUseCaseService stamps last_updated and last_updated_by when a use
+    // case column is written; a members-only update is not stamped.
 
     const transaction = await sequelize.transaction();
     try {

@@ -85,6 +85,7 @@ const ENTITY_MESSAGES: Record<LifecycleEntityConfig["key"], EntityMessages> = {
       retire: "Only a planned or live use case can be retired",
       confirm: "Only a live use case can be confirmed as still live",
     },
+    goLiveNotAllowed: "Approve this use case before marking it as live",
   },
   ai_app: {
     invalidId: "Invalid AI app ID",

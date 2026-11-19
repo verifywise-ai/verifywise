@@ -4,12 +4,12 @@ import { FrameworkConfig, getConfigById } from "./frameworkRegistry.utils";
 import logger from "./logger/fileLogger";
 
 /**
- * Generic read/write helpers for the impl tables of the 23 registry
+ * Generic read/write helpers for the impl tables of the 24 bundled
  * frameworks (SOC2, GDPR, HIPAA, ...). Table + column names come from
  * Servers/structures/ via frameworkRegistry.utils.ts, so a single set of
  * endpoints serves all of them.
  *
- * These helpers ONLY handle the 23 registry frameworks. Built-ins (EU,
+ * These helpers ONLY handle the 24 bundled frameworks. Built-ins (EU,
  * ISO 42001, ISO 27001, NIST AI RMF) have bespoke tables with extra
  * columns (risk_review, is_applicable, ...) and their own routes.
  */
@@ -490,15 +490,15 @@ export async function updateImplQuery(
 
 /**
  * Look up the project_id that an impl row belongs to (used by the PATCH
- * controller to bump projects.updated_at inside the transaction). Returns
- * null if the row doesn't exist for this org.
+ * controller to bump projects.updated_at inside the transaction, and by the
+ * use case access guard). Returns null if the row doesn't exist for this org.
  */
 export async function getImplContextQuery(
   frameworkId: number,
   level: ImplLevel,
   implId: number,
   organizationId: number,
-  transaction: Transaction,
+  transaction?: Transaction,
 ) {
   const resolved = resolveLevel(frameworkId, level);
   if (!resolved) return null;

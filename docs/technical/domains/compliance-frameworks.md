@@ -2,10 +2,10 @@
 
 ## Overview
 
-VerifyWise ships 25 compliance frameworks, all available to every organization. None of them needs to be installed or enabled.
+VerifyWise ships 28 compliance frameworks, all available to every organization. None of them needs to be installed or enabled.
 
 - **4 core frameworks** (ids 1–4): EU AI Act, ISO 42001, ISO 27001 and NIST AI RMF. Each has hand-built tables, endpoints and pages. Most of this document describes these.
-- **23 bundled frameworks** (ids 5–27): SOC 2, GDPR, HIPAA and others. They are declared in the structure registry (`Servers/structures/`) and served by generic endpoints and a generic UI. See [Bundled frameworks (ids 5–27)](#bundled-frameworks-ids-527).
+- **24 bundled frameworks** (ids 5–28): SOC 2, GDPR, HIPAA and others. They are declared in the structure registry (`Servers/structures/`) and served by generic endpoints and a generic UI. See [Bundled frameworks (ids 5–28)](#bundled-frameworks-ids-528).
 
 - **Imported frameworks**: an organization's own frameworks, imported from Excel through the `framework-import` extension. They are stored per organization outside the bundled catalog, and use cases assess them like the bundled ones. See [Imported frameworks](#imported-frameworks).
 
@@ -19,7 +19,7 @@ All frameworks share the same patterns for progress tracking, status management 
 | ISO 42001 | 2 | AI management system |
 | ISO 27001 | 3 | Information security management |
 | NIST AI RMF | 4 | AI risk management |
-| 23 bundled frameworks | 5–27 | See [Bundled frameworks](#bundled-frameworks-ids-527) |
+| 24 bundled frameworks | 5–28 | See [Bundled frameworks](#bundled-frameworks-ids-528) |
 
 ## Framework Structures
 
@@ -480,7 +480,7 @@ DELETE /frameworks/fromProject?frameworkId=2&projectId=5
 
 Calls `frameworkDeletionMap[frameworkId]` and deletes all of that project's implementation data for the framework (status, assignments, risk links, evidence links). The UI asks for confirmation ("Confirm framework removal") first.
 
-## Bundled frameworks (ids 5–27)
+## Bundled frameworks (ids 5–28)
 
 These frameworks shipped as plugins until PR #4443 (August 2026). They are now core and are declared in TypeScript:
 
@@ -492,7 +492,7 @@ These frameworks shipped as plugins until PR #4443 (August 2026). They are now c
 
 Names and flags come from each structure's `seed.name` and `seed.is_organizational`.
 
-**Organization-level (13)**: added under **Frameworks → Manage frameworks → Add/remove frameworks**
+**Organization-level (14)**: added under **Frameworks → Manage frameworks → Add/remove frameworks**
 
 | ID | Key | Name | Levels |
 |----|-----|------|--------|
@@ -508,7 +508,8 @@ Names and flags come from each structure's `seed.name` and `seed.is_organization
 | 20 | `bahrain-pdpl` | Bahrain Personal Data Protection Law | 2 |
 | 21 | `quebec-law25` | Quebec Law 25 Compliance Framework | 2 |
 | 25 | `nist-csf` | NIST Cybersecurity Framework | 3 |
-| 26 | `en-18286` | EN 18286 | 2 |
+| 26 | `osfi-e23` | OSFI E-23 Model Risk Management | 2 |
+| 27 | `en-18286` | EN 18286 | 2 |
 
 **Use-case-level (10)**: added from a use case's **Frameworks/regulations** tab
 
@@ -523,11 +524,11 @@ Names and flags come from each structure's `seed.name` and `seed.is_organization
 | 22 | `texas-ai-act` | Texas Responsible AI Governance Act Framework | 2 |
 | 23 | `colorado-ai-act` | Colorado Artificial Intelligence Act Framework | 2 |
 | 24 | `hipaa` | HIPAA Security Rule Framework | 3 |
-| 27 | `en-18286-ai-systems` | EN 18286 AI systems | 2 |
+| 28 | `en-18286-ai-systems` | EN 18286 AI systems | 2 |
 
-Total: 4 core + 23 bundled = **27 frameworks**.
+Total: 4 core + 24 bundled = **28 frameworks**.
 
-EN 18286 is split into two frameworks: `en-18286` (id 26, organization level: clauses 4–7, 9.6, 9.7 and 10) and `en-18286-ai-systems` (id 27, use-case level: clause 8 and 9.1–9.5, tracked per AI system). The standard defines one QMS; the split follows the organization / AI system division Modulos uses. Both were added after the August 2026 migrations, by `20261110121006-add-en-18286-framework.js`, which skips each framework whose `frameworks` row the `20260805*` migrations already created.
+EN 18286 is split into two frameworks: `en-18286` (id 27, organization level: clauses 4–7, 9.6, 9.7 and 10) and `en-18286-ai-systems` (id 28, use-case level: clause 8 and 9.1–9.5, tracked per AI system). The standard defines one QMS; the split follows the organization / AI system division Modulos uses. Both were added after the August 2026 migrations, by `20261110121006-add-en-18286-framework.js`, which skips each framework whose `frameworks` row the `20260805*` migrations already created.
 
 ### Tables
 
@@ -538,6 +539,8 @@ Evidence is stored in `file_entity_links` with `framework_type` set to the struc
 ### Generic endpoints
 
 Adding and removing use the shared `POST /api/frameworks/toProject` and `DELETE /api/frameworks/fromProject`. `Servers/utils/frameworkRegistry.utils.ts` provides `makeCreate(key)` / `makeDelete(key)`, which are wired into `frameworkAdditionMap` / `frameworkDeletionMap`.
+
+A bundled framework picked when a use case or the organizational project is created is built the same way, at creation or, with an approval workflow, when the request is approved. Creation, approval and "add framework" all go through `buildProjectFrameworkQuery` (`Servers/utils/framework.utils.ts`), which calls `frameworkAdditionMap`; see [Use cases](./use-cases.md#processing). The builders are not idempotent (each call inserts a full set of rows), so they only run right after the `projects_frameworks` row is inserted. Links created before this, with no implementation rows, are built by migration `20261117140851-build-empty-bundled-frameworks.js`, which only touches links that have no level-2 rows.
 
 Implementation work goes through `Servers/routes/frameworkImpl.route.ts`, mounted at `/api/frameworks` next to `frameworks.route.ts`. It is handled by `Servers/controllers/frameworkImpl.ctrl.ts` and `Servers/utils/frameworkImpl.utils.ts`. All routes require JWT. `:level` is `l2` or `l3`.
 
@@ -618,7 +621,7 @@ An imported framework cannot be deleted while a use case uses it: the delete ans
 ### Not covered
 
 - Imported frameworks attach to use cases only, not to the organizational project, and are not part of the use case defaults (`default_framework_ids`).
-- Reports do not include them (bundled frameworks 5–25 are not in reports either).
+- Reports do not include them (bundled frameworks 5–28 are not in reports either).
 - The drawer has no Notes tab for them: `NotesAttachedToEnum` has no imported values.
 
 ## Key Files
@@ -639,7 +642,7 @@ An imported framework cannot be deleted while a use case uses it: the delete ans
 | `routes/iso-42001.route.ts` | ISO 42001 routes |
 | `routes/nist-ai-rmf.route.ts` | NIST routes |
 | `routes/eu-ai-act.route.ts` | EU AI Act routes |
-| `structures/index.ts`, `structures/<Name>/*.structure.ts` | Bundled framework registry (ids 5–27) |
+| `structures/index.ts`, `structures/<Name>/*.structure.ts` | Bundled framework registry (ids 5–28) |
 | `utils/frameworkRegistry.utils.ts` | Add/remove bundled frameworks on a project |
 | `routes/frameworkImpl.route.ts`, `controllers/frameworkImpl.ctrl.ts`, `utils/frameworkImpl.utils.ts` | Generic implementation endpoints |
 | `types/framework.type.ts` | `frameworkAdditionMap` / `frameworkDeletionMap` by framework id |

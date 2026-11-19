@@ -1,6 +1,7 @@
 import express from "express";
 const router = express.Router();
 import authenticateJWT from "../middleware/auth.middleware";
+import { requireOwnSubmissionOrIntakeManager } from "../middleware/intakeSubmissionAccess.middleware";
 import authorize from "../middleware/accessControl.middleware";
 import {
   generalApiLimiter,
@@ -92,8 +93,18 @@ router.get("/oversight", authenticateJWT, authorize("intakeForm.edit"), getIntak
 router.get("/submissions", authenticateJWT, getPendingSubmissions);
 router.get("/submissions/stats", authenticateJWT, getSubmissionStats);
 router.get("/submissions/by-entity/:entityType/:entityId", authenticateJWT, getSubmissionByEntity);
-router.get("/submissions/:id", authenticateJWT, getSubmissionById);
-router.get("/submissions/:id/preview", authenticateJWT, getSubmissionPreview);
+router.get(
+  "/submissions/:id",
+  authenticateJWT,
+  requireOwnSubmissionOrIntakeManager,
+  getSubmissionById,
+);
+router.get(
+  "/submissions/:id/preview",
+  authenticateJWT,
+  requireOwnSubmissionOrIntakeManager,
+  getSubmissionPreview,
+);
 router.patch(
   "/submissions/:id/risk-override",
   authenticateJWT,

@@ -1,5 +1,7 @@
 import { QueryTypes, Transaction } from "sequelize";
 import { releaseUseCaseFromReview } from "./lifecycle.utils";
+import { latestApprovalStatusSql } from "./approvalState.utils";
+import { buildProjectFrameworkQuery, hasFrameworkBuilder } from "./framework.utils";
 import { sequelize } from "../database/db";
 import { ApprovalRequestModel } from "../domain.layer/models/approvalWorkflow/approvalRequest.model";
 import { ApprovalRequestStepModel } from "../domain.layer/models/approvalWorkflow/approvalRequestStep.model";
@@ -222,18 +224,29 @@ export const createPendingFrameworksForApprovedUseCase = async (
   const pendingFrameworks = (projectData as any).pending_frameworks as number[];
   const enableAiDataInsertion = (projectData as any).enable_ai_data_insertion || false;
 
-  // Import framework creation utilities
-  const { createEUFrameworkQuery } = require("./eu.utils");
-  const { createISOFrameworkQuery } = require("./iso42001.utils");
-  const { createISO27001FrameworkQuery } = require("./iso27001.utils");
-  const { createNISTAI_RMFFrameworkQuery } = require("./nistAiRmfCorrect.utils");
-
-  // Create frameworks
+  // Create frameworks. Core and bundled frameworks are built alike, the way
+  // creation without a workflow builds them.
   for (const frameworkId of pendingFrameworks) {
-    // Create project_framework record FIRST (required by framework creation functions)
-    await sequelize.query(
+    // A pending id with no builder (queued before creation checked for one)
+    // would be attached with nothing behind it, so it is left off instead.
+    if (!hasFrameworkBuilder(frameworkId)) {
+      logStructured(
+        "error",
+        `pending framework ${frameworkId} has no builder; not attached to use case ${entityId}`,
+        "createPendingFrameworksForApprovedUseCase",
+        "approvalRequest.utils.ts",
+      );
+      continue;
+    }
+
+    // Create project_framework record FIRST (required by framework creation functions).
+    // A framework attached meanwhile (through "add framework" after a
+    // rejection) was built then, so it is neither linked nor built again.
+    const [inserted] = (await sequelize.query(
       `INSERT INTO projects_frameworks (organization_id, project_id, framework_id, is_demo)
-       VALUES (:organizationId, :project_id, :framework_id, false)`,
+       VALUES (:organizationId, :project_id, :framework_id, false)
+       ON CONFLICT (project_id, framework_id) DO NOTHING
+       RETURNING id`,
       {
         replacements: {
           organizationId,
@@ -242,28 +255,17 @@ export const createPendingFrameworksForApprovedUseCase = async (
         },
         transaction,
       },
-    );
+    )) as [{ id: number }[], number];
+    if (!inserted?.length) continue;
 
     // Create framework-specific records
-    if (frameworkId === 1) {
-      await createEUFrameworkQuery(entityId, enableAiDataInsertion, organizationId, transaction);
-    } else if (frameworkId === 2) {
-      await createISOFrameworkQuery(entityId, enableAiDataInsertion, organizationId, transaction);
-    } else if (frameworkId === 3) {
-      await createISO27001FrameworkQuery(
-        entityId,
-        enableAiDataInsertion,
-        organizationId,
-        transaction,
-      );
-    } else if (frameworkId === 4) {
-      await createNISTAI_RMFFrameworkQuery(
-        entityId,
-        enableAiDataInsertion,
-        organizationId,
-        transaction,
-      );
-    }
+    await buildProjectFrameworkQuery(
+      frameworkId,
+      entityId,
+      enableAiDataInsertion,
+      organizationId,
+      transaction,
+    );
   }
 
   // Clear pending frameworks after creation
@@ -1281,8 +1283,10 @@ export const hasPendingApprovalQuery = async (
 };
 
 /**
- * Get the approval status for a use-case
- * Returns 'pending', 'rejected', or null if no pending/rejected approval
+ * The approval status of a use case (or another entity): 'pending' while a
+ * request is open, 'rejected' when the latest decided request was rejected,
+ * otherwise null. A rejection followed by a new review that is approved is no
+ * longer rejected; a re-review that is withdrawn leaves the rejection.
  */
 export const getApprovalStatusQuery = async (
   entityId: number,
@@ -1291,38 +1295,17 @@ export const getApprovalStatusQuery = async (
   transaction: Transaction | null = null,
 ): Promise<"pending" | "rejected" | null> => {
   const results = (await sequelize.query(
-    `SELECT status
-     FROM approval_requests
-     WHERE organization_id = :organizationId
-       AND entity_id = :entityId
-       AND entity_type = :entityType
-       AND status IN (:pendingStatus, :rejectedStatus)
-     ORDER BY updated_at DESC
-     LIMIT 1`,
+    `SELECT ${latestApprovalStatusSql(":organizationId", ":entityType", ":entityId")} AS status`,
     {
-      replacements: {
-        organizationId,
-        entityId,
-        entityType,
-        pendingStatus: ApprovalRequestStatus.PENDING,
-        rejectedStatus: ApprovalRequestStatus.REJECTED,
-      },
-      type: "SELECT",
+      replacements: { organizationId, entityId, entityType },
+      type: QueryTypes.SELECT,
       ...(transaction && { transaction }),
     },
-  )) as any[];
+  )) as { status: string | null }[];
 
-  if (results.length === 0 || !results[0]) {
-    return null;
-  }
-
-  const status = (results[0] as any).status;
-  if (status === ApprovalRequestStatus.PENDING) {
-    return "pending";
-  } else if (status === ApprovalRequestStatus.REJECTED) {
-    return "rejected";
-  }
-
+  const status = results[0]?.status;
+  if (status === ApprovalRequestStatus.PENDING) return "pending";
+  if (status === ApprovalRequestStatus.REJECTED) return "rejected";
   return null;
 };
 

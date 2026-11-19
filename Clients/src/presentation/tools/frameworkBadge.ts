@@ -25,6 +25,7 @@ const FRAMEWORK_BADGE_SLUGS: Record<string, string> = {
   "NIST Cybersecurity Framework": "nist_csf",
   "NYC Local Law 144 - Automated Employment Decision Tools": "nyc_local_law_144",
   "OECD AI Principles": "oecd_ai_principles",
+  "OSFI E-23 Model Risk Management": "osfi_e23",
   "PCI-DSS Lite Framework": "pci_dss",
   "Qatar Personal Data Privacy Law": "qatar_pdpl",
   "Quebec Law 25 Compliance Framework": "quebec_law25",

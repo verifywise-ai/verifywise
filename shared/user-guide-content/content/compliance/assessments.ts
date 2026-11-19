@@ -181,7 +181,7 @@ export const assessmentsContent: ArticleContent = {
           collectionId: 'compliance',
           articleId: 'adding-frameworks',
           title: 'Adding frameworks',
-          description: 'All 25 built-in frameworks and how to add them',
+          description: 'All 28 built-in frameworks and how to add them',
         },
         {
           collectionId: 'compliance',

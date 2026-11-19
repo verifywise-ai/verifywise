@@ -1,6 +1,7 @@
 import express from "express";
 const router = express.Router();
 import authenticateJWT from "../../middleware/auth.middleware";
+import { requireOwnSubmissionOrIntakeManager } from "../../middleware/intakeSubmissionAccess.middleware";
 import {
   generalApiLimiter,
   intakeTierSuggestionVisitorLimiter,
@@ -43,6 +44,11 @@ router.post(
 );
 
 // Reviewers: what the applicant said about the suggestion (same access as the submission preview).
-router.get("/submissions/:id", authenticateJWT, getSubmissionTierSuggestionResponse);
+router.get(
+  "/submissions/:id",
+  authenticateJWT,
+  requireOwnSubmissionOrIntakeManager,
+  getSubmissionTierSuggestionResponse,
+);
 
 export default router;

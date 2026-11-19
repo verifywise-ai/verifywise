@@ -26,7 +26,7 @@ import {
 import { countNISTAIRMFSubcategoriesProgress } from "../../utils/nist_ai_rmf.subcategory.utils";
 import { requireOrganization } from "../scope";
 import { listFrameworkRefs } from "../frameworks";
-import { CREATE_TIME_FRAMEWORK_BUILDERS } from "../../services/useCase.service";
+import { hasFrameworkBuilder } from "../../utils/framework.utils";
 import { result, type ToolDef } from "../tool";
 
 const organizationIdArg = z
@@ -146,7 +146,7 @@ async function frameworkProgress(
       scope: "organization",
     };
   } else {
-    // One of the 23 bundled frameworks, which track completion through their
+    // One of the 24 bundled frameworks, which track completion through their
     // own structures rather than these tables.
     tracks.note = "This framework does not report progress through the core control tables.";
   }
@@ -228,9 +228,10 @@ const listFrameworks: ToolDef = {
         id: framework.id,
         name: framework.name,
         scope: framework.isOrganizational ? "organization wide" : "use case",
-        // Whether attaching this framework to a new use case builds out its
-        // controls, clauses and assessments, or only records the attachment.
-        buildsControls: framework.id in CREATE_TIME_FRAMEWORK_BUILDERS,
+        // Whether attaching this framework to a use case builds out its
+        // controls, clauses and assessments. Every framework with a builder
+        // can be attached; creation refuses the others.
+        buildsControls: hasFrameworkBuilder(framework.id),
       })),
     });
   },

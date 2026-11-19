@@ -1008,6 +1008,33 @@ export const deleteCustomFieldValueQuery = async (
 };
 
 /**
+ * deleteAllCustomFieldValuesForEntityQuery for many entities of one type, in
+ * one statement.
+ */
+export const deleteAllCustomFieldValuesForEntitiesQuery = async (
+  entityType: CustomFieldEntityType,
+  entityIds: number[],
+  organizationId: number,
+  transaction?: Transaction,
+): Promise<void> => {
+  assertEntityType(entityType);
+  entityIds.forEach((id) => assertPositiveInt(id, "entity_id"));
+  assertPositiveInt(organizationId, "organizationId");
+  if (entityIds.length === 0) return;
+
+  await sequelize.query(
+    `DELETE FROM custom_field_values
+       WHERE organization_id = :organizationId
+         AND entity_type = :entityType
+         AND entity_id = ANY(ARRAY[:entityIds]::int[])`,
+    {
+      replacements: { organizationId, entityType, entityIds },
+      transaction,
+    },
+  );
+};
+
+/**
  * Bulk-fetch custom field values for many entities of one type, in one query.
  * Used by list-endpoint queries to attach `custom_fields` to each row without
  * an N+1.

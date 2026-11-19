@@ -11,6 +11,26 @@ interface ChangelogEntry {
 
 const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "v2.6.9",
+    date: "November 18, 2026",
+    title: "A new look, a Home page, OSFI E-23 and risk approvals",
+    summary:
+      "VerifyWise has a new look with one sidebar and a Home page that lists what needs you today. You can switch back to the classic look until January 2027. OSFI Guideline E-23 on model risk management is now a built-in framework. Risks follow use case access, and only a risk's approver or an Admin decides its approval.",
+    items: [
+      "OSFI E-23: OSFI's Guideline E-23 on model risk management is a new built-in framework, with 16 groups and 83 requirements that keep OSFI's own numbering. Add it on the Frameworks page. It is an organization-level checklist you assess yourself, separate from the model records in Model Risk Management",
+      "New look: new colours, type and icons, with one sidebar in place of the app switcher and module sidebars. You can switch back in Settings → Preferences → Interface style until January 2027. Tables no longer have a group-by control",
+      "Home: the Today tab lists what needs your attention, with counts for your organization. Start here is now on the Get started tab",
+      "What's changed: a card tells you what changed when you open a page whose place or layout changed in the new look. Accounts created after the update don't see these cards",
+      "Risk approval: approval status is Pending, Approved, Rejected or Not required. Naming an approver sets it to Pending and notifies them. Only the approver or an Admin can approve or reject. Approver and assessment date are optional",
+      "Risk visibility: Admins see every risk. Other users see risks linked to use cases they can access, risks linked to no use case and risks they own or approve. When you delete a use case and can edit risks, you choose whether to archive the risks linked only to it",
+      "Use case go-live: a use case can't be marked live while its approval is pending or rejected. The lifecycle panel says why",
+      "Policies: approve policies through approval workflows",
+      "AI Detection: every scan gets a governance score and says when a check didn't run. The CI gate fails only when the score is below your threshold. Review decisions carry over to new scans",
+      "Slack: you can connect Slack from the app. Slack connections belong to the organization",
+      "Demo data: creating demo data shows a progress screen while it runs",
+    ],
+  },
+  {
     version: "v2.6.8",
     date: "November 13, 2026",
     title: "Training assignments, groups and custom roles, and framework import",

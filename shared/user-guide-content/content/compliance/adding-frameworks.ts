@@ -10,7 +10,7 @@ export const addingFrameworksContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'VerifyWise comes with 27 compliance frameworks: EU AI Act, ISO 42001, ISO 27001 and NIST AI RMF, plus 23 more bundled frameworks covering privacy, security, sector rules and AI ethics. Every framework is available to every organization. There is nothing to enable or install; you add the ones you need.',
+      text: 'VerifyWise comes with 28 compliance frameworks: EU AI Act, ISO 42001, ISO 27001 and NIST AI RMF, plus 24 more bundled frameworks covering privacy, security, sector rules and AI ethics. Every framework is available to every organization. There is nothing to enable or install; you add the ones you need.',
     },
     {
       type: 'paragraph',
@@ -51,6 +51,7 @@ export const addingFrameworksContent: ArticleContent = {
         { name: 'Qatar Personal Data Privacy Law' },
         { name: 'Bahrain Personal Data Protection Law' },
         { name: 'Quebec Law 25 Compliance Framework' },
+        { name: 'OSFI E-23 Model Risk Management' },
       ],
     },
     {
@@ -167,7 +168,7 @@ export const addingFrameworksContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'In any of the 23 bundled frameworks, click a requirement to open its drawer. The drawer has four tabs:',
+      text: 'In any of the 24 bundled frameworks, click a requirement to open its drawer. The drawer has four tabs:',
     },
     {
       type: 'bullet-list',
@@ -191,7 +192,7 @@ export const addingFrameworksContent: ArticleContent = {
     {
       type: 'callout',
       variant: 'info',
-      text: 'Generated reports currently cover EU AI Act, ISO 42001, ISO 27001 and NIST AI RMF. The 23 bundled frameworks are not included in reports yet.',
+      text: 'Generated reports currently cover EU AI Act, ISO 42001, ISO 27001 and NIST AI RMF. The 24 bundled frameworks are not included in reports yet.',
     },
     {
       type: 'heading',

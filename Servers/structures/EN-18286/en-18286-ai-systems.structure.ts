@@ -1,7 +1,7 @@
 import type { FrameworkStructure } from "../types";
 
 export const en18286AiSystemsStructure: FrameworkStructure = {
-  id: 27,
+  id: 28,
   key: "en-18286-ai-systems",
   framework_type: "en_18286_ai_systems",
   displayName: "EN 18286 AI systems",

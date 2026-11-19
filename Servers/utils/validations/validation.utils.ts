@@ -407,6 +407,22 @@ export const validateForeignKey = (
  * accepted. `Number()` is not enough on its own: it accepts `[2]`, `"2e0"` and
  * `"0x2"`.
  */
+/**
+ * A route id an access guard can trust: a positive integer, or a string of
+ * plain digits with no sign, space, exponent, hex prefix or leading zero.
+ * NaN otherwise. Every string it accepts parses to the same number with
+ * parseInt, Number or toId, so a handler behind the guard acts on the id the
+ * guard checked.
+ */
+export const toStrictId = (value: unknown): number => {
+  if (typeof value === "number") return Number.isSafeInteger(value) && value > 0 ? value : NaN;
+  if (typeof value === "string" && /^[1-9]\d*$/.test(value)) {
+    const id = Number(value);
+    return Number.isSafeInteger(id) ? id : NaN;
+  }
+  return NaN;
+};
+
 export const toId = (value: unknown): number => {
   if (typeof value === "number") return Number.isInteger(value) ? value : NaN;
   if (typeof value === "string" && /^-?\d+$/.test(value.trim())) return Number(value.trim());

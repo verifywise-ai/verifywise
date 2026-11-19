@@ -52,6 +52,8 @@ import {
   deleteProjectFrameworkHIPAAQuery,
   createNISTCSFFrameworkQuery,
   deleteProjectFrameworkNISTCSFQuery,
+  createOSFIE23FrameworkQuery,
+  deleteProjectFrameworkOSFIE23Query,
   createEN18286FrameworkQuery,
   deleteProjectFrameworkEN18286Query,
   createEN18286AISystemsFrameworkQuery,
@@ -92,8 +94,9 @@ export const frameworkAdditionMap: Record<
   23: createColoradoAIActFrameworkQuery,
   24: createHIPAAFrameworkQuery,
   25: createNISTCSFFrameworkQuery,
-  26: createEN18286FrameworkQuery,
-  27: createEN18286AISystemsFrameworkQuery,
+  26: createOSFIE23FrameworkQuery,
+  27: createEN18286FrameworkQuery,
+  28: createEN18286AISystemsFrameworkQuery,
 };
 
 export const frameworkDeletionMap: Record<
@@ -125,8 +128,9 @@ export const frameworkDeletionMap: Record<
   23: deleteProjectFrameworkColoradoAIActQuery,
   24: deleteProjectFrameworkHIPAAQuery,
   25: deleteProjectFrameworkNISTCSFQuery,
-  26: deleteProjectFrameworkEN18286Query,
-  27: deleteProjectFrameworkEN18286AISystemsQuery,
+  26: deleteProjectFrameworkOSFIE23Query,
+  27: deleteProjectFrameworkEN18286Query,
+  28: deleteProjectFrameworkEN18286AISystemsQuery,
 };
 
 export const frameworkFilesDeletionSourceMap: Record<number, string[]> = {
@@ -134,7 +138,7 @@ export const frameworkFilesDeletionSourceMap: Record<number, string[]> = {
   2: ["Management system clauses group", "Reference controls group"],
   3: ["Main clauses group", "Annex controls group"],
   4: ["Subcategories group"], // Only subcategories are tenant-based and have files
-  // Frameworks 5-27 store file links in file_entity_links (not files.source),
+  // Frameworks 5-28 store file links in file_entity_links (not files.source),
   // so the source-based sweep in framework.utils.ts is a no-op. Their delete
   // functions handle file_entity_links cleanup themselves.
   5: [],
@@ -160,4 +164,5 @@ export const frameworkFilesDeletionSourceMap: Record<number, string[]> = {
   25: [],
   26: [],
   27: [],
+  28: [],
 };

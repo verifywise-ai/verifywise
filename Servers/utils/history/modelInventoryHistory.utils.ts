@@ -3,16 +3,19 @@ import { sequelize } from "../../database/db";
 import { ModelInventoryStatus } from "../../domain.layer/enums/model-inventory-status.enum";
 import { Transaction, QueryTypes } from "sequelize";
 
-// Whitelist of allowed parameter names for aggregation
-const ALLOWED_PARAMETERS = [
-  "name",
-  "version",
-  "owner",
-  // add all other safe column names intended to be exposed
-  "type",
-  "created_at",
-  // DO NOT add user-controlled column names unless they're safe
-];
+// Whitelist of model_inventories columns the generic count may group by.
+// "status" and "security_assessment" have their own branches below.
+const ALLOWED_PARAMETERS = ["version", "type", "created_at"];
+
+/** Whether a snapshot can be taken for this parameter (else the caller answers 400). */
+export function isSnapshotParameter(parameter: unknown): parameter is string {
+  return (
+    typeof parameter === "string" &&
+    (parameter === "status" ||
+      parameter === "security_assessment" ||
+      ALLOWED_PARAMETERS.includes(parameter))
+  );
+}
 
 /**
  * Record a snapshot of parameter counts in history

@@ -21,6 +21,7 @@ import CustomizableSkeleton from "../Skeletons";
 
 import { projectWrapperStyle, noProjectsTextStyle, vwhomeBodyProjectsGrid } from "./style";
 import useFormattedDate from "../../../application/hooks/useFormattedDate";
+import { startDateCalendarDay } from "../../tools/isoDateToString";
 import {
   formatHighRiskRoles,
   projectHighRiskRoles,
@@ -199,7 +200,7 @@ const ProjectList = ({
         case "status":
           return item.status?.toLowerCase();
         case "start_date":
-          return item.start_date;
+          return startDateCalendarDay(item.start_date);
         default:
           return null;
       }
@@ -332,7 +333,7 @@ const ProjectList = ({
         project_title: project.project_title || "-",
         ai_risk_classification: project.ai_risk_classification || "-",
         high_risk_roles: formatHighRiskRoles(projectHighRiskRoles(project)) || "-",
-        start_date: project.start_date ? formatDate(project.start_date) : "-",
+        start_date: project.start_date ? formatDate(startDateCalendarDay(project.start_date)) : "-",
         last_updated: project.last_updated ? formatDate(project.last_updated) : "-",
         owner: ownerName,
         status: project.status || "-",

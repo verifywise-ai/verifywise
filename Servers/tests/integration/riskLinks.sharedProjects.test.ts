@@ -13,6 +13,7 @@ import {
   linkRiskToProject,
   linkVendorToProject,
   linkModelToProject,
+  linkModelToFramework,
 } from "../factories";
 import { getSharedProjectCandidatesQuery } from "../../utils/riskLink.utils";
 import { sequelize } from "../../database/db";
@@ -67,7 +68,7 @@ describe("getSharedProjectCandidatesQuery", () => {
     );
   });
 
-  it("returns a model attached under two frameworks exactly once", async () => {
+  it("returns a model linked to the use case and to two frameworks exactly once", async () => {
     const { owner } = await seedTwoTenantContexts();
     const project = await createTestProject(owner.orgId, owner.userId, {
       project_title: "Fraud Detection",
@@ -76,8 +77,9 @@ describe("getSharedProjectCandidatesQuery", () => {
     await linkRiskToProject(owner.orgId, subject, project);
 
     const model = await createTestModelInventory(owner.orgId, {});
-    await linkModelToProject(owner.orgId, model, project, 1);
-    await linkModelToProject(owner.orgId, model, project, 2);
+    await linkModelToProject(owner.orgId, model, project);
+    await linkModelToFramework(owner.orgId, model, 1);
+    await linkModelToFramework(owner.orgId, model, 2);
     const modelRisk = await createTestModelRisk(owner.orgId, { model_id: model });
 
     const result = await getSharedProjectCandidatesQuery(owner.orgId, subject, SYSTEM_RISK_VIEWER);
@@ -90,6 +92,20 @@ describe("getSharedProjectCandidatesQuery", () => {
         projects: ["Fraud Detection"],
       },
     ]);
+  });
+
+  it("does not count a framework link as a use case link", async () => {
+    const { owner } = await seedTwoTenantContexts();
+    const project = await createTestProject(owner.orgId, owner.userId, {});
+    const subject = await createTestRisk(owner.orgId, {});
+    await linkRiskToProject(owner.orgId, subject, project);
+
+    const model = await createTestModelInventory(owner.orgId, {});
+    await linkModelToFramework(owner.orgId, model, 1);
+    await createTestModelRisk(owner.orgId, { model_id: model });
+
+    const result = await getSharedProjectCandidatesQuery(owner.orgId, subject, SYSTEM_RISK_VIEWER);
+    expect(result).toEqual([]);
   });
 
   it("collects both titles when the subject sits in two shared projects", async () => {
@@ -173,7 +189,7 @@ describe("getSharedProjectCandidatesQuery", () => {
     await linkRiskToProject(owner.orgId, subject, project);
 
     const model = await createTestModelInventory(owner.orgId, {});
-    await linkModelToProject(owner.orgId, model, project, 1);
+    await linkModelToProject(owner.orgId, model, project);
     const modelRisk = await createTestModelRisk(owner.orgId, {
       model_id: model,
       risk_name: "Fairness degradation in production",

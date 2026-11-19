@@ -15,8 +15,8 @@ const PROJECT_ID = 11;
 const PF_ID = 13;
 const tx = { id: "tx" } as any;
 
-const org = getStructureById(26) as FrameworkStructure;
-const aiSystems = getStructureById(27) as FrameworkStructure;
+const org = getStructureById(27) as FrameworkStructure;
+const aiSystems = getStructureById(28) as FrameworkStructure;
 
 /** "4.1", "9.6", ... as the UI renders them from order_no. */
 const subclauses = (fw: FrameworkStructure) =>
@@ -30,14 +30,14 @@ beforeEach(() => {
 });
 
 describe("EN 18286 registry entries", () => {
-  it("registers the organization-level framework as id 26", () => {
+  it("registers the organization-level framework as id 27", () => {
     expect(org.key).toBe("en-18286");
     expect(org.framework_type).toBe("en_18286");
     expect(org.seed.name).toBe("EN 18286");
     expect(org.seed.is_organizational).toBe(true);
   });
 
-  it("registers the AI system-level framework as id 27", () => {
+  it("registers the AI system-level framework as id 28", () => {
     expect(aiSystems.key).toBe("en-18286-ai-systems");
     expect(aiSystems.framework_type).toBe("en_18286_ai_systems");
     expect(aiSystems.seed.name).toBe("EN 18286 AI systems");
@@ -132,9 +132,9 @@ describe("EN 18286 clause split", () => {
 
 describe("EN 18286 add and remove dispatch", () => {
   it.each([
-    [26, "en_18286_requirements", "en_18286_requirements_struct", "en_18286_clauses_struct"],
+    [27, "en_18286_requirements", "en_18286_requirements_struct", "en_18286_clauses_struct"],
     [
-      27,
+      28,
       "en_18286_ai_systems_requirements",
       "en_18286_ai_systems_requirements_struct",
       "en_18286_ai_systems_clauses_struct",
@@ -155,8 +155,8 @@ describe("EN 18286 add and remove dispatch", () => {
   });
 
   it.each([
-    [26, "en_18286", "en_18286_requirements"],
-    [27, "en_18286_ai_systems", "en_18286_ai_systems_requirements"],
+    [27, "en_18286", "en_18286_requirements"],
+    [28, "en_18286_ai_systems", "en_18286_ai_systems_requirements"],
   ])("framework %i removes only its own file links", async (frameworkId, frameworkType, impl) => {
     mockQuery
       .mockResolvedValueOnce([{ id: PF_ID, owner: null, is_demo: false }])
