@@ -163,6 +163,23 @@ describe("ExtensionService.enable / updateConfiguration validation", () => {
     ).rejects.toBeInstanceOf(ValidationException);
   });
 
+  it("rejects a long run of dots without backtracking (CodeQL polynomial regex)", async () => {
+    // The old pattern /^[^\s@]+@[^\s@]+\.[^\s@]+$/ backtracks quadratically on
+    // a long dotted domain that fails at the end (the trailing space): about
+    // 19 s here. isEmail caps the length and splits the domain on fixed dots,
+    // so it answers at once. The elapsed-time check is explicit because jest's
+    // timeout is a timer and cannot fire while a synchronous regex blocks.
+    const started = Date.now();
+    await expect(
+      ExtensionService.enable("mlflow", 1, 1, {
+        tracking_server_url: "https://mlflow.example.com",
+        auth_method: "none",
+        notify_email: `!@!.${"!.".repeat(100000)} `,
+      }),
+    ).rejects.toBeInstanceOf(ValidationException);
+    expect(Date.now() - started).toBeLessThan(1000);
+  }, 60000);
+
   it("rejects a select value that isn't in the declared options", async () => {
     await expect(
       ExtensionService.enable("mlflow", 1, 1, {

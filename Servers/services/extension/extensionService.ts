@@ -11,6 +11,7 @@ import {
   ValidationException,
 } from "../../domain.layer/exceptions/custom.exception";
 import { decrypt, encrypt } from "../../utils/encryption.utils";
+import { isEmail } from "../../utils/validations/email.utils";
 import {
   STORED_SECRET_MESSAGES,
   checkStoredSecrets,
@@ -399,7 +400,7 @@ export class ExtensionService {
     }
   }
   private static assertEmail(key: string, value: string): void {
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
+    if (!isEmail(value)) {
       throw new ValidationException(`Field '${key}' must be a valid email address`, key, value);
     }
   }
