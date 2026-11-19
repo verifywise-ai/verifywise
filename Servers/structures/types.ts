@@ -1,5 +1,5 @@
 /**
- * Runtime + migration registry for the 22 bundled frameworks (SOC2, GDPR,
+ * Runtime + migration registry for the 24 bundled frameworks (SOC2, GDPR,
  * HIPAA, ..., OSFI E-23). Each framework lives in its own folder under this directory
  * and exports a FrameworkStructure describing table names, columns, entity
  * types, and the seed structure the initial migration inserts.

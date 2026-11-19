@@ -23,7 +23,7 @@ import {
 const upload = createMemoryUpload();
 
 /**
- * Generic impl endpoints for the 22 bundled frameworks. Mounted at
+ * Generic impl endpoints for the 24 bundled frameworks. Mounted at
  * /api/frameworks in app.ts. Table + column names come from
  * Servers/structures/ via the dispatch inside frameworkImpl.utils.ts.
  * Each route runs the access rule of the use case it reads or writes.
