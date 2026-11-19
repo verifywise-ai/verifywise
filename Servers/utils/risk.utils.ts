@@ -27,6 +27,7 @@ import { storedRiskCategories } from "./riskCategory.utils";
 import { recordProjectRiskDeletion } from "./projectRiskChangeHistory.utils";
 import { getStructureById } from "../structures";
 import { unlinkRiskFromAllPoliciesQuery } from "./policyLinkedObject.utils";
+import { pgTextArray } from "./pgArray.utils";
 import {
   accessibleProjectIdSql,
   getAccessibleProjectIdsQuery,
@@ -759,7 +760,7 @@ export const createRiskQuery = async (
         risk_owner: projectRisk.risk_owner,
         ai_lifecycle_phase: projectRisk.ai_lifecycle_phase,
         risk_description: projectRisk.risk_description,
-        risk_category: `{${(projectRisk.risk_category || []).join(",")}}`,
+        risk_category: pgTextArray(projectRisk.risk_category || []),
         impact: projectRisk.impact,
         assessment_mapping: projectRisk.assessment_mapping,
         controls_mapping: projectRisk.controls_mapping,
@@ -1004,7 +1005,7 @@ export const updateRiskByIdQuery = async (
         if (f === "risk_category") {
           // Format array for PostgreSQL
           const arr = value as string[];
-          updateProjectRisk[f as keyof RiskModel] = `{${(arr || []).join(",")}}` as any;
+          updateProjectRisk[f as keyof RiskModel] = pgTextArray(arr || []) as any;
         } else if (
           !RISK_TEXT_COLUMNS.has(f) &&
           (value === "" || (RISK_USER_COLUMNS.has(f) && Number(value) === 0))

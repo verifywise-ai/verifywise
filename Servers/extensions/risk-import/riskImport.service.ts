@@ -18,6 +18,7 @@ import { calculateRiskLevel, normalizeCurrentRiskLevel } from "../../utils/riskL
 import { isInvalidDateCell, riskCalendarDateFromCell } from "../../utils/riskCalendarDate.utils";
 import { MAX_IMPORT_ROWS } from "../importLimits";
 import { notifyRiskApprovers } from "../../services/riskApproverNotification.service";
+import { pgTextArray } from "../../utils/pgArray.utils";
 import {
   isRiskApprovalDecision,
   normalizeRiskApprovalStatus,
@@ -916,7 +917,7 @@ export async function importRisks(
               organization_id: organizationId,
               ...data,
               risk_category: data.risk_category
-                ? `{${(data.risk_category as string[]).map((c) => `"${c.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`).join(",")}}`
+                ? pgTextArray(data.risk_category as string[])
                 : null,
             },
             type: QueryTypes.SELECT,
