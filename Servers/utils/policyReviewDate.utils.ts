@@ -14,6 +14,20 @@ import { ValidationException } from "../domain.layer/exceptions/custom.exception
 export const POLICY_REVIEW_DATE_SQL =
   'to_char(pm.next_review_date, \'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"\') AS next_review_date';
 
+/**
+ * SET items that restart the review reminders when an UPDATE moves the review
+ * date to a different day (P-H3): the old notices were about a date that no
+ * longer applies. The same day, rewritten, keeps the stamps. The new value is
+ * the `:next_review_date` replacement ("YYYY-MM-DD" or null); the right-hand
+ * side of a SET reads the row as it was before the UPDATE.
+ */
+export const CLEAR_REVIEW_REMINDERS_ON_DATE_CHANGE_SQL = `due_soon_reminded_at = CASE
+       WHEN next_review_date::date IS NOT DISTINCT FROM CAST(:next_review_date AS date)
+       THEN due_soon_reminded_at END,
+     overdue_reminded_at = CASE
+       WHEN next_review_date::date IS NOT DISTINCT FROM CAST(:next_review_date AS date)
+       THEN overdue_reminded_at END`;
+
 const REVIEW_DATE_PATTERN =
   /^(\d{4})-(\d{2})-(\d{2})(?:T(\d{2}):(\d{2})(?::(\d{2})(?:\.\d{1,9})?)?(?:Z|[+-](\d{2}):?(\d{2}))?)?$/;
 

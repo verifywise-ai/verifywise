@@ -1,6 +1,12 @@
-import { describe, it, expect } from "@jest/globals";
+import { describe, it, expect, jest, afterEach } from "@jest/globals";
 import crypto from "crypto";
-import { encrypt, decrypt, maskApiKey } from "../encryption.utils";
+import {
+  encrypt,
+  decrypt,
+  maskApiKey,
+  resolveEncryptionKey,
+  DEFAULT_DEVELOPMENT_ENCRYPTION_KEY,
+} from "../encryption.utils";
 
 const ENCRYPTION_KEY =
   process.env.ENCRYPTION_KEY || "default-key-change-this-in-production-32chars!!";
@@ -101,6 +107,76 @@ describe("encryption.utils", () => {
     it("should return *** for null or undefined", () => {
       expect(maskApiKey(null as unknown as string)).toBe("***");
       expect(maskApiKey(undefined as unknown as string)).toBe("***");
+    });
+  });
+
+  describe("resolveEncryptionKey (production requires ENCRYPTION_KEY)", () => {
+    it("throws in production when ENCRYPTION_KEY is unset, naming the old default key", () => {
+      expect(() => resolveEncryptionKey({ NODE_ENV: "production" })).toThrow(
+        /ENCRYPTION_KEY must be set in production/,
+      );
+      expect(() => resolveEncryptionKey({ NODE_ENV: "production" })).toThrow(
+        DEFAULT_DEVELOPMENT_ENCRYPTION_KEY,
+      );
+      expect(() => resolveEncryptionKey({ NODE_ENV: "production" })).toThrow(/re-save/);
+    });
+
+    it("throws in production when ENCRYPTION_KEY is empty or whitespace", () => {
+      expect(() => resolveEncryptionKey({ NODE_ENV: "production", ENCRYPTION_KEY: "" })).toThrow();
+      expect(() =>
+        resolveEncryptionKey({ NODE_ENV: "production", ENCRYPTION_KEY: "   \t" }),
+      ).toThrow();
+    });
+
+    it("returns a configured production key exactly as given", () => {
+      expect(resolveEncryptionKey({ NODE_ENV: "production", ENCRYPTION_KEY: " k3y " })).toBe(
+        " k3y ",
+      );
+    });
+
+    it("keeps the development default outside production", () => {
+      expect(resolveEncryptionKey({})).toBe(DEFAULT_DEVELOPMENT_ENCRYPTION_KEY);
+      expect(resolveEncryptionKey({ NODE_ENV: "test", ENCRYPTION_KEY: "" })).toBe(
+        DEFAULT_DEVELOPMENT_ENCRYPTION_KEY,
+      );
+      expect(resolveEncryptionKey({ NODE_ENV: "development", ENCRYPTION_KEY: "dev" })).toBe("dev");
+    });
+
+    describe("at module load", () => {
+      const originalEnv = { ...process.env };
+      afterEach(() => {
+        process.env = { ...originalEnv };
+      });
+
+      it("stops loading in production without a key", () => {
+        process.env.NODE_ENV = "production";
+        delete process.env.ENCRYPTION_KEY;
+        jest.isolateModules(() => {
+          // eslint-disable-next-line @typescript-eslint/no-require-imports
+          expect(() => require("../encryption.utils")).toThrow(
+            /ENCRYPTION_KEY must be set in production/,
+          );
+        });
+      });
+
+      it("loads in production with a key and round-trips", () => {
+        process.env.NODE_ENV = "production";
+        process.env.ENCRYPTION_KEY = "a-production-key-for-this-test-only";
+        jest.isolateModules(() => {
+          // eslint-disable-next-line @typescript-eslint/no-require-imports
+          const mod = require("../encryption.utils");
+          expect(mod.decrypt(mod.encrypt("secret"))).toBe("secret");
+        });
+      });
+
+      it("loads outside production without a key", () => {
+        process.env.NODE_ENV = "test";
+        delete process.env.ENCRYPTION_KEY;
+        jest.isolateModules(() => {
+          // eslint-disable-next-line @typescript-eslint/no-require-imports
+          expect(() => require("../encryption.utils")).not.toThrow();
+        });
+      });
     });
   });
 });

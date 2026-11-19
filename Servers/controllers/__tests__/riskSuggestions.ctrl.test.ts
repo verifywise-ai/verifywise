@@ -244,6 +244,18 @@ describe("suggestRisksWithAI", () => {
     expect((res as any).json.mock.calls[0][0].data.suppressed_count).toBe(1);
   });
 
+  it("names to the model only the existing risks the user can see", async () => {
+    setupHappyPath();
+
+    const req = createMockReq({ body: { projectId: 5 }, role: "Editor" }) as Request;
+    await suggestRisksWithAI(req, createMockRes() as Response);
+
+    expect(mockGetRisksByProject).toHaveBeenCalledWith(5, 1, "active", {
+      userId: (req as any).userId,
+      role: "Editor",
+    });
+  });
+
   it("passes no purpose but still the description when the project has no goal or purpose", async () => {
     setupHappyPath();
     mockGetProjectById.mockResolvedValue({ ...PROJECT, goal: null, use_case_purpose: null });

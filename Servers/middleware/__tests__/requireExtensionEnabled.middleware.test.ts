@@ -13,6 +13,12 @@ jest.mock("../../utils/validations/validation.utils", () => ({
   sanitizeForLog: (value: string) => value,
 }));
 
+const mockLogError = jest.fn();
+jest.mock("../../utils/logger/fileLogger", () => ({
+  __esModule: true,
+  logStructuredError: (...args: unknown[]) => mockLogError(...args),
+}));
+
 const mockFindByKey = jest.fn();
 const mockFindByExtensionId = jest.fn();
 
@@ -29,7 +35,10 @@ jest.mock("../../domain.layer/models/extension/extensionEnablement.model", () =>
 
 // Import the middleware AFTER mocks are wired.
 // eslint-disable-next-line @typescript-eslint/no-require-imports
-const { requireExtensionEnabled } = require("../requireExtensionEnabled.middleware");
+const {
+  requireExtensionEnabled,
+  isExtensionEnabledForOrganization,
+} = require("../requireExtensionEnabled.middleware");
 
 function makeReq(organizationId?: number): Partial<Request> {
   return {
@@ -135,8 +144,9 @@ describe("requireExtensionEnabled middleware", () => {
     expect(next).toHaveBeenCalledTimes(3);
   });
 
-  it("returns 500 with the underlying message when the DB layer throws", async () => {
-    mockFindByKey.mockRejectedValueOnce(new Error("db down") as never);
+  it("returns a generic 500 and logs the cause when the DB layer throws", async () => {
+    const cause = new Error('relation "extension_enablements" does not exist');
+    mockFindByKey.mockRejectedValueOnce(cause as never);
     const mw = requireExtensionEnabled("slack-crash");
     const req = makeReq(7) as Request;
     const res = makeRes() as Response;
@@ -145,6 +155,16 @@ describe("requireExtensionEnabled middleware", () => {
     await mw(req, res, next);
 
     expect(res.status).toHaveBeenCalledWith(500);
+    expect(res.json).toHaveBeenCalledWith({ message: "Internal server error" });
+    expect(JSON.stringify((res.json as jest.Mock).mock.calls)).not.toContain(
+      "extension_enablements",
+    );
+    expect(mockLogError).toHaveBeenCalledWith(
+      expect.stringContaining("slack-crash"),
+      cause,
+      "checkEnabled",
+      "requireExtensionEnabled.middleware.ts",
+    );
     expect(next).not.toHaveBeenCalled();
   });
 
@@ -163,5 +183,38 @@ describe("requireExtensionEnabled middleware", () => {
     expect(mockFindByKey).toHaveBeenCalledWith("param-ext");
     expect(mockFindByExtensionId).toHaveBeenCalledWith(31, 7);
     expect(next).toHaveBeenCalled();
+  });
+});
+
+describe("isExtensionEnabledForOrganization", () => {
+  beforeEach(() => {
+    mockFindByKey.mockReset();
+    mockFindByExtensionId.mockReset();
+  });
+
+  it("is true when the organization enabled the extension", async () => {
+    mockFindByKey.mockResolvedValue({ id: 41 } as never);
+    mockFindByExtensionId.mockResolvedValue({ enabled: true } as never);
+
+    await expect(isExtensionEnabledForOrganization("lookup-on", 7)).resolves.toBe(true);
+    expect(mockFindByExtensionId).toHaveBeenCalledWith(41, 7);
+  });
+
+  it("is false when the organization disabled the extension", async () => {
+    mockFindByKey.mockResolvedValue({ id: 42 } as never);
+    mockFindByExtensionId.mockResolvedValue({ enabled: false } as never);
+    await expect(isExtensionEnabledForOrganization("lookup-off", 7)).resolves.toBe(false);
+  });
+
+  it("is false when the organization never enabled the extension", async () => {
+    mockFindByKey.mockResolvedValue({ id: 43 } as never);
+    mockFindByExtensionId.mockResolvedValue(null as never);
+    await expect(isExtensionEnabledForOrganization("lookup-never", 7)).resolves.toBe(false);
+  });
+
+  it("is false for an extension missing from the catalog", async () => {
+    mockFindByKey.mockResolvedValue(null as never);
+    await expect(isExtensionEnabledForOrganization("lookup-missing", 7)).resolves.toBe(false);
+    expect(mockFindByExtensionId).not.toHaveBeenCalled();
   });
 });

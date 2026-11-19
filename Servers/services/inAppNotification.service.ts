@@ -19,6 +19,7 @@ import { EMAIL_TEMPLATES } from "../constants/emailTemplates";
 import { translate, type SupportedLang } from "../utils/i18n.utils";
 import { getUserLanguage } from "../utils/userPreference.utils";
 import { deadlineNoticeKey } from "../utils/deadline.utils";
+import { formatReviewDate } from "../utils/policyReviewDate.utils";
 
 /**
  * Build a frontend-compatible URL for a given entity type and id.
@@ -789,8 +790,21 @@ export const notifyApprovalRequested = async (
   },
   requesterName: string,
   baseUrl: string,
+  /**
+   * The request's entity, when it is not a use case. For a policy, `useCase.id`
+   * is the approval request id: the notification names the policy and links
+   * to the approval workflows page opened on that request (the same
+   * `/approval-workflows?request=<id>` link the Home queue uses), where the
+   * approver decides.
+   */
+  entity?: { type: string; id: number },
 ): Promise<void> => {
   const approver = await getUserById(approverId);
+
+  const isPolicy = entity?.type === "policy";
+  const actionUrl = isPolicy
+    ? `/approval-workflows?request=${useCase.id}`
+    : buildEntityUrl(NotificationEntityType.USE_CASE, useCase.id);
 
   await sendInAppNotification(
     organizationId,
@@ -799,10 +813,10 @@ export const notifyApprovalRequested = async (
       type: NotificationType.APPROVAL_REQUESTED,
       title: `Approval requested - Step ${useCase.stepNumber}`,
       message: `${requesterName} needs your approval for: ${useCase.name}`,
-      entity_type: NotificationEntityType.USE_CASE,
-      entity_id: useCase.id,
+      entity_type: isPolicy ? NotificationEntityType.POLICY : NotificationEntityType.USE_CASE,
+      entity_id: isPolicy ? entity!.id : useCase.id,
       entity_name: useCase.name,
-      action_url: buildEntityUrl(NotificationEntityType.USE_CASE, useCase.id),
+      action_url: actionUrl,
       metadata: { stepNumber: useCase.stepNumber },
     },
     true,
@@ -816,7 +830,7 @@ export const notifyApprovalRequested = async (
         workflow_name: useCase.workflowName,
         step_number: String(useCase.stepNumber),
         total_steps: String(useCase.totalSteps),
-        approval_url: `${baseUrl}${buildEntityUrl(NotificationEntityType.USE_CASE, useCase.id)}`,
+        approval_url: `${baseUrl}${actionUrl}`,
       },
     },
   );
@@ -842,6 +856,8 @@ export const notifyApprovalComplete = async (
    * that don't pass it.
    */
   entityType?: string,
+  /** approval_requests.entity_id, for entity types whose link needs it (policy). */
+  entityId?: number,
 ): Promise<void> => {
   const requester = await getUserById(requesterId);
 
@@ -850,8 +866,22 @@ export const notifyApprovalComplete = async (
   // approval workflow, just add a row here.
   const labelFor = (
     et?: string,
-  ): { label: string; entity: NotificationEntityType; url: string } => {
+  ): { label: string; entity: NotificationEntityType; url: string; entityId?: number } => {
     switch (et) {
+      case "policy":
+        if (entityId) {
+          return {
+            label: "Policy",
+            entity: NotificationEntityType.POLICY,
+            url: buildEntityUrl(NotificationEntityType.POLICY, entityId),
+            entityId,
+          };
+        }
+        return {
+          label: "Policy",
+          entity: NotificationEntityType.POLICY,
+          url: `/policies`,
+        };
       case "ai_action":
         return {
           label: "AI action",
@@ -887,7 +917,7 @@ export const notifyApprovalComplete = async (
     }
   };
 
-  const { label, entity, url } = labelFor(entityType);
+  const { label, entity, url, entityId: linkedId } = labelFor(entityType);
 
   await sendInAppNotification(
     organizationId,
@@ -897,7 +927,7 @@ export const notifyApprovalComplete = async (
       title: `${label} fully approved`,
       message: `Your ${label.toLowerCase()} "${useCase.name}" has been fully approved`,
       entity_type: entity,
-      entity_id: useCase.id,
+      entity_id: linkedId ?? useCase.id,
       entity_name: useCase.name,
       action_url: url,
     },
@@ -1222,43 +1252,60 @@ export const notifyModelRiskDueSoon = async (
 };
 
 /**
- * Notify policy due soon
+ * Remind a policy's owner or reviewer that its review is due soon or overdue
+ * (P-H3, P-M2). The in-app notice is the channel of record: it is stored
+ * first, and a failure to store it rejects, so the sweep leaves the policy
+ * unstamped and retries it the next day. The email is best-effort:
+ * sendInAppNotification logs and swallows its failure (e.g. no email
+ * configured, or no address), so it never blocks the reminder. Title,
+ * message and subject are keyed and reach the recipient in their language;
+ * the email body stays English.
+ *
+ * @param policy.reviewDate - The review day, "YYYY-MM-DD".
  */
-export const notifyPolicyDueSoon = async (
+export const notifyPolicyReviewReminder = async (
   organizationId: number,
-  adminId: number,
-  policy: {
-    id: number;
-    name: string;
-    projectName: string;
-    dueDate: string;
-  },
+  userId: number,
+  policy: { id: number; title: string; reviewDate: string },
+  kind: "due_soon" | "overdue",
   baseUrl: string,
 ): Promise<void> => {
-  const admin = await getUserById(adminId);
+  const user = await getUserById(userId);
+  const overdue = kind === "overdue";
+  const titleKey = overdue ? "Policy review overdue" : "Policy review due soon";
+  const messageKey = overdue
+    ? 'The review of policy "{title}" was due on {date}. Please review it as soon as you can.'
+    : 'The review of policy "{title}" is due on {date}.';
+  const subjectKey = overdue ? "Policy review overdue: {title}" : "Policy review due soon: {title}";
+  const policyPath = buildEntityUrl(NotificationEntityType.POLICY, policy.id);
+  const reviewDate = formatReviewDate(policy.reviewDate);
 
   await sendInAppNotification(
     organizationId,
     {
-      user_id: adminId,
-      type: NotificationType.POLICY_DUE_SOON,
-      title: "Policy due soon",
-      message: `Policy "${policy.name}" is due on ${policy.dueDate}`,
+      user_id: userId,
+      lang: await getUserLanguage(userId),
+      type: overdue ? NotificationType.POLICY_OVERDUE : NotificationType.POLICY_DUE_SOON,
+      titleKey,
+      messageKey,
+      messageVars: { title: policy.title, date: reviewDate },
       entity_type: NotificationEntityType.POLICY,
       entity_id: policy.id,
-      entity_name: policy.name,
-      action_url: buildEntityUrl(NotificationEntityType.POLICY, policy.id),
+      entity_name: policy.title,
+      action_url: policyPath,
     },
     true,
     {
-      template: EMAIL_TEMPLATES.POLICY_DUE_SOON,
-      subject: `Policy due soon: ${policy.name}`,
+      template: EMAIL_TEMPLATES.POLICY_REVIEW_REMINDER,
+      subjectKey,
+      subjectVars: { title: policy.title },
       variables: {
-        admin_name: admin ? `${admin.name}` : "Admin",
-        policy_name: policy.name,
-        project_name: policy.projectName,
-        due_date: policy.dueDate,
-        policy_url: `${baseUrl}${buildEntityUrl(NotificationEntityType.POLICY, policy.id)}`,
+        reminder_title: translate("en", titleKey),
+        reminder_message: translate("en", messageKey, { title: policy.title, date: reviewDate }),
+        recipient_name: user?.name || "there",
+        policy_name: policy.title,
+        review_date: reviewDate,
+        policy_url: `${baseUrl}${policyPath}`,
       },
     },
   );
@@ -1743,6 +1790,23 @@ async function getUserById(
   return result[0] || null;
 }
 
+async function getOrganizationMemberById(
+  userId: number,
+  organizationId: number,
+): Promise<{ name: string; surname: string; email: string } | null> {
+  const result = await sequelize.query<{ name: string; surname: string; email: string }>(
+    `SELECT u.name, u.surname, u.email
+       FROM users u
+       JOIN organization_members om ON om.user_id = u.id
+      WHERE u.id = :userId AND om.organization_id = :organizationId`,
+    {
+      replacements: { userId, organizationId },
+      type: QueryTypes.SELECT,
+    },
+  );
+  return result[0] || null;
+}
+
 async function getUserEmail(userId: number): Promise<{ email: string } | null> {
   const result = await sequelize.query<{ email: string }>(
     `SELECT email FROM users WHERE id = :userId`,
@@ -1775,7 +1839,14 @@ async function getUserEmails(
  * Role type for assignment notifications
  */
 export type AssignmentRoleType =
-  "Owner" | "Reviewer" | "Approver" | "Member" | "Assignee" | "Action Owner" | "Risk Owner";
+  | "Owner"
+  | "Reviewer"
+  | "Approver"
+  | "Member"
+  | "Assignee"
+  | "Action Owner"
+  | "Risk Owner"
+  | "Risk Approver";
 
 /**
  * Entity type labels for display in notifications
@@ -1802,6 +1873,8 @@ function getNotificationTypeForRole(roleType: AssignmentRoleType): NotificationT
   switch (roleType) {
     case "Owner":
     case "Risk Owner":
+    // Same type as Risk Owner, so no notification type enum change (ruling K5)
+    case "Risk Approver":
       return NotificationType.ASSIGNMENT_OWNER;
     case "Reviewer":
       return NotificationType.ASSIGNMENT_REVIEWER;
@@ -1827,6 +1900,8 @@ function getRoleDescription(roleType: AssignmentRoleType): string {
       return "As the Owner, you are responsible for completing this item and ensuring all requirements are met.";
     case "Risk Owner":
       return "As the Risk Owner, you are responsible for managing and mitigating this risk.";
+    case "Risk Approver":
+      return "As the Risk Approver, you decide whether this risk's treatment is approved or rejected.";
     case "Reviewer":
       return "As the Reviewer, you are responsible for reviewing the work and providing feedback before approval.";
     case "Approver":
@@ -1923,6 +1998,48 @@ function buildEntityContextHtml(context?: AssignmentEntityContext): string {
   return `<table style="width: 100%; border-collapse: collapse; margin-bottom: 8px;">${rows.join("")}</table>`;
 }
 
+/** An assignment link: absolute URLs as they are, relative ones on `baseUrl`. */
+const buildAssignmentUrl = (entityUrl: string, baseUrl: string): string =>
+  entityUrl.startsWith("http")
+    ? entityUrl
+    : `${baseUrl}${entityUrl.startsWith("/") ? "" : "/"}${entityUrl}`;
+
+/**
+ * Shared scaffolding of the assignment notifications: look up the assignee
+ * (skip with a warning when missing), run `send`, log what it returns, and
+ * never throw, since notifications must not break the main flow.
+ */
+const sendAssignmentNotification = async (
+  organizationId: number,
+  assigneeId: number,
+  send: (assignee: { name: string; surname: string; email: string }) => Promise<string>,
+): Promise<void> => {
+  try {
+    // Only a member of the organization is ever told about its records.
+    const assignee = await getOrganizationMemberById(assigneeId, organizationId);
+    if (!assignee) {
+      logger.warn(
+        `Cannot send assignment notification: user ${assigneeId} is not a member of organization ${organizationId}`,
+      );
+      return;
+    }
+
+    const sent = await send(assignee);
+
+    // The values are interpolated into the message here rather than passed as
+    // printf arguments: winston is configured without format.splat(), so a
+    // stray %s or %d in caller-supplied data (assigneeId reaches here from a
+    // request body) is printed literally instead of being treated as a
+    // format specifier.
+    logger.info(`📧 Assignment notification sent to user ${assigneeId} ${sent}`);
+  } catch (error) {
+    logger.error(
+      `Failed to send assignment notification to user ${assigneeId}: ${error instanceof Error ? error.message : String(error)}`,
+    );
+    // Don't rethrow - notifications should not break the main flow
+  }
+};
+
 /**
  * Notify a user when they are assigned to an entity
  *
@@ -1946,23 +2063,15 @@ export const notifyUserAssigned = async (
   assignerName: string,
   baseUrl: string,
   entityContext?: AssignmentEntityContext,
-): Promise<void> => {
-  try {
-    const assignee = await getUserById(assigneeId);
-    if (!assignee) {
-      logger.warn(`Cannot send assignment notification: user ${assigneeId} not found`);
-      return;
-    }
-
+): Promise<void> =>
+  sendAssignmentNotification(organizationId, assigneeId, async (assignee) => {
     const displayEntityType =
       ENTITY_TYPE_DISPLAY_LABELS[assignment.entityType] || assignment.entityType;
     const notificationType = getNotificationTypeForRole(assignment.roleType);
     const notificationEntityType = getNotificationEntityType(assignment.entityType);
 
     // Build full URL
-    const fullUrl = assignment.entityUrl.startsWith("http")
-      ? assignment.entityUrl
-      : `${baseUrl}${assignment.entityUrl.startsWith("/") ? "" : "/"}${assignment.entityUrl}`;
+    const fullUrl = buildAssignmentUrl(assignment.entityUrl, baseUrl);
 
     // Build entity context HTML for email
     const entityContextHtml = buildEntityContextHtml(entityContext);
@@ -1997,18 +2106,101 @@ export const notifyUserAssigned = async (
       },
     );
 
-    // The values are interpolated into the message here rather than passed as
-    // printf arguments: winston is configured without format.splat(), so a
-    // stray %s or %d in caller-supplied data (assigneeId reaches here from a
-    // request body) is printed literally instead of being treated as a
-    // format specifier.
-    logger.info(
-      `📧 Assignment notification sent to user ${assigneeId} as ${assignment.roleType} for ${assignment.entityType} ${assignment.entityId}`,
+    return `as ${assignment.roleType} for ${assignment.entityType} ${assignment.entityId}`;
+  });
+
+/** Items listed in a multi-item assignment notice before "and <k> more". */
+export const ASSIGNED_MANY_LIST_LIMIT = 20;
+
+/**
+ * The words of a multi-item assignment notice, chosen by the caller. The keys
+ * are translated into the recipient's language; the email body stays English.
+ */
+export interface AssignedManyTexts {
+  /** Title and email subject. Vars: {count}. */
+  titleKey: string;
+  /** Message listing every item. Vars: {assigner}, {count}, {names}. */
+  messageKey: string;
+  /** Message when the list is cut. Vars: {assigner}, {count}, {names}, {more}. */
+  messageMoreKey: string;
+  /** Plural noun for the English email body, e.g. "risks". */
+  itemsLabel: string;
+  /** English email line on what the role means for these items. */
+  roleDescription: string;
+}
+
+/**
+ * Notify a user once when a bulk action assigns them to several items of one
+ * kind (e.g. a bulk set owner on risks): one in-app notification and one
+ * assignment email listing the items, instead of one per item. Same
+ * notification type, entity type and email template as notifyUserAssigned.
+ *
+ * @param assignment.entityUrl - Link to the list page, e.g. "/risk-management"
+ */
+export const notifyUserAssignedMany = async (
+  organizationId: number,
+  assigneeId: number,
+  assignment: {
+    entityType: string;
+    items: Array<{ id: number; name: string }>;
+    roleType: AssignmentRoleType;
+    entityUrl: string;
+    texts: AssignedManyTexts;
+  },
+  assignerName: string,
+  baseUrl: string,
+): Promise<void> =>
+  sendAssignmentNotification(organizationId, assigneeId, async (assignee) => {
+    const { texts } = assignment;
+    const count = assignment.items.length;
+    const shown = assignment.items.slice(0, ASSIGNED_MANY_LIST_LIMIT).map((item) => item.name);
+    const more = count - shown.length;
+    const names = shown.join(", ");
+
+    // The item names are user text: escaped here, since *_html variables are
+    // inserted into the email as is.
+    const itemStyle = `color: ${emailColorTokens.colorTextSecondary}; font-size: 13px; margin-bottom: 4px;`;
+    const listItems = shown.map((name) => `<li style="${itemStyle}">${escapeHtml(name)}</li>`);
+    if (more > 0) listItems.push(`<li style="${itemStyle}">and ${more} more</li>`);
+    const listHtml = `<ul style="margin: 0 0 8px 0; padding-left: 20px;">${listItems.join("")}</ul>`;
+
+    await sendInAppNotification(
+      organizationId,
+      {
+        user_id: assigneeId,
+        type: getNotificationTypeForRole(assignment.roleType),
+        titleKey: texts.titleKey,
+        titleVars: { count },
+        ...(more > 0
+          ? {
+              messageKey: texts.messageMoreKey,
+              messageVars: { assigner: assignerName, count, names, more },
+            }
+          : {
+              messageKey: texts.messageKey,
+              messageVars: { assigner: assignerName, count, names },
+            }),
+        entity_type: getNotificationEntityType(assignment.entityType),
+        action_url: assignment.entityUrl,
+      },
+      true,
+      {
+        template: EMAIL_TEMPLATES.ASSIGNMENT_NOTIFICATION,
+        subjectKey: texts.titleKey,
+        subjectVars: { count },
+        variables: {
+          recipient_name: assignee.name || "User",
+          assigner_name: assignerName,
+          role_type: assignment.roleType,
+          entity_type: texts.itemsLabel,
+          entity_name: `${count} ${texts.itemsLabel}`,
+          entity_url: buildAssignmentUrl(assignment.entityUrl, baseUrl),
+          assignment_date: formatAssignmentDate(),
+          role_description: texts.roleDescription,
+          entity_context_html: listHtml,
+        },
+      },
     );
-  } catch (error) {
-    logger.error(
-      `Failed to send assignment notification to user ${assigneeId}: ${error instanceof Error ? error.message : String(error)}`,
-    );
-    // Don't rethrow - notifications should not break the main flow
-  }
-};
+
+    return `as ${assignment.roleType} for ${count} ${assignment.entityType} items`;
+  });

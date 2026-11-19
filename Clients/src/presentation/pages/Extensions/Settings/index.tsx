@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { ReactNode, useCallback, useEffect, useMemo, useState } from "react";
 import { Navigate, useNavigate, useParams } from "react-router";
 import { Box, CircularProgress, Stack, Typography, useTheme } from "@mui/material";
 import { ChevronLeft } from "lucide-react";
@@ -8,6 +8,7 @@ import { useExtensions } from "../../../../application/contexts/Extensions.conte
 import {
   ExtensionConfigForm,
   ExtensionConfigFormValues,
+  initialFormValues,
   OptionalNotice,
   prepareSubmitValues,
 } from "../../../components/ExtensionConfigForm";
@@ -21,23 +22,42 @@ import ModelLifecycleConfig from "../model-lifecycle/ModelLifecycleConfig";
 import { JiraAssetsConfiguration } from "../jira-assets/JiraAssetsConfiguration";
 import { JiraIncidentsConfiguration } from "../jira-incidents/JiraIncidentsConfiguration";
 import { useCan, usePermissionsSettled } from "../../../../application/hooks/useCan";
-import { palette, radiusPx } from "../../../themes/palette";
+import { palette, radiusPx, status } from "../../../themes/palette";
+import ConfirmDisableModal from "../ConfirmDisableModal";
+import {
+  EXTENSION_DISABLED_MESSAGE,
+  EXTENSION_ENABLED_MESSAGE,
+  humanizeCategory,
+} from "../catalogCopy";
+import useTranslation from "../../../../application/hooks/useTranslation";
+import { fill } from "../../../../i18n/fill";
 
-const CATEGORY_LABEL: Record<string, string> = {
-  communication: "Communication",
-  ml_ops: "ML Ops",
-  data_management: "Data management",
-  version_control: "Version control",
-  monitoring: "Monitoring",
-  security: "Security",
-  analytics: "Analytics",
-};
-const humanizeCategory = (raw: string): string =>
-  CATEGORY_LABEL[raw] ?? raw.replace(/_/g, " ").replace(/^./, (c) => c.toUpperCase());
+// Enable and disable feedback is one full sentence per extension so it
+// translates as a whole. An extension missing from the map gets the same
+// sentence as a template with its name filled in.
+function toggledMessage(
+  extension: Extension,
+  action: "enabled" | "disabled",
+  t: (key: string) => string,
+): string {
+  const sentences = action === "enabled" ? EXTENSION_ENABLED_MESSAGE : EXTENSION_DISABLED_MESSAGE;
+  const sentence = sentences[extension.key];
+  if (sentence) return sentence;
+  const template = action === "enabled" ? "{name} enabled." : "{name} disabled.";
+  return fill(t(template), { name: extension.displayName });
+}
 
 /**
  * Per-extension settings page — /extensions/:key/settings.
- * Config form + Enable/Disable + optional Test Connection.
+ * Config form + Enable/Disable + Test connection for extensions with
+ * pre-enable fields (MLflow, Azure AI Foundry). The panels of Slack, Jira
+ * and Model lifecycle carry their own connection checks.
+ *
+ * `formValues` starts from the stored configuration, so an untouched form
+ * sends the stored values; the server keeps any field left out and clears a
+ * field sent as `null` (see `prepareSubmitValues`). After a successful Enable
+ * or Save the form is reseeded from the response. Disable does not reseed,
+ * so unsaved edits stay in the form.
  *
  * The initial fetch uses `getExtensionByKey` (fresh from the server so we
  * see the latest `configuration` shape). Enable/disable/updateConfiguration
@@ -47,6 +67,7 @@ export default function ExtensionSettingsPage() {
   const theme = useTheme();
   const { key } = useParams();
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const canManageExtensions = useCan("extension.admin");
   const permissionsSettled = usePermissionsSettled();
   const { enable, disable, updateConfiguration, getByKey } = useExtensions();
@@ -55,11 +76,29 @@ export default function ExtensionSettingsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [formValues, setFormValues] = useState<ExtensionConfigFormValues>({});
+  // Bumped to remount the form after a successful Enable/Save, so it shows
+  // what is now stored (a newly stored secret reads "Stored").
+  const [formKey, setFormKey] = useState(0);
   const [busy, setBusy] = useState<"enable" | "disable" | "save" | "test" | null>(null);
+  const [confirmDisableOpen, setConfirmDisableOpen] = useState(false);
   const [feedback, setFeedback] = useState<{
     severity: "success" | "error" | "info";
-    message: string;
+    message: ReactNode;
   } | null>(null);
+  const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
+
+  const reseedForm = useCallback((ext: Extension) => {
+    setFormValues(initialFormValues(ext.configFields ?? [], ext.configuration ?? {}));
+    setFormKey((k) => k + 1);
+    // A result for the values before the save no longer applies.
+    setTestResult(null);
+  }, []);
+
+  // A connection result describes the values it tested, so an edit clears it.
+  const handleFormChange = useCallback((values: ExtensionConfigFormValues) => {
+    setFormValues(values);
+    setTestResult(null);
+  }, []);
 
   const load = useCallback(async () => {
     if (!key) return;
@@ -68,12 +107,13 @@ export default function ExtensionSettingsPage() {
     try {
       const ext = await getExtensionByKey({ key });
       setExtension(ext);
+      reseedForm(ext);
     } catch (err: any) {
       setError(err?.message ?? "Failed to load extension");
     } finally {
       setLoading(false);
     }
-  }, [key]);
+  }, [key, reseedForm]);
 
   useEffect(() => {
     load();
@@ -103,7 +143,8 @@ export default function ExtensionSettingsPage() {
       const submit = prepareSubmitValues(configFields, formValues);
       const next = await enable(extension.key, submit);
       setExtension(next);
-      setFeedback({ severity: "success", message: `${extension.displayName} enabled.` });
+      reseedForm(next);
+      setFeedback({ severity: "success", message: toggledMessage(extension, "enabled", t) });
     } catch (err: any) {
       setFeedback({
         severity: "error",
@@ -120,8 +161,9 @@ export default function ExtensionSettingsPage() {
     setFeedback(null);
     try {
       const next = await disable(extension.key);
+      // No reseed: unsaved edits stay in the form for the next Enable.
       setExtension(next);
-      setFeedback({ severity: "success", message: `${extension.displayName} disabled.` });
+      setFeedback({ severity: "success", message: toggledMessage(extension, "disabled", t) });
     } catch (err: any) {
       setFeedback({
         severity: "error",
@@ -129,6 +171,7 @@ export default function ExtensionSettingsPage() {
       });
     } finally {
       setBusy(null);
+      setConfirmDisableOpen(false);
     }
   };
 
@@ -140,6 +183,7 @@ export default function ExtensionSettingsPage() {
       const submit = prepareSubmitValues(configFields, formValues);
       const next = await updateConfiguration(extension.key, submit);
       setExtension(next);
+      reseedForm(next);
       setFeedback({ severity: "success", message: "Configuration saved." });
     } catch (err: any) {
       setFeedback({
@@ -154,17 +198,14 @@ export default function ExtensionSettingsPage() {
   const handleTest = async () => {
     if (!extension) return;
     setBusy("test");
-    setFeedback(null);
+    setTestResult(null);
     try {
       const submit = prepareSubmitValues(configFields, formValues);
       const result = await testExtensionConnection({ key: extension.key, configuration: submit });
-      setFeedback({
-        severity: result.success ? "success" : "error",
-        message: result.message,
-      });
+      setTestResult({ success: result.success, message: result.message });
     } catch (err: any) {
-      setFeedback({
-        severity: "error",
+      setTestResult({
+        success: false,
         message: err?.response?.data?.data?.message ?? err?.message ?? "Test failed",
       });
     } finally {
@@ -184,7 +225,12 @@ export default function ExtensionSettingsPage() {
         text: theme.palette.status.success.text,
         label: "Enabled",
       }
-    : null;
+    : {
+        bg: status.default.bg,
+        border: status.default.border,
+        text: status.default.text,
+        label: "Disabled",
+      };
 
   return (
     <PageHeaderExtended
@@ -238,23 +284,21 @@ export default function ExtensionSettingsPage() {
                 sx={{ width: 28, height: 28, objectFit: "contain", borderRadius: radiusPx.sm }}
               />
             )}
-            {statusStyles && (
-              <Box
-                sx={{
-                  px: "8px",
-                  py: "2px",
-                  borderRadius: radiusPx.sm,
-                  bgcolor: statusStyles.bg,
-                  border: `1px solid ${statusStyles.border}`,
-                }}
+            <Box
+              sx={{
+                px: "8px",
+                py: "2px",
+                borderRadius: radiusPx.sm,
+                bgcolor: statusStyles.bg,
+                border: `1px solid ${statusStyles.border}`,
+              }}
+            >
+              <Typography
+                sx={{ fontSize: 11, fontWeight: 500, color: statusStyles.text, lineHeight: 1.5 }}
               >
-                <Typography
-                  sx={{ fontSize: 11, fontWeight: 500, color: statusStyles.text, lineHeight: 1.5 }}
-                >
-                  {statusStyles.label}
-                </Typography>
-              </Box>
-            )}
+                {statusStyles.label}
+              </Typography>
+            </Box>
             <Typography sx={{ fontSize: 12, color: theme.palette.text.tertiary }}>
               v{extension.version} · {humanizeCategory(extension.category)}
             </Typography>
@@ -313,10 +357,12 @@ export default function ExtensionSettingsPage() {
                 Configuration
               </Typography>
               <ExtensionConfigForm
+                key={formKey}
                 fields={configFields}
                 initialValues={extension.configuration}
+                secretsSet={extension.secretsSet}
                 disabled={busy !== null}
-                onChange={setFormValues}
+                onChange={handleFormChange}
               />
               {configFields.some((f) => f.isSecret) && (
                 <Box sx={{ mt: "12px" }}>
@@ -333,54 +379,79 @@ export default function ExtensionSettingsPage() {
             <JiraIncidentsConfiguration />
           )}
 
-          {/* Actions */}
-          <Stack direction="row" spacing="12px" flexWrap="wrap" sx={{ rowGap: "8px" }}>
-            {extension.enabled ? (
-              <CustomizableButton
-                variant="outlined"
-                color="error"
-                size="medium"
-                onClick={handleDisable}
-                isDisabled={busy !== null}
-              >
-                Disable
-              </CustomizableButton>
-            ) : (
-              <CustomizableButton
-                variant="contained"
-                color="primary"
-                size="medium"
-                onClick={handleEnable}
-                isDisabled={busy !== null}
-              >
-                Enable
-              </CustomizableButton>
-            )}
+          {/* Actions, with the connection test result right under them */}
+          <Stack spacing="8px" data-testid="extension-actions">
+            <Stack direction="row" spacing="12px" flexWrap="wrap" sx={{ rowGap: "8px" }}>
+              {extension.enabled ? (
+                <CustomizableButton
+                  variant="outlined"
+                  color="error"
+                  size="medium"
+                  onClick={() => setConfirmDisableOpen(true)}
+                  isDisabled={busy !== null}
+                >
+                  Disable
+                </CustomizableButton>
+              ) : (
+                <CustomizableButton
+                  variant="contained"
+                  color="primary"
+                  size="medium"
+                  onClick={handleEnable}
+                  isDisabled={busy !== null}
+                >
+                  Enable
+                </CustomizableButton>
+              )}
 
-            {extension.enabled && configFields.length > 0 && (
-              <CustomizableButton
-                variant="outlined"
-                color="primary"
-                size="medium"
-                onClick={handleSaveConfig}
-                isDisabled={busy !== null}
-              >
-                Save configuration
-              </CustomizableButton>
-            )}
+              {extension.enabled && configFields.length > 0 && (
+                <CustomizableButton
+                  variant="outlined"
+                  color="primary"
+                  size="medium"
+                  onClick={handleSaveConfig}
+                  isDisabled={busy !== null}
+                >
+                  Save configuration
+                </CustomizableButton>
+              )}
 
-            {extension.enabled && extension.requiresConfiguration && (
-              <CustomizableButton
-                variant="text"
-                color="primary"
-                size="medium"
-                onClick={handleTest}
-                isDisabled={busy !== null}
+              {configFields.length > 0 && (
+                <CustomizableButton
+                  variant="text"
+                  color="primary"
+                  size="medium"
+                  onClick={handleTest}
+                  isDisabled={busy !== null}
+                >
+                  Test connection
+                </CustomizableButton>
+              )}
+            </Stack>
+
+            {testResult && (
+              <Typography
+                role="status"
+                sx={{
+                  fontSize: 13,
+                  color: testResult.success
+                    ? theme.palette.status.success.text
+                    : (theme.palette.status.error?.text ?? palette.status.error.text),
+                }}
               >
-                Test connection
-              </CustomizableButton>
+                {testResult.message}
+              </Typography>
             )}
           </Stack>
+
+          <ConfirmDisableModal
+            isOpen={confirmDisableOpen}
+            extensionKey={extension.key}
+            extensionName={extension.displayName}
+            isSubmitting={busy === "disable"}
+            onCancel={() => setConfirmDisableOpen(false)}
+            onConfirm={handleDisable}
+          />
         </Stack>
       ) : (
         <Box

@@ -306,9 +306,9 @@ export const EXPLORE_VIDEO_DATA: Record<string, ExploreVideoData> = {
       {
         number: "01",
         category: "CATALOG",
-        title: "Seven\nextensions",
+        title: "Nine\nextensions",
         description:
-          "Slack, MLflow, Azure AI Foundry, Jira Assets, Model Lifecycle, Risk Import, and Dataset Bulk Upload.",
+          "Slack, MLflow, Azure AI Foundry, Jira Assets, Jira incidents, Model lifecycle, Risk import, Dataset bulk upload, and Framework import.",
       },
       {
         number: "02",

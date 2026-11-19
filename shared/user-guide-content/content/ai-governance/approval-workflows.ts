@@ -42,6 +42,14 @@ export const approvalWorkflowsContent: ArticleContent = {
       text: 'When a workflow is active for an entity type, users can submit approval requests from that entity\'s page. The request includes details about what\'s being submitted and why. All designated approvers receive a notification.',
     },
     {
+      type: 'paragraph',
+      text: 'Policies are submitted from the **Approval** section of the policy editor. A policy workflow is used only when it is active and every step has at least one approver. The policy approval article explains what each decision does to the policy.',
+    },
+    {
+      type: 'paragraph',
+      text: 'A use case workflow follows the same rule: it must be active and have at least one approver on every step, or the use case is not saved. While a use case\'s request is pending or rejected, only people who manage approval workflows can change or remove its workflow.',
+    },
+    {
       type: 'heading',
       id: 'statuses',
       level: 2,
@@ -59,6 +67,10 @@ export const approvalWorkflowsContent: ArticleContent = {
         { status: 'Rejected', meaning: 'One or more approvers rejected the request' },
         { status: 'Withdrawn', meaning: 'The requestor cancelled the request' },
       ],
+    },
+    {
+      type: 'paragraph',
+      text: 'Only a pending request can be withdrawn, and only by the person who made it. If the item a request is about is deleted, such as a file or a policy, its pending request is rejected and the requestor is notified.',
     },
     {
       type: 'heading',
@@ -86,7 +98,20 @@ export const approvalWorkflowsContent: ArticleContent = {
         { action: 'View workflows and requests', roles: 'Any authenticated user' },
         { action: 'Create or edit workflows', roles: 'Admin' },
         { action: 'Submit approval requests', roles: 'Admin or Editor' },
+        { action: 'Withdraw a pending request', roles: 'The person who submitted it' },
         { action: 'Approve or reject requests', roles: 'Designated approvers (any role)' },
+      ],
+    },
+    {
+      type: 'article-links',
+      title: 'Related articles',
+      items: [
+        {
+          collectionId: 'policies',
+          articleId: 'policy-approval',
+          title: 'Policy approval',
+          description: 'Submit a policy for approval or approve it as an Admin',
+        },
       ],
     },
   ],

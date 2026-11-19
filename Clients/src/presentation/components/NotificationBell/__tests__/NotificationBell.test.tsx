@@ -140,6 +140,20 @@ describe("NotificationBell", () => {
     expect(mockNavigate).toHaveBeenCalledWith("/tasks/1");
   });
 
+  it("opens an old approval request link on that request", async () => {
+    mockNotifications = [createNotification({ action_url: "/approval-requests/45" })];
+    await openPopover();
+    await userEvent.click(screen.getByText("Test notification"));
+    expect(mockNavigate).toHaveBeenCalledWith("/approval-workflows?request=45");
+  });
+
+  it("sends any other approval request link to the approval workflows page", async () => {
+    mockNotifications = [createNotification({ action_url: "/approval-requests/45/steps" })];
+    await openPopover();
+    await userEvent.click(screen.getByText("Test notification"));
+    expect(mockNavigate).toHaveBeenCalledWith("/approval-workflows");
+  });
+
   it("shows mark all as read button when unreadCount > 0", async () => {
     mockUnreadCount = 2;
     mockNotifications = [createNotification()];

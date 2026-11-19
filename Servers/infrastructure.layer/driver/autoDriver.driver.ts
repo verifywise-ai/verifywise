@@ -7,13 +7,14 @@ import { sequelize } from "../../database/db";
 import { createNewProjectQuery, lockProjectForDelete } from "../../utils/project.utils";
 import { deleteProjectWithSideEffects } from "../../utils/projectDeletion.utils";
 import { createRiskQuery } from "../../utils/risk.utils";
+import { RISK_APPROVAL_PENDING } from "../../domain.layer/enums/risk-approval-status.enum";
 import { createNewVendorQuery } from "../../utils/vendor.utils";
 import { createNewVendorRiskQuery } from "../../utils/vendorRisk.utils";
 import { deleteDemoUsersQuery } from "../../utils/user.utils";
 import { createNewModelRiskQuery } from "../../utils/modelRisk.utils";
 import { createNewTaskQuery } from "../../utils/task.utils";
 import { createNewTrainingRegistarQuery } from "../../utils/trainingRegistar.utils";
-import { createPolicyQuery } from "../../utils/policyManager.utils";
+import { createPolicyQuery, deletePolicyLeftoversQuery } from "../../utils/policyManager.utils";
 import { createNewModelInventoryQuery } from "../../utils/modelInventory.utils";
 import { createNewDatasetQuery } from "../../utils/dataset.utils";
 
@@ -34,6 +35,7 @@ import { ModelRiskStatus } from "../../domain.layer/enums/model-risk-status.enum
 import { TaskPriority, TaskStatus } from "../../domain.layer/enums/task-priority.enum";
 import { ModelInventoryModel } from "../../domain.layer/models/modelInventory/modelInventory.model";
 import { DatasetModel } from "../../domain.layer/models/dataset/dataset.model";
+import { SYSTEM_RISK_VIEWER } from "../../utils/riskVisibility.utils";
 import { AiAppStatus, AiAppDiscoveredSource } from "../../domain.layer/enums/ai-app-status.enum";
 import {
   IncidentType,
@@ -173,7 +175,7 @@ export async function insertMockData(
           risk_severity: "Moderate",
           final_risk_level: "Medium risk",
           risk_approval: userId,
-          approval_status: "In Progress",
+          approval_status: RISK_APPROVAL_PENDING,
           date_of_assessment: new Date(Date.now()),
           projects: [project.id!],
           frameworks: [1], // EU AI Act framework
@@ -181,6 +183,8 @@ export async function insertMockData(
         },
         organizationId,
         transaction,
+        // The demo seed links its risks to the use cases it just created.
+        { viewer: SYSTEM_RISK_VIEWER },
       );
 
       // Create second project risk - Data Privacy Risk
@@ -210,7 +214,7 @@ export async function insertMockData(
           risk_severity: "Moderate",
           final_risk_level: "Medium risk",
           risk_approval: userId,
-          approval_status: "In Progress",
+          approval_status: RISK_APPROVAL_PENDING,
           date_of_assessment: new Date(Date.now()),
           projects: [project.id!],
           frameworks: [1],
@@ -218,6 +222,8 @@ export async function insertMockData(
         },
         organizationId,
         transaction,
+        // The demo seed links its risks to the use cases it just created.
+        { viewer: SYSTEM_RISK_VIEWER },
       );
 
       // create vendor
@@ -687,7 +693,7 @@ export async function insertMockData(
           risk_severity: "Moderate",
           final_risk_level: "Medium risk",
           risk_approval: userId,
-          approval_status: "In Progress",
+          approval_status: RISK_APPROVAL_PENDING,
           date_of_assessment: new Date(Date.now()),
           projects: [codingAssistantProject.id!],
           frameworks: [1], // EU AI Act framework
@@ -695,6 +701,8 @@ export async function insertMockData(
         },
         organizationId,
         transaction,
+        // The demo seed links its risks to the use cases it just created.
+        { viewer: SYSTEM_RISK_VIEWER },
       );
 
       await createRiskQuery(
@@ -726,7 +734,7 @@ export async function insertMockData(
           risk_severity: "Moderate",
           final_risk_level: "Medium risk",
           risk_approval: userId,
-          approval_status: "In Progress",
+          approval_status: RISK_APPROVAL_PENDING,
           date_of_assessment: new Date(Date.now()),
           projects: [demandForecastProject.id!],
           frameworks: [1], // EU AI Act framework
@@ -734,6 +742,8 @@ export async function insertMockData(
         },
         organizationId,
         transaction,
+        // The demo seed links its risks to the use cases it just created.
+        { viewer: SYSTEM_RISK_VIEWER },
       );
 
       // =====================================================
@@ -1102,6 +1112,13 @@ export async function deleteMockData(organizationId: number) {
         { replacements: { organizationId, id: policy.id }, transaction },
       );
     }
+    // The rows a single policy delete also removes (folder mappings, CE marking,
+    // task and share links, notifications, custom field values).
+    await deletePolicyLeftoversQuery(
+      organizationId,
+      demoPolicies[0].map((policy) => policy.id),
+      transaction,
+    );
     await sequelize.query(
       `DELETE FROM policy_manager WHERE organization_id = :organizationId AND is_demo = true`,
       { replacements: { organizationId }, transaction },

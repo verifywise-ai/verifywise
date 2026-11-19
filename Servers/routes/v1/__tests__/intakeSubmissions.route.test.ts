@@ -21,6 +21,14 @@ jest.mock("../../../middleware/accessControl.middleware", () => ({
         : next(),
   ),
 }));
+// Decision 5: someone else's submission is a 404 unless the caller manages
+// intake; a header stands in for "not the caller's own submission".
+jest.mock("../../../middleware/intakeSubmissionAccess.middleware", () => ({
+  requireOwnSubmissionOrIntakeManager: (req: any, res: any, next: any) =>
+    req.headers["x-no-edit"] && req.headers["x-not-own"]
+      ? res.status(404).json({ message: "Submission not found" })
+      : next(),
+}));
 jest.mock("../../../controllers/intakeForm.ctrl", () => ({
   getSubmissionPreviewV1: jest.fn((req: any, res: any) =>
     res.status(200).json({ route: "preview", id: req.params.id }),
@@ -39,13 +47,21 @@ app.use("/api/v1/intake-submissions", routes);
 describe("/api/v1/intake-submissions (#5262)", () => {
   beforeEach(() => jest.clearAllMocks());
 
-  it("previews a submission for any signed-in reviewer, like the legacy route", async () => {
+  it("previews one's own submission without intakeForm.edit, like the legacy route", async () => {
     const res = await request(app)
       .get("/api/v1/intake-submissions/5/preview")
       .set("x-no-edit", "1");
     expect(res.status).toBe(200);
     expect(res.body).toEqual({ route: "preview", id: "5" });
     expect(auth).toHaveBeenCalledTimes(1);
+  });
+
+  it("answers 404 for someone else's submission without intakeForm.edit", async () => {
+    const res = await request(app)
+      .get("/api/v1/intake-submissions/5/preview")
+      .set("x-no-edit", "1")
+      .set("x-not-own", "1");
+    expect(res.status).toBe(404);
   });
 
   it("approves with intakeForm.edit, like the legacy route", async () => {

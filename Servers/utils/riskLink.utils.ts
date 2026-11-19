@@ -14,6 +14,13 @@ import { HierarchyEdge, ParentEntityType } from "../services/riskLinks/hierarchy
 import { DismissReason } from "../services/riskLinks/dismissReason";
 import { toJsonArray, toNumber } from "./pgRow.utils";
 import { effectiveRiskLevelSql, riskLevelRankSql } from "./riskLevel.utils";
+import {
+  accessibleProjectIdSql,
+  riskIdVisibilitySql,
+  riskVisibilityCondition,
+  riskVisibilitySql,
+  RiskViewer,
+} from "./riskVisibility.utils";
 
 /**
  * pg hands NUMERIC back as a string and can hand JSONB / JSON_AGG output back
@@ -262,16 +269,23 @@ export async function upsertRiskLinkQuery(
  * catches is an id that exists and belongs to another org, or one that is
  * soft-deleted — so both clauses below are load-bearing, and neither has a
  * safety net behind it. Callers compare the result length against the input.
+ * A risk the viewer cannot see (risk visibility rule) is left out, so it is
+ * answered like a missing one.
  */
 export async function getLiveRiskIdsQuery(
   ids: number[],
   organizationId: number,
+  viewer: RiskViewer,
 ): Promise<number[]> {
   if (ids.length === 0) return [];
+  const visibility = riskVisibilitySql("risks", viewer);
   const rows = await sequelize.query(
     `SELECT id FROM risks
-      WHERE id IN (:ids) AND organization_id = :organizationId AND is_deleted = false`,
-    { replacements: { ids, organizationId }, type: QueryTypes.SELECT },
+      WHERE id IN (:ids) AND organization_id = :organizationId AND is_deleted = false${visibility.sql}`,
+    {
+      replacements: { ids, organizationId, ...visibility.replacements },
+      type: QueryTypes.SELECT,
+    },
   );
   return (rows as { id: number }[]).map((row) => row.id);
 }
@@ -721,12 +735,19 @@ export interface RiskLinkWithRelated extends RiskLinkRow {
  * hides them. Both endpoints are joined and both are filtered: `related` so a
  * deleted partner disappears from the list, `subject` so a deleted subject
  * returns an empty list rather than its old neighbours.
+ *
+ * The risk visibility rule applies to both ends as well: a subject the viewer
+ * cannot see returns an empty list, as a missing one does, and a related
+ * project risk they cannot see drops out of the list.
  */
 export async function getRiskLinksForRiskQuery(
   organizationId: number,
   riskId: number,
   statuses: RiskLinkStatus[],
+  viewer: RiskViewer,
 ): Promise<RiskLinkWithRelated[]> {
+  const subjectVisibility = riskVisibilitySql("subject", viewer);
+  const relatedVisibility = riskVisibilityCondition("related", viewer);
   const rows = await sequelize.query(
     `SELECT l.*,
             COALESCE(mr.id, vr.id, related.id) AS related_id,
@@ -770,9 +791,20 @@ export async function getRiskLinksForRiskQuery(
        AND subject.organization_id = :organizationId
        AND subject.is_deleted = false
        AND l.status IN (:statuses)
-       AND COALESCE(related.id, mr.id, vr.id) IS NOT NULL
+       AND COALESCE(related.id, mr.id, vr.id) IS NOT NULL${subjectVisibility.sql}${
+         relatedVisibility ? ` AND (related.id IS NULL OR ${relatedVisibility.sql})` : ""
+       }
      ORDER BY l.score DESC, COALESCE(mr.id, vr.id, related.id) ASC`,
-    { replacements: { organizationId, riskId, statuses }, type: QueryTypes.SELECT },
+    {
+      replacements: {
+        organizationId,
+        riskId,
+        statuses,
+        ...subjectVisibility.replacements,
+        ...relatedVisibility?.replacements,
+      },
+      type: QueryTypes.SELECT,
+    },
   );
 
   return (rows as any[]).map((row) => ({
@@ -791,13 +823,16 @@ export async function getRiskLinksForRiskQuery(
  * to it (`related_to` pairs stored with `source_vendor_risk_id`).
  *
  * Same R7 rule as getRiskLinksForRiskQuery: a soft-deleted partner drops out of
- * the list, and a soft-deleted subject returns nothing.
+ * the list, and a soft-deleted subject returns nothing. A child project risk
+ * the viewer cannot see (risk visibility rule) drops out too.
  */
 export async function getRiskLinksForVendorRiskQuery(
   organizationId: number,
   vendorRiskId: number,
   statuses: RiskLinkStatus[],
+  viewer: RiskViewer,
 ): Promise<RiskLinkWithRelated[]> {
+  const childVisibility = riskVisibilitySql("child", viewer);
   const rows = await sequelize.query(
     `SELECT l.*,
             child.id AS related_id,
@@ -818,7 +853,7 @@ export async function getRiskLinksForVendorRiskQuery(
       WHERE l.organization_id = :organizationId
         AND l.target_vendor_risk_id = :vendorRiskId
         AND l.relation_type = 'inherits_from'
-        AND l.status IN (:statuses)
+        AND l.status IN (:statuses)${childVisibility.sql}
 
      UNION ALL
 
@@ -849,7 +884,10 @@ export async function getRiskLinksForVendorRiskQuery(
         AND l.status IN (:statuses)
 
       ORDER BY score DESC, related_entity_type, related_id`,
-    { replacements: { organizationId, vendorRiskId, statuses }, type: QueryTypes.SELECT },
+    {
+      replacements: { organizationId, vendorRiskId, statuses, ...childVisibility.replacements },
+      type: QueryTypes.SELECT,
+    },
   );
 
   return (rows as any[]).map((row) => ({
@@ -874,11 +912,20 @@ export interface VendorRiskChildCandidate {
  * projects this vendor serves, with those project titles. The mirror of
  * getSharedProjectCandidatesQuery, which ranks vendor parents for a project
  * risk over the same `vendors_projects` join.
+ *
+ * A project risk the viewer cannot see (risk visibility rule) is left out, so
+ * the picker never names a hidden risk. The admin hierarchy pass passes
+ * SYSTEM_RISK_VIEWER.
  */
 export async function getVendorRiskChildCandidatesQuery(
   organizationId: number,
   vendorRiskId: number,
+  viewer: RiskViewer,
 ): Promise<VendorRiskChildCandidate[]> {
+  const childVisibility = riskVisibilitySql("child", viewer);
+  // Only the use cases the viewer can access: a hidden one's title is never
+  // named, and a risk reached only through it drops out.
+  const projectAccess = accessibleProjectIdSql("p.id", viewer);
   const rows = await sequelize.query(
     `SELECT DISTINCT child.id AS id, p.project_title AS project_title
        FROM vendorrisks vr
@@ -895,9 +942,17 @@ export async function getVendorRiskChildCandidatesQuery(
        JOIN projects p ON p.id = vp.project_id
       WHERE vr.id = :vendorRiskId
         AND vr.organization_id = :organizationId
-        AND vr.is_deleted = false
+        AND vr.is_deleted = false${childVisibility.sql}${projectAccess.sql}
       ORDER BY child.id, p.project_title`,
-    { replacements: { organizationId, vendorRiskId }, type: QueryTypes.SELECT },
+    {
+      replacements: {
+        organizationId,
+        vendorRiskId,
+        ...childVisibility.replacements,
+        ...projectAccess.replacements,
+      },
+      type: QueryTypes.SELECT,
+    },
   );
 
   const grouped = new Map<number, VendorRiskChildCandidate>();
@@ -1158,13 +1213,40 @@ export async function getDismissalAnalyticsQuery(
   };
 }
 
+/**
+ * Leaves out a link with a project risk end (source or target) the viewer
+ * cannot see (risk visibility rule), so it is answered like a missing link.
+ * Bound against risk_links (unaliased). Empty for a viewer who sees every risk.
+ */
+function linkEndsVisibilitySql(viewer: RiskViewer): {
+  sql: string;
+  replacements: Record<string, unknown>;
+} {
+  // Both ends are nullable (a vendor or model risk end has no risk id), and a
+  // NULL end is not a project risk, so it never hides the link.
+  const source = riskIdVisibilitySql("risk_links.source_risk_id", viewer);
+  const target = riskIdVisibilitySql("risk_links.target_risk_id", viewer);
+  if (!source.sql || !target.sql) return { sql: "", replacements: {} };
+  return {
+    sql: ` AND (risk_links.source_risk_id IS NULL OR ${source.sql})
+           AND (risk_links.target_risk_id IS NULL OR ${target.sql})`,
+    replacements: { ...source.replacements, ...target.replacements },
+  };
+}
+
+/** One link of the organization, or null when missing or when the viewer cannot see one of its risks. */
 export async function getRiskLinkByIdQuery(
   id: number,
   organizationId: number,
+  viewer: RiskViewer,
 ): Promise<RiskLinkRow | null> {
+  const visibility = linkEndsVisibilitySql(viewer);
   const rows = await sequelize.query(
-    `SELECT * FROM risk_links WHERE id = :id AND organization_id = :organizationId`,
-    { replacements: { id, organizationId }, type: QueryTypes.SELECT },
+    `SELECT * FROM risk_links WHERE id = :id AND organization_id = :organizationId${visibility.sql}`,
+    {
+      replacements: { id, organizationId, ...visibility.replacements },
+      type: QueryTypes.SELECT,
+    },
   );
   const row = (rows as any[])[0];
   return row ? toLinkRow(row) : null;
@@ -1263,20 +1345,29 @@ export interface SharedProjectCandidate {
  * none of the fields the tier-0 scorer compares, and the two `risk_category`
  * enums are disjoint vocabularies.
  *
- * `DISTINCT` is load-bearing on the model branch —
- * `model_inventories_projects_frameworks` is keyed per framework, so one model
- * in one project under three frameworks would otherwise appear three times.
+ * The model branch reads direct use case links only (`framework_id IS NULL`):
+ * a framework link carries no use case. `DISTINCT` stays as a guard against
+ * duplicate link rows.
  *
  * The org filters on the junction tables sit on nullable columns on purpose.
  * A NULL there makes the row invisible, which is the correct direction for a
  * tenant boundary and matches the rest of the codebase. The subject's own
  * ownership is anchored to `risks.organization_id`, which is NOT NULL, so it
  * does not depend on the nullable `projects_risks.organization_id`.
+ *
+ * A subject the viewer cannot see (risk visibility rule) has no candidates, as
+ * a missing one does.
  */
 export async function getSharedProjectCandidatesQuery(
   organizationId: number,
   riskId: number,
+  viewer: RiskViewer,
 ): Promise<SharedProjectCandidate[]> {
+  const subjectVisibility = riskVisibilitySql("subject", viewer);
+  // Only the subject's use cases the viewer can access: a hidden one's title
+  // is never named, and a vendor or model risk reached only through it drops
+  // out.
+  const projectAccess = accessibleProjectIdSql("pr.project_id", viewer);
   const rows = await sequelize.query(
     `WITH subject_projects AS (
        SELECT pr.project_id
@@ -1284,9 +1375,9 @@ export async function getSharedProjectCandidatesQuery(
          JOIN risks subject
            ON subject.id = pr.risk_id
           AND subject.organization_id = :organizationId
-          AND subject.is_deleted = false
+          AND subject.is_deleted = false${subjectVisibility.sql}
         WHERE pr.risk_id = :riskId
-          AND pr.organization_id = :organizationId
+          AND pr.organization_id = :organizationId${projectAccess.sql}
      )
      SELECT DISTINCT 'vendor_risk' AS entity_type, vr.id AS id,
             LEFT(vr.risk_description, 80) AS name, p.project_title AS project_title
@@ -1306,13 +1397,22 @@ export async function getSharedProjectCandidatesQuery(
        JOIN model_inventories_projects_frameworks mp
          ON mp.model_inventory_id = mr.model_id
         AND mp.organization_id = :organizationId
+        AND mp.framework_id IS NULL
        JOIN subject_projects sp ON sp.project_id = mp.project_id
        JOIN projects p          ON p.id          = mp.project_id
       WHERE mr.organization_id = :organizationId
         AND mr.is_deleted = false
 
      ORDER BY entity_type, id, project_title`,
-    { replacements: { organizationId, riskId }, type: QueryTypes.SELECT },
+    {
+      replacements: {
+        organizationId,
+        riskId,
+        ...subjectVisibility.replacements,
+        ...projectAccess.replacements,
+      },
+      type: QueryTypes.SELECT,
+    },
   );
 
   // DISTINCT already guarantees one row per (entity, id, title), so the titles
@@ -1398,9 +1498,8 @@ export async function updateRiskLinkStatusQuery(
  * NOT EXISTS is status-agnostic on purpose: a dismissed link is a human saying
  * no, and re-proposing it is exactly what the dismissal analytics discourage.
  *
- * `COUNT(DISTINCT mr.id)` absorbs the two row shapes of
- * `model_inventories_projects_frameworks` (with and without framework_id); a
- * naive COUNT(*) would double-count. `risk_owner` is selected but not filtered
+ * Only direct use case links count (`framework_id IS NULL`): a framework link
+ * carries no use case. `COUNT(DISTINCT mr.id)` guards against duplicate rows. `risk_owner` is selected but not filtered
  * — an ownerless risk is a real candidate, it just cannot be notified.
  *
  * A risk that cannot take a model-risk parent is left out — one that already
@@ -1463,6 +1562,7 @@ export async function getModelRiskCandidatesQuery(input: {
          ON mp.project_id = pr.project_id
         AND mp.organization_id = :organizationId
         AND mp.model_inventory_id = :modelInventoryId
+        AND mp.framework_id IS NULL
        JOIN model_risks mr
          ON mr.model_id = mp.model_inventory_id
         AND mr.organization_id = :organizationId
@@ -1849,11 +1949,14 @@ export interface StaleChildRow {
  * it so a later move re-notifies. Org-scoped and idempotent: only a link whose
  * flag is currently set is touched, so a second click (or a link already
  * reviewed) is a no-op rather than an error. Returns true when a row changed.
+ * A link with a risk the viewer cannot see is left alone.
  */
 export async function acknowledgeParentLevelChangeQuery(
   organizationId: number,
   linkId: number,
+  viewer: RiskViewer,
 ): Promise<boolean> {
+  const visibility = linkEndsVisibilitySql(viewer);
   // RETURNING, not the UPDATE's metadata: on Postgres that is the driver's
   // result object, not a row count, so counting it always gave false.
   const rows = await sequelize.query(
@@ -1863,9 +1966,12 @@ export async function acknowledgeParentLevelChangeQuery(
             updated_at = NOW()
       WHERE id = :linkId
         AND organization_id = :organizationId
-        AND parent_level_changed_at IS NOT NULL
+        AND parent_level_changed_at IS NOT NULL${visibility.sql}
       RETURNING id`,
-    { replacements: { organizationId, linkId }, type: QueryTypes.SELECT },
+    {
+      replacements: { organizationId, linkId, ...visibility.replacements },
+      type: QueryTypes.SELECT,
+    },
   );
   return rows.length > 0;
 }

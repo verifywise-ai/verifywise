@@ -2,6 +2,35 @@
 // Spread into ../translations.ts. Other areas stay in that file for now.
 
 export const de: Record<string, string> = {
+  "Link policies to risks and evidence": "Richtlinien mit Risiken und Nachweisen verknüpfen",
+  "Link a policy to the risks it mitigates and the evidence that supports it, so reviewers can see what each policy covers.":
+    "Verknüpfen Sie eine Richtlinie mit den Risiken, die sie mindert, und den Nachweisen, die sie belegen, damit Prüfer sehen, was jede Richtlinie abdeckt.",
+  "Archived policies stay in the list with the Archived status. Filter by that status to see only them.":
+    "Archivierte Richtlinien bleiben mit dem Status „Archiviert“ in der Liste. Filtern Sie nach diesem Status, um nur diese zu sehen.",
+  "Linked risks and evidence": "Verknüpfte Risiken und Nachweise",
+  "Link evidence": "Nachweise verknüpfen",
+  "Link new risks": "Neue Risiken verknüpfen",
+  "Risk linked": "Risiko verknüpft",
+  "Risks linked": "Risiken verknüpft",
+  "Evidence linked": "Nachweis verknüpft",
+  "Risk unlinked": "Risiko getrennt",
+  "Evidence unlinked": "Nachweis getrennt",
+  "Couldn't load risks. Close this window and try again.":
+    "Die Risiken konnten nicht geladen werden. Schließen Sie dieses Fenster und versuchen Sie es erneut.",
+  "Couldn't load evidence. Close this window and try again.":
+    "Die Nachweise konnten nicht geladen werden. Schließen Sie dieses Fenster und versuchen Sie es erneut.",
+  "Linked, but the list couldn't be refreshed. Reopen this window to see it.":
+    "Verknüpft, aber die Liste konnte nicht aktualisiert werden. Öffnen Sie dieses Fenster erneut, um sie zu sehen.",
+  "Couldn't link the selected risks. Try again.":
+    "Die ausgewählten Risiken konnten nicht verknüpft werden. Versuchen Sie es erneut.",
+  "Couldn't link the selected evidence. Try again.":
+    "Die ausgewählten Nachweise konnten nicht verknüpft werden. Versuchen Sie es erneut.",
+  "Couldn't unlink this item. Try again.":
+    "Dieser Eintrag konnte nicht getrennt werden. Versuchen Sie es erneut.",
+  "{count} image from the document wasn't imported. Add it with the image button in the toolbar.":
+    "{count} Bild aus dem Dokument wurde nicht importiert. Fügen Sie es mit der Bildschaltfläche in der Symbolleiste hinzu.",
+  "{count} images from the document weren't imported. Add them with the image button in the toolbar.":
+    "{count} Bilder aus dem Dokument wurden nicht importiert. Fügen Sie sie mit der Bildschaltfläche in der Symbolleiste hinzu.",
   "Create new policies": "Neue Richtlinien erstellen",
   "Create from templates": "Aus Vorlagen erstellen",
   "Replace all": "Alle ersetzen",
@@ -41,8 +70,6 @@ export const de: Record<string, string> = {
     "KI-Ethikrichtlinie, Data-Governance-Richtlinie, KI-Risikomanagement-Richtlinie, Vorfallsreaktions-Richtlinie und Drittanbieter-KI-Richtlinie.",
   "Create and manage AI governance policies using pre-built templates or custom documentation to stay compliant and consistent.":
     "KI-Governance-Richtlinien mit vorgefertigten Vorlagen oder eigener Dokumentation erstellen und verwalten, um konform und konsistent zu bleiben.",
-  "Each policy can be mapped to specific compliance controls, creating an audit trail showing which policies address which requirements.":
-    "Jede Richtlinie kann bestimmten Compliance-Kontrollen zugeordnet werden, wodurch ein Prüfpfad entsteht, der zeigt, welche Richtlinien welche Anforderungen abdecken.",
   "Pre-built policy documents covering common AI governance topics. Copy a template, customize it for your organization, and publish.":
     "Vorgefertigte Richtliniendokumente zu gängigen KI-Governance-Themen. Kopieren Sie eine Vorlage, passen Sie sie für Ihre Organisation an und veröffentlichen Sie sie.",
   "Start with a blank policy or use one of the built-in templates. Fill in the details for your organization and publish when ready.":
@@ -79,9 +106,71 @@ export const de: Record<string, string> = {
     "Die Richtlinie wurde als Organisationsvorlage gespeichert.",
   "Update the name, description and category of this organization template. To change its content, use Edit content.":
     "Aktualisieren Sie Name, Beschreibung und Kategorie dieser Organisationsvorlage. Um den Inhalt zu ändern, verwenden Sie „Inhalt bearbeiten“.",
+  "Withdraw the approval request to change the status.":
+    "Ziehen Sie die Genehmigungsanfrage zurück, um den Status zu ändern.",
+  "Waiting for approval. Withdraw the request to edit the title or content.":
+    "Wartet auf Genehmigung. Ziehen Sie die Anfrage zurück, um Titel oder Inhalt zu bearbeiten.",
+  "Submit for approval": "Zur Genehmigung einreichen",
+  "Save the policy before submitting it for approval.":
+    "Speichern Sie die Richtlinie, bevor Sie sie zur Genehmigung einreichen.",
+  "Could not load the approval status.": "Der Genehmigungsstatus konnte nicht geladen werden.",
+  "Approved by {name} on {date}": "Genehmigt von {name} am {date}",
+  "Approved on {date}": "Genehmigt am {date}",
+  "Changes requested by {name}": "Änderungen angefordert von {name}",
+  "Changes requested": "Änderungen angefordert",
+  "Waiting for approval in {workflow}": "Wartet auf Genehmigung in {workflow}",
+  "Requested by {name} on {date}": "Angefordert von {name} am {date}",
+  "Requested on {date}": "Angefordert am {date}",
+  "An Admin approves this policy. Your organization has no policy approval workflow.":
+    "Ein Admin genehmigt diese Richtlinie. Ihre Organisation hat keinen Genehmigungsworkflow für Richtlinien.",
+  "Withdraw request": "Anfrage zurückziehen",
+  "Save your changes before sending the policy for approval.":
+    "Speichern Sie Ihre Änderungen, bevor Sie die Richtlinie zur Genehmigung senden.",
+  "{workflow} approves this policy. It stays under review until a decision.":
+    "{workflow} genehmigt diese Richtlinie. Sie bleibt bis zur Entscheidung in Prüfung.",
+  "Choose the workflow that approves this policy.":
+    "Wählen Sie den Workflow, der diese Richtlinie genehmigt.",
+  "Select a workflow": "Workflow auswählen",
+  "Approve policy": "Richtlinie genehmigen",
+  "Your organization has no policy approval workflow, so you approve it here.":
+    "Ihre Organisation hat keinen Genehmigungsworkflow für Richtlinien, daher genehmigen Sie sie hier.",
+  "Comment must be 2000 characters or fewer": "Der Kommentar darf höchstens 2000 Zeichen lang sein",
+  "Withdraw approval request?": "Genehmigungsanfrage zurückziehen?",
+  "The policy goes back to draft. You can submit it again later.":
+    "Die Richtlinie wird wieder zum Entwurf. Sie können sie später erneut einreichen.",
+  "Replaces the team members of each selected policy with this user.":
+    "Ersetzt die Teammitglieder jeder ausgewählten Richtlinie durch diesen Benutzer.",
 };
 
 export const fr: Record<string, string> = {
+  "Link policies to risks and evidence": "Relier les politiques aux risques et aux preuves",
+  "Link a policy to the risks it mitigates and the evidence that supports it, so reviewers can see what each policy covers.":
+    "Reliez une politique aux risques qu'elle atténue et aux preuves qui l'appuient, afin que les réviseurs voient ce que chaque politique couvre.",
+  "Archived policies stay in the list with the Archived status. Filter by that status to see only them.":
+    "Les politiques archivées restent dans la liste avec le statut Archivé. Filtrez par ce statut pour n'afficher qu'elles.",
+  "Linked risks and evidence": "Risques et preuves liés",
+  "Link evidence": "Relier des preuves",
+  "Link new risks": "Relier de nouveaux risques",
+  "Risk linked": "Risque relié",
+  "Risks linked": "Risques reliés",
+  "Evidence linked": "Preuve reliée",
+  "Risk unlinked": "Risque dissocié",
+  "Evidence unlinked": "Preuve dissociée",
+  "Couldn't load risks. Close this window and try again.":
+    "Impossible de charger les risques. Fermez cette fenêtre et réessayez.",
+  "Couldn't load evidence. Close this window and try again.":
+    "Impossible de charger les preuves. Fermez cette fenêtre et réessayez.",
+  "Linked, but the list couldn't be refreshed. Reopen this window to see it.":
+    "Lié, mais la liste n'a pas pu être actualisée. Rouvrez cette fenêtre pour la voir.",
+  "Couldn't link the selected risks. Try again.":
+    "Impossible de lier les risques sélectionnés. Réessayez.",
+  "Couldn't link the selected evidence. Try again.":
+    "Impossible de lier les preuves sélectionnées. Réessayez.",
+  "Couldn't unlink this item. Try again.": "Impossible de dissocier cet élément. Réessayez.",
+  "{count} image from the document wasn't imported. Add it with the image button in the toolbar.":
+    "{count} image du document n'a pas été importée. Ajoutez-la avec le bouton d'image de la barre d'outils.",
+  "{count} images from the document weren't imported. Add them with the image button in the toolbar.":
+    "{count} images du document n'ont pas été importées. Ajoutez-les avec le bouton d'image de la barre d'outils.",
   "Create new policies": "Créer de nouvelles politiques",
   "Create from templates": "Créer à partir de modèles",
   "Replace all": "Tout remplacer",
@@ -121,8 +210,6 @@ export const fr: Record<string, string> = {
     "Politique d'éthique de l'IA, Politique de gouvernance des données, Politique de gestion des risques IA, Politique de réponse aux incidents et Politique relative aux fournisseurs IA tiers.",
   "Create and manage AI governance policies using pre-built templates or custom documentation to stay compliant and consistent.":
     "Créez et gérez les politiques de gouvernance IA à l'aide de modèles prêts à l'emploi ou d'une documentation personnalisée pour rester conforme et cohérent.",
-  "Each policy can be mapped to specific compliance controls, creating an audit trail showing which policies address which requirements.":
-    "Chaque politique peut être reliée à des contrôles de conformité spécifiques, créant une piste d'audit montrant quelles politiques couvrent quelles exigences.",
   "Pre-built policy documents covering common AI governance topics. Copy a template, customize it for your organization, and publish.":
     "Documents de politique prêts à l'emploi couvrant les thèmes courants de gouvernance IA. Copiez un modèle, personnalisez-le pour votre organisation et publiez-le.",
   "Start with a blank policy or use one of the built-in templates. Fill in the details for your organization and publish when ready.":
@@ -159,9 +246,73 @@ export const fr: Record<string, string> = {
     "La politique a été enregistrée comme modèle de l'organisation.",
   "Update the name, description and category of this organization template. To change its content, use Edit content.":
     "Modifiez le nom, la description et la catégorie de ce modèle de l'organisation. Pour modifier son contenu, utilisez « Modifier le contenu ».",
+  "Withdraw the approval request to change the status.":
+    "Retirez la demande d'approbation pour modifier le statut.",
+  "Waiting for approval. Withdraw the request to edit the title or content.":
+    "En attente d'approbation. Retirez la demande pour modifier le titre ou le contenu.",
+  "Submit for approval": "Soumettre pour approbation",
+  "Save the policy before submitting it for approval.":
+    "Enregistrez la politique avant de la soumettre pour approbation.",
+  "Could not load the approval status.": "Impossible de charger le statut d'approbation.",
+  "Approved by {name} on {date}": "Approuvée par {name} le {date}",
+  "Approved on {date}": "Approuvée le {date}",
+  "Changes requested by {name}": "Modifications demandées par {name}",
+  "Changes requested": "Modifications demandées",
+  "Waiting for approval in {workflow}": "En attente d'approbation dans {workflow}",
+  "Requested by {name} on {date}": "Demandée par {name} le {date}",
+  "Requested on {date}": "Demandée le {date}",
+  "An Admin approves this policy. Your organization has no policy approval workflow.":
+    "Un administrateur approuve cette politique. Votre organisation n'a pas de workflow d'approbation des politiques.",
+  "Withdraw request": "Retirer la demande",
+  "Save your changes before sending the policy for approval.":
+    "Enregistrez vos modifications avant d'envoyer la politique pour approbation.",
+  "{workflow} approves this policy. It stays under review until a decision.":
+    "{workflow} approuve cette politique. Elle reste en revue jusqu'à la décision.",
+  "Choose the workflow that approves this policy.":
+    "Choisissez le workflow qui approuve cette politique.",
+  "Select a workflow": "Sélectionner un workflow",
+  "Approve policy": "Approuver la politique",
+  "Your organization has no policy approval workflow, so you approve it here.":
+    "Votre organisation n'a pas de workflow d'approbation des politiques, vous l'approuvez donc ici.",
+  "Comment must be 2000 characters or fewer":
+    "Le commentaire doit comporter 2000 caractères au maximum",
+  "Withdraw approval request?": "Retirer la demande d'approbation ?",
+  "The policy goes back to draft. You can submit it again later.":
+    "La politique repasse en brouillon. Vous pourrez la soumettre à nouveau plus tard.",
+  "Replaces the team members of each selected policy with this user.":
+    "Remplace les membres de l'équipe de chaque politique sélectionnée par cet utilisateur.",
 };
 
 export const es: Record<string, string> = {
+  "Link policies to risks and evidence": "Vincular políticas a riesgos y evidencia",
+  "Link a policy to the risks it mitigates and the evidence that supports it, so reviewers can see what each policy covers.":
+    "Vincule una política con los riesgos que mitiga y la evidencia que la respalda, para que los revisores vean qué cubre cada política.",
+  "Archived policies stay in the list with the Archived status. Filter by that status to see only them.":
+    "Las políticas archivadas permanecen en la lista con el estado Archivado. Filtre por ese estado para ver solo esas.",
+  "Linked risks and evidence": "Riesgos y evidencia vinculados",
+  "Link evidence": "Vincular evidencia",
+  "Link new risks": "Vincular nuevos riesgos",
+  "Risk linked": "Riesgo vinculado",
+  "Risks linked": "Riesgos vinculados",
+  "Evidence linked": "Evidencia vinculada",
+  "Risk unlinked": "Riesgo desvinculado",
+  "Evidence unlinked": "Evidencia desvinculada",
+  "Couldn't load risks. Close this window and try again.":
+    "No se pudieron cargar los riesgos. Cierre esta ventana e inténtelo de nuevo.",
+  "Couldn't load evidence. Close this window and try again.":
+    "No se pudo cargar la evidencia. Cierre esta ventana e inténtelo de nuevo.",
+  "Linked, but the list couldn't be refreshed. Reopen this window to see it.":
+    "Vinculado, pero no se pudo actualizar la lista. Vuelva a abrir esta ventana para verla.",
+  "Couldn't link the selected risks. Try again.":
+    "No se pudieron vincular los riesgos seleccionados. Inténtelo de nuevo.",
+  "Couldn't link the selected evidence. Try again.":
+    "No se pudieron vincular las evidencias seleccionadas. Inténtelo de nuevo.",
+  "Couldn't unlink this item. Try again.":
+    "No se pudo desvincular este elemento. Inténtelo de nuevo.",
+  "{count} image from the document wasn't imported. Add it with the image button in the toolbar.":
+    "{count} imagen del documento no se importó. Agréguela con el botón de imagen de la barra de herramientas.",
+  "{count} images from the document weren't imported. Add them with the image button in the toolbar.":
+    "{count} imágenes del documento no se importaron. Agréguelas con el botón de imagen de la barra de herramientas.",
   "Create new policies": "Crear nuevas políticas",
   "Create from templates": "Crear a partir de plantillas",
   "Replace all": "Reemplazar todo",
@@ -201,8 +352,6 @@ export const es: Record<string, string> = {
     "Política de ética de la IA, Política de gobernanza de datos, Política de gestión de riesgos de la IA, Política de respuesta a incidentes y Política de proveedores externos de IA.",
   "Create and manage AI governance policies using pre-built templates or custom documentation to stay compliant and consistent.":
     "Cree y gestione políticas de gobernanza de la IA mediante plantillas predefinidas o documentación personalizada para mantener el cumplimiento y la coherencia.",
-  "Each policy can be mapped to specific compliance controls, creating an audit trail showing which policies address which requirements.":
-    "Cada política puede asignarse a controles de cumplimiento específicos, creando un rastro de auditoría que muestra qué políticas abordan qué requisitos.",
   "Pre-built policy documents covering common AI governance topics. Copy a template, customize it for your organization, and publish.":
     "Documentos de política predefinidos que abarcan temas habituales de gobernanza de la IA. Copie una plantilla, personalícela para su organización y publíquela.",
   "Start with a blank policy or use one of the built-in templates. Fill in the details for your organization and publish when ready.":
@@ -239,4 +388,37 @@ export const es: Record<string, string> = {
     "La política se guardó como plantilla de la organización.",
   "Update the name, description and category of this organization template. To change its content, use Edit content.":
     "Actualice el nombre, la descripción y la categoría de esta plantilla de la organización. Para cambiar su contenido, use Editar contenido.",
+  "Withdraw the approval request to change the status.":
+    "Retire la solicitud de aprobación para cambiar el estado.",
+  "Waiting for approval. Withdraw the request to edit the title or content.":
+    "En espera de aprobación. Retire la solicitud para editar el título o el contenido.",
+  "Submit for approval": "Enviar para aprobación",
+  "Save the policy before submitting it for approval.":
+    "Guarde la política antes de enviarla para aprobación.",
+  "Could not load the approval status.": "No se pudo cargar el estado de aprobación.",
+  "Approved by {name} on {date}": "Aprobada por {name} el {date}",
+  "Approved on {date}": "Aprobada el {date}",
+  "Changes requested by {name}": "Cambios solicitados por {name}",
+  "Changes requested": "Cambios solicitados",
+  "Waiting for approval in {workflow}": "Esperando aprobación en {workflow}",
+  "Requested by {name} on {date}": "Solicitada por {name} el {date}",
+  "Requested on {date}": "Solicitada el {date}",
+  "An Admin approves this policy. Your organization has no policy approval workflow.":
+    "Un administrador aprueba esta política. Su organización no tiene un flujo de aprobación de políticas.",
+  "Withdraw request": "Retirar solicitud",
+  "Save your changes before sending the policy for approval.":
+    "Guarde sus cambios antes de enviar la política para aprobación.",
+  "{workflow} approves this policy. It stays under review until a decision.":
+    "{workflow} aprueba esta política. Permanece en revisión hasta que haya una decisión.",
+  "Choose the workflow that approves this policy.": "Elija el flujo que aprueba esta política.",
+  "Select a workflow": "Seleccionar un flujo",
+  "Approve policy": "Aprobar política",
+  "Your organization has no policy approval workflow, so you approve it here.":
+    "Su organización no tiene un flujo de aprobación de políticas, así que la aprueba aquí.",
+  "Comment must be 2000 characters or fewer": "El comentario debe tener 2000 caracteres o menos",
+  "Withdraw approval request?": "¿Retirar la solicitud de aprobación?",
+  "The policy goes back to draft. You can submit it again later.":
+    "La política vuelve a borrador. Puede enviarla de nuevo más tarde.",
+  "Replaces the team members of each selected policy with this user.":
+    "Reemplaza a los miembros del equipo de cada política seleccionada por este usuario.",
 };

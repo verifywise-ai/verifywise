@@ -8,14 +8,23 @@ import {
 } from "../domain.layer/exceptions/custom.exception";
 import { sanitizeForLog, EXTENSION_KEY_PATTERN } from "../utils/validations/validation.utils";
 import { translateError } from "../utils/i18n.utils";
+import { UnsafeOutboundUrlError } from "../utils/safeOutboundUrl";
+import {
+  STORED_SECRET_MESSAGES,
+  checkStoredSecrets,
+  withoutKeys,
+} from "../services/extension/storedSecretGuard";
 // Per-extension connectivity checks live inside each extension's service
 // module. Import them lazily via the dispatch table below to keep this
 // controller from pulling every extension's transitive deps at boot.
 import { testConnection as mlflowTestConnection } from "../extensions/mlflow/mlflow.service";
 import { testConnection as azureTestConnection } from "../extensions/azure-ai-foundry/azureAiFoundry.service";
 import {
+  JiraNotConfiguredError,
   clientFromConfig as jiraClientFromConfig,
+  JiraConfigValidationError,
   loadFullConfig as jiraLoadFullConfig,
+  parseJiraConnection,
 } from "../extensions/jira-assets/jiraAssets.service";
 import { testConnection as jiraIncidentsTestConnection } from "../extensions/jira-incidents/jiraIncidents.config";
 
@@ -36,39 +45,94 @@ type TestConnectionRunner = (
   organizationId: number,
 ) => Promise<TestConnectionResult>;
 
+/** Jira Assets test with fields missing and none stored to fill them. */
+export const JIRA_ASSETS_NOT_SAVED_MESSAGE = "Save the Jira Assets connection first.";
+
+const failedTest = (message: string): TestConnectionResult => ({
+  success: false,
+  message,
+  testedAt: new Date().toISOString(),
+});
+
+/**
+ * The submitted payload overlaid on the stored, decrypted configuration, or
+ * the reason the stored secret may not be used: a stored secret is never sent
+ * to a changed address or identity (services/extension/storedSecretGuard.ts).
+ */
+async function overlayOnStored(
+  key: string,
+  submitted: Record<string, unknown>,
+  organizationId: number,
+): Promise<{ config: Record<string, unknown> } | { refused: string }> {
+  const stored = await ExtensionService.getRuntimeConfiguration(key, organizationId);
+  const next = { ...stored, ...submitted };
+  const check = checkStoredSecrets(key, stored, next, submitted);
+  if (check.blocked) return { refused: STORED_SECRET_MESSAGES[check.blocked] };
+  return { config: withoutKeys(next, check.drop) };
+}
+
 const TEST_CONNECTION_DISPATCH: Record<string, TestConnectionRunner> = {
   // MLflow + Azure store their config in extension_enablements.configuration;
   // the caller-submitted payload is overlaid on the stored, decrypted blob
   // before calling the check.
   mlflow: async (submitted, organizationId) => {
-    const stored = await ExtensionService.getRuntimeConfiguration("mlflow", organizationId);
-    return mlflowTestConnection({ ...stored, ...submitted } as any);
+    const overlay = await overlayOnStored("mlflow", submitted, organizationId);
+    if ("refused" in overlay) return failedTest(overlay.refused);
+    return mlflowTestConnection(overlay.config as any);
   },
   "azure-ai-foundry": async (submitted, organizationId) => {
-    const stored = await ExtensionService.getRuntimeConfiguration(
-      "azure-ai-foundry",
-      organizationId,
-    );
-    return azureTestConnection({ ...stored, ...submitted } as any);
+    const overlay = await overlayOnStored("azure-ai-foundry", submitted, organizationId);
+    if ("refused" in overlay) return failedTest(overlay.refused);
+    return azureTestConnection(overlay.config as any);
   },
   // JIRA stores its config in the dedicated jira_assets_config table (see
   // migration 20260819105546-remove-dead-extension-config-fields.js — its
   // extension_enablements.configuration is empty by design). Read the
   // decrypted token from that table when the caller submits only the
   // non-secret fields, then run the same connectivity check the dedicated
-  // /extensions/jira-assets/test-connection route uses.
+  // /extensions/jira-assets/test-connection route uses. The fields get the
+  // checks a save runs first (parseJiraConnection: trimmed text, base URL,
+  // workspace ID, deployment type, email on cloud); a JiraConfigValidationError
+  // is answered as a failed test with its translated message.
   "jira-assets": async (submitted, organizationId) => {
-    const candidate = { ...(submitted as any) };
+    const connection = parseJiraConnection(submitted as any);
+    const candidate = {
+      ...(submitted as any),
+      jira_base_url: connection.jiraBaseUrl,
+      workspace_id: connection.workspaceId,
+      email: connection.email,
+      api_token: connection.apiToken,
+      deployment_type: connection.deploymentType,
+    };
     if (!candidate.api_token) {
       const stored = await jiraLoadFullConfig(organizationId);
+      // Never send the stored token to a changed base URL, workspace, email
+      // or deployment type.
+      const check = checkStoredSecrets("jira-assets", stored as any, candidate, candidate);
+      if (check.blocked) return failedTest(STORED_SECRET_MESSAGES[check.blocked]);
       if (stored?.api_token) candidate.api_token = stored.api_token;
     }
-    const client = jiraClientFromConfig(candidate);
+    if (!candidate.api_token) {
+      throw new JiraConfigValidationError("API Token is required", {
+        i18nKey: "API Token is required",
+      });
+    }
+    let client: ReturnType<typeof jiraClientFromConfig>;
+    try {
+      client = jiraClientFromConfig(candidate);
+    } catch (err) {
+      // A refused base URL (loopback, link-local, metadata, ...) or a missing
+      // field (nothing submitted and nothing stored) is a failed test, not a
+      // server error. The missing-field text names no field and no raw error.
+      if (err instanceof UnsafeOutboundUrlError) return failedTest(err.message);
+      if (err instanceof JiraNotConfiguredError) return failedTest(JIRA_ASSETS_NOT_SAVED_MESSAGE);
+      throw err;
+    }
     const result = await client.testConnection();
     return {
       success: result.success,
       message: result.success
-        ? "Successfully connected to JIRA Assets"
+        ? "Successfully connected to Jira Assets"
         : `Connection failed: ${result.error ?? "unknown error"}`,
       testedAt: new Date().toISOString(),
     };
@@ -239,7 +303,8 @@ export async function disableExtension(req: Request, res: Response): Promise<any
 /**
  * PATCH /api/extensions/:key/configuration
  * Update the stored configuration. Body: { configuration: {...} }.
- * Secret fields absent from the body preserve their existing encrypted value.
+ * Fields absent from the body keep their stored value; `null` clears one (see
+ * ExtensionService.mergeAndEncrypt).
  */
 export async function updateExtensionConfiguration(req: Request, res: Response): Promise<any> {
   const functionName = "updateExtensionConfiguration";
@@ -329,6 +394,10 @@ export async function testExtensionConnection(req: Request, res: Response): Prom
   } catch (error) {
     if (error instanceof NotFoundException) {
       return res.status(404).json(STATUS_CODE[404](req.t!("Extension not found")));
+    }
+    // Invalid connection fields are a failed test, as a refused URL is.
+    if (error instanceof JiraConfigValidationError) {
+      return res.status(200).json(STATUS_CODE[200](failedTest(translateError(req, error))));
     }
     logStructured(
       "error",

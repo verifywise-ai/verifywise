@@ -966,7 +966,6 @@ export const de: Record<string, string> = {
   "Invite User": "Benutzer einladen",
   "Keep risk as is": "Risiko unverändert lassen",
   "Link Evidence": "Nachweise verknüpfen",
-  "Link New Risks": "Neue Risiken verknüpfen",
   "Link tasks to controls or risks": "Aufgaben mit Kontrollen oder Risiken verknüpfen",
   "Link to governance artifacts": "Mit Governance-Artefakten verknüpfen",
   "Link to model": "Mit Modell verknüpfen",
@@ -1191,7 +1190,6 @@ export const de: Record<string, string> = {
   "Limitation": "Einschränkung",
   "Limitations": "Einschränkungen",
   "Line": "Zeile",
-  "Linked Operational Objects": "Verknüpfte operative Objekte",
   "Linked Policies Objects": "Verknüpfte Richtlinien-Objekte",
   "Configure an LLM API key to send messages.":
     "Konfigurieren Sie einen LLM-API-Schlüssel, um Nachrichten zu senden.",
@@ -2595,7 +2593,6 @@ export const de: Record<string, string> = {
   "Departments": "Abteilungen",
   "Details": "Details",
   "Download results as JSON": "Ergebnisse als JSON herunterladen",
-  "EU AI Act Completion Status": "Fertigstellungsstatus EU-KI-Verordnung",
   "EXPLORE VERIFYWISE": "VERIFYWISE ERKUNDEN",
   "Each AI tool receives a risk score from 0 to 100, recalculated nightly. The score is a weighted composite of four factors:":
     "Jedes KI-Tool erhält eine Risikobewertung von 0 bis 100, die nächtlich neu berechnet wird. Die Bewertung ist eine gewichtete Zusammensetzung aus vier Faktoren:",
@@ -2672,7 +2669,6 @@ export const de: Record<string, string> = {
     "Wie möchten Sie beginnen? Sie können mit Beispieldaten erkunden oder mit einem leeren Dashboard starten.",
   "IMPACT ASSESSMENT": "FOLGENABSCHÄTZUNG",
   "INCIDENT INFORMATION": "VORFALLSINFORMATIONEN",
-  "ISO 42001 Completion Status": "Fertigstellungsstatus ISO 42001",
   "ISO 42001, ISO 27001, NIST AI RMF": "ISO 42001, ISO 27001, NIST AI RMF",
   "Icon Buttons": "Symbolschaltflächen",
   "Implementation description:": "Implementierungsbeschreibung:",
@@ -3073,8 +3069,8 @@ export const de: Record<string, string> = {
   "Active incidents": "Aktive Vorfälle",
   "SOC 2, GDPR, HIPAA, DORA, and 17 more frameworks are built in, with requirements, evidence, and risk tracking.":
     "SOC 2, GDPR, HIPAA, DORA und 17 weitere Rahmenwerke sind integriert, mit Anforderungen, Nachweisen und Risikoverfolgung.",
-  "Slack, MLflow, Azure AI Foundry, Jira Assets, Model Lifecycle, Risk Import, and Dataset Bulk Upload.":
-    "Slack, MLflow, Azure AI Foundry, Jira Assets, Model Lifecycle, Risk Import und Dataset Bulk Upload.",
+  "Slack, MLflow, Azure AI Foundry, Jira Assets, Jira incidents, Model lifecycle, Risk import, Dataset bulk upload, and Framework import.":
+    "Slack, MLflow, Azure AI Foundry, Jira Assets, Jira-Vorfälle, Modelllebenszyklus, Risikoimport, Massen-Upload von Datensätzen und Rahmenwerk-Import.",
   "Admins enable, configure, and disable extensions from the Extensions page. Nothing to install.":
     "Administratoren aktivieren, konfigurieren und deaktivieren Extensions auf der Seite Extensions. Keine Installation erforderlich.",
   "Import risks from Excel, bulk upload datasets with PII detection, and define model lifecycle phases.":
@@ -4789,10 +4785,8 @@ export const de: Record<string, string> = {
   "Add tags": "Tags hinzufügen",
   "Adds to the chosen folder; existing assignments are preserved.":
     "Wird dem ausgewählten Ordner hinzugefügt; bestehende Zuordnungen bleiben erhalten.",
-  "Archived policies will be moved out of the active list. You can still find them via the Archived status filter.":
-    'Archivierte Richtlinien werden aus der aktiven Liste entfernt. Sie sind weiterhin über den Statusfilter "Archiviert" abrufbar.',
-  "Archived risks are soft-deleted: they are hidden from the active risk register but remain available for audit history.":
-    "Archivierte Risiken werden weich gelöscht: Sie werden aus dem aktiven Risikoregister ausgeblendet, bleiben aber für die Audit-Historie verfügbar.",
+  "Archived risks are removed from the risk register, reports and linked policies. Their change history is kept.":
+    "Archivierte Risiken werden aus dem Risikoregister, aus Berichten und aus verknüpften Richtlinien entfernt. Ihr Änderungsverlauf bleibt erhalten.",
   "Assign reviewer": "Prüfer zuweisen",
   "Bulk actions": "Massenaktionen",
   "Clear selection": "Auswahl aufheben",
@@ -4803,7 +4797,6 @@ export const de: Record<string, string> = {
   "Replace tags": "Tags ersetzen",
   "Replaces existing categories. Leave empty to clear.":
     "Ersetzt vorhandene Kategorien. Leer lassen, um sie zu entfernen.",
-  "Replaces existing reviewer assignments.": "Ersetzt bestehende Prüferzuweisungen.",
   "Replaces existing tags. Leave empty to clear.":
     "Ersetzt vorhandene Tags. Leer lassen, um sie zu entfernen.",
   "Set categories": "Kategorien festlegen",
@@ -5453,8 +5446,6 @@ export const de: Record<string, string> = {
   "Extension settings": "Erweiterungseinstellungen",
   "Extensions": "Erweiterungen",
   "Key": "Schlüssel",
-  "Password/token fields are stored encrypted. Leave blank to keep the existing value.":
-    "Passwort-/Token-Felder werden verschlüsselt gespeichert. Leer lassen, um den vorhandenen Wert beizubehalten.",
   "Specific extension settings page": "Spezifische Erweiterungseinstellungsseite",
   "Sync Interval": "Synchronisierungsintervall",
   "This extension has no configuration.": "Diese Erweiterung hat keine Konfiguration.",
@@ -5635,6 +5626,8 @@ export const de: Record<string, string> = {
   "AI app bulk import and bulk assessment": "Massenimport und Massenbewertung von KI-Apps",
   "Training assignments, groups and custom roles, and framework import":
     "Schulungszuweisungen, Gruppen und benutzerdefinierte Rollen sowie Framework-Import",
+  "A new look, a Home page, OSFI E-23, EN 18286 and risk approvals":
+    "Ein neues Erscheinungsbild, eine Startseite, OSFI E-23, EN 18286 und Risikofreigaben",
   // Unified sidebar (phase 2)
   "Record": "Erfassen",
   "Workspace": "Arbeitsbereich",
@@ -5649,6 +5642,50 @@ export const de: Record<string, string> = {
   "Shadow AI settings": "Schatten-KI-Einstellungen",
   "Scan settings": "Scan-Einstellungen",
   "Admin access required.": "Administratorzugriff erforderlich.",
+
+  // Demo data loader (components/DemoDataLoader)
+  "Setting up your demo workspace": "Ihr Demo-Arbeitsbereich wird eingerichtet",
+  "The governance committee is in session.": "Das Governance-Komitee tagt.",
+  "Your demo workspace is ready": "Ihr Demo-Arbeitsbereich ist bereit",
+  "Use cases, risks, vendors, policies and 90 days of AI traffic are in place.":
+    "Anwendungsfälle, Risiken, Anbieter, Richtlinien und 90 Tage KI-Traffic sind angelegt.",
+  "Explore the demo": "Demo erkunden",
+  "Demo data progress": "Fortschritt der Demodaten",
+  "Creating demo data": "Demodaten werden erstellt",
+  "Auditor owl": "Auditor-Eule",
+  "Builder beaver": "Baumeister-Biber",
+  "Vendor raccoon": "Anbieter-Waschbär",
+  "Legal tortoise": "Juristen-Schildkröte",
+  "Who approved this model? Asking for an auditor.":
+    "Wer hat dieses Modell freigegeben? Ich frage für einen Auditor.",
+  "Building the risk register. One more risk and it holds water.":
+    "Ich baue das Risikoregister. Noch ein Risiko, dann ist es dicht.",
+  "Found a vendor called TalentAI Solutions. Going through their paperwork.":
+    "Einen Anbieter namens TalentAI Solutions gefunden. Ich wühle mich durch die Unterlagen.",
+  "Reading the EU AI Act. On article 3. Go on without me.":
+    "Ich lese die EU-KI-Verordnung. Artikel 3. Macht ohne mich weiter.",
+  "Algorithmic bias in candidate screening. Writing that one down.":
+    "Algorithmischer Bias bei der Bewerberauswahl. Das notiere ich mir.",
+  "Two policies drafted. Nobody will read them. Beautiful, though.":
+    "Zwei Richtlinien entworfen. Niemand wird sie lesen. Trotzdem wunderschön.",
+  "Rummaging through 90 days of AI gateway traffic.":
+    "Ich durchstöbere 90 Tage AI-Gateway-Traffic.",
+  "Still on article 3.": "Immer noch bei Artikel 3.",
+  "New task: complete the bias audit. Not it.": "Neue Aufgabe: Bias-Audit abschließen. Ich nicht.",
+  "Training plans ready. Attendance mandatory, snacks optional.":
+    "Schulungspläne stehen. Teilnahme Pflicht, Snacks freiwillig.",
+  "Spotted some shadow AI tools. Nobody admits to installing them.":
+    "Ein paar Schatten-KI-Tools entdeckt. Keiner will sie installiert haben.",
+  "Article 4. Picking up speed now.": "Artikel 4. Jetzt nehme ich Fahrt auf.",
+  "Model inventory checked. Zero excuses.": "Modellinventar geprüft. Null Ausreden.",
+  "Double-checking the double checks.": "Die doppelten Prüfungen werden doppelt geprüft.",
+  "Stacking the last few records into place.": "Die letzten Datensätze werden aufgestapelt.",
+  "One more box of receipts back here.": "Hier hinten noch eine Kiste mit Belegen.",
+  "Article 5. Nearly at the good part.": "Artikel 5. Gleich kommt der spannende Teil.",
+  "All approved. Unanimously, for once.": "Alles genehmigt. Ausnahmsweise einstimmig.",
+  "A few seconds left": "Noch wenige Sekunden",
+  "Almost there": "Gleich geschafft",
+  "Finished": "Fertig",
 };
 
 export const fr: Record<string, string> = {
@@ -6690,7 +6727,6 @@ export const fr: Record<string, string> = {
   "Invite User": "Inviter un utilisateur",
   "Keep risk as is": "Conserver le risque en l'état",
   "Link Evidence": "Relier des preuves",
-  "Link New Risks": "Relier de nouveaux risques",
   "Link tasks to controls or risks": "Relier les tâches aux contrôles ou risques",
   "Link to governance artifacts": "Relier aux artefacts de gouvernance",
   "Link to model": "Relier au modèle",
@@ -6905,7 +6941,6 @@ export const fr: Record<string, string> = {
   "Limitation": "Limitation",
   "Limitations": "Limitations",
   "Line": "Ligne",
-  "Linked Operational Objects": "Objets opérationnels liés",
   "Linked Policies Objects": "Objets de politiques liés",
   "Configure an LLM API key to send messages.":
     "Configurez une clé API LLM pour envoyer des messages.",
@@ -8184,7 +8219,6 @@ export const fr: Record<string, string> = {
   "Departments": "Départements",
   "Details": "Détails",
   "Download results as JSON": "Télécharger les résultats au format JSON",
-  "EU AI Act Completion Status": "Statut d'achèvement du Règlement IA de l'UE",
   "EXPLORE VERIFYWISE": "EXPLORER VERIFYWISE",
   "Each AI tool receives a risk score from 0 to 100, recalculated nightly. The score is a weighted composite of four factors:":
     "Chaque outil IA reçoit un score de risque de 0 à 100, recalculé chaque nuit. Le score est une combinaison pondérée de quatre facteurs :",
@@ -8261,7 +8295,6 @@ export const fr: Record<string, string> = {
     "Comment souhaitez-vous commencer ? Vous pouvez explorer avec des données d'exemple ou démarrer à zéro.",
   "IMPACT ASSESSMENT": "ANALYSE D'IMPACT",
   "INCIDENT INFORMATION": "INFORMATIONS SUR L'INCIDENT",
-  "ISO 42001 Completion Status": "Statut d'achèvement ISO 42001",
   "ISO 42001, ISO 27001, NIST AI RMF": "ISO 42001, ISO 27001, NIST AI RMF",
   "Icon Buttons": "Boutons d'icône",
   "Implementation description:": "Description de l'implémentation :",
@@ -8658,8 +8691,8 @@ export const fr: Record<string, string> = {
   "Active incidents": "Incidents actifs",
   "SOC 2, GDPR, HIPAA, DORA, and 17 more frameworks are built in, with requirements, evidence, and risk tracking.":
     "SOC 2, RGPD, HIPAA, DORA et 17 autres référentiels sont intégrés, avec exigences, preuves et suivi des risques.",
-  "Slack, MLflow, Azure AI Foundry, Jira Assets, Model Lifecycle, Risk Import, and Dataset Bulk Upload.":
-    "Slack, MLflow, Azure AI Foundry, Jira Assets, Model Lifecycle, Risk Import et Dataset Bulk Upload.",
+  "Slack, MLflow, Azure AI Foundry, Jira Assets, Jira incidents, Model lifecycle, Risk import, Dataset bulk upload, and Framework import.":
+    "Slack, MLflow, Azure AI Foundry, Jira Assets, Incidents Jira, Cycle de vie du modèle, Import de risques, Téléversement en masse de jeux de données et Import de référentiels.",
   "Admins enable, configure, and disable extensions from the Extensions page. Nothing to install.":
     "Les administrateurs activent, configurent et désactivent les extensions depuis la page Extensions. Rien à installer.",
   "Import risks from Excel, bulk upload datasets with PII detection, and define model lifecycle phases.":
@@ -10380,10 +10413,8 @@ export const fr: Record<string, string> = {
   "Add tags": "Ajouter des balises",
   "Adds to the chosen folder; existing assignments are preserved.":
     "Ajoute au dossier sélectionné ; les affectations existantes sont conservées.",
-  "Archived policies will be moved out of the active list. You can still find them via the Archived status filter.":
-    "Les politiques archivées seront retirées de la liste active. Vous pourrez toujours les retrouver via le filtre de statut Archivé.",
-  "Archived risks are soft-deleted: they are hidden from the active risk register but remain available for audit history.":
-    "Les risques archivés sont supprimés en douceur : ils sont masqués du registre des risques actifs mais restent disponibles dans l'historique d'audit.",
+  "Archived risks are removed from the risk register, reports and linked policies. Their change history is kept.":
+    "Les risques archivés sont retirés du registre des risques, des rapports et des politiques associées. Leur historique des modifications est conservé.",
   "Assign reviewer": "Attribuer un relecteur",
   "Bulk actions": "Actions groupées",
   "Clear selection": "Effacer la sélection",
@@ -10394,7 +10425,6 @@ export const fr: Record<string, string> = {
   "Replace tags": "Remplacer les balises",
   "Replaces existing categories. Leave empty to clear.":
     "Remplace les catégories existantes. Laisser vide pour effacer.",
-  "Replaces existing reviewer assignments.": "Remplace les affectations de relecteurs existantes.",
   "Replaces existing tags. Leave empty to clear.":
     "Remplace les balises existantes. Laisser vide pour effacer.",
   "Set categories": "Définir les catégories",
@@ -11039,8 +11069,6 @@ export const fr: Record<string, string> = {
   "Extension settings": "Paramètres de l'extension",
   "Extensions": "Extensions",
   "Key": "Clé",
-  "Password/token fields are stored encrypted. Leave blank to keep the existing value.":
-    "Les champs mot de passe/jeton sont stockés chiffrés. Laissez vide pour conserver la valeur existante.",
   "Specific extension settings page": "Page de paramètres d'extension spécifique",
   "Sync Interval": "Intervalle de synchronisation",
   "This extension has no configuration.": "Cette extension n'a pas de configuration.",
@@ -11216,6 +11244,8 @@ export const fr: Record<string, string> = {
   "AI app bulk import and bulk assessment": "Import et évaluation en masse des applications d'IA",
   "Training assignments, groups and custom roles, and framework import":
     "Affectation des formations, groupes et rôles personnalisés, et import de référentiels",
+  "A new look, a Home page, OSFI E-23, EN 18286 and risk approvals":
+    "Une nouvelle apparence, une page d'accueil, OSFI E-23, EN 18286 et l'approbation des risques",
 
   "Request": "Requête",
   // Unified sidebar (phase 2)
@@ -11232,6 +11262,51 @@ export const fr: Record<string, string> = {
   "Shadow AI settings": "Paramètres de l'IA fantôme",
   "Scan settings": "Paramètres d'analyse",
   "Admin access required.": "Accès administrateur requis.",
+
+  // Demo data loader (components/DemoDataLoader)
+  "Setting up your demo workspace": "Configuration de votre espace de démonstration",
+  "The governance committee is in session.": "Le comité de gouvernance est en séance.",
+  "Your demo workspace is ready": "Votre espace de démonstration est prêt",
+  "Use cases, risks, vendors, policies and 90 days of AI traffic are in place.":
+    "Les cas d'usage, risques, fournisseurs, politiques et 90 jours de trafic IA sont en place.",
+  "Explore the demo": "Explorer la démo",
+  "Demo data progress": "Progression des données de démonstration",
+  "Creating demo data": "Création des données de démonstration",
+  "Auditor owl": "Hibou auditeur",
+  "Builder beaver": "Castor bâtisseur",
+  "Vendor raccoon": "Raton laveur des fournisseurs",
+  "Legal tortoise": "Tortue juriste",
+  "Who approved this model? Asking for an auditor.":
+    "Qui a approuvé ce modèle ? C'est pour un auditeur.",
+  "Building the risk register. One more risk and it holds water.":
+    "Je construis le registre des risques. Encore un risque et il sera étanche.",
+  "Found a vendor called TalentAI Solutions. Going through their paperwork.":
+    "J'ai trouvé un fournisseur nommé TalentAI Solutions. J'épluche leurs documents.",
+  "Reading the EU AI Act. On article 3. Go on without me.":
+    "Je lis le Règlement IA de l'UE. Article 3. Continuez sans moi.",
+  "Algorithmic bias in candidate screening. Writing that one down.":
+    "Biais algorithmique dans la sélection des candidats. Je le note.",
+  "Two policies drafted. Nobody will read them. Beautiful, though.":
+    "Deux politiques rédigées. Personne ne les lira. Magnifiques, pourtant.",
+  "Rummaging through 90 days of AI gateway traffic.":
+    "Je fouille 90 jours de trafic de l'AI Gateway.",
+  "Still on article 3.": "Toujours à l'article 3.",
+  "New task: complete the bias audit. Not it.":
+    "Nouvelle tâche : terminer l'audit des biais. Pas moi.",
+  "Training plans ready. Attendance mandatory, snacks optional.":
+    "Plans de formation prêts. Présence obligatoire, collations facultatives.",
+  "Spotted some shadow AI tools. Nobody admits to installing them.":
+    "Quelques outils d'IA fantôme repérés. Personne n'avoue les avoir installés.",
+  "Article 4. Picking up speed now.": "Article 4. Je prends de la vitesse.",
+  "Model inventory checked. Zero excuses.": "Inventaire des modèles vérifié. Zéro excuse.",
+  "Double-checking the double checks.": "Je revérifie les doubles vérifications.",
+  "Stacking the last few records into place.": "J'empile les derniers enregistrements.",
+  "One more box of receipts back here.": "Encore une boîte de justificatifs par ici.",
+  "Article 5. Nearly at the good part.": "Article 5. Bientôt le passage intéressant.",
+  "All approved. Unanimously, for once.": "Tout est approuvé. À l'unanimité, pour une fois.",
+  "A few seconds left": "Encore quelques secondes",
+  "Almost there": "Presque terminé",
+  "Finished": "Terminé",
 };
 
 export const es: Record<string, string> = {
@@ -12061,7 +12136,6 @@ export const es: Record<string, string> = {
   "Invite User": "Invitar usuario",
   "Keep risk as is": "Mantener el riesgo tal cual",
   "Link Evidence": "Vincular evidencia",
-  "Link New Risks": "Vincular nuevos riesgos",
   "Link tasks to controls or risks": "Vincular tareas a controles o riesgos",
   "Link to governance artifacts": "Vincular a artefactos de gobernanza",
   "Link to model": "Vincular al modelo",
@@ -12283,7 +12357,6 @@ export const es: Record<string, string> = {
   "Limitation": "Limitación",
   "Limitations": "Limitaciones",
   "Line": "Línea",
-  "Linked Operational Objects": "Objetos operativos vinculados",
   "Linked Policies Objects": "Objetos de políticas vinculados",
   "Configure an LLM API key to send messages.":
     "Configure una clave de API de LLM para enviar mensajes.",
@@ -12983,7 +13056,6 @@ export const es: Record<string, string> = {
   "Departments": "Departamentos",
   "Details": "Detalles",
   "Download results as JSON": "Descargar resultados como JSON",
-  "EU AI Act Completion Status": "Estado de finalización del EU AI Act",
   "EXPLORE VERIFYWISE": "EXPLORA VERIFYWISE",
   "Edit dataset": "Editar conjunto de datos",
   "Edit selection": "Editar selección",
@@ -13032,7 +13104,6 @@ export const es: Record<string, string> = {
   "How is this calculated?": "¿Cómo se calcula esto?",
   "IMPACT ASSESSMENT": "EVALUACIÓN DE IMPACTO",
   "INCIDENT INFORMATION": "INFORMACIÓN DEL INCIDENTE",
-  "ISO 42001 Completion Status": "Estado de finalización de ISO 42001",
   "ISO 42001, ISO 27001, NIST AI RMF": "ISO 42001, ISO 27001, NIST AI RMF",
   "Icon Buttons": "Botones de icono",
   "Implementation description:": "Descripción de la implementación:",
@@ -14009,7 +14080,6 @@ export const es: Record<string, string> = {
   "Mark complete": "Marcar como completado",
   "Remove tags": "Eliminar etiquetas",
   "Replace tags": "Reemplazar etiquetas",
-  "Replaces existing reviewer assignments.": "Reemplaza las asignaciones de revisor existentes.",
   "Set categories": "Establecer categorías",
   "Set category": "Establecer categoría",
   "Set owner": "Establecer responsable",
@@ -15022,8 +15092,8 @@ export const es: Record<string, string> = {
     "Los registros precisos garantizan la responsabilidad y respaldan las auditorías, la resolución de problemas y el cumplimiento normativo.",
   "SOC 2, GDPR, HIPAA, DORA, and 17 more frameworks are built in, with requirements, evidence, and risk tracking.":
     "SOC 2, GDPR, HIPAA, DORA y 17 marcos más están integrados, con requisitos, evidencias y seguimiento de riesgos.",
-  "Slack, MLflow, Azure AI Foundry, Jira Assets, Model Lifecycle, Risk Import, and Dataset Bulk Upload.":
-    "Slack, MLflow, Azure AI Foundry, Jira Assets, Model Lifecycle, Risk Import y Dataset Bulk Upload.",
+  "Slack, MLflow, Azure AI Foundry, Jira Assets, Jira incidents, Model lifecycle, Risk import, Dataset bulk upload, and Framework import.":
+    "Slack, MLflow, Azure AI Foundry, Jira Assets, Incidentes de Jira, Ciclo de vida del modelo, Importación de riesgos, Subida masiva de conjuntos de datos e Importación de marcos.",
   "Admins enable, configure, and disable extensions from the Extensions page. Nothing to install.":
     "Los administradores activan, configuran y desactivan extensiones desde la página Extensions. No hay nada que instalar.",
   "Import risks from Excel, bulk upload datasets with PII detection, and define model lifecycle phases.":
@@ -15985,10 +16055,8 @@ export const es: Record<string, string> = {
     "Tu plataforma de gobernanza y cumplimiento de IA. En 3 minutos,",
   "Adds to the chosen folder; existing assignments are preserved.":
     "Se añade a la carpeta elegida; se conservan las asignaciones existentes.",
-  "Archived policies will be moved out of the active list. You can still find them via the Archived status filter.":
-    "Las políticas archivadas se retirarán de la lista activa. Aún podrás encontrarlas mediante el filtro de estado Archivado.",
-  "Archived risks are soft-deleted: they are hidden from the active risk register but remain available for audit history.":
-    "Los riesgos archivados se eliminan de forma reversible: quedan ocultos del registro de riesgos activo, pero siguen disponibles para el historial de auditoría.",
+  "Archived risks are removed from the risk register, reports and linked policies. Their change history is kept.":
+    "Los riesgos archivados se eliminan del registro de riesgos, de los informes y de las políticas vinculadas. Su historial de cambios se conserva.",
   "Replaces existing categories. Leave empty to clear.":
     "Sustituye las categorías existentes. Déjalo vacío para borrarlas.",
   "Replaces existing tags. Leave empty to clear.":
@@ -16513,8 +16581,6 @@ export const es: Record<string, string> = {
   "Extension settings": "Configuración de la extensión",
   "Extensions": "Extensiones",
   "Key": "Clave",
-  "Password/token fields are stored encrypted. Leave blank to keep the existing value.":
-    "Los campos de contraseña/token se almacenan cifrados. Deje en blanco para mantener el valor existente.",
   "Specific extension settings page": "Página de configuración de extensión específica",
   "Sync Interval": "Intervalo de sincronización",
   "This extension has no configuration.": "Esta extensión no tiene configuración.",
@@ -16689,6 +16755,8 @@ export const es: Record<string, string> = {
     "Importación y evaluación masivas de aplicaciones de IA",
   "Training assignments, groups and custom roles, and framework import":
     "Asignación de formaciones, grupos y roles personalizados, e importación de marcos",
+  "A new look, a Home page, OSFI E-23, EN 18286 and risk approvals":
+    "Un nuevo aspecto, una página de inicio, OSFI E-23, EN 18286 y aprobación de riesgos",
   "Enter a full web address starting with http:// or https://":
     "Introduzca una dirección web completa que empiece por http:// o https://",
   "Shown under the field on the public form":
@@ -16707,4 +16775,49 @@ export const es: Record<string, string> = {
   "Shadow AI settings": "Configuración de IA en la sombra",
   "Scan settings": "Configuración de escaneo",
   "Admin access required.": "Se requiere acceso de administrador.",
+
+  // Demo data loader (components/DemoDataLoader)
+  "Setting up your demo workspace": "Preparando tu espacio de demostración",
+  "The governance committee is in session.": "El comité de gobernanza está en sesión.",
+  "Your demo workspace is ready": "Tu espacio de demostración está listo",
+  "Use cases, risks, vendors, policies and 90 days of AI traffic are in place.":
+    "Los casos de uso, riesgos, proveedores, políticas y 90 días de tráfico de IA ya están listos.",
+  "Explore the demo": "Explorar la demo",
+  "Demo data progress": "Progreso de los datos de demostración",
+  "Creating demo data": "Creando datos de demostración",
+  "Auditor owl": "Búho auditor",
+  "Builder beaver": "Castor constructor",
+  "Vendor raccoon": "Mapache de proveedores",
+  "Legal tortoise": "Tortuga legal",
+  "Who approved this model? Asking for an auditor.":
+    "¿Quién aprobó este modelo? Pregunto para un auditor.",
+  "Building the risk register. One more risk and it holds water.":
+    "Construyendo el registro de riesgos. Un riesgo más y ya no hace agua.",
+  "Found a vendor called TalentAI Solutions. Going through their paperwork.":
+    "Encontré un proveedor llamado TalentAI Solutions. Revisando su papeleo.",
+  "Reading the EU AI Act. On article 3. Go on without me.":
+    "Leyendo el EU AI Act. Artículo 3. Sigan sin mí.",
+  "Algorithmic bias in candidate screening. Writing that one down.":
+    "Sesgo algorítmico en la selección de candidatos. Lo apunto.",
+  "Two policies drafted. Nobody will read them. Beautiful, though.":
+    "Dos políticas redactadas. Nadie las leerá. Preciosas, eso sí.",
+  "Rummaging through 90 days of AI gateway traffic.":
+    "Revisando 90 días de tráfico del AI Gateway.",
+  "Still on article 3.": "Sigo en el artículo 3.",
+  "New task: complete the bias audit. Not it.":
+    "Nueva tarea: completar la auditoría de sesgos. Yo no.",
+  "Training plans ready. Attendance mandatory, snacks optional.":
+    "Planes de formación listos. Asistencia obligatoria, aperitivos opcionales.",
+  "Spotted some shadow AI tools. Nobody admits to installing them.":
+    "Detecté algunas herramientas de IA en la sombra. Nadie admite haberlas instalado.",
+  "Article 4. Picking up speed now.": "Artículo 4. Ahora cojo velocidad.",
+  "Model inventory checked. Zero excuses.": "Inventario de modelos revisado. Cero excusas.",
+  "Double-checking the double checks.": "Revisando dos veces las revisiones dobles.",
+  "Stacking the last few records into place.": "Apilando los últimos registros en su sitio.",
+  "One more box of receipts back here.": "Otra caja de recibos por aquí atrás.",
+  "Article 5. Nearly at the good part.": "Artículo 5. Casi en la parte interesante.",
+  "All approved. Unanimously, for once.": "Todo aprobado. Por unanimidad, para variar.",
+  "A few seconds left": "Quedan unos segundos",
+  "Almost there": "Ya casi está",
+  "Finished": "Terminado",
 };

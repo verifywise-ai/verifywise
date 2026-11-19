@@ -101,6 +101,23 @@ export function logStructured(
 }
 
 /**
+ * An error for the real logs. The default `logger` has no transport in
+ * production, so `logger.error(msg, err)` is lost there (and its format drops
+ * the error argument anyway). This writes the structured line with the error's
+ * message (tenant file and the central stack) and the stack to the tenant file.
+ */
+export function logStructuredError(
+  description: string,
+  error: unknown,
+  functionName: string,
+  fileName: string,
+): void {
+  const err = error instanceof Error ? error : new Error(String(error));
+  logStructured("error", `${description}: ${err.message}`, functionName, fileName);
+  getTenantAwareLogger().error(`${description}: ${err.stack ?? err.message}`);
+}
+
+/**
  * Get a tenant-aware logger instance for general logging
  * This can be used for non-structured logging throughout the application
  */

@@ -13,9 +13,11 @@ import {
   linkRiskToProject,
   linkVendorToProject,
   linkModelToProject,
+  linkModelToFramework,
 } from "../factories";
 import { getSharedProjectCandidatesQuery } from "../../utils/riskLink.utils";
 import { sequelize } from "../../database/db";
+import { SYSTEM_RISK_VIEWER } from "../../utils/riskVisibility.utils";
 
 afterEach(async () => {
   await cleanupDatabase();
@@ -34,7 +36,7 @@ describe("getSharedProjectCandidatesQuery", () => {
     await linkVendorToProject(owner.orgId, vendor, project);
     const vendorRisk = await createTestVendorRisk(owner.orgId, { vendor_id: vendor });
 
-    const result = await getSharedProjectCandidatesQuery(owner.orgId, subject);
+    const result = await getSharedProjectCandidatesQuery(owner.orgId, subject, SYSTEM_RISK_VIEWER);
 
     expect(result).toEqual([
       {
@@ -61,10 +63,12 @@ describe("getSharedProjectCandidatesQuery", () => {
     await linkVendorToProject(owner.orgId, vendor, otherProject);
     await createTestVendorRisk(owner.orgId, { vendor_id: vendor });
 
-    expect(await getSharedProjectCandidatesQuery(owner.orgId, subject)).toEqual([]);
+    expect(await getSharedProjectCandidatesQuery(owner.orgId, subject, SYSTEM_RISK_VIEWER)).toEqual(
+      [],
+    );
   });
 
-  it("returns a model attached under two frameworks exactly once", async () => {
+  it("returns a model linked to the use case and to two frameworks exactly once", async () => {
     const { owner } = await seedTwoTenantContexts();
     const project = await createTestProject(owner.orgId, owner.userId, {
       project_title: "Fraud Detection",
@@ -73,11 +77,12 @@ describe("getSharedProjectCandidatesQuery", () => {
     await linkRiskToProject(owner.orgId, subject, project);
 
     const model = await createTestModelInventory(owner.orgId, {});
-    await linkModelToProject(owner.orgId, model, project, 1);
-    await linkModelToProject(owner.orgId, model, project, 2);
+    await linkModelToProject(owner.orgId, model, project);
+    await linkModelToFramework(owner.orgId, model, 1);
+    await linkModelToFramework(owner.orgId, model, 2);
     const modelRisk = await createTestModelRisk(owner.orgId, { model_id: model });
 
-    const result = await getSharedProjectCandidatesQuery(owner.orgId, subject);
+    const result = await getSharedProjectCandidatesQuery(owner.orgId, subject, SYSTEM_RISK_VIEWER);
 
     expect(result).toEqual([
       {
@@ -87,6 +92,20 @@ describe("getSharedProjectCandidatesQuery", () => {
         projects: ["Fraud Detection"],
       },
     ]);
+  });
+
+  it("does not count a framework link as a use case link", async () => {
+    const { owner } = await seedTwoTenantContexts();
+    const project = await createTestProject(owner.orgId, owner.userId, {});
+    const subject = await createTestRisk(owner.orgId, {});
+    await linkRiskToProject(owner.orgId, subject, project);
+
+    const model = await createTestModelInventory(owner.orgId, {});
+    await linkModelToFramework(owner.orgId, model, 1);
+    await createTestModelRisk(owner.orgId, { model_id: model });
+
+    const result = await getSharedProjectCandidatesQuery(owner.orgId, subject, SYSTEM_RISK_VIEWER);
+    expect(result).toEqual([]);
   });
 
   it("collects both titles when the subject sits in two shared projects", async () => {
@@ -104,7 +123,7 @@ describe("getSharedProjectCandidatesQuery", () => {
     await linkVendorToProject(owner.orgId, vendor, fraud);
     const vendorRisk = await createTestVendorRisk(owner.orgId, { vendor_id: vendor });
 
-    const result = await getSharedProjectCandidatesQuery(owner.orgId, subject);
+    const result = await getSharedProjectCandidatesQuery(owner.orgId, subject, SYSTEM_RISK_VIEWER);
 
     // ORDER BY project_title puts "Fraud Detection" before "KYC".
     expect(result).toEqual([
@@ -132,7 +151,9 @@ describe("getSharedProjectCandidatesQuery", () => {
     await linkVendorToProject(attacker.orgId, attackerVendor, attackerProject);
     await createTestVendorRisk(attacker.orgId, { vendor_id: attackerVendor });
 
-    expect(await getSharedProjectCandidatesQuery(owner.orgId, subject)).toEqual([]);
+    expect(await getSharedProjectCandidatesQuery(owner.orgId, subject, SYSTEM_RISK_VIEWER)).toEqual(
+      [],
+    );
   });
 
   it("omits a model risk with no model, without erroring", async () => {
@@ -145,14 +166,18 @@ describe("getSharedProjectCandidatesQuery", () => {
 
     await createTestModelRisk(owner.orgId, {});
 
-    expect(await getSharedProjectCandidatesQuery(owner.orgId, subject)).toEqual([]);
+    expect(await getSharedProjectCandidatesQuery(owner.orgId, subject, SYSTEM_RISK_VIEWER)).toEqual(
+      [],
+    );
   });
 
   it("returns an empty list for a risk that belongs to no project", async () => {
     const { owner } = await seedTwoTenantContexts();
     const subject = await createTestRisk(owner.orgId, {});
 
-    expect(await getSharedProjectCandidatesQuery(owner.orgId, subject)).toEqual([]);
+    expect(await getSharedProjectCandidatesQuery(owner.orgId, subject, SYSTEM_RISK_VIEWER)).toEqual(
+      [],
+    );
   });
 
   it("carries a display name for each candidate", async () => {
@@ -164,7 +189,7 @@ describe("getSharedProjectCandidatesQuery", () => {
     await linkRiskToProject(owner.orgId, subject, project);
 
     const model = await createTestModelInventory(owner.orgId, {});
-    await linkModelToProject(owner.orgId, model, project, 1);
+    await linkModelToProject(owner.orgId, model, project);
     const modelRisk = await createTestModelRisk(owner.orgId, {
       model_id: model,
       risk_name: "Fairness degradation in production",
@@ -177,7 +202,11 @@ describe("getSharedProjectCandidatesQuery", () => {
       risk_description: "The vendor cannot evidence its own model validation.",
     });
 
-    const candidates = await getSharedProjectCandidatesQuery(owner.orgId, subject);
+    const candidates = await getSharedProjectCandidatesQuery(
+      owner.orgId,
+      subject,
+      SYSTEM_RISK_VIEWER,
+    );
 
     // Matched on entity type as well as id, because the two id spaces collide:
     // a fresh model_risk and a fresh vendorrisk both start at 1. Finding by id
@@ -208,7 +237,9 @@ describe("getSharedProjectCandidatesQuery", () => {
       { replacements: { vendorRisk, orgId: owner.orgId } },
     );
 
-    expect(await getSharedProjectCandidatesQuery(owner.orgId, subject)).toEqual([]);
+    expect(await getSharedProjectCandidatesQuery(owner.orgId, subject, SYSTEM_RISK_VIEWER)).toEqual(
+      [],
+    );
   });
 });
 

@@ -7,12 +7,15 @@ jest.mock("../../utils/risk.utils", () => ({
   getRisksByFrameworkQuery: jest.fn(),
   getRisksByProjectQuery: jest.fn(),
   updateRiskByIdQuery: jest.fn(),
-  deleteRiskByIdQuery: jest.fn(),
-  bulkSetProjectRisksOwnerQuery: jest.fn(),
-  bulkSetProjectRisksCategoryQuery: jest.fn(),
-  bulkArchiveProjectRisksQuery: jest.fn(),
+  archiveRiskQuery: jest.fn(),
+  archiveRisksInBulkQuery: jest.fn(async () => []),
+  recordRiskSnapshots: jest.fn(),
   assertRiskReferencesInOrganization: jest.fn(),
+  getActiveRisksByIdsQuery: jest.fn(),
+  getProjectTitlesByRiskIdsQuery: jest.fn().mockResolvedValue(new Map()),
+  sameRiskCategories: jest.fn().mockReturnValue(false),
   PROJECT_RISK_CATEGORIES_SET: new Set(["financial", "operational", "strategic", "compliance"]),
+  enqueueBulkRiskAutomation: jest.fn(),
 }));
 jest.mock("../../domain.layer/models/risks/risk.model", () => ({
   RiskModel: jest.fn(),
@@ -33,7 +36,7 @@ jest.mock("../../utils/bulkAction.utils", () => ({
   assertOrgOwnsIds: jest.fn().mockResolvedValue(undefined),
   withBulkTransaction: jest.fn().mockImplementation(async (_opts: any, fn: any) => {
     const transaction = { commit: jest.fn(), rollback: jest.fn() };
-    await fn(transaction);
+    return fn(transaction);
   }),
 }));
 jest.mock("../../utils/logger/logHelper", () => ({
@@ -54,6 +57,7 @@ jest.mock("../../utils/projectRiskChangeHistory.utils", () => ({
 }));
 jest.mock("../../services/inAppNotification.service", () => ({
   notifyUserAssigned: jest.fn().mockResolvedValue(undefined),
+  notifyUserAssignedMany: jest.fn().mockResolvedValue(undefined),
 }));
 jest.mock("../../utils/quantitativeRisk.utils", () => ({
   computeDerivedFields: jest.fn().mockReturnValue({}),
@@ -101,10 +105,7 @@ import {
   getRisksByFrameworkQuery,
   getRisksByProjectQuery,
   updateRiskByIdQuery,
-  deleteRiskByIdQuery,
-  bulkSetProjectRisksOwnerQuery,
-  bulkSetProjectRisksCategoryQuery,
-  bulkArchiveProjectRisksQuery,
+  archiveRiskQuery,
 } from "../../utils/risk.utils";
 import { createRiskService } from "../../services/risk.service";
 import {
@@ -122,18 +123,8 @@ const mockGetByProject = getRisksByProjectQuery as jest.MockedFunction<
   typeof getRisksByProjectQuery
 >;
 const mockUpdate = updateRiskByIdQuery as jest.MockedFunction<typeof updateRiskByIdQuery>;
-const mockDelete = deleteRiskByIdQuery as jest.MockedFunction<typeof deleteRiskByIdQuery>;
+const mockDelete = archiveRiskQuery as jest.MockedFunction<typeof archiveRiskQuery>;
 const mockCreateService = createRiskService as jest.MockedFunction<typeof createRiskService>;
-const mockBulkOwner = bulkSetProjectRisksOwnerQuery as jest.MockedFunction<
-  typeof bulkSetProjectRisksOwnerQuery
->;
-const mockBulkCategory = bulkSetProjectRisksCategoryQuery as jest.MockedFunction<
-  typeof bulkSetProjectRisksCategoryQuery
->;
-const mockBulkArchive = bulkArchiveProjectRisksQuery as jest.MockedFunction<
-  typeof bulkArchiveProjectRisksQuery
->;
-
 function createReq(overrides?: Partial<Request>): any {
   return {
     userId: 1,
@@ -154,7 +145,9 @@ function createRes(): any {
 }
 
 describe("risks.ctrl", () => {
-  beforeEach(() => jest.clearAllMocks());
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
   afterEach(() => jest.restoreAllMocks());
 
   describe("getAllRisks", () => {
@@ -166,6 +159,17 @@ describe("risks.ctrl", () => {
       await getAllRisks(req, res);
       expect(res.status).toHaveBeenCalledWith(200);
       expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ data }));
+    });
+    it("passes the viewer so the query can scope a non-Admin", async () => {
+      mockGetAll.mockResolvedValue([] as any);
+      const req = createReq({ role: "Editor", userId: 7 });
+      await getAllRisks(req, createRes());
+      expect(mockGetAll).toHaveBeenCalledWith(1, "active", { userId: 7, role: "Editor" });
+    });
+    it("passes the Admin viewer unchanged", async () => {
+      mockGetAll.mockResolvedValue([] as any);
+      await getAllRisks(createReq(), createRes());
+      expect(mockGetAll).toHaveBeenCalledWith(1, "active", { userId: 1, role: "Admin" });
     });
     it("should return 204 when no risks exist", async () => {
       mockGetAll.mockResolvedValue(null as any);
@@ -216,6 +220,21 @@ describe("risks.ctrl", () => {
   });
 
   describe("getRisksByFramework", () => {
+    it("passes the viewer to the framework and project queries", async () => {
+      mockGetByFramework.mockResolvedValue([] as any);
+      mockGetByProject.mockResolvedValue([] as any);
+      const req = createReq({ params: { id: "3" }, role: "Reviewer", userId: 9 });
+      await getRisksByFramework(req, createRes());
+      await getRisksByProject(req, createRes());
+      expect(mockGetByFramework).toHaveBeenCalledWith(3, 1, "active", {
+        userId: 9,
+        role: "Reviewer",
+      });
+      expect(mockGetByProject).toHaveBeenCalledWith(3, 1, "active", {
+        userId: 9,
+        role: "Reviewer",
+      });
+    });
     it("should return 200 with risks when data exists", async () => {
       const data = buildManyRisk(1);
       mockGetByFramework.mockResolvedValue(data as any);
@@ -249,6 +268,22 @@ describe("risks.ctrl", () => {
       await getRiskById(req, res);
       expect(res.status).toHaveBeenCalledWith(200);
       expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ data: risk }));
+    });
+    it("answers a risk the viewer cannot see like a missing one", async () => {
+      // getRiskByIdQuery answers a hidden risk with null, as a missing one.
+      mockGetById.mockResolvedValue(null as any);
+      const req = createReq({ params: { id: "1" }, role: "Auditor", userId: 7 });
+      const res = createRes();
+      await getRiskById(req, res);
+      expect(mockGetById).toHaveBeenCalledWith(1, 1, { userId: 7, role: "Auditor" });
+      expect(res.status).toHaveBeenCalledWith(204);
+    });
+    it("returns a visible risk to a non-Admin", async () => {
+      const risk = buildRisk();
+      mockGetById.mockResolvedValue(risk as any);
+      const res = createRes();
+      await getRiskById(createReq({ params: { id: "1" }, role: "Editor" }), res);
+      expect(res.status).toHaveBeenCalledWith(200);
     });
     it("should return 204 when risk is not found", async () => {
       mockGetById.mockResolvedValue(null as any);
@@ -328,6 +363,49 @@ describe("risks.ctrl", () => {
       const res = createRes();
       await updateRiskById(req, res);
       expect(res.status).toHaveBeenCalledWith(404);
+    });
+    it("answers a risk the viewer cannot see like a missing one (404, nothing written)", async () => {
+      mockGetById.mockResolvedValue(null as any);
+      const req = createReq({
+        params: { id: "1" },
+        body: { risk_name: "R2" },
+        role: "Editor",
+        userId: 7,
+      });
+      const res = createRes();
+      await updateRiskById(req, res);
+      expect(mockGetById).toHaveBeenCalledWith(1, 1, { userId: 7, role: "Editor" });
+      expect(mockUpdate).not.toHaveBeenCalled();
+      expect(res.status).toHaveBeenCalledWith(404);
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({ data: "Project risk not found" }),
+      );
+    });
+    it("passes the viewer to the service, so linking is checked", async () => {
+      mockGetById.mockResolvedValue({ ...buildRisk(), risk_owner: null } as any);
+      mockUpdate.mockResolvedValue({ ...buildRisk(), risk_owner: null } as any);
+      const req = createReq({
+        params: { id: "1" },
+        body: { projects: [3] },
+        role: "Editor",
+        userId: 7,
+      });
+      await updateRiskById(req, createRes());
+      expect(mockUpdate.mock.calls[0][4]).toEqual(
+        expect.objectContaining({ viewer: { userId: 7, role: "Editor" } }),
+      );
+    });
+    it("answers a link to an inaccessible use case with the 400 a foreign one gets", async () => {
+      mockGetById.mockResolvedValue({ ...buildRisk(), risk_owner: null } as any);
+      mockUpdate.mockRejectedValue(
+        new ValidationException("Linked use cases must belong to this organization"),
+      );
+      const res = createRes();
+      await updateRiskById(
+        createReq({ params: { id: "1" }, body: { projects: [9] }, role: "Editor" }),
+        res,
+      );
+      expect(res.status).toHaveBeenCalledWith(400);
     });
     it("should return 200 when risk is updated", async () => {
       const existing = { ...buildRisk(), risk_owner: null, event_frequency_min: null };
@@ -429,20 +507,34 @@ describe("risks.ctrl", () => {
   });
 
   describe("deleteRiskById", () => {
-    it("should return 200 when risk is deleted", async () => {
-      const risk = buildRisk();
-      mockDelete.mockResolvedValue(risk as any);
+    it("should archive through the shared path and return 200 with data true", async () => {
+      // archiveRiskQuery returns the archived row; the legacy response stays `true`.
+      mockDelete.mockResolvedValue({ id: 1, risk_name: "Archived risk", is_deleted: true });
       const req = createReq({ params: { id: "1" } });
       const res = createRes();
       await deleteRiskById(req, res);
+      // userId 1 from createReq, so the shared path records the deletion.
+      expect(mockDelete).toHaveBeenCalledWith(1, 1, 1, expect.anything(), {
+        viewer: { userId: 1, role: "Admin" },
+      });
       expect(res.status).toHaveBeenCalledWith(200);
-      expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ data: risk }));
+      expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ data: true }));
     });
     it("should return 404 when risk is not found", async () => {
-      mockDelete.mockResolvedValue(null as any);
+      mockDelete.mockResolvedValue(false);
       const req = createReq({ params: { id: "99" } });
       const res = createRes();
       await deleteRiskById(req, res);
+      expect(res.status).toHaveBeenCalledWith(404);
+    });
+    it("answers a risk the viewer cannot see like a missing one (404, not archived)", async () => {
+      // The archive matches no row for a hidden risk, as for a missing one.
+      mockDelete.mockResolvedValue(null);
+      const res = createRes();
+      await deleteRiskById(createReq({ params: { id: "1" }, role: "Editor", userId: 7 }), res);
+      expect(mockDelete).toHaveBeenCalledWith(1, 1, 7, expect.anything(), {
+        viewer: { userId: 7, role: "Editor" },
+      });
       expect(res.status).toHaveBeenCalledWith(404);
     });
     it("should return 500 on error", async () => {
@@ -456,22 +548,48 @@ describe("risks.ctrl", () => {
 
   describe("bulkUpdateProjectRisks", () => {
     it("should return 200 for set_owner action", async () => {
+      const { getActiveRisksByIdsQuery } = require("../../utils/risk.utils");
+      (getActiveRisksByIdsQuery as jest.Mock<any>).mockResolvedValue([
+        buildRisk({ id: 1 }),
+        buildRisk({ id: 2 }),
+      ]);
+      mockUpdate.mockImplementation(async (id: number) => buildRisk({ id }) as any);
       const req = createReq({ body: { ids: [1, 2], action: "set_owner", ownerId: 3 } });
       const res = createRes();
       await bulkUpdateProjectRisks(req, res);
       expect(res.status).toHaveBeenCalledWith(200);
       expect(res.json).toHaveBeenCalledWith(
-        expect.objectContaining({ data: { updated: 2, action: "set_owner" } }),
+        expect.objectContaining({ data: { updated: 2, changed: 2, action: "set_owner" } }),
       );
     });
     it("should return 200 for archive action", async () => {
+      const { archiveRisksInBulkQuery } = require("../../utils/risk.utils");
+      (archiveRisksInBulkQuery as jest.Mock<any>).mockResolvedValue([buildRisk({ id: 1 })]);
       const req = createReq({ body: { ids: [1], action: "archive" } });
       const res = createRes();
       await bulkUpdateProjectRisks(req, res);
       expect(res.status).toHaveBeenCalledWith(200);
       expect(res.json).toHaveBeenCalledWith(
-        expect.objectContaining({ data: { updated: 1, action: "archive" } }),
+        expect.objectContaining({ data: { updated: 1, changed: 1, action: "archive" } }),
       );
+    });
+    it("counts risks the user cannot see as ids that are not theirs (same 403 as unknown ids)", async () => {
+      const { assertOrgOwnsIds } = require("../../utils/bulkAction.utils");
+      await bulkUpdateProjectRisks(
+        createReq({ body: { ids: [1], action: "archive" }, role: "Editor", userId: 7 }),
+        createRes(),
+      );
+      const arg = (assertOrgOwnsIds as jest.Mock<any>).mock.calls.at(-1)[0];
+      expect(arg.extra.sql).toContain("risks.risk_owner = :visibilityUserId");
+      expect(arg.extra.replacements).toEqual({ visibilityUserId: 7 });
+    });
+    it("adds no visibility filter for an Admin", async () => {
+      const { assertOrgOwnsIds } = require("../../utils/bulkAction.utils");
+      await bulkUpdateProjectRisks(
+        createReq({ body: { ids: [1], action: "archive" } }),
+        createRes(),
+      );
+      expect((assertOrgOwnsIds as jest.Mock<any>).mock.calls.at(-1)[0].extra.sql).toBe("");
     });
     it("should return 400 for invalid action", async () => {
       const req = createReq({ body: { ids: [1], action: "invalid" } });

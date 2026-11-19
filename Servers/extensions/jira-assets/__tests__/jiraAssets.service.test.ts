@@ -13,7 +13,9 @@ import {
   JiraNotConfiguredError,
   jiraReadiness,
   JiraUseCaseDeleteFailedError,
+  listUseCases,
   JiraUseCaseNotFoundError,
+  parseJiraConnection,
   parseSyncIntervalHours,
   removeMissingUseCases,
   REMOVAL_SKIP_REASONS,
@@ -32,8 +34,8 @@ import * as engineSchedule from "../../sync-engine/schedule";
 import * as engineStatus from "../../sync-engine/status";
 import type { RunView } from "../../sync-engine/status";
 import { sequelize } from "../../../database/db";
-import { decryptText } from "../../../tools/createSecureValue";
-import { JiraAssetsClient } from "../jira.client";
+import { decryptText, encryptText } from "../../../tools/createSecureValue";
+import { JiraAssetsClient, JiraInvalidIdError } from "../jira.client";
 import { deleteProjectByIdQuery, lockProjectForDelete } from "../../../utils/project.utils";
 import {
   getPendingApprovalRequestIdQuery,
@@ -72,9 +74,17 @@ jest.mock("../../../tools/createSecureValue", () => ({
 }));
 jest.mock("../jira.client", () => {
   class JiraUpstreamError extends Error {}
+  // The id rule itself is real: the selection writes share it with the client.
+  // So are the workspace format and deployment types a saved config is checked against.
+  const { jiraId, JiraInvalidIdError, JIRA_DEPLOYMENT_TYPES, WORKSPACE_ID_PATTERN } =
+    jest.requireActual("../jira.client");
   return {
     JiraAssetsClient: jest.fn(),
     JiraUpstreamError,
+    jiraId,
+    JiraInvalidIdError,
+    JIRA_DEPLOYMENT_TYPES,
+    WORKSPACE_ID_PATTERN,
     WORKER_SYNC_DEADLINE_MS: 600_000,
     MAX_PAGES: 500,
     PAGE_SIZE: 50,
@@ -1483,15 +1493,64 @@ describe("updateSelection (partial patch)", () => {
     });
   });
 
-  it("rejects bad ids and empty bodies, and reports a missing config", async () => {
+  it("rejects empty bodies, and reports a missing config", async () => {
     await expect(updateSelection(5, 8, {})).rejects.toBeInstanceOf(JiraConfigValidationError);
-    await expect(
-      updateSelection(5, 8, { selected_object_type_id: "1; DROP TABLE x" }),
-    ).rejects.toBeInstanceOf(JiraConfigValidationError);
     mockQuery.mockResolvedValue([[], 0]);
     await expect(updateSelection(5, 8, { selected_schema_id: "3" })).rejects.toBeInstanceOf(
       JiraNotConfiguredError,
     );
+  });
+});
+
+describe("selected ids follow the client's numeric Jira id rule", () => {
+  const bad = ["1; DROP TABLE x", "abc", "OBJ-1", "1:2", "-1", "1.5", "1".repeat(19), {}, true];
+
+  it.each(bad)("updateSelection refuses %p before writing", async (id) => {
+    const err = await updateSelection(5, 8, { selected_object_type_id: id }).catch((e) => e);
+
+    expect(err).toBeInstanceOf(JiraInvalidIdError);
+    expect(err.i18nVars).toEqual({ field: "selected_object_type_id" });
+    expect(mockQuery).not.toHaveBeenCalled();
+  });
+
+  it("updateSelection still clears with an empty string", async () => {
+    mockQuery.mockResolvedValue([[{ selected_schema_id: null, selected_object_type_id: "7" }], 1]);
+
+    await updateSelection(5, 8, { selected_schema_id: "", selected_object_type_id: "7" });
+
+    expect(mockQuery.mock.calls[0][1].replacements).toMatchObject({
+      schemaId: null,
+      objectTypeId: "7",
+    });
+  });
+
+  const base = { jira_base_url: "https://x.atlassian.net", workspace_id: "w", email: "a@b.co" };
+
+  it.each([
+    ["selected_schema_id", "../../api"],
+    ["selected_object_type_id", "OBJ-1"],
+  ])("saveConfig refuses a non-numeric %s before writing", async (field, id) => {
+    mockQuery.mockResolvedValueOnce([{ id: 1, api_token_encrypted: "enc", ...base }]);
+
+    const err = await saveConfig(5, 3, { ...base, [field]: id }).catch((e) => e);
+
+    expect(err).toBeInstanceOf(JiraInvalidIdError);
+    expect(err.i18nVars).toEqual({ field });
+    expect(mockQuery).toHaveBeenCalledTimes(1);
+    expect(mockTransaction).not.toHaveBeenCalled();
+  });
+
+  it("saveConfig stores numeric ids and null for missing or empty ones", async () => {
+    mockQuery
+      .mockResolvedValueOnce([{ id: 1, api_token_encrypted: "enc", ...base }])
+      .mockResolvedValue([]);
+
+    await saveConfig(5, 3, { ...base, selected_schema_id: "3", selected_object_type_id: "" });
+
+    expect(mockQuery.mock.calls[1][1].replacements).toMatchObject({
+      selectedSchemaId: "3",
+      selectedObjectTypeId: null,
+    });
   });
 });
 
@@ -1519,9 +1578,11 @@ describe("saveConfig validation", () => {
     workspace_id: "w",
     email: "a@b.co",
   };
+  // The stored row for the same connection (deployment type unset reads as cloud).
+  const stored = { id: 1, api_token_encrypted: "enc", ...base, deployment_type: null };
 
   it("rejects an out-of-range interval before writing", async () => {
-    mockQuery.mockResolvedValueOnce([{ id: 1, api_token_encrypted: "enc" }]);
+    mockQuery.mockResolvedValueOnce([stored]);
 
     await expect(saveConfig(5, 3, { ...base, sync_interval_hours: 500 })).rejects.toBeInstanceOf(
       JiraConfigValidationError,
@@ -1530,7 +1591,7 @@ describe("saveConfig validation", () => {
   });
 
   it("writes the connection without sync columns and the schedule through the engine", async () => {
-    mockQuery.mockResolvedValueOnce([{ id: 1, api_token_encrypted: "enc" }]).mockResolvedValue([]);
+    mockQuery.mockResolvedValueOnce([stored]).mockResolvedValue([]);
     const save = jest.spyOn(engineSchedule, "saveSchedule").mockResolvedValue({
       enabled: true,
       interval_hours: 6,
@@ -1555,7 +1616,7 @@ describe("saveConfig validation", () => {
   });
 
   it("saves only the sync field the body carries, keeping the other", async () => {
-    mockQuery.mockResolvedValueOnce([{ id: 1, api_token_encrypted: "enc" }]).mockResolvedValue([]);
+    mockQuery.mockResolvedValueOnce([stored]).mockResolvedValue([]);
     const save = jest.spyOn(engineSchedule, "saveSchedule").mockResolvedValue({
       enabled: true,
       interval_hours: 6,
@@ -1571,7 +1632,7 @@ describe("saveConfig validation", () => {
       expect.objectContaining({ userId: 3 }),
     );
 
-    mockQuery.mockResolvedValueOnce([{ id: 1, api_token_encrypted: "enc" }]);
+    mockQuery.mockResolvedValueOnce([stored]);
     await saveConfig(5, 3, { ...base, sync_enabled: true });
     expect(save).toHaveBeenLastCalledWith(
       "jira-assets",
@@ -1583,13 +1644,164 @@ describe("saveConfig validation", () => {
   });
 
   it("leaves the schedule alone when the body has no sync fields", async () => {
-    mockQuery.mockResolvedValueOnce([{ id: 1, api_token_encrypted: "enc" }]).mockResolvedValue([]);
+    mockQuery.mockResolvedValueOnce([stored]).mockResolvedValue([]);
     const save = jest.spyOn(engineSchedule, "saveSchedule");
 
     await saveConfig(5, 3, base);
 
     expect(save).not.toHaveBeenCalled();
     save.mockRestore();
+  });
+
+  describe("a stored token is never kept for a changed connection", () => {
+    it.each([
+      [
+        "base URL",
+        { jira_base_url: "https://evil.example.com" },
+        "Enter the API token again: the Jira base URL changed.",
+      ],
+      [
+        "workspace",
+        { workspace_id: "other" },
+        "Enter the API token again: the workspace ID changed.",
+      ],
+      ["email", { email: "b@b.co" }, "Enter the API token again: the email changed."],
+      [
+        "deployment type",
+        { deployment_type: "datacenter" as const },
+        "Enter the API token again: the deployment type changed.",
+      ],
+    ])("refuses a changed %s without a token, before writing", async (_, change, message) => {
+      mockQuery.mockResolvedValueOnce([stored]);
+      await expect(saveConfig(5, 3, { ...base, ...change })).rejects.toThrow(message);
+      expect(mockQuery).toHaveBeenCalledTimes(1);
+    });
+
+    it("saves a changed base URL with a new token", async () => {
+      mockQuery.mockResolvedValueOnce([stored]).mockResolvedValue([]);
+      await saveConfig(5, 3, { ...base, jira_base_url: "https://new.example.com", api_token: "n" });
+      const [updateSql, update] = mockQuery.mock.calls[1];
+      expect(updateSql).toContain("api_token_encrypted = :apiTokenEncrypted");
+      expect(update.replacements.jiraBaseUrl).toBe("https://new.example.com");
+    });
+
+    it("keeps the stored token when the connection is unchanged (a trailing slash is no change)", async () => {
+      mockQuery.mockResolvedValueOnce([stored]).mockResolvedValue([]);
+      await saveConfig(5, 3, {
+        ...base,
+        jira_base_url: "https://x.atlassian.net/",
+        email: " a@b.co ",
+        deployment_type: "cloud",
+      });
+      const [updateSql] = mockQuery.mock.calls[1];
+      expect(updateSql).not.toContain("api_token_encrypted");
+    });
+  });
+});
+
+describe("saveConfig checks the connection fields before reading or writing", () => {
+  const base = {
+    jira_base_url: "https://x.atlassian.net",
+    workspace_id: "12345678-1234-1234-1234-123456789012",
+    email: "a@b.co",
+    api_token: "tok",
+  };
+
+  const refusal = async (body: Record<string, unknown>) => {
+    const err = await saveConfig(5, 3, body as any).catch((e) => e);
+    expect(err).toBeInstanceOf(JiraConfigValidationError);
+    expect(mockQuery).not.toHaveBeenCalled();
+    expect(mockTransaction).not.toHaveBeenCalled();
+    return err as JiraConfigValidationError;
+  };
+
+  it.each([
+    ["jira_base_url", undefined, "Jira base URL is required"],
+    ["jira_base_url", "   ", "Jira base URL is required"],
+    ["jira_base_url", 42, "Jira connection fields must be text"],
+    ["jira_base_url", "x.atlassian.net", "Jira base URL must be a valid http or https URL"],
+    ["jira_base_url", "ftp://x.atlassian.net", "Jira base URL must be a valid http or https URL"],
+    ["jira_base_url", "javascript:alert(1)", "Jira base URL must be a valid http or https URL"],
+    [
+      "jira_base_url",
+      "https://me:pw@x.atlassian.net",
+      "Jira base URL must not include a user name or password",
+    ],
+    [
+      "jira_base_url",
+      "http://169.254.169.254/latest",
+      "Jira base URL points to an address that is not allowed",
+    ],
+    ["workspace_id", "", "Workspace ID is required"],
+    ["workspace_id", { id: 1 }, "Jira connection fields must be text"],
+    [
+      "workspace_id",
+      "../../admin",
+      "Workspace ID may only contain letters, numbers and hyphens, up to 64 characters",
+    ],
+    [
+      "workspace_id",
+      "a".repeat(65),
+      "Workspace ID may only contain letters, numbers and hyphens, up to 64 characters",
+    ],
+    ["deployment_type", "server", "Deployment type must be cloud or datacenter"],
+    ["deployment_type", "", "Deployment type must be cloud or datacenter"],
+    ["deployment_type", 1, "Jira connection fields must be text"],
+    ["email", undefined, "Email is required"],
+    ["email", "not-an-email", "Email must be a valid email address"],
+    ["email", ["a@b.co"], "Jira connection fields must be text"],
+    ["api_token", 123, "Jira connection fields must be text"],
+  ])("refuses %s = %p with a translatable message", async (field, value, message) => {
+    const err = await refusal({ ...base, [field]: value });
+    expect(err.message).toBe(message);
+    expect(err.i18nKey).toBe(message);
+  });
+
+  it("asks for the API token on a first save, after reading the row", async () => {
+    mockQuery.mockResolvedValueOnce([]);
+    const err = await saveConfig(5, 3, { ...base, api_token: "  " }).catch((e) => e);
+    expect(err).toBeInstanceOf(JiraConfigValidationError);
+    expect(err.i18nKey).toBe("API Token is required");
+    expect(mockQuery).toHaveBeenCalledTimes(1);
+    expect(mockTransaction).not.toHaveBeenCalled();
+  });
+
+  it("stores trimmed values and defaults the deployment type to cloud", async () => {
+    mockQuery.mockResolvedValueOnce([]).mockResolvedValue([]);
+
+    await saveConfig(5, 3, {
+      jira_base_url: "  https://x.atlassian.net/  ",
+      workspace_id: " ws-1 ",
+      email: " a@b.co ",
+      api_token: " tok ",
+    });
+
+    const [insertSql, insert] = mockQuery.mock.calls[1];
+    expect(insertSql).toContain("INSERT INTO jira_assets_config");
+    expect(insert.replacements).toMatchObject({
+      jiraBaseUrl: "https://x.atlassian.net/",
+      workspaceId: "ws-1",
+      email: "a@b.co",
+      deploymentType: "cloud",
+    });
+    expect(encryptText).toHaveBeenCalledWith("tok");
+  });
+
+  it("accepts a user name instead of an email on Data Center, and a private host", () => {
+    expect(
+      parseJiraConnection({
+        jira_base_url: "http://10.0.0.5:8080/jira",
+        workspace_id: "3",
+        email: "jira-admin",
+        deployment_type: "datacenter",
+      }),
+    ).toEqual({
+      jiraBaseUrl: "http://10.0.0.5:8080/jira",
+      workspaceId: "3",
+      email: "jira-admin",
+      apiToken: undefined,
+      deploymentType: "datacenter",
+    });
   });
 });
 
@@ -1615,6 +1827,33 @@ describe("removal skip reasons", () => {
       expect(swagger).toContain(reason);
       expect(docs).toContain(`\`${reason}\``);
     }
+  });
+});
+
+describe("listUseCases visibility (E-M5)", () => {
+  it("limits a non-admin to the use cases they own, are a member of or reach through a group", async () => {
+    mockQuery.mockResolvedValueOnce([{ project_id: 50 }]);
+
+    const rows = await listUseCases(5, { userId: 8, role: "Editor" });
+
+    expect(rows).toEqual([{ project_id: 50 }]);
+    const [sql, options] = mockQuery.mock.calls[0];
+    expect(sql).toContain("p.owner = :visibilityUserId");
+    expect(sql).toContain("FROM projects_members pm");
+    expect(sql).toContain("FROM project_groups pg");
+    // The rule sits in the WHERE clause, before the ORDER BY.
+    expect(sql.indexOf("p.owner = :visibilityUserId")).toBeLessThan(sql.indexOf("ORDER BY"));
+    expect(options.replacements).toEqual({ organizationId: 5, visibilityUserId: 8 });
+  });
+
+  it.each(["Admin", "SuperAdmin"])("leaves the list whole for an %s", async (role) => {
+    mockQuery.mockResolvedValueOnce([]);
+
+    await listUseCases(5, { userId: 8, role });
+
+    const [sql, options] = mockQuery.mock.calls[0];
+    expect(sql).not.toContain(":visibilityUserId");
+    expect(options.replacements).toEqual({ organizationId: 5 });
   });
 });
 

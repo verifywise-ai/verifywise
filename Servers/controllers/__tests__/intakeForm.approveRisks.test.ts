@@ -214,7 +214,13 @@ describe("approveSubmission with suggested risks", () => {
     for (const [input, ctx, transaction] of createRiskService.mock.calls) {
       expect(input.projects).toEqual([50]);
       expect(input.risk_owner).toBe(7);
-      expect(ctx).toEqual({ userId: 7, organizationId: ORG });
+      // Ruling J8: the risk goes on the use case this approval just created.
+      expect(ctx).toEqual({
+        userId: 7,
+        organizationId: ORG,
+        viewer: { system: true },
+        callerIsAdmin: true,
+      });
       expect(transaction).toBe(tx);
     }
     expect(createRiskService.mock.calls.map((c: any[]) => c[0].risk_name)).toEqual([

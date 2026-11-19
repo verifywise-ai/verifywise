@@ -1,6 +1,6 @@
 # Servers — Backend Development Guide
 
-> **Last Updated:** 2026-11-11
+> **Last Updated:** 2026-11-18
 
 ---
 
@@ -161,7 +161,7 @@ Bug fixes to existing unversioned endpoints stay on their legacy router in `rout
 
 ### Frameworks and Extensions
 
-- **Frameworks 5–25** (SOC 2, GDPR, HIPAA, ...) are declared in `structures/<Name>/*.structure.ts` (registry `structures/index.ts`) and served by the generic `routes/frameworkImpl.route.ts`. Migrations `require("../../dist/structures")`, so run `npm run build` before `npm run migrate-db`. Guide: `docs/technical/guides/adding-new-framework.md`.
+- **Frameworks 5–28** (SOC 2, GDPR, HIPAA, ...) are declared in `structures/<Name>/*.structure.ts` (registry `structures/index.ts`) and served by the generic `routes/frameworkImpl.route.ts`. Migrations `require("../../dist/structures")`, so run `npm run build` before `npm run migrate-db`. Guide: `docs/technical/guides/adding-new-framework.md`.
 - **Extensions** live in `extensions/<key>/`. They are mounted at `/api/extensions/<key>` **after** the `/api/extensions` catalog router, and gated with `requireExtensionEnabled("<key>")`. Read config with `ExtensionService.getRuntimeConfiguration(key, orgId)`. Reference: `docs/technical/infrastructure/extensions.md`.
 
 ---
@@ -187,7 +187,10 @@ every contributor must follow:
   operations keep their existing tags. Regenerate (`generate:swagger`,
   `generate:endpoints`, `check:api-drift`) — never hand-edit `swagger.yaml`. Deprecation
   markings go through the generator's deprecation list (`scripts/apiDeprecations.ts`),
-  not manual edits.
+  not manual edits. Add an entry there (method, OpenAPI path, sunset, replacement): the
+  generator sets `deprecated: true` and prepends the Sunset notice ahead of the
+  `Requires role: ...` note, and fails if an entry matches no route. First entries: the
+  legacy `/policies/{id}/review/*` endpoints, replaced by `/v1/policies` approval.
 - **Raw-body trap:** the `express.json` exclusions in `app.ts` match legacy URL substrings
   (`/api/deepeval/`, `/api/bias_and_fairness/`, `/api/webhooks/`). If such a router is ever
   migrated to `/api/v1`, update the exclusions in the same PR.

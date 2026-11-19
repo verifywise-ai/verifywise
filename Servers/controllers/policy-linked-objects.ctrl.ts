@@ -6,6 +6,7 @@ import {
   getAllPolicyLinkedObjectsQuery,
   getPolicyLinkedObjectByIdQuery,
   linkObjectsToPolicyQuery,
+  unlinkRiskFromAllPoliciesQuery,
 } from "../utils/policyLinkedObject.utils";
 import { Transaction } from "sequelize";
 import { sequelize } from "../database/db";
@@ -17,6 +18,7 @@ import {
 } from "../domain.layer/exceptions/custom.exception";
 
 import { translateError } from "../utils/i18n.utils";
+import { isRiskVisibleQuery, riskViewer } from "../utils/riskVisibility.utils";
 
 /** Most ids one link request may carry (evidence lists can be long). */
 const MAX_LINK_IDS = 1000;
@@ -35,7 +37,7 @@ export async function getAllLinkedObjects(req: Request, res: Response) {
 
   try {
     const tenant = req.organizationId!;
-    const rows = await getAllPolicyLinkedObjectsQuery(tenant);
+    const rows = await getAllPolicyLinkedObjectsQuery(tenant, riskViewer(req));
 
     const grouped = rows.reduce(
       (acc, row: any) => {
@@ -99,7 +101,7 @@ export async function getLinkedObjects(req: Request, res: Response) {
 
   try {
     const tenant = req.organizationId!;
-    const rows = await getPolicyLinkedObjectByIdQuery(policyId, tenant);
+    const rows = await getPolicyLinkedObjectByIdQuery(policyId, tenant, riskViewer(req));
 
     const grouped = rows.reduce(
       (acc, row: any) => {
@@ -180,6 +182,7 @@ export async function createLinkedObject(req: Request, res: Response) {
       ids,
       req.organizationId!,
       transaction,
+      riskViewer(req),
     );
     await transaction.commit();
 
@@ -222,14 +225,11 @@ export async function deleteRiskFromAllPolicies(req: Request, res: Response) {
     const organizationId = req.organizationId!;
     transaction = await sequelize.transaction();
 
-    await sequelize.query(
-      `DELETE FROM policy_linked_objects
-       WHERE organization_id = :organizationId AND object_id = :riskId AND object_type = 'risk'`,
-      {
-        replacements: { organizationId, riskId },
-        transaction,
-      },
-    );
+    // A risk the user cannot see is left linked and answered like an unknown
+    // id: nothing to unlink, same success response.
+    if (await isRiskVisibleQuery(riskId, organizationId, riskViewer(req), transaction)) {
+      await unlinkRiskFromAllPoliciesQuery(riskId, organizationId, transaction);
+    }
 
     await transaction.commit();
 
@@ -308,7 +308,9 @@ export async function deleteLinkedObject(req: Request, res: Response) {
     const tenant = req.organizationId!;
     transaction = await sequelize.transaction();
 
-    await deletePolicyLinkedObjectQuery(id, tenant, transaction);
+    // A link to a risk the user cannot see is not deleted and is answered
+    // like a missing row (ruling J2).
+    await deletePolicyLinkedObjectQuery(id, tenant, riskViewer(req), transaction);
 
     await transaction.commit();
 

@@ -9,7 +9,7 @@ export type { RetentionPolicy };
 /**
  * Every allowed value for `files.source`. Built-in labels (from EU AI Act /
  * ISO 42001 / ISO 27001 / NIST AI RMF controllers, plus report + file-
- * manager paths) come first; per-framework generic labels for the 21
+ * manager paths) come first; per-framework generic labels for the 22
  * frameworks in `Servers/structures/` follow. Any new generic-framework
  * label added to a structure's `source_labels` must also be added here.
  */
@@ -44,6 +44,8 @@ export type FileSource =
   | "Colorado AI Act sections"
   | "Data Governance practices"
   | "DORA requirements"
+  | "EN 18286 requirements"
+  | "EN 18286 AI systems requirements"
   | "FTC AI Guidelines requirements"
   | "GDPR articles"
   | "HIPAA standards"
@@ -52,6 +54,7 @@ export type FileSource =
   | "NIST CSF subcategories"
   | "NYC Local Law 144 requirements"
   | "OECD AI Principles requirements"
+  | "OSFI E-23 requirements"
   | "PCI DSS requirements"
   | "Qatar PDPL articles"
   | "Quebec Law 25 articles"
@@ -235,6 +238,8 @@ export class FileModel extends Model<File> {
       "Colorado AI Act sections",
       "Data Governance practices",
       "DORA requirements",
+      "EN 18286 requirements",
+      "EN 18286 AI systems requirements",
       "FTC AI Guidelines requirements",
       "GDPR articles",
       "HIPAA standards",
@@ -243,6 +248,7 @@ export class FileModel extends Model<File> {
       "NIST CSF subcategories",
       "NYC Local Law 144 requirements",
       "OECD AI Principles requirements",
+      "OSFI E-23 requirements",
       "PCI DSS requirements",
       "Qatar PDPL articles",
       "Quebec Law 25 articles",

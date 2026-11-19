@@ -109,6 +109,22 @@ describe("workflows / modelDeploymentWorkflow handlers", () => {
     });
   });
 
+  it("risk_assessment counts live risks by risk_level, not a severity column (M-M6)", async () => {
+    mockQuery.mockResolvedValueOnce([{ total: 2, critical: 1 }] as any);
+
+    await stepById("risk_assessment").handler(ctx());
+
+    const sql = String(mockQuery.mock.calls[0][0]);
+    // model_risks has no severity column: reading it failed the step.
+    expect(sql).not.toMatch(/severity/);
+    expect(sql).toMatch(/risk_level::text IN \(:criticalLevels\)/);
+    expect(sql).toMatch(/is_deleted = false/);
+    expect((mockQuery.mock.calls[0][1] as any).replacements.criticalLevels).toEqual([
+      "High",
+      "Critical",
+    ]);
+  });
+
   it("risk_assessment short-circuits to an empty snapshot when no modelId", async () => {
     const res = await stepById("risk_assessment").handler(ctx({ triggerPayload: {} }));
 

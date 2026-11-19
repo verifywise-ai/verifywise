@@ -25,7 +25,7 @@ export const de: Record<string, string> = {
   "Context of the organization": "Kontext der Organisation",
   "Framework dashboard": "Rahmenwerk-Dashboard",
   "Framework visibility and configuration": "Sichtbarkeit und Konfiguration des Rahmenwerks",
-  "items": "Elementen",
+  "items": "Elemente",
   "Loading status data...": "Statusdaten werden geladen...",
   "No AI models linked to this framework yet":
     "Noch keine KI-Modelle mit diesem Rahmenwerk verknüpft",
@@ -469,6 +469,10 @@ export const de: Record<string, string> = {
   "Loading imported frameworks...": "Importierte Frameworks werden geladen...",
   "Could not load imported frameworks. Refresh the page to try again.":
     "Importierte Frameworks konnten nicht geladen werden. Laden Sie die Seite neu, um es erneut zu versuchen.",
+  'Are you sure you want to delete the project "{title}"? This deletes its framework progress and its files. Its risks stay in the risk register but are no longer linked to it. This cannot be undone.':
+    "Möchten Sie das Projekt „{title}“ wirklich löschen? Dadurch werden sein Framework-Fortschritt und seine Dateien gelöscht. Seine Risiken bleiben im Risikoregister, sind aber nicht mehr mit ihm verknüpft. Dies kann nicht rückgängig gemacht werden.",
+  'Are you sure you want to delete the framework "{title}"? This deletes its framework progress and its files. Its risks stay in the risk register but are no longer linked to it. This cannot be undone.':
+    "Möchten Sie das Rahmenwerk „{title}“ wirklich löschen? Dadurch werden sein Framework-Fortschritt und seine Dateien gelöscht. Seine Risiken bleiben im Risikoregister, sind aber nicht mehr mit ihm verknüpft. Dies kann nicht rückgängig gemacht werden.",
 };
 
 export const fr: Record<string, string> = {
@@ -943,6 +947,10 @@ export const fr: Record<string, string> = {
   "Loading imported frameworks...": "Chargement des référentiels importés...",
   "Could not load imported frameworks. Refresh the page to try again.":
     "Impossible de charger les référentiels importés. Actualisez la page pour réessayer.",
+  'Are you sure you want to delete the project "{title}"? This deletes its framework progress and its files. Its risks stay in the risk register but are no longer linked to it. This cannot be undone.':
+    "Voulez-vous vraiment supprimer le projet « {title} » ? Cela supprime sa progression dans les référentiels et ses fichiers. Ses risques restent dans le registre des risques mais ne lui sont plus liés. Cette action est irréversible.",
+  'Are you sure you want to delete the framework "{title}"? This deletes its framework progress and its files. Its risks stay in the risk register but are no longer linked to it. This cannot be undone.':
+    "Voulez-vous vraiment supprimer le référentiel « {title} » ? Cela supprime sa progression dans les référentiels et ses fichiers. Ses risques restent dans le registre des risques mais ne lui sont plus liés. Cette action est irréversible.",
 };
 
 export const es: Record<string, string> = {
@@ -1408,4 +1416,8 @@ export const es: Record<string, string> = {
   "Loading imported frameworks...": "Cargando marcos importados...",
   "Could not load imported frameworks. Refresh the page to try again.":
     "No se pudieron cargar los marcos importados. Actualice la página para volver a intentarlo.",
+  'Are you sure you want to delete the project "{title}"? This deletes its framework progress and its files. Its risks stay in the risk register but are no longer linked to it. This cannot be undone.':
+    "¿Seguro que quiere eliminar el proyecto «{title}»? Esto elimina su progreso en los marcos y sus archivos. Sus riesgos permanecen en el registro de riesgos, pero ya no están vinculados a él. Esta acción no se puede deshacer.",
+  'Are you sure you want to delete the framework "{title}"? This deletes its framework progress and its files. Its risks stay in the risk register but are no longer linked to it. This cannot be undone.':
+    "¿Seguro que quiere eliminar el marco «{title}»? Esto elimina su progreso en los marcos y sus archivos. Sus riesgos permanecen en el registro de riesgos, pero ya no están vinculados a él. Esta acción no se puede deshacer.",
 };

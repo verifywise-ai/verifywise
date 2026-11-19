@@ -114,6 +114,7 @@ SUPERADMIN_PASSWORD=your-admin-password
 # Secrets: generate each with openssl rand -base64 32
 JWT_SECRET=
 REFRESH_TOKEN_SECRET=
+# Required: the backend refuses to start in production without it
 ENCRYPTION_KEY=
 ENCRYPTION_PASSWORD=
 AI_GATEWAY_INTERNAL_KEY=

@@ -6,6 +6,7 @@ import CustomizableMultiSelect from "../Inputs/Select/Multi";
 import { Archive, BookmarkPlus, UserCheck, Tag as TagIcon } from "lucide-react";
 import singleTheme from "../../themes/v1SingleTheme";
 import CustomIconButton from "../../components/IconButton";
+import { buildUserSortNames, userSortName } from "../../../application/utils/userSort";
 import useUsers from "../../../application/hooks/useUsers";
 import { PolicyTableProps } from "../../types/interfaces/i.policy";
 import Chip from "../Chip";
@@ -21,15 +22,20 @@ import { formatCustomFieldValue } from "../CustomFieldsSection/formatCustomField
 import useFormattedDate from "../../../application/hooks/useFormattedDate";
 import { useCanCheck } from "../../../application/hooks/useCan";
 import { toDateOnlyString } from "../../tools/isoDateToString";
+import {
+  filenameFromContentDisposition,
+  policyDownloadFallbackName,
+  triggerBrowserDownload,
+} from "../../utils/browserDownload.utils";
 
 const tableHeaders = [
   { id: "title", name: "Title" },
   { id: "status", name: "Status" },
-  { id: "next_review", name: "Next Review" },
+  { id: "next_review", name: "Next review" },
   { id: "author", name: "Author" },
   // { id: "reviewers", name: "Reviewers" },
-  { id: "last_updated", name: "Last Updated" },
-  { id: "updated_by", name: "Updated By" },
+  { id: "last_updated", name: "Last updated" },
+  { id: "updated_by", name: "Updated by" },
   { id: "actions", name: "Actions" },
 ];
 
@@ -76,11 +82,10 @@ const PolicyTable: React.FC<PolicyTableProps> = ({
 
   const { users } = useUsers();
 
-  // Helper function to get user name by ID
-  const getUserNameById = (id: string | null | undefined | number) => {
-    const user = users.find((u) => u.id === id);
-    return user ? user.name + " " + user.surname : "-";
-  };
+  // One name source for display and sort, so a missing surname never prints "null".
+  const userNames = useMemo(() => buildUserSortNames(users), [users]);
+  const getUserNameById = (id: string | null | undefined | number) =>
+    userSortName(userNames, id) || "-";
 
   // ----- Bulk actions -----
   const getRowId = useCallback((p: any) => Number(p.id), []);
@@ -145,7 +150,7 @@ const PolicyTable: React.FC<PolicyTableProps> = ({
         disabled: bulkMutation.isPending,
         confirm: {
           title: `Archive ${selectionCount} polic${selectionCount === 1 ? "y" : "ies"}?`,
-          body: "Archived policies will be moved out of the active list. You can still find them via the Archived status filter.",
+          body: "Archived policies stay in the list with the Archived status. Filter by that status to see only them.",
           confirmLabel: "Archive",
           danger: true,
         },
@@ -191,23 +196,11 @@ const PolicyTable: React.FC<PolicyTableProps> = ({
 
       const blob = await response.blob();
       const contentDisposition = response.headers.get("Content-Disposition");
-      let filename = `${title.replace(/[^a-zA-Z0-9\s-]/g, "").replace(/\s+/g, "_")}_${new Date().toISOString().split("T")[0]}.pdf`;
-
-      if (contentDisposition) {
-        const match = contentDisposition.match(/filename="?([^"]+)"?/);
-        if (match) {
-          filename = match[1];
-        }
-      }
-
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = filename;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
+      const filename = filenameFromContentDisposition(
+        contentDisposition,
+        policyDownloadFallbackName(title, "pdf"),
+      );
+      triggerBrowserDownload(blob, filename);
     } catch (error) {
       console.error("Failed to export PDF:", error);
     }
@@ -229,23 +222,11 @@ const PolicyTable: React.FC<PolicyTableProps> = ({
 
       const blob = await response.blob();
       const contentDisposition = response.headers.get("Content-Disposition");
-      let filename = `${title.replace(/[^a-zA-Z0-9\s-]/g, "").replace(/\s+/g, "_")}_${new Date().toISOString().split("T")[0]}.docx`;
-
-      if (contentDisposition) {
-        const match = contentDisposition.match(/filename="?([^"]+)"?/);
-        if (match) {
-          filename = match[1];
-        }
-      }
-
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = filename;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
+      const filename = filenameFromContentDisposition(
+        contentDisposition,
+        policyDownloadFallbackName(title, "docx"),
+      );
+      triggerBrowserDownload(blob, filename);
     } catch (error) {
       console.error("Failed to export DOCX:", error);
     }
@@ -522,8 +503,8 @@ const PolicyTable: React.FC<PolicyTableProps> = ({
           title={`Assign reviewer to ${selectionCount} polic${selectionCount === 1 ? "y" : "ies"}`}
           body={
             <Stack gap={2}>
-              <Typography variant="body2" sx={{ color: "text.secondary", fontSize: 12 }}>
-                Replaces existing reviewer assignments.
+              <Typography variant="body2" sx={{ color: "text.secondary", fontSize: "13px" }}>
+                Replaces the team members of each selected policy with this user.
               </Typography>
               <VWSelect
                 id="bulk-policy-reviewer"

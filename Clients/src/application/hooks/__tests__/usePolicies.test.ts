@@ -5,12 +5,14 @@ import React from "react";
 
 vi.mock("../../repository/policy.repository", () => ({
   getAllPolicies: vi.fn(),
+  getPolicyFolderCounts: vi.fn(),
 }));
 
-import { usePolicies, policyQueryKeys } from "../usePolicies";
-import { getAllPolicies } from "../../repository/policy.repository";
+import { usePolicies, usePolicyFolderCounts, policyQueryKeys } from "../usePolicies";
+import { getAllPolicies, getPolicyFolderCounts } from "../../repository/policy.repository";
 
 const mockGetAllPolicies = vi.mocked(getAllPolicies);
+const mockGetPolicyFolderCounts = vi.mocked(getPolicyFolderCounts);
 
 function createWrapper() {
   const queryClient = new QueryClient({
@@ -54,5 +56,15 @@ describe("policyQueryKeys", () => {
     ]);
     expect(policyQueryKeys.details()).toEqual(["policies", "detail"]);
     expect(policyQueryKeys.detail(5)).toEqual(["policies", "detail", 5]);
+  });
+});
+
+describe("usePolicyFolderCounts", () => {
+  it("fetches the folder counts under the policies key", async () => {
+    mockGetPolicyFolderCounts.mockResolvedValue({ 3: 2 });
+    const { result } = renderHook(() => usePolicyFolderCounts(), { wrapper: createWrapper() });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(result.current.data).toEqual({ 3: 2 });
+    expect(policyQueryKeys.folderCounts()).toEqual(["policies", "folder-counts"]);
   });
 });

@@ -222,10 +222,9 @@ describe("DuplicateCandidates row actions", () => {
     expect(screen.getByText(/stays\./)).toBeInTheDocument();
 
     await userEvent.click(screen.getByRole("button", { name: "Delete risk" }));
-    expect(mockDeleteEntityById).toHaveBeenNthCalledWith(1, { routeUrl: "/projectRisks/12" });
-    expect(mockDeleteEntityById).toHaveBeenNthCalledWith(2, {
-      routeUrl: "/policy-linked/risk/12/unlink-all",
-    });
+    // The server unlinks the archived risk's policies; no second call.
+    expect(mockDeleteEntityById).toHaveBeenCalledTimes(1);
+    expect(mockDeleteEntityById).toHaveBeenCalledWith({ routeUrl: "/projectRisks/12" });
     expect(await screen.findByText('Deleted "Model drift undetected".')).toBeInTheDocument();
     expect(mockGetDuplicateCandidates).toHaveBeenCalledTimes(2);
     expect(await screen.findByText(/No likely duplicates/)).toBeInTheDocument();

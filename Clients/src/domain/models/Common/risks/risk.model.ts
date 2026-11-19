@@ -5,6 +5,7 @@ import { MitigationStatus } from "../../../enums/mitigitaion";
 import { RiskLevelAutoCalculated } from "../../../enums/riskLevelAutoCalculated.enum";
 import { RiskSeverity } from "../../../enums/riskSeverity.enum";
 import { Severity } from "../../../enums/severity.enum";
+import type { RiskApprovalStatus } from "../../../types/ProjectRisk";
 
 export class RiskModel {
   id?: number;
@@ -30,7 +31,7 @@ export class RiskModel {
   risk_severity!: RiskSeverity;
   final_risk_level!: string;
   risk_approval!: number;
-  approval_status!: string;
+  approval_status!: RiskApprovalStatus;
   date_of_assessment!: Date;
   is_demo?: boolean;
   evidence_stale_at?: string | null;

@@ -17,6 +17,8 @@ import {
 import { logEngine } from "../../../application/tools/log.engine";
 import StandardModal from "../../components/Modals/StandardModal";
 import CustomizableToast from "../../components/Toast";
+import DemoDataLoaderOverlay from "../../components/DemoDataLoader/DemoDataLoaderOverlay";
+import type { DemoDataLoaderStatus } from "../../components/DemoDataLoader";
 import Alert from "../../components/Alert";
 import { AlertState } from "../../../application/interfaces/appStates";
 import { useDashboard } from "../../../application/hooks/useDashboard";
@@ -42,9 +44,8 @@ const Dashboard: FC<DashboardProps> = ({ reloadTrigger }) => {
 
   // Demo data state
   const [showToastNotification, setShowToastNotification] = useState<boolean>(false);
-  const [toastMessage, setToastMessage] = useState<string>(
-    "Generating demo data. Please wait, this process may take some time...",
-  );
+  const [toastMessage, setToastMessage] = useState<string>("");
+  const [demoLoaderStatus, setDemoLoaderStatus] = useState<DemoDataLoaderStatus | null>(null);
   const [openDemoDataModal, setOpenDemoDataModal] = useState<boolean>(false);
   const [openDeleteDemoDataModal, setOpenDeleteDemoDataModal] = useState<boolean>(false);
   const [hasDemoData, setHasDemoData] = useState<boolean>(false);
@@ -93,91 +94,35 @@ const Dashboard: FC<DashboardProps> = ({ reloadTrigger }) => {
     fetchProjects();
   }, [setDashboardValues, reloadTrigger, location.pathname, refreshProjectsFlag]);
 
-  // Handle create demo data
+  // Handle create demo data. The overlay shows progress while the request
+  // runs, then reloads from its "Explore the demo" button.
   const handleCreateDemoData = async () => {
     setOpenDemoDataModal(false);
-    setToastMessage("Generating demo data. Please wait, this process may take some time...");
-    setShowToastNotification(true);
+    setDemoLoaderStatus("running");
 
-    const startTime = Date.now();
-    const minDisplayTime = 3500;
+    const showError = (body: string) => {
+      setDemoLoaderStatus(null);
+      logEngine({ type: "error", message: body });
+      setAlertState({ variant: "error", body });
+      setTimeout(() => {
+        setAlertState(undefined);
+      }, 3000);
+    };
 
     try {
       const response = await postAutoDrivers();
-
-      const elapsedTime = Date.now() - startTime;
-      const remainingTime = Math.max(0, minDisplayTime - elapsedTime);
-
-      if (remainingTime > 0) {
-        await new Promise((resolve) => setTimeout(resolve, remainingTime));
-      }
-
       if (response.status === 200 || response.status === 201) {
         logEngine({
           type: "info",
           message: "Demo data generated successfully.",
         });
-
-        // Refresh dashboard and projects data
-        await Promise.all([
-          fetchDashboard(),
-          getAllProjects({ forceFresh: true }).then((projectsResponse) => {
-            if (projectsResponse?.data) {
-              setProjects(projectsResponse.data);
-              setDashboardValues((prevValues: any) => ({
-                ...prevValues,
-                projects: projectsResponse.data,
-                selectedProjectId: projectsResponse.data[0]?.id || "",
-              }));
-            }
-          }),
-        ]);
-
-        // Force refresh projects flag to trigger updates in child components
-        setRefreshProjectsFlag((prev) => !prev);
-
-        // Update hasDemoData state immediately
         setHasDemoData(true);
-
-        setShowToastNotification(false);
-
-        // Reload the page to refresh all dashboard metrics
-        window.location.reload();
+        setDemoLoaderStatus("done");
       } else {
-        setShowToastNotification(false);
-        logEngine({
-          type: "error",
-          message: "Failed to generate demo data.",
-        });
-        setAlertState({
-          variant: "error",
-          body: "Failed to generate demo data.",
-        });
-        setTimeout(() => {
-          setAlertState(undefined);
-        }, 3000);
+        showError("Failed to generate demo data.");
       }
     } catch (error) {
-      const elapsedTime = Date.now() - startTime;
-      const remainingTime = Math.max(0, minDisplayTime - elapsedTime);
-
-      if (remainingTime > 0) {
-        await new Promise((resolve) => setTimeout(resolve, remainingTime));
-      }
-
-      setShowToastNotification(false);
-      const errorMessage = (error as Error).message;
-      logEngine({
-        type: "error",
-        message: `An error occurred: ${errorMessage}`,
-      });
-      setAlertState({
-        variant: "error",
-        body: `An error occurred: ${errorMessage}`,
-      });
-      setTimeout(() => {
-        setAlertState(undefined);
-      }, 3000);
+      showError(`An error occurred: ${(error as Error).message}`);
     }
   };
 
@@ -348,6 +293,13 @@ const Dashboard: FC<DashboardProps> = ({ reloadTrigger }) => {
 
                 <ChangeNotice />
 
+                {demoLoaderStatus && (
+                  <DemoDataLoaderOverlay
+                    status={demoLoaderStatus}
+                    onExplore={() => window.location.reload()}
+                  />
+                )}
+
                 {/* Demo Data Modals */}
                 <StandardModal
                   isOpen={openDemoDataModal}
@@ -356,7 +308,7 @@ const Dashboard: FC<DashboardProps> = ({ reloadTrigger }) => {
                   description="Generate sample data to explore VerifyWise features"
                   submitButtonText="Create demo data"
                   onSubmit={handleCreateDemoData}
-                  isSubmitting={showToastNotification}
+                  isSubmitting={demoLoaderStatus === "running"}
                   maxWidth="480px"
                 >
                   <Typography variant="body2" sx={{ color: "text.secondary" }}>

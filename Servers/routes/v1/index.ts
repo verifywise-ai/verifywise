@@ -33,7 +33,9 @@ import dashboardPreferencesRoutes from "./dashboardPreferences.route";
 import trainingRoutes from "./training.route";
 import groupsRoutes from "./groups.route";
 import policyTemplatesRoutes from "./policyTemplates.route";
+import policiesRoutes from "./policies.route";
 import frameworkImportRoutes from "./frameworkImport.route";
+import riskImportRoutes from "./risk-import.route";
 import importedFrameworkAssessmentRoutes from "./importedFrameworkAssessment.route";
 import intakeSubmissionsRoutes from "./intakeSubmissions.route";
 import aiDetectionRoutes from "./aiDetection.route";
@@ -90,9 +92,15 @@ router.use("/groups", groupsRoutes);
 // Organisation-owned policy templates (#5261).
 router.use("/policy-templates", policyTemplatesRoutes);
 
+// Policy approval through the generic approval workflows (PR G). Replaces the
+// deprecated legacy /api/policies/:id/review/* endpoints.
+router.use("/policies", policiesRoutes);
+
 // Framework import extension (#5254): spreadsheet imports of org-owned
 // frameworks. Gated per org with requireExtensionEnabled inside the router.
 router.use("/framework-import", frameworkImportRoutes);
+// Risk import extension: strict import rules (the legacy path keeps its old ones).
+router.use("/risk-import", riskImportRoutes);
 // Imported frameworks attached to use cases and assessed there (#5254).
 router.use("/imported-framework-assessments", importedFrameworkAssessmentRoutes);
 // Intake submission preview and approval with custom field values (#5262).

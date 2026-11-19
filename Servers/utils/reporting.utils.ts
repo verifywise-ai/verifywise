@@ -26,7 +26,7 @@ export const getProjectRisksReportQuery = async (projectId: number, organization
     FROM risks risk
     JOIN projects_risks pr ON risk.id = pr.risk_id AND pr.organization_id = :organizationId
     LEFT JOIN users u ON risk.risk_owner = u.id
-    WHERE risk.organization_id = :organizationId AND pr.project_id = :project_id
+    WHERE risk.organization_id = :organizationId AND risk.is_deleted = false AND pr.project_id = :project_id
     ORDER BY risk.created_at DESC, risk.id ASC
   `;
   const projectRisks = await sequelize.query(query, {

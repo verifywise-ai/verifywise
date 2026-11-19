@@ -20,7 +20,6 @@ import { ChevronsUpDown, ChevronUp, ChevronDown, FileCheck } from "lucide-react"
 
 import StandardModal from "../Modals/StandardModal";
 
-import { handleAlert } from "../../../application/tools/alertUtils";
 import { singleTheme } from "../../themes";
 import {
   paginationMenuProps,
@@ -35,6 +34,7 @@ import { paginationStyle } from "../Table/styles";
 import { FileIcon } from "../FileIcon";
 import { getUserFilesMetaData } from "../../../application/repository/file.repository";
 import CustomizableToast from "../../components/Toast";
+import Alert from "../Alert";
 import { FileExpiryChip } from "../FileExpiryChip";
 import useFormattedDate from "../../../application/hooks/useFormattedDate";
 
@@ -167,21 +167,18 @@ const LinkEvidenceSelectorModal: React.FC<LinkEvidenceSelectorModalProps> = ({
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
 
-  const [, setAlert] = useState<any>(null);
-
-  const toast = (variant: any, msg: string) => {
-    handleAlert({ variant, body: msg, setAlert });
-    setTimeout(() => setAlert(null), 2500);
-  };
+  const [loadError, setLoadError] = useState(false);
 
   // Fetch Evidence
   const fetchEvidence = useCallback(async () => {
     try {
+      setLoadError(false);
       const response = await getUserFilesMetaData();
       setEvidences(response ?? []);
     } catch (err) {
       console.error(err);
-      toast("Failed to load evidence.", "Failed to load evidence.");
+      setEvidences([]);
+      setLoadError(true);
     }
   }, []);
 
@@ -238,10 +235,9 @@ const LinkEvidenceSelectorModal: React.FC<LinkEvidenceSelectorModalProps> = ({
     try {
       setLoading(true);
       await onSubmit(selected);
-      toast("success", "Evidence linked successfully!");
       onClose();
     } catch {
-      toast("error", "Failed to link evidence.");
+      // The caller already reported the failure; stay open so the selection is kept.
     } finally {
       setLoading(false);
     }
@@ -347,11 +343,20 @@ const LinkEvidenceSelectorModal: React.FC<LinkEvidenceSelectorModalProps> = ({
     <StandardModal
       isOpen={isOpen}
       onClose={onClose}
-      title="Link Evidence"
+      title="Link evidence"
       description="Select evidence items to link with this policy."
       onSubmit={selected.length > 0 ? handleSubmit : undefined}
       showCancelButton={false}
     >
+      {loadError && (
+        <Box sx={{ mb: "16px" }}>
+          <Alert
+            variant="error"
+            body={"Couldn't load evidence. Close this window and try again."}
+            inline
+          />
+        </Box>
+      )}
       <TableContainer sx={{ maxHeight: 450, overflow: "auto" }}>
         <Table sx={singleTheme.tableStyles.primary.frame}>
           <SortableTableHead

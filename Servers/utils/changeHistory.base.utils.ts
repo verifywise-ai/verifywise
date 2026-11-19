@@ -172,44 +172,52 @@ export const recordMultipleFieldChanges = async (
 };
 
 /**
- * Record the same field change on many entities of one type in a single
- * INSERT, for unattended jobs that touch many rows at once. Rows carry a null
- * actor and changed_by_system = true, so the history panel shows "System"
- * rather than mistaking them for a deleted user's change. The entity's table
- * must have the changed_by_system column (migration
- * 20261005130617-change-history-changed-by-system; not the ai_gateway_* tables).
+ * Record the same change on many entities of one type in a single INSERT.
+ * `changedBySystem` stores the rows with a null actor and
+ * changed_by_system = true (see recordEntityChange); the entity's table must
+ * then have that column (migration 20261005130617-change-history-changed-by-system;
+ * not the ai_gateway_* tables).
  *
  * Audit ledger entries are appended one at a time after the transaction
  * commits: one per row would otherwise open that many concurrent ledger
  * transactions, all queued on the same per-org advisory lock and each holding
  * a pool connection.
  */
-export const recordEntityFieldChangeBulk = async (
+export const recordEntityChangeBulk = async (
   entityType: EntityType,
   entityIds: number[],
+  action: "created" | "updated" | "deleted",
+  changedByUserId: number | null,
   organizationId: number,
   fieldName: string,
   oldValue: string,
   newValue: string,
   transaction: Transaction,
+  changedBySystem = false,
 ): Promise<void> => {
   if (entityIds.length === 0) return;
   const config = getEntityConfig(entityType);
   const tableName = escapePgName(config.tableName);
   const foreignKey = escapePgName(config.foreignKeyField);
+  const actorId = changedBySystem ? null : changedByUserId;
+  // Only name the column when it is set, so tables without it still work.
+  const systemColumn = changedBySystem ? ", changed_by_system" : "";
+  const actorValue = changedBySystem ? "NULL, true" : ":changed_by_user_id";
 
   await sequelize.query(
     `INSERT INTO ${tableName}
-     (organization_id, ${foreignKey}, action, field_name, old_value, new_value, changed_by_user_id, changed_by_system, changed_at)
-     SELECT :organization_id, entity_id, 'updated', :field_name, :old_value, :new_value, NULL, true, NOW()
+     (organization_id, ${foreignKey}, action, field_name, old_value, new_value, changed_by_user_id${systemColumn}, changed_at)
+     SELECT :organization_id, entity_id, :action, :field_name, :old_value, :new_value, ${actorValue}, NOW()
        FROM unnest(ARRAY[:entity_ids]::int[]) AS entity_id`,
     {
       replacements: {
         organization_id: organizationId,
         entity_ids: entityIds,
+        action,
         field_name: fieldName,
         old_value: oldValue,
         new_value: newValue,
+        changed_by_user_id: actorId,
       },
       transaction,
     },
@@ -221,10 +229,10 @@ export const recordEntityFieldChangeBulk = async (
         await appendToAuditLedger({
           organizationId,
           entryType: "change_history",
-          userId: null,
+          userId: actorId,
           entityType,
           entityId,
-          action: "updated",
+          action,
           fieldName,
           oldValue,
           newValue,
@@ -233,6 +241,34 @@ export const recordEntityFieldChangeBulk = async (
     })();
   });
 };
+
+/**
+ * Record the same field change on many entities of one type in a single
+ * INSERT, for unattended jobs that touch many rows at once. Rows carry a null
+ * actor and changed_by_system = true, so the history panel shows "System"
+ * rather than mistaking them for a deleted user's change.
+ */
+export const recordEntityFieldChangeBulk = async (
+  entityType: EntityType,
+  entityIds: number[],
+  organizationId: number,
+  fieldName: string,
+  oldValue: string,
+  newValue: string,
+  transaction: Transaction,
+): Promise<void> =>
+  recordEntityChangeBulk(
+    entityType,
+    entityIds,
+    "updated",
+    null,
+    organizationId,
+    fieldName,
+    oldValue,
+    newValue,
+    transaction,
+    true,
+  );
 
 /**
  * Get change history for a specific entity with pagination support
@@ -279,7 +315,7 @@ export const getEntityChangeHistory = async (
        FROM ${tableName} ch
        LEFT JOIN users u ON ch.changed_by_user_id = u.id
        WHERE ch.organization_id = :organization_id AND ch.${foreignKey} = :entity_id
-       ORDER BY ch.changed_at DESC
+       ORDER BY ch.changed_at DESC, ch.id DESC
        LIMIT :limit OFFSET :offset`,
       {
         replacements: { organization_id: organizationId, entity_id: entityId, limit, offset },
@@ -382,12 +418,17 @@ export const trackEntityChanges = async (
     // Skip if field is not being updated
     if (newValue === undefined) continue;
 
+    // A field with a comparison key is compared on it before anything is
+    // formatted, so an unchanged value runs no formatter lookups.
+    const compare = config.fieldComparators?.[field];
+    if (compare && compare(oldValue) === compare(newValue)) continue;
+
     // Format values for comparison
     const oldValueStr = await formatFieldValue(entityType, field, oldValue, context);
     const newValueStr = await formatFieldValue(entityType, field, newValue, context);
 
-    // Record change if values differ
-    if (oldValueStr !== newValueStr) {
+    // Record change if values differ (by the field's comparison key when it has one)
+    if (compare || oldValueStr !== newValueStr) {
       changes.push({
         fieldName: getFieldLabel(entityType, field),
         oldValue: oldValueStr,
@@ -533,28 +574,142 @@ export const recordEntityCreation = async (
   transaction?: Transaction,
   changedBySystem = false,
 ): Promise<void> => {
-  const config = getEntityConfig(entityType);
-
-  // Record initial field values as changes
-  for (const field of config.fieldsToTrack) {
-    const value = entityData[field];
-    if (value !== undefined && value !== null && value !== "") {
-      await recordEntityChange(
-        entityType,
-        entityId,
-        "created",
-        changedByUserId,
-        organizationId,
-        getFieldLabel(entityType, field),
-        "-",
-        // Tenant-scoped name lookups, on the creating transaction.
-        await formatFieldValue(entityType, field, value, { organizationId, transaction }),
-        transaction,
-        changedBySystem,
-      );
-    }
+  // Tenant-scoped name lookups, on the creating transaction.
+  const changes = await creationChanges(entityType, entityData, { organizationId, transaction });
+  for (const change of changes) {
+    await recordEntityChange(
+      entityType,
+      entityId,
+      "created",
+      changedByUserId,
+      organizationId,
+      change.fieldName,
+      "-",
+      change.newValue,
+      transaction,
+      changedBySystem,
+    );
   }
 };
+
+/**
+ * The 'created' entries recordEntityCreation writes for one entity: each
+ * non-empty tracked field, labelled and formatted. `lookupCache` shares the
+ * results of formatters that look rows up (user names and the like) across
+ * calls, so a bulk caller resolves each distinct value once.
+ */
+const creationChanges = async (
+  entityType: EntityType,
+  entityData: Record<string, unknown>,
+  context: FormatterContext,
+  lookupCache?: Map<string, string>,
+): Promise<Array<{ fieldName: string; newValue: string }>> => {
+  const config = getEntityConfig(entityType);
+  const changes: Array<{ fieldName: string; newValue: string }> = [];
+  for (const field of config.fieldsToTrack) {
+    const value = entityData[field];
+    if (value === undefined || value === null || value === "") continue;
+    const cacheKey =
+      lookupCache && config.fieldFormatters?.[field]
+        ? `${field}\u0000${JSON.stringify(value)}`
+        : undefined;
+    let newValue = cacheKey !== undefined ? lookupCache!.get(cacheKey) : undefined;
+    if (newValue === undefined) {
+      newValue = await formatFieldValue(entityType, field, value, context);
+      if (cacheKey !== undefined) lookupCache!.set(cacheKey, newValue);
+    }
+    changes.push({ fieldName: getFieldLabel(entityType, field), newValue });
+  }
+  return changes;
+};
+
+/** History rows per INSERT in recordEntityCreationBulk. */
+const CREATION_BULK_CHUNK = 1000;
+
+/**
+ * recordEntityCreation for many entities created by one user in one
+ * transaction (a spreadsheet import): the same rows, written with a few
+ * multi-row INSERTs instead of one statement per field. Each distinct
+ * looked-up value (an owner, an approver) is resolved once. Audit ledger
+ * entries are appended one at a time after the transaction commits, as in
+ * recordEntityFieldChangeBulk, so a rolled-back import leaves none and the
+ * ledger's per-org lock is not flooded.
+ *
+ * Errors propagate: the caller decides whether a failed history write fails
+ * its own work.
+ */
+export const recordEntityCreationBulk = async (
+  entityType: EntityType,
+  entities: Array<{ id: number; data: Record<string, unknown> }>,
+  changedByUserId: number,
+  organizationId: number,
+  transaction: Transaction,
+): Promise<void> => {
+  const config = getEntityConfig(entityType);
+  const tableName = escapePgName(config.tableName);
+  const foreignKey = escapePgName(config.foreignKeyField);
+  const context: FormatterContext = { organizationId, transaction };
+  const lookupCache = new Map<string, string>();
+
+  const rows: Array<{ entityId: number; fieldName: string; newValue: string | null }> = [];
+  for (const entity of entities) {
+    for (const change of await creationChanges(entityType, entity.data, context, lookupCache)) {
+      // recordEntityChange stores an empty value as NULL.
+      rows.push({
+        entityId: entity.id,
+        fieldName: change.fieldName,
+        newValue: change.newValue || null,
+      });
+    }
+  }
+  if (rows.length === 0) return;
+
+  for (let start = 0; start < rows.length; start += CREATION_BULK_CHUNK) {
+    const chunk = rows.slice(start, start + CREATION_BULK_CHUNK);
+    await sequelize.query(
+      `INSERT INTO ${tableName}
+       (organization_id, ${foreignKey}, action, field_name, old_value, new_value, changed_by_user_id, changed_at)
+       SELECT :organization_id, t.entity_id, 'created', t.field_name, '-', t.new_value, :changed_by_user_id, NOW()
+         FROM unnest(ARRAY[:entity_ids]::int[], ARRAY[:field_names]::text[], ARRAY[:new_values]::text[])
+           AS t(entity_id, field_name, new_value)`,
+      {
+        replacements: {
+          organization_id: organizationId,
+          changed_by_user_id: changedByUserId,
+          entity_ids: chunk.map((r) => r.entityId),
+          field_names: chunk.map((r) => r.fieldName),
+          new_values: chunk.map((r) => r.newValue),
+        },
+        transaction,
+      },
+    );
+  }
+
+  transaction.afterCommit(() => {
+    void (async () => {
+      for (const row of rows) {
+        await appendToAuditLedger({
+          organizationId,
+          entryType: "change_history",
+          userId: changedByUserId,
+          entityType,
+          entityId: row.entityId,
+          action: "created",
+          fieldName: row.fieldName,
+          oldValue: "-",
+          newValue: row.newValue,
+        }).catch((err) => logger.error(`[audit_ledger] write failed: ${err}`));
+      }
+    })();
+  });
+};
+
+/** The field name a deletion is recorded under, e.g. "Model Risk". */
+const deletionFieldName = (entityType: EntityType): string =>
+  entityType
+    .split("_")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
 
 /**
  * Record entity deletion
@@ -563,35 +718,54 @@ export const recordEntityCreation = async (
  *
  * @param entityType - The type of entity being deleted
  * @param entityId - The ID of the entity being deleted
- * @param changedByUserId - ID of the user deleting the entity
+ * @param changedByUserId - ID of the user deleting the entity; null with changedBySystem
  * @param organizationId - Organization ID for tenant isolation
  * @param transaction - Optional database transaction
+ * @param changedBySystem - Record the deletion as the system's (see recordEntityChange)
  */
 export const recordEntityDeletion = async (
   entityType: EntityType,
   entityId: number,
-  changedByUserId: number,
+  changedByUserId: number | null,
   organizationId: number,
   transaction?: Transaction,
+  changedBySystem = false,
 ): Promise<void> => {
-  // Get the entity name from the config or use a default
-  const entityName = entityType
-    .split("_")
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(" ");
-
   await recordEntityChange(
     entityType,
     entityId,
     "deleted",
     changedByUserId,
     organizationId,
-    entityName,
+    deletionFieldName(entityType),
     "Active",
     "Deleted",
     transaction,
+    changedBySystem,
   );
 };
+
+/** recordEntityDeletion for many entities of one type, in one INSERT. */
+export const recordEntityDeletionBulk = async (
+  entityType: EntityType,
+  entityIds: number[],
+  changedByUserId: number | null,
+  organizationId: number,
+  transaction: Transaction,
+  changedBySystem = false,
+): Promise<void> =>
+  recordEntityChangeBulk(
+    entityType,
+    entityIds,
+    "deleted",
+    changedByUserId,
+    organizationId,
+    deletionFieldName(entityType),
+    "Active",
+    "Deleted",
+    transaction,
+    changedBySystem,
+  );
 
 /**
  * Record evidence being added to an entity

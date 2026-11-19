@@ -41,6 +41,10 @@ export const linkedModelsContent: ArticleContent = {
       text: 'Models are linked to projects through the model inventory. When you create or edit a model in the inventory, you can assign it to one or more projects. The linked models tab is a read-only view of those associations.',
     },
     {
+      type: 'paragraph',
+      text: 'To link a model to a use case, or remove that link, you need access to the use case: you own it, are a member of it, or are an Admin. The tab lists only models linked to the use case directly. A model linked to a framework is not linked to any use case through it, so it does not appear here.',
+    },
+    {
       type: 'callout',
       variant: 'tip',
       title: 'Where to link',

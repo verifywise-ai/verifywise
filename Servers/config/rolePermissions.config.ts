@@ -105,7 +105,7 @@ export const ROLE_PERMISSIONS = {
   },
   "extension.admin": {
     module: "Extensions",
-    description: "Install, configure and remove extensions",
+    description: "Enable, configure and disable extensions",
     legacyRoles: ADMIN,
   },
   "file.admin": {
@@ -355,25 +355,33 @@ export const ROLE_PERMISSIONS = {
   // `legacyRoles` is the client allowlist each one replaced, so built-in roles
   // see exactly what they saw before. postMarketMonitoring.edit (config and
   // question writes) and apiKeys.admin (token create/revoke/delete, plus any
-  // super admin) are enforced by the server. The ones marked "screen only"
-  // are not: their routes are shared with flows other roles use (framework
-  // saves, members via the project form) or sit behind a catch-all proxy
-  // (evals), so they only decide what the app offers.
+  // super admin) are enforced by the server, and so are:
+  // - framework.edit and framework.audit: the framework save routes check
+  //   which fields a save changes (middleware/frameworkWriteAccess), so an
+  //   Auditor still records audit results through the drawer it shares with
+  //   Editors; adding and removing frameworks needs framework.edit. One
+  //   exception: an EU AI Act answer's status, which the assessment tracker
+  //   lets every role change.
+  // - evals.edit, partly: the EvalServer writes listed in EVALS_EDIT_WRITES
+  //   (routes/deepEvalRoutes.route.ts). The app lets every role create and
+  //   change projects and experiments and upload datasets, so those stay open.
+  // useCase.members is screen only: the use case form lets anyone with
+  // useCase.edit (Editors included) choose team members, so the server
+  // cannot refuse it without taking that away.
   "useCase.members": {
     module: "Use cases",
-    description: "Choose a use case's team members (screen only, not checked by the server)",
+    description:
+      "Choose team members in a use case's settings (screen only, not checked by the server)",
     legacyRoles: ADMIN,
   },
   "framework.edit": {
     module: "Frameworks",
-    description:
-      "Edit framework controls and answers, and add or remove frameworks (screen only, not checked by the server)",
+    description: "Edit framework controls and answers, and add or remove frameworks",
     legacyRoles: EDITOR,
   },
   "framework.audit": {
     module: "Frameworks",
-    description:
-      "Record audit results on framework controls (screen only, not checked by the server)",
+    description: "Record audit results on framework controls",
     legacyRoles: AUDIT,
   },
   "postMarketMonitoring.edit": {
@@ -384,7 +392,7 @@ export const ROLE_PERMISSIONS = {
   "evals.edit": {
     module: "LLM evals",
     description:
-      "Create and change eval projects, experiments, scorers and datasets (screen only, not checked by the server)",
+      "Create and change eval projects, experiments, scorers and datasets (the server checks deleting projects, experiments and datasets, and scorer and saved model changes)",
     legacyRoles: EDITOR,
   },
   "apiKeys.admin": {

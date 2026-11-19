@@ -248,6 +248,61 @@ export const riskAssessmentContent: ArticleContent = {
     },
     {
       type: 'heading',
+      id: 'who-can-see-a-risk',
+      level: 2,
+      text: 'Who can see a risk',
+    },
+    {
+      type: 'paragraph',
+      text: 'Admins see every risk in the organization. Other users see a risk when any of these applies:',
+    },
+    {
+      type: 'bullet-list',
+      items: [
+        { text: 'The risk is not archived and not linked to a use case. A risk linked only to frameworks counts as not linked.' },
+        { text: 'The risk is linked to a use case you own, are a team member of or reach through a group.' },
+        { text: 'You are the risk\'s action owner or its approver.' },
+      ],
+    },
+    {
+      type: 'paragraph',
+      text: 'When the last use case link of an active risk is removed, everyone in the organization can see the risk. This also happens when that use case is deleted. An archived risk with no use case link stays private: only Admins, its action owner and its approver can see it. Before you delete a use case, the delete dialog tells you how many of its risks are linked to no other use case and lets you archive them or keep them visible to everyone. Archiving is selected by default, and the risks are archived and the use case deleted together, so if something goes wrong nothing changes. Deleting a use case through the AI advisor or the Jira Assets integration archives these risks too, and the AI advisor deletes a use case only for a user whose role can archive risks. To keep such a risk active and private instead, cancel and link it to another use case first. If an archived risk with no use case link is ever restored, everyone in the organization can see it again.',
+    },
+    {
+      type: 'paragraph',
+      text: 'A risk you cannot see is left out of the risk register, search results, change history, linked risks, policy links, the vendor exposure report and the AI advisor\'s answers. Opening it directly behaves as if the risk does not exist.',
+    },
+    {
+      type: 'paragraph',
+      text: 'Being assigned a task on a use case, or approving its workflow, lets you open the use case. It does not show you its risks. On such a use case you see only the risks you own or approve.',
+    },
+    {
+      type: 'paragraph',
+      text: 'A risk you can see names only the use cases you can access, in the risk register, on the risk itself and in the link pickers. To link a risk to a use case, you need access to that use case. The **Applicable use cases** field lists only the use cases you can access. When you edit a risk that is also linked to a use case you cannot access, that link is hidden from you. Saving the risk keeps it.',
+    },
+    {
+      type: 'callout',
+      variant: 'info',
+      title: 'Totals count every risk',
+      text: 'Dashboard counts, risk history over time and the organization\'s quantitative risk totals include every risk in the organization. So do the AI advisor\'s risk analytics, which give counts only. A few places don\'t apply this rule yet and can show risks you otherwise can\'t see: organization reports, deadlines, the evidence hub, FRIA and approval requests.',
+    },
+    {
+      type: 'heading',
+      id: 'archiving-and-bulk-edits',
+      level: 2,
+      text: 'Archiving, bulk edits and export',
+    },
+    {
+      type: 'bullet-list',
+      items: [
+        { bold: 'Archiving', text: 'Archiving a risk, one at a time, in bulk or through the AI advisor, removes it from the risk register, from reports and from every policy it was linked to. Its change history keeps a deletion entry. Archived risks no longer count towards use case totals, framework control panels or post-market monitoring cycle snapshots' },
+        { bold: 'Bulk owner and category', text: 'Setting the owner or category on several risks records change history on each changed risk. A new owner gets one notification listing the risks assigned to them, and automations run once for the whole bulk action, with a summary of the changes. Risks that already have the value are skipped' },
+        { bold: 'Removing a use case or framework', text: 'When you remove a use case or framework from a risk, the risk\'s links to controls in every framework of that use case are removed too' },
+        { bold: 'Export', text: 'Export includes the risks that match your current filters and search. If nothing matches, there is nothing to export and the export button is disabled' },
+      ],
+    },
+    {
+      type: 'heading',
       id: 'risk-tracking',
       level: 2,
       text: 'Risk tracking',

@@ -23,11 +23,26 @@ import logger, { logStructured } from "../utils/logger/fileLogger";
 import { logRollbackFailure } from "../utils/logger/logHelper";
 import { ValidationError } from "../utils/validations/validation.utils";
 import { translateError } from "../utils/i18n.utils";
+import { ValidationException } from "../domain.layer/exceptions/custom.exception";
 import {
   validateCompleteDatasetCreation,
   validateCompleteDatasetUpdate,
   validateDatasetIdParam,
 } from "../utils/validations/datasetValidation.utils";
+
+/**
+ * 400 body for a ValidationException from the dataset utils (a linked model
+ * or use case outside the organization), in the shape of the request
+ * validation errors above.
+ */
+const referenceErrorResponse = (req: Request, error: ValidationException) => {
+  const message = translateError(req, error);
+  return STATUS_CODE[400]({
+    status: "error",
+    message,
+    errors: [{ field: error.metadata?.field ?? "body", message, code: error.code }],
+  });
+};
 
 export async function getAllDatasets(req: Request, res: Response) {
   logStructured("processing", "starting getAllDatasets", "getAllDatasets", "dataset.ctrl.ts");
@@ -298,6 +313,16 @@ export async function createNewDataset(req: Request, res: Response) {
       }
     }
 
+    if (error instanceof ValidationException) {
+      logStructured(
+        "error",
+        `createNewDataset rejected: ${error.message}`,
+        "createNewDataset",
+        "dataset.ctrl.ts",
+      );
+      return res.status(400).json(referenceErrorResponse(req, error));
+    }
+
     logStructured("error", "failed to create new dataset", "createNewDataset", "dataset.ctrl.ts");
     logger.error("Error in createNewDataset:", error);
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
@@ -480,6 +505,16 @@ export async function updateDatasetById(req: Request, res: Response) {
           rollbackError,
         });
       }
+    }
+
+    if (error instanceof ValidationException) {
+      logStructured(
+        "error",
+        `updateDatasetById rejected: ${error.message}`,
+        "updateDatasetById",
+        "dataset.ctrl.ts",
+      );
+      return res.status(400).json(referenceErrorResponse(req, error));
     }
 
     logStructured("error", "failed to update dataset", "updateDatasetById", "dataset.ctrl.ts");

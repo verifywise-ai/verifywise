@@ -407,8 +407,8 @@ export const collections: Collection[] = [
       {
         id: 'adding-frameworks',
         title: 'Adding frameworks',
-        description: 'Add any of the 25 built-in frameworks to your organization or a use case, and work through their requirements.',
-        keywords: ['framework', 'add framework', 'remove framework', 'manage frameworks', 'organizational', 'use case', 'soc 2', 'gdpr', 'ccpa', 'dora', 'hipaa', 'pci-dss', 'cis controls', 'nist csf', 'cybersecurity', 'nyc local law 144', 'altai', 'oecd', 'ftc', 'colorado', 'texas', 'quebec', 'pdpl', 'data governance', 'ai ethics', 'custom framework', 'requirement'],
+        description: 'Add any of the 28 built-in frameworks to your organization or a use case, and work through their requirements.',
+        keywords: ['framework', 'add framework', 'remove framework', 'manage frameworks', 'organizational', 'use case', 'soc 2', 'gdpr', 'ccpa', 'dora', 'hipaa', 'pci-dss', 'cis controls', 'nist csf', 'cybersecurity', 'nyc local law 144', 'altai', 'oecd', 'ftc', 'colorado', 'texas', 'quebec', 'osfi', 'e-23', 'model risk', 'pdpl', 'data governance', 'ai ethics', 'custom framework', 'requirement'],
       },
       {
         id: 'framework-import',
@@ -481,9 +481,9 @@ export const collections: Collection[] = [
       },
       {
         id: 'policy-approval',
-        title: 'Policy templates',
-        description: 'Use pre-built templates to create common governance policies.',
-        keywords: ['template', 'pre-built', 'ethics', 'compliance', 'starter'],
+        title: 'Policy approval',
+        description: 'Submit policies for approval through an approval workflow, or approve them as an Admin when there is none.',
+        keywords: ['approval', 'approve', 'submit', 'workflow', 'reject', 'withdraw', 'under review', 'approved', 'publish', 'status'],
       },
       {
         id: 'policy-templates',
@@ -563,8 +563,8 @@ export const collections: Collection[] = [
       {
         id: 'extensions',
         title: 'Extensions',
-        description: 'Enable, configure and disable the built-in extensions: Slack, MLflow, Azure AI Foundry, Model Lifecycle, Risk Import, Jira Assets, Jira incidents and Dataset Bulk Upload.',
-        keywords: ['extension', 'extensions', 'enable', 'disable', 'configure', 'integration', 'slack', 'mlflow', 'azure ai foundry', 'model lifecycle', 'risk import', 'excel', 'jira', 'jira assets', 'jira incidents', 'incident sync', 'dataset bulk upload', 'bulk upload', 'plugin', 'marketplace'],
+        description: 'Enable, configure and disable the built-in extensions: Slack, MLflow, Azure AI Foundry, Model lifecycle, Risk import, Jira Assets, Jira incidents, Dataset bulk upload and Framework import.',
+        keywords: ['extension', 'extensions', 'enable', 'disable', 'configure', 'integration', 'slack', 'mlflow', 'azure ai foundry', 'model lifecycle', 'risk import', 'excel', 'jira', 'jira assets', 'jira incidents', 'incident sync', 'dataset bulk upload', 'bulk upload', 'framework import', 'plugin', 'marketplace'],
       },
     ],
   },

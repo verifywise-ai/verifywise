@@ -1,12 +1,22 @@
 import { screen, waitFor, fireEvent, within } from "@testing-library/react";
 import { renderWithProviders } from "../../../../../test/renderWithProviders";
 
-const mockDeleteProject = vi.fn();
 const mockAssignFrameworkToProject = vi.fn();
 const mockDeleteEntityById = vi.fn();
 
-vi.mock("../../../../../application/repository/project.repository", () => ({
-  deleteProject: (...args: any[]) => mockDeleteProject(...args),
+// The dialog itself (count, archive choice, request, errors) has its own
+// tests; here it reports a finished delete or a cancel.
+vi.mock("../../../../components/Modals/DeleteUseCase", () => ({
+  default: ({ projectId, title, message, proceedText, onDeleted, onCancel }: any) => (
+    <div data-testid="delete-use-case-modal" data-project-id={projectId}>
+      <span>{title}</span>
+      <p>{message}</p>
+      <button onClick={onCancel}>cancel</button>
+      <button onClick={() => onDeleted({ deleted: true, archived_risk_ids: [] })}>
+        {proceedText}
+      </button>
+    </div>
+  ),
 }));
 
 vi.mock("../../../../../application/repository/entity.repository", () => ({
@@ -145,33 +155,28 @@ describe("FrameworkSettings", () => {
     expect(screen.getByTestId("project-form")).toBeInTheDocument();
   });
 
-  it("opens the delete confirmation modal and deletes the project on success", async () => {
-    mockDeleteProject.mockResolvedValue({ status: 200 });
+  it("deletes the project through the use case delete dialog", async () => {
     renderWithProviders(<FrameworkSettings {...defaultProps} />);
     fireEvent.click(screen.getByText("Delete framework"));
+    const dialog = screen.getByTestId("delete-use-case-modal");
+    expect(dialog).toHaveAttribute("data-project-id", "1");
     expect(screen.getByText("Confirm delete")).toBeInTheDocument();
+    expect(dialog).toHaveTextContent("Its risks stay in the risk register");
+    expect(dialog).not.toHaveTextContent("remove all associated data");
     fireEvent.click(screen.getByText("Delete"));
     await waitFor(() => {
       expect(defaultProps.setProjects).toHaveBeenCalled();
     });
     expect(screen.getByText("Framework deleted successfully")).toBeInTheDocument();
+    expect(screen.queryByTestId("delete-use-case-modal")).not.toBeInTheDocument();
   });
 
-  it("shows an error alert when deleting the project fails", async () => {
-    mockDeleteProject.mockResolvedValue({ status: 500 });
-    renderWithProviders(<FrameworkSettings {...defaultProps} />);
-    fireEvent.click(screen.getByText("Delete framework"));
-    fireEvent.click(screen.getByText("Delete"));
-    await waitFor(() => {
-      expect(screen.getByText("Failed to delete framework")).toBeInTheDocument();
-    });
-  });
-
-  it("cancels the delete confirmation modal", () => {
+  it("cancels the delete dialog", () => {
     renderWithProviders(<FrameworkSettings {...defaultProps} />);
     fireEvent.click(screen.getByText("Delete framework"));
     fireEvent.click(screen.getByText("cancel"));
-    expect(screen.queryByTestId("confirmation-modal")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("delete-use-case-modal")).not.toBeInTheDocument();
+    expect(defaultProps.setProjects).not.toHaveBeenCalled();
   });
 
   it("adds a framework that has not been added yet", async () => {

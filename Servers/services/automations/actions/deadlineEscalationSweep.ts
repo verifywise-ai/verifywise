@@ -67,14 +67,32 @@ const recipientsFor = (row: DeadlineEscalationRow, adminIds: number[]): number[]
   return ids;
 };
 
-/** 7-day leg: in-app + email. Returns 1 when a notice was sent. */
+/**
+ * One recipient's outcome: `fresh` when they had no notice for this threshold
+ * yet (so one was written now), `sent` the deliveries to count.
+ */
+interface LegResult {
+  fresh: boolean;
+  sent: number;
+}
+
+const ALREADY_NOTIFIED: LegResult = { fresh: false, sent: 0 };
+
+const slackNoticeFor = (kind: EscalationKind, row: DeadlineEscalationRow) => ({
+  entityKind: kind === "risk" ? ("Risk" as const) : ("Model risk" as const),
+  entityName: row.entity_name,
+  distanceText: distanceText(row.deadline),
+  deadlineText: dateText(row.deadline),
+});
+
+/** 7-day leg: in-app + email. */
 async function sendEmailLeg(
   organizationId: number,
   kind: EscalationKind,
   row: DeadlineEscalationRow,
   recipientId: number,
   baseUrl: string,
-): Promise<number> {
+): Promise<LegResult> {
   const already = await hasDeadlineNoticeQuery(
     organizationId,
     recipientId,
@@ -84,7 +102,7 @@ async function sendEmailLeg(
     DEADLINE_EMAIL_DAYS,
     row.deadline,
   );
-  if (already) return 0;
+  if (already) return ALREADY_NOTIFIED;
   if (kind === "risk") {
     await notifyRiskDeadlineDueSoon(
       organizationId,
@@ -109,7 +127,7 @@ async function sendEmailLeg(
       true,
     );
   }
-  return 1;
+  return { fresh: true, sent: 1 };
 }
 
 /**
@@ -125,7 +143,7 @@ async function sendSlackLeg(
   row: DeadlineEscalationRow,
   recipientId: number,
   baseUrl: string,
-): Promise<number> {
+): Promise<LegResult> {
   const already = await hasDeadlineNoticeQuery(
     organizationId,
     recipientId,
@@ -135,14 +153,14 @@ async function sendSlackLeg(
     DEADLINE_SLACK_DAYS,
     row.deadline,
   );
-  if (already) return 0;
-  const entityKind = kind === "risk" ? "Risk" : "Model risk";
-  const slack = await sendDeadlineDueSoonSlackNotification(recipientId, {
-    entityKind,
-    entityName: row.entity_name,
-    distanceText: distanceText(row.deadline),
-    deadlineText: dateText(row.deadline),
-  });
+  if (already) return ALREADY_NOTIFIED;
+  // The recipient's own Slack connections only; organization-wide ones get
+  // one post per row from the sweep loop, not one per recipient.
+  const slack = await sendDeadlineDueSoonSlackNotification(
+    organizationId,
+    recipientId,
+    slackNoticeFor(kind, row),
+  );
   if (kind === "risk") {
     await notifyRiskDeadlineDueSoon(
       organizationId,
@@ -169,7 +187,7 @@ async function sendSlackLeg(
   }
   // Honest count: the in-app record is always written above, but `slacked`
   // means a Slack message actually left the building.
-  return slack?.delivered === true ? 1 : 0;
+  return { fresh: true, sent: slack?.delivered === true ? 1 : 0 };
 }
 
 /** Sweep one org. Each recipient's write is isolated: log and continue. */
@@ -192,7 +210,7 @@ export async function runDeadlineEscalationSweep(
       row: DeadlineEscalationRow,
       recipientId: number,
       baseUrl: string,
-    ) => Promise<number>;
+    ) => Promise<LegResult>;
     count: "emailed" | "slacked";
   }[] = [
     {
@@ -224,14 +242,45 @@ export async function runDeadlineEscalationSweep(
   for (const leg of legs) {
     scanned += leg.rows.length;
     for (const row of leg.rows) {
+      let anyFresh = false;
+      let anyAlready = false;
       for (const recipientId of recipientsFor(row, adminIds)) {
         try {
-          const sent = await leg.send(organizationId, leg.kind, row, recipientId, baseUrl);
+          const { fresh, sent } = await leg.send(
+            organizationId,
+            leg.kind,
+            row,
+            recipientId,
+            baseUrl,
+          );
+          anyFresh = anyFresh || fresh;
+          anyAlready = anyAlready || !fresh;
           if (leg.count === "emailed") emailed += sent;
           else slacked += sent;
         } catch (error) {
           logger.error(
             `❌ Deadline escalation failed for org ${organizationId} recipient ${recipientId} entity ${row.entity_id}:`,
+            error,
+          );
+        }
+      }
+      // Organization-wide Slack connections: one post per row and deadline, on
+      // the first run that notifies anyone about it. A run where some recipient
+      // already had their 1-day record (a new Admin, an owner change, a retry
+      // after a failed write) is not the first, so the shared channel is not
+      // posted to again. A recipient whose send threw counts as neither fresh
+      // nor already notified.
+      if (leg.count === "slacked" && anyFresh && !anyAlready) {
+        try {
+          const slack = await sendDeadlineDueSoonSlackNotification(
+            organizationId,
+            null,
+            slackNoticeFor(leg.kind, row),
+          );
+          if (slack?.delivered === true) slacked += 1;
+        } catch (error) {
+          logger.error(
+            `❌ Deadline escalation Slack post failed for org ${organizationId} entity ${row.entity_id}:`,
             error,
           );
         }

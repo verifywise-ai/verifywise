@@ -87,24 +87,13 @@ const DuplicateRowActions: React.FC<DuplicateRowActionsProps> = ({
     setPendingDelete(null);
     setBusy(true);
     try {
-      // Same sequence as the Risk Management page: soft-delete the risk, then
-      // drop its policy links so no policy points at a deleted risk.
+      // Archiving also drops the risk's policy links on the server.
       const response = await deleteEntityById({ routeUrl: `/projectRisks/${risk.id}` });
       if (response.status !== 200) {
         onNotify({
           variant: "error",
           body: response.status === 404 ? "Risk not found." : "Failed to delete the risk.",
         });
-        return;
-      }
-      try {
-        await deleteEntityById({ routeUrl: `/policy-linked/risk/${risk.id}/unlink-all` });
-      } catch {
-        onNotify({
-          variant: "warning",
-          body: "Risk deleted but failed to remove it from some linked policies.",
-        });
-        onRiskDeleted();
         return;
       }
       onNotify({

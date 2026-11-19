@@ -1304,6 +1304,7 @@ export const getSubClauseRisksQuery = async (
      INNER JOIN subclauses_iso__risks sir
        ON pr.organization_id = sir.organization_id AND pr.id = sir.projects_risks_id
      WHERE sir.organization_id = :organizationId AND sir.subclause_id = :subclauseId
+       AND pr.is_deleted = false
      ORDER BY pr.id ASC`,
     {
       replacements: { organizationId, subclauseId },
@@ -1329,6 +1330,7 @@ export const getAnnexCategoryRisksQuery = async (
      INNER JOIN annexcategories_iso__risks acr
        ON pr.organization_id = acr.organization_id AND pr.id = acr.projects_risks_id
      WHERE acr.organization_id = :organizationId AND acr.annexcategory_id = :annexCategoryId
+       AND pr.is_deleted = false
      ORDER BY pr.id ASC`,
     {
       replacements: { organizationId, annexCategoryId },

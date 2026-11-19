@@ -82,3 +82,16 @@ logger.info("General info");
 logger.warn("Warning message");
 logger.error("Error occurred", error);
 ```
+
+The default `logger` has a console transport in development only: in
+production it writes nowhere, and its format drops the `error` argument. For
+an error outside the request helpers (a background job, middleware, a service
+that must not fail its caller), use `logStructuredError`. It writes the
+structured line with the error's message (tenant log file and the central
+OTLP stack) and the stack to the tenant log file:
+
+```typescript
+import { logStructuredError } from "../utils/logger/fileLogger";
+
+logStructuredError("Enablement lookup failed for org 7", error, "myFunction", "myFile.ts");
+```

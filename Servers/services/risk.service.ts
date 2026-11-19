@@ -8,7 +8,8 @@
  */
 
 import { Transaction } from "sequelize";
-import { createRiskQuery, updateRiskByIdQuery } from "../utils/risk.utils";
+import { createRiskQuery, lockRiskApprovalQuery, updateRiskByIdQuery } from "../utils/risk.utils";
+import type { RiskViewer } from "../utils/riskVisibility.utils";
 import { writtenValues } from "../utils/changeHistory.base.utils";
 import { RiskModel } from "../domain.layer/models/risks/risk.model";
 import { IRisk } from "../domain.layer/interfaces/I.risk";
@@ -26,6 +27,7 @@ import { computeDerivedFields } from "../utils/quantitativeRisk.utils";
 import { validateQuantitativeRiskFields } from "../utils/validations/quantitativeRiskValidation.utils";
 import { ValidationError } from "../utils/validations/validation.utils";
 import { ValidationException } from "../domain.layer/exceptions/custom.exception";
+import { resolveRiskApproval } from "../utils/riskApproval.utils";
 
 export type CreateRiskServiceInput = Partial<RiskModel> & {
   projects?: number[];
@@ -35,6 +37,20 @@ export type CreateRiskServiceInput = Partial<RiskModel> & {
 export interface CreateRiskServiceContext {
   userId: number;
   organizationId: number;
+  /**
+   * The acting user as the risk visibility rule sees them. Unless they see
+   * every risk, the use cases a risk is linked to must be ones they can write
+   * to. MCP (Admin-only) and intake approval (ruling J8) pass
+   * SYSTEM_RISK_VIEWER.
+   */
+  viewer: RiskViewer;
+  /**
+   * Whether the caller may decide any risk's approval (organization.admin,
+   * see callerCanDecideAnyRisk). Otherwise only the risk's approver may set
+   * or undo Approved and Rejected (ruling K3). MCP (Admin-only) and system
+   * writers that set no approval decision pass true.
+   */
+  callerIsAdmin: boolean;
 }
 
 /**
@@ -43,6 +59,7 @@ export interface CreateRiskServiceContext {
  * Steps:
  *  1. Normalize risk_owner (0 → null) — matches the existing controller behavior
  *  2. If FAIR quantitative fields are present: validate + compute derived fields
+ *  2b. Resolve the approver and approval status (throws RiskApprovalForbiddenError)
  *  3. INSERT into risks table (+ projects_risks and frameworks_risks junctions)
  *  4. Record creation in change history
  *
@@ -80,6 +97,18 @@ export async function createRiskService(
     Object.assign(projectRiskData, derived);
   }
 
+  // 2b. Approval status: one of the four values, Pending when an approver is
+  //     named, and a decision only from the approver or an Admin.
+  const approval = resolveRiskApproval({
+    existing: null,
+    submitted: {
+      risk_approval: projectRiskData.risk_approval,
+      approval_status: projectRiskData.approval_status,
+    },
+    callerId: ctx.userId,
+    callerIsAdmin: ctx.callerIsAdmin,
+  });
+
   // Build a payload where every column `createRiskQuery` reads is present
   // with an explicit value. `createRiskQuery` forwards values straight into
   // Sequelize named replacements, and Sequelize rejects `undefined` with
@@ -115,8 +144,8 @@ export async function createRiskService(
       projectRiskData.likelihood_mitigation,
       projectRiskData.risk_severity,
     ),
-    risk_approval: projectRiskData.risk_approval ?? null,
-    approval_status: projectRiskData.approval_status ?? null,
+    risk_approval: approval.risk_approval,
+    approval_status: approval.approval_status,
     date_of_assessment: projectRiskData.date_of_assessment ?? null,
     is_demo: projectRiskData.is_demo ?? false,
     // FAIR quantitative fields — createRiskQuery already uses `?? null` on
@@ -155,6 +184,7 @@ export async function createRiskService(
     normalized as unknown as Partial<RiskModel & { projects: number[]; frameworks: number[] }>,
     ctx.organizationId,
     transaction,
+    { viewer: ctx.viewer },
   );
 
   if (!newRisk) {
@@ -196,10 +226,16 @@ export type UpdateRiskServiceInput = CreateRiskServiceInput;
  *  1. Normalize risk_owner (0 → null) — matches the existing controller behavior
  *  2. If FAIR fields are in play: merge them over the stored row, validate the
  *     merged set, then recompute the derived fields
+ *  2c. If the approver or approval status was sent: resolve what is stored
+ *     (throws RiskApprovalForbiddenError)
  *  3. UPDATE the risk (+ projects_risks and frameworks_risks junctions)
  *  4. Diff the stored row before and after the write, so history records the
  *     values as stored ('' vs NULL and calendar dates normalised), not as sent
  *  5. Record the diff in change history
+ *
+ * A bulk edit passes recordSnapshots: false and runAutomations: false, and
+ * records the risk history snapshots and runs the risk_updated automation once
+ * for the whole batch.
  *
  * `existingRisk` is the caller's — it already had to load the row to answer
  * "no such risk", so it is passed in rather than read twice.
@@ -214,6 +250,10 @@ export async function updateRiskService(
   existingRisk: IRisk,
   ctx: CreateRiskServiceContext,
   transaction: Transaction,
+  {
+    recordSnapshots = true,
+    runAutomations = true,
+  }: { recordSnapshots?: boolean; runAutomations?: boolean } = {},
 ): Promise<RiskModel | null> {
   // 1. Convert optional FK fields (0 => NULL), as the controller did. Only
   //    when the caller sent risk_owner: setting it on every partial edit
@@ -279,6 +319,43 @@ export async function updateRiskService(
   delete updateData.final_risk_level;
   Object.assign(updateData, computeRiskLevelUpdates(updateData, existingRisk));
 
+  // 2c. Approval. Only when the caller sent the approver or the status, so an
+  //     edit that names neither (a bulk action, a partial MCP update) leaves
+  //     them as stored. A status that is not one of the four is ignored.
+  //     The stored values are re-read under a row lock, so a concurrent save
+  //     that changed the approver is seen here (the caller's read happened
+  //     before the transaction).
+  if (input.risk_approval !== undefined || input.approval_status !== undefined) {
+    const locked = await lockRiskApprovalQuery(riskId, ctx.organizationId, transaction);
+    if (locked) {
+      existingRisk = {
+        ...existingRisk,
+        risk_approval: locked.risk_approval as number,
+        approval_status: locked.approval_status as string,
+      };
+    }
+    const approval = resolveRiskApproval({
+      existing: {
+        risk_approval: existingRisk.risk_approval ?? null,
+        approval_status: existingRisk.approval_status ?? null,
+      },
+      submitted: {
+        risk_approval: input.risk_approval,
+        approval_status: input.approval_status,
+      },
+      callerId: ctx.userId,
+      callerIsAdmin: ctx.callerIsAdmin,
+    });
+    if (input.risk_approval !== undefined) {
+      updateData.risk_approval = approval.risk_approval as unknown as number;
+    }
+    if (approval.approval_status !== existingRisk.approval_status) {
+      updateData.approval_status = approval.approval_status;
+    } else {
+      delete updateData.approval_status;
+    }
+  }
+
   // 3. Write. An absent projects/frameworks list is sent as empty, as before.
   const updatedRisk = await updateRiskByIdQuery(
     riskId,
@@ -289,6 +366,7 @@ export async function updateRiskService(
     },
     ctx.organizationId,
     transaction,
+    { recordSnapshots, runAutomations, viewer: ctx.viewer },
   );
 
   // 4. Change history (in the same transaction). Diff the row as written:

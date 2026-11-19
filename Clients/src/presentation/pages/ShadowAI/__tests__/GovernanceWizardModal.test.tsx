@@ -37,6 +37,15 @@ vi.mock("../../../components/Inputs/Select", () => ({
   ),
 }));
 
+// Model Lifecycle enablement, per test (the toggle is only offered when it is on).
+let mockLifecycleEnabled = true;
+vi.mock("../../../../application/contexts/Extensions.context", () => ({
+  useExtensions: () => ({
+    isEnabled: (key: string) => key === "model-lifecycle" && mockLifecycleEnabled,
+  }),
+  ExtensionsProvider: ({ children }: { children: any }) => children,
+}));
+
 import GovernanceWizardModal from "../GovernanceWizardModal";
 
 const baseTool: IShadowAiTool = {
@@ -55,6 +64,30 @@ describe("GovernanceWizardModal", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    mockLifecycleEnabled = true;
+  });
+
+  it("hides the lifecycle option and sends no start_lifecycle when Model Lifecycle is off", async () => {
+    mockLifecycleEnabled = false;
+    mockStartGovernance.mockResolvedValue({});
+
+    renderWithProviders(
+      <GovernanceWizardModal
+        isOpen={true}
+        onClose={onClose}
+        tool={baseTool}
+        onSuccess={onSuccess}
+      />,
+    );
+
+    expect(screen.queryByText("Start lifecycle review")).not.toBeInTheDocument();
+    expect(screen.queryByRole("switch")).not.toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText("Owner"), { target: { value: "2" } });
+    fireEvent.click(screen.getByRole("button", { name: "Start governance" }));
+
+    await waitFor(() => expect(mockStartGovernance).toHaveBeenCalled());
+    expect(mockStartGovernance.mock.calls[0][1]).not.toHaveProperty("start_lifecycle");
   });
 
   it("does not render its content when closed", () => {

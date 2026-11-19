@@ -1,20 +1,26 @@
 /**
- * Slack extension routes.
+ * Slack extension routes: the organization's Slack connections, at
+ * /api/extensions/slack/oauth/workspaces, and the caller's own connections
+ * with no organization (legacy rows that send nothing), at
+ * /api/extensions/slack/oauth/unlinked.
  *
- * Delegates to the existing slack webhook controllers in
- * Servers/controllers/slackWebhook.ctrl.ts — that implementation predates the
- * extensions system and already handles OAuth exchange, proper AES
- * encryption of access_token/url, and bot-invite. Rebuilding it here would
- * duplicate the encryption logic and risk drift between two code paths, so
- * these routes just mount the same handlers under the extension gate.
+ * Handlers live in Servers/controllers/slackWebhook.ctrl.ts (OAuth exchange,
+ * AES encryption of access_token/url, bot invite). Every route needs the
+ * extension enabled for the caller's organization and the "extension.admin"
+ * permission (Admin): connections belong to the organization, and the only
+ * screen that reads them is the Admin-only extension settings page. Each
+ * handler filters by the caller's organization, so another organization's id
+ * answers 404.
  *
- * The legacy /api/slackWebhooks mount stays live for now — the slack
- * extension routes ship alongside it. Frontend can move over incrementally.
+ * The deprecated legacy alias /api/slackWebhooks (routes/slackWebhook.route.ts)
+ * mounts the same handlers behind the same gates until its removal PR.
  */
 
 import express from "express";
 import authenticateJWT from "../../middleware/auth.middleware";
+import authorize from "../../middleware/accessControl.middleware";
 import { requireExtensionEnabled } from "../../middleware/requireExtensionEnabled.middleware";
+import { slackWorkspaceCreateLimiter } from "../../middleware/rateLimit.middleware";
 import {
   createNewSlackWebhook,
   getAllSlackWebhooks,
@@ -22,6 +28,8 @@ import {
   updateSlackWebhookById,
   sendSlackMessage,
   deleteSlackWebhookById,
+  getUnlinkedSlackConnections,
+  deleteUnlinkedSlackConnection,
 } from "../../controllers/slackWebhook.ctrl";
 
 const router = express.Router();
@@ -29,19 +37,21 @@ const router = express.Router();
 router.use(authenticateJWT);
 router.use(requireExtensionEnabled("slack"));
 
-// Rate limit the OAuth-exchange endpoint so a leaked JWT can't spam
-// Slack's OAuth API on our behalf.
-import { slackWorkspaceCreateLimiter } from "../../middleware/rateLimit.middleware";
+const admin = authorize("extension.admin");
 
-// OAuth workspaces — exposed at /api/extensions/slack/oauth/workspaces to match
-// the extension's UI conventions. Handlers are shared with /api/slackWebhooks.
-router.get("/oauth/workspaces", getAllSlackWebhooks);
-router.get("/oauth/workspaces/:id", getSlackWebhookById);
-router.post("/oauth/workspaces", slackWorkspaceCreateLimiter, createNewSlackWebhook);
-router.patch("/oauth/workspaces/:id", updateSlackWebhookById);
-router.delete("/oauth/workspaces/:id", deleteSlackWebhookById);
+router.get("/oauth/workspaces", admin, getAllSlackWebhooks);
+router.get("/oauth/workspaces/:id", admin, getSlackWebhookById);
+// Rate limited so a leaked token can't spam Slack's OAuth API on our behalf.
+router.post("/oauth/workspaces", admin, slackWorkspaceCreateLimiter, createNewSlackWebhook);
+router.patch("/oauth/workspaces/:id", admin, updateSlackWebhookById);
+router.delete("/oauth/workspaces/:id", admin, deleteSlackWebhookById);
 
-// One-off message send (used by test-connection and manual sends).
-router.post("/oauth/workspaces/:id/send", sendSlackMessage);
+// Test message to this one connection's channel.
+router.post("/oauth/workspaces/:id/send", admin, sendSlackMessage);
+
+// The caller's own connections with no organization: list and remove only.
+// Filtered by the caller's user id, not the organization.
+router.get("/oauth/unlinked", admin, getUnlinkedSlackConnections);
+router.delete("/oauth/unlinked/:id", admin, deleteUnlinkedSlackConnection);
 
 export default router;

@@ -1,4 +1,5 @@
 import { Request, Response } from "express";
+import { checkedUseCaseId } from "../middleware/projectAccess.middleware";
 import { QueryTypes } from "sequelize";
 import { sequelize } from "../database/db";
 import { notifyUserAssigned, AssignmentRoleType } from "../services/inAppNotification.service";
@@ -690,11 +691,9 @@ export async function saveClauses(req: RequestWithFile, res: Response): Promise<
 
   try {
     const subClause = req.body as IISO27001SubClause & {
-      user_id: string;
       delete: string;
       risksDelete: string;
       risksMitigated: string;
-      project_id: string;
     };
 
     // Files to unlink (not delete) - the actual file stays in file manager
@@ -744,8 +743,8 @@ export async function saveClauses(req: RequestWithFile, res: Response): Promise<
     if (req.files && Array.isArray(req.files) && req.files.length > 0) {
       uploadedFiles = await uploadFiles(
         req.files as UploadedFile[],
-        parseInt(subClause.user_id),
-        parseInt(subClause.project_id),
+        req.userId!,
+        checkedUseCaseId(res)!,
         "Main clauses group",
         req.organizationId!,
         transaction,
@@ -850,8 +849,6 @@ export async function saveAnnexes(req: RequestWithFile, res: Response): Promise<
 
   try {
     const annexControl = req.body as IISO27001AnnexControl & {
-      user_id: string;
-      project_id: string;
       delete: string;
       risksDelete: string;
       risksMitigated: string;
@@ -910,8 +907,8 @@ export async function saveAnnexes(req: RequestWithFile, res: Response): Promise<
     if (req.files && Array.isArray(req.files) && req.files.length > 0) {
       uploadedFiles = await uploadFiles(
         req.files as UploadedFile[],
-        parseInt(annexControl.user_id),
-        parseInt(annexControl.project_id),
+        req.userId!,
+        checkedUseCaseId(res)!,
         "Annex controls group",
         req.organizationId!,
         transaction,

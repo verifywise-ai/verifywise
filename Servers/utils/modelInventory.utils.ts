@@ -1,6 +1,6 @@
 import { ModelInventoryModel } from "../domain.layer/models/modelInventory/modelInventory.model";
 import { sequelize } from "../database/db";
-import { Transaction } from "sequelize";
+import { QueryTypes, Transaction } from "sequelize";
 import { TenantAutomationActionModel } from "../domain.layer/models/tenantAutomationAction/tenantAutomationAction.model";
 import { replaceTemplateVariables } from "./automation/automation.utils";
 import { enqueueAutomationAction } from "../services/automations/automationProducer";
@@ -10,10 +10,51 @@ import {
 } from "./automation/modelInventory.automation.utils";
 import { IModelInventoryProjectFramework } from "../domain.layer/interfaces/i.modelInventoryProjectFramework";
 import { recordSnapshotIfChanged } from "./history/modelInventoryHistory.utils";
+import { releaseModelRisksOfModelQuery } from "./modelRisk.utils";
+import {
+  assertOrganizationMember,
+  assertUseCaseWriteAccess,
+  resolveModelLinkTargets,
+  toPositiveId,
+  useCasesWithoutAccess,
+  UseCaseViewer,
+} from "./modelReferences.utils";
+
+export const APPROVER_NOT_IN_ORGANIZATION = "The approver must be a member of this organization.";
 import {
   deleteAllCustomFieldValuesForEntityQuery,
   fetchCustomFieldsForEntities,
 } from "./customField.utils";
+
+/**
+ * Splits a model's link rows into the use cases it is linked to directly and
+ * the frameworks it is linked to. A framework link is a row with framework_id
+ * set (project_id is NULL since the framework-link migration; older rows that
+ * still carried a project id are framework links too, never use case links).
+ */
+export function splitModelLinks(
+  rows: Pick<IModelInventoryProjectFramework, "project_id" | "framework_id">[],
+): {
+  projects: number[];
+  frameworks: number[];
+} {
+  const projects = new Set<number>();
+  const frameworks = new Set<number>();
+  for (const row of rows) {
+    if (row.framework_id) frameworks.add(row.framework_id);
+    else if (row.project_id) projects.add(row.project_id);
+  }
+  return { projects: [...projects], frameworks: [...frameworks] };
+}
+
+function assignModelLinks(
+  model: ModelInventoryModel,
+  rows: Pick<IModelInventoryProjectFramework, "project_id" | "framework_id">[],
+) {
+  const { projects, frameworks } = splitModelLinks(rows);
+  (model.dataValues as any).projects = projects;
+  (model.dataValues as any).frameworks = frameworks;
+}
 
 export const getAllModelInventoriesQuery = async (organizationId: number) => {
   const modelInventories = await sequelize.query(
@@ -41,13 +82,7 @@ export const getAllModelInventoriesQuery = async (organizationId: number) => {
         replacements: { organizationId, model_inventory_id: model.id },
       },
     )) as [IModelInventoryProjectFramework[], number];
-    for (const pf of projectFrameworks[0]) {
-      if (pf.project_id && pf.framework_id) {
-        (model.dataValues as any).frameworks.push(pf.framework_id);
-      } else {
-        (model.dataValues as any).projects.push(pf.project_id);
-      }
-    }
+    assignModelLinks(model, projectFrameworks[0]);
     (model.dataValues as any).custom_fields = customFieldsByModel.get(model.id!) ?? [];
   }
   return modelInventories;
@@ -71,13 +106,7 @@ export const getModelsByOrganizationIdQuery = async (organizationId: number) => 
         replacements: { organizationId, model_inventory_id: model.id },
       },
     )) as [IModelInventoryProjectFramework[], number];
-    for (const pf of projectFrameworks[0]) {
-      if (pf.project_id && pf.framework_id) {
-        (model.dataValues as any).frameworks.push(pf.framework_id);
-      } else {
-        (model.dataValues as any).projects.push(pf.project_id);
-      }
-    }
+    assignModelLinks(model, projectFrameworks[0]);
   }
   return modelInventory;
 };
@@ -102,13 +131,7 @@ export const getModelInventoryByIdQuery = async (id: number, organizationId: num
       replacements: { organizationId, model_inventory_id: model.id },
     },
   )) as [IModelInventoryProjectFramework[], number];
-  for (const pf of projectFrameworks[0]) {
-    if (pf.project_id && pf.framework_id) {
-      (model.dataValues as any).frameworks.push(pf.framework_id);
-    } else {
-      (model.dataValues as any).projects.push(pf.project_id);
-    }
-  }
+  assignModelLinks(model, projectFrameworks[0]);
 
   return model;
 };
@@ -143,14 +166,95 @@ export const getModelByFrameworkIdQuery = async (frameworkId: number, organizati
   return modelInventories;
 };
 
+/**
+ * Direct use case links: project_id set, framework_id NULL. Ids are already
+ * checked against the organization. A link that already exists is skipped
+ * (the table's unique constraint never fires while framework_id is NULL).
+ */
+export async function insertModelProjectLinks(
+  modelInventoryId: number,
+  projectIds: number[],
+  organizationId: number,
+  transaction: Transaction,
+) {
+  for (const projectId of projectIds) {
+    await sequelize.query(
+      `INSERT INTO model_inventories_projects_frameworks (organization_id, model_inventory_id, project_id)
+       SELECT :organization_id, :model_inventory_id, :project_id
+        WHERE NOT EXISTS (
+          SELECT 1 FROM model_inventories_projects_frameworks
+           WHERE organization_id = :organization_id AND model_inventory_id = :model_inventory_id
+             AND project_id = :project_id AND framework_id IS NULL);`,
+      {
+        replacements: {
+          organization_id: organizationId,
+          model_inventory_id: modelInventoryId,
+          project_id: projectId,
+        },
+        transaction,
+      },
+    );
+  }
+}
+
+/**
+ * Framework links: framework_id set, project_id NULL. A framework link is not
+ * tied to a use case. Ids are already checked against the organization; a
+ * link that already exists is skipped (partial unique index on
+ * (model_inventory_id, framework_id)).
+ */
+export async function insertModelFrameworkLinks(
+  modelInventoryId: number,
+  frameworkIds: number[],
+  organizationId: number,
+  transaction: Transaction,
+) {
+  for (const frameworkId of frameworkIds) {
+    await sequelize.query(
+      `INSERT INTO model_inventories_projects_frameworks (organization_id, model_inventory_id, project_id, framework_id)
+       VALUES (:organization_id, :model_inventory_id, NULL, :framework_id)
+       ON CONFLICT (model_inventory_id, framework_id) WHERE framework_id IS NOT NULL DO NOTHING;`,
+      {
+        replacements: {
+          organization_id: organizationId,
+          model_inventory_id: modelInventoryId,
+          framework_id: frameworkId,
+        },
+        transaction,
+      },
+    );
+  }
+}
+
 export const createNewModelInventoryQuery = async (
   modelInventory: ModelInventoryModel,
   organizationId: number,
   projects: number[],
   frameworks: number[],
   transaction: Transaction,
+  // Set for a REST caller: every linked use case needs the caller's access.
+  useCaseViewer?: UseCaseViewer,
 ) => {
   const created_at = new Date();
+
+  // Checked in the transaction that stores them: the approver must be a
+  // member, the use cases and frameworks must be the organization's.
+  await assertOrganizationMember(
+    modelInventory.approver,
+    organizationId,
+    "approver",
+    APPROVER_NOT_IN_ORGANIZATION,
+    transaction,
+  );
+  const { projectIds, frameworkIds } = await resolveModelLinkTargets(
+    projects,
+    frameworks,
+    organizationId,
+    transaction,
+  );
+  if (useCaseViewer) {
+    await assertUseCaseWriteAccess(projectIds, useCaseViewer, organizationId, transaction);
+  }
 
   try {
     const result = await sequelize.query(
@@ -192,49 +296,10 @@ export const createNewModelInventoryQuery = async (
     (createdModel.dataValues as any).projects = [];
     (createdModel.dataValues as any).frameworks = [];
 
-    for (const projectId of projects) {
-      const result = (await sequelize.query(
-        `INSERT INTO model_inventories_projects_frameworks (organization_id, model_inventory_id, project_id)
-         VALUES (:organization_id, :model_inventory_id, :project_id);`,
-        {
-          replacements: {
-            organization_id: organizationId,
-            model_inventory_id: createdModel.id,
-            project_id: projectId,
-          },
-          transaction,
-        },
-      )) as [IModelInventoryProjectFramework[], number];
-      if (result[0].length > 0) {
-        (createdModel.dataValues as any).projects.push(projectId);
-      }
-    }
-
-    for (const frameworkId of frameworks) {
-      const [[{ project_id }]] = (await sequelize.query(
-        `SELECT project_id FROM projects_frameworks WHERE organization_id = :organization_id AND framework_id = :framework_id LIMIT 1;`,
-        {
-          replacements: { organization_id: organizationId, framework_id: frameworkId },
-          transaction,
-        },
-      )) as [{ project_id: number }[], number];
-      const result = (await sequelize.query(
-        `INSERT INTO model_inventories_projects_frameworks (organization_id, model_inventory_id, project_id, framework_id)
-         VALUES (:organization_id, :model_inventory_id, :project_id, :framework_id);`,
-        {
-          replacements: {
-            organization_id: organizationId,
-            model_inventory_id: createdModel.id,
-            project_id: project_id,
-            framework_id: frameworkId,
-          },
-          transaction,
-        },
-      )) as [IModelInventoryProjectFramework[], number];
-      if (result[0].length > 0) {
-        (createdModel.dataValues as any).frameworks.push(frameworkId);
-      }
-    }
+    await insertModelProjectLinks(createdModel.id!, projectIds, organizationId, transaction);
+    await insertModelFrameworkLinks(createdModel.id!, frameworkIds, organizationId, transaction);
+    (createdModel.dataValues as any).projects = projectIds;
+    (createdModel.dataValues as any).frameworks = frameworkIds;
 
     const automations = (await sequelize.query(
       `SELECT
@@ -302,9 +367,60 @@ export const updateModelInventoryByIdQuery = async (
   deleteFrameworks: boolean,
   organizationId: number,
   transaction: Transaction,
+  // Set for a REST caller: see the use case link rules below.
+  useCaseViewer?: UseCaseViewer,
 ) => {
   const updated_at = new Date();
   const oldModel = await getModelInventoryByIdQuery(id, organizationId);
+
+  // An unchanged approver is not re-checked, so a model whose approver has
+  // since left the organization can still be edited. A new one must be a member.
+  const newApprover = modelInventory.approver;
+  if (toPositiveId(newApprover) !== toPositiveId(oldModel?.approver)) {
+    await assertOrganizationMember(
+      newApprover,
+      organizationId,
+      "approver",
+      APPROVER_NOT_IN_ORGANIZATION,
+      transaction,
+    );
+  }
+  // Frameworks already linked are accepted unchanged; only added ones are
+  // checked. The linked ones are read only when the request sends frameworks.
+  const linkedFrameworkIds =
+    Array.isArray(frameworks) && frameworks.length > 0
+      ? await getModelInventoryFrameworkIdsQuery(id, organizationId, transaction)
+      : [];
+  const { projectIds, frameworkIds } = await resolveModelLinkTargets(
+    projects,
+    frameworks,
+    organizationId,
+    transaction,
+    linkedFrameworkIds,
+  );
+
+  // Use case links change by difference. With a caller (REST), an added use
+  // case needs the caller's access, and a link to a use case the caller cannot
+  // open is kept: the form only lists the use cases the caller can see, so
+  // its absence from the list is not an unlink.
+  const replaceProjects = projectIds.length > 0 || deleteProjects;
+  let addedProjectIds: number[] = [];
+  let removedProjectIds: number[] = [];
+  if (replaceProjects) {
+    const beforeIds = await getModelInventoryProjectIdsQuery(id, organizationId, transaction);
+    addedProjectIds = projectIds.filter((p) => !beforeIds.includes(p));
+    removedProjectIds = beforeIds.filter((p) => !projectIds.includes(p));
+    if (useCaseViewer) {
+      await assertUseCaseWriteAccess(addedProjectIds, useCaseViewer, organizationId, transaction);
+      const hidden = await useCasesWithoutAccess(
+        removedProjectIds,
+        useCaseViewer,
+        organizationId,
+        transaction,
+      );
+      removedProjectIds = removedProjectIds.filter((p) => !hidden.includes(p));
+    }
+  }
 
   try {
     // First update the record
@@ -351,41 +467,24 @@ export const updateModelInventoryByIdQuery = async (
       },
     );
     const updatedModel = result[0];
-    (updatedModel.dataValues as any).projects = [];
-    (updatedModel.dataValues as any).frameworks = [];
 
-    if ((projects && projects.length > 0) || deleteProjects) {
-      // First, delete existing associations
+    if (removedProjectIds.length > 0) {
+      // Direct use case links only; framework links (framework_id set) stay.
       await sequelize.query(
-        `DELETE FROM model_inventories_projects_frameworks WHERE organization_id = :organization_id AND model_inventory_id = :model_inventory_id AND project_id IS NOT NULL`,
+        `DELETE FROM model_inventories_projects_frameworks WHERE organization_id = :organization_id AND model_inventory_id = :model_inventory_id AND framework_id IS NULL AND project_id IN (:project_ids)`,
         {
-          replacements: { organization_id: organizationId, model_inventory_id: id },
+          replacements: {
+            organization_id: organizationId,
+            model_inventory_id: id,
+            project_ids: removedProjectIds,
+          },
           transaction,
         },
       );
-
-      // Then, insert new associations
-      for (const projectId of projects) {
-        const result = (await sequelize.query(
-          `INSERT INTO model_inventories_projects_frameworks (organization_id, model_inventory_id, project_id)
-            VALUES (:organization_id, :model_inventory_id, :project_id);`,
-          {
-            replacements: {
-              organization_id: organizationId,
-              model_inventory_id: id,
-              project_id: projectId,
-            },
-            transaction,
-          },
-        )) as [IModelInventoryProjectFramework[], number];
-        if (result[0].length > 0) {
-          (updatedModel.dataValues as any).projects.push(projectId);
-        }
-      }
     }
+    await insertModelProjectLinks(id, addedProjectIds, organizationId, transaction);
 
-    if ((frameworks && frameworks.length > 0) || deleteFrameworks) {
-      // First, delete existing associations
+    if (frameworkIds.length > 0 || deleteFrameworks) {
       await sequelize.query(
         `DELETE FROM model_inventories_projects_frameworks WHERE organization_id = :organization_id AND model_inventory_id = :model_inventory_id AND framework_id IS NOT NULL`,
         {
@@ -393,35 +492,17 @@ export const updateModelInventoryByIdQuery = async (
           transaction,
         },
       );
-
-      // Then, insert new associations
-      for (const frameworkId of frameworks) {
-        const [[{ project_id }]] = (await sequelize.query(
-          `SELECT project_id FROM projects_frameworks WHERE organization_id = :organization_id AND framework_id = :framework_id LIMIT 1;`,
-          {
-            replacements: { organization_id: organizationId, framework_id: frameworkId },
-            transaction,
-          },
-        )) as [{ project_id: number }[], number];
-
-        const result = (await sequelize.query(
-          `INSERT INTO model_inventories_projects_frameworks (organization_id, model_inventory_id, project_id, framework_id)
-            VALUES (:organization_id, :model_inventory_id, :project_id, :framework_id);`,
-          {
-            replacements: {
-              organization_id: organizationId,
-              model_inventory_id: id,
-              project_id: project_id,
-              framework_id: frameworkId,
-            },
-            transaction,
-          },
-        )) as [IModelInventoryProjectFramework[], number];
-        if (result[0].length > 0) {
-          (updatedModel.dataValues as any).frameworks.push(frameworkId);
-        }
-      }
+      await insertModelFrameworkLinks(id, frameworkIds, organizationId, transaction);
     }
+
+    const links = (await sequelize.query(
+      `SELECT project_id, framework_id FROM model_inventories_projects_frameworks WHERE organization_id = :organization_id AND model_inventory_id = :model_inventory_id`,
+      {
+        replacements: { organization_id: organizationId, model_inventory_id: id },
+        transaction,
+      },
+    )) as [IModelInventoryProjectFramework[], number];
+    assignModelLinks(updatedModel, links[0]);
 
     const automations = (await sequelize.query(
       `SELECT
@@ -475,30 +556,76 @@ export const updateModelInventoryByIdQuery = async (
       // Don't throw - history recording failure shouldn't block model update
     }
 
-    return updatedModel;
+    // The use cases this update linked, for the caller's "added to a use
+    // case" notices (not a column: it stays out of the JSON response).
+    return Object.assign(updatedModel, { addedProjectIds });
   } catch (error) {
     console.error("Error updating model inventory:", error);
     throw error;
   }
 };
 
+/**
+ * Locks the organization's model row for the rest of the transaction (FOR
+ * UPDATE). Anything that adds a risk, validation or finding to the model
+ * takes a key-share lock on that row through its foreign key, so once this
+ * returns, nothing can join the model until the transaction ends and every
+ * row that joined before is visible. False when the organization has no such
+ * model.
+ */
+export const lockModelInventoryQuery = async (
+  id: number,
+  organizationId: number,
+  transaction: Transaction,
+): Promise<boolean> => {
+  const rows = await sequelize.query(
+    `SELECT id FROM model_inventories
+      WHERE organization_id = :organizationId AND id = :id
+      FOR UPDATE`,
+    { replacements: { organizationId, id }, type: QueryTypes.SELECT, transaction },
+  );
+  return rows.length > 0;
+};
+
+/**
+ * Deletes a model. Its risks are never deleted with it: with `deleteRisks`
+ * they are archived (as a model risk delete does), otherwise they stay, with
+ * no model. Evidence stops listing the model.
+ *
+ * `changedByUserId` is who the model risks' change history names; null
+ * (AI Advisor) records it as the system's.
+ */
 export const deleteModelInventoryByIdQuery = async (
   id: number,
   deleteRisks: boolean,
   organizationId: number,
   transaction: Transaction,
+  changedByUserId: number | null = null,
 ) => {
   try {
-    if (deleteRisks) {
-      // Delete associated model risks first
-      await sequelize.query(
-        `DELETE FROM model_risks WHERE organization_id = :organization_id AND model_id = :id`,
-        {
-          replacements: { organization_id: organizationId, id },
-          transaction,
-        },
-      );
-    }
+    // First, so no risk joins the model while its risks are released. A
+    // caller that checked the model under this lock already holds it;
+    // locking again in the same transaction is a no-op.
+    await lockModelInventoryQuery(id, organizationId, transaction);
+    await releaseModelRisksOfModelQuery(
+      id,
+      deleteRisks,
+      organizationId,
+      changedByUserId,
+      transaction,
+    );
+
+    // updated_at stays: the evidence freshness sweep reads it as the last
+    // review of the evidence, which dropping a deleted model is not.
+    await sequelize.query(
+      `UPDATE evidence_hub
+          SET mapped_model_ids = array_remove(mapped_model_ids, :id)
+        WHERE organization_id = :organization_id AND :id = ANY(mapped_model_ids)`,
+      {
+        replacements: { organization_id: organizationId, id },
+        transaction,
+      },
+    );
 
     await deleteAllCustomFieldValuesForEntityQuery(
       "model_inventory",
@@ -573,23 +700,39 @@ export const deleteModelInventoryByIdQuery = async (
 };
 
 /**
- * Distinct project ids a model inventory is attached to. Same SELECT as the
- * inline project lookups above, factored out for the two callers that need it
- * without a model row: the update-trigger project diff and the new-model-risk
- * trigger's project scope.
+ * Distinct use case ids a model inventory is linked to directly. Used by the
+ * update query (link diff) and the new-model-risk trigger's project scope.
  */
 export async function getModelInventoryProjectIdsQuery(
   modelInventoryId: number,
   organizationId: number,
+  transaction?: Transaction,
 ): Promise<number[]> {
   const rows = (await sequelize.query(
     `SELECT DISTINCT project_id FROM model_inventories_projects_frameworks
       WHERE organization_id = :organizationId
         AND model_inventory_id = :modelInventoryId
-        AND project_id IS NOT NULL`,
-    { replacements: { organizationId, modelInventoryId } },
+        AND project_id IS NOT NULL
+        AND framework_id IS NULL`,
+    { replacements: { organizationId, modelInventoryId }, transaction },
   )) as [{ project_id: number }[], number];
   return rows[0].map((row) => row.project_id);
+}
+
+/** Distinct framework ids a model inventory is linked to. */
+export async function getModelInventoryFrameworkIdsQuery(
+  modelInventoryId: number,
+  organizationId: number,
+  transaction?: Transaction,
+): Promise<number[]> {
+  const rows = (await sequelize.query(
+    `SELECT DISTINCT framework_id FROM model_inventories_projects_frameworks
+      WHERE organization_id = :organizationId
+        AND model_inventory_id = :modelInventoryId
+        AND framework_id IS NOT NULL`,
+    { replacements: { organizationId, modelInventoryId }, transaction },
+  )) as [{ framework_id: number }[], number];
+  return rows[0].map((row) => row.framework_id);
 }
 
 /**

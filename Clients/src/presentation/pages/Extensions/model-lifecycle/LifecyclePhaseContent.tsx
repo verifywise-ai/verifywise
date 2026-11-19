@@ -18,8 +18,8 @@ export default function LifecyclePhaseContent({
   const items = Array.isArray(phase.items) ? phase.items : [];
 
   return (
-    <Stack sx={{ flex: 1, overflowY: "auto", p: 12, gap: 8 }}>
-      <Stack sx={{ gap: 2 }}>
+    <Stack sx={{ flex: 1, overflowY: "auto", p: "24px", gap: "16px" }}>
+      <Stack sx={{ gap: "4px" }}>
         <Typography sx={{ ...textStyles.cardTitle, color: text.primary }}>{phase.name}</Typography>
         {phase.description && (
           <Typography sx={{ ...textStyles.body, color: text.secondary }}>
@@ -33,8 +33,8 @@ export default function LifecyclePhaseContent({
       {items.length > 0 ? (
         <Stack spacing={0} divider={<Box sx={{ borderTop: `1px solid ${border.light}` }} />}>
           {items.map((item) => (
-            <Stack key={item.id} sx={{ py: 8, gap: 4 }}>
-              <Stack direction="row" alignItems="center" sx={{ gap: 4 }}>
+            <Stack key={item.id} sx={{ py: "16px", gap: "8px" }}>
+              <Stack direction="row" alignItems="center" sx={{ gap: "8px" }}>
                 <Typography sx={{ ...textStyles.formLabel, color: text.secondary }}>
                   {item.name}
                 </Typography>
@@ -54,7 +54,7 @@ export default function LifecyclePhaseContent({
           ))}
         </Stack>
       ) : (
-        <Typography sx={{ textAlign: "center", color: text.subdued, py: 4 }}>
+        <Typography sx={{ textAlign: "center", color: text.subdued, py: "8px" }}>
           No items configured for this phase
         </Typography>
       )}

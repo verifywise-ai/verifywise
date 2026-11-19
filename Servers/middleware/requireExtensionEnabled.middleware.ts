@@ -3,6 +3,7 @@ import { STATUS_CODE } from "../utils/statusCode.utils";
 import { ExtensionModel } from "../domain.layer/models/extension/extension.model";
 import { ExtensionEnablementModel } from "../domain.layer/models/extension/extensionEnablement.model";
 import { sanitizeForLog } from "../utils/validations/validation.utils";
+import { logStructuredError } from "../utils/logger/fileLogger";
 
 /**
  * Per-extension route gate. Fails with 403 when the caller's organization
@@ -21,6 +22,20 @@ async function resolveExtensionId(key: string): Promise<number | null> {
   if (!extension) return null;
   extensionIdCache.set(key, extension.id);
   return extension.id;
+}
+
+/**
+ * The gate's lookup outside a request: whether the organization has enabled
+ * the extension. An extension missing from the catalog counts as disabled.
+ */
+export async function isExtensionEnabledForOrganization(
+  extensionKey: string,
+  organizationId: number,
+): Promise<boolean> {
+  const extensionId = await resolveExtensionId(extensionKey);
+  if (extensionId === null) return false;
+  const enablement = await ExtensionEnablementModel.findByExtensionId(extensionId, organizationId);
+  return !!enablement?.enabled;
 }
 
 async function checkEnabled(
@@ -48,11 +63,8 @@ async function checkEnabled(
       return;
     }
 
-    const enablement = await ExtensionEnablementModel.findByExtensionId(
-      extensionId,
-      organizationId,
-    );
-    if (!enablement || !enablement.enabled) {
+    // Same lookup the background senders use, so the gate and they agree.
+    if (!(await isExtensionEnabledForOrganization(extensionKey, organizationId))) {
       res.status(403).json(
         STATUS_CODE[403](
           req.t!("Extension '{key}' is not enabled for this organization", {
@@ -65,7 +77,14 @@ async function checkEnabled(
 
     next();
   } catch (err) {
-    res.status(500).json(STATUS_CODE[500]((err as Error).message));
+    // The cause goes to the log only: a database error message is not for the client.
+    logStructuredError(
+      `Extension gate: enablement check failed for '${sanitizeForLog(extensionKey)}' (org ${organizationId})`,
+      err,
+      "checkEnabled",
+      "requireExtensionEnabled.middleware.ts",
+    );
+    res.status(500).json(STATUS_CODE[500](req.t!("Internal server error")));
   }
 }
 

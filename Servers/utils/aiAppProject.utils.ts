@@ -107,8 +107,8 @@ async function aiAppExistsQuery(
 
 /**
  * The models a use case hands to a new AI app: the ones on its Linked models tab
- * (getModelByProjectIdQuery). Rows with a framework_id belong to the framework;
- * their project_id is just the first project found using that framework.
+ * (getModelByProjectIdQuery). Rows with a framework_id are framework links and
+ * carry no use case.
  */
 async function getProjectModelIdsQuery(
   projectId: number,

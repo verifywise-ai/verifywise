@@ -335,21 +335,19 @@ const RiskManagement = () => {
   // Define export columns for risk management table
   const exportColumns = useMemo(() => {
     return [
-      { id: "risk_name", label: "Risk Name" },
+      { id: "risk_name", label: "Risk name" },
       { id: "risk_owner", label: "Owner" },
       { id: "severity", label: "Severity" },
       { id: "likelihood", label: "Likelihood" },
-      { id: "mitigation_status", label: "Mitigation Status" },
-      { id: "risk_level", label: "Risk Level" },
-      { id: "deadline", label: "Target Date" },
-      { id: "controls_mapping", label: "Linked Controls" },
+      { id: "mitigation_status", label: "Mitigation status" },
+      { id: "risk_level", label: "Risk level" },
+      { id: "deadline", label: "Target date" },
     ];
   }, []);
 
   // Prepare export data - format the data for export
   const exportData = useMemo(() => {
-    const dataToExport = filteredRisks.length > 0 ? filteredRisks : projectRisks;
-    return dataToExport.map((risk: RiskModel) => {
+    return filteredRisks.map((risk: RiskModel) => {
       const ownerUser = users.find((user) => user.id === risk.risk_owner);
       const ownerName = ownerUser ? `${ownerUser.name} ${ownerUser.surname}` : "-";
 
@@ -361,10 +359,9 @@ const RiskManagement = () => {
         mitigation_status: risk.mitigation_status || "-",
         risk_level: getEffectiveRiskLevel(risk) || "-",
         deadline: toLocalDateOnly(riskCalendarDay(risk.deadline)) || "-",
-        controls_mapping: risk.controls_mapping || "-",
       };
     });
-  }, [filteredRisks, projectRisks, users]);
+  }, [filteredRisks, users]);
 
   const fetchProjectRisks = useCallback(async (filter: "active" | "deleted" | "all" = "active") => {
     try {
@@ -560,16 +557,7 @@ const RiskManagement = () => {
         routeUrl: `/projectRisks/${riskId}`,
       });
       if (response.status === 200) {
-        // Delete the risk from all linked policies
-        try {
-          await deleteEntityById({
-            routeUrl: `/policy-linked/risk/${riskId}/unlink-all`,
-          });
-        } catch (linkedError) {
-          console.error("Error deleting risk from linked policies", linkedError);
-          handleToast("warning", "Risk deleted but failed to remove from some linked policies.");
-        }
-
+        // The server drops the archived risk's policy links itself.
         // Set current pagination number after deleting the risk
         const rowsPerPage = 5;
         const rowCount = projectRisks.slice(
@@ -609,7 +597,7 @@ const RiskManagement = () => {
 
   return (
     <PageHeaderExtended
-      title="Risk Management"
+      title="Risk management"
       description="Manage and monitor risks across all your projects"
       helpArticlePath="risk-management/risk-assessment"
       tipBoxEntity="risk-management"
@@ -713,7 +701,7 @@ const RiskManagement = () => {
               data={exportData}
               columns={exportColumns}
               filename="risk-management"
-              title="Risk Management"
+              title="Risk management"
             />
             {canViewRiskGraph && (
               <Tooltip title="Risk inheritance graph" arrow>
@@ -958,7 +946,7 @@ const RiskManagement = () => {
       <AnalyticsDrawer
         open={isAnalyticsDrawerOpen}
         onClose={() => setIsAnalyticsDrawerOpen(false)}
-        title="Risk Analytics & Trends"
+        title="Risk analytics & trends"
         description="Track your project risks history over time"
         entityName="Risk"
         chartType="risk"

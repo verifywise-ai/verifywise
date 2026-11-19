@@ -17,7 +17,11 @@ jest.mock("../../../utils/approvalRequest.utils", () => ({
 
 import { writeToolExecutors } from "../../confirmation/createWriteTool";
 import "../../functions/approvalWorkflowFunctions";
-import { processApprovalQuery } from "../../../utils/approvalRequest.utils";
+import {
+  createApprovalRequestQuery,
+  processApprovalQuery,
+} from "../../../utils/approvalRequest.utils";
+import { sequelize } from "../../../database/db";
 import { ApprovalResult } from "../../../domain.layer/enums/approval-workflow.enum";
 
 const mockProcess = processApprovalQuery as jest.MockedFunction<any>;
@@ -44,5 +48,22 @@ describe.each([
 
     expect(mockProcess).toHaveBeenCalledWith(7, 5, result, "ok", 1, mockTransaction);
     expect(mockTransaction.commit).toHaveBeenCalled();
+  });
+});
+
+describe("agent_create_approval_request", () => {
+  beforeEach(() => jest.clearAllMocks());
+
+  it("refuses a policy request: policies are submitted from the policy", async () => {
+    await expect(
+      execute("agent_create_approval_request", {
+        workflow_id: 11,
+        entity_type: "policy",
+        entity_id: 55,
+        _userId: 5,
+      }),
+    ).rejects.toThrow("Submit the policy for approval from the policy");
+    expect(sequelize.transaction).not.toHaveBeenCalled();
+    expect(createApprovalRequestQuery).not.toHaveBeenCalled();
   });
 });

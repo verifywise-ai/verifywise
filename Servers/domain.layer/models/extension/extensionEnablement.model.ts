@@ -130,13 +130,18 @@ export class ExtensionEnablementModel {
     return (rows[0] as any)[0] as IExtensionEnablement;
   }
 
+  /**
+   * Outward-facing shape. Leaves out `configuration`: it carries encrypted
+   * secret values and must never reach a client. Server code that needs the
+   * stored configuration reads the row itself (or
+   * ExtensionService.getRuntimeConfiguration for decrypted values).
+   */
   static toJSON(ee: IExtensionEnablement): Record<string, unknown> {
     return {
       id: ee.id,
       organizationId: ee.organization_id,
       extensionId: ee.extension_id,
       enabled: ee.enabled,
-      configuration: ee.configuration,
       enabledAt: ee.enabled_at,
       enabledBy: ee.enabled_by,
       createdAt: ee.created_at,

@@ -1,7 +1,73 @@
 import { DatasetModel } from "../domain.layer/models/dataset/dataset.model";
 import { sequelize } from "../database/db";
-import { Transaction } from "sequelize";
+import { QueryTypes, Transaction } from "sequelize";
 import { IDatasetModelInventory, IDatasetProject } from "../domain.layer/interfaces/i.dataset";
+import { ValidationException } from "../domain.layer/exceptions/custom.exception";
+import { parseReferencedIds } from "./user.utils";
+
+/**
+ * Rejects `value` unless it is an array of ids that `sql` finds in the
+ * organization. Fails closed on a malformed id (5.5, "7x") or a value that is
+ * not an array. Returns the ids to link: duplicates collapsed, 0 and null
+ * entries dropped as "no link".
+ */
+const assertIdsInOrganization = async (
+  organizationId: number,
+  value: unknown,
+  sql: string,
+  field: "models" | "projects",
+  message: string,
+  transaction?: Transaction,
+): Promise<number[]> => {
+  const ids = Array.isArray(value) ? parseReferencedIds(value) : null;
+  if (ids !== null && ids.length === 0) return ids;
+  const found =
+    ids === null
+      ? []
+      : ((await sequelize.query(sql, {
+          replacements: { organizationId, ids },
+          type: QueryTypes.SELECT,
+          ...(transaction ? { transaction } : {}),
+        })) as { id: number }[]);
+  if (ids === null || found.length !== ids.length) {
+    throw new ValidationException(message, field, value);
+  }
+  return ids;
+};
+
+/**
+ * Tenant guard for a dataset's linked models and use cases: every id must
+ * belong to the organization, since the link tables' foreign keys alone
+ * accept any tenant's row. Shared by the dataset routes and the dataset bulk
+ * upload extension. Returns the ids to link, so callers insert each link once
+ * and never insert a 0 or null id.
+ *
+ * @throws ValidationException naming the field ("models" or "projects").
+ */
+export const assertDatasetReferencesInOrganization = async (
+  organizationId: number,
+  models: unknown,
+  projects: unknown,
+  transaction?: Transaction,
+): Promise<{ models: number[]; projects: number[] }> => {
+  const modelIds = await assertIdsInOrganization(
+    organizationId,
+    models,
+    "SELECT id FROM model_inventories WHERE organization_id = :organizationId AND id IN (:ids)",
+    "models",
+    "Linked models must belong to this organization",
+    transaction,
+  );
+  const projectIds = await assertIdsInOrganization(
+    organizationId,
+    projects,
+    "SELECT id FROM projects WHERE organization_id = :organizationId AND id IN (:ids)",
+    "projects",
+    "Linked use cases must belong to this organization",
+    transaction,
+  );
+  return { models: modelIds, projects: projectIds };
+};
 
 export const getAllDatasetsQuery = async (organizationId: number) => {
   const datasets = await sequelize.query(
@@ -127,6 +193,13 @@ export const createNewDatasetQuery = async (
   const created_at = new Date();
 
   try {
+    const linked = await assertDatasetReferencesInOrganization(
+      organizationId,
+      models,
+      projects,
+      transaction,
+    );
+
     const result = await sequelize.query(
       `INSERT INTO datasets (
         organization_id, name, description, version, owner, type, function, source, license, format,
@@ -176,7 +249,7 @@ export const createNewDatasetQuery = async (
     (createdDataset.dataValues as any).projects = [];
 
     // Create model relationships
-    for (const modelId of models) {
+    for (const modelId of linked.models) {
       await sequelize.query(
         `INSERT INTO dataset_model_inventories (organization_id, dataset_id, model_inventory_id, relationship_type, created_at)
          VALUES (:organization_id, :dataset_id, :model_inventory_id, 'trained_on', NOW())`,
@@ -193,7 +266,7 @@ export const createNewDatasetQuery = async (
     }
 
     // Create project relationships
-    for (const projectId of projects) {
+    for (const projectId of linked.projects) {
       await sequelize.query(
         `INSERT INTO dataset_projects (organization_id, dataset_id, project_id, created_at)
          VALUES (:organization_id, :dataset_id, :project_id, NOW())`,
@@ -229,6 +302,13 @@ export const updateDatasetByIdQuery = async (
   const updated_at = new Date();
 
   try {
+    const linked = await assertDatasetReferencesInOrganization(
+      organizationId,
+      models,
+      projects,
+      transaction,
+    );
+
     // Update the dataset record
     await sequelize.query(
       `UPDATE datasets SET
@@ -311,7 +391,7 @@ export const updateDatasetByIdQuery = async (
       );
 
       // Insert new model associations
-      for (const modelId of models) {
+      for (const modelId of linked.models) {
         await sequelize.query(
           `INSERT INTO dataset_model_inventories (organization_id, dataset_id, model_inventory_id, relationship_type, created_at)
            VALUES (:organization_id, :dataset_id, :model_inventory_id, 'trained_on', NOW())`,
@@ -340,7 +420,7 @@ export const updateDatasetByIdQuery = async (
       );
 
       // Insert new project associations
-      for (const projectId of projects) {
+      for (const projectId of linked.projects) {
         await sequelize.query(
           `INSERT INTO dataset_projects (organization_id, dataset_id, project_id, created_at)
            VALUES (:organization_id, :dataset_id, :project_id, NOW())`,

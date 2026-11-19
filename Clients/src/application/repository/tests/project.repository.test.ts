@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { apiServices } from "../../../infrastructure/api/networkServices";
 import {
   createProject,
-  deleteProject,
+  deleteUseCase,
   getAllProjects,
   getProjectById,
   getProjectProgressData,
@@ -406,76 +406,40 @@ describe("project.repository", () => {
     });
   });
 
-  describe("deleteProject", () => {
-    it("should delete a project", async () => {
-      const response = { status: 204, data: null };
-      vi.mocked(apiServices.delete).mockResolvedValue(response as any);
-
-      const result = await deleteProject({ id: 1 });
-
-      expect(apiServices.delete).toHaveBeenCalledWith("/projects/1");
-      expect(result).toEqual(response);
+  describe("deleteUseCase", () => {
+    const options = (archive: boolean) => ({
+      params: { archive_risks_linked_only_here: String(archive) },
+      suppressGlobalErrorToast: true,
     });
 
-    it("should return response object on delete", async () => {
-      const response = { status: 200, data: { message: "Deleted" } };
-      vi.mocked(apiServices.delete).mockResolvedValue(response as any);
+    it("deletes through the v1 route and passes the archive choice", async () => {
+      const data = { deleted: true, archived_risk_ids: [3, 5] };
+      vi.mocked(apiServices.delete).mockResolvedValue({ status: 202, data } as any);
 
-      const result = await deleteProject({ id: 1 });
+      const result = await deleteUseCase({ id: 1, archiveRisksLinkedOnlyHere: true });
 
-      expect(result).toEqual(response);
+      expect(apiServices.delete).toHaveBeenCalledWith("/v1/projects/1", options(true));
+      expect(result).toEqual(data);
     });
 
-    it("should handle different project IDs on delete", async () => {
-      const response = { status: 204 };
-      vi.mocked(apiServices.delete).mockResolvedValue(response as any);
+    it("sends false when the risks are kept", async () => {
+      vi.mocked(apiServices.delete).mockResolvedValue({
+        status: 202,
+        data: { deleted: true, archived_risk_ids: [] },
+      } as any);
 
-      await deleteProject({ id: 25 });
+      await deleteUseCase({ id: 25, archiveRisksLinkedOnlyHere: false });
 
-      expect(apiServices.delete).toHaveBeenCalledWith("/projects/25");
+      expect(apiServices.delete).toHaveBeenCalledWith("/v1/projects/25", options(false));
     });
 
-    it("should handle project not found on delete", async () => {
-      const error = {
-        response: { status: 404, data: { message: "Project not found" } },
-        message: "Not Found",
-      };
+    it.each([403, 404, 500])("rethrows a %s", async (status) => {
+      const error = { response: { status, data: { message: "x" } }, message: "x" };
       vi.mocked(apiServices.delete).mockRejectedValue(error);
 
-      await expect(deleteProject({ id: 999 })).rejects.toEqual(error);
-    });
-
-    it("should handle 403 forbidden on delete", async () => {
-      const error = {
-        response: { status: 403, data: { message: "Forbidden" } },
-        message: "Forbidden",
-      };
-      vi.mocked(apiServices.delete).mockRejectedValue(error);
-
-      await expect(deleteProject({ id: 1 })).rejects.toEqual(error);
-    });
-
-    it("should handle 409 conflict on delete (project has dependencies)", async () => {
-      const error = {
-        response: {
-          status: 409,
-          data: { message: "Cannot delete, project has active assessments" },
-        },
-        message: "Conflict",
-      };
-      vi.mocked(apiServices.delete).mockRejectedValue(error);
-
-      await expect(deleteProject({ id: 1 })).rejects.toEqual(error);
-    });
-
-    it("should handle 500 server error on delete", async () => {
-      const error = {
-        response: { status: 500, data: { message: "Internal Server Error" } },
-        message: "Server Error",
-      };
-      vi.mocked(apiServices.delete).mockRejectedValue(error);
-
-      await expect(deleteProject({ id: 1 })).rejects.toEqual(error);
+      await expect(deleteUseCase({ id: 1, archiveRisksLinkedOnlyHere: true })).rejects.toEqual(
+        error,
+      );
     });
   });
 

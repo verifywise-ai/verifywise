@@ -60,7 +60,7 @@ const OTHER_IP = "203.0.113.20";
  */
 const LIMITERS = [
   { name: "fileOperationsLimiter", key: "fileOperations", limit: 100, windowMinutes: 15 },
-  { name: "generalApiLimiter", key: "generalApi", limit: 300, windowMinutes: 1 },
+  { name: "generalApiLimiter", key: "generalApi", limit: 600, windowMinutes: 1 },
   { name: "authLimiter", key: "auth", limit: 5, windowMinutes: 15 },
   { name: "tokenRefreshLimiter", key: "tokenRefresh", limit: 60, windowMinutes: 15 },
   { name: "aiDetectionScanLimiter", key: "aiDetectionScan", limit: 10, windowMinutes: 60 },
@@ -71,7 +71,6 @@ const LIMITERS = [
   { name: "passwordResetEmailLimiter", key: "passwordResetEmail", limit: 5, windowMinutes: 1 },
   { name: "inviteEmailLimiter", key: "inviteEmail", limit: 5, windowMinutes: 1 },
   { name: "invitationResendLimiter", key: "invitationResend", limit: 5, windowMinutes: 1 },
-  { name: "slackWebhookCreateLimiter", key: "slackWebhookCreate", limit: 10, windowMinutes: 60 },
   {
     name: "slackWorkspaceCreateLimiter",
     key: "slackWorkspaceCreate",

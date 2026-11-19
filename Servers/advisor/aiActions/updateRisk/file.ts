@@ -19,12 +19,14 @@ import logger from "../../../utils/logger/fileLogger";
 import { createApprovalRequestQuery } from "../../../utils/approvalRequest.utils";
 import { getWorkflowStepsQuery } from "../../../utils/approvalWorkflow.utils";
 import { getRiskByIdQuery } from "../../../utils/risk.utils";
+import { riskViewerForUserQuery } from "../../../utils/riskVisibility.utils";
 import {
   ApprovalRequestStatus,
   EntityType,
 } from "../../../domain.layer/enums/approval-workflow.enum";
 import type { AiActionFileResult } from "../types";
 import { ensureAiActionWorkflow } from "../workflow";
+import { riskApprovalRefusal } from "../riskApprovalPrecheck";
 import { AgentUpdateRiskSchema } from "./schema";
 import { renderUpdateRiskDiffPreview } from "./preview";
 
@@ -64,7 +66,13 @@ export async function fileUpdateRisk(
   //    confirm the target exists. `getRiskByIdQuery` runs outside any
   //    transaction, which is fine at file-time — the actual update
   //    re-reads inside the approve transaction.
-  const currentRisk = await getRiskByIdQuery(parsed.data.risk_id, organizationId, false);
+  const viewer = await riskViewerForUserQuery(userId, organizationId);
+  const currentRisk = await getRiskByIdQuery(
+    parsed.data.risk_id,
+    organizationId,
+    // A risk the requester cannot see is a missing one to them.
+    viewer,
+  );
 
   if (!currentRisk) {
     return {
@@ -72,6 +80,15 @@ export async function fileUpdateRisk(
       message: `Risk #${parsed.data.risk_id} not found (or has been deleted) in this organization. Ask the user to clarify which risk they meant, or call fetch_risks to find candidates.`,
     };
   }
+
+  const approvalRefusal = await riskApprovalRefusal({
+    existing: currentRisk,
+    input: parsed.data,
+    userId,
+    organizationId,
+    role: async () => viewer.role,
+  });
+  if (approvalRefusal) return { status: "error", message: approvalRefusal };
 
   // 3. Open a transaction so workflow lazy-creation + approval-request
   //    insert commit atomically.

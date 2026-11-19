@@ -1,4 +1,4 @@
-import { screen } from "@testing-library/react";
+import { act, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { renderWithProviders } from "../../../../../test/renderWithProviders";
 import VWProjectRisksTable from "../index";
@@ -52,11 +52,22 @@ vi.mock("../../../../../application/hooks/useBulkSelection", () => ({
   }),
 }));
 
+const bulkHookOptions = vi.hoisted(() => ({
+  current: undefined as
+    | undefined
+    | {
+        onSuccess?: (
+          payload: { ids: number[]; action: string },
+          result?: { updated: number; changed?: number; action: string },
+        ) => void;
+      },
+}));
+
 vi.mock("../../../../../application/hooks/useBulkUpdateProjectRisks", () => ({
-  useBulkUpdateProjectRisks: () => ({
-    mutate: vi.fn(),
-    isPending: false,
-  }),
+  useBulkUpdateProjectRisks: (options: typeof bulkHookOptions.current) => {
+    bulkHookOptions.current = options;
+    return { mutate: vi.fn(), isPending: false };
+  },
 }));
 
 vi.mock("../../../../../application/hooks/useUsers", () => ({
@@ -414,6 +425,33 @@ describe("VWProjectRisksTable", () => {
     renderWithProviders(<VWProjectRisksTable {...defaultProps} canRunBulkActions />);
     const checkboxes = screen.getAllByTestId(/risk-checkbox-/);
     expect(checkboxes.length).toBeGreaterThan(0);
+  });
+
+  it("reports the server's changed count after a bulk action", () => {
+    const onBulkActionSuccess = vi.fn();
+    renderWithProviders(
+      <VWProjectRisksTable
+        {...defaultProps}
+        canRunBulkActions
+        onBulkActionSuccess={onBulkActionSuccess}
+      />,
+    );
+
+    act(() => {
+      bulkHookOptions.current?.onSuccess?.(
+        { ids: [1, 2, 3], action: "archive" },
+        { updated: 3, changed: 0, action: "archive" },
+      );
+    });
+    expect(onBulkActionSuccess).toHaveBeenLastCalledWith("archive", 0);
+
+    act(() => {
+      bulkHookOptions.current?.onSuccess?.(
+        { ids: [1, 2], action: "set_owner" },
+        { updated: 2, action: "set_owner" },
+      );
+    });
+    expect(onBulkActionSuccess).toHaveBeenLastCalledWith("set_owner", 2);
   });
 
   it("closes owner dialog on cancel", async () => {

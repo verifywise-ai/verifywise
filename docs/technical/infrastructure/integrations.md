@@ -112,12 +112,14 @@ Sends team notifications for automation events, alerts, and updates.
 ### Database Schema
 
 ```
-slack_webhooks (public schema)
+slack_webhooks (verifywise schema)
 ├── id (PK, SERIAL)
 ├── access_token (TEXT, encrypted)
 ├── access_token_iv (TEXT)
 ├── scope (TEXT NOT NULL)
-├── user_id (FK → users)
+├── user_id (FK → users; the Admin who connected it)
+├── organization_id (INTEGER, nullable; the organization that owns it)
+├── delivery_scope (TEXT, 'organization' | 'user', default 'organization')
 ├── team_name (TEXT NOT NULL)
 ├── team_id (TEXT NOT NULL)
 ├── channel (TEXT NOT NULL)
@@ -137,18 +139,18 @@ Slack is the `slack` extension. The client uses the gated extension routes:
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | `/api/extensions/slack/oauth/workspaces` | List webhooks |
-| GET | `/api/extensions/slack/oauth/workspaces/:id` | Get webhook |
+| GET | `/api/extensions/slack/oauth/workspaces` | List the organization's connections |
+| GET | `/api/extensions/slack/oauth/workspaces/:id` | Get one connection |
 | POST | `/api/extensions/slack/oauth/workspaces` | Connect workspace (OAuth code exchange) |
-| PATCH | `/api/extensions/slack/oauth/workspaces/:id` | Update webhook (routing, active) |
-| DELETE | `/api/extensions/slack/oauth/workspaces/:id` | Delete webhook |
-| POST | `/api/extensions/slack/oauth/workspaces/:id/send` | Send message |
+| PATCH | `/api/extensions/slack/oauth/workspaces/:id` | Update `routing_type` and/or `is_active` |
+| DELETE | `/api/extensions/slack/oauth/workspaces/:id` | Delete connection |
+| POST | `/api/extensions/slack/oauth/workspaces/:id/send` | Send a test message (400 if the connection is inactive) |
 
-The legacy `/api/slackWebhooks` mount serves the same handlers but is **not** gated by the extension. Notification delivery (`services/slack/`) reads `slack_webhooks` directly and does not check whether the extension is enabled.
+Every route needs JWT, the Slack extension enabled for the caller's organization, and `extension.admin` (Admin). Connections belong to the organization: owner and organization come from the token, and another organization's id answers 404. The deprecated legacy alias `/api/slackWebhooks` (`routes/slackWebhook.route.ts`) mounts the same handlers behind the same gates, with the same Admin-only, organization-scoped behaviour; it is kept per ADR 0001 and slated for removal. The client uses the extension path. Delivery rules (organization, enablement, active, routing, `delivery_scope`) are in [Extensions → Slack](./extensions.md#slack-connections-and-delivery).
 
 ### OAuth Flow
 
-1. User initiates Slack OAuth from frontend
+1. An Admin starts Slack OAuth from the extension settings page
 2. Slack redirects with authorization code
 3. Backend exchanges code for access token
 4. Token and webhook URL encrypted and stored
@@ -169,7 +171,7 @@ The legacy `/api/slackWebhooks` mount serves the same handlers but is **not** ga
 
 ### Routing Types
 
-Notifications can be routed to different channels based on event type (configured per webhook).
+Notifications can be routed to different channels based on event type (configured per connection). Saving a connection's routing makes it organization-wide (`delivery_scope = 'organization'`).
 
 ### Rate Limiting
 
@@ -264,7 +266,7 @@ Extension secret config fields (MLflow, Azure AI Foundry) are the exception. The
 |-------------|---------------|
 | MLflow | Admin to configure; any user of an org with the extension enabled to read/sync |
 | GitHub | Admin |
-| Slack | Authenticated, extension enabled (user-scoped) |
+| Slack | Admin (`extension.admin`), extension enabled; connections are organization-scoped |
 | LLM Keys | Authenticated |
 
 ---
@@ -308,8 +310,8 @@ ENCRYPTION_KEY=32-byte-key-for-aes-256
 
 | File | Purpose |
 |------|---------|
-| `extensions/slack/slack.route.ts` | Routes (gated) |
-| `routes/slackWebhook.route.ts` | Legacy routes (ungated) |
+| `extensions/slack/slack.route.ts` | Routes (gated, Admin) |
+| `utils/slackWebhook.utils.ts` | Queries, including the delivery query |
 | `controllers/slackWebhook.ctrl.ts` | Controller |
 | `services/slack/slackNotificationService.ts` | Notification service |
 | `domain.layer/models/slackNotification/` | Model |

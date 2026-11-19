@@ -149,6 +149,12 @@ const namedRowFormatter =
     }
   };
 
+/** Comparison key for a nullable id column: "" for none, else the number as text. */
+const nullableIdKey = (value: unknown): string =>
+  value === null || value === undefined || value === "" || Number(value) === 0
+    ? ""
+    : String(Number(value));
+
 /**
  * Entity configuration interface
  */
@@ -158,7 +164,65 @@ export interface EntityConfig {
   fieldsToTrack: string[];
   fieldLabels: { [key: string]: string };
   fieldFormatters?: { [key: string]: FieldFormatter };
+  /**
+   * Per-field comparison key. When set, a change is recorded only if the key
+   * differs between the old and new value, instead of the formatted strings.
+   * For fields whose formatted value is a lossy summary (e.g. a text excerpt).
+   */
+  fieldComparators?: { [key: string]: (value: unknown) => string };
 }
+
+/** Longest excerpt of rich text kept in a history entry. */
+export const HISTORY_EXCERPT_LENGTH = 120;
+
+/** Tags that separate words; any other tag (b, i, span, a...) is dropped without a space. */
+const BLOCK_TAG =
+  /<\/?(?:p|div|li|ul|ol|br|hr|h[1-6]|tr|td|th|table|thead|tbody|blockquote|pre|section|article|header|footer)\b[^<>]*>/gi;
+
+const BASIC_ENTITIES: { [key: string]: string } = {
+  "&nbsp;": " ",
+  "&amp;": "&",
+  "&lt;": "<",
+  "&gt;": ">",
+  "&quot;": '"',
+  "&#39;": "'",
+  "&apos;": "'",
+};
+
+/**
+ * Strip the HTML's tags until none is left, so removing one can't join the
+ * rest into a new tag. A tag can't contain "<", so each match stops at the
+ * next one: linear work per pass even with many unclosed "<".
+ */
+const stripTags = (html: string): string => {
+  let previous: string;
+  let text = html;
+  do {
+    previous = text;
+    text = text.replace(BLOCK_TAG, " ").replace(/<[^<>]*>/g, "");
+  } while (text !== previous);
+  return text;
+};
+
+/**
+ * A readable one-line plain-text excerpt of an HTML value: tags stripped,
+ * then basic entities decoded in one pass (so nothing is decoded twice),
+ * whitespace collapsed, cut to HISTORY_EXCERPT_LENGTH characters with a
+ * trailing ellipsis when cut. The excerpt is text, not HTML: an encoded
+ * "&lt;" in the policy becomes "<" and must be shown as text. An empty
+ * result is "-".
+ */
+export const htmlExcerpt = (value: unknown): string => {
+  const text = stripTags(String(value ?? ""))
+    .replace(/&(?:nbsp|amp|lt|gt|quot|apos|#39);/g, (m) => BASIC_ENTITIES[m])
+    .replace(/\s+/g, " ")
+    .trim();
+  if (!text) return "-";
+  return text.length > HISTORY_EXCERPT_LENGTH ? `${text.slice(0, HISTORY_EXCERPT_LENGTH)}…` : text;
+};
+
+/** The HTML as stored, compared without surrounding whitespace; null equals empty. */
+const normalizedHtml = (value: unknown): string => String(value ?? "").trim();
 
 /**
  * Generic field formatters that can be reused across entities
@@ -466,9 +530,14 @@ export const ENTITY_CONFIGS: { [key in EntityType]: EntityConfig } = {
       "goal",
       "target_industry",
       "description",
+      "use_case_category",
+      "use_case_purpose",
+      "use_case_audience",
+      "deployment_context",
       "status",
       "framework",
       "monitored_regulations_and_standards",
+      "approval_workflow_id",
     ],
     fieldLabels: {
       project_title: "Name",
@@ -483,9 +552,14 @@ export const ENTITY_CONFIGS: { [key in EntityType]: EntityConfig } = {
       goal: "Goal",
       target_industry: "Target industry",
       description: "Description",
+      use_case_category: "Use case category",
+      use_case_purpose: "Use case purpose",
+      use_case_audience: "Use case audience",
+      deployment_context: "Deployment context",
       status: "Status",
       framework: "Frameworks",
       monitored_regulations_and_standards: "Monitored regulations and standards",
+      approval_workflow_id: "Approval workflow",
       // Lifecycle (#5187); recorded by controllers/useCaseLifecycle.ctrl.ts.
       lifecycle_stage: "Lifecycle stage",
       go_live_date: "Go-live date",
@@ -501,7 +575,16 @@ export const ENTITY_CONFIGS: { [key in EntityType]: EntityConfig } = {
       high_risk_roles: async (value: unknown): Promise<string> => formatHighRiskRoles(value) || "-",
       framework: GENERIC_FORMATTERS.frameworkArray,
       monitored_regulations_and_standards: GENERIC_FORMATTERS.array,
+      // Clearing or replacing the workflow ends or restarts the review, so the
+      // change is part of the record (audit U-H2).
+      approval_workflow_id: namedRowFormatter(
+        "SELECT workflow_title AS name FROM approval_workflows WHERE id = :id AND organization_id = :organizationId",
+        "Approval workflow",
+      ),
     },
+    // By id, not by title: two workflows may share a title, and an unchanged
+    // save (also "5" for 5) looks no name up.
+    fieldComparators: { approval_workflow_id: nullableIdKey },
   },
 
   // AI apps (#5193). Written by the lifecycle actions
@@ -700,9 +783,11 @@ export const ENTITY_CONFIGS: { [key in EntityType]: EntityConfig } = {
       "next_review_date",
       "policy_owner_id",
       "assigned_reviewer_ids",
+      "content_html",
     ],
     fieldLabels: {
       title: "Title",
+      content_html: "Content",
       status: "Status",
       tags: "Tags",
       next_review_date: "Next review date",
@@ -714,7 +799,11 @@ export const ENTITY_CONFIGS: { [key in EntityType]: EntityConfig } = {
       next_review_date: GENERIC_FORMATTERS.calendarDate,
       policy_owner_id: GENERIC_FORMATTERS.user,
       assigned_reviewer_ids: GENERIC_FORMATTERS.userArray,
+      content_html: async (value: unknown): Promise<string> => htmlExcerpt(value),
     },
+    // The excerpt is a summary: compare the HTML so an edit past the excerpt
+    // is still recorded.
+    fieldComparators: { content_html: normalizedHtml },
   },
 
   incident: {
@@ -880,7 +969,15 @@ export const ENTITY_CONFIGS: { [key in EntityType]: EntityConfig } = {
     },
     fieldFormatters: {
       target_date: GENERIC_FORMATTERS.date,
+      // Provider and model, as the incident's affected model is named.
+      model_id: namedRowFormatter(
+        "SELECT CONCAT_WS(' ', provider, model) AS name FROM model_inventories WHERE id = :id AND organization_id = :organizationId",
+        "Model",
+      ),
     },
+    // Compared by id: two models can share a name, and a move between them
+    // is still a change.
+    fieldComparators: { model_id: (value: unknown) => String(value ?? "") },
   },
 
   dataset: {

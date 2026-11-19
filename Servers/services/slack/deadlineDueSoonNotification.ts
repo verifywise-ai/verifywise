@@ -9,10 +9,13 @@ export interface DeadlineSlackNotice {
 }
 
 /**
- * One-recipient Slack send for the deadline sweep's 1-day leg. The per-row
- * and per-recipient loops (with their try/catch) live in the sweep — this
- * helper sends exactly one message, unlike policyDueSoonNotification, whose
- * `return` inside the per-policy loop exits after the first policy.
+ * One Slack send for the deadline sweep's 1-day leg. The per-row and
+ * per-recipient loops (with their try/catch) live in the sweep — this helper
+ * sends exactly one message.
+ *
+ * `userId` null: the organization-wide connections, once per row. A user:
+ * only that user's own connections, once per recipient — so a shared channel
+ * gets one post per deadline, not one per owner and admin.
  *
  * Deliberate reuse of EVIDENCE_AND_TASK_ALERTS: routing_type is a Postgres
  * ARRAY(ENUM) column and a dedicated risk value would cost a second migration
@@ -23,12 +26,15 @@ export interface DeadlineSlackNotice {
  * level, and it does not.
  */
 export const sendDeadlineDueSoonSlackNotification = async (
-  userId: number,
+  organizationId: number,
+  userId: number | null,
   notice: DeadlineSlackNotice,
 ): Promise<SlackSendResult> => {
   return sendSlackNotification(
     {
+      organizationId,
       userId,
+      ownConnectionsOnly: userId !== null,
       routingType: SlackNotificationRoutingType.EVIDENCE_AND_TASK_ALERTS,
     },
     {

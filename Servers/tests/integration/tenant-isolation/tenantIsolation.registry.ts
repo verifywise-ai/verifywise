@@ -368,6 +368,92 @@ export const tenantIsolationRegistry: IsolationEntity[] = [
     baseRoute: "/api/v1/imported-framework-assessments",
     testFile: "imported-framework-assessment.isolation.test.ts",
   },
+  {
+    // OSFI E-23 (bundled framework 26, organization wide). Its requirement
+    // rows and their risk junction are served only through the generic
+    // /api/frameworks impl routes, keyed by the organization's own
+    // projects_frameworks link, so a hand-written file covers both tables.
+    name: "osfi_e23_requirements",
+    tables: ["osfi_e23_requirements", "osfi_e23_requirements__risks"],
+    baseRoute: "/api/frameworks",
+    testFile: "osfi-e23-requirements.isolation.test.ts",
+  },
+  {
+    // EN 18286 and EN 18286 AI systems (framework ids 27 and 28). Impl rows
+    // and risk links are only reachable through a project's framework on the
+    // generic registry framework routes, so a hand-written file covers all
+    // four tables.
+    name: "en_18286_requirements",
+    tables: [
+      "en_18286_requirements",
+      "en_18286_requirements__risks",
+      "en_18286_ai_systems_requirements",
+      "en_18286_ai_systems_requirements__risks",
+    ],
+    baseRoute: "/api/frameworks",
+    testFile: "en-18286.isolation.test.ts",
+  },
+  {
+    // Slack extension connections. Every connection belongs to an
+    // organization; management routes and delivery filter by it, so a
+    // hand-written file covers the routes and the delivery query.
+    name: "slack-webhooks",
+    tables: ["slack_webhooks"],
+    baseRoute: "/api/extensions/slack",
+    testFile: "slack-webhooks.isolation.test.ts",
+  },
+  {
+    // Model Lifecycle extension. Setup rows are keyed by the caller's
+    // organization; every per-model row is reached through a model and an
+    // item that must both be in the organization, so a hand-written file
+    // covers all seven tables.
+    name: "model-lifecycle",
+    tables: [
+      "model_lifecycle_phases",
+      "model_lifecycle_items",
+      "model_lifecycle_values",
+      "model_lifecycle_item_files",
+      "model_lifecycle_item_people",
+      "model_lifecycle_item_approvals",
+      "model_lifecycle_change_history",
+    ],
+    baseRoute: "/api/extensions/model-lifecycle",
+  },
+  {
+    // MLflow extension. Sync, list and read are keyed by the caller's
+    // organization (its own tracking server and records). mlflow_integrations
+    // is the pre-extension config table no route uses any more; the file
+    // checks nothing another organization does touches the owner's row.
+    name: "mlflow",
+    tables: ["mlflow_integrations", "mlflow_model_records"],
+    baseRoute: "/api/extensions/mlflow",
+  },
+  {
+    // Azure AI Foundry extension. Sync, discovery, list and read are keyed by
+    // the caller's organization (its own endpoint, key and records).
+    name: "azure-ai-foundry",
+    tables: ["azure_ai_model_records"],
+    baseRoute: "/api/extensions/azure-ai-foundry",
+  },
+  {
+    // Jira Assets extension. Config, schedule and selection writes are keyed
+    // by the caller's organization; use case removal and delete take ids. One
+    // file covers use case visibility and the writes across organizations.
+    // jira_assets_sync_history stays deferred: it is no longer written and a
+    // follow-up migration drops it.
+    name: "jira-assets",
+    tables: ["jira_assets_config", "jira_assets_use_cases"],
+    baseRoute: "/api/extensions/jira-assets",
+    testFile: "jira-assets-use-cases.isolation.test.ts",
+  },
+  {
+    // Extension catalog enablement. Enable, disable and configuration are
+    // keyed by extension key and always act on the caller's organization's
+    // row, so a hand-written file covers them.
+    name: "extension-enablements",
+    tables: ["extension_enablements"],
+    baseRoute: "/api/extensions/:key",
+  },
 ];
 
 /** Flat set of all tenant-scoped tables declared in the registry. */

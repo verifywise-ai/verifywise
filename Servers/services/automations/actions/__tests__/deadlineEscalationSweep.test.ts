@@ -104,7 +104,13 @@ describe("runDeadlineEscalationSweep", () => {
 
     const summary = await runDeadlineEscalationSweep(1);
 
-    expect(mockSlack).toHaveBeenCalledTimes(2); // owner + admin
+    // Owner and admin each get their own connections; the organization's
+    // connections get one post for the row, not one per recipient.
+    expect(mockSlack).toHaveBeenCalledTimes(3);
+    expect(mockSlack.mock.calls.map((call) => call[1]).sort()).toEqual([5, 9, null].sort());
+    expect(mockSlack.mock.calls.filter((call) => call[1] === null)).toHaveLength(1);
+    // Each send names the swept organization, never the recipient's other ones.
+    for (const call of mockSlack.mock.calls) expect(call[0]).toBe(1);
     // The 7-day leg fired too (1 day out is within 7), under its own dedup row.
     expect(mockDedup).toHaveBeenCalledWith(
       1,
@@ -141,9 +147,90 @@ describe("runDeadlineEscalationSweep", () => {
       BASE_URL,
       false,
     );
-    // Row seen by both legs; each leg notifies owner + admin. Slack delivered,
-    // so the 1-day leg counts as slacked.
-    expect(summary).toEqual({ scanned: 2, emailed: 2, slacked: 2 });
+    // Row seen by both legs; each leg notifies owner + admin. Every Slack send
+    // delivered (two own, one organization), so all three count.
+    expect(summary).toEqual({ scanned: 2, emailed: 2, slacked: 3 });
+  });
+
+  it("a row everyone was already told about → no organization post", async () => {
+    const row = riskRow({ deadline: new Date(Date.now() + 1 * DAY) });
+    mockRisks.mockResolvedValue([row]);
+    mockDedup.mockResolvedValue(true);
+
+    const summary = await runDeadlineEscalationSweep(1);
+
+    expect(mockSlack).not.toHaveBeenCalled();
+    expect(summary.slacked).toBe(0);
+  });
+
+  it("first night → exactly one organization post", async () => {
+    const row = riskRow({ deadline: new Date(Date.now() + 1 * DAY) });
+    mockRisks.mockImplementation(async (_org: number, days: number) =>
+      days === DEADLINE_SLACK_DAYS ? [row] : [],
+    );
+
+    await runDeadlineEscalationSweep(1);
+
+    expect(mockSlack.mock.calls.filter((call) => call[1] === null)).toHaveLength(1);
+  });
+
+  it("one recipient new, one already told → no organization post", async () => {
+    const row = riskRow({ deadline: new Date(Date.now() + 1 * DAY) });
+    mockRisks.mockImplementation(async (_org: number, days: number) =>
+      days === DEADLINE_SLACK_DAYS ? [row] : [],
+    );
+    // Admin 9 already has the notice; owner 5 does not (owner changed, or a
+    // retry after a failed write). The channel already heard about this row.
+    mockDedup.mockImplementation(async (_org: number, recipientId: number) => recipientId === 9);
+
+    await runDeadlineEscalationSweep(1);
+
+    expect(mockSlack.mock.calls.map((call) => call[1])).toEqual([5]);
+  });
+
+  it("new admin joins after the first night → no organization post", async () => {
+    const row = riskRow({ deadline: new Date(Date.now() + 1 * DAY) });
+    mockRisks.mockImplementation(async (_org: number, days: number) =>
+      days === DEADLINE_SLACK_DAYS ? [row] : [],
+    );
+    // Owner 5 and admin 9 were told on the first night; admin 12 is new.
+    mockAdmins.mockResolvedValue([9, 12]);
+    mockDedup.mockImplementation(async (_org: number, recipientId: number) => recipientId !== 12);
+
+    await runDeadlineEscalationSweep(1);
+
+    expect(mockSlack.mock.calls.map((call) => call[1])).toEqual([12]);
+  });
+
+  it("a recipient whose send throws counts as neither fresh nor already told", async () => {
+    const row = riskRow({ deadline: new Date(Date.now() + 1 * DAY) });
+    mockRisks.mockImplementation(async (_org: number, days: number) =>
+      days === DEADLINE_SLACK_DAYS ? [row] : [],
+    );
+    // Admin 9's dedup lookup fails; owner 5 is fresh. Still the first run.
+    mockDedup.mockImplementation(async (_org: number, recipientId: number) => {
+      if (recipientId === 9) throw new Error("db blip");
+      return false;
+    });
+
+    await runDeadlineEscalationSweep(1);
+
+    expect(mockSlack.mock.calls.map((call) => call[1])).toEqual([5, null]);
+  });
+
+  it("a failing organization post is logged and the sweep goes on", async () => {
+    const row = riskRow({ deadline: new Date(Date.now() + 1 * DAY) });
+    mockRisks.mockImplementation(async (_org: number, days: number) =>
+      days === DEADLINE_SLACK_DAYS ? [row] : [],
+    );
+    mockSlack.mockImplementation(async (_org: number, userId: number | null) => {
+      if (userId === null) throw new Error("slack down");
+      return { attempted: true, delivered: true };
+    });
+
+    const summary = await runDeadlineEscalationSweep(1);
+
+    expect(summary).toEqual({ scanned: 1, emailed: 0, slacked: 2 });
   });
 
   it("an undelivered Slack still writes the in-app record but counts zero slacked", async () => {

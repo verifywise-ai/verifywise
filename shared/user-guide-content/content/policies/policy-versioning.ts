@@ -41,12 +41,12 @@ export const policyVersioningContent: ArticleContent = {
         {
           icon: 'Eye',
           title: 'Under Review',
-          description: 'The policy is complete and awaiting review by designated stakeholders.',
+          description: 'The policy has been submitted for approval and is waiting for a decision.',
         },
         {
           icon: 'CheckCircle',
           title: 'Approved',
-          description: 'The policy has passed review and is ready to be published.',
+          description: 'The policy was approved through the approval workflow, or by an Admin, and can be published.',
         },
         {
           icon: 'Globe',
@@ -79,9 +79,9 @@ export const policyVersioningContent: ArticleContent = {
       type: 'ordered-list',
       items: [
         { bold: 'Draft', text: 'Author creates or updates the policy content' },
-        { bold: 'Under Review', text: 'Author submits the policy for stakeholder review' },
-        { bold: 'Approved', text: 'Reviewers confirm the policy meets requirements' },
-        { bold: 'Published', text: 'Policy becomes active and authoritative' },
+        { bold: 'Under Review', text: 'Author submits the policy for approval' },
+        { bold: 'Approved', text: 'The workflow\'s approvers approve it, or an Admin does when there is no workflow' },
+        { bold: 'Published', text: 'Someone sets the status to Published and the policy becomes authoritative' },
         { bold: 'Archived', text: 'When superseded, policy is archived for reference' },
       ],
     },
@@ -98,11 +98,15 @@ export const policyVersioningContent: ArticleContent = {
     {
       type: 'ordered-list',
       items: [
-        { text: 'Click on the policy in the table to open the detail view' },
+        { text: 'Click on the policy in the table to open it' },
         { text: 'Locate the status field' },
         { text: 'Select the new status from the dropdown' },
         { text: 'Save your changes' },
       ],
+    },
+    {
+      type: 'paragraph',
+      text: 'The dropdown only lists statuses you can choose. Under Review and Approved come from the approval process, not the dropdown. Published can only follow Approved, and a Published or Archived policy can\'t go back to Draft. While an approval request is pending, the status is locked.',
     },
     {
       type: 'callout',
@@ -125,6 +129,19 @@ export const policyVersioningContent: ArticleContent = {
         { bold: 'Set review dates', text: 'When creating or editing a policy, set a next review date' },
         { bold: 'Filter by review date', text: 'Use the filter to find policies approaching their review date' },
         { bold: 'Track overdue reviews', text: 'Policies past their review date should be prioritized for attention' },
+      ],
+    },
+    {
+      type: 'paragraph',
+      text: 'VerifyWise reminds people about upcoming and overdue reviews. A reminder goes to the policy owner and the assigned reviewers, or to the author when the policy has neither. It arrives as a notification and an email, and in Slack if your organization sends policy reminders there.',
+    },
+    {
+      type: 'bullet-list',
+      items: [
+        { bold: 'Due soon', text: 'Sent once, when the review date is within the next 7 days' },
+        { bold: 'Overdue', text: 'Sent once, after the review date has passed' },
+        { bold: 'Changing the date', text: 'Moving the review date to another day sends the reminders again for the new date' },
+        { bold: 'Archived and deprecated', text: 'Policies with these statuses are not reminded' },
       ],
     },
     {
@@ -181,6 +198,12 @@ export const policyVersioningContent: ArticleContent = {
           articleId: 'policy-management',
           title: 'Policy management basics',
           description: 'Create and organize policies',
+        },
+        {
+          collectionId: 'policies',
+          articleId: 'policy-approval',
+          title: 'Policy approval',
+          description: 'Submit a policy for approval or approve it as an Admin',
         },
         {
           collectionId: 'policies',

@@ -20,7 +20,7 @@ import {
  * An organization's imported framework (imported_frameworks + topics +
  * subtopics) is attached to a use case through projects_imported_frameworks,
  * and assessed through one impl row per topic (L2) and per subtopic (L3),
- * exactly like the bundled frameworks 5-25 are assessed through their impl
+ * exactly like the bundled frameworks 5-28 are assessed through their impl
  * tables. Shapes mirror utils/frameworkImpl.utils.ts so the client reuses the
  * generic framework page and drawer.
  *
@@ -784,6 +784,7 @@ export async function getImplLinkedRisksQuery(
        JOIN ${spec.risksTable} jr
          ON r.organization_id = jr.organization_id AND r.id = jr.projects_risks_id
       WHERE jr.organization_id = :organizationId AND jr.${spec.risksImplCol} = :implId
+        AND r.is_deleted = false
       ORDER BY r.id ASC;`,
     { replacements: { organizationId, implId }, type: QueryTypes.SELECT, transaction },
   )) as Array<Record<string, unknown>>;
@@ -801,6 +802,7 @@ async function assertRisksInProject(
     `SELECT pr.risk_id
        FROM projects_risks pr
        JOIN risks r ON r.id = pr.risk_id AND r.organization_id = pr.organization_id
+                    AND r.is_deleted = false
       WHERE pr.organization_id = :organizationId
         AND pr.project_id = :projectId
         AND pr.risk_id IN (:riskIds);`,

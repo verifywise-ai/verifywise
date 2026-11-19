@@ -11,8 +11,40 @@ import crypto from "crypto";
 
 const CURRENT_ALGORITHM = "aes-256-gcm";
 const LEGACY_ALGORITHM = "aes-256-cbc";
-const ENCRYPTION_KEY =
-  process.env.ENCRYPTION_KEY || "default-key-change-this-in-production-32chars!!"; // Must be 32 characters
+/**
+ * Key used when ENCRYPTION_KEY is unset outside production (local dev, unit
+ * tests). Installs that ran without a key encrypted their stored credentials
+ * with this value, which is why the production error below names it.
+ */
+export const DEFAULT_DEVELOPMENT_ENCRYPTION_KEY = "default-key-change-this-in-production-32chars!!";
+
+/**
+ * Pick the encryption key for this process. In production an unset or blank
+ * ENCRYPTION_KEY stops startup: a key everyone can read in the source is no
+ * protection for stored credentials. Elsewhere the development default is
+ * used when the variable is empty. A configured value is returned exactly as
+ * given (never trimmed) so existing ciphertext keeps decrypting.
+ */
+export function resolveEncryptionKey(env: NodeJS.ProcessEnv): string {
+  const configured = env.ENCRYPTION_KEY;
+  if (env.NODE_ENV !== "production") {
+    // Unchanged from before the production check: any non-empty value is used.
+    return configured || DEFAULT_DEVELOPMENT_ENCRYPTION_KEY;
+  }
+  if (configured !== undefined && configured.trim() !== "") return configured;
+  throw new Error(
+    "ENCRYPTION_KEY must be set in production. " +
+      "If this install previously ran without ENCRYPTION_KEY, its stored credentials were " +
+      `encrypted with the old default key: set ENCRYPTION_KEY=${DEFAULT_DEVELOPMENT_ENCRYPTION_KEY} (no quotes) ` +
+      "to keep them readable, then rotate to a new random key and re-save each credential " +
+      "(extension settings, LLM API keys, GitHub tokens).",
+  );
+}
+
+// Resolved once at module load, so a production process without a key fails
+// at boot (index.ts and jobs/worker.ts import this module first) rather than
+// on the first decrypt.
+const ENCRYPTION_KEY = resolveEncryptionKey(process.env); // Padded/truncated to 32 characters
 const GCM_IV_LENGTH = 12; // AES-GCM standard nonce length
 const GCM_AUTH_TAG_LENGTH = 16;
 

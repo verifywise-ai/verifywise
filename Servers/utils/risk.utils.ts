@@ -1,13 +1,17 @@
+import { RISK_APPROVAL_NOT_REQUIRED } from "../domain.layer/enums/risk-approval-status.enum";
 import { RiskModel } from "../domain.layer/models/risks/risk.model";
 import { getEffectiveRiskLevel } from "./riskLevel.utils";
 import { sequelize } from "../database/db";
 import { Transaction, QueryTypes } from "sequelize";
 import { IRisk } from "../domain.layer/interfaces/I.risk";
-import { IProjectFrameworks } from "../domain.layer/interfaces/i.projectFramework";
-import { TenantAutomationActionModel } from "../domain.layer/models/tenantAutomationAction/tenantAutomationAction.model";
-import { replaceTemplateVariables } from "./automation/automation.utils";
-import { enqueueAutomationAction } from "../services/automations/automationProducer";
 import {
+  enqueueAutomationActions,
+  getEventAutomationActionsQuery,
+  IAutomationActionRow,
+} from "./automation/automationActions.utils";
+import {
+  BulkRiskChange,
+  buildBulkRiskReplacements,
   buildRiskReplacements,
   buildRiskUpdateReplacements,
 } from "./automation/risk.automation.utils";
@@ -19,6 +23,59 @@ import {
   ValidationException,
 } from "../domain.layer/exceptions/custom.exception";
 import { toRiskCalendarDate } from "./riskCalendarDate.utils";
+import { storedRiskCategories } from "./riskCategory.utils";
+import { recordProjectRiskDeletion } from "./projectRiskChangeHistory.utils";
+import { getStructureById } from "../structures";
+import { unlinkRiskFromAllPoliciesQuery } from "./policyLinkedObject.utils";
+import {
+  accessibleProjectIdSql,
+  getAccessibleProjectIdsQuery,
+  isRiskVisibleQuery,
+  projectRiskVisibilitySql,
+  riskVisibilitySql,
+  RiskViewer,
+  scopedRiskViewer,
+  SYSTEM_RISK_VIEWER,
+} from "./riskVisibility.utils";
+
+type RiskAutomationTrigger = "risk_added" | "risk_updated" | "risk_deleted";
+
+/**
+ * Every active action of the organization's automations for a risk trigger,
+ * by automation, then action order (R-L6). Automations from before that
+ * change run only the event's first action until saved again
+ * (keepLegacyFirstActionOnly).
+ */
+const findRiskAutomationActions = (
+  triggerKey: RiskAutomationTrigger,
+  organizationId: number,
+  transaction?: Transaction,
+): Promise<IAutomationActionRow[]> =>
+  getEventAutomationActionsQuery(organizationId, triggerKey, transaction);
+
+/**
+ * Full names ("name surname") of the given users, keyed by id, in one query.
+ * Empty ids are skipped; a user not found is simply absent from the map.
+ */
+export const getUserFullNamesQuery = async (
+  ids: Array<number | null | undefined>,
+  transaction?: Transaction,
+): Promise<Map<number, string>> => {
+  const userIds = [...new Set(ids.filter((id) => Boolean(id)).map(Number))];
+  if (userIds.length === 0) return new Map();
+  const rows = await sequelize.query<{ id: number; full_name: string }>(
+    `SELECT id, name || ' ' || surname AS full_name FROM users WHERE id IN (:userIds);`,
+    { replacements: { userIds }, type: QueryTypes.SELECT, transaction },
+  );
+  return new Map(rows.map((row) => [Number(row.id), row.full_name]));
+};
+
+/** The risk with owner_name and approver_name for automations; "" when unknown. */
+const withUserNames = (risk: any, names: Map<number, string>) => ({
+  ...risk,
+  owner_name: (risk.risk_owner && names.get(Number(risk.risk_owner))) || "",
+  approver_name: (risk.risk_approval && names.get(Number(risk.risk_approval))) || "",
+});
 
 type Mitigation = {
   id: number;
@@ -79,6 +136,18 @@ export const assertRiskReferencesInOrganization = async (
   },
   organizationId: number,
   transaction?: Transaction,
+  options: {
+    /** The acting user. A non-Admin may only link use cases they can write to. */
+    viewer?: RiskViewer;
+    /** Use cases already linked: not re-checked against the viewer. */
+    alreadyLinked?: number[];
+    /**
+     * The use cases the viewer can access, when the caller has already read
+     * them (getAccessibleProjectIdsQuery over at least every id in `projects`).
+     * Saves the query.
+     */
+    accessibleProjectIds?: number[];
+  } = {},
 ): Promise<void> => {
   const isOutside = async (id: number | null | undefined): Promise<boolean> => {
     const ids = parseReferencedIds([id]);
@@ -122,6 +191,24 @@ export const assertRiskReferencesInOrganization = async (
     );
   }
 
+  // A use case the viewer cannot see is answered like one outside the
+  // organization: no new status or message. Only newly linked ones count.
+  if (options.viewer && scopedRiskViewer(options.viewer) && projectIds) {
+    const already = new Set((options.alreadyLinked ?? []).map(Number));
+    const toCheck = [...new Set(projectIds)].filter((id) => !already.has(id));
+    const known = options.accessibleProjectIds;
+    const accessible = known
+      ? toCheck.filter((id) => known.includes(id))
+      : await getAccessibleProjectIdsQuery(toCheck, organizationId, options.viewer, transaction);
+    if (accessible.length !== toCheck.length) {
+      throw new ValidationException(
+        "Linked use cases must belong to this organization",
+        "projects",
+        refs.projects,
+      );
+    }
+  }
+
   const frameworkIds = parseReferencedIds(refs.frameworks ?? []);
   const frameworkRows =
     frameworkIds && frameworkIds.length > 0
@@ -143,6 +230,7 @@ export const assertRiskReferencesInOrganization = async (
 export const getAllRisksQuery = async (
   organizationId: number,
   filter: "active" | "deleted" | "all" = "active",
+  viewer: RiskViewer,
 ): Promise<IRisk[]> => {
   let whereClause = "WHERE r.organization_id = :organizationId";
   switch (filter) {
@@ -157,6 +245,12 @@ export const getAllRisksQuery = async (
       break;
   }
 
+  // A non-Admin viewer sees only the risks riskVisibilitySql lets through,
+  // and each risk's projects only among the use cases they can access.
+  const visibility = riskVisibilitySql("r", viewer);
+  whereClause += visibility.sql;
+  const projectAccess = accessibleProjectIdSql("pr.project_id", viewer);
+
   // OPTIMIZED: Fast query for list view - only fetches basic risk data with projects/frameworks
   // The full relationships (subClauses, annexCategories, controls, assessments, etc.)
   // are fetched separately via getRiskByIdQuery when viewing a single risk
@@ -164,7 +258,7 @@ export const getAllRisksQuery = async (
     SELECT
       r.*,
       COALESCE(
-        JSON_AGG(DISTINCT pr.project_id) FILTER (WHERE pr.project_id IS NOT NULL),
+        JSON_AGG(DISTINCT pr.project_id) FILTER (WHERE pr.project_id IS NOT NULL${projectAccess.sql}),
         '[]'
       ) as projects,
       COALESCE(
@@ -180,7 +274,7 @@ export const getAllRisksQuery = async (
   `;
 
   const risks = (await sequelize.query(query, {
-    replacements: { organizationId },
+    replacements: { organizationId, ...visibility.replacements, ...projectAccess.replacements },
     type: QueryTypes.SELECT,
   })) as any[];
 
@@ -216,231 +310,11 @@ export const getAllRisksQuery = async (
   return risks as IRisk[];
 };
 
-/**
- * PRESERVED: Original complex query with all relationships
- * This query fetches all risk data including subClauses, annexCategories, controls, assessments, etc.
- * It's slow due to 12+ LEFT JOINs and subqueries in JOIN conditions.
- * Use getAllRisksQuery for list views and getRiskByIdQuery for single risk with full relationships.
- */
-export const getAllRisksQueryWithRelationships = async (
-  organizationId: number,
-  filter: "active" | "deleted" | "all" = "active",
-): Promise<IRisk[]> => {
-  let whereClause = "WHERE r.organization_id = :organizationId";
-  switch (filter) {
-    case "active":
-      whereClause += " AND is_deleted = false";
-      break;
-    case "deleted":
-      whereClause += " AND is_deleted = true";
-      break;
-    case "all":
-      // No additional filter
-      break;
-  }
-
-  const query = `
-    SELECT
-      r.*,
-      COALESCE(
-        JSON_AGG(DISTINCT pr.project_id) FILTER (WHERE pr.project_id IS NOT NULL),
-        '[]'
-      ) as projects,
-      COALESCE(
-        JSON_AGG(DISTINCT fr.framework_id) FILTER (WHERE fr.framework_id IS NOT NULL),
-        '[]'
-      ) as frameworks,
-      COALESCE(
-        JSON_AGG(DISTINCT JSONB_BUILD_OBJECT(
-          'id', scr.subclause_id,
-          'meta_id', sc.subclause_meta_id,
-          'sup_id', csi.clause_no,
-          'title', scs.title,
-          'sub_id', scs.order_no,
-          'parent_id', csi.id,
-          'project_id', pf_sc.project_id
-        )) FILTER (WHERE scr.subclause_id IS NOT NULL),
-        '[]'
-      ) as sub_clauses,
-      COALESCE(
-        JSON_AGG(DISTINCT JSONB_BUILD_OBJECT(
-          'id', acr.annexcategory_id,
-          'meta_id', ac.annexcategory_meta_id,
-          'sup_id', asi.annex_no,
-          'sub_id', acs.sub_id,
-          'title', acs.title,
-          'parent_id', asi.id,
-          'project_id', pf_ac.project_id
-        )) FILTER (WHERE acr.annexcategory_id IS NOT NULL),
-        '[]'
-      ) as annex_categories,
-      COALESCE(
-        JSON_AGG(DISTINCT JSONB_BUILD_OBJECT(
-          'id', cr.control_id,
-          'meta_id', ac_eu.control_meta_id,
-          'sup_id', ccs.id,
-          'sub_id', cse.id,
-          'title', cse.title,
-          'parent_id', cse.id,
-          'project_id', pf_cr.project_id
-        )) FILTER (WHERE cr.control_id IS NOT NULL),
-        '[]'
-      ) as controls,
-      COALESCE(
-        JSON_AGG(DISTINCT JSONB_BUILD_OBJECT(
-          'id', ans.id,
-          'meta_id', ans.question_id,
-          'sup_id', ts.id,
-          'sub_id', sts.id,
-          'title', ts.title || '. ' || sts.title || '. ' || qse.question,
-          'parent_id', qse.id,
-          'project_id', pf_ans.project_id
-        )) FILTER (WHERE ans.id IS NOT NULL),
-        '[]'
-      ) as assessments,
-      COALESCE(
-        JSON_AGG(DISTINCT JSONB_BUILD_OBJECT(
-          'id', acr_27001.annexcontrol_id,
-          'meta_id', ac_27001.annexcontrol_meta_id,
-          'sup_id', ccs_27001.id,
-          'sub_id', cse_27001.id,
-          'title', cse_27001.title,
-          'parent_id', cse_27001.id,
-          'project_id', pf_ac27001.project_id
-        )) FILTER (WHERE acr_27001.annexcontrol_id IS NOT NULL),
-        '[]'
-      ) as annex_controls_27001,
-      COALESCE(
-        JSON_AGG(DISTINCT JSONB_BUILD_OBJECT(
-          'id', scr_27001.subclause_id,
-          'meta_id', sc_27001.subclause_meta_id,
-          'sup_id', csi_27001.order_no,
-          'title', scs_27001.title,
-          'sub_id', scs_27001.order_no,
-          'parent_id', csi_27001.id,
-          'project_id', pf_sc27001.project_id
-        )) FILTER (WHERE scr_27001.subclause_id IS NOT NULL),
-        '[]'
-      ) as sub_clauses_27001
-    FROM risks r
-
-    -- Projects relationship
-    LEFT JOIN projects_risks pr ON r.id = pr.risk_id AND pr.organization_id = :organizationId
-
-    -- Frameworks relationship
-    LEFT JOIN frameworks_risks fr ON r.id = fr.risk_id AND fr.organization_id = :organizationId
-
-    -- SubClauses ISO relationship
-    LEFT JOIN subclauses_iso__risks scr ON r.id = scr.projects_risks_id AND scr.organization_id = :organizationId
-    LEFT JOIN subclauses_iso sc ON scr.subclause_id = sc.id AND sc.organization_id = :organizationId
-    LEFT JOIN subclauses_struct_iso scs ON scs.id = sc.subclause_meta_id
-    LEFT JOIN clauses_struct_iso csi ON csi.id = scs.clause_id
-    LEFT JOIN projects_frameworks pf_sc ON pf_sc.framework_id = csi.framework_id AND pf_sc.organization_id = :organizationId
-      AND pf_sc.project_id IN (SELECT project_id FROM projects_risks WHERE risk_id = r.id AND organization_id = :organizationId)
-
-    -- Annex Categories relationship
-    LEFT JOIN annexcategories_iso__risks acr ON r.id = acr.projects_risks_id AND acr.organization_id = :organizationId
-    LEFT JOIN annexcategories_iso ac ON acr.annexcategory_id = ac.id AND ac.organization_id = :organizationId
-    LEFT JOIN annexcategories_struct_iso acs ON acs.id = ac.annexcategory_meta_id
-    LEFT JOIN annex_struct_iso asi ON asi.id = acs.annex_id
-    LEFT JOIN projects_frameworks pf_ac ON pf_ac.framework_id = asi.framework_id AND pf_ac.organization_id = :organizationId
-      AND pf_ac.project_id IN (SELECT project_id FROM projects_risks WHERE risk_id = r.id AND organization_id = :organizationId)
-
-    -- Controls EU relationship
-    LEFT JOIN controls_eu__risks cr ON r.id = cr.projects_risks_id AND cr.organization_id = :organizationId
-    LEFT JOIN controls_eu ac_eu ON cr.control_id = ac_eu.id AND ac_eu.organization_id = :organizationId
-    LEFT JOIN controls_struct_eu cse ON cse.id = ac_eu.control_meta_id
-    LEFT JOIN controlcategories_struct_eu ccs ON ccs.id = cse.control_category_id
-    LEFT JOIN projects_frameworks pf_cr ON pf_cr.framework_id = ccs.framework_id AND pf_cr.organization_id = :organizationId
-      AND pf_cr.project_id IN (SELECT project_id FROM projects_risks WHERE risk_id = r.id AND organization_id = :organizationId)
-
-    -- Answers/Assessments EU relationship
-    LEFT JOIN answers_eu__risks aur ON r.id = aur.projects_risks_id AND aur.organization_id = :organizationId
-    LEFT JOIN answers_eu ans ON aur.answer_id = ans.id AND ans.organization_id = :organizationId
-    LEFT JOIN questions_struct_eu qse ON qse.id = ans.question_id
-    LEFT JOIN subtopics_struct_eu sts ON sts.id = qse.subtopic_id
-    LEFT JOIN topics_struct_eu ts ON ts.id = sts.topic_id
-    LEFT JOIN projects_frameworks pf_ans ON pf_ans.framework_id = ts.framework_id AND pf_ans.organization_id = :organizationId
-      AND pf_ans.project_id IN (SELECT project_id FROM projects_risks WHERE risk_id = r.id AND organization_id = :organizationId)
-
-    -- Annex Controls ISO 27001 relationship
-    LEFT JOIN annexcontrols_iso27001__risks acr_27001 ON r.id = acr_27001.projects_risks_id AND acr_27001.organization_id = :organizationId
-    LEFT JOIN annexcontrols_iso27001 ac_27001 ON acr_27001.annexcontrol_id = ac_27001.id AND ac_27001.organization_id = :organizationId
-    LEFT JOIN annexcontrols_struct_iso27001 cse_27001 ON cse_27001.id = ac_27001.annexcontrol_meta_id
-    LEFT JOIN annex_struct_iso27001 ccs_27001 ON ccs_27001.id = cse_27001.annex_id
-    LEFT JOIN projects_frameworks pf_ac27001 ON pf_ac27001.framework_id = ccs_27001.framework_id AND pf_ac27001.organization_id = :organizationId
-      AND pf_ac27001.project_id IN (SELECT project_id FROM projects_risks WHERE risk_id = r.id AND organization_id = :organizationId)
-
-    -- SubClauses ISO 27001 relationship
-    LEFT JOIN subclauses_iso27001__risks scr_27001 ON r.id = scr_27001.projects_risks_id AND scr_27001.organization_id = :organizationId
-    LEFT JOIN subclauses_iso27001 sc_27001 ON scr_27001.subclause_id = sc_27001.id AND sc_27001.organization_id = :organizationId
-    LEFT JOIN subclauses_struct_iso27001 scs_27001 ON scs_27001.id = sc_27001.subclause_meta_id
-    LEFT JOIN clauses_struct_iso27001 csi_27001 ON csi_27001.id = scs_27001.clause_id
-    LEFT JOIN projects_frameworks pf_sc27001 ON pf_sc27001.framework_id = csi_27001.framework_id AND pf_sc27001.organization_id = :organizationId
-      AND pf_sc27001.project_id IN (SELECT project_id FROM projects_risks WHERE risk_id = r.id AND organization_id = :organizationId)
-
-    ${whereClause}
-    GROUP BY r.id
-    ORDER BY r.created_at DESC, r.id ASC
-  `;
-
-  const result = (await sequelize.query(query, { replacements: { organizationId } })) as [
-    any[],
-    number,
-  ];
-  const risks = result[0];
-
-  // Helper function to transform arrays - hoisted outside loop for performance
-  const transformArray = (arr: any[]) => {
-    if (typeof arr === "string") {
-      arr = JSON.parse(arr);
-    }
-
-    // Filter out empty objects and transform keys
-    const filtered = arr.filter((item: any) => item && item.id != null);
-
-    return filtered.map((item: any) => ({
-      id: item.id,
-      meta_id: item.meta_id,
-      parent_id: item.parent_id,
-      sup_id: item.sup_id,
-      title: item.title,
-      sub_id: item.sub_id,
-      project_id: item.project_id,
-    }));
-  };
-
-  // Transform the aggregated JSON arrays back to the expected format
-  for (let risk of risks) {
-    // Parse JSON strings if needed
-    if (typeof risk.projects === "string") {
-      risk.projects = JSON.parse(risk.projects);
-    }
-    if (typeof risk.frameworks === "string") {
-      risk.frameworks = JSON.parse(risk.frameworks);
-    }
-
-    risk.subClauses = transformArray(risk.sub_clauses || []);
-    risk.annexCategories = transformArray(risk.annex_categories || []);
-    risk.controls = transformArray(risk.controls || []);
-    risk.assessments = transformArray(risk.assessments || []);
-    risk.annexControls_27001 = transformArray(risk.annex_controls_27001 || []);
-    risk.subClauses_27001 = transformArray(risk.sub_clauses_27001 || []);
-
-    // Clean up the snake_case versions
-    delete risk.sub_clauses;
-    delete risk.annex_categories;
-    delete risk.annex_controls_27001;
-    delete risk.sub_clauses_27001;
-  }
-
-  return risks as IRisk[];
-};
-
 export const getRisksByProjectQuery = async (
   projectId: number,
   organizationId: number,
   filter: "active" | "deleted" | "all" = "active",
+  viewer: RiskViewer,
 ): Promise<IRisk[] | null> => {
   let whereClause = "WHERE r.organization_id = :organizationId";
   switch (filter) {
@@ -455,11 +329,18 @@ export const getRisksByProjectQuery = async (
       break;
   }
 
+  // A viewer who cannot see the use case gets only the risks they own or
+  // approve there (projectRiskVisibilitySql). Each risk's projects list only
+  // the use cases they can access.
+  const visibility = projectRiskVisibilitySql("r", viewer);
+  whereClause += visibility.sql;
+  const projectAccess = accessibleProjectIdSql("p.id", viewer);
+
   const result = (await sequelize.query(
     `SELECT
       r.*,
       COALESCE(
-        JSON_AGG(DISTINCT p.id) FILTER (WHERE p.id IS NOT NULL),
+        JSON_AGG(DISTINCT p.id) FILTER (WHERE p.id IS NOT NULL${projectAccess.sql}),
         '[]'
       ) as projects,
       COALESCE(
@@ -475,7 +356,15 @@ export const getRisksByProjectQuery = async (
       ${whereClause}
       GROUP BY r.id
       ORDER BY r.created_at DESC, r.id ASC`,
-    { replacements: { projectId, organizationId }, type: QueryTypes.SELECT },
+    {
+      replacements: {
+        projectId,
+        organizationId,
+        ...visibility.replacements,
+        ...projectAccess.replacements,
+      },
+      type: QueryTypes.SELECT,
+    },
   )) as IRisk[];
   return result;
 };
@@ -484,6 +373,7 @@ export const getRisksByFrameworkQuery = async (
   frameworkId: number,
   organizationId: number,
   filter: "active" | "deleted" | "all" = "active",
+  viewer: RiskViewer,
 ): Promise<IRisk[] | null> => {
   let whereClause = "WHERE r.organization_id = :organizationId";
   switch (filter) {
@@ -498,11 +388,16 @@ export const getRisksByFrameworkQuery = async (
       break;
   }
 
+  const visibility = riskVisibilitySql("r", viewer);
+  whereClause += visibility.sql;
+  // Each risk's projects list only the use cases the viewer can access.
+  const projectAccess = accessibleProjectIdSql("p.id", viewer);
+
   const result = (await sequelize.query(
     `SELECT
       r.*,
       COALESCE(
-        JSON_AGG(DISTINCT p.id) FILTER (WHERE p.id IS NOT NULL),
+        JSON_AGG(DISTINCT p.id) FILTER (WHERE p.id IS NOT NULL${projectAccess.sql}),
         '[]'
       ) AS projects,
       COALESCE(
@@ -519,24 +414,59 @@ export const getRisksByFrameworkQuery = async (
     GROUP BY r.id
     ORDER BY r.created_at DESC, r.id ASC;
     `,
-    { replacements: { frameworkId, organizationId }, type: QueryTypes.SELECT },
+    {
+      replacements: {
+        frameworkId,
+        organizationId,
+        ...visibility.replacements,
+        ...projectAccess.replacements,
+      },
+      type: QueryTypes.SELECT,
+    },
   )) as IRisk[];
   return result;
 };
 
+/**
+ * One risk with its links and mappings, or null when it is missing, archived
+ * (unless includeDeleted) or hidden from the viewer (risk visibility rule):
+ * a hidden risk is answered exactly like a missing one. For a non-Admin the
+ * use case ids it carries are narrowed to the use cases they can access:
+ * `projects`, and the mapping rows, each kept once under its own use case
+ * and only when that use case is accessible.
+ */
 export const getRiskByIdQuery = async (
   id: number,
   organizationId: number,
+  viewer: RiskViewer,
   includeDeleted: boolean = false,
 ): Promise<IRisk | null> => {
+  const visibility = riskVisibilitySql("risks", viewer);
   const whereClause = includeDeleted
     ? "WHERE id = :id AND organization_id = :organizationId"
     : "WHERE id = :id AND organization_id = :organizationId AND is_deleted = false";
-  const result = (await sequelize.query(`SELECT * FROM risks ${whereClause}`, {
-    replacements: { id, organizationId },
+  const result = (await sequelize.query(`SELECT * FROM risks ${whereClause}${visibility.sql}`, {
+    replacements: { id, organizationId, ...visibility.replacements },
   })) as [IRisk[], number];
   const projectRisk = result[0][0];
   if (!projectRisk) return null;
+  // Every use case id below is narrowed to the ones the viewer can access.
+  const projectAccess = accessibleProjectIdSql("projects_risks.project_id", viewer);
+  const mappingAccess = accessibleProjectIdSql("pf.project_id", viewer);
+  const mappingReplacements = {
+    riskId: projectRisk.id,
+    organizationId,
+    ...mappingAccess.replacements,
+  };
+  // Each mapping query joins projects_frameworks on the framework alone, so a
+  // mapping comes back once per use case using that framework. Admins and the
+  // system viewer keep that output as it is. For anyone else the row is kept
+  // only when pf is the mapping's own use case (the element row's
+  // projects_frameworks_id, given as `realPf`) and that use case is accessible,
+  // so a mapping on a hidden use case never shows under an accessible one.
+  const scopedMappings = scopedRiskViewer(viewer) !== null;
+  const mappingScope = (realPf: string): string =>
+    scopedMappings ? ` AND pf.id = ${realPf}${mappingAccess.sql}` : "";
 
   let ownerFullName = "";
 
@@ -577,8 +507,8 @@ export const getRiskByIdQuery = async (
   (projectRisk as any).annexControls_27001 = [];
 
   const attachedProjects = (await sequelize.query(
-    `SELECT project_id FROM projects_risks WHERE risk_id = :riskId AND organization_id = :organizationId`,
-    { replacements: { riskId: projectRisk.id, organizationId } },
+    `SELECT project_id FROM projects_risks WHERE risk_id = :riskId AND organization_id = :organizationId${projectAccess.sql}`,
+    { replacements: { riskId: projectRisk.id, organizationId, ...projectAccess.replacements } },
   )) as [{ project_id: number }[], number];
   if (attachedProjects[0].length > 0) {
     (projectRisk as any).projects = attachedProjects[0].map((p) => p.project_id);
@@ -599,8 +529,8 @@ export const getRiskByIdQuery = async (
       JOIN subclauses_struct_iso scs ON scs.id = sc.subclause_meta_id
       JOIN clauses_struct_iso csi ON csi.id = scs.clause_id
       JOIN projects_frameworks pf ON pf.framework_id = csi.framework_id AND pf.organization_id = :organizationId
-      WHERE scr.projects_risks_id = :riskId AND scr.organization_id = :organizationId`,
-    { replacements: { riskId: projectRisk.id, organizationId } },
+      WHERE scr.projects_risks_id = :riskId AND scr.organization_id = :organizationId${mappingScope("sc.projects_frameworks_id")}`,
+    { replacements: mappingReplacements },
   )) as [Mitigation[], number];
   if (attachedSubClauses[0].length > 0) {
     (projectRisk as any).subClauses = attachedSubClauses[0];
@@ -613,8 +543,8 @@ export const getRiskByIdQuery = async (
       JOIN annexcategories_struct_iso acs ON acs.id = ac.annexcategory_meta_id
       JOIN annex_struct_iso asi ON asi.id = acs.annex_id
       JOIN projects_frameworks pf ON pf.framework_id = asi.framework_id AND pf.organization_id = :organizationId
-      WHERE acr.projects_risks_id = :riskId AND acr.organization_id = :organizationId`,
-    { replacements: { riskId: projectRisk.id, organizationId } },
+      WHERE acr.projects_risks_id = :riskId AND acr.organization_id = :organizationId${mappingScope("ac.projects_frameworks_id")}`,
+    { replacements: mappingReplacements },
   )) as [Mitigation[], number];
   if (attachedAnnexCategories[0].length > 0) {
     (projectRisk as any).annexCategories = attachedAnnexCategories[0];
@@ -626,8 +556,8 @@ export const getRiskByIdQuery = async (
       JOIN controls_struct_eu cse ON cse.id = ac.control_meta_id
       JOIN controlcategories_struct_eu ccs ON ccs.id = cse.control_category_id
       JOIN projects_frameworks pf ON pf.framework_id = ccs.framework_id AND pf.organization_id = :organizationId
-      WHERE cr.projects_risks_id = :riskId AND cr.organization_id = :organizationId`,
-    { replacements: { riskId: projectRisk.id, organizationId } },
+      WHERE cr.projects_risks_id = :riskId AND cr.organization_id = :organizationId${mappingScope("ac.projects_frameworks_id")}`,
+    { replacements: mappingReplacements },
   )) as [Mitigation[], number];
   if (attachedControls[0].length > 0) {
     (projectRisk as any).controls = attachedControls[0];
@@ -642,8 +572,10 @@ export const getRiskByIdQuery = async (
       JOIN subtopics_struct_eu sts ON sts.id = qse.subtopic_id
       JOIN topics_struct_eu ts ON ts.id = sts.topic_id
       JOIN projects_frameworks pf ON pf.framework_id = ts.framework_id AND pf.organization_id = :organizationId
-      WHERE aur.projects_risks_id = :riskId AND aur.organization_id = :organizationId`,
-    { replacements: { riskId: projectRisk.id, organizationId } },
+      WHERE aur.projects_risks_id = :riskId AND aur.organization_id = :organizationId${mappingScope(
+        "(SELECT asm.projects_frameworks_id FROM assessments asm WHERE asm.id = ans.assessment_id AND asm.organization_id = :organizationId)",
+      )}`,
+    { replacements: mappingReplacements },
   )) as [Mitigation[], number];
   if (attachedAssessments[0].length > 0) {
     (projectRisk as any).assessments = attachedAssessments[0];
@@ -655,8 +587,8 @@ export const getRiskByIdQuery = async (
       JOIN annexcontrols_struct_iso27001 cse ON cse.id = ac.annexcontrol_meta_id
       JOIN annex_struct_iso27001 ccs ON ccs.id = cse.annex_id
       JOIN projects_frameworks pf ON pf.framework_id = ccs.framework_id AND pf.organization_id = :organizationId
-      WHERE acr.projects_risks_id = :riskId AND acr.organization_id = :organizationId`,
-    { replacements: { riskId: projectRisk.id, organizationId } },
+      WHERE acr.projects_risks_id = :riskId AND acr.organization_id = :organizationId${mappingScope("ac.projects_frameworks_id")}`,
+    { replacements: mappingReplacements },
   )) as [Mitigation[], number];
   if (attachedAnnexControls_27001[0].length > 0) {
     (projectRisk as any).annexControls_27001 = attachedAnnexControls_27001[0];
@@ -669,8 +601,8 @@ export const getRiskByIdQuery = async (
       JOIN subclauses_struct_iso27001 scs ON scs.id = sc.subclause_meta_id
       JOIN clauses_struct_iso27001 csi ON csi.id = scs.clause_id
       JOIN projects_frameworks pf ON pf.framework_id = csi.framework_id AND pf.organization_id = :organizationId
-      WHERE scr.projects_risks_id = :riskId AND scr.organization_id = :organizationId`,
-    { replacements: { riskId: projectRisk.id, organizationId } },
+      WHERE scr.projects_risks_id = :riskId AND scr.organization_id = :organizationId${mappingScope("sc.projects_frameworks_id")}`,
+    { replacements: mappingReplacements },
   )) as [Mitigation[], number];
   if (attachedSubClauses_27001[0].length > 0) {
     (projectRisk as any).subClauses_27001 = attachedSubClauses_27001[0];
@@ -719,7 +651,8 @@ export const linkRiskToProjectQuery = async (
   riskId: number,
   projectId: number,
   organizationId: number,
-  transaction?: Transaction,
+  transaction: Transaction | undefined,
+  viewer: RiskViewer,
 ): Promise<void> => {
   const risks = await sequelize.query(
     `SELECT id FROM risks
@@ -727,9 +660,29 @@ export const linkRiskToProjectQuery = async (
         AND (is_deleted = false OR is_deleted IS NULL)`,
     { replacements: { riskId, organizationId }, type: QueryTypes.SELECT, transaction },
   );
-  if (risks.length === 0) throw new NotFoundException("Risk not found", "risk", riskId);
-  await assertRiskReferencesInOrganization({ projects: [projectId] }, organizationId, transaction);
+  // A risk the viewer cannot see is a missing one.
+  if (
+    risks.length === 0 ||
+    !(await isRiskVisibleQuery(riskId, organizationId, viewer, transaction))
+  ) {
+    throw new NotFoundException("Risk not found", "risk", riskId);
+  }
+  await assertRiskReferencesInOrganization({ projects: [projectId] }, organizationId, transaction, {
+    viewer,
+  });
   await createProjectRiskLink([projectId], riskId, organizationId, transaction);
+};
+
+const getLinkedProjectIdsQuery = async (
+  riskId: number,
+  organizationId: number,
+  transaction?: Transaction,
+): Promise<number[]> => {
+  const rows = await sequelize.query<{ project_id: number }>(
+    `SELECT project_id FROM projects_risks WHERE risk_id = :riskId AND organization_id = :organizationId`,
+    { replacements: { riskId, organizationId }, type: QueryTypes.SELECT, transaction },
+  );
+  return rows.map((r) => Number(r.project_id));
 };
 
 const createFrameworkRiskLink = async (
@@ -765,8 +718,9 @@ export const createRiskQuery = async (
   projectRisk: Partial<RiskModel & { projects: number[]; frameworks: number[] }>,
   organizationId: number,
   transaction: Transaction,
+  { viewer }: { viewer: RiskViewer },
 ): Promise<RiskModel> => {
-  await assertRiskReferencesInOrganization(projectRisk, organizationId, transaction);
+  await assertRiskReferencesInOrganization(projectRisk, organizationId, transaction, { viewer });
 
   const result = await sequelize.query(
     `INSERT INTO risks (
@@ -823,7 +777,9 @@ export const createRiskQuery = async (
         risk_severity: projectRisk.risk_severity,
         final_risk_level: projectRisk.final_risk_level,
         risk_approval: projectRisk.risk_approval,
-        approval_status: projectRisk.approval_status,
+        // An omitted value would bind NULL, which the column refuses; store
+        // the column default instead.
+        approval_status: projectRisk.approval_status ?? RISK_APPROVAL_NOT_REQUIRED,
         date_of_assessment: toRiskCalendarDate(projectRisk.date_of_assessment ?? null),
         is_demo: projectRisk.is_demo || false,
         event_frequency_min: projectRisk.event_frequency_min ?? null,
@@ -871,65 +827,16 @@ export const createRiskQuery = async (
   }
   const createdRisk = result[0];
 
-  const automations = (await sequelize.query(
-    `SELECT
-      pat.key AS trigger_key,
-      paa.key AS action_key,
-      a.id AS automation_id,
-      aa.*
-    FROM automation_triggers pat JOIN automations a ON a.trigger_id = pat.id AND a.organization_id = :organizationId JOIN automation_actions_data aa ON a.id = aa.automation_id AND aa.organization_id = :organizationId JOIN automation_actions paa ON aa.action_type_id = paa.id WHERE pat.key = 'risk_added' AND a.is_active ORDER BY aa."order" ASC;`,
-    { replacements: { organizationId }, transaction },
-  )) as [
-    (TenantAutomationActionModel & {
-      trigger_key: string;
-      action_key: string;
-      automation_id: number;
-    })[],
-    number,
-  ];
-  if (automations[0].length > 0) {
-    const automation = automations[0][0];
-    if (automation["trigger_key"] === "risk_added") {
-      const owner_name = (await sequelize.query(
-        `SELECT name || ' ' || surname AS full_name FROM users WHERE id = :owner_id;`,
-        {
-          replacements: { owner_id: createdRisk.dataValues.risk_owner },
-          transaction,
-        },
-      )) as [{ full_name: string }[], number];
-      const approver_name = (await sequelize.query(
-        `SELECT name || ' ' || surname AS full_name FROM users WHERE id = :approver_id;`,
-        {
-          replacements: { approver_id: createdRisk.dataValues.risk_approval },
-          transaction,
-        },
-      )) as [{ full_name: string }[], number];
-
-      const params = automation.params!;
-
-      // Build replacements
-      const replacements = buildRiskReplacements({
-        ...createdRisk.dataValues,
-        owner_name: owner_name?.[0]?.[0]?.full_name ?? "",
-        approver_name: approver_name?.[0]?.[0]?.full_name ?? "",
-      });
-
-      // Replace variables in subject and body
-      const processedParams = {
-        ...params,
-        subject: replaceTemplateVariables(params.subject || "", replacements),
-        body: replaceTemplateVariables(params.body || "", replacements),
-        automation_id: automation.automation_id,
-      };
-
-      // Enqueue with processed params
-      await enqueueAutomationAction(automation.action_key, {
-        ...processedParams,
-        organizationId,
-      });
-    } else {
-      console.warn(`No matching trigger found for key: ${automation["trigger_key"]}`);
-    }
+  const actions = await findRiskAutomationActions("risk_added", organizationId, transaction);
+  if (actions.length > 0) {
+    const risk = createdRisk.dataValues;
+    const names = await getUserFullNamesQuery([risk.risk_owner, risk.risk_approval], transaction);
+    await enqueueAutomationActions(
+      actions,
+      buildRiskReplacements(withUserNames(risk, names)),
+      organizationId,
+      transaction,
+    );
   }
 
   // Record history snapshots for all tracked parameters
@@ -976,8 +883,48 @@ export const updateRiskByIdQuery = async (
   >,
   organizationId: number,
   transaction: Transaction,
+  {
+    recordSnapshots = true,
+    runAutomations = true,
+    viewer,
+  }: { recordSnapshots?: boolean; runAutomations?: boolean; viewer: RiskViewer },
 ): Promise<RiskModel | null> => {
-  const existingRisk = await getRiskByIdQuery(id, organizationId, true);
+  const scopedViewer = scopedRiskViewer(viewer) ?? undefined;
+  // A risk the viewer cannot see is answered like a missing one (null), before
+  // anything is validated or written, so a validation error never tells a
+  // hidden risk from a missing one. The UPDATE below repeats the rule.
+  if (scopedViewer && !(await isRiskVisibleQuery(id, organizationId, scopedViewer, transaction))) {
+    return null;
+  }
+  // Read as the system on purpose: it only feeds the change diff (owner and
+  // approver checks, automation, snapshots), and the viewer's read would
+  // narrow nothing the diff uses. getRiskByIdQuery runs outside the
+  // transaction, so it is not the visibility check either.
+  const existingRisk = await getRiskByIdQuery(id, organizationId, SYSTEM_RISK_VIEWER, true);
+  // The use case links as they were, read once: the viewer check skips the
+  // ones already linked, and the link edit below diffs against them.
+  const editsProjectLinks =
+    (projectRisk.projects && projectRisk.projects.length > 0) || projectRisk.deletedLinkedProject;
+  const linkedBefore = editsProjectLinks
+    ? await getLinkedProjectIdsQuery(id, organizationId, transaction)
+    : [];
+  // For a non-Admin, which of the current and requested use cases they can
+  // access, read once: it checks the new links and finds the hidden links the
+  // edit keeps (ruling J3).
+  const accessibleProjectIds =
+    scopedViewer && editsProjectLinks
+      ? await getAccessibleProjectIdsQuery(
+          [
+            ...new Set([
+              ...linkedBefore,
+              ...(parseReferencedIds(projectRisk.projects ?? []) ?? []),
+            ]),
+          ],
+          organizationId,
+          scopedViewer,
+          transaction,
+        )
+      : undefined;
   // Unchanged owner/approver are not re-checked, so a risk whose owner has
   // left the organization can still be edited.
   await assertRiskReferencesInOrganization(
@@ -995,6 +942,7 @@ export const updateRiskByIdQuery = async (
     },
     organizationId,
     transaction,
+    { viewer: scopedViewer, alreadyLinked: linkedBefore, accessibleProjectIds },
   );
   const updateProjectRisk: Partial<Record<keyof RiskModel, any>> & { organizationId?: number } = {};
   const setClause = [
@@ -1079,78 +1027,57 @@ export const updateRiskByIdQuery = async (
       return `${f} = :${f}`;
     });
 
-  let query = `UPDATE risks SET ${setClause.join(", ")} WHERE id = :id AND organization_id = :organizationId RETURNING *;`;
+  // A risk hidden from the viewer matches nothing, as deleteRiskByIdQuery.
+  const visibility = riskVisibilitySql("risks", viewer);
+  let query = `UPDATE risks SET ${setClause.join(", ")} WHERE id = :id AND organization_id = :organizationId${visibility.sql} RETURNING *;`;
   if (setClause.length === 0) {
-    query = `SELECT * FROM risks WHERE id = :id AND organization_id = :organizationId;`;
+    query = `SELECT * FROM risks WHERE id = :id AND organization_id = :organizationId${visibility.sql};`;
   }
   updateProjectRisk.organizationId = organizationId;
 
   updateProjectRisk.id = id;
 
   const result = await sequelize.query(query, {
-    replacements: updateProjectRisk,
+    replacements: { ...updateProjectRisk, ...visibility.replacements },
     mapToModel: true,
     model: RiskModel,
     // type: QueryTypes.UPDATE,
     transaction,
   });
+  // No row: missing or hidden. Nothing else is written.
+  const updatedRisk = result[0];
+  if (!updatedRisk) return null;
 
   // Handle project links - delete if explicitly flagged as deleted or if new projects are provided
-  if (
-    (projectRisk.projects && projectRisk.projects.length > 0) ||
-    projectRisk.deletedLinkedProject
-  ) {
-    // First, get the current projects linked to this risk to identify deleted ones
-    const currentProjectsResult = (await sequelize.query(
-      `SELECT project_id FROM projects_risks WHERE risk_id = :riskId AND organization_id = :organizationId`,
-      {
-        replacements: { riskId: id, organizationId },
-        transaction,
-      },
-    )) as [{ project_id: number }[], number];
-
-    const currentProjectIds = currentProjectsResult[0].map((row) => row.project_id);
+  if (editsProjectLinks) {
+    const currentProjectIds = linkedBefore;
     const newProjectIds = projectRisk.projects || [];
+
+    // A non-Admin only replaces links among the use cases they can see. Links
+    // to the others stay, so editing a risk cannot unlink a use case that is
+    // hidden from the editor (ruling J3).
+    const keptHiddenIds = accessibleProjectIds
+      ? currentProjectIds.filter((pid) => !accessibleProjectIds.includes(Number(pid)))
+      : [];
 
     // Find projects that are being removed
     const deletedProjectIds = currentProjectIds.filter(
-      (projectId) => !newProjectIds.includes(projectId),
+      (projectId) => !newProjectIds.includes(projectId) && !keptHiddenIds.includes(projectId),
     );
 
-    // Clean up mitigation mappings for deleted projects
+    // Clean up every framework's mappings for the removed projects (R-L7)
     if (deletedProjectIds.length > 0) {
-      const projectFrameworks = (await sequelize.query(
-        `SELECT * FROM projects_frameworks WHERE project_id IN (:deletedProjectIds) AND organization_id = :organizationId`,
-        {
-          replacements: { deletedProjectIds, organizationId },
-          transaction,
-        },
-      )) as [(IProjectFrameworks & { id: number })[], number];
-
-      for (let pf of projectFrameworks[0]) {
-        if (pf.framework_id === 1) {
-          await sequelize.query(
-            `DELETE FROM answers_eu__risks WHERE organization_id = :organizationId AND answer_id IN (
-              SELECT ae.id FROM answers_eu ae JOIN assessments a ON ae.assessment_id = a.id AND ae.organization_id = :organizationId AND a.organization_id = :organizationId WHERE a.projects_frameworks_id = :pfId
-            ) AND projects_risks_id = :riskId`,
-            { replacements: { pfId: pf.id, riskId: id, organizationId }, transaction },
-          );
-
-          await sequelize.query(
-            `DELETE FROM controls_eu__risks WHERE organization_id = :organizationId AND control_id IN (
-              SELECT sc.id FROM controls_eu c JOIN subcontrols_eu sc ON c.id = sc.control_id AND c.organization_id = :organizationId AND sc.organization_id = :organizationId WHERE c.projects_frameworks_id = :pfId
-            ) AND projects_risks_id = :riskId`,
-            { replacements: { pfId: pf.id, riskId: id, organizationId }, transaction },
-          );
-        }
-      }
+      await deleteRiskMappingsForProjectsQuery(id, deletedProjectIds, organizationId, transaction);
     }
 
-    // Delete all project-risk links
+    // Delete the project-risk links (all of them, except the hidden ones a
+    // non-Admin keeps)
     await sequelize.query(
-      `DELETE FROM projects_risks WHERE risk_id = :riskId AND organization_id = :organizationId`,
+      `DELETE FROM projects_risks WHERE risk_id = :riskId AND organization_id = :organizationId${
+        keptHiddenIds.length > 0 ? " AND project_id NOT IN (:keptHiddenIds)" : ""
+      }`,
       {
-        replacements: { riskId: id, organizationId },
+        replacements: { riskId: id, organizationId, keptHiddenIds },
         transaction,
       },
     );
@@ -1182,48 +1109,21 @@ export const updateRiskByIdQuery = async (
       (frameworkId) => !newFrameworkIds.includes(frameworkId),
     );
 
-    // Clean up mitigation mappings for deleted frameworks (if framework-specific cleanup is needed)
+    // Clean up the removed frameworks' mappings, whatever the framework (R-L7)
     if (deletedFrameworkIds.length > 0) {
       const projectFrameworks = (await sequelize.query(
-        `SELECT * FROM projects_frameworks WHERE framework_id IN (:deletedFrameworkIds) AND organization_id = :organizationId`,
+        `SELECT id FROM projects_frameworks WHERE framework_id IN (:deletedFrameworkIds) AND organization_id = :organizationId`,
         {
           replacements: { deletedFrameworkIds, organizationId },
           transaction,
         },
-      )) as [(IProjectFrameworks & { id: number })[], number];
-      for (let pf of projectFrameworks[0]) {
-        if (pf.framework_id === 2) {
-          await sequelize.query(
-            `DELETE FROM subclauses_iso__risks WHERE organization_id = :organizationId AND subclause_id IN (
-              SELECT sc.id FROM subclauses_iso sc WHERE sc.projects_frameworks_id = :pfId AND sc.organization_id = :organizationId
-            ) AND projects_risks_id = :riskId`,
-            { replacements: { pfId: pf.id, riskId: id, organizationId }, transaction },
-          );
-
-          await sequelize.query(
-            `DELETE FROM annexcategories_iso__risks WHERE organization_id = :organizationId AND annexcategory_id IN (
-              SELECT ac.id FROM annexcategories_iso ac WHERE ac.projects_frameworks_id = :pfId AND ac.organization_id = :organizationId
-            ) AND projects_risks_id = :riskId`,
-            { replacements: { pfId: pf.id, riskId: id, organizationId }, transaction },
-          );
-        }
-
-        if (pf.framework_id === 3) {
-          await sequelize.query(
-            `DELETE FROM subclauses_iso27001__risks WHERE organization_id = :organizationId AND subclause_id IN (
-              SELECT sc.id FROM subclauses_iso27001 sc WHERE sc.projects_frameworks_id = :pfId AND sc.organization_id = :organizationId
-            ) AND projects_risks_id = :riskId`,
-            { replacements: { pfId: pf.id, riskId: id, organizationId }, transaction },
-          );
-
-          await sequelize.query(
-            `DELETE FROM annexcontrols_iso27001__risks WHERE organization_id = :organizationId AND annexcontrol_id IN (
-              SELECT ac.id FROM annexcontrols_iso27001 ac WHERE ac.projects_frameworks_id = :pfId AND ac.organization_id = :organizationId
-            ) AND projects_risks_id = :riskId`,
-            { replacements: { pfId: pf.id, riskId: id, organizationId }, transaction },
-          );
-        }
-      }
+      )) as [{ id: number }[], number];
+      await deleteRiskMappingsForProjectFrameworksQuery(
+        id,
+        projectFrameworks[0].map((pf) => pf.id),
+        organizationId,
+        transaction,
+      );
     }
 
     // Delete all framework-risk links
@@ -1239,82 +1139,25 @@ export const updateRiskByIdQuery = async (
       await createFrameworkRiskLink(projectRisk.frameworks, id, organizationId, transaction);
     }
   }
-  const updatedRisk = result[0];
-  const automations = (await sequelize.query(
-    `SELECT
-      pat.key AS trigger_key,
-      paa.key AS action_key,
-      a.id AS automation_id,
-      aa.*
-    FROM automation_triggers pat JOIN automations a ON a.trigger_id = pat.id AND a.organization_id = :organizationId JOIN automation_actions_data aa ON a.id = aa.automation_id AND aa.organization_id = :organizationId JOIN automation_actions paa ON aa.action_type_id = paa.id WHERE pat.key = 'risk_updated' AND a.is_active ORDER BY aa."order" ASC;`,
-    { replacements: { organizationId }, transaction },
-  )) as [
-    (TenantAutomationActionModel & {
-      trigger_key: string;
-      action_key: string;
-      automation_id: number;
-    })[],
-    number,
-  ];
-  if (automations[0].length > 0) {
-    const automation = automations[0][0];
-    if (automation["trigger_key"] === "risk_updated") {
-      let ownerFullName = "";
-
-      if (updatedRisk.dataValues.risk_owner) {
-        const ownerResult = (await sequelize.query(
-          `SELECT name || ' ' || surname AS full_name 
-            FROM users 
-            WHERE id = :owner_id;`,
-          {
-            replacements: { owner_id: updatedRisk.dataValues.risk_owner },
-            transaction,
-          },
-        )) as [{ full_name: string }[], any];
-
-        ownerFullName = ownerResult?.[0]?.[0]?.full_name ?? "";
-      }
-
-      let approverFullName = "";
-      if (updatedRisk.dataValues.risk_approval) {
-        const approver_name = (await sequelize.query(
-          `SELECT name || ' ' || surname AS full_name FROM users WHERE id = :approver_id;`,
-          {
-            replacements: { approver_id: updatedRisk.dataValues.risk_approval },
-            transaction,
-          },
-        )) as [{ full_name: string }[], number];
-        approverFullName = approver_name?.[0]?.[0]?.full_name ?? "";
-      }
-
-      const params = automation.params!;
-
-      // Build replacements
-      const replacements = buildRiskUpdateReplacements(existingRisk, {
-        ...updatedRisk.dataValues,
-        owner_name: ownerFullName,
-        approver_name: approverFullName,
-      });
-
-      // Replace variables in subject and body
-      const processedParams = {
-        ...params,
-        subject: replaceTemplateVariables(params.subject || "", replacements),
-        body: replaceTemplateVariables(params.body || "", replacements),
-        automation_id: automation.automation_id,
-      };
-
-      // Enqueue with processed params
-      await enqueueAutomationAction(automation.action_key, {
-        ...processedParams,
-        organizationId,
-      });
-    } else {
-      console.warn(`No matching trigger found for key: ${automation["trigger_key"]}`);
-    }
+  // A bulk action passes runAutomations: false and runs the automations once
+  // for the whole batch (enqueueBulkRiskAutomation).
+  const actions = runAutomations
+    ? await findRiskAutomationActions("risk_updated", organizationId, transaction)
+    : [];
+  if (actions.length > 0) {
+    const risk = updatedRisk.dataValues;
+    const names = await getUserFullNamesQuery([risk.risk_owner, risk.risk_approval], transaction);
+    await enqueueAutomationActions(
+      actions,
+      buildRiskUpdateReplacements(existingRisk, withUserNames(risk, names)),
+      organizationId,
+      transaction,
+    );
   }
 
-  // Record history snapshots if tracked parameters changed
+  // Record history snapshots if tracked parameters changed. A bulk edit
+  // skips this and records them once after its loop.
+  if (!recordSnapshots) return updatedRisk;
   try {
     const parametersToCheck = [
       { key: "severity", param: "severity" },
@@ -1349,17 +1192,28 @@ export const updateRiskByIdQuery = async (
   return updatedRisk;
 };
 
+/**
+ * Soft-delete one risk. Returns the archived row (as it was written), or null
+ * when no active risk matched.
+ */
 export const deleteRiskByIdQuery = async (
   id: number,
   organizationId: number,
   transaction: Transaction,
-): Promise<boolean> => {
+  {
+    viewer,
+    recordSnapshots = true,
+    runAutomations = true,
+  }: { viewer: RiskViewer; recordSnapshots?: boolean; runAutomations?: boolean },
+): Promise<RiskModel | null> => {
   // Soft delete. Custom field values stay with the archived risk, and nothing
-  // else runs when no active risk matched (R-M7).
+  // else runs when no active risk matched (R-M7). A risk hidden from the
+  // viewer does not match, so it is answered like a missing one.
+  const visibility = riskVisibilitySql("risks", viewer);
   const result = (await sequelize.query(
-    `UPDATE risks SET is_deleted = true, deleted_at = NOW(), updated_at = NOW() WHERE id = :id AND organization_id = :organizationId AND is_deleted = false RETURNING *`,
+    `UPDATE risks SET is_deleted = true, deleted_at = NOW(), updated_at = NOW() WHERE id = :id AND organization_id = :organizationId AND is_deleted = false${visibility.sql} RETURNING *`,
     {
-      replacements: { id, organizationId },
+      replacements: { id, organizationId, ...visibility.replacements },
       mapToModel: true,
       // model: RiskModel,
       // type: QueryTypes.UPDATE,
@@ -1367,69 +1221,109 @@ export const deleteRiskByIdQuery = async (
     },
   )) as [RiskModel[], number];
   const deletedRisk = result[0][0];
-  if (!deletedRisk) return false;
-  const automations = (await sequelize.query(
-    `SELECT
-      pat.key AS trigger_key,
-      paa.key AS action_key,
-      a.id AS automation_id,
-      aa.*
-    FROM automation_triggers pat JOIN automations a ON a.trigger_id = pat.id AND a.organization_id = :organizationId JOIN automation_actions_data aa ON a.id = aa.automation_id AND aa.organization_id = :organizationId JOIN automation_actions paa ON aa.action_type_id = paa.id WHERE pat.key = 'risk_deleted' AND a.is_active ORDER BY aa."order" ASC;`,
-    { replacements: { organizationId }, transaction },
-  )) as [
-    (TenantAutomationActionModel & {
-      trigger_key: string;
-      action_key: string;
-      automation_id: number;
-    })[],
-    number,
-  ];
-  if (automations[0].length > 0) {
-    const automation = automations[0][0];
-    if (automation["trigger_key"] === "risk_deleted") {
-      const owner_name = (await sequelize.query(
-        `SELECT name || ' ' || surname AS full_name FROM users WHERE id = :owner_id;`,
-        {
-          replacements: { owner_id: deletedRisk.risk_owner },
-          transaction,
-        },
-      )) as [{ full_name: string }[], number];
-      const approver_name = (await sequelize.query(
-        `SELECT name || ' ' || surname AS full_name FROM users WHERE id = :approver_id;`,
-        {
-          replacements: { approver_id: deletedRisk.risk_approval },
-          transaction,
-        },
-      )) as [{ full_name: string }[], number];
-
-      const params = automation.params!;
-
-      // Build replacements
-      const replacements = buildRiskReplacements({
-        ...deletedRisk,
-        owner_name: owner_name?.[0]?.[0]?.full_name ?? "",
-        approver_name: approver_name?.[0]?.[0]?.full_name ?? "",
-      });
-
-      // Replace variables in subject and body
-      const processedParams = {
-        ...params,
-        subject: replaceTemplateVariables(params.subject || "", replacements),
-        body: replaceTemplateVariables(params.body || "", replacements),
-        automation_id: automation.automation_id,
-      };
-
-      // Enqueue with processed params
-      await enqueueAutomationAction(automation.action_key, {
-        ...processedParams,
-        organizationId,
-      });
-    } else {
-      console.warn(`No matching trigger found for key: ${automation["trigger_key"]}`);
-    }
+  if (!deletedRisk) return null;
+  // A bulk action passes runAutomations: false and runs the automations once
+  // for the whole batch (enqueueBulkRiskAutomation).
+  const actions = runAutomations
+    ? await findRiskAutomationActions("risk_deleted", organizationId, transaction)
+    : [];
+  if (actions.length > 0) {
+    const names = await getUserFullNamesQuery(
+      [deletedRisk.risk_owner, deletedRisk.risk_approval],
+      transaction,
+    );
+    await enqueueAutomationActions(
+      actions,
+      buildRiskReplacements(withUserNames(deletedRisk, names)),
+      organizationId,
+      transaction,
+    );
   }
 
-  // Record history snapshots for all tracked parameters after deletion
+  // Record history snapshots for all tracked parameters after deletion. A
+  // bulk archive skips this and records them once after its loop.
+  if (recordSnapshots) {
+    await recordRiskSnapshots(organizationId, transaction);
+  }
+
+  return deletedRisk;
+};
+
+/**
+ * The active (not archived) risks of the organization among `ids`. Archived
+ * ids are left out, so a bulk edit leaves them alone.
+ */
+export const getActiveRisksByIdsQuery = async (
+  ids: number[],
+  organizationId: number,
+  transaction?: Transaction,
+): Promise<IRisk[]> => {
+  if (ids.length === 0) return [];
+  return sequelize.query<IRisk>(
+    `SELECT * FROM risks WHERE organization_id = :organizationId AND id IN (:ids) AND is_deleted = false`,
+    { replacements: { organizationId, ids }, type: QueryTypes.SELECT, transaction },
+  );
+};
+
+/** Same risk categories, ignoring order and duplicates. */
+export const sameRiskCategories = (stored: unknown, next: string[]): boolean => {
+  const a = new Set(storedRiskCategories(stored));
+  const b = new Set(next);
+  return a.size === b.size && [...a].every((c) => b.has(c));
+};
+
+/**
+ * One project (use case) title per risk, for notifications: the title of the
+ * lowest-id project each risk is linked to. Risks with no project are absent.
+ */
+export const getProjectTitlesByRiskIdsQuery = async (
+  riskIds: number[],
+  organizationId: number,
+): Promise<Map<number, string>> => {
+  if (riskIds.length === 0) return new Map();
+  const rows = await sequelize.query<{ risk_id: number; project_title: string }>(
+    `SELECT DISTINCT ON (prl.risk_id) prl.risk_id, p.project_title
+       FROM projects_risks prl
+       JOIN projects p ON p.id = prl.project_id AND p.organization_id = :organizationId
+      WHERE prl.risk_id IN (:riskIds) AND prl.organization_id = :organizationId
+      ORDER BY prl.risk_id, p.id ASC`,
+    { replacements: { riskIds, organizationId }, type: QueryTypes.SELECT },
+  );
+  return new Map(rows.map((r) => [Number(r.risk_id), r.project_title]));
+};
+
+/**
+ * The stored approver and approval status of a risk, read with a row lock
+ * inside `transaction`, so two saves that both change the approval resolve
+ * one after the other instead of against the same stale read. Null when the
+ * risk is not in this organization.
+ */
+export const lockRiskApprovalQuery = async (
+  riskId: number,
+  organizationId: number,
+  transaction: Transaction,
+): Promise<{ risk_approval: number | null; approval_status: string | null } | null> => {
+  const rows = await sequelize.query<{
+    risk_approval: number | null;
+    approval_status: string | null;
+  }>(
+    `SELECT risk_approval, approval_status FROM risks
+      WHERE id = :riskId AND organization_id = :organizationId
+      FOR UPDATE`,
+    { replacements: { riskId, organizationId }, type: QueryTypes.SELECT, transaction },
+  );
+  return rows[0] ?? null;
+};
+
+/**
+ * Record the four risk history snapshots. A bulk archive or edit records them
+ * once after its loop. Failures are logged, never thrown: history must not
+ * block the change.
+ */
+export const recordRiskSnapshots = async (
+  organizationId: number,
+  transaction: Transaction,
+): Promise<void> => {
   try {
     await Promise.all([
       recordSnapshotIfChanged("severity", organizationId, undefined, transaction),
@@ -1439,96 +1333,315 @@ export const deleteRiskByIdQuery = async (
     ]);
   } catch (historyError) {
     console.error("Error recording risk history snapshots:", historyError);
-    // Don't throw - history recording failure shouldn't block risk deletion
+  }
+};
+
+/**
+ * Run the risk automations once for a whole bulk action: `risk_deleted` for an
+ * archive, `risk_updated` for a set owner/category. The per-risk paths run
+ * with runAutomations: false, so each action sends once per bulk action, not
+ * once per risk. Runs every action the single path would and enqueues after
+ * commit. Owner and approver names come from one query for the batch.
+ */
+export const enqueueBulkRiskAutomation = async (
+  trigger: "risk_deleted" | "risk_updated",
+  changes: BulkRiskChange[],
+  organizationId: number,
+  transaction: Transaction,
+): Promise<void> => {
+  if (changes.length === 0) return;
+  const actions = await findRiskAutomationActions(trigger, organizationId, transaction);
+  if (actions.length === 0) return;
+
+  const names = await getUserFullNamesQuery(
+    changes.flatMap(({ before, after }) => [
+      before.risk_owner,
+      before.risk_approval,
+      after.risk_owner,
+      after.risk_approval,
+    ]),
+    transaction,
+  );
+  const withNames = (risk: any) => withUserNames(risk, names);
+  await enqueueAutomationActions(
+    actions,
+    buildBulkRiskReplacements(
+      trigger,
+      changes.map(({ before, after }) => ({ before: withNames(before), after: withNames(after) })),
+    ),
+    organizationId,
+    transaction,
+  );
+};
+
+/**
+ * Archive (soft-delete) one risk with every side effect of the single delete:
+ * the risk_deleted automation, the change-history entry and the risk's policy
+ * links. Shared by DELETE /projectRisks/:id and the bulk archive, which passes
+ * recordSnapshots: false and runAutomations: false and records the snapshots
+ * and runs the automation once for the whole batch.
+ *
+ * Returns the archived row (the bulk archive uses it for its automation
+ * summary), or null, doing nothing else, when no active risk matched. A risk
+ * the viewer cannot see does not match (risk visibility rule).
+ */
+export const archiveRiskQuery = async (
+  id: number,
+  organizationId: number,
+  userId: number | undefined,
+  transaction: Transaction,
+  {
+    viewer,
+    recordSnapshots = true,
+    runAutomations = true,
+  }: { viewer: RiskViewer; recordSnapshots?: boolean; runAutomations?: boolean },
+): Promise<RiskModel | null> => {
+  const archived = await deleteRiskByIdQuery(id, organizationId, transaction, {
+    viewer,
+    recordSnapshots,
+    runAutomations,
+  });
+  if (!archived) return null;
+
+  if (userId) {
+    await recordProjectRiskDeletion(id, userId, organizationId, transaction);
   }
 
-  return result[0].length > 0;
+  // An archived risk is no longer linked to any policy (R-M8).
+  await unlinkRiskFromAllPoliciesQuery(id, organizationId, transaction);
+
+  return archived;
 };
 
 /**
- * Bulk-assign a single risk owner across many project risks.
- * Caller must validate org ownership beforehand (e.g. via assertOrgOwnsIds).
- * Skips rows that have already been soft-deleted.
+ * Archive several risks as one bulk action: each goes through archiveRiskQuery
+ * (change history, policy unlinks), then the history snapshots are recorded
+ * and the org's "risk deleted" automation runs once for the batch. Shared by
+ * the bulk archive (PATCH /projectRisks/bulk), the v1 use case delete and the
+ * advisor's use case delete.
+ *
+ * Runs as the system viewer: every caller has already decided which ids the
+ * user may archive, in the same transaction. Returns the archived rows; an id
+ * that is missing or already archived is skipped.
  */
-export const bulkSetProjectRisksOwnerQuery = async (
-  organizationId: number,
+export const archiveRisksInBulkQuery = async (
   ids: number[],
-  ownerId: number,
+  organizationId: number,
+  userId: number | undefined,
   transaction: Transaction,
-): Promise<void> => {
-  if (ids.length === 0) return;
-
-  await sequelize.query(
-    `UPDATE risks
-       SET risk_owner = :ownerId,
-           updated_at = NOW()
-     WHERE organization_id = :organizationId
-       AND id IN (:ids)
-       AND is_deleted = false`,
-    {
-      replacements: { organizationId, ids, ownerId },
+): Promise<RiskModel[]> => {
+  const archivedRows: RiskModel[] = [];
+  for (const id of ids) {
+    const archived = await archiveRiskQuery(id, organizationId, userId, transaction, {
+      viewer: SYSTEM_RISK_VIEWER,
+      recordSnapshots: false,
+      runAutomations: false,
+    });
+    if (archived) archivedRows.push(archived);
+  }
+  if (archivedRows.length > 0) {
+    await recordRiskSnapshots(organizationId, transaction);
+    await enqueueBulkRiskAutomation(
+      "risk_deleted",
+      archivedRows.map((row) => ({ before: row, after: row })),
+      organizationId,
       transaction,
-    },
-  );
+    );
+  }
+  return archivedRows;
 };
 
 /**
- * Bulk-replace risk_category (enum array) on many project risks.
- * Categories must already be validated against the predefined enum.
- * Uses a JSONB → enum-array conversion so empty arrays serialize cleanly.
+ * One mapping table family: the risk junction, its impl-id column, and the
+ * subquery that selects the impl rows belonging to :pfIds. Every name here is
+ * a literal or comes from the Servers/structures registry, never from input.
  */
-export const bulkSetProjectRisksCategoryQuery = async (
-  organizationId: number,
-  ids: number[],
-  categories: string[],
-  transaction: Transaction,
-): Promise<void> => {
-  if (ids.length === 0) return;
+type RiskMappingTable = { risksTable: string; implCol: string; implIdsSql: string };
 
-  await sequelize.query(
-    `UPDATE risks
-       SET risk_category =
-             ARRAY(SELECT jsonb_array_elements_text(CAST(:categories AS jsonb)))
-             ::enum_projectrisks_risk_category[],
-           updated_at = NOW()
-     WHERE organization_id = :organizationId
-       AND id IN (:ids)
-       AND is_deleted = false`,
+const BUILT_IN_RISK_MAPPING_TABLES: Record<number, RiskMappingTable[]> = {
+  // EU AI Act
+  1: [
     {
-      replacements: {
-        organizationId,
-        ids,
-        categories: JSON.stringify(categories),
-      },
-      transaction,
+      risksTable: "answers_eu__risks",
+      implCol: "answer_id",
+      implIdsSql: `SELECT ae.id FROM answers_eu ae JOIN assessments a ON ae.assessment_id = a.id AND ae.organization_id = :organizationId AND a.organization_id = :organizationId WHERE a.projects_frameworks_id IN (:pfIds)`,
     },
-  );
+    {
+      risksTable: "controls_eu__risks",
+      implCol: "control_id",
+      implIdsSql: `SELECT c.id FROM controls_eu c WHERE c.projects_frameworks_id IN (:pfIds) AND c.organization_id = :organizationId`,
+    },
+    {
+      risksTable: "subcontrols_eu__risks",
+      implCol: "subcontrol_id",
+      implIdsSql: `SELECT sc.id FROM subcontrols_eu sc JOIN controls_eu c ON c.id = sc.control_id AND c.organization_id = :organizationId WHERE sc.organization_id = :organizationId AND c.projects_frameworks_id IN (:pfIds)`,
+    },
+  ],
+  // ISO 42001
+  2: [
+    {
+      risksTable: "subclauses_iso__risks",
+      implCol: "subclause_id",
+      implIdsSql: `SELECT id FROM subclauses_iso WHERE projects_frameworks_id IN (:pfIds) AND organization_id = :organizationId`,
+    },
+    {
+      risksTable: "annexcategories_iso__risks",
+      implCol: "annexcategory_id",
+      implIdsSql: `SELECT id FROM annexcategories_iso WHERE projects_frameworks_id IN (:pfIds) AND organization_id = :organizationId`,
+    },
+  ],
+  // ISO 27001
+  3: [
+    {
+      risksTable: "subclauses_iso27001__risks",
+      implCol: "subclause_id",
+      implIdsSql: `SELECT id FROM subclauses_iso27001 WHERE projects_frameworks_id IN (:pfIds) AND organization_id = :organizationId`,
+    },
+    {
+      risksTable: "annexcontrols_iso27001__risks",
+      implCol: "annexcontrol_id",
+      implIdsSql: `SELECT id FROM annexcontrols_iso27001 WHERE projects_frameworks_id IN (:pfIds) AND organization_id = :organizationId`,
+    },
+  ],
+  // NIST AI RMF
+  4: [
+    {
+      risksTable: "nist_ai_rmf_subcategories__risks",
+      implCol: "nist_ai_rmf_subcategory_id",
+      implIdsSql: `SELECT id FROM nist_ai_rmf_subcategories WHERE projects_frameworks_id IN (:pfIds) AND organization_id = :organizationId`,
+    },
+  ],
+};
+
+/** The bundled frameworks' l2 (and l3) junctions, from the structures registry. */
+const bundledRiskMappingTables = (frameworkId: number): RiskMappingTable[] => {
+  const structure = getStructureById(frameworkId);
+  if (!structure) return [];
+  const { tables, cols } = structure;
+  const families: RiskMappingTable[] = [
+    {
+      risksTable: tables.l2_risks,
+      implCol: cols.l2_risks_impl,
+      implIdsSql: `SELECT id FROM ${tables.l2_impl} WHERE projects_frameworks_id IN (:pfIds) AND organization_id = :organizationId`,
+    },
+  ];
+  if (tables.l3_impl && tables.l3_risks && cols.l3_risks_impl) {
+    families.push({
+      risksTable: tables.l3_risks,
+      implCol: cols.l3_risks_impl,
+      implIdsSql: `SELECT id FROM ${tables.l3_impl} WHERE projects_frameworks_id IN (:pfIds) AND organization_id = :organizationId`,
+    });
+  }
+  return families;
 };
 
 /**
- * Bulk soft-delete project risks. Idempotent: rows already archived are
- * left untouched.
+ * Delete one risk's mappings to the impl rows of the given projects_frameworks
+ * rows, for every framework those rows belong to: the four built-in ones and
+ * the bundled registry frameworks (R-L7).
  */
-export const bulkArchiveProjectRisksQuery = async (
+export const deleteRiskMappingsForProjectFrameworksQuery = async (
+  riskId: number,
+  projectFrameworkIds: number[],
   organizationId: number,
-  ids: number[],
   transaction: Transaction,
 ): Promise<void> => {
-  if (ids.length === 0) return;
+  if (projectFrameworkIds.length === 0) return;
 
-  await sequelize.query(
-    `UPDATE risks
-       SET is_deleted = true,
-           deleted_at = NOW(),
-           updated_at = NOW()
-     WHERE organization_id = :organizationId
-       AND id IN (:ids)
-       AND is_deleted = false`,
+  const frameworkRows = (await sequelize.query(
+    `SELECT DISTINCT framework_id FROM projects_frameworks
+      WHERE id IN (:pfIds) AND organization_id = :organizationId`,
     {
-      replacements: { organizationId, ids },
+      replacements: { pfIds: projectFrameworkIds, organizationId },
+      type: QueryTypes.SELECT,
       transaction,
     },
+  )) as { framework_id: number }[];
+
+  for (const { framework_id } of frameworkRows) {
+    const families =
+      BUILT_IN_RISK_MAPPING_TABLES[framework_id] ?? bundledRiskMappingTables(framework_id);
+    for (const { risksTable, implCol, implIdsSql } of families) {
+      await sequelize.query(
+        `DELETE FROM ${risksTable}
+          WHERE organization_id = :organizationId AND projects_risks_id = :riskId
+            AND ${implCol} IN (${implIdsSql})`,
+        {
+          replacements: { riskId, pfIds: projectFrameworkIds, organizationId },
+          transaction,
+        },
+      );
+    }
+  }
+};
+
+/**
+ * Delete one risk's mappings to everything the given projects (use cases)
+ * hold: the projects_frameworks frameworks, custom frameworks and imported
+ * frameworks.
+ */
+export const deleteRiskMappingsForProjectsQuery = async (
+  riskId: number,
+  projectIds: number[],
+  organizationId: number,
+  transaction: Transaction,
+): Promise<void> => {
+  if (projectIds.length === 0) return;
+
+  const projectFrameworks = (await sequelize.query(
+    `SELECT id FROM projects_frameworks WHERE project_id IN (:projectIds) AND organization_id = :organizationId`,
+    {
+      replacements: { projectIds, organizationId },
+      type: QueryTypes.SELECT,
+      transaction,
+    },
+  )) as { id: number }[];
+  await deleteRiskMappingsForProjectFrameworksQuery(
+    riskId,
+    projectFrameworks.map((pf) => pf.id),
+    organizationId,
+    transaction,
   );
+
+  const replacements = { riskId, projectIds, organizationId };
+  const customLevel2ImplIds = `SELECT l2.id FROM custom_framework_level2_impl l2
+      JOIN custom_framework_projects cfp ON cfp.id = l2.project_framework_id AND cfp.organization_id = :organizationId
+     WHERE l2.organization_id = :organizationId AND cfp.project_id IN (:projectIds)`;
+  await sequelize.query(
+    `DELETE FROM custom_framework_level2_risks
+      WHERE organization_id = :organizationId AND risk_id = :riskId
+        AND level2_impl_id IN (${customLevel2ImplIds})`,
+    { replacements, transaction },
+  );
+  await sequelize.query(
+    `DELETE FROM custom_framework_level3_risks
+      WHERE organization_id = :organizationId AND risk_id = :riskId
+        AND level3_impl_id IN (
+          SELECT l3.id FROM custom_framework_level3_impl l3
+           WHERE l3.organization_id = :organizationId AND l3.level2_impl_id IN (${customLevel2ImplIds})
+        )`,
+    { replacements, transaction },
+  );
+
+  for (const [risksTable, implCol, implTable] of [
+    ["imported_framework_topic_impl__risks", "topic_impl_id", "imported_framework_topic_impl"],
+    [
+      "imported_framework_subtopic_impl__risks",
+      "subtopic_impl_id",
+      "imported_framework_subtopic_impl",
+    ],
+  ] as const) {
+    await sequelize.query(
+      `DELETE FROM ${risksTable}
+        WHERE organization_id = :organizationId AND projects_risks_id = :riskId
+          AND ${implCol} IN (
+            SELECT i.id FROM ${implTable} i
+              JOIN projects_imported_frameworks pif ON pif.id = i.project_imported_framework_id AND pif.organization_id = :organizationId
+             WHERE i.organization_id = :organizationId AND pif.project_id IN (:projectIds)
+          )`,
+      { replacements, transaction },
+    );
+  }
 };
 
 export const PROJECT_RISK_CATEGORIES = [
@@ -1552,3 +1665,96 @@ export const PROJECT_RISK_CATEGORIES = [
 export type ProjectRiskCategory = (typeof PROJECT_RISK_CATEGORIES)[number];
 
 export const PROJECT_RISK_CATEGORIES_SET: Set<string> = new Set(PROJECT_RISK_CATEGORIES);
+
+/**
+ * The active risks linked to this use case and to no other: deleting the use
+ * case removes its projects_risks rows and keeps the risks, so these would be
+ * left with no use case link. An active risk with no link is visible to
+ * everyone in the organization (riskVisibilitySql); an archived one is not, so
+ * the delete can archive these to keep them private
+ * (deleteProjectWithSideEffects with archiveRisksLinkedOnlyHere).
+ *
+ * One query, driven from this use case's projects_risks rows (joined to their
+ * risks, with NOT EXISTS for any other link), under a LEFT JOIN from the use
+ * case row: no row at all means the use case is not in the organization
+ * (null) and a single row with no risk means none. projects_risks has the key
+ * (risk_id, project_id), so a risk appears once, and project_id is NOT NULL,
+ * so `<>` is enough. The "no other use case" test ignores
+ * projects_risks.organization_id for the same reason riskVisibilitySql does: a
+ * row with a NULL organization still counts as a link. Archived risks are left
+ * out: they are already private once unlinked.
+ *
+ * Both the count endpoint and the delete (deleteProjectWithSideEffects) call
+ * this function, so the dialog's list and the set the delete archives come
+ * from the same SQL. The delete passes its transaction, after the use case row
+ * and the risks' links are locked (lockRiskLinksOfProjectQuery), to read the
+ * set at the moment of the delete.
+ */
+export const getRisksLinkedOnlyToProjectQuery = async (
+  projectId: number,
+  organizationId: number,
+  transaction?: Transaction,
+): Promise<{ id: number; risk_name: string }[] | null> => {
+  const rows = await sequelize.query<{ project_id: number; id: number | null; risk_name: string }>(
+    `SELECT p.id AS project_id, only_here.id, only_here.risk_name
+       FROM projects p
+       LEFT JOIN (
+         SELECT r.id, r.risk_name
+           FROM projects_risks pr
+           JOIN risks r
+             ON r.id = pr.risk_id
+            AND r.organization_id = :organizationId
+            AND r.is_deleted = false
+          WHERE pr.project_id = :projectId
+            AND NOT EXISTS (
+              SELECT 1 FROM projects_risks other
+               WHERE other.risk_id = pr.risk_id AND other.project_id <> pr.project_id)
+       ) only_here ON true
+      WHERE p.id = :projectId AND p.organization_id = :organizationId
+      ORDER BY only_here.risk_name, only_here.id`,
+    { replacements: { projectId, organizationId }, type: QueryTypes.SELECT, transaction },
+  );
+  if (rows.length === 0) return null;
+  return rows
+    .filter((row) => row.id !== null)
+    .map((row) => ({ id: Number(row.id), risk_name: row.risk_name }));
+};
+
+/**
+ * Locks, in this transaction, every risk linked to this use case and every
+ * projects_risks row of those risks (their links to any use case, not only
+ * this one), so the "linked only here" set read right after cannot change
+ * before the delete commits. Risk rows first, then link rows, each in key
+ * order: the risk update path also updates the risk row before it deletes the
+ * risk's links, so both take the locks in the same order and cannot deadlock
+ * on them.
+ *
+ * Every path that removes a link deletes the projects_risks row (risk update
+ * link diff, risk delete, another use case's delete), and a DELETE waits for
+ * this row lock. A link removed by a transaction that commits while this one
+ * waits is skipped by the lock (READ COMMITTED) and is gone for the next read,
+ * so the risk then counts as linked only here. A new link waits too: its
+ * foreign key check takes a key share lock on the risk row, which conflicts
+ * with the lock taken here.
+ */
+export const lockRiskLinksOfProjectQuery = async (
+  projectId: number,
+  organizationId: number,
+  transaction: Transaction,
+): Promise<void> => {
+  await sequelize.query(
+    `SELECT r.id FROM risks r
+      WHERE r.organization_id = :organizationId
+        AND r.id IN (SELECT risk_id FROM projects_risks WHERE project_id = :projectId)
+      ORDER BY r.id
+      FOR UPDATE`,
+    { replacements: { projectId, organizationId }, type: QueryTypes.SELECT, transaction },
+  );
+  await sequelize.query(
+    `SELECT pr.risk_id, pr.project_id FROM projects_risks pr
+      WHERE pr.risk_id IN (SELECT risk_id FROM projects_risks WHERE project_id = :projectId)
+      ORDER BY pr.risk_id, pr.project_id
+      FOR UPDATE`,
+    { replacements: { projectId }, type: QueryTypes.SELECT, transaction },
+  );
+};

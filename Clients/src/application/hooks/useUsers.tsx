@@ -18,31 +18,42 @@ interface ApiResponse {
 }
 
 const USERS_QUERY_KEY = ["users"] as const;
+// One shared empty list, so memos keyed on `users` do not rebuild on every render while loading.
+const NO_USERS: User[] = [];
+
+/**
+ * API rows to Users, with role_id as roleId and the dates as Date objects.
+ * Module-level so its identity never changes: React Query then keeps the
+ * selected array while the cached rows are unchanged, and memos or effects
+ * keyed on `users` do not run again after a refetch that changed nothing.
+ */
+const toUsers = (response: ApiResponse | undefined): User[] =>
+  // GET /users answers 204 with no body when the organization has no users.
+  (Array.isArray(response?.data) ? response.data : []).map((user: ApiUser): User => ({
+    id: user.id,
+    name: user.name,
+    surname: user.surname,
+    email: user.email,
+    roleId: user.role_id,
+    created_at: user.created_at ? new Date(user.created_at) : undefined,
+    last_login: user.last_login ? new Date(user.last_login) : undefined,
+  }));
 
 const useUsers = () => {
   const { userId, organizationId } = useAuth();
   const queryClient = useQueryClient();
 
   const {
-    data: users = [],
+    data: users = NO_USERS,
     isLoading: loading,
     error,
   } = useQuery({
     queryKey: USERS_QUERY_KEY,
-    queryFn: async () => {
-      const response = await getAllUsers();
-      // Convert role_id to roleId
-      const formattedUsers: User[] = (response as ApiResponse).data.map((user: ApiUser): User => ({
-        id: user.id,
-        name: user.name,
-        surname: user.surname,
-        email: user.email,
-        roleId: user.role_id,
-        created_at: user.created_at ? new Date(user.created_at) : undefined,
-        last_login: user.last_login ? new Date(user.last_login) : undefined,
-      }));
-      return formattedUsers;
-    },
+    // The cache holds the API rows as they arrive (plain JSON), so a refetch
+    // that returns the same users keeps the same reference. The Date fields
+    // are added in `select`, which React Query reruns only when the rows change.
+    queryFn: async () => (await getAllUsers()) as ApiResponse,
+    select: toUsers,
     // Skip when the caller has no org context (pure SuperAdmin). Elected
     // SuperAdmins have an org and still need their tenant user list.
     enabled: !!userId && !!organizationId,

@@ -32,7 +32,7 @@ function createReq(overrides: Record<string, unknown> = {}): Request {
 }
 
 function createRes(): Response {
-  const res: Partial<Response> = {};
+  const res: Partial<Response> = { locals: {} };
   res.status = jest.fn().mockReturnValue(res) as unknown as Response["status"];
   res.json = jest.fn().mockReturnValue(res) as unknown as Response["json"];
   return res as Response;
@@ -107,6 +107,18 @@ describe("requireProjectAccess", () => {
     expect(readAccessQuery).toHaveBeenCalledWith(12, { userId: 7, role: "Editor" }, 3);
     expect(accessQuery).not.toHaveBeenCalled();
     expect(next).toHaveBeenCalledTimes(1);
+  });
+
+  it("uses the write rule for a GET when asked to, and refuses a read-only caller", async () => {
+    accessQuery.mockResolvedValue("denied");
+    const res = createRes();
+
+    await requireProjectAccess("id", "params", "write")(createReq({ method: "GET" }), res, next);
+
+    expect(accessQuery).toHaveBeenCalledWith(12, { userId: 7, role: "Editor" }, 3);
+    expect(readAccessQuery).not.toHaveBeenCalled();
+    expect(res.status).toHaveBeenCalledWith(403);
+    expect(next).not.toHaveBeenCalled();
   });
 
   it.each(["POST", "PUT", "PATCH", "DELETE"])(

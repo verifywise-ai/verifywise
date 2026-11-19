@@ -5,7 +5,7 @@ import light from "./presentation/themes/light";
 import { CssBaseline } from "@mui/material";
 import { VerifyWiseContext } from "./application/contexts/VerifyWise.context";
 import { useCallback, useMemo, useState, useEffect, Suspense } from "react";
-import { Provider } from "react-redux";
+import { Provider, useDispatch, useSelector } from "react-redux";
 import { PersistGate } from "redux-persist/integration/react";
 import { store, persistor } from "./application/redux/store";
 import { useAuth } from "./application/hooks/useAuth";
@@ -29,6 +29,7 @@ import Alert from "./presentation/components/Alert";
 import useUsers from "./application/hooks/useUsers";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { useLocation, useNavigate } from "react-router";
+import { ensureI18nModulesForPath } from "./i18n/domTranslator";
 import { clearChunkReloadFlag } from "./application/utils/deploymentHelpers";
 import ChunkErrorBoundary from "./presentation/components/ChunkErrorBoundary";
 import { CommandPalette } from "./presentation/components/CommandPalette";
@@ -36,6 +37,8 @@ import CommandPaletteErrorBoundary from "./presentation/components/CommandPalett
 import useCommandPalette from "./application/hooks/useCommandPalette";
 import useUserPreferences from "./application/hooks/useUserPreferences";
 import { SetupModal, useOnboarding } from "./presentation/components/Onboarding";
+import { SETUP_MODAL_ROUTES } from "./application/hooks/useOnboarding";
+import { selectSetupModalOpen, setSetupModalOpen } from "./application/redux/ui/uiSlice";
 import { isClassicUi } from "./presentation/themes/uiStyle";
 import { lazyRoute } from "./application/utils/lazyRoute";
 import {
@@ -143,7 +146,7 @@ function App() {
   // });
 
   // Onboarding should show on the dashboard (/), Home or the start-here page
-  const isOnboardingRoute = ["/", "/home", "/start-here"].includes(location.pathname);
+  const isOnboardingRoute = SETUP_MODAL_ROUTES.includes(location.pathname);
 
   // Derive modal visibility from onboarding state and current route
   // Only show modal if:
@@ -155,11 +158,22 @@ function App() {
     [token, userId, state.isComplete, isOnboardingRoute],
   );
 
+  // Once open, the modal stays mounted until it calls back, even after it saves
+  // "completed" to Redux itself: the demo loader saves it as soon as the data
+  // is in, then waits for "Explore the demo".
+  const dispatch = useDispatch();
+  const setupModalOpen = useSelector(selectSetupModalOpen);
+  useEffect(() => {
+    if (showModal && !setupModalOpen) dispatch(setSetupModalOpen(true));
+    else if (!token && setupModalOpen) dispatch(setSetupModalOpen(false));
+  }, [dispatch, showModal, setupModalOpen, token]);
+
   const handleOnboardingDone = useCallback(() => {
+    dispatch(setSetupModalOpen(false));
     completeOnboarding();
     // The new look keeps Start here as Home's Get started tab.
     navigate(isClassicUi() ? "/start-here" : "/home?tab=get-started");
-  }, [completeOnboarding, navigate]);
+  }, [completeOnboarding, dispatch, navigate]);
 
   useEffect(() => {
     setShowAlertCallback((alertProps: AlertProps) => {
@@ -175,6 +189,12 @@ function App() {
       setShowAlertCallback(() => {});
     };
   }, []);
+
+  // Non-English languages load only the dictionary modules for this route
+  // (plus shared chrome). English needs no dictionary chunks.
+  useEffect(() => {
+    void ensureI18nModulesForPath(location.pathname);
+  }, [location.pathname]);
 
   useEffect(() => {
     if (userPreferences) {
@@ -295,7 +315,7 @@ function App() {
                         onOpenChange={commandPalette.close}
                       />
                     </CommandPaletteErrorBoundary>
-                    {showModal && (
+                    {Boolean(token && userId) && (showModal || setupModalOpen) && (
                       <SetupModal onComplete={handleOnboardingDone} onSkip={handleOnboardingDone} />
                     )}
                     <ChunkErrorBoundary>

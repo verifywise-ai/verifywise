@@ -31,6 +31,7 @@ export const de: Record<string, string> = {
     "Noch keine Daten. Dieses Modell wartet auf seine erste Metrik aus Ihrem Monitoring-Feed.",
   "No ingestion tokens yet. Create one to start pushing metrics.":
     "Noch keine Ingestion-Token. Erstellen Sie einen, um mit dem Senden von Metriken zu beginnen.",
+  "No model": "Kein Modell",
   "No threshold defined": "Kein Schwellenwert definiert",
   "No thresholds defined yet. Add one so ingested metrics can be evaluated.":
     "Noch keine Schwellenwerte definiert. Fügen Sie einen hinzu, damit eingehende Metriken ausgewertet werden können.",
@@ -83,6 +84,7 @@ export const de: Record<string, string> = {
   "Attestation": "Attestierung",
   "Could not load the portfolio summary. Try again shortly.":
     "Portfolioübersicht konnte nicht geladen werden. Bitte versuchen Sie es in Kürze erneut.",
+  "Could not load the model lifecycle.": "Der Modelllebenszyklus konnte nicht geladen werden.",
   "Fleet attestation status": "Attestierungsstatus des Bestands",
   "Generate attestation report": "Attestierungsbericht erstellen",
   "Advance this validation to In validation to begin writing the report.":
@@ -267,9 +269,11 @@ export const de: Record<string, string> = {
     "Erfassen Sie den Status jedes Modells: genehmigt, eingeschränkt, ausstehend, blockiert oder abgelehnt. Dies gibt Auditoren Einblick in Ihre Governance-Abdeckung.",
   "Set expiry dates on evidence so you're reminded to update or re-certify documents before they become stale.":
     "Legen Sie Ablaufdaten für Nachweise fest, damit Sie daran erinnert werden, Dokumente zu aktualisieren oder neu zu zertifizieren, bevor sie veralten.",
-  "MLFlow": "MLFlow",
+  "MLflow": "MLflow",
   "Only admins can change retention periods":
     "Nur Administratoren können Aufbewahrungsfristen ändern",
+  "Only users who can edit models can share this view":
+    "Nur Benutzer, die Modelle bearbeiten können, können diese Ansicht teilen",
 };
 
 export const fr: Record<string, string> = {
@@ -302,6 +306,7 @@ export const fr: Record<string, string> = {
     "Aucune donnée pour le moment. Ce modèle attend sa première métrique de votre flux de surveillance.",
   "No ingestion tokens yet. Create one to start pushing metrics.":
     "Aucun jeton d'ingestion pour le moment. Créez-en un pour commencer à envoyer des métriques.",
+  "No model": "Aucun modèle",
   "No threshold defined": "Aucun seuil défini",
   "No thresholds defined yet. Add one so ingested metrics can be evaluated.":
     "Aucun seuil défini pour le moment. Ajoutez-en un pour que les métriques ingérées puissent être évaluées.",
@@ -353,6 +358,7 @@ export const fr: Record<string, string> = {
   "Attestation": "Attestation",
   "Could not load the portfolio summary. Try again shortly.":
     "Impossible de charger le résumé du portefeuille. Réessayez sous peu.",
+  "Could not load the model lifecycle.": "Impossible de charger le cycle de vie du modèle.",
   "Fleet attestation status": "Statut d’attestation du parc",
   "Generate attestation report": "Générer le rapport d’attestation",
   "Advance this validation to In validation to begin writing the report.":
@@ -537,9 +543,11 @@ export const fr: Record<string, string> = {
     "Enregistrez le statut de chaque modèle : approuvé, restreint, en attente, bloqué ou rejeté. Cela offre aux auditeurs une visibilité sur votre couverture de gouvernance.",
   "Set expiry dates on evidence so you're reminded to update or re-certify documents before they become stale.":
     "Définissez des dates d'expiration sur les preuves afin d'être averti de mettre à jour ou de recertifier les documents avant qu'ils ne deviennent obsolètes.",
-  "MLFlow": "MLFlow",
+  "MLflow": "MLflow",
   "Only admins can change retention periods":
     "Seuls les administrateurs peuvent modifier les durées de conservation",
+  "Only users who can edit models can share this view":
+    "Seuls les utilisateurs qui peuvent modifier les modèles peuvent partager cette vue",
 };
 
 export const es: Record<string, string> = {
@@ -572,6 +580,7 @@ export const es: Record<string, string> = {
     "Aún no hay datos. Este modelo está esperando su primera métrica de su flujo de monitoreo.",
   "No ingestion tokens yet. Create one to start pushing metrics.":
     "Aún no hay tokens de ingesta. Cree uno para empezar a enviar métricas.",
+  "No model": "Sin modelo",
   "No threshold defined": "Sin umbral definido",
   "No thresholds defined yet. Add one so ingested metrics can be evaluated.":
     "Aún no se han definido umbrales. Añada uno para que las métricas ingeridas puedan evaluarse.",
@@ -623,6 +632,7 @@ export const es: Record<string, string> = {
   "Attestation": "Atestación",
   "Could not load the portfolio summary. Try again shortly.":
     "No se pudo cargar el resumen de la cartera. Vuelva a intentarlo en breve.",
+  "Could not load the model lifecycle.": "No se pudo cargar el ciclo de vida del modelo.",
   "Fleet attestation status": "Estado de atestación de la flota",
   "Generate attestation report": "Generar informe de atestación",
   "Advance this validation to In validation to begin writing the report.":
@@ -807,7 +817,9 @@ export const es: Record<string, string> = {
     "Registre el estado de cada modelo: aprobado, restringido, pendiente, bloqueado o rechazado. Esto ofrece a los auditores visibilidad sobre su cobertura de gobernanza.",
   "Set expiry dates on evidence so you're reminded to update or re-certify documents before they become stale.":
     "Establezca fechas de caducidad en las evidencias para que se le recuerde actualizar o recertificar los documentos antes de que queden obsoletos.",
-  "MLFlow": "MLFlow",
+  "MLflow": "MLflow",
   "Only admins can change retention periods":
     "Solo los administradores pueden cambiar los periodos de retención",
+  "Only users who can edit models can share this view":
+    "Solo los usuarios que pueden editar modelos pueden compartir esta vista",
 };

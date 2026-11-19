@@ -18,6 +18,7 @@ import {
 import { logProcessing, logSuccess, logFailure } from "../utils/logger/logHelper";
 
 import { translateError } from "../utils/i18n.utils";
+import { riskViewer } from "../utils/riskVisibility.utils";
 /**
  * Search across all entities
  *
@@ -67,6 +68,7 @@ export async function search(req: Request, res: Response): Promise<any> {
       query: query.trim(),
       organizationId,
       userId,
+      riskViewer: riskViewer(req),
       limit,
       offset,
       reviewStatus,

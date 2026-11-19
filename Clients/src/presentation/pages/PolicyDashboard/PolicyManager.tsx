@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useMemo, useCallback } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useLocation, useNavigate, useSearchParams } from "react-router";
 import { Box, Stack, Fade, Tooltip, IconButton } from "@mui/material";
 import {
@@ -34,7 +35,12 @@ import {
 import { AlertProps } from "../../types/alert.types";
 import { PolicyManagerModel } from "../../../domain/models/Common/policy/policyManager.model";
 import { PolicyManagerProps } from "../../types/interfaces/i.policy";
-import { usePolicies } from "../../../application/hooks/usePolicies";
+import {
+  usePolicies,
+  usePolicyFolderCounts,
+  policyQueryKeys,
+} from "../../../application/hooks/usePolicies";
+import { usePolicyApprovalChangedListener } from "../../../application/hooks/usePolicyApproval";
 import PolicyStatusCard from "./PolicyStatusCard";
 import { ExportMenu } from "../../components/Table/ExportMenu";
 import useUsers from "../../../application/hooks/useUsers";
@@ -88,6 +94,10 @@ const PolicyManager: React.FC<PolicyManagerProps> = ({ tags: _tags }) => {
     isLoading,
     error: policiesError,
   } = usePolicies({ suppressGlobalErrorToast: true });
+  // Refetch when a policy request is decided from the approval requests modal.
+  usePolicyApprovalChangedListener();
+  const queryClient = useQueryClient();
+  const { data: folderCounts } = usePolicyFolderCounts();
   const deletePolicyMutation = useDeletePolicy();
   const [flashRowId, setFlashRowId] = useState<number | null>(null);
   const can = useCanCheck();
@@ -319,6 +329,7 @@ const PolicyManager: React.FC<PolicyManagerProps> = ({ tags: _tags }) => {
         setAssignFolderPolicyId(null);
         setAssignFolderCurrentFolders([]);
         await refreshFolders();
+        queryClient.invalidateQueries({ queryKey: policyQueryKeys.folderCounts() });
         // Refresh folder filter if a folder is currently selected
         if (typeof selectedFolder === "number") {
           const updatedIds = await getPolicyIdsInFolder(selectedFolder);
@@ -342,7 +353,7 @@ const PolicyManager: React.FC<PolicyManagerProps> = ({ tags: _tags }) => {
         setAssignFolderSubmitting(false);
       }
     },
-    [assignFolderPolicyId, refreshFolders],
+    [assignFolderPolicyId, refreshFolders, queryClient],
   );
 
   // Handle policy card click to filter by status
@@ -542,10 +553,10 @@ const PolicyManager: React.FC<PolicyManagerProps> = ({ tags: _tags }) => {
     return [
       { id: "title", label: "Title" },
       { id: "status", label: "Status" },
-      { id: "next_review", label: "Next Review" },
+      { id: "next_review", label: "Next review" },
       { id: "author", label: "Author" },
-      { id: "last_updated", label: "Last Updated" },
-      { id: "updated_by", label: "Updated By" },
+      { id: "last_updated", label: "Last updated" },
+      { id: "updated_by", label: "Updated by" },
     ];
   }, []);
 
@@ -660,7 +671,7 @@ const PolicyManager: React.FC<PolicyManagerProps> = ({ tags: _tags }) => {
               data={exportData}
               columns={exportColumns}
               filename="policy-manager"
-              title="Policy Manager"
+              title="Policy manager"
             />
             {canEditPolicies && (
               <Box data-joyride-id="add-policy-button">
@@ -713,6 +724,8 @@ const PolicyManager: React.FC<PolicyManagerProps> = ({ tags: _tags }) => {
                 canManage={canEditPolicies}
                 collapsed={folderSidebarCollapsed}
                 onToggleCollapse={() => setFolderSidebarCollapsed((p) => !p)}
+                // No counts while they load or after they fail, rather than a 0 everywhere.
+                countByFolderId={folderCounts ?? null}
                 allLabel="All policies"
                 showUncategorized={false}
               />
@@ -759,8 +772,8 @@ const PolicyManager: React.FC<PolicyManagerProps> = ({ tags: _tags }) => {
                         />
                         <EmptyStateTip
                           icon={Shield}
-                          title="Link policies to controls"
-                          description="Each policy can be mapped to specific compliance controls, creating an audit trail showing which policies address which requirements."
+                          title="Link policies to risks and evidence"
+                          description="Link a policy to the risks it mitigates and the evidence that supports it, so reviewers can see what each policy covers."
                         />
                         <EmptyStateTip
                           icon={Link2}

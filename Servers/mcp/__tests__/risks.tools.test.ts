@@ -43,6 +43,7 @@ import { getUserByIdQuery } from "../../utils/user.utils";
 import { requireOrganization } from "../scope";
 import { resolveFrameworkIds } from "../frameworks";
 import { riskTools } from "../tools/risks";
+import { SYSTEM_RISK_VIEWER } from "../../utils/riskVisibility.utils";
 
 const CALLER = { userId: 7, organizationId: 3, role: "Admin", isSuperAdmin: false };
 
@@ -90,7 +91,7 @@ describe("list_risks", () => {
 
     const res = await tool("list_risks").handler({ organizationId: 3 }, CALLER);
 
-    expect(getAllRisksQuery).toHaveBeenCalledWith(3, "active");
+    expect(getAllRisksQuery).toHaveBeenCalledWith(3, "active", SYSTEM_RISK_VIEWER);
     expect(payload(res)).toMatchObject({ organizationId: 3, count: 1 });
   });
 
@@ -99,7 +100,7 @@ describe("list_risks", () => {
 
     await tool("list_risks").handler({ organizationId: 3, useCaseId: 5 }, CALLER);
 
-    expect(getRisksByProjectQuery).toHaveBeenCalledWith(5, 3, "active");
+    expect(getRisksByProjectQuery).toHaveBeenCalledWith(5, 3, "active", SYSTEM_RISK_VIEWER);
     expect(getAllRisksQuery).not.toHaveBeenCalled();
   });
 
@@ -167,7 +168,12 @@ describe("create_risk", () => {
 
   it("attributes the write to the authenticated caller", async () => {
     await tool("create_risk").handler(CREATE_ARGS, CALLER);
-    expect(mockCreate.mock.calls[0][1]).toEqual({ userId: 7, organizationId: 3 });
+    expect(mockCreate.mock.calls[0][1]).toEqual({
+      userId: 7,
+      organizationId: 3,
+      viewer: SYSTEM_RISK_VIEWER,
+      callerIsAdmin: true,
+    });
   });
 
   it("commits, recomputes the risk links and tells the owner", async () => {

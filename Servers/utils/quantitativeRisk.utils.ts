@@ -5,6 +5,7 @@ import {
   IPortfolioSummary,
   IPortfolioSnapshot,
 } from "../domain.layer/interfaces/I.quantitativeRisk";
+import { projectRiskVisibilitySql, RiskViewer, SYSTEM_RISK_VIEWER } from "./riskVisibility.utils";
 
 // ============================================================
 // FAIR Computation Functions
@@ -200,12 +201,16 @@ export async function getPortfolioByOrg(organizationId: number): Promise<IPortfo
 }
 
 /**
- * Get portfolio summary for a specific project.
+ * Get portfolio summary for a specific project, over the risks of that use
+ * case the viewer can see (projectRiskVisibilitySql, as the use case's risk
+ * list). The organization portfolio stays organization-wide (ruling J4).
  */
 export async function getPortfolioByProject(
   organizationId: number,
   projectId: number,
+  viewer: RiskViewer,
 ): Promise<IPortfolioSummary> {
+  const visibility = projectRiskVisibilitySql("r", viewer);
   const [result] = await sequelize.query<{
     total_ale: string;
     total_residual_ale: string;
@@ -230,9 +235,9 @@ export async function getPortfolioByProject(
     WHERE r.organization_id = :organizationId
       AND pr.project_id = :projectId
       AND r.is_deleted = false
-      AND r.ale_estimate IS NOT NULL`,
+      AND r.ale_estimate IS NOT NULL${visibility.sql}`,
     {
-      replacements: { organizationId, projectId },
+      replacements: { organizationId, projectId, ...visibility.replacements },
       type: QueryTypes.SELECT,
     },
   );
@@ -267,8 +272,9 @@ export async function recordPortfolioSnapshot(
   organizationId: number,
   projectId?: number | null,
 ): Promise<void> {
+  // Snapshots are organization data, not one user's view (ruling J4).
   const summary = projectId
-    ? await getPortfolioByProject(organizationId, projectId)
+    ? await getPortfolioByProject(organizationId, projectId, SYSTEM_RISK_VIEWER)
     : await getPortfolioByOrg(organizationId);
 
   // Only record if there are risks with ALE

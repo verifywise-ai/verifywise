@@ -35,7 +35,8 @@ const LEGACY_URL_REWRITES: Array<{ pattern: RegExp; replacement: string }> = [
   { pattern: /^\/risks\/(\d+)/, replacement: "/risk-management?riskId=$1" },
   { pattern: /^\/assessments\/(\d+)/, replacement: "/project-view?projectId=$1" },
   { pattern: /^\/files\/(\d+)/, replacement: "/file-manager?fileId=$1" },
-  { pattern: /^\/approval-requests(?:\?|$|\/)/, replacement: "/approval-workflows" },
+  { pattern: /^\/approval-requests\/(\d+)$/, replacement: "/approval-workflows?request=$1" },
+  { pattern: /^\/approval-requests(?:\?|$|\/).*/, replacement: "/approval-workflows" },
 ];
 
 const repairLegacyActionUrl = (url: string): string => {

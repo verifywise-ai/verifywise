@@ -45,7 +45,7 @@ async function resolveInAppRecipients(
  * - `inApp`  — store + push the in-app notification (default ON).
  * - `email`  — also send an email; the config is forwarded to the in-app
  *              service which owns the email delivery (rate-limited).
- * - `slack`  — send to Slack via the user's configured integrations.
+ * - `slack`  — send to the organization's Slack connections routed for the type.
  * - `teams`  — POST to a Microsoft Teams incoming webhook.
  */
 export interface IProactiveChannels {
@@ -115,10 +115,13 @@ export const notifyProactive = async (
   // Slack.
   if (channels.slack) {
     try {
-      await sendSlackNotification(channels.slack, {
-        title: payload.title,
-        message: payload.body,
-      });
+      await sendSlackNotification(
+        { ...channels.slack, organizationId },
+        {
+          title: payload.title,
+          message: payload.body,
+        },
+      );
     } catch (error) {
       logger.error("proactiveNotify: slack channel failed:", error);
     }

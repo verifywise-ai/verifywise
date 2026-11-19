@@ -19,7 +19,7 @@ import {
 import { getConfigById } from "../utils/frameworkRegistry.utils";
 
 /**
- * Generic impl endpoints for the 21 migrated frameworks. All URL params are
+ * Generic impl endpoints for the 24 bundled frameworks. All URL params are
  * validated (frameworkId + level + id) before dispatch; table names come
  * from Servers/structures/ via frameworkRegistry.utils.ts. Built-ins
  * (EU / ISO 42001 / ISO 27001 / NIST) keep their bespoke controllers.
@@ -202,7 +202,7 @@ export async function updateImpl(req: RequestWithFile, res: Response): Promise<a
       return res.status(404).json(STATUS_CODE[404](req.t!("Record not found")));
     }
 
-    const body = req.body as Record<string, string> & { user_id?: string };
+    const body = req.body as Record<string, string>;
 
     const deletedRaw = JSON.parse(body.delete || "[]");
     const deletedFileIds = Array.isArray(deletedRaw)
@@ -211,7 +211,8 @@ export async function updateImpl(req: RequestWithFile, res: Response): Promise<a
           .filter((v: number) => Number.isFinite(v))
       : [];
 
-    const uploaderId = body.user_id ? parseInt(body.user_id) : req.userId!;
+    // The uploader is the signed-in user, never a user_id from the body.
+    const uploaderId = req.userId!;
     const uploadedFileIds: number[] = [];
     if (req.files && Array.isArray(req.files) && req.files.length > 0) {
       for (const file of req.files as UploadedFile[]) {

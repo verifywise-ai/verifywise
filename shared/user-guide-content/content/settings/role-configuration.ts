@@ -300,7 +300,11 @@ export const roleConfigurationContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Four permissions only change what the screens show. The server doesn\'t check them yet: "Choose a use case\'s team members", "Edit framework controls and answers, and add or remove frameworks", "Record audit results on framework controls" and "Create and change eval projects, experiments, scorers and datasets". Their descriptions in Settings > Roles say so.',
+      text: 'The two framework permissions are checked by what a save changes. "Edit framework controls and answers, and add or remove frameworks" covers implementation details, status, owners, due dates, evidence files and linked risks. "Record audit results on framework controls" covers auditor feedback. A role with only the second can still save auditor feedback from the same panel. The status of an EU AI Act assessment question stays open to every role, as the assessment tracker offers it to everyone.',
+    },
+    {
+      type: 'paragraph',
+      text: 'Two permissions are only partly checked. "Create and change eval projects, experiments, scorers and datasets" is checked when deleting projects, experiments and datasets and when changing scorers and saved models. Creating and changing projects and experiments, and adding datasets, stay open to every role. "Choose team members in a use case\'s settings" only changes the use case settings page: anyone who can create and edit use cases can still choose team members in the use case form.',
     },
     {
       type: 'heading',

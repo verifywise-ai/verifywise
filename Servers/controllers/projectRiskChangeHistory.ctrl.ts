@@ -7,6 +7,7 @@
 import { Request, Response } from "express";
 import { getProjectRiskChangeHistory } from "../utils/projectRiskChangeHistory.utils";
 import { STATUS_CODE } from "../utils/statusCode.utils";
+import { isRiskVisibleQuery, riskViewer } from "../utils/riskVisibility.utils";
 
 import { translateError } from "../utils/i18n.utils";
 export async function getProjectRiskChangeHistoryByRiskId(
@@ -38,12 +39,11 @@ export async function getProjectRiskChangeHistoryByRiskId(
       return res.status(400).json(STATUS_CODE[400](req.t!("Invalid project risk ID")));
     }
 
-    const history = await getProjectRiskChangeHistory(
-      projectRiskId,
-      req.organizationId!,
-      limit,
-      offset,
-    );
+    // A risk the viewer cannot see answers like a missing one: no history.
+    const visible = await isRiskVisibleQuery(projectRiskId, req.organizationId!, riskViewer(req));
+    const history = visible
+      ? await getProjectRiskChangeHistory(projectRiskId, req.organizationId!, limit, offset)
+      : { data: [], hasMore: false, total: 0 };
 
     return res.status(200).json(STATUS_CODE[200](history));
   } catch (error) {
