@@ -3,8 +3,8 @@
 /**
  * Adds EN 18286:2026 (AI quality management system for EU AI Act regulatory
  * purposes) on existing databases, as two registry frameworks:
- *   - `en-18286` (id 26, organization level): clauses 4-7, 9.6, 9.7, 10
- *   - `en-18286-ai-systems` (id 27, use-case level): clause 8, 9.1-9.5
+ *   - `en-18286` (id 27, organization level): clauses 4-7, 9.6, 9.7, 10
+ *   - `en-18286-ai-systems` (id 28, use-case level): clause 8, 9.1-9.5
  *
  * Same steps as 20260805125946-create-framework-struct-tables.js and
  * 20260805130326-create-framework-impl-tables.js, for these two entries
