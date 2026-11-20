@@ -43,6 +43,7 @@ import { pluralizeEntityType } from "../../../tools/pluralizeEntityType";
 import { isCompletedStatus } from "../../../../domain/types/Status";
 import { importedAssessmentPaths } from "../../../../application/repository/importedFrameworkAssessment.repository";
 import { styles } from "./style";
+import { getPositionPrefix } from "../../../../application/constants/frameworks";
 
 interface FrameworkMeta {
   id: number;
@@ -418,7 +419,8 @@ const GenericFramework = ({
                 }}
               >
                 <Typography fontSize={13}>
-                  {row.label} {row.node.title}
+                  {getPositionPrefix(data?.framework.framework_type, row.label)}
+                  {row.node.title}
                   {row.node.retired && <RetiredMarker />}
                 </Typography>
                 <StatusDropdown
@@ -437,7 +439,8 @@ const GenericFramework = ({
               sx={styles.subClauseRow(isLast, flashingRowId === row.node.impl_id)}
             >
               <Typography fontSize={13}>
-                {row.label} {row.node.title}
+                {getPositionPrefix(data?.framework.framework_type, row.label)}
+                {row.node.title}
                 {row.node.retired && <RetiredMarker />}
               </Typography>
               <StatusDropdown
@@ -503,7 +506,7 @@ const GenericFramework = ({
                 style={styles.expandIcon(expanded === l1.id) as React.CSSProperties}
               />
               <Typography sx={{ paddingLeft: "2.5px", fontSize: 13 }}>
-                {l1.order_no != null ? `${l1.order_no} ` : ""}
+                {getPositionPrefix(data.framework.framework_type, l1.order_no)}
                 {l1.title}
               </Typography>
             </AccordionSummary>

@@ -4572,6 +4572,9 @@ export const de: Record<string, string> = {
   "AI app bulk import and bulk assessment": "Massenimport und Massenbewertung von KI-Apps",
   "Training assignments, groups and custom roles, and framework import":
     "Schulungszuweisungen, Gruppen und benutzerdefinierte Rollen sowie Framework-Import",
+  "A new look, a Home page, OSFI E-23, EN 18286 and risk approvals":
+    "Ein neues Erscheinungsbild, eine Startseite, OSFI E-23, EN 18286 und Risikofreigaben",
+  // Unified sidebar (phase 2)
   "Record": "Erfassen",
   "Workspace": "Arbeitsbereich",
   "Inventory": "Inventar",
@@ -9240,6 +9243,11 @@ export const fr: Record<string, string> = {
   "AI app bulk import and bulk assessment": "Import et évaluation en masse des applications d'IA",
   "Training assignments, groups and custom roles, and framework import":
     "Affectation des formations, groupes et rôles personnalisés, et import de référentiels",
+  "A new look, a Home page, OSFI E-23, EN 18286 and risk approvals":
+    "Une nouvelle apparence, une page d'accueil, OSFI E-23, EN 18286 et l'approbation des risques",
+
+  "Request": "Requête",
+  // Unified sidebar (phase 2)
   "Record": "Enregistrer",
   "Workspace": "Espace de travail",
   "Inventory": "Inventaire",
@@ -13908,6 +13916,13 @@ export const es: Record<string, string> = {
     "Importación y evaluación masivas de aplicaciones de IA",
   "Training assignments, groups and custom roles, and framework import":
     "Asignación de formaciones, grupos y roles personalizados, e importación de marcos",
+  "A new look, a Home page, OSFI E-23, EN 18286 and risk approvals":
+    "Un nuevo aspecto, una página de inicio, OSFI E-23, EN 18286 y aprobación de riesgos",
+  "Enter a full web address starting with http:// or https://":
+    "Introduzca una dirección web completa que empiece por http:// o https://",
+  "Shown under the field on the public form":
+    "Se muestra debajo del campo en el formulario público",
+  // Unified sidebar (phase 2)
   "Record": "Registrar",
   "Workspace": "Espacio de trabajo",
   "Inventory": "Inventario",
