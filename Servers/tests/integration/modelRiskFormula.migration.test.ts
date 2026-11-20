@@ -57,6 +57,9 @@ describe("model risk likelihood and severity lists migration", () => {
   });
 
   afterAll(async () => {
+    // up is idempotent: whatever an assertion left behind, the shared test
+    // DB ends with the column every other suite writes.
+    await migration.up(queryInterface);
     await cleanupDatabase();
   });
 
