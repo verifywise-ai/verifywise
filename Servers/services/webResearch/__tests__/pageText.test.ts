@@ -16,6 +16,11 @@ import { MAX_URL_CHARS } from "../publicUrl";
 
 const BASE = "https://acme.com/trust/";
 
+// The timing tests below catch a reader that backtracks or goes quadratic: on these inputs that
+// takes minutes to hours, while a linear one takes well under a second. The budget leaves room for
+// a loaded CI runner late in the one in-band coverage run, where 2 MB of anchors took 1.2 s.
+const LINEAR_BUDGET_MS = 10_000;
+
 /** A page whose only job is to carry one date source; `head` goes into <head>. */
 const pageWith = (head: string, body = "<p>Hello</p>") =>
   `<html><head><title>T</title>${head}</head><body>${body}</body></html>`;
@@ -664,7 +669,7 @@ describe("selectExcerpt", () => {
     const huge = pageOf({ 90_000: STRONG }, 100_000);
     const start = performance.now();
     const { excerpt } = selectExcerpt(huge, { focus: "training customer data" });
-    expect(performance.now() - start).toBeLessThan(1000);
+    expect(performance.now() - start).toBeLessThan(LINEAR_BUDGET_MS);
     expect(excerpt.endsWith(STRONG)).toBe(true);
   });
 
@@ -840,10 +845,10 @@ describe("extractPageText on hostile input", () => {
     extractPageText("<p>warm up</p><a href='/x'>x</a>", BASE);
   });
 
-  it.each(CASES)("reads 2 MB of %s in under a second", (_name, html) => {
+  it.each(CASES)("reads 2 MB of %s in linear time", (_name, html) => {
     const start = performance.now();
     extractPageText(html, BASE);
-    expect(performance.now() - start).toBeLessThan(1000);
+    expect(performance.now() - start).toBeLessThan(LINEAR_BUDGET_MS);
   });
 
   // Pages with a stack nearly as deep as the limit allows for their number of `<`. A page that
@@ -860,10 +865,10 @@ describe("extractPageText on hostile input", () => {
     ],
   ];
 
-  it.each(NEAR_THE_LIMIT)("reads 2 MB of %s, in under a second", (_name, html) => {
+  it.each(NEAR_THE_LIMIT)("reads 2 MB of %s, in linear time", (_name, html) => {
     const start = performance.now();
     const { text } = extractPageText(html, BASE);
-    expect(performance.now() - start).toBeLessThan(1000);
+    expect(performance.now() - start).toBeLessThan(LINEAR_BUDGET_MS);
     expect(text).toBe("head text");
   });
 
