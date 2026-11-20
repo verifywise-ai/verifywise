@@ -157,7 +157,7 @@ export const toolsDefinition: any[] = [
               "How bad the outcome would be if the risk occurs. With likelihood, it sets the risk level.",
           },
         },
-        required: ["risk_name"],
+        required: ["risk_name", "likelihood", "severity"],
       },
     },
   },

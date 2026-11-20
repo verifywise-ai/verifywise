@@ -376,6 +376,8 @@ import {
   ModelRiskLikelihood,
   ModelRiskSeverity,
   normalizeStoredLabels,
+  requirePair,
+  requirePairOrLevel,
   withPreviousLikelihood,
 } from "../aiActions/createModelRisk/schema";
 
@@ -463,12 +465,15 @@ const AgentUpdateModelRiskObject = z
 
 /**
  * Stored input is parsed again when the approval executes (and when filed):
- * labels are normalized (decision 10).
+ * labels are normalized (decision 10). A suggestion filed now needs both
+ * likelihood and severity; one filed before the lists may name a level instead.
  */
-const AgentSuggestModelRiskSchema = z.preprocess(
-  (raw) => normalizeStoredLabels(raw, "description"),
-  AgentSuggestModelRiskObject,
-);
+const AgentSuggestModelRiskSchema = z
+  .preprocess((raw) => normalizeStoredLabels(raw, "description"), AgentSuggestModelRiskObject)
+  .superRefine(requirePairOrLevel);
+const AgentSuggestModelRiskFileSchema = z
+  .preprocess((raw) => normalizeStoredLabels(raw, "description"), AgentSuggestModelRiskObject)
+  .superRefine(requirePair);
 const AgentUpdateModelRiskSchema = z.preprocess(
   (raw) => normalizeStoredLabels(raw, "carry"),
   AgentUpdateModelRiskObject,
@@ -631,7 +636,7 @@ const agentSuggestModelRisk = async (
   void _u;
   void _o;
   void _r;
-  const parsed = AgentSuggestModelRiskSchema.safeParse(userParams);
+  const parsed = AgentSuggestModelRiskFileSchema.safeParse(userParams);
   if (!parsed.success) {
     throwOnValidationFailure("agent_suggest_model_risk", parsed.error.issues);
   }

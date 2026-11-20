@@ -23,7 +23,7 @@ import {
   NotFoundException,
 } from "../../../domain.layer/exceptions/custom.exception";
 import "../../functions/modelInventoryFunctions";
-import "../../functions/modelRiskFunctions";
+import { availableModelRiskTools } from "../../functions/modelRiskFunctions";
 import { MODEL_WRITE_REFUSED } from "../../functions/modelWriteScope";
 import { writeToolExecutors } from "../../confirmation/createWriteTool";
 import { availableModelInventoryTools } from "../../functions/modelInventoryFunctions";
@@ -297,6 +297,26 @@ describe("model risk writes", () => {
       { likelihood: "Likely" },
       editorCtx(CHATTER),
     );
+  });
+
+  it("refuses a stored suggestion with neither likelihood and severity nor a level", async () => {
+    await expect(
+      run("agent_suggest_model_risk", {
+        risk_name: "Drift",
+        likelihood: "Likely",
+        _userId: CHATTER,
+      }),
+    ).rejects.toThrow(/no likelihood and severity and no risk level/);
+    expect(mockRiskCreate).not.toHaveBeenCalled();
+  });
+
+  it("asks a new suggestion for both likelihood and severity", async () => {
+    await expect(
+      availableModelRiskTools.agent_suggest_model_risk(
+        { risk_name: "Drift", risk_level: "High", _userId: CHATTER },
+        ORG,
+      ),
+    ).rejects.toThrow(/likelihood and severity are both required/);
   });
 
   it("updates, changes status, attaches and detaches through the service", async () => {

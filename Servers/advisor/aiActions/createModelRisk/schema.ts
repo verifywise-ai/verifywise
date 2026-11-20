@@ -81,6 +81,36 @@ export function normalizeStoredLabels(raw: unknown, into: "description" | "carry
   return out;
 }
 
+type LevelInputs = { likelihood?: string; severity?: string; risk_level?: string };
+
+/** Message for new input that leaves out likelihood or severity. */
+export const PAIR_REQUIRED =
+  "likelihood and severity are both required: together they set the risk level";
+
+/**
+ * New input (file time) needs both, since together they set the level.
+ */
+export const requirePair = (input: LevelInputs, ctx: z.RefinementCtx) => {
+  if (!input.likelihood)
+    ctx.addIssue({ code: "custom", path: ["likelihood"], message: PAIR_REQUIRED });
+  if (!input.severity) ctx.addIssue({ code: "custom", path: ["severity"], message: PAIR_REQUIRED });
+};
+
+/**
+ * Stored input (approval time): both, or an approval filed before the lists
+ * that names a level, which is kept. Neither would store a risk without a
+ * level, so it is refused.
+ */
+export const requirePairOrLevel = (input: LevelInputs, ctx: z.RefinementCtx) => {
+  if ((input.likelihood && input.severity) || input.risk_level) return;
+  ctx.addIssue({
+    code: "custom",
+    path: ["severity"],
+    message:
+      "this approval has no likelihood and severity and no risk level, so the risk would have no level. Reject it and ask for the risk again with a likelihood and a severity.",
+  });
+};
+
 export const ModelRiskStatus = z.enum(["Open", "In Progress", "Resolved", "Accepted"]);
 
 const isoDateString = z
@@ -132,12 +162,16 @@ const AgentCreateModelRiskObject = z
   .strict();
 
 /**
- * The input, parsed when filed and again when the approval executes, with
- * the labels normalized.
+ * The stored input, parsed again when the approval executes: labels
+ * normalized, and both inputs or (an older approval) a level.
  */
-export const AgentCreateModelRiskSchema = z.preprocess(
-  (raw) => normalizeStoredLabels(raw, "description"),
-  AgentCreateModelRiskObject,
-);
+export const AgentCreateModelRiskSchema = z
+  .preprocess((raw) => normalizeStoredLabels(raw, "description"), AgentCreateModelRiskObject)
+  .superRefine(requirePairOrLevel);
+
+/** New input from the model (file time): likelihood and severity both required. */
+export const AgentCreateModelRiskFileSchema = z
+  .preprocess((raw) => normalizeStoredLabels(raw, "description"), AgentCreateModelRiskObject)
+  .superRefine(requirePair);
 
 export type AgentCreateModelRiskInput = z.infer<typeof AgentCreateModelRiskObject>;
