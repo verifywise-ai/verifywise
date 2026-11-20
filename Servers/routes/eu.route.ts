@@ -1,6 +1,6 @@
 import express from "express";
 const router = express.Router();
-import { createMemoryUpload } from "../utils/upload.utils";
+import { createMemoryUpload, handleUploadError } from "../utils/upload.utils";
 // Security: bounded upload config (30MB/file, 10 files, MIME allowlist).
 const upload = createMemoryUpload();
 
@@ -82,6 +82,7 @@ router.patch(
   authenticateJWT,
   requireUseCaseAccessVia(useCaseOfEuControl),
   upload.any(),
+  handleUploadError,
   requireFrameworkWriteAccess(euControlChanges),
   saveControls,
 );
@@ -90,6 +91,7 @@ router.patch(
   authenticateJWT,
   requireUseCaseAccessVia(useCaseOfEuAnswer),
   upload.any(),
+  handleUploadError,
   requireFrameworkWriteAccess(euAnswerChanges),
   updateQuestionById,
 );

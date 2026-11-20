@@ -16,6 +16,7 @@ import { createPendingFrameworksForApprovedUseCase } from "../../utils/approvalR
 
 const HIPAA = 24; // use case scoped, three levels
 const SOC2 = 5; // organization wide
+const OSFI_E23 = 26; // organization wide, 83 requirements
 
 let counter = 0;
 async function adminApi() {
@@ -157,6 +158,80 @@ describe("bundled frameworks picked at creation are built", () => {
         SOC2,
       ),
     );
+  });
+
+  it("POST /api/v1/projects builds an organization-wide OSFI E-23", async () => {
+    const { orgId, adminId, api } = await adminApi();
+
+    const res = await api
+      .post("/api/v1/projects")
+      .send(body(adminId, { framework: [OSFI_E23], is_organizational: true }));
+
+    expect(res.status).toBe(201);
+    expect(Object.keys(res.body.data.frameworks)).toEqual(["osfi-e23"]);
+    const projectId = projectIdOf(res);
+    const rows = await count(
+      `SELECT COUNT(*) AS n FROM osfi_e23_requirements i
+         JOIN projects_frameworks pf ON pf.id = i.projects_frameworks_id
+        WHERE pf.project_id = :projectId AND i.status = 'Not started'
+          AND i.organization_id = :orgId`,
+      { projectId, orgId },
+    );
+    expect(rows).toBe(83);
+  });
+
+  it("refuses OSFI E-23 on a use case", async () => {
+    const { adminId, api } = await adminApi();
+    const [[fw]] = (await sequelize.query(
+      `SELECT is_organizational FROM frameworks WHERE id = ${OSFI_E23}`,
+    )) as [Array<{ is_organizational: boolean }>, unknown];
+    expect(fw.is_organizational).toBe(true);
+    const created = await api.post("/api/projects").send(body(adminId, { framework: [1] }));
+    expect(created.status).toBe(201);
+    const projectId = projectIdOf(created);
+
+    const res = await api.post(
+      `/api/frameworks/toProject?frameworkId=${OSFI_E23}&projectId=${projectId}`,
+    );
+
+    // The organizational mismatch branch (not the "Framework not found" one).
+    expect(res.status).toBe(404);
+    expect(JSON.stringify(res.body)).toContain(
+      "Framework not found or could not be added to the project.",
+    );
+    expect(
+      await count(
+        `SELECT COUNT(*) AS n FROM osfi_e23_requirements i
+           JOIN projects_frameworks pf ON pf.id = i.projects_frameworks_id
+          WHERE pf.project_id = :projectId`,
+        { projectId },
+      ),
+    ).toBe(0);
+  });
+
+  it("removing OSFI E-23 deletes its requirement rows", async () => {
+    const { adminId, api } = await adminApi();
+    const created = await api
+      .post("/api/v1/projects")
+      .send(body(adminId, { framework: [OSFI_E23], is_organizational: true }));
+    expect(created.status).toBe(201);
+    const projectId = projectIdOf(created);
+    const [[link]] = (await sequelize.query(
+      `SELECT id FROM projects_frameworks WHERE project_id = :projectId AND framework_id = ${OSFI_E23}`,
+      { replacements: { projectId } },
+    )) as [Array<{ id: number }>, unknown];
+
+    const res = await api.delete(
+      `/api/frameworks/fromProject?frameworkId=${OSFI_E23}&projectId=${projectId}`,
+    );
+
+    expect(res.status).toBeLessThan(300);
+    expect(
+      await count(
+        `SELECT COUNT(*) AS n FROM osfi_e23_requirements WHERE projects_frameworks_id = :id`,
+        { id: link.id },
+      ),
+    ).toBe(0);
   });
 
   it("refuses a framework id with no builder with 400 and writes nothing", async () => {

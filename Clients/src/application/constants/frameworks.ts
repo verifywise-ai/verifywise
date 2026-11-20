@@ -26,6 +26,28 @@ export const FRAMEWORK_DETECTION = {
 } as const;
 
 /**
+ * Frameworks whose group and item titles already carry the official numbers
+ * ("Principle 3.1 ...", "3.1.1 ..."), so the generic list must not prefix its
+ * own position numbers. Keyed by `framework_type`.
+ */
+export const FRAMEWORKS_WITH_OWN_NUMBERING = new Set(["osfi_e23"]);
+
+/**
+ * Position prefix the generic framework list puts before a group or item
+ * title ("1 ", "1.1 "); empty for frameworks that number their own titles.
+ */
+export const getPositionPrefix = (
+  frameworkType: string | undefined,
+  label: string | number | null | undefined,
+): string =>
+  FRAMEWORKS_WITH_OWN_NUMBERING.has(frameworkType ?? "") ||
+  label === null ||
+  label === undefined ||
+  label === ""
+    ? ""
+    : `${label} `;
+
+/**
  * Helper function to detect framework type from name
  */
 export const getFrameworkType = (

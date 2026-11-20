@@ -4,7 +4,7 @@
   "main": "index.js",
   "scripts": {
     "test:unit": "jest --testPathIgnorePatterns=/tests/integration/ --testPathIgnorePatterns=/helpers/ --detectOpenHandles --forceExit",
-    "test:coverage": "jest --coverage --testPathIgnorePatterns=/tests/integration/ --testPathIgnorePatterns=/helpers/ --detectOpenHandles --forceExit",
+    "test:coverage": "jest --coverage --testPathIgnorePatterns=/tests/integration/ --testPathIgnorePatterns=/helpers/ --maxWorkers=3 --workerIdleMemoryLimit=1GB --forceExit",
     "test:smoke": "jest --config jest.config.js --globalSetup=\"<rootDir>/tests/integration/globalSetup.js\" --testPathPatterns=deadline-summary --runInBand",
     "test:ratelimit": "jest --config jest.config.js --testMatch=\"**/tests/integration/rate-limiting/**/*.test.ts\" --testPathIgnorePatterns=/helpers/ --testPathIgnorePatterns=limiter-wiring --runInBand --forceExit",
     "smoke:api-contract": "ts-node --transpile-only scripts/apiContractSmoke.ts",

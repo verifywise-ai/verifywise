@@ -68,6 +68,7 @@ import {
 } from "../../../../application/utils/highRiskRoles";
 import CustomException from "../../../../infrastructure/exceptions/customeException";
 import { applyApprovalWorkflowSelection } from "./approvalWorkflowField";
+import { splitServerErrors } from "./serverErrors";
 import { includesEuAiAct } from "../../../../application/constants/frameworks";
 import { radiusPx } from "../../../themes/palette";
 
@@ -175,6 +176,8 @@ export const ProjectForm = ({
   const { users } = useUsers();
   const { allFrameworks, loading: frameworksLoading } = useFrameworks({ listOfFrameworks: [] });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  // A refused save's message (403, or a 400 not tied to a field the form shows).
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"details" | "custom-fields">("details");
   const customFieldsRef = useRef<CustomFieldsSectionHandle | null>(null);
   const [approvalWorkflows, setApprovalWorkflows] = useState<Array<{ _id: number; name: string }>>(
@@ -514,6 +517,7 @@ export const ProjectForm = ({
     }
     {
       setIsSubmitting(true);
+      setSubmitError(null);
       try {
         const body: any = {
           ...values,
@@ -630,20 +634,16 @@ export const ProjectForm = ({
           }, 1000);
         }
       } catch (err) {
-        // Surface backend validation errors (400) inline, mapped per field.
-        if (err instanceof CustomException && err.status === 400) {
-          const serverErrors = err.response?.data?.errors;
-          if (Array.isArray(serverErrors) && serverErrors.length > 0) {
-            const fieldErrors: Partial<Record<keyof FormValues, string>> = {};
-            for (const serverError of serverErrors) {
-              if (
-                serverError &&
-                typeof serverError.field === "string" &&
-                typeof serverError.message === "string"
-              ) {
-                fieldErrors[serverError.field as keyof FormValues] = serverError.message;
-              }
-            }
+        // A 400 with field errors is shown on those fields. Any other 400, a
+        // 403 (e.g. a workflow change refused while the approval is pending)
+        // and field errors the form has no input for are shown above the
+        // form, which stays open.
+        if (err instanceof CustomException && (err.status === 400 || err.status === 403)) {
+          const { fieldErrors, formMessages } = splitServerErrors(
+            err.status === 400 ? err.response?.data?.errors : undefined,
+          );
+          const hasFieldErrors = Object.keys(fieldErrors).length > 0;
+          if (hasFieldErrors) {
             setServerErrors(fieldErrors);
             setActiveTab("details");
             const firstServerInvalid = PROJECT_FORM_FIELD_ORDER.find((field) => fieldErrors[field]);
@@ -653,6 +653,11 @@ export const ProjectForm = ({
             if (fieldId) {
               focusFormFieldById(fieldId);
             }
+          }
+          if (formMessages.length > 0) {
+            setSubmitError(formMessages.join(" "));
+          } else if (!hasFieldErrors) {
+            setSubmitError(err.message);
           }
         }
         setTimeout(() => {
@@ -769,6 +774,12 @@ export const ProjectForm = ({
             Settings, but other tabs (Frameworks/Regulations, Use case risks, Linked models, etc.)
             are disabled until the approval is complete.
           </Typography>
+        </Alert>
+      )}
+
+      {submitError && (
+        <Alert severity="error" sx={{ width: "100%" }} onClose={() => setSubmitError(null)}>
+          <Typography sx={{ fontSize: 13, fontWeight: 500 }}>{submitError}</Typography>
         </Alert>
       )}
 

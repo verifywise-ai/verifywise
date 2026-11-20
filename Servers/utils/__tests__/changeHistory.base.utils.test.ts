@@ -357,3 +357,50 @@ describe("recordEntityCreationBulk", () => {
     ).rejects.toThrow("insert failed");
   });
 });
+
+// A use case's approval workflow is compared by id, not by its title: two
+// workflows can share a title, and an unchanged save must look nothing up.
+describe("trackEntityChanges: use case approval workflow", () => {
+  const context = { organizationId: 1 };
+
+  it("records a switch between two workflows with the same title", async () => {
+    mockQuery.mockResolvedValue([{ name: "Sign-off" }]);
+    const changes = await trackEntityChanges(
+      "use_case",
+      { approval_workflow_id: 3 },
+      { approval_workflow_id: 8 },
+      context,
+    );
+    expect(changes).toEqual([
+      { fieldName: "Approval workflow", oldValue: "Sign-off", newValue: "Sign-off" },
+    ]);
+  });
+
+  it.each([
+    [5, 5],
+    [5, "5"],
+    [null, null],
+  ])("records nothing and looks nothing up for %p -> %p", async (before, after) => {
+    const changes = await trackEntityChanges(
+      "use_case",
+      { approval_workflow_id: before },
+      { approval_workflow_id: after },
+      context,
+    );
+    expect(changes).toEqual([]);
+    expect(mockQuery).not.toHaveBeenCalled();
+  });
+
+  it("records clearing the workflow", async () => {
+    mockQuery.mockResolvedValue([{ name: "Sign-off" }]);
+    const changes = await trackEntityChanges(
+      "use_case",
+      { approval_workflow_id: 3 },
+      { approval_workflow_id: null },
+      context,
+    );
+    expect(changes).toEqual([
+      { fieldName: "Approval workflow", oldValue: "Sign-off", newValue: "-" },
+    ]);
+  });
+});

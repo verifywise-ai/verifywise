@@ -4,6 +4,7 @@ import {
   updateArenaSetting,
   type ArenaSetting,
 } from "../repository/deepEval.repository";
+import { retryUpTo } from "../utils/queryRetry";
 
 export const ARENA_SETTING_KEY = ["llmEvals", "arenaSetting"] as const;
 
@@ -27,7 +28,7 @@ export function useArenaSetting({
     enabled,
     // Short, so another Admin's change reaches open tabs quickly.
     staleTime: 30 * 1000,
-    retry: 1,
+    retry: retryUpTo(1),
   });
 }
 

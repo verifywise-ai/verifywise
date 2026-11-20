@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { queryClient, invalidateQueries, resetQueryCache } from "../queryClient";
+import { queryClient, invalidateQueries, resetQueryCache, retryQuery } from "../queryClient";
 
 describe("queryClient config", () => {
   it("should have default query options configured", () => {
@@ -7,7 +7,7 @@ describe("queryClient config", () => {
 
     expect(defaults.queries?.staleTime).toBe(2000);
     expect(defaults.queries?.gcTime).toBe(600000);
-    expect(defaults.queries?.retry).toBe(3);
+    expect(defaults.queries?.retry).toBe(retryQuery);
     expect(defaults.queries?.refetchOnWindowFocus).toBe(false);
     expect(defaults.queries?.refetchOnMount).toBe(true);
     expect(defaults.queries?.refetchOnReconnect).toBe(true);
@@ -34,5 +34,23 @@ describe("queryClient config", () => {
     expect(clearSpy).toHaveBeenCalledTimes(1);
 
     clearSpy.mockRestore();
+  });
+
+  describe("retryQuery", () => {
+    it("retries server, network and timeout failures up to three times", () => {
+      const serverError = { status: 500 };
+      expect(retryQuery(0, serverError)).toBe(true);
+      expect(retryQuery(2, serverError)).toBe(true);
+      expect(retryQuery(3, serverError)).toBe(false);
+      expect(retryQuery(0, new Error("Network Error"))).toBe(true);
+      expect(retryQuery(0, null)).toBe(true);
+      expect(retryQuery(0, { status: 408 })).toBe(true);
+    });
+
+    it("never retries a rate-limited request or another 4xx", () => {
+      expect(retryQuery(0, { status: 429 })).toBe(false);
+      expect(retryQuery(0, { response: { status: 429 } })).toBe(false);
+      expect(retryQuery(0, { status: 404 })).toBe(false);
+    });
   });
 });
