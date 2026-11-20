@@ -242,6 +242,33 @@ export const modelInventoryContent: ArticleContent = {
     },
     {
       type: 'heading',
+      id: 'model-risk-level',
+      level: 2,
+      text: 'Model risk level',
+    },
+    {
+      type: 'paragraph',
+      text: 'You don\'t pick a model risk\'s level. You pick its **Likelihood** (Rare, Unlikely, Possible, Likely, Almost Certain) and its **Severity** (Negligible, Minor, Moderate, Major, Catastrophic), and VerifyWise works out the level with the same formula it uses for use case risks. The form shows the result as you choose.',
+    },
+    {
+      type: 'bullet-list',
+      items: [
+        { bold: 'Low', text: 'The formula says No risk or Low risk.' },
+        { bold: 'Medium', text: 'The formula says Medium risk.' },
+        { bold: 'High', text: 'The formula says High risk.' },
+        { bold: 'Critical', text: 'The formula says Very high risk.' },
+      ],
+    },
+    {
+      type: 'paragraph',
+      text: 'A new model risk needs both. Risks added before this change have no severity, so they keep the level someone picked until you set both; from then on the level follows them. If an older risk had a likelihood that isn\'t on the list, it was cleared and its text added to the end of the description as "Previous likelihood: …".',
+    },
+    {
+      type: 'paragraph',
+      text: 'When a level changes, use case risks that inherit from the model risk are flagged for review, whether the change came from the formula or from a picked level.',
+    },
+    {
+      type: 'heading',
       id: 'model-risk-owners',
       level: 2,
       text: 'Model risk owners',

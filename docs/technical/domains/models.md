@@ -52,7 +52,8 @@ model_risks
 ├── description
 ├── mitigation_plan
 ├── impact
-├── likelihood
+├── likelihood (likelihood label or NULL)
+├── severity (severity label or NULL)
 ├── key_metrics
 ├── current_values
 ├── threshold
@@ -136,6 +137,52 @@ enum ModelRiskLevel {
   CRITICAL = "Critical"
 }
 ```
+
+Decision 10: the level comes from the shared likelihood x severity formula
+(`utils/riskLevel.utils.ts`, the one project risks use since #5376; client
+mirror `presentation/tools/riskCalculator.ts`). `likelihood` takes the
+likelihood labels (Rare, Unlikely, Possible, Likely, Almost Certain) and
+`severity` the severity labels (Negligible, Minor, Moderate, Major,
+Catastrophic), stored in the labels' spelling. The four stored levels stay,
+so reports, filters, MRM, PMM and risk links read `risk_level` as before.
+`calculateModelRiskLevel` maps the formula's result:
+
+| Formula | `risk_level` |
+|---|---|
+| No risk, Low risk | Low |
+| Medium risk | Medium |
+| High risk | High |
+| Very high risk | Critical |
+
+`services/modelRisk.service.ts` (`applyModelRiskFormula`) applies it on
+every write path (REST legacy and v1, advisor tools, `agent_create_model_risk`,
+intake approval, Shadow AI): when the save leaves the risk with both a
+likelihood and a severity (sent, else stored: on update the merged row, so a
+save that sends only the severity recomputes from the stored likelihood),
+the server sets `risk_level` and ignores a sent one. With either missing the
+sent or stored level is kept, so older rows and callers that send no
+severity (Shadow AI, intake approval, which sends the suggestion's
+likelihood and its reviewed level) keep working. A label is matched without
+regard to case or surrounding spaces; "" or null clears it; anything else is
+a 400 on every route ("Likelihood must be one of: ..." / "Severity must be
+one of: ...", en/de/fr). The client form (`NewModelRisk`) has both selects,
+shows the computed level read-only (`presentation/tools/modelRiskLevel.ts`,
+same mapping) and sends no level once both are set; editing an older risk
+without both still shows the level select.
+
+Migration `20261120094040-model-risk-likelihood-severity-lists` adds
+`severity` and normalizes `likelihood`: a label match gets the label's
+spelling, a blank value becomes NULL, and anything else is appended to the
+risk's `description` as "Previous likelihood: <value>" (after a blank line;
+on its own when the description is empty) before `likelihood` is set to
+NULL. `risk_level` is not recomputed (no row has a severity yet). `down`
+drops `severity` and moves each "Previous likelihood" line back; a
+re-spelled label keeps the new spelling.
+
+Risk links: the `risk_links_flag_stale` trigger flags confirmed
+`inherits_from` links to a model risk whenever its `risk_level` changes, so a
+level the formula moves is flagged exactly like a picked one, and an update
+that leaves the level where it was flags nothing.
 
 ### Risk Status
 
@@ -324,7 +371,9 @@ Model ─────┬───── Project A (direct)
 |----------|-------------|
 | risk_name | Title of the risk |
 | risk_category | Performance/Bias/Security/Data/Compliance |
-| risk_level | Low/Medium/High/Critical |
+| risk_level | Low/Medium/High/Critical, from likelihood and severity when both are set |
+| likelihood | Rare/Unlikely/Possible/Likely/Almost Certain |
+| severity | Negligible/Minor/Moderate/Major/Catastrophic |
 | owner | Responsible person |
 | target_date | Resolution deadline |
 | mitigation_plan | Remediation steps |
@@ -481,9 +530,9 @@ with `{ errors: [{ field, message, location }] }`, one message per field.
 
 | | Model | Model risk |
 |---|---|---|
-| Required on create | `provider`, `model`, `version` (non-empty strings) | `risk_name` (non-empty), `risk_category`, `risk_level` (enums), `owner` (positive integer), `target_date` (ISO 8601) |
+| Required on create | `provider`, `model`, `version` (non-empty strings) | `risk_name` (non-empty), `risk_category`, `likelihood`, `severity` (lists), `owner` (positive integer), `target_date` (ISO 8601) |
 | Defaulted by the server | `status` (Pending), `status_date` (now) | `status` (Open) |
-| Checked when sent | `status`, `type` (enums; `type` "" or null = unclassified), `status_date` (ISO 8601), `approver` (positive integer; "", 0, null = none), `projects`, `frameworks` (integer arrays), `capabilities` (string or string array), `security_assessment`, `deleteProjects`, `deleteFrameworks` (booleans), text fields (strings) | `status` (enum), `model_id` (positive integer; "" or null = none), text fields |
+| Checked when sent | `status`, `type` (enums; `type` "" or null = unclassified), `status_date` (ISO 8601), `approver` (positive integer; "", 0, null = none), `projects`, `frameworks` (integer arrays), `capabilities` (string or string array), `security_assessment`, `deleteProjects`, `deleteFrameworks` (booleans), text fields (strings) | `status`, `risk_level` (enums; the level is ignored when likelihood and severity are set), `likelihood`, `severity` (lists, on update too), `model_id` (positive integer; "" or null = none), text fields |
 
 The required set is the create forms' (`NewModelInventory`, `NewModelRisk`)
 minus the fields the server defaults, so the forms never send a body v1
