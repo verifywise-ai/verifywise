@@ -176,8 +176,19 @@ spelling, a blank value becomes NULL, and anything else is appended to the
 risk's `description` as "Previous likelihood: <value>" (after a blank line;
 on its own when the description is empty) before `likelihood` is set to
 NULL. `risk_level` is not recomputed (no row has a severity yet). `down`
-drops `severity` and moves each "Previous likelihood" line back; a
-re-spelled label keeps the new spelling.
+drops `severity` and moves each "Previous likelihood" line back while it is
+still the description's last line; a re-spelled label keeps the new
+spelling.
+
+Advisor: `agent_create_model_risk` and `agent_suggest_model_risk` require
+likelihood and severity when filed. An approval is parsed again when it is
+approved, through `normalizeStoredLabels` (`aiActions/createModelRisk/schema.ts`):
+a label in any case gets its spelling, and a free-text likelihood from an
+approval filed before the lists becomes a "Previous likelihood" line in the
+description (for `agent_update_model_risk`, appended to the stored one). A
+stored create or suggestion runs with both inputs, or with a `risk_level`
+and no pair (kept); with neither it is refused rather than stored without a
+level.
 
 Risk links: the `risk_links_flag_stale` trigger flags confirmed
 `inherits_from` links to a model risk whenever its `risk_level` changes, so a
@@ -532,7 +543,7 @@ with `{ errors: [{ field, message, location }] }`, one message per field.
 |---|---|---|
 | Required on create | `provider`, `model`, `version` (non-empty strings) | `risk_name` (non-empty), `risk_category`, `likelihood`, `severity` (lists), `owner` (positive integer), `target_date` (ISO 8601) |
 | Defaulted by the server | `status` (Pending), `status_date` (now) | `status` (Open) |
-| Checked when sent | `status`, `type` (enums; `type` "" or null = unclassified), `status_date` (ISO 8601), `approver` (positive integer; "", 0, null = none), `projects`, `frameworks` (integer arrays), `capabilities` (string or string array), `security_assessment`, `deleteProjects`, `deleteFrameworks` (booleans), text fields (strings) | `status`, `risk_level` (enums; the level is ignored when likelihood and severity are set), `likelihood`, `severity` (lists, on update too), `model_id` (positive integer; "" or null = none), text fields |
+| Checked when sent | `status`, `type` (enums; `type` "" or null = unclassified), `status_date` (ISO 8601), `approver` (positive integer; "", 0, null = none), `projects`, `frameworks` (integer arrays), `capabilities` (string or string array), `security_assessment`, `deleteProjects`, `deleteFrameworks` (booleans), text fields (strings) | `status`, `risk_level` (enums; the level is ignored when likelihood and severity are set), `likelihood`, `severity` (lists; on update null or "" clears one, and the stored level stays), `model_id` (positive integer; "" or null = none), text fields |
 
 The required set is the create forms' (`NewModelInventory`, `NewModelRisk`)
 minus the fields the server defaults, so the forms never send a body v1
