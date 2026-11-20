@@ -94,9 +94,11 @@ export function StepProgressDialog({
       >
         {step.label}
       </Typography>
+      {/* role="progressbar" needs an accessible name (axe: aria-progressbar-name). */}
       <LinearProgress
         variant="determinate"
         value={step.progress}
+        aria-label={title}
         sx={{
           "height": 6,
           "borderRadius": radiusPx.md,
