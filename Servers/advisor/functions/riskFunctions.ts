@@ -1,3 +1,4 @@
+import { RISK_APPROVAL_NOT_REQUIRED } from "../../domain.layer/enums/risk-approval-status.enum";
 import { IRisk } from "../../domain.layer/interfaces/I.risk";
 import {
   getAllRisksQuery,
@@ -11,6 +12,7 @@ import {
 } from "../../utils/risk.utils";
 import { getTimeseriesForTimeframe } from "../../utils/history/riskHistory.utils";
 import { createWriteToolFn } from "../confirmation/createWriteTool";
+import { actingRequesterId } from "./actingRequester";
 import { sequelize } from "../../database/db";
 import logger from "../../utils/logger/fileLogger";
 import { getEffectiveRiskLevel } from "../../utils/riskLevel.utils";
@@ -444,8 +446,8 @@ export const actingRiskViewer = async (
   params: Record<string, unknown>,
   organizationId: number,
 ): Promise<RiskViewer> => {
-  const userId = Number(params._requesterId) || Number(params._userId);
-  if (!userId || userId < 0) return UNKNOWN_RISK_VIEWER;
+  const userId = actingRequesterId(params);
+  if (userId === undefined) return UNKNOWN_RISK_VIEWER;
   return riskViewerForUserQuery(userId, organizationId);
 };
 
@@ -481,7 +483,7 @@ const agentCreateRisk = createWriteToolFn({
         risk_severity: "Moderate",
         final_risk_level: "",
         risk_approval: null,
-        approval_status: "",
+        approval_status: RISK_APPROVAL_NOT_REQUIRED,
         date_of_assessment: new Date(),
         deadline: params.deadline || null,
         assessment_mapping: "",

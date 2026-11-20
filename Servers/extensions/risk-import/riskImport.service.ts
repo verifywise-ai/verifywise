@@ -17,6 +17,15 @@ import {
 import { calculateRiskLevel, normalizeCurrentRiskLevel } from "../../utils/riskLevel.utils";
 import { isInvalidDateCell, riskCalendarDateFromCell } from "../../utils/riskCalendarDate.utils";
 import { MAX_IMPORT_ROWS } from "../importLimits";
+import { notifyRiskApprovers } from "../../services/riskApproverNotification.service";
+import { pgTextArray } from "../../utils/pgArray.utils";
+import {
+  isRiskApprovalDecision,
+  normalizeRiskApprovalStatus,
+  RISK_APPROVAL_NOT_REQUIRED,
+  RISK_APPROVAL_PENDING,
+  RISK_APPROVAL_STATUSES,
+} from "../../domain.layer/enums/risk-approval-status.enum";
 
 /**
  * Server-side risk-import extension logic. Two entry points:
@@ -74,6 +83,10 @@ export const RISK_IMPORT_VALIDATION_MESSAGES = {
   userNotMember: "User must be a member of this organization",
   duplicateInFile: 'A risk named "{name}" already appears on row {row} of this file',
   nameExists: 'A risk named "{name}" already exists',
+  approvalStatusInvalid: "Invalid approval status. Must be one of: {values}",
+  approvalDecisionAdminOnly: "Only an Admin can import a risk as Approved or Rejected",
+  // The same words (and en.json key) the risk form answers with (K9).
+  approverSelf: "You can't name yourself as the approver. Ask an Admin or pick someone else.",
 } as const;
 
 /**
@@ -255,6 +268,7 @@ export async function buildExcelTemplate(
   addDropdown(8, SEVERITY_VALUES);
   addDropdown(10, MITIGATION_STATUS_VALUES);
   addDropdown(11, CURRENT_RISK_LEVEL_VALUES);
+  addDropdown(19, RISK_APPROVAL_STATUSES);
   addDropdown(15, LIKELIHOOD_VALUES);
   addDropdown(16, RISK_SEVERITY_VALUES);
   addDateValidation(12); // deadline
@@ -411,13 +425,55 @@ function normalizeRow(raw: unknown): RiskImportRow {
   return row as RiskImportRow;
 }
 
+/** Who is importing: the approval checks depend on it. */
+interface Importer {
+  userId: number;
+  /** organization.admin: may import Approved or Rejected and name themself as approver. */
+  callerIsAdmin: boolean;
+}
+
+/**
+ * The approval checks of the strict path (decision 5, K9): a status that is
+ * not one of the four, a decision (Approved, Rejected) from a non-Admin, and
+ * a non-Admin naming themself as the approver. The legacy path maps the same
+ * input silently instead (importedApprovalStatus).
+ */
+function approvalErrors(
+  row: RiskImportRow,
+  rowIndex: number,
+  { userId, callerIsAdmin }: Importer,
+): RiskImportError[] {
+  const errors: RiskImportError[] = [];
+  const cell = row.approval_status?.trim();
+  const status = normalizeRiskApprovalStatus(cell);
+  if (cell && !status) {
+    errors.push(
+      keyedError(rowIndex, "approval_status", "approvalStatusInvalid", {
+        values: RISK_APPROVAL_STATUSES.join(", "),
+      }),
+    );
+  } else if (status && isRiskApprovalDecision(status) && !callerIsAdmin) {
+    errors.push(keyedError(rowIndex, "approval_status", "approvalDecisionAdminOnly"));
+  }
+  if (!callerIsAdmin && parseUserId(row.risk_approval) === userId) {
+    errors.push(keyedError(rowIndex, "risk_approval", "approverSelf"));
+  }
+  return errors;
+}
+
 /**
  * Strict rules (the /api/v1 contract): lifecycle phase, likelihood and severity
- * are required and unknown categories are errors. Lenient rules (the frozen
- * legacy path) accept what the endpoint accepted before: those three are
- * optional but enum-checked when present, and unknown categories are dropped.
+ * are required, unknown categories are errors, and so are the approval checks.
+ * Lenient rules (the frozen legacy path) accept what the endpoint accepted
+ * before: those three are optional but enum-checked when present, unknown
+ * categories are dropped and the approval status is mapped, never refused.
  */
-function validateRow(row: RiskImportRow, rowIndex: number, strict: boolean): RiskImportError[] {
+function validateRow(
+  row: RiskImportRow,
+  rowIndex: number,
+  strict: boolean,
+  importer: Importer,
+): RiskImportError[] {
   const errors: RiskImportError[] = [];
 
   if (!row.risk_name || row.risk_name.trim().length === 0) {
@@ -509,10 +565,27 @@ function validateRow(row: RiskImportRow, rowIndex: number, strict: boolean): Ris
   if (row.date_of_assessment && isInvalidDateCell(row.date_of_assessment)) {
     errors.push(keyedError(rowIndex, "date_of_assessment", "assessmentDateInvalid"));
   }
+  if (strict) errors.push(...approvalErrors(row, rowIndex, importer));
   return errors;
 }
 
-export function parseRow(row: RiskImportRow): Record<string, unknown> {
+/**
+ * A row's approval status (decision 5): Not required without an approver,
+ * otherwise Pending. Approved or Rejected from the file is kept only when the
+ * importing user is an Admin. On the strict path validateRow has already
+ * refused what this maps; on the legacy path (frozen, K2) the mapping is the
+ * rule, so a non-Admin naming themself as approver is kept as Pending.
+ */
+function importedApprovalStatus(row: RiskImportRow, callerIsAdmin: boolean): string {
+  if (parseUserId(row.risk_approval) === null) return RISK_APPROVAL_NOT_REQUIRED;
+  const status = normalizeRiskApprovalStatus(row.approval_status);
+  return status && isRiskApprovalDecision(status) && callerIsAdmin ? status : RISK_APPROVAL_PENDING;
+}
+
+export function parseRow(
+  row: RiskImportRow,
+  { callerIsAdmin = false }: { callerIsAdmin?: boolean } = {},
+): Record<string, unknown> {
   // Unknown values are rejected by validateRow before a row is parsed.
   const riskCategory = row.risk_category ? splitCategories(row.risk_category).valid : null;
 
@@ -540,7 +613,7 @@ export function parseRow(row: RiskImportRow): Record<string, unknown> {
     // Derived like the inherent level; the sheet value is ignored.
     final_risk_level: calculateRiskLevel(likelihoodMitigation, row.risk_severity ?? null),
     risk_approval: parseUserId(row.risk_approval),
-    approval_status: row.approval_status ?? null,
+    approval_status: importedApprovalStatus(row, callerIsAdmin),
     // An empty cell stays empty: the import time is not an assessment date.
     date_of_assessment: row.date_of_assessment
       ? riskCalendarDateFromCell(row.date_of_assessment)
@@ -549,6 +622,30 @@ export function parseRow(row: RiskImportRow): Record<string, unknown> {
 }
 
 const ROW_SAVEPOINT = "risk_import_row";
+
+/**
+ * Tell each approver the import named about their risks, after commit and
+ * without waiting: a failed notice never fails the import. One notice per
+ * approver, listing their risks; the importer is not told about themself.
+ */
+function notifyImportedApprovers(
+  organizationId: number,
+  userId: number,
+  created: Array<{ id: number; data: Record<string, unknown> }>,
+): void {
+  const risks = created
+    .filter(({ data }) => typeof data.risk_approval === "number")
+    .map(({ id, data }) => ({
+      id,
+      risk_name: data.risk_name as string,
+      risk_description: data.risk_description as string,
+      risk_approval: data.risk_approval as number,
+    }));
+  if (risks.length === 0) return;
+  notifyRiskApprovers(organizationId, userId, risks).catch((err) =>
+    logStructuredError("Risk import approver notices failed", err, "importRisks", FILE_NAME),
+  );
+}
 
 /** PostgreSQL error codes a row insert can hit, mapped to the message the user sees. */
 const DB_ERROR_MESSAGES: Record<string, RiskImportMessage> = {
@@ -669,13 +766,18 @@ export interface ImportRisksOptions {
    * had before, with row numbers as index + 2.
    */
   strict: boolean;
+  /**
+   * Whether the importing user is an Admin (organization.admin): only then is
+   * an Approved or Rejected status from the file kept.
+   */
+  callerIsAdmin?: boolean;
 }
 
 export async function importRisks(
   rawRows: RiskImportRow[],
   organizationId: number,
   userId: number,
-  { strict }: ImportRisksOptions = { strict: false },
+  { strict, callerIsAdmin = false }: ImportRisksOptions = { strict: false },
 ): Promise<RiskImportResult> {
   // Checked before anything else, so an oversized file is never validated or written.
   if (rawRows.length > MAX_IMPORT_ROWS) {
@@ -699,7 +801,7 @@ export async function importRisks(
   );
 
   rows.forEach((row, i) => {
-    errors.push(...validateRow(row, rowNumbers[i], strict));
+    errors.push(...validateRow(row, rowNumbers[i], strict, { userId, callerIsAdmin }));
   });
 
   // Owner and approver must be members of the importing organization. A value
@@ -779,7 +881,7 @@ export async function importRisks(
 
     const created: Array<{ id: number; data: Record<string, unknown> }> = [];
     for (let i = 0; i < rows.length; i++) {
-      const data = parseRow(rows[i]);
+      const data = parseRow(rows[i], { callerIsAdmin });
       const rowIndex = rowNumbers[i];
       // A failed statement aborts the whole transaction; rolling back to the
       // row's savepoint keeps it usable, so the later rows still report
@@ -815,7 +917,7 @@ export async function importRisks(
               organization_id: organizationId,
               ...data,
               risk_category: data.risk_category
-                ? `{${(data.risk_category as string[]).map((c) => `"${c.replace(/"/g, '\\"')}"`).join(",")}}`
+                ? pgTextArray(data.risk_category as string[])
                 : null,
             },
             type: QueryTypes.SELECT,
@@ -852,6 +954,7 @@ export async function importRisks(
     await recordEntityCreationBulk("risk", created, userId, organizationId, transaction);
 
     await transaction.commit();
+    notifyImportedApprovers(organizationId, userId, created);
     return {
       success: true,
       imported: created.length,

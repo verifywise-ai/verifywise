@@ -174,7 +174,7 @@ export const useCasesContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'A chronological log of every change made to the use case: who changed what, when, and the old and new values. Useful for audits and internal reviews.',
+      text: 'A chronological log of every change made to the use case: who changed what, when, and the old and new values. Changes to the use case category, purpose, audience and deployment context are logged too. A save only logs the fields whose values changed. Useful for audits and internal reviews.',
     },
     {
       type: 'heading',
@@ -224,9 +224,17 @@ export const useCasesContent: ArticleContent = {
       text: 'Change the basics (title, goal, status), transfer ownership, manage team members, add or remove frameworks, or delete the use case. Every edit gets recorded in the activity log.',
     },
     {
+      type: 'paragraph',
+      text: 'Saving only changes the fields you edited. The AI risk classification and high-risk roles show only while the EU AI Act is selected. When it is not, saving keeps them as they are, so a classification set by an intake form or the API is not lost. The classification list has Prohibited, High risk, Limited risk, Minimal risk, GPAI, General risk and Out of scope.',
+    },
+    {
       type: 'callout',
       variant: 'warning',
       text: 'Deleting a use case cannot be undone. Any pending approval requests get withdrawn automatically.',
+    },
+    {
+      type: 'paragraph',
+      text: 'Deleting a use case keeps its risks in the risk register. A risk that was linked only to this use case is then linked to none, so everyone in the organization can see it while it is active. When there are such risks, the delete dialog says how many and gives you a choice. **Archive these risks** is selected by default: the risks are archived as the use case is deleted, and an archived risk with no use case link is visible only to Admins, its action owner and its approver. **Keep them visible to everyone** deletes the use case and leaves the risks active. **Show risk names** lists them. To keep a risk active and private, cancel and link it to another use case first. If the dialog cannot check the risks, it says that risks linked only to this use case may become visible to everyone and still offers the same choice. The archive and the delete happen together, so if either fails, nothing changes and the dialog shows an error. Deleting an organizational project from the Framework page uses the same dialog. Deleting a use case through the AI advisor or the Jira Assets integration archives these risks as well. The AI advisor deletes a use case only for a user whose role can archive risks.',
     },
     {
       type: 'heading',
@@ -275,6 +283,14 @@ export const useCasesContent: ArticleContent = {
       text: 'After approval, the deferred frameworks get created and all tabs open up.',
     },
     {
+      type: 'paragraph',
+      text: 'The workflow must be active, made for use cases, and have an approver on every step. Otherwise the use case is not saved and the form shows why on the **Approval workflow** field.',
+    },
+    {
+      type: 'paragraph',
+      text: 'While a request is pending or after it is rejected, only people who manage approval workflows can change or remove the workflow. If you sent the request, withdraw it from the approval request instead. Removing the workflow from a rejected use case does not create its frameworks. They wait until a new review approves it. Workflow changes show up in the use case\'s history.',
+    },
+    {
       type: 'heading',
       id: 'lifecycle',
       level: 2,
@@ -287,7 +303,7 @@ export const useCasesContent: ArticleContent = {
     {
       type: 'bullet-list',
       items: [
-        { bold: 'In review', text: 'An approval request is open, or an intake request is waiting for a decision. Intake requests are listed under the search bar, and **Review** opens the submission. The search covers them too, but the export leaves them out. The use case is created only when the request is approved. It then arrives as planned. Rejected and superseded requests are not shown. Days in review count from the first time a request was submitted.' },
+        { bold: 'In review', text: 'An approval request is open, or an intake request is waiting for a decision. Intake requests are listed under the search bar, and **Review** opens the submission. People who can manage intake forms see every request; everyone else sees only the requests they submitted. The search covers them too, but the export leaves them out. The use case is created only when the request is approved. It then arrives as planned. Rejected and superseded requests are not shown. Days in review count from the first time a request was submitted.' },
         { bold: 'Planned', text: 'Approved, or created without an approval workflow, but not in use yet.' },
         { bold: 'Live', text: 'In use. The owner recorded a go-live date.' },
         { bold: 'Retired', text: 'No longer in use. It stays in the inventory with its history.' },
@@ -307,7 +323,7 @@ export const useCasesContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Open a use case to move it along. On the Overview tab, choose **Mark as live** and pick the go-live date (today or earlier), or choose **Retire**. A planned use case that never launches can be retired too. The same panel holds the department. The dashboard uses it to group live use cases.',
+      text: 'Open a use case to move it along. On the Overview tab, choose **Mark as live** and pick the go-live date (today or earlier), or choose **Retire**. A planned use case that never launches can be retired too. A use case with an approval workflow cannot be marked as live until a review approves it, so not while its request is pending, was rejected or was withdrawn. A rejected use case stays rejected even if an admin removes its workflow: attach a workflow and get it approved first. The same panel holds the department. The dashboard uses it to group live use cases.',
     },
     {
       type: 'image',

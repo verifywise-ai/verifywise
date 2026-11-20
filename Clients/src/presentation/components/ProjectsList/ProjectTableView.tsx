@@ -22,6 +22,7 @@ import Chip from "../Chip";
 import StaleMarker from "../LifecycleTabs/StaleMarker";
 import ViewRelationshipsButton from "../ViewRelationshipsButton";
 import IconButton from "../IconButton";
+import DeleteUseCaseModal from "../Modals/DeleteUseCase";
 import {
   ChevronsUpDown,
   ChevronUp,
@@ -37,7 +38,7 @@ import { TableEmptyStateLayout } from "../Table/TableEmptyStateLayout";
 import { IProjectTableViewProps } from "../../../domain/interfaces/i.project";
 import { Project } from "../../../domain/types/Project";
 import useFormattedDate from "../../../application/hooks/useFormattedDate";
-import { deleteProject } from "../../../application/repository/project.repository";
+import { startDateCalendarDay } from "../../tools/isoDateToString";
 import { VerifyWiseContext } from "../../../application/contexts/VerifyWise.context";
 import Alert from "../Alert";
 import { useCanCheck } from "../../../application/hooks/useCan";
@@ -200,6 +201,8 @@ const ProjectTableView: React.FC<IProjectTableViewProps> = ({
   const { setProjects } = useContext(VerifyWiseContext);
   const can = useCanCheck();
   const [page, setPage] = useState(0);
+  // The use case whose delete dialog is open.
+  const [projectIdToDelete, setProjectIdToDelete] = useState<number | null>(null);
   const [alert, setAlert] = useState<{
     variant: "success" | "info" | "warning" | "error";
     title?: string;
@@ -305,42 +308,24 @@ const ProjectTableView: React.FC<IProjectTableViewProps> = ({
     [navigate],
   );
 
-  const handleDeleteProject = useCallback(
-    async (projectId: number) => {
-      try {
-        const response = await deleteProject({ id: projectId });
-        const isError = response.status === 404 || response.status === 500;
-
-        setAlert({
-          variant: isError ? "error" : "success",
-          title: isError ? "Error" : "Success",
-          body: isError
-            ? "Failed to delete use case. Please try again."
-            : "Use case deleted successfully.",
-        });
-
-        if (!isError) {
-          setProjects((prevProjects) => prevProjects.filter((project) => project.id !== projectId));
-          // Call the callback if provided to refresh the parent component
-          if (onProjectDeleted) {
-            onProjectDeleted();
-          }
-        }
-
-        setTimeout(() => {
-          setAlert(null);
-        }, 3000);
-      } catch (error) {
-        console.error("Error deleting project:", error);
-        setAlert({
-          variant: "error",
-          title: "Error",
-          body: "Failed to delete use case. Please try again.",
-        });
-        setTimeout(() => {
-          setAlert(null);
-        }, 3000);
+  // The dialog has already deleted the use case (and archived its risks when
+  // asked) in one request; a failure stays in the dialog and never gets here.
+  const handleProjectDeleted = useCallback(
+    (projectId: number) => {
+      setProjectIdToDelete(null);
+      setAlert({
+        variant: "success",
+        title: "Success",
+        body: "Use case deleted successfully.",
+      });
+      setProjects((prevProjects) => prevProjects.filter((project) => project.id !== projectId));
+      // Call the callback if provided to refresh the parent component
+      if (onProjectDeleted) {
+        onProjectDeleted();
       }
+      setTimeout(() => {
+        setAlert(null);
+      }, 3000);
     },
     [setProjects, onProjectDeleted],
   );
@@ -379,8 +364,9 @@ const ProjectTableView: React.FC<IProjectTableViewProps> = ({
           break;
 
         case "startDate":
-          aValue = new Date(a.start_date).getTime();
-          bValue = new Date(b.start_date).getTime();
+          // No start date sorts first, as before; NaN would break the comparator.
+          aValue = startDateCalendarDay(a.start_date)?.getTime() ?? 0;
+          bValue = startDateCalendarDay(b.start_date)?.getTime() ?? 0;
           break;
 
         case "lastUpdated":
@@ -583,7 +569,7 @@ const ProjectTableView: React.FC<IProjectTableViewProps> = ({
                         sortConfig.key === "startDate" ? "background.surface" : "inherit",
                     }}
                   >
-                    {formatDate(project.start_date)}
+                    {formatUserDate(startDateCalendarDay(project.start_date))}
                   </TableCell>
                 )}
 
@@ -636,12 +622,10 @@ const ProjectTableView: React.FC<IProjectTableViewProps> = ({
                           id={project.id}
                           type="use case"
                           onEdit={() => handleEditProject(project.id)}
-                          onDelete={() => {
-                            handleDeleteProject(project.id);
-                          }}
+                          // No warning props: the menu item opens DeleteUseCaseModal,
+                          // which also asks about risks linked only to this use case.
+                          onDelete={() => setProjectIdToDelete(project.id)}
                           onMouseEvent={() => {}}
-                          warningTitle="Delete this use case?"
-                          warningMessage="Note that deleting a use case will remove all data related to that use case from your system. This is permanent and non-recoverable."
                         />
                       )}
                     </Stack>
@@ -734,6 +718,15 @@ const ProjectTableView: React.FC<IProjectTableViewProps> = ({
           )}
         </Table>
       </TableContainer>
+      {projectIdToDelete !== null && (
+        <DeleteUseCaseModal
+          projectId={projectIdToDelete}
+          message="This deletes the use case, its framework progress and its files. Its risks stay in the risk register but are no longer linked to it. This cannot be undone."
+          proceedText="Delete use case"
+          onCancel={() => setProjectIdToDelete(null)}
+          onDeleted={() => handleProjectDeleted(projectIdToDelete)}
+        />
+      )}
     </>
   );
 };

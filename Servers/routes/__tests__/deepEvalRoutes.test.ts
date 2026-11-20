@@ -46,9 +46,12 @@ import {
   gatewayDetailMessage,
   gatewayErrorMessage,
   injectApiKeys,
+  isEvalsEditWrite,
+  requireEvalsEditForChanges,
   resolveEvalsSettingsPermission,
   toLiteLLMModel,
 } from "../deepEvalRoutes.route";
+import { BUILTIN_ROLE_PERMISSIONS } from "../../config/rolePermissions.config";
 import { getDecryptedAiGatewayKeyForProviderQuery } from "../../utils/aiGatewayEvalKey.utils";
 import { requestHasPermission } from "../../utils/rolePermissions.utils";
 
@@ -701,5 +704,112 @@ describe("resolveEvalsSettingsPermission", () => {
     expect(req.canManageEvalsSettings).toBe(false);
     expect(next).toHaveBeenCalledTimes(1);
     errSpy.mockRestore();
+  });
+});
+
+// --------------------------------------------------------------------------- //
+// requireEvalsEditForChanges — evals.edit on the EvalServer edits            //
+// --------------------------------------------------------------------------- //
+
+describe("isEvalsEditWrite", () => {
+  it.each([
+    ["DELETE", "/projects/p1"],
+    ["DELETE", "/experiments/e1"],
+    ["PUT", "/experiments/e1/status"],
+    ["POST", "/scorers"],
+    ["PUT", "/scorers/s1"],
+    ["DELETE", "/scorers/s1"],
+    ["DELETE", "/datasets/user"],
+    ["POST", "/models"],
+    ["PUT", "/models/m1"],
+    ["DELETE", "/models/m1"],
+  ])("%s %s needs evals.edit", (method, path) => {
+    expect(isEvalsEditWrite(method, path)).toBe(true);
+  });
+
+  it.each([
+    ["DELETE", "/projects/p1/"],
+    ["delete", "//projects//p1"],
+    ["POST", "/Scorers"],
+    ["POST", "/%73corers"],
+    ["DELETE", "/datasets/%75ser"],
+    ["POST", "/experiments/../scorers"],
+    ["POST", "/%E0%A4%A"],
+  ])("other spellings of an edit still need it: %s %s", (method, path) => {
+    expect(isEvalsEditWrite(method, path)).toBe(true);
+  });
+
+  it.each([
+    // Open to every role in the app today (parity with built-in roles)
+    ["POST", "/projects"],
+    ["PUT", "/projects/p1"],
+    ["POST", "/experiments"],
+    ["PATCH", "/experiments/e1"],
+    ["POST", "/datasets/upload"],
+    // Runs, tests and other evals features are not edits
+    ["POST", "/scorers/s1/test"],
+    ["POST", "/models/validate"],
+    ["POST", "/arena/compare"],
+    ["POST", "/bias-audits/run"],
+    ["POST", "/reports/generate"],
+    ["POST", "/logs"],
+    ["PUT", "/settings/arena"],
+    // Reads
+    ["GET", "/scorers"],
+    ["GET", "/projects/p1"],
+  ])("%s %s does not", (method, path) => {
+    expect(isEvalsEditWrite(method, path)).toBe(false);
+  });
+});
+
+describe("requireEvalsEditForChanges", () => {
+  const call = async (role: string, method: string, path: string) => {
+    mockHasPermission.mockImplementation(async (req: any, key) =>
+      role === "Custom with evals.edit"
+        ? key === "evals.edit"
+        : (BUILTIN_ROLE_PERMISSIONS[req.role]?.has(key) ?? false),
+    );
+    const req: any = { role, method, path, organizationId: 7, t: (k: string) => k };
+    const res: any = {};
+    res.status = jest.fn(() => res);
+    res.json = jest.fn(() => res);
+    const next = buildNext();
+    await requireEvalsEditForChanges(req, res, next);
+    return { next, status: (res.status as jest.Mock).mock.calls[0]?.[0] };
+  };
+
+  it.each(["Admin", "Editor", "Custom with evals.edit"])("%s may delete a scorer", async (role) => {
+    expect((await call(role, "DELETE", "/scorers/s1")).next).toHaveBeenCalled();
+  });
+
+  it.each(["Reviewer", "Auditor", "Custom without evals.edit"])(
+    "%s may not delete a scorer",
+    async (role) => {
+      const { status, next } = await call(role, "DELETE", "/scorers/s1");
+      expect(status).toBe(403);
+      expect(next).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each([
+    ["POST", "/projects"],
+    ["PUT", "/projects/p1"],
+    ["POST", "/experiments"],
+    ["PATCH", "/experiments/e1"],
+    ["POST", "/datasets/upload"],
+  ])("Reviewer and Auditor keep %s %s without a lookup", async (method, path) => {
+    for (const role of ["Reviewer", "Auditor"]) {
+      const { next } = await call(role, method, path);
+      expect(next).toHaveBeenCalled();
+    }
+    expect(mockHasPermission).not.toHaveBeenCalled();
+  });
+
+  it("passes a lookup error to the error handler", async () => {
+    mockHasPermission.mockRejectedValue(new Error("db down"));
+    const req: any = { role: "Editor", method: "POST", path: "/scorers", t: (k: string) => k };
+    const next = buildNext();
+    await requireEvalsEditForChanges(req, {} as Response, next);
+    expect(next).toHaveBeenCalledWith(expect.any(Error));
   });
 });

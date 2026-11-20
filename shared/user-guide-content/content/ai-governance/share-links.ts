@@ -22,7 +22,7 @@ export const shareLinksContent: ArticleContent = {
       type: 'ordered-list',
       items: [
         { text: 'Open **Model inventory**, where the app offers share links.' },
-        { text: 'Click the **Share** button.' },
+        { text: 'Click the **Share** button. It is turned off if you cannot edit what you are sharing.' },
         { text: 'Choose what fields to include in the shared view.' },
         { text: 'Set an expiration date (how long the link stays active).' },
         { text: 'Optionally allow data export from the shared view.' },
@@ -39,6 +39,10 @@ export const shareLinksContent: ArticleContent = {
     {
       type: 'paragraph',
       text: 'When someone opens a share link, they see a read-only view of the resource with only the fields you selected. They don\'t need a VerifyWise account. The shared view shows VerifyWise branding and a note that the link was shared by your organization.',
+    },
+    {
+      type: 'paragraph',
+      text: 'Even with **Share all fields** on, a share link never shows internal fields: organization and user IDs, external keys, model risk management (MRM) fields, security assessment files or the contact details of an external owner. A model\'s approver is shown by name.',
     },
     {
       type: 'callout',
@@ -85,9 +89,9 @@ export const shareLinksContent: ArticleContent = {
         { key: 'roles', label: 'Required role', width: '50%' },
       ],
       rows: [
-        { action: 'Create share links', roles: 'Any signed-in member' },
+        { action: 'Create or change share links', roles: 'Anyone who can edit what is shared (for example, edit models for the model list). A use case or risk link also needs access to that use case or risk; a link to the whole use case or risk list needs a role that sees every use case.' },
         { action: 'View active share links', roles: 'Any signed-in member' },
-        { action: 'Revoke share links', roles: 'Creator (any role can revoke a link they created)' },
+        { action: 'Turn off or revoke share links', roles: 'The creator, even after losing edit access, or an Admin for any link in the organization' },
         { action: 'Access shared view (external)', roles: 'Anyone with the link' },
       ],
     },

@@ -749,6 +749,27 @@ export const de: Record<string, string> = {
   "Loading people...": "Personen werden geladen...",
   "People could not be loaded.": "Die Personen konnten nicht geladen werden.",
   "No people found.": "Keine Personen gefunden.",
+  "Checking linked risks...": "Verknüpfte Risiken werden geprüft...",
+  "Risks linked only to this use case may become visible to everyone in the organization.":
+    "Risiken, die nur mit diesem Anwendungsfall verknüpft sind, können für alle in der Organisation sichtbar werden.",
+  "Your role does not allow archiving risks.":
+    "Ihre Rolle erlaubt das Archivieren von Risiken nicht.",
+  "The use case could not be deleted. Nothing was changed. Try again.":
+    "Der Anwendungsfall konnte nicht gelöscht werden. Es wurde nichts geändert. Versuchen Sie es erneut.",
+  "Hide risk names": "Risikonamen ausblenden",
+  "Show risk names": "Risikonamen anzeigen",
+  "Archive this risk": "Dieses Risiko archivieren",
+  "Archive these risks": "Diese Risiken archivieren",
+  "Keep it visible to everyone": "Für alle sichtbar lassen",
+  "Keep them visible to everyone": "Für alle sichtbar lassen",
+  "To keep it private, cancel and link it to another use case first.":
+    "Damit es nicht für alle sichtbar wird, brechen Sie ab und verknüpfen Sie es zuerst mit einem anderen Anwendungsfall.",
+  "To keep them private, cancel and link them to another use case first.":
+    "Damit sie nicht für alle sichtbar werden, brechen Sie ab und verknüpfen Sie sie zuerst mit einem anderen Anwendungsfall.",
+  "{count} risk is linked only to this use case. After you delete it, everyone in the organization can see it.":
+    "{count} Risiko ist nur mit diesem Anwendungsfall verknüpft. Nach dem Löschen können alle in der Organisation es sehen.",
+  "{count} risks are linked only to this use case. After you delete it, everyone in the organization can see them.":
+    "{count} Risiken sind nur mit diesem Anwendungsfall verknüpft. Nach dem Löschen können alle in der Organisation sie sehen.",
 };
 
 export const fr: Record<string, string> = {
@@ -1494,6 +1515,26 @@ export const fr: Record<string, string> = {
   "Loading people...": "Chargement des personnes...",
   "People could not be loaded.": "Les personnes n'ont pas pu être chargées.",
   "No people found.": "Aucune personne trouvée.",
+  "Checking linked risks...": "Vérification des risques liés...",
+  "Risks linked only to this use case may become visible to everyone in the organization.":
+    "Les risques liés uniquement à ce cas d'usage peuvent devenir visibles par tous les membres de l'organisation.",
+  "Your role does not allow archiving risks.": "Votre rôle ne permet pas d'archiver des risques.",
+  "The use case could not be deleted. Nothing was changed. Try again.":
+    "Le cas d'usage n'a pas pu être supprimé. Rien n'a été modifié. Réessayez.",
+  "Hide risk names": "Masquer les noms des risques",
+  "Show risk names": "Afficher les noms des risques",
+  "Archive this risk": "Archiver ce risque",
+  "Archive these risks": "Archiver ces risques",
+  "Keep it visible to everyone": "Le laisser visible par tous",
+  "Keep them visible to everyone": "Les laisser visibles par tous",
+  "To keep it private, cancel and link it to another use case first.":
+    "Pour qu'il reste privé, annulez et liez-le d'abord à un autre cas d'usage.",
+  "To keep them private, cancel and link them to another use case first.":
+    "Pour qu'ils restent privés, annulez et liez-les d'abord à un autre cas d'usage.",
+  "{count} risk is linked only to this use case. After you delete it, everyone in the organization can see it.":
+    "{count} risque est lié uniquement à ce cas d'usage. Après la suppression, tous les membres de l'organisation pourront le voir.",
+  "{count} risks are linked only to this use case. After you delete it, everyone in the organization can see them.":
+    "{count} risques sont liés uniquement à ce cas d'usage. Après la suppression, tous les membres de l'organisation pourront les voir.",
 };
 
 export const es: Record<string, string> = {
@@ -2236,4 +2277,24 @@ export const es: Record<string, string> = {
   "Loading people...": "Cargando personas...",
   "People could not be loaded.": "No se pudieron cargar las personas.",
   "No people found.": "No se encontraron personas.",
+  "Checking linked risks...": "Comprobando los riesgos vinculados...",
+  "Risks linked only to this use case may become visible to everyone in the organization.":
+    "Los riesgos vinculados solo a este caso de uso pueden quedar visibles para todos en la organización.",
+  "Your role does not allow archiving risks.": "Su rol no permite archivar riesgos.",
+  "The use case could not be deleted. Nothing was changed. Try again.":
+    "No se pudo eliminar el caso de uso. No se ha cambiado nada. Inténtelo de nuevo.",
+  "Hide risk names": "Ocultar los nombres de los riesgos",
+  "Show risk names": "Mostrar los nombres de los riesgos",
+  "Archive this risk": "Archivar este riesgo",
+  "Archive these risks": "Archivar estos riesgos",
+  "Keep it visible to everyone": "Mantenerlo visible para todos",
+  "Keep them visible to everyone": "Mantenerlos visibles para todos",
+  "To keep it private, cancel and link it to another use case first.":
+    "Para que siga siendo privado, cancele y vincúlelo primero a otro caso de uso.",
+  "To keep them private, cancel and link them to another use case first.":
+    "Para que sigan siendo privados, cancele y vincúlelos primero a otro caso de uso.",
+  "{count} risk is linked only to this use case. After you delete it, everyone in the organization can see it.":
+    "{count} riesgo está vinculado solo a este caso de uso. Después de eliminarlo, todos en la organización podrán verlo.",
+  "{count} risks are linked only to this use case. After you delete it, everyone in the organization can see them.":
+    "{count} riesgos están vinculados solo a este caso de uso. Después de eliminarlo, todos en la organización podrán verlos.",
 };

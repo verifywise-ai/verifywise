@@ -14,12 +14,15 @@
  * - Upload restricted to Admin and Editor roles
  */
 
-import express, { Request, Response, NextFunction } from "express";
+import express from "express";
 import multer from "multer";
 import authenticateJWT from "../../middleware/auth.middleware";
 import authorize from "../../middleware/accessControl.middleware";
 import { requireExtensionEnabled } from "../../middleware/requireExtensionEnabled.middleware";
-import { STATUS_CODE } from "../../utils/statusCode.utils";
+import {
+  createUploadErrorHandler,
+  SPREADSHEET_UNSUPPORTED_MESSAGE,
+} from "../../utils/upload.utils";
 import { uploadDatasetFile } from "./datasetBulkUpload.ctrl";
 
 const router = express.Router();
@@ -52,33 +55,18 @@ const fileFilter = (
   }
 };
 
+const DATASET_MAX_BYTES = 30 * 1024 * 1024; // 30MB
+
 const upload = multer({
   storage,
-  limits: { fileSize: 30 * 1024 * 1024 }, // 30MB
+  limits: { fileSize: DATASET_MAX_BYTES },
   fileFilter,
 });
 
-/**
- * Multer error handling middleware
- */
-const handleMulterError = (err: any, req: Request, res: Response, next: NextFunction) => {
-  if (err instanceof multer.MulterError) {
-    if (err.code === "LIMIT_FILE_SIZE") {
-      return res
-        .status(413)
-        .json(STATUS_CODE[413](req.t!("File size exceeds maximum allowed size of 30MB")));
-    }
-    return res.status(400).json(STATUS_CODE[400](err.message));
-  }
-
-  if (err && err.message === "UNSUPPORTED_FILE_TYPE") {
-    return res
-      .status(415)
-      .json(STATUS_CODE[415](req.t!("Unsupported file type. Allowed types: CSV, XLS, XLSX")));
-  }
-
-  return next(err);
-};
+const handleMulterError = createUploadErrorHandler(
+  DATASET_MAX_BYTES,
+  SPREADSHEET_UNSUPPORTED_MESSAGE,
+);
 
 /**
  * @route   POST /dataset-bulk-upload/upload

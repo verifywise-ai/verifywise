@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { getGatewayModelsForProvider, hasGatewayCatalog } from "../repository/deepEval.repository";
 import { PROVIDERS, type ModelInfo } from "../../presentation/utils/providers";
+import { retryUpTo } from "../utils/queryRetry";
 
 const PROVIDER_MODELS_KEY = ["provider-models"] as const;
 
@@ -33,7 +34,7 @@ export function useProviderModels(provider: string) {
     // A provider the catalog doesn't cover (self-hosted) uses the bundled list only
     enabled: !!provider && hasGatewayCatalog(provider),
     // The bundled list shows meanwhile; don't hold the loading state through 3 retries.
-    retry: 1,
+    retry: retryUpTo(1),
     staleTime: 5 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
   });

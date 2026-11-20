@@ -24,8 +24,10 @@ import {
   getVisibleEuCategoryIdsForProject,
   updateControlEUByIdQuery,
   updateQuestionEUByIdQuery,
+  subcontrolsBelongToControlQuery,
   updateSubcontrolEUByIdQuery,
 } from "../utils/eu.utils";
+import { checkedUseCaseId } from "../middleware/projectAccess.middleware";
 import { AnswerEU } from "../domain.layer/frameworks/EU-AI-Act/answerEU.model";
 import { sequelize } from "../database/db";
 import { IProjectAttributes } from "../domain.layer/interfaces/i.project";
@@ -340,15 +342,32 @@ export async function saveControls(req: RequestWithFile, res: Response): Promise
   try {
     const Control = req.body as ControlEU & {
       subControls: string;
-      user_id: number;
-      project_id: number;
       delete: string;
     };
+    // The use case the route guard resolved from the control, never a
+    // project_id from the body.
+    const projectId = checkedUseCaseId(res);
+    const submittedSubcontrols: Array<Record<string, any>> = Control.subControls
+      ? JSON.parse(Control.subControls)
+      : [];
+
+    // Only this control's subcontrols may be saved through it.
+    if (
+      !(await subcontrolsBelongToControlQuery(
+        controlId,
+        submittedSubcontrols.map((sc) => sc.id),
+        req.organizationId!,
+        transaction,
+      ))
+    ) {
+      await transaction.rollback();
+      return res.status(404).json(STATUS_CODE[404](req.t!("Record not found")));
+    }
 
     // Check for pending approval
-    if (Control.project_id) {
+    if (projectId) {
       const hasPendingApproval = await hasPendingApprovalQuery(
-        Control.project_id,
+        projectId,
         "use_case",
         req.organizationId!,
         transaction,
@@ -358,7 +377,7 @@ export async function saveControls(req: RequestWithFile, res: Response): Promise
         await transaction.rollback();
         await logFailure({
           eventType: "Update",
-          description: `Cannot save controls for project with pending approval: project ID ${Control.project_id}, control ID ${controlId}`,
+          description: `Cannot save controls for project with pending approval: project ID ${projectId}, control ID ${controlId}`,
           functionName: "saveControls",
           fileName: "eu.ctrl.ts",
           error: new Error("Project has pending approval and controls cannot be modified"),
@@ -445,8 +464,8 @@ export async function saveControls(req: RequestWithFile, res: Response): Promise
 
     const subControlResp: any[] = [];
 
-    if (Control.subControls) {
-      for (const subcontrol of JSON.parse(Control.subControls)) {
+    if (submittedSubcontrols.length > 0) {
+      for (const subcontrol of submittedSubcontrols) {
         const evidenceFiles = ((req.files as UploadedFile[]) || []).filter(
           (f) => f.fieldname === `evidence_files_${parseInt(subcontrol.id)}`,
         );
@@ -458,8 +477,8 @@ export async function saveControls(req: RequestWithFile, res: Response): Promise
         for (let f of evidenceFiles) {
           const evidenceUploadedFile = await uploadFile(
             f,
-            Control.user_id,
-            Control.project_id,
+            req.userId!,
+            projectId!,
             "Compliance tracker group",
             req.organizationId!,
             transaction,
@@ -479,8 +498,8 @@ export async function saveControls(req: RequestWithFile, res: Response): Promise
         for (let f of feedbackFiles) {
           const feedbackUploadedFile = await uploadFile(
             f,
-            Control.user_id,
-            Control.project_id,
+            req.userId!,
+            projectId!,
             "Compliance tracker group",
             req.organizationId!,
             transaction,
@@ -570,7 +589,7 @@ export async function saveControls(req: RequestWithFile, res: Response): Promise
           change.roleType,
           change.newUserId,
           change.oldUserId,
-          Control.project_id,
+          projectId,
         );
       }
     }
@@ -618,15 +637,13 @@ export async function updateQuestionById(req: RequestWithFile, res: Response): P
       AnswerEU & {
         risksDelete: number[];
         risksMitigated: number[];
-        user_id: string | number;
-        project_id: string | number;
         delete: string;
       }
     > = req.body;
 
-    // Get project ID and check for pending approval
-    const projectId =
-      typeof body.project_id === "string" ? parseInt(body.project_id) : (body.project_id as number);
+    // The use case the route guard resolved from the answer, never a
+    // project_id from the body.
+    const projectId = checkedUseCaseId(res);
 
     if (projectId) {
       const hasPendingApproval = await hasPendingApprovalQuery(
@@ -688,9 +705,8 @@ export async function updateQuestionById(req: RequestWithFile, res: Response): P
     logger.debug(`📋 Filtered evidence files (fieldname="files"): ${evidenceFiles.length}`);
 
     let uploadedFiles: FileType[] = [];
-    const userId =
-      typeof body.user_id === "string" ? parseInt(body.user_id) : (body.user_id as number);
-    // projectId already declared above for pending approval check
+    // The uploader is the signed-in user; projectId is the guarded use case.
+    const userId = req.userId!;
 
     logger.debug(
       `👤 userId: ${userId}, projectId: ${projectId}, evidenceFiles.length: ${evidenceFiles.length}`,

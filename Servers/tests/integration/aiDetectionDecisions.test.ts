@@ -5,7 +5,10 @@ jest.setTimeout(60000);
 
 import { sequelize } from "../../database/db";
 import { cleanupDatabase } from "./helpers";
-import { seedTwoTenantContexts } from "./tenant-isolation/tenantIsolation.harness";
+import {
+  buildTenantContext,
+  seedTwoTenantContexts,
+} from "./tenant-isolation/tenantIsolation.harness";
 import type { TenantContext } from "./tenant-isolation/tenantIsolation.harness";
 import { applyGovernanceDecisionsToScanQuery } from "../../utils/aiDetectionDecisions.utils";
 
@@ -299,6 +302,26 @@ describe("AI Detection decisions across scans", () => {
     const alreadySet = await createFinding(owner.orgId, second, { status: "flagged" });
     expect(await apply(second, owner.orgId)).toBe(0);
     expect((await statusOf(alreadySet)).governance_status).toBe("flagged");
+  });
+
+  it("answers 403 when an Editor names themself as the suggested risk's approver", async () => {
+    const editor = await buildTenantContext(3);
+    const scanId = await createScan(editor.orgId, editor.userId);
+    const res = await editor.request.post(`${V1_BASE}/${scanId}/suggested-risks/risks`).send({
+      suggestion_name: "Prompt injection",
+      risk_name: "Prompt injection in the chat endpoint",
+      risk_owner: editor.userId,
+      risk_approval: editor.userId,
+    });
+    expect(res.status).toBe(403);
+    expect(res.body).toEqual({
+      message: "Forbidden",
+      data: "You can't name yourself as the approver. Ask an Admin or pick someone else.",
+    });
+    const [rows] = await sequelize.query(`SELECT id FROM risks WHERE organization_id = :orgId`, {
+      replacements: { orgId: editor.orgId },
+    });
+    expect(rows).toHaveLength(0);
   });
 
   it("adds a suggestion to the risk register once, even when two adds race", async () => {

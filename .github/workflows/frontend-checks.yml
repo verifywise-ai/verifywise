@@ -12,51 +12,34 @@ on:
       - 'Clients/**'
       - 'ansible/templates/verifywise-nginx.conf.j2'
       - '.github/workflows/frontend-checks.yml'
+      - 'scripts/security/**'
   push:
     branches: ['master', 'develop']
     paths:
       - 'Clients/**'
       - 'ansible/templates/verifywise-nginx.conf.j2'
       - '.github/workflows/frontend-checks.yml'
-  # Manual trigger only: used by the flake-check job (#4503-CI), which runs the
+      - 'scripts/security/**'
+  # Nightly full run on develop. A push to develop runs only the quick checks
+  # (the PR already ran the unit shards and coverage), so this is what catches
+  # two PRs that pass alone but break together.
+  schedule:
+    - cron: '45 2 * * *'
+  # Also the manual trigger for the flake-check job (#4503-CI), which runs the
   # unit suite three consecutive times and is too heavy for PR CI.
   workflow_dispatch:
 
+# The org's Free plan runs at most 20 jobs at once, so every job here also
+# makes other PRs wait. A newer push to the same PR cancels the older run.
+# Every other run (push, nightly, manual) gets a group of its own commit and
+# event, so it neither cancels nor replaces a queued run of another commit.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
-  security-audit:
-    name: Security Audit
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: Clients
-
-    steps:
-      - uses: actions/checkout@v7
-
-      - name: Set up Node
-        uses: actions/setup-node@v7
-        with:
-          node-version: '22'
-          cache: 'npm'
-          cache-dependency-path: Clients/package-lock.json
-
-      - name: Install dependencies
-        run: npm ci --legacy-peer-deps
-
-      - name: Run npm audit
-        run: npm audit --audit-level=high
-        continue-on-error: true
-
-      - name: Run npm audit (JSON output for review)
-        run: npm audit --json > ../audit-results.json || true
-
-      - name: Upload audit results
-        uses: actions/upload-artifact@v7
-        with:
-          name: frontend-npm-audit-results
-          path: audit-results.json
-          retention-days: 30
-
+  # Quick checks share one job (and one npm ci): as separate jobs, each spent
+  # longer waiting for a runner than running.
   lint-and-typecheck:
     name: Lint, Types & i18n
     runs-on: ubuntu-latest
@@ -64,6 +47,8 @@ jobs:
       run:
         working-directory: Clients
 
+    # Each check runs as long as npm ci succeeded, even after an earlier check
+    # failed, so one run reports every failure (as separate jobs did).
     steps:
       - uses: actions/checkout@v7
 
@@ -75,42 +60,70 @@ jobs:
           cache-dependency-path: Clients/package-lock.json
 
       - name: Install dependencies
+        id: install
         run: npm ci --legacy-peer-deps
 
       - name: Prettier format check
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         run: npm run format-check
 
       - name: TypeScript type check
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         run: npm run typecheck
 
       - name: ESLint (errors only)
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         # (#4617-3) Frontend ESLint gate. Already enforced here via --quiet
         # (errors fail the job); warnings are left non-blocking while the
         # backlog is burned down.
         run: npm run lint -- --quiet
 
       - name: i18n audit (catch dictionary drift)
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         run: npm run i18n:audit:strict
 
       - name: Dependency vulnerability audit
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         run: |
           npm audit --audit-level=high --omit=dev || true
           node $GITHUB_WORKSPACE/scripts/security/npm-audit-gate.js .
 
-  # The production nginx image must proxy /api and /v1 to the backend. Builds
-  # only the Dockerfile's nginx stage (no npm build), so it takes seconds.
-  nginx-proxy:
-    name: Frontend nginx proxies /api and /v1
-    runs-on: ubuntu-latest
+      # Full report (dev dependencies included) for review; never blocks.
+      - name: npm audit report (JSON)
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: npm audit --json > ../audit-results.json || true
 
-    steps:
-      - uses: actions/checkout@v7
+      - name: Upload audit results
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: frontend-npm-audit-results
+          path: audit-results.json
+          retention-days: 30
 
-      - name: Test the nginx proxy routes
+      # The production nginx image must proxy /api and /v1 to the backend.
+      # Builds only the Dockerfile's nginx stage (no npm build), so it takes
+      # seconds.
+      - name: Frontend nginx proxies /api and /v1
+        if: ${{ !cancelled() }}
+        working-directory: ${{ github.workspace }}
         run: Clients/scripts/test-nginx-proxy.sh
 
+      - name: Dependency Review
+        if: ${{ !cancelled() && github.event_name == 'pull_request' }}
+        uses: actions/dependency-review-action@v5
+        with:
+          fail-on-severity: high
+          deny-licenses: GPL-3.0, AGPL-3.0
+          allow-ghsas: GHSA-mh99-v99m-4gvg, GHSA-qwww-vcr4-c8h2
+          # jszip is dual-licensed (MIT OR GPL-3.0-or-later); VerifyWise uses it
+          # under MIT. The 3.10.1 -> 3.10.2 bump re-triggers the license heuristic.
+          allow-dependencies-licenses: pkg:npm/jszip
+
+  # Not on push: the PR already ran them; the nightly run covers develop.
   unit-and-component-tests:
     name: Unit & Component Tests (shard ${{ matrix.shard }}/4)
+    if: github.event_name != 'push'
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -305,20 +318,3 @@ jobs:
             echo "=== Flake check run $i/3 ==="
             npx vitest run --retry=0
           done
-
-  dependency-review:
-    name: Dependency Review
-    runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request'
-    steps:
-      - uses: actions/checkout@v7
-
-      - name: Dependency Review
-        uses: actions/dependency-review-action@v5
-        with:
-          fail-on-severity: high
-          deny-licenses: GPL-3.0, AGPL-3.0
-          allow-ghsas: GHSA-mh99-v99m-4gvg, GHSA-qwww-vcr4-c8h2
-          # jszip is dual-licensed (MIT OR GPL-3.0-or-later); VerifyWise uses it
-          # under MIT. The 3.10.1 -> 3.10.2 bump re-triggers the license heuristic.
-          allow-dependencies-licenses: pkg:npm/jszip

@@ -8,6 +8,7 @@ jest.mock("../../utils/risk.utils", () => ({
   getRisksByProjectQuery: jest.fn(),
   updateRiskByIdQuery: jest.fn(),
   archiveRiskQuery: jest.fn(),
+  archiveRisksInBulkQuery: jest.fn(async () => []),
   recordRiskSnapshots: jest.fn(),
   assertRiskReferencesInOrganization: jest.fn(),
   getActiveRisksByIdsQuery: jest.fn(),
@@ -562,9 +563,8 @@ describe("risks.ctrl", () => {
       );
     });
     it("should return 200 for archive action", async () => {
-      const { getActiveRisksByIdsQuery } = require("../../utils/risk.utils");
-      (getActiveRisksByIdsQuery as jest.Mock<any>).mockResolvedValue([buildRisk({ id: 1 })]);
-      mockDelete.mockResolvedValue(true);
+      const { archiveRisksInBulkQuery } = require("../../utils/risk.utils");
+      (archiveRisksInBulkQuery as jest.Mock<any>).mockResolvedValue([buildRisk({ id: 1 })]);
       const req = createReq({ body: { ids: [1], action: "archive" } });
       const res = createRes();
       await bulkUpdateProjectRisks(req, res);

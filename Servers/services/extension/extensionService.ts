@@ -11,6 +11,7 @@ import {
   ValidationException,
 } from "../../domain.layer/exceptions/custom.exception";
 import { decrypt, encrypt } from "../../utils/encryption.utils";
+import { hasLegacyEmailShape } from "../../utils/validations/email.utils";
 import {
   STORED_SECRET_MESSAGES,
   checkStoredSecrets,
@@ -398,8 +399,9 @@ export class ExtensionService {
       throw new ValidationException(`Field '${key}' must be a valid URL`, key, value);
     }
   }
+  /** Same acceptance as before the CodeQL fix: see hasLegacyEmailShape. */
   private static assertEmail(key: string, value: string): void {
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
+    if (!hasLegacyEmailShape(value)) {
       throw new ValidationException(`Field '${key}' must be a valid email address`, key, value);
     }
   }

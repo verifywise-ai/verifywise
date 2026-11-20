@@ -8,6 +8,8 @@
 
 import { sequelize } from "../../../database/db";
 import { createNewModelRiskQuery } from "../../../utils/modelRisk.utils";
+import { MODEL_NOT_IN_ORGANIZATION } from "../../../utils/modelReferences.utils";
+import { ValidationException } from "../../../domain.layer/exceptions/custom.exception";
 import { TransientApprovalError } from "../../approval/approvalGateway";
 import type { AiActionExecuteContext, AiActionExecuteResult } from "../types";
 import type { AgentCreateModelRiskInput } from "./schema";
@@ -63,44 +65,36 @@ export async function executeCreateModelRisk(
     resolvedModelId = approval.entity_id;
   }
 
-  // Re-check the model FK at execute time. Between file-time and
-  // execute-time the model could have been deleted.
-  if (resolvedModelId !== undefined) {
-    const [modelRows] = (await sequelize.query(
-      `SELECT id FROM model_inventories
-         WHERE id = :model_id AND organization_id = :organization_id`,
+  // createNewModelRiskQuery checks the model in this transaction, as every
+  // model risk write does: between file-time and execute-time the model could
+  // have been deleted. Only that refusal gets the message below.
+  let created: Awaited<ReturnType<typeof createNewModelRiskQuery>>;
+  try {
+    created = await createNewModelRiskQuery(
       {
-        replacements: {
-          model_id: resolvedModelId,
-          organization_id: ctx.organizationId,
-        },
-        transaction: ctx.transaction,
+        model_id: resolvedModelId,
+        risk_name: input.risk_name,
+        description: input.description ?? "",
+        risk_category: input.risk_category as any,
+        risk_level: input.risk_level as any,
+        status: (input.status ?? "Open") as any,
+        owner: (input.owner ?? null) as any,
+        target_date: input.target_date as any,
+        mitigation_plan: input.mitigation_plan ?? "",
+        impact: input.impact ?? "",
+        likelihood: input.likelihood ?? "",
       },
-    )) as [Array<{ id: number }>, unknown];
-    if (!modelRows || modelRows.length === 0) {
+      ctx.organizationId,
+      ctx.transaction,
+    );
+  } catch (error) {
+    if (error instanceof ValidationException && error.message === MODEL_NOT_IN_ORGANIZATION) {
       throw new Error(
         `Model #${resolvedModelId} no longer exists in this organization — cannot link the new model risk.`,
       );
     }
+    throw error;
   }
-
-  const created = await createNewModelRiskQuery(
-    {
-      model_id: resolvedModelId,
-      risk_name: input.risk_name,
-      description: input.description ?? "",
-      risk_category: input.risk_category as any,
-      risk_level: input.risk_level as any,
-      status: (input.status ?? "Open") as any,
-      owner: (input.owner ?? null) as any,
-      target_date: input.target_date as any,
-      mitigation_plan: input.mitigation_plan ?? "",
-      impact: input.impact ?? "",
-      likelihood: input.likelihood ?? "",
-    },
-    ctx.organizationId,
-    ctx.transaction,
-  );
 
   if (created.id == null) {
     throw new Error(

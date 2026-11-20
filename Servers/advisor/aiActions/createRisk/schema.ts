@@ -16,6 +16,7 @@
  */
 
 import { z } from "zod";
+import { RISK_APPROVAL_STATUSES } from "../../../domain.layer/enums/risk-approval-status.enum";
 
 export const RiskSeverity = z.enum(["Negligible", "Minor", "Moderate", "Major", "Catastrophic"]);
 
@@ -30,6 +31,9 @@ export const RiskMitigationStatus = z.enum([
   "Canceled",
   "Requires review",
 ]);
+
+/** Pending, Approved, Rejected or Not required (decision 5). */
+export const RiskApprovalStatusSchema = z.enum(RISK_APPROVAL_STATUSES);
 
 export const RiskAiLifecyclePhase = z.enum([
   "Problem definition & planning",
@@ -105,9 +109,11 @@ const isoDateString = z
  *       currentRiskLevel      → required, enum
  *       implementationStrategy→ required, 1..1024
  *       deadline              → required, ISO date
- *       approver              → required user id (risk_approval)
- *       approvalStatus        → required, enum (same as mitigationStatus)
- *       dateOfAssessment      → required, ISO date
+ *       approver              → optional user id (risk_approval)
+ *       approvalStatus        → optional, Pending / Approved / Rejected /
+ *                                Not required; the risk service decides the
+ *                                stored value and who may set a decision
+ *       dateOfAssessment      → optional, ISO date
  */
 export const AgentCreateRiskSchema = z
   .object({
@@ -130,9 +136,9 @@ export const AgentCreateRiskSchema = z
     current_risk_level: CurrentRiskLevel,
     implementation_strategy: z.string().min(1).max(1024),
     deadline: isoDateString,
-    approver: z.number().int().positive(),
-    approval_status: RiskMitigationStatus,
-    date_of_assessment: isoDateString,
+    approver: z.number().int().positive().optional(),
+    approval_status: RiskApprovalStatusSchema.optional(),
+    date_of_assessment: isoDateString.optional(),
   })
   .strict();
 

@@ -360,17 +360,26 @@ a step 1 approver — nobody is asked to approve their own request.
 
 ### Which Workflows May Be Submitted
 
-`createUseCaseApprovalRequest` (`Servers/services/projects/approvalRequest.service.ts`) rejects a
-submitted `approval_workflow_id` with a `400` — rolling the use case back, so nothing is created —
-when the workflow is either:
+`getUsableUseCaseWorkflow` (`Servers/services/projects/approvalRequest.service.ts`) refuses a
+submitted `approval_workflow_id` with a `400` (a field error on `approval_workflow_id`) — on create
+and on update, on `/api/projects` and `/api/v1/projects` — before anything is written, when the
+workflow:
 
-- **inactive.** Deleting a workflow is a soft delete (`is_active = false`,
+- **does not exist in this organization** (a missing id, or another organization's);
+- **is inactive.** Deleting a workflow is a soft delete (`is_active = false`,
   `deleteApprovalWorkflowQuery`), so the row stays readable and a stale id would otherwise still
-  start a request.
-- **for another entity type.** Only `entity_type = 'use_case'` workflows govern use cases.
+  start a request;
+- **is for another entity type.** Only `entity_type = 'use_case'` workflows govern use cases;
+- **has no steps, or a step without approvers.** Nobody could decide the request, and the use
+  case's frameworks would wait for it forever. Until this change such a workflow was accepted and
+  no request was created, which left the frameworks parked with no review.
 
-A workflow with no steps is not an error: no request is created and the use case is saved without
-one.
+### Changing a use case's workflow
+
+While a use case's request is pending or rejected, only holders of `approvalWorkflow.admin` may
+clear or replace its workflow (403 for anyone else); the requester withdraws through the withdraw
+route. Clearing it never attaches the frameworks of a rejected use case, and a rejected use case
+cannot go live. Details: [Use cases](./use-cases.md#changing-the-approval-workflow).
 
 ## Policy requests
 
@@ -469,7 +478,7 @@ pending_frameworks: [
 projects
 ├── approval_workflow_id (FK → approval_workflows)
 ├── has_pending_approval (computed)
-└── approval_status (computed: pending/rejected/null)
+└── approval_status (computed from the newest pending/approved/rejected request: pending/rejected/null)
 ```
 
 ### Incident Management
@@ -491,7 +500,7 @@ ai_incident_managements
     ↓
 3. If workflow provided:
    ├── Fetch workflow and steps
-   ├── Reject it (400) if inactive or not a use_case workflow
+   ├── Reject it (400) if missing, inactive, not a use_case workflow, or a step has no approver
    ├── Create approval request
    ├── Set entity_type to "use_case"
    └── Notify the step 1 approvers (after commit)

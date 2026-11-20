@@ -16,7 +16,7 @@
  * tests/integration/rate-limiting/.
  *
  * Production limits:
- * - generalApiLimiter: 300/min — loose global ceiling mounted ahead of all route
+ * - generalApiLimiter: 600/min — loose global ceiling mounted ahead of all route
  *   mounts in app.ts; stricter per-route limiters still apply on top
  * - authLimiter: 5/15min — register, password reset, change password
  * - loginLimiter: 5/min — login and login-microsoft
@@ -99,7 +99,7 @@ export const buildRateLimitConfigs = (relaxed: boolean): Record<string, RateLimi
   // a developer hammering localhost from one IP is not locked out.
   generalApi: {
     windowMinutes: 1,
-    maxRequests: relaxed ? 100000 : 300,
+    maxRequests: relaxed ? 100000 : 600,
     message: "Too many requests from this IP, please slow down and retry",
   },
   auth: {

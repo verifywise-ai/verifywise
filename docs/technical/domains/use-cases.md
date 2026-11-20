@@ -41,8 +41,8 @@ projects
 ├── goal
 ├── target_industry
 ├── description
-├── last_updated
-├── last_updated_by (FK → users)
+├── last_updated             # Set by the server on every update of a project column, never from the body
+├── last_updated_by (FK → users)  # The acting user; NULL for a system write
 ├── is_demo                  # Demo/test project flag
 ├── created_at
 ├── is_organizational        # Org vs personal project
@@ -120,6 +120,7 @@ Supported frameworks:
 2. ISO 42001 (framework_id: 2)
 3. ISO 27001 (framework_id: 3)
 4. NIST AI RMF (framework_id: 4)
+5. The 24 bundled frameworks (framework_id: 5–28), see [Compliance frameworks](./compliance-frameworks.md#bundled-frameworks-ids-528)
 
 ## Status Workflow
 
@@ -166,9 +167,9 @@ Transitions:
 | Trigger | Change |
 |---------|--------|
 | Approval request opened (`services/projects/approvalRequest.service.ts`) | `planned → in_review` |
-| Approval approved, auto-approved, rejected or withdrawn; workflow cleared or replaced (`releaseUseCaseFromReview`) | `in_review → planned` |
+| Approval approved, auto-approved, rejected or withdrawn; workflow cleared or replaced by an approval workflow admin (`releaseUseCaseFromReview`) | `in_review → planned` |
 | Use case created (any path, incl. intake approval) | `planned`; the request body never sets the stage |
-| `POST /api/v1/use-case-lifecycle/:id/go-live` | `planned → live`, sets `go_live_date`, resets the confirmation period |
+| `POST /api/v1/use-case-lifecycle/:id/go-live` | `planned → live`, sets `go_live_date`, resets the confirmation period. Refused (409 "Approve this use case before marking it as live") unless the latest approval decision is approved, or the use case has no workflow and no decision (`goLiveCondition`). So a pending or rejected use case, and one with a workflow attached whose request was withdrawn, can't go live |
 | `POST /api/v1/use-case-lifecycle/:id/confirm` | live only; sets `last_confirmed_*` |
 | `POST /api/v1/use-case-lifecycle/:id/retire` | `planned`/`live → retired`, sets `retired_at` |
 | `PATCH /api/v1/use-case-lifecycle/:id/department` | sets `department` |
@@ -179,7 +180,7 @@ Read models: `GET /api/v1/use-case-lifecycle/summary` (stale ids and the interva
 
 **Still live? check.** `lifecycle_org_settings.confirmation_interval_days` (30/90/180, default 90; `GET/PATCH /api/v1/lifecycle-settings`, PATCH needs `organization.admin`). A live use case is stale when `COALESCE(last_confirmed_at, go_live_date)` is older than the interval (`staleSql` in `utils/lifecycle.utils.ts`). The `lifecycle_confirmation_sweep` BullMQ job (daily 06:30) emails each owner once per period (`lifecycle-confirmation-due.mjml`).
 
-**Intake requests in review (#5188).** Pending use case intake submissions have no project until approval, so `GET /api/v1/use-case-lifecycle/intake-submissions` lists them from `intake_submissions` (status `pending`, entity type `use_case`; approved, rejected and superseded never appear). The response is `{ total, items, limit }`: `total` counts every pending request, `items` holds the oldest 500. Each item has the title (read from the field each form maps to `project_title`; schemas are read once per form, not sent per row), form name, submitter name, `submitted_at` and whole `days_in_review`, both measured from the first submission of its resubmission chain (`original_submission_id`, walked recursively). The In review tab and the dashboard both count `total` through `useUseCaseStageCounts`; the requests table sits under the list toolbar, follows its search (title, form, submitter), is not exported, and links each row to `/intake-forms/submissions?submission=<id>`. The dashboard response carries `review_time` (approved use case submissions, first submission → approval, last 12 months: count, median and average days); non-admins only count submissions whose created use case they can see (`projectVisibilitySql`). Comparing it with an agreed review time waits for #5189's per-form setting.
+**Intake requests in review (#5188).** Pending use case intake submissions have no project until approval, so `GET /api/v1/use-case-lifecycle/intake-submissions` lists them from `intake_submissions` (status `pending`, entity type `use_case`; approved, rejected and superseded never appear). The response is `{ total, items, limit }`: `total` counts every pending request, `items` holds the oldest 500. Each item has the title (read from the field each form maps to `project_title`; schemas are read once per form, not sent per row), form name, submitter name, `submitted_at` and whole `days_in_review`, both measured from the first submission of its resubmission chain (`original_submission_id`, walked recursively). The In review tab and the dashboard both count `total` through `useUseCaseStageCounts`; the requests table sits under the list toolbar, follows its search (title, form, submitter), is not exported, and links each row to `/intake-forms/submissions?submission=<id>`. The dashboard response carries `review_time` (approved use case submissions, first submission → approval, last 12 months: count, median and average days); non-admins only count submissions whose created use case they can see (`projectVisibilitySql`). **Who sees the requests:** a caller with `intakeForm.edit` sees every pending request; anyone else only the requests sent from their own email address (`submitter_email`, compared without case or surrounding spaces, since submissions store no user id). Both `total` and `items` are narrowed. The same rule (shared `submittedBySql` in `utils/intakeForm.utils.ts`) applies to the AI app In review list (`GET /api/v1/ai-app-lifecycle/intake-submissions`) and to the Intake screen's submissions list (`GET /api/intake/submissions`); every lane and senior reviewer holds `intakeForm.edit`, so reviewers still see what they decide. Reads of one submission follow it too: `GET /api/intake/submissions/:id`, `/submissions/:id/preview` and `/api/v1/intake-submissions/:id/preview` (`requireOwnSubmissionOrIntakeManager`) answer 404 for someone else's submission, `GET /api/intake/forms/:id/submissions` lists a non-manager only their own, and `/submissions/by-entity/:type/:id` answers 404 when the entity's submission is someone else's (the use case page's intake card then hides itself). `GET /api/v1/intake-tier-suggestion/submissions/:id` runs the same by-id guard, and `/submissions/stats` counts a non-manager's own submissions only. `submitterScope(req)` is the one place that decides "everyone or the caller". Comparing it with an agreed review time waits for #5189's per-form setting.
 
 **AI apps (#5193).** `LIFECYCLE_ENTITIES.ai_app` reuses the columns (no `department`; AI apps keep `ai_apps_departments`), the shared `lifecycle_org_settings` interval, the daily sweep and `controllers/lifecycle.ctrl.ts` (`lifecycleActionHandlers`). Routes: `GET /api/v1/ai-apps` (legacy list plus lifecycle columns and `?lifecycle_stage=`; `/api/ai-apps` is unchanged), `/api/v1/ai-app-lifecycle/summary` (server counts: the AI apps list is paged), `/:id`, `/:id/history` (`ai_app_change_history`), and `/:id/go-live|retire|confirm` (`aiApp.edit` or owner, never Auditors). Going live also needs status `approved` or `restricted` (`goLiveCondition` on the entity config; a planned draft gets 409 "Approve this AI app before marking it as live"; `GET /:id` returns `can_go_live` from the same condition, and setting a live app back to draft moves it to planned). Pending AI app intake requests: `GET /api/v1/ai-app-lifecycle/intake-submissions`, the same `getPendingIntakeSubmissions` as use cases (title from the field mapped to `name`), counted in and listed on the AI apps In review tab (hidden under a status filter). Backfill: `under_review` → in review, `banned` → retired, else planned. After that, `syncAiAppStageWithStatus` (called by `createAiAppQuery` and `updateAiAppByIdQuery`, so every status change) keeps it in step: under_review → in review (from planned); leaving under_review → planned (if still in review); banned → retired (sets `retired_at`, records history, ends still-live checks). The AI apps page pages, sorts and searches on the server per tab (`GET /api/v1/ai-apps?lifecycle_stage=&search=&page=&limit=&sortBy=&order=`).
 
@@ -196,7 +197,9 @@ Read models: `GET /api/v1/use-case-lifecycle/summary` (stale ids and the interva
 | POST | `/projects` | Create project |
 | PATCH | `/projects/:id` | Update project |
 | PATCH | `/projects/:id/status` | Update status |
-| DELETE | `/projects/:id` | Delete project |
+| DELETE | `/projects/:id` | Delete project (legacy, frozen: never archives risks) |
+| DELETE | `/v1/projects/:id?archive_risks_linked_only_here=true\|false` | Delete project, optionally archiving the risks linked only to it |
+| GET | `/v1/projects/:id/risks-linked-only-here` | Active risks linked only to this use case |
 
 ### Progress Endpoints
 
@@ -249,6 +252,39 @@ The guard reads the id from the same place the handler does: `requireProjectAcce
 - **A refused or failed `GET /api/projects/:id`** shows the empty state in `ProjectView`.
 - **MCP tools** call services directly and are not behind this guard.
 
+#### Routes keyed by a child of a use case
+
+Routes keyed by something that belongs to a use case run the same rule through `requireUseCaseAccessVia(resolver, options)` (same file). The resolver (`utils/useCaseOfChild.utils.ts`) finds the use case of the child in the caller's organization; the read rule applies to a `GET`, the write rule to anything else.
+
+| Routes | Child id | Resolver |
+|--------|----------|----------|
+| `/api/eu-ai-act` compliances and assessments by project id (`GET`, `DELETE`), progress, `controlById`, `topicById`, `controls/byControlCategoryId`, `controlCategories` (only when `projectFrameworkId` is sent) | `projects_frameworks` id, path or `projectFrameworkId` query | `useCaseOfProjectFramework` |
+| `PATCH /api/eu-ai-act/saveControls/:id`, `/saveAnswer/:id` | control, answer | `useCaseOfEuControl`, `useCaseOfEuAnswer` |
+| `/api/iso-42001`, `/api/iso-27001`: by project id, struct, progress, assignments, `subClauses/byClauseId`, annex category or control `byId`, `DELETE` by project id | `projects_frameworks` id | `useCaseOfProjectFramework` |
+| ISO `subClause/byId`, `saveClauses`, `saveAnnexes`, ISO 42001 subclause and annex category risks | requirement row | `useCaseOfIso42001Subclause`, `…AnnexCategory`, `useCaseOfIso27001Subclause`, `…AnnexControl` |
+| `/api/nist-ai-rmf/subcategories/byId/:id`, `/:id/risks`, `PATCH /:id`, `/:id/status` | subcategory | `useCaseOfNistSubcategory` |
+| `/api/frameworks/:fw/dashboard/:projectFrameworkId`; `impl/:level/:id` (`GET`, `PATCH`, risks) | `projects_frameworks` id, impl row | `useCaseOfProjectFramework`, `useCaseOfFrameworkImpl` |
+| every `/api/fria/:friaId/...` route | FRIA | `useCaseOfFria` |
+| `GET /api/v1/control-eu-change-history/:id`, `subcontrol-eu-change-history`, `annex-category-change-history` | control, subcontrol, annex category (`missing: "seesAll"`: the history outlives the row) | `useCaseOfEuControl`, `useCaseOfEuSubcontrol`, `useCaseOfIso42001AnnexCategory` |
+| `/api/pmm/config/:configId` (`PUT`, `DELETE`), `/config/:configId/questions` (`GET`, `POST`) | monitoring config | `useCaseOfPmmConfig` (`utils/pmmUseCaseAccess.utils.ts`) |
+| `/api/pmm/cycles/:cycleId` and its `responses` (`GET`, `POST`), `submit`, `flag`, `reassign` | monitoring cycle | `useCaseOfPmmCycle` |
+| `GET /api/pmm/reports/:reportId/download` | monitoring report | `useCaseOfPmmReport` |
+| `POST /api/pmm/config` | `project_id` in the JSON body | `sameUseCase` |
+
+**Monitoring stakeholders.** The guard's `orAllow` option is asked only when the use case rule refuses. The post-market monitoring routes use it so the stakeholder assigned to a cycle (`assigned_stakeholder_id`), who need not be on the use case, can still open the cycle, its responses, its config's questions and its report, and save, flag and submit it, as the monitoring email asks. Only an open cycle (pending, in progress or escalated) lets its stakeholder read the config's questions. Reassigning the stakeholder, starting a cycle and changing the config need `postMarketMonitoring.edit` and write access to the use case. Rows named in the body stay inside what the guard checked (`middleware/pmmRowScope.middleware.ts`): a question added through `/config/:configId/questions` always gets that config (the body's `config_id` is replaced); a response save, flag or submit naming a question of another config answers 404 with nothing written; `PUT`/`DELETE /questions/:questionId` need write access to the question's use case (organization questions, which have no config, pass as before); `/questions/reorder` takes only JSON positive integer ids with whole display orders of 0 or more (400 otherwise, and the handler gets only the validated values), then needs write access to the use case of every question it names (`requireAccessToUseCases`: one query, 403 and the same audit entry as other refusals). `GET /api/pmm/reports` lists only reports of use cases the caller can see (`projectVisibilitySql`) and of cycles the caller is the stakeholder of (the reports the download route lets them open); a `project_id` filter for a hidden use case returns an empty list. `GET /org/questions` is not guarded.
+
+`requireProjectAccess` also guards `GET /api/pmm/config/:projectId`, `GET /api/pmm/active-cycle/:projectId`, `GET /api/frameworks/:fw/tree/:projectId`, `GET /api/fria/:projectId`, `GET /api/ce-marking/:projectId` and `GET /api/use-case-change-history/:useCaseId`.
+
+- **Ids are parsed strictly** (`toStrictId`): only plain digits are accepted, so an id such as `1e0`, `0x1` or ` 1` is a 400 rather than an id the handler might read differently. The intake by-id guard does the same.
+- **Not found:** a `GET` naming a child that is not in the caller's organization is passed on to the handler, as for use case ids. A write answers 404 "Record not found" from the guard: several legacy write handlers never check that the row exists, and wrote against another organization's id.
+- **Change history** outlives its use case (no foreign key), so `requireProjectAccess(..., "seesAll")` lets only a role that sees every use case read the history of a deleted one. `limit` is 1 to 100 (default 100), `offset` a whole number; anything else is a 400.
+- **Handlers act only inside the checked use case.** On success the guard sets `res.locals.useCaseId`; read it with `checkedUseCaseId(res)`. Handlers behind the guard use it, never a `project_id` from the body: the EU pending approval check, evidence uploads (EU, ISO 27001, NIST) and assignment notifications. Uploads record the signed-in user, never a body `user_id`. Rows named in the body or a second path id must belong to the checked parent: an EU control save refuses (404, nothing written) any subcontrol id of another control (`subcontrolsBelongToControlQuery`, and the framework write snapshot reads only that control's subcontrols); FRIA evidence link takes only a `file_id` the caller may open (`canUserAccessFile`, 404 otherwise), and unlink deletes only a link whose entity is that FRIA, and a FRIA risk item update or delete touches only that FRIA's item (404 otherwise).
+- **Not guarded:** imported framework links (`/api/v1/imported-framework-assessment/links/:linkId/...`) check the link's use case in their controller. Organization-wide reads with no child id (EU/ISO `all/*/progress`, NIST progress, overview and category lists) and the static catalogues are unchanged.
+
+#### The AI Advisor
+
+The advisor's use case tools (`advisor/functions/useCaseFunctions.ts`) run as the acting user (`_requesterId`, else `_userId`). `fetch_use_cases`, `get_use_case_analytics` and `get_use_case_executive_summary` read `getUserProjects` for that user and their role, so they see what the use case list shows; no user, or one outside the organization, reads nothing. Create needs `useCase.edit`; update, status, add member and delete also need write access (`getProjectAccessQuery`), and delete keeps its `risks.edit` check. `agent_add_member_to_use_case` is a `warning` action, so a person approves it. Every advisor tool call is checked once, in `bridgeTools` (`advisor/toolBridge.ts`), by `useCaseRefusalForTool` (`advisor/functions/useCaseScope.ts`): each use case the call names, directly (`project_id`, `projectId`, `use_case_id`) or through a row of one (a per-tool table maps EU control and answer, ISO subclause and annex, NIST subcategory, PMM cycle and config ids to their use case with the REST resolvers), must pass the read rule for a read tool or the write rule for a write tool (one registered for the approval flow). A row of another use case than the one named is refused, and a PMM cycle's stakeholder passes on the cycle tools as in REST. A refused call never reaches the tool; the model gets "You do not have access to use case n". The use case write tools also check `useCase.edit` and write access in their executors, because an approver's execution does not go through the bridge. The listing tools (`list_projects`, `get_all_projects_compliance`, `list_use_cases_for_model`, `get_user_detail`'s use cases, `fetch_pmm_reports`) apply `projectVisibilitySql` for the acting user.
+
 **Use case access also decides which risks a non-Admin sees.** A user sees the risks linked to a use case they own, are a team member of or reach through a group. Read access as a task assignee or workflow approver does not count. Linking a risk to a use case needs that access too. See [Visibility](./risk-management.md#visibility) in the risk management doc.
 
 ## Create Project
@@ -286,12 +322,29 @@ POST /projects
    - Create framework records immediately
    - Initialize framework-specific data
 5. **If approval workflow set:**
+   - Refuse it first (400 on `approval_workflow_id`, nothing written) unless it can review a use case: it exists in this organization, is active, is a `use_case` workflow, and every step has at least one approver (`getUsableUseCaseWorkflow`, `services/projects/approvalRequest.service.ts`)
    - Store frameworks in `pending_frameworks`
    - Create ApprovalRequest
    - Wait for approval before framework creation
+
+A framework of the wrong scope (an organization-wide framework on a use case, or the reverse) is a 400 on `framework`, and `project_title` is limited to 255 characters (400 on `project_title`). On `/api/v1/projects`, validation errors that name a field are answered as `{ errors: [{ field, message, location }] }`, the shape the request validators use, so the use case form shows them on the field (the form shows a `framework` error on its regulations field, and any other error above the form). The legacy `/api/projects` contract is frozen: there the body stays the plain message.
+
+### Changing the approval workflow
+
+`PATCH /api/projects/:id` and `PATCH /api/v1/projects/:id` (`updateProjectById`) treat `approval_workflow_id` as changed only when the body carries it and it differs from the saved id (`null`, `0` and `""` clear it; `"5"` equals `5`).
+
+- **Who may change it.** While the use case's approval status is pending or rejected, only holders of `approvalWorkflow.admin` may clear, replace or set the workflow; anyone else gets 403 and nothing is written. The requester withdraws a pending request through `POST /api/approval-requests/:id/withdraw` instead. With no pending or rejected request, anyone who may edit the use case may change it.
+- **Replaced.** The pending request (if any) is withdrawn and a request under the new workflow is opened. The new workflow must be usable (400 otherwise, as on create).
+- **Cleared.** The pending request (if any) is withdrawn, and the parked `pending_frameworks` are created, unless the latest decision (after that withdrawal) is a rejection: a rejected use case never gets its frameworks this way, and keeps them parked until a new review approves it.
+- **History.** Every change is recorded in `use_case_change_history` as "Approval workflow", with the workflow titles. Changes are detected by id (`fieldComparators`), so a switch between two workflows with the same title is recorded and an unchanged save looks no title up.
+- **Concurrency.** The saved workflow is read with `SELECT ... FOR UPDATE` inside the update's transaction (`lockUseCaseWorkflowQuery`), so two saves that attach a workflow at once cannot each open a pending request.
+
+**Approval status.** `approval_status` on the use case (`getApprovalStatusQuery`) is the status of its newest pending, approved or rejected request (`latestApprovalStatusSql`, `utils/approvalState.utils.ts`); withdrawn requests are skipped. A rejection followed by an approved review is no longer rejected; a re-review that is withdrawn leaves the rejection. The go-live condition reads the same SQL. No other path changes a use case's workflow or live stage: the MCP use case tools and the advisor's use case tools accept neither, intake approval creates use cases without a workflow, and `PATCH /api/projects/:id/status` writes `status` only.
 6. Trigger `project_added` automation
 7. Send email to project owner
 8. Send Slack notification
+
+Every picked framework, core (1–4) or bundled (5–28), is built through `frameworkAdditionMap` by `buildProjectFrameworkQuery` (`utils/framework.utils.ts`): at creation in `createUseCaseService` step 3 (`services/useCase.service.ts`, shared by `POST /api/projects`, `POST /api/v1/projects` and the MCP `create_use_case` tool), and after approval in `createPendingFrameworksForApprovedUseCase` (`utils/approvalRequest.utils.ts`, also run when an edit clears the workflow). An id with no builder is refused with 400 (`framework`, "Framework not found") before anything is written; a pending id with no builder is logged and left off at approval, and one attached since the request was made (through "add framework" after a rejection) is neither linked nor built again. Intake approval builds the EU AI Act and adds the organization's default frameworks through `addFrameworkToProjectQuery`, which uses the same builder. Before November 2026 only ids 1–4 were built, leaving bundled frameworks attached with no rows; migration `20261117140851-build-empty-bundled-frameworks.js` builds those links.
 
 ### Response
 
@@ -301,6 +354,8 @@ POST /projects
   frameworks: { [key: string]: Object }
 }
 ```
+
+`frameworks` holds one entry per framework built at creation (empty while an approval workflow holds them): `eu`, `iso42001`, `iso27001`, `nist_ai_rmf` for the core frameworks, the structure key (`soc2`, `hipaa`, ...) for bundled ones. The client does not read it; the MCP tool returns its keys as `frameworksWithStructures`.
 
 ## Update Project
 
@@ -330,11 +385,22 @@ The caller needs the `useCase.edit` permission and must be able to see the use c
 ### Processing
 
 1. Get current project state
-2. Compare member lists (old vs new)
-3. Add new members, remove deleted members
-4. Notify newly added members via email
-5. Record all changes in change history
-6. Trigger `project_updated` automation
+2. Drop any body `last_updated*`; when the body writes a project column, stamp `last_updated` (now) and `last_updated_by` (the caller)
+3. Compare member lists (old vs new)
+4. Add new members, remove deleted members
+5. Notify newly added members via email
+6. Record the changes in change history
+7. Trigger `project_updated` automation (only when a project column was written)
+
+A field missing from the body is left as it is, so a partial update never clears a value it does not send.
+
+**Last updated.** `updateUseCaseService` (`services/useCase.service.ts`) sets `last_updated` and `last_updated_by` on every update that writes a project column, on `PATCH /api/projects/:id` and `PATCH /api/v1/projects/:id` alike, and drops body values. A members-only update (`hasProjectColumnUpdate` in `utils/project.utils.ts` is false) is not stamped and does not fire the `project_updated` automation. The MCP `update_use_case` tool goes through the same service. The other writers stamp them too: `PATCH /api/projects/:id/status`, the EU AI Act classification (`setUseCaseClassificationQuery`) and the advisor's `agent_update_use_case` and `agent_update_use_case_status` (the requester, else the approver, else NULL). The Jira Assets sync sets only `last_updated`. Create sets both on the server, never from the body (the advisor's `agent_create_use_case` sets only `last_updated`).
+
+**The Settings form sends only what changed** (`changedProjectFields` in `ProjectView/ProjectSettings`). It compares the form with the use case as loaded and leaves out unchanged fields, the fields it does not show (the AI risk classification and high-risk roles while EU AI Act is not selected), `last_updated*` and the frameworks, which are added and removed through `/frameworks/toProject` and `/frameworks/fromProject` as soon as they are picked. A use case classified by intake, MCP or the API therefore keeps its level and roles. The classification list offers every server level: Prohibited, High risk, Limited risk, Minimal risk, GPAI, General risk (stored as `General Risk`) and Out of scope.
+
+**Start dates are calendar days.** `start_date` is a timestamp: the API, intake and MCP store a bare date at 00:00 UTC, the console stores the browser's local midnight. Screens read it with `startDateCalendarDay` (`presentation/tools/isoDateToString.ts`): exactly 00:00 UTC is the UTC date, anything else the local date. 12:00 UTC is not special here (it is local midnight in UTC+12), unlike risk dates (`riskCalendarDay`). Used by the Settings tab, the use case form, the use case list and table (display, sort and the start date filter), the entity graph side panel and the approval request details. The edit form sends `start_date` only when the user picks another day, so an untouched date is never rewritten. The server's automation emails still format the raw instant.
+
+**Stats.** `GET /api/projects/stats/:id` (legacy, answers 202) returns `user.userWhoUpdated` as `{ id, name, surname, email }` of the last editor, read within the organization, or `null`.
 
 ## Delete Project
 
@@ -344,13 +410,23 @@ When a project is deleted, the following are removed:
 
 1. Withdraw pending approval requests
 2. Record deletion in change history
-3. Delete associated risks (`projects_risks`)
+3. Delete risk links (`projects_risks`). The risks stay in the register
 4. Delete members (`projects_members`)
 5. Delete framework-specific data (controls, assessments)
 6. Delete framework associations (`projects_frameworks`)
 7. Delete associated files
 8. Delete project record
 9. Trigger `project_deleted` automation
+
+### Risks linked only to the deleted use case
+
+An active risk with no use case link is visible to everyone in the organization, while an archived one is visible only to Admins, its owner and its approver (see [Visibility](./risk-management.md#visibility)). Deleting a use case therefore reveals its active risks that are linked to no other use case, unless the delete archives them.
+
+`DELETE /api/v1/projects/:id?archive_risks_linked_only_here=true|false` (flag required) deletes the use case and, with `true`, archives those risks in the same transaction, after locking the use case and before removing its links. Any failure rolls back both. It answers 202 with `{ deleted: true, archived_risk_ids }`. Its gate is the legacy delete's (`useCase.edit` plus write access to the use case) and, with `true`, `risks.edit` too (403 without it). Before reading the set it locks the risks linked to the use case and every link of those risks, also to other use cases, so a concurrent unlink waits and the set cannot change before the commit (see [Visibility](./risk-management.md#visibility)). The legacy `DELETE /api/projects/:id` is frozen: it never archives, so API clients that want these risks kept private use the v1 route.
+
+Every other path that deletes a use case archives them: the advisor's `agent_delete_use_case` (through the same `deleteProjectWithSideEffects`, so it also withdraws a pending approval, records the deletion and runs the `project_deleted` automation) and the Jira Assets removals. The advisor acts as the user who asked: without `risks.edit` it refuses the delete and changes nothing, and it never deletes without archiving. The demo data removal deletes the demo risks first and does not archive.
+
+The delete dialog (`presentation/components/Modals/DeleteUseCase`, used by the use case table, the use case settings page and the Framework page's organizational project delete, in its menu and its Settings tab) reads the risks from `GET /api/v1/projects/:id/risks-linked-only-here` when it opens. When there are some, it says how many, offers to archive them (the default) or keep them visible, and can list their names. It then sends one request to the v1 delete with the choice; the server works the set out again at that moment. The archive flag does not depend on the count read when the dialog opened: with `risks.edit` and archive chosen it is always sent, and an empty set archives nothing. When the count request fails the dialog still offers the choice, next to a neutral warning. The dialog cannot be closed while the request runs, and a failure keeps it open with an error and changes nothing. Every successful delete refreshes the cached project risk queries and the project lists.
 
 ## Stakeholder Management
 
@@ -444,11 +520,13 @@ All project modifications are tracked in `use_case_change_history`:
 ### Tracked Changes
 
 - Project creation with initial values
-- Field modifications (old → new value)
+- Field modifications (old → new value), including use case category, purpose, audience and deployment context
 - Status changes
 - Member additions/removals
 - Framework additions
 - Project deletion
+
+An update is diffed against what the UPDATE stored (`writtenValues` of its `RETURNING` row), not against the request. Keys the update does not write, such as `framework` and `monitored_regulations_and_standards`, are never compared, so a save cannot log a framework change, and a value sent unchanged records nothing.
 
 ## Automation Triggers
 
@@ -526,7 +604,7 @@ getAllProjects({signal?})
 getProjectById({id, signal?})
 createProject({body})
 updateProject({id, body})
-deleteProject({id})
+deleteUseCase({id, archiveRisksLinkedOnlyHere})  // DELETE /v1/projects/:id
 getProjectProgressData({routeUrl, signal?})
 ```
 

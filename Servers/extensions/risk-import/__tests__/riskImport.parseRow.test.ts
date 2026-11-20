@@ -26,3 +26,35 @@ describe("risk import parseRow residual level", () => {
     expect(data.final_risk_level).toBe("High risk");
   });
 });
+
+describe("risk import parseRow approval status", () => {
+  it.each([
+    ["In progress", undefined, "Not required"],
+    ["", undefined, "Not required"],
+    [undefined, undefined, "Not required"],
+    ["Pending", undefined, "Not required"],
+    ["Approved", undefined, "Not required"],
+    [undefined, 4, "Pending"],
+    ["In progress", 4, "Pending"],
+    ["not_required", 4, "Pending"],
+    ["pending", 4, "Pending"],
+  ])("stores %p with approver %p as %s", (status, approver, expected) => {
+    const data = parseRow({ approval_status: status, risk_approval: approver } as never);
+    expect(data.approval_status).toBe(expected);
+  });
+
+  it("keeps Approved or Rejected from the file only for an Admin", () => {
+    const approved = { approval_status: "approved", risk_approval: 4 } as never;
+    const rejected = { approval_status: "Rejected", risk_approval: 4 } as never;
+    expect(parseRow(approved).approval_status).toBe("Pending");
+    expect(parseRow(rejected, { callerIsAdmin: false }).approval_status).toBe("Pending");
+    expect(parseRow(approved, { callerIsAdmin: true }).approval_status).toBe("Approved");
+    expect(parseRow(rejected, { callerIsAdmin: true }).approval_status).toBe("Rejected");
+  });
+
+  it("needs an approver for a decision, even from an Admin", () => {
+    expect(
+      parseRow({ approval_status: "Approved" } as never, { callerIsAdmin: true }).approval_status,
+    ).toBe("Not required");
+  });
+});

@@ -1790,6 +1790,23 @@ async function getUserById(
   return result[0] || null;
 }
 
+async function getOrganizationMemberById(
+  userId: number,
+  organizationId: number,
+): Promise<{ name: string; surname: string; email: string } | null> {
+  const result = await sequelize.query<{ name: string; surname: string; email: string }>(
+    `SELECT u.name, u.surname, u.email
+       FROM users u
+       JOIN organization_members om ON om.user_id = u.id
+      WHERE u.id = :userId AND om.organization_id = :organizationId`,
+    {
+      replacements: { userId, organizationId },
+      type: QueryTypes.SELECT,
+    },
+  );
+  return result[0] || null;
+}
+
 async function getUserEmail(userId: number): Promise<{ email: string } | null> {
   const result = await sequelize.query<{ email: string }>(
     `SELECT email FROM users WHERE id = :userId`,
@@ -1822,7 +1839,14 @@ async function getUserEmails(
  * Role type for assignment notifications
  */
 export type AssignmentRoleType =
-  "Owner" | "Reviewer" | "Approver" | "Member" | "Assignee" | "Action Owner" | "Risk Owner";
+  | "Owner"
+  | "Reviewer"
+  | "Approver"
+  | "Member"
+  | "Assignee"
+  | "Action Owner"
+  | "Risk Owner"
+  | "Risk Approver";
 
 /**
  * Entity type labels for display in notifications
@@ -1849,6 +1873,8 @@ function getNotificationTypeForRole(roleType: AssignmentRoleType): NotificationT
   switch (roleType) {
     case "Owner":
     case "Risk Owner":
+    // Same type as Risk Owner, so no notification type enum change (ruling K5)
+    case "Risk Approver":
       return NotificationType.ASSIGNMENT_OWNER;
     case "Reviewer":
       return NotificationType.ASSIGNMENT_REVIEWER;
@@ -1874,6 +1900,8 @@ function getRoleDescription(roleType: AssignmentRoleType): string {
       return "As the Owner, you are responsible for completing this item and ensuring all requirements are met.";
     case "Risk Owner":
       return "As the Risk Owner, you are responsible for managing and mitigating this risk.";
+    case "Risk Approver":
+      return "As the Risk Approver, you decide whether this risk's treatment is approved or rejected.";
     case "Reviewer":
       return "As the Reviewer, you are responsible for reviewing the work and providing feedback before approval.";
     case "Approver":
@@ -1982,13 +2010,17 @@ const buildAssignmentUrl = (entityUrl: string, baseUrl: string): string =>
  * never throw, since notifications must not break the main flow.
  */
 const sendAssignmentNotification = async (
+  organizationId: number,
   assigneeId: number,
   send: (assignee: { name: string; surname: string; email: string }) => Promise<string>,
 ): Promise<void> => {
   try {
-    const assignee = await getUserById(assigneeId);
+    // Only a member of the organization is ever told about its records.
+    const assignee = await getOrganizationMemberById(assigneeId, organizationId);
     if (!assignee) {
-      logger.warn(`Cannot send assignment notification: user ${assigneeId} not found`);
+      logger.warn(
+        `Cannot send assignment notification: user ${assigneeId} is not a member of organization ${organizationId}`,
+      );
       return;
     }
 
@@ -2032,7 +2064,7 @@ export const notifyUserAssigned = async (
   baseUrl: string,
   entityContext?: AssignmentEntityContext,
 ): Promise<void> =>
-  sendAssignmentNotification(assigneeId, async (assignee) => {
+  sendAssignmentNotification(organizationId, assigneeId, async (assignee) => {
     const displayEntityType =
       ENTITY_TYPE_DISPLAY_LABELS[assignment.entityType] || assignment.entityType;
     const notificationType = getNotificationTypeForRole(assignment.roleType);
@@ -2118,7 +2150,7 @@ export const notifyUserAssignedMany = async (
   assignerName: string,
   baseUrl: string,
 ): Promise<void> =>
-  sendAssignmentNotification(assigneeId, async (assignee) => {
+  sendAssignmentNotification(organizationId, assigneeId, async (assignee) => {
     const { texts } = assignment;
     const count = assignment.items.length;
     const shown = assignment.items.slice(0, ASSIGNED_MANY_LIST_LIMIT).map((item) => item.name);

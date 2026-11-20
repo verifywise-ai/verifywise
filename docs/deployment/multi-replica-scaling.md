@@ -67,10 +67,10 @@ docker compose -f docker-compose.multireplica.yml --env-file .env down
    uses express-rate-limit's default in-process `MemoryStore` (no store is
    configured). Limits are therefore **per replica**:
 
-   | Store | 500 rapid requests, 2 replicas, 300/min generalApi limit |
+   | Store | 1000 rapid requests, 2 replicas, 600/min generalApi limit |
    |-------|----------------------------------------------------------|
-   | In-memory (current) | **0 × 429 expected** — each replica counts ~250 requests, under its own 300/min budget. Effective client budget ≈ N_replicas × 300. |
-   | Redis-backed (hypothetical) | **429s expected** — the 300/min budget is shared, so the client trips the limit partway through. |
+   | In-memory (current) | **0 × 429 expected** — each replica counts ~500 requests, under its own 600/min budget. Effective client budget ≈ N_replicas × 600. |
+   | Redis-backed (hypothetical) | **429s expected** — the 600/min budget is shared, so the client trips the limit partway through. |
 
    The script asserts the in-memory expectation (no 429s). **If those
    assertions ever fail because a Redis store was wired into the limiters,

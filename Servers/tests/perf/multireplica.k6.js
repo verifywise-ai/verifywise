@@ -26,16 +26,16 @@
  *     in-process MemoryStore. Limits are therefore PER REPLICA, not shared:
  *
  *       EXPECTED (current, in-memory store):
- *         generalApiLimiter = 300 req/min/IP PER REPLICA. With 2 replicas
+ *         generalApiLimiter = 600 req/min/IP PER REPLICA. With 2 replicas
  *         and least_conn/round-robin distribution, a client can sustain
- *         ~600 req/min before seeing
- *         any 429. Sending 500 rapid requests should produce ZERO 429s
- *         (~250 per replica, under each replica's own 300 limit).
+ *         ~1200 req/min before seeing
+ *         any 429. Sending 1000 rapid requests should produce ZERO 429s
+ *         (~500 per replica, under each replica's own 600 limit).
  *
  *       IF A REDIS STORE WERE WIRED (express-rate-limit RedisStore):
- *         the budget would be SHARED across replicas: 500 requests against a
- *         300/min limit would start yielding 429 partway through. If this
- *         test ever observes 429s during the 500-request phase, that means
+ *         the budget would be SHARED across replicas: 1000 requests against a
+ *         600/min limit would start yielding 429 partway through. If this
+ *         test ever observes 429s during the 1000-request phase, that means
  *         the limiter became shared — update the expectations here and in
  *         docs/deployment/multi-replica-scaling.md.
  *
@@ -58,8 +58,9 @@ const BASE_URL = __ENV.BASE_URL || "http://localhost:8080";
 const EMAIL = __ENV.PERF_EMAIL || "admin@verifywise-test.com";
 const PASSWORD = __ENV.PERF_PASSWORD || "TestAdmin!Str0ng";
 
-// Deliberately just under 2 x 300 (two replicas x generalApiLimiter prod cap).
-const RATE_LIMIT_PROBE_REQUESTS = 500;
+// Under 2 x 600 (two replicas x generalApiLimiter prod cap) and over 600,
+// so a shared store would show 429s.
+const RATE_LIMIT_PROBE_REQUESTS = 1000;
 
 export const options = {
   vus: 1,
@@ -118,7 +119,7 @@ export default function () {
   );
 
   // Current expectation (per-replica in-memory limiter): every request fits
-  // under each replica's own 300/min budget, so no 429s. See header comment
+  // under each replica's own 600/min budget, so no 429s. See header comment
   // for what a Redis-backed shared store would change.
   check(throttled, {
     "no 429s below per-replica budgets (in-memory store)": (t) => t === 0,

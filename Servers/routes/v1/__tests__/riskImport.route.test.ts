@@ -100,7 +100,10 @@ describe("POST /api/v1/risk-import/import", () => {
       .set("x-org", "7")
       .send({ csvData: [{ risk_name: "A" }], organization_id: 99 });
     expect(res.status).toBe(200);
-    expect(importRisks).toHaveBeenCalledWith([{ risk_name: "A" }], 7, 9, { strict: true });
+    expect(importRisks).toHaveBeenCalledWith([{ risk_name: "A" }], 7, 9, {
+      strict: true,
+      callerIsAdmin: false,
+    });
   });
 
   it("answers 400 with the row errors of a rejected import", async () => {
@@ -120,7 +123,10 @@ describe("POST /api/v1/risk-import/import", () => {
       .set("Authorization", "Bearer t")
       .send({ csvData: [{ risk_name: "A" }] });
     expect(res.status).toBe(200);
-    expect(importRisks).toHaveBeenCalledWith([{ risk_name: "A" }], 42, 9, { strict: false });
+    expect(importRisks).toHaveBeenCalledWith([{ risk_name: "A" }], 42, 9, {
+      strict: false,
+      callerIsAdmin: true,
+    });
   });
 
   describe("row error messages", () => {

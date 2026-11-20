@@ -177,8 +177,10 @@ ENCRYPTION_KEY=your-32-character-encryption-key
 **Upgrading an install that ran without a key.** Its stored credentials (extension settings, LLM API keys, GitHub tokens) were encrypted with the old built-in default. To keep them readable, set exactly that value first:
 
 ```bash
-ENCRYPTION_KEY="default-key-change-this-in-production-32chars!!"
+ENCRYPTION_KEY=default-key-change-this-in-production-32chars!!
 ```
+
+Write it without quotes. `install.sh` passes quotes to the backend as part of the key, so a quoted value would not match.
 
 Then rotate to a new random key and re-save each credential. This affects Docker Compose installs whose `.env` has `ENCRYPTION_KEY=` with no value. Helm and Ansible already generate a key: the chart uses `secrets.encryptionKey`, else the value in its existing Secret, else a random 32-character key, and Ansible's `install.yml` generates one. The Helm chart and the raw Kubernetes manifests now also pass `ENCRYPTION_KEY` to the worker, from the same Secret as the backend; before, the worker used the built-in default.
 

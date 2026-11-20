@@ -1,4 +1,6 @@
 import { Transaction } from "sequelize";
+import { projectVisibilitySql } from "./projectVisibility.utils";
+import { NotFoundException } from "../domain.layer/exceptions/custom.exception";
 import { sequelize } from "../database/db";
 import { effectiveRiskLevelSql, riskLevelRankSql } from "./riskLevel.utils";
 import {
@@ -579,14 +581,20 @@ export const savePMMResponseQuery = async (
   const result = (await sequelize.query(
     `INSERT INTO post_market_monitoring_responses (
       organization_id, cycle_id, question_id, response_value, is_flagged
-    ) VALUES (
-      :organizationId, :cycle_id, :question_id, :response_value, :is_flagged
     )
-    ON CONFLICT (organization_id, cycle_id, question_id)
+    SELECT :organizationId, c.id, q.id, :response_value, :is_flagged
+    FROM post_market_monitoring_cycles c
+    JOIN post_market_monitoring_questions q
+      ON q.id = :question_id
+     AND q.organization_id = :organizationId
+     AND (q.config_id = c.config_id OR q.config_id IS NULL)
+    WHERE c.id = :cycle_id AND c.organization_id = :organizationId
+    ON CONFLICT (cycle_id, question_id)
     DO UPDATE SET
       response_value = :response_value,
       is_flagged = :is_flagged,
       updated_at = NOW()
+    WHERE post_market_monitoring_responses.organization_id = :organizationId
     RETURNING *;`,
     {
       replacements: {
@@ -600,7 +608,17 @@ export const savePMMResponseQuery = async (
     },
   )) as [IPMMResponse[], number];
 
-  return result[0][0];
+  // The SELECT returns no row when the cycle or the question is not this
+  // organization's (or the question is not one of the cycle's): refuse it.
+  const saved = result[0][0];
+  if (!saved) {
+    throw new NotFoundException(
+      "Question not found in this cycle",
+      "PMMResponse",
+      responseData.question_id,
+    );
+  }
+  return saved;
 };
 
 export const savePMMResponsesQuery = async (
@@ -622,6 +640,7 @@ export const savePMMResponsesQuery = async (
 export const getPMMResponsesQuery = async (
   cycleId: number,
   organizationId: number,
+  transaction?: Transaction,
 ): Promise<IPMMResponse[]> => {
   const result = (await sequelize.query(
     `SELECT
@@ -634,7 +653,7 @@ export const getPMMResponsesQuery = async (
     JOIN post_market_monitoring_questions q ON r.question_id = q.id AND q.organization_id = :organizationId
     WHERE r.organization_id = :organizationId AND r.cycle_id = :cycleId
     ORDER BY q.display_order ASC;`,
-    { replacements: { cycleId, organizationId } },
+    { replacements: { cycleId, organizationId }, transaction },
   )) as [IPMMResponse[], number];
 
   return result[0];
@@ -720,13 +739,28 @@ export const getPMMReportsQuery = async (
     limit?: number;
   },
   organizationId: number,
+  viewer: { userId: number; role: string },
 ): Promise<{ reports: any[]; total: number }> => {
   const page = filters.page || 1;
   const limit = filters.limit || 10;
   const offset = (page - 1) * limit;
 
-  const whereClauses: string[] = ["r.organization_id = :organizationId"];
-  const replacements: Record<string, any> = { limit, offset, organizationId };
+  // Only reports of use cases the viewer's use case list shows, and of
+  // cycles the viewer is the stakeholder of (who may download that report).
+  const visibility = projectVisibilitySql("vp", viewer);
+  const whereClauses: string[] = [
+    "r.organization_id = :organizationId",
+    `(EXISTS (SELECT 1 FROM projects vp
+               WHERE vp.organization_id = :organizationId AND vp.id = cfg.project_id${visibility.sql})
+      OR c.assigned_stakeholder_id = :reportViewerId)`,
+  ];
+  const replacements: Record<string, any> = {
+    limit,
+    offset,
+    organizationId,
+    reportViewerId: viewer.userId,
+    ...visibility.replacements,
+  };
 
   if (filters.projectId) {
     whereClauses.push("cfg.project_id = :projectId");
@@ -796,11 +830,12 @@ export const getPMMReportsQuery = async (
 export const getContextSnapshotQuery = async (
   projectId: number,
   organizationId: number,
+  transaction?: Transaction,
 ): Promise<IPMMContextSnapshot> => {
   // Get project details
   const projectResult = (await sequelize.query(
     `SELECT project_title, status FROM projects WHERE organization_id = :organizationId AND id = :projectId;`,
-    { replacements: { projectId, organizationId } },
+    { replacements: { projectId, organizationId }, transaction },
   )) as [{ project_title: string; status: string }[], number];
 
   const project = projectResult[0][0] || { project_title: "", status: "" };
@@ -817,7 +852,7 @@ export const getContextSnapshotQuery = async (
      WHERE r.organization_id = :organizationId
        AND r.is_deleted = false
        AND pr.project_id = :projectId;`,
-    { replacements: { projectId, organizationId } },
+    { replacements: { projectId, organizationId }, transaction },
   )) as [{ total: string; high_count: string; medium_count: string; low_count: string }[], number];
 
   const risks = riskResult[0][0] || {
@@ -827,21 +862,33 @@ export const getContextSnapshotQuery = async (
     low_count: "0",
   };
 
-  // Get model counts
+  // Models linked to the use case. model_inventories has no project_id: links
+  // live in model_inventories_projects_frameworks. Only rows without a
+  // framework are direct use case links; framework rows carry no use case.
   const modelResult = (await sequelize.query(
-    `SELECT COUNT(*) as total FROM model_inventories WHERE organization_id = :organizationId AND project_id = :projectId;`,
-    { replacements: { projectId, organizationId } },
+    `SELECT COUNT(DISTINCT mi.id) as total
+     FROM model_inventories mi
+     JOIN model_inventories_projects_frameworks mpf
+       ON mpf.model_inventory_id = mi.id AND mpf.organization_id = :organizationId
+     WHERE mi.organization_id = :organizationId
+       AND mpf.project_id = :projectId
+       AND mpf.framework_id IS NULL;`,
+    { replacements: { projectId, organizationId }, transaction },
   )) as [{ total: string }[], number];
 
   const models = parseInt(modelResult[0][0]?.total || "0", 10);
 
-  // Get model risks count
+  // Live risks of those models
   const modelRiskResult = (await sequelize.query(
-    `SELECT COUNT(*) as total
+    `SELECT COUNT(DISTINCT mr.id) as total
      FROM model_risks mr
-     JOIN model_inventories mi ON mr.model_id = mi.id AND mi.organization_id = :organizationId
-     WHERE mr.organization_id = :organizationId AND mi.project_id = :projectId;`,
-    { replacements: { projectId, organizationId } },
+     JOIN model_inventories_projects_frameworks mpf
+       ON mpf.model_inventory_id = mr.model_id AND mpf.organization_id = :organizationId
+     WHERE mr.organization_id = :organizationId
+       AND mr.is_deleted = false
+       AND mpf.project_id = :projectId
+       AND mpf.framework_id IS NULL;`,
+    { replacements: { projectId, organizationId }, transaction },
   )) as [{ total: string }[], number];
 
   const modelRisks = parseInt(modelRiskResult[0][0]?.total || "0", 10);
@@ -852,19 +899,21 @@ export const getContextSnapshotQuery = async (
      FROM vendors v
      JOIN vendors_projects vp ON v.id = vp.vendor_id AND vp.organization_id = :organizationId
      WHERE v.organization_id = :organizationId AND vp.project_id = :projectId;`,
-    { replacements: { projectId, organizationId } },
+    { replacements: { projectId, organizationId }, transaction },
   )) as [{ total: string }[], number];
 
   const vendors = parseInt(vendorResult[0][0]?.total || "0", 10);
 
-  // Get vendor risks count
+  // Live risks of the use case's vendors
   const vendorRiskResult = (await sequelize.query(
-    `SELECT COUNT(*) as total
+    `SELECT COUNT(DISTINCT vr.id) as total
      FROM vendorrisks vr
      JOIN vendors v ON vr.vendor_id = v.id AND v.organization_id = :organizationId
      JOIN vendors_projects vp ON v.id = vp.vendor_id AND vp.organization_id = :organizationId
-     WHERE vr.organization_id = :organizationId AND vp.project_id = :projectId;`,
-    { replacements: { projectId, organizationId } },
+     WHERE vr.organization_id = :organizationId
+       AND vr.is_deleted = false
+       AND vp.project_id = :projectId;`,
+    { replacements: { projectId, organizationId }, transaction },
   )) as [{ total: string }[], number];
 
   const vendorRisks = parseInt(vendorRiskResult[0][0]?.total || "0", 10);

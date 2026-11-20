@@ -614,7 +614,7 @@ export const intakeFormsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'All submissions appear in the **Submissions** tab on the intake forms page. Each row shows the submitter\'s name (if provided), the form name, submission status, risk score and date.',
+      text: 'Submissions appear in the **Submissions** tab on the intake forms page. People who can manage intake forms see every submission; everyone else sees only the ones they sent. Each row shows the submitter\'s name (if provided), the form name, submission status, risk score and date.',
     },
     {
       type: 'paragraph',

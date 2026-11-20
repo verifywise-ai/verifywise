@@ -15,9 +15,9 @@ import {
   createNewModelInventoryQuery,
   updateModelInventoryByIdQuery,
   deleteModelInventoryByIdQuery,
+  lockModelInventoryQuery,
   getModelByProjectIdQuery,
   getModelByFrameworkIdQuery,
-  getModelInventoryProjectIdsQuery,
 } from "../utils/modelInventory.utils";
 import { notifyModelRiskCandidates } from "../services/riskLinks/modelCandidates";
 import {
@@ -33,6 +33,10 @@ import { triggerModelDeployment } from "../services/workflows/triggers";
 import { logRollbackFailure } from "../utils/logger/logHelper";
 
 import { translateError } from "../utils/i18n.utils";
+import {
+  ForbiddenException,
+  ValidationException,
+} from "../domain.layer/exceptions/custom.exception";
 // Helper function to get user name
 async function getUserNameById(userId: number): Promise<string> {
   const result = await sequelize.query<{ name: string; surname: string }>(
@@ -227,6 +231,10 @@ export async function getModelByFrameworkId(req: Request, res: Response) {
   }
 }
 
+/**
+ * POST /api/modelInventory. Each linked use case needs the caller's access
+ * to that use case (decision 8), checked in the write query.
+ */
 export async function createNewModelInventory(req: Request, res: Response) {
   const {
     provider_model,
@@ -292,6 +300,7 @@ export async function createNewModelInventory(req: Request, res: Response) {
       projects || [],
       frameworks || [],
       transaction,
+      { userId: req.userId!, role: req.role! },
     );
 
     // Record creation in change history
@@ -305,8 +314,10 @@ export async function createNewModelInventory(req: Request, res: Response) {
 
     await transaction.commit();
 
-    // Notify approver if assigned
-    if (approver) {
+    // Notify approver if assigned. The stored value is the one the write
+    // checked against the organization.
+    const savedApprover = savedModelInventory.approver;
+    if (savedApprover) {
       const assignerName = await getUserNameById(req.userId!);
       const baseUrl = process.env.FRONTEND_URL || "http://localhost:5173";
 
@@ -320,7 +331,7 @@ export async function createNewModelInventory(req: Request, res: Response) {
 
       notifyUserAssigned(
         req.organizationId!,
-        approver,
+        savedApprover,
         {
           entityType: "Model Inventory",
           entityId: savedModelInventory.id!,
@@ -342,7 +353,7 @@ export async function createNewModelInventory(req: Request, res: Response) {
       organizationId: req.organizationId!,
       modelInventoryId: savedModelInventory.id!,
       modelName: savedModelInventory.model || `Model #${savedModelInventory.id}`,
-      projectIds: projects || [],
+      projectIds: ((savedModelInventory as any).dataValues?.projects as number[] | undefined) ?? [],
     }).catch((err) => logger.error("Model risk candidate notice failed:", err));
 
     logStructured(
@@ -367,6 +378,15 @@ export async function createNewModelInventory(req: Request, res: Response) {
           rollbackError,
         });
       }
+    }
+
+    // A reference the organization does not own (approver, use case,
+    // framework) or a malformed field.
+    if (error instanceof ValidationException) {
+      return res.status(400).json(STATUS_CODE[400](translateError(req, error)));
+    }
+    if (error instanceof ForbiddenException) {
+      return res.status(403).json(STATUS_CODE[403](req.t!("Access denied")));
     }
 
     // A duplicate external_key within the org violates the partial unique index.
@@ -394,6 +414,11 @@ export async function createNewModelInventory(req: Request, res: Response) {
   }
 }
 
+/**
+ * PATCH /api/modelInventory/:id. Linking a use case, or unlinking one, needs
+ * the caller's access to that use case (decision 8); a link to a use case the
+ * caller cannot open is kept, never removed by its absence from the list.
+ */
 export async function updateModelInventoryById(req: Request, res: Response) {
   const modelInventoryId = parseInt(
     Array.isArray(req.params.id) ? req.params.id[0] : req.params.id,
@@ -504,20 +529,6 @@ export async function updateModelInventoryById(req: Request, res: Response) {
       external_key,
     });
 
-    // F6: capture the project list before the full-replacement update below
-    // overwrites it, so only newly added projects notify afterwards. A failed
-    // read falls back to the incoming list (empty diff, nothing fires) — an
-    // auxiliary read must never break the update.
-    let projectIdsBefore: number[] = projects || [];
-    try {
-      projectIdsBefore = await getModelInventoryProjectIdsQuery(
-        modelInventoryId,
-        req.organizationId!,
-      );
-    } catch (error) {
-      logger.error("Model risk candidate notice diff failed:", error);
-    }
-
     // Use the existing database query approach for updating
     transaction = await sequelize.transaction();
     const savedModelInventory = await updateModelInventoryByIdQuery(
@@ -529,6 +540,7 @@ export async function updateModelInventoryById(req: Request, res: Response) {
       deleteFrameworks || false,
       req.organizationId!,
       transaction,
+      { userId: req.userId!, role: req.role! },
     );
 
     // Record changes in change history
@@ -588,12 +600,13 @@ export async function updateModelInventoryById(req: Request, res: Response) {
         modelInventoryId,
         modelName,
         savedModelInventory.version || undefined,
-      ).catch((err) => console.error("Failed to trigger model_deployment workflow:", err));
+      ).catch((err) => logger.error("Failed to trigger model_deployment workflow:", err));
     }
 
     // Notify approver if changed to a new user
     const oldApprover = (currentModelInventory as any).approver;
-    if (approver && approver !== oldApprover) {
+    const savedApprover = savedModelInventory.approver;
+    if (savedApprover && Number(savedApprover) !== Number(oldApprover)) {
       const assignerName = await getUserNameById(req.userId!);
       const baseUrl = process.env.FRONTEND_URL || "http://localhost:5173";
 
@@ -607,7 +620,7 @@ export async function updateModelInventoryById(req: Request, res: Response) {
 
       notifyUserAssigned(
         req.organizationId!,
-        approver,
+        savedApprover,
         {
           entityType: "Model Inventory",
           entityId: modelInventoryId,
@@ -623,9 +636,10 @@ export async function updateModelInventoryById(req: Request, res: Response) {
       ).catch((err) => console.error("Failed to send approver notification:", err));
     }
 
-    // F6: notify only for newly added projects. A plain field edit sends
-    // projects: undefined, so the diff is empty and nothing fires.
-    const addedProjectIds = (projects || []).filter((id: number) => !projectIdsBefore.includes(id));
+    // F6: notify only for newly added projects. The update query changes use
+    // case links by difference and reports the ones it added; a plain field
+    // edit sends projects: undefined, so nothing is added and nothing fires.
+    const addedProjectIds = savedModelInventory.addedProjectIds ?? [];
     if (addedProjectIds.length > 0) {
       notifyModelRiskCandidates({
         organizationId: req.organizationId!,
@@ -657,6 +671,15 @@ export async function updateModelInventoryById(req: Request, res: Response) {
           rollbackError,
         });
       }
+    }
+
+    // A reference the organization does not own (approver, use case,
+    // framework) or a malformed field.
+    if (error instanceof ValidationException) {
+      return res.status(400).json(STATUS_CODE[400](translateError(req, error)));
+    }
+    if (error instanceof ForbiddenException) {
+      return res.status(403).json(STATUS_CODE[403](req.t!("Access denied")));
     }
 
     // A duplicate external_key within the org violates the partial unique index.
@@ -700,13 +723,18 @@ export async function deleteModelInventoryById(req: Request, res: Response) {
   let transaction: Transaction | null = null;
 
   try {
-    // Check if model inventory exists
-    const existingModelInventory = (await getModelInventoryByIdQuery(
+    transaction = await sequelize.transaction();
+
+    // Lock the model row first: from here no risk, validation or finding can
+    // join the model, so the checks below hold until the delete commits.
+    const exists = await lockModelInventoryQuery(
       modelInventoryId,
       req.organizationId!,
-    )) as unknown as ModelInventoryModel;
-
-    if (!existingModelInventory) {
+      transaction,
+    );
+    if (!exists) {
+      await transaction.rollback();
+      transaction = null;
       logStructured(
         "successful",
         "no model inventory found",
@@ -719,9 +747,16 @@ export async function deleteModelInventoryById(req: Request, res: Response) {
     // MRM protection (§7b): a model with validation or finding history cannot be
     // hard-deleted — it must be decommissioned so the audit trail survives. The
     // DB's ON DELETE RESTRICT is the backstop; this returns a friendly message
-    // instead of a raw FK error.
-    const hasMrmHistory = await modelHasMrmHistoryQuery(modelInventoryId, req.organizationId!);
+    // instead of a raw FK error. Read under the lock, so a validation added
+    // while the delete waited still answers 409.
+    const hasMrmHistory = await modelHasMrmHistoryQuery(
+      modelInventoryId,
+      req.organizationId!,
+      transaction,
+    );
     if (hasMrmHistory) {
+      await transaction.rollback();
+      transaction = null;
       logStructured(
         "error",
         `model ${modelInventoryId} has MRM history — delete blocked`,
@@ -739,9 +774,6 @@ export async function deleteModelInventoryById(req: Request, res: Response) {
         );
     }
 
-    // Use the existing database query approach for deleting
-    transaction = await sequelize.transaction();
-
     // Record deletion in change history before deleting
     await recordModelInventoryDeletion(
       modelInventoryId,
@@ -755,6 +787,7 @@ export async function deleteModelInventoryById(req: Request, res: Response) {
       deleteRisks,
       req.organizationId!,
       transaction,
+      req.userId ?? null,
     );
     await transaction.commit();
 

@@ -34,7 +34,7 @@ describe("riskVisibilitySql", () => {
       const { sql, replacements } = riskVisibilitySql("risk", { userId: 5, role });
       expect(replacements).toEqual({ visibilityUserId: 5 });
       expect(sql.startsWith(" AND (")).toBe(true);
-      // unlinked risks stay visible; only projects_risks counts as a link
+      // active unlinked risks stay visible; only projects_risks counts as a link
       expect(sql).toContain("NOT EXISTS");
       expect(sql).toContain("FROM projects_risks prv");
       expect(sql).not.toContain("frameworks_risks");
@@ -48,6 +48,17 @@ describe("riskVisibilitySql", () => {
       expect(sql).toContain("prv.risk_id = risk.id");
     },
   );
+
+  it("shows an unlinked risk to everyone only while it is active", () => {
+    const { sql } = riskVisibilitySql("risk", { userId: 5, role: "Editor" });
+    // The archived test sits inside the unlinked branch only: an archived risk
+    // with no link needs the owner or approver branch, and an archived linked
+    // risk still passes through the use case branch.
+    expect(sql).toMatch(
+      /\(\(risk\.is_deleted = false AND NOT EXISTS \(\s*SELECT 1 FROM projects_risks prv\s*WHERE prv\.risk_id = risk\.id\)\)\s*OR EXISTS/,
+    );
+    expect(sql.match(/is_deleted/g)).toHaveLength(1);
+  });
 
   it("does not filter the risk's own project aggregate with a WHERE on a join", () => {
     const { sql } = riskVisibilitySql("r", { userId: 5, role: "Editor" });

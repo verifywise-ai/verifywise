@@ -31,12 +31,18 @@
 import express from "express";
 const router = express.Router();
 const multer = require("multer");
+import { createUploadErrorHandler, IMAGE_ONLY_UNSUPPORTED_MESSAGE } from "../utils/upload.utils";
 // Profile photos: small images only (prevents memory-exhaustion DoS via
 // unbounded multipart uploads).
+const PROFILE_PHOTO_MAX_BYTES = 5 * 1024 * 1024; // 5MB
+const handleProfilePhotoError = createUploadErrorHandler(
+  PROFILE_PHOTO_MAX_BYTES,
+  IMAGE_ONLY_UNSUPPORTED_MESSAGE,
+);
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: {
-    fileSize: 5 * 1024 * 1024, // 5MB
+    fileSize: PROFILE_PHOTO_MAX_BYTES,
     files: 1,
   },
   fileFilter: (_req: Express.Request, file: Express.Multer.File, cb: any) => {
@@ -286,6 +292,7 @@ router.post(
   authenticateJWT,
   selfOnly,
   upload.single("photo"),
+  handleProfilePhotoError,
   uploadUserProfilePhoto,
 );
 router.get("/:id/profile-photo", authenticateJWT, getUserProfilePhoto);

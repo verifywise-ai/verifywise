@@ -166,9 +166,7 @@ export function pgIntArray(values: number[]): string {
 }
 
 /** Postgres text[] literal with every element quoted. */
-export function pgTextArray(values: string[]): string {
-  return `{${values.map((v) => `"${v.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`).join(",")}}`;
-}
+export { pgTextArray } from "../../../utils/pgArray.utils";
 
 // ---------------------------------------------------------------------------
 // Database helpers
