@@ -1,13 +1,18 @@
 #!/usr/bin/env node
 /**
  * i18n gap audit — static scan of src/ for English strings that aren't
- * present in the German or French dictionaries.
+ * present in the German, French or Spanish dictionaries, plus unused
+ * dictionary keys (present in modules but never quoted in app source).
  *
  * Usage:
- *   node scripts/i18n-audit.mjs            # human summary
- *   node scripts/i18n-audit.mjs --json     # JSON: { de: [...], fr: [...] }
- *   node scripts/i18n-audit.mjs --lang=de  # only DE
+ *   node scripts/i18n-audit.mjs            # human summary (missing-key gaps)
+ *   node scripts/i18n-audit.mjs --json     # JSON gaps: { de: [...], fr: [...], es: [...] }
+ *   node scripts/i18n-audit.mjs --unused   # list unused dictionary keys (human)
+ *   node scripts/i18n-audit.mjs --unused-json  # JSON: { total, byModule }
+ *   node scripts/i18n-audit.mjs --lang=de  # only DE (gaps)
  *   node scripts/i18n-audit.mjs --strict   # exit 1 if any gaps (CI mode)
+ *
+ * --strict does not fail on unused keys; those are cleaned in follow-up PRs.
  */
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { join, extname } from "node:path";
@@ -22,6 +27,8 @@ const SUPPORTED_LANGS = ["de", "fr", "es"];
 
 const args = process.argv.slice(2);
 const wantJson = args.includes("--json");
+const wantUnused = args.includes("--unused");
+const wantUnusedJson = args.includes("--unused-json");
 const strict = args.includes("--strict");
 const langArg = args.find((a) => a.startsWith("--lang="))?.split("=")[1];
 
@@ -267,6 +274,84 @@ function isNoise(s) {
   return false;
 }
 
+// ─── Unused keys ────────────────────────────────────────────────────────────
+// A dictionary key is unused when no app source file contains the exact
+// "key" / 'key' literal (or the key as JSX text). Apostrophe-safe: we do not
+// tokenize with a single-quote regex that can span comments. The i18n tree
+// and StyleGuide are skipped so dictionary files do not count as usage.
+// --strict does not fail on unused keys (cleanup lands in batches).
+
+function walkUsageFiles(dir, files = []) {
+  for (const name of readdirSync(dir)) {
+    if (SKIP_DIRS.has(name)) continue;
+    const full = join(dir, name);
+    const st = statSync(full);
+    if (st.isDirectory()) {
+      walkUsageFiles(full, files);
+    } else if ([".tsx", ".ts"].includes(extname(name))) {
+      if (/[\\/]pages[\\/]StyleGuide[\\/]/.test(full)) continue;
+      files.push(full);
+    }
+  }
+  return files;
+}
+
+function loadKeysByModule() {
+  const byModule = new Map();
+  if (!existsSync(MODULES_DIR)) return byModule;
+  for (const name of readdirSync(MODULES_DIR)) {
+    if (!name.endsWith(".ts")) continue;
+    const moduleText = readFileSync(join(MODULES_DIR, name), "utf8");
+    const exportRe = /export const (de|fr|es)\b[^=]*=\s*\{([\s\S]*?)\n\};/g;
+    let deBlock = null;
+    for (const m of moduleText.matchAll(exportRe)) {
+      if (m[1] === "de") {
+        deBlock = m[2];
+        break;
+      }
+    }
+    if (!deBlock) {
+      throw new Error(`Could not find de dictionary in i18n/modules/${name}`);
+    }
+    const keys = new Set();
+    addPairs(keys, deBlock);
+    byModule.set(name.replace(/\.ts$/, ""), keys);
+  }
+  return byModule;
+}
+
+function findUnusedKeys() {
+  // Collect quoted literals and JSX text once. Single-line quotes only so an
+  // apostrophe in a comment cannot swallow the rest of the file.
+  const used = new Set();
+  const unescapeLit = (raw) => raw.replace(/\\(["'\\])/g, "$1");
+  for (const file of walkUsageFiles(SRC_DIR)) {
+    const text = readFileSync(file, "utf8");
+    for (const m of text.matchAll(/"(?:[^"\\\n]|\\.)*"/g)) {
+      used.add(unescapeLit(m[0].slice(1, -1)));
+    }
+    for (const m of text.matchAll(/'(?:[^'\\\n]|\\.)*'/g)) {
+      used.add(unescapeLit(m[0].slice(1, -1)));
+    }
+    for (const m of text.matchAll(/>([^<>{}]+)</g)) {
+      const trimmed = m[1].trim();
+      if (trimmed) used.add(trimmed);
+    }
+  }
+
+  const byModule = loadKeysByModule();
+  const unusedByModule = {};
+  let total = 0;
+  for (const [mod, keys] of [...byModule.entries()].sort((a, b) => a[0].localeCompare(b[0]))) {
+    const unused = [...keys].filter((key) => !used.has(key)).sort();
+    if (unused.length > 0) {
+      unusedByModule[mod] = unused;
+      total += unused.length;
+    }
+  }
+  return { total, byModule: unusedByModule };
+}
+
 // ─── Run audit ──────────────────────────────────────────────────────────────
 
 const allFiles = walk(SRC_DIR);
@@ -287,9 +372,16 @@ for (const lang of targetLangs) {
   result[lang] = missing;
 }
 
+// Unused scan is opt-in (--unused / --unused-json). It walks every source
+// file per key and is too slow for the default summary and for CI --strict.
+const unusedReport = wantUnused || wantUnusedJson ? findUnusedKeys() : null;
+
 // ─── Output ─────────────────────────────────────────────────────────────────
 
-if (wantJson) {
+if (wantUnusedJson) {
+  process.stdout.write(JSON.stringify(unusedReport, null, 2));
+  process.stdout.write("\n");
+} else if (wantJson) {
   process.stdout.write(JSON.stringify(result, null, 2));
   process.stdout.write("\n");
 } else {
@@ -316,6 +408,20 @@ if (wantJson) {
     }
     if (missing.length > 30) {
       console.log(`  ... ${missing.length - 30} more. Run with --json for full list.`);
+    }
+    console.log();
+  }
+
+  if (wantUnused && unusedReport) {
+    console.log(`─── Unused keys (${unusedReport.total}) ───`);
+    for (const [mod, keys] of Object.entries(unusedReport.byModule)) {
+      console.log(`\n${mod} (${keys.length})`);
+      for (const key of keys.slice(0, 40)) {
+        console.log(`  ${key}`);
+      }
+      if (keys.length > 40) {
+        console.log(`  ... ${keys.length - 40} more. Run with --unused-json for the full list.`);
+      }
     }
     console.log();
   }
