@@ -264,7 +264,15 @@ async function generateAndUploadReport(
       mapReportTypeToFileSource(reportType),
       organizationId,
     );
-    return uploadedFile;
+    // Return the in-memory buffer alongside the row: under S3 storage the
+    // row's content column is NULL by design, and the scheduled-report email
+    // attachment needs the bytes.
+    return {
+      file: uploadedFile,
+      content: result.content,
+      filename: result.filename,
+      mimetype: result.mimeType,
+    };
   } catch (error) {
     console.error("Report generation/upload error:", error);
     return undefined;
@@ -396,7 +404,8 @@ async function sendReportNotification() {
   }
 }
 
-async function sendReportNotificationEmail(jobData: any) {
+// Exported for unit tests (see __tests__/reportAttachments.test.ts).
+export async function sendReportNotificationEmail(jobData: any) {
   const { automation, organizationId, projectDetails, full_name, organization_name } = jobData;
   const [[{ exists }]] = (await sequelize.query(
     `SELECT EXISTS(SELECT 1 FROM automation_actions_data WHERE organization_id = :organizationId AND id = :actionId) AS exists;`,
@@ -417,7 +426,7 @@ async function sendReportNotificationEmail(jobData: any) {
 
   for (let reportType of automation_params.reportType) {
     // Use the new v2 reporting system
-    const uploadedFile = await generateAndUploadReport(
+    const report = await generateAndUploadReport(
       reportType,
       automation.user_id,
       parseInt(automation_params.projectId),
@@ -427,12 +436,14 @@ async function sendReportNotificationEmail(jobData: any) {
       organization_name,
     );
 
-    // Add report file as email attachment
-    if (uploadedFile) {
+    // Add report file as email attachment. The buffer is the one held in
+    // memory from generation — the stored row's content column is NULL when
+    // external object storage is configured.
+    if (report) {
       attachments.push({
-        filename: uploadedFile.filename,
-        content: uploadedFile.content,
-        contentType: uploadedFile.type,
+        filename: report.file.filename,
+        content: report.content,
+        contentType: report.file.type,
       });
     }
   }

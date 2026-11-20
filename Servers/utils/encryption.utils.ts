@@ -35,7 +35,7 @@ export function resolveEncryptionKey(env: NodeJS.ProcessEnv): string {
   throw new Error(
     "ENCRYPTION_KEY must be set in production. " +
       "If this install previously ran without ENCRYPTION_KEY, its stored credentials were " +
-      `encrypted with the old default key: set ENCRYPTION_KEY="${DEFAULT_DEVELOPMENT_ENCRYPTION_KEY}" ` +
+      `encrypted with the old default key: set ENCRYPTION_KEY=${DEFAULT_DEVELOPMENT_ENCRYPTION_KEY} (no quotes) ` +
       "to keep them readable, then rotate to a new random key and re-save each credential " +
       "(extension settings, LLM API keys, GitHub tokens).",
   );

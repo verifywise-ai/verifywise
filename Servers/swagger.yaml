@@ -11483,7 +11483,7 @@ paths:
           name: frameworkId
           in: path
           required: true
-          description: 'Framework id (the bundled frameworks use ids 5-25)'
+          description: 'Framework id (the bundled frameworks use ids 5-28)'
           schema:
             type: integer
         -
@@ -11517,7 +11517,7 @@ paths:
           name: frameworkId
           in: path
           required: true
-          description: 'Framework id (the bundled frameworks use ids 5-25)'
+          description: 'Framework id (the bundled frameworks use ids 5-28)'
           schema:
             type: integer
         -
@@ -11551,7 +11551,7 @@ paths:
           name: frameworkId
           in: path
           required: true
-          description: 'Framework id (the bundled frameworks use ids 5-25)'
+          description: 'Framework id (the bundled frameworks use ids 5-28)'
           schema:
             type: integer
         -
@@ -11594,7 +11594,7 @@ paths:
           name: frameworkId
           in: path
           required: true
-          description: 'Framework id (the bundled frameworks use ids 5-25)'
+          description: 'Framework id (the bundled frameworks use ids 5-28)'
           schema:
             type: integer
         -
@@ -11666,7 +11666,7 @@ paths:
           name: frameworkId
           in: path
           required: true
-          description: 'Framework id (the bundled frameworks use ids 5-25)'
+          description: 'Framework id (the bundled frameworks use ids 5-28)'
           schema:
             type: integer
         -

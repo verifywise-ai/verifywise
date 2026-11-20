@@ -29,6 +29,7 @@ import {
   ReportRunViewer,
 } from "../utils/reportRun.utils";
 import { getFileById } from "../utils/fileUpload.utils";
+import { resolveFileContent } from "../services/storage";
 import { getRunAnalysesQuery } from "../utils/reportRunAnalysis.utils";
 
 const MAX_PAGE = 200;
@@ -116,9 +117,10 @@ export async function downloadRun(req: Request, res: Response): Promise<any> {
     const run = await getRunQuery(Number(req.params.id), req.organizationId!);
     if (!run || !run.file_id) return res.status(404).json(STATUS_CODE[404](req.t!("not found")));
     // Org-scoped file fetch (WHERE organization_id = :org AND id = :id) returns
-    // a FileModel whose `content` is the stored file buffer.
+    // a FileModel whose bytes live in `content` or external storage.
     const file: any = await getFileById(run.file_id, req.organizationId!);
     if (!file) return res.status(404).json(STATUS_CODE[404](req.t!("file missing")));
+    const content = await resolveFileContent(file);
     // Same shape as the file-manager download path (fileManager.ctrl.ts):
     // sanitize before the name reaches a header — a quote or CRLF in
     // output_filename would otherwise rewrite it — declare nosniff, and write
@@ -130,8 +132,8 @@ export async function downloadRun(req: Request, res: Response): Promise<any> {
     res.setHeader("Content-Type", run.output_mime_type || "application/octet-stream");
     res.setHeader("X-Content-Type-Options", "nosniff");
     res.setHeader("Content-Disposition", `attachment; filename="${safeFilename}"`);
-    res.setHeader("Content-Length", file.content ? file.content.length : 0);
-    res.end(file.content);
+    res.setHeader("Content-Length", content ? content.length : 0);
+    res.end(content ?? undefined);
     return;
   } catch (e) {
     return res.status(500).json(STATUS_CODE[500]((e as Error).message));

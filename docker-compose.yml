@@ -54,7 +54,7 @@ services:
       - SMTP_PORT=587
       - LLM_EVALS_URL=http://eval_server:8000
       - REDIS_URL=redis://redis:6379/0
-      - ENCRYPTION_KEY=$ENCRYPTION_KEY
+      - ENCRYPTION_KEY=${ENCRYPTION_KEY:?ENCRYPTION_KEY must be set in the env file before starting}
       - AI_GATEWAY_URL=http://ai_gateway:8100
       - AI_GATEWAY_INTERNAL_KEY=${AI_GATEWAY_INTERNAL_KEY:?AI_GATEWAY_INTERNAL_KEY must be set in the env file before starting}
       - EVAL_SERVER_INTERNAL_KEY=${EVAL_SERVER_INTERNAL_KEY:?EVAL_SERVER_INTERNAL_KEY must be set in the env file before starting}
@@ -101,7 +101,7 @@ services:
       - DB_NAME=$DB_NAME
       - JWT_SECRET=${JWT_SECRET:?JWT_SECRET must be set in the env file before starting}
       - REDIS_URL=redis://redis:6379/0
-      - ENCRYPTION_KEY=$ENCRYPTION_KEY
+      - ENCRYPTION_KEY=${ENCRYPTION_KEY:?ENCRYPTION_KEY must be set in the env file before starting}
       # The worker runs the daily retention purge, which calls the AI Gateway.
       - AI_GATEWAY_URL=http://ai_gateway:8100
       - AI_GATEWAY_INTERNAL_KEY=${AI_GATEWAY_INTERNAL_KEY:?AI_GATEWAY_INTERNAL_KEY must be set in the env file before starting}
@@ -124,7 +124,7 @@ services:
       - DB_NAME=$DB_NAME
       - BACKEND_URL=http://backend:$BACKEND_PORT
       - REDIS_URL=redis://redis:6379/0
-      - ENCRYPTION_KEY=$ENCRYPTION_KEY
+      - ENCRYPTION_KEY=${ENCRYPTION_KEY:?ENCRYPTION_KEY must be set in the env file before starting}
       - AI_GATEWAY_URL=http://ai_gateway:8100
       - AI_GATEWAY_INTERNAL_KEY=${AI_GATEWAY_INTERNAL_KEY:?AI_GATEWAY_INTERNAL_KEY must be set in the env file before starting}
       - EVAL_SERVER_INTERNAL_KEY=${EVAL_SERVER_INTERNAL_KEY:?EVAL_SERVER_INTERNAL_KEY must be set in the env file before starting}

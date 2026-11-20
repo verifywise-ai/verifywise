@@ -59,7 +59,7 @@ services:
       - DB_NAME=$DB_NAME
       - JWT_SECRET=${JWT_SECRET:?JWT_SECRET must be set in the env file before starting}
       - REDIS_URL=redis://redis:6379/0
-      - ENCRYPTION_KEY=$ENCRYPTION_KEY
+      - ENCRYPTION_KEY=${ENCRYPTION_KEY:?ENCRYPTION_KEY must be set in the env file before starting}
       - AI_GATEWAY_URL=${AI_GATEWAY_URL:-http://localhost:8100}
       - AI_GATEWAY_INTERNAL_KEY=${AI_GATEWAY_INTERNAL_KEY:?AI_GATEWAY_INTERNAL_KEY must be set in the env file before starting}
       - SUPERADMIN_EMAIL=$SUPERADMIN_EMAIL

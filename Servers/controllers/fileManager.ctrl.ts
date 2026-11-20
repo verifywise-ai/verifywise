@@ -53,6 +53,8 @@ import { getUserProjects } from "../utils/user.utils";
 import { getProjectByIdQuery } from "../utils/project.utils";
 import { trackEntityChanges, recordMultipleFieldChanges } from "../utils/changeHistory.base.utils";
 import { extractText, normalizeText } from "../services/fileIngestion/textExtractor";
+import { resolveFileContent } from "../services/storage";
+import { withStorageCleanup } from "../services/storage/transactionRegistry";
 
 /**
  * Helper function to validate and parse request authentication data
@@ -318,27 +320,30 @@ export const uploadFile = async (req: Request, res: Response): Promise<any> => {
     const transaction = await sequelize.transaction();
 
     try {
-      // Upload file to files table with org_id and project_id = NULL
-      const uploadOptions: UploadOrganizationFileOptions = {
-        modelId,
-        source,
-        approvalWorkflowId,
-        transaction,
-      };
+      // withStorageCleanup removes externally stored objects if anything in
+      // here fails and the transaction is rolled back.
+      await withStorageCleanup(transaction, async () => {
+        // Upload file to files table with org_id and project_id = NULL
+        const uploadOptions: UploadOrganizationFileOptions = {
+          modelId,
+          source,
+          approvalWorkflowId,
+          transaction,
+        };
 
-      uploadedFile = await uploadOrganizationFile(
-        file,
-        userId,
-        req.organizationId!,
-        orgId,
-        uploadOptions,
-      );
+        uploadedFile = await uploadOrganizationFile(
+          file,
+          userId,
+          req.organizationId!,
+          orgId,
+          uploadOptions,
+        );
 
-      // If approval workflow is specified, create an approval request
-      if (approvalWorkflowId && uploadedFile.id) {
-        // Get workflow steps with approvers
-        const workflowStepsResult = await sequelize.query(
-          `SELECT aws.*,
+        // If approval workflow is specified, create an approval request
+        if (approvalWorkflowId && uploadedFile.id) {
+          // Get workflow steps with approvers
+          const workflowStepsResult = await sequelize.query(
+            `SELECT aws.*,
             COALESCE(
               json_agg(
                 json_build_object('approver_id', asa.approver_id)
@@ -350,47 +355,48 @@ export const uploadFile = async (req: Request, res: Response): Promise<any> => {
            WHERE aws.organization_id = :orgId AND aws.workflow_id = :workflowId
            GROUP BY aws.id
            ORDER BY aws.step_number ASC`,
-          {
-            replacements: { orgId, workflowId: approvalWorkflowId },
-            type: "SELECT" as const,
-            transaction,
-          },
-        );
-        const workflowSteps = workflowStepsResult as unknown as ApprovalWorkflowStepModel[];
-
-        if (workflowSteps.length > 0) {
-          // Create the approval request
-          const approvalRequest = await createApprovalRequestQuery(
             {
-              request_name: `File Approval: ${uploadedFile.filename}`,
-              workflow_id: approvalWorkflowId,
-              entity_id: uploadedFile.id,
-              entity_type: "file",
-              entity_data: {
-                filename: uploadedFile.filename,
-                size: uploadedFile.size,
-                mimetype: uploadedFile.mimetype,
-              },
-              status: ApprovalRequestStatus.PENDING,
-              requested_by: userId,
-            },
-            workflowSteps,
-            req.organizationId!,
-            transaction,
-          );
-
-          approvalRequestId = (approvalRequest as any).id;
-
-          // Update file with approval_request_id
-          await sequelize.query(
-            `UPDATE files SET approval_request_id = :approvalRequestId WHERE organization_id = :orgId AND id = :fileId`,
-            {
-              replacements: { approvalRequestId, orgId, fileId: uploadedFile.id },
+              replacements: { orgId, workflowId: approvalWorkflowId },
+              type: "SELECT" as const,
               transaction,
             },
           );
+          const workflowSteps = workflowStepsResult as unknown as ApprovalWorkflowStepModel[];
+
+          if (workflowSteps.length > 0) {
+            // Create the approval request
+            const approvalRequest = await createApprovalRequestQuery(
+              {
+                request_name: `File Approval: ${uploadedFile.filename}`,
+                workflow_id: approvalWorkflowId,
+                entity_id: uploadedFile.id,
+                entity_type: "file",
+                entity_data: {
+                  filename: uploadedFile.filename,
+                  size: uploadedFile.size,
+                  mimetype: uploadedFile.mimetype,
+                },
+                status: ApprovalRequestStatus.PENDING,
+                requested_by: userId,
+              },
+              workflowSteps,
+              req.organizationId!,
+              transaction,
+            );
+
+            approvalRequestId = (approvalRequest as any).id;
+
+            // Update file with approval_request_id
+            await sequelize.query(
+              `UPDATE files SET approval_request_id = :approvalRequestId WHERE organization_id = :orgId AND id = :fileId`,
+              {
+                replacements: { approvalRequestId, orgId, fileId: uploadedFile.id },
+                transaction,
+              },
+            );
+          }
         }
-      }
+      });
 
       await transaction.commit();
     } catch (error) {
@@ -759,8 +765,9 @@ export const downloadFile = async (req: Request, res: Response): Promise<any> =>
       }
     }
 
-    // Check if file content exists in database
-    if (!file.content) {
+    // Check if file content exists (database column or external storage)
+    const content = await resolveFileContent(file);
+    if (!content) {
       await logFailure({
         eventType: "Error",
         description: `File content not found in database for file ID ${fileId}`,
@@ -786,8 +793,7 @@ export const downloadFile = async (req: Request, res: Response): Promise<any> =>
     res.setHeader("Content-Disposition", `attachment; filename="${safeFilename}"`);
 
     // Set Content-Length
-    const contentLength = file.content ? file.content.length : 0;
-    res.setHeader("Content-Length", contentLength);
+    res.setHeader("Content-Length", content.length);
 
     await logSuccess({
       eventType: "Read",
@@ -798,8 +804,8 @@ export const downloadFile = async (req: Request, res: Response): Promise<any> =>
       organizationId: req.organizationId!,
     });
 
-    // Send file content from database (after logging to avoid async interference)
-    res.end(file.content);
+    // Send file content (after logging to avoid async interference)
+    res.end(content);
   } catch (error) {
     await logFailure({
       eventType: "Error",

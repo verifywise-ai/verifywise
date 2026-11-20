@@ -34,6 +34,7 @@ import { TopicModel } from "../domain.layer/models/topic/topic.model";
 import { SubtopicModel } from "../domain.layer/models/subtopic/subtopic.model";
 import { QuestionModel } from "../domain.layer/models/question/question.model";
 import { deleteFileById } from "./fileUpload.utils";
+import { resolveFileContent } from "../services/storage";
 import { reassignAgentOwnersOfDeletedUsersQuery } from "./agentDiscovery.utils";
 import { AutomationModel } from "../domain.layer/models/automation/automation.model";
 import { addOrganizationMemberQuery } from "./organizationMember.utils";
@@ -693,15 +694,27 @@ export const uploadUserProfilePhotoQuery = async (
 
 export const getUserProfilePhotoQuery = async (userId: number, organizationId: number) => {
   const result = (await sequelize.query(
-    `SELECT f.content, f.type
+    `SELECT f.content, f.type, f.storage_provider, f.storage_key
      FROM users u
      INNER JOIN files f ON u.profile_photo_id = f.id AND f.organization_id = :organizationId
      WHERE u.id = :userId
      LIMIT 1;`,
     { replacements: { userId, organizationId } },
-  )) as [{ content: Buffer; type: string }[], number];
+  )) as [
+    {
+      content: Buffer | null;
+      type: string;
+      storage_provider: string | null;
+      storage_key: string | null;
+    }[],
+    number,
+  ];
 
-  return result[0][0] || null;
+  const row = result[0][0];
+  if (!row) return null;
+
+  // Bytes may live in the content column (default) or external storage.
+  return { content: await resolveFileContent(row), type: row.type };
 };
 
 export const deleteUserProfilePhotoQuery = async (

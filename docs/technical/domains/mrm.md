@@ -1,6 +1,6 @@
 # Model Risk Management (MRM)
 
-> **Last Updated:** 2026-07-11
+> **Last Updated:** 2026-11-18
 > **Status:** Merged (PR #4228, 2026-07-04). Metric retention added on `feat/mrm-retention`.
 > Alert email delivery + configuration added on `feat/mrm-alerts` (stacked; merges after retention).
 
@@ -8,6 +8,8 @@ Governance-grade model risk management for regulated banking standards: **SR 26-
 (US Fed), **SS1/23** (UK PRA), **OSFI E-23** (Canada). Lives as a grouped **Model risk
 management** tab inside Model inventory — one register for AI and traditional models, not a
 separate silo.
+
+For a principle-by-principle E-23 readiness checklist at program level, an organization adds bundled framework 26 (OSFI E-23 Model Risk Management, `Servers/structures/OSFI-E-23/`) on the Frameworks page. It is a self-assessed checklist and is not linked to MRM records. See [Compliance frameworks](./compliance-frameworks.md#bundled-frameworks-ids-528).
 
 **Scope boundary (deliberate):** governance MRM only — tiering, validation, findings,
 monitoring, revalidation, attestation. VerifyWise never computes quantitative model metrics

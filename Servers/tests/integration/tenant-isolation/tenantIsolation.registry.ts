@@ -409,6 +409,31 @@ export const tenantIsolationRegistry: IsolationEntity[] = [
     testFile: "imported-framework-assessment.isolation.test.ts",
   },
   {
+    // OSFI E-23 (bundled framework 26, organization wide). Its requirement
+    // rows and their risk junction are served only through the generic
+    // /api/frameworks impl routes, keyed by the organization's own
+    // projects_frameworks link, so a hand-written file covers both tables.
+    name: "osfi_e23_requirements",
+    tables: ["osfi_e23_requirements", "osfi_e23_requirements__risks"],
+    baseRoute: "/api/frameworks",
+    testFile: "osfi-e23-requirements.isolation.test.ts",
+  },
+  {
+    // EN 18286 and EN 18286 AI systems (framework ids 27 and 28). Impl rows
+    // and risk links are only reachable through a project's framework on the
+    // generic registry framework routes, so a hand-written file covers all
+    // four tables.
+    name: "en_18286_requirements",
+    tables: [
+      "en_18286_requirements",
+      "en_18286_requirements__risks",
+      "en_18286_ai_systems_requirements",
+      "en_18286_ai_systems_requirements__risks",
+    ],
+    baseRoute: "/api/frameworks",
+    testFile: "en-18286.isolation.test.ts",
+  },
+  {
     // Slack extension connections. Every connection belongs to an
     // organization; management routes and delivery filter by it, so a
     // hand-written file covers the routes and the delivery query.

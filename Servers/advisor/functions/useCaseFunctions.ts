@@ -14,6 +14,8 @@ import { createWriteToolFn } from "../confirmation/createWriteTool";
 import { sequelize } from "../../database/db";
 import { QueryTypes } from "sequelize";
 import { withLegacyHighRiskRole } from "../../utils/highRiskRoles.utils";
+import { deleteObjectOnCommit } from "../../services/storage/transactionRegistry";
+import { StorageObjectRef } from "../../services/storage/types";
 
 export interface FetchUseCasesParams {
   status?: string;
@@ -445,6 +447,28 @@ const agentDeleteUseCase = createWriteToolFn({
           transaction,
         },
       )) as Array<{ id: number; project_title: string }>;
+
+      // Delete the file rows here, before the shared delete, so their
+      // externally stored bytes can be queued for removal once the
+      // transaction commits (the shared delete only removes the rows).
+      const deletedFiles = (await sequelize.query(
+        `DELETE FROM files WHERE organization_id = :organizationId AND project_id = :id
+         RETURNING storage_provider, storage_key`,
+        {
+          replacements: { organizationId, id: useCaseId },
+          transaction,
+          type: QueryTypes.SELECT,
+        },
+      )) as unknown as { storage_provider: string | null; storage_key: string | null }[];
+      // Externally stored bytes are removed only after the deletes commit.
+      for (const row of deletedFiles) {
+        if (row.storage_key) {
+          deleteObjectOnCommit(transaction, {
+            provider: row.storage_provider as StorageObjectRef["provider"],
+            key: row.storage_key,
+          });
+        }
+      }
 
       // The shared delete: approval withdrawal, change history, the archive
       // of the risks linked only to this use case (so they stay private once

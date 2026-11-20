@@ -6,6 +6,7 @@
  */
 
 import { sequelize } from "../../database/db";
+import { pgTextArray } from "../../utils/pgArray.utils";
 
 function daysAgo(days: number): string {
   return new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
@@ -98,9 +99,7 @@ export async function createTestRisk(
         name,
         description: options.risk_description ?? null,
         riskOwner: options.risk_owner ?? null,
-        riskCategory: options.risk_category
-          ? `{${options.risk_category.map((value) => `"${value.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`).join(",")}}`
-          : null,
+        riskCategory: options.risk_category ? pgTextArray(options.risk_category) : null,
         controlsMapping: options.controls_mapping ?? null,
         assessmentMapping: options.assessment_mapping ?? null,
         aiLifecyclePhase: options.ai_lifecycle_phase ?? null,

@@ -242,9 +242,9 @@ The legacy `POST /api/vendors` and `PATCH /api/vendors/:id` are frozen (ADR 0001
 | POST | `/toProject` | Add to project | JWT |
 | DELETE | `/fromProject` | Remove from project | JWT |
 
-### Bundled frameworks (ids 5–25)
+### Bundled frameworks (ids 5–28)
 
-Generic implementation endpoints for the frameworks declared in `Servers/structures/` (`frameworkImpl.route.ts`). `:level` is `l2` or `l3`. See [Compliance Frameworks](../domains/compliance-frameworks.md#bundled-frameworks-ids-525).
+Generic implementation endpoints for the frameworks declared in `Servers/structures/` (`frameworkImpl.route.ts`). `:level` is `l2` or `l3`. See [Compliance Frameworks](../domains/compliance-frameworks.md#bundled-frameworks-ids-528).
 
 | Method | Endpoint | Description | Auth |
 |--------|----------|-------------|------|

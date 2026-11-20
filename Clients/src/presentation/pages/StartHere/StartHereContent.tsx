@@ -285,6 +285,11 @@ const RESOURCES = [
 
 const WHATS_NEW = [
   {
+    label: "AI contracts: what companies lose in the fine print",
+    sub: "November 14, 2026",
+    url: "https://verifywise.ai/blog/ai-contracts-what-companies-risk-losing",
+  },
+  {
     label: "EN 18286 explained: EU AI Act vs. ISO 42001",
     sub: "November 6, 2026",
     url: "https://verifywise.ai/blog/en-18286-eu-ai-act-iso-42001",
@@ -298,11 +303,6 @@ const WHATS_NEW = [
     label: "New Jersey tenant screening AI: the rules already in force",
     sub: "October 17, 2026",
     url: "https://verifywise.ai/blog/ai-tenant-screening-new-jersey-a5495",
-  },
-  {
-    label: "VerifyWise 2.6: risk inheritance and evidence retention",
-    sub: "October 13, 2026",
-    url: "https://verifywise.ai/blog/verifywise-2-6-announcement",
   },
 ] as const;
 
