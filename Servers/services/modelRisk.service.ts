@@ -10,6 +10,11 @@
  * saved one) is told. The assigner is told too when they pick themself, as
  * for project risks. The notice goes only to a member of the organization
  * (`notifyUserAssigned` checks), with the assignment email.
+ *
+ * Level (decision 10): likelihood and severity are list labels, and when a
+ * save leaves the risk with both, the level comes from the shared formula
+ * (`calculateModelRiskLevel`) and a sent `risk_level` is ignored. With either
+ * missing, the sent or stored level stays, as before.
  */
 
 import { Transaction } from "sequelize";
@@ -38,6 +43,12 @@ import { getUserNameById } from "./riskApproverNotification.service";
 import { notifyUserAssigned } from "./inAppNotification.service";
 import { notifyModelRiskCandidates } from "./riskLinks/modelCandidates";
 import logger from "../utils/logger/fileLogger";
+import {
+  calculateModelRiskLevel,
+  canonicalLikelihood,
+  canonicalSeverity,
+} from "../utils/riskLevel.utils";
+import { ValidationException } from "../domain.layer/exceptions/custom.exception";
 
 export interface ModelRiskWriteContext {
   organizationId: number;
@@ -63,6 +74,59 @@ const txContext = (
 function withoutDemoFlag(input: ModelRiskInput): ModelRiskInput {
   const { is_demo: _isDemo, ...rest } = input;
   return rest;
+}
+
+export const LIKELIHOOD_NOT_VALID =
+  "Likelihood must be one of: Rare, Unlikely, Possible, Likely, Almost Certain.";
+export const SEVERITY_NOT_VALID =
+  "Severity must be one of: Negligible, Minor, Moderate, Major, Catastrophic.";
+
+const isBlank = (value: unknown) =>
+  value === null || (typeof value === "string" && value.trim() === "");
+
+/**
+ * A sent likelihood or severity as its canonical label: undefined when not
+ * sent, null when cleared (null or ""), else a label matched without regard
+ * to case. Anything else is a 400 naming the field.
+ */
+function labelInput(
+  value: unknown,
+  canonical: (v: unknown) => string | null,
+  field: string,
+  message: string,
+): string | null | undefined {
+  if (value === undefined) return undefined;
+  if (isBlank(value)) return null;
+  const label = canonical(value);
+  if (!label) throw new ValidationException(message, field, value);
+  return label;
+}
+
+/**
+ * The write with its likelihood and severity normalized and, when the risk
+ * ends up with both (sent, else `stored`), the formula's level in place of
+ * any sent one. Exported for the unit tests.
+ */
+export function applyModelRiskFormula(
+  input: ModelRiskInput,
+  stored?: Pick<IModelRisk, "likelihood" | "severity"> | null,
+): ModelRiskInput {
+  const out: ModelRiskInput = { ...input };
+  const likelihood = labelInput(
+    input.likelihood,
+    canonicalLikelihood,
+    "likelihood",
+    LIKELIHOOD_NOT_VALID,
+  );
+  const severity = labelInput(input.severity, canonicalSeverity, "severity", SEVERITY_NOT_VALID);
+  if (likelihood !== undefined) out.likelihood = likelihood;
+  if (severity !== undefined) out.severity = severity;
+  const level = calculateModelRiskLevel(
+    likelihood !== undefined ? likelihood : stored?.likelihood,
+    severity !== undefined ? severity : stored?.severity,
+  );
+  if (level) out.risk_level = level;
+  return out;
 }
 
 /**
@@ -131,7 +195,7 @@ export async function createModelRiskService(
   ctx: ModelRiskWriteContext,
   transaction?: Transaction,
 ): Promise<ModelRiskModel> {
-  const data = withoutDemoFlag(input);
+  const data = applyModelRiskFormula(withoutDemoFlag(input));
   const log = txContext("createModelRiskService", "Create", ctx);
   return inTransaction(transaction, log, async (tx) => {
     const risk = await createNewModelRiskQuery(
@@ -158,7 +222,7 @@ export async function updateModelRiskService(
   ctx: ModelRiskWriteContext,
   transaction?: Transaction,
 ): Promise<ModelRiskModel | null> {
-  const data = withoutDemoFlag(input);
+  const sent = withoutDemoFlag(input);
   const log = txContext("updateModelRiskService", "Update", ctx);
   return inTransaction(transaction, log, async (tx) => {
     const existing = await getModelRiskByIdQuery(id, ctx.organizationId, false, {
@@ -167,6 +231,9 @@ export async function updateModelRiskService(
     });
     if (!existing) return null;
     const before = existing.get({ plain: true });
+    // The level is computed on the merged row: a save that sends only the
+    // severity recomputes it from the stored likelihood.
+    const data = applyModelRiskFormula(sent, before);
 
     const risk = await updateModelRiskByIdQuery(
       id,

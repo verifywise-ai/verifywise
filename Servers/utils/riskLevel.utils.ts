@@ -9,7 +9,11 @@
  * stays a valid stored value (for the current level) but no formula produces it.
  *
  * Effective level = current_risk_level when set, else risk_level_autocalculated.
+ * Model risks map the formula's level onto their four levels
+ * (`calculateModelRiskLevel`).
  */
+
+import { ModelRiskLevel } from "../domain.layer/enums/model-risk-level.enum";
 
 /** Likelihood label to 1-5 score. */
 export const LIKELIHOOD_SCALE = {
@@ -66,6 +70,50 @@ export function calculateRiskLevel(
   if (score <= 12) return "Medium risk";
   if (score <= 16) return "High risk";
   return "Very high risk";
+}
+
+/**
+ * The canonical spelling of a likelihood or severity label (case-insensitive,
+ * trimmed), or null when the value is not one of the scale's labels.
+ */
+function canonicalLabel<K extends string>(scale: Record<K, number>, value: unknown): K | null {
+  if (typeof value !== "string") return null;
+  const key = value.trim().toLowerCase();
+  return (Object.keys(scale) as K[]).find((label) => label.toLowerCase() === key) ?? null;
+}
+
+export type LikelihoodLabel = keyof typeof LIKELIHOOD_SCALE;
+export type SeverityLabel = keyof typeof SEVERITY_SCALE;
+
+export const canonicalLikelihood = (value: unknown): LikelihoodLabel | null =>
+  canonicalLabel(LIKELIHOOD_SCALE, value);
+
+export const canonicalSeverity = (value: unknown): SeverityLabel | null =>
+  canonicalLabel(SEVERITY_SCALE, value);
+
+/**
+ * Model risks keep their four stored levels (reports, filters, MRM, PMM and
+ * risk links read them). The formula's five levels map onto them: "No risk"
+ * and "Low risk" are Low, "Very high risk" is Critical.
+ */
+const MODEL_RISK_LEVEL_FOR: Record<string, ModelRiskLevel> = {
+  "No risk": ModelRiskLevel.LOW,
+  "Low risk": ModelRiskLevel.LOW,
+  "Medium risk": ModelRiskLevel.MEDIUM,
+  "High risk": ModelRiskLevel.HIGH,
+  "Very high risk": ModelRiskLevel.CRITICAL,
+};
+
+/**
+ * A model risk's level from its likelihood and severity, through the shared
+ * formula. Null when either is missing or not a known label.
+ */
+export function calculateModelRiskLevel(
+  likelihood: string | null | undefined,
+  severity: string | null | undefined,
+): ModelRiskLevel | null {
+  const level = calculateRiskLevel(likelihood, severity);
+  return level ? MODEL_RISK_LEVEL_FOR[level] : null;
 }
 
 /**

@@ -91,14 +91,29 @@ describe("v1 model risk", () => {
   const risk = {
     risk_name: "Drift",
     risk_category: "Performance",
-    risk_level: "High",
+    likelihood: "Likely",
+    severity: "Major",
     owner: "7",
     target_date: "2027-01-31",
   };
 
   it("requires the form's fields (M-M10)", async () => {
     const r = await run(validateCreateModelRiskV1, { risk_name: "Drift" });
-    expect(r.fields).toEqual(["owner", "risk_category", "risk_level", "target_date"]);
+    // Decision 10: likelihood and severity set the level, which is no longer required.
+    expect(r.fields).toEqual(["likelihood", "owner", "risk_category", "severity", "target_date"]);
+  });
+
+  it("checks a sent level and the lists on create", async () => {
+    const r = await run(validateCreateModelRiskV1, {
+      ...risk,
+      risk_level: "Huge",
+      likelihood: "likely",
+      severity: "Critical",
+    });
+    expect(r.fields).toEqual(["likelihood", "risk_level", "severity"]);
+    expect((await run(validateCreateModelRiskV1, { ...risk, risk_level: "Low" })).status).toBe(
+      undefined,
+    );
   });
 
   it("accepts only the required fields, and the form's empty model", async () => {
@@ -111,10 +126,10 @@ describe("v1 model risk", () => {
   it("refuses bad values on update", async () => {
     const r = await run(
       validateUpdateModelRiskV1,
-      { risk_level: "Huge", owner: [7], target_date: "later" },
+      { risk_level: "Huge", owner: [7], target_date: "later", likelihood: "Often", severity: null },
       { id: "3" },
     );
-    expect(r.fields).toEqual(["owner", "risk_level", "target_date"]);
+    expect(r.fields).toEqual(["likelihood", "owner", "risk_level", "severity", "target_date"]);
   });
 
   it("accepts an update without an owner", async () => {
