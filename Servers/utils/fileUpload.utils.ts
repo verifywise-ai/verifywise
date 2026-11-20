@@ -4,8 +4,30 @@ import { FileModel, FileSource } from "../domain.layer/models/file/file.model";
 import { Transaction, QueryTypes } from "sequelize";
 import { ProjectModel } from "../domain.layer/models/project/project.model";
 import { resolveFileExpiryOnCreate } from "./retention.utils";
+import { buildStorageKey, getFileStorage } from "../services/storage";
+import { deleteObjectOnCommit, registerPendingPut } from "../services/storage/transactionRegistry";
+import { StorageObjectRef } from "../services/storage/types";
 
 const sanitizeFilename = (name: string) => name.replace(/[^a-zA-Z0-9-_\.]/g, "_");
+
+/**
+ * Store the upload buffer via the configured storage provider. Under the
+ * default local provider this is a pass-through (the buffer goes into
+ * files.content); under S3 the object is stored and the row records the key.
+ */
+const storeFileContent = async (
+  file: UploadedFile,
+  organizationId: number,
+  transaction: Transaction | null,
+): Promise<{ content: Buffer | null; ref: StorageObjectRef }> => {
+  const stored = await getFileStorage().put({
+    key: buildStorageKey(organizationId, file.originalname),
+    body: file.buffer,
+    contentType: file.mimetype,
+  });
+  registerPendingPut(transaction, stored);
+  return { content: stored.key ? null : file.buffer, ref: stored };
+};
 
 export const uploadFile = async (
   file: UploadedFile,
@@ -42,18 +64,20 @@ export const uploadFile = async (
     null,
   );
 
+  const { content, ref } = await storeFileContent(file, organizationId, transaction);
+
   const query = `INSERT INTO files
     (
-      organization_id, filename, content, type, project_id, uploaded_by, uploaded_time, is_demo, source, size, file_path, org_id, model_id, expiry_date, retention_policy
+      organization_id, filename, content, type, project_id, uploaded_by, uploaded_time, is_demo, source, size, file_path, org_id, model_id, expiry_date, retention_policy, storage_provider, storage_key
     )
     VALUES (
-      :organization_id, :filename, :content, :type, :project_id, :uploaded_by, :uploaded_time, :is_demo, :source, :size, :file_path, :org_id, :model_id, :expiry_date, :retention_policy
+      :organization_id, :filename, :content, :type, :project_id, :uploaded_by, :uploaded_time, :is_demo, :source, :size, :file_path, :org_id, :model_id, :expiry_date, :retention_policy, :storage_provider, :storage_key
     ) RETURNING *`;
   const result = await sequelize.query(query, {
     replacements: {
       organization_id: organizationId,
       filename: sanitizeFilename(file.originalname),
-      content: file.buffer,
+      content,
       project_id: project_id,
       type: file.mimetype,
       uploaded_by: user_id,
@@ -66,6 +90,8 @@ export const uploadFile = async (
       model_id: options?.model_id || null,
       expiry_date,
       retention_policy,
+      storage_provider: ref.key ? ref.provider : null,
+      storage_key: ref.key,
     },
     mapToModel: true,
     model: FileModel,
@@ -89,7 +115,7 @@ export const deleteFileById = async (
     },
   );
 
-  const query = `DELETE FROM files WHERE organization_id = :organizationId AND id = :id returning id`;
+  const query = `DELETE FROM files WHERE organization_id = :organizationId AND id = :id returning id, storage_provider, storage_key`;
   console.log(`Executing query: ${query} with id: ${id}`);
   const result = await sequelize.query(query, {
     replacements: { organizationId, id },
@@ -98,6 +124,15 @@ export const deleteFileById = async (
     transaction,
   });
   console.log(`Delete result: ${result}`);
+  // Externally stored bytes are removed only after the row delete commits.
+  for (const row of result) {
+    if (row.storage_key) {
+      deleteObjectOnCommit(transaction, {
+        provider: row.storage_provider as StorageObjectRef["provider"],
+        key: row.storage_key,
+      });
+    }
+  }
   return result.length > 0;
 };
 

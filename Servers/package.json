@@ -4,7 +4,7 @@
   "main": "index.js",
   "scripts": {
     "test:unit": "jest --testPathIgnorePatterns=/tests/integration/ --testPathIgnorePatterns=/helpers/ --detectOpenHandles --forceExit",
-    "test:coverage": "jest --coverage --testPathIgnorePatterns=/tests/integration/ --testPathIgnorePatterns=/helpers/ --detectOpenHandles --forceExit",
+    "test:coverage": "jest --coverage --testPathIgnorePatterns=/tests/integration/ --testPathIgnorePatterns=/helpers/ --maxWorkers=3 --workerIdleMemoryLimit=1GB --forceExit",
     "test:smoke": "jest --config jest.config.js --globalSetup=\"<rootDir>/tests/integration/globalSetup.js\" --testPathPatterns=deadline-summary --runInBand",
     "test:ratelimit": "jest --config jest.config.js --testMatch=\"**/tests/integration/rate-limiting/**/*.test.ts\" --testPathIgnorePatterns=/helpers/ --testPathIgnorePatterns=limiter-wiring --runInBand --forceExit",
     "smoke:api-contract": "ts-node --transpile-only scripts/apiContractSmoke.ts",
@@ -58,7 +58,9 @@
   "dependencies": {
     "@ai-sdk/anthropic": "^4.0.103",
     "@ai-sdk/openai": "^4.0.116",
+    "@aws-sdk/client-s3": "^3.1170.0",
     "@aws-sdk/client-ses": "^3.1168.0",
+    "@aws-sdk/s3-request-presigner": "^3.1170.0",
     "@azure/communication-email": "^1.1.0",
     "@azure/msal-node": "^7.2.2",
     "@daytonaio/sdk": "^0.231.1",

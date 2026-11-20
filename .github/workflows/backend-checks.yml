@@ -295,10 +295,13 @@ jobs:
         run: npm ci
 
       - name: Run tests with coverage
-        # --detectOpenHandles runs every suite in one process, so heap use
-        # grows with the suite; the 4 GB default ran out at ~420 suites.
+        # Suites run in 3 parallel workers (the runner has 4 vCPUs and 16 GB).
+        # test:coverage no longer passes --detectOpenHandles, which forced every
+        # suite into one process and made this the slowest job on a PR. Workers
+        # are recycled at 1 GB idle heap. NODE_OPTIONS reaches every worker, so
+        # the heap cap is per process: 3 GB x (3 workers + parent) fits in 16 GB.
         env:
-          NODE_OPTIONS: --max-old-space-size=8192
+          NODE_OPTIONS: --max-old-space-size=3072
         run: npm run test:coverage
 
       - name: Upload coverage report

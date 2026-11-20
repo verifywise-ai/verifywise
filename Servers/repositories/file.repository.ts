@@ -26,6 +26,9 @@ import {
   FileEntityLinkProjection,
 } from "../utils/files/attachLinkProjections";
 import sanitizeFilename from "sanitize-filename";
+import { buildStorageKey, getFileStorage, resolveFileContent } from "../services/storage";
+import { deleteObjectOnCommit, registerPendingPut } from "../services/storage/transactionRegistry";
+import { StorageObjectRef } from "../services/storage/types";
 
 // Re-export FileSource for backward compatibility
 export { FileSource };
@@ -241,18 +244,30 @@ export async function uploadProjectFile(
     null,
   );
 
+  // Store bytes via the configured provider. Under the default local provider
+  // this is a pass-through and the buffer goes into files.content; under S3
+  // the object is stored and the row records the key instead.
+  const stored = await getFileStorage().put({
+    key: buildStorageKey(organizationId, file.originalname),
+    body: file.buffer,
+    contentType: file.mimetype,
+  });
+  registerPendingPut(transaction, stored);
+
   const query = `
     INSERT INTO files
-      (organization_id, filename, content, type, project_id, uploaded_by, uploaded_time, is_demo, source, expiry_date, retention_policy)
+      (organization_id, filename, content, type, project_id, uploaded_by, uploaded_time, is_demo, source, expiry_date, retention_policy, storage_provider, storage_key)
     VALUES
-      (:organizationId, :filename, :content, :type, :project_id, :uploaded_by, :uploaded_time, :is_demo, :source, :expiry_date, :retention_policy)
+      (:organizationId, :filename, :content, :type, :project_id, :uploaded_by, :uploaded_time, :is_demo, :source, :expiry_date, :retention_policy, :storage_provider, :storage_key)
     RETURNING *`;
 
   const result = await sequelize.query(query, {
     replacements: {
       organizationId,
       filename: sanitizeFilenameStr(file.originalname),
-      content: file.buffer,
+      content: stored.key ? null : file.buffer,
+      storage_provider: stored.key ? stored.provider : null,
+      storage_key: stored.key,
       project_id: projectId,
       type: file.mimetype,
       uploaded_by: userId,
@@ -317,13 +332,23 @@ export async function deleteProjectFileById(
     },
   );
 
-  const query = `DELETE FROM files WHERE organization_id = :organizationId AND id = :id RETURNING id`;
+  const query = `DELETE FROM files WHERE organization_id = :organizationId AND id = :id RETURNING id, storage_provider, storage_key`;
   const result = await sequelize.query(query, {
     replacements: { organizationId, id },
     mapToModel: true,
     model: FileModel,
     transaction,
   });
+
+  // Externally stored bytes are removed only after the row delete commits.
+  for (const row of result) {
+    if (row.storage_key) {
+      deleteObjectOnCommit(transaction, {
+        provider: row.storage_provider as StorageObjectRef["provider"],
+        key: row.storage_key,
+      });
+    }
+  }
 
   return result.length > 0;
 }
@@ -417,11 +442,19 @@ export async function uploadOrganizationFile(
     null,
   );
 
+  // Store bytes via the configured provider (see uploadProjectFile).
+  const stored = await getFileStorage().put({
+    key: buildStorageKey(organizationId, file.originalname),
+    body: file.buffer,
+    contentType: file.mimetype,
+  });
+  registerPendingPut(txn, stored);
+
   const query = `
     INSERT INTO files
-      (organization_id, filename, size, type, file_path, content, uploaded_by, uploaded_time, model_id, org_id, is_demo, source, project_id, file_group_id, review_status, version, approval_workflow_id, expiry_date, retention_policy)
+      (organization_id, filename, size, type, file_path, content, uploaded_by, uploaded_time, model_id, org_id, is_demo, source, project_id, file_group_id, review_status, version, approval_workflow_id, expiry_date, retention_policy, storage_provider, storage_key)
     VALUES
-      (:organizationId, :filename, :size, :mimetype, :file_path, :content, :uploaded_by, NOW(), :model_id, :org_id, false, :source, NULL, gen_random_uuid(), :review_status, '1.0', :approval_workflow_id, :expiry_date, :retention_policy)
+      (:organizationId, :filename, :size, :mimetype, :file_path, :content, :uploaded_by, NOW(), :model_id, :org_id, false, :source, NULL, gen_random_uuid(), :review_status, '1.0', :approval_workflow_id, :expiry_date, :retention_policy, :storage_provider, :storage_key)
     RETURNING id, filename, size, type AS mimetype, file_path, uploaded_by, uploaded_time AS upload_date, model_id, org_id, is_demo, source, project_id, file_group_id, review_status, version, approval_workflow_id, expiry_date, retention_policy`;
 
   const result = await sequelize.query(query, {
@@ -434,7 +467,9 @@ export async function uploadOrganizationFile(
       org_id: orgId,
       model_id: modelId ?? null,
       file_path: safeName,
-      content: file.buffer,
+      content: stored.key ? null : file.buffer,
+      storage_provider: stored.key ? stored.provider : null,
+      storage_key: stored.key,
       source: finalSource ?? "File Manager",
       review_status: reviewStatus,
       approval_workflow_id: approvalWorkflowId ?? null,
@@ -509,7 +544,7 @@ export async function deleteFileById(
       },
     );
 
-    const query = `DELETE FROM files WHERE organization_id = :organizationId AND id = :fileId RETURNING id`;
+    const query = `DELETE FROM files WHERE organization_id = :organizationId AND id = :fileId RETURNING id, storage_provider, storage_key`;
 
     const result = await sequelize.query(query, {
       replacements: { organizationId, fileId },
@@ -518,6 +553,19 @@ export async function deleteFileById(
     });
 
     const deleted = Array.isArray(result) && result.length > 0;
+
+    // Externally stored bytes are removed only after the row delete commits.
+    for (const row of result as {
+      storage_provider?: string | null;
+      storage_key?: string | null;
+    }[]) {
+      if (row.storage_key) {
+        deleteObjectOnCommit(txn, {
+          provider: row.storage_provider as StorageObjectRef["provider"],
+          key: row.storage_key,
+        });
+      }
+    }
 
     // Only commit if we created the transaction ourselves
     if (!useProvidedTransaction) {
@@ -1030,7 +1078,9 @@ export async function getFilePreview(
       filename,
       type AS mimetype,
       size,
-      content
+      content,
+      storage_provider,
+      storage_key
     FROM files
     WHERE organization_id = :organizationId AND id = :fileId`;
 
@@ -1049,10 +1099,15 @@ export async function getFilePreview(
     mimetype: string;
     size: number | null;
     content: Buffer | null;
+    storage_provider?: string | null;
+    storage_key?: string | null;
   };
 
+  // Bytes may live in the content column (default) or external storage.
+  const content = await resolveFileContent(file);
+
   // Check if file has content stored
-  if (!file.content) {
+  if (!content) {
     return {
       id: file.id,
       filename: file.filename,
@@ -1064,14 +1119,14 @@ export async function getFilePreview(
   }
 
   // Check if file is too large for preview
-  const fileSize = file.size || file.content.length;
+  const fileSize = file.size || content.length;
   const canPreview = fileSize <= maxSize;
 
   return {
     ...file,
     size: fileSize,
     canPreview,
-    content: canPreview ? file.content : Buffer.alloc(0),
+    content: canPreview ? content : Buffer.alloc(0),
   };
 }
 

@@ -24,6 +24,7 @@ import {
 } from "docx";
 import { chromium, Browser } from "playwright";
 import { getFileById } from "../../repositories/file.repository";
+import { resolveFileContent } from "../../services/storage";
 import { JSDOM } from "jsdom";
 import { escapeHtml, sanitizeHtmlForPdf } from "../../utils/sanitization.utils";
 
@@ -101,9 +102,12 @@ async function fetchImageAsBase64(
     if (isNaN(fileIdNum)) return null;
 
     const file = await getFileById(fileIdNum, organizationId);
-    if (!file || !file.content) return null;
+    if (!file) return null;
 
-    const base64 = file.content.toString("base64");
+    const content = await resolveFileContent(file);
+    if (!content) return null;
+
+    const base64 = content.toString("base64");
     const mimeType = file.type || "image/png";
 
     return { base64, mimeType };

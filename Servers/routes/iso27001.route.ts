@@ -1,7 +1,7 @@
 import express from "express";
 import { validateId } from "../domain.layer/validations/id.valid";
 const router = express.Router();
-import { createMemoryUpload } from "../utils/upload.utils";
+import { createMemoryUpload, handleUploadError } from "../utils/upload.utils";
 // Security: bounded upload config (30MB/file, 10 files, MIME allowlist).
 const upload = createMemoryUpload();
 
@@ -155,6 +155,7 @@ router.patch(
   validateId("id"),
   subclauseInPath,
   upload.any(),
+  handleUploadError,
   requireFrameworkWriteAccess(iso27001SubclauseChanges),
   saveClauses,
 );
@@ -165,6 +166,7 @@ router.patch(
   validateId("id"),
   annexInPath,
   upload.any(),
+  handleUploadError,
   requireFrameworkWriteAccess(iso27001AnnexChanges),
   saveAnnexes,
 );

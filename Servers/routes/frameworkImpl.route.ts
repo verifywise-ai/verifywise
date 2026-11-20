@@ -2,7 +2,7 @@ import express from "express";
 const router = express.Router();
 
 import { validateId } from "../domain.layer/validations/id.valid";
-import { createMemoryUpload } from "../utils/upload.utils";
+import { createMemoryUpload, handleUploadError } from "../utils/upload.utils";
 import authenticateJWT from "../middleware/auth.middleware";
 import { requireFrameworkWriteAccess } from "../middleware/frameworkWriteAccess.middleware";
 import {
@@ -23,7 +23,7 @@ import {
 const upload = createMemoryUpload();
 
 /**
- * Generic impl endpoints for the 21 migrated frameworks. Mounted at
+ * Generic impl endpoints for the 24 bundled frameworks. Mounted at
  * /api/frameworks in app.ts. Table + column names come from
  * Servers/structures/ via the dispatch inside frameworkImpl.utils.ts.
  * Each route runs the access rule of the use case it reads or writes.
@@ -79,6 +79,7 @@ router.patch(
   validateId("id"),
   implUseCase,
   upload.any(),
+  handleUploadError,
   requireFrameworkWriteAccess(frameworkImplChanges),
   updateImpl,
 );

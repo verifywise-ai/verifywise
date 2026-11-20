@@ -1,6 +1,6 @@
 import express from "express";
 const router = express.Router();
-import { createMemoryUpload } from "../utils/upload.utils";
+import { createMemoryUpload, handleUploadError } from "../utils/upload.utils";
 // Security: bounded upload config (30MB/file, 10 files, MIME allowlist).
 const upload = createMemoryUpload();
 import { validateVisibility } from "../middleware/validateAITrustCentreVisibility.middleware";
@@ -51,6 +51,7 @@ router.post(
   "/resources",
   authenticateJWT,
   upload.single("file"),
+  handleUploadError,
   validateCreateAITrustResource,
   createAITrustResource,
 );
@@ -60,13 +61,14 @@ router.post(
   validateCreateAITrustSubprocessor,
   createAITrustSubprocessor,
 );
-router.post("/logo", authenticateJWT, upload.single("logo"), uploadCompanyLogo);
+router.post("/logo", authenticateJWT, upload.single("logo"), handleUploadError, uploadCompanyLogo);
 
 router.put("/overview", authenticateJWT, validateUpdateAITrustOverview, updateAITrustOverview);
 router.put(
   "/resources/:id",
   authenticateJWT,
   upload.single("file"),
+  handleUploadError,
   validateUpdateAITrustResource,
   updateAITrustResource,
 );

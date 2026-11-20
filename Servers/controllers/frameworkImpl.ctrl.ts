@@ -19,7 +19,7 @@ import {
 import { getConfigById } from "../utils/frameworkRegistry.utils";
 
 /**
- * Generic impl endpoints for the 21 migrated frameworks. All URL params are
+ * Generic impl endpoints for the 24 bundled frameworks. All URL params are
  * validated (frameworkId + level + id) before dispatch; table names come
  * from Servers/structures/ via frameworkRegistry.utils.ts. Built-ins
  * (EU / ISO 42001 / ISO 27001 / NIST) keep their bespoke controllers.
