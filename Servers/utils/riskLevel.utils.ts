@@ -85,6 +85,12 @@ function canonicalLabel<K extends string>(scale: Record<K, number>, value: unkno
 export type LikelihoodLabel = keyof typeof LIKELIHOOD_SCALE;
 export type SeverityLabel = keyof typeof SEVERITY_SCALE;
 
+/** 400 messages for a likelihood or severity that is not on the list. */
+export const LIKELIHOOD_NOT_VALID =
+  "Likelihood must be one of: Rare, Unlikely, Possible, Likely, Almost Certain.";
+export const SEVERITY_NOT_VALID =
+  "Severity must be one of: Negligible, Minor, Moderate, Major, Catastrophic.";
+
 export const canonicalLikelihood = (value: unknown): LikelihoodLabel | null =>
   canonicalLabel(LIKELIHOOD_SCALE, value);
 

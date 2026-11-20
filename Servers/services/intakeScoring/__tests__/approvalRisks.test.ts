@@ -78,7 +78,7 @@ describe("buildUseCaseRiskFromSuggestion", () => {
 });
 
 describe("buildModelRiskFromSuggestion", () => {
-  it("maps a suggestion onto a model risk owned by the approver", () => {
+  it("maps a suggestion onto a model risk owned by the approver, with likelihood and severity", () => {
     const risk = buildModelRiskFromSuggestion(
       suggestion({
         modelRiskCategory: ModelRiskCategory.BIAS,
@@ -90,24 +90,37 @@ describe("buildModelRiskFromSuggestion", () => {
       risk_name: "Biased ranking",
       description: "Rankings disadvantage some groups.",
       risk_category: "Bias & Fairness",
-      risk_level: "High",
       status: "Open",
       owner: "7",
       target_date: "2027-01-19",
+      // The service sets the level from these (decision 10), not the
+      // reviewer's modelRiskLevel.
       likelihood: "Likely",
+      severity: "Major",
       impact: "Qualified applicants are rejected.",
       mitigation_plan: "Audit rankings each quarter.",
       model_id: 9,
     });
   });
 
-  it("derives category and level when the suggestion has none", () => {
-    const risk = buildModelRiskFromSuggestion(
-      suggestion({ categories: [], likelihood: "Almost Certain", severity: "Catastrophic" }),
-      { ...CTX, modelId: 9 },
-    );
+  it("derives the category when the suggestion has none", () => {
+    const risk = buildModelRiskFromSuggestion(suggestion({ categories: [] }), {
+      ...CTX,
+      modelId: 9,
+    });
     expect(risk.risk_category).toBe("Compliance");
-    expect(risk.risk_level).toBe("Critical");
+  });
+
+  it("refuses a suggestion without a valid likelihood or severity, naming the field", () => {
+    expect(() =>
+      buildModelRiskFromSuggestion(suggestion({ severity: "" as any }), { ...CTX, modelId: 9 }),
+    ).toThrow("Severity must be one of: Negligible, Minor, Moderate, Major, Catastrophic.");
+    expect(() =>
+      buildModelRiskFromSuggestion(suggestion({ likelihood: "Often" as any }), {
+        ...CTX,
+        modelId: 9,
+      }),
+    ).toThrow("Likelihood must be one of: Rare, Unlikely, Possible, Likely, Almost Certain.");
   });
 });
 

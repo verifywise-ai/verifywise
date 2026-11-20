@@ -135,7 +135,6 @@ import {
   type RoutingReason,
 } from "../domain.layer/interfaces/i.intakeSubmission";
 import { ModelRiskCategory } from "../domain.layer/enums/model-risk-category.enum";
-import { ModelRiskLevel } from "../domain.layer/enums/model-risk-level.enum";
 import {
   asBand,
   isBandAllowed,
@@ -151,7 +150,7 @@ import {
 } from "../services/intakeScoring/approvalRisks";
 import { createRiskService } from "../services/risk.service";
 import { SYSTEM_RISK_VIEWER } from "../utils/riskVisibility.utils";
-import { LIKELIHOODS, SEVERITIES } from "../services/intakeScoring/riskMappers";
+import { LIKELIHOODS, modelRiskLevelFor, SEVERITIES } from "../services/intakeScoring/riskMappers";
 import type { IntakeSuggestedRisk } from "../services/intakeScoring/intakeSuggestions";
 import { selectRetryStages } from "../services/intakeScoring/retry";
 import {
@@ -612,7 +611,6 @@ async function logIfOutsideLane(
 const SUGGESTION_STATES: IntakeSuggestedRisk["state"][] = ["suggested", "accepted", "dismissed"];
 const SUGGESTION_TEXT_FIELDS = ["description", "mitigationPlan", "implementationStrategy"] as const;
 const MODEL_RISK_CATEGORIES = Object.values(ModelRiskCategory) as string[];
-const MODEL_RISK_LEVELS = Object.values(ModelRiskLevel) as string[];
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
 /**
@@ -674,12 +672,9 @@ export function parseSuggestionPatch(
     }
     patch.modelRiskCategory = body.modelRiskCategory as ModelRiskCategory;
   }
-  if (body.modelRiskLevel !== undefined) {
-    if (!MODEL_RISK_LEVELS.includes(body.modelRiskLevel as string)) {
-      return { invalid: "modelRiskLevel" };
-    }
-    patch.modelRiskLevel = body.modelRiskLevel as ModelRiskLevel;
-  }
+  // A model risk's level comes from likelihood and severity (decision 10):
+  // the reviewer can no longer set it.
+  if (body.modelRiskLevel !== undefined) return { invalid: "modelRiskLevel" };
   return { patch };
 }
 
@@ -2265,6 +2260,17 @@ export async function updateSuggestedRisk(req: Request, res: Response) {
         .json(STATUS_CODE[400](req.t!("Add a mitigation plan before accepting this risk")));
     }
 
+    // A model suggestion's level follows its likelihood and severity.
+    if (
+      current.modelRiskLevel !== undefined &&
+      (content.likelihood !== undefined || content.severity !== undefined)
+    ) {
+      content.modelRiskLevel = modelRiskLevelFor(
+        content.likelihood ?? current.likelihood,
+        content.severity ?? current.severity,
+      );
+    }
+
     const now = new Date().toISOString();
     const patch: Partial<IntakeSuggestedRisk> = {
       ...content,
@@ -2954,6 +2960,11 @@ async function approve(
       userId: req.userId!,
       organizationId: req.organizationId!,
     });
+    // A request the risk writes refuse (an accepted model suggestion without
+    // a valid likelihood or severity) is the reviewer's to fix: 400.
+    if (error instanceof ValidationException) {
+      return res.status(400).json(STATUS_CODE[400](translateError(req, error)));
+    }
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }

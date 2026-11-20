@@ -2,6 +2,14 @@
 // Spread into ../translations.ts. Other areas stay in that file for now.
 
 export const de: Record<string, string> = {
+  "Rare": "Selten",
+  "Unlikely": "Unwahrscheinlich",
+  "Possible": "Möglich",
+  "Likely": "Wahrscheinlich",
+  "Almost certain": "Fast sicher",
+  "Set by likelihood and severity": "Ergibt sich aus Eintrittswahrscheinlichkeit und Schweregrad",
+  "Pick a likelihood and a severity to set the level":
+    "Wählen Sie Eintrittswahrscheinlichkeit und Schweregrad, um die Stufe festzulegen",
   "close calls": "Grenzfälle",
   "missed of completed": "übersehen von abgeschlossen",
   "decisions": "Entscheidungen",
@@ -773,6 +781,14 @@ export const de: Record<string, string> = {
 };
 
 export const fr: Record<string, string> = {
+  "Rare": "Rare",
+  "Unlikely": "Peu probable",
+  "Possible": "Possible",
+  "Likely": "Probable",
+  "Almost certain": "Presque certain",
+  "Set by likelihood and severity": "Déterminé par la probabilité et la gravité",
+  "Pick a likelihood and a severity to set the level":
+    "Choisissez une probabilité et une gravité pour définir le niveau",
   "close calls": "cas limites",
   "missed of completed": "manquées sur terminées",
   "decisions": "décisions",
@@ -1538,6 +1554,14 @@ export const fr: Record<string, string> = {
 };
 
 export const es: Record<string, string> = {
+  "Rare": "Raro",
+  "Unlikely": "Improbable",
+  "Possible": "Posible",
+  "Likely": "Probable",
+  "Almost certain": "Casi seguro",
+  "Set by likelihood and severity": "Determinado por la probabilidad y la gravedad",
+  "Pick a likelihood and a severity to set the level":
+    "Elija una probabilidad y una gravedad para definir el nivel",
   "close calls": "casos límite",
   "missed of completed": "omitidas de completadas",
   "decisions": "decisiones",

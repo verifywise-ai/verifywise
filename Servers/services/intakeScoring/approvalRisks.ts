@@ -7,7 +7,14 @@ import { ModelRiskStatus } from "../../domain.layer/enums/model-risk-status.enum
 import type { IRiskAssessmentV2 } from "../../domain.layer/interfaces/i.intakeSubmission";
 import type { CreateRiskServiceInput } from "../risk.service";
 import type { IntakeSuggestedRisk } from "./intakeSuggestions";
-import { modelRiskCategoryFor, modelRiskLevelFor } from "./riskMappers";
+import { modelRiskCategoryFor } from "./riskMappers";
+import { ValidationException } from "../../domain.layer/exceptions/custom.exception";
+import {
+  canonicalLikelihood,
+  canonicalSeverity,
+  LIKELIHOOD_NOT_VALID,
+  SEVERITY_NOT_VALID,
+} from "../../utils/riskLevel.utils";
 import { bandFor, ClassificationLevel, combineScore, ruleMinimumFor } from "./scoreMath";
 
 /** When a suggestion has no deadline, the risk is due this long after approval. */
@@ -69,15 +76,23 @@ export function buildModelRiskFromSuggestion(
   s: IntakeSuggestedRisk,
   ctx: ApprovalContext & { modelId: number },
 ): Partial<IModelRisk> {
+  // A stored suggestion with no valid pair would make a risk without a
+  // level: refuse it, naming the field, so the reviewer sets both.
+  const likelihood = canonicalLikelihood(s.likelihood);
+  if (!likelihood) throw new ValidationException(LIKELIHOOD_NOT_VALID, "likelihood", s.likelihood);
+  const severity = canonicalSeverity(s.severity);
+  if (!severity) throw new ValidationException(SEVERITY_NOT_VALID, "severity", s.severity);
   return {
     risk_name: s.name,
     description: s.description,
     risk_category: s.modelRiskCategory ?? modelRiskCategoryFor(s.categories),
-    risk_level: s.modelRiskLevel ?? modelRiskLevelFor(s.likelihood, s.severity),
     status: ModelRiskStatus.OPEN,
     owner: String(ctx.approverId),
     target_date: deadlineFor(s, ctx.approvedAt),
-    likelihood: s.likelihood,
+    // Both, so the level comes from the formula like every model risk's
+    // (decision 10); the reviewer edits likelihood and severity, not a level.
+    likelihood,
+    severity,
     impact: s.impact,
     mitigation_plan: s.mitigationPlan,
     model_id: ctx.modelId,

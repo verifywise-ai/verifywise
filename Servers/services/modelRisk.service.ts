@@ -47,6 +47,8 @@ import {
   calculateModelRiskLevel,
   canonicalLikelihood,
   canonicalSeverity,
+  LIKELIHOOD_NOT_VALID,
+  SEVERITY_NOT_VALID,
 } from "../utils/riskLevel.utils";
 import { ValidationException } from "../domain.layer/exceptions/custom.exception";
 
@@ -75,11 +77,6 @@ function withoutDemoFlag(input: ModelRiskInput): ModelRiskInput {
   const { is_demo: _isDemo, ...rest } = input;
   return rest;
 }
-
-export const LIKELIHOOD_NOT_VALID =
-  "Likelihood must be one of: Rare, Unlikely, Possible, Likely, Almost Certain.";
-export const SEVERITY_NOT_VALID =
-  "Severity must be one of: Negligible, Minor, Moderate, Major, Catastrophic.";
 
 const isBlank = (value: unknown) =>
   value === null || (typeof value === "string" && value.trim() === "");

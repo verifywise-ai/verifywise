@@ -160,9 +160,11 @@ intake approval, Shadow AI): when the save leaves the risk with both a
 likelihood and a severity (sent, else stored: on update the merged row, so a
 save that sends only the severity recomputes from the stored likelihood),
 the server sets `risk_level` and ignores a sent one. With either missing the
-sent or stored level is kept, so older rows and callers that send no
-severity (Shadow AI, intake approval, which sends the suggestion's
-likelihood and its reviewed level) keep working. A label is matched without
+sent or stored level is kept, so older rows and Shadow AI (which sets its
+level from data sensitivity and sends no likelihood) keep working. An
+intake approval sends the accepted suggestion's likelihood and severity, so
+its level comes from the formula too; the reviewer edits those two, not a
+level (see `intake-forms.md`). A label is matched without
 regard to case or surrounding spaces; "" or null clears it; anything else is
 a 400 on every route ("Likelihood must be one of: ..." / "Severity must be
 one of: ...", en/de/fr). The client form (`NewModelRisk`) has both selects,
