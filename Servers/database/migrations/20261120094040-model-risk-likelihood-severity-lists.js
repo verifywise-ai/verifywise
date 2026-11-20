@@ -14,8 +14,9 @@
  * keep their hand-picked level until someone sets both.
  *
  * `down` drops `severity` and moves each "Previous likelihood" line back into
- * `likelihood`. A label whose spelling `up` changed ("likely" -> "Likely")
- * keeps the new spelling.
+ * `likelihood` while it is still the description's last line (text added
+ * after it since leaves the risk as it is). A label whose spelling `up`
+ * changed ("likely" -> "Likely") keeps the new spelling.
  */
 
 const LABELS = ["Rare", "Unlikely", "Possible", "Likely", "Almost Certain"];
@@ -65,8 +66,11 @@ module.exports = {
         {
           transaction,
           replacements: {
-            capture: `(?:\n\n|^)${MARKER}(.*)$`,
-            strip: `(\n\n|^)${MARKER}.*$`,
+            // Only a marker that is still the description's last line: in
+            // Postgres "." also matches a newline, so ".*" would take text
+            // added after it.
+            capture: `(?:\n\n|^)${MARKER}([^\n]*)$`,
+            strip: `(\n\n|^)${MARKER}[^\n]*$`,
           },
         },
       );

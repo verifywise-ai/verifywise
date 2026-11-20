@@ -53,6 +53,7 @@ describe("model risk likelihood and severity lists migration", () => {
     ids.oddNoText = await insertRisk(org, "Confirmed", "");
     ids.blank = await insertRisk(org, "", "Kept");
     ids.none = await insertRisk(org, null, null);
+    ids.textAfter = await insertRisk(org, "Often", null);
   });
 
   afterAll(async () => {
@@ -90,7 +91,16 @@ describe("model risk likelihood and severity lists migration", () => {
   });
 
   it("down drops severity and moves the old likelihood text back", async () => {
+    // Someone wrote below the marker after up: down must leave that risk alone.
+    await sequelize.query(
+      `UPDATE model_risks SET description = description || E'\\n\\nChecked again in May.' WHERE id = :id`,
+      { replacements: { id: ids.textAfter } },
+    );
     await migration.down(queryInterface);
+    expect(await readRisk(ids.textAfter)).toMatchObject({
+      likelihood: null,
+      description: "Previous likelihood: Often\n\nChecked again in May.",
+    });
     expect(await hasSeverity()).toBe(false);
     expect(await readRisk(ids.oddWithText)).toMatchObject({
       likelihood: "High chance",
