@@ -126,10 +126,29 @@ describe("v1 model risk", () => {
   it("refuses bad values on update", async () => {
     const r = await run(
       validateUpdateModelRiskV1,
-      { risk_level: "Huge", owner: [7], target_date: "later", likelihood: "Often", severity: null },
+      { risk_level: "Huge", owner: [7], target_date: "later", likelihood: "Often", severity: 3 },
       { id: "3" },
     );
     expect(r.fields).toEqual(["likelihood", "owner", "risk_level", "severity", "target_date"]);
+  });
+
+  it("lets an update clear likelihood or severity with null or an empty string", async () => {
+    for (const cleared of [null, ""]) {
+      expect(
+        (
+          await run(
+            validateUpdateModelRiskV1,
+            { likelihood: cleared, severity: cleared },
+            { id: "3" },
+          )
+        ).status,
+      ).toBeUndefined();
+    }
+  });
+
+  it("still requires both on create (null is not a value)", async () => {
+    const r = await run(validateCreateModelRiskV1, { ...risk, likelihood: null, severity: "" });
+    expect(r.fields).toEqual(["likelihood", "severity"]);
   });
 
   it("accepts an update without an owner", async () => {

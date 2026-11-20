@@ -203,6 +203,16 @@ export const validateCreateModelRiskV1 = [
   handleValidationErrors,
 ];
 
+/**
+ * On update a likelihood or severity may be cleared (null or ""); the level
+ * then stays as stored. Anything else must be on the list.
+ */
+const clearableListValue = (field: string, values: string[]) =>
+  body(field)
+    .optional({ values: "null" })
+    .custom((value) => value === "" || (typeof value === "string" && values.includes(value)))
+    .withMessage(`${oneOf(field, values)}, or null or "" to clear it`);
+
 export const validateUpdateModelRiskV1 = [
   param("id").isInt({ min: 1, max: MAX_ID }).withMessage("id must be a positive integer"),
   nonEmptyTextIfSent("risk_name"),
@@ -211,8 +221,8 @@ export const validateUpdateModelRiskV1 = [
     RISK_CATEGORIES,
     oneOf("risk_category", RISK_CATEGORIES),
   ),
-  isOneOf(body("likelihood").optional(), LIKELIHOODS, oneOf("likelihood", LIKELIHOODS)),
-  isOneOf(body("severity").optional(), SEVERITIES, oneOf("severity", SEVERITIES)),
+  clearableListValue("likelihood", LIKELIHOODS),
+  clearableListValue("severity", SEVERITIES),
   isOneOf(body("risk_level").optional(), RISK_LEVELS, oneOf("risk_level", RISK_LEVELS)),
   requiredRefId("owner", "owner must be a positive integer").optional(),
   body("target_date")

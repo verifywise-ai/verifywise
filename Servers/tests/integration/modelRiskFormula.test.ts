@@ -141,6 +141,16 @@ describe("model risk level from the formula", () => {
     expect((await riskRow(id)).risk_level).toBe("High");
   });
 
+  it("v1 update clears the severity with null and keeps the stored level", async () => {
+    const created = await api
+      .post("/api/v1/model-risks")
+      .send(body({ likelihood: "Likely", severity: "Major" }));
+    const id = created.body.data.id;
+    const res = await api.patch(`/api/v1/model-risks/${id}`).send({ severity: null });
+    expect(res.status).toBe(200);
+    expect(await riskRow(id)).toEqual({ likelihood: "Likely", severity: null, risk_level: "High" });
+  });
+
   it("an older risk without inputs keeps taking a hand-picked level on update", async () => {
     const id = await createTestModelRisk(org, { risk_level: "Medium" });
     const res = await api.patch(`/api/v1/model-risks/${id}`).send({ risk_level: "Critical" });
