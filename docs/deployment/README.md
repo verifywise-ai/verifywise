@@ -9,6 +9,7 @@ This directory contains comprehensive guides for deploying and securing VerifyWi
 | [Production Deployment Guide](./PRODUCTION_DEPLOYMENT_GUIDE.md) | Step-by-step production deployment instructions |
 | [Security Hardening Guide](./SECURITY_HARDENING_GUIDE.md) | Security best practices and hardening checklist |
 | [Configuration Reference](./CONFIGURATION_REFERENCE.md) | Complete reference for all configuration options |
+| [File Storage Migration Guide](./FILE_STORAGE_MIGRATION.md) | Local (database) vs S3-compatible file storage: configuration, switching, backup |
 | [Disaster Recovery Guide](./DISASTER_RECOVERY_GUIDE.md) | DR/BC procedures, backup/restore, and high-availability |
 
 ## Quick start

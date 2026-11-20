@@ -8,6 +8,7 @@ import { IAITrustCentreSubprocessors } from "../domain.layer/interfaces/i.aiTrus
 import { IAITrustCentrePublic } from "../domain.layer/interfaces/i.aiTrustCentrePublic";
 import { ValidationException } from "../domain.layer/exceptions/custom.exception";
 import { deleteFileById, getFileById } from "./fileUpload.utils";
+import { resolveFileContent } from "../services/storage";
 
 export const getIsVisibleQuery = async (organizationId: number) => {
   try {
@@ -23,13 +24,25 @@ export const getIsVisibleQuery = async (organizationId: number) => {
 
 export const getCompanyLogoQuery = async (organizationId: number) => {
   const result = (await sequelize.query(
-    `SELECT f.content, f.type FROM ai_trust_center AS ai
+    `SELECT f.content, f.type, f.storage_provider, f.storage_key FROM ai_trust_center AS ai
      INNER JOIN files f ON ai.logo = f.id AND f.organization_id = :organizationId
      WHERE ai.organization_id = :organizationId LIMIT 1;`,
     { replacements: { organizationId } },
-  )) as [{ content: Buffer }[], number];
+  )) as [
+    {
+      content: Buffer | null;
+      type: string;
+      storage_provider: string | null;
+      storage_key: string | null;
+    }[],
+    number,
+  ];
 
-  return result[0][0] || null;
+  const row = result[0][0];
+  if (!row) return null;
+
+  // Bytes may live in the content column (default) or external storage.
+  return { content: await resolveFileContent(row), type: row.type };
 };
 
 export const getAITrustCentrePublicPageQuery = async (organizationId: number) => {
@@ -168,6 +181,9 @@ export const getAITrustCentrePublicResourceByIdQuery = async (
   if (!file) {
     return null;
   }
+  // Populate content from wherever the bytes live (content column by default,
+  // external storage when the row carries a storage key).
+  file.content = (await resolveFileContent(file)) as Buffer;
   return file;
 };
 

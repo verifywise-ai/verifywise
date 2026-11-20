@@ -3,7 +3,7 @@
  *
  * The framework drawers save through one route per framework (EU AI Act
  * controls and answers, ISO 42001 / 27001 clauses and annexes, NIST AI RMF
- * subcategories, the 21 bundled frameworks and imported frameworks). The same
+ * subcategories, the 24 bundled frameworks and imported frameworks). The same
  * request carries implementation fields ("framework.edit") and audit fields
  * ("framework.audit"), and the drawers always send the whole form, unchanged
  * fields included. So the permission a save needs depends on which fields it
@@ -694,8 +694,9 @@ export const euControlChanges: FrameworkChangeDetector = async (req) => {
       ? (sequelize.query(
           `SELECT id, status, implementation_details, evidence_description, feedback_description
              FROM subcontrols_eu
-            WHERE organization_id = :organizationId AND id IN (:subcontrolIds);`,
-          { replacements: { organizationId, subcontrolIds }, type: QueryTypes.SELECT },
+            WHERE organization_id = :organizationId AND control_id = :controlId
+              AND id IN (:subcontrolIds);`,
+          { replacements: { organizationId, controlId, subcontrolIds }, type: QueryTypes.SELECT },
         ) as Promise<Row[]>)
       : Promise.resolve([] as Row[]),
     subcontrolIds.length > 0

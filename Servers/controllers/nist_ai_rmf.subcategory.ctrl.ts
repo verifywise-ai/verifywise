@@ -22,7 +22,7 @@ import { NISTAIMRFSubcategoryModel } from "../domain.layer/frameworks/NIST-AI-RM
 import { logFailure, logProcessing, logSuccess } from "../utils/logger/logHelper";
 import { uploadFile } from "../utils/fileUpload.utils";
 import { UploadedFile, RequestWithFile } from "../utils/question.utils";
-import { getUserProjects } from "../utils/user.utils";
+import { checkedUseCaseId } from "../middleware/projectAccess.middleware";
 
 import { translateError } from "../utils/i18n.utils";
 import { toId } from "../utils/validations/validation.utils";
@@ -265,9 +265,7 @@ export async function updateNISTAIRMFSubcategoryById(
 
   try {
     const subcategory = req.body as Partial<NISTAIMRFSubcategoryModel> & {
-      user_id?: string;
       delete?: string;
-      project_id?: string;
       tags?: string | string[]; // Tags come as JSON string from FormData
       risksDelete?: string; // JSON string of risk IDs to delete
       risksMitigated?: string; // JSON string of risk IDs to add
@@ -317,16 +315,9 @@ export async function updateNISTAIRMFSubcategoryById(
           .filter((id) => !isNaN(id)) as number[])
       : [];
 
-    // Get user's project ID for file uploads
-    let userProjectId = 1; // Default fallback
-    try {
-      const userProjects = await getUserProjects(Number(req.userId), req.organizationId!);
-      if (userProjects && userProjects.length > 0) {
-        userProjectId = userProjects[0].id!; // Use first project user has access to
-      }
-    } catch (error) {
-      logger.warn("Could not fetch user projects, using default project ID 1");
-    }
+    // Files are filed under the use case the route guard resolved from the
+    // subcategory, never a project_id from the body.
+    const projectId = checkedUseCaseId(res)!;
 
     // Handle file uploads
     let uploadedFiles: {
@@ -343,8 +334,8 @@ export async function updateNISTAIRMFSubcategoryById(
       for (const file of req.files as UploadedFile[]) {
         const uploadedFile = await uploadFile(
           file,
-          subcategory.user_id ? parseInt(subcategory.user_id) : Number(req.userId),
-          subcategory.project_id ? parseInt(subcategory.project_id) : userProjectId,
+          req.userId!,
+          projectId,
           "Main clauses group",
           req.organizationId!,
           transaction,

@@ -1728,3 +1728,26 @@ export const deleteProjectFrameworkEUQuery = async (
   );
   return result.length > 0 && assessmentDeleted && complianceDeleted;
 };
+
+/**
+ * Whether every id is a subcontrol of `controlId` in this organization. A
+ * control's save names its subcontrols in the body, so an id of another
+ * control (another use case's) must be refused before anything is written.
+ * An empty list is true; a malformed id is false.
+ */
+export const subcontrolsBelongToControlQuery = async (
+  controlId: number,
+  subcontrolIds: unknown[],
+  organizationId: number,
+  transaction?: Transaction,
+): Promise<boolean> => {
+  const ids = [...new Set(subcontrolIds.map((id) => Number(id)))];
+  if (ids.length === 0) return true;
+  if (ids.some((id) => !Number.isSafeInteger(id) || id <= 0)) return false;
+  const rows = await sequelize.query<{ n: number }>(
+    `SELECT COUNT(*)::int AS n FROM subcontrols_eu
+      WHERE organization_id = :organizationId AND control_id = :controlId AND id IN (:ids)`,
+    { replacements: { organizationId, controlId, ids }, type: QueryTypes.SELECT, transaction },
+  );
+  return rows[0]?.n === ids.length;
+};

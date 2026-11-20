@@ -11,47 +11,31 @@ on:
     paths:
       - "Servers/**"
       - ".github/workflows/backend-checks.yml"
+      - "scripts/security/**"
   push:
     branches: ["master", "develop"]
     paths:
       - "Servers/**"
       - ".github/workflows/backend-checks.yml"
+      - "scripts/security/**"
+  # Nightly full run on develop. A push to develop runs only the quick checks
+  # (the PR already ran the database suites and the coverage gate), so this is
+  # what catches two PRs that pass alone but break together.
+  schedule:
+    - cron: "30 2 * * *"
+  workflow_dispatch:
+
+# The org's Free plan runs at most 20 jobs at once, so every job here also
+# makes other PRs wait. A newer push to the same PR cancels the older run.
+# Every other run (push, nightly, manual) gets a group of its own commit and
+# event, so it neither cancels nor replaces a queued run of another commit.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-  security-audit:
-    name: Security Audit
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: Servers
-
-    steps:
-      - uses: actions/checkout@v7
-
-      - name: Set up Node
-        uses: actions/setup-node@v7
-        with:
-          node-version: "22"
-          cache: npm
-          cache-dependency-path: Servers/package-lock.json
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Run npm audit
-        run: npm audit --audit-level=high
-        continue-on-error: true
-
-      - name: Run npm audit (JSON output for review)
-        run: npm audit --json > ../audit-results.json || true
-
-      - name: Upload audit results
-        uses: actions/upload-artifact@v7
-        with:
-          name: backend-npm-audit-results
-          path: audit-results.json
-          retention-days: 30
-
+  # Quick checks share one job (and one npm ci): as separate jobs, each spent
+  # longer waiting for a runner than running.
   lint-and-build:
     name: Lint and Build
     runs-on: ubuntu-latest
@@ -59,6 +43,8 @@ jobs:
       run:
         working-directory: Servers
 
+    # Each check runs as long as npm ci succeeded, even after an earlier check
+    # failed, so one run reports every failure (as separate jobs did).
     steps:
       - uses: actions/checkout@v7
         with:
@@ -72,9 +58,25 @@ jobs:
           cache-dependency-path: Servers/package-lock.json
 
       - name: Install dependencies
+        id: install
         run: npm ci
 
+      # Runs before the build so the diff below sees only what the generators
+      # changed.
+      - name: Regenerate OpenAPI spec and endpoint registry
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: |
+          npm run generate:swagger
+          npm run generate:endpoints
+
+      - name: Fail if the committed generated files are stale
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: |
+          git diff --exit-code -- swagger.yaml ../docs/api-docs/src/config/endpoints.ts \
+            || { echo "::error::swagger.yaml / endpoints.ts are out of sync with the route layer. Run 'npm run generate:swagger && npm run generate:endpoints' in Servers/ and commit the result."; exit 1; }
+
       - name: Get changed files
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         id: changed-files
         run: |
           if [ "${{ github.event_name }}" = "pull_request" ]; then
@@ -84,11 +86,20 @@ jobs:
           fi
 
       - name: Prettier format check
-        if: steps.changed-files.outputs.files != ''
+        if: ${{ !cancelled() && steps.install.outcome == 'success' && steps.changed-files.outputs.files != '' }}
         run: npx prettier --check ${{ steps.changed-files.outputs.files }}
 
       - name: TypeScript type check
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         run: npm run build
+
+      # ESLint gate (#4617-3). Blocking: `npm run lint` currently reports 0 errors
+      # (3.5k `no-explicit-any` warnings remain; they do not affect the exit code
+      # and are being burned down separately). eslint exits non-zero on any error,
+      # so a green step here means no lint errors were introduced.
+      - name: ESLint
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: npm run lint
 
       # The unit suite runs once, with coverage, in the Coverage Gate job below.
 
@@ -100,59 +111,63 @@ jobs:
       # because it builds the real app, which needs ENCRYPTION_KEY at module load —
       # it runs in tenant-isolation-tests instead.
       - name: Rate-limiter verification suite
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         run: npm run test:ratelimit
 
       - name: i18n audit (catch dictionary drift)
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         run: npm run i18n:audit:strict
 
       # de/fr are checked against en.json above; this checks en.json against the
       # code: every server message needs a key, and no message may skip req.t.
       - name: i18n en.json check (catch server messages without a key)
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         run: |
           npm run test:i18n-scripts
           npm run i18n:check-en
 
       - name: API documentation drift check
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         run: npm run check:api-drift
 
       - name: Dependency vulnerability audit
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         run: |
           npm audit --audit-level=high --omit=dev || true
           node $GITHUB_WORKSPACE/scripts/security/npm-audit-gate.js .
 
+      # Full report (dev dependencies included) for review; never blocks.
+      - name: npm audit report (JSON)
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: npm audit --json > ../audit-results.json || true
 
-  # ESLint gate (#4617-3). Blocking: `npm run lint` currently reports 0 errors
-  # (3.5k `no-explicit-any` warnings remain; they do not affect the exit code
-  # and are being burned down separately). eslint exits non-zero on any error,
-  # so a green job here means no lint errors were introduced.
-  eslint:
-    name: ESLint
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: Servers
-
-    steps:
-      - uses: actions/checkout@v7
-
-      - name: Set up Node
-        uses: actions/setup-node@v7
+      - name: Upload audit results
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        uses: actions/upload-artifact@v7
         with:
-          node-version: "22"
-          cache: npm
-          cache-dependency-path: Servers/package-lock.json
+          name: backend-npm-audit-results
+          path: audit-results.json
+          retention-days: 30
 
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Run ESLint
-        run: npm run lint
+      - name: Dependency Review
+        if: ${{ !cancelled() && github.event_name == 'pull_request' }}
+        uses: actions/dependency-review-action@v5
+        with:
+          fail-on-severity: high
+          deny-licenses: GPL-3.0, AGPL-3.0
+          allow-ghsas: GHSA-mh99-v99m-4gvg, GHSA-qwww-vcr4-c8h2
+          # jszip is dual-licensed (MIT OR GPL-3.0-or-later); VerifyWise uses it
+          # under MIT. The 3.10.1 -> 3.10.2 bump re-triggers the license heuristic.
+          allow-dependencies-licenses: pkg:npm/jszip
 
   # One job per suite, in parallel: run in series they took ~9 minutes and set
   # the pace for every backend PR. Each job has its own Postgres, and each
   # suite's globalSetup migrates it, so no suite depends on another having run.
+  #
+  # Not on push: the PR already ran them; the nightly run covers develop.
   tenant-isolation-tests:
     name: Tenant Isolation Integration Tests (${{ matrix.suite }}${{ matrix.rls == 'on' && ', RLS enforced' || '' }})
+    if: github.event_name != 'push'
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -246,7 +261,7 @@ jobs:
       - name: Run database-backed regression suites
         if: matrix.suite == 'regression-suites'
         run: |
-          npm run test:integration -- --testPathPatterns='tests/integration/(login|projects|tasks|vendors|workflow-audit-log|user-deletion-fks|reporting-rls-policies|report-run-visibility|framework-gap-workflow|report-scope-membership|report-scope-authorization|workflow-approval-gate|audit-ledger-retention|file-manager|approval-workflows|rate-limiting/limiter-wiring|governance-os\.cross-tenant|home-queue-sources)\.test\.ts'
+          npm run test:integration -- --testPathPatterns='tests/integration/(login|projects|tasks|vendors|workflow-audit-log|user-deletion-fks|reporting-rls-policies|report-run-visibility|framework-gap-workflow|report-scope-membership|report-scope-authorization|workflow-approval-gate|audit-ledger-retention|file-manager|approval-workflows|rate-limiting/limiter-wiring|governance-os\.cross-tenant|home-queue-sources|useCaseBundledFrameworks)\.test\.ts'
 
       - name: Run deadline-summary smoke test
         if: matrix.suite == 'smoke-and-audit'
@@ -257,41 +272,10 @@ jobs:
         if: matrix.suite == 'smoke-and-audit'
         run: npx ts-node scripts/auditTenantIsolationCoverage.ts
 
-  api-docs-drift:
-    name: API Docs Drift
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: Servers
-
-    steps:
-      - uses: actions/checkout@v7
-
-      - name: Set up Node
-        uses: actions/setup-node@v7
-        with:
-          node-version: "22"
-          cache: npm
-          cache-dependency-path: Servers/package-lock.json
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Regenerate OpenAPI spec and endpoint registry
-        run: |
-          npm run generate:swagger
-          npm run generate:endpoints
-
-      - name: Fail if the committed generated files are stale
-        run: |
-          git diff --exit-code -- swagger.yaml ../docs/api-docs/src/config/endpoints.ts \
-            || { echo "::error::swagger.yaml / endpoints.ts are out of sync with the route layer. Run 'npm run generate:swagger && npm run generate:endpoints' in Servers/ and commit the result."; exit 1; }
-
-      - name: Check route/spec drift
-        run: npm run check:api-drift
-
+  # Not on push: the PR already ran it; the nightly run covers develop.
   coverage:
     name: Coverage Gate
+    if: github.event_name != 'push'
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -311,14 +295,17 @@ jobs:
         run: npm ci
 
       - name: Run tests with coverage
-        # --detectOpenHandles runs every suite in one process, so heap use
-        # grows with the suite; the 4 GB default ran out at ~420 suites.
+        # Suites run in 3 parallel workers (the runner has 4 vCPUs and 16 GB).
+        # test:coverage no longer passes --detectOpenHandles, which forced every
+        # suite into one process and made this the slowest job on a PR. Workers
+        # are recycled at 1 GB idle heap. NODE_OPTIONS reaches every worker, so
+        # the heap cap is per process: 3 GB x (3 workers + parent) fits in 16 GB.
         env:
-          NODE_OPTIONS: --max-old-space-size=8192
+          NODE_OPTIONS: --max-old-space-size=3072
         run: npm run test:coverage
 
       - name: Upload coverage report
-        if: always()
+        if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v7
         with:
           name: backend-coverage-report
@@ -376,20 +363,3 @@ jobs:
                 body,
               });
             }
-
-  dependency-review:
-    name: Dependency Review
-    runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request'
-    steps:
-      - uses: actions/checkout@v7
-
-      - name: Dependency Review
-        uses: actions/dependency-review-action@v5
-        with:
-          fail-on-severity: high
-          deny-licenses: GPL-3.0, AGPL-3.0
-          allow-ghsas: GHSA-mh99-v99m-4gvg, GHSA-qwww-vcr4-c8h2
-          # jszip is dual-licensed (MIT OR GPL-3.0-or-later); VerifyWise uses it
-          # under MIT. The 3.10.1 -> 3.10.2 bump re-triggers the license heuristic.
-          allow-dependencies-licenses: pkg:npm/jszip

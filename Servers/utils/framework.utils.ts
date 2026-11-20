@@ -1,4 +1,4 @@
-import { Transaction } from "sequelize";
+import { QueryTypes, Transaction } from "sequelize";
 import { sequelize } from "../database/db";
 import { FrameworkModel } from "../domain.layer/models/frameworks/frameworks.model";
 import { ProjectFrameworksModel } from "../domain.layer/models/projectFrameworks/projectFrameworks.model";
@@ -7,6 +7,75 @@ import {
   frameworkDeletionMap,
   frameworkFilesDeletionSourceMap,
 } from "../types/framework.type";
+import { deleteObjectOnCommit } from "../services/storage/transactionRegistry";
+import { StorageObjectRef } from "../services/storage/types";
+import { ValidationException } from "../domain.layer/exceptions/custom.exception";
+import { getStructureById } from "../structures";
+
+/** Response keys the four core frameworks have always been reported under. */
+const CORE_FRAMEWORK_RESULT_KEYS: Record<number, string> = {
+  1: "eu",
+  2: "iso42001",
+  3: "iso27001",
+  4: "nist_ai_rmf",
+};
+
+/**
+ * The builders by framework id, as a Map so a request-supplied id can only
+ * reach a builder, never another property of the object.
+ */
+const FRAMEWORK_BUILDERS = new Map(
+  Object.entries(frameworkAdditionMap).map(([id, build]) => [Number(id), build] as const),
+);
+
+/** Whether a framework id has a builder that sets up its controls for a project. */
+export const hasFrameworkBuilder = (frameworkId: number): boolean =>
+  FRAMEWORK_BUILDERS.has(frameworkId);
+
+/**
+ * The key a built framework is reported under: the historical key for the core
+ * frameworks, the structure key (soc2, hipaa, ...) for the bundled ones.
+ */
+export const frameworkResultKey = (frameworkId: number): string =>
+  CORE_FRAMEWORK_RESULT_KEYS[frameworkId] ??
+  getStructureById(frameworkId)?.key ??
+  `framework_${frameworkId}`;
+
+/**
+ * Refuse a framework list holding an id that has no builder. Such a framework
+ * would be attached to the use case with nothing set up behind it, and could
+ * then not be added again because it is already attached.
+ */
+export const assertFrameworksBuildable = (frameworkIds: number[]): void => {
+  const unknown = frameworkIds.find((id) => !hasFrameworkBuilder(id));
+  if (unknown !== undefined) {
+    throw new ValidationException("Framework not found", "framework", unknown, {
+      i18nKey: "Framework not found",
+    });
+  }
+};
+
+/**
+ * Set up a framework's controls, clauses and assessments on a project whose
+ * projects_frameworks row already exists. Every framework, core or bundled,
+ * goes through frameworkAdditionMap, so creation, approval and "add framework"
+ * build the same thing.
+ */
+export const buildProjectFrameworkQuery = async (
+  frameworkId: number,
+  projectId: number,
+  enableAiDataInsertion: boolean,
+  organizationId: number,
+  transaction: Transaction,
+): Promise<object> => {
+  const build = FRAMEWORK_BUILDERS.get(frameworkId);
+  if (typeof build !== "function") {
+    throw new ValidationException("Framework not found", "framework", frameworkId, {
+      i18nKey: "Framework not found",
+    });
+  }
+  return build(projectId, enableAiDataInsertion, organizationId, transaction);
+};
 
 export const getAllFrameworksQuery = async (organizationId: number): Promise<FrameworkModel[]> => {
   const frameworks = await sequelize.query(
@@ -153,8 +222,7 @@ export const addFrameworkToProjectQuery = async (
     return false;
   }
 
-  const addFn = frameworkAdditionMap[frameworkId];
-  if (!addFn) {
+  if (!hasFrameworkBuilder(frameworkId)) {
     return false;
   }
 
@@ -172,7 +240,7 @@ export const addFrameworkToProjectQuery = async (
     return false;
   }
 
-  await addFn(projectId, false, organizationId, transaction);
+  await buildProjectFrameworkQuery(frameworkId, projectId, false, organizationId, transaction);
   return true;
 };
 
@@ -197,13 +265,25 @@ const deleteFrameworkEvidenceFiles = async (
     },
   );
 
-  await sequelize.query(
-    `DELETE FROM files WHERE organization_id = :organizationId AND project_id = :project_id AND source IN (:source)`,
+  const deletedFiles = (await sequelize.query(
+    `DELETE FROM files WHERE organization_id = :organizationId AND project_id = :project_id AND source IN (:source)
+     RETURNING storage_provider, storage_key`,
     {
       replacements: { project_id: projectId, source, organizationId },
       transaction,
+      type: QueryTypes.SELECT,
     },
-  );
+  )) as unknown as { storage_provider: string | null; storage_key: string | null }[];
+
+  // Externally stored bytes are removed only after the row deletes commit.
+  for (const row of deletedFiles) {
+    if (row.storage_key) {
+      deleteObjectOnCommit(transaction, {
+        provider: row.storage_provider as StorageObjectRef["provider"],
+        key: row.storage_key,
+      });
+    }
+  }
 };
 
 export const deleteFrameworkFromProjectQuery = async (

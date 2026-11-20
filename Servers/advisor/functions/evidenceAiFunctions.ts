@@ -3,6 +3,7 @@ import logger from "../../utils/logger/fileLogger";
 import { getEvidenceGapsQuery, upsertAnalysisQuery } from "../../utils/evidenceAi.utils";
 import { parseDocument, isSupportedMimeType } from "../parsers";
 import { analyzeEvidence } from "../evidenceAnalyzer/analyzer.service";
+import { resolveFileContent } from "../../services/storage";
 import { getLLMKeysWithKeyQuery, getLLMProviderUrl } from "../../utils/llmKey.utils";
 import type { LLMProvider } from "../../domain.layer/interfaces/i.llmKey";
 
@@ -52,7 +53,7 @@ const analyzeDocument = async (
     const { file_id, document_text } = params;
 
     const [fileRows] = await sequelize.query(
-      `SELECT id, filename, type, content, uploaded_time
+      `SELECT id, filename, type, content, storage_provider, storage_key, uploaded_time
          FROM files
         WHERE id = :fileId AND organization_id = :organizationId`,
       { replacements: { fileId: file_id, organizationId } },
@@ -63,11 +64,12 @@ const analyzeDocument = async (
     }
 
     // Stored content wins; caller text is only a fallback for content-less
-    // rows.
+    // rows. Bytes may live in the content column or external storage.
     let text = "";
     let fromStoredContent = false;
-    if (file.content) {
-      const buffer = Buffer.isBuffer(file.content) ? file.content : Buffer.from(file.content);
+    const storedContent = await resolveFileContent(file);
+    if (storedContent) {
+      const buffer = Buffer.isBuffer(storedContent) ? storedContent : Buffer.from(storedContent);
       if (isSupportedMimeType(file.type)) {
         text = (await parseDocument(buffer, file.type)).text;
       } else {

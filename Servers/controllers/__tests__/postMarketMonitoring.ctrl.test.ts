@@ -851,6 +851,8 @@ describe("postMarketMonitoring.ctrl", () => {
           limit: 10,
         },
         1,
+        // The list is scoped to the use cases the caller can see.
+        { userId: 1, role: "Admin" },
       );
       expect(res.status).toHaveBeenCalledWith(200);
     });
@@ -881,6 +883,8 @@ describe("postMarketMonitoring.ctrl", () => {
           limit: 5,
         },
         1,
+        // The list is scoped to the use cases the caller can see.
+        { userId: 1, role: "Admin" },
       );
       expect(res.status).toHaveBeenCalledWith(200);
     });
@@ -893,6 +897,8 @@ describe("postMarketMonitoring.ctrl", () => {
       expect(mockGetReports).toHaveBeenCalledWith(
         expect.objectContaining({ page: 0, limit: 10 }),
         1,
+        // The list is scoped to the use cases the caller can see.
+        { userId: 1, role: "Admin" },
       );
       expect(res.status).toHaveBeenCalledWith(200);
     });

@@ -14,6 +14,7 @@ import {
 import { parseDocument, isSupportedMimeType } from "../advisor/parsers";
 import { trackAIContent } from "../middleware/aiContentTracker.middleware";
 import { analyzeEvidence, type AnalyzerResult } from "../advisor/evidenceAnalyzer/analyzer.service";
+import { resolveFileContent } from "../services/storage";
 import { getLLMKeysWithKeyQuery, getLLMProviderUrl } from "../utils/llmKey.utils";
 import type { LLMProvider } from "../domain.layer/interfaces/i.llmKey";
 import type {
@@ -173,12 +174,16 @@ export async function analyzeFile(req: Request, res: Response) {
     }
 
     const [contentRows] = await sequelize.query(
-      `SELECT content, octet_length(content) AS size_bytes,
+      `SELECT content, storage_provider, storage_key, octet_length(content) AS size_bytes,
               uploaded_time AS upload_date
        FROM files WHERE id = :fileId AND organization_id = :organizationId`,
       { replacements: { fileId, organizationId } },
     );
     const contentRow = (contentRows as any[])[0];
+
+    // Bytes may live in the content column (default) or external storage.
+    const storedContent = await resolveFileContent(contentRow ?? {});
+    const sizeBytes = contentRow?.size_bytes ?? storedContent?.length ?? null;
 
     // Optional expiry from evidence row, if linked.
     let expiryDate: string | null = null;
@@ -199,10 +204,8 @@ export async function analyzeFile(req: Request, res: Response) {
     }
 
     let documentText = "";
-    if (contentRow?.content) {
-      const buffer = Buffer.isBuffer(contentRow.content)
-        ? contentRow.content
-        : Buffer.from(contentRow.content);
+    if (storedContent) {
+      const buffer = Buffer.isBuffer(storedContent) ? storedContent : Buffer.from(storedContent);
       if (isSupportedMimeType(file.type)) {
         const parsed = await parseDocument(buffer, file.type);
         documentText = parsed.text;
@@ -226,7 +229,7 @@ export async function analyzeFile(req: Request, res: Response) {
         documentText,
         filename: file.filename,
         fileType: file.type,
-        fileSizeBytes: contentRow?.size_bytes ?? null,
+        fileSizeBytes: sizeBytes,
         uploadDate: contentRow?.upload_date ?? null,
         expiryDate,
         parseFidelity: inferParseFidelity(file.type),

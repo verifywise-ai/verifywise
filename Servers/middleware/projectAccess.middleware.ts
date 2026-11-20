@@ -1,16 +1,176 @@
 import { NextFunction, Request, Response } from "express";
 import { STATUS_CODE } from "../utils/statusCode.utils";
 import { logFailure } from "../utils/logger/logHelper";
-import { getProjectAccessQuery, getProjectReadAccessQuery } from "../utils/project.utils";
-import { toId } from "../utils/validations/validation.utils";
+import {
+  getProjectAccessQuery,
+  getProjectReadAccessQuery,
+  inaccessibleUseCasesQuery,
+  type ProjectAccess,
+} from "../utils/project.utils";
+import { seesAllProjects } from "../utils/projectVisibility.utils";
+import { toStrictId } from "../utils/validations/validation.utils";
 
 const FILE = "projectAccess.middleware.ts";
-const FUNCTION_NAME = "requireProjectAccess";
+
+type IdSource = "params" | "query" | "body";
+type AccessRule = "method" | "write";
+
+/**
+ * The use case a child id belongs to, looked up in the caller's organization
+ * only; null when there is no such child there. Receives the request for
+ * resolvers that need another route field (the framework of an impl row).
+ */
+export type UseCaseOfChild = (
+  childId: number,
+  organizationId: number,
+  req: Request,
+) => Promise<number | null>;
+
+export interface UseCaseAccessOptions {
+  /** Name of the field holding the id. Default "id". */
+  param?: string;
+  /**
+   * Where the handler reads that field. It must be the same place: a repeated
+   * query field is refused rather than resolved, so the id checked here is the
+   * id the handler acts on. "body" for a JSON body (mount after the parser).
+   * Default "params".
+   */
+  source?: IdSource;
+  /**
+   * "write" applies the write rule to a GET as well, for a read that only
+   * someone who could change the use case may make. The default picks the
+   * rule from the method.
+   */
+  access?: AccessRule;
+  /** Let a request without the field through unchecked (the handler then does not scope by it). */
+  optional?: boolean;
+  /**
+   * A child or use case that is not in the caller's organization: "pass" lets
+   * the handler answer its usual 404. "refuseWrites" (the default for child
+   * routes) does that for a GET and answers 404 itself for any other method,
+   * since several legacy write handlers never check that the row exists and
+   * would write against another organization's id. "seesAll" lets through
+   * only a role that sees every use case and refuses anyone else with 403,
+   * for rows that outlive their use case (its change history).
+   */
+  missing?: "pass" | "refuseWrites" | "seesAll";
+  /**
+   * Asked only when the use case rule refuses: true lets the caller through
+   * anyway (the stakeholder assigned to a monitoring cycle, who need not be
+   * on the use case). Receives the same id and organization as the resolver.
+   */
+  orAllow?: (childId: number, organizationId: number, req: Request) => Promise<boolean>;
+}
 
 const eventTypeFor = (method: string): "Read" | "Delete" | "Update" => {
   if (method === "GET") return "Read";
   if (method === "DELETE") return "Delete";
   return "Update";
+};
+
+/**
+ * The resolver for a route that names the use case itself, for example a
+ * use case id in the body: requireUseCaseAccessVia(sameUseCase, {...}).
+ */
+export const sameUseCase: UseCaseOfChild = async (id) => id;
+
+/** The 403 every refusal answers, with the same audit entry. */
+const refuseAccess = async (
+  req: Request,
+  res: Response,
+  functionName: string,
+  description: string,
+) => {
+  await logFailure({
+    eventType: eventTypeFor(req.method),
+    description: `${req.method} refused, ${description}`,
+    functionName,
+    fileName: FILE,
+    error: new Error("Access denied"),
+    // Both guards answer 401 before refusing when there is no user.
+    userId: req.userId!,
+    organizationId: req.organizationId,
+  });
+  return res.status(403).json(STATUS_CODE[403](req.t!("Access denied")));
+};
+
+const buildGuard = (
+  resolveUseCase: UseCaseOfChild,
+  options: Required<Pick<UseCaseAccessOptions, "missing">> & UseCaseAccessOptions,
+  functionName: string,
+  invalidIdMessage: string,
+) => {
+  const {
+    param = "id",
+    source = "params",
+    access = "method",
+    optional = false,
+    missing,
+    orAllow,
+  } = options;
+  const label = resolveUseCase === sameUseCase ? "project ID" : `the use case of ${param}`;
+
+  return async (req: Request, res: Response, next: NextFunction) => {
+    const { userId, role, organizationId } = req;
+    if (!userId || !role) {
+      return res.status(401).json(STATUS_CODE[401](req.t!("Unauthorized")));
+    }
+
+    const raw = req[source]?.[param];
+    if (optional && raw === undefined) return next();
+
+    const eventType = eventTypeFor(req.method);
+    // Strict: an id the handler might parse differently (" 1", "1e0", "0x1")
+    // is refused here, never passed on unchecked.
+    const id = toStrictId(raw);
+    if (Number.isNaN(id)) {
+      return res.status(400).json(STATUS_CODE[400](req.t!(invalidIdMessage)));
+    }
+
+    const refuse = (reason: string) =>
+      refuseAccess(req, res, functionName, `${reason} ${label} ${id}`);
+
+    try {
+      // No organization means nothing to scope the check to (a pure SuperAdmin).
+      if (!organizationId) return await refuse("no access to");
+
+      const accessQuery =
+        req.method === "GET" && access === "method"
+          ? getProjectReadAccessQuery
+          : getProjectAccessQuery;
+      const projectId = await resolveUseCase(id, organizationId, req);
+      let result: ProjectAccess =
+        projectId === null
+          ? "not_found"
+          : await accessQuery(projectId, { userId, role }, organizationId);
+      if (result === "denied" && orAllow && (await orAllow(id, organizationId, req))) {
+        result = "allowed";
+      }
+
+      if (result === "denied") return await refuse("no access to");
+      // The use case checked, for handlers that need its id: they use this,
+      // never a project_id from the body.
+      if (result === "allowed") res.locals.useCaseId = projectId;
+      if (result === "not_found") {
+        if (missing === "seesAll" && !seesAllProjects(role)) return await refuse("no use case for");
+        if (missing === "refuseWrites" && req.method !== "GET") {
+          return res.status(404).json(STATUS_CODE[404](req.t!("Record not found")));
+        }
+      }
+      return next();
+    } catch (error) {
+      await logFailure({
+        eventType,
+        description: `Use case access check failed for ${label} ${id}`,
+        functionName,
+        fileName: FILE,
+        error: error as Error,
+        userId,
+        organizationId,
+      });
+      return res.status(500).json(STATUS_CODE[500](req.t!("Internal server error")));
+    }
+  };
 };
 
 /**
@@ -31,54 +191,83 @@ const eventTypeFor = (method: string): "Read" | "Delete" | "Update" => {
  * @param access "write" applies the write rule to a GET as well, for a read
  * that only someone who could change the use case may make (what deleting it
  * would do, for example). The default picks the rule from the method.
+ * @param missing see UseCaseAccessOptions.missing
  */
-export const requireProjectAccess =
-  (
-    paramName: string = "id",
-    source: "params" | "query" = "params",
-    access: "method" | "write" = "method",
-  ) =>
+export const requireProjectAccess = (
+  paramName: string = "id",
+  source: IdSource = "params",
+  access: AccessRule = "method",
+  missing: "pass" | "seesAll" = "pass",
+) =>
+  buildGuard(
+    sameUseCase,
+    { param: paramName, source, access, missing },
+    "requireProjectAccess",
+    "Invalid project ID",
+  );
+
+/**
+ * requireProjectAccess for a route keyed by something that belongs to a use
+ * case (a projects_frameworks row, a framework requirement row, a FRIA)
+ * rather than by the use case id. `resolveUseCase` finds the use case in the
+ * caller's organization (see utils/useCaseOfChild.utils.ts); the same rule,
+ * statuses and logging then apply: 403 without access, 400 for a malformed
+ * id, 500 when the check fails. A child that is not in the organization is
+ * passed on for a GET and answered 404 for a write (see `missing`).
+ */
+export const requireUseCaseAccessVia = (
+  resolveUseCase: UseCaseOfChild,
+  options: UseCaseAccessOptions = {},
+) =>
+  buildGuard(
+    resolveUseCase,
+    { ...options, missing: options.missing ?? "refuseWrites" },
+    "requireUseCaseAccessVia",
+    "Invalid ID",
+  );
+
+/**
+ * The use case the guard on this route checked and allowed, or undefined
+ * when no guard ran or the row was not found (the handler then answers 404).
+ */
+export const checkedUseCaseId = (res: Response): number | undefined => {
+  const id = res.locals?.useCaseId;
+  return typeof id === "number" ? id : undefined;
+};
+
+/**
+ * For a write that names several rows of possibly different use cases (a
+ * reorder): `useCasesOf` lists the use cases those rows belong to, and every
+ * one must pass the write rule, checked in one query. Refusals answer and log
+ * like requireUseCaseAccessVia; a failed check is a 500, never allowed.
+ * `useCasesOf` runs after any body validation, on the validated values.
+ */
+export const requireAccessToUseCases =
+  (useCasesOf: (req: Request, organizationId: number) => Promise<number[]>, functionName: string) =>
   async (req: Request, res: Response, next: NextFunction) => {
     const { userId, role, organizationId } = req;
     if (!userId || !role) {
       return res.status(401).json(STATUS_CODE[401](req.t!("Unauthorized")));
     }
-
-    const eventType = eventTypeFor(req.method);
-    const projectId = toId(req[source][paramName]);
-    if (!Number.isSafeInteger(projectId) || projectId <= 0) {
-      return res.status(400).json(STATUS_CODE[400](req.t!("Invalid project ID")));
-    }
-
     try {
-      const accessQuery =
-        req.method === "GET" && access === "method"
-          ? getProjectReadAccessQuery
-          : getProjectAccessQuery;
-      // No organization means nothing to scope the check to (a pure SuperAdmin).
-      const result = organizationId
-        ? await accessQuery(projectId, { userId, role }, organizationId)
-        : "denied";
-
-      if (result === "denied") {
-        await logFailure({
-          eventType,
-          description: `${req.method} refused, no access to project ID ${projectId}`,
-          functionName: FUNCTION_NAME,
-          fileName: FILE,
-          error: new Error("Access denied"),
-          userId,
-          organizationId,
-        });
-        return res.status(403).json(STATUS_CODE[403](req.t!("Access denied")));
+      if (!organizationId) return await refuseAccess(req, res, functionName, "no organization");
+      const projectIds = [...new Set(await useCasesOf(req, organizationId))];
+      if (projectIds.length === 0) return next();
+      const denied = await inaccessibleUseCasesQuery(projectIds, { userId, role }, organizationId);
+      if (denied.length > 0) {
+        return await refuseAccess(
+          req,
+          res,
+          functionName,
+          `no access to project IDs ${denied.join(", ")}`,
+        );
       }
-
       return next();
     } catch (error) {
       await logFailure({
-        eventType,
-        description: `Project access check failed for project ID ${projectId}`,
-        functionName: FUNCTION_NAME,
+        eventType: eventTypeFor(req.method),
+        description: "Use case access check failed",
+        functionName,
         fileName: FILE,
         error: error as Error,
         userId,

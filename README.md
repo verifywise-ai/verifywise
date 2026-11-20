@@ -1,8 +1,8 @@
 > [!NOTE]
-> **VerifyWise has a new license.** New releases are licensed under the [VerifyWise Community & Evaluation License (VCEL) 1.0](LICENSE.md), which replaces the Business Source License 1.1.
+> **VerifyWise has a new license.** New releases are licensed under the [VerifyWise Community & Evaluation License (VCEL) 1.1](LICENSE.md), which replaces VCEL 1.0 and the Business Source License 1.1.
 >
-> - **Free** for personal use, schools and universities, public sector institutions and noncommercial research. Schools and public bodies can also run it in production for their own work.
-> - **Companies** can evaluate VerifyWise free for 60 days. Running it inside a company after that needs a commercial license.
+> - **Free** for personal use and for training and demonstrations.
+> - **Any organization** can evaluate VerifyWise free for 60 days. Running it inside an organization after that needs a license. This includes companies, government and public-sector bodies, schools, universities, research institutes and nonprofits.
 > - **Releases you already use** keep the license they were released under.
 >
 > Questions? See the [licensing FAQ](LICENSING-FAQ.md) or write to hello@verifywise.ai. Thank you for using and supporting VerifyWise.
@@ -63,7 +63,7 @@ We are democratizing AI best practices with a solution that can be hosted on-pre
 ![VerifyWise platform](https://github.com/user-attachments/assets/2d05cd1f-f67b-45d2-aca4-1fdcde287a44)
 
 - Option to host the application on-premises or in a private cloud
-- Source-available license ([VCEL 1.0](LICENSE.md)): free for personal, educational, public sector, noncommercial research and evaluation use. Commercial use needs a commercial license ([licensing FAQ](LICENSING-FAQ.md))
+- Source-available license ([VCEL 1.1](LICENSE.md)): free for personal use, training and a 60-day evaluation. Any other use by an organization, including government, educational, research and nonprofit organizations, needs a license ([licensing FAQ](LICENSING-FAQ.md))
 - Faster audits using AI-generated answers for compliance and assessment questions
 - Full access to the source code for transparency, security audits, and customization
 - Docker and Kubernetes deployment (also deployable on render.com and similar platforms)
@@ -94,7 +94,7 @@ We are democratizing AI best practices with a solution that can be hosted on-pre
   - Detailed reports with PDF and DOCX export
   - Event logs (audits) for enterprise organizations
   - AI incident management
-  - 25 built-in compliance frameworks: the four above plus 21 more, including SOC 2, GDPR, HIPAA, DORA, CCPA, NIST CSF and NYC Local Law 144
+  - 28 built-in compliance frameworks: the four above plus 24 more, including SOC 2, GDPR, HIPAA, DORA, CCPA, NIST CSF, NYC Local Law 144 and EN 18286
   - Built-in extensions an admin can enable per organization: Slack, MLflow, Azure AI Foundry, Jira Assets, Model Lifecycle, Risk Import (Excel) and Dataset Bulk Upload
   - Automations (when an entity changes, do this, or send period reports, or send webhooks)
   - Google OAuth2 and Entra ID (enterprise edition) support for authentication
@@ -227,10 +227,11 @@ Download the required files using wget:
 
 ```
 curl -O https://raw.githubusercontent.com/bluewave-labs/verifywise/develop/install.sh
-curl -O https://raw.githubusercontent.com/bluewave-labs/verifywise/develop/.env.prod
 ```
 
-Make sure to change the JWT_SECRET variable to your liking, set your super admin credentials (`SUPERADMIN_EMAIL` and `SUPERADMIN_PASSWORD`), and change `localhost` to the IP of the server. An example is shown below:
+`.env.prod` is not published in the repository. Create it next to `install.sh`, starting from the example in the [installation guide](https://verifywise.ai/user-guide/getting-started/installing).
+
+Set your super admin credentials (`SUPERADMIN_EMAIL` and `SUPERADMIN_PASSWORD`), and change `localhost` to the IP of the server. An example is shown below:
 
 ```
 BACKEND_URL=http://64.23.242.4:3000
@@ -238,6 +239,8 @@ FRONTEND_URL=http://64.23.242.4:8080
 SUPERADMIN_EMAIL=admin@verifywise.com
 SUPERADMIN_PASSWORD=YourStr0ngPassword!
 ```
+
+Set every secret in the file as well: `DB_PASSWORD`, `JWT_SECRET`, `REFRESH_TOKEN_SECRET`, `ENCRYPTION_KEY`, `ENCRYPTION_PASSWORD`, `AI_GATEWAY_INTERNAL_KEY` and `EVAL_SERVER_INTERNAL_KEY`, plus `ENCRYPTION_ALGORITHM=aes-256-cbc`. Generate each secret with `openssl rand -base64 32` and write it without quotes. `install.sh` stops before starting any container if one is missing. The backend refuses to start without `ENCRYPTION_KEY`. If you are upgrading an install that ran without it, `install.sh` prints the old default key to set so your stored credentials keep decrypting.
 
 Note: CORS is automatically configured to allow requests from the same host where the backend is running.
 

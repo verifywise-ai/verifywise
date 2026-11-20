@@ -91,7 +91,7 @@ describe("ModelRisksTable", () => {
     expect(screen.getByText("Bias in scoring")).toBeInTheDocument();
     expect(screen.getByText("GPT-4")).toBeInTheDocument();
     expect(screen.getAllByText("Jane Doe").length).toBe(2);
-    expect(screen.getByText("N/A")).toBeInTheDocument();
+    expect(screen.getByText("No model")).toBeInTheDocument();
     expect(screen.getByText("Open")).toBeInTheDocument();
     expect(screen.getByText("Resolved")).toBeInTheDocument();
   });
@@ -100,6 +100,20 @@ describe("ModelRisksTable", () => {
     renderWithProviders(
       <ModelRisksTable
         data={[{ ...risks[0], owner: "999" }]}
+        isLoading={false}
+        onEdit={vi.fn()}
+        onDelete={vi.fn()}
+        users={users}
+        models={models}
+      />,
+    );
+    expect(screen.getByText("Unknown")).toBeInTheDocument();
+  });
+
+  it("shows 'Unknown' for a model id that is not in the loaded models", () => {
+    renderWithProviders(
+      <ModelRisksTable
+        data={[{ ...risks[0], model_id: 999 }]}
         isLoading={false}
         onEdit={vi.fn()}
         onDelete={vi.fn()}
@@ -125,6 +139,29 @@ describe("ModelRisksTable", () => {
 
     fireEvent.click(screen.getByText("Bias in scoring"));
     expect(onEdit).toHaveBeenCalledWith(1);
+  });
+
+  it("opens nothing and offers no actions for a deleted risk", () => {
+    const onEdit = vi.fn();
+    renderWithProviders(
+      <ModelRisksTable
+        data={[{ ...risks[0], is_deleted: true }, risks[1]]}
+        isLoading={false}
+        onEdit={onEdit}
+        onDelete={vi.fn()}
+        users={users}
+        models={models}
+      />,
+    );
+
+    fireEvent.click(screen.getByText("Bias in scoring"));
+    expect(onEdit).not.toHaveBeenCalled();
+    const [deletedRow, liveRow] = screen.getAllByRole("row").slice(1);
+    expect(deletedRow.querySelectorAll("button")).toHaveLength(0);
+    expect(liveRow.querySelectorAll("button").length).toBeGreaterThan(0);
+
+    fireEvent.click(screen.getByText("Drift"));
+    expect(onEdit).toHaveBeenCalledWith(2);
   });
 
   it("sorts by risk name when the column header is clicked", () => {

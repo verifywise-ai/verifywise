@@ -86,6 +86,26 @@ describe("ProjectTableView", () => {
     expect(within(rows[0]).getByText("UC-2")).toBeInTheDocument();
   });
 
+  it("sorts use cases without a start date first and keeps the dated ones in order", () => {
+    renderWithProviders(
+      <ProjectTableView
+        projects={[
+          makeProject(1, { start_date: "2026-03-01T00:00:00.000Z" } as unknown as Partial<Project>),
+          makeProject(2, { start_date: null } as unknown as Partial<Project>),
+          makeProject(3, { start_date: "2026-01-01T00:00:00.000Z" } as unknown as Partial<Project>),
+          makeProject(4, { start_date: "2026-02-01T00:00:00.000Z" } as unknown as Partial<Project>),
+        ]}
+      />,
+    );
+    fireEvent.keyDown(screen.getByText("Start date").closest("th")!, { key: "Enter" });
+
+    const ids = screen
+      .getAllByRole("button")
+      .filter((el) => el.tagName === "TR")
+      .map((row) => within(row).getByText(/^UC-\d+$/).textContent);
+    expect(ids).toEqual(["UC-2", "UC-3", "UC-4", "UC-1"]);
+  });
+
   it("returns to the last page that has rows when the list shrinks", () => {
     const many = Array.from({ length: 12 }, (_, i) => makeProject(i + 1));
     const { rerender } = renderWithProviders(<ProjectTableView projects={many} />);
