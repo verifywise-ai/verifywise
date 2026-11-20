@@ -254,6 +254,51 @@ describe("model risk writes", () => {
     );
   });
 
+  // Decision 10: approvals filed before the likelihood list still execute.
+  it("runs a suggestion filed with a free-text likelihood, keeping the text", async () => {
+    await run("agent_suggest_model_risk", {
+      risk_name: "Drift",
+      description: "Seen in March",
+      risk_level: "High",
+      likelihood: "High",
+      _userId: CHATTER,
+    });
+    expect(mockRiskCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        likelihood: null,
+        risk_level: "High",
+        description: "Seen in March\n\nPrevious likelihood: High",
+      }),
+      editorCtx(CHATTER),
+    );
+  });
+
+  it("runs an update filed with a free-text likelihood, appending it to the stored description", async () => {
+    (sequelize.query as unknown as jest.Mock<any>).mockResolvedValueOnce([
+      { description: "Stored text" },
+    ]);
+    await run("agent_update_model_risk", {
+      model_risk_id: 11,
+      likelihood: "High",
+      _userId: CHATTER,
+    });
+    expect(mockRiskUpdate).toHaveBeenLastCalledWith(
+      11,
+      { description: "Stored text\n\nPrevious likelihood: High" },
+      editorCtx(CHATTER),
+    );
+    await run("agent_update_model_risk", {
+      model_risk_id: 11,
+      likelihood: "likely",
+      _userId: CHATTER,
+    });
+    expect(mockRiskUpdate).toHaveBeenLastCalledWith(
+      11,
+      { likelihood: "Likely" },
+      editorCtx(CHATTER),
+    );
+  });
+
   it("updates, changes status, attaches and detaches through the service", async () => {
     await run("agent_update_model_risk", { model_risk_id: 11, owner: 12, _userId: CHATTER });
     expect(mockRiskUpdate).toHaveBeenLastCalledWith(11, { owner: 12 }, editorCtx(CHATTER));

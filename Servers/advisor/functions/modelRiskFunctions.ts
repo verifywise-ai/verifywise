@@ -1,7 +1,7 @@
 import { ModelRiskCategory } from "../../domain.layer/enums/model-risk-category.enum";
 import { ModelRiskLevel } from "../../domain.layer/enums/model-risk-level.enum";
 import { ModelRiskStatus } from "../../domain.layer/enums/model-risk-status.enum";
-import { getAllModelRisksQuery } from "../../utils/modelRisk.utils";
+import { getAllModelRisksQuery, getModelRiskByIdQuery } from "../../utils/modelRisk.utils";
 import { ModelRiskModel } from "../../domain.layer/models/modelRisk/modelRisk.model";
 import logger from "../../utils/logger/fileLogger";
 
@@ -372,7 +372,12 @@ import {
   updateModelRiskService,
 } from "../../services/modelRisk.service";
 import { isRefusal, modelWriteContext } from "./modelWriteScope";
-import { ModelRiskLikelihood, ModelRiskSeverity } from "../aiActions/createModelRisk/schema";
+import {
+  ModelRiskLikelihood,
+  ModelRiskSeverity,
+  normalizeStoredLabels,
+  withPreviousLikelihood,
+} from "../aiActions/createModelRisk/schema";
 
 // Mirrors the Postgres enums (enum_model_risks_*) and the TS enums
 // (ModelRiskCategory / ModelRiskLevel / ModelRiskStatus). Strict so the
@@ -394,7 +399,7 @@ const isoDateString = z
     message: "must be a valid ISO date string (e.g. 2026-04-15)",
   });
 
-const AgentSuggestModelRiskSchema = z
+const AgentSuggestModelRiskObject = z
   .object({
     /**
      * Existing model id. Use this when the model already exists in the
@@ -437,7 +442,7 @@ const AgentSuggestModelRiskSchema = z
   })
   .strict();
 
-const AgentUpdateModelRiskSchema = z
+const AgentUpdateModelRiskObject = z
   .object({
     model_risk_id: z.number().int().positive(),
     risk_name: z.string().min(3).max(255).optional(),
@@ -451,8 +456,23 @@ const AgentUpdateModelRiskSchema = z
     impact: z.string().max(2048).optional(),
     likelihood: ModelRiskLikelihood.optional(),
     severity: ModelRiskSeverity.optional(),
+    /** Set only by normalizeStoredLabels: free text an older approval held. */
+    _previous_likelihood: z.string().optional(),
   })
   .strict();
+
+/**
+ * Stored input is parsed again when the approval executes (and when filed):
+ * labels are normalized (decision 10).
+ */
+const AgentSuggestModelRiskSchema = z.preprocess(
+  (raw) => normalizeStoredLabels(raw, "description"),
+  AgentSuggestModelRiskObject,
+);
+const AgentUpdateModelRiskSchema = z.preprocess(
+  (raw) => normalizeStoredLabels(raw, "carry"),
+  AgentUpdateModelRiskObject,
+);
 
 function throwOnValidationFailure(
   toolName: string,
@@ -663,6 +683,14 @@ const agentUpdateModelRisk = createWriteToolFn({
 
     const ctx = await modelWriteContext(params, organizationId);
     if (isRefusal(ctx)) return ctx;
+    // An older approval's free-text likelihood goes to the end of the
+    // description, as the migration did for stored risks.
+    if (data._previous_likelihood) {
+      const base =
+        data.description ?? (await getModelRiskByIdQuery(id, organizationId))?.description ?? "";
+      updateData.description = withPreviousLikelihood(base, data._previous_likelihood);
+    }
+
     const result = await updateModelRiskService(id, updateData, ctx);
     if (!result) {
       throw new Error(`Model risk #${id} not found or does not belong to this organization`);
