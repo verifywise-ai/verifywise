@@ -35,11 +35,14 @@ export const getStorageForProvider = (provider: StorageProvider): FileStorage =>
   let storage: FileStorage;
   if (provider === "s3") {
     // Lazy require so deployments without S3 configured never load the SDK
-    // or validate S3 configuration.
-    const { S3Storage } = require("./s3Storage");
+    // or validate S3 configuration. The `typeof import()` cast makes
+    // TypeScript add the file to the emit program: a plain require() is not
+    // followed by tsc, so dist/services/storage/s3Storage.js would never be
+    // emitted and the compiled app would fail with "Cannot find module".
+    const { S3Storage } = require("./s3Storage") as typeof import("./s3Storage");
     storage = new S3Storage();
   } else {
-    const { DatabaseStorage } = require("./databaseStorage");
+    const { DatabaseStorage } = require("./databaseStorage") as typeof import("./databaseStorage");
     storage = new DatabaseStorage();
   }
   instances[provider] = storage;
