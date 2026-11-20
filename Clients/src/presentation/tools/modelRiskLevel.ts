@@ -13,6 +13,36 @@ import { ModelRiskLevel } from "../../domain/interfaces/i.modelRisk";
 export const MODEL_RISK_LIKELIHOODS = Object.values(RiskLikelihood);
 export const MODEL_RISK_SEVERITIES = Object.values(RiskSeverity);
 
+/**
+ * Select options: the stored value is the canonical label ("Almost Certain"),
+ * the text shown is in sentence case ("Almost certain"), which the i18n
+ * dictionaries translate.
+ */
+// Written out so the i18n audit sees each text.
+const LIKELIHOOD_TEXT: Record<RiskLikelihood, string> = {
+  [RiskLikelihood.Rare]: "Rare",
+  [RiskLikelihood.Unlikely]: "Unlikely",
+  [RiskLikelihood.Possible]: "Possible",
+  [RiskLikelihood.Likely]: "Likely",
+  [RiskLikelihood.AlmostCertain]: "Almost certain",
+};
+const SEVERITY_TEXT: Record<RiskSeverity, string> = {
+  [RiskSeverity.Negligible]: "Negligible",
+  [RiskSeverity.Minor]: "Minor",
+  [RiskSeverity.Moderate]: "Moderate",
+  [RiskSeverity.Major]: "Major",
+  [RiskSeverity.Catastrophic]: "Catastrophic",
+};
+
+export const MODEL_RISK_LIKELIHOOD_OPTIONS = MODEL_RISK_LIKELIHOODS.map((l) => ({
+  _id: l,
+  name: LIKELIHOOD_TEXT[l],
+}));
+export const MODEL_RISK_SEVERITY_OPTIONS = MODEL_RISK_SEVERITIES.map((s) => ({
+  _id: s,
+  name: SEVERITY_TEXT[s],
+}));
+
 const LEVEL_FOR: Record<string, ModelRiskLevel> = {
   "No risk": ModelRiskLevel.LOW,
   "Low risk": ModelRiskLevel.LOW,

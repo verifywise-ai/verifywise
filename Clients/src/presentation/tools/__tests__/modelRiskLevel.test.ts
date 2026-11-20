@@ -2,7 +2,9 @@ import { describe, expect, it } from "vitest";
 import {
   computeModelRiskLevel,
   MODEL_RISK_LIKELIHOODS,
+  MODEL_RISK_LIKELIHOOD_OPTIONS,
   MODEL_RISK_SEVERITIES,
+  MODEL_RISK_SEVERITY_OPTIONS,
   modelRiskSaveBody,
 } from "../modelRiskLevel";
 import { ModelRiskLevel } from "../../../domain/interfaces/i.modelRisk";
@@ -60,5 +62,22 @@ describe("modelRiskSaveBody", () => {
     expect(modelRiskSaveBody({ ...base, likelihood: "", severity: "" }, false)).toEqual({
       risk_name: "Drift",
     });
+  });
+});
+
+describe("likelihood and severity options", () => {
+  it("show sentence case and store the canonical label", () => {
+    expect(MODEL_RISK_LIKELIHOOD_OPTIONS).toContainEqual({
+      _id: "Almost Certain",
+      name: "Almost certain",
+    });
+    expect(MODEL_RISK_LIKELIHOOD_OPTIONS.map((o) => o._id)).toEqual(MODEL_RISK_LIKELIHOODS);
+    expect(MODEL_RISK_SEVERITY_OPTIONS.map((o) => o.name)).toEqual([
+      "Negligible",
+      "Minor",
+      "Moderate",
+      "Major",
+      "Catastrophic",
+    ]);
   });
 });

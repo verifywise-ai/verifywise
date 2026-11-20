@@ -29,8 +29,8 @@ import { useCanCheck } from "../../../../application/hooks/useCan";
 import ReadOnlyFieldset from "../../ReadOnlyFieldset";
 import {
   computeModelRiskLevel,
-  MODEL_RISK_LIKELIHOODS,
-  MODEL_RISK_SEVERITIES,
+  MODEL_RISK_LIKELIHOOD_OPTIONS,
+  MODEL_RISK_SEVERITY_OPTIONS,
   modelRiskSaveBody,
   picksModelRiskLevel,
 } from "../../../tools/modelRiskLevel";
@@ -74,9 +74,6 @@ const riskLevelOptions = [
   { _id: ModelRiskLevel.HIGH, name: "High" },
   { _id: ModelRiskLevel.CRITICAL, name: "Critical" },
 ];
-
-const likelihoodOptions = MODEL_RISK_LIKELIHOODS.map((l) => ({ _id: l, name: l }));
-const severityOptions = MODEL_RISK_SEVERITIES.map((s) => ({ _id: s, name: s }));
 
 const statusOptions = [
   { _id: ModelRiskStatus.OPEN, name: "Open" },
@@ -379,7 +376,7 @@ const NewModelRisk: FC<NewModelRiskProps> = ({
             error={errors.likelihood}
             isRequired={!isEdit}
             sx={{ width: "100%" }}
-            items={likelihoodOptions}
+            items={MODEL_RISK_LIKELIHOOD_OPTIONS}
             onChange={handleOnSelectChange("likelihood")}
             placeholder="Select likelihood"
           />
@@ -392,7 +389,7 @@ const NewModelRisk: FC<NewModelRiskProps> = ({
             error={errors.severity}
             isRequired={!isEdit}
             sx={{ width: "100%" }}
-            items={severityOptions}
+            items={MODEL_RISK_SEVERITY_OPTIONS}
             onChange={handleOnSelectChange("severity")}
             placeholder="Select severity"
           />
