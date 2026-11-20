@@ -577,7 +577,8 @@ and v1 routes, as #5418 did for risks, in Shadow AI's start governance
 (which names no approver), in the advisor's model tools and
 `agent_register_model`, and in an intake approval that creates a model (as
 the approving user: a non-Admin cannot approve a submission that names them
-the model's approver, R3, 403; an approver outside the organization is a
+the model's approver, R3, 403 "This submission names you as the model's
+approver. Another reviewer or an Admin must approve it."; an approver outside the organization is a
 400). The update reads the model `FOR UPDATE` in its transaction and checks
 against that row.
 
