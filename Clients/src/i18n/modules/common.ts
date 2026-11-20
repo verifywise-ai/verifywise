@@ -13918,10 +13918,6 @@ export const es: Record<string, string> = {
     "Asignación de formaciones, grupos y roles personalizados, e importación de marcos",
   "A new look, a Home page, OSFI E-23, EN 18286 and risk approvals":
     "Un nuevo aspecto, una página de inicio, OSFI E-23, EN 18286 y aprobación de riesgos",
-  "Enter a full web address starting with http:// or https://":
-    "Introduzca una dirección web completa que empiece por http:// o https://",
-  "Shown under the field on the public form":
-    "Se muestra debajo del campo en el formulario público",
   // Unified sidebar (phase 2)
   "Record": "Registrar",
   "Workspace": "Espacio de trabajo",
