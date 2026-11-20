@@ -1598,8 +1598,8 @@ const ModelInventory: React.FC = () => {
       await fetchModelRisksData(false);
 
       // A refused delete (403: not the model's approver or an Admin) says why.
-      // apiServices throws a CustomException whose response is the body,
-      // { message: "Forbidden", data: "<reason>" }.
+      // apiServices throws a CustomException whose response is the 403 body;
+      // its data field holds the reason.
       const serverMessage =
         (error as { status?: number })?.status === 403
           ? (error as { response?: { data?: unknown } })?.response?.data
