@@ -8,6 +8,8 @@ import { ISO27001AnnexStructModel } from "../domain.layer/frameworks/ISO-27001/I
 import { ISO27001ClauseStructModel } from "../domain.layer/frameworks/ISO-27001/ISO27001ClauseStruct.model";
 import { IProjectsMembers } from "../domain.layer/interfaces/i.projectMember";
 import { projectVisibilitySql } from "./projectVisibility.utils";
+import { deleteObjectOnCommit } from "../services/storage/transactionRegistry";
+import { StorageObjectRef } from "../services/storage/types";
 
 /**
  * Retrieves all project risk data from the `projectrisks` table,
@@ -149,12 +151,23 @@ export const deleteReportByIdQuery = async (id: number, organizationId: number) 
   const deleted = (await sequelize.query(
     `DELETE FROM files
       WHERE organization_id = :organizationId AND id = :id AND source IN (:sources)
-      RETURNING id`,
+      RETURNING id, storage_provider, storage_key`,
     {
       replacements: { id, organizationId, sources: REPORT_FILE_SOURCES },
       type: QueryTypes.DELETE,
     },
-  )) as unknown as { id: number }[];
+  )) as unknown as { id: number; storage_provider: string | null; storage_key: string | null }[];
+
+  // Externally stored bytes go with the row. There is no transaction here, so
+  // the object delete runs immediately after the row delete.
+  for (const row of deleted) {
+    if (row.storage_key) {
+      deleteObjectOnCommit(undefined, {
+        provider: row.storage_provider as StorageObjectRef["provider"],
+        key: row.storage_key,
+      });
+    }
+  }
 
   return deleted.length > 0;
 };
