@@ -177,6 +177,10 @@ import { createSignedToken, verifySignedToken } from "../utils/signedToken.utils
 import { formAiAvailable } from "../services/intakeLiveChecks/availability";
 import { recordSubmitLiveChecks } from "../services/intakeLiveChecks/submit";
 
+/** R3 on intake approval: the submitter, not the reviewer, named the approver. */
+const INTAKE_MODEL_SELF_APPROVER_MESSAGE =
+  "This submission names you as the model's approver. Another reviewer or an Admin must approve it.";
+
 /** Safely extract a single string from req.params (which may be string | string[]). */
 const paramStr = (val: string | string[]): string => (Array.isArray(val) ? val[0] : val);
 
@@ -2656,11 +2660,15 @@ async function approve(
         );
         entityId = createdModel.id!;
       } catch (error) {
-        // The submission's approver is the approving user (R3), or is not a
-        // member of the organization.
+        // The submission names the approving user as the model's approver
+        // (R3): a non-Admin can't approve their own model, so say who can.
         if (error instanceof ModelApprovalForbiddenError) {
           await transaction.rollback();
-          return res.status(403).json(STATUS_CODE[403](translateError(req, error)));
+          const message =
+            error.reason === "self"
+              ? req.t!(INTAKE_MODEL_SELF_APPROVER_MESSAGE)
+              : translateError(req, error);
+          return res.status(403).json(STATUS_CODE[403](message));
         }
         if (error instanceof ValidationException) {
           await transaction.rollback();

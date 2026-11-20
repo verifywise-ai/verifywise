@@ -762,4 +762,55 @@ describe("model write rules", () => {
       }
     });
   });
+  describe("intake approval names the reviewer as approver (R3)", () => {
+    async function modelSubmission(): Promise<number> {
+      const [forms] = await sequelize.query(
+        `INSERT INTO intake_forms (organization_id, name, description, slug, entity_type, schema, created_by)
+         VALUES (:org, 'Model request', 'd', :slug, 'model', :schema, :admin) RETURNING id`,
+        {
+          replacements: {
+            org,
+            admin,
+            slug: `model-form-${Date.now()}-${++counter}`,
+            schema: JSON.stringify({
+              version: "1.0",
+              fields: [{ id: "f_name", type: "text", label: "Name", entityFieldMapping: "name" }],
+            }),
+          },
+        },
+      );
+      const [subs] = await sequelize.query(
+        `INSERT INTO intake_submissions (organization_id, form_id, submitter_name, data, entity_type, status)
+         VALUES (:org, :formId, 'Sam', :data, 'model', 'pending') RETURNING id`,
+        {
+          replacements: {
+            org,
+            formId: Number((forms as any[])[0].id),
+            data: JSON.stringify({ f_name: "Intake model" }),
+          },
+        },
+      );
+      return Number((subs as any[])[0].id);
+    }
+
+    const confirmed = () => ({
+      confirmedEntityData: { name: `Intake model ${++counter}`, provider: "Acme", approver },
+    });
+
+    it("refuses a non-Admin reviewer and says another reviewer or an Admin must approve", async () => {
+      const id = await modelSubmission();
+      const api = await as(org, approver, "Editor");
+      const res = await api.post(`/api/intake/submissions/${id}/approve`).send(confirmed());
+      expect(res.status).toBe(403);
+      expect(JSON.stringify(res.body)).toMatch(/names you as the model's approver/);
+      expect(JSON.stringify(res.body)).not.toMatch(/name yourself/);
+    });
+
+    it("lets an Admin approve the same submission", async () => {
+      const id = await modelSubmission();
+      const api = await as(org, admin, "Admin");
+      const res = await api.post(`/api/intake/submissions/${id}/approve`).send(confirmed());
+      expect(res.status).toBe(200);
+    });
+  });
 });

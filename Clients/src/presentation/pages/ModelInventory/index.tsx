@@ -1597,9 +1597,19 @@ const ModelInventory: React.FC = () => {
       await fetchModelInventoryData(false);
       await fetchModelRisksData(false);
 
+      // A refused delete (403: not the model's approver or an Admin) says why.
+      // apiServices throws a CustomException whose response is the body,
+      // { message: "Forbidden", data: "<reason>" }.
+      const serverMessage =
+        (error as { status?: number })?.status === 403
+          ? (error as { response?: { data?: unknown } })?.response?.data
+          : undefined;
       setAlert({
         variant: "error",
-        body: "Failed to delete model inventory. Please try again.",
+        body:
+          typeof serverMessage === "string" && serverMessage
+            ? serverMessage
+            : "Failed to delete model inventory. Please try again.",
       });
     } finally {
       setDeletingId(null);

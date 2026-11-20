@@ -1555,6 +1555,7 @@
   "A linked risk was not found in this organization.": "Ein verknüpftes Risiko wurde in dieser Organisation nicht gefunden.",
   "A linked training was not found in this organization.": "Eine verknüpfte Schulung wurde in dieser Organisation nicht gefunden.",
   "Only the model's approver or an Admin can change its approval.": "Nur die genehmigende Person des Modells oder ein Admin kann die Genehmigung ändern.",
+  "This submission names you as the model's approver. Another reviewer or an Admin must approve it.": "Diese Einreichung nennt Sie als genehmigende Person des Modells. Eine andere prüfende Person oder ein Admin muss sie genehmigen.",
   "A value in this request is not valid.": "Ein Wert in dieser Anfrage ist ungültig.",
   "Status must be one of the model statuses.": "Der Status muss einer der Modellstatus sein.",
   "Invalid ID": "Ungültige ID",

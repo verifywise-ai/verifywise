@@ -113,9 +113,13 @@ const MODEL_APPROVAL_FORBIDDEN_MESSAGES = {
 
 /** A refused approval change; a ForbiddenException, answered 403 with its message. */
 export class ModelApprovalForbiddenError extends ForbiddenException {
+  /** Which rule refused: "decide" (R1, R2) or "self" (R3). */
+  readonly reason: keyof typeof MODEL_APPROVAL_FORBIDDEN_MESSAGES;
+
   constructor(reason: keyof typeof MODEL_APPROVAL_FORBIDDEN_MESSAGES = "decide") {
     const message = MODEL_APPROVAL_FORBIDDEN_MESSAGES[reason];
     super(message, "model", "approval", { i18nKey: message });
+    this.reason = reason;
     this.name = "ModelApprovalForbiddenError";
     Object.setPrototypeOf(this, ModelApprovalForbiddenError.prototype);
   }

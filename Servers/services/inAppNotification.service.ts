@@ -1855,7 +1855,7 @@ const ENTITY_TYPE_DISPLAY_LABELS: Record<string, string> = {
   vendor: "Vendor",
   vendor_risk: "Vendor Risk",
   project_risk: "Use Case Risk",
-  model_risk: "Model Risk",
+  model_risk: "Model risk",
   project: "Use Case",
   model_inventory: "Model",
   iso42001_subclause: "ISO 42001 Subclause",
