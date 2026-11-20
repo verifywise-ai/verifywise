@@ -372,6 +372,7 @@ import {
   updateModelRiskService,
 } from "../../services/modelRisk.service";
 import { isRefusal, modelWriteContext } from "./modelWriteScope";
+import { ModelRiskLikelihood, ModelRiskSeverity } from "../aiActions/createModelRisk/schema";
 
 // Mirrors the Postgres enums (enum_model_risks_*) and the TS enums
 // (ModelRiskCategory / ModelRiskLevel / ModelRiskStatus). Strict so the
@@ -414,6 +415,8 @@ const AgentSuggestModelRiskSchema = z
     risk_name: z.string().min(3).max(255),
     description: z.string().max(2048).optional(),
     risk_category: ModelRiskCategorySchema.optional(),
+    // Not offered to the model any more (likelihood and severity set the
+    // level); parsed so approvals filed before still execute.
     risk_level: ModelRiskLevelSchema.optional(),
     status: ModelRiskStatusSchema.optional(),
     /**
@@ -429,7 +432,8 @@ const AgentSuggestModelRiskSchema = z
     target_date: isoDateString.optional(),
     mitigation_plan: z.string().max(2048).optional(),
     impact: z.string().max(2048).optional(),
-    likelihood: z.string().max(255).optional(),
+    likelihood: ModelRiskLikelihood.optional(),
+    severity: ModelRiskSeverity.optional(),
   })
   .strict();
 
@@ -445,7 +449,8 @@ const AgentUpdateModelRiskSchema = z
     target_date: isoDateString.optional(),
     mitigation_plan: z.string().max(2048).optional(),
     impact: z.string().max(2048).optional(),
-    likelihood: z.string().max(255).optional(),
+    likelihood: ModelRiskLikelihood.optional(),
+    severity: ModelRiskSeverity.optional(),
   })
   .strict();
 
@@ -581,7 +586,8 @@ const _agentSuggestModelRiskInner = createWriteToolFn({
         target_date: data.target_date || new Date().toISOString(),
         mitigation_plan: data.mitigation_plan || "",
         impact: data.impact || "",
-        likelihood: data.likelihood || "",
+        likelihood: data.likelihood ?? null,
+        severity: data.severity ?? null,
       },
       ctx,
     );
@@ -646,6 +652,7 @@ const agentUpdateModelRisk = createWriteToolFn({
       "mitigation_plan",
       "impact",
       "likelihood",
+      "severity",
     ];
 
     for (const field of updatableFields) {

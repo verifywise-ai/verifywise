@@ -14,6 +14,12 @@
  */
 
 import { z } from "zod";
+import {
+  LIKELIHOOD_SCALE,
+  LikelihoodLabel,
+  SEVERITY_SCALE,
+  SeverityLabel,
+} from "../../../utils/riskLevel.utils";
 
 export const ModelRiskCategory = z.enum([
   "Performance",
@@ -24,6 +30,14 @@ export const ModelRiskCategory = z.enum([
 ]);
 
 export const ModelRiskLevel = z.enum(["Low", "Medium", "High", "Critical"]);
+
+/** The likelihood and severity lists the level is computed from (decision 10). */
+export const ModelRiskLikelihood = z.enum(
+  Object.keys(LIKELIHOOD_SCALE) as [LikelihoodLabel, ...LikelihoodLabel[]],
+);
+export const ModelRiskSeverity = z.enum(
+  Object.keys(SEVERITY_SCALE) as [SeverityLabel, ...SeverityLabel[]],
+);
 
 export const ModelRiskStatus = z.enum(["Open", "In Progress", "Resolved", "Accepted"]);
 
@@ -50,6 +64,11 @@ export const AgentCreateModelRiskSchema = z
     risk_name: z.string().min(3).max(255),
     description: z.string().max(2048).optional(),
     risk_category: ModelRiskCategory.optional(),
+    /**
+     * No longer offered to the model: the level comes from likelihood and
+     * severity. Still parsed so an approval filed before keeps executing;
+     * the service ignores it when both are set.
+     */
     risk_level: ModelRiskLevel.optional(),
     status: ModelRiskStatus.optional(),
     /**
@@ -65,7 +84,8 @@ export const AgentCreateModelRiskSchema = z
     target_date: isoDateString.optional(),
     mitigation_plan: z.string().max(2048).optional(),
     impact: z.string().max(2048).optional(),
-    likelihood: z.string().max(255).optional(),
+    likelihood: ModelRiskLikelihood.optional(),
+    severity: ModelRiskSeverity.optional(),
   })
   .strict();
 

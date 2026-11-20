@@ -1,3 +1,8 @@
+import { LIKELIHOOD_SCALE, SEVERITY_SCALE } from "../../utils/riskLevel.utils";
+
+const LIKELIHOODS = Object.keys(LIKELIHOOD_SCALE);
+const SEVERITIES = Object.keys(SEVERITY_SCALE);
+
 export const toolsDefinition: any[] = [
   {
     type: "function",
@@ -116,11 +121,6 @@ export const toolsDefinition: any[] = [
             enum: ["Performance", "Bias & Fairness", "Security", "Data Quality", "Compliance"],
             description: "The category of the model risk.",
           },
-          risk_level: {
-            type: "string",
-            enum: ["Low", "Medium", "High", "Critical"],
-            description: "The severity level of the model risk.",
-          },
           status: {
             type: "string",
             enum: ["Open", "In Progress", "Resolved", "Accepted"],
@@ -146,7 +146,15 @@ export const toolsDefinition: any[] = [
           },
           likelihood: {
             type: "string",
-            description: "Likelihood of the risk occurring.",
+            enum: LIKELIHOODS,
+            description:
+              "How likely the risk is to occur. With severity, it sets the risk level (Low, Medium, High or Critical); there is no level to pass.",
+          },
+          severity: {
+            type: "string",
+            enum: SEVERITIES,
+            description:
+              "How bad the outcome would be if the risk occurs. With likelihood, it sets the risk level.",
           },
         },
         required: ["risk_name"],
@@ -179,11 +187,6 @@ export const toolsDefinition: any[] = [
             enum: ["Performance", "Bias & Fairness", "Security", "Data Quality", "Compliance"],
             description: "Updated risk category.",
           },
-          risk_level: {
-            type: "string",
-            enum: ["Low", "Medium", "High", "Critical"],
-            description: "Updated severity level.",
-          },
           status: {
             type: "string",
             enum: ["Open", "In Progress", "Resolved", "Accepted"],
@@ -208,7 +211,15 @@ export const toolsDefinition: any[] = [
           },
           likelihood: {
             type: "string",
-            description: "Updated likelihood.",
+            enum: LIKELIHOODS,
+            description:
+              "Updated likelihood. The risk level is recomputed from likelihood and severity; there is no level to pass.",
+          },
+          severity: {
+            type: "string",
+            enum: SEVERITIES,
+            description:
+              "Updated severity. The risk level is recomputed from it and the likelihood.",
           },
         },
         required: ["model_risk_id"],
