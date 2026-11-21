@@ -54,6 +54,12 @@ import { useBulkSelection } from "../../../../application/hooks/useBulkSelection
 import { useBulkUpdateFiles } from "../../../../application/hooks/useBulkUpdateFiles";
 import { useTriggerAnalysis, useQualityScores } from "../../../../application/hooks/useEvidenceAi";
 import { useLLMKeyStatus } from "../../../../application/hooks/useLLMKeyStatus";
+import { useCan } from "../../../../application/hooks/useCan";
+import { useTranslation } from "../../../../application/hooks/useTranslation";
+import { handleAlert } from "../../../../application/tools/alertUtils";
+import { fill } from "../../../../i18n/fill";
+import Alert from "../../Alert";
+import type { AlertProps } from "../../../types/alert.types";
 import EvidenceAnalysisPanel from "../../EvidenceAnalysisPanel";
 import EvidenceQualityBadge, { type QualityGrade } from "../../EvidenceQualityBadge";
 import StandardModal from "../../Modals/StandardModal";
@@ -417,6 +423,11 @@ const FileBasicTable: React.FC<IFileBasicTableProps> = ({
   const triggerAnalysis = useTriggerAnalysis();
   const { data: qualityScores } = useQualityScores();
   const { hasKeys: hasLLMKey } = useLLMKeyStatus();
+  // The server's permission for analyze and apply, so a custom role granted it
+  // gets the actions too. Read-only roles may view an analysis but not run one.
+  const canAnalyze = useCan("fileManager.contribute");
+  const { t } = useTranslation();
+  const [alert, setAlert] = useState<AlertProps | null>(null);
   const analysisByFileId = useMemo(() => {
     const m = new Map<number, { grade: QualityGrade | null; analysis: unknown }>();
     (qualityScores ?? []).forEach((q: any) => {
@@ -551,15 +562,33 @@ const FileBasicTable: React.FC<IFileBasicTableProps> = ({
         onClick: handleOpenTagsDialog,
         disabled: bulkMutation.isPending,
       },
-      {
-        id: "analyze_ai",
-        label: "Analyze with AI",
-        icon: <Sparkles size={16} />,
-        disabled: triggerAnalysis.isPending || !hasLLMKey,
-        onClick: async () => {
-          await Promise.all(selectedIds.map((id) => triggerAnalysis.mutateAsync(id)));
-        },
-      },
+      ...(canAnalyze
+        ? [
+            {
+              id: "analyze_ai",
+              label: "Analyze with AI",
+              icon: <Sparkles size={16} />,
+              disabled: triggerAnalysis.isPending || !hasLLMKey,
+              onClick: async () => {
+                // Every file is attempted; one failure must not hide the rest.
+                const results = await Promise.allSettled(
+                  selectedIds.map((id) => triggerAnalysis.mutateAsync(id)),
+                );
+                const failed = results.filter((r) => r.status === "rejected").length;
+                if (failed > 0) {
+                  handleAlert({
+                    variant: "error",
+                    body: fill(t("{failed} of {total} files could not be analyzed"), {
+                      failed,
+                      total: results.length,
+                    }),
+                    setAlert,
+                  });
+                }
+              },
+            },
+          ]
+        : []),
     ],
     [
       handleOpenFolderDialog,
@@ -568,6 +597,8 @@ const FileBasicTable: React.FC<IFileBasicTableProps> = ({
       triggerAnalysis,
       selectedIds,
       hasLLMKey,
+      canAnalyze,
+      t,
     ],
   );
 
@@ -916,32 +947,43 @@ const FileBasicTable: React.FC<IFileBasicTableProps> = ({
                                   <EvidenceQualityBadge grade={entry.grade} />
                                 </Box>
                               )}
-                              <Tooltip
-                                title={
-                                  !hasLLMKey
-                                    ? "Configure an LLM key to enable AI analysis"
-                                    : entry?.grade
-                                      ? "Re-analyze with AI"
-                                      : "Analyze with AI"
-                                }
-                                arrow
-                              >
-                                <span>
-                                  <MUIIconButton
-                                    aria-label={
-                                      entry?.grade ? "Re-analyze with AI" : "Analyze with AI"
-                                    }
-                                    size="small"
-                                    disabled={triggerAnalysis.isPending || !hasLLMKey}
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      if (fid) triggerAnalysis.mutate(fid);
-                                    }}
-                                  >
-                                    <Sparkles size={14} />
-                                  </MUIIconButton>
-                                </span>
-                              </Tooltip>
+                              {canAnalyze && (
+                                <Tooltip
+                                  title={
+                                    !hasLLMKey
+                                      ? "Configure an LLM key to enable AI analysis"
+                                      : entry?.grade
+                                        ? "Re-analyze with AI"
+                                        : "Analyze with AI"
+                                  }
+                                  arrow
+                                >
+                                  <span>
+                                    <MUIIconButton
+                                      aria-label={
+                                        entry?.grade ? "Re-analyze with AI" : "Analyze with AI"
+                                      }
+                                      size="small"
+                                      disabled={triggerAnalysis.isPending || !hasLLMKey}
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        if (fid) {
+                                          triggerAnalysis.mutate(fid, {
+                                            onError: () =>
+                                              handleAlert({
+                                                variant: "error",
+                                                body: "This file could not be analyzed",
+                                                setAlert,
+                                              }),
+                                          });
+                                        }
+                                      }}
+                                    >
+                                      <Sparkles size={14} />
+                                    </MUIIconButton>
+                                  </span>
+                                </Tooltip>
+                              )}
                             </>
                           );
                         })()}
@@ -1234,6 +1276,7 @@ const FileBasicTable: React.FC<IFileBasicTableProps> = ({
       >
         {selectedAnalysis && <EvidenceAnalysisPanel analysis={selectedAnalysis} />}
       </StandardModal>
+      {alert && <Alert {...alert} isToast={true} onClick={() => setAlert(null)} />}
     </>
   );
 };
