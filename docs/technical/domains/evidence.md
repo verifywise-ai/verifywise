@@ -198,6 +198,16 @@ enum FileSource {
 | GET    | `/evidence-ai/suggestions/:fileId`       | Suggested control links for a file     |
 | POST   | `/evidence-ai/suggestions/:fileId/apply` | Create links from accepted suggestions |
 
+Access: every `:fileId` route runs `requireFileAccess` (`Servers/middleware/fileAccess.middleware.ts`),
+which applies `canUserAccessFile`, the File Manager download's rule: Admins; any member for an
+organization-level file; the uploader and the project's owner and members for a project file. A
+file the caller cannot open and a missing file both answer the same 403. `analyze` and `apply` also
+need `fileManager.contribute`, and the file table hides the analyze actions without it. `analyze`
+accepts `visibility` `public` or `private` (400 otherwise) and answers 409, before calling the
+LLM, when another user's private analysis exists. `GET /quality-scores` returns only analyses of
+files the caller can open (`buildFileAccessFilter`). The advisor's `analyze_document` tool applies
+the same permission and file check.
+
 `GET /gaps` takes `framework_type` (`eu_ai_act` or `iso_42001`; both when omitted, and an
 unrecognized value returns nothing rather than quietly answering for another framework) and
 `low_grades` (default `D,F`). `getEvidenceGapsQuery` also accepts a `projectId`, which restricts

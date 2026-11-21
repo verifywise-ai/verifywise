@@ -146,44 +146,80 @@ export const getFileById = async (id: number, organizationId: number) => {
   return result[0];
 };
 
+/** Roles that may read every file in their organization. */
+export const isFileAdminRole = (role: string) => role === "Admin" || role === "SuperAdmin";
+
 /**
- * Check if a user has access to a file.
- * Access is granted if:
- * - User is Admin
- * - User uploaded the file
- * - For project files: User has access to the project (owner or member)
- * - For org-level files: User belongs to the same organization
+ * SQL predicate: the caller (`:fileAccessUserId`) may read the files row
+ * `alias`. It is the rule the File Manager download applies
+ * (fileManager.ctrl.ts downloadFile), minus the Admin bypass, which callers
+ * handle with isFileAdminRole:
+ * - an organization-level file (project_id IS NULL) is readable by any member
+ *   of the organization. files.org_id is not consulted: migrated files and
+ *   uploadFile leave it NULL, and the row's organization_id already scopes it;
+ * - a project file by its uploader and the project's owner and members.
+ *
+ * The caller must already restrict `alias.organization_id` to the caller's
+ * organization.
+ */
+export const fileAccessPredicate = (alias: string) => `(
+      ${alias}.project_id IS NULL
+      OR ${alias}.uploaded_by = :fileAccessUserId
+      OR EXISTS (
+        SELECT 1 FROM projects fa_p
+         WHERE fa_p.id = ${alias}.project_id
+           AND fa_p.organization_id = ${alias}.organization_id
+           AND fa_p.owner = :fileAccessUserId
+      )
+      OR EXISTS (
+        SELECT 1 FROM projects_members fa_pm
+         WHERE fa_pm.project_id = ${alias}.project_id
+           AND fa_pm.organization_id = ${alias}.organization_id
+           AND fa_pm.user_id = :fileAccessUserId
+      )
+    )`;
+
+/**
+ * canUserAccessFile's rule as a WHERE fragment over a joined files row, for
+ * list queries. Empty for Admins. Otherwise the file must exist: a LEFT JOIN
+ * that found no file would otherwise pass as an organization-level file.
+ */
+export const buildFileAccessFilter = (
+  alias: string,
+  userId: number | null,
+  role: string,
+): { clause: string; replacements: Record<string, unknown> } => {
+  if (isFileAdminRole(role)) return { clause: "", replacements: {} };
+  return {
+    clause: `AND ${alias}.id IS NOT NULL AND ${fileAccessPredicate(alias)}`,
+    replacements: { fileAccessUserId: userId },
+  };
+};
+
+/**
+ * Whether the user may read the file: Admins always; otherwise see
+ * fileAccessPredicate. A missing file answers false, like a forbidden one.
  */
 export const canUserAccessFile = async (
   fileId: number,
   userId: number,
   role: string,
   organizationId: number,
-  userOrgId?: number,
 ): Promise<boolean> => {
-  // Admins can access all files
-  if (role === "Admin" || role === "SuperAdmin") {
+  if (isFileAdminRole(role)) {
     return true;
   }
 
-  // Query that handles both project-level and org-level files
   const query = `
     SELECT f.id
     FROM files f
-    LEFT JOIN projects p ON f.project_id = p.id AND p.organization_id = :organizationId
-    LEFT JOIN projects_members pm ON p.id = pm.project_id AND pm.organization_id = :organizationId
     WHERE f.organization_id = :organizationId AND f.id = :fileId
-      AND (
-        f.uploaded_by = :userId
-        OR p.owner = :userId
-        OR pm.user_id = :userId
-        OR (f.project_id IS NULL AND f.org_id = :userOrgId)
-      )
+      AND ${fileAccessPredicate("f")}
     LIMIT 1
   `;
 
   const result = await sequelize.query(query, {
-    replacements: { organizationId, fileId, userId, userOrgId: userOrgId || null },
+    replacements: { organizationId, fileId, fileAccessUserId: userId },
     type: QueryTypes.SELECT,
   });
 

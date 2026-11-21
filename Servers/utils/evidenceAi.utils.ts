@@ -1,5 +1,6 @@
 import { sequelize } from "../database/db";
 import { buildVisibilityFilterForEvidence } from "./visibility.utils";
+import { buildFileAccessFilter } from "./fileUpload.utils";
 import type { QualityGrade } from "../domain.layer/interfaces/i.evidenceAi";
 import { logStructured } from "./logger/fileLogger";
 
@@ -129,24 +130,51 @@ export const getAnalysisByFileIdQuery = async (
 };
 
 /**
- * Get quality scores for all analyzed files (dashboard view).
+ * Visibility and author of a file's stored analysis, or null when there is
+ * none. Used to keep a private analysis from being overwritten by anyone but
+ * its author.
+ */
+export const getAnalysisAuthorQuery = async (
+  fileId: number,
+  organizationId: number,
+): Promise<{ visibility: string; analyzed_by: number | null } | null> => {
+  const [rows] = await sequelize.query(
+    `SELECT visibility, analyzed_by
+       FROM evidence_ai_analysis
+      WHERE file_id = :fileId AND organization_id = :organizationId
+      LIMIT 1`,
+    { replacements: { fileId, organizationId } },
+  );
+  return (rows as any[])[0] ?? null;
+};
+
+/**
+ * Get quality scores for analyzed files (dashboard view).
+ *
+ * Each row carries the analysis itself (summary, findings, suggested links),
+ * so the list is limited to files the caller can access (the rule
+ * canUserAccessFile applies to GET /analysis/:fileId) on top of the
+ * visibility filter.
  */
 export const getQualityScoresQuery = async (
   organizationId: number,
-  userId?: number | null,
+  userId: number | null,
+  role: string,
   visibility?: string,
 ) => {
-  const vis = buildVisibilityFilterForEvidence(userId ?? null, visibility, "eaa");
+  const vis = buildVisibilityFilterForEvidence(userId, visibility, "eaa");
+  const access = buildFileAccessFilter("f", userId, role);
   const [rows] = await sequelize.query(
     `SELECT eaa.*, f.filename
      FROM evidence_ai_analysis eaa
-     LEFT JOIN files f ON f.id = eaa.file_id
+     LEFT JOIN files f ON f.id = eaa.file_id AND f.organization_id = eaa.organization_id
      WHERE eaa.organization_id = :organizationId
      ${vis.clause}
+     ${access.clause}
      ORDER BY CASE eaa.overall_quality_grade
        WHEN 'F' THEN 0 WHEN 'D' THEN 1 WHEN 'C' THEN 2
        WHEN 'B' THEN 3 WHEN 'A' THEN 4 ELSE 5 END ASC`,
-    { replacements: { organizationId, ...vis.replacements } },
+    { replacements: { organizationId, ...vis.replacements, ...access.replacements } },
   );
   return rows as any[];
 };

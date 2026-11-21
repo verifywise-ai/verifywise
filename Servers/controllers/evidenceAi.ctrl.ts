@@ -8,6 +8,7 @@ import {
   getQualityScoresQuery,
   getEvidenceGapsQuery,
   getAdoptedEvidenceFrameworksQuery,
+  getAnalysisAuthorQuery,
   getSuggestionsQuery,
   applySuggestionsQuery,
 } from "../utils/evidenceAi.utils";
@@ -24,6 +25,10 @@ import type {
 } from "../domain.layer/interfaces/i.evidenceAi";
 
 const fileName = "evidenceAi.ctrl.ts";
+
+/** The values evidence_ai_analysis.visibility holds (add-ai-visibility-columns). */
+const ANALYSIS_VISIBILITIES = ["public", "private"] as const;
+type AnalysisVisibility = (typeof ANALYSIS_VISIBILITIES)[number];
 
 /**
  * Why no grade was produced.
@@ -146,6 +151,12 @@ export async function analyzeFile(req: Request, res: Response) {
     return res.status(400).json(STATUS_CODE[400](req.t!("Invalid file ID")));
   }
 
+  const requestedVisibility = req.body?.visibility ?? "public";
+  if (!(ANALYSIS_VISIBILITIES as readonly unknown[]).includes(requestedVisibility)) {
+    return res.status(400).json(STATUS_CODE[400](req.t!("Visibility must be public or private")));
+  }
+  const visibility = requestedVisibility as AnalysisVisibility;
+
   logStructured("processing", `analyzing file ${fileId}`, functionName, fileName);
 
   try {
@@ -171,6 +182,16 @@ export async function analyzeFile(req: Request, res: Response) {
     const file = (fileRows as any[])[0];
     if (!file) {
       return res.status(404).json(STATUS_CODE[404](req.t!("File not found")));
+    }
+
+    // A private analysis is visible only to its author, so nobody else may
+    // replace it; the advisor's analyze_document leaves it alone too. Checked
+    // before the LLM call so a refused request spends no AI credits.
+    const existing = await getAnalysisAuthorQuery(fileId, organizationId);
+    if (existing?.visibility === "private" && Number(existing.analyzed_by) !== userId) {
+      return res
+        .status(409)
+        .json(STATUS_CODE[409](req.t!("This file has a private analysis by another user")));
     }
 
     const [contentRows] = await sequelize.query(
@@ -289,7 +310,6 @@ export async function analyzeFile(req: Request, res: Response) {
     }
 
     // ---- Persist -------------------------------------------------
-    const visibility = req.body?.visibility || "public";
     const analysis = await upsertAnalysisQuery(fileId, organizationId, {
       summary,
       key_findings: keyFindings,
@@ -402,6 +422,7 @@ export async function getQualityScores(req: Request, res: Response) {
     const scores = await getQualityScoresQuery(
       req.organizationId!,
       req.userId ? Number(req.userId) : null,
+      req.role || "",
       visFilter,
     );
 
