@@ -73,7 +73,33 @@ export async function resolveUseCaseFrameworks(names: string[]): Promise<UseCase
     return { ids: [], isOrganizational: false };
   }
 
-  const matched = await matchByName(names);
+  return scopeOf(await matchByName(names));
+}
+
+/**
+ * The same for framework ids (the advisor names frameworks by the ids
+ * fetch_frameworks reports). An unknown id is refused with the list.
+ */
+export async function resolveUseCaseFrameworkIds(ids: number[]): Promise<UseCaseFrameworks> {
+  if (ids.length === 0) {
+    return { ids: [], isOrganizational: false };
+  }
+  const all = await listFrameworkRefs();
+  const byId = new Map(all.map((f) => [f.id, f]));
+  const matched = ids.map((id) => {
+    const found = byId.get(id);
+    if (!found) {
+      throw new Error(
+        `No framework with id ${id} on this deployment. Available: ${all.map((f) => `${f.id} ${f.name}`).join(", ")}.`,
+      );
+    }
+    return found;
+  });
+  return scopeOf(matched);
+}
+
+/** A use case's scope from its frameworks, which must all share one. */
+function scopeOf(matched: FrameworkRef[]): UseCaseFrameworks {
   const organizationWide = matched.filter((f) => f.isOrganizational);
   const useCaseScoped = matched.filter((f) => !f.isOrganizational);
 
