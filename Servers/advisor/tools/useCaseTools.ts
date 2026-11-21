@@ -1,3 +1,9 @@
+import {
+  USE_CASE_CLASSIFICATIONS,
+  USE_CASE_CLASSIFICATION_FILTERS,
+  USE_CASE_STATUSES,
+} from "../functions/useCaseLabels";
+
 export const toolsDefinition: any[] = [
   {
     type: "function",
@@ -10,12 +16,12 @@ export const toolsDefinition: any[] = [
         properties: {
           status: {
             type: "string",
-            enum: ["Draft", "In Progress", "Active", "Completed", "Archived"],
+            enum: USE_CASE_STATUSES,
             description: "Filter by use case status.",
           },
           ai_risk_classification: {
             type: "string",
-            enum: ["High risk", "Limited risk", "Minimal risk", "Unacceptable risk"],
+            enum: USE_CASE_CLASSIFICATION_FILTERS,
             description: "Filter by EU AI Act risk classification level.",
           },
           limit: {
@@ -46,7 +52,7 @@ export const toolsDefinition: any[] = [
     function: {
       name: "get_use_case_executive_summary",
       description:
-        "Get a high-level executive summary of use cases. Use this tool for quick overview of total use cases, active vs draft counts, high-risk use cases, and compliance posture. Ideal for answering questions about overall use case portfolio.",
+        "Get a high-level executive summary of use cases. Use this tool for quick overview of total use cases, counts by status (not started, in progress, under review, completed, and every other status), high-risk and prohibited use cases, and the use cases with the most risks. Ideal for answering questions about overall use case portfolio.",
       parameters: {
         type: "object",
         properties: {},
@@ -59,7 +65,7 @@ export const toolsDefinition: any[] = [
     function: {
       name: "agent_create_use_case",
       description:
-        "Create a new use case (project) in the system. Requires human confirmation before execution.",
+        "Create a new use case (project) in the system, as the console does: the owner (the requester unless another user is named), members and frameworks are set, change history is recorded and the owner is notified. Requires human confirmation before execution.",
       parameters: {
         type: "object",
         properties: {
@@ -73,17 +79,37 @@ export const toolsDefinition: any[] = [
           },
           status: {
             type: "string",
-            enum: ["Draft", "In Progress", "Active", "Completed", "Archived"],
-            description: "Initial status for the use case. Defaults to 'Draft'.",
+            enum: USE_CASE_STATUSES,
+            description: "Initial status for the use case. Defaults to 'Not started'.",
           },
           risk_classification: {
             type: "string",
-            enum: ["High risk", "Limited risk", "Minimal risk", "Unacceptable risk"],
+            enum: USE_CASE_CLASSIFICATIONS,
             description: "EU AI Act risk classification level.",
           },
           industry: {
             type: "string",
             description: "Target industry for the use case.",
+          },
+          goal: {
+            type: "string",
+            description: "What the use case is meant to achieve.",
+          },
+          owner: {
+            type: "number",
+            description:
+              "User id of the owner, a user of this organization. Defaults to the user who asked.",
+          },
+          members: {
+            type: "array",
+            items: { type: "number" },
+            description: "User ids to add as members, users of this organization.",
+          },
+          framework_ids: {
+            type: "array",
+            items: { type: "number" },
+            description:
+              "Ids of the compliance frameworks to attach, as fetch_frameworks reports them. All must be use-case scoped, or all organization-wide.",
           },
         },
         required: ["name"],
@@ -95,7 +121,7 @@ export const toolsDefinition: any[] = [
     function: {
       name: "agent_update_use_case",
       description:
-        "Update an existing use case (project). Requires human confirmation before execution.",
+        "Update an existing use case (project). Only the fields sent change; the change is recorded in the use case history. Requires human confirmation before execution.",
       parameters: {
         type: "object",
         properties: {
@@ -113,12 +139,12 @@ export const toolsDefinition: any[] = [
           },
           status: {
             type: "string",
-            enum: ["Draft", "In Progress", "Active", "Completed", "Archived"],
+            enum: USE_CASE_STATUSES,
             description: "New status for the use case.",
           },
           risk_classification: {
             type: "string",
-            enum: ["High risk", "Limited risk", "Minimal risk", "Unacceptable risk"],
+            enum: USE_CASE_CLASSIFICATIONS,
             description: "New EU AI Act risk classification level.",
           },
           industry: {
@@ -149,7 +175,7 @@ export const toolsDefinition: any[] = [
           },
           status: {
             type: "string",
-            enum: ["Draft", "In Progress", "Active", "Completed", "Archived"],
+            enum: USE_CASE_STATUSES,
             description: "New status for the use case.",
           },
         },
