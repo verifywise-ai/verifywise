@@ -23,6 +23,9 @@ jest.mock("../../../services/useCaseNotifications.service", () => ({
   notifyUseCaseCreated: jest.fn(),
   notifyUseCaseUpdated: jest.fn(),
 }));
+jest.mock("../../../utils/user.utils", () => ({
+  findUsersNotInOrganization: jest.fn(),
+}));
 jest.mock("../../../mcp/frameworks", () => ({
   resolveUseCaseFrameworkIds: jest.fn(),
 }));
@@ -37,10 +40,13 @@ import { sequelize } from "../../../database/db";
 import { getUserRoleInOrganization, userHasPermission } from "../../../utils/userPermission.utils";
 import {
   calculateProjectRisks,
+  getCurrentProjectMembers,
   getProjectAccessQuery,
   getProjectByIdQuery,
   getUserProjects,
+  lockProjectForDelete,
 } from "../../../utils/project.utils";
+import { findUsersNotInOrganization } from "../../../utils/user.utils";
 import { createUseCaseService, updateUseCaseService } from "../../../services/useCase.service";
 import {
   notifyUseCaseCreated,
@@ -62,6 +68,9 @@ const notifyUpdated = notifyUseCaseUpdated as unknown as AsyncMock;
 const frameworksOf = resolveUseCaseFrameworkIds as unknown as AsyncMock;
 const submit = submitForApproval as unknown as AsyncMock;
 const listProjects = getUserProjects as unknown as AsyncMock;
+const lockRow = lockProjectForDelete as unknown as AsyncMock;
+const membersNow = getCurrentProjectMembers as unknown as AsyncMock;
+const usersOutside = findUsersNotInOrganization as unknown as AsyncMock;
 
 const transaction = { commit: jest.fn(), rollback: jest.fn() };
 const EXISTING = { id: 12, owner: 5, status: "Not started", external_owner_email: null };
@@ -80,6 +89,9 @@ beforeEach(() => {
   updateService.mockResolvedValue({ useCase: { id: 12, members: [] }, currentMembers: [] });
   submit.mockResolvedValue({ outcome: "pending", confirmationResult: { pending: true } });
   (calculateProjectRisks as unknown as AsyncMock).mockResolvedValue([]);
+  lockRow.mockResolvedValue(true);
+  membersNow.mockResolvedValue([]);
+  usersOutside.mockResolvedValue([]);
 });
 
 /** U-M6: advisor creates and updates go through the use case service. */
@@ -293,4 +305,149 @@ describe("get_use_case_executive_summary", () => {
     });
     expect(summary.statusCounts["On hold"]).toBe(1);
   });
+});
+
+/** Review fixes on the advisor use case writes. */
+describe("agent_add_member_to_use_case reads members under the row lock", () => {
+  it("locks the use case, then reads its members in the same transaction", async () => {
+    const order: string[] = [];
+    lockRow.mockImplementation(async () => {
+      order.push("lock");
+      return true;
+    });
+    membersNow.mockImplementation(async () => {
+      order.push("read");
+      return [7];
+    });
+
+    const result = (await writeToolExecutors.get("agent_add_member_to_use_case")!(
+      { use_case_id: 12, user_id: 20, _userId: 9 },
+      4,
+    )) as any;
+
+    expect(result.success).toBe(true);
+    expect(order).toEqual(["lock", "read"]);
+    expect(lockRow).toHaveBeenCalledWith(12, 4, transaction);
+    expect(membersNow).toHaveBeenCalledWith(12, 4, transaction);
+    expect(updateService.mock.calls[0][1]).toEqual({ members: [7, 20] });
+  });
+
+  it("refuses an existing member and writes nothing", async () => {
+    membersNow.mockResolvedValue([20]);
+    const result = (await writeToolExecutors.get("agent_add_member_to_use_case")!(
+      { use_case_id: 12, user_id: 20, _userId: 9 },
+      4,
+    )) as any;
+    expect(result).toEqual({
+      success: false,
+      message: "User is already a member of this use case",
+    });
+    expect(updateService).not.toHaveBeenCalled();
+    expect(transaction.rollback).toHaveBeenCalled();
+  });
+});
+
+describe("repeated ids", () => {
+  it("are written once", async () => {
+    await writeToolExecutors.get("agent_create_use_case")!(
+      { name: "X", members: [8, 8], framework_ids: [5, 5], _userId: 9 },
+      4,
+    );
+    expect(frameworksOf).toHaveBeenCalledWith([5]);
+    expect((createService.mock.calls[0][0] as any).members).toEqual([8]);
+  });
+});
+
+describe("the console's title rules", () => {
+  const long = "x".repeat(256);
+
+  it.each([
+    ["agent_create_use_case", {}],
+    ["agent_create_use_case", { name: "   " }],
+    ["agent_create_use_case", { name: long }],
+    ["agent_update_use_case", { use_case_id: 12, name: "" }],
+    ["agent_update_use_case", { use_case_id: 12, name: long }],
+  ])("%s refuses %j at file time", async (tool, params) => {
+    await expect(availableUseCaseTools[tool]({ ...params, _userId: 9 }, 4)).rejects.toThrow(
+      "project_title",
+    );
+    expect(submit).not.toHaveBeenCalled();
+  });
+
+  it("refuses a blank title when a stored approval executes", async () => {
+    const result = (await writeToolExecutors.get("agent_update_use_case")!(
+      { use_case_id: 12, name: "  ", _userId: 9 },
+      4,
+    )) as any;
+    expect(result.success).toBe(false);
+    expect(updateService).not.toHaveBeenCalled();
+  });
+
+  it("refuses an over-long title when a stored approval executes", async () => {
+    const result = (await writeToolExecutors.get("agent_create_use_case")!(
+      { name: long, _userId: 9 },
+      4,
+    )) as any;
+    expect(result.success).toBe(false);
+    expect(createService).not.toHaveBeenCalled();
+  });
+
+  it("writes the title trimmed", async () => {
+    await writeToolExecutors.get("agent_update_use_case")!(
+      { use_case_id: 12, name: "  Renamed  ", _userId: 9 },
+      4,
+    );
+    expect((updateService.mock.calls[0][1] as any).project_title).toBe("Renamed");
+  });
+});
+
+describe("the owner is checked when filed", () => {
+  it("refuses an owner that is not a user id", async () => {
+    await expect(
+      availableUseCaseTools.agent_create_use_case({ name: "X", owner: "abc", _userId: 9 }, 4),
+    ).rejects.toThrow("owner");
+    expect(submit).not.toHaveBeenCalled();
+  });
+
+  it("refuses an owner outside the organization", async () => {
+    usersOutside.mockResolvedValue([99]);
+    await expect(
+      availableUseCaseTools.agent_create_use_case({ name: "X", owner: 99, _userId: 9 }, 4),
+    ).rejects.toThrow("not in this organization");
+    expect(usersOutside).toHaveBeenCalledWith([99], 4);
+    expect(submit).not.toHaveBeenCalled();
+  });
+});
+
+describe("executive summary status buckets", () => {
+  it("counts no status as Not started and older labels as Other, adding up to the total", async () => {
+    listProjects.mockResolvedValue([
+      { id: 1, status: null },
+      { id: 2, status: "Draft" },
+      { id: 3, status: "In progress" },
+    ]);
+    const summary = (await availableUseCaseTools.get_use_case_executive_summary(
+      { _userId: 9 },
+      4,
+    )) as any;
+    expect(summary.notStartedUseCases).toBe(1);
+    expect(summary.statusCounts.Other).toBe(1);
+    const sum = Object.values(summary.statusCounts as Record<string, number>).reduce(
+      (a, b) => a + b,
+      0,
+    );
+    expect(sum).toBe(summary.totalUseCases);
+  });
+});
+
+describe("fetch_use_cases filters that are not text", () => {
+  it.each([{ status: 5 }, { ai_risk_classification: { a: 1 } }])(
+    "%j matches nothing instead of failing",
+    async (filter) => {
+      listProjects.mockResolvedValue([{ id: 1, status: "In progress" }]);
+      await expect(
+        availableUseCaseTools.fetch_use_cases({ ...filter, _userId: 9 }, 4),
+      ).resolves.toEqual([]);
+    },
+  );
 });

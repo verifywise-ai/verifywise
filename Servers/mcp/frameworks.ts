@@ -81,6 +81,8 @@ export async function resolveUseCaseFrameworks(names: string[]): Promise<UseCase
  * fetch_frameworks reports). An unknown id is refused with the list.
  */
 export async function resolveUseCaseFrameworkIds(ids: number[]): Promise<UseCaseFrameworks> {
+  // One link per framework: a repeated id would break the unique link.
+  ids = [...new Set(ids)];
   if (ids.length === 0) {
     return { ids: [], isOrganizational: false };
   }

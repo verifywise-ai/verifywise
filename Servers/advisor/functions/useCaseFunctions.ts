@@ -18,7 +18,8 @@ import { findUsersNotInOrganization } from "../../utils/user.utils";
 import logger from "../../utils/logger/fileLogger";
 import { createWriteToolFn } from "../confirmation/createWriteTool";
 import { sequelize } from "../../database/db";
-import { QueryTypes } from "sequelize";
+import { QueryTypes, type Transaction } from "sequelize";
+import { PROJECT_TITLE_MAX_LENGTH } from "../../middleware/validators/project.validator";
 import {
   createUseCaseService,
   updateUseCaseService,
@@ -69,16 +70,20 @@ const fetchUseCases = async (
   try {
     let projects = await getVisibleProjects(params as Record<string, unknown>, organizationId);
 
-    // Apply filters, matching the stored spelling case-insensitively.
-    if (params.status) {
-      const status = canonicalStatus(params.status) ?? params.status;
+    // Apply filters, matching the stored spelling case-insensitively. A filter
+    // that is not text matches nothing, rather than listing every use case.
+    const statusFilter: unknown = params.status;
+    const classFilter: unknown = params.ai_risk_classification;
+    if (statusFilter !== undefined && statusFilter !== null && statusFilter !== "") {
+      if (typeof statusFilter !== "string") return [];
+      const status = canonicalStatus(statusFilter) ?? statusFilter;
       projects = projects.filter((p: any) => p.status === status);
     }
-    if (params.ai_risk_classification) {
-      const wanted = params.ai_risk_classification.trim().toLowerCase();
+    if (classFilter !== undefined && classFilter !== null && classFilter !== "") {
+      if (typeof classFilter !== "string") return [];
+      const wanted = classFilter.trim().toLowerCase();
       const classification =
-        USE_CASE_CLASSIFICATION_FILTERS.find((c) => c.toLowerCase() === wanted) ??
-        params.ai_risk_classification;
+        USE_CASE_CLASSIFICATION_FILTERS.find((c) => c.toLowerCase() === wanted) ?? classFilter;
       projects = projects.filter((p: any) => p.ai_risk_classification === classification);
     }
 
@@ -155,6 +160,8 @@ const getUseCaseAnalytics = async (
   }
 };
 
+const OTHER_STATUS = "Other";
+
 const getUseCaseExecutiveSummary = async (
   params: Record<string, unknown>,
   organizationId: number,
@@ -163,12 +170,19 @@ const getUseCaseExecutiveSummary = async (
     const projects = await getVisibleProjects(params, organizationId);
     const total = projects.length;
 
-    // Every status the console offers, zero when none is in it.
+    // Every status the console offers, zero when none is in it. No status
+    // counts as Not started, as in the analytics; a value off the list (an
+    // older label) counts as Other, so the counts add up to the total.
     const statusCounts: Record<string, number> = Object.fromEntries(
       USE_CASE_STATUSES.map((status) => [status, 0]),
     );
     projects.forEach((p: any) => {
-      if (p.status in statusCounts) statusCounts[p.status] += 1;
+      const status = p.status || ProjectStatus.NOT_STARTED;
+      if (Object.prototype.hasOwnProperty.call(statusCounts, status)) {
+        statusCounts[status] += 1;
+      } else {
+        statusCounts[OTHER_STATUS] = (statusCounts[OTHER_STATUS] ?? 0) + 1;
+      }
     });
 
     const highRiskCount = projects.filter(
@@ -252,50 +266,141 @@ const useCaseWriteContext = async (
 const isRefusal = (value: unknown): value is Refusal =>
   typeof value === "object" && value !== null && (value as Refusal).success === false;
 
-/** A list of positive user or framework ids, or null when it is not one. */
+/** A list of positive user or framework ids without repeats, or null when it is not one. */
 const idList = (value: unknown): number[] | null => {
   if (value === undefined || value === null) return [];
   if (!Array.isArray(value)) return null;
   const ids = value.map(Number);
-  return ids.every((id) => Number.isSafeInteger(id) && id > 0) ? ids : null;
+  return ids.every((id) => Number.isSafeInteger(id) && id > 0) ? [...new Set(ids)] : null;
+};
+
+const isSet = (value: unknown) => value !== undefined && value !== null;
+
+type Problem = { path: string[]; message: string };
+
+interface InputRules {
+  /** Whether the title (`name`) must be sent, may be sent, or is not an input. */
+  title?: "required" | "optional";
+  /** Id list inputs (members, framework_ids). */
+  idFields?: string[];
+}
+
+/**
+ * The checks of a use case write, run when it is filed and again when it
+ * executes: labels on the lists (an approval filed before them maps its old
+ * labels with `acceptLegacy`), the console's title rules, id lists, and an
+ * owner and members who are users of this organization. Returns the input as
+ * it is written (labels as the lists spell them, the title trimmed, id lists
+ * without repeats) and every problem found.
+ */
+const checkUseCaseInput = async (
+  params: Record<string, unknown>,
+  organizationId: number,
+  { title, idFields = [] }: InputRules,
+  acceptLegacy: boolean,
+): Promise<{ params: Record<string, unknown>; problems: Problem[] }> => {
+  const { params: checked, issues } = checkUseCaseLabels(params, { acceptLegacy });
+  const problems: Problem[] = [...issues];
+
+  // The console's rules for project_title (project.validator.ts).
+  if (title) {
+    const name = checked.name;
+    if (!isSet(name)) {
+      if (title === "required") {
+        problems.push({
+          path: ["name"],
+          message: "project_title is required and must be a non-empty string",
+        });
+      }
+    } else if (typeof name !== "string" || !name.trim()) {
+      problems.push({ path: ["name"], message: "project_title must be a non-empty string" });
+    } else if (name.trim().length > PROJECT_TITLE_MAX_LENGTH) {
+      problems.push({
+        path: ["name"],
+        message: `project_title must be at most ${PROJECT_TITLE_MAX_LENGTH} characters`,
+      });
+    } else {
+      checked.name = name.trim();
+    }
+  }
+
+  const people: number[] = [];
+  for (const field of idFields) {
+    const ids = idList(checked[field]);
+    if (ids === null) {
+      problems.push({ path: [field], message: "must be a list of positive ids" });
+    } else if (isSet(checked[field])) {
+      checked[field] = ids;
+      if (field === "members") people.push(...ids);
+    }
+  }
+  if (isSet(checked.owner)) {
+    const owner = Number(checked.owner);
+    if (!Number.isSafeInteger(owner) || owner <= 0) {
+      problems.push({ path: ["owner"], message: "must be a positive user id" });
+    } else {
+      checked.owner = owner;
+      people.push(owner);
+    }
+  }
+  if (people.length > 0) {
+    const outside = await findUsersNotInOrganization([...new Set(people)], organizationId);
+    if (outside.length > 0) {
+      problems.push({
+        path: [outside.includes(Number(checked.owner)) ? "owner" : "members"],
+        message: `user ${outside.join(", ")} is not in this organization`,
+      });
+    }
+  }
+  return { params: checked, problems };
 };
 
 /**
- * File time: refuse labels outside the lists (and malformed id lists) before
- * an approval is filed, and file the labels as the lists spell them.
+ * File time: refuse input the write would refuse before an approval is filed,
+ * and file it as it will be written.
  */
-const checkFiling = (
+const checkFiling = async (
   toolName: string,
   params: Record<string, unknown>,
-  idFields: string[] = [],
-): Record<string, unknown> => {
-  const { params: checked, issues } = checkUseCaseLabels(params);
-  const problems: Array<{ path: string[]; message: string }> = [...issues];
-  for (const field of idFields) {
-    if (idList(params[field]) === null) {
-      problems.push({ path: [field], message: "must be a list of positive ids" });
-    }
-  }
+  organizationId: number,
+  rules: InputRules = {},
+): Promise<Record<string, unknown>> => {
+  const { params: checked, problems } = await checkUseCaseInput(
+    params,
+    organizationId,
+    rules,
+    false,
+  );
   if (problems.length > 0) throwOnValidationFailure(toolName, problems);
   return checked;
 };
 
 /**
- * Execute time: the labels of an approval filed before these lists map to the
- * nearest real value; anything else is refused.
+ * Execute time: the same checks, with the labels of an approval filed before
+ * these lists mapped to the nearest real value; anything else is refused.
  */
-const executionLabels = (
+const executionInput = async (
   params: Record<string, unknown>,
-): { params: Record<string, unknown> } | Refusal => {
-  const { params: checked, issues } = checkUseCaseLabels(params, { acceptLegacy: true });
-  if (issues.length > 0) {
+  organizationId: number,
+  rules: InputRules = {},
+): Promise<{ params: Record<string, unknown> } | Refusal> => {
+  const { params: checked, problems } = await checkUseCaseInput(
+    params,
+    organizationId,
+    rules,
+    true,
+  );
+  if (problems.length > 0) {
     return {
       success: false,
-      message: issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; "),
+      message: problems.map((i) => `${i.path.join(".")}: ${i.message}`).join("; "),
     };
   }
   return { params: checked };
 };
+
+const CREATE_RULES: InputRules = { title: "required", idFields: ["members", "framework_ids"] };
+const UPDATE_RULES: InputRules = { title: "optional" };
 
 /**
  * Update one use case through updateUseCaseService as the acting user, then
@@ -303,20 +408,36 @@ const executionLabels = (
  */
 const updateUseCaseAsUser = async (
   useCaseId: number,
-  input: UpdateUseCaseServiceInput,
+  /** The input, or a function that builds it from what the locked row holds. */
+  input:
+    | UpdateUseCaseServiceInput
+    | ((transaction: Transaction) => Promise<UpdateUseCaseServiceInput | Refusal>),
   ctx: UseCaseServiceContext,
 ): Promise<unknown> => {
   const { organizationId } = ctx;
-  const existing = await getProjectByIdQuery(useCaseId, organizationId);
-  if (!existing) return { success: false, message: `Use case #${useCaseId} not found` };
-
+  const notFound = { success: false, message: `Use case #${useCaseId} not found` };
   const transaction = await sequelize.transaction();
+  let existing: Awaited<ReturnType<typeof getProjectByIdQuery>>;
   let outcome: Awaited<ReturnType<typeof updateUseCaseService>>;
   try {
-    outcome = await updateUseCaseService(useCaseId, input, existing, ctx, transaction);
+    // Lock the row first: a concurrent save either committed before the reads
+    // below or waits for this one, so nothing it wrote is overwritten.
+    existing = (await lockProjectForDelete(useCaseId, organizationId, transaction))
+      ? await getProjectByIdQuery(useCaseId, organizationId)
+      : null;
+    if (!existing) {
+      await transaction.rollback();
+      return notFound;
+    }
+    const resolved = typeof input === "function" ? await input(transaction) : input;
+    if (isRefusal(resolved)) {
+      await transaction.rollback();
+      return resolved;
+    }
+    outcome = await updateUseCaseService(useCaseId, resolved, existing, ctx, transaction);
     if (!outcome.useCase) {
       await transaction.rollback();
-      return { success: false, message: `Use case #${useCaseId} not found` };
+      return notFound;
     }
     await transaction.commit();
   } catch (error) {
@@ -343,17 +464,14 @@ const createUseCaseExecutor = createWriteToolFn({
   executeFn: async (params, organizationId) => {
     const refusal = await refuseUseCaseWrite(params, organizationId);
     if (refusal) return refusal;
-    const labels = executionLabels(params);
-    if (isRefusal(labels)) return labels;
+    const checked = await executionInput(params, organizationId, CREATE_RULES);
+    if (isRefusal(checked)) return checked;
     const ctx = await useCaseWriteContext(params, organizationId);
     if (isRefusal(ctx)) return ctx;
 
-    const p = labels.params;
-    const members = idList(p.members);
-    const frameworkIds = idList(p.framework_ids);
-    if (members === null || frameworkIds === null) {
-      return { success: false, message: "members and framework_ids must be lists of ids" };
-    }
+    const p = checked.params;
+    const members = idList(p.members) ?? [];
+    const frameworkIds = idList(p.framework_ids) ?? [];
     let frameworks: Awaited<ReturnType<typeof resolveUseCaseFrameworkIds>>;
     try {
       frameworks = await resolveUseCaseFrameworkIds(frameworkIds);
@@ -374,7 +492,7 @@ const createUseCaseExecutor = createWriteToolFn({
           ai_risk_classification: p.risk_classification as AiRiskClassification | undefined,
           // The requester owns what they create unless they name an owner,
           // as the console's form starts with the creator.
-          owner: p.owner !== undefined && p.owner !== null ? Number(p.owner) : ctx.userId,
+          owner: isSet(p.owner) ? Number(p.owner) : ctx.userId,
           start_date: new Date(),
           members,
           framework: frameworks.ids,
@@ -407,7 +525,7 @@ const createUseCaseExecutor = createWriteToolFn({
 
 const agentCreateUseCase = async (params: Record<string, unknown>, organizationId: number) =>
   createUseCaseExecutor(
-    checkFiling("agent_create_use_case", params, ["members", "framework_ids"]),
+    await checkFiling("agent_create_use_case", params, organizationId, CREATE_RULES),
     organizationId,
   );
 
@@ -428,12 +546,12 @@ const updateUseCaseExecutor = createWriteToolFn({
   executeFn: async (params, organizationId) => {
     const refusal = await refuseUseCaseWrite(params, organizationId, params.use_case_id);
     if (refusal) return refusal;
-    const labels = executionLabels(params);
-    if (isRefusal(labels)) return labels;
+    const checked = await executionInput(params, organizationId, UPDATE_RULES);
+    if (isRefusal(checked)) return checked;
 
     const input: Record<string, unknown> = {};
     for (const [param, column] of Object.entries(UPDATE_FIELDS)) {
-      const value = labels.params[param];
+      const value = checked.params[param];
       if (value !== undefined && value !== null) input[column] = value;
     }
     if (Object.keys(input).length === 0) {
@@ -447,7 +565,10 @@ const updateUseCaseExecutor = createWriteToolFn({
 });
 
 const agentUpdateUseCase = async (params: Record<string, unknown>, organizationId: number) =>
-  updateUseCaseExecutor(checkFiling("agent_update_use_case", params), organizationId);
+  updateUseCaseExecutor(
+    await checkFiling("agent_update_use_case", params, organizationId, UPDATE_RULES),
+    organizationId,
+  );
 
 const updateUseCaseStatusExecutor = createWriteToolFn({
   toolName: "agent_update_use_case_status",
@@ -456,21 +577,24 @@ const updateUseCaseStatusExecutor = createWriteToolFn({
   executeFn: async (params, organizationId) => {
     const refusal = await refuseUseCaseWrite(params, organizationId, params.use_case_id);
     if (refusal) return refusal;
-    const labels = executionLabels(params);
-    if (isRefusal(labels)) return labels;
-    if (!labels.params.status) return { success: false, message: "status is required" };
+    const checked = await executionInput(params, organizationId);
+    if (isRefusal(checked)) return checked;
+    if (!checked.params.status) return { success: false, message: "status is required" };
     const ctx = await useCaseWriteContext(params, organizationId);
     if (isRefusal(ctx)) return ctx;
     return updateUseCaseAsUser(
       Number(params.use_case_id),
-      { status: labels.params.status as ProjectStatus },
+      { status: checked.params.status as ProjectStatus },
       ctx,
     );
   },
 });
 
 const agentUpdateUseCaseStatus = async (params: Record<string, unknown>, organizationId: number) =>
-  updateUseCaseStatusExecutor(checkFiling("agent_update_use_case_status", params), organizationId);
+  updateUseCaseStatusExecutor(
+    await checkFiling("agent_update_use_case_status", params, organizationId),
+    organizationId,
+  );
 
 // Adding a member grants that person access to the use case, so it always
 // waits for a person's approval ("warning" is never auto-approved).
@@ -494,18 +618,23 @@ const agentAddMemberToUseCase = createWriteToolFn({
     }
 
     const useCaseId = Number(params.use_case_id);
-    const current = (await getCurrentProjectMembers(useCaseId, organizationId)).map(Number);
-    if (current.includes(userId)) {
-      return { success: false, message: "User is already a member of this use case" };
-    }
-
     const ctx = await useCaseWriteContext(params, organizationId);
     if (isRefusal(ctx)) return ctx;
-    // The full list, as the console's member picker sends it: history records
-    // the member change and the new member gets the "you were added" email.
+    // The full list, as the console's member picker sends it, read under the
+    // row lock so a member added or removed meanwhile is kept as it is. History
+    // records the member change and the new member gets the "you were added"
+    // email.
     const result = (await updateUseCaseAsUser(
       useCaseId,
-      { members: [...current, userId] },
+      async (transaction) => {
+        const current = (
+          await getCurrentProjectMembers(useCaseId, organizationId, transaction)
+        ).map(Number);
+        if (current.includes(userId)) {
+          return { success: false, message: "User is already a member of this use case" };
+        }
+        return { members: [...current, userId] };
+      },
       ctx,
     )) as { success: boolean };
     if (!result.success) return result;

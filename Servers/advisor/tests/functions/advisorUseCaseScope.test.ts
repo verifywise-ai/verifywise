@@ -57,6 +57,7 @@ const createService = createUseCaseService as unknown as AsyncMock;
 const updateService = updateUseCaseService as unknown as AsyncMock;
 const projectById = projectUtils.getProjectByIdQuery as unknown as AsyncMock;
 const currentMembers = projectUtils.getCurrentProjectMembers as unknown as AsyncMock;
+const lockRow = projectUtils.lockProjectForDelete as unknown as AsyncMock;
 
 const EDITOR = { id: 3, name: "Editor", organizationId: null };
 const VISIBLE = [
@@ -75,6 +76,7 @@ beforeEach(() => {
   mockTransaction.mockResolvedValue({ commit: jest.fn(), rollback: jest.fn() });
   projectById.mockResolvedValue({ id: 12, owner: 5, external_owner_email: null });
   currentMembers.mockResolvedValue([]);
+  lockRow.mockResolvedValue(true);
   updateService.mockResolvedValue({ useCase: { id: 12, members: [20] }, currentMembers: [] });
 });
 

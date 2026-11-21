@@ -163,6 +163,34 @@ describe("advisor use case writes through the use case service", () => {
     expect((await historyOf(useCaseId)).length).toBeGreaterThan(before);
   });
 
+  it("links a repeated framework and member once", async () => {
+    const result = (await create(
+      {
+        name: "Repeats",
+        members: [member, member],
+        framework_ids: [EU_AI_ACT, EU_AI_ACT],
+        _userId: editor,
+      },
+      orgId,
+    )) as any;
+
+    expect(result.success).toBe(true);
+    const id = result.use_case.id;
+    expect(await frameworksOf(id)).toEqual([EU_AI_ACT]);
+    expect(await membersOf(id)).toEqual([member]);
+    await sequelize.query(`DELETE FROM projects WHERE id = :id`, { replacements: { id } });
+  });
+
+  it("refuses a blank title and keeps the stored one", async () => {
+    const before = (await row(useCaseId)).project_title;
+    const result = (await update(
+      { use_case_id: useCaseId, name: "  ", _userId: editor },
+      orgId,
+    )) as any;
+    expect(result.success).toBe(false);
+    expect((await row(useCaseId)).project_title).toBe(before);
+  });
+
   it("refuses an owner outside the organization and writes nothing", async () => {
     const otherOrg = await createTestOrganization();
     const outsider = await user(otherOrg, "Admin");

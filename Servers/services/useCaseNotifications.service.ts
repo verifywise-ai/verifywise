@@ -43,6 +43,34 @@ const PROJECT_ROLES: Record<number, ProjectRole> = {
   4: "auditor",
 };
 
+const UNKNOWN_ASSIGNER = "Someone";
+
+/**
+ * The acting user's full name, or null when the lookup fails or finds no one
+ * (logged). Never throws, so the notices after it are still sent.
+ */
+async function actorName(
+  actorId: number,
+  organizationId: number,
+  log: NoticeLogContext,
+  eventType: "Create" | "Update",
+): Promise<string | null> {
+  try {
+    const actor = await getUserByIdQuery(actorId);
+    return actor ? `${actor.name} ${actor.surname}`.trim() : null;
+  } catch (error) {
+    await logFailure({
+      eventType,
+      description: "Failed to look up the user who changed the use case",
+      ...log,
+      error: error as Error,
+      userId: actorId,
+      organizationId,
+    });
+    return null;
+  }
+}
+
 /** Tell the approvers, or the requester when it was auto-approved. */
 export function notifyUseCaseApprovalOutcome(
   useCase: ProjectModel,
@@ -116,27 +144,31 @@ export async function notifyUseCaseCreated(
       });
     }
 
-    const actor = await getUserByIdQuery(actorId);
-    sendSlackNotification(
-      {
-        organizationId,
-        userId: actor.id!,
-        routingType: SlackNotificationRoutingType.PROJECTS_AND_ORGANIZATIONS,
-      },
-      {
-        title: `Project created`,
-        message: `${actor.name} ${actor.surname} created Project ${useCase.project_title}.`,
-      },
-    ).catch(async (slackError) => {
-      await logFailure({
-        eventType: "Create",
-        description: "Failed to send Slack notification for project creation",
-        ...log,
-        error: slackError as Error,
-        userId: actorId,
-        organizationId,
+    // The actor's name is for Slack and the owner notice only: a failed
+    // lookup skips Slack and leaves the owner notices with a generic name.
+    const assignerName = await actorName(actorId, organizationId, log, "Create");
+    if (assignerName) {
+      sendSlackNotification(
+        {
+          organizationId,
+          userId: actorId,
+          routingType: SlackNotificationRoutingType.PROJECTS_AND_ORGANIZATIONS,
+        },
+        {
+          title: `Project created`,
+          message: `${assignerName} created Project ${useCase.project_title}.`,
+        },
+      ).catch(async (slackError) => {
+        await logFailure({
+          eventType: "Create",
+          description: "Failed to send Slack notification for project creation",
+          ...log,
+          error: slackError as Error,
+          userId: actorId,
+          organizationId,
+        });
       });
-    });
+    }
 
     if (useCase.owner) {
       notifyUserAssigned(
@@ -149,7 +181,7 @@ export async function notifyUseCaseCreated(
           roleType: "Owner",
           entityUrl: `/project-view?projectId=${useCase.id}`,
         },
-        `${actor.name} ${actor.surname}`.trim(),
+        assignerName ?? UNKNOWN_ASSIGNER,
         baseUrl(),
       ).catch((err) => console.error("Failed to send owner notification:", err));
     } else if (useCase.external_owner_email) {
@@ -195,8 +227,8 @@ export async function notifyUseCaseUpdated(
   try {
     const newOwner = after.owner;
     if (newOwner && newOwner !== before.owner && newOwner !== actorId) {
-      const assigner = await getUserByIdQuery(actorId);
-      const assignerName = assigner ? `${assigner.name} ${assigner.surname}`.trim() : "Someone";
+      const assignerName =
+        (await actorName(actorId, organizationId, log, "Update")) ?? UNKNOWN_ASSIGNER;
       notifyUserAssigned(
         organizationId,
         newOwner,
