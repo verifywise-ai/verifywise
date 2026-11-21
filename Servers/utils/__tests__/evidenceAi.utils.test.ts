@@ -15,7 +15,11 @@ jest.mock("../logger/fileLogger", () => ({
 }));
 
 import { sequelize } from "../../database/db";
-import { getAdoptedEvidenceFrameworksQuery, getEvidenceGapsQuery } from "../evidenceAi.utils";
+import {
+  getAdoptedEvidenceFrameworksQuery,
+  getEvidenceGapsQuery,
+  getQualityScoresQuery,
+} from "../evidenceAi.utils";
 import { logStructured } from "../logger/fileLogger";
 
 const mockQuery = sequelize.query as jest.MockedFunction<any>;
@@ -205,5 +209,38 @@ describe("getAdoptedEvidenceFrameworksQuery", () => {
   it("returns both when both are adopted, in a stable order", async () => {
     mockQuery.mockResolvedValueOnce([[{ framework_id: 2 }, { framework_id: 1 }]]);
     expect(await getAdoptedEvidenceFrameworksQuery(9)).toEqual(["eu_ai_act", "iso_42001"]);
+  });
+});
+
+describe("getQualityScoresQuery", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockQuery.mockResolvedValue([[], 0]);
+  });
+
+  const sqlOf = () => (mockQuery.mock.calls[0][0] as string).replace(/\s+/g, " ");
+  const replacementsOf = () => (mockQuery.mock.calls[0][1] as any).replacements;
+
+  // The endpoint returned every analyzed file's summary, findings and
+  // suggested links in the organization, bypassing the per-file check the
+  // /analysis/:fileId route applies.
+  it("returns only analyses of files the caller can access", async () => {
+    await getQualityScoresQuery(1, 7, "Editor");
+    const sql = sqlOf();
+    expect(sql).toContain("f.id IS NOT NULL");
+    expect(sql).toContain("f.project_id IS NULL");
+    expect(sql).toContain("f.uploaded_by = :fileAccessUserId");
+    expect(sql).toMatch(/projects_members fa_pm .*fa_pm\.user_id = :fileAccessUserId/);
+    expect(replacementsOf()).toMatchObject({ organizationId: 1, fileAccessUserId: 7 });
+  });
+
+  it("keeps the file join inside the organization", async () => {
+    await getQualityScoresQuery(1, 7, "Editor");
+    expect(sqlOf()).toContain("f.organization_id = eaa.organization_id");
+  });
+
+  it("does not filter by file access for an Admin", async () => {
+    await getQualityScoresQuery(1, 7, "Admin");
+    expect(sqlOf()).not.toContain(":fileAccessUserId");
   });
 });
