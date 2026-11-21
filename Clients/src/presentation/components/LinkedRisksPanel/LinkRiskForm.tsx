@@ -5,6 +5,7 @@ import Radio from "../Inputs/Radio";
 import AutoCompleteField from "../Inputs/Autocomplete";
 import Chip from "../Chip";
 import { CustomizableButton } from "../button/customizable-button";
+import InlineFormCard, { InlineFormActions } from "./InlineFormCard";
 import { textStyles } from "../../themes/typography";
 import { getAllProjectRisks } from "../../../application/repository/projectRisk.repository";
 import { getAllVendorRisks } from "../../../application/repository/vendorRisk.repository";
@@ -240,7 +241,7 @@ export default function LinkRiskForm({ riskId, existingLinks, onClose }: LinkRis
   };
 
   return (
-    <Stack spacing="16px" sx={{ py: "8px" }}>
+    <InlineFormCard title="Link a risk">
       {/* useFlexGap: Stack's margin spacing would reset each Radio's -5px
           margin, which offsets its hover padding. */}
       <Stack
@@ -334,7 +335,10 @@ export default function LinkRiskForm({ riskId, existingLinks, onClose }: LinkRis
         </Alert>
       )}
 
-      <Stack direction="row" spacing="8px">
+      <InlineFormActions>
+        <CustomizableButton size="small" variant="text" color="secondary" onClick={onClose}>
+          Cancel
+        </CustomizableButton>
         <CustomizableButton
           size="small"
           variant="contained"
@@ -344,10 +348,7 @@ export default function LinkRiskForm({ riskId, existingLinks, onClose }: LinkRis
         >
           Link
         </CustomizableButton>
-        <CustomizableButton size="small" variant="text" color="secondary" onClick={onClose}>
-          Cancel
-        </CustomizableButton>
-      </Stack>
-    </Stack>
+      </InlineFormActions>
+    </InlineFormCard>
   );
 }

@@ -1,0 +1,154 @@
+import { readFileSync } from "node:fs";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+import { checkOtherNames, otherNamesIn, storedOtherNames } from "../otherNamesValidation";
+
+// The cases live with the server's validation; both suites run the same file. Resolved with
+// node:path, as the intake form logic cases test does: Vite refuses `new URL(..., import.meta.url)`
+// for files outside Clients/.
+const CASES_FILE = resolve(
+  dirname(fileURLToPath(import.meta.url)),
+  "../../../../../Servers/utils/validations/__fixtures__/otherNames.cases.json",
+);
+const cases: {
+  names: Array<{ name: string; text: string; names: string[] }>;
+  storedLength: Array<{ name: string; lengths: number[]; separator: string; accepted: boolean }>;
+  controlCharacters: Array<{
+    name: string;
+    text: string;
+    accepted: boolean;
+    message: string;
+    stored: string;
+  }>;
+} = JSON.parse(readFileSync(CASES_FILE, "utf8"));
+
+/** A text of distinct names of the given lengths ("AAA…", "BBB…"), joined by `separator`, as on the server. */
+const namesOfLengths = (lengths: number[], separator: string): string =>
+  lengths.map((length, n) => String.fromCharCode(65 + n).repeat(length)).join(separator);
+
+const FIVE = "Alpha, Inc., Beta, LLC, Gamma, Ltd., Delta, GmbH, Epsilon, plc";
+
+const ACCEPTED = { accepted: true, message: "" };
+
+describe("checkOtherNames", () => {
+  it.each([[""], ["   "], [" , ; ,\n"]])("accepts %p: a vendor needs no other name", (value) => {
+    expect(checkOtherNames(value)).toEqual(ACCEPTED);
+  });
+
+  it("accepts names separated by commas, semicolons and line breaks", () => {
+    expect(checkOtherNames("Facebook, Instagram;  WhatsApp\nMeta Quest\r\nMessenger")).toEqual(
+      ACCEPTED,
+    );
+  });
+
+  it("accepts 500 characters in all and refuses one more", () => {
+    const name = "x".repeat(60);
+    const text = (length: number) => `${name}, `.repeat(10).slice(0, length);
+
+    expect(checkOtherNames(text(500))).toEqual(ACCEPTED);
+    expect(checkOtherNames(`${text(500)}y`)).toEqual({
+      accepted: false,
+      message: "Other names must be at most 500 characters",
+    });
+  });
+
+  it("counts the length without the white space around the text", () => {
+    expect(checkOtherNames(`${" ".repeat(600)}Facebook`)).toEqual(ACCEPTED);
+  });
+
+  it("accepts 8 names and refuses 9, counting a name once however it is written", () => {
+    const names = (count: number) =>
+      Array.from({ length: count }, (_, n) => `Name ${n}`).join(", ");
+
+    expect(checkOtherNames(names(8))).toEqual(ACCEPTED);
+    expect(checkOtherNames(names(9))).toEqual({
+      accepted: false,
+      message: "Other names can list at most 8 names",
+    });
+    expect(checkOtherNames("Facebook, FACEBOOK, face-book, Face Book")).toEqual(ACCEPTED);
+  });
+
+  it("refuses a name of one character or of more than 80, and accepts 2 and 80", () => {
+    const wrong = {
+      accepted: false,
+      message: "Each of the other names must be between 2 and 80 characters",
+    };
+
+    expect(checkOtherNames("Facebook, A")).toEqual(wrong);
+    expect(checkOtherNames(`Facebook, ${"x".repeat(81)}`)).toEqual(wrong);
+    expect(checkOtherNames(`3M, ${"y".repeat(80)}`)).toEqual(ACCEPTED);
+  });
+
+  it("refuses a name with no letter or digit in it", () => {
+    expect(checkOtherNames("Facebook, --")).toEqual({
+      accepted: false,
+      message: "Each of the other names must contain a letter or a digit",
+    });
+  });
+
+  it("agrees with the server limits", () => {
+    // 500 characters, 8 names, 2 to 80 characters in a name: see validateOtherNames in
+    // Servers/utils/validations/vendorValidation.utils.ts.
+    expect(checkOtherNames("ab, cd, ef, gh, ij, kl, mn, op")).toEqual(ACCEPTED);
+    expect(checkOtherNames("ab, cd, ef, gh, ij, kl, mn, op, qr").accepted).toBe(false);
+  });
+});
+
+describe("a legal form after a comma", () => {
+  it.each(cases.names)("reads $name as the server reads it", ({ text, names }) => {
+    expect(otherNamesIn(text)).toEqual(names);
+  });
+
+  it("counts a legal form after a comma as part of the name before it, so five legal names are five names", () => {
+    expect(checkOtherNames(FIVE)).toEqual(ACCEPTED);
+  });
+
+  it("counts a legal form after a comma towards the length of that name", () => {
+    expect(checkOtherNames(`${"x".repeat(75)}, Inc.`)).toEqual({
+      accepted: false,
+      message: "Each of the other names must be between 2 and 80 characters",
+    });
+    expect(checkOtherNames(`${"x".repeat(74)}, Inc.`)).toEqual(ACCEPTED);
+  });
+});
+
+describe("the length of the other names as the server stores them", () => {
+  it.each(cases.storedLength)(
+    "is held to 500 characters, as the server holds it: $name",
+    ({ lengths, separator, accepted }) => {
+      expect(checkOtherNames(namesOfLengths(lengths, separator)).accepted).toBe(accepted);
+    },
+  );
+
+  it("refuses names that would be stored longer than 500 characters, in plain words", () => {
+    const typed = namesOfLengths(Array(8).fill(61), "\n");
+
+    expect(typed).toHaveLength(495);
+    expect(storedOtherNames(typed)).toHaveLength(502);
+    expect(checkOtherNames(typed)).toEqual({
+      accepted: false,
+      message: "Other names must be at most 500 characters with a comma and a space between names",
+    });
+  });
+
+  it.each(cases.storedLength.filter(({ accepted }) => accepted))(
+    "accepts the stored text of names it accepted, as the edit form loads it: $name",
+    ({ lengths, separator }) => {
+      expect(checkOtherNames(storedOtherNames(namesOfLengths(lengths, separator)))).toEqual(
+        ACCEPTED,
+      );
+    },
+  );
+});
+
+// The server drops the C0 control characters that are not white space, and DEL, before it splits
+// and measures the names, so the form does too: what it accepts the server accepts.
+describe("the control characters in other names", () => {
+  it.each(cases.controlCharacters)(
+    "are left out as the server leaves them out: $name",
+    ({ text, accepted, message, stored }) => {
+      expect(checkOtherNames(text)).toEqual({ accepted, message });
+      expect(storedOtherNames(text)).toBe(stored);
+    },
+  );
+});

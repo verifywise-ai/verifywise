@@ -2,7 +2,7 @@
 
 ## Overview
 
-VerifyWise uses BullMQ with Redis for background job processing and scheduled tasks. The system supports recurring jobs (cron-based), event-triggered automations, and user-configured workflows. Two queues handle different concerns: general automations and Slack notifications. MLflow sync is not queued; it runs on demand when a user clicks **Sync**.
+VerifyWise uses BullMQ with Redis for background job processing and scheduled tasks. The system supports recurring jobs (cron-based), event-triggered automations, and user-configured workflows. Four queues handle different concerns: general automations, Slack notifications, vendor research runs and the syncs of the vendor risk database. MLflow sync is not queued; it runs on demand when a user clicks **Sync**.
 
 ## Architecture
 
@@ -64,9 +64,15 @@ Handles general automation tasks: email sending, report generation, vendor notif
 import { Queue } from "bullmq";
 
 export const automationQueue = new Queue("automation-actions", {
-  connection: { url: process.env.REDIS_URL }
+  connection: { url: REDIS_URL },
+  defaultJobOptions: {
+    removeOnComplete: COMPLETED_JOB_RETENTION,  // { age: 1 day, count: 1000 }
+    removeOnFail: FAILED_JOB_RETENTION,         // { age: 7 days, count: 5000 }
+  },
 });
 ```
+
+**Finished jobs.** BullMQ keeps a finished job until something removes it, and no code reads one back. A job that sets no `removeOnComplete`/`removeOnFail` of its own is kept for a day after it completes (at most 1000) and for a week after it fails (at most 5000). These are the automation emails from `enqueueAutomationAction`, `generate_report_manual` and `send_pmm_notification`, and they carry recipients and message bodies. `send_report_notification_daily` sets its own: it is removed as soon as it completes (`removeOnComplete: true`) and a failed one is kept a week, at most 5000 (`removeOnFail: FAILED_JOB_RETENTION`), like the others. Its enqueue passes a `runAt` time, which is no BullMQ option (BullMQ waits on `delay`), so the job runs as soon as it is queued, not at the hour and minute of the automation. Every scheduler of the automation queue and of the Slack queue (`slack-notification-policy`) removes a completed run at once and keeps a failed run for a week (`FAILED_JOB_RETENTION` in its template). The schedulers of the vendor research queue (`vendor_research_scan`) and of the vendor risk database (`vrdb_sync_<list>`) remove a failed run at once too (`removeOnFail: true`). The one-off jobs with a fixed id (`extension_sync_run`, the risk link jobs, `intake_assessment`) remove themselves as soon as they settle, because BullMQ ignores an add whose id is still in use. BullMQ applies `age` and `count` when another job of the same kind finishes, not on a timer.
 
 ### Slack Notifications Queue
 
@@ -82,6 +88,39 @@ export const notificationQueue = new Queue("slack-notifications", {
 });
 ```
 
+### Vendor Research Queue
+
+**Queue Name:** `vendor-research`
+
+Carries out the runs of the [vendor research agent](../domains/vendors.md#vendor-research-agent), one `vendor_research` job for each run. The queue also holds the job scheduler of the [scheduled scan](../domains/vendors.md#the-scheduled-scan), `vendor_research_scan`, which `scheduleVendorResearchScan` upserts at the start of the backend (`jobs/producer.ts`) and which, like the rest of the queue, is never obliterated.
+
+```typescript
+// File: Servers/services/vendorResearch/queue.ts
+
+export const vendorResearchQueue = new Queue("vendor-research", {
+  connection: { url: REDIS_URL }
+});
+```
+
+A run has a queue and a worker of its own for two reasons. A run holds its place for minutes (up to about 7), while every other job on `automation-actions` is short, so on a shared queue a burst of runs kept the notifications, the recomputes and the reports waiting, and a long line of other jobs could leave a run queued past the 15 minutes after which it is not started. And the number of runs at once is a setting of research alone (`VENDOR_RESEARCH_WORKER_CONCURRENCY`). There used to be a third: the backend emptied the automation queue each time it started (`obliterate` in `scheduleVendorReviewDateNotification` and `scheduleReportNotification`), which lost the runs that were waiting. No start empties a queue any more (see [Startup Flow](#startup-flow)).
+
+### Vendor Risk Database Queue
+
+**Queue Name:** `vendor-risk-database`
+
+Carries out the syncs of the [vendor risk database](../domains/vendors.md#vendor-risk-database), one `vrdb_sync` job for each list and sync, and its status job, `vrdb_relabel`. A queue of its own, as the research has one: a sync downloads a list of tens of megabytes and must not hold the places of the automations. The queue is never emptied (`obliterate`) at start.
+
+```typescript
+// File: Servers/services/vendorResearch/vrdb/queue.ts
+
+export const VRDB_QUEUE = "vendor-risk-database";
+export const vrdbQueue = new Queue(VRDB_QUEUE, { connection: { url: REDIS_URL } });
+```
+
+Each list has a BullMQ job scheduler of its own (`vrdb_sync_<list>`, `vrdbSchedulerId`), at the list's own minute in UTC (`VRDB_SOURCES` in `vrdb/sources.ts`, see the table below). `scheduleVendorRiskDatabaseSync`, called by `addAllJobs` at the start of the backend (`jobs/producer.ts`), upserts the schedulers of the active lists (`activeMirrors`: 32, the ten that were there before 2026-11-10 (the CISA catalog, the OFAC, UK and EU lists, the US Consolidated Screening List, the CVE records, the ATLAS, NHTSA and FDA lists and the FDA recalls) and the 22 lists of 2026-11-10 that the table below shows, while the gates of the UN list, Q6, and of the AI Incident Database, Q29, are closed; `vrdb/gates.ts`; the LEI records of GLEIF are read through at run time and have no scheduler) while `VENDOR_RESEARCH_RECORDS` is not `false` (`vrdbSyncsOn`; the database has no flag of its own), and removes them otherwise, so turning the records off stops every download; a list behind a closed gate has no scheduler. An upsert by id changes nothing when the scheduler exists, so every start can call it. At the same start a first sync is queued only for an active list that is taken whole and was never copied (job id `vrdb_sync_first_<list>`; a list that an upgrade adds gets its first sync at the first start after it (the three open AI lists of 2026-11-05, the Consolidated Screening List and the FDA recalls of 2026-11-07, and the 22 lists of 2026-11-10, which are queued in the order of `VRDB_SOURCES`, so that their cron minutes do not apply to the first sync; one worker process takes them back to back, but with a worker in the backend container and one in the worker container two of them run at once, so two adjacent lists of one host, such as `fda_ai_devices` and `fda_device_recalls`, may ask `www.fda.gov` at the same time), and the AI Incident Database gets one at the first start after an operator opens its gate): the CVE records get none, since a list read by its changes has its first copy from the baseline that an operator loads once (`scripts/vrdbCveBaseline.ts`, see [Vendors](../domains/vendors.md#vendor-risk-database)) and a sync before that is refused as `no_baseline`. A job has `attempts: 3`, an exponential back-off from one minute, and is removed when it completes or fails (`VRDB_SYNC_JOB_OPTIONS`). The worker sets no `lockDuration`, so the default of BullMQ holds: a lock of 30 seconds that a timer renews every 15 seconds while the event loop is free, and a job that stalls is retried once. A sync may take minutes, since a connector that makes more than one request to a host waits between them as long as the host asks, or one second where it states nothing (`HOST_PAUSE_MS` in `vrdb/connectors/kit/pause.ts`, five hosts: 20 seconds for `open.canada.ca`, 5 seconds for `www.ftc.gov`, 1 second for `www.datos.gov.co`, 1 second for the open data bucket of the European Commission, `compcases-open-data-portal-files-prod.s3.eu-west-1.amazonaws.com`, and 400 ms between the pages of `www.gov.uk`); the waits are timers and do not block the loop, so the lock is renewed while a sync waits, and a connector does its heavy work in streams and pieces (the two NHTSA zips are inflated as a stream) for the same reason. The 22 syncs of 2026-11-10 on the clock of the table never run in the same hour as another list of the same host on the same day, and none runs at hours 0, 6, 12 or 18, where the 6-hourly lists run. A copy is out of date 48 hours after its last successful sync, and 192 hours (8 days) after it for the 14 lists of 2026-11-10 that are copied weekly (`staleAfterHours` in `VRDB_SOURCES`: `uk_ofsi`, `ftc_penalties`, `eu_dg_comp`, `disclose_io`, `uk_cma`, `canada_ai_register`, `ftc_competition`, `omb_ai_inventory`, `co_sic_penalties`, `uk_atrs`, `fmti`, `uk_mhra`, `nl_algoritmeregister` and `epoch_ai`); a list that was never copied is out of date as well.
+
+**The status job.** A sync, or an answer of a read-through source (the NVD), that changed the status of a record adds `vrdb_relabel` with `{ sourceId }` (`enqueueRelabel`), and so does a completed research run, after its commit and without waiting, for each list whose records its saved findings cite (`relabelCitedLists` in `services/vendorResearch/pipeline.ts`; a failure to add it is logged), under the deduplication id `vrdb_relabel_<list>` with `keepLastIfActive` and the options of a sync (`VRDB_RELABEL_JOB_OPTIONS`). BullMQ drops an add while a job of that id waits, so one waits per list and the changes of several syncs are taken by one job; an add while the job runs is kept and queued when the run ends, so a change that lands during a run is not lost. It relabels the pending findings of every organization that cite a changed record (`relabelSource` in `vrdb/relabel.ts`, see [Vendors](../domains/vendors.md#vendor-risk-database)). A failure to add it is logged with the error's name and leaves the copy or the answer as it is: the next change adds the job again. A read-through answer starts the addition and does not wait for it (`relabelAfterAnswer` in `vrdb/lookup.ts`), so a Redis that stalls never holds the vendor's run past its time limit.
+
 ## Scheduled Jobs
 
 ### Job Schedule Summary
@@ -96,6 +135,43 @@ Recurring (cron) jobs only — see [On-Demand Jobs](#on-demand-jobs) below for j
 | `report_scheduler_tick` | `*/15 * * * *` | Every 15 minutes | Template-first scheduled report dispatch |
 | `extension_sync_tick` | `*/5 * * * *` | Every 5 minutes | Sync engine: queues one `extension_sync_run` per org whose schedule is due (interval and failure backoff) for every extension with a sync provider (see [Extensions → Scheduled sync](./extensions.md#scheduled-sync)). Retires the old `jira_assets_scheduled_sync_check` scheduler, whose name the worker still accepts for one release |
 | `policy_review_reminder_sweep` | `0 8 * * *` | Daily at 8 AM | Policy review reminders: once within 7 days of the review date, once overdue, to owner and reviewers (in-app, email, Slack). Replaced `send_policy_due_soon_notification` and `slack-notification-policy`, whose schedulers startup removes (see [Policies](../domains/policies.md)) |
+| `approval_overdue_sweep` | `17 * * * *` | Every hour at minute 17 | Approval SLA escalation: the active step of each pending approval request whose `due_at` has passed is claimed once (`escalated_at`), and its escalation user is notified in-app and by email (`services/automations/actions/approvalOverdueSweep.ts`) |
+| `data_retention_prune` | `30 3 * * *` | Daily at 03:30 | Prunes each organization's audit records older than its `audit_retention_months`: the audit ledger from its oldest end (with checkpoints), then each audit table, in batches. Organizations without a period are skipped. See [Data retention](../domains/data-retention.md) |
+| `vendor_research_scan` (queue `vendor-research`) | `11 * * * *` (UTC) | Every hour at minute 11 | Scheduled vendor research: for each organization that chose a scan interval in Research settings, starts at most 5 due vendors while the runs of the last 24 hours are under half of the daily cap. See [Vendors → The scheduled scan](../domains/vendors.md#the-scheduled-scan) |
+| `vrdb_sync` (scheduler `vrdb_sync_kev`) | `23 * * * *` (UTC) | Every hour at minute 23 | Copy the CISA catalog of known exploited vulnerabilities (unless `VENDOR_RESEARCH_RECORDS=false`) |
+| `vrdb_sync` (scheduler `vrdb_sync_ofac`) | `41 */6 * * *` (UTC) | Every 6 hours at minute 41 | Copy the OFAC SDN list (same) |
+| `vrdb_sync` (scheduler `vrdb_sync_uk_sanctions`) | `47 */6 * * *` (UTC) | Every 6 hours at minute 47 | Copy the UK Sanctions List (same) |
+| `vrdb_sync` (scheduler `vrdb_sync_eu_fsf`) | `53 */6 * * *` (UTC) | Every 6 hours at minute 53 | Copy the EU consolidated list of financial sanctions (same) |
+| `vrdb_sync` (scheduler `vrdb_sync_cve`) | `29 2 * * *` (UTC) | Daily at 02:29 | Read the CVE Program's changes of the days since the last sync (same; refused as `no_baseline` until an operator has loaded the baseline) |
+| `vrdb_sync` (scheduler `vrdb_sync_un_sanctions`) | `59 */6 * * *` (UTC) | Every 6 hours at minute 59 | Copy the UN Security Council Consolidated List (no scheduler: the gate Q6 is closed) |
+| `vrdb_sync` (scheduler `vrdb_sync_aiid`) | `11 4 * * *` (UTC) | Daily at 04:11 | Copy the AI Incident Database from its weekly Excel export (no scheduler: the gate Q29 is closed; it opens when an operator sets `AIID_PERMISSION_GRANTED` in `vrdb/gates.ts` after the operator's written confirmation or the product owner's written acceptance, and the backend restarts) |
+| `vrdb_sync` (scheduler `vrdb_sync_atlas`) | `17 3 * * *` (UTC) | Daily at 03:17 | Copy the MITRE ATLAS case studies, the newest format 6 release of the monthly manifest (same) |
+| `vrdb_sync` (scheduler `vrdb_sync_fda_ai_devices`) | `35 5 * * *` (UTC) | Daily at 05:35 | Copy the FDA list of AI-enabled medical devices, one CSV file (same) |
+| `vrdb_sync` (scheduler `vrdb_sync_nhtsa_sgo`) | `5 13 * * *` (UTC) | Daily at 13:05 | Copy the NHTSA Standing General Order crash reports, three CSV files downloaded whole each day (same) |
+| `vrdb_sync` (scheduler `vrdb_sync_csl`) | `7 */6 * * *` (UTC) | Every 6 hours at minute 7 | Copy the US Consolidated Screening List, one JSON file of about 34 MB read with a conditional request (same; no gate) |
+| `vrdb_sync` (scheduler `vrdb_sync_fda_device_recalls`) | `43 14 * * *` (UTC) | Daily at 14:43 | Copy the FDA recalls of AI-enabled medical devices from openFDA: a probe of the recalls, a probe of the device enforcement reports and the FDA list's CSV every day, and the join of the list's submission numbers and the class of the recalls it finds (up to 80 requests in all, 500 ms apart) only when either openFDA dataset or the FDA list has changed since the last sync (same; no gate) |
+| `vrdb_sync` (scheduler `vrdb_sync_canada_sema`) | `2 1 * * *` (UTC) | Daily at 01:02 | Copy the Consolidated Canadian Autonomous Sanctions List, one XML file (entities only) (same; no gate) |
+| `vrdb_sync` (scheduler `vrdb_sync_california_breaches`) | `12 7 * * *` (UTC) | Daily at 07:12 | Copy the data breach list of the California Attorney General, one CSV export, summarized by organization (same; no gate) |
+| `vrdb_sync` (scheduler `vrdb_sync_uk_ofsi`) | `18 10 * * 3` (UTC) | Weekly on Wednesday at 10:18 | Copy the enforcement notices of the UK Office of Financial Sanctions Implementation from the GOV.UK search API, up to 2 pages of 1,000 results (same; no gate) |
+| `vrdb_sync` (scheduler `vrdb_sync_charlotin`) | `25 15 * * *` (UTC) | Daily at 15:25 | Copy the AI Hallucination Cases database, one CSV export, counted by AI tool (same; no gate) |
+| `vrdb_sync` (scheduler `vrdb_sync_ftc_penalties`) | `55 4 * * 2` (UTC) | Weekly on Tuesday at 04:55 | Copy the civil penalty cases of the US Federal Trade Commission: the catalog `data.json`, then one Excel workbook, 5 seconds apart (same; no gate) |
+| `vrdb_sync` (scheduler `vrdb_sync_piperoll`) | `21 11 * * *` (UTC) | Daily at 11:21 | Copy the PipeRoll Agent Incident Registry, one JSON file (same; no gate) |
+| `vrdb_sync` (scheduler `vrdb_sync_eu_dg_comp`) | `51 17 * * 1` (UTC) | Weekly on Monday at 17:51 | Copy the competition cases of the European Commission, two JSON files from a storage bucket (antitrust and cartel cases, and DMA cases), 1 second apart (same; no gate) |
+| `vrdb_sync` (scheduler `vrdb_sync_disclose_io`) | `8 20 * * 6` (UTC) | Weekly on Saturday at 20:08 | Copy the disclose.io program list, one JSON file from GitHub (same; no gate) |
+| `vrdb_sync` (scheduler `vrdb_sync_uk_cma`) | `16 8 * * 2` (UTC) | Weekly on Tuesday at 08:16 | Copy the cases of the UK Competition and Markets Authority from the GOV.UK search API, up to 5 pages of 1,000 results, 400 ms apart (same; no gate) |
+| `vrdb_sync` (scheduler `vrdb_sync_canada_ai_register`) | `31 20 * * 1` (UTC) | Weekly on Monday at 20:31 | Copy the Government of Canada AI Register: the dataset record, then the CSV file it names, 20 seconds apart (same; no gate) |
+| `vrdb_sync` (scheduler `vrdb_sync_ftc_competition`) | `57 4 * * 4` (UTC) | Weekly on Thursday at 04:57 | Copy the nonmerger enforcement actions of the US Federal Trade Commission, one CSV file (same; no gate) |
+| `vrdb_sync` (scheduler `vrdb_sync_omb_ai_inventory`) | `33 21 * * 2` (UTC) | Weekly on Tuesday at 21:33 | Copy the US federal AI use case inventory (2025 edition), one CSV file from GitHub (same; no gate) |
+| `vrdb_sync` (scheduler `vrdb_sync_co_sic_penalties`) | `4 3 * * 3` (UTC) | Weekly on Wednesday at 03:04 | Copy the consumer protection sanctions of the Colombian SIC from the open data portal: a count, then up to 50,000 rows, 1 second apart (same; no gate) |
+| `vrdb_sync` (scheduler `vrdb_sync_uk_atrs`) | `14 5 * * 1` (UTC) | Weekly on Monday at 05:14 | Copy the UK Algorithmic Transparency Recording Standard records from the GOV.UK search API, one request of up to 1,000 results (same; no gate) |
+| `vrdb_sync` (scheduler `vrdb_sync_nhtsa_recalls`) | `3 9 * * *` (UTC) | Daily at 09:03 | Copy the NHTSA vehicle and equipment recalls, one zip file read as a stream (same; no gate) |
+| `vrdb_sync` (scheduler `vrdb_sync_fmti`) | `45 21 * * 5` (UTC) | Weekly on Friday at 21:45 | Copy the Foundation Model Transparency Index (December 2025 edition), one CSV file from GitHub (same; no gate) |
+| `vrdb_sync` (scheduler `vrdb_sync_uk_mhra`) | `22 22 * * 4` (UTC) | Weekly on Thursday at 22:22 | Copy the UK MHRA field safety notice lists from the GOV.UK search API, up to 3 pages of 1,000 results, 400 ms apart (same; no gate) |
+| `vrdb_sync` (scheduler `vrdb_sync_nl_algoritmeregister`) | `37 22 * * 3` (UTC) | Weekly on Wednesday at 22:37 | Copy the Dutch Algorithm Register, one CSV download (same; no gate) |
+| `vrdb_sync` (scheduler `vrdb_sync_nhtsa_odi`) | `1 10 * * *` (UTC) | Daily at 10:01 | Copy the NHTSA defect investigations, one zip file read as a stream (same; no gate) |
+| `vrdb_sync` (scheduler `vrdb_sync_fedramp`) | `6 19 * * *` (UTC) | Daily at 19:06 | Copy the FedRAMP Marketplace, one JSON file from GitHub (same; no gate) |
+| `vrdb_sync` (scheduler `vrdb_sync_epoch_ai`) | `39 23 * * 4` (UTC) | Weekly on Thursday at 23:39 | Copy Data on AI Models of Epoch AI, one CSV file (same; no gate) |
+| `vrdb_sync` (scheduler `vrdb_sync_c2pa_conforming`) | `49 16 * * *` (UTC) | Daily at 16:49 | Copy the C2PA Conforming Products List, one JSON file from GitHub (same; no gate) |
 
 ### Cron Pattern Reference
 
@@ -114,17 +190,17 @@ Recurring (cron) jobs only — see [On-Demand Jobs](#on-demand-jobs) below for j
 ```typescript
 // File: Servers/services/automations/automationProducer.ts
 
-export const scheduleVendorReviewDateNotification = async () => {
-  await automationQueue.add(
+export async function scheduleVendorReviewDateNotification() {
+  await automationQueue.upsertJobScheduler(
     "send_vendor_notification",
-    { type: "review_date" },
+    { pattern: "0 0 * * *" },  // Daily at midnight
     {
-      repeat: { pattern: "0 0 * * *" },  // Daily at midnight
-      removeOnComplete: true,
-      removeOnFail: false,
+      name: "send_vendor_notification",
+      data: { type: "review_date" },
+      opts: { removeOnComplete: true, removeOnFail: FAILED_JOB_RETENTION },
     }
   );
-};
+}
 ```
 
 **Processing Logic:**
@@ -136,17 +212,17 @@ export const scheduleVendorReviewDateNotification = async () => {
 ### Report Notifications
 
 ```typescript
-export const scheduleReportNotification = async () => {
-  await automationQueue.add(
+export async function scheduleReportNotification() {
+  await automationQueue.upsertJobScheduler(
     "send_report_notification",
-    { type: "report_notification" },
+    { pattern: "0 0 * * *" },
     {
-      repeat: { pattern: "0 0 * * *" },
-      removeOnComplete: true,
-      removeOnFail: false,
+      name: "send_report_notification",
+      data: { type: "report_notification" },
+      opts: { removeOnComplete: true, removeOnFail: FAILED_JOB_RETENTION },
     }
   );
-};
+}
 ```
 
 **Processing Logic:**
@@ -159,17 +235,17 @@ export const scheduleReportNotification = async () => {
 ### PMM Hourly Check
 
 ```typescript
-export const schedulePMMHourlyCheck = async () => {
-  await automationQueue.add(
+export async function schedulePMMHourlyCheck() {
+  await automationQueue.upsertJobScheduler(
     "pmm_hourly_check",
-    { type: "pmm" },
+    { pattern: "0 * * * *" },  // Every hour
     {
-      repeat: { pattern: "0 * * * *" },  // Every hour
-      removeOnComplete: true,
-      removeOnFail: false,
+      name: "pmm_hourly_check",
+      data: { type: "pmm" },
+      opts: { removeOnComplete: true, removeOnFail: FAILED_JOB_RETENTION },
     }
   );
-};
+}
 ```
 
 **Processing Logic:**
@@ -184,15 +260,15 @@ export const schedulePMMHourlyCheck = async () => {
 Powers the template-first reporting layer (see [Reporting Domain](../domains/reporting.md)). This repeatable job runs every 15 minutes and dispatches due scheduled reports.
 
 ```typescript
-// Registered in Servers/jobs/producer.ts (addAllJobs)
+// scheduleReportSchedulerTick, registered in Servers/jobs/producer.ts (addAllJobs)
 
-await automationQueue.add(
+await automationQueue.upsertJobScheduler(
   "report_scheduler_tick",
-  { type: "report_scheduler_tick" },
+  { pattern: "*/15 * * * *" },  // Every 15 minutes
   {
-    repeat: { pattern: "*/15 * * * *" },  // Every 15 minutes
-    removeOnComplete: true,
-    removeOnFail: false,
+    name: "report_scheduler_tick",
+    data: { type: "reporting" },
+    opts: { removeOnComplete: true, removeOnFail: FAILED_JOB_RETENTION },
   }
 );
 ```
@@ -206,11 +282,12 @@ Handled in `automationWorker.ts` alongside the other automation job types.
 
 ### On-Demand Jobs
 
-Not every job on the `automation-actions` queue is scheduled. Some are enqueued once, on demand, in direct response to a user action — no `repeat` pattern, no cron.
+Not every job is scheduled. Some are enqueued once, on demand, in direct response to a user action — no `repeat` pattern, no cron. The `Queue` column says which queue and so which worker carries the job out.
 
 | Job Name | Queue | Enqueued By | Handler |
 |----------|-------|-------------|---------|
 | `generate_report_manual` | `automation-actions` | `generateReportsV2` / `generateReports` controller, when a user requests a manual report (see [Reporting Domain](../domains/reporting.md)) | `handleManualReportGeneration` → `executeManualRun` |
+| `vendor_research` | `vendor-research` | `enqueueVendorResearch` (`services/vendorResearch/queue.ts`), called by `startVendorResearch` in `services/vendorResearch/trigger.ts` when a vendor is created or a user starts research (see [Vendors](../domains/vendors.md#vendor-research-agent)) | `handleVendorResearchJob` → `runVendorResearch`, in the [research worker](#vendor-research-worker) |
 | `extension_sync_run` | `automation-actions` | `startManualRun` (`POST /api/extensions/:key/runs` and Jira Assets' deprecated `POST /sync`) and the tick, via `enqueueExtensionSyncRun`; job id fixed per extension and org (`ext-sync-<key>-<orgId>`); `{ key, orgId, kind, triggeredBy, payload }`, one attempt, removed on complete and on fail. The old `jira_assets_sync_run` name is accepted for one release | `runExtensionSyncJob` (claims at pickup) → `runClaimed` |
 
 **Processing Logic:**
@@ -219,6 +296,14 @@ Not every job on the `automation-actions` queue is scheduled. Some are enqueued 
 3. `report_runs` is updated to a terminal status (`success` or `failed`) on completion — `executeManualRun` never produces `partial_success` (that state applies only to scheduled runs with multiple delivery targets)
 
 This job only runs while a worker process (`npm run worker`) is up — with no worker running, the run stays `status: "running"` indefinitely and the frontend poll never resolves.
+
+**`vendor_research`:** researches one vendor for one run row that already exists as `queued` in `vendor_research_runs`. Payload: `{ organizationId, vendorId, runId }`.
+
+- **Job id:** `vendor-research-{org}-{vendor}-{run}`, one per run and without a colon (BullMQ rejects a custom id with a colon unless it has exactly three parts). An id per vendor would make BullMQ silently ignore the `add` of a vendor's next run while the job of an earlier, swept run still sat in Redis; the partial unique index `vendor_research_runs_active_uniq` already allows one active run per vendor.
+- **Options:** `attempts: 2`, exponential backoff with a 5000 ms delay, `removeOnComplete` and `removeOnFail` both `true`, so no retained job holds on to an id.
+- **Retries:** the pipeline itself catches a failing model call and a web that cannot be reached at all (not one search or read of the run was answered: "The run stopped because the web could not be reached") and ends the run as `failed`. A search that fails or a page that cannot be read is a result inside the run, not a failure: the run goes on without it. So a retry only covers Redis and database failures that happen before the run is marked `running`, while it is still `queued`. A retry never pays for the model calls or the searches twice.
+- **No worker:** the run stays `queued` until the 15-minute sweep fails it with `timed out`. The sweep runs when a new run is requested for the vendor and when its latest run is read, not in the background. A `queued` run older than the sweep limit stops counting toward the cooldown and the daily cap even before the sweep reaches it, because a job can be lost (for example when Redis is emptied) and nobody may open the vendor again.
+- **Redis down:** `Queue.add` does not fail, BullMQ keeps the command in the offline queue of its client. `startVendorResearch` therefore waits at most 5 seconds (`ENQUEUE_TIMEOUT_MS`) for the `add`, then fails the run as `could not enqueue` and answers 503. A job that lands after that finds the run `failed` and is skipped without a search or a model call.
 
 `extension_sync_run` also needs a worker. Without one, the job just waits: nothing is claimed until a worker picks it up, so no run goes stale while queued. A second job for the same org is not queued while one waits. The panel's poll ends with "The sync is taking longer than expected" after 20 minutes. Queue calls made for an HTTP request time out after 5 seconds (503 "Background jobs are unavailable").
 
@@ -283,6 +368,31 @@ export const createAutomationWorker = () => {
 };
 ```
 
+### Vendor Research Worker
+
+```typescript
+// File: Servers/services/vendorResearch/worker.ts
+
+export const createVendorResearchWorker = (
+  concurrency = getVendorResearchConfig().workerConcurrency,
+  queueName = VENDOR_RESEARCH_QUEUE,
+) => new Worker(queueName, async (job) => { /* name check, then handleVendorResearchJob(job.data) or runVendorResearchScan() */ },
+  { connection: { url: REDIS_URL }, concurrency });
+```
+
+It takes the jobs of `vendor-research` only, `VENDOR_RESEARCH_WORKER_CONCURRENCY` at a time for each worker process (5 unless set). It takes `vendor_research` (one run) and `vendor_research_scan` (the scan, which only starts runs and finishes in moments) and refuses any other name. A failure of the handler of a run reaches BullMQ, which retries the job (`attempts: 2`); the pipeline itself ends a run that cannot be researched, so only Redis and database failures before the run is marked running come this far. The job of the scan has a single attempt and is not kept: a scan that fails is logged, and the scan of the next hour does its work. It logs a completed job at debug level and a failed one as an error.
+
+### Vendor Risk Database Worker
+
+```typescript
+// File: Servers/services/vendorResearch/vrdb/worker.ts
+
+export const createVrdbWorker = (concurrency = 1, queueName = VRDB_QUEUE) =>
+  new Worker(queueName, async (job) => processVrdbJob(job), { connection: { url: REDIS_URL }, concurrency });
+```
+
+Each worker process takes the jobs of `vendor-risk-database` one at a time (a list is tens of megabytes, and two syncs share no work). The image runs a worker process in the backend container as well as in the worker container (`Servers/start.sh` starts `node dist/jobs/worker.js` beside the API; see [Vendors](../domains/vendors.md#two-worker-processes)), so a deployment runs as many syncs at once as it has worker processes: two at least, three with the two backend replicas of the Kubernetes manifests and the Helm chart. BullMQ hands each job to one worker, and one job runs twice at once only when its lock lapses: a job whose lock is not renewed in time is taken for stalled and handed to a worker again (once), while the first process goes on, since its processor takes no abort signal (`processVrdbJob(job)` in `vrdb/worker.ts`). A first sync (`vrdb_sync_first_<list>`) and a scheduled sync of the same list are two jobs and can run at once as well. In both cases the apply of a copy locks the list's row in `vrdb_sources` (`FOR UPDATE`), so their writes follow one another. The pause between the requests to one host (`HOST_PAUSE_MS`) is kept in each process, so two syncs of lists of one host in two processes do not wait for each other. `processVrdbJob` refuses a job with any name but `vrdb_sync` and `vrdb_relabel` and one that names no list of the vendor risk database. A sync checks the records switch and its list's gate again (an operator may turn the records off after a scheduler fired) and runs `syncSource` (`vrdb/sync.ts`); one that changed the status of a record adds the status job of its list. The status job needs no switch (it reads stored copies only) and runs `relabelSource`, which throws for a failure of the database, so that BullMQ tries it again. A failed sync throws a fixed text with the list and the error code, never a message. One that failed on the way (`fetch_failed`, `unexpected`) throws `VrdbSyncFailed`, so BullMQ tries it again; one the list refused (`wrong_root`, `parse_errors`, `empty`, `shrank`, `too_large`, `feed_without_file`: a download a minute later gets the same file; and `no_baseline`, for a list read by its changes that has no baseline yet, which only an operator loads), or whose answer asked for a wait (`Retry-After`, which `syncSource` passes on as `retryAfterMs`), throws `VrdbSyncNotRetried`, a BullMQ `UnrecoverableError`, and the list's next scheduled sync asks again. Either way the sync has already stored the attempt in `vrdb_sync_runs` and left the copy as it was. It logs a completed job at debug level and a failed one as an error.
+
 ### Worker Initialization
 
 ```typescript
@@ -290,11 +400,15 @@ export const createAutomationWorker = () => {
 
 import { createNotificationWorker } from "../services/slack/slackWorker";
 import { createAutomationWorker } from "../services/automations/automationWorker";
+import { createVendorResearchWorker } from "../services/vendorResearch/worker";
+import { createVrdbWorker } from "../services/vendorResearch/vrdb/worker";
 
 const notificationWorker = createNotificationWorker();
 const automationWorker = createAutomationWorker();
+const vendorResearchWorker = createVendorResearchWorker();
+const vrdbWorker = createVrdbWorker(1);
 
-const workers: Worker[] = [notificationWorker, automationWorker];
+const workers: Worker[] = [notificationWorker, automationWorker, vendorResearchWorker, vrdbWorker];
 
 // Graceful shutdown
 process.on("SIGINT", async () => {
@@ -302,6 +416,8 @@ process.on("SIGINT", async () => {
   process.exit(0);
 });
 ```
+
+Where this process runs: the image's command, `Servers/start.sh`, starts it in the background (`node dist/jobs/worker.js &`) before the API, so every backend container runs one, and the worker container of `docker-compose.yml`, `kubernetes/worker-deployment.yaml` and the Helm chart runs another (`command: ["node", "dist/jobs/worker.js"]`). The development backend's `npm run watch` starts one beside the API too. Every queue above is therefore taken by at least two processes, each with its own environment and network: a setting a worker reads (the vendor research variables, for example) has to be set on the backend and on the worker alike. Whether the backend container should stop starting a worker when a separate one is deployed is an open decision.
 
 ## Job Handlers
 
@@ -629,6 +745,13 @@ import { addAllJobs } from "./jobs/producer";
 addAllJobs();
 ```
 
+Every backend start runs `addAllJobs`, on every replica, so it never empties a queue. The automation queue also holds the [on-demand jobs](#on-demand-jobs) (`extension_sync_run`, `generate_report_manual`, `send_email`, the risk link recomputes), which users or other replicas queued or are running. Each step runs on its own (`safeSchedule`): one that fails is logged and the rest still run.
+
+- **Schedulers are upserted.** `upsertJobScheduler` is idempotent by scheduler id: another start leaves one next job per scheduler, and a changed pattern takes effect at the next start.
+- **Retiring a scheduler.** Deleting a `schedule*` function leaves its scheduler in Redis. Remove it by id at startup, as `scheduleExtensionSyncTick` does with `removeJobScheduler("jira_assets_scheduled_sync_check")` and `scheduleFileExpirySweep` does with the v2.5.x id `evidence_expiry_sweep`.
+- **BullMQ 5 leftovers.** Releases before v2.5 scheduled with `queue.add(name, data, { repeat })`, and BullMQ 6 keeps running such an entry beside the scheduler that replaced it. `addAllJobs` therefore first removes them from both queues with `removeLegacyRepeatableJobs` (`Servers/jobs/legacyRepeatableJobs.ts`): entries without an iteration count, or under BullMQ 5's md5 key. On a queue without such entries it removes nothing.
+- **Never `obliterate` or `drain` these queues at startup.** Either deletes the on-demand jobs, and `obliterate({ force: true })` also deletes jobs a worker is running, whose worker then fails with "Missing key for job". Obliterate deletes the schedulers too.
+
 ## Redis Configuration
 
 ```env
@@ -656,7 +779,7 @@ export const redisClient = new IORedis(
 ```typescript
 worker.on("failed", (job, err) => {
   console.error(`Job ${job?.id} failed: ${err.message}`);
-  // Jobs with removeOnFail: false are kept for debugging
+  // Failed jobs stay in the failed set for a week (see Finished jobs)
 });
 
 worker.on("error", (err) => {
@@ -674,7 +797,7 @@ await queue.add(jobName, data, {
     delay: 1000,                  // 1s, 2s, 4s delays
   },
   removeOnComplete: true,
-  removeOnFail: false,            // Keep failed jobs for inspection
+  removeOnFail: { age: 7 * 24 * 3600 },  // Keep failed jobs a week for inspection
 });
 ```
 
@@ -683,9 +806,14 @@ await queue.add(jobName, data, {
 | File | Purpose |
 |------|---------|
 | `Servers/jobs/producer.ts` | Job scheduling entry point |
+| `Servers/jobs/legacyRepeatableJobs.ts` | Removes BullMQ 5 repeatable jobs at startup |
 | `Servers/jobs/worker.ts` | Worker initialization |
 | `Servers/services/automations/automationProducer.ts` | Automation queue producer |
 | `Servers/services/automations/automationWorker.ts` | Automation queue worker |
+| `Servers/services/vendorResearch/queue.ts` | Vendor research queue and producer, and the scheduler of the hourly scan |
+| `Servers/services/vendorResearch/worker.ts` | Vendor research queue worker |
+| `Servers/services/vendorResearch/vrdb/queue.ts` | Vendor risk database queue and the schedulers of the syncs |
+| `Servers/services/vendorResearch/vrdb/worker.ts` | Vendor risk database queue worker |
 | `Servers/services/automations/actions/sendEmail.ts` | Email action handler |
 | `Servers/services/postMarketMonitoring/pmmScheduler.ts` | PMM job processor |
 | `Servers/controllers/automations.ctrl.ts` | Automation API controller |

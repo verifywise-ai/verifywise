@@ -13848,6 +13848,109 @@ export const vendorEndpoints: Endpoint[] = [
     ],
     tag: "Vendors",
   },
+  {
+    method: 'GET',
+    path: '/v1/vendors/{id}/research/latest',
+    summary: "Get Latest Vendor Research",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: Vendors",
+  },
+  {
+    method: 'GET',
+    path: '/v1/vendors/{id}/research/runs/{runId}/trace',
+    summary: "Get Vendor Research Run Trace",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: Vendors",
+  },
+  {
+    method: 'POST',
+    path: '/v1/vendors/{id}/research',
+    summary: "Start Vendor Research Run",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: Vendors",
+  },
+  {
+    method: 'POST',
+    path: '/v1/vendors',
+    summary: "Create Vendor V1",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: Vendors",
+  },
+  {
+    method: 'PATCH',
+    path: '/v1/vendors/{id}',
+    summary: "Update Vendor By Id V1",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: Vendors",
+  },
+];
+
+// v1: Vendor Research endpoints
+export const vendorResearchEndpoints: Endpoint[] = [
+  {
+    method: 'GET',
+    path: '/v1/vendor-research/config',
+    summary: "Get Research Config",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: Vendor Research",
+  },
+  {
+    method: 'GET',
+    path: '/v1/vendor-research/decision-stats',
+    summary: "Get Decision Stats",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: Vendor Research",
+  },
+  {
+    method: 'GET',
+    path: '/v1/vendor-research/settings',
+    summary: "Get Research Settings",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: Vendor Research",
+  },
+  {
+    method: 'PUT',
+    path: '/v1/vendor-research/settings',
+    summary: "Save Research Settings",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: Vendor Research",
+  },
 ];
 
 // Vendor Risks endpoints
@@ -13975,6 +14078,43 @@ export const vendorRiskEndpoints: Endpoint[] = [
   },
 ];
 
+// v1: Vendor Risk Findings endpoints
+export const vendorRiskFindingsEndpoints: Endpoint[] = [
+  {
+    method: 'GET',
+    path: '/v1/vendor-risk-findings',
+    summary: "List Vendor Risk Findings",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: Vendor Risk Findings",
+  },
+  {
+    method: 'POST',
+    path: '/v1/vendor-risk-findings/{id}/accept',
+    summary: "Accept Vendor Risk Finding",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: Vendor Risk Findings",
+  },
+  {
+    method: 'POST',
+    path: '/v1/vendor-risk-findings/{id}/dismiss',
+    summary: "Dismiss Vendor Risk Finding",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: Vendor Risk Findings",
+  },
+];
+
 // Webhooks endpoints
 export const webhookEndpoints: Endpoint[] = [
   {
@@ -14099,6 +14239,8 @@ export const allEndpoints = {
   v1V1training: v1V1trainingEndpoints,
   v1V1useCaseLifecycle: v1V1useCaseLifecycleEndpoints,
   vendor: vendorEndpoints,
+  vendorResearch: vendorResearchEndpoints,
   vendorRisk: vendorRiskEndpoints,
+  vendorRiskFindings: vendorRiskFindingsEndpoints,
   webhook: webhookEndpoints,
 };

@@ -1,0 +1,694 @@
+import { RESEARCH_CATEGORIES } from "../../../domain.layer/interfaces/i.vendorResearch";
+import { REPEATED_QUERY_JACCARD, queryWords, similarity } from "../../webResearch/queryMatch";
+import { regulatorTopicsOf } from "../market";
+import { MAX_TOPIC_WORDS, NEWS_TOPIC_WORDS, normalizeQuery, suggestedQueries } from "../queries";
+import { ResearchTarget, buildTarget } from "../target";
+
+const ACME: ResearchTarget = {
+  name: "Acme Analytics, Inc.",
+  domain: "acme-analytics.com",
+  provides: "Product analytics",
+};
+
+describe("normalizeQuery", () => {
+  it("leaves a query of the vendor's name and a topic as it is", () => {
+    expect(normalizeQuery("Acme Analytics data breach", ACME)).toBe("Acme Analytics data breach");
+  });
+
+  it("puts the name first, without the legal form that the record carries", () => {
+    expect(normalizeQuery("data breach Acme Analytics, Inc.", ACME)).toBe(
+      "Acme Analytics data breach",
+    );
+  });
+
+  it("adds the name to a query that lacks it", () => {
+    expect(normalizeQuery("data breach", ACME)).toBe("Acme Analytics data breach");
+  });
+
+  it("takes the domain for the name and puts the name in its place", () => {
+    expect(normalizeQuery("acme-analytics.com breach", ACME)).toBe("Acme Analytics breach");
+  });
+
+  it("keeps the name alone when nothing else is asked", () => {
+    expect(normalizeQuery("Acme Analytics", ACME)).toBe("Acme Analytics");
+    expect(normalizeQuery("???", ACME)).toBe("Acme Analytics");
+  });
+
+  it("removes the operators of a search engine, which the feed does not understand", () => {
+    expect(
+      normalizeQuery('site:acme-analytics.com inurl:trust "Acme Analytics" security -jobs', ACME),
+    ).toBe("Acme Analytics security");
+    expect(normalizeQuery("Acme Analytics filetype:pdf intitle:dpa before:2025", ACME)).toBe(
+      "Acme Analytics",
+    );
+  });
+
+  it("removes the boolean words and the punctuation of a query that tries to be clever", () => {
+    expect(normalizeQuery("(Acme Analytics) AND (breach OR incident) | hack", ACME)).toBe(
+      "Acme Analytics breach incident hack",
+    );
+  });
+
+  it("removes an address from the query", () => {
+    expect(normalizeQuery("Acme Analytics https://example.com/leak?id=1 breach", ACME)).toBe(
+      "Acme Analytics breach",
+    );
+  });
+
+  it("drops the small words that only dilute a query", () => {
+    expect(normalizeQuery("what is the lawsuit about Acme Analytics", ACME)).toBe(
+      "Acme Analytics lawsuit",
+    );
+  });
+
+  it("keeps at most three topic words, the first ones", () => {
+    expect(MAX_TOPIC_WORDS).toBe(3);
+    expect(normalizeQuery("Acme Analytics data breach incident ransomware attack 2025", ACME)).toBe(
+      "Acme Analytics data breach incident",
+    );
+  });
+
+  it("repeats no word, in any case", () => {
+    expect(normalizeQuery("Acme Analytics breach BREACH Breach lawsuit", ACME)).toBe(
+      "Acme Analytics breach lawsuit",
+    );
+  });
+
+  it("does not take a word of the name for a topic", () => {
+    expect(normalizeQuery("Acme breach analytics", ACME)).toBe("Acme Analytics breach");
+  });
+
+  it("keeps the vendor's name as the record writes it when there is no legal form to remove", () => {
+    expect(normalizeQuery("breach", { ...ACME, name: "OpenAI" })).toBe("OpenAI breach");
+  });
+
+  it("keeps a word in another language or script", () => {
+    expect(normalizeQuery("Datenleck Acme Analytics", ACME)).toBe("Acme Analytics Datenleck");
+    expect(normalizeQuery("Acme Analytics 数据泄露", ACME)).toBe("Acme Analytics 数据泄露");
+  });
+
+  it("is idempotent", () => {
+    for (const raw of [
+      'site:x.com "Acme Analytics" (breach OR fine) -job lawsuit settlement 2024',
+      "what is the breach",
+      "acme-analytics.com",
+    ]) {
+      const once = normalizeQuery(raw, ACME);
+      expect(normalizeQuery(once, ACME)).toBe(once);
+    }
+  });
+
+  it("never gives more than 200 characters", () => {
+    const long = normalizeQuery(`${"w".repeat(150)} ${"x".repeat(150)}`, ACME);
+    expect(long.length).toBeLessThanOrEqual(200);
+  });
+
+  it("handles a vendor whose whole name is a legal form", () => {
+    expect(normalizeQuery("Limited breach", { ...ACME, name: "Limited" })).toBe("Limited breach");
+  });
+});
+
+describe("normalizeQuery for a vendor with other names", () => {
+  const META: ResearchTarget = {
+    name: "Meta Platforms, Inc.",
+    domain: "facebook.com",
+    provides: "Social media",
+    aliases: ["Facebook", "WhatsApp Inc."],
+  };
+
+  it("leads with the other name when the query names the vendor only by it, as the press writes it", () => {
+    expect(normalizeQuery("Facebook data breach", META)).toBe("Facebook data breach");
+    expect(normalizeQuery("data breach Facebook", META)).toBe("Facebook data breach");
+  });
+
+  it("writes the other name without its legal form", () => {
+    expect(normalizeQuery("WhatsApp Inc. fine", META)).toBe("WhatsApp fine");
+  });
+
+  it("leads with the name when the query holds it, and keeps the other name as a topic word", () => {
+    expect(normalizeQuery("Meta Platforms Facebook breach", META)).toBe(
+      "Meta Platforms Facebook breach",
+    );
+    // "Meta" alone is a word of the name, not the name, so it is Facebook that the query names.
+    expect(normalizeQuery("Meta Facebook breach", META)).toBe("Facebook breach");
+  });
+
+  it("leads with the other name that comes first in the query, and keeps the next one as a topic", () => {
+    expect(normalizeQuery("WhatsApp Facebook outage", META)).toBe("WhatsApp Facebook outage");
+    expect(normalizeQuery("outage Facebook WhatsApp", META)).toBe("Facebook outage WhatsApp");
+  });
+
+  it("does not repeat the words of the other name that leads", () => {
+    expect(normalizeQuery("Facebook facebook breach", META)).toBe("Facebook breach");
+    expect(normalizeQuery("Facebook Lite breach", META)).toBe("Facebook Lite breach");
+  });
+
+  it("leads with the name when the query holds no name of the vendor", () => {
+    expect(normalizeQuery("data breach", META)).toBe("Meta Platforms data breach");
+  });
+
+  it("takes the domain for the name, also when the query holds another name of the vendor", () => {
+    expect(normalizeQuery("facebook.com breach", META)).toBe("Meta Platforms breach");
+    expect(normalizeQuery("facebook.com Facebook breach", META)).toBe("Facebook breach");
+  });
+
+  it("does not repeat a word of the other name that leads, where the query says it again", () => {
+    const orbit: ResearchTarget = {
+      name: "Zeta Systems",
+      domain: "zeta.io",
+      provides: "Hosting",
+      aliases: ["Orbit Suite"],
+    };
+
+    expect(normalizeQuery("Orbit Suite breach Suite", orbit)).toBe("Orbit Suite breach");
+  });
+
+  it("leads with the other name that stands first in the query, by either of its written forms", () => {
+    const orbit: ResearchTarget = {
+      name: "Zeta Systems",
+      domain: "zeta.io",
+      provides: "Hosting",
+      aliases: ["The Orbit Co", "Quark"],
+    };
+
+    // "Orbit", the form without the article and the legal form, stands before "Quark"; the form as
+    // the record writes it stands after.
+    expect(normalizeQuery("Orbit news Quark The Orbit Co breach", orbit)).toBe(
+      "Orbit Quark breach",
+    );
+  });
+
+  it("does not take a word of the vendor's name for a topic when another name leads", () => {
+    expect(normalizeQuery("Facebook Meta breach", META)).toBe("Facebook breach");
+  });
+
+  it("is idempotent", () => {
+    for (const raw of [
+      "Facebook data breach",
+      "WhatsApp Facebook outage",
+      "Meta Facebook breach",
+      "data breach",
+    ]) {
+      const once = normalizeQuery(raw, META);
+      expect(normalizeQuery(once, META)).toBe(once);
+    }
+  });
+
+  it("behaves as before for a vendor with no other names", () => {
+    const plain = { ...META, aliases: undefined };
+
+    expect(normalizeQuery("Facebook data breach", plain)).toBe(
+      "Meta Platforms Facebook data breach",
+    );
+    expect(normalizeQuery("Facebook data breach", { ...META, aliases: [] })).toBe(
+      "Meta Platforms Facebook data breach",
+    );
+  });
+});
+
+describe("suggestedQueries", () => {
+  it("gives short news queries for the categories that search the news", () => {
+    expect(suggestedQueries(ACME, ["security_incidents", "legal_regulatory"])).toEqual({
+      security_incidents: ["Acme Analytics data breach", "Acme Analytics security incident"],
+      legal_regulatory: [
+        "Acme Analytics lawsuit",
+        "Acme Analytics fined",
+        "Acme Analytics FTC",
+        "Acme Analytics settlement",
+      ],
+    });
+  });
+
+  it("gives none for the categories that read the vendor's own website", () => {
+    expect(suggestedQueries(ACME, ["certifications", "ai_specific"])).toEqual({});
+  });
+
+  it("gives one query for the outages of the service, for the category of availability", () => {
+    expect(suggestedQueries(ACME, ["availability"])).toEqual({
+      availability: ["Acme Analytics outage"],
+    });
+  });
+
+  it("gives a vendor in a market of another language the English query for outages only", () => {
+    const brume = {
+      name: "Brume Logiciels SAS",
+      domain: "brume-logiciels.fr",
+      provides: "Software",
+    };
+
+    expect(suggestedQueries(brume, ["availability"])).toEqual({
+      availability: ["Brume Logiciels outage"],
+    });
+  });
+
+  it("gives three queries for the solvency of the vendor, for the category of financial health", () => {
+    expect(suggestedQueries(ACME, ["financial_health"])).toEqual({
+      financial_health: [
+        "Acme Analytics layoffs",
+        "Acme Analytics bankruptcy",
+        "Acme Analytics acquisition",
+      ],
+    });
+  });
+
+  it("gives a vendor in a market of another language the English queries for financial health only", () => {
+    const brume = {
+      name: "Brume Logiciels SAS",
+      domain: "brume-logiciels.fr",
+      provides: "Software",
+    };
+
+    expect(suggestedQueries(brume, ["financial_health"])).toEqual({
+      financial_health: [
+        "Brume Logiciels layoffs",
+        "Brume Logiciels bankruptcy",
+        "Brume Logiciels acquisition",
+      ],
+    });
+  });
+
+  it("gives only the categories it is asked for", () => {
+    expect(suggestedQueries(ACME, ["legal_regulatory"])).toEqual({
+      legal_regulatory: [
+        "Acme Analytics lawsuit",
+        "Acme Analytics fined",
+        "Acme Analytics FTC",
+        "Acme Analytics settlement",
+      ],
+    });
+  });
+
+  describe("for a vendor in a market of another language", () => {
+    const BRUME: ResearchTarget = {
+      name: "Brume Logiciels SAS",
+      domain: "brume-logiciels.fr",
+      provides: "Software",
+    };
+
+    it("adds the queries in the language of the market after the English ones", () => {
+      expect(suggestedQueries(BRUME, ["security_incidents", "legal_regulatory"])).toEqual({
+        security_incidents: [
+          "Brume Logiciels data breach",
+          "Brume Logiciels security incident",
+          "Brume Logiciels fuite de données",
+          "Brume Logiciels cyberattaque",
+        ],
+        legal_regulatory: [
+          "Brume Logiciels lawsuit",
+          "Brume Logiciels fined",
+          "Brume Logiciels CNIL sanction",
+          "Brume Logiciels plainte",
+        ],
+      });
+    });
+
+    it("puts the query of the first other name between the English queries and the local ones", () => {
+      const known = { ...BRUME, aliases: ["Brume Cloud"] };
+
+      expect(suggestedQueries(known, ["legal_regulatory"]).legal_regulatory).toEqual([
+        "Brume Logiciels lawsuit",
+        "Brume Logiciels fined",
+        "Brume Cloud lawsuit",
+        "Brume Logiciels CNIL sanction",
+        "Brume Logiciels plainte",
+      ]);
+    });
+
+    it("gives no two queries that the session would take for one, in any market", () => {
+      for (const domain of [
+        "brume.de",
+        "brume.fr",
+        "brume.it",
+        "brume.es",
+        "brume.nl",
+        "brume.pt",
+        "brume.com.br",
+      ]) {
+        const target = { ...BRUME, name: "Brume", domain, aliases: ["Cirrus"] };
+        const queries = Object.values(suggestedQueries(target, RESEARCH_CATEGORIES))
+          .flat()
+          .map((query) => queryWords(query));
+
+        for (let first = 0; first < queries.length; first += 1) {
+          for (let second = first + 1; second < queries.length; second += 1) {
+            expect(similarity(queries[first], queries[second])).toBeLessThan(
+              REPEATED_QUERY_JACCARD,
+            );
+          }
+        }
+      }
+    });
+  });
+
+  describe("for a vendor with no market of another language", () => {
+    it.each([
+      ["acme.com", ["FTC", "settlement"]],
+      ["acme.co.uk", ["ICO fine", "settlement"]],
+      ["acme.ie", ["DPC fine", "settlement"]],
+      ["acme.com.au", ["OAIC", "settlement"]],
+    ])(
+      "adds the queries that name the authority of its jurisdiction after the English ones: %s",
+      (domain, topics) => {
+        expect(
+          suggestedQueries({ ...ACME, domain }, ["legal_regulatory"]).legal_regulatory,
+        ).toEqual([
+          "Acme Analytics lawsuit",
+          "Acme Analytics fined",
+          ...topics.map((topic) => `Acme Analytics ${topic}`),
+        ]);
+      },
+    );
+
+    it("adds none for the security incidents", () => {
+      expect(suggestedQueries({ ...ACME, domain: "acme.co.uk" }, ["security_incidents"])).toEqual({
+        security_incidents: ["Acme Analytics data breach", "Acme Analytics security incident"],
+      });
+    });
+
+    it("gives no two queries that the session would take for one, in any jurisdiction", () => {
+      for (const domain of ["brume.com", "brume.co.uk", "brume.ie", "brume.com.au"]) {
+        const target = { ...ACME, name: "Brume", domain, aliases: ["Cirrus"] };
+        const queries = Object.values(suggestedQueries(target, RESEARCH_CATEGORIES))
+          .flat()
+          .map((query) => queryWords(query));
+
+        for (let first = 0; first < queries.length; first += 1) {
+          for (let second = first + 1; second < queries.length; second += 1) {
+            expect(similarity(queries[first], queries[second])).toBeLessThan(
+              REPEATED_QUERY_JACCARD,
+            );
+          }
+        }
+      }
+    });
+  });
+
+  it("uses the name without its legal form", () => {
+    const [first] = suggestedQueries({ ...ACME, name: "Müller GmbH" }, [
+      "security_incidents",
+    ]).security_incidents!;
+    expect(first).toBe("Müller data breach");
+  });
+
+  describe("for a vendor with other names", () => {
+    const WITH_ALIASES: ResearchTarget = { ...ACME, aliases: ["AcmeAI Ltd", "Acme Cloud"] };
+
+    it("adds one query for each category, led by the first other name and the first topic of the category", () => {
+      expect(suggestedQueries(WITH_ALIASES, ["security_incidents", "legal_regulatory"])).toEqual({
+        security_incidents: [
+          "Acme Analytics data breach",
+          "Acme Analytics security incident",
+          "AcmeAI data breach",
+        ],
+        legal_regulatory: [
+          "Acme Analytics lawsuit",
+          "Acme Analytics fined",
+          "Acme Analytics FTC",
+          "Acme Analytics settlement",
+          "AcmeAI lawsuit",
+        ],
+      });
+    });
+
+    it("adds the query for layoffs of the first other name to the category of financial health", () => {
+      expect(suggestedQueries(WITH_ALIASES, ["financial_health"])).toEqual({
+        financial_health: [
+          "Acme Analytics layoffs",
+          "Acme Analytics bankruptcy",
+          "Acme Analytics acquisition",
+          "AcmeAI layoffs",
+        ],
+      });
+    });
+
+    it("adds the query for outages of the first other name to the category of availability", () => {
+      expect(suggestedQueries(WITH_ALIASES, ["availability"])).toEqual({
+        availability: ["Acme Analytics outage", "AcmeAI outage"],
+      });
+    });
+
+    it("leads no search with a legal form when the vendor's legal name is written with a comma", () => {
+      const target = buildTarget({
+        vendor_name: "Acme Analytics",
+        website: "acme-analytics.example",
+        vendor_provides: "x",
+        other_names: "Acme Analytics, Inc.",
+      });
+
+      expect(
+        suggestedQueries(target, [
+          "security_incidents",
+          "legal_regulatory",
+          "availability",
+          "financial_health",
+        ]),
+      ).toEqual({
+        security_incidents: ["Acme Analytics data breach", "Acme Analytics security incident"],
+        legal_regulatory: [
+          "Acme Analytics lawsuit",
+          "Acme Analytics fined",
+          "Acme Analytics FTC",
+          "Acme Analytics settlement",
+        ],
+        availability: ["Acme Analytics outage"],
+        financial_health: [
+          "Acme Analytics layoffs",
+          "Acme Analytics bankruptcy",
+          "Acme Analytics acquisition",
+        ],
+      });
+    });
+
+    it("adds nothing for the categories that read the vendor's own website, or for no other name", () => {
+      expect(suggestedQueries(WITH_ALIASES, ["certifications", "ai_specific"])).toEqual({});
+      expect(suggestedQueries({ ...ACME, aliases: [] }, ["legal_regulatory"])).toEqual(
+        suggestedQueries(ACME, ["legal_regulatory"]),
+      );
+    });
+
+    const NEWS = [
+      "security_incidents",
+      "legal_regulatory",
+      "availability",
+      "financial_health",
+    ] as const;
+
+    it("leads with the next other name when the first is the vendor's own name with a legal form, as for a dotted name that is also the domain", () => {
+      const target: ResearchTarget = {
+        name: "acme.io",
+        domain: "acme.io",
+        provides: "Work management",
+        aliases: ["acme.io Ltd.", "ACMI"],
+      };
+
+      expect(suggestedQueries(target, NEWS)).toEqual({
+        security_incidents: [
+          "acme.io data breach",
+          "acme.io security incident",
+          "ACMI data breach",
+        ],
+        legal_regulatory: [
+          "acme.io lawsuit",
+          "acme.io fined",
+          "acme.io FTC",
+          "acme.io settlement",
+          "ACMI lawsuit",
+        ],
+        availability: ["acme.io outage", "ACMI outage"],
+        financial_health: [
+          "acme.io layoffs",
+          "acme.io bankruptcy",
+          "acme.io acquisition",
+          "ACMI layoffs",
+        ],
+      });
+    });
+
+    it.each([
+      ["a legal form", "Acme Analytics Ltd"],
+      ["a legal form in capitals, as a home page may write it", "ACME ANALYTICS, INC."],
+      ["the article and a legal form", "The Acme Analytics Company"],
+      ["two legal forms", "Acme Analytics Pty Ltd"],
+      ["its domain", "acme-analytics.com"],
+      ["its domain with www", "www.acme-analytics.com"],
+    ])(
+      "passes over an other name that is the vendor's name with %s, and leads with the next one",
+      (_form, first) => {
+        const suggested = suggestedQueries({ ...ACME, aliases: [first, "Initech"] }, NEWS);
+
+        expect(NEWS.map((category) => suggested[category]!.slice(-1)[0])).toEqual([
+          "Initech data breach",
+          "Initech lawsuit",
+          "Initech outage",
+          "Initech layoffs",
+        ]);
+      },
+    );
+
+    it("gives a category no query of an other name when each of them makes the query of the name again, and keeps it in the others", () => {
+      const target = { ...ACME, aliases: ["Acme Analytics Holding Corp", "Acme Analytics Inc"] };
+
+      expect(suggestedQueries(target, NEWS)).toEqual({
+        security_incidents: ["Acme Analytics data breach", "Acme Analytics security incident"],
+        legal_regulatory: [
+          "Acme Analytics lawsuit",
+          "Acme Analytics fined",
+          "Acme Analytics FTC",
+          "Acme Analytics settlement",
+          "Acme Analytics Holding lawsuit",
+        ],
+        availability: ["Acme Analytics outage", "Acme Analytics Holding outage"],
+        financial_health: [
+          "Acme Analytics layoffs",
+          "Acme Analytics bankruptcy",
+          "Acme Analytics acquisition",
+          "Acme Analytics Holding layoffs",
+        ],
+      });
+    });
+
+    it("gives no two queries that the session would take for one, compared as the engine is given them, whatever the other names", () => {
+      for (const aliases of [
+        ["Acme Analytics Ltd", "Initech"],
+        ["acme-analytics.com"],
+        ["Acme Analytics Holding Corp"],
+        ["Acme Analytics Group"],
+        ["Cirrus"],
+      ]) {
+        for (const domain of ["acme-analytics.com", "acme-analytics.fr", "acme-analytics.co.uk"]) {
+          const target = { ...ACME, domain, aliases };
+          const queries = Object.values(suggestedQueries(target, RESEARCH_CATEGORIES))
+            .flat()
+            .map((query) => queryWords(normalizeQuery(query, target)));
+
+          for (let first = 0; first < queries.length; first += 1) {
+            for (let second = first + 1; second < queries.length; second += 1) {
+              expect(similarity(queries[first], queries[second])).toBeLessThan(
+                REPEATED_QUERY_JACCARD,
+              );
+            }
+          }
+        }
+      }
+    });
+
+    it("leaves out a query of the name that the session would take for one before it, for a name of eight words", () => {
+      const target: ResearchTarget = {
+        name: "Alpha Beta Gamma Delta Epsilon Zeta Eta Theta",
+        domain: "alpha-beta.com",
+        provides: "x",
+      };
+
+      expect(suggestedQueries(target, ["legal_regulatory"])).toEqual({
+        legal_regulatory: ["Alpha Beta Gamma Delta Epsilon Zeta Eta Theta lawsuit"],
+      });
+    });
+
+    it("keeps the first other name when it makes a query of its own: Ray-Project for Anyscale", () => {
+      const target: ResearchTarget = {
+        name: "Anyscale",
+        domain: "anyscale.com",
+        provides: "AI compute",
+        aliases: ["Ray-Project"],
+      };
+
+      const suggested = suggestedQueries(target, NEWS);
+
+      expect(suggested.security_incidents).toEqual([
+        "Anyscale data breach",
+        "Anyscale security incident",
+        "Ray-Project data breach",
+      ]);
+      expect(NEWS.map((category) => suggested[category]!.slice(-1)[0])).toEqual([
+        "Ray-Project data breach",
+        "Ray-Project lawsuit",
+        "Ray-Project outage",
+        "Ray-Project layoffs",
+      ]);
+    });
+
+    it("leads with NetScaler and never with Citrix Systems", () => {
+      const target: ResearchTarget = {
+        name: "Citrix",
+        domain: "citrix.com",
+        provides: "x",
+        aliases: ["NetScaler", "Citrix Systems"],
+      };
+
+      const suggested = suggestedQueries(target, NEWS);
+
+      expect(NEWS.map((category) => suggested[category]!.slice(-1)[0])).toEqual([
+        "NetScaler data breach",
+        "NetScaler lawsuit",
+        "NetScaler outage",
+        "NetScaler layoffs",
+      ]);
+      expect(
+        Object.values(suggested)
+          .flat()
+          .filter((q) => q.startsWith("Citrix Systems")),
+      ).toEqual([]);
+    });
+
+    it("keeps an other name that adds a word to a name of one word, or that is the brand of the domain", () => {
+      expect(
+        suggestedQueries(
+          { name: "Acme", domain: "acme.com", provides: "x", aliases: ["Acme Global"] },
+          ["security_incidents"],
+        ).security_incidents,
+      ).toContain("Acme Global data breach");
+      expect(
+        suggestedQueries(
+          { name: "Acme Analytics", domain: "acme.com", provides: "x", aliases: ["Acme"] },
+          ["security_incidents"],
+        ).security_incidents,
+      ).toContain("Acme data breach");
+    });
+  });
+});
+
+describe("NEWS_TOPIC_WORDS", () => {
+  it("are the English words of what the news categories look for: single, lower case, each once", () => {
+    expect(NEWS_TOPIC_WORDS).toEqual([
+      "breach",
+      "incident",
+      "lawsuit",
+      "fined",
+      "outage",
+      "layoffs",
+      "bankruptcy",
+      "acquisition",
+    ]);
+    for (const word of NEWS_TOPIC_WORDS) expect(word).toMatch(/^[a-z]+$/);
+    expect(new Set(NEWS_TOPIC_WORDS).size).toBe(NEWS_TOPIC_WORDS.length);
+  });
+
+  it("leave out the words that name no topic by themselves: an article about a software vendor has them anyway", () => {
+    expect(NEWS_TOPIC_WORDS).not.toContain("data");
+    expect(NEWS_TOPIC_WORDS).not.toContain("security");
+  });
+
+  it("hold every word that a suggested query of the news categories adds to the name, bar those two and the regulators", () => {
+    const regulators = regulatorTopicsOf(ACME).flatMap((topic) => topic.toLowerCase().split(" "));
+    const added = Object.values(suggestedQueries(ACME, RESEARCH_CATEGORIES))
+      .flat()
+      .flatMap((query) =>
+        query
+          .replace(/^Acme Analytics /, "")
+          .toLowerCase()
+          .split(" "),
+      );
+
+    expect(added.length).toBeGreaterThan(NEWS_TOPIC_WORDS.length);
+    for (const word of added) {
+      if (word === "data" || word === "security" || regulators.includes(word)) continue;
+      expect(NEWS_TOPIC_WORDS).toContain(word);
+    }
+  });
+
+  it("are combined with the regulators of the vendor's jurisdiction by the caller, not repeated here", () => {
+    for (const topic of regulatorTopicsOf(ACME)) {
+      expect(NEWS_TOPIC_WORDS).not.toContain(topic.toLowerCase());
+    }
+  });
+});

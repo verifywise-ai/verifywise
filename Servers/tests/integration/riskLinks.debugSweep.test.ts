@@ -30,11 +30,18 @@ afterEach(async () => {
   await cleanupDatabase();
 });
 
-/** A context for an arbitrary role name — the shared harness only maps 1/3/5. */
+/**
+ * A context for an arbitrary role name — the shared harness only maps 1/3/5. A SuperAdmin is the
+ * pure super admin the gate knows (see isPureSuperAdmin): signed in without an organization and
+ * carrying the super_admins flag; a request that only says "SuperAdmin" is refused.
+ */
 async function appAs(role: string, orgId: number, userId: number) {
   const app: http.Server = await createTestApp({
     bypassAuth: true,
-    mockUser: { userId, organizationId: orgId, role },
+    mockUser:
+      role === "SuperAdmin"
+        ? { userId, organizationId: null, role, isSuperAdmin: true }
+        : { userId, organizationId: orgId, role },
   });
   return testRequest(app);
 }

@@ -13,9 +13,11 @@
  */
 
 import TabContext from "@mui/lab/TabContext";
-import { Autocomplete, Box, Stack, TextField, Typography, Divider } from "@mui/material";
+import { Box, Stack, Typography, Divider } from "@mui/material";
 import Field from "../../Inputs/Field";
 import Select from "../../Inputs/Select";
+import AutoCompleteField from "../../Inputs/Autocomplete";
+import { textStyles } from "../../../themes/typography";
 import { useEffect, useRef, useState, useMemo, useCallback } from "react";
 import Alert from "../../Alert";
 import { checkStringValidation } from "../../../../application/validations/stringValidation";
@@ -49,10 +51,13 @@ import CustomFieldsSection, { type CustomFieldsSectionHandle } from "../../Custo
 import { useRequiredCustomFieldsGate } from "../../CustomFieldsSection/RequiredCustomFieldsGate";
 import { useVendorRiskChangeHistory } from "../../../../application/hooks/useVendorRiskChangeHistory";
 import { VendorModel } from "../../../../domain/models/Common/vendor/vendor.model";
-import { ExistingRisk } from "../../../../domain/interfaces/i.vendor";
+import {
+  ExistingRisk,
+  VendorRiskFormDetails,
+  VendorRiskPreview,
+} from "../../../../domain/interfaces/i.vendor";
 import { Framework } from "../../../../domain/types/Framework";
 import RiskLevel from "../../RiskLevel";
-import { radiusPx } from "../../../themes/palette";
 
 interface AddNewRiskProps {
   isOpen: boolean;
@@ -61,9 +66,17 @@ interface AddNewRiskProps {
   handleChange?: (event: React.SyntheticEvent, newValue: string) => void;
   existingRisk?: ExistingRisk | null;
   onSuccess?: () => void;
-  vendors: VendorModel[];
+  /** The form lists these for the vendor field and reads nothing else of them. */
+  vendors: Array<Pick<VendorModel, "id" | "vendor_name">>;
   /** The tab an existing risk opens on, e.g. "linked-risks" from the table's reach link. */
   initialTab?: "details" | "linked-risks";
+  /**
+   * Opens the form on a risk that was drafted elsewhere, as a new risk (see VendorRiskPreview).
+   * Saving hands what is on screen to the preview's `onSave` instead of creating the risk here.
+   * The vendor is fixed, and the form does not check the role: whoever opens a preview has
+   * checked that the person may save it. Ignored when an existing risk is being edited.
+   */
+  preview?: VendorRiskPreview | null;
 }
 
 const initialState: VendorRiskModalFormValues = {
@@ -74,12 +87,6 @@ const initialState: VendorRiskModalFormValues = {
   likelihood: "1",
   action_plan: "",
   vendor_id: "",
-};
-
-// The vendor risk enum spells the top likelihood "Almost certain"; the shared
-// RiskLikelihood value (used by RiskCalculator) is "Almost Certain".
-const VENDOR_LIKELIHOOD_VALUES: Record<string, string> = {
-  [RiskLikelihood.AlmostCertain]: "Almost certain",
 };
 
 const LIKELIHOOD_OPTIONS = [
@@ -100,6 +107,30 @@ const RISK_SEVERITY_OPTIONS = [
   { _id: 5, name: RiskSeverity.Catastrophic },
 ] as const;
 
+/**
+ * The register spells its top likelihood "Almost certain", with a small c; the list above spells
+ * it with a capital C, as the project risks do. A name is turned into the register's before it is
+ * saved, and a register value is matched to its option without regard to case, so that a risk of
+ * this level can be shown and saved.
+ */
+const toRegisterLikelihood = (name: string): string =>
+  name === RiskLikelihood.AlmostCertain ? "Almost certain" : name;
+
+/** The id, as a string, of the option that a register value names. Case does not matter; "1" if none does. */
+const optionIdOf = (options: ReadonlyArray<{ _id: number | ""; name: string }>, value: string) =>
+  String(options.find((option) => option.name.toLowerCase() === value.toLowerCase())?._id ?? 1);
+
+/** The values a preview starts the form on. */
+const valuesOfPreview = (preview: VendorRiskPreview): VendorRiskModalFormValues => ({
+  vendor_id: preview.values.vendor_id,
+  action_owner: preview.values.action_owner === null ? "" : String(preview.values.action_owner),
+  risk_description: preview.values.risk_description,
+  impact_description: preview.values.impact_description,
+  action_plan: preview.values.action_plan,
+  likelihood: optionIdOf(LIKELIHOOD_OPTIONS, preview.values.likelihood),
+  risk_severity: optionIdOf(RISK_SEVERITY_OPTIONS, preview.values.risk_severity),
+});
+
 const AddNewRisk: React.FC<AddNewRiskProps> = ({
   isOpen,
   setIsOpen,
@@ -107,9 +138,12 @@ const AddNewRisk: React.FC<AddNewRiskProps> = ({
   onSuccess = () => {},
   vendors,
   initialTab,
+  preview,
 }) => {
   const can = useCanCheck();
-  const isEditingDisabled = !can("vendor.edit");
+  // A preview is for a new risk: with an existing one the form edits that.
+  const draft = existingRisk ? null : (preview ?? null);
+  const isEditingDisabled = !draft && !can("vendor.edit");
   const VENDOR_OPTIONS =
     vendors?.length > 0
       ? vendors
@@ -126,16 +160,19 @@ const AddNewRisk: React.FC<AddNewRiskProps> = ({
 
   const validators = useMemo(
     () => ({
+      // The maxima are the server's (VENDOR_RISK_VALIDATION_LIMITS in
+      // Servers/utils/validations/vendorRiskValidation.utils.ts): a risk the research agent
+      // wrote carries texts longer than the form used to take, and every save checks them.
       risk_description: (v: unknown) => {
-        const r = checkStringValidation("Risk description", v as string, 1, 256);
+        const r = checkStringValidation("Risk description", v as string, 1, 500);
         return r.accepted ? "" : r.message;
       },
       impact_description: (v: unknown) => {
-        const r = checkStringValidation("Impact description", v as string, 1, 256);
+        const r = checkStringValidation("Impact description", v as string, 1, 500);
         return r.accepted ? "" : r.message;
       },
       action_plan: (v: unknown) => {
-        const r = checkStringValidation("Action plan", v as string, 1, 256);
+        const r = checkStringValidation("Action plan", v as string, 1, 1000);
         return r.accepted ? "" : r.message;
       },
       vendor_id: (v: unknown) => {
@@ -213,9 +250,16 @@ const AddNewRisk: React.FC<AddNewRiskProps> = ({
     }
   }, [isOpen, resetErrors, existingRisk?.id, initialTab]);
 
+  // The draft is read through a ref and identified by its key: the form starts from its values
+  // when it opens or another draft is opened, not whenever the page renders and hands over a new
+  // object, which would wipe what the person has typed.
+  const draftRef = useRef(draft);
+  draftRef.current = draft;
+  const draftKey = draft?.key;
+
   useEffect(() => {
     if (isOpen && !existingRisk) {
-      setValues(initialState);
+      setValues(draftRef.current ? valuesOfPreview(draftRef.current) : initialState);
       setSelectedFrameworks([]);
     } else if (existingRisk) {
       setValues((prevValues) => ({
@@ -223,15 +267,8 @@ const AddNewRisk: React.FC<AddNewRiskProps> = ({
         risk_description: existingRisk.risk_description,
         impact_description: existingRisk.impact_description,
         action_owner: String(existingRisk.action_owner) || "",
-        risk_severity: Number(
-          RISK_SEVERITY_OPTIONS.find((r) => r.name === existingRisk.risk_severity)?._id ?? 1,
-        ).toString(),
-        likelihood: Number(
-          LIKELIHOOD_OPTIONS.find(
-            (r) =>
-              String(r.name).toLowerCase() === String(existingRisk.likelihood ?? "").toLowerCase(),
-          )?._id ?? 1,
-        ).toString(),
+        risk_severity: optionIdOf(RISK_SEVERITY_OPTIONS, existingRisk.risk_severity),
+        likelihood: optionIdOf(LIKELIHOOD_OPTIONS, existingRisk.likelihood),
         action_plan: existingRisk.action_plan,
         vendor_id: existingRisk.vendor_id,
       }));
@@ -239,7 +276,7 @@ const AddNewRisk: React.FC<AddNewRiskProps> = ({
         Array.isArray(existingRisk.frameworks) ? existingRisk.frameworks.map(Number) : [],
       );
     }
-  }, [existingRisk, isOpen]);
+  }, [existingRisk, isOpen, draftKey]);
 
   const handleSave = () => {
     if (customFieldsGate.blocked) return;
@@ -290,7 +327,7 @@ const AddNewRisk: React.FC<AddNewRiskProps> = ({
       selectedLikelihood.name as RiskLikelihood,
       selectedSeverity.name as RiskSeverity,
     );
-    const _riskDetails = {
+    const _riskDetails: VendorRiskFormDetails = {
       vendor_id: values.vendor_id,
       risk_description: values.risk_description,
       impact_description: values.impact_description,
@@ -299,13 +336,64 @@ const AddNewRisk: React.FC<AddNewRiskProps> = ({
       action_plan: values.action_plan,
       risk_severity: selectedSeverity.name,
       risk_level: risk_risklevel.level,
-      likelihood: VENDOR_LIKELIHOOD_VALUES[selectedLikelihood.name] ?? selectedLikelihood.name,
+      likelihood: toRegisterLikelihood(selectedLikelihood.name),
       frameworks: selectedFrameworks,
     };
     if (existingRisk) {
       await updateRisk(existingRisk.id!, _riskDetails);
+    } else if (draft) {
+      await savePreview(_riskDetails, draft);
     } else {
       await createRisk(_riskDetails);
+    }
+  };
+
+  /**
+   * Saves the risk the form was opened on through the owner of the draft, which decides what
+   * saving means (see VendorRiskPreview). It tells the person whether it worked, so the form adds
+   * no message of its own, and it reports a failure through the request layer. The form stays
+   * open with the values as they are, so that nothing the person edited is lost and they can save
+   * again.
+   *
+   * Once the risk exists the form closes, also when the custom field values could not be saved:
+   * saving again would try to add the risk a second time. The person is told, and can set the
+   * values on the risk.
+   */
+  const savePreview = async (riskDetails: VendorRiskFormDetails, owner: VendorRiskPreview) => {
+    setIsSubmitting(true);
+    try {
+      const newRiskId = await owner.onSave(riskDetails);
+
+      let cfFlushFailed = false;
+      if (newRiskId && customFieldsRef.current?.hasPendingValues()) {
+        try {
+          await customFieldsRef.current.flush(newRiskId);
+        } catch (cfError) {
+          cfFlushFailed = true;
+          logEngine({
+            type: "error",
+            message: `Vendor risk created, but custom field values failed to save: ${(cfError as Error).message}`,
+          });
+        }
+      }
+      onSuccess();
+      if (cfFlushFailed) {
+        setAlert({
+          variant: "warning",
+          body: "Risk added, but its custom field values could not be saved. Open the risk to try again.",
+        });
+        setTimeout(() => setAlert(null), 6000);
+      }
+      // The form can be closed while the request is on its way, and another draft opened: only
+      // close the form that is still on the draft that was just saved.
+      if (draftRef.current?.key === owner.key) setIsOpen();
+    } catch (error) {
+      logEngine({
+        type: "error",
+        message: `The suggested risk could not be saved: ${(error as Error).message}`,
+      });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -449,182 +537,146 @@ const AddNewRisk: React.FC<AddNewRiskProps> = ({
     [clearFieldError],
   );
 
+  // Read top to bottom: who and what, then what it would cost and what is
+  // being done about it, then where it applies and how severe it is. The
+  // validation focus order (VENDOR_RISK_MODAL_FIELD_ORDER) follows the same path.
   const risksPanel = (
-    <Stack spacing={6}>
+    <Stack spacing={8}>
       <Stack direction="row" spacing={6}>
-        <Stack flex={1} spacing={6}>
-          <Stack direction="row" spacing={6}>
-            <Box flex={1}>
-              <Select
-                items={VENDOR_OPTIONS}
-                label="Vendor"
-                placeholder="Select vendor"
-                isHidden={false}
-                id="vendor_id"
-                onChange={(e) => handleOnChange("vendor_id", e.target.value)}
-                onBlur={handleFieldBlur("vendor_id")}
-                value={values.vendor_id}
-                error={errors.vendor_id}
-                sx={{ width: "100%" }}
-                isRequired
-                disabled={isEditingDisabled}
-              />
-            </Box>
-            <Box flex={1}>
-              <Select
-                items={formattedUsers}
-                label="Action owner"
-                placeholder="Select owner"
-                isHidden={false}
-                id="action_owner"
-                onChange={(e) => handleOnChange("action_owner", e.target.value)}
-                onBlur={handleFieldBlur("action_owner")}
-                value={values.action_owner || ""}
-                error={errors.action_owner}
-                sx={{ width: "100%" }}
-                isRequired
-                disabled={isEditingDisabled}
-              />
-            </Box>
-          </Stack>
-          <Box>
-            <Field
-              id="vendor-risk-description-input"
-              label="Risk description"
-              width="100%"
-              value={values.risk_description}
-              onChange={(e) => handleOnChange("risk_description", e.target.value)}
-              onBlur={handleFieldBlur("risk_description")}
-              error={errors.risk_description}
-              isRequired
-              disabled={isEditingDisabled}
-              type="description"
-              rows={7}
-              placeholder="Describe the specific risk related to this vendor (e.g., data breach, service outage, compliance gap)."
-            />
-          </Box>
-        </Stack>
-        <Stack flex={1} spacing={6}>
-          <Box>
-            <Field
-              id="vendor-risk-action-plan-input"
-              label="Action plan"
-              width="100%"
-              type="description"
-              value={values.action_plan}
-              error={errors.action_plan}
-              onChange={(e) => handleOnChange("action_plan", e.target.value)}
-              onBlur={handleFieldBlur("action_plan")}
-              isRequired
-              disabled={isEditingDisabled}
-              rows={4}
-              placeholder="Outline the steps or controls you will take to reduce or eliminate this risk."
-            />
-          </Box>
-          <Box>
-            <Field
-              id="vendor-risk-impact-description-input"
-              label="Impact description"
-              width="100%"
-              value={values.impact_description}
-              onChange={(e) => handleOnChange("impact_description", e.target.value)}
-              onBlur={handleFieldBlur("impact_description")}
-              error={errors.impact_description}
-              isRequired
-              disabled={isEditingDisabled}
-              type="description"
-              rows={4}
-              placeholder="Explain the potential consequences if this risk occurs (e.g., financial, reputational, regulatory)."
-            />
-          </Box>
-        </Stack>
-      </Stack>
-
-      {/* Applicable Frameworks */}
-      <Stack>
-        <Typography fontWeight={600} fontSize={16} mb={2}>
-          Applicable frameworks
-        </Typography>
-        <Typography fontSize={13} color="text.secondary" mb={2}>
-          Select the compliance frameworks this vendor risk applies to.
-        </Typography>
-        <Autocomplete
-          multiple
-          id="vendor-risk-frameworks-input"
-          size="small"
-          value={
-            frameworksLoading || !organizationalFrameworks.length
-              ? []
-              : organizationalFrameworks.filter((fw) => selectedFrameworks.includes(Number(fw.id)))
-          }
-          options={organizationalFrameworks}
-          getOptionLabel={(fw) => fw.name}
-          renderOption={(props, option) => {
-            const { key, ...optionProps } = props;
-            return (
-              <Box key={key} component="li" {...optionProps}>
-                <Typography fontSize={13}>{option.name}</Typography>
-              </Box>
-            );
-          }}
-          renderInput={(params) => (
-            <TextField
-              {...params}
-              placeholder={
-                frameworksLoading
-                  ? "Loading frameworks..."
-                  : selectedFrameworks.length > 0
-                    ? ""
-                    : "Select applicable frameworks"
-              }
-              sx={{
-                "& .MuiOutlinedInput-root": {
-                  paddingTop: "4px !important",
-                  paddingBottom: "4px !important",
-                },
-                "& ::placeholder": {
-                  fontSize: 13,
-                },
-              }}
-            />
-          )}
-          onChange={(_event, newValue) => {
-            setSelectedFrameworks(newValue.map((fw) => Number(fw.id)));
-          }}
-          sx={{
-            "width": "100%",
-            "& .MuiChip-root": {
-              borderRadius: radiusPx.sm,
-            },
-          }}
-          disabled={frameworksLoading || isEditingDisabled}
-        />
-      </Stack>
-
-      <Stack>
-        <Divider sx={{ mb: 4 }} />
-        <Box>
-          <Typography fontWeight={600} fontSize={16} mb={2}>
-            Calculate risk level
-          </Typography>
-          <Typography fontSize={13} color="text.secondary" mb={4}>
-            The risk level is a weighted score: likelihood plus three times severity, so severity
-            counts more. Pick a likelihood and a severity and the level follows from the score.
-          </Typography>
-          <Stack direction="row" spacing={6}>
-            <RiskLevel
-              likelihood={Number(values.likelihood) || 1}
-              riskSeverity={Number(values.risk_severity) || 1}
-              handleOnSelectChange={handleOnSelectChange}
-              likelihoodError={errors.likelihood}
-              riskSeverityError={errors.risk_severity}
-              onLikelihoodBlur={handleFieldBlur("likelihood")}
-              onRiskSeverityBlur={handleFieldBlur("risk_severity")}
-              disabled={isEditingDisabled}
-            />
-          </Stack>
+        <Box flex={1}>
+          <Select
+            items={VENDOR_OPTIONS}
+            label="Vendor"
+            placeholder="Select vendor"
+            isHidden={false}
+            id="vendor_id"
+            onChange={(e) => handleOnChange("vendor_id", e.target.value)}
+            onBlur={handleFieldBlur("vendor_id")}
+            value={values.vendor_id}
+            error={errors.vendor_id}
+            sx={{ width: "100%" }}
+            isRequired
+            // The vendor of a draft belongs to what it was drafted from.
+            disabled={isEditingDisabled || draft !== null}
+          />
+        </Box>
+        <Box flex={1}>
+          <Select
+            items={formattedUsers}
+            label="Action owner"
+            placeholder="Select owner"
+            isHidden={false}
+            id="action_owner"
+            onChange={(e) => handleOnChange("action_owner", e.target.value)}
+            onBlur={handleFieldBlur("action_owner")}
+            value={values.action_owner || ""}
+            error={errors.action_owner}
+            sx={{ width: "100%" }}
+            isRequired
+            disabled={isEditingDisabled}
+          />
         </Box>
       </Stack>
+
+      <Field
+        id="vendor-risk-description-input"
+        label="Risk description"
+        width="100%"
+        value={values.risk_description}
+        onChange={(e) => handleOnChange("risk_description", e.target.value)}
+        onBlur={handleFieldBlur("risk_description")}
+        error={errors.risk_description}
+        isRequired
+        disabled={isEditingDisabled}
+        type="description"
+        rows={4}
+        placeholder="Describe the specific risk related to this vendor (e.g., data breach, service outage, compliance gap)."
+      />
+
+      <Stack direction="row" spacing={6}>
+        <Box flex={1}>
+          <Field
+            id="vendor-risk-impact-description-input"
+            label="Impact description"
+            width="100%"
+            value={values.impact_description}
+            onChange={(e) => handleOnChange("impact_description", e.target.value)}
+            onBlur={handleFieldBlur("impact_description")}
+            error={errors.impact_description}
+            isRequired
+            disabled={isEditingDisabled}
+            type="description"
+            rows={4}
+            placeholder="Explain the potential consequences if this risk occurs (e.g., financial, reputational, regulatory)."
+          />
+        </Box>
+        <Box flex={1}>
+          <Field
+            id="vendor-risk-action-plan-input"
+            label="Action plan"
+            width="100%"
+            type="description"
+            value={values.action_plan}
+            error={errors.action_plan}
+            onChange={(e) => handleOnChange("action_plan", e.target.value)}
+            onBlur={handleFieldBlur("action_plan")}
+            isRequired
+            disabled={isEditingDisabled}
+            rows={4}
+            placeholder="Outline the steps or controls you will take to reduce or eliminate this risk."
+          />
+        </Box>
+      </Stack>
+
+      <AutoCompleteField<Framework, true>
+        multiple
+        id="vendor-risk-frameworks-input"
+        label="Applicable frameworks"
+        isOptional
+        helperText="Select the compliance frameworks this vendor risk applies to."
+        placeholder={
+          frameworksLoading
+            ? "Loading frameworks..."
+            : selectedFrameworks.length > 0
+              ? ""
+              : "Select applicable frameworks"
+        }
+        value={
+          frameworksLoading || !organizationalFrameworks.length
+            ? []
+            : organizationalFrameworks.filter((fw) => selectedFrameworks.includes(Number(fw.id)))
+        }
+        options={organizationalFrameworks}
+        getOptionLabel={(fw) => fw.name}
+        isOptionEqualToValue={(option, selected) => option.id === selected.id}
+        onChange={(_event, newValue) => {
+          setSelectedFrameworks(newValue.map((fw) => Number(fw.id)));
+        }}
+        sx={{ width: "100%" }}
+        disabled={frameworksLoading || isEditingDisabled}
+      />
+
+      <Divider />
+
+      <Stack spacing={2}>
+        <Typography sx={{ ...textStyles.subsectionTitle, color: "text.primary" }}>
+          Calculate risk level
+        </Typography>
+        <Typography sx={{ ...textStyles.body, color: "text.tertiary" }}>
+          The risk level is a weighted score: likelihood plus three times severity, so severity
+          counts more. Pick a likelihood and a severity and the level follows from the score.
+        </Typography>
+      </Stack>
+      <RiskLevel
+        likelihood={Number(values.likelihood) || 1}
+        riskSeverity={Number(values.risk_severity) || 1}
+        handleOnSelectChange={handleOnSelectChange}
+        likelihoodError={errors.likelihood}
+        riskSeverityError={errors.risk_severity}
+        onLikelihoodBlur={handleFieldBlur("likelihood")}
+        onRiskSeverityBlur={handleFieldBlur("risk_severity")}
+        disabled={isEditingDisabled}
+      />
     </Stack>
   );
 
@@ -647,11 +699,13 @@ const AddNewRisk: React.FC<AddNewRiskProps> = ({
           setActiveTab("details");
           setIsOpen();
         }}
-        title={existingRisk ? "Edit risk" : "Add a new vendor risk"}
+        title={draft ? draft.title : existingRisk ? "Edit risk" : "Add a new vendor risk"}
         description={
-          existingRisk
-            ? "Update risk details including description, impact assessment, and mitigation plan."
-            : "Document and assess a potential risk associated with your vendor. Provide details of the risk, its impact, and your mitigation plan."
+          draft
+            ? draft.description
+            : existingRisk
+              ? "Update risk details including description, impact assessment, and mitigation plan."
+              : "Document and assess a potential risk associated with your vendor. Provide details of the risk, its impact, and your mitigation plan."
         }
         // Neither tab edits the risk: links save on their own, and activity is read-only.
         onSubmit={activeTab === "activity" || activeTab === "linked-risks" ? undefined : handleSave}

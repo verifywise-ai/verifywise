@@ -480,6 +480,8 @@ export const de: Record<string, string> = {
     "Leer lassen oder 0 eingeben, um unbegrenzt aufzubewahren. Maximum {max}.",
   "Retention settings could not be loaded.":
     "Die Aufbewahrungseinstellungen konnten nicht geladen werden.",
+  "Extension": "Erweiterung",
+  "Configure and enable this extension.": "Konfigurieren und aktivieren Sie diese Erweiterung.",
   // Groups and custom roles (#5253)
   "Add a whole group to the use case in one step.":
     "Fügen Sie eine ganze Gruppe in einem Schritt zum Anwendungsfall hinzu.",
@@ -658,8 +660,6 @@ export const de: Record<string, string> = {
     "Optional – nur erforderlich, wenn Sie die Azure Resource Manager API verwenden.",
   "Configure to enable": "Zum Aktivieren konfigurieren",
   "Configuration required": "Konfiguration erforderlich",
-  "Extension": "Erweiterung",
-  "Configure and enable this extension.": "Konfigurieren und aktivieren Sie diese Erweiterung.",
   "Enable failed": "Aktivierung fehlgeschlagen",
   "Disable failed": "Deaktivierung fehlgeschlagen",
   "Test failed": "Test fehlgeschlagen",
@@ -1254,6 +1254,8 @@ export const fr: Record<string, string> = {
     "Laissez vide ou saisissez 0 pour conserver indéfiniment. Maximum {max}.",
   "Retention settings could not be loaded.":
     "Les paramètres de conservation n'ont pas pu être chargés.",
+  "Extension": "Extension",
+  "Configure and enable this extension.": "Configurez et activez cette extension.",
   // Groups and custom roles (#5253)
   "Add a whole group to the use case in one step.":
     "Ajoutez un groupe entier au cas d'usage en une seule étape.",
@@ -1433,8 +1435,6 @@ export const fr: Record<string, string> = {
     "Facultatif : requis uniquement si vous utilisez l'API Azure Resource Manager.",
   "Configure to enable": "Configurer pour activer",
   "Configuration required": "Configuration requise",
-  "Extension": "Extension",
-  "Configure and enable this extension.": "Configurez et activez cette extension.",
   "Enable failed": "Échec de l'activation",
   "Disable failed": "Échec de la désactivation",
   "Test failed": "Échec du test",
@@ -2025,6 +2025,8 @@ export const es: Record<string, string> = {
   "Leave empty or enter 0 to keep indefinitely. Maximum {max}.":
     "Déjalo vacío o escribe 0 para conservar indefinidamente. Máximo {max}.",
   "Retention settings could not be loaded.": "No se pudo cargar la configuración de retención.",
+  "Extension": "Extensión",
+  "Configure and enable this extension.": "Configure y active esta extensión.",
   // Groups and custom roles (#5253)
   "Add a whole group to the use case in one step.":
     "Agregue un grupo completo al caso de uso en un solo paso.",
@@ -2201,8 +2203,6 @@ export const es: Record<string, string> = {
     "Opcional: solo es necesario si usa la API de Azure Resource Manager.",
   "Configure to enable": "Configurar para activar",
   "Configuration required": "Configuración necesaria",
-  "Extension": "Extensión",
-  "Configure and enable this extension.": "Configure y active esta extensión.",
   "Enable failed": "Error al activar",
   "Disable failed": "Error al desactivar",
   "Test failed": "Error en la prueba",

@@ -13418,7 +13418,7 @@ export const es: Record<string, string> = {
   "Governance domains group controls by topic area.":
     "Los dominios de gobernanza agrupan los controles por área temática.",
   "Healthcare": "Sanidad",
-  "High Risk": "Alto riesgo",
+  "High Risk": "Riesgo alto",
   "Limited Risk": "Riesgo limitado",
   "Mapped Controls": "Controles asignados",
   "Minimal Risk": "Riesgo mínimo",

@@ -2,7 +2,6 @@ import { Request, Response } from "express";
 import { sequelize } from "../database/db";
 import { STATUS_CODE } from "../utils/statusCode.utils";
 import {
-  createNewVendorRiskQuery,
   deleteVendorRiskByIdQuery,
   getAllVendorRisksAllProjectsQuery,
   getVendorRiskByIdQuery,
@@ -14,16 +13,21 @@ import {
   getVendorRisksByFrameworkIdQuery,
 } from "../utils/vendorRisk.utils";
 import { VendorRiskModel } from "../domain.layer/models/vendorRisk/vendorRisk.model";
+import { ValidationException } from "../domain.layer/exceptions/custom.exception";
 import { logProcessing, logSuccess, logFailure } from "../utils/logger/logHelper";
 import {
-  recordVendorRiskCreation,
   trackVendorRiskChanges,
   recordMultipleFieldChanges,
 } from "../utils/vendorRiskChangeHistory.utils";
 import { notifyUserAssigned } from "../services/inAppNotification.service";
-import { notifyVendorRiskCandidates } from "../services/riskLinks/vendorCandidates";
+import {
+  assertActionOwnerOfOrganization,
+  CreateVendorRiskInput,
+  createVendorRiskInTransaction,
+  runVendorRiskPostCommitEffects,
+} from "../services/vendors/vendorRiskCreate.service";
+import { toId } from "../utils/validations/validation.utils";
 import { enqueueVendorRiskLinkRecompute } from "../services/automations/automationProducer";
-import { getVendorNoticeContextQuery } from "../utils/riskLink.utils";
 import logger from "../utils/logger/fileLogger";
 import { QueryTypes } from "sequelize";
 
@@ -247,118 +251,18 @@ export async function createVendorRisk(req: Request, res: Response): Promise<any
   });
 
   try {
-    const newVendorRisk: VendorRiskModel = req.body;
-    const frameworks: number[] | undefined = req.body.frameworks;
-    const vendorRiskModel = await VendorRiskModel.createNewVendorRisk(newVendorRisk);
-
-    const createdVendorRisk = await createNewVendorRiskQuery(
-      vendorRiskModel,
+    const input: CreateVendorRiskInput = req.body;
+    const createdVendorRisk = await createVendorRiskInTransaction(
+      input,
+      req.userId,
       req.organizationId!,
       transaction,
     );
 
     if (createdVendorRisk) {
-      // Create framework associations if provided
-      if (frameworks && frameworks.length > 0 && createdVendorRisk.id) {
-        try {
-          await createVendorRiskFrameworkAssociations(
-            frameworks,
-            createdVendorRisk.id,
-            req.organizationId!,
-            transaction,
-          );
-        } catch (fwError) {
-          console.warn(
-            "Could not create framework associations (table may not exist yet):",
-            (fwError as Error).message,
-          );
-        }
-      }
-
-      // Record creation in change history
-      const userId = req.userId;
-      if (userId && createdVendorRisk.id) {
-        await recordVendorRiskCreation(
-          createdVendorRisk.id,
-          userId,
-          req.organizationId!,
-          createdVendorRisk,
-          transaction,
-        );
-      }
-
       await transaction.commit();
 
-      // Related vendor risks are suggested in the background, like project
-      // risk links on save. Fire-and-forget: a queue outage must not fail the save.
-      if (createdVendorRisk.id) {
-        enqueueVendorRiskLinkRecompute(req.organizationId!, createdVendorRisk.id).catch((err) =>
-          logger.error("Vendor risk link recompute enqueue failed:", err),
-        );
-      }
-
-      // A new vendor risk on a vendor with use cases is the most direct cause
-      // of new candidates: announce this vendor risk to the owners of project
-      // risks in those use cases. Fire-and-forget.
-      if (createdVendorRisk.vendor_id && createdVendorRisk.id) {
-        const vendorId = createdVendorRisk.vendor_id;
-        const vendorRiskId = createdVendorRisk.id;
-        getVendorNoticeContextQuery(req.organizationId!, vendorId)
-          .then(async (context) => {
-            if (!context || context.projectIds.length === 0) return;
-            await notifyVendorRiskCandidates({
-              organizationId: req.organizationId!,
-              vendorId,
-              vendorName: context.name,
-              projectIds: context.projectIds,
-              vendorRiskIds: [vendorRiskId],
-            });
-          })
-          .catch((err) => logger.error("Vendor risk candidate notice failed:", err));
-      }
-
-      // Notify action_owner if assigned
-      const actionOwnerId = createdVendorRisk.action_owner;
-      if (actionOwnerId && createdVendorRisk.id) {
-        const assignerName = await getUserNameById(req.userId!);
-        const baseUrl = process.env.FRONTEND_URL || "http://localhost:5173";
-
-        // Get vendor name for context
-        let vendorName: string | undefined;
-        if (createdVendorRisk.vendor_id) {
-          const vendorResult = await sequelize.query<{ vendor_name: string }>(
-            `SELECT vendor_name FROM vendors WHERE organization_id = :organizationId AND id = :vendorId`,
-            {
-              replacements: {
-                organizationId: req.organizationId!,
-                vendorId: createdVendorRisk.vendor_id,
-              },
-              type: QueryTypes.SELECT,
-            },
-          );
-          vendorName = vendorResult[0]?.vendor_name;
-        }
-
-        notifyUserAssigned(
-          req.organizationId!,
-          actionOwnerId,
-          {
-            entityType: "Vendor Risk",
-            entityId: createdVendorRisk.id,
-            entityName:
-              createdVendorRisk.risk_description || `Vendor Risk #${createdVendorRisk.id}`,
-            roleType: "Action Owner",
-            entityUrl: `${baseUrl}/vendors?vendorRiskId=${createdVendorRisk.id}`,
-          },
-          assignerName,
-          baseUrl,
-          {
-            parentType: vendorName ? "Vendor" : undefined,
-            parentName: vendorName,
-            description: createdVendorRisk.impact_description || undefined,
-          },
-        ).catch((err) => console.error("Failed to send action owner notification:", err));
-      }
+      await runVendorRiskPostCommitEffects(createdVendorRisk, req.userId, req.organizationId!);
 
       await logSuccess({
         eventType: "Create",
@@ -371,6 +275,7 @@ export async function createVendorRisk(req: Request, res: Response): Promise<any
       return res.status(201).json(STATUS_CODE[201](createdVendorRisk));
     }
 
+    await transaction.rollback();
     await logSuccess({
       eventType: "Create",
       description: "Vendor risk creation returned null",
@@ -382,6 +287,20 @@ export async function createVendorRisk(req: Request, res: Response): Promise<any
     return res.status(503).json(STATUS_CODE[503]({}));
   } catch (error) {
     await transaction.rollback();
+    // A request the create refuses (an action owner of another organization) is the caller's to
+    // correct, not a failure of the server.
+    if (error instanceof ValidationException) {
+      await logFailure({
+        eventType: "Create",
+        description: `Validation failed: ${error.message}`,
+        functionName: "createVendorRisk",
+        fileName: "vendorRisk.ctrl.ts",
+        error: error as Error,
+        userId: req.userId!,
+        organizationId: req.organizationId!,
+      });
+      return res.status(400).json(STATUS_CODE[400](translateError(req, error)));
+    }
     await logFailure({
       eventType: "Create",
       description: "Failed to create vendor risk",
@@ -424,6 +343,15 @@ export async function updateVendorRiskById(req: Request, res: Response): Promise
         organizationId: req.organizationId!,
       });
       return res.status(404).json(STATUS_CODE[404]({}));
+    }
+
+    // The action owner is emailed the risk's text and the vendor's name, so a new owner must be a
+    // user of the organization, as on the create. An owner the request leaves as it is stored is not
+    // checked again: a risk whose owner has since left the organization can still be edited.
+    const requestedOwner: unknown = updatedVendorRisk.action_owner;
+    const storedOwner: unknown = (existingVendorRisk as { action_owner?: unknown }).action_owner;
+    if (requestedOwner && toId(requestedOwner) !== toId(storedOwner)) {
+      await assertActionOwnerOfOrganization(requestedOwner, req.organizationId!, transaction);
     }
 
     // Create model from existing data for change tracking
@@ -487,9 +415,11 @@ export async function updateVendorRiskById(req: Request, res: Response): Promise
       );
 
       // Notify action_owner if changed to a new user
+      // Compared as ids, as the check above does: the stored owner sent again as text ("8") is not
+      // a new owner, is not checked, and so must not be told again either.
       const oldActionOwner = (existingVendorRisk as any).action_owner;
       const newActionOwner = updatedVendorRisk.action_owner;
-      if (newActionOwner && newActionOwner !== oldActionOwner) {
+      if (newActionOwner && toId(newActionOwner) !== toId(oldActionOwner)) {
         const assignerName = await getUserNameById(req.userId!);
         const baseUrl = process.env.FRONTEND_URL || "http://localhost:5173";
 
@@ -548,6 +478,19 @@ export async function updateVendorRiskById(req: Request, res: Response): Promise
     return res.status(404).json(STATUS_CODE[404]({}));
   } catch (error) {
     await transaction.rollback();
+    // An action owner of another organization is the caller's to correct, as on the create.
+    if (error instanceof ValidationException) {
+      await logFailure({
+        eventType: "Update",
+        description: `Validation failed: ${error.message}`,
+        functionName: "updateVendorRiskById",
+        fileName: "vendorRisk.ctrl.ts",
+        error: error as Error,
+        userId: req.userId!,
+        organizationId: req.organizationId!,
+      });
+      return res.status(400).json(STATUS_CODE[400](translateError(req, error)));
+    }
     await logFailure({
       eventType: "Update",
       description: "Failed to update vendor risk",

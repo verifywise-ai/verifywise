@@ -102,7 +102,9 @@ export interface TestAppOptions {
   mockUser?: {
     userId?: number;
     role?: string;
-    organizationId?: number;
+    organizationId?: number | null;
+    /** The `super_admins` flag a signed-in super admin carries (see isPureSuperAdmin). */
+    isSuperAdmin?: boolean;
   };
 }
 
@@ -146,8 +148,13 @@ export function createTestExpressApp(options?: TestAppOptions): Application {
     preRoutesMiddleware.push((req, _res, next) => {
       req.userId = mockUser.userId;
       req.role = mockUser.role;
-      req.organizationId = mockUser.organizationId;
-      req.tenantHash = getTenantHash(mockUser.organizationId);
+      req.organizationId = mockUser.organizationId as number;
+      if (mockUser.isSuperAdmin !== undefined) req.isSuperAdmin = mockUser.isSuperAdmin;
+      // A pure super admin has no organization, hence no tenant hash.
+      req.tenantHash =
+        mockUser.organizationId == null
+          ? (undefined as unknown as string)
+          : getTenantHash(mockUser.organizationId);
       req.testBypassAuth = true;
       next();
     });

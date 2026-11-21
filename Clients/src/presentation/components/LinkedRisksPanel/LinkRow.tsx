@@ -231,12 +231,14 @@ export default function LinkRow({
       </Stack>
 
       {dismissing && (
-        <DismissReasonForm
-          link={link}
-          pending={statusPending}
-          onSubmit={onSubmitDismissal}
-          onCancel={onCancelDismissal}
-        />
+        <Box sx={{ mt: "8px" }}>
+          <DismissReasonForm
+            link={link}
+            pending={statusPending}
+            onSubmit={onSubmitDismissal}
+            onCancel={onCancelDismissal}
+          />
+        </Box>
       )}
     </Box>
   );

@@ -443,6 +443,32 @@ describe("LinkRiskForm shared-project ranking", () => {
   });
 });
 
+describe("LinkRiskForm frame", () => {
+  const buttonLabels = () => screen.getAllByRole("button").map((button) => button.textContent);
+
+  // Like every other form of the Linked risks tab it opens in a titled card, and its buttons sit
+  // in the order of StandardModal's footer: Cancel, then the primary action.
+  it("opens in a card titled Link a risk, with Cancel before Link", () => {
+    wrap(<LinkRiskForm riskId={42} existingLinks={[]} onClose={vi.fn()} />);
+
+    expect(screen.getByText("Link a risk")).toBeInTheDocument();
+    const labels = buttonLabels();
+    expect(labels).toContain("Cancel");
+    expect(labels).toContain("Link");
+    expect(labels.indexOf("Cancel")).toBeLessThan(labels.indexOf("Link"));
+  });
+
+  it("closes from Cancel without creating a link", async () => {
+    const onClose = vi.fn();
+    wrap(<LinkRiskForm riskId={42} existingLinks={[]} onClose={onClose} />);
+
+    await userEvent.click(screen.getByRole("button", { name: "Cancel" }));
+
+    expect(onClose).toHaveBeenCalledTimes(1);
+    expect(mockCreate).not.toHaveBeenCalled();
+  });
+});
+
 describe("LinkRiskForm radio groups", () => {
   // A shared name makes the browser treat the options as one group: one tab
   // stop, arrow keys move the selection.

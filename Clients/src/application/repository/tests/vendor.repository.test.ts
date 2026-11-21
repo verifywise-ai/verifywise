@@ -167,8 +167,10 @@ describe("vendor.repository", () => {
     });
   });
 
+  // ADR 0001: the create and the update take the other names and the identifiers, so they are served
+  // under /api/v1. The reads and the delete did not change, and stay on /vendors.
   describe("createNewVendor", () => {
-    it("should make POST request to /vendors with body", async () => {
+    it("should make POST request to /v1/vendors with body", async () => {
       const mockResponse = {
         data: { id: 1, name: "New Vendor" },
         status: 201,
@@ -182,7 +184,7 @@ describe("vendor.repository", () => {
       const result = await createNewVendor({ body });
 
       expect(apiServices.post).toHaveBeenCalledTimes(1);
-      expect(apiServices.post).toHaveBeenCalledWith("/vendors", body);
+      expect(apiServices.post).toHaveBeenCalledWith("/v1/vendors", body);
       expect(result).toEqual(mockResponse);
     });
 
@@ -211,7 +213,7 @@ describe("vendor.repository", () => {
   });
 
   describe("update", () => {
-    it("should make PATCH request to /vendors/:id with body", async () => {
+    it("should make PATCH request to /v1/vendors/:id with body", async () => {
       const mockResponse = {
         data: { id: 1, name: "Updated Vendor" },
         status: 200,
@@ -225,7 +227,7 @@ describe("vendor.repository", () => {
       const result = await update({ id: 1, body });
 
       expect(apiServices.patch).toHaveBeenCalledTimes(1);
-      expect(apiServices.patch).toHaveBeenCalledWith("/vendors/1", body);
+      expect(apiServices.patch).toHaveBeenCalledWith("/v1/vendors/1", body);
       expect(result).toEqual(mockResponse);
     });
 

@@ -8020,6 +8020,12 @@ tags:
     name: 'v1: V1/Training'
   -
     name: 'v1: V1/Use Case Lifecycle'
+  -
+    name: 'v1: Vendor Research'
+  -
+    name: 'v1: Vendor Risk Findings'
+  -
+    name: 'v1: Vendors'
 paths:
   /webhooks/github:
     post:
@@ -27902,6 +27908,173 @@ paths:
       tags:
         - 'v1: V1/Intake Form Review Time'
       operationId: updateIntakeFormReviewTime
+      security:
+        -
+          bearerAuth: []
+  '/v1/vendors/{id}/research/latest':
+    get:
+      summary: 'Get Latest Vendor Research'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: Vendors'
+      operationId: getLatestVendorResearch
+      security:
+        -
+          bearerAuth: []
+  '/v1/vendors/{id}/research/runs/{runId}/trace':
+    get:
+      summary: 'Get Vendor Research Run Trace'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: Vendors'
+      operationId: getVendorResearchRunTrace
+      security:
+        -
+          bearerAuth: []
+  '/v1/vendors/{id}/research':
+    post:
+      summary: 'Start Vendor Research Run'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: Vendors'
+      operationId: startVendorResearchRun
+      security:
+        -
+          bearerAuth: []
+  /v1/vendors:
+    post:
+      summary: 'Create Vendor V1'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: Vendors'
+      operationId: createVendorV1
+      security:
+        -
+          bearerAuth: []
+  '/v1/vendors/{id}':
+    patch:
+      summary: 'Update Vendor By Id V1'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: Vendors'
+      operationId: updateVendorByIdV1
+      security:
+        -
+          bearerAuth: []
+  /v1/vendor-research/config:
+    get:
+      summary: 'Get Research Config'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: Vendor Research'
+      operationId: getResearchConfig
+      security:
+        -
+          bearerAuth: []
+  /v1/vendor-research/decision-stats:
+    get:
+      summary: 'Get Decision Stats'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: Vendor Research'
+      operationId: getDecisionStats
+      security:
+        -
+          bearerAuth: []
+  /v1/vendor-research/settings:
+    get:
+      summary: 'Get Research Settings'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: Vendor Research'
+      operationId: getResearchSettings
+      security:
+        -
+          bearerAuth: []
+    put:
+      summary: 'Save Research Settings'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: Vendor Research'
+      operationId: saveResearchSettings
+      security:
+        -
+          bearerAuth: []
+  /v1/vendor-risk-findings:
+    get:
+      summary: 'List Vendor Risk Findings'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: Vendor Risk Findings'
+      operationId: listVendorRiskFindings
+      security:
+        -
+          bearerAuth: []
+  '/v1/vendor-risk-findings/{id}/accept':
+    post:
+      summary: 'Accept Vendor Risk Finding'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: Vendor Risk Findings'
+      operationId: acceptVendorRiskFinding
+      security:
+        -
+          bearerAuth: []
+  '/v1/vendor-risk-findings/{id}/dismiss':
+    post:
+      summary: 'Dismiss Vendor Risk Finding'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: Vendor Risk Findings'
+      operationId: dismissVendorRiskFinding
       security:
         -
           bearerAuth: []

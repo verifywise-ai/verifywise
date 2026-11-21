@@ -225,6 +225,7 @@ Read the relevant file BEFORE implementing changes in that area:
 | AI Detection | `docs/technical/domains/ai-detection.md` |
 | Risk management | `docs/technical/domains/risk-management.md` |
 | Vendors | `docs/technical/domains/vendors.md` |
+| Vendor risk database (VRDB): mirrored official lists, read-through databases, gated sources, the status job, credibility labels, the backfill of the label (maintainer script) | `docs/technical/domains/vendors.md` |
 | Policies | `docs/technical/domains/policies.md` |
 | Use cases / projects | `docs/technical/domains/use-cases.md` |
 | Models / model inventory | `docs/technical/domains/models.md` |
@@ -244,6 +245,7 @@ Read the relevant file BEFORE implementing changes in that area:
 | FRIA (Fundamental Rights Impact Assessment) | `docs/technical/domains/fria.md` |
 | Compliance frameworks | `docs/technical/domains/compliance-frameworks.md` |
 | Observability (OTel metrics + logs → Grafana/Prometheus/Loki) | `docs/technical/infrastructure/observability.md` |
+| Web research toolkit (page guard, search engine, research loop) | `docs/technical/infrastructure/web-research.md` |
 | Docker & deployment | `docs/deployment/PRODUCTION_DEPLOYMENT_GUIDE.md` |
 | Database schema | `docs/technical/architecture/database-schema.md` |
 | Authentication architecture | `docs/technical/architecture/authentication.md` |
