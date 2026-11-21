@@ -183,6 +183,14 @@ describe("calculateModelRiskLevel (decision 10)", () => {
     expect(calculateModelRiskLevel("Likely", undefined)).toBeNull();
     expect(calculateModelRiskLevel("Often", "Minor")).toBeNull();
   });
+
+  it("is null for the project risk severity Critical, as the validators refuse it", () => {
+    expect(calculateModelRiskLevel("Likely", "Critical")).toBeNull();
+  });
+
+  it("accepts a label in any case", () => {
+    expect(calculateModelRiskLevel("likely", "MAJOR")).toBe("High");
+  });
 });
 
 describe("canonicalLikelihood / canonicalSeverity", () => {

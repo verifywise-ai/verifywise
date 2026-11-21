@@ -2394,6 +2394,9 @@ async function approve(
     organizationId: req.organizationId!,
   });
 
+  // Before the transaction: on a role cache miss this needs its own
+  // connection, which must not wait behind the one the transaction holds.
+  const callerIsAdmin = await requestCallerIsAdmin(req);
   const transaction = await sequelize.transaction();
 
   try {
@@ -2660,7 +2663,7 @@ async function approve(
           {
             organizationId: req.organizationId!,
             userId: req.userId!,
-            callerIsAdmin: await requestCallerIsAdmin(req),
+            callerIsAdmin,
           },
           transaction,
         );

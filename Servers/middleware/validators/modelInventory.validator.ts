@@ -11,9 +11,11 @@
  * - A model risk's likelihood and severity are list labels; the service
  *   sets the level from them (decision 10), so v1 asks for both on create
  *   and no longer for `risk_level` (still checked when sent).
- * - The legacy routes keep accepting what they accepted; their bad enum or
- *   date values, which used to fail in the database with a 500, answer 400
- *   in the controllers.
+ * - The legacy routes have no validator chain; their bad enum or date
+ *   values, which used to fail in the database with a 500, answer 400 in
+ *   the controllers. They share the services, so the approval rule
+ *   (decision 9) and the likelihood × severity formula with its label
+ *   check (decision 10) apply to them too.
  *
  * `is_demo` is not validated: no route takes it from the body.
  */

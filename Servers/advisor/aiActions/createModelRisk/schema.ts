@@ -62,6 +62,8 @@ export const withPreviousLikelihood = (text: string | null | undefined, value: s
 export function normalizeStoredLabels(raw: unknown, into: "description" | "carry"): unknown {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) return raw;
   const out: Record<string, unknown> = { ...(raw as Record<string, unknown>) };
+  // Only this function sets it; a value sent in the tool input is dropped.
+  delete out._previous_likelihood;
   if (typeof out.severity === "string")
     out.severity = canonicalSeverity(out.severity) ?? out.severity;
   if (typeof out.likelihood !== "string") return out;

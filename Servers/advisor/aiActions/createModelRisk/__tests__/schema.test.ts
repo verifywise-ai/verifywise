@@ -1,5 +1,9 @@
 import { describe, expect, it } from "@jest/globals";
-import { AgentCreateModelRiskFileSchema, AgentCreateModelRiskSchema } from "../schema";
+import {
+  AgentCreateModelRiskFileSchema,
+  AgentCreateModelRiskSchema,
+  normalizeStoredLabels,
+} from "../schema";
 
 const base = { risk_name: "Drift risk", description: "Seen in March" };
 
@@ -50,5 +54,22 @@ describe("agent_create_model_risk new input (file time)", () => {
       AgentCreateModelRiskFileSchema.safeParse({ ...base, likelihood: "Likely", severity: "Minor" })
         .success,
     ).toBe(true);
+  });
+});
+
+describe("normalizeStoredLabels carry mode", () => {
+  it("drops a _previous_likelihood sent in the input", () => {
+    expect(
+      normalizeStoredLabels({ model_risk_id: 1, _previous_likelihood: "made up" }, "carry"),
+    ).toEqual({ model_risk_id: 1 });
+  });
+
+  it("carries free-text likelihood it moved itself", () => {
+    expect(
+      normalizeStoredLabels(
+        { model_risk_id: 1, likelihood: "Often", _previous_likelihood: "made up" },
+        "carry",
+      ),
+    ).toEqual({ model_risk_id: 1, _previous_likelihood: "Often" });
   });
 });

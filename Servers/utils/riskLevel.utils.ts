@@ -112,13 +112,17 @@ const MODEL_RISK_LEVEL_FOR: Record<string, ModelRiskLevel> = {
 
 /**
  * A model risk's level from its likelihood and severity, through the shared
- * formula. Null when either is missing or not a known label.
+ * formula. Null when either is missing or not on the model risk lists (the
+ * project risk severity "Critical" is not one).
  */
 export function calculateModelRiskLevel(
   likelihood: string | null | undefined,
   severity: string | null | undefined,
 ): ModelRiskLevel | null {
-  const level = calculateRiskLevel(likelihood, severity);
+  const l = canonicalLikelihood(likelihood);
+  const s = canonicalSeverity(severity);
+  if (!l || !s) return null;
+  const level = calculateRiskLevel(l, s);
   return level ? MODEL_RISK_LEVEL_FOR[level] : null;
 }
 
