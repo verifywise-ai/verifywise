@@ -1,7 +1,7 @@
 import { ModelRiskCategory } from "../../domain.layer/enums/model-risk-category.enum";
 import { ModelRiskLevel } from "../../domain.layer/enums/model-risk-level.enum";
 import { ModelRiskStatus } from "../../domain.layer/enums/model-risk-status.enum";
-import { getAllModelRisksQuery } from "../../utils/modelRisk.utils";
+import { getAllModelRisksQuery, getModelRiskByIdQuery } from "../../utils/modelRisk.utils";
 import { ModelRiskModel } from "../../domain.layer/models/modelRisk/modelRisk.model";
 import logger from "../../utils/logger/fileLogger";
 
@@ -372,6 +372,14 @@ import {
   updateModelRiskService,
 } from "../../services/modelRisk.service";
 import { isRefusal, modelWriteContext } from "./modelWriteScope";
+import {
+  ModelRiskLikelihood,
+  ModelRiskSeverity,
+  normalizeStoredLabels,
+  requirePair,
+  requirePairOrLevel,
+  withPreviousLikelihood,
+} from "../aiActions/createModelRisk/schema";
 
 // Mirrors the Postgres enums (enum_model_risks_*) and the TS enums
 // (ModelRiskCategory / ModelRiskLevel / ModelRiskStatus). Strict so the
@@ -393,7 +401,7 @@ const isoDateString = z
     message: "must be a valid ISO date string (e.g. 2026-04-15)",
   });
 
-const AgentSuggestModelRiskSchema = z
+const AgentSuggestModelRiskObject = z
   .object({
     /**
      * Existing model id. Use this when the model already exists in the
@@ -414,6 +422,8 @@ const AgentSuggestModelRiskSchema = z
     risk_name: z.string().min(3).max(255),
     description: z.string().max(2048).optional(),
     risk_category: ModelRiskCategorySchema.optional(),
+    // Not offered to the model any more (likelihood and severity set the
+    // level); parsed so approvals filed before still execute.
     risk_level: ModelRiskLevelSchema.optional(),
     status: ModelRiskStatusSchema.optional(),
     /**
@@ -429,11 +439,12 @@ const AgentSuggestModelRiskSchema = z
     target_date: isoDateString.optional(),
     mitigation_plan: z.string().max(2048).optional(),
     impact: z.string().max(2048).optional(),
-    likelihood: z.string().max(255).optional(),
+    likelihood: ModelRiskLikelihood.optional(),
+    severity: ModelRiskSeverity.optional(),
   })
   .strict();
 
-const AgentUpdateModelRiskSchema = z
+const AgentUpdateModelRiskObject = z
   .object({
     model_risk_id: z.number().int().positive(),
     risk_name: z.string().min(3).max(255).optional(),
@@ -445,9 +456,28 @@ const AgentUpdateModelRiskSchema = z
     target_date: isoDateString.optional(),
     mitigation_plan: z.string().max(2048).optional(),
     impact: z.string().max(2048).optional(),
-    likelihood: z.string().max(255).optional(),
+    likelihood: ModelRiskLikelihood.optional(),
+    severity: ModelRiskSeverity.optional(),
+    /** Set only by normalizeStoredLabels: free text an older approval held. */
+    _previous_likelihood: z.string().optional(),
   })
   .strict();
+
+/**
+ * Stored input is parsed again when the approval executes (and when filed):
+ * labels are normalized (decision 10). A suggestion filed now needs both
+ * likelihood and severity; one filed before the lists may name a level instead.
+ */
+const AgentSuggestModelRiskSchema = z
+  .preprocess((raw) => normalizeStoredLabels(raw, "description"), AgentSuggestModelRiskObject)
+  .superRefine(requirePairOrLevel);
+const AgentSuggestModelRiskFileSchema = z
+  .preprocess((raw) => normalizeStoredLabels(raw, "description"), AgentSuggestModelRiskObject)
+  .superRefine(requirePair);
+const AgentUpdateModelRiskSchema = z.preprocess(
+  (raw) => normalizeStoredLabels(raw, "carry"),
+  AgentUpdateModelRiskObject,
+);
 
 function throwOnValidationFailure(
   toolName: string,
@@ -581,7 +611,8 @@ const _agentSuggestModelRiskInner = createWriteToolFn({
         target_date: data.target_date || new Date().toISOString(),
         mitigation_plan: data.mitigation_plan || "",
         impact: data.impact || "",
-        likelihood: data.likelihood || "",
+        likelihood: data.likelihood ?? null,
+        severity: data.severity ?? null,
       },
       ctx,
     );
@@ -605,7 +636,7 @@ const agentSuggestModelRisk = async (
   void _u;
   void _o;
   void _r;
-  const parsed = AgentSuggestModelRiskSchema.safeParse(userParams);
+  const parsed = AgentSuggestModelRiskFileSchema.safeParse(userParams);
   if (!parsed.success) {
     throwOnValidationFailure("agent_suggest_model_risk", parsed.error.issues);
   }
@@ -646,6 +677,7 @@ const agentUpdateModelRisk = createWriteToolFn({
       "mitigation_plan",
       "impact",
       "likelihood",
+      "severity",
     ];
 
     for (const field of updatableFields) {
@@ -656,6 +688,14 @@ const agentUpdateModelRisk = createWriteToolFn({
 
     const ctx = await modelWriteContext(params, organizationId);
     if (isRefusal(ctx)) return ctx;
+    // An older approval's free-text likelihood goes to the end of the
+    // description, as the migration did for stored risks.
+    if (data._previous_likelihood) {
+      const base =
+        data.description ?? (await getModelRiskByIdQuery(id, organizationId))?.description ?? "";
+      updateData.description = withPreviousLikelihood(base, data._previous_likelihood);
+    }
+
     const result = await updateModelRiskService(id, updateData, ctx);
     if (!result) {
       throw new Error(`Model risk #${id} not found or does not belong to this organization`);

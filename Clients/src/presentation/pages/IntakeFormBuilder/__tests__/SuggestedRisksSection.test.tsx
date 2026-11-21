@@ -220,6 +220,19 @@ describe("SuggestedRisksSection", () => {
     expect(screen.getByText("Model risk level")).toBeInTheDocument();
   });
 
+  // Decision 10: the level comes from likelihood and severity, not a picker.
+  it("shows the model risk level the formula gives and lets no one pick it", async () => {
+    render(block([item({ modelRiskCategory: "Bias & Fairness", modelRiskLevel: "Low" })]), {
+      isModel: true,
+    });
+    // Possible x Major is High, whatever level was stored.
+    expect(screen.getByText("High")).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId("suggested-risk-a-edit"));
+    const level = document.getElementById("suggestion-a-model-level") as HTMLInputElement;
+    expect(level.value).toBe("High");
+    expect(level).toBeDisabled();
+  });
+
   it("says how many lower-rated suggestions were dropped", () => {
     render(block([item()], { droppedCount: 4 }));
     expect(screen.getByText("4")).toBeInTheDocument();

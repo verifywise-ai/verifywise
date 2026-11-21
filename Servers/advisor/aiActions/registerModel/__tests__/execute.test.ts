@@ -91,6 +91,11 @@ describe("executeRegisterModel", () => {
     );
   });
 
+  it("keeps the message of a failure that is not about the use case", async () => {
+    mockCreate.mockRejectedValueOnce(new ValidationException("Bad framework", "frameworks", [9]));
+    await expect(executeRegisterModel(ctx({ project_id: 3 }))).rejects.toThrow("Bad framework");
+  });
+
   it("reuses an existing model and links it through the service", async () => {
     mockQuery.mockResolvedValue([[{ id: 22 }], 1]);
     await expect(executeRegisterModel(ctx({ project_id: 3 }))).resolves.toEqual({ entityId: 22 });

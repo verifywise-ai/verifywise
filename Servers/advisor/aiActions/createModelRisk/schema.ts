@@ -14,6 +14,14 @@
  */
 
 import { z } from "zod";
+import {
+  canonicalLikelihood,
+  canonicalSeverity,
+  LIKELIHOOD_SCALE,
+  LikelihoodLabel,
+  SEVERITY_SCALE,
+  SeverityLabel,
+} from "../../../utils/riskLevel.utils";
 
 export const ModelRiskCategory = z.enum([
   "Performance",
@@ -25,6 +33,86 @@ export const ModelRiskCategory = z.enum([
 
 export const ModelRiskLevel = z.enum(["Low", "Medium", "High", "Critical"]);
 
+/** The likelihood and severity lists the level is computed from (decision 10). */
+export const ModelRiskLikelihood = z.enum(
+  Object.keys(LIKELIHOOD_SCALE) as [LikelihoodLabel, ...LikelihoodLabel[]],
+);
+export const ModelRiskSeverity = z.enum(
+  Object.keys(SEVERITY_SCALE) as [SeverityLabel, ...SeverityLabel[]],
+);
+
+/** The wording the likelihood migration uses for text that is not a label. */
+export const PREVIOUS_LIKELIHOOD = "Previous likelihood: ";
+
+/** `text` with the "Previous likelihood" line appended after a blank line. */
+export const withPreviousLikelihood = (text: string | null | undefined, value: string) =>
+  text && text.trim()
+    ? `${text}\n\n${PREVIOUS_LIKELIHOOD}${value}`
+    : `${PREVIOUS_LIKELIHOOD}${value}`;
+
+/**
+ * Approvals filed before the likelihood list (decision 10) hold free-text
+ * likelihoods, and the stored input is parsed again when it is approved.
+ * A label in any case gets its spelling; any other text leaves `likelihood`
+ * and, as the migration does, is kept as a "Previous likelihood" line: in the
+ * description (`into: "description"`, for a create) or in
+ * `_previous_likelihood` for the executor to append to the stored
+ * description (`into: "carry"`, for an update, which may not send one).
+ */
+export function normalizeStoredLabels(raw: unknown, into: "description" | "carry"): unknown {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return raw;
+  const out: Record<string, unknown> = { ...(raw as Record<string, unknown>) };
+  // Only this function sets it; a value sent in the tool input is dropped.
+  delete out._previous_likelihood;
+  if (typeof out.severity === "string")
+    out.severity = canonicalSeverity(out.severity) ?? out.severity;
+  if (typeof out.likelihood !== "string") return out;
+  const label = canonicalLikelihood(out.likelihood);
+  if (label) {
+    out.likelihood = label;
+    return out;
+  }
+  const text = out.likelihood.trim();
+  delete out.likelihood;
+  if (!text) return out;
+  if (into === "description") {
+    out.description = withPreviousLikelihood(out.description as string | undefined, text);
+  } else {
+    out._previous_likelihood = text;
+  }
+  return out;
+}
+
+type LevelInputs = { likelihood?: string; severity?: string; risk_level?: string };
+
+/** Message for new input that leaves out likelihood or severity. */
+export const PAIR_REQUIRED =
+  "likelihood and severity are both required: together they set the risk level";
+
+/**
+ * New input (file time) needs both, since together they set the level.
+ */
+export const requirePair = (input: LevelInputs, ctx: z.RefinementCtx) => {
+  if (!input.likelihood)
+    ctx.addIssue({ code: "custom", path: ["likelihood"], message: PAIR_REQUIRED });
+  if (!input.severity) ctx.addIssue({ code: "custom", path: ["severity"], message: PAIR_REQUIRED });
+};
+
+/**
+ * Stored input (approval time): both, or an approval filed before the lists
+ * that names a level, which is kept. Neither would store a risk without a
+ * level, so it is refused.
+ */
+export const requirePairOrLevel = (input: LevelInputs, ctx: z.RefinementCtx) => {
+  if ((input.likelihood && input.severity) || input.risk_level) return;
+  ctx.addIssue({
+    code: "custom",
+    path: ["severity"],
+    message:
+      "this approval has no likelihood and severity and no risk level, so the risk would have no level. Reject it and ask for the risk again with a likelihood and a severity.",
+  });
+};
+
 export const ModelRiskStatus = z.enum(["Open", "In Progress", "Resolved", "Accepted"]);
 
 const isoDateString = z
@@ -34,7 +122,7 @@ const isoDateString = z
     message: "must be a valid ISO date string (e.g. 2026-04-15)",
   });
 
-export const AgentCreateModelRiskSchema = z
+const AgentCreateModelRiskObject = z
   .object({
     model_id: z.number().int().positive().optional(),
     /**
@@ -50,6 +138,11 @@ export const AgentCreateModelRiskSchema = z
     risk_name: z.string().min(3).max(255),
     description: z.string().max(2048).optional(),
     risk_category: ModelRiskCategory.optional(),
+    /**
+     * No longer offered to the model: the level comes from likelihood and
+     * severity. Still parsed so an approval filed before keeps executing;
+     * the service ignores it when both are set.
+     */
     risk_level: ModelRiskLevel.optional(),
     status: ModelRiskStatus.optional(),
     /**
@@ -65,8 +158,22 @@ export const AgentCreateModelRiskSchema = z
     target_date: isoDateString.optional(),
     mitigation_plan: z.string().max(2048).optional(),
     impact: z.string().max(2048).optional(),
-    likelihood: z.string().max(255).optional(),
+    likelihood: ModelRiskLikelihood.optional(),
+    severity: ModelRiskSeverity.optional(),
   })
   .strict();
 
-export type AgentCreateModelRiskInput = z.infer<typeof AgentCreateModelRiskSchema>;
+/**
+ * The stored input, parsed again when the approval executes: labels
+ * normalized, and both inputs or (an older approval) a level.
+ */
+export const AgentCreateModelRiskSchema = z
+  .preprocess((raw) => normalizeStoredLabels(raw, "description"), AgentCreateModelRiskObject)
+  .superRefine(requirePairOrLevel);
+
+/** New input from the model (file time): likelihood and severity both required. */
+export const AgentCreateModelRiskFileSchema = z
+  .preprocess((raw) => normalizeStoredLabels(raw, "description"), AgentCreateModelRiskObject)
+  .superRefine(requirePair);
+
+export type AgentCreateModelRiskInput = z.infer<typeof AgentCreateModelRiskObject>;

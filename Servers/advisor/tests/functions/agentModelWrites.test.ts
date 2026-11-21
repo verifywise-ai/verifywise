@@ -23,7 +23,7 @@ import {
   NotFoundException,
 } from "../../../domain.layer/exceptions/custom.exception";
 import "../../functions/modelInventoryFunctions";
-import "../../functions/modelRiskFunctions";
+import { availableModelRiskTools } from "../../functions/modelRiskFunctions";
 import { MODEL_WRITE_REFUSED } from "../../functions/modelWriteScope";
 import { writeToolExecutors } from "../../confirmation/createWriteTool";
 import { availableModelInventoryTools } from "../../functions/modelInventoryFunctions";
@@ -252,6 +252,71 @@ describe("model risk writes", () => {
       expect.objectContaining({ risk_name: "Drift", owner: 12 }),
       editorCtx(REQUESTER),
     );
+  });
+
+  // Decision 10: approvals filed before the likelihood list still execute.
+  it("runs a suggestion filed with a free-text likelihood, keeping the text", async () => {
+    await run("agent_suggest_model_risk", {
+      risk_name: "Drift",
+      description: "Seen in March",
+      risk_level: "High",
+      likelihood: "High",
+      _userId: CHATTER,
+    });
+    expect(mockRiskCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        likelihood: null,
+        risk_level: "High",
+        description: "Seen in March\n\nPrevious likelihood: High",
+      }),
+      editorCtx(CHATTER),
+    );
+  });
+
+  it("runs an update filed with a free-text likelihood, appending it to the stored description", async () => {
+    (sequelize.query as unknown as jest.Mock<any>).mockResolvedValueOnce([
+      { description: "Stored text" },
+    ]);
+    await run("agent_update_model_risk", {
+      model_risk_id: 11,
+      likelihood: "High",
+      _userId: CHATTER,
+    });
+    expect(mockRiskUpdate).toHaveBeenLastCalledWith(
+      11,
+      { description: "Stored text\n\nPrevious likelihood: High" },
+      editorCtx(CHATTER),
+    );
+    await run("agent_update_model_risk", {
+      model_risk_id: 11,
+      likelihood: "likely",
+      _userId: CHATTER,
+    });
+    expect(mockRiskUpdate).toHaveBeenLastCalledWith(
+      11,
+      { likelihood: "Likely" },
+      editorCtx(CHATTER),
+    );
+  });
+
+  it("refuses a stored suggestion with neither likelihood and severity nor a level", async () => {
+    await expect(
+      run("agent_suggest_model_risk", {
+        risk_name: "Drift",
+        likelihood: "Likely",
+        _userId: CHATTER,
+      }),
+    ).rejects.toThrow(/no likelihood and severity and no risk level/);
+    expect(mockRiskCreate).not.toHaveBeenCalled();
+  });
+
+  it("asks a new suggestion for both likelihood and severity", async () => {
+    await expect(
+      availableModelRiskTools.agent_suggest_model_risk(
+        { risk_name: "Drift", risk_level: "High", _userId: CHATTER },
+        ORG,
+      ),
+    ).rejects.toThrow(/likelihood and severity are both required/);
   });
 
   it("updates, changes status, attaches and detaches through the service", async () => {

@@ -40,6 +40,7 @@ import {
   deleteModelRiskService,
   updateModelRiskService,
 } from "../modelRisk.service";
+import { ValidationException } from "../../domain.layer/exceptions/custom.exception";
 
 const EDITOR = 10;
 const OWNER = 20;
@@ -158,6 +159,93 @@ describe("updateModelRiskService", () => {
     mockGet.mockResolvedValue(null);
     expect(await updateModelRiskService(5, {} as any, ctx, fakeTx() as any)).toBeNull();
     expect(mockUpdate).not.toHaveBeenCalled();
+  });
+});
+
+describe("model risk level from the formula (decision 10)", () => {
+  const written = () => mockCreate.mock.calls[0][0];
+  const updated = () => mockUpdate.mock.calls[0][1];
+
+  it("computes the level on create and ignores a sent one", async () => {
+    mockCreate.mockResolvedValue(row({ owner: null }));
+    await createModelRiskService(
+      { risk_name: "Drift", likelihood: "Likely", severity: "Major", risk_level: "Low" } as any,
+      ctx,
+      fakeTx() as any,
+    );
+    expect(written()).toMatchObject({
+      likelihood: "Likely",
+      severity: "Major",
+      risk_level: "High",
+    });
+  });
+
+  it("keeps a sent level when the severity is missing", async () => {
+    mockCreate.mockResolvedValue(row({ owner: null }));
+    await createModelRiskService(
+      { risk_name: "Drift", likelihood: "Likely", risk_level: "Low" } as any,
+      ctx,
+      fakeTx() as any,
+    );
+    expect(written()).toMatchObject({ likelihood: "Likely", risk_level: "Low" });
+  });
+
+  it("stores the label's spelling and a blank value as null", async () => {
+    mockCreate.mockResolvedValue(row({ owner: null }));
+    await createModelRiskService(
+      { risk_name: "Drift", likelihood: " almost certain", severity: "" } as any,
+      ctx,
+      fakeTx() as any,
+    );
+    expect(written()).toMatchObject({ likelihood: "Almost Certain", severity: null });
+  });
+
+  it("refuses a likelihood or severity that is not on the list, naming the field", async () => {
+    await expect(
+      createModelRiskService(
+        { risk_name: "Drift", likelihood: "Confirmed" } as any,
+        ctx,
+        fakeTx() as any,
+      ),
+    ).rejects.toThrow(
+      new ValidationException(
+        "Likelihood must be one of: Rare, Unlikely, Possible, Likely, Almost Certain.",
+      ),
+    );
+    mockGet.mockResolvedValue(row({ likelihood: "Rare" }));
+    await expect(
+      updateModelRiskService(5, { severity: "Critical" } as any, ctx, fakeTx() as any),
+    ).rejects.toBeInstanceOf(ValidationException);
+    expect(mockCreate).not.toHaveBeenCalled();
+    expect(mockUpdate).not.toHaveBeenCalled();
+  });
+
+  it("recomputes on update from the stored likelihood when only the severity is sent", async () => {
+    mockGet.mockResolvedValue(row({ likelihood: "Rare", severity: "Minor", risk_level: "Low" }));
+    mockUpdate.mockResolvedValue(row({}));
+    await updateModelRiskService(5, { severity: "Catastrophic" } as any, ctx, fakeTx() as any);
+    expect(updated()).toEqual({ severity: "Catastrophic", risk_level: "High" });
+  });
+
+  it("ignores a sent level on update when the merged row has both inputs", async () => {
+    mockGet.mockResolvedValue(row({ likelihood: "Rare", severity: "Minor", risk_level: "Low" }));
+    mockUpdate.mockResolvedValue(row({}));
+    await updateModelRiskService(5, { risk_level: "Critical" } as any, ctx, fakeTx() as any);
+    expect(updated()).toEqual({ risk_level: "Low" });
+  });
+
+  it("keeps a sent level on update when the stored row has no severity", async () => {
+    mockGet.mockResolvedValue(row({ likelihood: "Rare", severity: null, risk_level: "Low" }));
+    mockUpdate.mockResolvedValue(row({}));
+    await updateModelRiskService(5, { risk_level: "Critical" } as any, ctx, fakeTx() as any);
+    expect(updated()).toEqual({ risk_level: "Critical" });
+  });
+
+  it("keeps the stored level when a save clears the likelihood", async () => {
+    mockGet.mockResolvedValue(row({ likelihood: "Rare", severity: "Minor", risk_level: "Low" }));
+    mockUpdate.mockResolvedValue(row({}));
+    await updateModelRiskService(5, { likelihood: null } as any, ctx, fakeTx() as any);
+    expect(updated()).toEqual({ likelihood: null });
   });
 });
 

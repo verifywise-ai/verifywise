@@ -152,14 +152,16 @@ describe("model write rules", () => {
         .send({ risk_name: "Drift" });
       expect(res.status).toBe(400);
       const fields = res.body.data.errors.map((e: { field: string }) => e.field).sort();
-      expect(fields).toEqual(["owner", "risk_category", "risk_level", "target_date"]);
+      // The level is computed from likelihood and severity (decision 10).
+      expect(fields).toEqual(["likelihood", "owner", "risk_category", "severity", "target_date"]);
     });
 
     it("creates a model risk from only its required fields, the rest null or empty", async () => {
       const res = await (await as(org, admin, "Admin")).post("/api/v1/model-risks").send({
         risk_name: "Drift",
         risk_category: "Performance",
-        risk_level: "High",
+        likelihood: "Likely",
+        severity: "Major",
         owner: String(owner),
         target_date: "2027-01-31",
       });
@@ -597,7 +599,9 @@ describe("model write rules", () => {
     const riskBody = (extra: Record<string, unknown> = {}) => ({
       risk_name: `V1 risk ${++counter}`,
       risk_category: "Performance",
-      risk_level: "High",
+      // Likely x Major: High by the formula.
+      likelihood: "Likely",
+      severity: "Major",
       owner: String(owner),
       target_date: "2027-01-31",
       ...extra,
@@ -672,7 +676,7 @@ describe("model write rules", () => {
       });
       const updated = await api
         .patch(`/api/v1/model-risks/${id}`)
-        .send({ risk_level: "Low", status: "In Progress" });
+        .send({ severity: "Negligible", status: "In Progress" });
       expect(updated.status).toBe(200);
       expect(updated.body.data).toMatchObject({ id, risk_level: "Low", status: "In Progress" });
       expect((await riskRow(id)).risk_level).toBe("Low");
