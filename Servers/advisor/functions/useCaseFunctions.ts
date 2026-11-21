@@ -1,12 +1,8 @@
 import { actingRequesterId } from "./actingRequester";
-import {
-  getProjectAccessQuery,
-  getUserProjects,
-  lockProjectForDelete,
-} from "../../utils/project.utils";
+import { getUserProjects, lockProjectForDelete } from "../../utils/project.utils";
 import { deleteProjectWithSideEffects } from "../../utils/projectDeletion.utils";
-import { getUserRoleInOrganization, userHasPermission } from "../../utils/userPermission.utils";
-import { actingProjectViewer, actingUserId, NO_PROJECT_VIEWER } from "./useCaseScope";
+import { userHasPermission } from "../../utils/userPermission.utils";
+import { actingProjectViewer, NO_PROJECT_VIEWER, refuseUseCaseWrite } from "./useCaseScope";
 import { calculateProjectRisks } from "../../utils/project.utils";
 import { findUsersNotInOrganization } from "../../utils/user.utils";
 import logger from "../../utils/logger/fileLogger";
@@ -33,38 +29,6 @@ const getVisibleProjects = async (params: Record<string, unknown>, organizationI
   if (viewer === NO_PROJECT_VIEWER) return [];
   const projects = await getUserProjects(viewer, organizationId);
   return projects || [];
-};
-
-type Refusal = { success: false; message: string };
-
-/**
- * The console's rule for a use case write: useCase.edit, and for an existing
- * use case write access to it (getProjectAccessQuery: Admin, owner, member
- * or group member, as PATCH /api/projects/:id). Returns the refusal to
- * report, or null when the write may go ahead.
- */
-const refuseUseCaseWrite = async (
-  params: Record<string, unknown>,
-  organizationId: number,
-  useCaseId?: unknown,
-): Promise<Refusal | null> => {
-  const userId = actingUserId(params);
-  if (!userId || !(await userHasPermission(organizationId, userId, "useCase.edit"))) {
-    return { success: false, message: "Your role does not allow changing use cases" };
-  }
-  if (useCaseId === undefined) return null;
-  const id = Number(useCaseId);
-  const role = await getUserRoleInOrganization(organizationId, userId);
-  const access =
-    Number.isSafeInteger(id) && id > 0 && role
-      ? await getProjectAccessQuery(id, { userId, role: role.name }, organizationId)
-      : "not_found";
-  if (access === "not_found")
-    return { success: false, message: `Use case #${useCaseId} not found` };
-  if (access === "denied") {
-    return { success: false, message: `You do not have access to use case #${useCaseId}` };
-  }
-  return null;
 };
 
 const fetchUseCases = async (

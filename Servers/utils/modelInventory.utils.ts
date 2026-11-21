@@ -4,6 +4,7 @@ import { QueryTypes, Transaction } from "sequelize";
 import { TenantAutomationActionModel } from "../domain.layer/models/tenantAutomationAction/tenantAutomationAction.model";
 import { replaceTemplateVariables } from "./automation/automation.utils";
 import { enqueueAutomationAction } from "../services/automations/automationProducer";
+import logger from "./logger/fileLogger";
 import {
   buildModelReplacements,
   buildModelUpdateReplacements,
@@ -54,6 +55,24 @@ function assignModelLinks(
   const { projects, frameworks } = splitModelLinks(rows);
   (model.dataValues as any).projects = projects;
   (model.dataValues as any).frameworks = frameworks;
+}
+
+/**
+ * Enqueue an automation action after `transaction` commits (at once without
+ * one). A failure is logged: the write it follows has already committed.
+ */
+function enqueueAutomationAfterCommit(
+  transaction: Transaction | null | undefined,
+  actionKey: string,
+  payload: Record<string, unknown>,
+): void {
+  const run = () => {
+    enqueueAutomationAction(actionKey, payload).catch((err) =>
+      logger.error(`Failed to enqueue model automation ${actionKey}:`, err),
+    );
+  };
+  if (transaction) transaction.afterCommit(run);
+  else run();
 }
 
 export const getAllModelInventoriesQuery = async (organizationId: number) => {
@@ -111,13 +130,21 @@ export const getModelsByOrganizationIdQuery = async (organizationId: number) => 
   return modelInventory;
 };
 
-export const getModelInventoryByIdQuery = async (id: number, organizationId: number) => {
+export const getModelInventoryByIdQuery = async (
+  id: number,
+  organizationId: number,
+  // forUpdate (inside a transaction) locks the row, so a save checks and
+  // diffs against the row it then changes.
+  options: { transaction?: Transaction; forUpdate?: boolean } = {},
+) => {
+  const lock = options.forUpdate ? " FOR UPDATE" : "";
   const modelInventory = await sequelize.query(
-    `SELECT * FROM model_inventories WHERE organization_id = :organizationId AND id = :id`,
+    `SELECT * FROM model_inventories WHERE organization_id = :organizationId AND id = :id${lock}`,
     {
       replacements: { organizationId, id },
       mapToModel: true,
       model: ModelInventoryModel,
+      transaction: options.transaction,
     },
   );
 
@@ -129,6 +156,7 @@ export const getModelInventoryByIdQuery = async (id: number, organizationId: num
     `SELECT project_id, framework_id FROM model_inventories_projects_frameworks WHERE organization_id = :organizationId AND model_inventory_id = :model_inventory_id`,
     {
       replacements: { organizationId, model_inventory_id: model.id },
+      transaction: options.transaction,
     },
   )) as [IModelInventoryProjectFramework[], number];
   assignModelLinks(model, projectFrameworks[0]);
@@ -333,8 +361,9 @@ export const createNewModelInventoryQuery = async (
           automation_id: automation.automation_id,
         };
 
-        // Enqueue with processed params
-        await enqueueAutomationAction(automation.action_key, {
+        // Enqueued once the transaction commits: a rolled-back write
+        // announces nothing.
+        enqueueAutomationAfterCommit(transaction, automation.action_key, {
           ...processedParams,
           organizationId,
         });
@@ -369,9 +398,13 @@ export const updateModelInventoryByIdQuery = async (
   transaction: Transaction,
   // Set for a REST caller: see the use case link rules below.
   useCaseViewer?: UseCaseViewer,
+  // The row as the caller read it under its lock, before the save changed
+  // it; read here when not given.
+  previous?: Record<string, any> | null,
 ) => {
   const updated_at = new Date();
-  const oldModel = await getModelInventoryByIdQuery(id, organizationId);
+  const oldModel =
+    previous ?? (await getModelInventoryByIdQuery(id, organizationId, { transaction }));
 
   // An unchanged approver is not re-checked, so a model whose approver has
   // since left the organization can still be edited. A new one must be a member.
@@ -536,8 +569,9 @@ export const updateModelInventoryByIdQuery = async (
           automation_id: automation.automation_id,
         };
 
-        // Enqueue with processed params
-        await enqueueAutomationAction(automation.action_key, {
+        // Enqueued once the transaction commits: a rolled-back write
+        // announces nothing.
+        enqueueAutomationAfterCommit(transaction, automation.action_key, {
           ...processedParams,
           organizationId,
         });
@@ -674,8 +708,9 @@ export const deleteModelInventoryByIdQuery = async (
           automation_id: automation.automation_id,
         };
 
-        // Enqueue with processed params
-        await enqueueAutomationAction(automation.action_key, {
+        // Enqueued once the transaction commits: a rolled-back write
+        // announces nothing.
+        enqueueAutomationAfterCommit(transaction, automation.action_key, {
           ...processedParams,
           organizationId,
         });

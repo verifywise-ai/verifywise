@@ -131,7 +131,7 @@ const ModelRisksDialog: React.FC<ModelRisksDialogProps> = ({
 
     try {
       await updateEntityById({
-        routeUrl: `/modelRisks/${selectedRisk.id}`,
+        routeUrl: `/v1/model-risks/${selectedRisk.id}`,
         body: formData,
       });
       handleEditModalClose();

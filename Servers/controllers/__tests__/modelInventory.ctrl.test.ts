@@ -14,15 +14,33 @@ jest.mock("../../utils/modelInventory.utils", () => ({
 jest.mock("../../utils/mrm.utils", () => ({
   modelHasMrmHistoryQuery: jest.fn(),
 }));
-jest.mock("../../utils/modelInventoryChangeHistory.utils", () => ({
-  recordModelInventoryCreation: jest.fn().mockResolvedValue(undefined),
-  recordModelInventoryDeletion: jest.fn().mockResolvedValue(undefined),
-  trackModelInventoryChanges: jest.fn().mockResolvedValue([]),
+jest.mock("../../utils/changeHistory.base.utils", () => ({
+  recordEntityCreation: jest.fn().mockResolvedValue(undefined),
+  recordEntityDeletion: jest.fn().mockResolvedValue(undefined),
+  trackEntityChanges: jest.fn().mockResolvedValue([]),
   recordMultipleFieldChanges: jest.fn().mockResolvedValue(undefined),
 }));
+jest.mock("../../utils/rolePermissions.utils", () => ({
+  roleHasPermission: jest.fn(async () => true),
+}));
+jest.mock("../../services/riskApproverNotification.service", () => ({
+  getUserNameById: jest.fn(async () => "Test User"),
+}));
+jest.mock("../../services/proactiveNotify", () => ({
+  notifyProactive: jest.fn(async () => undefined),
+}));
+jest.mock("../../services/workflows/triggers", () => ({
+  triggerModelDeployment: jest.fn(async () => undefined),
+}));
+// afterCommit runs its hook at once: the mocked commit has nothing to wait for.
+const mockTransaction = () => ({
+  commit: jest.fn(),
+  rollback: jest.fn(),
+  afterCommit: jest.fn((fn: () => void) => fn()),
+});
 jest.mock("../../database/db", () => ({
   sequelize: {
-    transaction: jest.fn().mockResolvedValue({ commit: jest.fn(), rollback: jest.fn() }),
+    transaction: jest.fn(async () => mockTransaction()),
     query: jest.fn().mockResolvedValue([{ name: "Test", surname: "User" }]),
   },
 }));
@@ -38,6 +56,7 @@ jest.mock("../../utils/statusCode.utils", () => ({
     202: (d: any) => ({ message: "Accepted", data: d }),
     204: (d: any) => ({ message: "No Content", data: d }),
     400: (d: any) => ({ message: "Bad Request", data: d }),
+    403: (d: any) => ({ message: "Forbidden", data: d }),
     404: (d: any) => ({ message: "Not Found", data: d }),
     409: (d: any) => ({ message: "Conflict", data: d }),
     500: (d: any) => ({ message: "Internal Server Error", data: d }),
@@ -129,7 +148,7 @@ function createRes(): any {
 }
 
 function mockModel(data: any) {
-  return { ...data, toSafeJSON: () => data };
+  return { ...data, toSafeJSON: () => data, get: () => ({ ...data }) };
 }
 
 describe("modelInventory.ctrl", () => {
@@ -169,12 +188,12 @@ describe("modelInventory.ctrl", () => {
       await getModelInventoryById(req, res);
       expect(res.status).toHaveBeenCalledWith(200);
     });
-    it("should return 204 when model is not found", async () => {
+    it("should return 404 when model is not found (M-L1)", async () => {
       mockGetById.mockResolvedValue(null as any);
       const req = createReq({ params: { id: "99" } });
       const res = createRes();
       await getModelInventoryById(req, res);
-      expect(res.status).toHaveBeenCalledWith(204);
+      expect(res.status).toHaveBeenCalledWith(404);
     });
     it("should return 500 on error", async () => {
       mockGetById.mockRejectedValue(new Error("DB error"));
@@ -258,6 +277,57 @@ describe("modelInventory.ctrl", () => {
     });
   });
 
+  describe("refused writes", () => {
+    it("answers 403 with the approval message for a refused approval change", async () => {
+      mockGetById.mockResolvedValue(
+        mockModel({ id: 1, model: "M1", status: "Pending", approver: 5 }) as any,
+      );
+      const { roleHasPermission } = jest.requireMock("../../utils/rolePermissions.utils") as {
+        roleHasPermission: jest.Mock<any>;
+      };
+      roleHasPermission.mockResolvedValueOnce(false);
+      const req = createReq({ role: "Editor", params: { id: "1" }, body: { status: "Approved" } });
+      const res = createRes();
+      await updateModelInventoryById(req, res);
+      expect(res.status).toHaveBeenCalledWith(403);
+      expect(res.json).toHaveBeenCalledWith({
+        message: "Forbidden",
+        data: "Only the model's approver or an Admin can change its approval.",
+      });
+      expect(mockUpdate).not.toHaveBeenCalled();
+    });
+
+    it("looks up the caller's Admin role only for a body that sends status or approver", async () => {
+      const { roleHasPermission } = jest.requireMock("../../utils/rolePermissions.utils") as {
+        roleHasPermission: jest.Mock<any>;
+      };
+      mockGetById.mockResolvedValue(
+        mockModel({ id: 1, model: "M1", status: "Pending", approver: 5 }) as any,
+      );
+      mockUpdate.mockResolvedValue(mockModel({ id: 1, model: "M2" }) as any);
+      roleHasPermission.mockClear();
+      await updateModelInventoryById(
+        createReq({ role: "Editor", params: { id: "1" }, body: { model: "M2" } }),
+        createRes(),
+      );
+      expect(roleHasPermission).not.toHaveBeenCalled();
+      await updateModelInventoryById(
+        createReq({ role: "Editor", params: { id: "1" }, body: { status: "Pending" } }),
+        createRes(),
+      );
+      expect(roleHasPermission).toHaveBeenCalledWith(1, "Editor", "organization.admin");
+    });
+
+    it("answers 400, not 500, for a value the database cannot store", async () => {
+      mockCreate.mockRejectedValue(
+        Object.assign(new Error("invalid input value for enum"), { parent: { code: "22P02" } }),
+      );
+      const res = createRes();
+      await createNewModelInventory(createReq({ body: { status: "Bogus" } }), res);
+      expect(res.status).toHaveBeenCalledWith(400);
+    });
+  });
+
   describe("updateModelInventoryById", () => {
     it("should return 404 when model is not found", async () => {
       mockGetById.mockResolvedValue(null as any);
@@ -322,15 +392,16 @@ describe("modelInventory.ctrl", () => {
   });
 
   describe("deleteModelInventoryById", () => {
-    const tx = { commit: jest.fn(), rollback: jest.fn() };
+    const tx = { commit: jest.fn(), rollback: jest.fn(), afterCommit: jest.fn() };
     beforeEach(() => {
       (sequelize.transaction as jest.Mock<any>).mockResolvedValue(tx);
+      mockGetById.mockResolvedValue(mockModel({ id: 1, approver: null }) as any);
       mockLock.mockResolvedValue(true);
       mockMrmHistory.mockResolvedValue(false);
     });
 
     it("should return 404 when model is not found", async () => {
-      mockLock.mockResolvedValue(false);
+      mockGetById.mockResolvedValue(null as any);
       const req = createReq({ params: { id: "99" } });
       const res = createRes();
       await deleteModelInventoryById(req, res);
@@ -349,11 +420,44 @@ describe("modelInventory.ctrl", () => {
     it("locks the model row, then checks MRM history in the same transaction", async () => {
       mockDelete.mockResolvedValue(undefined);
       await deleteModelInventoryById(createReq({ params: { id: "1" } }), createRes());
-      expect(mockLock).toHaveBeenCalledWith(1, 1, tx);
+      expect(mockGetById).toHaveBeenCalledWith(1, 1, { transaction: tx, forUpdate: true });
       expect(mockMrmHistory).toHaveBeenCalledWith(1, 1, tx);
-      expect(mockLock.mock.invocationCallOrder[0]).toBeLessThan(
+      expect(mockGetById.mock.invocationCallOrder[0]).toBeLessThan(
         mockMrmHistory.mock.invocationCallOrder[0],
       );
+    });
+    it("answers 403 to an Editor deleting a model whose approver is someone else", async () => {
+      mockGetById.mockResolvedValue(mockModel({ id: 1, approver: 5, status: "Pending" }) as any);
+      const { roleHasPermission } = jest.requireMock("../../utils/rolePermissions.utils") as {
+        roleHasPermission: jest.Mock<any>;
+      };
+      roleHasPermission.mockResolvedValueOnce(false);
+      const res = createRes();
+      await deleteModelInventoryById(
+        createReq({ role: "Editor", userId: 2, params: { id: "1" } }),
+        res,
+      );
+      expect(res.status).toHaveBeenCalledWith(403);
+      expect(res.json).toHaveBeenCalledWith({
+        message: "Forbidden",
+        data: "Only the model's approver or an Admin can change its approval.",
+      });
+      expect(tx.rollback).toHaveBeenCalled();
+      expect(mockDelete).not.toHaveBeenCalled();
+    });
+    it("lets the saved approver delete the model", async () => {
+      mockGetById.mockResolvedValue(mockModel({ id: 1, approver: 5, status: "Approved" }) as any);
+      const { roleHasPermission } = jest.requireMock("../../utils/rolePermissions.utils") as {
+        roleHasPermission: jest.Mock<any>;
+      };
+      roleHasPermission.mockResolvedValueOnce(false);
+      const res = createRes();
+      await deleteModelInventoryById(
+        createReq({ role: "Editor", userId: 5, params: { id: "1" } }),
+        res,
+      );
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(mockDelete).toHaveBeenCalled();
     });
     it("answers 409 for a model with MRM history, rolling back without deleting", async () => {
       mockMrmHistory.mockResolvedValue(true);
@@ -364,7 +468,7 @@ describe("modelInventory.ctrl", () => {
       expect(mockDelete).not.toHaveBeenCalled();
     });
     it("should return 500 on error", async () => {
-      mockLock.mockRejectedValue(new Error("DB error"));
+      mockGetById.mockRejectedValue(new Error("DB error"));
       const req = createReq({ params: { id: "1" } });
       const res = createRes();
       await deleteModelInventoryById(req, res);

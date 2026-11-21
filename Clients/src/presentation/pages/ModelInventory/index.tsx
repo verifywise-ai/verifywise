@@ -930,7 +930,6 @@ const ModelInventory: React.FC = () => {
     const MODEL_INVENTORY_TOOLS = new Set([
       "agent_register_model",
       "agent_update_model",
-      "agent_update_model_lifecycle_phase",
       "agent_retire_model",
       "agent_delete_model",
       "agent_link_model_to_project",
@@ -1433,7 +1432,7 @@ const ModelInventory: React.FC = () => {
       const deleteFrameworks = oldFrameworks.length > 0 && newFrameworks.length === 0;
 
       await updateEntityById({
-        routeUrl: `/modelInventory/${selectedModelInventory.id}`,
+        routeUrl: `/v1/model-inventories/${selectedModelInventory.id}`,
         body: {
           ...formData,
           deleteProjects,
@@ -1447,7 +1446,7 @@ const ModelInventory: React.FC = () => {
       });
     } else {
       // Create new model inventory
-      const response = await createModelInventory("/modelInventory", formData);
+      const response = await createModelInventory("/v1/model-inventories", formData);
       modelId = response?.data?.id || null;
       setAlert({
         variant: "success",
@@ -1598,9 +1597,19 @@ const ModelInventory: React.FC = () => {
       await fetchModelInventoryData(false);
       await fetchModelRisksData(false);
 
+      // A refused delete (403: not the model's approver or an Admin) says why.
+      // apiServices throws a CustomException whose response is the 403 body;
+      // its data field holds the reason.
+      const serverMessage =
+        (error as { status?: number })?.status === 403
+          ? (error as { response?: { data?: unknown } })?.response?.data
+          : undefined;
       setAlert({
         variant: "error",
-        body: "Failed to delete model inventory. Please try again.",
+        body:
+          typeof serverMessage === "string" && serverMessage
+            ? serverMessage
+            : "Failed to delete model inventory. Please try again.",
       });
     } finally {
       setDeletingId(null);
@@ -1843,7 +1852,7 @@ const ModelInventory: React.FC = () => {
       if (selectedModelRisk) {
         // Update existing model risk
         await updateEntityById({
-          routeUrl: `/modelRisks/${selectedModelRisk.id}`,
+          routeUrl: `/v1/model-risks/${selectedModelRisk.id}`,
           body: formData,
         });
         savedId = selectedModelRisk.id ?? undefined;
@@ -1854,7 +1863,7 @@ const ModelInventory: React.FC = () => {
       } else {
         // Create new model risk using apiServices
         const response: any = await createNewUser({
-          routeUrl: "/modelRisks",
+          routeUrl: "/v1/model-risks",
           body: formData,
         });
         savedId = response?.data?.id;

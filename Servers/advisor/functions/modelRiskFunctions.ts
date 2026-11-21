@@ -367,10 +367,11 @@ import { z } from "zod";
 import { createWriteToolFn } from "../confirmation/createWriteTool";
 import { TransientApprovalError } from "../approval/approvalGateway";
 import {
-  createNewModelRiskQuery,
-  updateModelRiskByIdQuery,
-  deleteModelRiskByIdQuery,
-} from "../../utils/modelRisk.utils";
+  createModelRiskService,
+  deleteModelRiskService,
+  updateModelRiskService,
+} from "../../services/modelRisk.service";
+import { isRefusal, modelWriteContext } from "./modelWriteScope";
 
 // Mirrors the Postgres enums (enum_model_risks_*) and the TS enums
 // (ModelRiskCategory / ModelRiskLevel / ModelRiskStatus). Strict so the
@@ -484,9 +485,15 @@ const _agentSuggestModelRiskInner = createWriteToolFn({
     // `approvalGateway.ts:226,366`. Strip those internal fields before
     // running strict Zod validation, otherwise `.strict()` rejects them
     // as unknown keys.
-    const { _userId: _u, _organizationId: _o, ...userParams } = params as Record<string, unknown>;
+    const {
+      _userId: _u,
+      _organizationId: _o,
+      _requesterId: _r,
+      ...userParams
+    } = params as Record<string, unknown>;
     void _u;
     void _o;
+    void _r;
     const parsed = AgentSuggestModelRiskSchema.safeParse(userParams);
     if (!parsed.success) {
       throwOnValidationFailure("agent_suggest_model_risk", parsed.error.issues);
@@ -557,7 +564,11 @@ const _agentSuggestModelRiskInner = createWriteToolFn({
       }
     }
 
-    const result = await createNewModelRiskQuery(
+    // Through the model risk service, as the acting user: change history and
+    // the owner's assignment notice.
+    const ctx = await modelWriteContext(params, organizationId);
+    if (isRefusal(ctx)) return ctx;
+    const result = await createModelRiskService(
       {
         model_id: resolvedModelId,
         risk_name: data.risk_name,
@@ -572,7 +583,7 @@ const _agentSuggestModelRiskInner = createWriteToolFn({
         impact: data.impact || "",
         likelihood: data.likelihood || "",
       },
-      organizationId,
+      ctx,
     );
     return result;
   },
@@ -590,9 +601,10 @@ const agentSuggestModelRisk = async (
   params: Record<string, unknown>,
   organizationId: number,
 ): Promise<unknown> => {
-  const { _userId: _u, _organizationId: _o, ...userParams } = params;
+  const { _userId: _u, _organizationId: _o, _requesterId: _r, ...userParams } = params;
   void _u;
   void _o;
+  void _r;
   const parsed = AgentSuggestModelRiskSchema.safeParse(userParams);
   if (!parsed.success) {
     throwOnValidationFailure("agent_suggest_model_risk", parsed.error.issues);
@@ -606,9 +618,15 @@ const agentUpdateModelRisk = createWriteToolFn({
   descriptionFn: (params) =>
     `Update model risk #${params.model_risk_id}${params.risk_name ? ` ("${params.risk_name}")` : ""}`,
   executeFn: async (params, organizationId) => {
-    const { _userId: _u, _organizationId: _o, ...userParams } = params as Record<string, unknown>;
+    const {
+      _userId: _u,
+      _organizationId: _o,
+      _requesterId: _r,
+      ...userParams
+    } = params as Record<string, unknown>;
     void _u;
     void _o;
+    void _r;
     const parsed = AgentUpdateModelRiskSchema.safeParse(userParams);
     if (!parsed.success) {
       throwOnValidationFailure("agent_update_model_risk", parsed.error.issues);
@@ -636,7 +654,9 @@ const agentUpdateModelRisk = createWriteToolFn({
       }
     }
 
-    const result = await updateModelRiskByIdQuery(id, updateData as any, organizationId);
+    const ctx = await modelWriteContext(params, organizationId);
+    if (isRefusal(ctx)) return ctx;
+    const result = await updateModelRiskService(id, updateData, ctx);
     if (!result) {
       throw new Error(`Model risk #${id} not found or does not belong to this organization`);
     }
@@ -653,7 +673,9 @@ const agentChangeModelRiskStatus = createWriteToolFn({
     const id = params.model_risk_id as number;
     const status = params.status as string;
 
-    const result = await updateModelRiskByIdQuery(id, { status } as any, organizationId);
+    const ctx = await modelWriteContext(params, organizationId);
+    if (isRefusal(ctx)) return ctx;
+    const result = await updateModelRiskService(id, { status } as Record<string, unknown>, ctx);
     if (!result) {
       throw new Error(`Model risk #${id} not found or does not belong to this organization`);
     }
@@ -667,7 +689,9 @@ const agentDeleteModelRisk = createWriteToolFn({
   descriptionFn: (params) => `Delete model risk #${params.model_risk_id}`,
   executeFn: async (params, organizationId) => {
     const id = params.model_risk_id as number;
-    const deleted = await deleteModelRiskByIdQuery(id, organizationId);
+    const ctx = await modelWriteContext(params, organizationId);
+    if (isRefusal(ctx)) return ctx;
+    const deleted = await deleteModelRiskService(id, ctx);
     if (!deleted) {
       throw new Error(`Model risk #${id} not found or already deleted`);
     }
@@ -723,7 +747,9 @@ const agentAttachModelRiskToModel = createWriteToolFn({
       throw new Error(`Model #${modelId} not found or does not belong to this organization`);
     }
 
-    const result = await updateModelRiskByIdQuery(id, { model_id: modelId } as any, organizationId);
+    const ctx = await modelWriteContext(params, organizationId);
+    if (isRefusal(ctx)) return ctx;
+    const result = await updateModelRiskService(id, { model_id: modelId }, ctx);
     if (!result) {
       throw new Error(`Model risk #${id} not found or does not belong to this organization`);
     }
@@ -742,7 +768,13 @@ const agentDetachModelRiskFromModel = createWriteToolFn({
     `Detach model risk #${params.model_risk_id} from its model (set model_id = NULL)`,
   executeFn: async (params, organizationId) => {
     const id = params.model_risk_id as number;
-    const result = await updateModelRiskByIdQuery(id, { model_id: null } as any, organizationId);
+    const ctx = await modelWriteContext(params, organizationId);
+    if (isRefusal(ctx)) return ctx;
+    const result = await updateModelRiskService(
+      id,
+      { model_id: null } as Record<string, unknown>,
+      ctx,
+    );
     if (!result) {
       throw new Error(`Model risk #${id} not found or does not belong to this organization`);
     }

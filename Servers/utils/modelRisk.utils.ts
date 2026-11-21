@@ -114,11 +114,13 @@ export async function createNewModelRiskQuery(
       replacements: {
         organization_id: organizationId,
         risk_name: data.risk_name || "",
-        risk_category: data.risk_category,
-        risk_level: data.risk_level,
+        // Unset optional fields are stored as NULL: a named replacement left
+        // undefined makes the insert fail (M-M10).
+        risk_category: data.risk_category || null,
+        risk_level: data.risk_level || null,
         status: data.status || "Open",
         owner: ownerId,
-        target_date: data.target_date,
+        target_date: data.target_date || null,
         description: data.description || "",
         mitigation_plan: data.mitigation_plan || "",
         impact: data.impact || "",

@@ -30,7 +30,7 @@ import {
   RISK_APPROVAL_PENDING,
   RiskApprovalStatus,
 } from "../domain.layer/enums/risk-approval-status.enum";
-import { roleHasPermission } from "./rolePermissions.utils";
+import { roleIsOrganizationAdmin } from "./organizationAdmin.utils";
 
 export const RISK_APPROVAL_FORBIDDEN_MESSAGE =
   "Only the risk's approver or an Admin can change its approval.";
@@ -152,6 +152,5 @@ export async function callerCanDecideAnyRisk(
   organizationId: number | null,
   role: string,
 ): Promise<boolean> {
-  if (!role) return false;
-  return roleHasPermission(organizationId, role, "organization.admin");
+  return roleIsOrganizationAdmin(organizationId, role);
 }

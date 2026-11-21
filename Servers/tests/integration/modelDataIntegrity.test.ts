@@ -602,10 +602,12 @@ describe("model data integrity", () => {
 
   describe("demo data (M-L7)", () => {
     it("a model created as demo data goes with Delete demo data; its risks stay", async () => {
-      const api = await as(org, admin);
-      const created = await api.post("/api/modelInventory").send(modelBody({ is_demo: true }));
-      expect(created.status).toBe(201);
-      const id = created.body.data.id;
+      // Only the demo seed creates demo models (no route takes is_demo from a
+      // body since PR G), so the demo row is written directly.
+      const id = await createTestModelInventory(org, { model: "Demo model" });
+      await sequelize.query(`UPDATE model_inventories SET is_demo = true WHERE id = :id`, {
+        replacements: { id },
+      });
       const realModel = await createTestModelInventory(org, {});
       const userRisk = await createTestModelRisk(org, { model_id: id });
 
