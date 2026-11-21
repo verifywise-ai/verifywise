@@ -10,6 +10,7 @@ import {
   type SuggestedRisksBlock,
 } from "../../../../application/repository/intakeForm.repository";
 import SuggestedRiskEditor from "./SuggestedRiskEditor";
+import { computeModelRiskLevel } from "../../../tools/modelRiskLevel";
 import { radiusPx } from "../../../themes/palette";
 
 export interface SuggestedRisksSectionProps {
@@ -185,7 +186,11 @@ function SuggestedRisksSection({
                   {isModel && risk.modelRiskCategory && (
                     <>
                       {" · "}
-                      <span>{risk.modelRiskCategory}</span> · <span>{risk.modelRiskLevel}</span>
+                      <span>{risk.modelRiskCategory}</span> ·{" "}
+                      <span>
+                        {computeModelRiskLevel(risk.likelihood, risk.severity) ??
+                          risk.modelRiskLevel}
+                      </span>
                     </>
                   )}
                 </Typography>

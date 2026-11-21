@@ -13,7 +13,10 @@ export interface IModelRisk {
   description?: string;
   mitigation_plan?: string;
   impact?: string;
-  likelihood?: string;
+  /** A likelihood label (`LIKELIHOOD_SCALE`), or null. */
+  likelihood?: string | null;
+  /** A severity label (`SEVERITY_SCALE`), or null. */
+  severity?: string | null;
   key_metrics?: string;
   current_values?: string;
   threshold?: string;

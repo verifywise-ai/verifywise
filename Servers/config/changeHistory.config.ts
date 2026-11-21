@@ -952,6 +952,7 @@ export const ENTITY_CONFIGS: { [key in EntityType]: EntityConfig } = {
       "mitigation_plan",
       "impact",
       "likelihood",
+      "severity",
       "model_id",
     ],
     fieldLabels: {
@@ -965,6 +966,7 @@ export const ENTITY_CONFIGS: { [key in EntityType]: EntityConfig } = {
       mitigation_plan: "Mitigation plan",
       impact: "Impact",
       likelihood: "Likelihood",
+      severity: "Severity",
       model_id: "Associated model",
     },
     fieldFormatters: {

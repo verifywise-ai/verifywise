@@ -38,13 +38,14 @@ export async function executeRegisterModel(
   if (isRefusal(writer)) throw new Error(writer.message);
 
   // A use case the model cannot be linked to, in words the approver reads.
+  // Any other failure (a framework, an approver) keeps its own message.
   const linkError = (error: unknown): Error => {
-    if (error instanceof ValidationException) {
+    if (error instanceof ValidationException && error.metadata.field === "projects") {
       return new Error(
         `Project #${input.project_id} no longer exists in this organization — cannot link the new model.`,
       );
     }
-    if (error instanceof ForbiddenException) {
+    if (error instanceof ForbiddenException && error.metadata.resource === "project") {
       return new Error(`You do not have access to use case #${input.project_id}.`);
     }
     return error as Error;

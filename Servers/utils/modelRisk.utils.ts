@@ -108,8 +108,8 @@ export async function createNewModelRiskQuery(
     transaction ?? null,
   );
   const result = await sequelize.query(
-    `INSERT INTO model_risks (organization_id, risk_name, risk_category, risk_level, status, owner, target_date, description, mitigation_plan, impact, likelihood, key_metrics, current_values, threshold, model_id, created_at, updated_at, is_demo)
-        VALUES (:organization_id, :risk_name, :risk_category, :risk_level, :status, :owner, :target_date, :description, :mitigation_plan, :impact, :likelihood, :key_metrics, :current_values, :threshold, :model_id, :created_at, :updated_at, :is_demo) RETURNING *`,
+    `INSERT INTO model_risks (organization_id, risk_name, risk_category, risk_level, status, owner, target_date, description, mitigation_plan, impact, likelihood, severity, key_metrics, current_values, threshold, model_id, created_at, updated_at, is_demo)
+        VALUES (:organization_id, :risk_name, :risk_category, :risk_level, :status, :owner, :target_date, :description, :mitigation_plan, :impact, :likelihood, :severity, :key_metrics, :current_values, :threshold, :model_id, :created_at, :updated_at, :is_demo) RETURNING *`,
     {
       replacements: {
         organization_id: organizationId,
@@ -124,7 +124,9 @@ export async function createNewModelRiskQuery(
         description: data.description || "",
         mitigation_plan: data.mitigation_plan || "",
         impact: data.impact || "",
-        likelihood: data.likelihood || "",
+        // A likelihood and severity label each, or NULL (never "").
+        likelihood: data.likelihood || null,
+        severity: data.severity || null,
         key_metrics: data.key_metrics || "",
         current_values: data.current_values || "",
         threshold: data.threshold || "",
@@ -200,6 +202,7 @@ export async function updateModelRiskByIdQuery(
     "mitigation_plan",
     "impact",
     "likelihood",
+    "severity",
     "key_metrics",
     "current_values",
     "threshold",

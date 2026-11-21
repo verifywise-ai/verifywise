@@ -8,9 +8,14 @@
  *   form's (`NewModelInventory`, `NewModelRisk`), minus the fields the server
  *   defaults (a model's status and status date, a model risk's status), so
  *   the form never sends a body v1 refuses.
- * - The legacy routes keep accepting what they accepted; their bad enum or
- *   date values, which used to fail in the database with a 500, answer 400
- *   in the controllers.
+ * - A model risk's likelihood and severity are list labels; the service
+ *   sets the level from them (decision 10), so v1 asks for both on create
+ *   and no longer for `risk_level` (still checked when sent).
+ * - The legacy routes have no validator chain; their bad enum or date
+ *   values, which used to fail in the database with a 500, answer 400 in
+ *   the controllers. They share the services, so the approval rule
+ *   (decision 9) and the likelihood × severity formula with its label
+ *   check (decision 10) apply to them too.
  *
  * `is_demo` is not validated: no route takes it from the body.
  */
@@ -22,6 +27,7 @@ import { ModelInventoryType } from "../../domain.layer/enums/model-inventory-typ
 import { ModelRiskCategory } from "../../domain.layer/enums/model-risk-category.enum";
 import { ModelRiskLevel } from "../../domain.layer/enums/model-risk-level.enum";
 import { ModelRiskStatus } from "../../domain.layer/enums/model-risk-status.enum";
+import { LIKELIHOOD_SCALE, SEVERITY_SCALE } from "../../utils/riskLevel.utils";
 
 const MAX_ID = 2147483647;
 const oneOf = (field: string, values: string[]) => `${field} must be one of: ${values.join(", ")}`;
@@ -160,20 +166,16 @@ export const validateUpdateModelInventoryV1 = [
 const RISK_CATEGORIES = Object.values(ModelRiskCategory) as string[];
 const RISK_LEVELS = Object.values(ModelRiskLevel) as string[];
 const RISK_STATUSES = Object.values(ModelRiskStatus) as string[];
+const LIKELIHOODS = Object.keys(LIKELIHOOD_SCALE);
+const SEVERITIES = Object.keys(SEVERITY_SCALE);
 
 const optionalModelRiskFields: ValidationChain[] = [
   isOneOf(body("status").optional(), RISK_STATUSES, oneOf("status", RISK_STATUSES)),
   // "" or null: no model.
   optionalRefId("model_id"),
-  ...[
-    "description",
-    "mitigation_plan",
-    "impact",
-    "likelihood",
-    "key_metrics",
-    "current_values",
-    "threshold",
-  ].map(optionalText),
+  ...["description", "mitigation_plan", "impact", "key_metrics", "current_values", "threshold"].map(
+    optionalText,
+  ),
 ];
 
 export const validateCreateModelRiskV1 = [
@@ -184,10 +186,17 @@ export const validateCreateModelRiskV1 = [
     `risk_category is required and must be one of: ${RISK_CATEGORIES.join(", ")}`,
   ),
   isOneOf(
-    body("risk_level"),
-    RISK_LEVELS,
-    `risk_level is required and must be one of: ${RISK_LEVELS.join(", ")}`,
+    body("likelihood"),
+    LIKELIHOODS,
+    `likelihood is required and must be one of: ${LIKELIHOODS.join(", ")}`,
   ),
+  isOneOf(
+    body("severity"),
+    SEVERITIES,
+    `severity is required and must be one of: ${SEVERITIES.join(", ")}`,
+  ),
+  // Computed from likelihood and severity; a sent value must still be valid.
+  isOneOf(body("risk_level").optional(), RISK_LEVELS, oneOf("risk_level", RISK_LEVELS)),
   requiredRefId("owner", "owner is required and must be a positive integer"),
   body("target_date")
     .isISO8601()
@@ -195,6 +204,16 @@ export const validateCreateModelRiskV1 = [
   ...optionalModelRiskFields,
   handleValidationErrors,
 ];
+
+/**
+ * On update a likelihood or severity may be cleared (null or ""); the level
+ * then stays as stored. Anything else must be on the list.
+ */
+const clearableListValue = (field: string, values: string[]) =>
+  body(field)
+    .optional({ values: "null" })
+    .custom((value) => value === "" || (typeof value === "string" && values.includes(value)))
+    .withMessage(`${oneOf(field, values)}, or null or "" to clear it`);
 
 export const validateUpdateModelRiskV1 = [
   param("id").isInt({ min: 1, max: MAX_ID }).withMessage("id must be a positive integer"),
@@ -204,6 +223,8 @@ export const validateUpdateModelRiskV1 = [
     RISK_CATEGORIES,
     oneOf("risk_category", RISK_CATEGORIES),
   ),
+  clearableListValue("likelihood", LIKELIHOODS),
+  clearableListValue("severity", SEVERITIES),
   isOneOf(body("risk_level").optional(), RISK_LEVELS, oneOf("risk_level", RISK_LEVELS)),
   requiredRefId("owner", "owner must be a positive integer").optional(),
   body("target_date")

@@ -210,6 +210,7 @@ export interface IntakeSuggestedRisk {
   /** ISO date; null means approval + 90 days. */
   deadline: string | null;
   modelRiskCategory?: string;
+  /** Kept by the server from likelihood and severity; not editable. */
   modelRiskLevel?: string;
   state: SuggestionState;
   editedBy?: number;
@@ -240,7 +241,6 @@ export type SuggestedRiskPatch = Partial<
     | "implementationStrategy"
     | "deadline"
     | "modelRiskCategory"
-    | "modelRiskLevel"
   >
 >;
 

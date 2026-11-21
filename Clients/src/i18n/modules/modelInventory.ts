@@ -2,6 +2,16 @@
 // Spread into ../translations.ts. Other areas stay in that file for now.
 
 export const de: Record<string, string> = {
+  "Rare": "Selten",
+  "Unlikely": "Unwahrscheinlich",
+  "Possible": "Möglich",
+  "Likely": "Wahrscheinlich",
+  "Almost certain": "Fast sicher",
+  "Likelihood is required.": "Die Eintrittswahrscheinlichkeit ist erforderlich.",
+  "Severity is required.": "Der Schweregrad ist erforderlich.",
+  "Set by likelihood and severity": "Ergibt sich aus Eintrittswahrscheinlichkeit und Schweregrad",
+  "Set likelihood and severity, or pick a level.":
+    "Legen Sie Eintrittswahrscheinlichkeit und Schweregrad fest oder wählen Sie eine Stufe.",
   "Add threshold": "Schwellenwert hinzufügen",
   "Alerts & notifications": "Warnungen & Benachrichtigungen",
   "Assigned to": "Zugewiesen an",
@@ -277,6 +287,16 @@ export const de: Record<string, string> = {
 };
 
 export const fr: Record<string, string> = {
+  "Rare": "Rare",
+  "Unlikely": "Peu probable",
+  "Possible": "Possible",
+  "Likely": "Probable",
+  "Almost certain": "Presque certain",
+  "Likelihood is required.": "La probabilité est obligatoire.",
+  "Severity is required.": "La gravité est obligatoire.",
+  "Set by likelihood and severity": "Déterminé par la probabilité et la gravité",
+  "Set likelihood and severity, or pick a level.":
+    "Définissez la probabilité et la gravité, ou choisissez un niveau.",
   "Add threshold": "Ajouter un seuil",
   "Alerts & notifications": "Alertes et notifications",
   "Assigned to": "Attribué à",
@@ -551,6 +571,16 @@ export const fr: Record<string, string> = {
 };
 
 export const es: Record<string, string> = {
+  "Rare": "Raro",
+  "Unlikely": "Improbable",
+  "Possible": "Posible",
+  "Likely": "Probable",
+  "Almost certain": "Casi seguro",
+  "Likelihood is required.": "La probabilidad es obligatoria.",
+  "Severity is required.": "La gravedad es obligatoria.",
+  "Set by likelihood and severity": "Determinado por la probabilidad y la gravedad",
+  "Set likelihood and severity, or pick a level.":
+    "Defina la probabilidad y la gravedad, o elija un nivel.",
   "Add threshold": "Añadir umbral",
   "Alerts & notifications": "Alertas y notificaciones",
   "Assigned to": "Asignado a",

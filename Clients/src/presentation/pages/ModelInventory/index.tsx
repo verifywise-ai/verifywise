@@ -2537,6 +2537,8 @@ const ModelInventory: React.FC = () => {
                   description: selectedModelRisk.description || "",
                   mitigation_plan: selectedModelRisk.mitigation_plan || "",
                   impact: selectedModelRisk.impact || "",
+                  likelihood: selectedModelRisk.likelihood ?? "",
+                  severity: selectedModelRisk.severity ?? "",
                   model_id: selectedModelRisk.model_id,
                 }
               : undefined
