@@ -80,4 +80,24 @@ describe("incident owner (assignee_id) against the database", () => {
     expect(res.status).toBe(400);
     expect(JSON.stringify(res.body)).toContain("assignee_id");
   });
+
+  it("still edits an incident whose stored owner is no longer a member", async () => {
+    const { owner, attacker } = await seedTwoTenantContexts();
+    // Stands in for an owner removed from the organization after assignment.
+    const incidentId = await createTestIncident(owner.orgId, owner.userId, {
+      assignee_id: attacker.userId,
+    });
+
+    const statusOnly = await owner.request
+      .patch(`${ROUTE}/${incidentId}`)
+      .send({ status: "Investigating" });
+    expect(statusOnly.status).toBe(200);
+
+    // The edit form sends the unchanged owner back with the other fields.
+    const sameOwner = await owner.request
+      .patch(`${ROUTE}/${incidentId}`)
+      .send({ status: "Mitigated", assignee_id: attacker.userId });
+    expect(sameOwner.status).toBe(200);
+    expect(sameOwner.body?.data?.status).toBe("Mitigated");
+  });
 });
