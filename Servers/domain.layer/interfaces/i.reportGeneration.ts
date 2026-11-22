@@ -299,6 +299,7 @@ export interface ReportData {
     mrmFleet?: MrmFleetSectionData;
     mrmInventoryAppendix?: MrmInventoryAppendixSectionData;
     e23Contradictions?: E23ContradictionsSectionData;
+    e23FixItList?: E23FixItListSectionData;
     // Organization group
     vendors?: VendorsListSectionData;
     models?: ModelsListSectionData;
@@ -676,6 +677,28 @@ export interface E23ContradictionsSectionData {
   notRun: Array<{ ruleId: string; requirement: string; reason: string }>;
   /** Keyed by E-23 group title. */
   coverage: Record<string, "checked" | "selfAssessmentOnly">;
+}
+
+/** One line of the internal E-23 fix-it list (spec 8.6). */
+export interface E23FixItItem {
+  severity: "high" | "medium" | "low";
+  /** 1 fired contradiction rule, 2 no owner, 3 overdue, 4 needs rework, 5 done without evidence, 6 other not done, 7 model gap. */
+  source: 1 | 2 | 3 | 4 | 5 | 6 | 7;
+  what: string;
+  /** Requirement number and title, or a model name. */
+  where: string;
+  /** "Unassigned" when there is no active owner. */
+  owner: string;
+  dueDate: string | null;
+  overdue: boolean;
+  closesWhen: string;
+  /** Requirement order number; 0 for sources 1 and 7. */
+  sortKey: number;
+}
+
+export interface E23FixItListSectionData {
+  items: E23FixItItem[];
+  counts: { high: number; medium: number; low: number };
 }
 
 // NIST AI RMF Subcategories (Compliance & Governance group)

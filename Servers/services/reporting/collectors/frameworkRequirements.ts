@@ -25,7 +25,7 @@ import {
 
 const MAX_EVIDENCE_FILES = 10;
 // Same completed states as addStatusCounts in frameworkImpl.utils.ts.
-const DONE_STATUSES = new Set(["Implemented", "Audited"]);
+export const DONE_STATUSES = new Set(["Implemented", "Audited"]);
 
 type ImplRow = Record<string, any>;
 
