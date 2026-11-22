@@ -323,11 +323,16 @@ describe("vendor user references against organization_members", () => {
       // Stands in for an assignee who has since left the organization.
       await setVendorUsers(vendorId, attacker.userId);
 
-      const res = await whileAnotherSaveIsPending("vendors", "assignee", vendorId, owner.userId, () =>
-        owner.request
-          .patch(`/api/vendors/${vendorId}`)
-          .send({ assignee: attacker.userId })
-          .then((r) => r),
+      const res = await whileAnotherSaveIsPending(
+        "vendors",
+        "assignee",
+        vendorId,
+        owner.userId,
+        () =>
+          owner.request
+            .patch(`/api/vendors/${vendorId}`)
+            .send({ assignee: attacker.userId })
+            .then((r) => r),
       );
 
       expect(res.status).toBe(400);
