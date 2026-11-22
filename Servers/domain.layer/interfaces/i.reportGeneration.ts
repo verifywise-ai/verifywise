@@ -3,6 +3,8 @@
  * Following VerifyWise clean architecture patterns
  */
 
+import type { ReportParameters } from "./i.reportTemplate";
+
 export type ReportFormat = "pdf" | "docx";
 
 export interface ReportBranding {
@@ -34,6 +36,10 @@ export interface ReportMetadata {
    * which has no scope of its own, stays type-compatible.
    */
   scope?: "project" | "organization";
+  /** Parameter values the run was made with, for report kinds that take them. */
+  reportParameters?: ReportParameters;
+  /** The report kind, e.g. "osfi_e23". Absent for general reports. */
+  reportKind?: string;
 }
 
 export interface ReportSection {
@@ -89,6 +95,12 @@ export interface ReportGenerationRequest {
    * gets no prior-run comparison.
    */
   scheduledReportId?: number;
+  /** Parameter values for report kinds that take them. */
+  reportParameters?: ReportParameters;
+  /** The report kind, e.g. "osfi_e23". Absent for general reports. */
+  reportKind?: string;
+  /** The template the run was made from, when it has one. */
+  templateId?: number;
 }
 
 export interface ReportGenerationResult {
@@ -97,6 +109,8 @@ export interface ReportGenerationResult {
   content: Buffer;
   mimeType: string;
   error?: string;
+  /** A second file produced by the same run, stored beside the main report. */
+  companion?: { filename: string; content: Buffer; mimeType: string };
   /**
    * Structured analyzer output, keyed by section key. The runner persists this
    * to report_run_analyses; the renderers read the flattened copy on

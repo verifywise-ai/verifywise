@@ -211,12 +211,12 @@ describe("archiveTemplate", () => {
 });
 
 describe("listSections", () => {
-  it("returns the 13-entry catalog, framework requirements included", async () => {
+  it("returns the 18-entry catalog, framework requirements included", async () => {
     const res = mockRes();
     await listSections(mockReq() as any, res);
     expect(res.status).toHaveBeenCalledWith(200);
     const payload = res.json.mock.calls[0][0];
-    expect(payload.data).toHaveLength(13);
+    expect(payload.data).toHaveLength(18);
     expect(payload.data.map((s: { key: string }) => s.key)).toContain("frameworkRequirements");
   });
 });

@@ -33,6 +33,11 @@ export const SECTION_LABELS: Record<string, string> = {
   policyManager: "Policy Manager",
   incidentManagement: "Incident Management",
   frameworkRequirements: "Framework requirements",
+  mrmFleet: "Model risk management status",
+  e23Contradictions: "Where the checklist and the data disagree",
+  e23FixItList: "Fix-it list (internal document)",
+  mrmInventoryAppendix: "Model inventory appendix",
+  signOff: "Sign-off",
 };
 
 /**

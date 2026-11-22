@@ -269,16 +269,29 @@ describe("analyzer registry", () => {
     expect(risks.map((r) => r.name)).toEqual(["Low1", "VeryHigh1"]);
   });
 
-  it("keeps the thirteen human-readable section labels", () => {
+  it("keeps the human-readable section labels, the five E-23 sections included", () => {
     expect(SECTION_LABELS.projectRisks).toBe("Use Case Risks");
-    expect(Object.keys(SECTION_LABELS)).toHaveLength(13);
+    expect(Object.keys(SECTION_LABELS)).toHaveLength(18);
   });
 
   it("§3 — every section key has its own analytic instruction, with a generic fallback for anything unmapped", () => {
     // One shared instruction for all 12 section types is why every section
     // summary reads the same. The key set must track SECTION_LABELS exactly,
     // or a section silently falls back to the generic text.
-    expect(Object.keys(SECTION_INSTRUCTIONS).sort()).toEqual(Object.keys(SECTION_LABELS).sort());
+    // The five E-23-only sections are rendered from data, not summarised, so
+    // they carry a label but no analytic instruction.
+    const e23Only = [
+      "mrmFleet",
+      "e23Contradictions",
+      "e23FixItList",
+      "mrmInventoryAppendix",
+      "signOff",
+    ];
+    expect(Object.keys(SECTION_INSTRUCTIONS).sort()).toEqual(
+      Object.keys(SECTION_LABELS)
+        .filter((k) => !e23Only.includes(k))
+        .sort(),
+    );
     Object.entries(SECTION_INSTRUCTIONS).forEach(([key, body]) => {
       expect(body.length).toBeGreaterThan(120);
       // A camelCase identifier must never appear in prose the model is shown —

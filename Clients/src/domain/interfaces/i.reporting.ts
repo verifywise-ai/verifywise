@@ -14,6 +14,9 @@ export interface ReportRun {
   file_id: number | null;
   output_filename: string | null;
   output_mime_type: string | null;
+  companion_file_id?: number | null;
+  companion_filename?: string | null;
+  companion_mime_type?: string | null;
   error_message: string | null;
   /** Per-channel delivery outcome; carries the reason behind partial_success. */
   delivery_status: Record<string, { status?: string; enabled?: boolean }> | null;
@@ -56,6 +59,8 @@ export interface ReportSectionCatalogEntry {
   key: string;
   label: string;
   group: string;
+  /** Report kinds this section is limited to. Absent means every report. */
+  kinds?: string[];
 }
 
 // ---------------------------------------------------------------------------
@@ -90,6 +95,27 @@ export interface FrameworkConfig {
   frameworkIds?: string[];
 }
 
+export type ReportFrequency = "daily" | "weekly" | "monthly" | "quarterly";
+
+export type ReportParameterFieldType = "text" | "textarea" | "date" | "select" | "boolean";
+
+export interface ReportParameterField {
+  key: string;
+  label: string;
+  type: ReportParameterFieldType;
+  required: boolean;
+  maxLength?: number;
+  options?: { value: string; label: string }[];
+}
+
+/** Mirrors Servers/domain.layer/interfaces/i.reportTemplate.ts ReportParametersConfig. */
+export interface ReportParametersConfig {
+  kind?: string;
+  fields?: ReportParameterField[];
+}
+
+export type ReportParameters = Record<string, string | boolean>;
+
 export interface TemplateSectionConfig {
   key: string;
   reportSectionKey: string;
@@ -112,6 +138,7 @@ export interface ReportTemplateVersion {
   // Optional, unlike its siblings, even though the column is NOT NULL DEFAULT
   // '{}': responses generated before the column existed carry no such key.
   framework_config?: FrameworkConfig;
+  parameters_config?: ReportParametersConfig;
   format_config: Record<string, unknown>;
   branding_config: Record<string, unknown>;
   schedule_defaults: Record<string, unknown>;
