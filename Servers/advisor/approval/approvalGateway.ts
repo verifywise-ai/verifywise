@@ -150,6 +150,21 @@ async function updateApprovalRecord(
   );
 }
 
+/**
+ * An executor reports that it did nothing (refused, not found, no fields to
+ * update, already linked) by returning `{ success: false, message }`. That is
+ * a failed execution, not a completed one, and the message is its reason.
+ * Null for any other result.
+ */
+export function executionFailureMessage(result: unknown): string | null {
+  if (!result || typeof result !== "object") return null;
+  const { success, message, error } = result as Record<string, unknown>;
+  if (success !== false) return null;
+  if (typeof message === "string" && message) return message;
+  if (typeof error === "string" && error) return error;
+  return "The action did not complete";
+}
+
 // ── Core Gateway ────────────────────────────────────────────────
 
 /**
@@ -310,6 +325,8 @@ async function submitForApprovalImpl(
     try {
       const paramsWithUser = { ...config.inputParams, _userId: config.userId };
       result = await executor(paramsWithUser, config.organizationId);
+      const failure = executionFailureMessage(result);
+      if (failure) throw new Error(failure);
     } catch (execError) {
       const errorMsg = execError instanceof Error ? execError.message : "Unknown error";
       stateHistory.push({
@@ -713,6 +730,8 @@ async function approveActionImpl(
   let result: unknown;
   try {
     result = await executor(inputParams, organizationId);
+    const failure = executionFailureMessage(result);
+    if (failure) throw new Error(failure);
   } catch (execError) {
     const errorMsg = execError instanceof Error ? execError.message : "Unknown error";
 

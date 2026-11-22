@@ -171,7 +171,9 @@ export async function deleteOrganization(
     );
 
     for (const user of users) {
-      await removeUserFromOrganizationQuery(user.id, organizationId, transaction);
+      await removeUserFromOrganizationQuery(user.id, organizationId, transaction, {
+        organizationDeleted: true,
+      });
     }
 
     await sequelize.query(`DELETE FROM organizations WHERE id = :organizationId`, {

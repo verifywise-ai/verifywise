@@ -86,9 +86,10 @@ export const toolsDefinition: any[] = [
             enum: ["Planned", "In Progress", "Completed"],
             description: "Initial status of the training. Defaults to 'Planned'.",
           },
-          due_date: {
+          duration: {
             type: "string",
-            description: "Due date for the training in ISO format (e.g. '2026-06-30').",
+            description:
+              "How long the training takes, as free text (e.g. '2 hours'). Not a date: a training has no due date; set due dates when assigning it.",
           },
         },
         required: ["title"],
@@ -129,9 +130,10 @@ export const toolsDefinition: any[] = [
             enum: ["Planned", "In Progress", "Completed"],
             description: "New status for the training record.",
           },
-          due_date: {
+          duration: {
             type: "string",
-            description: "New due date in ISO format.",
+            description:
+              "New duration, as free text (e.g. '2 hours'). Not a date: a training has no due date; due dates belong to assignments.",
           },
         },
         required: ["training_id"],
@@ -143,7 +145,7 @@ export const toolsDefinition: any[] = [
     function: {
       name: "agent_assign_training_to_user",
       description:
-        "Assign a training program to a specific user. Requires human confirmation before execution.",
+        "Assign a training program to a user of this organization, to complete by a due date. The user is notified. Needs permission to edit training. Requires human confirmation before execution.",
       parameters: {
         type: "object",
         properties: {
@@ -155,8 +157,13 @@ export const toolsDefinition: any[] = [
             type: "number",
             description: "The ID of the user to assign the training to.",
           },
+          due_date: {
+            type: "string",
+            description:
+              "When the user must complete the training, as YYYY-MM-DD (e.g. '2026-06-30'). Today or later.",
+          },
         },
-        required: ["training_id", "user_id"],
+        required: ["training_id", "user_id", "due_date"],
       },
     },
   },

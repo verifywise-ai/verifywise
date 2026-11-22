@@ -211,10 +211,26 @@ POST /vendors/
 ### Processing
 
 1. Validate required fields
-2. Create vendor record
-3. Create vendor-project associations
-4. Record creation in change history
-5. Trigger `vendor_added` automation
+2. Check that `assignee` and `reviewer` are members of the organization (400 otherwise)
+3. Create vendor record
+4. Create vendor-project associations
+5. Record creation in change history
+6. Trigger `vendor_added` automation
+7. After commit, notify the assignee and reviewer
+
+### User references
+
+`vendors.assignee`, `vendors.reviewer` and `vendorrisks.action_owner` are user
+ids. A new or changed one must be a member of the organization
+(`organization_members`), or the write is refused with a 400 naming the field;
+otherwise the assignment email would send the vendor's name and description to
+another organization's user. The check lives in the query layer
+(`assertVendorUsersInOrganization` in `utils/vendor.utils.ts`, and the action
+owner check in `utils/vendorRisk.utils.ts`, both on
+`findUserFieldOutsideOrganization` in `utils/user.utils.ts`), so REST, the
+Advisor write tools, AI app import and the demo seed all go through it, inside
+the write's transaction. An unchanged stored id is not re-checked: a vendor
+whose assignee has since left the organization can still be edited.
 
 ## Vendor Scorecard
 
@@ -268,6 +284,13 @@ Vendor ─────┬───── Project A
 | risk_severity | Combined assessment |
 | action_plan | Mitigation strategy |
 | action_owner | Responsible user |
+
+Removing a user from an organization sets `action_owner` to NULL on that
+organization's vendor risks they own (and `assignee` / `reviewer` on its
+vendors), in the removal's transaction (`clearOrganizationReferencesToUser`,
+`Servers/utils/user.utils.ts`). Other organizations' rows are untouched. No
+vendor risk change history is written for this clear, as for the other
+columns it clears.
 
 ### Soft Delete
 
