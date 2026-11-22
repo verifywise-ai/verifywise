@@ -1,15 +1,47 @@
 import { actingRequesterId } from "./actingRequester";
-import { getUserProjects, lockProjectForDelete } from "../../utils/project.utils";
+import {
+  getCurrentProjectMembers,
+  getProjectByIdQuery,
+  getUserProjects,
+  lockProjectForDelete,
+} from "../../utils/project.utils";
 import { deleteProjectWithSideEffects } from "../../utils/projectDeletion.utils";
 import { userHasPermission } from "../../utils/userPermission.utils";
-import { actingProjectViewer, NO_PROJECT_VIEWER, refuseUseCaseWrite } from "./useCaseScope";
+import {
+  actingProjectViewer,
+  NO_PROJECT_VIEWER,
+  refuseUseCaseWrite,
+  type Refusal,
+} from "./useCaseScope";
 import { calculateProjectRisks } from "../../utils/project.utils";
 import { findUsersNotInOrganization } from "../../utils/user.utils";
 import logger from "../../utils/logger/fileLogger";
 import { createWriteToolFn } from "../confirmation/createWriteTool";
 import { sequelize } from "../../database/db";
-import { QueryTypes } from "sequelize";
-import { withLegacyHighRiskRole } from "../../utils/highRiskRoles.utils";
+import { QueryTypes, type Transaction } from "sequelize";
+import { PROJECT_TITLE_MAX_LENGTH } from "../../middleware/validators/project.validator";
+import {
+  createUseCaseService,
+  updateUseCaseService,
+  type UpdateUseCaseServiceInput,
+  type UseCaseServiceContext,
+} from "../../services/useCase.service";
+import {
+  notifyUseCaseCreated,
+  notifyUseCaseUpdated,
+} from "../../services/useCaseNotifications.service";
+import { resolveUseCaseFrameworkIds } from "../../mcp/frameworks";
+import { ProjectStatus } from "../../domain.layer/enums/project-status.enum";
+import { AiRiskClassification } from "../../domain.layer/enums/ai-risk-classification.enum";
+import { ProjectModel } from "../../domain.layer/models/project/project.model";
+import { refusalFrom } from "./modelWriteScope";
+import { throwOnValidationFailure } from "./toolValidation";
+import {
+  canonicalStatus,
+  checkUseCaseLabels,
+  USE_CASE_CLASSIFICATION_FILTERS,
+  USE_CASE_STATUSES,
+} from "./useCaseLabels";
 import { deleteObjectOnCommit } from "../../services/storage/transactionRegistry";
 import { StorageObjectRef } from "../../services/storage/types";
 
@@ -38,14 +70,21 @@ const fetchUseCases = async (
   try {
     let projects = await getVisibleProjects(params as Record<string, unknown>, organizationId);
 
-    // Apply filters
-    if (params.status) {
-      projects = projects.filter((p: any) => p.status === params.status);
+    // Apply filters, matching the stored spelling case-insensitively. A filter
+    // that is not text matches nothing, rather than listing every use case.
+    const statusFilter: unknown = params.status;
+    const classFilter: unknown = params.ai_risk_classification;
+    if (statusFilter !== undefined && statusFilter !== null && statusFilter !== "") {
+      if (typeof statusFilter !== "string") return [];
+      const status = canonicalStatus(statusFilter) ?? statusFilter;
+      projects = projects.filter((p: any) => p.status === status);
     }
-    if (params.ai_risk_classification) {
-      projects = projects.filter(
-        (p: any) => p.ai_risk_classification === params.ai_risk_classification,
-      );
+    if (classFilter !== undefined && classFilter !== null && classFilter !== "") {
+      if (typeof classFilter !== "string") return [];
+      const wanted = classFilter.trim().toLowerCase();
+      const classification =
+        USE_CASE_CLASSIFICATION_FILTERS.find((c) => c.toLowerCase() === wanted) ?? classFilter;
+      projects = projects.filter((p: any) => p.ai_risk_classification === classification);
     }
 
     // Limit results
@@ -86,7 +125,7 @@ const getUseCaseAnalytics = async (
     // Status distribution
     const statusDistribution: Record<string, number> = {};
     projects.forEach((p: any) => {
-      const status = p.status || "Draft";
+      const status = p.status || ProjectStatus.NOT_STARTED;
       statusDistribution[status] = (statusDistribution[status] || 0) + 1;
     });
 
@@ -121,6 +160,8 @@ const getUseCaseAnalytics = async (
   }
 };
 
+const OTHER_STATUS = "Other";
+
 const getUseCaseExecutiveSummary = async (
   params: Record<string, unknown>,
   organizationId: number,
@@ -129,16 +170,25 @@ const getUseCaseExecutiveSummary = async (
     const projects = await getVisibleProjects(params, organizationId);
     const total = projects.length;
 
-    const activeCount = projects.filter(
-      (p: any) => p.status === "Active" || p.status === "In Progress",
-    ).length;
-    const draftCount = projects.filter((p: any) => p.status === "Draft").length;
-    const completedCount = projects.filter((p: any) => p.status === "Completed").length;
+    // Every status the console offers, zero when none is in it. No status
+    // counts as Not started, as in the analytics; a value off the list (an
+    // older label) counts as Other, so the counts add up to the total.
+    const statusCounts: Record<string, number> = Object.fromEntries(
+      USE_CASE_STATUSES.map((status) => [status, 0]),
+    );
+    projects.forEach((p: any) => {
+      const status = p.status || ProjectStatus.NOT_STARTED;
+      if (Object.prototype.hasOwnProperty.call(statusCounts, status)) {
+        statusCounts[status] += 1;
+      } else {
+        statusCounts[OTHER_STATUS] = (statusCounts[OTHER_STATUS] ?? 0) + 1;
+      }
+    });
 
     const highRiskCount = projects.filter(
       (p: any) =>
-        p.ai_risk_classification === "High risk" ||
-        p.ai_risk_classification === "Unacceptable risk",
+        p.ai_risk_classification === AiRiskClassification.HIGH_RISK ||
+        p.ai_risk_classification === AiRiskClassification.PROHIBITED,
     ).length;
 
     // Get risk counts for each project (parallelized to avoid N+1)
@@ -170,9 +220,11 @@ const getUseCaseExecutiveSummary = async (
 
     return {
       totalUseCases: total,
-      activeUseCases: activeCount,
-      draftUseCases: draftCount,
-      completedUseCases: completedCount,
+      notStartedUseCases: statusCounts[ProjectStatus.NOT_STARTED],
+      inProgressUseCases: statusCounts[ProjectStatus.IN_PROGRESS],
+      underReviewUseCases: statusCounts[ProjectStatus.UNDER_REVIEW],
+      completedUseCases: statusCounts[ProjectStatus.COMPLETED],
+      statusCounts,
       highRiskUseCases: highRiskCount,
       topProjectsByRisk: projectRiskSummaries
         .sort((a, b) => b.totalRisks - a.totalRisks)
@@ -187,8 +239,224 @@ const getUseCaseExecutiveSummary = async (
 };
 
 // --- Write tools (Human Confirmation Flow) ---
+//
+// Creates and updates go through services/useCase.service.ts as the user who
+// asked (the requester after an approval), as the console's routes do: the
+// owner and members, framework structures, change history, the approval
+// request and the project_added / project_updated automations. The notices the
+// console sends after commit come from services/useCaseNotifications.service.ts.
 
-const agentCreateUseCase = createWriteToolFn({
+const NOTICE_LOG = { functionName: "advisorUseCaseWrite", fileName: "useCaseFunctions.ts" };
+
+const NO_USE_CASE_WRITE: Refusal = {
+  success: false,
+  message: "Your role does not allow changing use cases",
+};
+
+/** The service context for the acting user, with their role in the organization. */
+const useCaseWriteContext = async (
+  params: Record<string, unknown>,
+  organizationId: number,
+): Promise<UseCaseServiceContext | Refusal> => {
+  const viewer = await actingProjectViewer(params, organizationId);
+  if (viewer === NO_PROJECT_VIEWER) return NO_USE_CASE_WRITE;
+  return { userId: viewer.userId, organizationId, actorRole: viewer.role };
+};
+
+const isRefusal = (value: unknown): value is Refusal =>
+  typeof value === "object" && value !== null && (value as Refusal).success === false;
+
+/** A list of positive user or framework ids without repeats, or null when it is not one. */
+const idList = (value: unknown): number[] | null => {
+  if (value === undefined || value === null) return [];
+  if (!Array.isArray(value)) return null;
+  const ids = value.map(Number);
+  return ids.every((id) => Number.isSafeInteger(id) && id > 0) ? [...new Set(ids)] : null;
+};
+
+const isSet = (value: unknown) => value !== undefined && value !== null;
+
+type Problem = { path: string[]; message: string };
+
+interface InputRules {
+  /** Whether the title (`name`) must be sent, may be sent, or is not an input. */
+  title?: "required" | "optional";
+  /** Id list inputs (members, framework_ids). */
+  idFields?: string[];
+}
+
+/**
+ * The checks of a use case write, run when it is filed and again when it
+ * executes: labels on the lists (an approval filed before them maps its old
+ * labels with `acceptLegacy`), the console's title rules, id lists, and an
+ * owner and members who are users of this organization. Returns the input as
+ * it is written (labels as the lists spell them, the title trimmed, id lists
+ * without repeats) and every problem found.
+ */
+const checkUseCaseInput = async (
+  params: Record<string, unknown>,
+  organizationId: number,
+  { title, idFields = [] }: InputRules,
+  acceptLegacy: boolean,
+): Promise<{ params: Record<string, unknown>; problems: Problem[] }> => {
+  const { params: checked, issues } = checkUseCaseLabels(params, { acceptLegacy });
+  const problems: Problem[] = [...issues];
+
+  // The console's rules for project_title (project.validator.ts).
+  if (title) {
+    const name = checked.name;
+    if (!isSet(name)) {
+      if (title === "required") {
+        problems.push({
+          path: ["name"],
+          message: "project_title is required and must be a non-empty string",
+        });
+      }
+    } else if (typeof name !== "string" || !name.trim()) {
+      problems.push({ path: ["name"], message: "project_title must be a non-empty string" });
+    } else if (name.trim().length > PROJECT_TITLE_MAX_LENGTH) {
+      problems.push({
+        path: ["name"],
+        message: `project_title must be at most ${PROJECT_TITLE_MAX_LENGTH} characters`,
+      });
+    } else {
+      checked.name = name.trim();
+    }
+  }
+
+  const people: number[] = [];
+  for (const field of idFields) {
+    const ids = idList(checked[field]);
+    if (ids === null) {
+      problems.push({ path: [field], message: "must be a list of positive ids" });
+    } else if (isSet(checked[field])) {
+      checked[field] = ids;
+      if (field === "members") people.push(...ids);
+    }
+  }
+  if (isSet(checked.owner)) {
+    const owner = Number(checked.owner);
+    if (!Number.isSafeInteger(owner) || owner <= 0) {
+      problems.push({ path: ["owner"], message: "must be a positive user id" });
+    } else {
+      checked.owner = owner;
+      people.push(owner);
+    }
+  }
+  if (people.length > 0) {
+    const outside = await findUsersNotInOrganization([...new Set(people)], organizationId);
+    if (outside.length > 0) {
+      problems.push({
+        path: [outside.includes(Number(checked.owner)) ? "owner" : "members"],
+        message: `user ${outside.join(", ")} is not in this organization`,
+      });
+    }
+  }
+  return { params: checked, problems };
+};
+
+/**
+ * File time: refuse input the write would refuse before an approval is filed,
+ * and file it as it will be written.
+ */
+const checkFiling = async (
+  toolName: string,
+  params: Record<string, unknown>,
+  organizationId: number,
+  rules: InputRules = {},
+): Promise<Record<string, unknown>> => {
+  const { params: checked, problems } = await checkUseCaseInput(
+    params,
+    organizationId,
+    rules,
+    false,
+  );
+  if (problems.length > 0) throwOnValidationFailure(toolName, problems);
+  return checked;
+};
+
+/**
+ * Execute time: the same checks, with the labels of an approval filed before
+ * these lists mapped to the nearest real value; anything else is refused.
+ */
+const executionInput = async (
+  params: Record<string, unknown>,
+  organizationId: number,
+  rules: InputRules = {},
+): Promise<{ params: Record<string, unknown> } | Refusal> => {
+  const { params: checked, problems } = await checkUseCaseInput(
+    params,
+    organizationId,
+    rules,
+    true,
+  );
+  if (problems.length > 0) {
+    return {
+      success: false,
+      message: problems.map((i) => `${i.path.join(".")}: ${i.message}`).join("; "),
+    };
+  }
+  return { params: checked };
+};
+
+const CREATE_RULES: InputRules = { title: "required", idFields: ["members", "framework_ids"] };
+const UPDATE_RULES: InputRules = { title: "optional" };
+
+/**
+ * Update one use case through updateUseCaseService as the acting user, then
+ * send the console's update notices (a new owner, added members).
+ */
+const updateUseCaseAsUser = async (
+  useCaseId: number,
+  /** The input, or a function that builds it from what the locked row holds. */
+  input:
+    | UpdateUseCaseServiceInput
+    | ((transaction: Transaction) => Promise<UpdateUseCaseServiceInput | Refusal>),
+  ctx: UseCaseServiceContext,
+): Promise<unknown> => {
+  const { organizationId } = ctx;
+  const notFound = { success: false, message: `Use case #${useCaseId} not found` };
+  const transaction = await sequelize.transaction();
+  let existing: Awaited<ReturnType<typeof getProjectByIdQuery>>;
+  let outcome: Awaited<ReturnType<typeof updateUseCaseService>>;
+  try {
+    // Lock the row first: a concurrent save either committed before the reads
+    // below or waits for this one, so nothing it wrote is overwritten.
+    existing = (await lockProjectForDelete(useCaseId, organizationId, transaction))
+      ? await getProjectByIdQuery(useCaseId, organizationId)
+      : null;
+    if (!existing) {
+      await transaction.rollback();
+      return notFound;
+    }
+    const resolved = typeof input === "function" ? await input(transaction) : input;
+    if (isRefusal(resolved)) {
+      await transaction.rollback();
+      return resolved;
+    }
+    outcome = await updateUseCaseService(useCaseId, resolved, existing, ctx, transaction);
+    if (!outcome.useCase) {
+      await transaction.rollback();
+      return notFound;
+    }
+    await transaction.commit();
+  } catch (error) {
+    await transaction.rollback();
+    return refusalFrom(error);
+  }
+
+  await notifyUseCaseUpdated(
+    existing,
+    outcome.useCase,
+    outcome.currentMembers,
+    ctx.userId,
+    organizationId,
+    NOTICE_LOG,
+  );
+  return { success: true, use_case: outcome.useCase };
+};
+
+const createUseCaseExecutor = createWriteToolFn({
   toolName: "agent_create_use_case",
   warningLevel: "warning",
   descriptionFn: (params) =>
@@ -196,53 +464,81 @@ const agentCreateUseCase = createWriteToolFn({
   executeFn: async (params, organizationId) => {
     const refusal = await refuseUseCaseWrite(params, organizationId);
     if (refusal) return refusal;
-    const transaction = await sequelize.transaction();
-    try {
-      // Generate next UC ID
-      const ucIdResult = await sequelize.query<{ next_id: number }>(
-        `SELECT nextval('project_uc_id_seq') AS next_id`,
-        { type: QueryTypes.SELECT, transaction },
-      );
-      const ucId = `UC-${ucIdResult[0].next_id}`;
+    const checked = await executionInput(params, organizationId, CREATE_RULES);
+    if (isRefusal(checked)) return checked;
+    const ctx = await useCaseWriteContext(params, organizationId);
+    if (isRefusal(ctx)) return ctx;
 
-      const now = new Date();
-      const result = await sequelize.query(
-        `INSERT INTO projects (
-          organization_id, uc_id, project_title, description, status,
-          ai_risk_classification, target_industry, start_date,
-          last_updated, created_at
-        ) VALUES (
-          :organization_id, :uc_id, :project_title, :description, :status,
-          :ai_risk_classification, :target_industry, :start_date,
-          :last_updated, :created_at
-        ) RETURNING *`,
+    const p = checked.params;
+    const members = idList(p.members) ?? [];
+    const frameworkIds = idList(p.framework_ids) ?? [];
+    let frameworks: Awaited<ReturnType<typeof resolveUseCaseFrameworkIds>>;
+    try {
+      frameworks = await resolveUseCaseFrameworkIds(frameworkIds);
+    } catch (error) {
+      return { success: false, message: (error as Error).message };
+    }
+
+    const transaction = await sequelize.transaction();
+    let created: Awaited<ReturnType<typeof createUseCaseService>>;
+    try {
+      created = await createUseCaseService(
         {
-          replacements: {
-            organization_id: organizationId,
-            uc_id: ucId,
-            project_title: params.name as string,
-            description: (params.description as string) || null,
-            status: (params.status as string) || "Draft",
-            ai_risk_classification: (params.risk_classification as string) || null,
-            target_industry: (params.industry as string) || null,
-            start_date: now,
-            last_updated: now,
-            created_at: now,
-          },
-          transaction,
-        },
+          project_title: p.name as string,
+          description: (p.description as string) || undefined,
+          goal: (p.goal as string) || undefined,
+          target_industry: (p.industry as string) || undefined,
+          status: p.status as ProjectStatus | undefined,
+          ai_risk_classification: p.risk_classification as AiRiskClassification | undefined,
+          // The requester owns what they create unless they name an owner,
+          // as the console's form starts with the creator.
+          owner: isSet(p.owner) ? Number(p.owner) : ctx.userId,
+          start_date: new Date(),
+          members,
+          framework: frameworks.ids,
+          is_organizational: frameworks.isOrganizational,
+          enable_ai_data_insertion: false,
+        } as Partial<ProjectModel> & { members: number[]; framework: number[] },
+        ctx,
+        transaction,
       );
       await transaction.commit();
-      const created = withLegacyHighRiskRole((result as any)[0]?.[0] || (result as any)[0]);
-      return { success: true, use_case: created };
     } catch (error) {
       await transaction.rollback();
-      throw error;
+      return refusalFrom(error);
     }
+
+    await notifyUseCaseCreated(
+      created.useCase,
+      created.approvalResult,
+      ctx.userId,
+      organizationId,
+      NOTICE_LOG,
+    );
+    return {
+      success: true,
+      use_case: created.useCase.toJSON(),
+      frameworks_built: Object.keys(created.frameworks),
+    };
   },
 });
 
-const agentUpdateUseCase = createWriteToolFn({
+const agentCreateUseCase = async (params: Record<string, unknown>, organizationId: number) =>
+  createUseCaseExecutor(
+    await checkFiling("agent_create_use_case", params, organizationId, CREATE_RULES),
+    organizationId,
+  );
+
+const UPDATE_FIELDS: Record<string, string> = {
+  name: "project_title",
+  description: "description",
+  status: "status",
+  risk_classification: "ai_risk_classification",
+  industry: "target_industry",
+  goal: "goal",
+};
+
+const updateUseCaseExecutor = createWriteToolFn({
   toolName: "agent_update_use_case",
   warningLevel: "warning",
   descriptionFn: (params) =>
@@ -250,70 +546,55 @@ const agentUpdateUseCase = createWriteToolFn({
   executeFn: async (params, organizationId) => {
     const refusal = await refuseUseCaseWrite(params, organizationId, params.use_case_id);
     if (refusal) return refusal;
-    const fields: Record<string, { column: string; value: unknown }> = {
-      name: { column: "project_title", value: params.name },
-      description: { column: "description", value: params.description },
-      status: { column: "status", value: params.status },
-      risk_classification: { column: "ai_risk_classification", value: params.risk_classification },
-      industry: { column: "target_industry", value: params.industry },
-      goal: { column: "goal", value: params.goal },
-    };
+    const checked = await executionInput(params, organizationId, UPDATE_RULES);
+    if (isRefusal(checked)) return checked;
 
-    const setClauses: string[] = [];
-    const replacements: Record<string, unknown> = {
-      organizationId,
-      id: params.use_case_id,
-      last_updated: new Date(),
-      // The one who asked, else the approver; NULL when neither is known, so a
-      // write never keeps showing the previous editor as the last one.
-      last_updated_by: actingRequesterId(params) ?? null,
-    };
-
-    for (const [key, { column, value }] of Object.entries(fields)) {
-      if (value !== undefined && value !== null) {
-        setClauses.push(`${column} = :${key}`);
-        replacements[key] = value;
-      }
+    const input: Record<string, unknown> = {};
+    for (const [param, column] of Object.entries(UPDATE_FIELDS)) {
+      const value = checked.params[param];
+      if (value !== undefined && value !== null) input[column] = value;
     }
-
-    if (setClauses.length === 0) {
+    if (Object.keys(input).length === 0) {
       return { success: false, message: "No fields to update" };
     }
 
-    setClauses.push("last_updated = :last_updated", "last_updated_by = :last_updated_by");
-
-    const result = await sequelize.query(
-      `UPDATE projects SET ${setClauses.join(", ")} WHERE organization_id = :organizationId AND id = :id RETURNING *`,
-      { replacements },
-    );
-    const updated = withLegacyHighRiskRole((result as any)[0]?.[0] || (result as any)[0]);
-    return { success: true, use_case: updated };
+    const ctx = await useCaseWriteContext(params, organizationId);
+    if (isRefusal(ctx)) return ctx;
+    return updateUseCaseAsUser(Number(params.use_case_id), input, ctx);
   },
 });
 
-const agentUpdateUseCaseStatus = createWriteToolFn({
+const agentUpdateUseCase = async (params: Record<string, unknown>, organizationId: number) =>
+  updateUseCaseExecutor(
+    await checkFiling("agent_update_use_case", params, organizationId, UPDATE_RULES),
+    organizationId,
+  );
+
+const updateUseCaseStatusExecutor = createWriteToolFn({
   toolName: "agent_update_use_case_status",
   warningLevel: "warning",
   descriptionFn: (params) => `Update use case #${params.use_case_id} status to "${params.status}"`,
   executeFn: async (params, organizationId) => {
     const refusal = await refuseUseCaseWrite(params, organizationId, params.use_case_id);
     if (refusal) return refusal;
-    const result = await sequelize.query(
-      `UPDATE projects SET status = :status, last_updated = :last_updated, last_updated_by = :last_updated_by WHERE organization_id = :organizationId AND id = :id RETURNING *`,
-      {
-        replacements: {
-          organizationId,
-          id: params.use_case_id,
-          status: params.status,
-          last_updated: new Date(),
-          last_updated_by: actingRequesterId(params) ?? null,
-        },
-      },
+    const checked = await executionInput(params, organizationId);
+    if (isRefusal(checked)) return checked;
+    if (!checked.params.status) return { success: false, message: "status is required" };
+    const ctx = await useCaseWriteContext(params, organizationId);
+    if (isRefusal(ctx)) return ctx;
+    return updateUseCaseAsUser(
+      Number(params.use_case_id),
+      { status: checked.params.status as ProjectStatus },
+      ctx,
     );
-    const updated = withLegacyHighRiskRole((result as any)[0]?.[0] || (result as any)[0]);
-    return { success: true, use_case: updated };
   },
 });
+
+const agentUpdateUseCaseStatus = async (params: Record<string, unknown>, organizationId: number) =>
+  updateUseCaseStatusExecutor(
+    await checkFiling("agent_update_use_case_status", params, organizationId),
+    organizationId,
+  );
 
 // Adding a member grants that person access to the use case, so it always
 // waits for a person's approval ("warning" is never auto-approved).
@@ -336,33 +617,27 @@ const agentAddMemberToUseCase = createWriteToolFn({
       return { success: false, message: `User #${params.user_id} is not in this organization` };
     }
 
-    // Check if membership already exists
-    const existing = await sequelize.query(
-      `SELECT user_id FROM projects_members WHERE organization_id = :organizationId AND project_id = :project_id AND user_id = :user_id`,
-      {
-        replacements: {
-          organizationId,
-          project_id: params.use_case_id,
-          user_id: userId,
-        },
-        type: QueryTypes.SELECT,
+    const useCaseId = Number(params.use_case_id);
+    const ctx = await useCaseWriteContext(params, organizationId);
+    if (isRefusal(ctx)) return ctx;
+    // The full list, as the console's member picker sends it, read under the
+    // row lock so a member added or removed meanwhile is kept as it is. History
+    // records the member change and the new member gets the "you were added"
+    // email.
+    const result = (await updateUseCaseAsUser(
+      useCaseId,
+      async (transaction) => {
+        const current = (
+          await getCurrentProjectMembers(useCaseId, organizationId, transaction)
+        ).map(Number);
+        if (current.includes(userId)) {
+          return { success: false, message: "User is already a member of this use case" };
+        }
+        return { members: [...current, userId] };
       },
-    );
-
-    if ((existing as any[]).length > 0) {
-      return { success: false, message: "User is already a member of this use case" };
-    }
-
-    await sequelize.query(
-      `INSERT INTO projects_members (organization_id, project_id, user_id) VALUES (:organizationId, :project_id, :user_id)`,
-      {
-        replacements: {
-          organizationId,
-          project_id: params.use_case_id,
-          user_id: userId,
-        },
-      },
-    );
+      ctx,
+    )) as { success: boolean };
+    if (!result.success) return result;
     return {
       success: true,
       message: `User #${params.user_id} added to use case #${params.use_case_id}`,
