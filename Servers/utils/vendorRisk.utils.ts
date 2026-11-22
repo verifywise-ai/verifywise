@@ -147,6 +147,10 @@ const assertVendorRiskOwnerInOrganization = async (
   }
 };
 
+/** The action_owner column value: null, '' and 0 mean no owner and are stored as NULL. */
+const vendorActionOwnerValue = (value: unknown): unknown =>
+  value === null || value === undefined || value === "" || value === 0 ? null : value;
+
 /**
  * Tenant guard for a vendor risk's vendor: a vendor_id must name a vendor of
  * the organization, or the risk (and the vendor name in its assignment
@@ -207,7 +211,7 @@ export const createNewVendorRiskQuery = async (
         likelihood: normalizeVendorRiskLikelihood(vendorRisk.likelihood),
         risk_severity: vendorRisk.risk_severity,
         action_plan: vendorRisk.action_plan,
-        action_owner: vendorRisk.action_owner,
+        action_owner: vendorActionOwnerValue(vendorRisk.action_owner),
         risk_level: vendorRisk.risk_level,
         is_demo: vendorRisk.is_demo || false,
       },
@@ -265,6 +269,12 @@ export const updateVendorRiskByIdQuery = async (
     "risk_level",
   ]
     .filter((f) => {
+      // action_owner can be cleared: null, '' and 0 write NULL.
+      if (f === "action_owner") {
+        if (vendorRisk.action_owner === undefined) return false;
+        updateVendorRisk.action_owner = vendorActionOwnerValue(vendorRisk.action_owner);
+        return true;
+      }
       if (
         vendorRisk[f as keyof VendorRiskModel] !== undefined &&
         vendorRisk[f as keyof VendorRiskModel]

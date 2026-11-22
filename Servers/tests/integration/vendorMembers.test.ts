@@ -462,4 +462,49 @@ describe("vendor user references against organization_members", () => {
       expect(await riskCount(otherVendor)).toBe(1);
     });
   });
+  // The update used to drop a falsy action_owner, so an owner could never be
+  // removed from a vendor risk.
+  describe("clearing a vendor risk's action owner", () => {
+    const ownerOf = async (riskId: number) => {
+      const [row] = await sequelize.query<{ action_owner: number | null }>(
+        "SELECT action_owner FROM vendorrisks WHERE id = :riskId",
+        { replacements: { riskId }, type: QueryTypes.SELECT },
+      );
+      return row.action_owner;
+    };
+
+    it("writes NULL for null and for an empty value, and sends no email", async () => {
+      const { owner } = await seedTwoTenantContexts();
+      const vendorId = await createTestVendor(owner.orgId);
+
+      for (const cleared of [null, ""]) {
+        const riskId = await createTestVendorRisk(owner.orgId, {
+          vendor_id: vendorId,
+          action_owner: owner.userId,
+        });
+        const res = await owner.request
+          .patch(`/api/vendorRisks/${riskId}`)
+          .send({ action_owner: cleared });
+        expect(res.status).toBe(202);
+        expect(await ownerOf(riskId)).toBeNull();
+      }
+      expect(notify).not.toHaveBeenCalled();
+    });
+
+    it("leaves the owner alone when the update does not send one", async () => {
+      const { owner } = await seedTwoTenantContexts();
+      const vendorId = await createTestVendor(owner.orgId);
+      const riskId = await createTestVendorRisk(owner.orgId, {
+        vendor_id: vendorId,
+        action_owner: owner.userId,
+      });
+
+      const res = await owner.request
+        .patch(`/api/vendorRisks/${riskId}`)
+        .send({ action_plan: "Re-check in Q1" });
+
+      expect(res.status).toBe(202);
+      expect(await ownerOf(riskId)).toBe(owner.userId);
+    });
+  });
 });
