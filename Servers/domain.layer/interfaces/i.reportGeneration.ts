@@ -296,6 +296,8 @@ export interface ReportData {
     clausesAndAnnexes?: ClausesAndAnnexesSectionData;
     nistSubcategories?: NistSubcategoriesSectionData;
     frameworkRequirements?: FrameworkRequirementsSectionData;
+    mrmFleet?: MrmFleetSectionData;
+    mrmInventoryAppendix?: MrmInventoryAppendixSectionData;
     // Organization group
     vendors?: VendorsListSectionData;
     models?: ModelsListSectionData;
@@ -527,6 +529,128 @@ export interface FrameworkRequirementsSectionData {
     groups: FrameworkRequirementGroup[];
     rollup: FrameworkRequirementRollup;
   }>;
+}
+
+// Model risk management facts (OSFI E-23 report). One row per model inventory
+// entry, retired ones included and flagged; every E-23 section derives from it.
+export type MrmTierValue = "1" | "2" | "3";
+
+export interface MrmModelFacts {
+  id: number;
+  /** model_inventories.model */
+  name: string;
+  version: string | null;
+  provider: string | null;
+  type: string | null;
+  status: string | null;
+  /** status = 'Retired' */
+  retired: boolean;
+  tier: MrmTierValue | null;
+  /** ISO timestamps throughout (full precision, not date-only). */
+  tieredAt: string | null;
+  revalidationFlagged: boolean;
+  intendedUse: string | null;
+  limitations: string | null;
+  inventoryApproverId: number | null;
+  /** Display name, or null when unset or not a current organization member. */
+  inventoryApprover: string | null;
+  roles: {
+    /** Display names of current members only; a departed user is dropped. */
+    owner: string[];
+    /** Raw user ids, resolved or not. */
+    developerIds: number[];
+    validator: string[];
+    approver: string[];
+  };
+  hasOpenValidation: boolean;
+  openValidationNextDue: string | null;
+  latestSignedOff: {
+    validatorId: number | null;
+    outcome: string | null;
+    signedOffAt: string;
+    /** Report section keys missing or with empty trimmed text. */
+    emptyReportSections: string[];
+  } | null;
+  /** next_due of the latest signed-off validation. */
+  nextReviewDue: string | null;
+  activeThresholds: number;
+  lastMetricReceivedAt: string | null;
+  findings: Array<{
+    severity: string;
+    stage: string;
+    dueDate: string | null;
+    remediationPlanEmpty: boolean;
+  }>;
+}
+
+/** Counts within the report period, non-retired models only. */
+export interface MrmActivity {
+  /** null when the run has no period; every count is then 0. */
+  period: { start: string; end: string } | null;
+  validationsSignedOff: number;
+  findingsOpened: number;
+  findingsClosed: number;
+  breaches: number;
+  revalidationEvents: number;
+}
+
+export interface MrmFleetSectionData {
+  totals: {
+    models: number;
+    untiered: number;
+    byTier: Record<MrmTierValue, number>;
+  };
+  validationCoverage: {
+    validated: number;
+    inReview: number;
+    notStarted: number;
+    overdue: number;
+  };
+  openFindingsBySeverity: Record<"critical" | "high" | "medium" | "low", number>;
+  monitoring: {
+    withActiveThresholds: number;
+    withRecentMetric: number;
+  };
+  activity: MrmActivity;
+  perTier: Array<{
+    tier: MrmTierValue;
+    models: number;
+    tieringCurrent: number;
+    validated: number;
+    monitoringActive: number;
+    openFindings: number;
+    criticalHighFindings: number;
+  }>;
+  /** Only models with at least one exception; the rest appear as counts. */
+  exceptions: Array<{
+    name: string;
+    tier: MrmTierValue | null;
+    issues: string[];
+  }>;
+}
+
+export interface MrmInventoryAppendixRow {
+  name: string;
+  version: string | null;
+  provider: string | null;
+  type: string | null;
+  tier: MrmTierValue | null;
+  status: string | null;
+  owner: string | null;
+  approver: string | null;
+  intendedUse: string | null;
+  /** First 300 characters, then "…". */
+  limitations: string | null;
+  latestOutcome: string | null;
+  latestSignedOffAt: string | null;
+  nextReviewDue: string | null;
+  activeThresholds: boolean;
+  openFindings: number;
+}
+
+export interface MrmInventoryAppendixSectionData {
+  active: MrmInventoryAppendixRow[];
+  retired: MrmInventoryAppendixRow[];
 }
 
 // NIST AI RMF Subcategories (Compliance & Governance group)
