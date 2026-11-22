@@ -35,6 +35,7 @@ const generatedAt = new Date(2026, 10, 22, 12, 0, 0);
 const l2Row = (over: Record<string, unknown>) => ({
   impl_id: 1,
   struct_id: 1,
+  group_id: 1,
   group_title: "G1",
   group_order: 1,
   title: "R",
@@ -76,10 +77,25 @@ describe("collectFrameworkRequirements", () => {
   it("builds groups in order with rollups", async () => {
     mockQueries({
       l2: [
-        l2Row({ impl_id: 1, group_title: "B", group_order: 2, order_no: 1, status: "Implemented" }),
-        l2Row({ impl_id: 2, group_title: "A", group_order: 1, order_no: 1, status: "Audited" }),
+        l2Row({
+          impl_id: 1,
+          group_id: 2,
+          group_title: "B",
+          group_order: 2,
+          order_no: 1,
+          status: "Implemented",
+        }),
+        l2Row({
+          impl_id: 2,
+          group_id: 1,
+          group_title: "A",
+          group_order: 1,
+          order_no: 1,
+          status: "Audited",
+        }),
         l2Row({
           impl_id: 3,
+          group_id: 1,
           group_title: "A",
           group_order: 1,
           order_no: 2,
@@ -116,6 +132,7 @@ describe("collectFrameworkRequirements", () => {
     const files = Array.from({ length: 12 }, (_, i) => ({
       entity_type: flat.entity_types.l2_impl,
       entity_id: 1,
+      file_id: i,
       filename: `f${String(11 - i).padStart(2, "0")}.pdf`,
     }));
     mockQueries({
@@ -192,5 +209,72 @@ describe("collectFrameworkRequirements", () => {
     expect(query).toHaveBeenCalledTimes(1);
     expect(out.frameworks[0].groups).toEqual([]);
     expect(out.frameworks[0].rollup.total).toBe(0);
+  });
+
+  it("counts a file linked twice once", async () => {
+    const link = {
+      entity_type: flat.entity_types.l2_impl,
+      entity_id: 1,
+      file_id: 4,
+      filename: "a.pdf",
+    };
+    mockQueries({ l2: [l2Row({ impl_id: 1 })], evidence: [link, { ...link }] });
+    const out = await collectFrameworkRequirements(targetFor(flat.id, "F"), 1, generatedAt, names);
+    expect(out.frameworks[0].groups[0].requirements[0].evidenceCount).toBe(1);
+  });
+
+  it("scopes the risk join to the organization", async () => {
+    mockQueries({ l2: [l2Row({ impl_id: 1 })] });
+    await collectFrameworkRequirements(targetFor(flat.id, "F"), 1, generatedAt, names);
+    const riskSql = query.mock.calls
+      .map((c) => c[0] as string)
+      .find((q) => q.includes("projects_risks_id"))!;
+    expect(riskSql).toContain("pr.organization_id = r.organization_id");
+  });
+
+  it("rejects an invalid generatedAt", async () => {
+    await expect(
+      collectFrameworkRequirements(targetFor(flat.id, "F"), 1, new Date("nope"), names),
+    ).rejects.toThrow("Invalid generatedAt");
+  });
+
+  it("keeps groups with the same title apart by id", async () => {
+    mockQueries({
+      l2: [
+        l2Row({ impl_id: 1, group_id: 1, group_title: "Same", group_order: 1 }),
+        l2Row({ impl_id: 2, group_id: 2, group_title: "Same", group_order: 1 }),
+      ],
+    });
+    const out = await collectFrameworkRequirements(targetFor(flat.id, "F"), 1, generatedAt, names);
+    expect(out.frameworks[0].groups).toHaveLength(2);
+  });
+
+  it("nests L3 by struct parent when the impl parent matches nothing", async () => {
+    query.mockImplementation(async (sql: string) => {
+      if (sql.includes("file_entity_links") || sql.includes("projects_risks_id")) return [];
+      if (sql.includes("parent_struct_id"))
+        return [
+          {
+            impl_id: 20,
+            parent_impl_id: null,
+            parent_struct_id: 100,
+            title: "Child",
+            order_no: 1,
+            status: "Draft",
+            owner: 5,
+            reviewer: null,
+            approver: null,
+            due_date: null,
+          },
+        ];
+      return [l2Row({ impl_id: 10, struct_id: 100 })];
+    });
+    const out = await collectFrameworkRequirements(
+      targetFor(nested.id, "N"),
+      1,
+      generatedAt,
+      names,
+    );
+    expect(out.frameworks[0].groups[0].requirements[0].children).toHaveLength(1);
   });
 });

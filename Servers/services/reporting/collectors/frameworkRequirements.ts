@@ -14,7 +14,7 @@ import type {
   FrameworkRequirementRow,
   FrameworkRequirementsSectionData,
 } from "../../../domain.layer/interfaces/i.reportGeneration";
-import { isoDate } from "../dataCollector";
+import { isoDate } from "../dateUtils";
 import type { FrameworkTarget } from "../reportScope";
 import {
   EVIDENCE_SQL,
@@ -70,6 +70,9 @@ export async function collectFrameworkRequirements(
   const structure = getStructureById(target.frameworkId);
   if (!structure) throw new Error(`Not a bundled framework: ${target.frameworkId}`);
 
+  const today = isoDate(generatedAt);
+  if (!today) throw new Error("Invalid generatedAt");
+
   const { entity_types, tables, cols } = structure;
   const replacements = { organizationId, pfId: target.projectFrameworkId };
   const select = <T = ImplRow>(sql: string, extra: Record<string, unknown> = {}) =>
@@ -92,12 +95,18 @@ export async function collectFrameworkRequirements(
   const l3Risks = new Map<number, number>();
 
   if (implIds.length > 0) {
-    const links = await select<{ entity_type: string; entity_id: number; filename: string }>(
-      EVIDENCE_SQL,
-      { frameworkType: structure.framework_type, implIds },
-    );
+    const links = await select<{
+      entity_type: string;
+      entity_id: number;
+      file_id: number;
+      filename: string;
+    }>(EVIDENCE_SQL, { frameworkType: structure.framework_type, implIds });
+    const seen = new Set<string>();
     for (const l of links) {
       const key = `${l.entity_type}:${l.entity_id}`;
+      const linkKey = `${key}:${l.file_id}`;
+      if (seen.has(linkKey)) continue;
+      seen.add(linkKey);
       const list = evidence.get(key) ?? [];
       list.push(l.filename);
       evidence.set(key, list);
@@ -126,8 +135,6 @@ export async function collectFrameworkRequirements(
   const userNames = userIds.size > 0 ? await resolveUserNames([...userIds]) : new Map();
   const nameOf = (id: unknown): string | null =>
     id == null ? null : (userNames.get(Number(id)) ?? UNKNOWN_USER);
-
-  const today = isoDate(generatedAt) as string;
 
   const toRow = (
     r: ImplRow,
@@ -168,7 +175,7 @@ export async function collectFrameworkRequirements(
     const row = toRow(r, 2, entity_types.l2_impl, l2Risks);
     l2ByImpl.set(row.implId, row);
     l2ByStruct.set(Number(r.struct_id), row);
-    const key = `${r.group_order}:${r.group_title}`;
+    const key = String(r.group_id);
     if (!rowsByGroup.has(key)) {
       rowsByGroup.set(key, { title: r.group_title, orderNo: Number(r.group_order ?? 0), rows: [] });
     }
