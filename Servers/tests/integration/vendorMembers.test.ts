@@ -21,6 +21,7 @@ import { seedTwoTenantContexts } from "./tenant-isolation/tenantIsolation.harnes
 import { createTestVendor, createTestVendorRisk } from "../factories";
 import { notifyUserAssigned } from "../../services/inAppNotification.service";
 import { createNewVendorQuery } from "../../utils/vendor.utils";
+import { updateVendorRiskByIdQuery } from "../../utils/vendorRisk.utils";
 import { IVendor } from "../../domain.layer/interfaces/i.vendor";
 
 const notify = notifyUserAssigned as jest.Mock;
@@ -363,6 +364,45 @@ describe("vendor user references against organization_members", () => {
         { replacements: { riskId }, type: QueryTypes.SELECT },
       );
       expect(row.action_owner).toBe(owner.userId);
+    });
+  });
+  // The Advisor's update tool calls updateVendorRiskByIdQuery directly, with
+  // no REST pre-read, so the query itself must leave a deleted risk alone.
+  describe("a soft-deleted vendor risk", () => {
+    it("is not edited, through the query or REST, and answers like a missing one", async () => {
+      const { owner } = await seedTwoTenantContexts();
+      const vendorId = await createTestVendor(owner.orgId);
+      const riskId = await createTestVendorRisk(owner.orgId, { vendor_id: vendorId });
+      await sequelize.query(
+        "UPDATE vendorrisks SET is_deleted = true, deleted_at = NOW(), action_plan = 'Before' WHERE id = :riskId",
+        { replacements: { riskId } },
+      );
+
+      const transaction = await sequelize.transaction();
+      try {
+        const result = await updateVendorRiskByIdQuery(
+          riskId,
+          { action_plan: "After" } as any,
+          owner.orgId,
+          transaction,
+        );
+        expect(result ?? null).toBeNull();
+        await transaction.commit();
+      } catch (error) {
+        await transaction.rollback();
+        throw error;
+      }
+
+      const res = await owner.request
+        .patch(`/api/vendorRisks/${riskId}`)
+        .send({ action_plan: "After" });
+      expect(res.status).toBe(404);
+
+      const [row] = await sequelize.query<{ action_plan: string }>(
+        "SELECT action_plan FROM vendorrisks WHERE id = :riskId",
+        { replacements: { riskId }, type: QueryTypes.SELECT },
+      );
+      expect(row.action_plan).toBe("Before");
     });
   });
 });

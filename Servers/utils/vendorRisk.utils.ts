@@ -190,22 +190,25 @@ export const updateVendorRiskByIdQuery = async (
   organizationId: number,
   transaction: Transaction,
 ): Promise<VendorRiskModel | null> => {
-  if (vendorRisk.action_owner !== undefined) {
-    // Only a new owner is checked: one who has since left the organization
-    // stays on the vendor risk and must not block every other edit. The row
-    // is locked so a concurrent save cannot change the owner between this
-    // comparison and the UPDATE below.
-    const [stored] = (await sequelize.query(
-      `SELECT action_owner FROM vendorrisks WHERE organization_id = :organizationId AND id = :id FOR UPDATE`,
-      { replacements: { organizationId, id }, type: QueryTypes.SELECT, transaction },
-    )) as { action_owner: number | null }[];
-    await assertVendorRiskOwnerInOrganization(
-      vendorRisk.action_owner,
-      organizationId,
-      transaction,
-      stored ? stored.action_owner : undefined,
-    );
-  }
+  // The stored row, read and locked on this transaction so a concurrent save
+  // cannot change it between the checks below and the UPDATE. A missing or
+  // soft-deleted vendor risk is not edited: the caller answers 404.
+  const [stored] = (await sequelize.query(
+    `SELECT action_owner FROM vendorrisks
+      WHERE organization_id = :organizationId AND id = :id AND is_deleted = false
+      FOR UPDATE`,
+    { replacements: { organizationId, id }, type: QueryTypes.SELECT, transaction },
+  )) as { action_owner: number | null }[];
+  if (!stored) return null;
+
+  // Only a new owner is checked: one who has since left the organization
+  // stays on the vendor risk and must not block every other edit.
+  await assertVendorRiskOwnerInOrganization(
+    vendorRisk.action_owner,
+    organizationId,
+    transaction,
+    stored.action_owner,
+  );
 
   const updateVendorRisk: Partial<Record<keyof VendorRiskModel, any>> & {
     organizationId?: number;
@@ -236,7 +239,7 @@ export const updateVendorRiskByIdQuery = async (
     .map((f) => `${f} = :${f}`)
     .join(", ");
 
-  const query = `UPDATE vendorrisks SET ${setClause} WHERE organization_id = :organizationId AND id = :id RETURNING *;`;
+  const query = `UPDATE vendorrisks SET ${setClause} WHERE organization_id = :organizationId AND id = :id AND is_deleted = false RETURNING *;`;
 
   updateVendorRisk.organizationId = organizationId;
   updateVendorRisk.id = id;
