@@ -172,6 +172,16 @@ describe("chartUtils", () => {
       expect(svg).toContain("2/10");
     });
 
+    it("leaves room between the percentage and a long count", () => {
+      const svg = generateComplianceProgressChart([
+        { category: "Group", completed: 120, total: 480, percentage: 25 },
+      ]);
+      const pctX = Number(/<text x="([\d.]+)"[^>]*>25%<\/text>/.exec(svg)?.[1]);
+      // "100%" at 12px is about 34px wide; "120/480" at 10px about 38px.
+      // Percentage starts left of width - 34 - 38.
+      expect(pctX + 34).toBeLessThanOrEqual(400 - 38);
+    });
+
     it("should apply correct colors based on percentage", () => {
       const svg = generateComplianceProgressChart(mockComplianceData);
 

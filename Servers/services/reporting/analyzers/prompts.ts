@@ -337,7 +337,7 @@ export interface FlatRequirement extends FrameworkRequirementRow {
 const groupLabel = (g: any): string => {
   const title = oneLine(g?.title);
   const useCase = oneLine(g?.useCase);
-  return useCase ? `${useCase} · ${title}` : title;
+  return useCase ? `${useCase} · ${title || "Untitled group"}` : title;
 };
 
 /**

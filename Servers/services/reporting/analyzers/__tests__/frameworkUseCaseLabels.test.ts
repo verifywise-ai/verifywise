@@ -83,6 +83,18 @@ describe("framework requirements keep the use case label", () => {
     expect(text).toContain("- HIPAA: Risk analysis");
   });
 
+  it("names an untitled group under a use case instead of a trailing separator", () => {
+    const untitled = {
+      frameworks: [
+        {
+          ...section.frameworks[0],
+          groups: [{ ...section.frameworks[0].groups[0], title: "" }],
+        },
+      ],
+    };
+    expect(flattenFrameworkRequirements(untitled)[0]._group).toBe("Claims triage · Untitled group");
+  });
+
   it("prints none when no requirement is open (fails at base: empty list under the header)", () => {
     const done = {
       frameworks: [
