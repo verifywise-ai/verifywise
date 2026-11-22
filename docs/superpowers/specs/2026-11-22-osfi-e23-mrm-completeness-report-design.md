@@ -143,17 +143,18 @@ In order. "Section key" is the catalog key where the part is a selectable sectio
 
 1. **Cover.** Institution name, "OSFI E-23 model risk management: completeness report", audience line ("Prepared for OSFI supervisory review" or "Prepared for the Board of directors"), period, as-of, prepared by, accountable executive. Branding as today.
 2. **Scope and method.** Fixed text plus parameters: self-assessment statement, the two data sources and how each is collected, the scope note, the period rule from 8.2, how AI content is labelled, and the limitations (below). Always present in this template.
-3. **Executive summary** (existing AI block). Gets E-23 sections and facts as input. Absent without an LLM key, with the neutral "not produced" line.
-4. **E-23 program completeness** (`frameworkRequirements`, selection `native:26`). From PR 1, with E-23 group titles as written in the structure.
-5. **Model risk management status** (new section `mrmFleet`). Fleet totals, models by tier, untiered, validation coverage (validated / in review / not started / overdue), open findings by severity, monitoring coverage (models with active thresholds, models with a metric received in the last 90 days), activity in period (validations signed off, findings opened/closed, breaches, revalidation events), and a per-tier table (models, tiering current, validated, monitoring active, open findings, critical/high findings). Lists only models with an exception; counts for the rest.
+3. **At a glance** (always present in this template, no AI). Fixed figures: E-23 requirements implemented or audited (n of 83), groups checked against MRM data, contradiction rules fired (n of 13), models in scope, untiered, overdue validations, open critical/high findings, fix-it items by severity, and, when a previous run exists, the change since it. Gives the board a summary even without an LLM key.
+4. **Executive summary** (existing AI block). Gets E-23 sections and facts as input. Absent without an LLM key, with the neutral "not produced" line.
+5. **E-23 program completeness** (`frameworkRequirements`, selection `native:26`). From PR 1, with E-23 group titles as written in the structure. In this template each group also shows its **data coverage**: "Checked against MRM data" when at least one contradiction rule targets a requirement in the group, otherwise "Self-assessment only". The coverage comes from the rule table in 8.4, so it cannot drift from the rules.
+6. **Model risk management status** (new section `mrmFleet`). Fleet totals, models by tier, untiered, validation coverage (validated / in review / not started / overdue), open findings by severity, monitoring coverage (models with active thresholds, models with a metric received in the last 90 days), activity in period (validations signed off, findings opened/closed, breaches, revalidation events), and a per-tier table (models, tiering current, validated, monitoring active, open findings, critical/high findings). Lists only models with an exception; counts for the rest.
 
-This section uses a **report-only** collector, not `getAttestationSummary` as is. That function counts retired models and prints a per-tier `ok`/`blocked` attestation status. Here every count excludes retired models, so sections 5, 6 and 8 agree, and no per-tier verdict is printed. `getAttestationSummary` stays unchanged for the MRM tab and its DOCX. Shared SQL fragments may be factored out if that does not change the existing function's output.
-6. **Where the checklist and the data disagree** (new section `e23Contradictions`). The fixed rules in 8.4. Table: requirement, claimed status, what the data shows, affected count, examples (up to 5 model names, then "and N more"). When no rule fires: "No contradictions found by the rules in this report", plus the list of rules checked, so an empty table is never mistaken for an unchecked one.
-7. **E-23 gap analysis** (new AI block `e23Gap`, see 8.5).
-8. **Fix-it list** (new section `e23FixItList`, see 8.6).
-9. **Model inventory appendix** (new section `mrmInventoryAppendix`, off by default).
-10. **Sections with no data / Analyses not produced** (existing blocks).
-11. **Sign-off** (new section `signOff`, on by default in this template). Statement that the report is a self-assessment prepared from VerifyWise records and is not an OSFI assessment, followed by signature lines (name, title, signature, date) for the accountable executive and, when given, the head of model validation.
+This section uses a **report-only** collector, not `getAttestationSummary` as is. That function counts retired models and prints a per-tier `ok`/`blocked` attestation status. Here every count excludes retired models, so the MRM status, contradictions and fix-it sections agree, and no per-tier verdict is printed. `getAttestationSummary` stays unchanged for the MRM tab and its DOCX. Shared SQL fragments may be factored out if that does not change the existing function's output.
+7. **Where the checklist and the data disagree** (new section `e23Contradictions`). The fixed rules in 8.4. Table: requirement, claimed status, what the data shows, affected count, examples (up to 5 model names, then "and N more"). When no rule fires: "No contradictions found by the rules in this report", plus the list of rules checked, so an empty table is never mistaken for an unchecked one.
+8. **E-23 gap analysis** (new AI block `e23Gap`, see 8.5).
+9. **Fix-it list** (new section `e23FixItList`, see 8.6).
+10. **Model inventory appendix** (new section `mrmInventoryAppendix`, off by default).
+11. **Sections with no data / Analyses not produced** (existing blocks).
+12. **Sign-off** (new section `signOff`, on by default in this template). Statement that the report is a self-assessment prepared from VerifyWise records and is not an OSFI assessment, followed by signature lines (name, title, signature, date) for the accountable executive and, when given, the head of model validation.
 
 **Limitations text** (in Scope and method) always lists: VerifyWise does not compute model performance metrics (the institution supplies them); these E-23 Appendix 1 fields are not tracked in VerifyWise: production deployment date, data sources, approved uses and exceptions, dependencies, third-party designation; statuses are self-assessed.
 
@@ -165,13 +166,13 @@ A rule fires only when the named requirement's status is `Implemented` or `Audit
 |---|---|---|
 | C1 | 2.1.4 Enterprise-level model inventory as system of record | No models in the inventory |
 | C2 | 2.2.3 Every model rated through a defined process | Any model with no MRM tier |
-| C3 | 2.2.4 Regular and trigger-based rating review | Any model whose tier was set more than 12 months before generation, or flagged for revalidation with no open validation |
+| C3 | 2.2.4 Regular and trigger-based rating review | Any tiered model whose rating was last set or affirmed more than 12 months before generation (the later of `mrm_tiered_at` and its latest validation sign-off, since sign-off affirms the tier per 3.4.8), or flagged for revalidation with no open validation |
 | C4 | 3.1.3 Explicit stakeholder responsibilities | Any model with no `owner` MRM role |
-| C5 | 3.4.1 Review independent of development | Any validation whose validator also holds the `developer` role on that model |
+| C5 | 3.4.1 Review independent of development | Any model whose latest validation's validator currently also holds the `developer` role on that model (latest only: role history is not kept, so older validations cannot be judged fairly) |
 | C6 | 3.4.2 Review depth and frequency set by rating | Any model with an overdue validation (`next_due` before generation, not validated) |
 | C7 | 3.4.6 Documented results and recommendation to the approver | Any model whose latest signed-off validation has one or more of its six report sections (`purpose_scope`, `conceptual_soundness`, `data_review`, `outcomes_analysis`, `findings_limitations`, `conclusion_signoff`) missing or with empty text after trimming |
 | C8 | 3.4.7 Suitability approval throughout the lifecycle | Any model with neither an `approver` MRM role nor an inventory approver |
-| C9 | 3.4.9 Approval with known limitations backed by mitigants or justification | Any `Approved` model with an open critical or high finding |
+| C9 | 3.4.9 Approval with known limitations backed by mitigants or justification | Any `Approved` model with a critical or high finding still at stage `open` and with an empty remediation plan (E-23 allows approval with known limitations when mitigants exist, so a planned or in-progress remediation does not fire) |
 | C10 | 3.6.4 Breach thresholds and material-modification criteria | Any tier 1 or tier 2 model with no active threshold |
 | C11 | 3.6.1 Monitoring standards by rating and model type | Any model with active thresholds but no metric received in the last 90 days |
 | C12 | 2.2.8 Remediation when model risk exceeds appetite | Any open critical or high finding past its due date |
@@ -192,13 +193,13 @@ A new analyzer in `services/reporting/analyzers/`, registered like `complianceGa
 - **Input:** E-23 rows of `frameworkRequirements`, `mrmFleet`, `e23Contradictions`, the facts block, and the audience parameter (formal register for both audiences; the board version leads with consequences, the examiner version with evidence).
 - **Output (zod, `.strict()`):**
   - `narrative` (overall position, 40–2500 chars);
-  - `principles[]`: `group` (verbatim E-23 group title), `position` (`supported` / `partly supported` / `not supported` / `not assessed`), `explanation`, `basis` (`observed` / `inferred` / `absent`), `what_would_close_this`;
+  - `principles[]`: `group` (verbatim E-23 group title), `position` (`consistent` / `partly consistent` / `inconsistent` / `not assessable`, meaning how far the MRM data is consistent with the self-assessed statuses; rendered as "Data consistent with self-assessment" and so on, never as a compliance rating), `explanation`, `basis` (`observed` / `inferred` / `absent`), `what_would_close_this`. Groups marked "Self-assessment only" (8.3) must be `not assessable`;
   - `abstain_reason`.
 - **Provenance:** add `{ list: "principles", field: "group" }` to `VERBATIM_FIELDS`; add the narrative to `PROSE_FIELD` for the shallowness gate.
-- **Prompt rules:** existing `GROUNDING_RULES`, plus: never state or imply OSFI's view or compliance; explain contradictions, never invent new ones; `position` must not be `supported` for a group with a fired contradiction rule.
+- **Prompt rules:** existing `GROUNDING_RULES`, plus: never state or imply OSFI's view or compliance; explain contradictions, never invent new ones. The two position constraints (no `consistent` for a group with a fired rule; `not assessable` for a self-assessment-only group) are enforced in code after parsing, not only asked for in the prompt: a violating row is corrected to the allowed value and the correction is recorded in `audit_metadata`.
 - **Gating:** new `e23Gap` flag in `AiBlocksConfig`, request `aiBlocks`, resolver, `LEGACY_BLOCKS`/`NO_BLOCKS` (off for manual legacy runs) and the wizard's AI step.
 - **Existing analyzers:** `executiveSummary`, `keyFindings` and `recommendedActions` receive the new sections through `prepareSectionData` and facts. `recommendedActions` takes the fix-it list as input so its actions point at real items.
-- **No key / failure:** existing abstention behaviour. The deterministic sections (4, 5, 6, 8) never depend on the LLM.
+- **No key / failure:** existing abstention behaviour. The fixed sections (at a glance, completeness, MRM status, contradictions, fix-it list) never depend on the LLM.
 
 ### 8.6 Fix-it list (`e23FixItList`)
 
@@ -216,7 +217,13 @@ Item sources:
 
 Each item: severity, what is wrong, where (requirement number and title, or model name), owner (requirement owner, or the model's `owner` role; "Unassigned" when none), due date when one exists, and "Closes when" (fixed text per item type).
 
-Severity: **High** for sources 1, 3 and 7 when the model is tier 1 or has a critical/high finding; **Medium** for sources 2, 4, 5 and remaining source 7 items; **Low** for source 6. Sorted by severity, then overdue first, then requirement order or model name.
+Severity:
+
+- **High:** every source 1 and source 3 item; a source 7 item when the model is tier 1 or has an open critical or high finding.
+- **Medium:** every source 2, 4 and 5 item; every other source 7 item.
+- **Low:** every source 6 item.
+
+ Sorted by severity, then overdue first, then requirement order or model name.
 
 ### 8.7 Model inventory appendix (`mrmInventoryAppendix`)
 
@@ -238,7 +245,7 @@ No new gate is needed. Organization-scope reports already require Admin (`servic
 
 ### 8.10 Change since last run
 
-Scheduled runs already diff facts against the previous run of the same schedule. Add the new aggregates (requirements done, contradictions fired, fix-it items by severity, overdue validations, untiered models) to facts so the change block covers them. Bump `FACTS_SCHEMA_VERSION`.
+Scheduled runs already diff facts against the previous run of the same schedule; manual runs get no comparison today. Many customers will run this report by hand each quarter, so for templates of kind `osfi_e23` a manual run compares against the organization's previous successful run of the same template (any trigger), and a scheduled run keeps comparing against its own schedule. Other templates are unchanged. Add the new aggregates (requirements done, contradictions fired, fix-it items by severity, overdue validations, untiered models) to facts so the change block covers them. Bump `FACTS_SCHEMA_VERSION`.
 
 ### 8.11 Docs and guide
 
@@ -259,7 +266,7 @@ Scheduled runs already diff facts against the previous run of the same schedule.
 
 **Made by the user:** option B; readers are an OSFI examiner or the board, and the report also carries a fix-it list; the wizard asks the report details in 8.1 and remembers them; English only; sign-off page included; model listing shows exceptions with the full inventory as an optional appendix; fix-it list inside the report, no CSV; fixed contradiction rules explained by AI; missing inventory fields reported as "not tracked"; remaining defaults accepted.
 
-**Made by me (open to correction):** two PRs; adding a quarterly schedule frequency for every template; scheduled periods roll (one interval ending the day before the run), aligned to fiscal quarters through the run date; `parameters_config.kind` marks an E-23 template and E-23 sections are offered only there; the MRM status section counts exclude retired models and print no per-tier verdict; rules match requirements by title number and list unmatched rules as "not run"; the specific contradiction rules (C7 reworked to empty validation report sections, C13 added) and their 12-month and 90-day windows; fix-it severity scheme; the AI does not rank the fix-it list (deterministic for an examiner); `e23Gap` position scale; prefill from the organization's last run rather than a stored per-org template copy; generic `parameters_config` rather than E-23-only fields; period bounds activity counts only.
+**Made by me (open to correction):** two PRs; adding a quarterly schedule frequency for every template; scheduled periods roll (one interval ending the day before the run), aligned to fiscal quarters through the run date; `parameters_config.kind` marks an E-23 template and E-23 sections are offered only there; the MRM status section counts exclude retired models and print no per-tier verdict; rules match requirements by title number and list unmatched rules as "not run"; the specific contradiction rules (C7 reworked to empty validation report sections, C13 added) and their 12-month and 90-day windows; C3 counts a validation sign-off as affirming the tier; C5 checks only the latest validation; C9 fires only for unmitigated critical/high findings (E-23 allows approval with mitigated limitations); per-group data coverage label derived from the rules; a fixed "at a glance" summary that needs no AI; E-23 manual runs compare against the previous run of the same template; gap-analysis positions phrased as data consistency, enforced in code; fix-it severity scheme; the AI does not rank the fix-it list (deterministic for an examiner); `e23Gap` position scale; prefill from the organization's last run rather than a stored per-org template copy; generic `parameters_config` rather than E-23-only fields; period bounds activity counts only.
 
 ## 11. Left to the builder
 
