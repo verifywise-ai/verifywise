@@ -1,7 +1,7 @@
 jest.mock("../../../../database/db", () => ({ sequelize: {} }));
 
 import { collectFacts } from "../facts";
-import { flattenFrameworkRequirements, prepareSectionData } from "../prompts";
+import { flattenFrameworkRequirements, prepareSectionData, requirementRank } from "../prompts";
 
 const rollup = (done: number, total: number) => ({
   total,
@@ -114,5 +114,11 @@ describe("framework requirements keep the use case label", () => {
     expect(prepareSectionData("frameworkRequirements", done)).toMatch(
       /Requirements not done[^\n]*\nnone$/,
     );
+  });
+
+  it("ranks a requirement whose owner has left like an unassigned one", () => {
+    const departed = { ...req("x"), owner: "Unknown user" } as any;
+    const none = { ...req("x"), owner: null } as any;
+    expect(requirementRank(departed)).toBe(requirementRank(none));
   });
 });

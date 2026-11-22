@@ -7,6 +7,7 @@
  */
 
 import type { FrameworkRequirementRow } from "../../../domain.layer/interfaces/i.reportGeneration";
+import { hasNoActiveOwner } from "../collectors/frameworkRollup";
 
 export const ANALYZER_VERSION = "report-analyzer-v3";
 
@@ -371,7 +372,7 @@ export function flattenFrameworkRequirements(data: any): FlatRequirement[] {
  * ahead of unassigned, and a row that is both ranks first of all.
  */
 export const requirementRank = (row: FrameworkRequirementRow): number =>
-  row.isDone ? 0 : 1 + (row.isOverdue ? 2 : 0) + (!row.owner || !String(row.owner).trim() ? 1 : 0);
+  row.isDone ? 0 : 1 + (row.isOverdue ? 2 : 0) + (hasNoActiveOwner(row.owner) ? 1 : 0);
 
 const MAX_FREE_TEXT_CHARS = 200;
 

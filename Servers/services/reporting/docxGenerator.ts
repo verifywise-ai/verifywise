@@ -412,6 +412,19 @@ function createSubsectionHeader(title: string): Paragraph {
 type TableCellInput = string | { main: string; secondary?: string };
 
 /**
+ * Main and secondary text of a cell. Collected rows are typed as strings but
+ * nullable columns (e.g. a NIST subcategory description) can still arrive as
+ * null at runtime, so anything that is not a structured cell prints as text.
+ */
+function cellParts(cell: TableCellInput | null | undefined): {
+  main: string;
+  secondary?: string;
+} {
+  if (cell !== null && typeof cell === "object") return cell;
+  return { main: cell == null ? "" : String(cell) };
+}
+
+/**
  * Create a standard table with headers and borders
  */
 function createTable(headers: string[], rows: TableCellInput[][]): Table {
@@ -473,19 +486,19 @@ function createTable(headers: string[], rows: TableCellInput[][]): Table {
                 new Paragraph({
                   children: [
                     new TextRun({
-                      text: (typeof cell === "string" ? cell : cell.main) || "-",
+                      text: cellParts(cell).main || "-",
                       size: 20,
                       color: COLORS.textPrimary,
                     }),
                   ],
                 }),
                 // Opt-in only: structured cells carry a small secondary line.
-                ...(typeof cell !== "string" && cell.secondary
+                ...(cellParts(cell).secondary
                   ? [
                       new Paragraph({
                         children: [
                           new TextRun({
-                            text: cell.secondary,
+                            text: cellParts(cell).secondary,
                             size: 16,
                             color: COLORS.textSecondary,
                           }),

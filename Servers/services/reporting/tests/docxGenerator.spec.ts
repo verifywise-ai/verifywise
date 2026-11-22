@@ -695,6 +695,32 @@ describe("DOCX Generator", () => {
       expect(run).not.toContain('<w:sz w:val="16"/>');
       expect(run).not.toContain("595959");
     });
+
+    it("prints a null cell as '-' instead of failing the export", async () => {
+      const result = await generateDOCX({
+        ...mockReportData,
+        sections: {
+          projectRisks: {
+            totalRisks: 1,
+            risksByLevel: [],
+            risks: [
+              {
+                id: 1,
+                name: null,
+                description: "",
+                riskLevel: "High",
+                impact: "Major",
+                likelihood: "Likely",
+                mitigationStatus: "Open",
+                owner: "Alice",
+              },
+            ],
+          },
+        } as unknown as ReportData["sections"],
+      });
+      expect(result.success).toBe(true);
+      expect(await docxText(result.content)).toContain("Alice");
+    });
   });
 
   describe("framework requirements", () => {

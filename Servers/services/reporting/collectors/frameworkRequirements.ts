@@ -15,7 +15,7 @@ import type {
 } from "../../../domain.layer/interfaces/i.reportGeneration";
 import { isoDate } from "../dateUtils";
 import type { FrameworkTarget } from "../reportScope";
-import { addRow, emptyRollup, rollupFromGroups } from "./frameworkRollup";
+import { addRow, emptyRollup, rollupFromGroups, UNKNOWN_USER } from "./frameworkRollup";
 import {
   EVIDENCE_SQL,
   l2RequirementsSql,
@@ -24,7 +24,6 @@ import {
 } from "./frameworkRequirements.queries";
 
 const MAX_EVIDENCE_FILES = 10;
-const UNKNOWN_USER = "Unknown user";
 // Same completed states as addStatusCounts in frameworkImpl.utils.ts.
 const DONE_STATUSES = new Set(["Implemented", "Audited"]);
 

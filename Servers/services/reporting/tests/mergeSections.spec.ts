@@ -234,6 +234,32 @@ describe("mergeFrameworkRequirements", () => {
     expect(merged.frameworks[0].groups[0].useCase).toBeUndefined();
   });
 
+  it("labels a framework only one of several use cases carries", () => {
+    const e23 = fwData([reqRow(1, true)]);
+    const other = {
+      frameworks: [{ ...fwData([reqRow(2, false)]).frameworks[0], frameworkId: 9 }],
+    };
+    const merged = mergeFrameworkRequirements([
+      { useCase: "Alpha", framework: "OSFI E-23", data: e23 },
+      { useCase: "Beta", framework: "HIPAA", data: other },
+    ]);
+
+    expect(merged.frameworks.map((f) => f.groups[0].useCase)).toEqual(["Beta", "Alpha"]);
+  });
+
+  it("counts a requirement owned by a departed member as unassigned", () => {
+    const merged = mergeFrameworkRequirements([
+      { useCase: "Alpha", framework: "OSFI E-23", data: fwData([reqRow(1, true)]) },
+      {
+        useCase: "Beta",
+        framework: "OSFI E-23",
+        data: fwData([{ ...reqRow(2, false), owner: "Unknown user" }]),
+      },
+    ]);
+
+    expect(merged.frameworks[0].rollup.unassigned).toBe(1);
+  });
+
   it("returns undefined for no contributions", () => {
     expect(mergeFrameworkRequirements([])).toBeUndefined();
   });

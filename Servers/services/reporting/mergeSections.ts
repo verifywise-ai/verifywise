@@ -122,9 +122,10 @@ export function mergeFrameworkRequirements(
   if (items.length === 0) return undefined;
   if (items.length === 1) return items[0].data;
 
-  // One entry per framework, however many use cases carry it. Groups are
-  // labelled only when that framework had more than one pairing: every
-  // pairing repeats the same group titles.
+  // One entry per framework, however many use cases carry it. More than one
+  // pairing contributed, so every group is labelled with its use case, also
+  // for a framework only one use case carries: the reader otherwise cannot
+  // tell which use case's SOC 2 a block shows.
   const byFramework = new Map<number, SectionContribution<FrameworkRequirementsSectionData>[]>();
   for (const item of items) {
     for (const fw of item.data.frameworks ?? []) {
@@ -137,10 +138,9 @@ export function mergeFrameworkRequirements(
   const frameworks = [...byFramework.entries()]
     .sort(([a], [b]) => a - b)
     .map(([frameworkId, parts]) => {
-      const labelled = parts.length > 1;
       const labels = labelsFor(parts);
       const groups = parts.flatMap((part, i) =>
-        part.data.frameworks[0].groups.map((g) => (labelled ? { ...g, useCase: labels[i] } : g)),
+        part.data.frameworks[0].groups.map((g) => ({ ...g, useCase: labels[i] })),
       );
       return {
         frameworkId,

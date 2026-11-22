@@ -14,6 +14,17 @@ import type {
   FrameworkRequirementRow,
 } from "../../../domain.layer/interfaces/i.reportGeneration";
 
+/** Printed for an owner, reviewer or approver who is no longer an organization member. */
+export const UNKNOWN_USER = "Unknown user";
+
+/**
+ * True when nobody currently in the organization owns the requirement: no
+ * owner, or an owner who has left (their id stays on the row, but the name
+ * lookup only resolves current members).
+ */
+export const hasNoActiveOwner = (owner: string | null | undefined): boolean =>
+  owner == null || !owner.trim() || owner === UNKNOWN_USER;
+
 export const emptyRollup = (): FrameworkRequirementRollup => ({
   total: 0,
   done: 0,
@@ -26,7 +37,7 @@ export const emptyRollup = (): FrameworkRequirementRollup => ({
 export const addRow = (rollup: FrameworkRequirementRollup, row: FrameworkRequirementRow) => {
   rollup.total += 1;
   if (row.isDone) rollup.done += 1;
-  if (row.owner === null) rollup.unassigned += 1;
+  if (hasNoActiveOwner(row.owner)) rollup.unassigned += 1;
   if (row.evidenceCount === 0) rollup.noEvidence += 1;
   if (row.isOverdue) rollup.overdue += 1;
   rollup.statusBreakdown[row.status] = (rollup.statusBreakdown[row.status] ?? 0) + 1;
