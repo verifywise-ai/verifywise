@@ -2,7 +2,10 @@ import { getAllTrainingRegistarQuery } from "../../utils/trainingRegistar.utils"
 import logger from "../../utils/logger/fileLogger";
 import { createWriteToolFn } from "../confirmation/createWriteTool";
 import { sequelize } from "../../database/db";
-import { QueryTypes } from "sequelize";
+import { assignTraining } from "../../services/trainingAssignment.service";
+import { userHasPermission } from "../../utils/userPermission.utils";
+import { translate } from "../../utils/i18n.utils";
+import { actingRequesterId } from "./actingRequester";
 
 export interface FetchTrainingRecordsParams {
   status?: "Planned" | "In Progress" | "Completed";
@@ -175,7 +178,7 @@ const agentCreateTrainingRecord = createWriteToolFn({
           provider: (params.provider as string) || null,
           department: (params.department as string) || null,
           status: (params.status as string) || "Planned",
-          duration: (params.due_date as string) || null,
+          duration: (params.duration as string) || null,
         },
       },
     );
@@ -196,7 +199,9 @@ const agentUpdateTrainingRecord = createWriteToolFn({
       provider: { column: "provider", value: params.provider },
       department: { column: "department", value: params.department },
       status: { column: "status", value: params.status },
-      due_date: { column: "duration", value: params.due_date },
+      // Free text such as "2 hours". A training has no due date: due dates
+      // belong to its assignments (agent_assign_training_to_user).
+      duration: { column: "duration", value: params.duration },
     };
 
     const setClauses: string[] = [];
@@ -228,39 +233,40 @@ const agentUpdateTrainingRecord = createWriteToolFn({
 const agentAssignTrainingToUser = createWriteToolFn({
   toolName: "agent_assign_training_to_user",
   warningLevel: "info",
-  descriptionFn: (params) => `Assign training #${params.training_id} to user #${params.user_id}`,
+  descriptionFn: (params) =>
+    `Assign training #${params.training_id} to user #${params.user_id}, due ${params.due_date}`,
   executeFn: async (params, organizationId) => {
-    // Check if assignment already exists
-    const existing = await sequelize.query(
-      `SELECT id FROM training_assignments WHERE organization_id = :organizationId AND training_id = :training_id AND user_id = :user_id`,
-      {
-        replacements: {
-          organizationId,
-          training_id: params.training_id,
-          user_id: params.user_id,
-        },
-        type: QueryTypes.SELECT,
-      },
-    );
-
-    if ((existing as any[]).length > 0) {
-      return { success: false, message: "User is already assigned to this training" };
+    const trainingId = params.training_id;
+    // The console's gate (POST /api/v1/training/assignments): training.edit,
+    // held by the user who asked, else the approver. No user: refused.
+    const userId = actingRequesterId(params);
+    if (!(await userHasPermission(organizationId, userId, "training.edit"))) {
+      return {
+        success: false,
+        message: `Training #${trainingId} was not assigned: your role does not allow editing training.`,
+      };
     }
 
-    await sequelize.query(
-      `INSERT INTO training_assignments (organization_id, training_id, user_id, assigned_at)
-       VALUES (:organizationId, :training_id, :user_id, NOW())`,
-      {
-        replacements: {
-          organizationId,
-          training_id: params.training_id,
-          user_id: params.user_id,
-        },
-      },
+    // The console's own path: validation, organization and membership checks,
+    // change history and the assignee's notification.
+    const result = await assignTraining(
+      { training_id: trainingId, user_ids: [params.user_id], due_date: params.due_date },
+      { userId: userId!, organizationId },
     );
+    if (!result.ok) {
+      return { success: false, message: translate("en", result.message, result.vars) };
+    }
+    const [assignment] = result.created;
+    if (!assignment) {
+      return {
+        success: false,
+        message: `User #${params.user_id} is already assigned to training #${trainingId}`,
+      };
+    }
     return {
       success: true,
-      message: `Training #${params.training_id} assigned to user #${params.user_id}`,
+      message: `Training #${trainingId} assigned to user #${params.user_id}, due ${assignment.due_date}`,
+      assignment,
     };
   },
 });
