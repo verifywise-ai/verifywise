@@ -59,10 +59,15 @@ export function createWriteToolFn(
     organizationId: number,
   ): Promise<ConfirmationToolResult | unknown> => {
     const userId = (params._userId as number) || 0;
-    const refusal = config.precheckFn ? await config.precheckFn(params, organizationId) : null;
+    const sanitized = sanitizeParams(params);
+    // As the gateway runs the executor: the caller's params without internal
+    // fields, and the user the approval is submitted for. Never a
+    // _requesterId from the params, which would act as someone else.
+    const refusal = config.precheckFn
+      ? await config.precheckFn({ ...sanitized, _userId: userId }, organizationId)
+      : null;
     if (refusal) return { success: false, message: refusal };
 
-    const sanitized = sanitizeParams(params);
     const description = await config.descriptionFn(sanitized, organizationId);
 
     const result = await submitForApproval({
