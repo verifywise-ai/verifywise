@@ -405,4 +405,61 @@ describe("vendor user references against organization_members", () => {
       expect(row.action_plan).toBe("Before");
     });
   });
+  // vendor_id was never checked against the organization: a vendor risk
+  // could be created on, or moved to, another organization's vendor.
+  describe("a vendor risk's vendor", () => {
+    const riskCount = async (vendorId: number) => {
+      const [row] = await sequelize.query<{ n: string }>(
+        "SELECT COUNT(*) AS n FROM vendorrisks WHERE vendor_id = :vendorId",
+        { replacements: { vendorId }, type: QueryTypes.SELECT },
+      );
+      return Number(row.n);
+    };
+
+    it("must belong to the caller's organization on create", async () => {
+      const { owner, attacker } = await seedTwoTenantContexts();
+      const foreignVendor = await createTestVendor(attacker.orgId);
+
+      const res = await owner.request.post("/api/vendorRisks").send({
+        vendor_id: foreignVendor,
+        risk_description: "Training data provenance",
+        action_owner: owner.userId,
+      });
+
+      expect(res.status).toBe(400);
+      expect(JSON.stringify(res.body)).toContain("The vendor must belong to this organization");
+      expect(await riskCount(foreignVendor)).toBe(0);
+      expect(notify).not.toHaveBeenCalled();
+    });
+
+    it("must belong to the caller's organization on update", async () => {
+      const { owner, attacker } = await seedTwoTenantContexts();
+      const vendorId = await createTestVendor(owner.orgId);
+      const foreignVendor = await createTestVendor(attacker.orgId);
+      const riskId = await createTestVendorRisk(owner.orgId, { vendor_id: vendorId });
+
+      const res = await owner.request
+        .patch(`/api/vendorRisks/${riskId}`)
+        .send({ vendor_id: foreignVendor });
+
+      expect(res.status).toBe(400);
+      expect(JSON.stringify(res.body)).toContain("The vendor must belong to this organization");
+      expect(await riskCount(foreignVendor)).toBe(0);
+      expect(await riskCount(vendorId)).toBe(1);
+    });
+
+    it("accepts a move to another vendor of the same organization", async () => {
+      const { owner } = await seedTwoTenantContexts();
+      const vendorId = await createTestVendor(owner.orgId);
+      const otherVendor = await createTestVendor(owner.orgId, { vendor_name: "Second vendor" });
+      const riskId = await createTestVendorRisk(owner.orgId, { vendor_id: vendorId });
+
+      const res = await owner.request
+        .patch(`/api/vendorRisks/${riskId}`)
+        .send({ vendor_id: otherVendor });
+
+      expect(res.status).toBe(202);
+      expect(await riskCount(otherVendor)).toBe(1);
+    });
+  });
 });

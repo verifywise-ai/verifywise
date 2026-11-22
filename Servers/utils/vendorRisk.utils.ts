@@ -6,7 +6,7 @@ import {
   deleteAllCustomFieldValuesForEntityQuery,
   fetchCustomFieldsForEntities,
 } from "./customField.utils";
-import { findUserFieldOutsideOrganization } from "./user.utils";
+import { findUserFieldOutsideOrganization, parseReferencedIds } from "./user.utils";
 import { ValidationException } from "../domain.layer/exceptions/custom.exception";
 
 export const getVendorRisksByProjectIdQuery = async (
@@ -147,11 +147,47 @@ const assertVendorRiskOwnerInOrganization = async (
   }
 };
 
+/**
+ * Tenant guard for a vendor risk's vendor: a vendor_id must name a vendor of
+ * the organization, or the risk (and the vendor name in its assignment
+ * email) would hang off another organization's vendor. Read on the caller's
+ * transaction. undefined and null mean "not written" and pass.
+ *
+ * @throws ValidationException naming vendor_id.
+ */
+const assertVendorInOrganization = async (
+  vendorId: unknown,
+  organizationId: number,
+  transaction: Transaction,
+): Promise<void> => {
+  if (vendorId === undefined || vendorId === null) return;
+  const ids = parseReferencedIds([vendorId]);
+  const found =
+    ids && ids.length === 1
+      ? ((await sequelize.query(
+          `SELECT id FROM vendors WHERE organization_id = :organizationId AND id = :id`,
+          {
+            replacements: { organizationId, id: ids[0] },
+            type: QueryTypes.SELECT,
+            transaction,
+          },
+        )) as { id: number }[])
+      : [];
+  if (found.length === 0) {
+    throw new ValidationException(
+      "The vendor must belong to this organization",
+      "vendor_id",
+      vendorId,
+    );
+  }
+};
+
 export const createNewVendorRiskQuery = async (
   vendorRisk: IVendorRisk,
   organizationId: number,
   transaction: Transaction,
 ): Promise<VendorRiskModel> => {
+  await assertVendorInOrganization(vendorRisk.vendor_id, organizationId, transaction);
   await assertVendorRiskOwnerInOrganization(vendorRisk.action_owner, organizationId, transaction);
   const result = await sequelize.query(
     `INSERT INTO vendorRisks (
@@ -200,6 +236,11 @@ export const updateVendorRiskByIdQuery = async (
     { replacements: { organizationId, id }, type: QueryTypes.SELECT, transaction },
   )) as { action_owner: number | null }[];
   if (!stored) return null;
+
+  // An empty vendor_id is not written (see the SET clause below).
+  if (vendorRisk.vendor_id) {
+    await assertVendorInOrganization(vendorRisk.vendor_id, organizationId, transaction);
+  }
 
   // Only a new owner is checked: one who has since left the organization
   // stays on the vendor risk and must not block every other edit.

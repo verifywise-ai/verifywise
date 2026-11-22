@@ -1279,6 +1279,7 @@
   "The selected approval workflow is not a use case workflow": "Le workflow d'approbation sélectionné n'est pas un workflow de cas d'usage",
   "The upload could not be read.": "Le fichier envoyé n'a pas pu être lu.",
   "The validator must be independent — they cannot also be the developer": "Le validateur doit être indépendant — il ne peut pas être aussi le développeur",
+  "The vendor must belong to this organization": "Le fournisseur doit appartenir à cette organisation",
   "The vendor assignee is not a valid user id": "Le destinataire du fournisseur n'est pas un identifiant d'utilisateur valide",
   "The vendor assignee must be a member of this organization": "Le destinataire du fournisseur doit être membre de cette organisation",
   "The vendor reviewer is not a valid user id": "Le réviseur du fournisseur n'est pas un identifiant d'utilisateur valide",
