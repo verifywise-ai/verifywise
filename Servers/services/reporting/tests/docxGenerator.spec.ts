@@ -655,6 +655,48 @@ describe("DOCX Generator", () => {
     });
   });
 
+  describe("table cells with newlines (existing callers)", () => {
+    it("keeps a multi-line assessment answer as one run at the normal size and colour", async () => {
+      const result = await generateDOCX({
+        ...mockReportData,
+        sections: {
+          assessment: {
+            overallProgress: 50,
+            totalQuestions: 1,
+            answeredQuestions: 1,
+            topics: [
+              {
+                id: 1,
+                title: "Topic",
+                progress: 100,
+                subtopics: [
+                  {
+                    id: 1,
+                    title: "Sub",
+                    questions: [
+                      {
+                        id: 1,
+                        question: "Q?",
+                        answer: "line1\r\nline2\nline3",
+                        status: "Answered",
+                      },
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+        } as unknown as ReportData["sections"],
+      });
+      const xml = await docxXml(result.content);
+      const run = xml.match(/<w:r>(?:(?!<\/w:r>).)*line1(?:(?!<\/w:r>).)*<\/w:r>/s)?.[0] ?? "";
+      expect(run).toContain("line1\r\nline2\nline3");
+      expect(run).toContain('<w:sz w:val="20"/>');
+      expect(run).not.toContain('<w:sz w:val="16"/>');
+      expect(run).not.toContain("595959");
+    });
+  });
+
   describe("framework requirements", () => {
     const rollup = (total: number, done: number) => ({
       total,

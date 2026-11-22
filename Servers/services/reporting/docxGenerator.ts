@@ -408,10 +408,13 @@ function createSubsectionHeader(title: string): Paragraph {
   });
 }
 
+/** A plain string, or a main line plus an optional smaller secondary line. */
+type TableCellInput = string | { main: string; secondary?: string };
+
 /**
  * Create a standard table with headers and borders
  */
-function createTable(headers: string[], rows: string[][]): Table {
+function createTable(headers: string[], rows: TableCellInput[][]): Table {
   const borderStyle = {
     style: BorderStyle.SINGLE,
     size: 1,
@@ -466,19 +469,31 @@ function createTable(headers: string[], rows: string[][]): Table {
                 left: borderStyle,
                 right: borderStyle,
               },
-              // A newline starts a new, smaller paragraph (e.g. an evidence line).
-              children: (cell || "-").split("\n").map(
-                (line, lineIndex) =>
-                  new Paragraph({
-                    children: [
-                      new TextRun({
-                        text: line,
-                        size: lineIndex === 0 ? 20 : 16,
-                        color: lineIndex === 0 ? COLORS.textPrimary : COLORS.textSecondary,
+              children: [
+                new Paragraph({
+                  children: [
+                    new TextRun({
+                      text: (typeof cell === "string" ? cell : cell.main) || "-",
+                      size: 20,
+                      color: COLORS.textPrimary,
+                    }),
+                  ],
+                }),
+                // Opt-in only: structured cells carry a small secondary line.
+                ...(typeof cell !== "string" && cell.secondary
+                  ? [
+                      new Paragraph({
+                        children: [
+                          new TextRun({
+                            text: cell.secondary,
+                            size: 16,
+                            color: COLORS.textSecondary,
+                          }),
+                        ],
                       }),
-                    ],
-                  }),
-              ),
+                    ]
+                  : []),
+              ],
               verticalAlign: VerticalAlign.CENTER,
             }),
         ),
@@ -1332,16 +1347,19 @@ function createComplianceSection(reportData: ReportData): (Paragraph | Table)[] 
 
         if (group.requirements.length > 0) {
           const headers = ["Requirement", "Status", "Owner", "Due date", "Evidence"];
-          const rows: string[][] = [];
+          const rows: TableCellInput[][] = [];
           group.requirements.forEach((req) => {
             [req, ...(req.children ?? [])].forEach((r) => {
               const more = r.evidenceCount - r.evidenceFiles.length;
               const evidenceLine =
                 r.evidenceFiles.length > 0
-                  ? `\nEvidence: ${r.evidenceFiles.join(", ")}${more > 0 ? `, and ${more} more` : ""}`
-                  : "";
+                  ? `Evidence: ${r.evidenceFiles.join(", ")}${more > 0 ? `, and ${more} more` : ""}`
+                  : undefined;
               rows.push([
-                `${r.level === 3 ? "    " : ""}${r.title}${evidenceLine}`,
+                {
+                  main: `${r.level === 3 ? "    " : ""}${r.title}`,
+                  secondary: evidenceLine,
+                },
                 r.status,
                 r.owner || "—",
                 r.dueDate || "—",
