@@ -2,27 +2,25 @@ import { Request, Response } from "express";
 import { STATUS_CODE } from "../utils/statusCode.utils";
 
 import {
-  createNewTrainingRegistarQuery,
   getAllTrainingRegistarQuery,
   getTrainingRegistarByIdQuery,
-  updateTrainingRegistarByIdQuery,
-  deleteTrainingRegistarByIdQuery,
 } from "../utils/trainingRegistar.utils";
 
 import { TrainingRegistarModel } from "../domain.layer/models/trainingRegistar/trainingRegistar.model";
-import { sequelize } from "../database/db";
 import { logProcessing, logSuccess, logFailure } from "../utils/logger/logHelper";
 import logger from "../utils/logger/fileLogger";
-import { buildEntityUrl, notifyTrainingAssigned } from "../services/inAppNotification.service";
-import { NotificationEntityType } from "../domain.layer/interfaces/i.notification";
-import { getAllUsersQuery } from "../utils/user.utils";
 import { translateError } from "../utils/i18n.utils";
 import {
-  recordEntityCreation,
-  trackEntityChanges,
-  recordMultipleFieldChanges,
-  recordEntityDeletion,
-} from "../utils/changeHistory.base.utils";
+  createTrainingRecord,
+  deleteTrainingRecord,
+  updateTrainingRecord,
+  type TrainingRecordActor,
+} from "../services/trainingRecord.service";
+
+const actorOf = (req: Request): TrainingRecordActor => ({
+  userId: req.userId,
+  organizationId: req.organizationId!,
+});
 
 // get ALL training registry api
 export async function getAllTrainingRegistar(req: Request, res: Response): Promise<any> {
@@ -130,8 +128,6 @@ export async function getTrainingRegistarById(req: Request, res: Response): Prom
 
 // create new training registar
 export async function createNewTrainingRegistar(req: Request, res: Response): Promise<any> {
-  const transaction = await sequelize.transaction();
-
   logProcessing({
     description: "starting createNewTrainingRegistar",
     functionName: "createNewTrainingRegistar",
@@ -144,35 +140,12 @@ export async function createNewTrainingRegistar(req: Request, res: Response): Pr
   try {
     const newTrainingRegistar: TrainingRegistarModel = req.body;
 
-    const createdNewTrainingRegistar = await createNewTrainingRegistarQuery(
+    const createdNewTrainingRegistar = await createTrainingRecord(
       newTrainingRegistar,
-      req.organizationId!,
-      transaction,
+      actorOf(req),
     );
 
     if (createdNewTrainingRegistar) {
-      // Record creation in change history
-      const trainingData = createdNewTrainingRegistar?.dataValues || createdNewTrainingRegistar;
-      const trainingId = trainingData?.id;
-      if (trainingId && req.userId) {
-        // Normalize numberOfPeople to people (DB column name) for change tracking
-        const normalizedData: Record<string, unknown> = {
-          ...newTrainingRegistar,
-          people:
-            (newTrainingRegistar as any).numberOfPeople ?? (newTrainingRegistar as any).people,
-        };
-        delete (normalizedData as any).numberOfPeople;
-        await recordEntityCreation(
-          "training",
-          trainingId,
-          req.userId,
-          req.organizationId!,
-          normalizedData,
-          transaction,
-        );
-      }
-
-      await transaction.commit();
       await logSuccess({
         eventType: "Create",
         description: `Successfully created training registrar: ${newTrainingRegistar.training_name}`,
@@ -181,42 +154,9 @@ export async function createNewTrainingRegistar(req: Request, res: Response): Pr
         userId: req.userId!,
         organizationId: req.organizationId!,
       });
-
-      // Send training assigned notifications to org admins
-      const baseUrl = process.env.FRONTEND_URL || "http://localhost:3000";
-      try {
-        const users = await getAllUsersQuery(req.organizationId!);
-        const admins = users.filter((user) => user.role_id === 1);
-        const creatorUser = users.find((user) => user.id === req.userId);
-        const creatorName = creatorUser ? `${creatorUser.name} ${creatorUser.surname}` : "System";
-
-        const trainingData = createdNewTrainingRegistar?.dataValues || createdNewTrainingRegistar;
-        const trainingId = trainingData?.id || 0;
-
-        for (const admin of admins) {
-          await notifyTrainingAssigned(
-            req.organizationId!,
-            admin.id!,
-            {
-              id: trainingId,
-              name: newTrainingRegistar.training_name,
-              description: newTrainingRegistar.description,
-              duration: newTrainingRegistar.duration,
-              // These recipients are admins hearing about a new record, not trainees.
-              actionPath: buildEntityUrl(NotificationEntityType.TRAINING, trainingId),
-            },
-            creatorName,
-            baseUrl,
-          );
-        }
-      } catch (notifyError) {
-        logger.error("Failed to send training assigned notification:", notifyError);
-      }
-
       return res.status(201).json(STATUS_CODE[201](createdNewTrainingRegistar));
     }
 
-    await transaction.rollback();
     await logFailure({
       eventType: "Create",
       description: "Failed to create training registrar",
@@ -228,7 +168,6 @@ export async function createNewTrainingRegistar(req: Request, res: Response): Pr
     });
     return res.status(503).json(STATUS_CODE[503]({}));
   } catch (error) {
-    await transaction.rollback();
     await logFailure({
       eventType: "Create",
       description: "Failed to create training registrar",
@@ -248,8 +187,6 @@ export async function updateTrainingRegistarById(req: Request, res: Response): P
     Array.isArray(req.params.id) ? req.params.id[0] : req.params.id,
   );
 
-  const transaction = await sequelize.transaction();
-
   logProcessing({
     description: `starting updateTrainingRegistarById for training registrar ID ${trainingRegistarId}`,
     functionName: "updateTrainingRegistarById",
@@ -260,47 +197,9 @@ export async function updateTrainingRegistarById(req: Request, res: Response): P
   logger.debug(`✏️ Updating training registrar ID ${trainingRegistarId}`);
 
   try {
-    // Map numberOfPeople to people for DB
-    const updatedTrainingRegistar: any = {
-      ...req.body,
-      people: req.body.numberOfPeople,
-    };
-    delete updatedTrainingRegistar.numberOfPeople;
-
-    // Get existing data for change tracking
-    const existingTraining = await getTrainingRegistarByIdQuery(
-      trainingRegistarId,
-      req.organizationId!,
-    );
-
-    const trainingRegistar = await updateTrainingRegistarByIdQuery(
-      trainingRegistarId,
-      updatedTrainingRegistar,
-      req.organizationId!,
-      transaction,
-    );
+    const trainingRegistar = await updateTrainingRecord(trainingRegistarId, req.body, actorOf(req));
 
     if (trainingRegistar) {
-      // Record changes in change history
-      if (existingTraining && req.userId) {
-        const changes = await trackEntityChanges(
-          "training",
-          existingTraining,
-          updatedTrainingRegistar,
-        );
-        if (changes.length > 0) {
-          await recordMultipleFieldChanges(
-            "training",
-            trainingRegistarId,
-            req.userId,
-            req.organizationId!,
-            changes,
-            transaction,
-          );
-        }
-      }
-
-      await transaction.commit();
       await logSuccess({
         eventType: "Update",
         description: `Successfully updated training registrar ID ${trainingRegistarId}`,
@@ -312,7 +211,6 @@ export async function updateTrainingRegistarById(req: Request, res: Response): P
       return res.status(202).json(STATUS_CODE[202](trainingRegistar));
     }
 
-    await transaction.rollback();
     await logFailure({
       eventType: "Update",
       description: `Training registrar not found: ID ${trainingRegistarId}`,
@@ -324,7 +222,6 @@ export async function updateTrainingRegistarById(req: Request, res: Response): P
     });
     return res.status(404).json(STATUS_CODE[404]({}));
   } catch (error) {
-    await transaction.rollback();
     await logFailure({
       eventType: "Update",
       description: `Failed to update training registrar ID ${trainingRegistarId}`,
@@ -342,8 +239,6 @@ export async function deleteTrainingRegistarById(req: Request, res: Response): P
   const trainingRegistarId = parseInt(
     Array.isArray(req.params.id) ? req.params.id[0] : req.params.id,
   );
-  const transaction = await sequelize.transaction();
-
   logProcessing({
     description: `starting deleteTrainingRegistarById for training registrar ID ${trainingRegistarId}`,
     functionName: "deleteTrainingRegistarById",
@@ -354,25 +249,9 @@ export async function deleteTrainingRegistarById(req: Request, res: Response): P
   logger.debug(`🗑️ Deleting training registrar ID ${trainingRegistarId}`);
 
   try {
-    const deleteTrainingRegistar = await deleteTrainingRegistarByIdQuery(
-      trainingRegistarId,
-      req.organizationId!,
-      transaction,
-    );
+    const deleteTrainingRegistar = await deleteTrainingRecord(trainingRegistarId, actorOf(req));
 
     if (deleteTrainingRegistar) {
-      // Record deletion in change history
-      if (req.userId) {
-        await recordEntityDeletion(
-          "training",
-          trainingRegistarId,
-          req.userId,
-          req.organizationId!,
-          transaction,
-        );
-      }
-
-      await transaction.commit();
       await logSuccess({
         eventType: "Delete",
         description: `Successfully deleted training registrar ID ${trainingRegistarId}`,
@@ -384,7 +263,6 @@ export async function deleteTrainingRegistarById(req: Request, res: Response): P
       return res.status(202).json(STATUS_CODE[202](deleteTrainingRegistar));
     }
 
-    await transaction.rollback();
     await logFailure({
       eventType: "Delete",
       description: `Training registrar not found: ID ${trainingRegistarId}`,
@@ -396,7 +274,6 @@ export async function deleteTrainingRegistarById(req: Request, res: Response): P
     });
     return res.status(404).json(STATUS_CODE[404]({}));
   } catch (error) {
-    await transaction.rollback();
     await logFailure({
       eventType: "Delete",
       description: `Failed to delete training registrar ID ${trainingRegistarId}`,

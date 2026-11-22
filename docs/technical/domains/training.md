@@ -342,7 +342,15 @@ Changing a training's status to Completed does not complete its assignments. A f
 
 ### Advisor
 
-The Advisor's `agent_assign_training_to_user` assigns one person with a required `due_date` through `assignTraining` in `services/trainingAssignment.service.ts`, the same function behind `POST /assignments`: same validation, organization and membership checks, change history and notice. It needs `training.edit`, held by the user who asked (else the approver), and since it emails the assignee it is a `warning`-level write: a person confirms it before it runs. A training record has no due date, so the record create and update tools take `duration` (free text such as "2 hours") and never a date.
+The Advisor's training writes run as the user who asked (else the approver), with the console's permission, through the console's own services, so an Advisor write leaves the same rows, history, automations and notices as a console one:
+
+| Tool | Permission | Service |
+|------|-----------|---------|
+| `agent_create_training_record`, `agent_update_training_record` | `training.edit` | `services/trainingRecord.service.ts` (also behind `POST`/`PATCH /api/training`) |
+| `agent_delete_training_record` | `training.admin` | `services/trainingRecord.service.ts` (also behind `DELETE /api/training/:id`) |
+| `agent_assign_training_to_user` | `training.edit` | `assignTraining` in `services/trainingAssignment.service.ts` (also behind `POST /assignments`) |
+
+Each tool's checks (permission; for an assignment the ids, the due date, the training in the organization and the person a member) run before the approval is requested, so nobody is asked to approve a call that cannot run, and again when it executes. The assignment takes a required `due_date`, emails the assignee and is a `warning`-level write: a person confirms it first. Its approval card names the training and the person (name and email). A training record has no due date: the record tools take `duration` (free text such as "2 hours") and refuse a `due_date`, including one in an approval stored before this changed.
 
 ### Change history
 

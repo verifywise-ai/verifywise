@@ -17,8 +17,19 @@ export type WriteExecuteFn = (
 interface WriteToolConfig {
   toolName: string;
   warningLevel: WarningLevel;
-  descriptionFn: (params: Record<string, unknown>) => string;
+  /** What the approval card says; may look names up in the organization. */
+  descriptionFn: (
+    params: Record<string, unknown>,
+    organizationId: number,
+  ) => string | Promise<string>;
   executeFn: WriteExecuteFn;
+  /**
+   * Checks run before anything is submitted for approval, with the caller's
+   * params (including _userId). A message refuses the call at once, so nobody
+   * is asked to approve an action that cannot run. The executor still checks
+   * again when it runs: things can change while an approval waits.
+   */
+  precheckFn?: (params: Record<string, unknown>, organizationId: number) => Promise<string | null>;
 }
 
 /**
@@ -48,8 +59,11 @@ export function createWriteToolFn(
     organizationId: number,
   ): Promise<ConfirmationToolResult | unknown> => {
     const userId = (params._userId as number) || 0;
+    const refusal = config.precheckFn ? await config.precheckFn(params, organizationId) : null;
+    if (refusal) return { success: false, message: refusal };
+
     const sanitized = sanitizeParams(params);
-    const description = config.descriptionFn(sanitized);
+    const description = await config.descriptionFn(sanitized, organizationId);
 
     const result = await submitForApproval({
       organizationId,

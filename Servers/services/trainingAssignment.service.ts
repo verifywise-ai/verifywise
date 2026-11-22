@@ -19,6 +19,7 @@ import {
   type TrainingAssignment,
 } from "../utils/trainingAssignment.utils";
 import { parseCreateAssignments } from "../utils/validations/trainingAssignmentValidation.utils";
+import { frontendBaseUrl } from "../utils/frontendUrl.utils";
 
 /** Who makes the change, and in which organization. */
 export interface TrainingAssignmentActor {
@@ -26,9 +27,23 @@ export interface TrainingAssignmentActor {
   organizationId: number;
 }
 
+export type AssignmentRefusal = {
+  ok: false;
+  status: 400 | 404;
+  message: string;
+  vars?: Record<string, string | number>;
+};
+
 export type AssignTrainingResult =
-  | { ok: true; created: TrainingAssignment[]; skippedUserIds: number[] }
-  | { ok: false; status: 400 | 404; message: string; vars?: Record<string, string | number> };
+  { ok: true; created: TrainingAssignment[]; skippedUserIds: number[] } | AssignmentRefusal;
+
+export type CheckedAssignment = {
+  ok: true;
+  training: AssignableTraining;
+  trainingId: number;
+  userIds: number[];
+  dueDate: string;
+};
 
 export const personName = (name: string, surname: string): string => `${name} ${surname}`.trim();
 
@@ -37,6 +52,10 @@ export const personName = (name: string, surname: string): string => `${name} ${
  * removing an assignment leaves a record of what it was and who changed it.
  * Ledger entries run one at a time afterwards: an assignment can name 500
  * people, and each ledger append takes a pool connection.
+ *
+ * The appends are awaited, so they finish before the request does: under RLS
+ * enforcement a query issued after the response would run on the request's
+ * finished transaction, and the ledger entry would be lost.
  *
  * The change itself is already saved, so a history failure is logged rather
  * than turned into an error that would hide a completed change.
@@ -68,9 +87,8 @@ export async function recordAssignmentHistory(
   } catch (error) {
     logger.error(`Failed to record assignment history for training ${trainingId}:`, error);
   }
-  void (async () => {
-    for (const append of ledgerAppends) await append();
-  })();
+  // Each append logs its own failure and never rejects.
+  for (const append of ledgerAppends) await append();
 }
 
 /**
@@ -83,7 +101,7 @@ async function notifyAssignees(
   created: TrainingAssignment[],
 ): Promise<void> {
   if (created.length === 0) return;
-  const baseUrl = process.env.FRONTEND_URL || "http://localhost:5173";
+  const baseUrl = frontendBaseUrl();
 
   let assignerName = "A colleague";
   try {
@@ -117,23 +135,23 @@ async function notifyAssignees(
 }
 
 /**
- * Assign a training to people of the actor's organization. `input` is the
- * unvalidated request: { training_id, user_ids, due_date }. Refusals carry an
- * English message (a locale key) and its variables. People already assigned
- * keep their row and due date and come back in skippedUserIds.
+ * The checks an assignment must pass before anything is written: the request
+ * ({ training_id, user_ids, due_date }, unvalidated), the training belonging
+ * to the organization, and every person being a member of it. Refusals carry
+ * an English message (a locale key) and its variables.
  */
-export async function assignTraining(
+export async function checkTrainingAssignment(
   input: Record<string, unknown> | undefined,
-  actor: TrainingAssignmentActor,
-): Promise<AssignTrainingResult> {
+  organizationId: number,
+): Promise<CheckedAssignment | AssignmentRefusal> {
   const parsed = parseCreateAssignments(input);
   if (!parsed.ok) return { ok: false, status: 400, message: parsed.message, vars: parsed.vars };
   const { training_id: trainingId, user_ids: userIds, due_date: dueDate } = parsed.value;
 
-  const training = await getAssignableTrainingQuery(trainingId, actor.organizationId);
+  const training = await getAssignableTrainingQuery(trainingId, organizationId);
   if (!training) return { ok: false, status: 404, message: "Training not found" };
 
-  const nonMembers = await getNonMemberUserIdsQuery(userIds, actor.organizationId);
+  const nonMembers = await getNonMemberUserIdsQuery(userIds, organizationId);
   if (nonMembers.length > 0) {
     return {
       ok: false,
@@ -141,6 +159,21 @@ export async function assignTraining(
       message: "Every person must be a member of this organization",
     };
   }
+  return { ok: true, training, trainingId, userIds, dueDate };
+}
+
+/**
+ * Assign a training to people of the actor's organization, after
+ * checkTrainingAssignment. People already assigned keep their row and due
+ * date and come back in skippedUserIds.
+ */
+export async function assignTraining(
+  input: Record<string, unknown> | undefined,
+  actor: TrainingAssignmentActor,
+): Promise<AssignTrainingResult> {
+  const checked = await checkTrainingAssignment(input, actor.organizationId);
+  if (!checked.ok) return checked;
+  const { training, trainingId, userIds, dueDate } = checked;
 
   const { created, skippedUserIds } = await createTrainingAssignmentsQuery(
     { trainingId, userIds, dueDate, assignedBy: actor.userId },
