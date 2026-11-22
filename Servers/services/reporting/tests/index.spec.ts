@@ -110,10 +110,15 @@ describe("Report Generation Service", () => {
         1,
       );
 
-      expect(mockDataCollector.collectAllData).toHaveBeenCalledWith(expect.any(Array), {
-        reportKind: "osfi_e23",
-        reportParameters: { institutionName: "Northern Bank" },
-      });
+      // No schedule or template id, so there is no previous run to compare with.
+      expect(mockDataCollector.collectAllData).toHaveBeenCalledWith(
+        expect.any(Array),
+        {
+          reportKind: "osfi_e23",
+          reportParameters: { institutionName: "Northern Bank" },
+        },
+        { priorE23Glance: null },
+      );
     });
 
     it("should generate DOCX report successfully", async () => {

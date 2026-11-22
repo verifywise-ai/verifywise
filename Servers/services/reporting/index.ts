@@ -14,7 +14,7 @@ import { createDataCollector, createScopedDataCollector } from "./dataCollector"
 import { resolveFrameworkTargets } from "./reportScope";
 import { generatePDF, closeBrowser } from "./pdfGenerator";
 import { generateDOCX } from "./docxGenerator";
-import logger from "../../utils/logger/fileLogger";
+import logger, { logStructuredError } from "../../utils/logger/fileLogger";
 import { runAnalyzers } from "./analyzers/runAnalyzers";
 import {
   collectAllowedOwners,
@@ -27,6 +27,10 @@ import {
 import { mapAnalysesToSummaries } from "./analyzers/mapToSummaries";
 import { getLLMKeysWithKeyQuery } from "../../utils/llmKey.utils";
 import { SECTION_KEYS } from "./sectionCatalog";
+import { getPriorE23GlanceQuery } from "../../utils/reportRun.utils";
+import { E23_KIND } from "./e23/e23Parameters";
+import { toE23GlanceSnapshot } from "./e23/glance";
+import type { E23GlanceSnapshot } from "../../domain.layer/interfaces/i.reportGeneration";
 
 /**
  * Valid section keys that can be passed directly from the frontend.
@@ -86,6 +90,31 @@ function getRequestedSections(reportType: string | string[]): string[] {
 }
 
 /**
+ * The previous comparable E-23 run's glance: same schedule for a scheduled
+ * run, same template (any trigger) otherwise. A failed lookup only loses the
+ * comparison, never the report.
+ */
+async function priorE23Glance(
+  request: ReportGenerationRequest,
+  organizationId: number,
+): Promise<E23GlanceSnapshot | null> {
+  try {
+    return await getPriorE23GlanceQuery(organizationId, {
+      scheduledReportId: request.scheduledReportId,
+      templateId: request.templateId,
+    });
+  } catch (error) {
+    logStructuredError(
+      `Report: previous E-23 glance lookup failed, no comparison shown (organizationId=${organizationId})`,
+      error,
+      "priorE23Glance",
+      "index.ts",
+    );
+    return null;
+  }
+}
+
+/**
  * Generate a report in the specified format
  */
 export async function generateReport(
@@ -126,10 +155,14 @@ export async function generateReport(
 
     // Collect all report data. The kind and parameters ride on the metadata
     // so the renderers can read them alongside everything else they show.
-    const reportData = await dataCollector.collectAllData(sections, {
-      reportKind: request.reportKind,
-      reportParameters: request.reportParameters,
-    });
+    // An E-23 run also gets the previous comparable run's glance (spec 8.10).
+    const run = { reportKind: request.reportKind, reportParameters: request.reportParameters };
+    const reportData =
+      request.reportKind === E23_KIND
+        ? await dataCollector.collectAllData(sections, run, {
+            priorE23Glance: await priorE23Glance(request, organizationId),
+          })
+        : await dataCollector.collectAllData(sections, run);
 
     // AI analysis (optional, per-block gated)
     let analyses: Record<string, any> | undefined;
@@ -239,15 +272,23 @@ export async function generateReport(
       result.filename = `${baseName}_AI_${ext}`;
     }
 
-    const collectionFailures = (reportData.sectionNotices ?? [])
-      .filter((n) => n.reason === "collection_failed" && n.detail)
-      .map((n) => n.detail as string);
+    // Deduplicated: one unreadable source (the MRM data) can raise a notice on
+    // several sections, and the run message should name it once.
+    const collectionFailures = [
+      ...new Set(
+        (reportData.sectionNotices ?? [])
+          .filter((n) => n.reason === "collection_failed" && n.detail)
+          .map((n) => n.detail as string),
+      ),
+    ];
+    const glance = reportData.sections.e23Glance;
 
     return {
       ...result,
       analyses,
       factsSnapshot,
       ...(collectionFailures.length > 0 && { collectionFailures }),
+      ...(glance && { e23Glance: toE23GlanceSnapshot(glance, reportData.metadata.generatedAt) }),
     };
   } catch (error) {
     console.error("Error generating report:", error);

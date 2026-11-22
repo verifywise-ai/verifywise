@@ -6,6 +6,7 @@ import {
   listRunsQuery,
   canViewRunQuery,
   getLastParametersQuery,
+  getPriorE23GlanceQuery,
 } from "../reportRun.utils";
 const q = sequelize.query as jest.Mock;
 const ADMIN = { userId: 1, role: "Admin" };
@@ -160,6 +161,78 @@ describe("canViewRunQuery", () => {
         parameters: { institutionName: "Northern Bank" },
         periodEnd: "2026-10-31",
       });
+    });
+  });
+  describe("updateRunStatusQuery configSnapshotPatch", () => {
+    it("merges the patch into config_snapshot", async () => {
+      await updateRunStatusQuery(5, 7, {
+        status: "success",
+        configSnapshotPatch: { e23_glance: { rulesFired: 2 } },
+      });
+      const [sql, opts] = q.mock.calls[0];
+      expect(sql).toContain(
+        "config_snapshot = COALESCE(config_snapshot, '{}'::jsonb) || CAST(:config_snapshot_patch AS jsonb)",
+      );
+      expect(JSON.parse(opts.replacements.config_snapshot_patch)).toEqual({
+        e23_glance: { rulesFired: 2 },
+      });
+    });
+    it("leaves config_snapshot alone without a patch", async () => {
+      await updateRunStatusQuery(5, 7, { status: "success" });
+      expect(q.mock.calls[0][0]).not.toContain("config_snapshot");
+    });
+  });
+
+  describe("getPriorE23GlanceQuery", () => {
+    const stored = {
+      requirementsDone: 30,
+      requirementsTotal: 83,
+      groupsChecked: 2,
+      groupsTotal: 3,
+      rulesFired: 1,
+      rulesTotal: 13,
+      modelsInScope: 12,
+      untiered: 3,
+      overdueValidations: 4,
+      openCriticalHigh: 3,
+      fixIt: { high: 6, medium: 5, low: 4 },
+      generatedAt: "2026-08-01T00:00:00.000Z",
+    };
+    it("prefers the schedule when both ids are given", async () => {
+      q.mockResolvedValueOnce([{ glance: stored }]);
+      const prior = await getPriorE23GlanceQuery(7, { scheduledReportId: 3, templateId: 4 });
+      const [sql, opts] = q.mock.calls[0];
+      expect(sql).toContain("rr.scheduled_report_id = :scheduledReportId");
+      expect(sql).not.toContain("rr.template_id = :templateId");
+      expect(opts.replacements).toEqual({ organization_id: 7, scheduledReportId: 3 });
+      expect(prior).toEqual(stored);
+    });
+    it("falls back to the template, any trigger", async () => {
+      q.mockResolvedValueOnce([]);
+      const prior = await getPriorE23GlanceQuery(7, { templateId: 4 });
+      const [sql, opts] = q.mock.calls[0];
+      expect(sql).toContain("rr.template_id = :templateId");
+      expect(sql).not.toContain("scheduled_report_id");
+      expect(sql).not.toContain("triggered_by");
+      expect(opts.replacements).toEqual({ organization_id: 7, templateId: 4 });
+      expect(prior).toBeNull();
+    });
+    it("reads only finished runs of this organization that stored a glance", async () => {
+      q.mockResolvedValueOnce([]);
+      await getPriorE23GlanceQuery(7, { templateId: 4 });
+      const sql = q.mock.calls[0][0];
+      expect(sql).toContain("rr.organization_id = :organization_id");
+      expect(sql).toContain("rr.status IN ('success', 'partial_success')");
+      expect(sql).toContain("jsonb_typeof(rr.config_snapshot->'e23_glance') = 'object'");
+      expect(sql).toContain("ORDER BY rr.completed_at DESC NULLS LAST, rr.id DESC");
+    });
+    it("does not query without a schedule or template", async () => {
+      expect(await getPriorE23GlanceQuery(7, {})).toBeNull();
+      expect(q).not.toHaveBeenCalled();
+    });
+    it("returns null for a malformed stored glance", async () => {
+      q.mockResolvedValueOnce([{ glance: { rulesFired: "x" } }]);
+      expect(await getPriorE23GlanceQuery(7, { templateId: 4 })).toBeNull();
     });
   });
 });

@@ -24,6 +24,10 @@ import {
   PolicyManagerSectionData,
   IncidentManagementSectionData,
   FrameworkRequirementsSectionData,
+  MrmFleetSectionData,
+  E23ContradictionsSectionData,
+  E23FixItListSectionData,
+  E23GlanceSnapshot,
 } from "../../domain.layer/interfaces/i.reportGeneration";
 import type { SectionNotice } from "../../domain.layer/interfaces/i.reportGeneration";
 import {
@@ -63,7 +67,13 @@ import { getUserByIdQuery } from "../../utils/user.utils";
 import { getProjectByIdQuery } from "../../utils/project.utils";
 import { getAllFrameworkByIdQuery } from "../../utils/framework.utils";
 import { sequelize } from "../../database/db";
-import logger from "../../utils/logger/fileLogger";
+import logger, { logStructuredError } from "../../utils/logger/fileLogger";
+import { collectMrmModelFacts } from "./collectors/mrmModelFacts";
+import { buildInventoryAppendix, buildMrmFleet } from "./e23/mrmFleet";
+import { evaluateE23Rules } from "./e23/contradictionRules";
+import { buildE23FixItList } from "./e23/fixItList";
+import { buildE23Glance } from "./e23/glance";
+import { E23_FRAMEWORK_ID, E23_KIND } from "./e23/e23Parameters";
 import { QueryTypes } from "sequelize";
 import { effectiveRiskLevelSql, getEffectiveRiskLevel } from "../../utils/riskLevel.utils";
 
@@ -100,6 +110,29 @@ const RISK_LEVEL_COLORS: Record<string, string> = {
 
 // A future status chart should use status.success.text, status.warning.text,
 // status.error.text, and text.secondary from the shared palette.
+
+/** E-23 sections that are built from the MRM data (sign-off is not). */
+const MRM_SECTION_KEYS = [
+  "mrmFleet",
+  "e23Contradictions",
+  "e23FixItList",
+  "mrmInventoryAppendix",
+] as const;
+const MRM_FAILURE_DETAIL = "Model risk management data";
+
+/**
+ * The E-23 part of a requirements section, for the rules. Undefined when no
+ * E-23 pairing was read, and also when any E-23 pairing failed: rules run on a
+ * partial checklist would report a requirement as missing that is only unread.
+ */
+const e23Only = (
+  data: FrameworkRequirementsSectionData | undefined,
+  failed: FrameworkTarget[],
+): FrameworkRequirementsSectionData | undefined => {
+  if (failed.some((t) => t.frameworkId === E23_FRAMEWORK_ID)) return undefined;
+  const frameworks = (data?.frameworks ?? []).filter((f) => f.frameworkId === E23_FRAMEWORK_ID);
+  return frameworks.length > 0 ? { frameworks } : undefined;
+};
 
 export class ReportDataCollector {
   private organizationId: number;
@@ -281,6 +314,10 @@ export class ReportDataCollector {
   async collectAllData(
     sections: string[],
     run: Pick<ReportMetadata, "reportKind" | "reportParameters"> = {},
+    options: {
+      /** E-23 runs only: the previous comparable run's glance, or null. */
+      priorE23Glance?: E23GlanceSnapshot | null;
+    } = {},
   ): Promise<ReportData> {
     const metadata: ReportMetadata = { ...(await this.collectMetadata()), ...run };
     const branding = await this.collectBranding();
@@ -444,55 +481,56 @@ export class ReportDataCollector {
     }
 
     // Bundled frameworks (ids 5-28) share one generic section.
+    //
+    // An E-23 kind run also needs the E-23 (framework 26) requirements for its
+    // rules, fix-it list and glance, whether or not the section itself was
+    // selected. When it was, the E-23 part is read off the section; when it was
+    // not, only the E-23 pairings are collected, the same way.
+    const isE23Run = run.reportKind === E23_KIND;
     const bundledTargets = targets.filter((t) => isBundledFrameworkId(t.frameworkId));
-    if (bundledTargets.length > 0) {
-      if (sections.includes("frameworkRequirements") || sections.includes("all")) {
-        const generatedAt = metadata.generatedAt;
-        // One pairing that cannot be read must not lose the report: collect
-        // each independently, name the failed one in a notice, merge the rest.
-        const failedTargets: FrameworkTarget[] = [];
-        const contributions: SectionContribution<FrameworkRequirementsSectionData>[] = [];
-        for (const t of bundledTargets) {
-          try {
-            contributions.push({
-              useCase: t.projectTitle,
-              framework: t.frameworkName,
-              data: await collectFrameworkRequirements(
-                t,
-                this.organizationId,
-                generatedAt,
-                this.resolveUserNames.bind(this),
-              ),
-            });
-          } catch (error) {
-            logger.error(
-              `Report: frameworkRequirements collection failed (organizationId=${this.organizationId}, ` +
-                `frameworkId=${t.frameworkId}, projectFrameworkId=${t.projectFrameworkId}): ` +
-                `${error instanceof Error ? (error.stack ?? error.message) : String(error)}`,
-            );
-            failedTargets.push(t);
-          }
+    const e23Targets = bundledTargets.filter((t) => t.frameworkId === E23_FRAMEWORK_ID);
+    const wantsRequirements =
+      sections.includes("frameworkRequirements") || sections.includes("all");
+    let e23Requirements: FrameworkRequirementsSectionData | undefined;
+    if (bundledTargets.length > 0 && wantsRequirements) {
+      const { data, failed } = await this.collectBundledRequirements(
+        bundledTargets,
+        metadata.generatedAt,
+        sectionNotices,
+      );
+      sectionData.frameworkRequirements = data;
+      if (isE23Run) {
+        e23Requirements = e23Only(data, failed);
+        if (e23Targets.length === 0 && requested("frameworkRequirements")) {
+          sectionNotices.push({ sectionKey: "frameworkRequirements", reason: noticeReason });
         }
-        // "<framework> for <use case>"; the project id is appended only when two
-        // failures would otherwise read the same.
-        const describe = (t: FrameworkTarget) =>
-          t.isOrganizationalProject
-            ? `${t.frameworkName} (organization)`
-            : `${t.frameworkName} for ${t.projectTitle}`;
-        const counts = new Map<string, number>();
-        failedTargets.forEach((t) => counts.set(describe(t), (counts.get(describe(t)) ?? 0) + 1));
-        for (const t of failedTargets) {
-          const base = describe(t);
-          sectionNotices.push({
-            sectionKey: "frameworkRequirements",
-            reason: "collection_failed",
-            detail: counts.get(base)! > 1 ? `${base} (use case #${t.projectId})` : base,
-          });
-        }
-        sectionData.frameworkRequirements = mergeFrameworkRequirements(contributions);
       }
-    } else if (requested("frameworkRequirements")) {
+    } else if (bundledTargets.length === 0 && requested("frameworkRequirements")) {
       sectionNotices.push({ sectionKey: "frameworkRequirements", reason: noticeReason });
+    } else if (isE23Run && e23Targets.length > 0) {
+      const { data, failed } = await this.collectBundledRequirements(
+        e23Targets,
+        metadata.generatedAt,
+        sectionNotices,
+      );
+      e23Requirements = e23Only(data, failed);
+    }
+
+    if (isE23Run) {
+      // No E-23 pairing at all: the rules cannot run. A pairing that exists but
+      // failed already has its collection_failed notice, so no second one.
+      if (e23Targets.length === 0 && requested("e23Contradictions")) {
+        sectionNotices.push({ sectionKey: "e23Contradictions", reason: noticeReason });
+      }
+      await this.collectE23Sections({
+        requested,
+        generatedAt: metadata.generatedAt,
+        reportParameters: run.reportParameters,
+        requirements: e23Requirements,
+        priorGlance: options.priorE23Glance ?? null,
+        sectionData,
+        sectionNotices,
+      });
     }
 
     // ============================================
@@ -537,6 +575,138 @@ export class ReportDataCollector {
       sections: sectionData,
       sectionNotices,
     };
+  }
+
+  /**
+   * Collects the frameworkRequirements section over bundled pairings. One
+   * pairing that cannot be read must not lose the report: each is collected
+   * independently, the failed one is named in a notice, the rest are merged.
+   */
+  private async collectBundledRequirements(
+    bundledTargets: FrameworkTarget[],
+    generatedAt: Date,
+    sectionNotices: SectionNotice[],
+  ): Promise<{
+    data: FrameworkRequirementsSectionData | undefined;
+    failed: FrameworkTarget[];
+  }> {
+    const failedTargets: FrameworkTarget[] = [];
+    const contributions: SectionContribution<FrameworkRequirementsSectionData>[] = [];
+    for (const t of bundledTargets) {
+      try {
+        contributions.push({
+          useCase: t.projectTitle,
+          framework: t.frameworkName,
+          data: await collectFrameworkRequirements(
+            t,
+            this.organizationId,
+            generatedAt,
+            this.resolveUserNames.bind(this),
+          ),
+        });
+      } catch (error) {
+        logger.error(
+          `Report: frameworkRequirements collection failed (organizationId=${this.organizationId}, ` +
+            `frameworkId=${t.frameworkId}, projectFrameworkId=${t.projectFrameworkId}): ` +
+            `${error instanceof Error ? (error.stack ?? error.message) : String(error)}`,
+        );
+        failedTargets.push(t);
+      }
+    }
+    // "<framework> for <use case>"; the project id is appended only when two
+    // failures would otherwise read the same.
+    const describe = (t: FrameworkTarget) =>
+      t.isOrganizationalProject
+        ? `${t.frameworkName} (organization)`
+        : `${t.frameworkName} for ${t.projectTitle}`;
+    const counts = new Map<string, number>();
+    failedTargets.forEach((t) => counts.set(describe(t), (counts.get(describe(t)) ?? 0) + 1));
+    for (const t of failedTargets) {
+      const base = describe(t);
+      sectionNotices.push({
+        sectionKey: "frameworkRequirements",
+        reason: "collection_failed",
+        detail: counts.get(base)! > 1 ? `${base} (use case #${t.projectId})` : base,
+      });
+    }
+    return { data: mergeFrameworkRequirements(contributions), failed: failedTargets };
+  }
+
+  /**
+   * The E-23 sections of a kind run (spec 8.3), all derived from one read of
+   * the MRM data. Each is set only when selected; the glance always is.
+   *
+   * A failed MRM read does not fail the report: every selected section that
+   * needs it gets a collection_failed notice and is left out, and the glance
+   * carries mrmUnavailable with its model figures at 0.
+   */
+  private async collectE23Sections(input: {
+    requested: (key: string) => boolean;
+    generatedAt: Date;
+    reportParameters: ReportMetadata["reportParameters"];
+    requirements: FrameworkRequirementsSectionData | undefined;
+    priorGlance: E23GlanceSnapshot | null;
+    sectionData: ReportData["sections"];
+    sectionNotices: SectionNotice[];
+  }): Promise<void> {
+    const { requested, generatedAt, requirements, sectionData, sectionNotices } = input;
+    const params = input.reportParameters ?? {};
+    const period =
+      typeof params.periodStart === "string" && typeof params.periodEnd === "string"
+        ? { start: params.periodStart, end: params.periodEnd }
+        : null;
+
+    let facts: Awaited<ReturnType<typeof collectMrmModelFacts>> | null = null;
+    try {
+      facts = await collectMrmModelFacts(
+        this.organizationId,
+        generatedAt,
+        period,
+        this.resolveUserNames.bind(this),
+      );
+    } catch (error) {
+      logStructuredError(
+        `Report: MRM model facts collection failed (organizationId=${this.organizationId})`,
+        error,
+        "collectE23Sections",
+        "dataCollector.ts",
+      );
+      for (const key of MRM_SECTION_KEYS) {
+        if (requested(key)) {
+          sectionNotices.push({
+            sectionKey: key,
+            reason: "collection_failed",
+            detail: MRM_FAILURE_DETAIL,
+          });
+        }
+      }
+    }
+
+    let fleet: MrmFleetSectionData | undefined;
+    let contradictions: E23ContradictionsSectionData | undefined;
+    let fixIt: E23FixItListSectionData | undefined;
+    if (facts) {
+      const { models } = facts;
+      fleet = buildMrmFleet(models, facts.activity, generatedAt);
+      contradictions = evaluateE23Rules({ requirements, models, generatedAt });
+      fixIt = buildE23FixItList({ requirements, contradictions, models, generatedAt });
+      if (requested("mrmFleet")) sectionData.mrmFleet = fleet;
+      if (requested("e23Contradictions")) sectionData.e23Contradictions = contradictions;
+      if (requested("e23FixItList")) sectionData.e23FixItList = fixIt;
+      if (requested("mrmInventoryAppendix")) {
+        sectionData.mrmInventoryAppendix = buildInventoryAppendix(models);
+      }
+    }
+    if (requested("signOff")) sectionData.signOff = {};
+
+    sectionData.e23Glance = buildE23Glance({
+      requirements,
+      contradictions,
+      fleet,
+      fixIt,
+      mrmUnavailable: facts === null,
+      previous: input.priorGlance,
+    });
   }
 
   /**

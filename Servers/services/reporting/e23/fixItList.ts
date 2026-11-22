@@ -19,8 +19,8 @@ import { hasNoActiveOwner } from "../collectors/frameworkRollup";
 import type { E23RuleId } from "./contradictionRules";
 import { FIX_IT_CLOSES_WHEN } from "./e23Text";
 import { isCriticalOrHigh, isOpenFinding, isValidationOverdue, time } from "./mrmFleet";
+import { E23_FRAMEWORK_ID } from "./e23Parameters";
 
-const E23_FRAMEWORK_ID = 26;
 const UNASSIGNED = "Unassigned";
 // Typed against the shared status list, so a rename fails the typecheck.
 const NEEDS_REWORK: Status = "Needs rework";

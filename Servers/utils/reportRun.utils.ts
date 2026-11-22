@@ -2,6 +2,8 @@ import { sequelize } from "../database/db";
 import { QueryTypes } from "sequelize";
 import { deleteFileById } from "./fileUpload.utils";
 import type { ReportParameters } from "../domain.layer/interfaces/i.reportTemplate";
+import type { E23GlanceSnapshot } from "../domain.layer/interfaces/i.reportGeneration";
+import { parseStoredE23Glance } from "../services/reporting/e23/glance";
 
 export async function createRunQuery(input: any): Promise<any> {
   const rows: any[] = await sequelize.query(
@@ -31,14 +33,20 @@ const TERMINAL_RUN_STATUSES = ["success", "failed", "partial_success"];
 // completed_at is only stamped for terminal statuses. Setting it
 // unconditionally would mark a run complete on any future intermediate-progress
 // update through this same function.
+//
+// fields.configSnapshotPatch, when given, is merged into config_snapshot (top-
+// level keys replaced), e.g. { e23_glance } at the end of an E-23 run.
 export async function updateRunStatusQuery(
   id: number,
   organization_id: number,
   fields: any,
 ): Promise<void> {
   const completedAt = TERMINAL_RUN_STATUSES.includes(fields.status) ? "completed_at = NOW(), " : "";
+  const patch = fields.configSnapshotPatch
+    ? "config_snapshot = COALESCE(config_snapshot, '{}'::jsonb) || CAST(:config_snapshot_patch AS jsonb), "
+    : "";
   await sequelize.query(
-    `UPDATE report_runs SET status = :status, ${completedAt}file_id = :file_id, output_filename = :output_filename,
+    `UPDATE report_runs SET status = :status, ${completedAt}${patch}file_id = :file_id, output_filename = :output_filename,
        output_mime_type = :output_mime_type, delivery_status = :delivery_status, ai_status = :ai_status,
        ai_tokens_used = :ai_tokens_used, ai_cost = :ai_cost, duration_ms = :duration_ms, error_message = :error_message, updated_at = NOW()
      WHERE id = :id AND organization_id = :organization_id`,
@@ -56,6 +64,9 @@ export async function updateRunStatusQuery(
         ai_cost: fields.ai_cost ?? null,
         duration_ms: fields.duration_ms ?? null,
         error_message: fields.error_message ?? null,
+        ...(fields.configSnapshotPatch && {
+          config_snapshot_patch: JSON.stringify(fields.configSnapshotPatch),
+        }),
       },
       type: QueryTypes.UPDATE,
     },
@@ -287,6 +298,47 @@ export async function getLastParametersQuery(
     parameters,
     periodEnd: typeof periodEnd === "string" ? periodEnd : null,
   };
+}
+
+/**
+ * The "at a glance" figures of the previous comparable E-23 run, for the
+ * change-since-last-run line (spec 8.10): the latest finished run (success or
+ * partial_success) of the same schedule when the run has one, else of the same
+ * template whatever triggered it. Null when there is none, when neither id is
+ * known, or when the stored figures are malformed.
+ *
+ * No viewer rule here: the result goes into the report being generated, whose
+ * runner already reads the whole organization's data.
+ */
+export async function getPriorE23GlanceQuery(
+  organizationId: number,
+  opts: { scheduledReportId?: number; templateId?: number },
+): Promise<E23GlanceSnapshot | null> {
+  const where = [
+    "rr.organization_id = :organization_id",
+    "rr.status IN ('success', 'partial_success')",
+    "jsonb_typeof(rr.config_snapshot->'e23_glance') = 'object'",
+  ];
+  const replacements: Record<string, unknown> = { organization_id: organizationId };
+  if (opts.scheduledReportId) {
+    where.push("rr.scheduled_report_id = :scheduledReportId");
+    replacements.scheduledReportId = opts.scheduledReportId;
+  } else if (opts.templateId) {
+    where.push("rr.template_id = :templateId");
+    replacements.templateId = opts.templateId;
+  } else {
+    return null;
+  }
+
+  const rows: { glance: unknown }[] = await sequelize.query(
+    `SELECT rr.config_snapshot->'e23_glance' AS glance
+     FROM report_runs rr
+     WHERE ${where.join(" AND ")}
+     ORDER BY rr.completed_at DESC NULLS LAST, rr.id DESC
+     LIMIT 1`,
+    { replacements, type: QueryTypes.SELECT },
+  );
+  return rows[0] ? parseStoredE23Glance(rows[0].glance) : null;
 }
 
 export async function getRunQuery(id: number, organization_id: number): Promise<any> {

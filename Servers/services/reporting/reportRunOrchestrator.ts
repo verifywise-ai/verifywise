@@ -142,6 +142,9 @@ export async function runScheduledReport(
       }),
       ai_status: aiStatus ?? undefined,
       duration_ms: Date.now() - startedAt,
+      // An E-23 run keeps its "at a glance" figures on the run, so the next
+      // run of the same schedule or template can show the change (spec 8.10).
+      ...(result.e23Glance && { configSnapshotPatch: { e23_glance: result.e23Glance } }),
     });
     return { runId: run.id, status };
   } catch (e: any) {

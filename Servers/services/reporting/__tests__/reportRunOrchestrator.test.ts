@@ -427,4 +427,61 @@ describe("runScheduledReport", () => {
       expect(createRunQuery.mock.calls[0][0].config_snapshot.report_parameters).toEqual({});
     });
   });
+  describe("E-23 glance storage", () => {
+    const glance = { rulesFired: 2, generatedAt: "2026-10-01T00:00:00.000Z" };
+    const delivered = {
+      storage: { status: "success", fileId: 5 },
+      emailLink: { status: "skipped" },
+      attachment: { status: "skipped" },
+      fileId: 5,
+    };
+    const generated = {
+      success: true,
+      content: Buffer.from("x"),
+      filename: "r.pdf",
+      mimeType: "application/pdf",
+      e23Glance: glance,
+    };
+
+    it("merges the glance into config_snapshot on success", async () => {
+      generateReport.mockResolvedValue(generated);
+      deliverReport.mockResolvedValue(delivered);
+      await runScheduledReport(sched as any, { triggeredBy: "manual" });
+      expect(updateRunStatusQuery).toHaveBeenCalledWith(
+        77,
+        sched.organization_id,
+        expect.objectContaining({
+          status: "success",
+          configSnapshotPatch: { e23_glance: glance },
+        }),
+      );
+    });
+
+    it("stores it on partial_success too", async () => {
+      generateReport.mockResolvedValue({ ...generated, collectionFailures: ["MRM"] });
+      deliverReport.mockResolvedValue(delivered);
+      await runScheduledReport(sched as any, { triggeredBy: "manual" });
+      expect(updateRunStatusQuery).toHaveBeenCalledWith(
+        77,
+        sched.organization_id,
+        expect.objectContaining({
+          status: "partial_success",
+          configSnapshotPatch: { e23_glance: glance },
+        }),
+      );
+    });
+
+    it("does not store it on a failed run", async () => {
+      generateReport.mockResolvedValue({ ...generated, success: false, error: "x" });
+      await runScheduledReport(sched as any, { triggeredBy: "manual" });
+      expect(updateRunStatusQuery.mock.calls[0][2].configSnapshotPatch).toBeUndefined();
+    });
+
+    it("sends no patch for a run without a glance", async () => {
+      generateReport.mockResolvedValue({ ...generated, e23Glance: undefined });
+      deliverReport.mockResolvedValue(delivered);
+      await runScheduledReport(sched as any, { triggeredBy: "manual" });
+      expect(updateRunStatusQuery.mock.calls[0][2]).not.toHaveProperty("configSnapshotPatch");
+    });
+  });
 });

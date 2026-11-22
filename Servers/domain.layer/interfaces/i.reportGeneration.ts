@@ -109,6 +109,11 @@ export interface ReportGenerationResult {
   content: Buffer;
   mimeType: string;
   error?: string;
+  /**
+   * An E-23 run's "at a glance" figures, stored on the run so the next run can
+   * show the change since this one.
+   */
+  e23Glance?: E23GlanceSnapshot;
   /** A second file produced by the same run, stored beside the main report. */
   companion?: { filename: string; content: Buffer; mimeType: string };
   /**
@@ -300,6 +305,10 @@ export interface ReportData {
     mrmInventoryAppendix?: MrmInventoryAppendixSectionData;
     e23Contradictions?: E23ContradictionsSectionData;
     e23FixItList?: E23FixItListSectionData;
+    /** Always set on an E-23 kind run, whichever sections were selected. */
+    e23Glance?: E23Glance;
+    /** The sign-off page carries no data; its presence means "render it". */
+    signOff?: Record<string, never>;
     // Organization group
     vendors?: VendorsListSectionData;
     models?: ModelsListSectionData;
@@ -699,6 +708,39 @@ export interface E23FixItItem {
 export interface E23FixItListSectionData {
   items: E23FixItItem[];
   counts: { high: number; medium: number; low: number };
+}
+
+/** The fixed "at a glance" figures of an E-23 report (spec 8.3 item 3). */
+export interface E23GlanceFigures {
+  /** E-23 (framework 26) requirements implemented or audited, pooled over pairings. */
+  requirementsDone: number;
+  requirementsTotal: number;
+  /** E-23 groups checked against MRM data, of all groups the rules know. */
+  groupsChecked: number;
+  groupsTotal: number;
+  rulesFired: number;
+  rulesTotal: number;
+  /** Non-retired models. */
+  modelsInScope: number;
+  untiered: number;
+  overdueValidations: number;
+  openCriticalHigh: number;
+  fixIt: { high: number; medium: number; low: number };
+}
+
+/** The figures as stored on a run (config_snapshot.e23_glance). */
+export interface E23GlanceSnapshot extends E23GlanceFigures {
+  /** ISO timestamp of the run that produced them. */
+  generatedAt: string;
+  /** True when that run could not read the MRM data; its model figures are 0. */
+  mrmUnavailable?: boolean;
+}
+
+export interface E23Glance extends E23GlanceFigures {
+  /** True when the MRM data could not be read: model and fix-it figures are 0. */
+  mrmUnavailable?: boolean;
+  /** The previous comparable run's figures, or null when there is none. */
+  previous: E23GlanceSnapshot | null;
 }
 
 // NIST AI RMF Subcategories (Compliance & Governance group)

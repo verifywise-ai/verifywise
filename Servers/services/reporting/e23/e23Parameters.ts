@@ -11,6 +11,9 @@ import { ReportParameterField } from "../../../domain.layer/interfaces/i.reportT
 
 export const E23_KIND = "osfi_e23";
 
+/** The bundled OSFI E-23 framework (Servers/structures registry id). */
+export const E23_FRAMEWORK_ID = 26;
+
 export const E23_PARAMETER_FIELDS: ReportParameterField[] = [
   { key: "periodStart", label: "Period start", type: "date", required: true },
   { key: "periodEnd", label: "Period end", type: "date", required: true },

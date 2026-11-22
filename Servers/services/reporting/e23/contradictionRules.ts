@@ -28,8 +28,8 @@ import {
   METRIC_STALE_DAYS,
   time,
 } from "./mrmFleet";
+import { E23_FRAMEWORK_ID } from "./e23Parameters";
 
-const E23_FRAMEWORK_ID = 26;
 const MAX_EXAMPLES = 5;
 
 export type E23RuleId =
