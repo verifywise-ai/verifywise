@@ -57,18 +57,28 @@ describe("computeNextRun", () => {
       expect(q(a)).toBe("2027-01-01T09:00:00.000Z");
       expect(logger.warn).toHaveBeenCalled();
     });
+    it("undefined anchor falls back to 1 without warning", () => {
+      (logger.warn as jest.Mock).mockClear();
+      const next = computeNextRun(
+        { frequency: "quarterly", hour: 9, minute: 0, timezone: "UTC", dayOfMonth: 1 },
+        now,
+      );
+      expect(next.toISOString()).toBe("2027-01-01T09:00:00.000Z");
+      expect(logger.warn).not.toHaveBeenCalled();
+    });
     it("anchor 12 -> next is 2026-12-01", () => {
       expect(q(12)).toBe("2026-12-01T09:00:00.000Z");
     });
   });
 
   it("unknown stored frequency falls back to the monthly cron", () => {
+    (logger.warn as jest.Mock).mockClear();
     const next = computeNextRun(
       { frequency: "yearly", hour: 9, minute: 0, timezone: "UTC", dayOfMonth: 1 } as any,
       from,
     );
     expect(next.toISOString()).toBe("2026-07-01T09:00:00.000Z");
-    expect(logger.warn).toHaveBeenCalled();
+    expect(logger.warn).toHaveBeenCalledWith(expect.stringContaining('unknown frequency "yearly"'));
   });
 });
 

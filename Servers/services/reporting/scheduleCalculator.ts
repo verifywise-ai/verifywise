@@ -15,6 +15,7 @@ function quarterlyMonths(anchorMonth: number): string {
 
 // A stored anchorMonth outside 1-12 must never build an invalid cron.
 function safeAnchor(a: unknown): number {
+  if (a === undefined || a === null) return 1;
   if (typeof a === "number" && Number.isInteger(a) && a >= 1 && a <= 12) return a;
   logger.warn(`computeNextRun: invalid quarterly anchorMonth "${String(a)}", using 1`);
   return 1;
