@@ -48,81 +48,105 @@ describe("Report framework requirements tenant isolation", () => {
     await cleanupDatabase();
   });
 
-  it("does not count another organization's evidence or risks and returns only own rows", async () => {
+  async function setup() {
     const { owner, attacker } = await seedTwoTenantContexts();
     const a = await seedE23(owner.orgId, owner.userId);
     const b = await seedE23(attacker.orgId, attacker.userId);
-    expect(a.implRows.length).toBeGreaterThan(0);
-    expect(b.implRows.length).toBe(a.implRows.length);
-
-    // Org B attaches evidence and links a risk to the same requirement struct,
-    // and also plants rows that name org A's impl id under org B's tenant.
     const bImpl = b.implRows[0];
-    const aImplSameStruct = a.implRows.find(
-      (r) => r.requirement_meta_id === bImpl.requirement_meta_id,
-    )!;
+    const aImpl = a.implRows.find((r) => r.requirement_meta_id === bImpl.requirement_meta_id)!;
     const bFile = await createTestFile(attacker.orgId, attacker.userId, {
       filename: "org-b-evidence.pdf",
       project_id: b.projectId,
     });
-    for (const entityId of [bImpl.id, aImplSameStruct.id]) {
-      await createTestFileEntityLink(attacker.orgId, {
+    const bRisk = await createTestRisk(attacker.orgId, { risk_name: "Org B risk" });
+    const linkEvidence = (orgId: number, entityId: number, projectId: number) =>
+      createTestFileEntityLink(orgId, {
         file_id: bFile,
         framework_type: "osfi_e23",
         entity_type: "requirement",
         entity_id: entityId,
-        project_id: b.projectId,
+        project_id: projectId,
       });
-    }
-    const bRisk = await createTestRisk(attacker.orgId, { risk_name: "Org B risk" });
-    for (const requirementId of [bImpl.id, aImplSameStruct.id]) {
-      await sequelize.query(
+    const linkRisk = (orgId: number, requirementId: number) =>
+      sequelize.query(
         `INSERT INTO osfi_e23_requirements__risks (organization_id, requirement_id, projects_risks_id)
          VALUES (:orgId, :requirementId, :riskId)`,
-        { replacements: { orgId: attacker.orgId, requirementId, riskId: bRisk } },
+        { replacements: { orgId, requirementId, riskId: bRisk } },
       );
-    }
+    const collect = async (target: FrameworkTarget, orgId: number) => {
+      const result = await collectFrameworkRequirements(
+        target,
+        orgId,
+        new Date(),
+        resolveUserNames,
+      );
+      return result.frameworks[0];
+    };
+    const rowsOf = (fw: Awaited<ReturnType<typeof collect>>) =>
+      fw.groups.flatMap((g) => g.requirements);
+    return { owner, attacker, a, b, aImpl, bImpl, linkEvidence, linkRisk, collect, rowsOf };
+  }
 
-    const result = await collectFrameworkRequirements(
-      a.target,
-      owner.orgId,
-      new Date(),
-      resolveUserNames,
-    );
-    const rows = result.frameworks[0].groups.flatMap((g) => g.requirements);
+  it("returns only the caller's own impl rows", async () => {
+    const { owner, a, collect, rowsOf } = await setup();
+    const rows = rowsOf(await collect(a.target, owner.orgId));
     expect(rows.map((r) => r.implId).sort((x, y) => x - y)).toEqual(
       a.implRows.map((r) => r.id).sort((x, y) => x - y),
     );
-    expect(rows.every((r) => r.evidenceCount === 0 && r.riskCount === 0)).toBe(true);
-    expect(rows.every((r) => r.evidenceFiles.length === 0)).toBe(true);
-    expect(result.frameworks[0].rollup.noEvidence).toBe(rows.length);
+  });
 
-    // Sanity: org B sees its own evidence and risk, so the zeros above are
-    // isolation and not a broken fixture.
-    const bResult = await collectFrameworkRequirements(
-      b.target,
-      attacker.orgId,
-      new Date(),
-      resolveUserNames,
-    );
-    const bRow = bResult.frameworks[0].groups
-      .flatMap((g) => g.requirements)
-      .find((r) => r.implId === bImpl.id)!;
+  it("does not count another organization's evidence links", async () => {
+    const { owner, attacker, a, b, aImpl, bImpl, linkEvidence, collect, rowsOf } = await setup();
+    // Org B's link on its own impl row, and one under org B naming org A's impl id.
+    await linkEvidence(attacker.orgId, bImpl.id, b.projectId);
+    await linkEvidence(attacker.orgId, aImpl.id, b.projectId);
+
+    const fw = await collect(a.target, owner.orgId);
+    const rows = rowsOf(fw);
+    expect(rows.every((r) => r.evidenceCount === 0 && r.evidenceFiles.length === 0)).toBe(true);
+    expect(fw.rollup.noEvidence).toBe(rows.length);
+
+    // Sanity: org B sees its own evidence, so the zeros above are isolation.
+    const bRow = rowsOf(await collect(b.target, attacker.orgId)).find(
+      (r) => r.implId === bImpl.id,
+    )!;
     expect(bRow.evidenceCount).toBe(1);
+  });
+
+  it("does not count another organization's risk links", async () => {
+    const { owner, attacker, a, b, aImpl, bImpl, linkRisk, collect, rowsOf } = await setup();
+    await linkRisk(attacker.orgId, bImpl.id);
+    await linkRisk(attacker.orgId, aImpl.id);
+
+    const rows = rowsOf(await collect(a.target, owner.orgId));
+    expect(rows.every((r) => r.riskCount === 0)).toBe(true);
+
+    const bRow = rowsOf(await collect(b.target, attacker.orgId)).find(
+      (r) => r.implId === bImpl.id,
+    )!;
     expect(bRow.riskCount).toBe(1);
   });
 
-  it("returns no groups when org A collects with org B's projectFrameworkId", async () => {
-    const { owner, attacker } = await seedTwoTenantContexts();
-    await seedE23(owner.orgId, owner.userId);
-    const b = await seedE23(attacker.orgId, attacker.userId);
+  it("does not show an org B file linked from an org A evidence link", async () => {
+    const { owner, a, aImpl, linkEvidence, collect, rowsOf } = await setup();
+    await linkEvidence(owner.orgId, aImpl.id, a.projectId);
 
-    const result = await collectFrameworkRequirements(
-      b.target,
-      owner.orgId,
-      new Date(),
-      resolveUserNames,
-    );
-    expect(result.frameworks[0].groups).toEqual([]);
+    const row = rowsOf(await collect(a.target, owner.orgId)).find((r) => r.implId === aImpl.id)!;
+    expect(row.evidenceCount).toBe(0);
+    expect(row.evidenceFiles).toEqual([]);
+  });
+
+  it("does not count an org B risk linked from an org A requirement", async () => {
+    const { owner, a, aImpl, linkRisk, collect, rowsOf } = await setup();
+    await linkRisk(owner.orgId, aImpl.id);
+
+    const row = rowsOf(await collect(a.target, owner.orgId)).find((r) => r.implId === aImpl.id)!;
+    expect(row.riskCount).toBe(0);
+  });
+
+  it("returns no groups when org A collects with org B's projectFrameworkId", async () => {
+    const { owner, b, collect } = await setup();
+    const fw = await collect(b.target, owner.orgId);
+    expect(fw.groups).toEqual([]);
   });
 });
