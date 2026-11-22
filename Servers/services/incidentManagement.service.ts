@@ -43,16 +43,32 @@ import logger from "../utils/logger/fileLogger";
 export const INCIDENT_CHANGED_MESSAGE =
   "This incident was changed since you opened it. Reload to see the latest version.";
 
-/** Thrown when an update fails validation; `errors` match the HTTP 400 body. */
+/**
+ * Thrown when an update fails validation; `errors` match the HTTP 400 body.
+ * `transactionAborted` is true when the write itself failed (a reference
+ * deleted after the check broke the FK): Postgres has aborted the
+ * transaction, so a caller that passed its own must roll it back.
+ */
 export class IncidentUpdateValidationError extends Error {
-  constructor(public readonly errors: ValidationError[]) {
+  constructor(
+    public readonly errors: ValidationError[],
+    { transactionAborted = false }: { transactionAborted?: boolean } = {},
+  ) {
     super("Incident update validation failed");
     this.name = "IncidentUpdateValidationError";
+    this.transactionAborted = transactionAborted;
   }
+
+  readonly transactionAborted: boolean;
 }
 
 export interface UpdateIncidentOptions {
-  /** Run inside the caller's transaction; the caller commits or rolls back. */
+  /**
+   * Run inside the caller's transaction; the caller commits or rolls back.
+   * After an IncidentUpdateValidationError the transaction is still usable
+   * unless the error has `transactionAborted: true` (the UPDATE hit a foreign
+   * key violation); then the caller can only roll it back.
+   */
   transaction?: Transaction;
   /**
    * Record history as a system change (null actor, changed_by_system = true)
@@ -207,7 +223,9 @@ export async function updateIncident(
     // violation, so the caller must roll it back.
     const deletedReference = incidentReferenceFieldFromError(error);
     if (deletedReference) {
-      throw new IncidentUpdateValidationError(invalidReferenceErrors([deletedReference]));
+      throw new IncidentUpdateValidationError(invalidReferenceErrors([deletedReference]), {
+        transactionAborted: true,
+      });
     }
     throw error;
   }

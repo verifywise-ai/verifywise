@@ -184,18 +184,30 @@ Field validation (`validateCompleteIncidentCreation`) runs first, outside any
 transaction. The references (`project_id`, `model_inventory_id`, and
 `assignee_id` against `organization_members`) are then checked by
 `validateIncidentReferences` inside the create transaction, before the insert,
-with plain reads (no row locks). A bad reference rolls the transaction back and
-answers 400 (`message: "Incident creation validation failed"`, one
+with plain reads (no row locks). `''`, null and an absent field all mean "no
+reference" and are stored as NULL (`toIncidentReferenceValue`, shared with the
+update path). A bad reference rolls the transaction back and answers 400
+(`message: "Incident creation validation failed"`, one
 `{ field, message: "<field> does not reference an entity in your organization", code: "INVALID_REFERENCE" }`
-per bad reference). A database error in the check rolls back and answers 500.
+per bad reference). Both messages are translated with the request language
+(locale keys `Incident creation validation failed` and
+`{field} does not reference an entity in your organization`). A database error
+in the check rolls back and answers 500. The handler tracks whether its
+transaction has been committed or rolled back and only rolls back an open one,
+so an error after the commit still gets an answer.
 
 A use case, model or owner account deleted by another transaction after the
 check fails the insert's foreign key check (Postgres 23503).
 `incidentReferenceFieldFromError` (`Servers/utils/incidentManagement.utils.ts`)
 recognises a violation of `ai_incident_managements` on one of those three
 columns, and the create answers the same 400 for that field instead of a 500.
-The update path (`updateIncident`) maps the same violation to the same
-`INVALID_REFERENCE` error.
+The column comes from the constraint name
+(`ai_incident_managements_<column>_fkey`), which does not depend on the
+server's message language; the English `Key (<column>)=` detail is only a
+fallback. The update path (`updateIncident`) maps the same violation to the
+same `INVALID_REFERENCE` error, with `transactionAborted: true` on the
+`IncidentUpdateValidationError`: Postgres has aborted the transaction, so a
+caller that passed its own can only roll it back.
 
 **Known limit.** An owner removed from the organization (membership deleted,
 account kept) at the same moment as a create or an owner change can remain the

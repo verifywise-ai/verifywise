@@ -25,13 +25,18 @@ import { cleanupDatabase } from "./helpers";
 import { seedTwoTenantContexts } from "./tenant-isolation/tenantIsolation.harness";
 import { createTestIncident, createTestProject } from "../factories";
 import { validateIncidentReferences } from "../../utils/incidentManagement.utils";
+import { updateIncident } from "../../services/incidentManagement.service";
+
+const actualCheck = jest.requireActual<typeof import("../../utils/incidentManagement.utils")>(
+  "../../utils/incidentManagement.utils",
+).validateIncidentReferences;
 
 const ROUTE = "/api/ai-incident-managements";
 const checkReferences = validateIncidentReferences as jest.MockedFunction<
   typeof validateIncidentReferences
 >;
 
-const payload = (refs: Record<string, number>) => ({
+const payload = (refs: Record<string, number | string>) => ({
   ai_project: "Support chatbot",
   type: "Malfunction",
   severity: "Serious",
@@ -65,7 +70,9 @@ async function deletedProject(orgId: number, userId: number): Promise<number> {
 
 describe("a reference deleted after the incident reference check", () => {
   afterEach(async () => {
-    checkReferences.mockClear();
+    // mockReset also drops a queued mockResolvedValueOnce a test did not use.
+    checkReferences.mockReset();
+    checkReferences.mockImplementation(actualCheck);
     await cleanupDatabase();
   });
 
@@ -109,6 +116,28 @@ describe("a reference deleted after the incident reference check", () => {
     expect(row).toEqual({ project_id: null, status: "Open" });
   });
 
+  it("flags the caller's transaction as aborted when the update hits the FK", async () => {
+    const { owner } = await seedTwoTenantContexts();
+    const incidentId = await createTestIncident(owner.orgId, owner.userId);
+    const projectId = await deletedProject(owner.orgId, owner.userId);
+    checkReferences.mockResolvedValueOnce([]);
+
+    const transaction = await sequelize.transaction();
+    try {
+      await expect(
+        updateIncident(owner.orgId, incidentId, { project_id: projectId }, owner.userId, {
+          transaction,
+        }),
+      ).rejects.toMatchObject({
+        name: "IncidentUpdateValidationError",
+        transactionAborted: true,
+        errors: [expect.objectContaining({ field: "project_id", code: "INVALID_REFERENCE" })],
+      });
+    } finally {
+      await transaction.rollback();
+    }
+  });
+
   it("still answers a reference the check itself rejects with the same 400", async () => {
     const { owner } = await seedTwoTenantContexts();
     const projectId = await deletedProject(owner.orgId, owner.userId);
@@ -117,6 +146,32 @@ describe("a reference deleted after the incident reference check", () => {
 
     expect(res.status).toBe(400);
     expect(res.body?.data?.errors).toEqual(projectIdError);
+  });
+
+  it("creates an incident with empty references ('') as having none", async () => {
+    const { owner } = await seedTwoTenantContexts();
+
+    const res = await owner.request
+      .post(ROUTE)
+      .send(payload({ project_id: "", model_inventory_id: "", assignee_id: "" }));
+
+    expect(res.status).toBe(201);
+    expect(res.body?.data?.project_id).toBeNull();
+    expect(res.body?.data?.model_inventory_id).toBeNull();
+    expect(res.body?.data?.assignee_id).toBeNull();
+  });
+
+  it("clears a reference sent as '' on update", async () => {
+    const { owner } = await seedTwoTenantContexts();
+    const projectId = await createTestProject(owner.orgId, owner.userId);
+    const incidentId = await createTestIncident(owner.orgId, owner.userId, {
+      project_id: projectId,
+    });
+
+    const res = await owner.request.patch(`${ROUTE}/${incidentId}`).send({ project_id: "" });
+
+    expect(res.status).toBe(200);
+    expect(res.body?.data?.project_id).toBeNull();
   });
 
   it("creates an incident whose references are all valid", async () => {
