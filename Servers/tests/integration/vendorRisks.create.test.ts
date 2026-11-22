@@ -222,14 +222,32 @@ describe("POST /api/vendorRisks", () => {
     expect((await storedFor(owner.orgId)).frameworkLinks).toBe(0);
   });
 
+  // The insert itself fails in the database, after every check has passed. (An unknown vendor id
+  // no longer reaches the insert: the vendor check refuses it with a 400 first.)
   it("answers 500 and stores nothing when the insert fails", async () => {
     const { owner } = await seedTwoTenantContexts();
-    const unknownVendorId = 987654321;
+    const vendorId = await createTestVendor(owner.orgId, { vendor_name: "Acme Corp" });
+    const realQuery = sequelize.query.bind(sequelize);
+    let failedInserts = 0;
+    const spy = jest.spyOn(sequelize, "query").mockImplementation(((
+      sql: unknown,
+      options: unknown,
+    ) => {
+      if (typeof sql === "string" && /INSERT INTO vendorRisks\b/i.test(sql)) {
+        failedInserts += 1;
+        return realQuery("SELECT 1/0", options as any);
+      }
+      return realQuery(sql as string, options as any);
+    }) as any);
 
-    const res = await owner.request
-      .post(BASE)
-      .send(payload(unknownVendorId, { action_owner: owner.userId }));
+    let res;
+    try {
+      res = await owner.request.post(BASE).send(payload(vendorId, { action_owner: owner.userId }));
+    } finally {
+      spy.mockRestore();
+    }
 
+    expect(failedInserts).toBe(1);
     expect(res.status).toBe(500);
     expect(await storedFor(owner.orgId)).toEqual({ risks: 0, frameworkLinks: 0, history: 0 });
     expect(recomputeJobs()).toHaveLength(0);

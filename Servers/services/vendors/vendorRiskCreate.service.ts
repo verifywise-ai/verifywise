@@ -61,7 +61,8 @@ async function getUserNameById(userId: number): Promise<string> {
  * owner (null, 0, nothing) is told nothing and needs no check. The create and the update of a
  * vendor risk (`updateVendorRiskById`) both call it.
  *
- * @throws ValidationException when the action owner is not a user of the organization
+ * @throws ValidationException when the action owner is not a user id, or not a user of the
+ *   organization
  */
 export async function assertActionOwnerOfOrganization(
   actionOwner: unknown,
@@ -70,10 +71,16 @@ export async function assertActionOwnerOfOrganization(
 ): Promise<void> {
   if (!actionOwner) return;
   const ownerId = toId(actionOwner);
-  const isOwnUser =
-    Number.isSafeInteger(ownerId) &&
-    (await isUserOfOrganization(ownerId, organizationId, transaction));
-  if (!isOwnUser) {
+  // A value that is not a user id at all (a name, 5.5, -3) is a malformed request, with the same
+  // message the guard in the vendor risk queries gives it.
+  if (!Number.isSafeInteger(ownerId) || ownerId <= 0) {
+    throw new ValidationException(
+      "The action owner is not a valid user id",
+      "action_owner",
+      actionOwner,
+    );
+  }
+  if (!(await isUserOfOrganization(ownerId, organizationId, transaction))) {
     throw new ValidationException(
       "The action owner must be a user of your organization",
       "action_owner",

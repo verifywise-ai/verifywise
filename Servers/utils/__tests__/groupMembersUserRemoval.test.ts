@@ -18,7 +18,9 @@ const indexOfCall = (pattern: RegExp) =>
 beforeEach(() => {
   mockQuery.mockReset();
   mockQuery.mockImplementation(async (sql: any) =>
-    /DELETE FROM organization_members/.test(String(sql)) ? [{ user_id: 5 }] : [],
+    /DELETE FROM organization_members|FROM organization_members[\s\S]*FOR UPDATE/.test(String(sql))
+      ? [{ user_id: 5 }]
+      : [],
   );
 });
 

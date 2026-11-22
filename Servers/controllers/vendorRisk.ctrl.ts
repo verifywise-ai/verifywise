@@ -295,7 +295,7 @@ export async function createVendorRisk(req: Request, res: Response): Promise<any
         description: `Validation failed: ${error.message}`,
         functionName: "createVendorRisk",
         fileName: "vendorRisk.ctrl.ts",
-        error: error as Error,
+        error,
         userId: req.userId!,
         organizationId: req.organizationId!,
       });
@@ -485,7 +485,7 @@ export async function updateVendorRiskById(req: Request, res: Response): Promise
         description: `Validation failed: ${error.message}`,
         functionName: "updateVendorRiskById",
         fileName: "vendorRisk.ctrl.ts",
-        error: error as Error,
+        error,
         userId: req.userId!,
         organizationId: req.organizationId!,
       });

@@ -229,7 +229,7 @@ describe("acceptFinding", () => {
     });
     // In the accept's own transaction: a lookup outside it would take a second pooled connection
     // while the transaction holds one, and as many accepts as the pool has would run it dry.
-    expect(getVendorByIdQuery).toHaveBeenCalledWith(VENDOR, ORG, transaction);
+    expect(getVendorByIdQuery).toHaveBeenCalledWith(VENDOR, ORG, { transaction });
     expect(createVendorRiskInTransaction).toHaveBeenCalledWith(
       {
         vendor_id: VENDOR,
@@ -685,7 +685,7 @@ describe("acceptFinding", () => {
 
       await expect(accept()).rejects.toBeInstanceOf(NotFoundException);
 
-      expect(getVendorByIdQuery).toHaveBeenCalledWith(VENDOR, ORG, transaction);
+      expect(getVendorByIdQuery).toHaveBeenCalledWith(VENDOR, ORG, { transaction });
       expectNothingCreated();
     });
   });

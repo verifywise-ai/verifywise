@@ -44,6 +44,15 @@ export const parseAssignmentId = (value: unknown): Parsed<number> =>
 export const parseTrainingIdQuery = (value: unknown): Parsed<number> =>
   parseIdFromText(value, "Training ID must be a positive integer");
 
+/**
+ * An id given as a number or as its digits ("12"), as a model's tool call
+ * may send either.
+ */
+export function parseIdValue(value: unknown, message: string): Parsed<number> {
+  if (typeof value === "string") return parseIdFromText(value.trim(), message);
+  return isValidId(value) ? { ok: true, value } : fail(message);
+}
+
 export function parseTrainingId(value: unknown): Parsed<number> {
   return isValidId(value) ? { ok: true, value } : fail("Training ID must be a positive integer");
 }

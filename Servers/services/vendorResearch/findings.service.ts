@@ -360,7 +360,7 @@ export async function acceptFinding(args: {
       );
     }
 
-    const vendor = await getVendorByIdQuery(finding.vendor_id, organizationId, transaction);
+    const vendor = await getVendorByIdQuery(finding.vendor_id, organizationId, { transaction });
     if (!vendor) {
       throw new NotFoundException("Vendor not found", "Vendor", finding.vendor_id);
     }
