@@ -1574,5 +1574,7 @@
   "orders must list positive integer ids with display orders of 0 or more": "orders doit contenir des identifiants entiers positifs avec des ordres d'affichage de 0 ou plus",
   "Visibility must be public or private": "La visibilité doit être publique ou privée",
   "This file has a private analysis by another user": "Ce fichier a une analyse privée d'un autre utilisateur",
-  "A private analysis would replace another user's analysis of this file": "Une analyse privée remplacerait l'analyse de ce fichier par un autre utilisateur"
+  "A private analysis would replace another user's analysis of this file": "Une analyse privée remplacerait l'analyse de ce fichier par un autre utilisateur",
+  "Incident creation validation failed": "La validation de la création de l'incident a échoué",
+  "{field} does not reference an entity in your organization": "{field} ne fait référence à aucun élément de votre organisation"
 }

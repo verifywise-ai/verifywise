@@ -23,6 +23,8 @@ import {
   diffIncidentColumns,
   enqueueIncidentUpdatedAutomations,
   getIncidentByIdQuery,
+  incidentReferenceFieldFromError,
+  invalidReferenceErrors,
   updateIncidentByIdQuery,
   validateIncidentReferences,
 } from "../utils/incidentManagement.utils";
@@ -41,16 +43,32 @@ import logger from "../utils/logger/fileLogger";
 export const INCIDENT_CHANGED_MESSAGE =
   "This incident was changed since you opened it. Reload to see the latest version.";
 
-/** Thrown when an update fails validation; `errors` match the HTTP 400 body. */
+/**
+ * Thrown when an update fails validation; `errors` match the HTTP 400 body.
+ * `transactionAborted` is true when the write itself failed (a reference
+ * deleted after the check broke the FK): Postgres has aborted the
+ * transaction, so a caller that passed its own must roll it back.
+ */
 export class IncidentUpdateValidationError extends Error {
-  constructor(public readonly errors: ValidationError[]) {
+  constructor(
+    public readonly errors: ValidationError[],
+    { transactionAborted = false }: { transactionAborted?: boolean } = {},
+  ) {
     super("Incident update validation failed");
     this.name = "IncidentUpdateValidationError";
+    this.transactionAborted = transactionAborted;
   }
+
+  readonly transactionAborted: boolean;
 }
 
 export interface UpdateIncidentOptions {
-  /** Run inside the caller's transaction; the caller commits or rolls back. */
+  /**
+   * Run inside the caller's transaction; the caller commits or rolls back.
+   * After an IncidentUpdateValidationError the transaction is still usable
+   * unless the error has `transactionAborted: true` (the UPDATE hit a foreign
+   * key violation); then the caller can only roll it back.
+   */
   transaction?: Transaction;
   /**
    * Record history as a system change (null actor, changed_by_system = true)
@@ -156,13 +174,7 @@ export async function updateIncident(
       transaction,
     );
     if (invalidRefs.length > 0) {
-      throw new IncidentUpdateValidationError(
-        invalidRefs.map((field) => ({
-          field,
-          message: `${field} does not reference an entity in your organization`,
-          code: "INVALID_REFERENCE",
-        })),
-      );
+      throw new IncidentUpdateValidationError(invalidReferenceErrors(invalidRefs));
     }
 
     const effective = applyReopenApprovalReset(stored, updates);
@@ -206,6 +218,15 @@ export async function updateIncident(
     return saved;
   } catch (error) {
     if (ownsTransaction) await transaction.rollback();
+    // A reference deleted after the check fails the UPDATE's FK check: the
+    // same 400 as a failed check. A caller's transaction is aborted by the
+    // violation, so the caller must roll it back.
+    const deletedReference = incidentReferenceFieldFromError(error);
+    if (deletedReference) {
+      throw new IncidentUpdateValidationError(invalidReferenceErrors([deletedReference]), {
+        transactionAborted: true,
+      });
+    }
     throw error;
   }
 }
