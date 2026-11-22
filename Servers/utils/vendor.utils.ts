@@ -16,6 +16,8 @@ import {
   deleteAllCustomFieldValuesForEntityQuery,
   fetchCustomFieldsForEntities,
 } from "./customField.utils";
+import { findUserFieldOutsideOrganization } from "./user.utils";
+import { ValidationException } from "../domain.layer/exceptions/custom.exception";
 
 export const getAllVendorsQuery = async (organizationId: number): Promise<IVendor[]> => {
   const vendors = await sequelize.query(
@@ -188,6 +190,44 @@ const VENDOR_EMPTY_MEANS_NULL: ReadonlySet<string> = new Set([
 export const vendorColumnValue = (column: string, value: unknown): unknown =>
   value === "" && VENDOR_EMPTY_MEANS_NULL.has(column) ? null : value;
 
+/**
+ * Tenant guard for a vendor's assignee and reviewer: a new or changed one must
+ * be a member of the organization, or the assignment email would send the
+ * vendor's name and description to another organization's user. Every vendor
+ * write (REST, Advisor, AI app import, demo seed) goes through
+ * createNewVendorQuery / updateVendorByIdQuery, which call this.
+ *
+ * @throws ValidationException naming the first offending field.
+ */
+export const assertVendorUsersInOrganization = async (
+  vendor: Partial<IVendor>,
+  organizationId: number,
+  transaction: Transaction,
+  stored?: Partial<IVendor> | null,
+): Promise<void> => {
+  const outside = await findUserFieldOutsideOrganization(
+    [
+      { field: "assignee", value: vendor.assignee, stored: stored ? stored.assignee : undefined },
+      { field: "reviewer", value: vendor.reviewer, stored: stored ? stored.reviewer : undefined },
+    ],
+    organizationId,
+    transaction,
+  );
+  if (!outside) return;
+  if (outside.field === "assignee") {
+    throw new ValidationException(
+      "The vendor assignee must be a member of this organization",
+      "assignee",
+      outside.value,
+    );
+  }
+  throw new ValidationException(
+    "The vendor reviewer must be a member of this organization",
+    "reviewer",
+    outside.value,
+  );
+};
+
 export const createNewVendorQuery = async (
   vendor: IVendor,
   organizationId: number,
@@ -196,6 +236,8 @@ export const createNewVendorQuery = async (
   /** Bulk loads turn this off: one automation per row is not what anyone configured. */
   options: { runAutomations: boolean } = { runAutomations: true },
 ): Promise<VendorModel> => {
+  await assertVendorUsersInOrganization(vendor, organizationId, transaction);
+
   // Build dynamic query for optional fields
   const fields = [
     "organization_id",
@@ -423,6 +465,9 @@ export const updateVendorByIdQuery = async (
     .join(", ");
 
   const oldVendor = await getVendorByIdQuery(id, organizationId);
+  // Only a new or changed person is checked: one who has since left the
+  // organization stays on the vendor and must not block every other edit.
+  await assertVendorUsersInOrganization(vendor, organizationId, transaction, oldVendor);
 
   const query = `UPDATE vendors SET ${setClause} WHERE organization_id = :organizationId AND id = :id RETURNING *;`;
 

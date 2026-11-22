@@ -214,6 +214,45 @@ export const findUsersNotInOrganization = async (
   return unique.filter((id) => !found.has(id));
 };
 
+/** One user-id field of a row, for findUserFieldOutsideOrganization. */
+export interface UserFieldCheck {
+  /** Column name. */
+  field: string;
+  /** The value being written; undefined means the field is not written. */
+  value: unknown;
+  /** The value already stored on the row (updates only). */
+  stored?: unknown;
+}
+
+/**
+ * Tenant guard for the user ids a row points at (owner, assignee, reviewer):
+ * returns the first check whose id is not a member of the organization, or
+ * null. The caller throws a ValidationException naming that field, so names
+ * and assignment emails never cross tenants.
+ *
+ * Only a new or changed value is checked. Removing a member does not clear
+ * every row they were named on, and an unchanged stored id must not block
+ * the other edits of that row. null, '' and 0 mean "none" and pass; any other
+ * value that is not a positive integer is refused (fails closed).
+ */
+export const findUserFieldOutsideOrganization = async (
+  checks: UserFieldCheck[],
+  organizationId: number,
+  transaction: Transaction | null = null,
+): Promise<UserFieldCheck | null> => {
+  for (const check of checks) {
+    const { value, stored } = check;
+    if (value === undefined || value === "") continue;
+    if (stored !== undefined && String(value ?? "").trim() === String(stored ?? "")) continue;
+    const ids = parseReferencedIds([value]);
+    if (ids === null) return check;
+    if (ids.length === 0) continue;
+    const outside = await findUsersNotInOrganization(ids, organizationId, transaction);
+    if (outside.length > 0) return check;
+  }
+  return null;
+};
+
 export const getUserByIdOrThrow = async (id: number): Promise<UserModel> => {
   const user = await getUserByIdQuery(id);
   if (!user) {

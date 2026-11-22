@@ -6,6 +6,8 @@ import {
   deleteAllCustomFieldValuesForEntityQuery,
   fetchCustomFieldsForEntities,
 } from "./customField.utils";
+import { findUserFieldOutsideOrganization } from "./user.utils";
+import { ValidationException } from "../domain.layer/exceptions/custom.exception";
 
 export const getVendorRisksByProjectIdQuery = async (
   projectId: number,
@@ -115,11 +117,40 @@ export const normalizeVendorRiskLikelihood = <T>(likelihood: T): T => {
   return likelihood;
 };
 
+/**
+ * Tenant guard for a vendor risk's action owner: a new or changed one must be
+ * a member of the organization, or the assignment email would reach another
+ * organization's user. Every vendor risk write (REST, Advisor, demo seed)
+ * goes through createNewVendorRiskQuery / updateVendorRiskByIdQuery.
+ *
+ * @throws ValidationException naming action_owner.
+ */
+const assertVendorRiskOwnerInOrganization = async (
+  actionOwner: unknown,
+  organizationId: number,
+  transaction: Transaction,
+  stored?: unknown,
+): Promise<void> => {
+  const outside = await findUserFieldOutsideOrganization(
+    [{ field: "action_owner", value: actionOwner, stored }],
+    organizationId,
+    transaction,
+  );
+  if (outside) {
+    throw new ValidationException(
+      "The action owner must be a member of this organization",
+      "action_owner",
+      actionOwner,
+    );
+  }
+};
+
 export const createNewVendorRiskQuery = async (
   vendorRisk: IVendorRisk,
   organizationId: number,
   transaction: Transaction,
 ): Promise<VendorRiskModel> => {
+  await assertVendorRiskOwnerInOrganization(vendorRisk.action_owner, organizationId, transaction);
   const result = await sequelize.query(
     `INSERT INTO vendorRisks (
       organization_id, vendor_id, order_no, risk_description, impact_description,
@@ -157,6 +188,21 @@ export const updateVendorRiskByIdQuery = async (
   organizationId: number,
   transaction: Transaction,
 ): Promise<VendorRiskModel | null> => {
+  if (vendorRisk.action_owner !== undefined) {
+    // Only a new owner is checked: one who has since left the organization
+    // stays on the vendor risk and must not block every other edit.
+    const [stored] = (await sequelize.query(
+      `SELECT action_owner FROM vendorrisks WHERE organization_id = :organizationId AND id = :id`,
+      { replacements: { organizationId, id }, type: QueryTypes.SELECT, transaction },
+    )) as { action_owner: number | null }[];
+    await assertVendorRiskOwnerInOrganization(
+      vendorRisk.action_owner,
+      organizationId,
+      transaction,
+      stored ? stored.action_owner : undefined,
+    );
+  }
+
   const updateVendorRisk: Partial<Record<keyof VendorRiskModel, any>> & {
     organizationId?: number;
   } = {};
