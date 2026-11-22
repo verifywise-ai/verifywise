@@ -725,6 +725,33 @@ describe("section notices", () => {
       expect(html).toContain("Compliance & Governance");
     });
 
+    it("keeps the due date on one line and the group heading with its table", () => {
+      const html = render(undefined, { frameworkRequirements });
+      expect(html).toContain('<td style="white-space: nowrap;">2026-12-01</td>');
+      expect(html).toMatch(/<h5 style="[^"]*break-after: avoid/);
+    });
+
+    it("keeps a short chart on one page but lets a long one break", () => {
+      const withGroups = (n: number) => ({
+        frameworkRequirements: {
+          frameworks: [
+            {
+              ...frameworkRequirements.frameworks[0],
+              groups: Array.from({ length: n }, (_, i) => ({
+                ...frameworkRequirements.frameworks[0].groups[0],
+                title: `Group ${i}`,
+              })),
+            },
+          ],
+        },
+      });
+      const extra = { frameworkRequirementCharts: ["<svg></svg>"] };
+      expect(render(undefined, withGroups(3), undefined, extra)).toContain(
+        'class="fr-chart avoid-break"',
+      );
+      expect(render(undefined, withGroups(20), undefined, extra)).toContain('class="fr-chart"');
+    });
+
     it("embeds the chart svg supplied for the framework", () => {
       const html = render(undefined, { frameworkRequirements }, undefined, {
         frameworkRequirementCharts: ["<svg data-test-chart></svg>"],

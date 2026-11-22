@@ -900,13 +900,14 @@ const riskChipClass = (level) => {
       <p style="font-size: 11px; margin: 0 0 8px 0; color: var(--color-text-secondary);"><%= fw.rollup.done %> of <%= fw.rollup.total %> requirements implemented or audited</p>
 
       <% if (typeof frameworkRequirementCharts !== 'undefined' && frameworkRequirementCharts && frameworkRequirementCharts[fwIdx]) { %>
-      <div class="avoid-break" style="margin-bottom: 12px;">
+      <% const frChartBars = new Set(fw.groups.map(function(g) { return g.title; })).size; %>
+      <div class="fr-chart<%= frChartBars <= 8 ? ' avoid-break' : '' %>" style="margin-bottom: 12px;">
         <%- frameworkRequirementCharts[fwIdx] %>
       </div>
       <% } %>
 
       <% fw.groups.forEach(function(group) { %>
-      <h5 style="font-size: 12px; margin: 12px 0 8px 0; color: var(--color-text-secondary);"><% if (group.useCase) { %><%= group.useCase %> · <% } %><%= group.title %></h5>
+      <h5 style="font-size: 12px; margin: 12px 0 8px 0; page-break-after: avoid; break-after: avoid; color: var(--color-text-secondary);"><% if (group.useCase) { %><%= group.useCase %> · <% } %><%= group.title %></h5>
 
       <% if (group.requirements.length > 0) { %>
       <table class="data-table" style="font-size: 10px;">
@@ -926,7 +927,7 @@ const riskChipClass = (level) => {
             <td<% if (r.level === 3) { %> style="padding-left: 24px;"<% } %>><%= r.title %><% if (frEvidenceLine(r)) { %><br><span style="font-size: 9px; color: var(--color-text-secondary);"><%= frEvidenceLine(r) %></span><% } %></td>
             <td><span class="chip <%= frChipClass(r) %>"><%= r.status %></span></td>
             <td><%= r.owner || '—' %></td>
-            <td><%= r.dueDate || '—' %></td>
+            <td style="white-space: nowrap;"><%= r.dueDate || '—' %></td>
             <td><%= r.evidenceCount %></td>
           </tr>
           <% }); }); %>
