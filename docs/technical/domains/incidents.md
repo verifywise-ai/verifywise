@@ -345,6 +345,24 @@ incidents status sync (`changedBySystem: true`, see
 It returns the updated incident, or `null` when the incident does not exist in
 the organization.
 
+### Owner removed from the organization
+
+Removing a user from an organization (`removeUserFromOrganizationQuery` in
+`Servers/utils/user.utils.ts`, behind `DELETE /users/:id` and the super
+admin's `DELETE /super-admin/organizations/:id/users/:userId`) clears `assignee_id` on that organization's incidents they own, in the
+removal's transaction. Incidents in other organizations they still belong to
+keep them as owner. The removal first locks the membership row, so a
+concurrent write that checks the owner's membership with a locking read either
+commits before the clear (and is cleared too) or waits and then finds the
+membership gone. Each cleared incident gets `updated_at` bumped (an editor
+holding the old version gets the usual 409) and an `Owner` change
+(`<name>` → `-`) in `incident_change_history`, recorded as the system
+(`changed_by_system = true`, null actor). The history is written before the
+membership is deleted, so the tenant-scoped user lookup still names them. No
+`incident_updated` automation is sent for the clear. Deleting an account goes
+through the same clear for every organization; the FK's `ON DELETE SET NULL`
+is the fallback.
+
 ## Change Tracking
 
 All incident modifications are tracked:

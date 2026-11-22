@@ -38,6 +38,7 @@ import { resolveFileContent } from "../services/storage";
 import { reassignAgentOwnersOfDeletedUsersQuery } from "./agentDiscovery.utils";
 import { AutomationModel } from "../domain.layer/models/automation/automation.model";
 import { addOrganizationMemberQuery } from "./organizationMember.utils";
+import { formatEntityFieldChanges, recordMultipleFieldChanges } from "./changeHistory.base.utils";
 import { revokeUserOrganizationTokens } from "./refreshToken.utils";
 
 /**
@@ -397,6 +398,44 @@ export const isLastAdminQuery = async (
 };
 
 /**
+ * Clears the owner (assignee_id) of the user's incidents in one organization
+ * and records each clear in the incident's history as a system change. Runs
+ * while the user is still a member, so the history names them.
+ */
+const clearIncidentOwnerQuery = async (
+  id: number,
+  organizationId: number,
+  transaction: Transaction,
+): Promise<void> => {
+  const cleared = (await sequelize.query(
+    `UPDATE ai_incident_managements SET assignee_id = NULL, updated_at = NOW()
+     WHERE organization_id = :organizationId AND assignee_id = :id
+     RETURNING id`,
+    { replacements: { id, organizationId }, type: QueryTypes.SELECT, transaction },
+  )) as { id: number }[];
+  if (cleared.length === 0) return;
+
+  const changes = await formatEntityFieldChanges(
+    "incident",
+    { assignee_id: id },
+    { assignee_id: null },
+    ["assignee_id"],
+    { organizationId, transaction },
+  );
+  for (const incident of cleared) {
+    await recordMultipleFieldChanges(
+      "incident",
+      incident.id,
+      null,
+      organizationId,
+      changes,
+      transaction,
+      true,
+    );
+  }
+};
+
+/**
  * Clears one organization's references to a user: assignment columns go to
  * NULL, agents they primarily own move to their next owner, and their project
  * and group memberships in that organization are deleted (a group row left
@@ -450,6 +489,8 @@ const clearOrganizationReferencesToUser = async (
     );
   }
 
+  await clearIncidentOwnerQuery(id, organizationId, transaction);
+
   // Agents whose primary owner is this user move to their next remaining owner.
   await reassignAgentOwnersOfDeletedUsersQuery([id], organizationId, transaction);
 
@@ -494,6 +535,15 @@ export const removeUserFromOrganizationQuery = async (
   organizationId: number,
   transaction: Transaction,
 ): Promise<{ removed: boolean; accountDeleted: boolean }> => {
+  // Lock the membership before clearing: a write that checks it with a
+  // locking read either commits first, so the clear below covers its row, or
+  // waits and then finds the membership gone.
+  await sequelize.query(
+    `SELECT user_id FROM organization_members
+     WHERE organization_id = :organizationId AND user_id = :id
+     FOR UPDATE`,
+    { replacements: { id, organizationId }, type: QueryTypes.SELECT, transaction },
+  );
   await clearOrganizationReferencesToUser(id, organizationId, transaction);
   await revokeUserOrganizationTokens(id, organizationId, transaction);
 
