@@ -13,6 +13,7 @@ import {
   mergeAssessment,
   mergeClausesAndAnnexes,
   mergeNistSubcategories,
+  mergeFrameworkRequirements,
 } from "../mergeSections";
 
 const compliance = (n: number, done: number, controlId: string) => ({
@@ -145,5 +146,95 @@ describe("mergeNistSubcategories", () => {
       ["GV.1", "Alpha"],
       ["GV.2", "Beta"],
     ]);
+  });
+});
+
+const reqRow = (implId: number, isDone: boolean, children: any[] = []) => ({
+  implId,
+  level: 2 as const,
+  title: `R${implId}`,
+  orderNo: implId,
+  status: isDone ? "Implemented" : "Not started",
+  owner: isDone ? "Ann" : null,
+  reviewer: null,
+  approver: null,
+  dueDate: null,
+  isDone,
+  isOverdue: false,
+  evidenceCount: isDone ? 1 : 0,
+  evidenceFiles: [],
+  riskCount: 0,
+  children,
+});
+
+const fwData = (rows: any[]) => ({
+  frameworks: [
+    {
+      frameworkId: 26,
+      frameworkName: "OSFI E-23",
+      groups: [
+        {
+          title: "Governance",
+          orderNo: 1,
+          requirements: rows,
+          rollup: {
+            total: rows.length,
+            done: rows.filter((r) => r.isDone).length,
+            unassigned: 0,
+            noEvidence: 0,
+            overdue: 0,
+            statusBreakdown: {},
+          },
+        },
+      ],
+      rollup: {
+        total: rows.length,
+        done: 0,
+        unassigned: 0,
+        noEvidence: 0,
+        overdue: 0,
+        statusBreakdown: {},
+      },
+    },
+  ],
+});
+
+describe("mergeFrameworkRequirements", () => {
+  it("merges two pairings of one framework with useCase labels and pooled rollup", () => {
+    const merged = mergeFrameworkRequirements([
+      {
+        useCase: "Alpha",
+        framework: "OSFI E-23",
+        data: fwData([reqRow(1, true), reqRow(2, false)]),
+      },
+      {
+        useCase: "Beta",
+        framework: "OSFI E-23",
+        data: fwData([reqRow(3, true, [reqRow(4, false)])]),
+      },
+    ]);
+
+    expect(merged.frameworks).toHaveLength(1);
+    const fw = merged.frameworks[0];
+    expect(fw.groups.map((g) => g.useCase)).toEqual(["Alpha", "Beta"]);
+    // 2 + (1 L2 + 1 L3) rows pooled; 2 done of 4, not an average of percentages.
+    expect(fw.rollup.total).toBe(4);
+    expect(fw.rollup.done).toBe(2);
+    expect(fw.rollup.unassigned).toBe(2);
+    expect(fw.rollup.statusBreakdown).toEqual({ Implemented: 2, "Not started": 2 });
+  });
+
+  it("keeps single-pairing output unlabelled", () => {
+    const one = fwData([reqRow(1, true)]);
+    const merged = mergeFrameworkRequirements([
+      { useCase: "Alpha", framework: "OSFI E-23", data: one },
+    ]);
+
+    expect(merged).toEqual(one);
+    expect(merged.frameworks[0].groups[0].useCase).toBeUndefined();
+  });
+
+  it("returns undefined for no contributions", () => {
+    expect(mergeFrameworkRequirements([])).toBeUndefined();
   });
 });

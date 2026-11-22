@@ -10,12 +10,12 @@ import { sequelize } from "../../../database/db";
 import { getStructureById } from "../../../structures";
 import type {
   FrameworkRequirementGroup,
-  FrameworkRequirementRollup,
   FrameworkRequirementRow,
   FrameworkRequirementsSectionData,
 } from "../../../domain.layer/interfaces/i.reportGeneration";
 import { isoDate } from "../dateUtils";
 import type { FrameworkTarget } from "../reportScope";
+import { addRow, emptyRollup, rollupFromGroups } from "./frameworkRollup";
 import {
   EVIDENCE_SQL,
   l2RequirementsSql,
@@ -31,35 +31,6 @@ const DONE_STATUSES = new Set(["Implemented", "Audited"]);
 type ImplRow = Record<string, any>;
 
 export const isBundledFrameworkId = (id: number): boolean => getStructureById(id) !== null;
-
-const emptyRollup = (): FrameworkRequirementRollup => ({
-  total: 0,
-  done: 0,
-  unassigned: 0,
-  noEvidence: 0,
-  overdue: 0,
-  statusBreakdown: {},
-});
-
-const addRow = (rollup: FrameworkRequirementRollup, row: FrameworkRequirementRow) => {
-  rollup.total += 1;
-  if (row.isDone) rollup.done += 1;
-  if (row.owner === null) rollup.unassigned += 1;
-  if (row.evidenceCount === 0) rollup.noEvidence += 1;
-  if (row.isOverdue) rollup.overdue += 1;
-  rollup.statusBreakdown[row.status] = (rollup.statusBreakdown[row.status] ?? 0) + 1;
-};
-
-const mergeRollup = (into: FrameworkRequirementRollup, from: FrameworkRequirementRollup) => {
-  into.total += from.total;
-  into.done += from.done;
-  into.unassigned += from.unassigned;
-  into.noEvidence += from.noEvidence;
-  into.overdue += from.overdue;
-  for (const [k, v] of Object.entries(from.statusBreakdown)) {
-    into.statusBreakdown[k] = (into.statusBreakdown[k] ?? 0) + v;
-  }
-};
 
 export async function collectFrameworkRequirements(
   target: FrameworkTarget,
@@ -216,8 +187,7 @@ export async function collectFrameworkRequirements(
   const orderedGroups = [...groups.values()].sort((a, b) => a.orderNo - b.orderNo);
   for (const g of orderedGroups) g.requirements.sort((a, b) => a.orderNo - b.orderNo);
 
-  const rollup = emptyRollup();
-  for (const g of orderedGroups) mergeRollup(rollup, g.rollup);
+  const rollup = rollupFromGroups(orderedGroups);
 
   return {
     frameworks: [

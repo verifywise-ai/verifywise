@@ -190,6 +190,60 @@ describe("section notices", () => {
  * no statuses under an ISO 27001 heading, and raised NO notice — isoTargets
  * was non-empty, so the no_framework_target branch never ran.
  */
+const e23Target: FrameworkTarget = {
+  projectId: 7,
+  projectTitle: "Model risk",
+  isOrganizationalProject: false,
+  frameworkId: 26,
+  frameworkName: "OSFI E-23",
+  projectFrameworkId: 13,
+};
+
+describe("frameworkRequirements section", () => {
+  it("includes frameworkRequirements for native:26 alongside ISO", async () => {
+    const collector = createScopedDataCollector(
+      10,
+      1,
+      "organization",
+      [isoTarget, e23Target],
+      null,
+      ["native:2", "native:26"],
+    );
+
+    const data = await collector.collectAllData(["frameworkRequirements", "clausesAndAnnexes"]);
+
+    expect(data.sections.frameworkRequirements?.frameworks.map((f) => f.frameworkId)).toEqual([26]);
+    expect(data.sections.clausesAndAnnexes).toBeDefined();
+    expect(data.sectionNotices).not.toContainEqual(
+      expect.objectContaining({ sectionKey: "frameworkRequirements" }),
+    );
+  });
+
+  it("emits no_framework_target when only core frameworks are in scope and the section is requested", async () => {
+    const collector = createScopedDataCollector(10, 1, "organization", [isoTarget], null, [
+      "native:2",
+    ]);
+
+    const data = await collector.collectAllData(["frameworkRequirements"]);
+
+    expect(data.sections.frameworkRequirements).toBeUndefined();
+    expect(data.sectionNotices).toContainEqual({
+      sectionKey: "frameworkRequirements",
+      reason: "no_framework_target",
+    });
+  });
+
+  it('does not emit a notice for sections:["all"]', async () => {
+    const collector = createScopedDataCollector(10, 1, "organization", [isoTarget]);
+
+    const data = await collector.collectAllData(["all"]);
+
+    expect(data.sectionNotices).not.toContainEqual(
+      expect.objectContaining({ sectionKey: "frameworkRequirements" }),
+    );
+  });
+});
+
 describe("clausesAndAnnexes framework routing", () => {
   beforeEach(() => jest.clearAllMocks());
 

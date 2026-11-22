@@ -42,12 +42,18 @@ import {
   getClausesReportQueryISO27001,
   getAnnexesReportQueryISO27001,
 } from "../../utils/reporting.utils";
+import { isoDate } from "./dateUtils";
 import { FrameworkTarget, ReportScope, resolveFrameworkTargets } from "./reportScope";
+import {
+  collectFrameworkRequirements,
+  isBundledFrameworkId,
+} from "./collectors/frameworkRequirements";
 import { parseFrameworkSelection, type ParsedFrameworkSelection } from "./frameworkSelection";
 import {
   mergeAssessment,
   mergeClausesAndAnnexes,
   mergeCompliance,
+  mergeFrameworkRequirements,
   mergeNistSubcategories,
   SectionContribution,
 } from "./mergeSections";
@@ -58,6 +64,8 @@ import { getAllFrameworkByIdQuery } from "../../utils/framework.utils";
 import { sequelize } from "../../database/db";
 import { QueryTypes } from "sequelize";
 import { effectiveRiskLevelSql, getEffectiveRiskLevel } from "../../utils/riskLevel.utils";
+
+export { isoDate };
 
 /**
  * Risk level colour mapping.
@@ -87,9 +95,6 @@ const RISK_LEVEL_COLORS: Record<string, string> = {
   "Very Low": riskMark.veryLow,
   "No risk": text.icon,
 };
-
-import { isoDate } from "./dateUtils";
-export { isoDate };
 
 // A future status chart should use status.success.text, status.warning.text,
 // status.error.text, and text.secondary from the shared palette.
@@ -431,6 +436,26 @@ export class ReportDataCollector {
       }
     } else if (requested("nistSubcategories")) {
       sectionNotices.push({ sectionKey: "nistSubcategories", reason: noticeReason });
+    }
+
+    // Bundled frameworks (ids 5-28) share one generic section.
+    const bundledTargets = targets.filter((t) => isBundledFrameworkId(t.frameworkId));
+    if (bundledTargets.length > 0) {
+      if (sections.includes("frameworkRequirements") || sections.includes("all")) {
+        const generatedAt = metadata.generatedAt;
+        sectionData.frameworkRequirements = mergeFrameworkRequirements(
+          await this.perTarget(bundledTargets, (t) =>
+            collectFrameworkRequirements(
+              t,
+              this.organizationId,
+              generatedAt,
+              this.resolveUserNames.bind(this),
+            ),
+          ),
+        );
+      }
+    } else if (requested("frameworkRequirements")) {
+      sectionNotices.push({ sectionKey: "frameworkRequirements", reason: noticeReason });
     }
 
     // ============================================
