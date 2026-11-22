@@ -138,7 +138,9 @@ const assertVendorRiskOwnerInOrganization = async (
   );
   if (outside) {
     throw new ValidationException(
-      "The action owner must be a member of this organization",
+      outside.reason === "invalid"
+        ? "The action owner is not a valid user id"
+        : "The action owner must be a member of this organization",
       "action_owner",
       actionOwner,
     );

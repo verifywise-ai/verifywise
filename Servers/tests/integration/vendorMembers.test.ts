@@ -20,6 +20,8 @@ import { sequelize } from "../../database/db";
 import { seedTwoTenantContexts } from "./tenant-isolation/tenantIsolation.harness";
 import { createTestVendor, createTestVendorRisk } from "../factories";
 import { notifyUserAssigned } from "../../services/inAppNotification.service";
+import { createNewVendorQuery } from "../../utils/vendor.utils";
+import { IVendor } from "../../domain.layer/interfaces/i.vendor";
 
 const notify = notifyUserAssigned as jest.Mock;
 
@@ -219,6 +221,50 @@ describe("vendor user references against organization_members", () => {
         .patch(`/api/vendorRisks/${leftRisk}`)
         .send({ action_plan: "Re-check in Q1", action_owner: attacker.userId });
       expect(kept.status).toBe(202);
+    });
+  });
+  // A name or other non-id where a user id is expected is a malformed
+  // request, not an outsider: it gets its own message, still a 400.
+  describe("a value that is not a user id", () => {
+    it("is refused on a vendor risk as not a valid user id, on create and update", async () => {
+      const { owner } = await seedTwoTenantContexts();
+      const vendorId = await createTestVendor(owner.orgId);
+
+      const created = await owner.request.post("/api/vendorRisks").send({
+        vendor_id: vendorId,
+        risk_description: "Training data provenance",
+        action_owner: "Jane Doe",
+      });
+      expect(created.status).toBe(400);
+      expect(JSON.stringify(created.body)).toContain("The action owner is not a valid user id");
+
+      const riskId = await createTestVendorRisk(owner.orgId, {
+        vendor_id: vendorId,
+        action_owner: owner.userId,
+      });
+      const updated = await owner.request
+        .patch(`/api/vendorRisks/${riskId}`)
+        .send({ action_owner: "Jane Doe" });
+      expect(updated.status).toBe(400);
+      expect(JSON.stringify(updated.body)).toContain("The action owner is not a valid user id");
+      expect(notify).not.toHaveBeenCalled();
+    });
+
+    it("is refused on a vendor written outside REST (Advisor, import) as not a valid user id", async () => {
+      const { owner } = await seedTwoTenantContexts();
+      const transaction = await sequelize.transaction();
+      try {
+        await expect(
+          createNewVendorQuery(
+            { ...vendorPayload(owner.userId), assignee: "Jane Doe" } as unknown as IVendor,
+            owner.orgId,
+            transaction,
+          ),
+        ).rejects.toThrow("The vendor assignee is not a valid user id");
+      } finally {
+        await transaction.rollback();
+      }
+      expect(await vendorCount(owner.orgId)).toBe(0);
     });
   });
 });

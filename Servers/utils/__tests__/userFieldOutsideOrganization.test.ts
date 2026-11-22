@@ -38,7 +38,7 @@ describe("findUserFieldOutsideOrganization", () => {
       ORG_ID,
       tx,
     );
-    expect(outside).toMatchObject({ field: "reviewer", value: 9 });
+    expect(outside).toMatchObject({ field: "reviewer", value: 9, reason: "outside" });
   });
 
   it("reads organization_members on the caller's transaction", async () => {
@@ -68,7 +68,7 @@ describe("findUserFieldOutsideOrganization", () => {
       ORG_ID,
       tx,
     );
-    expect(outside).toMatchObject({ field: "reviewer" });
+    expect(outside).toMatchObject({ field: "reviewer", reason: "outside" });
   });
 
   it("treats a field not written, null, '' and 0 as no user", async () => {
@@ -80,11 +80,11 @@ describe("findUserFieldOutsideOrganization", () => {
     expect(mockQuery).not.toHaveBeenCalled();
   });
 
-  it("fails closed on a value that is not a positive integer", async () => {
-    for (const value of [5.5, "5x", -3, { id: 5 }]) {
+  it("fails closed on a value that is not a positive integer, reported as invalid", async () => {
+    for (const value of [5.5, "5x", "Jane Doe", -3, { id: 5 }]) {
       await expect(
         findUserFieldOutsideOrganization([{ field: "assignee", value }], ORG_ID, tx),
-      ).resolves.toMatchObject({ field: "assignee" });
+      ).resolves.toMatchObject({ field: "assignee", reason: "invalid" });
     }
     expect(mockQuery).not.toHaveBeenCalled();
   });

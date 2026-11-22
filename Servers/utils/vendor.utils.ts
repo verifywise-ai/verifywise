@@ -214,15 +214,20 @@ export const assertVendorUsersInOrganization = async (
     transaction,
   );
   if (!outside) return;
+  const invalid = outside.reason === "invalid";
   if (outside.field === "assignee") {
     throw new ValidationException(
-      "The vendor assignee must be a member of this organization",
+      invalid
+        ? "The vendor assignee is not a valid user id"
+        : "The vendor assignee must be a member of this organization",
       "assignee",
       outside.value,
     );
   }
   throw new ValidationException(
-    "The vendor reviewer must be a member of this organization",
+    invalid
+      ? "The vendor reviewer is not a valid user id"
+      : "The vendor reviewer must be a member of this organization",
     "reviewer",
     outside.value,
   );
