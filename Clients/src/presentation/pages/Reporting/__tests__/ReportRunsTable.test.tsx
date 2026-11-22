@@ -26,7 +26,12 @@ vi.mock("../../../../application/repository/reporting.repository", () => ({
   downloadReportRunFixItList: (...args: any[]) => mockDownloadFixItList(...args),
 }));
 
+vi.mock("../../../../infrastructure/api/customAxios", () => ({
+  showAlert: vi.fn(),
+}));
+
 import ReportRunsTable from "../ReportRunsTable";
+import { showAlert } from "../../../../infrastructure/api/customAxios";
 
 const run = (over: Record<string, unknown> = {}) => ({
   id: 1,
@@ -496,6 +501,43 @@ describe("ReportRunsTable", () => {
 
       expect(screen.queryByText("Draft")).not.toBeInTheDocument();
       expect(screen.queryByText("Final")).not.toBeInTheDocument();
+    });
+  });
+
+  // A failed download used to end in console.error only: the click did nothing visible.
+  describe("download failures", () => {
+    it.each([
+      ["Download", "Failed to download the report"],
+      ["Download fix-it list", "Failed to download the fix-it list"],
+    ])("shows an error toast when %s fails", async (action, message) => {
+      mockRunsPage.mockReturnValue({
+        data: {
+          rows: [run({ companion_file_id: 11, companion_filename: "x_fix-it-list.pdf" })],
+          total: 1,
+        },
+        isLoading: false,
+      });
+      mockDownloadReportRun.mockRejectedValue(new Error("network"));
+      mockDownloadFixItList.mockRejectedValue(new Error("network"));
+      const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+
+      try {
+        const user = userEvent.setup();
+        renderWithProviders(<ReportRunsTable variant="live" />);
+
+        await clickRowAction(user, action);
+
+        await waitFor(() =>
+          expect(showAlert).toHaveBeenCalledWith({
+            variant: "error",
+            body: message,
+            isToast: true,
+          }),
+        );
+        expect(consoleError).not.toHaveBeenCalled();
+      } finally {
+        consoleError.mockRestore();
+      }
     });
   });
 });

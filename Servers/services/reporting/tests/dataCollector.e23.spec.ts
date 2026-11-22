@@ -43,6 +43,8 @@ import type {
   MrmModelFacts,
 } from "../../../domain.layer/interfaces/i.reportGeneration";
 import { buildMrmFleet } from "../e23/mrmFleet";
+import { buildE23FixItView } from "../e23/fixItView";
+import { E23_NOT_ON_FILE, NO_FIX_IT_ITEMS } from "../e23/e23Text";
 
 const E23_RUN = {
   reportKind: "osfi_e23",
@@ -228,11 +230,40 @@ describe("E-23 kind run", () => {
       sectionKey: "frameworkRequirements",
       reason: "no_framework_target",
     });
+    expect(data.sectionNotices).toContainEqual({
+      sectionKey: "e23FixItList",
+      reason: "no_framework_target",
+    });
     expect(data.sections.mrmFleet).toBeDefined();
     const items = data.sections.e23FixItList?.items ?? [];
     expect(items.length).toBeGreaterThan(0);
     expect(items.every((i) => i.source === 7)).toBe(true);
     expect(data.sections.e23Glance?.requirementsAvailable).toBe(false);
+  });
+
+  it("without E-23 on file, a run selecting only the fix-it list never calls it clear", async () => {
+    requirementsSpy();
+    // A model with no gaps, so the list is empty: only the checklist is missing.
+    mockCollectMrm.mockResolvedValue({
+      models: [
+        model({
+          tier: "3",
+          roles: { owner: ["Olu Owner"], developerIds: [], validator: [], approver: ["Ana"] },
+        }),
+      ],
+      activity,
+    });
+    const collector = createScopedDataCollector(10, 1, "organization", [soc2Target]);
+
+    const data = await collector.collectAllData(["e23FixItList"], E23_RUN);
+
+    expect(data.sectionNotices).toEqual([
+      { sectionKey: "e23FixItList", reason: "no_framework_target" },
+    ]);
+    expect(data.sections.e23FixItList?.items).toEqual([]);
+    const text = JSON.stringify(buildE23FixItView(data, { runId: 1 }));
+    expect(text).toContain(E23_NOT_ON_FILE);
+    expect(text).not.toContain(NO_FIX_IT_ITEMS);
   });
 
   it("without any bundled framework: one no_framework_target per requested section", async () => {

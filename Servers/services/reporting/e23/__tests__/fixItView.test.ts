@@ -135,12 +135,23 @@ describe("buildE23FixItView", () => {
   });
 
   it("says when E-23 is not on file, and does not call the list clear", () => {
+    const data = e23FixItReportData({ notOnFile: true, items: [] });
+    // The collector raises this on the fix-it list itself when there is no E-23 pairing.
+    data.sectionNotices.push({ sectionKey: "e23FixItList", reason: "no_framework_target" });
+
+    const view = buildE23FixItView(data, { runId: 1 })!;
+
+    expect(allText(view)).toContain(E23_NOT_ON_FILE);
+    expect(allText(view)).not.toContain(NO_FIX_IT_ITEMS);
+  });
+
+  it("reads not-on-file from its own notice, not from other sections' notices", () => {
+    // Only the formal sections' notices: the list itself was checked.
     const view = buildE23FixItView(e23FixItReportData({ notOnFile: true, items: [] }), {
       runId: 1,
     })!;
 
-    expect(allText(view)).toContain(E23_NOT_ON_FILE);
-    expect(allText(view)).not.toContain(NO_FIX_IT_ITEMS);
+    expect(allText(view)).not.toContain(E23_NOT_ON_FILE);
   });
 
   it("omits the run line when the run id is not known", () => {

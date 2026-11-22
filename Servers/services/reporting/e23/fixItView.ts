@@ -30,7 +30,6 @@ import {
   type E23Cell,
   type E23Cover,
   type E23Section,
-  e23NotOnFile,
   formatReportDate,
   isE23Report,
 } from "./formalView";
@@ -89,11 +88,21 @@ function notCompletedBlocks(data: ReportData): E23Block[] {
   ];
 }
 
+/**
+ * E-23 was not checked: the collector raises no_framework_target on
+ * e23FixItList itself when there is no E-23 pairing, whichever other
+ * sections were selected.
+ */
+const e23NotChecked = (data: ReportData): boolean =>
+  (data.sectionNotices ?? []).some(
+    (n) => n.sectionKey === "e23FixItList" && n.reason === "no_framework_target",
+  );
+
 function itemsSection(data: ReportData): E23Section {
   const list = data.sections.e23FixItList;
   const items = list?.items ?? [];
   const notCompleted = notCompletedBlocks(data);
-  const notOnFile = e23NotOnFile(data);
+  const notOnFile = e23NotChecked(data);
   const blocks: E23Block[] = [...notCompleted];
   if (notOnFile) blocks.push({ kind: "paragraph", text: E23_NOT_ON_FILE });
 

@@ -16,29 +16,8 @@
     :root {
       --color-primary: <%= branding.primaryColor || '{{colorBrandPrimary}}' %>;
     }
-
-    .group-header {
-      background: var(--color-background-alt);
-      padding: 16px 24px;
-      margin: 32px 0 24px 0;
-      border-left: 4px solid var(--color-primary);
-    }
-
-    .group-title {
-      font-size: 18px;
-      font-weight: 700;
-      color: var(--color-text-primary);
-      margin: 0;
-    }
   </style>
   <style><%- include('./styles/e23.css') %></style>
-  <style>
-    /* The cover already fills its page; a forced break here leaves a blank one. */
-    #e23-fixit-items {
-      page-break-before: auto;
-      break-before: auto;
-    }
-  </style>
 </head>
 <body>
   <div class="report-container">

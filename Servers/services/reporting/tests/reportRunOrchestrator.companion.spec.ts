@@ -11,14 +11,12 @@ const generateReport = jest.fn();
 const createRunQuery = jest.fn();
 const updateRunStatusQuery = jest.fn();
 const uploadFile = jest.fn();
-const deleteRunFileQuery = jest.fn();
 const sendAutomationEmail = jest.fn();
 
 jest.mock("../index", () => ({ generateReport: (...a: any) => generateReport(...a) }));
 jest.mock("../../../utils/reportRun.utils", () => ({
   createRunQuery: (...a: any) => createRunQuery(...a),
   updateRunStatusQuery: (...a: any) => updateRunStatusQuery(...a),
-  deleteRunFileQuery: (...a: any) => deleteRunFileQuery(...a),
 }));
 jest.mock("../../../utils/fileUpload.utils", () => ({
   uploadFile: (...a: any) => uploadFile(...a),
@@ -193,19 +191,18 @@ describe("runScheduledReport with a fix-it companion", () => {
 
     expect(outcome.status).toBe("partial_success");
     expect(finalUpdate()).toMatchObject({ companion_file_id: 500 });
-    expect(deleteRunFileQuery).not.toHaveBeenCalled();
   });
 
-  it("removes the stored companion when the run then fails outright (both or neither)", async () => {
-    // persistAnalyses or the status write throwing after the companion is stored.
+  it("keeps the stored files when the run fails late, after delivery", async () => {
+    // persistAnalyses or the status write throwing after delivery: the formal
+    // report may already be stored or emailed, so neither file is taken back.
     updateRunStatusQuery.mockRejectedValueOnce(new Error("db down"));
 
-    const outcome = await run({ saveToStorage: false });
+    const outcome = await run({ saveToStorage: true });
 
     expect(outcome.status).toBe("failed");
-    expect(deleteRunFileQuery).toHaveBeenCalledWith(500, 1);
+    expect(uploadFile).toHaveBeenCalledTimes(2);
     expect(finalUpdate()).toMatchObject({ status: "failed" });
-    expect(finalUpdate().companion_file_id).toBeUndefined();
   });
 
   it("stores no companion for a run without one", async () => {

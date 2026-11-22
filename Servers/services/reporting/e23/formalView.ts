@@ -156,7 +156,7 @@ export const isE23Report = (data: ReportData): boolean => data.metadata.reportKi
  * E-23 has no pairing in scope: the collector said so with a
  * no_framework_target notice on the completeness or contradictions section.
  */
-export const e23NotOnFile = (data: ReportData): boolean =>
+const e23NotOnFile = (data: ReportData): boolean =>
   (data.sectionNotices ?? []).some(
     (n) =>
       (n.sectionKey === "frameworkRequirements" || n.sectionKey === "e23Contradictions") &&

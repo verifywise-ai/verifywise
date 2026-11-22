@@ -521,11 +521,15 @@ export class ReportDataCollector {
     }
 
     if (isE23Run) {
-      // No E-23 pairing at all: the rules cannot run. A pairing that exists but
-      // failed is a read failure instead, said on each section it leaves
-      // incomplete (the rules, and the fix-it list's requirement items).
-      if (e23Targets.length === 0 && requested("e23Contradictions")) {
-        sectionNotices.push({ sectionKey: "e23Contradictions", reason: noticeReason });
+      // No E-23 pairing at all: the rules cannot run and the fix-it list has no
+      // requirement items; each selected section says so itself, so the fix-it
+      // list never reads as clear whichever sections were selected. A pairing
+      // that exists but failed is a read failure instead, said on each section
+      // it leaves incomplete (the rules, and the fix-it list's requirement items).
+      if (e23Targets.length === 0) {
+        for (const key of ["e23Contradictions", "e23FixItList"]) {
+          if (requested(key)) sectionNotices.push({ sectionKey: key, reason: noticeReason });
+        }
       }
       if (e23ChecklistFailed) {
         for (const key of ["e23Contradictions", "e23FixItList"]) {

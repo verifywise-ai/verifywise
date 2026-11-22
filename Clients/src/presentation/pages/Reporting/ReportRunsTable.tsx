@@ -39,6 +39,7 @@ import {
   useRunAnalyses,
 } from "../../../application/hooks/useReporting";
 import useFormattedDate from "../../../application/hooks/useFormattedDate";
+import { showAlert } from "../../../infrastructure/api/customAxios";
 import {
   downloadReportRun,
   downloadReportRunFixItList,
@@ -173,6 +174,7 @@ export default function ReportRunsTable({ variant }: { variant: "live" | "archiv
     id: number,
     filename: string | null,
     fetchFile: (id: number) => Promise<Blob> = downloadReportRun,
+    failureMessage = "Failed to download the report",
   ) => {
     try {
       const blob = await fetchFile(id);
@@ -187,8 +189,9 @@ export default function ReportRunsTable({ variant }: { variant: "live" | "archiv
       } finally {
         URL.revokeObjectURL(url);
       }
-    } catch (error) {
-      console.error("Failed to download report run:", error);
+    } catch {
+      // Same toast as the other Reporting tabs, so a failed download is never silent.
+      showAlert({ variant: "error", body: failureMessage, isToast: true });
     }
   };
 
@@ -296,6 +299,7 @@ export default function ReportRunsTable({ variant }: { variant: "live" | "archiv
                               r.id,
                               r.companion_filename ?? null,
                               downloadReportRunFixItList,
+                              "Failed to download the fix-it list",
                             )
                         : undefined
                     }

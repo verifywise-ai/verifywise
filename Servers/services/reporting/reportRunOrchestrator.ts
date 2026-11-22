@@ -1,13 +1,8 @@
 import { generateReport } from "./index";
 import { resolveReportRequest } from "./reportTemplateResolver";
 import { deliverReport } from "./reportDeliveryService";
-import {
-  createRunQuery,
-  deleteRunFileQuery,
-  updateRunStatusQuery,
-} from "../../utils/reportRun.utils";
+import { createRunQuery, updateRunStatusQuery } from "../../utils/reportRun.utils";
 import { uploadFile } from "../../utils/fileUpload.utils";
-import logger from "../../utils/logger/fileLogger";
 import { gapsMessage } from "./noticeText";
 import { persistAnalyses } from "./analyzers/persistAnalyses";
 import { rollingPeriod } from "./scheduleCalculator";
@@ -95,8 +90,6 @@ export async function runScheduledReport(
   });
 
   const userId = sched.owner_id ?? sched.created_by;
-  // The companion file once stored, so a later failure can take it back out.
-  let companionFileId: number | null = null;
   try {
     // The schedule id is what makes a prior-run comparison possible: this run's
     // predecessor is the last run of the same schedule. Attached here rather
@@ -124,6 +117,7 @@ export async function runScheduledReport(
     // It never goes to deliverReport, so no email link or attachment can carry
     // it. If it cannot be stored the run fails before anything is delivered.
     const companion = result.companion;
+    let companionFileId: number | null = null;
     if (companion) {
       try {
         const file: any = await uploadFile(
@@ -192,18 +186,9 @@ export async function runScheduledReport(
     });
     return { runId: run.id, status };
   } catch (e: any) {
-    // Both or neither: a run that fails after its fix-it list was stored does
-    // not keep the list. Best effort; a failed cleanup must not hide the error.
-    if (companionFileId !== null) {
-      try {
-        await deleteRunFileQuery(companionFileId, sched.organization_id);
-      } catch (cleanupError) {
-        logger.warn(
-          `Report run ${run.id}: stored fix-it list ${companionFileId} could not be removed after the run failed`,
-          cleanupError,
-        );
-      }
-    }
+    // A late failure (persisting analyses, the final status write) comes after
+    // delivery: the formal report may already be stored or emailed, so the
+    // stored files stay where they are.
     await updateRunStatusQuery(run.id, sched.organization_id, {
       status: "failed",
       error_message: e.message,

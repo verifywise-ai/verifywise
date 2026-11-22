@@ -387,17 +387,6 @@ export async function setRunArchivedQuery(
 }
 
 /**
- * Delete one stored file of a run (with its folder mappings) in its own
- * transaction: used to take back an E-23 fix-it list when its run fails
- * after the list was stored.
- */
-export async function deleteRunFileQuery(fileId: number, organization_id: number): Promise<void> {
-  await sequelize.transaction(async (transaction) => {
-    await deleteFileById(fileId, organization_id, transaction);
-  });
-}
-
-/**
  * Permanently delete a run and the files it produced — the file is the report,
  * which is what DELETE /reporting/:id meant before runs became the list; an
  * E-23 run also has its internal fix-it list (companion_file_id). A run with
