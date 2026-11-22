@@ -190,7 +190,7 @@ A rule fires only when the named requirement's status is `Implemented` or `Audit
 |---|---|---|
 | C1 | 2.1.4 Enterprise-level model inventory as system of record | No models in the inventory |
 | C2 | 2.2.3 Every model rated through a defined process | Any model with no MRM tier |
-| C3 | 2.2.4 Regular and trigger-based rating review | Any tiered model whose rating was last set or affirmed longer ago than its tier's review cadence (`REVALIDATION_CADENCE_MONTHS` in `utils/mrm.utils.ts`: tier 1 12 months, tier 2 18, tier 3 24, the same cadence the MRM module uses for `next_due`) (the later of `mrm_tiered_at` and its latest validation sign-off, since sign-off affirms the tier per 3.4.8), or flagged for revalidation with no open validation |
+| C3 | 2.2.4 Regular and trigger-based rating review | Any tiered model whose rating was last set or affirmed (the later of `mrm_tiered_at` and its latest validation sign-off, since sign-off affirms the tier per 3.4.8) longer ago than its tier's review cadence (`REVALIDATION_CADENCE_MONTHS` in `utils/mrm.utils.ts`: tier 1 12 months, tier 2 18, tier 3 24, the same cadence the MRM module uses for `next_due`), or flagged for revalidation with no open validation |
 | C4 | 3.1.3 Explicit stakeholder responsibilities | Any model with no `owner` MRM role |
 | C5 | 3.4.1 Review independent of development | Any model whose latest validation's validator currently also holds the `developer` role on that model (latest only: role history is not kept, so older validations cannot be judged fairly) |
 | C6 | 3.4.2 Review depth and frequency set by rating | Any model with an overdue validation (`next_due` before generation, not validated) |
