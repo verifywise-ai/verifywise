@@ -512,7 +512,11 @@ export async function updateVendorRiskById(req: Request, res: Response): Promise
       // Track and record changes
       const userId = req.userId;
       if (userId) {
-        const changes = await trackVendorRiskChanges(oldVendorRiskModel, updatedVendorRisk);
+        // The level as stored (computed), not as the request sent it.
+        const changes = await trackVendorRiskChanges(oldVendorRiskModel, {
+          ...updatedVendorRisk,
+          risk_level: vendorRisk.risk_level,
+        });
         if (changes.length > 0) {
           await recordMultipleFieldChanges(
             vendorRiskId,
@@ -683,7 +687,7 @@ export async function deleteVendorRiskById(req: Request, res: Response): Promise
 export async function getVendorRisksByFrameworkId(req: Request, res: Response): Promise<any> {
   const frameworkId = parseRouteId(req.params.id);
   if (frameworkId === null) {
-    return res.status(400).json(STATUS_CODE[400](req.t!("Invalid framework ID")));
+    return res.status(400).json(STATUS_CODE[400](req.t!("Invalid framework id")));
   }
   const filter = parseVendorRiskListFilter(req.query.filter);
   if (filter === null) {

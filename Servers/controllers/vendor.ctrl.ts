@@ -34,6 +34,7 @@ import logger from "../utils/logger/fileLogger";
 import { QueryTypes } from "sequelize";
 
 import { translateError } from "../utils/i18n.utils";
+import { calculateVendorRiskScore } from "../utils/vendorScorecard.utils";
 // Helper function to get user name
 async function getUserNameById(userId: number): Promise<string> {
   const result = await sequelize.query<{ name: string; surname: string }>(
@@ -315,7 +316,7 @@ export async function createVendor(req: Request, res: Response): Promise<any> {
           createdVendor.id!,
           req.userId,
           req.organizationId!,
-          vendorData,
+          { ...vendorData, risk_score: createdVendor.risk_score },
           transaction,
         );
       }
@@ -510,7 +511,20 @@ export async function updateVendorById(req: Request, res: Response): Promise<any
     const vendorModel = new VendorModel({ ...existingVendor, projects: undefined });
 
     // Track changes before updating
-    const changes = await trackVendorChanges(vendorModel, updateData);
+    // The risk score as it will be stored: computed from the answers this
+    // request writes, else the stored ones (as updateVendorByIdQuery does).
+    const answer = (
+      field: "data_sensitivity" | "business_criticality" | "past_issues" | "regulatory_exposure",
+    ) => (updateData[field] !== undefined ? updateData[field] : existingVendor[field]);
+    const changes = await trackVendorChanges(vendorModel, {
+      ...updateData,
+      risk_score: calculateVendorRiskScore({
+        data_sensitivity: answer("data_sensitivity"),
+        business_criticality: answer("business_criticality"),
+        past_issues: answer("past_issues"),
+        regulatory_exposure: answer("regulatory_exposure"),
+      }),
+    });
 
     // Update vendor using the enhanced method
     await vendorModel.updateVendor({

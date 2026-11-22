@@ -19,6 +19,7 @@ import {
 import { findUserFieldOutsideOrganization } from "./user.utils";
 import { ValidationException } from "../domain.layer/exceptions/custom.exception";
 import logger from "./logger/fileLogger";
+import { calculateVendorRiskScore } from "./vendorScorecard.utils";
 
 export const getAllVendorsQuery = async (organizationId: number): Promise<IVendor[]> => {
   const vendors = await sequelize.query(
@@ -337,11 +338,15 @@ export const createNewVendorQuery = async (
       vendor.regulatory_exposure,
     );
   }
-  if (vendor.risk_score !== undefined) {
-    fields.push("risk_score");
-    values.push("risk_score");
-    replacements.risk_score = vendorColumnValue("risk_score", vendor.risk_score);
-  }
+  // Computed from the scorecard answers; a sent risk_score is ignored.
+  fields.push("risk_score");
+  values.push("risk_score");
+  replacements.risk_score = calculateVendorRiskScore({
+    data_sensitivity: replacements.data_sensitivity,
+    business_criticality: replacements.business_criticality,
+    past_issues: replacements.past_issues,
+    regulatory_exposure: replacements.regulatory_exposure,
+  });
 
   const fieldsList = fields.join(", ");
   const valuesList = values.map((v) => `:${v}`).join(", ");
@@ -434,8 +439,17 @@ export const updateVendorByIdQuery = async (
   },
   organizationId: number,
 ): Promise<IVendor> => {
+  // Read and lock the stored row on the caller's transaction: the "unchanged"
+  // comparison below must see what this UPDATE will overwrite, or a
+  // concurrent save could be overwritten with a non-member that is no
+  // longer the stored value. The risk score is computed from it too.
+  const oldVendor = await getVendorByIdQuery(id, organizationId, {
+    transaction,
+    forUpdate: true,
+  });
+
   const updateVendor: Partial<Record<keyof IVendor, any>> & { organizationId?: number } = {};
-  const setClause = [
+  const columns = [
     "vendor_name",
     "vendor_provides",
     "assignee",
@@ -449,49 +463,48 @@ export const updateVendorByIdQuery = async (
     "business_criticality",
     "past_issues",
     "regulatory_exposure",
-    "risk_score",
-  ]
-    .filter((f) => {
-      // For review and scorecard fields, allow undefined or null to be updated (to clear the field)
-      // For other required fields, only update if they have a value
-      const isReviewField = ["review_result", "review_status", "reviewer", "review_date"].includes(
-        f,
-      );
-      const isScorecardField = [
-        "data_sensitivity",
-        "business_criticality",
-        "past_issues",
-        "regulatory_exposure",
-        "risk_score",
-      ].includes(f);
-      const value = vendor[f as keyof IVendor];
+  ].filter((f) => {
+    // For review and scorecard fields, allow undefined or null to be updated (to clear the field)
+    // For other required fields, only update if they have a value
+    const isReviewField = ["review_result", "review_status", "reviewer", "review_date"].includes(f);
+    const isScorecardField = [
+      "data_sensitivity",
+      "business_criticality",
+      "past_issues",
+      "regulatory_exposure",
+    ].includes(f);
+    const value = vendor[f as keyof IVendor];
 
-      if (isReviewField || isScorecardField) {
-        // Review and scorecard fields: include if explicitly provided (even if null/empty)
-        if (value !== undefined) {
-          updateVendor[f as keyof IVendor] = vendorColumnValue(f, value);
-          return true;
-        }
-      } else {
-        // Required fields: include only if they have a value
-        if (value !== undefined && value) {
-          updateVendor[f as keyof IVendor] = value;
-          return true;
-        }
+    if (isReviewField || isScorecardField) {
+      // Review and scorecard fields: include if explicitly provided (even if null/empty)
+      if (value !== undefined) {
+        updateVendor[f as keyof IVendor] = vendorColumnValue(f, value);
+        return true;
       }
-      return false;
-    })
-    .map((f) => `${f} = :${f}`)
-    .join(", ");
-
-  // Read and lock the stored row on the caller's transaction: the "unchanged"
-  // comparison below must see what this UPDATE will overwrite, or a
-  // concurrent save could be overwritten with a non-member that is no
-  // longer the stored value.
-  const oldVendor = await getVendorByIdQuery(id, organizationId, {
-    transaction,
-    forUpdate: true,
+    } else {
+      // Required fields: include only if they have a value
+      if (value !== undefined && value) {
+        updateVendor[f as keyof IVendor] = value;
+        return true;
+      }
+    }
+    return false;
   });
+
+  // The risk score follows the scorecard answers as they will be stored: the
+  // ones this request writes, else the stored ones. A sent risk_score is ignored.
+  if (oldVendor) {
+    const answer = (field: keyof IVendor) =>
+      field in updateVendor ? updateVendor[field] : oldVendor[field];
+    updateVendor.risk_score = calculateVendorRiskScore({
+      data_sensitivity: answer("data_sensitivity"),
+      business_criticality: answer("business_criticality"),
+      past_issues: answer("past_issues"),
+      regulatory_exposure: answer("regulatory_exposure"),
+    });
+    columns.push("risk_score");
+  }
+  const setClause = columns.map((f) => `${f} = :${f}`).join(", ");
   // Only a new or changed person is checked: one who has since left the
   // organization stays on the vendor and must not block every other edit.
   await assertVendorUsersInOrganization(vendor, organizationId, transaction, oldVendor);

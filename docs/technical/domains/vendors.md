@@ -244,8 +244,8 @@ sent aren't checked, and a vendor PATCH validates only what it sends: an
 imported vendor with empty required fields can still be edited, but a PATCH
 can't blank a required field.
 
-A vendor risk create needs `vendor_id`, `risk_description`, `likelihood`,
-`risk_severity` and `risk_level`; an update can't blank them, but can clear
+A vendor risk create needs `vendor_id`, `risk_description`, `likelihood` and
+`risk_severity`; an update can't blank them, but can clear
 `impact_description` and `action_plan` (`''` or `null`). `likelihood` accepts
 either spelling of "Almost certain". Framework ids are checked against
 `frameworks` inside the write's transaction, and repeats are saved once: an
@@ -270,7 +270,31 @@ The scorecard assesses vendor risk across dimensions:
 
 ### Risk Score
 
-Calculated score (0-100) based on scorecard values. Higher score indicates higher risk.
+The server computes `risk_score` on every vendor write, from the scorecard
+answers as they will be stored (`calculateVendorRiskScore`,
+`utils/vendorScorecard.utils.ts`); a `risk_score` in the request is ignored.
+Each answer is normalized against its scale's highest value and weighted
+(sensitivity 0.3, criticality 0.3, past issues 0.2, regulatory exposure 0.2);
+the sum × 100, rounded, is the score (0–100). A vendor with no answer has
+`risk_score` NULL and the vendor table shows "Not assessed", where it used to
+show a green 0%. The drawer's live preview uses the same table
+(`Clients/src/domain/utils/vendorScorecard.utils.ts`).
+
+### Vendor risk level
+
+`vendorrisks.risk_level` is computed by the server on create and on every
+update from likelihood and severity as they will be stored, with the formula
+project risks use (`calculateRiskLevel` in `utils/riskLevel.utils.ts`:
+likelihood + 3 × severity → "No risk", "Low risk", "Medium risk", "High risk",
+"Very high risk"). A `risk_level` in the request is ignored, so a level can't
+go stale when likelihood or severity changes. The Risks tab cards, card filter
+and level filter group levels through `vendorRiskLevelLabel`
+(`Clients/src/application/utils/riskLevel.ts`): "No risk" is the lowest card,
+and an older stored "Very low" counts there.
+
+Migration `20261122200000-vendor-risk-level-and-score-recompute` recomputed
+every stored level (rows without likelihood or severity kept theirs) and every
+score (NULL where no answer is set).
 
 ## Vendor-Project Relationship
 
@@ -473,9 +497,9 @@ fully answered "no exposure" vendor (`true`, zero suggestions). Suggestions are 
 | C `past_issues` | `Minor incident (e.g. small delay, minor bug)` → `Minor`; `Major incident (e.g. data breach, legal issue)` → `Major` | per value | `Likely` |
 | D `regulatory_exposure` | Any value except `None` | `Moderate` | `Possible` |
 
-`risk_level` is derived with `calculateRiskLevel` from
-`utils/validations/vendorRiskValidation.utils.ts` and stored in the report with the ` Risk`
-suffix used by `vendorrisks.risk_level` (for example `High Risk`). Suggestion text names the
+`risk_level` is derived with `calculateRiskLevel` from `utils/riskLevel.utils.ts`, the
+formula a saved vendor risk gets, so accepting a suggestion stores the level it showed
+(for example `Very high risk`). Suggestion text names the
 answer through a short display label, not the raw enum value; `reasons` keeps the raw enum value.
 
 ### Suppression

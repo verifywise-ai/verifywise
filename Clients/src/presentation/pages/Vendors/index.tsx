@@ -51,6 +51,7 @@ import VendorRiskInsights from "./VendorRiskInsights";
 import { matchesHeatCell } from "./VendorRiskInsights/HeatMapSection";
 import ListStateWrapper from "../../components/ListStateWrapper";
 import { chartTheme } from "../../themes/chartTheme";
+import { vendorRiskLevelLabel } from "../../../application/utils/riskLevel";
 
 // Constants
 const REDIRECT_DELAY_MS = 2000;
@@ -401,11 +402,11 @@ const Vendors = () => {
         label: "Risk level",
         type: "select" as const,
         options: [
-          { value: "Very High", label: "Very high" },
+          { value: "Very high", label: "Very high" },
           { value: "High", label: "High" },
           { value: "Medium", label: "Medium" },
           { value: "Low", label: "Low" },
-          { value: "Very Low", label: "Very low" },
+          { value: "No risk", label: "No risk" },
         ],
       },
       {
@@ -430,7 +431,9 @@ const Vendors = () => {
       case "risk_severity":
         return item.risk_severity;
       case "risk_level":
-        return item.risk_level;
+        // The card label ("Medium"), not the stored "Medium risk", so the
+        // filter's values match.
+        return vendorRiskLevelLabel(item.risk_level);
       case "action_owner":
         return item.action_owner?.toString();
       default:
@@ -484,7 +487,7 @@ const Vendors = () => {
       setSelectedRiskLevel(riskLevel);
       setAlert({
         variant: "info",
-        title: `Filtering by ${riskLevel} risks`,
+        title: `Filtering by risk level: ${riskLevel}`,
         body: "The table now shows only vendor risks with this risk level. Click the card again to see all risks.",
       });
     } else {
@@ -827,24 +830,9 @@ const Vendors = () => {
 
     // Apply card filter for risk level (using same matching logic as summary)
     if (selectedRiskLevel) {
-      const levelLower = selectedRiskLevel.toLowerCase();
-      filtered = filtered.filter((risk) => {
-        const riskLevel = (risk.risk_level || "").toLowerCase();
-        switch (levelLower) {
-          case "very high":
-            return riskLevel.includes("very high");
-          case "high":
-            return riskLevel.includes("high") && !riskLevel.includes("very high");
-          case "medium":
-            return riskLevel.includes("medium");
-          case "low":
-            return riskLevel.includes("low") && !riskLevel.includes("very low");
-          case "very low":
-            return riskLevel.includes("very low");
-          default:
-            return true;
-        }
-      });
+      filtered = filtered.filter(
+        (risk) => vendorRiskLevelLabel(risk.risk_level) === selectedRiskLevel,
+      );
     }
 
     // Then the heat map cell, if one is selected
@@ -1021,8 +1009,8 @@ const Vendors = () => {
                   color: chartTheme.riskSummary.low,
                 },
                 {
-                  key: "Very low",
-                  label: "Very low",
+                  key: "No risk",
+                  label: "No risk",
                   count: vendorRisksSummary.veryLowRisks,
                   color: chartTheme.riskSummary.veryLow,
                 },

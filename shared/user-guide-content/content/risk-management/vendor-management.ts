@@ -236,7 +236,7 @@ export const vendorManagementContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Based on the scorecard inputs, VerifyWise calculates an overall risk score for each vendor. Higher scores mean greater risk and more oversight needed.',
+      text: 'Based on the scorecard inputs, VerifyWise calculates an overall risk score from 0 to 100 for each vendor. Higher scores mean greater risk and more oversight needed. A vendor with no scorecard answers shows "Not assessed" instead of a score.',
     },
     {
       type: 'callout',

@@ -8,6 +8,7 @@ import {
 } from "./customField.utils";
 import { findUserFieldOutsideOrganization, parseReferencedIds } from "./user.utils";
 import { ValidationException } from "../domain.layer/exceptions/custom.exception";
+import { calculateRiskLevel } from "./riskLevel.utils";
 
 export const getVendorRisksByProjectIdQuery = async (
   projectId: number,
@@ -220,7 +221,8 @@ export const createNewVendorRiskQuery = async (
         risk_severity: vendorRisk.risk_severity,
         action_plan: vendorRisk.action_plan,
         action_owner: vendorActionOwnerValue(vendorRisk.action_owner),
-        risk_level: vendorRisk.risk_level,
+        // Computed from likelihood and severity; a sent risk_level is ignored.
+        risk_level: calculateRiskLevel(vendorRisk.likelihood, vendorRisk.risk_severity),
         is_demo: vendorRisk.is_demo || false,
       },
       mapToModel: true,
@@ -242,11 +244,11 @@ export const updateVendorRiskByIdQuery = async (
   // cannot change it between the checks below and the UPDATE. A missing or
   // soft-deleted vendor risk is not edited: the caller answers 404.
   const [stored] = (await sequelize.query(
-    `SELECT action_owner FROM vendorrisks
+    `SELECT action_owner, likelihood, risk_severity FROM vendorrisks
       WHERE organization_id = :organizationId AND id = :id AND is_deleted = false
       FOR UPDATE`,
     { replacements: { organizationId, id }, type: QueryTypes.SELECT, transaction },
-  )) as { action_owner: number | null }[];
+  )) as { action_owner: number | null; likelihood: string | null; risk_severity: string | null }[];
   if (!stored) return null;
 
   // An empty vendor_id is not written (see the SET clause below).
@@ -266,7 +268,7 @@ export const updateVendorRiskByIdQuery = async (
   const updateVendorRisk: Partial<Record<keyof VendorRiskModel, any>> & {
     organizationId?: number;
   } = {};
-  const setClause = [
+  const columns = [
     "vendor_id",
     "risk_description",
     "impact_description",
@@ -274,36 +276,46 @@ export const updateVendorRiskByIdQuery = async (
     "risk_severity",
     "action_plan",
     "action_owner",
-    "risk_level",
-  ]
-    .filter((f) => {
-      // action_owner can be cleared: null, '' and 0 write NULL.
-      if (f === "action_owner") {
-        if (vendorRisk.action_owner === undefined) return false;
-        updateVendorRisk.action_owner = vendorActionOwnerValue(vendorRisk.action_owner);
-        return true;
-      }
-      // Optional text: a value that is sent is written, so '' and null clear it.
-      if (f === "impact_description" || f === "action_plan") {
-        const value = vendorRisk[f];
-        if (value === undefined) return false;
-        updateVendorRisk[f] = value;
-        return true;
-      }
-      if (
-        vendorRisk[f as keyof VendorRiskModel] !== undefined &&
-        vendorRisk[f as keyof VendorRiskModel]
-      ) {
-        updateVendorRisk[f as keyof VendorRiskModel] =
-          f === "likelihood"
-            ? normalizeVendorRiskLikelihood(vendorRisk.likelihood)
-            : vendorRisk[f as keyof VendorRiskModel];
-        return true;
-      }
-      return false;
-    })
-    .map((f) => `${f} = :${f}`)
-    .join(", ");
+  ].filter((f) => {
+    // action_owner can be cleared: null, '' and 0 write NULL.
+    if (f === "action_owner") {
+      if (vendorRisk.action_owner === undefined) return false;
+      updateVendorRisk.action_owner = vendorActionOwnerValue(vendorRisk.action_owner);
+      return true;
+    }
+    // Optional text: a value that is sent is written, so '' and null clear it.
+    if (f === "impact_description" || f === "action_plan") {
+      const value = vendorRisk[f];
+      if (value === undefined) return false;
+      updateVendorRisk[f] = value;
+      return true;
+    }
+    if (
+      vendorRisk[f as keyof VendorRiskModel] !== undefined &&
+      vendorRisk[f as keyof VendorRiskModel]
+    ) {
+      updateVendorRisk[f as keyof VendorRiskModel] =
+        f === "likelihood"
+          ? normalizeVendorRiskLikelihood(vendorRisk.likelihood)
+          : vendorRisk[f as keyof VendorRiskModel];
+      return true;
+    }
+    return false;
+  });
+
+  // The level follows likelihood and severity as they will be stored: the
+  // sent ones, else the stored ones. A sent risk_level is ignored. Written
+  // on every update, so a level left stale by an older write is corrected;
+  // an older risk without likelihood or severity keeps its level.
+  const level = calculateRiskLevel(
+    updateVendorRisk.likelihood ?? stored.likelihood,
+    updateVendorRisk.risk_severity ?? stored.risk_severity,
+  );
+  if (level) {
+    updateVendorRisk.risk_level = level;
+    columns.push("risk_level");
+  }
+  const setClause = columns.map((f) => `${f} = :${f}`).join(", ");
 
   // A request that changes only frameworks names no column: read the row
   // back instead of building an UPDATE with an empty SET.

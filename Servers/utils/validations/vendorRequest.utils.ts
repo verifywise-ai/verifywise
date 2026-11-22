@@ -65,12 +65,6 @@ const required = (field: string): ValidationException =>
     i18nVars: { field },
   });
 
-const outOfRange = (field: string, value: unknown, min: number, max: number): ValidationException =>
-  new ValidationException(`${field} must be a whole number from ${min} to ${max}`, field, value, {
-    i18nKey: "{key} must be a whole number from {min} to {max}",
-    i18nVars: { key: field, min, max },
-  });
-
 /** '', null and undefined: the field is cleared or not sent. */
 const isEmpty = (value: unknown): boolean => value === undefined || value === null || value === "";
 
@@ -187,14 +181,6 @@ export const assertVendorRequestBody = (rawBody: unknown): void => {
   // (assertVendorUsersInOrganization), which tells a non-id from an outsider.
   assertIdList(body, "projects");
 
-  const riskScore = body.risk_score;
-  if (!isEmpty(riskScore)) {
-    const score = toId(riskScore);
-    if (!Number.isInteger(score) || score < 0 || score > 100) {
-      throw outOfRange("risk_score", riskScore, 0, 100);
-    }
-  }
-
   const orderNo = body.order_no;
   if (!isEmpty(orderNo)) {
     const n = toId(orderNo);
@@ -210,19 +196,13 @@ export const assertVendorRequestBody = (rawBody: unknown): void => {
 /**
  * Checks the fields of a vendor risk create or PATCH body that are present.
  * On create, the fields the risk can't exist without are required.
- * vendor_id, risk_description, likelihood, risk_severity and risk_level can't
+ * vendor_id, risk_description, likelihood and risk_severity can't
  * be cleared; impact_description and action_plan can.
  */
 export const assertVendorRiskRequestBody = (rawBody: unknown, mode: "create" | "update"): void => {
   const body = assertObjectBody(rawBody);
   if (mode === "create") {
-    for (const field of [
-      "vendor_id",
-      "risk_description",
-      "likelihood",
-      "risk_severity",
-      "risk_level",
-    ]) {
+    for (const field of ["vendor_id", "risk_description", "likelihood", "risk_severity"]) {
       if (isEmpty(body[field])) throw required(field);
     }
   }
@@ -230,7 +210,6 @@ export const assertVendorRiskRequestBody = (rawBody: unknown, mode: "create" | "
   assertText(body, "risk_description", { nonEmpty: true });
   assertText(body, "impact_description");
   assertText(body, "action_plan");
-  assertText(body, "risk_level", { max: SHORT_TEXT_MAX, nonEmpty: true });
   assertEnum(body, "likelihood", VENDOR_RISK_LIKELIHOODS, {
     nonEmpty: true,
     caseInsensitive: true,

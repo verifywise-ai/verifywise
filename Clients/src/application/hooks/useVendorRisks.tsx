@@ -13,7 +13,7 @@
  */
 import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
-import { convertToCamelCaseRiskKey } from "../tools/stringUtil";
+import { riskLevelBucket } from "../utils/riskLevel";
 import { VendorRisk } from "../../domain/types/VendorRisk";
 import { getAllVendorRisks } from "../repository/vendorRisk.repository";
 
@@ -66,10 +66,10 @@ const useVendorRisks = ({
   const vendorRisksSummary = useMemo(() => {
     return filteredVendorRisks.reduce(
       (acc, risk) => {
-        const _risk = convertToCamelCaseRiskKey(risk.risk_level);
-        const key = `${_risk.replace(/risks?$/i, "")}Risks`;
-        if (key in acc && key !== "total") {
-          const riskKey = key as
+        // "No risk" (and an older "Very low") count on the lowest card.
+        const bucket = riskLevelBucket(risk.risk_level);
+        if (bucket) {
+          const riskKey = `${bucket}Risks` as
             "veryHighRisks" | "highRisks" | "mediumRisks" | "lowRisks" | "veryLowRisks";
           acc[riskKey] = acc[riskKey] + 1;
         }

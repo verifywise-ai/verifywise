@@ -271,8 +271,6 @@ describe("vendor and vendor risk writes", () => {
       ["an unknown data sensitivity", { data_sensitivity: "Very" }],
       ["a use case id that is not a number", { projects: ["abc"] }],
       ["use cases that are not a list", { projects: 3 }],
-      ["a risk score above 100", { risk_score: 9999 }],
-      ["a risk score that is not a whole number", { risk_score: "high" }],
       ["a vendor name over 255 characters", { vendor_name: "x".repeat(256) }],
       ["a review date that is not a date", { review_date: "someday" }],
       ["a review date sent as a number", { review_date: 1700000000000 }],
@@ -418,7 +416,6 @@ describe("vendor and vendor risk writes", () => {
     });
 
     it.each([
-      ["without a risk level", { risk_level: undefined }],
       ["with an unknown severity", { risk_severity: "High" }],
       ["with an unknown likelihood", { likelihood: "Sometimes" }],
       ["with a vendor id that is not a number", { vendor_id: "abc" }],

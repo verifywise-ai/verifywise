@@ -45,6 +45,7 @@ export const de: Record<string, string> = {
   "Frameworks in its use cases": "Rahmenwerke in seinen Anwendungsfällen",
   "Every active vendor risk is mapped to at least one framework.":
     "Jedes aktive Anbieterrisiko ist mindestens einem Rahmenwerk zugeordnet.",
+  "Not assessed": "Nicht bewertet",
 };
 
 export const fr: Record<string, string> = {
@@ -92,6 +93,7 @@ export const fr: Record<string, string> = {
   "Frameworks in its use cases": "Référentiels de ses cas d'usage",
   "Every active vendor risk is mapped to at least one framework.":
     "Chaque risque fournisseur actif est associé à au moins un référentiel.",
+  "Not assessed": "Non évalué",
 };
 
 export const es: Record<string, string> = {
@@ -139,4 +141,5 @@ export const es: Record<string, string> = {
   "Frameworks in its use cases": "Marcos en sus casos de uso",
   "Every active vendor risk is mapped to at least one framework.":
     "Cada riesgo del proveedor activo está asignado al menos a un marco.",
+  "Not assessed": "Sin evaluar",
 };
