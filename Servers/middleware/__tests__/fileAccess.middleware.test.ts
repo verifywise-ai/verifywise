@@ -50,6 +50,19 @@ describe("requireFileAccess", () => {
     expect(next).not.toHaveBeenCalled();
   });
 
+  // Number("5e2") is 500 while the handlers' parseInt read 5: the middleware
+  // checked one file and the handler acted on another.
+  it.each(["5e2", "5abc", "0x5", "5.0", "-5", "0", " 5"])(
+    "answers 400 for the non-decimal file id %j without checking access",
+    async (fileId) => {
+      const res = createRes();
+      await requireFileAccess("fileId")(createReq({ params: { fileId } } as any), res, next);
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(mockCanAccess).not.toHaveBeenCalled();
+      expect(next).not.toHaveBeenCalled();
+    },
+  );
+
   it("answers 401 with the translated message without a user", async () => {
     const res = createRes();
     await requireFileAccess("fileId")(createReq({ userId: undefined } as any), res, next);
@@ -78,8 +91,11 @@ describe("requireFileAccess", () => {
   it("passes an allowed caller on without logging a failure", async () => {
     mockCanAccess.mockResolvedValue(true);
     const res = createRes();
-    await requireFileAccess("fileId")(createReq(), res, next);
+    const req = createReq();
+    await requireFileAccess("fileId")(req, res, next);
     expect(next).toHaveBeenCalledWith();
     expect(logFailure).not.toHaveBeenCalled();
+    // The handler acts on exactly the id that was checked.
+    expect(req.fileId).toBe(5);
   });
 });

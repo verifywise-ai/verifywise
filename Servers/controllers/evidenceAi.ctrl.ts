@@ -143,11 +143,10 @@ function inferParseFidelity(fileType: string): "high" | "medium" | "low" | undef
  */
 export async function analyzeFile(req: Request, res: Response) {
   const functionName = "analyzeFile";
-  const fileId = parseInt(
-    Array.isArray(req.params.fileId) ? req.params.fileId[0] : req.params.fileId,
-  );
+  // Parsed and access-checked by requireFileAccess.
+  const fileId = req.fileId;
 
-  if (isNaN(fileId)) {
+  if (fileId === undefined) {
     return res.status(400).json(STATUS_CODE[400](req.t!("Invalid file ID")));
   }
 
@@ -380,11 +379,10 @@ export async function analyzeFile(req: Request, res: Response) {
  */
 export async function getAnalysis(req: Request, res: Response) {
   const functionName = "getAnalysis";
-  const fileId = parseInt(
-    Array.isArray(req.params.fileId) ? req.params.fileId[0] : req.params.fileId,
-  );
+  // Parsed and access-checked by requireFileAccess.
+  const fileId = req.fileId;
 
-  if (isNaN(fileId)) {
+  if (fileId === undefined) {
     return res.status(400).json(STATUS_CODE[400](req.t!("Invalid file ID")));
   }
 
@@ -500,11 +498,10 @@ export async function getGaps(req: Request, res: Response) {
  */
 export async function getSuggestions(req: Request, res: Response) {
   const functionName = "getSuggestions";
-  const fileId = parseInt(
-    Array.isArray(req.params.fileId) ? req.params.fileId[0] : req.params.fileId,
-  );
+  // Parsed and access-checked by requireFileAccess.
+  const fileId = req.fileId;
 
-  if (isNaN(fileId)) {
+  if (fileId === undefined) {
     return res.status(400).json(STATUS_CODE[400](req.t!("Invalid file ID")));
   }
 
@@ -530,11 +527,10 @@ export async function getSuggestions(req: Request, res: Response) {
  */
 export async function applySuggestions(req: Request, res: Response) {
   const functionName = "applySuggestions";
-  const fileId = parseInt(
-    Array.isArray(req.params.fileId) ? req.params.fileId[0] : req.params.fileId,
-  );
+  // Parsed and access-checked by requireFileAccess.
+  const fileId = req.fileId;
 
-  if (isNaN(fileId)) {
+  if (fileId === undefined) {
     return res.status(400).json(STATUS_CODE[400](req.t!("Invalid file ID")));
   }
 

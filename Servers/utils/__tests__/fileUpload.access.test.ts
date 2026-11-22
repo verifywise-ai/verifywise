@@ -26,9 +26,18 @@ describe("canUserAccessFile", () => {
     mockQuery.mockResolvedValue([]);
   });
 
-  it("lets an Admin through without querying", async () => {
+  // An Admin of another organization was let through for any file id, so it
+  // could link another organization's file.
+  it("lets an Admin open any file of their own organization only", async () => {
+    mockQuery.mockResolvedValueOnce([{ id: 5 }]);
     await expect(canUserAccessFile(5, 2, "Admin", 1)).resolves.toBe(true);
-    expect(mockQuery).not.toHaveBeenCalled();
+    const sql = lastSql();
+    expect(sql).toContain("f.organization_id = :organizationId AND f.id = :fileId");
+    expect(sql).not.toContain(":fileAccessUserId");
+    expect(lastReplacements()).toEqual(expect.objectContaining({ fileId: 5, organizationId: 1 }));
+
+    mockQuery.mockResolvedValueOnce([]);
+    await expect(canUserAccessFile(5, 2, "Admin", 1)).resolves.toBe(false);
   });
 
   // Regression: files.org_id is NULL on migrated files and uploadFile leaves it

@@ -197,8 +197,9 @@ export const buildFileAccessFilter = (
 };
 
 /**
- * Whether the user may read the file: Admins always; otherwise see
- * fileAccessPredicate. A missing file answers false, like a forbidden one.
+ * Whether the user may read the file: an Admin any file of the organization;
+ * anyone else see fileAccessPredicate. A missing file, or another
+ * organization's, answers false like a forbidden one.
  */
 export const canUserAccessFile = async (
   fileId: number,
@@ -206,17 +207,17 @@ export const canUserAccessFile = async (
   role: string,
   organizationId: number,
 ): Promise<boolean> => {
-  if (isFileAdminRole(role)) {
-    return true;
-  }
-
-  const query = `
-    SELECT f.id
-    FROM files f
-    WHERE f.organization_id = :organizationId AND f.id = :fileId
-      AND ${fileAccessPredicate("f")}
-    LIMIT 1
-  `;
+  // Admins skip the per-file rule, not the organization: the file must still
+  // be one of theirs.
+  const query = isFileAdminRole(role)
+    ? `SELECT f.id FROM files f
+        WHERE f.organization_id = :organizationId AND f.id = :fileId
+        LIMIT 1`
+    : `SELECT f.id
+         FROM files f
+        WHERE f.organization_id = :organizationId AND f.id = :fileId
+          AND ${fileAccessPredicate("f")}
+        LIMIT 1`;
 
   const result = await sequelize.query(query, {
     replacements: { organizationId, fileId, fileAccessUserId: userId },

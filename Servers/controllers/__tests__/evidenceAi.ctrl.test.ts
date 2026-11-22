@@ -65,6 +65,7 @@ function createReq(overrides?: Partial<Request>): any {
     role: "Editor",
     organizationId: 1,
     params: { fileId: "42" },
+    fileId: 42,
     body: {},
     t: getTranslator("en"),
     ...overrides,
