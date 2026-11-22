@@ -23,7 +23,8 @@ import {
   diffIncidentColumns,
   enqueueIncidentUpdatedAutomations,
   getIncidentByIdQuery,
-  IncidentReferenceField,
+  incidentReferenceFieldFromError,
+  invalidReferenceErrors,
   updateIncidentByIdQuery,
   validateIncidentReferences,
 } from "../utils/incidentManagement.utils";
@@ -138,13 +139,6 @@ export async function updateIncident(
     const validationErrors: ValidationError[] = validateCompleteIncidentUpdate(updates, stored);
     if (validationErrors.length > 0) throw new IncidentUpdateValidationError(validationErrors);
 
-    // A reference the update sets to a new value is checked with a locking
-    // read, as on create, so a concurrent delete or removal cannot slip in
-    // before the write. One kept from the row is read without a lock: locking
-    // it would wait on a delete whose cascade waits on this incident's row.
-    const isNewReference = (field: IncidentReferenceField) =>
-      updates[field] !== undefined &&
-      String(updates[field] ?? "").trim() !== String(stored[field] ?? "");
     const invalidRefs = await validateIncidentReferences(
       {
         model_inventory_id:
@@ -154,22 +148,17 @@ export async function updateIncident(
         project_id: updates.project_id !== undefined ? updates.project_id : stored.project_id,
         // Only a new owner is checked: one who has since left the organization
         // stays on the incident and must not block every other edit.
-        assignee_id: isNewReference("assignee_id") ? updates.assignee_id : undefined,
+        assignee_id:
+          updates.assignee_id !== undefined &&
+          String(updates.assignee_id ?? "").trim() !== String(stored.assignee_id ?? "")
+            ? updates.assignee_id
+            : undefined,
       },
       organizationId,
       transaction,
-      {
-        lock: (["model_inventory_id", "project_id", "assignee_id"] as const).filter(isNewReference),
-      },
     );
     if (invalidRefs.length > 0) {
-      throw new IncidentUpdateValidationError(
-        invalidRefs.map((field) => ({
-          field,
-          message: `${field} does not reference an entity in your organization`,
-          code: "INVALID_REFERENCE",
-        })),
-      );
+      throw new IncidentUpdateValidationError(invalidReferenceErrors(invalidRefs));
     }
 
     const effective = applyReopenApprovalReset(stored, updates);
@@ -213,6 +202,13 @@ export async function updateIncident(
     return saved;
   } catch (error) {
     if (ownsTransaction) await transaction.rollback();
+    // A reference deleted after the check fails the UPDATE's FK check: the
+    // same 400 as a failed check. A caller's transaction is aborted by the
+    // violation, so the caller must roll it back.
+    const deletedReference = incidentReferenceFieldFromError(error);
+    if (deletedReference) {
+      throw new IncidentUpdateValidationError(invalidReferenceErrors([deletedReference]));
+    }
     throw error;
   }
 }

@@ -8,6 +8,8 @@ import {
   deleteIncidentByIdQuery,
   archiveIncidentByIdQuery,
   validateIncidentReferences,
+  incidentReferenceFieldFromError,
+  invalidReferenceErrors,
   IncidentListFilters,
 } from "../utils/incidentManagement.utils";
 import { STATUS_CODE } from "../utils/statusCode.utils";
@@ -229,11 +231,20 @@ export async function createNewIncident(req: Request, res: Response) {
     );
   }
 
+  const invalidReferenceResponse = (fields: string[]) =>
+    res.status(400).json(
+      STATUS_CODE[400]({
+        status: "error",
+        message: "Incident creation validation failed",
+        errors: invalidReferenceErrors(fields),
+      }),
+    );
+
   const transaction = await sequelize.transaction();
   try {
-    // Checked on the create transaction with locking reads, so a referenced
-    // record deleted or an owner removed concurrently cannot slip in between
-    // the check and the insert.
+    // Checked on the create transaction (plain reads, no locks). A reference
+    // deleted after this check fails the insert's FK check, answered below
+    // with the same 400.
     const invalidRefs = await validateIncidentReferences(
       {
         model_inventory_id: req.body.model_inventory_id,
@@ -242,21 +253,10 @@ export async function createNewIncident(req: Request, res: Response) {
       },
       req.organizationId!,
       transaction,
-      { lock: true, lockOrganization: true },
     );
     if (invalidRefs.length > 0) {
       await transaction.rollback();
-      return res.status(400).json(
-        STATUS_CODE[400]({
-          status: "error",
-          message: "Incident creation validation failed",
-          errors: invalidRefs.map((field) => ({
-            field,
-            message: `${field} does not reference an entity in your organization`,
-            code: "INVALID_REFERENCE",
-          })),
-        }),
-      );
+      return invalidReferenceResponse(invalidRefs);
     }
 
     const incident = new AIIncidentManagementModel({
@@ -329,6 +329,8 @@ export async function createNewIncident(req: Request, res: Response) {
         .status(400)
         .json(validationExceptionResponse(req, error, "Incident creation validation failed"));
     }
+    const deletedReference = incidentReferenceFieldFromError(error);
+    if (deletedReference) return invalidReferenceResponse([deletedReference]);
     logStructured(
       "error",
       "failed to create new incident",

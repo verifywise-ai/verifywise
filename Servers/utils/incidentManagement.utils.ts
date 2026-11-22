@@ -1,5 +1,5 @@
 import { sequelize } from "../database/db";
-import { QueryTypes, Transaction } from "sequelize";
+import { Transaction } from "sequelize";
 import { AIIncidentManagementModel } from "../domain.layer/models/incidentManagement/incidemtManagement.model";
 import { TenantAutomationActionModel } from "../domain.layer/models/tenantAutomationAction/tenantAutomationAction.model";
 import {
@@ -475,23 +475,41 @@ export const archiveIncidentByIdQuery = async (
   }
 };
 
+const INCIDENT_REFERENCE_COLUMNS = ["model_inventory_id", "project_id", "assignee_id"];
+
+/** The 400 `errors` entries for reference fields that point outside the organization. */
+export const invalidReferenceErrors = (fields: string[]) =>
+  fields.map((field) => ({
+    field,
+    message: `${field} does not reference an entity in your organization`,
+    code: "INVALID_REFERENCE",
+  }));
+
+/**
+ * The incident reference field a write failed on, when `error` is a foreign
+ * key violation (Postgres 23503) of ai_incident_managements on
+ * model_inventory_id, project_id or assignee_id: the referenced row was
+ * deleted between the reference check and the write. Returns null for any
+ * other error.
+ */
+export const incidentReferenceFieldFromError = (error: unknown): string | null => {
+  const driverError =
+    (error as { parent?: unknown; original?: unknown } | null)?.parent ??
+    (error as { original?: unknown } | null)?.original ??
+    error;
+  const pg = driverError as { code?: unknown; table?: unknown; detail?: unknown } | null;
+  if (pg?.code !== "23503" || pg.table !== "ai_incident_managements") return null;
+  // Sequelize leaves `fields` empty for 23503; the column is in the detail:
+  // `Key (project_id)=(12) is not present in table "projects".`
+  const column = /^Key \(([a-z_]+)\)=/.exec(String(pg.detail ?? ""))?.[1];
+  return column && INCIDENT_REFERENCE_COLUMNS.includes(column) ? column : null;
+};
+
 /**
  * Verify that referenced entities (issue #4583 FKs) exist and belong to the
  * caller's organization. Prevents cross-org linkage (IDOR) that a bare FK
  * constraint cannot catch. Returns the list of invalid field names.
- *
- * With `lock` (true for every field, or the fields to lock; needs
- * `transaction`), the rows those checks read are locked FOR KEY SHARE, the
- * lock the write's own FK checks take: a concurrent delete or member removal
- * either waits until that transaction ends or, if it got there first, makes
- * the reference invalid once it commits. Plain updates of those rows are not
- * blocked. Locks are taken parent first, in the order the deleters take
- * theirs (docs/technical/domains/incidents.md, "Reference checks on create
- * and update"): the organization row (`lockOrganization`, create only), the
- * owner's users row, their membership, the use case, then the model.
  */
-export type IncidentReferenceField = "model_inventory_id" | "project_id" | "assignee_id";
-
 export const validateIncidentReferences = async (
   refs: {
     model_inventory_id?: unknown;
@@ -500,38 +518,19 @@ export const validateIncidentReferences = async (
   },
   organizationId: number,
   transaction?: Transaction,
-  {
-    lock = false,
-    lockOrganization = false,
-  }: { lock?: boolean | readonly IncidentReferenceField[]; lockOrganization?: boolean } = {},
 ): Promise<string[]> => {
-  const locks = (field: IncidentReferenceField) =>
-    lock === true || (Array.isArray(lock) && lock.includes(field));
-  const anyLock = lock === true || (Array.isArray(lock) && lock.length > 0) || lockOrganization;
-  if (anyLock && !transaction) {
-    throw new Error("validateIncidentReferences: a locking check needs a transaction");
-  }
-
-  if (lockOrganization) {
-    await sequelize.query(`SELECT id FROM organizations WHERE id = :organizationId FOR KEY SHARE`, {
-      replacements: { organizationId },
-      type: QueryTypes.SELECT,
-      transaction,
-    });
-  }
-
-  const invalid = new Set<string>();
-  // In lock order. A user's organizations live in organization_members (users
-  // has no organization_id since the multi-organization migration); the other
+  const invalidFields: string[] = [];
+  // A user's organizations live in organization_members (users has no
+  // organization_id since the multi-organization migration); the other
   // referenced tables carry organization_id themselves.
   const checks: Array<{
-    field: IncidentReferenceField;
+    field: string;
     id: unknown;
     table: "model_inventories" | "projects" | "users";
   }> = [
-    { field: "assignee_id", id: refs.assignee_id, table: "users" },
-    { field: "project_id", id: refs.project_id, table: "projects" },
     { field: "model_inventory_id", id: refs.model_inventory_id, table: "model_inventories" },
+    { field: "project_id", id: refs.project_id, table: "projects" },
+    { field: "assignee_id", id: refs.assignee_id, table: "users" },
   ];
 
   for (const check of checks) {
@@ -545,36 +544,20 @@ export const validateIncidentReferences = async (
           ? Number(String(check.id).trim())
           : NaN;
     if (!Number.isSafeInteger(id) || id <= 0) {
-      invalid.add(check.field);
+      invalidFields.push(check.field);
       continue;
     }
-    const lockThis = locks(check.field);
     if (check.table === "users") {
-      if (lockThis) {
-        // The users row before the membership: account deletion locks it first.
-        const user = await sequelize.query(`SELECT id FROM users WHERE id = :id FOR KEY SHARE`, {
-          replacements: { id },
-          type: QueryTypes.SELECT,
-          transaction,
-        });
-        if (!user.length) {
-          invalid.add(check.field);
-          continue;
-        }
-      }
-      const notMembers = await findUsersNotInOrganization([id], organizationId, transaction, {
-        lock: lockThis,
-      });
-      if (notMembers.length) invalid.add(check.field);
+      const notMembers = await findUsersNotInOrganization([id], organizationId, transaction);
+      if (notMembers.length) invalidFields.push(check.field);
       continue;
     }
     const result = (await sequelize.query(
-      `SELECT id FROM ${check.table} WHERE id = :id AND organization_id = :organizationId${lockThis ? " FOR KEY SHARE" : ""}`,
+      `SELECT id FROM ${check.table} WHERE id = :id AND organization_id = :organizationId`,
       { replacements: { id, organizationId }, transaction },
     )) as [Array<{ id: number }>, number];
-    if (!result[0].length) invalid.add(check.field);
+    if (!result[0].length) invalidFields.push(check.field);
   }
 
-  // Reported in the field order callers have always seen.
-  return ["model_inventory_id", "project_id", "assignee_id"].filter((field) => invalid.has(field));
+  return invalidFields;
 };

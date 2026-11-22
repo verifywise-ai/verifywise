@@ -14,7 +14,6 @@ jest.mock("../../utils/user.utils", () => ({
   resetPasswordQuery: jest.fn(),
   updateUserByIdQuery: jest.fn(),
   isLastAdminQuery: jest.fn(async () => false),
-  lockUsersForDeletionQuery: jest.fn(async () => undefined),
 }));
 jest.mock("bcrypt", () => ({
   compare: jest.fn().mockResolvedValue(true),

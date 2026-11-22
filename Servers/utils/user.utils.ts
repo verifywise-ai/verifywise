@@ -190,30 +190,19 @@ export const parseReferencedIds = (values: unknown[]): number[] | null => {
   return Array.from(ids);
 };
 
-/**
- * Returns the ids in `userIds` that are not users of `organizationId` (invalid ids are ignored).
- *
- * With `lock` (which needs `transaction`), the memberships found are read FOR
- * KEY SHARE, so a concurrent removal waits until that transaction ends; a
- * role change does not.
- */
+/** Returns the ids in `userIds` that are not users of `organizationId` (invalid ids are ignored). */
 export const findUsersNotInOrganization = async (
   userIds: number[],
   organizationId: number,
   transaction: Transaction | null = null,
-  { lock = false }: { lock?: boolean } = {},
 ): Promise<number[]> => {
-  if (lock && !transaction) {
-    throw new Error("findUsersNotInOrganization: a locking read needs a transaction");
-  }
   const unique = Array.from(new Set(userIds.filter((id) => Number.isInteger(id) && id > 0)));
   if (unique.length === 0) return [];
 
   const rows = (await sequelize.query(
     `SELECT user_id AS id FROM organization_members
      WHERE organization_id = :organizationId
-       AND user_id IN (:userIds)
-     ORDER BY user_id${lock ? " FOR KEY SHARE" : ""};`,
+       AND user_id IN (:userIds);`,
     {
       replacements: { organizationId, userIds: unique },
       type: QueryTypes.SELECT,
@@ -493,32 +482,10 @@ const clearOrganizationReferencesToUser = async (
 };
 
 /**
- * Locks users rows FOR UPDATE, in id order, before anything that may delete
- * them. Every path that can delete an account takes this lock first, before
- * any membership lock (isLastAdminQuery, the removal's own DELETE): writers
- * that check a user reference lock the users row before the membership (see
- * validateIncidentReferences), so the two never wait on each other in a cycle.
- */
-export const lockUsersForDeletionQuery = async (
-  ids: number[],
-  transaction: Transaction,
-): Promise<void> => {
-  if (ids.length === 0) return;
-  await sequelize.query(`SELECT id FROM users WHERE id IN (:ids) ORDER BY id FOR UPDATE`, {
-    replacements: { ids },
-    type: QueryTypes.SELECT,
-    transaction,
-  });
-};
-
-/**
  * Removes a user from one organization: clears that organization's references
  * to them, revokes their refresh tokens for it, and deletes the membership.
  * When it was their last membership the account is deleted too, in the same
  * transaction, unless they are a super admin.
- *
- * Callers that check isLastAdminQuery first call lockUsersForDeletionQuery
- * before it, to keep the users-then-membership lock order.
  *
  * @returns `removed` false when the user is not a member of the organization.
  */
@@ -527,7 +494,6 @@ export const removeUserFromOrganizationQuery = async (
   organizationId: number,
   transaction: Transaction,
 ): Promise<{ removed: boolean; accountDeleted: boolean }> => {
-  await lockUsersForDeletionQuery([id], transaction);
   await clearOrganizationReferencesToUser(id, organizationId, transaction);
   await revokeUserOrganizationTokens(id, organizationId, transaction);
 
@@ -566,7 +532,6 @@ export const deleteUserAccountQuery = async (
   id: number,
   transaction: Transaction,
 ): Promise<boolean> => {
-  await lockUsersForDeletionQuery([id], transaction);
   const memberships = (await sequelize.query(
     `SELECT organization_id FROM organization_members WHERE user_id = :id`,
     { replacements: { id }, type: QueryTypes.SELECT, transaction },
@@ -805,7 +770,6 @@ export const deleteDemoUsersQuery = async (
   if (demoUsers.length === 0) return;
   const userIds = demoUsers.map((u) => Number(u.id));
 
-  await lockUsersForDeletionQuery(userIds, transaction);
   await reassignAgentOwnersOfDeletedUsersQuery(userIds, organizationId, transaction);
   await sequelize.query(
     `DELETE FROM organization_members

@@ -27,7 +27,6 @@ jest.mock("../../utils/user.utils", () => ({
   getUserByEmailQuery: jest.fn(),
   removeUserFromOrganizationQuery: jest.fn(),
   isLastAdminQuery: jest.fn(async () => false),
-  lockUsersForDeletionQuery: jest.fn(async () => undefined),
 }));
 jest.mock("../../utils/organizationMember.utils", () => ({
   getUserOrganizationsQuery: jest.fn(),

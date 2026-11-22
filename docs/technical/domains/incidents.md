@@ -178,51 +178,30 @@ POST /aiIncidentManagement/
 }
 ```
 
-### Reference checks on create and update
+### Reference checks on create
 
 Field validation (`validateCompleteIncidentCreation`) runs first, outside any
 transaction. The references (`project_id`, `model_inventory_id`, and
 `assignee_id` against `organization_members`) are then checked by
-`validateIncidentReferences` on the write's transaction, before the insert or
-update, with locking reads (`FOR KEY SHARE`, the lock the write's own FK
-checks take; it blocks a DELETE or key change of the row, not a plain UPDATE
-such as a role change or a use case rename). `lock` needs a transaction:
-without one the helper throws, as does `findUsersNotInOrganization`.
-
-- **Create** (`{ lock: true, lockOrganization: true }`) locks every reference.
-- **Update** (`updateIncident`) locks only the references it sets to a new
-  value. A reference kept from the row is read without a lock: the update
-  already holds the incident row, and a delete of that use case or model
-  cascades (`ON DELETE SET NULL`) into the same row, so locking it would
-  deadlock.
-
-A use case or model deleted, or an owner removed from the organization or
-deleted, by another transaction either waits until the write commits (for a
-delete, the FK's `ON DELETE SET NULL` then clears the reference) or, if it got
-there first, makes the write wait and then fail the check once it commits.
-The answer is the usual 400 (`message: "Incident creation validation failed"`
-or `"Incident update validation failed"`, one
+`validateIncidentReferences` inside the create transaction, before the insert,
+with plain reads (no row locks). A bad reference rolls the transaction back and
+answers 400 (`message: "Incident creation validation failed"`, one
 `{ field, message: "<field> does not reference an entity in your organization", code: "INVALID_REFERENCE" }`
-per bad reference), never a 500 from the FK, a deadlock, or an incident saved
-with a non-member owner.
+per bad reference). A database error in the check rolls back and answers 500.
 
-**Lock order.** Locks are taken parent first, in the order the deleters take
-theirs, so no two of them wait on each other in a cycle:
+A use case, model or owner account deleted by another transaction after the
+check fails the insert's foreign key check (Postgres 23503).
+`incidentReferenceFieldFromError` (`Servers/utils/incidentManagement.utils.ts`)
+recognises a violation of `ai_incident_managements` on one of those three
+columns, and the create answers the same 400 for that field instead of a 500.
+The update path (`updateIncident`) maps the same violation to the same
+`INVALID_REFERENCE` error.
 
-1. the organization row (create only; organization deletion,
-   `deleteOrganization` in `services/superAdmin.service.ts`, locks it
-   `FOR UPDATE` before it removes members);
-2. the owner's `users` row (every path that can delete an account locks it
-   `FOR UPDATE` first through `lockUsersForDeletionQuery`
-   (`utils/user.utils.ts`): `removeUserFromOrganizationQuery`,
-   `deleteUserAccountQuery`, `deleteDemoUsersQuery`, and, before their
-   `isLastAdminQuery` membership locks, `DELETE /users/:id`, the super admin's
-   member removal and `removeUserById`);
-3. the owner's `organization_members` row;
-4. the use case, then the model.
-
-`assignee_id` is `ON DELETE SET NULL` on `users`, so an account deleted after
-the create commits clears the new incident's owner.
+**Known limit.** An owner removed from the organization (membership deleted,
+account kept) at the same moment as a create or an owner change can remain the
+incident's owner: membership has no foreign key, and the check takes no locks
+on purpose, because locking the referenced rows deadlocks with the user,
+member and organization deletion paths.
 
 ## Incident Lifecycle
 
@@ -339,13 +318,12 @@ incidents status sync (`changedBySystem: true`, see
    `validateIncidentReferences` (FKs must belong to the organization; unchanged
    FKs come from the row; `''`, null and undefined mean "no reference" and are
    not looked up; anything that is not a positive integer is invalid and never
-   reaches SQL). References the update sets to a new value are read with a
-   lock, kept ones without (see
-   [Reference checks on create and update](#reference-checks-on-create-and-update)).
-   Field validation errors are thrown before the reference
+   reaches SQL). Field validation errors are thrown before the reference
    lookups run. Failures throw `IncidentUpdateValidationError`; the
    controller keeps its 400 body (`message: "Incident update validation failed"`,
-   `errors: [{ field, message, code }]`).
+   `errors: [{ field, message, code }]`). A reference deleted after this check
+   fails the UPDATE's foreign key check; that violation is thrown as the same
+   `INVALID_REFERENCE` error (see [Reference checks on create](#reference-checks-on-create)).
 4. Applies the reopen approval reset.
 5. Diffs the update against the row with `diffIncidentColumns`
    (`Servers/utils/incidentManagement.utils.ts`). Keys that are not updatable
