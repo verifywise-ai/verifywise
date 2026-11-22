@@ -330,4 +330,65 @@ describe("buildE23FixItList: ordering and counts", () => {
     const list = build(undefined, [ok, late]);
     expect(list.items.map((i) => i.where)).toEqual(["Z", "A"]);
   });
+
+  it("orders two rules on the same requirement by rule id regardless of input order", () => {
+    const mk = (ruleId: string) => ({
+      ruleId,
+      requirement: "3.4.7",
+      requirementTitle: "3.4.7 Suitability approval",
+      claimedStatus: "Implemented",
+      finding: `finding ${ruleId}`,
+      affectedCount: 1,
+      examples: ["A"],
+      moreCount: 0,
+    });
+    const a = build(undefined, [], { ...none, fired: [mk("C8"), mk("C13")] });
+    const b = build(undefined, [], { ...none, fired: [mk("C13"), mk("C8")] });
+    expect(a.items.map((i) => i.what)).toEqual(["finding C8", "finding C13"]);
+    expect(b.items.map((i) => i.what)).toEqual(["finding C8", "finding C13"]);
+  });
+});
+
+describe("buildE23FixItList: source 7 mixed dates", () => {
+  it("shows the overdue validation date when the finding due date is in the future", () => {
+    const m = model({
+      hasOpenValidation: true,
+      openValidationNextDue: "2026-11-01T00:00:00.000Z",
+      findings: [
+        {
+          severity: "high",
+          stage: "open",
+          dueDate: "2027-01-01T00:00:00.000Z",
+          remediationPlanEmpty: false,
+        },
+      ],
+    });
+    expect(build(undefined, [m]).items[0]).toMatchObject({
+      overdue: true,
+      dueDate: "2026-11-01T00:00:00.000Z",
+    });
+  });
+
+  it("shows the earliest upcoming date when nothing is overdue", () => {
+    const m = model({
+      findings: [
+        {
+          severity: "high",
+          stage: "open",
+          dueDate: "2027-03-01T00:00:00.000Z",
+          remediationPlanEmpty: false,
+        },
+        {
+          severity: "critical",
+          stage: "open",
+          dueDate: "2027-01-01T00:00:00.000Z",
+          remediationPlanEmpty: false,
+        },
+      ],
+    });
+    expect(build(undefined, [m]).items[0]).toMatchObject({
+      overdue: false,
+      dueDate: "2027-01-01T00:00:00.000Z",
+    });
+  });
 });

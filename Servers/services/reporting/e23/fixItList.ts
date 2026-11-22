@@ -93,6 +93,7 @@ function modelItem(m: MrmModelFacts, generatedAt: Date): E23FixItItem | null {
   const now = generatedAt.getTime();
   const openCriticalHigh = m.findings.filter((f) => isOpenFinding(f) && isCriticalOrHigh(f));
   const validationOverdue = isValidationOverdue(m, generatedAt);
+  const validationDueIso = m.openValidationNextDue;
 
   const gaps: string[] = [];
   if (!m.tier) gaps.push("Untiered");
@@ -105,21 +106,21 @@ function modelItem(m: MrmModelFacts, generatedAt: Date): E23FixItItem | null {
   if (openCriticalHigh.length > 0) gaps.push("Open critical or high finding");
   if (gaps.length === 0) return null;
 
-  const findingDues = openCriticalHigh
-    .map((f) => time(f.dueDate))
-    .filter((t): t is number => t !== null);
-  const validationDue = validationOverdue ? time(m.openValidationNextDue) : null;
-  const earliestFinding = findingDues.length > 0 ? Math.min(...findingDues) : null;
-
-  let dueDate: string | null = null;
-  if (earliestFinding !== null) {
-    dueDate = openCriticalHigh.find((f) => time(f.dueDate) === earliestFinding)?.dueDate ?? null;
-  } else if (validationDue !== null) {
-    dueDate = m.openValidationNextDue;
-  }
-  const overdue =
-    (earliestFinding !== null && earliestFinding < now) ||
-    (validationDue !== null && validationDue < now);
+  // Candidate dates: open critical/high finding dues, plus the validation due date when overdue.
+  const candidates = [
+    ...openCriticalHigh.map((f) => ({ iso: f.dueDate, at: time(f.dueDate) })),
+    { iso: validationDueIso, at: validationOverdue ? time(validationDueIso) : null },
+  ].filter((c): c is { iso: string; at: number } => c.iso !== null && c.at !== null);
+  const earliest = (list: typeof candidates) =>
+    list.reduce<(typeof candidates)[number] | null>(
+      (a, c) => (a === null || c.at < a.at ? c : a),
+      null,
+    );
+  // When something is past due, show the earliest date that actually is; else the earliest upcoming one.
+  const pastDue = earliest(candidates.filter((c) => c.at < now));
+  const chosen = pastDue ?? earliest(candidates);
+  const dueDate = chosen?.iso ?? null;
+  const overdue = pastDue !== null;
 
   return {
     severity: m.tier === "1" || openCriticalHigh.length > 0 ? "high" : "medium",
@@ -145,13 +146,17 @@ export function buildE23FixItList(input: {
     .flatMap((f) => f.groups.flatMap((g) => flatten(g.requirements)));
 
   const items: E23FixItItem[] = [];
+  // Rule number per source 1 item, for the final sort tiebreak (natural C1..C13 order).
+  const ruleNumber = new Map<E23FixItItem, number>();
 
   for (const rule of input.contradictions.fired) {
     const title = rule.requirementTitle.trim();
     const matched =
       rows.find((r) => r.title.trim() === title && r.isDone) ??
       rows.find((r) => r.title.trim() === title);
-    items.push({
+    // A requirement can carry both a source 1 item (a rule fired on it) and a
+    // source 5 item (done without evidence). That is intended: the fixes differ.
+    const item: E23FixItItem = {
       severity: "high",
       source: 1,
       what: rule.finding,
@@ -161,7 +166,9 @@ export function buildE23FixItList(input: {
       overdue: false,
       closesWhen: FIX_IT_CLOSES_WHEN[rule.ruleId as E23RuleId],
       sortKey: 0,
-    });
+    };
+    ruleNumber.set(item, Number(rule.ruleId.slice(1)));
+    items.push(item);
   }
 
   for (const row of rows) {
@@ -179,7 +186,10 @@ export function buildE23FixItList(input: {
       SEVERITY_RANK[a.severity] - SEVERITY_RANK[b.severity] ||
       Number(b.overdue) - Number(a.overdue) ||
       a.sortKey - b.sortKey ||
-      a.where.localeCompare(b.where),
+      a.where.localeCompare(b.where) ||
+      a.source - b.source ||
+      (ruleNumber.get(a) ?? 0) - (ruleNumber.get(b) ?? 0) ||
+      a.what.localeCompare(b.what),
   );
 
   const counts = { high: 0, medium: 0, low: 0 };
