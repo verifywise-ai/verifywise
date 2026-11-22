@@ -11,9 +11,6 @@ import {
   Paragraph,
   TextRun,
   Table,
-  TableRow,
-  TableCell,
-  WidthType,
   AlignmentType,
   HeadingLevel,
   PageBreak,
@@ -21,7 +18,6 @@ import {
   Footer,
   PageNumber,
   ShadingType,
-  VerticalAlign,
   convertInchesToTwip,
 } from "docx";
 import {
@@ -30,25 +26,25 @@ import {
   AISummaries,
 } from "../../domain.layer/interfaces/i.reportGeneration";
 import { ANALYSIS_LABELS } from "./analyzers/mapToSummaries";
-
-// Color constants matching VerifyWise theme
-const COLORS = {
-  primary: "13715B",
-  secondary: "1C2130",
-  textPrimary: "1C2130",
-  textSecondary: "667085",
-  textTertiary: "98A2B3",
-  border: "E4E7EC",
-  backgroundAlt: "F9FAFB",
-  success: "027A48",
-  warning: "B54708",
-  error: "B42318",
-  info: "026AA2",
-  // AI analysis styling
-  aiBg: "F0FAF7",
-  aiWarning: "DC6803",
-  aiWarningBg: "FFFCF5",
-};
+import {
+  COLORS,
+  TableCellInput,
+  createEmptyState,
+  createSectionHeader,
+  createSubsectionHeader,
+  createTable,
+  createTableSpacing,
+  createTocEntry,
+} from "./docxPrimitives";
+import {
+  createE23Closing,
+  createE23Cover,
+  createE23DraftHeader,
+  createE23Sections,
+  createE23Toc,
+} from "./docxE23";
+import { buildE23FormalView, evidenceLine } from "./e23/formalView";
+import { E23_NOTICE_LABELS } from "./e23/e23Text";
 
 /**
  * Copy for the "sections with no data" block. Duplicated in report-pdf.ejs
@@ -331,234 +327,6 @@ function createTableOfContents(reportData: ReportData): Paragraph[] {
   );
 
   return paragraphs;
-}
-
-function createTocEntry(text: string): Paragraph {
-  return new Paragraph({
-    spacing: { before: 160, after: 160 },
-    border: {
-      bottom: {
-        style: BorderStyle.DOTTED,
-        size: 1,
-        color: COLORS.border,
-      },
-    },
-    children: [
-      new TextRun({
-        text,
-        size: 24, // 12pt
-        color: COLORS.textPrimary,
-      }),
-    ],
-  });
-}
-
-/**
- * Create a group header (matches PDF group-header style - uppercase with left border)
- */
-function createSectionHeader(title: string): Paragraph {
-  return new Paragraph({
-    heading: HeadingLevel.HEADING_2,
-    spacing: { before: 400, after: 300 },
-    shading: {
-      fill: COLORS.backgroundAlt,
-      type: ShadingType.CLEAR,
-    },
-    border: {
-      left: {
-        color: COLORS.primary,
-        size: 24,
-        style: BorderStyle.SINGLE,
-        space: 8,
-      },
-    },
-    children: [
-      new TextRun({
-        text: title.toUpperCase(),
-        bold: true,
-        size: 36, // 18pt
-        color: COLORS.textPrimary,
-      }),
-    ],
-  });
-}
-
-/**
- * Create a subsection header (matches PDF subsection-title style - with border-bottom)
- */
-function createSubsectionHeader(title: string): Paragraph {
-  return new Paragraph({
-    heading: HeadingLevel.HEADING_3,
-    spacing: { before: 300, after: 200 },
-    border: {
-      bottom: {
-        color: COLORS.border,
-        size: 6,
-        style: BorderStyle.SINGLE,
-        space: 4,
-      },
-    },
-    children: [
-      new TextRun({
-        text: title,
-        bold: true,
-        size: 32, // 16pt
-        color: COLORS.textPrimary,
-      }),
-    ],
-  });
-}
-
-/** A plain string, or a main line plus an optional smaller secondary line. */
-type TableCellInput = string | { main: string; secondary?: string };
-
-/**
- * Main and secondary text of a cell. Collected rows are typed as strings but
- * nullable columns (e.g. a NIST subcategory description) can still arrive as
- * null at runtime, so anything that is not a structured cell prints as text.
- */
-function cellParts(cell: TableCellInput | null | undefined): {
-  main: string;
-  secondary?: string;
-} {
-  if (cell !== null && typeof cell === "object") return cell;
-  return { main: cell == null ? "" : String(cell) };
-}
-
-/**
- * Create a standard table with headers and borders
- */
-function createTable(headers: string[], rows: TableCellInput[][]): Table {
-  const borderStyle = {
-    style: BorderStyle.SINGLE,
-    size: 1,
-    color: COLORS.border,
-  };
-
-  const headerCells = headers.map(
-    (header) =>
-      new TableCell({
-        shading: {
-          fill: COLORS.backgroundAlt,
-          type: ShadingType.CLEAR,
-        },
-        borders: {
-          top: borderStyle,
-          bottom: borderStyle,
-          left: borderStyle,
-          right: borderStyle,
-        },
-        children: [
-          new Paragraph({
-            children: [
-              new TextRun({
-                text: header,
-                bold: true,
-                size: 20,
-                color: COLORS.textPrimary,
-              }),
-            ],
-          }),
-        ],
-        verticalAlign: VerticalAlign.CENTER,
-      }),
-  );
-
-  const dataRows = rows.map(
-    (row, rowIndex) =>
-      new TableRow({
-        children: row.map(
-          (cell) =>
-            new TableCell({
-              shading:
-                rowIndex % 2 === 1
-                  ? {
-                      fill: COLORS.backgroundAlt,
-                      type: ShadingType.CLEAR,
-                    }
-                  : undefined,
-              borders: {
-                top: borderStyle,
-                bottom: borderStyle,
-                left: borderStyle,
-                right: borderStyle,
-              },
-              children: [
-                new Paragraph({
-                  children: [
-                    new TextRun({
-                      text: cellParts(cell).main || "-",
-                      size: 20,
-                      color: COLORS.textPrimary,
-                    }),
-                  ],
-                }),
-                // Opt-in only: structured cells carry a small secondary line.
-                ...(cellParts(cell).secondary
-                  ? [
-                      new Paragraph({
-                        children: [
-                          new TextRun({
-                            text: cellParts(cell).secondary,
-                            size: 16,
-                            color: COLORS.textSecondary,
-                          }),
-                        ],
-                      }),
-                    ]
-                  : []),
-              ],
-              verticalAlign: VerticalAlign.CENTER,
-            }),
-        ),
-      }),
-  );
-
-  return new Table({
-    width: {
-      size: 100,
-      type: WidthType.PERCENTAGE,
-    },
-    rows: [
-      new TableRow({
-        children: headerCells,
-        tableHeader: true,
-      }),
-      ...dataRows,
-    ],
-  });
-}
-
-/**
- * Create spacing paragraph after tables
- */
-function createTableSpacing(): Paragraph {
-  return new Paragraph({
-    spacing: { after: 200 },
-    children: [],
-  });
-}
-
-/**
- * Create empty state message
- */
-function createEmptyState(message: string): Paragraph {
-  return new Paragraph({
-    alignment: AlignmentType.CENTER,
-    spacing: { before: 200, after: 200 },
-    shading: {
-      fill: COLORS.backgroundAlt,
-      type: ShadingType.CLEAR,
-    },
-    children: [
-      new TextRun({
-        text: message,
-        size: 22,
-        color: COLORS.textSecondary,
-        italics: true,
-      }),
-    ],
-  });
 }
 
 /**
@@ -1068,8 +836,14 @@ function createRiskAnalysisSection(reportData: ReportData): (Paragraph | Table)[
 /**
  * Create Compliance & Governance section
  */
-function createComplianceSection(reportData: ReportData): (Paragraph | Table)[] {
-  const { sections } = reportData;
+function createComplianceSection(
+  reportData: ReportData,
+  // An E-23 report shows the requirements in its own completeness section.
+  opts: { withFrameworkRequirements: boolean } = { withFrameworkRequirements: true },
+): (Paragraph | Table)[] {
+  const sections = opts.withFrameworkRequirements
+    ? reportData.sections
+    : { ...reportData.sections, frameworkRequirements: undefined };
   const elements: (Paragraph | Table)[] = [];
 
   if (
@@ -1364,15 +1138,10 @@ function createComplianceSection(reportData: ReportData): (Paragraph | Table)[] 
           const rows: TableCellInput[][] = [];
           group.requirements.forEach((req) => {
             [req, ...(req.children ?? [])].forEach((r) => {
-              const more = r.evidenceCount - r.evidenceFiles.length;
-              const evidenceLine =
-                r.evidenceFiles.length > 0
-                  ? `Evidence: ${r.evidenceFiles.join(", ")}${more > 0 ? `, and ${more} more` : ""}`
-                  : undefined;
               rows.push([
                 {
                   main: `${r.level === 3 ? "    " : ""}${r.title}`,
-                  secondary: evidenceLine,
+                  secondary: evidenceLine(r),
                 },
                 r.status,
                 r.owner || "—",
@@ -1584,7 +1353,9 @@ function createSectionNoticesSection(reportData: ReportData): (Paragraph | Table
     for (const notice of failed) {
       elements.push(
         bullet(
-          NOTICE_LABELS[notice.sectionKey] ?? notice.sectionKey,
+          NOTICE_LABELS[notice.sectionKey] ??
+            E23_NOTICE_LABELS[notice.sectionKey] ??
+            notice.sectionKey,
           `${notice.detail ? `${notice.detail}: ` : ""}${NOTICE_TEXT.failedSuffix}`,
         ),
       );
@@ -1603,7 +1374,9 @@ function createSectionNoticesSection(reportData: ReportData): (Paragraph | Table
     for (const notice of empty) {
       elements.push(
         bullet(
-          NOTICE_LABELS[notice.sectionKey] ?? notice.sectionKey,
+          NOTICE_LABELS[notice.sectionKey] ??
+            E23_NOTICE_LABELS[notice.sectionKey] ??
+            notice.sectionKey,
           NOTICE_REASONS[notice.reason] ?? notice.reason,
         ),
       );
@@ -1616,7 +1389,7 @@ function createSectionNoticesSection(reportData: ReportData): (Paragraph | Table
 /**
  * Create footer for all pages
  */
-function createFooter(reportData: ReportData): Footer {
+function createFooter(reportData: ReportData, title?: string): Footer {
   const { metadata, branding } = reportData;
   const formattedDate = metadata.generatedAt.toLocaleDateString("en-US", {
     year: "numeric",
@@ -1638,7 +1411,7 @@ function createFooter(reportData: ReportData): Footer {
         },
         children: [
           new TextRun({
-            text: `${branding.organizationName} | ${metadata.frameworkName} Report | Generated: ${formattedDate} | Page `,
+            text: `${title ?? `${branding.organizationName} | ${metadata.frameworkName} Report`} | Generated: ${formattedDate} | Page `,
             size: 18,
             color: COLORS.textTertiary,
           }),
@@ -1665,11 +1438,33 @@ export async function generateDOCX(reportData: ReportData): Promise<ReportGenera
       ? createExecutiveSummarySection(reportData.aiSummaries)
       : [];
     const riskSection = createRiskAnalysisSection(reportData);
-    const complianceSection = createComplianceSection(reportData);
+    const e23 = buildE23FormalView(reportData);
+    const complianceSection = createComplianceSection(reportData, {
+      withFrameworkRequirements: !e23,
+    });
     const organizationSection = createOrganizationSection(reportData);
 
+    // An OSFI E-23 report (spec 8.3 order). Recommended actions go to its
+    // internal fix-it list, and the abstentions follow the notices.
+    const e23Children = e23 && [
+      ...createE23Cover(e23),
+      ...createE23Toc(e23),
+      ...createE23Sections(e23.intro),
+      ...aiExecutiveSummary,
+      ...createE23Sections(e23.main),
+      // The e23Gap analysis renders here, after the contradictions.
+      ...createComplianceGapSection(reportData),
+      ...createVendorRiskSection(reportData),
+      ...riskSection,
+      ...complianceSection,
+      ...organizationSection,
+      ...(e23.appendix ? createE23Sections([e23.appendix]) : []),
+      ...createSectionNoticesSection(reportData),
+      ...createE23Closing(e23),
+    ];
+
     // Combine all sections
-    const allChildren = [
+    const allChildren = e23Children || [
       ...coverPage,
       ...toc,
       ...aiExecutiveSummary,
@@ -1707,8 +1502,9 @@ export async function generateDOCX(reportData: ReportData): Promise<ReportGenera
               },
             },
           },
+          ...(e23?.watermark && { headers: { default: createE23DraftHeader(e23.watermark) } }),
           footers: {
-            default: createFooter(reportData),
+            default: createFooter(reportData, e23?.footerTitle),
           },
           children: allChildren,
         },

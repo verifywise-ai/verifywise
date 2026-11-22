@@ -16,6 +16,8 @@ import {
 import { ANALYSIS_LABELS } from "./analyzers/mapToSummaries";
 import { applyColorTokens } from "../../tools/emailColors";
 import { generateComplianceProgressChart } from "./chartUtils";
+import { buildE23FormalView } from "./e23/formalView";
+import { E23_NOTICE_LABELS } from "./e23/e23Text";
 
 // Browser instance singleton for reuse
 let browserInstance: Browser | null = null;
@@ -91,21 +93,26 @@ export function buildFrameworkRequirementCharts(reportData: ReportData): string[
   });
 }
 
+const TEMPLATES_DIR = path.join(__dirname, "../../templates/reports");
+
+const readTemplate = (relativePath: string): string =>
+  applyColorTokens(fs.readFileSync(path.join(TEMPLATES_DIR, relativePath), "utf-8"));
+
 /**
  * Render the report template to an HTML string. Synchronous and free of
  * Playwright, so tests render exactly what the PDF is printed from.
+ *
+ * An OSFI E-23 kind run also gets `e23` (its formal-report content, see
+ * e23/formalView.ts), its stylesheet and `e23Partial` for the E-23 blocks in
+ * templates/reports/partials/e23. A general report gets none of them, so its
+ * HTML is exactly what it was before the E-23 report existed.
  */
 export function renderReportHtml(reportData: ReportData): string {
-  const templatePath = path.join(__dirname, "../../templates/reports/report-pdf.ejs");
+  const pdfCss = readTemplate("styles/pdf.css");
+  const templateContent = readTemplate("report-pdf.ejs");
+  const e23 = buildE23FormalView(reportData);
 
-  // Read CSS files
-  const pdfCssPath = path.join(__dirname, "../../templates/reports/styles/pdf.css");
-  const pdfCss = applyColorTokens(fs.readFileSync(pdfCssPath, "utf-8"));
-
-  const templateContent = applyColorTokens(fs.readFileSync(templatePath, "utf-8"));
-
-  // Render with EJS
-  const html = ejs.render(templateContent, {
+  const data: Record<string, unknown> = {
     ...reportData,
     // One analyzer-label map, shared with docxGenerator.
     analysisLabels: ANALYSIS_LABELS,
@@ -116,11 +123,20 @@ export function renderReportHtml(reportData: ReportData): string {
       if (filePath.includes("pdf.css")) {
         return pdfCss;
       }
+      if (e23 && filePath.includes("e23.css")) {
+        return readTemplate("styles/e23.css");
+      }
       return "";
     },
-  });
+  };
+  if (e23) {
+    data.e23 = e23;
+    data.e23NoticeLabels = E23_NOTICE_LABELS;
+    data.e23Partial = (name: string, locals: Record<string, unknown> = {}) =>
+      ejs.render(readTemplate(`partials/e23/${name}.ejs`), { ...data, ...locals });
+  }
 
-  return html;
+  return ejs.render(templateContent, data);
 }
 
 /**

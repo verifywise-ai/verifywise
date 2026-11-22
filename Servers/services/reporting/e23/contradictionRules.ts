@@ -19,7 +19,7 @@ import type {
   FrameworkRequirementsSectionData,
   MrmModelFacts,
 } from "../../../domain.layer/interfaces/i.reportGeneration";
-import { computeNextReviewDue, REVALIDATION_CADENCE_MONTHS } from "../../../utils/mrm.utils";
+import { computeNextReviewDue, REVALIDATION_CADENCE_MONTHS } from "../../../utils/mrmCadence.utils";
 import {
   hasRecentMetric,
   isCriticalOrHigh,
@@ -45,7 +45,8 @@ export interface E23Rule {
   dataCondition: string;
 }
 
-const cadence = `tier 1 ${REVALIDATION_CADENCE_MONTHS[MrmTier.TIER_1]} months, tier 2 ${
+/** Review cadence per tier, read from the MRM module ("tier 1 12 months, tier 2 18, tier 3 24"). */
+export const REVIEW_CADENCE_TEXT = `tier 1 ${REVALIDATION_CADENCE_MONTHS[MrmTier.TIER_1]} months, tier 2 ${
   REVALIDATION_CADENCE_MONTHS[MrmTier.TIER_2]
 }, tier 3 ${REVALIDATION_CADENCE_MONTHS[MrmTier.TIER_3]}`;
 
@@ -66,7 +67,7 @@ export const E23_RULES: readonly E23Rule[] = [
     id: "C3",
     requirement: "2.2.4",
     description: "Regular and trigger-based rating review",
-    dataCondition: `Any tiered model whose rating was last set or affirmed (the later of its tiering date and its latest validation sign-off, since sign-off affirms the tier) longer ago than its tier's review cadence (${cadence}), or flagged for revalidation with no open validation`,
+    dataCondition: `Any tiered model whose rating was last set or affirmed (the later of its tiering date and its latest validation sign-off, since sign-off affirms the tier) longer ago than its tier's review cadence (${REVIEW_CADENCE_TEXT}), or flagged for revalidation with no open validation`,
   },
   {
     id: "C4",

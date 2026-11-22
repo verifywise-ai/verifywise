@@ -1,0 +1,29 @@
+<%# OSFI E-23 cover and table of contents. Content comes from e23 (services/reporting/e23/formalView.ts). %>
+    <div class="cover-page">
+      <% if (branding.organizationLogo) { %>
+      <img src="<%= branding.organizationLogo %>" alt="<%= e23.institution %>" class="cover-logo">
+      <p class="cover-subtitle"><%= e23.institution %></p>
+      <% } else { %>
+      <div class="e23-cover-institution"><%= e23.institution %></div>
+      <% } %>
+
+      <h1 class="cover-title"><%= e23.cover.title %></h1>
+      <p class="cover-subtitle"><%= e23.cover.audienceLine %></p>
+
+      <div class="cover-meta">
+        <% e23.cover.lines.forEach(function(line) { %>
+        <p class="cover-meta-item"><strong><%= line.label %>:</strong> <%= line.value %></p>
+        <% }); %>
+      </div>
+    </div>
+
+    <div class="toc">
+      <h2 class="toc-title">Table of contents</h2>
+      <ul class="toc-list">
+        <% e23.toc.forEach(function(heading, i) { %>
+        <li class="toc-item">
+          <span><span class="toc-item-number"><%= i + 1 %>.</span> <%= heading %></span>
+        </li>
+        <% }); %>
+      </ul>
+    </div>

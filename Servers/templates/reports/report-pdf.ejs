@@ -23,12 +23,20 @@ const riskChipClass = (level) => {
     .replace(/\s+/g, '-');
   return RISK_CHIP_LEVELS.test(key) ? 'chip-' + key : 'chip-default';
 };
+/*
+ * OSFI E-23 kind runs (metadata.reportKind "osfi_e23") get `e23`, their
+ * formal-report content from services/reporting/e23/formalView.ts, and
+ * `e23Partial` for the blocks in partials/e23. Every E-23 line below is a
+ * whitespace-slurping guard, so a general report renders byte for byte as it
+ * did before (pinned by reportPdfTemplate.e23.test.ts).
+ */
+const isE23 = typeof e23 !== 'undefined' && !!e23;
 %><!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title><%= metadata.projectTitle %> - <%= metadata.frameworkName %> Report</title>
+  <title><%= isE23 ? e23.institution + ' - ' + e23.cover.title : metadata.projectTitle + ' - ' + metadata.frameworkName + ' Report' %></title>
   <style>
     <%- include('./styles/pdf.css') %>
 
@@ -137,10 +145,19 @@ const riskChipClass = (level) => {
       margin-top: 3px;
     }
   </style>
+  <%_ if (isE23) { -%>
+  <style><%- include('./styles/e23.css') %></style>
+  <%_ } -%>
 </head>
 <body>
   <div class="report-container">
+    <%_ if (isE23 && e23.watermark) { -%>
+    <div class="e23-watermark"><%= e23.watermark %></div>
+    <%_ } -%>
 
+    <%_ if (isE23) { -%>
+    <%- e23Partial('front') %>
+    <%_ } else { -%>
     <!-- Cover Page -->
     <div class="cover-page">
       <% if (branding.organizationLogo) { %>
@@ -222,6 +239,10 @@ const riskChipClass = (level) => {
         <% } %>
       </ul>
     </div>
+    <%_ } -%>
+    <%_ if (isE23) { -%>
+    <%- e23Partial('sections', { e23Sections: e23.intro }) %>
+    <%_ } -%>
 
     <!-- ============================================ -->
     <!-- EXECUTIVE SUMMARY (AI-Generated) -->
@@ -285,7 +306,7 @@ const riskChipClass = (level) => {
     </div>
     <% } %>
 
-      <% if (typeof aiSummaries !== 'undefined' && aiSummaries && aiSummaries.recommendedActions && aiSummaries.recommendedActions.length > 0) { %>
+      <% if (!isE23 && typeof aiSummaries !== 'undefined' && aiSummaries && aiSummaries.recommendedActions && aiSummaries.recommendedActions.length > 0) { %>
       <div class="subsection">
         <div class="subsection-header">
           <h3 class="subsection-title">Recommended actions</h3>
@@ -315,6 +336,9 @@ const riskChipClass = (level) => {
       </div>
       <% } %>
 
+    <%_ if (isE23) { /* Recommended actions go to the internal fix-it list for this report. The e23Gap analysis renders after e23.main. */ -%>
+    <%- e23Partial('sections', { e23Sections: e23.main }) %>
+    <%_ } -%>
     <!-- ============================================ -->
     <!-- COMPLIANCE GAP ANALYSIS (AI-Generated) -->
     <!-- ============================================ -->
@@ -387,7 +411,7 @@ const riskChipClass = (level) => {
     <!-- ============================================ -->
     <!-- ANALYSES NOT PRODUCED (AI abstentions) -->
     <!-- ============================================ -->
-    <% if (typeof aiSummaries !== 'undefined' && aiSummaries && aiSummaries.abstentions && Object.keys(aiSummaries.abstentions).length > 0) { %>
+    <% if (!isE23 && typeof aiSummaries !== 'undefined' && aiSummaries && aiSummaries.abstentions && Object.keys(aiSummaries.abstentions).length > 0) { %>
     <div class="subsection">
       <div class="subsection-header">
         <h3 class="subsection-title">Analyses not produced</h3>
@@ -595,7 +619,7 @@ const riskChipClass = (level) => {
     <!-- ============================================ -->
     <!-- COMPLIANCE & GOVERNANCE GROUP -->
     <!-- ============================================ -->
-    <% if (sections.compliance || sections.assessment || sections.clausesAndAnnexes || sections.nistSubcategories || sections.frameworkRequirements) { %>
+    <% if (sections.compliance || sections.assessment || sections.clausesAndAnnexes || sections.nistSubcategories || (sections.frameworkRequirements && !isE23)) { %>
     <div class="group-header">
       <h2 class="group-title">Compliance & Governance</h2>
     </div>
@@ -868,7 +892,7 @@ const riskChipClass = (level) => {
     <% } %>
 
     <!-- Framework requirements (bundled frameworks) Subsection -->
-    <% if (sections.frameworkRequirements) { %>
+    <% if (sections.frameworkRequirements && !isE23) { %>
     <div class="subsection" id="framework-requirements">
       <div class="subsection-header">
         <h3 class="subsection-title">Framework requirements</h3>
@@ -1166,6 +1190,9 @@ const riskChipClass = (level) => {
     <% } %>
     <% } %>
 
+    <%_ if (isE23 && e23.appendix) { -%>
+    <%- e23Partial('sections', { e23Sections: [e23.appendix] }) %>
+    <%_ } -%>
     <!-- ============================================ -->
     <!-- SECTIONS WITH NO DATA (section notices) -->
     <!-- Deliberately outside every group guard: a report whose only content -->
@@ -1212,7 +1239,7 @@ const riskChipClass = (level) => {
       <ul class="section-notice">
         <% failedNotices.forEach(function(n) { %>
         <li>
-          <strong><%= NOTICE_LABELS[n.sectionKey] || n.sectionKey %></strong>
+          <strong><%= NOTICE_LABELS[n.sectionKey] || (typeof e23NoticeLabels !== 'undefined' && e23NoticeLabels[n.sectionKey]) || n.sectionKey %></strong>
           &mdash; <%= n.detail ? n.detail + ': ' : '' %><%= noticeText.failedSuffix %>
         </li>
         <% }); %>
@@ -1232,7 +1259,7 @@ const riskChipClass = (level) => {
       <ul class="section-notice">
         <% emptyNotices.forEach(function(n) { %>
         <li>
-          <strong><%= NOTICE_LABELS[n.sectionKey] || n.sectionKey %></strong>
+          <strong><%= NOTICE_LABELS[n.sectionKey] || (typeof e23NoticeLabels !== 'undefined' && e23NoticeLabels[n.sectionKey]) || n.sectionKey %></strong>
           &mdash; <%= NOTICE_REASONS[n.reason] || n.reason %>
         </li>
         <% }); %>
@@ -1240,6 +1267,9 @@ const riskChipClass = (level) => {
     </div>
     <% } %>
     <% } %>
+    <%_ if (isE23) { -%>
+    <%- e23Partial('closing') %>
+    <%_ } -%>
 
     <!-- Page Footer (rendered as part of content) -->
     <div class="page-footer">

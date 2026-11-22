@@ -1,0 +1,48 @@
+<%# Lays out E-23 sections (e23Sections: E23Section[] from formalView.ts). No content decisions here. %>
+<% e23Sections.forEach(function(section) { %>
+    <section class="e23-section" id="e23-<%= section.id %>">
+      <div class="group-header">
+        <h2 class="group-title"><%= section.heading %></h2>
+      </div>
+      <% section.blocks.forEach(function(block) { %>
+      <% if (block.kind === 'paragraph') { %>
+      <p class="e23-paragraph<%= block.muted ? ' e23-muted' : '' %>"><%= block.text %></p>
+      <% } else if (block.kind === 'subheading') { %>
+      <h4 class="e23-subheading"><%= block.text %></h4>
+      <% if (block.note) { %><p class="e23-note"><%= block.note %></p><% } %>
+      <% } else if (block.kind === 'list') { %>
+      <% if (block.title) { %><h4 class="e23-subheading"><%= block.title %></h4><% } %>
+      <ul class="e23-list">
+        <% block.items.forEach(function(item) { %>
+        <li><%= item %></li>
+        <% }); %>
+      </ul>
+      <% } else if (block.kind === 'table') { %>
+      <% if (block.title) { %><h4 class="e23-subheading"><%= block.title %></h4><% } %>
+      <table class="data-table e23-table<%= block.small ? ' e23-small' : '' %>">
+        <% if (block.widths) { %>
+        <colgroup><% block.widths.forEach(function(w) { %><col style="width: <%= w %>%;"><% }); %></colgroup>
+        <% } %>
+        <thead>
+          <tr><% block.headers.forEach(function(h) { %><th><%= h %></th><% }); %></tr>
+        </thead>
+        <tbody>
+          <% block.rows.forEach(function(row) { %>
+          <tr>
+            <% row.forEach(function(cell) { %>
+            <% if (cell && typeof cell === 'object') { %>
+            <td<% if (cell.indent || cell.nowrap) { %> class="<%= [cell.indent ? 'e23-indent' : '', cell.nowrap ? 'e23-nowrap' : ''].join(' ').trim() %>"<% } %>><%= cell.main %><% if (cell.secondary) { %><br><span class="e23-secondary"><%= cell.secondary %></span><% } %></td>
+            <% } else { %>
+            <td><%= cell %></td>
+            <% } %>
+            <% }); %>
+          </tr>
+          <% }); %>
+        </tbody>
+      </table>
+      <% } else if (block.kind === 'chart' && typeof frameworkRequirementCharts !== 'undefined' && frameworkRequirementCharts[block.index]) { %>
+      <div class="fr-chart e23-chart avoid-break"><%- frameworkRequirementCharts[block.index] %></div>
+      <% } %>
+      <% }); %>
+    </section>
+<% }); %>
