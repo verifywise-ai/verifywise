@@ -23,7 +23,8 @@ export const METRIC_STALE_DAYS = 90;
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const TIERS: readonly MrmTierValue[] = ["1", "2", "3"];
-const SEVERITIES = ["critical", "high", "medium", "low"] as const;
+type Severity = keyof MrmFleetSectionData["openFindingsBySeverity"];
+const SEVERITIES = new Set<string>(["critical", "high", "medium", "low"]);
 const LIMITATIONS_MAX = 300;
 
 const time = (iso: string | null): number | null => {
@@ -38,7 +39,12 @@ export const isOpenFinding = (f: MrmModelFacts["findings"][number]): boolean =>
 export const isCriticalOrHigh = (f: MrmModelFacts["findings"][number]): boolean =>
   f.severity === "critical" || f.severity === "high";
 
-/** An open validation whose next due date is strictly before generation. */
+/**
+ * An open validation whose next due date is strictly before generation.
+ * Strict `<` is intentional (spec 8.4 C6: "next_due before generation"); the
+ * MRM tab (mrmAttestation.utils.ts) uses `<=`, so a due time equal to the
+ * generation instant counts as overdue there but not here.
+ */
 export const isValidationOverdue = (m: MrmModelFacts, generatedAt: Date): boolean => {
   const due = time(m.openValidationNextDue);
   return m.hasOpenValidation && due !== null && due < generatedAt.getTime();
@@ -87,11 +93,11 @@ export function buildMrmFleet(
     if (validated) validationCoverage.validated += 1;
     if (overdue) validationCoverage.overdue += 1;
     else if (m.hasOpenValidation) validationCoverage.inReview += 1;
-    if (!m.latestSignedOff && !m.hasOpenValidation) validationCoverage.notStarted += 1;
+    // Every non-retired model lands in at least one bucket.
+    if (!validated && !m.hasOpenValidation) validationCoverage.notStarted += 1;
 
     for (const f of open) {
-      const sev = SEVERITIES.find((s) => s === f.severity);
-      if (sev) openFindingsBySeverity[sev] += 1;
+      if (SEVERITIES.has(f.severity)) openFindingsBySeverity[f.severity as Severity] += 1;
     }
 
     if (m.activeThresholds > 0) monitoring.withActiveThresholds += 1;

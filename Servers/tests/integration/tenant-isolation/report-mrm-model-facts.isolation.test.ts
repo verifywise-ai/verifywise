@@ -10,7 +10,8 @@ import { collectMrmModelFacts } from "../../../services/reporting/collectors/mrm
 const resolveAll = async (ids: unknown[]) =>
   new Map<number, string>(ids.map((id) => [Number(id), `User ${id}`]));
 
-const GENERATED_AT = new Date();
+// Fixed, so the period and the seeded dates do not depend on today.
+const GENERATED_AT = new Date("2026-11-22T12:00:00.000Z");
 const DAY_MS = 24 * 60 * 60 * 1000;
 const isoDay = (d: Date) => d.toISOString().slice(0, 10);
 const PERIOD = {

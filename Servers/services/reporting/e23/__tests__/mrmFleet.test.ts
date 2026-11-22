@@ -138,14 +138,24 @@ describe("buildMrmFleet", () => {
 
   it("counts not started models and models with no signed-off outcome", () => {
     const fleet = buildMrmFleet(
-      [model({ latestSignedOff: null, nextReviewDue: null })],
+      [
+        model({ latestSignedOff: null, nextReviewDue: null }),
+        model({
+          latestSignedOff: {
+            validatorId: null,
+            outcome: null,
+            signedOffAt: "2026-06-01T00:00:00.000Z",
+            emptyReportSections: [],
+          },
+        }),
+      ],
       activity,
       GENERATED_AT,
     );
     expect(fleet.validationCoverage).toEqual({
       validated: 0,
       inReview: 0,
-      notStarted: 1,
+      notStarted: 2,
       overdue: 0,
     });
   });
