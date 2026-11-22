@@ -9049,6 +9049,8 @@ paths:
                 properties:
                   message: {type: string}
                   data: {$ref: '#/components/schemas/VendorRiskResponse'}
+        '400':
+          description: 'Validation error, e.g. an action owner who is not a member of the organization'
         '401':
           description: Unauthorized
         '500':
@@ -9107,6 +9109,8 @@ paths:
                 properties:
                   message: {type: string}
                   data: {$ref: '#/components/schemas/VendorRiskResponse'}
+        '400':
+          description: 'Validation error, e.g. an action owner who is not a member of the organization'
         '401':
           description: Unauthorized
         '500':

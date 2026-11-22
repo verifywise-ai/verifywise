@@ -13938,6 +13938,7 @@ export const vendorRiskEndpoints: Endpoint[] = [
     },
     responses: [
       { status: 202, description: "Accepted" },
+      { status: 400, description: "Validation error, e.g. an action owner who is not a member of the organization" },
       { status: 401, description: "Unauthorized" },
       { status: 500, description: "Internal server error" },
     ],
@@ -13968,6 +13969,7 @@ export const vendorRiskEndpoints: Endpoint[] = [
     },
     responses: [
       { status: 201, description: "Created successfully" },
+      { status: 400, description: "Validation error, e.g. an action owner who is not a member of the organization" },
       { status: 401, description: "Unauthorized" },
       { status: 500, description: "Internal server error" },
     ],

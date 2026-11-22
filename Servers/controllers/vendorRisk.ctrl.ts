@@ -28,6 +28,7 @@ import logger from "../utils/logger/fileLogger";
 import { QueryTypes } from "sequelize";
 
 import { translateError } from "../utils/i18n.utils";
+import { ValidationException } from "../domain.layer/exceptions/custom.exception";
 // Helper function to get user name
 async function getUserNameById(userId: number): Promise<string> {
   const result = await sequelize.query<{ name: string; surname: string }>(
@@ -382,6 +383,18 @@ export async function createVendorRisk(req: Request, res: Response): Promise<any
     return res.status(503).json(STATUS_CODE[503]({}));
   } catch (error) {
     await transaction.rollback();
+    if (error instanceof ValidationException) {
+      await logFailure({
+        eventType: "Create",
+        description: `Validation failed: ${error.message}`,
+        functionName: "createVendorRisk",
+        fileName: "vendorRisk.ctrl.ts",
+        error,
+        userId: req.userId!,
+        organizationId: req.organizationId!,
+      });
+      return res.status(400).json(STATUS_CODE[400](translateError(req, error)));
+    }
     await logFailure({
       eventType: "Create",
       description: "Failed to create vendor risk",
@@ -548,6 +561,18 @@ export async function updateVendorRiskById(req: Request, res: Response): Promise
     return res.status(404).json(STATUS_CODE[404]({}));
   } catch (error) {
     await transaction.rollback();
+    if (error instanceof ValidationException) {
+      await logFailure({
+        eventType: "Update",
+        description: `Validation failed: ${error.message}`,
+        functionName: "updateVendorRiskById",
+        fileName: "vendorRisk.ctrl.ts",
+        error,
+        userId: req.userId!,
+        organizationId: req.organizationId!,
+      });
+      return res.status(400).json(STATUS_CODE[400](translateError(req, error)));
+    }
     await logFailure({
       eventType: "Update",
       description: "Failed to update vendor risk",

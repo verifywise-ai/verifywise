@@ -6,6 +6,8 @@ import {
   deleteAllCustomFieldValuesForEntityQuery,
   fetchCustomFieldsForEntities,
 } from "./customField.utils";
+import { findUserFieldOutsideOrganization, parseReferencedIds } from "./user.utils";
+import { ValidationException } from "../domain.layer/exceptions/custom.exception";
 
 export const getVendorRisksByProjectIdQuery = async (
   projectId: number,
@@ -115,11 +117,82 @@ export const normalizeVendorRiskLikelihood = <T>(likelihood: T): T => {
   return likelihood;
 };
 
+/**
+ * Tenant guard for a vendor risk's action owner: a new or changed one must be
+ * a member of the organization, or the assignment email would reach another
+ * organization's user. Every vendor risk write (REST, Advisor, demo seed)
+ * goes through createNewVendorRiskQuery / updateVendorRiskByIdQuery.
+ *
+ * @throws ValidationException naming action_owner.
+ */
+const assertVendorRiskOwnerInOrganization = async (
+  actionOwner: unknown,
+  organizationId: number,
+  transaction: Transaction,
+  stored?: unknown,
+): Promise<void> => {
+  const outside = await findUserFieldOutsideOrganization(
+    [{ field: "action_owner", value: actionOwner, stored }],
+    organizationId,
+    transaction,
+  );
+  if (outside) {
+    throw new ValidationException(
+      outside.reason === "invalid"
+        ? "The action owner is not a valid user id"
+        : "The action owner must be a member of this organization",
+      "action_owner",
+      actionOwner,
+    );
+  }
+};
+
+/** The action_owner column value: null, '' and 0 mean no owner and are stored as NULL. */
+const vendorActionOwnerValue = (value: unknown): unknown =>
+  value === null || value === undefined || value === "" || value === 0 ? null : value;
+
+/**
+ * Tenant guard for a vendor risk's vendor: a vendor_id must name a vendor of
+ * the organization, or the risk (and the vendor name in its assignment
+ * email) would hang off another organization's vendor. Read on the caller's
+ * transaction. undefined and null mean "not written" and pass.
+ *
+ * @throws ValidationException naming vendor_id.
+ */
+const assertVendorInOrganization = async (
+  vendorId: unknown,
+  organizationId: number,
+  transaction: Transaction,
+): Promise<void> => {
+  if (vendorId === undefined || vendorId === null) return;
+  const ids = parseReferencedIds([vendorId]);
+  const found =
+    ids && ids.length === 1
+      ? ((await sequelize.query(
+          `SELECT id FROM vendors WHERE organization_id = :organizationId AND id = :id`,
+          {
+            replacements: { organizationId, id: ids[0] },
+            type: QueryTypes.SELECT,
+            transaction,
+          },
+        )) as { id: number }[])
+      : [];
+  if (found.length === 0) {
+    throw new ValidationException(
+      "The vendor must belong to this organization",
+      "vendor_id",
+      vendorId,
+    );
+  }
+};
+
 export const createNewVendorRiskQuery = async (
   vendorRisk: IVendorRisk,
   organizationId: number,
   transaction: Transaction,
 ): Promise<VendorRiskModel> => {
+  await assertVendorInOrganization(vendorRisk.vendor_id, organizationId, transaction);
+  await assertVendorRiskOwnerInOrganization(vendorRisk.action_owner, organizationId, transaction);
   const result = await sequelize.query(
     `INSERT INTO vendorRisks (
       organization_id, vendor_id, order_no, risk_description, impact_description,
@@ -138,7 +211,7 @@ export const createNewVendorRiskQuery = async (
         likelihood: normalizeVendorRiskLikelihood(vendorRisk.likelihood),
         risk_severity: vendorRisk.risk_severity,
         action_plan: vendorRisk.action_plan,
-        action_owner: vendorRisk.action_owner,
+        action_owner: vendorActionOwnerValue(vendorRisk.action_owner),
         risk_level: vendorRisk.risk_level,
         is_demo: vendorRisk.is_demo || false,
       },
@@ -157,6 +230,31 @@ export const updateVendorRiskByIdQuery = async (
   organizationId: number,
   transaction: Transaction,
 ): Promise<VendorRiskModel | null> => {
+  // The stored row, read and locked on this transaction so a concurrent save
+  // cannot change it between the checks below and the UPDATE. A missing or
+  // soft-deleted vendor risk is not edited: the caller answers 404.
+  const [stored] = (await sequelize.query(
+    `SELECT action_owner FROM vendorrisks
+      WHERE organization_id = :organizationId AND id = :id AND is_deleted = false
+      FOR UPDATE`,
+    { replacements: { organizationId, id }, type: QueryTypes.SELECT, transaction },
+  )) as { action_owner: number | null }[];
+  if (!stored) return null;
+
+  // An empty vendor_id is not written (see the SET clause below).
+  if (vendorRisk.vendor_id) {
+    await assertVendorInOrganization(vendorRisk.vendor_id, organizationId, transaction);
+  }
+
+  // Only a new owner is checked: one who has since left the organization
+  // stays on the vendor risk and must not block every other edit.
+  await assertVendorRiskOwnerInOrganization(
+    vendorRisk.action_owner,
+    organizationId,
+    transaction,
+    stored.action_owner,
+  );
+
   const updateVendorRisk: Partial<Record<keyof VendorRiskModel, any>> & {
     organizationId?: number;
   } = {};
@@ -171,6 +269,12 @@ export const updateVendorRiskByIdQuery = async (
     "risk_level",
   ]
     .filter((f) => {
+      // action_owner can be cleared: null, '' and 0 write NULL.
+      if (f === "action_owner") {
+        if (vendorRisk.action_owner === undefined) return false;
+        updateVendorRisk.action_owner = vendorActionOwnerValue(vendorRisk.action_owner);
+        return true;
+      }
       if (
         vendorRisk[f as keyof VendorRiskModel] !== undefined &&
         vendorRisk[f as keyof VendorRiskModel]
@@ -186,7 +290,7 @@ export const updateVendorRiskByIdQuery = async (
     .map((f) => `${f} = :${f}`)
     .join(", ");
 
-  const query = `UPDATE vendorrisks SET ${setClause} WHERE organization_id = :organizationId AND id = :id RETURNING *;`;
+  const query = `UPDATE vendorrisks SET ${setClause} WHERE organization_id = :organizationId AND id = :id AND is_deleted = false RETURNING *;`;
 
   updateVendorRisk.organizationId = organizationId;
   updateVendorRisk.id = id;
