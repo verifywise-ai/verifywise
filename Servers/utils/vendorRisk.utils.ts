@@ -2,10 +2,12 @@ import { VendorRiskModel } from "../domain.layer/models/vendorRisk/vendorRisk.mo
 import { IVendorRisk } from "../domain.layer/interfaces/i.vendorRisk";
 import { sequelize } from "../database/db";
 import { QueryTypes, Transaction } from "sequelize";
+import { fetchCustomFieldsForEntities } from "./customField.utils";
 import {
-  deleteAllCustomFieldValuesForEntityQuery,
-  fetchCustomFieldsForEntities,
-} from "./customField.utils";
+  recordEntityDeletion,
+  recordEntityDeletionBulk,
+  recordEntityRestoration,
+} from "./changeHistory.base.utils";
 import { findUserFieldOutsideOrganization, parseReferencedIds } from "./user.utils";
 import { ValidationException } from "../domain.layer/exceptions/custom.exception";
 import { calculateRiskLevel } from "./riskLevel.utils";
@@ -216,10 +218,11 @@ export const createNewVendorRiskQuery = async (
         vendor_id: vendorRisk.vendor_id,
         order_no: vendorRisk.order_no || null,
         risk_description: vendorRisk.risk_description,
-        impact_description: vendorRisk.impact_description,
+        // Optional: a create may leave them out.
+        impact_description: vendorRisk.impact_description ?? null,
         likelihood: normalizeVendorRiskLikelihood(vendorRisk.likelihood),
         risk_severity: vendorRisk.risk_severity,
-        action_plan: vendorRisk.action_plan,
+        action_plan: vendorRisk.action_plan ?? null,
         action_owner: vendorActionOwnerValue(vendorRisk.action_owner),
         // Computed from likelihood and severity; a sent risk_level is ignored.
         risk_level: calculateRiskLevel(vendorRisk.likelihood, vendorRisk.risk_severity),
@@ -337,12 +340,18 @@ export const updateVendorRiskByIdQuery = async (
   return result[0];
 };
 
+/**
+ * Soft-deletes a vendor risk and records the deletion in its history, as
+ * `deletedBy` or, without one (an Advisor tool), as the system. Its custom
+ * field values, framework links and history stay, so a restore brings the
+ * risk back whole. Returns false when there is no active risk with this id.
+ */
 export const deleteVendorRiskByIdQuery = async (
   id: number,
   organizationId: number,
   transaction: Transaction,
+  deletedBy?: number,
 ): Promise<boolean> => {
-  await deleteAllCustomFieldValuesForEntityQuery("vendor_risk", id, organizationId, transaction);
   // RETURNING rows, read as a SELECT: with QueryTypes.UPDATE the result is
   // [rows, count], which is never empty, so a missing id read as deleted.
   const rows = await sequelize.query(
@@ -353,25 +362,82 @@ export const deleteVendorRiskByIdQuery = async (
       transaction,
     },
   );
-  return rows.length > 0;
+  if (rows.length === 0) return false;
+  await recordEntityDeletion(
+    "vendor_risk",
+    id,
+    deletedBy ?? null,
+    organizationId,
+    transaction,
+    deletedBy === undefined,
+  );
+  return true;
 };
 
+/**
+ * Restores a soft-deleted vendor risk and records it in its history. Returns
+ * the restored row, or null when there is no deleted risk with this id.
+ */
+export const restoreVendorRiskByIdQuery = async (
+  id: number,
+  organizationId: number,
+  transaction: Transaction,
+  restoredBy: number,
+): Promise<IVendorRisk | null> => {
+  const rows = await sequelize.query<IVendorRisk>(
+    `UPDATE vendorrisks SET is_deleted = false, deleted_at = NULL, updated_at = NOW()
+      WHERE organization_id = :organizationId AND id = :id AND is_deleted = true
+      RETURNING *`,
+    {
+      replacements: { organizationId, id },
+      type: QueryTypes.SELECT,
+      transaction,
+    },
+  );
+  if (rows.length === 0) return null;
+  await recordEntityRestoration("vendor_risk", id, restoredBy, organizationId, transaction);
+  return rows[0];
+};
+
+/**
+ * Hard-deletes every risk of a vendor (the vendor itself is being deleted),
+ * with their custom field values; framework and risk links cascade. Risks
+ * still active get a "deleted" history entry; soft-deleted ones already have
+ * one. Returns the ids deleted.
+ */
 export const deleteVendorRisksForVendorQuery = async (
   vendorId: number,
   organizationId: number,
   transaction: Transaction,
-): Promise<boolean> => {
-  const result = await sequelize.query(
-    `DELETE FROM vendorrisks WHERE organization_id = :organizationId AND vendor_id = :vendor_id RETURNING id`,
+  deletedBy?: number,
+): Promise<number[]> => {
+  const rows = await sequelize.query<{ id: number; is_deleted: boolean }>(
+    `DELETE FROM vendorrisks WHERE organization_id = :organizationId AND vendor_id = :vendor_id RETURNING id, is_deleted`,
     {
       replacements: { organizationId, vendor_id: vendorId },
-      mapToModel: true,
-      model: VendorRiskModel,
-      type: QueryTypes.UPDATE,
+      type: QueryTypes.SELECT,
       transaction,
     },
   );
-  return result.length > 0;
+  const ids = rows.map((row) => Number(row.id));
+  if (ids.length === 0) return ids;
+  await sequelize.query(
+    `DELETE FROM custom_field_values
+      WHERE organization_id = :organizationId AND entity_type = 'vendor_risk' AND entity_id IN (:ids)`,
+    { replacements: { organizationId, ids }, transaction },
+  );
+  const activeIds = rows.filter((row) => !row.is_deleted).map((row) => Number(row.id));
+  if (activeIds.length > 0) {
+    await recordEntityDeletionBulk(
+      "vendor_risk",
+      activeIds,
+      deletedBy ?? null,
+      organizationId,
+      transaction,
+      deletedBy === undefined,
+    );
+  }
+  return ids;
 };
 
 export const getAllVendorRisksAllProjectsQuery = async (

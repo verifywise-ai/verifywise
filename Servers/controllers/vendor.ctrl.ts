@@ -21,9 +21,9 @@ import {
 } from "../domain.layer/exceptions/custom.exception";
 import {
   recordVendorCreation,
-  trackVendorChanges,
   recordMultipleFieldChanges,
 } from "../utils/vendorChangeHistory.utils";
+import { trackEntityChanges } from "../utils/changeHistory.base.utils";
 import { notifyUserAssigned } from "../services/inAppNotification.service";
 import { getVendorRiskSuggestions as getVendorRiskSuggestionsService } from "../services/vendors/riskSuggestions";
 import { triggerVendorOnboarding } from "../services/workflows/triggers";
@@ -316,7 +316,12 @@ export async function createVendor(req: Request, res: Response): Promise<any> {
           createdVendor.id!,
           req.userId,
           req.organizationId!,
-          { ...vendorData, risk_score: createdVendor.risk_score },
+          {
+            ...vendorData,
+            risk_score: createdVendor.risk_score,
+            // The links written (visible use cases only), none if empty.
+            projects: createdVendor.projects?.length ? createdVendor.projects : undefined,
+          },
           transaction,
         );
       }
@@ -516,15 +521,24 @@ export async function updateVendorById(req: Request, res: Response): Promise<any
     const answer = (
       field: "data_sensitivity" | "business_criticality" | "past_issues" | "regulatory_exposure",
     ) => (updateData[field] !== undefined ? updateData[field] : existingVendor[field]);
-    const changes = await trackVendorChanges(vendorModel, {
-      ...updateData,
-      risk_score: calculateVendorRiskScore({
-        data_sensitivity: answer("data_sensitivity"),
-        business_criticality: answer("business_criticality"),
-        past_issues: answer("past_issues"),
-        regulatory_exposure: answer("regulatory_exposure"),
-      }),
-    });
+    // Name lookups are scoped to this organization and run on the write's
+    // transaction. Use case links are diffed after the write, from storage.
+    const historyContext = { organizationId: req.organizationId!, transaction };
+    const changes = await trackEntityChanges(
+      "vendor",
+      vendorModel,
+      {
+        ...updateData,
+        projects: undefined,
+        risk_score: calculateVendorRiskScore({
+          data_sensitivity: answer("data_sensitivity"),
+          business_criticality: answer("business_criticality"),
+          past_issues: answer("past_issues"),
+          regulatory_exposure: answer("regulatory_exposure"),
+        }),
+      },
+      historyContext,
+    );
 
     // Update vendor using the enhanced method
     await vendorModel.updateVendor({
@@ -562,6 +576,20 @@ export async function updateVendorById(req: Request, res: Response): Promise<any
     );
 
     if (vendor) {
+      // The use case links as stored before and after: the request may name
+      // use cases the user can't see, which are neither added nor removed.
+      // History records the count only (changeHistory.config.ts).
+      const projectIdsBefore = (existingVendor.projects ?? []).map(Number);
+      const projectIdsAfter = (vendor.projects ?? []).map(Number);
+      changes.push(
+        ...(await trackEntityChanges(
+          "vendor",
+          { projects: projectIdsBefore },
+          { projects: projectIdsAfter },
+          historyContext,
+        )),
+      );
+
       // Record changes in change history
       if (changes.length > 0) {
         await recordMultipleFieldChanges(
@@ -586,8 +614,6 @@ export async function updateVendorById(req: Request, res: Response): Promise<any
       // Only use cases this update added or removed, read from the links as
       // stored before and after the write. A plain field edit sends no
       // projects, so both lists match and nothing fires.
-      const projectIdsBefore = (existingVendor.projects ?? []).map(Number);
-      const projectIdsAfter = (vendor.projects ?? []).map(Number);
       const addedProjectIds = projectIdsAfter.filter((id) => !projectIdsBefore.includes(id));
       if (addedProjectIds.length > 0) {
         notifyVendorRiskCandidates({
@@ -729,7 +755,12 @@ export async function deleteVendorById(req: Request, res: Response): Promise<any
   });
 
   try {
-    const deletedVendor = await deleteVendorByIdQuery(vendorId, req.organizationId!, transaction);
+    const deletedVendor = await deleteVendorByIdQuery(
+      vendorId,
+      req.organizationId!,
+      transaction,
+      req.userId!,
+    );
 
     if (deletedVendor) {
       await transaction.commit();

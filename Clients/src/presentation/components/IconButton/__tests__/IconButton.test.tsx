@@ -355,6 +355,22 @@ describe("IconButton", () => {
     expect(onRestore).toHaveBeenCalledTimes(1);
   });
 
+  it("offers View and Restore risk for a deleted risk, without Edit or Delete", async () => {
+    const onRestore = vi.fn();
+    const onView = vi.fn();
+    await renderWithMenuOpen({ type: "Risk", isArchived: true, onRestore, onView });
+    expect(screen.queryByText("Edit")).not.toBeInTheDocument();
+    expect(screen.queryByText("Remove")).not.toBeInTheDocument();
+    await userEvent.click(screen.getByText("Restore risk"));
+    expect(onRestore).toHaveBeenCalledTimes(1);
+  });
+
+  it("offers only View for a deleted risk when it can't be restored", async () => {
+    await renderWithMenuOpen({ type: "Risk", isArchived: true, onView: vi.fn() });
+    expect(screen.getByText("View")).toBeInTheDocument();
+    expect(screen.queryByText("Restore risk")).not.toBeInTheDocument();
+  });
+
   it("opens confirmation modal for task archive when warning provided", async () => {
     await renderWithMenuOpen({
       type: "task",

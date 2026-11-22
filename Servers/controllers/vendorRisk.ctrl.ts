@@ -13,14 +13,15 @@ import {
   deleteVendorRiskFrameworkAssociations,
   getVendorRisksByFrameworkIdQuery,
   normalizeVendorRiskLikelihood,
+  restoreVendorRiskByIdQuery,
 } from "../utils/vendorRisk.utils";
 import { VendorRiskModel } from "../domain.layer/models/vendorRisk/vendorRisk.model";
 import { logProcessing, logSuccess, logFailure } from "../utils/logger/logHelper";
 import {
   recordVendorRiskCreation,
-  trackVendorRiskChanges,
   recordMultipleFieldChanges,
 } from "../utils/vendorRiskChangeHistory.utils";
+import { trackEntityChanges } from "../utils/changeHistory.base.utils";
 import { notifyUserAssigned } from "../services/inAppNotification.service";
 import { notifyVendorRiskCandidates } from "../services/riskLinks/vendorCandidates";
 import { enqueueVendorRiskLinkRecompute } from "../services/automations/automationProducer";
@@ -209,7 +210,24 @@ export async function getAllVendorRisksByVendorId(req: Request, res: Response) {
   }
 }
 
+/** GET /vendorRisks/:id (legacy): an active vendor risk; 404 for a deleted one. */
 export async function getVendorRiskById(req: Request, res: Response): Promise<any> {
+  return readVendorRiskById(req, res, false);
+}
+
+/**
+ * GET /v1/vendor-risks/:id: a vendor risk, deleted ones included with
+ * is_deleted set, so a deleted risk can be opened read-only and restored.
+ */
+export async function getVendorRiskByIdIncludingDeleted(req: Request, res: Response): Promise<any> {
+  return readVendorRiskById(req, res, true);
+}
+
+async function readVendorRiskById(
+  req: Request,
+  res: Response,
+  includeDeleted: boolean,
+): Promise<any> {
   const vendorRiskId = parseRouteId(req.params.id);
   if (vendorRiskId === null) {
     return res.status(400).json(STATUS_CODE[400](req.t!("Invalid vendor risk ID")));
@@ -224,7 +242,11 @@ export async function getVendorRiskById(req: Request, res: Response): Promise<an
   });
 
   try {
-    const vendorRisk = await getVendorRiskByIdQuery(vendorRiskId, req.organizationId!);
+    const vendorRisk = await getVendorRiskByIdQuery(
+      vendorRiskId,
+      req.organizationId!,
+      includeDeleted,
+    );
 
     if (vendorRisk) {
       await logSuccess({
@@ -308,7 +330,10 @@ export async function createVendorRisk(req: Request, res: Response): Promise<any
           createdVendorRisk.id,
           userId,
           req.organizationId!,
-          createdVendorRisk,
+          {
+            ...createdVendorRisk.toJSON(),
+            frameworks: frameworks.length > 0 ? frameworks : undefined,
+          },
           transaction,
         );
       }
@@ -480,9 +505,6 @@ export async function updateVendorRiskById(req: Request, res: Response): Promise
       return res.status(404).json(STATUS_CODE[404]({}));
     }
 
-    // Create model from existing data for change tracking
-    const oldVendorRiskModel = new VendorRiskModel(existingVendorRisk as any);
-
     if (frameworks) await assertFrameworksExist(frameworks, transaction);
 
     const vendorRiskModel = new VendorRiskModel();
@@ -513,10 +535,18 @@ export async function updateVendorRiskById(req: Request, res: Response): Promise
       const userId = req.userId;
       if (userId) {
         // The level as stored (computed), not as the request sent it.
-        const changes = await trackVendorRiskChanges(oldVendorRiskModel, {
-          ...updatedVendorRisk,
-          risk_level: vendorRisk.risk_level,
-        });
+        // Name lookups scoped to this organization, on the write's transaction.
+        const changes = await trackEntityChanges(
+          "vendor_risk",
+          { ...existingVendorRisk, frameworks: existingVendorRisk.frameworks ?? [] },
+          {
+            ...updatedVendorRisk,
+            risk_level: vendorRisk.risk_level,
+            vendor_id: updatedVendorRisk.vendor_id === undefined ? undefined : vendorRisk.vendor_id,
+            frameworks,
+          },
+          { organizationId: req.organizationId!, transaction },
+        );
         if (changes.length > 0) {
           await recordMultipleFieldChanges(
             vendorRiskId,
@@ -644,6 +674,7 @@ export async function deleteVendorRiskById(req: Request, res: Response): Promise
       vendorRiskId,
       req.organizationId!,
       transaction,
+      req.userId!,
     );
 
     if (deletedVendorRisk) {
@@ -675,6 +706,76 @@ export async function deleteVendorRiskById(req: Request, res: Response): Promise
       eventType: "Delete",
       description: "Failed to delete vendor risk",
       functionName: "deleteVendorRiskById",
+      fileName: "vendorRisk.ctrl.ts",
+      error: error as Error,
+      userId: req.userId!,
+      organizationId: req.organizationId!,
+    });
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
+  }
+}
+
+/**
+ * PATCH /v1/vendor-risks/:id/restore (vendor.edit): restores a deleted vendor
+ * risk. 404 when no deleted risk has this id.
+ */
+export async function restoreVendorRiskById(req: Request, res: Response): Promise<any> {
+  const vendorRiskId = parseRouteId(req.params.id);
+  if (vendorRiskId === null) {
+    return res.status(400).json(STATUS_CODE[400](req.t!("Invalid vendor risk ID")));
+  }
+  const transaction = await sequelize.transaction();
+
+  logProcessing({
+    description: `starting restoreVendorRiskById for ID ${vendorRiskId}`,
+    functionName: "restoreVendorRiskById",
+    fileName: "vendorRisk.ctrl.ts",
+    userId: req.userId!,
+    organizationId: req.organizationId!,
+  });
+
+  try {
+    const restored = await restoreVendorRiskByIdQuery(
+      vendorRiskId,
+      req.organizationId!,
+      transaction,
+      req.userId!,
+    );
+    if (!restored) {
+      await transaction.rollback();
+      await logSuccess({
+        eventType: "Update",
+        description: `No deleted vendor risk to restore: ID ${vendorRiskId}`,
+        functionName: "restoreVendorRiskById",
+        fileName: "vendorRisk.ctrl.ts",
+        userId: req.userId!,
+        organizationId: req.organizationId!,
+      });
+      return res.status(404).json(STATUS_CODE[404]({}));
+    }
+    await transaction.commit();
+    await logSuccess({
+      eventType: "Update",
+      description: `Restored vendor risk ID ${vendorRiskId}`,
+      functionName: "restoreVendorRiskById",
+      fileName: "vendorRisk.ctrl.ts",
+      userId: req.userId!,
+      organizationId: req.organizationId!,
+    });
+
+    // Back in the pool of related-risk suggestions.
+    enqueueVendorRiskLinkRecompute(req.organizationId!, vendorRiskId).catch((err) =>
+      logger.error("Vendor risk link recompute enqueue failed:", err),
+    );
+
+    const vendorRisk = await getVendorRiskByIdQuery(vendorRiskId, req.organizationId!);
+    return res.status(200).json(STATUS_CODE[200](vendorRisk));
+  } catch (error) {
+    await transaction.rollback();
+    await logFailure({
+      eventType: "Update",
+      description: "Failed to restore vendor risk",
+      functionName: "restoreVendorRiskById",
       fileName: "vendorRisk.ctrl.ts",
       error: error as Error,
       userId: req.userId!,

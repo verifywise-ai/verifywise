@@ -28,7 +28,10 @@ import { useCanCheck } from "../../../application/hooks/useCan";
 import SearchBox from "../../components/Search/SearchBox";
 import { useVendors, useDeleteVendor } from "../../../application/hooks/useVendors";
 import { useProjects } from "../../../application/hooks/useProjects";
-import { useDeleteVendorRisk } from "../../../application/hooks/useVendorRiskMutations";
+import {
+  useDeleteVendorRisk,
+  useRestoreVendorRisk,
+} from "../../../application/hooks/useVendorRiskMutations";
 import { getVendorById } from "../../../application/repository/vendor.repository";
 import { getVendorRiskById } from "../../../application/repository/vendorRisk.repository";
 import { PageHeaderExtended } from "../../components/Layout/PageHeaderExtended";
@@ -500,6 +503,7 @@ const Vendors = () => {
   // Mutation hooks
   const deleteVendorMutation = useDeleteVendor();
   const deleteVendorRiskMutation = useDeleteVendorRisk();
+  const restoreVendorRiskMutation = useRestoreVendorRisk();
 
   const [alert, setAlert] = useState<{
     variant: "success" | "info" | "warning" | "error";
@@ -744,6 +748,24 @@ const Vendors = () => {
       setTimeout(() => setAlert(null), 3000);
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  // Restore a deleted risk, from its row menu or its read-only modal.
+  const handleRestoreRisk = async (riskId: number) => {
+    setIsSubmitting(true);
+    try {
+      await restoreVendorRiskMutation.mutateAsync(riskId);
+      setIsRiskModalOpen(false);
+      setSelectedRisk(null);
+      setAlert({ variant: "success", body: "Risk restored." });
+      await refreshVendorRisks();
+    } catch (error) {
+      logEngine({ type: "error", message: `Failed to restore risk: ${error}` });
+      setAlert({ variant: "error", body: "Could not restore the risk. Please try again." });
+    } finally {
+      setIsSubmitting(false);
+      setTimeout(() => setAlert(null), 3000);
     }
   };
 
@@ -1237,6 +1259,7 @@ const Vendors = () => {
                 visibleColumns={vendorRiskVisibleColumns}
                 exposure={exposureById}
                 onOpenLinks={(id) => handleEditRisk(id, "linked-risks")}
+                onRestore={isDeletingAllowed ? handleRestoreRisk : undefined}
               />
             </Stack>
           )}
@@ -1262,6 +1285,7 @@ const Vendors = () => {
         existingRisk={selectedRisk}
         vendors={vendors}
         initialTab={riskModalTab}
+        onRestore={isDeletingAllowed ? handleRestoreRisk : undefined}
       />
       {isSubmitting && <CustomizableToast title="Processing your request. Please wait..." />}
 

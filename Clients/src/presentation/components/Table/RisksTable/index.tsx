@@ -112,6 +112,7 @@ const RiskTable: React.FC<IRiskTableProps> = ({
   visibleColumns,
   exposure,
   onOpenLinks,
+  onRestore,
 }) => {
   const formatDate = useFormattedDate();
   const theme = useTheme();
@@ -477,8 +478,11 @@ const RiskTable: React.FC<IRiskTableProps> = ({
                         onEdit={() => onEdit(row.risk_id!)}
                         onMouseEvent={() => {}}
                         warningTitle="Delete this risk?"
-                        warningMessage="This action is non-recoverable."
+                        warningMessage="It moves to the deleted risks, where it can be restored."
                         type="Risk"
+                        isArchived={row.is_deleted}
+                        onView={() => onEdit(row.risk_id!)}
+                        onRestore={onRestore ? () => onRestore(row.risk_id!) : undefined}
                       />
                     )}
                   </Stack>
@@ -504,6 +508,7 @@ const RiskTable: React.FC<IRiskTableProps> = ({
       isVisible,
       exposure,
       onOpenLinks,
+      onRestore,
       t,
       formatDate,
     ],

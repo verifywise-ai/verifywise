@@ -12,10 +12,10 @@ import {
   buildVendorUpdateReplacements,
 } from "./automation/vendor.automation.utils";
 import { replaceTemplateVariables } from "./automation/automation.utils";
-import {
-  deleteAllCustomFieldValuesForEntityQuery,
-  fetchCustomFieldsForEntities,
-} from "./customField.utils";
+import { fetchCustomFieldsForEntities } from "./customField.utils";
+import { withdrawApprovalRequestQuery } from "./approvalRequest.utils";
+import { ApprovalRequestStatus } from "../domain.layer/enums/approval-workflow.enum";
+import { recordEntityDeletion } from "./changeHistory.base.utils";
 import { findUserFieldOutsideOrganization } from "./user.utils";
 import { ValidationException } from "../domain.layer/exceptions/custom.exception";
 import logger from "./logger/fileLogger";
@@ -595,13 +595,64 @@ export const updateVendorByIdQuery = async (
   return updatedVendor;
 };
 
+/** Rows that point at a vendor by type and id, with no foreign key to cascade. */
+const VENDOR_LEFTOVERS = [
+  `DELETE FROM custom_field_values WHERE organization_id = :organizationId AND entity_type = 'vendor' AND entity_id = :id`,
+  `DELETE FROM notes WHERE organization_id = :organizationId AND attached_to = 'VENDOR' AND attached_to_id = :idText`,
+  `DELETE FROM task_entity_links WHERE organization_id = :organizationId AND entity_type = 'vendor' AND entity_id = :id`,
+  `DELETE FROM share_links WHERE organization_id = :organizationId AND resource_type = 'vendor' AND resource_id = :id`,
+];
+
+/**
+ * Hard-deletes a vendor (decision 6 of the vendors audit) with everything
+ * that points at it: its risks and their custom field values, its own custom
+ * field values, notes, task links, share links and use case links. Pending
+ * approval requests for it are withdrawn. The vendor and each risk still
+ * active get a "deleted" history entry, as `deletedBy` or, without one (an
+ * Advisor tool), as the system. Returns false, touching nothing, when the
+ * organization has no such vendor.
+ */
 export const deleteVendorByIdQuery = async (
   id: number,
   organizationId: number,
   transaction: Transaction,
+  deletedBy?: number,
 ): Promise<boolean> => {
-  await deleteVendorRisksForVendorQuery(id, organizationId, transaction);
-  await deleteAllCustomFieldValuesForEntityQuery("vendor", id, organizationId, transaction);
+  const [vendorRow] = await sequelize.query<{ id: number }>(
+    `SELECT id FROM vendors WHERE organization_id = :organizationId AND id = :id FOR UPDATE`,
+    { replacements: { organizationId, id }, type: QueryTypes.SELECT, transaction },
+  );
+  if (!vendorRow) return false;
+
+  await deleteVendorRisksForVendorQuery(id, organizationId, transaction, deletedBy);
+  for (const sql of VENDOR_LEFTOVERS) {
+    await sequelize.query(sql, {
+      replacements: { organizationId, id, idText: String(id) },
+      transaction,
+    });
+  }
+  const pendingApprovals = await sequelize.query<{ id: number }>(
+    `SELECT id FROM approval_requests
+      WHERE organization_id = :organizationId AND entity_type = 'vendor' AND entity_id = :id AND status = :pending`,
+    {
+      replacements: { organizationId, id, pending: ApprovalRequestStatus.PENDING },
+      type: QueryTypes.SELECT,
+      transaction,
+    },
+  );
+  for (const request of pendingApprovals) {
+    await withdrawApprovalRequestQuery(request.id, organizationId, transaction, {
+      changedBy: deletedBy ?? null,
+    });
+  }
+  await recordEntityDeletion(
+    "vendor",
+    id,
+    deletedBy ?? null,
+    organizationId,
+    transaction,
+    deletedBy === undefined,
+  );
   await updateProjectUpdatedByIdQuery(id, "vendors", organizationId, transaction);
   await sequelize.query(
     `DELETE FROM vendors_projects WHERE organization_id = :organizationId AND vendor_id = :id`,

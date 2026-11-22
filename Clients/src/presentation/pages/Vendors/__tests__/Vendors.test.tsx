@@ -46,6 +46,7 @@ vi.mock("../../../../application/hooks/useProjects", () => ({
 
 vi.mock("../../../../application/hooks/useVendorRiskMutations", () => ({
   useDeleteVendorRisk: () => ({ mutateAsync: vi.fn() }),
+  useRestoreVendorRisk: () => ({ mutateAsync: vi.fn() }),
 }));
 
 vi.mock("../../../../application/hooks/useMultipleOnScreen", () => ({

@@ -175,6 +175,12 @@ enum Likelihood {
 | POST | `/vendorRisks/` | Create risk |
 | PATCH | `/vendorRisks/:id` | Update risk |
 | DELETE | `/vendorRisks/:id` | Soft delete risk |
+| GET | `/v1/vendor-risks/:id` | Get a risk, deleted ones included (`is_deleted: true`), to open read-only |
+| PATCH | `/v1/vendor-risks/:id/restore` | Restore a deleted risk (`vendor.edit`; 404 if no deleted risk has this id) |
+
+The legacy `/vendorRisks` router is frozen: its `GET /vendorRisks/:id` still
+answers 404 for a deleted risk, and updates do too. Custom field values of a
+deleted risk can't be written or cleared until it is restored.
 
 ### Change History Endpoints
 
@@ -318,7 +324,22 @@ isn't on every linked use case can therefore save the vendor, where the old
 delete-visible-then-reinsert-all hit the primary key and answered 500. The
 response's `projects` is read back from `vendors_projects` after the write.
 
-- Deleting vendor cascades to junction table
+### Deleting a vendor
+
+A vendor delete is a hard delete (`deleteVendorByIdQuery`,
+`utils/vendor.utils.ts`), in one transaction:
+
+- the vendor row is locked first; an unknown id answers 404 and touches nothing
+- its risks are deleted, active or not, with their custom field values;
+  framework and risk links cascade
+- its custom field values, notes (`attached_to = 'VENDOR'`), task links, share
+  links and use case links are removed
+- pending approval requests for it are withdrawn
+- the vendor, and each risk that was still active, get a "deleted" history
+  entry. A risk deleted earlier already has one.
+
+The console records the deleting user. The Advisor's delete tool has no user,
+so its deletions are recorded as made by the system.
 
 ## Vendor Risk Management
 
@@ -351,11 +372,19 @@ columns it clears.
 
 ### Soft Delete
 
-Vendor risks support soft delete:
-- `is_deleted` flag set to true
-- `deleted_at` timestamp recorded
-- Risk hidden from default queries
-- Can be restored or permanently deleted
+Deleting a vendor risk is a soft delete (`deleteVendorRiskByIdQuery`):
+- `is_deleted` set to true, `deleted_at` recorded
+- a "deleted" history entry (Vendor Risk: Active → Deleted)
+- custom field values and framework links are kept, so a restore brings the
+  risk back whole
+- hidden from the default lists, reports and risk link suggestions
+
+A deleted risk shows in the Risks tab under the "Deleted" status filter. It
+opens read-only, titled "Deleted risk", without the Linked risks tab. Holders
+of `vendor.edit` can restore it from its row menu or from the modal.
+`PATCH /v1/vendor-risks/:id/restore` clears the flag, records a history entry
+(Deleted → Active) and queues a link recompute. It is gone for good only when
+its vendor is deleted.
 
 ### Linked risks
 
@@ -526,6 +555,16 @@ All vendor changes are tracked:
 | old_value | Previous value |
 | new_value | New value |
 | timestamp | When changed |
+
+Besides the form fields, vendor history records use case link changes ("Use
+cases", diffed from the links stored before and after the write). It records
+the number of linked use cases, not their titles: every vendor viewer reads the
+history, and most can't see every linked use case. And
+vendor risk history records moving a risk to another vendor ("Vendor") and
+framework mapping changes ("Frameworks"). Link and framework lists compare as
+sets, so a reorder records nothing. User and vendor names are looked
+up within the organization: a user from another organization shows as
+`User #id`.
 
 ## Frontend Structure
 

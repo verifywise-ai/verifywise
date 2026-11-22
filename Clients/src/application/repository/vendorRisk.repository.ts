@@ -44,6 +44,7 @@ export async function getVendorRisksByVendorId({
   return response.data;
 }
 
+/** A vendor risk, deleted ones included (with is_deleted) so they open read-only. */
 export async function getVendorRiskById({
   id,
   signal,
@@ -51,7 +52,7 @@ export async function getVendorRiskById({
   id: number;
   signal?: AbortSignal;
 }): Promise<any> {
-  const response = await apiServices.get(`/vendorRisks/${id}`, {
+  const response = await apiServices.get(`/v1/vendor-risks/${id}`, {
     signal,
   });
   return response.data;
@@ -75,6 +76,12 @@ export async function updateVendorRisk({
 
 export async function deleteVendorRisk({ id }: { id: number }): Promise<any> {
   const response = await apiServices.delete(`/vendorRisks/${id}`);
+  return response;
+}
+
+/** Restores a deleted vendor risk (vendor.edit). */
+export async function restoreVendorRisk({ id }: { id: number }): Promise<any> {
+  const response = await apiServices.patch(`/v1/vendor-risks/${id}/restore`);
   return response;
 }
 

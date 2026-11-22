@@ -365,10 +365,13 @@ const assertEntityBelongsToOrg = async (
   transaction?: Transaction,
 ): Promise<void> => {
   const table = ENTITY_TYPE_TO_TABLE[entityType];
+  // A deleted vendor risk is read-only until restored: its values are kept
+  // for the restore, not open to writes.
+  const notDeleted = entityType === "vendor_risk" ? " AND is_deleted = false" : "";
   // Safe: `table` resolved from a static allowlist, never user-controlled.
   const rows = await sequelize.query(
     `SELECT 1 AS ok FROM ${table}
-       WHERE id = :entityId AND organization_id = :organizationId
+       WHERE id = :entityId AND organization_id = :organizationId${notDeleted}
        LIMIT 1`,
     {
       replacements: { entityId, organizationId },
@@ -997,6 +1000,10 @@ export const deleteCustomFieldValueQuery = async (
        WHERE organization_id = :organizationId
          AND definition_id = :definitionId
          AND entity_id = :entityId
+         -- A deleted vendor risk's values are kept for its restore.
+         AND NOT (entity_type = 'vendor_risk' AND entity_id IN (
+           SELECT id FROM vendorrisks
+            WHERE organization_id = :organizationId AND is_deleted = true))
        RETURNING id`,
     {
       replacements: { organizationId, definitionId, entityId },

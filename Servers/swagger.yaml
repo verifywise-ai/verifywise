@@ -8020,6 +8020,8 @@ tags:
     name: 'v1: V1/Training'
   -
     name: 'v1: V1/Use Case Lifecycle'
+  -
+    name: 'v1: V1/Vendor Risks'
 paths:
   /webhooks/github:
     post:
@@ -29320,6 +29322,34 @@ paths:
       tags:
         - 'v1: V1/Model Risks'
       operationId: v1_model_risks_updateModelRiskById
+      security:
+        -
+          bearerAuth: []
+  '/v1/vendor-risks/{id}':
+    get:
+      summary: 'Get Vendor Risk By Id Including Deleted'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Vendor Risks'
+      operationId: getVendorRiskByIdIncludingDeleted
+      security:
+        -
+          bearerAuth: []
+  '/v1/vendor-risks/{id}/restore':
+    patch:
+      summary: 'Restore Vendor Risk By Id'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Vendor Risks'
+      operationId: restoreVendorRiskById
       security:
         -
           bearerAuth: []

@@ -874,13 +874,13 @@ export class ReportDataCollector {
       let replacements: Record<string, any>;
 
       if (isOrganizational) {
-        // For organizational reports, get ALL vendor risks
+        // For organizational reports, every vendor risk not deleted
         vendorRisksQuery = `
           SELECT vr.*, v.vendor_name as vendor_name, u.name as owner_name, u.surname as owner_surname
           FROM vendorrisks vr
           JOIN vendors v ON vr.vendor_id = v.id AND v.organization_id = vr.organization_id
           LEFT JOIN users u ON vr.action_owner = u.id
-          WHERE vr.organization_id = :organizationId
+          WHERE vr.organization_id = :organizationId AND vr.is_deleted = false
           ORDER BY vr.id ASC
         `;
         replacements = { organizationId: this.organizationId };
@@ -893,6 +893,7 @@ export class ReportDataCollector {
           LEFT JOIN users u ON vr.action_owner = u.id
           JOIN vendors_projects vp ON v.id = vp.vendor_id AND vp.organization_id = v.organization_id
           WHERE vr.organization_id = :organizationId AND vp.project_id = :projectId
+            AND vr.is_deleted = false
           ORDER BY vr.id ASC
         `;
         replacements = { organizationId: this.organizationId, projectId: this.projectId };
