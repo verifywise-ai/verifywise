@@ -298,6 +298,7 @@ export interface ReportData {
     frameworkRequirements?: FrameworkRequirementsSectionData;
     mrmFleet?: MrmFleetSectionData;
     mrmInventoryAppendix?: MrmInventoryAppendixSectionData;
+    e23Contradictions?: E23ContradictionsSectionData;
     // Organization group
     vendors?: VendorsListSectionData;
     models?: ModelsListSectionData;
@@ -651,6 +652,29 @@ export interface MrmInventoryAppendixRow {
 export interface MrmInventoryAppendixSectionData {
   active: MrmInventoryAppendixRow[];
   retired: MrmInventoryAppendixRow[];
+}
+
+/** Fixed E-23 contradiction rules (spec 8.4) evaluated over the MRM facts. */
+export interface E23ContradictionsSectionData {
+  /** false when the E-23 framework (id 26) is not in the requirements; no rule runs. */
+  available: boolean;
+  fired: Array<{
+    ruleId: string;
+    /** Requirement number, e.g. "2.1.4". */
+    requirement: string;
+    requirementTitle: string;
+    claimedStatus: string;
+    finding: string;
+    affectedCount: number;
+    /** Up to five model names, sorted. */
+    examples: string[];
+    moreCount: number;
+  }>;
+  /** Rule ids evaluated (their requirement was found). */
+  checked: string[];
+  notRun: Array<{ ruleId: string; requirement: string; reason: string }>;
+  /** Keyed by E-23 group title. */
+  coverage: Record<string, "checked" | "selfAssessmentOnly">;
 }
 
 // NIST AI RMF Subcategories (Compliance & Governance group)
