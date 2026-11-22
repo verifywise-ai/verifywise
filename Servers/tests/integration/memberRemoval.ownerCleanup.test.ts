@@ -1,5 +1,12 @@
 jest.setTimeout(60000);
 
+// Ledger appends run after commit on their own connection; the tests assert
+// them through this mock, so nothing writes after the tables are truncated.
+jest.mock("../../utils/auditLedger.utils", () => ({
+  ...jest.requireActual("../../utils/auditLedger.utils"),
+  appendToAuditLedger: jest.fn().mockResolvedValue(undefined),
+}));
+
 /**
  * Removing a member from an organization clears the incidents they own
  * (ai_incident_managements.assignee_id) and the vendor risks they are action
@@ -11,9 +18,12 @@ jest.setTimeout(60000);
 import { QueryTypes } from "sequelize";
 import { sequelize } from "../../database/db";
 import { removeUserFromOrganizationQuery } from "../../utils/user.utils";
-import { removeUserFromOrganization } from "../../services/superAdmin.service";
+import { appendToAuditLedger } from "../../utils/auditLedger.utils";
+import { deleteOrganization, removeUserFromOrganization } from "../../services/superAdmin.service";
 import { createTestOrganization, createTestUser, cleanupDatabase } from "./helpers";
 import { createTestIncident, createTestVendor, createTestVendorRisk } from "../factories";
+
+const ledgerAppends = appendToAuditLedger as jest.MockedFunction<typeof appendToAuditLedger>;
 
 interface Seed {
   orgA: number;
@@ -70,7 +80,22 @@ async function vendorRiskOwner(id: number): Promise<number | null> {
   return row.action_owner;
 }
 
+async function historyCount(): Promise<number> {
+  const [{ count }] = (await sequelize.query(
+    `SELECT COUNT(*)::int AS count FROM incident_change_history`,
+    { type: QueryTypes.SELECT },
+  )) as { count: number }[];
+  return count;
+}
+
+const incidentLedgerAppends = () =>
+  ledgerAppends.mock.calls.filter(([entry]) => entry.entityType === "incident");
+
 describe("removing a member clears the incidents and vendor risks they own", () => {
+  beforeEach(() => {
+    ledgerAppends.mockClear();
+  });
+
   afterEach(async () => {
     await cleanupDatabase();
   });
@@ -98,8 +123,9 @@ describe("removing a member clears the incidents and vendor risks they own", () 
     expect(await vendorRiskOwner(s.vendorRiskB)).toBe(s.member);
   });
 
-  it("records the cleared incident owner as a system change, named while still a member", async () => {
+  it("records each cleared incident owner as a system change, named while still a member", async () => {
     const s = await seed();
+    const incidentA2 = await createTestIncident(s.orgA, s.adminA, { assignee_id: s.member });
     const [member] = (await sequelize.query(`SELECT name, surname FROM users WHERE id = :id`, {
       replacements: { id: s.member },
       type: QueryTypes.SELECT,
@@ -112,20 +138,23 @@ describe("removing a member clears the incidents and vendor risks they own", () 
               changed_by_user_id, changed_by_system
          FROM incident_change_history
         WHERE action = 'updated'
-        ORDER BY id`,
+        ORDER BY incident_id`,
       { type: QueryTypes.SELECT },
     )) as Array<Record<string, unknown>>;
-    expect(history).toEqual([
-      {
-        incident_id: s.incidentA,
-        organization_id: s.orgA,
-        action: "updated",
-        field_name: "Owner",
-        old_value: `${member.name} ${member.surname}`,
-        new_value: "-",
-        changed_by_user_id: null,
-        changed_by_system: true,
-      },
+    const row = (incidentId: number) => ({
+      incident_id: incidentId,
+      organization_id: s.orgA,
+      action: "updated",
+      field_name: "Owner",
+      old_value: `${member.name} ${member.surname}`,
+      new_value: "-",
+      changed_by_user_id: null,
+      changed_by_system: true,
+    });
+    expect(history).toEqual([row(s.incidentA), row(incidentA2)]);
+    expect(incidentLedgerAppends().map(([entry]) => entry.entityId)).toEqual([
+      s.incidentA,
+      incidentA2,
     ]);
   });
 
@@ -133,15 +162,45 @@ describe("removing a member clears the incidents and vendor risks they own", () 
     const s = await seed();
 
     const transaction = await sequelize.transaction();
-    await removeUserFromOrganizationQuery(s.member, s.orgA, transaction);
-    await transaction.rollback();
+    try {
+      await removeUserFromOrganizationQuery(s.member, s.orgA, transaction);
+    } finally {
+      await transaction.rollback();
+    }
 
     expect(await incidentOwner(s.incidentA)).toBe(s.member);
     expect(await vendorRiskOwner(s.vendorRiskA)).toBe(s.member);
-    const [{ count }] = (await sequelize.query(
-      `SELECT COUNT(*)::int AS count FROM incident_change_history`,
-      { type: QueryTypes.SELECT },
-    )) as { count: number }[];
-    expect(count).toBe(0);
+    expect(await historyCount()).toBe(0);
+    expect(incidentLedgerAppends()).toEqual([]);
+  });
+
+  it("changes nothing for a user who is not a member of the organization", async () => {
+    const s = await seed();
+    // A stale owner: adminA was never a member of organization B.
+    const staleIncident = await createTestIncident(s.orgB, s.member, { assignee_id: s.adminA });
+
+    const transaction = await sequelize.transaction();
+    try {
+      const result = await removeUserFromOrganizationQuery(s.adminA, s.orgB, transaction);
+      expect(result).toEqual({ removed: false, accountDeleted: false });
+      await transaction.commit();
+    } catch (error) {
+      await transaction.rollback();
+      throw error;
+    }
+
+    expect(await incidentOwner(staleIncident)).toBe(s.adminA);
+    expect(await historyCount()).toBe(0);
+  });
+
+  it("writes no incident owner history when the whole organization is deleted", async () => {
+    const s = await seed();
+
+    await deleteOrganization(s.orgA);
+
+    expect(await historyCount()).toBe(0);
+    expect(incidentLedgerAppends()).toEqual([]);
+    expect(await incidentOwner(s.incidentB)).toBe(s.member);
+    expect(await vendorRiskOwner(s.vendorRiskB)).toBe(s.member);
   });
 });

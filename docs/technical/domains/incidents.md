@@ -349,19 +349,31 @@ the organization.
 
 Removing a user from an organization (`removeUserFromOrganizationQuery` in
 `Servers/utils/user.utils.ts`, behind `DELETE /users/:id` and the super
-admin's `DELETE /super-admin/organizations/:id/users/:userId`) clears `assignee_id` on that organization's incidents they own, in the
-removal's transaction. Incidents in other organizations they still belong to
-keep them as owner. The removal first locks the membership row, so a
-concurrent write that checks the owner's membership with a locking read either
-commits before the clear (and is cleared too) or waits and then finds the
-membership gone. Each cleared incident gets `updated_at` bumped (an editor
-holding the old version gets the usual 409) and an `Owner` change
-(`<name>` → `-`) in `incident_change_history`, recorded as the system
-(`changed_by_system = true`, null actor). The history is written before the
-membership is deleted, so the tenant-scoped user lookup still names them. No
-`incident_updated` automation is sent for the clear. Deleting an account goes
-through the same clear for every organization; the FK's `ON DELETE SET NULL`
-is the fallback.
+admin's `DELETE /super-admin/organizations/:id/users/:userId`) clears
+`assignee_id` on that organization's incidents they own, in the removal's
+transaction. Incidents in other organizations they still belong to keep them
+as owner.
+
+- The removal first locks the membership row (`FOR UPDATE`). If there is no
+  membership it returns `removed: false` and changes nothing. The incident
+  create and update reference checks take a matching lock on the owner's
+  membership (`FOR KEY SHARE`) in the incident reference-check change; until
+  that lands they read it without a lock, so an incident created with this
+  owner while the removal runs can still keep them.
+- Each cleared incident gets `updated_at` bumped (an editor holding the old
+  version gets the usual 409) and an `Owner` change (`<name>` → `-`) in
+  `incident_change_history`, recorded as the system
+  (`changed_by_system = true`, null actor) in one bulk insert
+  (`recordEntityFieldChangeBulk`; its ledger appends run one after another
+  after commit). The history is written before the membership is deleted,
+  so the tenant-scoped user lookup still names them. It runs in a savepoint:
+  a failed history write is logged and never blocks the removal.
+- No `incident_updated` automation is sent for the clear.
+- Deleting the whole organization (`deleteOrganization`) passes
+  `organizationDeleted`, which skips this clear and its history: the
+  incidents are deleted with the organization.
+- Deleting an account goes through the same clear for every organization; the
+  FK's `ON DELETE SET NULL` is the fallback.
 
 ## Change Tracking
 
