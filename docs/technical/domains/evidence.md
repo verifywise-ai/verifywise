@@ -202,10 +202,17 @@ Access: every `:fileId` route runs `requireFileAccess` (`Servers/middleware/file
 which applies `canUserAccessFile`, the File Manager download's rule: Admins; any member for an
 organization-level file; the uploader and the project's owner and members for a project file. A
 file the caller cannot open and a missing file both answer the same 403. `analyze` and `apply` also
-need `fileManager.contribute`, and the file table hides the analyze actions without it. `analyze`
-accepts `visibility` `public` or `private` (400 otherwise) and answers 409, before calling the
-LLM, when another user's private analysis exists. `GET /quality-scores` returns only analyses of
-files the caller can open (`buildFileAccessFilter`). The advisor's `analyze_document` tool applies
+need `fileManager.contribute`, and the file table hides the analyze actions without it. Admins
+pass the per-file rule but still only for their own organization's files. The middleware accepts
+plain decimal ids only and hands the parsed id to the handler as `req.fileId`.
+
+`analyze` accepts `visibility` `public` or `private` (400 otherwise). There is one analysis row per
+file, so another member's analysis is not replaced when either side is private
+(`isAnalysisReplaceBlocked`): 409, checked before the LLM call and again in the UPDATE. Callers
+with `file.admin` may replace it, and so may anyone when the author is unknown or has left the
+organization. A private analysis's suggestions are not auto-applied as links, and
+`GET /suggestions` reads the caller's own private analysis. `GET /quality-scores` returns only
+analyses of files the caller can open (`buildFileAccessFilter`). The advisor's `analyze_document` tool applies
 the same permission and file check.
 
 `GET /gaps` takes `framework_type` (`eu_ai_act` or `iso_42001`; both when omitted, and an

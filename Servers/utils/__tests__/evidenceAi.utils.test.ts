@@ -19,6 +19,9 @@ import {
   getAdoptedEvidenceFrameworksQuery,
   getEvidenceGapsQuery,
   getQualityScoresQuery,
+  getSuggestionsQuery,
+  isAnalysisReplaceBlocked,
+  upsertAnalysisQuery,
 } from "../evidenceAi.utils";
 import { logStructured } from "../logger/fileLogger";
 
@@ -242,5 +245,96 @@ describe("getQualityScoresQuery", () => {
   it("does not filter by file access for an Admin", async () => {
     await getQualityScoresQuery(1, 7, "Admin");
     expect(sqlOf()).not.toContain(":fileAccessUserId");
+  });
+});
+
+describe("isAnalysisReplaceBlocked", () => {
+  const guard = { userId: 1, visibility: "public", canOverride: false };
+  const other = (visibility: string, extra = {}) => ({
+    visibility,
+    analyzed_by: 9,
+    author_is_member: true,
+    ...extra,
+  });
+
+  it("blocks replacing another member's private analysis", () => {
+    expect(isAnalysisReplaceBlocked(other("private"), guard)).toBe(true);
+  });
+
+  it("blocks a private run over another member's public analysis", () => {
+    expect(isAnalysisReplaceBlocked(other("public"), { ...guard, visibility: "private" })).toBe(
+      true,
+    );
+  });
+
+  it("allows public over public, the author, an override, and an unknown or departed author", () => {
+    expect(isAnalysisReplaceBlocked(other("public"), guard)).toBe(false);
+    expect(isAnalysisReplaceBlocked(other("private", { analyzed_by: 1 }), guard)).toBe(false);
+    expect(isAnalysisReplaceBlocked(other("private"), { ...guard, canOverride: true })).toBe(false);
+    expect(isAnalysisReplaceBlocked(other("private", { analyzed_by: null }), guard)).toBe(false);
+    expect(isAnalysisReplaceBlocked(other("private", { author_is_member: false }), guard)).toBe(
+      false,
+    );
+    expect(isAnalysisReplaceBlocked(null, guard)).toBe(false);
+  });
+});
+
+describe("upsertAnalysisQuery guard", () => {
+  const data = {
+    summary: "S",
+    key_findings: [],
+    compliance_areas: [],
+    quality_score: null,
+    overall_quality_grade: null,
+    suggested_control_links: [],
+    analysis_model: "m",
+    analyzed_by: 1,
+    visibility: "private",
+  };
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockQuery.mockReset();
+  });
+
+  // The write re-checks the rule the early check applied, so a private
+  // analysis saved during the LLM call is not overwritten.
+  it("re-checks the replace rule in the UPDATE and answers null when it blocks", async () => {
+    mockQuery.mockResolvedValueOnce([[{ id: 3 }], 0]).mockResolvedValueOnce([[], 0]);
+    const result = await upsertAnalysisQuery(42, 1, data, {
+      userId: 1,
+      visibility: "private",
+      canOverride: false,
+    });
+    expect(result).toBeNull();
+    const [sql, options] = mockQuery.mock.calls[1] as [string, any];
+    const flat = sql.replace(/\s+/g, " ");
+    expect(flat).toContain("analyzed_by IS NOT DISTINCT FROM :guardUserId");
+    expect(flat).toContain("NOT EXISTS ( SELECT 1 FROM organization_members om");
+    expect(options.replacements).toMatchObject({
+      canOverride: false,
+      guardUserId: 1,
+      guardVisibility: "private",
+    });
+  });
+
+  it("updates without the condition when no guard is given", async () => {
+    mockQuery.mockResolvedValueOnce([[{ id: 3 }], 0]).mockResolvedValueOnce([[{ id: 3 }], 0]);
+    expect(await upsertAnalysisQuery(42, 1, data)).toEqual({ id: 3 });
+    expect(mockQuery.mock.calls[1][0] as string).not.toContain(":guardUserId");
+  });
+});
+
+describe("getSuggestionsQuery", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockQuery.mockReset();
+    mockQuery.mockResolvedValue([[], 0]);
+  });
+
+  it("looks the analysis up as the caller, so their own private analysis counts", async () => {
+    await getSuggestionsQuery(42, 1, 7);
+    const { buildVisibilityFilterForEvidence } = jest.requireMock("../visibility.utils") as any;
+    expect(buildVisibilityFilterForEvidence).toHaveBeenCalledWith(7, undefined, "eaa");
   });
 });

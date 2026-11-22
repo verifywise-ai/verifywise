@@ -9,6 +9,7 @@ import {
   getEvidenceGapsQuery,
   getAdoptedEvidenceFrameworksQuery,
   getAnalysisAuthorQuery,
+  isAnalysisReplaceBlocked,
   getSuggestionsQuery,
   applySuggestionsQuery,
 } from "../utils/evidenceAi.utils";
@@ -17,6 +18,7 @@ import { trackAIContent } from "../middleware/aiContentTracker.middleware";
 import { analyzeEvidence, type AnalyzerResult } from "../advisor/evidenceAnalyzer/analyzer.service";
 import { resolveFileContent } from "../services/storage";
 import { getLLMKeysWithKeyQuery, getLLMProviderUrl } from "../utils/llmKey.utils";
+import { requestHasPermission } from "../utils/rolePermissions.utils";
 import type { LLMProvider } from "../domain.layer/interfaces/i.llmKey";
 import type {
   QualityGrade,
@@ -29,6 +31,12 @@ const fileName = "evidenceAi.ctrl.ts";
 /** The values evidence_ai_analysis.visibility holds (add-ai-visibility-columns). */
 const ANALYSIS_VISIBILITIES = ["public", "private"] as const;
 type AnalysisVisibility = (typeof ANALYSIS_VISIBILITIES)[number];
+
+/** Why another user's analysis may not be replaced (isAnalysisReplaceBlocked). */
+const replaceBlockedMessage = (existingVisibility: string | undefined) =>
+  existingVisibility === "private"
+    ? "This file has a private analysis by another user"
+    : "A private analysis would replace another user's analysis of this file";
 
 /**
  * Why no grade was produced.
@@ -183,14 +191,20 @@ export async function analyzeFile(req: Request, res: Response) {
       return res.status(404).json(STATUS_CODE[404](req.t!("File not found")));
     }
 
-    // A private analysis is visible only to its author, so nobody else may
-    // replace it; the advisor's analyze_document leaves it alone too. Checked
-    // before the LLM call so a refused request spends no AI credits.
+    // Another member's analysis is not replaced when either side is private
+    // (isAnalysisReplaceBlocked); file.admin may override. Checked before the
+    // LLM call so a refused request spends no AI credits, and again in the
+    // write in case the row changed meanwhile.
+    const replaceGuard = {
+      userId,
+      visibility,
+      canOverride: await requestHasPermission(req, "file.admin"),
+    };
     const existing = await getAnalysisAuthorQuery(fileId, organizationId);
-    if (existing?.visibility === "private" && Number(existing.analyzed_by) !== userId) {
+    if (isAnalysisReplaceBlocked(existing, replaceGuard)) {
       return res
         .status(409)
-        .json(STATUS_CODE[409](req.t!("This file has a private analysis by another user")));
+        .json(STATUS_CODE[409](req.t!(replaceBlockedMessage(existing?.visibility))));
     }
 
     const [contentRows] = await sequelize.query(
@@ -309,21 +323,35 @@ export async function analyzeFile(req: Request, res: Response) {
     }
 
     // ---- Persist -------------------------------------------------
-    const analysis = await upsertAnalysisQuery(fileId, organizationId, {
-      summary,
-      key_findings: keyFindings,
-      compliance_areas: complianceAreas,
-      quality_score: qualityScore,
-      overall_quality_grade: overallGrade,
-      suggested_control_links: suggestions,
-      analysis_model: modelLabel,
-      analyzed_by: userId,
-      visibility,
-      audit_metadata: auditMetadata,
-    });
+    const analysis = await upsertAnalysisQuery(
+      fileId,
+      organizationId,
+      {
+        summary,
+        key_findings: keyFindings,
+        compliance_areas: complianceAreas,
+        quality_score: qualityScore,
+        overall_quality_grade: overallGrade,
+        suggested_control_links: suggestions,
+        analysis_model: modelLabel,
+        analyzed_by: userId,
+        visibility,
+        audit_metadata: auditMetadata,
+      },
+      replaceGuard,
+    );
+    if (!analysis) {
+      // Another user's analysis landed while this one ran.
+      const current = await getAnalysisAuthorQuery(fileId, organizationId);
+      return res
+        .status(409)
+        .json(STATUS_CODE[409](req.t!(replaceBlockedMessage(current?.visibility))));
+    }
 
     // ---- Auto-apply control links --------------------------------
-    if (suggestions.length > 0) {
+    // A private analysis is its author's alone, so its suggestions are not
+    // turned into organization-wide links.
+    if (visibility !== "private" && suggestions.length > 0) {
       try {
         await applySuggestionsQuery(
           fileId,
@@ -506,7 +534,11 @@ export async function getSuggestions(req: Request, res: Response) {
   }
 
   try {
-    const suggestions = await getSuggestionsQuery(fileId, req.organizationId!);
+    const suggestions = await getSuggestionsQuery(
+      fileId,
+      req.organizationId!,
+      req.userId ? Number(req.userId) : null,
+    );
 
     if (!suggestions) {
       return res.status(204).json(STATUS_CODE[204](null));
