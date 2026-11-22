@@ -9,7 +9,13 @@
  */
 import type { ReportData } from "../../../domain.layer/interfaces/i.reportGeneration";
 import { isoDate } from "../dataCollector";
-import { isTerminalStatus, levelRank, SECTION_LABELS } from "./prompts";
+import {
+  flattenFrameworkRequirements,
+  isTerminalStatus,
+  levelRank,
+  requirementRank,
+  SECTION_LABELS,
+} from "./prompts";
 
 /**
  * The aggregate vocabulary this file emits. BUMP IT whenever an aggregate is
@@ -28,7 +34,7 @@ import { isTerminalStatus, levelRank, SECTION_LABELS } from "./prompts";
  * run carries no change block at all — which is exactly what a first run
  * renders. One comparison is the honest price of a rename.
  */
-export const FACTS_SCHEMA_VERSION = 1;
+export const FACTS_SCHEMA_VERSION = 2;
 
 /** Structured, storable snapshot. Persisted to report_run_analyses.audit_metadata
  *  so a later run can diff against it without a second LLM call. */
@@ -169,6 +175,16 @@ interface SectionSpec {
   /** Row fields to bucket by value. */
   counts?: string[];
   /**
+   * Totals and buckets the section already carries NESTED (per-framework
+   * rollups), summed here rather than recomputed from rows. Totals are named
+   * for the rollup field they sum; buckets go through the same MAX_BUCKETS cap
+   * as `counts`, keyed `<field>_<value>`.
+   */
+  aggregates?: (section: any) => {
+    totals: Record<string, number>;
+    buckets: Record<string, Record<string, number>>;
+  };
+  /**
    * Row field carrying the section's accountable person. Rows missing it are
    * counted, and the aggregate is NAMED FOR THIS FIELD (`<field>_missing`) —
    * never a fixed "ownerless".
@@ -190,6 +206,21 @@ interface SectionSpec {
   rank?: (row: any) => number;
   label: (row: any) => string;
 }
+
+const sumRollups = (section: any) => {
+  const totals: Record<string, number> = {};
+  const status: Record<string, number> = {};
+  (section.frameworks ?? []).forEach((fw: any) => {
+    const r = fw?.rollup ?? {};
+    for (const f of ["total", "done", "overdue", "unassigned", "noEvidence"]) {
+      totals[f] = (totals[f] ?? 0) + (Number(r[f]) || 0);
+    }
+    Object.entries(r.statusBreakdown ?? {}).forEach(([k, v]) => {
+      status[k] = (status[k] ?? 0) + (Number(v) || 0);
+    });
+  });
+  return { totals, buckets: { status } };
+};
 
 const SPECS: Record<string, SectionSpec> = {
   projectRisks: {
@@ -331,6 +362,16 @@ const SPECS: Record<string, SectionSpec> = {
     label: (r) =>
       `${text(r.incidentId)} ${text(r.type)} (${text(r.severity)}, ${text(r.status)}, reported ${text(r.reportedDate)})`,
   },
+  frameworkRequirements: {
+    // L2 and L3 rows both: a not-done L3 child can be the most overdue item in
+    // its framework. `totals`/`status_*` come from the collector's rollups, so
+    // `items` (rows incl. children) and `total` (rollup) can differ and say so.
+    rows: (s) => flattenFrameworkRequirements(s),
+    aggregates: sumRollups,
+    rank: requirementRank,
+    label: (r) =>
+      `${r._framework}: ${text(r.title)} (${text(r.status)}, owner ${text(r.owner)}, due ${text(r.dueDate)})`,
+  },
 };
 
 export function collectFacts(reportData: ReportData): FactsSnapshot {
@@ -355,12 +396,21 @@ export function collectFacts(reportData: ReportData): FactsSnapshot {
     // disagree, rows were dropped somewhere and the model can see that.
     put(key, "items", rows.length);
 
-    for (const field of spec.counts ?? []) {
-      const buckets: Record<string, number> = {};
-      rows.forEach((row) => {
-        const bucket = text(row?.[field]);
-        buckets[bucket] = (buckets[bucket] ?? 0) + 1;
-      });
+    const agg = spec.aggregates?.(data);
+    Object.entries(agg?.totals ?? {}).forEach(([name, value]) => put(key, name, value));
+
+    const bucketed: Array<[string, Record<string, number>]> = [
+      ...(spec.counts ?? []).map((field): [string, Record<string, number>] => {
+        const buckets: Record<string, number> = {};
+        rows.forEach((row) => {
+          const bucket = text(row?.[field]);
+          buckets[bucket] = (buckets[bucket] ?? 0) + 1;
+        });
+        return [field, buckets];
+      }),
+      ...Object.entries(agg?.buckets ?? {}),
+    ];
+    for (const [field, buckets] of bucketed) {
       const ordered = Object.entries(buckets).sort((a, b) => b[1] - a[1]);
       ordered
         .slice(0, MAX_BUCKETS)

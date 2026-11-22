@@ -641,7 +641,7 @@ Three standing rendering constraints:
 
 ### Versioning
 
-`ANALYZER_VERSION` (`analyzers/prompts.ts`) is stamped into `report_run_analyses.audit_metadata`; it currently reads `report-analyzer-v2`. **Bump it on any prompt or schema change** — it is how a stored analysis is traced back to the prompt and schema that produced it.
+`ANALYZER_VERSION` (`analyzers/prompts.ts`) is stamped into `report_run_analyses.audit_metadata`; it currently reads `report-analyzer-v3`. **Bump it on any prompt or schema change** — it is how a stored analysis is traced back to the prompt and schema that produced it.
 
 ## PDF Generation
 

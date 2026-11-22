@@ -6,7 +6,9 @@
  * to the prompt that produced them.
  */
 
-export const ANALYZER_VERSION = "report-analyzer-v2";
+import type { FrameworkRequirementRow } from "../../../domain.layer/interfaces/i.reportGeneration";
+
+export const ANALYZER_VERSION = "report-analyzer-v3";
 
 const MAX_DATA_ITEMS = 50;
 /** Hard backstop on the joined section body, independent of the per-array
@@ -29,6 +31,7 @@ export const SECTION_LABELS: Record<string, string> = {
   trainingRegistry: "Training Registry",
   policyManager: "Policy Manager",
   incidentManagement: "Incident Management",
+  frameworkRequirements: "Framework requirements",
 };
 
 /**
@@ -134,6 +137,15 @@ export const SECTION_INSTRUCTIONS: Record<string, string> = {
 - Which severities are over-represented among the open ones compared with the register as a whole?
 - Does one type recur, and how many incidents does it account for?
 - Name the incident a reader should look at first and say why.`,
+
+  // Every row here carries a real status, owner, due date and evidence count
+  // (collectors/frameworkRequirements.ts), so each question below has a backing
+  // field. `dueDate` goes through isoDate(), so day arithmetic against the
+  // reference date is askable, as for compliance controls.
+  frameworkRequirements: `- For each framework, what share of requirements is done, and which framework lags furthest behind the others?
+- How many requirements are overdue against the reference date, and which requirement groups hold them?
+- How many requirements have no owner, and how many have no evidence attached? Do the two overlap or sit in different groups?
+- Name the specific requirements furthest from done, overdue ones first, and say what is missing for each.`,
 };
 
 /** Fallback for a section key with no entry above: today's generic text, so an
@@ -311,6 +323,80 @@ function rankTruncateAndStamp(obj: any, field: string, max: number): any[] {
   return truncated;
 }
 
+/** A framework requirement flattened out of its framework and group, with L3
+ *  children promoted to rows of their own. */
+export interface FlatRequirement extends FrameworkRequirementRow {
+  _framework: string;
+  _group: string;
+}
+
+/**
+ * Every requirement in the section, L2 and L3 alike, tagged with where it sits.
+ * Shared by the prompt body and the facts block so both rank the same rows.
+ */
+export function flattenFrameworkRequirements(data: any): FlatRequirement[] {
+  const out: FlatRequirement[] = [];
+  const walk = (rows: FrameworkRequirementRow[] | undefined, framework: string, group: string) =>
+    (rows ?? []).forEach((row) => {
+      if (!row) return;
+      out.push({ ...row, _framework: framework, _group: group });
+      walk(row.children, framework, group);
+    });
+  (data?.frameworks ?? []).forEach((fw: any) =>
+    (fw?.groups ?? []).forEach((g: any) =>
+      walk(g?.requirements, String(fw?.frameworkName ?? ""), String(g?.title ?? "")),
+    ),
+  );
+  return out;
+}
+
+/**
+ * Materiality of a requirement, HIGHER IS MORE MATERIAL: finished work 0, open
+ * work 1, +1 when it has no owner, +2 when it is overdue — so overdue ranks
+ * ahead of unassigned, and a row that is both ranks first of all.
+ */
+export const requirementRank = (row: FrameworkRequirementRow): number =>
+  row.isDone ? 0 : 1 + (row.isOverdue ? 2 : 0) + (!row.owner || !String(row.owner).trim() ? 1 : 0);
+
+const FRAMEWORK_TOP_N = 25;
+const FRAMEWORK_MAX_GROUP_LINES = 40;
+
+const rollupLine = (r: any): string =>
+  `${r?.done ?? 0}/${r?.total ?? 0} done, overdue ${r?.overdue ?? 0}, unassigned ${r?.unassigned ?? 0}, no evidence ${r?.noEvidence ?? 0}`;
+
+/**
+ * Compact text for the frameworkRequirements section: one rollup line per
+ * framework, one per group, then the top not-done requirements. Every cut says
+ * how much it dropped, so a truncated list never reads as the whole estate.
+ */
+function prepareFrameworkRequirements(data: any): string {
+  const lines: string[] = [];
+  (data.frameworks ?? []).forEach((fw: any) => {
+    lines.push(`${fw?.frameworkName ?? "Unknown framework"}: ${rollupLine(fw?.rollup)}`);
+    const groups: any[] = fw?.groups ?? [];
+    groups.slice(0, FRAMEWORK_MAX_GROUP_LINES).forEach((g) => {
+      lines.push(`  ${g?.title ?? "Untitled group"}: ${rollupLine(g?.rollup)}`);
+    });
+    if (groups.length > FRAMEWORK_MAX_GROUP_LINES) {
+      lines.push(`  … and ${groups.length - FRAMEWORK_MAX_GROUP_LINES} more groups`);
+    }
+  });
+
+  const notDone = flattenFrameworkRequirements(data)
+    .filter((r) => !r.isDone)
+    .sort((a, b) => requirementRank(b) - requirementRank(a) || dateOf(a) - dateOf(b));
+  lines.push("", "Requirements not done (overdue first, then unassigned):");
+  notDone.slice(0, FRAMEWORK_TOP_N).forEach((r) => {
+    lines.push(
+      `- ${r._framework}: ${r.title} [${r.status}] ${r.owner || "unassigned"} ${r.dueDate || "no due date"}`,
+    );
+  });
+  if (notDone.length > FRAMEWORK_TOP_N) {
+    lines.push(`… and ${notDone.length - FRAMEWORK_TOP_N} more`);
+  }
+  return lines.join("\n");
+}
+
 /**
  * Ported from aiSummarizer.ts:74-125. The per-section caps are load-bearing:
  * without them a large tenant's report exceeds the model context window and
@@ -318,6 +404,8 @@ function rankTruncateAndStamp(obj: any, field: string, max: number): any[] {
  */
 export function prepareSectionData(key: string, data: any): string {
   if (!data) return "No data available for this section.";
+
+  if (key === "frameworkRequirements") return prepareFrameworkRequirements(data);
 
   const clone = { ...data };
 

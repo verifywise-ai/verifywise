@@ -4,7 +4,13 @@
 // leaving it unmocked opens a DB connection during a unit test.
 jest.mock("../../../../database/db", () => ({ sequelize: {} }));
 
-import { collectFacts, referenceDay, renderFacts, type FactsSnapshot } from "../facts";
+import {
+  collectFacts,
+  FACTS_SCHEMA_VERSION,
+  referenceDay,
+  renderFacts,
+  type FactsSnapshot,
+} from "../facts";
 
 // Every fixture below uses the vocabulary dataCollector ACTUALLY emits for that
 // section, not a plausible-looking one. Project and vendor risks carry the
@@ -727,5 +733,85 @@ describe("renderFacts", () => {
     const out = renderFacts(collectFacts(full));
     expect(out.length).toBeLessThan(3000);
     expect(out).toContain('top_showing="showing 3 of 60"');
+  });
+
+  it("FACTS_SCHEMA_VERSION is 2", () => {
+    expect(FACTS_SCHEMA_VERSION).toBe(2);
+  });
+
+  it("collectFacts emits frameworkRequirements aggregates", () => {
+    const req = (title: string, over: any = {}) => ({
+      title,
+      status: "Waiting",
+      owner: "Alice",
+      dueDate: null,
+      isDone: false,
+      isOverdue: false,
+      ...over,
+    });
+    const statusBreakdown = (n: number) =>
+      Object.fromEntries(Array.from({ length: n }, (_, i) => [`S${i}`, i + 1]));
+    const data: any = {
+      metadata: { generatedAt: new Date(2026, 6, 22) },
+      sections: {
+        frameworkRequirements: {
+          frameworks: [
+            {
+              frameworkName: "SOC 2",
+              rollup: {
+                total: 10,
+                done: 4,
+                overdue: 2,
+                unassigned: 1,
+                noEvidence: 3,
+                statusBreakdown: statusBreakdown(10),
+              },
+              groups: [
+                {
+                  title: "CC1",
+                  requirements: [
+                    req("Finished", { isDone: true, status: "Done" }),
+                    req("Late", { isOverdue: true, dueDate: "2026-06-01" }),
+                    req("Ownerless", { owner: null }),
+                    req("Parent", {
+                      children: [req("Child late", { isOverdue: true, owner: null })],
+                    }),
+                    req("Plain"),
+                  ],
+                },
+              ],
+            },
+            {
+              frameworkName: "GDPR",
+              rollup: {
+                total: 5,
+                done: 1,
+                overdue: 0,
+                unassigned: 2,
+                noEvidence: 1,
+                statusBreakdown: { S0: 4 },
+              },
+              groups: [],
+            },
+          ],
+        },
+      },
+    };
+    const f = collectFacts(data).sections.frameworkRequirements;
+    expect(f.total).toBe(15);
+    expect(f.done).toBe(5);
+    expect(f.overdue).toBe(2);
+    expect(f.unassigned).toBe(3);
+    expect(f.noEvidence).toBe(4);
+    expect(f.status_S0).toBe(5);
+    const statusKeys = Object.keys(f).filter((k) => k.startsWith("status_S"));
+    expect(statusKeys).toHaveLength(8);
+    expect(f.status_showing).toBe("showing 8 of 10");
+    expect(f.status_distinct).toBe(10);
+    // Ranked before truncation: overdue + ownerless child first, then overdue.
+    expect(f.top1).toContain("Child late");
+    expect(f.top2).toContain("Late");
+    expect(f.top3).toContain("Ownerless");
+    expect(f.top_showing).toBe("showing 3 of 6");
   });
 });
