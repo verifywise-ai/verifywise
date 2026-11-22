@@ -39,6 +39,29 @@ const request: any = {
 describe("executeManualRun", () => {
   beforeEach(() => jest.clearAllMocks());
 
+  it("marks the run partial_success with the gaps when a pairing could not be read", async () => {
+    mockGenerate.mockResolvedValue({
+      success: true,
+      filename: "r.pdf",
+      content: Buffer.from("x"),
+      mimeType: "application/pdf",
+      collectionFailures: ["SOC 2 for Chatbot"],
+    } as any);
+    mockUpload.mockResolvedValue({ id: 42, filename: "r.pdf", content: Buffer.from("x") } as any);
+
+    await executeManualRun(99, request, 3, 5);
+
+    expect(mockUpdate).toHaveBeenCalledWith(
+      99,
+      5,
+      expect.objectContaining({
+        status: "partial_success",
+        file_id: 42,
+        error_message: "Report generated with gaps: SOC 2 for Chatbot could not be read.",
+      }),
+    );
+  });
+
   it("marks the run success and stores the uploaded file id", async () => {
     mockGenerate.mockResolvedValue({
       success: true,

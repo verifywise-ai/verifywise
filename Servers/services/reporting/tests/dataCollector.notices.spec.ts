@@ -328,8 +328,34 @@ describe("frameworkRequirements collection failures", () => {
     expect(data.sectionNotices).toContainEqual({
       sectionKey: "frameworkRequirements",
       reason: "collection_failed",
-      detail: "OSFI E-23",
+      detail: "OSFI E-23 (organization)",
     });
+  });
+
+  it("tells two same-named use cases apart by project id", async () => {
+    jest
+      .spyOn(frameworkRequirements, "collectFrameworkRequirements")
+      .mockRejectedValue(new Error("x"));
+    const twin = { ...soc2Target, projectId: 9, projectFrameworkId: 15 };
+    const collector = createScopedDataCollector(10, 1, "organization", [soc2Target, twin]);
+
+    const data = await collector.collectAllData(["frameworkRequirements"]);
+
+    expect(data.sectionNotices.map((n) => n.detail)).toEqual([
+      "SOC 2 for Chatbot (use case #8)",
+      "SOC 2 for Chatbot (use case #9)",
+    ]);
+  });
+
+  it("logs the error stack", async () => {
+    jest
+      .spyOn(frameworkRequirements, "collectFrameworkRequirements")
+      .mockRejectedValue(new Error("boom"));
+    const collector = createScopedDataCollector(10, 1, "organization", [soc2Target]);
+
+    await collector.collectAllData(["frameworkRequirements"]);
+
+    expect((logger.error as jest.Mock).mock.calls.at(-1)?.[0]).toContain("Error: boom");
   });
 
   it("leaves the section undefined and keeps one notice per pairing when all fail", async () => {

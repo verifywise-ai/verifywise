@@ -265,6 +265,65 @@ describe("collectAnalyzerInputs", () => {
     expect(collectFactsInput(rd).facts).not.toContain("Change since");
   });
 
+  describe("a frameworkRequirements section that could not be read", () => {
+    const rollup = (total: number) => ({
+      total,
+      done: 0,
+      unassigned: 0,
+      noEvidence: 0,
+      overdue: 0,
+      statusBreakdown: {},
+    });
+    const withFramework = (total: number) => ({
+      frameworks: [
+        {
+          frameworkId: 5,
+          frameworkName: "SOC 2",
+          groups: [{ title: "CC1", orderNo: 1, requirements: [], rollup: rollup(total) }],
+          rollup: rollup(total),
+        },
+      ],
+    });
+    const base = {
+      metadata: { generatedAt: new Date(2026, 6, 22), frameworkName: "SOC 2", projectTitle: "A" },
+      charts: {},
+    };
+    const prior = collectFactsInput({
+      ...base,
+      sections: { frameworkRequirements: withFramework(10) },
+    } as any).snapshot;
+
+    it("is left out of the snapshot and of the change lines", () => {
+      const out = collectFactsInput(
+        {
+          ...base,
+          sections: { frameworkRequirements: withFramework(2) },
+          sectionNotices: [
+            { sectionKey: "frameworkRequirements", reason: "collection_failed", detail: "GDPR" },
+          ],
+        } as any,
+        prior,
+      );
+
+      expect(out.snapshot.sections.frameworkRequirements).toBeUndefined();
+      expect(out.facts).not.toContain("Change since");
+    });
+
+    it("is unchanged without a failure notice", () => {
+      const out = collectFactsInput(
+        {
+          ...base,
+          sections: { frameworkRequirements: withFramework(2) },
+          sectionNotices: [],
+        } as any,
+        prior,
+      );
+
+      expect(out.snapshot.sections.frameworkRequirements).toBeDefined();
+      expect(out.facts).toContain("Change since");
+    });
+  });
+
   it("does not query for a prior snapshot when the run belongs to no schedule", async () => {
     // A manual run has no predecessor by construction. Skipping the query is
     // the whole of "degrade to prior = null silently".

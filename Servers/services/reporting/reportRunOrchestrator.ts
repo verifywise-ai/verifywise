@@ -2,12 +2,12 @@ import { generateReport } from "./index";
 import { resolveReportRequest } from "./reportTemplateResolver";
 import { deliverReport } from "./reportDeliveryService";
 import { createRunQuery, updateRunStatusQuery } from "../../utils/reportRun.utils";
+import { gapsMessage } from "./noticeText";
 import { persistAnalyses } from "./analyzers/persistAnalyses";
 
-// The run status vocabulary is fixed at: queued, running, success,
-// partial_success, failed. partial_success means "generated but a delivery
-// channel failed, or part of a section could not be read" — it is downloadable and callers must not treat it as an
-// error.
+// The run status vocabulary is fixed at: queued, running, success, partial_success, failed.
+// partial_success means "generated, but a delivery channel failed or part of a section could
+// not be read" — it is downloadable and callers must not treat it as an error.
 export type ReportRunOutcome = {
   runId: number;
   status: "success" | "partial_success" | "failed";
@@ -110,7 +110,7 @@ export async function runScheduledReport(
       output_mime_type: result.mimeType,
       delivery_status: delivery,
       ...(gaps.length > 0 && {
-        error_message: `Report generated with gaps: ${gaps.join("; ")} could not be read.`,
+        error_message: gapsMessage(gaps),
       }),
       ai_status: aiStatus ?? undefined,
       duration_ms: Date.now() - startedAt,

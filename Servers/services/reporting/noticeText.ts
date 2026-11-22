@@ -13,3 +13,7 @@ export const NOTICE_TEXT = {
     "What to do: generate the report again. If the same part is still missing, " +
     "ask your VerifyWise administrator to check the server logs for this report run.",
 } as const;
+
+/** The run-level message for a report that was produced with unreadable parts. */
+export const gapsMessage = (details: string[]): string =>
+  `Report generated with gaps: ${details.join("; ")} ${NOTICE_TEXT.failedSuffix.replace(/\.$/, "")}.`;

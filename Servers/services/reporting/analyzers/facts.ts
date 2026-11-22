@@ -385,7 +385,16 @@ export function collectFacts(reportData: ReportData): FactsSnapshot {
     sections[key][name] = value;
   };
 
+  // A section some of whose data could not be read would record a partial
+  // count as the estate's value, and the next run would report a fake change.
+  const unreadable = new Set(
+    (reportData?.sectionNotices ?? [])
+      .filter((n) => n.reason === "collection_failed")
+      .map((n) => n.sectionKey),
+  );
+
   for (const key of Object.keys(SPECS)) {
+    if (unreadable.has(key)) continue;
     const data: any = (reportData?.sections as any)?.[key];
     if (!data) continue;
     const spec = SPECS[key];

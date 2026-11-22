@@ -447,6 +447,7 @@ export class ReportDataCollector {
         const generatedAt = metadata.generatedAt;
         // One pairing that cannot be read must not lose the report: collect
         // each independently, name the failed one in a notice, merge the rest.
+        const failedTargets: FrameworkTarget[] = [];
         const contributions: SectionContribution<FrameworkRequirementsSectionData>[] = [];
         for (const t of bundledTargets) {
           try {
@@ -464,16 +465,26 @@ export class ReportDataCollector {
             logger.error(
               `Report: frameworkRequirements collection failed (organizationId=${this.organizationId}, ` +
                 `frameworkId=${t.frameworkId}, projectFrameworkId=${t.projectFrameworkId}): ` +
-                `${error instanceof Error ? error.message : String(error)}`,
+                `${error instanceof Error ? (error.stack ?? error.message) : String(error)}`,
             );
-            sectionNotices.push({
-              sectionKey: "frameworkRequirements",
-              reason: "collection_failed",
-              detail: t.isOrganizationalProject
-                ? t.frameworkName
-                : `${t.frameworkName} for ${t.projectTitle}`,
-            });
+            failedTargets.push(t);
           }
+        }
+        // "<framework> for <use case>"; the project id is appended only when two
+        // failures would otherwise read the same.
+        const describe = (t: FrameworkTarget) =>
+          t.isOrganizationalProject
+            ? `${t.frameworkName} (organization)`
+            : `${t.frameworkName} for ${t.projectTitle}`;
+        const counts = new Map<string, number>();
+        failedTargets.forEach((t) => counts.set(describe(t), (counts.get(describe(t)) ?? 0) + 1));
+        for (const t of failedTargets) {
+          const base = describe(t);
+          sectionNotices.push({
+            sectionKey: "frameworkRequirements",
+            reason: "collection_failed",
+            detail: counts.get(base)! > 1 ? `${base} (use case #${t.projectId})` : base,
+          });
         }
         sectionData.frameworkRequirements = mergeFrameworkRequirements(contributions);
       }
