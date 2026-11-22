@@ -1,0 +1,15 @@
+/**
+ * English copy for the "Sections that could not be completed" block of a
+ * report. One module, read by both renderers (report-pdf.ejs gets it through
+ * the render data, docxGenerator imports it), so the two cannot drift.
+ */
+export const NOTICE_TEXT = {
+  failedTitle: "Sections that could not be completed",
+  failedIntro:
+    "Part of these sections could not be read when the report was generated. " +
+    "Everything else in the report is complete.",
+  failedSuffix: "could not be read.",
+  failedGuidance:
+    "What to do: generate the report again. If the same part is still missing, " +
+    "ask your VerifyWise administrator to check the server logs for this report run.",
+} as const;

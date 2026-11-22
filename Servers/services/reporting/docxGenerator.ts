@@ -4,6 +4,7 @@
  * Following VerifyWise clean architecture patterns
  */
 
+import { NOTICE_TEXT } from "./noticeText";
 import {
   Document,
   Packer,
@@ -1558,43 +1559,55 @@ function createSectionNoticesSection(reportData: ReportData): (Paragraph | Table
   if (notices.length === 0) return [];
 
   const elements: (Paragraph | Table)[] = [];
-  elements.push(createSubsectionHeader("Sections with no data"));
-  elements.push(
+  const failed = notices.filter((n) => n.reason === "collection_failed");
+  const empty = notices.filter((n) => n.reason !== "collection_failed");
+
+  const intro = (text: string) =>
     new Paragraph({
       spacing: { after: 120 },
+      children: [new TextRun({ text, size: 20, color: COLORS.textSecondary })],
+    });
+  const bullet = (label: string, text: string) =>
+    new Paragraph({
+      spacing: { before: 60, after: 60 },
+      indent: { left: convertInchesToTwip(0.3) },
+      bullet: { level: 0 },
       children: [
-        new TextRun({
-          text:
-            "These sections were requested but produced nothing. They are listed so an " +
-            "empty report is never mistaken for a clean one.",
-          size: 20,
-          color: COLORS.textSecondary,
-        }),
+        new TextRun({ text: label, bold: true, size: 20, color: COLORS.textPrimary }),
+        new TextRun({ text: ` — ${text}`, size: 20, color: COLORS.textPrimary }),
       ],
-    }),
-  );
+    });
 
-  for (const notice of notices) {
+  if (failed.length > 0) {
+    elements.push(createSubsectionHeader(NOTICE_TEXT.failedTitle));
+    elements.push(intro(NOTICE_TEXT.failedIntro));
+    for (const notice of failed) {
+      elements.push(
+        bullet(
+          NOTICE_LABELS[notice.sectionKey] ?? notice.sectionKey,
+          `${notice.detail ? `${notice.detail}: ` : ""}${NOTICE_TEXT.failedSuffix}`,
+        ),
+      );
+    }
+    elements.push(intro(NOTICE_TEXT.failedGuidance));
+  }
+
+  if (empty.length > 0) {
+    elements.push(createSubsectionHeader("Sections with no data"));
     elements.push(
-      new Paragraph({
-        spacing: { before: 60, after: 60 },
-        indent: { left: convertInchesToTwip(0.3) },
-        bullet: { level: 0 },
-        children: [
-          new TextRun({
-            text: NOTICE_LABELS[notice.sectionKey] ?? notice.sectionKey,
-            bold: true,
-            size: 20,
-            color: COLORS.textPrimary,
-          }),
-          new TextRun({
-            text: ` — ${NOTICE_REASONS[notice.reason] ?? notice.reason}`,
-            size: 20,
-            color: COLORS.textPrimary,
-          }),
-        ],
-      }),
+      intro(
+        "These sections were requested but produced nothing. They are listed so an " +
+          "empty report is never mistaken for a clean one.",
+      ),
     );
+    for (const notice of empty) {
+      elements.push(
+        bullet(
+          NOTICE_LABELS[notice.sectionKey] ?? notice.sectionKey,
+          NOTICE_REASONS[notice.reason] ?? notice.reason,
+        ),
+      );
+    }
   }
 
   return elements;

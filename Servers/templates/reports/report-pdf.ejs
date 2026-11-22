@@ -1199,6 +1199,28 @@ const riskChipClass = (level) => {
         unresolved_framework: 'The selected framework is a plugin framework, which reports do not yet cover.'
       };
     %>
+    <%
+      const failedNotices = sectionNotices.filter(function(n) { return n.reason === 'collection_failed'; });
+      const emptyNotices = sectionNotices.filter(function(n) { return n.reason !== 'collection_failed'; });
+    %>
+    <% if (failedNotices.length > 0) { %>
+    <div class="subsection">
+      <div class="subsection-header">
+        <h3 class="subsection-title"><%= noticeText.failedTitle %></h3>
+      </div>
+      <p class="section-notice-intro"><%= noticeText.failedIntro %></p>
+      <ul class="section-notice">
+        <% failedNotices.forEach(function(n) { %>
+        <li>
+          <strong><%= NOTICE_LABELS[n.sectionKey] || n.sectionKey %></strong>
+          &mdash; <%= n.detail ? n.detail + ': ' : '' %><%= noticeText.failedSuffix %>
+        </li>
+        <% }); %>
+      </ul>
+      <p class="section-notice-intro"><%= noticeText.failedGuidance %></p>
+    </div>
+    <% } %>
+    <% if (emptyNotices.length > 0) { %>
     <div class="subsection">
       <div class="subsection-header">
         <h3 class="subsection-title">Sections with no data</h3>
@@ -1208,7 +1230,7 @@ const riskChipClass = (level) => {
         report is never mistaken for a clean one.
       </p>
       <ul class="section-notice">
-        <% sectionNotices.forEach(function(n) { %>
+        <% emptyNotices.forEach(function(n) { %>
         <li>
           <strong><%= NOTICE_LABELS[n.sectionKey] || n.sectionKey %></strong>
           &mdash; <%= NOTICE_REASONS[n.reason] || n.reason %>
@@ -1216,6 +1238,7 @@ const riskChipClass = (level) => {
         <% }); %>
       </ul>
     </div>
+    <% } %>
     <% } %>
 
     <!-- Page Footer (rendered as part of content) -->

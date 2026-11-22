@@ -6,7 +6,7 @@ import { persistAnalyses } from "./analyzers/persistAnalyses";
 
 // The run status vocabulary is fixed at: queued, running, success,
 // partial_success, failed. partial_success means "generated but a delivery
-// channel failed" — it is downloadable and callers must not treat it as an
+// channel failed, or part of a section could not be read" — it is downloadable and callers must not treat it as an
 // error.
 export type ReportRunOutcome = {
   runId: number;
@@ -94,7 +94,8 @@ export async function runScheduledReport(
     );
     const channels = [delivery.storage, delivery.emailLink, delivery.attachment];
     const anyFailed = channels.some((c: any) => c?.status === "failed");
-    const status = anyFailed ? "partial_success" : "success";
+    const gaps = result.collectionFailures ?? [];
+    const status = anyFailed || gaps.length > 0 ? "partial_success" : "success";
     const aiStatus = await persistAnalyses(
       run.id,
       sched.organization_id,
@@ -108,6 +109,9 @@ export async function runScheduledReport(
       output_filename: result.filename,
       output_mime_type: result.mimeType,
       delivery_status: delivery,
+      ...(gaps.length > 0 && {
+        error_message: `Report generated with gaps: ${gaps.join("; ")} could not be read.`,
+      }),
       ai_status: aiStatus ?? undefined,
       duration_ms: Date.now() - startedAt,
     });

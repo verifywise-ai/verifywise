@@ -26,6 +26,13 @@ jest.mock("../../../utils/reporting.utils", () => ({
   getAnnexesReportQueryISO27001: jest.fn().mockResolvedValue([]),
 }));
 
+jest.mock("../../../utils/logger/fileLogger", () => ({
+  __esModule: true,
+  default: { debug: jest.fn(), error: jest.fn(), info: jest.fn(), warn: jest.fn() },
+}));
+
+import * as frameworkRequirements from "../collectors/frameworkRequirements";
+import logger from "../../../utils/logger/fileLogger";
 import { createScopedDataCollector } from "../dataCollector";
 import type { FrameworkTarget } from "../reportScope";
 import {
@@ -253,6 +260,88 @@ describe("frameworkRequirements section", () => {
     expect(data.sectionNotices).not.toContainEqual(
       expect.objectContaining({ sectionKey: "frameworkRequirements" }),
     );
+  });
+});
+
+describe("frameworkRequirements collection failures", () => {
+  const soc2Target: FrameworkTarget = {
+    projectId: 8,
+    projectTitle: "Chatbot",
+    isOrganizationalProject: false,
+    frameworkId: 5,
+    frameworkName: "SOC 2",
+    projectFrameworkId: 14,
+  };
+  const orgE23Target: FrameworkTarget = {
+    ...e23Target,
+    projectTitle: "Organization",
+    isOrganizationalProject: true,
+  };
+  const groupsFor = (t: FrameworkTarget) => ({
+    frameworks: [
+      {
+        frameworkId: t.frameworkId,
+        frameworkName: t.frameworkName,
+        groups: [],
+        rollup: {
+          total: 0,
+          done: 0,
+          unassigned: 0,
+          noEvidence: 0,
+          overdue: 0,
+          statusBreakdown: {},
+        },
+      },
+    ],
+  });
+
+  afterEach(() => jest.restoreAllMocks());
+
+  it("skips the pairing that throws, keeps the rest, and records a notice", async () => {
+    jest
+      .spyOn(frameworkRequirements, "collectFrameworkRequirements")
+      .mockImplementation(async (t) => {
+        if (t.frameworkId === 5) throw new Error("relation missing");
+        return groupsFor(t) as never;
+      });
+    const collector = createScopedDataCollector(10, 1, "organization", [soc2Target, e23Target]);
+
+    const data = await collector.collectAllData(["frameworkRequirements"]);
+
+    expect(data.sections.frameworkRequirements?.frameworks.map((f) => f.frameworkId)).toEqual([26]);
+    expect(data.sectionNotices).toContainEqual({
+      sectionKey: "frameworkRequirements",
+      reason: "collection_failed",
+      detail: "SOC 2 for Chatbot",
+    });
+    expect(logger.error).toHaveBeenCalled();
+  });
+
+  it("names just the framework for an organizational project", async () => {
+    jest
+      .spyOn(frameworkRequirements, "collectFrameworkRequirements")
+      .mockRejectedValue(new Error("x"));
+    const collector = createScopedDataCollector(10, 1, "organization", [orgE23Target]);
+
+    const data = await collector.collectAllData(["frameworkRequirements"]);
+
+    expect(data.sectionNotices).toContainEqual({
+      sectionKey: "frameworkRequirements",
+      reason: "collection_failed",
+      detail: "OSFI E-23",
+    });
+  });
+
+  it("leaves the section undefined and keeps one notice per pairing when all fail", async () => {
+    jest
+      .spyOn(frameworkRequirements, "collectFrameworkRequirements")
+      .mockRejectedValue(new Error("x"));
+    const collector = createScopedDataCollector(10, 1, "organization", [soc2Target, e23Target]);
+
+    const data = await collector.collectAllData(["frameworkRequirements"]);
+
+    expect(data.sections.frameworkRequirements).toBeUndefined();
+    expect(data.sectionNotices.filter((n) => n.reason === "collection_failed")).toHaveLength(2);
   });
 });
 
