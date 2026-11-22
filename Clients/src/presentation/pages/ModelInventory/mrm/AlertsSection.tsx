@@ -94,9 +94,9 @@ const AlertsSection = ({ users, onError, onSuccess }: AlertsSectionProps) => {
   return (
     <Box>
       <Typography sx={mrmSectionIntroStyle}>
-        Who hears about a breach. When an ingested metric breaches its threshold, VerifyWise
-        notifies the people assigned to the model&apos;s MRM roles, plus any additional recipients
-        configured below. Email delivery and automatic findings are off until you enable them here.
+        Who hears about a breach. VerifyWise notifies the people in the model&apos;s MRM roles, plus
+        any extra recipients you add here. Email alerts and automatic findings are off until you
+        turn them on.
       </Typography>
 
       <Box sx={{ maxWidth: "520px", marginBottom: "32px" }}>

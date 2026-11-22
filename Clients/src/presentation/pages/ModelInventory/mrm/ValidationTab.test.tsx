@@ -74,7 +74,9 @@ describe("ValidationTab", () => {
   it("shows a skeleton while loading", () => {
     mockUseValidations.mockReturnValue({ data: undefined, isLoading: true });
     renderWithProviders(<ValidationTab users={users} onError={onError} onSuccess={onSuccess} />);
-    expect(screen.getByText(/Staged validation workflow/)).toBeInTheDocument();
+    expect(
+      screen.getByText(/A validation is an independent review of one model/),
+    ).toBeInTheDocument();
   });
 
   it("shows an empty state when there are no validations", () => {

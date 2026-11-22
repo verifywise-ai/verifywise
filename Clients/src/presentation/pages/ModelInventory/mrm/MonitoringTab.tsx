@@ -107,9 +107,10 @@ const MonitoringTab = ({ onError }: MonitoringTabProps) => {
   return (
     <Box>
       <Typography sx={mrmSectionIntroStyle}>
-        Ongoing monitoring. Your pipeline pushes raw metrics to one open ingestion endpoint;
-        VerifyWise owns thresholds, evaluation, alerting and the audit trail — the receiving end
-        only. Configure the endpoint and tokens in Settings &rarr; Metrics feed &amp; tokens.
+        Pick a model to see the latest value of each metric your monitoring pipeline sends, compared
+        with its threshold. VerifyWise doesn&apos;t calculate these metrics. It stores them, checks
+        them against thresholds and raises alerts. Set up the feed in Settings &rarr; Metrics feed
+        &amp; tokens.
       </Typography>
 
       <Box sx={{ maxWidth: "360px", marginBottom: "24px" }}>
@@ -202,9 +203,8 @@ const MonitoringTab = ({ onError }: MonitoringTabProps) => {
             Breach history
           </Typography>
           <Typography sx={mrmSectionIntroStyle}>
-            Every warning and breach evaluation for this model, newest first, with the threshold as
-            it stood at evaluation time. A breach raises an alert and can flag the model for
-            revalidation.
+            Every warning and breach for this model, newest first. Each row shows the threshold as
+            it was when the value was checked.
           </Typography>
           {breaches.length === 0 ? (
             <EmptyState message="No breaches recorded. Every metric is within its threshold." />

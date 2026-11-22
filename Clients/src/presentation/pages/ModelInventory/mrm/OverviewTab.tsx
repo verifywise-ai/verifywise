@@ -95,9 +95,9 @@ const OverviewTab = ({ onError, onSuccess }: OverviewTabProps) => {
     <Box>
       <Box sx={mrmToolbarStyle}>
         <Typography sx={{ ...mrmSectionIntroStyle, marginBottom: 0, maxWidth: "640px" }}>
-          Model risk overview. Fleet-wide view of whether tiering is up to date, validation status
-          and open findings — the portfolio summary that has no home on a single model record. Feeds
-          the inventory attestation report.
+          A summary of all your models: how many have a tier, where each validation stands and which
+          findings are open. Generate the attestation report to download it as a Word document for
+          sign-off.
         </Typography>
         <CustomizableButton
           variant="contained"
