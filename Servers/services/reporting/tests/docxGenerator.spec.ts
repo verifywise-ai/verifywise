@@ -855,6 +855,42 @@ describe("DOCX Generator", () => {
       expect(text).toContain("brand_new_reason");
     });
 
+    describe("collection_failed", () => {
+      const failed = {
+        sectionKey: "frameworkRequirements",
+        reason: "collection_failed",
+        detail: "SOC 2 for <b>Chatbot</b>",
+      } as const;
+
+      it("renders its own subsection with the pairing and what to do", async () => {
+        const result = await generateDOCX({ ...mockReportData, sectionNotices: [failed] });
+        const text = await docxText(result.content);
+
+        expect(text).toContain("Sections that could not be completed");
+        expect(text).toContain("Part of these sections could not be read");
+        expect(text).toContain("Framework requirements");
+        expect(text).toContain("SOC 2 for &lt;b&gt;Chatbot&lt;/b&gt;: could not be read.");
+        expect(text).toContain("could not be read.");
+        expect(text).toContain("What to do: generate the report again.");
+        expect(text).not.toContain("Sections with no data");
+      });
+
+      it("keeps no_data notices under Sections with no data only", async () => {
+        const result = await generateDOCX({
+          ...mockReportData,
+          sectionNotices: [failed, { sectionKey: "vendors", reason: "no_data" }],
+        });
+        const text = await docxText(result.content);
+
+        expect(text.indexOf("Sections that could not be completed")).toBeLessThan(
+          text.indexOf("Sections with no data"),
+        );
+        const noDataPart = text.slice(text.indexOf("Sections with no data"));
+        expect(noDataPart).toContain("Vendors");
+        expect(noDataPart).not.toContain("Framework requirements");
+      });
+    });
+
     it("renders nothing when there are no notices", async () => {
       const result = await generateDOCX({ ...mockReportData, sectionNotices: [] });
       const text = await docxText(result.content);

@@ -114,7 +114,7 @@ const GenerateReportPopup: React.FC<IGenerateReportProps> = ({
     return Object.values(sectionSelection).some((v) => v === true);
   }, [sectionSelection]);
 
-  const toast = useCallback((variant: "success" | "error", body: string) => {
+  const toast = useCallback((variant: "success" | "warning" | "error", body: string) => {
     showAlert({ variant, body, isToast: true });
   }, []);
 
@@ -217,7 +217,10 @@ const GenerateReportPopup: React.FC<IGenerateReportProps> = ({
     // onClose/toast/state on it.
     let cancelled = false;
 
-    if (run.data.status === "success" && run.data.file_id != null) {
+    if (
+      (run.data.status === "success" || run.data.status === "partial_success") &&
+      run.data.file_id != null
+    ) {
       const finishedRun = run.data;
       downloadReportRun(finishedRun.id)
         .then((blob) => {
@@ -230,7 +233,16 @@ const GenerateReportPopup: React.FC<IGenerateReportProps> = ({
           a.click();
           a.remove();
           URL.revokeObjectURL(url);
-          toast("success", "Report successfully downloaded.");
+          // partial_success: the file is complete except for the parts the
+          // message names, so warn with it rather than report an error.
+          if (finishedRun.status === "partial_success") {
+            toast(
+              "warning",
+              finishedRun.error_message ?? "Report downloaded, but part of it could not be read.",
+            );
+          } else {
+            toast("success", "Report successfully downloaded.");
+          }
           onReportGeneratedRef.current?.();
           onCloseRef.current();
         })
@@ -247,7 +259,7 @@ const GenerateReportPopup: React.FC<IGenerateReportProps> = ({
         // Terminal success but no file was produced.
         toast("error", "Report generated, but the file is not available to download.");
       } else {
-        // failed | partial_success
+        // failed, or partial_success with no file to download
         toast("error", run.data.error_message ?? "Report generation failed.");
       }
       setRunId(undefined);

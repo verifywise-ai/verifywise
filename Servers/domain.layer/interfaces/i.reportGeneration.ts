@@ -112,6 +112,11 @@ export interface ReportGenerationResult {
   /** A second file produced by the same run, stored beside the main report. */
   companion?: { filename: string; content: Buffer; mimeType: string };
   /**
+   * Pairings whose data could not be read (collection_failed notices). The
+   * report was still produced; the run orchestrator marks it partial_success.
+   */
+  collectionFailures?: string[];
+  /**
    * Structured analyzer output, keyed by section key. The runner persists this
    * to report_run_analyses; the renderers read the flattened copy on
    * ReportData.aiSummaries instead.
@@ -261,7 +266,14 @@ export interface SectionNotice {
     /** A pairing exists; the query returned zero rows. */
     | "no_data"
     /** A plugin:/custom: framework was selected but that path is not available yet. */
-    | "unresolved_framework";
+    | "unresolved_framework"
+    /**
+     * A query for one pairing threw. The rest of the section and the report
+     * are complete; `detail` names the pairing that is missing.
+     */
+    | "collection_failed";
+  /** For collection_failed: which pairing could not be read, e.g. "SOC 2 for Chatbot". */
+  detail?: string;
 }
 
 // Unified report data structure

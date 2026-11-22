@@ -23,6 +23,7 @@ import {
   TrainingRegistrySectionData,
   PolicyManagerSectionData,
   IncidentManagementSectionData,
+  FrameworkRequirementsSectionData,
 } from "../../domain.layer/interfaces/i.reportGeneration";
 import type { SectionNotice } from "../../domain.layer/interfaces/i.reportGeneration";
 import {
@@ -62,6 +63,7 @@ import { getUserByIdQuery } from "../../utils/user.utils";
 import { getProjectByIdQuery } from "../../utils/project.utils";
 import { getAllFrameworkByIdQuery } from "../../utils/framework.utils";
 import { sequelize } from "../../database/db";
+import logger from "../../utils/logger/fileLogger";
 import { QueryTypes } from "sequelize";
 import { effectiveRiskLevelSql, getEffectiveRiskLevel } from "../../utils/riskLevel.utils";
 
@@ -443,16 +445,48 @@ export class ReportDataCollector {
     if (bundledTargets.length > 0) {
       if (sections.includes("frameworkRequirements") || sections.includes("all")) {
         const generatedAt = metadata.generatedAt;
-        sectionData.frameworkRequirements = mergeFrameworkRequirements(
-          await this.perTarget(bundledTargets, (t) =>
-            collectFrameworkRequirements(
-              t,
-              this.organizationId,
-              generatedAt,
-              this.resolveUserNames.bind(this),
-            ),
-          ),
-        );
+        // One pairing that cannot be read must not lose the report: collect
+        // each independently, name the failed one in a notice, merge the rest.
+        const failedTargets: FrameworkTarget[] = [];
+        const contributions: SectionContribution<FrameworkRequirementsSectionData>[] = [];
+        for (const t of bundledTargets) {
+          try {
+            contributions.push({
+              useCase: t.projectTitle,
+              framework: t.frameworkName,
+              data: await collectFrameworkRequirements(
+                t,
+                this.organizationId,
+                generatedAt,
+                this.resolveUserNames.bind(this),
+              ),
+            });
+          } catch (error) {
+            logger.error(
+              `Report: frameworkRequirements collection failed (organizationId=${this.organizationId}, ` +
+                `frameworkId=${t.frameworkId}, projectFrameworkId=${t.projectFrameworkId}): ` +
+                `${error instanceof Error ? (error.stack ?? error.message) : String(error)}`,
+            );
+            failedTargets.push(t);
+          }
+        }
+        // "<framework> for <use case>"; the project id is appended only when two
+        // failures would otherwise read the same.
+        const describe = (t: FrameworkTarget) =>
+          t.isOrganizationalProject
+            ? `${t.frameworkName} (organization)`
+            : `${t.frameworkName} for ${t.projectTitle}`;
+        const counts = new Map<string, number>();
+        failedTargets.forEach((t) => counts.set(describe(t), (counts.get(describe(t)) ?? 0) + 1));
+        for (const t of failedTargets) {
+          const base = describe(t);
+          sectionNotices.push({
+            sectionKey: "frameworkRequirements",
+            reason: "collection_failed",
+            detail: counts.get(base)! > 1 ? `${base} (use case #${t.projectId})` : base,
+          });
+        }
+        sectionData.frameworkRequirements = mergeFrameworkRequirements(contributions);
       }
     } else if (requested("frameworkRequirements")) {
       sectionNotices.push({ sectionKey: "frameworkRequirements", reason: noticeReason });

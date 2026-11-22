@@ -235,7 +235,16 @@ export async function generateReport(
       result.filename = `${baseName}_AI_${ext}`;
     }
 
-    return { ...result, analyses, factsSnapshot };
+    const collectionFailures = (reportData.sectionNotices ?? [])
+      .filter((n) => n.reason === "collection_failed" && n.detail)
+      .map((n) => n.detail as string);
+
+    return {
+      ...result,
+      analyses,
+      factsSnapshot,
+      ...(collectionFailures.length > 0 && { collectionFailures }),
+    };
   } catch (error) {
     console.error("Error generating report:", error);
     return {

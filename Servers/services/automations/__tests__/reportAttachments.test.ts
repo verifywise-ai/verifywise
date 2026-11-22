@@ -50,6 +50,7 @@ jest.mock("../../../utils/logger/fileLogger", () => ({
 
 import { beforeEach, describe, expect, it, jest } from "@jest/globals";
 import { sendReportNotificationEmail } from "../automationWorker";
+import logger from "../../../utils/logger/fileLogger";
 
 const JOB_DATA = {
   automation: {
@@ -121,5 +122,25 @@ describe("sendReportNotificationEmail", () => {
     expect(mockUploadFile).not.toHaveBeenCalled();
     const [, jobPayload] = mockEnqueue.mock.calls[0] as [string, any];
     expect(jobPayload.attachments).toEqual([]);
+  });
+
+  it("still attaches a report with gaps and warns about what could not be read", async () => {
+    mockGenerateReport.mockResolvedValue({
+      ...GENERATED,
+      collectionFailures: ["SOC 2 for Chatbot"],
+    });
+    mockUploadFile.mockResolvedValue({
+      id: 11,
+      filename: GENERATED.filename,
+      type: GENERATED.mimeType,
+    });
+
+    await sendReportNotificationEmail(JOB_DATA);
+
+    const [, jobPayload] = mockEnqueue.mock.calls[0] as [string, any];
+    expect(jobPayload.attachments).toHaveLength(1);
+    expect(logger.warn).toHaveBeenCalledWith(
+      expect.stringContaining("Report generated with gaps: SOC 2 for Chatbot could not be read."),
+    );
   });
 });

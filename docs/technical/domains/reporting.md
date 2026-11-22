@@ -365,6 +365,23 @@ whose only content is notices must still say so.
 | `no_framework_target` | "No project in scope uses a framework that provides this section." | no resolved pairing serves the section — including an invalid-only selection such as `["abc"]` or `["plugin:SOC2"]` |
 | `unresolved_framework` | "The selected framework is a plugin framework, which reports do not yet cover." | the selection named a `plugin:`/`custom:` framework and **no** native one |
 | `no_data` | "No records were found in scope." | **declared but never emitted — see below** |
+| `collection_failed` | "<section> — <detail>: could not be read." | the `frameworkRequirements` query for one bundled-framework pairing threw; `detail` is "<framework> for <use case>" (just the framework for an organizational project) |
+
+`collection_failed` is the only notice that means something broke rather than
+that something is empty, so it renders in its own subsection, *Sections that
+could not be completed*, ahead of *Sections with no data* (which excludes it),
+with a "what to do" line: generate the report again, and if the same part is
+still missing, ask the administrator to check the server logs. The copy lives
+once in `services/reporting/noticeText.ts` (passed to the EJS render data and
+imported by `docxGenerator.ts`). `dataCollector.ts` collects each bundled
+pairing independently: the failing one is logged (organization, framework and
+pairing ids, message) and skipped, the others merge normally, and if every
+pairing fails the section is absent and only the notices remain. ISO, NIST and
+EU sections still fail the whole run on a thrown error. `generateReport` copies
+the details to `ReportGenerationResult.collectionFailures`; the run orchestrator
+then records the run as `partial_success` with `error_message` "Report generated
+with gaps: <detail>; <detail> could not be read." The report is downloadable.
+Analyzers never see `sectionNotices`, so the AI prompts are unaffected.
 
 `unresolved_framework` requires both halves of that test — no native entry *and*
 a plugin or custom entry present. An invalid-only selection has neither, so it

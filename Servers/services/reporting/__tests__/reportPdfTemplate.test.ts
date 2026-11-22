@@ -14,6 +14,7 @@ import {
   SectionNotice,
 } from "../../../domain.layer/interfaces/i.reportGeneration";
 import { ANALYSIS_LABELS } from "../analyzers/mapToSummaries";
+import { NOTICE_TEXT } from "../noticeText";
 
 const TEMPLATE_PATH = path.join(__dirname, "../../../templates/reports/report-pdf.ejs");
 const template = fs.readFileSync(TEMPLATE_PATH, "utf-8");
@@ -72,6 +73,7 @@ function render(
     sectionNotices: sectionNotices as SectionNotice[],
     // The renderer supplies these; the template must not declare its own copy.
     analysisLabels: ANALYSIS_LABELS,
+    noticeText: NOTICE_TEXT,
     include: () => "",
     ...extra,
   } satisfies Omit<ReportData, "aiSummaries"> & {
@@ -627,6 +629,43 @@ describe("section notices", () => {
 
     expect(html).toContain("somethingNew");
     expect(html).toContain("brand_new_reason");
+  });
+
+  describe("collection_failed", () => {
+    const failed: SectionNotice = {
+      sectionKey: "frameworkRequirements",
+      reason: "collection_failed",
+      detail: "SOC 2 for <b>Chatbot</b>",
+    };
+
+    it("renders its own subsection with the pairing and what to do", () => {
+      const html = render(undefined, {}, [failed]);
+
+      expect(html).toContain("Sections that could not be completed");
+      expect(html).toContain("Part of these sections could not be read");
+      expect(html).toContain("Framework requirements");
+      expect(html).toContain("could not be read.");
+      expect(html).toContain("What to do: generate the report again.");
+      expect(html).not.toContain("Sections with no data");
+    });
+
+    it("escapes the detail", () => {
+      const html = render(undefined, {}, [failed]);
+
+      expect(html).toContain("SOC 2 for &lt;b&gt;Chatbot&lt;/b&gt;");
+      expect(html).not.toContain("<b>Chatbot</b>");
+    });
+
+    it("keeps no_data notices under Sections with no data only", () => {
+      const html = render(undefined, {}, [failed, { sectionKey: "vendors", reason: "no_data" }]);
+
+      expect(html.indexOf("Sections that could not be completed")).toBeLessThan(
+        html.indexOf("Sections with no data"),
+      );
+      const noDataPart = html.slice(html.indexOf("Sections with no data"));
+      expect(noDataPart).toContain("Vendors");
+      expect(noDataPart).not.toContain("Framework requirements");
+    });
   });
 
   it("renders nothing when there are no notices", () => {

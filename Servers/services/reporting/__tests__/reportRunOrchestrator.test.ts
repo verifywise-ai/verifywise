@@ -69,6 +69,34 @@ describe("runScheduledReport", () => {
     );
     expect(outcome).toEqual({ runId: 77, status: "success" });
   });
+  it("collection failures -> partial_success with the gaps in error_message", async () => {
+    generateReport.mockResolvedValue({
+      success: true,
+      content: Buffer.from("x"),
+      filename: "r.pdf",
+      mimeType: "application/pdf",
+      collectionFailures: ["SOC 2 for Chatbot", "GDPR"],
+    });
+    deliverReport.mockResolvedValue({
+      storage: { status: "success", fileId: 5 },
+      emailLink: { status: "skipped" },
+      attachment: { status: "skipped" },
+      fileId: 5,
+    });
+    const outcome = await runScheduledReport(sched as any, {
+      triggeredBy: "scheduler",
+      scheduledFor: new Date(),
+    });
+    expect(updateRunStatusQuery).toHaveBeenCalledWith(
+      77,
+      sched.organization_id,
+      expect.objectContaining({
+        status: "partial_success",
+        error_message: "Report generated with gaps: SOC 2 for Chatbot; GDPR could not be read.",
+      }),
+    );
+    expect(outcome).toEqual({ runId: 77, status: "partial_success" });
+  });
   // report_runs has no project column: config_snapshot.project_id is the only
   // record of a run's project for a run-now report, and listRunsQuery reads it
   // to keep a project's report off a non-member's list.
