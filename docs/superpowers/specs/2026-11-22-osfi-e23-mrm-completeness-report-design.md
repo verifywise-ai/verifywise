@@ -1,6 +1,6 @@
 # OSFI E-23 and model risk completeness report: design
 
-> Date: 2026-11-22 · Status: draft for approval · Branch: `feature/e23-mrm-completeness-report`
+> Date: 2026-11-22 · Status: ready for approval · Branch: `feature/e23-mrm-completeness-report`
 
 ## 1. Intent
 
@@ -11,7 +11,7 @@ VerifyWise already holds both halves of the answer, but nothing puts them side b
 - **What the institution says it does.** Bundled framework 26 (`Servers/structures/OSFI-E-23/`) is a self-assessed checklist: 83 requirements in 16 groups (12 principles, plus "Model design", "Model approval", "Model decommission" and "Appendix 1"), each with a status, owner, reviewer, approver, due date, evidence files and linked risks.
 - **What the institution actually does.** The MRM module (Model inventory → Model risk management) holds tiers, validations, findings, roles, thresholds and monitoring results per model.
 
-The report puts them together, flags where the checklist claims something the model data contradicts, and ends with a fix-it list the MRM lead can work from.
+The report puts them together, flags where the checklist claims something the model data contradicts, and produces a separate internal fix-it list the MRM lead can work from.
 
 ## 2. Readers and what success looks like
 
@@ -24,7 +24,7 @@ The report puts them together, flags where the checklist claims something the mo
 **Goals**
 
 1. Reports cover bundled frameworks (ids 5–28), not only ids 1–4. This lands first, as its own PR, and is useful on its own.
-2. An "OSFI E-23 completeness" report on the Reporting page with: cover and scope, executive summary, E-23 program completeness by principle, MRM fleet status, contradictions, an E-23 gap analysis, a fix-it list, an optional model inventory appendix, limitations, and a sign-off page.
+2. An "OSFI E-23 completeness" report on the Reporting page with: cover and scope, executive summary, E-23 program completeness by principle, MRM fleet status, contradictions, an E-23 gap analysis, an optional model inventory appendix, limitations, and a sign-off page; plus a separate internal fix-it list produced by the same run.
 3. The wizard asks the customer for the details the database cannot know (period, institution, accountable executive, and so on) and remembers them for the next run.
 4. An E-23-aware AI analysis that uses the organization's existing LLM key when one exists. Without a key the report still generates in full.
 5. PDF and DOCX, run now or on a schedule, through the existing `report_runs` pipeline. Schedules today offer daily, weekly and monthly only; this work adds **quarterly** (see 8.1).
@@ -281,7 +281,7 @@ Follow the idempotent per-slug pattern of `20260729221814-seed-system-report-tem
 
 ### 8.9 Permissions
 
-No new gate is needed. Organization-scope reports already require Admin (`services/reporting/reportAuthorization.ts`), running a template requires `reportTemplate.edit`, and MRM read endpoints are open to every signed-in member of the organization. So everyone who can run this report can already see the MRM data in the app.
+No new gate is needed. Organization-scope reports already require Admin (`services/reporting/reportAuthorization.ts`), running a template requires `reportTemplate.edit`, and MRM read endpoints are open to every signed-in member of the organization. So everyone who can run this report can already see the MRM data in the app. **User decision: no change to who can run it.** It stays Admin-only like every organization-scope report; the MRM team gets the files through run history or a schedule an Admin sets up.
 
 ### 8.10 Change since last run
 
@@ -296,17 +296,18 @@ Scheduled runs already diff facts against the previous run of the same schedule;
 
 ## 9. Testing
 
-- **Unit:** each contradiction rule fires and stays silent at its boundary (status not done, exactly at each tier cadence, exactly 90 days, retired models ignored); every rule number exists as a title prefix in the E-23 structure file; an unmatched rule is reported as not run; quarterly next-run dates (including month-end clamping) and rolling period computation; E-23-only sections rejected outside an `osfi_e23` template; fix-it severity and ordering; parameter validation (each field, unknown keys, date rules); `e23Gap` schema, provenance filtering and the "no `supported` with a fired rule" check; facts aggregates; catalog keys.
+- **Unit:** each contradiction rule fires and stays silent at its boundary (status not done, exactly at each tier cadence, exactly 90 days, retired models ignored); every rule number exists as a title prefix in the E-23 structure file; an unmatched rule is reported as not run; quarterly next-run dates (including month-end clamping) and rolling period computation; E-23-only sections rejected outside an `osfi_e23` template; fix-it severity and ordering; parameter validation (each field, unknown keys, date rules); `e23Gap` schema, provenance filtering and the post-parse position constraints (no `consistent` with a fired rule; `not assessable` for self-assessment-only groups); facts aggregates; catalog keys.
 - **Integration (live Postgres):** `frameworkRequirements` collector on a bundled framework with evidence and risks; `mrmFleet` and contradiction inputs; cross-organization isolation for every new collector and the last-parameters endpoint.
 - **Renderers:** both formats render every new section, including empty and notice states; label maps shared, not duplicated.
+- **E-23 outputs:** a run with the fix-it list on stores two files and fails if either fails; the fix-it file is stored even with save-to-storage off; email delivery never attaches or links the fix-it file; draft runs carry the watermark and no signature lines, final runs the reverse; the board version omits requirement rows, model names and the appendix while its figures match the examiner version of the same run.
 - **Frontend:** wizard step appears only when the template declares parameters, prefill, validation messages, AI step shows the new block.
 - **Gates:** `Servers` build, unit tests; `Clients` typecheck, build, `i18n:audit:strict`, format-check; Semgrep; swagger and endpoints regenerated.
 
 ## 10. Decisions on record
 
-**Made by the user:** option B; readers are an OSFI examiner or the board; the fix-it list is a separate internal document produced by the same run, not part of the formal report, and it is never emailed (scheduled emails carry the formal report only); the board version is a summary and the examiner version has full detail (8.3); reports are watermarked "Draft" unless "Final version" is ticked (8.1); review intervals stay fixed for now and the report states them; the wizard asks the report details in 8.1 and remembers them; English only; sign-off page included; model listing shows exceptions with the full inventory as an optional appendix; fix-it list inside the report, no CSV; fixed contradiction rules explained by AI; missing inventory fields reported as "not tracked"; remaining defaults accepted.
+**Made by the user:** option B; readers are an OSFI examiner or the board; the fix-it list is a separate internal document produced by the same run, not part of the formal report, and it is never emailed (scheduled emails carry the formal report only); the board version is a summary and the examiner version has full detail (8.3); reports are watermarked "Draft" unless "Final version" is ticked (8.1); review intervals stay fixed for now and the report states them; running it stays Admin-only; the wizard asks the report details in 8.1 and remembers them; English only; sign-off page included; model listing shows exceptions with the full inventory as an optional appendix; no CSV export of the fix-it list; fixed contradiction rules explained by AI; missing inventory fields reported as "not tracked"; remaining defaults accepted.
 
-**Made by me (open to correction):** two PRs; adding a quarterly schedule frequency for every template; scheduled periods roll (one interval ending the day before the run), aligned to fiscal quarters through the run date; `parameters_config.kind` marks an E-23 template and E-23 sections are offered only there; the MRM status section counts exclude retired models and print no per-tier verdict; rules match requirements by title number and list unmatched rules as "not run"; the specific contradiction rules (C7 reworked to empty validation report sections, C13 added) the MRM tier cadence for C3 and a 90-day window for C11; C3 counts a validation sign-off as affirming the tier; C5 checks only the latest validation; C9 fires only for unmitigated critical/high findings (E-23 allows approval with mitigated limitations); per-group data coverage label derived from the rules; a fixed "at a glance" summary that needs no AI; E-23 manual runs compare against the previous run of the same template; gap-analysis positions phrased as data consistency, enforced in code; recommended actions move to the internal document for this template; a run fails if either file fails; fix-it severity scheme; the AI does not rank the fix-it list (deterministic for an examiner); `e23Gap` position scale; prefill from the organization's last run rather than a stored per-org template copy; generic `parameters_config` rather than E-23-only fields; period bounds activity counts only.
+**Made by me (open to correction):** two PRs; adding a quarterly schedule frequency for every template; scheduled periods roll (one interval ending the day before the run), aligned to fiscal quarters through the run date; `parameters_config.kind` marks an E-23 template and E-23 sections are offered only there; the MRM status section counts exclude retired models and print no per-tier verdict; rules match requirements by title number and list unmatched rules as "not run"; the specific contradiction rules (C7 reworked to empty validation report sections, C13 added), the MRM tier cadence for C3 and a 90-day window for C11; C3 counts a validation sign-off as affirming the tier; C5 checks only the latest validation; C9 fires only for unmitigated critical/high findings (E-23 allows approval with mitigated limitations); per-group data coverage label derived from the rules; a fixed "at a glance" summary that needs no AI; E-23 manual runs compare against the previous run of the same template; gap-analysis positions phrased as data consistency, enforced in code; recommended actions move to the internal document for this template; a run fails if either file fails; fix-it severity scheme; the AI does not rank the fix-it list (deterministic for an examiner); `e23Gap` position scale; prefill from the organization's last run rather than a stored per-org template copy; generic `parameters_config` rather than E-23-only fields; period bounds activity counts only.
 
 ## 11. Left to the builder
 
