@@ -1,3 +1,4 @@
+import logger from "../../../utils/logger/fileLogger";
 import { computeNextRun, validateScheduleConfig, rollingPeriod } from "../scheduleCalculator";
 
 jest.mock("../../../utils/logger/fileLogger", () => ({
@@ -48,6 +49,14 @@ describe("computeNextRun", () => {
     it("anchor 2 -> next is 2027-02-01", () => {
       expect(q(2)).toBe("2027-02-01T09:00:00.000Z");
     });
+    it("anchor 1 -> next is 2027-01-01", () => {
+      expect(q(1)).toBe("2027-01-01T09:00:00.000Z");
+    });
+    it.each([0, 13, 1.5])("invalid stored anchor %s falls back to 1 and warns", (a) => {
+      (logger.warn as jest.Mock).mockClear();
+      expect(q(a)).toBe("2027-01-01T09:00:00.000Z");
+      expect(logger.warn).toHaveBeenCalled();
+    });
     it("anchor 12 -> next is 2026-12-01", () => {
       expect(q(12)).toBe("2026-12-01T09:00:00.000Z");
     });
@@ -59,6 +68,7 @@ describe("computeNextRun", () => {
       from,
     );
     expect(next.toISOString()).toBe("2026-07-01T09:00:00.000Z");
+    expect(logger.warn).toHaveBeenCalled();
   });
 });
 
@@ -98,34 +108,16 @@ describe("validateScheduleConfig", () => {
 
 describe("rollingPeriod", () => {
   const d = (s: string) => new Date(`${s}T10:00:00Z`);
-  it("daily", () => {
-    expect(rollingPeriod("daily", d("2026-06-10"))).toEqual({
-      periodStart: "2026-06-09",
-      periodEnd: "2026-06-09",
-    });
-  });
-  it("weekly", () => {
-    expect(rollingPeriod("weekly", d("2026-06-10"))).toEqual({
-      periodStart: "2026-06-03",
-      periodEnd: "2026-06-09",
-    });
-  });
-  it("monthly clamps to month end", () => {
-    expect(rollingPeriod("monthly", d("2026-03-31"))).toEqual({
-      periodStart: "2026-03-01",
-      periodEnd: "2026-03-30",
-    });
-  });
-  it("monthly on the 1st covers the previous month", () => {
-    expect(rollingPeriod("monthly", d("2026-06-01"))).toEqual({
-      periodStart: "2026-05-01",
-      periodEnd: "2026-05-31",
-    });
-  });
-  it("quarterly", () => {
-    expect(rollingPeriod("quarterly", d("2026-06-01"))).toEqual({
-      periodStart: "2026-03-01",
-      periodEnd: "2026-05-31",
-    });
+  const cases: [string, string, string, string][] = [
+    ["daily", "2026-06-10", "2026-06-09", "2026-06-09"],
+    ["weekly", "2026-06-10", "2026-06-03", "2026-06-09"],
+    ["monthly", "2026-07-01", "2026-06-01", "2026-06-30"],
+    ["monthly", "2026-03-01", "2026-02-01", "2026-02-28"],
+    ["monthly", "2026-03-31", "2026-02-28", "2026-03-30"],
+    ["quarterly", "2026-06-01", "2026-03-01", "2026-05-31"],
+    ["quarterly", "2026-11-01", "2026-08-01", "2026-10-31"],
+  ];
+  it.each(cases)("%s run %s -> %s..%s", (f, run, start, end) => {
+    expect(rollingPeriod(f as any, d(run))).toEqual({ periodStart: start, periodEnd: end });
   });
 });
