@@ -19,15 +19,17 @@ import { getTemplate } from "../../../application/repository/reporting.repositor
 import { showAlert } from "../../../infrastructure/api/customAxios";
 import type {
   FrameworkConfig,
+  ReportParametersConfig,
   ReportTemplateWriteBody,
 } from "../../../domain/interfaces/i.reporting";
 
-// The create body carries framework_config the same way it carries
-// sections_config — createTemplateVersionQuery reads all three off one body.
-// ReportTemplateWriteBody does not declare it yet, so widen here rather than
-// send the field untyped.
+// The create body carries framework_config and parameters_config the same way
+// it carries sections_config — createTemplateVersionQuery reads them all off
+// one body. ReportTemplateWriteBody does not declare them yet, so widen here
+// rather than send the fields untyped.
 type TemplateCreateBody = ReportTemplateWriteBody & {
   framework_config?: FrameworkConfig;
+  parameters_config?: ReportParametersConfig;
 };
 
 // Same three the builder offers. Kept in sync by hand — the backend takes any
@@ -149,6 +151,9 @@ export default function TemplatesTab({
       sections_config: source.latestVersion?.sections_config ?? undefined,
       ai_blocks_config: source.latestVersion?.ai_blocks_config ?? undefined,
       framework_config: source.latestVersion?.framework_config ?? undefined,
+      // The report kind (e.g. OSFI E-23) lives here; a copy without it would
+      // offer the kind's sections under a general template that refuses them.
+      parameters_config: source.latestVersion?.parameters_config ?? undefined,
     };
 
     duplicate.mutate(body, { onError: mutationError("Failed to duplicate template") });

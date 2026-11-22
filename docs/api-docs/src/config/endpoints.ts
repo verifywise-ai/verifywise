@@ -13545,6 +13545,58 @@ export const v1V1projectsEndpoints: Endpoint[] = [
   },
 ];
 
+// v1: V1/Report Templates endpoints
+export const v1V1reportTemplatesEndpoints: Endpoint[] = [
+  {
+    method: 'POST',
+    path: '/v1/report-templates/{id}/run',
+    summary: "Run Template Now",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Report Templates",
+  },
+  {
+    method: 'GET',
+    path: '/v1/report-templates/{id}/last-parameters',
+    summary: "Get Last Parameters",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Report Templates",
+  },
+];
+
+// v1: V1/Scheduled Reports endpoints
+export const v1V1scheduledReportsEndpoints: Endpoint[] = [
+  {
+    method: 'POST',
+    path: '/v1/scheduled-reports',
+    summary: "Create Scheduled Report",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Scheduled Reports",
+  },
+  {
+    method: 'PATCH',
+    path: '/v1/scheduled-reports/{id}',
+    summary: "Update Scheduled Report",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Scheduled Reports",
+  },
+];
+
 // v1: V1/Training endpoints
 export const v1V1trainingEndpoints: Endpoint[] = [
   {
@@ -14098,6 +14150,8 @@ export const allEndpoints = {
   v1V1modelRisks: v1V1modelRisksEndpoints,
   v1V1policyTemplates: v1V1policyTemplatesEndpoints,
   v1V1projects: v1V1projectsEndpoints,
+  v1V1reportTemplates: v1V1reportTemplatesEndpoints,
+  v1V1scheduledReports: v1V1scheduledReportsEndpoints,
   v1V1training: v1V1trainingEndpoints,
   v1V1useCaseLifecycle: v1V1useCaseLifecycleEndpoints,
   vendor: vendorEndpoints,

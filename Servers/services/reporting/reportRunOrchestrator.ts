@@ -4,6 +4,30 @@ import { deliverReport } from "./reportDeliveryService";
 import { createRunQuery, updateRunStatusQuery } from "../../utils/reportRun.utils";
 import { gapsMessage } from "./noticeText";
 import { persistAnalyses } from "./analyzers/persistAnalyses";
+import { rollingPeriod } from "./scheduleCalculator";
+import type {
+  ReportParameters,
+  ReportParametersConfig,
+} from "../../domain.layer/interfaces/i.reportTemplate";
+
+const PERIOD_KEYS = ["periodStart", "periodEnd"];
+
+/**
+ * The parameters a run uses. A schedule stores every answer except the
+ * period, so a run of a schedule (scheduler tick or the schedule's run-now)
+ * gets the rolling period ending the day before its run date. Template
+ * run-now has no schedule (id null) and keeps the dates the user sent.
+ */
+function runParameters(sched: any, opts: { scheduledFor?: Date }): ReportParameters {
+  const params: ReportParameters = { ...(sched.report_parameters ?? {}) };
+  const config: ReportParametersConfig = sched.parameters_config ?? {};
+  const declaresPeriod = (config.fields ?? []).some((f) => PERIOD_KEYS.includes(f.key));
+  const frequency = sched.schedule_config?.frequency;
+  if (sched.id != null && declaresPeriod && frequency) {
+    Object.assign(params, rollingPeriod(frequency, opts.scheduledFor ?? new Date()));
+  }
+  return params;
+}
 
 // The run status vocabulary is fixed at: queued, running, success, partial_success, failed.
 // partial_success means "generated, but a delivery channel failed or part of a section could
@@ -29,6 +53,7 @@ export async function runScheduledReport(
   opts: { triggeredBy: "scheduler" | "manual"; userId?: number; scheduledFor?: Date },
 ): Promise<ReportRunOutcome> {
   const startedAt = Date.now();
+  const reportParameters = runParameters(sched, opts);
   const run = await createRunQuery({
     organization_id: sched.organization_id,
     scheduled_report_id: sched.id ?? null,
@@ -56,6 +81,9 @@ export async function runScheduledReport(
       sections_config: sched.sections_config,
       ai_blocks_config: sched.ai_blocks_config,
       delivery_config: sched.delivery_config,
+      // What the run was made with, period included. The run history reads
+      // isFinal from here, and last-parameters prefills the next run from it.
+      report_parameters: reportParameters,
     },
     scheduled_for: opts.scheduledFor ?? null,
   });
@@ -66,7 +94,7 @@ export async function runScheduledReport(
     // than in resolveReportRequest, which maps template config and knows
     // nothing about runs.
     const request = {
-      ...resolveReportRequest(sched, sched.llm_key_id),
+      ...resolveReportRequest({ ...sched, report_parameters: reportParameters }, sched.llm_key_id),
       scheduledReportId: sched.id ?? undefined,
     };
     const result = await generateReport(

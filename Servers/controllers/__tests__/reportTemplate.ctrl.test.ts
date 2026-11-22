@@ -298,3 +298,125 @@ describe("runTemplateNow rejects a non-array selection", () => {
     expect(runScheduledReport).not.toHaveBeenCalled();
   });
 });
+
+describe("runTemplateNow report parameters", () => {
+  const { E23_KIND, E23_PARAMETER_FIELDS } = jest.requireActual(
+    "../../services/reporting/e23/e23Parameters",
+  );
+  const e23Version = {
+    id: 30,
+    template_id: 7,
+    parameters_config: { kind: E23_KIND, fields: E23_PARAMETER_FIELDS },
+  };
+  const validParams = {
+    periodStart: "2026-08-01",
+    periodEnd: "2026-10-31",
+    institutionName: "Northern Bank",
+    accountableExecutiveName: "Ada Park",
+    accountableExecutiveTitle: "Chief risk officer",
+    preparedByName: "Sam Lee",
+    preparedByTitle: "Model risk lead",
+    audience: "osfi",
+  };
+  const e23Sections = { sections: [{ reportSectionKey: "mrmFleet", defaultEnabled: true }] };
+
+  beforeEach(() => {
+    (getTemplateByIdQuery as jest.Mock).mockResolvedValue({ id: 7, name: "OSFI E-23" });
+    (runScheduledReport as jest.Mock).mockResolvedValue({ runId: 1, status: "success" });
+  });
+
+  it("passes validated parameters and the version's parameters_config into the run", async () => {
+    (getVersionByIdQuery as jest.Mock).mockResolvedValue(e23Version);
+    const res = mockRes();
+    await runTemplateNow(
+      mockReq({
+        params: { id: "7" },
+        body: {
+          templateVersionId: 30,
+          scope: "organization",
+          sectionsConfig: e23Sections,
+          reportParameters: validParams,
+        },
+      }) as any,
+      res,
+    );
+
+    expect(res.status).toHaveBeenCalledWith(200);
+    const sched = (runScheduledReport as jest.Mock).mock.calls[0][0];
+    expect(sched.report_parameters).toEqual(validParams);
+    expect(sched.parameters_config.kind).toBe(E23_KIND);
+  });
+
+  it("400s listing a missing required field", async () => {
+    (getVersionByIdQuery as jest.Mock).mockResolvedValue(e23Version);
+    const { institutionName: _omit, ...withoutInstitution } = validParams;
+    const res = mockRes();
+    await runTemplateNow(
+      mockReq({
+        params: { id: "7" },
+        body: {
+          templateVersionId: 30,
+          scope: "organization",
+          sectionsConfig: e23Sections,
+          reportParameters: withoutInstitution,
+        },
+      }) as any,
+      res,
+    );
+
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json.mock.calls[0][0].data.errors).toEqual(["Institution name is required"]);
+    expect(runScheduledReport).not.toHaveBeenCalled();
+  });
+
+  it("400s with the required-field errors when a kind template run sends no parameters", async () => {
+    (getVersionByIdQuery as jest.Mock).mockResolvedValue(e23Version);
+    const res = mockRes();
+    await runTemplateNow(
+      mockReq({
+        params: { id: "7" },
+        body: { templateVersionId: 30, scope: "organization", sectionsConfig: e23Sections },
+      }) as any,
+      res,
+    );
+
+    expect(res.status).toHaveBeenCalledWith(400);
+    const errors: string[] = res.json.mock.calls[0][0].data.errors;
+    expect(errors).toContain("Institution name is required");
+    expect(errors).toContain("Period start is required");
+    expect(runScheduledReport).not.toHaveBeenCalled();
+  });
+
+  it("400s an E-23-only section on a template that is not an E-23 report", async () => {
+    (getVersionByIdQuery as jest.Mock).mockResolvedValue({ id: 30, template_id: 7 });
+    const res = mockRes();
+    await runTemplateNow(
+      mockReq({
+        params: { id: "7" },
+        body: { templateVersionId: 30, scope: "organization", sectionsConfig: e23Sections },
+      }) as any,
+      res,
+    );
+
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json.mock.calls[0][0].data.errors).toEqual([
+      "section mrmFleet is only available in an OSFI E-23 report",
+    ]);
+    expect(runScheduledReport).not.toHaveBeenCalled();
+  });
+
+  it("runs a general template with empty parameters when none are declared or sent", async () => {
+    (getVersionByIdQuery as jest.Mock).mockResolvedValue({ id: 30, template_id: 7 });
+    const res = mockRes();
+    await runTemplateNow(
+      mockReq({
+        params: { id: "7" },
+        body: { templateVersionId: 30, scope: "organization" },
+      }) as any,
+      res,
+    );
+
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect((runScheduledReport as jest.Mock).mock.calls[0][0].report_parameters).toEqual({});
+  });
+});

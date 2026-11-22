@@ -278,8 +278,11 @@ export class ReportDataCollector {
    * - Framework 3 (ISO 27001): clausesAndAnnexes
    * - Framework 4 (NIST AI RMF): nistSubcategories
    */
-  async collectAllData(sections: string[]): Promise<ReportData> {
-    const metadata = await this.collectMetadata();
+  async collectAllData(
+    sections: string[],
+    run: Pick<ReportMetadata, "reportKind" | "reportParameters"> = {},
+  ): Promise<ReportData> {
+    const metadata: ReportMetadata = { ...(await this.collectMetadata()), ...run };
     const branding = await this.collectBranding();
     // Drop the project filter when the report covers the whole organization,
     // or when its single project is itself organizational. These are two

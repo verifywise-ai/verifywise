@@ -11,6 +11,7 @@ import type {
   ReportParameters,
   ReportParametersConfig,
 } from "../../domain.layer/interfaces/i.reportTemplate";
+import { kindViolations } from "./sectionCatalog";
 
 export interface ReportParameterError {
   key: string;
@@ -133,4 +134,84 @@ export function validateReportParameters(
   }
 
   return { value, errors };
+}
+
+/** True when a template version asks for parameters (a report kind, or declared fields). */
+export function declaresParameters(config: ReportParametersConfig | null | undefined): boolean {
+  return !!config?.kind || (config?.fields?.length ?? 0) > 0;
+}
+
+/** The section keys a sections_config lists, for the report-kind check. */
+export function sectionKeysOf(sectionsConfig: unknown): string[] {
+  const sections = (sectionsConfig as { sections?: unknown })?.sections;
+  if (!Array.isArray(sections)) return [];
+  return sections
+    .map((s) => (s as { reportSectionKey?: unknown })?.reportSectionKey)
+    .filter((k): k is string => typeof k === "string");
+}
+
+/**
+ * Everything a run or schedule request must pass before it is accepted:
+ * sections limited to another report kind are refused, and the parameters are
+ * checked against the version's declared fields. A version that declares
+ * parameters but receives none is validated as `{}`, so the caller gets the
+ * required-field errors rather than a report with a blank cover.
+ */
+export function validateRunInput(
+  config: ReportParametersConfig | null | undefined,
+  sectionKeys: string[],
+  raw: unknown,
+  opts: { now: Date; requirePeriod: boolean },
+): { value: ReportParameters; errors: ReportParameterError[] } {
+  const cfg = config ?? {};
+  const errors: ReportParameterError[] = kindViolations(sectionKeys, cfg.kind).map((key) => ({
+    key,
+    message: "section {key} is only available in an OSFI E-23 report",
+    params: { key },
+  }));
+  if ((raw === undefined || raw === null) && !declaresParameters(cfg)) {
+    return { value: {}, errors };
+  }
+  const result = validateReportParameters(cfg, raw ?? {}, opts);
+  return { value: result.value, errors: [...errors, ...result.errors] };
+}
+
+/**
+ * Every message a parameter or report-kind error can carry. They are
+ * translation keys; listing them here is what lets the i18n scanner see them
+ * through parameterErrorMessages (it cannot follow e.message out of an array).
+ * A message added to the validators must be added here too, or it is sent
+ * untranslated.
+ */
+const PARAMETER_MESSAGES = [
+  "{label} is required",
+  "{label} must be true or false",
+  "{label} must be text",
+  "{label} must be at most {max} characters",
+  "{label} must be a valid date (YYYY-MM-DD)",
+  "{label} must be one of the listed options",
+  "{label} cannot be in the future",
+  "{label} must be on or after the period start",
+  "unknown report parameter: {key}",
+  "report parameters must be an object",
+  "the reporting period is set at run time for schedules",
+  "section {key} is only available in an OSFI E-23 report",
+] as const;
+
+const fill = (text: string, params?: Record<string, string | number>): string =>
+  text.replace(/\{(\w+)\}/g, (m, k) => (params && k in params ? String(params[k]) : m));
+
+/**
+ * Turns parameter errors into messages. With a request translator the English
+ * key is translated; without one (tests, internal callers) the placeholders
+ * are filled into the English text.
+ */
+export function parameterErrorMessages(
+  errors: ReportParameterError[],
+  t?: (key: string, vars?: Record<string, string | number>) => string,
+): string[] {
+  return errors.map((e) => {
+    const key = PARAMETER_MESSAGES.find((m) => m === e.message);
+    return t && key ? t(key, e.params) : fill(e.message, e.params);
+  });
 }

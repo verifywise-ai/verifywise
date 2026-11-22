@@ -342,4 +342,89 @@ describe("runScheduledReport", () => {
       }),
     );
   });
+
+  describe("report parameters", () => {
+    const e23Config = {
+      kind: "osfi_e23",
+      fields: [
+        { key: "periodStart", label: "Period start", type: "date", required: true },
+        { key: "periodEnd", label: "Period end", type: "date", required: true },
+        { key: "institutionName", label: "Institution name", type: "text", required: true },
+      ],
+    };
+    beforeEach(() => {
+      generateReport.mockResolvedValue({
+        success: true,
+        content: Buffer.from("x"),
+        filename: "r.pdf",
+        mimeType: "application/pdf",
+      });
+      deliverReport.mockResolvedValue({
+        storage: { status: "success", fileId: 5 },
+        emailLink: { status: "skipped" },
+        attachment: { status: "skipped" },
+        fileId: 5,
+      });
+    });
+
+    it("merges the rolling period into a scheduled run's parameters and snapshot", async () => {
+      await runScheduledReport(
+        {
+          ...sched,
+          parameters_config: e23Config,
+          report_parameters: { institutionName: "Northern Bank" },
+          schedule_config: { frequency: "quarterly", anchorMonth: 2, hour: 9, minute: 0 },
+        } as any,
+        { triggeredBy: "scheduler", scheduledFor: new Date("2026-11-01T09:00:00Z") },
+      );
+
+      const expected = {
+        institutionName: "Northern Bank",
+        periodStart: "2026-08-01",
+        periodEnd: "2026-10-31",
+      };
+      expect(createRunQuery.mock.calls[0][0].config_snapshot.report_parameters).toEqual(expected);
+      const request = generateReport.mock.calls[0][0];
+      expect(request.reportParameters).toEqual(expected);
+      expect(request.reportKind).toBe("osfi_e23");
+    });
+
+    it("merges the rolling period on a schedule's run-now too", async () => {
+      await runScheduledReport(
+        {
+          ...sched,
+          parameters_config: e23Config,
+          report_parameters: { institutionName: "Northern Bank" },
+          schedule_config: { frequency: "monthly", hour: 9, minute: 0 },
+        } as any,
+        { triggeredBy: "manual", userId: 9 },
+      );
+
+      const params = createRunQuery.mock.calls[0][0].config_snapshot.report_parameters;
+      expect(params.periodStart).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+      expect(params.periodEnd).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    });
+
+    it("keeps the dates the user sent on a template run-now", async () => {
+      const userParams = {
+        institutionName: "Northern Bank",
+        periodStart: "2026-01-01",
+        periodEnd: "2026-03-31",
+      };
+      await runScheduledReport(
+        { ...sched, id: null, parameters_config: e23Config, report_parameters: userParams } as any,
+        { triggeredBy: "manual", userId: 9 },
+      );
+
+      expect(createRunQuery.mock.calls[0][0].config_snapshot.report_parameters).toEqual(userParams);
+    });
+
+    it("snapshots empty parameters for a general report", async () => {
+      await runScheduledReport(sched as any, {
+        triggeredBy: "scheduler",
+        scheduledFor: new Date(),
+      });
+      expect(createRunQuery.mock.calls[0][0].config_snapshot.report_parameters).toEqual({});
+    });
+  });
 });

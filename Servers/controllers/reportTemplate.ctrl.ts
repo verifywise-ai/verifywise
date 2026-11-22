@@ -30,6 +30,11 @@ import { parseFrameworkSelection } from "../services/reporting/frameworkSelectio
 import { NotFoundException } from "../domain.layer/exceptions/custom.exception";
 import { runScheduledReport } from "../services/reporting/reportRunOrchestrator";
 import { assertReportScopeAllowed } from "../services/reporting/reportAuthorization";
+import {
+  parameterErrorMessages,
+  sectionKeysOf,
+  validateRunInput,
+} from "../services/reporting/reportParameters";
 
 export async function listTemplates(req: Request, res: Response): Promise<any> {
   try {
@@ -68,6 +73,7 @@ const VERSION_CONFIG_FIELDS = [
   "branding_config",
   "schedule_defaults",
   "delivery_defaults",
+  "parameters_config",
 ];
 
 const hasVersionConfig = (body: any): boolean =>
@@ -342,6 +348,24 @@ export async function runTemplateNow(req: Request, res: Response): Promise<any> 
       );
     }
 
+    // Sections limited to a report kind are refused outside it, and the
+    // parameters are checked against the version's declared fields. A run of
+    // a kind template that sends no parameters gets the required-field errors.
+    // Template run-now uses the period the user sent; only schedule runs
+    // derive it (see runScheduledReport).
+    const parametersConfig = version.parameters_config ?? {};
+    const checked = validateRunInput(
+      parametersConfig,
+      sectionKeysOf(req.body.sectionsConfig),
+      req.body.reportParameters,
+      { now: new Date(), requirePeriod: true },
+    );
+    if (checked.errors.length) {
+      return res
+        .status(400)
+        .json(STATUS_CODE[400]({ errors: parameterErrorMessages(checked.errors, req.t) }));
+    }
+
     // An omitted scope resolves to "organization" here, so this endpoint is the
     // widest report in the product reachable with the least input.
     const scopeErrors = await assertReportScopeAllowed({
@@ -371,6 +395,8 @@ export async function runTemplateNow(req: Request, res: Response): Promise<any> 
       project_framework_id: req.body.projectFrameworkId ?? null,
       sections_config: req.body.sectionsConfig ?? null,
       ai_blocks_config: req.body.aiBlocksConfig ?? null,
+      parameters_config: parametersConfig,
+      report_parameters: checked.value,
       format: req.body.format ?? "pdf",
       // Storage is what gives the run a file_id, and a run without one has
       // nothing to download. Run now puts a report in the list; it is not a

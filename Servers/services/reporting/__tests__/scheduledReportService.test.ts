@@ -93,6 +93,7 @@ describe("validateScheduledReportInput", () => {
     const errs = validateScheduledReportInput({
       scope: "organization",
       sectionsConfig: { sections: [{ reportSectionKey: "projectRisks" }] },
+      scheduleConfig: base.scheduleConfig,
       deliveryConfig: {
         sendEmailLink: true,
         recipients: ["a@example.com", "b.c+tag@sub.example.co.uk"],
@@ -105,8 +106,21 @@ describe("validateScheduledReportInput", () => {
     const errs = validateScheduledReportInput({
       scope: "organization",
       sectionsConfig: { sections: [{ reportSectionKey: "projectRisks" }] },
+      scheduleConfig: base.scheduleConfig,
       deliveryConfig: { saveToStorage: true, recipients: ["garbage"] },
     } as any);
     expect(errs).toEqual([]);
+  });
+
+  it("rejects a missing or malformed schedule config", () => {
+    expect(validateScheduledReportInput({ ...base, scheduleConfig: undefined } as any)).toContain(
+      "schedule config must be an object",
+    );
+    expect(
+      validateScheduledReportInput({
+        ...base,
+        scheduleConfig: { frequency: "quarterly", hour: 9, minute: 0, timezone: "UTC" },
+      } as any),
+    ).toContain("anchorMonth must be an integer from 1 to 12 for quarterly schedules");
   });
 });

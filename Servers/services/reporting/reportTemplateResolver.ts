@@ -40,5 +40,11 @@ export function resolveReportRequest(sched: any, llmKeyId?: number): ReportGener
     aiEnhanced,
     aiBlocks,
     llmKeyId,
+    // The kind comes from the template version (parameters_config), never
+    // from the request body, so a caller cannot claim a kind its template
+    // does not declare.
+    reportKind: sched.parameters_config?.kind || undefined,
+    reportParameters: sched.report_parameters ?? undefined,
+    templateId: sched.template_id ?? undefined,
   };
 }

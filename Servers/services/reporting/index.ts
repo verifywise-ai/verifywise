@@ -124,8 +124,12 @@ export async function generateReport(
     // Determine which sections to include
     const sections = getRequestedSections(request.reportType);
 
-    // Collect all report data
-    const reportData = await dataCollector.collectAllData(sections);
+    // Collect all report data. The kind and parameters ride on the metadata
+    // so the renderers can read them alongside everything else they show.
+    const reportData = await dataCollector.collectAllData(sections, {
+      reportKind: request.reportKind,
+      reportParameters: request.reportParameters,
+    });
 
     // AI analysis (optional, per-block gated)
     let analyses: Record<string, any> | undefined;
