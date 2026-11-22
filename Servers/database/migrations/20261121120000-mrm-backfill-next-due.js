@@ -9,12 +9,15 @@
  * Servers/utils/mrm.utils.ts). Validations signed off earlier have next_due NULL,
  * so the daily revalidation sweep would never reschedule those models. This sets
  * next_due on each tiered model's latest signed-off validation, counted from its
- * sign-off date. A model whose review is already past due gets a revalidation
- * opened on the next sweep, which is the intended behaviour.
+ * sign-off date, whatever the sign-off outcome. The month math runs in UTC and
+ * clamps to the end of a shorter month, the same as computeNextReviewDue. A
+ * model whose review is already past due gets a revalidation opened on the next
+ * sweep, which is the intended behaviour.
  *
  * Only rows where next_due is NULL are touched, so a due date set through the
- * API is kept. down() is a no-op: once written, a backfilled date cannot be told
- * apart from one set at sign-off.
+ * API is kept, as sign-off keeps a future one for an untiered model. Untiered
+ * models are skipped: they have no cadence. down() is a no-op: once written, a
+ * backfilled date cannot be told apart from one set at sign-off.
  */
 module.exports = {
   async up(queryInterface) {
@@ -30,8 +33,9 @@ module.exports = {
             ORDER BY v.organization_id, v.model_inventory_id, v.signed_off_at DESC, v.id DESC
          )
          UPDATE verifywise.mrm_validations target
-            SET next_due = latest.signed_off_at + make_interval(months =>
-                  CASE mi.mrm_tier::text WHEN '1' THEN 12 WHEN '2' THEN 18 WHEN '3' THEN 24 END),
+            SET next_due = ((latest.signed_off_at AT TIME ZONE 'UTC') + make_interval(months =>
+                  CASE mi.mrm_tier::text WHEN '1' THEN 12 WHEN '2' THEN 18 WHEN '3' THEN 24 END))
+                  AT TIME ZONE 'UTC',
                 updated_at = now()
            FROM latest
            JOIN verifywise.model_inventories mi
