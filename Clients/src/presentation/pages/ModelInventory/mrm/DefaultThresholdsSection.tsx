@@ -187,9 +187,9 @@ const DefaultThresholdsSection = ({ onError, onSuccess }: DefaultThresholdsSecti
   return (
     <Box>
       <Typography sx={mrmSectionIntroStyle}>
-        Thresholds VerifyWise evaluates ingested metrics against. Five shapes cover the common
-        cases: floor (≥), above (&gt;), ceiling (≤), below (&lt;) and band (a min–max the value must
-        stay inside). A breach raises an alert and can flag the model for revalidation.
+        The limits each metric is checked against. A threshold can be a minimum (≥ or &gt;), a
+        maximum (≤ or &lt;) or a range the value must remain inside. A breach raises an alert. It
+        can also flag the model for revalidation.
       </Typography>
 
       <Box sx={{ display: "flex", justifyContent: "flex-end", marginBottom: "16px" }}>
@@ -266,7 +266,7 @@ const DefaultThresholdsSection = ({ onError, onSuccess }: DefaultThresholdsSecti
         isOpen={isOpen}
         onClose={close}
         title={editing ? "Edit threshold" : "Add threshold"}
-        description="Set the metric, shape and severity VerifyWise evaluates ingested points against."
+        description="Choose the metric, the limit and the severity of a breach. Values from your pipeline are checked against it."
         onSubmit={handleSubmit}
         submitButtonText="Save"
         isSubmitting={createThreshold.isPending || updateThreshold.isPending}

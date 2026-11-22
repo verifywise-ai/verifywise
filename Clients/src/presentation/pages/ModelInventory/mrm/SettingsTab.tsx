@@ -96,10 +96,13 @@ const sectionFromSlug = (slug: string | undefined): (typeof SECTION_ITEMS)[numbe
 const TIERING_RULES = [
   {
     tier: "Tier 1",
-    cadence: "Full independent validation + continuous monitoring · annual revalidation",
+    cadence: "Full independent validation with continuous monitoring. Revalidated every 12 months.",
   },
-  { tier: "Tier 2", cadence: "Standard validation + periodic monitoring · 18-month cycle" },
-  { tier: "Tier 3", cadence: "Lightweight review · biennial revalidation" },
+  {
+    tier: "Tier 2",
+    cadence: "Standard validation with periodic monitoring. Revalidated every 18 months.",
+  },
+  { tier: "Tier 3", cadence: "A lighter review. Revalidated every 24 months." },
 ];
 
 const RolesSection = ({ users, onError, onSuccess }: SettingsTabProps) => {
@@ -175,8 +178,8 @@ const RolesSection = ({ users, onError, onSuccess }: SettingsTabProps) => {
   return (
     <Box>
       <Typography sx={mrmSectionIntroStyle}>
-        Assign the people accountable for each model. The validator must be independent — they
-        cannot also be the developer.
+        Choose who is responsible for each model. The validator must be independent, so they
+        can&apos;t also be the model&apos;s developer.
       </Typography>
 
       <Box sx={{ maxWidth: "360px", marginBottom: "24px" }}>
@@ -248,8 +251,8 @@ const RolesSection = ({ users, onError, onSuccess }: SettingsTabProps) => {
 const TieringRulesSection = () => (
   <Box>
     <Typography sx={mrmSectionIntroStyle}>
-      The tier drives revalidation cadence and the depth of oversight. Tier assignment is manual in
-      this release — set each model&apos;s tier on the Tiering sub-tab.
+      What each tier means for validation depth and revalidation frequency. Assign tiers on the
+      Tiering tab.
     </Typography>
 
     <TableContainer sx={mrmTableContainerStyle}>

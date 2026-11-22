@@ -1,6 +1,7 @@
 import { getAllOrganizationsQuery } from "../../../utils/organization.utils";
 import {
   getDueRevalidationsQuery,
+  getLapsedScheduledReviewsQuery,
   triggerRevalidation,
 } from "../../../utils/mrmRevalidation.utils";
 import { notifyRevalidationDue } from "../../../utils/mrmAlerts.utils";
@@ -74,7 +75,61 @@ export async function runRevalidationSweep(
     }
   }
 
-  return { organization_id: organizationId, due: due.length, opened, annotated };
+  // Periodic reviews that came due since the last sign-off: open the next
+  // validation, dated to the missed due date so it counts as overdue at once,
+  // and send the overdue alert. When a validation with no due date is already
+  // open (breach, tier increase, change or a manual start), annotate it and
+  // give it the missed due date instead. This runs after the loop above so a
+  // review opened here is not annotated twice on the same run.
+  const lapsed = await getLapsedScheduledReviewsQuery(organizationId, now);
+  for (const row of lapsed) {
+    try {
+      const result = await triggerRevalidation(
+        organizationId,
+        row.model_inventory_id,
+        MrmRevalidationTriggerSource.SCHEDULED,
+        "scheduled revalidation due",
+        { next_due: row.next_due, swept_at: now.toISOString() },
+        undefined,
+        { next_due: row.next_due },
+      );
+      if (result.created_validation) {
+        opened += 1;
+      } else {
+        annotated += 1;
+      }
+      // Alert only for a validation this run opened. An annotated open
+      // validation now carries the missed due date, so the first loop sends its
+      // one overdue alert on a later run if it is still not started.
+      if (result.created_validation && result.validation_id != null) {
+        try {
+          await notifyRevalidationDue(
+            organizationId,
+            row.model_inventory_id,
+            result.validation_id,
+            row.next_due,
+          );
+        } catch (error) {
+          logger.error(
+            `❌ Overdue-validation alert failed for org ${organizationId} model ${row.model_inventory_id}:`,
+            error,
+          );
+        }
+      }
+    } catch (error) {
+      logger.error(
+        `❌ Scheduled revalidation failed for org ${organizationId} model ${row.model_inventory_id}:`,
+        error,
+      );
+    }
+  }
+
+  return {
+    organization_id: organizationId,
+    due: due.length + lapsed.length,
+    opened,
+    annotated,
+  };
 }
 
 /**

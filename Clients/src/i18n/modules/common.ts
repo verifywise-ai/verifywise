@@ -114,16 +114,16 @@ export const de: Record<string, string> = {
   "Notify only": "Nur benachrichtigen",
   "Threshold": "Schwellenwert",
   "Token name": "Token-Name",
-  "Who hears about a breach. When an ingested metric breaches its threshold, VerifyWise notifies the people assigned to the model's MRM roles, plus any additional recipients configured below. Email delivery and automatic findings are off until you enable them here.":
-    "Wer von einem Verstoß erfährt. Wenn eine erfasste Metrik ihren Schwellenwert verletzt, benachrichtigt VerifyWise die den MRM-Rollen des Modells zugewiesenen Personen sowie alle unten konfigurierten zusätzlichen Empfänger. E-Mail-Versand und automatische Feststellungen sind deaktiviert, bis Sie sie hier aktivieren.",
+  "Who hears about a breach. VerifyWise notifies the people in the model's MRM roles, plus any extra recipients you add here. Email alerts and automatic findings are off until you turn them on.":
+    "Wer von einem Verstoß erfährt. VerifyWise benachrichtigt die Personen in den MRM-Rollen des Modells sowie alle zusätzlichen Empfänger, die Sie hier hinzufügen. E-Mail-Benachrichtigungen und automatische Feststellungen sind deaktiviert, bis Sie sie einschalten.",
   "Notifications are delivered in-app, and by email when email alerts are enabled. A threshold set to notify and flag for revalidation also marks the model as due for a fresh validation.":
     "Benachrichtigungen werden in der App zugestellt und per E-Mail, wenn E-Mail-Benachrichtigungen aktiviert sind. Ein Schwellenwert mit Benachrichtigung und Revalidierungs-Kennzeichnung markiert das Modell zusätzlich als fällig für eine neue Validierung.",
   "Developer": "Entwickler",
   "Change": "Änderung",
   "Scheduled": "Geplant",
   "Record the validator": "Erfassen Sie den Validator",
-  "Benign monitoring points older than the retention window are removed by a daily job. Breach and evaluation history is never deleted.":
-    "Unauffällige Überwachungspunkte, die älter als das Aufbewahrungsfenster sind, werden durch einen täglichen Job entfernt. Verstoß- und Bewertungshistorie wird nie gelöscht.",
+  "A daily job deletes routine metric values older than this window. Breaches and their evaluations are kept permanently.":
+    "Ein täglicher Job löscht unauffällige Metrikwerte, die älter als dieser Zeitraum sind. Verstöße und ihre Bewertungen werden dauerhaft aufbewahrt.",
   "Invite people and set each member's role. Admins manage the whole workspace and its settings. Editors can create and edit governance records. Reviewers can review and approve or reject. Auditors have read-only access.":
     "Laden Sie Personen ein und legen Sie die Rolle jedes Mitglieds fest. Admins verwalten den gesamten Arbeitsbereich und seine Einstellungen. Editoren können Governance-Datensätze erstellen und bearbeiten. Reviewer können prüfen und genehmigen oder ablehnen. Auditoren haben nur Lesezugriff.",
   "App details": "App-Details",
@@ -4783,16 +4783,16 @@ export const fr: Record<string, string> = {
   "Notify only": "Notifier uniquement",
   "Threshold": "Seuil",
   "Token name": "Nom du jeton",
-  "Who hears about a breach. When an ingested metric breaches its threshold, VerifyWise notifies the people assigned to the model's MRM roles, plus any additional recipients configured below. Email delivery and automatic findings are off until you enable them here.":
-    "Qui est informé d'un dépassement. Lorsqu'une métrique ingérée dépasse son seuil, VerifyWise notifie les personnes affectées aux rôles MRM du modèle, ainsi que les destinataires supplémentaires configurés ci-dessous. L'envoi d'e-mails et les constats automatiques sont désactivés tant que vous ne les activez pas ici.",
+  "Who hears about a breach. VerifyWise notifies the people in the model's MRM roles, plus any extra recipients you add here. Email alerts and automatic findings are off until you turn them on.":
+    "Qui est informé d'un dépassement. VerifyWise notifie les personnes affectées aux rôles MRM du modèle, ainsi que les destinataires supplémentaires que vous ajoutez ici. Les alertes par e-mail et les constats automatiques sont désactivés tant que vous ne les activez pas.",
   "Notifications are delivered in-app, and by email when email alerts are enabled. A threshold set to notify and flag for revalidation also marks the model as due for a fresh validation.":
     "Les notifications sont envoyées dans l'application, et par e-mail lorsque les alertes par e-mail sont activées. Un seuil configuré pour notifier et signaler une revalidation marque également le modèle comme devant faire l'objet d'une nouvelle validation.",
   "Developer": "Développeur",
   "Change": "Changement",
   "Scheduled": "Planifié",
   "Record the validator": "Enregistrez le validateur",
-  "Benign monitoring points older than the retention window are removed by a daily job. Breach and evaluation history is never deleted.":
-    "Les points de surveillance sans incident plus anciens que la fenêtre de rétention sont supprimés par une tâche quotidienne. L'historique des dépassements et des évaluations n'est jamais supprimé.",
+  "A daily job deletes routine metric values older than this window. Breaches and their evaluations are kept permanently.":
+    "Une tâche quotidienne supprime les valeurs de métriques sans incident plus anciennes que cette période. Les dépassements et leurs évaluations sont conservés définitivement.",
   "Invite people and set each member's role. Admins manage the whole workspace and its settings. Editors can create and edit governance records. Reviewers can review and approve or reject. Auditors have read-only access.":
     "Invitez des personnes et définissez le rôle de chaque membre. Les administrateurs gèrent l'ensemble de l'espace de travail et ses paramètres. Les éditeurs peuvent créer et modifier les enregistrements de gouvernance. Les relecteurs peuvent examiner et approuver ou rejeter. Les auditeurs disposent d'un accès en lecture seule.",
   "App details": "Détails de l'application",
@@ -9457,16 +9457,16 @@ export const es: Record<string, string> = {
   "Notify only": "Solo notificar",
   "Threshold": "Umbral",
   "Token name": "Nombre del token",
-  "Who hears about a breach. When an ingested metric breaches its threshold, VerifyWise notifies the people assigned to the model's MRM roles, plus any additional recipients configured below. Email delivery and automatic findings are off until you enable them here.":
-    "Quién se entera de un incumplimiento. Cuando una métrica ingerida supera su umbral, VerifyWise notifica a las personas asignadas a los roles MRM del modelo, además de los destinatarios adicionales configurados abajo. El envío de correos y los hallazgos automáticos están desactivados hasta que los habilite aquí.",
+  "Who hears about a breach. VerifyWise notifies the people in the model's MRM roles, plus any extra recipients you add here. Email alerts and automatic findings are off until you turn them on.":
+    "Quién se entera de un incumplimiento. VerifyWise notifica a las personas de los roles MRM del modelo, además de los destinatarios adicionales que añada aquí. Las alertas por correo y los hallazgos automáticos están desactivados hasta que los active.",
   "Notifications are delivered in-app, and by email when email alerts are enabled. A threshold set to notify and flag for revalidation also marks the model as due for a fresh validation.":
     "Las notificaciones se entregan en la aplicación y por correo electrónico cuando las alertas por correo están habilitadas. Un umbral configurado para notificar y marcar para revalidación también marca el modelo como pendiente de una nueva validación.",
   "Developer": "Desarrollador",
   "Change": "Cambio",
   "Scheduled": "Programado",
   "Record the validator": "Registre al validador",
-  "Benign monitoring points older than the retention window are removed by a daily job. Breach and evaluation history is never deleted.":
-    "Los puntos de monitoreo sin incidencias anteriores a la ventana de retención se eliminan mediante una tarea diaria. El historial de incumplimientos y evaluaciones nunca se elimina.",
+  "A daily job deletes routine metric values older than this window. Breaches and their evaluations are kept permanently.":
+    "Una tarea diaria elimina los valores de métricas sin incidencias anteriores a este periodo. Los incumplimientos y sus evaluaciones se conservan de forma permanente.",
   "Invite people and set each member's role. Admins manage the whole workspace and its settings. Editors can create and edit governance records. Reviewers can review and approve or reject. Auditors have read-only access.":
     "Invita a personas y asigna el rol de cada miembro. Los administradores gestionan todo el espacio de trabajo y su configuración. Los editores pueden crear y editar registros de gobernanza. Los revisores pueden revisar y aprobar o rechazar. Los auditores tienen acceso de solo lectura.",
   "App details": "Detalles de la aplicación",
