@@ -43,6 +43,7 @@ export const de: Record<string, string> = {
     "Die zu duplizierende Vorlage konnte nicht geladen werden.",
   "Format:": "Format:",
   "Frameworks:": "Rahmenwerke:",
+  "Framework requirements": "Framework-Anforderungen",
   "Hour": "Stunde",
   "Leave empty to include every framework in scope.":
     "Leer lassen, um alle Rahmenwerke im Umfang einzuschließen.",
@@ -111,6 +112,7 @@ export const fr: Record<string, string> = {
   "Failed to load the template to duplicate.": "Échec du chargement du modèle à dupliquer.",
   "Format:": "Format :",
   "Frameworks:": "Référentiels :",
+  "Framework requirements": "Exigences du référentiel",
   "Hour": "Heure",
   "Leave empty to include every framework in scope.":
     "Laissez vide pour inclure tous les référentiels de la portée.",
@@ -178,6 +180,7 @@ export const es: Record<string, string> = {
     "No se pudo cargar la plantilla que se va a duplicar.",
   "Format:": "Formato:",
   "Frameworks:": "Marcos:",
+  "Framework requirements": "Requisitos del marco",
   "Hour": "Hora",
   "Leave empty to include every framework in scope.":
     "Déjelo vacío para incluir todos los marcos del alcance.",
