@@ -1,8 +1,27 @@
-import { getAllTrainingRegistarQuery } from "../../utils/trainingRegistar.utils";
+import {
+  getAllTrainingRegistarQuery,
+  getTrainingRegistarByIdQuery,
+} from "../../utils/trainingRegistar.utils";
 import logger from "../../utils/logger/fileLogger";
 import { createWriteToolFn } from "../confirmation/createWriteTool";
-import { sequelize } from "../../database/db";
-import { QueryTypes } from "sequelize";
+import {
+  assignTraining,
+  checkTrainingAssignment,
+  personName,
+} from "../../services/trainingAssignment.service";
+import {
+  createTrainingRecord,
+  deleteTrainingRecord,
+  updateTrainingRecord,
+  type TrainingRecordInput,
+} from "../../services/trainingRecord.service";
+import { getAssignableTrainingQuery } from "../../utils/trainingAssignment.utils";
+import { getUserByIdQuery } from "../../utils/user.utils";
+import { userHasPermission } from "../../utils/userPermission.utils";
+import { translate } from "../../utils/i18n.utils";
+import { parseIdValue } from "../../utils/validations/trainingAssignmentValidation.utils";
+import type { PermissionKey } from "../../config/rolePermissions.config";
+import { actingRequesterId } from "./actingRequester";
 
 export interface FetchTrainingRecordsParams {
   status?: "Planned" | "In Progress" | "Completed";
@@ -154,32 +173,124 @@ const getTrainingExecutiveSummary = async (
 };
 
 // --- Write tools (Human Confirmation Flow) ---
+//
+// Each write runs as the user who asked (else the approver), with the console's
+// permission, through the console's own services. Its checks run once before
+// the approval is requested, so nobody is asked to approve a call that cannot
+// run, and again when it executes.
+
+/** A training record has no due date: only its assignments do. */
+const NO_DUE_DATE_ON_RECORDS =
+  "Training records have no due date; set it on the assignment (agent_assign_training_to_user)";
+
+/** Advisor parameter → training record field (the console's names). */
+const RECORD_FIELDS: Record<string, keyof TrainingRecordInput> = {
+  title: "training_name",
+  description: "description",
+  provider: "provider",
+  department: "department",
+  status: "status",
+  duration: "duration",
+};
+
+const recordInput = (params: Record<string, unknown>): TrainingRecordInput => {
+  const input: Record<string, unknown> = {};
+  for (const [param, field] of Object.entries(RECORD_FIELDS)) {
+    const value = params[param];
+    if (value !== undefined && value !== null) input[field] = value;
+  }
+  return input as TrainingRecordInput;
+};
+
+const ROLE_REFUSAL: Record<string, string> = {
+  "training.edit": "your role does not allow editing training",
+  "training.admin": "your role does not allow deleting training",
+};
+
+type RecordWrite = "create" | "update" | "delete";
+
+const RECORD_PERMISSION: Record<RecordWrite, PermissionKey> = {
+  create: "training.edit",
+  update: "training.edit",
+  // The console's gate for DELETE /api/training/:id.
+  delete: "training.admin",
+};
+
+type RecordRequest =
+  { ok: false; message: string } | { ok: true; id: number; input: TrainingRecordInput };
+
+const refused = (message: string): RecordRequest => ({ ok: false, message });
+
+/**
+ * The record write the tool asks for, or why it cannot run: a valid id (update
+ * and delete) for a record in this organization, no due date (records have
+ * none, including in an approval stored before they stopped taking one), a
+ * title to create, at least one field to update, and the console's permission
+ * held by the acting user. Run before the approval is requested and again when
+ * the write executes.
+ */
+async function recordRequest(
+  write: RecordWrite,
+  params: Record<string, unknown>,
+  organizationId: number,
+): Promise<RecordRequest> {
+  let id = 0;
+  let notDone = "Training record was not created";
+  if (write !== "create") {
+    const parsed = parseIdValue(params.training_id, "Training ID must be a positive integer");
+    if (!parsed.ok) return refused(parsed.message);
+    id = parsed.value;
+    notDone = `Training record #${id} was not ${write}d`;
+  }
+  if (params.due_date !== undefined && params.due_date !== null && params.due_date !== "") {
+    return refused(`${notDone}: ${NO_DUE_DATE_ON_RECORDS}`);
+  }
+
+  const input = recordInput(params);
+  if (
+    write === "create" &&
+    !(typeof input.training_name === "string" && input.training_name.trim())
+  ) {
+    return refused(`${notDone}: a title is required`);
+  }
+  if (write === "update" && Object.keys(input).length === 0) return refused("No fields to update");
+
+  const permission = RECORD_PERMISSION[write];
+  if (!(await userHasPermission(organizationId, actingRequesterId(params), permission))) {
+    return refused(`${notDone}: ${ROLE_REFUSAL[permission]}.`);
+  }
+  if (write !== "create" && !(await getTrainingRegistarByIdQuery(id, organizationId))) {
+    return refused(`Training record #${id} not found`);
+  }
+  return { ok: true, id, input };
+}
+
+const precheckRecord =
+  (write: RecordWrite) => async (params: Record<string, unknown>, organizationId: number) => {
+    const request = await recordRequest(write, params, organizationId);
+    return request.ok ? null : request.message;
+  };
+
+const actorFor = (params: Record<string, unknown>, organizationId: number) => ({
+  userId: actingRequesterId(params),
+  organizationId,
+});
 
 const agentCreateTrainingRecord = createWriteToolFn({
   toolName: "agent_create_training_record",
   warningLevel: "warning",
   descriptionFn: (params) =>
     `Create training record "${params.title}"${params.department ? ` for ${params.department} department` : ""}`,
+  precheckFn: precheckRecord("create"),
   executeFn: async (params, organizationId) => {
-    const result = await sequelize.query(
-      `INSERT INTO trainingregistar (
-        organization_id, training_name, description, provider, department, status, duration
-      ) VALUES (
-        :organization_id, :training_name, :description, :provider, :department, :status, :duration
-      ) RETURNING *`,
-      {
-        replacements: {
-          organization_id: organizationId,
-          training_name: params.title as string,
-          description: (params.description as string) || null,
-          provider: (params.provider as string) || null,
-          department: (params.department as string) || null,
-          status: (params.status as string) || "Planned",
-          duration: (params.due_date as string) || null,
-        },
-      },
+    const request = await recordRequest("create", params, organizationId);
+    if (!request.ok) return { success: false, message: request.message };
+
+    const created = await createTrainingRecord(
+      { status: "Planned", ...request.input },
+      actorFor(params, organizationId),
     );
-    const created = (result as any)[0]?.[0] || (result as any)[0];
+    if (!created) return { success: false, message: "Training record was not created" };
     return { success: true, training_record: created };
   },
 });
@@ -189,78 +300,113 @@ const agentUpdateTrainingRecord = createWriteToolFn({
   warningLevel: "warning",
   descriptionFn: (params) =>
     `Update training record #${params.training_id}${params.title ? ` — rename to "${params.title}"` : ""}`,
+  precheckFn: precheckRecord("update"),
   executeFn: async (params, organizationId) => {
-    const fields: Record<string, { column: string; value: unknown }> = {
-      title: { column: "training_name", value: params.title },
-      description: { column: "description", value: params.description },
-      provider: { column: "provider", value: params.provider },
-      department: { column: "department", value: params.department },
-      status: { column: "status", value: params.status },
-      due_date: { column: "duration", value: params.due_date },
-    };
+    const request = await recordRequest("update", params, organizationId);
+    if (!request.ok) return { success: false, message: request.message };
 
-    const setClauses: string[] = [];
-    const replacements: Record<string, unknown> = {
-      organizationId,
-      id: params.training_id,
-    };
-
-    for (const [key, { column, value }] of Object.entries(fields)) {
-      if (value !== undefined && value !== null) {
-        setClauses.push(`${column} = :${key}`);
-        replacements[key] = value;
-      }
-    }
-
-    if (setClauses.length === 0) {
-      return { success: false, message: "No fields to update" };
-    }
-
-    const result = await sequelize.query(
-      `UPDATE trainingregistar SET ${setClauses.join(", ")} WHERE organization_id = :organizationId AND id = :id RETURNING *`,
-      { replacements },
+    const result = await updateTrainingRecord(
+      request.id,
+      request.input,
+      actorFor(params, organizationId),
     );
-    const updated = (result as any)[0]?.[0] || (result as any)[0];
-    return { success: true, training_record: updated };
+    if (!result.ok) {
+      return {
+        success: false,
+        message:
+          result.reason === "no_fields"
+            ? "No fields to update"
+            : `Training record #${request.id} not found`,
+      };
+    }
+    return { success: true, training_record: result.record };
   },
 });
 
+/**
+ * The assignment the tool asks for, or why it cannot be made: ids given as
+ * numbers or digits, and training.edit held by the acting user.
+ */
+async function assignmentRequest(
+  params: Record<string, unknown>,
+  organizationId: number,
+): Promise<
+  { ok: false; message: string } | { ok: true; actorId: number; input: Record<string, unknown> }
+> {
+  const trainingId = parseIdValue(params.training_id, "Training ID must be a positive integer");
+  if (!trainingId.ok) return { ok: false, message: trainingId.message };
+  const userId = parseIdValue(params.user_id, "User ID must be a positive integer");
+  if (!userId.ok) return { ok: false, message: userId.message };
+
+  // The console's gate (POST /api/v1/training/assignments): training.edit,
+  // held by the user who asked, else the approver. No user: refused.
+  const actorId = actingRequesterId(params);
+  if (!(await userHasPermission(organizationId, actorId, "training.edit"))) {
+    return {
+      ok: false,
+      message: `Training #${trainingId.value} was not assigned: ${ROLE_REFUSAL["training.edit"]}.`,
+    };
+  }
+  return {
+    ok: true,
+    actorId: actorId!,
+    input: { training_id: trainingId.value, user_ids: [userId.value], due_date: params.due_date },
+  };
+}
+
 const agentAssignTrainingToUser = createWriteToolFn({
   toolName: "agent_assign_training_to_user",
-  warningLevel: "info",
-  descriptionFn: (params) => `Assign training #${params.training_id} to user #${params.user_id}`,
+  // Emails the assignee, so a person confirms it first.
+  warningLevel: "warning",
+  descriptionFn: async (params, organizationId) => {
+    const trainingId = parseIdValue(params.training_id, "");
+    const userId = parseIdValue(params.user_id, "");
+    const training = trainingId.ok
+      ? await getAssignableTrainingQuery(trainingId.value, organizationId)
+      : null;
+    const user = userId.ok ? await getUserByIdQuery(userId.value, null, organizationId) : null;
+    const what = training ? `"${training.training_name}"` : `training #${params.training_id}`;
+    const who = user
+      ? `${personName(user.name, user.surname)} (${user.email})`
+      : `user #${params.user_id}`;
+    const due =
+      typeof params.due_date === "string" && params.due_date ? `, due ${params.due_date}` : "";
+    return `Assign ${what} to ${who}${due}`;
+  },
+  precheckFn: async (params, organizationId) => {
+    const request = await assignmentRequest(params, organizationId);
+    if (!request.ok) return request.message;
+    // The console's checks: due date, the training in this organization, the
+    // person a member of it.
+    const checked = await checkTrainingAssignment(request.input, organizationId);
+    return checked.ok ? null : translate("en", checked.message, checked.vars);
+  },
   executeFn: async (params, organizationId) => {
-    // Check if assignment already exists
-    const existing = await sequelize.query(
-      `SELECT id FROM training_assignments WHERE organization_id = :organizationId AND training_id = :training_id AND user_id = :user_id`,
-      {
-        replacements: {
-          organizationId,
-          training_id: params.training_id,
-          user_id: params.user_id,
-        },
-        type: QueryTypes.SELECT,
-      },
-    );
+    const request = await assignmentRequest(params, organizationId);
+    if (!request.ok) return { success: false, message: request.message };
 
-    if ((existing as any[]).length > 0) {
-      return { success: false, message: "User is already assigned to this training" };
+    // The console's own path: validation, organization and membership checks,
+    // change history and the assignee's notification.
+    const result = await assignTraining(request.input, {
+      userId: request.actorId,
+      organizationId,
+    });
+    if (!result.ok) {
+      return { success: false, message: translate("en", result.message, result.vars) };
     }
-
-    await sequelize.query(
-      `INSERT INTO training_assignments (organization_id, training_id, user_id, assigned_at)
-       VALUES (:organizationId, :training_id, :user_id, NOW())`,
-      {
-        replacements: {
-          organizationId,
-          training_id: params.training_id,
-          user_id: params.user_id,
-        },
-      },
-    );
+    const [assignment] = result.created;
+    const trainingId = request.input.training_id;
+    const userId = (request.input.user_ids as number[])[0];
+    if (!assignment) {
+      return {
+        success: false,
+        message: `User #${userId} is already assigned to training #${trainingId}`,
+      };
+    }
     return {
       success: true,
-      message: `Training #${params.training_id} assigned to user #${params.user_id}`,
+      message: `Training #${trainingId} assigned to user #${userId}, due ${assignment.due_date}`,
+      assignment,
     };
   },
 });
@@ -269,15 +415,17 @@ const agentDeleteTrainingRecord = createWriteToolFn({
   toolName: "agent_delete_training_record",
   warningLevel: "danger",
   descriptionFn: (params) => `Permanently delete training record #${params.training_id}`,
+  precheckFn: precheckRecord("delete"),
   executeFn: async (params, organizationId) => {
-    const result = await sequelize.query(
-      `DELETE FROM trainingregistar WHERE organization_id = :organizationId AND id = :id RETURNING id, training_name`,
-      {
-        replacements: { organizationId, id: params.training_id },
-      },
-    );
-    const deleted = (result as any)[0]?.[0] || (result as any)[0];
-    return { success: true, deleted_training_record: deleted };
+    const request = await recordRequest("delete", params, organizationId);
+    if (!request.ok) return { success: false, message: request.message };
+
+    const deleted = await deleteTrainingRecord(request.id, actorFor(params, organizationId));
+    if (!deleted) return { success: false, message: `Training record #${request.id} not found` };
+    return {
+      success: true,
+      deleted_training_record: { id: request.id, training_name: deleted.training_name },
+    };
   },
 });
 

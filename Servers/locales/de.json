@@ -1398,6 +1398,7 @@
   "User does not belong to the selected organization": "Der Benutzer gehört nicht zur ausgewählten Organisation",
   "User does not belong to this organization": "Benutzer gehört nicht zu dieser Organisation",
   "user email, name, and roleId are required": "email, name und roleId des Benutzers sind erforderlich",
+  "User ID must be a positive integer": "Die Benutzer-ID muss eine positive ganze Zahl sein",
   "User IDs must be a non-empty list of positive integers": "Die Benutzer-IDs müssen eine nicht leere Liste positiver ganzer Zahlen sein",
   "User is already a member of this organization": "Der Benutzer ist bereits Mitglied dieser Organisation",
   "User is already a member of this project": "Benutzer ist bereits Mitglied dieses Projekts",
