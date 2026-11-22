@@ -67,6 +67,9 @@ export const FRAMEWORK_IDS = {
   NIST_AI_RMF: 4,
 } as const;
 
+/** Framework ids from this one up are the bundled frameworks (SOC 2, GDPR, ...). */
+export const FIRST_BUNDLED_FRAMEWORK_ID = 5;
+
 /**
  * Get sections available for a specific framework and report type
  */
@@ -86,9 +89,13 @@ export function getAvailableSections(
           (s) => s.id !== "vendorRisks" && s.id !== "modelRisks",
         );
       }
-      // Organizational reports don't have Compliance & Governance sections
+      // Organizational reports have no Compliance & Governance sections, except
+      // the framework requirements section of a bundled framework (many of which
+      // are organizational).
       if (group.id === "complianceGovernance") {
-        filteredSections = [];
+        filteredSections = filteredSections.filter(
+          (s) => s.id === "frameworkRequirements" && frameworkId >= FIRST_BUNDLED_FRAMEWORK_ID,
+        );
       }
     }
 
@@ -109,8 +116,7 @@ export function getAvailableSections(
             // Only for NIST AI RMF (framework 4)
             return frameworkId === FRAMEWORK_IDS.NIST_AI_RMF;
           case "frameworkRequirements":
-            // Only for bundled frameworks (ids 5 and up)
-            return frameworkId >= 5;
+            return frameworkId >= FIRST_BUNDLED_FRAMEWORK_ID;
           default:
             return true;
         }
