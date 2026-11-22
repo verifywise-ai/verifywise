@@ -242,7 +242,7 @@ export async function createNewIncident(req: Request, res: Response) {
       },
       req.organizationId!,
       transaction,
-      { lock: true },
+      { lock: true, lockOrganization: true },
     );
     if (invalidRefs.length > 0) {
       await transaction.rollback();

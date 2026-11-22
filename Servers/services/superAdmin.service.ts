@@ -22,6 +22,7 @@ import {
   getUserByEmailQuery,
   getUserByIdQuery,
   isLastAdminQuery,
+  lockUsersForDeletionQuery,
   removeUserFromOrganizationQuery,
 } from "../utils/user.utils";
 import {
@@ -165,6 +166,13 @@ export async function deleteOrganization(
 ): Promise<{ usersRemoved: number }> {
   const transaction = await sequelize.transaction();
   try {
+    // The organization row first: an incident create locks it before the
+    // owner and membership rows the member removals below lock.
+    await sequelize.query(`SELECT id FROM organizations WHERE id = :organizationId FOR UPDATE`, {
+      replacements: { organizationId },
+      type: QueryTypes.SELECT,
+      transaction,
+    });
     const users = await sequelize.query<{ id: number }>(
       `SELECT user_id AS id FROM organization_members WHERE organization_id = :organizationId`,
       { replacements: { organizationId }, type: QueryTypes.SELECT, transaction },
@@ -426,6 +434,9 @@ export async function removeUserFromOrganization(
 ): Promise<{ removed: true; userId: number; accountDeleted: boolean }> {
   const transaction = await sequelize.transaction();
   try {
+    // The users row before the Admin membership locks: the removal may delete
+    // the account (see lockUsersForDeletionQuery).
+    await lockUsersForDeletionQuery([userId], transaction);
     if (await isLastAdminQuery(organizationId, userId, transaction)) {
       throw new ConflictException(t("The organization must keep at least one Admin"));
     }
@@ -469,6 +480,8 @@ export async function removeUserById(
     // In organization id order, so the Admin row locks are always taken in
     // the same order as any concurrent check.
     const organizationIds = organizations.map((o) => o.organization_id).sort((a, b) => a - b);
+    // The users row before the Admin membership locks below.
+    await lockUsersForDeletionQuery([userId], transaction);
     for (const organizationId of organizationIds) {
       if (await isLastAdminQuery(organizationId, userId, transaction)) {
         throw new ConflictException(t("The organization must keep at least one Admin"));

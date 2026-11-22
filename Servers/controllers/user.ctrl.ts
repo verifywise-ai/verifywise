@@ -29,6 +29,7 @@ import {
   checkUserExistsQuery,
   createNewUserQuery,
   isLastAdminQuery,
+  lockUsersForDeletionQuery,
   removeUserFromOrganizationQuery,
   deleteUserProfilePhotoQuery,
   getAllUsersQuery,
@@ -1816,6 +1817,9 @@ async function deleteUserById(req: Request, res: Response) {
           );
       }
 
+      // The users row before the Admin membership locks: the removal may
+      // delete the account (see lockUsersForDeletionQuery).
+      await lockUsersForDeletionQuery([id], transaction);
       if (await isLastAdminQuery(req.organizationId!, id, transaction)) {
         logStructured(
           "error",

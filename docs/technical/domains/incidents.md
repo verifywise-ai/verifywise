@@ -178,23 +178,51 @@ POST /aiIncidentManagement/
 }
 ```
 
-### Reference checks on create
+### Reference checks on create and update
 
 Field validation (`validateCompleteIncidentCreation`) runs first, outside any
 transaction. The references (`project_id`, `model_inventory_id`, and
 `assignee_id` against `organization_members`) are then checked by
-`validateIncidentReferences(..., transaction, { lock: true })` on the create
-transaction, before the insert. With `lock` the rows are read `FOR SHARE`: a
-use case or model deleted, or an owner removed from the organization, by
-another transaction either waits until the create commits (for a delete, the
-FK's `ON DELETE SET NULL` then clears the new incident's reference) or, if it
-got there first, makes the create wait and
-then fail the check once it commits. The answer is the usual 400
-(`message: "Incident creation validation failed"`, one
+`validateIncidentReferences` on the write's transaction, before the insert or
+update, with locking reads (`FOR KEY SHARE`, the lock the write's own FK
+checks take; it blocks a DELETE or key change of the row, not a plain UPDATE
+such as a role change or a use case rename). `lock` needs a transaction:
+without one the helper throws, as does `findUsersNotInOrganization`.
+
+- **Create** (`{ lock: true, lockOrganization: true }`) locks every reference.
+- **Update** (`updateIncident`) locks only the references it sets to a new
+  value. A reference kept from the row is read without a lock: the update
+  already holds the incident row, and a delete of that use case or model
+  cascades (`ON DELETE SET NULL`) into the same row, so locking it would
+  deadlock.
+
+A use case or model deleted, or an owner removed from the organization or
+deleted, by another transaction either waits until the write commits (for a
+delete, the FK's `ON DELETE SET NULL` then clears the reference) or, if it got
+there first, makes the write wait and then fail the check once it commits.
+The answer is the usual 400 (`message: "Incident creation validation failed"`
+or `"Incident update validation failed"`, one
 `{ field, message: "<field> does not reference an entity in your organization", code: "INVALID_REFERENCE" }`
-per bad reference), never a 500 from the FK or an incident saved with a
-non-member owner. The update path checks references on its transaction too,
-but with plain reads (it locks only the incident row).
+per bad reference), never a 500 from the FK, a deadlock, or an incident saved
+with a non-member owner.
+
+**Lock order.** Locks are taken parent first, in the order the deleters take
+theirs, so no two of them wait on each other in a cycle:
+
+1. the organization row (create only; organization deletion,
+   `deleteOrganization` in `services/superAdmin.service.ts`, locks it
+   `FOR UPDATE` before it removes members);
+2. the owner's `users` row (every path that can delete an account locks it
+   `FOR UPDATE` first through `lockUsersForDeletionQuery`
+   (`utils/user.utils.ts`): `removeUserFromOrganizationQuery`,
+   `deleteUserAccountQuery`, `deleteDemoUsersQuery`, and, before their
+   `isLastAdminQuery` membership locks, `DELETE /users/:id`, the super admin's
+   member removal and `removeUserById`);
+3. the owner's `organization_members` row;
+4. the use case, then the model.
+
+`assignee_id` is `ON DELETE SET NULL` on `users`, so an account deleted after
+the create commits clears the new incident's owner.
 
 ## Incident Lifecycle
 
@@ -311,7 +339,10 @@ incidents status sync (`changedBySystem: true`, see
    `validateIncidentReferences` (FKs must belong to the organization; unchanged
    FKs come from the row; `''`, null and undefined mean "no reference" and are
    not looked up; anything that is not a positive integer is invalid and never
-   reaches SQL). Field validation errors are thrown before the reference
+   reaches SQL). References the update sets to a new value are read with a
+   lock, kept ones without (see
+   [Reference checks on create and update](#reference-checks-on-create-and-update)).
+   Field validation errors are thrown before the reference
    lookups run. Failures throw `IncidentUpdateValidationError`; the
    controller keeps its 400 body (`message: "Incident update validation failed"`,
    `errors: [{ field, message, code }]`).
