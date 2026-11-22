@@ -178,6 +178,24 @@ POST /aiIncidentManagement/
 }
 ```
 
+### Reference checks on create
+
+Field validation (`validateCompleteIncidentCreation`) runs first, outside any
+transaction. The references (`project_id`, `model_inventory_id`, and
+`assignee_id` against `organization_members`) are then checked by
+`validateIncidentReferences(..., transaction, { lock: true })` on the create
+transaction, before the insert. With `lock` the rows are read `FOR SHARE`: a
+use case or model deleted, or an owner removed from the organization, by
+another transaction either waits until the create commits (for a delete, the
+FK's `ON DELETE SET NULL` then clears the new incident's reference) or, if it
+got there first, makes the create wait and
+then fail the check once it commits. The answer is the usual 400
+(`message: "Incident creation validation failed"`, one
+`{ field, message: "<field> does not reference an entity in your organization", code: "INVALID_REFERENCE" }`
+per bad reference), never a 500 from the FK or an incident saved with a
+non-member owner. The update path checks references on its transaction too,
+but with plain reads (it locks only the incident row).
+
 ## Incident Lifecycle
 
 ### Status Workflow

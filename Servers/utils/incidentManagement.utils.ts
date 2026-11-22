@@ -479,6 +479,11 @@ export const archiveIncidentByIdQuery = async (
  * Verify that referenced entities (issue #4583 FKs) exist and belong to the
  * caller's organization. Prevents cross-org linkage (IDOR) that a bare FK
  * constraint cannot catch. Returns the list of invalid field names.
+ *
+ * With `lock`, the referenced rows (and the owner's membership) are read FOR
+ * SHARE on `transaction`: a concurrent delete or member removal either waits
+ * until that transaction ends or, if it got there first, makes the reference
+ * invalid once it commits.
  */
 export const validateIncidentReferences = async (
   refs: {
@@ -488,7 +493,9 @@ export const validateIncidentReferences = async (
   },
   organizationId: number,
   transaction?: Transaction,
+  { lock = false }: { lock?: boolean } = {},
 ): Promise<string[]> => {
+  const lockClause = lock ? " FOR SHARE" : "";
   const invalidFields: string[] = [];
   // A user's organizations live in organization_members (users has no
   // organization_id since the multi-organization migration); the other
@@ -518,12 +525,14 @@ export const validateIncidentReferences = async (
       continue;
     }
     if (check.table === "users") {
-      const notMembers = await findUsersNotInOrganization([id], organizationId, transaction);
+      const notMembers = await findUsersNotInOrganization([id], organizationId, transaction, {
+        lock,
+      });
       if (notMembers.length) invalidFields.push(check.field);
       continue;
     }
     const result = (await sequelize.query(
-      `SELECT id FROM ${check.table} WHERE id = :id AND organization_id = :organizationId`,
+      `SELECT id FROM ${check.table} WHERE id = :id AND organization_id = :organizationId${lockClause}`,
       { replacements: { id, organizationId }, transaction },
     )) as [Array<{ id: number }>, number];
     if (!result[0].length) invalidFields.push(check.field);

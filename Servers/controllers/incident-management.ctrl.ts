@@ -229,30 +229,36 @@ export async function createNewIncident(req: Request, res: Response) {
     );
   }
 
-  const invalidRefs = await validateIncidentReferences(
-    {
-      model_inventory_id: req.body.model_inventory_id,
-      project_id: req.body.project_id,
-      assignee_id: req.body.assignee_id,
-    },
-    req.organizationId!,
-  );
-  if (invalidRefs.length > 0) {
-    return res.status(400).json(
-      STATUS_CODE[400]({
-        status: "error",
-        message: "Incident creation validation failed",
-        errors: invalidRefs.map((field) => ({
-          field,
-          message: `${field} does not reference an entity in your organization`,
-          code: "INVALID_REFERENCE",
-        })),
-      }),
-    );
-  }
-
   const transaction = await sequelize.transaction();
   try {
+    // Checked on the create transaction with locking reads, so a referenced
+    // record deleted or an owner removed concurrently cannot slip in between
+    // the check and the insert.
+    const invalidRefs = await validateIncidentReferences(
+      {
+        model_inventory_id: req.body.model_inventory_id,
+        project_id: req.body.project_id,
+        assignee_id: req.body.assignee_id,
+      },
+      req.organizationId!,
+      transaction,
+      { lock: true },
+    );
+    if (invalidRefs.length > 0) {
+      await transaction.rollback();
+      return res.status(400).json(
+        STATUS_CODE[400]({
+          status: "error",
+          message: "Incident creation validation failed",
+          errors: invalidRefs.map((field) => ({
+            field,
+            message: `${field} does not reference an entity in your organization`,
+            code: "INVALID_REFERENCE",
+          })),
+        }),
+      );
+    }
+
     const incident = new AIIncidentManagementModel({
       ai_project: req.body.ai_project,
       model_inventory_id: req.body.model_inventory_id ?? null,

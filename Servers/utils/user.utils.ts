@@ -190,11 +190,17 @@ export const parseReferencedIds = (values: unknown[]): number[] | null => {
   return Array.from(ids);
 };
 
-/** Returns the ids in `userIds` that are not users of `organizationId` (invalid ids are ignored). */
+/**
+ * Returns the ids in `userIds` that are not users of `organizationId` (invalid ids are ignored).
+ *
+ * With `lock`, the memberships found are read FOR SHARE on `transaction`, so a
+ * concurrent removal waits until that transaction ends.
+ */
 export const findUsersNotInOrganization = async (
   userIds: number[],
   organizationId: number,
   transaction: Transaction | null = null,
+  { lock = false }: { lock?: boolean } = {},
 ): Promise<number[]> => {
   const unique = Array.from(new Set(userIds.filter((id) => Number.isInteger(id) && id > 0)));
   if (unique.length === 0) return [];
@@ -202,7 +208,7 @@ export const findUsersNotInOrganization = async (
   const rows = (await sequelize.query(
     `SELECT user_id AS id FROM organization_members
      WHERE organization_id = :organizationId
-       AND user_id IN (:userIds);`,
+       AND user_id IN (:userIds)${lock ? " FOR SHARE" : ""};`,
     {
       replacements: { organizationId, userIds: unique },
       type: QueryTypes.SELECT,
