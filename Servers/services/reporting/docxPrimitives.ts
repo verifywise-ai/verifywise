@@ -7,6 +7,7 @@
 import {
   AlignmentType,
   BorderStyle,
+  convertInchesToTwip,
   HeadingLevel,
   Paragraph,
   ShadingType,
@@ -261,6 +262,21 @@ export function createEmptyState(message: string): Paragraph {
         color: COLORS.textSecondary,
         italics: true,
       }),
+    ],
+  });
+}
+
+/** A bulleted line: an optional bold label, then the text. */
+export function createBullet(text: string, label?: string): Paragraph {
+  return new Paragraph({
+    spacing: { before: 60, after: 60 },
+    indent: { left: convertInchesToTwip(0.3) },
+    bullet: { level: 0 },
+    children: [
+      ...(label
+        ? [new TextRun({ text: label, bold: true, size: 20, color: COLORS.textPrimary })]
+        : []),
+      new TextRun({ text, size: 20, color: COLORS.textPrimary }),
     ],
   });
 }

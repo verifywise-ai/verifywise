@@ -186,6 +186,8 @@ export interface E23FixtureOptions {
   /** Empty inventory. */
   noModels?: boolean;
   withAppendix?: boolean;
+  /** The MRM read failed: MRM sections absent, each with a collection_failed notice. */
+  mrmFailed?: boolean;
   withHeadOfValidation?: boolean;
 }
 
@@ -335,7 +337,13 @@ export function e23ReportData(opts: E23FixtureOptions = {}): ReportData {
           { sectionKey: "frameworkRequirements", reason: "no_framework_target" },
           { sectionKey: "e23Contradictions", reason: "no_framework_target" },
         ]
-      : [],
+      : opts.mrmFailed
+        ? ["mrmFleet", "e23Contradictions", "mrmInventoryAppendix"].map((sectionKey) => ({
+            sectionKey,
+            reason: "collection_failed" as const,
+            detail: "Model risk management data",
+          }))
+        : [],
     sections: {
       ...(!opts.notOnFile && {
         frameworkRequirements: {
@@ -356,16 +364,16 @@ export function e23ReportData(opts: E23FixtureOptions = {}): ReportData {
           ],
         },
       }),
-      mrmFleet,
-      e23Contradictions: contradictions,
-      ...(opts.withAppendix && {
-        mrmInventoryAppendix: {
-          active: [appendixRow("Credit scorer"), appendixRow("Fraud detector", { tier: null })],
-          retired: [
-            appendixRow("Legacy scorecard", { status: "Retired", activeThresholds: false }),
-          ],
-        },
-      }),
+      ...(!opts.mrmFailed && { mrmFleet, e23Contradictions: contradictions }),
+      ...(opts.withAppendix &&
+        !opts.mrmFailed && {
+          mrmInventoryAppendix: {
+            active: [appendixRow("Credit scorer"), appendixRow("Fraud detector", { tier: null })],
+            retired: [
+              appendixRow("Legacy scorecard", { status: "Retired", activeThresholds: false }),
+            ],
+          },
+        }),
       signOff: {},
       e23Glance: {
         requirementsDone: requirementsAvailable ? 4 : 0,

@@ -4,19 +4,12 @@
  * this module holds no report text of its own.
  */
 
-import {
-  AlignmentType,
-  convertInchesToTwip,
-  Header,
-  PageBreak,
-  Paragraph,
-  Table,
-  TextRun,
-} from "docx";
+import { AlignmentType, Header, PageBreak, Paragraph, Table, TextRun } from "docx";
 import type { E23Block, E23Cell, E23FormalView, E23Section } from "./e23/formalView";
 import {
   COLORS,
   TableCellInput,
+  createBullet,
   createSectionHeader,
   createSubsectionHeader,
   createTable,
@@ -48,14 +41,6 @@ const subheading = (value: string) =>
     children: [new TextRun({ text: value, bold: true, size: 22, color: COLORS.textPrimary })],
   });
 
-const bullet = (value: string) =>
-  new Paragraph({
-    spacing: { before: 40, after: 40 },
-    indent: { left: convertInchesToTwip(0.3) },
-    bullet: { level: 0 },
-    children: [new TextRun({ text: value, size: 20, color: COLORS.textPrimary })],
-  });
-
 const toCell = (cell: E23Cell): TableCellInput =>
   typeof cell === "string"
     ? cell
@@ -68,7 +53,10 @@ function blockElements(block: E23Block): Element[] {
     case "subheading":
       return [subheading(block.text), ...(block.note ? [text(block.note, { muted: true })] : [])];
     case "list":
-      return [...(block.title ? [subheading(block.title)] : []), ...block.items.map(bullet)];
+      return [
+        ...(block.title ? [subheading(block.title)] : []),
+        ...block.items.map((item) => createBullet(item)),
+      ];
     case "table":
       return [
         ...(block.title ? [subheading(block.title)] : []),
@@ -150,19 +138,7 @@ export function createE23Closing(view: E23FormalView): Element[] {
   const elements: Element[] = [];
   if (view.abstentions.length > 0) {
     elements.push(createSubsectionHeader(view.abstentionsHeading));
-    view.abstentions.forEach((a) =>
-      elements.push(
-        new Paragraph({
-          spacing: { before: 60, after: 60 },
-          indent: { left: convertInchesToTwip(0.3) },
-          bullet: { level: 0 },
-          children: [
-            new TextRun({ text: `${a.label}: `, bold: true, size: 20, color: COLORS.textPrimary }),
-            new TextRun({ text: a.reason, size: 20, color: COLORS.textPrimary }),
-          ],
-        }),
-      ),
-    );
+    view.abstentions.forEach((a) => elements.push(createBullet(a.reason, `${a.label}: `)));
   }
 
   const signOff = view.signOff;

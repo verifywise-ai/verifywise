@@ -14,6 +14,7 @@ import {
   NO_CONTRADICTIONS,
   NO_MODELS,
   NOT_CHECKED,
+  SECTION_NOT_COMPLETED,
   SIGN_OFF_STATEMENT,
 } from "../e23/e23Text";
 import { ReportData } from "../../../domain.layer/interfaces/i.reportGeneration";
@@ -172,6 +173,18 @@ describe("generateDOCX: OSFI E-23 formal report", () => {
   it("says E-23 is not on file and that the inventory is empty", async () => {
     expect(await partText(e23ReportData({ notOnFile: true }))).toContain(E23_NOT_ON_FILE);
     expect(await partText(e23ReportData({ noModels: true }))).toContain(NO_MODELS);
+  });
+
+  it("keeps a selected section whose data failed, pointing at the notices", async () => {
+    const text = await partText(e23ReportData({ mrmFailed: true, withAppendix: true }));
+    for (const [start, end] of [
+      [upper(E23_HEADINGS.mrm), upper(E23_HEADINGS.contradictions)],
+      [upper(E23_HEADINGS.contradictions), upper(E23_HEADINGS.appendix)],
+      [upper(E23_HEADINGS.appendix), "Part of these sections could not be read"],
+    ]) {
+      expect(between(text, start, end)).toContain(SECTION_NOT_COMPLETED);
+    }
+    expect(text).toContain(`5. ${E23_HEADINGS.mrm}`);
   });
 
   it("leaves recommended actions out of the formal report", () => {

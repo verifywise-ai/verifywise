@@ -32,6 +32,7 @@ import {
   NO_CONTRADICTIONS,
   NO_MODELS,
   NOT_CHECKED,
+  SECTION_NOT_COMPLETED,
   SIGN_OFF_DRAFT,
   SIGN_OFF_DRAFT_NOTE,
   SIGN_OFF_FIELDS,
@@ -157,6 +158,22 @@ const e23NotOnFile = (data: ReportData): boolean =>
       (n.sectionKey === "frameworkRequirements" || n.sectionKey === "e23Contradictions") &&
       n.reason === "no_framework_target",
   );
+
+/** The section was selected but its data could not be read (collection_failed). */
+const collectionFailed = (data: ReportData, sectionKey: string): boolean =>
+  (data.sectionNotices ?? []).some(
+    (n) => n.sectionKey === sectionKey && n.reason === "collection_failed",
+  );
+
+/**
+ * A selected section whose data failed keeps its heading and place, so the
+ * reader sees it was asked for and is pointed at the notice, never at a gap.
+ */
+const notCompletedSection = (id: string, heading: string): E23Section => ({
+  id,
+  heading,
+  blocks: [{ kind: "paragraph", text: SECTION_NOT_COMPLETED }],
+});
 
 // ---------------------------------------------------------------------------
 // At a glance
@@ -344,7 +361,9 @@ function completenessSection(
 
 function mrmSection(data: ReportData, board: boolean): E23Section | null {
   const fleet = data.sections.mrmFleet;
-  if (!fleet) return null;
+  if (!fleet) {
+    return collectionFailed(data, "mrmFleet") ? notCompletedSection("mrm", E23_HEADINGS.mrm) : null;
+  }
   const heading = E23_HEADINGS.mrm;
   if (fleet.totals.models === 0) {
     return { id: "mrm", heading, blocks: [{ kind: "paragraph", text: NO_MODELS }] };
@@ -483,7 +502,11 @@ function contradictionsSection(
   notOnFile: boolean,
 ): E23Section | null {
   const c = data.sections.e23Contradictions;
-  if (!c && !notOnFile) return null;
+  if (!c && !notOnFile) {
+    return collectionFailed(data, "e23Contradictions")
+      ? notCompletedSection("contradictions", E23_HEADINGS.contradictions)
+      : null;
+  }
   const heading = E23_HEADINGS.contradictions;
   if (notOnFile) {
     return {
@@ -619,7 +642,12 @@ function appendixTables(title: string, rows: MrmInventoryAppendixRow[]): E23Bloc
 
 function appendixSection(data: ReportData, board: boolean): E23Section | null {
   const a = data.sections.mrmInventoryAppendix;
-  if (!a || board) return null;
+  if (board) return null;
+  if (!a) {
+    return collectionFailed(data, "mrmInventoryAppendix")
+      ? notCompletedSection("appendix", E23_HEADINGS.appendix)
+      : null;
+  }
   return {
     id: "appendix",
     heading: E23_HEADINGS.appendix,

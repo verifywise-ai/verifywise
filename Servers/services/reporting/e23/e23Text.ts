@@ -83,6 +83,10 @@ export const E23_CHECKS_NOT_READ =
 
 export const NO_MODELS = "No models in the inventory";
 
+/** A selected section whose data could not be read; the notices block names what failed. */
+export const SECTION_NOT_COMPLETED =
+  'This section could not be completed. See "Sections that could not be completed" at the end of the report.';
+
 /** A glance figure whose source could not be measured in this run. */
 export const NOT_CHECKED = "Not checked";
 

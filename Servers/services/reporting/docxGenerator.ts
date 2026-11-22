@@ -29,6 +29,7 @@ import { ANALYSIS_LABELS } from "./analyzers/mapToSummaries";
 import {
   COLORS,
   TableCellInput,
+  createBullet,
   createEmptyState,
   createSectionHeader,
   createSubsectionHeader,
@@ -462,20 +463,7 @@ function createExecutiveSummarySection(aiSummaries: AISummaries): (Paragraph | T
   } else if (aiSummaries.keyFindings && aiSummaries.keyFindings.length > 0) {
     elements.push(createSubsectionHeader("Key Findings"));
     aiSummaries.keyFindings.forEach((finding) => {
-      elements.push(
-        new Paragraph({
-          spacing: { before: 60, after: 60 },
-          indent: { left: convertInchesToTwip(0.3) },
-          bullet: { level: 0 },
-          children: [
-            new TextRun({
-              text: finding,
-              size: 20,
-              color: COLORS.textPrimary,
-            }),
-          ],
-        }),
-      );
+      elements.push(createBullet(finding));
     });
   }
 
@@ -483,20 +471,7 @@ function createExecutiveSummarySection(aiSummaries: AISummaries): (Paragraph | T
   if (aiSummaries.recommendations && aiSummaries.recommendations.length > 0) {
     elements.push(createSubsectionHeader("Recommendations"));
     aiSummaries.recommendations.forEach((rec) => {
-      elements.push(
-        new Paragraph({
-          spacing: { before: 60, after: 60 },
-          indent: { left: convertInchesToTwip(0.3) },
-          bullet: { level: 0 },
-          children: [
-            new TextRun({
-              text: rec,
-              size: 20,
-              color: COLORS.textPrimary,
-            }),
-          ],
-        }),
-      );
+      elements.push(createBullet(rec));
     });
   }
 
@@ -634,19 +609,10 @@ function createVendorRiskSection(reportData: ReportData): (Paragraph | Table)[] 
   elements.push(...createAIAnalysisBox(vendorRisk.narrative, "AI-Generated Analysis"));
   (vendorRisk.concerns ?? []).forEach((c) => {
     elements.push(
-      new Paragraph({
-        spacing: { before: 60, after: 60 },
-        indent: { left: convertInchesToTwip(0.3) },
-        bullet: { level: 0 },
-        children: [
-          new TextRun({ text: `${c.vendor}: `, bold: true, size: 20, color: COLORS.textPrimary }),
-          new TextRun({
-            text: `${c.concern} (${c.severity}${c.basis ? `, Basis: ${c.basis}` : ""})`,
-            size: 20,
-            color: COLORS.textPrimary,
-          }),
-        ],
-      }),
+      createBullet(
+        `${c.concern} (${c.severity}${c.basis ? `, Basis: ${c.basis}` : ""})`,
+        `${c.vendor}: `,
+      ),
     );
   });
 
@@ -672,22 +638,7 @@ function createAbstentionsSection(reportData: ReportData): (Paragraph | Table)[]
   const elements: (Paragraph | Table)[] = [];
   elements.push(createSubsectionHeader("Analyses not produced"));
   Object.entries(abstentions).forEach(([key, reason]) => {
-    elements.push(
-      new Paragraph({
-        spacing: { before: 60, after: 60 },
-        indent: { left: convertInchesToTwip(0.3) },
-        bullet: { level: 0 },
-        children: [
-          new TextRun({
-            text: `${ANALYSIS_LABELS[key] ?? key}: `,
-            bold: true,
-            size: 20,
-            color: COLORS.textPrimary,
-          }),
-          new TextRun({ text: reason, size: 20, color: COLORS.textPrimary }),
-        ],
-      }),
-    );
+    elements.push(createBullet(reason, `${ANALYSIS_LABELS[key] ?? key}: `));
   });
 
   elements.push(new Paragraph({ children: [new PageBreak()] }));
@@ -1336,16 +1287,7 @@ function createSectionNoticesSection(reportData: ReportData): (Paragraph | Table
       spacing: { after: 120 },
       children: [new TextRun({ text, size: 20, color: COLORS.textSecondary })],
     });
-  const bullet = (label: string, text: string) =>
-    new Paragraph({
-      spacing: { before: 60, after: 60 },
-      indent: { left: convertInchesToTwip(0.3) },
-      bullet: { level: 0 },
-      children: [
-        new TextRun({ text: label, bold: true, size: 20, color: COLORS.textPrimary }),
-        new TextRun({ text: ` — ${text}`, size: 20, color: COLORS.textPrimary }),
-      ],
-    });
+  const bullet = (label: string, text: string) => createBullet(` — ${text}`, label);
 
   if (failed.length > 0) {
     elements.push(createSubsectionHeader(NOTICE_TEXT.failedTitle));

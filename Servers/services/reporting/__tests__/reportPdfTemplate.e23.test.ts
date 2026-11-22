@@ -16,6 +16,7 @@ import {
   NO_CONTRADICTIONS,
   NO_MODELS,
   NOT_CHECKED,
+  SECTION_NOT_COMPLETED,
   SIGN_OFF_STATEMENT,
 } from "../e23/e23Text";
 import { e23ReportData, nonKindReportData } from "../tests/helpers/e23ReportData";
@@ -73,7 +74,7 @@ describe("report-pdf.ejs: OSFI E-23 formal report", () => {
 
   it("renders the sections in spec order", () => {
     const order = [
-      E23_REPORT_TITLE,
+      'class="cover-title"',
       'id="e23-scope"',
       'id="e23-glance"',
       "Executive Summary",
@@ -202,6 +203,24 @@ describe("report-pdf.ejs: OSFI E-23 formal report", () => {
     const mrm = sectionHtml(renderReportHtml(e23ReportData({ noModels: true })), "mrm");
     expect(mrm).toContain(NO_MODELS);
     expect(mrm).not.toContain("<table");
+  });
+
+  it("keeps a selected section whose data failed, in place and in the TOC, pointing at the notices", () => {
+    const html = renderReportHtml(e23ReportData({ mrmFailed: true, withAppendix: true }));
+    for (const id of ["mrm", "contradictions", "appendix"]) {
+      // EJS escapes the quotes around the notices heading.
+      expect(sectionHtml(html, id)).toContain(SECTION_NOT_COMPLETED.replace(/"/g, "&#34;"));
+    }
+    expect(html).toContain(`<span class="toc-item-number">`);
+    for (const heading of [E23_HEADINGS.mrm, E23_HEADINGS.contradictions, E23_HEADINGS.appendix]) {
+      expect(html.indexOf(heading)).toBeLessThan(html.indexOf('id="e23-scope"'));
+    }
+    expect(html).toContain("Sections that could not be completed");
+  });
+
+  it("puts the institution and report title in the PDF footer", () => {
+    const footer = examiner.match(/<div class="page-footer">[\s\S]*?<\/div>/)![0];
+    expect(footer).toContain(`Northern Bank of Canada | ${E23_REPORT_TITLE}`);
   });
 
   it("leaves recommended actions out of the formal report", () => {

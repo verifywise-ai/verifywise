@@ -36,7 +36,7 @@ const isE23 = typeof e23 !== 'undefined' && !!e23;
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title><%= isE23 ? e23.institution + ' - ' + e23.cover.title : metadata.projectTitle + ' - ' + metadata.frameworkName + ' Report' %></title>
+  <title><% if (isE23) { %><%= e23.institution %> - <%= e23.cover.title %><% } else { %><%= metadata.projectTitle %> - <%= metadata.frameworkName %> Report<% } %></title>
   <style>
     <%- include('./styles/pdf.css') %>
 
@@ -1273,7 +1273,7 @@ const isE23 = typeof e23 !== 'undefined' && !!e23;
 
     <!-- Page Footer (rendered as part of content) -->
     <div class="page-footer">
-      <span><%= branding.organizationName %></span>
+      <span><%= isE23 ? e23.footerTitle : branding.organizationName %></span>
       <span><%= metadata.generatedAt.toLocaleDateString() %></span>
     </div>
 
