@@ -49,6 +49,8 @@ export interface IconButtonProps {
   onMouseEvent?: (e: React.SyntheticEvent) => void;
   onMakeVisible?: () => void;
   onDownload?: () => void | Promise<void>;
+  /** A second file stored with the record (a report run's fix-it list). */
+  onDownloadCompanion?: () => void | Promise<void>;
   isVisible?: boolean;
   canDelete?: boolean;
   /** Hides the Edit item when false (honoured by the "agent" type). Defaults to true. */

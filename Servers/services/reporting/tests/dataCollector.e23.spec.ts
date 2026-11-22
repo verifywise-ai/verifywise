@@ -372,7 +372,29 @@ describe("E-23 kind run", () => {
   });
 
   it("an MRM read failure: notices per selected MRM section, sections skipped, glance flagged", async () => {
-    requirementsSpy();
+    // One requirement not done and unowned, so the checklist alone yields an item.
+    const notDone = row({
+      title: "2.2.4 Review",
+      implId: 2,
+      orderNo: 2,
+      isDone: false,
+      owner: null,
+    });
+    jest
+      .spyOn(frameworkRequirements, "collectFrameworkRequirements")
+      .mockImplementation(async () => ({
+        frameworks: [
+          {
+            ...e23Requirements.frameworks[0],
+            groups: [
+              {
+                ...e23Requirements.frameworks[0].groups[0],
+                requirements: [...e23Requirements.frameworks[0].groups[0].requirements, notDone],
+              },
+            ],
+          },
+        ],
+      }));
     const error = new Error("mrm down");
     mockCollectMrm.mockRejectedValue(error);
     const collector = createScopedDataCollector(10, 1, "organization", [e23Target]);
@@ -380,7 +402,11 @@ describe("E-23 kind run", () => {
     const data = await collector.collectAllData(["mrmFleet", "e23FixItList", "signOff"], E23_RUN);
 
     expect(data.sections.mrmFleet).toBeUndefined();
-    expect(data.sections.e23FixItList).toBeUndefined();
+    // The fix-it list keeps the items the checklist alone can give (sources 2
+    // to 6): no rule ran and no model was read. Its notice says the rest is missing.
+    expect(data.sections.e23FixItList?.items.map((i) => [i.source, i.where])).toEqual([
+      [2, "2.2.4 Review"],
+    ]);
     expect(data.sections.e23Contradictions).toBeUndefined();
     expect(data.sections.signOff).toEqual({});
     expect(data.sectionNotices).toEqual([

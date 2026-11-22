@@ -1,7 +1,13 @@
 import { generateReport } from "./index";
 import { resolveReportRequest } from "./reportTemplateResolver";
 import { deliverReport } from "./reportDeliveryService";
-import { createRunQuery, updateRunStatusQuery } from "../../utils/reportRun.utils";
+import {
+  createRunQuery,
+  deleteRunFileQuery,
+  updateRunStatusQuery,
+} from "../../utils/reportRun.utils";
+import { uploadFile } from "../../utils/fileUpload.utils";
+import logger from "../../utils/logger/fileLogger";
 import { gapsMessage } from "./noticeText";
 import { persistAnalyses } from "./analyzers/persistAnalyses";
 import { rollingPeriod } from "./scheduleCalculator";
@@ -88,20 +94,20 @@ export async function runScheduledReport(
     scheduled_for: opts.scheduledFor ?? null,
   });
 
+  const userId = sched.owner_id ?? sched.created_by;
+  // The companion file once stored, so a later failure can take it back out.
+  let companionFileId: number | null = null;
   try {
     // The schedule id is what makes a prior-run comparison possible: this run's
     // predecessor is the last run of the same schedule. Attached here rather
     // than in resolveReportRequest, which maps template config and knows
-    // nothing about runs.
+    // nothing about runs. The run id goes on the fix-it list's cover.
     const request = {
       ...resolveReportRequest({ ...sched, report_parameters: reportParameters }, sched.llm_key_id),
       scheduledReportId: sched.id ?? undefined,
+      runId: run.id,
     };
-    const result = await generateReport(
-      request,
-      sched.owner_id ?? sched.created_by,
-      sched.organization_id,
-    );
+    const result = await generateReport(request, userId, sched.organization_id);
     if (!result.success) {
       const error = result.error ?? "generation failed";
       await updateRunStatusQuery(run.id, sched.organization_id, {
@@ -111,14 +117,46 @@ export async function runScheduledReport(
       });
       return { runId: run.id, status: "failed", error };
     }
+
+    // The internal fix-it list (spec 8.6) is stored first and always, whatever
+    // "Save to storage" says: that channel governs the formal report only, and
+    // a schedule without it would otherwise produce a list nobody can open.
+    // It never goes to deliverReport, so no email link or attachment can carry
+    // it. If it cannot be stored the run fails before anything is delivered.
+    const companion = result.companion;
+    if (companion) {
+      try {
+        const file: any = await uploadFile(
+          {
+            fieldname: "report",
+            originalname: companion.filename,
+            mimetype: companion.mimeType,
+            buffer: companion.content,
+            size: companion.content.length,
+          },
+          userId,
+          null,
+          "All reports",
+          sched.organization_id,
+        );
+        if (!file?.id) throw new Error("the file store returned no id");
+        companionFileId = file.id;
+      } catch (e: any) {
+        const error = `The fix-it list could not be stored: ${e?.message ?? String(e)}`;
+        await updateRunStatusQuery(run.id, sched.organization_id, {
+          status: "failed",
+          error_message: error,
+          duration_ms: Date.now() - startedAt,
+        });
+        return { runId: run.id, status: "failed", error };
+      }
+    }
+
+    // The formal report only: deliverReport never sees the companion.
     const delivery = await deliverReport(
       sched.delivery_config,
       { content: result.content, filename: result.filename, mimeType: result.mimeType },
-      {
-        organizationId: sched.organization_id,
-        userId: sched.owner_id ?? sched.created_by,
-        runId: run.id,
-      },
+      { organizationId: sched.organization_id, userId, runId: run.id },
     );
     const channels = [delivery.storage, delivery.emailLink, delivery.attachment];
     const anyFailed = channels.some((c: any) => c?.status === "failed");
@@ -136,6 +174,12 @@ export async function runScheduledReport(
       file_id: delivery.fileId,
       output_filename: result.filename,
       output_mime_type: result.mimeType,
+      ...(companion &&
+        companionFileId !== null && {
+          companion_file_id: companionFileId,
+          companion_filename: companion.filename,
+          companion_mime_type: companion.mimeType,
+        }),
       delivery_status: delivery,
       ...(gaps.length > 0 && {
         error_message: gapsMessage(gaps),
@@ -148,6 +192,18 @@ export async function runScheduledReport(
     });
     return { runId: run.id, status };
   } catch (e: any) {
+    // Both or neither: a run that fails after its fix-it list was stored does
+    // not keep the list. Best effort; a failed cleanup must not hide the error.
+    if (companionFileId !== null) {
+      try {
+        await deleteRunFileQuery(companionFileId, sched.organization_id);
+      } catch (cleanupError) {
+        logger.warn(
+          `Report run ${run.id}: stored fix-it list ${companionFileId} could not be removed after the run failed`,
+          cleanupError,
+        );
+      }
+    }
     await updateRunStatusQuery(run.id, sched.organization_id, {
       status: "failed",
       error_message: e.message,

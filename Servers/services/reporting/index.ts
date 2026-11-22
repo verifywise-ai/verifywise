@@ -12,8 +12,9 @@ import {
 import { ReportType } from "../../domain.layer/models/reporting/reporting.model";
 import { createDataCollector, createScopedDataCollector } from "./dataCollector";
 import { resolveFrameworkTargets } from "./reportScope";
-import { generatePDF, closeBrowser } from "./pdfGenerator";
+import { generatePDF, generateFixItPDF, closeBrowser } from "./pdfGenerator";
 import { generateDOCX } from "./docxGenerator";
+import { generateFixItDOCX } from "./docxFixIt";
 import logger, { logStructuredError } from "../../utils/logger/fileLogger";
 import { runAnalyzers } from "./analyzers/runAnalyzers";
 import {
@@ -30,6 +31,7 @@ import { SECTION_KEYS } from "./sectionCatalog";
 import { getPriorE23GlanceQuery } from "../../utils/reportRun.utils";
 import { E23_KIND } from "./e23/e23Parameters";
 import { parseStoredE23Glance, toE23GlanceSnapshot } from "./e23/glance";
+import { FIX_IT_FILENAME_SUFFIX } from "./e23/e23Text";
 import type { E23GlanceSnapshot } from "../../domain.layer/interfaces/i.reportGeneration";
 
 /**
@@ -114,6 +116,33 @@ async function priorE23Glance(
       "index.ts",
     );
     return null;
+  }
+}
+
+/** "Q3 report.pdf" -> "Q3 report" for the given extension; unchanged otherwise. */
+const baseNameOf = (filename: string, ext: string): string =>
+  filename.endsWith(ext) ? filename.slice(0, -ext.length) : filename;
+
+/**
+ * Render the fix-it list in the run's format. A renderer that throws counts
+ * as a failed render, so the caller has one failure path.
+ */
+async function generateFixItCompanion(
+  reportData: ReportData,
+  request: ReportGenerationRequest,
+): Promise<ReportGenerationResult> {
+  try {
+    return request.format === "pdf"
+      ? await generateFixItPDF(reportData, request.runId)
+      : await generateFixItDOCX(reportData, request.runId);
+  } catch (error) {
+    return {
+      success: false,
+      filename: "",
+      content: Buffer.alloc(0),
+      mimeType: "",
+      error: error instanceof Error ? error.message : "Unknown error",
+    };
   }
 }
 
@@ -268,6 +297,30 @@ export async function generateReport(
         : `${request.reportName}${extension}`;
     }
 
+    // The internal fix-it list of an E-23 run (spec 8.6), named after the
+    // formal report before the AI marker below is added to that name. Both or
+    // neither: a fix-it list that fails fails the whole result, so a formal
+    // report never goes out while its internal list silently did not generate.
+    let companion: ReportGenerationResult["companion"];
+    if (result.success && request.reportKind === E23_KIND && sections.includes("e23FixItList")) {
+      const ext = request.format === "pdf" ? ".pdf" : ".docx";
+      const fixIt = await generateFixItCompanion(reportData, request);
+      if (!fixIt.success) {
+        return {
+          success: false,
+          filename: "",
+          content: Buffer.alloc(0),
+          mimeType: "",
+          error: `The fix-it list could not be generated: ${fixIt.error ?? "unknown error"}`,
+        };
+      }
+      companion = {
+        filename: `${baseNameOf(result.filename, ext)}${FIX_IT_FILENAME_SUFFIX}${ext}`,
+        content: fixIt.content,
+        mimeType: fixIt.mimeType,
+      };
+    }
+
     // Mark AI-enhanced reports in the filename for frontend badge detection
     if (request.aiEnhanced && result.success && reportData.aiSummaries) {
       const ext = request.format === "pdf" ? ".pdf" : ".docx";
@@ -288,6 +341,7 @@ export async function generateReport(
 
     return {
       ...result,
+      ...(companion && { companion }),
       analyses,
       factsSnapshot,
       ...(collectionFailures.length > 0 && { collectionFailures }),

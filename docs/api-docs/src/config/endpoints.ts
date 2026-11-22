@@ -13545,6 +13545,21 @@ export const v1V1projectsEndpoints: Endpoint[] = [
   },
 ];
 
+// v1: V1/Report Runs endpoints
+export const v1V1reportRunsEndpoints: Endpoint[] = [
+  {
+    method: 'GET',
+    path: '/v1/report-runs/{id}/download/fix-it-list',
+    summary: "Download Run Companion",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Report Runs",
+  },
+];
+
 // v1: V1/Report Templates endpoints
 export const v1V1reportTemplatesEndpoints: Endpoint[] = [
   {
@@ -14150,6 +14165,7 @@ export const allEndpoints = {
   v1V1modelRisks: v1V1modelRisksEndpoints,
   v1V1policyTemplates: v1V1policyTemplatesEndpoints,
   v1V1projects: v1V1projectsEndpoints,
+  v1V1reportRuns: v1V1reportRunsEndpoints,
   v1V1reportTemplates: v1V1reportTemplatesEndpoints,
   v1V1scheduledReports: v1V1scheduledReportsEndpoints,
   v1V1training: v1V1trainingEndpoints,

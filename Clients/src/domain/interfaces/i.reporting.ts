@@ -17,6 +17,11 @@ export interface ReportRun {
   companion_file_id?: number | null;
   companion_filename?: string | null;
   companion_mime_type?: string | null;
+  /**
+   * The run's final flag from its report parameters, as text ("true" or
+   * "false"); null when the report takes no such parameter.
+   */
+  is_final?: string | null;
   error_message: string | null;
   /** Per-channel delivery outcome; carries the delivery reason behind partial_success. */
   delivery_status: Record<string, { status?: string; enabled?: boolean }> | null;

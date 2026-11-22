@@ -74,16 +74,20 @@ export interface E23Signatory {
   title: string;
 }
 
+/** A cover page: shared by the formal report and the internal fix-it list. */
+export interface E23Cover {
+  title: string;
+  /** The audience line of the formal report; the internal marking of the fix-it list. */
+  subtitle: string;
+  lines: Array<{ label: string; value: string }>;
+}
+
 export interface E23FormalView {
   board: boolean;
   /** DRAFT_WATERMARK unless the run is final. */
   watermark: string | null;
   institution: string;
-  cover: {
-    title: string;
-    audienceLine: string;
-    lines: Array<{ label: string; value: string }>;
-  };
+  cover: E23Cover;
   /** Headings in body order, for the table of contents. */
   toc: string[];
   /** Before the executive summary: scope and method, at a glance. */
@@ -152,7 +156,7 @@ export const isE23Report = (data: ReportData): boolean => data.metadata.reportKi
  * E-23 has no pairing in scope: the collector said so with a
  * no_framework_target notice on the completeness or contradictions section.
  */
-const e23NotOnFile = (data: ReportData): boolean =>
+export const e23NotOnFile = (data: ReportData): boolean =>
   (data.sectionNotices ?? []).some(
     (n) =>
       (n.sectionKey === "frameworkRequirements" || n.sectionKey === "e23Contradictions") &&
@@ -736,7 +740,7 @@ export function buildE23FormalView(data: ReportData): E23FormalView | null {
     institution,
     cover: {
       title: E23_REPORT_TITLE,
-      audienceLine: board ? AUDIENCE_LINES.board : AUDIENCE_LINES.osfi,
+      subtitle: board ? AUDIENCE_LINES.board : AUDIENCE_LINES.osfi,
       lines: [
         { label: "Period", value: `${periodStart} to ${periodEnd}` },
         { label: "Position as at", value: generated },

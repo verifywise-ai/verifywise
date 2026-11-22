@@ -712,6 +712,17 @@ export class ReportDataCollector {
       if (requested("mrmInventoryAppendix")) {
         sectionData.mrmInventoryAppendix = buildInventoryAppendix(models);
       }
+    } else if (requested("e23FixItList")) {
+      // Without the MRM data no rule runs and no model is read, but the
+      // checklist's own items (sources 2 to 6) can still be listed; the
+      // collection_failed notice above says the rest is missing. The glance
+      // keeps its fix-it figure unmeasured (fixIt stays undefined).
+      sectionData.e23FixItList = buildE23FixItList({
+        requirements,
+        contradictions: { available: false, fired: [], checked: [], notRun: [], coverage: {} },
+        models: [],
+        generatedAt,
+      });
     }
     if (requested("signOff")) sectionData.signOff = {};
 

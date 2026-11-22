@@ -101,6 +101,8 @@ export interface ReportGenerationRequest {
   reportKind?: string;
   /** The template the run was made from, when it has one. */
   templateId?: number;
+  /** The report_runs row this generation belongs to; printed on the fix-it list's cover. */
+  runId?: number;
 }
 
 export interface ReportGenerationResult {

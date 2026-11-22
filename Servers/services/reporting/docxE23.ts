@@ -5,7 +5,7 @@
  */
 
 import { AlignmentType, Header, PageBreak, Paragraph, Table, TextRun } from "docx";
-import type { E23Block, E23Cell, E23FormalView, E23Section } from "./e23/formalView";
+import type { E23Block, E23Cell, E23Cover, E23FormalView, E23Section } from "./e23/formalView";
 import {
   COLORS,
   TableCellInput,
@@ -72,12 +72,20 @@ function blockElements(block: E23Block): Element[] {
   }
 }
 
-/** Each section on its own pages, like the general report's groups. */
-export function createE23Sections(sections: E23Section[]): Element[] {
-  return sections.flatMap((section) => [
+/**
+ * Each section on its own pages, like the general report's groups. A document
+ * that ends with its sections passes breakAfterLast false, so it has no blank
+ * last page.
+ */
+export function createE23Sections(
+  sections: E23Section[],
+  opts: { breakAfterLast?: boolean } = {},
+): Element[] {
+  const breakAfterLast = opts.breakAfterLast ?? true;
+  return sections.flatMap((section, i) => [
     createSectionHeader(section.heading),
     ...section.blocks.flatMap(blockElements),
-    pageBreak(),
+    ...(breakAfterLast || i < sections.length - 1 ? [pageBreak()] : []),
   ]);
 }
 
@@ -94,12 +102,13 @@ const coverLine = (
     ],
   });
 
-export function createE23Cover(view: E23FormalView): Paragraph[] {
+/** The formal report's cover, and the fix-it list's (same layout, own content). */
+export function createE23Cover(view: { institution: string; cover: E23Cover }): Paragraph[] {
   return [
     new Paragraph({ spacing: { before: 2400 }, children: [] }),
     coverLine(view.institution, 56, { bold: true, color: COLORS.primary, after: 600 }),
     coverLine(view.cover.title, 48, { bold: true, after: 300 }),
-    coverLine(view.cover.audienceLine, 30, { color: COLORS.textSecondary, after: 800 }),
+    coverLine(view.cover.subtitle, 30, { color: COLORS.textSecondary, after: 800 }),
     ...view.cover.lines.map(
       (line) =>
         new Paragraph({

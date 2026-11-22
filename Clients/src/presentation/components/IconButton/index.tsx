@@ -62,6 +62,7 @@ function IconButton({
   onMouseEvent,
   onMakeVisible,
   onDownload,
+  onDownloadCompanion,
   isVisible,
   canDelete,
   canEdit = true,
@@ -208,24 +209,27 @@ function IconButton({
     }
   };
 
-  const handleDownload = async (e?: React.SyntheticEvent) => {
-    try {
-      if (onDownload) {
-        await onDownload();
+  const downloadWith =
+    (download?: () => void | Promise<void>) => async (e?: React.SyntheticEvent) => {
+      try {
+        if (download) {
+          await download();
+        }
+      } catch (error) {
+        console.error("Download failed:", error);
+        setAlert({
+          variant: "error",
+          body: "Failed to download file. Please try again.",
+          isToast: true,
+        });
+      } finally {
+        if (e) {
+          closeActionMenu(e);
+        }
       }
-    } catch (error) {
-      console.error("Download failed:", error);
-      setAlert({
-        variant: "error",
-        body: "Failed to download file. Please try again.",
-        isToast: true,
-      });
-    } finally {
-      if (e) {
-        closeActionMenu(e);
-      }
-    }
-  };
+    };
+  const handleDownload = downloadWith(onDownload);
+  const handleDownloadCompanion = downloadWith(onDownloadCompanion);
 
   const handleSendTestNotification = async (e?: React.SyntheticEvent) => {
     if (onSendTest) {
@@ -352,6 +356,8 @@ function IconButton({
       // A run only has a file once it succeeds, so the caller withholds
       // onDownload rather than offering an item that cannot work.
       if (onDownload) items.push("download");
+      // An OSFI E-23 run also stores its internal fix-it list.
+      if (onDownloadCompanion) items.push("download_companion");
       if (onView) items.push("view");
       items.push(isArchived ? "restore" : "archive");
       items.push("delete");
@@ -439,6 +445,7 @@ function IconButton({
         restore: "Restore task",
       },
       reportrun: {
+        download_companion: "Download fix-it list",
         view: "View analyses",
         delete: "Delete permanently",
       },
@@ -524,6 +531,8 @@ function IconButton({
                   handleEdit(e);
                 } else if (item === "download") {
                   await handleDownload(e);
+                } else if (item === "download_companion") {
+                  await handleDownloadCompanion(e);
                 } else if (item === "make visible") {
                   handleMakeVisible(e);
                 } else if (item === "view") {

@@ -8,6 +8,7 @@ const mockRestore = vi.fn();
 const mockDelete = vi.fn();
 const mockAnalyses = vi.fn();
 const mockDownloadReportRun = vi.fn();
+const mockDownloadFixItList = vi.fn();
 
 vi.mock("../../../../application/hooks/useReporting", () => ({
   useReportRunsPage: (...args: any[]) => mockRunsPage(...args),
@@ -22,6 +23,7 @@ vi.mock("../../../../application/hooks/useReporting", () => ({
 
 vi.mock("../../../../application/repository/reporting.repository", () => ({
   downloadReportRun: (...args: any[]) => mockDownloadReportRun(...args),
+  downloadReportRunFixItList: (...args: any[]) => mockDownloadFixItList(...args),
 }));
 
 import ReportRunsTable from "../ReportRunsTable";
@@ -407,5 +409,93 @@ describe("ReportRunsTable", () => {
 
     expect(mockDelete).not.toHaveBeenCalled();
     expect(screen.queryByText("Delete report run permanently?")).not.toBeInTheDocument();
+  });
+
+  // An OSFI E-23 run stores its internal fix-it list beside the report (spec 8.6).
+  describe("E-23 runs", () => {
+    const e23Run = (over: Record<string, unknown> = {}) =>
+      run({
+        output_filename: "E23 report.pdf",
+        companion_file_id: 11,
+        companion_filename: "E23 report_fix-it-list.pdf",
+        is_final: "false",
+        ...over,
+      });
+
+    it("offers a second download for the fix-it list, only when the run has one", async () => {
+      mockRunsPage.mockReturnValue({
+        data: { rows: [e23Run(), run({ id: 2 })], total: 2 },
+        isLoading: false,
+      });
+      const user = userEvent.setup();
+      renderWithProviders(<ReportRunsTable variant="live" />);
+
+      await openRowMenu(user, 0);
+      expect(screen.getByRole("menuitem", { name: "Download" })).toBeInTheDocument();
+      expect(screen.getByRole("menuitem", { name: "Download fix-it list" })).toBeInTheDocument();
+      await user.keyboard("{Escape}");
+
+      await openRowMenu(user, 1);
+      expect(screen.getByRole("menuitem", { name: "Download" })).toBeInTheDocument();
+      expect(
+        screen.queryByRole("menuitem", { name: "Download fix-it list" }),
+      ).not.toBeInTheDocument();
+    });
+
+    it("downloads the fix-it list under its own name", async () => {
+      mockRunsPage.mockReturnValue({ data: { rows: [e23Run()], total: 1 }, isLoading: false });
+      const blob = new Blob(["fix"], { type: "application/pdf" });
+      mockDownloadFixItList.mockResolvedValue(blob);
+      (URL as any).createObjectURL = vi.fn(() => "blob:fix");
+      (URL as any).revokeObjectURL = vi.fn();
+      let downloadedFilename: string | undefined;
+      const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(function (
+        this: HTMLAnchorElement,
+      ) {
+        downloadedFilename = this.download;
+      });
+
+      try {
+        const user = userEvent.setup();
+        renderWithProviders(<ReportRunsTable variant="live" />);
+
+        await clickRowAction(user, "Download fix-it list");
+
+        await waitFor(() => expect(clickSpy).toHaveBeenCalledOnce());
+        expect(mockDownloadFixItList).toHaveBeenCalledWith(1);
+        expect(mockDownloadReportRun).not.toHaveBeenCalled();
+        expect(downloadedFilename).toBe("E23 report_fix-it-list.pdf");
+      } finally {
+        clickSpy.mockRestore();
+        delete (URL as any).createObjectURL;
+        delete (URL as any).revokeObjectURL;
+      }
+    });
+
+    it("shows Draft for a run that was not generated as final", () => {
+      mockRunsPage.mockReturnValue({ data: { rows: [e23Run()], total: 1 }, isLoading: false });
+      renderWithProviders(<ReportRunsTable variant="live" />);
+
+      expect(screen.getByText("Draft")).toBeInTheDocument();
+      expect(screen.queryByText("Final")).not.toBeInTheDocument();
+    });
+
+    it("shows Final for a final run", () => {
+      mockRunsPage.mockReturnValue({
+        data: { rows: [e23Run({ is_final: "true" })], total: 1 },
+        isLoading: false,
+      });
+      renderWithProviders(<ReportRunsTable variant="live" />);
+
+      expect(screen.getByText("Final")).toBeInTheDocument();
+      expect(screen.queryByText("Draft")).not.toBeInTheDocument();
+    });
+
+    it("shows no version chip for a report without the final parameter", () => {
+      renderWithProviders(<ReportRunsTable variant="live" />);
+
+      expect(screen.queryByText("Draft")).not.toBeInTheDocument();
+      expect(screen.queryByText("Final")).not.toBeInTheDocument();
+    });
   });
 });

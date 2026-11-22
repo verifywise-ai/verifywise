@@ -46,6 +46,7 @@ import modelInventoriesRoutes from "./modelInventories.route";
 import modelRisksRoutes from "./modelRisks.route";
 import reportTemplatesRoutes from "./reportTemplates.route";
 import scheduledReportsRoutes from "./scheduledReports.route";
+import reportRunsRoutes from "./reportRuns.route";
 
 const router = express.Router();
 
@@ -131,5 +132,6 @@ router.use("/model-risks", modelRisksRoutes);
 // the legacy /api/reporting routers are frozen.
 router.use("/report-templates", reportTemplatesRoutes);
 router.use("/scheduled-reports", scheduledReportsRoutes);
+router.use("/report-runs", reportRunsRoutes);
 
 export default router;

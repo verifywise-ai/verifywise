@@ -15,8 +15,17 @@ jest.mock("../dataCollector", () => ({
   createScopedDataCollector: jest.fn(() => ({ collectAllData: mockCollectAllData })),
 }));
 jest.mock("../reportScope", () => ({ resolveFrameworkTargets: jest.fn().mockResolvedValue([]) }));
-jest.mock("../pdfGenerator", () => ({ generatePDF: jest.fn(), closeBrowser: jest.fn() }));
+jest.mock("../pdfGenerator", () => ({
+  generatePDF: jest.fn(),
+  generateFixItPDF: jest.fn(),
+  closeBrowser: jest.fn(),
+}));
 jest.mock("../docxGenerator", () => ({ generateDOCX: jest.fn() }));
+jest.mock("../docxFixIt", () => ({ generateFixItDOCX: jest.fn() }));
+// An AI run whose key lookup fails still renders (analysis never loses the report).
+jest.mock("../../../utils/llmKey.utils", () => ({
+  getLLMKeysWithKeyQuery: jest.fn().mockRejectedValue(new Error("no keys")),
+}));
 jest.mock("../../../utils/reportRun.utils", () => ({
   getPriorE23GlanceQuery: (...a: unknown[]) => mockPrior(...a),
 }));
@@ -27,7 +36,9 @@ jest.mock("../../../utils/logger/fileLogger", () => ({
 }));
 
 import { generateReport } from "../index";
-import { generatePDF } from "../pdfGenerator";
+import { generateFixItPDF, generatePDF } from "../pdfGenerator";
+import { generateDOCX } from "../docxGenerator";
+import { generateFixItDOCX } from "../docxFixIt";
 
 const GENERATED_AT = new Date("2026-10-01T09:00:00.000Z");
 
@@ -144,5 +155,132 @@ describe("generateReport, general run", () => {
     expect(mockPrior).not.toHaveBeenCalled();
     expect(mockCollectAllData.mock.calls[0]).toHaveLength(2);
     expect(result.e23Glance).toBeUndefined();
+  });
+});
+
+describe("generateReport, E-23 fix-it companion", () => {
+  const fixItRequest = { ...request, reportType: ["mrmFleet", "e23FixItList"], runId: 77 };
+  const PDF_FIX_IT = {
+    success: true,
+    filename: "x.pdf",
+    content: Buffer.from("fix"),
+    mimeType: "application/pdf",
+  };
+
+  beforeEach(() => {
+    (generateFixItPDF as jest.Mock).mockReset().mockResolvedValue(PDF_FIX_IT);
+    (generateFixItDOCX as jest.Mock).mockReset().mockResolvedValue({
+      ...PDF_FIX_IT,
+      filename: "x.docx",
+      mimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    });
+    (generateDOCX as jest.Mock).mockResolvedValue({
+      success: true,
+      filename: "r.docx",
+      content: Buffer.from("x"),
+      mimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    });
+  });
+
+  it("produces the fix-it list in the run's format, named after the formal report", async () => {
+    const result = await generateReport({ ...fixItRequest, reportName: "Q3 E-23" }, 1, 5);
+
+    expect(generateFixItPDF).toHaveBeenCalledWith(expect.anything(), 77);
+    expect(result.success).toBe(true);
+    expect(result.filename).toBe("Q3 E-23.pdf");
+    expect(result.companion).toEqual({
+      filename: "Q3 E-23_fix-it-list.pdf",
+      content: PDF_FIX_IT.content,
+      mimeType: "application/pdf",
+    });
+  });
+
+  it("produces a DOCX fix-it list for a DOCX run", async () => {
+    const result = await generateReport(
+      { ...fixItRequest, format: "docx", reportName: "Q3 E-23" },
+      1,
+      5,
+    );
+
+    expect(generateFixItDOCX).toHaveBeenCalledWith(expect.anything(), 77);
+    expect(generateFixItPDF).not.toHaveBeenCalled();
+    expect(result.companion?.filename).toBe("Q3 E-23_fix-it-list.docx");
+  });
+
+  it("names the companion after the formal base name, without the AI marker", async () => {
+    mockCollectAllData.mockResolvedValue({
+      ...reportData(true),
+      aiSummaries: { executiveSummary: "x" },
+    });
+
+    const result = await generateReport(
+      { ...fixItRequest, reportName: "Q3 E-23", aiEnhanced: true },
+      1,
+      5,
+    );
+
+    expect(result.filename).toBe("Q3 E-23_AI_.pdf");
+    expect(result.companion?.filename).toBe("Q3 E-23_fix-it-list.pdf");
+  });
+
+  it("produces no companion when the fix-it list is not selected", async () => {
+    const result = await generateReport({ ...request, runId: 77 }, 1, 5);
+
+    expect(generateFixItPDF).not.toHaveBeenCalled();
+    expect(result.companion).toBeUndefined();
+  });
+
+  it("produces no companion for a general report, even with the key selected", async () => {
+    mockCollectAllData.mockResolvedValue(reportData(false));
+
+    const result = await generateReport(
+      { ...fixItRequest, reportKind: undefined, reportParameters: undefined },
+      1,
+      5,
+    );
+
+    expect(generateFixItPDF).not.toHaveBeenCalled();
+    expect(result.companion).toBeUndefined();
+  });
+
+  it("fails the whole result when the fix-it list fails to render", async () => {
+    (generateFixItPDF as jest.Mock).mockResolvedValue({
+      success: false,
+      filename: "",
+      content: Buffer.alloc(0),
+      mimeType: "",
+      error: "browser crashed",
+    });
+
+    const result = await generateReport(fixItRequest, 1, 5);
+
+    expect(result.success).toBe(false);
+    expect(result.error).toBe("The fix-it list could not be generated: browser crashed");
+    expect(result.companion).toBeUndefined();
+  });
+
+  it("fails the whole result when the fix-it renderer throws", async () => {
+    (generateFixItPDF as jest.Mock).mockRejectedValue(new Error("template missing"));
+
+    const result = await generateReport(fixItRequest, 1, 5);
+
+    expect(result.success).toBe(false);
+    expect(result.error).toBe("The fix-it list could not be generated: template missing");
+  });
+
+  it("does not try the fix-it list when the formal report already failed", async () => {
+    (generatePDF as jest.Mock).mockResolvedValue({
+      success: false,
+      filename: "",
+      content: Buffer.alloc(0),
+      mimeType: "",
+      error: "formal failed",
+    });
+
+    const result = await generateReport(fixItRequest, 1, 5);
+
+    expect(generateFixItPDF).not.toHaveBeenCalled();
+    expect(result.success).toBe(false);
+    expect(result.error).toBe("formal failed");
   });
 });

@@ -8017,6 +8017,8 @@ tags:
   -
     name: 'v1: V1/Projects'
   -
+    name: 'v1: V1/Report Runs'
+  -
     name: 'v1: V1/Report Templates'
   -
     name: 'v1: V1/Scheduled Reports'
@@ -29380,6 +29382,20 @@ paths:
       tags:
         - 'v1: V1/Scheduled Reports'
       operationId: v1_scheduled_reports_updateScheduledReport
+      security:
+        -
+          bearerAuth: []
+  '/v1/report-runs/{id}/download/fix-it-list':
+    get:
+      summary: 'Download Run Companion'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Report Runs'
+      operationId: downloadRunCompanion
       security:
         -
           bearerAuth: []

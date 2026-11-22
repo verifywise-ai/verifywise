@@ -87,6 +87,34 @@ export const NO_MODELS = "No models in the inventory";
 export const SECTION_NOT_COMPLETED =
   'This section could not be completed. See "Sections that could not be completed" at the end of the report.';
 
+// ---------------------------------------------------------------------------
+// The internal fix-it list (spec 8.6): a second file of the run
+// ---------------------------------------------------------------------------
+
+export const FIX_IT_TITLE = "OSFI E-23 fix-it list";
+
+/** On the fix-it list's cover and in every page footer. */
+export const INTERNAL_MARKING = "Internal: not for external distribution";
+
+export const FIX_IT_HEADING = "Fix-it items";
+
+export const FIX_IT_HEADERS = ["Severity", "What", "Where", "Owner", "Due date", "Closes when"];
+
+export const FIX_IT_SEVERITY_LABELS = { high: "High", medium: "Medium", low: "Low" } as const;
+
+/** Under the due date of an item that is past it. */
+export const FIX_IT_OVERDUE = "Overdue";
+
+export const NO_FIX_IT_ITEMS =
+  "No fix-it items. Every requirement and model check in this list is clear.";
+
+/** Lead line when part of the list's data could not be read; the failed parts follow. */
+export const FIX_IT_NOT_COMPLETED =
+  "This list could not be completed. Items that depend on the data below are missing:";
+
+/** Appended to the formal report's base name for the fix-it file. */
+export const FIX_IT_FILENAME_SUFFIX = "_fix-it-list";
+
 /** A glance figure whose source could not be measured in this run. */
 export const NOT_CHECKED = "Not checked";
 

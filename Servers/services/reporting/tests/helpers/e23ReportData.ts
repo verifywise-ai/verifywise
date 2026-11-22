@@ -5,6 +5,7 @@
  */
 import type {
   E23ContradictionsSectionData,
+  E23FixItItem,
   FrameworkRequirementGroup,
   FrameworkRequirementRow,
   MrmFleetSectionData,
@@ -407,4 +408,64 @@ export function e23ReportData(opts: E23FixtureOptions = {}): ReportData {
       },
     },
   };
+}
+
+/** Fix-it items covering every severity, one overdue, one with no due date. */
+export const FIX_IT_ITEMS: E23FixItItem[] = [
+  {
+    severity: "high",
+    source: 1,
+    what: "3 models have no MRM tier",
+    where: "2.2.3 Every model rated through a defined process",
+    owner: "Rae Rater",
+    dueDate: null,
+    overdue: false,
+    closesWhen: "Every model has an MRM tier",
+    sortKey: 0,
+  },
+  {
+    severity: "high",
+    source: 3,
+    what: "Past its due date and not done (status: In progress)",
+    where: "3.6.4 Breach thresholds and material-modification criteria",
+    owner: "Unassigned",
+    dueDate: "2026-09-30",
+    overdue: true,
+    closesWhen: "The requirement is implemented or audited",
+    sortKey: 12,
+  },
+  {
+    severity: "medium",
+    source: 7,
+    what: "Untiered; No owner role",
+    where: "Fraud detector",
+    owner: "Unassigned",
+    dueDate: null,
+    overdue: false,
+    closesWhen: "Every listed gap on the model is resolved",
+    sortKey: 0,
+  },
+  {
+    severity: "low",
+    source: 6,
+    what: "Not done (status: Not started)",
+    where: "1.1.2 Model risk appetite",
+    owner: "Sam Steward",
+    dueDate: "2027-01-15",
+    overdue: false,
+    closesWhen: "The requirement is implemented or audited",
+    sortKey: 2,
+  },
+];
+
+/** An E-23 kind run whose fix-it list was collected (e23FixItList selected). */
+export function e23FixItReportData(
+  opts: E23FixtureOptions & { items?: E23FixItItem[] } = {},
+): ReportData {
+  const data = e23ReportData(opts);
+  const items = opts.items ?? FIX_IT_ITEMS;
+  const counts = { high: 0, medium: 0, low: 0 };
+  items.forEach((i) => (counts[i.severity] += 1));
+  data.sections.e23FixItList = { items, counts };
+  return data;
 }

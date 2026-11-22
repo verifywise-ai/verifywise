@@ -17,6 +17,7 @@ import { ANALYSIS_LABELS } from "./analyzers/mapToSummaries";
 import { applyColorTokens } from "../../tools/emailColors";
 import { generateComplianceProgressChart } from "./chartUtils";
 import { buildE23FormalView } from "./e23/formalView";
+import { buildE23FixItView, type E23FixItView } from "./e23/fixItView";
 import { E23_NOTICE_LABELS } from "./e23/e23Text";
 
 // Browser instance singleton for reuse
@@ -139,40 +140,42 @@ export function renderReportHtml(reportData: ReportData): string {
   return ejs.render(templateContent, data);
 }
 
+const PAGE_MARGIN = { top: "0.75in", right: "0.75in", bottom: "0.75in", left: "0.75in" };
+
+/**
+ * Print HTML to an A4 PDF. With a footer template, Chromium prints it in the
+ * bottom margin of every page.
+ */
+async function printPdf(html: string, footerTemplate?: string): Promise<Buffer> {
+  let page: Page | null = null;
+  try {
+    const browser = await getBrowser();
+    page = await browser.newPage();
+    await page.setContent(html, { waitUntil: "networkidle" });
+    // Wait for any charts to render (if using client-side rendering)
+    await page.waitForTimeout(500);
+    const pdfBuffer = await page.pdf({
+      format: "A4",
+      margin: PAGE_MARGIN,
+      printBackground: true,
+      ...(footerTemplate
+        ? { displayHeaderFooter: true, headerTemplate: "<span></span>", footerTemplate }
+        : { displayHeaderFooter: false }),
+    });
+    return Buffer.from(pdfBuffer);
+  } finally {
+    if (page) {
+      await page.close();
+    }
+  }
+}
+
 /**
  * Generate PDF from report data
  */
 export async function generatePDF(reportData: ReportData): Promise<ReportGenerationResult> {
-  let page: Page | null = null;
-
   try {
-    // Render HTML template
-    const html = renderReportHtml(reportData);
-
-    // Get browser and create page
-    const browser = await getBrowser();
-    page = await browser.newPage();
-
-    // Set content
-    await page.setContent(html, {
-      waitUntil: "networkidle",
-    });
-
-    // Wait for any charts to render (if using client-side rendering)
-    await page.waitForTimeout(500);
-
-    // Generate PDF
-    const pdfBuffer = await page.pdf({
-      format: "A4",
-      margin: {
-        top: "0.75in",
-        right: "0.75in",
-        bottom: "0.75in",
-        left: "0.75in",
-      },
-      printBackground: true,
-      displayHeaderFooter: false,
-    });
+    const content = await printPdf(renderReportHtml(reportData));
 
     // Generate filename
     const timestamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
@@ -181,7 +184,7 @@ export async function generatePDF(reportData: ReportData): Promise<ReportGenerat
     return {
       success: true,
       filename,
-      content: Buffer.from(pdfBuffer),
+      content,
       mimeType: "application/pdf",
     };
   } catch (error) {
@@ -193,10 +196,78 @@ export async function generatePDF(reportData: ReportData): Promise<ReportGenerat
       mimeType: "",
       error: error instanceof Error ? error.message : "Unknown error",
     };
-  } finally {
-    if (page) {
-      await page.close();
-    }
+  }
+}
+
+/**
+ * The internal E-23 fix-it list's HTML (e23-fixit-pdf.ejs). Synchronous and
+ * free of Playwright, like renderReportHtml, so tests render what is printed.
+ */
+export function renderFixItHtml(reportData: ReportData, fixIt: E23FixItView): string {
+  const data: Record<string, unknown> = {
+    branding: reportData.branding,
+    fixIt,
+    include: (filePath: string) => {
+      if (filePath.includes("pdf.css")) return readTemplate("styles/pdf.css");
+      if (filePath.includes("e23.css")) return readTemplate("styles/e23.css");
+      return "";
+    },
+  };
+  data.e23Partial = (name: string, locals: Record<string, unknown> = {}) =>
+    ejs.render(readTemplate(`partials/e23/${name}.ejs`), { ...data, ...locals });
+  return ejs.render(readTemplate("e23-fixit-pdf.ejs"), data);
+}
+
+const escapeHtml = (value: string): string =>
+  value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+
+/**
+ * The fix-it list's page footer: the internal marking and the page number,
+ * printed by Chromium on every page. Its styles must be inline and carry a
+ * font size; the footer does not see the page's stylesheet.
+ */
+export function fixItFooterTemplate(fixIt: E23FixItView): string {
+  return applyColorTokens(
+    `<div style="width: 100%; box-sizing: border-box; padding: 0 0.75in; font-family: Arial, sans-serif; font-size: 8px; color: {{colorTextSecondary}};">` +
+      `<div style="display: flex; justify-content: space-between; gap: 16px; padding-top: 4px; border-top: 1px solid {{colorBorderLight}};">` +
+      `<span style="font-weight: 700;">${escapeHtml(fixIt.footerText)}</span>` +
+      `<span style="white-space: nowrap;">Page <span class="pageNumber"></span> of <span class="totalPages"></span></span>` +
+      `</div></div>`,
+  );
+}
+
+/**
+ * The internal E-23 fix-it list as a PDF (spec 8.6). The caller names the
+ * file after the formal report; the filename here is a fallback.
+ */
+export async function generateFixItPDF(
+  reportData: ReportData,
+  runId?: number,
+): Promise<ReportGenerationResult> {
+  try {
+    const fixIt = buildE23FixItView(reportData, { runId });
+    if (!fixIt) throw new Error("the fix-it list belongs to an OSFI E-23 report");
+    const content = await printPdf(renderFixItHtml(reportData, fixIt), fixItFooterTemplate(fixIt));
+    return {
+      success: true,
+      filename: "fix-it-list.pdf",
+      content,
+      mimeType: "application/pdf",
+    };
+  } catch (error) {
+    console.error("Error generating fix-it list PDF:", error);
+    return {
+      success: false,
+      filename: "",
+      content: Buffer.alloc(0),
+      mimeType: "",
+      error: error instanceof Error ? error.message : "Unknown error",
+    };
   }
 }
 

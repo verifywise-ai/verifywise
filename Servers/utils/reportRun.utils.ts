@@ -45,7 +45,9 @@ export async function updateRunStatusQuery(
     : "";
   await sequelize.query(
     `UPDATE report_runs SET status = :status, ${completedAt}${patch}file_id = :file_id, output_filename = :output_filename,
-       output_mime_type = :output_mime_type, delivery_status = :delivery_status, ai_status = :ai_status,
+       output_mime_type = :output_mime_type, companion_file_id = :companion_file_id,
+       companion_filename = :companion_filename, companion_mime_type = :companion_mime_type,
+       delivery_status = :delivery_status, ai_status = :ai_status,
        ai_tokens_used = :ai_tokens_used, ai_cost = :ai_cost, duration_ms = :duration_ms, error_message = :error_message, updated_at = NOW()
      WHERE id = :id AND organization_id = :organization_id`,
     {
@@ -56,6 +58,9 @@ export async function updateRunStatusQuery(
         file_id: fields.file_id ?? null,
         output_filename: fields.output_filename ?? null,
         output_mime_type: fields.output_mime_type ?? null,
+        companion_file_id: fields.companion_file_id ?? null,
+        companion_filename: fields.companion_filename ?? null,
+        companion_mime_type: fields.companion_mime_type ?? null,
         delivery_status: JSON.stringify(fields.delivery_status ?? {}),
         ai_status: JSON.stringify(fields.ai_status ?? {}),
         ai_tokens_used: fields.ai_tokens_used ?? null,
@@ -97,6 +102,14 @@ export type ReportRunViewer = {
  * never raise a cast error mid-query.
  */
 const RUN_PROJECT_ID_SQL = `COALESCE(rr.config_snapshot->>'project_id', sr.project_id::text)`;
+
+/**
+ * The run's final flag as text ('true' or 'false'), or NULL when its report
+ * takes no such parameter. The run history shows a Draft or Final chip only
+ * for runs where it is not NULL.
+ */
+const IS_FINAL_SQL = (alias: string) =>
+  `${alias}config_snapshot->'report_parameters'->>'isFinal' AS is_final`;
 
 // sr is joined for RUN_PROJECT_ID_SQL alone. Org-scoped on the join, like every
 // other table this file touches.
@@ -225,6 +238,7 @@ export async function listRunsQuery(
   // since been archived still has to name its runs.
   const rows: any[] = await sequelize.query(
     `SELECT rr.*,
+            ${IS_FINAL_SQL("rr.")},
             t.name AS template_name,
             ${RUN_PROJECT_ID_SQL} AS scope_project_id,
             p.project_title AS scope_project_title
@@ -342,7 +356,7 @@ export async function getPriorE23GlanceQuery(
 
 export async function getRunQuery(id: number, organization_id: number): Promise<any> {
   const rows: any[] = await sequelize.query(
-    `SELECT * FROM report_runs WHERE id = :id AND organization_id = :organization_id`,
+    `SELECT *, ${IS_FINAL_SQL("")} FROM report_runs WHERE id = :id AND organization_id = :organization_id`,
     { replacements: { id, organization_id }, type: QueryTypes.SELECT },
   );
   return rows[0] ?? null;
@@ -373,9 +387,21 @@ export async function setRunArchivedQuery(
 }
 
 /**
- * Permanently delete a run and the file it produced — the file is the report,
- * which is what DELETE /reporting/:id meant before runs became the list. A run
- * with no file_id (failed, or still running) deletes the row alone.
+ * Delete one stored file of a run (with its folder mappings) in its own
+ * transaction: used to take back an E-23 fix-it list when its run fails
+ * after the list was stored.
+ */
+export async function deleteRunFileQuery(fileId: number, organization_id: number): Promise<void> {
+  await sequelize.transaction(async (transaction) => {
+    await deleteFileById(fileId, organization_id, transaction);
+  });
+}
+
+/**
+ * Permanently delete a run and the files it produced — the file is the report,
+ * which is what DELETE /reporting/:id meant before runs became the list; an
+ * E-23 run also has its internal fix-it list (companion_file_id). A run with
+ * no file (failed, or still running) deletes the row alone.
  *
  * One transaction, because the two deletes are not independent: report_runs
  * .file_id is ON DELETE SET NULL, so if the file DELETE committed and the run
@@ -387,14 +413,15 @@ export async function setRunArchivedQuery(
 export async function deleteRunQuery(id: number, organization_id: number): Promise<boolean> {
   return await sequelize.transaction(async (transaction) => {
     const rows: any[] = await sequelize.query(
-      `SELECT id, file_id FROM report_runs WHERE id = :id AND organization_id = :organization_id`,
+      `SELECT id, file_id, companion_file_id FROM report_runs
+       WHERE id = :id AND organization_id = :organization_id`,
       { replacements: { id, organization_id }, type: QueryTypes.SELECT, transaction },
     );
     const run = rows[0];
     if (!run) return false;
 
-    if (run.file_id) {
-      await deleteFileById(run.file_id, organization_id, transaction);
+    for (const fileId of [run.file_id, run.companion_file_id]) {
+      if (fileId) await deleteFileById(fileId, organization_id, transaction);
     }
 
     await sequelize.query(
