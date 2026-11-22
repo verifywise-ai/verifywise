@@ -544,4 +544,43 @@ describe("scheduled report parameters and schedule config", () => {
     expect(res.status).toHaveBeenCalledWith(400);
     expect(utils.updateScheduledReportQuery).not.toHaveBeenCalled();
   });
+
+  it("400s a project-scoped schedule of an E-23 template", async () => {
+    const res = mockRes();
+    await createScheduledReport(
+      { body: { ...body, scope: "project", projectId: 5 }, organizationId: 42, userId: 9 } as any,
+      res,
+    );
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json.mock.calls[0][0].data.errors).toContain(
+      "an OSFI E-23 report covers the whole organization; choose organization scope",
+    );
+    expect(utils.createScheduledReportQuery).not.toHaveBeenCalled();
+  });
+
+  it("400s a PATCH that moves an E-23 schedule to project scope", async () => {
+    utils.getScheduledReportQuery.mockResolvedValueOnce({
+      id: 7,
+      scope: "organization",
+      project_id: null,
+      template_version_id: 30,
+      sections_config: body.sectionsConfig,
+      report_parameters: scheduleParams,
+    });
+    const res = mockRes();
+    await updateScheduledReport(
+      {
+        params: { id: "7" },
+        body: { scope: "project", projectId: 5 },
+        organizationId: 42,
+        userId: 9,
+      } as any,
+      res,
+    );
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json.mock.calls[0][0].data.errors).toContain(
+      "an OSFI E-23 report covers the whole organization; choose organization scope",
+    );
+    expect(utils.updateScheduledReportQuery).not.toHaveBeenCalled();
+  });
 });

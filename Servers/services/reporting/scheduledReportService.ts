@@ -92,6 +92,8 @@ export async function validateScheduledReportParameters(input: {
   organizationId: number;
   sectionsConfig: unknown;
   reportParameters: unknown;
+  /** The schedule's scope as it will be stored (after a PATCH, not before). */
+  scope: string | undefined;
 }): Promise<{ value: ReportParameters; errors: ReportParameterError[] }> {
   const version = input.templateVersionId
     ? await getVersionByIdQuery(Number(input.templateVersionId), input.organizationId)
@@ -101,6 +103,6 @@ export async function validateScheduledReportParameters(input: {
     version.parameters_config ?? {},
     sectionKeysOf(input.sectionsConfig),
     input.reportParameters,
-    { now: new Date(), requirePeriod: false },
+    { now: new Date(), requirePeriod: false, scope: input.scope },
   );
 }

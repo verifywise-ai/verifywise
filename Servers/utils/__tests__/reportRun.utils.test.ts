@@ -5,6 +5,7 @@ import {
   updateRunStatusQuery,
   listRunsQuery,
   canViewRunQuery,
+  getLastParametersQuery,
 } from "../reportRun.utils";
 const q = sequelize.query as jest.Mock;
 const ADMIN = { userId: 1, role: "Admin" };
@@ -121,5 +122,44 @@ describe("canViewRunQuery", () => {
     // organization-scoped runs (no project) can come back.
     expect(q.mock.calls[0][0]).toContain(MEMBERSHIP_SQL);
     expect(q.mock.calls[0][1].replacements.viewerUserId).toBeNull();
+  });
+
+  describe("getLastParametersQuery", () => {
+    const MEMBERSHIP_SQL = "p.owner = :viewerUserId OR pm.user_id = :viewerUserId";
+    it("applies run visibility for a non-Admin viewer, like the run list", async () => {
+      q.mockResolvedValueOnce([]);
+      await getLastParametersQuery(3, 7, { userId: 9, role: "Editor" });
+      const [sql, opts] = q.mock.calls[0];
+      expect(sql).toContain(MEMBERSHIP_SQL);
+      expect(sql).toContain("LEFT JOIN scheduled_reports sr");
+      expect(opts.replacements).toMatchObject({
+        templateId: 3,
+        organization_id: 7,
+        viewerUserId: 9,
+      });
+    });
+
+    it("does not restrict an Admin", async () => {
+      q.mockResolvedValueOnce([]);
+      await getLastParametersQuery(3, 7, ADMIN);
+      expect(q.mock.calls[0][0]).not.toContain(MEMBERSHIP_SQL);
+    });
+
+    it("strips the period and the final flag from the prefill", async () => {
+      q.mockResolvedValueOnce([
+        {
+          parameters: {
+            institutionName: "Northern Bank",
+            periodStart: "2026-08-01",
+            periodEnd: "2026-10-31",
+            isFinal: true,
+          },
+        },
+      ]);
+      expect(await getLastParametersQuery(3, 7, ADMIN)).toEqual({
+        parameters: { institutionName: "Northern Bank" },
+        periodEnd: "2026-10-31",
+      });
+    });
   });
 });

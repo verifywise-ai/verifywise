@@ -238,32 +238,51 @@ export async function listRunsQuery(
 }
 
 /**
- * The answers from this organization's latest successful run of a template,
- * for prefilling the next run. The period is left out (the next run asks for
- * its own); the old end date is returned separately so the caller can start
- * the next period the day after it.
+ * The answers from the latest successful run of a template that this viewer
+ * may see, for prefilling the next run. The period and the final flag are
+ * left out (each run asks for its own, and final must be a deliberate choice
+ * every time); the old end date is returned separately so the caller can
+ * start the next period the day after it.
  *
  * Runs are matched on organization_id as well as template_id: a system
  * template is shared by every organization, and one organization's answers
- * must never prefill another's form.
+ * must never prefill another's form. Within the organization the run-list
+ * visibility rule applies (viewerVisibilitySql over RUN_FROM_SQL), so a
+ * member who cannot open a project's run cannot read its cover page here.
  */
 export async function getLastParametersQuery(
   templateId: number,
-  organizationId: number,
+  organization_id: number,
+  viewer: ReportRunViewer,
 ): Promise<{ parameters: ReportParameters; periodEnd: string | null } | null> {
+  const where: string[] = [
+    "rr.template_id = :templateId",
+    "rr.organization_id = :organization_id",
+    "rr.status = 'success'",
+    "jsonb_typeof(rr.config_snapshot->'report_parameters') = 'object'",
+  ];
+  const replacements: Record<string, unknown> = { templateId, organization_id };
+  const visibility = viewerVisibilitySql(viewer);
+  if (visibility) {
+    where.push(visibility);
+    replacements.viewerUserId = viewer.userId;
+  }
+
   const rows: { parameters: unknown }[] = await sequelize.query(
     `SELECT rr.config_snapshot->'report_parameters' AS parameters
-       FROM report_runs rr
-      WHERE rr.template_id = :templateId
-        AND rr.organization_id = :organizationId
-        AND rr.status = 'success'
-        AND jsonb_typeof(rr.config_snapshot->'report_parameters') = 'object'
-      ORDER BY rr.completed_at DESC NULLS LAST, rr.id DESC
-      LIMIT 1`,
-    { replacements: { templateId, organizationId }, type: QueryTypes.SELECT },
+     ${RUN_FROM_SQL}
+     WHERE ${where.join(" AND ")}
+     ORDER BY rr.completed_at DESC NULLS LAST, rr.id DESC
+     LIMIT 1`,
+    { replacements, type: QueryTypes.SELECT },
   );
   if (!rows[0]) return null;
-  const { periodStart: _start, periodEnd, ...parameters } = rows[0].parameters as ReportParameters;
+  const {
+    periodStart: _start,
+    periodEnd,
+    isFinal: _isFinal,
+    ...parameters
+  } = rows[0].parameters as ReportParameters;
   return {
     parameters,
     periodEnd: typeof periodEnd === "string" ? periodEnd : null,

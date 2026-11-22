@@ -12,6 +12,19 @@ import type {
   ReportParametersConfig,
 } from "../../domain.layer/interfaces/i.reportTemplate";
 import { kindViolations } from "./sectionCatalog";
+import { E23_KIND } from "./e23/e23Parameters";
+
+/** Report kinds a template version may declare in parameters_config.kind. */
+export const KNOWN_REPORT_KINDS: readonly string[] = [E23_KIND];
+
+/** An absent kind is a general report; any other value must be a known kind. */
+export function reportKindErrors(
+  config: ReportParametersConfig | null | undefined,
+): ReportParameterError[] {
+  const kind = config?.kind;
+  if (kind === undefined || kind === null || KNOWN_REPORT_KINDS.includes(kind)) return [];
+  return [{ key: "kind", message: "unknown report kind: {kind}", params: { kind: String(kind) } }];
+}
 
 export interface ReportParameterError {
   key: string;
@@ -161,7 +174,7 @@ export function validateRunInput(
   config: ReportParametersConfig | null | undefined,
   sectionKeys: string[],
   raw: unknown,
-  opts: { now: Date; requirePeriod: boolean },
+  opts: { now: Date; requirePeriod: boolean; scope?: string },
 ): { value: ReportParameters; errors: ReportParameterError[] } {
   const cfg = config ?? {};
   const errors: ReportParameterError[] = kindViolations(sectionKeys, cfg.kind).map((key) => ({
@@ -169,6 +182,14 @@ export function validateRunInput(
     message: "section {key} is only available in an OSFI E-23 report",
     params: { key },
   }));
+  // The E-23 report describes the institution's whole model risk programme;
+  // a project slice of it would read as complete while leaving models out.
+  if (cfg.kind === E23_KIND && opts.scope !== undefined && opts.scope !== "organization") {
+    errors.push({
+      key: "scope",
+      message: "an OSFI E-23 report covers the whole organization; choose organization scope",
+    });
+  }
   if ((raw === undefined || raw === null) && !declaresParameters(cfg)) {
     return { value: {}, errors };
   }
@@ -183,7 +204,7 @@ export function validateRunInput(
  * A message added to the validators must be added here too, or it is sent
  * untranslated.
  */
-const PARAMETER_MESSAGES = [
+export const PARAMETER_MESSAGES = [
   "{label} is required",
   "{label} must be true or false",
   "{label} must be text",
@@ -196,6 +217,8 @@ const PARAMETER_MESSAGES = [
   "report parameters must be an object",
   "the reporting period is set at run time for schedules",
   "section {key} is only available in an OSFI E-23 report",
+  "an OSFI E-23 report covers the whole organization; choose organization scope",
+  "unknown report kind: {kind}",
 ] as const;
 
 const fill = (text: string, params?: Record<string, string | number>): string =>

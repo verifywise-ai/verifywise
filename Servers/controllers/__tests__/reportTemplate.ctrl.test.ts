@@ -420,3 +420,75 @@ describe("runTemplateNow report parameters", () => {
     expect((runScheduledReport as jest.Mock).mock.calls[0][0].report_parameters).toEqual({});
   });
 });
+
+describe("report kind on template writes", () => {
+  it("400s a template create that declares an unknown report kind", async () => {
+    const res = mockRes();
+    await createTemplate(
+      mockReq({
+        body: {
+          name: "Copy",
+          category: "governance",
+          default_scope: "organization",
+          parameters_config: { kind: "made_up" },
+        },
+      }) as any,
+      res,
+    );
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(JSON.stringify(res.json.mock.calls[0][0])).toContain("unknown report kind: made_up");
+    expect(createTemplateQuery).not.toHaveBeenCalled();
+  });
+
+  it("400s a template PATCH that declares an unknown report kind", async () => {
+    const res = mockRes();
+    await updateTemplate(
+      mockReq({ params: { id: "7" }, body: { parameters_config: { kind: "made_up" } } }) as any,
+      res,
+    );
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(createTemplateVersionQuery).not.toHaveBeenCalled();
+  });
+
+  it("accepts the E-23 kind on create", async () => {
+    (createTemplateQuery as jest.Mock).mockResolvedValue({ id: 7 });
+    (createTemplateVersionQuery as jest.Mock).mockResolvedValue({ id: 30, version: 1 });
+    const res = mockRes();
+    await createTemplate(
+      mockReq({
+        body: {
+          name: "Copy",
+          category: "governance",
+          default_scope: "organization",
+          parameters_config: { kind: "osfi_e23", fields: [] },
+        },
+      }) as any,
+      res,
+    );
+    expect(res.status).toHaveBeenCalledWith(201);
+  });
+});
+
+describe("runTemplateNow E-23 scope", () => {
+  it("400s a project-scoped run of an E-23 template", async () => {
+    (getTemplateByIdQuery as jest.Mock).mockResolvedValue({ id: 7, name: "OSFI E-23" });
+    (getVersionByIdQuery as jest.Mock).mockResolvedValue({
+      id: 30,
+      template_id: 7,
+      parameters_config: { kind: "osfi_e23", fields: [] },
+    });
+    const res = mockRes();
+    await runTemplateNow(
+      mockReq({
+        params: { id: "7" },
+        body: { templateVersionId: 30, scope: "project", projectId: 5, reportParameters: {} },
+      }) as any,
+      res,
+    );
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json.mock.calls[0][0].data.errors).toContain(
+      "an OSFI E-23 report covers the whole organization; choose organization scope",
+    );
+    expect(runScheduledReport).not.toHaveBeenCalled();
+  });
+});

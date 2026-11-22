@@ -63,6 +63,8 @@ export async function createScheduledReport(req: Request, res: Response): Promis
       organizationId: req.organizationId!,
       sectionsConfig: req.body?.sectionsConfig,
       reportParameters: req.body?.reportParameters,
+      // The resolver derives a missing scope the same way.
+      scope: req.body?.scope ?? (req.body?.projectId ? "project" : "organization"),
     });
     const errors = [
       ...validateScheduledReportInput(req.body),
@@ -258,15 +260,20 @@ export async function updateScheduledReport(req: Request, res: Response): Promis
         return res.status(403).json(STATUS_CODE[403]({ errors: authzErrors }));
       }
 
-      // New sections or new answers are checked against the schedule's own
-      // template version, each against the other's stored value when only
-      // one is patched. The validated answers replace the raw ones.
-      if (input.reportParameters !== undefined || input.sectionsConfig !== undefined) {
+      // New sections, answers or scope are checked against the schedule's
+      // own template version, each against the stored value of the others
+      // when only one is patched. The validated answers replace the raw ones.
+      if (
+        input.reportParameters !== undefined ||
+        input.sectionsConfig !== undefined ||
+        input.scope !== undefined
+      ) {
         const parameters = await validateScheduledReportParameters({
           templateVersionId: existing.template_version_id,
           organizationId: req.organizationId!,
           sectionsConfig: input.sectionsConfig ?? existing.sections_config,
           reportParameters: input.reportParameters ?? existing.report_parameters,
+          scope: effectiveScope,
         });
         if (parameters.errors.length) {
           return res

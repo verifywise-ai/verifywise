@@ -2,8 +2,8 @@
  * @fileoverview Report parameter endpoints.
  *
  * GET /api/v1/report-templates/:id/last-parameters returns the answers from
- * this organization's latest successful run of a template, so the run wizard
- * can prefill them ("remember for next time").
+ * the latest successful run of a template that the caller may see in their
+ * organization, so the run wizard can prefill them ("remember for next time").
  *
  * @module controllers/reportParameters
  */
@@ -25,7 +25,12 @@ export async function getLastParameters(req: Request, res: Response): Promise<an
       : null;
     if (!template) return res.status(404).json(STATUS_CODE[404](req.t!("template not found")));
 
-    const last = await getLastParametersQuery(templateId, organizationId);
+    // The viewer comes from the authenticated request only, as in listRuns:
+    // a member not on a project must not read that project's run here.
+    const last = await getLastParametersQuery(templateId, organizationId, {
+      userId: req.userId ?? null,
+      role: req.role ?? null,
+    });
     return res.status(200).json(STATUS_CODE[200](last));
   } catch (error) {
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));

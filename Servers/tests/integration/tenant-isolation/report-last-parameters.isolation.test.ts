@@ -1,6 +1,8 @@
 jest.setTimeout(60000);
 
-import { cleanupDatabase } from "../helpers";
+import { cleanupDatabase, createTestUser } from "../helpers";
+import { createTestApp, testRequest } from "../setup";
+import { createTestProject } from "../../factories";
 import { sequelize } from "../../../database/db";
 import { QueryTypes } from "sequelize";
 import { seedTwoTenantContexts, TenantContext } from "./tenantIsolation.harness";
@@ -42,6 +44,7 @@ async function seedRun(
   parameters: Record<string, string | boolean>,
   completedAt: string,
   status = "success",
+  projectId: number | null = null,
 ): Promise<void> {
   await sequelize.query(
     `INSERT INTO report_runs
@@ -55,7 +58,7 @@ async function seedRun(
         user: ctx.userId,
         status,
         completedAt,
-        snapshot: JSON.stringify({ report_parameters: parameters }),
+        snapshot: JSON.stringify({ project_id: projectId, report_parameters: parameters }),
       },
     },
   );
@@ -153,5 +156,73 @@ describe("Report last-parameters tenant isolation", () => {
 
     expect((await attacker.request.get(lastParameters(ownerTemplateId))).status).toBe(404);
     expect((await owner.request.get(lastParameters(ownerTemplateId))).status).toBe(200);
+  });
+
+  describe("within the organization", () => {
+    /** An Editor in the owner's organization who is not on any project. */
+    async function editorOf(ctx: TenantContext) {
+      const userId = await createTestUser(
+        ctx.orgId,
+        3,
+        `last-params-editor-${Date.now()}@test.com`,
+        "Password123!",
+      );
+      const app = await createTestApp({
+        bypassAuth: true,
+        mockUser: { userId, organizationId: ctx.orgId, role: "Editor" },
+      });
+      return testRequest(app);
+    }
+
+    it("gives a member not on project P the older visible run, not P's run", async () => {
+      const { owner } = await seedTwoTenantContexts();
+      const templateId = await seedSystemTemplate("e23-visibility");
+      const projectP = await createTestProject(owner.orgId, owner.userId);
+
+      await seedRun(
+        owner,
+        templateId,
+        { institutionName: "Organization run", periodEnd: "2026-07-31" },
+        "2026-08-02T10:00:00Z",
+      );
+      await seedRun(
+        owner,
+        templateId,
+        { institutionName: "Project P run", scopeNote: "P only", periodEnd: "2026-10-31" },
+        "2026-11-02T10:00:00Z",
+        "success",
+        projectP,
+      );
+
+      const editor = await editorOf(owner);
+      const editorRes = await editor.get(lastParameters(templateId));
+      expect(editorRes.status).toBe(200);
+      expect(editorRes.body.data).toEqual({
+        parameters: { institutionName: "Organization run" },
+        periodEnd: "2026-07-31",
+      });
+
+      // The Admin sees every run, so the newer project run is theirs.
+      const adminRes = await owner.request.get(lastParameters(templateId));
+      expect(adminRes.body.data.parameters.institutionName).toBe("Project P run");
+    });
+
+    it("gives that member nothing when P's run is the only one", async () => {
+      const { owner } = await seedTwoTenantContexts();
+      const templateId = await seedSystemTemplate("e23-visibility-only");
+      const projectP = await createTestProject(owner.orgId, owner.userId);
+      await seedRun(
+        owner,
+        templateId,
+        { institutionName: "Project P run" },
+        "2026-11-02T10:00:00Z",
+        "success",
+        projectP,
+      );
+
+      const editorRes = await (await editorOf(owner)).get(lastParameters(templateId));
+      expect(editorRes.status).toBe(200);
+      expect(editorRes.body.data).toBeNull();
+    });
   });
 });

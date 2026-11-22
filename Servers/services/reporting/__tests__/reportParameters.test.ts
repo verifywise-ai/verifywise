@@ -1,4 +1,11 @@
-import { validateReportParameters } from "../reportParameters";
+import fs from "fs";
+import path from "path";
+import {
+  PARAMETER_MESSAGES,
+  reportKindErrors,
+  validateReportParameters,
+  validateRunInput,
+} from "../reportParameters";
 import { E23_PARAMETER_FIELDS } from "../e23/e23Parameters";
 
 const config = { kind: "osfi_e23", fields: E23_PARAMETER_FIELDS };
@@ -121,5 +128,67 @@ describe("validateReportParameters", () => {
         },
       ]);
     });
+  });
+});
+
+describe("PARAMETER_MESSAGES", () => {
+  // parameterErrorMessages only translates messages in this list; anything
+  // else is sent in English. Every message the module can emit must be listed.
+  it("lists every message literal the module emits", () => {
+    const src = fs.readFileSync(path.join(__dirname, "..", "reportParameters.ts"), "utf8");
+    const emitted = [...src.matchAll(/message:\s*"([^"]+)"/g)].map((m) => m[1]);
+    expect(emitted.length).toBeGreaterThan(10);
+    for (const m of emitted) expect(PARAMETER_MESSAGES).toContain(m);
+  });
+
+  it("lists every message produced by a broad set of bad inputs", () => {
+    const bad = [
+      undefined,
+      [],
+      "x",
+      {},
+      { unknown: 1 },
+      { periodStart: "2026-13-40", periodEnd: "2099-01-01", isFinal: "yes" },
+      { periodStart: "2026-05-01", periodEnd: "2026-04-01", institutionName: 5 },
+      { institutionName: "x".repeat(300), audience: "press" },
+    ];
+    const messages = new Set<string>();
+    for (const raw of bad) {
+      for (const requirePeriod of [true, false]) {
+        for (const e of validateRunInput(config, ["mrmFleet"], raw, {
+          now,
+          requirePeriod,
+          scope: "project",
+        }).errors)
+          messages.add(e.message);
+        for (const e of validateRunInput({}, ["mrmFleet"], raw, { now, requirePeriod }).errors)
+          messages.add(e.message);
+      }
+    }
+    for (const e of reportKindErrors({ kind: "made_up" })) messages.add(e.message);
+    expect(messages.size).toBeGreaterThan(10);
+    for (const m of messages) expect(PARAMETER_MESSAGES).toContain(m);
+  });
+});
+
+describe("report kind and scope rules", () => {
+  it("refuses an E-23 run that is not organization scope", () => {
+    const { errors } = validateRunInput(config, [], valid, {
+      now,
+      requirePeriod: true,
+      scope: "project",
+    });
+    expect(errors.map((e) => e.message)).toEqual([
+      "an OSFI E-23 report covers the whole organization; choose organization scope",
+    ]);
+  });
+
+  it("accepts an absent or known kind and refuses an unknown one", () => {
+    expect(reportKindErrors(undefined)).toEqual([]);
+    expect(reportKindErrors({})).toEqual([]);
+    expect(reportKindErrors({ kind: "osfi_e23" })).toEqual([]);
+    expect(reportKindErrors({ kind: "made_up" })).toEqual([
+      { key: "kind", message: "unknown report kind: {kind}", params: { kind: "made_up" } },
+    ]);
   });
 });
