@@ -174,7 +174,7 @@ const riskChipClass = (level) => {
         <%
         // Determine which groups have content
         const hasRiskAnalysis = sections.projectRisks || sections.vendorRisks || sections.modelRisks;
-        const hasComplianceGovernance = sections.compliance || sections.assessment || sections.clausesAndAnnexes || sections.nistSubcategories;
+        const hasComplianceGovernance = sections.compliance || sections.assessment || sections.clausesAndAnnexes || sections.nistSubcategories || sections.frameworkRequirements;
         const hasOrganization = sections.vendors || sections.models || sections.trainingRegistry || sections.policyManager || sections.incidentManagement;
         let sectionNum = 1;
         %>
@@ -595,7 +595,7 @@ const riskChipClass = (level) => {
     <!-- ============================================ -->
     <!-- COMPLIANCE & GOVERNANCE GROUP -->
     <!-- ============================================ -->
-    <% if (sections.compliance || sections.assessment || sections.clausesAndAnnexes || sections.nistSubcategories) { %>
+    <% if (sections.compliance || sections.assessment || sections.clausesAndAnnexes || sections.nistSubcategories || sections.frameworkRequirements) { %>
     <div class="group-header">
       <h2 class="group-title">Compliance & Governance</h2>
     </div>
@@ -866,6 +866,77 @@ const riskChipClass = (level) => {
       <% }); %>
     </div>
     <% } %>
+
+    <!-- Framework requirements (bundled frameworks) Subsection -->
+    <% if (sections.frameworkRequirements) { %>
+    <div class="subsection" id="framework-requirements">
+      <div class="subsection-header">
+        <h3 class="subsection-title">Framework requirements</h3>
+      </div>
+
+      <% if (typeof aiSummaries !== 'undefined' && aiSummaries && aiSummaries.sectionSummaries && aiSummaries.sectionSummaries['frameworkRequirements']) { %>
+      <div class="ai-analysis-box">
+        <div class="ai-analysis-label">AI Analysis</div>
+        <div class="ai-analysis-content"><%= aiSummaries.sectionSummaries['frameworkRequirements'] %></div>
+      </div>
+      <% } %>
+
+      <%
+      const frChipClass = function(req) {
+        if (req.isDone) return 'chip-success';
+        if (req.status === 'Needs rework') return 'chip-error';
+        if (req.status === 'Not started') return 'chip-default';
+        return 'chip-warning';
+      };
+      const frEvidenceLine = function(req) {
+        if (!req.evidenceFiles || req.evidenceFiles.length === 0) return '';
+        const more = req.evidenceCount - req.evidenceFiles.length;
+        return 'Evidence: ' + req.evidenceFiles.join(', ') + (more > 0 ? ', and ' + more + ' more' : '');
+      };
+      %>
+
+      <% sections.frameworkRequirements.frameworks.forEach(function(fw, fwIdx) { %>
+      <h4 class="section-subtitle"><%= fw.frameworkName %></h4>
+      <p style="font-size: 11px; margin: 0 0 8px 0; color: var(--color-text-secondary);"><%= fw.rollup.done %> of <%= fw.rollup.total %> requirements implemented or audited</p>
+
+      <% if (typeof frameworkRequirementCharts !== 'undefined' && frameworkRequirementCharts && frameworkRequirementCharts[fwIdx]) { %>
+      <div class="avoid-break" style="margin-bottom: 12px;">
+        <%- frameworkRequirementCharts[fwIdx] %>
+      </div>
+      <% } %>
+
+      <% fw.groups.forEach(function(group) { %>
+      <h5 style="font-size: 12px; margin: 12px 0 8px 0; color: var(--color-text-secondary);"><% if (group.useCase) { %><%= group.useCase %> · <% } %><%= group.title %></h5>
+
+      <% if (group.requirements.length > 0) { %>
+      <table class="data-table" style="font-size: 10px;">
+        <thead>
+          <tr>
+            <th>Requirement</th>
+            <th>Status</th>
+            <th>Owner</th>
+            <th>Due date</th>
+            <th>Evidence</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% group.requirements.forEach(function(req) {
+            [req].concat(req.children || []).forEach(function(r) { %>
+          <tr>
+            <td<% if (r.level === 3) { %> style="padding-left: 24px;"<% } %>><%= r.title %><% if (frEvidenceLine(r)) { %><br><span style="font-size: 9px; color: var(--color-text-secondary);"><%= frEvidenceLine(r) %></span><% } %></td>
+            <td><span class="chip <%= frChipClass(r) %>"><%= r.status %></span></td>
+            <td><%= r.owner || '—' %></td>
+            <td><%= r.dueDate || '—' %></td>
+            <td><%= r.evidenceCount %></td>
+          </tr>
+          <% }); }); %>
+        </tbody>
+      </table>
+      <% } %>
+      <% }); %>
+      <% }); %>
+    </div>
+    <% } %>
     <% } %>
 
     <!-- ============================================ -->
@@ -1114,6 +1185,7 @@ const riskChipClass = (level) => {
         assessment: 'Assessment tracker',
         clausesAndAnnexes: 'Clauses and annexes',
         nistSubcategories: 'NIST subcategories',
+        frameworkRequirements: 'Framework requirements',
         models: 'AI models',
         vendors: 'Vendors',
         trainingRegistry: 'Training registry',

@@ -655,6 +655,108 @@ describe("DOCX Generator", () => {
     });
   });
 
+  describe("framework requirements", () => {
+    const rollup = (total: number, done: number) => ({
+      total,
+      done,
+      unassigned: 0,
+      noEvidence: 0,
+      overdue: 0,
+      statusBreakdown: {},
+    });
+    const row = (over: Record<string, unknown>) => ({
+      implId: 1,
+      level: 2 as const,
+      title: "Req",
+      orderNo: 1,
+      status: "In progress",
+      owner: null,
+      reviewer: null,
+      approver: null,
+      dueDate: null,
+      isDone: false,
+      isOverdue: false,
+      evidenceCount: 0,
+      evidenceFiles: [] as string[],
+      riskCount: 0,
+      ...over,
+    });
+    const frameworkData = (): ReportData => ({
+      ...mockReportData,
+      sections: {
+        frameworkRequirements: {
+          frameworks: [
+            {
+              frameworkId: 26,
+              frameworkName: "OSFI E-23",
+              rollup: rollup(3, 1),
+              groups: [
+                {
+                  title: "Governance",
+                  orderNo: 1,
+                  useCase: "Credit scoring",
+                  rollup: rollup(3, 1),
+                  requirements: [
+                    row({
+                      implId: 10,
+                      title: "Model inventory",
+                      status: "Implemented",
+                      isDone: true,
+                      owner: "Jane Doe",
+                      dueDate: "2026-12-01",
+                      evidenceCount: 3,
+                      evidenceFiles: ["a.pdf", "b.docx"],
+                      children: [
+                        row({
+                          implId: 11,
+                          level: 3,
+                          title: "Inventory sub item",
+                        }),
+                      ],
+                    }),
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+      },
+    });
+
+    it("renders framework requirements with progress line, group headings and evidence line", async () => {
+      const result = await generateDOCX(frameworkData());
+      const text = await docxText(result.content);
+
+      expect(result.success).toBe(true);
+      expect(text).toContain("OSFI E-23");
+      expect(text).toContain("1 of 3 requirements implemented or audited");
+      expect(text).toContain("Credit scoring · Governance");
+      expect(text).toContain("Requirement");
+      expect(text).toContain("Due date");
+      expect(text).toContain("Model inventory");
+      expect(text).toContain("Jane Doe");
+      expect(text).toContain("2026-12-01");
+      expect(text).toContain("Inventory sub item");
+      expect(text).toContain("Evidence: a.pdf, b.docx, and 1 more");
+    });
+
+    it("includes frameworkRequirements in the compliance group guard", async () => {
+      const result = await generateDOCX(frameworkData());
+      const text = await docxText(result.content);
+      expect(text).toContain("1. Compliance &amp; governance");
+      expect(text).toContain("COMPLIANCE &amp; GOVERNANCE");
+    });
+
+    it("labels the notice for the section", async () => {
+      const result = await generateDOCX({
+        ...mockReportData,
+        sections: {},
+        sectionNotices: [{ sectionKey: "frameworkRequirements", reason: "no_data" }],
+      });
+      expect(await docxText(result.content)).toContain("Framework requirements");
+    });
+  });
+
   describe("section notices", () => {
     it("names the section and explains why it is empty", async () => {
       // Nothing but notices: both "has any section" guards return [], so this

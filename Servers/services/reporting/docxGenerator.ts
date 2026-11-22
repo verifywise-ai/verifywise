@@ -62,6 +62,7 @@ const NOTICE_LABELS: Record<string, string> = {
   assessment: "Assessment tracker",
   clausesAndAnnexes: "Clauses and annexes",
   nistSubcategories: "NIST subcategories",
+  frameworkRequirements: "Framework requirements",
   models: "AI models",
   vendors: "Vendors",
   trainingRegistry: "Training registry",
@@ -304,7 +305,8 @@ function createTableOfContents(reportData: ReportData): Paragraph[] {
     sections.compliance ||
     sections.assessment ||
     sections.clausesAndAnnexes ||
-    sections.nistSubcategories
+    sections.nistSubcategories ||
+    sections.frameworkRequirements
   ) {
     paragraphs.push(createTocEntry(`${sectionNum++}. Compliance & governance`));
   }
@@ -464,17 +466,19 @@ function createTable(headers: string[], rows: string[][]): Table {
                 left: borderStyle,
                 right: borderStyle,
               },
-              children: [
-                new Paragraph({
-                  children: [
-                    new TextRun({
-                      text: cell || "-",
-                      size: 20,
-                      color: COLORS.textPrimary,
-                    }),
-                  ],
-                }),
-              ],
+              // A newline starts a new, smaller paragraph (e.g. an evidence line).
+              children: (cell || "-").split("\n").map(
+                (line, lineIndex) =>
+                  new Paragraph({
+                    children: [
+                      new TextRun({
+                        text: line,
+                        size: lineIndex === 0 ? 20 : 16,
+                        color: lineIndex === 0 ? COLORS.textPrimary : COLORS.textSecondary,
+                      }),
+                    ],
+                  }),
+              ),
               verticalAlign: VerticalAlign.CENTER,
             }),
         ),
@@ -1043,7 +1047,8 @@ function createComplianceSection(reportData: ReportData): (Paragraph | Table)[] 
     !sections.compliance &&
     !sections.assessment &&
     !sections.clausesAndAnnexes &&
-    !sections.nistSubcategories
+    !sections.nistSubcategories &&
+    !sections.frameworkRequirements
   ) {
     return [];
   }
@@ -1271,6 +1276,79 @@ function createComplianceSection(reportData: ReportData): (Paragraph | Table)[] 
             sub.status || "-",
             sub.risks && sub.risks.length > 0 ? sub.risks.map((r) => r.riskName).join(", ") : "-",
           ]);
+          elements.push(createTable(headers, rows));
+          elements.push(createTableSpacing());
+        }
+      });
+    });
+  }
+
+  // Framework requirements (bundled frameworks)
+  if (sections.frameworkRequirements) {
+    elements.push(createSubsectionHeader("Framework requirements"));
+
+    if (reportData.aiSummaries?.sectionSummaries?.["frameworkRequirements"]) {
+      elements.push(
+        ...createAIAnalysisBox(reportData.aiSummaries.sectionSummaries["frameworkRequirements"]),
+      );
+    }
+
+    sections.frameworkRequirements.frameworks.forEach((fw) => {
+      elements.push(
+        new Paragraph({
+          spacing: { before: 200, after: 100 },
+          children: [
+            new TextRun({ text: fw.frameworkName, bold: true, size: 24, color: COLORS.primary }),
+          ],
+        }),
+      );
+      elements.push(
+        new Paragraph({
+          spacing: { after: 100 },
+          children: [
+            new TextRun({
+              text: `${fw.rollup.done} of ${fw.rollup.total} requirements implemented or audited`,
+              size: 20,
+              color: COLORS.textSecondary,
+            }),
+          ],
+        }),
+      );
+
+      fw.groups.forEach((group) => {
+        elements.push(
+          new Paragraph({
+            spacing: { before: 120, after: 80 },
+            children: [
+              new TextRun({
+                text: `${group.useCase ? `${group.useCase} · ` : ""}${group.title}`,
+                bold: true,
+                size: 22,
+                color: COLORS.textSecondary,
+              }),
+            ],
+          }),
+        );
+
+        if (group.requirements.length > 0) {
+          const headers = ["Requirement", "Status", "Owner", "Due date", "Evidence"];
+          const rows: string[][] = [];
+          group.requirements.forEach((req) => {
+            [req, ...(req.children ?? [])].forEach((r) => {
+              const more = r.evidenceCount - r.evidenceFiles.length;
+              const evidenceLine =
+                r.evidenceFiles.length > 0
+                  ? `\nEvidence: ${r.evidenceFiles.join(", ")}${more > 0 ? `, and ${more} more` : ""}`
+                  : "";
+              rows.push([
+                `${r.level === 3 ? "    " : ""}${r.title}${evidenceLine}`,
+                r.status,
+                r.owner || "—",
+                r.dueDate || "—",
+                String(r.evidenceCount),
+              ]);
+            });
+          });
           elements.push(createTable(headers, rows));
           elements.push(createTableSpacing());
         }

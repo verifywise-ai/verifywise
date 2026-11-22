@@ -14,6 +14,7 @@ import {
 } from "../../domain.layer/interfaces/i.reportGeneration";
 import { ANALYSIS_LABELS } from "./analyzers/mapToSummaries";
 import { applyColorTokens } from "../../tools/emailColors";
+import { generateComplianceProgressChart } from "./chartUtils";
 
 // Browser instance singleton for reuse
 let browserInstance: Browser | null = null;
@@ -49,6 +50,31 @@ export async function closeBrowser(): Promise<void> {
   }
 }
 
+const escapeSvgText = (value: string): string =>
+  value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+
+/**
+ * One completeness-by-group bar chart per framework, in the order of
+ * sections.frameworkRequirements.frameworks. The chart helper writes labels
+ * into SVG unescaped and the template emits it raw, so group titles (user
+ * text) are escaped here. DOCX embeds no charts, so it has no counterpart.
+ */
+function buildFrameworkRequirementCharts(reportData: ReportData): string[] {
+  const frameworks = reportData.sections.frameworkRequirements?.frameworks ?? [];
+  return frameworks.map((fw) =>
+    generateComplianceProgressChart(
+      fw.groups.map((group) => ({
+        category: escapeSvgText(`${group.useCase ? `${group.useCase} · ` : ""}${group.title}`),
+        completed: group.rollup.done,
+        total: group.rollup.total,
+        percentage:
+          group.rollup.total > 0 ? Math.round((group.rollup.done / group.rollup.total) * 100) : 0,
+      })),
+      { width: 350, title: "Completeness by group" },
+    ),
+  );
+}
+
 /**
  * Render EJS template to HTML string
  */
@@ -66,6 +92,7 @@ async function renderTemplate(reportData: ReportData): Promise<string> {
     ...reportData,
     // One analyzer-label map, shared with docxGenerator.
     analysisLabels: ANALYSIS_LABELS,
+    frameworkRequirementCharts: buildFrameworkRequirementCharts(reportData),
     // Include helper for CSS inclusion
     include: (filePath: string) => {
       if (filePath.includes("pdf.css")) {
