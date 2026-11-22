@@ -168,6 +168,26 @@ export const addVendorProjects = async (
   return vendors_projects;
 };
 
+/**
+ * Nullable vendor columns whose Postgres type (enum, integer, timestamp)
+ * rejects ''. The vendor drawer sends '' for a cleared select or date, so ''
+ * means "none" here, as NULL. review_result is VARCHAR and keeps ''.
+ */
+const VENDOR_EMPTY_MEANS_NULL: ReadonlySet<string> = new Set([
+  "review_status",
+  "reviewer",
+  "review_date",
+  "data_sensitivity",
+  "business_criticality",
+  "past_issues",
+  "regulatory_exposure",
+  "risk_score",
+]);
+
+/** The value to write to vendor column `column`: '' becomes NULL where the type needs it. */
+export const vendorColumnValue = (column: string, value: unknown): unknown =>
+  value === "" && VENDOR_EMPTY_MEANS_NULL.has(column) ? null : value;
+
 export const createNewVendorQuery = async (
   vendor: IVendor,
   organizationId: number,
@@ -217,44 +237,50 @@ export const createNewVendorQuery = async (
   if (vendor.review_status !== undefined) {
     fields.push("review_status");
     values.push("review_status");
-    replacements.review_status = vendor.review_status;
+    replacements.review_status = vendorColumnValue("review_status", vendor.review_status);
   }
   if (vendor.reviewer !== undefined) {
     fields.push("reviewer");
     values.push("reviewer");
-    replacements.reviewer = vendor.reviewer;
+    replacements.reviewer = vendorColumnValue("reviewer", vendor.reviewer);
   }
   if (vendor.review_date !== undefined) {
     fields.push("review_date");
     values.push("review_date");
-    replacements.review_date = vendor.review_date;
+    replacements.review_date = vendorColumnValue("review_date", vendor.review_date);
   }
 
   // Add optional scorecard fields only if provided
   if (vendor.data_sensitivity !== undefined) {
     fields.push("data_sensitivity");
     values.push("data_sensitivity");
-    replacements.data_sensitivity = vendor.data_sensitivity;
+    replacements.data_sensitivity = vendorColumnValue("data_sensitivity", vendor.data_sensitivity);
   }
   if (vendor.business_criticality !== undefined) {
     fields.push("business_criticality");
     values.push("business_criticality");
-    replacements.business_criticality = vendor.business_criticality;
+    replacements.business_criticality = vendorColumnValue(
+      "business_criticality",
+      vendor.business_criticality,
+    );
   }
   if (vendor.past_issues !== undefined) {
     fields.push("past_issues");
     values.push("past_issues");
-    replacements.past_issues = vendor.past_issues;
+    replacements.past_issues = vendorColumnValue("past_issues", vendor.past_issues);
   }
   if (vendor.regulatory_exposure !== undefined) {
     fields.push("regulatory_exposure");
     values.push("regulatory_exposure");
-    replacements.regulatory_exposure = vendor.regulatory_exposure;
+    replacements.regulatory_exposure = vendorColumnValue(
+      "regulatory_exposure",
+      vendor.regulatory_exposure,
+    );
   }
   if (vendor.risk_score !== undefined) {
     fields.push("risk_score");
     values.push("risk_score");
-    replacements.risk_score = vendor.risk_score;
+    replacements.risk_score = vendorColumnValue("risk_score", vendor.risk_score);
   }
 
   const fieldsList = fields.join(", ");
@@ -381,7 +407,7 @@ export const updateVendorByIdQuery = async (
       if (isReviewField || isScorecardField) {
         // Review and scorecard fields: include if explicitly provided (even if null/empty)
         if (value !== undefined) {
-          updateVendor[f as keyof IVendor] = value;
+          updateVendor[f as keyof IVendor] = vendorColumnValue(f, value);
           return true;
         }
       } else {
