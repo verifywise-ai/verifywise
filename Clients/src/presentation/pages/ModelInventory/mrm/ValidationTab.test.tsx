@@ -95,6 +95,34 @@ describe("ValidationTab", () => {
     expect(screen.getByText("Draft")).toBeInTheDocument();
   });
 
+  it("shows the next due date only on open and latest validated rows", () => {
+    const older: IMrmValidation = {
+      ...validation,
+      id: 11,
+      stage: MrmValidationStage.VALIDATED,
+      signed_off_at: "2025-01-10T00:00:00Z",
+      next_due: "2025-12-31T00:00:00Z",
+    };
+    const latest: IMrmValidation = {
+      ...validation,
+      id: 12,
+      stage: MrmValidationStage.VALIDATED,
+      signed_off_at: "2026-01-10T00:00:00Z",
+      next_due: "2026-11-30T00:00:00Z",
+    };
+    const open: IMrmValidation = { ...validation, id: 13, next_due: "2027-01-01T00:00:00Z" };
+    mockUseValidations.mockReturnValue({ data: [older, latest, open], isLoading: false });
+    renderWithProviders(<ValidationTab users={users} onError={onError} onSuccess={onSuccess} />);
+
+    const rows = screen.getAllByRole("row").slice(1);
+    const nextDueCell = (row: HTMLElement) =>
+      row.querySelectorAll("td")[row.querySelectorAll("td").length - 1];
+    expect(rows).toHaveLength(3);
+    expect(nextDueCell(rows[0]).textContent).toBe("—");
+    expect(nextDueCell(rows[1]).textContent).not.toBe("—");
+    expect(nextDueCell(rows[2]).textContent).not.toBe("—");
+  });
+
   it("opens the validation report drawer on row click", async () => {
     mockUseValidations.mockReturnValue({ data: [validation], isLoading: false });
     renderWithProviders(<ValidationTab users={users} onError={onError} onSuccess={onSuccess} />);

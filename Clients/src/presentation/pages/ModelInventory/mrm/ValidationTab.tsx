@@ -85,6 +85,26 @@ const ValidationTab = ({ users, onError, onSuccess }: ValidationTabProps) => {
     return ids;
   }, [validations]);
 
+  /**
+   * Each model's latest signed-off validation. Its next_due is the date of the
+   * next periodic review; an older validated row's date is superseded.
+   */
+  const latestValidatedIds = useMemo(() => {
+    const latest = new Map<number, IMrmValidation>();
+    validations.forEach((v) => {
+      if (v.stage !== MrmValidationStage.VALIDATED) return;
+      const current = latest.get(v.model_inventory_id);
+      const time = (x: IMrmValidation) => (x.signed_off_at ? Date.parse(x.signed_off_at) : -1);
+      if (!current || time(v) > time(current) || (time(v) === time(current) && v.id > current.id)) {
+        latest.set(v.model_inventory_id, v);
+      }
+    });
+    return new Set(Array.from(latest.values()).map((v) => v.id));
+  }, [validations]);
+
+  const showsNextDue = (v: IMrmValidation): boolean =>
+    v.stage !== MrmValidationStage.VALIDATED || latestValidatedIds.has(v.id);
+
   const availableFleetItems = useMemo(
     () =>
       fleet
@@ -228,7 +248,9 @@ const ValidationTab = ({ users, onError, onSuccess }: ValidationTabProps) => {
                       {validation.signed_off_at ? formatDate(validation.signed_off_at) : "—"}
                     </TableCell>
                     <TableCell sx={mrmTableCellStyle}>
-                      {validation.next_due ? formatDate(validation.next_due) : "—"}
+                      {validation.next_due && showsNextDue(validation)
+                        ? formatDate(validation.next_due)
+                        : "—"}
                     </TableCell>
                   </TableRow>
                 );
