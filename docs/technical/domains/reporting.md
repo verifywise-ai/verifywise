@@ -233,8 +233,9 @@ Per framework the report prints:
   done means status `Implemented` or `Audited`,
 - a completeness-by-group chart (PDF only; the DOCX renderer has no charts),
 - per group, a table `Requirement | Status | Owner | Due date | Evidence`. Level
-  3 rows are indented under their parent. Evidence lists file names, up to 10,
-  then ", and N more".
+  3 rows are indented under their parent. The Evidence column shows the linked-file
+  count; the file names (up to 10, then ", and N more") appear in a small line
+  under the requirement title.
 
 A requirement is overdue when its due date is before the report date and it is
 not done. When a framework has more than one pairing in scope, the pairings are

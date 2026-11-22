@@ -43,7 +43,7 @@ export const de: Record<string, string> = {
     "Die zu duplizierende Vorlage konnte nicht geladen werden.",
   "Format:": "Format:",
   "Frameworks:": "Rahmenwerke:",
-  "Framework requirements": "Framework-Anforderungen",
+  "Framework requirements": "Rahmenwerk-Anforderungen",
   "Hour": "Stunde",
   "Leave empty to include every framework in scope.":
     "Leer lassen, um alle Rahmenwerke im Umfang einzuschließen.",
