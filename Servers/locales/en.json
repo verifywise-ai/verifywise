@@ -1391,6 +1391,7 @@
   "User does not belong to the selected organization": "User does not belong to the selected organization",
   "User does not belong to this organization": "User does not belong to this organization",
   "user email, name, and roleId are required": "user email, name, and roleId are required",
+  "User ID must be a positive integer": "User ID must be a positive integer",
   "User IDs must be a non-empty list of positive integers": "User IDs must be a non-empty list of positive integers",
   "User is already a member of this organization": "User is already a member of this organization",
   "User is already a member of this project": "User is already a member of this project",
