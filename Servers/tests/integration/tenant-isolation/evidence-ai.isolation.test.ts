@@ -5,10 +5,11 @@ import { sequelize } from "../../../database/db";
 import { seedTwoTenantContexts } from "./tenantIsolation.harness";
 import { createTestApp, testRequest } from "../setup";
 import { createTestFile, createTestProject } from "../../factories";
-import { upsertAnalysisQuery } from "../../../utils/evidenceAi.utils";
+import { getAnalysisAuthorQuery, upsertAnalysisQuery } from "../../../utils/evidenceAi.utils";
 
+/** A suggestion as applySuggestionsQuery reads it, so an allowed apply writes a link. */
 const APPLY_BODY = {
-  suggestions: [{ framework_type: "eu_ai_act", entity_type: "x", entity_id: 1 }],
+  suggestions: [{ control_id: 1, framework_type: "eu_ai_act" }],
 };
 
 /** A user in the organization with the given role, optionally a project member. */
@@ -149,15 +150,56 @@ describe("Evidence AI file access", () => {
     const scores = await attacker.request.get("/api/evidence-ai/quality-scores");
     expect(JSON.stringify(scores.body ?? {})).not.toContain("Owner-only summary");
 
+    // The attacker is an Admin of their own organization: being an Admin
+    // must not open another organization's file.
+    const apply = await attacker.request
+      .post(`/api/evidence-ai/suggestions/${fileId}/apply`)
+      .send(APPLY_BODY);
+    expect(apply.status).toBe(403);
     const [links] = await sequelize.query(
       `SELECT COUNT(*)::int AS n FROM file_entity_links WHERE file_id = :fileId`,
       { replacements: { fileId } },
     );
-    await attacker.request.post(`/api/evidence-ai/suggestions/${fileId}/apply`).send(APPLY_BODY);
-    const [after] = await sequelize.query(
-      `SELECT COUNT(*)::int AS n FROM file_entity_links WHERE file_id = :fileId`,
-      { replacements: { fileId } },
-    );
-    expect((after as any[])[0].n).toBe((links as any[])[0].n);
+    expect((links as any[])[0].n).toBe(0);
+
+    // The same body does write a link for the owner, so the 403 above is the
+    // access check and not a malformed request.
+    const own = await owner.request
+      .post(`/api/evidence-ai/suggestions/${fileId}/apply`)
+      .send(APPLY_BODY);
+    expect(own.status).toBe(200);
+    expect(own.body?.data?.applied_count).toBe(1);
+  });
+
+  it("re-checks the replace rule in the write against the database", async () => {
+    const { owner, fileId } = await projectFile();
+    const colleague = await orgUser(owner.orgId, 3, "Editor");
+    const data = {
+      summary: "Private notes",
+      key_findings: [],
+      compliance_areas: [],
+      quality_score: null,
+      overall_quality_grade: null,
+      suggested_control_links: [],
+      analysis_model: "test",
+      analyzed_by: owner.userId,
+      visibility: "private",
+    };
+    await upsertAnalysisQuery(fileId, owner.orgId, data);
+    expect(await getAnalysisAuthorQuery(fileId, owner.orgId)).toMatchObject({
+      visibility: "private",
+      author_is_member: true,
+    });
+
+    const asColleague = { ...data, analyzed_by: colleague.userId, visibility: "public" };
+    const guard = { userId: colleague.userId, visibility: "public", canOverride: false };
+    expect(await upsertAnalysisQuery(fileId, owner.orgId, asColleague, guard)).toBeNull();
+    expect((await getAnalysisAuthorQuery(fileId, owner.orgId))?.analyzed_by).toBe(owner.userId);
+
+    const written = await upsertAnalysisQuery(fileId, owner.orgId, asColleague, {
+      ...guard,
+      canOverride: true,
+    });
+    expect(written?.analyzed_by).toBe(colleague.userId);
   });
 });
