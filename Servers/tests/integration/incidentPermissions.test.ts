@@ -73,17 +73,9 @@ describe("incident edit, archive and delete permissions", () => {
     await cleanupDatabase();
   });
 
-  it.each([
-    ["Reviewer", 2],
-    ["Auditor", 4],
-  ])("refuses edit, archive and delete to a %s", async (role, roleId) => {
-    const userId = await createTestUser(
-      orgId,
-      roleId,
-      `${role}-${Date.now()}@test.com`,
-      "Password123!",
-    );
-    const request = await clientFor(orgId, userId, role);
+  it("refuses edit, archive and delete to an Auditor", async () => {
+    const userId = await createTestUser(orgId, 4, `auditor-${Date.now()}@test.com`, "Password123!");
+    const request = await clientFor(orgId, userId, "Auditor");
     const id = await createTestIncident(orgId, adminId);
 
     const edit = await request.patch(`${ROUTE}/${id}`).send({ status: "Closed" });
@@ -98,9 +90,17 @@ describe("incident edit, archive and delete permissions", () => {
     expect(row).toEqual({ status: "Open", archived: false });
   });
 
-  it("lets an Editor edit and archive but not delete", async () => {
-    const userId = await createTestUser(orgId, 3, `editor-${Date.now()}@test.com`, "Password123!");
-    const request = await clientFor(orgId, userId, "Editor");
+  it.each([
+    ["Editor", 3],
+    ["Reviewer", 2],
+  ])("lets a %s edit and archive but not delete", async (role, roleId) => {
+    const userId = await createTestUser(
+      orgId,
+      roleId,
+      `${role}-${Date.now()}@test.com`,
+      "Password123!",
+    );
+    const request = await clientFor(orgId, userId, role);
     const id = await createTestIncident(orgId, adminId);
 
     expect((await request.patch(`${ROUTE}/${id}`).send({ status: "Investigating" })).status).toBe(
@@ -131,7 +131,11 @@ describe("incident edit, archive and delete permissions", () => {
     invalidateRolePermissionsCache();
 
     expect(await grantedKeys(orgId, reporter)).toEqual(["incident.create", "incident.edit"]);
-    expect(await grantedKeys(orgId, orgAdmin)).toEqual(["incident.delete", "organization.admin"]);
+    expect(await grantedKeys(orgId, orgAdmin)).toEqual([
+      "incident.delete",
+      "incident.edit",
+      "organization.admin",
+    ]);
     expect(await grantedKeys(orgId, reader)).toEqual(["risks.edit"]);
 
     const userId = await createTestUser(

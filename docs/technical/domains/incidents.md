@@ -146,11 +146,11 @@ Mounted at `/api/ai-incident-managements`.
 | GET | `/` | Any member | Get all incidents |
 | GET | `/:id` | Any member | Get incident by ID |
 | POST | `/` | `incident.create` (Admin, Editor) | Create incident |
-| PATCH | `/:id` | `incident.edit` (Admin, Editor) | Update incident |
-| PATCH | `/:id/archive` | `incident.edit` (Admin, Editor) | Archive incident |
+| PATCH | `/:id` | `incident.edit` (Admin, Editor, Reviewer) | Update incident, including approval |
+| PATCH | `/:id/archive` | `incident.edit` (Admin, Editor, Reviewer) | Archive incident |
 | DELETE | `/:id` | `incident.delete` (Admin) | Delete incident |
 
-Until 2026-11, edit, archive and delete needed only a login, so Reviewers and Auditors could change or delete incidents. Migration `20261122180000` grants `incident.edit` to custom roles that hold `incident.create`, and `incident.delete` to custom roles that hold `organization.admin`. On the incidents page, roles without `incident.edit` open incidents read-only and the row menu offers only View. The page has no delete action.
+Until 2026-11, edit, archive and delete needed only a login, so Auditors could change or delete incidents. Reviewers hold `incident.edit` because the incident drawer is where approval is recorded; an approval-only permission is a planned follow-up. Migration `20261122180000` grants `incident.edit` to custom roles that hold `incident.create` or `organization.admin`, and `incident.delete` to custom roles that hold `organization.admin`. On the incidents page, roles without `incident.edit` open incidents read-only and the row menu offers only View. The page has no delete action. The Advisor's incident write tools check the same keys for the user who asked, when the write is proposed and again when it runs.
 
 ### Change History
 

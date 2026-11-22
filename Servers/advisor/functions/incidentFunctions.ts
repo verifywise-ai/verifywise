@@ -18,6 +18,8 @@ import {
 } from "../../services/incidentManagement.service";
 import { sequelize } from "../../database/db";
 import logger from "../../utils/logger/fileLogger";
+import { userHasPermission } from "../../utils/userPermission.utils";
+import { actingRequesterId } from "./actingRequester";
 
 export interface FetchIncidentsParams {
   type?:
@@ -456,12 +458,39 @@ const getIncidentExecutiveSummary = async (
 
 // ── Write Tools (Human Confirmation Flow) ──────────────────────────
 
+// The REST routes' gates (routes/aiIncidentManagement.route.ts), held by the
+// user who asked, else the approver. Checked when the write is proposed and
+// again when it runs, since roles can change while an approval waits.
+const INCIDENT_REFUSAL = {
+  "incident.create": "your role does not allow reporting incidents",
+  "incident.edit": "your role does not allow editing or archiving incidents",
+  "incident.delete": "your role does not allow deleting incidents",
+} as const;
+
+type IncidentPermission = keyof typeof INCIDENT_REFUSAL;
+
+async function incidentPermissionRefusal(
+  permission: IncidentPermission,
+  params: Record<string, unknown>,
+  organizationId: number,
+): Promise<string | null> {
+  if (await userHasPermission(organizationId, actingRequesterId(params), permission)) return null;
+  return `Not done: ${INCIDENT_REFUSAL[permission]}.`;
+}
+
+const precheckIncident =
+  (permission: IncidentPermission) => (params: Record<string, unknown>, organizationId: number) =>
+    incidentPermissionRefusal(permission, params, organizationId);
+
 const agentCreateIncident = createWriteToolFn({
   toolName: "agent_create_incident",
   warningLevel: "warning",
   descriptionFn: (params) =>
     `Create incident "${params.title}"${params.severity ? ` (${params.severity})` : ""}`,
+  precheckFn: precheckIncident("incident.create"),
   executeFn: async (params, organizationId) => {
+    const refusal = await incidentPermissionRefusal("incident.create", params, organizationId);
+    if (refusal) return { success: false, message: refusal };
     const transaction = await sequelize.transaction();
     try {
       const incidentData = {
@@ -537,7 +566,10 @@ const agentUpdateIncident = createWriteToolFn({
   warningLevel: "warning",
   descriptionFn: (params) =>
     `Update incident #${params.incident_id}${params.title ? ` title to "${params.title}"` : ""}`,
+  precheckFn: precheckIncident("incident.edit"),
   executeFn: async (params, organizationId) => {
+    const refusal = await incidentPermissionRefusal("incident.edit", params, organizationId);
+    if (refusal) return { success: false, message: refusal };
     const fields: Record<string, unknown> = {};
     if (params.title !== undefined) fields.ai_project = params.title;
     if (params.description !== undefined) fields.description = params.description;
@@ -552,15 +584,22 @@ const agentUpdateIncidentStatus = createWriteToolFn({
   toolName: "agent_update_incident_status",
   warningLevel: "warning",
   descriptionFn: (params) => `Update incident #${params.incident_id} status to "${params.status}"`,
-  executeFn: async (params, organizationId) =>
-    applyIncidentUpdate(params, organizationId, { status: params.status }),
+  precheckFn: precheckIncident("incident.edit"),
+  executeFn: async (params, organizationId) => {
+    const refusal = await incidentPermissionRefusal("incident.edit", params, organizationId);
+    if (refusal) return { success: false, message: refusal };
+    return applyIncidentUpdate(params, organizationId, { status: params.status });
+  },
 });
 
 const agentArchiveIncident = createWriteToolFn({
   toolName: "agent_archive_incident",
   warningLevel: "danger",
   descriptionFn: (params) => `Archive incident #${params.incident_id}`,
+  precheckFn: precheckIncident("incident.edit"),
   executeFn: async (params, organizationId) => {
+    const refusal = await incidentPermissionRefusal("incident.edit", params, organizationId);
+    if (refusal) return { success: false, message: refusal };
     const transaction = await sequelize.transaction();
     try {
       const result = await archiveIncidentByIdQuery(
@@ -581,7 +620,10 @@ const agentDeleteIncident = createWriteToolFn({
   toolName: "agent_delete_incident",
   warningLevel: "danger",
   descriptionFn: (params) => `Permanently delete incident #${params.incident_id}`,
+  precheckFn: precheckIncident("incident.delete"),
   executeFn: async (params, organizationId) => {
+    const refusal = await incidentPermissionRefusal("incident.delete", params, organizationId);
+    if (refusal) return { success: false, message: refusal };
     const transaction = await sequelize.transaction();
     try {
       const result = await deleteIncidentByIdQuery(

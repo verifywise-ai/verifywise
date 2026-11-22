@@ -143,8 +143,8 @@ describe("screen keys the server now enforces", () => {
     ],
     [postMarketMonitoringRouter, "post", "/questions/reorder", "postMarketMonitoring.edit", EDITOR],
     [incidentRouter, "post", "/", "incident.create", EDITOR],
-    [incidentRouter, "patch", "/:id", "incident.edit", EDITOR],
-    [incidentRouter, "patch", "/:id/archive", "incident.edit", EDITOR],
+    [incidentRouter, "patch", "/:id", "incident.edit", CONTRIBUTOR],
+    [incidentRouter, "patch", "/:id/archive", "incident.edit", CONTRIBUTOR],
     [incidentRouter, "delete", "/:id", "incident.delete", ADMIN],
   ])("%#: %s %s requires %s", (router, method, routePath, key, roles) => {
     expect(permissionFor(router, method as string, routePath as string)).toEqual([key]);

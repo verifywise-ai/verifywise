@@ -298,8 +298,8 @@ export const ROLE_PERMISSIONS = {
   },
   "incident.edit": {
     module: "Incidents",
-    description: "Edit and archive AI incidents",
-    legacyRoles: EDITOR,
+    description: "Edit, approve and archive AI incidents",
+    legacyRoles: CONTRIBUTOR,
   },
   "riskLinks.edit": {
     module: "Risks",

@@ -128,7 +128,7 @@ describe("keys added for issue #5314 — same built-in roles as the lists they r
     ["evals.edit", ["Admin", "Editor"]],
     ["apiKeys.admin", ["Admin"]],
     ["incident.create", ["Admin", "Editor"]],
-    ["incident.edit", ["Admin", "Editor"]],
+    ["incident.edit", ["Admin", "Editor", "Reviewer"]],
     ["incident.delete", ["Admin"]],
   ])("%s is held by %j", (key, roles) => {
     const holders = BUILTIN_ROLES.filter((role) =>

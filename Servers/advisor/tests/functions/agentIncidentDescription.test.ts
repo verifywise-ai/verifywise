@@ -5,6 +5,10 @@ import { beforeEach, describe, expect, it, jest } from "@jest/globals";
 jest.mock("../../../database/db", () => ({
   sequelize: { query: jest.fn(), transaction: jest.fn() },
 }));
+// Permission held; agentIncidentPermissions.test.ts covers the refusals.
+jest.mock("../../../utils/userPermission.utils", () => ({
+  userHasPermission: jest.fn(async () => true),
+}));
 jest.mock("../../approval/approvalGateway", () => ({ submitForApproval: jest.fn() }));
 jest.mock("../../../services/automations/automationProducer", () => ({
   enqueueAutomationAction: jest.fn(),

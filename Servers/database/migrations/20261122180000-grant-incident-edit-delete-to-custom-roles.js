@@ -8,7 +8,8 @@
  *   - DELETE /ai-incident-managements/:id                 -> incident.delete
  *
  * Keep existing custom roles working the way 20261111120001 did:
- *   - a role that may report incidents (incident.create) may also edit them;
+ *   - a role that may report incidents (incident.create) or holds
+ *     organization.admin may edit, approve and archive them;
  *   - a role that holds organization.admin may also delete them.
  * Other custom roles lose these writes until an Admin grants the keys.
  * Built-in roles get the keys from code (Servers/config/rolePermissions.config.ts).
@@ -18,24 +19,24 @@
  */
 
 const GRANTS = [
-  { key: "incident.edit", heldKey: "incident.create" },
-  { key: "incident.delete", heldKey: "organization.admin" },
+  { key: "incident.edit", heldKeys: ["incident.create", "organization.admin"] },
+  { key: "incident.delete", heldKeys: ["organization.admin"] },
 ];
 
 module.exports = {
   async up(queryInterface) {
     await queryInterface.sequelize.transaction(async (transaction) => {
-      for (const { key, heldKey } of GRANTS) {
+      for (const { key, heldKeys } of GRANTS) {
         await queryInterface.sequelize.query(
           `
           INSERT INTO verifywise.role_permissions (organization_id, role_id, permission_key, allowed)
           SELECT DISTINCT rp.organization_id, rp.role_id, :key, TRUE
             FROM verifywise.role_permissions rp
             JOIN verifywise.roles r ON r.id = rp.role_id AND r.organization_id = rp.organization_id
-           WHERE rp.allowed AND rp.permission_key = :heldKey
+           WHERE rp.allowed AND rp.permission_key IN (:heldKeys)
           ON CONFLICT (organization_id, role_id, permission_key) DO NOTHING;
         `,
-          { replacements: { key, heldKey }, transaction },
+          { replacements: { key, heldKeys }, transaction },
         );
       }
     });
