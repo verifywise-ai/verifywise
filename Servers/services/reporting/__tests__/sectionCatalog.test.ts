@@ -1,6 +1,6 @@
 import { REPORT_SECTION_CATALOG, SECTION_KEYS } from "../sectionCatalog";
 
-// The 13 literals VALID_SECTION_KEYS held before the catalog refactor.
+// The 13 literals (plus frameworkRequirements, added later) VALID_SECTION_KEYS held before the catalog refactor.
 // This is a behaviour pin: the refactor must not add or drop a key.
 const LEGACY_VALID_SECTION_KEYS = [
   "projectRisks",
@@ -10,6 +10,7 @@ const LEGACY_VALID_SECTION_KEYS = [
   "assessment",
   "clausesAndAnnexes",
   "nistSubcategories",
+  "frameworkRequirements",
   "vendors",
   "models",
   "trainingRegistry",
@@ -19,8 +20,8 @@ const LEGACY_VALID_SECTION_KEYS = [
 ];
 
 describe("sectionCatalog", () => {
-  it("holds exactly the 12 real sections (the 'all' wildcard is not a section)", () => {
-    expect(SECTION_KEYS).toHaveLength(12);
+  it("holds exactly the 13 real sections (the 'all' wildcard is not a section)", () => {
+    expect(SECTION_KEYS).toHaveLength(13);
     expect(SECTION_KEYS).not.toContain("all");
   });
 
@@ -33,6 +34,15 @@ describe("sectionCatalog", () => {
       expect(entry.label.length).toBeGreaterThan(0);
       expect(entry.group.length).toBeGreaterThan(0);
     }
+  });
+
+  it("lists frameworkRequirements under Compliance and governance", () => {
+    expect(REPORT_SECTION_CATALOG).toContainEqual({
+      key: "frameworkRequirements",
+      label: "Framework requirements",
+      group: "Compliance and governance",
+    });
+    expect(SECTION_KEYS).toContain("frameworkRequirements");
   });
 
   it("has no duplicate keys", () => {

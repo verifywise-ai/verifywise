@@ -37,6 +37,11 @@ export const REPORT_SECTION_GROUPS: ReportSectionGroup[] = [
       { id: "assessmentTracker", label: "Assessment Tracker", backendKey: "assessment" },
       { id: "clausesAndAnnexes", label: "Clauses & Annexes", backendKey: "clausesAndAnnexes" },
       { id: "nistSubcategories", label: "NIST Subcategories", backendKey: "nistSubcategories" },
+      {
+        id: "frameworkRequirements",
+        label: "Framework requirements",
+        backendKey: "frameworkRequirements",
+      },
     ],
   },
   {
@@ -103,6 +108,9 @@ export function getAvailableSections(
           case "nistSubcategories":
             // Only for NIST AI RMF (framework 4)
             return frameworkId === FRAMEWORK_IDS.NIST_AI_RMF;
+          case "frameworkRequirements":
+            // Only for bundled frameworks (ids 5 and up)
+            return frameworkId >= 5;
           default:
             return true;
         }

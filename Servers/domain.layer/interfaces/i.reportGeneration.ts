@@ -269,6 +269,7 @@ export interface ReportData {
     assessment?: AssessmentSectionData;
     clausesAndAnnexes?: ClausesAndAnnexesSectionData;
     nistSubcategories?: NistSubcategoriesSectionData;
+    frameworkRequirements?: FrameworkRequirementsSectionData;
     // Organization group
     vendors?: VendorsListSectionData;
     models?: ModelsListSectionData;
@@ -453,6 +454,52 @@ export interface PolicyManagerSectionData {
     status: string;
     reviewDate?: string;
     owner?: string;
+  }>;
+}
+
+// Bundled framework requirements (Compliance & Governance group, framework ids 5-28)
+export interface FrameworkRequirementRow {
+  implId: number;
+  level: 2 | 3;
+  title: string;
+  orderNo: number;
+  status: string; // raw IMPL_STATUSES value
+  owner: string | null; // display name
+  reviewer: string | null;
+  approver: string | null;
+  dueDate: string | null; // ISO date via isoDate
+  isDone: boolean;
+  isOverdue: boolean;
+  evidenceCount: number;
+  evidenceFiles: string[]; // file names, max 10, sorted
+  riskCount: number;
+  children?: FrameworkRequirementRow[]; // L3 under L2
+}
+
+export interface FrameworkRequirementRollup {
+  total: number;
+  done: number;
+  unassigned: number;
+  noEvidence: number;
+  overdue: number;
+  statusBreakdown: Record<string, number>; // keyed by raw status
+}
+
+export interface FrameworkRequirementGroup {
+  title: string;
+  orderNo: number;
+  /** Set only when more than one use case pairing contributed (see compliance). */
+  useCase?: string;
+  requirements: FrameworkRequirementRow[];
+  rollup: FrameworkRequirementRollup;
+}
+
+export interface FrameworkRequirementsSectionData {
+  frameworks: Array<{
+    frameworkId: number;
+    frameworkName: string;
+    groups: FrameworkRequirementGroup[];
+    rollup: FrameworkRequirementRollup;
   }>;
 }
 
