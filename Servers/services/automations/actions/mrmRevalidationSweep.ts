@@ -77,8 +77,10 @@ export async function runRevalidationSweep(
 
   // Periodic reviews that came due since the last sign-off: open the next
   // validation, dated to the missed due date so it counts as overdue at once,
-  // and send the overdue alert. This runs after the loop above so a review
-  // opened here is not annotated twice on the same run.
+  // and send the overdue alert. When a validation with no due date is already
+  // open (breach, tier increase, change or a manual start), annotate it and
+  // give it the missed due date instead. This runs after the loop above so a
+  // review opened here is not annotated twice on the same run.
   const lapsed = await getLapsedScheduledReviewsQuery(organizationId, now);
   for (const row of lapsed) {
     try {
@@ -96,7 +98,10 @@ export async function runRevalidationSweep(
       } else {
         annotated += 1;
       }
-      if (result.validation_id != null) {
+      // Alert only for a validation this run opened. An annotated open
+      // validation now carries the missed due date, so the first loop sends its
+      // one overdue alert on a later run if it is still not started.
+      if (result.created_validation && result.validation_id != null) {
         try {
           await notifyRevalidationDue(
             organizationId,

@@ -137,7 +137,7 @@ export const mrmContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Select Sign off validation to close the cycle. You choose an outcome, Validated, Validated with findings, or Not validated, and the report becomes read-only afterward. Sign-off also sets the date of the next review from the model tier: 12 months for Tier 1, 18 for Tier 2 and 24 for Tier 3. A model with no tier gets no date. The drawer also lists any revalidation triggers that opened or annotated the cycle, so the reason the model is being validated stays attached to the record.',
+      text: 'Select Sign off validation to close the cycle. You choose an outcome, Validated, Validated with findings, or Not validated, and the report becomes read-only afterward. Sign-off also sets the date of the next review from the model tier: 12 months for Tier 1, 18 for Tier 2 and 24 for Tier 3, whatever the outcome. Changing a tier later moves that date to match the new tier. A model with no tier keeps a future date set through the API and otherwise gets none. The drawer also lists any revalidation triggers that opened or annotated the cycle, so the reason the model is being validated stays attached to the record.',
     },
     {
       type: 'heading',
@@ -273,7 +273,7 @@ export const mrmContent: ArticleContent = {
         { source: 'Breach', when: 'a metric breaches a threshold set to flag for revalidation.' },
         { source: 'Change', when: 'you request revalidation after a material change to the model.' },
         { source: 'Tier increase', when: 'a model moves to a higher tier.' },
-        { source: 'Scheduled', when: 'a daily sweep finds a model whose next review date has passed. It opens a new validation, or annotates an open one that is overdue.' },
+        { source: 'Scheduled', when: 'a daily sweep finds a model whose next review date has passed. It opens a new validation, or gives an open one the missed date. An overdue validation that has not been started is annotated once.' },
       ],
     },
     {

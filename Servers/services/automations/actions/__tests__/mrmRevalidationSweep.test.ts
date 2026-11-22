@@ -57,6 +57,17 @@ describe("runRevalidationSweep scheduled reviews", () => {
     expect(mockNotify).toHaveBeenCalledWith(1, 9, 91, NEXT_DUE);
   });
 
+  it("does not alert when it annotates an already-open validation", async () => {
+    mockDue.mockResolvedValue([]);
+    mockLapsed.mockResolvedValue([{ model_inventory_id: 9, next_due: NEXT_DUE }]);
+    mockTrigger.mockResolvedValue({ created_validation: false, validation_id: 91 });
+
+    const summary = await runRevalidationSweep(1);
+
+    expect(summary.annotated).toBe(1);
+    expect(mockNotify).not.toHaveBeenCalled();
+  });
+
   it("checks lapsed reviews after the overdue open validations", async () => {
     const order: string[] = [];
     mockDue.mockImplementation(async () => {

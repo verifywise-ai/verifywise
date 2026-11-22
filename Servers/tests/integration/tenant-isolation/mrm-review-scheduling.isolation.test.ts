@@ -5,9 +5,9 @@ import { sequelize } from "../../../database/db";
 import { QueryTypes } from "sequelize";
 import { seedTwoTenantContexts } from "./tenantIsolation.harness";
 import { createTestModelInventory, createTestMrmValidation } from "../../factories";
-import { signoffValidationQuery } from "../../../utils/mrm.utils";
+import { rescheduleNextReviewForTierQuery, signoffValidationQuery } from "../../../utils/mrm.utils";
 import { runRevalidationSweep } from "../../../services/automations/actions/mrmRevalidationSweep";
-import { MrmValidationOutcome } from "../../../domain.layer/enums/mrm.enum";
+import { MrmTier, MrmValidationOutcome } from "../../../domain.layer/enums/mrm.enum";
 
 /**
  * MRM periodic review scheduling: sign-off sets next_due from the model's tier,
@@ -104,6 +104,56 @@ describe("MRM periodic review scheduling", () => {
     expect(row.next_due).toBeNull();
   });
 
+  it("keeps a future due date on an untiered model at sign-off and clears a past one", async () => {
+    const { owner } = await seedTwoTenantContexts();
+    const futureModel = await createTestModelInventory(owner.orgId);
+    const pastModel = await createTestModelInventory(owner.orgId);
+    const future = new Date(Date.now() + 90 * 24 * 3600 * 1000);
+    const vf = await createTestMrmValidation(owner.orgId, futureModel, {
+      next_due: future.toISOString(),
+    });
+    const vp = await createTestMrmValidation(owner.orgId, pastModel, {
+      next_due: "2025-01-01T00:00:00Z",
+    });
+
+    for (const id of [vf, vp]) {
+      await signoffValidationQuery(id, owner.orgId, {
+        outcome: MrmValidationOutcome.VALIDATED,
+        signed_off_by: owner.userId,
+      });
+    }
+
+    const [rowF] = await validationsFor(owner.orgId, futureModel);
+    const [rowP] = await validationsFor(owner.orgId, pastModel);
+    expect(new Date(rowF.next_due!).toISOString()).toBe(future.toISOString());
+    expect(rowP.next_due).toBeNull();
+  });
+
+  it("re-dates the next review from the last sign-off when the tier changes", async () => {
+    const { owner, attacker } = await seedTwoTenantContexts();
+    const modelId = await createTestModelInventory(owner.orgId);
+    await setTier(modelId, "3");
+    const signedOffAt = new Date("2025-01-15T00:00:00Z");
+    await seedValidated(owner.orgId, modelId, signedOffAt, new Date("2027-01-15T00:00:00Z"));
+
+    // Another organization cannot re-date it.
+    const foreign = await sequelize.transaction((tx) =>
+      rescheduleNextReviewForTierQuery(modelId, attacker.orgId, MrmTier.TIER_1, tx),
+    );
+    expect(foreign).toBeNull();
+
+    const due = await sequelize.transaction((tx) =>
+      rescheduleNextReviewForTierQuery(modelId, owner.orgId, MrmTier.TIER_1, tx),
+    );
+    expect(due?.toISOString()).toBe("2026-01-15T00:00:00.000Z");
+    const [row] = await validationsFor(owner.orgId, modelId);
+    expect(new Date(row.next_due!).toISOString()).toBe("2026-01-15T00:00:00.000Z");
+
+    // The new date has passed, so the next sweep opens the review.
+    const summary = await runRevalidationSweep(owner.orgId, new Date("2026-02-01T00:00:00Z"));
+    expect(summary.opened).toBe(1);
+  });
+
   it("does not sign off a validation from another organization", async () => {
     const { owner, attacker } = await seedTwoTenantContexts();
     const modelId = await createTestModelInventory(owner.orgId);
@@ -145,6 +195,59 @@ describe("MRM periodic review scheduling", () => {
     const again = await runRevalidationSweep(owner.orgId, now);
     expect(again.opened).toBe(0);
     expect(await validationsFor(owner.orgId, modelId)).toHaveLength(2);
+  });
+
+  it("gives an open validation with no due date the missed date, and nudges it once", async () => {
+    const { owner } = await seedTwoTenantContexts();
+    const modelId = await createTestModelInventory(owner.orgId);
+    await setTier(modelId, "1");
+    const nextDue = new Date("2026-01-15T00:00:00Z");
+    await seedValidated(owner.orgId, modelId, new Date("2025-01-15T00:00:00Z"), nextDue);
+    // Opened by a breach or a manual start: no due date.
+    const openId = await createTestMrmValidation(owner.orgId, modelId);
+    const now = new Date("2026-02-01T00:00:00Z");
+    const events = async () =>
+      (
+        (await sequelize.query(
+          `SELECT id FROM mrm_revalidation_events
+            WHERE organization_id = :orgId AND resulting_validation_id = :id`,
+          { replacements: { orgId: owner.orgId, id: openId }, type: QueryTypes.SELECT },
+        )) as unknown[]
+      ).length;
+
+    const first = await runRevalidationSweep(owner.orgId, now);
+    expect(first).toMatchObject({ opened: 0, annotated: 1 });
+    const rows = await validationsFor(owner.orgId, modelId);
+    expect(rows).toHaveLength(2);
+    expect(new Date(rows[1].next_due!).toISOString()).toBe(nextDue.toISOString());
+    expect(await events()).toBe(1);
+
+    // Now overdue and not started: annotated and alerted once more, then left alone.
+    const second = await runRevalidationSweep(owner.orgId, now);
+    expect(second.annotated).toBe(1);
+    expect(await events()).toBe(2);
+
+    const third = await runRevalidationSweep(owner.orgId, now);
+    expect(third).toMatchObject({ due: 0, opened: 0, annotated: 0 });
+    expect(await events()).toBe(2);
+  });
+
+  it("includes a lapsed model whose status is empty", async () => {
+    const { owner } = await seedTwoTenantContexts();
+    const modelId = await createTestModelInventory(owner.orgId);
+    await setTier(modelId, "2");
+    await sequelize.query(`UPDATE model_inventories SET status = NULL WHERE id = :id`, {
+      replacements: { id: modelId },
+    });
+    await seedValidated(
+      owner.orgId,
+      modelId,
+      new Date("2024-06-15T00:00:00Z"),
+      new Date("2025-12-15T00:00:00Z"),
+    );
+
+    const summary = await runRevalidationSweep(owner.orgId, new Date("2026-02-01T00:00:00Z"));
+    expect(summary.opened).toBe(1);
   });
 
   it("skips retired models and reviews not yet due", async () => {

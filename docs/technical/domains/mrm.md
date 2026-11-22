@@ -86,13 +86,25 @@ event). Scheduled sweep = BullMQ daily job (`services/automations/actions/mrmRev
 reads the model's `mrm_tier` in the same transaction and writes `mrm_validations.next_due` with
 `computeNextReviewDue(tier, signed_off_at)`: Tier 1 +12 months, Tier 2 +18, Tier 3 +24
 (`REVALIDATION_CADENCE_MONTHS`, UTC month math clamped to month end, like Postgres
-`+ interval 'N months'`). An untiered model gets `next_due = NULL`. The sweep runs two loops per
-org: first `getDueRevalidationsQuery` (open, idle validations past `next_due`, annotated), then
-`getLapsedScheduledReviewsQuery` (the model's latest **validated** row has `next_due <= now`,
-the model is not `Retired`, and no validation is open). For each lapsed model it calls
-`triggerRevalidation(..., { next_due })`, which opens a `not_started` validation dated to the
-missed due date (so it counts as overdue at once), then sends `notifyRevalidationDue`. All three
-table references in the lapsed query filter on `organization_id`. Migration
+`+ interval 'N months'`), whatever the outcome (a `not_validated` sign-off keeps the normal
+cadence). An untiered model has no cadence: a future `next_due` already on the row (set through
+the API) is kept, a past one is cleared so the sweep does not reopen the model straight away.
+Assigning or changing a tier (`assignModelTier`) re-dates the latest validated row from its
+`signed_off_at` with the new cadence, in the same transaction as the tier write
+(`rescheduleNextReviewForTierQuery`); a date already past is picked up by the next sweep.
+
+The sweep runs two loops per org. First `getDueRevalidationsQuery`: open `not_started`
+validations past `next_due` whose overdue alert is unclaimed (`overdue_notified_at IS NULL`);
+each is annotated and alerted once per lifecycle, since the alert claim follows the annotation.
+Then `getLapsedScheduledReviewsQuery`: the model's latest **validated** row has
+`next_due <= now`, the model status `IS DISTINCT FROM 'Retired'` (a NULL status counts), and no
+open validation already carries a `next_due`. For each lapsed model it calls
+`triggerRevalidation(..., { next_due })`. With nothing open, that opens a `not_started`
+validation dated to the missed due date (so it counts as overdue at once) and sends
+`notifyRevalidationDue`. With an open validation that has no due date (opened by a breach, tier
+increase, change or manual start), it annotates it and sets `next_due = COALESCE(next_due,
+missed date)` without alerting; the first loop alerts on a later run if it is still not started.
+All table references in both queries filter on `organization_id`. Migration
 `20261121120000-mrm-backfill-next-due` backfills `next_due` on each tiered model's latest
 validated row signed off before scheduling existed (`next_due IS NULL` only; `down` is a no-op).
 
@@ -159,8 +171,8 @@ on-demand `POST /revalidation/sweep` endpoint call this same function, so both p
 claim mechanism. This is a **once-per-validation-lifecycle** nudge, atomically claimed by
 flipping `mrm_validations.overdue_notified_at` from `NULL` to `now()` in a single `UPDATE ...
 WHERE overdue_notified_at IS NULL RETURNING id`; only the caller that flips it proceeds to
-notify, so re-running the sweep (which re-annotates an already-open overdue validation every
-day) does not re-alert. A new validation row for the next cycle starts at `NULL`, so the model
+notify, so re-running the sweep does not re-alert. The first loop also skips a validation whose claim is
+taken, so it is annotated once per lifecycle rather than every day. A new validation row for the next cycle starts at `NULL`, so the model
 gets exactly one nudge per lifecycle, not one per calendar day it stays overdue. **The claim
 happens before recipient lookup**, so the lifecycle's one nudge is consumed even if the model
 currently has nobody assigned to hear it — consistent with the breach path's "recorded, but no

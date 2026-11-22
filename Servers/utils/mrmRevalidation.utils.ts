@@ -297,6 +297,26 @@ export const triggerRevalidation = async (
 };
 
 /**
+ * Give an open validation a due date when it has none. Used when a scheduled
+ * review lapses while a validation opened by another trigger is still open, so
+ * the overdue sweep can track it. A date already set is kept.
+ */
+async function fillOpenValidationNextDueQuery(
+  organizationId: number,
+  validationId: number,
+  nextDue: Date | null,
+  tx: Transaction,
+): Promise<void> {
+  if (!nextDue) return;
+  await sequelize.query(
+    `UPDATE mrm_validations
+        SET next_due = COALESCE(next_due, :nextDue)
+      WHERE organization_id = :organizationId AND id = :validationId`,
+    { replacements: { organizationId, validationId, nextDue }, transaction: tx },
+  );
+}
+
+/**
  * Inner body — always runs inside a transaction. Split out so both the internal
  * and caller-supplied transaction paths share one implementation.
  */
@@ -314,6 +334,7 @@ async function runTriggerRevalidation(
   // Already open? -> annotate + record a no-op event.
   const open = await getOpenValidationForModelQuery(organizationId, modelInventoryId, tx);
   if (open) {
+    await fillOpenValidationNextDueQuery(organizationId, open.id!, nextDue, tx);
     await appendRevalidationReasonQuery(
       organizationId,
       open.id!,
@@ -400,6 +421,7 @@ async function runTriggerRevalidation(
       await sequelize.query(`ROLLBACK TO SAVEPOINT ${SAVEPOINT}`, { transaction: tx });
       const raced = await getOpenValidationForModelQuery(organizationId, modelInventoryId, tx);
       if (raced) {
+        await fillOpenValidationNextDueQuery(organizationId, raced.id!, nextDue, tx);
         await appendRevalidationReasonQuery(
           organizationId,
           raced.id!,
@@ -440,8 +462,11 @@ export interface DueValidationRow {
  * for the model. Retired models are skipped, since a decommissioned model is no
  * longer reviewed. Org-scoped.
  *
- * A model with an open validation is left out on purpose: that review is
- * already the next cycle, and getDueRevalidationsQuery handles it if it idles.
+ * A model whose open validation already has a due date is left out: that
+ * review is the next cycle, and getDueRevalidationsQuery handles it if it idles.
+ * An open validation with no due date (opened by a breach, a tier increase, a
+ * change or a manual start) is included, so the sweep can annotate it and give
+ * it the missed due date; otherwise neither query would ever see it.
  */
 export const getLapsedScheduledReviewsQuery = async (
   organizationId: number,
@@ -460,12 +485,13 @@ export const getLapsedScheduledReviewsQuery = async (
          ON mi.id = latest.model_inventory_id AND mi.organization_id = :organizationId
       WHERE latest.next_due IS NOT NULL
         AND latest.next_due <= :now
-        AND mi.status <> :retired
+        AND mi.status IS DISTINCT FROM :retired
         AND NOT EXISTS (
           SELECT 1 FROM mrm_validations o
            WHERE o.organization_id = :organizationId
              AND o.model_inventory_id = latest.model_inventory_id
              AND o.stage <> :validated
+             AND o.next_due IS NOT NULL
         )
       ORDER BY latest.model_inventory_id ASC`,
     {
@@ -491,8 +517,10 @@ export const getLapsedScheduledReviewsQuery = async (
  * A not_started task that is now past its next_due is the real "nobody has
  * picked this up yet" case the nudge is meant for.
  *
- * A model already handled (a fresh trigger fired today) is naturally deduped by
- * triggerRevalidation's annotate path, so re-running the sweep is safe.
+ * Once per lifecycle: a validation whose overdue alert has been claimed
+ * (overdue_notified_at set, see notifyRevalidationDue) is skipped, so the sweep
+ * annotates it and records a revalidation event once, not on every daily run.
+ * The sweep claims that column right after annotating, so the two stay in step.
  */
 export const getDueRevalidationsQuery = async (
   organizationId: number,
@@ -505,6 +533,7 @@ export const getDueRevalidationsQuery = async (
         AND stage = :notStarted
         AND next_due IS NOT NULL
         AND next_due <= :now
+        AND overdue_notified_at IS NULL
       ORDER BY model_inventory_id ASC`,
     {
       replacements: {

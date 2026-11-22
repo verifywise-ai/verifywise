@@ -354,8 +354,14 @@ export function computeNextReviewDue(
 /**
  * Sign off a validation: mark it VALIDATED, record outcome / report_version /
  * signer / timestamp, and schedule the next periodic review (`next_due`) from
- * the model's current tier. The daily revalidation sweep opens a new validation
- * once that date passes (see `getLapsedScheduledReviewsQuery`).
+ * the model's current tier, whatever the outcome. The daily revalidation sweep
+ * opens a new validation once that date passes (see
+ * `getLapsedScheduledReviewsQuery`).
+ *
+ * An untiered model has no cadence, so a future due date already on the row
+ * (set through the API) is kept. A past one is cleared: on an open validation it
+ * was the deadline for this review, and keeping it would make the sweep open
+ * another validation straight after sign-off.
  */
 export const signoffValidationQuery = async (
   id: number,
@@ -383,7 +389,7 @@ export const signoffValidationQuery = async (
               report_version = COALESCE(:reportVersion, report_version),
               signed_off_at  = :now,
               signed_off_by  = :signedOffBy,
-              next_due       = :nextDue,
+              next_due       = COALESCE(:nextDue, CASE WHEN next_due > :now THEN next_due END),
               updated_at     = :now
         WHERE organization_id = :organizationId AND id = :id
         RETURNING *`,
@@ -415,6 +421,50 @@ export const signoffValidationQuery = async (
     await transaction.rollback();
     throw error;
   }
+};
+
+/**
+ * Re-date the next periodic review after a tier change: the model's latest
+ * signed-off validation gets next_due = signed_off_at + the new tier's cadence.
+ * Returns the new date, or null when the model has never been signed off. A
+ * date already in the past is written as is; the next sweep opens the review.
+ * Org-scoped; run it in the same transaction as the tier write.
+ */
+export const rescheduleNextReviewForTierQuery = async (
+  modelId: number,
+  organizationId: number,
+  tier: MrmTier,
+  transaction: Transaction,
+): Promise<Date | null> => {
+  const rows = (await sequelize.query(
+    `SELECT id, signed_off_at
+       FROM mrm_validations
+      WHERE organization_id = :organizationId
+        AND model_inventory_id = :modelId
+        AND stage = :validated
+        AND signed_off_at IS NOT NULL
+      ORDER BY signed_off_at DESC, id DESC
+      LIMIT 1
+      FOR UPDATE`,
+    {
+      replacements: { organizationId, modelId, validated: MrmValidationStage.VALIDATED },
+      type: QueryTypes.SELECT,
+      transaction,
+    },
+  )) as { id: number; signed_off_at: Date }[];
+  const latest = rows[0];
+  if (!latest) return null;
+  const nextDue = computeNextReviewDue(tier, new Date(latest.signed_off_at));
+  await sequelize.query(
+    `UPDATE mrm_validations
+        SET next_due = :nextDue, updated_at = :now
+      WHERE organization_id = :organizationId AND id = :id`,
+    {
+      replacements: { organizationId, id: latest.id, nextDue, now: new Date() },
+      transaction,
+    },
+  );
+  return nextDue;
 };
 
 // ---------------------------------------------------------------------------
