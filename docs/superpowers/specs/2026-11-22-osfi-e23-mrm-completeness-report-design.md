@@ -156,6 +156,22 @@ This section uses a **report-only** collector, not `getAttestationSummary` as is
 11. **Sections with no data / Analyses not produced** (existing blocks).
 12. **Sign-off** (new section `signOff`, on by default in this template). Statement that the report is a self-assessment prepared from VerifyWise records and is not an OSFI assessment, followed by signature lines (name, title, signature, date) for the accountable executive and, when given, the head of model validation.
 
+**Audience sets the level of detail (user decision).** Same template, same data and same rules; the audience answer decides how much each section shows.
+
+| Section | OSFI supervisory review | Board of directors |
+|---|---|---|
+| Cover, Scope and method | Full | Full; limitations kept, method shortened to one paragraph |
+| At a glance | Yes | Yes |
+| Executive summary (AI) | Yes | Yes |
+| E-23 program completeness | Every group, every requirement row with owner, due date and evidence | One line per group: done n of m, data coverage. No requirement rows |
+| MRM status | Full, including models with exceptions | Fleet totals, per-tier table and activity counts. No model names |
+| Contradictions | Every fired rule with counts and up to 5 example models | Every fired rule with its count. No model names |
+| E-23 gap analysis (AI) | Yes | Yes |
+| Model inventory appendix | When selected | Never, even if selected |
+| Sign-off | Yes | Yes |
+
+The renderers read the audience from `metadata.reportParameters.audience`; the collectors gather the same data either way, so the facts, rules and change-since-last-run figures are identical for both versions of the same estate. The AI prompts receive the audience so the board version leads with consequences, the examiner version with evidence.
+
 **Limitations text** (in Scope and method) always lists: VerifyWise does not compute model performance metrics (the institution supplies them); these E-23 Appendix 1 fields are not tracked in VerifyWise: production deployment date, data sources, approved uses and exceptions, dependencies, third-party designation; statuses are self-assessed.
 
 ### 8.4 Contradiction rules
@@ -279,7 +295,7 @@ Scheduled runs already diff facts against the previous run of the same schedule;
 
 ## 10. Decisions on record
 
-**Made by the user:** option B; readers are an OSFI examiner or the board; the fix-it list is a separate internal document produced by the same run, not part of the formal report, and it is never emailed (scheduled emails carry the formal report only); the wizard asks the report details in 8.1 and remembers them; English only; sign-off page included; model listing shows exceptions with the full inventory as an optional appendix; fix-it list inside the report, no CSV; fixed contradiction rules explained by AI; missing inventory fields reported as "not tracked"; remaining defaults accepted.
+**Made by the user:** option B; readers are an OSFI examiner or the board; the fix-it list is a separate internal document produced by the same run, not part of the formal report, and it is never emailed (scheduled emails carry the formal report only); the board version is a summary and the examiner version has full detail (8.3); the wizard asks the report details in 8.1 and remembers them; English only; sign-off page included; model listing shows exceptions with the full inventory as an optional appendix; fix-it list inside the report, no CSV; fixed contradiction rules explained by AI; missing inventory fields reported as "not tracked"; remaining defaults accepted.
 
 **Made by me (open to correction):** two PRs; adding a quarterly schedule frequency for every template; scheduled periods roll (one interval ending the day before the run), aligned to fiscal quarters through the run date; `parameters_config.kind` marks an E-23 template and E-23 sections are offered only there; the MRM status section counts exclude retired models and print no per-tier verdict; rules match requirements by title number and list unmatched rules as "not run"; the specific contradiction rules (C7 reworked to empty validation report sections, C13 added) and their 12-month and 90-day windows; C3 counts a validation sign-off as affirming the tier; C5 checks only the latest validation; C9 fires only for unmitigated critical/high findings (E-23 allows approval with mitigated limitations); per-group data coverage label derived from the rules; a fixed "at a glance" summary that needs no AI; E-23 manual runs compare against the previous run of the same template; gap-analysis positions phrased as data consistency, enforced in code; recommended actions move to the internal document for this template; a run fails if either file fails; fix-it severity scheme; the AI does not rank the fix-it list (deterministic for an examiner); `e23Gap` position scale; prefill from the organization's last run rather than a stored per-org template copy; generic `parameters_config` rather than E-23-only fields; period bounds activity counts only.
 
