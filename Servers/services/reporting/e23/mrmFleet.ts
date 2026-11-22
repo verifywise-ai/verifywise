@@ -27,7 +27,8 @@ type Severity = keyof MrmFleetSectionData["openFindingsBySeverity"];
 const SEVERITIES = new Set<string>(["critical", "high", "medium", "low"]);
 const LIMITATIONS_MAX = 300;
 
-const time = (iso: string | null): number | null => {
+/** ISO timestamp to epoch ms; null when missing or unparseable. */
+export const time = (iso: string | null | undefined): number | null => {
   if (!iso) return null;
   const t = new Date(iso).getTime();
   return Number.isNaN(t) ? null : t;

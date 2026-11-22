@@ -662,6 +662,7 @@ export interface E23ContradictionsSectionData {
     ruleId: string;
     /** Requirement number, e.g. "2.1.4". */
     requirement: string;
+    /** Full requirement title including its number, e.g. "2.1.4 Enterprise-level …". */
     requirementTitle: string;
     claimedStatus: string;
     finding: string;

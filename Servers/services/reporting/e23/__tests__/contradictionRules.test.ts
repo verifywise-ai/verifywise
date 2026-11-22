@@ -301,6 +301,14 @@ describe("evaluateE23Rules", () => {
   });
 
   describe("C9 approved with unmitigated finding", () => {
+    it("fires for a critical finding with no plan", () => {
+      expect(
+        fires(
+          "C9",
+          model({ findings: [finding({ severity: "critical", remediationPlanEmpty: true })] }),
+        ),
+      ).toBe(true);
+    });
     it("fires for an approved model with an open high finding and no plan", () => {
       expect(fires("C9", model({ findings: [finding({ remediationPlanEmpty: true })] }))).toBe(
         true,
@@ -336,6 +344,9 @@ describe("evaluateE23Rules", () => {
   });
 
   describe("C10 no thresholds on a tier 1 or 2 model", () => {
+    it("fires for tier 1 without active thresholds", () => {
+      expect(fires("C10", model({ tier: "1", activeThresholds: 0 }))).toBe(true);
+    });
     it("fires for tier 2 without active thresholds", () => {
       expect(fires("C10", model({ tier: "2", activeThresholds: 0 }))).toBe(true);
     });
@@ -385,6 +396,9 @@ describe("evaluateE23Rules", () => {
     });
     it("fires for an approved model whose latest outcome is not_validated", () => {
       expect(fires("C13", model({ latestSignedOff: outcome("not_validated") }))).toBe(true);
+    });
+    it("is silent for an approved model whose latest outcome is validated", () => {
+      expect(fires("C13", model({ latestSignedOff: outcome("validated") }))).toBe(false);
     });
     it("is silent when the model is not approved", () => {
       expect(
@@ -459,6 +473,61 @@ describe("evaluateE23Rules", () => {
     expect(result.coverage["Principle 2.1 – Model identification (C.1)"]).toBe(
       "selfAssessmentOnly",
     );
+  });
+
+  it("words the C5 and C13 findings", () => {
+    const result = evaluate([
+      model({
+        roles: { owner: ["O"], developerIds: [9], validator: [], approver: ["A"] },
+        latestSignedOff: {
+          validatorId: 9,
+          outcome: "not_validated",
+          signedOffAt: "2026-06-01T00:00:00.000Z",
+          emptyReportSections: [],
+        },
+      }),
+    ]);
+    const text = (id: string) => result.fired.find((f) => f.ruleId === id)?.finding;
+    expect(text("C5")).toBe(
+      "1 model whose latest validation was signed off by someone who also holds the developer role",
+    );
+    expect(text("C13")).toBe(
+      "1 model is approved although the latest validation outcome is 'Not validated'",
+    );
+  });
+
+  it("matches L3 children and padded titles by exact number only", () => {
+    const parent = {
+      ...row("2.2 Rating parent", "Not started", 1),
+      children: [{ ...row("2.2.3 Every model rated", "Implemented", 1), level: 3 as const }],
+    };
+    const groups = [
+      {
+        title: "Rating",
+        orderNo: 1,
+        requirements: [parent, row("  3.1.3 Explicit stakeholder responsibilities", "Audited", 2)],
+        rollup,
+      },
+      {
+        title: "Identification",
+        orderNo: 2,
+        requirements: [row("2.1.40 Not the inventory requirement", "Implemented", 1)],
+        rollup,
+      },
+    ];
+    const untiered = model({
+      tier: null,
+      tieredAt: null,
+      roles: { owner: [], developerIds: [], validator: [], approver: ["A"] },
+    });
+    const result = evaluate([untiered], section(groups));
+    expect(result.checked).toEqual(["C2", "C4"]);
+    expect(result.fired.map((f) => [f.ruleId, f.requirementTitle, f.claimedStatus])).toEqual([
+      ["C2", "2.2.3 Every model rated", "Implemented"],
+      ["C4", "  3.1.3 Explicit stakeholder responsibilities", "Audited"],
+    ]);
+    expect(result.notRun.map((n) => n.ruleId)).toContain("C1");
+    expect(result.coverage).toEqual({ Rating: "checked", Identification: "selfAssessmentOnly" });
   });
 
   it("fires when one of two E-23 pairings claims the requirement done", () => {

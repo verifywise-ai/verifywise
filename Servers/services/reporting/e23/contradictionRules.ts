@@ -26,6 +26,7 @@ import {
   isOpenFinding,
   isValidationOverdue,
   METRIC_STALE_DAYS,
+  time,
 } from "./mrmFleet";
 
 const E23_FRAMEWORK_ID = 26;
@@ -133,12 +134,6 @@ export const E23_RULES: readonly E23Rule[] = [
   },
 ];
 
-const time = (iso: string | null | undefined): number | null => {
-  if (!iso) return null;
-  const t = new Date(iso).getTime();
-  return Number.isNaN(t) ? null : t;
-};
-
 /**
  * Later of the tiering date and the latest sign-off (sign-off affirms the tier,
  * E-23 3.4.8). null when neither is known: the rating was never set through the
@@ -187,30 +182,30 @@ const CONDITIONS: Record<Exclude<E23RuleId, "C1">, Condition> = {
   C13: (m) => m.status === "Approved" && m.latestSignedOff?.outcome === "not_validated",
 };
 
-const models = (n: number) => (n === 1 ? "1 model" : `${n} models`);
+const modelCount = (n: number) => (n === 1 ? "1 model" : `${n} models`);
 const verb = (n: number, one: string, many: string) => (n === 1 ? one : many);
 
 /** One plain-English sentence per fired rule, from its condition and count. */
 const FINDING_TEMPLATES: Record<Exclude<E23RuleId, "C1">, (n: number) => string> = {
-  C2: (n) => `${models(n)} ${verb(n, "has", "have")} no MRM tier`,
+  C2: (n) => `${modelCount(n)} ${verb(n, "has", "have")} no MRM tier`,
   C3: (n) =>
-    `${models(n)} ${verb(n, "has a", "have a")} rating past its review cadence or awaiting revalidation`,
-  C4: (n) => `${models(n)} ${verb(n, "has", "have")} no owner role`,
+    `${modelCount(n)} ${verb(n, "has a", "have a")} rating past its review cadence or awaiting revalidation`,
+  C4: (n) => `${modelCount(n)} ${verb(n, "has", "have")} no owner role`,
   C5: (n) =>
-    `${models(n)} ${verb(n, "was", "were")} last validated by someone who also holds the developer role`,
-  C6: (n) => `${models(n)} ${verb(n, "has an", "have an")} overdue validation`,
+    `${modelCount(n)} whose latest validation was signed off by someone who also holds the developer role`,
+  C6: (n) => `${modelCount(n)} ${verb(n, "has an", "have an")} overdue validation`,
   C7: (n) =>
-    `${models(n)} ${verb(n, "has a", "have a")} latest signed-off validation report with missing or empty sections`,
-  C8: (n) => `${models(n)} ${verb(n, "has", "have")} no approver`,
+    `${modelCount(n)} ${verb(n, "has a", "have a")} latest signed-off validation report with missing or empty sections`,
+  C8: (n) => `${modelCount(n)} ${verb(n, "has", "have")} no approver`,
   C9: (n) =>
-    `${models(n)} ${verb(n, "is", "are")} approved with an open critical or high finding and no remediation plan`,
-  C10: (n) => `${models(n)} in tier 1 or 2 ${verb(n, "has", "have")} no active threshold`,
+    `${modelCount(n)} ${verb(n, "is", "are")} approved with an open critical or high finding and no remediation plan`,
+  C10: (n) => `${modelCount(n)} in tier 1 or 2 ${verb(n, "has", "have")} no active threshold`,
   C11: (n) =>
-    `${models(n)} with active thresholds received no metric in the last ${METRIC_STALE_DAYS} days`,
+    `${modelCount(n)} with active thresholds received no metric in the last ${METRIC_STALE_DAYS} days`,
   C12: (n) =>
-    `${models(n)} ${verb(n, "has an", "have an")} open critical or high finding past its due date`,
+    `${modelCount(n)} ${verb(n, "has an", "have an")} open critical or high finding past its due date`,
   C13: (n) =>
-    `${models(n)} ${verb(n, "is", "are")} approved although the latest validation outcome is not validated`,
+    `${modelCount(n)} ${verb(n, "is", "are")} approved although the latest validation outcome is 'Not validated'`,
 };
 
 const requirementNumber = (title: string): string => title.trim().split(/\s+/)[0] ?? "";
