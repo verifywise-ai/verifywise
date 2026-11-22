@@ -252,7 +252,10 @@ describe("Advisor training writes", () => {
 
     expect(
       await record("agent_delete_training_record", { training_id: id, _userId: adminId }, orgId),
-    ).toEqual({ success: true, deleted_training_record: { id } });
+    ).toEqual({
+      success: true,
+      deleted_training_record: { id, training_name: "Advisor course" },
+    });
     expect(await trainingExists(id)).toBe(false);
   });
 

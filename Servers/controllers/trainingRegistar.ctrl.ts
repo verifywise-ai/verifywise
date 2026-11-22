@@ -197,9 +197,12 @@ export async function updateTrainingRegistarById(req: Request, res: Response): P
   logger.debug(`✏️ Updating training registrar ID ${trainingRegistarId}`);
 
   try {
-    const trainingRegistar = await updateTrainingRecord(trainingRegistarId, req.body, actorOf(req));
+    const result = await updateTrainingRecord(trainingRegistarId, req.body, actorOf(req));
 
-    if (trainingRegistar) {
+    if (!result.ok && result.reason === "no_fields") {
+      return res.status(400).json(STATUS_CODE[400](req.t!("No fields to update")));
+    }
+    if (result.ok) {
       await logSuccess({
         eventType: "Update",
         description: `Successfully updated training registrar ID ${trainingRegistarId}`,
@@ -208,7 +211,7 @@ export async function updateTrainingRegistarById(req: Request, res: Response): P
         userId: req.userId!,
         organizationId: req.organizationId!,
       });
-      return res.status(202).json(STATUS_CODE[202](trainingRegistar));
+      return res.status(202).json(STATUS_CODE[202](result.record));
     }
 
     await logFailure({
@@ -249,9 +252,9 @@ export async function deleteTrainingRegistarById(req: Request, res: Response): P
   logger.debug(`🗑️ Deleting training registrar ID ${trainingRegistarId}`);
 
   try {
-    const deleteTrainingRegistar = await deleteTrainingRecord(trainingRegistarId, actorOf(req));
+    const deleted = await deleteTrainingRecord(trainingRegistarId, actorOf(req));
 
-    if (deleteTrainingRegistar) {
+    if (deleted) {
       await logSuccess({
         eventType: "Delete",
         description: `Successfully deleted training registrar ID ${trainingRegistarId}`,
@@ -260,7 +263,8 @@ export async function deleteTrainingRegistarById(req: Request, res: Response): P
         userId: req.userId!,
         organizationId: req.organizationId!,
       });
-      return res.status(202).json(STATUS_CODE[202](deleteTrainingRegistar));
+      // The response body stays `true`, as before.
+      return res.status(202).json(STATUS_CODE[202](true));
     }
 
     await logFailure({

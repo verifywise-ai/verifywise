@@ -126,31 +126,59 @@ export async function createTrainingRecord(
   return created;
 }
 
-/** Update a record; null when it is not in the organization. */
+/** The columns an update can write (as updateTrainingRegistarByIdQuery). */
+const WRITABLE_FIELDS = [
+  "training_name",
+  "duration",
+  "provider",
+  "department",
+  "status",
+  "people",
+  "description",
+] as const;
+
+export type UpdateTrainingRecordResult =
+  { ok: true; record: TrainingRegistarModel } | { ok: false; reason: "no_fields" | "not_found" };
+
+/**
+ * Update a record. The row is read once, locked, inside the update's
+ * transaction, and that read is both the change-history baseline and the
+ * automation's "before".
+ */
 export async function updateTrainingRecord(
   id: number,
   input: TrainingRecordInput,
   actor: TrainingRecordActor,
-): Promise<TrainingRegistarModel | null> {
+): Promise<UpdateTrainingRecordResult> {
   // Map numberOfPeople to people for DB
   const updates: Record<string, unknown> = { ...input, people: input.numberOfPeople };
   delete updates.numberOfPeople;
+  if (!WRITABLE_FIELDS.some((field) => updates[field] !== undefined && updates[field] !== null)) {
+    return { ok: false, reason: "no_fields" };
+  }
 
   const transaction = await sequelize.transaction();
   try {
-    // Existing data, for change tracking
-    const existing = await getTrainingRegistarByIdQuery(id, actor.organizationId);
+    const existing = await getTrainingRegistarByIdQuery(id, actor.organizationId, {
+      transaction,
+      lock: true,
+    });
+    if (!existing) {
+      await transaction.rollback();
+      return { ok: false, reason: "not_found" };
+    }
     const updated = await updateTrainingRegistarByIdQuery(
       id,
       updates as Partial<TrainingRegistarModel>,
       actor.organizationId,
       transaction,
+      existing,
     );
     if (!updated) {
       await transaction.rollback();
-      return null;
+      return { ok: false, reason: "not_found" };
     }
-    if (existing && actor.userId) {
+    if (actor.userId) {
       const changes = await trackEntityChanges("training", existing, updates);
       if (changes.length > 0) {
         await recordMultipleFieldChanges(
@@ -164,30 +192,35 @@ export async function updateTrainingRecord(
       }
     }
     await transaction.commit();
-    return updated;
+    return { ok: true, record: updated };
   } catch (error) {
     await transaction.rollback();
     throw error;
   }
 }
 
-/** Delete a record; false when it is not in the organization. */
+/** Delete a record; returns it as it was, or null when it is not in the organization. */
 export async function deleteTrainingRecord(
   id: number,
   actor: TrainingRecordActor,
-): Promise<boolean> {
+): Promise<ITrainingRegister | null> {
   const transaction = await sequelize.transaction();
   try {
-    const deleted = await deleteTrainingRegistarByIdQuery(id, actor.organizationId, transaction);
+    const existing = await getTrainingRegistarByIdQuery(id, actor.organizationId, {
+      transaction,
+      lock: true,
+    });
+    const deleted =
+      existing && (await deleteTrainingRegistarByIdQuery(id, actor.organizationId, transaction));
     if (!deleted) {
       await transaction.rollback();
-      return false;
+      return null;
     }
     if (actor.userId) {
       await recordEntityDeletion("training", id, actor.userId, actor.organizationId, transaction);
     }
     await transaction.commit();
-    return deleted;
+    return existing;
   } catch (error) {
     await transaction.rollback();
     throw error;

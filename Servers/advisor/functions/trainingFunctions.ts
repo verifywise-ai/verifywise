@@ -1,4 +1,7 @@
-import { getAllTrainingRegistarQuery } from "../../utils/trainingRegistar.utils";
+import {
+  getAllTrainingRegistarQuery,
+  getTrainingRegistarByIdQuery,
+} from "../../utils/trainingRegistar.utils";
 import logger from "../../utils/logger/fileLogger";
 import { createWriteToolFn } from "../confirmation/createWriteTool";
 import {
@@ -204,57 +207,90 @@ const ROLE_REFUSAL: Record<string, string> = {
   "training.admin": "your role does not allow deleting training",
 };
 
+type RecordWrite = "create" | "update" | "delete";
+
+const RECORD_PERMISSION: Record<RecordWrite, PermissionKey> = {
+  create: "training.edit",
+  update: "training.edit",
+  // The console's gate for DELETE /api/training/:id.
+  delete: "training.admin",
+};
+
+type RecordRequest =
+  { ok: false; message: string } | { ok: true; id: number; input: TrainingRecordInput };
+
+const refused = (message: string): RecordRequest => ({ ok: false, message });
+
 /**
- * Why a record write cannot run, or null. A due date is refused outright,
- * including one in an approval stored before records stopped taking it.
+ * The record write the tool asks for, or why it cannot run: a valid id (update
+ * and delete) for a record in this organization, no due date (records have
+ * none, including in an approval stored before they stopped taking one), a
+ * title to create, at least one field to update, and the console's permission
+ * held by the acting user. Run before the approval is requested and again when
+ * the write executes.
  */
-async function recordWriteRefusal(
+async function recordRequest(
+  write: RecordWrite,
   params: Record<string, unknown>,
   organizationId: number,
-  permission: PermissionKey,
-  notDone: string,
-): Promise<string | null> {
+): Promise<RecordRequest> {
+  let id = 0;
+  let notDone = "Training record was not created";
+  if (write !== "create") {
+    const parsed = parseIdValue(params.training_id, "Training ID must be a positive integer");
+    if (!parsed.ok) return refused(parsed.message);
+    id = parsed.value;
+    notDone = `Training record #${id} was not ${write}d`;
+  }
   if (params.due_date !== undefined && params.due_date !== null && params.due_date !== "") {
-    return `${notDone}: ${NO_DUE_DATE_ON_RECORDS}`;
+    return refused(`${notDone}: ${NO_DUE_DATE_ON_RECORDS}`);
   }
+
+  const input = recordInput(params);
+  if (
+    write === "create" &&
+    !(typeof input.training_name === "string" && input.training_name.trim())
+  ) {
+    return refused(`${notDone}: a title is required`);
+  }
+  if (write === "update" && Object.keys(input).length === 0) return refused("No fields to update");
+
+  const permission = RECORD_PERMISSION[write];
   if (!(await userHasPermission(organizationId, actingRequesterId(params), permission))) {
-    return `${notDone}: ${ROLE_REFUSAL[permission]}.`;
+    return refused(`${notDone}: ${ROLE_REFUSAL[permission]}.`);
   }
-  return null;
+  if (write !== "create" && !(await getTrainingRegistarByIdQuery(id, organizationId))) {
+    return refused(`Training record #${id} not found`);
+  }
+  return { ok: true, id, input };
 }
+
+const precheckRecord =
+  (write: RecordWrite) => async (params: Record<string, unknown>, organizationId: number) => {
+    const request = await recordRequest(write, params, organizationId);
+    return request.ok ? null : request.message;
+  };
 
 const actorFor = (params: Record<string, unknown>, organizationId: number) => ({
   userId: actingRequesterId(params),
   organizationId,
 });
 
-const CREATE_NOT_DONE = "Training record was not created";
-const updateNotDone = (params: Record<string, unknown>) =>
-  `Training record #${params.training_id} was not updated`;
-const deleteNotDone = (params: Record<string, unknown>) =>
-  `Training record #${params.training_id} was not deleted`;
-
 const agentCreateTrainingRecord = createWriteToolFn({
   toolName: "agent_create_training_record",
   warningLevel: "warning",
   descriptionFn: (params) =>
     `Create training record "${params.title}"${params.department ? ` for ${params.department} department` : ""}`,
-  precheckFn: (params, organizationId) =>
-    recordWriteRefusal(params, organizationId, "training.edit", CREATE_NOT_DONE),
+  precheckFn: precheckRecord("create"),
   executeFn: async (params, organizationId) => {
-    const refusal = await recordWriteRefusal(
-      params,
-      organizationId,
-      "training.edit",
-      CREATE_NOT_DONE,
-    );
-    if (refusal) return { success: false, message: refusal };
+    const request = await recordRequest("create", params, organizationId);
+    if (!request.ok) return { success: false, message: request.message };
 
     const created = await createTrainingRecord(
-      { status: "Planned", ...recordInput(params) },
+      { status: "Planned", ...request.input },
       actorFor(params, organizationId),
     );
-    if (!created) return { success: false, message: CREATE_NOT_DONE };
+    if (!created) return { success: false, message: "Training record was not created" };
     return { success: true, training_record: created };
   },
 });
@@ -264,27 +300,26 @@ const agentUpdateTrainingRecord = createWriteToolFn({
   warningLevel: "warning",
   descriptionFn: (params) =>
     `Update training record #${params.training_id}${params.title ? ` — rename to "${params.title}"` : ""}`,
-  precheckFn: (params, organizationId) =>
-    recordWriteRefusal(params, organizationId, "training.edit", updateNotDone(params)),
+  precheckFn: precheckRecord("update"),
   executeFn: async (params, organizationId) => {
-    const refusal = await recordWriteRefusal(
-      params,
-      organizationId,
-      "training.edit",
-      updateNotDone(params),
+    const request = await recordRequest("update", params, organizationId);
+    if (!request.ok) return { success: false, message: request.message };
+
+    const result = await updateTrainingRecord(
+      request.id,
+      request.input,
+      actorFor(params, organizationId),
     );
-    if (refusal) return { success: false, message: refusal };
-
-    const id = parseIdValue(params.training_id, "Training ID must be a positive integer");
-    if (!id.ok) return { success: false, message: id.message };
-    const input = recordInput(params);
-    if (Object.keys(input).length === 0) {
-      return { success: false, message: "No fields to update" };
+    if (!result.ok) {
+      return {
+        success: false,
+        message:
+          result.reason === "no_fields"
+            ? "No fields to update"
+            : `Training record #${request.id} not found`,
+      };
     }
-
-    const updated = await updateTrainingRecord(id.value, input, actorFor(params, organizationId));
-    if (!updated) return { success: false, message: `Training record #${id.value} not found` };
-    return { success: true, training_record: updated };
+    return { success: true, training_record: result.record };
   },
 });
 
@@ -380,23 +415,17 @@ const agentDeleteTrainingRecord = createWriteToolFn({
   toolName: "agent_delete_training_record",
   warningLevel: "danger",
   descriptionFn: (params) => `Permanently delete training record #${params.training_id}`,
-  precheckFn: (params, organizationId) =>
-    recordWriteRefusal(params, organizationId, "training.admin", deleteNotDone(params)),
+  precheckFn: precheckRecord("delete"),
   executeFn: async (params, organizationId) => {
-    // The console's gate for DELETE /api/training/:id is training.admin.
-    const refusal = await recordWriteRefusal(
-      params,
-      organizationId,
-      "training.admin",
-      deleteNotDone(params),
-    );
-    if (refusal) return { success: false, message: refusal };
+    const request = await recordRequest("delete", params, organizationId);
+    if (!request.ok) return { success: false, message: request.message };
 
-    const id = parseIdValue(params.training_id, "Training ID must be a positive integer");
-    if (!id.ok) return { success: false, message: id.message };
-    const deleted = await deleteTrainingRecord(id.value, actorFor(params, organizationId));
-    if (!deleted) return { success: false, message: `Training record #${id.value} not found` };
-    return { success: true, deleted_training_record: { id: id.value } };
+    const deleted = await deleteTrainingRecord(request.id, actorFor(params, organizationId));
+    if (!deleted) return { success: false, message: `Training record #${request.id} not found` };
+    return {
+      success: true,
+      deleted_training_record: { id: request.id, training_name: deleted.training_name },
+    };
   },
 });
 

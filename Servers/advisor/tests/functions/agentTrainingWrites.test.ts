@@ -29,6 +29,10 @@ jest.mock("../../../services/trainingRecord.service", () => ({
 jest.mock("../../../utils/user.utils", () => ({
   getUserByIdQuery: jest.fn(),
 }));
+jest.mock("../../../utils/trainingRegistar.utils", () => ({
+  getAllTrainingRegistarQuery: jest.fn(),
+  getTrainingRegistarByIdQuery: jest.fn(),
+}));
 
 import { sequelize } from "../../../database/db";
 import { userHasPermission } from "../../../utils/userPermission.utils";
@@ -38,6 +42,7 @@ import { recordMultipleFieldChanges } from "../../../utils/changeHistory.base.ut
 import { submitForApproval } from "../../approval/approvalGateway";
 import * as records from "../../../services/trainingRecord.service";
 import { getUserByIdQuery } from "../../../utils/user.utils";
+import { getTrainingRegistarByIdQuery } from "../../../utils/trainingRegistar.utils";
 import { availableTrainingTools } from "../../functions/trainingFunctions";
 import { writeToolExecutors } from "../../confirmation/createWriteTool";
 import { toolsDefinition } from "../../tools/trainingTools";
@@ -60,6 +65,7 @@ const mockRecordCreate = records.createTrainingRecord as unknown as jest.Mock<an
 const mockRecordUpdate = records.updateTrainingRecord as unknown as jest.Mock<any>;
 const mockRecordDelete = records.deleteTrainingRecord as unknown as jest.Mock<any>;
 const mockUser = getUserByIdQuery as unknown as jest.Mock<any>;
+const mockRecordById = getTrainingRegistarByIdQuery as unknown as jest.Mock<any>;
 
 /** The tool as the model calls it: checks, then the approval step. */
 const call = (tool: string, params: Record<string, unknown>) =>
@@ -98,8 +104,9 @@ beforeEach(() => {
   mockUser.mockResolvedValue({ name: "Ada", surname: "Lovelace", email: "ada@example.com" });
   mockSubmit.mockResolvedValue({ outcome: "pending", confirmationResult: { pending: true } });
   mockRecordCreate.mockResolvedValue({ id: 3 });
-  mockRecordUpdate.mockResolvedValue({ id: 3 });
-  mockRecordDelete.mockResolvedValue(true);
+  mockRecordUpdate.mockResolvedValue({ ok: true, record: { id: 3 } });
+  mockRecordDelete.mockResolvedValue({ id: 3, training_name: "AI literacy" });
+  mockRecordById.mockResolvedValue({ id: 3, training_name: "AI literacy" });
 });
 
 describe("agent_assign_training_to_user", () => {
@@ -388,10 +395,91 @@ describe("training record writes", () => {
     expect(
       await run("agent_update_training_record", { training_id: 3, _userId: APPROVER }),
     ).toEqual({ success: false, message: "No fields to update" });
-    mockRecordUpdate.mockResolvedValue(null);
+    mockRecordUpdate.mockResolvedValue({ ok: false, reason: "not_found" });
     expect(
       await run("agent_update_training_record", { training_id: 3, title: "X", _userId: APPROVER }),
     ).toEqual({ success: false, message: "Training record #3 not found" });
+  });
+
+  it.each([
+    [
+      "an update with a bad id",
+      "agent_update_training_record",
+      { training_id: "three", title: "X" },
+      "Training ID must be a positive integer",
+    ],
+    [
+      "an update with no fields",
+      "agent_update_training_record",
+      { training_id: 3 },
+      "No fields to update",
+    ],
+    [
+      "an update of a record outside the organization",
+      "agent_update_training_record",
+      { training_id: 3, title: "X" },
+      "Training record #3 not found",
+    ],
+    [
+      "a delete with no id",
+      "agent_delete_training_record",
+      {},
+      "Training ID must be a positive integer",
+    ],
+    [
+      "a delete of a record outside the organization",
+      "agent_delete_training_record",
+      { training_id: "3" },
+      "Training record #3 not found",
+    ],
+    [
+      "a create without a title",
+      "agent_create_training_record",
+      { duration: "1 hour" },
+      "Training record was not created: a title is required",
+    ],
+    [
+      "a create with a blank title",
+      "agent_create_training_record",
+      { title: "   " },
+      "Training record was not created: a title is required",
+    ],
+  ])("refuses %s before asking anyone to approve", async (what, tool, extra, message) => {
+    if (what.includes("outside the organization")) mockRecordById.mockResolvedValue(null);
+    expect(await call(tool, { ...extra, _userId: APPROVER })).toEqual({ success: false, message });
+    expect(mockSubmit).not.toHaveBeenCalled();
+    expect(await run(tool, { ...extra, _userId: APPROVER })).toEqual({ success: false, message });
+    expect(mockRecordCreate).not.toHaveBeenCalled();
+    expect(mockRecordUpdate).not.toHaveBeenCalled();
+    expect(mockRecordDelete).not.toHaveBeenCalled();
+  });
+
+  it("names the parsed id in a refusal, never #undefined", async () => {
+    const padded = await run("agent_update_training_record", {
+      training_id: " 3",
+      due_date: "2026-12-31",
+      _userId: APPROVER,
+    });
+    expect(padded.message).toMatch(/^Training record #3 was not updated: /);
+    const missing = await run("agent_delete_training_record", {
+      due_date: "2026-12-31",
+      _userId: APPROVER,
+    });
+    expect(missing).toEqual({ success: false, message: "Training ID must be a positive integer" });
+  });
+
+  it("runs the pre-approval checks as the caller, never a _requesterId from the params", async () => {
+    await call("agent_update_training_record", {
+      training_id: 3,
+      title: "X",
+      _userId: APPROVER,
+      _requesterId: REQUESTER,
+    });
+    expect(mockHas).toHaveBeenCalledTimes(1);
+    expect(mockHas).toHaveBeenCalledWith(ORG, APPROVER, "training.edit");
+    expect(mockSubmit).toHaveBeenCalledWith(
+      expect.objectContaining({ userId: APPROVER, inputParams: { training_id: 3, title: "X" } }),
+    );
   });
 
   it("deletes through the console's service with training.admin", async () => {
@@ -402,7 +490,10 @@ describe("training record writes", () => {
     });
     expect(mockHas).toHaveBeenCalledWith(ORG, REQUESTER, "training.admin");
     expect(mockRecordDelete).toHaveBeenCalledWith(3, { userId: REQUESTER, organizationId: ORG });
-    expect(result).toEqual({ success: true, deleted_training_record: { id: 3 } });
+    expect(result).toEqual({
+      success: true,
+      deleted_training_record: { id: 3, training_name: "AI literacy" },
+    });
   });
 
   it.each([
