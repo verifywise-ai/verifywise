@@ -60,9 +60,10 @@ export async function getFileContentById(req: Request, res: Response): Promise<a
   });
 
   try {
-    // Authorization check: verify user has access to this file
-    const orgId = req.organizationId ? Number(req.organizationId) : undefined;
-    const hasAccess = await canUserAccessFile(fileId, userId, role, req.organizationId!, orgId);
+    // Authorization check: the File Manager download's rule (Admin; any
+    // member for an organization-level file; uploader, project owner or
+    // member for a project file).
+    const hasAccess = await canUserAccessFile(fileId, userId, role, req.organizationId!);
     if (!hasAccess) {
       await logFailure({
         eventType: "Read",

@@ -64,6 +64,9 @@ export const de: Record<string, string> = {
   "Previous file": "Vorherige Datei",
   "Expired files": "Abgelaufene Dateien",
   "Retention policy": "Aufbewahrungsrichtlinie",
+  "{failed} of {total} files could not be analyzed":
+    "{failed} von {total} Dateien konnten nicht analysiert werden",
+  "This file could not be analyzed": "Diese Datei konnte nicht analysiert werden",
 };
 
 export const fr: Record<string, string> = {
@@ -128,6 +131,9 @@ export const fr: Record<string, string> = {
   "Previous file": "Fichier précédent",
   "Expired files": "Fichiers expirés",
   "Retention policy": "Politique de rétention",
+  "{failed} of {total} files could not be analyzed":
+    "{failed} fichiers sur {total} n'ont pas pu être analysés",
+  "This file could not be analyzed": "Ce fichier n'a pas pu être analysé",
 };
 
 export const es: Record<string, string> = {
@@ -192,4 +198,7 @@ export const es: Record<string, string> = {
   "Previous file": "Archivo anterior",
   "Expired files": "Archivos caducados",
   "Retention policy": "Política de retención",
+  "{failed} of {total} files could not be analyzed":
+    "No se pudieron analizar {failed} de {total} archivos",
+  "This file could not be analyzed": "No se pudo analizar este archivo",
 };

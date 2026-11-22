@@ -8,6 +8,8 @@ import {
   getQualityScoresQuery,
   getEvidenceGapsQuery,
   getAdoptedEvidenceFrameworksQuery,
+  getAnalysisAuthorQuery,
+  isAnalysisReplaceBlocked,
   getSuggestionsQuery,
   applySuggestionsQuery,
 } from "../utils/evidenceAi.utils";
@@ -16,6 +18,7 @@ import { trackAIContent } from "../middleware/aiContentTracker.middleware";
 import { analyzeEvidence, type AnalyzerResult } from "../advisor/evidenceAnalyzer/analyzer.service";
 import { resolveFileContent } from "../services/storage";
 import { getLLMKeysWithKeyQuery, getLLMProviderUrl } from "../utils/llmKey.utils";
+import { requestHasPermission } from "../utils/rolePermissions.utils";
 import type { LLMProvider } from "../domain.layer/interfaces/i.llmKey";
 import type {
   QualityGrade,
@@ -24,6 +27,16 @@ import type {
 } from "../domain.layer/interfaces/i.evidenceAi";
 
 const fileName = "evidenceAi.ctrl.ts";
+
+/** The values evidence_ai_analysis.visibility holds (add-ai-visibility-columns). */
+const ANALYSIS_VISIBILITIES = ["public", "private"] as const;
+type AnalysisVisibility = (typeof ANALYSIS_VISIBILITIES)[number];
+
+/** Why another user's analysis may not be replaced (isAnalysisReplaceBlocked). */
+const replaceBlockedMessage = (existingVisibility: string | undefined) =>
+  existingVisibility === "private"
+    ? "This file has a private analysis by another user"
+    : "A private analysis would replace another user's analysis of this file";
 
 /**
  * Why no grade was produced.
@@ -138,13 +151,18 @@ function inferParseFidelity(fileType: string): "high" | "medium" | "low" | undef
  */
 export async function analyzeFile(req: Request, res: Response) {
   const functionName = "analyzeFile";
-  const fileId = parseInt(
-    Array.isArray(req.params.fileId) ? req.params.fileId[0] : req.params.fileId,
-  );
+  // Parsed and access-checked by requireFileAccess.
+  const fileId = req.fileId;
 
-  if (isNaN(fileId)) {
+  if (fileId === undefined) {
     return res.status(400).json(STATUS_CODE[400](req.t!("Invalid file ID")));
   }
+
+  const requestedVisibility = req.body?.visibility ?? "public";
+  if (!(ANALYSIS_VISIBILITIES as readonly unknown[]).includes(requestedVisibility)) {
+    return res.status(400).json(STATUS_CODE[400](req.t!("Visibility must be public or private")));
+  }
+  const visibility = requestedVisibility as AnalysisVisibility;
 
   logStructured("processing", `analyzing file ${fileId}`, functionName, fileName);
 
@@ -171,6 +189,22 @@ export async function analyzeFile(req: Request, res: Response) {
     const file = (fileRows as any[])[0];
     if (!file) {
       return res.status(404).json(STATUS_CODE[404](req.t!("File not found")));
+    }
+
+    // Another member's analysis is not replaced when either side is private
+    // (isAnalysisReplaceBlocked); file.admin may override. Checked before the
+    // LLM call so a refused request spends no AI credits, and again in the
+    // write in case the row changed meanwhile.
+    const replaceGuard = {
+      userId,
+      visibility,
+      canOverride: await requestHasPermission(req, "file.admin"),
+    };
+    const existing = await getAnalysisAuthorQuery(fileId, organizationId);
+    if (isAnalysisReplaceBlocked(existing, replaceGuard)) {
+      return res
+        .status(409)
+        .json(STATUS_CODE[409](req.t!(replaceBlockedMessage(existing?.visibility))));
     }
 
     const [contentRows] = await sequelize.query(
@@ -289,22 +323,35 @@ export async function analyzeFile(req: Request, res: Response) {
     }
 
     // ---- Persist -------------------------------------------------
-    const visibility = req.body?.visibility || "public";
-    const analysis = await upsertAnalysisQuery(fileId, organizationId, {
-      summary,
-      key_findings: keyFindings,
-      compliance_areas: complianceAreas,
-      quality_score: qualityScore,
-      overall_quality_grade: overallGrade,
-      suggested_control_links: suggestions,
-      analysis_model: modelLabel,
-      analyzed_by: userId,
-      visibility,
-      audit_metadata: auditMetadata,
-    });
+    const analysis = await upsertAnalysisQuery(
+      fileId,
+      organizationId,
+      {
+        summary,
+        key_findings: keyFindings,
+        compliance_areas: complianceAreas,
+        quality_score: qualityScore,
+        overall_quality_grade: overallGrade,
+        suggested_control_links: suggestions,
+        analysis_model: modelLabel,
+        analyzed_by: userId,
+        visibility,
+        audit_metadata: auditMetadata,
+      },
+      replaceGuard,
+    );
+    if (!analysis) {
+      // Another user's analysis landed while this one ran.
+      const current = await getAnalysisAuthorQuery(fileId, organizationId);
+      return res
+        .status(409)
+        .json(STATUS_CODE[409](req.t!(replaceBlockedMessage(current?.visibility))));
+    }
 
     // ---- Auto-apply control links --------------------------------
-    if (suggestions.length > 0) {
+    // A private analysis is its author's alone, so its suggestions are not
+    // turned into organization-wide links.
+    if (visibility !== "private" && suggestions.length > 0) {
       try {
         await applySuggestionsQuery(
           fileId,
@@ -360,11 +407,10 @@ export async function analyzeFile(req: Request, res: Response) {
  */
 export async function getAnalysis(req: Request, res: Response) {
   const functionName = "getAnalysis";
-  const fileId = parseInt(
-    Array.isArray(req.params.fileId) ? req.params.fileId[0] : req.params.fileId,
-  );
+  // Parsed and access-checked by requireFileAccess.
+  const fileId = req.fileId;
 
-  if (isNaN(fileId)) {
+  if (fileId === undefined) {
     return res.status(400).json(STATUS_CODE[400](req.t!("Invalid file ID")));
   }
 
@@ -402,6 +448,7 @@ export async function getQualityScores(req: Request, res: Response) {
     const scores = await getQualityScoresQuery(
       req.organizationId!,
       req.userId ? Number(req.userId) : null,
+      req.role || "",
       visFilter,
     );
 
@@ -479,16 +526,19 @@ export async function getGaps(req: Request, res: Response) {
  */
 export async function getSuggestions(req: Request, res: Response) {
   const functionName = "getSuggestions";
-  const fileId = parseInt(
-    Array.isArray(req.params.fileId) ? req.params.fileId[0] : req.params.fileId,
-  );
+  // Parsed and access-checked by requireFileAccess.
+  const fileId = req.fileId;
 
-  if (isNaN(fileId)) {
+  if (fileId === undefined) {
     return res.status(400).json(STATUS_CODE[400](req.t!("Invalid file ID")));
   }
 
   try {
-    const suggestions = await getSuggestionsQuery(fileId, req.organizationId!);
+    const suggestions = await getSuggestionsQuery(
+      fileId,
+      req.organizationId!,
+      req.userId ? Number(req.userId) : null,
+    );
 
     if (!suggestions) {
       return res.status(204).json(STATUS_CODE[204](null));
@@ -509,11 +559,10 @@ export async function getSuggestions(req: Request, res: Response) {
  */
 export async function applySuggestions(req: Request, res: Response) {
   const functionName = "applySuggestions";
-  const fileId = parseInt(
-    Array.isArray(req.params.fileId) ? req.params.fileId[0] : req.params.fileId,
-  );
+  // Parsed and access-checked by requireFileAccess.
+  const fileId = req.fileId;
 
-  if (isNaN(fileId)) {
+  if (fileId === undefined) {
     return res.status(400).json(STATUS_CODE[400](req.t!("Invalid file ID")));
   }
 

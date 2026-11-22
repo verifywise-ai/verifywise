@@ -1017,7 +1017,7 @@ export async function linkFriaEvidence(req: Request, res: Response): Promise<Res
     if (
       !Number.isSafeInteger(fileId) ||
       fileId <= 0 ||
-      !(await canUserAccessFile(fileId, userId, req.role!, organizationId, organizationId))
+      !(await canUserAccessFile(fileId, userId, req.role!, organizationId))
     ) {
       return res.status(404).json(STATUS_CODE[404](req.t!("File not found")));
     }
