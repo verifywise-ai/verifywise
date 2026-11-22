@@ -120,6 +120,35 @@ describe("collectAnalyzerInputs", () => {
     expect(owners).toEqual(expect.arrayContaining(["Alice", "Bob", "Carol"]));
   });
 
+  it("harvests framework requirement owners, reviewers and approvers but not the Unknown user placeholder", () => {
+    const row = (over: any) => ({ title: "T", status: "Waiting", ...over });
+    const owners = collectAllowedOwners({
+      sections: {
+        frameworkRequirements: {
+          frameworks: [
+            {
+              frameworkName: "SOC 2",
+              groups: [
+                {
+                  title: "CC1",
+                  requirements: [
+                    row({
+                      owner: "Dana",
+                      reviewer: "Unknown user",
+                      children: [row({ approver: "Eve", owner: "Unknown user" })],
+                    }),
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+      },
+    } as any);
+    expect(owners).toEqual(expect.arrayContaining(["Dana", "Eve"]));
+    expect(owners).not.toContain("Unknown user");
+  });
+
   it("harvests approvers from the models section — its omission is why every action had a null owner", () => {
     // dataCollector.collectModelsList emits `approver` as a resolved name
     // string; model_inventories has no owner column. Leaving the section out

@@ -13,6 +13,7 @@ import {
   flattenFrameworkRequirements,
   isTerminalStatus,
   levelRank,
+  oneLine,
   requirementRank,
   SECTION_LABELS,
 } from "./prompts";
@@ -370,7 +371,7 @@ const SPECS: Record<string, SectionSpec> = {
     aggregates: sumRollups,
     rank: requirementRank,
     label: (r) =>
-      `${r._framework}: ${text(r.title)} (${text(r.status)}, owner ${text(r.owner)}, due ${text(r.dueDate)})`,
+      `${oneLine(r._framework)}: ${text(oneLine(r.title))} (${text(oneLine(r.status))}, owner ${text(oneLine(r.owner))}, due ${text(r.dueDate)})`,
   },
 };
 

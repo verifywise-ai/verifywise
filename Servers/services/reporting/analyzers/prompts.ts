@@ -358,6 +358,23 @@ export function flattenFrameworkRequirements(data: any): FlatRequirement[] {
 export const requirementRank = (row: FrameworkRequirementRow): number =>
   row.isDone ? 0 : 1 + (row.isOverdue ? 2 : 0) + (!row.owner || !String(row.owner).trim() ? 1 : 0);
 
+const MAX_FREE_TEXT_CHARS = 200;
+
+/**
+ * A free-text value (owner and requirement names are user-controlled) made safe
+ * to interpolate into one prompt line: control characters, newlines included,
+ * collapse to single spaces so a value cannot open a new instruction line, and
+ * a cut is marked with "…" like every other truncation here.
+ */
+export const oneLine = (v: unknown): string => {
+  const s = String(v ?? "")
+    // eslint-disable-next-line no-control-regex
+    .replace(/[\u0000-\u001f\u007f-\u009f\u2028\u2029]+/g, " ")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+  return s.length > MAX_FREE_TEXT_CHARS ? `${s.slice(0, MAX_FREE_TEXT_CHARS - 1)}…` : s;
+};
+
 const FRAMEWORK_TOP_N = 25;
 const FRAMEWORK_MAX_GROUP_LINES = 40;
 
@@ -372,10 +389,10 @@ const rollupLine = (r: any): string =>
 function prepareFrameworkRequirements(data: any): string {
   const lines: string[] = [];
   (data.frameworks ?? []).forEach((fw: any) => {
-    lines.push(`${fw?.frameworkName ?? "Unknown framework"}: ${rollupLine(fw?.rollup)}`);
+    lines.push(`${oneLine(fw?.frameworkName) || "Unknown framework"}: ${rollupLine(fw?.rollup)}`);
     const groups: any[] = fw?.groups ?? [];
     groups.slice(0, FRAMEWORK_MAX_GROUP_LINES).forEach((g) => {
-      lines.push(`  ${g?.title ?? "Untitled group"}: ${rollupLine(g?.rollup)}`);
+      lines.push(`  ${oneLine(g?.title) || "Untitled group"}: ${rollupLine(g?.rollup)}`);
     });
     if (groups.length > FRAMEWORK_MAX_GROUP_LINES) {
       lines.push(`  … and ${groups.length - FRAMEWORK_MAX_GROUP_LINES} more groups`);
@@ -388,7 +405,7 @@ function prepareFrameworkRequirements(data: any): string {
   lines.push("", "Requirements not done (overdue first, then unassigned):");
   notDone.slice(0, FRAMEWORK_TOP_N).forEach((r) => {
     lines.push(
-      `- ${r._framework}: ${r.title} [${r.status}] ${r.owner || "unassigned"} ${r.dueDate || "no due date"}`,
+      `- ${oneLine(r._framework)}: ${oneLine(r.title)} [${oneLine(r.status)}] ${oneLine(r.owner) || "unassigned"} ${oneLine(r.dueDate) || "no due date"}`,
     );
   });
   if (notDone.length > FRAMEWORK_TOP_N) {
