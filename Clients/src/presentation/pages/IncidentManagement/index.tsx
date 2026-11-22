@@ -184,6 +184,7 @@ const IncidentManagement: React.FC = () => {
   });
 
   const isCreatingDisabled = !useCan("incident.create");
+  const canEditIncidents = useCan("incident.edit");
 
   // FilterBy - Dynamic options generators
   const getUniqueProjects = useCallback(() => {
@@ -498,9 +499,10 @@ const IncidentManagement: React.FC = () => {
     }
   };
 
+  // Roles without incident.edit open the incident read-only.
   const handleEditIncident = async (id: string, mode: string) => {
     setSelectedIncidentId(id);
-    setModalMode(mode);
+    setModalMode(canEditIncidents ? mode : "view");
     const data = await fetchIncidentDataForSelectedId(id);
     if (data) setIsNewIncidentModalOpen(true);
   };
@@ -866,6 +868,7 @@ const IncidentManagement: React.FC = () => {
           onEdit={handleEditIncident}
           onArchive={handleArchiveIncident}
           onView={handleViewIncident}
+          canEdit={canEditIncidents}
           archivedId={archiveId}
           visibleColumns={incidentVisibleColumns}
           jiraLinks={jiraLinks}

@@ -139,6 +139,11 @@ export const ROLE_PERMISSIONS = {
     description: "Update organization settings",
     legacyRoles: ADMIN,
   },
+  "incident.delete": {
+    module: "Incidents",
+    description: "Permanently delete AI incidents",
+    legacyRoles: ADMIN,
+  },
   "reporting.admin": {
     module: "Reporting",
     description: "Configure reporting integrations",
@@ -289,6 +294,11 @@ export const ROLE_PERMISSIONS = {
   "incident.create": {
     module: "Incidents",
     description: "Report new AI incidents",
+    legacyRoles: EDITOR,
+  },
+  "incident.edit": {
+    module: "Incidents",
+    description: "Edit and archive AI incidents",
     legacyRoles: EDITOR,
   },
   "riskLinks.edit": {

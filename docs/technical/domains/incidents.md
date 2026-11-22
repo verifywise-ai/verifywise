@@ -139,14 +139,18 @@ enum HarmCategory {
 
 ### Incident CRUD
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/aiIncidentManagement/` | Get all incidents |
-| GET | `/aiIncidentManagement/:id` | Get incident by ID |
-| POST | `/aiIncidentManagement/` | Create incident |
-| PATCH | `/aiIncidentManagement/:id` | Update incident |
-| PATCH | `/aiIncidentManagement/:id/archive` | Archive incident |
-| DELETE | `/aiIncidentManagement/:id` | Delete incident |
+Mounted at `/api/ai-incident-managements`.
+
+| Method | Endpoint | Permission | Description |
+|--------|----------|------------|-------------|
+| GET | `/` | Any member | Get all incidents |
+| GET | `/:id` | Any member | Get incident by ID |
+| POST | `/` | `incident.create` (Admin, Editor) | Create incident |
+| PATCH | `/:id` | `incident.edit` (Admin, Editor) | Update incident |
+| PATCH | `/:id/archive` | `incident.edit` (Admin, Editor) | Archive incident |
+| DELETE | `/:id` | `incident.delete` (Admin) | Delete incident |
+
+Until 2026-11, edit, archive and delete needed only a login, so Reviewers and Auditors could change or delete incidents. Migration `20261122180000` grants `incident.edit` to custom roles that hold `incident.create`, and `incident.delete` to custom roles that hold `organization.admin`. On the incidents page, roles without `incident.edit` open incidents read-only and the row menu offers only View. The page has no delete action.
 
 ### Change History
 

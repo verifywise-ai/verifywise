@@ -244,6 +244,16 @@ export const incidentManagementContent: ArticleContent = {
     },
     {
       type: 'heading',
+      id: 'who-can-change-incidents',
+      level: 2,
+      text: 'Who can change incidents',
+    },
+    {
+      type: 'paragraph',
+      text: 'Admins and Editors can report, edit and archive incidents. Reviewers and Auditors can open incidents but not change them. Only Admins can delete an incident, and only through the API. For custom roles, an Admin grants these as the "Edit and archive AI incidents" and "Permanently delete AI incidents" permissions.',
+    },
+    {
+      type: 'heading',
       id: 'archiving',
       level: 2,
       text: 'Archiving incidents',
