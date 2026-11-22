@@ -151,7 +151,7 @@ In order. "Section key" is the catalog key where the part is a selectable sectio
 This section uses a **report-only** collector, not `getAttestationSummary` as is. That function counts retired models and prints a per-tier `ok`/`blocked` attestation status. Here every count excludes retired models, so the MRM status, contradictions and fix-it sections agree, and no per-tier verdict is printed. `getAttestationSummary` stays unchanged for the MRM tab and its DOCX. Shared SQL fragments may be factored out if that does not change the existing function's output.
 7. **Where the checklist and the data disagree** (new section `e23Contradictions`). The fixed rules in 8.4. Table: requirement, claimed status, what the data shows, affected count, examples (up to 5 model names, then "and N more"). When no rule fires: "No contradictions found by the rules in this report", plus the list of rules checked, so an empty table is never mistaken for an unchecked one.
 8. **E-23 gap analysis** (new AI block `e23Gap`, see 8.5).
-9. **Fix-it list** (new section `e23FixItList`, see 8.6).
+9. **Fix-it list:** not in this document. It is a separate internal document produced by the same run (8.6). The formal report keeps the contradictions, gaps and counts; it leaves out owner-level to-do items.
 10. **Model inventory appendix** (new section `mrmInventoryAppendix`, off by default).
 11. **Sections with no data / Analyses not produced** (existing blocks).
 12. **Sign-off** (new section `signOff`, on by default in this template). Statement that the report is a self-assessment prepared from VerifyWise records and is not an OSFI assessment, followed by signature lines (name, title, signature, date) for the accountable executive and, when given, the head of model validation.
@@ -198,12 +198,26 @@ A new analyzer in `services/reporting/analyzers/`, registered like `complianceGa
 - **Provenance:** add `{ list: "principles", field: "group" }` to `VERBATIM_FIELDS`; add the narrative to `PROSE_FIELD` for the shallowness gate.
 - **Prompt rules:** existing `GROUNDING_RULES`, plus: never state or imply OSFI's view or compliance; explain contradictions, never invent new ones. The two position constraints (no `consistent` for a group with a fired rule; `not assessable` for a self-assessment-only group) are enforced in code after parsing, not only asked for in the prompt: a violating row is corrected to the allowed value and the correction is recorded in `audit_metadata`.
 - **Gating:** new `e23Gap` flag in `AiBlocksConfig`, request `aiBlocks`, resolver, `LEGACY_BLOCKS`/`NO_BLOCKS` (off for manual legacy runs) and the wizard's AI step.
-- **Existing analyzers:** `executiveSummary`, `keyFindings` and `recommendedActions` receive the new sections through `prepareSectionData` and facts. `recommendedActions` takes the fix-it list as input so its actions point at real items.
+- **Existing analyzers:** `executiveSummary`, `keyFindings` and `recommendedActions` receive the new sections through `prepareSectionData` and facts. `recommendedActions` takes the fix-it list as input so its actions point at real items, and in this template it renders in the internal fix-it document, not the formal report (8.6).
 - **No key / failure:** existing abstention behaviour. The fixed sections (at a glance, completeness, MRM status, contradictions, fix-it list) never depend on the LLM.
 
-### 8.6 Fix-it list (`e23FixItList`)
+### 8.6 Fix-it list (`e23FixItList`): a separate internal document
 
-Deterministic. The AI does not rank or edit it.
+**Two files per run (user decision).** When `e23FixItList` is on, one run produces two files in the run's format (PDF or DOCX):
+
+1. the formal report (sections in 8.3), for the examiner or board;
+2. the internal fix-it list, for the MRM team.
+
+The internal document has its own short cover: institution, "OSFI E-23 fix-it list", "Internal: not for external distribution" on the cover and in every page footer, the as-of date and the run it belongs to. Its body is the fix-it list below, then the AI recommended actions (moved here from the formal report for this template, because they name suggested owners and read as a to-do list).
+
+**Storage and download.**
+
+- `report_runs` gains `companion_file_id INTEGER` and `companion_filename VARCHAR(255)`, both nullable. Both files are uploaded the same way as today's single file.
+- Download: a new `/api/v1` endpoint (for example `GET /api/v1/reporting/runs/:id/download/fix-it-list`), with the same organization and authorization checks as the existing download. Deleting a run's report deletes both files.
+- The run history row shows two download buttons when a companion exists.
+- If the formal report succeeds and the fix-it list fails, the run is marked failed (both or neither), so a customer never sends a formal report whose internal list silently did not generate.
+
+**Contents.** Deterministic. The AI does not rank or edit it.
 
 Item sources:
 
@@ -264,9 +278,9 @@ Scheduled runs already diff facts against the previous run of the same schedule;
 
 ## 10. Decisions on record
 
-**Made by the user:** option B; readers are an OSFI examiner or the board, and the report also carries a fix-it list; the wizard asks the report details in 8.1 and remembers them; English only; sign-off page included; model listing shows exceptions with the full inventory as an optional appendix; fix-it list inside the report, no CSV; fixed contradiction rules explained by AI; missing inventory fields reported as "not tracked"; remaining defaults accepted.
+**Made by the user:** option B; readers are an OSFI examiner or the board; the fix-it list is a separate internal document produced by the same run, not part of the formal report; the wizard asks the report details in 8.1 and remembers them; English only; sign-off page included; model listing shows exceptions with the full inventory as an optional appendix; fix-it list inside the report, no CSV; fixed contradiction rules explained by AI; missing inventory fields reported as "not tracked"; remaining defaults accepted.
 
-**Made by me (open to correction):** two PRs; adding a quarterly schedule frequency for every template; scheduled periods roll (one interval ending the day before the run), aligned to fiscal quarters through the run date; `parameters_config.kind` marks an E-23 template and E-23 sections are offered only there; the MRM status section counts exclude retired models and print no per-tier verdict; rules match requirements by title number and list unmatched rules as "not run"; the specific contradiction rules (C7 reworked to empty validation report sections, C13 added) and their 12-month and 90-day windows; C3 counts a validation sign-off as affirming the tier; C5 checks only the latest validation; C9 fires only for unmitigated critical/high findings (E-23 allows approval with mitigated limitations); per-group data coverage label derived from the rules; a fixed "at a glance" summary that needs no AI; E-23 manual runs compare against the previous run of the same template; gap-analysis positions phrased as data consistency, enforced in code; fix-it severity scheme; the AI does not rank the fix-it list (deterministic for an examiner); `e23Gap` position scale; prefill from the organization's last run rather than a stored per-org template copy; generic `parameters_config` rather than E-23-only fields; period bounds activity counts only.
+**Made by me (open to correction):** two PRs; adding a quarterly schedule frequency for every template; scheduled periods roll (one interval ending the day before the run), aligned to fiscal quarters through the run date; `parameters_config.kind` marks an E-23 template and E-23 sections are offered only there; the MRM status section counts exclude retired models and print no per-tier verdict; rules match requirements by title number and list unmatched rules as "not run"; the specific contradiction rules (C7 reworked to empty validation report sections, C13 added) and their 12-month and 90-day windows; C3 counts a validation sign-off as affirming the tier; C5 checks only the latest validation; C9 fires only for unmitigated critical/high findings (E-23 allows approval with mitigated limitations); per-group data coverage label derived from the rules; a fixed "at a glance" summary that needs no AI; E-23 manual runs compare against the previous run of the same template; gap-analysis positions phrased as data consistency, enforced in code; recommended actions move to the internal document for this template; a run fails if either file fails; fix-it severity scheme; the AI does not rank the fix-it list (deterministic for an examiner); `e23Gap` position scale; prefill from the organization's last run rather than a stored per-org template copy; generic `parameters_config` rather than E-23-only fields; period bounds activity counts only.
 
 ## 11. Left to the builder
 
