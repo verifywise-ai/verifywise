@@ -233,11 +233,23 @@ describe("frameworkRequirements section", () => {
     });
   });
 
-  it('does not emit a notice for sections:["all"]', async () => {
+  it('collects the section for sections:["all"] when a bundled target is in scope', async () => {
+    const collector = createScopedDataCollector(10, 1, "organization", [isoTarget, e23Target]);
+
+    const data = await collector.collectAllData(["all"]);
+
+    expect(data.sections.frameworkRequirements?.frameworks.map((f) => f.frameworkId)).toContain(26);
+    expect(data.sectionNotices).not.toContainEqual(
+      expect.objectContaining({ sectionKey: "frameworkRequirements" }),
+    );
+  });
+
+  it('does not emit a notice for sections:["all"] with only core frameworks', async () => {
     const collector = createScopedDataCollector(10, 1, "organization", [isoTarget]);
 
     const data = await collector.collectAllData(["all"]);
 
+    expect(data.sections.frameworkRequirements).toBeUndefined();
     expect(data.sectionNotices).not.toContainEqual(
       expect.objectContaining({ sectionKey: "frameworkRequirements" }),
     );
