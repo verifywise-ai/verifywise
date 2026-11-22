@@ -355,11 +355,10 @@ transaction. Incidents in other organizations they still belong to keep them
 as owner.
 
 - The removal first locks the membership row (`FOR UPDATE`). If there is no
-  membership it returns `removed: false` and changes nothing. The incident
-  create and update reference checks take a matching lock on the owner's
-  membership (`FOR KEY SHARE`) in the incident reference-check change; until
-  that lands they read it without a lock, so an incident created with this
-  owner while the removal runs can still keep them.
+  membership it returns `removed: false` and changes nothing.
+- Known limit: incident creates and owner changes check membership without a
+  lock, so one that runs at the same moment as the removal can still set the
+  member being removed as owner, after the clear has run.
 - Each cleared incident gets `updated_at` bumped (an editor holding the old
   version gets the usual 409) and an `Owner` change (`<name>` → `-`) in
   `incident_change_history`, recorded as the system

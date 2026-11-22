@@ -551,9 +551,10 @@ export const removeUserFromOrganizationQuery = async (
   transaction: Transaction,
   { organizationDeleted = false }: { organizationDeleted?: boolean } = {},
 ): Promise<{ removed: boolean; accountDeleted: boolean }> => {
-  // Lock the membership before clearing. A write that checks it with a
-  // matching lock either commits first, so the clear below covers its row, or
-  // waits and then finds the membership gone.
+  // Lock the membership before clearing: a non-member returns here with
+  // nothing changed, and two removals of the same member run one after the
+  // other. Incident writes take no lock on it, so this does not stop a
+  // concurrent create or owner change from naming this user (see incidents.md).
   const membership = await sequelize.query(
     `SELECT user_id FROM organization_members
      WHERE organization_id = :organizationId AND user_id = :id
