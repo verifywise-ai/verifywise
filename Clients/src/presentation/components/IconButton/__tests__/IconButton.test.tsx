@@ -263,6 +263,15 @@ describe("IconButton", () => {
     expect(onView).toHaveBeenCalledTimes(1);
   });
 
+  it("offers only View on an incident when canEdit is false", async () => {
+    await renderWithMenuOpen({ onView: vi.fn(), type: "incident", canEdit: false });
+    // Roles without incident.edit open incidents read-only.
+    const items = within(screen.getByRole("menu"))
+      .getAllByRole("menuitem")
+      .map((item) => item.textContent);
+    expect(items).toEqual(["View"]);
+  });
+
   it("calls onDownload when Download item clicked", async () => {
     const onDownload = vi.fn().mockResolvedValue(undefined);
     await renderWithMenuOpen({ onDownload, type: "evidence" });

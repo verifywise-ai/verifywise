@@ -139,14 +139,18 @@ enum HarmCategory {
 
 ### Incident CRUD
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/aiIncidentManagement/` | Get all incidents |
-| GET | `/aiIncidentManagement/:id` | Get incident by ID |
-| POST | `/aiIncidentManagement/` | Create incident |
-| PATCH | `/aiIncidentManagement/:id` | Update incident |
-| PATCH | `/aiIncidentManagement/:id/archive` | Archive incident |
-| DELETE | `/aiIncidentManagement/:id` | Delete incident |
+Mounted at `/api/ai-incident-managements`.
+
+| Method | Endpoint | Permission | Description |
+|--------|----------|------------|-------------|
+| GET | `/` | Any member | Get all incidents |
+| GET | `/:id` | Any member | Get incident by ID |
+| POST | `/` | `incident.create` (Admin, Editor) | Create incident |
+| PATCH | `/:id` | `incident.edit` (Admin, Editor, Reviewer) | Update incident, including approval |
+| PATCH | `/:id/archive` | `incident.edit` (Admin, Editor, Reviewer) | Archive incident |
+| DELETE | `/:id` | `incident.delete` (Admin) | Delete incident |
+
+Until 2026-11, edit, archive and delete needed only a login, so Auditors could change or delete incidents. Reviewers hold `incident.edit` because the incident drawer is where approval is recorded; an approval-only permission is a planned follow-up. Migration `20261122180000` grants `incident.edit` to custom roles that hold `incident.create`, a contributor-tier key (`file.contribute`, `fileManager.contribute`, `riskLinks.review`) or `organization.admin`, and `incident.delete` to custom roles that hold `organization.admin`. On the incidents page, roles without `incident.edit` open incidents read-only and the row menu offers only View. The page has no delete action. The Advisor's incident write tools check the same keys for the user who asked, when the write is proposed and again when it runs.
 
 ### Change History
 

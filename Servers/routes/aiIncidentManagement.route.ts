@@ -21,12 +21,12 @@ router.get("/:id", authenticateJWT, getIncidentById);
 router.post("/", authenticateJWT, authorize("incident.create"), createNewIncident);
 
 // PATCH update incident by ID
-router.patch("/:id", authenticateJWT, updateIncidentById);
+router.patch("/:id", authenticateJWT, authorize("incident.edit"), updateIncidentById);
 
 // PATCH archive incident by ID
-router.patch("/:id/archive", authenticateJWT, archiveIncidentById);
+router.patch("/:id/archive", authenticateJWT, authorize("incident.edit"), archiveIncidentById);
 
 // DELETE incident by ID
-router.delete("/:id", authenticateJWT, deleteIncidentById);
+router.delete("/:id", authenticateJWT, authorize("incident.delete"), deleteIncidentById);
 
 export default router;

@@ -381,6 +381,11 @@ function IconButton({
       return ["edit"];
     }
 
+    // Without incident.edit an incident opens read-only.
+    if (normalizedType === "incident" && canEdit === false) {
+      return ["view"];
+    }
+
     if (normalizedType === "vendor") {
       return canDelete ? ["edit", "remove"] : ["edit"];
     }

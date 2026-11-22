@@ -66,6 +66,7 @@ const IncidentTable: React.FC<IncidentTableProps> = ({
   onEdit,
   onView,
   onArchive,
+  canEdit = true,
   paginated = true,
   archivedId,
   visibleColumns,
@@ -297,6 +298,7 @@ const IncidentTable: React.FC<IncidentTableProps> = ({
                         <CustomIconButton
                           id={incident.id}
                           type="Incident"
+                          canEdit={canEdit}
                           onEdit={() => onEdit?.(incident.id?.toString(), "edit")}
                           onDelete={() => onArchive?.(incident.id?.toString(), "archive")}
                           onView={() => onView?.(incident.id?.toString(), "view")}
@@ -320,6 +322,7 @@ const IncidentTable: React.FC<IncidentTableProps> = ({
       onEdit,
       onArchive,
       onView,
+      canEdit,
       isVisible,
       sortConfig.key,
       visibleTableColumns.length,

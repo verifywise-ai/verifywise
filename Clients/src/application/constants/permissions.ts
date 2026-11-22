@@ -43,6 +43,7 @@ export const BUILTIN_UI_PERMISSIONS = {
   "aiApp.admin": ADMIN,
   "task.edit": EDITOR,
   "incident.create": EDITOR,
+  "incident.edit": CONTRIBUTOR,
   "ext.datasetBulkUpload.edit": EDITOR,
   "ext.frameworkImport.edit": EDITOR,
   "fileManager.contribute": CONTRIBUTOR,

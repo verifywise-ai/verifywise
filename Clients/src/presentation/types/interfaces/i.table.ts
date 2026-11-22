@@ -316,6 +316,8 @@ export interface IncidentTableProps {
   onEdit?: (id: string, mode: string) => void;
   onView?: (id: string, mode: string) => void;
   onArchive?: (id: string, mode: string) => void;
+  /** False hides edit and archive in the row menu (no incident.edit). */
+  canEdit?: boolean;
   paginated?: boolean;
   archivedId?: string | null;
   visibleColumns?: Set<string>;
