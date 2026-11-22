@@ -119,6 +119,7 @@ const MRM_SECTION_KEYS = [
   "mrmInventoryAppendix",
 ] as const;
 const MRM_FAILURE_DETAIL = "Model risk management data";
+const E23_CHECKLIST_FAILURE_DETAIL = "OSFI E-23 checklist";
 
 /**
  * The E-23 part of a requirements section, for the rules. Undefined when no
@@ -492,6 +493,7 @@ export class ReportDataCollector {
     const wantsRequirements =
       sections.includes("frameworkRequirements") || sections.includes("all");
     let e23Requirements: FrameworkRequirementsSectionData | undefined;
+    let e23ChecklistFailed = false;
     if (bundledTargets.length > 0 && wantsRequirements) {
       const { data, failed } = await this.collectBundledRequirements(
         bundledTargets,
@@ -501,6 +503,7 @@ export class ReportDataCollector {
       sectionData.frameworkRequirements = data;
       if (isE23Run) {
         e23Requirements = e23Only(data, failed);
+        e23ChecklistFailed = failed.some((t) => t.frameworkId === E23_FRAMEWORK_ID);
         if (e23Targets.length === 0 && requested("frameworkRequirements")) {
           sectionNotices.push({ sectionKey: "frameworkRequirements", reason: noticeReason });
         }
@@ -514,13 +517,26 @@ export class ReportDataCollector {
         sectionNotices,
       );
       e23Requirements = e23Only(data, failed);
+      e23ChecklistFailed = failed.length > 0;
     }
 
     if (isE23Run) {
       // No E-23 pairing at all: the rules cannot run. A pairing that exists but
-      // failed already has its collection_failed notice, so no second one.
+      // failed is a read failure instead, said on each section it leaves
+      // incomplete (the rules, and the fix-it list's requirement items).
       if (e23Targets.length === 0 && requested("e23Contradictions")) {
         sectionNotices.push({ sectionKey: "e23Contradictions", reason: noticeReason });
+      }
+      if (e23ChecklistFailed) {
+        for (const key of ["e23Contradictions", "e23FixItList"]) {
+          if (requested(key)) {
+            sectionNotices.push({
+              sectionKey: key,
+              reason: "collection_failed",
+              detail: E23_CHECKLIST_FAILURE_DETAIL,
+            });
+          }
+        }
       }
       await this.collectE23Sections({
         requested,

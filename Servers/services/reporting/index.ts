@@ -29,7 +29,7 @@ import { getLLMKeysWithKeyQuery } from "../../utils/llmKey.utils";
 import { SECTION_KEYS } from "./sectionCatalog";
 import { getPriorE23GlanceQuery } from "../../utils/reportRun.utils";
 import { E23_KIND } from "./e23/e23Parameters";
-import { toE23GlanceSnapshot } from "./e23/glance";
+import { parseStoredE23Glance, toE23GlanceSnapshot } from "./e23/glance";
 import type { E23GlanceSnapshot } from "../../domain.layer/interfaces/i.reportGeneration";
 
 /**
@@ -99,10 +99,13 @@ async function priorE23Glance(
   organizationId: number,
 ): Promise<E23GlanceSnapshot | null> {
   try {
-    return await getPriorE23GlanceQuery(organizationId, {
-      scheduledReportId: request.scheduledReportId,
-      templateId: request.templateId,
-    });
+    // Validated here, once: a malformed stored glance means no comparison.
+    return parseStoredE23Glance(
+      await getPriorE23GlanceQuery(organizationId, {
+        scheduledReportId: request.scheduledReportId,
+        templateId: request.templateId,
+      }),
+    );
   } catch (error) {
     logStructuredError(
       `Report: previous E-23 glance lookup failed, no comparison shown (organizationId=${organizationId})`,

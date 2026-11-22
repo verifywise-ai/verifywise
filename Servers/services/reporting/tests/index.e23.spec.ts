@@ -44,7 +44,12 @@ const figures = {
   openCriticalHigh: 3,
   fixIt: { high: 6, medium: 5, low: 4 },
 };
-const prior = { ...figures, rulesFired: 4, generatedAt: "2026-07-01T09:00:00.000Z" };
+const prior = {
+  ...figures,
+  rulesFired: 4,
+  generatedAt: "2026-07-01T09:00:00.000Z",
+  requirementsAvailable: true,
+};
 
 const reportData = (e23: boolean): any => ({
   metadata: { generatedAt: GENERATED_AT, organizationId: 5 },
@@ -52,7 +57,7 @@ const reportData = (e23: boolean): any => ({
   charts: {},
   renderedCharts: {},
   sectionNotices: [],
-  sections: e23 ? { e23Glance: { ...figures, previous: prior } } : {},
+  sections: e23 ? { e23Glance: { ...figures, requirementsAvailable: true, previous: null } } : {},
 });
 
 const request: any = {
@@ -92,7 +97,28 @@ describe("generateReport, E-23 kind", () => {
   it("returns the run's glance for storage, without previous", async () => {
     const result = await generateReport({ ...request, templateId: 4 }, 1, 5);
 
-    expect(result.e23Glance).toEqual({ ...figures, generatedAt: GENERATED_AT.toISOString() });
+    expect(result.e23Glance).toEqual({
+      ...figures,
+      requirementsAvailable: true,
+      generatedAt: GENERATED_AT.toISOString(),
+    });
+  });
+
+  it("validates the stored value: a malformed prior means no comparison", async () => {
+    mockPrior.mockResolvedValue({ rulesFired: "x" });
+
+    await generateReport({ ...request, templateId: 4 }, 1, 5);
+
+    expect(mockCollectAllData.mock.calls[0][2]).toEqual({ priorE23Glance: null });
+  });
+
+  it("an older stored glance without the flag counts as available", async () => {
+    const { requirementsAvailable: _flag, ...older } = prior;
+    mockPrior.mockResolvedValue(older);
+
+    await generateReport({ ...request, templateId: 4 }, 1, 5);
+
+    expect(mockCollectAllData.mock.calls[0][2]).toEqual({ priorE23Glance: prior });
   });
 
   it("a failed prior lookup means no comparison, not a failed report", async () => {

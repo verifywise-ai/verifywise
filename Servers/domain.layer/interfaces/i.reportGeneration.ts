@@ -728,19 +728,44 @@ export interface E23GlanceFigures {
   fixIt: { high: number; medium: number; low: number };
 }
 
-/** The figures as stored on a run (config_snapshot.e23_glance). */
-export interface E23GlanceSnapshot extends E23GlanceFigures {
-  /** ISO timestamp of the run that produced them. */
-  generatedAt: string;
-  /** True when that run could not read the MRM data; its model figures are 0. */
+/**
+ * Which figures were actually measured. Renderers print "Not checked" instead
+ * of 0 for a figure its flag marks unavailable:
+ * - requirementsAvailable false (E-23 not on file, or its checklist could not
+ *   be read): requirements, groups, rules fired and fix-it counts;
+ * - mrmUnavailable true (the MRM data could not be read): models in scope,
+ *   untiered, overdue validations, open critical/high, groups, rules fired and
+ *   fix-it counts.
+ */
+export interface E23GlanceAvailability {
+  requirementsAvailable: boolean;
   mrmUnavailable?: boolean;
 }
 
-export interface E23Glance extends E23GlanceFigures {
-  /** True when the MRM data could not be read: model and fix-it figures are 0. */
-  mrmUnavailable?: boolean;
+/** The figures as stored on a run (config_snapshot.e23_glance). */
+export interface E23GlanceSnapshot extends E23GlanceFigures, E23GlanceAvailability {
+  /** ISO timestamp of the run that produced them. */
+  generatedAt: string;
+}
+
+type Nullable<T> = { [K in keyof T]: T[K] | null };
+
+/**
+ * The previous run's figures for the change-since-last-run line. A figure is
+ * null when it was unavailable in either run (see E23GlanceAvailability), so
+ * no change is shown for it; rulesTotal is fixed and always kept.
+ */
+export interface E23GlancePrevious extends Nullable<
+  Omit<E23GlanceFigures, "rulesTotal" | "fixIt">
+> {
+  rulesTotal: number;
+  fixIt: E23GlanceFigures["fixIt"] | null;
+  generatedAt: string;
+}
+
+export interface E23Glance extends E23GlanceFigures, E23GlanceAvailability {
   /** The previous comparable run's figures, or null when there is none. */
-  previous: E23GlanceSnapshot | null;
+  previous: E23GlancePrevious | null;
 }
 
 // NIST AI RMF Subcategories (Compliance & Governance group)

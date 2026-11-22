@@ -65,6 +65,7 @@ describe("buildE23Glance", () => {
       overdueValidations: 4,
       openCriticalHigh: 3,
       fixIt: { high: 6, medium: 5, low: 4 },
+      requirementsAvailable: true,
       previous: null,
     });
   });
@@ -108,7 +109,33 @@ describe("buildE23Glance", () => {
       openCriticalHigh: 0,
       fixIt: { high: 0, medium: 0, low: 0 },
       mrmUnavailable: true,
+      requirementsAvailable: false,
     });
+  });
+
+  it("marks requirements unavailable when E-23 is not on file", () => {
+    const glance = buildE23Glance({
+      requirements: undefined,
+      contradictions: { ...contradictions, available: false, fired: [], coverage: {} },
+      fleet,
+      fixIt,
+      previous: null,
+    });
+    expect(glance.requirementsAvailable).toBe(false);
+    expect(glance.mrmUnavailable).toBeUndefined();
+    expect(glance.requirementsDone).toBe(0);
+    expect(glance.modelsInScope).toBe(12);
+  });
+
+  it("marks requirements unavailable when only non-E-23 requirements were read", () => {
+    const glance = buildE23Glance({
+      requirements: { frameworks: [requirements.frameworks[0]] },
+      contradictions: { ...contradictions, available: false, fired: [], coverage: {} },
+      fleet,
+      fixIt,
+      previous: null,
+    });
+    expect(glance.requirementsAvailable).toBe(false);
   });
 
   it("carries the previous run's figures without its own previous", () => {
@@ -132,6 +159,99 @@ describe("buildE23Glance", () => {
       generatedAt: "2026-08-01T00:00:00.000Z",
     });
   });
+
+  const fullSnapshot = () =>
+    toE23GlanceSnapshot(
+      buildE23Glance({ requirements, contradictions, fleet, fixIt, previous: null }),
+      new Date("2026-08-01T00:00:00.000Z"),
+    );
+
+  it("drops model, rule, group and fix-it changes when the previous run had no MRM data", () => {
+    const previous = { ...fullSnapshot(), mrmUnavailable: true };
+    const glance = buildE23Glance({ requirements, contradictions, fleet, fixIt, previous });
+    expect(glance.previous).toMatchObject({
+      requirementsDone: 30,
+      requirementsTotal: 83,
+      rulesTotal: 13,
+      modelsInScope: null,
+      untiered: null,
+      overdueValidations: null,
+      openCriticalHigh: null,
+      groupsChecked: null,
+      groupsTotal: null,
+      rulesFired: null,
+      fixIt: null,
+    });
+  });
+
+  it("drops the same changes when this run has no MRM data", () => {
+    const glance = buildE23Glance({
+      requirements,
+      contradictions: undefined,
+      fleet: undefined,
+      fixIt: undefined,
+      mrmUnavailable: true,
+      previous: fullSnapshot(),
+    });
+    expect(glance.previous).toMatchObject({
+      requirementsDone: 30,
+      modelsInScope: null,
+      rulesFired: null,
+      fixIt: null,
+    });
+  });
+
+  it("drops requirement, rule, group and fix-it changes when the previous run had no checklist", () => {
+    const previous = { ...fullSnapshot(), requirementsAvailable: false };
+    const glance = buildE23Glance({ requirements, contradictions, fleet, fixIt, previous });
+    expect(glance.previous).toMatchObject({
+      requirementsDone: null,
+      requirementsTotal: null,
+      groupsChecked: null,
+      groupsTotal: null,
+      rulesFired: null,
+      rulesTotal: 13,
+      fixIt: null,
+      modelsInScope: 12,
+      untiered: 3,
+      overdueValidations: 4,
+      openCriticalHigh: 3,
+    });
+  });
+
+  it("drops the same changes when this run has no checklist", () => {
+    const glance = buildE23Glance({
+      requirements: undefined,
+      contradictions: { ...contradictions, available: false, fired: [], coverage: {} },
+      fleet,
+      fixIt,
+      previous: fullSnapshot(),
+    });
+    expect(glance.previous).toMatchObject({
+      requirementsDone: null,
+      rulesFired: null,
+      fixIt: null,
+      modelsInScope: 12,
+    });
+  });
+});
+
+describe("toE23GlanceSnapshot", () => {
+  it("stores both availability flags", () => {
+    const glance = buildE23Glance({
+      requirements: undefined,
+      contradictions: undefined,
+      fleet: undefined,
+      fixIt: undefined,
+      mrmUnavailable: true,
+      previous: null,
+    });
+    const snapshot = toE23GlanceSnapshot(glance, new Date("2026-08-01T00:00:00.000Z"));
+    expect(snapshot.requirementsAvailable).toBe(false);
+    expect(snapshot.mrmUnavailable).toBe(true);
+    expect(snapshot).not.toHaveProperty("previous");
+    expect(parseStoredE23Glance(JSON.parse(JSON.stringify(snapshot)))).toEqual(snapshot);
+  });
 });
 
 describe("parseStoredE23Glance", () => {
@@ -152,8 +272,9 @@ describe("parseStoredE23Glance", () => {
     extra: "dropped",
   };
 
-  it("keeps the rounded figures and generatedAt only", () => {
+  it("keeps the rounded figures and generatedAt only; an older snapshot counts as available", () => {
     expect(parseStoredE23Glance(stored)).toEqual({
+      requirementsAvailable: true,
       requirementsDone: 30,
       requirementsTotal: 83,
       groupsChecked: 2,
@@ -171,6 +292,12 @@ describe("parseStoredE23Glance", () => {
 
   it("keeps the mrmUnavailable flag", () => {
     expect(parseStoredE23Glance({ ...stored, mrmUnavailable: true })?.mrmUnavailable).toBe(true);
+  });
+
+  it("keeps requirementsAvailable false", () => {
+    expect(
+      parseStoredE23Glance({ ...stored, requirementsAvailable: false })?.requirementsAvailable,
+    ).toBe(false);
   });
 
   it.each([

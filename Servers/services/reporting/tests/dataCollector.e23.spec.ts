@@ -232,6 +232,7 @@ describe("E-23 kind run", () => {
     const items = data.sections.e23FixItList?.items ?? [];
     expect(items.length).toBeGreaterThan(0);
     expect(items.every((i) => i.source === 7)).toBe(true);
+    expect(data.sections.e23Glance?.requirementsAvailable).toBe(false);
   });
 
   it("without any bundled framework: one no_framework_target per requested section", async () => {
@@ -248,7 +249,7 @@ describe("E-23 kind run", () => {
     ]);
   });
 
-  it("a failed E-23 pairing: collection_failed only, rules unavailable", async () => {
+  it("a failed E-23 pairing: rules unavailable, each dependent section says why", async () => {
     jest
       .spyOn(frameworkRequirements, "collectFrameworkRequirements")
       .mockRejectedValue(new Error("boom"));
@@ -257,6 +258,30 @@ describe("E-23 kind run", () => {
     const data = await collector.collectAllData(ALL_E23, E23_RUN);
 
     expect(data.sections.e23Contradictions?.available).toBe(false);
+    expect(data.sectionNotices).toEqual([
+      {
+        sectionKey: "frameworkRequirements",
+        reason: "collection_failed",
+        detail: "OSFI E-23 (organization)",
+      },
+      {
+        sectionKey: "e23Contradictions",
+        reason: "collection_failed",
+        detail: "OSFI E-23 checklist",
+      },
+      { sectionKey: "e23FixItList", reason: "collection_failed", detail: "OSFI E-23 checklist" },
+    ]);
+    expect(data.sections.e23Glance?.requirementsAvailable).toBe(false);
+  });
+
+  it("a failed E-23 pairing raises no checklist notice on unselected sections", async () => {
+    jest
+      .spyOn(frameworkRequirements, "collectFrameworkRequirements")
+      .mockRejectedValue(new Error("boom"));
+    const collector = createScopedDataCollector(10, 1, "organization", [e23Target]);
+
+    const data = await collector.collectAllData(["mrmFleet"], E23_RUN);
+
     expect(data.sectionNotices).toEqual([
       {
         sectionKey: "frameworkRequirements",
@@ -334,13 +359,16 @@ describe("E-23 kind run", () => {
       openCriticalHigh: 0,
       fixIt: { high: 0, medium: 0, low: 0 },
       generatedAt: "2026-07-01T00:00:00.000Z",
+      requirementsAvailable: true,
     };
 
     const data = await collector.collectAllData(["mrmFleet"], E23_RUN, {
       priorE23Glance: previous,
     });
 
-    expect(data.sections.e23Glance?.previous).toEqual(previous);
+    const { requirementsAvailable: _flag, ...figures } = previous;
+    expect(data.sections.e23Glance?.previous).toEqual(figures);
+    expect(data.sections.e23Glance?.requirementsAvailable).toBe(true);
   });
 
   it("an MRM read failure: notices per selected MRM section, sections skipped, glance flagged", async () => {

@@ -230,9 +230,9 @@ describe("canViewRunQuery", () => {
       expect(await getPriorE23GlanceQuery(7, {})).toBeNull();
       expect(q).not.toHaveBeenCalled();
     });
-    it("returns null for a malformed stored glance", async () => {
+    it("returns the stored value unparsed; the service layer validates it", async () => {
       q.mockResolvedValueOnce([{ glance: { rulesFired: "x" } }]);
-      expect(await getPriorE23GlanceQuery(7, { templateId: 4 })).toBeNull();
+      expect(await getPriorE23GlanceQuery(7, { templateId: 4 })).toEqual({ rulesFired: "x" });
     });
   });
 });

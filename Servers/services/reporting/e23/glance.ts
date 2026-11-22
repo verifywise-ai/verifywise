@@ -10,7 +10,9 @@ import type {
   E23ContradictionsSectionData,
   E23FixItListSectionData,
   E23Glance,
+  E23GlanceAvailability,
   E23GlanceFigures,
+  E23GlancePrevious,
   E23GlanceSnapshot,
   FrameworkRequirementsSectionData,
   MrmFleetSectionData,
@@ -54,6 +56,7 @@ export function buildE23Glance(input: {
   fixIt: E23FixItListSectionData | undefined;
   /** The MRM data could not be read; model, rule and fix-it figures are 0. */
   mrmUnavailable?: boolean;
+  /** Already parsed (parseStoredE23Glance), or null. */
   previous: E23GlanceSnapshot | null;
 }): E23Glance {
   const e23 = (input.requirements?.frameworks ?? []).filter(
@@ -61,6 +64,12 @@ export function buildE23Glance(input: {
   );
   const coverage = Object.values(input.contradictions?.coverage ?? {});
   const findings = input.fleet?.openFindingsBySeverity;
+  // The collector hands over requirements only when every E-23 pairing was
+  // read, so "any E-23 entry" is the same test as contradictions.available.
+  const availability: E23GlanceAvailability = {
+    requirementsAvailable: e23.length > 0,
+    ...(input.mrmUnavailable && { mrmUnavailable: true }),
+  };
 
   return {
     requirementsDone: e23.reduce((n, f) => n + f.rollup.done, 0),
@@ -78,8 +87,34 @@ export function buildE23Glance(input: {
       medium: input.fixIt?.counts.medium ?? 0,
       low: input.fixIt?.counts.low ?? 0,
     },
-    ...(input.mrmUnavailable && { mrmUnavailable: true }),
-    previous: input.previous ? parseStoredE23Glance(input.previous) : null,
+    ...availability,
+    previous: input.previous ? comparable(input.previous, availability) : null,
+  };
+}
+
+/**
+ * The previous run's figures, with every figure that was unavailable in
+ * either run set to null, so no change is shown against a 0 that was never
+ * measured. Groups follow E23GlanceAvailability.
+ */
+function comparable(prev: E23GlanceSnapshot, now: E23GlanceAvailability): E23GlancePrevious {
+  const requirements = prev.requirementsAvailable && now.requirementsAvailable;
+  const mrm = !prev.mrmUnavailable && !now.mrmUnavailable;
+  const rules = requirements && mrm;
+  const keep = (ok: boolean, v: number) => (ok ? v : null);
+  return {
+    requirementsDone: keep(requirements, prev.requirementsDone),
+    requirementsTotal: keep(requirements, prev.requirementsTotal),
+    groupsChecked: keep(rules, prev.groupsChecked),
+    groupsTotal: keep(rules, prev.groupsTotal),
+    rulesFired: keep(rules, prev.rulesFired),
+    rulesTotal: prev.rulesTotal,
+    modelsInScope: keep(mrm, prev.modelsInScope),
+    untiered: keep(mrm, prev.untiered),
+    overdueValidations: keep(mrm, prev.overdueValidations),
+    openCriticalHigh: keep(mrm, prev.openCriticalHigh),
+    fixIt: rules ? { ...prev.fixIt } : null,
+    generatedAt: prev.generatedAt,
   };
 }
 
@@ -88,6 +123,7 @@ export function toE23GlanceSnapshot(glance: E23Glance, generatedAt: Date): E23Gl
   return {
     ...pickFigures(glance),
     generatedAt: generatedAt.toISOString(),
+    requirementsAvailable: glance.requirementsAvailable,
     ...(glance.mrmUnavailable && { mrmUnavailable: true }),
   };
 }
@@ -124,6 +160,8 @@ export function parseStoredE23Glance(value: unknown): E23GlanceSnapshot | null {
     ...(figures as Omit<E23GlanceFigures, "fixIt">),
     fixIt: fixIt as E23GlanceFigures["fixIt"],
     generatedAt: v.generatedAt,
+    // Snapshots stored before the flag existed came from runs that read it.
+    requirementsAvailable: v.requirementsAvailable !== false,
     ...(v.mrmUnavailable === true && { mrmUnavailable: true }),
   };
 }

@@ -2,8 +2,6 @@ import { sequelize } from "../database/db";
 import { QueryTypes } from "sequelize";
 import { deleteFileById } from "./fileUpload.utils";
 import type { ReportParameters } from "../domain.layer/interfaces/i.reportTemplate";
-import type { E23GlanceSnapshot } from "../domain.layer/interfaces/i.reportGeneration";
-import { parseStoredE23Glance } from "../services/reporting/e23/glance";
 
 export async function createRunQuery(input: any): Promise<any> {
   const rows: any[] = await sequelize.query(
@@ -304,8 +302,9 @@ export async function getLastParametersQuery(
  * The "at a glance" figures of the previous comparable E-23 run, for the
  * change-since-last-run line (spec 8.10): the latest finished run (success or
  * partial_success) of the same schedule when the run has one, else of the same
- * template whatever triggered it. Null when there is none, when neither id is
- * known, or when the stored figures are malformed.
+ * template whatever triggered it. Null when there is none or when neither id
+ * is known. Returned as stored: the caller validates the shape
+ * (parseStoredE23Glance in services/reporting/e23/glance.ts).
  *
  * No viewer rule here: the result goes into the report being generated, whose
  * runner already reads the whole organization's data.
@@ -313,7 +312,7 @@ export async function getLastParametersQuery(
 export async function getPriorE23GlanceQuery(
   organizationId: number,
   opts: { scheduledReportId?: number; templateId?: number },
-): Promise<E23GlanceSnapshot | null> {
+): Promise<unknown> {
   const where = [
     "rr.organization_id = :organization_id",
     "rr.status IN ('success', 'partial_success')",
@@ -338,7 +337,7 @@ export async function getPriorE23GlanceQuery(
      LIMIT 1`,
     { replacements, type: QueryTypes.SELECT },
   );
-  return rows[0] ? parseStoredE23Glance(rows[0].glance) : null;
+  return rows[0]?.glance ?? null;
 }
 
 export async function getRunQuery(id: number, organization_id: number): Promise<any> {
