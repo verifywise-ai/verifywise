@@ -769,6 +769,7 @@
   "Lifecycle item not found": "Lifecycle item not found",
   "lifecycle_enabled must be a boolean": "lifecycle_enabled must be a boolean",
   "Likelihood is required": "Likelihood is required",
+  "Likelihood must be one of: Rare, Unlikely, Possible, Likely, Almost Certain.": "Likelihood must be one of: Rare, Unlikely, Possible, Likely, Almost Certain.",
   "Limitations are required": "Limitations are required",
   "Limited risk": "Limited risk",
   "Link not found": "Link not found",
@@ -1193,6 +1194,7 @@
   "Sent with care from VerifyWise": "Sent with care from VerifyWise",
   "Set and save a deployment name before generating a token": "Set and save a deployment name before generating a token",
   "Severity is required": "Severity is required",
+  "Severity must be one of: Negligible, Minor, Moderate, Major, Catastrophic.": "Severity must be one of: Negligible, Minor, Moderate, Major, Catastrophic.",
   "severity must be 'critical', 'high', 'medium', or 'low'": "severity must be 'critical', 'high', 'medium', or 'low'",
   "Shadow AI alert: {triggerLabel}": "Shadow AI alert: {triggerLabel}",
   "Shadow AI tool not found": "Shadow AI tool not found",
@@ -1600,8 +1602,15 @@
   "A linked model was not found in this organization.": "A linked model was not found in this organization.",
   "A linked risk was not found in this organization.": "A linked risk was not found in this organization.",
   "A linked training was not found in this organization.": "A linked training was not found in this organization.",
+  "Only the model's approver or an Admin can change its approval.": "Only the model's approver or an Admin can change its approval.",
+  "This submission names you as the model's approver. Another reviewer or an Admin must approve it.": "This submission names you as the model's approver. Another reviewer or an Admin must approve it.",
+  "A value in this request is not valid.": "A value in this request is not valid.",
+  "Status must be one of the model statuses.": "Status must be one of the model statuses.",
   "Invalid ID": "Invalid ID",
   "limit must be an integer from 1 to 100": "limit must be an integer from 1 to 100",
   "offset must be a whole number of 0 or more": "offset must be a whole number of 0 or more",
-  "orders must list positive integer ids with display orders of 0 or more": "orders must list positive integer ids with display orders of 0 or more"
+  "orders must list positive integer ids with display orders of 0 or more": "orders must list positive integer ids with display orders of 0 or more",
+  "Visibility must be public or private": "Visibility must be public or private",
+  "This file has a private analysis by another user": "This file has a private analysis by another user",
+  "A private analysis would replace another user's analysis of this file": "A private analysis would replace another user's analysis of this file"
 }

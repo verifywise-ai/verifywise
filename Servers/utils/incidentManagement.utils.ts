@@ -8,6 +8,7 @@ import {
 } from "./automation/incident.automation.utils";
 import { replaceTemplateVariables } from "./automation/automation.utils";
 import logger from "./logger/fileLogger";
+import { findUsersNotInOrganization } from "./user.utils";
 import { enqueueAutomationAction } from "../services/automations/automationProducer";
 import {
   assertValidIncidentDescription,
@@ -489,10 +490,13 @@ export const validateIncidentReferences = async (
   transaction?: Transaction,
 ): Promise<string[]> => {
   const invalidFields: string[] = [];
+  // A user's organizations live in organization_members (users has no
+  // organization_id since the multi-organization migration); the other
+  // referenced tables carry organization_id themselves.
   const checks: Array<{
     field: string;
     id: unknown;
-    table: string;
+    table: "model_inventories" | "projects" | "users";
   }> = [
     { field: "model_inventory_id", id: refs.model_inventory_id, table: "model_inventories" },
     { field: "project_id", id: refs.project_id, table: "projects" },
@@ -511,6 +515,11 @@ export const validateIncidentReferences = async (
           : NaN;
     if (!Number.isSafeInteger(id) || id <= 0) {
       invalidFields.push(check.field);
+      continue;
+    }
+    if (check.table === "users") {
+      const notMembers = await findUsersNotInOrganization([id], organizationId, transaction);
+      if (notMembers.length) invalidFields.push(check.field);
       continue;
     }
     const result = (await sequelize.query(

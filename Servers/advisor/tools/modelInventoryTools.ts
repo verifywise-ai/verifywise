@@ -123,8 +123,9 @@ export const toolsDefinition: any[] = [
           },
           status: {
             type: "string",
-            enum: ["Approved", "Restricted", "Pending", "Blocked", "Retired"],
-            description: "Updated approval status.",
+            enum: ["Approved", "Restricted", "Pending", "Blocked", "Rejected", "Retired"],
+            description:
+              "Updated approval status. Once a model has an approver, only that approver or an Admin can set or leave Approved, Restricted, Blocked or Rejected.",
           },
           hosting_provider: {
             type: "string",
@@ -143,32 +144,9 @@ export const toolsDefinition: any[] = [
   {
     type: "function",
     function: {
-      name: "agent_update_model_lifecycle_phase",
-      description:
-        "Update the lifecycle phase/status of a model in the inventory. Use this to transition a model between approval states (e.g., from 'Pending' to 'Approved'). Requires user confirmation before executing.",
-      parameters: {
-        type: "object",
-        properties: {
-          model_id: {
-            type: "number",
-            description: "The ID of the model to update.",
-          },
-          lifecycle_phase: {
-            type: "string",
-            enum: ["Approved", "Restricted", "Pending", "Blocked", "Retired"],
-            description: "The new lifecycle phase/status for the model.",
-          },
-        },
-        required: ["model_id", "lifecycle_phase"],
-      },
-    },
-  },
-  {
-    type: "function",
-    function: {
       name: "agent_retire_model",
       description:
-        "Retire a model by setting its status to 'Blocked'. This indicates the model should no longer be used but preserves the record. Requires user confirmation before executing.",
+        "Retire a model by setting its status to 'Retired'. This indicates the model is decommissioned and no longer in use but preserves the record. Requires user confirmation before executing.",
       parameters: {
         type: "object",
         properties: {

@@ -752,6 +752,7 @@
   "Lifecycle item not found": "Lebenszykluselement nicht gefunden",
   "lifecycle_enabled must be a boolean": "lifecycle_enabled muss ein boolescher Wert sein",
   "Likelihood is required": "Die Eintrittswahrscheinlichkeit ist erforderlich",
+  "Likelihood must be one of: Rare, Unlikely, Possible, Likely, Almost Certain.": "Die Eintrittswahrscheinlichkeit muss einer dieser Werte sein: Rare, Unlikely, Possible, Likely, Almost Certain.",
   "Limitations are required": "Einschränkungen sind erforderlich",
   "Limited risk": "Begrenztes Risiko",
   "Link not found": "Verknüpfung nicht gefunden",
@@ -1160,6 +1161,7 @@
   "Sent with care from VerifyWise": "Mit Sorgfalt gesendet von VerifyWise",
   "Set and save a deployment name before generating a token": "Legen Sie einen Bereitstellungsnamen fest und speichern Sie ihn, bevor Sie ein Token generieren",
   "Severity is required": "Schweregrad ist erforderlich",
+  "Severity must be one of: Negligible, Minor, Moderate, Major, Catastrophic.": "Der Schweregrad muss einer dieser Werte sein: Negligible, Minor, Moderate, Major, Catastrophic.",
   "severity must be 'critical', 'high', 'medium', or 'low'": "severity muss 'critical', 'high', 'medium' oder 'low' sein",
   "Shadow AI alert: {triggerLabel}": "Schatten-KI-Warnung: {triggerLabel}",
   "Shadow AI tool not found": "Schatten-KI-Tool nicht gefunden",
@@ -1607,8 +1609,15 @@
   "A linked model was not found in this organization.": "Ein verknüpftes Modell wurde in dieser Organisation nicht gefunden.",
   "A linked risk was not found in this organization.": "Ein verknüpftes Risiko wurde in dieser Organisation nicht gefunden.",
   "A linked training was not found in this organization.": "Eine verknüpfte Schulung wurde in dieser Organisation nicht gefunden.",
+  "Only the model's approver or an Admin can change its approval.": "Nur die genehmigende Person des Modells oder ein Admin kann die Genehmigung ändern.",
+  "This submission names you as the model's approver. Another reviewer or an Admin must approve it.": "Diese Einreichung nennt Sie als genehmigende Person des Modells. Eine andere prüfende Person oder ein Admin muss sie genehmigen.",
+  "A value in this request is not valid.": "Ein Wert in dieser Anfrage ist ungültig.",
+  "Status must be one of the model statuses.": "Der Status muss einer der Modellstatus sein.",
   "Invalid ID": "Ungültige ID",
   "limit must be an integer from 1 to 100": "limit muss eine ganze Zahl von 1 bis 100 sein",
   "offset must be a whole number of 0 or more": "offset muss eine ganze Zahl ab 0 sein",
-  "orders must list positive integer ids with display orders of 0 or more": "orders muss positive ganzzahlige IDs mit Anzeigereihenfolgen ab 0 enthalten"
+  "orders must list positive integer ids with display orders of 0 or more": "orders muss positive ganzzahlige IDs mit Anzeigereihenfolgen ab 0 enthalten",
+  "Visibility must be public or private": "Die Sichtbarkeit muss öffentlich oder privat sein",
+  "This file has a private analysis by another user": "Für diese Datei gibt es eine private Analyse eines anderen Benutzers",
+  "A private analysis would replace another user's analysis of this file": "Eine private Analyse würde die Analyse eines anderen Benutzers für diese Datei ersetzen"
 }

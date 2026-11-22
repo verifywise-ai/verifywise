@@ -34,15 +34,19 @@ jest.mock("../../utils/useCaseOrgSettings.utils", () => ({
 }));
 jest.mock("../../utils/framework.utils", () => ({ addFrameworkToProjectQuery: async () => true }));
 jest.mock("../../utils/eu.utils", () => ({ createEUFrameworkQuery: jest.fn() }));
-jest.mock("../../utils/modelInventory.utils", () => ({ createNewModelInventoryQuery: jest.fn() }));
-jest.mock("../../domain.layer/models/modelInventory/modelInventory.model", () => ({
-  ModelInventoryModel: { createNewModelInventory: jest.fn((x: unknown) => x) },
+// A model submission is created through the model services, as the
+// approving user.
+jest.mock("../../services/modelInventory.service", () => ({
+  createModelInventoryService: jest.fn(),
+}));
+jest.mock("../../services/modelRisk.service", () => ({ createModelRiskService: jest.fn() }));
+jest.mock("../../utils/organizationAdmin.utils", () => ({
+  requestCallerIsAdmin: jest.fn<any>().mockResolvedValue(false),
 }));
 jest.mock("../../utils/useCaseChangeHistory.utils", () => ({
   recordMultipleFieldChanges: jest.fn<any>().mockResolvedValue(undefined),
 }));
 jest.mock("../../services/risk.service", () => ({ createRiskService: jest.fn() }));
-jest.mock("../../utils/modelRisk.utils", () => ({ createNewModelRiskQuery: jest.fn() }));
 jest.mock("../../services/intakeFormEmail.service", () => ({
   sendSubmissionReceivedEmail: jest.fn(),
   sendNewSubmissionAdminNotification: jest.fn(),
@@ -71,6 +75,7 @@ jest.mock("../../utils/statusCode.utils", () => ({
   STATUS_CODE: {
     200: (d: any) => ({ message: "OK", data: d }),
     400: (d: any) => ({ message: "Bad Request", data: d }),
+    403: (d: any) => ({ message: "Forbidden", data: d }),
     404: (d: any) => ({ message: "Not Found", data: d }),
     500: (d: any) => ({ message: "Internal Server Error", data: d }),
   },
@@ -100,14 +105,13 @@ const intake = require("../../utils/intakeForm.utils");
 const runs = require("../../utils/euAiActClassification.utils");
 const data = require("../../utils/intakeSubmissionData.utils");
 const projects = require("../../utils/project.utils");
-const models = require("../../utils/modelInventory.utils");
+const { createModelInventoryService } = require("../../services/modelInventory.service");
+const { createModelRiskService } = require("../../services/modelRisk.service");
+const { requestCallerIsAdmin } = require("../../utils/organizationAdmin.utils");
+const { ModelApprovalForbiddenError } = require("../../utils/modelApproval.utils");
 const { createRiskService } = require("../../services/risk.service");
-const { createNewModelRiskQuery } = require("../../utils/modelRisk.utils");
 const customFields = require("../../utils/customField.utils");
 const { ValidationException } = require("../../domain.layer/exceptions/custom.exception");
-const {
-  ModelInventoryModel,
-} = require("../../domain.layer/models/modelInventory/modelInventory.model");
 const logger = require("../../utils/logger/fileLogger").default;
 const { logSuccess } = require("../../utils/logger/logHelper");
 const { sequelize } = require("../../database/db");
@@ -199,11 +203,12 @@ beforeEach(() => {
   intake.approveSubmissionQuery.mockResolvedValue({ id: 11 });
   intake.rejectSubmissionQuery.mockResolvedValue({ id: 11 });
   projects.createNewProjectQuery.mockResolvedValue({ id: 50 });
-  models.createNewModelInventoryQuery.mockResolvedValue({ id: 60 });
+  createModelInventoryService.mockResolvedValue({ id: 60 });
+  requestCallerIsAdmin.mockResolvedValue(false);
   runs.getLatestRunForSubmissionQuery.mockResolvedValue({ id: 1, questionnaireVersion: 1 });
   data.rescoreStoredRun.mockReturnValue(rescoredAs("High risk"));
   createRiskService.mockResolvedValue({ id: 1 });
-  createNewModelRiskQuery.mockResolvedValue({ id: 1 });
+  createModelRiskService.mockResolvedValue({ id: 1 });
 });
 
 describe("approveSubmission with suggested risks", () => {
@@ -230,18 +235,65 @@ describe("approveSubmission with suggested risks", () => {
     expect(tx.commit).toHaveBeenCalled();
   });
 
-  it("creates model risks for a model submission", async () => {
+  it("creates model risks for a model submission, through the model risk service", async () => {
     intake.getSubmissionByIdQuery.mockResolvedValue(submission({ entityType: "model" }));
     runs.getLatestRunForSubmissionQuery.mockResolvedValue(null);
     const r = await approve();
     expect(r.status).toBe(200);
-    expect(createNewModelRiskQuery).toHaveBeenCalledTimes(2);
-    for (const [input, org, transaction] of createNewModelRiskQuery.mock.calls) {
+    expect(createModelRiskService).toHaveBeenCalledTimes(2);
+    for (const [input, ctx, transaction] of createModelRiskService.mock.calls) {
       expect(input).toMatchObject({ model_id: 60, owner: "7", status: "Open" });
-      expect(org).toBe(ORG);
+      expect(ctx).toEqual({ organizationId: ORG, userId: 7 });
       expect(transaction).toBe(tx);
     }
     expect(createRiskService).not.toHaveBeenCalled();
+  });
+
+  // Item 2: the model is created through the model service as the
+  // approving user, in the approval's transaction.
+  it("creates the model through the model service as the approving user", async () => {
+    intake.getSubmissionByIdQuery.mockResolvedValue(
+      submission({ entityType: "model", data: {}, suggestedRisks: null }),
+    );
+    runs.getLatestRunForSubmissionQuery.mockResolvedValue(null);
+    requestCallerIsAdmin.mockResolvedValue(true);
+    const r = await approve({
+      confirmedEntityData: { name: "GPT", provider: "OpenAI", approver: 9 },
+    });
+    expect(r.status).toBe(200);
+    expect(createModelInventoryService).toHaveBeenCalledWith(
+      expect.objectContaining({ model: "GPT", provider: "OpenAI", approver: 9, status: "Pending" }),
+      { organizationId: ORG, userId: 7, callerIsAdmin: true },
+      tx,
+    );
+  });
+
+  // R3: a non-Admin may not approve a submission that names them approver.
+  it("answers 403 and rolls back when the model service refuses the approver", async () => {
+    intake.getSubmissionByIdQuery.mockResolvedValue(
+      submission({ entityType: "model", data: {}, suggestedRisks: null }),
+    );
+    runs.getLatestRunForSubmissionQuery.mockResolvedValue(null);
+    createModelInventoryService.mockRejectedValueOnce(new ModelApprovalForbiddenError("self"));
+    const r = await approve({ confirmedEntityData: { name: "GPT", approver: 7 } });
+    expect(r.status).toBe(403);
+    expect(tx.rollback).toHaveBeenCalled();
+    expect(tx.commit).not.toHaveBeenCalled();
+    expect(intake.approveSubmissionQuery).not.toHaveBeenCalled();
+  });
+
+  it("answers 400 and rolls back for an approver outside the organization", async () => {
+    intake.getSubmissionByIdQuery.mockResolvedValue(
+      submission({ entityType: "model", data: {}, suggestedRisks: null }),
+    );
+    runs.getLatestRunForSubmissionQuery.mockResolvedValue(null);
+    createModelInventoryService.mockRejectedValueOnce(
+      new ValidationException("The approver must be a member of this organization.", "approver"),
+    );
+    const r = await approve({ confirmedEntityData: { name: "GPT", approver: 999 } });
+    expect(r.status).toBe(400);
+    expect(tx.rollback).toHaveBeenCalled();
+    expect(intake.approveSubmissionQuery).not.toHaveBeenCalled();
   });
 
   it("rolls the approval back when a risk can't be created", async () => {
@@ -275,7 +327,7 @@ describe("approveSubmission with suggested risks", () => {
     await ctrl.rejectSubmission({ ...request(), body: { rejectionReason: "No" } } as any, r);
     expect(r.status).toHaveBeenCalledWith(200);
     expect(createRiskService).not.toHaveBeenCalled();
-    expect(createNewModelRiskQuery).not.toHaveBeenCalled();
+    expect(createModelRiskService).not.toHaveBeenCalled();
   });
 
   it("approving while the assessment runs closes both stages, rules-only", async () => {
@@ -506,7 +558,7 @@ describe("approveSubmission writes mapped custom fields (#5262)", () => {
       confirmedEntityData: { name: "x", "custom_field:owner": "y" },
     });
     expect(r.status).toBe(200);
-    const created = ModelInventoryModel.createNewModelInventory.mock.calls[0][0];
+    const created = createModelInventoryService.mock.calls[0][0];
     expect(created.model).toBe("x");
     expect(Object.keys(created)).not.toContain("custom_field:owner");
     expect(customFields.setCustomFieldValueQuery.mock.calls[0][0]).toEqual({

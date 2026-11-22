@@ -281,6 +281,15 @@ export const tenantIsolationRegistry: IsolationEntity[] = [
     baseRoute: "/api/file-change-history",
   },
   {
+    // Evidence AI analyses of a file. Routes are keyed by file id and also
+    // check per-file access within the organization, so a hand-written file
+    // covers them.
+    name: "evidence_ai",
+    tables: ["evidence_ai_analysis"],
+    baseRoute: "/api/evidence-ai",
+    testFile: "evidence-ai.isolation.test.ts",
+  },
+  {
     name: "ai_app_change_history",
     tables: ["ai_app_change_history"],
     baseRoute: "/api/v1/ai-app-lifecycle",

@@ -1,7 +1,8 @@
+import { throwOnValidationFailure } from "./toolValidation";
 import { ModelRiskCategory } from "../../domain.layer/enums/model-risk-category.enum";
 import { ModelRiskLevel } from "../../domain.layer/enums/model-risk-level.enum";
 import { ModelRiskStatus } from "../../domain.layer/enums/model-risk-status.enum";
-import { getAllModelRisksQuery } from "../../utils/modelRisk.utils";
+import { getAllModelRisksQuery, getModelRiskByIdQuery } from "../../utils/modelRisk.utils";
 import { ModelRiskModel } from "../../domain.layer/models/modelRisk/modelRisk.model";
 import logger from "../../utils/logger/fileLogger";
 
@@ -367,10 +368,19 @@ import { z } from "zod";
 import { createWriteToolFn } from "../confirmation/createWriteTool";
 import { TransientApprovalError } from "../approval/approvalGateway";
 import {
-  createNewModelRiskQuery,
-  updateModelRiskByIdQuery,
-  deleteModelRiskByIdQuery,
-} from "../../utils/modelRisk.utils";
+  createModelRiskService,
+  deleteModelRiskService,
+  updateModelRiskService,
+} from "../../services/modelRisk.service";
+import { isRefusal, modelWriteContext } from "./modelWriteScope";
+import {
+  ModelRiskLikelihood,
+  ModelRiskSeverity,
+  normalizeStoredLabels,
+  requirePair,
+  requirePairOrLevel,
+  withPreviousLikelihood,
+} from "../aiActions/createModelRisk/schema";
 
 // Mirrors the Postgres enums (enum_model_risks_*) and the TS enums
 // (ModelRiskCategory / ModelRiskLevel / ModelRiskStatus). Strict so the
@@ -392,7 +402,7 @@ const isoDateString = z
     message: "must be a valid ISO date string (e.g. 2026-04-15)",
   });
 
-const AgentSuggestModelRiskSchema = z
+const AgentSuggestModelRiskObject = z
   .object({
     /**
      * Existing model id. Use this when the model already exists in the
@@ -413,6 +423,8 @@ const AgentSuggestModelRiskSchema = z
     risk_name: z.string().min(3).max(255),
     description: z.string().max(2048).optional(),
     risk_category: ModelRiskCategorySchema.optional(),
+    // Not offered to the model any more (likelihood and severity set the
+    // level); parsed so approvals filed before still execute.
     risk_level: ModelRiskLevelSchema.optional(),
     status: ModelRiskStatusSchema.optional(),
     /**
@@ -428,11 +440,12 @@ const AgentSuggestModelRiskSchema = z
     target_date: isoDateString.optional(),
     mitigation_plan: z.string().max(2048).optional(),
     impact: z.string().max(2048).optional(),
-    likelihood: z.string().max(255).optional(),
+    likelihood: ModelRiskLikelihood.optional(),
+    severity: ModelRiskSeverity.optional(),
   })
   .strict();
 
-const AgentUpdateModelRiskSchema = z
+const AgentUpdateModelRiskObject = z
   .object({
     model_risk_id: z.number().int().positive(),
     risk_name: z.string().min(3).max(255).optional(),
@@ -444,24 +457,28 @@ const AgentUpdateModelRiskSchema = z
     target_date: isoDateString.optional(),
     mitigation_plan: z.string().max(2048).optional(),
     impact: z.string().max(2048).optional(),
-    likelihood: z.string().max(255).optional(),
+    likelihood: ModelRiskLikelihood.optional(),
+    severity: ModelRiskSeverity.optional(),
+    /** Set only by normalizeStoredLabels: free text an older approval held. */
+    _previous_likelihood: z.string().optional(),
   })
   .strict();
 
-function throwOnValidationFailure(
-  toolName: string,
-  issues: ReadonlyArray<{ path: ReadonlyArray<PropertyKey>; message: string }>,
-): void {
-  const errorList = issues
-    .map((i) => {
-      const pathStr = i.path.filter((p): p is string | number => typeof p !== "symbol").join(".");
-      return `- ${pathStr || "(root)"}: ${i.message}`;
-    })
-    .join("\n");
-  throw new Error(
-    `${toolName} validation failed. You MUST tell the user verbatim that the following fields had invalid values and ask them for corrected values for each one before retrying. DO NOT call this tool again until every error below is addressed:\n${errorList}`,
-  );
-}
+/**
+ * Stored input is parsed again when the approval executes (and when filed):
+ * labels are normalized (decision 10). A suggestion filed now needs both
+ * likelihood and severity; one filed before the lists may name a level instead.
+ */
+const AgentSuggestModelRiskSchema = z
+  .preprocess((raw) => normalizeStoredLabels(raw, "description"), AgentSuggestModelRiskObject)
+  .superRefine(requirePairOrLevel);
+const AgentSuggestModelRiskFileSchema = z
+  .preprocess((raw) => normalizeStoredLabels(raw, "description"), AgentSuggestModelRiskObject)
+  .superRefine(requirePair);
+const AgentUpdateModelRiskSchema = z.preprocess(
+  (raw) => normalizeStoredLabels(raw, "carry"),
+  AgentUpdateModelRiskObject,
+);
 
 /**
  * Inner createWriteToolFn handler. We wrap it below with a file-time
@@ -484,9 +501,15 @@ const _agentSuggestModelRiskInner = createWriteToolFn({
     // `approvalGateway.ts:226,366`. Strip those internal fields before
     // running strict Zod validation, otherwise `.strict()` rejects them
     // as unknown keys.
-    const { _userId: _u, _organizationId: _o, ...userParams } = params as Record<string, unknown>;
+    const {
+      _userId: _u,
+      _organizationId: _o,
+      _requesterId: _r,
+      ...userParams
+    } = params as Record<string, unknown>;
     void _u;
     void _o;
+    void _r;
     const parsed = AgentSuggestModelRiskSchema.safeParse(userParams);
     if (!parsed.success) {
       throwOnValidationFailure("agent_suggest_model_risk", parsed.error.issues);
@@ -557,7 +580,11 @@ const _agentSuggestModelRiskInner = createWriteToolFn({
       }
     }
 
-    const result = await createNewModelRiskQuery(
+    // Through the model risk service, as the acting user: change history and
+    // the owner's assignment notice.
+    const ctx = await modelWriteContext(params, organizationId);
+    if (isRefusal(ctx)) return ctx;
+    const result = await createModelRiskService(
       {
         model_id: resolvedModelId,
         risk_name: data.risk_name,
@@ -570,9 +597,10 @@ const _agentSuggestModelRiskInner = createWriteToolFn({
         target_date: data.target_date || new Date().toISOString(),
         mitigation_plan: data.mitigation_plan || "",
         impact: data.impact || "",
-        likelihood: data.likelihood || "",
+        likelihood: data.likelihood ?? null,
+        severity: data.severity ?? null,
       },
-      organizationId,
+      ctx,
     );
     return result;
   },
@@ -590,10 +618,11 @@ const agentSuggestModelRisk = async (
   params: Record<string, unknown>,
   organizationId: number,
 ): Promise<unknown> => {
-  const { _userId: _u, _organizationId: _o, ...userParams } = params;
+  const { _userId: _u, _organizationId: _o, _requesterId: _r, ...userParams } = params;
   void _u;
   void _o;
-  const parsed = AgentSuggestModelRiskSchema.safeParse(userParams);
+  void _r;
+  const parsed = AgentSuggestModelRiskFileSchema.safeParse(userParams);
   if (!parsed.success) {
     throwOnValidationFailure("agent_suggest_model_risk", parsed.error.issues);
   }
@@ -606,9 +635,15 @@ const agentUpdateModelRisk = createWriteToolFn({
   descriptionFn: (params) =>
     `Update model risk #${params.model_risk_id}${params.risk_name ? ` ("${params.risk_name}")` : ""}`,
   executeFn: async (params, organizationId) => {
-    const { _userId: _u, _organizationId: _o, ...userParams } = params as Record<string, unknown>;
+    const {
+      _userId: _u,
+      _organizationId: _o,
+      _requesterId: _r,
+      ...userParams
+    } = params as Record<string, unknown>;
     void _u;
     void _o;
+    void _r;
     const parsed = AgentUpdateModelRiskSchema.safeParse(userParams);
     if (!parsed.success) {
       throwOnValidationFailure("agent_update_model_risk", parsed.error.issues);
@@ -628,6 +663,7 @@ const agentUpdateModelRisk = createWriteToolFn({
       "mitigation_plan",
       "impact",
       "likelihood",
+      "severity",
     ];
 
     for (const field of updatableFields) {
@@ -636,7 +672,17 @@ const agentUpdateModelRisk = createWriteToolFn({
       }
     }
 
-    const result = await updateModelRiskByIdQuery(id, updateData as any, organizationId);
+    const ctx = await modelWriteContext(params, organizationId);
+    if (isRefusal(ctx)) return ctx;
+    // An older approval's free-text likelihood goes to the end of the
+    // description, as the migration did for stored risks.
+    if (data._previous_likelihood) {
+      const base =
+        data.description ?? (await getModelRiskByIdQuery(id, organizationId))?.description ?? "";
+      updateData.description = withPreviousLikelihood(base, data._previous_likelihood);
+    }
+
+    const result = await updateModelRiskService(id, updateData, ctx);
     if (!result) {
       throw new Error(`Model risk #${id} not found or does not belong to this organization`);
     }
@@ -653,7 +699,9 @@ const agentChangeModelRiskStatus = createWriteToolFn({
     const id = params.model_risk_id as number;
     const status = params.status as string;
 
-    const result = await updateModelRiskByIdQuery(id, { status } as any, organizationId);
+    const ctx = await modelWriteContext(params, organizationId);
+    if (isRefusal(ctx)) return ctx;
+    const result = await updateModelRiskService(id, { status } as Record<string, unknown>, ctx);
     if (!result) {
       throw new Error(`Model risk #${id} not found or does not belong to this organization`);
     }
@@ -667,7 +715,9 @@ const agentDeleteModelRisk = createWriteToolFn({
   descriptionFn: (params) => `Delete model risk #${params.model_risk_id}`,
   executeFn: async (params, organizationId) => {
     const id = params.model_risk_id as number;
-    const deleted = await deleteModelRiskByIdQuery(id, organizationId);
+    const ctx = await modelWriteContext(params, organizationId);
+    if (isRefusal(ctx)) return ctx;
+    const deleted = await deleteModelRiskService(id, ctx);
     if (!deleted) {
       throw new Error(`Model risk #${id} not found or already deleted`);
     }
@@ -723,7 +773,9 @@ const agentAttachModelRiskToModel = createWriteToolFn({
       throw new Error(`Model #${modelId} not found or does not belong to this organization`);
     }
 
-    const result = await updateModelRiskByIdQuery(id, { model_id: modelId } as any, organizationId);
+    const ctx = await modelWriteContext(params, organizationId);
+    if (isRefusal(ctx)) return ctx;
+    const result = await updateModelRiskService(id, { model_id: modelId }, ctx);
     if (!result) {
       throw new Error(`Model risk #${id} not found or does not belong to this organization`);
     }
@@ -742,7 +794,13 @@ const agentDetachModelRiskFromModel = createWriteToolFn({
     `Detach model risk #${params.model_risk_id} from its model (set model_id = NULL)`,
   executeFn: async (params, organizationId) => {
     const id = params.model_risk_id as number;
-    const result = await updateModelRiskByIdQuery(id, { model_id: null } as any, organizationId);
+    const ctx = await modelWriteContext(params, organizationId);
+    if (isRefusal(ctx)) return ctx;
+    const result = await updateModelRiskService(
+      id,
+      { model_id: null } as Record<string, unknown>,
+      ctx,
+    );
     if (!result) {
       throw new Error(`Model risk #${id} not found or does not belong to this organization`);
     }

@@ -45,6 +45,8 @@ import aiDetectionRoutes from "./aiDetection.route";
 import aiDetectionRepositoriesRoutes from "./aiDetectionRepositories.route";
 import homeQueueRoutes from "./homeQueue.route";
 import changeNoticeRoutes from "./changeNotice.route";
+import modelInventoriesRoutes from "./modelInventories.route";
+import modelRisksRoutes from "./modelRisks.route";
 
 const router = express.Router();
 
@@ -128,5 +130,10 @@ router.use("/home", homeQueueRoutes);
 
 // "What's changed" notices: per-user seen state and show rules.
 router.use("/change-notices", changeNoticeRoutes);
+
+// Model and model risk writes with strict validation; the legacy
+// /api/modelInventory and /api/modelRisks routers are frozen.
+router.use("/model-inventories", modelInventoriesRoutes);
+router.use("/model-risks", modelRisksRoutes);
 
 export default router;

@@ -70,19 +70,40 @@ const ValidationTab = ({ users, onError, onSuccess }: ValidationTabProps) => {
     return map;
   }, [fleet]);
 
-  /** Models that already have an active validation cycle (in_validation or under_review). */
+  /**
+   * Models that already have an open validation (any stage before validated). The
+   * database allows one open validation per model, so these cannot start another.
+   * A not-started validation counts: triggers and the scheduled sweep open those.
+   */
   const activeModelIds = useMemo(() => {
     const ids = new Set<number>();
     validations.forEach((v) => {
-      if (
-        v.stage === MrmValidationStage.IN_VALIDATION ||
-        v.stage === MrmValidationStage.UNDER_REVIEW
-      ) {
+      if (v.stage !== MrmValidationStage.VALIDATED) {
         ids.add(v.model_inventory_id);
       }
     });
     return ids;
   }, [validations]);
+
+  /**
+   * Each model's latest signed-off validation. Its next_due is the date of the
+   * next periodic review; an older validated row's date is superseded.
+   */
+  const latestValidatedIds = useMemo(() => {
+    const latest = new Map<number, IMrmValidation>();
+    validations.forEach((v) => {
+      if (v.stage !== MrmValidationStage.VALIDATED) return;
+      const current = latest.get(v.model_inventory_id);
+      const time = (x: IMrmValidation) => (x.signed_off_at ? Date.parse(x.signed_off_at) : -1);
+      if (!current || time(v) > time(current) || (time(v) === time(current) && v.id > current.id)) {
+        latest.set(v.model_inventory_id, v);
+      }
+    });
+    return new Set(Array.from(latest.values()).map((v) => v.id));
+  }, [validations]);
+
+  const showsNextDue = (v: IMrmValidation): boolean =>
+    v.stage !== MrmValidationStage.VALIDATED || latestValidatedIds.has(v.id);
 
   const availableFleetItems = useMemo(
     () =>
@@ -134,8 +155,11 @@ const ValidationTab = ({ users, onError, onSuccess }: ValidationTabProps) => {
   return (
     <Box>
       <Typography sx={mrmSectionIntroStyle}>
-        Staged validation workflow. Each model moves through a defined lifecycle with a
-        validation-report template. The validator is separate from the owner.
+        A validation is an independent review of one model, written up in a 6-section report. It
+        goes from Not started to In validation, Under review and Validated. Signing it off schedules
+        the model&apos;s next review from its tier. When that date passes, a new validation opens
+        automatically. A model can have one open validation at a time. Its validator can&apos;t be
+        the model&apos;s developer.
       </Typography>
 
       <Box sx={mrmPipelineStyle}>
@@ -224,7 +248,9 @@ const ValidationTab = ({ users, onError, onSuccess }: ValidationTabProps) => {
                       {validation.signed_off_at ? formatDate(validation.signed_off_at) : "—"}
                     </TableCell>
                     <TableCell sx={mrmTableCellStyle}>
-                      {validation.next_due ? formatDate(validation.next_due) : "—"}
+                      {validation.next_due && showsNextDue(validation)
+                        ? formatDate(validation.next_due)
+                        : "—"}
                     </TableCell>
                   </TableRow>
                 );
@@ -246,13 +272,14 @@ const ValidationTab = ({ users, onError, onSuccess }: ValidationTabProps) => {
         isOpen={startOpen}
         onClose={() => setStartOpen(false)}
         title="Start validation"
-        description="Open a new validation cycle for a model. Only one validation can be in progress per model."
+        description="Open a validation for a model. Models that already have an open validation are not listed."
         onSubmit={handleStart}
         submitButtonText="Start"
         isSubmitting={createValidation.isPending}
         fitContent
+        compact
       >
-        <Stack sx={{ gap: "48px" }}>
+        <Stack sx={{ gap: "16px" }}>
           <Select
             id="mrm-start-validation-model"
             label="Model"

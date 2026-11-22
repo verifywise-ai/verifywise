@@ -248,6 +248,19 @@ describe("updateSuggestedRisk", () => {
     expect(patch).toEqual({ name: "Renamed", editedBy: 7, editedAt: expect.any(String) });
   });
 
+  it("a model suggestion's level follows an edited severity", async () => {
+    intake.getSubmissionByIdQuery.mockResolvedValue(
+      submission({ suggestedRisks: block([item({ modelRiskLevel: "High" })]) }),
+    );
+    intake.updateSuggestedRiskItemQuery.mockResolvedValue(item());
+    await call(ctrl.updateSuggestedRisk, patchReq({ severity: "Negligible" }));
+    // Possible x Negligible: Low.
+    expect(intake.updateSuggestedRiskItemQuery.mock.calls[0][2]).toMatchObject({
+      severity: "Negligible",
+      modelRiskLevel: "Low",
+    });
+  });
+
   it("400 for a likelihood outside the scale", async () => {
     const r = await call(ctrl.updateSuggestedRisk, patchReq({ likelihood: "Sometimes" }));
     expect(r.status).toBe(400);
@@ -261,6 +274,8 @@ describe("updateSuggestedRisk", () => {
     [{ deadline: "2020-01-01" }, "deadline"],
     [{ deadline: "2099-02-30" }, "deadline"],
     [{ modelRiskLevel: "Severe" }, "modelRiskLevel"],
+    // Decision 10: likelihood and severity set a model risk's level.
+    [{ modelRiskLevel: "High" }, "modelRiskLevel"],
     [{ state: "maybe" }, "state"],
   ])("400 for %j", async (body, field) => {
     const r = await call(ctrl.updateSuggestedRisk, patchReq(body));

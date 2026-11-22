@@ -684,11 +684,6 @@ const deferredScopedTables: SharedTableEntry[] = [
       "Deferred to a future isolation wave; not covered by the first-pass matrix. See runbook section 2.4.",
   },
   {
-    name: "evidence_ai_analysis",
-    justification:
-      "Deferred to a future isolation wave; not covered by the first-pass matrix. See runbook section 2.4.",
-  },
-  {
     name: "feature_settings",
     justification:
       "Deferred to a future isolation wave; not covered by the first-pass matrix. See runbook section 2.4.",

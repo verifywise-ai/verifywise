@@ -90,23 +90,21 @@ describe("history name lookups on the caller's transaction", () => {
     const incidentId = await insertClosedApprovedIncident(owner.orgId);
 
     // Turn the owner-name lookup into a real database error (division by zero).
-    // The lookup is matched by what it reads, not by its exact text, and the
-    // count below proves it was hit: an exact-text match stopped firing
-    // unnoticed when the lookup started joining organization_members.
+    // Matches the user formatter's query (config/changeHistory.config.ts),
+    // with or without its organization_members join.
+    const isOwnerNameLookup = (sql: string) =>
+      /FROM users u\b[\s\S]*WHERE u\.id = :userId/.test(sql);
+    let lookupsFailed = 0;
     const realQuery = sequelize.query.bind(sequelize);
-    const isOwnerLookup = (sql: unknown) =>
-      typeof sql === "string" && /\bFROM users\b/.test(sql) && sql.includes(":userId");
-    let brokenLookups = 0;
-    const spy = jest.spyOn(sequelize, "query").mockImplementation(((
-      sql: unknown,
-      options: unknown,
-    ) => {
-      if (isOwnerLookup(sql)) {
-        brokenLookups += 1;
-        return realQuery("SELECT 1/0 AS name", options as any);
-      }
-      return realQuery(sql as string, options as any);
-    }) as any);
+    const spy = jest
+      .spyOn(sequelize, "query")
+      .mockImplementation(((sql: unknown, options: unknown) =>
+        realQuery(
+          typeof sql === "string" && isOwnerNameLookup(sql) && ++lookupsFailed
+            ? "SELECT 1/0 AS name"
+            : (sql as string),
+          options as any,
+        )) as any);
 
     try {
       await sequelize.transaction(async (transaction) => {
@@ -127,7 +125,9 @@ describe("history name lookups on the caller's transaction", () => {
     } finally {
       spy.mockRestore();
     }
-    expect(brokenLookups).toBeGreaterThan(0);
+    // The lookup really failed; if the formatter's SQL changes, update the
+    // matcher instead of letting this test pass without the failure.
+    expect(lookupsFailed).toBeGreaterThan(0);
 
     const rows = await sequelize.query<{ field_name: string; new_value: string }>(
       `SELECT field_name, new_value FROM incident_change_history

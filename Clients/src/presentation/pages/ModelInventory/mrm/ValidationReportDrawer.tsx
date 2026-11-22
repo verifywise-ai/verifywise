@@ -264,13 +264,14 @@ const ValidationReportDrawer = ({
         isOpen={signoffOpen}
         onClose={() => setSignoffOpen(false)}
         title="Sign off validation"
-        description="Record the validation outcome. This marks the validation as validated and closes the active cycle."
+        description="Record the outcome. This closes the validation and schedules the next review from the model tier."
         onSubmit={handleSignoff}
         submitButtonText="Sign off"
         isSubmitting={signoff.isPending}
         fitContent
+        compact
       >
-        <Stack sx={{ gap: "48px" }}>
+        <Stack sx={{ gap: "16px" }}>
           <Select
             id="mrm-signoff-outcome"
             label="Outcome"

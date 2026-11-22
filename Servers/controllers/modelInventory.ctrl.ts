@@ -1,53 +1,28 @@
 import { Request, Response } from "express";
-import { QueryTypes, Transaction } from "sequelize";
-import { sequelize } from "../database/db";
-import { notifyUserAssigned } from "../services/inAppNotification.service";
-import { notifyProactive } from "../services/proactiveNotify";
 import { ModelInventoryModel } from "../domain.layer/models/modelInventory/modelInventory.model";
-import { ModelInventoryStatus } from "../domain.layer/enums/model-inventory-status.enum";
-import {
-  NotificationType,
-  NotificationEntityType,
-} from "../domain.layer/interfaces/i.notification";
 import {
   getAllModelInventoriesQuery,
   getModelInventoryByIdQuery,
-  createNewModelInventoryQuery,
-  updateModelInventoryByIdQuery,
-  deleteModelInventoryByIdQuery,
-  lockModelInventoryQuery,
   getModelByProjectIdQuery,
   getModelByFrameworkIdQuery,
 } from "../utils/modelInventory.utils";
-import { notifyModelRiskCandidates } from "../services/riskLinks/modelCandidates";
 import {
-  recordModelInventoryCreation,
-  recordModelInventoryDeletion,
-  trackModelInventoryChanges,
-  recordMultipleFieldChanges,
-} from "../utils/modelInventoryChangeHistory.utils";
-import { modelHasMrmHistoryQuery } from "../utils/mrm.utils";
+  createModelInventoryService,
+  deleteModelInventoryService,
+  ModelWriteContext,
+  updateModelInventoryService,
+} from "../services/modelInventory.service";
+import { ModelApprovalForbiddenError } from "../utils/modelApproval.utils";
+import { requestCallerIsAdmin } from "../utils/organizationAdmin.utils";
 import { STATUS_CODE } from "../utils/statusCode.utils";
 import logger, { logStructured } from "../utils/logger/fileLogger";
-import { triggerModelDeployment } from "../services/workflows/triggers";
-import { logRollbackFailure } from "../utils/logger/logHelper";
-
 import { translateError } from "../utils/i18n.utils";
 import {
+  ConflictException,
   ForbiddenException,
+  NotFoundException,
   ValidationException,
 } from "../domain.layer/exceptions/custom.exception";
-// Helper function to get user name
-async function getUserNameById(userId: number): Promise<string> {
-  const result = await sequelize.query<{ name: string; surname: string }>(
-    `SELECT name, surname FROM users WHERE id = :userId`,
-    { replacements: { userId }, type: QueryTypes.SELECT },
-  );
-  if (result[0]) {
-    return `${result[0].name} ${result[0].surname}`.trim();
-  }
-  return "Someone";
-}
 
 export async function getAllModelInventories(req: Request, res: Response) {
   logStructured(
@@ -96,9 +71,8 @@ export async function getAllModelInventories(req: Request, res: Response) {
 }
 
 export async function getModelInventoryById(req: Request, res: Response) {
-  const modelInventoryId = parseInt(
-    Array.isArray(req.params.id) ? req.params.id[0] : req.params.id,
-  );
+  // The route checks that the id is a positive integer (400 otherwise).
+  const modelInventoryId = Number(req.params.id);
 
   logStructured(
     "processing",
@@ -128,7 +102,7 @@ export async function getModelInventoryById(req: Request, res: Response) {
       "getModelInventoryById",
       "modelInventory.ctrl.ts",
     );
-    return res.status(204).json(STATUS_CODE[204](modelInventory));
+    return res.status(404).json(STATUS_CODE[404](req.t!("Model inventory not found")));
   } catch (error) {
     logStructured(
       "error",
@@ -231,131 +205,84 @@ export async function getModelByFrameworkId(req: Request, res: Response) {
   }
 }
 
+/** invalid_text_representation (enums), invalid_datetime_format, datetime_field_overflow. */
+const DATABASE_BAD_VALUE_CODES = new Set(["22P02", "22007", "22008"]);
+
 /**
- * POST /api/modelInventory. Each linked use case needs the caller's access
- * to that use case (decision 8), checked in the write query.
+ * The approval rule reads callerIsAdmin only for a body that sends a status
+ * or an approver; any other save is allowed whoever sends it. So the role
+ * lookup runs only for those bodies (any value, even an empty one, counts as
+ * sent and is looked up).
+ */
+const sendsApprovalField = (body: unknown): boolean =>
+  typeof body === "object" &&
+  body !== null &&
+  ((body as Record<string, unknown>).status !== undefined ||
+    (body as Record<string, unknown>).approver !== undefined);
+
+const writeContext = async (req: Request): Promise<ModelWriteContext> => ({
+  organizationId: req.organizationId!,
+  userId: req.userId!,
+  callerIsAdmin: sendsApprovalField(req.body) ? await requestCallerIsAdmin(req) : false,
+  useCaseViewer: { userId: req.userId!, role: req.role! },
+});
+
+/**
+ * The answer to a refused model write, or null for an unexpected error. A
+ * refused approval change answers its own message; another refusal (a use
+ * case the caller cannot open) answers "Access denied", as before.
+ */
+function refusedWrite(req: Request, res: Response, error: unknown): Response | null {
+  // A reference the organization does not own (approver, use case,
+  // framework) or a malformed field.
+  if (error instanceof ValidationException) {
+    return res.status(400).json(STATUS_CODE[400](translateError(req, error)));
+  }
+  if (error instanceof ModelApprovalForbiddenError) {
+    return res.status(403).json(STATUS_CODE[403](translateError(req, error)));
+  }
+  if (error instanceof ForbiddenException) {
+    return res.status(403).json(STATUS_CODE[403](req.t!("Access denied")));
+  }
+  // A duplicate external_key within the org violates the partial unique index.
+  const code =
+    (error as { parent?: { code?: string }; original?: { code?: string } })?.parent?.code ??
+    (error as { original?: { code?: string } })?.original?.code;
+  // A value the database cannot store (an unknown status or type, a bad
+  // date): the legacy route does not validate them, so they used to be a 500.
+  if (code && DATABASE_BAD_VALUE_CODES.has(code)) {
+    return res.status(400).json(STATUS_CODE[400](req.t!("A value in this request is not valid.")));
+  }
+  if (code === "23505") {
+    return res
+      .status(409)
+      .json(
+        STATUS_CODE[409](
+          req.t!("A model with this external key already exists in your organization."),
+        ),
+      );
+  }
+  return null;
+}
+
+/**
+ * POST /api/modelInventory and /api/v1/model-inventories. Each linked use
+ * case needs the caller's access to that use case (decision 8), checked in
+ * the write query. The service applies the approval rule and records history.
  */
 export async function createNewModelInventory(req: Request, res: Response) {
-  const {
-    provider_model,
-    provider,
-    model,
-    version,
-    approver,
-    capabilities,
-    security_assessment,
-    status,
-    status_date,
-    type,
-    reference_link,
-    biases,
-    limitations,
-    hosting_provider,
-    intended_use,
-    security_assessment_data,
-    is_demo,
-    external_key,
-    projects,
-    frameworks,
-  } = req.body;
-
   logStructured(
     "processing",
     "starting createNewModelInventory",
     "createNewModelInventory",
     "modelInventory.ctrl.ts",
   );
-  logger.debug("🔍 Creating new model inventory");
-
-  let transaction: Transaction | null = null;
 
   try {
-    // Create new model inventory instance using the static method for validation
-    const modelInventory = ModelInventoryModel.createNewModelInventory({
-      provider_model,
-      provider,
-      model,
-      version,
-      approver,
-      capabilities,
-      security_assessment,
-      status,
-      status_date,
-      type,
-      reference_link,
-      biases,
-      limitations,
-      hosting_provider,
-      intended_use,
-      security_assessment_data,
-      is_demo,
-      external_key,
-    });
-
-    // Create transaction and use the existing database query approach
-    transaction = await sequelize.transaction();
-    const savedModelInventory = await createNewModelInventoryQuery(
-      modelInventory,
-      req.organizationId!,
-      projects || [],
-      frameworks || [],
-      transaction,
-      { userId: req.userId!, role: req.role! },
+    const savedModelInventory = await createModelInventoryService(
+      req.body ?? {},
+      await writeContext(req),
     );
-
-    // Record creation in change history
-    await recordModelInventoryCreation(
-      savedModelInventory.id!,
-      req.userId!,
-      req.organizationId!,
-      modelInventory,
-      transaction,
-    );
-
-    await transaction.commit();
-
-    // Notify approver if assigned. The stored value is the one the write
-    // checked against the organization.
-    const savedApprover = savedModelInventory.approver;
-    if (savedApprover) {
-      const assignerName = await getUserNameById(req.userId!);
-      const baseUrl = process.env.FRONTEND_URL || "http://localhost:5173";
-
-      // Build model context
-      const modelDetails = [
-        savedModelInventory.provider ? `Provider: ${savedModelInventory.provider}` : null,
-        savedModelInventory.version ? `Version: ${savedModelInventory.version}` : null,
-      ]
-        .filter(Boolean)
-        .join(" | ");
-
-      notifyUserAssigned(
-        req.organizationId!,
-        savedApprover,
-        {
-          entityType: "Model Inventory",
-          entityId: savedModelInventory.id!,
-          entityName: savedModelInventory.model || `Model #${savedModelInventory.id}`,
-          roleType: "Approver",
-          entityUrl: `${baseUrl}/model-inventory?modelId=${savedModelInventory.id}`,
-        },
-        assignerName,
-        baseUrl,
-        {
-          description: modelDetails || undefined,
-        },
-      ).catch((err) => console.error("Failed to send approver notification:", err));
-    }
-
-    // F6: a new model normally has no model risks yet, so this usually finds
-    // nothing and sends nothing. Fire-and-forget — the response must not wait.
-    notifyModelRiskCandidates({
-      organizationId: req.organizationId!,
-      modelInventoryId: savedModelInventory.id!,
-      modelName: savedModelInventory.model || `Model #${savedModelInventory.id}`,
-      projectIds: ((savedModelInventory as any).dataValues?.projects as number[] | undefined) ?? [],
-    }).catch((err) => logger.error("Model risk candidate notice failed:", err));
-
     logStructured(
       "successful",
       "new model inventory created",
@@ -364,45 +291,8 @@ export async function createNewModelInventory(req: Request, res: Response) {
     );
     return res.status(201).json(STATUS_CODE[201](savedModelInventory.toSafeJSON()));
   } catch (error) {
-    // Rollback transaction if it exists
-    if (transaction) {
-      try {
-        await transaction.rollback();
-      } catch (rollbackError) {
-        await logRollbackFailure({
-          req,
-          functionName: "createNewModelInventory",
-          fileName: "modelInventory.ctrl.ts",
-          eventType: "Create",
-          originalError: error,
-          rollbackError,
-        });
-      }
-    }
-
-    // A reference the organization does not own (approver, use case,
-    // framework) or a malformed field.
-    if (error instanceof ValidationException) {
-      return res.status(400).json(STATUS_CODE[400](translateError(req, error)));
-    }
-    if (error instanceof ForbiddenException) {
-      return res.status(403).json(STATUS_CODE[403](req.t!("Access denied")));
-    }
-
-    // A duplicate external_key within the org violates the partial unique index.
-    const code =
-      (error as { parent?: { code?: string }; original?: { code?: string } })?.parent?.code ??
-      (error as { original?: { code?: string } })?.original?.code;
-    if (code === "23505") {
-      return res
-        .status(409)
-        .json(
-          STATUS_CODE[409](
-            req.t!("A model with this external key already exists in your organization."),
-          ),
-        );
-    }
-
+    const refused = refusedWrite(req, res, error);
+    if (refused) return refused;
     logStructured(
       "error",
       "failed to create new model inventory",
@@ -415,49 +305,13 @@ export async function createNewModelInventory(req: Request, res: Response) {
 }
 
 /**
- * PATCH /api/modelInventory/:id. Linking a use case, or unlinking one, needs
- * the caller's access to that use case (decision 8); a link to a use case the
- * caller cannot open is kept, never removed by its absence from the list.
+ * PATCH /api/modelInventory/:id and /api/v1/model-inventories/:id. Linking
+ * a use case, or unlinking one, needs the caller's access to that use case
+ * (decision 8); a link to a use case the caller cannot open is kept, never
+ * removed by its absence from the list.
  */
 export async function updateModelInventoryById(req: Request, res: Response) {
-  const modelInventoryId = parseInt(
-    Array.isArray(req.params.id) ? req.params.id[0] : req.params.id,
-  );
-
-  // Get existing model inventory for business rule validation
-  try {
-    (await getModelInventoryByIdQuery(
-      modelInventoryId,
-      req.organizationId!,
-    )) as unknown as ModelInventoryModel;
-  } catch (error) {
-    // Continue without existing data if query fails
-  }
-
-  const {
-    provider_model,
-    provider,
-    model,
-    version,
-    approver,
-    capabilities,
-    security_assessment,
-    status,
-    status_date,
-    type,
-    reference_link,
-    biases,
-    limitations,
-    hosting_provider,
-    intended_use,
-    security_assessment_data,
-    is_demo,
-    external_key,
-    projects,
-    frameworks,
-    deleteProjects,
-    deleteFrameworks,
-  } = req.body;
+  const modelInventoryId = Number(req.params.id);
 
   logStructured(
     "processing",
@@ -465,18 +319,14 @@ export async function updateModelInventoryById(req: Request, res: Response) {
     "updateModelInventoryById",
     "modelInventory.ctrl.ts",
   );
-  logger.debug("🔍 Updating model inventory by id");
-
-  let transaction: Transaction | null = null;
 
   try {
-    // Get existing model inventory (re-fetch to ensure it exists)
-    const currentModelInventory = (await getModelInventoryByIdQuery(
+    const savedModelInventory = await updateModelInventoryService(
       modelInventoryId,
-      req.organizationId!,
-    )) as unknown as ModelInventoryModel;
-
-    if (!currentModelInventory) {
+      req.body ?? {},
+      await writeContext(req),
+    );
+    if (!savedModelInventory) {
       logStructured(
         "successful",
         "no model inventory found",
@@ -485,170 +335,6 @@ export async function updateModelInventoryById(req: Request, res: Response) {
       );
       return res.status(404).json(STATUS_CODE[404](req.t!("Model inventory not found")));
     }
-
-    // Track changes before updating
-    const changes = await trackModelInventoryChanges(currentModelInventory, {
-      provider_model,
-      provider,
-      model,
-      version,
-      approver,
-      capabilities,
-      security_assessment,
-      status,
-      status_date,
-      type,
-      reference_link,
-      biases,
-      limitations,
-      hosting_provider,
-      intended_use,
-      security_assessment_data,
-      is_demo,
-    });
-
-    // Update the model inventory using the static method
-    const updatedModelInventory = ModelInventoryModel.updateModelInventory(currentModelInventory, {
-      provider_model,
-      provider,
-      model,
-      version,
-      approver,
-      capabilities,
-      security_assessment,
-      status,
-      status_date,
-      type,
-      reference_link,
-      biases,
-      limitations,
-      hosting_provider,
-      intended_use,
-      security_assessment_data,
-      is_demo,
-      external_key,
-    });
-
-    // Use the existing database query approach for updating
-    transaction = await sequelize.transaction();
-    const savedModelInventory = await updateModelInventoryByIdQuery(
-      modelInventoryId,
-      updatedModelInventory,
-      projects || [],
-      frameworks || [],
-      deleteProjects || false,
-      deleteFrameworks || false,
-      req.organizationId!,
-      transaction,
-      { userId: req.userId!, role: req.role! },
-    );
-
-    // Record changes in change history
-    if (changes.length > 0) {
-      await recordMultipleFieldChanges(
-        modelInventoryId,
-        req.userId!,
-        req.organizationId!,
-        changes,
-        transaction,
-      );
-    }
-
-    await transaction.commit();
-
-    // Model-deployed hook (Phase 4 / issue 3811): when a model transitions
-    // into the deployed (Approved) state, trigger an automatic risk-assessment
-    // notification (in-app + email). Failure must never break the response.
-    const previousStatus = (currentModelInventory as any).status;
-    if (
-      status === ModelInventoryStatus.APPROVED &&
-      previousStatus !== ModelInventoryStatus.APPROVED
-    ) {
-      const modelName = savedModelInventory.model || `Model #${modelInventoryId}`;
-      notifyProactive(req.organizationId!, {
-        title: "Model deployed — risk assessment required",
-        body: `"${modelName}" was just deployed. A risk assessment is recommended for the newly deployed model.`,
-        notification: {
-          user_id: req.userId!,
-          type: NotificationType.SYSTEM,
-          title: "Model deployed — risk assessment required",
-          message: `"${modelName}" was just deployed. A risk assessment is recommended.`,
-          entity_type: NotificationEntityType.MODEL,
-          entity_id: modelInventoryId,
-        },
-        channels: {
-          inApp: true,
-          email: {
-            template: "model-deployed-risk-assessment",
-            subject: "Model deployed — risk assessment required",
-            variables: {
-              modelName,
-              modelId: String(modelInventoryId),
-            },
-          },
-        },
-        meta: { modelInventoryId },
-      }).catch((err) =>
-        console.error("Failed to send model deployed risk-assessment notification:", err),
-      );
-
-      // Phase 6 / issue 3813 — kick off the model_deployment autopilot
-      // workflow alongside the notification. Fire-and-forget; never blocks
-      // or fails the response.
-      triggerModelDeployment(
-        req.organizationId!,
-        modelInventoryId,
-        modelName,
-        savedModelInventory.version || undefined,
-      ).catch((err) => logger.error("Failed to trigger model_deployment workflow:", err));
-    }
-
-    // Notify approver if changed to a new user
-    const oldApprover = (currentModelInventory as any).approver;
-    const savedApprover = savedModelInventory.approver;
-    if (savedApprover && Number(savedApprover) !== Number(oldApprover)) {
-      const assignerName = await getUserNameById(req.userId!);
-      const baseUrl = process.env.FRONTEND_URL || "http://localhost:5173";
-
-      // Build model context
-      const modelDetails = [
-        savedModelInventory.provider ? `Provider: ${savedModelInventory.provider}` : null,
-        savedModelInventory.version ? `Version: ${savedModelInventory.version}` : null,
-      ]
-        .filter(Boolean)
-        .join(" | ");
-
-      notifyUserAssigned(
-        req.organizationId!,
-        savedApprover,
-        {
-          entityType: "Model Inventory",
-          entityId: modelInventoryId,
-          entityName: savedModelInventory.model || `Model #${modelInventoryId}`,
-          roleType: "Approver",
-          entityUrl: `${baseUrl}/model-inventory?modelId=${modelInventoryId}`,
-        },
-        assignerName,
-        baseUrl,
-        {
-          description: modelDetails || undefined,
-        },
-      ).catch((err) => console.error("Failed to send approver notification:", err));
-    }
-
-    // F6: notify only for newly added projects. The update query changes use
-    // case links by difference and reports the ones it added; a plain field
-    // edit sends projects: undefined, so nothing is added and nothing fires.
-    const addedProjectIds = savedModelInventory.addedProjectIds ?? [];
-    if (addedProjectIds.length > 0) {
-      notifyModelRiskCandidates({
-        organizationId: req.organizationId!,
-        modelInventoryId,
-        modelName: savedModelInventory.model || `Model #${modelInventoryId}`,
-        projectIds: addedProjectIds,
-      }).catch((err) => logger.error("Model risk candidate notice failed:", err));
-    }
-
     logStructured(
       "successful",
       "model inventory updated",
@@ -657,45 +343,8 @@ export async function updateModelInventoryById(req: Request, res: Response) {
     );
     return res.status(200).json(STATUS_CODE[200](savedModelInventory.toSafeJSON()));
   } catch (error) {
-    // Rollback transaction if it exists
-    if (transaction) {
-      try {
-        await transaction.rollback();
-      } catch (rollbackError) {
-        await logRollbackFailure({
-          req,
-          functionName: "updateModelInventoryById",
-          fileName: "modelInventory.ctrl.ts",
-          eventType: "Update",
-          originalError: error,
-          rollbackError,
-        });
-      }
-    }
-
-    // A reference the organization does not own (approver, use case,
-    // framework) or a malformed field.
-    if (error instanceof ValidationException) {
-      return res.status(400).json(STATUS_CODE[400](translateError(req, error)));
-    }
-    if (error instanceof ForbiddenException) {
-      return res.status(403).json(STATUS_CODE[403](req.t!("Access denied")));
-    }
-
-    // A duplicate external_key within the org violates the partial unique index.
-    const code =
-      (error as { parent?: { code?: string }; original?: { code?: string } })?.parent?.code ??
-      (error as { original?: { code?: string } })?.original?.code;
-    if (code === "23505") {
-      return res
-        .status(409)
-        .json(
-          STATUS_CODE[409](
-            req.t!("A model with this external key already exists in your organization."),
-          ),
-        );
-    }
-
+    const refused = refusedWrite(req, res, error);
+    if (refused) return refused;
     logStructured(
       "error",
       "failed to update model inventory",
@@ -708,9 +357,7 @@ export async function updateModelInventoryById(req: Request, res: Response) {
 }
 
 export async function deleteModelInventoryById(req: Request, res: Response) {
-  const modelInventoryId = parseInt(
-    Array.isArray(req.params.id) ? req.params.id[0] : req.params.id,
-  );
+  const modelInventoryId = Number(req.params.id);
   const deleteRisks = req.query.deleteRisks === "true";
 
   logStructured(
@@ -720,43 +367,32 @@ export async function deleteModelInventoryById(req: Request, res: Response) {
     "modelInventory.ctrl.ts",
   );
 
-  let transaction: Transaction | null = null;
-
   try {
-    transaction = await sequelize.transaction();
-
-    // Lock the model row first: from here no risk, validation or finding can
-    // join the model, so the checks below hold until the delete commits.
-    const exists = await lockModelInventoryQuery(
+    // Deleting a model with a saved approver needs that approver or an Admin.
+    await deleteModelInventoryService(
       modelInventoryId,
-      req.organizationId!,
-      transaction,
+      { deleteRisks },
+      {
+        organizationId: req.organizationId!,
+        userId: req.userId!,
+        callerIsAdmin: await requestCallerIsAdmin(req),
+      },
     );
-    if (!exists) {
-      await transaction.rollback();
-      transaction = null;
-      logStructured(
-        "successful",
-        "no model inventory found",
-        "deleteModelInventoryById",
-        "modelInventory.ctrl.ts",
-      );
+    logStructured(
+      "successful",
+      "model inventory deleted",
+      "deleteModelInventoryById",
+      "modelInventory.ctrl.ts",
+    );
+    return res.status(200).json(STATUS_CODE[200](req.t!("Model inventory deleted successfully")));
+  } catch (error) {
+    if (error instanceof NotFoundException) {
       return res.status(404).json(STATUS_CODE[404](req.t!("Model inventory not found")));
     }
-
-    // MRM protection (§7b): a model with validation or finding history cannot be
-    // hard-deleted — it must be decommissioned so the audit trail survives. The
-    // DB's ON DELETE RESTRICT is the backstop; this returns a friendly message
-    // instead of a raw FK error. Read under the lock, so a validation added
-    // while the delete waited still answers 409.
-    const hasMrmHistory = await modelHasMrmHistoryQuery(
-      modelInventoryId,
-      req.organizationId!,
-      transaction,
-    );
-    if (hasMrmHistory) {
-      await transaction.rollback();
-      transaction = null;
+    if (error instanceof ModelApprovalForbiddenError) {
+      return res.status(403).json(STATUS_CODE[403](translateError(req, error)));
+    }
+    if (error instanceof ConflictException) {
       logStructured(
         "error",
         `model ${modelInventoryId} has MRM history — delete blocked`,
@@ -773,48 +409,6 @@ export async function deleteModelInventoryById(req: Request, res: Response) {
           ),
         );
     }
-
-    // Record deletion in change history before deleting
-    await recordModelInventoryDeletion(
-      modelInventoryId,
-      req.userId!,
-      req.organizationId!,
-      transaction,
-    );
-
-    await deleteModelInventoryByIdQuery(
-      modelInventoryId,
-      deleteRisks,
-      req.organizationId!,
-      transaction,
-      req.userId ?? null,
-    );
-    await transaction.commit();
-
-    logStructured(
-      "successful",
-      "model inventory deleted",
-      "deleteModelInventoryById",
-      "modelInventory.ctrl.ts",
-    );
-    return res.status(200).json(STATUS_CODE[200](req.t!("Model inventory deleted successfully")));
-  } catch (error) {
-    // Rollback transaction if it exists
-    if (transaction) {
-      try {
-        await transaction.rollback();
-      } catch (rollbackError) {
-        await logRollbackFailure({
-          req,
-          functionName: "deleteModelInventoryById",
-          fileName: "modelInventory.ctrl.ts",
-          eventType: "Delete",
-          originalError: error,
-          rollbackError,
-        });
-      }
-    }
-
     logStructured(
       "error",
       "failed to delete model inventory",

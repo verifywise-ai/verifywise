@@ -144,6 +144,13 @@ interface StandardModalProps {
 
   /** When true, hides the submit button while keeping the cancel button visible */
   hideSubmitButton?: boolean;
+
+  /**
+   * When true, drops the framed content card and the divider lines above and below
+   * it, so header, fields and buttons sit on one plain surface. For short modals
+   * with one or two fields.
+   */
+  compact?: boolean;
 }
 
 const StandardModal: React.FC<StandardModalProps> = ({
@@ -166,9 +173,13 @@ const StandardModal: React.FC<StandardModalProps> = ({
   showCancelButton = true,
   fitContent = false,
   hideSubmitButton = false,
+  compact = false,
 }) => {
   const titleId = useId();
   const descriptionId = useId();
+  // The framed card (bordered body overlapping the header and footer) only
+  // applies when there is body content and the modal is not compact.
+  const framed = !!children && !compact;
 
   return (
     <Modal
@@ -211,11 +222,13 @@ const StandardModal: React.FC<StandardModalProps> = ({
         {/* Header Section with Background */}
         <Stack
           sx={{
-            background: `linear-gradient(180deg, ${vwPalette.background.alt} 0%, ${vwPalette.background.hover} 100%)`,
-            borderBottom: children ? `1px solid ${border.light}` : "none",
+            background: compact
+              ? "none"
+              : `linear-gradient(180deg, ${vwPalette.background.alt} 0%, ${vwPalette.background.hover} 100%)`,
+            borderBottom: framed ? `1px solid ${border.light}` : "none",
             padding: "16px 24px",
-            paddingBottom: children ? "36px" : "16px",
-            marginBottom: children ? "-20px" : 0,
+            paddingBottom: framed ? "36px" : compact ? "8px" : "16px",
+            marginBottom: framed ? "-20px" : 0,
             zIndex: 0,
           }}
         >
@@ -288,7 +301,7 @@ const StandardModal: React.FC<StandardModalProps> = ({
               }
             }}
             sx={{
-              padding: "20px",
+              padding: compact ? "8px 24px 16px" : "20px",
               flex: "1 1 auto",
               overflow: "auto",
               minHeight: 0,
@@ -297,8 +310,8 @@ const StandardModal: React.FC<StandardModalProps> = ({
                 : expandedHeight
                   ? "min(740px, calc(90vh - 180px))"
                   : "calc(100vh - 240px)",
-              border: `1px solid ${border.light}`,
-              borderRadius: radiusPx.xxl,
+              border: compact ? "none" : `1px solid ${border.light}`,
+              borderRadius: compact ? 0 : radiusPx.xxl,
               backgroundColor: "background.main",
               zIndex: 1,
               position: "relative",
@@ -330,11 +343,13 @@ const StandardModal: React.FC<StandardModalProps> = ({
             justifyContent={customFooter ? "space-between" : "flex-end"}
             spacing={6}
             sx={{
-              background: `linear-gradient(180deg, ${vwPalette.background.hover} 0%, ${vwPalette.background.alt} 100%)`,
-              borderTop: children ? `1px solid ${border.light}` : "none",
-              padding: "12px 24px",
-              paddingTop: children ? "32px" : "12px",
-              marginTop: children ? "-20px" : 0,
+              background: compact
+                ? "none"
+                : `linear-gradient(180deg, ${vwPalette.background.hover} 0%, ${vwPalette.background.alt} 100%)`,
+              borderTop: framed ? `1px solid ${border.light}` : "none",
+              padding: compact ? "8px 24px 20px" : "12px 24px",
+              paddingTop: framed ? "32px" : compact ? "8px" : "12px",
+              marginTop: framed ? "-20px" : 0,
               zIndex: 0,
             }}
           >

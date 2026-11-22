@@ -126,9 +126,10 @@ const FindingsTab = ({ users, onError, onSuccess }: FindingsTabProps) => {
   return (
     <Box>
       <Typography sx={mrmSectionIntroStyle}>
-        A finding links back to the validation that raised it and forward to the model&apos;s status
-        — an open critical or high finding can restrict the model. Findings are audit records and
-        are never deleted; they move through the lifecycle to closure.
+        A finding is a problem raised during a validation, such as missing data or a weak
+        assumption. Give it an owner, a remediation plan and a due date. Then advance it through the
+        stages until it is closed. Findings are part of the audit trail, so they can&apos;t be
+        deleted.
       </Typography>
 
       <Box sx={mrmPipelineStyle}>
@@ -219,13 +220,13 @@ const FindingsTab = ({ users, onError, onSuccess }: FindingsTabProps) => {
         isOpen={createOpen}
         onClose={() => setCreateOpen(false)}
         title="Create finding"
-        description="Raise a finding against a validation. It joins the register and tracks to closure."
+        description="Record a problem found during a validation. You can add an owner, a remediation plan and a due date after you create it."
         onSubmit={handleCreate}
         submitButtonText="Create"
         isSubmitting={createFinding.isPending}
         fitContent
       >
-        <Stack sx={{ gap: "48px" }}>
+        <Stack sx={{ gap: "16px" }}>
           <Select
             id="mrm-finding-validation"
             label="Validation"

@@ -1,8 +1,11 @@
 import type { AgentCreateModelRiskInput } from "./schema";
+import { calculateModelRiskLevel } from "../../../utils/riskLevel.utils";
 
 export function renderCreateModelRiskPreview(input: AgentCreateModelRiskInput): string {
   const qualifierParts: string[] = [];
-  if (input.risk_level) qualifierParts.push(input.risk_level);
+  // The level the service will store: the formula's when both are given.
+  const level = calculateModelRiskLevel(input.likelihood, input.severity) ?? input.risk_level;
+  if (level) qualifierParts.push(level);
   if (input.risk_category) qualifierParts.push(input.risk_category);
   const qualifier = qualifierParts.length ? `${qualifierParts.join(" / ")} ` : "";
 

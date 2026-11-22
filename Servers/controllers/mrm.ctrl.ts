@@ -14,6 +14,7 @@ import {
 } from "../domain.layer/enums/mrm.enum";
 import {
   assignModelTierQuery,
+  rescheduleNextReviewForTierQuery,
   createFindingQuery,
   createValidationQuery,
   getFindingByIdQuery,
@@ -33,6 +34,7 @@ import {
 import { triggerRevalidation } from "../utils/mrmRevalidation.utils";
 import { MrmRevalidationTriggerSource } from "../domain.layer/enums/mrmMonitoring.enum";
 import { toId } from "../utils/validations/validation.utils";
+import { sequelize } from "../database/db";
 
 const FILE = "mrm.ctrl.ts";
 
@@ -89,13 +91,27 @@ export async function assignModelTier(req: Request, res: Response) {
     // Fetch the old tier BEFORE the update so we can detect an upward re-tier.
     const oldTier = await getModelTierQuery(modelId, req.organizationId!);
 
-    const updated = await assignModelTierQuery(
-      modelId,
-      req.organizationId!,
-      tier,
-      typeof materiality_drivers === "string" ? materiality_drivers : null,
-      req.userId!,
-    );
+    // The tier write and the re-dated next review commit together: a new tier
+    // means a new cadence, counted from the model's last sign-off.
+    const transaction = await sequelize.transaction();
+    let updated;
+    try {
+      updated = await assignModelTierQuery(
+        modelId,
+        req.organizationId!,
+        tier,
+        typeof materiality_drivers === "string" ? materiality_drivers : null,
+        req.userId!,
+        transaction,
+      );
+      if (updated && tier !== oldTier) {
+        await rescheduleNextReviewForTierQuery(modelId, req.organizationId!, tier, transaction);
+      }
+      await transaction.commit();
+    } catch (error) {
+      await transaction.rollback();
+      throw error;
+    }
     if (!updated) {
       logStructured("successful", `model not found: ${modelId}`, fn, FILE);
       return res.status(404).json(STATUS_CODE[404](req.t!("Model not found")));
