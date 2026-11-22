@@ -7,6 +7,7 @@ import {
   MrmModelRole,
 } from "../domain.layer/enums/mrm.enum";
 import { MrmRevalidationTriggerSource } from "../domain.layer/enums/mrmMonitoring.enum";
+import { ModelInventoryStatus } from "../domain.layer/enums/model-inventory-status.enum";
 import { createValidationQuery } from "./mrm.utils";
 import { ConflictException } from "../domain.layer/exceptions/custom.exception";
 
@@ -273,6 +274,7 @@ export const triggerRevalidation = async (
   reason: string,
   sourceRef?: Record<string, unknown> | null,
   transaction?: Transaction,
+  options?: { next_due?: Date | null },
 ): Promise<TriggerRevalidationResult> => {
   const ownTx = transaction === undefined;
   const tx = transaction ?? (await sequelize.transaction());
@@ -284,6 +286,7 @@ export const triggerRevalidation = async (
       reason,
       sourceRef ?? null,
       tx,
+      options?.next_due ?? null,
     );
     if (ownTx) await tx.commit();
     return result;
@@ -304,6 +307,7 @@ async function runTriggerRevalidation(
   reason: string,
   sourceRef: Record<string, unknown> | null,
   tx: Transaction,
+  nextDue: Date | null = null,
 ): Promise<TriggerRevalidationResult> {
   const firedAtIso = new Date().toISOString();
 
@@ -350,6 +354,7 @@ async function runTriggerRevalidation(
         stage: MrmValidationStage.NOT_STARTED,
         trigger: triggerSourceToValidationTrigger(source),
         validator_id: validatorId,
+        next_due: nextDue,
       },
       tx,
     );
@@ -428,6 +433,52 @@ export interface DueValidationRow {
   model_inventory_id: number;
   next_due: Date | null;
 }
+
+/**
+ * Models whose periodic review has come due: the latest signed-off validation's
+ * next_due (set at sign-off from the tier) has passed, and no validation is open
+ * for the model. Retired models are skipped, since a decommissioned model is no
+ * longer reviewed. Org-scoped.
+ *
+ * A model with an open validation is left out on purpose: that review is
+ * already the next cycle, and getDueRevalidationsQuery handles it if it idles.
+ */
+export const getLapsedScheduledReviewsQuery = async (
+  organizationId: number,
+  now: Date,
+): Promise<DueValidationRow[]> => {
+  return (await sequelize.query(
+    `SELECT latest.model_inventory_id, latest.next_due
+       FROM (
+         SELECT DISTINCT ON (v.model_inventory_id) v.model_inventory_id, v.next_due
+           FROM mrm_validations v
+          WHERE v.organization_id = :organizationId
+            AND v.stage = :validated
+          ORDER BY v.model_inventory_id, v.signed_off_at DESC NULLS LAST, v.id DESC
+       ) latest
+       JOIN model_inventories mi
+         ON mi.id = latest.model_inventory_id AND mi.organization_id = :organizationId
+      WHERE latest.next_due IS NOT NULL
+        AND latest.next_due <= :now
+        AND mi.status <> :retired
+        AND NOT EXISTS (
+          SELECT 1 FROM mrm_validations o
+           WHERE o.organization_id = :organizationId
+             AND o.model_inventory_id = latest.model_inventory_id
+             AND o.stage <> :validated
+        )
+      ORDER BY latest.model_inventory_id ASC`,
+    {
+      replacements: {
+        organizationId,
+        now,
+        validated: MrmValidationStage.VALIDATED,
+        retired: ModelInventoryStatus.RETIRED,
+      },
+      type: QueryTypes.SELECT,
+    },
+  )) as DueValidationRow[];
+};
 
 /**
  * Models with an OVERDUE + IDLE validation whose next_due has passed — org-scoped.

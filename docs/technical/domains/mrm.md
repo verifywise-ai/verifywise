@@ -1,6 +1,6 @@
 # Model Risk Management (MRM)
 
-> **Last Updated:** 2026-11-18
+> **Last Updated:** 2026-11-21
 > **Status:** Merged (PR #4228, 2026-07-04). Metric retention added on `feat/mrm-retention`.
 > Alert email delivery + configuration added on `feat/mrm-alerts` (stacked; merges after retention).
 
@@ -82,6 +82,20 @@ event. Race-safe: a **SAVEPOINT** around the create means a concurrent-trigger u
 violation re-resolves to the annotate path (without it the aborted transaction loses the audit
 event). Scheduled sweep = BullMQ daily job (`services/automations/actions/mrmRevalidationSweep.ts`).
 
+**Periodic review scheduling.** Sign-off (`signoffValidationQuery` in `utils/mrm.utils.ts`)
+reads the model's `mrm_tier` in the same transaction and writes `mrm_validations.next_due` with
+`computeNextReviewDue(tier, signed_off_at)`: Tier 1 +12 months, Tier 2 +18, Tier 3 +24
+(`REVALIDATION_CADENCE_MONTHS`, UTC month math clamped to month end, like Postgres
+`+ interval 'N months'`). An untiered model gets `next_due = NULL`. The sweep runs two loops per
+org: first `getDueRevalidationsQuery` (open, idle validations past `next_due`, annotated), then
+`getLapsedScheduledReviewsQuery` (the model's latest **validated** row has `next_due <= now`,
+the model is not `Retired`, and no validation is open). For each lapsed model it calls
+`triggerRevalidation(..., { next_due })`, which opens a `not_started` validation dated to the
+missed due date (so it counts as overdue at once), then sends `notifyRevalidationDue`. All three
+table references in the lapsed query filter on `organization_id`. Migration
+`20261121120000-mrm-backfill-next-due` backfills `next_due` on each tiered model's latest
+validated row signed off before scheduling existed (`next_due IS NULL` only; `down` is a no-op).
+
 **Attestation** (`utils/mrmAttestation.utils.ts`, `services/reporting/mrmAttestationReport.ts`)
 — fleet roll-up summary + a DOCX board/examiner report. Attestation is blocked only by open
 **critical/high** findings.
@@ -154,7 +168,7 @@ one assigned to notify" behavior, and it prevents a model that temporarily has z
 from silently re-queuing an alert every day once someone is later assigned.
   - *Why not gate on `triggerRevalidation`'s `created_validation` flag instead of adding a
     claim column?* That was the original design, but it's unreachable: `getDueRevalidationsQuery`
-    (the sweep's source query) only returns models that **already have an open, `not_started`**
+    (the sweep's first source query) only returns models that **already have an open, `not_started`**
     validation past its due date. `triggerRevalidation` dedups on "one open validation per
     model," so for every row the sweep processes it can only **annotate** the existing
     validation, never create a new one — `created_validation` is true only on the rare race
@@ -162,7 +176,8 @@ from silently re-queuing an alert every day once someone is later assigned.
     call. Keying the alert on that flag would mean the overdue alert almost never fires. The
     `overdue_notified_at` claim decouples "should this validation get its one nudge" from
     "did this particular sweep run create vs. annotate," which is what actually needs to be
-    once-per-lifecycle.
+    once-per-lifecycle. (The lapsed-review loop does create validations, but it uses the same
+    claim, so both loops share one nudge per lifecycle.)
   - Only the sweep claims the column, so manual revalidation, breach-triggered revalidation, and
     tier-increase-triggered revalidation never consume or check the claim — the overdue nudge is
     specific to the scheduled/swept path.

@@ -87,9 +87,9 @@ export const mrmContent: ArticleContent = {
         { key: 'expectation', label: 'What the tier drives', width: '82%' },
       ],
       rows: [
-        { tier: 'Tier 1', expectation: 'Full independent validation and continuous monitoring, with annual revalidation.' },
-        { tier: 'Tier 2', expectation: 'Standard validation and periodic monitoring, on an 18-month cycle.' },
-        { tier: 'Tier 3', expectation: 'Lightweight review, with biennial revalidation.' },
+        { tier: 'Tier 1', expectation: 'Full independent validation and continuous monitoring. Revalidated every 12 months.' },
+        { tier: 'Tier 2', expectation: 'Standard validation and periodic monitoring. Revalidated every 18 months.' },
+        { tier: 'Tier 3', expectation: 'A lighter review. Revalidated every 24 months.' },
       ],
     },
     {
@@ -137,7 +137,7 @@ export const mrmContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Select Sign off validation to close the cycle. You choose an outcome, Validated, Validated with findings, or Not validated, and the report becomes read-only afterward. The drawer also lists any revalidation triggers that opened or annotated the cycle, so the reason the model is being validated stays attached to the record.',
+      text: 'Select Sign off validation to close the cycle. You choose an outcome, Validated, Validated with findings, or Not validated, and the report becomes read-only afterward. Sign-off also sets the date of the next review from the model tier: 12 months for Tier 1, 18 for Tier 2 and 24 for Tier 3. A model with no tier gets no date. The drawer also lists any revalidation triggers that opened or annotated the cycle, so the reason the model is being validated stays attached to the record.',
     },
     {
       type: 'heading',
@@ -273,7 +273,7 @@ export const mrmContent: ArticleContent = {
         { source: 'Breach', when: 'a metric breaches a threshold set to flag for revalidation.' },
         { source: 'Change', when: 'you request revalidation after a material change to the model.' },
         { source: 'Tier increase', when: 'a model moves to a higher tier.' },
-        { source: 'Scheduled', when: 'a daily sweep finds a validation past its next-due date.' },
+        { source: 'Scheduled', when: 'a daily sweep finds a model whose next review date has passed. It opens a new validation, or annotates an open one that is overdue.' },
       ],
     },
     {

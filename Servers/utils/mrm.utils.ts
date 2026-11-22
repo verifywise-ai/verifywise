@@ -319,14 +319,43 @@ export interface SignoffValidationInput {
 }
 
 /**
+ * Months between periodic validations for each tier: Tier 1 every year, Tier 2
+ * every 18 months, Tier 3 every 2 years. Settings → Tiering rules shows the same
+ * cadence, and the backfill migration `20261121120000-mrm-backfill-next-due` uses
+ * the same numbers.
+ */
+export const REVALIDATION_CADENCE_MONTHS: Record<MrmTier, number> = {
+  [MrmTier.TIER_1]: 12,
+  [MrmTier.TIER_2]: 18,
+  [MrmTier.TIER_3]: 24,
+};
+
+/**
+ * When the next periodic review is due, counted from `from` by the tier's
+ * cadence. An untiered model has no cadence and gets no due date (null). Month
+ * arithmetic clamps to the last day of a shorter month (Jan 31 + 1 month → Feb
+ * 28/29), the same as Postgres `+ interval 'N months'`.
+ */
+export function computeNextReviewDue(
+  tier: MrmTier | string | null | undefined,
+  from: Date,
+): Date | null {
+  const months = tier ? REVALIDATION_CADENCE_MONTHS[tier as MrmTier] : undefined;
+  if (!months) return null;
+  const due = new Date(from.getTime());
+  const day = due.getUTCDate();
+  due.setUTCDate(1);
+  due.setUTCMonth(due.getUTCMonth() + months);
+  const lastDay = new Date(Date.UTC(due.getUTCFullYear(), due.getUTCMonth() + 1, 0)).getUTCDate();
+  due.setUTCDate(Math.min(day, lastDay));
+  return due;
+}
+
+/**
  * Sign off a validation: mark it VALIDATED, record outcome / report_version /
- * signer / timestamp.
- *
- * The single UPDATE is already atomic in Postgres, so the transaction is not
- * strictly required today. It is retained deliberately: sign-off is the point at
- * which model state (e.g. a future model-status write) may become a second
- * statement, and keeping the transaction here means that change is a one-line
- * addition inside an existing atomic boundary rather than a refactor.
+ * signer / timestamp, and schedule the next periodic review (`next_due`) from
+ * the model's current tier. The daily revalidation sweep opens a new validation
+ * once that date passes (see `getLapsedScheduledReviewsQuery`).
  */
 export const signoffValidationQuery = async (
   id: number,
@@ -336,6 +365,17 @@ export const signoffValidationQuery = async (
   const transaction = await sequelize.transaction();
   try {
     const now = new Date();
+
+    const tierRows = (await sequelize.query(
+      `SELECT mi.mrm_tier
+         FROM mrm_validations v
+         JOIN model_inventories mi
+           ON mi.id = v.model_inventory_id AND mi.organization_id = v.organization_id
+        WHERE v.organization_id = :organizationId AND v.id = :id`,
+      { replacements: { organizationId, id }, type: QueryTypes.SELECT, transaction },
+    )) as { mrm_tier: MrmTier | null }[];
+    const nextDue = computeNextReviewDue(tierRows[0]?.mrm_tier ?? null, now);
+
     const rows = (await sequelize.query(
       `UPDATE mrm_validations
           SET stage          = :stage,
@@ -343,6 +383,7 @@ export const signoffValidationQuery = async (
               report_version = COALESCE(:reportVersion, report_version),
               signed_off_at  = :now,
               signed_off_by  = :signedOffBy,
+              next_due       = :nextDue,
               updated_at     = :now
         WHERE organization_id = :organizationId AND id = :id
         RETURNING *`,
@@ -354,6 +395,7 @@ export const signoffValidationQuery = async (
           outcome: input.outcome,
           reportVersion: input.report_version ?? null,
           signedOffBy: input.signed_off_by,
+          nextDue,
           now,
         },
         mapToModel: true,
