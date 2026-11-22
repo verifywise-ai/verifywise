@@ -1563,5 +1563,8 @@
   "Invalid ID": "Ungültige ID",
   "limit must be an integer from 1 to 100": "limit muss eine ganze Zahl von 1 bis 100 sein",
   "offset must be a whole number of 0 or more": "offset muss eine ganze Zahl ab 0 sein",
-  "orders must list positive integer ids with display orders of 0 or more": "orders muss positive ganzzahlige IDs mit Anzeigereihenfolgen ab 0 enthalten"
+  "orders must list positive integer ids with display orders of 0 or more": "orders muss positive ganzzahlige IDs mit Anzeigereihenfolgen ab 0 enthalten",
+  "Visibility must be public or private": "Die Sichtbarkeit muss öffentlich oder privat sein",
+  "This file has a private analysis by another user": "Für diese Datei gibt es eine private Analyse eines anderen Benutzers",
+  "A private analysis would replace another user's analysis of this file": "Eine private Analyse würde die Analyse eines anderen Benutzers für diese Datei ersetzen"
 }

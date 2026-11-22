@@ -81,7 +81,9 @@ describe("FindingsTab", () => {
   it("shows a skeleton while loading", () => {
     mockUseFindings.mockReturnValue({ data: undefined, isLoading: true });
     renderWithProviders(<FindingsTab users={users} onError={onError} onSuccess={onSuccess} />);
-    expect(screen.getByText(/A finding links back to the validation/)).toBeInTheDocument();
+    expect(
+      screen.getByText(/A finding is a problem raised during a validation/),
+    ).toBeInTheDocument();
   });
 
   it("shows an empty state when there are no findings", () => {

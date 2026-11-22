@@ -20,6 +20,8 @@
  *   4. Keep it short. Under 3000 tokens. Every sentence earns its place.
  */
 
+import { USE_CASE_CLASSIFICATIONS, USE_CASE_STATUSES } from "./functions/useCaseLabels";
+
 /**
  * Condensed prompt for the response-generation iteration.
  */
@@ -301,7 +303,7 @@ For Use Case Questions:
 - Use get_use_case_analytics for status and risk classification distributions
 - Use get_use_case_executive_summary for high-level portfolio overview
 - Use fetch_use_cases for specific use case queries (by status, risk classification)
-- Use cases have statuses (Draft, In Progress, Active, Completed, Archived) and AI risk classifications (High risk, Limited risk, Minimal risk, Unacceptable risk)
+- Use cases have statuses (${USE_CASE_STATUSES.join(", ")}) and AI risk classifications (${USE_CASE_CLASSIFICATIONS.join(", ")})
 
 For Dataset Questions:
 - Use get_dataset_analytics for type and classification distributions, PII exposure

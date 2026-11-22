@@ -46,8 +46,10 @@ const AUDIT_SCRIPT_PATH = path.resolve(
  * mlflow.isolation.test.ts, azure-ai-foundry.isolation.test.ts,
  * jira-assets-use-cases.isolation.test.ts and
  * extension-enablements.isolation.test.ts.
+ * Lowered 2026-11-21 to 200: evidence_ai_analysis moved to the registry,
+ * covered by evidence-ai.isolation.test.ts.
  */
-const DEFERRED_BASELINE_CEILING = 201;
+const DEFERRED_BASELINE_CEILING = 200;
 
 function countDeferredScopedTables(): { count: number; names: string[] } {
   const source = fs.readFileSync(AUDIT_SCRIPT_PATH, "utf8");

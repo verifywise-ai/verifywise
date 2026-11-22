@@ -1563,5 +1563,8 @@
   "Invalid ID": "Invalid ID",
   "limit must be an integer from 1 to 100": "limit must be an integer from 1 to 100",
   "offset must be a whole number of 0 or more": "offset must be a whole number of 0 or more",
-  "orders must list positive integer ids with display orders of 0 or more": "orders must list positive integer ids with display orders of 0 or more"
+  "orders must list positive integer ids with display orders of 0 or more": "orders must list positive integer ids with display orders of 0 or more",
+  "Visibility must be public or private": "Visibility must be public or private",
+  "This file has a private analysis by another user": "This file has a private analysis by another user",
+  "A private analysis would replace another user's analysis of this file": "A private analysis would replace another user's analysis of this file"
 }

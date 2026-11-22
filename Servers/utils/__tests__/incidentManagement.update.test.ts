@@ -108,10 +108,28 @@ describe("validateIncidentReferences", () => {
 
   it("accepts a numeric string id and looks it up as a number", async () => {
     mockQuery.mockResolvedValueOnce([[{ id: 7 }], 1]);
-    await expect(validateIncidentReferences({ assignee_id: "7" }, 1)).resolves.toEqual([]);
+    await expect(validateIncidentReferences({ project_id: "7" }, 1)).resolves.toEqual([]);
     expect(mockQuery.mock.calls[0][1]).toMatchObject({
       replacements: { id: 7, organizationId: 1 },
     });
+  });
+
+  // users has no organization_id since the multi-organization migration;
+  // reading it made every save of an incident with an owner fail with a 500.
+  it("checks an owner against organization_members, not users.organization_id", async () => {
+    mockQuery.mockResolvedValueOnce([{ id: 7 }]);
+    await expect(validateIncidentReferences({ assignee_id: "7" }, 1)).resolves.toEqual([]);
+    const [sql, options] = mockQuery.mock.calls[0];
+    expect(sql).toContain("FROM organization_members");
+    expect(sql).not.toMatch(/FROM users\b/);
+    expect(options).toMatchObject({ replacements: { organizationId: 1, userIds: [7] } });
+  });
+
+  it("refuses an owner who is not a member of the organization", async () => {
+    mockQuery.mockResolvedValueOnce([]);
+    await expect(validateIncidentReferences({ assignee_id: 8 }, 1)).resolves.toEqual([
+      "assignee_id",
+    ]);
   });
 
   it("checks a real id inside the organization, on the given transaction", async () => {

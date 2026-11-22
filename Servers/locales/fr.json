@@ -1563,5 +1563,8 @@
   "Invalid ID": "Identifiant non valide",
   "limit must be an integer from 1 to 100": "limit doit être un entier de 1 à 100",
   "offset must be a whole number of 0 or more": "offset doit être un entier supérieur ou égal à 0",
-  "orders must list positive integer ids with display orders of 0 or more": "orders doit contenir des identifiants entiers positifs avec des ordres d'affichage de 0 ou plus"
+  "orders must list positive integer ids with display orders of 0 or more": "orders doit contenir des identifiants entiers positifs avec des ordres d'affichage de 0 ou plus",
+  "Visibility must be public or private": "La visibilité doit être publique ou privée",
+  "This file has a private analysis by another user": "Ce fichier a une analyse privée d'un autre utilisateur",
+  "A private analysis would replace another user's analysis of this file": "Une analyse privée remplacerait l'analyse de ce fichier par un autre utilisateur"
 }

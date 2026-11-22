@@ -131,7 +131,7 @@ describe("SettingsTab", () => {
   it("navigates to the tiering rules section", () => {
     renderSettingsTab();
     fireEvent.click(screen.getByText("Tiering rules"));
-    expect(screen.getByText(/Tier assignment is manual in this release/)).toBeInTheDocument();
+    expect(screen.getByText(/Assign tiers on the Tiering tab/)).toBeInTheDocument();
     expect(screen.getByText("Tier 1")).toBeInTheDocument();
   });
 
@@ -139,7 +139,9 @@ describe("SettingsTab", () => {
     mockSetRolesMutateAsync.mockResolvedValue([]);
     renderSettingsTab(`${BASE}/roles`);
 
-    await waitFor(() => expect(screen.getByText(/independent — they/)).toBeInTheDocument());
+    await waitFor(() =>
+      expect(screen.getByText(/must be independent, so they/)).toBeInTheDocument(),
+    );
 
     const modelSelect = screen.getByRole("combobox");
     fireEvent.mouseDown(modelSelect);
@@ -194,13 +196,13 @@ describe("SettingsTab", () => {
     expect(screen.getByText(/Who hears about a breach/)).toBeInTheDocument();
 
     fireEvent.click(screen.getByText("Data retention"));
-    expect(screen.getByText(/Benign monitoring points older than/)).toBeInTheDocument();
+    expect(screen.getByText(/A daily job deletes routine metric values/)).toBeInTheDocument();
   });
 
   it("navigates to the default thresholds section", () => {
     renderSettingsTab();
     fireEvent.click(screen.getByText("Default thresholds"));
-    expect(screen.getByText(/Thresholds VerifyWise evaluates/)).toBeInTheDocument();
+    expect(screen.getByText(/The limits each metric is checked against/)).toBeInTheDocument();
   });
 
   it("falls back to the metrics-feed section for an unrecognised slug", () => {

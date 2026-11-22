@@ -37,7 +37,22 @@ jest.mock("../../utils/llmKey.utils", () => ({
   getLLMProviderUrl: jest.fn((name: string) => `https://${name}.example`),
 }));
 
+jest.mock("../../utils/userPermission.utils", () => ({
+  getUserRoleInOrganization: jest.fn(),
+}));
+
+jest.mock("../../utils/rolePermissions.utils", () => ({
+  roleInfoHasPermission: jest.fn(),
+}));
+
+jest.mock("../../utils/fileUpload.utils", () => ({
+  canUserAccessFile: jest.fn(),
+}));
+
 import { availableEvidenceAiTools } from "./evidenceAiFunctions";
+import { getUserRoleInOrganization } from "../../utils/userPermission.utils";
+import { roleInfoHasPermission } from "../../utils/rolePermissions.utils";
+import { canUserAccessFile } from "../../utils/fileUpload.utils";
 import { getEvidenceGapsQuery, upsertAnalysisQuery } from "../../utils/evidenceAi.utils";
 import { analyzeEvidence } from "../evidenceAnalyzer/analyzer.service";
 import { parseDocument } from "../parsers";
@@ -82,8 +97,17 @@ describe("detect_evidence_gaps (#4912)", () => {
   });
 });
 
+/** The signed-in user the advisor runs as, and their role in the organization. */
+const USER_ID = 3;
+const EDITOR = { id: 3, name: "Editor", organizationId: null };
+
 describe("analyze_document (#4913)", () => {
-  beforeEach(() => jest.clearAllMocks());
+  beforeEach(() => {
+    jest.clearAllMocks();
+    (getUserRoleInOrganization as jest.Mock<any>).mockResolvedValue(EDITOR);
+    (roleInfoHasPermission as jest.Mock<any>).mockResolvedValue(true);
+    (canUserAccessFile as jest.Mock<any>).mockResolvedValue(true);
+  });
 
   it("routes to the real analyzer with the parsed stored content and persists it", async () => {
     mockQuery.mockResolvedValue([
@@ -107,7 +131,11 @@ describe("analyze_document (#4913)", () => {
     });
 
     // Stored content exists: the parsed file text wins, caller text is ignored.
-    const result = await analyzeDocument({ file_id: 4, document_text: "invented text" }, 1);
+    const result = await analyzeDocument(
+      { file_id: 4, document_text: "invented text" },
+      1,
+      USER_ID,
+    );
 
     expect(parseDocument).toHaveBeenCalled();
     expect(analyzeEvidence).toHaveBeenCalledWith(
@@ -144,7 +172,7 @@ describe("analyze_document (#4913)", () => {
     ]);
     (analyzeEvidence as jest.Mock).mockResolvedValue({ overall_quality_grade: "B" });
 
-    const result = await analyzeDocument({ file_id: 4 }, 1);
+    const result = await analyzeDocument({ file_id: 4 }, 1, USER_ID);
 
     expect(upsertAnalysisQuery).not.toHaveBeenCalled();
     expect(result.persisted).toBe(false);
@@ -168,7 +196,7 @@ describe("analyze_document (#4913)", () => {
     ]);
     (analyzeEvidence as jest.Mock).mockResolvedValue({ overall_quality_grade: "C" });
 
-    await analyzeDocument({ file_id: 4, document_text: "caller supplied text" }, 1);
+    await analyzeDocument({ file_id: 4, document_text: "caller supplied text" }, 1, USER_ID);
 
     expect(analyzeEvidence).toHaveBeenCalledWith(
       expect.objectContaining({ documentText: "caller supplied text" }),
@@ -187,7 +215,11 @@ describe("analyze_document (#4913)", () => {
     ]);
     (analyzeEvidence as jest.Mock).mockResolvedValue({ overall_quality_grade: "A" });
 
-    const result = await analyzeDocument({ file_id: 4, document_text: "caller supplied text" }, 1);
+    const result = await analyzeDocument(
+      { file_id: 4, document_text: "caller supplied text" },
+      1,
+      USER_ID,
+    );
 
     expect(upsertAnalysisQuery).not.toHaveBeenCalled();
     expect(result.persisted).toBe(false);
@@ -197,7 +229,55 @@ describe("analyze_document (#4913)", () => {
   it("fails clearly when the file does not exist", async () => {
     mockQuery.mockResolvedValue([[]]);
 
-    await expect(analyzeDocument({ file_id: 99 }, 1)).rejects.toThrow(/not found/);
+    await expect(analyzeDocument({ file_id: 99 }, 1, USER_ID)).rejects.toThrow(/not found/);
     expect(analyzeEvidence).not.toHaveBeenCalled();
+  });
+});
+
+describe("analyze_document access", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    (getUserRoleInOrganization as jest.Mock<any>).mockResolvedValue(EDITOR);
+    (roleInfoHasPermission as jest.Mock<any>).mockResolvedValue(true);
+    (canUserAccessFile as jest.Mock<any>).mockResolvedValue(true);
+  });
+
+  // The tool loaded any file in the organization by id and sent its content
+  // to the LLM, whoever asked.
+  it("refuses a file the user cannot access, as if it did not exist", async () => {
+    (canUserAccessFile as jest.Mock<any>).mockResolvedValue(false);
+
+    await expect(analyzeDocument({ file_id: 4 }, 1, USER_ID)).rejects.toThrow(
+      "Failed to analyze document: File 4 not found in this organization",
+    );
+    expect(canUserAccessFile).toHaveBeenCalledWith(4, USER_ID, "Editor", 1);
+    expect(mockQuery).not.toHaveBeenCalled();
+    expect(analyzeEvidence).not.toHaveBeenCalled();
+  });
+
+  it("refuses a role without fileManager.contribute, before reading the file", async () => {
+    const auditor = { id: 4, name: "Auditor", organizationId: null };
+    (getUserRoleInOrganization as jest.Mock<any>).mockResolvedValue(auditor);
+    (roleInfoHasPermission as jest.Mock<any>).mockResolvedValue(false);
+
+    await expect(analyzeDocument({ file_id: 4 }, 1, USER_ID)).rejects.toThrow(
+      /your role cannot analyze documents/i,
+    );
+    expect(getUserRoleInOrganization).toHaveBeenCalledWith(1, USER_ID);
+    expect(roleInfoHasPermission).toHaveBeenCalledWith(1, auditor, "fileManager.contribute");
+    expect(mockQuery).not.toHaveBeenCalled();
+    expect(analyzeEvidence).not.toHaveBeenCalled();
+  });
+
+  it("refuses when there is no signed-in user to check", async () => {
+    (getUserRoleInOrganization as jest.Mock<any>).mockResolvedValue(undefined);
+    await expect(analyzeDocument({ file_id: 4 }, 1)).rejects.toThrow(/signed-in user/i);
+    expect(mockQuery).not.toHaveBeenCalled();
+  });
+
+  it("refuses a user who is not in the organization", async () => {
+    (getUserRoleInOrganization as jest.Mock<any>).mockResolvedValue(undefined);
+    await expect(analyzeDocument({ file_id: 4 }, 1, USER_ID)).rejects.toThrow(/signed-in user/i);
+    expect(mockQuery).not.toHaveBeenCalled();
   });
 });

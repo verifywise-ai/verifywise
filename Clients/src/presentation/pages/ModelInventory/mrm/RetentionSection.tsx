@@ -46,8 +46,8 @@ const RetentionSection = ({ onError, onSuccess }: RetentionSectionProps) => {
   return (
     <Box>
       <Typography sx={mrmSectionIntroStyle}>
-        Benign monitoring points older than the retention window are removed by a daily job. Breach
-        and evaluation history is never deleted.
+        A daily job deletes routine metric values older than this window. Breaches and their
+        evaluations are kept permanently.
       </Typography>
 
       <Box sx={{ maxWidth: "360px", marginBottom: "16px" }}>

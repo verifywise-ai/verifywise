@@ -144,7 +144,13 @@ export async function updateIncident(
             ? updates.model_inventory_id
             : stored.model_inventory_id,
         project_id: updates.project_id !== undefined ? updates.project_id : stored.project_id,
-        assignee_id: updates.assignee_id !== undefined ? updates.assignee_id : stored.assignee_id,
+        // Only a new owner is checked: one who has since left the organization
+        // stays on the incident and must not block every other edit.
+        assignee_id:
+          updates.assignee_id !== undefined &&
+          String(updates.assignee_id ?? "").trim() !== String(stored.assignee_id ?? "")
+            ? updates.assignee_id
+            : undefined,
       },
       organizationId,
       transaction,

@@ -53,7 +53,7 @@ describe("TieringTab", () => {
   it("shows a skeleton while loading", () => {
     mockUseFleetTiering.mockReturnValue({ data: undefined, isLoading: true });
     renderWithProviders(<TieringTab onError={onError} onSuccess={onSuccess} />);
-    expect(screen.getByText(/Model risk tiering/)).toBeInTheDocument();
+    expect(screen.getByText(/Give each model a risk tier/)).toBeInTheDocument();
   });
 
   it("shows an empty state when the fleet has no models", () => {
@@ -91,7 +91,7 @@ describe("TieringTab", () => {
     fireEvent.click(assignButtons[1]);
 
     await waitFor(() => {
-      expect(screen.getByText(/Set the risk tier and materiality drivers/)).toBeInTheDocument();
+      expect(screen.getByText(/Choose a tier for .* and note why/)).toBeInTheDocument();
     });
 
     fireEvent.click(screen.getByText("Save"));

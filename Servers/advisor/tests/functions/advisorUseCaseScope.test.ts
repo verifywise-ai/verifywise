@@ -5,6 +5,16 @@ jest.mock("../../../utils/project.utils", () => ({
   calculateProjectRisks: jest.fn(),
   lockProjectForDelete: jest.fn(),
   getProjectAccessQuery: jest.fn(),
+  getProjectByIdQuery: jest.fn(),
+  getCurrentProjectMembers: jest.fn(),
+}));
+jest.mock("../../../services/useCase.service", () => ({
+  createUseCaseService: jest.fn(),
+  updateUseCaseService: jest.fn(),
+}));
+jest.mock("../../../services/useCaseNotifications.service", () => ({
+  notifyUseCaseCreated: jest.fn(),
+  notifyUseCaseUpdated: jest.fn(),
 }));
 jest.mock("../../../utils/userPermission.utils", () => ({
   userHasPermission: jest.fn(),
@@ -27,6 +37,7 @@ import * as projectUtils from "../../../utils/project.utils";
 import * as userPermission from "../../../utils/userPermission.utils";
 import * as userUtils from "../../../utils/user.utils";
 import { submitForApproval } from "../../approval/approvalGateway";
+import { createUseCaseService, updateUseCaseService } from "../../../services/useCase.service";
 import { sequelize } from "../../../database/db";
 import { availableUseCaseTools } from "../../functions/useCaseFunctions";
 import { writeToolExecutors } from "../../confirmation/createWriteTool";
@@ -41,6 +52,12 @@ const roleOf = userPermission.getUserRoleInOrganization as unknown as AsyncMock;
 const usersOutside = userUtils.findUsersNotInOrganization as unknown as AsyncMock;
 const submit = submitForApproval as unknown as AsyncMock;
 const mockQuery = sequelize.query as unknown as AsyncMock;
+const mockTransaction = sequelize.transaction as unknown as AsyncMock;
+const createService = createUseCaseService as unknown as AsyncMock;
+const updateService = updateUseCaseService as unknown as AsyncMock;
+const projectById = projectUtils.getProjectByIdQuery as unknown as AsyncMock;
+const currentMembers = projectUtils.getCurrentProjectMembers as unknown as AsyncMock;
+const lockRow = projectUtils.lockProjectForDelete as unknown as AsyncMock;
 
 const EDITOR = { id: 3, name: "Editor", organizationId: null };
 const VISIBLE = [
@@ -56,6 +73,11 @@ beforeEach(() => {
   hasPermission.mockResolvedValue(true);
   usersOutside.mockResolvedValue([]);
   mockQuery.mockResolvedValue([[{ id: 1 }]]);
+  mockTransaction.mockResolvedValue({ commit: jest.fn(), rollback: jest.fn() });
+  projectById.mockResolvedValue({ id: 12, owner: 5, external_owner_email: null });
+  currentMembers.mockResolvedValue([]);
+  lockRow.mockResolvedValue(true);
+  updateService.mockResolvedValue({ useCase: { id: 12, members: [20] }, currentMembers: [] });
 });
 
 describe("advisor use case reads see what the user's use case list shows", () => {
@@ -110,6 +132,13 @@ describe("advisor use case writes need the console's permission and use case acc
 
     expect(hasPermission).toHaveBeenCalledWith(4, 5, "useCase.edit");
     expect(projectAccess).toHaveBeenCalledWith(12, { userId: 5, role: "Editor" }, 4);
+    expect(updateService).toHaveBeenCalledWith(
+      12,
+      expect.anything(),
+      expect.anything(),
+      { userId: 5, organizationId: 4, actorRole: "Editor" },
+      expect.anything(),
+    );
   });
 
   it.each(EDITS)("%s refuses without useCase.edit and writes nothing", async (tool, params) => {
@@ -119,6 +148,7 @@ describe("advisor use case writes need the console's permission and use case acc
 
     expect(result.success).toBe(false);
     expect(mockQuery).not.toHaveBeenCalled();
+    expect(updateService).not.toHaveBeenCalled();
   });
 
   it.each(EDITS)(
@@ -133,6 +163,7 @@ describe("advisor use case writes need the console's permission and use case acc
         message: "You do not have access to use case #12",
       });
       expect(mockQuery).not.toHaveBeenCalled();
+      expect(updateService).not.toHaveBeenCalled();
     },
   );
 
@@ -145,6 +176,7 @@ describe("advisor use case writes need the console's permission and use case acc
 
       expect(result).toEqual({ success: false, message: "Use case #12 not found" });
       expect(mockQuery).not.toHaveBeenCalled();
+      expect(updateService).not.toHaveBeenCalled();
     },
   );
 
@@ -153,10 +185,11 @@ describe("advisor use case writes need the console's permission and use case acc
 
     expect(result.success).toBe(false);
     expect(mockQuery).not.toHaveBeenCalled();
+    expect(updateService).not.toHaveBeenCalled();
   });
 
-  it("agent_add_member_to_use_case adds the member once allowed", async () => {
-    mockQuery.mockResolvedValueOnce([]).mockResolvedValueOnce([[], 1]);
+  it("agent_add_member_to_use_case adds the member through the use case service", async () => {
+    currentMembers.mockResolvedValue([7]);
 
     const result = (await writeToolExecutors.get("agent_add_member_to_use_case")!(
       { use_case_id: 12, user_id: 20, _userId: 9 },
@@ -164,10 +197,33 @@ describe("advisor use case writes need the console's permission and use case acc
     )) as any;
 
     expect(result.success).toBe(true);
-    expect(mockQuery).toHaveBeenLastCalledWith(
+    // The full member list, as the console sends it, so history records it.
+    expect(updateService).toHaveBeenCalledWith(
+      12,
+      { members: [7, 20] },
+      expect.anything(),
+      { userId: 9, organizationId: 4, actorRole: "Editor" },
+      expect.anything(),
+    );
+    expect(mockQuery).not.toHaveBeenCalledWith(
       expect.stringContaining("INSERT INTO projects_members"),
       expect.anything(),
     );
+  });
+
+  it("agent_add_member_to_use_case leaves an existing member alone", async () => {
+    currentMembers.mockResolvedValue([20]);
+
+    const result = (await writeToolExecutors.get("agent_add_member_to_use_case")!(
+      { use_case_id: 12, user_id: 20, _userId: 9 },
+      4,
+    )) as any;
+
+    expect(result).toEqual({
+      success: false,
+      message: "User is already a member of this use case",
+    });
+    expect(updateService).not.toHaveBeenCalled();
   });
 
   it("agent_create_use_case refuses without useCase.edit", async () => {
@@ -181,6 +237,7 @@ describe("advisor use case writes need the console's permission and use case acc
     expect(hasPermission).toHaveBeenCalledWith(4, 9, "useCase.edit");
     expect(result.success).toBe(false);
     expect(sequelize.transaction).not.toHaveBeenCalled();
+    expect(createService).not.toHaveBeenCalled();
   });
 });
 

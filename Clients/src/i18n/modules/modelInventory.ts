@@ -33,8 +33,6 @@ export const de: Record<string, string> = {
   "Metric trend": "Metriktrend",
   "Metrics feed & tokens": "Metrik-Feed & Token",
   "Minimum": "Minimum",
-  "Name a machine-to-machine token your pipeline will use to push metrics.":
-    "Benennen Sie einen Maschine-zu-Maschine-Token, den Ihre Pipeline zum Senden von Metriken verwendet.",
   "No breaches recorded. Every metric is within its threshold.":
     "Keine Überschreitungen erfasst. Jede Metrik liegt innerhalb ihres Schwellenwerts.",
   "No data yet. This model is awaiting its first metric from your monitoring feed.":
@@ -56,8 +54,6 @@ export const de: Record<string, string> = {
   "Select a model to view its monitored metrics.":
     "Wählen Sie ein Modell, um dessen überwachte Metriken anzuzeigen.",
   "Select a shape": "Form auswählen",
-  "Set the metric, shape and severity VerifyWise evaluates ingested points against.":
-    "Legen Sie Metrik, Form und Schweregrad fest, anhand derer VerifyWise eingehende Punkte auswertet.",
   "Shape": "Form",
   "Threshold at evaluation": "Schwellenwert zum Auswertungszeitpunkt",
   "Trend": "Trend",
@@ -122,14 +118,8 @@ export const de: Record<string, string> = {
     "Noch keine Validierungen. Starten Sie eine Validierung, um einen Bericht zu öffnen.",
   "Not validated": "Nicht validiert",
   "On this model": "Für dieses Modell",
-  "Open a new validation cycle for a model. Only one validation can be in progress per model.":
-    "Starten Sie einen neuen Validierungszyklus für ein Modell. Pro Modell kann nur eine Validierung laufen.",
   "Outcomes analysis": "Ergebnisanalyse",
   "Purpose & scope": "Zweck & Umfang",
-  "Raise a finding against a validation. It joins the register and tracks to closure.":
-    "Erfassen Sie eine Feststellung zu einer Validierung. Sie wird ins Register aufgenommen und bis zum Abschluss verfolgt.",
-  "Record the validation outcome. This marks the validation as validated and closes the active cycle.":
-    "Erfassen Sie das Validierungsergebnis. Damit wird die Validierung als validiert markiert und der aktive Zyklus geschlossen.",
   "Remediation plan": "Maßnahmenplan",
   "Roles & independence": "Rollen & Unabhängigkeit",
   "Save report": "Bericht speichern",
@@ -284,6 +274,18 @@ export const de: Record<string, string> = {
     "Nur Administratoren können Aufbewahrungsfristen ändern",
   "Only users who can edit models can share this view":
     "Nur Benutzer, die Modelle bearbeiten können, können diese Ansicht teilen",
+  "Choose the metric, the limit and the severity of a breach. Values from your pipeline are checked against it.":
+    "Wählen Sie die Metrik, den Grenzwert und den Schweregrad einer Überschreitung. Werte aus Ihrer Pipeline werden damit abgeglichen.",
+  "Name the token after the pipeline that will use it, so you can tell your tokens apart.":
+    "Benennen Sie den Token nach der Pipeline, die ihn verwendet, damit Sie Ihre Token unterscheiden können.",
+  "Open a validation for a model. Models that already have an open validation are not listed.":
+    "Starten Sie eine Validierung für ein Modell. Modelle mit einer offenen Validierung werden nicht angezeigt.",
+  "Record a problem found during a validation. You can add an owner, a remediation plan and a due date after you create it.":
+    "Erfassen Sie ein Problem, das bei einer Validierung gefunden wurde. Verantwortliche Person, Behebungsplan und Fälligkeitsdatum können Sie nach dem Erstellen ergänzen.",
+  "Record the outcome. This closes the validation and schedules the next review from the model tier.":
+    "Erfassen Sie das Ergebnis. Damit wird die Validierung abgeschlossen und die nächste Prüfung anhand der Modellstufe geplant.",
+  "This is the only time the token is shown. Store it somewhere safe. You will not be able to view it again.":
+    "Der Token wird nur dieses eine Mal angezeigt. Bewahren Sie ihn sicher auf. Sie können ihn später nicht mehr einsehen.",
 };
 
 export const fr: Record<string, string> = {
@@ -318,8 +320,6 @@ export const fr: Record<string, string> = {
   "Metric trend": "Tendance de la métrique",
   "Metrics feed & tokens": "Flux de métriques et jetons",
   "Minimum": "Minimum",
-  "Name a machine-to-machine token your pipeline will use to push metrics.":
-    "Nommez un jeton machine à machine que votre pipeline utilisera pour envoyer des métriques.",
   "No breaches recorded. Every metric is within its threshold.":
     "Aucun dépassement enregistré. Chaque métrique respecte son seuil.",
   "No data yet. This model is awaiting its first metric from your monitoring feed.":
@@ -341,8 +341,6 @@ export const fr: Record<string, string> = {
   "Select a model to view its monitored metrics.":
     "Sélectionnez un modèle pour afficher ses métriques surveillées.",
   "Select a shape": "Sélectionner une forme",
-  "Set the metric, shape and severity VerifyWise evaluates ingested points against.":
-    "Définissez la métrique, la forme et la gravité selon lesquelles VerifyWise évalue les points ingérés.",
   "Shape": "Forme",
   "Threshold at evaluation": "Seuil au moment de l'évaluation",
   "Trend": "Tendance",
@@ -406,14 +404,8 @@ export const fr: Record<string, string> = {
     "Aucune validation pour le moment. Démarrez une validation pour ouvrir un rapport.",
   "Not validated": "Non validé",
   "On this model": "Sur ce modèle",
-  "Open a new validation cycle for a model. Only one validation can be in progress per model.":
-    "Ouvrez un nouveau cycle de validation pour un modèle. Une seule validation peut être en cours par modèle.",
   "Outcomes analysis": "Analyse des résultats",
   "Purpose & scope": "Objet et périmètre",
-  "Raise a finding against a validation. It joins the register and tracks to closure.":
-    "Enregistrez une constatation liée à une validation. Elle rejoint le registre et est suivie jusqu'à sa clôture.",
-  "Record the validation outcome. This marks the validation as validated and closes the active cycle.":
-    "Enregistrez le résultat de la validation. Cela marque la validation comme validée et clôt le cycle actif.",
   "Remediation plan": "Plan de remédiation",
   "Roles & independence": "Rôles et indépendance",
   "Save report": "Enregistrer le rapport",
@@ -568,6 +560,18 @@ export const fr: Record<string, string> = {
     "Seuls les administrateurs peuvent modifier les durées de conservation",
   "Only users who can edit models can share this view":
     "Seuls les utilisateurs qui peuvent modifier les modèles peuvent partager cette vue",
+  "Choose the metric, the limit and the severity of a breach. Values from your pipeline are checked against it.":
+    "Choisissez la métrique, la limite et la gravité d'un dépassement. Les valeurs de votre pipeline sont comparées à ce seuil.",
+  "Name the token after the pipeline that will use it, so you can tell your tokens apart.":
+    "Nommez le jeton d'après le pipeline qui l'utilisera, pour distinguer vos jetons.",
+  "Open a validation for a model. Models that already have an open validation are not listed.":
+    "Ouvrez une validation pour un modèle. Les modèles qui ont déjà une validation ouverte ne sont pas listés.",
+  "Record a problem found during a validation. You can add an owner, a remediation plan and a due date after you create it.":
+    "Enregistrez un problème relevé lors d'une validation. Vous pourrez ajouter un responsable, un plan de remédiation et une échéance après sa création.",
+  "Record the outcome. This closes the validation and schedules the next review from the model tier.":
+    "Enregistrez le résultat. La validation est clôturée et la prochaine revue est planifiée selon le niveau du modèle.",
+  "This is the only time the token is shown. Store it somewhere safe. You will not be able to view it again.":
+    "Ce jeton n'est affiché qu'une seule fois. Conservez-le en lieu sûr. Vous ne pourrez plus le consulter.",
 };
 
 export const es: Record<string, string> = {
@@ -602,8 +606,6 @@ export const es: Record<string, string> = {
   "Metric trend": "Tendencia de la métrica",
   "Metrics feed & tokens": "Flujo de métricas y tokens",
   "Minimum": "Mínimo",
-  "Name a machine-to-machine token your pipeline will use to push metrics.":
-    "Asigne un nombre a un token de máquina a máquina que su canalización usará para enviar métricas.",
   "No breaches recorded. Every metric is within its threshold.":
     "No se registraron incumplimientos. Cada métrica está dentro de su umbral.",
   "No data yet. This model is awaiting its first metric from your monitoring feed.":
@@ -625,8 +627,6 @@ export const es: Record<string, string> = {
   "Select a model to view its monitored metrics.":
     "Seleccione un modelo para ver sus métricas monitoreadas.",
   "Select a shape": "Seleccionar una forma",
-  "Set the metric, shape and severity VerifyWise evaluates ingested points against.":
-    "Defina la métrica, la forma y la gravedad con las que VerifyWise evalúa los puntos ingeridos.",
   "Shape": "Forma",
   "Threshold at evaluation": "Umbral en el momento de la evaluación",
   "Trend": "Tendencia",
@@ -690,14 +690,8 @@ export const es: Record<string, string> = {
     "Aún no hay validaciones. Inicie una validación para abrir un informe.",
   "Not validated": "No validado",
   "On this model": "En este modelo",
-  "Open a new validation cycle for a model. Only one validation can be in progress per model.":
-    "Abra un nuevo ciclo de validación para un modelo. Solo puede haber una validación en curso por modelo.",
   "Outcomes analysis": "Análisis de resultados",
   "Purpose & scope": "Propósito y alcance",
-  "Raise a finding against a validation. It joins the register and tracks to closure.":
-    "Registre un hallazgo asociado a una validación. Se incorpora al registro y se sigue hasta su cierre.",
-  "Record the validation outcome. This marks the validation as validated and closes the active cycle.":
-    "Registre el resultado de la validación. Esto marca la validación como validada y cierra el ciclo activo.",
   "Remediation plan": "Plan de remediación",
   "Roles & independence": "Roles e independencia",
   "Save report": "Guardar informe",
@@ -852,4 +846,16 @@ export const es: Record<string, string> = {
     "Solo los administradores pueden cambiar los periodos de retención",
   "Only users who can edit models can share this view":
     "Solo los usuarios que pueden editar modelos pueden compartir esta vista",
+  "Choose the metric, the limit and the severity of a breach. Values from your pipeline are checked against it.":
+    "Elija la métrica, el límite y la gravedad de un incumplimiento. Los valores de su pipeline se comparan con este umbral.",
+  "Name the token after the pipeline that will use it, so you can tell your tokens apart.":
+    "Asigne al token el nombre del pipeline que lo usará, para distinguir sus tokens.",
+  "Open a validation for a model. Models that already have an open validation are not listed.":
+    "Abra una validación para un modelo. No se muestran los modelos que ya tienen una validación abierta.",
+  "Record a problem found during a validation. You can add an owner, a remediation plan and a due date after you create it.":
+    "Registre un problema detectado durante una validación. Puede añadir un responsable, un plan de remediación y una fecha límite después de crearlo.",
+  "Record the outcome. This closes the validation and schedules the next review from the model tier.":
+    "Registre el resultado. Esto cierra la validación y programa la próxima revisión según el nivel del modelo.",
+  "This is the only time the token is shown. Store it somewhere safe. You will not be able to view it again.":
+    "Este token solo se muestra una vez. Guárdelo en un lugar seguro. No podrá volver a verlo.",
 };

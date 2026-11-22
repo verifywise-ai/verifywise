@@ -74,7 +74,7 @@ const renderMrm = (route: string = BASE) =>
 describe("ModelRiskManagementTab (mrm/index)", () => {
   it("defaults to the overview sub-tab", () => {
     renderMrm();
-    expect(screen.getByText(/Model risk overview/)).toBeInTheDocument();
+    expect(screen.getByText(/A summary of all your models/)).toBeInTheDocument();
   });
 
   it("renders every sub-tab label", () => {
@@ -87,36 +87,40 @@ describe("ModelRiskManagementTab (mrm/index)", () => {
   it("switches to the tiering sub-tab on click", () => {
     renderMrm();
     fireEvent.click(screen.getByText("Tiering"));
-    expect(screen.getByText(/Model risk tiering/)).toBeInTheDocument();
+    expect(screen.getByText(/Give each model a risk tier/)).toBeInTheDocument();
   });
 
   it("switches to the validation sub-tab on click", () => {
     renderMrm();
     fireEvent.click(screen.getByText("Validation"));
-    expect(screen.getByText(/Staged validation workflow/)).toBeInTheDocument();
+    expect(
+      screen.getByText(/A validation is an independent review of one model/),
+    ).toBeInTheDocument();
   });
 
   it("switches to the findings sub-tab on click", () => {
     renderMrm();
     fireEvent.click(screen.getByText("Findings"));
-    expect(screen.getByText(/A finding links back to the validation/)).toBeInTheDocument();
+    expect(
+      screen.getByText(/A finding is a problem raised during a validation/),
+    ).toBeInTheDocument();
   });
 
   it("switches to the monitoring sub-tab on click", () => {
     renderMrm();
     fireEvent.click(screen.getByText("Monitoring"));
-    expect(screen.getByText(/Ongoing monitoring/)).toBeInTheDocument();
+    expect(screen.getByText(/Pick a model to see the latest value/)).toBeInTheDocument();
   });
 
   it("switches to the settings sub-tab on click", () => {
     renderMrm();
     fireEvent.click(screen.getByText("Settings"));
-    expect(screen.getByText(/One open endpoint/)).toBeInTheDocument();
+    expect(screen.getByText(/Your monitoring pipeline sends model metrics/)).toBeInTheDocument();
   });
 
   it("resolves an unrecognised path segment to overview", () => {
     renderMrm(`${BASE}/not-a-real-tab`);
-    expect(screen.getByText(/Model risk overview/)).toBeInTheDocument();
+    expect(screen.getByText(/A summary of all your models/)).toBeInTheDocument();
   });
 
   it("surfaces a success toast from a nested tab action and dismisses it", async () => {
@@ -126,7 +130,7 @@ describe("ModelRiskManagementTab (mrm/index)", () => {
     // with no toast present initially.
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
     await waitFor(() => {
-      expect(screen.getByText(/Model risk tiering/)).toBeInTheDocument();
+      expect(screen.getByText(/Give each model a risk tier/)).toBeInTheDocument();
     });
   });
 });
