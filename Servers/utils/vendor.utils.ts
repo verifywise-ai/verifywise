@@ -69,16 +69,25 @@ export const getAllVendorsQuery = async (organizationId: number): Promise<IVendo
   return vendorsWithDetails;
 };
 
+/**
+ * @param options.transaction read on this transaction.
+ * @param options.forUpdate lock the vendor row (SELECT ... FOR UPDATE) until
+ *   the transaction ends; requires options.transaction.
+ */
 export const getVendorByIdQuery = async (
   id: number,
   organizationId: number,
+  options: { transaction?: Transaction; forUpdate?: boolean } = {},
 ): Promise<IVendor | null> => {
+  const { transaction } = options;
+  const lock = options.forUpdate && transaction ? " FOR UPDATE" : "";
   const result = await sequelize.query(
-    `SELECT * FROM vendors WHERE organization_id = :organizationId AND id = :id`,
+    `SELECT * FROM vendors WHERE organization_id = :organizationId AND id = :id${lock}`,
     {
       replacements: { organizationId, id },
       mapToModel: true,
       model: VendorModel,
+      ...(transaction ? { transaction } : {}),
     },
   );
   if (!result.length) return null;
@@ -88,6 +97,7 @@ export const getVendorByIdQuery = async (
       replacements: { organizationId, vendor_id: id },
       mapToModel: true,
       model: VendorsProjectsModel,
+      ...(transaction ? { transaction } : {}),
     },
   );
   const vendor = result[0] as VendorModel;
@@ -469,7 +479,14 @@ export const updateVendorByIdQuery = async (
     .map((f) => `${f} = :${f}`)
     .join(", ");
 
-  const oldVendor = await getVendorByIdQuery(id, organizationId);
+  // Read and lock the stored row on the caller's transaction: the "unchanged"
+  // comparison below must see what this UPDATE will overwrite, or a
+  // concurrent save could be overwritten with a non-member that is no
+  // longer the stored value.
+  const oldVendor = await getVendorByIdQuery(id, organizationId, {
+    transaction,
+    forUpdate: true,
+  });
   // Only a new or changed person is checked: one who has since left the
   // organization stays on the vendor and must not block every other edit.
   await assertVendorUsersInOrganization(vendor, organizationId, transaction, oldVendor);

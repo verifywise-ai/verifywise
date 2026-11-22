@@ -192,9 +192,11 @@ export const updateVendorRiskByIdQuery = async (
 ): Promise<VendorRiskModel | null> => {
   if (vendorRisk.action_owner !== undefined) {
     // Only a new owner is checked: one who has since left the organization
-    // stays on the vendor risk and must not block every other edit.
+    // stays on the vendor risk and must not block every other edit. The row
+    // is locked so a concurrent save cannot change the owner between this
+    // comparison and the UPDATE below.
     const [stored] = (await sequelize.query(
-      `SELECT action_owner FROM vendorrisks WHERE organization_id = :organizationId AND id = :id`,
+      `SELECT action_owner FROM vendorrisks WHERE organization_id = :organizationId AND id = :id FOR UPDATE`,
       { replacements: { organizationId, id }, type: QueryTypes.SELECT, transaction },
     )) as { action_owner: number | null }[];
     await assertVendorRiskOwnerInOrganization(

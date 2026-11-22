@@ -49,6 +49,50 @@ const vendorCount = async (orgId: number) => {
 
 const notifiedUsers = () => notify.mock.calls.map((call) => call[1]);
 
+/** Waits until another session is blocked on a row lock running a query that matches `pattern`. */
+const waitForLockWait = async (pattern: string) => {
+  for (let i = 0; i < 100; i++) {
+    const [row] = await sequelize.query<{ n: number }>(
+      `SELECT COUNT(*)::int AS n FROM pg_stat_activity
+        WHERE datname = current_database() AND pid <> pg_backend_pid()
+          AND wait_event_type = 'Lock' AND query ILIKE :pattern`,
+      { replacements: { pattern }, type: QueryTypes.SELECT },
+    );
+    if (row.n > 0) return;
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  }
+  throw new Error(`no session waited on a lock running ${pattern}`);
+};
+
+/**
+ * Runs `write` while another transaction has set `column` of `table` row `id`
+ * to `value` and not committed yet; commits that transaction once `write` is
+ * blocked on the row (at whichever statement), then returns `write`'s result.
+ */
+const whileAnotherSaveIsPending = async <T>(
+  table: "vendors" | "vendorrisks",
+  column: "assignee" | "action_owner",
+  id: number,
+  value: number,
+  write: () => Promise<T>,
+): Promise<T> => {
+  const other = await sequelize.transaction();
+  let pending: Promise<T>;
+  try {
+    await sequelize.query(`UPDATE ${table} SET ${column} = :value WHERE id = :id`, {
+      replacements: { id, value },
+      transaction: other,
+    });
+    pending = write();
+    await waitForLockWait(`%${table}%`);
+    await other.commit();
+  } catch (error) {
+    await other.rollback();
+    throw error;
+  }
+  return pending;
+};
+
 // assignee, reviewer and a vendor risk's action_owner are user ids. A user of
 // another organization used to be accepted and was then sent the assignment
 // email with the vendor's name and description.
@@ -265,6 +309,60 @@ describe("vendor user references against organization_members", () => {
         await transaction.rollback();
       }
       expect(await vendorCount(owner.orgId)).toBe(0);
+    });
+  });
+  // The "unchanged value is not re-checked" rule compares against the stored
+  // row. That row must be read and locked on the writing transaction, or a
+  // save that commits in between is overwritten with the stale, non-member
+  // value without any check.
+  describe("a save that commits while the edit is in flight", () => {
+    it("vendor: the stale assignee is checked against the newly stored one and refused", async () => {
+      const { owner, attacker } = await seedTwoTenantContexts();
+      const vendorId = await createTestVendor(owner.orgId);
+      // Stands in for an assignee who has since left the organization.
+      await setVendorUsers(vendorId, attacker.userId);
+
+      const res = await whileAnotherSaveIsPending("vendors", "assignee", vendorId, owner.userId, () =>
+        owner.request
+          .patch(`/api/vendors/${vendorId}`)
+          .send({ assignee: attacker.userId })
+          .then((r) => r),
+      );
+
+      expect(res.status).toBe(400);
+      const [row] = await sequelize.query<{ assignee: number }>(
+        "SELECT assignee FROM vendors WHERE id = :vendorId",
+        { replacements: { vendorId }, type: QueryTypes.SELECT },
+      );
+      expect(row.assignee).toBe(owner.userId);
+    });
+
+    it("vendor risk: the stale action owner is checked against the newly stored one and refused", async () => {
+      const { owner, attacker } = await seedTwoTenantContexts();
+      const vendorId = await createTestVendor(owner.orgId);
+      const riskId = await createTestVendorRisk(owner.orgId, {
+        vendor_id: vendorId,
+        action_owner: attacker.userId,
+      });
+
+      const res = await whileAnotherSaveIsPending(
+        "vendorrisks",
+        "action_owner",
+        riskId,
+        owner.userId,
+        () =>
+          owner.request
+            .patch(`/api/vendorRisks/${riskId}`)
+            .send({ action_owner: attacker.userId })
+            .then((r) => r),
+      );
+
+      expect(res.status).toBe(400);
+      const [row] = await sequelize.query<{ action_owner: number }>(
+        "SELECT action_owner FROM vendorrisks WHERE id = :riskId",
+        { replacements: { riskId }, type: QueryTypes.SELECT },
+      );
+      expect(row.action_owner).toBe(owner.userId);
     });
   });
 });
