@@ -92,9 +92,10 @@ export function buildFrameworkRequirementCharts(reportData: ReportData): string[
 }
 
 /**
- * Render EJS template to HTML string
+ * Render the report template to an HTML string. Synchronous and free of
+ * Playwright, so tests render exactly what the PDF is printed from.
  */
-async function renderTemplate(reportData: ReportData): Promise<string> {
+export function renderReportHtml(reportData: ReportData): string {
   const templatePath = path.join(__dirname, "../../templates/reports/report-pdf.ejs");
 
   // Read CSS files
@@ -130,7 +131,7 @@ export async function generatePDF(reportData: ReportData): Promise<ReportGenerat
 
   try {
     // Render HTML template
-    const html = await renderTemplate(reportData);
+    const html = renderReportHtml(reportData);
 
     // Get browser and create page
     const browser = await getBrowser();
@@ -197,7 +198,7 @@ export async function generatePDFWithOptions(
   let page: Page | null = null;
 
   try {
-    const html = await renderTemplate(reportData);
+    const html = renderReportHtml(reportData);
 
     const browser = await getBrowser();
     page = await browser.newPage();
