@@ -18,13 +18,17 @@ jest.mock("../../../services/inAppNotification.service", () => ({
 jest.mock("../../../utils/changeHistory.base.utils", () => ({
   recordMultipleFieldChanges: jest.fn(),
 }));
+jest.mock("../../approval/approvalGateway", () => ({
+  submitForApproval: jest.fn(),
+}));
 
 import { sequelize } from "../../../database/db";
 import { userHasPermission } from "../../../utils/userPermission.utils";
 import * as assignments from "../../../utils/trainingAssignment.utils";
 import { notifyTrainingAssigned } from "../../../services/inAppNotification.service";
 import { recordMultipleFieldChanges } from "../../../utils/changeHistory.base.utils";
-import "../../functions/trainingFunctions";
+import { submitForApproval } from "../../approval/approvalGateway";
+import { availableTrainingTools } from "../../functions/trainingFunctions";
 import { writeToolExecutors } from "../../confirmation/createWriteTool";
 import { toolsDefinition } from "../../tools/trainingTools";
 
@@ -82,6 +86,20 @@ describe("agent_assign_training_to_user", () => {
     _userId: APPROVER,
     _requesterId: REQUESTER,
     ...extra,
+  });
+
+  it("waits for a person to confirm it, since it emails the assignee", async () => {
+    const pending = { requiresConfirmation: true };
+    (submitForApproval as unknown as jest.Mock<any>).mockResolvedValue({
+      outcome: "pending",
+      confirmationResult: pending,
+    });
+    const result = await availableTrainingTools.agent_assign_training_to_user(params(), ORG);
+    expect(submitForApproval).toHaveBeenCalledWith(
+      expect.objectContaining({ toolName: "agent_assign_training_to_user", riskLevel: "warning" }),
+    );
+    expect(result).toBe(pending);
+    expect(mockCreate).not.toHaveBeenCalled();
   });
 
   it("takes a required due date in its schema", () => {

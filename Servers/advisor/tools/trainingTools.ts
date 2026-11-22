@@ -145,7 +145,7 @@ export const toolsDefinition: any[] = [
     function: {
       name: "agent_assign_training_to_user",
       description:
-        "Assign a training program to a user of this organization, to complete by a due date. The user is notified. Needs permission to edit training.",
+        "Assign a training program to a user of this organization, to complete by a due date. The user is notified. Needs permission to edit training. Requires human confirmation before execution.",
       parameters: {
         type: "object",
         properties: {

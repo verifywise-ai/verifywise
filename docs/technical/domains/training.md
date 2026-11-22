@@ -342,7 +342,7 @@ Changing a training's status to Completed does not complete its assignments. A f
 
 ### Advisor
 
-The Advisor's `agent_assign_training_to_user` assigns one person with a required `due_date` through `assignTraining` in `services/trainingAssignment.service.ts`, the same function behind `POST /assignments`: same validation, organization and membership checks, change history and notice. It needs `training.edit`, held by the user who asked (else the approver). A training record has no due date, so the record create and update tools take `duration` (free text such as "2 hours") and never a date.
+The Advisor's `agent_assign_training_to_user` assigns one person with a required `due_date` through `assignTraining` in `services/trainingAssignment.service.ts`, the same function behind `POST /assignments`: same validation, organization and membership checks, change history and notice. It needs `training.edit`, held by the user who asked (else the approver), and since it emails the assignee it is a `warning`-level write: a person confirms it before it runs. A training record has no due date, so the record create and update tools take `duration` (free text such as "2 hours") and never a date.
 
 ### Change history
 

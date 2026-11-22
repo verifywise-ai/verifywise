@@ -232,7 +232,8 @@ const agentUpdateTrainingRecord = createWriteToolFn({
 
 const agentAssignTrainingToUser = createWriteToolFn({
   toolName: "agent_assign_training_to_user",
-  warningLevel: "info",
+  // Emails the assignee, so a person confirms it first.
+  warningLevel: "warning",
   descriptionFn: (params) =>
     `Assign training #${params.training_id} to user #${params.user_id}, due ${params.due_date}`,
   executeFn: async (params, organizationId) => {
