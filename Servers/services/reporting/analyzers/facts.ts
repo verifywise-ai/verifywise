@@ -365,13 +365,14 @@ const SPECS: Record<string, SectionSpec> = {
   },
   frameworkRequirements: {
     // L2 and L3 rows both: a not-done L3 child can be the most overdue item in
-    // its framework. `totals`/`status_*` come from the collector's rollups, so
-    // `items` (rows incl. children) and `total` (rollup) can differ and say so.
+    // its framework. `items` counts these rows and `total` sums the collector's
+    // rollups, which count the same L2 and L3 rows, so the two agree unless a
+    // row was dropped somewhere.
     rows: (s) => flattenFrameworkRequirements(s),
     aggregates: sumRollups,
     rank: requirementRank,
     label: (r) =>
-      `${oneLine(r._framework)}: ${text(oneLine(r.title))} (${text(oneLine(r.status))}, owner ${text(oneLine(r.owner))}, due ${text(r.dueDate)})`,
+      `${oneLine(r._framework)}${r._useCase ? ` (${r._useCase})` : ""}: ${text(oneLine(r.title))} (${text(oneLine(r.status))}, owner ${text(oneLine(r.owner))}, due ${text(r.dueDate)})`,
   },
 };
 

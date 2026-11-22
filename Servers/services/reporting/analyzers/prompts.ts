@@ -327,8 +327,18 @@ function rankTruncateAndStamp(obj: any, field: string, max: number): any[] {
  *  children promoted to rows of their own. */
 export interface FlatRequirement extends FrameworkRequirementRow {
   _framework: string;
+  /** Group title, prefixed with the use case when the pairing has one. */
   _group: string;
+  /** The use case of the pairing the row came from, "" when none. */
+  _useCase: string;
 }
+
+/** "Use case · Group" when the group sits under a use case pairing, else the title. */
+const groupLabel = (g: any): string => {
+  const title = oneLine(g?.title);
+  const useCase = oneLine(g?.useCase);
+  return useCase ? `${useCase} · ${title}` : title;
+};
 
 /**
  * Every requirement in the section, L2 and L3 alike, tagged with where it sits.
@@ -336,15 +346,20 @@ export interface FlatRequirement extends FrameworkRequirementRow {
  */
 export function flattenFrameworkRequirements(data: any): FlatRequirement[] {
   const out: FlatRequirement[] = [];
-  const walk = (rows: FrameworkRequirementRow[] | undefined, framework: string, group: string) =>
+  const walk = (
+    rows: FrameworkRequirementRow[] | undefined,
+    framework: string,
+    group: string,
+    useCase: string,
+  ) =>
     (rows ?? []).forEach((row) => {
       if (!row) return;
-      out.push({ ...row, _framework: framework, _group: group });
-      walk(row.children, framework, group);
+      out.push({ ...row, _framework: framework, _group: group, _useCase: useCase });
+      walk(row.children, framework, group, useCase);
     });
   (data?.frameworks ?? []).forEach((fw: any) =>
     (fw?.groups ?? []).forEach((g: any) =>
-      walk(g?.requirements, String(fw?.frameworkName ?? ""), String(g?.title ?? "")),
+      walk(g?.requirements, String(fw?.frameworkName ?? ""), groupLabel(g), oneLine(g?.useCase)),
     ),
   );
   return out;
@@ -392,7 +407,7 @@ function prepareFrameworkRequirements(data: any): string {
     lines.push(`${oneLine(fw?.frameworkName) || "Unknown framework"}: ${rollupLine(fw?.rollup)}`);
     const groups: any[] = fw?.groups ?? [];
     groups.slice(0, FRAMEWORK_MAX_GROUP_LINES).forEach((g) => {
-      lines.push(`  ${oneLine(g?.title) || "Untitled group"}: ${rollupLine(g?.rollup)}`);
+      lines.push(`  ${groupLabel(g) || "Untitled group"}: ${rollupLine(g?.rollup)}`);
     });
     if (groups.length > FRAMEWORK_MAX_GROUP_LINES) {
       lines.push(`  … and ${groups.length - FRAMEWORK_MAX_GROUP_LINES} more groups`);
@@ -403,9 +418,10 @@ function prepareFrameworkRequirements(data: any): string {
     .filter((r) => !r.isDone)
     .sort((a, b) => requirementRank(b) - requirementRank(a) || dateOf(a) - dateOf(b));
   lines.push("", "Requirements not done (overdue first, then unassigned):");
+  if (notDone.length === 0) lines.push("none");
   notDone.slice(0, FRAMEWORK_TOP_N).forEach((r) => {
     lines.push(
-      `- ${oneLine(r._framework)}: ${oneLine(r.title)} [${oneLine(r.status)}] ${oneLine(r.owner) || "unassigned"} ${oneLine(r.dueDate) || "no due date"}`,
+      `- ${oneLine(r._framework)}${r._useCase ? ` (${r._useCase})` : ""}: ${oneLine(r.title)} [${oneLine(r.status)}] ${oneLine(r.owner) || "unassigned"} ${oneLine(r.dueDate) || "no due date"}`,
     );
   });
   if (notDone.length > FRAMEWORK_TOP_N) {
