@@ -285,6 +285,13 @@ Vendor ─────┬───── Project A
 | action_plan | Mitigation strategy |
 | action_owner | Responsible user |
 
+Removing a user from an organization sets `action_owner` to NULL on that
+organization's vendor risks they own (and `assignee` / `reviewer` on its
+vendors), in the removal's transaction (`clearOrganizationReferencesToUser`,
+`Servers/utils/user.utils.ts`). Other organizations' rows are untouched. No
+vendor risk change history is written for this clear, as for the other
+columns it clears.
+
 ### Soft Delete
 
 Vendor risks support soft delete:

@@ -38,6 +38,9 @@ import { resolveFileContent } from "../services/storage";
 import { reassignAgentOwnersOfDeletedUsersQuery } from "./agentDiscovery.utils";
 import { AutomationModel } from "../domain.layer/models/automation/automation.model";
 import { addOrganizationMemberQuery } from "./organizationMember.utils";
+import { formatEntityFieldChanges, recordEntityFieldChangeBulk } from "./changeHistory.base.utils";
+import { runInSavepoint } from "../config/changeHistory.config";
+import logger from "./logger/fileLogger";
 import { revokeUserOrganizationTokens } from "./refreshToken.utils";
 
 /**
@@ -446,6 +449,51 @@ export const isLastAdminQuery = async (
 };
 
 /**
+ * Clears the owner (assignee_id) of the user's incidents in one organization
+ * and records each clear in the incident's history as a system change. Runs
+ * while the user is still a member, so the history names them.
+ */
+const clearIncidentOwnerQuery = async (
+  id: number,
+  organizationId: number,
+  transaction: Transaction,
+): Promise<void> => {
+  const cleared = (await sequelize.query(
+    `UPDATE ai_incident_managements SET assignee_id = NULL, updated_at = NOW()
+     WHERE organization_id = :organizationId AND assignee_id = :id
+     RETURNING id`,
+    { replacements: { id, organizationId }, type: QueryTypes.SELECT, transaction },
+  )) as { id: number }[];
+  if (cleared.length === 0) return;
+
+  // History is best effort: in a savepoint, so a failed write is logged and
+  // never blocks the removal. One INSERT for every incident; its ledger
+  // appends run one after another after commit.
+  try {
+    await runInSavepoint(async () => {
+      const [change] = await formatEntityFieldChanges(
+        "incident",
+        { assignee_id: id },
+        { assignee_id: null },
+        ["assignee_id"],
+        { organizationId, transaction },
+      );
+      await recordEntityFieldChangeBulk(
+        "incident",
+        cleared.map((incident) => incident.id),
+        organizationId,
+        change.fieldName,
+        change.oldValue,
+        change.newValue,
+        transaction,
+      );
+    }, transaction);
+  } catch (error) {
+    logger.error(`Error recording incident owner clear for user ${id}: ${error}`);
+  }
+};
+
+/**
  * Clears one organization's references to a user: assignment columns go to
  * NULL, agents they primarily own move to their next owner, and their project
  * and group memberships in that organization are deleted (a group row left
@@ -456,6 +504,7 @@ const clearOrganizationReferencesToUser = async (
   id: number,
   organizationId: number,
   transaction: Transaction,
+  { clearIncidentOwners = true }: { clearIncidentOwners?: boolean } = {},
 ): Promise<void> => {
   const usersFK = [
     {
@@ -499,6 +548,8 @@ const clearOrganizationReferencesToUser = async (
     );
   }
 
+  if (clearIncidentOwners) await clearIncidentOwnerQuery(id, organizationId, transaction);
+
   // Agents whose primary owner is this user move to their next remaining owner.
   await reassignAgentOwnersOfDeletedUsersQuery([id], organizationId, transaction);
 
@@ -536,14 +587,35 @@ const clearOrganizationReferencesToUser = async (
  * When it was their last membership the account is deleted too, in the same
  * transaction, unless they are a super admin.
  *
- * @returns `removed` false when the user is not a member of the organization.
+ * `organizationDeleted` is for deleting the whole organization in the same
+ * transaction: its incidents go with it, so their owners are not cleared and
+ * no history is written for rows about to be deleted.
+ *
+ * @returns `removed` false when the user is not a member of the organization;
+ *   nothing is changed then.
  */
 export const removeUserFromOrganizationQuery = async (
   id: number,
   organizationId: number,
   transaction: Transaction,
+  { organizationDeleted = false }: { organizationDeleted?: boolean } = {},
 ): Promise<{ removed: boolean; accountDeleted: boolean }> => {
-  await clearOrganizationReferencesToUser(id, organizationId, transaction);
+  // Lock the membership before clearing: a non-member returns here with
+  // nothing changed, and two removals of the same member run one after the
+  // other. Incident writes take no lock on it, so this does not stop a
+  // concurrent create or owner change from naming this user (see incidents.md).
+  const membership = await sequelize.query(
+    `SELECT user_id FROM organization_members
+     WHERE organization_id = :organizationId AND user_id = :id
+     FOR UPDATE`,
+    { replacements: { id, organizationId }, type: QueryTypes.SELECT, transaction },
+  );
+  if (membership.length === 0) {
+    return { removed: false, accountDeleted: false };
+  }
+  await clearOrganizationReferencesToUser(id, organizationId, transaction, {
+    clearIncidentOwners: !organizationDeleted,
+  });
   await revokeUserOrganizationTokens(id, organizationId, transaction);
 
   const removed = (await sequelize.query(
