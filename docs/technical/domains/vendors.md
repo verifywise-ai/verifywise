@@ -215,7 +215,7 @@ POST /vendors/
 3. Create vendor record
 4. Create vendor-project associations
 5. Record creation in change history
-6. Trigger `vendor_added` automation
+6. Queue the `vendor_added` automation, sent once the transaction commits (`transaction.afterCommit`); `vendor_updated` and `vendor_deleted` work the same way, and a delete that finds no vendor answers 404 and queues nothing
 7. After commit, notify the assignee and reviewer
 
 ### User references
@@ -231,6 +231,31 @@ owner check in `utils/vendorRisk.utils.ts`, both on
 Advisor write tools, AI app import and the demo seed all go through it, inside
 the write's transaction. An unchanged stored id is not re-checked: a vendor
 whose assignee has since left the organization can still be edited.
+
+### Request checks
+
+`utils/validations/vendorRequest.utils.ts` checks the fields a vendor or vendor
+risk create or PATCH sends, before the transaction opens, and answers 400
+naming the field where the database would otherwise fail with a 500: enums
+outside their list, text in an id or score field, strings longer than their
+VARCHAR(255) column, `risk_score` outside 0–100, a `review_date` that isn't a
+date, `projects` or `frameworks` that aren't lists of ids. Fields that aren't
+sent aren't checked, and a vendor PATCH validates only what it sends: an
+imported vendor with empty required fields can still be edited, but a PATCH
+can't blank a required field.
+
+A vendor risk create needs `vendor_id`, `risk_description`, `likelihood`,
+`risk_severity` and `risk_level`; an update can't blank them, but can clear
+`impact_description` and `action_plan` (`''` or `null`). `likelihood` accepts
+either spelling of "Almost certain". Framework ids are checked against
+`frameworks` inside the write's transaction, and repeats are saved once: an
+unknown id is a 400 and nothing is saved, where it used to be swallowed and
+answer 201/202. A PATCH that sends only `frameworks` replaces the links.
+
+Ids in the URL must be positive integers (`abc`, `12abc`, `1.5` are 400), and
+the vendor risk lists' `?filter=` must be `active`, `deleted` or `all` (400
+otherwise; absent means `active`). `GET /vendorRisks/by-projid/:id` still
+answers 200 with an empty list for a non-numeric id.
 
 ## Vendor Scorecard
 
@@ -259,8 +284,16 @@ Vendor ─────┬───── Project A
 
 ### Link Management
 
-- Adding vendor to project creates junction record
-- Removing vendor from project deletes junction record
+A vendor PATCH writes links only when it sends `projects`; a field-only save
+leaves them as they are, and `projects: []` unlinks every use case the user can
+see. Vendors are visible to the whole organization, but a non-Admin sees only
+some use cases, so `setVisibleVendorProjects` (`utils/vendor.utils.ts`) adds
+and removes only links to use cases the user can see (`getUserProjects`); links
+to the others are kept, and an id the user can't see is ignored. An Editor who
+isn't on every linked use case can therefore save the vendor, where the old
+delete-visible-then-reinsert-all hit the primary key and answered 500. The
+response's `projects` is read back from `vendors_projects` after the write.
+
 - Deleting vendor cascades to junction table
 
 ## Vendor Risk Management

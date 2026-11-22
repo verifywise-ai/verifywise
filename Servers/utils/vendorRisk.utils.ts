@@ -105,16 +105,24 @@ export const getVendorRiskByIdQuery = async (
   return vendorRisk;
 };
 
+/** enum_vendorrisks_likelihood, by lower-case spelling. */
+const VENDOR_RISK_LIKELIHOOD_BY_KEY: Record<string, string> = {
+  rare: "Rare",
+  unlikely: "Unlikely",
+  possible: "Possible",
+  likely: "Likely",
+  "almost certain": "Almost certain",
+};
+
 /**
  * The vendor risk likelihood enum spells the top value "Almost certain", while
- * project risks use "Almost Certain". Accept either casing so a caller using the
- * project spelling saves instead of failing on the enum.
+ * project risks use "Almost Certain". Any casing (and surrounding spaces) of an
+ * enum value is written as the enum spells it, so a caller using the project
+ * spelling saves instead of failing on the enum. Other values pass unchanged.
  */
 export const normalizeVendorRiskLikelihood = <T>(likelihood: T): T => {
-  if (typeof likelihood === "string" && likelihood.trim().toLowerCase() === "almost certain") {
-    return "Almost certain" as T;
-  }
-  return likelihood;
+  if (typeof likelihood !== "string") return likelihood;
+  return (VENDOR_RISK_LIKELIHOOD_BY_KEY[likelihood.trim().toLowerCase()] ?? likelihood) as T;
 };
 
 /**
@@ -275,6 +283,13 @@ export const updateVendorRiskByIdQuery = async (
         updateVendorRisk.action_owner = vendorActionOwnerValue(vendorRisk.action_owner);
         return true;
       }
+      // Optional text: a value that is sent is written, so '' and null clear it.
+      if (f === "impact_description" || f === "action_plan") {
+        const value = vendorRisk[f];
+        if (value === undefined) return false;
+        updateVendorRisk[f] = value;
+        return true;
+      }
       if (
         vendorRisk[f as keyof VendorRiskModel] !== undefined &&
         vendorRisk[f as keyof VendorRiskModel]
@@ -290,7 +305,11 @@ export const updateVendorRiskByIdQuery = async (
     .map((f) => `${f} = :${f}`)
     .join(", ");
 
-  const query = `UPDATE vendorrisks SET ${setClause} WHERE organization_id = :organizationId AND id = :id AND is_deleted = false RETURNING *;`;
+  // A request that changes only frameworks names no column: read the row
+  // back instead of building an UPDATE with an empty SET.
+  const query = setClause
+    ? `UPDATE vendorrisks SET ${setClause} WHERE organization_id = :organizationId AND id = :id AND is_deleted = false RETURNING *;`
+    : `SELECT * FROM vendorrisks WHERE organization_id = :organizationId AND id = :id AND is_deleted = false;`;
 
   updateVendorRisk.organizationId = organizationId;
   updateVendorRisk.id = id;
@@ -312,17 +331,17 @@ export const deleteVendorRiskByIdQuery = async (
   transaction: Transaction,
 ): Promise<boolean> => {
   await deleteAllCustomFieldValuesForEntityQuery("vendor_risk", id, organizationId, transaction);
-  const result = await sequelize.query(
-    `UPDATE vendorrisks SET is_deleted = true, deleted_at = NOW(), updated_at = NOW() WHERE organization_id = :organizationId AND id = :id AND is_deleted = false RETURNING *`,
+  // RETURNING rows, read as a SELECT: with QueryTypes.UPDATE the result is
+  // [rows, count], which is never empty, so a missing id read as deleted.
+  const rows = await sequelize.query(
+    `UPDATE vendorrisks SET is_deleted = true, deleted_at = NOW(), updated_at = NOW() WHERE organization_id = :organizationId AND id = :id AND is_deleted = false RETURNING id`,
     {
       replacements: { organizationId, id },
-      mapToModel: true,
-      model: VendorRiskModel,
-      type: QueryTypes.UPDATE,
+      type: QueryTypes.SELECT,
       transaction,
     },
   );
-  return result.length > 0;
+  return rows.length > 0;
 };
 
 export const deleteVendorRisksForVendorQuery = async (
