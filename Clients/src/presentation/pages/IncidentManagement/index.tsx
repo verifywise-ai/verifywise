@@ -45,7 +45,7 @@ import {
   getApiValidationMessage,
   UserFacingFieldErrors,
 } from "../../../application/utils/apiErrorReason";
-import { useCan } from "../../../application/hooks/useCan";
+import { useCan, usePermissionsSettled } from "../../../application/hooks/useCan";
 import { chartTheme } from "../../themes/chartTheme";
 
 type IncidentColumnKey =
@@ -185,6 +185,8 @@ const IncidentManagement: React.FC = () => {
 
   const isCreatingDisabled = !useCan("incident.create");
   const canEditIncidents = useCan("incident.edit");
+  // Until a custom role's permissions load, keep the asked-for mode; the server still enforces.
+  const permissionsSettled = usePermissionsSettled();
 
   // FilterBy - Dynamic options generators
   const getUniqueProjects = useCallback(() => {
@@ -502,7 +504,7 @@ const IncidentManagement: React.FC = () => {
   // Roles without incident.edit open the incident read-only.
   const handleEditIncident = async (id: string, mode: string) => {
     setSelectedIncidentId(id);
-    setModalMode(canEditIncidents ? mode : "view");
+    setModalMode(canEditIncidents || !permissionsSettled ? mode : "view");
     const data = await fetchIncidentDataForSelectedId(id);
     if (data) setIsNewIncidentModalOpen(true);
   };

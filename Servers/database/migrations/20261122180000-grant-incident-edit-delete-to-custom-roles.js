@@ -8,7 +8,8 @@
  *   - DELETE /ai-incident-managements/:id                 -> incident.delete
  *
  * Keep existing custom roles working the way 20261111120001 did:
- *   - a role that may report incidents (incident.create) or holds
+ *   - a role that may report incidents (incident.create), holds a
+ *     contributor-tier key (as built-in Reviewers do) or holds
  *     organization.admin may edit, approve and archive them;
  *   - a role that holds organization.admin may also delete them.
  * Other custom roles lose these writes until an Admin grants the keys.
@@ -19,7 +20,16 @@
  */
 
 const GRANTS = [
-  { key: "incident.edit", heldKeys: ["incident.create", "organization.admin"] },
+  {
+    key: "incident.edit",
+    heldKeys: [
+      "incident.create",
+      "file.contribute",
+      "fileManager.contribute",
+      "riskLinks.review",
+      "organization.admin",
+    ],
+  },
   { key: "incident.delete", heldKeys: ["organization.admin"] },
 ];
 

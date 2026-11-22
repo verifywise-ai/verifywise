@@ -139,11 +139,6 @@ export const ROLE_PERMISSIONS = {
     description: "Update organization settings",
     legacyRoles: ADMIN,
   },
-  "incident.delete": {
-    module: "Incidents",
-    description: "Permanently delete AI incidents",
-    legacyRoles: ADMIN,
-  },
   "reporting.admin": {
     module: "Reporting",
     description: "Configure reporting integrations",
@@ -177,6 +172,11 @@ export const ROLE_PERMISSIONS = {
   "evidence.admin": {
     module: "Evidence",
     description: "Run the evidence freshness check on demand",
+    legacyRoles: ADMIN,
+  },
+  "incident.delete": {
+    module: "Incidents",
+    description: "Permanently delete AI incidents",
     legacyRoles: ADMIN,
   },
 
@@ -296,11 +296,6 @@ export const ROLE_PERMISSIONS = {
     description: "Report new AI incidents",
     legacyRoles: EDITOR,
   },
-  "incident.edit": {
-    module: "Incidents",
-    description: "Edit, approve and archive AI incidents",
-    legacyRoles: CONTRIBUTOR,
-  },
   "riskLinks.edit": {
     module: "Risks",
     description: "Link related risks and acknowledge inherited risk level changes",
@@ -308,6 +303,11 @@ export const ROLE_PERMISSIONS = {
   },
 
   // ── Contributor tier (was authorize(["Admin", "Reviewer", "Editor"])) ────
+  "incident.edit": {
+    module: "Incidents",
+    description: "Edit, approve and archive AI incidents",
+    legacyRoles: CONTRIBUTOR,
+  },
   "file.contribute": {
     module: "Files",
     description: "Upload files",

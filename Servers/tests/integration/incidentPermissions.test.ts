@@ -122,7 +122,8 @@ describe("incident edit, archive and delete permissions", () => {
   it("grants the new keys to existing custom roles the way the migration describes", async () => {
     const reporter = await customRole(orgId, "Incident reporter", ["incident.create"]);
     const orgAdmin = await customRole(orgId, "Org admin", ["organization.admin"]);
-    const reader = await customRole(orgId, "Reader", ["risks.edit"]);
+    const reviewerLike = await customRole(orgId, "Compliance reviewer", ["riskLinks.review"]);
+    const reader = await customRole(orgId, "Reader", ["framework.audit"]);
 
     await migration.up({ sequelize });
     await migration.up({ sequelize }); // idempotent
@@ -136,7 +137,8 @@ describe("incident edit, archive and delete permissions", () => {
       "incident.edit",
       "organization.admin",
     ]);
-    expect(await grantedKeys(orgId, reader)).toEqual(["risks.edit"]);
+    expect(await grantedKeys(orgId, reviewerLike)).toEqual(["incident.edit", "riskLinks.review"]);
+    expect(await grantedKeys(orgId, reader)).toEqual(["framework.audit"]);
 
     const userId = await createTestUser(
       orgId,
