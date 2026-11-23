@@ -1,4 +1,5 @@
-import { useState, useEffect, useMemo, useContext, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
+import { useDispatch } from "react-redux";
 import { Box, Tab, Alert } from "@mui/material";
 import TabList from "@mui/lab/TabList";
 import TabPanel from "@mui/lab/TabPanel";
@@ -14,7 +15,7 @@ import ReadinessDashboard from "../../ReadinessDashboard";
 import useFrameworks from "../../../../application/hooks/useFrameworks";
 import AddFrameworkModal from "../AddNewFramework";
 import useMultipleOnScreen from "../../../../application/hooks/useMultipleOnScreen";
-import { VerifyWiseContext } from "../../../../application/contexts/VerifyWise.context";
+import { setComponentVisibility } from "../../../../application/redux/ui/uiSlice";
 import { ButtonToggle } from "../../../components/button-toggle";
 
 import { containerStyle, headerContainerStyle, tabListStyle } from "./styles";
@@ -80,7 +81,7 @@ const ProjectFrameworks = ({
   const [searchParams, setSearchParams] = useSearchParams();
   const { users } = useUsers();
 
-  const { changeComponentVisibility } = useContext(VerifyWiseContext);
+  const dispatch = useDispatch();
   const can = useCanCheck();
 
   const { refs, allVisible } = useMultipleOnScreen<HTMLElement>({
@@ -95,9 +96,14 @@ const ProjectFrameworks = ({
   }, [allFrameworks]);
 
   useEffect(() => {
-    changeComponentVisibility("projectFrameworks", allVisible);
-    changeComponentVisibility("compliance", tracker === "compliance" && allVisible);
-  }, [allVisible, tracker, changeComponentVisibility]);
+    dispatch(setComponentVisibility({ component: "projectFrameworks", value: allVisible }));
+    dispatch(
+      setComponentVisibility({
+        component: "compliance",
+        value: tracker === "compliance" && allVisible,
+      }),
+    );
+  }, [allVisible, tracker, dispatch]);
 
   const associatedFrameworkIds = project.framework?.map((f) => f.framework_id) || [];
 
