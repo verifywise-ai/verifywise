@@ -1,4 +1,5 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
+import { ComponentVisible } from "../../interfaces/ComponentVisible";
 
 export type AppModule =
   "main" | "evals" | "ai-detection" | "shadow-ai" | "ai-gateway" | "ai-trust-index" | "super-admin";
@@ -14,6 +15,12 @@ interface UiState {
    * ui slice is not persisted.
    */
   setup?: { modalOpen: boolean };
+  /**
+   * Tour-trigger visibility flags, migrated from the legacy VerifyWiseContext.
+   * Set by page/component mounts; read by Home/ComplianceTracker to fire the
+   * product tour once the relevant sections have rendered.
+   */
+  componentsVisible: ComponentVisible;
 }
 
 const initialState: UiState = {
@@ -25,6 +32,12 @@ const initialState: UiState = {
   },
   modelInventory: {
     statusFilter: "all",
+  },
+  componentsVisible: {
+    home: false,
+    sidebar: false,
+    projectFrameworks: false,
+    compliance: false,
   },
 };
 
@@ -57,6 +70,12 @@ const uiSlice = createSlice({
         state.appModule.active = action.payload;
       }
     },
+    setComponentVisibility: (
+      state,
+      action: PayloadAction<{ component: keyof ComponentVisible; value: boolean }>,
+    ) => {
+      state.componentsVisible[action.payload.component] = action.payload.value;
+    },
   },
 });
 
@@ -68,8 +87,18 @@ export const {
   setModelInventoryStatusFilter,
   setActiveModule,
   setSetupModalOpen,
+  setComponentVisibility,
 } = uiSlice.actions;
 
 /** True while the first-login setup modal is on screen. */
 export const selectSetupModalOpen = (state: { ui?: UiState }): boolean =>
   state.ui?.setup?.modalOpen === true;
+
+/** Tour-trigger visibility flags (migrated from VerifyWiseContext). */
+export const selectComponentsVisible = (state: { ui?: UiState }): ComponentVisible =>
+  state.ui?.componentsVisible ?? {
+    home: false,
+    sidebar: false,
+    projectFrameworks: false,
+    compliance: false,
+  };
