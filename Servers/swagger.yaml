@@ -16597,7 +16597,7 @@ paths:
       security:
         -
           bearerAuth: []
-      description: 'Requires role: Admin or Editor'
+      description: "Frozen legacy contract: parameters_config is ignored (use POST /v1/report-templates).\n\nRequires role: Admin or Editor"
   '/reporting/templates/{id}':
     get:
       summary: 'Get Template'
@@ -16625,7 +16625,7 @@ paths:
       security:
         -
           bearerAuth: []
-      description: 'Requires role: Admin or Editor'
+      description: "Frozen legacy contract: parameters_config is ignored and the stored report kind is kept (use PATCH /v1/report-templates/{id}).\n\nRequires role: Admin or Editor"
     delete:
       summary: 'Archive Template'
       responses:
@@ -16654,7 +16654,7 @@ paths:
       security:
         -
           bearerAuth: []
-      description: 'Requires role: Admin or Editor'
+      description: "Frozen legacy contract: reportParameters is ignored, so running a template whose kind needs report parameters fails with 400 (use POST /v1/report-templates/{id}/run).\n\nRequires role: Admin or Editor"
   /reporting/scheduled-reports:
     get:
       summary: 'List Scheduled Reports'
@@ -16674,6 +16674,8 @@ paths:
       responses:
         '200':
           description: Success
+        '400':
+          description: 'Validation error, or a quarterly schedule (only through /v1/scheduled-reports)'
         '500':
           description: 'Internal server error'
       tags:
@@ -16682,13 +16684,15 @@ paths:
       security:
         -
           bearerAuth: []
-      description: 'Requires role: Admin or Editor'
+      description: "Frozen legacy contract: reportParameters is ignored and a quarterly frequency is refused with 400 (use POST /v1/scheduled-reports).\n\nRequires role: Admin or Editor"
   '/reporting/scheduled-reports/{id}':
     patch:
       summary: 'Update Scheduled Report'
       responses:
         '200':
           description: Success
+        '400':
+          description: 'Validation error, or a quarterly schedule (only through /v1/scheduled-reports)'
         '500':
           description: 'Internal server error'
       tags:
@@ -16697,7 +16701,7 @@ paths:
       security:
         -
           bearerAuth: []
-      description: 'Requires role: Admin or Editor'
+      description: "Frozen legacy contract: reportParameters is ignored and a quarterly frequency is refused with 400 (use PATCH /v1/scheduled-reports/{id}).\n\nRequires role: Admin or Editor"
     delete:
       summary: 'Delete Scheduled Report'
       responses:
@@ -29537,6 +29541,167 @@ paths:
       tags:
         - 'v1: V1/Report Runs'
       operationId: downloadRunCompanion
+      security:
+        -
+          bearerAuth: []
+  /v1/report-templates:
+    post:
+      summary: 'Create Template'
+      description: "Creates a custom template in the caller's organization with its first version. Unlike the frozen POST /reporting/templates, it accepts parameters_config.\n"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+                - category
+                - default_scope
+              properties:
+                name:
+                  type: string
+                  maxLength: 255
+                description:
+                  type: string
+                  nullable: true
+                category:
+                  type: string
+                  example: compliance
+                default_scope:
+                  type: string
+                  enum: [project, organization]
+                supported_scopes:
+                  type: array
+                  items: {type: string, enum: [project, organization]}
+                recommended_frequency:
+                  type: string
+                  nullable: true
+                sections_config:
+                  type: object
+                ai_blocks_config:
+                  type: object
+                framework_config:
+                  type: object
+                  description: 'Empty means every framework in scope.'
+                parameters_config:
+                  type: object
+                  description: 'The report kind (e.g. osfi_e23) and its declared parameter fields. An unknown kind or a malformed field list is refused.'
+                  properties: {kind: {type: string, example: osfi_e23}, fields: {type: array, items: {type: object}}}
+      responses:
+        '201':
+          description: 'Created: the template with latestVersion'
+        '400':
+          description: 'Validation error (missing name or category, bad default_scope, invalid parameters_config)'
+        '401':
+          description: Unauthorized
+        '403':
+          description: 'The role lacks reportTemplate.edit'
+        '409':
+          description: 'A template with this name already exists'
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Report Templates'
+      operationId: v1_report_templates_createTemplate
+      security:
+        -
+          bearerAuth: []
+  '/v1/report-templates/{id}':
+    patch:
+      summary: 'Update Template'
+      description: "Updates a custom template's metadata and, when any config field is sent, appends a new version. A version written without parameters_config or framework_config (missing or null) keeps the previous version's value; an explicit {} framework_config is stored and means every framework. Unlike the frozen PATCH /reporting/templates/{id}, it accepts parameters_config. System templates and other organizations' templates answer 404.\n"
+      parameters:
+        -
+          name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  maxLength: 255
+                description:
+                  type: string
+                  nullable: true
+                category:
+                  type: string
+                  example: compliance
+                default_scope:
+                  type: string
+                  enum: [project, organization]
+                supported_scopes:
+                  type: array
+                  items: {type: string, enum: [project, organization]}
+                recommended_frequency:
+                  type: string
+                  nullable: true
+                sections_config:
+                  type: object
+                ai_blocks_config:
+                  type: object
+                framework_config:
+                  type: object
+                  description: 'Empty means every framework in scope.'
+                parameters_config:
+                  type: object
+                  description: 'The report kind (e.g. osfi_e23) and its declared parameter fields. An unknown kind or a malformed field list is refused.'
+                  properties: {kind: {type: string, example: osfi_e23}, fields: {type: array, items: {type: object}}}
+      responses:
+        '200':
+          description: 'Updated: the template with latestVersion (null when only metadata changed)'
+        '400':
+          description: 'No updatable fields supplied, or invalid parameters_config'
+        '401':
+          description: Unauthorized
+        '403':
+          description: 'The role lacks reportTemplate.edit'
+        '404':
+          description: 'Template not found in the organization, or a system template'
+        '409':
+          description: 'Duplicate name, or a concurrent edit (retry)'
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Report Templates'
+      operationId: v1_report_templates_updateTemplate
+      security:
+        -
+          bearerAuth: []
+  '/v1/report-templates/{id}/duplicate':
+    post:
+      summary: 'Duplicate Template'
+      description: "Copies a system template or one of the organization's own into the caller's organization, named '<name> (copy)', or the next free '<name> (copy N)' (archived templates hold their slug too). The copy carries the metadata and the latest version's whole config. An archived source answers 404. No request body.\n"
+      parameters:
+        -
+          name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '201':
+          description: 'Created: the copy with latestVersion'
+        '401':
+          description: Unauthorized
+        '403':
+          description: 'The role lacks reportTemplate.edit'
+        '404':
+          description: 'Template not found or not visible to the organization'
+        '409':
+          description: 'No free copy name: the first thousand are taken, or concurrent copies took the chosen name three times'
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Report Templates'
+      operationId: duplicateTemplate
       security:
         -
           bearerAuth: []

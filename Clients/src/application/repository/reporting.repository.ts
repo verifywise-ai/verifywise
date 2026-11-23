@@ -130,15 +130,23 @@ export async function getSectionCatalog(): Promise<ReportSectionCatalogEntry[]> 
   return extract(await apiServices.get("/reporting/sections"));
 }
 
+// Template writes go through v1, which accepts parameters_config (the report
+// kind); the legacy /reporting/templates writes are frozen and drop it.
 export async function createTemplate(body: ReportTemplateWriteBody): Promise<ReportTemplate> {
-  return extract(await apiServices.post("/reporting/templates", body));
+  return extract(await apiServices.post("/v1/report-templates", body));
 }
 
 export async function updateTemplate(
   id: number,
   body: ReportTemplateWriteBody,
 ): Promise<ReportTemplate> {
-  return extract(await apiServices.patch(`/reporting/templates/${id}`, body));
+  return extract(await apiServices.patch(`/v1/report-templates/${id}`, body));
+}
+
+// Server-side copy into the caller's organization, carrying the latest
+// version's sections, AI blocks, framework selection and report kind.
+export async function duplicateTemplate(id: number): Promise<ReportTemplate> {
+  return extract(await apiServices.post(`/v1/report-templates/${id}/duplicate`, {}));
 }
 
 export async function archiveTemplate(id: number): Promise<{ ok: boolean }> {
