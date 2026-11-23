@@ -16664,6 +16664,7 @@ paths:
   /reporting/scheduled-reports:
     get:
       summary: 'List Scheduled Reports'
+      description: 'Scheduled reports of the caller''s organization. Admins see all; other roles see organization-wide schedules and those of projects they own, are a member of or reach through a group.'
       responses:
         '200':
           description: Success
@@ -29577,14 +29578,14 @@ paths:
   '/v1/scheduled-reports/{id}':
     get:
       summary: 'Get Scheduled Report'
-      description: 'One scheduled report of the caller''s organization, with its template version''s parameters_config.'
+      description: 'One scheduled report of the caller''s organization, with its template version''s parameters_config. Admins read any schedule; other roles read organization-wide schedules and those of projects they own, are a member of or reach through a group, and get 404 for the rest.'
       responses:
         '200':
           description: Success
         '401':
           description: Unauthorized
         '404':
-          description: 'Scheduled report not found in this organization'
+          description: 'Scheduled report not found in this organization, or not readable by the caller'
         '500':
           description: 'Internal server error'
       tags:

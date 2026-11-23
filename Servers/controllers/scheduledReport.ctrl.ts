@@ -31,6 +31,7 @@ import {
 import { runScheduledReport } from "../services/reporting/reportRunOrchestrator";
 import { parseFrameworkSelection } from "../services/reporting/frameworkSelection";
 import { assertReportScopeAllowed } from "../services/reporting/reportAuthorization";
+import type { ReportViewer } from "../utils/reportVisibility.utils";
 
 /**
  * An unparseable framework entry must not reach the column. An empty selection
@@ -114,9 +115,18 @@ export async function createScheduledReport(req: Request, res: Response): Promis
   }
 }
 
+/**
+ * The viewer, from the authenticated request only. Missing identity becomes
+ * null, which matches no project owner or member, so such a caller sees
+ * organization-wide schedules only.
+ */
+function reportViewer(req: Request): ReportViewer {
+  return { userId: req.userId ?? null, role: req.role ?? null };
+}
+
 export async function listScheduledReports(req: Request, res: Response): Promise<any> {
   try {
-    const rows = await listScheduledReportsQuery(req.organizationId!);
+    const rows = await listScheduledReportsQuery(req.organizationId!, reportViewer(req));
     return res.status(200).json(STATUS_CODE[200](rows));
   } catch (error) {
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
@@ -126,9 +136,9 @@ export async function listScheduledReports(req: Request, res: Response): Promise
 /**
  * One schedule with its template version's parameters_config, so the edit
  * dialog knows which report details the schedule declares. Read access matches
- * listScheduledReports, which already returns every schedule of the
- * organization (report_parameters included) to any signed-in member; a scope
- * gate here would hide nothing the list does not show.
+ * listScheduledReports: a project schedule the caller may not read is a 404,
+ * like a missing one. (The write paths answer 403 for a schedule outside the
+ * caller's scope, so this alone does not hide which ids exist.)
  */
 export async function getScheduledReport(req: Request, res: Response): Promise<any> {
   logProcessing({
@@ -143,7 +153,7 @@ export async function getScheduledReport(req: Request, res: Response): Promise<a
     if (!Number.isInteger(id) || id <= 0) {
       return res.status(404).json(STATUS_CODE[404](req.t!("not found")));
     }
-    const row = await getScheduledReportQuery(id, req.organizationId!);
+    const row = await getScheduledReportQuery(id, req.organizationId!, reportViewer(req));
     if (!row) return res.status(404).json(STATUS_CODE[404](req.t!("not found")));
     return res.status(200).json(STATUS_CODE[200](row));
   } catch (error) {
@@ -160,8 +170,31 @@ export async function getScheduledReport(req: Request, res: Response): Promise<a
   }
 }
 
+/**
+ * The scope gate for a write to an existing schedule: the caller must be
+ * allowed to produce a report of the row's scope (assertReportScopeAllowed),
+ * as create, update, resume and run-now require. A row this organization does
+ * not hold is not checked; the organization-scoped write then matches nothing
+ * and stays a 200 no-op, as the tenant-isolation suite expects.
+ */
+async function scopeErrorsForSchedule(req: Request): Promise<string[]> {
+  const sched = await getScheduledReportQuery(Number(req.params.id), req.organizationId!);
+  if (!sched) return [];
+  return assertReportScopeAllowed({
+    role: req.role ?? null,
+    userId: req.userId!,
+    organizationId: req.organizationId!,
+    scope: sched.scope,
+    projectId: sched.project_id,
+  });
+}
+
 export async function pauseScheduledReport(req: Request, res: Response): Promise<any> {
   try {
+    const scopeErrors = await scopeErrorsForSchedule(req);
+    if (scopeErrors.length) {
+      return res.status(403).json(STATUS_CODE[403]({ errors: scopeErrors }));
+    }
     await setActiveQuery(Number(req.params.id), req.organizationId!, false);
     return res.status(200).json(STATUS_CODE[200]({ ok: true }));
   } catch (error) {
@@ -181,18 +214,9 @@ export async function resumeScheduledReport(req: Request, res: Response): Promis
     // 404/403 here must not fire for a row this organization_id can't see in
     // the first place; it only guards a same-tenant caller who is not
     // authorized for the row's scope.
-    const sched = await getScheduledReportQuery(Number(req.params.id), req.organizationId!);
-    if (sched) {
-      const scopeErrors = await assertReportScopeAllowed({
-        role: req.role ?? null,
-        userId: req.userId!,
-        organizationId: req.organizationId!,
-        scope: sched.scope,
-        projectId: sched.project_id,
-      });
-      if (scopeErrors.length) {
-        return res.status(403).json(STATUS_CODE[403]({ errors: scopeErrors }));
-      }
+    const scopeErrors = await scopeErrorsForSchedule(req);
+    if (scopeErrors.length) {
+      return res.status(403).json(STATUS_CODE[403]({ errors: scopeErrors }));
     }
 
     await setActiveQuery(Number(req.params.id), req.organizationId!, true);
@@ -204,6 +228,10 @@ export async function resumeScheduledReport(req: Request, res: Response): Promis
 
 export async function deleteScheduledReport(req: Request, res: Response): Promise<any> {
   try {
+    const scopeErrors = await scopeErrorsForSchedule(req);
+    if (scopeErrors.length) {
+      return res.status(403).json(STATUS_CODE[403]({ errors: scopeErrors }));
+    }
     await softDeleteQuery(Number(req.params.id), req.organizationId!);
     return res.status(200).json(STATUS_CODE[200]({ ok: true }));
   } catch (error) {

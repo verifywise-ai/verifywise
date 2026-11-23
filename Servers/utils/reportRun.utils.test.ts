@@ -61,7 +61,7 @@ describe("listRunsQuery project-membership visibility", () => {
     await listRunsQuery(1, { archived: false }, ADMIN);
 
     expect(mockQuery.mock.calls[0][0]).not.toContain("projects_members");
-    expect((mockQuery.mock.calls[0][1] as any).replacements.viewerUserId).toBeUndefined();
+    expect((mockQuery.mock.calls[0][1] as any).replacements.visibilityUserId).toBeUndefined();
   });
 
   it("does not restrict a SuperAdmin", async () => {
@@ -76,10 +76,10 @@ describe("listRunsQuery project-membership visibility", () => {
       await listRunsQuery(1, { archived: false }, { userId: 42, role });
 
       const countSql = mockQuery.mock.calls[0][0] as string;
-      expect(countSql).toContain("p.owner = :viewerUserId");
-      expect(countSql).toContain("pm.user_id = :viewerUserId");
+      expect(countSql).toContain("p.owner = :visibilityUserId");
+      expect(countSql).toContain("pm.user_id = :visibilityUserId");
       expect(countSql).toContain("projects_members");
-      expect((mockQuery.mock.calls[0][1] as any).replacements.viewerUserId).toBe(42);
+      expect((mockQuery.mock.calls[0][1] as any).replacements.visibilityUserId).toBe(42);
     },
   );
 
@@ -103,8 +103,8 @@ describe("listRunsQuery project-membership visibility", () => {
     await listRunsQuery(9, { archived: false }, AUDITOR);
 
     const countSql = mockQuery.mock.calls[0][0] as string;
-    expect(countSql).toContain("pm.organization_id = :organization_id");
-    expect(countSql).toContain("p.organization_id = :organization_id");
+    expect(countSql).toContain("pm.organization_id = :organizationId");
+    expect(countSql).toContain("p.organization_id = :organizationId");
   });
 
   it("applies the same restriction to the count as to the rows", async () => {
@@ -112,18 +112,18 @@ describe("listRunsQuery project-membership visibility", () => {
 
     // A count that ignored the filter would page the user through rows they
     // are never shown.
-    expect(mockQuery.mock.calls[0][0]).toContain("p.owner = :viewerUserId");
-    expect(mockQuery.mock.calls[1][0]).toContain("p.owner = :viewerUserId");
+    expect(mockQuery.mock.calls[0][0]).toContain("p.owner = :visibilityUserId");
+    expect(mockQuery.mock.calls[1][0]).toContain("p.owner = :visibilityUserId");
   });
 
   it("shows a viewer with no user id organization-scoped runs only", async () => {
     await listRunsQuery(1, { archived: false }, { userId: null, role: null });
 
     const countSql = mockQuery.mock.calls[0][0] as string;
-    expect(countSql).toContain("p.owner = :viewerUserId");
+    expect(countSql).toContain("p.owner = :visibilityUserId");
     // NULL matches no owner and no member row, so only the "no project" branch
     // can be true — an unidentifiable viewer never sees a project's report.
-    expect((mockQuery.mock.calls[0][1] as any).replacements.viewerUserId).toBeNull();
+    expect((mockQuery.mock.calls[0][1] as any).replacements.visibilityUserId).toBeNull();
   });
 
   it("returns the template name and the run's scope for the list columns", async () => {
