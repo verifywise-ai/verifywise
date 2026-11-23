@@ -131,7 +131,8 @@ const RiskTable: React.FC<IRiskTableProps> = ({
   // People sort by display name, not by user id.
   const userSortNames = useMemo(() => buildUserSortNames(users ?? []), [users]);
   const riskSortComparator = useCallback(
-    (a: EnrichedRisk, b: EnrichedRisk, key: string) => compareVendorRisks(a, b, key, userSortNames),
+    (a: EnrichedRisk, b: EnrichedRisk, key: string, direction: "asc" | "desc") =>
+      compareVendorRisks(a, b, key, userSortNames, direction),
     [userSortNames],
   );
 

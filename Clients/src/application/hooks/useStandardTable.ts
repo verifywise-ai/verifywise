@@ -11,7 +11,8 @@ interface UseStandardTableOptions<T> {
   defaultSortColumn: string;
   defaultSortDirection?: SortDirection;
   defaultRowsPerPage?: number;
-  sortComparator: (a: T, b: T, key: string) => number;
+  /** `direction` lets a comparator keep empty values last in both directions. */
+  sortComparator: (a: T, b: T, key: string, direction: "asc" | "desc") => number;
 }
 
 interface UseStandardTableReturn<T> {
@@ -84,7 +85,10 @@ export function useStandardTable<T>(
     const sortableRows = [...rows];
     const direction = sortConfig.direction === "asc" ? 1 : -1;
 
-    return sortableRows.sort((a: T, b: T) => direction * sortComparator(a, b, sortConfig.key));
+    const order = sortConfig.direction;
+    return sortableRows.sort(
+      (a: T, b: T) => direction * sortComparator(a, b, sortConfig.key, order),
+    );
   }, [rows, sortConfig, sortComparator]);
 
   // Ensure page is valid when rows change

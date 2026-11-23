@@ -102,7 +102,8 @@ export function vendorRiskCountByVendor(risks: VendorRiskRow[]): Map<number, num
 // Dashboard
 // ---------------------------------------------------------------------------
 
-export type VendorRiskDistribution = Record<RiskLevelBucket, number>;
+/** Level buckets, plus risks with no known level (shown as "Not assessed"). */
+export type VendorRiskDistribution = Record<RiskLevelBucket, number> & { notAssessed: number };
 
 export interface RecentVendorRisk {
   id: number;
@@ -121,6 +122,14 @@ export interface VendorRiskDashboardMetrics {
 }
 
 const RECENT_LIMIT = 5;
+const TITLE_LIMIT = 60;
+
+/** A recent-activity title: the description cut at 60 characters, as incidents are. */
+const shortTitle = (description: string | null | undefined): string => {
+  const text = description?.trim();
+  if (!text) return "Vendor risk";
+  return text.length > TITLE_LIMIT ? `${text.slice(0, TITLE_LIMIT)}...` : text;
+};
 
 const toIso = (value: string | Date | null | undefined): string | undefined => {
   if (!value) return undefined;
@@ -136,7 +145,7 @@ const lastTouched = (risk: { created_at?: string; updated_at?: string }): number
 /**
  * The dashboard's vendor risk card and recent activity, from the rows of
  * `GET /vendorRisks/all`. Each risk counts once; a risk without a known level
- * is in the total but in no level bucket; the recent list is the most
+ * counts as notAssessed, so the buckets add up to the total; the recent list is the most
  * recently changed risks, newest first, titled by their description.
  */
 export function buildVendorRiskDashboardMetrics(
@@ -149,18 +158,20 @@ export function buildVendorRiskDashboardMetrics(
     medium: 0,
     low: 0,
     veryLow: 0,
+    notAssessed: 0,
   };
 
   for (const risk of risks) {
     const bucket = riskLevelBucket(risk.risk_level);
     if (bucket) distribution[bucket]++;
+    else distribution.notAssessed++;
   }
 
   const recent = risks
     .filter((risk) => risk.risk_id !== undefined)
     .map((risk): RecentVendorRisk => ({
       id: risk.risk_id!,
-      title: risk.risk_description?.trim() || "",
+      title: shortTitle(risk.risk_description),
       severity: risk.risk_level
         ? risk.risk_level
             .trim()

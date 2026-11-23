@@ -88,6 +88,23 @@ describe("compareVendorRisks", () => {
     expect(sorted).toEqual([2, 3, 1]);
   });
 
+  it.each<[SortDirection, (number | null)[]]>([
+    ["asc", [2, 3, 1, null]],
+    ["desc", [1, 3, 2, null]],
+  ])("keeps a risk with no action owner last when sorting %s", (direction, expected) => {
+    const sign = direction === "asc" ? 1 : -1;
+    const sorted = [
+      { action_owner: null },
+      { action_owner: 1 },
+      { action_owner: 3 },
+      { action_owner: 2 },
+    ]
+      // As useStandardTable applies it: the direction times the comparator.
+      .sort((a, b) => sign * compareVendorRisks(a, b, "action_owner", userNames, direction))
+      .map((risk) => risk.action_owner);
+    expect(sorted).toEqual(expected);
+  });
+
   it("sorts severity by its scale, not alphabetically", () => {
     const sorted = ["Major", "Negligible", "Catastrophic", "Moderate", "Minor"]
       .map((risk_severity) => ({ risk_severity }))

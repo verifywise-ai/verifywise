@@ -24,4 +24,14 @@ describe("dashboard vendor risk chart", () => {
     expect(slices["No risk"]).toBe(1);
     expect(slices["Very high"]).toBe(1);
   });
+
+  it("adds a Not assessed slice so the slices add up to the total", () => {
+    const { distribution, total } = buildVendorRiskDashboardMetrics([
+      { id: 1, risk_level: "High risk" },
+      { id: 2, risk_level: null },
+    ] as any);
+    const slices = getVendorRiskData(distribution);
+    expect(slices[slices.length - 1]).toMatchObject({ label: "Not assessed", value: 1 });
+    expect(slices.reduce((sum, slice) => sum + slice.value, 0)).toBe(total);
+  });
 });

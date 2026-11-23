@@ -98,8 +98,10 @@ export const useUpdateVendor = () => {
       // Invalidate and refetch vendor details and lists
       queryClient.invalidateQueries({ queryKey: vendorQueryKeys.detail(id) });
       queryClient.invalidateQueries({ queryKey: vendorQueryKeys.lists() });
-      // A vendor's use cases feed the insights' reach and coverage.
+      // A vendor's use cases feed the insights' reach and coverage, and each
+      // of its risks' use case column and filter.
       queryClient.invalidateQueries({ queryKey: VENDOR_INSIGHTS_KEY });
+      queryClient.invalidateQueries({ queryKey: vendorRiskQueryKeys.lists() });
     },
   });
 };

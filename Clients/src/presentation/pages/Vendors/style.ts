@@ -56,6 +56,7 @@ export const vendorActionsStyle = {
 
 export const addNewButtonStyle = {
   backgroundColor: "brand.primary",
-  border: "1px solid brand.primary",
+  border: "1px solid",
+  borderColor: "brand.primary",
   gap: "4px",
 };

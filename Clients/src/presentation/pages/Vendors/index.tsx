@@ -195,7 +195,7 @@ const Vendors = () => {
   // Every vendor, whatever the Vendors tab filters: the Risks tab names the
   // vendor of each risk and offers all vendors in its modal. Shares the
   // cached list when the Vendors tab isn't filtered by use case.
-  const { data: allVendors = [] } = useVendors(
+  const { data: allVendors = [], isLoading: isAllVendorsLoading } = useVendors(
     { projectId: "all" },
     { suppressGlobalErrorToast: true },
   );
@@ -627,7 +627,7 @@ const Vendors = () => {
 
   // Auto-open create vendor modal when navigating from "Add new..." dropdown
   useEffect(() => {
-    if (location.state?.openCreateModal && !isVendorsLoading) {
+    if (location.state?.openCreateModal && !isVendorsLoading && !isAllVendorsLoading) {
       // Check if we're on the risks tab
       if (isRisksTab) {
         // Check if there are any vendors
@@ -664,6 +664,7 @@ const Vendors = () => {
     isRisksTab,
     allVendors.length,
     isVendorsLoading,
+    isAllVendorsLoading,
   ]);
 
   const handleDeleteVendor = async (vendorId?: number) => {
@@ -881,12 +882,14 @@ const Vendors = () => {
     let filtered = filterVendorData(vendors);
 
     // Then apply search filter
-    if (searchQuery) {
+    // Trimmed, as isVendorListFiltered reads it: spaces alone don't filter.
+    const query = searchQuery.trim().toLowerCase();
+    if (query) {
       filtered = filtered.filter(
         (vendor: VendorModel) =>
-          vendor.vendor_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          vendor.vendor_provides.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          vendor.vendor_contact_person.toLowerCase().includes(searchQuery.toLowerCase()),
+          (vendor.vendor_name ?? "").toLowerCase().includes(query) ||
+          (vendor.vendor_provides ?? "").toLowerCase().includes(query) ||
+          (vendor.vendor_contact_person ?? "").toLowerCase().includes(query),
       );
     }
 
@@ -1273,6 +1276,7 @@ const Vendors = () => {
         onSuccess={refreshVendorRisks}
         existingRisk={selectedRisk}
         vendors={allVendors}
+        vendorsLoading={isAllVendorsLoading}
         initialTab={riskModalTab}
         onRestore={isDeletingAllowed ? handleRestoreRisk : undefined}
       />

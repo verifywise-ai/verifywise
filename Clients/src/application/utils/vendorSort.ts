@@ -136,6 +136,7 @@ export function compareVendorRisks(
   b: SortableVendorRisk,
   key: string,
   userNames: Map<string, string>,
+  direction: SortDirection = "asc",
 ): number {
   switch (key) {
     case "risk_description":
@@ -144,11 +145,17 @@ export function compareVendorRisks(
       return compareNames(a.vendor_name ?? "", b.vendor_name ?? "");
     case "project_titles":
       return compareNames(titlesOf(a.project_titles), titlesOf(b.project_titles));
-    case "action_owner":
-      return compareNames(
-        userSortName(userNames, a.action_owner),
-        userSortName(userNames, b.action_owner),
-      );
+    case "action_owner": {
+      // No owner (or one who left) last in both directions; the table
+      // multiplies by the direction, so undo it for the empty case.
+      const aName = userSortName(userNames, a.action_owner);
+      const bName = userSortName(userNames, b.action_owner);
+      if (!aName || !bName) {
+        if (aName === bName) return 0;
+        return (aName ? -1 : 1) * (direction === "desc" ? -1 : 1);
+      }
+      return compareNames(aName, bName);
+    }
     case "risk_severity":
       return rankIn(SEVERITY_ORDER, a.risk_severity) - rankIn(SEVERITY_ORDER, b.risk_severity);
     case "likelihood":

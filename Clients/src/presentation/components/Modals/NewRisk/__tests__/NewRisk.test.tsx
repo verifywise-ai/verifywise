@@ -182,6 +182,13 @@ describe("NewRisk (AddNewRisk)", () => {
     expect(createMutateAsync).not.toHaveBeenCalled();
   });
 
+  it("doesn't say there are no vendors while the vendor list is loading", () => {
+    renderWithProviders(
+      <AddNewRisk isOpen={true} setIsOpen={vi.fn()} vendors={[]} vendorsLoading={true} />,
+    );
+    expect(screen.queryByText("No vendors yet")).toBeNull();
+  });
+
   // VC-L3: action_owner is a user id, and vendor_id too.
   it("sends the action owner and vendor as numbers", async () => {
     updateMutateAsync.mockReset();

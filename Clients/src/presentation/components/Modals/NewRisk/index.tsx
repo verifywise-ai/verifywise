@@ -62,6 +62,8 @@ interface AddNewRiskProps {
   existingRisk?: ExistingRisk | null;
   onSuccess?: () => void;
   vendors: VendorModel[];
+  /** The vendor list is still loading: don't say there are no vendors yet. */
+  vendorsLoading?: boolean;
   /** The tab an existing risk opens on, e.g. "linked-risks" from the table's reach link. */
   initialTab?: "details" | "linked-risks";
   /** Restores a deleted risk; its footer offers Restore instead of Save. */
@@ -111,6 +113,7 @@ const AddNewRisk: React.FC<AddNewRiskProps> = ({
   existingRisk,
   onSuccess = () => {},
   vendors,
+  vendorsLoading = false,
   initialTab,
   onRestore,
 }) => {
@@ -135,7 +138,7 @@ const AddNewRisk: React.FC<AddNewRiskProps> = ({
         })),
     [vendors],
   );
-  const hasNoVendors = VENDOR_OPTIONS.length === 0;
+  const hasNoVendors = !vendorsLoading && VENDOR_OPTIONS.length === 0;
   const existingVendorId = existingRisk?.vendor_id;
 
   const [values, setValues] = useState<VendorRiskModalFormValues>(initialState);

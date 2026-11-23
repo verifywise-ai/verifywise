@@ -79,7 +79,7 @@ describe("vendorRiskCountByVendor", () => {
 });
 
 describe("buildVendorRiskDashboardMetrics", () => {
-  it("counts each risk once and leaves an unknown level out of every bucket", () => {
+  it("counts each risk once and an unknown level as not assessed", () => {
     const metrics = buildVendorRiskDashboardMetrics([
       ...threeUseCases,
       row({ risk_id: 2, risk_level: "No risk" }),
@@ -94,7 +94,20 @@ describe("buildVendorRiskDashboardMetrics", () => {
       medium: 0,
       low: 0,
       veryLow: 2,
+      notAssessed: 1,
     });
+  });
+
+  it("titles a recent risk by its description, cut at 60 characters, or Vendor risk", () => {
+    const long = "x".repeat(400);
+    const metrics = buildVendorRiskDashboardMetrics([
+      row({ risk_id: 1, risk_description: long, created_at: "2026-01-02T00:00:00Z" }),
+      row({ risk_id: 2, risk_description: "  ", created_at: "2026-01-01T00:00:00Z" }),
+    ]);
+    expect(metrics.recent.map((risk) => risk.title)).toEqual([
+      `${"x".repeat(60)}...`,
+      "Vendor risk",
+    ]);
   });
 
   it("lists the newest risks first, by their real id and description", () => {
@@ -135,7 +148,7 @@ describe("buildVendorRiskDashboardMetrics", () => {
   it("answers zeroes for no rows", () => {
     expect(buildVendorRiskDashboardMetrics(undefined)).toEqual({
       total: 0,
-      distribution: { veryHigh: 0, high: 0, medium: 0, low: 0, veryLow: 0 },
+      distribution: { veryHigh: 0, high: 0, medium: 0, low: 0, veryLow: 0, notAssessed: 0 },
       recent: [],
     });
   });
