@@ -9,7 +9,8 @@ import {
   Divider,
   Popover,
 } from "@mui/material";
-import { useContext, useEffect, useState, useMemo, useRef } from "react";
+import { useEffect, useState, useMemo, useRef } from "react";
+import { useDispatch } from "react-redux";
 import {
   CirclePlus as AddCircleOutlineIcon,
   Settings as SettingsIcon,
@@ -18,7 +19,6 @@ import {
   ChevronDown as WhiteDownArrowIcon,
 } from "lucide-react";
 import CustomizableSkeleton from "../../components/Skeletons";
-import { VerifyWiseContext } from "../../../application/contexts/VerifyWise.context";
 import useMultipleOnScreen from "../../../application/hooks/useMultipleOnScreen";
 import useFrameworks from "../../../application/hooks/useFrameworks";
 import useUsers from "../../../application/hooks/useUsers";
@@ -63,6 +63,9 @@ import { textStyles } from "../../themes/typography";
 import { useExtensions } from "../../../application/contexts/Extensions.context";
 import FrameworkImportModal from "./Components/FrameworkImportModal";
 import { FileUp as FileUpIcon } from "lucide-react";
+import { setComponentVisibility } from "../../../application/redux/ui/uiSlice";
+import { useProjects } from "../../../application/hooks/useProjects";
+import { useProjectsCache } from "../../../application/hooks/useProjectsCache";
 
 // Tab styles following ProjectFrameworks pattern
 const tabStyle = {
@@ -113,7 +116,9 @@ const Framework = () => {
   const categoryId = searchParams.get("categoryId");
   const subcategoryId = searchParams.get("subcategoryId");
 
-  const { changeComponentVisibility, projects, setProjects } = useContext(VerifyWiseContext);
+  const dispatch = useDispatch();
+  const projects = useProjects().data ?? [];
+  const { setProjectsCache } = useProjectsCache();
   const can = useCanCheck();
   const { t } = useTranslation();
   const { refs, allVisible } = useMultipleOnScreen<HTMLElement>({
@@ -154,7 +159,7 @@ const Framework = () => {
       const { getAllProjects } = await import("../../../application/repository/project.repository");
       const response = await getAllProjects();
       if (response?.data) {
-        setProjects(response.data);
+        setProjectsCache(response.data);
       }
     } catch (error) {
       console.error("Error refreshing projects:", error);
@@ -189,8 +194,8 @@ const Framework = () => {
   // dialog open with its own error).
   const handleProjectDeleted = () => {
     if (!organizationalProject) return;
-    // Remove the project from context
-    setProjects((prevProjects) =>
+    // Remove the project from the shared projects cache
+    setProjectsCache((prevProjects) =>
       prevProjects.filter((project) => project.id !== organizationalProject.id),
     );
     // Stay on the Framework page - the UI will automatically show "No Organizational Project Found"
@@ -346,9 +351,9 @@ const Framework = () => {
 
   useEffect(() => {
     if (allVisible) {
-      changeComponentVisibility("projectFrameworks", true);
+      dispatch(setComponentVisibility({ component: "projectFrameworks", value: true }));
     }
-  }, [allVisible, changeComponentVisibility]);
+  }, [allVisible, dispatch]);
 
   // Reset selected framework when filtered frameworks change
   useEffect(() => {
@@ -1019,7 +1024,7 @@ const Framework = () => {
                   filteredFrameworks={filteredFrameworks}
                   onProjectDataChanged={refreshProjectData}
                   onFrameworksChanged={refreshFilteredFrameworks}
-                  setProjects={setProjects}
+                  setProjectsCache={setProjectsCache}
                 />
               </TabPanel>
             </TabContext>

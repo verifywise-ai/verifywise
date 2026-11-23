@@ -39,7 +39,7 @@ interface FrameworkSettingsProps {
   filteredFrameworks: Framework[];
   onProjectDataChanged: () => Promise<void>;
   onFrameworksChanged: () => void;
-  setProjects: React.Dispatch<React.SetStateAction<Project[]>>;
+  setProjectsCache: (updater: Project[] | ((prev: Project[]) => Project[])) => void;
 }
 
 const FrameworkSettings: React.FC<FrameworkSettingsProps> = ({
@@ -48,7 +48,7 @@ const FrameworkSettings: React.FC<FrameworkSettingsProps> = ({
   filteredFrameworks: _filteredFrameworks,
   onProjectDataChanged,
   onFrameworksChanged,
-  setProjects,
+  setProjectsCache,
 }) => {
   const can = useCanCheck();
   const { t } = useTranslation();
@@ -115,8 +115,8 @@ const FrameworkSettings: React.FC<FrameworkSettingsProps> = ({
   // Runs once DeleteUseCaseModal has deleted the project (a failure keeps the
   // dialog open with its own error).
   const handleProjectDeleted = () => {
-    // Remove the project from context
-    setProjects((prevProjects) =>
+    // Remove the project from the shared projects cache
+    setProjectsCache((prevProjects) =>
       prevProjects.filter((project) => project.id !== organizationalProject.id),
     );
     setAlert({
