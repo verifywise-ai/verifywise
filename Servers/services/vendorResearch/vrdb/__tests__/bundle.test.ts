@@ -372,6 +372,25 @@ describe("shippedBundleIds", () => {
     expect(shippedBundleIds(empty)).toBeNull();
   });
 
+  it("does not keep a missing manifest: one written later is read", () => {
+    const at = freshDir();
+    expect(shippedBundleIds(at)).toBeNull();
+    fs.writeFileSync(
+      path.join(at, MANIFEST_FILE),
+      JSON.stringify({ format: BUNDLE_FORMAT, lists: [{ sourceId: "kev" }] }),
+    );
+    expect(shippedBundleIds(at)).toEqual(new Set(["kev"]));
+  });
+
+  it("keeps a manifest that was read", () => {
+    const at = freshDir();
+    const file = path.join(at, MANIFEST_FILE);
+    fs.writeFileSync(file, JSON.stringify({ format: BUNDLE_FORMAT, lists: [{ sourceId: "kev" }] }));
+    expect(shippedBundleIds(at)).toEqual(new Set(["kev"]));
+    fs.rmSync(file);
+    expect(shippedBundleIds(at)).toEqual(new Set(["kev"]));
+  });
+
   it("the release's own manifest ships no bundle of the EU competition cases, whose connector is broken upstream", () => {
     const shipped = shippedBundleIds(path.resolve(__dirname, "../../../../data/vrdb"));
     expect(shipped).not.toBeNull();

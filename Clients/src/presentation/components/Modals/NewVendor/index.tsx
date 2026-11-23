@@ -104,6 +104,9 @@ const identifierMessage =
   (value: unknown): string =>
     check(typeof value === "string" ? value : "").message;
 
+/** The fields of the identifiers section, which is closed until opened. */
+const IDENTIFIER_FIELDS = ["country", "registrationNumber", "lei", "secCik"] as const;
+
 const REVIEW_STATUS_OPTIONS = [
   { _id: "notStarted", name: "Not started" },
   { _id: "inReview", name: "In review" },
@@ -242,10 +245,6 @@ const AddNewVendor: React.FC<AddNewVendorProps> = ({
   } | null>(null);
   const [isScorecardExpanded, setIsScorecardExpanded] = useState(false);
   const [isIdentifiersExpanded, setIsIdentifiersExpanded] = useState(false);
-  // An identifier that failed its check is never hidden behind the closed section.
-  const identifiersShown =
-    isIdentifiersExpanded ||
-    Boolean(errors.country || errors.registrationNumber || errors.lei || errors.secCik);
   const [activeTab, setActiveTab] = useState("details");
   const can = useCanCheck();
   const { users } = useUsers();
@@ -377,8 +376,12 @@ const AddNewVendor: React.FC<AddNewVendorProps> = ({
       handleOnSave();
       return;
     }
-    // The first field to fix takes the focus, an identifier far down the form included.
+    // The first field to fix takes the focus, an identifier far down the form included: an
+    // identifier that failed its check is never left behind the closed section.
     setActiveTab("details");
+    if (IDENTIFIER_FIELDS.some((field) => validators[field](values[field]) !== "")) {
+      setIsIdentifiersExpanded(true);
+    }
     const firstInvalid = getFirstInvalidField();
     const fieldIds: Partial<Record<keyof VendorModalFormValues, string>> = VENDOR_MODAL_FIELD_IDS;
     const fieldId = firstInvalid ? fieldIds[firstInvalid] : undefined;
@@ -802,9 +805,9 @@ const AddNewVendor: React.FC<AddNewVendorProps> = ({
         sx={{ width: 686 }}
       >
         <ButtonBase
-          aria-expanded={identifiersShown}
+          aria-expanded={isIdentifiersExpanded}
           aria-controls="vendor-form-identifiers-fields"
-          onClick={() => setIsIdentifiersExpanded(!identifiersShown)}
+          onClick={() => setIsIdentifiersExpanded((expanded) => !expanded)}
           sx={{
             "display": "flex",
             "alignItems": "center",
@@ -826,14 +829,17 @@ const AddNewVendor: React.FC<AddNewVendorProps> = ({
               record, instead of matching by name.
             </Typography>
           </Stack>
-          {identifiersShown ? (
+          {isIdentifiersExpanded ? (
             <ChevronUp size={16} style={{ color: theme.palette.text.tertiary, flexShrink: 0 }} />
           ) : (
             <ChevronDown size={16} style={{ color: theme.palette.text.tertiary, flexShrink: 0 }} />
           )}
         </ButtonBase>
-        {identifiersShown && (
-          <Stack id="vendor-form-identifiers-fields" spacing="8px">
+        {/* Always rendered, so that aria-controls names an element; `hidden` keeps the closed
+            fields out of the tab order and the accessibility tree. It sits on a Box, which sets no
+            display of its own that would override it. */}
+        <Box id="vendor-form-identifiers-fields" hidden={!isIdentifiersExpanded}>
+          <Stack spacing="8px">
             <Stack direction={"row"} spacing="12px">
               <Field // country
                 id={VENDOR_MODAL_FIELD_IDS.country}
@@ -882,7 +888,7 @@ const AddNewVendor: React.FC<AddNewVendorProps> = ({
               placeholder="Up to 10 digits"
             />
           </Stack>
-        )}
+        </Box>
       </Stack>
 
       {/* Vendor Scorecard Section */}

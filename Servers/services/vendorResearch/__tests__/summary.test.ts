@@ -107,6 +107,8 @@ describe("the notes", () => {
       overCap: "More risks were found than one run keeps",
       searchUnavailable: "The search was not available",
       newsUnavailable: "News search was not available; checked on the vendor's own pages only",
+      newsUnavailableWithRecords:
+        "News search was not available; checked on the vendor's own pages and public databases only",
       pagesUnreadable: "The pages could not be read",
       timeLimit: "Not researched: the time limit was reached",
       endedEarly: "Not researched: the research ended before this category was covered",
@@ -410,7 +412,7 @@ describe("summariseCategories", () => {
       record: "statuspage",
     });
 
-    it("says that only the vendor's own pages were checked when they and records are its sources", () => {
+    it("says that the vendor's own pages and public databases were checked when they are its sources", () => {
       expect(
         entryFor(
           summarise({
@@ -423,8 +425,41 @@ describe("summariseCategories", () => {
       ).toEqual({
         category: "availability",
         outcome: "nothing_found",
+        note: "News search was not available; checked on the vendor's own pages and public databases only",
+      });
+    });
+
+    it("says that only the vendor's own pages were checked when they are its only sources", () => {
+      expect(
+        entryFor(
+          summarise({
+            calls: [searchFailed("availability"), read("availability")],
+            entries: [ownPage("availability"), otherPage("ai_specific")],
+          }),
+          "availability",
+        ),
+      ).toEqual({
+        category: "availability",
+        outcome: "nothing_found",
         note: "News search was not available; checked on the vendor's own pages only",
       });
+    });
+
+    // A page that was read can still be dropped (too old, the same text, a duplicate): an answered
+    // read proves no source of the category survived.
+    it("is search_failed when a page was read but no source of it survived", () => {
+      for (const entries of [[], [ownPage("ai_specific")]]) {
+        expect(
+          entryFor(
+            summarise({ calls: [searchFailed("availability"), read("availability")], entries }),
+            "availability",
+          ),
+        ).toEqual({
+          category: "availability",
+          outcome: "search_failed",
+          note: "The search was not available",
+        });
+      }
     });
 
     it("is search_failed when a source of it is off the vendor's site", () => {

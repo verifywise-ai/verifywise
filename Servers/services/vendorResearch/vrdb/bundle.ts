@@ -177,8 +177,12 @@ export function readManifest(dir: string = bundleDir()): VrdbManifest {
   return { format: BUNDLE_FORMAT, lists: [] };
 }
 
-/** The lists of the shipped manifest, read once per directory (the release does not change). */
-const shippedByDir = new Map<string, ReadonlySet<VrdbSourceId> | null>();
+/**
+ * The lists of the shipped manifest, read once per directory (the release does not change). Only a
+ * manifest that was read is kept: a missing or unreadable one is read again on the next call, so a
+ * manifest written after the first look (`npm run vrdb:bundle` on a running server) is not missed.
+ */
+const shippedByDir = new Map<string, ReadonlySet<VrdbSourceId>>();
 
 /**
  * The lists the release ships a bundle of, as its manifest names them. A list the manifest does not
@@ -188,7 +192,8 @@ const shippedByDir = new Map<string, ReadonlySet<VrdbSourceId> | null>();
  * that a missing manifest shows as lists not checked instead of a screening that looks complete.
  */
 export function shippedBundleIds(dir: string = bundleDir()): ReadonlySet<VrdbSourceId> | null {
-  if (shippedByDir.has(dir)) return shippedByDir.get(dir) ?? null;
+  const cached = shippedByDir.get(dir);
+  if (cached !== undefined) return cached;
   let shipped: ReadonlySet<VrdbSourceId> | null = null;
   try {
     const parsed = JSON.parse(fs.readFileSync(path.join(dir, MANIFEST_FILE), "utf8")) as unknown;
@@ -205,7 +210,7 @@ export function shippedBundleIds(dir: string = bundleDir()): ReadonlySet<VrdbSou
   } catch {
     shipped = null;
   }
-  shippedByDir.set(dir, shipped);
+  if (shipped !== null) shippedByDir.set(dir, shipped);
   return shipped;
 }
 

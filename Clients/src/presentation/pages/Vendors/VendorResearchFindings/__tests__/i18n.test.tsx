@@ -59,14 +59,11 @@ vi.mock(
   }),
 );
 
-const role = vi.hoisted(() => ({ canEdit: true, isAdmin: true }));
+const role = vi.hoisted(() => ({ canEdit: true, canManageKeys: true }));
 vi.mock("../../../../../application/hooks/useCan", () => ({
   useCan: (key: string) =>
-    (key === "vendor.edit" && role.canEdit) || (key === "llmKeys.admin" && role.isAdmin),
+    (key === "vendor.edit" && role.canEdit) || (key === "llmKeys.admin" && role.canManageKeys),
   useCanCheck: () => (key: string) => key === "vendor.edit" && role.canEdit,
-}));
-vi.mock("../../../../../application/hooks/useIsAdmin", () => ({
-  useIsAdmin: () => role.isAdmin,
 }));
 // The person who adds a risk is user 4; the users of the organization are 4 and 9.
 vi.mock("../../../../../application/hooks/useAuth", () => ({
@@ -579,7 +576,7 @@ const labelOfSentence = (key: string): CredibilityLabel =>
 beforeEach(() => {
   vi.clearAllMocks();
   role.canEdit = true;
-  role.isAdmin = true;
+  role.canManageKeys = true;
   mocks.config.mockResolvedValue({ hasLlmKey: true, autoRunAllowed: true, autoRunEnabled: true });
   mocks.settings.mockResolvedValue({
     researchKeyId: null,
@@ -763,11 +760,6 @@ describe.each(LANGS)("research findings in %s", (lang) => {
   /** Opens what the latest run found and checked, which is behind one button of the summary. */
   const openRunDetails = async () =>
     userEvent.click(await screen.findByRole("button", { name: tr(lang, "How it was researched") }));
-  /** Opens the credits of the lists, which sit behind one link under the findings. */
-  const openCredits = async () =>
-    userEvent.click(
-      await screen.findByRole("button", { name: tr(lang, "Data sources and licences") }),
-    );
   /** Opens the names of the lists the run asked that held nothing. */
   const openAllLists = async () =>
     userEvent.click(await screen.findByRole("button", { name: tr(lang, "Show all lists") }));
@@ -1279,7 +1271,6 @@ describe.each(LANGS)("research findings in %s", (lang) => {
       ),
     ).toBeInTheDocument();
     // The words of the licences stay as their owners wrote them; the label before them does not.
-    await openCredits();
     expect(
       screen.getByText(
         tr(lang, "Data sources: {attributions}", { attributions: joinAttributions(ATTRIBUTIONS) }),
@@ -1358,18 +1349,12 @@ describe.each(LANGS)("research findings in %s", (lang) => {
         ),
       ),
     ).toBeInTheDocument();
-    // The notices stay as their owners wrote them: the NVD's on screen, as its terms ask, the
-    // others behind the link.
-    expect(
-      screen.getByText(
-        "This product uses data from the NVD API but is not endorsed or certified by the NVD.",
-      ),
-    ).toBeInTheDocument();
-    await openCredits();
+    // The notices stay as their owners wrote them, the NVD's among them.
     expect(
       screen.getByText(
         tr(lang, "Data sources: {attributions}", {
           attributions: joinAttributions([
+            "This product uses data from the NVD API but is not endorsed or certified by the NVD.",
             "CVE records Copyright © 1999-2026, The MITRE Corporation, under the CVE Terms of Use (https://www.cve.org/Legal/TermsOfUse)",
             "United Nations Security Council Consolidated List",
           ]),
@@ -1459,7 +1444,6 @@ describe.each(LANGS)("research findings in %s", (lang) => {
     ).toBeInTheDocument();
     // The notices stay as their owners wrote them, the share-alike one of the incident database
     // among them; the label before them does not.
-    await openCredits();
     expect(
       screen.getByText(
         tr(lang, "Data sources: {attributions}", {
@@ -1525,12 +1509,13 @@ describe.each(LANGS)("research findings in %s", (lang) => {
         ),
       ),
     ).toBeInTheDocument();
-    // The notices stay as their owners wrote them; the label before them does not. ITA's is on
-    // screen, as its terms ask; the other is behind the link.
-    expect(screen.getByText(CSL_NOTICE)).toBeInTheDocument();
-    await openCredits();
+    // The notices stay as their owners wrote them; the label before them does not.
     expect(
-      screen.getByText(tr(lang, "Data sources: {attributions}", { attributions: RECALLS_NOTICE })),
+      screen.getByText(
+        tr(lang, "Data sources: {attributions}", {
+          attributions: joinAttributions([CSL_NOTICE, RECALLS_NOTICE]),
+        }),
+      ),
     ).toBeInTheDocument();
 
     asOfLine();
@@ -1571,7 +1556,6 @@ describe.each(LANGS)("research findings in %s", (lang) => {
       screen.getByText(checkedLine(1, [name("FDA recalls of AI-enabled medical devices")])),
     ).toBeInTheDocument();
     // Only the notice of the list the run asked is shown.
-    await openCredits();
     expect(
       screen.getByText(tr(lang, "Data sources: {attributions}", { attributions: RECALLS_NOTICE })),
     ).toBeInTheDocument();
@@ -1642,7 +1626,6 @@ describe.each(LANGS)("research findings in %s", (lang) => {
     expect(screen.queryByText(/AI Hallucination Cases/)).toBeNull();
     expect(screen.queryByText(/Epoch AI/)).toBeNull();
     // Only the notice of the list that held a record is shown, as its owner wrote it.
-    await openCredits();
     expect(
       screen.getByText(
         tr(lang, "Data sources: {attributions}", {

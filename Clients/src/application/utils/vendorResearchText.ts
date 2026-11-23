@@ -108,14 +108,17 @@ export const dismissReasonLabel = (reason: DismissReason, t: Translate = transla
 const OVER_CAP_NOTE = "More risks were found than one run keeps";
 
 /**
- * The server's notes (NOTES.searchUnavailable and NOTES.newsUnavailable in
- * Servers/services/vendorResearch/summary.ts) on a category whose searches were not answered: on
- * `search_failed`, nothing could be searched; on `nothing_found`, a news category was checked on
- * the vendor's own pages only.
+ * The server's notes (NOTES.searchUnavailable, NOTES.newsUnavailable and
+ * NOTES.newsUnavailableWithRecords in Servers/services/vendorResearch/summary.ts) on a category
+ * whose searches were not answered: on `search_failed`, nothing could be searched; on
+ * `nothing_found`, a news category was checked on the vendor's own pages only, or on those and
+ * public databases.
  */
 const SEARCH_UNAVAILABLE_NOTE = "The search was not available";
 const NEWS_UNAVAILABLE_NOTE =
   "News search was not available; checked on the vendor's own pages only";
+const NEWS_UNAVAILABLE_WITH_RECORDS_NOTE =
+  "News search was not available; checked on the vendor's own pages and public databases only";
 
 /** The categories that rest on the news, not on the vendor's own site. */
 const NEWS_CATEGORIES: readonly ResearchCategory[] = [
@@ -136,7 +139,9 @@ export function newsSearchUnavailable(
 ): boolean {
   return (entries ?? []).some((entry) => {
     const note = typeof entry?.note === "string" ? entry.note.trim() : "";
-    if (entry?.outcome === "nothing_found") return note === NEWS_UNAVAILABLE_NOTE;
+    if (entry?.outcome === "nothing_found") {
+      return note === NEWS_UNAVAILABLE_NOTE || note === NEWS_UNAVAILABLE_WITH_RECORDS_NOTE;
+    }
     return (
       entry?.outcome === "search_failed" &&
       note === SEARCH_UNAVAILABLE_NOTE &&
@@ -338,6 +343,10 @@ const NOTHING_FOUND_NOTES = new Map<string, string>([
   [
     NEWS_UNAVAILABLE_NOTE,
     "News search was not available, so this was checked only on the vendor's own pages.",
+  ],
+  [
+    NEWS_UNAVAILABLE_WITH_RECORDS_NOTE,
+    "News search was not available, so this was checked only on the vendor's own pages and public databases.",
   ],
 ]);
 
@@ -1406,15 +1415,4 @@ export function attestationLines(
     }
   }
   return lines;
-}
-
-/**
- * The notices whose terms ask for them to be shown prominently: the NVD's ("must display the
- * following notice") and the International Trade Administration's ("should display the following
- * notice prominently within the application"). They stay on screen; the other credits may sit
- * behind a disclosure on the same page, which their licences allow (a reasonable manner, or a link
- * to the statement).
- */
-export function isProminentAttribution(attribution: string): boolean {
-  return attribution === ATTRIBUTIONS.nvd || attribution === ATTRIBUTIONS.csl;
 }

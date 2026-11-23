@@ -321,7 +321,7 @@ export default function RunSummary({
                     <VWLink
                       onClick={() => setAllListsOpen((open) => !open)}
                       ariaExpanded={allListsOpen}
-                      sx={{ fontSize: 13 }}
+                      sx={{ fontSize: textStyles.body.fontSize }}
                     >
                       {allListsOpen ? "Hide the lists" : "Show all lists"}
                     </VWLink>

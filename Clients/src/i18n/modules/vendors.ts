@@ -304,8 +304,6 @@ export const de: Record<string, string> = {
   "No records: {sources}.": "Keine Einträge: {sources}.",
   "Show all lists": "Alle Listen anzeigen",
   "Hide the lists": "Listen ausblenden",
-  "Data sources and licences": "Datenquellen und Lizenzen",
-  "Hide data sources and licences": "Datenquellen und Lizenzen ausblenden",
   "no risks found": "keine Risiken gefunden",
   "Listed in the FedRAMP Marketplace.": "Im FedRAMP Marketplace gelistet.",
   "Listed in the FedRAMP Marketplace: {status}.": "Im FedRAMP Marketplace gelistet: {status}.",
@@ -379,6 +377,8 @@ export const de: Record<string, string> = {
   "The search was not available.": "Die Suche war nicht verfügbar.",
   "News search was not available, so this was checked only on the vendor's own pages.":
     "Die Nachrichtensuche war nicht verfügbar, daher wurde nur auf den eigenen Seiten des Anbieters geprüft.",
+  "News search was not available, so this was checked only on the vendor's own pages and public databases.":
+    "Die Nachrichtensuche war nicht verfügbar, daher wurde nur auf den eigenen Seiten des Anbieters und in öffentlichen Datenbanken geprüft.",
   "News search was not available, so results may be incomplete.":
     "Die Nachrichtensuche war nicht verfügbar, daher sind die Ergebnisse möglicherweise unvollständig.",
   "The pages could not be read.": "Die Seiten konnten nicht gelesen werden.",
@@ -836,8 +836,6 @@ export const fr: Record<string, string> = {
   "No records: {sources}.": "Aucun enregistrement : {sources}.",
   "Show all lists": "Afficher toutes les listes",
   "Hide the lists": "Masquer les listes",
-  "Data sources and licences": "Sources des données et licences",
-  "Hide data sources and licences": "Masquer les sources des données et les licences",
   "no risks found": "aucun risque trouvé",
   "Listed in the FedRAMP Marketplace.": "Répertorié dans le FedRAMP Marketplace.",
   "Listed in the FedRAMP Marketplace: {status}.":
@@ -911,6 +909,8 @@ export const fr: Record<string, string> = {
   "The search was not available.": "La recherche n'était pas disponible.",
   "News search was not available, so this was checked only on the vendor's own pages.":
     "La recherche d'actualités n'était pas disponible, la vérification s'est donc limitée aux pages du fournisseur.",
+  "News search was not available, so this was checked only on the vendor's own pages and public databases.":
+    "La recherche d'actualités n'était pas disponible, la vérification s'est donc limitée aux pages du fournisseur et aux bases de données publiques.",
   "News search was not available, so results may be incomplete.":
     "La recherche d'actualités n'était pas disponible, les résultats peuvent donc être incomplets.",
   "The pages could not be read.": "Les pages n'ont pas pu être lues.",
@@ -1367,8 +1367,6 @@ export const es: Record<string, string> = {
   "No records: {sources}.": "Sin registros: {sources}.",
   "Show all lists": "Mostrar todas las listas",
   "Hide the lists": "Ocultar las listas",
-  "Data sources and licences": "Fuentes de datos y licencias",
-  "Hide data sources and licences": "Ocultar fuentes de datos y licencias",
   "no risks found": "no se encontraron riesgos",
   "Listed in the FedRAMP Marketplace.": "Figura en el FedRAMP Marketplace.",
   "Listed in the FedRAMP Marketplace: {status}.": "Figura en el FedRAMP Marketplace: {status}.",
@@ -1439,6 +1437,8 @@ export const es: Record<string, string> = {
   "The search was not available.": "La búsqueda no estaba disponible.",
   "News search was not available, so this was checked only on the vendor's own pages.":
     "La búsqueda de noticias no estaba disponible, así que solo se revisaron las páginas propias del proveedor.",
+  "News search was not available, so this was checked only on the vendor's own pages and public databases.":
+    "La búsqueda de noticias no estaba disponible, así que solo se revisaron las páginas propias del proveedor y las bases de datos públicas.",
   "News search was not available, so results may be incomplete.":
     "La búsqueda de noticias no estaba disponible, así que los resultados pueden estar incompletos.",
   "The pages could not be read.": "No se pudieron leer las páginas.",

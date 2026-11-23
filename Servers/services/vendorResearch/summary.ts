@@ -41,6 +41,9 @@ export const NOTES = {
    * or records: what it says rests on those alone, not on the news.
    */
   newsUnavailable: "News search was not available; checked on the vendor's own pages only",
+  /** As newsUnavailable, when the sources of it include a record of a public database. */
+  newsUnavailableWithRecords:
+    "News search was not available; checked on the vendor's own pages and public databases only",
   /** Worked on, no call answered, and a page could not be read. */
   pagesUnreadable: "The pages could not be read",
   /** No call, because the loop ran out of time. */
@@ -104,9 +107,10 @@ function modelNoteFor(
  * 5. A news category (one that is not in SITE_CATEGORIES: it rests on what the searches bring, not
  *    on the vendor's site) whose searches were none of them answered (it made some, or
  *    `searchUnavailable` names it): pages of it that were read do not make "no risks found" true
- *    for the news that was never searched. When it read a page and every source of it is the
- *    vendor's own page or a record (`entries`), `nothing_found` with the note that only the
- *    vendor's own pages were checked; otherwise `search_failed`, the search was not available. A
+ *    for the news that was never searched. When at least one source of it survived and every
+ *    source of it is the vendor's own page or a record (`entries`), `nothing_found` with the note
+ *    that only the vendor's own pages (and public databases, when a record is among them) were
+ *    checked; otherwise `search_failed`, the search was not available. A
  *    category of the vendor's site is not this rule: its pages carry it, and its failed searches
  *    are counted by rule 7.
  * 6. The model proposed a risk in it and none stayed: `nothing_found`, the possible risks were not
@@ -173,17 +177,18 @@ export function summariseCategories(input: {
       failedSearches === searches.length &&
       (searches.length > 0 || searchUnavailable);
     if (newsNotSearched) {
-      // What it says rests on the vendor's own pages alone when a page was read and every source
-      // of it is the vendor's own page or a record; otherwise the category was not researched.
+      // What it says rests on the vendor's own pages alone when at least one source of it survived
+      // (a page that was read can still be dropped: too old, the same text, a duplicate) and every
+      // one is the vendor's own page or a record; otherwise the category was not researched.
+      const sources = (input.entries ?? []).filter((entry) => entry.category === category);
       const ownOnly =
-        reads.length > failedReads &&
-        input.entries !== undefined &&
-        input.entries
-          .filter((entry) => entry.category === category)
-          .every((entry) => entry.onVendorSite || entry.record !== undefined);
-      return ownOnly
-        ? { category, outcome: "nothing_found", note: NOTES.newsUnavailable }
-        : { category, outcome: "search_failed", note: NOTES.searchUnavailable };
+        sources.length > 0 &&
+        sources.every((entry) => entry.onVendorSite || entry.record !== undefined);
+      if (!ownOnly) return { category, outcome: "search_failed", note: NOTES.searchUnavailable };
+      const note = sources.some((entry) => entry.record !== undefined)
+        ? NOTES.newsUnavailableWithRecords
+        : NOTES.newsUnavailable;
+      return { category, outcome: "nothing_found", note };
     }
 
     if (input.capped?.has(category) === true) {

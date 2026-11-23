@@ -41,10 +41,12 @@ vi.mock(
   }),
 );
 
-const role = vi.hoisted(() => ({ canEdit: true, isAdmin: false }));
+// `isAdmin` is the role name, which the page must not consult: what it shows rests on the
+// permissions (`canManageKeys` is llmKeys.admin), which a custom role can hold too.
+const role = vi.hoisted(() => ({ canEdit: true, canManageKeys: false, isAdmin: false }));
 vi.mock("../../../../../application/hooks/useCan", () => ({
   useCan: (key: string) =>
-    (key === "vendor.edit" && role.canEdit) || (key === "llmKeys.admin" && role.isAdmin),
+    (key === "vendor.edit" && role.canEdit) || (key === "llmKeys.admin" && role.canManageKeys),
   useCanCheck: () => (key: string) => key === "vendor.edit" && role.canEdit,
 }));
 vi.mock("../../../../../application/hooks/useIsAdmin", () => ({
@@ -135,9 +137,6 @@ const rowOf = (text: string) => {
 /** Opens what the latest run found and checked, which is behind one button of the summary. */
 const openRunDetails = async () =>
   userEvent.click(await screen.findByRole("button", { name: "How it was researched" }));
-/** Opens the credits of the lists under the findings, which sit behind one link of their own. */
-const openCredits = async () =>
-  userEvent.click(await screen.findByRole("button", { name: "Data sources and licences" }));
 /** Opens the names of every list the run asked that held nothing. */
 const openAllLists = async () =>
   userEvent.click(await screen.findByRole("button", { name: "Show all lists" }));
@@ -198,6 +197,7 @@ const acceptsAndLeavesOnlyTheSecond = () =>
 beforeEach(() => {
   vi.clearAllMocks();
   role.canEdit = true;
+  role.canManageKeys = false;
   role.isAdmin = false;
   formEdits.current = {};
   mocks.config.mockResolvedValue({ hasLlmKey: true, autoRunAllowed: true, autoRunEnabled: true });
@@ -277,7 +277,7 @@ describe("the states of the section", () => {
   });
 
   it("tells an Admin to add an LLM key", async () => {
-    role.isAdmin = true;
+    role.canManageKeys = true;
     mocks.list.mockResolvedValue({ rows: [], total: 0 });
     mocks.config.mockResolvedValue({
       hasLlmKey: false,
@@ -292,7 +292,7 @@ describe("the states of the section", () => {
   });
 
   it("takes whoever can add a key straight to the add-key form", async () => {
-    role.isAdmin = true;
+    role.canManageKeys = true;
     mocks.list.mockResolvedValue({ rows: [], total: 0 });
     mocks.config.mockResolvedValue({
       hasLlmKey: false,
@@ -316,7 +316,7 @@ describe("the states of the section", () => {
   });
 
   it("keeps the setup hint from everyone who is not an Admin", async () => {
-    role.isAdmin = false;
+    role.canManageKeys = false;
     mocks.list.mockResolvedValue({ rows: [], total: 0 });
     mocks.config.mockResolvedValue({
       hasLlmKey: false,
@@ -338,7 +338,7 @@ describe("the states of the section", () => {
   });
 
   it("says no findings are pending, with no setup hint, once the organization has an LLM key", async () => {
-    role.isAdmin = true;
+    role.canManageKeys = true;
     mocks.list.mockResolvedValue({ rows: [], total: 0 });
     mocks.config.mockResolvedValue({
       hasLlmKey: true,
@@ -3525,13 +3525,20 @@ describe("the coverage of the latest run", () => {
 
     const ALL =
       "No records: OFAC Specially Designated Nationals list, UK Sanctions List, EU consolidated list of financial sanctions.";
+    // The coverage lines name it nowhere else; the credits under the findings carry the list's
+    // own words, which name it, and stay on screen as its licence asks.
+    const named = () =>
+      screen.queryAllByText(
+        (text) => text.includes("UK Sanctions List") && !text.startsWith("Data sources:"),
+      );
+    expect(screen.getByText(/^Data sources:.*UK Sanctions List, FCDO/)).toBeInTheDocument();
     expect(screen.queryByText(ALL)).not.toBeInTheDocument();
-    expect(screen.queryByText(/UK Sanctions List/)).not.toBeInTheDocument();
+    expect(named()).toHaveLength(0);
     const toggle = screen.getByRole("button", { name: "Show all lists" });
     expect(toggle).toHaveAttribute("aria-expanded", "false");
     await openAllLists();
     expect(screen.getByText(ALL)).toBeInTheDocument();
-    expect(screen.getAllByText(/UK Sanctions List/)).toHaveLength(1);
+    expect(named()).toHaveLength(1);
     await userEvent.click(screen.getByRole("button", { name: "Hide the lists" }));
     expect(screen.queryByText(ALL)).not.toBeInTheDocument();
   });
@@ -3603,17 +3610,12 @@ describe("the coverage of the latest run", () => {
     await openRunDetails();
     expect(screen.queryByText(/^Checked/)).not.toBeInTheDocument();
     expect(screen.queryByText(/^Data sources:/)).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Data sources and licences" })).toBeNull();
   });
 
-  it("shows the data sources line behind Data sources and licences", async () => {
+  it("shows the data sources line", async () => {
     mocks.latest.mockResolvedValue(run({ coverage: coverage() }));
     renderSection({ route: WITH_VENDOR_7 });
 
-    const toggle = await screen.findByRole("button", { name: "Data sources and licences" });
-    expect(toggle).toHaveAttribute("aria-expanded", "false");
-    expect(screen.queryByText(/^Data sources:/)).not.toBeInTheDocument();
-    await openCredits();
     const line = await screen.findByText(`Data sources: ${joinAttributions(ATTRIBUTIONS)}`);
     // The UK statement's own full stop is not doubled by the semicolon that follows it.
     expect(line.textContent).toContain("Licence v3.0; EU consolidated list");
@@ -3643,7 +3645,6 @@ describe("the coverage of the latest run", () => {
       mocks.latest.mockResolvedValue(latest);
       renderSection({ route: WITH_VENDOR_7 });
       await screen.findByText(FIRST);
-      await openCredits();
 
       const expected =
         latest.status === "completed"
@@ -3658,7 +3659,6 @@ describe("the coverage of the latest run", () => {
       mocks.list.mockResolvedValue({ rows: [credibleFinding()], total: 1 });
       mocks.latest.mockResolvedValue(run({ coverage: coverage() }));
       renderSection({ route: WITH_VENDOR_7 });
-      await openCredits();
 
       expect(
         await screen.findByText(`Data sources: ${joinAttributions(ATTRIBUTIONS)}`),
@@ -3668,7 +3668,6 @@ describe("the coverage of the latest run", () => {
     it("credits the lists the findings cite with every vendor listed", async () => {
       mocks.list.mockResolvedValue({ rows: [credibleFinding(), secondFinding()], total: 2 });
       renderSection();
-      await openCredits();
 
       expect(await screen.findByText(KEV_LINE)).toBeInTheDocument();
       expect(screen.queryByRole("link", { name: "GDELT Project" })).not.toBeInTheDocument();
@@ -3716,13 +3715,13 @@ describe("the coverage of the latest run", () => {
         "Checked 5 public lists and registers. 2 had records: CISA Known Exploited Vulnerabilities, the National Vulnerability Database.",
       ),
     ).toBeInTheDocument();
-    // The NVD's terms ask for its notice to be displayed: it stays on screen without a click.
-    const notice = screen.getByText(
-      "This product uses data from the NVD API but is not endorsed or certified by the NVD.",
+    const line = screen.getByText(
+      `Data sources: ${joinAttributions([
+        ATTRIBUTIONS[0],
+        "This product uses data from the NVD API but is not endorsed or certified by the NVD.",
+        ...ATTRIBUTIONS.slice(1),
+      ])}`,
     );
-    expect(notice.closest("[data-vw-no-translate]")).not.toBeNull();
-    await openCredits();
-    const line = screen.getByText(`Data sources: ${joinAttributions(ATTRIBUTIONS)}`);
     expect(line.closest("[data-vw-no-translate]")).not.toBeNull();
   });
 
@@ -3765,7 +3764,6 @@ describe("the coverage of the latest run", () => {
     expect(
       screen.getByText("Sources cited: 0 official, 1 trusted press, 0 vendor, 2 unverified"),
     ).toBeInTheDocument();
-    await openCredits();
     const line = screen.getByText(
       `Data sources: ${joinAttributions([
         "AI Incident Database, Responsible AI Collaborative (incidentdatabase.ai), CC BY-SA 4.0. Adapted by VerifyWise; the adapted records are shared under CC BY-SA 4.0.",
@@ -3800,7 +3798,6 @@ describe("the coverage of the latest run", () => {
         "Checked 1 public list or register. 1 had a record: FDA list of AI-enabled medical devices.",
       ),
     ).toBeInTheDocument();
-    await openCredits();
     expect(
       screen.getByText(/^Data sources: FDA list of AI-enabled medical devices,/),
     ).toBeInTheDocument();
@@ -3849,15 +3846,15 @@ describe("the coverage of the latest run", () => {
       expect(
         screen.getByText("Sources cited: 2 official, 0 trusted press, 0 vendor, 0 unverified"),
       ).toBeInTheDocument();
-      // ITA's terms ask for its notice to be displayed prominently: it stays on screen.
-      const notice = screen.getByText(CSL_NOTICE);
-      expect(notice.closest("[data-vw-no-translate]")).not.toBeNull();
-      expect(notice.textContent).not.toContain("Data API");
-      // The other credit is behind the link, never translated.
-      expect(screen.queryByText(`Data sources: ${RECALLS_NOTICE}`)).toBeNull();
-      await openCredits();
-      const line = screen.getByText(`Data sources: ${RECALLS_NOTICE}`);
+      const line = screen.getByText(
+        `Data sources: ${joinAttributions([CSL_NOTICE, RECALLS_NOTICE])}`,
+      );
+      // The words of a notice are never translated, and the full stop of the first is not doubled.
       expect(line.closest("[data-vw-no-translate]")).not.toBeNull();
+      expect(line.textContent).toContain(
+        "Entries adapted by VerifyWise; FDA medical device recalls",
+      );
+      expect(line.textContent).not.toContain("Data API");
     });
 
     it("names the screening list when the run could not check it, and says nothing of the recalls it did not ask", async () => {
@@ -3882,7 +3879,6 @@ describe("the coverage of the latest run", () => {
           "Checked 1 public list or register. 1 had a record: CISA Known Exploited Vulnerabilities.",
         ),
       ).toBeInTheDocument();
-      await openCredits();
       // Neither notice is shown: nothing of the two lists is in the findings.
       expect(screen.queryByText(/Consolidated Screening List but is not endorsed/)).toBeNull();
       expect(screen.queryByText(/FDA recalls of AI-enabled medical devices/)).toBeNull();
@@ -3960,7 +3956,6 @@ describe("the coverage of the latest run", () => {
           "No records: AI Hallucination Cases database, Epoch AI Data on AI Models.",
         ),
       ).toBeInTheDocument();
-      await openCredits();
       const line = screen.getByText(
         `Data sources: ${joinAttributions([ATTRIBUTIONS[0], OFSI_NOTICE])}`,
       );
@@ -4387,8 +4382,8 @@ describe("Research again", () => {
 describe("the research settings", () => {
   const SETTINGS_BUTTON = { name: "Research settings" };
 
-  it("are offered to an Admin of an organization that has an LLM key, and open in a window", async () => {
-    role.isAdmin = true;
+  it("are offered to a role that manages the LLM keys when the organization has one, and open in a window", async () => {
+    role.canManageKeys = true;
     renderSection({ route: WITH_VENDOR_7 });
 
     await userEvent.click(await screen.findByRole("button", SETTINGS_BUTTON));
@@ -4398,8 +4393,25 @@ describe("the research settings", () => {
     expect(await within(dialog).findAllByRole("combobox")).toHaveLength(3);
   });
 
-  it("are not offered to anyone who is not an Admin, and the server is not asked for them", async () => {
+  it("are offered to a custom role that manages the LLM keys, though it is not Admin", async () => {
+    role.canManageKeys = true;
     role.isAdmin = false;
+    renderSection({ route: WITH_VENDOR_7 });
+
+    expect(await screen.findByRole("button", SETTINGS_BUTTON)).toBeInTheDocument();
+  });
+
+  it("are not offered to an Admin role that does not manage the LLM keys", async () => {
+    role.canManageKeys = false;
+    role.isAdmin = true;
+    renderSection({ route: WITH_VENDOR_7 });
+    await screen.findByText(FIRST);
+
+    expect(screen.queryByRole("button", SETTINGS_BUTTON)).not.toBeInTheDocument();
+  });
+
+  it("are not offered to anyone who does not manage the LLM keys, and the server is not asked for them", async () => {
+    role.canManageKeys = false;
     renderSection({ route: WITH_VENDOR_7 });
     await screen.findByText(FIRST);
 
@@ -4408,7 +4420,7 @@ describe("the research settings", () => {
   });
 
   it("are not offered while the organization has no LLM key, because there is nothing to choose from", async () => {
-    role.isAdmin = true;
+    role.canManageKeys = true;
     mocks.config.mockResolvedValue({
       hasLlmKey: false,
       autoRunAllowed: true,
@@ -4421,7 +4433,7 @@ describe("the research settings", () => {
   });
 
   it("are not offered before it is known whether the organization has an LLM key", async () => {
-    role.isAdmin = true;
+    role.canManageKeys = true;
     mocks.config.mockReturnValue(new Promise(() => {}));
     renderSection({ route: WITH_VENDOR_7 });
     await screen.findByText(FIRST);
@@ -4430,7 +4442,7 @@ describe("the research settings", () => {
   });
 
   it("are not read from the server until the window is opened", async () => {
-    role.isAdmin = true;
+    role.canManageKeys = true;
     renderSection({ route: WITH_VENDOR_7 });
     const button = await screen.findByRole("button", SETTINGS_BUTTON);
     expect(mocks.settings).not.toHaveBeenCalled();
@@ -4442,7 +4454,7 @@ describe("the research settings", () => {
   });
 
   it("tell the page when they were saved, and the window closes", async () => {
-    role.isAdmin = true;
+    role.canManageKeys = true;
     const { onNotify } = renderSection({ route: WITH_VENDOR_7 });
     await userEvent.click(await screen.findByRole("button", SETTINGS_BUTTON));
     const dialog = await screen.findByRole("dialog", { name: "Research settings" });
@@ -4462,7 +4474,7 @@ describe("the research settings", () => {
   });
 
   it("close on Cancel, and the next opening starts from what is saved", async () => {
-    role.isAdmin = true;
+    role.canManageKeys = true;
     mocks.settings.mockResolvedValue({
       researchKeyId: 20,
       analysisKeyId: null,

@@ -282,10 +282,49 @@ describe("NewVendor: the identifiers of the vendor", () => {
     renderWithProviders(<AddNewVendor isOpen={true} setIsOpen={vi.fn()} onSuccess={vi.fn()} />);
 
     expect(toggle()).toHaveAttribute("aria-expanded", "false");
-    expect(screen.queryByLabelText(/^lei/i)).not.toBeInTheDocument();
+    // The closed fields stay in the page, hidden, so that the button's aria-controls names them.
+    const controlled = document.getElementById(toggle().getAttribute("aria-controls") ?? "");
+    expect(controlled).not.toBeNull();
+    expect(controlled).not.toBeVisible();
+    expect(screen.getByLabelText(/^lei/i)).not.toBeVisible();
     await userEvent.click(toggle());
     expect(toggle()).toHaveAttribute("aria-expanded", "true");
-    expect(within(group()).getByLabelText(/^lei/i)).toBeInTheDocument();
+    expect(within(group()).getByLabelText(/^lei/i)).toBeVisible();
+    await userEvent.click(toggle());
+    expect(toggle()).toHaveAttribute("aria-expanded", "false");
+    expect(screen.getByLabelText(/^lei/i)).not.toBeVisible();
+  });
+
+  it("an invalid identifier keeps the section open while it is corrected", async () => {
+    open(vendor());
+
+    await userEvent.type(field(/^lei/i), "TOO-SHORT");
+    await save();
+
+    expect(await screen.findByText(/^LEI /)).toBeVisible();
+    // Typing clears the error; the section stays open, the field under the cursor with it.
+    await userEvent.type(screen.getByLabelText(/^lei/i), "X");
+    expect(toggle()).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByLabelText(/^lei/i)).toBeVisible();
+    expect(screen.getByLabelText(/^lei/i)).toHaveFocus();
+  });
+
+  it("a failed save opens the closed section on an invalid identifier and focuses it", async () => {
+    open(vendor());
+
+    await userEvent.type(field(/^lei/i), "TOO-SHORT");
+    await userEvent.click(toggle());
+    expect(toggle()).toHaveAttribute("aria-expanded", "false");
+    await save();
+
+    await waitFor(() => expect(toggle()).toHaveAttribute("aria-expanded", "true"));
+    expect(screen.getByLabelText(/^lei/i)).toBeVisible();
+    await waitFor(() => expect(screen.getByLabelText(/^lei/i)).toHaveFocus());
+    expect(updateVendor).not.toHaveBeenCalled();
+    // Typing clears the error; the section that the save opened stays open.
+    await userEvent.type(screen.getByLabelText(/^lei/i), "X");
+    expect(toggle()).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByLabelText(/^lei/i)).toBeVisible();
   });
 
   describe("in the person's language", () => {

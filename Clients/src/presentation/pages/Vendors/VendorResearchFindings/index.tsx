@@ -1,10 +1,11 @@
 import { useEffect, useId, useMemo, useRef, useState } from "react";
-import { Box, Link, Stack, Typography } from "@mui/material";
+import { Box, Stack, Typography } from "@mui/material";
 import { useNavigate, useSearchParams } from "react-router";
 import { CheckCircle2, Info, Settings2, X } from "lucide-react";
 import Select from "../../../components/Inputs/Select";
 import CustomizableSkeleton from "../../../components/Skeletons";
 import { CustomizableButton } from "../../../components/button/customizable-button";
+import { VWLink } from "../../../components/Link";
 import AddNewRisk from "../../../components/Modals/NewRisk";
 import { textStyles } from "../../../themes/typography";
 import { alertTextSx, infoAlertSx, successAlertSx } from "../../RiskInheritanceGraph/reportStyles";
@@ -12,7 +13,6 @@ import useTranslation from "../../../../application/hooks/useTranslation";
 import { useAuth } from "../../../../application/hooks/useAuth";
 import useUsers from "../../../../application/hooks/useUsers";
 import { useCan } from "../../../../application/hooks/useCan";
-import { useIsAdmin } from "../../../../application/hooks/useIsAdmin";
 import { LLM_KEY_CREATE_PATH } from "../../../../application/constants/llmKeyDeepLink";
 import {
   useAcceptFinding,
@@ -102,7 +102,6 @@ export default function VendorResearchFindings({
 }: VendorResearchFindingsProps) {
   const { t } = useTranslation();
   const canEdit = useCan("vendor.edit");
-  const isAdmin = useIsAdmin();
   const canManageKeys = useCan("llmKeys.admin");
   const navigate = useNavigate();
 
@@ -175,9 +174,9 @@ export default function VendorResearchFindings({
   const latest = useLatestVendorResearch(vendorId);
 
   const notConfigured = config.data !== undefined && !config.data.hasLlmKey;
-  // Only an Admin chooses the keys (the server refuses everyone else), and there is nothing to
-  // choose from until the organization has one.
-  const canChooseKeys = isAdmin && config.data?.hasLlmKey === true;
+  // Only a role that manages the LLM keys chooses them (the server refuses everyone else), and
+  // there is nothing to choose from until the organization has one.
+  const canChooseKeys = canManageKeys && config.data?.hasLlmKey === true;
 
   const vendorOptions = useMemo(() => {
     const named = vendors
@@ -452,14 +451,12 @@ export default function VendorResearchFindings({
             {canManageKeys && (
               <Typography sx={{ ...textStyles.bodySmall, color: "text.tertiary" }}>
                 {t("Research needs an LLM key.")}{" "}
-                <Link
-                  component="button"
-                  type="button"
+                <VWLink
                   onClick={() => navigate(LLM_KEY_CREATE_PATH)}
                   sx={{ fontSize: "inherit", verticalAlign: "baseline" }}
                 >
                   {t("Add an LLM key")}
-                </Link>
+                </VWLink>
               </Typography>
             )}
           </>

@@ -139,6 +139,12 @@ const FIXED_NOTES: Array<[outcome: CategoryOutcome, stored: string, sentence: st
     "News search was not available; checked on the vendor's own pages only",
     "News search was not available, so this was checked only on the vendor's own pages.",
   ],
+  // NOTES.newsUnavailableWithRecords: the same, when a public database record is among the sources.
+  [
+    "nothing_found",
+    "News search was not available; checked on the vendor's own pages and public databases only",
+    "News search was not available, so this was checked only on the vendor's own pages and public databases.",
+  ],
 ];
 
 /** Notes the earlier search provider stored: no longer ours, on any outcome. */
@@ -425,6 +431,15 @@ describe("newsSearchUnavailable", () => {
       ]),
     ).toBe(true);
     expect(newsSearchUnavailable([entryOf("availability", "nothing_found", NEWS_DOWN)])).toBe(true);
+    expect(
+      newsSearchUnavailable([
+        entryOf(
+          "availability",
+          "nothing_found",
+          "News search was not available; checked on the vendor's own pages and public databases only",
+        ),
+      ]),
+    ).toBe(true);
   });
 
   it("is false for a site category, for other notes, for the phrase on another outcome, and for no entries", () => {
