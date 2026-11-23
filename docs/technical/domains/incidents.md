@@ -490,6 +490,9 @@ incidents status sync (`changedBySystem: true`, see
    carries no user id.
 9. Enqueues the `incident_updated` automation (`enqueueIncidentUpdatedAutomations`)
    in `transaction.afterCommit`, so nothing is sent for a rolled-back change.
+10. When the change raises severity from below the critical tier into it, starts
+   the [critical incident response workflow](#critical-incident-response-workflow),
+   also in `transaction.afterCommit` and at most once per incident.
 
 It returns the updated incident, or `null` when the incident does not exist in
 the organization.
@@ -805,6 +808,79 @@ For incident notifications:
 - `changes_summary` - Markdown list of all changes
 - `date_and_time` - Current timestamp
 
+## Critical incident response workflow
+
+The `incident_response` workflow (Compliance Autopilot, issue 3813;
+`Servers/services/workflows/definitions/incidentResponse.workflow.ts`) runs
+when an incident reaches the critical tier: `isCriticalIncidentSeverity`,
+which is `Very serious` (and a legacy `critical`).
+
+### When it starts
+
+`triggerIncidentResponse` (`Servers/services/workflows/triggers.ts`) is called
+after commit, fire-and-forget, from:
+
+- every create: `createIncident` (console, AI Advisor) and
+  `createIncidentForImport` (Jira import), when the incident is created critical;
+- every update, in the shared path `updateIncident`, when the update moves
+  severity from below the critical tier into it (`isCriticalEscalation`). That
+  covers the REST update, the Advisor tools, the MCP `update_incident` tool and
+  the Jira status sync. Critical to critical, critical to lower, and lower to
+  lower never start it.
+
+**Once per incident.** The trigger takes a per-incident advisory lock
+(`pg_advisory_xact_lock`), looks for any `ai_workflow_runs` row of type
+`incident_response` whose `trigger_payload->>'incidentId'` is the incident, and
+creates a run only when there is none. Runs are never deleted, so the existing
+row is the durable record; there is no extra column. An incident created
+critical never gets a second run when it is later lowered and raised again, and
+neither does one escalated twice. Concurrent writers (a create racing an
+update, two updates) serialise on the lock and produce one run.
+
+### Steps
+
+| Step | Kind | What it does |
+|------|------|--------------|
+| `classify_incident` | Read | Loads the incident by id in the run's organization (`loadIncidentForResponse`, `getIncidentByIdQuery`); skips the run when it is gone or no longer critical |
+| `link_related_risks` | Read | Collects risks for context |
+| `create_remediation_tasks` | Write, gated | Pauses on a workflow gate approval; once approved, creates one remediation task |
+| `escalate_notify_admins` | Write, gated | Pauses on its own gate approval; once approved, notifies every Admin |
+
+Each gated step opens an approval in the Admin queue (`requestGateApproval`)
+and the run waits in `awaiting_approval`. Approving resumes the run at that
+step, which then performs its write; rejecting cancels the run. One approval
+authorises one write, so the escalation needs a second approval. Both writes
+re-read the incident at approval time (the owner may have changed) and skip if
+it was deleted.
+
+**Remediation task** (`createRemediationTask`,
+`Servers/services/workflows/incidentResponseActions.ts`): one task, High
+priority, Open, titled "Respond to critical incident <reference>", with a
+description that links to the incident. Assigned to the incident's owner
+(`assignee_id`); when there is none, or the owner has left the organization, to
+the user who created the incident (its creation history); failing that, to the
+Admin who approved the step. Only current organization members qualify; when
+none does, the task is created unassigned. The approving Admin is the task's
+creator; task history records the creation as a system change. The assignee
+gets the usual task-assigned notice. Tasks cannot link to incidents
+(`task_entity_links` has no incident type), so the link is in the description.
+
+**Admin escalation** (`notifyAdminsOfCriticalIncident`): every organization
+member with role Admin gets an in-app notice (`system` type, keyed title and
+message in their language, linked to `/ai-incident-managements?incidentId=<id>`)
+and an email (`incident-critical-escalation.mjml`, keyed subject; English body),
+through `notifyCriticalIncidentEscalation`.
+
+**Each write runs once per run.** Both writes first lock the run's
+`ai_workflow_runs` row (`FOR NO KEY UPDATE`), so a second execution of the same
+step waits for the first. The task is recorded in `ai_action_audit_log`
+(`rule_name = workflow.incident_response.remediation_task_created`, task id in
+`metadata`) in the task's own transaction; a later execution returns that task
+instead of creating another. Each Admin notice carries
+`metadata.workflow_action = incident_critical_escalation` and
+`metadata.workflow_run_id`; a later execution skips Admins who already have
+one, so it only reaches Admins a failed first attempt missed.
+
 ## AI Advisor Integration
 
 ### Available Tools
@@ -850,6 +926,9 @@ The incident management system supports Article 73 requirements:
 | `controllers/incident-management.ctrl.ts` | Controller |
 | `routes/aiIncidentManagement.route.ts` | Routes |
 | `advisor/tools/incidentTools.ts` | AI tools |
+| `services/workflows/definitions/incidentResponse.workflow.ts` | Critical incident response workflow |
+| `services/workflows/incidentResponseActions.ts` | Its incident lookup, remediation task and Admin escalation |
+| `templates/incident-critical-escalation.mjml` | Admin escalation email |
 
 ### Frontend
 

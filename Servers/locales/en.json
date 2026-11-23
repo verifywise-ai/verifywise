@@ -1669,5 +1669,8 @@
   "This file has a private analysis by another user": "This file has a private analysis by another user",
   "A private analysis would replace another user's analysis of this file": "A private analysis would replace another user's analysis of this file",
   "Incident creation validation failed": "Incident creation validation failed",
-  "{field} does not reference an entity in your organization": "{field} does not reference an entity in your organization"
+  "{field} does not reference an entity in your organization": "{field} does not reference an entity in your organization",
+  "Critical incident needs a response": "Critical incident needs a response",
+  "Incident {reference} in \"{useCase}\" was rated {severity}.": "Incident {reference} in \"{useCase}\" was rated {severity}.",
+  "Critical incident: {reference}": "Critical incident: {reference}"
 }

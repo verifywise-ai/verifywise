@@ -152,6 +152,33 @@ export const incidentManagementContent: ArticleContent = {
     },
     {
       type: 'heading',
+      id: 'critical-incident-response',
+      level: 3,
+      text: 'Response to Very serious incidents',
+    },
+    {
+      type: 'paragraph',
+      text: 'When an incident is recorded as Very serious, or an existing incident is raised to Very serious, VerifyWise starts a response for it. Admins get two approval requests, one after the other:',
+    },
+    {
+      type: 'bullet-list',
+      items: [
+        {
+          bold: 'Remediation task',
+          text: 'Approving the first request creates one high-priority task to respond to the incident. It goes to the incident\'s owner. If the incident has no owner, it goes to the person who created the incident, or else to the Admin who approved it.',
+        },
+        {
+          bold: 'Admin escalation',
+          text: 'Approving the second request notifies every Admin about the incident, in the app and by email.',
+        },
+      ],
+    },
+    {
+      type: 'paragraph',
+      text: 'Rejecting either request stops the response. Each incident gets one response: lowering its severity and raising it to Very serious again does not start another.',
+    },
+    {
+      type: 'heading',
       id: 'incident-workflow',
       level: 2,
       text: 'Incident workflow',

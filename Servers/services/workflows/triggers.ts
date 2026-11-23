@@ -8,8 +8,9 @@
 import { sequelize } from "../../database/db";
 import { QueryTypes } from "sequelize";
 import logger from "../../utils/logger/fileLogger";
-import { startWorkflow } from "./engine";
+import { createRun, runWorkflow, startWorkflow } from "./engine";
 import { getWorkflow } from "./registry";
+import { WorkflowDefinition, WorkflowRunParams } from "./types";
 import { getAllOrganizationsQuery } from "../../utils/organization.utils";
 
 const POLICY_LEAD_DAYS = 30;
@@ -54,8 +55,58 @@ async function triggerVendorOnboarding(organizationId: number, vendorId: number)
 }
 
 /**
- * Trigger: incident.severity = critical
- * Called from the incident controller after a critical incident is created.
+ * Creates the incident_response run for an incident unless the incident
+ * already has one (in any state, from any trigger). The check and the insert
+ * run under a per-incident advisory lock, so two writers that escalate the
+ * same incident at once (a create and an update, two updates, a Jira import)
+ * still produce one run. Returns the new run id, or null when one exists.
+ *
+ * Runs are never deleted, so an existing row is a durable "already started"
+ * record: no extra column or table is needed.
+ */
+async function createIncidentResponseRunOnce(
+  wf: WorkflowDefinition,
+  organizationId: number,
+  incidentId: number,
+  params: WorkflowRunParams,
+): Promise<number | null> {
+  return sequelize.transaction(async (transaction) => {
+    await sequelize.query(
+      `SELECT pg_advisory_xact_lock(hashtext('incident_response_run'), hashtext(:key))`,
+      {
+        replacements: { key: `${organizationId}:${incidentId}` },
+        type: QueryTypes.SELECT,
+        transaction,
+      },
+    );
+    const existing = (await sequelize.query(
+      `SELECT id FROM ai_workflow_runs
+        WHERE organization_id = :organizationId
+          AND workflow_type = :workflowType
+          AND trigger_payload->>'incidentId' = :incidentId
+        LIMIT 1`,
+      {
+        replacements: { organizationId, workflowType: wf.id, incidentId: String(incidentId) },
+        type: QueryTypes.SELECT,
+        transaction,
+      },
+    )) as Array<{ id: number }>;
+    if (existing.length > 0) return null;
+    // createRun commits on its own connection before the lock is released,
+    // so a writer waiting on the lock sees this run.
+    return createRun(wf, params);
+  });
+}
+
+/**
+ * Trigger: incident severity reaches the critical tier
+ * (isCriticalIncidentSeverity). Called after commit when an incident is
+ * created critical (console, AI Advisor, Jira import) and when an update
+ * raises an existing incident from a lower severity to the critical tier.
+ *
+ * At most one run per incident: an incident that already had a run (it was
+ * created critical, or escalated before) never starts a second one, whatever
+ * that run's state. Never throws.
  */
 async function triggerIncidentResponse(
   organizationId: number,
@@ -65,10 +116,15 @@ async function triggerIncidentResponse(
   const wf = getWorkflow("incident_response");
   if (!wf) return;
   try {
-    await startWorkflow(wf, {
-      organizationId,
-      triggerPayload: { incidentId, severity },
-    });
+    const params: WorkflowRunParams = { organizationId, triggerPayload: { incidentId, severity } };
+    const runId = await createIncidentResponseRunOnce(wf, organizationId, incidentId, params);
+    if (runId === null) {
+      logger.info(
+        `[workflow] incident_response not started for incident ${incidentId}: it already has a run`,
+      );
+      return;
+    }
+    await runWorkflow(wf, runId, params);
   } catch (error) {
     logger.error(`[workflow] incident_response trigger failed:`, error);
   }

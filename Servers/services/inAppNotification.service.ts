@@ -1123,6 +1123,70 @@ export const notifyVendorReviewDue = async (
   );
 };
 
+/** Marks the in-app rows of the critical incident escalation (metadata.workflow_action). */
+export const CRITICAL_INCIDENT_ESCALATION_ACTION = "incident_critical_escalation";
+
+/**
+ * Tell an Admin that a critical incident needs a response: the incident
+ * response workflow's escalate_notify_admins step. In-app and email. Title,
+ * message and subject are keyed and reach the recipient in their language;
+ * the email body stays English. The row's metadata carries the workflow run
+ * and the incident, which the workflow reads to notify each Admin once.
+ */
+export const notifyCriticalIncidentEscalation = async (
+  organizationId: number,
+  adminId: number,
+  incident: {
+    id: number;
+    reference: string;
+    useCase: string;
+    severity: string;
+    type: string;
+    ownerName?: string | null;
+  },
+  workflowRunId: number,
+  baseUrl: string,
+): Promise<void> => {
+  const admin = await getUserById(adminId);
+  const actionUrl = `/ai-incident-managements?incidentId=${incident.id}`;
+  await sendInAppNotification(
+    organizationId,
+    {
+      user_id: adminId,
+      type: NotificationType.SYSTEM,
+      titleKey: "Critical incident needs a response",
+      messageKey: 'Incident {reference} in "{useCase}" was rated {severity}.',
+      messageVars: {
+        reference: incident.reference,
+        useCase: incident.useCase,
+        severity: incident.severity,
+      },
+      entity_name: incident.reference,
+      action_url: actionUrl,
+      metadata: {
+        workflow_action: CRITICAL_INCIDENT_ESCALATION_ACTION,
+        workflow_run_id: workflowRunId,
+        incident_id: incident.id,
+      },
+    },
+    true,
+    {
+      template: EMAIL_TEMPLATES.INCIDENT_CRITICAL_ESCALATION,
+      subjectKey: "Critical incident: {reference}",
+      subjectVars: { reference: incident.reference },
+      variables: {
+        admin_name: admin ? `${admin.name}` : "Admin",
+        incident_reference: incident.reference,
+        use_case: incident.useCase,
+        severity: incident.severity,
+        incident_type: incident.type,
+        owner_name: incident.ownerName || "No owner",
+        incident_url: `${baseUrl}${actionUrl}`,
+      },
+    },
+  );
+};
+
 /**
  * "due on 12 Sep" / "3 days overdue" — shared by both deadline notifiers.
  * English unless a language is passed: the email template is English, so only
