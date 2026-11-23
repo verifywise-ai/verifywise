@@ -235,6 +235,7 @@ const EntityGraphInner: React.FC = () => {
         onNodeClick={handleNodeClick}
         nodeTypes={nodeTypes}
         fitView
+        forceColorMode="light"
         fitViewOptions={{ padding: VIEWPORT.FIT_VIEW_PADDING }}
         minZoom={VIEWPORT.MIN_ZOOM}
         maxZoom={VIEWPORT.MAX_ZOOM}
