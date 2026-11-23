@@ -440,6 +440,88 @@ describe("NewIncident (SideDrawerIncident)", () => {
     });
   });
 
+  describe("field rules shared with the server", () => {
+    const reversedDates = {
+      ...savableData,
+      occurred_date: "2026-09-02",
+      date_detected: "2026-09-01",
+    } as unknown as NewIncidentFormValues;
+
+    it("does not save a new incident without an incident type", () => {
+      const onSuccess = vi.fn();
+      renderWithProviders(
+        <SideDrawerIncident
+          isOpen={true}
+          setIsOpen={vi.fn()}
+          onSuccess={onSuccess}
+          initialData={{ ...savableData, type: "" }}
+        />,
+      );
+      fireEvent.click(screen.getByText("Save incident"));
+      expect(onSuccess).not.toHaveBeenCalled();
+    });
+
+    it("does not save a detected date before the occurred date", () => {
+      const onSuccess = vi.fn();
+      renderWithProviders(
+        <SideDrawerIncident
+          isOpen={true}
+          setIsOpen={vi.fn()}
+          onSuccess={onSuccess}
+          initialData={reversedDates}
+        />,
+      );
+      fireEvent.click(screen.getByText("Save incident"));
+      expect(onSuccess).not.toHaveBeenCalled();
+    });
+
+    it("does not save a detected date in the future", () => {
+      const onSuccess = vi.fn();
+      renderWithProviders(
+        <SideDrawerIncident
+          isOpen={true}
+          setIsOpen={vi.fn()}
+          onSuccess={onSuccess}
+          initialData={{ ...savableData, date_detected: "2999-01-01" }}
+        />,
+      );
+      fireEvent.click(screen.getByText("Save incident"));
+      expect(onSuccess).not.toHaveBeenCalled();
+    });
+
+    it("does not save a model / system version over 255 characters", () => {
+      const onSuccess = vi.fn();
+      renderWithProviders(
+        <SideDrawerIncident
+          isOpen={true}
+          setIsOpen={vi.fn()}
+          onSuccess={onSuccess}
+          initialData={{ ...savableData, model_system_version: "v".repeat(256) }}
+        />,
+      );
+      fireEvent.click(screen.getByText("Save incident"));
+      expect(onSuccess).not.toHaveBeenCalled();
+    });
+
+    it("lets an older incident with reversed dates be edited when the dates are untouched", async () => {
+      const onSuccess = vi.fn().mockResolvedValue(undefined);
+      renderWithProviders(
+        <SideDrawerIncident
+          isOpen={true}
+          setIsOpen={vi.fn()}
+          onSuccess={onSuccess}
+          initialData={{ ...reversedDates, incident_id: "INC-1" }}
+          isEdit
+        />,
+      );
+      fireEvent.change(screen.getByTestId("field-description"), {
+        target: { value: "Updated description of the incident." },
+      });
+      fireEvent.click(screen.getByText("Update incident"));
+      await waitFor(() => expect(onSuccess).toHaveBeenCalledTimes(1));
+    });
+  });
+
   it("compares lists as sets, so reordering harm categories is not an edit", () => {
     expect(
       isSameFormValue("categories_of_harm", ["Economic Loss", "Other"], ["Other", "Economic Loss"]),

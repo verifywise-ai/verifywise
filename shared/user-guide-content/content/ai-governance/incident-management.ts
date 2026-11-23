@@ -57,13 +57,19 @@ export const incidentManagementContent: ArticleContent = {
     {
       type: 'ordered-list',
       items: [
-        { bold: 'AI project', text: ',Select the project or system involved in the incident' },
-        { bold: 'Model/system version', text: ',Specify which version of the model was affected' },
-        { bold: 'Description', text: ',Provide a clear description of what occurred' },
+        { bold: 'AI use case or framework', text: ',Select the use case or framework involved in the incident' },
+        { bold: 'Incident type', text: ',What kind of incident it is (see below)' },
+        { bold: 'Severity', text: ',How serious the incident is (see below)' },
+        { bold: 'Occurred date', text: ',When the incident actually happened' },
+        { bold: 'Detected date', text: ',When the incident was discovered (may differ from occurrence)' },
         { bold: 'Reporter', text: ',Who is reporting the incident' },
-        { bold: 'Date occurred', text: ',When the incident actually happened' },
-        { bold: 'Date detected', text: ',When the incident was discovered (may differ from occurrence)' },
+        { bold: 'Categories of harm', text: ',At least one kind of harm involved' },
+        { bold: 'Description', text: ',A clear description of what occurred, at least 5 characters' },
       ],
+    },
+    {
+      type: 'paragraph',
+      text: 'Neither date can be in the future, and the detected date cannot be before the occurred date. The status starts as Open and the approval status as Pending. The model/system version and the other impact and response fields are optional.',
     },
     {
       type: 'image',

@@ -62,6 +62,16 @@ const makeRes = () => {
   return res;
 };
 
+/** Every field a create requires, valid; the tests vary the description. */
+const VALID_CREATE = {
+  ai_project: "Support chatbot",
+  type: "Malfunction",
+  severity: "Minor",
+  occurred_date: "2026-06-23",
+  date_detected: "2026-06-23",
+  reporter: "Ada Lovelace",
+};
+
 const makeReq = (body: Record<string, unknown>, params: Record<string, string> = {}) =>
   ({ body, params, organizationId: 7, userId: 5, t: (key: string) => key }) as any;
 
@@ -88,7 +98,7 @@ describe("incident controller description validation", () => {
 
   it("rejects an over-long description on create up front, without writing", async () => {
     const res = makeRes();
-    await createNewIncident(makeReq({ description: "a".repeat(32768) }), res);
+    await createNewIncident(makeReq({ ...VALID_CREATE, description: "a".repeat(32768) }), res);
     expectStandard400(res, "Incident creation validation failed", "MAX_LENGTH");
     expect(mockCreate).not.toHaveBeenCalled();
   });
@@ -96,7 +106,7 @@ describe("incident controller description validation", () => {
   it("returns the same shape when the write path throws a ValidationException on create", async () => {
     mockCreate.mockImplementation(async () => assertValidIncidentDescription("a".repeat(32768)));
     const res = makeRes();
-    await createNewIncident(makeReq({ description: "A valid description" }), res);
+    await createNewIncident(makeReq({ ...VALID_CREATE, description: "A valid description" }), res);
     expectStandard400(res, "Incident creation validation failed", "MAX_LENGTH");
   });
 
@@ -117,7 +127,7 @@ describe("incident controller description validation", () => {
   it("translates up-front field messages like the write-path backstop", async () => {
     const t = jest.fn((key: string) => `translated:${key}`);
     for (const [handler, body, params] of [
-      [createNewIncident, { description: "a".repeat(32768) }, {}],
+      [createNewIncident, { ...VALID_CREATE, description: "a".repeat(32768) }, {}],
       [updateIncidentById, { description: "a".repeat(32768) }, { id: "42" }],
     ] as const) {
       const res = makeRes();

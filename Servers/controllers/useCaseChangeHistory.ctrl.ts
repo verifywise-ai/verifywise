@@ -2,23 +2,7 @@ import { Request, Response } from "express";
 import { getUseCaseChangeHistory } from "../utils/useCaseChangeHistory.utils";
 import { STATUS_CODE } from "../utils/statusCode.utils";
 import { translateError } from "../utils/i18n.utils";
-
-/** The most history entries one request returns (the client asks for 100). */
-export const MAX_HISTORY_LIMIT = 100;
-
-/**
- * A paging field: `fallback` when absent, null when it is not a whole number
- * from `min` to `max`. A repeated field is invalid.
- */
-const pageNumber = (
-  raw: unknown,
-  { fallback, min, max }: { fallback: number; min: number; max: number },
-): number | null => {
-  if (raw === undefined || raw === "") return fallback;
-  if (typeof raw !== "string" || !/^\d+$/.test(raw.trim())) return null;
-  const value = Number(raw.trim());
-  return Number.isSafeInteger(value) && value >= min && value <= max ? value : null;
-};
+import { MAX_HISTORY_LIMIT, historyPageNumber } from "../utils/historyPaging.utils";
 
 /**
  * Get change history for a specific use case
@@ -33,7 +17,7 @@ export const getUseCaseHistory = async (req: Request, res: Response) => {
       return res.status(400).json(STATUS_CODE[400](req.t!("Invalid use case ID")));
     }
 
-    const limit = pageNumber(req.query.limit, {
+    const limit = historyPageNumber(req.query.limit, {
       fallback: MAX_HISTORY_LIMIT,
       min: 1,
       max: MAX_HISTORY_LIMIT,
@@ -43,7 +27,7 @@ export const getUseCaseHistory = async (req: Request, res: Response) => {
         .status(400)
         .json(STATUS_CODE[400](req.t!("limit must be an integer from 1 to 100")));
     }
-    const offset = pageNumber(req.query.offset, {
+    const offset = historyPageNumber(req.query.offset, {
       fallback: 0,
       min: 0,
       max: Number.MAX_SAFE_INTEGER,

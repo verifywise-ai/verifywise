@@ -20405,7 +20405,7 @@ paths:
       tags:
         - Incidents
       summary: 'Create New Incident'
-      description: 'Needs incident.create. approved_by and approval_date are set by the server and ignored in the request. A caller without incident.approve always gets approval_status Pending with no approval_notes. A caller with incident.approve may send Approved or Rejected; the server then records the caller''s name as approved_by and now as approval_date.'
+      description: 'Needs incident.create. Required: ai_project, type, severity, occurred_date, date_detected, reporter and description (5 to 32,767 characters). status defaults to Open and approval_status to Pending when omitted. type, severity, status and approval_status must be one of their listed values; ai_project, reporter and model_system_version are at most 255 characters; dates are YYYY-MM-DD (or an ISO date-time), not later than today in any time zone, and date_detected is on or after occurred_date. categories_of_harm is optional: a list (or a comma-separated string) of Health, Safety, Rights, Property, Environment. approved_by and approval_date are set by the server and ignored in the request. A caller without incident.approve always gets approval_status Pending with no approval_notes. A caller with incident.approve may send Approved or Rejected; the server then records the caller''s name as approved_by and now as approval_date.'
       operationId: createNewIncident
       security:
         -
@@ -20415,9 +20415,56 @@ paths:
           application/json:
             schema:
               type: object
+              required:
+                - ai_project
+                - type
+                - severity
+                - occurred_date
+                - date_detected
+                - reporter
+                - description
+              properties:
+                ai_project:
+                  type: string
+                  maxLength: 255
+                type:
+                  type: string
+                  enum: [Malfunction, 'Unexpected behavior', 'Model drift', Misuse, 'Data corruption', 'Security breach', 'Performance degradation']
+                severity:
+                  type: string
+                  enum: [Minor, Serious, 'Very serious']
+                status:
+                  type: string
+                  enum: [Open, Investigating, Mitigated, Closed, Suspended, 'Emergency action']
+                  default: Open
+                approval_status:
+                  type: string
+                  enum: [Pending, Approved, Rejected, 'Not required']
+                  default: Pending
+                occurred_date:
+                  type: string
+                  format: date
+                date_detected:
+                  type: string
+                  format: date
+                reporter:
+                  type: string
+                  maxLength: 255
+                model_system_version:
+                  type: string
+                  maxLength: 255
+                description:
+                  type: string
+                  minLength: 5
+                  maxLength: 32767
+                categories_of_harm:
+                  type: array
+                  items: {type: string, enum: [Health, Safety, Rights, Property, Environment]}
       responses:
         '201':
           description: 'Created successfully'
+        '400':
+          description: 'Validation failed: errors lists each field ({ field, message, code })'
         '401':
           description: Unauthorized
         '403':
@@ -20443,15 +20490,19 @@ paths:
       responses:
         '200':
           description: Success
+        '400':
+          description: 'Invalid incident ID'
         '401':
           description: Unauthorized
+        '404':
+          description: 'Incident not found (missing or in another organization)'
         '500':
           description: 'Internal server error'
     patch:
       tags:
         - Incidents
       summary: 'Update Incident By Id'
-      description: 'Needs incident.edit or incident.approve, then per field: changing approval_status or approval_notes needs incident.approve, changing any other field (archived included) needs incident.edit. A field sent with its stored value is not a change. approved_by and approval_date are set by the server and ignored in the request: when approval_status changes to Approved or Rejected, approved_by is the caller''s name and approval_date is now; when it changes to Pending or Not required, both are cleared.'
+      description: 'Needs incident.edit or incident.approve, then per field: changing approval_status or approval_notes needs incident.approve, changing any other field (archived included) needs incident.edit. A field sent with its stored value is not a change. approved_by and approval_date are set by the server and ignored in the request: when approval_status changes to Approved or Rejected, approved_by is the caller''s name and approval_date is now; when it changes to Pending or Not required, both are cleared. Changed fields follow the create rules (enums, lengths, dates, harm categories); a required field cannot be set to null or an empty string, and the dates the incident ends up with must keep date_detected on or after occurred_date. Fields left out are not changed.'
       operationId: updateIncidentById
       security:
         -
@@ -21179,9 +21230,28 @@ paths:
           required: true
           schema:
             type: integer
+        -
+          name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 100
+        -
+          name: offset
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
       responses:
         '200':
           description: Success
+        '400':
+          description: 'Invalid incident ID, or limit not an integer from 1 to 100, or offset not a whole number of 0 or more'
         '401':
           description: Unauthorized
         '500':

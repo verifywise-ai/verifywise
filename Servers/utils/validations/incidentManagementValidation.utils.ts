@@ -6,11 +6,12 @@
 import {
   AIIncidentManagementStatus,
   AIIncidentManagementApprovalStatus,
+  HarmCategory,
+  IncidentType,
+  Severity,
 } from "../../domain.layer/enums/ai-incident-management.enum";
 import {
   validateString,
-  validateEnum,
-  validateDate,
   validateForeignKey,
   validateSchema,
   ValidationResult,
@@ -38,52 +39,45 @@ export const INCIDENT_DESCRIPTION_TOO_SHORT_MESSAGE = `Description must be at le
 export const INCIDENT_DESCRIPTION_TOO_LONG_MESSAGE = `Description cannot exceed ${INCIDENT_DESCRIPTION_MAX_LENGTH.toLocaleString("en-US")} characters.`;
 
 /**
+ * Longest value of the VARCHAR(255) text columns a caller writes:
+ * ai_project, reporter and model_system_version. (type, severity, status and
+ * approval_status are checked against their enums instead.)
+ */
+export const INCIDENT_TEXT_COLUMN_MAX_LENGTH = 255;
+
+/**
  * Validation limits for incident management
  */
 export const INCIDENT_VALIDATION_LIMITS = {
   DESCRIPTION: { MIN: INCIDENT_DESCRIPTION_MIN_LENGTH, MAX: INCIDENT_DESCRIPTION_MAX_LENGTH },
-  RELATIONSHIP: { MIN: 3, MAX: 255 },
-  PROJECT: { MIN: 2, MAX: 255 },
-  REPORTER: { MIN: 2, MAX: 100 },
+  TEXT_COLUMN: { MAX: INCIDENT_TEXT_COLUMN_MAX_LENGTH },
 } as const;
 
-/**
- * Incident severity levels. Must match ai-incident-management.enum.ts and
- * the CHECK constraint ai_incident_managements_severity_check.
- */
-export const INCIDENT_SEVERITY_ENUM = ["Minor", "Serious", "Very serious"] as const;
+/** Incident types (IncidentType). The column has no CHECK constraint, so this list is the only gate. */
+export const INCIDENT_TYPE_ENUM: readonly string[] = Object.values(IncidentType);
 
 /**
- * Incident status values. Must match ai-incident-management.enum.ts and
- * the CHECK constraint ai_incident_managements_status_check.
+ * Incident severity levels (Severity). Must match the CHECK constraint
+ * ai_incident_managements_severity_check.
  */
-export const INCIDENT_STATUS_ENUM = [
-  "Open",
-  "Investigating",
-  "Mitigated",
-  "Closed",
-  "Suspended",
-  "Emergency action",
-] as const;
+export const INCIDENT_SEVERITY_ENUM: readonly string[] = Object.values(Severity);
 
 /**
- * Approval status values. Must match ai-incident-management.enum.ts and
- * the CHECK constraint ai_incident_managements_approval_status_check.
+ * Incident status values (AIIncidentManagementStatus). Must match the CHECK
+ * constraint ai_incident_managements_status_check.
  */
-export const APPROVAL_STATUS_ENUM = ["Pending", "Approved", "Rejected", "Not required"] as const;
+export const INCIDENT_STATUS_ENUM: readonly string[] = Object.values(AIIncidentManagementStatus);
 
 /**
- * Categories of harm per EU AI Act Article 73
+ * Approval status values (AIIncidentManagementApprovalStatus). Must match the
+ * CHECK constraint ai_incident_managements_approval_status_check.
  */
-export const INCIDENT_HARM_CATEGORIES_ENUM = [
-  "Health and Safety",
-  "Fundamental Rights Violation",
-  "Environmental Impact",
-  "Economic Loss",
-  "Privacy or Data Breach",
-  "Security Threat",
-  "Other",
-] as const;
+export const APPROVAL_STATUS_ENUM: readonly string[] = Object.values(
+  AIIncidentManagementApprovalStatus,
+);
+
+/** Categories of harm (HarmCategory): the values the incident page offers and stores. */
+export const INCIDENT_HARM_CATEGORIES_ENUM: readonly string[] = Object.values(HarmCategory);
 
 /**
  * Validates description
@@ -144,106 +138,201 @@ export const assertValidIncidentDescription = (value: unknown): void => {
 };
 
 /**
- * Validates categories of harm
+ * A field error with its translation key: controllers send
+ * translateError(req, error), which uses `i18nKey` / `i18nVars`; `message` is
+ * the English text.
  */
-export const validateCategoriesOfHarm = (value: any): ValidationResult => {
-  if (!Array.isArray(value) || value.length < 1) {
-    return {
-      isValid: false,
-      message: "At least one harm category is required",
-      code: "REQUIRED_FIELD",
-    };
+export interface IncidentFieldError extends ValidationError {
+  i18nKey: string;
+  i18nVars: Record<string, string | number>;
+}
+
+const REQUIRED_KEY = "{field} is required";
+const TEXT_KEY = "{field} must be text";
+const TOO_LONG_KEY = "{field} must be at most {max} characters";
+const ONE_OF_KEY = "{field} must be one of: {values}";
+const DATE_KEY = "{field} must be a valid date (YYYY-MM-DD)";
+const FUTURE_KEY = "{field} cannot be in the future";
+const BOOLEAN_KEY = "{field} must be true or false";
+const HARM_KEY = "{field} must be a list of these categories: {values}";
+const DATE_ORDER_KEY = "date_detected cannot be earlier than occurred_date";
+
+const fillPlaceholders = (key: string, vars: Record<string, string | number>): string =>
+  key.replace(/\{(\w+)\}/g, (_, name) => (name in vars ? String(vars[name]) : `{${name}}`));
+
+const fieldError = (
+  field: string,
+  code: string,
+  i18nKey: string,
+  vars: Record<string, string | number> = {},
+): IncidentFieldError => {
+  const i18nVars = { field, ...vars };
+  return { field, code, message: fillPlaceholders(i18nKey, i18nVars), i18nKey, i18nVars };
+};
+
+const isBlank = (value: unknown): boolean =>
+  value === undefined || value === null || (typeof value === "string" && value.trim() === "");
+
+/** A text field: a string, non-blank when required, at most `max` characters. */
+const checkText = (
+  field: string,
+  value: unknown,
+  { required, max }: { required: boolean; max?: number },
+): IncidentFieldError | null => {
+  if (value === undefined || value === null || value === "") {
+    return required ? fieldError(field, "REQUIRED_FIELD", REQUIRED_KEY) : null;
   }
-
-  for (const category of value) {
-    if (!INCIDENT_HARM_CATEGORIES_ENUM.includes(category as any)) {
-      return {
-        isValid: false,
-        message: `Invalid harm category: "${category}". Must be one of: ${INCIDENT_HARM_CATEGORIES_ENUM.join(", ")}`,
-        code: "INVALID_HARM_CATEGORY",
-      };
-    }
+  if (typeof value !== "string") return fieldError(field, "INVALID_TYPE", TEXT_KEY);
+  if (required && value.trim() === "") return fieldError(field, "REQUIRED_FIELD", REQUIRED_KEY);
+  if (max !== undefined && value.length > max) {
+    return fieldError(field, "MAX_LENGTH", TOO_LONG_KEY, { max });
   }
+  return null;
+};
 
-  return { isValid: true };
+/** A required value from `allowed` (exact match). */
+const checkEnum = (
+  field: string,
+  value: unknown,
+  allowed: readonly string[],
+): IncidentFieldError | null => {
+  if (isBlank(value)) return fieldError(field, "REQUIRED_FIELD", REQUIRED_KEY);
+  if (typeof value !== "string" || !allowed.includes(value)) {
+    return fieldError(field, "INVALID_ENUM_VALUE", ONE_OF_KEY, { values: allowed.join(", ") });
+  }
+  return null;
 };
 
 /**
- * Validates relationship/causality
+ * The calendar date (YYYY-MM-DD) of a date value the caller sent, or null
+ * when it is not a real date. Accepts a Date or a string starting with
+ * YYYY-MM-DD (a date or an ISO date-time); "2026-02-30" is not a date.
  */
-export const validateRelationship = (value: any): ValidationResult => {
-  return validateString(value, "Relationship/Causality", {
-    required: true,
-    minLength: INCIDENT_VALIDATION_LIMITS.RELATIONSHIP.MIN,
-    maxLength: INCIDENT_VALIDATION_LIMITS.RELATIONSHIP.MAX,
-    trimWhitespace: true,
-  });
+const sentCalendarDate = (value: unknown): string | null => {
+  if (value instanceof Date) {
+    return Number.isNaN(value.getTime()) ? null : incidentCalendarDate(value);
+  }
+  if (typeof value !== "string") return null;
+  const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(value.trim());
+  if (!match || Number.isNaN(new Date(value.trim()).getTime())) return null;
+  const [, y, m, d] = match.map(Number);
+  const probe = new Date(Date.UTC(y, m - 1, d));
+  return probe.getUTCFullYear() === y && probe.getUTCMonth() === m - 1 && probe.getUTCDate() === d
+    ? match[0]
+    : null;
 };
 
 /**
- * Validates AI project/system field
+ * The latest calendar date an incident date may have: tomorrow in UTC. The
+ * caller's "today" is at most one day ahead of UTC (UTC+14), so a date that
+ * is today anywhere in the world is accepted, and anything later is refused.
  */
-export const validateAIProject = (value: any): ValidationResult => {
-  return validateString(value, "AI Project/System", {
-    required: true,
-    minLength: INCIDENT_VALIDATION_LIMITS.PROJECT.MIN,
-    maxLength: INCIDENT_VALIDATION_LIMITS.PROJECT.MAX,
-    trimWhitespace: true,
-  });
+export const latestIncidentDate = (now: Date = new Date()): string =>
+  new Date(now.getTime() + 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+
+/** A required date that is a real calendar date and not in the future. */
+const checkDate = (field: string, value: unknown): IncidentFieldError | null => {
+  if (isBlank(value)) return fieldError(field, "REQUIRED_FIELD", REQUIRED_KEY);
+  const date = sentCalendarDate(value);
+  if (!date) return fieldError(field, "INVALID_DATE", DATE_KEY);
+  if (date > latestIncidentDate()) return fieldError(field, "FUTURE_DATE", FUTURE_KEY);
+  return null;
+};
+
+/** An optional boolean. */
+const checkBoolean = (field: string, value: unknown): IncidentFieldError | null =>
+  value === undefined || value === null || typeof value === "boolean"
+    ? null
+    : fieldError(field, "INVALID_TYPE", BOOLEAN_KEY);
+
+/** A list (possibly empty) of strings from INCIDENT_HARM_CATEGORIES_ENUM. */
+const checkHarmCategories = (value: unknown): IncidentFieldError | null =>
+  Array.isArray(value) &&
+  value.every((item) => typeof item === "string" && INCIDENT_HARM_CATEGORIES_ENUM.includes(item))
+    ? null
+    : fieldError("categories_of_harm", "INVALID_HARM_CATEGORY", HARM_KEY, {
+        values: INCIDENT_HARM_CATEGORIES_ENUM.join(", "),
+      });
+
+/**
+ * Harm categories as a create request may send them: a list, or the
+ * comma-separated string form ("Health, Safety"). Absent or empty is [].
+ * Anything else is returned unchanged, for checkHarmCategories to refuse.
+ */
+export const parseCreateHarmCategories = (value: unknown): unknown => {
+  if (value === undefined || value === null || value === "") return [];
+  if (typeof value === "string") {
+    return value
+      .split(",")
+      .map((item) => item.trim())
+      .filter((item) => item !== "");
+  }
+  return value;
+};
+
+export const validateSeverity = (value: unknown): ValidationResult => {
+  const error = checkEnum("severity", value, INCIDENT_SEVERITY_ENUM);
+  return error ? { isValid: false, message: error.message, code: error.code } : { isValid: true };
+};
+
+export const validateStatus = (value: unknown): ValidationResult => {
+  const error = checkEnum("status", value, INCIDENT_STATUS_ENUM);
+  return error ? { isValid: false, message: error.message, code: error.code } : { isValid: true };
+};
+
+export const validateApprovalStatus = (value: unknown): ValidationResult => {
+  const error = checkEnum("approval_status", value, APPROVAL_STATUS_ENUM);
+  return error ? { isValid: false, message: error.message, code: error.code } : { isValid: true };
 };
 
 /**
- * Validates severity level
+ * The rule for each incident field a caller writes (description and the
+ * reference ids have their own). A rule gets the value as sent and returns a
+ * field error or null. Required fields refuse an empty value; optional ones
+ * accept it.
  */
-export const validateSeverity = (value: any): ValidationResult => {
-  return validateEnum(value, "Severity Level", INCIDENT_SEVERITY_ENUM, true);
+const FIELD_RULES: Record<string, (value: unknown) => IncidentFieldError | null> = {
+  ai_project: (v) =>
+    checkText("ai_project", v, { required: true, max: INCIDENT_TEXT_COLUMN_MAX_LENGTH }),
+  type: (v) => checkEnum("type", v, INCIDENT_TYPE_ENUM),
+  severity: (v) => checkEnum("severity", v, INCIDENT_SEVERITY_ENUM),
+  status: (v) => checkEnum("status", v, INCIDENT_STATUS_ENUM),
+  approval_status: (v) => checkEnum("approval_status", v, APPROVAL_STATUS_ENUM),
+  occurred_date: (v) => checkDate("occurred_date", v),
+  date_detected: (v) => checkDate("date_detected", v),
+  reporter: (v) =>
+    checkText("reporter", v, { required: true, max: INCIDENT_TEXT_COLUMN_MAX_LENGTH }),
+  model_system_version: (v) =>
+    checkText("model_system_version", v, {
+      required: false,
+      max: INCIDENT_TEXT_COLUMN_MAX_LENGTH,
+    }),
+  affected_persons_groups: (v) => checkText("affected_persons_groups", v, { required: false }),
+  relationship_causality: (v) => checkText("relationship_causality", v, { required: false }),
+  immediate_mitigations: (v) => checkText("immediate_mitigations", v, { required: false }),
+  planned_corrective_actions: (v) =>
+    checkText("planned_corrective_actions", v, { required: false }),
+  approval_notes: (v) => checkText("approval_notes", v, { required: false }),
+  categories_of_harm: checkHarmCategories,
+  interim_report: (v) => checkBoolean("interim_report", v),
+  archived: (v) => checkBoolean("archived", v),
 };
 
 /**
- * Validates status
+ * Fields a new incident may leave out: the server fills them in
+ * (status Open, approval Pending).
  */
-export const validateStatus = (value: any): ValidationResult => {
-  return validateEnum(value, "Status", INCIDENT_STATUS_ENUM, true);
-};
+export const INCIDENT_CREATE_DEFAULTS = {
+  status: AIIncidentManagementStatus.OPEN,
+  approval_status: AIIncidentManagementApprovalStatus.PENDING,
+} as const;
 
-/**
- * Validates approval status
- */
-export const validateApprovalStatus = (value: any): ValidationResult => {
-  return validateEnum(value, "Approval Status", APPROVAL_STATUS_ENUM, true);
-};
-
-/**
- * Validates date occurred
- */
-export const validateDateOccurred = (value: any): ValidationResult => {
-  return validateDate(value, "Date Occurred", { required: true });
-};
-
-/**
- * Validates date detected
- */
-export const validateDateDetected = (value: any): ValidationResult => {
-  return validateDate(value, "Date Detected", { required: true });
-};
-
-/**
- * Validates reporter field
- */
-export const validateReporter = (value: any): ValidationResult => {
-  return validateString(value, "Reporter", {
-    required: true,
-    minLength: INCIDENT_VALIDATION_LIMITS.REPORTER.MIN,
-    maxLength: INCIDENT_VALIDATION_LIMITS.REPORTER.MAX,
-    trimWhitespace: true,
-  });
-};
-
-/**
- * Validates approver field (foreign key)
- */
-export const validateApprover = (value: any): ValidationResult => {
-  return validateForeignKey(value, "Approver", false);
+/** The date-order error when both dates are valid and detected is before occurred, else null. */
+const dateOrderError = (occurred: unknown, detected: unknown): IncidentFieldError | null => {
+  const occurredDate = sentCalendarDate(occurred);
+  const detectedDate = sentCalendarDate(detected);
+  if (!occurredDate || !detectedDate || detectedDate >= occurredDate) return null;
+  return fieldError("date_detected", "INVALID_DATE_ORDER", DATE_ORDER_KEY);
 };
 
 /**
@@ -275,20 +364,8 @@ export const validateProjectId = (value: any): ValidationResult =>
 export const validateAssigneeId = (value: any): ValidationResult =>
   validateOptionalIncidentReference(value, "Assignee ID");
 
-/**
- * Validation schema for creating an incident
- */
-export const createIncidentSchema = {
-  description: validateDescription,
-  model_inventory_id: validateModelInventoryId,
-  project_id: validateProjectId,
-  assignee_id: validateAssigneeId,
-};
-
-/**
- * Validation schema for updating an incident
- */
-export const updateIncidentSchema = {
+/** Reference ids: optional, positive integers when given. */
+const referenceSchema = {
   model_inventory_id: validateModelInventoryId,
   project_id: validateProjectId,
   assignee_id: validateAssigneeId,
@@ -299,38 +376,44 @@ export const validateIncidentIdParam = (id: any): ValidationResult => {
 };
 
 /**
- * Validates a complete incident for creation
+ * Field validation for a new incident: every field rule (FIELD_RULES) on the
+ * value sent, the description and reference ids, and detected on or after
+ * occurred. status and approval_status may be left out
+ * (INCIDENT_CREATE_DEFAULTS); harm categories may come as a list or the
+ * comma-separated string form.
  */
-export const validateCompleteIncident = (data: any): ValidationError[] => {
-  return validateSchema(data, createIncidentSchema);
-};
-
-/**
- * Validates a complete incident for update
- */
-export const validateUpdateIncident = (data: any): ValidationError[] => {
-  return validateSchema(data, updateIncidentSchema);
-};
-
-/**
- * Business rule validation for incident creation
- */
-export const validateIncidentCreationBusinessRules = (data: any): ValidationError[] => {
+export const validateCompleteIncidentCreation = (data: any): ValidationError[] => {
+  const body = data ?? {};
   const errors: ValidationError[] = [];
-
-  if (new Date(data.date_detected) < new Date(data.date_occurred)) {
+  const description = validateDescription(body.description);
+  if (!description.isValid) {
     errors.push({
-      field: "date_detected",
-      message: "Date detected cannot be earlier than date occurred",
-      code: "INVALID_DATE_ORDER",
+      field: "description",
+      message: description.message || "Invalid value",
+      code: description.code || "INVALID_VALUE",
     });
   }
-
+  for (const [field, rule] of Object.entries(FIELD_RULES)) {
+    let value = body[field];
+    if (field in INCIDENT_CREATE_DEFAULTS && isBlank(value)) continue;
+    if (field === "categories_of_harm") value = parseCreateHarmCategories(value);
+    const error = rule(value);
+    if (error) errors.push(error);
+  }
+  errors.push(...validateSchema(body, referenceSchema));
+  const order = dateOrderError(body.occurred_date, body.date_detected);
+  if (order) errors.push(order);
   return errors;
 };
 
 /**
- * Business rule validation for incident updates
+ * Field validation for an update, against the stored row (`existingData`,
+ * the row the service has locked). Only fields the update changes are
+ * checked (isSameIncidentValue), so editing one field of an older row whose
+ * other values predate a rule still works. A changed required field cannot
+ * be blanked (null or ""). When either date changes, the dates the row would
+ * end up with (the update over the stored row) must keep detected on or
+ * after occurred. Without `existingData` every field sent is checked.
  */
 export const validateIncidentUpdateBusinessRules = (
   data: any,
@@ -339,12 +422,18 @@ export const validateIncidentUpdateBusinessRules = (
   // Any status can move to any other status, including Closed back to an
   // open status (reopening). See applyReopenApprovalReset for the approval
   // side effect of a reopen.
+  const update = data ?? {};
+  const stored = existingData ?? {};
   const errors: ValidationError[] = [];
+  const changes = (field: string): boolean =>
+    update[field] !== undefined &&
+    (existingData === undefined || !isSameIncidentValue(field, stored[field], update[field]));
+
   // The description is checked only when the update changes it (see
-  // isIncidentDescriptionChanged), against the row the service has locked.
-  // The write query applies the same rule as a backstop.
-  if (isIncidentDescriptionChanged(data?.description, existingData?.description)) {
-    const result = validateDescription(data.description);
+  // isIncidentDescriptionChanged). The write query applies the same rule as
+  // a backstop.
+  if (isIncidentDescriptionChanged(update.description, stored.description)) {
+    const result = validateDescription(update.description);
     if (!result.isValid) {
       errors.push({
         field: "description",
@@ -353,17 +442,16 @@ export const validateIncidentUpdateBusinessRules = (
       });
     }
   }
-  // A value outside the enum (or null) would otherwise reach the CHECK /
-  // NOT NULL constraint and answer 500.
-  if (data && "approval_status" in data && data.approval_status !== undefined) {
-    const result = validateApprovalStatus(data.approval_status);
-    if (!result.isValid) {
-      errors.push({
-        field: "approval_status",
-        message: result.message || "Invalid value",
-        code: result.code || "INVALID_VALUE",
-      });
-    }
+  for (const [field, rule] of Object.entries(FIELD_RULES)) {
+    if (!changes(field)) continue;
+    const error = rule(update[field]);
+    if (error) errors.push(error);
+  }
+  if (changes("occurred_date") || changes("date_detected")) {
+    const effective = (field: string) =>
+      update[field] !== undefined ? update[field] : stored[field];
+    const order = dateOrderError(effective("occurred_date"), effective("date_detected"));
+    if (order) errors.push(order);
   }
   return errors;
 };
@@ -568,22 +656,12 @@ export const approvalStampFor = (
 };
 
 /**
- * Complete validation for incident creation
- */
-export const validateCompleteIncidentCreation = (data: any): ValidationError[] => {
-  const validationErrors = validateCompleteIncident(data);
-  const businessErrors = validateIncidentCreationBusinessRules(data);
-  return [...validationErrors, ...businessErrors];
-};
-
-/**
  * Complete validation for incident update
  */
 export const validateCompleteIncidentUpdate = (
   data: any,
   existingData?: any,
-): ValidationError[] => {
-  const validationErrors = validateUpdateIncident(data);
-  const businessErrors = validateIncidentUpdateBusinessRules(data, existingData);
-  return [...validationErrors, ...businessErrors];
-};
+): ValidationError[] => [
+  ...validateSchema(data ?? {}, referenceSchema),
+  ...validateIncidentUpdateBusinessRules(data, existingData),
+];

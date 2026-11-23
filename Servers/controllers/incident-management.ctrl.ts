@@ -24,13 +24,12 @@ import {
   validateProjectId,
   validateAssigneeId,
   approvalStampFor,
+  parseCreateHarmCategories,
+  INCIDENT_CREATE_DEFAULTS,
 } from "../utils/validations/incidentManagementValidation.utils";
 import { recordIncidentCreation } from "../utils/incidentChangeHistory.utils";
 import { triggerIncidentResponse } from "../services/workflows/triggers";
-import {
-  AIIncidentManagementApprovalStatus,
-  isCriticalIncidentSeverity,
-} from "../domain.layer/enums/ai-incident-management.enum";
+import { isCriticalIncidentSeverity } from "../domain.layer/enums/ai-incident-management.enum";
 import {
   updateIncident,
   IncidentAccessDeniedError,
@@ -212,7 +211,8 @@ export async function getIncidentById(req: Request, res: Response) {
       "getIncidentById",
       "incidentManagement.controller.ts",
     );
-    return res.status(204).json(STATUS_CODE[204](incident));
+    // Missing, or in another organization: the same 404 as update, archive and delete.
+    return res.status(404).json(STATUS_CODE[404](req.t!("Incident not found")));
   } catch (error) {
     logStructured(
       "error",
@@ -244,7 +244,7 @@ export async function createNewIncident(req: Request, res: Response) {
         message: creationFailed,
         errors: validationErrors.map((err: ValidationError) => ({
           field: err.field,
-          message: translateError(req, err.message),
+          message: translateError(req, err),
           code: err.code,
         })),
       }),
@@ -300,9 +300,12 @@ export async function createNewIncident(req: Request, res: Response) {
     // approver and date are the server's: the creator and now for Approved
     // or Rejected, empty otherwise; the request's values are ignored.
     const canApprove = await requestHasPermission(req, "incident.approve");
-    const approvalStatus = canApprove
-      ? (req.body.approval_status ?? AIIncidentManagementApprovalStatus.PENDING)
-      : AIIncidentManagementApprovalStatus.PENDING;
+    // Validation allowed an absent, null or "" approval_status / status:
+    // those take the defaults (Pending, Open).
+    const approvalStatus =
+      canApprove && req.body.approval_status
+        ? req.body.approval_status
+        : INCIDENT_CREATE_DEFAULTS.approval_status;
     const stamped = approvalStampFor(undefined, approvalStatus) === "stamp" && !!req.userId;
     // undefined is stored as NULL (createNewIncidentQuery).
     const approvedBy = stamped
@@ -316,17 +319,14 @@ export async function createNewIncident(req: Request, res: Response) {
       assignee_id: req.body.assignee_id ?? null,
       type: req.body.type,
       severity: req.body.severity,
-      status: req.body.status,
+      status: req.body.status || INCIDENT_CREATE_DEFAULTS.status,
       occurred_date: req.body.occurred_date ? req.body.occurred_date : null,
       date_detected: req.body.date_detected ? req.body.date_detected : null,
       reporter: req.body.reporter,
       approval_status: approvalStatus,
       approved_by: approvedBy,
-      categories_of_harm: req.body.categories_of_harm
-        ? Array.isArray(req.body.categories_of_harm)
-          ? req.body.categories_of_harm
-          : req.body.categories_of_harm.split(",").map((s: string) => s.trim())
-        : [],
+      // A list, or the comma-separated string form; validated above.
+      categories_of_harm: parseCreateHarmCategories(req.body.categories_of_harm) as string[],
       affected_persons_groups: req.body.affected_persons_groups,
       description: req.body.description,
       relationship_causality: req.body.relationship_causality,
@@ -343,20 +343,14 @@ export async function createNewIncident(req: Request, res: Response) {
 
     const savedIncident = await createNewIncidentQuery(incident, req.organizationId!, transaction);
 
-    // Record creation in change history
+    // Change history records the incident as saved (defaults, parsed harm
+    // categories and the server's approval fields), not the request body.
     if (savedIncident.id && req.userId) {
-      // History records the approval as stored, not as requested.
       await recordIncidentCreation(
         savedIncident.id,
         req.userId,
         req.organizationId!,
-        {
-          ...req.body,
-          approval_status: incident.approval_status,
-          approved_by: incident.approved_by,
-          approval_date: incident.approval_date,
-          approval_notes: incident.approval_notes,
-        },
+        savedIncident.dataValues ?? savedIncident,
         transaction,
       );
     }

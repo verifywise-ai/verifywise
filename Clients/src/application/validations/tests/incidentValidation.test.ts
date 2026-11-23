@@ -1,5 +1,10 @@
 import { describe, it, expect } from "vitest";
+import dayjs from "dayjs";
 import {
+  INCIDENT_DATE_ORDER_MESSAGE,
+  INCIDENT_FUTURE_DATE_MESSAGE,
+  isIncidentDateInFuture,
+  validateIncidentDetectedDate,
   INCIDENT_DESCRIPTION_MAX_LENGTH,
   INCIDENT_DESCRIPTION_MIN_LENGTH,
   INCIDENT_DESCRIPTION_REQUIRED_MESSAGE,
@@ -52,5 +57,36 @@ describe("validateIncidentDescription", () => {
 
   it("measures length after trimming, like the backend", () => {
     expect(validateIncidentDescription(`  ${"a".repeat(32767)}  `)).toBe("");
+  });
+});
+
+const today = dayjs("2026-11-23T10:00:00");
+
+describe("incident date rules", () => {
+  it("treats today as not in the future and tomorrow as in the future", () => {
+    expect(isIncidentDateInFuture("2026-11-23", today)).toBe(false);
+    expect(isIncidentDateInFuture("2026-11-24", today)).toBe(true);
+    expect(isIncidentDateInFuture("", today)).toBe(false);
+  });
+
+  it("accepts a detected date on or after the occurred date, up to today", () => {
+    expect(validateIncidentDetectedDate("2026-11-20", "2026-11-20", today)).toBe("");
+    expect(validateIncidentDetectedDate("2026-11-23", "2026-11-01", today)).toBe("");
+  });
+
+  it("refuses a detected date before the occurred date", () => {
+    expect(validateIncidentDetectedDate("2026-11-19", "2026-11-20", today)).toBe(
+      INCIDENT_DATE_ORDER_MESSAGE,
+    );
+  });
+
+  it("refuses a detected date in the future", () => {
+    expect(validateIncidentDetectedDate("2026-11-24", "2026-11-20", today)).toBe(
+      INCIDENT_FUTURE_DATE_MESSAGE,
+    );
+  });
+
+  it("leaves an empty detected date to the required check", () => {
+    expect(validateIncidentDetectedDate("", "2026-11-20", today)).toBe("");
   });
 });

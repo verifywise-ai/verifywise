@@ -85,7 +85,15 @@ describe("isIncidentDescriptionChanged", () => {
 
 describe("controller up-front description validation", () => {
   it("rejects an over-long description on create with a description field error", () => {
-    const errors = validateCompleteIncidentCreation({ description: "a".repeat(32768) });
+    const errors = validateCompleteIncidentCreation({
+      ai_project: "Support chatbot",
+      type: "Malfunction",
+      severity: "Minor",
+      occurred_date: "2026-06-23",
+      date_detected: "2026-06-23",
+      reporter: "Ada Lovelace",
+      description: "a".repeat(32768),
+    });
     expect(errors).toEqual([
       expect.objectContaining({
         field: "description",
@@ -96,7 +104,7 @@ describe("controller up-front description validation", () => {
   });
 
   it("rejects a missing description on create", () => {
-    expect(validateCompleteIncidentCreation({}).map((e) => e.field)).toEqual(["description"]);
+    expect(validateCompleteIncidentCreation({}).map((e) => e.field)).toContain("description");
   });
 
   it("checks the description on update only when it changes", () => {
