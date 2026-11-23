@@ -19,6 +19,7 @@ import { sequelize } from "../database/db";
 import { QueryTypes } from "sequelize";
 import { projectAccessSql } from "./projectVisibility.utils";
 import { riskVisibilityCondition, RiskViewer } from "./riskVisibility.utils";
+import { incidentPagePath } from "./incidentLinks.utils";
 
 /**
  * Search constants
@@ -137,6 +138,11 @@ interface EntityConfig {
   projectColumn?: string;
   /** Column name for review_status filtering (if the entity supports it) */
   reviewStatusColumn?: string;
+  /**
+   * A fixed SQL condition on the entity's own columns that every result must
+   * meet (no user input), e.g. leaving archived rows out.
+   */
+  alwaysWhere?: string;
 }
 
 /**
@@ -275,11 +281,20 @@ const ENTITY_CONFIGS: Record<string, EntityConfig> = {
   },
   incident_management: {
     tableName: "ai_incident_managements",
-    searchColumns: ["ai_project", "reporter", "description", "immediate_mitigations"],
+    // incident_id is the visible id ("INC-12"), so it can be searched for.
+    searchColumns: [
+      "incident_id",
+      "ai_project",
+      "reporter",
+      "description",
+      "immediate_mitigations",
+    ],
     titleColumn: "ai_project",
     subtitleColumn: "description",
     icon: "AlertCircle",
-    route: (id) => `/ai-incident-managements?incidentId=${id}`,
+    route: (id) => incidentPagePath(id),
+    // Archived incidents are left out, as on the incidents page's default view.
+    alwaysWhere: "archived IS NOT TRUE",
   },
   llm_evals_projects: {
     tableName: "llm_evals_projects",
@@ -478,15 +493,22 @@ async function searchEntity(
     conditions.push(`project_id IS NULL`);
   }
 
+  if (config.alwaysWhere) {
+    conditions.push(`(${config.alwaysWhere})`);
+  }
+
   // Validate table name against whitelist (SQL injection prevention)
   const safeTableName = validateTableName(config.tableName);
 
   // Build and execute query
   const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
   // ORDER BY id keeps results deterministic across calls. All searchable
-  // tables expose a numeric `id` primary key.
+  // tables expose a numeric `id` primary key. One table, no joins, so rows
+  // are already distinct; SELECT DISTINCT * also fails outright on a table
+  // with a json column (ai_incident_managements.categories_of_harm), which
+  // left incidents out of every search.
   const sql = `
-    SELECT DISTINCT * FROM ${safeTableName}
+    SELECT * FROM ${safeTableName}
     ${whereClause}
     ORDER BY id ASC
     LIMIT :limit

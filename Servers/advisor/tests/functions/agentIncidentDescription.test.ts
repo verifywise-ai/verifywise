@@ -10,6 +10,11 @@ jest.mock("../../../utils/userPermission.utils", () => ({
   userHasPermission: jest.fn(async () => true),
 }));
 jest.mock("../../approval/approvalGateway", () => ({ submitForApproval: jest.fn() }));
+// The create path builds the row with the model, as the REST create does; no
+// Sequelize instance is registered here, so the model is the plain data.
+jest.mock("../../../domain.layer/models/incidentManagement/incidemtManagement.model", () => ({
+  AIIncidentManagementModel: jest.fn().mockImplementation((data: unknown) => data),
+}));
 jest.mock("../../../services/automations/automationProducer", () => ({
   enqueueAutomationAction: jest.fn(),
 }));
@@ -17,7 +22,6 @@ jest.mock("../../../services/automations/automationProducer", () => ({
 import { sequelize } from "../../../database/db";
 import { writeToolExecutors } from "../../confirmation/createWriteTool";
 import "../../functions/incidentFunctions";
-import { ValidationException } from "../../../domain.layer/exceptions/custom.exception";
 
 const mockQuery = sequelize.query as unknown as jest.Mock<(...args: any[]) => Promise<unknown>>;
 const mockTransaction = sequelize.transaction as unknown as jest.Mock<() => Promise<unknown>>;
@@ -65,9 +69,11 @@ describe("incident description rule on the shared write path (AI Advisor tools)"
       description: "a".repeat(32768),
     });
 
-    await expect(promise).rejects.toBeInstanceOf(ValidationException);
+    // The create path's field validation (as on the REST create) refuses it
+    // before any transaction; the tool reports the field message.
     await expect(promise).rejects.toThrow(TOO_LONG);
     expect(writeCalls()).toHaveLength(0);
+    expect(mockTransaction).not.toHaveBeenCalled();
   });
 
   it("agent_create_incident accepts exactly 32,767 characters", async () => {

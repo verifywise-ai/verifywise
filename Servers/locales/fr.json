@@ -569,6 +569,9 @@
   "in {days} days": "dans {days} jours",
   "Incident deleted successfully": "Incident supprimé(e) avec succès",
   "Incident not found": "Incident introuvable",
+  "Restore this incident before editing it.": "Restaurez cet incident avant de le modifier.",
+  "Linked incidents must be a list of incident ids.": "Les incidents liés doivent être une liste d'identifiants d'incidents.",
+  "Some linked incidents do not exist in your organization.": "Certains incidents liés n'existent pas dans votre organisation.",
   "Incorrect CAPTCHA answer": "Réponse CAPTCHA incorrecte",
   "Ingestion token is invalid or has been revoked": "Le jeton d'ingestion est invalide ou a été révoqué",
   "Inherited risk level may be stale": "Le niveau de risque hérité est peut-être obsolète",
@@ -1683,5 +1686,11 @@
   "{model} is not in this endpoint's model list.": "{model} ne figure pas dans la liste des modèles de ce point de terminaison.",
   "The key contains characters a key cannot have. Paste it again.": "La clé contient des caractères qu'une clé ne peut pas contenir. Collez-la à nouveau.",
   "Enter the API key again when you change the provider or the endpoint.": "Saisissez à nouveau la clé API lorsque vous changez de fournisseur ou de point de terminaison.",
-  "The key could not be checked. Try again.": "La clé n'a pas pu être vérifiée. Réessayez."
+  "The key could not be checked. Try again.": "La clé n'a pas pu être vérifiée. Réessayez.",
+  "Critical incident needs a response": "Un incident critique nécessite une réponse",
+  "Incident {reference} in \"{useCase}\" was rated {severity}.": "L'incident {reference} dans « {useCase} » a été classé {severity}.",
+  "Critical incident: {reference}": "Incident critique : {reference}",
+  "Minor": "Mineur",
+  "Serious": "Grave",
+  "Very serious": "Très grave"
 }

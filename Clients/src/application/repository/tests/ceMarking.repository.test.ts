@@ -2,6 +2,8 @@ import { ceMarkingService } from "../../../infrastructure/api/ceMarkingService";
 import {
   getAllEvidences,
   getAllIncidents,
+  filterLinkableIncidents,
+  getLinkableIncidents,
   getAllPolicies,
   getCEMarking,
   updateCEMarking,
@@ -182,6 +184,51 @@ describe("Test CE Marking Repository", () => {
 
       expect(ceMarkingService.getAllIncidents).toHaveBeenCalledWith();
       expect(response).toEqual(mockData);
+    });
+  });
+
+  describe("filterLinkableIncidents", () => {
+    const incident = (id: number, extra: Record<string, unknown>) =>
+      ({ id, type: "Malfunction", severity: "Minor", status: "Open", ...extra }) as any;
+
+    it("keeps this use case's non-archived incidents only", () => {
+      const result = filterLinkableIncidents(
+        [
+          incident(1, { project_id: 7 }),
+          incident(2, { project_id: 7, archived: true }),
+          incident(3, { project_id: 8 }),
+          incident(4, { project_id: null }),
+        ],
+        "7",
+      );
+      expect(result.map((i) => i.id)).toEqual([1]);
+    });
+
+    it("keeps incidents already linked, archived or not, so they can be unlinked", () => {
+      const result = filterLinkableIncidents(
+        [
+          incident(2, { project_id: 7, archived: true }),
+          incident(3, { project_id: 8 }),
+          incident(4, {}),
+        ],
+        7,
+        [2, 4],
+      );
+      expect(result.map((i) => i.id)).toEqual([2, 4]);
+    });
+  });
+
+  describe("getLinkableIncidents", () => {
+    it("filters the incident list for the use case", async () => {
+      vi.mocked(ceMarkingService.getAllIncidents).mockResolvedValue([
+        { id: 1, project_id: 5 },
+        { id: 2, project_id: 5, archived: true },
+        { id: 3, project_id: 6 },
+      ] as any);
+
+      const response = await getLinkableIncidents("5", [3]);
+
+      expect(response.map((i) => i.id)).toEqual([1, 3]);
     });
   });
 

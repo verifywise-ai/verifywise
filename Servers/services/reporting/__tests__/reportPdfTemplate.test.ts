@@ -14,7 +14,7 @@ import {
   SectionNotice,
 } from "../../../domain.layer/interfaces/i.reportGeneration";
 import { ANALYSIS_LABELS } from "../analyzers/mapToSummaries";
-import { NOTICE_TEXT } from "../noticeText";
+import { archivedIncidentsNote, NOTICE_TEXT } from "../noticeText";
 
 const TEMPLATE_PATH = path.join(__dirname, "../../../templates/reports/report-pdf.ejs");
 const template = fs.readFileSync(TEMPLATE_PATH, "utf-8");
@@ -796,5 +796,29 @@ describe("section notices", () => {
       });
       expect(html).toContain("<svg data-test-chart></svg>");
     });
+  });
+});
+
+describe("report-pdf.ejs: incident management", () => {
+  const incidents = (archivedIncidents?: number) => ({
+    incidentManagement: {
+      totalIncidents: 1,
+      archivedIncidents,
+      incidents: [
+        { id: 1, incidentId: "INC-1", type: "Malfunction", severity: "Minor", status: "Open" },
+      ],
+    },
+  });
+
+  it("notes the archived incidents the report leaves out", () => {
+    const html = render(undefined, incidents(2), undefined, { archivedIncidentsNote });
+    expect(html).toContain('<p class="subsection-note">2 archived incidents are not included.</p>');
+  });
+
+  it("has no note when nothing is archived, or for data without the count", () => {
+    expect(render(undefined, incidents(0), undefined, { archivedIncidentsNote })).not.toContain(
+      "subsection-note",
+    );
+    expect(render(undefined, incidents(undefined))).not.toContain("subsection-note");
   });
 });

@@ -448,6 +448,13 @@ body {
   margin: 0;
 }
 
+/* A short line under a table, e.g. how many archived incidents were left out */
+.subsection-note {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  margin: 8px 0 0;
+}
+
 /* Page Header/Footer for print */
 .page-header {
   display: flex;

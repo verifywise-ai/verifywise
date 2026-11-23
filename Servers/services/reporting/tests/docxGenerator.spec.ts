@@ -920,4 +920,36 @@ describe("DOCX Generator", () => {
       expect(text).not.toContain("Sections with no data");
     });
   });
+
+  describe("incident management section", () => {
+    const withIncidents = (archivedIncidents: number): ReportData => ({
+      ...mockReportData,
+      metadata: { ...mockReportData.metadata, isOrganizational: true },
+      sections: {
+        incidentManagement: {
+          totalIncidents: 1,
+          archivedIncidents,
+          incidents: [
+            { id: 1, incidentId: "INC-1", type: "Malfunction", severity: "Minor", status: "Open" },
+          ],
+        },
+      },
+    });
+
+    it("says how many archived incidents were left out", async () => {
+      const result = await generateDOCX(withIncidents(3));
+      const text = await docxText(result.content);
+      expect(text).toContain("3 archived incidents are not included.");
+    });
+
+    it("uses the singular for one archived incident", async () => {
+      const text = await docxText((await generateDOCX(withIncidents(1))).content);
+      expect(text).toContain("1 archived incident is not included.");
+    });
+
+    it("says nothing when no incident is archived", async () => {
+      const text = await docxText((await generateDOCX(withIncidents(0))).content);
+      expect(text).not.toContain("archived");
+    });
+  });
 });

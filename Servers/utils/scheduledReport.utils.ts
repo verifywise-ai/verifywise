@@ -52,11 +52,10 @@ export async function createScheduledReportQuery(
 // The viewer is required on the list so no caller can get every schedule of
 // the organization by omission.
 function scheduleVisibility(
-  viewer: ReportViewer | undefined,
+  viewer: ReportViewer,
   organization_id: number,
   replacements: Record<string, unknown>,
 ): string {
-  if (!viewer) return "";
   const predicate = reportVisibilityPredicate(viewer, organization_id, "sr.project_id");
   if (!predicate) return "";
   Object.assign(replacements, predicate.replacements);
@@ -84,14 +83,13 @@ export async function listScheduledReportsQuery(
 const VERSION_PARAMETERS_SQL = `COALESCE(v.parameters_config, '{}'::jsonb) AS parameters_config`;
 const VERSION_JOIN_SQL = `LEFT JOIN report_template_versions v ON v.id = sr.template_version_id`;
 
-// With a viewer, a schedule the viewer may not read comes back as null, the
-// same as a missing one. Without a viewer it is organization-scoped only; the
-// write paths (update, resume, run-now) call it that way and apply their own
-// scope gate (assertReportScopeAllowed).
+// A schedule the viewer may not read comes back as null, the same as a missing
+// one. Every caller passes the viewer: the read endpoint, and the write paths,
+// which then answer an unreadable schedule like a missing id.
 export async function getScheduledReportQuery(
   id: number,
   organization_id: number,
-  viewer?: ReportViewer,
+  viewer: ReportViewer,
 ): Promise<any> {
   const replacements: Record<string, unknown> = { id, organization_id };
   const visibility = scheduleVisibility(viewer, organization_id, replacements);

@@ -121,6 +121,10 @@ The Dashboard domain provides centralized metrics, visualizations, and analytics
 
 ### Incident Metrics
 
+Computed in the client (`fetchIncidentMetrics` in `useDashboardMetrics.ts`)
+from `GET /ai-incident-managements`, leaving archived incidents out so the
+counts match the incidents page's default view.
+
 ```typescript
 {
   total: number;

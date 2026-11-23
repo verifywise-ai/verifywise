@@ -3,6 +3,7 @@ import { sequelize } from "../../../database/db";
 import { AIIncidentManagementStatus } from "../../../domain.layer/enums/ai-incident-management.enum";
 import { toIso } from "./dateOnly";
 import type { HomeQueueItem, HomeQueueSource } from "../../../domain.layer/interfaces/i.homeQueue";
+import { incidentPagePath } from "../../../utils/incidentLinks.utils";
 
 /**
  * Incidents assigned to me that are not Closed. Archived incidents are hidden
@@ -53,7 +54,7 @@ export const incidentsSource: HomeQueueSource = {
       entityId: i.id,
       // The list names an incident by its code ("INC-1"), then its project.
       name: i.incident_id || i.ai_project || "",
-      url: `/ai-incident-managements?incidentId=${i.id}`,
+      url: incidentPagePath(i.id),
       dueDate: null,
       waitingSince: toIso(i.created_at),
       overdue: false,

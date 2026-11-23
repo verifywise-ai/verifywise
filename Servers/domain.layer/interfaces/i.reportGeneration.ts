@@ -840,7 +840,10 @@ export interface NistSubcategoriesSectionData {
 
 // Incident Management (Organization group)
 export interface IncidentManagementSectionData {
+  /** Incidents in the report: archived ones are left out. */
   totalIncidents: number;
+  /** Archived incidents left out of the report, noted under the table. */
+  archivedIncidents?: number;
   incidents: Array<{
     id: number;
     incidentId: string;

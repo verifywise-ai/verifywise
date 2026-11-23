@@ -569,6 +569,9 @@
   "in {days} days": "in {days} Tagen",
   "Incident deleted successfully": "Vorfall erfolgreich gelöscht",
   "Incident not found": "Vorfall nicht gefunden",
+  "Restore this incident before editing it.": "Stellen Sie diesen Vorfall wieder her, bevor Sie ihn bearbeiten.",
+  "Linked incidents must be a list of incident ids.": "Verknüpfte Vorfälle müssen eine Liste von Vorfall-IDs sein.",
+  "Some linked incidents do not exist in your organization.": "Einige verknüpfte Vorfälle existieren in Ihrer Organisation nicht.",
   "Incorrect CAPTCHA answer": "Falsche CAPTCHA-Antwort",
   "Ingestion token is invalid or has been revoked": "Das Ingestion-Token ist ungültig oder wurde widerrufen",
   "Inherited risk level may be stale": "Geerbte Risikostufe möglicherweise veraltet",
@@ -1683,5 +1686,11 @@
   "{model} is not in this endpoint's model list.": "{model} ist nicht in der Modellliste dieses Endpunkts.",
   "The key contains characters a key cannot have. Paste it again.": "Der Schlüssel enthält Zeichen, die ein Schlüssel nicht enthalten kann. Fügen Sie ihn erneut ein.",
   "Enter the API key again when you change the provider or the endpoint.": "Geben Sie den API-Schlüssel erneut ein, wenn Sie den Anbieter oder den Endpunkt ändern.",
-  "The key could not be checked. Try again.": "Der Schlüssel konnte nicht geprüft werden. Versuchen Sie es erneut."
+  "The key could not be checked. Try again.": "Der Schlüssel konnte nicht geprüft werden. Versuchen Sie es erneut.",
+  "Critical incident needs a response": "Kritischer Vorfall erfordert eine Reaktion",
+  "Incident {reference} in \"{useCase}\" was rated {severity}.": "Vorfall {reference} in „{useCase}“ wurde als {severity} eingestuft.",
+  "Critical incident: {reference}": "Kritischer Vorfall: {reference}",
+  "Minor": "Gering",
+  "Serious": "Schwerwiegend",
+  "Very serious": "Sehr schwerwiegend"
 }
