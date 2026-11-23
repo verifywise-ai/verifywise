@@ -307,8 +307,9 @@ const TableWithPlaceholder: React.FC<ITableWithPlaceholderProps> = ({
           break;
 
         case "scorecard":
-          aValue = a.risk_score ?? 0;
-          bValue = b.risk_score ?? 0;
+          // Not assessed (no score) sorts below a score of 0.
+          aValue = a.risk_score ?? -1;
+          bValue = b.risk_score ?? -1;
           break;
 
         case "risk":
@@ -461,8 +462,15 @@ const TableWithPlaceholder: React.FC<ITableWithPlaceholderProps> = ({
                   >
                     <Box display="flex" alignItems="center" gap={1}>
                       {(() => {
-                        // Use only backend provided risk_score, no client-side calculations
-                        const riskScore = row.risk_score ?? 0;
+                        // The server computes risk_score; null means no scorecard answer.
+                        const riskScore = row.risk_score;
+                        if (riskScore === null || riskScore === undefined) {
+                          return (
+                            <Typography variant="body2" sx={{ color: "text.muted" }}>
+                              Not assessed
+                            </Typography>
+                          );
+                        }
                         const riskColor = getRiskScoreColor(riskScore);
 
                         return (

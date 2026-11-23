@@ -41,7 +41,7 @@ import {
 import { CREDIBILITY_PROMPT_VERSION } from "../../services/vendorResearch/prompts";
 import type { ResearchResult } from "../../services/vendorResearch/researchAgent";
 import { ResearchOutput, researchOutputSchema } from "../../services/vendorResearch/schema";
-import { calculateRiskLevel } from "../../utils/validations/vendorRiskValidation.utils";
+import { calculateRiskLevel } from "../../utils/riskLevel.utils";
 import {
   STALE_RUN_MINUTES,
   createRunQuery,
@@ -325,7 +325,7 @@ describe("runVendorResearch against the real tables", () => {
     ]);
     expect(Buffer.byteLength(JSON.stringify(run.evidence))).toBeLessThanOrEqual(MAX_EVIDENCE_BYTES);
 
-    const level = calculateRiskLevel("Catastrophic", "Almost certain");
+    const level = calculateRiskLevel("Almost certain", "Catastrophic");
     expect(level).toEqual(expect.any(String));
     const findings = await getFindingsForVendorQuery(seed.orgId, seed.vendorId);
     expect(findings).toHaveLength(1);
@@ -340,7 +340,7 @@ describe("runVendorResearch against the real tables", () => {
       status: "pending",
       likelihood: "Almost certain",
       risk_severity: "Catastrophic",
-      risk_level: `${level} Risk`,
+      risk_level: level,
       // A run stores no confidence (M3 Part B1): the label is in the credibility column.
       confidence: null,
       credibility: expect.stringMatching(/^(low|medium|high)$/),

@@ -35,8 +35,10 @@ const RISK = {
   likelihood: "Possible",
   risk_severity: "Major",
   action_plan: "Require encryption at rest",
-  risk_level: "High Risk",
 };
+
+/** The level the server computes for Possible and Major (calculateRiskLevel); none is sent. */
+const STORED_LEVEL = "High risk";
 
 const payload = (vendorId: number, overrides: Record<string, unknown> = {}) => ({
   vendor_id: vendorId,
@@ -85,6 +87,7 @@ describe("POST /api/vendorRisks", () => {
       id: expect.any(Number),
       vendor_id: vendorId,
       ...RISK,
+      risk_level: STORED_LEVEL,
       action_owner: null,
     });
 
@@ -96,6 +99,7 @@ describe("POST /api/vendorRisks", () => {
       id: res.body.data.id,
       vendor_id: vendorId,
       ...RISK,
+      risk_level: STORED_LEVEL,
       action_owner: null,
       is_deleted: false,
       is_demo: false,
@@ -161,7 +165,7 @@ describe("POST /api/vendorRisks", () => {
         RISK.likelihood,
         RISK.risk_severity,
         RISK.action_plan,
-        RISK.risk_level,
+        STORED_LEVEL,
         `${user.name} ${user.surname}`,
       ]),
     );
@@ -254,10 +258,8 @@ describe("POST /api/vendorRisks", () => {
     expect(notifyUserAssigned).not.toHaveBeenCalled();
   });
 
-  // A failed framework link aborts the whole Postgres transaction, whatever the service catches,
-  // so the change history insert that follows fails too: the request answers 500 and nothing is
-  // kept. The controller behaved the same way before the creation logic moved into a service.
-  it("answers 500 and stores nothing when a framework id does not exist", async () => {
+  // Checked before the insert, so a foreign key error never aborts the transaction.
+  it("answers 400 and stores nothing when a framework id does not exist", async () => {
     const { owner } = await seedTwoTenantContexts();
     const vendorId = await createTestVendor(owner.orgId, { vendor_name: "Acme Corp" });
 
@@ -265,7 +267,7 @@ describe("POST /api/vendorRisks", () => {
       .post(BASE)
       .send(payload(vendorId, { action_owner: owner.userId, frameworks: [987654321] }));
 
-    expect(res.status).toBe(500);
+    expect(res.status).toBe(400);
     expect(await storedFor(owner.orgId)).toEqual({ risks: 0, frameworkLinks: 0, history: 0 });
     expect(recomputeJobs()).toHaveLength(0);
     expect(notifyUserAssigned).not.toHaveBeenCalled();

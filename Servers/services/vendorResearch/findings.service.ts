@@ -39,10 +39,8 @@ import {
 import { VendorRiskModel } from "../../domain.layer/models/vendorRisk/vendorRisk.model";
 import logger from "../../utils/logger/fileLogger";
 import { VENDOR_RISK_ENUMS } from "../../utils/validations/validation.utils";
-import {
-  VENDOR_RISK_VALIDATION_LIMITS,
-  calculateRiskLevel,
-} from "../../utils/validations/vendorRiskValidation.utils";
+import { VENDOR_RISK_VALIDATION_LIMITS } from "../../utils/validations/vendorRiskValidation.utils";
+import { calculateRiskLevel } from "../../utils/riskLevel.utils";
 import { getVendorByIdQuery } from "../../utils/vendor.utils";
 import {
   getFindingByIdQuery,
@@ -208,7 +206,8 @@ function checkEdits(edits: FindingEdits): CheckedEdits {
 
 /**
  * The level of the new risk when the caller sent none: the finding's own while the likelihood and
- * the severity are the finding's, else worked out from the pair the way the research stores it.
+ * the severity are the finding's, else worked out from the pair with the formula a saved vendor
+ * risk gets. (The vendor risk insert computes its stored level from the pair in any case.)
  */
 function levelOfPair(
   finding: IVendorRiskFinding,
@@ -218,8 +217,7 @@ function levelOfPair(
   if (likelihood === finding.likelihood && severity === finding.risk_severity) {
     return finding.risk_level;
   }
-  const level = calculateRiskLevel(severity, likelihood);
-  return level === null ? finding.risk_level : `${level} Risk`;
+  return calculateRiskLevel(likelihood, severity) ?? finding.risk_level;
 }
 
 /**

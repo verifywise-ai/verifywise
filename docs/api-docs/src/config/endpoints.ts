@@ -13729,6 +13729,32 @@ export const v1V1useCaseLifecycleEndpoints: Endpoint[] = [
   },
 ];
 
+// v1: V1/Vendor Risks endpoints
+export const v1V1vendorRisksEndpoints: Endpoint[] = [
+  {
+    method: 'GET',
+    path: '/v1/vendor-risks/{id}',
+    summary: "Get Vendor Risk By Id Including Deleted",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Vendor Risks",
+  },
+  {
+    method: 'PATCH',
+    path: '/v1/vendor-risks/{id}/restore',
+    summary: "Restore Vendor Risk By Id",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Vendor Risks",
+  },
+];
+
 // Vendors endpoints
 export const vendorEndpoints: Endpoint[] = [
   {
@@ -14240,6 +14266,7 @@ export const allEndpoints = {
   v1V1projects: v1V1projectsEndpoints,
   v1V1training: v1V1trainingEndpoints,
   v1V1useCaseLifecycle: v1V1useCaseLifecycleEndpoints,
+  v1V1vendorRisks: v1V1vendorRisksEndpoints,
   vendor: vendorEndpoints,
   vendorResearch: vendorResearchEndpoints,
   vendorRisk: vendorRiskEndpoints,

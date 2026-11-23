@@ -11,14 +11,14 @@ import {
   createVendorRiskFrameworkAssociations,
   deleteVendorRiskFrameworkAssociations,
   getVendorRisksByFrameworkIdQuery,
+  normalizeVendorRiskLikelihood,
+  restoreVendorRiskByIdQuery,
 } from "../utils/vendorRisk.utils";
 import { VendorRiskModel } from "../domain.layer/models/vendorRisk/vendorRisk.model";
 import { ValidationException } from "../domain.layer/exceptions/custom.exception";
 import { logProcessing, logSuccess, logFailure } from "../utils/logger/logHelper";
-import {
-  trackVendorRiskChanges,
-  recordMultipleFieldChanges,
-} from "../utils/vendorRiskChangeHistory.utils";
+import { recordMultipleFieldChanges } from "../utils/vendorRiskChangeHistory.utils";
+import { trackEntityChanges } from "../utils/changeHistory.base.utils";
 import { notifyUserAssigned } from "../services/inAppNotification.service";
 import {
   assertActionOwnerOfOrganization,
@@ -32,6 +32,15 @@ import logger from "../utils/logger/fileLogger";
 import { QueryTypes } from "sequelize";
 
 import { translateError } from "../utils/i18n.utils";
+import {
+  assertFrameworksExist,
+  assertVendorRiskRequestBody,
+  parseRouteId,
+  parseVendorRiskListFilter,
+  toIdList,
+} from "../utils/validations/vendorRequest.utils";
+
+const INVALID_FILTER = "Filter must be active, deleted or all";
 // Helper function to get user name
 async function getUserNameById(userId: number): Promise<string> {
   const result = await sequelize.query<{ name: string; surname: string }>(
@@ -45,7 +54,10 @@ async function getUserNameById(userId: number): Promise<string> {
 }
 
 export async function getAllVendorRisksAllProjects(req: Request, res: Response): Promise<any> {
-  const filter = (req.query.filter as "active" | "deleted" | "all") || "active";
+  const filter = parseVendorRiskListFilter(req.query.filter);
+  if (filter === null) {
+    return res.status(400).json(STATUS_CODE[400](req.t!(INVALID_FILTER)));
+  }
 
   logProcessing({
     description: `starting getAllVendorRisksAllProjects with filter: ${filter}`,
@@ -83,7 +95,10 @@ export async function getAllVendorRisksAllProjects(req: Request, res: Response):
 export async function getAllVendorRisks(req: Request, res: Response): Promise<any> {
   const projectIdParam = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
   const projectId = parseInt(projectIdParam);
-  const filter = (req.query.filter as "active" | "deleted" | "all") || "active";
+  const filter = parseVendorRiskListFilter(req.query.filter);
+  if (filter === null) {
+    return res.status(400).json(STATUS_CODE[400](req.t!(INVALID_FILTER)));
+  }
 
   // Return empty array for non-numeric project IDs (e.g., plugin-sourced IDs like "plugin-prefix-2")
   if (isNaN(projectId)) {
@@ -141,8 +156,14 @@ export async function getAllVendorRisks(req: Request, res: Response): Promise<an
 }
 
 export async function getAllVendorRisksByVendorId(req: Request, res: Response) {
-  const vendorId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
-  const filter = (req.query.filter as "active" | "deleted" | "all") || "active";
+  const vendorId = parseRouteId(req.params.id);
+  if (vendorId === null) {
+    return res.status(400).json(STATUS_CODE[400](req.t!("Invalid vendor ID")));
+  }
+  const filter = parseVendorRiskListFilter(req.query.filter);
+  if (filter === null) {
+    return res.status(400).json(STATUS_CODE[400](req.t!(INVALID_FILTER)));
+  }
 
   logProcessing({
     description: `starting getAllVendorRisksByVendorId for vendor ID ${vendorId} with filter: ${filter}`,
@@ -190,8 +211,28 @@ export async function getAllVendorRisksByVendorId(req: Request, res: Response) {
   }
 }
 
+/** GET /vendorRisks/:id (legacy): an active vendor risk; 404 for a deleted one. */
 export async function getVendorRiskById(req: Request, res: Response): Promise<any> {
-  const vendorRiskId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
+  return readVendorRiskById(req, res, false);
+}
+
+/**
+ * GET /v1/vendor-risks/:id: a vendor risk, deleted ones included with
+ * is_deleted set, so a deleted risk can be opened read-only and restored.
+ */
+export async function getVendorRiskByIdIncludingDeleted(req: Request, res: Response): Promise<any> {
+  return readVendorRiskById(req, res, true);
+}
+
+async function readVendorRiskById(
+  req: Request,
+  res: Response,
+  includeDeleted: boolean,
+): Promise<any> {
+  const vendorRiskId = parseRouteId(req.params.id);
+  if (vendorRiskId === null) {
+    return res.status(400).json(STATUS_CODE[400](req.t!("Invalid vendor risk ID")));
+  }
 
   logProcessing({
     description: `starting getVendorRiskById for ID ${vendorRiskId}`,
@@ -202,7 +243,11 @@ export async function getVendorRiskById(req: Request, res: Response): Promise<an
   });
 
   try {
-    const vendorRisk = await getVendorRiskByIdQuery(vendorRiskId, req.organizationId!);
+    const vendorRisk = await getVendorRiskByIdQuery(
+      vendorRiskId,
+      req.organizationId!,
+      includeDeleted,
+    );
 
     if (vendorRisk) {
       await logSuccess({
@@ -240,6 +285,11 @@ export async function getVendorRiskById(req: Request, res: Response): Promise<an
 }
 
 export async function createVendorRisk(req: Request, res: Response): Promise<any> {
+  try {
+    assertVendorRiskRequestBody(req.body, "create");
+  } catch (error) {
+    return res.status(400).json(STATUS_CODE[400](translateError(req, error)));
+  }
   const transaction = await sequelize.transaction();
 
   logProcessing({
@@ -315,10 +365,25 @@ export async function createVendorRisk(req: Request, res: Response): Promise<any
 }
 
 export async function updateVendorRiskById(req: Request, res: Response): Promise<any> {
+  const vendorRiskId = parseRouteId(req.params.id);
+  if (vendorRiskId === null) {
+    return res.status(400).json(STATUS_CODE[400](req.t!("Invalid vendor risk ID")));
+  }
+  try {
+    assertVendorRiskRequestBody(req.body, "update");
+  } catch (error) {
+    return res.status(400).json(STATUS_CODE[400](translateError(req, error)));
+  }
   const transaction = await sequelize.transaction();
-  const vendorRiskId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
-  const updatedVendorRisk = req.body;
-  const frameworks: number[] | undefined = req.body.frameworks;
+  // Likelihood in its enum spelling, so the history diff doesn't record
+  // "Almost certain → Almost Certain" for a save that changes nothing.
+  const updatedVendorRisk =
+    req.body.likelihood === undefined
+      ? req.body
+      : { ...req.body, likelihood: normalizeVendorRiskLikelihood(req.body.likelihood) };
+  // null, like absent, leaves the framework links alone.
+  const frameworks: number[] | undefined =
+    req.body.frameworks == null ? undefined : toIdList(req.body.frameworks);
 
   logProcessing({
     description: `starting updateVendorRiskById for ID ${vendorRiskId}`,
@@ -354,8 +419,7 @@ export async function updateVendorRiskById(req: Request, res: Response): Promise
       await assertActionOwnerOfOrganization(requestedOwner, req.organizationId!, transaction);
     }
 
-    // Create model from existing data for change tracking
-    const oldVendorRiskModel = new VendorRiskModel(existingVendorRisk as any);
+    if (frameworks) await assertFrameworksExist(frameworks, transaction);
 
     const vendorRiskModel = new VendorRiskModel();
     await vendorRiskModel.updateVendorRisk(updatedVendorRisk);
@@ -370,24 +434,13 @@ export async function updateVendorRiskById(req: Request, res: Response): Promise
     if (vendorRisk) {
       // Replace framework associations if provided
       if (frameworks !== undefined) {
-        try {
-          await deleteVendorRiskFrameworkAssociations(
+        await deleteVendorRiskFrameworkAssociations(vendorRiskId, req.organizationId!, transaction);
+        if (frameworks.length > 0) {
+          await createVendorRiskFrameworkAssociations(
+            frameworks,
             vendorRiskId,
             req.organizationId!,
             transaction,
-          );
-          if (frameworks.length > 0) {
-            await createVendorRiskFrameworkAssociations(
-              frameworks,
-              vendorRiskId,
-              req.organizationId!,
-              transaction,
-            );
-          }
-        } catch (fwError) {
-          console.warn(
-            "Could not update framework associations (table may not exist yet):",
-            (fwError as Error).message,
           );
         }
       }
@@ -395,7 +448,19 @@ export async function updateVendorRiskById(req: Request, res: Response): Promise
       // Track and record changes
       const userId = req.userId;
       if (userId) {
-        const changes = await trackVendorRiskChanges(oldVendorRiskModel, updatedVendorRisk);
+        // The level as stored (computed), not as the request sent it.
+        // Name lookups scoped to this organization, on the write's transaction.
+        const changes = await trackEntityChanges(
+          "vendor_risk",
+          { ...existingVendorRisk, frameworks: existingVendorRisk.frameworks ?? [] },
+          {
+            ...updatedVendorRisk,
+            risk_level: vendorRisk.risk_level,
+            vendor_id: updatedVendorRisk.vendor_id === undefined ? undefined : vendorRisk.vendor_id,
+            frameworks,
+          },
+          { organizationId: req.organizationId!, transaction },
+        );
         if (changes.length > 0) {
           await recordMultipleFieldChanges(
             vendorRiskId,
@@ -418,7 +483,8 @@ export async function updateVendorRiskById(req: Request, res: Response): Promise
       // Compared as ids, as the check above does: the stored owner sent again as text ("8") is not
       // a new owner, is not checked, and so must not be told again either.
       const oldActionOwner = (existingVendorRisk as any).action_owner;
-      const newActionOwner = updatedVendorRisk.action_owner;
+      // The saved value, not the request's: the form sends the id as a string.
+      const newActionOwner = vendorRisk.action_owner;
       if (newActionOwner && toId(newActionOwner) !== toId(oldActionOwner)) {
         const assignerName = await getUserNameById(req.userId!);
         const baseUrl = process.env.FRONTEND_URL || "http://localhost:5173";
@@ -467,6 +533,7 @@ export async function updateVendorRiskById(req: Request, res: Response): Promise
       return res.status(202).json(STATUS_CODE[202](vendorRisk));
     }
 
+    await transaction.rollback();
     await logSuccess({
       eventType: "Update",
       description: `Vendor risk not found for update: ID ${vendorRiskId}`,
@@ -505,8 +572,11 @@ export async function updateVendorRiskById(req: Request, res: Response): Promise
 }
 
 export async function deleteVendorRiskById(req: Request, res: Response): Promise<any> {
+  const vendorRiskId = parseRouteId(req.params.id);
+  if (vendorRiskId === null) {
+    return res.status(400).json(STATUS_CODE[400](req.t!("Invalid vendor risk ID")));
+  }
   const transaction = await sequelize.transaction();
-  const vendorRiskId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
 
   logProcessing({
     description: `starting deleteVendorRiskById for ID ${vendorRiskId}`,
@@ -521,6 +591,7 @@ export async function deleteVendorRiskById(req: Request, res: Response): Promise
       vendorRiskId,
       req.organizationId!,
       transaction,
+      req.userId!,
     );
 
     if (deletedVendorRisk) {
@@ -536,9 +607,10 @@ export async function deleteVendorRiskById(req: Request, res: Response): Promise
       return res.status(202).json(STATUS_CODE[202](deletedVendorRisk));
     }
 
+    await transaction.rollback();
     await logSuccess({
       eventType: "Delete",
-      description: `Deleted vendor risk ID ${vendorRiskId}`,
+      description: `Vendor risk not found for deletion: ID ${vendorRiskId}`,
       functionName: "deleteVendorRiskById",
       fileName: "vendorRisk.ctrl.ts",
       userId: req.userId!,
@@ -560,9 +632,85 @@ export async function deleteVendorRiskById(req: Request, res: Response): Promise
   }
 }
 
+/**
+ * PATCH /v1/vendor-risks/:id/restore (vendor.edit): restores a deleted vendor
+ * risk. 404 when no deleted risk has this id.
+ */
+export async function restoreVendorRiskById(req: Request, res: Response): Promise<any> {
+  const vendorRiskId = parseRouteId(req.params.id);
+  if (vendorRiskId === null) {
+    return res.status(400).json(STATUS_CODE[400](req.t!("Invalid vendor risk ID")));
+  }
+  const transaction = await sequelize.transaction();
+
+  logProcessing({
+    description: `starting restoreVendorRiskById for ID ${vendorRiskId}`,
+    functionName: "restoreVendorRiskById",
+    fileName: "vendorRisk.ctrl.ts",
+    userId: req.userId!,
+    organizationId: req.organizationId!,
+  });
+
+  try {
+    const restored = await restoreVendorRiskByIdQuery(
+      vendorRiskId,
+      req.organizationId!,
+      transaction,
+      req.userId!,
+    );
+    if (!restored) {
+      await transaction.rollback();
+      await logSuccess({
+        eventType: "Update",
+        description: `No deleted vendor risk to restore: ID ${vendorRiskId}`,
+        functionName: "restoreVendorRiskById",
+        fileName: "vendorRisk.ctrl.ts",
+        userId: req.userId!,
+        organizationId: req.organizationId!,
+      });
+      return res.status(404).json(STATUS_CODE[404]({}));
+    }
+    await transaction.commit();
+    await logSuccess({
+      eventType: "Update",
+      description: `Restored vendor risk ID ${vendorRiskId}`,
+      functionName: "restoreVendorRiskById",
+      fileName: "vendorRisk.ctrl.ts",
+      userId: req.userId!,
+      organizationId: req.organizationId!,
+    });
+
+    // Back in the pool of related-risk suggestions.
+    enqueueVendorRiskLinkRecompute(req.organizationId!, vendorRiskId).catch((err) =>
+      logger.error("Vendor risk link recompute enqueue failed:", err),
+    );
+
+    const vendorRisk = await getVendorRiskByIdQuery(vendorRiskId, req.organizationId!);
+    return res.status(200).json(STATUS_CODE[200](vendorRisk));
+  } catch (error) {
+    await transaction.rollback();
+    await logFailure({
+      eventType: "Update",
+      description: "Failed to restore vendor risk",
+      functionName: "restoreVendorRiskById",
+      fileName: "vendorRisk.ctrl.ts",
+      error: error as Error,
+      userId: req.userId!,
+      organizationId: req.organizationId!,
+    });
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
+  }
+}
+
 export async function getVendorRisksByFrameworkId(req: Request, res: Response): Promise<any> {
-  const frameworkId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
-  const filter = (req.query.filter as "active" | "deleted" | "all") || "active";
+  const frameworkId = parseRouteId(req.params.id);
+  if (frameworkId === null) {
+    return res.status(400).json(STATUS_CODE[400](req.t!("Invalid framework id")));
+  }
+  const filter = parseVendorRiskListFilter(req.query.filter);
+  if (filter === null) {
+    return res.status(400).json(STATUS_CODE[400](req.t!(INVALID_FILTER)));
+  }
 
   logProcessing({
     description: `starting getVendorRisksByFrameworkId for framework ID ${frameworkId} with filter: ${filter}`,

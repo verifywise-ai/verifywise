@@ -14,6 +14,7 @@ import {
   SectionNotice,
 } from "../../../domain.layer/interfaces/i.reportGeneration";
 import { ANALYSIS_LABELS } from "../analyzers/mapToSummaries";
+import { NOTICE_TEXT } from "../noticeText";
 
 const TEMPLATE_PATH = path.join(__dirname, "../../../templates/reports/report-pdf.ejs");
 const template = fs.readFileSync(TEMPLATE_PATH, "utf-8");
@@ -26,6 +27,7 @@ const SECTION_KEYS: Array<keyof ReportData["sections"]> = [
   "assessment",
   "clausesAndAnnexes",
   "nistSubcategories",
+  "frameworkRequirements",
   "vendors",
   "models",
   "trainingRegistry",
@@ -41,6 +43,7 @@ function render(
   // Left undefined by default so every pre-existing test also proves the
   // template survives a caller that predates sectionNotices.
   sectionNotices?: SectionNotice[],
+  extra: Record<string, unknown> = {},
 ): string {
   const data = {
     metadata: {
@@ -70,7 +73,9 @@ function render(
     sectionNotices: sectionNotices as SectionNotice[],
     // The renderer supplies these; the template must not declare its own copy.
     analysisLabels: ANALYSIS_LABELS,
+    noticeText: NOTICE_TEXT,
     include: () => "",
+    ...extra,
   } satisfies Omit<ReportData, "aiSummaries"> & {
     aiSummaries?: AISummaries;
     analysisLabels: Record<string, string>;
@@ -626,6 +631,43 @@ describe("section notices", () => {
     expect(html).toContain("brand_new_reason");
   });
 
+  describe("collection_failed", () => {
+    const failed: SectionNotice = {
+      sectionKey: "frameworkRequirements",
+      reason: "collection_failed",
+      detail: "SOC 2 for <b>Chatbot</b>",
+    };
+
+    it("renders its own subsection with the pairing and what to do", () => {
+      const html = render(undefined, {}, [failed]);
+
+      expect(html).toContain("Sections that could not be completed");
+      expect(html).toContain("Part of these sections could not be read");
+      expect(html).toContain("Framework requirements");
+      expect(html).toContain("could not be read.");
+      expect(html).toContain("What to do: generate the report again.");
+      expect(html).not.toContain("Sections with no data");
+    });
+
+    it("escapes the detail", () => {
+      const html = render(undefined, {}, [failed]);
+
+      expect(html).toContain("SOC 2 for &lt;b&gt;Chatbot&lt;/b&gt;");
+      expect(html).not.toContain("<b>Chatbot</b>");
+    });
+
+    it("keeps no_data notices under Sections with no data only", () => {
+      const html = render(undefined, {}, [failed, { sectionKey: "vendors", reason: "no_data" }]);
+
+      expect(html.indexOf("Sections that could not be completed")).toBeLessThan(
+        html.indexOf("Sections with no data"),
+      );
+      const noDataPart = html.slice(html.indexOf("Sections with no data"));
+      expect(noDataPart).toContain("Vendors");
+      expect(noDataPart).not.toContain("Framework requirements");
+    });
+  });
+
   it("renders nothing when there are no notices", () => {
     const html = render(undefined, {}, []);
 
@@ -636,5 +678,124 @@ describe("section notices", () => {
     const html = render();
 
     expect(html).not.toContain("section-notice");
+  });
+
+  describe("framework requirements", () => {
+    const rollup = {
+      total: 2,
+      done: 1,
+      unassigned: 0,
+      noEvidence: 0,
+      overdue: 0,
+      statusBreakdown: {},
+    };
+    const base = {
+      implId: 1,
+      level: 2,
+      title: "Model inventory",
+      orderNo: 1,
+      status: "Implemented",
+      owner: "Jane <b>Doe</b>",
+      reviewer: null,
+      approver: null,
+      dueDate: "2026-12-01",
+      isDone: true,
+      isOverdue: false,
+      evidenceCount: 3,
+      evidenceFiles: ["a.pdf", "b.docx"],
+      riskCount: 0,
+      children: [
+        {
+          ...{},
+          implId: 2,
+          level: 3,
+          title: "Child item",
+          orderNo: 1,
+          status: "Not started",
+          owner: null,
+          reviewer: null,
+          approver: null,
+          dueDate: null,
+          isDone: false,
+          isOverdue: false,
+          evidenceCount: 0,
+          evidenceFiles: [],
+          riskCount: 0,
+        },
+      ],
+    };
+    const frameworkRequirements = {
+      frameworks: [
+        {
+          frameworkId: 26,
+          frameworkName: "OSFI E-23",
+          rollup,
+          groups: [
+            {
+              title: "Governance",
+              orderNo: 1,
+              useCase: "Credit scoring",
+              rollup,
+              requirements: [base],
+            },
+          ],
+        },
+      ],
+    };
+
+    it("renders framework requirements block and TOC entry", () => {
+      const html = render(undefined, { frameworkRequirements });
+      expect(html).toContain("Framework requirements");
+      expect(html).toContain("OSFI E-23");
+      expect(html).toContain("1 of 2 requirements implemented or audited");
+      expect(html).toContain("Credit scoring · Governance");
+      expect(html).toContain("Model inventory");
+      expect(html).toContain("Child item");
+      expect(html).toContain("2026-12-01");
+      expect(html).toContain("Evidence: a.pdf, b.docx, and 1 more");
+      expect(html).toContain("chip-success");
+      // user text is escaped
+      expect(html).not.toContain("<b>Doe</b>");
+      expect(html).toContain("Jane &lt;b&gt;Doe&lt;/b&gt;");
+    });
+
+    it("include frameworkRequirements in the compliance group guard", () => {
+      const html = render(undefined, { frameworkRequirements });
+      expect(html).toContain("Compliance & Governance");
+    });
+
+    it("keeps the due date on one line and the group heading with its table", () => {
+      const html = render(undefined, { frameworkRequirements });
+      expect(html).toContain('<td style="white-space: nowrap;">2026-12-01</td>');
+      expect(html).toMatch(/<h5 style="[^"]*break-after: avoid/);
+    });
+
+    it("keeps a short chart on one page but lets a long one break", () => {
+      const withGroups = (n: number) => ({
+        frameworkRequirements: {
+          frameworks: [
+            {
+              ...frameworkRequirements.frameworks[0],
+              groups: Array.from({ length: n }, (_, i) => ({
+                ...frameworkRequirements.frameworks[0].groups[0],
+                title: `Group ${i}`,
+              })),
+            },
+          ],
+        },
+      });
+      const extra = { frameworkRequirementCharts: ["<svg></svg>"] };
+      expect(render(undefined, withGroups(3), undefined, extra)).toContain(
+        'class="fr-chart avoid-break"',
+      );
+      expect(render(undefined, withGroups(20), undefined, extra)).toContain('class="fr-chart"');
+    });
+
+    it("embeds the chart svg supplied for the framework", () => {
+      const html = render(undefined, { frameworkRequirements }, undefined, {
+        frameworkRequirementCharts: ["<svg data-test-chart></svg>"],
+      });
+      expect(html).toContain("<svg data-test-chart></svg>");
+    });
   });
 });

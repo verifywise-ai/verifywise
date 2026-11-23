@@ -1,6 +1,6 @@
 # Reporting Domain
 
-> **Last Updated:** 2026-10-18
+> **Last Updated:** 2026-11-22
 
 ## Overview
 
@@ -47,6 +47,7 @@ Reports are organized into three groups:
 - Assessment Tracker (EU AI Act)
 - Clauses & Annexes (ISO 42001, ISO 27001)
 - NIST Subcategories (NIST AI RMF)
+- Framework Requirements (the bundled frameworks, ids 5–28: SOC 2, GDPR, HIPAA, OSFI E-23 and the rest)
 
 **Organization:**
 - AI Models
@@ -63,6 +64,7 @@ Reports are organized into three groups:
 | ISO 42001 | Clauses & Annexes, Project Risks, Organization |
 | ISO 27001 | Clauses & Annexes, Project Risks, Organization |
 | NIST AI RMF | NIST Subcategories, Project Risks, Organization |
+| Bundled frameworks (ids 5–28) | Framework Requirements, Project Risks, Organization |
 
 ## API Endpoints
 
@@ -216,6 +218,37 @@ has no labels and renders exactly as it did before scope existed.
 renderers read it to drop the project line. The report's own scope is
 `metadata.scope`; do not conflate them.
 
+### Framework requirements section
+
+`frameworkRequirements` ("Framework requirements", group "Compliance and
+governance") covers the bundled frameworks, `frameworks.id` 5–28. The collector is
+`services/reporting/collectors/frameworkRequirements.ts`, with its SQL in
+`frameworkRequirements.queries.ts` and the arithmetic in `frameworkRollup.ts`. It
+reads each framework's tables through its `Servers/structures` definition, so one
+collector serves every bundled framework.
+
+Per framework the report prints:
+
+- one line, "`<done>` of `<total>` requirements implemented or audited", where
+  done means status `Implemented` or `Audited`,
+- a completeness-by-group chart (PDF only; the DOCX renderer has no charts),
+- per group, a table `Requirement | Status | Owner | Due date | Evidence`. Level
+  3 rows are indented under their parent. The Evidence column shows the linked-file
+  count; the file names (up to 10, then ", and N more") appear in a small line
+  under the requirement title.
+
+A requirement is overdue when its due date is before the report date and it is
+not done. When a framework has more than one pairing in scope, the pairings are
+merged and rows carry a use-case label; with a single pairing there is no label.
+
+When the section is requested by name and no bundled framework is in scope, the
+report carries the existing `no_framework_target` notice. The section is
+selectable in custom templates (the TemplateBuilder reads the catalog) and on the
+legacy Generate page only for `frameworkId >= 5`. The analyzers receive it:
+`complianceGap` gets it beside `compliance` and `clausesAndAnnexes`, and the facts
+block carries it (`ANALYZER_VERSION` `report-analyzer-v3`, `FACTS_SCHEMA_VERSION`
+2). Imported (Excel) frameworks are not covered.
+
 ### Framework selection
 
 `frameworkIds` is a **string** array, and every entry carries a namespace
@@ -239,13 +272,14 @@ framework gates in `collectAllData`, which is the shipped bug documented above,
 so every parser branch rejects it rather than passing it through.
 
 > **Since August 2026 (PR #4443):** the 21 former plugin frameworks are native
-> `frameworks` rows (ids 5–25), so `native:5`…`native:25` parse and their
-> `projects_frameworks` pairings exist. The collector still builds framework
-> sections only for ids 1–4 (`dataCollector.ts`), so generated reports **do not
-> cover** the bundled frameworks yet. The `plugin:` and `custom:` namespaces
-> remain in the parser and point at the legacy `custom_framework_*` tables,
-> which were kept. See
-> [Compliance Frameworks](./compliance-frameworks.md#reporting-limitation).
+> `frameworks` rows (ids 5–25), and `native:5`…`native:28` parse with their
+> `projects_frameworks` pairings. Since November 2026 the bundled frameworks
+> (ids 5–28, from `Servers/structures`) are covered by one generic section,
+> `frameworkRequirements` (see [Framework requirements section](#framework-requirements-section)).
+> Imported (Excel) frameworks are still **not covered**. The `plugin:` and
+> `custom:` namespaces remain in the parser and point at the legacy
+> `custom_framework_*` tables, which reports do not read either. See
+> [Compliance Frameworks](./compliance-frameworks.md#reporting).
 
 **Empty or NULL means every framework in scope.** That is the entire
 backward-compatibility story: every row written before the column existed keeps
@@ -282,11 +316,11 @@ Framework selection is a template/schedule feature.
 
 ### The three narrowing tiers
 
-A selection narrows the twelve sections in three different ways, and the third
+A selection narrows the thirteen sections in three different ways, and the third
 way is *not at all*.
 
 **Framework-gated** — `compliance`, `assessment`, `clausesAndAnnexes`,
-`nistSubcategories`. These were already collected once per pairing that carries
+`nistSubcategories`, `frameworkRequirements`. These were already collected once per pairing that carries
 the right framework and merged, so nothing in the sections themselves changes;
 the narrowed target set is the whole of it. The narrowing happens once, in
 `resolveFrameworkTargets`.
@@ -331,6 +365,23 @@ whose only content is notices must still say so.
 | `no_framework_target` | "No project in scope uses a framework that provides this section." | no resolved pairing serves the section — including an invalid-only selection such as `["abc"]` or `["plugin:SOC2"]` |
 | `unresolved_framework` | "The selected framework is a plugin framework, which reports do not yet cover." | the selection named a `plugin:`/`custom:` framework and **no** native one |
 | `no_data` | "No records were found in scope." | **declared but never emitted — see below** |
+| `collection_failed` | "<section> — <detail>: could not be read." | the `frameworkRequirements` query for one bundled-framework pairing threw; `detail` is "<framework> for <use case>" (just the framework for an organizational project) |
+
+`collection_failed` is the only notice that means something broke rather than
+that something is empty, so it renders in its own subsection, *Sections that
+could not be completed*, ahead of *Sections with no data* (which excludes it),
+with a "what to do" line: generate the report again, and if the same part is
+still missing, ask the administrator to check the server logs. The copy lives
+once in `services/reporting/noticeText.ts` (passed to the EJS render data and
+imported by `docxGenerator.ts`). `dataCollector.ts` collects each bundled
+pairing independently: the failing one is logged (organization, framework and
+pairing ids, message) and skipped, the others merge normally, and if every
+pairing fails the section is absent and only the notices remain. ISO, NIST and
+EU sections still fail the whole run on a thrown error. `generateReport` copies
+the details to `ReportGenerationResult.collectionFailures`; the run orchestrator
+then records the run as `partial_success` with `error_message` "Report generated
+with gaps: <detail>; <detail> could not be read." The report is downloadable.
+Analyzers never see `sectionNotices`, so the AI prompts are unaffected.
 
 `unresolved_framework` requires both halves of that test — no native entry *and*
 a plugin or custom entry present. An invalid-only selection has neither, so it
@@ -353,7 +404,7 @@ name for the distinction whenever a section starts drawing it.
 
 **A notice fires only for a section named explicitly in the request.** The
 legacy `sections: ["all"]` shape means "whatever this estate has", not "I
-expected these twelve", and one notice per unserved section would turn every
+expected these thirteen", and one notice per unserved section would turn every
 single-framework estate's report into a wall of them. Templates always name
 their sections, so template and schedule runs still get notices.
 
@@ -471,6 +522,7 @@ literal `NULL` and counted as "unowned".
 | assessment         | assessments, topics, questions         | answer, progress                                                                                                              |
 | clausesAndAnnexes  | subclauses_iso, annexcategories_iso    | status (the `*_struct` parent tables carry none)                                                                              |
 | nistSubcategories  | nist_ai_rmf_subcategories + `*_struct` | function, category, status                                                                                                    |
+| frameworkRequirements | the framework's own tables from its structure (`l1`/`l2`/`l3` struct and impl tables, `Servers/structures`), `file_entity_links` + `files` (evidence), the l2/l3 risk link tables + `risks` (live linked risks) | status, owner, due_date, evidence file names |
 | vendors            | vendors, vendors_projects              | vendor_name, review_status, assignee                                                                                          |
 | models             | model_inventories                      | **model** (not `name`), version, status, **approver** (there is no `owner` column)                                            |
 | trainingRegistry   | trainingregistar                       | training_name, status (no assignee, no completion date)                                                                       |
@@ -525,7 +577,7 @@ finding expressible — `keyFindings` carries `related_sections` for exactly tha
 | `keyFindings`        | 5–8 findings, each attributed to a section key         | Facts + section summaries                                    |
 | `recommendedActions` | 3–5 prioritised actions                                | Facts + section summaries                                    |
 | `riskAnalysis`       | Risk narrative + up to 6 named risks                   | Facts + `projectRisks`, `vendorRisks`, `modelRisks`          |
-| `complianceGap`      | Explanation of STORED readiness scores + evidence gaps | Facts + readiness scores, evidence gaps, compliance sections |
+| `complianceGap`      | Explanation of STORED readiness scores + evidence gaps | Facts + readiness scores, evidence gaps, compliance sections (`compliance`, `clausesAndAnnexes`, `frameworkRequirements`) |
 | `vendorRisk`         | Third-party risk narrative + named vendor concerns     | Facts + `vendors`, `vendorRisks`                             |
 
 `sectionSummaries` (ported from the removed `aiSummarizer.ts`) is a seventh gateable block, but it is **not** a registry entry in `ANALYZERS`: its output is `Record<string, string>` prose rather than a schema-validated object, so it does not fit `AnalyzerDefinition`. It runs as a separate stage whose output the first three analyzers consume — feeding them raw section JSON instead measured ~38k tokens per prompt against ~6k, three times per report.
@@ -641,7 +693,7 @@ Three standing rendering constraints:
 
 ### Versioning
 
-`ANALYZER_VERSION` (`analyzers/prompts.ts`) is stamped into `report_run_analyses.audit_metadata`; it currently reads `report-analyzer-v2`. **Bump it on any prompt or schema change** — it is how a stored analysis is traced back to the prompt and schema that produced it.
+`ANALYZER_VERSION` (`analyzers/prompts.ts`) is stamped into `report_run_analyses.audit_metadata`; it currently reads `report-analyzer-v3`. **Bump it on any prompt or schema change** — it is how a stored analysis is traced back to the prompt and schema that produced it.
 
 ## PDF Generation
 
@@ -763,6 +815,7 @@ interface ReportData {
     assessment?: AssessmentSectionData;
     clausesAndAnnexes?: ClausesAndAnnexesSectionData;
     nistSubcategories?: NistSubcategoriesSectionData;
+    frameworkRequirements?: FrameworkRequirementsSectionData;
     vendors?: VendorsListSectionData;
     models?: ModelsListSectionData;
     trainingRegistry?: TrainingRegistrySectionData;
@@ -999,7 +1052,7 @@ All endpoints are auth-protected and org-scoped.
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | `/api/reporting/sections` | Section catalog (the 12-section taxonomy) |
+| GET | `/api/reporting/sections` | Section catalog (the 13-section taxonomy) |
 | GET | `/api/reporting/templates` | List available templates |
 | GET | `/api/reporting/templates/:id` | Get a template |
 | POST | `/api/reporting/templates` | Create a template |
@@ -1045,7 +1098,7 @@ The frontend wizard (`ConfigureReportWizard.tsx`, `mode="run-now"`) skips the Sc
 
 ### Section Catalog
 
-`Servers/services/reporting/sectionCatalog.ts` is the single owner of the 12-section taxonomy; it backs `GET /api/reporting/sections` and `VALID_SECTION_KEYS` derives from it (catalog keys plus the `all` wildcard). A test pins the catalog against the frontend's `REPORT_SECTION_GROUPS` backend-key set, so drift between the two fails CI rather than silently rejecting a section the wizard can still offer.
+`Servers/services/reporting/sectionCatalog.ts` is the single owner of the 13-section taxonomy; it backs `GET /api/reporting/sections` and `VALID_SECTION_KEYS` derives from it (catalog keys plus the `all` wildcard). A test pins the catalog against the frontend's `REPORT_SECTION_GROUPS` backend-key set, so drift between the two fails CI rather than silently rejecting a section the wizard can still offer.
 
 ### Services
 

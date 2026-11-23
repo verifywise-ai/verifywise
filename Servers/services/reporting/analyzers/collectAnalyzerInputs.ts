@@ -11,6 +11,7 @@ import { getEvidenceGapsQuery } from "../../../utils/evidenceAi.utils";
 import { getPriorFactsSnapshotQuery } from "../../../utils/reportRunAnalysis.utils";
 import logger from "../../../utils/logger/fileLogger";
 import type { AiBlocks } from "./runAnalyzers";
+import { flattenFrameworkRequirements } from "./prompts";
 import { FACTS_SCHEMA_VERSION, collectFacts, renderFacts, type FactsSnapshot } from "./facts";
 
 /**
@@ -201,6 +202,13 @@ export function collectAllowedOwners(reportData: ReportData): string[] {
   harvest(sections.compliance?.controls, ["owner", "approver"]);
   harvest(sections.trainingRegistry?.records, ["owner"]);
   harvest(sections.policyManager?.policies, ["owner", "reviewer"]);
+  harvest(flattenFrameworkRequirements(sections.frameworkRequirements), [
+    "owner",
+    "reviewer",
+    "approver",
+  ]);
+  // The collector's lookup-miss placeholder is not a person.
+  owners.delete("Unknown user");
 
   return Array.from(owners);
 }

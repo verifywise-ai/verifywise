@@ -37,7 +37,7 @@ import {
   NewFinding,
   ResearchCategory,
 } from "../../domain.layer/interfaces/i.vendorResearch";
-import { calculateRiskLevel } from "../../utils/validations/vendorRiskValidation.utils";
+import { calculateRiskLevel } from "../../utils/riskLevel.utils";
 import { EXCERPT_GAP } from "../webResearch/pageText";
 import { unescapeFromPrompt } from "./prompts";
 import {
@@ -354,7 +354,9 @@ function toFinding(
   ) {
     return refuse("invalid_value");
   }
-  const level = calculateRiskLevel(candidate.risk_severity, candidate.likelihood);
+  // The formula and spelling a saved vendor risk gets, so the finding shows the level its risk
+  // will have.
+  const level = calculateRiskLevel(candidate.likelihood, candidate.risk_severity);
   if (level === null) return refuse("invalid_value");
 
   const citations = validCitations(candidate, sourcesById, target, report);
@@ -374,7 +376,7 @@ function toFinding(
     action_plan: actionPlan.trim(),
     likelihood: candidate.likelihood,
     risk_severity: candidate.risk_severity,
-    risk_level: `${level} Risk`,
+    risk_level: level,
     rationale: rationale === "" ? null : rationale,
     sources: citations.map((citation) => citation.stored),
   };

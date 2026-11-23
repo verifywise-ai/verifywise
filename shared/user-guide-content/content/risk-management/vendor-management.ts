@@ -254,7 +254,7 @@ export const vendorManagementContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Based on the scorecard inputs, VerifyWise calculates an overall risk score for each vendor. Higher scores mean greater risk and more oversight needed.',
+      text: 'Based on the scorecard inputs, VerifyWise calculates an overall risk score from 0 to 100 for each vendor. Higher scores mean greater risk and more oversight needed. A vendor with no scorecard answers shows "Not assessed" instead of a score.',
     },
     {
       type: 'callout',
@@ -285,6 +285,24 @@ export const vendorManagementContent: ArticleContent = {
       variant: 'warning',
       title: 'Important',
       text: 'When a vendor experiences an incident or regulatory action, review all linked projects to assess potential impact.',
+    },
+    {
+      type: 'heading',
+      id: 'deleting',
+      level: 2,
+      text: 'Deleting vendors and vendor risks',
+    },
+    {
+      type: 'paragraph',
+      text: 'A deleted vendor risk is not gone. Pick "Deleted" in the status filter on the Risks tab to list deleted risks. Opening one shows it read-only. If you can edit vendors, choose Restore in its row menu or in the risk window to bring it back with its custom fields and frameworks.',
+    },
+    {
+      type: 'paragraph',
+      text: 'Deleting a vendor is permanent. It removes the vendor and all of its risks, including deleted ones, along with their custom field values, notes, task links and share links. Pending approval requests for the vendor are withdrawn.',
+    },
+    {
+      type: 'paragraph',
+      text: 'A risk\'s Activity tab shows when it was deleted or restored, and by whom.',
     },
     {
       type: 'article-links',

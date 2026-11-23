@@ -27,7 +27,7 @@ export class VendorModel {
   business_criticality?: BusinessCriticality;
   past_issues?: PastIssues;
   regulatory_exposure?: RegulatoryExposure;
-  risk_score?: number;
+  risk_score?: number | null;
 
   /** Other names the vendor is known by, separated by commas; the research looks for them too. */
   other_names?: string | null;

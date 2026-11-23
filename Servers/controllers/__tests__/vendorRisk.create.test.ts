@@ -74,7 +74,6 @@ import { notifyUserAssigned } from "../../services/inAppNotification.service";
 import { notifyVendorRiskCandidates } from "../../services/riskLinks/vendorCandidates";
 import { enqueueVendorRiskLinkRecompute } from "../../services/automations/automationProducer";
 import { getVendorNoticeContextQuery } from "../../utils/riskLink.utils";
-import logger from "../../utils/logger/fileLogger";
 import { findUsersNotInOrganization } from "../../utils/user.utils";
 import { logFailure, logSuccess } from "../../utils/logger/logHelper";
 import { createVendorRisk } from "../vendorRisk.ctrl";
@@ -99,7 +98,10 @@ const requestBody = {
 
 // What the model factory and the insert return; the create flow must pass them on as-is.
 const builtModel = { builtBy: "VendorRiskModel.createNewVendorRisk" };
-const insertedRisk = { id: 42, ...requestBody };
+const insertedRow = { id: 42, ...requestBody };
+const insertedRisk = { ...insertedRow, toJSON: () => insertedRow };
+/** A framework id that names no framework. */
+const UNKNOWN_FRAMEWORK = 404;
 
 let transaction: { commit: AnyMock; rollback: AnyMock };
 let originalFrontendUrl: string | undefined;
@@ -126,20 +128,24 @@ const flush = () => new Promise((resolve) => setImmediate(resolve));
 
 const callOrder = (fn: unknown): number => asMock(fn).mock.invocationCallOrder[0];
 
-// Everything the request reported through logger.warn, one string per call.
-const warnings = (): string[] =>
-  asMock(logger.warn).mock.calls.map((args) => args.map(String).join(" "));
-
 describe("createVendorRisk", () => {
   beforeEach(() => {
     jest.resetAllMocks();
     transaction = { commit: jest.fn(), rollback: jest.fn() };
     asMock(sequelize.transaction).mockResolvedValue(transaction);
-    asMock(sequelize.query).mockImplementation(async (sql: string) => {
-      if (sql.includes("FROM users")) return [{ name: "Ada", surname: "Lovelace" }];
-      if (sql.includes("FROM vendors")) return [{ vendor_name: "Acme Corp" }];
-      return [];
-    });
+    asMock(sequelize.query).mockImplementation(
+      async (sql: string, options?: { replacements?: { ids?: number[] } }) => {
+        if (sql.includes("FROM users")) return [{ name: "Ada", surname: "Lovelace" }];
+        if (sql.includes("FROM vendors")) return [{ vendor_name: "Acme Corp" }];
+        // Every framework id but UNKNOWN_FRAMEWORK is a framework.
+        if (sql.includes("FROM frameworks")) {
+          return (options?.replacements?.ids ?? [])
+            .filter((id) => id !== UNKNOWN_FRAMEWORK)
+            .map((id) => ({ id }));
+        }
+        return [];
+      },
+    );
     asMock(VendorRiskModel.createNewVendorRisk).mockResolvedValue(builtModel);
     asMock(createNewVendorRiskQuery).mockResolvedValue(insertedRisk);
     asMock(createVendorRiskFrameworkAssociations).mockResolvedValue(undefined);
@@ -199,23 +205,34 @@ describe("createVendorRisk", () => {
     );
   });
 
-  it("logs a framework association failure and still answers 201", async () => {
-    asMock(createVendorRiskFrameworkAssociations).mockRejectedValue(
-      new Error('relation "frameworks_vendorrisks" does not exist'),
+  it("answers 400 for a framework id that names no framework, and writes nothing", async () => {
+    const res = makeRes();
+
+    await createVendorRisk(
+      makeReq({ body: { ...requestBody, frameworks: [3, UNKNOWN_FRAMEWORK] } }),
+      res,
     );
+    await flush();
+
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(createNewVendorRiskQuery).not.toHaveBeenCalled();
+    expect(transaction.rollback).toHaveBeenCalledTimes(1);
+    expect(transaction.commit).not.toHaveBeenCalled();
+    expect(enqueueVendorRiskLinkRecompute).not.toHaveBeenCalled();
+  });
+
+  it("answers 500 and rolls back when a framework link fails", async () => {
+    asMock(createVendorRiskFrameworkAssociations).mockRejectedValue(new Error("link failed"));
     const res = makeRes();
 
     await createVendorRisk(makeReq({ body: { ...requestBody, frameworks: [3] } }), res);
+    await flush();
 
-    expect(res.status).toHaveBeenCalledWith(201);
-    expect(transaction.commit).toHaveBeenCalledTimes(1);
-    expect(transaction.rollback).not.toHaveBeenCalled();
-    // The steps after the failed one still run.
-    expect(recordVendorRiskCreation).toHaveBeenCalledTimes(1);
-    const reported = warnings();
-    expect(reported).toHaveLength(1);
-    expect(reported[0]).toContain("Could not create framework associations");
-    expect(reported[0]).toContain('relation "frameworks_vendorrisks" does not exist');
+    expect(res.status).toHaveBeenCalledWith(500);
+    expect(transaction.rollback).toHaveBeenCalledTimes(1);
+    expect(transaction.commit).not.toHaveBeenCalled();
+    expect(recordVendorRiskCreation).not.toHaveBeenCalled();
+    expect(enqueueVendorRiskLinkRecompute).not.toHaveBeenCalled();
   });
 
   it("records the creation in the change history inside the transaction when a user is known", async () => {
@@ -225,7 +242,7 @@ describe("createVendorRisk", () => {
       insertedRisk.id,
       USER_ID,
       ORG_ID,
-      insertedRisk,
+      insertedRow,
       transaction,
     );
     expect(callOrder(recordVendorRiskCreation)).toBeLessThan(callOrder(transaction.commit));

@@ -47,6 +47,7 @@ import homeQueueRoutes from "./homeQueue.route";
 import changeNoticeRoutes from "./changeNotice.route";
 import modelInventoriesRoutes from "./modelInventories.route";
 import modelRisksRoutes from "./modelRisks.route";
+import vendorRisksRoutes from "./vendorRisks.route";
 
 const router = express.Router();
 
@@ -135,5 +136,9 @@ router.use("/change-notices", changeNoticeRoutes);
 // /api/modelInventory and /api/modelRisks routers are frozen.
 router.use("/model-inventories", modelInventoriesRoutes);
 router.use("/model-risks", modelRisksRoutes);
+
+// Reading and restoring deleted vendor risks (vendors audit PR C); the
+// /api/vendorRisks router is frozen.
+router.use("/vendor-risks", vendorRisksRoutes);
 
 export default router;

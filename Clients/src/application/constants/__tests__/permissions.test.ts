@@ -105,6 +105,11 @@ const SCREEN_GATES: Array<{
   { gate: "ModelInventory and Datasets create", roles: ["Admin", "Editor"], key: "model.edit" },
   { gate: "AIApps create", roles: ["Admin", "Editor"], key: "aiApp.edit" },
   { gate: "IncidentManagement create", roles: ["Admin", "Editor"], key: "incident.create" },
+  {
+    gate: "IncidentManagement edit, approve and archive",
+    roles: ["Admin", "Editor", "Reviewer"],
+    key: "incident.edit",
+  },
   { gate: "Tasks create", roles: ["Admin", "Editor"], key: "task.edit" },
   {
     gate: "dataset bulk upload button",

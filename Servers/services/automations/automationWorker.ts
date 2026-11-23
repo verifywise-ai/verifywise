@@ -1,3 +1,4 @@
+import { gapsMessage } from "../reporting/noticeText";
 import { Worker, Job } from "bullmq";
 import { REDIS_URL } from "../../database/redis";
 import sendEmail from "./actions/sendEmail";
@@ -248,6 +249,10 @@ async function generateAndUploadReport(
     if (!result.success) {
       console.error("Report generation failed:", result.error);
       return undefined;
+    }
+
+    if (result.collectionFailures?.length) {
+      logger.warn(gapsMessage(result.collectionFailures));
     }
 
     const docFile = {

@@ -13,6 +13,8 @@ export interface ExistingRisk {
   action_plan: string;
   vendor_id: string;
   frameworks?: number[];
+  /** A deleted risk opens read-only and can be restored. */
+  is_deleted?: boolean;
 }
 export interface IVendorRisk {
   id: number;

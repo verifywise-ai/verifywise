@@ -10,6 +10,7 @@ import {
   createVendorRiskFrameworkAssociations,
 } from "../../utils/vendorRisk.utils";
 import { toId } from "../../utils/validations/validation.utils";
+import { assertFrameworksExist, toIdList } from "../../utils/validations/vendorRequest.utils";
 import { recordVendorRiskCreation } from "../../utils/vendorRiskChangeHistory.utils";
 import { enqueueVendorRiskLinkRecompute } from "../automations/automationProducer";
 import { notifyUserAssigned } from "../inAppNotification.service";
@@ -33,7 +34,8 @@ export interface CreateVendorRiskInput {
   risk_severity: IVendorRisk["risk_severity"];
   action_plan: string;
   action_owner: number | null;
-  risk_level: string;
+  /** Ignored: the insert computes the level from the likelihood and the severity. */
+  risk_level?: string;
   frameworks?: number[];
 }
 
@@ -93,9 +95,11 @@ export async function assertActionOwnerOfOrganization(
  * Insert a vendor risk, link its frameworks and record its creation, inside `transaction`.
  *
  * Neither commits nor rolls back: that stays with the caller. Returns null when the insert
- * yields no row; a failed insert or history write rejects, so the caller can roll back.
+ * yields no row; a failed insert, framework link or history write rejects, so the caller can roll
+ * back.
  *
- * @throws ValidationException when the action owner is not a user of the organization
+ * @throws ValidationException when the action owner is not a user of the organization, or a
+ *   framework id names no framework
  */
 export async function createVendorRiskInTransaction(
   input: CreateVendorRiskInput,
@@ -109,33 +113,32 @@ export async function createVendorRiskInTransaction(
 
   await assertActionOwnerOfOrganization(input.action_owner, organizationId, transaction);
 
+  const frameworks = toIdList(input.frameworks);
+  // Checked before the insert: a foreign key error on the links would abort the transaction and
+  // leave nothing to commit.
+  await assertFrameworksExist(frameworks, transaction);
+
   const created = await createNewVendorRiskQuery(vendorRiskModel, organizationId, transaction);
   if (!created) return null;
 
-  // Create framework associations if provided.
-  // A failed INSERT aborts the whole Postgres transaction even though it is caught here. With a
-  // user id the history insert below then fails and the request answers 500; without one, the
-  // commit of the aborted transaction silently rolls back although the controller answers 201.
-  // Preserved from the old controller: callers that pass `frameworks` must know this.
-  const { frameworks } = input;
-  if (frameworks && frameworks.length > 0 && created.id) {
-    try {
-      await createVendorRiskFrameworkAssociations(
-        frameworks,
-        created.id,
-        organizationId,
-        transaction,
-      );
-    } catch (fwError) {
-      // The logger has no format.splat(): a detail passed as a second argument never reaches
-      // the log line, so it goes into the message.
-      logger.warn(`Could not create framework associations: ${(fwError as Error).message}`);
-    }
+  if (frameworks.length > 0 && created.id) {
+    await createVendorRiskFrameworkAssociations(
+      frameworks,
+      created.id,
+      organizationId,
+      transaction,
+    );
   }
 
-  // Record creation in change history
+  // Record creation in change history, with the framework links written.
   if (userId && created.id) {
-    await recordVendorRiskCreation(created.id, userId, organizationId, created, transaction);
+    await recordVendorRiskCreation(
+      created.id,
+      userId,
+      organizationId,
+      { ...created.toJSON(), frameworks: frameworks.length > 0 ? frameworks : undefined },
+      transaction,
+    );
   }
 
   return created;

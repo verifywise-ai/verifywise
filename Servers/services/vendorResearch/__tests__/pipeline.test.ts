@@ -320,7 +320,8 @@ const EXPECTED_BREACH: NewFinding = {
   action_plan: "Ask the vendor for its incident report and for the data in the test system.",
   likelihood: "Possible",
   risk_severity: "Major",
-  risk_level: "High Risk",
+  // The register's formula and spelling (calculateRiskLevel).
+  risk_level: "High risk",
   credibility: "low",
   credibility_basis: expect.objectContaining({ rule: "unverified" }),
   rationale: "Customer records were copied, which is serious, but only a test system is named.",

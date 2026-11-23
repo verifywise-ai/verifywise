@@ -19,6 +19,17 @@ describe("the order of the pending findings", () => {
     expect(idsOf(orderFindings(rows))).toEqual([3, 6, 4, 1, 5, 2]);
   });
 
+  it("ranks the register's own spelling, down to No risk", () => {
+    const rows = [
+      finding({ id: 1, risk_level: "No risk" }),
+      finding({ id: 2, risk_level: "Something else" }),
+      finding({ id: 3, risk_level: "Low risk" }),
+      finding({ id: 4, risk_level: "Very high risk" }),
+    ];
+
+    expect(idsOf(orderFindings(rows))).toEqual([4, 3, 1, 2]);
+  });
+
   it("reads the level whatever its capitals", () => {
     const rows = [
       finding({ id: 1, risk_level: "medium risk" }),

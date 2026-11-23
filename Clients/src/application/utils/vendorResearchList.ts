@@ -15,10 +15,17 @@ import type {
 
 /**
  * The risk levels of the vendor register, the most severe first, in lower case. The server writes
- * a finding's level as "{level} Risk" from the register's own matrix
- * (Servers/services/vendorResearch/validation.ts).
+ * a finding's level with the register's own formula ("High risk", down to "No risk";
+ * Servers/services/vendorResearch/validation.ts); older findings say "Very low risk".
  */
-const LEVELS = ["very high risk", "high risk", "medium risk", "low risk", "very low risk"];
+const LEVELS = [
+  "very high risk",
+  "high risk",
+  "medium risk",
+  "low risk",
+  "very low risk",
+  "no risk",
+];
 /** The levels the summary counts as high: High and Very High. */
 const HIGH_LEVELS = 2;
 

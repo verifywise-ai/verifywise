@@ -9,8 +9,10 @@
   "{count} risks were assigned to you": "{count} risks were assigned to you",
   "{days} days": "{days} days",
   "{days} days overdue": "{days} days overdue",
+  "{field} is required": "{field} is required",
   "{field} must be a list of ids": "{field} must be a list of ids",
   "{field} must be a numeric Jira id": "{field} must be a numeric Jira id",
+  "{field} must be at most {max} characters": "{field} must be at most {max} characters",
   "{field} must be text": "{field} must be text",
   "{key} must be a whole number from {min} to {max}": "{key} must be a whole number from {min} to {max}",
   "{label} — \"{metric}\" = {value} breached its monitoring threshold.": "{label} — \"{metric}\" = {value} breached its monitoring threshold.",
@@ -504,6 +506,7 @@
   "File too large for preview": "File too large for preview",
   "File upload failed": "File upload failed",
   "fileId is required": "fileId is required",
+  "Filter must be active, deleted or all": "Filter must be active, deleted or all",
   "Finding not found": "Finding not found",
   "Finding type is required": "Finding type is required",
   "Finding type must be 'library' or 'dependency'": "Finding type must be 'library' or 'dependency'",
@@ -1620,5 +1623,7 @@
   "orders must list positive integer ids with display orders of 0 or more": "orders must list positive integer ids with display orders of 0 or more",
   "Visibility must be public or private": "Visibility must be public or private",
   "This file has a private analysis by another user": "This file has a private analysis by another user",
-  "A private analysis would replace another user's analysis of this file": "A private analysis would replace another user's analysis of this file"
+  "A private analysis would replace another user's analysis of this file": "A private analysis would replace another user's analysis of this file",
+  "Incident creation validation failed": "Incident creation validation failed",
+  "{field} does not reference an entity in your organization": "{field} does not reference an entity in your organization"
 }

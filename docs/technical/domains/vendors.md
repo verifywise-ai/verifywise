@@ -140,7 +140,7 @@ vendor_risk_findings
 ├── action_plan (TEXT)
 ├── likelihood (ENUM enum_vendorrisks_likelihood, the register's type)
 ├── risk_severity (ENUM enum_vendorrisks_risk_severity, the register's type)
-├── risk_level (VARCHAR(255), for example "High Risk")
+├── risk_level (VARCHAR(255), for example "High risk")
 ├── confidence (VARCHAR(10): low | medium | high, nullable)
 ├── credibility (VARCHAR(10): low | medium | high, nullable)
 ├── credibility_basis (JSONB, nullable)
@@ -172,7 +172,7 @@ Column notes:
 
 - `sources` is an array of `{ url, title, quote, published_at }` with at least one entry. The quote is a verbatim part of the text of that source (a snippet or a page excerpt), at most 300 characters.
 - The three text columns are at most 300 characters each. That limit, and the rule that a finding has at least one source, are enforced in code (the output schema and the validation), not by the DDL. The vendor risk form takes up to 500 characters for the risk and the impact and 1,000 for the action plan (the limits of the server, `VENDOR_RISK_VALIDATION_LIMITS`), so every accepted finding can be edited in the register.
-- `risk_level` is `calculateRiskLevel(risk_severity, likelihood)` followed by ` Risk`, as in the register.
+- `risk_level` is `calculateRiskLevel(likelihood, risk_severity)` (`utils/riskLevel.utils.ts`), the level and spelling the saved vendor risk gets ("High risk"; see [Vendor risk level](#vendor-risk-level)). Findings stored before that change keep the older spelling ("High Risk").
 - There is no unique constraint on the wording: the model words a risk differently on every run, so de-duplication is done in code (see [De-duplication](#de-duplication)).
 - Accepting a finding keeps its row and sets `accepted_vendor_risk_id` to the new register row, `decided_by` and `decided_at`. Dismissing sets `dismissed_reason`, `dismissed_note`, `decided_by` and `decided_at`.
 - `wrong_vendor` (the sources are about another company) and `outdated` (the sources are out of date) were added by `20261027133608-vendor-finding-dismiss-reasons.js`, which replaces the CHECK constraint of `dismissed_reason`. They tell a miss of the search apart from a risk the person does not care about, which is what the [decision statistics](#vendor-research-endpoints) are read for.
@@ -372,6 +372,12 @@ The research of a vendor (start a run, the latest run, the trace of a run) is se
 | POST | `/vendorRisks/` | Create risk |
 | PATCH | `/vendorRisks/:id` | Update risk |
 | DELETE | `/vendorRisks/:id` | Soft delete risk |
+| GET | `/v1/vendor-risks/:id` | Get a risk, deleted ones included (`is_deleted: true`), to open read-only |
+| PATCH | `/v1/vendor-risks/:id/restore` | Restore a deleted risk (`vendor.edit`; 404 if no deleted risk has this id) |
+
+The legacy `/vendorRisks` router is frozen: its `GET /vendorRisks/:id` still
+answers 404 for a deleted risk, and updates do too. Custom field values of a
+deleted risk can't be written or cleared until it is restored.
 
 The create and the update refuse with a 400 an action owner who is not a user of the organization ("The action owner must be a user of your organization"; `assertActionOwnerOfOrganization` in `services/vendors/vendorRiskCreate.service.ts`), since that user is emailed the risk's text and the vendor's name. The update checks only an owner who differs from the stored one, so a risk whose owner has since left the organization can still be edited; `null` (no owner) is never checked.
 
@@ -416,10 +422,10 @@ The other fields are **edits**: what the person changed in the vendor risk form 
 | `risk_description`, `impact_description` | A string of 1 to 500 characters (code points) once control characters are removed and the ends are trimmed |
 | `action_plan` | The same, 1 to 1,000 characters |
 | `likelihood`, `risk_severity` | One of the register's own values (`VENDOR_RISK_ENUMS`; note the top likelihood is `Almost certain` with a small c) |
-| `risk_level` | A string of 1 to 50 characters. It is stored as it is sent, as the form's own save does, because the form shows the level it works out and saves that one |
+| `risk_level` | A string of 1 to 50 characters. It is checked, but the new risk's stored level is computed from its likelihood and severity, as on every vendor risk write (see [Vendor risk level](#vendor-risk-level)) |
 | `frameworks` | An array of at most 100 positive whole numbers, each at most 2,147,483,647 (a Postgres integer); duplicates are dropped. Empty means none. Each must also be the id of a framework: that is checked inside the accept's transaction, after the finding is locked, and an id that names no framework is a 400 "Invalid frameworks" that rolls the accept back and leaves the finding pending |
 
-The vendor is always the finding's own: `vendor_id`, and everything else in the body that is not listed, is ignored. When `risk_level` is absent and the likelihood or the severity was changed, the level is worked out from the pair the way the research stores it (`<Level> Risk`); when neither changed, it is the finding's.
+The vendor is always the finding's own: `vendor_id`, and everything else in the body that is not listed, is ignored. The stored level of the new risk is always the one its likelihood and severity give.
 
 **Dismiss.** `reason` is one of `not_applicable`, `already_covered`, `inaccurate`, `accepted_risk`, `wrong_vendor`, `outdated`, `other`. `note` is optional; `null`, an empty note and a note of blanks all mean no note. The note is cleaned of control characters, trimmed, and then counted: at most 500 characters (code points), else 400.
 
@@ -517,7 +523,7 @@ POST /v1/vendors
 3. Create vendor record
 4. Create vendor-project associations
 5. Record creation in change history
-6. Trigger `vendor_added` automation
+6. Queue the `vendor_added` automation, sent once the transaction commits (`transaction.afterCommit`); `vendor_updated` and `vendor_deleted` work the same way, and a delete that finds no vendor answers 404 and queues nothing
 7. After commit, notify the assignee and reviewer
 
 ### User references
@@ -533,6 +539,31 @@ owner check in `utils/vendorRisk.utils.ts`, both on
 Advisor write tools, AI app import and the demo seed all go through it, inside
 the write's transaction. An unchanged stored id is not re-checked: a vendor
 whose assignee has since left the organization can still be edited.
+
+### Request checks
+
+`utils/validations/vendorRequest.utils.ts` checks the fields a vendor or vendor
+risk create or PATCH sends, before the transaction opens, and answers 400
+naming the field where the database would otherwise fail with a 500: enums
+outside their list, text in an id or score field, strings longer than their
+VARCHAR(255) column, `risk_score` outside 0–100, a `review_date` that isn't a
+date, `projects` or `frameworks` that aren't lists of ids. Fields that aren't
+sent aren't checked, and a vendor PATCH validates only what it sends: an
+imported vendor with empty required fields can still be edited, but a PATCH
+can't blank a required field.
+
+A vendor risk create needs `vendor_id`, `risk_description`, `likelihood` and
+`risk_severity`; an update can't blank them, but can clear
+`impact_description` and `action_plan` (`''` or `null`). `likelihood` accepts
+either spelling of "Almost certain". Framework ids are checked against
+`frameworks` inside the write's transaction, and repeats are saved once: an
+unknown id is a 400 and nothing is saved, where it used to be swallowed and
+answer 201/202. A PATCH that sends only `frameworks` replaces the links.
+
+Ids in the URL must be positive integers (`abc`, `12abc`, `1.5` are 400), and
+the vendor risk lists' `?filter=` must be `active`, `deleted` or `all` (400
+otherwise; absent means `active`). `GET /vendorRisks/by-projid/:id` still
+answers 200 with an empty list for a non-numeric id.
 
 ## Other names
 
@@ -687,7 +718,31 @@ The scorecard assesses vendor risk across dimensions:
 
 ### Risk Score
 
-Calculated score (0-100) based on scorecard values. Higher score indicates higher risk.
+The server computes `risk_score` on every vendor write, from the scorecard
+answers as they will be stored (`calculateVendorRiskScore`,
+`utils/vendorScorecard.utils.ts`); a `risk_score` in the request is ignored.
+Each answer is normalized against its scale's highest value and weighted
+(sensitivity 0.3, criticality 0.3, past issues 0.2, regulatory exposure 0.2);
+the sum × 100, rounded, is the score (0–100). A vendor with no answer has
+`risk_score` NULL and the vendor table shows "Not assessed", where it used to
+show a green 0%. The drawer's live preview uses the same table
+(`Clients/src/domain/utils/vendorScorecard.utils.ts`).
+
+### Vendor risk level
+
+`vendorrisks.risk_level` is computed by the server on create and on every
+update from likelihood and severity as they will be stored, with the formula
+project risks use (`calculateRiskLevel` in `utils/riskLevel.utils.ts`:
+likelihood + 3 × severity → "No risk", "Low risk", "Medium risk", "High risk",
+"Very high risk"). A `risk_level` in the request is ignored, so a level can't
+go stale when likelihood or severity changes. The Risks tab cards, card filter
+and level filter group levels through `vendorRiskLevelLabel`
+(`Clients/src/application/utils/riskLevel.ts`): "No risk" is the lowest card,
+and an older stored "Very low" counts there.
+
+Migration `20261122200000-vendor-risk-level-and-score-recompute` recomputed
+every stored level (rows without likelihood or severity kept theirs) and every
+score (NULL where no answer is set).
 
 ## Vendor-Project Relationship
 
@@ -701,9 +756,32 @@ Vendor ─────┬───── Project A
 
 ### Link Management
 
-- Adding vendor to project creates junction record
-- Removing vendor from project deletes junction record
-- Deleting vendor cascades to junction table
+A vendor PATCH writes links only when it sends `projects`; a field-only save
+leaves them as they are, and `projects: []` unlinks every use case the user can
+see. Vendors are visible to the whole organization, but a non-Admin sees only
+some use cases, so `setVisibleVendorProjects` (`utils/vendor.utils.ts`) adds
+and removes only links to use cases the user can see (`getUserProjects`); links
+to the others are kept, and an id the user can't see is ignored. An Editor who
+isn't on every linked use case can therefore save the vendor, where the old
+delete-visible-then-reinsert-all hit the primary key and answered 500. The
+response's `projects` is read back from `vendors_projects` after the write.
+
+### Deleting a vendor
+
+A vendor delete is a hard delete (`deleteVendorByIdQuery`,
+`utils/vendor.utils.ts`), in one transaction:
+
+- the vendor row is locked first; an unknown id answers 404 and touches nothing
+- its risks are deleted, active or not, with their custom field values;
+  framework and risk links cascade
+- its custom field values, notes (`attached_to = 'VENDOR'`), task links, share
+  links and use case links are removed
+- pending approval requests for it are withdrawn
+- the vendor, and each risk that was still active, get a "deleted" history
+  entry. A risk deleted earlier already has one.
+
+The console records the deleting user. The Advisor's delete tool has no user,
+so its deletions are recorded as made by the system.
 
 ## Vendor Risk Management
 
@@ -736,11 +814,19 @@ columns it clears.
 
 ### Soft Delete
 
-Vendor risks support soft delete:
-- `is_deleted` flag set to true
-- `deleted_at` timestamp recorded
-- Risk hidden from default queries
-- Can be restored or permanently deleted
+Deleting a vendor risk is a soft delete (`deleteVendorRiskByIdQuery`):
+- `is_deleted` set to true, `deleted_at` recorded
+- a "deleted" history entry (Vendor Risk: Active → Deleted)
+- custom field values and framework links are kept, so a restore brings the
+  risk back whole
+- hidden from the default lists, reports and risk link suggestions
+
+A deleted risk shows in the Risks tab under the "Deleted" status filter. It
+opens read-only, titled "Deleted risk", without the Linked risks tab. Holders
+of `vendor.edit` can restore it from its row menu or from the modal.
+`PATCH /v1/vendor-risks/:id/restore` clears the flag, records a history entry
+(Deleted → Active) and queues a link recompute. It is gone for good only when
+its vendor is deleted.
 
 ### Linked risks
 
@@ -913,9 +999,9 @@ fully answered "no exposure" vendor (`true`, zero suggestions). Suggestions are 
 | C `past_issues` | `Minor incident (e.g. small delay, minor bug)` → `Minor`; `Major incident (e.g. data breach, legal issue)` → `Major` | per value | `Likely` |
 | D `regulatory_exposure` | Any value except `None` | `Moderate` | `Possible` |
 
-`risk_level` is derived with `calculateRiskLevel` from
-`utils/validations/vendorRiskValidation.utils.ts` and stored in the report with the ` Risk`
-suffix used by `vendorrisks.risk_level` (for example `High Risk`). Suggestion text names the
+`risk_level` is derived with `calculateRiskLevel` from `utils/riskLevel.utils.ts`, the
+formula a saved vendor risk gets, so accepting a suggestion stores the level it showed
+(for example `Very high risk`). Suggestion text names the
 answer through a short display label, not the raw enum value; `reasons` keeps the raw enum value.
 
 ### Suppression
@@ -1133,7 +1219,7 @@ The user prompt carries the vendor (name, domain, what it provides) as context, 
 - **Verbatim quote.** Every citation is checked on its own and removed unless its source id is in the evidence pack and its quote is a substring of that source's text (the snippet of a result or the excerpt of a page), after the prompt escaping is decoded and case, whitespace and quotation marks are ignored. A quote that holds the gap marker `[…]` of a page excerpt is removed too: it would join passages that are not next to each other on the page. A source cited twice counts once. The check joins nothing: every quote must be a verbatim stretch of its source. The source that a change of a page of the vendor's terms makes has no exception. A quote may run across two parts of a long clause there only because the change already writes a part that continues the line before it as an indented line (see [Policy page changes](#policy-page-changes)): once white space is squeezed, the bullet and the indented line are the clause as the page has it, with one space at the cut. A quote that runs, without the dash, across two bullets or across a `- … ` line and the line before it, or across a cut made in the middle of a word (no blank at the cut: Chinese or Japanese text, a long URL) is refused, whether it is written as the page has it or with a space added at the cut. Such a part can still be quoted on its own.
 - **The source is about the vendor.** A citation is also removed unless its source mentions the vendor: it is the vendor's own page (the ledger's `onVendorSite` flag, for a vendor that has a domain; the host of the URL is not looked at), or its title or text names the vendor as a whole word (also without the legal form of the record: "Acme Analytics, Inc." is found as "Acme Analytics") or mentions the domain, or carries the LEI that the vendor's record holds as a whole code (`carriesStoredLei`: a sanctions entry that the LEI found under a former or a holding name shows its identification numbers in its text, so its citation stands; a registration number does not count, as it is unique only in its register). The name check is the matcher of `identity.ts`, the one the search uses to keep results that are not about the vendor out of the evidence. So a page asked for on the vendor's domain that redirected off it does not count as the vendor's own, and has to name the vendor like any other page. A page about a company with a similar name cannot get in.
 - **The quote says more than the name.** A citation is also removed unless its quote has at least one word that is no part of the vendor's own words. A word is a run of letters and digits in any script, compared after the quote is normalised as for the verbatim check. The vendor's own words are those of its name, of its other names (see [Other names](#other-names) above: a quote that is only "Facebook" says no more for Meta Platforms than "Meta Platforms" does, and the vendor-mention check accepts either) and of its domain; `www`, `http` and `https` (a page writes the domain with them, and the vendor record does not keep them); and the possessive of each word of the names and of the domain, which is the word followed by `s`, because the apostrophe is removed before words are compared ("Acme's" is "acmes"). For the vendor Acme Analytics (`acme-analytics.com`), the quotes "Acme", "Acme Analytics", "acme-analytics.com", "www.acme-analytics.com", "https://acme-analytics.com" and "Acme's" do not count, while "Acme confirmed the incident", "SOC 2 Type II" and "ISO 27001" do. This is not a minimum length. A refused quote does not use up its source: a later quote of the same source can still count. So a second hostname whose only quote is the vendor's name or domain no longer lifts a finding to `high`. There is no list of words, so any quote with one word beyond these still counts, and this is not a closed list of exceptions: a company suffix ("Acme Analytics Inc"), a path after the domain ("https://acme-analytics.com/trust") and, for a vendor with no domain on record, the top-level domain ("acme-analytics.com") all still count.
-- **Candidates.** A candidate is dropped when no citation is left, when its category has no source in the evidence pack, when a text is empty or longer than 300 characters, when an enum value is not valid, or when `calculateRiskLevel(risk_severity, likelihood)` gives no level. The stored `risk_level` is that level followed by ` Risk`.
+- **Candidates.** A candidate is dropped when no citation is left, when its category has no source in the evidence pack, when a text is empty or longer than 300 characters, when an enum value is not valid, or when `calculateRiskLevel(likelihood, risk_severity)` gives no level. The stored `risk_level` is that level, spelled as the register spells it ("High risk").
 - **No confidence.** The validation sets no ceiling and stores no confidence: the label of a kept finding is computed afterwards, from the sources it cites, by `credibilityOf` (see [Credibility](#credibility)). The confidence ceiling that the earlier rules set from the tier of the cited hosts (`sourceTiers.ts`) is gone with the flag; a publisher is now read from the registry (`sourceRegistry/publisher.ts`: the name of the site without its top-level domain, so one story on `bbc.co.uk` and `bbc.com` is one publisher, and an aggregator is no publisher at all).
 - **Clean text.** The texts the model wrote (the three finding texts, the rationale, the quotes and the category notes) are cleaned like the evidence is: control characters other than tab, line feed and carriage return are removed and lone surrogates are replaced. PostgreSQL refuses them, and one would fail the save of the whole run.
 
@@ -1264,7 +1350,7 @@ cd Servers && npx ts-node scripts/vendorResearchBackfillCredibility.ts          
 2. A missing finding, or one whose vendor is gone, is a 404. A finding that is not `pending` is a 409.
 3. The action owner is resolved (below).
 4. When the person picked frameworks, each of them must exist (`checkFrameworksExist`); one that does not is a 400 "Invalid frameworks", and nothing has been written.
-5. The vendor risk is created with `createVendorRiskInTransaction` (`services/vendors/vendorRiskCreate.service.ts`): the insert into `vendorrisks` with the description, impact, likelihood, severity, action plan and risk level (each the edit of the request when there is one, else the finding's; no order number), the frameworks the person picked (none are passed when none were, because a failed framework insert aborts the whole transaction and so the accept), and the change-history record of the creation by the user. The vendor risk form (`createVendorRisk`) calls the same function, so a risk created either way is created by the same rules. The vendor is the finding's own, whatever the request says.
+5. The vendor risk is created with `createVendorRiskInTransaction` (`services/vendors/vendorRiskCreate.service.ts`): the insert into `vendorrisks` with the description, impact, likelihood, severity and action plan (each the edit of the request when there is one, else the finding's; no order number) and the risk level the insert computes from the likelihood and the severity, the frameworks the person picked (each checked to be a framework before the insert, so an unknown id is a 400 and never a failed insert that aborts the transaction), and the change-history record of the creation by the user, with the framework links. The vendor risk form (`createVendorRisk`) calls the same function, so a risk created either way is created by the same rules. The vendor is the finding's own, whatever the request says.
 6. The finding is marked `accepted`, with `accepted_vendor_risk_id`, `decided_by` and `decided_at`.
 
 Anything that goes wrong rolls the whole accept back and leaves the finding `pending`. Only after the commit does `runVendorRiskPostCommitEffects` run, again the same as for the form: the related-risk recompute job, the candidate notice to the owners of project risks in the vendor's use cases, and the action owner's assignment notice, each fire-and-forget. A rolled-back accept announces nothing.
@@ -1344,6 +1430,16 @@ All vendor changes are tracked:
 | old_value | Previous value |
 | new_value | New value |
 | timestamp | When changed |
+
+Besides the form fields, vendor history records use case link changes ("Use
+cases", diffed from the links stored before and after the write). It records
+the number of linked use cases, not their titles: every vendor viewer reads the
+history, and most can't see every linked use case. And
+vendor risk history records moving a risk to another vendor ("Vendor") and
+framework mapping changes ("Frameworks"). Link and framework lists compare as
+sets, so a reorder records nothing. User and vendor names are looked
+up within the organization: a user from another organization shows as
+`User #id`.
 
 ## Frontend Structure
 

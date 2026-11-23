@@ -4,6 +4,7 @@
  * Following VerifyWise clean architecture patterns
  */
 
+import { NOTICE_TEXT } from "./noticeText";
 import {
   Document,
   Packer,
@@ -62,6 +63,7 @@ const NOTICE_LABELS: Record<string, string> = {
   assessment: "Assessment tracker",
   clausesAndAnnexes: "Clauses and annexes",
   nistSubcategories: "NIST subcategories",
+  frameworkRequirements: "Framework requirements",
   models: "AI models",
   vendors: "Vendors",
   trainingRegistry: "Training registry",
@@ -304,7 +306,8 @@ function createTableOfContents(reportData: ReportData): Paragraph[] {
     sections.compliance ||
     sections.assessment ||
     sections.clausesAndAnnexes ||
-    sections.nistSubcategories
+    sections.nistSubcategories ||
+    sections.frameworkRequirements
   ) {
     paragraphs.push(createTocEntry(`${sectionNum++}. Compliance & governance`));
   }
@@ -406,10 +409,26 @@ function createSubsectionHeader(title: string): Paragraph {
   });
 }
 
+/** A plain string, or a main line plus an optional smaller secondary line. */
+type TableCellInput = string | { main: string; secondary?: string };
+
+/**
+ * Main and secondary text of a cell. Collected rows are typed as strings but
+ * nullable columns (e.g. a NIST subcategory description) can still arrive as
+ * null at runtime, so anything that is not a structured cell prints as text.
+ */
+function cellParts(cell: TableCellInput | null | undefined): {
+  main: string;
+  secondary?: string;
+} {
+  if (cell !== null && typeof cell === "object") return cell;
+  return { main: cell == null ? "" : String(cell) };
+}
+
 /**
  * Create a standard table with headers and borders
  */
-function createTable(headers: string[], rows: string[][]): Table {
+function createTable(headers: string[], rows: TableCellInput[][]): Table {
   const borderStyle = {
     style: BorderStyle.SINGLE,
     size: 1,
@@ -468,12 +487,26 @@ function createTable(headers: string[], rows: string[][]): Table {
                 new Paragraph({
                   children: [
                     new TextRun({
-                      text: cell || "-",
+                      text: cellParts(cell).main || "-",
                       size: 20,
                       color: COLORS.textPrimary,
                     }),
                   ],
                 }),
+                // Opt-in only: structured cells carry a small secondary line.
+                ...(cellParts(cell).secondary
+                  ? [
+                      new Paragraph({
+                        children: [
+                          new TextRun({
+                            text: cellParts(cell).secondary,
+                            size: 16,
+                            color: COLORS.textSecondary,
+                          }),
+                        ],
+                      }),
+                    ]
+                  : []),
               ],
               verticalAlign: VerticalAlign.CENTER,
             }),
@@ -1043,7 +1076,8 @@ function createComplianceSection(reportData: ReportData): (Paragraph | Table)[] 
     !sections.compliance &&
     !sections.assessment &&
     !sections.clausesAndAnnexes &&
-    !sections.nistSubcategories
+    !sections.nistSubcategories &&
+    !sections.frameworkRequirements
   ) {
     return [];
   }
@@ -1278,6 +1312,82 @@ function createComplianceSection(reportData: ReportData): (Paragraph | Table)[] 
     });
   }
 
+  // Framework requirements (bundled frameworks)
+  if (sections.frameworkRequirements) {
+    elements.push(createSubsectionHeader("Framework requirements"));
+
+    if (reportData.aiSummaries?.sectionSummaries?.["frameworkRequirements"]) {
+      elements.push(
+        ...createAIAnalysisBox(reportData.aiSummaries.sectionSummaries["frameworkRequirements"]),
+      );
+    }
+
+    sections.frameworkRequirements.frameworks.forEach((fw) => {
+      elements.push(
+        new Paragraph({
+          spacing: { before: 200, after: 100 },
+          children: [
+            new TextRun({ text: fw.frameworkName, bold: true, size: 24, color: COLORS.primary }),
+          ],
+        }),
+      );
+      elements.push(
+        new Paragraph({
+          spacing: { after: 100 },
+          children: [
+            new TextRun({
+              text: `${fw.rollup.done} of ${fw.rollup.total} requirements implemented or audited`,
+              size: 20,
+              color: COLORS.textSecondary,
+            }),
+          ],
+        }),
+      );
+
+      fw.groups.forEach((group) => {
+        elements.push(
+          new Paragraph({
+            spacing: { before: 120, after: 80 },
+            children: [
+              new TextRun({
+                text: `${group.useCase ? `${group.useCase} · ` : ""}${group.title}`,
+                bold: true,
+                size: 22,
+                color: COLORS.textSecondary,
+              }),
+            ],
+          }),
+        );
+
+        if (group.requirements.length > 0) {
+          const headers = ["Requirement", "Status", "Owner", "Due date", "Evidence"];
+          const rows: TableCellInput[][] = [];
+          group.requirements.forEach((req) => {
+            [req, ...(req.children ?? [])].forEach((r) => {
+              const more = r.evidenceCount - r.evidenceFiles.length;
+              const evidenceLine =
+                r.evidenceFiles.length > 0
+                  ? `Evidence: ${r.evidenceFiles.join(", ")}${more > 0 ? `, and ${more} more` : ""}`
+                  : undefined;
+              rows.push([
+                {
+                  main: `${r.level === 3 ? "    " : ""}${r.title}`,
+                  secondary: evidenceLine,
+                },
+                r.status,
+                r.owner || "—",
+                r.dueDate || "—",
+                String(r.evidenceCount),
+              ]);
+            });
+          });
+          elements.push(createTable(headers, rows));
+          elements.push(createTableSpacing());
+        }
+      });
+    });
+  }
+
   // Add page break
   elements.push(new Paragraph({ children: [new PageBreak()] }));
 
@@ -1449,43 +1559,55 @@ function createSectionNoticesSection(reportData: ReportData): (Paragraph | Table
   if (notices.length === 0) return [];
 
   const elements: (Paragraph | Table)[] = [];
-  elements.push(createSubsectionHeader("Sections with no data"));
-  elements.push(
+  const failed = notices.filter((n) => n.reason === "collection_failed");
+  const empty = notices.filter((n) => n.reason !== "collection_failed");
+
+  const intro = (text: string) =>
     new Paragraph({
       spacing: { after: 120 },
+      children: [new TextRun({ text, size: 20, color: COLORS.textSecondary })],
+    });
+  const bullet = (label: string, text: string) =>
+    new Paragraph({
+      spacing: { before: 60, after: 60 },
+      indent: { left: convertInchesToTwip(0.3) },
+      bullet: { level: 0 },
       children: [
-        new TextRun({
-          text:
-            "These sections were requested but produced nothing. They are listed so an " +
-            "empty report is never mistaken for a clean one.",
-          size: 20,
-          color: COLORS.textSecondary,
-        }),
+        new TextRun({ text: label, bold: true, size: 20, color: COLORS.textPrimary }),
+        new TextRun({ text: ` — ${text}`, size: 20, color: COLORS.textPrimary }),
       ],
-    }),
-  );
+    });
 
-  for (const notice of notices) {
+  if (failed.length > 0) {
+    elements.push(createSubsectionHeader(NOTICE_TEXT.failedTitle));
+    elements.push(intro(NOTICE_TEXT.failedIntro));
+    for (const notice of failed) {
+      elements.push(
+        bullet(
+          NOTICE_LABELS[notice.sectionKey] ?? notice.sectionKey,
+          `${notice.detail ? `${notice.detail}: ` : ""}${NOTICE_TEXT.failedSuffix}`,
+        ),
+      );
+    }
+    elements.push(intro(NOTICE_TEXT.failedGuidance));
+  }
+
+  if (empty.length > 0) {
+    elements.push(createSubsectionHeader("Sections with no data"));
     elements.push(
-      new Paragraph({
-        spacing: { before: 60, after: 60 },
-        indent: { left: convertInchesToTwip(0.3) },
-        bullet: { level: 0 },
-        children: [
-          new TextRun({
-            text: NOTICE_LABELS[notice.sectionKey] ?? notice.sectionKey,
-            bold: true,
-            size: 20,
-            color: COLORS.textPrimary,
-          }),
-          new TextRun({
-            text: ` — ${NOTICE_REASONS[notice.reason] ?? notice.reason}`,
-            size: 20,
-            color: COLORS.textPrimary,
-          }),
-        ],
-      }),
+      intro(
+        "These sections were requested but produced nothing. They are listed so an " +
+          "empty report is never mistaken for a clean one.",
+      ),
     );
+    for (const notice of empty) {
+      elements.push(
+        bullet(
+          NOTICE_LABELS[notice.sectionKey] ?? notice.sectionKey,
+          NOTICE_REASONS[notice.reason] ?? notice.reason,
+        ),
+      );
+    }
   }
 
   return elements;

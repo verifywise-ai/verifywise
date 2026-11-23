@@ -5,7 +5,7 @@ import {
   RESEARCH_CATEGORIES,
   ResearchCategory,
 } from "../../../domain.layer/interfaces/i.vendorResearch";
-import { calculateRiskLevel } from "../../../utils/validations/vendorRiskValidation.utils";
+import { calculateRiskLevel } from "../../../utils/riskLevel.utils";
 import {
   MAX_FINDING_TEXT_CHARS,
   MAX_PER_CATEGORY as SCHEMA_MAX_PER_CATEGORY,
@@ -409,7 +409,7 @@ describe("validateFindings", () => {
           action_plan: "Ask the vendor for its incident report.",
           likelihood: "Possible",
           risk_severity: "Major",
-          risk_level: "High Risk",
+          risk_level: "High risk",
           rationale: "The vendor confirmed the incident, and it holds our customer data.",
           sources: [
             {
@@ -1205,12 +1205,12 @@ describe("validateFindings", () => {
   });
 
   describe("the risk level", () => {
-    it("is the level of the severity and the likelihood, with the word Risk after it", () => {
+    it("is the level a saved vendor risk gets for the likelihood and the severity", () => {
       for (const risk_severity of RESEARCH_SEVERITIES) {
         for (const likelihood of RESEARCH_LIKELIHOODS) {
           const [finding] = validate([candidate({ risk_severity, likelihood })]);
 
-          expect(finding.risk_level).toBe(`${calculateRiskLevel(risk_severity, likelihood)} Risk`);
+          expect(finding.risk_level).toBe(calculateRiskLevel(likelihood, risk_severity));
           expect(finding.risk_severity).toBe(risk_severity);
           expect(finding.likelihood).toBe(likelihood);
         }
@@ -1218,10 +1218,11 @@ describe("validateFindings", () => {
     });
 
     it.each([
-      ["Negligible", "Rare", "Very Low Risk"],
-      ["Moderate", "Unlikely", "Medium Risk"],
-      ["Major", "Likely", "High Risk"],
-      ["Catastrophic", "Almost certain", "Very High Risk"],
+      // likelihood + 3 x severity, as a saved vendor risk gets it.
+      ["Negligible", "Rare", "No risk"],
+      ["Moderate", "Unlikely", "Medium risk"],
+      ["Major", "Likely", "High risk"],
+      ["Catastrophic", "Almost certain", "Very high risk"],
     ] as const)("is %s and %s -> %s", (risk_severity, likelihood, expected) => {
       const [finding] = validate([candidate({ risk_severity, likelihood })]);
 
@@ -1338,7 +1339,7 @@ describe("validateFindings", () => {
 
       expect(found).toHaveLength(1);
       expect(found[0]).not.toHaveProperty("confidence");
-      expect(found[0].risk_level).toBe("High Risk");
+      expect(found[0].risk_level).toBe("High risk");
     });
 
     it("reports no rejection for it", () => {

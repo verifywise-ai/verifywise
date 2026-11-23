@@ -31,7 +31,7 @@ export interface VendorResponseDTO {
   business_criticality?: string; // BusinessCriticality enum as string
   past_issues?: string; // PastIssues enum as string
   regulatory_exposure?: string; // RegulatoryExposure enum as string
-  risk_score?: number;
+  risk_score?: number | null;
 
   /** Other names the vendor is known by, separated by commas. */
   other_names?: string | null;

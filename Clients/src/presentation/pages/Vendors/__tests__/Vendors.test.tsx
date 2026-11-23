@@ -91,6 +91,7 @@ const deleteVendorRisk = vi.hoisted(() => vi.fn());
 
 vi.mock("../../../../application/hooks/useVendorRiskMutations", () => ({
   useDeleteVendorRisk: () => ({ mutateAsync: deleteVendorRisk }),
+  useRestoreVendorRisk: () => ({ mutateAsync: vi.fn() }),
 }));
 
 vi.mock("../../../../application/hooks/useMultipleOnScreen", () => ({

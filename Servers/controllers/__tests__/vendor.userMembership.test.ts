@@ -23,6 +23,12 @@ jest.mock("../../utils/vendor.utils", () => ({
   getVendorByIdQuery: jest.fn(),
   getVendorByProjectIdQuery: jest.fn(),
   updateVendorByIdQuery: jest.fn(),
+  visibleVendorProjectIds: jest.fn(),
+}));
+// The diffs the change history records: the controller decides what goes into them.
+jest.mock("../../utils/changeHistory.base.utils", () => ({
+  ...(jest.requireActual("../../utils/changeHistory.base.utils") as object),
+  trackEntityChanges: jest.fn(),
 }));
 jest.mock("../../utils/user.utils", () => ({ findUsersNotInOrganization: jest.fn() }));
 jest.mock("../../utils/vendorChangeHistory.utils", () => ({
@@ -76,11 +82,13 @@ import { notifyVendorRiskCandidates } from "../../services/riskLinks/vendorCandi
 import { triggerAutoResearch } from "../../services/vendorResearch/trigger";
 import { triggerVendorOnboarding } from "../../services/workflows/triggers";
 import { findUsersNotInOrganization } from "../../utils/user.utils";
-import { recordVendorCreation, trackVendorChanges } from "../../utils/vendorChangeHistory.utils";
+import { recordVendorCreation } from "../../utils/vendorChangeHistory.utils";
+import { trackEntityChanges } from "../../utils/changeHistory.base.utils";
 import {
   createNewVendorQuery,
   getVendorByIdQuery,
   updateVendorByIdQuery,
+  visibleVendorProjectIds,
 } from "../../utils/vendor.utils";
 import { createVendor, createVendorV1, updateVendorById, updateVendorByIdV1 } from "../vendor.ctrl";
 
@@ -164,6 +172,9 @@ const expectNothingWritten = () => {
 
 beforeEach(() => {
   jest.resetAllMocks();
+  // Every use case sent is one the user can see.
+  asMock(visibleVendorProjectIds).mockImplementation(async (ids: unknown[]) => ids.map(Number));
+  asMock(trackEntityChanges).mockResolvedValue([]);
   transaction = { commit: jest.fn(), rollback: jest.fn() };
   asMock(sequelize.transaction).mockResolvedValue(transaction);
   asMock(sequelize.query).mockResolvedValue([{ name: "Casey", surname: "Sample" }]);
@@ -189,7 +200,6 @@ beforeEach(() => {
     assignee: Number(vendor.assignee),
     reviewer: vendor.reviewer === null ? null : Number(vendor.reviewer),
   }));
-  asMock(trackVendorChanges).mockResolvedValue([]);
   asMock(notifyUserAssigned).mockResolvedValue(undefined);
   asMock(triggerVendorOnboarding).mockResolvedValue(undefined);
   asMock(notifyVendorRiskCandidates).mockResolvedValue(undefined);
@@ -371,14 +381,21 @@ describe("PATCH /v1/vendors/:id reads the id strictly", () => {
     await updateVendorByIdV1(makeReq({ vendor_provides: "Changed" }, { id: "21" }), res);
 
     expect(res.status).toHaveBeenCalledWith(202);
-    expect(getVendorByIdQuery).toHaveBeenCalledWith(VENDOR_ID, ORG);
+    expect(getVendorByIdQuery).toHaveBeenCalledWith(
+      VENDOR_ID,
+      ORG,
+      expect.objectContaining({ forUpdate: true }),
+    );
   });
 
-  it("leaves the frozen legacy route its own reading of the id", async () => {
+  // The legacy route used to read "21abc" as vendor 21; it refuses such an id too now.
+  it("refuses an id that is not one on the legacy route as well", async () => {
     const res = makeRes();
 
     await updateVendorById(makeReq({ vendor_provides: "Changed" }, { id: "21abc" }), res);
 
-    expect(getVendorByIdQuery).toHaveBeenCalledWith(VENDOR_ID, ORG);
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(sequelize.transaction).not.toHaveBeenCalled();
+    expect(getVendorByIdQuery).not.toHaveBeenCalled();
   });
 });

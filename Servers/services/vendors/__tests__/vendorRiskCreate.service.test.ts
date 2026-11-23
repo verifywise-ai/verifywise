@@ -63,6 +63,8 @@ const FRONTEND_URL = "https://app.example.test";
 /** A user of the organization, and one of another organization only. */
 const MEMBER = 9;
 const STRANGER = 77;
+/** A framework id that names no framework. */
+const UNKNOWN_FRAMEWORK = 404;
 
 const input: CreateVendorRiskInput = {
   vendor_id: 5,
@@ -72,11 +74,12 @@ const input: CreateVendorRiskInput = {
   risk_severity: "Major",
   action_plan: "Require encryption at rest",
   action_owner: null,
-  risk_level: "High Risk",
 };
 
 const builtModel = { builtBy: "VendorRiskModel.createNewVendorRisk" };
-const insertedRisk = { id: 42, ...input };
+/** The inserted row as a plain object, and the model the insert returns for it. */
+const insertedRow = { id: 42, ...input };
+const insertedRisk = { ...insertedRow, toJSON: () => insertedRow };
 const asRisk = (overrides: Record<string, unknown> = {}): VendorRiskModel =>
   ({ ...insertedRisk, ...overrides }) as unknown as VendorRiskModel;
 
@@ -99,11 +102,19 @@ beforeEach(() => {
   asMock(getVendorNoticeContextQuery).mockResolvedValue({ name: "Acme Corp", projectIds: [] });
   asMock(notifyVendorRiskCandidates).mockResolvedValue(undefined);
   asMock(notifyUserAssigned).mockResolvedValue(undefined);
-  asMock(sequelize.query).mockImplementation(async (sql: string) => {
-    if (sql.includes("FROM users")) return [{ name: "Ada", surname: "Lovelace" }];
-    if (sql.includes("FROM vendors")) return [{ vendor_name: "Acme Corp" }];
-    return [];
-  });
+  asMock(sequelize.query).mockImplementation(
+    async (sql: string, options?: { replacements?: { ids?: number[] } }) => {
+      if (sql.includes("FROM users")) return [{ name: "Ada", surname: "Lovelace" }];
+      if (sql.includes("FROM vendors")) return [{ vendor_name: "Acme Corp" }];
+      // Every framework id but UNKNOWN_FRAMEWORK is a framework.
+      if (sql.includes("FROM frameworks")) {
+        return (options?.replacements?.ids ?? [])
+          .filter((id) => id !== UNKNOWN_FRAMEWORK)
+          .map((id) => ({ id }));
+      }
+      return [];
+    },
+  );
   process.env.FRONTEND_URL = FRONTEND_URL;
   asMock(findUsersNotInOrganization).mockImplementation(
     async (ids: number[], organizationId: number) =>
@@ -150,26 +161,44 @@ describe("createVendorRiskInTransaction", () => {
     expect(createVendorRiskFrameworkAssociations).not.toHaveBeenCalled();
   });
 
-  it("swallows a framework association failure with a warning and carries on", async () => {
-    asMock(createVendorRiskFrameworkAssociations).mockRejectedValue(
-      new Error('relation "frameworks_vendorrisks" does not exist'),
-    );
-
-    const created = await createVendorRiskInTransaction(
-      { ...input, frameworks: [3] },
+  it("takes framework ids sent as text, once each", async () => {
+    await createVendorRiskInTransaction(
+      { ...input, frameworks: ["3", 3, "4"] as unknown as number[] },
       USER_ID,
       ORG_ID,
       transaction,
     );
 
-    expect(created).toBe(insertedRisk);
-    expect(recordVendorRiskCreation).toHaveBeenCalledTimes(1);
-    // The logger is configured without format.splat(), so the detail has to be in the message.
-    const [warning, ...rest] = asMock(logger.warn).mock.calls[0];
-    expect(asMock(logger.warn)).toHaveBeenCalledTimes(1);
-    expect(warning).toContain("Could not create framework associations");
-    expect(warning).toContain('relation "frameworks_vendorrisks" does not exist');
-    expect(rest).toEqual([]);
+    expect(createVendorRiskFrameworkAssociations).toHaveBeenCalledWith(
+      [3, 4],
+      insertedRisk.id,
+      ORG_ID,
+      transaction,
+    );
+  });
+
+  it("refuses a framework id that names no framework before anything is written", async () => {
+    const call = createVendorRiskInTransaction(
+      { ...input, frameworks: [3, UNKNOWN_FRAMEWORK] },
+      USER_ID,
+      ORG_ID,
+      transaction,
+    );
+
+    await expect(call).rejects.toBeInstanceOf(ValidationException);
+    expect(createNewVendorRiskQuery).not.toHaveBeenCalled();
+    expect(createVendorRiskFrameworkAssociations).not.toHaveBeenCalled();
+    expect(recordVendorRiskCreation).not.toHaveBeenCalled();
+  });
+
+  it("lets a failed framework link reach the caller, which rolls back", async () => {
+    const failure = new Error("link failed");
+    asMock(createVendorRiskFrameworkAssociations).mockRejectedValue(failure);
+
+    await expect(
+      createVendorRiskInTransaction({ ...input, frameworks: [3] }, USER_ID, ORG_ID, transaction),
+    ).rejects.toBe(failure);
+    expect(recordVendorRiskCreation).not.toHaveBeenCalled();
   });
 
   describe("the action owner", () => {
@@ -238,7 +267,24 @@ describe("createVendorRiskInTransaction", () => {
       insertedRisk.id,
       USER_ID,
       ORG_ID,
-      insertedRisk,
+      insertedRow,
+      transaction,
+    );
+  });
+
+  it("records the framework links written with the creation", async () => {
+    await createVendorRiskInTransaction(
+      { ...input, frameworks: [3, 4] },
+      USER_ID,
+      ORG_ID,
+      transaction,
+    );
+
+    expect(recordVendorRiskCreation).toHaveBeenCalledWith(
+      insertedRisk.id,
+      USER_ID,
+      ORG_ID,
+      { ...insertedRow, frameworks: [3, 4] },
       transaction,
     );
   });

@@ -174,6 +174,11 @@ export const ROLE_PERMISSIONS = {
     description: "Run the evidence freshness check on demand",
     legacyRoles: ADMIN,
   },
+  "incident.delete": {
+    module: "Incidents",
+    description: "Permanently delete AI incidents",
+    legacyRoles: ADMIN,
+  },
 
   // ── Editor tier (was authorize(["Admin", "Editor"])) ─────────────────────
   "aiDetection.edit": {
@@ -299,6 +304,11 @@ export const ROLE_PERMISSIONS = {
   },
 
   // ── Contributor tier (was authorize(["Admin", "Reviewer", "Editor"])) ────
+  "incident.edit": {
+    module: "Incidents",
+    description: "Edit, approve and archive AI incidents",
+    legacyRoles: CONTRIBUTOR,
+  },
   "file.contribute": {
     module: "Files",
     description: "Upload files",

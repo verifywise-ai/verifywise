@@ -432,6 +432,16 @@ export const de: Record<string, string> = {
   "Record withdrawn": "Eintrag zurückgezogen",
   "Record rejected": "Eintrag abgelehnt",
   "Removed from the list": "Von der Liste gestrichen",
+  "Not assessed": "Nicht bewertet",
+  "Deleted risk": "Gelöschtes Risiko",
+  "This risk was deleted. Restore it to edit it again.":
+    "Dieses Risiko wurde gelöscht. Stellen Sie es wieder her, um es erneut zu bearbeiten.",
+  "Restore risk": "Risiko wiederherstellen",
+  "Risk restored.": "Risiko wiederhergestellt.",
+  "Could not restore the risk. Please try again.":
+    "Das Risiko konnte nicht wiederhergestellt werden. Bitte versuchen Sie es erneut.",
+  "It moves to the deleted risks, where it can be restored.":
+    "Es wird zu den gelöschten Risiken verschoben und kann dort wiederhergestellt werden.",
 };
 
 export const fr: Record<string, string> = {
@@ -867,6 +877,16 @@ export const fr: Record<string, string> = {
   "Record withdrawn": "Enregistrement retiré",
   "Record rejected": "Enregistrement rejeté",
   "Removed from the list": "Radié de la liste",
+  "Not assessed": "Non évalué",
+  "Deleted risk": "Risque supprimé",
+  "This risk was deleted. Restore it to edit it again.":
+    "Ce risque a été supprimé. Restaurez-le pour le modifier à nouveau.",
+  "Restore risk": "Restaurer le risque",
+  "Risk restored.": "Risque restauré.",
+  "Could not restore the risk. Please try again.":
+    "Impossible de restaurer le risque. Veuillez réessayer.",
+  "It moves to the deleted risks, where it can be restored.":
+    "Il est déplacé vers les risques supprimés, où il peut être restauré.",
 };
 
 export const es: Record<string, string> = {
@@ -1297,4 +1317,14 @@ export const es: Record<string, string> = {
   "Record withdrawn": "Registro retirado",
   "Record rejected": "Registro rechazado",
   "Removed from the list": "Excluido de la lista",
+  "Not assessed": "Sin evaluar",
+  "Deleted risk": "Riesgo eliminado",
+  "This risk was deleted. Restore it to edit it again.":
+    "Este riesgo se eliminó. Restáurelo para volver a editarlo.",
+  "Restore risk": "Restaurar riesgo",
+  "Risk restored.": "Riesgo restaurado.",
+  "Could not restore the risk. Please try again.":
+    "No se pudo restaurar el riesgo. Inténtelo de nuevo.",
+  "It moves to the deleted risks, where it can be restored.":
+    "Pasa a los riesgos eliminados, donde se puede restaurar.",
 };

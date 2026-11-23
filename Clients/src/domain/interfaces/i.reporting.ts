@@ -2,8 +2,8 @@
 // Phase 1 introduces only what the async generate flow needs; later phases extend.
 
 // The pipeline's own vocabulary (Servers/services/reporting/reportRunOrchestrator).
-// partial_success means generated but a delivery channel failed — it is still
-// downloadable and must not be presented as an error.
+// partial_success means generated but a delivery channel failed or part of a section
+// could not be read — it is still downloadable and must not be presented as an error.
 export type ReportRunStatus = "queued" | "running" | "success" | "failed" | "partial_success";
 
 export interface ReportRun {
@@ -15,7 +15,7 @@ export interface ReportRun {
   output_filename: string | null;
   output_mime_type: string | null;
   error_message: string | null;
-  /** Per-channel delivery outcome; carries the reason behind partial_success. */
+  /** Per-channel delivery outcome; carries the delivery reason behind partial_success. */
   delivery_status: Record<string, { status?: string; enabled?: boolean }> | null;
   archived_at: string | null;
   template_id: number | null;

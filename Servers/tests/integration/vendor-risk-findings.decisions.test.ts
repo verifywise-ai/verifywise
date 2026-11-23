@@ -302,13 +302,13 @@ describe("POST /api/v1/vendor-risk-findings/:id/accept", () => {
         risk_severity: FINDING.risk_severity,
         action_plan: FINDING.action_plan,
         action_owner: assignee,
-        risk_level: finding.risk_level,
+        // Computed from the pair (Possible / Major), whatever the finding's own spelling.
+        risk_level: "High risk",
         is_deleted: false,
         is_demo: false,
       },
     ]);
-    expect(risks[0].risk_level).toBe("High Risk");
-    expect(vendorRisk).toMatchObject({ id: risks[0].id, risk_level: "High Risk" });
+    expect(vendorRisk).toMatchObject({ id: risks[0].id, risk_level: "High risk" });
 
     // The finding is accepted into that risk, by the caller, and says so in the response too.
     expect(decided).toMatchObject({
@@ -347,7 +347,8 @@ describe("POST /api/v1/vendor-risk-findings/:id/accept", () => {
         FINDING.risk_description,
         FINDING.impact_description,
         FINDING.action_plan,
-        "High Risk",
+        // The level as stored: computed from Possible / Major.
+        "High risk",
       ]),
     );
 
@@ -600,7 +601,7 @@ describe("POST /api/v1/vendor-risk-findings/:id/accept", () => {
           risk_severity: FINDING.risk_severity,
           action_plan: "Ask for the audit report instead.",
           action_owner: null,
-          risk_level: "High Risk",
+          risk_level: "High risk",
           is_deleted: false,
           is_demo: false,
         },
@@ -614,14 +615,14 @@ describe("POST /api/v1/vendor-risk-findings/:id/accept", () => {
         inserted: [finding],
       } = await seedFindings(owner);
 
-      // The finding is Possible / Major (High); Almost certain / Major is Very High.
+      // The finding is Possible / Major (High risk); Almost certain / Major is Very high risk.
       const res = await owner.request
         .post(acceptUrl(finding.id))
         .send({ likelihood: "Almost certain" });
 
       expect(res.status).toBe(200);
       const [risk] = await risksOf(owner.orgId);
-      expect(risk).toMatchObject({ likelihood: "Almost certain", risk_level: "Very High Risk" });
+      expect(risk).toMatchObject({ likelihood: "Almost certain", risk_level: "Very high risk" });
     });
 
     it("refuses an edit the register cannot take with 400, and creates nothing", async () => {

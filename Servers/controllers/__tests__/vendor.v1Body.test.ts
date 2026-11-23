@@ -25,6 +25,12 @@ jest.mock("../../utils/vendor.utils", () => ({
   getVendorByIdQuery: jest.fn(),
   getVendorByProjectIdQuery: jest.fn(),
   updateVendorByIdQuery: jest.fn(),
+  visibleVendorProjectIds: jest.fn(),
+}));
+// The diffs the change history records: the controller decides what goes into them.
+jest.mock("../../utils/changeHistory.base.utils", () => ({
+  ...(jest.requireActual("../../utils/changeHistory.base.utils") as object),
+  trackEntityChanges: jest.fn(),
 }));
 jest.mock("../../utils/vendorChangeHistory.utils", () => ({
   recordVendorCreation: jest.fn(),
@@ -81,11 +87,13 @@ import { triggerVendorOnboarding } from "../../services/workflows/triggers";
 import { triggerAutoResearch } from "../../services/vendorResearch/trigger";
 import { notifyVendorRiskCandidates } from "../../services/riskLinks/vendorCandidates";
 import { notifyUserAssigned } from "../../services/inAppNotification.service";
-import { recordVendorCreation, trackVendorChanges } from "../../utils/vendorChangeHistory.utils";
+import { recordVendorCreation } from "../../utils/vendorChangeHistory.utils";
+import { trackEntityChanges } from "../../utils/changeHistory.base.utils";
 import {
   createNewVendorQuery,
   getVendorByIdQuery,
   updateVendorByIdQuery,
+  visibleVendorProjectIds,
 } from "../../utils/vendor.utils";
 import { createVendor, createVendorV1, updateVendorById, updateVendorByIdV1 } from "../vendor.ctrl";
 import { logFailure } from "../../utils/logger/logHelper";
@@ -169,8 +177,18 @@ const onlyCall = (fn: unknown): any[] => {
 
 const keysOf = (value: unknown): string[] => Object.keys(value as object);
 
+/** What an update hands the change history for its fields: the diff against the stored model. */
+const fieldDiff = (): Record<string, unknown> => {
+  const call = asMock(trackEntityChanges).mock.calls.find(([, before]) => before === model);
+  expect(call).toBeDefined();
+  return call![2];
+};
+
 beforeEach(() => {
   jest.resetAllMocks();
+  // Every use case sent is one the user can see.
+  asMock(visibleVendorProjectIds).mockImplementation(async (ids: unknown[]) => ids.map(Number));
+  asMock(trackEntityChanges).mockResolvedValue([]);
   transaction = { commit: jest.fn(), rollback: jest.fn() };
   asMock(sequelize.transaction).mockResolvedValue(transaction);
   asMock(sequelize.query).mockResolvedValue([{ name: "Ada", surname: "Lovelace" }]);
@@ -184,7 +202,6 @@ beforeEach(() => {
   asMock(getVendorByIdQuery).mockResolvedValue({ ...storedVendor });
   asMock(updateVendorByIdQuery).mockResolvedValue({ ...storedVendor, vendor_provides: "Changed" });
   asMock(recordVendorCreation).mockResolvedValue(undefined);
-  asMock(trackVendorChanges).mockResolvedValue([]);
   asMock(triggerVendorOnboarding).mockResolvedValue(undefined);
   asMock(notifyVendorRiskCandidates).mockResolvedValue(undefined);
   asMock(notifyUserAssigned).mockResolvedValue(undefined);
@@ -267,8 +284,10 @@ describe("PATCH /vendors/:id, the legacy update", () => {
     const update = onlyCall(model.updateVendor)[0];
     expect(update.vendor_provides).toBe("Changed");
     for (const field of V1_ONLY_FIELDS) expect(update[field]).toBeUndefined();
-    // The second argument is the body in the form the history records; the strip happened before it.
-    expect(onlyCall(trackVendorChanges)[1]).toStrictEqual({ vendor_provides: "Changed" });
+    // The body in the form the history records; the strip happened before it.
+    const recorded = fieldDiff();
+    expect(recorded).toMatchObject({ vendor_provides: "Changed" });
+    for (const field of V1_ONLY_FIELDS) expect(keysOf(recorded)).not.toContain(field);
   });
 });
 
@@ -280,7 +299,7 @@ describe("PATCH /v1/vendors/:id, the versioned update", () => {
 
     expect(res.status).toHaveBeenCalledWith(202);
     expect(onlyCall(model.updateVendor)[0]).toMatchObject({ ...FIVE, country: "fr" });
-    expect(onlyCall(trackVendorChanges)[1]).toMatchObject({ ...FIVE_AS_STORED, country: "FR" });
+    expect(fieldDiff()).toMatchObject({ ...FIVE_AS_STORED, country: "FR" });
   });
 });
 
@@ -341,7 +360,11 @@ describe.each([
     });
     expect(transaction.commit).toHaveBeenCalledTimes(1);
     expect(transaction.rollback).not.toHaveBeenCalled();
-    expect(getVendorByIdQuery).toHaveBeenCalledWith(VENDOR_ID, ORG_ID);
+    // Read and locked on the write's transaction.
+    expect(getVendorByIdQuery).toHaveBeenCalledWith(VENDOR_ID, ORG_ID, {
+      transaction,
+      forUpdate: true,
+    });
   });
 
   it("answers 404 for a vendor that is not stored in the organization, and writes nothing", async () => {

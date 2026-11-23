@@ -339,9 +339,10 @@ describe("acceptFinding", () => {
     });
 
     it.each<[string, FindingEdits, string]>([
-      ["a likelihood", { likelihood: "Almost certain" }, "Very High Risk"],
-      ["a severity", { risk_severity: "Negligible" }, "Low Risk"],
-      ["both", { likelihood: "Rare", risk_severity: "Catastrophic" }, "Medium Risk"],
+      // The formula a saved vendor risk gets: likelihood + 3 x severity.
+      ["a likelihood", { likelihood: "Almost certain" }, "Very high risk"],
+      ["a severity", { risk_severity: "Negligible" }, "Low risk"],
+      ["both", { likelihood: "Rare", risk_severity: "Catastrophic" }, "High risk"],
     ])(
       "works the level out from the pair when %s is edited and no level is sent",
       async (_label, edits, level) => {
@@ -357,7 +358,8 @@ describe("acceptFinding", () => {
       expect(created().risk_level).toBe("High Risk");
     });
 
-    it("stores the level as the caller sends it, as the vendor risk form does", async () => {
+    // The insert computes the stored level from the pair; this is only what is handed to it.
+    it("hands the create the level the caller sends", async () => {
       await accept({ edits: { likelihood: "Almost certain", risk_level: "Medium risk" } });
 
       expect(created().risk_level).toBe("Medium risk");

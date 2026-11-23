@@ -165,6 +165,11 @@ describe("updateVendorRiskById: the action owner", () => {
   });
 
   it("accepts a new owner of the organization, as before, and tells them", async () => {
+    // The row as saved, with the new owner: the notice goes by the saved value.
+    asMock(updateVendorRiskByIdQuery).mockResolvedValueOnce({
+      ...storedRisk,
+      action_owner: OWN_USER,
+    });
     const res = makeRes();
 
     await updateVendorRiskById(makeReq({ action_owner: OWN_USER }), res);

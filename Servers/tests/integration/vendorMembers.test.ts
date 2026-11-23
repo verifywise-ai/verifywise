@@ -278,6 +278,9 @@ describe("vendor user references against organization_members", () => {
       const created = await owner.request.post("/api/vendorRisks").send({
         vendor_id: vendorId,
         risk_description: "Training data provenance",
+        likelihood: "Possible",
+        risk_severity: "Moderate",
+        risk_level: "Medium risk",
         action_owner: "Jane Doe",
       });
       expect(created.status).toBe(400);
@@ -428,6 +431,9 @@ describe("vendor user references against organization_members", () => {
       const res = await owner.request.post("/api/vendorRisks").send({
         vendor_id: foreignVendor,
         risk_description: "Training data provenance",
+        likelihood: "Possible",
+        risk_severity: "Moderate",
+        risk_level: "Medium risk",
         action_owner: owner.userId,
       });
 

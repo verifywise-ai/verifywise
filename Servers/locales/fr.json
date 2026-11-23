@@ -7,8 +7,10 @@
   "{count} risks were assigned to you": "{count} risques vous ont été attribués",
   "{days} days": "{days} jours",
   "{days} days overdue": "il y a {days} jours",
+  "{field} is required": "{field} est obligatoire",
   "{field} must be a list of ids": "{field} doit être une liste d'ID",
   "{field} must be a numeric Jira id": "{field} doit être un identifiant Jira numérique",
+  "{field} must be at most {max} characters": "{field} ne doit pas dépasser {max} caractères",
   "{field} must be text": "{field} doit être du texte",
   "{key} must be a whole number from {min} to {max}": "{key} doit être un nombre entier de {min} à {max}",
   "{label} — \"{metric}\" = {value} breached its monitoring threshold.": "{label} — « {metric} » = {value} a dépassé son seuil de surveillance.",
@@ -498,6 +500,7 @@
   "File too large for preview": "Fichier trop volumineux pour la prévisualisation",
   "File upload failed": "Échec du téléversement du fichier",
   "fileId is required": "fileId est requis",
+  "Filter must be active, deleted or all": "Le filtre doit être active, deleted ou all",
   "Finding not found": "Constatation introuvable",
   "Finding type is required": "Le type de constatation est requis",
   "Finding type must be 'library' or 'dependency'": "Le type de constatation doit être « library » ou « dependency »",
@@ -1627,5 +1630,7 @@
   "orders must list positive integer ids with display orders of 0 or more": "orders doit contenir des identifiants entiers positifs avec des ordres d'affichage de 0 ou plus",
   "Visibility must be public or private": "La visibilité doit être publique ou privée",
   "This file has a private analysis by another user": "Ce fichier a une analyse privée d'un autre utilisateur",
-  "A private analysis would replace another user's analysis of this file": "Une analyse privée remplacerait l'analyse de ce fichier par un autre utilisateur"
+  "A private analysis would replace another user's analysis of this file": "Une analyse privée remplacerait l'analyse de ce fichier par un autre utilisateur",
+  "Incident creation validation failed": "La validation de la création de l'incident a échoué",
+  "{field} does not reference an entity in your organization": "{field} ne fait référence à aucun élément de votre organisation"
 }

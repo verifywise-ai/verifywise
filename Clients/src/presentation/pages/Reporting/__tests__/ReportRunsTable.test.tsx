@@ -171,6 +171,32 @@ describe("ReportRunsTable", () => {
     expect(await screen.findByText("Delivery failed: email link")).toBeInTheDocument();
   });
 
+  it("shows both the gaps message and the failed delivery channel", async () => {
+    mockRunsPage.mockReturnValue({
+      data: {
+        rows: [
+          run({
+            status: "partial_success",
+            error_message: "Report generated with gaps: GDPR could not be read.",
+            delivery_status: { emailLink: { status: "failed" } },
+          }),
+        ],
+        total: 1,
+      },
+      isLoading: false,
+    });
+    const user = userEvent.setup();
+    renderWithProviders(<ReportRunsTable variant="live" />);
+
+    await user.hover(screen.getByText("Partial success"));
+
+    expect(
+      await screen.findByText(
+        "Report generated with gaps: GDPR could not be read. Delivery failed: email link",
+      ),
+    ).toBeInTheDocument();
+  });
+
   it("archives from the live variant", async () => {
     const user = userEvent.setup();
     renderWithProviders(<ReportRunsTable variant="live" />);

@@ -207,90 +207,9 @@ export const validateVendorIdParam = (id: any): ValidationResult => {
 };
 
 /**
- * Business logic validations
+ * Business logic validations. A vendor risk's level is computed on the server
+ * from likelihood and severity (calculateRiskLevel in utils/riskLevel.utils.ts).
  */
-
-/**
- * Risk level calculation matrix - returns the exact calculated risk level
- */
-const RISK_CALCULATION_MATRIX: Record<string, Record<string, string>> = {
-  Negligible: {
-    Rare: "Very Low",
-    Unlikely: "Low",
-    Possible: "Low",
-    Likely: "Medium",
-    "Almost certain": "Medium",
-  },
-  Minor: {
-    Rare: "Low",
-    Unlikely: "Low",
-    Possible: "Medium",
-    Likely: "Medium",
-    "Almost certain": "High",
-  },
-  Moderate: {
-    Rare: "Low",
-    Unlikely: "Medium",
-    Possible: "Medium",
-    Likely: "High",
-    "Almost certain": "High",
-  },
-  Major: {
-    Rare: "Medium",
-    Unlikely: "Medium",
-    Possible: "High",
-    Likely: "High",
-    "Almost certain": "Very High",
-  },
-  Catastrophic: {
-    Rare: "Medium",
-    Unlikely: "High",
-    Possible: "High",
-    Likely: "Very High",
-    "Almost certain": "Very High",
-  },
-};
-
-/**
- * Calculates the correct risk level based on risk_severity and likelihood
- */
-export const calculateRiskLevel = (riskSeverity: string, likelihood: string): string | null => {
-  return RISK_CALCULATION_MATRIX[riskSeverity]?.[likelihood] || null;
-};
-
-/**
- * Validates that the provided risk level matches the calculated risk level
- * This ensures the backend calculation is correct
- */
-export const validateRiskLevelCalculation = (
-  riskSeverity: string,
-  likelihood: string,
-  providedRiskLevel: string,
-): ValidationResult => {
-  const calculatedRiskLevel = calculateRiskLevel(riskSeverity, likelihood);
-
-  if (!calculatedRiskLevel) {
-    return {
-      isValid: false,
-      message: `Cannot calculate risk level for risk severity "${riskSeverity}" and likelihood "${likelihood}"`,
-      code: "INVALID_RISK_CALCULATION_INPUTS",
-    };
-  }
-
-  // Normalize risk levels for comparison
-  const normalizeRiskLevel = (riskLevel: string): string =>
-    riskLevel.replace(/risk/i, "").trim().toLowerCase();
-
-  if (normalizeRiskLevel(providedRiskLevel) !== normalizeRiskLevel(calculatedRiskLevel)) {
-    return {
-      isValid: false,
-      message: `Risk level "${providedRiskLevel}" is incorrect. Expected "${calculatedRiskLevel}" for risk severity "${riskSeverity}" and likelihood "${likelihood}"`,
-      code: "INCORRECT_RISK_LEVEL_CALCULATION",
-    };
-  }
-
-  return { isValid: true };
-};
 
 /**
  * Validates that vendor exists (placeholder for database check)
@@ -310,30 +229,4 @@ export const validateUserExists = async (userId: number): Promise<ValidationResu
   // This would be implemented to check if user exists in database
   // For now, just validate the ID format
   return validateActionOwner(userId);
-};
-
-/**
- * Complete validation for vendor risk creation with business rules
- */
-export const validateCompleteVendorRisk = (data: any): ValidationError[] => {
-  const errors = validateCreateVendorRisk(data);
-
-  // Add business rule validations if basic validation passes
-  if (errors.length === 0 && data.risk_severity && data.likelihood && data.risk_level) {
-    const calculationResult = validateRiskLevelCalculation(
-      data.risk_severity,
-      data.likelihood,
-      data.risk_level,
-    );
-
-    if (!calculationResult.isValid) {
-      errors.push({
-        field: "risk_level",
-        message: calculationResult.message || "Risk level calculation is incorrect",
-        code: calculationResult.code || "INCORRECT_CALCULATION",
-      });
-    }
-  }
-
-  return errors;
 };

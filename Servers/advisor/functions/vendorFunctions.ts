@@ -476,7 +476,6 @@ const agentUpdateVendor = createWriteToolFn({
       if (params.criticality_level !== undefined)
         vendorData.business_criticality =
           params.criticality_level as IVendor["business_criticality"];
-      if (params.risk_score !== undefined) vendorData.risk_score = params.risk_score as number;
 
       const result = await updateVendorByIdQuery(
         {
@@ -570,7 +569,6 @@ const agentUpdateVendorRisk = createWriteToolFn({
         riskData.likelihood = params.likelihood as IVendorRisk["likelihood"];
       if (params.action_plan !== undefined) riskData.action_plan = params.action_plan as string;
       if (params.action_owner !== undefined) riskData.action_owner = params.action_owner as number;
-      if (params.risk_level !== undefined) riskData.risk_level = params.risk_level as string;
 
       const result = await updateVendorRiskByIdQuery(
         params.vendor_risk_id as number,

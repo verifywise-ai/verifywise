@@ -16,6 +16,12 @@ jest.mock("../../utils/vendor.utils", () => ({
   getVendorByIdQuery: jest.fn(),
   getVendorByProjectIdQuery: jest.fn(),
   updateVendorByIdQuery: jest.fn(),
+  visibleVendorProjectIds: jest.fn(),
+}));
+// The diffs the change history records: the controller decides what goes into them.
+jest.mock("../../utils/changeHistory.base.utils", () => ({
+  ...(jest.requireActual("../../utils/changeHistory.base.utils") as object),
+  trackEntityChanges: jest.fn(),
 }));
 jest.mock("../../utils/vendorChangeHistory.utils", () => ({
   recordVendorCreation: jest.fn(),
@@ -67,7 +73,8 @@ import { triggerVendorOnboarding } from "../../services/workflows/triggers";
 import { triggerAutoResearch } from "../../services/vendorResearch/trigger";
 import logger from "../../utils/logger/fileLogger";
 import { recordVendorCreation } from "../../utils/vendorChangeHistory.utils";
-import { createNewVendorQuery } from "../../utils/vendor.utils";
+import { createNewVendorQuery, visibleVendorProjectIds } from "../../utils/vendor.utils";
+import { trackEntityChanges } from "../../utils/changeHistory.base.utils";
 import { createVendor } from "../vendor.ctrl";
 
 type AnyMock = jest.Mock<(...args: any[]) => any>;
@@ -114,6 +121,9 @@ const callOrder = (fn: unknown): number => asMock(fn).mock.invocationCallOrder[0
 describe("createVendor: automatic research", () => {
   beforeEach(() => {
     jest.resetAllMocks();
+    // Every use case sent is one the user can see.
+    asMock(visibleVendorProjectIds).mockImplementation(async (ids: unknown[]) => ids.map(Number));
+    asMock(trackEntityChanges).mockResolvedValue([]);
     transaction = { commit: jest.fn(), rollback: jest.fn() };
     asMock(sequelize.transaction).mockResolvedValue(transaction);
     asMock(sequelize.query).mockResolvedValue([{ name: "Ada", surname: "Lovelace" }]);

@@ -381,7 +381,7 @@ export interface VendorRiskFinding {
   action_plan: string;
   likelihood: VendorRisk["likelihood"];
   risk_severity: VendorRisk["risk_severity"];
-  /** For example "High Risk". */
+  /** For example "High risk". */
   risk_level: string;
   /**
    * The credibility label and why it is what it is. Every finding has them: a finding of a run

@@ -125,7 +125,7 @@ describe("getVendorRiskSuggestions", () => {
     ]);
   });
 
-  it("derives risk_level from the matrix instead of hardcoding it", async () => {
+  it("derives risk_level with the formula saved vendor risks get", async () => {
     mockVendor.mockResolvedValue(vendor({ data_sensitivity: "Health data (e.g. HIPAA)" }));
 
     const report = await getVendorRiskSuggestions(1, 7);
@@ -133,7 +133,8 @@ describe("getVendorRiskSuggestions", () => {
 
     expect(suggestion.risk_severity).toBe("Catastrophic");
     expect(suggestion.likelihood).toBe("Possible");
-    expect(suggestion.risk_level).toBe("High Risk");
+    // 3 (Possible) + 3 * 5 (Catastrophic) = 18
+    expect(suggestion.risk_level).toBe("Very high risk");
     expect(suggestion.reasons).toEqual(["data_sensitivity: Health data (e.g. HIPAA)"]);
   });
 
@@ -149,12 +150,13 @@ describe("getVendorRiskSuggestions", () => {
 
     const report = await getVendorRiskSuggestions(1, 7);
 
-    // A and C are High; B and D are Medium. Equal levels fall back to A/B/C/D.
-    expect(report!.suggestions.map((s) => s.archetype)).toEqual([
-      "data_sensitivity",
-      "past_issues",
-      "business_criticality",
-      "regulatory_exposure",
+    // A is Very high (18); B (14) and C (16) are High; D is Medium (12).
+    // Equal levels fall back to A/B/C/D.
+    expect(report!.suggestions.map((s) => [s.archetype, s.risk_level])).toEqual([
+      ["data_sensitivity", "Very high risk"],
+      ["business_criticality", "High risk"],
+      ["past_issues", "High risk"],
+      ["regulatory_exposure", "Medium risk"],
     ]);
     expect(VENDOR_SUGGESTION_SUPPRESS_THRESHOLD).toBe(0.25);
   });

@@ -253,6 +253,8 @@ export interface IRiskTableProps {
   exposure?: Map<number, VendorRiskExposure>;
   /** Opens a vendor risk on its Linked risks tab; falls back to onEdit. */
   onOpenLinks?: (riskId: number) => void;
+  /** Restores a deleted vendor risk; deleted rows offer it when set. */
+  onRestore?: (riskId: number) => void;
 }
 
 export interface ITasksTableProps {
@@ -322,6 +324,8 @@ export interface IncidentTableProps {
   onEdit?: (id: string, mode: string) => void;
   onView?: (id: string, mode: string) => void;
   onArchive?: (id: string, mode: string) => void;
+  /** False hides edit and archive in the row menu (no incident.edit). */
+  canEdit?: boolean;
   paginated?: boolean;
   archivedId?: string | null;
   visibleColumns?: Set<string>;

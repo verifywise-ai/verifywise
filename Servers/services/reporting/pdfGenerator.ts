@@ -4,6 +4,7 @@
  * Following VerifyWise clean architecture patterns
  */
 
+import { NOTICE_TEXT } from "./noticeText";
 import { chromium, Browser, Page } from "playwright";
 import * as ejs from "ejs";
 import * as path from "path";
@@ -14,6 +15,7 @@ import {
 } from "../../domain.layer/interfaces/i.reportGeneration";
 import { ANALYSIS_LABELS } from "./analyzers/mapToSummaries";
 import { applyColorTokens } from "../../tools/emailColors";
+import { generateComplianceProgressChart } from "./chartUtils";
 
 // Browser instance singleton for reuse
 let browserInstance: Browser | null = null;
@@ -49,6 +51,46 @@ export async function closeBrowser(): Promise<void> {
   }
 }
 
+const escapeSvgText = (value: string): string =>
+  value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+
+const MAX_CHART_LABEL_CHARS = 55;
+
+const truncateLabel = (value: string): string =>
+  value.length > MAX_CHART_LABEL_CHARS ? `${value.slice(0, MAX_CHART_LABEL_CHARS - 1)}…` : value;
+
+/**
+ * One completeness-by-group bar chart per framework, in the order of
+ * sections.frameworkRequirements.frameworks. The chart helper writes labels
+ * into SVG unescaped and the template emits it raw, so group titles (user
+ * text) are truncated to fit the chart and escaped here. When groups come from
+ * several use case pairings (group.useCase set) the bars pool done/total per
+ * group title across use cases, so the chart stays one bar per group however
+ * many use cases there are; the tables keep the per-use-case detail. DOCX
+ * embeds no charts, so it has no counterpart.
+ */
+export function buildFrameworkRequirementCharts(reportData: ReportData): string[] {
+  const frameworks = reportData.sections.frameworkRequirements?.frameworks ?? [];
+  return frameworks.map((fw) => {
+    const bars = new Map<string, { done: number; total: number }>();
+    fw.groups.forEach((group) => {
+      const bar = bars.get(group.title) ?? { done: 0, total: 0 };
+      bar.done += group.rollup.done;
+      bar.total += group.rollup.total;
+      bars.set(group.title, bar);
+    });
+    return generateComplianceProgressChart(
+      Array.from(bars, ([title, { done, total }]) => ({
+        category: escapeSvgText(truncateLabel(title)),
+        completed: done,
+        total,
+        percentage: total > 0 ? Math.round((done / total) * 100) : 0,
+      })),
+      { width: 350, title: "Completeness by group" },
+    );
+  });
+}
+
 /**
  * Render EJS template to HTML string
  */
@@ -66,6 +108,8 @@ async function renderTemplate(reportData: ReportData): Promise<string> {
     ...reportData,
     // One analyzer-label map, shared with docxGenerator.
     analysisLabels: ANALYSIS_LABELS,
+    noticeText: NOTICE_TEXT,
+    frameworkRequirementCharts: buildFrameworkRequirementCharts(reportData),
     // Include helper for CSS inclusion
     include: (filePath: string) => {
       if (filePath.includes("pdf.css")) {

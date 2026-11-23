@@ -126,9 +126,9 @@ export const createNewIncidentQuery = async (
         replacements: {
           organization_id: organizationId,
           ai_project: incident.ai_project || "",
-          model_inventory_id: incident.model_inventory_id ?? null,
-          project_id: incident.project_id ?? null,
-          assignee_id: incident.assignee_id ?? null,
+          model_inventory_id: toIncidentReferenceValue(incident.model_inventory_id),
+          project_id: toIncidentReferenceValue(incident.project_id),
+          assignee_id: toIncidentReferenceValue(incident.assignee_id),
           type: incident.type,
           severity: incident.severity,
           status: incident.status,
@@ -241,14 +241,21 @@ export const UPDATABLE_INCIDENT_COLUMNS = [
 export type IncidentColumn = (typeof UPDATABLE_INCIDENT_COLUMNS)[number];
 
 /**
+ * The value to write for a reference (FK) column: '', null and undefined all
+ * mean "no reference", stored as NULL ('' would fail the INTEGER column).
+ * Shared by create and update.
+ */
+export const toIncidentReferenceValue = (value: unknown): unknown =>
+  value === "" || value === undefined ? null : value;
+
+/**
  * Normalises a value for writing: '' means "none" for FK and date columns,
  * and archived is never NULL (empty means not archived).
  */
 const toColumnValue = (column: IncidentColumn, value: unknown): unknown => {
   if (column === "archived") return Boolean(value);
-  if ((INCIDENT_FK_COLUMNS.has(column) || INCIDENT_DATE_COLUMNS.has(column)) && value === "") {
-    return null;
-  }
+  if (INCIDENT_FK_COLUMNS.has(column)) return toIncidentReferenceValue(value);
+  if (INCIDENT_DATE_COLUMNS.has(column) && value === "") return null;
   return value ?? null;
 };
 
@@ -473,6 +480,55 @@ export const archiveIncidentByIdQuery = async (
     console.error("Error archiving incident:", error);
     throw error;
   }
+};
+
+/**
+ * The 400 `errors` entries for reference fields that point outside the
+ * organization. `message` is the English text; controllers send
+ * translateError(req, entry), which uses `i18nKey` / `i18nVars`.
+ */
+export const invalidReferenceErrors = (fields: string[]) =>
+  fields.map((field) => ({
+    field,
+    message: `${field} does not reference an entity in your organization`,
+    code: "INVALID_REFERENCE",
+    i18nKey: "{field} does not reference an entity in your organization",
+    i18nVars: { field },
+  }));
+
+/** Matches the FK constraint names Postgres gave the reference columns. */
+const INCIDENT_REFERENCE_CONSTRAINT = /^ai_incident_managements_([a-z_]+)_fkey$/;
+
+/**
+ * The incident reference field a write failed on, when `error` is a foreign
+ * key violation (Postgres 23503) of ai_incident_managements on
+ * model_inventory_id, project_id or assignee_id: the referenced row was
+ * deleted between the reference check and the write. Returns null for any
+ * other error.
+ */
+export const incidentReferenceFieldFromError = (error: unknown): string | null => {
+  const driverError =
+    (error as { parent?: unknown; original?: unknown } | null)?.parent ??
+    (error as { original?: unknown } | null)?.original ??
+    error;
+  const pg = driverError as {
+    code?: unknown;
+    table?: unknown;
+    constraint?: unknown;
+    column?: unknown;
+    detail?: unknown;
+  } | null;
+  if (pg?.code !== "23503" || pg.table !== "ai_incident_managements") return null;
+  // Sequelize leaves `fields` empty for 23503. The constraint name
+  // (ai_incident_managements_project_id_fkey) does not depend on the server's
+  // lc_messages; the English detail
+  // (`Key (project_id)=(12) is not present in table "projects".`) is the
+  // fallback for a constraint named otherwise.
+  const column =
+    INCIDENT_REFERENCE_CONSTRAINT.exec(String(pg.constraint ?? ""))?.[1] ??
+    (typeof pg.column === "string" ? pg.column : undefined) ??
+    /^Key \(([a-z_]+)\)=/.exec(String(pg.detail ?? ""))?.[1];
+  return column && INCIDENT_FK_COLUMNS.has(column) ? column : null;
 };
 
 /**
