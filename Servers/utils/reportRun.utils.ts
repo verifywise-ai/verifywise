@@ -1,4 +1,5 @@
 import { sequelize } from "../database/db";
+import { projectVisibilitySql, ReportViewer } from "./reportVisibility.utils";
 import { QueryTypes } from "sequelize";
 import { deleteFileById } from "./fileUpload.utils";
 import type { ReportParameters } from "../domain.layer/interfaces/i.reportTemplate";
@@ -84,11 +85,7 @@ export async function updateRunStatusQuery(
  * cannot say who the viewer is must not get an organization-wide list by
  * default.
  */
-export type ReportRunViewer = {
-  userId: number | null;
-  /** Role name from the JWT: Admin, Reviewer, Editor, Auditor, SuperAdmin. */
-  role: string | null;
-};
+export type ReportRunViewer = ReportViewer;
 
 /**
  * The project a run covers, as text, or NULL when it covers the whole
@@ -118,24 +115,13 @@ const RUN_FROM_SQL = `FROM report_runs rr
        ON sr.id = rr.scheduled_report_id AND sr.organization_id = :organization_id`;
 
 /**
- * The membership predicate, or null when the viewer may see everything.
- *
- * Mirrors getGeneratedReportsQuery: Admin and SuperAdmin are unrestricted,
- * everyone else sees a project's report only if they own the project or are a
- * member of it. An organization-scoped report (no project) is visible to all —
- * the spec calls the legacy inner join to `projects` a bug precisely because it
- * hid those.
+ * The membership predicate for a run, or null when the viewer may see
+ * everything. The rule itself is shared with schedules (reportVisibility.utils):
+ * an organization-scoped report (no project) is visible to all — the spec calls
+ * the legacy inner join to `projects` a bug precisely because it hid those.
  */
 function viewerVisibilitySql(viewer: ReportRunViewer): string | null {
-  if (viewer.role === "Admin" || viewer.role === "SuperAdmin") return null;
-  return `(${RUN_PROJECT_ID_SQL} IS NULL OR EXISTS (
-       SELECT 1 FROM projects p
-       LEFT JOIN projects_members pm
-         ON pm.project_id = p.id AND pm.organization_id = :organization_id
-       WHERE p.id::text = ${RUN_PROJECT_ID_SQL}
-         AND p.organization_id = :organization_id
-         AND (p.owner = :viewerUserId OR pm.user_id = :viewerUserId)
-     ))`;
+  return projectVisibilitySql(viewer, RUN_PROJECT_ID_SQL);
 }
 
 /**

@@ -31,6 +31,7 @@ import {
 import { runScheduledReport } from "../services/reporting/reportRunOrchestrator";
 import { parseFrameworkSelection } from "../services/reporting/frameworkSelection";
 import { assertReportScopeAllowed } from "../services/reporting/reportAuthorization";
+import type { ReportViewer } from "../utils/reportVisibility.utils";
 
 /**
  * An unparseable framework entry must not reach the column. An empty selection
@@ -114,9 +115,18 @@ export async function createScheduledReport(req: Request, res: Response): Promis
   }
 }
 
+/**
+ * The viewer, from the authenticated request only. Missing identity becomes
+ * null, which matches no project owner or member, so such a caller sees
+ * organization-wide schedules only.
+ */
+function reportViewer(req: Request): ReportViewer {
+  return { userId: req.userId ?? null, role: req.role ?? null };
+}
+
 export async function listScheduledReports(req: Request, res: Response): Promise<any> {
   try {
-    const rows = await listScheduledReportsQuery(req.organizationId!);
+    const rows = await listScheduledReportsQuery(req.organizationId!, reportViewer(req));
     return res.status(200).json(STATUS_CODE[200](rows));
   } catch (error) {
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
@@ -126,9 +136,8 @@ export async function listScheduledReports(req: Request, res: Response): Promise
 /**
  * One schedule with its template version's parameters_config, so the edit
  * dialog knows which report details the schedule declares. Read access matches
- * listScheduledReports, which already returns every schedule of the
- * organization (report_parameters included) to any signed-in member; a scope
- * gate here would hide nothing the list does not show.
+ * listScheduledReports: a project schedule the caller may not read is a 404,
+ * like a missing one, so the sequential id space is not an oracle.
  */
 export async function getScheduledReport(req: Request, res: Response): Promise<any> {
   logProcessing({
@@ -143,7 +152,7 @@ export async function getScheduledReport(req: Request, res: Response): Promise<a
     if (!Number.isInteger(id) || id <= 0) {
       return res.status(404).json(STATUS_CODE[404](req.t!("not found")));
     }
-    const row = await getScheduledReportQuery(id, req.organizationId!);
+    const row = await getScheduledReportQuery(id, req.organizationId!, reportViewer(req));
     if (!row) return res.status(404).json(STATUS_CODE[404](req.t!("not found")));
     return res.status(200).json(STATUS_CODE[200](row));
   } catch (error) {
