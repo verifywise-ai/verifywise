@@ -146,6 +146,17 @@ export interface ReportGenerationResult {
       restatementRetried?: boolean;
       /** e23Gap positions corrected after parsing; see AnalyzerRunResult. */
       positionCorrections?: Array<{ group: string; from: string; to: string }>;
+      /** E-23 runs: the prose guard re-issued the call; see AnalyzerRunResult. */
+      guardRetried?: boolean;
+      /** E-23 runs: what the prose guard fed back or dropped; see AnalyzerRunResult. */
+      guardRejections?: Array<{
+        stage: "retried" | "removed";
+        field: string;
+        index?: number;
+        reason: string;
+        sentence: string;
+        detail: string;
+      }>;
     }
   >;
   /**
