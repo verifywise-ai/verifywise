@@ -427,6 +427,64 @@ describe("G1 guard: reviewed false positives pass, near misses still fail", () =
   });
 });
 
+/** Review of the widening above: each case it must not let through. */
+describe("G1 guard: the widened rules stay narrow", () => {
+  const reasons = (sentence: string, c: GuardContext) =>
+    checkProse(sentence, c).map((v) => v.reason);
+  let fleet: GuardContext;
+  beforeAll(() => {
+    fleet = ctxFor(sampleFleet(), "Validated 4, not validated 9.");
+  });
+
+  it("compliance: 'nothing' or 'none' negates only as 'says nothing about'", () => {
+    expect(reasons("Nothing is overdue and every requirement is fulfilled.", fleet)).toContain(
+      "compliance",
+    );
+    // "E-23 is fully met" matches no claim pattern, before or after this
+    // change; a "none" sentence that does make a claim must still be caught.
+    expect(
+      reasons("None of the findings remain open and every requirement is fulfilled.", fleet),
+    ).toContain("compliance");
+  });
+
+  it("period: one period date is not the period", () => {
+    expect(
+      reasons("In the last 90 days to 2026-09-30, 4 validations were signed off.", fleet),
+    ).toContain("period");
+  });
+
+  it("number: a quotient needs a rate in the sentence and a part no larger than its whole", () => {
+    expect(
+      reasons("Of the 13 models, 4 are validated and 9 are not, a share of 0.7.", fleet),
+    ).toContain("number");
+    expect(
+      reasons("The 9 unvalidated models sit across 4 tiers, or 2.3 per tier.", fleet),
+    ).toContain("number");
+    expect(reasons("The 4 validated models hold 3 findings, or 1.3 per model.", fleet)).toContain(
+      "number",
+    );
+  });
+
+  it("groupCount: 0 groups passes only for one section", () => {
+    expect(reasons("0 requirement groups are self-assessment only.", fleet)).toContain(
+      "groupCount",
+    );
+  });
+
+  it("totals: the requirement total is the one the prompt prints", () => {
+    const r = sampleFleet();
+    const fw = r.sections.frameworkRequirements!.frameworks[0];
+    // The same framework under a second use case: the prompt counts both.
+    r.sections.frameworkRequirements!.frameworks.push({ ...fw, useCaseId: 2 } as any);
+    const prompt = ANALYZERS.e23Gap.buildUserPrompt(r, extrasFor(r));
+    const printed = Number(/E-23 requirements: (\d+) in total/.exec(prompt)![1]);
+    const c = guardContext(prompt, r);
+    expect(c.totals).toContainEqual({ value: printed, kind: "requirements" });
+    expect(c.totals).toContainEqual({ value: 13, kind: "models" });
+    expect(prompt).toContain("Models in scope (not retired): 13");
+  });
+});
+
 describe("G1 prompt: the E-23 header states the by-design scope and the dates", () => {
   it("says self-assessment-only groups are no gap, and ties activity counts to the period", () => {
     const prompt = ANALYZERS.executiveSummary.buildUserPrompt(rd, extrasFor(rd));
