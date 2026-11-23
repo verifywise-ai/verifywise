@@ -51,7 +51,7 @@ export const VIEWPORT = {
   FOCUS_ZOOM: 1.2,
   MIN_ZOOM: 0.1,
   MAX_ZOOM: 2,
-  FIT_VIEW_PADDING: "8%",
+  FIT_VIEW_PADDING: 0.2,
   FOCUS_OFFSET_X: 75,
   FOCUS_OFFSET_Y: 30,
 } as const;
