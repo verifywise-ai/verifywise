@@ -45,7 +45,7 @@ mcp>=2.3.0
 # litellm 1.109.1 relaxed its filelock cap, so we can now take the 4.2.x line
 # (re-validated against litellm 1.109.1 on 2026-11-16); stay on the newest 4.2.x
 # below the next major until litellm's supported window moves again.
-filelock>=4.2.10,<4.2.11
+filelock>=4.2.12,<4.2.13
 
 # Observability — OpenTelemetry metrics + logs (pushed to central OTLP collector)
 opentelemetry-api>=1.45.2
