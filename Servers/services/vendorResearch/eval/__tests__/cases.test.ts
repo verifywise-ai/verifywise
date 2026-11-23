@@ -772,11 +772,11 @@ describe("the evaluation cases", () => {
       expect(basis.sources[0].record).toMatchObject({
         source: "kev",
         match: "strong",
-        as_of: "2026-10-07",
+        as_of: "2026-07-31",
         stale: true,
       });
       expect(credibilityRationale(basis)).toBe(
-        "High: CISA Known Exploited Vulnerabilities lists it (CVE-2026-30001), as of 7 Oct 2026. The source has not been updated since 7 Oct 2026.",
+        "High: CISA Known Exploited Vulnerabilities lists it (CVE-2026-30001), as of 31 Jul 2026. The source has not been updated since 31 Jul 2026.",
       );
       const stale = (run.found.coverage?.sources ?? [])
         .filter((source) => source.stale)

@@ -8,7 +8,8 @@
  *
  * The real producers run here against an in-memory stand-in for BullMQ's Queue.
  * It keeps the BullMQ behaviour these tests depend on: jobs by id (an add with
- * an id in use is ignored), job schedulers by id (an upsert replaces one, and
+ * an id in use is ignored, as is an add whose deduplication id belongs to a job
+ * still kept), job schedulers by id (an upsert replaces one, and
  * its job options sit on top of the queue's default ones), and obliterate,
  * which deletes both.
  *
@@ -45,6 +46,7 @@ jest.mock("bullmq", () => {
   class FakeQueue {
     jobs = new Map<string, MockJobRecord>();
     schedulers = new Map<string, MockSchedulerRecord>();
+    private deduplicated = new Map<string, string>();
     private lastId = 0;
 
     constructor(
@@ -54,9 +56,17 @@ jest.mock("bullmq", () => {
       mockQueues.set(name, this);
     }
 
-    async add(name: string, data: unknown, opts: { jobId?: string } = {}) {
+    async add(
+      name: string,
+      data: unknown,
+      opts: { jobId?: string; deduplication?: { id: string } } = {},
+    ) {
+      const dedupId = opts.deduplication?.id;
+      const kept = dedupId === undefined ? undefined : this.deduplicated.get(dedupId);
+      if (kept !== undefined && this.jobs.has(kept)) return this.jobHandle(kept);
       const id = opts.jobId ?? String(++this.lastId);
       if (!this.jobs.has(id)) this.jobs.set(id, { name, data, state: "waiting" });
+      if (dedupId !== undefined) this.deduplicated.set(dedupId, id);
       return this.jobHandle(id);
     }
 
@@ -123,19 +133,9 @@ jest.mock("../../utils/logger/fileLogger", () => ({
   default: { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() },
 }));
 
-// The states of the vendor risk database's lists, which the start reads to queue first syncs, come
-// from here and not from vrdb_sources, so the suite needs no database (sequelize.query is spied on
-// below to prove it). The default: no list was ever copied.
-jest.mock("../../utils/vrdb.utils", () => ({
-  ...jest.requireActual("../../utils/vrdb.utils"),
-  getVrdbSourceStatesQuery: jest.fn(async () => []),
-}));
-
 import { addAllJobs } from "../producer";
 import { sequelize } from "../../database/db";
-import { getVrdbSourceStatesQuery } from "../../utils/vrdb.utils";
-import { activeMirrors } from "../../services/vendorResearch/vrdb/sources";
-import { vrdbFirstSyncJobId } from "../../services/vendorResearch/vrdb/queue";
+import { legacySyncSchedulerId } from "../../services/vendorResearch/vrdb/queue";
 import {
   enqueueAutomationAction,
   enqueueExtensionSyncRun,
@@ -338,42 +338,44 @@ describe("addAllJobs", () => {
     expect(keptForever).toEqual([]);
   });
 
-  it("queues a first sync of each list copied whole that was never copied, without a database", async () => {
-    jest.mocked(getVrdbSourceStatesQuery).mockResolvedValueOnce([]);
+  it("removes the sync schedulers earlier builds registered for the vendor risk database, and queues one load, without a database", async () => {
+    for (const id of ["kev", "cve", "ofac", "gleif"] as const) {
+      vrdbQueue().schedulers.set(legacySyncSchedulerId(id), {
+        key: legacySyncSchedulerId(id),
+        name: "vrdb_sync",
+        next: Date.now() + 60_000,
+        pattern: "7 */6 * * *",
+        tz: "UTC",
+      });
+    }
 
     await addAllJobs();
 
-    const active = activeMirrors();
-    expect(getVrdbSourceStatesQuery).toHaveBeenCalledWith(active.map(({ id }) => id));
-    // A list read by its changes (the CVE records) gets its first copy from a baseline instead.
-    const copiedWhole = active.filter(({ missingStatus }) => missingStatus !== null);
-    expect(copiedWhole.length).toBeGreaterThan(0);
-    expect([...vrdbQueue().jobs.keys()].sort()).toEqual(
-      copiedWhole.map(({ id }) => vrdbFirstSyncJobId(id)).sort(),
-    );
+    expect([...vrdbQueue().schedulers.keys()]).toEqual([]);
+    expect([...vrdbQueue().jobs.values()]).toEqual([
+      { name: "vrdb_load", data: {}, state: "waiting" },
+    ]);
   });
 
-  it("queues no first sync of a list that was copied", async () => {
-    const [copied, ...others] = activeMirrors().filter(
-      ({ missingStatus }) => missingStatus !== null,
-    );
-    jest.mocked(getVrdbSourceStatesQuery).mockResolvedValueOnce([
-      {
-        id: copied.id,
-        lastSuccessAt: new Date("2026-11-01T00:00:00Z"),
-        lastOutcome: "ok",
-        sourceVersion: null,
-        etag: null,
-        lastModified: null,
-        activeRecords: 10,
-        cursor: null,
-      },
-    ]);
+  it("queues no second load while the first waits, as another replica's start would add", async () => {
+    await addAllJobs();
+    await addAllJobs();
+
+    expect([...vrdbQueue().jobs.values()].map(({ name }) => name)).toEqual(["vrdb_load"]);
+  });
+
+  it("removes the old schedulers but queues no load while the records are off", async () => {
+    process.env.VENDOR_RESEARCH_RECORDS = "false";
+    vrdbQueue().schedulers.set(legacySyncSchedulerId("kev"), {
+      key: legacySyncSchedulerId("kev"),
+      name: "vrdb_sync",
+      next: Date.now() + 60_000,
+      pattern: "0 * * * *",
+    });
 
     await addAllJobs();
 
-    const firstSyncs = [...vrdbQueue().jobs.keys()];
-    expect(firstSyncs).not.toContain(vrdbFirstSyncJobId(copied.id));
-    expect(firstSyncs.sort()).toEqual(others.map(({ id }) => vrdbFirstSyncJobId(id)).sort());
+    expect([...vrdbQueue().schedulers.keys()]).toEqual([]);
+    expect([...vrdbQueue().jobs.keys()]).toEqual([]);
   });
 });

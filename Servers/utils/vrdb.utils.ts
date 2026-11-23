@@ -8,7 +8,10 @@ import type {
   StoredCredibilityBasis,
   VrdbSourceId,
 } from "../domain.layer/interfaces/i.vendorResearch";
-import type { VrdbSourceDefinition } from "../services/vendorResearch/vrdb/sources";
+import {
+  type VrdbSourceDefinition,
+  staleAfterHoursOf,
+} from "../services/vendorResearch/vrdb/sources";
 import type {
   ApplyCounts,
   FindingRelabel,
@@ -226,7 +229,7 @@ export const upsertVrdbSourceQuery = async (
         documentationUrl: definition.documentationUrl,
         licence: definition.licence,
         attribution: definition.attribution,
-        staleAfterHours: definition.staleAfterHours,
+        staleAfterHours: staleAfterHoursOf(definition),
         now,
       },
       type: QueryTypes.INSERT,
@@ -396,6 +399,23 @@ export const pruneVrdbSyncRunsQuery = async (
     type: QueryTypes.DELETE,
     transaction,
   });
+};
+
+/**
+ * The ids of the stored records of a list that a retire would still change: those with keys, and
+ * those not active (the condition of the retire in `applyVrdbDeltaQuery`). The loader of the CVE
+ * bundle retires the ones the new bundle no longer holds (vrdb/loadBundled.ts).
+ */
+export const listVrdbKeyedRecordIdsQuery = async (
+  sourceId: VrdbSourceId,
+  transaction?: Transaction,
+): Promise<string[]> => {
+  const rows = (await sequelize.query(
+    `SELECT source_record_id FROM vrdb_records
+     WHERE source_id = :sourceId AND (cardinality(match_keys) > 0 OR status <> 'active')`,
+    { replacements: { sourceId }, type: QueryTypes.SELECT, transaction },
+  )) as Array<{ source_record_id: string }>;
+  return rows.map((row) => row.source_record_id);
 };
 
 // ---------------------------------------------------------------------------

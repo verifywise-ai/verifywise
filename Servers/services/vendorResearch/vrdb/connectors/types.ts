@@ -1,10 +1,12 @@
 /**
  * A connector downloads one list the vendor risk database mirrors and parses it into records (spec
- * D4.7). It asks through the fetch the sync gives it, which is the page guard's conditional GET,
- * and it keeps no address in what it hands back: the EU file's address carries a token (Q2). Most
- * lists are taken whole; a list read by its changes (the CVE records) hands the sync the changes of
- * each day after its cursor. A read-through connector asks a database for one vendor's key at run
- * time (D4.8 step 3).
+ * D4.7). Only the bundler (scripts/vrdbBundle.ts) runs a mirror's download, before a release; the
+ * server loads the bundles and downloads no list. A connector asks through the fetch it is given,
+ * the page guard's conditional GET, and keeps no address in what it hands back: the EU file's
+ * address carries a token (Q2). Most lists are taken whole; a list read by its changes (the CVE
+ * records) hands the bundler the changes of each day after its cursor. In what follows, "the sync"
+ * is that step of the bundler. A read-through connector asks a database for one vendor's key at
+ * run time (D4.8 step 3).
  */
 import type { VrdbSourceId } from "../../../../domain.layer/interfaces/i.vendorResearch";
 import type {
@@ -47,7 +49,7 @@ export interface Snapshot {
  * and the root of the document: the list's own (KEV `vulnerabilities`, OFAC `SDN.CSV`, UK
  * `Designations`, EU `export`) when the body is the list, the root of an XML document of another
  * kind (counted as an error), and null when the body holds no root the parser knows. The sync
- * fails a null root as wrong_root and any error as parse_errors (vrdb/sync.ts).
+ * fails a null root as wrong_root and any error as parse_errors (scripts/vrdbBundle.ts).
  */
 export interface ParseResult {
   records: ParsedRecord[];

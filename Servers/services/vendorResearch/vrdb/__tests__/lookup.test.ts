@@ -1008,11 +1008,11 @@ describe("offerRecords", () => {
     expect(securityOnly.outcome.records.map((entry) => entry.source)).toEqual(["kev"]);
   });
 
-  it("coverage marks a source stale after 48 hours", () => {
+  it("coverage marks a bundled source stale 60 days after its bundle was built", () => {
     const result = offer([row({ sourceId: "ofac", sourceRecordId: "1001" })], {
       states: [
-        state("kev", hoursAgo(47)),
-        state("ofac", hoursAgo(49)),
+        state("kev", hoursAgo(1439)),
+        state("ofac", hoursAgo(1441)),
         state("uk_sanctions", hoursAgo(2)),
         state("eu_fsf", hoursAgo(2)),
       ],
@@ -1117,21 +1117,21 @@ describe("offerRecords", () => {
     });
 
     it("reads a copy whose cursor lags weeks behind its last sync as stale, as of the cursor's day", () => {
-      // The last sync ran an hour ago, but applied the days up to 2026-10-08 only (a sync applies at
-      // most a week, after weeks with the records off, or a baseline of an older day).
+      // The last load ran an hour ago, but its bundle held the days up to 2026-08-15 only, more
+      // than the 60 days a bundled list stays current.
       const result = offer(
         [cveRow()],
-        withCve(state("cve", hoursAgo(1), { cursor: { day: "2026-10-08" } })),
+        withCve(state("cve", hoursAgo(1), { cursor: { day: "2026-08-15" } })),
       );
 
       expect(coverageOf(result, "cve")).toMatchObject({
         outcome: "found",
         stale: true,
-        last_success_at: "2026-10-08T23:59:59.999Z",
+        last_success_at: "2026-08-15T23:59:59.999Z",
       });
       const [record] = recordsOf(result, "cve");
-      expect(record.vrdb).toMatchObject({ asOf: "2026-10-08", stale: true });
-      expect(record.text).toContain("As of 2026-10-08.");
+      expect(record.vrdb).toMatchObject({ asOf: "2026-08-15", stale: true });
+      expect(record.text).toContain("As of 2026-08-15.");
     });
 
     it("reads a healthy daily copy as current just before its next sync", () => {
@@ -1630,7 +1630,7 @@ describe("offerRecords: the AI-specific lists (spec D2.14 to D2.17, D2.20)", () 
     expect(result.outcome.records.map((entry) => entry.source)).toEqual([...AI_OPEN]);
   });
 
-  it("a list never copied is failed, and one not brought up to date for 48 hours is stale and still offered", () => {
+  it("a list never copied is failed, and one not brought up to date for 60 days is stale and still offered", () => {
     const neverCopied = offerAi([caseStudy("AML.CS9001", "2026-03-02")], { states: ALL_SYNCED });
     for (const source of AI_OPEN) {
       expect(coverageOf(neverCopied, source)).toMatchObject({
@@ -1651,10 +1651,10 @@ describe("offerRecords: the AI-specific lists (spec D2.14 to D2.17, D2.20)", () 
       {
         states: [
           ...ALL_SYNCED,
-          state("atlas", hoursAgo(49)),
-          state("nhtsa_sgo", hoursAgo(47)),
+          state("atlas", hoursAgo(1441)),
+          state("nhtsa_sgo", hoursAgo(1439)),
           state("fda_ai_devices", hoursAgo(5)),
-          state("fda_device_recalls", hoursAgo(72)),
+          state("fda_device_recalls", hoursAgo(2000)),
         ],
       },
     );
@@ -1900,7 +1900,7 @@ describe("offerRecords: the US Consolidated Screening List (spec D2.19)", () => 
     expect(result.matches).toEqual([]);
   });
 
-  it("covers the list as found, none, failed while it was never copied, and stale after 48 hours", () => {
+  it("covers the list as found, none, failed while it was never copied, and stale after 60 days", () => {
     const definition = vrdbSourceOf("csl");
     const rows = [restrictedParty("el:acmeanalytics", "2024-03-01")];
 
@@ -1909,7 +1909,7 @@ describe("offerRecords: the US Consolidated Screening List (spec D2.19)", () => 
       restrictedParty("el:otherco", "2024-03-01", { matchKeys: ["name:otherco"] }),
     ]);
     const never = offerCsl(rows, { states: [...ALL_SYNCED, state("csl", null)] });
-    const stale = offerCsl(rows, { states: [...ALL_SYNCED, state("csl", hoursAgo(49))] });
+    const stale = offerCsl(rows, { states: [...ALL_SYNCED, state("csl", hoursAgo(1441))] });
 
     expect(coverageOf(found, "csl")).toEqual({
       id: "csl",

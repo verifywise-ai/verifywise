@@ -17,7 +17,7 @@ void warnIfGatewayKeyMissing(logger);
 const notificationWorker = createNotificationWorker();
 const automationWorker = createAutomationWorker();
 const vendorResearchWorker = createVendorResearchWorker();
-// The syncs of the vendor risk database, one at a time; its sync jobs do nothing while VENDOR_RESEARCH_RECORDS is false.
+// The load of the bundled lists of the vendor risk database, one job at a time; it loads nothing while VENDOR_RESEARCH_RECORDS is false.
 const vrdbWorker = createVrdbWorker(1);
 
 // Add workers here as you add on new workers within the application

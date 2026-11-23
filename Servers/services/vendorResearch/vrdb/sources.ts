@@ -1,10 +1,10 @@
 /**
  * The lists the vendor risk database holds (spec D4.1, Rulings 1 and 5 of the M1 plan): who
- * publishes each, how the database gets it (a copy of the whole list on a schedule, or, read
- * through, the answers of the database for a vendor's key, kept for a few hours), under which
- * licence, and the attribution a page that shows its records must carry. A copy or an answer is
- * out of date 48 hours after its last success (192 hours for a list that is copied weekly). A list
- * behind a closed gate (gates.ts) is defined here but neither copied nor looked up.
+ * publishes each, how the database gets it (a copy of the whole list that the release ships as a
+ * bundle, or, read through, the answers of the database for a vendor's key, kept for a few hours),
+ * under which licence, and the attribution a page that shows its records must carry. A bundled list
+ * is out of date 60 days after its bundle was built; an answer read through after its own hours.
+ * A list behind a closed gate (gates.ts) is defined here but neither bundled nor looked up.
  */
 import type {
   ResearchCategory,
@@ -20,7 +20,6 @@ interface SourceBase {
   listName: string;
   /** The category whose sources its records are. */
   category: ResearchCategory;
-  staleAfterHours: number;
   licence: string;
   attribution: string;
   documentationUrl: string;
@@ -28,11 +27,9 @@ interface SourceBase {
   gate?: VrdbGate;
 }
 
-/** A list the job copies on its schedule. */
+/** A list the release ships as a bundle (bundle.ts), which the worker loads at start. */
 export interface MirrorSource extends SourceBase {
   mode: "mirror";
-  /** When the job copies the list: a five-field cron, in UTC, each on a minute of its own. */
-  schedule: string;
   /**
    * What a record becomes when the list no longer holds it; null for a list read by its changes
    * (the CVE records), whose records leave by a status of their own.
@@ -43,6 +40,8 @@ export interface MirrorSource extends SourceBase {
 /** A database asked at run time, whose answers are kept for a while. */
 export interface ReadThroughSource extends SourceBase {
   mode: "read_through";
+  /** How long after its answer a key's records are out of date. */
+  staleAfterHours: number;
   /** How long an answer is kept before the database is asked again. */
   ttlHours: number;
 }
@@ -50,6 +49,13 @@ export interface ReadThroughSource extends SourceBase {
 export type VrdbSourceDefinition = MirrorSource | ReadThroughSource;
 
 const STALE_AFTER_HOURS = 48;
+
+/**
+ * How long after its bundle was built a bundled list is out of date. A release carries new bundles,
+ * so a list this old is on a deployment that has not been upgraded for two months: its records
+ * still count, and the rationale says the day they are from (credibility.ts).
+ */
+export const BUNDLED_STALE_AFTER_HOURS = 60 * 24;
 
 /**
  * The CVE Usage paragraph of the CVE Terms of Use (https://www.cve.org/Legal/TermsOfUse), word for
@@ -73,8 +79,6 @@ export const VRDB_SOURCES: readonly VrdbSourceDefinition[] = [
     listName: "CISA KEV catalog",
     category: "security_incidents",
     mode: "mirror",
-    schedule: "23 * * * *",
-    staleAfterHours: STALE_AFTER_HOURS,
     licence: "CC0 1.0",
     attribution: "CISA Known Exploited Vulnerabilities catalog (CC0 1.0)",
     documentationUrl: "https://www.cisa.gov/known-exploited-vulnerabilities-catalog",
@@ -115,8 +119,6 @@ export const VRDB_SOURCES: readonly VrdbSourceDefinition[] = [
     listName: "OFAC SDN list",
     category: "legal_regulatory",
     mode: "mirror",
-    schedule: "41 */6 * * *",
-    staleAfterHours: STALE_AFTER_HOURS,
     licence:
       "None published; a work of the US Government (17 U.S.C. §105); use accepted by the product owner on 2026-10-31 (Q5)",
     attribution: "OFAC Specially Designated Nationals list, US Department of the Treasury",
@@ -130,8 +132,6 @@ export const VRDB_SOURCES: readonly VrdbSourceDefinition[] = [
     listName: "UK Sanctions List",
     category: "legal_regulatory",
     mode: "mirror",
-    schedule: "47 */6 * * *",
-    staleAfterHours: STALE_AFTER_HOURS,
     licence: "Open Government Licence v3.0",
     attribution:
       "UK Sanctions List, FCDO. Contains public sector information licensed under the Open Government Licence v3.0.",
@@ -145,8 +145,6 @@ export const VRDB_SOURCES: readonly VrdbSourceDefinition[] = [
     listName: "EU financial sanctions list",
     category: "legal_regulatory",
     mode: "mirror",
-    schedule: "53 */6 * * *",
-    staleAfterHours: STALE_AFTER_HOURS,
     licence: "Commission reuse notice (Decision 2011/833/EU); CC BY 4.0",
     attribution: "EU consolidated list of financial sanctions, © European Union",
     documentationUrl:
@@ -160,8 +158,6 @@ export const VRDB_SOURCES: readonly VrdbSourceDefinition[] = [
     listName: "CVE List",
     category: "security_incidents",
     mode: "mirror",
-    schedule: "29 2 * * *",
-    staleAfterHours: STALE_AFTER_HOURS,
     licence: `CVE Terms of Use (https://www.cve.org/Legal/TermsOfUse). CVE Usage: ${CVE_TERMS_LICENCE}`,
     // Read at each use and not once at start-up, so a process that runs over New Year writes the new
     // year at its next sync. cve.org writes the word mark as CVE™ and registers only the logo, so the
@@ -180,8 +176,6 @@ export const VRDB_SOURCES: readonly VrdbSourceDefinition[] = [
     listName: "UN Security Council Consolidated List",
     category: "legal_regulatory",
     mode: "mirror",
-    schedule: "59 */6 * * *",
-    staleAfterHours: STALE_AFTER_HOURS,
     licence: "UN terms of use: personal, non-commercial use only (Q6)",
     attribution: "United Nations Security Council Consolidated List",
     documentationUrl: "https://main.un.org/securitycouncil/en/content/un-sc-consolidated-list",
@@ -195,8 +189,6 @@ export const VRDB_SOURCES: readonly VrdbSourceDefinition[] = [
     listName: "US Consolidated Screening List",
     category: "legal_regulatory",
     mode: "mirror",
-    schedule: "7 */6 * * *",
-    staleAfterHours: STALE_AFTER_HOURS,
     licence:
       "None published; a work of the US Government (17 U.S.C. §105) compiled by the International Trade Administration, whose developer terms allow services that search, display and analyze it; accepted on 2026-11-07 (Q33)",
     attribution:
@@ -211,8 +203,6 @@ export const VRDB_SOURCES: readonly VrdbSourceDefinition[] = [
     listName: "AI Incident Database",
     category: "ai_specific",
     mode: "mirror",
-    schedule: "11 4 * * *",
-    staleAfterHours: STALE_AFTER_HOURS,
     licence:
       "CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/): the incidents, entities and classifications collections of the AI Incident Database; report text, submissions and media excluded. Commercial use awaits the operator's confirmation (Q29).",
     attribution:
@@ -228,8 +218,6 @@ export const VRDB_SOURCES: readonly VrdbSourceDefinition[] = [
     listName: "MITRE ATLAS case studies",
     category: "ai_specific",
     mode: "mirror",
-    schedule: "17 3 * * *",
-    staleAfterHours: STALE_AFTER_HOURS,
     licence:
       "Apache License 2.0 (https://www.apache.org/licenses/LICENSE-2.0); the atlas-data repository's LICENSE (Q32).",
     // Read at each use, as the CVE's is, so that a process that runs over New Year writes the new
@@ -247,8 +235,6 @@ export const VRDB_SOURCES: readonly VrdbSourceDefinition[] = [
     listName: "NHTSA Standing General Order crash reports",
     category: "ai_specific",
     mode: "mirror",
-    schedule: "5 13 * * *",
-    staleAfterHours: STALE_AFTER_HOURS,
     licence:
       "None published; a work of the US Government (17 U.S.C. §105); accepted on 2026-11-05 (Q31)",
     attribution:
@@ -264,8 +250,6 @@ export const VRDB_SOURCES: readonly VrdbSourceDefinition[] = [
     listName: "FDA list of AI-enabled medical devices",
     category: "ai_specific",
     mode: "mirror",
-    schedule: "35 5 * * *",
-    staleAfterHours: STALE_AFTER_HOURS,
     licence: "Public domain (fda.gov: content may be republished freely)",
     attribution: "FDA list of AI-enabled medical devices, US Food and Drug Administration",
     documentationUrl:
@@ -281,8 +265,6 @@ export const VRDB_SOURCES: readonly VrdbSourceDefinition[] = [
     listName: "FDA device recall database",
     category: "ai_specific",
     mode: "mirror",
-    schedule: "43 14 * * *",
-    staleAfterHours: STALE_AFTER_HOURS,
     licence:
       "CC0 1.0 (https://open.fda.gov/license/): openFDA's device recall records and, for their class and classification day only, its device enforcement reports; the GMDN content of the openfda block is not used (Q34, Q37)",
     attribution:
@@ -297,8 +279,6 @@ export const VRDB_SOURCES: readonly VrdbSourceDefinition[] = [
     listName: "Consolidated Canadian Autonomous Sanctions List",
     category: "legal_regulatory",
     mode: "mirror",
-    schedule: "2 1 * * *",
-    staleAfterHours: STALE_AFTER_HOURS,
     licence:
       "Open Government Licence - Canada (https://open.canada.ca/en/open-government-licence-canada), through the open.canada.ca dataset record ab076f2e-94b1-4039-bb3d-58002deb826d, which lists sema-lmes.xml as its resource; entities only (individuals and ships are not copied: the licence does not cover personal information); decided on delegation on 2026-11-10 (Q46)",
     attribution:
@@ -314,8 +294,6 @@ export const VRDB_SOURCES: readonly VrdbSourceDefinition[] = [
     listName: "California Attorney General data breach list",
     category: "security_incidents",
     mode: "mirror",
-    schedule: "12 7 * * *",
-    staleAfterHours: STALE_AFTER_HOURS,
     licence:
       "Considered in the public domain; may be distributed or copied as permitted by law (https://oag.ca.gov/conditions): the Department's own list only (organisation, breach dates, reported date), never the sample notices, which the breached organisations wrote; the conditions page gives no warranty of accuracy and implies no endorsement; person-named practices are not copied; decided on delegation on 2026-11-10 (Q50)",
     attribution:
@@ -330,8 +308,6 @@ export const VRDB_SOURCES: readonly VrdbSourceDefinition[] = [
     listName: "UK OFSI financial sanctions enforcement notices",
     category: "legal_regulatory",
     mode: "mirror",
-    schedule: "18 10 * * 3",
-    staleAfterHours: 192,
     licence:
       "Open Government Licence v3.0 (https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/): the GOV.UK search metadata of OFSI's penalty and disclosure notices (title, short description, date); personal data excluded (Q52)",
     attribution:
@@ -347,8 +323,6 @@ export const VRDB_SOURCES: readonly VrdbSourceDefinition[] = [
     listName: "AI Hallucination Cases database",
     category: "ai_specific",
     mode: "mirror",
-    schedule: "25 15 * * *",
-    staleAfterHours: STALE_AFTER_HOURS,
     licence:
       "CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/), stated on the database page and in the export's x-license and link headers; the site's Content-Signal ai-train=no is honoured: the data never trains or fine-tunes a model (Q39)",
     attribution:
@@ -363,8 +337,6 @@ export const VRDB_SOURCES: readonly VrdbSourceDefinition[] = [
     listName: "FTC civil penalty case list",
     category: "legal_regulatory",
     mode: "mirror",
-    schedule: "55 4 * * 2",
-    staleAfterHours: 192,
     licence:
       "CC0 1.0 (https://creativecommons.org/publicdomain/zero/1.0/), as FTC's data.json states for the dataset 'FTC Bureau of Consumer Protection Penalty Actions'; FTC website policy: attribution where feasible, no implied endorsement, the FTC seal not used; names of natural persons are not copied",
     attribution:
@@ -379,8 +351,6 @@ export const VRDB_SOURCES: readonly VrdbSourceDefinition[] = [
     listName: "PipeRoll Agent Incident Registry",
     category: "ai_specific",
     mode: "mirror",
-    schedule: "21 11 * * *",
-    staleAfterHours: STALE_AFTER_HOURS,
     licence:
       "CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/): the registry's incident records and exports, per its incidents/LICENSE (the repository's MIT licence covers the tooling only); the AIID cross-references (aiid_incident_id) are not used; accepted on 2026-11-10 (Q38)",
     attribution:
@@ -395,8 +365,6 @@ export const VRDB_SOURCES: readonly VrdbSourceDefinition[] = [
     listName: "European Commission antitrust, cartel and DMA case data",
     category: "legal_regulatory",
     mode: "mirror",
-    schedule: "51 17 * * 1",
-    staleAfterHours: 192,
     licence:
       "Commission reuse notice (Decision 2011/833/EU); CC BY 4.0 per the Commission's legal notice (https://commission.europa.eu/legal-notice_en): the antitrust, cartel and DMA case files of DG Competition's open data only (no merger, state-aid or foreign-subsidy file, no attachment, press release or timeline text); person-shaped names of non-cartel antitrust cases dropped; accepted on delegation on 2026-11-10 (Q45)",
     attribution:
@@ -412,8 +380,6 @@ export const VRDB_SOURCES: readonly VrdbSourceDefinition[] = [
     listName: "disclose.io vulnerability disclosure program list",
     category: "security_incidents",
     mode: "mirror",
-    schedule: "8 20 * * 6",
-    staleAfterHours: 192,
     licence:
       "CC0 1.0 per the diodb LICENSE file (GitHub: CC0-1.0); the README's License section says CC BY 4.0, so the list is attributed as CC BY 4.0 requires; contact e-mails and contact URLs are not copied; decided on delegation on 2026-11-10 (Q49)",
     attribution:
@@ -428,8 +394,6 @@ export const VRDB_SOURCES: readonly VrdbSourceDefinition[] = [
     listName: "UK Competition and Markets Authority cases",
     category: "legal_regulatory",
     mode: "mirror",
-    schedule: "16 8 * * 2",
-    staleAfterHours: 192,
     licence:
       "Open Government Licence v3.0 (https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/): the GOV.UK search metadata of the CMA case pages (title, case type, state, outcome, dates); case documents, party submissions and personal data are excluded (Q52)",
     attribution:
@@ -444,8 +408,6 @@ export const VRDB_SOURCES: readonly VrdbSourceDefinition[] = [
     listName: "Government of Canada AI Register",
     category: "ai_specific",
     mode: "mirror",
-    schedule: "31 20 * * 1",
-    staleAfterHours: 192,
     licence:
       "Open Government Licence - Canada 2.0 (https://open.canada.ca/en/open-government-licence-canada): the dataset record's licence (ca-ogl-lgo); personal information, third-party rights and official symbols are outside it and are not used; accepted on 2026-11-10 (Q40)",
     attribution:
@@ -460,8 +422,6 @@ export const VRDB_SOURCES: readonly VrdbSourceDefinition[] = [
     listName: "FTC nonmerger enforcement action list",
     category: "legal_regulatory",
     mode: "mirror",
-    schedule: "57 4 * * 4",
-    staleAfterHours: 192,
     licence:
       "CC0 1.0 (https://creativecommons.org/publicdomain/zero/1.0/), as FTC's data.json and catalog.data.gov state for 'FTC Nonmerger Enforcement Actions'; FTC website policy: attribution where feasible, no implied endorsement, the FTC seal not used",
     attribution:
@@ -476,8 +436,6 @@ export const VRDB_SOURCES: readonly VrdbSourceDefinition[] = [
     listName: "US federal AI use case inventory",
     category: "ai_specific",
     mode: "mirror",
-    schedule: "33 21 * * 2",
-    staleAfterHours: 192,
     licence:
       "None published; a work of the US Government (17 U.S.C. §105) compiled by the Office of Management and Budget from the agencies' public inventories; contact_email and the agencies' and contractors' free text are not used; accepted on 2026-11-10 in the way of Q31 and Q33 (Q41)",
     attribution:
@@ -492,8 +450,6 @@ export const VRDB_SOURCES: readonly VrdbSourceDefinition[] = [
     listName: "Colombia SIC consumer protection sanctions list",
     category: "legal_regulatory",
     mode: "mirror",
-    schedule: "4 3 * * 3",
-    staleAfterHours: 192,
     licence:
       "CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/), as datos.gov.co states for dataset 73dx-n59j; MinTIC portal terms: cite 'Fuente: Portal de Datos Abiertos www.datos.gov.co' with the data's update date and do not distort the meaning; rows naming natural persons are not copied; adapted records are shared under CC BY-SA 4.0; decided on delegation on 2026-11-10 (Q47)",
     attribution:
@@ -508,8 +464,6 @@ export const VRDB_SOURCES: readonly VrdbSourceDefinition[] = [
     listName: "UK Algorithmic Transparency Records",
     category: "ai_specific",
     mode: "mirror",
-    schedule: "14 5 * * 1",
-    staleAfterHours: 192,
     licence:
       "Open Government Licence v3.0 (https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/): GOV.UK states that all its content is available under the OGL v3.0 except where otherwise stated, and no record states otherwise; records by bodies that are not Crown bodies (local authorities, 13 of 155) rely on that statement; contact e-mail addresses, named officials, linked documents and logos are excluded; accepted on 2026-11-10 (Q51)",
     attribution:
@@ -524,8 +478,6 @@ export const VRDB_SOURCES: readonly VrdbSourceDefinition[] = [
     listName: "NHTSA recalls file",
     category: "legal_regulatory",
     mode: "mirror",
-    schedule: "3 9 * * *",
-    staleAfterHours: STALE_AFTER_HOURS,
     licence:
       "Public Domain U.S. Government (DOT data catalogue tag on NHTSA's dataset); a work of the US Government (17 U.S.C. §105), accepted in the way of Q31 on 2026-11-10; the manufacturer-supplied fields 25 to 27 and the Part 573 texts are not used (Q36)",
     attribution:
@@ -540,8 +492,6 @@ export const VRDB_SOURCES: readonly VrdbSourceDefinition[] = [
     listName: "Foundation Model Transparency Index",
     category: "ai_specific",
     mode: "mirror",
-    schedule: "45 21 * * 5",
-    staleAfterHours: 192,
     licence:
       "CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/): the stanford-crfm/fmti repository's LICENSE.md (the README says CC-BY); the December 2025 scores file only; the transparency reports in the repository are not used; accepted on 2026-11-10 (Q44)",
     attribution:
@@ -556,8 +506,6 @@ export const VRDB_SOURCES: readonly VrdbSourceDefinition[] = [
     listName: "UK MHRA field safety notice lists",
     category: "legal_regulatory",
     mode: "mirror",
-    schedule: "22 22 * * 4",
-    staleAfterHours: 192,
     licence:
       "Open Government Licence v3.0 (https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/): the MHRA's weekly field safety notice list pages on GOV.UK; the manufacturers' attached field safety notices (third-party documents) are not read or copied (Q52)",
     attribution:
@@ -573,8 +521,6 @@ export const VRDB_SOURCES: readonly VrdbSourceDefinition[] = [
     listName: "Dutch Algorithm Register",
     category: "ai_specific",
     mode: "mirror",
-    schedule: "37 22 * * 3",
-    staleAfterHours: 192,
     licence:
       "No named licence: reuse permitted by the register's copyright page (https://algoritmes.overheid.nl/nl/footer/copyright: 'De inhoud van deze website mag worden hergebruikt'); the EUPL-1.2 covers only the register's code; contact fields not used; accepted on 2026-11-10 as a new precedent, pending the owner's confirmation (Q42)",
     attribution:
@@ -589,8 +535,6 @@ export const VRDB_SOURCES: readonly VrdbSourceDefinition[] = [
     listName: "NHTSA defect investigations file",
     category: "legal_regulatory",
     mode: "mirror",
-    schedule: "1 10 * * *",
-    staleAfterHours: STALE_AFTER_HOURS,
     licence:
       "Public Domain U.S. Government (DOT data catalogue tag on NHTSA's dataset); a work of the US Government (17 U.S.C. §105), accepted in the way of Q31 on 2026-11-10 (Q35)",
     attribution:
@@ -605,8 +549,6 @@ export const VRDB_SOURCES: readonly VrdbSourceDefinition[] = [
     listName: "FedRAMP Marketplace data",
     category: "certifications",
     mode: "mirror",
-    schedule: "6 19 * * *",
-    staleAfterHours: STALE_AFTER_HOURS,
     licence:
       "None published; a work of the US General Services Administration (17 U.S.C. §105) in GSA's FedRAMP/marketplace-fedramp-gov-data repository: only GSA's status fields are copied (provider, offering, status and its date, impact level, authorisation type, agency count, UEI); the host of each offering's website is used as a match key only and never shown; logos, provider descriptions and contact data are not copied; decided on delegation on 2026-11-10 (Q48)",
     attribution:
@@ -621,8 +563,6 @@ export const VRDB_SOURCES: readonly VrdbSourceDefinition[] = [
     listName: "Epoch AI Data on AI Models",
     category: "ai_specific",
     mode: "mirror",
-    schedule: "39 23 * * 4",
-    staleAfterHours: 192,
     licence:
       "Creative Commons Attribution (Epoch AI's data pages: 'free to use, distribute, and reproduce provided the source and authors are credited'; version 4.0 on the AI companies page, unstated on the AI models documentation): the AI models dataset; accepted on 2026-11-10 (Q43)",
     attribution:
@@ -637,8 +577,6 @@ export const VRDB_SOURCES: readonly VrdbSourceDefinition[] = [
     listName: "C2PA Conforming Products List",
     category: "certifications",
     mode: "mirror",
-    schedule: "49 16 * * *",
-    staleAfterHours: STALE_AFTER_HOURS,
     licence:
       "CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/): the c2pa-org/conformance-public repository's LICENSE; the C2PA name and marks are not licensed and are used only to name the source",
     attribution:
@@ -692,6 +630,10 @@ export function vrdbSourceOf(id: VrdbSourceId): VrdbSourceDefinition {
   return found;
 }
 
+/** How long after its last success a list is out of date (`vrdb_sources.stale_after_hours`). */
+export const staleAfterHoursOf = (definition: VrdbSourceDefinition): number =>
+  isMirror(definition) ? BUNDLED_STALE_AFTER_HOURS : definition.staleAfterHours;
+
 /** True when the copy of a list is out of date: never made, or older than its limit. */
 export function isStale(
   definition: VrdbSourceDefinition,
@@ -699,5 +641,5 @@ export function isStale(
   now: Date,
 ): boolean {
   if (lastSuccessAt === null) return true;
-  return now.getTime() - lastSuccessAt.getTime() > definition.staleAfterHours * 3_600_000;
+  return now.getTime() - lastSuccessAt.getTime() > staleAfterHoursOf(definition) * 3_600_000;
 }

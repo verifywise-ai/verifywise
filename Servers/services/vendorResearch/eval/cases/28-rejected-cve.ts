@@ -37,7 +37,7 @@ const catalog = kevConnector.parse({
 
 /**
  * Worked case 10 of the spec (D5.7): a CVE that its list no longer stands by. In M1 the copy of the
- * CISA catalog marks an entry the catalog dropped `withdrawn` (vrdb/sync.ts); a CVE that the CVE
+ * CISA catalog marks an entry the catalog dropped `withdrawn` (vrdb/loadBundled.ts); a CVE that the CVE
  * Program rejects becomes `rejected` with the CVE mirror of M2, and is offered no more than this.
  *
  * The catalog listed a flaw in the firmware of Larkspur Systems' gateways and then took the entry

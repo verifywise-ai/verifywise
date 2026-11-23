@@ -29,7 +29,7 @@ const list = ofacConnector.parse({
 
 /**
  * Worked case 11 of the spec (D5.7): a sanctions entry that its list no longer holds. The entity is
- * missing from today's full file, so the sync made it `delisted` on the day it went (vrdb/sync.ts).
+ * missing from today's full file, so the load of the new bundle made it `delisted` (vrdb/loadBundled.ts).
  *
  * An entity of the name of Harrowgate Freight was on the OFAC list and was taken off it. A run after
  * that is not offered the record, and the news has nothing, so it reports nothing. While the list

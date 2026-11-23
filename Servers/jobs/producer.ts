@@ -5,7 +5,7 @@ import {
   removeRetiredSlackPolicyScheduler,
 } from "../services/slack/slackProducer";
 import { scheduleVendorResearchScan } from "../services/vendorResearch/queue";
-import { scheduleVendorRiskDatabaseSync } from "../services/vendorResearch/vrdb/queue";
+import { scheduleVendorRiskDatabaseLoad } from "../services/vendorResearch/vrdb/queue";
 import logger from "../utils/logger/fileLogger";
 import { removeLegacyRepeatableJobs } from "./legacyRepeatableJobs";
 import {
@@ -101,7 +101,7 @@ export async function addAllJobs(): Promise<void> {
   await safeSchedule("stale-inheritance-notify-sweep", scheduleStaleInheritanceNotifySweep);
   await safeSchedule("approval-overdue-sweep", scheduleApprovalOverdueSweep);
   await safeSchedule("vendor-research-scan", scheduleVendorResearchScan);
-  await safeSchedule("vendor-risk-database-sync", scheduleVendorRiskDatabaseSync); // removes its schedulers while VENDOR_RESEARCH_RECORDS is false
+  await safeSchedule("vendor-risk-database-load", scheduleVendorRiskDatabaseLoad); // loads the bundled lists; nothing while VENDOR_RESEARCH_RECORDS is false
   await safeSchedule("ai-trust-index-sync", scheduleAiTrustIndexSync);
   await safeSchedule("extension-sync-tick", scheduleExtensionSyncTick);
 }

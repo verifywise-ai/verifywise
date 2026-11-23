@@ -62,7 +62,7 @@ export type RecordSourceId = (typeof RECORD_SOURCE_IDS)[number];
  * The lists the vendor risk database mirrors, and the databases it reads through (the NVD, the
  * SEC), in services/vendorResearch/vrdb: their records are looked up in the database, not on the
  * web, unless an operator turned the records off (VENDOR_RESEARCH_RECORDS). A list behind a closed
- * gate (vrdb/gates.ts) is neither copied nor looked up. Q4 (sec) and Q7 (cve) are open, so only
+ * gate (vrdb/gates.ts) is neither bundled nor looked up. Q4 (sec) and Q7 (cve) are open, so only
  * un_sanctions (Q6) and aiid (Q29) wait for their gates. The AI-specific lists are aiid (the AI
  * Incident Database), atlas (MITRE ATLAS case studies), nhtsa_sgo (NHTSA's crash reports of
  * automated driving and driver assistance systems), fda_ai_devices (the FDA's list of

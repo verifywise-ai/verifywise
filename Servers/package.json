@@ -10,6 +10,7 @@
     "smoke:api-contract": "ts-node --transpile-only scripts/apiContractSmoke.ts",
     "generate:enum-manifest": "ts-node --transpile-only scripts/generateEnumManifest.ts",
     "eval:vendor-research": "ts-node --transpile-only scripts/evalVendorResearch.ts",
+    "vrdb:bundle": "ts-node --transpile-only scripts/vrdbBundle.ts",
     "check:enum-drift": "npm run generate:enum-manifest && ts-node --transpile-only scripts/checkEnumLabelDrift.ts",
     "pretest:unit": "npm run build:tokens",
     "test": "npm run test:unit",

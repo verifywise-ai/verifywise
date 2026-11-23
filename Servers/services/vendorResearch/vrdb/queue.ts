@@ -1,76 +1,60 @@
 /**
- * The queue of the vendor risk database (spec D4.7): the syncs of the mirrored lists, one job per
- * list and sync, and the status job of a list whose records changed status (relabel.ts, Ruling 12
- * of the M2 plan), taken one at a time by the worker of worker.ts. A queue of its own, as the
- * research has one (R28): a sync downloads tens of megabytes and must not hold the places of the
- * automations, and this queue is never emptied.
+ * The queue of the vendor risk database: the load of the bundled lists (loadBundled.ts) and the
+ * status job of a list whose records changed status (relabel.ts, Ruling 12 of the M2 plan), taken
+ * one at a time by the worker of worker.ts. A queue of its own, as the research has one (R28), and
+ * never emptied.
  *
- * One BullMQ scheduler per active list, at the list's own minute (vrdb/sources.ts), in UTC. The
- * backend registers them at startup (jobs/producer.ts) while the records are on
- * (VENDOR_RESEARCH_RECORDS; the database has no switch of its own), and removes them otherwise, so
- * turning the records off stops every download; a list behind a closed gate (gates.ts) has no
- * scheduler either. An upsert by id changes nothing when the scheduler exists, so every start can
- * call it. An active list that was never copied gets a first sync at once as well, so that a new
- * deployment does not leave the runs without it until its scheduler's next minute, up to six hours
- * later. A list read by its changes (the CVE records) gets none: its first copy is a baseline that
- * an operator loads (scripts/vrdbCveBaseline.ts), and a sync before that is refused as
- * `no_baseline`.
+ * Nothing is downloaded: each release ships the lists as bundles (bundle.ts). At every start the
+ * backend (jobs/producer.ts) queues one load job while the records are on (VENDOR_RESEARCH_RECORDS);
+ * the job writes only the bundles that are new since the last start. It also removes the per-list
+ * sync schedulers that builds before the bundles registered, so that no deployment keeps
+ * downloading after an upgrade.
  */
 import { type JobsOptions, Queue } from "bullmq";
-import type { VrdbSourceId } from "../../../domain.layer/interfaces/i.vendorResearch";
+import {
+  VRDB_SOURCE_IDS,
+  type VrdbSourceId,
+} from "../../../domain.layer/interfaces/i.vendorResearch";
 import { REDIS_URL } from "../../../database/redis";
-import logger from "../../../utils/logger/fileLogger";
-import { getVrdbSourceStatesQuery } from "../../../utils/vrdb.utils";
 import { type VendorResearchConfig, getVendorResearchConfig } from "../config";
-import { VRDB_SOURCES, activeMirrors, isMirror } from "./sources";
-import type { VrdbSourceState } from "./types";
 
-/** The name of the queue of the syncs. The producer and the worker must agree on it. */
+/** The name of the queue. The producer and the worker must agree on it. */
 export const VRDB_QUEUE = "vendor-risk-database";
 
-/** The job name of the sync of one list, `{ sourceId }`. */
-export const VRDB_SYNC_JOB = "vrdb_sync";
+/** The job name of the load of the bundled lists; it carries no data. */
+export const VRDB_LOAD_JOB = "vrdb_load";
 
 /** The job name of the status job of one list, `{ sourceId }` (relabel.ts). */
 export const VRDB_RELABEL_JOB = "vrdb_relabel";
 
 /**
- * A failed sync is tried again three times, a minute apart and then more: a list's host that is
- * down for a moment should not leave the copy a sync older. Settled jobs are not kept.
+ * A failed job is tried again three times, a minute apart and then more: the database may be busy
+ * at start. Settled jobs are not kept.
  */
-export const VRDB_SYNC_JOB_OPTIONS: JobsOptions = {
+export const VRDB_JOB_OPTIONS: JobsOptions = {
   attempts: 3,
   backoff: { type: "exponential", delay: 60_000 },
   removeOnComplete: true,
   removeOnFail: true,
 };
 
-/**
- * A failed status job is tried again as a failed sync is. A settled one is not kept either: nothing
- * reads it, and BullMQ ends its deduplication when it settles (see `vrdbRelabelJobId`).
- */
-export const VRDB_RELABEL_JOB_OPTIONS: JobsOptions = VRDB_SYNC_JOB_OPTIONS;
-
 export const vrdbQueue = new Queue(VRDB_QUEUE, { connection: { url: REDIS_URL } });
 
-/** The id of the scheduler of a list; no colon, as no scheduler id of the code base has one. */
-export const vrdbSchedulerId = (id: VrdbSourceId): string => `vrdb_sync_${id}`;
+/** The id of the sync scheduler that builds before the bundles registered for a list. */
+export const legacySyncSchedulerId = (id: VrdbSourceId): string => `vrdb_sync_${id}`;
 
 /**
- * The id of the first sync of a list that was never copied. BullMQ adds nothing while a job of the
- * id is waiting or running, so two starts in a row queue one sync.
+ * The deduplication id of the load job: while one waits or runs, the load another replica's start
+ * adds is dropped. A load writes only what changed, so a second one would only read the bundles.
  */
-export const vrdbFirstSyncJobId = (id: VrdbSourceId): string => `vrdb_sync_first_${id}`;
+export const VRDB_LOAD_DEDUPLICATION_ID = "vrdb_load";
 
 /**
  * The deduplication id of the status job of a list. While a job of the list waits, an add is
- * dropped: the waiting job reads the findings when it starts, so the changes of several syncs are
- * relabeled by one job. While one runs, an add is kept as the next job of the list (BullMQ's
- * `keepLastIfActive`), which BullMQ queues when the running one ends: the running job may have read
- * the findings before the change was written, and a status job dropped then would leave the label
- * stale until the next change of the list. So at most one runs and one waits per list. It is no job
- * id: BullMQ drops an add whose job id exists before it looks at the deduplication, the running
- * job's included.
+ * dropped: the waiting job reads the findings when it starts. While one runs, an add is kept as the
+ * next job of the list (BullMQ's `keepLastIfActive`): the running job may have read the findings
+ * before the change was written. It is no job id: BullMQ drops an add whose job id exists before it
+ * looks at the deduplication, the running job's included.
  */
 export const vrdbRelabelJobId = (id: VrdbSourceId): string => `vrdb_relabel_${id}`;
 
@@ -83,74 +67,29 @@ export async function enqueueRelabel(
     VRDB_RELABEL_JOB,
     { sourceId },
     {
-      ...VRDB_RELABEL_JOB_OPTIONS,
+      ...VRDB_JOB_OPTIONS,
       deduplication: { id: vrdbRelabelJobId(sourceId), keepLastIfActive: true },
     },
   );
 }
 
-/** Whether the lists are mirrored: unless the records are off, which is the only switch. */
-export const vrdbSyncsOn = (config: Pick<VendorResearchConfig, "records">): boolean =>
+/** Whether the lists are loaded: unless the records are off, which is the only switch. */
+export const vrdbRecordsOn = (config: Pick<VendorResearchConfig, "records">): boolean =>
   config.records;
 
-/** The name of an error, for a log line: its message can carry a query. */
-function errorName(error: unknown): string {
-  return error instanceof Error && /^[A-Za-z_$][\w$.]{0,59}$/.test(error.name)
-    ? error.name
-    : "unknown";
-}
-
 /**
- * Upserts the scheduler of every active list while the syncs are on, and queues a first sync of
- * every active list that has no copy yet and is copied whole, not read by its changes; removes the
- * schedulers of the other lists, and of every list while the syncs are off. A failure to read the
- * lists' states is logged and queues nothing: the schedulers sync them at their minutes. `config`,
- * `queue` and `sourceStates` are for the tests.
+ * Removes the sync schedulers of earlier builds, and queues the load of the bundles while the
+ * records are on. `config` and `queue` are for the tests.
  */
-export async function scheduleVendorRiskDatabaseSync(
+export async function scheduleVendorRiskDatabaseLoad(
   config: VendorResearchConfig = getVendorResearchConfig(),
-  queue: Pick<Queue, "upsertJobScheduler" | "removeJobScheduler" | "add"> = vrdbQueue,
-  sourceStates: (
-    ids: readonly VrdbSourceId[],
-  ) => Promise<VrdbSourceState[]> = getVrdbSourceStatesQuery,
+  queue: Pick<Queue, "removeJobScheduler" | "add"> = vrdbQueue,
 ): Promise<void> {
-  const active = vrdbSyncsOn(config) ? activeMirrors() : [];
-  for (const definition of VRDB_SOURCES.filter(isMirror)) {
-    const schedulerId = vrdbSchedulerId(definition.id);
-    if (active.includes(definition)) {
-      await queue.upsertJobScheduler(
-        schedulerId,
-        { pattern: definition.schedule, tz: "UTC" },
-        { name: VRDB_SYNC_JOB, data: { sourceId: definition.id }, opts: VRDB_SYNC_JOB_OPTIONS },
-      );
-    } else {
-      await queue.removeJobScheduler(schedulerId);
-    }
-  }
-  if (active.length === 0) return;
-
-  let states: VrdbSourceState[];
-  try {
-    states = await sourceStates(active.map((definition) => definition.id));
-  } catch (error) {
-    logger.warn(
-      `vendor risk database: the states of the lists could not be read, so no first sync was queued (error ${errorName(error)})`,
-    );
-    return;
-  }
-  for (const definition of active) {
-    // A list read by its changes gets its first copy from its baseline (scripts/vrdbCveBaseline.ts),
-    // which an operator loads once. Without a cursor a sync of it is refused as no_baseline, so a
-    // first sync would only record a failed sync at every start.
-    if (definition.missingStatus === null) continue;
-    const copied = states.some(
-      (state) => state.id === definition.id && state.lastSuccessAt !== null,
-    );
-    if (copied) continue;
-    await queue.add(
-      VRDB_SYNC_JOB,
-      { sourceId: definition.id },
-      { ...VRDB_SYNC_JOB_OPTIONS, jobId: vrdbFirstSyncJobId(definition.id) },
-    );
-  }
+  for (const id of VRDB_SOURCE_IDS) await queue.removeJobScheduler(legacySyncSchedulerId(id));
+  if (!vrdbRecordsOn(config)) return;
+  await queue.add(
+    VRDB_LOAD_JOB,
+    {},
+    { ...VRDB_JOB_OPTIONS, deduplication: { id: VRDB_LOAD_DEDUPLICATION_ID } },
+  );
 }

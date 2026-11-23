@@ -22,8 +22,8 @@
  *   the product owner on 2026-10-31, without a separate legal review, and the product owner
  *   permitted the download of the baseline file. The Terms let anyone copy the records on one
  *   condition, that every copy reproduces MITRE's copyright designation and the licence, which the
- *   cve row of vrdb_sources holds (sources.ts). The first copy is a baseline that an operator loads
- *   once, with scripts/vrdbCveBaseline.ts; the daily sync reads the changes from it on.
+ *   cve row of vrdb_sources holds (sources.ts). The bundler (scripts/vrdbBundle.ts) builds the
+ *   copy from a baseline file and rolls it forward by the daily changes; the release ships it.
  * - Q29, the AI Incident Database (aiid): the written confirmation of its operator, the Responsible
  *   AI Collaborative (info@incidentdatabase.ai), that a commercial product may store the weekly
  *   export and show records derived from it under CC BY-SA 4.0, or the product owner's explicit

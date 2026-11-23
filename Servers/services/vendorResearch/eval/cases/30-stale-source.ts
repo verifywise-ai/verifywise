@@ -8,19 +8,19 @@ const SITE = "https://tamsinrobotics.example";
 const catalog = kevConnector.parse({
   bodies: [
     JSON.stringify({
-      catalogVersion: "2026.10.07",
+      catalogVersion: "2026.07.30",
       vulnerabilities: [
         {
           cveID: "CVE-2026-30001",
           vendorProject: "Tamsin Robotics",
           product: "TamsinOS",
           vulnerabilityName: "Tamsin Robotics TamsinOS Missing Authentication Vulnerability",
-          dateAdded: "2026-09-15",
+          dateAdded: "2026-07-15",
           shortDescription:
             "TamsinOS contains a missing authentication vulnerability in its fleet API that allows a remote attacker to send commands to the robots.",
           requiredAction:
             "Apply mitigations per vendor instructions or discontinue use of the product if mitigations are unavailable.",
-          dueDate: "2026-10-06",
+          dueDate: "2026-08-05",
           knownRansomwareCampaignUse: "Unknown",
         },
       ],
@@ -32,10 +32,10 @@ const catalog = kevConnector.parse({
 });
 
 /**
- * Worked case 12 of the spec (D5.7): a list whose copy is out of date. The syncs of the CISA
- * catalog and of the OFAC list have failed for three days, so both copies are older than the 48
- * hours after which a copy is stale (vrdb/sources.ts); the catalog's copy still holds the entry of
- * Tamsin Robotics' fleet software.
+ * Worked case 12 of the spec (D5.7): a list whose copy is out of date. The deployment was not
+ * upgraded for ten weeks, so the bundles of the CISA catalog and of the OFAC list are older than the
+ * 60 days after which a bundled list is stale (BUNDLED_STALE_AFTER_HOURS, vrdb/sources.ts); the
+ * catalog's copy still holds the entry of Tamsin Robotics' fleet software.
  *
  * The label stays: the record is offered and the finding is High, as the record is official and
  * names the vendor's product, and the line says the day of the copy and that it is not up to date.
@@ -72,8 +72,8 @@ export const STALE_SOURCE: EvalCase = {
     vrdb: {
       rows: rowsOf("kev", catalog.records, 3001),
       states: copies({
-        kev: { lastSuccessAt: new Date("2026-10-07T09:23:00Z"), lastOutcome: "failed" },
-        ofac: { lastSuccessAt: new Date("2026-10-07T09:41:00Z"), lastOutcome: "failed" },
+        kev: { lastSuccessAt: new Date("2026-07-31T09:23:00Z"), lastOutcome: "failed" },
+        ofac: { lastSuccessAt: new Date("2026-07-31T09:41:00Z"), lastOutcome: "failed" },
       }),
     },
     analysis: {

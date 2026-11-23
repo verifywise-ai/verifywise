@@ -1,7 +1,7 @@
 /**
  * The vendor risk database (VRDB, spec D4): local copies of public lists (the CISA catalog of known
- * exploited vulnerabilities and three sanctions lists), brought up to date by a scheduled job and
- * looked up by a research run instead of the web, unless VENDOR_RESEARCH_RECORDS=false (the only
+ * exploited vulnerabilities, sanctions lists and more), shipped with each release as bundles
+ * (bundle.ts), loaded at start, and looked up by a research run instead of the web, unless VENDOR_RESEARCH_RECORDS=false (the only
  * switch). A record is matched to a vendor by keys (keys.ts), never by a model.
  */
 import type {

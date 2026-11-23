@@ -21,8 +21,7 @@ import {
   type Validators,
 } from "../../../../webResearch/guardedFetch";
 import { type WriterEntry, writeZip } from "../../__tests__/helpers/zipWriter";
-import { type SyncStore, syncSource } from "../../sync";
-import type { ParsedRecord, VrdbSnapshotWrite } from "../../types";
+import type { ParsedRecord } from "../../types";
 import { ZipError } from "../../zip";
 import {
   AIID_EXPORT_HOST,
@@ -32,7 +31,13 @@ import {
   aiidConnector,
   aiidDescriptionOf,
 } from "../aiid";
-import { BodyTooLargeError, type ConnectorFetch, type Snapshot } from "../types";
+import {
+  BodyTooLargeError,
+  type ConnectorFetch,
+  FeedWithoutFileError,
+  NotTheListError,
+  type Snapshot,
+} from "../types";
 
 const PAGE = fs.readFileSync(path.join(__dirname, "fixtures/aiid-snapshots.html"), "utf8");
 const XLSX_TYPE = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
@@ -1558,113 +1563,56 @@ describe("aiidConnector.download", () => {
   });
 });
 
-// ---- the sync ---------------------------------------------------------------------------------
+// ---- the list as the bundler reads it ----------------------------------------------------------
 
-describe("aiidConnector in the sync", () => {
-  /** The queries of the sync in memory, as much as a sync of a list taken whole uses. */
-  function memoryStore(etag: string | null = null) {
-    const applied: VrdbSnapshotWrite[] = [];
-    const finished: Array<{ outcome: string; errorCode?: string }> = [];
-    const store: SyncStore = {
-      upsertVrdbSourceQuery: async () => undefined,
-      getVrdbSourceStatesQuery: async () =>
-        etag === null
-          ? []
-          : [
-              {
-                id: "aiid",
-                lastSuccessAt: new Date("2026-11-04T04:11:00Z"),
-                lastOutcome: "ok",
-                sourceVersion: DATE,
-                etag,
-                lastModified: "Mon, 02 Nov 2026 10:04:27 GMT",
-                activeRecords: 3,
-              },
-            ],
-      lastSuccessfulHashQuery: async () => null,
-      startVrdbSyncRunQuery: async () => 1,
-      finishVrdbSyncRunQuery: async (_run, result) => {
-        finished.push(result);
-      },
-      applyVrdbSnapshotQuery: async (input) => {
-        applied.push(input);
-        return {
-          seen: input.records.length,
-          inserted: input.records.length,
-          updated: 0,
-          statusChanged: 0,
-        };
-      },
-      applyVrdbDeltaQuery: async () => {
-        throw new Error("a list taken whole has no delta");
-      },
-      markVrdbSourceQuery: async () => undefined,
-      pruneVrdbSyncRunsQuery: async () => undefined,
-    };
-    return { store, applied, finished };
+describe("aiidConnector read as a list for its bundle", () => {
+  /**
+   * The download and the parse of the list, judged as the bundler judges a list taken whole
+   * (scripts/vrdbBundle.ts): a file that is not the list, one that parses with errors and an empty
+   * one are refused, each under the code the copy used to note for it.
+   */
+  async function readList(fetch: ConnectorFetch) {
+    let snapshot: Snapshot;
+    let parsed: ReturnType<typeof aiidConnector.parse>;
+    try {
+      const downloaded = await aiidConnector.download(fetch, { etag: null, lastModified: null });
+      if (downloaded === "unchanged") return { code: "unchanged" } as const;
+      snapshot = downloaded;
+      // The sheet is read by the parse, which refuses a sheet past its limits as the download does.
+      parsed = aiidConnector.parse(snapshot);
+    } catch (error) {
+      if (error instanceof BodyTooLargeError) return { code: "too_large" } as const;
+      if (error instanceof FeedWithoutFileError) return { code: "feed_without_file" } as const;
+      if (error instanceof NotTheListError) return { code: "wrong_root" } as const;
+      if (error instanceof ZipError) {
+        if (error.code === "too_large") return { code: "too_large" } as const;
+        return { code: error.code === "not_zip" ? "wrong_root" : "parse_errors" } as const;
+      }
+      throw error;
+    }
+    if (parsed.root === null) return { code: "wrong_root" } as const;
+    if (parsed.errors > 0) return { code: "parse_errors" } as const;
+    if (parsed.records.length === 0) return { code: "empty" } as const;
+    return { code: "ok", snapshot, parsed } as const;
   }
 
-  async function run(fetch: ConnectorFetch, etag: string | null = null) {
-    const memory = memoryStore(etag);
-    const outcome = await syncSource("aiid", {
-      store: memory.store,
-      connector: aiidConnector,
-      fetch,
-      now: () => new Date("2026-11-05T12:00:00Z"),
-    });
-    return { outcome, ...memory };
-  }
-
-  it("applies the incidents of the export, with its date as the version and its validators", async () => {
+  it("reads the incidents of the export, with its date as the version and its validators", async () => {
     const file = workbookZip([incident(), incident(), incident()]);
 
-    const { outcome, applied } = await run(server(file).fetch);
+    const read = await readList(server(file).fetch);
 
-    expect(outcome).toEqual({
-      outcome: "ok",
-      counts: { seen: 3, inserted: 3, updated: 0, statusChanged: 0 },
-    });
-    expect(applied).toHaveLength(1);
-    expect(applied[0]).toMatchObject({
-      sourceId: "aiid",
-      missingStatus: "withdrawn",
-      sourceVersion: DATE,
-      // The sync stores the etag behind the version of the connector that read the file.
-      etag: `cv${aiidConnector.version}:"export-1"`,
+    expect(read.code).toBe("ok");
+    if (read.code !== "ok") return;
+    expect(read.snapshot).toMatchObject({
+      etag: '"export-1"',
       lastModified: "Mon, 02 Nov 2026 10:04:27 GMT",
     });
-    expect(applied[0].records.map((record) => record.recordType)).toEqual([
+    expect(read.parsed.sourceVersion).toBe(DATE);
+    expect(read.parsed.records.map((record) => record.recordType)).toEqual([
       "ai_incident",
       "ai_incident",
       "ai_incident",
     ]);
-  });
-
-  it("answers unchanged on a 304 to the validators this version stored", async () => {
-    const fetch: ConnectorFetch = async (url) =>
-      url === AIID_SNAPSHOTS_URL ? answer(PAGE, { url }) : { notModified: true, url };
-
-    const { outcome, applied } = await run(fetch, `cv${aiidConnector.version}:"export-1"`);
-
-    expect(outcome).toEqual({ outcome: "unchanged" });
-    expect(applied).toEqual([]);
-  });
-
-  it("fails a 304 as fetch_failed when no validator was sent: another version stored them", async () => {
-    const sent: unknown[] = [];
-    const fetch: ConnectorFetch = async (url, validators) => {
-      if (url === AIID_SNAPSHOTS_URL) return answer(PAGE, { url });
-      sent.push(validators);
-      return { notModified: true, url };
-    };
-
-    // An OLDER version's marker: a reader leaves a list stored by a newer version alone (round 13),
-    // so the marker of another version that this test needs is the one before the connector's own.
-    const { outcome, applied } = await run(fetch, `cv${aiidConnector.version - 1}:"export-1"`);
-
-    expect(sent).toEqual([{ etag: null, lastModified: null }]);
-    expect(outcome).toEqual({ outcome: "failed", errorCode: "fetch_failed" });
-    expect(applied).toEqual([]);
   });
 
   const cutSheet = (() => {
@@ -1715,23 +1663,23 @@ describe("aiidConnector in the sync", () => {
       () => server(workbookZip([], { sheet: cellSheet("A20001", 20_001) })).fetch,
       "too_large",
     ],
-  ])("fails with a code for %s, and writes nothing", async (_label, fetchOf, code) => {
-    const { outcome, applied, finished } = await run(fetchOf());
+  ])("refuses %s, with the code it was noted under", async (_label, fetchOf, code) => {
+    const read = await readList(fetchOf());
 
-    expect(outcome).toEqual({ outcome: "failed", errorCode: code });
-    expect(applied).toEqual([]);
-    expect(finished[finished.length - 1]).toMatchObject({ outcome: "failed", errorCode: code });
+    expect(read.code).toBe(code);
   });
 
-  it("applies the rows it can read when a few do not parse, within the tolerance", async () => {
+  it("keeps the rows it can read when a few do not parse, within the tolerance", async () => {
     const file = workbookZip([
       ...Array.from({ length: 20 }, () => incident()),
       incident({ title: null }),
     ]);
 
-    const { outcome, applied } = await run(server(file).fetch);
+    const read = await readList(server(file).fetch);
 
-    expect(outcome).toMatchObject({ outcome: "ok", counts: { seen: 20 } });
-    expect(applied[0].records).toHaveLength(20);
+    expect(read.code).toBe("ok");
+    if (read.code !== "ok") return;
+    expect(read.parsed.records).toHaveLength(20);
+    expect(read.parsed.skipped).toBe(1);
   });
 });

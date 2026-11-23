@@ -1,11 +1,12 @@
 /**
  * The lists the vendor risk database mirrors (spec D4, Rulings 1 and 5 of the M1 plan): one
- * definition per VRDB id, with its schedule, its licence and when its copy is out of date; a list
- * behind a closed gate (gates.ts) is neither synced nor looked up. The four AI-specific lists
+ * definition per VRDB id, with its licence and when its copy is out of date (a bundled list 60 days
+ * after its bundle was built, a database read through after its own hours); a list behind a closed
+ * gate (gates.ts) is neither bundled nor looked up. The four AI-specific lists
  * (spec D2.14 to D2.17) are pinned against the sheets of the rulings of 2026-11-05, and the US
  * Consolidated Screening List and the FDA device recalls (spec D2.19, D2.20) against the sheets of
  * the rulings of 2026-11-07, as amended the same day. The 23 lists added on 2026-11-10 are pinned
- * against their sheets below (their licences and attributions, schedules, cadences and statuses):
+ * against their sheets below (their licences, attributions and statuses):
  * no expected value of theirs is read from the registry.
  */
 import { createHash } from "crypto";
@@ -25,8 +26,10 @@ import {
   type VrdbGate,
 } from "../gates";
 import {
+  BUNDLED_STALE_AFTER_HOURS,
   CVE_TERMS_LICENCE,
   type MirrorSource,
+  type ReadThroughSource,
   VRDB_SOURCES,
   activeMirrors,
   activeReadThroughs,
@@ -34,6 +37,7 @@ import {
   cveCopyrightOf,
   isMirror,
   isStale,
+  staleAfterHoursOf,
   vrdbSourceOf,
 } from "../sources";
 
@@ -104,8 +108,6 @@ const NEW_SHEETS = [
     operator: "Global Affairs Canada",
     listName: "Consolidated Canadian Autonomous Sanctions List",
     category: "legal_regulatory",
-    schedule: "2 1 * * *",
-    staleAfterHours: 48,
     missingStatus: "delisted",
     documentationUrl:
       "https://www.international.gc.ca/world-monde/international_relations-relations_internationales/sanctions/consolidated-consolide.aspx?lang=eng",
@@ -120,8 +122,6 @@ const NEW_SHEETS = [
     operator: "the California Department of Justice, Office of the Attorney General",
     listName: "California Attorney General data breach list",
     category: "security_incidents",
-    schedule: "12 7 * * *",
-    staleAfterHours: 48,
     missingStatus: "withdrawn",
     documentationUrl: "https://oag.ca.gov/privacy/databreach/list",
     licence:
@@ -135,8 +135,6 @@ const NEW_SHEETS = [
     operator: "the Office of Financial Sanctions Implementation (HM Treasury)",
     listName: "UK OFSI financial sanctions enforcement notices",
     category: "legal_regulatory",
-    schedule: "18 10 * * 3",
-    staleAfterHours: 192,
     missingStatus: "withdrawn",
     documentationUrl:
       "https://www.gov.uk/government/collections/enforcement-of-financial-sanctions",
@@ -151,8 +149,6 @@ const NEW_SHEETS = [
     operator: "Damien Charlotin (HEC Paris), the database's author",
     listName: "AI Hallucination Cases database",
     category: "ai_specific",
-    schedule: "25 15 * * *",
-    staleAfterHours: 48,
     missingStatus: "withdrawn",
     documentationUrl: "https://www.damiencharlotin.com/hallucinations/",
     licence:
@@ -166,8 +162,6 @@ const NEW_SHEETS = [
     operator: "the US Federal Trade Commission",
     listName: "FTC civil penalty case list",
     category: "legal_regulatory",
-    schedule: "55 4 * * 2",
-    staleAfterHours: 192,
     missingStatus: "withdrawn",
     documentationUrl: "https://www.ftc.gov/data.json",
     licence:
@@ -181,8 +175,6 @@ const NEW_SHEETS = [
     operator: "PipeRoll, an independent registry kept by one editor",
     listName: "PipeRoll Agent Incident Registry",
     category: "ai_specific",
-    schedule: "21 11 * * *",
-    staleAfterHours: 48,
     missingStatus: "withdrawn",
     documentationUrl: "https://piperoll.org/data/",
     licence:
@@ -196,8 +188,6 @@ const NEW_SHEETS = [
     operator: "the European Commission (DG Competition)",
     listName: "European Commission antitrust, cartel and DMA case data",
     category: "legal_regulatory",
-    schedule: "51 17 * * 1",
-    staleAfterHours: 192,
     missingStatus: "withdrawn",
     documentationUrl:
       "https://competition-policy.ec.europa.eu/about/news/dg-competitions-case-data-available-open-data-2025-03-18_en",
@@ -212,8 +202,6 @@ const NEW_SHEETS = [
     operator: "disclose.io (the community-maintained diodb repository)",
     listName: "disclose.io vulnerability disclosure program list",
     category: "security_incidents",
-    schedule: "8 20 * * 6",
-    staleAfterHours: 192,
     missingStatus: "withdrawn",
     documentationUrl: "https://github.com/disclose/diodb",
     licence:
@@ -227,8 +215,6 @@ const NEW_SHEETS = [
     operator: "the Competition and Markets Authority",
     listName: "UK Competition and Markets Authority cases",
     category: "legal_regulatory",
-    schedule: "16 8 * * 2",
-    staleAfterHours: 192,
     missingStatus: "withdrawn",
     documentationUrl: "https://www.gov.uk/cma-cases",
     licence:
@@ -242,8 +228,6 @@ const NEW_SHEETS = [
     operator: "the Treasury Board of Canada Secretariat",
     listName: "Government of Canada AI Register",
     category: "ai_specific",
-    schedule: "31 20 * * 1",
-    staleAfterHours: 192,
     missingStatus: "withdrawn",
     documentationUrl: "https://open.canada.ca/data/en/dataset/fcbc0200-79ba-4fa4-94a6-00e32facea6b",
     licence:
@@ -257,8 +241,6 @@ const NEW_SHEETS = [
     operator: "the US Federal Trade Commission",
     listName: "FTC nonmerger enforcement action list",
     category: "legal_regulatory",
-    schedule: "57 4 * * 4",
-    staleAfterHours: 192,
     missingStatus: "withdrawn",
     documentationUrl: "https://catalog.data.gov/dataset/ftc-nonmerger-enforcement-actions",
     licence:
@@ -272,8 +254,6 @@ const NEW_SHEETS = [
     operator: "the US Office of Management and Budget",
     listName: "US federal AI use case inventory",
     category: "ai_specific",
-    schedule: "33 21 * * 2",
-    staleAfterHours: 192,
     missingStatus: "withdrawn",
     documentationUrl: "https://github.com/ombegov/2025-Federal-Agency-AI-Use-Case-Inventory",
     licence:
@@ -287,8 +267,6 @@ const NEW_SHEETS = [
     operator: "Colombia's Superintendencia de Industria y Comercio (SIC)",
     listName: "Colombia SIC consumer protection sanctions list",
     category: "legal_regulatory",
-    schedule: "4 3 * * 3",
-    staleAfterHours: 192,
     missingStatus: "withdrawn",
     documentationUrl: "https://www.datos.gov.co/d/73dx-n59j",
     licence:
@@ -302,8 +280,6 @@ const NEW_SHEETS = [
     operator: "the Cabinet Office (GOV.UK), for the public bodies that publish the records",
     listName: "UK Algorithmic Transparency Records",
     category: "ai_specific",
-    schedule: "14 5 * * 1",
-    staleAfterHours: 192,
     missingStatus: "withdrawn",
     documentationUrl: "https://www.gov.uk/algorithmic-transparency-records",
     licence:
@@ -317,8 +293,6 @@ const NEW_SHEETS = [
     operator: "NHTSA",
     listName: "NHTSA recalls file",
     category: "legal_regulatory",
-    schedule: "3 9 * * *",
-    staleAfterHours: 48,
     missingStatus: "withdrawn",
     documentationUrl: "https://www.nhtsa.gov/nhtsa-datasets-and-apis",
     licence:
@@ -332,8 +306,6 @@ const NEW_SHEETS = [
     operator: "the Stanford Center for Research on Foundation Models (CRFM)",
     listName: "Foundation Model Transparency Index",
     category: "ai_specific",
-    schedule: "45 21 * * 5",
-    staleAfterHours: 192,
     missingStatus: "withdrawn",
     documentationUrl: "https://github.com/stanford-crfm/fmti",
     licence:
@@ -347,8 +319,6 @@ const NEW_SHEETS = [
     operator: "the Medicines and Healthcare products Regulatory Agency",
     listName: "UK MHRA field safety notice lists",
     category: "legal_regulatory",
-    schedule: "22 22 * * 4",
-    staleAfterHours: 192,
     missingStatus: "withdrawn",
     documentationUrl: "https://www.gov.uk/drug-device-alerts",
     licence:
@@ -363,8 +333,6 @@ const NEW_SHEETS = [
       "the Dutch Ministry of the Interior and Kingdom Relations (the publishing public bodies write the descriptions)",
     listName: "Dutch Algorithm Register",
     category: "ai_specific",
-    schedule: "37 22 * * 3",
-    staleAfterHours: 192,
     missingStatus: "withdrawn",
     documentationUrl: "https://algoritmes.overheid.nl/api-docs",
     licence:
@@ -378,8 +346,6 @@ const NEW_SHEETS = [
     operator: "NHTSA",
     listName: "NHTSA defect investigations file",
     category: "legal_regulatory",
-    schedule: "1 10 * * *",
-    staleAfterHours: 48,
     missingStatus: "withdrawn",
     documentationUrl: "https://www.nhtsa.gov/nhtsa-datasets-and-apis",
     licence:
@@ -393,8 +359,6 @@ const NEW_SHEETS = [
     operator: "the US General Services Administration (FedRAMP)",
     listName: "FedRAMP Marketplace data",
     category: "certifications",
-    schedule: "6 19 * * *",
-    staleAfterHours: 48,
     missingStatus: "delisted",
     documentationUrl: "https://github.com/FedRAMP/marketplace-fedramp-gov-data",
     licence:
@@ -408,8 +372,6 @@ const NEW_SHEETS = [
     operator: "Epoch AI",
     listName: "Epoch AI Data on AI Models",
     category: "ai_specific",
-    schedule: "39 23 * * 4",
-    staleAfterHours: 192,
     missingStatus: "withdrawn",
     documentationUrl: "https://epoch.ai/data/ai-models-documentation",
     licence:
@@ -423,8 +385,6 @@ const NEW_SHEETS = [
     operator: "the Coalition for Content Provenance and Authenticity (C2PA)",
     listName: "C2PA Conforming Products List",
     category: "certifications",
-    schedule: "49 16 * * *",
-    staleAfterHours: 48,
     missingStatus: "withdrawn",
     documentationUrl: "https://github.com/c2pa-org/conformance-public",
     licence:
@@ -508,101 +468,6 @@ describe("the VRDB sources", () => {
     expect(NEW_IDS).toHaveLength(23);
   });
 
-  it("every active mirror has a schedule on a minute of its own", () => {
-    const minutesOf = (gates: Record<VrdbGate, boolean>) =>
-      activeMirrors(gates).map(({ id, schedule }) => [id, schedule.split(" ")[0]]);
-    expect(minutesOf(CLOSED)).toEqual([
-      ["kev", "23"],
-      ["ofac", "41"],
-      ["uk_sanctions", "47"],
-      ["eu_fsf", "53"],
-      ["csl", "7"],
-      ["atlas", "17"],
-      ["nhtsa_sgo", "5"],
-      ["fda_ai_devices", "35"],
-      ["fda_device_recalls", "43"],
-      ["canada_sema", "2"],
-      ["california_breaches", "12"],
-      ["uk_ofsi", "18"],
-      ["charlotin", "25"],
-      ["ftc_penalties", "55"],
-      ["piperoll", "21"],
-      ["eu_dg_comp", "51"],
-      ["disclose_io", "8"],
-      ["uk_cma", "16"],
-      ["canada_ai_register", "31"],
-      ["ftc_competition", "57"],
-      ["omb_ai_inventory", "33"],
-      ["co_sic_penalties", "4"],
-      ["uk_atrs", "14"],
-      ["nhtsa_recalls", "3"],
-      ["fmti", "45"],
-      ["uk_mhra", "22"],
-      ["nl_algoritmeregister", "37"],
-      ["nhtsa_odi", "1"],
-      ["fedramp", "6"],
-      ["epoch_ai", "39"],
-      ["c2pa_conforming", "49"],
-    ]);
-    expect(minutesOf(OPEN)).toEqual([
-      ["kev", "23"],
-      ["ofac", "41"],
-      ["uk_sanctions", "47"],
-      ["eu_fsf", "53"],
-      ["cve", "29"],
-      ["un_sanctions", "59"],
-      ["csl", "7"],
-      ["aiid", "11"],
-      ["atlas", "17"],
-      ["nhtsa_sgo", "5"],
-      ["fda_ai_devices", "35"],
-      ["fda_device_recalls", "43"],
-      ["canada_sema", "2"],
-      ["california_breaches", "12"],
-      ["uk_ofsi", "18"],
-      ["charlotin", "25"],
-      ["ftc_penalties", "55"],
-      ["piperoll", "21"],
-      ["eu_dg_comp", "51"],
-      ["disclose_io", "8"],
-      ["uk_cma", "16"],
-      ["canada_ai_register", "31"],
-      ["ftc_competition", "57"],
-      ["omb_ai_inventory", "33"],
-      ["co_sic_penalties", "4"],
-      ["uk_atrs", "14"],
-      ["nhtsa_recalls", "3"],
-      ["fmti", "45"],
-      ["uk_mhra", "22"],
-      ["nl_algoritmeregister", "37"],
-      ["nhtsa_odi", "1"],
-      ["fedramp", "6"],
-      ["epoch_ai", "39"],
-      ["c2pa_conforming", "49"],
-    ]);
-    // A minute of its own: two downloads of tens of megabytes never start together. With the 22
-    // lists added on 2026-11-10 that is 34 mirrors on 34 different minutes (the shipped twelve use
-    // 5, 7, 11, 17, 23, 29, 35, 41, 43, 47, 53 and 59).
-    const minutes = activeMirrors(OPEN).map(({ schedule }) => schedule.split(" ")[0]);
-    expect(minutes).toHaveLength(34);
-    expect(new Set(minutes).size).toBe(minutes.length);
-    const FIELD = /^(?:\*|\*\/\d+|\d+)$/;
-    for (const { schedule } of activeMirrors(OPEN)) {
-      const fields = schedule.split(" ");
-      expect(fields).toHaveLength(5);
-      expect(fields.filter((field) => !FIELD.test(field))).toEqual([]);
-    }
-  });
-
-  it("no two mirrors have the same cron expression, and each starts on one fixed minute", () => {
-    const schedules = activeMirrors(OPEN).map(({ schedule }) => schedule);
-    expect(new Set(schedules).size).toBe(schedules.length);
-    // A minute that is a star or a step would make "a minute of its own" mean nothing.
-    for (const { id, schedule } of activeMirrors(OPEN)) {
-      expect([id, /^\d{1,2}$/.test(schedule.split(" ")[0])]).toEqual([id, true]);
-    }
-  });
-
   it("a source behind a closed gate is not active", () => {
     // The SEC (Q4) and the CVE records (Q7) are open; the UN list (Q6) and the AI Incident Database
     // (Q29) are the ones that wait.
@@ -673,7 +538,7 @@ describe("the VRDB sources", () => {
     expect(idsOf(activeReadThroughs(CLOSED))).toEqual(["nvd", "gleif"]);
   });
 
-  it("holds no gate for any of the 23 lists of 2026-11-10: each is active, and the 22 copied are scheduled, with every gate closed", () => {
+  it("holds no gate for any of the 23 lists of 2026-11-10: each is active, and the 22 copied are bundled, with every gate closed", () => {
     for (const id of NEW_IDS) {
       expect([id, vrdbSourceOf(id).gate]).toEqual([id, undefined]);
       expect(idsOf(activeVrdbSources(CLOSED))).toContain(id);
@@ -748,22 +613,14 @@ describe("the VRDB sources", () => {
     expect(idsOf(activeReadThroughs(OPEN))).toEqual(["nvd", "sec", "gleif"]);
   });
 
-  it("every source is out of date after 48 hours, but a list copied once a week after 192 (eight days)", () => {
-    expect(VRDB_SOURCES.map((source) => source.staleAfterHours)).toEqual([
-      // The 14 shipped before 2026-11-10: all 48.
-      48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48,
-      // The 23 added on 2026-11-10, in the order of the registry: a list copied every day is out of
-      // date after two days, one copied every week after eight, and GLEIF, read through, after two.
-      48, 48, 192, 48, 192, 48, 192, 192, 192, 192, 192, 192, 192, 192, 48, 192, 192, 192, 48, 48,
-      192, 48, 48,
-    ]);
-    // The cadence and the hours agree: a daily cron (a star for the day of the week) goes with 48, a
-    // weekly one (one day of the week) with 192.
-    for (const id of NEW_MIRROR_IDS) {
-      const { schedule, staleAfterHours } = mirrorOf(id);
-      const dayOfWeek = schedule.split(" ")[4];
-      expect([id, staleAfterHours]).toEqual([id, dayOfWeek === "*" ? 48 : 192]);
-      expect([id, dayOfWeek === "*" || /^[0-6]$/.test(dayOfWeek)]).toEqual([id, true]);
+  it("every bundled list is out of date 60 days after its bundle was built, and a database read through after its own 48 hours", () => {
+    expect(BUNDLED_STALE_AFTER_HOURS).toBe(60 * 24);
+    expect(VRDB_SOURCES.map((source) => [source.id, staleAfterHoursOf(source)])).toEqual(
+      VRDB_SOURCES.map(({ id }) => [id, ["nvd", "sec", "gleif"].includes(id) ? 48 : 1440]),
+    );
+    // A bundled list keeps no hours of its own: a release, not a schedule, brings it up to date.
+    for (const source of VRDB_SOURCES.filter(isMirror)) {
+      expect([source.id, "staleAfterHours" in source]).toEqual([source.id, false]);
     }
   });
 
@@ -778,12 +635,11 @@ describe("the VRDB sources", () => {
   it("holds the values of the plan's table", () => {
     expect(
       VRDB_SOURCES.filter(isMirror).map(
-        ({ id, operator, listName, category, schedule, missingStatus, mode }) => ({
+        ({ id, operator, listName, category, missingStatus, mode }) => ({
           id,
           operator,
           listName,
           category,
-          schedule,
           missingStatus,
           mode,
         }),
@@ -794,7 +650,6 @@ describe("the VRDB sources", () => {
         operator: "CISA",
         listName: "CISA KEV catalog",
         category: "security_incidents",
-        schedule: "23 * * * *",
         missingStatus: "withdrawn",
         mode: "mirror",
       },
@@ -803,7 +658,6 @@ describe("the VRDB sources", () => {
         operator: "OFAC",
         listName: "OFAC SDN list",
         category: "legal_regulatory",
-        schedule: "41 */6 * * *",
         missingStatus: "delisted",
         mode: "mirror",
       },
@@ -812,7 +666,6 @@ describe("the VRDB sources", () => {
         operator: "FCDO",
         listName: "UK Sanctions List",
         category: "legal_regulatory",
-        schedule: "47 */6 * * *",
         missingStatus: "delisted",
         mode: "mirror",
       },
@@ -821,7 +674,6 @@ describe("the VRDB sources", () => {
         operator: "European Commission",
         listName: "EU financial sanctions list",
         category: "legal_regulatory",
-        schedule: "53 */6 * * *",
         missingStatus: "delisted",
         mode: "mirror",
       },
@@ -830,7 +682,6 @@ describe("the VRDB sources", () => {
         operator: "the CVE Program",
         listName: "CVE List",
         category: "security_incidents",
-        schedule: "29 2 * * *",
         missingStatus: null,
         mode: "mirror",
       },
@@ -839,7 +690,6 @@ describe("the VRDB sources", () => {
         operator: "the UN Security Council",
         listName: "UN Security Council Consolidated List",
         category: "legal_regulatory",
-        schedule: "59 */6 * * *",
         missingStatus: "delisted",
         mode: "mirror",
       },
@@ -848,7 +698,6 @@ describe("the VRDB sources", () => {
         operator: "the International Trade Administration",
         listName: "US Consolidated Screening List",
         category: "legal_regulatory",
-        schedule: "7 */6 * * *",
         missingStatus: "delisted",
         mode: "mirror",
       },
@@ -857,7 +706,6 @@ describe("the VRDB sources", () => {
         operator: "the Responsible AI Collaborative",
         listName: "AI Incident Database",
         category: "ai_specific",
-        schedule: "11 4 * * *",
         missingStatus: "withdrawn",
         mode: "mirror",
       },
@@ -866,7 +714,6 @@ describe("the VRDB sources", () => {
         operator: "MITRE",
         listName: "MITRE ATLAS case studies",
         category: "ai_specific",
-        schedule: "17 3 * * *",
         missingStatus: "withdrawn",
         mode: "mirror",
       },
@@ -875,7 +722,6 @@ describe("the VRDB sources", () => {
         operator: "NHTSA",
         listName: "NHTSA Standing General Order crash reports",
         category: "ai_specific",
-        schedule: "5 13 * * *",
         missingStatus: "withdrawn",
         mode: "mirror",
       },
@@ -884,7 +730,6 @@ describe("the VRDB sources", () => {
         operator: "the FDA",
         listName: "FDA list of AI-enabled medical devices",
         category: "ai_specific",
-        schedule: "35 5 * * *",
         missingStatus: "withdrawn",
         mode: "mirror",
       },
@@ -893,7 +738,6 @@ describe("the VRDB sources", () => {
         operator: "the FDA",
         listName: "FDA device recall database",
         category: "ai_specific",
-        schedule: "43 14 * * *",
         missingStatus: "withdrawn",
         mode: "mirror",
       },
@@ -903,7 +747,6 @@ describe("the VRDB sources", () => {
         operator: "Global Affairs Canada",
         listName: "Consolidated Canadian Autonomous Sanctions List",
         category: "legal_regulatory",
-        schedule: "2 1 * * *",
         missingStatus: "delisted",
         mode: "mirror",
       },
@@ -912,7 +755,6 @@ describe("the VRDB sources", () => {
         operator: "the California Department of Justice, Office of the Attorney General",
         listName: "California Attorney General data breach list",
         category: "security_incidents",
-        schedule: "12 7 * * *",
         missingStatus: "withdrawn",
         mode: "mirror",
       },
@@ -921,7 +763,6 @@ describe("the VRDB sources", () => {
         operator: "the Office of Financial Sanctions Implementation (HM Treasury)",
         listName: "UK OFSI financial sanctions enforcement notices",
         category: "legal_regulatory",
-        schedule: "18 10 * * 3",
         missingStatus: "withdrawn",
         mode: "mirror",
       },
@@ -930,7 +771,6 @@ describe("the VRDB sources", () => {
         operator: "Damien Charlotin (HEC Paris), the database's author",
         listName: "AI Hallucination Cases database",
         category: "ai_specific",
-        schedule: "25 15 * * *",
         missingStatus: "withdrawn",
         mode: "mirror",
       },
@@ -939,7 +779,6 @@ describe("the VRDB sources", () => {
         operator: "the US Federal Trade Commission",
         listName: "FTC civil penalty case list",
         category: "legal_regulatory",
-        schedule: "55 4 * * 2",
         missingStatus: "withdrawn",
         mode: "mirror",
       },
@@ -948,7 +787,6 @@ describe("the VRDB sources", () => {
         operator: "PipeRoll, an independent registry kept by one editor",
         listName: "PipeRoll Agent Incident Registry",
         category: "ai_specific",
-        schedule: "21 11 * * *",
         missingStatus: "withdrawn",
         mode: "mirror",
       },
@@ -957,7 +795,6 @@ describe("the VRDB sources", () => {
         operator: "the European Commission (DG Competition)",
         listName: "European Commission antitrust, cartel and DMA case data",
         category: "legal_regulatory",
-        schedule: "51 17 * * 1",
         missingStatus: "withdrawn",
         mode: "mirror",
       },
@@ -966,7 +803,6 @@ describe("the VRDB sources", () => {
         operator: "disclose.io (the community-maintained diodb repository)",
         listName: "disclose.io vulnerability disclosure program list",
         category: "security_incidents",
-        schedule: "8 20 * * 6",
         missingStatus: "withdrawn",
         mode: "mirror",
       },
@@ -975,7 +811,6 @@ describe("the VRDB sources", () => {
         operator: "the Competition and Markets Authority",
         listName: "UK Competition and Markets Authority cases",
         category: "legal_regulatory",
-        schedule: "16 8 * * 2",
         missingStatus: "withdrawn",
         mode: "mirror",
       },
@@ -984,7 +819,6 @@ describe("the VRDB sources", () => {
         operator: "the Treasury Board of Canada Secretariat",
         listName: "Government of Canada AI Register",
         category: "ai_specific",
-        schedule: "31 20 * * 1",
         missingStatus: "withdrawn",
         mode: "mirror",
       },
@@ -993,7 +827,6 @@ describe("the VRDB sources", () => {
         operator: "the US Federal Trade Commission",
         listName: "FTC nonmerger enforcement action list",
         category: "legal_regulatory",
-        schedule: "57 4 * * 4",
         missingStatus: "withdrawn",
         mode: "mirror",
       },
@@ -1002,7 +835,6 @@ describe("the VRDB sources", () => {
         operator: "the US Office of Management and Budget",
         listName: "US federal AI use case inventory",
         category: "ai_specific",
-        schedule: "33 21 * * 2",
         missingStatus: "withdrawn",
         mode: "mirror",
       },
@@ -1011,7 +843,6 @@ describe("the VRDB sources", () => {
         operator: "Colombia's Superintendencia de Industria y Comercio (SIC)",
         listName: "Colombia SIC consumer protection sanctions list",
         category: "legal_regulatory",
-        schedule: "4 3 * * 3",
         missingStatus: "withdrawn",
         mode: "mirror",
       },
@@ -1020,7 +851,6 @@ describe("the VRDB sources", () => {
         operator: "the Cabinet Office (GOV.UK), for the public bodies that publish the records",
         listName: "UK Algorithmic Transparency Records",
         category: "ai_specific",
-        schedule: "14 5 * * 1",
         missingStatus: "withdrawn",
         mode: "mirror",
       },
@@ -1029,7 +859,6 @@ describe("the VRDB sources", () => {
         operator: "NHTSA",
         listName: "NHTSA recalls file",
         category: "legal_regulatory",
-        schedule: "3 9 * * *",
         missingStatus: "withdrawn",
         mode: "mirror",
       },
@@ -1038,7 +867,6 @@ describe("the VRDB sources", () => {
         operator: "the Stanford Center for Research on Foundation Models (CRFM)",
         listName: "Foundation Model Transparency Index",
         category: "ai_specific",
-        schedule: "45 21 * * 5",
         missingStatus: "withdrawn",
         mode: "mirror",
       },
@@ -1047,7 +875,6 @@ describe("the VRDB sources", () => {
         operator: "the Medicines and Healthcare products Regulatory Agency",
         listName: "UK MHRA field safety notice lists",
         category: "legal_regulatory",
-        schedule: "22 22 * * 4",
         missingStatus: "withdrawn",
         mode: "mirror",
       },
@@ -1057,7 +884,6 @@ describe("the VRDB sources", () => {
           "the Dutch Ministry of the Interior and Kingdom Relations (the publishing public bodies write the descriptions)",
         listName: "Dutch Algorithm Register",
         category: "ai_specific",
-        schedule: "37 22 * * 3",
         missingStatus: "withdrawn",
         mode: "mirror",
       },
@@ -1066,7 +892,6 @@ describe("the VRDB sources", () => {
         operator: "NHTSA",
         listName: "NHTSA defect investigations file",
         category: "legal_regulatory",
-        schedule: "1 10 * * *",
         missingStatus: "withdrawn",
         mode: "mirror",
       },
@@ -1075,7 +900,6 @@ describe("the VRDB sources", () => {
         operator: "the US General Services Administration (FedRAMP)",
         listName: "FedRAMP Marketplace data",
         category: "certifications",
-        schedule: "6 19 * * *",
         missingStatus: "delisted",
         mode: "mirror",
       },
@@ -1084,7 +908,6 @@ describe("the VRDB sources", () => {
         operator: "Epoch AI",
         listName: "Epoch AI Data on AI Models",
         category: "ai_specific",
-        schedule: "39 23 * * 4",
         missingStatus: "withdrawn",
         mode: "mirror",
       },
@@ -1093,7 +916,6 @@ describe("the VRDB sources", () => {
         operator: "the Coalition for Content Provenance and Authenticity (C2PA)",
         listName: "C2PA Conforming Products List",
         category: "certifications",
-        schedule: "49 16 * * *",
         missingStatus: "withdrawn",
         mode: "mirror",
       },
@@ -1263,7 +1085,6 @@ describe("the VRDB sources", () => {
         name: "AI Incident Database",
         operator: "the Responsible AI Collaborative",
         listName: "AI Incident Database",
-        schedule: "11 4 * * *",
         licence:
           "CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/): the incidents, entities and classifications collections of the AI Incident Database; report text, submissions and media excluded. Commercial use awaits the operator's confirmation (Q29).",
       },
@@ -1272,7 +1093,6 @@ describe("the VRDB sources", () => {
         name: "MITRE ATLAS case studies",
         operator: "MITRE",
         listName: "MITRE ATLAS case studies",
-        schedule: "17 3 * * *",
         licence:
           "Apache License 2.0 (https://www.apache.org/licenses/LICENSE-2.0); the atlas-data repository's LICENSE (Q32).",
       },
@@ -1281,7 +1101,6 @@ describe("the VRDB sources", () => {
         name: "NHTSA Standing General Order crash reports",
         operator: "NHTSA",
         listName: "NHTSA Standing General Order crash reports",
-        schedule: "5 13 * * *",
         licence:
           "None published; a work of the US Government (17 U.S.C. §105); accepted on 2026-11-05 (Q31)",
       },
@@ -1290,14 +1109,13 @@ describe("the VRDB sources", () => {
         name: "FDA list of AI-enabled medical devices",
         operator: "the FDA",
         listName: "FDA list of AI-enabled medical devices",
-        schedule: "35 5 * * *",
         licence: "Public domain (fda.gov: content may be republished freely)",
       },
     ] as const;
 
     it.each(SHEETS)(
-      "$id is a mirror in ai_specific that is out of date after 48 hours and withdraws a record it no longer lists",
-      ({ id, name, operator, listName, schedule, licence }) => {
+      "$id is a bundled mirror in ai_specific that withdraws a record it no longer lists",
+      ({ id, name, operator, listName, licence }) => {
         const definition = vrdbSourceOf(id);
 
         expect(isMirror(definition)).toBe(true);
@@ -1308,8 +1126,6 @@ describe("the VRDB sources", () => {
           listName,
           category: "ai_specific",
           mode: "mirror",
-          schedule,
-          staleAfterHours: 48,
           licence,
           missingStatus: "withdrawn",
         });
@@ -1347,7 +1163,7 @@ describe("the VRDB sources", () => {
       // The licence says why: the operator's confirmation is still awaited.
       expect(vrdbSourceOf("aiid").licence).toContain("awaits the operator's confirmation (Q29)");
 
-      // Closed, it is neither scheduled nor looked up ...
+      // Closed, it is neither bundled nor looked up ...
       expect(idsOf(activeVrdbSources())).not.toContain("aiid");
       expect(idsOf(activeMirrors())).not.toContain("aiid");
       expect(idsOf(activeVrdbSources(CLOSED))).not.toContain("aiid");
@@ -1431,7 +1247,6 @@ describe("the VRDB sources", () => {
         operator: "the International Trade Administration",
         listName: "US Consolidated Screening List",
         category: "legal_regulatory",
-        schedule: "7 */6 * * *",
         missingStatus: "delisted",
         licence:
           "None published; a work of the US Government (17 U.S.C. §105) compiled by the International Trade Administration, whose developer terms allow services that search, display and analyze it; accepted on 2026-11-07 (Q33)",
@@ -1445,7 +1260,6 @@ describe("the VRDB sources", () => {
         operator: "the FDA",
         listName: "FDA device recall database",
         category: "ai_specific",
-        schedule: "43 14 * * *",
         missingStatus: "withdrawn",
         // Amended on 2026-11-10 when the FDA enforcement reports were folded into the list (Q37): its
         // records now carry the FDA's class and classification day, so the licence names those reports
@@ -1456,17 +1270,17 @@ describe("the VRDB sources", () => {
     ] as const;
 
     it.each(SHEETS)(
-      "$id is a mirror in $category that is out of date after 48 hours, with the values of its sheet word for word",
+      "$id is a bundled mirror in $category, with the values of its sheet word for word",
       (sheet) => {
         const definition = vrdbSourceOf(sheet.id);
 
         expect(isMirror(definition)).toBe(true);
         // The whole definition: a field that the sheet does not name, a gate included, fails it.
-        expect(definition).toEqual({ ...sheet, mode: "mirror", staleAfterHours: 48 });
+        expect(definition).toEqual({ ...sheet, mode: "mirror" });
       },
     );
 
-    it("holds no gate for either list: both are active, and scheduled, with every gate closed", () => {
+    it("holds no gate for either list: both are active, and bundled, with every gate closed", () => {
       for (const { id } of SHEETS) {
         expect(vrdbSourceOf(id).gate).toBeUndefined();
         expect(idsOf(activeVrdbSources(CLOSED))).toContain(id);
@@ -1505,7 +1319,7 @@ describe("the VRDB sources", () => {
 
   describe("the 23 lists added on 2026-11-10", () => {
     it.each(NEW_SHEETS)(
-      "$id is a mirror in $category, out of date after $staleAfterHours hours, with the values of its sheet word for word",
+      "$id is a bundled mirror in $category, with the values of its sheet word for word",
       (sheet) => {
         const definition = vrdbSourceOf(sheet.id);
 
@@ -1529,62 +1343,45 @@ describe("the VRDB sources", () => {
         NEW_MIRROR_IDS.filter((id) => mirrorOf(id).missingStatus === "withdrawn"),
       ).toHaveLength(20);
     });
-
-    it("copies the two NHTSA files after the hour their operator replaces them", () => {
-      const minuteOfDay = (id: VrdbSourceId) => {
-        const [minute, hour] = mirrorOf(id).schedule.split(" ");
-        return Number(hour) * 60 + Number(minute);
-      };
-
-      // NHTSA replaced its recalls file at about 08:03 UTC and its investigations file at about 09:03
-      // UTC, on the day each was watched: a sync before that copies the day before's file. So the
-      // recalls are copied after 08:30, an hour after the replacement, and the investigations at 10:00
-      // or later, 58 minutes after the replacement.
-      expect(mirrorOf("nhtsa_recalls").schedule).toBe("3 9 * * *");
-      expect(mirrorOf("nhtsa_odi").schedule).toBe("1 10 * * *");
-      expect(minuteOfDay("nhtsa_recalls")).toBeGreaterThan(8 * 60 + 30);
-      expect(minuteOfDay("nhtsa_odi")).toBeGreaterThanOrEqual(10 * 60);
-      // The crash reports of the list shipped before keep their hour, after both.
-      expect(mirrorOf("nhtsa_sgo").schedule).toBe("5 13 * * *");
-      expect(minuteOfDay("nhtsa_sgo")).toBeGreaterThan(minuteOfDay("nhtsa_odi"));
-    });
-
-    it("starts none of the 22 in an hour of the six-hourly lists: 0, 6, 12 and 18 UTC", () => {
-      // The OFAC, UK, EU, UN and screening lists run every sixth hour, which makes those four hours
-      // the busy ones; the new lists keep out of them.
-      expect(
-        VRDB_SOURCES.filter(isMirror)
-          .filter(({ schedule }) => schedule.split(" ")[1] === "*/6")
-          .map(({ id }) => id),
-      ).toEqual(["ofac", "uk_sanctions", "eu_fsf", "un_sanctions", "csl"]);
-      for (const id of NEW_MIRROR_IDS) {
-        const hour = Number(mirrorOf(id).schedule.split(" ")[1]);
-        expect([id, [0, 6, 12, 18].includes(hour)]).toEqual([id, false]);
-      }
-    });
   });
 
   describe("isStale", () => {
-    const kev = vrdbSourceOf("kev");
     const now = new Date("2026-10-30T12:00:00Z");
-    const ago = (minutes: number) => new Date(now.getTime() - minutes * 60_000);
+    const ago = (hours: number, minutes = 0) =>
+      new Date(now.getTime() - (hours * 60 + minutes) * 60_000);
 
-    it("is false at 47 h 59 min", () => expect(isStale(kev, ago(47 * 60 + 59), now)).toBe(false));
-    it("is true at 48 h 1 min", () => expect(isStale(kev, ago(48 * 60 + 1), now)).toBe(true));
-    it("is true for a list never copied", () => expect(isStale(kev, null, now)).toBe(true));
-
-    it("is false for a list copied once a week at 191 h 59 min, and true at 192 h 1 min", () => {
-      const weekly = vrdbSourceOf("uk_cma");
-      expect(isStale(weekly, ago(191 * 60 + 59), now)).toBe(false);
-      expect(isStale(weekly, ago(192 * 60 + 1), now)).toBe(true);
-      // The weekly list is not out of date at the 48 hours of a daily one.
-      expect(isStale(weekly, ago(49 * 60), now)).toBe(false);
+    it("is true for a list never loaded, bundled or read through", () => {
+      expect(isStale(vrdbSourceOf("kev"), null, now)).toBe(true);
+      expect(isStale(vrdbSourceOf("gleif"), null, now)).toBe(true);
     });
 
-    it("is true for GLEIF after 48 hours and for a list copied every day at the same limit", () => {
-      expect(isStale(vrdbSourceOf("gleif"), ago(48 * 60 + 1), now)).toBe(true);
-      expect(isStale(vrdbSourceOf("nhtsa_recalls"), ago(47 * 60 + 59), now)).toBe(false);
-      expect(isStale(vrdbSourceOf("nhtsa_recalls"), ago(48 * 60 + 1), now)).toBe(true);
+    it.each([["kev"], ["cve"], ["uk_cma"], ["nhtsa_recalls"]] as const)(
+      "is false for the bundled %s at 59 days 23 h 59 min, and true at 60 days 1 min",
+      (id) => {
+        const definition = vrdbSourceOf(id);
+        expect(staleAfterHoursOf(definition)).toBe(1440);
+        expect(isStale(definition, ago(1439, 59), now)).toBe(false);
+        expect(isStale(definition, ago(1440, 1), now)).toBe(true);
+        // A bundle is not out of date at the 48 hours of a database read through.
+        expect(isStale(definition, ago(49), now)).toBe(false);
+      },
+    );
+
+    it.each([["nvd"], ["sec"], ["gleif"]] as const)(
+      "is false for %s, read through, at 47 h 59 min and true at 48 h 1 min: its own hours",
+      (id) => {
+        const definition = vrdbSourceOf(id);
+        expect(staleAfterHoursOf(definition)).toBe(48);
+        expect(isStale(definition, ago(47, 59), now)).toBe(false);
+        expect(isStale(definition, ago(48, 1), now)).toBe(true);
+      },
+    );
+
+    it("reads the hours of a read-through definition as it is given", () => {
+      const definition = { ...vrdbSourceOf("gleif"), staleAfterHours: 6 } as ReadThroughSource;
+      expect(staleAfterHoursOf(definition)).toBe(6);
+      expect(isStale(definition, ago(5, 59), now)).toBe(false);
+      expect(isStale(definition, ago(6, 1), now)).toBe(true);
     });
   });
 });

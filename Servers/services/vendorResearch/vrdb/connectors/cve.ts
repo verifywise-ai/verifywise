@@ -2,12 +2,12 @@
  * The CVE Program's records (cvelistV5, spec D2.6) as a list the vendor risk database reads by its
  * changes, behind Q7 (gates.ts; Ruling 8 of the M2 plan). The programme publishes the records that
  * changed on a day as an asset of a release on GitHub: the release `cve_<day>_at_end_of_day` holds
- * `<day>_delta_CVEs_at_end_of_day.zip`, one JSON file per record. A sync asks the GitHub API for the
- * release of each day after the cursor up to yesterday (UTC), at most seven, oldest first; it reads
- * the release's list of assets, since their names are irregular, and downloads the delta from the
- * project's releases on github.com only. The lookback is filled from a baseline file an operator
- * downloaded (scripts/vrdbCveBaseline.ts), which sets the cursor: the sync refuses a list without
- * one (`no_baseline`, sync.ts), so the download's start at yesterday for no cursor is a fallback.
+ * `<day>_delta_CVEs_at_end_of_day.zip`, one JSON file per record. The bundler (scripts/vrdbBundle.ts)
+ * asks the GitHub API for the release of each day after the cursor up to yesterday (UTC), at most
+ * seven a call, oldest first; it reads the release's list of assets, since their names are
+ * irregular, and downloads the delta from the project's releases on github.com only. The lookback
+ * comes from a baseline file the bundler reads (`--cve-baseline`), which sets the cursor; the
+ * server itself downloads nothing (vrdb/bundle.ts).
  *
  * A day without an end-of-day release is read from its last hourly release (Q7). Three days since
  * 2024 have none (2025-01-13, 2026-06-20 and 2026-07-19), though each has hourly releases through
