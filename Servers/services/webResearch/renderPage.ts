@@ -47,9 +47,10 @@
  *   and the memory of typed arrays, live outside that heap. At most
  *   RENDER_CONCURRENCY pages are rendered at once in the process. The browser is started when it
  *   is first needed, kept, and closed after RENDER_BROWSER_IDLE_MS without use.
- * - **Chromium keeps its own sandbox** unless the process runs as root, where it refuses to start
- *   with one (as in a container that runs as root); then it is started without it, as the PDF
- *   reports are (see services/reporting/pdfGenerator.ts). Run the backend unprivileged to keep it.
+ * - **Chromium always keeps its own sandbox.** As root it cannot (as in a container that runs as
+ *   root), so a process that runs as root does not start it at all (`RootRenderRefused`): pages of
+ *   the open web are not run without a sandbox, unlike the PDF reports, which render the app's own
+ *   HTML. Run the backend and the worker unprivileged to read pages that need JavaScript.
  *
  * Any failure (no Chromium, a page that does not load, the time, the caller giving up) is an
  * answer of null: the page reader then reports the page as one that needs JavaScript, as it did
@@ -316,16 +317,33 @@ export interface RendererDeps {
   closeMs?: number;
 }
 
+/**
+ * Thrown instead of starting Chromium in a process that runs as root. As root Chromium cannot keep
+ * its own sandbox, and a page of the open web would then run its scripts with no sandbox in the
+ * process that holds the database credentials and every organization's LLM keys. The renderer
+ * reports it once, and pages that need JavaScript are reported as such, as with headless off.
+ */
+export class RootRenderRefused extends Error {
+  constructor() {
+    super(
+      "the process runs as root, and Chromium is not started without its sandbox; run the backend and the worker as an unprivileged user to read pages that need JavaScript",
+    );
+    this.name = "RootRenderRefused";
+  }
+}
+
+/** Whether this process runs as root; `getuid` is absent on Windows. */
+export const runsAsRoot = (): boolean =>
+  typeof process.getuid === "function" && process.getuid() === 0;
+
 /** Chromium through Playwright, which is a dependency already (the PDF reports use it). */
-async function launchChromium(): Promise<RenderBrowser> {
+export async function launchChromium(asRoot: () => boolean = runsAsRoot): Promise<RenderBrowser> {
+  if (asRoot()) throw new RootRenderRefused();
   const { chromium } = await import("playwright");
   const executablePath = process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH;
-  const asRoot = typeof process.getuid === "function" && process.getuid() === 0;
   const browser = await chromium.launch({
     headless: true,
-    args: asRoot
-      ? ["--no-sandbox", "--disable-setuid-sandbox", ...CHROMIUM_ARGS]
-      : [...CHROMIUM_ARGS],
+    args: [...CHROMIUM_ARGS],
     ...(executablePath ? { executablePath } : {}),
   });
   return browser as unknown as RenderBrowser;
@@ -361,7 +379,7 @@ const holdsText = (minimum: number): string =>
   `(document.body ? document.body.innerText.length : 0) >= ${minimum}`;
 
 export function createChromiumRenderer(deps: RendererDeps = {}): PageRenderer {
-  const launch = deps.launch ?? launchChromium;
+  const launch = deps.launch ?? (() => launchChromium());
   const fetchResource = deps.fetch ?? guardedFetch;
   const now = deps.now ?? Date.now;
   const log = deps.log ?? (() => undefined);

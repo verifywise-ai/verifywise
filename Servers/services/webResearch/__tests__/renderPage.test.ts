@@ -16,7 +16,9 @@ import {
   RenderContext,
   RenderPage,
   RenderRoute,
+  RootRenderRefused,
   createChromiumRenderer,
+  launchChromium,
 } from "../renderPage";
 import { MAX_HTML_CHARS } from "../pageText";
 
@@ -1449,5 +1451,24 @@ describe("createChromiumRenderer", () => {
 
       expect(most).toBe(2);
     });
+  });
+});
+
+describe("launchChromium", () => {
+  it("refuses to start Chromium in a process that runs as root, so no page runs without a sandbox", async () => {
+    await expect(launchChromium(() => true)).rejects.toBeInstanceOf(RootRenderRefused);
+  });
+
+  it("is reported once by the renderer, which then answers null, as with headless off", async () => {
+    const log = jest.fn();
+    const render = createChromiumRenderer({
+      launch: () => launchChromium(() => true),
+      log,
+    });
+    const request = { url: DOCUMENT_URL, signal: new AbortController().signal } as never;
+    await expect(render(request)).resolves.toBeNull();
+    await expect(render(request)).resolves.toBeNull();
+    expect(log).toHaveBeenCalledTimes(1);
+    expect(log.mock.calls[0][0]).toContain("runs as root");
   });
 });
