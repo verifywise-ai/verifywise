@@ -18,7 +18,7 @@ distro==1.9.0
 docstring_parser==0.18.0
 eval_type_backport==0.4.0
 fastapi==0.141.1
-filelock==4.2.1
+filelock==4.2.12
 frozenlist==1.8.0
 fsspec==2026.6.0
 google-api-core==2.34.0
