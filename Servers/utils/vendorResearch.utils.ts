@@ -268,19 +268,21 @@ export const getLatestRunQuery = (
   findRun("vendor_id = :vendorId", { organizationId, vendorId });
 
 /**
- * The category summaries of the organization's latest completed runs that searched the news
- * through GDELT and were created in the last `days` days, newest first, at most `limit` of them.
- * Only the summaries are read: what the research settings window needs to tell whether GDELT has
- * been failing (see services/vendorResearch/searchStatus.ts).
+ * The category summaries of the organization's latest finished runs (completed, or failed with a
+ * summary) created in the last `days` days, newest first, at most `limit` of them. Only the
+ * summaries are read: what the research settings window needs to tell whether recent runs got no
+ * news (see services/vendorResearch/searchStatus.ts). It does not filter on `search_engine`, which
+ * is null on a run none of whose searches was answered.
  */
-export const listRecentGdeltRunSummariesQuery = async (
+export const listRecentRunSummariesQuery = async (
   organizationId: number,
   limit: number,
   days: number,
 ): Promise<unknown[]> => {
   const rows = (await sequelize.query(
     `SELECT category_summary FROM vendor_research_runs
-     WHERE organization_id = :organizationId AND status = 'completed' AND search_engine = 'gdelt'
+     WHERE organization_id = :organizationId AND status IN ('completed', 'failed')
+       AND category_summary IS NOT NULL
        AND created_at >= NOW() - (:days * INTERVAL '1 day')
      ORDER BY created_at DESC, id DESC
      LIMIT :limit`,

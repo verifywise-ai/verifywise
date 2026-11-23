@@ -115,7 +115,7 @@ beforeEach(() => {
   // No line about the search unless a test asks for one.
   mocks.searchStatus.mockResolvedValue({
     engines: { default: null, byKey: {} },
-    gdeltNewsFailing: false,
+    recentRunsFoundNoNews: false,
   });
 });
 
@@ -674,14 +674,18 @@ describe("the line about the news search", () => {
   const ENGINES = { 30: "gdelt", 20: "anthropic", 10: "gdelt" } as const;
   const NOTICE = "research-settings-news-notice";
   const GDELT_ONLY = "This key gets news only from GDELT, which sometimes refuses requests.";
-  const GDELT_FAILING = "Recent research runs got no news because GDELT did not answer.";
+  const NO_RECENT_NEWS = "Recent research runs got no news.";
   const CHOOSE = "Choose an Anthropic key for more reliable news.";
   const ADD = "Add an Anthropic key for more reliable news";
+  const SAVE_FIRST = "Save, then add an Anthropic key for more reliable news.";
 
-  const statusWith = (byKey: Record<number, "anthropic" | "gdelt">, gdeltNewsFailing = false) =>
+  const statusWith = (
+    byKey: Record<number, "anthropic" | "gdelt">,
+    recentRunsFoundNoNews = false,
+  ) =>
     mocks.searchStatus.mockResolvedValue({
       engines: { default: byKey[30] ?? null, byKey },
-      gdeltNewsFailing,
+      recentRunsFoundNoNews,
     });
 
   it("says the default key gets news only from GDELT, and points to the Anthropic key", async () => {
@@ -707,14 +711,13 @@ describe("the line about the news search", () => {
     expect(within(dialog).getByTestId(NOTICE)).toHaveTextContent(GDELT_ONLY);
   });
 
-  it("warns when the latest GDELT runs got no news", async () => {
+  it("warns when recent runs got no news", async () => {
     statusWith(ENGINES, true);
     renderModal();
     const dialog = await openWindow();
 
     const notice = await within(dialog).findByTestId(NOTICE);
-    expect(notice).toHaveTextContent(`${GDELT_FAILING} ${CHOOSE}`);
-    expect(notice).not.toHaveTextContent(GDELT_ONLY);
+    expect(notice).toHaveTextContent(`${NO_RECENT_NEWS} ${GDELT_ONLY} ${CHOOSE}`);
   });
 
   it("does not warn about past runs once an Anthropic key is chosen", async () => {
@@ -735,6 +738,19 @@ describe("the line about the news search", () => {
     const notice = await within(dialog).findByTestId(NOTICE);
     expect(notice).not.toHaveTextContent(CHOOSE);
     expect(within(notice).getByText(ADD)).toBeInTheDocument();
+  });
+
+  it("asks to save first, without a link, while a change is unsaved", async () => {
+    statusWith({ 30: "gdelt", 20: "gdelt", 10: "gdelt" });
+    renderModal();
+    const dialog = await openWindow();
+    await within(dialog).findByTestId(NOTICE);
+
+    await choose(selectsOf(dialog).scan, SCAN_WEEKLY);
+
+    const notice = within(dialog).getByTestId(NOTICE);
+    expect(notice).toHaveTextContent(SAVE_FIRST);
+    expect(within(notice).queryByText(ADD)).not.toBeInTheDocument();
   });
 
   it("shows nothing when the status cannot be read, and the window still saves", async () => {

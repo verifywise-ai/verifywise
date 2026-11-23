@@ -53,7 +53,7 @@ vi.mock(
     // No line about the search: what these tests read is elsewhere.
     getVendorResearchSearchStatus: vi.fn(async () => ({
       engines: { default: null, byKey: {} },
-      gdeltNewsFailing: false,
+      recentRunsFoundNoNews: false,
     })),
     saveVendorResearchSettings: vi.fn(),
     listVendorRiskFindings: vi.fn(),

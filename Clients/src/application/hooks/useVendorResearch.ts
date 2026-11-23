@@ -158,7 +158,7 @@ export function useVendorResearchSettings(enabled = true) {
 }
 
 /**
- * Which search each LLM key gets, and whether the organization's recent GDELT runs got no news:
+ * Which search each LLM key gets, and whether the organization's recent runs got no news:
  * what the research settings window warns about. Admin only, like the settings, and read each time
  * the window opens. A failed read shows no warning and is not retried: the window works without it.
  */

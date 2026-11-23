@@ -487,14 +487,14 @@ export type ResearchSearchEngine = "anthropic" | "gdelt";
 /**
  * What the research settings window warns about (Admin only): the search of each LLM key by id,
  * of the default (the newest key; `null` without a key), and whether the organization's latest
- * GDELT runs all got no news.
+ * runs that say something about the news (up to 3, last 30 days) all got none.
  */
 export interface VendorResearchSearchStatus {
   engines: {
     default: ResearchSearchEngine | null;
     byKey: Record<number, ResearchSearchEngine>;
   };
-  gdeltNewsFailing: boolean;
+  recentRunsFoundNoNews: boolean;
 }
 
 /**

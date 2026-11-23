@@ -23,12 +23,12 @@ import {
   getRunTraceQuery,
   getVendorResearchSettingsQuery,
   listFindingsQuery,
-  listRecentGdeltRunSummariesQuery,
+  listRecentRunSummariesQuery,
 } from "../utils/vendorResearch.utils";
 import { getVendorResearchConfig } from "../services/vendorResearch/config";
 import {
-  RECENT_GDELT_RUNS,
-  RECENT_GDELT_RUN_DAYS,
+  RECENT_RUNS_READ,
+  RECENT_RUN_DAYS,
   researchSearchStatus,
 } from "../services/vendorResearch/searchStatus";
 import { credibilityRationale } from "../services/vendorResearch/credibilityText";
@@ -529,8 +529,8 @@ function autoResearchOf(
 }
 
 /**
- * Which search each of the organization's LLM keys gets in a research run, and whether the news
- * search of GDELT has been failing for its recent runs (see services/vendorResearch/searchStatus.ts).
+ * Which search each of the organization's LLM keys gets in a research run, and whether its recent
+ * runs got no news (see services/vendorResearch/searchStatus.ts).
  * For those who manage the organization's LLM keys: it is read by the research settings window. It
  * names engines by key id and carries a boolean, never a key or an address.
  */
@@ -548,11 +548,7 @@ export async function getResearchSearchStatus(req: Request, res: Response): Prom
   try {
     const [llmKeys, summaries] = await Promise.all([
       getLLMKeysQuery(req.organizationId!),
-      listRecentGdeltRunSummariesQuery(
-        req.organizationId!,
-        RECENT_GDELT_RUNS,
-        RECENT_GDELT_RUN_DAYS,
-      ),
+      listRecentRunSummariesQuery(req.organizationId!, RECENT_RUNS_READ, RECENT_RUN_DAYS),
     ]);
     const keys = llmKeys
       .filter((key) => typeof key.id === "number")

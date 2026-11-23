@@ -53,7 +53,7 @@ export async function getVendorResearchSettings(): Promise<VendorResearchSetting
 }
 
 /**
- * Which search each LLM key gets, and whether GDELT has been failing. Admin only. A failure raises
+ * Which search each LLM key gets, and whether recent runs got no news. Admin only. A failure raises
  * no toast: the window that reads it only leaves its warning out.
  */
 export async function getVendorResearchSearchStatus(): Promise<VendorResearchSearchStatus> {

@@ -64,8 +64,9 @@ interface ResearchSettingsModalProps {
  * When the research key on screen gets its news from GDELT alone (any key but an Anthropic key
  * that calls Anthropic's API; the server says which, see `useVendorResearchSearchStatus`), a line
  * under it says so, because GDELT can refuse a server and a run then finds no news. When the
- * organization's latest GDELT runs all got no news, the line becomes a warning. It points to an
- * Anthropic key: one of the list when there is one, otherwise the form that adds one. A status
+ * organization's latest runs that say something about the news all got none, the line becomes a
+ * warning. It points to an Anthropic key: one of the list when there is one, otherwise the form
+ * that adds one (a link only while nothing is unsaved, since leaving drops the changes). A status
  * that could not be read shows no line.
  *
  * The parent mounts it only while it is open, so each opening starts from what is saved. Nothing
@@ -121,7 +122,10 @@ export default function ResearchSettingsModal({ onClose, onNotify }: ResearchSet
   const engines = searchStatus.data?.engines;
   const researchEngine = research === DEFAULT_KEY ? engines?.default : engines?.byKey[research];
   const hasAnthropicKey = keys.some((key) => engines?.byKey[key.id] === "anthropic");
-  const gdeltFailing = searchStatus.data?.gdeltNewsFailing === true;
+  const noRecentNews = searchStatus.data?.recentRunsFoundNoNews === true;
+  // Leaving for the add-key form would drop what was changed here, so the link is offered only
+  // while nothing is unsaved.
+  const unsaved = Object.keys(changes).length > 0;
 
   const keyOptions = keys.map((key) => ({
     _id: key.id,
@@ -209,22 +213,23 @@ export default function ResearchSettingsModal({ onClose, onNotify }: ResearchSet
               sx={{
                 alignItems: "flex-start",
                 gap: "6px",
-                color: gdeltFailing ? "status.warning.text" : "text.secondary",
+                color: noRecentNews ? "status.warning.text" : "text.secondary",
               }}
             >
               <Box component="span" sx={{ display: "inline-flex", mt: "2px", flexShrink: 0 }}>
-                {gdeltFailing ? (
+                {noRecentNews ? (
                   <AlertTriangle size={14} strokeWidth={1.5} aria-hidden="true" />
                 ) : (
                   <Info size={14} strokeWidth={1.5} aria-hidden="true" />
                 )}
               </Box>
               <Typography sx={{ ...textStyles.bodySmall, color: "inherit" }}>
-                {gdeltFailing
-                  ? t("Recent research runs got no news because GDELT did not answer.")
-                  : t("This key gets news only from GDELT, which sometimes refuses requests.")}{" "}
+                {noRecentNews && `${t("Recent research runs got no news.")} `}
+                {t("This key gets news only from GDELT, which sometimes refuses requests.")}{" "}
                 {hasAnthropicKey ? (
                   t("Choose an Anthropic key for more reliable news.")
+                ) : unsaved ? (
+                  t("Save, then add an Anthropic key for more reliable news.")
                 ) : (
                   <VWLink
                     onClick={() => navigate(LLM_KEY_CREATE_PATH)}
