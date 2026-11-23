@@ -12,17 +12,7 @@ import {
 } from "../e23/e23Text";
 import type { ReportData } from "../../../domain.layer/interfaces/i.reportGeneration";
 import { FIX_IT_ITEMS, e23FixItReportData, nonKindReportData } from "./helpers/e23ReportData";
-
-const unescapeXml = (s: string) =>
-  s
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&quot;/g, '"')
-    .replace(/&apos;/g, "'")
-    .replace(/&amp;/g, "&");
-
-const xmlText = (xml: string) =>
-  [...xml.matchAll(/<w:t[^>]*>([^<]*)<\/w:t>/g)].map((m) => unescapeXml(m[1])).join("\n");
+import { xmlText } from "./helpers/xmlText";
 
 async function parts(data: ReportData) {
   const result = await generateFixItDOCX(data, 77);

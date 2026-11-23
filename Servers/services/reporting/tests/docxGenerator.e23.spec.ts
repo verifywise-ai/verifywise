@@ -19,14 +19,7 @@ import {
 } from "../e23/e23Text";
 import { ReportData } from "../../../domain.layer/interfaces/i.reportGeneration";
 import { e23ReportData, nonKindReportData } from "./helpers/e23ReportData";
-
-const unescapeXml = (s: string) =>
-  s
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&quot;/g, '"')
-    .replace(/&apos;/g, "'")
-    .replace(/&amp;/g, "&");
+import { xmlText } from "./helpers/xmlText";
 
 /** Visible text of one part of the DOCX, runs joined with newlines. */
 async function partText(data: ReportData, part = "word/document.xml"): Promise<string> {
@@ -36,7 +29,7 @@ async function partText(data: ReportData, part = "word/document.xml"): Promise<s
   const file = zip.file(part);
   if (!file) return "";
   const xml = await file.async("string");
-  return [...xml.matchAll(/<w:t[^>]*>([^<]*)<\/w:t>/g)].map((m) => unescapeXml(m[1])).join("\n");
+  return xmlText(xml);
 }
 
 /** Text of every header part. */

@@ -20,6 +20,7 @@ import {
   E23_GROUP_INVENTORY,
   E23_GROUP_SELF,
 } from "../../tests/helpers/e23ReportData";
+import { unescapeXml, xmlText } from "../../tests/helpers/xmlText";
 import type { ReportData } from "../../../../domain.layer/interfaces/i.reportGeneration";
 
 const GAP_NARRATIVE = "The tiering claim is not borne out by the inventory records.";
@@ -57,15 +58,16 @@ const gapSection = (view: E23FormalView): E23Section | undefined =>
 const docxText = async (content: Buffer): Promise<string> => {
   const zip = await JSZip.loadAsync(content);
   const xml = await zip.file("word/document.xml")!.async("string");
-  return [...xml.matchAll(/<w:t[^>]*>([^<]*)<\/w:t>/g)]
-    .map((m) =>
-      m[1]
-        .replace(/&amp;/g, "&")
-        .replace(/&apos;/g, "'")
-        .replace(/&quot;/g, '"'),
-    )
-    .join("\n");
+  return xmlText(xml);
 };
+
+describe("unescapeXml", () => {
+  it("decodes each entity once: an escaped entity stays literal", () => {
+    expect(unescapeXml("&amp;quot;")).toBe("&quot;");
+    expect(unescapeXml("&amp;amp;")).toBe("&amp;");
+    expect(unescapeXml("Q&amp;A &lt;b&gt; &quot;x&quot; it&apos;s")).toBe(`Q&A <b> "x" it's`);
+  });
+});
 
 describe("the e23Gap block in the formal report", () => {
   it("follows the contradictions, labelled as AI, positions printed as labels", () => {
