@@ -1,5 +1,6 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 import { ComponentVisible } from "../../interfaces/ComponentVisible";
+import { InputValues } from "../../interfaces/appStates";
 
 export type AppModule =
   "main" | "evals" | "ai-detection" | "shadow-ai" | "ai-gateway" | "ai-trust-index" | "super-admin";
@@ -21,6 +22,12 @@ interface UiState {
    * product tour once the relevant sections have rendered.
    */
   componentsVisible: ComponentVisible;
+  /**
+   * Cross-component "row selected for edit" shuttle, migrated from the legacy
+   * VerifyWiseContext. Risk/policy tables write the clicked row here; the
+   * AddNewRiskForm hook reads it to prefill the edit form.
+   */
+  inputValues: InputValues;
 }
 
 const initialState: UiState = {
@@ -39,6 +46,7 @@ const initialState: UiState = {
     projectFrameworks: false,
     compliance: false,
   },
+  inputValues: {},
 };
 
 const uiSlice = createSlice({
@@ -76,6 +84,9 @@ const uiSlice = createSlice({
     ) => {
       state.componentsVisible[action.payload.component] = action.payload.value;
     },
+    setInputValues: (state, action: PayloadAction<InputValues>) => {
+      state.inputValues = action.payload;
+    },
   },
 });
 
@@ -88,6 +99,7 @@ export const {
   setActiveModule,
   setSetupModalOpen,
   setComponentVisibility,
+  setInputValues,
 } = uiSlice.actions;
 
 /** True while the first-login setup modal is on screen. */
@@ -102,3 +114,7 @@ export const selectComponentsVisible = (state: { ui?: UiState }): ComponentVisib
     projectFrameworks: false,
     compliance: false,
   };
+
+/** Row-selected-for-edit shuttle (migrated from VerifyWiseContext). */
+export const selectInputValues = (state: { ui?: UiState }): InputValues =>
+  state.ui?.inputValues ?? {};
