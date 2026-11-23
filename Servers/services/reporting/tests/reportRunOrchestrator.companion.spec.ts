@@ -202,7 +202,43 @@ describe("runScheduledReport with a fix-it companion", () => {
 
     expect(outcome.status).toBe("failed");
     expect(uploadFile).toHaveBeenCalledTimes(2);
-    expect(finalUpdate()).toMatchObject({ status: "failed" });
+    // Kept files stay linked to the run: downloadable, and deleted with it.
+    expect(finalUpdate()).toMatchObject({
+      status: "failed",
+      error_message: "db down",
+      file_id: 501,
+      output_filename: FORMAL.filename,
+      output_mime_type: FORMAL.mimeType,
+      companion_file_id: 500,
+      companion_filename: COMPANION.filename,
+      companion_mime_type: COMPANION.mimeType,
+    });
+    expect(finalUpdate().delivery_status).toMatchObject({ storage: { status: "success" } });
+  });
+
+  it("keeps the companion linked when the run fails late without a stored formal report", async () => {
+    updateRunStatusQuery.mockRejectedValueOnce(new Error("db down"));
+
+    await run({ saveToStorage: false });
+
+    expect(finalUpdate()).toMatchObject({
+      status: "failed",
+      companion_file_id: 500,
+      companion_filename: COMPANION.filename,
+    });
+    expect(finalUpdate().file_id ?? null).toBeNull();
+  });
+
+  it("links nothing on a late failure before the companion was stored", async () => {
+    // A throw before any upload (here: the request cannot be resolved).
+    generateReport.mockRejectedValueOnce(new Error("resolver broke"));
+
+    await run({ saveToStorage: true });
+
+    expect(uploadFile).not.toHaveBeenCalled();
+    expect(finalUpdate()).toMatchObject({ status: "failed", error_message: "resolver broke" });
+    expect(finalUpdate().companion_file_id ?? null).toBeNull();
+    expect(finalUpdate().file_id ?? null).toBeNull();
   });
 
   it("stores no companion for a run without one", async () => {

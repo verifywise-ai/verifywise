@@ -93,6 +93,10 @@ export async function runScheduledReport(
   });
 
   const userId = sched.owner_id ?? sched.created_by;
+  // The files this run has stored so far, as run columns. Every later status
+  // write carries them, the failure one included: a file that is kept must
+  // stay linked to its run, or it can neither be downloaded nor deleted with it.
+  let stored: Record<string, unknown> = {};
   try {
     // The schedule id is what makes a prior-run comparison possible: this run's
     // predecessor is the last run of the same schedule. Attached here rather
@@ -120,7 +124,6 @@ export async function runScheduledReport(
     // It never goes to deliverReport, so no email link or attachment can carry
     // it. If it cannot be stored the run fails before anything is delivered.
     const companion = result.companion;
-    let companionFileId: number | null = null;
     if (companion) {
       try {
         const file: any = await uploadFile(
@@ -137,7 +140,11 @@ export async function runScheduledReport(
           sched.organization_id,
         );
         if (!file?.id) throw new Error("the file store returned no id");
-        companionFileId = file.id;
+        stored = {
+          companion_file_id: file.id,
+          companion_filename: companion.filename,
+          companion_mime_type: companion.mimeType,
+        };
       } catch (e: any) {
         const error = `The fix-it list could not be stored: ${e?.message ?? String(e)}`;
         await updateRunStatusQuery(run.id, sched.organization_id, {
@@ -155,6 +162,13 @@ export async function runScheduledReport(
       { content: result.content, filename: result.filename, mimeType: result.mimeType },
       { organizationId: sched.organization_id, userId, runId: run.id },
     );
+    stored = {
+      ...stored,
+      file_id: delivery.fileId,
+      output_filename: result.filename,
+      output_mime_type: result.mimeType,
+      delivery_status: delivery,
+    };
     const channels = [delivery.storage, delivery.emailLink, delivery.attachment];
     const anyFailed = channels.some((c: any) => c?.status === "failed");
     const gaps = result.collectionFailures ?? [];
@@ -168,16 +182,7 @@ export async function runScheduledReport(
     );
     await updateRunStatusQuery(run.id, sched.organization_id, {
       status,
-      file_id: delivery.fileId,
-      output_filename: result.filename,
-      output_mime_type: result.mimeType,
-      ...(companion &&
-        companionFileId !== null && {
-          companion_file_id: companionFileId,
-          companion_filename: companion.filename,
-          companion_mime_type: companion.mimeType,
-        }),
-      delivery_status: delivery,
+      ...stored,
       ...(gaps.length > 0 && {
         error_message: gapsMessage(gaps),
       }),
@@ -191,8 +196,9 @@ export async function runScheduledReport(
   } catch (e: any) {
     // A late failure (persisting analyses, the final status write) comes after
     // delivery: the formal report may already be stored or emailed, so the
-    // stored files stay where they are.
+    // stored files stay where they are, and stay linked to the run.
     await updateRunStatusQuery(run.id, sched.organization_id, {
+      ...stored,
       status: "failed",
       error_message: e.message,
       duration_ms: Date.now() - startedAt,
