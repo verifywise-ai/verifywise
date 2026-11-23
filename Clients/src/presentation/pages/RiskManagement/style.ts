@@ -7,10 +7,41 @@ export const riskMainStackStyle = {
   gap: 10,
 };
 
+/**
+ * Toolbar: filters, Columns and Search on the left take the room that's left
+ * and wrap inside it; the actions on the right keep their width and stay at
+ * the top right. On a narrow screen the actions move to their own line,
+ * still right-aligned, instead of being squeezed.
+ */
+export const riskToolbarStyle = {
+  flexWrap: "wrap",
+  alignItems: "flex-start",
+  justifyContent: "space-between",
+  columnGap: "16px",
+  rowGap: "8px",
+};
+
 export const riskFilterRowStyle = {
+  display: "flex",
+  flexWrap: "wrap",
+  gap: "8px",
+  alignItems: "center",
+  flex: "1 1 0",
+  minWidth: "320px",
+};
+
+/** Columns and Search wrap to the next line together, never apart. */
+export const riskViewControlsStyle = {
   display: "flex",
   gap: "8px",
   alignItems: "center",
+};
+
+export const riskActionsStyle = {
+  gap: "8px",
+  alignItems: "center",
+  flexShrink: 0,
+  marginLeft: "auto",
 };
 
 // B. Toolbar Buttons
@@ -24,7 +55,8 @@ export const analyticsIconButtonStyle = {
 export const addNewRiskButtonStyle = {
   backgroundColor: singleTheme.buttons.primary.contained.backgroundColor,
   border: `1px solid ${singleTheme.buttons.primary.contained.backgroundColor}`,
-  gap: 2,
+  gap: "8px",
+  whiteSpace: "nowrap",
 };
 
 // C. Popover (Insert Risk Mega Dropdown)
