@@ -1,6 +1,6 @@
 # Servers — Backend Development Guide
 
-> **Last Updated:** 2026-11-18
+> **Last Updated:** 2026-11-23
 
 ---
 
@@ -185,7 +185,8 @@ every contributor must follow:
   signature auth only for documented machine-ingestion surfaces.
 - **Swagger:** versioned operations get tags of the form `v1: <Resource>`; legacy
   operations keep their existing tags. Regenerate (`generate:swagger`,
-  `generate:endpoints`, `check:api-drift`) — never hand-edit `swagger.yaml`. Deprecation
+  `generate:endpoints`, `check:api-drift`) — never hand-edit the generated parts of
+  `swagger.yaml` (see **API Documentation Workflow** below for what may be edited). Deprecation
   markings go through the generator's deprecation list (`scripts/apiDeprecations.ts`),
   not manual edits. Add an entry there (method, OpenAPI path, sunset, replacement): the
   generator sets `deprecated: true` and prepends the Sunset notice ahead of the
@@ -207,8 +208,13 @@ every contributor must follow:
 ## API Documentation Workflow
 
 The Express route layer is the single source of truth for the API surface.
-`Servers/swagger.yaml` and `docs/api-docs/src/config/endpoints.ts` are generated
-from the route files and must never be edited by hand.
+`docs/api-docs/src/config/endpoints.ts` is generated and must never be edited by
+hand. In `Servers/swagger.yaml` the generator owns the paths, methods, tags,
+`operationId`, `security`, deprecation markings and the `Requires role:` note;
+never hand-edit those. Everything else (summaries, descriptions, parameters,
+request bodies, responses and `components.schemas`) has no other source: the
+generator keeps it as written. Correct it in `swagger.yaml`, then run step 3
+below and commit the regenerated output, so CI's drift check sees a stable file.
 
 ### Adding or changing an endpoint
 
