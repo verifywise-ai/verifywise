@@ -135,6 +135,12 @@ const rowOf = (text: string) => {
 /** Opens what the latest run found and checked, which is behind one button of the summary. */
 const openRunDetails = async () =>
   userEvent.click(await screen.findByRole("button", { name: "How it was researched" }));
+/** Opens the credits of the lists under the findings, which sit behind one link of their own. */
+const openCredits = async () =>
+  userEvent.click(await screen.findByRole("button", { name: "Data sources and licences" }));
+/** Opens the names of every list the run asked that held nothing. */
+const openAllLists = async () =>
+  userEvent.click(await screen.findByRole("button", { name: "Show all lists" }));
 /**
  * The line of the source with this host in an open row: the host, the date and the tags of the
  * source. Its quote is under the line.
@@ -3487,7 +3493,7 @@ describe("the coverage of the latest run", () => {
   const follows = (a: HTMLElement, b: HTMLElement) =>
     Boolean(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
   const CHECKED =
-    "Checked: CISA Known Exploited Vulnerabilities (1), OFAC Specially Designated Nationals list (0), UK Sanctions List (0), EU consolidated list of financial sanctions (0), the National Vulnerability Database";
+    "Checked 4 public lists and registers. 1 had a record: CISA Known Exploited Vulnerabilities.";
 
   it("lists the checked sources and their counts", async () => {
     mocks.latest.mockResolvedValue(
@@ -3497,6 +3503,10 @@ describe("the coverage of the latest run", () => {
     await openRunDetails();
 
     const checked = screen.getByText(CHECKED);
+    expect(
+      screen.getByText("Also checked: the National Vulnerability Database."),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Data as of 10 Oct 2026.")).toBeInTheDocument();
     const cited = screen.getByText(
       "Sources cited: 1 official, 0 trusted press, 0 vendor, 0 unverified",
     );
@@ -3508,16 +3518,22 @@ describe("the coverage of the latest run", () => {
     expect(screen.queryByText(/The server's/)).not.toBeInTheDocument();
   });
 
-  it("says No records in … as of …", async () => {
+  it("names the lists that held nothing only behind Show all lists, and never twice", async () => {
     mocks.latest.mockResolvedValue(run({ coverage: coverage() }));
     renderSection({ route: WITH_VENDOR_7 });
     await openRunDetails();
 
-    expect(
-      screen.getByText(
-        "No records in OFAC Specially Designated Nationals list, UK Sanctions List, EU consolidated list of financial sanctions as of 10 Oct 2026",
-      ),
-    ).toBeInTheDocument();
+    const ALL =
+      "No records: OFAC Specially Designated Nationals list, UK Sanctions List, EU consolidated list of financial sanctions.";
+    expect(screen.queryByText(ALL)).not.toBeInTheDocument();
+    expect(screen.queryByText(/UK Sanctions List/)).not.toBeInTheDocument();
+    const toggle = screen.getByRole("button", { name: "Show all lists" });
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+    await openAllLists();
+    expect(screen.getByText(ALL)).toBeInTheDocument();
+    expect(screen.getAllByText(/UK Sanctions List/)).toHaveLength(1);
+    await userEvent.click(screen.getByRole("button", { name: "Hide the lists" }));
+    expect(screen.queryByText(ALL)).not.toBeInTheDocument();
   });
 
   it("names a stale source", async () => {
@@ -3566,7 +3582,7 @@ describe("the coverage of the latest run", () => {
     const notChecked = screen.getByText(
       "Not checked: OFAC Specially Designated Nationals list, the vendor's status page",
     );
-    expect(follows(screen.getByText(/^Checked:/), notChecked)).toBe(true);
+    expect(follows(screen.getByText(/^Checked \d/), notChecked)).toBe(true);
   });
 
   it("says Public databases turned off", async () => {
@@ -3585,14 +3601,19 @@ describe("the coverage of the latest run", () => {
 
     expect(await screen.findByText("Public databases turned off")).toBeInTheDocument();
     await openRunDetails();
-    expect(screen.queryByText(/^Checked:/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/^Checked/)).not.toBeInTheDocument();
     expect(screen.queryByText(/^Data sources:/)).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Data sources and licences" })).toBeNull();
   });
 
-  it("shows the data sources line", async () => {
+  it("shows the data sources line behind Data sources and licences", async () => {
     mocks.latest.mockResolvedValue(run({ coverage: coverage() }));
     renderSection({ route: WITH_VENDOR_7 });
 
+    const toggle = await screen.findByRole("button", { name: "Data sources and licences" });
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+    expect(screen.queryByText(/^Data sources:/)).not.toBeInTheDocument();
+    await openCredits();
     const line = await screen.findByText(`Data sources: ${joinAttributions(ATTRIBUTIONS)}`);
     // The UK statement's own full stop is not doubled by the semicolon that follows it.
     expect(line.textContent).toContain("Licence v3.0; EU consolidated list");
@@ -3622,6 +3643,7 @@ describe("the coverage of the latest run", () => {
       mocks.latest.mockResolvedValue(latest);
       renderSection({ route: WITH_VENDOR_7 });
       await screen.findByText(FIRST);
+      await openCredits();
 
       const expected =
         latest.status === "completed"
@@ -3636,6 +3658,7 @@ describe("the coverage of the latest run", () => {
       mocks.list.mockResolvedValue({ rows: [credibleFinding()], total: 1 });
       mocks.latest.mockResolvedValue(run({ coverage: coverage() }));
       renderSection({ route: WITH_VENDOR_7 });
+      await openCredits();
 
       expect(
         await screen.findByText(`Data sources: ${joinAttributions(ATTRIBUTIONS)}`),
@@ -3645,6 +3668,7 @@ describe("the coverage of the latest run", () => {
     it("credits the lists the findings cite with every vendor listed", async () => {
       mocks.list.mockResolvedValue({ rows: [credibleFinding(), secondFinding()], total: 2 });
       renderSection();
+      await openCredits();
 
       expect(await screen.findByText(KEV_LINE)).toBeInTheDocument();
       expect(screen.queryByRole("link", { name: "GDELT Project" })).not.toBeInTheDocument();
@@ -3689,16 +3713,16 @@ describe("the coverage of the latest run", () => {
 
     expect(
       screen.getByText(
-        "Checked: CISA Known Exploited Vulnerabilities (1), the National Vulnerability Database (2), OFAC Specially Designated Nationals list (0), UK Sanctions List (0), EU consolidated list of financial sanctions (0)",
+        "Checked 5 public lists and registers. 2 had records: CISA Known Exploited Vulnerabilities, the National Vulnerability Database.",
       ),
     ).toBeInTheDocument();
-    const line = screen.getByText(
-      `Data sources: ${joinAttributions([
-        ATTRIBUTIONS[0],
-        "This product uses data from the NVD API but is not endorsed or certified by the NVD.",
-        ...ATTRIBUTIONS.slice(1),
-      ])}`,
+    // The NVD's terms ask for its notice to be displayed: it stays on screen without a click.
+    const notice = screen.getByText(
+      "This product uses data from the NVD API but is not endorsed or certified by the NVD.",
     );
+    expect(notice.closest("[data-vw-no-translate]")).not.toBeNull();
+    await openCredits();
+    const line = screen.getByText(`Data sources: ${joinAttributions(ATTRIBUTIONS)}`);
     expect(line.closest("[data-vw-no-translate]")).not.toBeNull();
   });
 
@@ -3724,12 +3748,13 @@ describe("the coverage of the latest run", () => {
 
     expect(
       screen.getByText(
-        "Checked: AI Incident Database (2), MITRE ATLAS case studies (1), NHTSA Standing General Order crash reports (0), FDA list of AI-enabled medical devices (0)",
+        "Checked 4 public lists and registers. 2 had records: AI Incident Database, MITRE ATLAS case studies.",
       ),
     ).toBeInTheDocument();
+    await openAllLists();
     expect(
       screen.getByText(
-        "No records in NHTSA Standing General Order crash reports, FDA list of AI-enabled medical devices as of 10 Oct 2026",
+        "No records: NHTSA Standing General Order crash reports, FDA list of AI-enabled medical devices.",
       ),
     ).toBeInTheDocument();
     expect(
@@ -3740,6 +3765,7 @@ describe("the coverage of the latest run", () => {
     expect(
       screen.getByText("Sources cited: 0 official, 1 trusted press, 0 vendor, 2 unverified"),
     ).toBeInTheDocument();
+    await openCredits();
     const line = screen.getByText(
       `Data sources: ${joinAttributions([
         "AI Incident Database, Responsible AI Collaborative (incidentdatabase.ai), CC BY-SA 4.0. Adapted by VerifyWise; the adapted records are shared under CC BY-SA 4.0.",
@@ -3770,8 +3796,11 @@ describe("the coverage of the latest run", () => {
 
     expect(screen.getByText("Not checked: MITRE ATLAS case studies")).toBeInTheDocument();
     expect(
-      screen.getByText("Checked: FDA list of AI-enabled medical devices (3)"),
+      screen.getByText(
+        "Checked 1 public list or register. 1 had a record: FDA list of AI-enabled medical devices.",
+      ),
     ).toBeInTheDocument();
+    await openCredits();
     expect(
       screen.getByText(/^Data sources: FDA list of AI-enabled medical devices,/),
     ).toBeInTheDocument();
@@ -3805,13 +3834,12 @@ describe("the coverage of the latest run", () => {
 
       expect(
         screen.getByText(
-          "Checked: US Consolidated Screening List (2), FDA recalls of AI-enabled medical devices (0)",
+          "Checked 2 public lists and registers. 1 had a record: US Consolidated Screening List.",
         ),
       ).toBeInTheDocument();
+      await openAllLists();
       expect(
-        screen.getByText(
-          "No records in FDA recalls of AI-enabled medical devices as of 10 Oct 2026",
-        ),
+        screen.getByText("No records: FDA recalls of AI-enabled medical devices."),
       ).toBeInTheDocument();
       expect(
         screen.getByText(
@@ -3821,15 +3849,15 @@ describe("the coverage of the latest run", () => {
       expect(
         screen.getByText("Sources cited: 2 official, 0 trusted press, 0 vendor, 0 unverified"),
       ).toBeInTheDocument();
-      const line = screen.getByText(
-        `Data sources: ${joinAttributions([CSL_NOTICE, RECALLS_NOTICE])}`,
-      );
-      // The words of a notice are never translated, and the full stop of the first is not doubled.
+      // ITA's terms ask for its notice to be displayed prominently: it stays on screen.
+      const notice = screen.getByText(CSL_NOTICE);
+      expect(notice.closest("[data-vw-no-translate]")).not.toBeNull();
+      expect(notice.textContent).not.toContain("Data API");
+      // The other credit is behind the link, never translated.
+      expect(screen.queryByText(`Data sources: ${RECALLS_NOTICE}`)).toBeNull();
+      await openCredits();
+      const line = screen.getByText(`Data sources: ${RECALLS_NOTICE}`);
       expect(line.closest("[data-vw-no-translate]")).not.toBeNull();
-      expect(line.textContent).toContain(
-        "Entries adapted by VerifyWise; FDA medical device recalls",
-      );
-      expect(line.textContent).not.toContain("Data API");
     });
 
     it("names the screening list when the run could not check it, and says nothing of the recalls it did not ask", async () => {
@@ -3850,8 +3878,11 @@ describe("the coverage of the latest run", () => {
 
       expect(screen.getByText("Not checked: US Consolidated Screening List")).toBeInTheDocument();
       expect(
-        screen.getByText("Checked: CISA Known Exploited Vulnerabilities (1)"),
+        screen.getByText(
+          "Checked 1 public list or register. 1 had a record: CISA Known Exploited Vulnerabilities.",
+        ),
       ).toBeInTheDocument();
+      await openCredits();
       // Neither notice is shown: nothing of the two lists is in the findings.
       expect(screen.queryByText(/Consolidated Screening List but is not endorsed/)).toBeNull();
       expect(screen.queryByText(/FDA recalls of AI-enabled medical devices/)).toBeNull();
@@ -3874,7 +3905,7 @@ describe("the coverage of the latest run", () => {
 
       expect(await screen.findByText("Public databases turned off")).toBeInTheDocument();
       await openRunDetails();
-      expect(screen.queryByText(/^Checked:/)).not.toBeInTheDocument();
+      expect(screen.queryByText(/^Checked/)).not.toBeInTheDocument();
       expect(screen.queryByText(/^Data sources:/)).not.toBeInTheDocument();
     });
   });
@@ -3884,7 +3915,7 @@ describe("the coverage of the latest run", () => {
     const OFSI_NOTICE =
       "UK Office of Financial Sanctions Implementation (HM Treasury) enforcement notices, published on GOV.UK. Contains public sector information licensed under the Open Government Licence v3.0. Adapted by VerifyWise; no endorsement by HM Treasury is implied.";
 
-    it("names the list that held a record, counts the ones that held none, and credits only the first", async () => {
+    it("names the lists that held a record, the others only behind Show all lists, and credits only the first", async () => {
       mocks.latest.mockResolvedValue(
         run({
           coverage: coverage({
@@ -3909,7 +3940,7 @@ describe("the coverage of the latest run", () => {
 
       expect(
         await screen.findByText(
-          "Checked: CISA Known Exploited Vulnerabilities (1), UK OFSI financial sanctions enforcement notices (1), 2 more lists with no records",
+          "Checked 4 public lists and registers. 2 had records: CISA Known Exploited Vulnerabilities, UK OFSI financial sanctions enforcement notices.",
         ),
       ).toBeInTheDocument();
       // A list that could not be checked is always named: a silent gap would read as a clean check.
@@ -3920,17 +3951,23 @@ describe("the coverage of the latest run", () => {
         ),
       ).toBeInTheDocument();
       expect(screen.getByText("Not checked: GLEIF LEI records")).toBeInTheDocument();
-      // The lists that held nothing are counted, never named, and owe no credit.
+      // The lists that held nothing are named only on request, and owe no credit.
       expect(screen.queryByText(/AI Hallucination Cases/)).toBeNull();
       expect(screen.queryByText(/Epoch AI/)).toBeNull();
-      expect(screen.queryByText(/^No records in/)).toBeNull();
+      await openAllLists();
+      expect(
+        screen.getByText(
+          "No records: AI Hallucination Cases database, Epoch AI Data on AI Models.",
+        ),
+      ).toBeInTheDocument();
+      await openCredits();
       const line = screen.getByText(
         `Data sources: ${joinAttributions([ATTRIBUTIONS[0], OFSI_NOTICE])}`,
       );
       expect(line.closest("[data-vw-no-translate]")).not.toBeNull();
     });
 
-    it("says nothing of the lists a run asked when none of them held a record, but counts them", async () => {
+    it("counts the lists a run asked when none of them held a record, and credits none", async () => {
       mocks.latest.mockResolvedValue(
         run({
           coverage: coverage({
@@ -3943,7 +3980,9 @@ describe("the coverage of the latest run", () => {
       renderSection({ route: WITH_VENDOR_7 });
       await openRunDetails();
 
-      expect(await screen.findByText("Checked: 3 lists with no records")).toBeInTheDocument();
+      expect(
+        await screen.findByText("Checked 3 public lists and registers. None had a record."),
+      ).toBeInTheDocument();
       expect(screen.queryByText(/^Data sources:/)).not.toBeInTheDocument();
       expect(screen.queryByText(/^Not checked:/)).not.toBeInTheDocument();
     });
@@ -3960,9 +3999,10 @@ describe("the coverage of the latest run", () => {
       if (details !== null) await userEvent.click(details);
       expect(screen.queryByText("What it checked")).not.toBeInTheDocument();
       for (const start of [
-        /^Checked:/,
+        /^Checked/,
         /^Not checked:/,
-        /^No records in/,
+        /^No records:/,
+        /^Data as of/,
         /^Sources cited:/,
         /^Data sources:/,
       ]) {

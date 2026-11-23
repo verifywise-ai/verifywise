@@ -763,6 +763,46 @@ describe.each(LANGS)("research findings in %s", (lang) => {
   /** Opens what the latest run found and checked, which is behind one button of the summary. */
   const openRunDetails = async () =>
     userEvent.click(await screen.findByRole("button", { name: tr(lang, "How it was researched") }));
+  /** Opens the credits of the lists, which sit behind one link under the findings. */
+  const openCredits = async () =>
+    userEvent.click(
+      await screen.findByRole("button", { name: tr(lang, "Data sources and licences") }),
+    );
+  /** Opens the names of the lists the run asked that held nothing. */
+  const openAllLists = async () =>
+    userEvent.click(await screen.findByRole("button", { name: tr(lang, "Show all lists") }));
+  /** The line that counts the lists a run asked and names the ones that held a record. */
+  const checkedLine = (total: number, held: readonly string[]) => {
+    const count = tr(
+      lang,
+      total === 1
+        ? "Checked 1 public list or register."
+        : "Checked {count} public lists and registers.",
+      { count: total },
+    );
+    const found =
+      held.length === 0
+        ? tr(lang, "None had a record.")
+        : tr(
+            lang,
+            held.length === 1 ? "1 had a record: {sources}." : "{count} had records: {sources}.",
+            {
+              count: held.length,
+              sources: held.join(", "),
+            },
+          );
+    return plain(`${count} ${found}`);
+  };
+  /**
+   * The one line with the days of the copies the run asked, in the language's own range form: it
+   * says them once. Returns the line, which the test then expects.
+   */
+  const asOfLine = () => {
+    const [prefix] = tr(lang, "Data as of {dates}.", { dates: "\u0000" }).split("\u0000");
+    const lines = screen.queryAllByText((text) => text.startsWith(prefix));
+    expect(lines).toHaveLength(1);
+    return plain(lines[0].textContent ?? "");
+  };
   /** The two scales a level is computed from, as the one line an open row shows them on. */
   const scales = (severity: string, likelihood: string) =>
     tr(lang, "Severity: {severity} · Likelihood: {likelihood}", {
@@ -1195,13 +1235,12 @@ describe.each(LANGS)("research findings in %s", (lang) => {
 
     expect(await screen.findByText(tr(lang, "What it checked"))).toBeInTheDocument();
     expect(
-      await screen.findByText(
-        tr(lang, "Checked: {sources}", {
+      await screen.findByText(checkedLine(4, [name("CISA Known Exploited Vulnerabilities")])),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        tr(lang, "Also checked: {sources}.", {
           sources: [
-            `${name("CISA Known Exploited Vulnerabilities")} (1)`,
-            `${name("OFAC Specially Designated Nationals list")} (0)`,
-            `${name("UK Sanctions List")} (0)`,
-            `${name("EU consolidated list of financial sanctions")} (0)`,
             name("the National Vulnerability Database"),
             name("SEC EDGAR"),
             name("Have I Been Pwned"),
@@ -1210,15 +1249,15 @@ describe.each(LANGS)("research findings in %s", (lang) => {
         }),
       ),
     ).toBeInTheDocument();
+    await openAllLists();
     expect(
-      screen.getByText(
-        tr(lang, "No records in {sources} as of {dates}", {
+      await screen.findByText(
+        tr(lang, "No records: {sources}.", {
           sources: [
             name("OFAC Specially Designated Nationals list"),
             name("UK Sanctions List"),
             name("EU consolidated list of financial sanctions"),
           ].join(", "),
-          dates: dateIn(lang, "2026-10-10T08:00:00.000Z"),
         }),
       ),
     ).toBeInTheDocument();
@@ -1240,12 +1279,14 @@ describe.each(LANGS)("research findings in %s", (lang) => {
       ),
     ).toBeInTheDocument();
     // The words of the licences stay as their owners wrote them; the label before them does not.
+    await openCredits();
     expect(
       screen.getByText(
         tr(lang, "Data sources: {attributions}", { attributions: joinAttributions(ATTRIBUTIONS) }),
       ),
     ).toBeInTheDocument();
 
+    asOfLine();
     expectNoUntranslatedText(lang, FIXTURES);
   });
 
@@ -1283,14 +1324,15 @@ describe.each(LANGS)("research findings in %s", (lang) => {
     ).toBeInTheDocument();
     expect(
       await screen.findByText(
-        tr(lang, "Checked: {sources}", {
-          sources: [
-            `${name("the National Vulnerability Database")} (2)`,
-            `${name("the CVE Program")} (0)`,
-            `${name("UN Security Council Consolidated List")} (1)`,
-            name("Have I Been Pwned"),
-          ].join(", "),
-        }),
+        checkedLine(3, [
+          name("the National Vulnerability Database"),
+          name("UN Security Council Consolidated List"),
+        ]),
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        tr(lang, "Also checked: {sources}.", { sources: name("Have I Been Pwned") }),
       ),
     ).toBeInTheDocument();
     expect(
@@ -1298,10 +1340,13 @@ describe.each(LANGS)("research findings in %s", (lang) => {
     ).toBeInTheDocument();
     expect(
       screen.getByText(
-        tr(lang, "No records in {sources} as of {dates}", {
-          sources: name("the CVE Program"),
-          dates: dateIn(lang, "2026-10-10T08:00:00.000Z"),
-        }),
+        tr(lang, "Data as of {dates}.", { dates: dateIn(lang, "2026-10-10T08:00:00.000Z") }),
+      ),
+    ).toBeInTheDocument();
+    await openAllLists();
+    expect(
+      await screen.findByText(
+        tr(lang, "No records: {sources}.", { sources: name("the CVE Program") }),
       ),
     ).toBeInTheDocument();
     expect(
@@ -1313,12 +1358,18 @@ describe.each(LANGS)("research findings in %s", (lang) => {
         ),
       ),
     ).toBeInTheDocument();
-    // The notices stay as their owners wrote them, the NVD's among them.
+    // The notices stay as their owners wrote them: the NVD's on screen, as its terms ask, the
+    // others behind the link.
+    expect(
+      screen.getByText(
+        "This product uses data from the NVD API but is not endorsed or certified by the NVD.",
+      ),
+    ).toBeInTheDocument();
+    await openCredits();
     expect(
       screen.getByText(
         tr(lang, "Data sources: {attributions}", {
           attributions: joinAttributions([
-            "This product uses data from the NVD API but is not endorsed or certified by the NVD.",
             "CVE records Copyright © 1999-2026, The MITRE Corporation, under the CVE Terms of Use (https://www.cve.org/Legal/TermsOfUse)",
             "United Nations Security Council Consolidated List",
           ]),
@@ -1326,6 +1377,7 @@ describe.each(LANGS)("research findings in %s", (lang) => {
       ),
     ).toBeInTheDocument();
 
+    asOfLine();
     expectNoUntranslatedText(lang, FIXTURES);
   });
 
@@ -1370,13 +1422,7 @@ describe.each(LANGS)("research findings in %s", (lang) => {
     ).toBeInTheDocument();
     expect(
       await screen.findByText(
-        tr(lang, "Checked: {sources}", {
-          sources: [
-            `${name("AI Incident Database")} (2)`,
-            `${name("MITRE ATLAS case studies")} (1)`,
-            `${name("NHTSA Standing General Order crash reports")} (0)`,
-          ].join(", "),
-        }),
+        checkedLine(3, [name("AI Incident Database"), name("MITRE ATLAS case studies")]),
       ),
     ).toBeInTheDocument();
     expect(
@@ -1386,11 +1432,11 @@ describe.each(LANGS)("research findings in %s", (lang) => {
         }),
       ),
     ).toBeInTheDocument();
+    await openAllLists();
     expect(
-      screen.getByText(
-        tr(lang, "No records in {sources} as of {dates}", {
+      await screen.findByText(
+        tr(lang, "No records: {sources}.", {
           sources: name("NHTSA Standing General Order crash reports"),
-          dates: dateIn(lang, "2026-10-10T08:00:00.000Z"),
         }),
       ),
     ).toBeInTheDocument();
@@ -1413,6 +1459,7 @@ describe.each(LANGS)("research findings in %s", (lang) => {
     ).toBeInTheDocument();
     // The notices stay as their owners wrote them, the share-alike one of the incident database
     // among them; the label before them does not.
+    await openCredits();
     expect(
       screen.getByText(
         tr(lang, "Data sources: {attributions}", {
@@ -1425,6 +1472,7 @@ describe.each(LANGS)("research findings in %s", (lang) => {
       ),
     ).toBeInTheDocument();
 
+    asOfLine();
     expectNoUntranslatedText(lang, FIXTURES);
   });
 
@@ -1450,20 +1498,13 @@ describe.each(LANGS)("research findings in %s", (lang) => {
     await openRunDetails();
 
     expect(
-      await screen.findByText(
-        tr(lang, "Checked: {sources}", {
-          sources: [
-            `${name("US Consolidated Screening List")} (2)`,
-            `${name("FDA recalls of AI-enabled medical devices")} (0)`,
-          ].join(", "),
-        }),
-      ),
+      await screen.findByText(checkedLine(2, [name("US Consolidated Screening List")])),
     ).toBeInTheDocument();
+    await openAllLists();
     expect(
-      screen.getByText(
-        tr(lang, "No records in {sources} as of {dates}", {
+      await screen.findByText(
+        tr(lang, "No records: {sources}.", {
           sources: name("FDA recalls of AI-enabled medical devices"),
-          dates: dateIn(lang, "2026-10-07T09:23:00.000Z"),
         }),
       ),
     ).toBeInTheDocument();
@@ -1484,15 +1525,15 @@ describe.each(LANGS)("research findings in %s", (lang) => {
         ),
       ),
     ).toBeInTheDocument();
-    // The notices stay as their owners wrote them; the label before them does not.
+    // The notices stay as their owners wrote them; the label before them does not. ITA's is on
+    // screen, as its terms ask; the other is behind the link.
+    expect(screen.getByText(CSL_NOTICE)).toBeInTheDocument();
+    await openCredits();
     expect(
-      screen.getByText(
-        tr(lang, "Data sources: {attributions}", {
-          attributions: joinAttributions([CSL_NOTICE, RECALLS_NOTICE]),
-        }),
-      ),
+      screen.getByText(tr(lang, "Data sources: {attributions}", { attributions: RECALLS_NOTICE })),
     ).toBeInTheDocument();
 
+    asOfLine();
     expectNoUntranslatedText(lang, FIXTURES);
   });
 
@@ -1527,13 +1568,10 @@ describe.each(LANGS)("research findings in %s", (lang) => {
       ),
     ).toBeInTheDocument();
     expect(
-      screen.getByText(
-        tr(lang, "Checked: {sources}", {
-          sources: `${name("FDA recalls of AI-enabled medical devices")} (1)`,
-        }),
-      ),
+      screen.getByText(checkedLine(1, [name("FDA recalls of AI-enabled medical devices")])),
     ).toBeInTheDocument();
     // Only the notice of the list the run asked is shown.
+    await openCredits();
     expect(
       screen.getByText(tr(lang, "Data sources: {attributions}", { attributions: RECALLS_NOTICE })),
     ).toBeInTheDocument();
@@ -1548,6 +1586,7 @@ describe.each(LANGS)("research findings in %s", (lang) => {
       ),
     ).toBeInTheDocument();
 
+    asOfLine();
     expectNoUntranslatedText(lang, FIXTURES);
   });
 
@@ -1582,13 +1621,10 @@ describe.each(LANGS)("research findings in %s", (lang) => {
 
     expect(
       await screen.findByText(
-        tr(lang, "Checked: {sources}", {
-          sources: [
-            `${name("CISA Known Exploited Vulnerabilities")} (1)`,
-            `${name("UK OFSI financial sanctions enforcement notices")} (1)`,
-            tr(lang, "{count} more lists with no records", { count: 2 }),
-          ].join(", "),
-        }),
+        checkedLine(4, [
+          name("CISA Known Exploited Vulnerabilities"),
+          name("UK OFSI financial sanctions enforcement notices"),
+        ]),
       ),
     ).toBeInTheDocument();
     // Without a click, the summary says what could not be checked.
@@ -1606,6 +1642,7 @@ describe.each(LANGS)("research findings in %s", (lang) => {
     expect(screen.queryByText(/AI Hallucination Cases/)).toBeNull();
     expect(screen.queryByText(/Epoch AI/)).toBeNull();
     // Only the notice of the list that held a record is shown, as its owner wrote it.
+    await openCredits();
     expect(
       screen.getByText(
         tr(lang, "Data sources: {attributions}", {
@@ -1623,10 +1660,11 @@ describe.each(LANGS)("research findings in %s", (lang) => {
       ),
     ).toBeInTheDocument();
 
+    asOfLine();
     expectNoUntranslatedText(lang, FIXTURES);
   });
 
-  it("counts the lists that held no record in one item when no list is named, in the language of the screen", async () => {
+  it("counts the lists when none of them held a record, in the language of the screen", async () => {
     mocks.latest.mockResolvedValue(
       run({
         category_summary: FOUR_OUTCOMES,
@@ -1640,13 +1678,7 @@ describe.each(LANGS)("research findings in %s", (lang) => {
     renderSection();
     await openRunDetails();
 
-    expect(
-      await screen.findByText(
-        tr(lang, "Checked: {sources}", {
-          sources: tr(lang, "{count} lists with no records", { count: 3 }),
-        }),
-      ),
-    ).toBeInTheDocument();
+    expect(await screen.findByText(checkedLine(3, []))).toBeInTheDocument();
     expect(
       screen.getByText(
         tr(
@@ -1657,6 +1689,7 @@ describe.each(LANGS)("research findings in %s", (lang) => {
       ),
     ).toBeInTheDocument();
 
+    asOfLine();
     expectNoUntranslatedText(lang, FIXTURES);
   });
 
@@ -1693,11 +1726,7 @@ describe.each(LANGS)("research findings in %s", (lang) => {
       await screen.findByText(tr(lang, "Not checked: {sources}", { sources })),
     ).toBeInTheDocument();
     expect(
-      screen.getByText(
-        tr(lang, "Checked: {sources}", {
-          sources: `${tr(lang, "CISA Known Exploited Vulnerabilities")} (1)`,
-        }),
-      ),
+      screen.getByText(checkedLine(1, [tr(lang, "CISA Known Exploited Vulnerabilities")])),
     ).toBeInTheDocument();
     expect(
       screen.getByText(
@@ -1709,6 +1738,7 @@ describe.each(LANGS)("research findings in %s", (lang) => {
       ),
     ).toBeInTheDocument();
 
+    asOfLine();
     expectNoUntranslatedText(lang, FIXTURES);
   });
 

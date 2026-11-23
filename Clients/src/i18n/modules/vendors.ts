@@ -294,12 +294,31 @@ export const de: Record<string, string> = {
     "disclose.io-Liste der Programme zur Offenlegung von Schwachstellen",
   "GLEIF LEI records": "GLEIF-LEI-Datensätze",
   "Checked: {sources}": "Geprüft: {sources}",
-  "{count} more lists with no records": "{count} weitere Listen ohne Einträge",
-  "1 more list with no records": "1 weitere Liste ohne Einträge",
-  "{count} lists with no records": "{count} Listen ohne Einträge",
-  "1 list with no records": "1 Liste ohne Einträge",
+  "Checked 1 public list or register.": "1 öffentliche Liste oder 1 öffentliches Register geprüft.",
+  "Checked {count} public lists and registers.": "{count} öffentliche Listen und Register geprüft.",
+  "None had a record.": "Keine enthielt einen Eintrag.",
+  "1 had a record: {sources}.": "1 enthielt einen Eintrag: {sources}.",
+  "{count} had records: {sources}.": "{count} enthielten Einträge: {sources}.",
+  "Also checked: {sources}.": "Außerdem geprüft: {sources}.",
+  "Data as of {dates}.": "Datenstand: {dates}.",
+  "No records: {sources}.": "Keine Einträge: {sources}.",
+  "Show all lists": "Alle Listen anzeigen",
+  "Hide the lists": "Listen ausblenden",
+  "Data sources and licences": "Datenquellen und Lizenzen",
+  "Hide data sources and licences": "Datenquellen und Lizenzen ausblenden",
+  "no risks found": "keine Risiken gefunden",
+  "Listed in the FedRAMP Marketplace.": "Im FedRAMP Marketplace gelistet.",
+  "Listed in the FedRAMP Marketplace: {status}.": "Im FedRAMP Marketplace gelistet: {status}.",
+  "Listed in the FedRAMP Marketplace: {status} since {date}.":
+    "Im FedRAMP Marketplace gelistet: {status} seit {date}.",
+  "Listed in the FedRAMP Marketplace: {status} since {date}, impact level {impact}.":
+    "Im FedRAMP Marketplace gelistet: {status} seit {date}, Auswirkungsstufe {impact}.",
+  "Listed in the C2PA Conforming Products List.": "In der C2PA Conforming Products List gelistet.",
+  "Listed in the C2PA Conforming Products List: 1 conforming product, since {date}.":
+    "In der C2PA Conforming Products List gelistet: 1 konformes Produkt, seit {date}.",
+  "Listed in the C2PA Conforming Products List: {count} conforming products, the newest since {date}.":
+    "In der C2PA Conforming Products List gelistet: {count} konforme Produkte, das neueste seit {date}.",
   "Not checked: {sources}": "Nicht geprüft: {sources}",
-  "No records in {sources} as of {dates}": "Keine Einträge ({sources}), Stand: {dates}",
   "{source}: last updated {date}, not up to date":
     "{source}: zuletzt aktualisiert am {date}, nicht aktuell",
   "Sources cited: {official} official, {press} trusted press, {vendor} vendor, {unverified} unverified":
@@ -807,12 +826,33 @@ export const fr: Record<string, string> = {
     "liste disclose.io des programmes de divulgation de vulnérabilités",
   "GLEIF LEI records": "enregistrements LEI de la GLEIF",
   "Checked: {sources}": "Sources consultées : {sources}",
-  "{count} more lists with no records": "{count} autres listes sans enregistrement",
-  "1 more list with no records": "1 autre liste sans enregistrement",
-  "{count} lists with no records": "{count} listes sans enregistrement",
-  "1 list with no records": "1 liste sans enregistrement",
+  "Checked 1 public list or register.": "1 liste ou registre public consulté.",
+  "Checked {count} public lists and registers.": "{count} listes et registres publics consultés.",
+  "None had a record.": "Aucun ne contenait d'enregistrement.",
+  "1 had a record: {sources}.": "1 contenait un enregistrement : {sources}.",
+  "{count} had records: {sources}.": "{count} contenaient des enregistrements : {sources}.",
+  "Also checked: {sources}.": "Également consultés : {sources}.",
+  "Data as of {dates}.": "Données à la date du {dates}.",
+  "No records: {sources}.": "Aucun enregistrement : {sources}.",
+  "Show all lists": "Afficher toutes les listes",
+  "Hide the lists": "Masquer les listes",
+  "Data sources and licences": "Sources des données et licences",
+  "Hide data sources and licences": "Masquer les sources des données et les licences",
+  "no risks found": "aucun risque trouvé",
+  "Listed in the FedRAMP Marketplace.": "Répertorié dans le FedRAMP Marketplace.",
+  "Listed in the FedRAMP Marketplace: {status}.":
+    "Répertorié dans le FedRAMP Marketplace : {status}.",
+  "Listed in the FedRAMP Marketplace: {status} since {date}.":
+    "Répertorié dans le FedRAMP Marketplace : {status} depuis le {date}.",
+  "Listed in the FedRAMP Marketplace: {status} since {date}, impact level {impact}.":
+    "Répertorié dans le FedRAMP Marketplace : {status} depuis le {date}, niveau d'impact {impact}.",
+  "Listed in the C2PA Conforming Products List.":
+    "Répertorié dans la C2PA Conforming Products List.",
+  "Listed in the C2PA Conforming Products List: 1 conforming product, since {date}.":
+    "Répertorié dans la C2PA Conforming Products List : 1 produit conforme, depuis le {date}.",
+  "Listed in the C2PA Conforming Products List: {count} conforming products, the newest since {date}.":
+    "Répertorié dans la C2PA Conforming Products List : {count} produits conformes, le plus récent depuis le {date}.",
   "Not checked: {sources}": "Sources non consultées : {sources}",
-  "No records in {sources} as of {dates}": "Aucun enregistrement ({sources}) à la date du {dates}",
   "{source}: last updated {date}, not up to date":
     "{source} : dernière mise à jour le {date}, pas à jour",
   "Sources cited: {official} official, {press} trusted press, {vendor} vendor, {unverified} unverified":
@@ -1316,12 +1356,32 @@ export const es: Record<string, string> = {
     "lista de disclose.io de programas de divulgación de vulnerabilidades",
   "GLEIF LEI records": "registros LEI de la GLEIF",
   "Checked: {sources}": "Fuentes consultadas: {sources}",
-  "{count} more lists with no records": "{count} listas más sin registros",
-  "1 more list with no records": "1 lista más sin registros",
-  "{count} lists with no records": "{count} listas sin registros",
-  "1 list with no records": "1 lista sin registros",
+  "Checked 1 public list or register.": "Se consultó 1 lista o registro público.",
+  "Checked {count} public lists and registers.":
+    "Se consultaron {count} listas y registros públicos.",
+  "None had a record.": "Ninguno tenía registros.",
+  "1 had a record: {sources}.": "1 tenía un registro: {sources}.",
+  "{count} had records: {sources}.": "{count} tenían registros: {sources}.",
+  "Also checked: {sources}.": "También se consultó: {sources}.",
+  "Data as of {dates}.": "Datos a fecha de {dates}.",
+  "No records: {sources}.": "Sin registros: {sources}.",
+  "Show all lists": "Mostrar todas las listas",
+  "Hide the lists": "Ocultar las listas",
+  "Data sources and licences": "Fuentes de datos y licencias",
+  "Hide data sources and licences": "Ocultar fuentes de datos y licencias",
+  "no risks found": "no se encontraron riesgos",
+  "Listed in the FedRAMP Marketplace.": "Figura en el FedRAMP Marketplace.",
+  "Listed in the FedRAMP Marketplace: {status}.": "Figura en el FedRAMP Marketplace: {status}.",
+  "Listed in the FedRAMP Marketplace: {status} since {date}.":
+    "Figura en el FedRAMP Marketplace: {status} desde el {date}.",
+  "Listed in the FedRAMP Marketplace: {status} since {date}, impact level {impact}.":
+    "Figura en el FedRAMP Marketplace: {status} desde el {date}, nivel de impacto {impact}.",
+  "Listed in the C2PA Conforming Products List.": "Figura en la C2PA Conforming Products List.",
+  "Listed in the C2PA Conforming Products List: 1 conforming product, since {date}.":
+    "Figura en la C2PA Conforming Products List: 1 producto conforme, desde el {date}.",
+  "Listed in the C2PA Conforming Products List: {count} conforming products, the newest since {date}.":
+    "Figura en la C2PA Conforming Products List: {count} productos conformes, el más reciente desde el {date}.",
   "Not checked: {sources}": "Fuentes no consultadas: {sources}",
-  "No records in {sources} as of {dates}": "Ningún registro ({sources}) a fecha de {dates}",
   "{source}: last updated {date}, not up to date":
     "{source}: última actualización el {date}, no está al día",
   "Sources cited: {official} official, {press} trusted press, {vendor} vendor, {unverified} unverified":

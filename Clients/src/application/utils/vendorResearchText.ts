@@ -31,6 +31,7 @@ import { fill } from "../../i18n/fill";
 import type {
   BackfilledCredibilityBasis,
   CategorySummaryEntry,
+  CoverageAttestation,
   CoverageSource,
   CredibilityBasis,
   CredibilityLabel,
@@ -153,10 +154,17 @@ export function describeCategoryLine(
   entry: Pick<CategorySummaryEntry, "category" | "outcome"> &
     Partial<Pick<CategorySummaryEntry, "note">>,
   t: Translate = translateKey,
+  options: { listed?: boolean } = {},
 ): string {
+  // A category with a listing in the vendor's favour (`attestationLines`) under it: "nothing found"
+  // would read as if the listing were not there, so it says what it means, no risks.
+  const outcome =
+    options.listed === true && entry?.outcome === "nothing_found"
+      ? t("no risks found")
+      : outcomeLabel(entry?.outcome, t);
   return fill(t("{category}: {outcome}"), {
     category: categoryLabel(entry?.category, t),
-    outcome: outcomeLabel(entry?.outcome, t),
+    outcome,
   });
 }
 
@@ -1109,20 +1117,22 @@ const LISTS_SHOWN_WHEN_FOUND: ReadonlySet<string> = new Set([
 
 export interface CoverageText {
   /**
-   * The lists and the databases the run asked, with what each list held; null for none. A list of
-   * those shown when found that held nothing is not named: the last item counts them.
+   * How many lists the run asked and which of them held a record ("Checked 33 public lists and
+   * registers. 1 had a record: FedRAMP Marketplace."); with no list asked, the web databases that
+   * answered ("Checked: Have I Been Pwned"); null for neither.
    */
   checked: string | null;
+  /** The web databases that answered, when lists were asked too; null for none. */
+  alsoChecked: string | null;
+  /** The days of the copies the run asked, once and compact ("Data as of 22–23 Nov 2026."). */
+  asOf: string | null;
+  /** The lists the run asked that held no record, named one by one, for a disclosure; null for none. */
+  allLists: string | null;
   /**
    * The lists and the databases the run could not check (a list with no copy, a lookup that
    * failed): its findings rest on none of them; null for none.
    */
   notChecked: string | null;
-  /**
-   * The lists that held nothing of the vendor, as of the days of their copies; null for none. The
-   * lists shown when found are not in it: `checked` counts them.
-   */
-  none: string | null;
   /** A line for each list the run asked whose copy is out of date. */
   stale: string[];
   /**
@@ -1141,14 +1151,46 @@ export interface CoverageText {
 }
 
 /**
- * What a run of the vendor risk database checked, in words: the lists and the databases it asked,
- * the lists that held nothing, the copies that are out of date, and what its findings cite. Built
- * from ids, outcomes, days and counts alone: the names and the attributions are the screen's own,
- * and a list or a database this file does not know is left out. A database the vendor risk
- * database reads through (the NVD) is a list here: its count, the day of its answer, its notice.
- * A list added on 2026-11-10 (`LISTS_SHOWN_WHEN_FOUND`) is named only when the run was offered a
- * record of it; a run that asked such lists and found nothing counts them in one item, so that the
- * lines stay short. A list that could not be checked is always named.
+ * The days of the given instants as one compact range in the language of the screen ("22–23 Nov
+ * 2026"), or the one day when they share it; null for none.
+ */
+function dayRangeOf(values: readonly unknown[], lang: string): string | null {
+  const days = [
+    ...new Set(
+      values.flatMap((value) =>
+        typeof value === "string" &&
+        /^\d{4}-\d{2}-\d{2}(?:T|$)/.test(value) &&
+        !Number.isNaN(new Date(value).getTime())
+          ? [new Date(value).toISOString().slice(0, 10)]
+          : [],
+      ),
+    ),
+  ].sort();
+  if (days.length === 0) return null;
+  const first = days[0];
+  const last = days[days.length - 1];
+  if (first === last) return formatResearchDate(first, lang);
+  // `formatRange` is in every browser the app supports; the lib of the build does not declare it.
+  const format = new Intl.DateTimeFormat(DATE_LOCALES[lang] ?? "en-GB", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    timeZone: "UTC",
+  }) as Intl.DateTimeFormat & { formatRange?: (from: Date, to: Date) => string };
+  return typeof format.formatRange === "function"
+    ? format.formatRange(new Date(first), new Date(last))
+    : `${formatResearchDate(first, lang)} – ${formatResearchDate(last, lang)}`;
+}
+
+/**
+ * What a run of the vendor risk database checked, in words a buyer reads: how many lists it asked
+ * and which held a record, the web databases that answered, the days of the copies once, the lists
+ * that held nothing (for a disclosure), the lists it could not check, the copies that are out of
+ * date, and what its findings cite. Built from ids, outcomes, days and counts alone: the names and
+ * the attributions are the screen's own, and a list or a database this file does not know is left
+ * out. A database the vendor risk database reads through (the NVD) is a list here. A list that
+ * could not be checked is always named. A list the release ships no bundle of has no row in a
+ * run's coverage at all (the server leaves it out), so it is in none of these lines.
  */
 export function coverageLines(coverage: RunCoverage, t: Translate, lang: string): CoverageText {
   const lists = (Array.isArray(coverage?.sources) ? coverage.sources : []).filter(
@@ -1171,57 +1213,59 @@ export function coverageLines(coverage: RunCoverage, t: Translate, lang: string)
     countOf(source.strong) + countOf(source.weak) > 0;
   const shownWhenFound = (source: CoverageSource): boolean => LISTS_SHOWN_WHEN_FOUND.has(source.id);
 
-  // A list shown when found is named only when it held a record; the others are counted in a last
-  // item, so that the line does not grow with every list that was asked and held nothing.
-  const named = asked.filter((source) => !shownWhenFound(source) || heldRecords(source));
-  const quiet = asked.length - named.length;
-  const checked = [
-    ...named.map(
-      (source) => `${nameOf(source.id)} (${countOf(source.strong) + countOf(source.weak)})`,
-    ),
-    ...lookups.map((lookup) => nameOf(lookup.id)),
-  ];
-  if (quiet > 0) {
-    const key =
-      checked.length === 0
-        ? quiet === 1
-          ? "1 list with no records"
-          : "{count} lists with no records"
-        : quiet === 1
-          ? "1 more list with no records"
-          : "{count} more lists with no records";
-    checked.push(fill(t(key), { count: quiet }));
+  const held = asked.filter(heldRecords).map((source) => nameOf(source.id));
+  const empty = asked.filter((source) => !heldRecords(source)).map((source) => nameOf(source.id));
+  const databases = lookups.map((lookup) => nameOf(lookup.id)).join(", ");
+  let checked: string | null = null;
+  if (asked.length > 0) {
+    const count = fill(
+      t(
+        asked.length === 1
+          ? "Checked 1 public list or register."
+          : "Checked {count} public lists and registers.",
+      ),
+      { count: asked.length },
+    );
+    const found =
+      held.length === 0
+        ? t("None had a record.")
+        : fill(
+            t(held.length === 1 ? "1 had a record: {sources}." : "{count} had records: {sources}."),
+            {
+              count: held.length,
+              sources: held.join(", "),
+            },
+          );
+    checked = `${count} ${found}`;
+  } else if (lookups.length > 0) {
+    checked = fill(t("Checked: {sources}"), { sources: databases });
   }
+  const asOfDays = dayRangeOf(
+    asked.map((source) => source.last_success_at),
+    lang,
+  );
   // What the run could not check: a silent gap in the screening would read as a clean one. Every
   // list that failed is named, whichever group it is in.
   const failed = [
     ...lists.filter((source) => source.outcome === "failed").map((source) => nameOf(source.id)),
     ...known.filter((lookup) => lookup.outcome === "failed").map((lookup) => nameOf(lookup.id)),
   ];
-  // The lists shown when found that held nothing are in the count above, not in this line.
-  const empty = lists
-    .filter((source) => !shownWhenFound(source))
-    .flatMap((source) => {
-      const date = source.outcome === "none" ? dayOf(source.last_success_at, lang) : null;
-      return date === null ? [] : [{ name: nameOf(source.id), date }];
-    });
   const cited = coverage?.cited;
 
   return {
-    checked:
-      checked.length === 0 ? null : fill(t("Checked: {sources}"), { sources: checked.join(", ") }),
+    checked,
+    alsoChecked:
+      asked.length > 0 && lookups.length > 0
+        ? fill(t("Also checked: {sources}."), { sources: databases })
+        : null,
+    asOf: asOfDays === null ? null : fill(t("Data as of {dates}."), { dates: asOfDays }),
+    allLists:
+      empty.length === 0 ? null : fill(t("No records: {sources}."), { sources: empty.join(", ") }),
     notChecked:
       failed.length === 0
         ? null
         : fill(t("Not checked: {sources}"), { sources: failed.join(", ") }),
     unchecked: failed,
-    none:
-      empty.length === 0
-        ? null
-        : fill(t("No records in {sources} as of {dates}"), {
-            sources: empty.map((entry) => entry.name).join(", "),
-            dates: [...new Set(empty.map((entry) => entry.date))].join(", "),
-          }),
     stale: asked.flatMap((source) => {
       const date = source.stale === true ? dayOf(source.last_success_at, lang) : null;
       return date === null
@@ -1260,4 +1304,117 @@ export function coverageLines(coverage: RunCoverage, t: Translate, lang: string)
       ),
     ],
   };
+}
+
+// ── What a listing attests ───────────────────────────────────────────────────
+
+/** The category under which each list that attests is shown. A list not here shows nothing. */
+const ATTESTING_LISTS: Record<string, ResearchCategory> = {
+  fedramp: "certifications",
+  c2pa_conforming: "certifications",
+};
+
+/** FedRAMP's own names of its statuses: proper names, never translated. */
+const FEDRAMP_STATUS_NAMES: Record<string, string> = {
+  fedramp_authorized: "FedRAMP Authorized",
+  fedramp_ready: "FedRAMP Ready",
+  fedramp_in_process: "FedRAMP In Process",
+  agency_in_process: "Agency In Process",
+};
+
+/** The impact levels the FedRAMP Marketplace data writes; another value is not shown. */
+const FEDRAMP_IMPACT_LEVELS: ReadonlySet<string> = new Set([
+  "High",
+  "Moderate",
+  "Low",
+  "LI-SaaS",
+  "20x Moderate",
+  "20x Low",
+]);
+
+const isDay = (value: unknown): value is string =>
+  typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value);
+
+function fedrampSentence(attestation: CoverageAttestation, t: Translate, lang: string): string {
+  const status = labelFor(FEDRAMP_STATUS_NAMES, attestation.status);
+  if (status === undefined) return t("Listed in the FedRAMP Marketplace.");
+  const since = isDay(attestation.since) ? formatResearchDate(attestation.since, lang) : null;
+  const impact =
+    typeof attestation.impact === "string" && FEDRAMP_IMPACT_LEVELS.has(attestation.impact)
+      ? attestation.impact
+      : null;
+  if (since === null) return fill(t("Listed in the FedRAMP Marketplace: {status}."), { status });
+  return impact === null
+    ? fill(t("Listed in the FedRAMP Marketplace: {status} since {date}."), { status, date: since })
+    : fill(t("Listed in the FedRAMP Marketplace: {status} since {date}, impact level {impact}."), {
+        status,
+        date: since,
+        impact,
+      });
+}
+
+function c2paSentence(attestation: CoverageAttestation, t: Translate, lang: string): string {
+  const count = countOf(attestation.count);
+  const since = isDay(attestation.since) ? formatResearchDate(attestation.since, lang) : null;
+  if (attestation.status !== "c2pa_conforming" || count === 0 || since === null) {
+    return t("Listed in the C2PA Conforming Products List.");
+  }
+  return fill(
+    t(
+      count === 1
+        ? "Listed in the C2PA Conforming Products List: 1 conforming product, since {date}."
+        : "Listed in the C2PA Conforming Products List: {count} conforming products, the newest since {date}.",
+    ),
+    { count, date: since },
+  );
+}
+
+/**
+ * What the lists that attest something in the vendor's favour (a FedRAMP authorisation, a C2PA
+ * conformance) said of it, one line per matched record, by the category they are shown under. A
+ * listing is context, never a risk: these lines sit under their category, beside "no risks found".
+ * The status is the one the server read from the list's own record, never more: a provider listed
+ * as In Process is never called authorised. A match by name alone says so, and each line ends with
+ * the day of the copy.
+ */
+export function attestationLines(
+  coverage: RunCoverage | null | undefined,
+  t: Translate,
+  lang: string,
+): Partial<Record<ResearchCategory, string[]>> {
+  const lines: Partial<Record<ResearchCategory, string[]>> = {};
+  for (const source of Array.isArray(coverage?.sources) ? coverage.sources : []) {
+    const category = labelFor(ATTESTING_LISTS, source?.id);
+    if (category === undefined || source.checked !== true) continue;
+    for (const attestation of Array.isArray(source.attestations) ? source.attestations : []) {
+      if (attestation === null || typeof attestation !== "object") continue;
+      const main =
+        source.id === "fedramp"
+          ? fedrampSentence(attestation, t, lang)
+          : c2paSentence(attestation, t, lang);
+      const asOf = isDay(attestation.as_of) ? formatResearchDate(attestation.as_of, lang) : null;
+      const line = [
+        main,
+        attestation.strength === "weak"
+          ? t("Matched by name only: this may be another company.")
+          : "",
+        asOf === null ? "" : fill(t("Data as of {dates}."), { dates: asOf }),
+      ]
+        .filter((part) => part !== "")
+        .join(" ");
+      (lines[category] ??= []).push(line);
+    }
+  }
+  return lines;
+}
+
+/**
+ * The notices whose terms ask for them to be shown prominently: the NVD's ("must display the
+ * following notice") and the International Trade Administration's ("should display the following
+ * notice prominently within the application"). They stay on screen; the other credits may sit
+ * behind a disclosure on the same page, which their licences allow (a reasonable manner, or a link
+ * to the statement).
+ */
+export function isProminentAttribution(attribution: string): boolean {
+  return attribution === ATTRIBUTIONS.nvd || attribution === ATTRIBUTIONS.csl;
 }

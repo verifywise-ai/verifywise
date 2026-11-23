@@ -181,6 +181,34 @@ export interface CoverageSource {
   /** When the copy was last brought up to date (ISO 8601); null when it never was. */
   last_success_at: string | null;
   stale: boolean;
+  /**
+   * For a list whose entries attest something in the vendor's favour (the FedRAMP Marketplace, the
+   * C2PA Conforming Products List), what each matched record says; absent for other lists and for
+   * older runs. Context, never a risk.
+   */
+  attestations?: CoverageAttestation[];
+}
+
+/** The status a listing attests (FedRAMP's four statuses, or a C2PA conformance). */
+export type AttestationStatus =
+  | "fedramp_authorized"
+  | "fedramp_ready"
+  | "fedramp_in_process"
+  | "agency_in_process"
+  | "c2pa_conforming";
+
+/** What one matched record of an attesting list says, in closed words. */
+export interface CoverageAttestation {
+  status: AttestationStatus | null;
+  /** A FedRAMP impact level as the Marketplace writes it ("High", "LI-SaaS"…); null for none. */
+  impact: string | null;
+  /** The day (YYYY-MM-DD) of the status, or of the newest conformance; null when unknown. */
+  since: string | null;
+  /** How many offerings or products the list names for the vendor. */
+  count: number;
+  strength: "strong" | "weak";
+  /** The day (YYYY-MM-DD) of the copy the record is from. */
+  as_of: string;
 }
 
 /**

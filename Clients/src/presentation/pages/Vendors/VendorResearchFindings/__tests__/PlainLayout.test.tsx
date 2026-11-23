@@ -205,7 +205,7 @@ describe("how the vendor was researched, behind one button", () => {
     const button = await detailsButton();
     expect(button).toHaveAttribute("aria-expanded", "false");
     expect(screen.queryByText("Security incidents: risks found")).not.toBeInTheDocument();
-    expect(screen.queryByText(/^Checked:/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/^Checked/)).not.toBeInTheDocument();
     expect(screen.queryByText(/^Sources cited:/)).not.toBeInTheDocument();
     expect(screen.queryByText(/^Searches:/)).not.toBeInTheDocument();
     expect(screen.queryByText("What the last research found")).not.toBeInTheDocument();
@@ -221,7 +221,7 @@ describe("how the vendor was researched, behind one button", () => {
     expect(shown.getByText("What it checked")).toBeInTheDocument();
     expect(
       shown.getByText(
-        "Checked: CISA Known Exploited Vulnerabilities (1), OFAC Specially Designated Nationals list (0), UK Sanctions List (0), EU consolidated list of financial sanctions (0), the National Vulnerability Database",
+        "Checked 4 public lists and registers. 1 had a record: CISA Known Exploited Vulnerabilities.",
       ),
     ).toBeInTheDocument();
     expect(
@@ -412,7 +412,7 @@ describe("the credits a licence asks for", () => {
   // The four lists of the fixture, each in its owner's words.
   const DATA_SOURCES = `Data sources: ${joinAttributions(ATTRIBUTIONS)}`;
 
-  it("stay on screen without a click, under the findings", async () => {
+  it("keep the GDELT credit on screen and the lists' credits one click away, under the findings", async () => {
     mocks.latest.mockResolvedValue(credited());
     renderSection();
     await screen.findByText(FIRST);
@@ -420,6 +420,9 @@ describe("the credits a licence asks for", () => {
     const link = await screen.findByRole("link", { name: "GDELT Project" });
     expect(link).toHaveAttribute("href", "https://www.gdeltproject.org/");
     expect(link.closest("p")).toHaveTextContent(GDELT);
+    const toggle = screen.getByRole("button", { name: "Data sources and licences" });
+    expect(screen.queryByText(DATA_SOURCES)).not.toBeInTheDocument();
+    await userEvent.click(toggle);
     const sources = screen.getByText(DATA_SOURCES);
     expect(follows(screen.getByText(SECOND), link)).toBe(true);
     expect(follows(link, sources)).toBe(true);
@@ -429,13 +432,14 @@ describe("the credits a licence asks for", () => {
     expect(screen.getAllByText(/^Data sources:/)).toHaveLength(1);
   });
 
-  it("stay on screen for a vendor with nothing pending", async () => {
+  it("stay on the page for a vendor with nothing pending", async () => {
     listOf([]);
     mocks.latest.mockResolvedValue(credited());
     renderSection();
 
     expect(await screen.findByText("No pending research findings.")).toBeInTheDocument();
     expect(await screen.findByRole("link", { name: "GDELT Project" })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Data sources and licences" }));
     expect(screen.getByText(DATA_SOURCES)).toBeInTheDocument();
   });
 

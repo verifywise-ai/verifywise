@@ -4,6 +4,7 @@ import { LANGS, setLanguage } from "../../../test/i18nHelpers";
 import type {
   CategoryOutcome,
   CategorySummaryEntry,
+  CoverageAttestation,
   CoverageSource,
   CredibilityBasis,
   CredibilityRule,
@@ -18,6 +19,7 @@ import type {
 } from "../../../domain/interfaces/i.vendorResearch";
 import * as vendorResearchText from "../vendorResearchText";
 import {
+  attestationLines,
   categoryLabel,
   coverageLines,
   credibilityLabel,
@@ -2015,10 +2017,33 @@ describe("coverageLines", () => {
     "EU consolidated list of financial sanctions, © European Union",
   ];
 
-  it("lists what the run checked, with the records each list held, in the screen's own names", () => {
-    expect(linesOf(coverageOf()).checked).toBe(
-      "Checked: CISA Known Exploited Vulnerabilities (1), OFAC Specially Designated Nationals list (2), UK Sanctions List (0), EU consolidated list of financial sanctions (0), the National Vulnerability Database, SEC EDGAR",
+  it("counts the lists the run checked and names the ones that held a record, in the screen's own names", () => {
+    const lines = linesOf(coverageOf());
+    expect(lines.checked).toBe(
+      "Checked 4 public lists and registers. 2 had records: CISA Known Exploited Vulnerabilities, OFAC Specially Designated Nationals list.",
     );
+    expect(lines.alsoChecked).toBe("Also checked: the National Vulnerability Database, SEC EDGAR.");
+    expect(lines.asOf).toBe("Data as of 10 Oct 2026.");
+  });
+
+  it("says it in the singular, and says when no list held a record", () => {
+    const one = linesOf(coverageOf({ sources: [listCopy("kev")], lookups: [] }));
+    expect(one.checked).toBe("Checked 1 public list or register. None had a record.");
+    expect(one.alsoChecked).toBeNull();
+    const held = linesOf(
+      coverageOf({ sources: [listCopy("kev", { outcome: "found", strong: 3 })], lookups: [] }),
+    );
+    expect(held.checked).toBe(
+      "Checked 1 public list or register. 1 had a record: CISA Known Exploited Vulnerabilities.",
+    );
+  });
+
+  it("names the web databases alone when the run asked no list", () => {
+    const lines = linesOf(coverageOf({ sources: [] }));
+    expect(lines.checked).toBe("Checked: the National Vulnerability Database, SEC EDGAR");
+    expect(lines.alsoChecked).toBeNull();
+    expect(lines.asOf).toBeNull();
+    expect(linesOf(coverageOf({ sources: [], lookups: [] })).checked).toBeNull();
   });
 
   it("names the lists and the databases the run could not check", () => {
@@ -2041,9 +2066,9 @@ describe("coverageLines", () => {
     expect(linesOf(coverageOf({ lookups: [] })).notChecked).toBeNull();
   });
 
-  it("says which lists held no record, as of the days of their copies", () => {
-    expect(linesOf(coverageOf()).none).toBe(
-      "No records in UK Sanctions List, EU consolidated list of financial sanctions as of 10 Oct 2026",
+  it("names the lists that held no record for the disclosure, and gives the days of the copies once", () => {
+    expect(linesOf(coverageOf()).allLists).toBe(
+      "No records: UK Sanctions List, EU consolidated list of financial sanctions.",
     );
     const twoDays = coverageOf({
       sources: [
@@ -2052,11 +2077,21 @@ describe("coverageLines", () => {
         listCopy("eu_fsf"),
       ],
     });
-    expect(linesOf(twoDays).none).toBe(
-      "No records in OFAC Specially Designated Nationals list, UK Sanctions List, EU consolidated list of financial sanctions as of 9 Oct 2026, 10 Oct 2026",
+    expect(linesOf(twoDays).allLists).toBe(
+      "No records: OFAC Specially Designated Nationals list, UK Sanctions List, EU consolidated list of financial sanctions.",
     );
+    // One compact range, as the language writes it ("9 – 10 Oct 2026" in en-GB).
+    expect(linesOf(twoDays).asOf).toMatch(/^Data as of 9\s?–\s?10 Oct 2026\.$/);
     const found = coverageOf({ sources: [listCopy("kev", { outcome: "found", strong: 1 })] });
-    expect(linesOf(found).none).toBeNull();
+    expect(linesOf(found).allLists).toBeNull();
+  });
+
+  it("names no list twice: a list is either among those with a record or among those without", () => {
+    const lines = linesOf(coverageOf());
+    for (const name of ["CISA Known Exploited Vulnerabilities", "UK Sanctions List"]) {
+      const said = [lines.checked, lines.allLists].join(" ").split(name).length - 1;
+      expect(said).toBe(1);
+    }
   });
 
   it("names each out-of-date list the run checked, with the day of its copy", () => {
@@ -2114,9 +2149,11 @@ describe("coverageLines", () => {
     });
     expect(linesOf(off)).toEqual({
       checked: null,
+      alsoChecked: null,
+      asOf: null,
+      allLists: null,
       notChecked: null,
       unchecked: [],
-      none: null,
       stale: [],
       cited: "Sources cited: 0 official, 1 trusted press, 0 vendor, 0 unverified",
       off: true,
@@ -2187,8 +2224,9 @@ describe("coverageLines", () => {
     it("the NVD is checked as a database, with its notice in the data sources", () => {
       const lines = linesOf(m2());
       expect(lines.checked).toBe(
-        "Checked: CISA Known Exploited Vulnerabilities (1), the National Vulnerability Database (2), OFAC Specially Designated Nationals list (2), UK Sanctions List (0), EU consolidated list of financial sanctions (0), SEC EDGAR",
+        "Checked 5 public lists and registers. 3 had records: CISA Known Exploited Vulnerabilities, the National Vulnerability Database, OFAC Specially Designated Nationals list.",
       );
+      expect(lines.alsoChecked).toBe("Also checked: SEC EDGAR.");
       expect(lines.notChecked).toBe("Not checked: the vendor's status page");
       expect(lines.attributions).toEqual([ATTRIBUTIONS[0], NOTICES.nvd, ...ATTRIBUTIONS.slice(1)]);
     });
@@ -2209,8 +2247,9 @@ describe("coverageLines", () => {
         );
 
       const none = nvd({ outcome: "none" });
-      expect(none.checked).toBe("Checked: the National Vulnerability Database (0)");
-      expect(none.none).toBe("No records in the National Vulnerability Database as of 9 Oct 2026");
+      expect(none.checked).toBe("Checked 1 public list or register. None had a record.");
+      expect(none.allLists).toBe("No records: the National Vulnerability Database.");
+      expect(none.asOf).toBe("Data as of 9 Oct 2026.");
       expect(none.attributions).toEqual([NOTICES.nvd]);
 
       const failed = nvd({ checked: false, outcome: "failed", last_success_at: null });
@@ -2252,9 +2291,10 @@ describe("coverageLines", () => {
         }),
       );
       expect(lines.checked).toBe(
-        "Checked: SEC EDGAR (1), the CVE Program (0), UN Security Council Consolidated List (1), Have I Been Pwned, the vendor's status page",
+        "Checked 3 public lists and registers. 2 had records: SEC EDGAR, UN Security Council Consolidated List.",
       );
-      expect(lines.none).toBe("No records in the CVE Program as of 10 Oct 2026");
+      expect(lines.alsoChecked).toBe("Also checked: Have I Been Pwned, the vendor's status page.");
+      expect(lines.allLists).toBe("No records: the CVE Program.");
       expect(lines.attributions).toEqual([NOTICES.sec, cveNotice(2026), NOTICES.un_sanctions]);
 
       // An answer of the SEC that could not be refreshed still offered its stored filing: credited.
@@ -2304,8 +2344,8 @@ describe("coverageLines", () => {
     });
 
     it("a run stored before M2 still shows the NVD among the databases it asked", () => {
-      expect(linesOf(coverageOf()).checked).toContain(
-        "EU consolidated list of financial sanctions (0), the National Vulnerability Database, SEC EDGAR",
+      expect(linesOf(coverageOf()).alsoChecked).toBe(
+        "Also checked: the National Vulnerability Database, SEC EDGAR.",
       );
     });
   });
@@ -2326,19 +2366,19 @@ describe("coverageLines", () => {
 
     it("counts the records each list held, in the screen's own names", () => {
       expect(linesOf(aiRun()).checked).toBe(
-        "Checked: AI Incident Database (2), MITRE ATLAS case studies (1), NHTSA Standing General Order crash reports (0), FDA list of AI-enabled medical devices (1)",
+        "Checked 4 public lists and registers. 3 had records: AI Incident Database, MITRE ATLAS case studies, FDA list of AI-enabled medical devices.",
       );
     });
 
     it("says which of them held no record, as of the day of its copy", () => {
-      expect(linesOf(aiRun()).none).toBe(
-        "No records in NHTSA Standing General Order crash reports as of 10 Oct 2026",
+      expect(linesOf(aiRun()).allLists).toBe(
+        "No records: NHTSA Standing General Order crash reports.",
       );
       const allNone = aiRun({
         sources: AI_LISTS.map((list) => listCopy(list.id)),
       });
-      expect(linesOf(allNone).none).toBe(
-        "No records in AI Incident Database, MITRE ATLAS case studies, NHTSA Standing General Order crash reports, FDA list of AI-enabled medical devices as of 10 Oct 2026",
+      expect(linesOf(allNone).allLists).toBe(
+        "No records: AI Incident Database, MITRE ATLAS case studies, NHTSA Standing General Order crash reports, FDA list of AI-enabled medical devices.",
       );
     });
 
@@ -2424,14 +2464,14 @@ describe("coverageLines", () => {
 
     it("counts the records each list held, in the screen's own names", () => {
       expect(linesOf(pairRun()).checked).toBe(
-        "Checked: US Consolidated Screening List (2), FDA recalls of AI-enabled medical devices (1)",
+        "Checked 2 public lists and registers. 2 had records: US Consolidated Screening List, FDA recalls of AI-enabled medical devices.",
       );
     });
 
     it("says which of them held no record, as of the day of its copy", () => {
       const noneAtAll = pairRun({ sources: CSL_AND_RECALLS.map((list) => listCopy(list.id)) });
-      expect(linesOf(noneAtAll).none).toBe(
-        "No records in US Consolidated Screening List, FDA recalls of AI-enabled medical devices as of 10 Oct 2026",
+      expect(linesOf(noneAtAll).allLists).toBe(
+        "No records: US Consolidated Screening List, FDA recalls of AI-enabled medical devices.",
       );
       const recallsOnly = pairRun({
         sources: [
@@ -2439,10 +2479,11 @@ describe("coverageLines", () => {
           listCopy("fda_device_recalls", { last_success_at: "2026-10-09T23:00:00.000Z" }),
         ],
       });
-      expect(linesOf(recallsOnly).none).toBe(
-        "No records in FDA recalls of AI-enabled medical devices as of 9 Oct 2026",
+      expect(linesOf(recallsOnly).allLists).toBe(
+        "No records: FDA recalls of AI-enabled medical devices.",
       );
-      expect(linesOf(pairRun()).none).toBeNull();
+      expect(linesOf(recallsOnly).asOf).toMatch(/^Data as of 9\s?–\s?10 Oct 2026\.$/);
+      expect(linesOf(pairRun()).allLists).toBeNull();
     });
 
     it("names the lists the run could not check, and the ones that are out of date", () => {
@@ -2519,7 +2560,10 @@ describe("coverageLines", () => {
         }),
       );
       expect(lines.checked).toBe(
-        "Checked: CISA Known Exploited Vulnerabilities (1), OFAC Specially Designated Nationals list (0), UN Security Council Consolidated List (0), US Consolidated Screening List (1), FDA list of AI-enabled medical devices (0), FDA recalls of AI-enabled medical devices (1), the National Vulnerability Database, SEC EDGAR",
+        "Checked 6 public lists and registers. 3 had records: CISA Known Exploited Vulnerabilities, US Consolidated Screening List, FDA recalls of AI-enabled medical devices.",
+      );
+      expect(lines.allLists).toBe(
+        "No records: OFAC Specially Designated Nationals list, UN Security Council Consolidated List, FDA list of AI-enabled medical devices.",
       );
       expect(lines.attributions).toEqual([
         ATTRIBUTIONS[0],
@@ -2558,7 +2602,7 @@ describe("coverageLines", () => {
     });
   });
 
-  describe("with the lists added on 2026-11-10: named when they held a record, counted when they held none", () => {
+  describe("with the lists added on 2026-11-10: named like every other list", () => {
     /** What the terms of three of them ask a screen to say, as the server stores it (vrdb/sources.ts). */
     const NOTICES = {
       canada_sema:
@@ -2577,7 +2621,7 @@ describe("coverageLines", () => {
     const noCopy = (id: VrdbSourceId, overrides: Partial<CoverageSource> = {}) =>
       listCopy(id, { checked: false, outcome: "failed", last_success_at: null, ...overrides });
 
-    it("names a list that held a record, and counts the ones that held none in a last item", () => {
+    it("names a list that held a record, and the ones that held none behind the disclosure", () => {
       const lines = linesOf(
         runOf(
           kev(),
@@ -2589,48 +2633,31 @@ describe("coverageLines", () => {
         ),
       );
       expect(lines.checked).toBe(
-        "Checked: CISA Known Exploited Vulnerabilities (1), OFAC Specially Designated Nationals list (0), UK OFSI financial sanctions enforcement notices (1), 2 more lists with no records",
+        "Checked 5 public lists and registers. 2 had records: CISA Known Exploited Vulnerabilities, UK OFSI financial sanctions enforcement notices.",
       );
-      // The lists that held nothing are counted above: only the shipped list is named here.
-      expect(lines.none).toBe(
-        "No records in OFAC Specially Designated Nationals list as of 10 Oct 2026",
+      expect(lines.allLists).toBe(
+        "No records: OFAC Specially Designated Nationals list, AI Hallucination Cases database, Epoch AI Data on AI Models.",
       );
       expect(lines.notChecked).toBe("Not checked: GLEIF LEI records");
       // A list that held no record owes no credit: nothing of it is in the findings.
       expect(lines.attributions).toEqual([ATTRIBUTIONS[0], ATTRIBUTIONS[1], NOTICES.uk_ofsi]);
     });
 
-    it("counts the lists that held none in four forms, the item last", () => {
+    it("counts every list the run asked, whatever list it is, and a count that is not a whole number is no record", () => {
       const none = (...ids: VrdbSourceId[]) => ids.map((id) => listCopy(id));
       const checkedOf = (...sources: CoverageSource[]) => linesOf(runOf(...sources)).checked;
-      expect(checkedOf(...none("charlotin", "epoch_ai", "gleif"))).toBe(
-        "Checked: 3 lists with no records",
-      );
-      expect(checkedOf(...none("charlotin"))).toBe("Checked: 1 list with no records");
-      expect(checkedOf(kev(), ...none("charlotin"))).toBe(
-        "Checked: CISA Known Exploited Vulnerabilities (1), 1 more list with no records",
+      expect(checkedOf(...none("charlotin", "epoch_ai"))).toBe(
+        "Checked 2 public lists and registers. None had a record.",
       );
       expect(checkedOf(kev(), ...none("charlotin", "epoch_ai", "fmti"))).toBe(
-        "Checked: CISA Known Exploited Vulnerabilities (1), 3 more lists with no records",
+        "Checked 4 public lists and registers. 1 had a record: CISA Known Exploited Vulnerabilities.",
       );
-      // After the databases the run looked up on the web too.
-      const lookedUp = (sources: CoverageSource[]) =>
-        linesOf(coverageOf({ sources, lookups: [{ id: "hibp", outcome: "none" }] })).checked;
-      expect(lookedUp([kev(), ...none("charlotin")])).toBe(
-        "Checked: CISA Known Exploited Vulnerabilities (1), Have I Been Pwned, 1 more list with no records",
-      );
-      expect(lookedUp(none("charlotin", "epoch_ai"))).toBe(
-        "Checked: Have I Been Pwned, 2 more lists with no records",
-      );
-      // Never in the line of the lists that held nothing, whatever the day of the copy.
-      expect(linesOf(runOf(...none("charlotin", "epoch_ai"))).none).toBeNull();
-      // A count that is not a whole number is no record.
       const odd = listCopy("charlotin", {
         outcome: "found",
         strong: "2" as never,
         weak: Number.NaN,
       });
-      expect(checkedOf(odd)).toBe("Checked: 1 list with no records");
+      expect(checkedOf(odd)).toBe("Checked 1 public list or register. None had a record.");
     });
 
     it("says nothing of a list the run did not ask: the vendor has no website, or the list is off", () => {
@@ -2641,7 +2668,9 @@ describe("coverageLines", () => {
           listCopy("epoch_ai", { checked: false, outcome: "off" }),
         ),
       );
-      expect(lines.checked).toBe("Checked: CISA Known Exploited Vulnerabilities (1)");
+      expect(lines.checked).toBe(
+        "Checked 1 public list or register. 1 had a record: CISA Known Exploited Vulnerabilities.",
+      );
       expect(lines.notChecked).toBeNull();
       expect(lines.attributions).toEqual([ATTRIBUTIONS[0]]);
     });
@@ -2661,7 +2690,9 @@ describe("coverageLines", () => {
       expect(lines.notChecked).toBe(
         "Not checked: AI Hallucination Cases database, GLEIF LEI records",
       );
-      expect(lines.checked).toBe("Checked: CISA Known Exploited Vulnerabilities (1)");
+      expect(lines.checked).toBe(
+        "Checked 1 public list or register. 1 had a record: CISA Known Exploited Vulnerabilities.",
+      );
       // The stored record is in the findings, so its notice is shown; the other list offered none.
       expect(lines.attributions).toEqual([ATTRIBUTIONS[0], NOTICES.gleif]);
     });
@@ -2678,28 +2709,27 @@ describe("coverageLines", () => {
         "UK OFSI financial sanctions enforcement notices: last updated 6 Oct 2026, not up to date",
       ]);
       expect(lines.checked).toBe(
-        "Checked: UK OFSI financial sanctions enforcement notices (1), 1 more list with no records",
+        "Checked 2 public lists and registers. 1 had a record: UK OFSI financial sanctions enforcement notices.",
       );
-      expect(lines.none).toBeNull();
+      expect(lines.allLists).toBe("No records: AI Hallucination Cases database.");
     });
 
-    it("keeps Canada's sanctions list among the lists it names, with its count, its day and its notice", () => {
+    it("keeps Canada's sanctions list among the lists it names, with its day and its notice", () => {
       const lines = linesOf(runOf(listCopy("canada_sema"), listCopy("uk_ofsi")));
-      expect(lines.checked).toBe(
-        "Checked: Consolidated Canadian Autonomous Sanctions List (0), 1 more list with no records",
+      expect(lines.checked).toBe("Checked 2 public lists and registers. None had a record.");
+      expect(lines.allLists).toBe(
+        "No records: Consolidated Canadian Autonomous Sanctions List, UK OFSI financial sanctions enforcement notices.",
       );
-      expect(lines.none).toBe(
-        "No records in Consolidated Canadian Autonomous Sanctions List as of 10 Oct 2026",
-      );
+      expect(lines.asOf).toBe("Data as of 10 Oct 2026.");
       expect(lines.attributions).toEqual([NOTICES.canada_sema]);
     });
 
     it("hides no list that held a record or failed, however many lists the run asked", () => {
       const held = linesOf(runOf(...NEW_LISTS.map((list) => found(list.id))));
       expect(held.checked).toBe(
-        `Checked: ${NEW_LISTS.map((list) => `${list.name} (1)`).join(", ")}`,
+        `Checked ${NEW_LISTS.length} public lists and registers. ${NEW_LISTS.length} had records: ${NEW_LISTS.map((list) => list.name).join(", ")}.`,
       );
-      expect(held.none).toBeNull();
+      expect(held.allLists).toBeNull();
       expect(held.attributions).toHaveLength(NEW_LISTS.length);
 
       const failed = linesOf(runOf(...NEW_LISTS.map((list) => noCopy(list.id))));
@@ -2726,7 +2756,7 @@ describe("coverageLines", () => {
         runOf(listCopy("kev", { checked: false, outcome: "off" }), listCopy("charlotin")),
       );
       expect(oneOn.off).toBe(false);
-      expect(oneOn.checked).toBe("Checked: 1 list with no records");
+      expect(oneOn.checked).toBe("Checked 1 public list or register. None had a record.");
     });
   });
 
@@ -2741,8 +2771,8 @@ describe("coverageLines", () => {
         lookups: [{ id: "mystery" as RecordSourceId, outcome: "found" }],
       }),
     );
-    expect(lines.checked).toBe("Checked: CISA Known Exploited Vulnerabilities (0)");
-    expect(lines.none).toBe("No records in CISA Known Exploited Vulnerabilities as of 10 Oct 2026");
+    expect(lines.checked).toBe("Checked 1 public list or register. None had a record.");
+    expect(lines.allLists).toBe("No records: CISA Known Exploited Vulnerabilities.");
     expect(lines.stale).toEqual([]);
     expect(lines.attributions).toEqual(ATTRIBUTIONS.slice(0, 1));
     expect(JSON.stringify(lines)).not.toContain("server");
@@ -2757,7 +2787,7 @@ describe("coverageLines", () => {
       t,
       "fr",
     );
-    expect(lines.none).toContain(formatResearchDate("2026-03-12", "fr"));
+    expect(lines.asOf).toContain(formatResearchDate("2026-03-12", "fr"));
     expect(lines.stale[0]).toContain(formatResearchDate("2026-03-12", "fr"));
   });
 });
@@ -2812,6 +2842,126 @@ describe("joinAttributions", () => {
     );
     expect(joinAttributions([NVD])).toBe(NVD);
     expect(joinAttributions([])).toBe("");
+  });
+});
+
+/** A run whose two attesting lists matched the vendor, in every form their lines take. */
+const attesting = (
+  id: "fedramp" | "c2pa_conforming",
+  attestations: CoverageAttestation[],
+): CoverageSource => ({
+  id,
+  name: "The server's name",
+  attribution: "The server's attribution",
+  mode: "mirror",
+  checked: true,
+  outcome: "found",
+  strong: 0,
+  weak: attestations.length,
+  last_success_at: "2026-11-23T15:18:18.788Z",
+  stale: false,
+  attestations,
+});
+const attestation = (overrides: Partial<CoverageAttestation> = {}): CoverageAttestation => ({
+  status: "fedramp_authorized",
+  impact: "High",
+  since: "2024-09-09",
+  count: 1,
+  strength: "strong",
+  as_of: "2026-11-23",
+  ...overrides,
+});
+const ATTESTING_RUN: RunCoverage = {
+  registry_version: "sr-6",
+  sources: [
+    attesting("fedramp", [
+      attestation(),
+      attestation({ impact: null }),
+      attestation({ since: null }),
+      attestation({ status: null, strength: "weak" }),
+    ]),
+    attesting("c2pa_conforming", [
+      attestation({ status: "c2pa_conforming", impact: null, since: "2026-11-09", count: 1 }),
+      attestation({ status: "c2pa_conforming", impact: null, since: "2026-11-09", count: 2 }),
+      attestation({ status: null, impact: null, since: null, count: 0 }),
+    ]),
+  ],
+  lookups: [],
+  cited: { official: 0, trusted_press: 0, vendor: 0, unverified: 0 },
+};
+
+describe("attestationLines", () => {
+  const linesOf = (coverage: RunCoverage) => attestationLines(coverage, english, "en");
+
+  it("says what the FedRAMP Marketplace lists of the vendor, under Certifications, with the day of the copy", () => {
+    expect(linesOf(ATTESTING_RUN).certifications).toEqual([
+      "Listed in the FedRAMP Marketplace: FedRAMP Authorized since 9 Sept 2024, impact level High. Data as of 23 Nov 2026.",
+      "Listed in the FedRAMP Marketplace: FedRAMP Authorized since 9 Sept 2024. Data as of 23 Nov 2026.",
+      "Listed in the FedRAMP Marketplace: FedRAMP Authorized. Data as of 23 Nov 2026.",
+      "Listed in the FedRAMP Marketplace. Matched by name only: this may be another company. Data as of 23 Nov 2026.",
+      "Listed in the C2PA Conforming Products List: 1 conforming product, since 9 Nov 2026. Data as of 23 Nov 2026.",
+      "Listed in the C2PA Conforming Products List: 2 conforming products, the newest since 9 Nov 2026. Data as of 23 Nov 2026.",
+      "Listed in the C2PA Conforming Products List. Data as of 23 Nov 2026.",
+    ]);
+  });
+
+  it("names the status the record gives, never a better one", () => {
+    const run = (status: CoverageAttestation["status"]) =>
+      linesOf({ ...ATTESTING_RUN, sources: [attesting("fedramp", [attestation({ status })])] })
+        .certifications?.[0] ?? "";
+    expect(run("fedramp_in_process")).toContain("FedRAMP In Process since");
+    expect(run("fedramp_ready")).toContain("FedRAMP Ready since");
+    expect(run("agency_in_process")).toContain("Agency In Process since");
+    for (const status of ["fedramp_in_process", "fedramp_ready", "agency_in_process"] as const) {
+      expect(run(status)).not.toContain("Authorized");
+    }
+    // A status the screen does not know says only that the vendor is listed.
+    expect(run("mystery" as never)).toBe(
+      "Listed in the FedRAMP Marketplace. Data as of 23 Nov 2026.",
+    );
+  });
+
+  it("shows no impact level it does not know, and nothing for a list that does not attest or was not asked", () => {
+    const odd = linesOf({
+      ...ATTESTING_RUN,
+      sources: [attesting("fedramp", [attestation({ impact: "<b>Max</b>" })])],
+    });
+    expect(odd.certifications?.[0]).toBe(
+      "Listed in the FedRAMP Marketplace: FedRAMP Authorized since 9 Sept 2024. Data as of 23 Nov 2026.",
+    );
+    const other = linesOf({
+      ...ATTESTING_RUN,
+      sources: [
+        { ...attesting("fedramp", [attestation()]), id: "kev" },
+        { ...attesting("fedramp", [attestation()]), checked: false, outcome: "failed" },
+      ],
+    });
+    expect(other).toEqual({});
+    expect(linesOf({ ...ATTESTING_RUN, sources: [] })).toEqual({});
+    expect(attestationLines(null, english, "en")).toEqual({});
+  });
+
+  it("makes the category line say no risks were found beside a listing", () => {
+    const certifications = entry("nothing_found", "", "certifications");
+    expect(describeCategoryLine(certifications, english, { listed: true })).toBe(
+      "Certifications: no risks found",
+    );
+    expect(describeCategoryLine(certifications, english)).toBe("Certifications: nothing found");
+    expect(
+      describeCategoryLine(entry("findings", "", "certifications"), english, { listed: true }),
+    ).toBe("Certifications: risks found");
+  });
+
+  it.each(LANGS)("is worded in %s, keeping FedRAMP's own names", (lang) => {
+    const t = (key: string) => translations[lang][key] ?? key;
+    const lines = attestationLines(ATTESTING_RUN, t, lang).certifications ?? [];
+    expect(lines).toHaveLength(7);
+    for (const line of lines) {
+      expect(line).not.toContain("{");
+      expect(line).not.toContain("Listed in");
+    }
+    expect(lines[0]).toContain("FedRAMP Authorized");
+    expect(lines[0]).toContain("High");
   });
 });
 
@@ -2924,11 +3074,35 @@ describe("translation", () => {
       t,
       "en",
     );
-    // The item that counts the lists that held nothing, in its other three forms: beside a list that
-    // is named or alone, for one list or for several.
-    for (const ids of [["kev", "charlotin"], ["charlotin"], ["charlotin", "epoch_ai"]] as const) {
-      coverageLines(askedOf(ids), t, "en");
+    // The count of the lists in its other forms: one list, one or several with a record, and the
+    // web databases alone; and the days of the copies as a range.
+    const heldBy = (ids: readonly VrdbSourceId[], held: number): RunCoverage => {
+      const coverage = askedOf(ids);
+      return {
+        ...coverage,
+        sources: coverage.sources.map((source, index) =>
+          index < held
+            ? {
+                ...source,
+                outcome: "found" as const,
+                weak: 1,
+                last_success_at: `2026-10-0${index + 1}T11:00:00.000Z`,
+              }
+            : source,
+        ),
+      };
+    };
+    for (const coverage of [
+      askedOf(["kev"]),
+      heldBy(["kev", "ofac"], 1),
+      heldBy(["kev", "ofac", "uk_sanctions"], 2),
+      { ...askedOf([]), lookups: [{ id: "hibp" as const, outcome: "found" as const }] },
+    ]) {
+      coverageLines(coverage, t, "en");
     }
+    // What a listing in the vendor's favour says, in every form.
+    attestationLines(ATTESTING_RUN, t, "en");
+    describeCategoryLine(entry("nothing_found", "", "certifications"), t, { listed: true });
     return [...keys];
   };
 
@@ -2952,7 +3126,15 @@ describe("translation", () => {
         "Delisted",
         "the vendor's status page",
         "OFAC SDN list",
-        "No records in {sources} as of {dates}",
+        "Checked {count} public lists and registers.",
+        "Checked 1 public list or register.",
+        "None had a record.",
+        "1 had a record: {sources}.",
+        "{count} had records: {sources}.",
+        "Also checked: {sources}.",
+        "Data as of {dates}.",
+        "No records: {sources}.",
+        "Checked: {sources}",
         "{source}: last updated {date}, not up to date",
         "the CVE Program",
         "UN Security Council Consolidated List",
@@ -2968,11 +3150,15 @@ describe("translation", () => {
         "FDA device recall database",
         // The line of a finding that cites registers only.
         REGISTER_ONLY_SENTENCE,
-        // The item that counts the lists that held nothing, in its four forms.
-        "{count} more lists with no records",
-        "1 more list with no records",
-        "{count} lists with no records",
-        "1 list with no records",
+        // A listing in the vendor's favour, and the category line beside it.
+        "Listed in the FedRAMP Marketplace.",
+        "Listed in the FedRAMP Marketplace: {status}.",
+        "Listed in the FedRAMP Marketplace: {status} since {date}.",
+        "Listed in the FedRAMP Marketplace: {status} since {date}, impact level {impact}.",
+        "Listed in the C2PA Conforming Products List.",
+        "Listed in the C2PA Conforming Products List: 1 conforming product, since {date}.",
+        "Listed in the C2PA Conforming Products List: {count} conforming products, the newest since {date}.",
+        "no risks found",
         // The lists added on 2026-11-10, by name and by the name their entries have.
         "Consolidated Canadian Autonomous Sanctions List",
         "UK OFSI financial sanctions enforcement notices",
@@ -3014,7 +3200,7 @@ describe("translation", () => {
       );
       for (const list of AI_LISTS) {
         const words = translations[lang][list.name];
-        expect(lines.checked).toContain(`${words} (1)`);
+        expect(lines.checked).toContain(words);
         // In the sentence of a record matched by name, and of one the list withdrew.
         for (const basis of [
           basisOf("name_only", [aiRecordOf(list)], true),
@@ -3075,7 +3261,7 @@ describe("translation", () => {
         expect(words).not.toBe(list.name);
         expect(listWords).toBeDefined();
         expect(listWords).not.toBe(list.list);
-        expect(lines.checked).toContain(`${words} (1)`);
+        expect(lines.checked).toContain(words);
         // In the sentence of a record matched by name (the list its entry is on), and of one the list
         // dropped, by its status (the database that dropped it).
         for (const [basis, expected] of [
@@ -3145,7 +3331,7 @@ describe("translation", () => {
       };
       const lines = coverageLines(coverage, t, lang);
       for (const list of NEW_LISTS) {
-        expect(lines.checked).toContain(`${translations[lang][list.name]} (1)`);
+        expect(lines.checked).toContain(translations[lang][list.name]);
       }
       // The words of a licence are never translated: they are the English screen's, list by list.
       expect(lines.attributions).toHaveLength(NEW_LISTS.length);
@@ -3165,59 +3351,59 @@ describe("translation", () => {
   );
 
   it.each(LANGS)(
-    "counts the lists that held no record in %s, in each of its four forms",
+    "counts the lists in %s, in each of its forms, with no placeholder left",
     (lang) => {
       const t = (key: string) => translations[lang][key] ?? key;
-      const checkedOf = (ids: readonly VrdbSourceId[]) =>
+      const linesFor = (ids: readonly VrdbSourceId[], held: number) =>
         coverageLines(
           {
             registry_version: "2026-10-29.1",
-            sources: ids.map((id) => ({
+            sources: ids.map((id, index) => ({
               id,
               name: "The server's name",
               attribution: "The server's attribution",
               mode: "mirror" as const,
               checked: true,
-              outcome: "none" as const,
+              outcome: index < held ? ("found" as const) : ("none" as const),
               strong: 0,
-              weak: 0,
+              weak: index < held ? 1 : 0,
               last_success_at: "2026-10-10T11:00:00.000Z",
               stale: false,
             })),
-            lookups: [],
+            lookups: [{ id: "hibp", outcome: "none" }],
             cited: { official: 0, trusted_press: 0, vendor: 0, unverified: 0 },
           },
           t,
           lang,
-        ).checked ?? "";
+        );
       const COUNTS = {
         de: [
-          "1 Liste ohne Einträge",
-          "3 Listen ohne Einträge",
-          "1 weitere Liste ohne Einträge",
-          "3 weitere Listen ohne Einträge",
+          "1 öffentliche Liste",
+          "3 öffentliche Listen",
+          "Keine enthielt",
+          "1 enthielt",
+          "2 enthielten",
         ],
         fr: [
-          "1 liste sans enregistrement",
-          "3 listes sans enregistrement",
-          "1 autre liste sans enregistrement",
-          "3 autres listes sans enregistrement",
+          "1 liste ou registre",
+          "3 listes et registres",
+          "Aucun ne contenait",
+          "1 contenait",
+          "2 contenaient",
         ],
-        es: [
-          "1 lista sin registros",
-          "3 listas sin registros",
-          "1 lista más sin registros",
-          "3 listas más sin registros",
-        ],
+        es: ["1 lista o registro", "3 listas y registros", "Ninguno tenía", "1 tenía", "2 tenían"],
       } as const;
-      const [one, many, moreOne, moreMany] = COUNTS[lang];
-      expect(checkedOf(["charlotin"])).toContain(one);
-      expect(checkedOf(["charlotin", "epoch_ai", "gleif"])).toContain(many);
-      expect(checkedOf(["kev", "charlotin"])).toContain(moreOne);
-      expect(checkedOf(["kev", "charlotin", "epoch_ai", "gleif"])).toContain(moreMany);
-      // The count is filled in: no placeholder is left in any form.
-      for (const ids of [["charlotin"], ["charlotin", "epoch_ai"], ["kev", "charlotin"]] as const) {
-        expect(checkedOf(ids)).not.toContain("{");
+      const [one, many, none, heldOne, heldMany] = COUNTS[lang];
+      expect(linesFor(["kev"], 0).checked).toContain(one);
+      expect(linesFor(["kev"], 0).checked).toContain(none);
+      expect(linesFor(["kev", "ofac", "uk_sanctions"], 1).checked).toContain(many);
+      expect(linesFor(["kev", "ofac", "uk_sanctions"], 1).checked).toContain(heldOne);
+      expect(linesFor(["kev", "ofac", "uk_sanctions"], 2).checked).toContain(heldMany);
+      for (const held of [0, 1, 2]) {
+        const lines = linesFor(["kev", "ofac", "uk_sanctions"], held);
+        for (const line of [lines.checked, lines.alsoChecked, lines.asOf, lines.allLists]) {
+          expect(line ?? "").not.toContain("{");
+        }
       }
     },
   );

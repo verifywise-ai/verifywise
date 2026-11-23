@@ -177,6 +177,38 @@ export function readManifest(dir: string = bundleDir()): VrdbManifest {
   return { format: BUNDLE_FORMAT, lists: [] };
 }
 
+/** The lists of the shipped manifest, read once per directory (the release does not change). */
+const shippedByDir = new Map<string, ReadonlySet<VrdbSourceId> | null>();
+
+/**
+ * The lists the release ships a bundle of, as its manifest names them. A list the manifest does not
+ * name is never loaded in this deployment, so it is no part of what a run can check (lookup.ts,
+ * `coveredSources`). Null when the manifest cannot be read or names no list: the deployment then
+ * cannot tell a list it ships from one it does not, and every active list stays in the coverage, so
+ * that a missing manifest shows as lists not checked instead of a screening that looks complete.
+ */
+export function shippedBundleIds(dir: string = bundleDir()): ReadonlySet<VrdbSourceId> | null {
+  if (shippedByDir.has(dir)) return shippedByDir.get(dir) ?? null;
+  let shipped: ReadonlySet<VrdbSourceId> | null = null;
+  try {
+    const parsed = JSON.parse(fs.readFileSync(path.join(dir, MANIFEST_FILE), "utf8")) as unknown;
+    const lists = (parsed as Partial<VrdbManifest> | null)?.lists;
+    if (
+      (parsed as Partial<VrdbManifest> | null)?.format === BUNDLE_FORMAT &&
+      Array.isArray(lists)
+    ) {
+      const ids = lists
+        .map((entry) => (entry as Partial<ManifestEntry> | null)?.sourceId)
+        .filter((id): id is VrdbSourceId => (VRDB_SOURCE_IDS as readonly unknown[]).includes(id));
+      shipped = ids.length === 0 ? null : new Set(ids);
+    }
+  } catch {
+    shipped = null;
+  }
+  shippedByDir.set(dir, shipped);
+  return shipped;
+}
+
 export function writeManifest(manifest: VrdbManifest, dir: string = bundleDir()): void {
   const lists = [...manifest.lists].sort(
     (a, b) => VRDB_SOURCE_IDS.indexOf(a.sourceId) - VRDB_SOURCE_IDS.indexOf(b.sourceId),

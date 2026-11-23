@@ -15,7 +15,7 @@ import userEvent from "@testing-library/user-event";
 import { renderWithProviders } from "../../../../../test/renderWithProviders";
 import { LANGS, resetAudit, setLanguage, tr } from "../../../../../test/i18nHelpers";
 import { translations } from "../../../../../i18n/translations";
-import { FOUR_OUTCOMES, run } from "./fixtures";
+import { FOUR_OUTCOMES, coverage, listCopy, run } from "./fixtures";
 
 vi.mock(
   "../../../../../application/repository/vendorResearch.repository",
@@ -354,6 +354,98 @@ describe("a run whose news search was not available", () => {
     await openDetails(tr(lang, DETAILS));
     expect(await screen.findByText(tr(lang, OWN_PAGES_NOTE))).toBeInTheDocument();
     expect(translations[lang][OWN_PAGES_NOTE]).not.toBe(OWN_PAGES_NOTE);
+  });
+});
+
+describe("a listing in the vendor's favour (the FedRAMP Marketplace)", () => {
+  /** The run of 2026-11-23 for a vendor the Marketplace lists by name: FedRAMP Authorized, High. */
+  const listed = (status: "fedramp_authorized" | "fedramp_in_process" = "fedramp_authorized") =>
+    searched({
+      category_summary: FOUR_OUTCOMES,
+      coverage: coverage({
+        sources: [
+          listCopy("kev"),
+          listCopy("fedramp", {
+            outcome: "found",
+            weak: 1,
+            last_success_at: "2026-11-23T15:18:18.788Z",
+            attestations: [
+              {
+                status,
+                impact: "High",
+                since: "2024-09-09",
+                count: 1,
+                strength: "weak",
+                as_of: "2026-11-23",
+              },
+            ],
+          }),
+        ],
+        lookups: [],
+      }),
+    });
+
+  afterAll(async () => {
+    await setLanguage("en");
+  });
+
+  it("shows it under Certifications, which says no risks were found, never as a risk", async () => {
+    mocks.latest.mockResolvedValue(listed());
+    renderSummary();
+    await openDetails();
+
+    const category = await screen.findByText("Certifications: no risks found");
+    const line = screen.getByText(
+      "Listed in the FedRAMP Marketplace: FedRAMP Authorized since 9 Sept 2024, impact level High. Matched by name only: this may be another company. Data as of 23 Nov 2026.",
+    );
+    expect(follows(category, line)).toBe(true);
+    expect(category.closest("li")).toContainElement(line);
+    expect(screen.queryByText("Certifications: nothing found")).not.toBeInTheDocument();
+    // The checked line names the list among those that held a record.
+    expect(
+      screen.getByText(
+        "Checked 2 public lists and registers. 1 had a record: FedRAMP Marketplace.",
+      ),
+    ).toBeInTheDocument();
+    // No warning on screen: a listing is no gap.
+    expect(screen.queryByText(/could not be checked/)).not.toBeInTheDocument();
+  });
+
+  it("says In Process for a provider the record lists as in process, never authorised", async () => {
+    mocks.latest.mockResolvedValue(listed("fedramp_in_process"));
+    renderSummary();
+    await openDetails();
+
+    expect(
+      await screen.findByText(/^Listed in the FedRAMP Marketplace: FedRAMP In Process since/),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/FedRAMP Authorized/)).not.toBeInTheDocument();
+  });
+
+  it.each(LANGS)("is worded in %s", async (lang) => {
+    resetAudit();
+    await setLanguage(lang);
+    mocks.latest.mockResolvedValue(listed());
+    renderSummary();
+    await openDetails(tr(lang, DETAILS));
+
+    expect(
+      await screen.findByText(
+        new RegExp(
+          `^${tr(
+            lang,
+            "Listed in the FedRAMP Marketplace: {status} since {date}, impact level {impact}.",
+            {
+              status: "FedRAMP Authorized",
+              date: "§",
+              impact: "High",
+            },
+          )
+            .split("§")[0]
+            .replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`,
+        ),
+      ),
+    ).toBeInTheDocument();
   });
 });
 

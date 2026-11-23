@@ -73,6 +73,11 @@
  */
 import { shortName } from "../../identity";
 import { compactName } from "../../records/match";
+import {
+  type AttestationStatus,
+  type CoverageAttestation,
+  FEDRAMP_IMPACT_LEVELS,
+} from "../../../../domain.layer/interfaces/i.vendorResearch";
 import { joinSentences, sentence } from "../../records/sentence";
 import { isSharedHost } from "../../sharedHosts";
 import { domainKey, hostsOf } from "../keys";
@@ -556,6 +561,47 @@ function itemOf(product: FedrampProduct): string {
   ]
     .filter((part) => part !== "")
     .join(", ");
+}
+
+const STATUS_IDS: Record<FedrampStatus, AttestationStatus> = {
+  "FedRAMP Authorized": "fedramp_authorized",
+  "FedRAMP Ready": "fedramp_ready",
+  "FedRAMP In Process": "fedramp_in_process",
+  "Agency In Process": "agency_in_process",
+};
+
+const COUNTS_PATTERN =
+  /GSA's FedRAMP Marketplace data lists (\d+) cloud offerings? of it: ([^.]*)\./;
+
+/**
+ * What a record of this list attests, read back from the text `fedrampSummaryOf` wrote: the best
+ * status the provider holds (the first of the counts sentence, which follows the order of RANK),
+ * and the day and the impact level of the newest offering of that status (the first of that status
+ * in "Listed", which is sorted the same way). A status the text does not name is null, never
+ * guessed: a provider listed only as In Process is never called authorised. The impact level is one
+ * of the levels the file uses, or null.
+ */
+export function fedrampAttestationOf(
+  summary: string,
+): Pick<CoverageAttestation, "status" | "impact" | "since" | "count"> {
+  const counts = COUNTS_PATTERN.exec(summary);
+  if (counts === null) return { status: null, impact: null, since: null, count: 0 };
+  const first = /^\d+ (.+)$/.exec(counts[2].split(", ")[0])?.[1];
+  const best = STATUSES.find((status) => status === first);
+  if (best === undefined) {
+    return { status: null, impact: null, since: null, count: Number(counts[1]) };
+  }
+  const listed = summary.slice(counts.index + counts[0].length);
+  const item = new RegExp(
+    `\\([A-Za-z0-9]{3,20}\\), ${best} since (\\d{4}-\\d{2}-\\d{2})(?:, ([^,;.]+) impact)?`,
+  ).exec(listed);
+  const impact = FEDRAMP_IMPACT_LEVELS.find((level) => level === item?.[2]) ?? null;
+  return {
+    status: STATUS_IDS[best],
+    impact,
+    since: item?.[1] ?? null,
+    count: Number(counts[1]),
+  };
 }
 
 /**

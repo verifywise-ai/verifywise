@@ -1,9 +1,13 @@
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { Box, Stack, Typography } from "@mui/material";
 import { VWLink } from "../../../components/Link";
 import { textStyles } from "../../../themes/typography";
 import useTranslation from "../../../../application/hooks/useTranslation";
-import { coverageLines, joinAttributions } from "../../../../application/utils/vendorResearchText";
+import {
+  coverageLines,
+  isProminentAttribution,
+  joinAttributions,
+} from "../../../../application/utils/vendorResearchText";
 import type {
   CoverageSource,
   RecordSourceId,
@@ -14,7 +18,7 @@ import type {
 } from "../../../../domain/interfaces/i.vendorResearch";
 import { fill } from "../../../../i18n/fill";
 
-const creditSx = { ...textStyles.caption, color: "text.accent" };
+const creditSx = { ...textStyles.body, color: "text.tertiary" };
 
 /** The GDELT Project's own site. Its terms allow the news to be used if the project is cited with a link. */
 const GDELT_URL = "https://www.gdeltproject.org/";
@@ -121,8 +125,13 @@ interface ResearchCreditsProps {
  * the GDELT Project, with the link its terms ask for, when the run searched the news with it, and
  * each list the run asked or a finding on screen cites, in its owner's words.
  *
- * It is on screen without a click, whatever is folded away above it and whether or not a finding
- * is pending: a credit that sits behind a button is not the credit the terms ask for. A run that
+ * The GDELT Project's credit, with its link, and the two notices whose terms ask for prominence (the
+ * NVD's and the International Trade Administration's, `isProminentAttribution`) are on screen
+ * without a click, whatever is folded away above it and whether or not a finding is pending. The
+ * other lists' credits are on the same page behind "Data sources and licences": their licences ask
+ * for the credit in a reasonable manner for the medium (CC BY, CC BY-SA), or for the statement to
+ * be included or linked to (the Open Government Licences), which a disclosure next to the findings
+ * satisfies; the public-domain and CC0 lists ask for none. A run that
  * is still going shows none of its lines yet, so nothing of it is credited until it has ended. The
  * findings on screen can come from earlier runs, though, and a later run may have failed, still be
  * going, or not have asked the list a finding cites: the records of those findings are on screen,
@@ -130,6 +139,7 @@ interface ResearchCreditsProps {
  */
 export default function ResearchCredits({ run, findings = [] }: ResearchCreditsProps) {
   const { t, lang } = useTranslation();
+  const [open, setOpen] = useState(false);
   // The run's own lines, only once it has ended.
   const ended = run && run.status !== "queued" && run.status !== "running" ? run : null;
 
@@ -141,6 +151,8 @@ export default function ResearchCredits({ run, findings = [] }: ResearchCreditsP
     ]),
   ];
   if (!gdelt && attributions.length === 0) return null;
+  const prominent = attributions.filter(isProminentAttribution);
+  const folded = attributions.filter((attribution) => !isProminentAttribution(attribution));
 
   return (
     <Stack sx={{ gap: "4px" }}>
@@ -150,12 +162,28 @@ export default function ResearchCredits({ run, findings = [] }: ResearchCreditsP
         </Typography>
       )}
       {/* The lists' own words, as their terms ask: the label is ours, the credits are not. */}
-      {attributions.length > 0 && (
+      {prominent.length > 0 && (
         <Typography data-vw-no-translate="true" sx={{ ...creditSx, overflowWrap: "anywhere" }}>
-          {fill(t("Data sources: {attributions}"), {
-            attributions: joinAttributions(attributions),
-          })}
+          {joinAttributions(prominent)}
         </Typography>
+      )}
+      {folded.length > 0 && (
+        <Box>
+          <VWLink
+            onClick={() => setOpen((shown) => !shown)}
+            ariaExpanded={open}
+            sx={{ fontSize: 13 }}
+          >
+            {open ? "Hide data sources and licences" : "Data sources and licences"}
+          </VWLink>
+          {open && (
+            <Typography data-vw-no-translate="true" sx={{ ...creditSx, overflowWrap: "anywhere" }}>
+              {fill(t("Data sources: {attributions}"), {
+                attributions: joinAttributions(folded),
+              })}
+            </Typography>
+          )}
+        </Box>
       )}
     </Stack>
   );
