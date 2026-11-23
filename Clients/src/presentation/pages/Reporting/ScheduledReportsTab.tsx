@@ -26,7 +26,9 @@ import {
   useSetActive,
   useUpdateScheduledReport,
   useDeleteScheduledReport,
+  useOrganizationName,
 } from "../../../application/hooks/useReporting";
+import { useAuth } from "../../../application/hooks/useAuth";
 import useFormattedDate from "../../../application/hooks/useFormattedDate";
 import { showAlert } from "../../../infrastructure/api/customAxios";
 import { FREQUENCY_ITEMS, MONTH_ITEMS, withFrequency } from "./scheduleOptions";
@@ -82,7 +84,7 @@ export default function ScheduledReportsTab() {
   // Report details: the legacy list does not carry the version's declared
   // fields, so the dialog loads the schedule itself. Edits win over the stored
   // answers; errors show on edited fields, or on all of them after a Save
-  // attempt, as in the run wizard.
+  // attempt, as in the run wizard. data is only ever a successful load.
   const detail = useScheduledReport(draft?.id);
   const [parameterEdits, setParameterEdits] = useState<ReportParameters>({});
   const [touched, setTouched] = useState<Set<string>>(() => new Set());
@@ -94,17 +96,28 @@ export default function ScheduledReportsTab() {
   const hasDetails = fields.some((f) => !PERIOD_KEYS.includes(f.key));
   const today = todayIso();
   const storedParameters = detail.data?.report_parameters;
+  // The same defaults as the run wizard, for answers the schedule lacks.
+  const { userToken } = useAuth();
+  const { data: organizationName = "" } = useOrganizationName(hasDetails);
+  const userFullName = [userToken?.name, userToken?.surname].filter(Boolean).join(" ");
   const prefill = useMemo(
     () =>
       buildParameterPrefill(fields, {
         last: { parameters: storedParameters ?? {}, periodEnd: null },
-        organizationName: "",
-        userFullName: "",
+        organizationName,
+        userFullName,
         today,
       }),
-    [fields, storedParameters, today],
+    [fields, storedParameters, organizationName, userFullName, today],
   );
   const parameterValues = { ...prefill, ...parameterEdits };
+  // The details are sent, and so validated, only when the user changed what
+  // would be sent: a rename must not resubmit or be blocked by stored answers.
+  const requestParameters = toRequestParameters(fields, parameterValues, false);
+  const prefillParameters = toRequestParameters(fields, prefill, false);
+  const detailsChanged =
+    hasDetails &&
+    Object.keys(requestParameters).some((k) => requestParameters[k] !== prefillParameters[k]);
   const parameterErrors = hasDetails
     ? validateParameters(fields, parameterValues, { today, requirePeriod: false })
     : {};
@@ -115,12 +128,13 @@ export default function ScheduledReportsTab() {
     setParameterEdits((prev) => ({ ...prev, [key]: value }));
     setTouched((prev) => new Set(prev).add(key));
   };
-  // Until the schedule has loaded it is unknown whether it declares details,
-  // and a Save then could not send them. A failed load leaves the stored
-  // answers untouched (no reportParameters is sent), so Save stays available.
-  const detailsLoading = draft != null && detail.isFetching;
+  // Until the first load ends it is unknown whether the schedule declares
+  // details. A background refetch keeps the loaded data, so it does not count.
+  // A failed load leaves the stored answers untouched (no reportParameters is
+  // sent), so Save stays available.
+  const detailsLoading = draft != null && detail.isPending;
   const draftId = draft?.id;
-  const detailFailed = detail.isError;
+  const detailFailed = detail.isError && !detail.data && !detail.isFetching;
   useEffect(() => {
     if (draftId != null && detailFailed) {
       showAlert({
@@ -153,7 +167,7 @@ export default function ScheduledReportsTab() {
 
   const submitEdit = () => {
     if (!draft || detailsLoading) return;
-    if (hasDetails && Object.keys(parameterErrors).length > 0) {
+    if (detailsChanged && Object.keys(parameterErrors).length > 0) {
       setSaveAttempted(true);
       return;
     }
@@ -162,15 +176,14 @@ export default function ScheduledReportsTab() {
         id: draft.id,
         // scheduleConfig always goes along: the backend recomputes next_run_at
         // only when it is present, and the hook's invalidate refreshes the row.
-        // reportParameters only for a version that declares details: the
-        // server rejects answers a template does not ask for.
+        // reportParameters only when the details were changed, which also
+        // means the version declares them (the server rejects answers a
+        // template does not ask for).
         body: {
           name: draft.name,
           format: draft.format,
           scheduleConfig: draft.schedule,
-          ...(hasDetails
-            ? { reportParameters: toRequestParameters(fields, parameterValues, false) }
-            : {}),
+          ...(detailsChanged ? { reportParameters: requestParameters } : {}),
         },
       },
       {

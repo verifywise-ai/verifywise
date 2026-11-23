@@ -25,7 +25,8 @@ const ROW = {
 
 vi.mock("../../../../application/hooks/useReporting", () => ({
   useScheduledReports: () => ({ data: [ROW] }),
-  useScheduledReport: () => ({ isFetching: false, isError: false, ...detail }),
+  useScheduledReport: () => ({ isPending: false, isFetching: false, isError: false, ...detail }),
+  useOrganizationName: () => ({ data: "Acme Bank" }),
   useRunNow: () => ({ mutate: vi.fn(), isPending: false }),
   useSetActive: () => ({ mutate: vi.fn(), isPending: false }),
   useUpdateScheduledReport: () => ({ mutate: updateMutate, isPending: false }),
@@ -37,6 +38,10 @@ vi.mock("../../../../infrastructure/api/customAxios", async (importOriginal) => 
   showAlert: (...args: unknown[]) => showAlert(...args),
 }));
 
+vi.mock("../../../../application/hooks/useAuth", () => ({
+  useAuth: () => ({ userToken: { name: "Pat", surname: "Lee" }, organizationId: 1 }),
+}));
+
 import ScheduledReportsTab from "../ScheduledReportsTab";
 
 // The E-23 version's declared fields (Servers e23Parameters.ts), trimmed to
@@ -46,6 +51,8 @@ const E23_FIELDS = [
   { key: "periodStart", label: "Period start", type: "date", required: true },
   { key: "periodEnd", label: "Period end", type: "date", required: true },
   { key: "institutionName", label: "Institution name", type: "text", required: true },
+  { key: "preparedByName", label: "Prepared by name", type: "text", required: true },
+  { key: "scopeNote", label: "Scope note", type: "text", required: true },
   { key: "isFinal", label: "Final version", type: "boolean", required: false },
 ];
 const kindDetail = (stored: Record<string, unknown>) => ({
@@ -169,13 +176,18 @@ describe("ScheduledReportsTab", () => {
     });
 
     it("prefills the stored answers and saves the final version box", () => {
-      detail = kindDetail({ institutionName: "Acme Bank", isFinal: false });
+      detail = kindDetail({
+        institutionName: "Kestrel Bank",
+        preparedByName: "Sam Roe",
+        scopeNote: "All models",
+        isFinal: false,
+      });
       render(<ScheduledReportsTab />);
       clickRowAction("Edit");
 
       // A schedule's period is derived per run, so it is not offered.
       expect(screen.queryByLabelText("Period start")).not.toBeInTheDocument();
-      expect(screen.getByLabelText(/Institution name/)).toHaveValue("Acme Bank");
+      expect(screen.getByLabelText(/Institution name/)).toHaveValue("Kestrel Bank");
       expect(screen.getByLabelText("Final version")).not.toBeChecked();
 
       fireEvent.click(screen.getByLabelText("Final version"));
@@ -188,13 +200,23 @@ describe("ScheduledReportsTab", () => {
           name: "Weekly compliance digest",
           format: "pdf",
           scheduleConfig: { frequency: "weekly", hour: 9, minute: 0, timezone: "UTC" },
-          reportParameters: { institutionName: "Acme Bank", isFinal: true },
+          reportParameters: {
+            institutionName: "Kestrel Bank",
+            preparedByName: "Sam Roe",
+            scopeNote: "All models",
+            isFinal: true,
+          },
         },
       });
     });
 
     it("blocks Save and shows the error while a required answer is blank", () => {
-      detail = kindDetail({ institutionName: "Acme Bank", isFinal: false });
+      detail = kindDetail({
+        institutionName: "Kestrel Bank",
+        preparedByName: "Sam Roe",
+        scopeNote: "All models",
+        isFinal: false,
+      });
       render(<ScheduledReportsTab />);
       clickRowAction("Edit");
 
@@ -206,7 +228,7 @@ describe("ScheduledReportsTab", () => {
     });
 
     it("keeps Save disabled until the schedule has loaded", () => {
-      detail = { data: undefined, isFetching: true };
+      detail = { data: undefined, isPending: true, isFetching: true };
       render(<ScheduledReportsTab />);
       clickRowAction("Edit");
 
@@ -227,6 +249,84 @@ describe("ScheduledReportsTab", () => {
       fireEvent.click(screen.getByRole("button", { name: "Save" }));
       expect(updateMutate).toHaveBeenCalledTimes(1);
       expect(updateMutate.mock.calls[0][0].body).not.toHaveProperty("reportParameters");
+    });
+
+    it("renames a kind schedule without resending its stored answers", () => {
+      detail = kindDetail({
+        institutionName: "Kestrel Bank",
+        preparedByName: "Sam Roe",
+        scopeNote: "All models",
+        isFinal: false,
+      });
+      render(<ScheduledReportsTab />);
+      clickRowAction("Edit");
+
+      fireEvent.change(screen.getByLabelText("Name"), { target: { value: "Quarterly E-23" } });
+      fireEvent.click(screen.getByRole("button", { name: "Save" }));
+
+      expect(updateMutate).toHaveBeenCalledTimes(1);
+      expect(updateMutate.mock.calls[0][0].body).toEqual({
+        name: "Quarterly E-23",
+        format: "pdf",
+        scheduleConfig: { frequency: "weekly", hour: 9, minute: 0, timezone: "UTC" },
+      });
+    });
+
+    it("does not block a rename on a stored required answer that is missing", () => {
+      // scopeNote has no default, so it stays blank and invalid.
+      detail = kindDetail({ institutionName: "Kestrel Bank", isFinal: false });
+      render(<ScheduledReportsTab />);
+      clickRowAction("Edit");
+
+      fireEvent.change(screen.getByLabelText("Name"), { target: { value: "Quarterly E-23" } });
+      fireEvent.click(screen.getByRole("button", { name: "Save" }));
+
+      expect(updateMutate).toHaveBeenCalledTimes(1);
+      expect(updateMutate.mock.calls[0][0].body).not.toHaveProperty("reportParameters");
+      expect(screen.queryByText("Scope note is required")).not.toBeInTheDocument();
+    });
+
+    it("fills answers the schedule lacks from the organization and the user", () => {
+      detail = kindDetail({ scopeNote: "All models", isFinal: false });
+      render(<ScheduledReportsTab />);
+      clickRowAction("Edit");
+
+      expect(screen.getByLabelText(/Institution name/)).toHaveValue("Acme Bank");
+      expect(screen.getByLabelText(/Prepared by name/)).toHaveValue("Pat Lee");
+      fireEvent.click(screen.getByLabelText("Final version"));
+      fireEvent.click(screen.getByRole("button", { name: "Save" }));
+
+      expect(updateMutate.mock.calls[0][0].body.reportParameters).toEqual({
+        institutionName: "Acme Bank",
+        preparedByName: "Pat Lee",
+        scopeNote: "All models",
+        isFinal: true,
+      });
+    });
+
+    it("keeps Save enabled during a background refetch of loaded details", () => {
+      detail = { ...kindDetail({ institutionName: "Kestrel Bank" }), isFetching: true };
+      render(<ScheduledReportsTab />);
+      clickRowAction("Edit");
+
+      expect(screen.getByRole("button", { name: "Save" })).toBeEnabled();
+    });
+
+    it("does not report a load failure while a retry is in flight", () => {
+      detail = { data: undefined, isError: true, isFetching: true };
+      render(<ScheduledReportsTab />);
+      clickRowAction("Edit");
+
+      expect(showAlert).not.toHaveBeenCalled();
+    });
+
+    it("does not report a load failure when earlier details are still loaded", () => {
+      detail = { ...kindDetail({ institutionName: "Kestrel Bank" }), isError: true };
+      render(<ScheduledReportsTab />);
+      clickRowAction("Edit");
+
+      expect(showAlert).not.toHaveBeenCalled();
+      expect(screen.getByLabelText(/Institution name/)).toHaveValue("Kestrel Bank");
     });
   });
 });

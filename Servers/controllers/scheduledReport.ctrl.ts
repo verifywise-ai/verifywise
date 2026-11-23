@@ -131,6 +131,13 @@ export async function listScheduledReports(req: Request, res: Response): Promise
  * gate here would hide nothing the list does not show.
  */
 export async function getScheduledReport(req: Request, res: Response): Promise<any> {
+  logProcessing({
+    description: "getScheduledReport",
+    functionName: "getScheduledReport",
+    fileName: "scheduledReport.ctrl.ts",
+    userId: req.userId!,
+    organizationId: req.organizationId!,
+  });
   try {
     const id = Number(req.params.id);
     if (!Number.isInteger(id) || id <= 0) {
@@ -140,6 +147,15 @@ export async function getScheduledReport(req: Request, res: Response): Promise<a
     if (!row) return res.status(404).json(STATUS_CODE[404](req.t!("not found")));
     return res.status(200).json(STATUS_CODE[200](row));
   } catch (error) {
+    await logFailure({
+      eventType: "Read",
+      description: "getScheduledReport failed",
+      functionName: "getScheduledReport",
+      fileName: "scheduledReport.ctrl.ts",
+      error: error as Error,
+      userId: req.userId!,
+      organizationId: req.organizationId!,
+    });
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
   }
 }

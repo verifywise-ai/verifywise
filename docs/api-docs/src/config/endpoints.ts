@@ -13603,9 +13603,12 @@ export const v1V1scheduledReportsEndpoints: Endpoint[] = [
     method: 'GET',
     path: '/v1/scheduled-reports/{id}',
     summary: "Get Scheduled Report",
+    description: "One scheduled report of the caller's organization, with its template version's parameters_config.",
     requiresAuth: true,
     responses: [
       { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 404, description: "Scheduled report not found in this organization" },
       { status: 500, description: "Internal server error" },
     ],
     tag: "v1: V1/Scheduled Reports",

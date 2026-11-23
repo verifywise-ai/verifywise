@@ -29481,9 +29481,14 @@ paths:
   '/v1/scheduled-reports/{id}':
     get:
       summary: 'Get Scheduled Report'
+      description: 'One scheduled report of the caller''s organization, with its template version''s parameters_config.'
       responses:
         '200':
           description: Success
+        '401':
+          description: Unauthorized
+        '404':
+          description: 'Scheduled report not found in this organization'
         '500':
           description: 'Internal server error'
       tags:
