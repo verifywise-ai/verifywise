@@ -52,10 +52,14 @@ export default function TemplateBuilder({ onClose }: { onClose: () => void }) {
   const { data: catalog = [], isLoading } = useSectionCatalog();
   const create = useCreateTemplate();
 
-  const groups = catalog.reduce<Record<string, ReportSectionCatalogEntry[]>>((acc, entry) => {
-    (acc[entry.group] ??= []).push(entry);
-    return acc;
-  }, {});
+  // Templates built here have no report kind, so a section limited to one
+  // (the E-23 sections) would only be refused by the server on every run.
+  const groups = catalog
+    .filter((entry) => !entry.kinds?.length)
+    .reduce<Record<string, ReportSectionCatalogEntry[]>>((acc, entry) => {
+      (acc[entry.group] ??= []).push(entry);
+      return acc;
+    }, {});
 
   const canNext = () => {
     if (active === 0) return name.trim().length > 0;

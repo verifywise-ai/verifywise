@@ -10,6 +10,8 @@ vi.mock("../../../../application/hooks/useReporting", () => ({
     data: [
       { key: "projectRisks", label: "Use case risks", group: "Risk analysis" },
       { key: "vendors", label: "Vendors", group: "Organization" },
+      // Limited to the E-23 report kind; a template built here has no kind.
+      { key: "mrmFleet", label: "Model fleet", group: "Model risk", kinds: ["osfi_e23"] },
     ],
     isLoading: false,
   }),
@@ -63,5 +65,17 @@ describe("TemplateBuilder", () => {
     // reads as "off" on the backend, which is a different meaning from false.
     expect(Object.keys(body.ai_blocks_config)).toHaveLength(8);
     expect(body.ai_blocks_config.e23Gap).toBe(false);
+  });
+
+  it("hides sections limited to a report kind", () => {
+    render(<TemplateBuilder onClose={() => {}} />);
+    fireEvent.change(screen.getByLabelText(/template name/i), {
+      target: { value: "Board pack" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /next/i }));
+    expect(screen.getByText("Use case risks")).toBeInTheDocument();
+    expect(screen.queryByText("Model fleet")).not.toBeInTheDocument();
+    // A group left with no offered section is not shown either.
+    expect(screen.queryByText("Model risk")).not.toBeInTheDocument();
   });
 });

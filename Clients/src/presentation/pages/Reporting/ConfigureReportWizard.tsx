@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Box, MenuItem, Select as MuiSelect, Stack, Typography, useTheme } from "@mui/material";
 import { ChevronDown } from "lucide-react";
 import StepperModal from "../../components/Modals/StepperModal";
@@ -11,26 +11,39 @@ import { text as textColors } from "../../themes/palette";
 import { getSelectStyles } from "../../utils/inputStyles";
 import {
   useCreateScheduledReport,
+  useLastReportParameters,
+  useOrganizationName,
   useRunTemplateNow,
 } from "../../../application/hooks/useReporting";
+import { useAuth } from "../../../application/hooks/useAuth";
 import { useProjects } from "../../../application/hooks/useProjects";
 import useFrameworks from "../../../application/hooks/useFrameworks";
 import { useLLMKeyStatus } from "../../../application/hooks/useLLMKeyStatus";
 import { showAlert } from "../../../infrastructure/api/customAxios";
-import type { AiBlocksConfig } from "../../../domain/interfaces/i.reporting";
-import { aiBlocksForKind, DEFAULT_AI_BLOCKS } from "./aiBlocks";
+import type {
+  AiBlocksConfig,
+  ReportParameterField,
+  ReportParameters,
+} from "../../../domain/interfaces/i.reporting";
+import { aiBlocksForKind, DEFAULT_AI_BLOCKS, E23_REPORT_KIND } from "./aiBlocks";
+import ReportDetailsStep from "./ReportDetailsStep";
+import {
+  buildParameterPrefill,
+  reportRequestErrorMessage,
+  todayIso,
+  toRequestParameters,
+  validateParameters,
+} from "./reportParameters";
+import { FREQUENCY_ITEMS, MONTH_ITEMS, withFrequency } from "./scheduleOptions";
 
 // Run now skips Schedule and Delivery entirely: there is no recurrence to set
 // up and the run is saved to storage unconditionally (see reportTemplate.ctrl
 // runTemplateNow), so there is nothing for either step to configure.
 const SCHEDULE_STEPS = ["Scope", "Sections", "AI Insights", "Schedule", "Delivery", "Review"];
 const RUN_NOW_STEPS = ["Scope", "Sections", "AI Insights", "Review"];
-const FREQUENCIES = ["daily", "weekly", "monthly"];
-
-const FREQUENCY_ITEMS = FREQUENCIES.map((f) => ({
-  _id: f,
-  name: f.charAt(0).toUpperCase() + f.slice(1),
-}));
+// Inserted after Scope only for a template version that declares fields.
+const DETAILS_STEP = "Report details";
+const NO_FIELDS: ReportParameterField[] = [];
 
 const SCOPE_ITEMS = [
   { _id: "project", name: "Project" },
@@ -69,10 +82,19 @@ export default function ConfigureReportWizard({
   onClose: () => void;
 }) {
   const theme = useTheme();
-  const STEPS = mode === "run-now" ? RUN_NOW_STEPS : SCHEDULE_STEPS;
+  const parametersConfig = template.latestVersion?.parameters_config;
+  const fields: ReportParameterField[] = parametersConfig?.fields?.length
+    ? parametersConfig.fields
+    : NO_FIELDS;
+  const hasDetails = fields.length > 0;
+  const baseSteps = mode === "run-now" ? RUN_NOW_STEPS : SCHEDULE_STEPS;
+  const STEPS = hasDetails ? [baseSteps[0], DETAILS_STEP, ...baseSteps.slice(1)] : baseSteps;
+  // The server refuses a project-scoped E-23 run or schedule (the report
+  // describes the whole model risk programme), so there is no choice to offer.
+  const organizationOnly = parametersConfig?.kind === E23_REPORT_KIND;
   const [active, setActive] = useState(0);
   const [scope, setScope] = useState<"project" | "organization">(
-    template.default_scope ?? "project",
+    organizationOnly ? "organization" : (template.default_scope ?? "project"),
   );
   const [projectId, setProjectId] = useState<number | null>(null);
   // Seeded from the template's default. An empty list means every framework in
@@ -93,12 +115,12 @@ export default function ConfigureReportWizard({
   // ponytail: no template carries a format in format_config today (it is
   // persisted as {}), so there is nothing to seed from — plain "pdf" default.
   const [format, setFormat] = useState<"pdf" | "docx">("pdf");
-  const [schedule, setSchedule] = useState<any>({
-    frequency: template.recommended_frequency ?? "daily",
-    hour: 9,
-    minute: 0,
-    timezone: "UTC",
-  });
+  const [schedule, setSchedule] = useState<any>(() =>
+    withFrequency(
+      { frequency: "daily", hour: 9, minute: 0, timezone: "UTC" },
+      template.recommended_frequency ?? "daily",
+    ),
+  );
   const [delivery, setDelivery] = useState<any>({
     saveToStorage: true,
     sendEmailLink: true,
@@ -106,6 +128,38 @@ export default function ConfigureReportWizard({
     recipients: [] as string[],
   });
   const [recipientsText, setRecipientsText] = useState("");
+
+  // Report details: what the user typed wins over the prefill, which arrives
+  // asynchronously (previous run, organization name) and must not overwrite it.
+  const [parameterEdits, setParameterEdits] = useState<ReportParameters>({});
+  const [touched, setTouched] = useState<Set<string>>(() => new Set());
+  const { userToken } = useAuth();
+  const { data: lastParameters } = useLastReportParameters(template.id, hasDetails);
+  const { data: organizationName = "" } = useOrganizationName(hasDetails);
+  const userFullName = [userToken?.name, userToken?.surname].filter(Boolean).join(" ");
+  const today = todayIso();
+  const prefill = useMemo(
+    () =>
+      buildParameterPrefill(fields, {
+        last: lastParameters,
+        organizationName,
+        userFullName,
+        today,
+      }),
+    [fields, lastParameters, organizationName, userFullName, today],
+  );
+  const parameterValues = { ...prefill, ...parameterEdits };
+  const requirePeriod = mode === "run-now";
+  const parameterErrors = validateParameters(fields, parameterValues, { today, requirePeriod });
+  // Errors appear once a field has been edited; a blank required field the
+  // user has not reached yet still blocks Next through canNext.
+  const shownParameterErrors = Object.fromEntries(
+    Object.entries(parameterErrors).filter(([key]) => touched.has(key)),
+  );
+  const setParameter = (key: string, value: string | boolean) => {
+    setParameterEdits((prev) => ({ ...prev, [key]: value }));
+    setTouched((prev) => new Set(prev).add(key));
+  };
 
   const { data: projects = [] } = useProjects();
   const { allFrameworks } = useFrameworks({ listOfFrameworks: [] });
@@ -134,6 +188,7 @@ export default function ConfigureReportWizard({
 
   const canNext = () => {
     if (step === "Scope" && scope === "project" && !projectId) return false;
+    if (step === DETAILS_STEP && Object.keys(parameterErrors).length > 0) return false;
     if (step === "Sections" && !sections.some((s: any) => s.defaultEnabled !== false)) return false;
     if (
       step === "Delivery" &&
@@ -174,6 +229,11 @@ export default function ConfigureReportWizard({
       sectionsConfig: { sections },
       aiBlocksConfig: ai,
       format,
+      // Only for a version that declares fields: the server rejects
+      // parameters a template does not ask for.
+      ...(hasDetails
+        ? { reportParameters: toRequestParameters(fields, parameterValues, requirePeriod) }
+        : {}),
     };
 
     if (mode === "run-now") {
@@ -181,8 +241,12 @@ export default function ConfigureReportWizard({
         { id: template.id, body: base },
         {
           onSuccess: onClose,
-          onError: () =>
-            showAlert({ variant: "error", body: "Failed to run report", isToast: true }),
+          onError: (error) =>
+            showAlert({
+              variant: "error",
+              body: reportRequestErrorMessage(error, "Failed to run report"),
+              isToast: true,
+            }),
         },
       );
       return;
@@ -197,10 +261,10 @@ export default function ConfigureReportWizard({
       },
       {
         onSuccess: onClose,
-        onError: () =>
+        onError: (error) =>
           showAlert({
             variant: "error",
-            body: "Failed to create scheduled report",
+            body: reportRequestErrorMessage(error, "Failed to create scheduled report"),
             isToast: true,
           }),
       },
@@ -226,17 +290,25 @@ export default function ConfigureReportWizard({
           second "Scope" on screen would only repeat it. */}
       {step === "Scope" && (
         <Stack spacing={6}>
-          <Typography sx={panelHintSx}>
-            Choose whether this report covers a single project or the whole organization.
-          </Typography>
-          <Select
-            id="configure-report-level"
-            label="Report level"
-            value={scope}
-            items={SCOPE_ITEMS}
-            onChange={(e) => setScope(e.target.value as "project" | "organization")}
-            getOptionValue={(item) => item._id}
-          />
+          {organizationOnly ? (
+            <Typography sx={panelHintSx}>
+              An OSFI E-23 report covers the whole organization.
+            </Typography>
+          ) : (
+            <>
+              <Typography sx={panelHintSx}>
+                Choose whether this report covers a single project or the whole organization.
+              </Typography>
+              <Select
+                id="configure-report-level"
+                label="Report level"
+                value={scope}
+                items={SCOPE_ITEMS}
+                onChange={(e) => setScope(e.target.value as "project" | "organization")}
+                getOptionValue={(item) => item._id}
+              />
+            </>
+          )}
           {scope === "project" && (
             <Select
               id="configure-report-project"
@@ -381,6 +453,17 @@ export default function ConfigureReportWizard({
         </Stack>
       )}
 
+      {step === DETAILS_STEP && (
+        <ReportDetailsStep
+          fields={fields}
+          values={parameterValues}
+          errors={shownParameterErrors}
+          onChange={setParameter}
+          mode={mode}
+          frequency={schedule.frequency}
+        />
+      )}
+
       {step === "Sections" && (
         <Stack spacing="8px">
           {sections.length === 0 && (
@@ -440,10 +523,22 @@ export default function ConfigureReportWizard({
             value={schedule.frequency}
             items={FREQUENCY_ITEMS}
             onChange={(e) =>
-              setSchedule((prev: any) => ({ ...prev, frequency: String(e.target.value) }))
+              setSchedule((prev: any) => withFrequency(prev, String(e.target.value)))
             }
             getOptionValue={(item) => item._id}
           />
+          {schedule.frequency === "quarterly" && (
+            <Select
+              id="configure-report-anchor-month"
+              label="Run in month"
+              value={String(schedule.anchorMonth)}
+              items={MONTH_ITEMS}
+              onChange={(e) =>
+                setSchedule((prev: any) => ({ ...prev, anchorMonth: Number(e.target.value) }))
+              }
+              getOptionValue={(item) => item._id}
+            />
+          )}
           <Stack direction="row" spacing={6}>
             <Field
               id="configure-report-hour"
@@ -535,6 +630,17 @@ export default function ConfigureReportWizard({
               projectId &&
               ` (${projects.find((p: any) => p.id === projectId)?.project_title ?? projectId})`}
           </Typography>
+          {hasDetails && mode === "run-now" && (
+            <Typography sx={reviewRowSx}>
+              <strong>Reporting period:</strong> {String(parameterValues.periodStart ?? "")} to{" "}
+              {String(parameterValues.periodEnd ?? "")}
+            </Typography>
+          )}
+          {fields.some((f) => f.key === "isFinal") && (
+            <Typography sx={reviewRowSx}>
+              <strong>Version:</strong> {parameterValues.isFinal === true ? "Final" : "Draft"}
+            </Typography>
+          )}
           {/* Set on the Scope step in both modes, so both have to review it. */}
           <Typography sx={reviewRowSx}>
             <strong>Format:</strong> {format.toUpperCase()}

@@ -69,6 +69,12 @@ export const de: Record<string, string> = {
     "Was dieser Bericht abdeckt und für wen er gedacht ist",
   "Word (DOCX)": "Word (DOCX)",
   "You haven&apos;t created any templates yet.": "Sie haben noch keine Vorlagen erstellt.",
+  "An OSFI E-23 report covers the whole organization.":
+    "Ein OSFI-E-23-Bericht deckt die gesamte Organisation ab.",
+  "Reporting period:": "Berichtszeitraum:",
+  "Run in month": "Ausführen im Monat",
+  "Unticked, every page is marked as a draft":
+    "Ohne Häkchen wird jede Seite als Entwurf gekennzeichnet",
 };
 
 export const fr: Record<string, string> = {
@@ -136,6 +142,12 @@ export const fr: Record<string, string> = {
   "What this report covers and who it is for": "Ce que couvre ce rapport et à qui il est destiné",
   "Word (DOCX)": "Word (DOCX)",
   "You haven&apos;t created any templates yet.": "Vous n'avez encore créé aucun modèle.",
+  "An OSFI E-23 report covers the whole organization.":
+    "Un rapport OSFI E-23 couvre l'ensemble de l'organisation.",
+  "Reporting period:": "Période de déclaration :",
+  "Run in month": "Exécuter au mois de",
+  "Unticked, every page is marked as a draft":
+    "Non cochée, chaque page est marquée comme brouillon",
 };
 
 export const es: Record<string, string> = {
@@ -204,4 +216,9 @@ export const es: Record<string, string> = {
   "What this report covers and who it is for": "Qué abarca este informe y a quién está dirigido",
   "Word (DOCX)": "Word (DOCX)",
   "You haven&apos;t created any templates yet.": "Aún no ha creado ninguna plantilla.",
+  "An OSFI E-23 report covers the whole organization.":
+    "Un informe OSFI E-23 abarca toda la organización.",
+  "Reporting period:": "Periodo del informe:",
+  "Run in month": "Ejecutar en el mes",
+  "Unticked, every page is marked as a draft": "Sin marcar, cada página se marca como borrador",
 };

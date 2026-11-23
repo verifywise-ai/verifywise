@@ -123,6 +123,12 @@ export interface ReportParametersConfig {
 
 export type ReportParameters = Record<string, string | boolean>;
 
+/** GET /api/v1/report-templates/:id/last-parameters (without period and isFinal). */
+export interface LastReportParameters {
+  parameters: ReportParameters;
+  periodEnd: string | null;
+}
+
 export interface TemplateSectionConfig {
   key: string;
   reportSectionKey: string;
@@ -351,4 +357,5 @@ export interface ScheduledReportUpdateBody {
   format?: "pdf" | "docx";
   scheduleConfig?: Record<string, unknown>;
   deliveryConfig?: Record<string, unknown>;
+  reportParameters?: ReportParameters;
 }

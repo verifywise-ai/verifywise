@@ -20,6 +20,7 @@ import {
   archiveTemplate,
   runTemplateNow,
   getRunAnalyses,
+  getLastReportParameters,
 } from "../reporting.repository";
 import { apiServices } from "../../../infrastructure/api/networkServices";
 
@@ -104,7 +105,10 @@ describe("reporting.repository", () => {
 
       const result = await createScheduledReport(body);
 
-      expect(apiServices.post).toHaveBeenCalledWith("/reporting/scheduled-reports", body);
+      // v1 accepts reportParameters and quarterly; the caller shows the 400 messages.
+      expect(apiServices.post).toHaveBeenCalledWith("/v1/scheduled-reports", body, {
+        suppressGlobalErrorToast: true,
+      });
       expect(result).toEqual({ id: 1, ...body });
     });
   });
@@ -160,7 +164,9 @@ describe("reporting.repository", () => {
 
       await updateScheduledReport(5, body);
 
-      expect(apiServices.patch).toHaveBeenCalledWith("/reporting/scheduled-reports/5", body);
+      expect(apiServices.patch).toHaveBeenCalledWith("/v1/scheduled-reports/5", body, {
+        suppressGlobalErrorToast: true,
+      });
     });
   });
 
@@ -363,7 +369,9 @@ describe("reporting.repository", () => {
 
       await runTemplateNow(1, body);
 
-      expect(apiServices.post).toHaveBeenCalledWith("/reporting/templates/1/run", body);
+      expect(apiServices.post).toHaveBeenCalledWith("/v1/report-templates/1/run", body, {
+        suppressGlobalErrorToast: true,
+      });
     });
   });
 
@@ -378,6 +386,23 @@ describe("reporting.repository", () => {
       await getRunAnalyses(9);
 
       expect(apiServices.get).toHaveBeenCalledWith("/reporting/runs/9/analyses");
+    });
+  });
+
+  describe("getLastReportParameters", () => {
+    it("reads the v1 prefill and passes a missing run through as null", async () => {
+      vi.mocked(apiServices.get).mockResolvedValue({
+        status: 200,
+        statusText: "OK",
+        data: { message: "OK", data: null },
+      });
+
+      const result = await getLastReportParameters(3);
+
+      expect(apiServices.get).toHaveBeenCalledWith("/v1/report-templates/3/last-parameters", {
+        suppressGlobalErrorToast: true,
+      });
+      expect(result).toBeNull();
     });
   });
 });
