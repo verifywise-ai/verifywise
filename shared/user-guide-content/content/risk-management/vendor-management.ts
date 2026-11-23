@@ -88,8 +88,8 @@ export const vendorManagementContent: ArticleContent = {
       type: 'ordered-list',
       items: [
         { bold: 'Vendor name', text: 'The official company or product name' },
-        { bold: 'Other names (optional)', text: 'Other names the vendor is known by, separated by commas, for example "Facebook" for "Meta Platforms". A legal name written with a comma, such as "Acme Analytics, Inc.", counts as one name. The web research looks for sources that use them too' },
         { bold: 'Use cases', text: 'The use cases this vendor serves. You can pick approved use cases' },
+        { bold: 'Other names (optional)', text: 'Other names the vendor is known by, separated by commas, for example "Facebook" for "Meta Platforms". A legal name written with a comma, such as "Acme Analytics, Inc.", counts as one name. The web research looks for sources that use them too' },
         { bold: 'Website', text: 'Vendor\'s official website URL' },
         { bold: 'Vendor contact person', text: 'Primary contact at the vendor' },
         { bold: 'Assignee', text: 'Person responsible for managing this vendor relationship' },
@@ -98,7 +98,7 @@ export const vendorManagementContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'These fields are required. Review status, reviewer, review date, review result and the scorecard are optional.',
+      text: 'All of these except other names are required. Review status, reviewer, review date, review result, the identifiers and the scorecard are optional.',
     },
     {
       type: 'paragraph',

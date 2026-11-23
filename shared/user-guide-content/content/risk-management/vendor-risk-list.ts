@@ -34,12 +34,12 @@ export const vendorRiskListContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Four sections sit between the cards and the table. Each one opens when you select it, and your browser remembers which ones you left open.',
+      text: 'The Insights tab of the Vendors page has four reports, each on a tab of its own. They read every active vendor risk, whatever the Risks tab is filtered to, and your browser remembers which report you left open.',
     },
     {
       type: 'bullet-list',
       items: [
-        { bold: 'Heat map', text: 'Places each risk by likelihood and severity. Select a cell to show only its risks in the table; select it again to show every risk.' },
+        { bold: 'Heat map', text: 'Places each risk by likelihood and severity. Select a cell to open the Risks tab with only that cell\'s risks: the other filters, the search and the card are cleared, and a notice above the table says the table shows one cell. Choose **Show all risks** in the notice, or select the same cell again on the heat map, to show every risk.' },
         { bold: 'Blast radius', text: 'For each vendor, how many project risks inherit from its risks and which use cases they sit in. Admins also get a "View on map" link to the risk inheritance graph.' },
         { bold: 'Duplicate vendor risks', text: 'Pairs of one vendor\'s risks that read like the same risk entered twice. Nothing is merged or deleted for you: open either risk to clean up.' },
         { bold: 'Framework coverage', text: 'Active vendor risks that aren\'t mapped to a framework. Coverage gaps are risks whose vendor serves a use case with a framework attached; the rest have no framework to map to yet.' },

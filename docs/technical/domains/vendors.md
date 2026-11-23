@@ -1565,12 +1565,12 @@ the last page with rows when the list shrinks.
 | `VendorRiskLinksPanel` | The Linked risks tab: child project risks and related vendor risks, plus Suggest children and the related scan |
 | `RelateVendorRiskForm` | Picker that relates another vendor risk to this one |
 | `InlineFormCard` | Bordered frame, title and Cancel/primary actions for the forms that open inside the Linked risks tab |
-| `VendorRiskInsights` | Content of the Insights tab: heat map, blast radius, duplicate and coverage sub-tabs. `HeatCellNotice` is the notice above the register on the Risks tab while a heat map cell filters it |
-| `VendorResearchFindings` | Content of the Research findings tab: pending findings with Preview suggested risk and Dismiss, and the latest research run of a vendor (see [Vendor research](#vendor-research)) |
-| `VendorResearchButton` | **Research risks** icon button in each row of the vendors table |
+| `VendorRiskInsights` (`pages/Vendors/VendorRiskInsights/`) | Content of the Insights tab: heat map, blast radius, duplicate and coverage sub-tabs. `HeatCellNotice` is the notice above the register on the Risks tab while a heat map cell filters it |
+| `VendorResearchFindings` (`pages/Vendors/VendorResearchFindings/`) | Content of the Research findings tab: pending findings with Preview suggested risk and Dismiss, and the latest research run of a vendor (see [Vendor research](#vendor-research)) |
+| `VendorResearchButton` (`components/VendorResearchButton/`) | **Research risks** icon button in each row of the vendors table |
 | `RiskTable` (`components/Table/RisksTable/`) | Display vendor risks, including the Inherited by column |
 | `TableWithPlaceholder` (`components/Table/WithPlaceholder/`) | Main vendor list |
-| `TableFilter` (`components/Table/TableFilter`, with `FilterBy` and `useFilterBy`) | Dynamic filtering (`FilterBy` in the classic look, filter chips in phase 1) |
+| `TableFilter` (`components/Table/TableFilter.tsx`, with `useFilterBy`) | Dynamic filtering (`FilterBy` in the classic look, filter chips in phase 1) |
 
 ### Hooks
 
