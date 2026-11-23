@@ -76,6 +76,9 @@ import {
   vendorRiskCountByVendor,
 } from "../../../application/utils/vendorRiskRows";
 import useFormattedDate from "../../../application/hooks/useFormattedDate";
+import { useTranslation } from "../../../application/hooks/useTranslation";
+import { fill } from "../../../i18n/fill";
+import { LazyFallback } from "../../../application/utils/lazyRoute";
 
 /** True when a request failed with 404: the record is already gone. */
 const isNotFound = (error: unknown): boolean =>
@@ -134,6 +137,7 @@ const Vendors = () => {
   const can = useCanCheck();
   const { users } = useUsers();
   const formatDate = useFormattedDate();
+  const { t } = useTranslation();
 
   const [selectedVendor, setSelectedVendor] = useState<VendorModel | null>(null);
   const [selectedRisk, setSelectedRisk] = useState<ExistingRisk | null>(null);
@@ -232,10 +236,12 @@ const Vendors = () => {
       .sort()
       .map((assigneeId) => {
         const user = users.find((u) => u.id.toString() === assigneeId);
-        const userName = user ? `${user.name} ${user.surname}`.trim() : `User ${assigneeId}`;
+        const userName = user
+          ? `${user.name} ${user.surname}`.trim()
+          : fill(t("User {id}"), { id: assigneeId });
         return { value: assigneeId, label: userName };
       });
-  }, [vendors, users]);
+  }, [vendors, users, t]);
 
   const getUniqueVendorReviewers = useCallback(() => {
     const reviewerIds = new Set<string>();
@@ -248,10 +254,12 @@ const Vendors = () => {
       .sort()
       .map((reviewerId) => {
         const user = users.find((u) => u.id.toString() === reviewerId);
-        const userName = user ? `${user.name} ${user.surname}`.trim() : `User ${reviewerId}`;
+        const userName = user
+          ? `${user.name} ${user.surname}`.trim()
+          : fill(t("User {id}"), { id: reviewerId });
         return { value: reviewerId, label: userName };
       });
-  }, [vendors, users]);
+  }, [vendors, users, t]);
 
   // FilterBy - Filter columns configuration for Vendors tab
   const vendorFilterColumns: FilterColumn[] = useMemo(
@@ -380,10 +388,10 @@ const Vendors = () => {
       .sort()
       .map((vendorId) => {
         const vendor = allVendors.find((v: VendorModel) => v.id?.toString() === vendorId);
-        const vendorName = vendor ? vendor.vendor_name : `Vendor ${vendorId}`;
+        const vendorName = vendor ? vendor.vendor_name : fill(t("Vendor {id}"), { id: vendorId });
         return { value: vendorId, label: vendorName };
       });
-  }, [vendorRisks, allVendors]);
+  }, [vendorRisks, allVendors, t]);
 
   const getUniqueRiskActionOwners = useCallback(() => {
     const ownerIds = new Set<string>();
@@ -396,10 +404,12 @@ const Vendors = () => {
       .sort()
       .map((ownerId) => {
         const user = users.find((u) => u.id.toString() === ownerId);
-        const userName = user ? `${user.name} ${user.surname}`.trim() : `User ${ownerId}`;
+        const userName = user
+          ? `${user.name} ${user.surname}`.trim()
+          : fill(t("User {id}"), { id: ownerId });
         return { value: ownerId, label: userName };
       });
-  }, [vendorRisks, users]);
+  }, [vendorRisks, users, t]);
 
   // FilterBy - Filter columns configuration for Vendor Risks tab
   const vendorRiskFilterColumns: FilterColumn[] = useMemo(
@@ -513,20 +523,23 @@ const Vendors = () => {
   );
 
   // Handle risk card click to filter vendor risks by risk level
-  const handleRiskCardClick = useCallback((riskLevel: string) => {
-    if (riskLevel) {
-      setSelectedRiskLevel(riskLevel);
-      setAlert({
-        variant: "info",
-        title: `Filtering by risk level: ${riskLevel}`,
-        body: "The table now shows only vendor risks with this risk level. Click the card again to see all risks.",
-      });
-    } else {
-      setSelectedRiskLevel(null);
-      setAlert(null);
-      setShowAlert(false);
-    }
-  }, []);
+  const handleRiskCardClick = useCallback(
+    (riskLevel: string) => {
+      if (riskLevel) {
+        setSelectedRiskLevel(riskLevel);
+        setAlert({
+          variant: "info",
+          title: fill(t("Filtering by risk level: {level}"), { level: t(riskLevel) }),
+          body: "The table now shows only vendor risks with this risk level. Click the card again to see all risks.",
+        });
+      } else {
+        setSelectedRiskLevel(null);
+        setAlert(null);
+        setShowAlert(false);
+      }
+    },
+    [t],
+  );
 
   // Mutation hooks
   const deleteVendorMutation = useDeleteVendor();
@@ -988,7 +1001,9 @@ const Vendors = () => {
           ? "This table includes a list of external entities that provide AI-related products, services, or components. You can create and manage all vendors here."
           : "This table includes a list of risks related to a vendor. You can create and manage all vendor risks here."
       }
-      helpArticlePath={value === "1" ? "risk-management/vendor-management" : undefined}
+      helpArticlePath={
+        value === "1" ? "risk-management/vendor-management" : "risk-management/vendor-risk-list"
+      }
       tipBoxEntity="vendors"
       summaryCards={
         value !== "1" && !loadingVendorRisks && !isVendorsLoading ? (
@@ -1048,7 +1063,7 @@ const Vendors = () => {
       }
       alert={
         alert && (
-          <Suspense fallback={<div>Loading...</div>}>
+          <Suspense fallback={<LazyFallback />}>
             <Fade in={showAlert} timeout={300}>
               <Box sx={{ position: "fixed" }}>
                 <Alert
@@ -1068,7 +1083,7 @@ const Vendors = () => {
       }
     >
       <TabContext value={value}>
-        <Box sx={{ mt: 2 }}>
+        <Box sx={{ mt: "4px" }}>
           <TabBar
             tabs={[
               {
@@ -1094,7 +1109,7 @@ const Vendors = () => {
           />
         </Box>
         {value === "1" && (
-          <Stack spacing={2}>
+          <Stack spacing="4px">
             <Stack direction="row" sx={vendorToolbarStyle}>
               <Box sx={vendorFilterRowStyle}>
                 <TableFilter
@@ -1125,7 +1140,7 @@ const Vendors = () => {
                   data={exportData}
                   columns={exportColumns}
                   filename="vendors"
-                  title="Vendor List"
+                  title="Vendor list"
                 />
                 <div data-joyride-id="add-new-vendor" ref={refs[0]}>
                   <CustomizableButton
@@ -1146,7 +1161,7 @@ const Vendors = () => {
         )}
 
         {value !== "1" && (
-          <Stack spacing={2}>
+          <Stack spacing="4px">
             <Stack direction="row" sx={vendorToolbarStyle}>
               <Box sx={vendorFilterRowStyle}>
                 <Select
@@ -1193,7 +1208,7 @@ const Vendors = () => {
                   data={vendorRisksExportData}
                   columns={vendorRisksExportColumns}
                   filename="vendor-risks"
-                  title="Vendor Risks"
+                  title="Vendor risks"
                 />
                 <Box data-joyride-id="add-vendor-risk-button">
                   <CustomizableButton
@@ -1233,7 +1248,7 @@ const Vendors = () => {
           {loadingVendorRisks ? (
             <CustomizableSkeleton variant="rectangular" width="100%" height={400} />
           ) : (
-            <Stack spacing={4}>
+            <Stack spacing="8px">
               <VendorRiskInsights
                 risks={vendorRisks}
                 selectedCell={heatCell}

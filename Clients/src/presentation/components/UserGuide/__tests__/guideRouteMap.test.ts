@@ -48,7 +48,7 @@ describe("getGuideTargetForLocation", () => {
   it("maps sub-pages that have their own topic", () => {
     expect(getGuideTargetForLocation("/vendors/risks")).toEqual({
       collectionId: "risk-management",
-      articleId: "vendor-risks",
+      articleId: "vendor-risk-list",
     });
     expect(getGuideTargetForLocation("/evals/12/datasets/editor")).toEqual({
       collectionId: "llm-evals",

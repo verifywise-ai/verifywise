@@ -357,7 +357,7 @@ export const collections: Collection[] = [
     title: 'Risk management',
     description: 'Identify, assess, and mitigate risks across your AI systems and vendors.',
     icon: 'AlertTriangle',
-    articleCount: 5,
+    articleCount: 6,
     articles: [
       {
         id: 'risk-assessment',
@@ -388,6 +388,12 @@ export const collections: Collection[] = [
         title: 'Vendor risk assessment',
         description: 'Assess and track risks associated with your AI vendors.',
         keywords: ['vendor', 'risk', 'supplier', 'assessment', 'third-party'],
+      },
+      {
+        id: 'vendor-risk-list',
+        title: 'Vendor risks list',
+        description: 'Find, filter, add, export and restore vendor risks on the Risks tab.',
+        keywords: ['vendor', 'risk', 'risks tab', 'heat map', 'blast radius', 'duplicates', 'coverage', 'filter', 'export', 'restore', 'deleted'],
       },
     ],
   },

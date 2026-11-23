@@ -61,7 +61,7 @@ export default function VendorRiskInsights({
   }, []);
 
   return (
-    <Stack spacing={4}>
+    <Stack spacing="8px">
       <InsightSection
         title="Heat map"
         description="Vendor risks by likelihood and severity. Select a cell to filter the table."

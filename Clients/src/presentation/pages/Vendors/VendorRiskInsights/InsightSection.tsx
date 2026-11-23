@@ -36,7 +36,7 @@ export default function InsightSection({
           <Typography sx={summaryDescriptionSx}>{description}</Typography>
         </Box>
       </AccordionSummary>
-      <AccordionDetails sx={{ p: 8 }}>{expanded ? children : null}</AccordionDetails>
+      <AccordionDetails sx={{ p: "16px" }}>{expanded ? children : null}</AccordionDetails>
     </Accordion>
   );
 }
