@@ -1768,9 +1768,6 @@ components:
           type: string
         impact_description:
           type: string
-        impact:
-          type: string
-          nullable: true
         likelihood:
           type: string
           enum:
