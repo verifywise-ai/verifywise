@@ -13618,7 +13618,7 @@ export const v1V1reportTemplatesEndpoints: Endpoint[] = [
     method: 'PATCH',
     path: '/v1/report-templates/{id}',
     summary: "Update Template",
-    description: "Updates a custom template's metadata and, when any config field is sent, appends a new version. A version written without parameters_config keeps the previous version's kind. Unlike the frozen PATCH /reporting/templates/{id}, it accepts parameters_config. System templates and other organizations' templates answer 404.",
+    description: "Updates a custom template's metadata and, when any config field is sent, appends a new version. A version written without parameters_config or framework_config (missing or null) keeps the previous version's value; an explicit {} framework_config is stored and means every framework. Unlike the frozen PATCH /reporting/templates/{id}, it accepts parameters_config. System templates and other organizations' templates answer 404.",
     requiresAuth: true,
     parameters: [
       { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },

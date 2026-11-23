@@ -149,11 +149,30 @@ describe("reportTemplate.utils", () => {
     });
   });
 
-  it("createTemplateVersionQuery defaults framework_config to the column default", async () => {
-    q.mockResolvedValueOnce([{ id: 32, version: 1 }]);
+  // A PATCH that edits sections only must not widen the template to every
+  // framework: a missing selection inherits the previous version's, and the
+  // first version falls back to the column default {}.
+  it("createTemplateVersionQuery keeps the previous version's framework_config when none is sent", async () => {
+    q.mockResolvedValueOnce([{ id: 32, version: 2 }]);
     await createTemplateVersionQuery(7, 42, { sections_config: { sections: [] } }, 9);
-    const [, opts] = q.mock.calls[0];
-    expect(opts.replacements.framework_config).toBe("{}");
+    const [sql, opts] = q.mock.calls[0];
+    expect(opts.replacements.framework_config).toBeNull();
+    expect(sql).toMatch(
+      /COALESCE\(\s*CAST\(:framework_config AS JSONB\),\s*\(SELECT framework_config FROM report_template_versions\s+WHERE template_id = :template_id ORDER BY version DESC LIMIT 1\),\s*'\{\}'::jsonb\s*\)/,
+    );
+  });
+
+  it("createTemplateVersionQuery treats a null framework_config like a missing one", async () => {
+    q.mockResolvedValueOnce([{ id: 32, version: 2 }]);
+    await createTemplateVersionQuery(7, 42, { framework_config: null }, 9);
+    expect(q.mock.calls[0][1].replacements.framework_config).toBeNull();
+  });
+
+  // Clearing the selection stays possible: an explicit {} is stored as sent.
+  it("createTemplateVersionQuery stores an explicit empty framework_config", async () => {
+    q.mockResolvedValueOnce([{ id: 32, version: 2 }]);
+    await createTemplateVersionQuery(7, 42, { framework_config: {} }, 9);
+    expect(q.mock.calls[0][1].replacements.framework_config).toBe("{}");
   });
 
   // A copy of the E-23 template must stay an E-23 report: parameters_config

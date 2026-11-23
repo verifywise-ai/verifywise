@@ -252,6 +252,12 @@ export async function archiveTemplateQuery(id: number, organization_id: number):
 // PATCH that edits sections only) keeps the previous version's value rather
 // than quietly turning an E-23 template into a general one whose sections
 // every run would then refuse.
+//
+// framework_config is inherited the same way, for the same kind of reason: a
+// sections-only PATCH used to write {} and so widen a framework-specific
+// template to every framework. Only a missing or null value inherits; an
+// explicit {} is stored, so a caller can still clear the selection. A first
+// version (no previous one) gets the column default {}.
 export async function createTemplateVersionQuery(
   template_id: number,
   organization_id: number,
@@ -279,7 +285,13 @@ export async function createTemplateVersionQuery(
      SELECT :template_id,
             (SELECT COALESCE(MAX(version), 0) + 1
                FROM report_template_versions WHERE template_id = :template_id),
-            :sections_config, :ai_blocks_config, :framework_config,
+            :sections_config, :ai_blocks_config,
+            COALESCE(
+              CAST(:framework_config AS JSONB),
+              (SELECT framework_config FROM report_template_versions
+                WHERE template_id = :template_id ORDER BY version DESC LIMIT 1),
+              '{}'::jsonb
+            ),
             COALESCE(
               CAST(:parameters_config AS JSONB),
               (SELECT parameters_config FROM report_template_versions
@@ -300,9 +312,12 @@ export async function createTemplateVersionQuery(
         organization_id,
         sections_config: JSON.stringify(config.sections_config ?? { sections: [] }),
         ai_blocks_config: JSON.stringify(config.ai_blocks_config ?? {}),
-        // {} is the column default and means "every framework in scope" —
-        // the same fallback the wizard applies when it seeds [].
-        framework_config: JSON.stringify(config.framework_config ?? {}),
+        // null inherits the previous version's selection (see above); {} is
+        // stored as sent and means "every framework in scope".
+        framework_config:
+          config.framework_config === undefined || config.framework_config === null
+            ? null
+            : JSON.stringify(config.framework_config),
         parameters_config: parametersConfig ? JSON.stringify(parametersConfig) : null,
         format_config: JSON.stringify(config.format_config ?? {}),
         branding_config: JSON.stringify(config.branding_config ?? {}),

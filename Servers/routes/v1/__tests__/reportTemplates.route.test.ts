@@ -278,6 +278,31 @@ describe("/api/v1/report-templates", () => {
       });
     });
 
+    // framework_config is a version field: alone it appends a version, and a
+    // config PATCH without it sends nothing, so the version query inherits the
+    // previous selection instead of widening to every framework.
+    it("appends a version for a framework selection sent alone", async () => {
+      const res = await request(app)
+        .patch(`${BASE}/7`)
+        .set(auth)
+        .send({ framework_config: { frameworkIds: ["native:3"] } });
+      expect(res.status).toBe(200);
+      expect((createTemplateVersionQuery as jest.Mock).mock.calls[0][2]).toEqual({
+        framework_config: { frameworkIds: ["native:3"] },
+      });
+    });
+
+    it("leaves the framework selection out of a sections-only update", async () => {
+      const res = await request(app)
+        .patch(`${BASE}/7`)
+        .set(auth)
+        .send({ sections_config: { sections: [{ reportSectionKey: "projectRisks" }] } });
+      expect(res.status).toBe(200);
+      expect((createTemplateVersionQuery as jest.Mock).mock.calls[0][2]).not.toHaveProperty(
+        "framework_config",
+      );
+    });
+
     it("answers 404 when another organization's template is updated", async () => {
       const res = await request(app)
         .patch(`${BASE}/7`)

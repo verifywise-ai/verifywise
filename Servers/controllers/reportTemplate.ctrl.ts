@@ -90,6 +90,7 @@ const VERSION_CONFIG_FIELDS = [
   "schedule_defaults",
   "delivery_defaults",
   "parameters_config",
+  "framework_config",
 ];
 
 const hasVersionConfig = (body: any): boolean =>
@@ -303,7 +304,7 @@ export async function duplicateTemplate(req: Request, res: Response): Promise<an
     }
     const latest = await getLatestVersionQuery(source.id, req.organizationId!);
     const config = Object.fromEntries(
-      [...VERSION_CONFIG_FIELDS, "framework_config"].map((f) => [f, latest?.[f] ?? undefined]),
+      VERSION_CONFIG_FIELDS.map((f) => [f, latest?.[f] ?? undefined]),
     );
 
     let created: { tpl: any; version: any } | null = null;
