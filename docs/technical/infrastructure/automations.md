@@ -193,7 +193,7 @@ Recurring (cron) jobs only — see [On-Demand Jobs](#on-demand-jobs) below for j
 export async function scheduleVendorReviewDateNotification() {
   await automationQueue.upsertJobScheduler(
     "send_vendor_notification",
-    { pattern: "0 0 * * *" },  // Daily at midnight
+    { pattern: "0 0 * * *", tz: "UTC" },  // Daily at midnight UTC
     {
       name: "send_vendor_notification",
       data: { type: "review_date" },
@@ -203,11 +203,13 @@ export async function scheduleVendorReviewDateNotification() {
 }
 ```
 
-**Processing Logic:**
-1. Queries all organizations
-2. For each org, finds vendors with approaching review dates
-3. Checks automation config for `daysBefore` parameter
-4. Sends email notifications to assignees
+**Processing logic** (`Servers/services/automations/vendorReviewReminders.ts`):
+1. For each organization, loads every action of every active `vendor_review_date_approaching` automation. An organization with none gets nothing: there is no reminder without an automation.
+2. For each automation, finds the vendors whose review date falls on today plus its `daysBefore` (a whole number ≥ 0, else 0). Days are UTC calendar days, as on the Home queue.
+3. A `Reviewed` vendor is dropped by the Home queue's rule (`VENDOR_REVIEW_OPEN_CONDITION` in `homeQueue/sources/vendorReviews.source.ts`): only once its review date has passed. A reminder date is never in the past, so the next cycle's reminder still goes out after a review is marked Reviewed.
+4. Queues every action of the automation, in order, with the vendor's template values (`{{vendor.review_date}}` is the UTC day, or "Not set").
+5. Sends the reviewer (or the assignee when no reviewer is set) one in-app notice per vendor per run, however many automations match.
+6. A failing organization or automation is logged and skipped; the rest still run.
 
 ### Report Notifications
 

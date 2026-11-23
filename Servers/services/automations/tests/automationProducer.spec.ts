@@ -123,7 +123,7 @@ describe("automationProducer", () => {
       await scheduleVendorReviewDateNotification();
 
       expect(mockObliterate).not.toHaveBeenCalled();
-      expectSchedulerCall("send_vendor_notification", { type: "review_date" }, "0 0 * * *");
+      expectSchedulerCall("send_vendor_notification", { type: "review_date" }, "0 0 * * *", "UTC");
     });
   });
 

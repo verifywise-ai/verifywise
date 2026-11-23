@@ -13,6 +13,7 @@ import { writeToolExecutors } from "../confirmation/createWriteTool";
 import type { ConfirmationRequest, ConfirmationToolResult } from "../confirmation/types";
 import type { SubmitForApprovalConfig, ApprovalContext, StateHistoryEntry } from "./types";
 import { sequelize } from "../../database/db";
+import { getUserRoleInOrganization } from "../../utils/userPermission.utils";
 import { QueryTypes } from "sequelize";
 import { v4 as uuidv4 } from "uuid";
 import logger, { logStructured } from "../../utils/logger/fileLogger";
@@ -215,25 +216,50 @@ async function submitForApprovalImpl(
   // Run the rule engine for a richer evaluation
   let ruleDecision: RuleDecision = "require-approval";
   let ruleMatched: string | undefined;
+  let ruleReason: string | undefined;
 
   if (!noExecutor) {
+    // The requester's current role in this organization, so role rules
+    // (auditor-write-block, custom rules on user_role) match. A user whose
+    // role can't be resolved matches no role. If the lookup itself fails the
+    // call is refused: role rules must not be skipped.
+    let userRole: string | null = null;
     try {
-      const facts = deriveFacts({
-        toolName: config.toolName,
-        riskLevel: config.riskLevel,
-        inputParams: config.inputParams,
-      });
-      const ruleResult = await evaluateRules(config.organizationId, facts);
-      ruleDecision = ruleResult.decision;
-      ruleMatched = ruleResult.matchedRule || undefined;
+      userRole =
+        (await getUserRoleInOrganization(config.organizationId, config.userId))?.name ?? "Unknown";
     } catch {
-      // Rule engine failure → safe default: require approval
+      ruleDecision = "auto-reject";
+      ruleMatched = "requester-role-unavailable";
+      ruleReason = "Your role could not be checked. Try again.";
       logStructured(
         "error",
-        "rule engine failed, defaulting to require-approval",
+        "requester role lookup failed, auto-rejecting",
         functionName,
         fileName,
       );
+    }
+    if (userRole !== null) {
+      try {
+        const facts = deriveFacts({
+          toolName: config.toolName,
+          riskLevel: config.riskLevel,
+          inputParams: config.inputParams,
+          userRole,
+        });
+        const ruleResult = await evaluateRules(config.organizationId, facts);
+        ruleDecision = ruleResult.decision;
+        ruleMatched = ruleResult.matchedRule || undefined;
+        const reason = ruleResult.eventParams?.reason;
+        ruleReason = typeof reason === "string" && reason ? reason : undefined;
+      } catch {
+        // Rule engine failure → safe default: require approval
+        logStructured(
+          "error",
+          "rule engine failed, defaulting to require-approval",
+          functionName,
+          fileName,
+        );
+      }
     }
   }
 
@@ -283,7 +309,7 @@ async function submitForApprovalImpl(
   if (effectiveDecision === "auto-reject") {
     const errorMessage = noExecutor
       ? `No executor registered for tool: ${config.toolName}`
-      : `Auto-rejected by rule: ${effectiveRuleMatched}`;
+      : (ruleReason ?? `Auto-rejected by rule: ${effectiveRuleMatched}`);
     await insertApprovalRecord(id, config, "auto_reject", stateHistory, {
       ruleMatched: effectiveRuleMatched,
       errorMessage,
