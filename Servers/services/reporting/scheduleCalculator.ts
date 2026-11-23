@@ -4,6 +4,7 @@ import type {
   ScheduleConfig,
 } from "../../domain.layer/interfaces/i.reportTemplate";
 import logger from "../../utils/logger/fileLogger";
+import type { ReportParameterError } from "./reportParameters";
 
 const FREQUENCIES: ReportFrequency[] = ["daily", "weekly", "monthly", "quarterly"];
 
@@ -23,7 +24,7 @@ function safeAnchor(a: unknown): number {
 
 // Build a 5-field cron from the schedule config, then ask cron-parser for the
 // next occurrence after `from` in the configured timezone. An unknown stored
-// frequency falls back to monthly (new input is rejected by validateScheduleConfig).
+// frequency falls back to monthly (new input is rejected by scheduleConfigErrors).
 export function computeNextRun(cfg: ScheduleConfig, from: Date = new Date()): Date {
   const m = cfg.minute ?? 0;
   const h = cfg.hour ?? 0;
@@ -44,24 +45,40 @@ export function computeNextRun(cfg: ScheduleConfig, from: Date = new Date()): Da
   return it.next().toDate();
 }
 
-// Returns human-readable problems with a schedule config; empty means valid.
-export function validateScheduleConfig(cfg: unknown): string[] {
+/**
+ * The problems with a schedule config; empty means valid. Messages are
+ * translation keys with named placeholders, listed in PARAMETER_MESSAGES;
+ * callers turn them into text with parameterErrorMessages.
+ */
+export function scheduleConfigErrors(cfg: unknown): ReportParameterError[] {
   if (typeof cfg !== "object" || cfg === null || Array.isArray(cfg)) {
-    return ["schedule config must be an object"];
+    return [{ key: "scheduleConfig", message: "schedule config must be an object" }];
   }
   const c = cfg as Record<string, unknown>;
   if (!FREQUENCIES.includes(c.frequency as ReportFrequency)) {
-    return [`frequency must be one of: ${FREQUENCIES.join(", ")}`];
+    return [
+      {
+        key: "frequency",
+        message: "frequency must be one of: {frequencies}",
+        params: { frequencies: FREQUENCIES.join(", ") },
+      },
+    ];
   }
-  const errors: string[] = [];
+  const errors: ReportParameterError[] = [];
   if (c.frequency === "quarterly") {
     const a = c.anchorMonth;
     if (typeof a !== "number" || !Number.isInteger(a) || a < 1 || a > 12) {
-      errors.push("anchorMonth must be an integer from 1 to 12 for quarterly schedules");
+      errors.push({
+        key: "anchorMonth",
+        message: "anchorMonth must be an integer from 1 to 12 for quarterly schedules",
+      });
     }
     const d = c.dayOfMonth;
     if (d !== undefined && (typeof d !== "number" || !Number.isInteger(d) || d < 1 || d > 28)) {
-      errors.push("dayOfMonth must be an integer from 1 to 28 for quarterly schedules");
+      errors.push({
+        key: "dayOfMonth",
+        message: "dayOfMonth must be an integer from 1 to 28 for quarterly schedules",
+      });
     }
   }
   return errors;

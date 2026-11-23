@@ -123,4 +123,15 @@ describe("validateScheduledReportInput", () => {
       } as any),
     ).toContain("anchorMonth must be an integer from 1 to 12 for quarterly schedules");
   });
+
+  it("translates the schedule config errors with the request translator", () => {
+    const { getTranslator } = jest.requireActual("../../../utils/i18n.utils");
+    const errs = validateScheduledReportInput(
+      { ...base, scheduleConfig: { frequency: "yearly" } } as any,
+      getTranslator("de"),
+    );
+    expect(errs).toHaveLength(1);
+    expect(errs[0]).toContain("daily, weekly, monthly, quarterly");
+    expect(errs[0]).not.toContain("frequency must be one of");
+  });
 });

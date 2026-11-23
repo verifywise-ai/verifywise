@@ -67,7 +67,7 @@ export async function createScheduledReport(req: Request, res: Response): Promis
       scope: req.body?.scope ?? (req.body?.projectId ? "project" : "organization"),
     });
     const errors = [
-      ...validateScheduledReportInput(req.body),
+      ...validateScheduledReportInput(req.body, req.t),
       ...frameworkSelectionErrors(req.body?.frameworkIds),
       // await is load-bearing: see validateTemplateVersionOwnership's note.
       ...(await validateTemplateVersionOwnership(
@@ -292,13 +292,18 @@ export async function updateScheduledReport(req: Request, res: Response): Promis
       input.sectionsConfig !== undefined ||
       input.scheduleConfig !== undefined
     ) {
-      const errors = validateScheduledReportInput({
-        scope: input.scope ?? "organization",
-        projectId: input.projectId,
-        sectionsConfig: input.sectionsConfig ?? { sections: [{ reportSectionKey: "placeholder" }] },
-        deliveryConfig: input.deliveryConfig ?? { saveToStorage: true },
-        scheduleConfig: input.scheduleConfig ?? { frequency: "daily" },
-      } as any);
+      const errors = validateScheduledReportInput(
+        {
+          scope: input.scope ?? "organization",
+          projectId: input.projectId,
+          sectionsConfig: input.sectionsConfig ?? {
+            sections: [{ reportSectionKey: "placeholder" }],
+          },
+          deliveryConfig: input.deliveryConfig ?? { saveToStorage: true },
+          scheduleConfig: input.scheduleConfig ?? { frequency: "daily" },
+        } as any,
+        req.t,
+      );
       if (errors.length) return res.status(400).json(STATUS_CODE[400]({ errors }));
     }
 

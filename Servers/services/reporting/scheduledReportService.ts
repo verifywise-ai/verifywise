@@ -1,7 +1,12 @@
 import { getTemplateByIdQuery, getVersionByIdQuery } from "../../utils/reportTemplate.utils";
 import { isValidEmail } from "../email/types";
-import { validateScheduleConfig } from "./scheduleCalculator";
-import { ReportParameterError, sectionKeysOf, validateRunInput } from "./reportParameters";
+import { scheduleConfigErrors } from "./scheduleCalculator";
+import {
+  parameterErrorMessages,
+  ReportParameterError,
+  sectionKeysOf,
+  validateRunInput,
+} from "./reportParameters";
 import type { ReportParameters } from "../../domain.layer/interfaces/i.reportTemplate";
 
 export interface ScheduledReportInput {
@@ -20,13 +25,20 @@ export interface ScheduledReportInput {
   reportParameters?: unknown;
 }
 
-export function validateScheduledReportInput(input: ScheduledReportInput): string[] {
+/**
+ * `t` is the request translator: the schedule config messages go through it
+ * (without one, as in tests, they come back in English).
+ */
+export function validateScheduledReportInput(
+  input: ScheduledReportInput,
+  t?: (key: string, vars?: Record<string, string | number>) => string,
+): string[] {
   const errs: string[] = [];
   if (input.scope === "project" && !input.projectId) errs.push("project scope requires projectId");
   if (input.scope === "organization" && input.projectId)
     errs.push("organization scope must not set projectId");
   if (!input.sectionsConfig?.sections?.length) errs.push("at least one section is required");
-  errs.push(...validateScheduleConfig(input.scheduleConfig));
+  errs.push(...parameterErrorMessages(scheduleConfigErrors(input.scheduleConfig), t));
   const d = input.deliveryConfig || {};
   if (!d.saveToStorage && !d.sendEmailLink && !d.attachFile)
     errs.push("at least one delivery option is required");

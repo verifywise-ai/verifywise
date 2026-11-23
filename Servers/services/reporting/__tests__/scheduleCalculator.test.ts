@@ -1,5 +1,9 @@
 import logger from "../../../utils/logger/fileLogger";
-import { computeNextRun, validateScheduleConfig, rollingPeriod } from "../scheduleCalculator";
+import { computeNextRun, rollingPeriod, scheduleConfigErrors } from "../scheduleCalculator";
+import { PARAMETER_MESSAGES, parameterErrorMessages } from "../reportParameters";
+
+// The English text of a schedule config's problems.
+const scheduleConfigText = (cfg: unknown) => parameterErrorMessages(scheduleConfigErrors(cfg));
 
 jest.mock("../../../utils/logger/fileLogger", () => ({
   __esModule: true,
@@ -82,37 +86,68 @@ describe("computeNextRun", () => {
   });
 });
 
-describe("validateScheduleConfig", () => {
+describe("scheduleConfigErrors as text", () => {
   const base = { hour: 9, minute: 0, timezone: "UTC" };
   it("accepts the four frequencies", () => {
     for (const frequency of ["daily", "weekly", "monthly"]) {
-      expect(validateScheduleConfig({ ...base, frequency })).toEqual([]);
+      expect(scheduleConfigText({ ...base, frequency })).toEqual([]);
     }
-    expect(validateScheduleConfig({ ...base, frequency: "quarterly", anchorMonth: 3 })).toEqual([]);
+    expect(scheduleConfigText({ ...base, frequency: "quarterly", anchorMonth: 3 })).toEqual([]);
   });
   it("rejects an unknown frequency", () => {
-    expect(validateScheduleConfig({ ...base, frequency: "yearly" }).length).toBeGreaterThan(0);
+    expect(scheduleConfigText({ ...base, frequency: "yearly" }).length).toBeGreaterThan(0);
   });
   it("rejects a non-object", () => {
-    expect(validateScheduleConfig(null).length).toBeGreaterThan(0);
+    expect(scheduleConfigText(null).length).toBeGreaterThan(0);
   });
   it("quarterly requires anchorMonth", () => {
-    const errors = validateScheduleConfig({ ...base, frequency: "quarterly" });
+    const errors = scheduleConfigText({ ...base, frequency: "quarterly" });
     expect(errors.join(" ")).toMatch(/anchorMonth/);
   });
   it("quarterly rejects anchorMonth 13 and non-integers", () => {
-    expect(
-      validateScheduleConfig({ ...base, frequency: "quarterly", anchorMonth: 13 }).length,
-    ).toBe(1);
-    expect(
-      validateScheduleConfig({ ...base, frequency: "quarterly", anchorMonth: 1.5 }).length,
-    ).toBe(1);
+    expect(scheduleConfigText({ ...base, frequency: "quarterly", anchorMonth: 13 }).length).toBe(1);
+    expect(scheduleConfigText({ ...base, frequency: "quarterly", anchorMonth: 1.5 }).length).toBe(
+      1,
+    );
   });
   it("quarterly rejects dayOfMonth outside 1-28", () => {
     expect(
-      validateScheduleConfig({ ...base, frequency: "quarterly", anchorMonth: 1, dayOfMonth: 29 })
+      scheduleConfigText({ ...base, frequency: "quarterly", anchorMonth: 1, dayOfMonth: 29 })
         .length,
     ).toBe(1);
+  });
+});
+
+describe("scheduleConfigErrors", () => {
+  const base = { hour: 9, minute: 0, timezone: "UTC" };
+
+  it("gives translation keys with named placeholders, never a filled-in message", () => {
+    expect(scheduleConfigErrors({ ...base, frequency: "yearly" })).toEqual([
+      {
+        key: "frequency",
+        message: "frequency must be one of: {frequencies}",
+        params: { frequencies: "daily, weekly, monthly, quarterly" },
+      },
+    ]);
+  });
+
+  it("lists every message it can give in PARAMETER_MESSAGES, so each is translated", () => {
+    const bad = [
+      null,
+      "x",
+      { ...base, frequency: "yearly" },
+      { ...base, frequency: "quarterly" },
+      { ...base, frequency: "quarterly", anchorMonth: 1, dayOfMonth: 31 },
+    ];
+    const messages = new Set(bad.flatMap((c) => scheduleConfigErrors(c).map((e) => e.message)));
+    expect(messages.size).toBe(4);
+    for (const m of messages) expect(PARAMETER_MESSAGES).toContain(m);
+  });
+
+  it("fills the placeholder into the English text", () => {
+    expect(scheduleConfigText({ ...base, frequency: "yearly" })).toEqual([
+      "frequency must be one of: daily, weekly, monthly, quarterly",
+    ]);
   });
 });
 

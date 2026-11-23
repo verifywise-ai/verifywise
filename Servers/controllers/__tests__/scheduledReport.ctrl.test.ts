@@ -18,6 +18,7 @@ jest.mock("../../services/reporting/reportAuthorization", () => ({
   assertReportScopeAllowed: jest.fn(async () => []),
 }));
 import { createScheduledReport, updateScheduledReport } from "../scheduledReport.ctrl";
+import { getTranslator } from "../../utils/i18n.utils";
 
 function mockRes() {
   const r: any = {};
@@ -449,6 +450,47 @@ describe("scheduled report parameters and schedule config", () => {
     expect(utils.createScheduledReportQuery.mock.calls[0][0].reportParameters).toEqual(
       scheduleParams,
     );
+  });
+
+  it("translates a schedule config error on create, the frequencies as a placeholder", async () => {
+    const res = mockRes();
+    await createScheduledReport(
+      {
+        body: { ...body, scheduleConfig: { ...body.scheduleConfig, frequency: "yearly" } },
+        organizationId: 42,
+        userId: 9,
+        t: getTranslator("de"),
+      } as any,
+      res,
+    );
+    expect(res.status).toHaveBeenCalledWith(400);
+    const errors: string[] = res.json.mock.calls[0][0].data.errors;
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toContain("daily, weekly, monthly, quarterly");
+    expect(errors[0]).not.toContain("frequency must be one of");
+    expect(utils.createScheduledReportQuery).not.toHaveBeenCalled();
+  });
+
+  it("translates a schedule config error on PATCH", async () => {
+    const res = mockRes();
+    await updateScheduledReport(
+      {
+        params: { id: "7" },
+        body: { scheduleConfig: { frequency: "quarterly", hour: 9, minute: 0, timezone: "UTC" } },
+        organizationId: 42,
+        userId: 9,
+        t: getTranslator("fr"),
+      } as any,
+      res,
+    );
+    expect(res.status).toHaveBeenCalledWith(400);
+    const errors: string[] = res.json.mock.calls[0][0].data.errors;
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toContain("anchorMonth");
+    expect(errors[0]).not.toBe(
+      "anchorMonth must be an integer from 1 to 12 for quarterly schedules",
+    );
+    expect(utils.updateScheduledReportQuery).not.toHaveBeenCalled();
   });
 
   it("400s a schedule that sends a reporting period", async () => {

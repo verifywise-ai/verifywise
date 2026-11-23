@@ -287,7 +287,8 @@ export function validateRunInput(
 }
 
 /**
- * Every message a parameter or report-kind error can carry. They are
+ * Every message a parameter, report-kind, parameters-config or schedule-config
+ * (scheduleCalculator.scheduleConfigErrors) error can carry. They are
  * translation keys; listing them here is what lets the i18n scanner see them
  * through parameterErrorMessages (it cannot follow e.message out of an array).
  * A message added to the validators must be added here too, or it is sent
@@ -317,6 +318,10 @@ export const PARAMETER_MESSAGES = [
   "parameter field {name} needs a list of options",
   "parameter field {name} has an option without a text value and label",
   "parameter field key {name} is used more than once",
+  "schedule config must be an object",
+  "frequency must be one of: {frequencies}",
+  "anchorMonth must be an integer from 1 to 12 for quarterly schedules",
+  "dayOfMonth must be an integer from 1 to 28 for quarterly schedules",
 ] as const;
 
 const fill = (text: string, params?: Record<string, string | number>): string =>
