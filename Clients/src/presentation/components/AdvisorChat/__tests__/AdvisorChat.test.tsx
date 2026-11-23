@@ -1,4 +1,5 @@
-import { screen } from "@testing-library/react";
+import { act, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { vi } from "vitest";
 
 vi.mock("@assistant-ui/react", () => ({
@@ -41,9 +42,10 @@ vi.mock("../../../../application/hooks/useUserPreferences", () => ({
   }),
 }));
 
+const mockNavigate = vi.fn();
 vi.mock("react-router", () => ({
   MemoryRouter: ({ children }: any) => <>{children}</>,
-  useNavigate: () => vi.fn(),
+  useNavigate: () => mockNavigate,
 }));
 
 import { renderWithProviders } from "../../../../test/renderWithProviders";
@@ -81,6 +83,27 @@ describe("AdvisorChat", () => {
   it("sends the saved parallel-agents preference to the advisor runtime", () => {
     mockParallelAgents = true;
     renderWithProviders(<AdvisorChat />);
-    expect(vi.mocked(useAdvisorRuntime)).toHaveBeenCalledWith(undefined, undefined, true);
+    expect(vi.mocked(useAdvisorRuntime)).toHaveBeenCalledWith(
+      undefined,
+      undefined,
+      true,
+      expect.any(Function),
+    );
+  });
+
+  it("shows a request error in the chat with a link to the LLM keys page", async () => {
+    renderWithProviders(<AdvisorChat />);
+    const onRuntimeError = vi.mocked(useAdvisorRuntime).mock.calls[0][3]!;
+    act(() => onRuntimeError("This API key is not scoped to a workspace"));
+
+    expect(screen.getByText("The AI advisor could not answer")).toBeInTheDocument();
+    expect(screen.getByText("This API key is not scoped to a workspace")).toBeInTheDocument();
+
+    const user = userEvent.setup();
+    await user.click(screen.getByText("Check your LLM key in Settings"));
+    expect(mockNavigate).toHaveBeenCalledWith("/settings/apikeys");
+
+    await user.click(screen.getByRole("button", { name: "Close notification" }));
+    expect(screen.queryByText("The AI advisor could not answer")).not.toBeInTheDocument();
   });
 });

@@ -302,6 +302,20 @@ export const userManagementContent: ArticleContent = {
     },
     {
       type: 'heading',
+      id: 'llm-keys',
+      level: 2,
+      text: 'LLM keys',
+    },
+    {
+      type: 'paragraph',
+      text: 'The Advisor and the AI features use the LLM key you add under **Settings → API keys**. When you save a key, VerifyWise sends one free request to the provider to check that the key works and can use the model you picked. If the provider refuses the key, the form says why under the field to fix and the key is not saved.',
+    },
+    {
+      type: 'paragraph',
+      text: 'An Anthropic key that is not tied to a workspace needs the workspace ID. Enter it in **Workspace ID** (it starts with `wrkspc_`), or create the key inside a workspace in the Anthropic Console. If VerifyWise cannot reach the provider to check the key, click **Save anyway** to save it unchecked.',
+    },
+    {
+      type: 'heading',
       id: 'faq',
       level: 2,
       text: 'Frequently asked questions',

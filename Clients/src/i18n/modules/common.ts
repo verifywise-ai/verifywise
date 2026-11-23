@@ -4675,6 +4675,8 @@ export const de: Record<string, string> = {
   "No vendors yet": "Noch keine Anbieter",
   "Add a vendor first. Each vendor risk belongs to a vendor.":
     "Fügen Sie zuerst einen Anbieter hinzu. Jedes Anbieterrisiko gehört zu einem Anbieter.",
+  "The AI advisor could not answer": "Der KI-Berater konnte nicht antworten",
+  "Check your LLM key in Settings": "Prüfen Sie Ihren LLM-Schlüssel in den Einstellungen",
 };
 
 export const fr: Record<string, string> = {
@@ -9355,6 +9357,8 @@ export const fr: Record<string, string> = {
   "No vendors yet": "Aucun fournisseur pour l'instant",
   "Add a vendor first. Each vendor risk belongs to a vendor.":
     "Ajoutez d'abord un fournisseur. Chaque risque fournisseur appartient à un fournisseur.",
+  "The AI advisor could not answer": "Le conseiller IA n'a pas pu répondre",
+  "Check your LLM key in Settings": "Vérifiez votre clé LLM dans les paramètres",
 };
 
 export const es: Record<string, string> = {
@@ -14032,4 +14036,6 @@ export const es: Record<string, string> = {
   "No vendors yet": "Aún no hay proveedores",
   "Add a vendor first. Each vendor risk belongs to a vendor.":
     "Añade primero un proveedor. Cada riesgo de proveedor pertenece a un proveedor.",
+  "The AI advisor could not answer": "El asesor de IA no pudo responder",
+  "Check your LLM key in Settings": "Revisa tu clave de LLM en Configuración",
 };

@@ -6,8 +6,11 @@ import { AdvisorHeader } from "./AdvisorHeader";
 import { AdvisorDomain } from "./advisorConfig";
 import { useAdvisorConversationSafe } from "../../../application/contexts/AdvisorConversation.context";
 import useUserPreferences from "../../../application/hooks/useUserPreferences";
-import { useEffect, useRef, useMemo, memo } from "react";
+import { useEffect, useRef, useMemo, useState, memo } from "react";
+import { useNavigate } from "react-router";
 import { radiusPx } from "../../themes/palette";
+import Alert from "../Alert";
+import { LLM_KEYS_PATH } from "../../../application/constants/llmKeyDeepLink";
 
 // Extracted style functions for performance (created once per theme)
 const createPaperStyles = (theme: Theme): SxProps<Theme> => ({
@@ -51,12 +54,16 @@ const AdvisorChatInner = ({
   isLoadingLLMKeys?: boolean;
 }) => {
   const theme = useTheme();
+  const navigate = useNavigate();
   // Saved in Settings → Preferences. The transport still sends it as `parallel`.
   const { userPreferences } = useUserPreferences();
+  // A request that failed before the stream opened (bad key, network, 5xx).
+  const [runtimeError, setRuntimeError] = useState<string | null>(null);
   const runtime = useAdvisorRuntime(
     selectedLLMKeyId,
     pageContext,
     userPreferences.parallel_agents ?? false,
+    setRuntimeError,
   );
 
   return (
@@ -69,6 +76,21 @@ const AdvisorChatInner = ({
         bgcolor: theme.palette.background.alt ?? theme.palette.background.paper,
       }}
     >
+      {runtimeError && (
+        <Alert
+          variant="error"
+          title="The AI advisor could not answer"
+          body={runtimeError}
+          inline
+          isToast
+          onClick={() => setRuntimeError(null)}
+          action={{
+            label: "Check your LLM key in Settings",
+            onClick: () => navigate(LLM_KEYS_PATH),
+          }}
+          sx={{ m: "12px", flexShrink: 0 }}
+        />
+      )}
       {runtime ? (
         <AssistantRuntimeProvider runtime={runtime}>
           <CustomThread

@@ -1,8 +1,15 @@
 import { LLMKeysModel } from "../../domain/models/Common/llmKeys/llmKeys.model";
 import { apiServices } from "../../infrastructure/api/networkServices";
 
-export async function createLLMKey({ body }: { body: Partial<LLMKeysModel> }): Promise<any> {
-  const response = await apiServices.post("/llm-keys", body);
+/**
+ * Create and update go through /v1/llm-keys, which checks the key with its
+ * provider before saving. A refusal is a 400 and "could not check" a 409,
+ * both with { message, code }; skip_verification: true saves past the 409.
+ */
+export type LLMKeyWriteBody = Partial<LLMKeysModel> & { skip_verification?: boolean };
+
+export async function createLLMKey({ body }: { body: LLMKeyWriteBody }): Promise<any> {
+  const response = await apiServices.post("/v1/llm-keys", body);
   return response;
 }
 
@@ -11,9 +18,9 @@ export async function editLLMKey({
   body,
 }: {
   id: string;
-  body: Partial<LLMKeysModel>;
+  body: LLMKeyWriteBody;
 }): Promise<any> {
-  const response = await apiServices.patch(`/llm-keys/${id}`, body);
+  const response = await apiServices.patch(`/v1/llm-keys/${id}`, body);
   return response;
 }
 

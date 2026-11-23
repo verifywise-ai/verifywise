@@ -1666,5 +1666,10 @@
   "This file has a private analysis by another user": "This file has a private analysis by another user",
   "A private analysis would replace another user's analysis of this file": "A private analysis would replace another user's analysis of this file",
   "Incident creation validation failed": "Incident creation validation failed",
-  "{field} does not reference an entity in your organization": "{field} does not reference an entity in your organization"
+  "{field} does not reference an entity in your organization": "{field} does not reference an entity in your organization",
+  "Could not reach {provider} to check this key.": "Could not reach {provider} to check this key.",
+  "the endpoint": "the endpoint",
+  "This Anthropic key is not tied to a workspace. Create the key inside a workspace in the Anthropic Console, or enter the workspace ID.": "This Anthropic key is not tied to a workspace. Create the key inside a workspace in the Anthropic Console, or enter the workspace ID.",
+  "The provider rejected this key. Check that you copied all of it.": "The provider rejected this key. Check that you copied all of it.",
+  "This key cannot use {model}. Choose another model.": "This key cannot use {model}. Choose another model."
 }

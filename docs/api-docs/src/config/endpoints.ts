@@ -13337,6 +13337,62 @@ export const v1V1lifecycleSettingsEndpoints: Endpoint[] = [
   },
 ];
 
+// v1: V1/Llm Keys endpoints
+export const v1V1llmKeysEndpoints: Endpoint[] = [
+  {
+    method: 'POST',
+    path: '/v1/llm-keys',
+    summary: "Create an LLM key, checked with its provider first",
+    description: "Checks the key with its provider before saving: one free request (Anthropic GET /v1/models/{model}, OpenAI GET /v1/models, OpenRouter GET /api/v1/key, Custom GET {url}/models) sent with the key and its custom headers, 8 second timeout. A refusal is a 400 with data.code workspace_required, invalid_key or model_unavailable. When the provider cannot be reached (network error, timeout, 5xx, 429, or a Custom URL the outbound policy refuses) the answer is a 409 with data.code unreachable, unless the body sets skip_verification: true, which saves the key unchecked. A rejected key is never saved, even with skip_verification. Anthropic keys not tied to a workspace need the anthropic-workspace-id custom header.",
+    requiresAuth: true,
+    requestBody: {
+      "name": "Anthropic | OpenAI | OpenRouter | Custom (required)",
+      "key": "string (required)",
+      "model": "string (required)",
+      "url": "string (optional)",
+      "custom_headers": "object (optional, nullable)",
+      "skip_verification": "boolean (optional)",
+    },
+    responses: [
+      { status: 201, description: "Created; the key is not returned" },
+      { status: 400, description: "Invalid body, or the provider rejected the key: data is { message, code } with code workspace_required, invalid_key or model_unavailable" },
+      { status: 401, description: "Unauthorized" },
+      { status: 403, description: "Forbidden - requires the llmKeys.admin permission (Admin by default)" },
+      { status: 409, description: "The provider could not be reached to check the key: data is { message, code: unreachable }. Resend with skip_verification: true to save anyway." },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Llm Keys",
+  },
+  {
+    method: 'PATCH',
+    path: '/v1/llm-keys/{id}',
+    summary: "Update an LLM key, checked with its provider first",
+    description: "Checks the key with its provider before saving when the body changes the provider, key, URL, model or headers (unsent fields keep their stored values): one free request (Anthropic GET /v1/models/{model}, OpenAI GET /v1/models, OpenRouter GET /api/v1/key, Custom GET {url}/models) sent with the key and its custom headers, 8 second timeout. A refusal is a 400 with data.code workspace_required, invalid_key or model_unavailable. When the provider cannot be reached (network error, timeout, 5xx, 429, or a Custom URL the outbound policy refuses) the answer is a 409 with data.code unreachable, unless the body sets skip_verification: true, which saves the key unchecked. A rejected key is never saved, even with skip_verification. Anthropic keys not tied to a workspace need the anthropic-workspace-id custom header.",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    requestBody: {
+      "name": "Anthropic | OpenAI | OpenRouter | Custom (optional)",
+      "key": "string (optional)",
+      "model": "string (optional)",
+      "url": "string (optional)",
+      "custom_headers": "object (optional, nullable)",
+      "skip_verification": "boolean (optional)",
+    },
+    responses: [
+      { status: 200, description: "Updated; the key is not returned" },
+      { status: 400, description: "Invalid body, or the provider rejected the key: data is { message, code } with code workspace_required, invalid_key or model_unavailable" },
+      { status: 401, description: "Unauthorized" },
+      { status: 403, description: "Forbidden - requires the llmKeys.admin permission (Admin by default)" },
+      { status: 404, description: "No LLM key with this id in the organization" },
+      { status: 409, description: "The provider could not be reached to check the key: data is { message, code: unreachable }. Resend with skip_verification: true to save anyway." },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Llm Keys",
+  },
+];
+
 // v1: V1/Model Inventories endpoints
 export const v1V1modelInventoriesEndpoints: Endpoint[] = [
   {
@@ -14472,6 +14528,7 @@ export const allEndpoints = {
   v1V1importedFrameworkAssessments: v1V1importedFrameworkAssessmentsEndpoints,
   v1V1intakeFormReviewTime: v1V1intakeFormReviewTimeEndpoints,
   v1V1lifecycleSettings: v1V1lifecycleSettingsEndpoints,
+  v1V1llmKeys: v1V1llmKeysEndpoints,
   v1V1modelInventories: v1V1modelInventoriesEndpoints,
   v1V1modelRisks: v1V1modelRisksEndpoints,
   v1V1policyTemplates: v1V1policyTemplatesEndpoints,

@@ -67,8 +67,9 @@ export const VWLink = memo(function VWLink({
         }
       : {};
 
-  // Build component props conditionally
-  const componentProps = onClick ? { component: "button" as const } : {};
+  // Build component props conditionally. type="button": inside a form (a
+  // modal's), a plain <button> would also submit it.
+  const componentProps = onClick ? { component: "button" as const, type: "button" as const } : {};
 
   return (
     <Box

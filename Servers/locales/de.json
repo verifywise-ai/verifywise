@@ -1673,5 +1673,10 @@
   "This file has a private analysis by another user": "Für diese Datei gibt es eine private Analyse eines anderen Benutzers",
   "A private analysis would replace another user's analysis of this file": "Eine private Analyse würde die Analyse eines anderen Benutzers für diese Datei ersetzen",
   "Incident creation validation failed": "Validierung beim Erstellen des Vorfalls fehlgeschlagen",
-  "{field} does not reference an entity in your organization": "{field} verweist auf keinen Eintrag in Ihrer Organisation"
+  "{field} does not reference an entity in your organization": "{field} verweist auf keinen Eintrag in Ihrer Organisation",
+  "Could not reach {provider} to check this key.": "{provider} war nicht erreichbar, um diesen Schlüssel zu prüfen.",
+  "the endpoint": "der Endpunkt",
+  "This Anthropic key is not tied to a workspace. Create the key inside a workspace in the Anthropic Console, or enter the workspace ID.": "Dieser Anthropic-Schlüssel ist keinem Workspace zugeordnet. Erstellen Sie den Schlüssel in einem Workspace in der Anthropic Console oder geben Sie die Workspace-ID ein.",
+  "The provider rejected this key. Check that you copied all of it.": "Der Anbieter hat diesen Schlüssel abgelehnt. Prüfen Sie, ob Sie ihn vollständig kopiert haben.",
+  "This key cannot use {model}. Choose another model.": "Dieser Schlüssel kann {model} nicht verwenden. Wählen Sie ein anderes Modell."
 }
