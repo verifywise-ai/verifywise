@@ -15,7 +15,7 @@ import {
   ResearchCategory,
 } from "../../domain.layer/interfaces/i.vendorResearch";
 import type { StopReason } from "../webResearch/researchLoop";
-import type { CallRecord } from "../webResearch/webSession";
+import type { CallRecord, LedgerEntry } from "../webResearch/webSession";
 import { NO_DOMAIN_NOTE, SITE_CATEGORIES } from "./categories";
 import { MAX_NOTE_CHARS, ResearchOutput } from "./schema";
 import { cleanText, cutAtCodePoint } from "./text";
@@ -31,8 +31,16 @@ export const NOTES = {
    * took the risks that held up (and the verifier, when on, the ones the caps kept).
    */
   overCap: "More risks were found than one run keeps",
-  /** Worked on, and every call was a search that failed. */
+  /**
+   * Every call was a search that failed; or the category has no call and its searches failed for
+   * want of an answer (`searchUnavailable` of the research).
+   */
   searchUnavailable: "The search was not available",
+  /**
+   * A news category whose searches all failed, and whose sources are all the vendor's own pages
+   * or records: what it says rests on those alone, not on the news.
+   */
+  newsUnavailable: "News search was not available; checked on the vendor's own pages only",
   /** Worked on, no call answered, and a page could not be read. */
   pagesUnreadable: "The pages could not be read",
   /** No call, because the loop ran out of time. */
@@ -87,14 +95,20 @@ function modelNoteFor(
  *
  * 1. A category that needs the vendor's domain, for a vendor without one: `skipped`.
  * 2. A kept finding: `findings`, with a plain count, also when some calls of the category failed.
- * 3. No call: `skipped`, because the time ran out or the loop ended before it got there.
+ * 3. No call: `search_failed`, the search was not available, when searches of it failed for want
+ *    of an answer (`searchUnavailable`: a search that the clock cut off while the engine had not
+ *    answered leaves no call); otherwise `skipped`, because the time ran out or the loop ended
+ *    before it got there.
  * 4. No call answered: `search_failed`. The search was not available when every call was a failed
  *    search; once a page could not be read, the pages could not be read.
  * 5. A news category (one that is not in SITE_CATEGORIES: it rests on what the searches bring, not
- *    on the vendor's site) that made searches, none of which was answered: `search_failed`, the
- *    search was not available. Pages of it that were read do not make "no risks found" true for the
- *    news that was never searched. A category of the vendor's site is not this rule: its pages
- *    carry it, and its failed searches are counted by rule 7.
+ *    on the vendor's site) whose searches were none of them answered (it made some, or
+ *    `searchUnavailable` names it): pages of it that were read do not make "no risks found" true
+ *    for the news that was never searched. When it read a page and every source of it is the
+ *    vendor's own page or a record (`entries`), `nothing_found` with the note that only the
+ *    vendor's own pages were checked; otherwise `search_failed`, the search was not available. A
+ *    category of the vendor's site is not this rule: its pages carry it, and its failed searches
+ *    are counted by rule 7.
  * 6. The model proposed a risk in it and none stayed: `nothing_found`, the possible risks were not
  *    confirmed; or, when the cap of the run cut a risk of it (`capped`), `over_cap`: more risks
  *    were found than one run keeps. The cap has an outcome of its own, so that what the UI says of
@@ -124,6 +138,10 @@ export function summariseCategories(input: {
   freshCategories?: ReadonlySet<ResearchCategory>;
   /** The categories of the risks that held up and that the caps cut. */
   capped?: ReadonlySet<ResearchCategory>;
+  /** The categories whose searches failed for want of an answer, none answered (see rule 3). */
+  searchUnavailable?: readonly ResearchCategory[];
+  /** The sources of the run, to tell a category checked on the vendor's own pages only (rule 5). */
+  entries?: readonly Pick<LedgerEntry<ResearchCategory>, "category" | "onVendorSite" | "record">[];
 }): CategorySummaryEntry[] {
   return RESEARCH_CATEGORIES.map((category): CategorySummaryEntry => {
     if (input.skippedNoDomain.includes(category)) {
@@ -132,8 +150,12 @@ export function summariseCategories(input: {
     const keptCount = input.kept.filter((finding) => finding.category === category).length;
     if (keptCount > 0) return { category, outcome: "findings", note: findingsNote(keptCount) };
 
+    const searchUnavailable = input.searchUnavailable?.includes(category) === true;
     const calls = input.calls.filter((call) => call.category === category);
     if (calls.length === 0) {
+      if (searchUnavailable) {
+        return { category, outcome: "search_failed", note: NOTES.searchUnavailable };
+      }
       const note = input.stoppedBecause === "time" ? NOTES.timeLimit : NOTES.endedEarly;
       return { category, outcome: "skipped", note };
     }
@@ -146,12 +168,22 @@ export function summariseCategories(input: {
       return { category, outcome: "search_failed", note };
     }
     // The news of the category was not searched, whatever pages of it were read.
-    if (
+    const newsNotSearched =
       !SITE_CATEGORIES.includes(category) &&
-      searches.length > 0 &&
-      failedSearches === searches.length
-    ) {
-      return { category, outcome: "search_failed", note: NOTES.searchUnavailable };
+      failedSearches === searches.length &&
+      (searches.length > 0 || searchUnavailable);
+    if (newsNotSearched) {
+      // What it says rests on the vendor's own pages alone when a page was read and every source
+      // of it is the vendor's own page or a record; otherwise the category was not researched.
+      const ownOnly =
+        reads.length > failedReads &&
+        input.entries !== undefined &&
+        input.entries
+          .filter((entry) => entry.category === category)
+          .every((entry) => entry.onVendorSite || entry.record !== undefined);
+      return ownOnly
+        ? { category, outcome: "nothing_found", note: NOTES.newsUnavailable }
+        : { category, outcome: "search_failed", note: NOTES.searchUnavailable };
     }
 
     if (input.capped?.has(category) === true) {

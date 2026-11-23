@@ -868,6 +868,8 @@ async function research(args: RunArgs, deps: PipelineDeps, progress: Progress): 
       stoppedBecause: found.stoppedBecause,
       freshCategories,
       capped,
+      searchUnavailable: found.searchUnavailable,
+      entries: found.entries,
     });
 
   // The failed-run rule, in this order. A model call that rejected with nothing in it leaves the

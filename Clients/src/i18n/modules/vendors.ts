@@ -358,6 +358,10 @@ export const de: Record<string, string> = {
   "More risks were found than one run keeps.":
     "Es wurden mehr Risiken gefunden, als ein Durchlauf behält.",
   "The search was not available.": "Die Suche war nicht verfügbar.",
+  "News search was not available, so this was checked only on the vendor's own pages.":
+    "Die Nachrichtensuche war nicht verfügbar, daher wurde nur auf den eigenen Seiten des Anbieters geprüft.",
+  "News search was not available, so results may be incomplete.":
+    "Die Nachrichtensuche war nicht verfügbar, daher sind die Ergebnisse möglicherweise unvollständig.",
   "The pages could not be read.": "Die Seiten konnten nicht gelesen werden.",
   "1 potential risk found": "1 mögliches Risiko gefunden",
   "{count} potential risks found": "{count} mögliche Risiken gefunden",
@@ -865,6 +869,10 @@ export const fr: Record<string, string> = {
   "More risks were found than one run keeps.":
     "Plus de risques ont été trouvés qu'une exécution n'en conserve.",
   "The search was not available.": "La recherche n'était pas disponible.",
+  "News search was not available, so this was checked only on the vendor's own pages.":
+    "La recherche d'actualités n'était pas disponible, la vérification s'est donc limitée aux pages du fournisseur.",
+  "News search was not available, so results may be incomplete.":
+    "La recherche d'actualités n'était pas disponible, les résultats peuvent donc être incomplets.",
   "The pages could not be read.": "Les pages n'ont pas pu être lues.",
   "1 potential risk found": "1 risque potentiel trouvé",
   "{count} potential risks found": "{count} risques potentiels trouvés",
@@ -1369,6 +1377,10 @@ export const es: Record<string, string> = {
   "More risks were found than one run keeps.":
     "Se encontraron más riesgos de los que conserva una ejecución.",
   "The search was not available.": "La búsqueda no estaba disponible.",
+  "News search was not available, so this was checked only on the vendor's own pages.":
+    "La búsqueda de noticias no estaba disponible, así que solo se revisaron las páginas propias del proveedor.",
+  "News search was not available, so results may be incomplete.":
+    "La búsqueda de noticias no estaba disponible, así que los resultados pueden estar incompletos.",
   "The pages could not be read.": "No se pudieron leer las páginas.",
   "1 potential risk found": "1 posible riesgo encontrado",
   "{count} potential risks found": "{count} posibles riesgos encontrados",

@@ -39,6 +39,11 @@ const MODEL = { modelId: "a test model" };
 /** The vendor's own page that the tests read without a search: it is on the domain acme.com. */
 const OWN_PAGE = "https://acme.com/security";
 
+/** What the loop answers a search with no query. */
+const MISSING_QUERY =
+  'Invalid step: the search had no "query". Write the fields of an action in this order: ' +
+  "action, category, query, kind, url, focus, part; a search has a query of at least 3 characters.";
+
 /** A search result whose title and snippet name its URL, so that results are easy to tell apart. */
 function result(url: string, fields: Partial<SearchResult> = {}): SearchResult {
   return {
@@ -533,11 +538,7 @@ describe("runResearchLoop", () => {
         then: finishStep,
       });
 
-      expect(results(calls[3].prompt)).toEqual([
-        "Invalid step: a search needs a query and a category.",
-        "Invalid step: a search needs a query and a category.",
-        "Invalid step: a search needs a query and a category.",
-      ]);
+      expect(results(calls[3].prompt)).toEqual([MISSING_QUERY, MISSING_QUERY, MISSING_QUERY]);
     });
 
     it("escaping (Review Focus 3): text from a result, a page or the model cannot open or close a tag", async () => {
@@ -723,62 +724,159 @@ describe("runResearchLoop", () => {
   });
 
   describe("invalid steps (Review Focus 2)", () => {
-    const SEARCH_NEEDS = "Invalid step: a search needs a query and a category.";
-    const READ_NEEDS = "Invalid step: a read needs a url and a category.";
+    const SHORT_QUERY = "Invalid step: the query of a search needs at least 3 characters.";
+    const SEARCH_CATEGORY =
+      'Invalid step: the search had no "category". Give every search the category it is for.';
+    const MISSING_URL = 'Invalid step: the read had no "url". Give every read the address to read.';
+    const READ_CATEGORY =
+      'Invalid step: the read had no "category". Give every read the category it is for.';
     const NOT_RESEARCHABLE = "That category cannot be researched for this vendor.";
 
-    it.each<[string, LoopStep<Category>, string]>([
+    it.each<[string, LoopStep<Category>, string, string]>([
       [
         "a search with no query",
         stepOf("t", { action: "search", category: "security_incidents" }),
-        SEARCH_NEEDS,
+        MISSING_QUERY,
+        "missing_query",
       ],
       [
         "a search with a query under 3 characters",
         stepOf("t", { action: "search", category: "security_incidents", query: "ab" }),
-        SEARCH_NEEDS,
+        SHORT_QUERY,
+        "short_query",
       ],
       [
         "a search with a query that is under 3 characters without its spaces",
         stepOf("t", { action: "search", category: "security_incidents", query: "  ab  " }),
-        SEARCH_NEEDS,
+        SHORT_QUERY,
+        "short_query",
       ],
       [
         "a search with no category",
         stepOf("t", { action: "search", query: "Acme data breach" }),
-        SEARCH_NEEDS,
+        SEARCH_CATEGORY,
+        "missing_category",
       ],
       [
         "a read with no url",
         stepOf("t", { action: "read", category: "security_incidents" }),
-        READ_NEEDS,
+        MISSING_URL,
+        "missing_url",
       ],
-      ["a read with no category", stepOf("t", { action: "read", url: OWN_PAGE }), READ_NEEDS],
+      [
+        "a read with no category",
+        stepOf("t", { action: "read", url: OWN_PAGE }),
+        READ_CATEGORY,
+        "missing_category",
+      ],
       [
         "a search in a category outside researchable",
         searchStep("Acme ISO 27001", "certifications"),
         NOT_RESEARCHABLE,
+        "not_researchable",
       ],
       [
         "a read in a category outside researchable",
         readStep(OWN_PAGE, "ai_specific"),
         NOT_RESEARCHABLE,
+        "not_researchable",
       ],
     ])(
-      "%s costs one step, is answered with its message and reaches no engine or reader",
-      async (_label, step, message) => {
+      "%s costs one step, is answered with its message, names the field and reaches no engine or reader",
+      async (_label, step, message, reason) => {
+        const turns: LoopTurn<Category>[] = [];
         const { outcome, calls, search, readPage } = await run({
           script: [step, finishStep, finishStep],
           researchable: ["security_incidents", "legal_regulatory"],
+          observer: { turn: (turn) => turns.push(turn) },
         });
 
         expect(lastResult(calls[1].prompt)).toBe(message);
+        expect(turns[0]).toMatchObject({ tool: "invalid", outcome: "refused", reason });
         expect(calls[1].prompt).toContain("Budget left: 8 searches, 12 page reads, 23 steps.");
         expect(search).not.toHaveBeenCalled();
         expect(readPage).not.toHaveBeenCalled();
         expect(outcome).toEqual({ stoppedBecause: "finished", steps: 3, modelError: null });
       },
     );
+
+    it("a loop of one category gives a search and a read with no category that category", async () => {
+      const found = result("https://news.example/acme-breach");
+      const turns: LoopTurn<Category>[] = [];
+      const { search, readPage } = await run({
+        script: [
+          stepOf(
+            "No category given.",
+            { action: "search", query: "Acme data breach", kind: "news" },
+            { action: "read", url: OWN_PAGE },
+          ),
+          finishStep,
+        ],
+        web: { searches: [[found]] },
+        researchable: ["security_incidents"],
+        observer: { turn: (turn) => turns.push(turn) },
+      });
+
+      expect(search).toHaveBeenCalledWith("Acme data breach", "news", expect.any(AbortSignal));
+      expect(readPage).toHaveBeenCalledWith(OWN_PAGE, expect.any(AbortSignal));
+      expect(turns.slice(0, 2)).toMatchObject([
+        { tool: "search", category: "security_incidents", outcome: "ok" },
+        { tool: "read", category: "security_incidents", outcome: "ok" },
+      ]);
+    });
+
+    // Regression, 2026-11-23: a provider that decodes against the schema accepts the fields of an
+    // action in the schema's order only. A model that copied an example with "kind" before "query"
+    // could not write the query any more, and every search came back as this answer (raw text of
+    // the run, trimmed). The loop refuses it, names the missing field and keeps the category.
+    it("a search the model answered without a query, through the real structured call, is told the field and its order", async () => {
+      const raw =
+        '{"thought":"Retry one news search for security incidents.","actions":[{"action":"search",' +
+        '"category":"security_incidents","kind":"news","url":null,"focus":null,"part":null}]}';
+      const model = new MockLanguageModelV4({
+        doGenerate: async () => ({
+          content: [{ type: "text", text: raw }],
+          finishReason: { unified: "stop", raw: undefined },
+          usage: {
+            inputTokens: { total: 10, noCache: 10, cacheRead: undefined, cacheWrite: undefined },
+            outputTokens: { total: 20, text: 20, reasoning: undefined },
+          },
+          warnings: [],
+        }),
+      });
+      const { session, search } = webSession();
+      const turns: LoopTurn<Category>[] = [];
+      const prompts: string[] = [];
+
+      await runResearchLoop<Category>(
+        {
+          system: SYSTEM,
+          task: TASK,
+          categories: CATEGORIES,
+          researchable: ["security_incidents"],
+          limits: { maxSteps: 2 },
+        },
+        {
+          generate: (params, impl) => {
+            prompts.push(params.prompt);
+            return generateObjectWithSelfCorrection(params, impl);
+          },
+          model,
+          session,
+          observer: { turn: (turn) => turns.push(turn) },
+        },
+      );
+
+      expect(search).not.toHaveBeenCalled();
+      expect(turns[0]).toMatchObject({
+        tool: "invalid",
+        outcome: "refused",
+        reason: "missing_query",
+        category: "security_incidents",
+        kind: "news",
+      });
+      expect(lastResult(prompts[1])).toBe(MISSING_QUERY);
+    });
   });
 
   describe("a read of an address no search returned", () => {
@@ -1398,7 +1496,7 @@ describe("runResearchLoop", () => {
 
       expect(search).toHaveBeenCalledTimes(1);
       const shown = results(calls[1].prompt);
-      expect(shown[0]).toBe("Invalid step: a search needs a query and a category.");
+      expect(shown[0]).toBe(MISSING_QUERY);
       expect(shown[1]).toContain(found.url);
     });
 
@@ -2066,7 +2164,7 @@ describe("runResearchLoop observer", () => {
     expect(turns[0]).toMatchObject({
       tool: "invalid",
       outcome: "refused",
-      reason: "invalid_search",
+      reason: "missing_query",
     });
     expect(turns[1]).toMatchObject({ tool: "finish", outcome: "refused", reason: "reminder" });
     expect(turns[2]).toMatchObject({ tool: "finish", outcome: "ok" });

@@ -277,6 +277,86 @@ describe("a category whose risks the cap of the run cut", () => {
   });
 });
 
+// Run 1 of 2026-11-23: the news engine never answered. A category checked on the vendor's own
+// pages only says so, and the run says without a click that its results may be incomplete.
+describe("a run whose news search was not available", () => {
+  const GAP = "News search was not available, so results may be incomplete.";
+  const OWN_PAGES_NOTE =
+    "News search was not available, so this was checked only on the vendor's own pages.";
+  const newsDown = () =>
+    searched({
+      category_summary: [
+        {
+          category: "security_incidents",
+          outcome: "search_failed",
+          note: "The search was not available",
+        },
+        {
+          category: "availability",
+          outcome: "nothing_found",
+          note: "News search was not available; checked on the vendor's own pages only",
+        },
+        {
+          category: "certifications",
+          outcome: "nothing_found",
+          note: "No risks found in the sources reviewed",
+        },
+      ],
+    });
+
+  afterAll(async () => {
+    await setLanguage("en");
+  });
+
+  it("warns on screen, and says under the category that only the vendor's pages were checked", async () => {
+    mocks.latest.mockResolvedValue(newsDown());
+    renderSummary();
+
+    expect(await screen.findByText(GAP)).toBeInTheDocument();
+    await openDetails();
+    const line = await screen.findByText("Availability: nothing found");
+    expect(follows(line, screen.getByText(OWN_PAGES_NOTE))).toBe(true);
+    // A fixed sentence, not the model's words.
+    expect(screen.queryByText("AI note (unverified)")).not.toBeInTheDocument();
+  });
+
+  it("does not warn when the search of a site category alone failed", async () => {
+    mocks.latest.mockResolvedValue(
+      searched({
+        category_summary: [
+          {
+            category: "certifications",
+            outcome: "search_failed",
+            note: "The search was not available",
+          },
+          {
+            category: "security_incidents",
+            outcome: "nothing_found",
+            note: "No risks found in the sources reviewed",
+          },
+        ],
+      }),
+    );
+    renderSummary();
+
+    await screen.findByRole("button", { name: DETAILS });
+    expect(screen.queryByText(GAP)).not.toBeInTheDocument();
+  });
+
+  it.each(LANGS)("says it in %s", async (lang) => {
+    resetAudit();
+    await setLanguage(lang);
+    mocks.latest.mockResolvedValue(newsDown());
+    renderSummary();
+
+    expect(await screen.findByText(tr(lang, GAP))).toBeInTheDocument();
+    expect(translations[lang][GAP]).not.toBe(GAP);
+    await openDetails(tr(lang, DETAILS));
+    expect(await screen.findByText(tr(lang, OWN_PAGES_NOTE))).toBeInTheDocument();
+    expect(translations[lang][OWN_PAGES_NOTE]).not.toBe(OWN_PAGES_NOTE);
+  });
+});
+
 describe("the lines of the engine in German, French and Spanish", () => {
   afterAll(async () => {
     await setLanguage("en");

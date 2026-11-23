@@ -374,6 +374,7 @@ describe("createVendorResearcher", () => {
       stoppedBecause: "model_error",
       modelError: failure,
       jsonObjectFallback: false,
+      searchUnavailable: [],
       readPage: web.readPage,
       // The engine the run was given answered its search.
       searchEngine: "replay",
@@ -424,6 +425,7 @@ describe("createVendorResearcher", () => {
       stoppedBecause: "finished",
       modelError: null,
       jsonObjectFallback: false,
+      searchUnavailable: [],
       readPage: web.readPage,
       // This run searched nothing, however many searches the first one made.
       searchEngine: null,
@@ -1037,6 +1039,28 @@ describe("createVendorResearcher", () => {
         { kind: "web", outcome: "failed" },
         { kind: "news", outcome: "refused" },
       ]);
+    });
+
+    it("names the categories whose searches failed and none answered", async () => {
+      const web = fakeWeb();
+      web.search.mockImplementation(async (query) => {
+        if (query.includes("outage") || query.includes("fine")) throw new SearchEngineError();
+        return [];
+      });
+      const model = scriptedModel([
+        // security_incidents: one failed, one answered (empty), so it is not named.
+        searchStep("Acme outage", "security_incidents", "news"),
+        searchStep("Acme data breach", "security_incidents", "news"),
+        // legal_regulatory: its one search failed.
+        searchStep("Acme fine", "legal_regulatory", "news"),
+        finishStep,
+        finishStep,
+      ]);
+      const research = createVendorResearcher({ ...web, generate: model.generate });
+
+      const found = await research({ target: WITHOUT_DOMAIN, model: MODEL, now: NOW });
+
+      expect(found.searchUnavailable).toEqual(["legal_regulatory"]);
     });
 
     it("does not count a step that is not a search, or one the rules refused as invalid", async () => {
@@ -2655,6 +2679,7 @@ describe("createVendorResearcher", () => {
         stoppedBecause: "finished",
         modelError: null,
         jsonObjectFallback: false,
+        searchUnavailable: [],
         readPage: expect.any(Function),
         // Nothing was searched, so no engine was used.
         searchEngine: null,

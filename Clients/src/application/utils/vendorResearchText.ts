@@ -107,6 +107,44 @@ export const dismissReasonLabel = (reason: DismissReason, t: Translate = transla
 const OVER_CAP_NOTE = "More risks were found than one run keeps";
 
 /**
+ * The server's notes (NOTES.searchUnavailable and NOTES.newsUnavailable in
+ * Servers/services/vendorResearch/summary.ts) on a category whose searches were not answered: on
+ * `search_failed`, nothing could be searched; on `nothing_found`, a news category was checked on
+ * the vendor's own pages only.
+ */
+const SEARCH_UNAVAILABLE_NOTE = "The search was not available";
+const NEWS_UNAVAILABLE_NOTE =
+  "News search was not available; checked on the vendor's own pages only";
+
+/** The categories that rest on the news, not on the vendor's own site. */
+const NEWS_CATEGORIES: readonly ResearchCategory[] = [
+  "security_incidents",
+  "legal_regulatory",
+  "availability",
+  "financial_health",
+];
+
+/**
+ * True when the search of a news category was not available in the run (the engine did not
+ * answer), so that the screen can say that the results may be incomplete without a click. Read
+ * from the notes of the category summary, which the server writes from closed phrases.
+ */
+export function newsSearchUnavailable(
+  entries:
+    readonly Pick<CategorySummaryEntry, "category" | "outcome" | "note">[] | null | undefined,
+): boolean {
+  return (entries ?? []).some((entry) => {
+    const note = typeof entry?.note === "string" ? entry.note.trim() : "";
+    if (entry?.outcome === "nothing_found") return note === NEWS_UNAVAILABLE_NOTE;
+    return (
+      entry?.outcome === "search_failed" &&
+      note === SEARCH_UNAVAILABLE_NOTE &&
+      NEWS_CATEGORIES.includes(entry.category)
+    );
+  });
+}
+
+/**
  * "Security incidents: nothing found". Built from the category and the outcome alone, never from
  * the note, so what the line says does not depend on text the model wrote: on `nothing_found` the
  * note may be the model's, whatever words it used.
@@ -289,6 +327,10 @@ const NOTHING_FOUND_NOTES = new Map<string, string>([
   ],
   // How a run stored before the cap had an outcome of its own kept a capped category.
   [OVER_CAP_NOTE, "More risks were found than one run keeps."],
+  [
+    NEWS_UNAVAILABLE_NOTE,
+    "News search was not available, so this was checked only on the vendor's own pages.",
+  ],
 ]);
 
 /** The risks held up, and the cap of one run took them. */
@@ -297,7 +339,7 @@ const OVER_CAP_NOTES = new Map<string, string>([
 ]);
 
 const SEARCH_FAILED_NOTES = new Map<string, string>([
-  ["The search was not available", "The search was not available."],
+  [SEARCH_UNAVAILABLE_NOTE, "The search was not available."],
   ["The pages could not be read", "The pages could not be read."],
 ]);
 

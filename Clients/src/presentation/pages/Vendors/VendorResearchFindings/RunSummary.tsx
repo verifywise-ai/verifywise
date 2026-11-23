@@ -25,6 +25,7 @@ import {
   describeProgress,
   describeRunError,
   formatResearchDate,
+  newsSearchUnavailable,
 } from "../../../../application/utils/vendorResearchText";
 import { fill } from "../../../../i18n/fill";
 import InlineError from "./InlineError";
@@ -219,6 +220,9 @@ export default function RunSummary({
             <AlertCircle size={16} />
             <Typography sx={errorTextSx}>{describeRunError(run.error, t)}</Typography>
           </Box>
+        )}
+        {newsSearchUnavailable(entries) && (
+          <Gap>{t("News search was not available, so results may be incomplete.")}</Gap>
         )}
         {coverage?.off && <Gap quiet>Public databases turned off</Gap>}
         {unchecked !== null && <Gap>{unchecked}</Gap>}

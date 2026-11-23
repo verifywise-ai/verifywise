@@ -107,6 +107,14 @@ export interface ResearchResult {
    */
   jsonObjectFallback: boolean;
   /**
+   * The categories in which a search failed because the engine did not answer
+   * (`search_unavailable`) and no search was answered, the code's and the model's alike. It is
+   * read from the turns of the run, not from `calls`: a search that the clock of the routine work
+   * cut off while the engine had not answered leaves no call (see webSession.ts), and still means
+   * that the news of the category was not searched. Absent from a researcher that does not tell.
+   */
+  searchUnavailable?: ResearchCategory[];
+  /**
    * The other names of the vendor that its home page gave (see aliases.ts), after the ones a person
    * wrote. The analysis adds them to its target, so that it names the vendor as the research did.
    * This researcher always gives it; a researcher that does not names the vendor by the record only.
@@ -613,7 +621,16 @@ export function createVendorResearcher(
      * model and for what the code did before the loop (`by`). `loop` is the category of the loop
      * that took the turn, when the loops are one for each category.
      */
+    // For each category, how many of its searches failed for want of an answer and how many
+    // were answered (see `searchUnavailable`).
+    const searchesOf = new Map<ResearchCategory, { failed: number; answered: number }>();
     const record = (turn: RecordedTurn, by?: "code", loop?: ResearchCategory) => {
+      if (turn.tool === "search" && turn.category !== undefined) {
+        const counted = searchesOf.get(turn.category) ?? { failed: 0, answered: 0 };
+        if (turn.outcome === "failed" && turn.reason === "search_unavailable") counted.failed += 1;
+        if (turn.outcome === "ok" || turn.outcome === "empty") counted.answered += 1;
+        searchesOf.set(turn.category, counted);
+      }
       // What came of each search is counted whether or not the run keeps a trace.
       if (turn.tool === "search" && turn.kind !== undefined) {
         metrics.searchFinished({ kind: turn.kind, outcome: SEARCH_OUTCOME[turn.outcome] });
@@ -809,6 +826,10 @@ export function createVendorResearcher(
       stoppedBecause,
       modelError,
       jsonObjectFallback: jsonObjectModel !== null,
+      searchUnavailable: RESEARCH_CATEGORIES.filter((category) => {
+        const counted = searchesOf.get(category);
+        return counted !== undefined && counted.failed > 0 && counted.answered === 0;
+      }),
       siteNames,
       readPage,
       policyPages: policies.pages(),

@@ -31,6 +31,7 @@ import {
   formatResearchDate,
   joinAttributions,
   nameOnlyNote,
+  newsSearchUnavailable,
   outcomeLabel,
   recordStatusLabel,
   sourceCategoryLabel,
@@ -130,6 +131,12 @@ const FIXED_NOTES: Array<[outcome: CategoryOutcome, stored: string, sentence: st
   ["findings", "3 potential risks found", "3 potential risks found"],
   ["search_failed", "The search was not available", "The search was not available."],
   ["search_failed", "The pages could not be read", "The pages could not be read."],
+  // The server's NOTES.newsUnavailable: a news category checked on the vendor's own pages only.
+  [
+    "nothing_found",
+    "News search was not available; checked on the vendor's own pages only",
+    "News search was not available, so this was checked only on the vendor's own pages.",
+  ],
 ];
 
 /** Notes the earlier search provider stored: no longer ours, on any outcome. */
@@ -398,6 +405,37 @@ describe("describeCategoryNote", () => {
     for (const outcome of ["constructor", "__proto__", "toString"]) {
       expect(describeCategoryNote({ outcome, note: "text" } as never)).toBeNull();
     }
+  });
+});
+
+describe("newsSearchUnavailable", () => {
+  const NEWS_DOWN = "News search was not available; checked on the vendor's own pages only";
+  const entryOf = (
+    category: ResearchCategory,
+    outcome: CategoryOutcome,
+    note: string,
+  ): CategorySummaryEntry => ({ category, outcome, note });
+
+  it("is true for a news category whose search was not available, or that was checked on its own pages only", () => {
+    expect(
+      newsSearchUnavailable([
+        entryOf("legal_regulatory", "search_failed", "The search was not available"),
+      ]),
+    ).toBe(true);
+    expect(newsSearchUnavailable([entryOf("availability", "nothing_found", NEWS_DOWN)])).toBe(true);
+  });
+
+  it("is false for a site category, for other notes, for the phrase on another outcome, and for no entries", () => {
+    expect(
+      newsSearchUnavailable([
+        entryOf("certifications", "search_failed", "The search was not available"),
+        entryOf("security_incidents", "search_failed", "The pages could not be read"),
+        entryOf("security_incidents", "nothing_found", "The search was not available"),
+        entryOf("security_incidents", "skipped", NEWS_DOWN),
+      ]),
+    ).toBe(false);
+    expect(newsSearchUnavailable([])).toBe(false);
+    expect(newsSearchUnavailable(null)).toBe(false);
   });
 });
 
