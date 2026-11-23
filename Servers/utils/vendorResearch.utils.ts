@@ -967,6 +967,12 @@ export const saveSnapshotsQuery = async (
  * The organizations that turned the scheduled scan on, with the days between two scans of a
  * vendor. The one query of this file that is not scoped to an organization: the scan has to find
  * them first, and it reads two numbers.
+ *
+ * It works because the app connects as the owner of the tables, which their tenant policies do not
+ * bind. RLS Phase 2 scopes queries only inside a request (database/db.ts); a job runs outside one.
+ * If the app moves to a role the policies bind, this read must move to one per organization with
+ * `app.current_org` set (as utils/dataRetention.utils.ts does), and so must the scan's other
+ * queries (services/vendorResearch/scan.ts), or the scan finds no organization and runs nothing.
  */
 export const listScanOrganizationsQuery = async (): Promise<
   Array<{ organizationId: number; intervalDays: number }>

@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { Box, Stack, Typography } from "@mui/material";
 import { textStyles } from "../../themes/typography";
+import { radiusPx } from "../../themes/palette";
 
 interface InlineFormCardProps {
   title: string;
@@ -19,7 +20,7 @@ export default function InlineFormCard({ title, description, children }: InlineF
       sx={{
         border: 1,
         borderColor: "border.dark",
-        borderRadius: "4px",
+        borderRadius: radiusPx.sm,
         bgcolor: "background.alt",
         p: "16px",
       }}
