@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 
 import { STATUS_CODE } from "../utils/statusCode.utils";
 import { toId } from "../utils/validations/validation.utils";
+import { assertVendorRequestBody, parseRouteId } from "../utils/validations/vendorRequest.utils";
 import {
   createNewVendorQuery,
   deleteVendorByIdQuery,
@@ -9,6 +10,7 @@ import {
   getVendorByIdQuery,
   getVendorByProjectIdQuery,
   updateVendorByIdQuery,
+  visibleVendorProjectIds,
 } from "../utils/vendor.utils";
 import { sequelize } from "../database/db";
 import { logFailure, logProcessing, logSuccess } from "../utils/logger/logHelper";
@@ -19,9 +21,9 @@ import {
 } from "../domain.layer/exceptions/custom.exception";
 import {
   recordVendorCreation,
-  trackVendorChanges,
   recordMultipleFieldChanges,
 } from "../utils/vendorChangeHistory.utils";
+import { trackEntityChanges } from "../utils/changeHistory.base.utils";
 import { notifyUserAssigned } from "../services/inAppNotification.service";
 import { getVendorRiskSuggestions as getVendorRiskSuggestionsService } from "../services/vendors/riskSuggestions";
 import { triggerVendorOnboarding } from "../services/workflows/triggers";
@@ -32,6 +34,7 @@ import logger from "../utils/logger/fileLogger";
 import { QueryTypes } from "sequelize";
 
 import { translateError } from "../utils/i18n.utils";
+import { calculateVendorRiskScore } from "../utils/vendorScorecard.utils";
 // Helper function to get user name
 async function getUserNameById(userId: number): Promise<string> {
   const result = await sequelize.query<{ name: string; surname: string }>(
@@ -92,7 +95,10 @@ export async function getAllVendors(req: Request, res: Response): Promise<any> {
 }
 
 export async function getVendorById(req: Request, res: Response): Promise<any> {
-  const vendorId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
+  const vendorId = parseRouteId(req.params.id);
+  if (vendorId === null) {
+    return res.status(400).json(STATUS_CODE[400](req.t!("Invalid vendor ID")));
+  }
 
   logProcessing({
     description: `starting getVendorById for ID ${vendorId}`,
@@ -141,7 +147,10 @@ export async function getVendorById(req: Request, res: Response): Promise<any> {
 }
 
 export async function getVendorByProjectId(req: Request, res: Response): Promise<any> {
-  const projectId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
+  const projectId = parseRouteId(req.params.id);
+  if (projectId === null) {
+    return res.status(400).json(STATUS_CODE[400](req.t!("Invalid project ID")));
+  }
 
   logProcessing({
     description: `starting getVendorByProjectId for ID ${projectId}`,
@@ -247,6 +256,11 @@ export async function getVendorRiskSuggestions(req: Request, res: Response): Pro
 }
 
 export async function createVendor(req: Request, res: Response): Promise<any> {
+  try {
+    assertVendorRequestBody(req.body);
+  } catch (error) {
+    return res.status(400).json(STATUS_CODE[400](translateError(req, error)));
+  }
   const transaction = await sequelize.transaction();
   const vendorData = req.body;
 
@@ -272,7 +286,14 @@ export async function createVendor(req: Request, res: Response): Promise<any> {
       vendorData.review_date,
       vendorData.order_no,
       vendorData.is_demo || false,
-      vendorData.projects,
+      // Only use cases the user can see, as on update.
+      Array.isArray(vendorData.projects)
+        ? await visibleVendorProjectIds(
+            vendorData.projects,
+            { userId: req.userId!, role: req.role!, transaction },
+            req.organizationId!,
+          )
+        : [],
       vendorData.data_sensitivity,
       vendorData.business_criticality,
       vendorData.past_issues,
@@ -295,7 +316,12 @@ export async function createVendor(req: Request, res: Response): Promise<any> {
           createdVendor.id!,
           req.userId,
           req.organizationId!,
-          vendorData,
+          {
+            ...vendorData,
+            risk_score: createdVendor.risk_score,
+            // The links written (visible use cases only), none if empty.
+            projects: createdVendor.projects?.length ? createdVendor.projects : undefined,
+          },
           transaction,
         );
       }
@@ -323,7 +349,7 @@ export async function createVendor(req: Request, res: Response): Promise<any> {
         organizationId: req.organizationId!,
         vendorId: createdVendor.id!,
         vendorName: createdVendor.vendor_name,
-        projectIds: vendorData.projects || [],
+        projectIds: createdVendor.projects ?? [],
       }).catch((err) => logger.error("Vendor risk candidate notice failed:", err));
 
       // Send assignment notifications (fire-and-forget)
@@ -374,6 +400,7 @@ export async function createVendor(req: Request, res: Response): Promise<any> {
       return res.status(201).json(STATUS_CODE[201](createdVendor));
     }
 
+    await transaction.rollback();
     await logSuccess({
       eventType: "Create",
       description: "Vendor creation returned null",
@@ -426,8 +453,16 @@ export async function createVendor(req: Request, res: Response): Promise<any> {
 }
 
 export async function updateVendorById(req: Request, res: Response): Promise<any> {
+  const vendorId = parseRouteId(req.params.id);
+  if (vendorId === null) {
+    return res.status(400).json(STATUS_CODE[400](req.t!("Invalid vendor ID")));
+  }
+  try {
+    assertVendorRequestBody(req.body);
+  } catch (error) {
+    return res.status(400).json(STATUS_CODE[400](translateError(req, error)));
+  }
   const transaction = await sequelize.transaction();
-  const vendorId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
   const updateData = req.body;
 
   logProcessing({
@@ -455,7 +490,12 @@ export async function updateVendorById(req: Request, res: Response): Promise<any
     }
 
     // Find existing vendor
-    const existingVendor = await getVendorByIdQuery(vendorId, req.organizationId!);
+    // Read and lock on the write's transaction: the before/after diffs below
+    // (links, assignee, reviewer) must see the row this save overwrites.
+    const existingVendor = await getVendorByIdQuery(vendorId, req.organizationId!, {
+      transaction,
+      forUpdate: true,
+    });
 
     if (!existingVendor) {
       await transaction.rollback();
@@ -470,11 +510,35 @@ export async function updateVendorById(req: Request, res: Response): Promise<any
       return res.status(404).json(STATUS_CODE[404]({}));
     }
 
-    // Create VendorModel instance and update it
-    const vendorModel = new VendorModel(existingVendor);
+    // Create VendorModel instance and update it. The stored use case links
+    // are not carried over: links are written only when the request sends
+    // `projects`, so a field-only save never touches them.
+    const vendorModel = new VendorModel({ ...existingVendor, projects: undefined });
 
     // Track changes before updating
-    const changes = await trackVendorChanges(vendorModel, updateData);
+    // The risk score as it will be stored: computed from the answers this
+    // request writes, else the stored ones (as updateVendorByIdQuery does).
+    const answer = (
+      field: "data_sensitivity" | "business_criticality" | "past_issues" | "regulatory_exposure",
+    ) => (updateData[field] !== undefined ? updateData[field] : existingVendor[field]);
+    // Name lookups are scoped to this organization and run on the write's
+    // transaction. Use case links are diffed after the write, from storage.
+    const historyContext = { organizationId: req.organizationId!, transaction };
+    const changes = await trackEntityChanges(
+      "vendor",
+      vendorModel,
+      {
+        ...updateData,
+        projects: undefined,
+        risk_score: calculateVendorRiskScore({
+          data_sensitivity: answer("data_sensitivity"),
+          business_criticality: answer("business_criticality"),
+          past_issues: answer("past_issues"),
+          regulatory_exposure: answer("regulatory_exposure"),
+        }),
+      },
+      historyContext,
+    );
 
     // Update vendor using the enhanced method
     await vendorModel.updateVendor({
@@ -496,8 +560,9 @@ export async function updateVendorById(req: Request, res: Response): Promise<any
       risk_score: updateData.risk_score,
     });
 
-    // Validate updated data
-    await vendorModel.validateVendorData();
+    // updateVendor checked each field the request sent. The whole row is not
+    // validated again: an imported vendor can have empty required fields, and
+    // a save that doesn't touch them must not fail on them.
 
     const vendor = await updateVendorByIdQuery(
       {
@@ -511,6 +576,20 @@ export async function updateVendorById(req: Request, res: Response): Promise<any
     );
 
     if (vendor) {
+      // The use case links as stored before and after: the request may name
+      // use cases the user can't see, which are neither added nor removed.
+      // History records the count only (changeHistory.config.ts).
+      const projectIdsBefore = (existingVendor.projects ?? []).map(Number);
+      const projectIdsAfter = (vendor.projects ?? []).map(Number);
+      changes.push(
+        ...(await trackEntityChanges(
+          "vendor",
+          { projects: projectIdsBefore },
+          { projects: projectIdsAfter },
+          historyContext,
+        )),
+      );
+
       // Record changes in change history
       if (changes.length > 0) {
         await recordMultipleFieldChanges(
@@ -532,14 +611,10 @@ export async function updateVendorById(req: Request, res: Response): Promise<any
         organizationId: req.organizationId!,
       });
 
-      // Only use cases this update added. A plain field edit sends no
-      // projects, so the diff is empty and nothing fires.
-      const projectIdsBefore = (existingVendor.projects ?? []).map(Number);
-      const addedProjectIds = Array.isArray(updateData.projects)
-        ? (updateData.projects as unknown[])
-            .map(Number)
-            .filter((id) => Number.isInteger(id) && !projectIdsBefore.includes(id))
-        : [];
+      // Only use cases this update added or removed, read from the links as
+      // stored before and after the write. A plain field edit sends no
+      // projects, so both lists match and nothing fires.
+      const addedProjectIds = projectIdsAfter.filter((id) => !projectIdsBefore.includes(id));
       if (addedProjectIds.length > 0) {
         notifyVendorRiskCandidates({
           organizationId: req.organizationId!,
@@ -551,11 +626,7 @@ export async function updateVendorById(req: Request, res: Response): Promise<any
 
       // Use cases shared with another vendor feed the related vendor risk
       // score, so a change in either direction rescores this vendor's risks.
-      const removedProjectIds = Array.isArray(updateData.projects)
-        ? projectIdsBefore.filter(
-            (id) => !(updateData.projects as unknown[]).map(Number).includes(id),
-          )
-        : [];
+      const removedProjectIds = projectIdsBefore.filter((id) => !projectIdsAfter.includes(id));
       if (addedProjectIds.length > 0 || removedProjectIds.length > 0) {
         getActiveVendorRiskIdsQuery(req.organizationId!, vendorId)
           .then((ids) =>
@@ -669,8 +740,11 @@ export async function updateVendorById(req: Request, res: Response): Promise<any
 }
 
 export async function deleteVendorById(req: Request, res: Response): Promise<any> {
+  const vendorId = parseRouteId(req.params.id);
+  if (vendorId === null) {
+    return res.status(400).json(STATUS_CODE[400](req.t!("Invalid vendor ID")));
+  }
   const transaction = await sequelize.transaction();
-  const vendorId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
 
   logProcessing({
     description: `starting deleteVendorById for ID ${vendorId}`,
@@ -681,7 +755,12 @@ export async function deleteVendorById(req: Request, res: Response): Promise<any
   });
 
   try {
-    const deletedVendor = await deleteVendorByIdQuery(vendorId, req.organizationId!, transaction);
+    const deletedVendor = await deleteVendorByIdQuery(
+      vendorId,
+      req.organizationId!,
+      transaction,
+      req.userId!,
+    );
 
     if (deletedVendor) {
       await transaction.commit();

@@ -41,8 +41,10 @@ beforeEach(() => {
         .filter((id: number) => id === MEMBER)
         .map((id: number) => ({ id }));
     }
-    if (text.includes("SELECT action_owner FROM vendorrisks")) {
-      return [{ action_owner: STORED_RISK_OWNER }];
+    if (text.includes("SELECT action_owner, likelihood, risk_severity FROM vendorrisks")) {
+      return [
+        { action_owner: STORED_RISK_OWNER, likelihood: "Possible", risk_severity: "Moderate" },
+      ];
     }
     if (/INSERT INTO vendors /.test(text)) return [{ id: 1, vendor_name: "Model host" }];
     if (/UPDATE vendorrisks SET/.test(text)) return [{ id: 2, vendor_id: 1 }];

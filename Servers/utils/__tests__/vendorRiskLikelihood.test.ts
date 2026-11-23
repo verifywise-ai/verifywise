@@ -9,7 +9,13 @@ describe("normalizeVendorRiskLikelihood", () => {
     expect(normalizeVendorRiskLikelihood(" ALMOST CERTAIN ")).toBe("Almost certain");
   });
 
-  it("leaves the other values unchanged", () => {
+  it("maps any casing of the other enum values to their enum spelling", () => {
+    expect(normalizeVendorRiskLikelihood("possible")).toBe("Possible");
+    expect(normalizeVendorRiskLikelihood(" LIKELY ")).toBe("Likely");
+    expect(normalizeVendorRiskLikelihood("rare")).toBe("Rare");
+  });
+
+  it("leaves the enum values and non-strings unchanged", () => {
     for (const value of ["Rare", "Unlikely", "Possible", "Likely", "Almost certain"]) {
       expect(normalizeVendorRiskLikelihood(value)).toBe(value);
     }

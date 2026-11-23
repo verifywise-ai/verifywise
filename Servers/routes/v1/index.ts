@@ -47,6 +47,7 @@ import modelRisksRoutes from "./modelRisks.route";
 import reportTemplatesRoutes from "./reportTemplates.route";
 import scheduledReportsRoutes from "./scheduledReports.route";
 import reportRunsRoutes from "./reportRuns.route";
+import vendorRisksRoutes from "./vendorRisks.route";
 
 const router = express.Router();
 
@@ -133,5 +134,8 @@ router.use("/model-risks", modelRisksRoutes);
 router.use("/report-templates", reportTemplatesRoutes);
 router.use("/scheduled-reports", scheduledReportsRoutes);
 router.use("/report-runs", reportRunsRoutes);
+// Reading and restoring deleted vendor risks (vendors audit PR C); the
+// /api/vendorRisks router is frozen.
+router.use("/vendor-risks", vendorRisksRoutes);
 
 export default router;

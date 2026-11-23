@@ -263,6 +263,15 @@ describe("IconButton", () => {
     expect(onView).toHaveBeenCalledTimes(1);
   });
 
+  it("offers only View on an incident when canEdit is false", async () => {
+    await renderWithMenuOpen({ onView: vi.fn(), type: "incident", canEdit: false });
+    // Roles without incident.edit open incidents read-only.
+    const items = within(screen.getByRole("menu"))
+      .getAllByRole("menuitem")
+      .map((item) => item.textContent);
+    expect(items).toEqual(["View"]);
+  });
+
   it("calls onDownload when Download item clicked", async () => {
     const onDownload = vi.fn().mockResolvedValue(undefined);
     await renderWithMenuOpen({ onDownload, type: "evidence" });
@@ -344,6 +353,22 @@ describe("IconButton", () => {
     });
     await userEvent.click(screen.getByText("Restore task"));
     expect(onRestore).toHaveBeenCalledTimes(1);
+  });
+
+  it("offers View and Restore risk for a deleted risk, without Edit or Delete", async () => {
+    const onRestore = vi.fn();
+    const onView = vi.fn();
+    await renderWithMenuOpen({ type: "Risk", isArchived: true, onRestore, onView });
+    expect(screen.queryByText("Edit")).not.toBeInTheDocument();
+    expect(screen.queryByText("Remove")).not.toBeInTheDocument();
+    await userEvent.click(screen.getByText("Restore risk"));
+    expect(onRestore).toHaveBeenCalledTimes(1);
+  });
+
+  it("offers only View for a deleted risk when it can't be restored", async () => {
+    await renderWithMenuOpen({ type: "Risk", isArchived: true, onView: vi.fn() });
+    expect(screen.getByText("View")).toBeInTheDocument();
+    expect(screen.queryByText("Restore risk")).not.toBeInTheDocument();
   });
 
   it("opens confirmation modal for task archive when warning provided", async () => {

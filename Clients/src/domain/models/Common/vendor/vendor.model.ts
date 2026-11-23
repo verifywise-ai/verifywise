@@ -27,7 +27,7 @@ export class VendorModel {
   business_criticality?: BusinessCriticality;
   past_issues?: PastIssues;
   regulatory_exposure?: RegulatoryExposure;
-  risk_score?: number;
+  risk_score?: number | null;
 
   custom_fields?: Array<{
     definition_id: number;

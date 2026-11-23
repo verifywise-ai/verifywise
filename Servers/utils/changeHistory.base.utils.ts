@@ -745,6 +745,32 @@ export const recordEntityDeletion = async (
   );
 };
 
+/**
+ * Record that a soft-deleted entity was restored: the mirror of
+ * recordEntityDeletion, an 'updated' entry from "Deleted" back to "Active".
+ */
+export const recordEntityRestoration = async (
+  entityType: EntityType,
+  entityId: number,
+  changedByUserId: number | null,
+  organizationId: number,
+  transaction?: Transaction,
+  changedBySystem = false,
+): Promise<void> => {
+  await recordEntityChange(
+    entityType,
+    entityId,
+    "updated",
+    changedByUserId,
+    organizationId,
+    deletionFieldName(entityType),
+    "Deleted",
+    "Active",
+    transaction,
+    changedBySystem,
+  );
+};
+
 /** recordEntityDeletion for many entities of one type, in one INSERT. */
 export const recordEntityDeletionBulk = async (
   entityType: EntityType,
