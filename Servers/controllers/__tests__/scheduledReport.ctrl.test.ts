@@ -698,6 +698,31 @@ describe.each([
   });
 });
 
+describe("non-numeric schedule ids", () => {
+  it("answers a pause of a non-numeric id like a missing one, without querying", async () => {
+    const utils = require("../../utils/scheduledReport.utils");
+    utils.getScheduledReportQuery.mockClear();
+    utils.setActiveQuery.mockClear();
+    const res = mockRes();
+    await pauseScheduledReport(
+      { params: { id: "abc" }, organizationId: 42, userId: 9, role: "Editor" } as any,
+      res,
+    );
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(utils.getScheduledReportQuery).not.toHaveBeenCalled();
+    expect(utils.setActiveQuery).not.toHaveBeenCalled();
+  });
+
+  it("answers run-now of a non-numeric id with 404", async () => {
+    const res = mockRes();
+    await runScheduledReportNow(
+      { params: { id: "abc" }, organizationId: 42, userId: 9, role: "Editor" } as any,
+      res,
+    );
+    expect(res.status).toHaveBeenCalledWith(404);
+  });
+});
+
 describe("runScheduledReportNow", () => {
   it("answers 404 without running for a schedule the caller cannot see", async () => {
     const utils = require("../../utils/scheduledReport.utils");

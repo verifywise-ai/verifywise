@@ -207,7 +207,7 @@ describe("report scope authorization", () => {
     expect(after[0].delivery_config).toEqual(before[0].delivery_config);
   });
 
-  it("refuses an Editor resuming a foreign project schedule", async () => {
+  it("treats an Editor's resume and delete of an unreadable project schedule as a no-op", async () => {
     const admin = testRequest(await appFor(adminId, "Admin", orgId));
     const created = await admin
       .post(SCHEDULES)
@@ -228,6 +228,31 @@ describe("report scope authorization", () => {
     )) as Array<{ is_active: boolean; deleted_at: unknown }>;
     expect(rows[0].is_active).toBe(false);
     expect(rows[0].deleted_at).toBeNull();
+  });
+
+  // Every member can see an organization-wide schedule. Checking only the
+  // post-patch scope let an Editor move one into a project of theirs and take
+  // over its delivery; the stored scope is checked too.
+  it("refuses an Editor moving an organization schedule into their own project", async () => {
+    const created = await testRequest(await appFor(adminId, "Admin", orgId))
+      .post(SCHEDULES)
+      .send(schedulePayload({ scope: "organization" }));
+    expect(created.status).toBe(201);
+    const id = (created.body?.data ?? created.body).id;
+
+    const res = await testRequest(await appFor(editorId, "Editor", orgId))
+      .patch(`${SCHEDULES}/${id}`)
+      .send({
+        scope: "project",
+        projectId: ownedProjectId,
+        deliveryConfig: { saveToStorage: true, attachFile: true, recipients: ["editor@test.com"] },
+      });
+    expect(res.status).toBe(403);
+    const rows = (await sequelize.query(
+      `SELECT scope, project_id FROM scheduled_reports WHERE id = :id`,
+      { replacements: { id }, type: QueryTypes.SELECT },
+    )) as Array<{ scope: string; project_id: number | null }>;
+    expect(rows[0]).toEqual({ scope: "organization", project_id: null });
   });
 
   // Visibility is what turns a refusal into a 404: an Editor who can see an

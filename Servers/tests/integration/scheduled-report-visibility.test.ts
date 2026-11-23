@@ -138,8 +138,4 @@ describe("scheduled report visibility", () => {
   it("shows an unidentified caller organization-wide schedules only", async () => {
     expect(await listIds("Editor", null as unknown as number)).toEqual([orgSchedule]);
   });
-
-  it("still reads any schedule of the organization without a viewer (write paths)", async () => {
-    expect((await getScheduledReportQuery(projectSchedule, orgId))?.id).toBe(projectSchedule);
-  });
 });

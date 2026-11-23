@@ -178,8 +178,11 @@ export async function getScheduledReport(req: Request, res: Response): Promise<a
  * answer 404, pause, resume and delete a 200 no-op that writes nothing.
  * A 403 is left only for a schedule the caller can already see.
  */
-function readableSchedule(req: Request): Promise<any> {
-  return getScheduledReportQuery(Number(req.params.id), req.organizationId!, reportViewer(req));
+async function readableSchedule(req: Request): Promise<any> {
+  // A non-numeric id would reach SQL as NaN and fail; it is simply missing.
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id) || id <= 0) return null;
+  return getScheduledReportQuery(id, req.organizationId!, reportViewer(req));
 }
 
 /**
@@ -204,6 +207,7 @@ function scopeErrorsForSchedule(req: Request, sched: any): Promise<string[]> {
  * they can see but may not change, and the write otherwise.
  */
 async function writeVisibleSchedule(
+  action: string,
   req: Request,
   res: Response,
   write: (id: number, organizationId: number) => Promise<void>,
@@ -219,21 +223,34 @@ async function writeVisibleSchedule(
     }
     return res.status(200).json(STATUS_CODE[200]({ ok: true }));
   } catch (error) {
+    await logFailure({
+      eventType: "Update",
+      description: `${action} of scheduled report ${req.params.id} failed`,
+      functionName: action,
+      fileName: "scheduledReport.ctrl.ts",
+      error: error as Error,
+      userId: req.userId!,
+      organizationId: req.organizationId!,
+    });
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
   }
 }
 
 export async function pauseScheduledReport(req: Request, res: Response): Promise<any> {
-  return writeVisibleSchedule(req, res, (id, org) => setActiveQuery(id, org, false));
+  return writeVisibleSchedule("pauseScheduledReport", req, res, (id, org) =>
+    setActiveQuery(id, org, false),
+  );
 }
 
 // Resuming re-enables delivery, so it is gated like create, PATCH and run-now.
 export async function resumeScheduledReport(req: Request, res: Response): Promise<any> {
-  return writeVisibleSchedule(req, res, (id, org) => setActiveQuery(id, org, true));
+  return writeVisibleSchedule("resumeScheduledReport", req, res, (id, org) =>
+    setActiveQuery(id, org, true),
+  );
 }
 
 export async function deleteScheduledReport(req: Request, res: Response): Promise<any> {
-  return writeVisibleSchedule(req, res, softDeleteQuery);
+  return writeVisibleSchedule("deleteScheduledReport", req, res, softDeleteQuery);
 }
 
 export async function updateScheduledReport(req: Request, res: Response): Promise<any> {
@@ -309,6 +326,15 @@ export async function updateScheduledReport(req: Request, res: Response): Promis
         if (scopeErrors.length) {
           return res.status(400).json(STATUS_CODE[400]({ errors: scopeErrors }));
         }
+      }
+
+      // The caller must be allowed to produce the schedule's CURRENT scope
+      // too, not only the post-patch one: every member can see an
+      // organization-wide schedule, and without this an Editor could move it
+      // into a project of theirs and take over its delivery.
+      const currentErrors = await scopeErrorsForSchedule(req, existing);
+      if (currentErrors.length) {
+        return res.status(403).json(STATUS_CODE[403]({ errors: currentErrors }));
       }
 
       // Authorization runs against the effective post-patch scope on EVERY
@@ -402,6 +428,15 @@ export async function runScheduledReportNow(req: Request, res: Response): Promis
     await runScheduledReport(sched, { triggeredBy: "manual", userId: req.userId! });
     return res.status(202).json(STATUS_CODE[202]({ queued: true }));
   } catch (error) {
+    await logFailure({
+      eventType: "Create",
+      description: `run-now of scheduled report ${req.params.id} failed`,
+      functionName: "runScheduledReportNow",
+      fileName: "scheduledReport.ctrl.ts",
+      error: error as Error,
+      userId: req.userId!,
+      organizationId: req.organizationId!,
+    });
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
   }
 }
