@@ -594,10 +594,17 @@ const TableWithPlaceholder: React.FC<ITableWithPlaceholderProps> = ({
                       opacity: 0.7,
                     }}
                   >
-                    {fill(t("Showing {range} of {total} vendor(s)"), {
-                      range: getRange,
-                      total: sortedVendors?.length ?? 0,
-                    })}
+                    {fill(
+                      t(
+                        pluralKey(
+                          lang,
+                          sortedVendors?.length ?? 0,
+                          "Showing {range} of {total} vendor",
+                          "Showing {range} of {total} vendors",
+                        ),
+                      ),
+                      { range: getRange, total: sortedVendors?.length ?? 0 },
+                    )}
                   </TableCell>
                   <TablePagination
                     count={sortedVendors?.length}

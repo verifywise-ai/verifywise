@@ -59,7 +59,6 @@ export const de: Record<string, string> = {
     "Keine Anbieter entsprechen Ihrer Suche oder Ihren Filtern.",
   "No vendor risks match your search or filters.":
     "Keine Anbieterrisiken entsprechen Ihrer Suche oder Ihren Filtern.",
-  "Active + deleted": "Aktiv + gelöscht",
   "Add a new vendor risk": "Neues Anbieterrisiko hinzufügen",
   "All use cases are selected": "Alle Anwendungsfälle sind ausgewählt",
   "An error occurred: {message}": "Ein Fehler ist aufgetreten: {message}",
@@ -116,7 +115,8 @@ export const de: Record<string, string> = {
   "CCPA (California)": "CCPA (Kalifornien)",
   "{count} risk": "{count} Risiko",
   "{count} risks": "{count} Risiken",
-  "Showing {range} of {total} vendor(s)": "Anzeige: {range} von {total} Anbieter(n)",
+  "Showing {range} of {total} vendor": "Anzeige: {range} von {total} Anbieter",
+  "Showing {range} of {total} vendors": "Anzeige: {range} von {total} Anbietern",
 };
 
 export const fr: Record<string, string> = {
@@ -178,7 +178,6 @@ export const fr: Record<string, string> = {
     "Aucun fournisseur ne correspond à votre recherche ou à vos filtres.",
   "No vendor risks match your search or filters.":
     "Aucun risque fournisseur ne correspond à votre recherche ou à vos filtres.",
-  "Active + deleted": "Actifs + supprimés",
   "Add a new vendor risk": "Ajouter un nouveau risque fournisseur",
   "All use cases are selected": "Tous les cas d'usage sont sélectionnés",
   "An error occurred: {message}": "Une erreur s'est produite : {message}",
@@ -235,7 +234,8 @@ export const fr: Record<string, string> = {
   "CCPA (California)": "CCPA (Californie)",
   "{count} risk": "{count} risque",
   "{count} risks": "{count} risques",
-  "Showing {range} of {total} vendor(s)": "Affichage de {range} sur {total} fournisseur(s)",
+  "Showing {range} of {total} vendor": "Affichage de {range} sur {total} fournisseur",
+  "Showing {range} of {total} vendors": "Affichage de {range} sur {total} fournisseurs",
 };
 
 export const es: Record<string, string> = {
@@ -297,7 +297,6 @@ export const es: Record<string, string> = {
     "Ningún proveedor coincide con tu búsqueda o tus filtros.",
   "No vendor risks match your search or filters.":
     "Ningún riesgo de proveedor coincide con tu búsqueda o tus filtros.",
-  "Active + deleted": "Activos + eliminados",
   "Add a new vendor risk": "Añadir un nuevo riesgo de proveedor",
   "All use cases are selected": "Todos los casos de uso están seleccionados",
   "An error occurred: {message}": "Se produjo un error: {message}",
@@ -350,5 +349,6 @@ export const es: Record<string, string> = {
   "CCPA (California)": "CCPA (California)",
   "{count} risk": "{count} riesgo",
   "{count} risks": "{count} riesgos",
-  "Showing {range} of {total} vendor(s)": "Mostrando {range} de {total} proveedor(es)",
+  "Showing {range} of {total} vendor": "Mostrando {range} de {total} proveedor",
+  "Showing {range} of {total} vendors": "Mostrando {range} de {total} proveedores",
 };

@@ -523,23 +523,21 @@ const Vendors = () => {
   );
 
   // Handle risk card click to filter vendor risks by risk level
-  const handleRiskCardClick = useCallback(
-    (riskLevel: string) => {
-      if (riskLevel) {
-        setSelectedRiskLevel(riskLevel);
-        setAlert({
-          variant: "info",
-          title: fill(t("Filtering by risk level: {level}"), { level: t(riskLevel) }),
-          body: "The table now shows only vendor risks with this risk level. Click the card again to see all risks.",
-        });
-      } else {
-        setSelectedRiskLevel(null);
-        setAlert(null);
-        setShowAlert(false);
-      }
-    },
-    [t],
-  );
+  const handleRiskCardClick = useCallback((riskLevel: string) => {
+    if (riskLevel) {
+      setSelectedRiskLevel(riskLevel);
+      setAlert({
+        variant: "info",
+        // The title is built at render time, so it follows a language switch.
+        riskLevel,
+        body: "The table now shows only vendor risks with this risk level. Click the card again to see all risks.",
+      });
+    } else {
+      setSelectedRiskLevel(null);
+      setAlert(null);
+      setShowAlert(false);
+    }
+  }, []);
 
   // Mutation hooks
   const deleteVendorMutation = useDeleteVendor();
@@ -549,6 +547,8 @@ const Vendors = () => {
   const [alert, setAlert] = useState<{
     variant: "success" | "info" | "warning" | "error";
     title?: string;
+    /** Set by a risk card click; the title is "Filtering by risk level: …". */
+    riskLevel?: string;
     body: string;
   } | null>(null);
   const [showAlert, setShowAlert] = useState(false);
@@ -1068,7 +1068,11 @@ const Vendors = () => {
               <Box sx={{ position: "fixed" }}>
                 <Alert
                   variant={alert.variant}
-                  title={alert.title}
+                  title={
+                    alert.riskLevel
+                      ? fill(t("Filtering by risk level: {level}"), { level: t(alert.riskLevel) })
+                      : alert.title
+                  }
                   body={alert.body}
                   isToast={true}
                   onClick={() => {

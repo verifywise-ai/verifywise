@@ -129,6 +129,8 @@ describe("Test String Validation", () => {
     "J. Smith",
     "Ngô Bảo Châu",
     "Łukasz",
+    "علی\u200Cرضا",
+    "Gal·la",
   ])("accepts the contact person name %s", (name) => {
     expect(
       checkStringValidation(
@@ -144,7 +146,7 @@ describe("Test String Validation", () => {
       ).accepted,
     ).toBe(true);
   });
-  it.each(["John_Doe", "-Anne", "'Brien", "Jane <b>", "a@b.co"])(
+  it.each(["John_Doe", "-Anne", "'Brien", "Jane <b>", "a@b.co", "Jane\nDoe", "Jane\tDoe"])(
     "rejects the contact person name %s",
     (name) => {
       expect(

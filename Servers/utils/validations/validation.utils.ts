@@ -546,10 +546,13 @@ export const VALIDATION_PATTERNS = {
   URL: /^https?:\/\/.+/,
   ALPHANUMERIC: /^[a-zA-Z0-9]+$/,
   LETTERS_ONLY: /^[a-zA-Z\s]+$/,
-  // A person's name: a letter in any script, then letters, marks, spaces and
-  // ' ’ . - ("José García", "O'Brien", "Anne-Marie"). Same as the client's
-  // PERSON_NAME_PATTERN (Clients/src/application/validations/stringValidation.ts).
-  PERSON_NAME: /^\p{L}[\p{L}\p{M}\s'’.-]*$/u,
+  // A person's name: a letter in any script, then letters, marks, spaces,
+  // ' ’ . · - and the zero-width joiners ("José García", "O'Brien", "Gal·la").
+  // The same rule as the vendor form's PERSON_NAME_PATTERN (Clients
+  // .../validations/stringValidation.ts). Used by validateVendorContactPerson,
+  // which no REST route calls: the API only requires a non-empty contact
+  // person (assertVendorRequestBody), so the form is where the rule applies.
+  PERSON_NAME: /^\p{L}[\p{L}\p{M} '’.·\u200C\u200D-]*$/u,
   NUMBERS_ONLY: /^[0-9]+$/,
 } as const;
 

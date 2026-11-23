@@ -1,7 +1,7 @@
 import { isValidEmail } from "./emailAddress.rule";
 
-/** A person's name: letters in any script, then letters, marks, spaces, ' ’ . - */
-export const PERSON_NAME_PATTERN = /^\p{L}[\p{L}\p{M}\s'’.-]*$/u;
+/** A person's name: a letter in any script, then letters, marks, spaces, ' ’ . · - and ZWNJ/ZWJ. */
+export const PERSON_NAME_PATTERN = /^\p{L}[\p{L}\p{M} '’.·\u200C\u200D-]*$/u;
 
 /**
  * Converts feedback information into an object containing acceptance status and a message.

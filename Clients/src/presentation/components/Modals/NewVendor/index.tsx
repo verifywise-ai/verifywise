@@ -744,7 +744,6 @@ const AddNewVendor: React.FC<AddNewVendorProps> = ({
                       borderRadius: radiusPx.sm,
                       padding: "12px",
                       mb: "4px",
-                      fontFamily: "monospace",
                     }}
                   >
                     <Typography
@@ -814,7 +813,7 @@ const AddNewVendor: React.FC<AddNewVendorProps> = ({
                       gap: "2px",
                       padding: "4px 8px",
                       borderRadius: radiusPx.sm,
-                      backgroundColor: `${riskColor}20`,
+                      backgroundColor: alpha(riskColor, 0.125),
                       border: `1px solid ${riskColor}`,
                       minWidth: "50px",
                     }}
