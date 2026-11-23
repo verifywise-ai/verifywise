@@ -1,5 +1,6 @@
 import { sequelize } from "../database/db";
 import { QueryTypes, Transaction } from "sequelize";
+import { VERSION_JSON_COLUMNS } from "./reportTemplateVersionColumns";
 import { ValidationException } from "../domain.layer/exceptions/custom.exception";
 
 // System templates (organization_id IS NULL) plus this org's custom templates.
@@ -251,17 +252,7 @@ export async function archiveTemplateQuery(id: number, organization_id: number):
 //   one whose sections every run then refuses.
 // - sections_config and ai_blocks_config: a reset empties the report.
 // Duplicating a template passes every column of the source's latest version.
-const VERSION_JSON_COLUMNS: Array<{ column: string; fallback: string }> = [
-  { column: "sections_config", fallback: "jsonb_build_object('sections', jsonb_build_array())" },
-  { column: "ai_blocks_config", fallback: "'{}'::jsonb" },
-  { column: "framework_config", fallback: "'{}'::jsonb" },
-  { column: "parameters_config", fallback: "'{}'::jsonb" },
-  { column: "format_config", fallback: "'{}'::jsonb" },
-  { column: "branding_config", fallback: "'{}'::jsonb" },
-  { column: "schedule_defaults", fallback: "'{}'::jsonb" },
-  { column: "delivery_defaults", fallback: "'{}'::jsonb" },
-];
-
+// The columns and their first-version defaults: ./reportTemplateVersionColumns.ts.
 export async function createTemplateVersionQuery(
   template_id: number,
   organization_id: number,

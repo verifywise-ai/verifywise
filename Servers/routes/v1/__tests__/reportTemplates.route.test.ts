@@ -303,6 +303,43 @@ describe("/api/v1/report-templates", () => {
       );
     });
 
+    // A null config field means "keep the previous value", so a body of
+    // nulls has nothing to write.
+    it("treats a body of null config fields as having no updatable fields", async () => {
+      const res = await request(app)
+        .patch(`${BASE}/7`)
+        .set(auth)
+        .send({ ai_blocks_config: null, branding_config: null });
+      expect(res.status).toBe(400);
+      expect(createTemplateVersionQuery).not.toHaveBeenCalled();
+    });
+
+    // The latest version holds mrmFleet, an E-23-only section. Dropping the
+    // kind without new sections would keep it, and every run would refuse it.
+    it("refuses a kind change that would keep sections the new kind refuses", async () => {
+      const res = await request(app).patch(`${BASE}/7`).set(auth).send({ parameters_config: {} });
+      expect(res.status).toBe(400);
+      expect(JSON.stringify(res.body)).toContain("only available in an OSFI E-23 report");
+      expect(createTemplateVersionQuery).not.toHaveBeenCalled();
+    });
+
+    it("accepts a kind change that sends sections the new kind allows", async () => {
+      const res = await request(app)
+        .patch(`${BASE}/7`)
+        .set(auth)
+        .send({
+          parameters_config: {},
+          sections_config: { sections: [{ reportSectionKey: "projectRisks" }] },
+        });
+      expect(res.status).toBe(200);
+      expect(createTemplateVersionQuery).toHaveBeenCalledTimes(1);
+    });
+
+    it("answers 404, not 400, for a kind change on a system template", async () => {
+      const res = await request(app).patch(`${BASE}/8`).set(auth).send({ parameters_config: {} });
+      expect(res.status).toBe(404);
+    });
+
     it("answers 404 when another organization's template is updated", async () => {
       const res = await request(app)
         .patch(`${BASE}/7`)
