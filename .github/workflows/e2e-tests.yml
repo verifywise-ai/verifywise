@@ -230,13 +230,20 @@ jobs:
         uses: actions/cache@v6
         with:
           path: ~/.cache/ms-playwright
-          key: playwright-browsers-${{ runner.os }}-${{ hashFiles('Clients/package-lock.json', 'Clients/package.json') }}
+          key: playwright-browsers-${{ runner.os }}-${{ hashFiles('Clients/package-lock.json', 'Clients/package.json', 'Servers/package-lock.json') }}
           restore-keys: |
             playwright-browsers-${{ runner.os }}-
 
       - name: Install Playwright browsers
         working-directory: Clients
         run: npx playwright install --with-deps chromium
+
+      # Report PDFs are rendered by the backend with its own playwright package. Dependabot
+      # bumps Servers and Clients in separate PRs, so the two can need different Chromium
+      # builds; install the backend one too or report runs fail with "Executable doesn't exist".
+      - name: Install the backend Playwright browser
+        working-directory: Servers
+        run: npx --no-install playwright install chromium-headless-shell
 
       - name: Start frontend
         working-directory: Clients

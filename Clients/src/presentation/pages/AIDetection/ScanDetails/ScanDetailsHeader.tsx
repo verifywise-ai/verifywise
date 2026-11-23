@@ -6,7 +6,7 @@
  */
 
 import { Box, Typography, Tooltip } from "@mui/material";
-import { AlertCircle, ArrowLeft, CheckCircle2, Download, RefreshCw } from "lucide-react";
+import { AlertCircle, ArrowLeft, CheckCircle2, Download, Network, RefreshCw } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { CustomizableButton } from "../../../components/button/customizable-button";
 import Chip from "../../../components/Chip";
@@ -31,6 +31,7 @@ interface ScanDetailsHeaderProps {
   onRecalculate: () => void;
   isExporting: boolean;
   onExport: () => void;
+  onViewGraph: () => void;
 }
 
 export function ScanDetailsHeader({
@@ -40,6 +41,7 @@ export function ScanDetailsHeader({
   onRecalculate,
   isExporting,
   onExport,
+  onViewGraph,
 }: ScanDetailsHeaderProps) {
   // Recalculating now would start a second paid AI analysis; the server refuses it too
   const llmPending = scan.scan.risk_score_details?.llm_status === "pending";
@@ -121,6 +123,17 @@ export function ScanDetailsHeader({
                   variant="outlined"
                   startIcon={<RefreshCw size={16} />}
                   isDisabled={isRecalculating || llmPending}
+                  sx={{ height: 34 }}
+                />
+              </span>
+            </Tooltip>
+            <Tooltip title="View AI dependency graph" arrow placement="top">
+              <span>
+                <CustomizableButton
+                  text="View graph"
+                  onClick={onViewGraph}
+                  variant="outlined"
+                  startIcon={<Network size={16} />}
                   sx={{ height: 34 }}
                 />
               </span>

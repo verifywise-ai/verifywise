@@ -312,7 +312,7 @@ const AIDepGraphInner: React.FC<AIDepGraphProps> = ({ scanId, repositoryUrl }) =
     setEdges(rawEdges);
 
     // Fit view after layout
-    setTimeout(() => fitView({ padding: "8%" }), 100);
+    setTimeout(() => fitView({ padding: 0.2 }), 100);
   }, [
     graphData,
     visibleTypes,
@@ -409,8 +409,7 @@ const AIDepGraphInner: React.FC<AIDepGraphProps> = ({ scanId, repositoryUrl }) =
         onNodeClick={handleNodeClick}
         nodeTypes={nodeTypes}
         fitView
-        forceColorMode="light"
-        fitViewOptions={{ padding: "8%" }}
+        fitViewOptions={{ padding: 0.2 }}
         minZoom={0.2}
         maxZoom={2}
         defaultEdgeOptions={{ type: "smoothstep" }}
