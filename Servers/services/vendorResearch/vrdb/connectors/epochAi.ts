@@ -38,8 +38,9 @@
  * label that Epoch corrects adds or withdraws a record.
  *
  * What the file is. The header must hold the columns that are read, by name (a column more is fine,
- * and every row must be as wide as the header); `Model`, the key of the list, must be one text per
- * row, never twice; fewer than 3,000 rows is not this list, and neither is a file in which fewer
+ * and every row must be as wide as the header); `Model` is the key of the list, and a model the
+ * list names twice is read from its first row, the repeat counted as unreadable (the list named two
+ * models twice in November 2026); fewer than 3,000 rows is not this list, and neither is a file in which fewer
  * than 90 % of the rows with an organisation line up (a row with a list cell over 2,000 characters
  * does not; a changed format would otherwise empty the Industry set without a word). A row that has
  * no model name, or an organisation item too long to be one, or a flag cell (`Frontier model`,

@@ -21,6 +21,7 @@ import { useWatchedLinks } from "./useWatchedLinks";
 import { useFormFocus } from "./useFormFocus";
 import { groupingNotice } from "./groupingNotice";
 import { useCan } from "../../../application/hooks/useCan";
+import { radiusPx } from "../../themes/palette";
 
 interface VendorRiskLinksPanelProps {
   vendorRiskId: number;
@@ -294,7 +295,7 @@ export default function VendorRiskLinksPanel({ vendorRiskId }: VendorRiskLinksPa
               sx={{
                 "border": 1,
                 "borderColor": "border.light",
-                "borderRadius": "4px",
+                "borderRadius": radiusPx.sm,
                 "bgcolor": "background.main",
                 "& > :not(hr)": { px: "14px", py: "10px" },
               }}

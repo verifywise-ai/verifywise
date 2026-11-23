@@ -199,6 +199,34 @@ describe("the load of a list taken whole, in the database", () => {
     },
   );
 
+  it("keeps each list's newest success through the prune, so an old bundle is still known as loaded", async () => {
+    bundle("ofac", [entity("E1")], BUILT_1);
+    await load("ofac");
+    // A failed attempt after it, also older than the cutoff, is forgotten.
+    const failedRun = await vrdbStore.startVrdbSyncRunQuery("ofac", NOW);
+    await vrdbStore.finishVrdbSyncRunQuery(failedRun, { outcome: "failed", errorCode: "x" }, NOW);
+
+    await vrdbStore.pruneVrdbSyncRunsQuery(new Date(NOW.getTime() + 365 * 24 * 3_600_000));
+
+    expect((await runRows("ofac")).map((row) => row.outcome)).toEqual(["ok"]);
+    await expect(load("ofac")).resolves.toEqual({ sourceId: "ofac", outcome: "unchanged" });
+  });
+
+  it("notes a list current again when its loaded bundle comes back after a failure", async () => {
+    bundle("ofac", [entity("E1")], BUILT_1);
+    await load("ofac");
+    await vrdbStore.markVrdbSourceQuery("ofac", {
+      outcome: "failed",
+      at: NOW,
+      errorCode: "bundle_missing",
+    });
+
+    await expect(load("ofac")).resolves.toEqual({ sourceId: "ofac", outcome: "unchanged" });
+
+    expect(await sourceRow("ofac")).toMatchObject({ last_outcome: "unchanged", last_error: null });
+    expect(((await sourceRow("ofac")).last_success_at as Date).toISOString()).toBe(BUILT_1);
+  });
+
   it("marks a list with no bundle as failed and writes no run", async () => {
     await expect(load("ofac")).resolves.toEqual({
       sourceId: "ofac",

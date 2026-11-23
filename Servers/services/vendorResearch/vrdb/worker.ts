@@ -47,6 +47,14 @@ function errorName(error: unknown): string {
     : "unknown";
 }
 
+/** A load in which the database failed to take some lists; its text names only their ids. */
+export class VrdbLoadFailed extends Error {
+  constructor(readonly sourceIds: VrdbSourceId[]) {
+    super(`The load of ${sourceIds.join(", ")} failed`);
+    this.name = "VrdbLoadFailed";
+  }
+}
+
 const isVrdbSourceId = (value: unknown): value is VrdbSourceId =>
   typeof value === "string" && (VRDB_SOURCE_IDS as readonly string[]).includes(value);
 
@@ -74,6 +82,12 @@ export async function processVrdbJob(
         );
       }
     }
+    // A list the database failed to take (load_failed) is tried again by the job's retries
+    // (VRDB_JOB_OPTIONS): the database may be busy at start. The lists that loaded are skipped on
+    // the retry by their hash. A missing or unreadable bundle (bundle_*) is no reason to retry:
+    // the next try reads the same file.
+    const failed = results.filter((result) => result.errorCode === "load_failed");
+    if (failed.length > 0) throw new VrdbLoadFailed(failed.map((result) => result.sourceId));
     return results;
   }
   if (job.name !== VRDB_RELABEL_JOB) throw new Error(`Unknown job: ${job.name}`);
@@ -96,8 +110,10 @@ export const createVrdbWorker = (concurrency: number = 1, queueName: string = VR
     logger.debug(`vendor risk database job ${job.id} has been completed`);
   });
   worker.on("failed", (job, error) => {
-    // Logged by the error's name: the message of a database error can carry a query's values.
-    logger.error(`vendor risk database job ${job?.id} failed: ${errorName(error)}`);
+    // A failed load names its lists; any other error is logged by its name: the message of a
+    // database error can carry a query's values.
+    const failure = error instanceof VrdbLoadFailed ? error.message : errorName(error);
+    logger.error(`vendor risk database job ${job?.id} failed: ${failure}`);
   });
 
   return worker;

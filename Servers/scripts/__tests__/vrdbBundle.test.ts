@@ -366,6 +366,19 @@ describe("bundleLists, a list taken whole", () => {
       expect(readManifest(dir).lists).toEqual([before]);
     });
 
+    it("counts each id of the previous bundle once, as it counts the new download", async () => {
+      // A connector that gives an id twice: the previous bundle holds 10 rows of 6 ids.
+      const six = records(6);
+      previous({ sourceId: "kev", records: [...six, ...six.slice(0, 4)] });
+
+      const [outcome] = await bundleLists(
+        options({ only: ["kev"] }),
+        deps({ kev: wholeConnector("kev", parsed({ records: records(6) })) }),
+      );
+
+      expect(outcome.outcome).toBe("ok");
+    });
+
     it("lets a list lose a fifth exactly", async () => {
       previous({ sourceId: "kev", records: records(10) });
 

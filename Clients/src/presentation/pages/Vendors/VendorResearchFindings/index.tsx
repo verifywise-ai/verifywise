@@ -53,6 +53,7 @@ import ResearchCredits from "./ResearchCredits";
 import ResearchSettingsModal from "./ResearchSettingsModal";
 import RunSummary from "./RunSummary";
 import { controlHeightSx, iconControlSx } from "./styles";
+import { radiusPx } from "../../../themes/palette";
 
 /** The URL parameter a notification link uses to open the section on one vendor. */
 const VENDOR_PARAM = "findingsVendorId";
@@ -541,7 +542,7 @@ export default function VendorResearchFindings({
               p: "16px",
               border: "1px solid",
               borderColor: "border.dark",
-              borderRadius: "4px",
+              borderRadius: radiusPx.sm,
               backgroundColor: "background.accent",
             }}
           >

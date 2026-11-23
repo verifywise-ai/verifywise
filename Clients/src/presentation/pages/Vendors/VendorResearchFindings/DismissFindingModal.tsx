@@ -10,6 +10,7 @@ import type {
   DismissReason,
   VendorRiskFinding,
 } from "../../../../domain/interfaces/i.vendorResearch";
+import { radiusPx } from "../../../themes/palette";
 
 /** The reasons the server accepts, in the order the select lists them. */
 const DISMISS_REASONS: DismissReason[] = [
@@ -84,7 +85,7 @@ export default function DismissFindingModal({
             p: "12px",
             border: "1px solid",
             borderColor: "border.dark",
-            borderRadius: "4px",
+            borderRadius: radiusPx.sm,
             backgroundColor: "background.accent",
           }}
         >

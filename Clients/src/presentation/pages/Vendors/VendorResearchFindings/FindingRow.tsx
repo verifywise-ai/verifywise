@@ -5,6 +5,7 @@ import Chip from "../../../components/Chip";
 import { VWLink } from "../../../components/Link";
 import { CustomizableButton } from "../../../components/button/customizable-button";
 import palette, { background, border } from "../../../themes/palette";
+import { radiusPx } from "../../../themes/palette";
 import { textStyles } from "../../../themes/typography";
 import useTranslation from "../../../../application/hooks/useTranslation";
 import {
@@ -210,7 +211,7 @@ export default function FindingRow({
         p: "12px 16px",
         border: "1px solid",
         borderColor: "border.dark",
-        borderRadius: "4px",
+        borderRadius: radiusPx.sm,
         backgroundColor: "background.main",
       }}
     >
@@ -227,7 +228,7 @@ export default function FindingRow({
           "justifyContent": "flex-start",
           "gap": "8px",
           "textAlign": "left",
-          "borderRadius": "4px",
+          "borderRadius": radiusPx.sm,
           "&:focus-visible": {
             outline: `2px solid ${palette.brand.primary}`,
             outlineOffset: "2px",

@@ -389,16 +389,25 @@ export const markVrdbSourceQuery = async (
   );
 };
 
-/** Forgets the sync attempts that started before the moment. */
+/**
+ * Forgets the attempts that started before the moment, but for each list's newest success with a
+ * hash: `lastSuccessfulHashQuery` reads it to know that the bundle is loaded, and a bundle can stay
+ * the same for longer than the runs are kept.
+ */
 export const pruneVrdbSyncRunsQuery = async (
   before: Date,
   transaction?: Transaction,
 ): Promise<void> => {
-  await sequelize.query(`DELETE FROM vrdb_sync_runs WHERE started_at < :before`, {
-    replacements: { before },
-    type: QueryTypes.DELETE,
-    transaction,
-  });
+  await sequelize.query(
+    `DELETE FROM vrdb_sync_runs
+     WHERE started_at < :before
+       AND id NOT IN (
+         SELECT DISTINCT ON (source_id) id FROM vrdb_sync_runs
+         WHERE outcome IN ('ok', 'unchanged') AND raw_snapshot_hash IS NOT NULL
+         ORDER BY source_id, started_at DESC, id DESC
+       )`,
+    { replacements: { before }, type: QueryTypes.DELETE, transaction },
+  );
 };
 
 /**

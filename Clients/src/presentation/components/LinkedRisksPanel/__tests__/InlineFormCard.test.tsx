@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { ThemeProvider } from "@mui/material";
 import { light } from "../../../themes";
+import { radiusPx } from "../../../themes/palette";
 import InlineFormCard, { InlineFormActions } from "../InlineFormCard";
 
 // The app theme is required: the card reads background.alt and border.dark, which MUI's default
@@ -11,8 +12,8 @@ const wrap = (ui: React.ReactElement) => render(<ThemeProvider theme={light}>{ui
 describe("InlineFormCard", () => {
   // These forms open between a toolbar and lists, or under a list row, and without a frame they
   // read as part of the list. The frame is the house one: the default border, not the light one,
-  // with the 4px radius.
-  it("frames its content with the house border and a 4px radius", () => {
+  // with the small radius token, which the look (phase 1 or classic) gives its own value.
+  it("frames its content with the house border and the small radius token", () => {
     wrap(
       <InlineFormCard title="Link a risk">
         <p>Body</p>
@@ -23,7 +24,7 @@ describe("InlineFormCard", () => {
     // The default border token, which the look (phase 1 or classic) gives its own value.
     expect(light.palette.border.dark).toBeTruthy();
     expect(light.palette.border.dark).not.toBe(light.palette.border.light);
-    expect(card).toHaveStyle({ borderColor: light.palette.border.dark, borderRadius: "4px" });
+    expect(card).toHaveStyle({ borderColor: light.palette.border.dark, borderRadius: radiusPx.sm });
   });
 
   it("shows the title, the description when there is one, and the content", () => {

@@ -140,7 +140,8 @@ function checkWhole(
 ): void {
   const seen = new Set(records.map((record) => record.sourceRecordId)).size;
   if (seen === 0) throw new Refused("empty");
-  const before = previous?.records.length ?? 0;
+  const before =
+    previous === null ? 0 : new Set(previous.records.map((record) => record.sourceRecordId)).size;
   // A new version of the connector may read the same list into fewer records by design.
   const sameReader = previous?.connectorVersion === connectorVersion;
   if (before > 0 && sameReader && (before - seen) / before > SHRINK_LIMIT && !allowShrink) {

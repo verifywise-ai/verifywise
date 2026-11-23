@@ -26,7 +26,7 @@ import { Worker } from "bullmq";
 import logger from "../../../../utils/logger/fileLogger";
 import type { VendorResearchConfig } from "../../config";
 import type { LoadResult } from "../loadBundled";
-import { createVrdbWorker, processVrdbJob } from "../worker";
+import { VrdbLoadFailed, createVrdbWorker, processVrdbJob } from "../worker";
 
 const config = (overrides: Partial<VendorResearchConfig> = {}): VendorResearchConfig => ({
   autoRun: true,
@@ -94,9 +94,38 @@ describe("the load job", () => {
     ]);
     const enqueueRelabel = jest.fn().mockResolvedValue(undefined);
 
-    await processVrdbJob(loadJob(), { config: config(), load, enqueueRelabel });
+    // csl failed in the database, so the job throws to be tried again, after the status jobs.
+    await expect(
+      processVrdbJob(loadJob(), { config: config(), load, enqueueRelabel }),
+    ).rejects.toBeInstanceOf(VrdbLoadFailed);
 
     expect(enqueueRelabel.mock.calls).toEqual([["ofac"], ["cve"]]);
+  });
+
+  it("throws when the database failed to take a list, naming only the lists, so that BullMQ tries the job again", async () => {
+    const load = loadOf([
+      { sourceId: "kev", outcome: "ok", counts: counts(0) },
+      { sourceId: "csl", outcome: "failed", errorCode: "load_failed" },
+      { sourceId: "ofac", outcome: "failed", errorCode: "load_failed" },
+    ]);
+
+    const error = await processVrdbJob(loadJob(), { config: config(), load }).catch((e) => e);
+
+    expect(error).toBeInstanceOf(VrdbLoadFailed);
+    expect((error as VrdbLoadFailed).sourceIds).toEqual(["csl", "ofac"]);
+    expect((error as Error).message).toBe("The load of csl, ofac failed");
+  });
+
+  it("does not throw for a list whose bundle is missing or unreadable: a retry reads the same file", async () => {
+    const results: LoadResult[] = [
+      { sourceId: "kev", outcome: "ok", counts: counts(0) },
+      { sourceId: "eu_dg_comp", outcome: "failed", errorCode: "bundle_missing" },
+      { sourceId: "csl", outcome: "failed", errorCode: "bundle_unreadable" },
+    ];
+
+    await expect(
+      processVrdbJob(loadJob(), { config: config(), load: loadOf(results) }),
+    ).resolves.toEqual(results);
   });
 
   it("logs a status job that cannot be added by the error's name, adds the others, and the load stands", async () => {
@@ -213,6 +242,16 @@ describe("createVrdbWorker", () => {
       "vendor risk database job vrdb_relabel_ofac failed: SequelizeConnectionRefusedError",
     );
     expect(JSON.stringify((logger.error as jest.Mock).mock.calls)).not.toContain("10.0.0.5");
+  });
+
+  it("logs a failed load by the lists it names", () => {
+    createVrdbWorker();
+
+    failedHandler()({ id: "7" }, new VrdbLoadFailed(["csl", "ofac"]));
+
+    expect(logger.error).toHaveBeenCalledWith(
+      "vendor risk database job 7 failed: The load of csl, ofac failed",
+    );
   });
 
   it("logs an error whose name is not a plain identifier as unknown", () => {
