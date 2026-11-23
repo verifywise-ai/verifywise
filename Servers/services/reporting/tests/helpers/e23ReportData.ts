@@ -328,6 +328,8 @@ export function e23ReportData(opts: E23FixtureOptions = {}): ReportData {
     aiSummaries: {
       executiveSummary: "The model risk programme is largely in place.",
       sectionSummaries: {},
+      // mapToSummaries sets both from the recommendedActions block.
+      recommendations: ["Tier the three untiered models"],
       recommendedActions: [
         { action: "Tier the three untiered models", priority: "high", suggestedOwner: "Rae Rater" },
       ],

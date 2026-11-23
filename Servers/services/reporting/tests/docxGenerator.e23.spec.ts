@@ -187,8 +187,11 @@ describe("generateDOCX: OSFI E-23 formal report", () => {
     expect(text).toContain(`5. ${E23_HEADINGS.mrm}`);
   });
 
-  it("leaves recommended actions out of the formal report", () => {
-    expect(examiner).not.toContain("Tier the three untiered models");
-    expect(examiner).not.toContain("Recommended actions");
+  it("leaves recommended actions and their recommendations list out of the formal report", () => {
+    for (const text of [examiner, board]) {
+      expect(text).not.toContain("Tier the three untiered models");
+      expect(text.toLowerCase()).not.toContain("recommended actions");
+      expect(text.toLowerCase()).not.toContain("recommendations");
+    }
   });
 });

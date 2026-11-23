@@ -132,6 +132,7 @@ export function renderReportHtml(reportData: ReportData): string {
   };
   if (e23) {
     data.e23 = e23;
+    data.aiSummaries = e23.aiSummaries;
     data.e23NoticeLabels = E23_NOTICE_LABELS;
     data.e23Partial = (name: string, locals: Record<string, unknown> = {}) =>
       ejs.render(readTemplate(`partials/e23/${name}.ejs`), { ...data, ...locals });

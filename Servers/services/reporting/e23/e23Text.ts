@@ -73,11 +73,20 @@ export const AI_GENERATED_LABEL = "AI-Generated Analysis";
 /** Headers of the e23Gap table (spec 8.5). */
 export const E23_GAP_HEADERS = ["Requirement group", "Position", "Explanation", "Basis"];
 
-/** Under an e23Gap explanation and a recommended action's reason. */
+/** Title of the e23Gap table of positions (spec 8.5). */
+export const E23_GAP_TABLE_TITLE = `Position by requirement group (${AI_GENERATED_LABEL})`;
+
+/**
+ * Before the closing condition (what_would_close_this) printed under each
+ * explanation in the e23Gap table.
+ */
 export const CLOSES_WHEN_PREFIX = "Closes when:";
 
 /** The recommended actions, in the fix-it list for this report (spec 8.6). */
 export const RECOMMENDED_ACTIONS_HEADING = "Recommended actions";
+/** Above the recommended actions in the fix-it list. */
+export const RECOMMENDED_ACTIONS_AI_NOTE =
+  "These actions were written by AI from the fix-it items and the report data. Check each one before acting on it.";
 export const RECOMMENDED_ACTIONS_HEADERS = [
   "Action",
   "Why",

@@ -193,7 +193,7 @@ const FINDING_TEMPLATES: Record<Exclude<E23RuleId, "C1">, (n: number) => string>
     `${modelCount(n)} ${verb(n, "has a", "have a")} rating past its review cadence or awaiting revalidation`,
   C4: (n) => `${modelCount(n)} ${verb(n, "has", "have")} no owner role`,
   C5: (n) =>
-    `${modelCount(n)} whose latest validation was signed off by someone who also holds the developer role`,
+    `${modelCount(n)} ${verb(n, "has a", "have a")} latest validation signed off by someone who also holds the developer role`,
   C6: (n) => `${modelCount(n)} ${verb(n, "has an", "have an")} overdue validation`,
   C7: (n) =>
     `${modelCount(n)} ${verb(n, "has a", "have a")} latest signed-off validation report with missing or empty sections`,
@@ -209,7 +209,12 @@ const FINDING_TEMPLATES: Record<Exclude<E23RuleId, "C1">, (n: number) => string>
     `${modelCount(n)} ${verb(n, "is", "are")} approved although the latest validation outcome is 'Not validated'`,
 };
 
-const requirementNumber = (title: string): string => title.trim().split(/\s+/)[0] ?? "";
+/**
+ * A requirement's number: the title text before the first space ("2.1.4
+ * Enterprise-level ..." gives "2.1.4"). The structure has no requirement id,
+ * so this is how a rule finds its requirement (spec 8.4).
+ */
+export const requirementNumber = (title: string): string => title.trim().split(/\s+/)[0] ?? "";
 
 const flattenRows = (rows: FrameworkRequirementRow[]): FrameworkRequirementRow[] =>
   rows.flatMap((r) => [r, ...flattenRows(r.children ?? [])]);

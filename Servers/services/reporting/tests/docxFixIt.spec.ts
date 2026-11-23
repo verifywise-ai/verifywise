@@ -80,6 +80,12 @@ describe("generateFixItDOCX", () => {
     }
   });
 
+  it("carries the recommended actions the formal report leaves out", async () => {
+    const { body } = await parts(e23FixItReportData());
+
+    expect(body.text).toContain("Tier the three untiered models");
+  });
+
   it("says what could not be read", async () => {
     const data = e23FixItReportData();
     data.sectionNotices = [

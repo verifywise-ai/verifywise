@@ -223,8 +223,11 @@ describe("report-pdf.ejs: OSFI E-23 formal report", () => {
     expect(footer).toContain(`Northern Bank of Canada | ${E23_REPORT_TITLE}`);
   });
 
-  it("leaves recommended actions out of the formal report", () => {
-    expect(examiner).not.toContain("Tier the three untiered models");
-    expect(examiner).not.toContain("Recommended actions");
+  it("leaves recommended actions and their recommendations list out of the formal report", () => {
+    for (const html of [examiner, board]) {
+      expect(html).not.toContain("Tier the three untiered models");
+      expect(html).not.toContain("Recommended actions");
+      expect(html).not.toContain("Recommendations");
+    }
   });
 });

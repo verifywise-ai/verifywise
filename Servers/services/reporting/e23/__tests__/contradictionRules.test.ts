@@ -489,7 +489,7 @@ describe("evaluateE23Rules", () => {
     ]);
     const text = (id: string) => result.fired.find((f) => f.ruleId === id)?.finding;
     expect(text("C5")).toBe(
-      "1 model whose latest validation was signed off by someone who also holds the developer role",
+      "1 model has a latest validation signed off by someone who also holds the developer role",
     );
     expect(text("C13")).toBe(
       "1 model is approved although the latest validation outcome is 'Not validated'",

@@ -291,7 +291,7 @@ const isE23 = typeof e23 !== 'undefined' && !!e23;
       </div>
       <% } %>
 
-      <% if (aiSummaries.recommendations && aiSummaries.recommendations.length > 0) { %>
+      <% if (!isE23 && aiSummaries.recommendations && aiSummaries.recommendations.length > 0) { %>
       <div class="subsection">
         <div class="subsection-header">
           <h3 class="subsection-title">Recommendations</h3>

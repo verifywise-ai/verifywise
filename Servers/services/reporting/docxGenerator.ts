@@ -1316,11 +1316,12 @@ export async function generateDOCX(reportData: ReportData): Promise<ReportGenera
     // Build document sections
     const coverPage = createCoverPage(reportData);
     const toc = createTableOfContents(reportData);
-    const aiExecutiveSummary = reportData.aiSummaries
-      ? createExecutiveSummarySection(reportData.aiSummaries)
-      : [];
-    const riskSection = createRiskAnalysisSection(reportData);
     const e23 = buildE23FormalView(reportData);
+    // An E-23 report prints its view's summaries, which leave out the
+    // recommendations that belong to the internal fix-it list.
+    const aiSummaries = e23 ? e23.aiSummaries : reportData.aiSummaries;
+    const aiExecutiveSummary = aiSummaries ? createExecutiveSummarySection(aiSummaries) : [];
+    const riskSection = createRiskAnalysisSection(reportData);
     const complianceSection = createComplianceSection(reportData, {
       withFrameworkRequirements: !e23,
     });

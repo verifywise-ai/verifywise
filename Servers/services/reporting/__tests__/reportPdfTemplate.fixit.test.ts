@@ -38,6 +38,10 @@ describe("e23-fixit-pdf.ejs", () => {
     }
   });
 
+  it("carries the recommended actions the formal report leaves out", () => {
+    expect(html).toContain("Tier the three untiered models");
+  });
+
   it("contains nothing from the formal report", () => {
     expect(html).not.toContain("Table of contents");
     expect(html).not.toContain("Sign-off");

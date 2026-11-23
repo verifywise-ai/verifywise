@@ -25,6 +25,7 @@ import {
   FIX_IT_TITLE,
   INTERNAL_MARKING,
   NO_FIX_IT_ITEMS,
+  RECOMMENDED_ACTIONS_AI_NOTE,
   RECOMMENDED_ACTIONS_HEADERS,
   RECOMMENDED_ACTIONS_HEADING,
   textParam,
@@ -154,7 +155,7 @@ function actionsSection(data: ReportData): E23Section | null {
           {
             kind: "ai",
             label: AI_GENERATED_LABEL,
-            text: "These actions were written by AI from the fix-it items and the report data. Check each one before acting on it.",
+            text: RECOMMENDED_ACTIONS_AI_NOTE,
           },
           {
             kind: "table",

@@ -12,6 +12,7 @@
  */
 
 import type {
+  AISummaries,
   E23Glance,
   FrameworkRequirementRow,
   MrmInventoryAppendixRow,
@@ -29,6 +30,7 @@ import {
   DRAFT_WATERMARK,
   E23_CHECKS_NOT_READ,
   E23_GAP_HEADERS,
+  E23_GAP_TABLE_TITLE,
   E23_HEADINGS,
   E23_NOT_ON_FILE,
   E23_REPORT_TITLE,
@@ -114,6 +116,12 @@ export interface E23FormalView {
   } | null;
   /** Footer line of the DOCX: institution and report title. */
   footerTitle: string;
+  /**
+   * The AI summaries the formal report may print: the run's, without the
+   * recommended actions and the recommendations list derived from them,
+   * which belong to the internal fix-it list (spec 8.6).
+   */
+  aiSummaries: AISummaries | undefined;
 }
 
 const DASH = "—";
@@ -601,7 +609,7 @@ function e23GapSection(data: ReportData): E23Section | null {
   if (gap.principles.length > 0) {
     blocks.push({
       kind: "table",
-      title: `Position by requirement group (${AI_GENERATED_LABEL})`,
+      title: E23_GAP_TABLE_TITLE,
       headers: E23_GAP_HEADERS,
       widths: [28, 20, 40, 12],
       rows: gap.principles.map((p) => [
@@ -825,5 +833,15 @@ export function buildE23FormalView(data: ReportData): E23FormalView | null {
         }
       : null,
     footerTitle: `${institution} | ${E23_REPORT_TITLE}`,
+    aiSummaries: formalAiSummaries(ai),
   };
+}
+
+/** The run's AI summaries minus the to-do content that goes to the fix-it list. */
+function formalAiSummaries(ai: AISummaries | undefined): AISummaries | undefined {
+  if (!ai) return ai;
+  const formal = { ...ai };
+  delete formal.recommendations;
+  delete formal.recommendedActions;
+  return formal;
 }
