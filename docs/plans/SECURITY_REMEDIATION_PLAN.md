@@ -11,6 +11,9 @@ Data fetched from GitHub Security API on the current branch.
 
 Tools represented: **Trivy** (197), **Semgrep OSS** (77), **CodeQL** (19).
 
+> **Snapshot refresh (2026-11-23):** All alerts are now closed — **0 open**.
+> Code Scanning: 474 total (404 fixed, 70 dismissed with justifications). Dependabot: 697 total, all fixed.
+
 ---
 
 ## 1. Agent Roster Assignments
@@ -89,6 +92,14 @@ Tools represented: **Trivy** (197), **Semgrep OSS** (77), **CodeQL** (19).
 **Acceptance criteria:**
 - All listed injection/path alerts close in the next GitHub scan.
 - New unit/integration tests added for each sanitization pattern.
+
+> **Wave 2 status (completed — verified 2026-11-23, 0 open alerts)**
+> - W2.1: 55 Semgrep `avoid-sqlalchemy-text` alerts fixed across `EvalServer/src/`, `AIGateway/src/crud/`, and migration scripts by replacing `text(f"...")` with parameterized `text()` + bind params (PR #4511). 6 residual alerts in `AIGateway/src/crud/{virtual_keys,mcp_guardrails,mcp_agent_keys}.py` suppressed with rule-specific `nosemgrep` (static column lists, all user values bound) and dismissed with justification.
+> - W2.2: 16 CodeQL `py/path-injection` alerts fixed in `GRSModule/ui/backend/` (`results.py`, `watcher.py`, `snapshot.py`, `path_utils.py`) using the canonical `os.path.normpath(...).startswith(...)` containment check recognized by CodeQL's sanitizer.
+> - W2.3: 2 subprocess-injection alerts in `GRSModule/ui/backend/services/runner.py` resolved — `shell=False` with allowlisted commands; `nosemgrep` annotated, dismissed as false positive with justification.
+> - W2.4: 2 Sequelize-injection alerts in `Servers/controllers/shareLink.ctrl.ts` resolved — static parameterized query map with `bind:` values; `nosemgrep` annotated, dismissed as false positive.
+> - W2.5: CodeQL `js/regex-injection` in `Clients/scripts/i18n-audit.mjs` fixed; `js/polynomial-redos` in `Servers/domain.layer/validations/email.valid.ts` dismissed as false positive.
+> - Verified locally on `develop` (2026-11-23): GRSModule UI backend tests (39 passed), Servers shareLink controller tests (6 passed), Clients RichTextRenderer tests (8 passed).
 
 ---
 
@@ -173,6 +184,15 @@ Trivy KSV alerts (197 total). Grouped themes:
 **Acceptance criteria:**
 - Each alert closed in the next scan.
 - Existing functional tests pass.
+
+> **Wave 5 status (completed — verified 2026-11-23, 0 open alerts)**
+> - `js/missing-rate-limiting`: 14 alerts fixed — `webhookLimiter` on webhook routes, `fileOperationsLimiter` on all file-manager routes, and limiters applied across remaining unprotected routes; 3 dismissed with justification (`plugin.route.ts`, one `fileManager.route.ts` variant).
+> - `express-res-sendfile` / `js/path-injection` / `js/request-forgery` in `Servers/routes/plugin.route.ts`: fixed (allowlisted key/filename, `realpath` canonicalization + containment check); residuals dismissed as false positive. File has since been removed from `develop`.
+> - `xss.direct-response-write` in `Servers/controllers/fileManager.ctrl.ts`: dismissed (won't fix) with justification — sanitized binary/Buffer preview data with safe `Content-Type`; `nosemgrep` annotated.
+> - `spawn-git-clone` in `Servers/services/aiDetection.service.ts`: Git URL rebuilt from validated owner/repo with forced `github.com` host; token injected only after URL construction; dismissed as false positive.
+> - `react-dangerouslysetinnerhtml` in `Clients/.../RichTextRenderer/index.tsx`: fixed — DOMPurify sanitization confirmed, test payload annotated.
+> - `py/stack-trace-exposure` in `AIGateway/src/routers/{prompts,mcp_proxy}.py`: fixed — generic JSON-RPC errors returned to clients, details logged server-side.
+> - `dynamic-urllib-use-detected` (`AIGateway/tests/e2e_mock_agentic_system.py`, `scripts/fetch_security_alerts.py`): dismissed as false positive — hardcoded GitHub API base URL / validated URLs, `nosemgrep` annotated.
 
 ---
 
