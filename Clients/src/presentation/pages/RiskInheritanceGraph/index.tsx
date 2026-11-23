@@ -52,6 +52,7 @@ import {
   errorContainerSx,
   errorTextSx,
   controlPanelSx,
+  GRAPH_FIT_VIEW_OPTIONS,
   legendLabelSx,
   legendItemSx,
   legendTextSx,
@@ -324,12 +325,12 @@ const RiskInheritanceGraphInner: React.FC = () => {
               nodeTypes={nodeTypes}
               proOptions={proOptions}
               fitView
-              fitViewOptions={{ padding: 0.2 }}
+              fitViewOptions={GRAPH_FIT_VIEW_OPTIONS}
               minZoom={0.1}
               maxZoom={2}
               defaultEdgeOptions={{ type: "smoothstep" }}
             >
-              <Controls showInteractive={false} />
+              <Controls showInteractive={false} fitViewOptions={GRAPH_FIT_VIEW_OPTIONS} />
               <MiniMap
                 nodeColor={(n) =>
                   ENTITY_TYPE_COLORS[(n.data as RiskInheritanceNodeData)?.entityType ?? "risk"]
