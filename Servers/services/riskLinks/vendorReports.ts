@@ -267,7 +267,7 @@ export function vendorRiskLevelRank(level: string | null): number {
   if (value.includes("very high") || value.includes("critical")) return 5;
   if (value.includes("high")) return 4;
   if (value.includes("medium") || value.includes("moderate")) return 3;
-  if (value.includes("very low")) return 1;
+  if (value.includes("very low") || value.startsWith("no risk")) return 1;
   if (value.includes("low")) return 2;
   return 0;
 }

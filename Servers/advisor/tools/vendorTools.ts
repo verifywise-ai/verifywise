@@ -241,10 +241,6 @@ export const toolsDefinition: any[] = [
             ],
             description: "Updated business criticality level.",
           },
-          risk_score: {
-            type: "number",
-            description: "Updated risk score (0-100).",
-          },
         },
         required: ["vendor_id"],
       },
@@ -342,10 +338,6 @@ export const toolsDefinition: any[] = [
           action_owner: {
             type: "string",
             description: "Updated action owner.",
-          },
-          risk_level: {
-            type: "string",
-            description: "Updated risk level.",
           },
         },
         required: ["vendor_risk_id"],

@@ -252,6 +252,8 @@ export interface IRiskTableProps {
   exposure?: Map<number, VendorRiskExposure>;
   /** Opens a vendor risk on its Linked risks tab; falls back to onEdit. */
   onOpenLinks?: (riskId: number) => void;
+  /** Restores a deleted vendor risk; deleted rows offer it when set. */
+  onRestore?: (riskId: number) => void;
 }
 
 export interface ITasksTableProps {

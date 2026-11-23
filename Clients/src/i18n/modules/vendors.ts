@@ -45,6 +45,16 @@ export const de: Record<string, string> = {
   "Frameworks in its use cases": "Rahmenwerke in seinen Anwendungsfällen",
   "Every active vendor risk is mapped to at least one framework.":
     "Jedes aktive Anbieterrisiko ist mindestens einem Rahmenwerk zugeordnet.",
+  "Not assessed": "Nicht bewertet",
+  "Deleted risk": "Gelöschtes Risiko",
+  "This risk was deleted. Restore it to edit it again.":
+    "Dieses Risiko wurde gelöscht. Stellen Sie es wieder her, um es erneut zu bearbeiten.",
+  "Restore risk": "Risiko wiederherstellen",
+  "Risk restored.": "Risiko wiederhergestellt.",
+  "Could not restore the risk. Please try again.":
+    "Das Risiko konnte nicht wiederhergestellt werden. Bitte versuchen Sie es erneut.",
+  "It moves to the deleted risks, where it can be restored.":
+    "Es wird zu den gelöschten Risiken verschoben und kann dort wiederhergestellt werden.",
 };
 
 export const fr: Record<string, string> = {
@@ -92,6 +102,16 @@ export const fr: Record<string, string> = {
   "Frameworks in its use cases": "Référentiels de ses cas d'usage",
   "Every active vendor risk is mapped to at least one framework.":
     "Chaque risque fournisseur actif est associé à au moins un référentiel.",
+  "Not assessed": "Non évalué",
+  "Deleted risk": "Risque supprimé",
+  "This risk was deleted. Restore it to edit it again.":
+    "Ce risque a été supprimé. Restaurez-le pour le modifier à nouveau.",
+  "Restore risk": "Restaurer le risque",
+  "Risk restored.": "Risque restauré.",
+  "Could not restore the risk. Please try again.":
+    "Impossible de restaurer le risque. Veuillez réessayer.",
+  "It moves to the deleted risks, where it can be restored.":
+    "Il est déplacé vers les risques supprimés, où il peut être restauré.",
 };
 
 export const es: Record<string, string> = {
@@ -139,4 +159,14 @@ export const es: Record<string, string> = {
   "Frameworks in its use cases": "Marcos en sus casos de uso",
   "Every active vendor risk is mapped to at least one framework.":
     "Cada riesgo del proveedor activo está asignado al menos a un marco.",
+  "Not assessed": "Sin evaluar",
+  "Deleted risk": "Riesgo eliminado",
+  "This risk was deleted. Restore it to edit it again.":
+    "Este riesgo se eliminó. Restáurelo para volver a editarlo.",
+  "Restore risk": "Restaurar riesgo",
+  "Risk restored.": "Riesgo restaurado.",
+  "Could not restore the risk. Please try again.":
+    "No se pudo restaurar el riesgo. Inténtelo de nuevo.",
+  "It moves to the deleted risks, where it can be restored.":
+    "Pasa a los riesgos eliminados, donde se puede restaurar.",
 };

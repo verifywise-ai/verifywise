@@ -8,6 +8,7 @@ import {
   createVendorRisk,
   updateVendorRisk,
   deleteVendorRisk,
+  restoreVendorRisk,
 } from "../vendorRisk.repository";
 
 vi.mock("../../../infrastructure/api/networkServices", () => {
@@ -198,7 +199,7 @@ describe("vendorRisk.repository", () => {
       const result = await getVendorRiskById({ id: 1 });
 
       expect(apiServices.get).toHaveBeenCalledTimes(1);
-      expect(apiServices.get).toHaveBeenCalledWith("/vendorRisks/1", {
+      expect(apiServices.get).toHaveBeenCalledWith("/v1/vendor-risks/1", {
         signal: undefined,
       });
       expect(result).toEqual(mockResponse.data);
@@ -311,6 +312,18 @@ describe("vendorRisk.repository", () => {
       await expect(updateVendorRisk({ id: 1, body: { risk_description: "Test" } })).rejects.toThrow(
         "Connection refused",
       );
+    });
+  });
+
+  describe("restoreVendorRisk", () => {
+    it("sends PATCH /v1/vendor-risks/:id/restore", async () => {
+      const mockResponse = { data: { data: { id: 1, is_deleted: false } }, status: 200 };
+      vi.mocked(apiServices.patch).mockResolvedValue(mockResponse as never);
+
+      const result = await restoreVendorRisk({ id: 1 });
+
+      expect(apiServices.patch).toHaveBeenCalledWith("/v1/vendor-risks/1/restore");
+      expect(result).toEqual(mockResponse);
     });
   });
 

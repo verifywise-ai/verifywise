@@ -175,6 +175,12 @@ enum Likelihood {
 | POST | `/vendorRisks/` | Create risk |
 | PATCH | `/vendorRisks/:id` | Update risk |
 | DELETE | `/vendorRisks/:id` | Soft delete risk |
+| GET | `/v1/vendor-risks/:id` | Get a risk, deleted ones included (`is_deleted: true`), to open read-only |
+| PATCH | `/v1/vendor-risks/:id/restore` | Restore a deleted risk (`vendor.edit`; 404 if no deleted risk has this id) |
+
+The legacy `/vendorRisks` router is frozen: its `GET /vendorRisks/:id` still
+answers 404 for a deleted risk, and updates do too. Custom field values of a
+deleted risk can't be written or cleared until it is restored.
 
 ### Change History Endpoints
 
@@ -215,7 +221,7 @@ POST /vendors/
 3. Create vendor record
 4. Create vendor-project associations
 5. Record creation in change history
-6. Trigger `vendor_added` automation
+6. Queue the `vendor_added` automation, sent once the transaction commits (`transaction.afterCommit`); `vendor_updated` and `vendor_deleted` work the same way, and a delete that finds no vendor answers 404 and queues nothing
 7. After commit, notify the assignee and reviewer
 
 ### User references
@@ -232,6 +238,31 @@ Advisor write tools, AI app import and the demo seed all go through it, inside
 the write's transaction. An unchanged stored id is not re-checked: a vendor
 whose assignee has since left the organization can still be edited.
 
+### Request checks
+
+`utils/validations/vendorRequest.utils.ts` checks the fields a vendor or vendor
+risk create or PATCH sends, before the transaction opens, and answers 400
+naming the field where the database would otherwise fail with a 500: enums
+outside their list, text in an id or score field, strings longer than their
+VARCHAR(255) column, `risk_score` outside 0–100, a `review_date` that isn't a
+date, `projects` or `frameworks` that aren't lists of ids. Fields that aren't
+sent aren't checked, and a vendor PATCH validates only what it sends: an
+imported vendor with empty required fields can still be edited, but a PATCH
+can't blank a required field.
+
+A vendor risk create needs `vendor_id`, `risk_description`, `likelihood` and
+`risk_severity`; an update can't blank them, but can clear
+`impact_description` and `action_plan` (`''` or `null`). `likelihood` accepts
+either spelling of "Almost certain". Framework ids are checked against
+`frameworks` inside the write's transaction, and repeats are saved once: an
+unknown id is a 400 and nothing is saved, where it used to be swallowed and
+answer 201/202. A PATCH that sends only `frameworks` replaces the links.
+
+Ids in the URL must be positive integers (`abc`, `12abc`, `1.5` are 400), and
+the vendor risk lists' `?filter=` must be `active`, `deleted` or `all` (400
+otherwise; absent means `active`). `GET /vendorRisks/by-projid/:id` still
+answers 200 with an empty list for a non-numeric id.
+
 ## Vendor Scorecard
 
 The scorecard assesses vendor risk across dimensions:
@@ -245,7 +276,31 @@ The scorecard assesses vendor risk across dimensions:
 
 ### Risk Score
 
-Calculated score (0-100) based on scorecard values. Higher score indicates higher risk.
+The server computes `risk_score` on every vendor write, from the scorecard
+answers as they will be stored (`calculateVendorRiskScore`,
+`utils/vendorScorecard.utils.ts`); a `risk_score` in the request is ignored.
+Each answer is normalized against its scale's highest value and weighted
+(sensitivity 0.3, criticality 0.3, past issues 0.2, regulatory exposure 0.2);
+the sum × 100, rounded, is the score (0–100). A vendor with no answer has
+`risk_score` NULL and the vendor table shows "Not assessed", where it used to
+show a green 0%. The drawer's live preview uses the same table
+(`Clients/src/domain/utils/vendorScorecard.utils.ts`).
+
+### Vendor risk level
+
+`vendorrisks.risk_level` is computed by the server on create and on every
+update from likelihood and severity as they will be stored, with the formula
+project risks use (`calculateRiskLevel` in `utils/riskLevel.utils.ts`:
+likelihood + 3 × severity → "No risk", "Low risk", "Medium risk", "High risk",
+"Very high risk"). A `risk_level` in the request is ignored, so a level can't
+go stale when likelihood or severity changes. The Risks tab cards, card filter
+and level filter group levels through `vendorRiskLevelLabel`
+(`Clients/src/application/utils/riskLevel.ts`): "No risk" is the lowest card,
+and an older stored "Very low" counts there.
+
+Migration `20261122200000-vendor-risk-level-and-score-recompute` recomputed
+every stored level (rows without likelihood or severity kept theirs) and every
+score (NULL where no answer is set).
 
 ## Vendor-Project Relationship
 
@@ -259,9 +314,32 @@ Vendor ─────┬───── Project A
 
 ### Link Management
 
-- Adding vendor to project creates junction record
-- Removing vendor from project deletes junction record
-- Deleting vendor cascades to junction table
+A vendor PATCH writes links only when it sends `projects`; a field-only save
+leaves them as they are, and `projects: []` unlinks every use case the user can
+see. Vendors are visible to the whole organization, but a non-Admin sees only
+some use cases, so `setVisibleVendorProjects` (`utils/vendor.utils.ts`) adds
+and removes only links to use cases the user can see (`getUserProjects`); links
+to the others are kept, and an id the user can't see is ignored. An Editor who
+isn't on every linked use case can therefore save the vendor, where the old
+delete-visible-then-reinsert-all hit the primary key and answered 500. The
+response's `projects` is read back from `vendors_projects` after the write.
+
+### Deleting a vendor
+
+A vendor delete is a hard delete (`deleteVendorByIdQuery`,
+`utils/vendor.utils.ts`), in one transaction:
+
+- the vendor row is locked first; an unknown id answers 404 and touches nothing
+- its risks are deleted, active or not, with their custom field values;
+  framework and risk links cascade
+- its custom field values, notes (`attached_to = 'VENDOR'`), task links, share
+  links and use case links are removed
+- pending approval requests for it are withdrawn
+- the vendor, and each risk that was still active, get a "deleted" history
+  entry. A risk deleted earlier already has one.
+
+The console records the deleting user. The Advisor's delete tool has no user,
+so its deletions are recorded as made by the system.
 
 ## Vendor Risk Management
 
@@ -294,11 +372,19 @@ columns it clears.
 
 ### Soft Delete
 
-Vendor risks support soft delete:
-- `is_deleted` flag set to true
-- `deleted_at` timestamp recorded
-- Risk hidden from default queries
-- Can be restored or permanently deleted
+Deleting a vendor risk is a soft delete (`deleteVendorRiskByIdQuery`):
+- `is_deleted` set to true, `deleted_at` recorded
+- a "deleted" history entry (Vendor Risk: Active → Deleted)
+- custom field values and framework links are kept, so a restore brings the
+  risk back whole
+- hidden from the default lists, reports and risk link suggestions
+
+A deleted risk shows in the Risks tab under the "Deleted" status filter. It
+opens read-only, titled "Deleted risk", without the Linked risks tab. Holders
+of `vendor.edit` can restore it from its row menu or from the modal.
+`PATCH /v1/vendor-risks/:id/restore` clears the flag, records a history entry
+(Deleted → Active) and queues a link recompute. It is gone for good only when
+its vendor is deleted.
 
 ### Linked risks
 
@@ -440,9 +526,9 @@ fully answered "no exposure" vendor (`true`, zero suggestions). Suggestions are 
 | C `past_issues` | `Minor incident (e.g. small delay, minor bug)` → `Minor`; `Major incident (e.g. data breach, legal issue)` → `Major` | per value | `Likely` |
 | D `regulatory_exposure` | Any value except `None` | `Moderate` | `Possible` |
 
-`risk_level` is derived with `calculateRiskLevel` from
-`utils/validations/vendorRiskValidation.utils.ts` and stored in the report with the ` Risk`
-suffix used by `vendorrisks.risk_level` (for example `High Risk`). Suggestion text names the
+`risk_level` is derived with `calculateRiskLevel` from `utils/riskLevel.utils.ts`, the
+formula a saved vendor risk gets, so accepting a suggestion stores the level it showed
+(for example `Very high risk`). Suggestion text names the
 answer through a short display label, not the raw enum value; `reasons` keeps the raw enum value.
 
 ### Suppression
@@ -469,6 +555,16 @@ All vendor changes are tracked:
 | old_value | Previous value |
 | new_value | New value |
 | timestamp | When changed |
+
+Besides the form fields, vendor history records use case link changes ("Use
+cases", diffed from the links stored before and after the write). It records
+the number of linked use cases, not their titles: every vendor viewer reads the
+history, and most can't see every linked use case. And
+vendor risk history records moving a risk to another vendor ("Vendor") and
+framework mapping changes ("Frameworks"). Link and framework lists compare as
+sets, so a reorder records nothing. User and vendor names are looked
+up within the organization: a user from another organization shows as
+`User #id`.
 
 ## Frontend Structure
 

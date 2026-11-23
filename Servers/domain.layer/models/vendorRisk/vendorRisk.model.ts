@@ -165,6 +165,8 @@ export class VendorRiskModel extends Model<VendorRiskModel> implements IVendorRi
       action_owner: this.action_owner,
       risk_level: this.risk_level,
       is_demo: this.is_demo,
+      is_deleted: this.is_deleted,
+      deleted_at: this.deleted_at,
       created_at: (this.createdAt ?? this.created_at)?.toISOString(),
       updated_at: (this.updatedAt ?? this.updated_at)?.toISOString(),
     };

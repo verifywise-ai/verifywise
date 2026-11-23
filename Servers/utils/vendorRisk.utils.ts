@@ -2,12 +2,15 @@ import { VendorRiskModel } from "../domain.layer/models/vendorRisk/vendorRisk.mo
 import { IVendorRisk } from "../domain.layer/interfaces/i.vendorRisk";
 import { sequelize } from "../database/db";
 import { QueryTypes, Transaction } from "sequelize";
+import { fetchCustomFieldsForEntities } from "./customField.utils";
 import {
-  deleteAllCustomFieldValuesForEntityQuery,
-  fetchCustomFieldsForEntities,
-} from "./customField.utils";
+  recordEntityDeletion,
+  recordEntityDeletionBulk,
+  recordEntityRestoration,
+} from "./changeHistory.base.utils";
 import { findUserFieldOutsideOrganization, parseReferencedIds } from "./user.utils";
 import { ValidationException } from "../domain.layer/exceptions/custom.exception";
+import { calculateRiskLevel } from "./riskLevel.utils";
 
 export const getVendorRisksByProjectIdQuery = async (
   projectId: number,
@@ -105,16 +108,24 @@ export const getVendorRiskByIdQuery = async (
   return vendorRisk;
 };
 
+/** enum_vendorrisks_likelihood, by lower-case spelling. */
+const VENDOR_RISK_LIKELIHOOD_BY_KEY: Record<string, string> = {
+  rare: "Rare",
+  unlikely: "Unlikely",
+  possible: "Possible",
+  likely: "Likely",
+  "almost certain": "Almost certain",
+};
+
 /**
  * The vendor risk likelihood enum spells the top value "Almost certain", while
- * project risks use "Almost Certain". Accept either casing so a caller using the
- * project spelling saves instead of failing on the enum.
+ * project risks use "Almost Certain". Any casing (and surrounding spaces) of an
+ * enum value is written as the enum spells it, so a caller using the project
+ * spelling saves instead of failing on the enum. Other values pass unchanged.
  */
 export const normalizeVendorRiskLikelihood = <T>(likelihood: T): T => {
-  if (typeof likelihood === "string" && likelihood.trim().toLowerCase() === "almost certain") {
-    return "Almost certain" as T;
-  }
-  return likelihood;
+  if (typeof likelihood !== "string") return likelihood;
+  return (VENDOR_RISK_LIKELIHOOD_BY_KEY[likelihood.trim().toLowerCase()] ?? likelihood) as T;
 };
 
 /**
@@ -207,12 +218,14 @@ export const createNewVendorRiskQuery = async (
         vendor_id: vendorRisk.vendor_id,
         order_no: vendorRisk.order_no || null,
         risk_description: vendorRisk.risk_description,
-        impact_description: vendorRisk.impact_description,
+        // Optional: a create may leave them out.
+        impact_description: vendorRisk.impact_description ?? null,
         likelihood: normalizeVendorRiskLikelihood(vendorRisk.likelihood),
         risk_severity: vendorRisk.risk_severity,
-        action_plan: vendorRisk.action_plan,
+        action_plan: vendorRisk.action_plan ?? null,
         action_owner: vendorActionOwnerValue(vendorRisk.action_owner),
-        risk_level: vendorRisk.risk_level,
+        // Computed from likelihood and severity; a sent risk_level is ignored.
+        risk_level: calculateRiskLevel(vendorRisk.likelihood, vendorRisk.risk_severity),
         is_demo: vendorRisk.is_demo || false,
       },
       mapToModel: true,
@@ -234,11 +247,11 @@ export const updateVendorRiskByIdQuery = async (
   // cannot change it between the checks below and the UPDATE. A missing or
   // soft-deleted vendor risk is not edited: the caller answers 404.
   const [stored] = (await sequelize.query(
-    `SELECT action_owner FROM vendorrisks
+    `SELECT action_owner, likelihood, risk_severity FROM vendorrisks
       WHERE organization_id = :organizationId AND id = :id AND is_deleted = false
       FOR UPDATE`,
     { replacements: { organizationId, id }, type: QueryTypes.SELECT, transaction },
-  )) as { action_owner: number | null }[];
+  )) as { action_owner: number | null; likelihood: string | null; risk_severity: string | null }[];
   if (!stored) return null;
 
   // An empty vendor_id is not written (see the SET clause below).
@@ -258,7 +271,7 @@ export const updateVendorRiskByIdQuery = async (
   const updateVendorRisk: Partial<Record<keyof VendorRiskModel, any>> & {
     organizationId?: number;
   } = {};
-  const setClause = [
+  const columns = [
     "vendor_id",
     "risk_description",
     "impact_description",
@@ -266,31 +279,52 @@ export const updateVendorRiskByIdQuery = async (
     "risk_severity",
     "action_plan",
     "action_owner",
-    "risk_level",
-  ]
-    .filter((f) => {
-      // action_owner can be cleared: null, '' and 0 write NULL.
-      if (f === "action_owner") {
-        if (vendorRisk.action_owner === undefined) return false;
-        updateVendorRisk.action_owner = vendorActionOwnerValue(vendorRisk.action_owner);
-        return true;
-      }
-      if (
-        vendorRisk[f as keyof VendorRiskModel] !== undefined &&
-        vendorRisk[f as keyof VendorRiskModel]
-      ) {
-        updateVendorRisk[f as keyof VendorRiskModel] =
-          f === "likelihood"
-            ? normalizeVendorRiskLikelihood(vendorRisk.likelihood)
-            : vendorRisk[f as keyof VendorRiskModel];
-        return true;
-      }
-      return false;
-    })
-    .map((f) => `${f} = :${f}`)
-    .join(", ");
+  ].filter((f) => {
+    // action_owner can be cleared: null, '' and 0 write NULL.
+    if (f === "action_owner") {
+      if (vendorRisk.action_owner === undefined) return false;
+      updateVendorRisk.action_owner = vendorActionOwnerValue(vendorRisk.action_owner);
+      return true;
+    }
+    // Optional text: a value that is sent is written, so '' and null clear it.
+    if (f === "impact_description" || f === "action_plan") {
+      const value = vendorRisk[f];
+      if (value === undefined) return false;
+      updateVendorRisk[f] = value;
+      return true;
+    }
+    if (
+      vendorRisk[f as keyof VendorRiskModel] !== undefined &&
+      vendorRisk[f as keyof VendorRiskModel]
+    ) {
+      updateVendorRisk[f as keyof VendorRiskModel] =
+        f === "likelihood"
+          ? normalizeVendorRiskLikelihood(vendorRisk.likelihood)
+          : vendorRisk[f as keyof VendorRiskModel];
+      return true;
+    }
+    return false;
+  });
 
-  const query = `UPDATE vendorrisks SET ${setClause} WHERE organization_id = :organizationId AND id = :id AND is_deleted = false RETURNING *;`;
+  // The level follows likelihood and severity as they will be stored: the
+  // sent ones, else the stored ones. A sent risk_level is ignored. Written
+  // on every update, so a level left stale by an older write is corrected;
+  // an older risk without likelihood or severity keeps its level.
+  const level = calculateRiskLevel(
+    updateVendorRisk.likelihood ?? stored.likelihood,
+    updateVendorRisk.risk_severity ?? stored.risk_severity,
+  );
+  if (level) {
+    updateVendorRisk.risk_level = level;
+    columns.push("risk_level");
+  }
+  const setClause = columns.map((f) => `${f} = :${f}`).join(", ");
+
+  // A request that changes only frameworks names no column: read the row
+  // back instead of building an UPDATE with an empty SET.
+  const query = setClause
+    ? `UPDATE vendorrisks SET ${setClause} WHERE organization_id = :organizationId AND id = :id AND is_deleted = false RETURNING *;`
+    : `SELECT * FROM vendorrisks WHERE organization_id = :organizationId AND id = :id AND is_deleted = false;`;
 
   updateVendorRisk.organizationId = organizationId;
   updateVendorRisk.id = id;
@@ -306,41 +340,104 @@ export const updateVendorRiskByIdQuery = async (
   return result[0];
 };
 
+/**
+ * Soft-deletes a vendor risk and records the deletion in its history, as
+ * `deletedBy` or, without one (an Advisor tool), as the system. Its custom
+ * field values, framework links and history stay, so a restore brings the
+ * risk back whole. Returns false when there is no active risk with this id.
+ */
 export const deleteVendorRiskByIdQuery = async (
   id: number,
   organizationId: number,
   transaction: Transaction,
+  deletedBy?: number,
 ): Promise<boolean> => {
-  await deleteAllCustomFieldValuesForEntityQuery("vendor_risk", id, organizationId, transaction);
-  const result = await sequelize.query(
-    `UPDATE vendorrisks SET is_deleted = true, deleted_at = NOW(), updated_at = NOW() WHERE organization_id = :organizationId AND id = :id AND is_deleted = false RETURNING *`,
+  // RETURNING rows, read as a SELECT: with QueryTypes.UPDATE the result is
+  // [rows, count], which is never empty, so a missing id read as deleted.
+  const rows = await sequelize.query(
+    `UPDATE vendorrisks SET is_deleted = true, deleted_at = NOW(), updated_at = NOW() WHERE organization_id = :organizationId AND id = :id AND is_deleted = false RETURNING id`,
     {
       replacements: { organizationId, id },
-      mapToModel: true,
-      model: VendorRiskModel,
-      type: QueryTypes.UPDATE,
+      type: QueryTypes.SELECT,
       transaction,
     },
   );
-  return result.length > 0;
+  if (rows.length === 0) return false;
+  await recordEntityDeletion(
+    "vendor_risk",
+    id,
+    deletedBy ?? null,
+    organizationId,
+    transaction,
+    deletedBy === undefined,
+  );
+  return true;
 };
 
+/**
+ * Restores a soft-deleted vendor risk and records it in its history. Returns
+ * the restored row, or null when there is no deleted risk with this id.
+ */
+export const restoreVendorRiskByIdQuery = async (
+  id: number,
+  organizationId: number,
+  transaction: Transaction,
+  restoredBy: number,
+): Promise<IVendorRisk | null> => {
+  const rows = await sequelize.query<IVendorRisk>(
+    `UPDATE vendorrisks SET is_deleted = false, deleted_at = NULL, updated_at = NOW()
+      WHERE organization_id = :organizationId AND id = :id AND is_deleted = true
+      RETURNING *`,
+    {
+      replacements: { organizationId, id },
+      type: QueryTypes.SELECT,
+      transaction,
+    },
+  );
+  if (rows.length === 0) return null;
+  await recordEntityRestoration("vendor_risk", id, restoredBy, organizationId, transaction);
+  return rows[0];
+};
+
+/**
+ * Hard-deletes every risk of a vendor (the vendor itself is being deleted),
+ * with their custom field values; framework and risk links cascade. Risks
+ * still active get a "deleted" history entry; soft-deleted ones already have
+ * one. Returns the ids deleted.
+ */
 export const deleteVendorRisksForVendorQuery = async (
   vendorId: number,
   organizationId: number,
   transaction: Transaction,
-): Promise<boolean> => {
-  const result = await sequelize.query(
-    `DELETE FROM vendorrisks WHERE organization_id = :organizationId AND vendor_id = :vendor_id RETURNING id`,
+  deletedBy?: number,
+): Promise<number[]> => {
+  const rows = await sequelize.query<{ id: number; is_deleted: boolean }>(
+    `DELETE FROM vendorrisks WHERE organization_id = :organizationId AND vendor_id = :vendor_id RETURNING id, is_deleted`,
     {
       replacements: { organizationId, vendor_id: vendorId },
-      mapToModel: true,
-      model: VendorRiskModel,
-      type: QueryTypes.UPDATE,
+      type: QueryTypes.SELECT,
       transaction,
     },
   );
-  return result.length > 0;
+  const ids = rows.map((row) => Number(row.id));
+  if (ids.length === 0) return ids;
+  await sequelize.query(
+    `DELETE FROM custom_field_values
+      WHERE organization_id = :organizationId AND entity_type = 'vendor_risk' AND entity_id IN (:ids)`,
+    { replacements: { organizationId, ids }, transaction },
+  );
+  const activeIds = rows.filter((row) => !row.is_deleted).map((row) => Number(row.id));
+  if (activeIds.length > 0) {
+    await recordEntityDeletionBulk(
+      "vendor_risk",
+      activeIds,
+      deletedBy ?? null,
+      organizationId,
+      transaction,
+      deletedBy === undefined,
+    );
+  }
+  return ids;
 };
 
 export const getAllVendorRisksAllProjectsQuery = async (

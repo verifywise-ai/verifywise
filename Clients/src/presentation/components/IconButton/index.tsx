@@ -376,6 +376,11 @@ function IconButton({
       return items;
     }
 
+    // A deleted vendor risk: open it read-only, and restore it where allowed.
+    if (normalizedType === "risk" && isArchived) {
+      return onRestore ? ["view", "restore"] : ["view"];
+    }
+
     // Read-only roles keep the entry that opens the (view-only) record.
     if (normalizedType === "model risk" && canDelete === false) {
       return ["edit"];
@@ -437,6 +442,9 @@ function IconButton({
     const LABELS_BY_TYPE: Record<string, Record<string, string>> = {
       incident: {
         archive: "Archive incident",
+      },
+      risk: {
+        restore: "Restore risk",
       },
       task: {
         archive: "Archive task",

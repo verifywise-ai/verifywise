@@ -33,6 +33,7 @@ import { useCustomFieldDefinitions } from "../../../../application/hooks/useCust
 import useFormattedDate from "../../../../application/hooks/useFormattedDate";
 import { formatCustomFieldValue } from "../../CustomFieldsSection/formatCustomFieldValue";
 import { palette } from "../../../themes/palette";
+import { riskLevelRank } from "../../../../application/utils/riskLevel";
 
 const titleOfTableColumns: StandardColumn[] = [
   { id: "risk_description", label: "risk description", sortable: true },
@@ -73,14 +74,6 @@ const getLikelihoodValue = (likelihood: string): number => {
   return 0;
 };
 
-const getRiskLevelValue = (riskLevel: string): number => {
-  const r = riskLevel.toLowerCase();
-  if (r.includes("high") || r.includes("critical")) return 3;
-  if (r.includes("medium") || r.includes("moderate")) return 2;
-  if (r.includes("low") || r.includes("minor")) return 1;
-  return 0;
-};
-
 function riskSortComparator(a: EnrichedRisk, b: EnrichedRisk, key: string): number {
   switch (key) {
     case "risk_description":
@@ -100,7 +93,7 @@ function riskSortComparator(a: EnrichedRisk, b: EnrichedRisk, key: string): numb
     case "likelihood":
       return getLikelihoodValue(a.likelihood) - getLikelihoodValue(b.likelihood);
     case "risk_level":
-      return getRiskLevelValue(a.risk_level) - getRiskLevelValue(b.risk_level);
+      return riskLevelRank(a.risk_level) - riskLevelRank(b.risk_level);
     case "inherited_by":
       return a.inherited_by - b.inherited_by;
     default:
@@ -119,6 +112,7 @@ const RiskTable: React.FC<IRiskTableProps> = ({
   visibleColumns,
   exposure,
   onOpenLinks,
+  onRestore,
 }) => {
   const formatDate = useFormattedDate();
   const theme = useTheme();
@@ -484,8 +478,11 @@ const RiskTable: React.FC<IRiskTableProps> = ({
                         onEdit={() => onEdit(row.risk_id!)}
                         onMouseEvent={() => {}}
                         warningTitle="Delete this risk?"
-                        warningMessage="This action is non-recoverable."
+                        warningMessage="It moves to the deleted risks, where it can be restored."
                         type="Risk"
+                        isArchived={row.is_deleted}
+                        onView={() => onEdit(row.risk_id!)}
+                        onRestore={onRestore ? () => onRestore(row.risk_id!) : undefined}
                       />
                     )}
                   </Stack>
@@ -511,6 +508,7 @@ const RiskTable: React.FC<IRiskTableProps> = ({
       isVisible,
       exposure,
       onOpenLinks,
+      onRestore,
       t,
       formatDate,
     ],

@@ -28,7 +28,10 @@ import { useCanCheck } from "../../../application/hooks/useCan";
 import SearchBox from "../../components/Search/SearchBox";
 import { useVendors, useDeleteVendor } from "../../../application/hooks/useVendors";
 import { useProjects } from "../../../application/hooks/useProjects";
-import { useDeleteVendorRisk } from "../../../application/hooks/useVendorRiskMutations";
+import {
+  useDeleteVendorRisk,
+  useRestoreVendorRisk,
+} from "../../../application/hooks/useVendorRiskMutations";
 import { getVendorById } from "../../../application/repository/vendor.repository";
 import { getVendorRiskById } from "../../../application/repository/vendorRisk.repository";
 import { PageHeaderExtended } from "../../components/Layout/PageHeaderExtended";
@@ -51,6 +54,7 @@ import VendorRiskInsights from "./VendorRiskInsights";
 import { matchesHeatCell } from "./VendorRiskInsights/HeatMapSection";
 import ListStateWrapper from "../../components/ListStateWrapper";
 import { chartTheme } from "../../themes/chartTheme";
+import { vendorRiskLevelLabel } from "../../../application/utils/riskLevel";
 
 // Constants
 const REDIRECT_DELAY_MS = 2000;
@@ -401,11 +405,11 @@ const Vendors = () => {
         label: "Risk level",
         type: "select" as const,
         options: [
-          { value: "Very High", label: "Very high" },
+          { value: "Very high", label: "Very high" },
           { value: "High", label: "High" },
           { value: "Medium", label: "Medium" },
           { value: "Low", label: "Low" },
-          { value: "Very Low", label: "Very low" },
+          { value: "No risk", label: "No risk" },
         ],
       },
       {
@@ -430,7 +434,9 @@ const Vendors = () => {
       case "risk_severity":
         return item.risk_severity;
       case "risk_level":
-        return item.risk_level;
+        // The card label ("Medium"), not the stored "Medium risk", so the
+        // filter's values match.
+        return vendorRiskLevelLabel(item.risk_level);
       case "action_owner":
         return item.action_owner?.toString();
       default:
@@ -484,7 +490,7 @@ const Vendors = () => {
       setSelectedRiskLevel(riskLevel);
       setAlert({
         variant: "info",
-        title: `Filtering by ${riskLevel} risks`,
+        title: `Filtering by risk level: ${riskLevel}`,
         body: "The table now shows only vendor risks with this risk level. Click the card again to see all risks.",
       });
     } else {
@@ -497,6 +503,7 @@ const Vendors = () => {
   // Mutation hooks
   const deleteVendorMutation = useDeleteVendor();
   const deleteVendorRiskMutation = useDeleteVendorRisk();
+  const restoreVendorRiskMutation = useRestoreVendorRisk();
 
   const [alert, setAlert] = useState<{
     variant: "success" | "info" | "warning" | "error";
@@ -744,6 +751,24 @@ const Vendors = () => {
     }
   };
 
+  // Restore a deleted risk, from its row menu or its read-only modal.
+  const handleRestoreRisk = async (riskId: number) => {
+    setIsSubmitting(true);
+    try {
+      await restoreVendorRiskMutation.mutateAsync(riskId);
+      setIsRiskModalOpen(false);
+      setSelectedRisk(null);
+      setAlert({ variant: "success", body: "Risk restored." });
+      await refreshVendorRisks();
+    } catch (error) {
+      logEngine({ type: "error", message: `Failed to restore risk: ${error}` });
+      setAlert({ variant: "error", body: "Could not restore the risk. Please try again." });
+    } finally {
+      setIsSubmitting(false);
+      setTimeout(() => setAlert(null), 3000);
+    }
+  };
+
   const handleEditRisk = async (
     riskId: number | undefined,
     tab: "details" | "linked-risks" = "details",
@@ -827,24 +852,9 @@ const Vendors = () => {
 
     // Apply card filter for risk level (using same matching logic as summary)
     if (selectedRiskLevel) {
-      const levelLower = selectedRiskLevel.toLowerCase();
-      filtered = filtered.filter((risk) => {
-        const riskLevel = (risk.risk_level || "").toLowerCase();
-        switch (levelLower) {
-          case "very high":
-            return riskLevel.includes("very high");
-          case "high":
-            return riskLevel.includes("high") && !riskLevel.includes("very high");
-          case "medium":
-            return riskLevel.includes("medium");
-          case "low":
-            return riskLevel.includes("low") && !riskLevel.includes("very low");
-          case "very low":
-            return riskLevel.includes("very low");
-          default:
-            return true;
-        }
-      });
+      filtered = filtered.filter(
+        (risk) => vendorRiskLevelLabel(risk.risk_level) === selectedRiskLevel,
+      );
     }
 
     // Then the heat map cell, if one is selected
@@ -1021,8 +1031,8 @@ const Vendors = () => {
                   color: chartTheme.riskSummary.low,
                 },
                 {
-                  key: "Very low",
-                  label: "Very low",
+                  key: "No risk",
+                  label: "No risk",
                   count: vendorRisksSummary.veryLowRisks,
                   color: chartTheme.riskSummary.veryLow,
                 },
@@ -1249,6 +1259,7 @@ const Vendors = () => {
                 visibleColumns={vendorRiskVisibleColumns}
                 exposure={exposureById}
                 onOpenLinks={(id) => handleEditRisk(id, "linked-risks")}
+                onRestore={isDeletingAllowed ? handleRestoreRisk : undefined}
               />
             </Stack>
           )}
@@ -1274,6 +1285,7 @@ const Vendors = () => {
         existingRisk={selectedRisk}
         vendors={vendors}
         initialTab={riskModalTab}
+        onRestore={isDeletingAllowed ? handleRestoreRisk : undefined}
       />
       {isSubmitting && <CustomizableToast title="Processing your request. Please wait..." />}
 

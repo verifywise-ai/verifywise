@@ -64,6 +64,8 @@ interface AddNewRiskProps {
   vendors: VendorModel[];
   /** The tab an existing risk opens on, e.g. "linked-risks" from the table's reach link. */
   initialTab?: "details" | "linked-risks";
+  /** Restores a deleted risk; its footer offers Restore instead of Save. */
+  onRestore?: (riskId: number) => Promise<void>;
 }
 
 const initialState: VendorRiskModalFormValues = {
@@ -107,9 +109,18 @@ const AddNewRisk: React.FC<AddNewRiskProps> = ({
   onSuccess = () => {},
   vendors,
   initialTab,
+  onRestore,
 }) => {
   const can = useCanCheck();
-  const isEditingDisabled = !can("vendor.edit");
+  const canEdit = can("vendor.edit");
+  // A deleted risk opens read-only; restoring it is the only change.
+  const isDeleted = Boolean(existingRisk?.is_deleted);
+  const isEditingDisabled = !canEdit || isDeleted;
+  const restore =
+    isDeleted && canEdit && onRestore && existingRisk?.id
+      ? // The page shows the progress toast and the outcome.
+        () => onRestore(existingRisk.id!)
+      : undefined;
   const VENDOR_OPTIONS =
     vendors?.length > 0
       ? vendors
@@ -647,16 +658,27 @@ const AddNewRisk: React.FC<AddNewRiskProps> = ({
           setActiveTab("details");
           setIsOpen();
         }}
-        title={existingRisk ? "Edit risk" : "Add a new vendor risk"}
+        title={isDeleted ? "Deleted risk" : existingRisk ? "Edit risk" : "Add a new vendor risk"}
         description={
-          existingRisk
-            ? "Update risk details including description, impact assessment, and mitigation plan."
-            : "Document and assess a potential risk associated with your vendor. Provide details of the risk, its impact, and your mitigation plan."
+          isDeleted
+            ? "This risk was deleted. Restore it to edit it again."
+            : existingRisk
+              ? "Update risk details including description, impact assessment, and mitigation plan."
+              : "Document and assess a potential risk associated with your vendor. Provide details of the risk, its impact, and your mitigation plan."
         }
         // Neither tab edits the risk: links save on their own, and activity is read-only.
-        onSubmit={activeTab === "activity" || activeTab === "linked-risks" ? undefined : handleSave}
-        submitButtonText="Save"
-        isSubmitting={isSubmitting || isEditingDisabled || customFieldsGate.blocked}
+        onSubmit={
+          isDeleted
+            ? restore
+            : activeTab === "activity" || activeTab === "linked-risks"
+              ? undefined
+              : handleSave
+        }
+        submitButtonText={isDeleted ? "Restore" : "Save"}
+        hideSubmitButton={isDeleted && !restore}
+        isSubmitting={
+          isDeleted ? isSubmitting : isSubmitting || isEditingDisabled || customFieldsGate.blocked
+        }
         maxWidth="1000px"
       >
         <TabContext value={activeTab}>
@@ -668,7 +690,16 @@ const AddNewRisk: React.FC<AddNewRiskProps> = ({
                       { label: "Risk details", value: "details", icon: "ShieldAlert" },
                       { label: "Custom fields", value: "custom-fields", icon: "Settings" },
                       { label: "Activity", value: "activity", icon: "History" },
-                      { label: "Linked risks", value: "linked-risks", icon: "Network" },
+                      // A deleted risk takes no part in links until it is restored.
+                      ...(isDeleted
+                        ? []
+                        : [
+                            {
+                              label: "Linked risks",
+                              value: "linked-risks",
+                              icon: "Network" as const,
+                            },
+                          ]),
                     ]
                   : [
                       { label: "Risk details", value: "details", icon: "ShieldAlert" },
@@ -686,6 +717,7 @@ const AddNewRisk: React.FC<AddNewRiskProps> = ({
               entityType="vendor_risk"
               entityId={existingRisk?.id ?? null}
               onPendingChange={customFieldsGate.onPendingChange}
+              disabled={isEditingDisabled}
             />
           </Box>
           {activeTab === "activity" && existingRisk?.id && (

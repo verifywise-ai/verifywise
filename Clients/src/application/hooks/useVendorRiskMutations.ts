@@ -4,6 +4,7 @@ import {
   updateVendorRisk,
   deleteVendorRisk,
   getVendorRiskById,
+  restoreVendorRisk,
 } from "../repository/vendorRisk.repository";
 import { vendorRiskQueryKeys } from "./useVendorRisks";
 
@@ -51,6 +52,18 @@ export const useDeleteVendorRisk = () => {
     onSuccess: () => {
       // Invalidate and refetch vendor risks
       queryClient.invalidateQueries({ queryKey: vendorRiskQueryKeys.lists() });
+    },
+  });
+};
+
+// Restore a deleted vendor risk; lists and the risk itself refetch.
+export const useRestoreVendorRisk = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (id: number) => restoreVendorRisk({ id }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: vendorRiskQueryKeys.all });
     },
   });
 };
