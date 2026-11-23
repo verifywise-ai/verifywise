@@ -4,6 +4,10 @@ jest.mock("../../services/incidentManagement.service", () => ({
   ...(jest.requireActual("../../services/incidentManagement.service") as object),
   setIncidentArchived: jest.fn(),
   deleteIncident: jest.fn(),
+  updateIncident: jest.fn(),
+}));
+jest.mock("../../utils/rolePermissions.utils", () => ({
+  requestHasPermission: jest.fn(async () => true),
 }));
 jest.mock("../../utils/logger/fileLogger", () => ({
   __esModule: true,
@@ -11,11 +15,23 @@ jest.mock("../../utils/logger/fileLogger", () => ({
   logStructured: jest.fn(),
 }));
 
-import { archiveIncidentById, deleteIncidentById } from "../incident-management.ctrl";
-import { deleteIncident, setIncidentArchived } from "../../services/incidentManagement.service";
+import {
+  archiveIncidentById,
+  deleteIncidentById,
+  updateIncidentById,
+} from "../incident-management.ctrl";
+import {
+  deleteIncident,
+  IncidentArchivedError,
+  IncidentUpdateValidationError,
+  setIncidentArchived,
+  updateIncident,
+} from "../../services/incidentManagement.service";
+import { ConflictException } from "../../domain.layer/exceptions/custom.exception";
 
 const mockArchive = setIncidentArchived as unknown as jest.Mock<(...a: any[]) => any>;
 const mockDelete = deleteIncident as unknown as jest.Mock<(...a: any[]) => any>;
+const mockUpdate = updateIncident as unknown as jest.Mock<(...a: any[]) => any>;
 
 const t = (key: string) => `T:${key}`;
 const makeReq = (id: string, body?: unknown) =>
@@ -30,33 +46,17 @@ const makeRes = () => {
 describe("archiveIncidentById", () => {
   beforeEach(() => jest.clearAllMocks());
 
-  it.each([
-    [undefined, true],
-    [{}, true],
-    [{ archived: true }, true],
-    [{ archived: false }, false],
-  ])("body %j sets archived to %s through the shared update path", async (body, archived) => {
-    mockArchive.mockResolvedValue({ toSafeJSON: () => ({ id: 3, archived }) });
-    const res = makeRes();
-
-    await archiveIncidentById(makeReq("3", body), res);
-
-    expect(mockArchive).toHaveBeenCalledWith(7, 3, archived, 5);
-    expect(res.status).toHaveBeenCalledWith(200);
-    expect(res.json.mock.calls[0][0]).toEqual(
-      expect.objectContaining({ data: { id: 3, archived } }),
-    );
-  });
-
-  it.each([{ archived: "false" }, { archived: 0 }, { archived: null }])(
-    "refuses a non-boolean archived (%j) with 400",
+  it.each([[undefined], [{}], [{ archived: false }]])(
+    "archives through the shared update path whatever the body (%j)",
     async (body) => {
+      mockArchive.mockResolvedValue({ toSafeJSON: () => ({ id: 3, archived: true }) });
       const res = makeRes();
 
       await archiveIncidentById(makeReq("3", body), res);
 
-      expect(res.status).toHaveBeenCalledWith(400);
-      expect(mockArchive).not.toHaveBeenCalled();
+      // The route stays archive-only; restore is PATCH /:id with { archived: false }.
+      expect(mockArchive).toHaveBeenCalledWith(7, 3, true, 5);
+      expect(res.status).toHaveBeenCalledWith(200);
     },
   );
 
@@ -64,9 +64,34 @@ describe("archiveIncidentById", () => {
     mockArchive.mockResolvedValue(null);
     const res = makeRes();
 
-    await archiveIncidentById(makeReq("3", { archived: false }), res);
+    await archiveIncidentById(makeReq("3"), res);
 
     expect(res.status).toHaveBeenCalledWith(404);
+  });
+
+  it("answers 400 for a validation error from the write path", async () => {
+    mockArchive.mockRejectedValue(
+      new IncidentUpdateValidationError([
+        { field: "project_id", message: "bad", code: "INVALID_REFERENCE" },
+      ]),
+    );
+    const res = makeRes();
+
+    await archiveIncidentById(makeReq("3"), res);
+
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json.mock.calls[0][0].data.errors[0]).toEqual(
+      expect.objectContaining({ field: "project_id", code: "INVALID_REFERENCE" }),
+    );
+  });
+
+  it("answers 409 for a conflict", async () => {
+    mockArchive.mockRejectedValue(new ConflictException("changed", "incident", "updated_at"));
+    const res = makeRes();
+
+    await archiveIncidentById(makeReq("3"), res);
+
+    expect(res.status).toHaveBeenCalledWith(409);
   });
 
   it("answers 400 for a malformed id", async () => {
@@ -74,6 +99,25 @@ describe("archiveIncidentById", () => {
     await archiveIncidentById(makeReq("abc"), res);
     expect(res.status).toHaveBeenCalledWith(400);
     expect(mockArchive).not.toHaveBeenCalled();
+  });
+});
+
+describe("updateIncidentById on an archived incident", () => {
+  beforeEach(() => jest.clearAllMocks());
+
+  it("answers 409 with the restore message", async () => {
+    mockUpdate.mockRejectedValue(new IncidentArchivedError(["status"]));
+    const res = makeRes();
+
+    await updateIncidentById(makeReq("3", { status: "Closed" }), res);
+
+    expect(res.status).toHaveBeenCalledWith(409);
+    expect(res.json.mock.calls[0][0].data).toEqual(
+      expect.objectContaining({
+        message: "T:Restore this incident before editing it.",
+        code: "INCIDENT_ARCHIVED",
+      }),
+    );
   });
 });
 

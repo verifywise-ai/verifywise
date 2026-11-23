@@ -288,7 +288,7 @@ export const incidentManagementContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'To see archived incidents, change the view above the table from "Active only" to "Archived only" or "Active + archived". Archived incidents are marked "Archived" and open read-only. To bring one back, choose Restore incident in its row menu. Archiving and restoring need the same permission as editing, and both are recorded in the incident\'s change history.',
+      text: 'To see archived incidents, change the view above the table from "Active only" to "Archived only" or "Active + archived". Archived incidents are marked "Archived" and open read-only: restore one before changing it. To bring one back, choose Restore incident in its row menu. Archiving and restoring need the same permission as editing, and both are recorded in the incident\'s change history.',
     },
     {
       type: 'article-links',

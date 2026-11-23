@@ -1331,7 +1331,7 @@ export const aiIncidentEndpoints: Endpoint[] = [
     method: 'PATCH',
     path: '/ai-incident-managements/{id}',
     summary: "Update Incident By Id",
-    description: "Needs incident.edit or incident.approve, then per field: changing approval_status or approval_notes needs incident.approve, changing any other field (archived included) needs incident.edit. A field sent with its stored value is not a change. approved_by and approval_date are set by the server and ignored in the request: when approval_status changes to Approved or Rejected, approved_by is the caller's name and approval_date is now; when it changes to Pending or Not required, both are cleared. Changed fields follow the create rules (enums, lengths, dates; harm categories an update adds must be listed values, stored ones outside the list may stay); a required field cannot be set to null or an empty string, and the dates the incident ends up with must keep date_detected on or after occurred_date. Fields left out are not changed.",
+    description: "Needs incident.edit or incident.approve, then per field: changing approval_status or approval_notes needs incident.approve, changing any other field (archived included) needs incident.edit. A field sent with its stored value is not a change. An archived incident takes only { \"archived\": false } (restore); any other change answers 409 (\"Restore this incident before editing it.\") and nothing is written. approved_by and approval_date are set by the server and ignored in the request: when approval_status changes to Approved or Rejected, approved_by is the caller's name and approval_date is now; when it changes to Pending or Not required, both are cleared. Changed fields follow the create rules (enums, lengths, dates; harm categories an update adds must be listed values, stored ones outside the list may stay); a required field cannot be set to null or an empty string, and the dates the incident ends up with must keep date_detected on or after occurred_date. Fields left out are not changed.",
     requiresAuth: true,
     parameters: [
       { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
@@ -1342,7 +1342,7 @@ export const aiIncidentEndpoints: Endpoint[] = [
       { status: 401, description: "Unauthorized" },
       { status: 403, description: "The role holds neither incident.edit nor incident.approve, or the request changes a field that needs the key it lacks (\"Your role does not allow editing this incident's details.\" / \"Your role does not allow approving or rejecting incidents.\"). Nothing is written." },
       { status: 404, description: "Incident not found" },
-      { status: 409, description: "The incident changed since expected_updated_at" },
+      { status: 409, description: "The incident changed since expected_updated_at, or the incident is archived and the request changes more than archived (code INCIDENT_ARCHIVED)" },
       { status: 500, description: "Internal server error" },
     ],
     tag: "Incidents",
@@ -1370,17 +1370,14 @@ export const aiIncidentEndpoints: Endpoint[] = [
     method: 'PATCH',
     path: '/ai-incident-managements/{id}/archive',
     summary: "Archive Incident By Id",
-    description: "Archives the incident, or restores it with { \"archived\": false }. Both go through the incident update path: the row is locked, the change is recorded in change history (\"Archived\") and the incident_updated automation is sent after commit. Archiving an archived incident (or restoring an active one) changes nothing.",
+    description: "Archives the incident through the incident update path: the row is locked, the change is recorded in change history (\"Archived\") and the incident_updated automation is sent after commit. Archiving an archived incident changes nothing. The request body is ignored. To restore, send { \"archived\": false } to PATCH /ai-incident-managements/{id}.",
     requiresAuth: true,
     parameters: [
       { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
     ],
-    requestBody: {
-      "archived": "boolean (optional)",
-    },
     responses: [
       { status: 200, description: "The incident after the change" },
-      { status: 400, description: "The id is not a positive integer, or archived is present and not a boolean (\"archived must be true or false\")" },
+      { status: 400, description: "The id is not a positive integer" },
       { status: 401, description: "Unauthorized" },
       { status: 403, description: "The role does not hold incident.edit" },
       { status: 404, description: "Incident not found in the organization" },

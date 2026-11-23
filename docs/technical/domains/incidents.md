@@ -147,7 +147,7 @@ Mounted at `/api/ai-incident-managements`.
 | GET | `/:id` | Any member | Get incident by ID (404 when missing or in another organization) |
 | POST | `/` | `incident.create` (Admin, Editor) | Create incident |
 | PATCH | `/:id` | `incident.edit` or `incident.approve` (Admin, Editor, Reviewer), then per field (below) | Update incident, including approval |
-| PATCH | `/:id/archive` | `incident.edit` (Admin, Editor) | Archive incident; `{ "archived": false }` restores it (see [Archive, restore and delete](#archive-restore-and-delete)) |
+| PATCH | `/:id/archive` | `incident.edit` (Admin, Editor) | Archive incident (restore with `PATCH /:id` and `{ "archived": false }`, see [Archive, restore and delete](#archive-restore-and-delete)) |
 | DELETE | `/:id` | `incident.delete` (Admin) | Delete incident (404 when missing or in another organization) |
 
 Until 2026-11, edit, archive and delete needed only a login, so Auditors could change or delete incidents. Migration `20261122180000` grants `incident.edit` to custom roles that hold `incident.create` or `organization.admin`, and `incident.delete` to custom roles that hold `organization.admin`.
@@ -179,18 +179,29 @@ On the incidents page, the drawer enables the approval status and notes only wit
 
 ### Archive, restore and delete
 
-Archiving is reversible. `PATCH /:id/archive` takes an optional body
-`{ "archived": true | false }`: absent or `true` archives, `false` restores; any
-other value of `archived` answers 400 ("archived must be true or false"). The
-controller calls `setIncidentArchived` (`services/incidentManagement.service.ts`),
-which is `updateIncident(..., { archived }, userId, { access: { canEdit: true, canApprove: false } })`:
+Archiving is reversible. `PATCH /:id/archive` archives (its body is ignored,
+as before). The controller calls `setIncidentArchived`
+(`services/incidentManagement.service.ts`), which is
+`updateIncident(..., { archived: true }, userId, { access: { canEdit: true, canApprove: false } })`:
 the route already requires `incident.edit`, and `archived` is an incident
-detail. So archive and restore take the row lock, record an "Archived" change
-(No → Yes, or back) in `incident_change_history`, and send `incident_updated`
-after commit. Archiving an archived incident, or restoring an active one,
-changes nothing and records nothing. The answer is the incident (200), or 404
-when it is not in the organization. The Advisor's `agent_archive_incident`
-uses the same function.
+detail. Restoring is an ordinary update, `PATCH /:id` with
+`{ "archived": false }` (it needs `incident.edit`; the page's "Restore
+incident" sends exactly that). So archive and restore both take the row lock,
+record an "Archived" change (No → Yes, or back) in `incident_change_history`,
+and send `incident_updated` after commit. Archiving an archived incident
+changes nothing and records nothing. The archive route answers the incident
+(200), 404 when it is not in the organization, 400 for a validation error from
+the write path and 409 for a conflict. The Advisor's `agent_archive_incident`
+uses `setIncidentArchived` too; there is no Advisor restore tool.
+
+An archived incident is read-only until restored: `updateIncident` refuses a
+change to any field other than `archived` (`IncidentArchivedError`; REST
+answers 409, code `INCIDENT_ARCHIVED`, "Restore this incident before editing
+it.", nothing written). A request that restores and changes another field in
+the same call is refused the same way. The page opens archived incidents
+read-only, including from a `?incidentId=` link. The Jira status sync never
+writes to archived incidents: `listSyncableLinks` leaves them out and
+`stillAsRead` re-checks `archived` under the incident lock before each write.
 
 Archived incidents are left out of:
 
@@ -218,7 +229,8 @@ transaction:
    Jira status sync.
 2. When nothing was deleted (missing, or another organization's), it returns
    null: nothing is written, no automation is sent. The route answers 404 and
-   the Advisor tool `{ deleted: false, incident_id, message }`.
+   the Advisor tool `{ success: false, message: "Incident #<id> not found." }`,
+   like its other refusals.
 3. Otherwise a deletion entry is recorded with `recordEntityDeletion`
    (`field_name` "Incident", "Active" → "Deleted", action `deleted`), as the
    user or as the system for an Advisor execution without one.
@@ -421,10 +433,13 @@ incidents status sync (`changedBySystem: true`, see
    [Editing versus approving](#editing-versus-approving)): 403 when a changed
    field needs a key the caller lacks.
 4. Validates against the locked row: `validateCompleteIncidentUpdate` and
-   `validateIncidentReferences` (FKs must belong to the organization; unchanged
-   FKs come from the row; `''`, null and undefined mean "no reference" and are
-   not looked up; anything that is not a positive integer is invalid and never
-   reaches SQL). Field validation errors are thrown before the reference
+   `validateIncidentReferences` (FKs must belong to the organization). Only the
+   references the update changes are checked (`changedReferences`): one left
+   out or sent back with its stored value is not looked up, so a reference that
+   has since become invalid (an owner who left the organization) never blocks
+   other edits, archive or restore. `''`, null and undefined mean "no
+   reference" and are not looked up; anything that is not a positive integer
+   is invalid and never reaches SQL. Field validation errors are thrown before the reference
    lookups run. Failures throw `IncidentUpdateValidationError`; the
    controller keeps its 400 body (`message: "Incident update validation failed"`,
    `errors: [{ field, message, code }]`). A reference deleted after this check
@@ -543,10 +558,12 @@ All incident modifications are tracked:
 - A view select: "Active only" (the default), "Active + archived" or "Archived
   only" (`incidentsForArchiveView`). Archived rows carry an "Archived" chip,
   open read-only, and their row menu offers View and, with `incident.edit`,
-  "Restore incident" (`PATCH /:id/archive` with `{ archived: false }`). The
+  "Restore incident" (`PATCH /:id` with `{ archived: false }`). The
   archive confirmation says archived incidents leave the default list,
   dashboard, search and reports and can be restored from the "Archived only"
-  view. The status cards count active incidents only.
+  view. The status cards count the incidents of the chosen view, the set a
+  card click filters. "No archived incidents." shows only when there are none;
+  when filters or search hide the archived ones, the usual empty state shows.
 - Incident list with filtering
 - Filter by: incident_id, ai_project, type, severity, status, approval_status
 - Search functionality
@@ -758,8 +775,10 @@ still be removed.
 ## Reports
 
 The reports' incident management section (`collectIncidentManagement` in
-`Servers/services/reporting/dataCollector.ts`, organization and use case
-reports) leaves archived incidents out and counts them in
+`Servers/services/reporting/dataCollector.ts`) lists the organization's
+incidents, or for a use case report the incidents linked to the use case by
+`project_id` (until 2026-11 it compared the free-text `ai_project` with the
+use case id, so that section was normally empty). It leaves archived incidents out and counts them in
 `archivedIncidents`. When it is above 0 the PDF (`report-pdf.ejs`) and Word
 (`docxGenerator.ts`) reports add a line under the table, "N archived
 incidents are not included." (`archivedIncidentsNote` in
@@ -945,10 +964,6 @@ Known issues outside this change, recorded so they are not lost:
   controllers). For those, a user id from another organization written into a
   tracked field would be shown with that user's name. Fix: pass
   `{ organizationId, transaction }` from each caller.
-- **Use case reports match incidents on `ai_project` (pre-existing).**
-  `collectIncidentManagement` compares `ai_project` (free text) with the
-  project id, so a use case report's incident section is normally empty. Fix:
-  match on `project_id`.
 - **TIMESTAMP WITHOUT TIME ZONE dates shift on non-UTC servers
   (pre-existing).** pg parses these columns (oid 1114) as server-local time
   and the API serialises them with `toISOString()`, so `occurred_date`,

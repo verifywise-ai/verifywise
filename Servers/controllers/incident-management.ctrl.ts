@@ -21,9 +21,11 @@ import {
   setIncidentArchived,
   updateIncident,
   IncidentAccessDeniedError,
+  IncidentArchivedError,
   IncidentCreateValidationError,
   IncidentUpdateValidationError,
   INCIDENT_APPROVE_DENIED_MESSAGE,
+  INCIDENT_ARCHIVED_MESSAGE,
   INCIDENT_CHANGED_MESSAGE,
   INCIDENT_EDIT_DENIED_MESSAGE,
   type IncidentWriteAccess,
@@ -76,6 +78,14 @@ const validationExceptionResponse = (req: Request, error: ValidationException, m
         code: (error.metadata.validationCode as string | undefined) ?? error.code,
       },
     ],
+  });
+
+/** 409 body for a change to an archived incident other than restoring it. */
+const archivedIncidentResponse = (req: Request) =>
+  STATUS_CODE[409]({
+    status: "error",
+    message: req.t!(INCIDENT_ARCHIVED_MESSAGE),
+    code: "INCIDENT_ARCHIVED",
   });
 
 /** The caller's incident write access, from the request's role (built-in or custom). */
@@ -345,6 +355,9 @@ export async function updateIncidentById(req: Request, res: Response) {
           ),
         );
     }
+    if (error instanceof IncidentArchivedError) {
+      return res.status(409).json(archivedIncidentResponse(req));
+    }
     if (error instanceof IncidentUpdateValidationError) {
       const errorDetails = error.errors.map((err: ValidationError) => ({
         field: err.field,
@@ -459,38 +472,18 @@ export async function deleteIncidentById(req: Request, res: Response) {
   }
 }
 
-/** Message for an archive request whose `archived` is not a boolean. */
-export const INCIDENT_ARCHIVED_FLAG_MESSAGE = "archived must be true or false";
-
 /**
- * Archive (body `{}` or `{ archived: true }`) or restore
- * (`{ archived: false }`) an incident (incident.edit). Both go through the
- * shared update path: row lock, change history ("Archived") and the
- * `incident_updated` automation after commit. Returns the incident.
+ * Archive incident by ID (incident.edit). Goes through the shared update path
+ * (setIncidentArchived): row lock, change history ("Archived") and the
+ * `incident_updated` automation after commit. Restoring is an ordinary update
+ * (`PATCH /:id` with `{ archived: false }`). Returns the incident.
  */
 export async function archiveIncidentById(req: Request, res: Response) {
   const { incidentId, response } = invalidIncidentIdResponse(req, res, "archiveIncidentById");
   if (response) return response;
 
-  const requested = (req.body ?? {}).archived;
-  if (requested !== undefined && typeof requested !== "boolean") {
-    return res.status(400).json(
-      STATUS_CODE[400]({
-        status: "error",
-        message: req.t!(INCIDENT_ARCHIVED_FLAG_MESSAGE),
-        code: "INVALID_PARAMETER",
-      }),
-    );
-  }
-  const archived = requested ?? true;
-
   try {
-    const incident = await setIncidentArchived(
-      req.organizationId!,
-      incidentId!,
-      archived,
-      req.userId,
-    );
+    const incident = await setIncidentArchived(req.organizationId!, incidentId!, true, req.userId);
     if (!incident) {
       logStructured(
         "successful",
@@ -503,12 +496,34 @@ export async function archiveIncidentById(req: Request, res: Response) {
 
     logStructured(
       "successful",
-      archived ? "incident archived" : "incident restored",
+      "incident archived",
       "archiveIncidentById",
       "incidentManagement.controller.ts",
     );
     return res.status(200).json(STATUS_CODE[200](incident.toSafeJSON()));
   } catch (error) {
+    if (error instanceof IncidentUpdateValidationError) {
+      return res.status(400).json(
+        STATUS_CODE[400]({
+          status: "error",
+          message: "Incident update validation failed",
+          errors: error.errors.map((err: ValidationError) => ({
+            field: err.field,
+            message: translateError(req, err),
+            code: err.code,
+          })),
+        }),
+      );
+    }
+    if (error instanceof ConflictException) {
+      return res.status(409).json(
+        STATUS_CODE[409]({
+          status: "error",
+          message: req.t!(INCIDENT_CHANGED_MESSAGE),
+          code: "CONFLICT",
+        }),
+      );
+    }
     logStructured(
       "error",
       "failed to archive incident",

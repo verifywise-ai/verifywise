@@ -326,6 +326,8 @@ export interface IncidentTableProps {
   onRestore?: (id: string) => void;
   /** The page's archive view, for the empty state: "archived" lists only archived incidents. */
   archiveView?: "active" | "all" | "archived";
+  /** Whether the organization has any archived incident (before filters and search). */
+  hasArchivedIncidents?: boolean;
   /** False hides edit, archive and restore in the row menu (no incident.edit). */
   canEdit?: boolean;
   /**

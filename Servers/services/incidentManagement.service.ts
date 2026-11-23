@@ -124,6 +124,43 @@ export class IncidentAccessDeniedError extends Error {
   }
 }
 
+/** Message for a change to an archived incident other than restoring it. */
+export const INCIDENT_ARCHIVED_MESSAGE = "Restore this incident before editing it.";
+
+/**
+ * Thrown when an update changes an archived incident's fields other than
+ * `archived` (restoring it). The controller answers 409 with
+ * INCIDENT_ARCHIVED_MESSAGE; nothing is written.
+ */
+export class IncidentArchivedError extends Error {
+  constructor(public readonly fields: string[]) {
+    super(INCIDENT_ARCHIVED_MESSAGE);
+    this.name = "IncidentArchivedError";
+  }
+}
+
+/**
+ * The reference columns (use case, model, owner) an update changes against
+ * the stored row: only those are checked against the organization, so a
+ * reference that has since become invalid (an owner who left the
+ * organization) never blocks other edits, archive or restore.
+ */
+const changedReferences = (
+  stored: Record<string, unknown>,
+  updates: Record<string, unknown>,
+): Record<"model_inventory_id" | "project_id" | "assignee_id", unknown> => {
+  const changed = (column: "model_inventory_id" | "project_id" | "assignee_id") =>
+    updates[column] !== undefined &&
+    String(updates[column] ?? "").trim() !== String(stored[column] ?? "")
+      ? updates[column]
+      : undefined;
+  return {
+    model_inventory_id: changed("model_inventory_id"),
+    project_id: changed("project_id"),
+    assignee_id: changed("assignee_id"),
+  };
+};
+
 export interface UpdateIncidentOptions {
   /**
    * What the caller may change (see IncidentWriteAccess). Required unless
@@ -243,25 +280,21 @@ export async function updateIncident(
       throw new IncidentAccessDeniedError("approve", needs.approve);
     }
 
+    // An archived incident is read-only until restored: the only change it
+    // takes is `archived` itself (restore, possibly with nothing else).
+    if (stored.archived) {
+      const blocked = [...needs.edit, ...needs.approve].filter((column) => column !== "archived");
+      if (blocked.length > 0) throw new IncidentArchivedError(blocked);
+    }
+
     // Field validation first: a malformed value never reaches the reference SQL.
     const validationErrors: ValidationError[] = validateCompleteIncidentUpdate(updates, stored);
     if (validationErrors.length > 0) throw new IncidentUpdateValidationError(validationErrors);
 
+    // Only references the update changes are checked; unchanged ones (and
+    // ones sent back with their stored value) are not looked up.
     const invalidRefs = await validateIncidentReferences(
-      {
-        model_inventory_id:
-          updates.model_inventory_id !== undefined
-            ? updates.model_inventory_id
-            : stored.model_inventory_id,
-        project_id: updates.project_id !== undefined ? updates.project_id : stored.project_id,
-        // Only a new owner is checked: one who has since left the organization
-        // stays on the incident and must not block every other edit.
-        assignee_id:
-          updates.assignee_id !== undefined &&
-          String(updates.assignee_id ?? "").trim() !== String(stored.assignee_id ?? "")
-            ? updates.assignee_id
-            : undefined,
-      },
+      changedReferences(stored, updates),
       organizationId,
       transaction,
     );
@@ -561,12 +594,24 @@ export async function deleteIncident(
   options: { changedBySystem?: boolean } = {},
 ): Promise<Record<string, unknown> | null> {
   const transaction = await sequelize.transaction();
+  // Set once the transaction is committed or rolled back, so the catch below
+  // never rolls back a finished one.
+  let finished = false;
+  const rollback = async () => {
+    if (finished) return;
+    finished = true;
+    try {
+      await transaction.rollback();
+    } catch (rollbackError) {
+      logger.error(`[incident] delete rollback failed: ${rollbackError}`);
+    }
+  };
   try {
     // No SELECT ... FOR UPDATE first: the delete takes the link before the
     // incident, the order the Jira status sync locks them in.
     const deleted = await deleteIncidentByIdQuery(incidentId, organizationId, transaction);
     if (!deleted) {
-      await transaction.rollback();
+      await rollback();
       return null;
     }
     if (userId || options.changedBySystem) {
@@ -580,9 +625,10 @@ export async function deleteIncident(
       );
     }
     await transaction.commit();
+    finished = true;
     return deleted;
   } catch (error) {
-    await transaction.rollback();
+    await rollback();
     throw error;
   }
 }

@@ -46,8 +46,10 @@ jest.mock("../workflows/triggers", () => ({
 import {
   createIncident,
   deleteIncident,
+  IncidentArchivedError,
   IncidentCreateValidationError,
   setIncidentArchived,
+  updateIncident,
 } from "../incidentManagement.service";
 import {
   createNewIncidentQuery,
@@ -323,5 +325,116 @@ describe("setIncidentArchived", () => {
   it("returns null for a missing incident", async () => {
     mockGet.mockResolvedValue(null);
     expect(await setIncidentArchived(4, 404, true, 9)).toBeNull();
+  });
+});
+
+describe("updateIncident on an archived incident", () => {
+  const EDIT = { access: { canEdit: true, canApprove: true } };
+
+  beforeEach(() => {
+    mockUpdate.mockImplementation(async (_id: number, changed: any) => ({ id: 42, ...changed }));
+    const incident = storedIncident();
+    incident.dataValues.archived = true;
+    mockGet.mockResolvedValue(incident);
+  });
+
+  it("refuses any change other than archived, writing nothing", async () => {
+    const error = await updateIncident(4, 42, { status: "Investigating" }, 9, EDIT).catch((e) => e);
+
+    expect(error).toBeInstanceOf(IncidentArchivedError);
+    expect(error.fields).toEqual(["status"]);
+    expect(mockUpdate).not.toHaveBeenCalled();
+    expect(mockTransaction.rollback).toHaveBeenCalled();
+  });
+
+  it("refuses a restore that also changes another field", async () => {
+    await expect(
+      updateIncident(4, 42, { archived: false, severity: "Minor" }, 9, EDIT),
+    ).rejects.toBeInstanceOf(IncidentArchivedError);
+    expect(mockUpdate).not.toHaveBeenCalled();
+  });
+
+  it("refuses an approval change too", async () => {
+    await expect(
+      updateIncident(4, 42, { approval_status: "Rejected" }, 9, EDIT),
+    ).rejects.toBeInstanceOf(IncidentArchivedError);
+  });
+
+  it("restores, and accepts fields sent back with their stored values", async () => {
+    const stored = (await mockGet()).dataValues;
+    await updateIncident(4, 42, { archived: false, status: stored.status }, 9, EDIT);
+
+    expect(mockUpdate.mock.calls[0][1]).toEqual({ archived: false });
+  });
+});
+
+describe("updateIncident reference checks", () => {
+  beforeEach(() => {
+    mockUpdate.mockImplementation(async (_id: number, changed: any) => ({ id: 42, ...changed }));
+    mockGet.mockResolvedValue(storedIncident());
+  });
+
+  it("looks up no reference the update leaves out or sends back unchanged", async () => {
+    // The stored owner has left the organization: the check would refuse them.
+    mockRefs.mockImplementation(async (refs: any) =>
+      refs.assignee_id !== undefined || refs.project_id !== undefined ? ["assignee_id"] : [],
+    );
+    const stored = (await mockGet()).dataValues;
+
+    await setIncidentArchived(4, 42, true, 9);
+    await updateIncident(
+      4,
+      42,
+      { status: "Investigating", project_id: stored.project_id, assignee_id: stored.assignee_id },
+      9,
+      { access: { canEdit: true, canApprove: false } },
+    );
+
+    for (const [refs] of mockRefs.mock.calls) {
+      expect(refs).toEqual({
+        model_inventory_id: undefined,
+        project_id: undefined,
+        assignee_id: undefined,
+      });
+    }
+    expect(mockUpdate).toHaveBeenCalledTimes(2);
+  });
+
+  it("checks a reference the update changes", async () => {
+    mockRefs.mockResolvedValue(["project_id"]);
+
+    await expect(
+      updateIncident(4, 42, { project_id: 999 }, 9, {
+        access: { canEdit: true, canApprove: false },
+      }),
+    ).rejects.toThrow("Incident update validation failed");
+    expect(mockRefs.mock.calls[0][0]).toEqual({
+      model_inventory_id: undefined,
+      project_id: 999,
+      assignee_id: undefined,
+    });
+  });
+});
+
+describe("deleteIncident rollback guard", () => {
+  it("does not roll back a committed transaction when something fails after commit", async () => {
+    mockDelete.mockResolvedValue({ id: 42 });
+    mockTransaction.commit.mockImplementationOnce(async () => {
+      throw new Error("commit acknowledged late");
+    });
+
+    await expect(deleteIncident(4, 42, 9)).rejects.toThrow("commit acknowledged late");
+    // A failed commit is not `finished`, so it is rolled back exactly once.
+    expect(mockTransaction.rollback).toHaveBeenCalledTimes(1);
+  });
+
+  it("rolls back once for a missing incident, even if rollback itself fails", async () => {
+    mockDelete.mockResolvedValue(null);
+    mockTransaction.rollback.mockImplementationOnce(async () => {
+      throw new Error("connection gone");
+    });
+
+    expect(await deleteIncident(4, 404, 9)).toBeNull();
+    expect(mockTransaction.rollback).toHaveBeenCalledTimes(1);
   });
 });

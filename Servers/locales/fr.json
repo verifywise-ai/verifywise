@@ -567,7 +567,7 @@
   "in {days} days": "dans {days} jours",
   "Incident deleted successfully": "Incident supprimé(e) avec succès",
   "Incident not found": "Incident introuvable",
-  "archived must be true or false": "archived doit valoir true ou false",
+  "Restore this incident before editing it.": "Restaurez cet incident avant de le modifier.",
   "Linked incidents must be a list of incident ids.": "Les incidents liés doivent être une liste d'identifiants d'incidents.",
   "Some linked incidents do not exist in your organization.": "Certains incidents liés n'existent pas dans votre organisation.",
   "Incorrect CAPTCHA answer": "Réponse CAPTCHA incorrecte",

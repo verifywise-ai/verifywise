@@ -68,6 +68,7 @@ const IncidentTable: React.FC<IncidentTableProps> = ({
   onArchive,
   onRestore,
   archiveView = "active",
+  hasArchivedIncidents = false,
   canEdit = true,
   canApprove = false,
   paginated = true,
@@ -360,7 +361,13 @@ const IncidentTable: React.FC<IncidentTableProps> = ({
     );
   }
 
-  if ((!sortedRows || sortedRows.length === 0) && archiveView === "archived") {
+  // "No archived incidents." only when there are none at all; with archived
+  // incidents that the filters or search hide, the usual empty state shows.
+  if (
+    (!sortedRows || sortedRows.length === 0) &&
+    archiveView === "archived" &&
+    !hasArchivedIncidents
+  ) {
     return (
       <TableEmptyStateLayout
         header={

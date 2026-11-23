@@ -123,7 +123,8 @@ describe("incident archive, restore, delete, links and search", () => {
         new Date(before.updated_at).getTime(),
       );
 
-      const restored = await api.patch(`${ROUTE}/${id}/archive`).send({ archived: false });
+      // Restore is the ordinary update; the archive route stays archive-only.
+      const restored = await api.patch(`${ROUTE}/${id}`).send({ archived: false });
       expect(restored.status).toBe(200);
       expect(restored.body.data.archived).toBe(false);
       expect((await incidentRow(id)).archived).toBe(false);
@@ -141,9 +142,9 @@ describe("incident archive, restore, delete, links and search", () => {
 
     it("archiving an archived incident changes and records nothing", async () => {
       const id = await createTestIncident(orgId, adminId);
-      await api.patch(`${ROUTE}/${id}/archive`).send({ archived: true });
+      await api.patch(`${ROUTE}/${id}/archive`).send({});
 
-      const again = await api.patch(`${ROUTE}/${id}/archive`).send({ archived: true });
+      const again = await api.patch(`${ROUTE}/${id}/archive`).send({});
 
       expect(again.status).toBe(200);
       expect(await historyOf(id)).toHaveLength(1);
@@ -165,7 +166,7 @@ describe("incident archive, restore, delete, links and search", () => {
       let settled = false;
       const request = api
         .patch(`${ROUTE}/${id}/archive`)
-        .send({ archived: true })
+        .send({})
         .then((res) => {
           settled = true;
           return res;
@@ -181,18 +182,77 @@ describe("incident archive, restore, delete, links and search", () => {
       expect(await historyOf(id)).toHaveLength(0);
     });
 
-    it("answers 400 for a non-boolean archived and 404 for a missing or foreign incident", async () => {
-      const id = await createTestIncident(orgId, adminId);
+    it("answers 404 for a missing or foreign incident", async () => {
       const otherOrg = await createTestOrganization(`Other ${unique()}`);
       const otherAdmin = await createTestUser(otherOrg, 1, `o-${unique()}@test.com`, "Pw1!x");
       const foreign = await createTestIncident(otherOrg, otherAdmin);
 
-      const bad = await api.patch(`${ROUTE}/${id}/archive`).send({ archived: "no" });
       const missing = await api.patch(`${ROUTE}/999999999/archive`).send({});
       const foreignRes = await api.patch(`${ROUTE}/${foreign}/archive`).send({});
 
-      expect([bad.status, missing.status, foreignRes.status]).toEqual([400, 404, 404]);
+      expect([missing.status, foreignRes.status]).toEqual([404, 404]);
       expect((await incidentRow(foreign)).archived).toBe(false);
+    });
+
+    it("the archive route ignores a body asking to restore", async () => {
+      const id = await createTestIncident(orgId, adminId);
+
+      const res = await api.patch(`${ROUTE}/${id}/archive`).send({ archived: false });
+
+      expect(res.status).toBe(200);
+      expect((await incidentRow(id)).archived).toBe(true);
+    });
+
+    it("archives and restores an incident whose owner has left the organization", async () => {
+      const ownerId = await createTestUser(orgId, 3, `owner-${unique()}@test.com`, "Pw1!x");
+      const id = await createTestIncident(orgId, adminId, { assignee_id: ownerId });
+      // The owner moves to another organization; this membership is removed
+      // directly, so the incident keeps the departed owner (a user must keep
+      // at least one membership).
+      const elsewhere = await createTestOrganization(`Elsewhere ${unique()}`);
+      await sequelize.query(
+        `INSERT INTO organization_members (organization_id, user_id, role_id)
+         VALUES (:elsewhere, :ownerId, 3)`,
+        { replacements: { elsewhere, ownerId } },
+      );
+      await sequelize.query(
+        `DELETE FROM organization_members WHERE organization_id = :orgId AND user_id = :ownerId`,
+        { replacements: { orgId, ownerId } },
+      );
+
+      const archived = await api.patch(`${ROUTE}/${id}/archive`).send({});
+      const restored = await api.patch(`${ROUTE}/${id}`).send({ archived: false });
+      const edited = await api.patch(`${ROUTE}/${id}`).send({ status: "Investigating" });
+
+      expect([archived.status, restored.status, edited.status]).toEqual([200, 200, 200]);
+      const row = await incidentRow(id);
+      expect(row.assignee_id).toBe(ownerId);
+      expect(row.status).toBe("Investigating");
+    });
+
+    it("refuses edits to an archived incident until it is restored", async () => {
+      const id = await createTestIncident(orgId, adminId);
+      await api.patch(`${ROUTE}/${id}/archive`).send({});
+
+      const edit = await api.patch(`${ROUTE}/${id}`).send({ status: "Closed" });
+      const restoreAndEdit = await api
+        .patch(`${ROUTE}/${id}`)
+        .send({ archived: false, status: "Closed" });
+
+      expect([edit.status, restoreAndEdit.status]).toEqual([409, 409]);
+      expect(edit.body.data).toEqual(
+        expect.objectContaining({
+          message: "Restore this incident before editing it.",
+          code: "INCIDENT_ARCHIVED",
+        }),
+      );
+      const row = await incidentRow(id);
+      expect([row.status, row.archived]).toEqual(["Open", true]);
+
+      const restore = await api.patch(`${ROUTE}/${id}`).send({ archived: false });
+      const editAfter = await api.patch(`${ROUTE}/${id}`).send({ status: "Closed" });
+      expect([restore.status, editAfter.status]).toEqual([200, 200]);
+      expect((await incidentRow(id)).status).toBe("Closed");
     });
   });
 
@@ -252,7 +312,7 @@ describe("incident archive, restore, delete, links and search", () => {
       expect(mockEnqueue).not.toHaveBeenCalled();
     });
 
-    it("the Advisor reports deleted: false for a missing incident and sends nothing", async () => {
+    it("the Advisor refuses a missing incident and sends nothing", async () => {
       await activateAutomation(orgId, "incident_deleted");
 
       const result = await writeToolExecutors.get("agent_delete_incident")!(
@@ -260,7 +320,7 @@ describe("incident archive, restore, delete, links and search", () => {
         orgId,
       );
 
-      expect(result).toEqual(expect.objectContaining({ deleted: false }));
+      expect(result).toEqual({ success: false, message: "Incident #999999999 not found." });
       await new Promise((resolve) => setImmediate(resolve));
       expect(mockEnqueue).not.toHaveBeenCalled();
     });

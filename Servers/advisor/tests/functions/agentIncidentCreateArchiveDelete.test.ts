@@ -141,11 +141,11 @@ describe("agent_delete_incident", () => {
     expect(result).toEqual({ deleted: true, incident_id: 42, ai_project: "Chatbot" });
   });
 
-  it("reports deleted: false for a missing incident", async () => {
+  it("refuses a missing incident like the other refusals", async () => {
     mockDelete.mockResolvedValue(null);
 
     const result = await run("agent_delete_incident", { incident_id: 404, _userId: 9 });
 
-    expect(result).toEqual(expect.objectContaining({ deleted: false, incident_id: 404 }));
+    expect(result).toEqual({ success: false, message: "Incident #404 not found." });
   });
 });

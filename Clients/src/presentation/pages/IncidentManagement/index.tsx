@@ -537,10 +537,13 @@ const IncidentManagement: React.FC = () => {
 
   // Roles with neither incident.edit nor incident.approve open the incident
   // read-only; the drawer then enables only the fields the role may change.
+  // An archived incident always opens read-only (the server refuses edits to
+  // it until it is restored), including from a ?incidentId= link.
   const handleEditIncident = async (id: string, mode: string) => {
     setSelectedIncidentId(id);
     setModalMode(canEditIncidents || canApproveIncidents || !permissionsSettled ? mode : "view");
     const data = await fetchIncidentDataForSelectedId(id);
+    if (data?.archived) setModalMode("view");
     if (data) setIsNewIncidentModalOpen(true);
   };
 
@@ -567,10 +570,16 @@ const IncidentManagement: React.FC = () => {
         ),
       );
 
-      await archiveIncidentById({
-        routeUrl: `/ai-incident-managements/${id}`,
-        body: { archived },
-      });
+      // Archive has its own route; restoring is an ordinary update of
+      // `archived` (PATCH /:id), which needs incident.edit as archiving does.
+      if (archived) {
+        await archiveIncidentById({ routeUrl: `/ai-incident-managements/${id}`, body: {} });
+      } else {
+        await updateEntityById({
+          routeUrl: `/ai-incident-managements/${id}`,
+          body: { archived: false },
+        });
+      }
 
       // Re-fetch to ensure consistent state
       await fetchIncidentsData(false);
@@ -774,6 +783,7 @@ const IncidentManagement: React.FC = () => {
         }
         summaryCards={
           /* TODO: Refactor to always show cards (like Model Inventory) to prevent layout shift and beacon positioning issues */
+          // Counted from the chosen view, the same set a card click filters.
           incidentsData.length > 0 ? (
             <StatusTileCards
               items={[
@@ -781,48 +791,46 @@ const IncidentManagement: React.FC = () => {
                   key: IncidentManagementStatus.OPEN,
                   label: "Open",
                   color: chartTheme.incidentStatus.open,
-                  count: incidentsData.filter(
-                    (i) => i.status === IncidentManagementStatus.OPEN && !i.archived,
-                  ).length,
+                  count: viewIncidents.filter((i) => i.status === IncidentManagementStatus.OPEN)
+                    .length,
                 },
                 {
                   key: IncidentManagementStatus.INVESTIGATED,
                   label: "Investigating",
                   color: chartTheme.incidentStatus.investigating,
-                  count: incidentsData.filter(
-                    (i) => i.status === IncidentManagementStatus.INVESTIGATED && !i.archived,
+                  count: viewIncidents.filter(
+                    (i) => i.status === IncidentManagementStatus.INVESTIGATED,
                   ).length,
                 },
                 {
                   key: IncidentManagementStatus.MITIGATED,
                   label: "Mitigated",
                   color: chartTheme.incidentStatus.mitigated,
-                  count: incidentsData.filter(
-                    (i) => i.status === IncidentManagementStatus.MITIGATED && !i.archived,
+                  count: viewIncidents.filter(
+                    (i) => i.status === IncidentManagementStatus.MITIGATED,
                   ).length,
                 },
                 {
                   key: IncidentManagementStatus.CLOSED,
                   label: "Closed",
                   color: chartTheme.incidentStatus.closed,
-                  count: incidentsData.filter(
-                    (i) => i.status === IncidentManagementStatus.CLOSED && !i.archived,
-                  ).length,
+                  count: viewIncidents.filter((i) => i.status === IncidentManagementStatus.CLOSED)
+                    .length,
                 },
                 {
                   key: IncidentManagementStatus.SUSPENDED,
                   label: "Suspended",
                   color: chartTheme.incidentStatus.suspended,
-                  count: incidentsData.filter(
-                    (i) => i.status === IncidentManagementStatus.SUSPENDED && !i.archived,
+                  count: viewIncidents.filter(
+                    (i) => i.status === IncidentManagementStatus.SUSPENDED,
                   ).length,
                 },
                 {
                   key: IncidentManagementStatus.EMERGENCY_ACTION,
                   label: "Emergency action",
                   color: chartTheme.incidentStatus.emergency,
-                  count: incidentsData.filter(
-                    (i) => i.status === IncidentManagementStatus.EMERGENCY_ACTION && !i.archived,
+                  count: viewIncidents.filter(
+                    (i) => i.status === IncidentManagementStatus.EMERGENCY_ACTION,
                   ).length,
                 },
               ]}
@@ -929,6 +937,7 @@ const IncidentManagement: React.FC = () => {
           onRestore={handleRestoreIncident}
           onView={handleViewIncident}
           archiveView={archiveView}
+          hasArchivedIncidents={incidentsData.some((i) => !!i.archived)}
           canEdit={canEditIncidents}
           canApprove={canApproveIncidents}
           archivedId={archiveId}

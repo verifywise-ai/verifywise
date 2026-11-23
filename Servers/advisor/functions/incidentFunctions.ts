@@ -656,12 +656,8 @@ const agentDeleteIncident = createWriteToolFn({
       changedBySystem: userId === null,
     });
     if (!deleted) {
-      // Nothing deleted, nothing sent.
-      return {
-        deleted: false,
-        incident_id: incidentId,
-        message: `Incident #${incidentId} not found.`,
-      };
+      // Nothing deleted, nothing sent: reported like the other refusals.
+      return { success: false, message: `Incident #${incidentId} not found.` };
     }
     return { deleted: true, incident_id: incidentId, ai_project: deleted.ai_project };
   },

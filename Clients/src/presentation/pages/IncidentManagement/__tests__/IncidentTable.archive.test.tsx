@@ -80,8 +80,14 @@ describe("IncidentTable — archived incidents", () => {
     expect(screen.queryByText(/cannot be undone/)).not.toBeInTheDocument();
   });
 
-  it("shows its own empty state in the archived view", () => {
+  it("shows its own empty state when there are no archived incidents", () => {
     renderWithProviders(<IncidentTable data={[]} archiveView="archived" />);
     expect(screen.getByText("No archived incidents.")).toBeInTheDocument();
+  });
+
+  it("shows the usual empty state when filters hide the archived incidents", () => {
+    renderWithProviders(<IncidentTable data={[]} archiveView="archived" hasArchivedIncidents />);
+    expect(screen.queryByText("No archived incidents.")).not.toBeInTheDocument();
+    expect(screen.getByText(/No incidents reported yet/)).toBeInTheDocument();
   });
 });

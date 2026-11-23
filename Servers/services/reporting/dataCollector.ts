@@ -1706,7 +1706,7 @@ export class ReportDataCollector {
   /**
    * Collect incident management section data
    * For organizational reports: all incidents
-   * For use case reports: incidents linked to project
+   * For use case reports: incidents linked to the use case (project_id)
    * Archived incidents are left out of both; `archivedIncidents` counts the
    * ones left out, so the report can say so.
    */
@@ -1721,10 +1721,10 @@ export class ReportDataCollector {
         scope = "aim.organization_id = :organizationId";
         replacements = { organizationId: this.organizationId };
       } else {
-        // Get only project-linked incidents for use case reports.
-        // ai_project is a varchar column, so bind the project id as text.
-        scope = "aim.organization_id = :organizationId AND aim.ai_project = :projectId";
-        replacements = { organizationId: this.organizationId, projectId: String(this.projectId) };
+        // Use case reports: the incidents linked to the use case by
+        // project_id (ai_project is free text, not the use case's id).
+        scope = "aim.organization_id = :organizationId AND aim.project_id = :projectId";
+        replacements = { organizationId: this.organizationId, projectId: Number(this.projectId) };
       }
 
       const incidents = (await sequelize.query(

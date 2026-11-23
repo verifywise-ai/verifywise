@@ -3,6 +3,8 @@ import { renderWithProviders } from "../../../../test/renderWithProviders";
 
 const captured = vi.hoisted(() => ({
   tableProps: null as any,
+  tiles: null as any,
+  drawerProps: null as any,
   role: "Admin",
 }));
 
@@ -59,17 +61,27 @@ vi.mock("../IncidentTable", () => ({
 }));
 vi.mock("../../../components/Modals/NewIncident", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../../../components/Modals/NewIncident")>()),
-  default: () => null,
+  default: (props: any) => {
+    captured.drawerProps = props;
+    return null;
+  },
 }));
 vi.mock("../../../components/PageTour", () => ({ default: () => null }));
 vi.mock("../IncidentManagementSteps", () => ({ default: [] }));
-vi.mock("../../../components/Cards/StatusTileCards", () => ({ StatusTileCards: () => null }));
+vi.mock("../../../components/Cards/StatusTileCards", () => ({
+  StatusTileCards: (props: any) => {
+    captured.tiles = props.items;
+    return null;
+  },
+}));
 
 import IncidentManagement from "../index";
 import { incidentsForArchiveView } from "../archiveView";
 import {
   archiveIncidentById,
   getAllEntities,
+  getEntityById,
+  updateEntityById,
 } from "../../../../application/repository/entity.repository";
 import { AIIncidentManagementModel } from "../../../../domain/models/Common/incidentManagement/incidentManagement.model";
 
@@ -105,6 +117,7 @@ describe("IncidentManagement — archived view and restore", () => {
     captured.role = "Admin";
     vi.mocked(getAllEntities).mockResolvedValue({ data: INCIDENTS } as any);
     vi.mocked(archiveIncidentById).mockResolvedValue({ data: {} } as any);
+    vi.mocked(updateEntityById).mockResolvedValue({ data: {} } as any);
     vi.spyOn(console, "error").mockImplementation(() => {});
   });
 
@@ -129,15 +142,16 @@ describe("IncidentManagement — archived view and restore", () => {
     await waitFor(() => expect(listedIds()).toEqual(["INC-1", "INC-2", "INC-3"]));
   });
 
-  it("restores an incident with archived: false", async () => {
+  it("restores an incident with the ordinary update, archived: false", async () => {
     await renderPage();
 
     await captured.tableProps.onRestore("2");
 
-    expect(archiveIncidentById).toHaveBeenCalledWith({
+    expect(updateEntityById).toHaveBeenCalledWith({
       routeUrl: "/ai-incident-managements/2",
       body: { archived: false },
     });
+    expect(archiveIncidentById).not.toHaveBeenCalled();
     expect(await screen.findByText("Incident restored.")).toBeInTheDocument();
   });
 
@@ -148,13 +162,13 @@ describe("IncidentManagement — archived view and restore", () => {
 
     expect(archiveIncidentById).toHaveBeenCalledWith({
       routeUrl: "/ai-incident-managements/1",
-      body: { archived: true },
+      body: {},
     });
     expect(await screen.findByText("Incident archived successfully.")).toBeInTheDocument();
   });
 
   it("says so when a restore fails", async () => {
-    vi.mocked(archiveIncidentById).mockRejectedValue(new Error("boom"));
+    vi.mocked(updateEntityById).mockRejectedValue(new Error("boom"));
     await renderPage();
 
     await captured.tableProps.onRestore("2");
@@ -162,5 +176,33 @@ describe("IncidentManagement — archived view and restore", () => {
     expect(
       await screen.findByText("Could not restore the incident. Please try again."),
     ).toBeInTheDocument();
+  });
+
+  it("counts the status tiles from the chosen view", async () => {
+    await renderPage();
+    const count = (key: string) => captured.tiles.find((t: any) => t.key === key).count;
+    expect([count("Open"), count("Closed")]).toEqual([2, 0]);
+
+    await chooseView("Archived only");
+    await waitFor(() => expect(count("Closed")).toBe(1));
+    expect(count("Open")).toBe(0);
+  });
+
+  it("opens an archived incident read-only from an ?incidentId= link", async () => {
+    vi.mocked(getEntityById).mockResolvedValue({ data: INCIDENTS[1] } as any);
+
+    renderWithProviders(<IncidentManagement />, { route: "/incidents?incidentId=2" });
+
+    await waitFor(() => expect(captured.drawerProps?.isOpen).toBe(true));
+    expect(captured.drawerProps.mode).toBe("view");
+  });
+
+  it("opens an active incident editable from an ?incidentId= link", async () => {
+    vi.mocked(getEntityById).mockResolvedValue({ data: INCIDENTS[0] } as any);
+
+    renderWithProviders(<IncidentManagement />, { route: "/incidents?incidentId=1" });
+
+    await waitFor(() => expect(captured.drawerProps?.isOpen).toBe(true));
+    expect(captured.drawerProps.mode).toBe("edit");
   });
 });
