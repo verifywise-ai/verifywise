@@ -89,6 +89,7 @@ export const vendorManagementContent: ArticleContent = {
       items: [
         { bold: 'Vendor name', text: 'The official company or product name' },
         { bold: 'Use cases', text: 'The use cases this vendor serves. You can pick approved use cases' },
+        { bold: 'Other names (optional)', text: 'Other names the vendor is known by, separated by commas, for example "Facebook" for "Meta Platforms". A legal name written with a comma, such as "Acme Analytics, Inc.", counts as one name. The web research looks for sources that use them too' },
         { bold: 'Website', text: 'Vendor\'s official website URL' },
         { bold: 'Vendor contact person', text: 'Primary contact at the vendor' },
         { bold: 'Assignee', text: 'Person responsible for managing this vendor relationship' },
@@ -97,13 +98,30 @@ export const vendorManagementContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'These fields are required. Review status, reviewer, review date, review result and the scorecard are optional.',
+      text: 'All of these except other names are required. Review status, reviewer, review date, review result, the identifiers and the scorecard are optional.',
+    },
+    {
+      type: 'paragraph',
+      text: 'Under **Identifiers** you can also give, each optional, the numbers that official lists use for companies. They let the research tie a record of such a list to your vendor by a number rather than by its name alone:',
+    },
+    {
+      type: 'bullet-list',
+      items: [
+        { bold: 'Country', text: 'The two-letter code of the country the vendor is registered in, such as DE or GB. The form shows the name of the country. The research takes the vendor\'s market from it: for Germany, Austria, France, Italy, Spain, the Netherlands, Portugal and Brazil it also searches the news in the language of the country, and for the United States, the United Kingdom, Ireland and Australia it searches in English and names the country\'s regulator in the news about fines, whatever the website\'s domain or the legal form say' },
+        { bold: 'Registration number', text: 'The number in the company register, as the register writes it. A sanctions entry that carries it and the vendor\'s name is your vendor' },
+        { bold: 'LEI', text: 'The Legal Entity Identifier, 20 letters and digits. The form checks its check digits. A sanctions entry that carries it is your vendor' },
+        { bold: 'SEC CIK', text: 'The number of a company that files with the US Securities and Exchange Commission, up to 10 digits. The research asks the SEC about this company rather than one found by the vendor\'s name' },
+      ],
     },
     {
       type: 'image',
       src: '/images/user-guide/add-vendor.png',
       alt: 'Add new vendor modal with fields for vendor name, use cases, website, contact person, assignee, description, review status, reviewer, review date, and result',
       caption: 'Register new vendors with complete contact and review information.',
+    },
+    {
+      type: 'paragraph',
+      text: 'VerifyWise can also research a new vendor on the web for risks. To start research yourself, use the **Research risks** icon in the vendor\'s row. See [[Vendor risk assessment]](risk-management/vendor-risks) for how findings work.',
     },
     {
       type: 'heading',

@@ -9,6 +9,8 @@
     "test:ratelimit": "jest --config jest.config.js --testMatch=\"**/tests/integration/rate-limiting/**/*.test.ts\" --testPathIgnorePatterns=/helpers/ --testPathIgnorePatterns=limiter-wiring --runInBand --forceExit",
     "smoke:api-contract": "ts-node --transpile-only scripts/apiContractSmoke.ts",
     "generate:enum-manifest": "ts-node --transpile-only scripts/generateEnumManifest.ts",
+    "eval:vendor-research": "ts-node --transpile-only scripts/evalVendorResearch.ts",
+    "vrdb:bundle": "ts-node --transpile-only scripts/vrdbBundle.ts",
     "check:enum-drift": "npm run generate:enum-manifest && ts-node --transpile-only scripts/checkEnumLabelDrift.ts",
     "pretest:unit": "npm run build:tokens",
     "test": "npm run test:unit",
@@ -131,6 +133,7 @@
     "winston-daily-rotate-file": "^5.0.0",
     "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz",
     "xstate": "^5.33.4",
+    "yaml": "2.9.1",
     "yamljs": "^0.3.0",
     "zod": "^4.6.7"
   },

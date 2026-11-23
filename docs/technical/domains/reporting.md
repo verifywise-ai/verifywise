@@ -1060,13 +1060,13 @@ All endpoints are auth-protected and org-scoped.
 | PATCH | `/api/reporting/templates/:id` | Update a template (see [Template Write Path](#template-write-path)) |
 | DELETE | `/api/reporting/templates/:id` | Delete a template — soft (`is_active = false`), surfaced in the UI as **Delete** since nothing restores it (see [Templates Tab](#frontend-status)) |
 | POST | `/api/reporting/templates/:id/run` | Run a template once, ad hoc, with no schedule row (see [Run Now](#run-now-ad-hoc-template-runs)) |
-| GET | `/api/reporting/scheduled-reports` | List scheduled reports |
+| GET | `/api/reporting/scheduled-reports` | List scheduled reports the caller may read: Admins see all, others see organization-wide schedules and those of projects they own, are a member of or reach through a group (same rule as runs, `utils/reportVisibility.utils.ts`) |
 | POST | `/api/reporting/scheduled-reports` | Create a scheduled report (recipients are format-validated here) |
 | PATCH | `/api/reporting/scheduled-reports/:id` | Update a scheduled report (see [Updating a Schedule](#updating-a-schedule)) |
 | POST | `/api/reporting/scheduled-reports/:id/run-now` | Trigger an immediate run of an existing schedule |
-| POST | `/api/reporting/scheduled-reports/:id/pause` | Pause schedule |
+| POST | `/api/reporting/scheduled-reports/:id/pause` | Pause schedule (same scope gate as resume: `assertReportScopeAllowed` on the row's scope) |
 | POST | `/api/reporting/scheduled-reports/:id/resume` | Resume schedule |
-| DELETE | `/api/reporting/scheduled-reports/:id` | Soft-delete a scheduled report |
+| DELETE | `/api/reporting/scheduled-reports/:id` | Soft-delete a scheduled report (same scope gate as resume) |
 | GET | `/api/reporting/runs` | List report runs — **paginated**, returns `{rows, total, limit, offset}`, and filterable by `?archived=true\|false` (see [Run Listing is Paginated](#run-listing-is-paginated) and [Run Archiving](#run-archiving)) |
 | GET | `/api/reporting/runs/:id` | Get a run (org-scoped **and** membership-scoped — see [One Rule, Applied to Every Per-Run Endpoint](#one-rule-applied-to-every-per-run-endpoint)) |
 | GET | `/api/reporting/runs/:id/download` | Download a run's output (same gate, then org-scoped run and org-scoped file) |
@@ -1081,7 +1081,11 @@ All endpoints are auth-protected and org-scoped.
 
 **DELETE is a soft delete.** It sets `is_active = false`. `scheduled_reports.template_id` is a NOT NULL FK with no `ON DELETE` clause, so hard-deleting a referenced template fails at the database; archiving is the only safe removal.
 
-**Template versions are append-only.** A `PATCH` carrying any of `sections_config`, `ai_blocks_config`, `format_config`, `branding_config`, `schedule_defaults` or `delivery_defaults` inserts a **new** `report_template_versions` row at `MAX(version) + 1`. Metadata fields (name, description, and the like) update the `report_templates` row in place. Existing scheduled reports keep pointing at the version they were created against.
+**Template versions are append-only.** A `PATCH` carrying a non-null value for any of `sections_config`, `ai_blocks_config`, `framework_config`, `parameters_config` (v1 only), `format_config`, `branding_config`, `schedule_defaults` or `delivery_defaults` inserts a **new** `report_template_versions` row at `MAX(version) + 1`. Metadata fields (name, description, and the like) update the `report_templates` row in place. Existing scheduled reports keep pointing at the version they were created against.
+
+**A new version inherits what the PATCH leaves out.** `createTemplateVersionQuery` writes `COALESCE(sent, previous version, default)` for every config column, so a sections-only edit keeps the AI blocks, framework selection, report kind, format, branding and defaults. An explicit value, `{}` included, is stored as sent; a null is treated like a missing field, so a body whose config fields are all null is "no updatable fields supplied". A first version gets `{ sections: [] }` for sections and `{}` for the rest. The column list lives in `utils/reportTemplateVersionColumns.ts` and is shared by the INSERT, the controller's "append a version" check and `duplicateTemplate`. Before this, every column the body left out was reset to `{}`; the legacy PATCH gets the same fix, since it shares the controller.
+
+**A kind change must not strand sections.** A v1 `PATCH` that sends `parameters_config` without `sections_config` inherits the previous sections. When the new kind refuses one of them (for example an E-23 section after the kind is removed), the write is refused with 400 and the section named, instead of storing a version every run would refuse. Sending sections that fit the new kind in the same PATCH is accepted.
 
 **Slugs are derived server-side** from the template name. Uniqueness is enforced by `uq_report_templates_org_slug` on `(COALESCE(organization_id, 0), slug)`, which makes system templates share the org-0 namespace. A collision returns **409**.
 
@@ -1338,11 +1342,11 @@ It seeds whether or not any organization has added E-23; without the framework t
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | POST | `/api/v1/report-templates` | Create a custom template with its first version; accepts `parameters_config` (`reportTemplate.edit`) |
-| PATCH | `/api/v1/report-templates/:id` | Update a custom template's metadata and, when a config field is sent, append a version; accepts `parameters_config`. A version written without `parameters_config` or `framework_config` (missing or null) keeps the previous version's value; an explicit `{}` framework selection is stored and means every framework (`reportTemplate.edit`) |
+| PATCH | `/api/v1/report-templates/:id` | Update a custom template's metadata and, when a config field is sent, append a version; accepts `parameters_config`. A config field the body leaves out (missing or null) keeps the previous version's value, so a partial edit never resets the rest; an explicit value, `{}` included, is stored as sent (an empty `framework_config` means every framework); a body whose config fields are all null has nothing to write, and a kind change that would keep sections the new kind refuses is a 400 (`reportTemplate.edit`) |
 | POST | `/api/v1/report-templates/:id/duplicate` | Copy a system template or one of the organization's own into the caller's organization, with its metadata and the latest version's whole config (sections, AI blocks, framework selection, report kind, format, branding, schedule and delivery defaults). The server names it `"<name> (copy)"`, then `"(copy 2)"`, `"(copy 3)"`, ... past any slug the organization already holds, archived templates included (the slug index covers them); a slug taken by a concurrent copy is retried up to three times. 404 for a template the organization cannot see or an archived one (`reportTemplate.edit`) |
 | POST | `/api/v1/report-templates/:id/run` | Run a template now, with `reportParameters` for kinds that take them (`reportTemplate.edit`) |
 | GET | `/api/v1/report-templates/:id/last-parameters` | Answers from the organization's latest `success` or `partial_success` run of the template that the caller may see (the same two statuses the prior glance reads), for the wizard prefill. Period and `isFinal` are left out; the old `periodEnd` comes back separately so the next period starts the day after it (`reportTemplate.edit`) |
-| GET | `/api/v1/scheduled-reports/:id` | One schedule of the organization with its template version's `parameters_config`, which the legacy list lacks; the schedule edit dialog uses it to show and save the stored report details (`report_parameters`). Same read access as the legacy list: any signed-in member, no scope gate. 404 for a missing, other-organization or non-integer id |
+| GET | `/api/v1/scheduled-reports/:id` | One schedule of the organization with its template version's `parameters_config`, which the legacy list lacks; the schedule edit dialog uses it to show and save the stored report details (`report_parameters`). Same read rule as the list and as runs: Admins read any schedule, others organization-wide schedules and those of projects they own, are a member of or reach through a group. 404 for a missing, other-organization, unreadable or non-integer id |
 | GET | `/api/v1/report-runs/:id/download/fix-it-list` | Download the run's internal fix-it list. Same visibility gate and organization checks as the formal report download |
 | POST | `/api/v1/scheduled-reports` | Create a schedule; accepts `reportParameters` and the `quarterly` frequency (`scheduledReport.edit`) |
 | PATCH | `/api/v1/scheduled-reports/:id` | Update a schedule; accepts `reportParameters` and the `quarterly` frequency (`scheduledReport.edit`) |

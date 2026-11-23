@@ -199,7 +199,7 @@ describe("NewVendor (AddNewVendor)", () => {
     await userEvent.click(screen.getByRole("button", { name: "Save" }));
 
     await waitFor(() => expect(createMutateAsync).toHaveBeenCalledTimes(1));
-    expect(createMutateAsync.mock.calls[0][0]).toMatchObject({ review_date: "", projects: [1] });
+    expect(createMutateAsync.mock.calls[0][0]).toMatchObject({ review_date: null, projects: [1] });
   });
 
   it("sends a picked review date as that day at noon UTC", async () => {
@@ -234,7 +234,7 @@ describe("NewVendor (AddNewVendor)", () => {
     await waitFor(() => expect(updateMutateAsync).toHaveBeenCalledTimes(1));
     expect(updateMutateAsync.mock.calls[0][0]).toMatchObject({
       id: 9,
-      data: { review_date: "" },
+      data: { review_date: null },
     });
   });
 

@@ -27,6 +27,20 @@ import { useFormValidation } from "../../../../application/hooks/useFormValidati
 import dayjs, { Dayjs } from "dayjs";
 import { calendarDayAtNoonUtc } from "../../../../application/utils/calendarDay";
 import Alert from "../../Alert";
+import { checkOtherNames } from "../../../../application/validations/otherNamesValidation";
+import {
+  type IdentifierCheck,
+  checkCountry,
+  checkLei,
+  checkRegistrationNumber,
+  checkSecCik,
+} from "../../../../application/validations/vendorIdentifiersValidation";
+import { focusFormFieldById } from "../../../../application/utils/formValidationFocus";
+import {
+  VENDOR_MODAL_FIELD_IDS,
+  VENDOR_MODAL_FIELD_ORDER,
+  type VendorModalFormValues,
+} from "../../../constants/formValidationFieldMaps";
 import { checkStringValidation } from "../../../../application/validations/stringValidation";
 import { useProjects } from "../../../../application/hooks/useProjects";
 import useUsers from "../../../../application/hooks/useUsers";
@@ -59,8 +73,9 @@ import { useTranslation } from "../../../../application/hooks/useTranslation";
 import { fill } from "../../../../i18n/fill";
 import { LazyFallback } from "../../../../application/utils/lazyRoute";
 
-const initialState = {
+const initialState: VendorModalFormValues = {
   vendorName: "",
+  otherNames: "",
   website: "",
   projectIds: [] as number[],
   vendorProvides: "",
@@ -76,7 +91,18 @@ const initialState = {
   businessCriticality: "",
   pastIssues: "",
   regulatoryExposure: "",
+  // Identifiers
+  country: "",
+  registrationNumber: "",
+  lei: "",
+  secCik: "",
 };
+
+/** The validator of an identifier: the message of its check, empty when the value is accepted. */
+const identifierMessage =
+  (check: (text: string) => IdentifierCheck) =>
+  (value: unknown): string =>
+    check(typeof value === "string" ? value : "").message;
 
 const REVIEW_STATUS_OPTIONS = [
   { _id: "notStarted", name: "Not started" },
@@ -148,7 +174,7 @@ const AddNewVendor: React.FC<AddNewVendorProps> = ({
   onChange = () => {},
 }) => {
   const theme = useTheme();
-  const { t } = useTranslation();
+  const { t, lang } = useTranslation();
   const [values, setValues] = useState(initialState);
   const validators = useMemo(
     () => ({
@@ -158,6 +184,10 @@ const AddNewVendor: React.FC<AddNewVendorProps> = ({
       },
       website: (v: unknown) => {
         const r = checkStringValidation("Vendor website", v as string, 1, 64);
+        return r.accepted ? "" : r.message;
+      },
+      otherNames: (v: unknown) => {
+        const r = checkOtherNames((v as string) ?? "");
         return r.accepted ? "" : r.message;
       },
       reviewResult: (v: unknown) => {
@@ -190,11 +220,20 @@ const AddNewVendor: React.FC<AddNewVendorProps> = ({
         return r.accepted ? "" : r.message;
       },
       assignee: (v: unknown) => (v === null ? "Please select an assignee from the dropdown" : ""),
+      country: identifierMessage(checkCountry),
+      registrationNumber: identifierMessage(checkRegistrationNumber),
+      lei: identifierMessage(checkLei),
+      secCik: identifierMessage(checkSecCik),
     }),
     [],
   );
-  const { errors, validateAll, clearFieldError, resetErrors } =
-    useFormValidation<typeof initialState>(validators);
+  const { errors, validateAll, clearFieldError, getFirstInvalidField, resetErrors } =
+    useFormValidation<VendorModalFormValues>(validators);
+  // The name of the country in the person's language, once its code is one the server takes.
+  const countryName = useMemo(() => {
+    const code = checkCountry(values.country).value;
+    return code === null ? undefined : new Intl.DisplayNames([lang], { type: "region" }).of(code);
+  }, [lang, values.country]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [alert, setAlert] = useState<{
     variant: "success" | "info" | "warning" | "error";
@@ -272,6 +311,7 @@ const AddNewVendor: React.FC<AddNewVendorProps> = ({
       setValues((prevValues) => ({
         ...prevValues,
         vendorName: existingVendor.vendor_name,
+        otherNames: existingVendor.other_names ?? "",
         website: existingVendor.website,
         projectIds: existingVendor.projects || [],
         vendorProvides: existingVendor.vendor_provides,
@@ -279,7 +319,7 @@ const AddNewVendor: React.FC<AddNewVendorProps> = ({
         reviewStatus:
           REVIEW_STATUS_OPTIONS?.find((s) => s.name === existingVendor.review_status)?._id || "",
         reviewer: existingVendor.reviewer || null,
-        reviewResult: existingVendor.review_result,
+        reviewResult: existingVendor.review_result ?? "",
         assignee: existingVendor.assignee || null,
         reviewDate:
           existingVendor.review_date && dayjs(existingVendor.review_date).isValid()
@@ -289,6 +329,10 @@ const AddNewVendor: React.FC<AddNewVendorProps> = ({
         businessCriticality: existingVendor.business_criticality || "",
         pastIssues: existingVendor.past_issues || "",
         regulatoryExposure: existingVendor.regulatory_exposure || "",
+        country: existingVendor.country ?? "",
+        registrationNumber: existingVendor.registration_number ?? "",
+        lei: existingVendor.lei ?? "",
+        secCik: existingVendor.sec_cik ?? "",
       }));
       // Expand scorecard if any scorecard fields have values
       if (
@@ -316,9 +360,16 @@ const AddNewVendor: React.FC<AddNewVendorProps> = ({
     // bail here too in case the modal submits through some other path (Enter
     // key, programmatic trigger) while required custom fields are still empty.
     if (customFieldsGate.blocked) return;
-    if (validateAll(values)) {
+    if (validateAll(values, VENDOR_MODAL_FIELD_ORDER)) {
       handleOnSave();
+      return;
     }
+    // The first field to fix takes the focus, an identifier far down the form included.
+    setActiveTab("details");
+    const firstInvalid = getFirstInvalidField();
+    const fieldIds: Partial<Record<keyof VendorModalFormValues, string>> = VENDOR_MODAL_FIELD_IDS;
+    const fieldId = firstInvalid ? fieldIds[firstInvalid] : undefined;
+    if (fieldId) focusFormFieldById(fieldId);
   };
 
   /**
@@ -375,15 +426,24 @@ const AddNewVendor: React.FC<AddNewVendorProps> = ({
     const _vendorDetails = {
       projects: values.projectIds,
       vendor_name: values.vendorName,
+      // An empty text clears the names of a vendor that had some.
+      other_names: values.otherNames.trim(),
+      // Each identifier as the server stores it; an empty field sends null, which clears it.
+      country: checkCountry(values.country).value,
+      registration_number: checkRegistrationNumber(values.registrationNumber).value,
+      lei: checkLei(values.lei).value,
+      sec_cik: checkSecCik(values.secCik).value,
       assignee: values.assignee ?? undefined,
       vendor_provides: values.vendorProvides,
       website: formattedWebsite,
       vendor_contact_person: values.vendorContactPerson,
       review_result: values.reviewResult,
-      review_status: REVIEW_STATUS_OPTIONS?.find((s) => s._id === values.reviewStatus)?.name || "",
+      // No review status or date sends null, which stores none: the server takes no empty text.
+      review_status:
+        REVIEW_STATUS_OPTIONS?.find((s) => s._id === values.reviewStatus)?.name ?? null,
       reviewer: values.reviewer ?? undefined,
-      // '' when there is none: the server stores NULL, and an update clears it.
-      review_date: calendarDayAtNoonUtc(values.reviewDate),
+      // None picked sends null: the server stores NULL, and an update clears it.
+      review_date: calendarDayAtNoonUtc(values.reviewDate) || null,
       // Scorecard fields
       data_sensitivity: values.dataSensitivity || undefined,
       business_criticality: values.businessCriticality || undefined,
@@ -423,7 +483,8 @@ const AddNewVendor: React.FC<AddNewVendorProps> = ({
         }
 
         onSuccess();
-        // Saved: a second Save must not create the vendor again.
+        // Saved: a second Save must not create the vendor again, so the form starts afresh. A save
+        // that fails keeps what was typed.
         setValues(initialState);
         if (cfFlushFailed) {
           // The vendor is in the DB. Keep the modal open so the warning
@@ -493,6 +554,8 @@ const AddNewVendor: React.FC<AddNewVendorProps> = ({
           }
         }
         onSuccess();
+        // The vendor is saved, so the form starts afresh; a save that fails keeps what was typed.
+        setValues(initialState);
         if (cfFlushFailed) {
           // Keep modal open so the inline warning rendered by
           // CustomFieldsSection stays visible.
@@ -534,6 +597,7 @@ const AddNewVendor: React.FC<AddNewVendorProps> = ({
     <Stack spacing="12px">
       <Stack direction={"row"} spacing="12px">
         <Field // vendorName
+          id={VENDOR_MODAL_FIELD_IDS.vendorName}
           label="Vendor name"
           width={220}
           value={values?.vendorName}
@@ -598,8 +662,21 @@ const AddNewVendor: React.FC<AddNewVendorProps> = ({
           }}
         />
       </Stack>
+      <Field // otherNames
+        id={VENDOR_MODAL_FIELD_IDS.otherNames}
+        label="Other names"
+        width={686}
+        isOptional
+        value={values.otherNames}
+        onChange={(e) => handleOnChange("otherNames", e.target.value)}
+        error={errors.otherNames}
+        disabled={isEditingDisabled}
+        placeholder="e.g. Facebook, Instagram"
+        helperText="Other names this vendor is known by, separated by commas. The research looks for them too."
+      />
       <Stack direction={"row"} spacing="12px">
         <Field // website
+          id={VENDOR_MODAL_FIELD_IDS.website}
           label="Website"
           width={220}
           value={values.website}
@@ -610,6 +687,7 @@ const AddNewVendor: React.FC<AddNewVendorProps> = ({
           placeholder="Enter vendor website"
         />
         <Field // vendorContactPerson
+          id={VENDOR_MODAL_FIELD_IDS.vendorContactPerson}
           label="Vendor contact person"
           width={220}
           value={values.vendorContactPerson}
@@ -624,7 +702,7 @@ const AddNewVendor: React.FC<AddNewVendorProps> = ({
           label="Assignee"
           placeholder="Select person"
           isHidden={false}
-          id=""
+          id={VENDOR_MODAL_FIELD_IDS.assignee}
           onChange={(e) => handleOnChange("assignee", Number(e.target.value))}
           value={values.assignee !== null ? values.assignee : ""}
           sx={{
@@ -636,6 +714,7 @@ const AddNewVendor: React.FC<AddNewVendorProps> = ({
         />
       </Stack>
       <Field // vendorProvides
+        id={VENDOR_MODAL_FIELD_IDS.vendorProvides}
         label="What does the vendor provide?"
         width={686}
         type="description"
@@ -690,6 +769,7 @@ const AddNewVendor: React.FC<AddNewVendorProps> = ({
         </Stack>
       </Stack>
       <Field // reviewResult
+        id={VENDOR_MODAL_FIELD_IDS.reviewResult}
         label="Review result"
         width={686}
         type="description"
@@ -700,6 +780,70 @@ const AddNewVendor: React.FC<AddNewVendorProps> = ({
         placeholder="Summarize the outcome of the review (e.g., approved, rejected, pending more info, or risk concerns identified)."
         rows={2}
       />
+
+      {/* Identifiers (spec Q1): optional, each checked as the server checks it */}
+      <Stack
+        role="group"
+        aria-labelledby="vendor-form-identifiers"
+        spacing="8px"
+        sx={{ width: 686 }}
+      >
+        <Stack spacing="2px">
+          <Typography id="vendor-form-identifiers" variant="subtitle1" sx={{ fontWeight: 600 }}>
+            Identifiers
+          </Typography>
+          <Typography variant="body2" sx={{ color: theme.palette.text.secondary }}>
+            Turns a match by name into a match by identifier.
+          </Typography>
+        </Stack>
+        <Stack direction={"row"} spacing="12px">
+          <Field // country
+            id={VENDOR_MODAL_FIELD_IDS.country}
+            label="Country"
+            width={220}
+            isOptional
+            value={values.country}
+            onChange={(e) => handleOnChange("country", e.target.value)}
+            error={errors.country}
+            disabled={isEditingDisabled}
+            placeholder="e.g. DE"
+            helperText={countryName}
+          />
+          <Field // registrationNumber
+            id={VENDOR_MODAL_FIELD_IDS.registrationNumber}
+            label="Registration number"
+            width={220}
+            isOptional
+            value={values.registrationNumber}
+            onChange={(e) => handleOnChange("registrationNumber", e.target.value)}
+            error={errors.registrationNumber}
+            disabled={isEditingDisabled}
+            placeholder="As the company register writes it"
+          />
+          <Field // lei
+            id={VENDOR_MODAL_FIELD_IDS.lei}
+            label="LEI"
+            width={220}
+            isOptional
+            value={values.lei}
+            onChange={(e) => handleOnChange("lei", e.target.value)}
+            error={errors.lei}
+            disabled={isEditingDisabled}
+            placeholder="20 letters and digits"
+          />
+        </Stack>
+        <Field // secCik
+          id={VENDOR_MODAL_FIELD_IDS.secCik}
+          label="SEC CIK"
+          width={220}
+          isOptional
+          value={values.secCik}
+          onChange={(e) => handleOnChange("secCik", e.target.value)}
+          error={errors.secCik}
+          disabled={isEditingDisabled}
+          placeholder="Up to 10 digits"
+        />
+      </Stack>
 
       {/* Vendor Scorecard Section */}
       <Stack spacing="4px" sx={{ width: 686 }}>

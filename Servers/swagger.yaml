@@ -8039,6 +8039,12 @@ tags:
     name: 'v1: V1/Use Case Lifecycle'
   -
     name: 'v1: V1/Vendor Risks'
+  -
+    name: 'v1: Vendor Research'
+  -
+    name: 'v1: Vendor Risk Findings'
+  -
+    name: 'v1: Vendors'
 paths:
   /webhooks/github:
     post:
@@ -16658,6 +16664,7 @@ paths:
   /reporting/scheduled-reports:
     get:
       summary: 'List Scheduled Reports'
+      description: 'Scheduled reports of the caller''s organization. Admins see all; other roles see organization-wide schedules and those of projects they own, are a member of or reach through a group.'
       responses:
         '200':
           description: Success
@@ -29590,14 +29597,14 @@ paths:
   '/v1/scheduled-reports/{id}':
     get:
       summary: 'Get Scheduled Report'
-      description: 'One scheduled report of the caller''s organization, with its template version''s parameters_config.'
+      description: 'One scheduled report of the caller''s organization, with its template version''s parameters_config. Admins read any schedule; other roles read organization-wide schedules and those of projects they own, are a member of or reach through a group, and get 404 for the rest.'
       responses:
         '200':
           description: Success
         '401':
           description: Unauthorized
         '404':
-          description: 'Scheduled report not found in this organization'
+          description: 'Scheduled report not found in this organization, or not readable by the caller'
         '500':
           description: 'Internal server error'
       tags:
@@ -29699,7 +29706,7 @@ paths:
   '/v1/report-templates/{id}':
     patch:
       summary: 'Update Template'
-      description: "Updates a custom template's metadata and, when any config field is sent, appends a new version. A version written without parameters_config or framework_config (missing or null) keeps the previous version's value; an explicit {} framework_config is stored and means every framework. Unlike the frozen PATCH /reporting/templates/{id}, it accepts parameters_config. System templates and other organizations' templates answer 404.\n"
+      description: "Updates a custom template's metadata and, when any config field is sent, appends a new version. A config field the body leaves out (missing or null) keeps the previous version's value, so a partial edit never resets the rest; an explicit value, {} included, is stored as sent (an empty framework_config means every framework). A body whose config fields are all null has nothing to write (400), and a parameters_config change without sections_config is refused (400) when the new kind refuses one of the inherited sections. Unlike the frozen PATCH /reporting/templates/{id}, it accepts parameters_config. System templates and other organizations' templates answer 404.\n"
       parameters:
         -
           name: id
@@ -29791,6 +29798,173 @@ paths:
       tags:
         - 'v1: V1/Report Templates'
       operationId: duplicateTemplate
+      security:
+        -
+          bearerAuth: []
+  '/v1/vendors/{id}/research/latest':
+    get:
+      summary: 'Get Latest Vendor Research'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: Vendors'
+      operationId: getLatestVendorResearch
+      security:
+        -
+          bearerAuth: []
+  '/v1/vendors/{id}/research/runs/{runId}/trace':
+    get:
+      summary: 'Get Vendor Research Run Trace'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: Vendors'
+      operationId: getVendorResearchRunTrace
+      security:
+        -
+          bearerAuth: []
+  '/v1/vendors/{id}/research':
+    post:
+      summary: 'Start Vendor Research Run'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: Vendors'
+      operationId: startVendorResearchRun
+      security:
+        -
+          bearerAuth: []
+  /v1/vendors:
+    post:
+      summary: 'Create Vendor V1'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: Vendors'
+      operationId: createVendorV1
+      security:
+        -
+          bearerAuth: []
+  '/v1/vendors/{id}':
+    patch:
+      summary: 'Update Vendor By Id V1'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: Vendors'
+      operationId: updateVendorByIdV1
+      security:
+        -
+          bearerAuth: []
+  /v1/vendor-research/config:
+    get:
+      summary: 'Get Research Config'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: Vendor Research'
+      operationId: getResearchConfig
+      security:
+        -
+          bearerAuth: []
+  /v1/vendor-research/decision-stats:
+    get:
+      summary: 'Get Decision Stats'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: Vendor Research'
+      operationId: getDecisionStats
+      security:
+        -
+          bearerAuth: []
+  /v1/vendor-research/settings:
+    get:
+      summary: 'Get Research Settings'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: Vendor Research'
+      operationId: getResearchSettings
+      security:
+        -
+          bearerAuth: []
+    put:
+      summary: 'Save Research Settings'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: Vendor Research'
+      operationId: saveResearchSettings
+      security:
+        -
+          bearerAuth: []
+  /v1/vendor-risk-findings:
+    get:
+      summary: 'List Vendor Risk Findings'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: Vendor Risk Findings'
+      operationId: listVendorRiskFindings
+      security:
+        -
+          bearerAuth: []
+  '/v1/vendor-risk-findings/{id}/accept':
+    post:
+      summary: 'Accept Vendor Risk Finding'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: Vendor Risk Findings'
+      operationId: acceptVendorRiskFinding
+      security:
+        -
+          bearerAuth: []
+  '/v1/vendor-risk-findings/{id}/dismiss':
+    post:
+      summary: 'Dismiss Vendor Risk Finding'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: Vendor Risk Findings'
+      operationId: dismissVendorRiskFinding
       security:
         -
           bearerAuth: []

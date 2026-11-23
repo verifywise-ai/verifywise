@@ -1,0 +1,284 @@
+{
+  "format": 1,
+  "lists": [
+    {
+      "sourceId": "kev",
+      "file": "kev.json.gz",
+      "builtAt": "2026-11-23T15:17:18.347Z",
+      "records": 1790,
+      "connectorVersion": 2,
+      "sourceVersion": "2026.11.23",
+      "sha256": "83a9cb7989344075df46f42a7717e77c3464e089cf2472333e4242454befbfdf"
+    },
+    {
+      "sourceId": "ofac",
+      "file": "ofac.json.gz",
+      "builtAt": "2026-11-23T15:26:17.104Z",
+      "records": 10122,
+      "connectorVersion": 2,
+      "sourceVersion": null,
+      "sha256": "ee835fa1e023b93b4d1022f2d037465a9bdacb52222ab5653c699f45773bc9a2"
+    },
+    {
+      "sourceId": "uk_sanctions",
+      "file": "uk_sanctions.json.gz",
+      "builtAt": "2026-11-23T15:17:21.671Z",
+      "records": 1685,
+      "connectorVersion": 4,
+      "sourceVersion": "2026-11-23",
+      "sha256": "164463743921d972ad08861121eb19a8992b5b74e2e181e444b69ea914b55700"
+    },
+    {
+      "sourceId": "eu_fsf",
+      "file": "eu_fsf.json.gz",
+      "builtAt": "2026-11-23T15:26:58.708Z",
+      "records": 1797,
+      "connectorVersion": 5,
+      "sourceVersion": "2026-11-20T16:51:00.798+01:00",
+      "sha256": "a51c2a0654a88013e2f8bbe1223c610e069f262487bb1826c0bfbc82b7bc9d71"
+    },
+    {
+      "sourceId": "cve",
+      "file": "cve.json.gz",
+      "builtAt": "2026-11-23T15:38:40.861Z",
+      "records": 36067,
+      "connectorVersion": 3,
+      "sourceVersion": null,
+      "sha256": "8a35b920698904edff11606b23b0f1cc3f05373396308901d4e538eb6cf68780"
+    },
+    {
+      "sourceId": "csl",
+      "file": "csl.json.gz",
+      "builtAt": "2026-11-23T15:17:28.547Z",
+      "records": 5169,
+      "connectorVersion": 3,
+      "sourceVersion": "2026-11-20",
+      "sha256": "5e1e4bf1729879eac4f12496f8bca60b3460d4c8d33f34aefe02c31aa9036aba"
+    },
+    {
+      "sourceId": "atlas",
+      "file": "atlas.json.gz",
+      "builtAt": "2026-11-23T15:17:33.687Z",
+      "records": 77,
+      "connectorVersion": 3,
+      "sourceVersion": "2026.10",
+      "sha256": "834bdd510baab855f6cb896e2a1c33e62ccc59a55c5a220eef55b014c8a547e8"
+    },
+    {
+      "sourceId": "nhtsa_sgo",
+      "file": "nhtsa_sgo.json.gz",
+      "builtAt": "2026-11-23T15:17:34.660Z",
+      "records": 46,
+      "connectorVersion": 2,
+      "sourceVersion": "2026-10",
+      "sha256": "be33a98c079643daa30b24c0fbb76a54d8d566217575ec4f8b58cae0e0447c71"
+    },
+    {
+      "sourceId": "fda_ai_devices",
+      "file": "fda_ai_devices.json.gz",
+      "builtAt": "2026-11-23T15:17:35.600Z",
+      "records": 640,
+      "connectorVersion": 2,
+      "sourceVersion": "2026-09-04",
+      "sha256": "a05a15f6214838c7aba4b194b9af13cb5b20e2b0c1e67bf7be84a784e9a8aef7"
+    },
+    {
+      "sourceId": "fda_device_recalls",
+      "file": "fda_device_recalls.json.gz",
+      "builtAt": "2026-11-23T15:22:27.794Z",
+      "records": 155,
+      "connectorVersion": 3,
+      "sourceVersion": "2026-11-19",
+      "sha256": "b16296319a765adfc34eab4107331d7557b2308c09d2fccfa80b5f36ab27dafe"
+    },
+    {
+      "sourceId": "canada_sema",
+      "file": "canada_sema.json.gz",
+      "builtAt": "2026-11-23T15:27:22.974Z",
+      "records": 1497,
+      "connectorVersion": 1,
+      "sourceVersion": null,
+      "sha256": "670ee2def3016a281e0a8cdf1d50de9ca27af7489b26111983fa7a2ea38e7454"
+    },
+    {
+      "sourceId": "california_breaches",
+      "file": "california_breaches.json.gz",
+      "builtAt": "2026-11-23T15:27:26.679Z",
+      "records": 4398,
+      "connectorVersion": 1,
+      "sourceVersion": "2026-11-20",
+      "sha256": "f786401270bb2b42f08f6ab0b92e20e16c2e0cb629a2708522f176239da09277"
+    },
+    {
+      "sourceId": "uk_ofsi",
+      "file": "uk_ofsi.json.gz",
+      "builtAt": "2026-11-23T15:17:39.659Z",
+      "records": 19,
+      "connectorVersion": 11,
+      "sourceVersion": "2026-09-02",
+      "sha256": "7688904a1acc38816e8cee5b8eb77c81904e0ad8982e6d454763d4920ed3c151"
+    },
+    {
+      "sourceId": "charlotin",
+      "file": "charlotin.json.gz",
+      "builtAt": "2026-11-23T15:17:40.467Z",
+      "records": 84,
+      "connectorVersion": 2,
+      "sourceVersion": "2026-11-16",
+      "sha256": "32266f2230b0a84962467e763f1ee07f9f0ede2ab6d43b4ffbe8611920c9dbf1"
+    },
+    {
+      "sourceId": "ftc_penalties",
+      "file": "ftc_penalties.json.gz",
+      "builtAt": "2026-11-23T15:17:43.326Z",
+      "records": 293,
+      "connectorVersion": 1,
+      "sourceVersion": "2026-08-13",
+      "sha256": "94b4975548a193ab33a00a693c779c6a92faa8cafd6f7023c94b9903f294b5b5"
+    },
+    {
+      "sourceId": "piperoll",
+      "file": "piperoll.json.gz",
+      "builtAt": "2026-11-23T15:26:32.009Z",
+      "records": 36,
+      "connectorVersion": 2,
+      "sourceVersion": "2026-10-06",
+      "sha256": "e8bfa86149cd6ce4c78419c582a4ee6a22dac12936462a37c844c615651aa761"
+    },
+    {
+      "sourceId": "disclose_io",
+      "file": "disclose_io.json.gz",
+      "builtAt": "2026-11-23T15:17:50.159Z",
+      "records": 1843,
+      "connectorVersion": 1,
+      "sourceVersion": null,
+      "sha256": "fdc95b29cd9e422cd16e33637991ff586b338ebe9ed727065ad611e6fc328029"
+    },
+    {
+      "sourceId": "uk_cma",
+      "file": "uk_cma.json.gz",
+      "builtAt": "2026-11-23T15:17:50.983Z",
+      "records": 461,
+      "connectorVersion": 3,
+      "sourceVersion": null,
+      "sha256": "64b747450fa0142389404f267f543f4c633b15ebae14de374a954b8bd89b78d2"
+    },
+    {
+      "sourceId": "canada_ai_register",
+      "file": "canada_ai_register.json.gz",
+      "builtAt": "2026-11-23T15:27:47.698Z",
+      "records": 120,
+      "connectorVersion": 2,
+      "sourceVersion": "2026-04-28",
+      "sha256": "81c1c717a5094f95c544c686e3b9f99029e9b5d1bf6f4399a69c93dce05c540a"
+    },
+    {
+      "sourceId": "ftc_competition",
+      "file": "ftc_competition.json.gz",
+      "builtAt": "2026-11-23T15:17:54.883Z",
+      "records": 201,
+      "connectorVersion": 1,
+      "sourceVersion": "2026-06-30",
+      "sha256": "5fa20f8d95dc22a3e8068721859106c240c6e91a90ba9e8ffe13fe1944046d48"
+    },
+    {
+      "sourceId": "omb_ai_inventory",
+      "file": "omb_ai_inventory.json.gz",
+      "builtAt": "2026-11-23T15:17:55.380Z",
+      "records": 377,
+      "connectorVersion": 1,
+      "sourceVersion": "2025",
+      "sha256": "10c3e966e2c684ad8a5c5091eebecedd0509f4a49f040d883dc833057322cd72"
+    },
+    {
+      "sourceId": "co_sic_penalties",
+      "file": "co_sic_penalties.json.gz",
+      "builtAt": "2026-11-23T15:28:09.127Z",
+      "records": 2218,
+      "connectorVersion": 1,
+      "sourceVersion": "2026-07-30",
+      "sha256": "fab4c3345f5e954dba559db36c64b769f83c313ee6370a65565ae27479d3a255"
+    },
+    {
+      "sourceId": "uk_atrs",
+      "file": "uk_atrs.json.gz",
+      "builtAt": "2026-11-23T15:17:56.812Z",
+      "records": 119,
+      "connectorVersion": 10,
+      "sourceVersion": "2026-11-19",
+      "sha256": "83b95c774dc5feed2e80f872190987c7bd00851835cd82b5b7b7f61e4ebf7e7e"
+    },
+    {
+      "sourceId": "nhtsa_recalls",
+      "file": "nhtsa_recalls.json.gz",
+      "builtAt": "2026-11-23T15:17:58.683Z",
+      "records": 1619,
+      "connectorVersion": 1,
+      "sourceVersion": "2026-11-19",
+      "sha256": "475c74f03f30609e3f47ee373e7b77b51809eeb34efc0d904747fa1cfc5c5c89"
+    },
+    {
+      "sourceId": "fmti",
+      "file": "fmti.json.gz",
+      "builtAt": "2026-11-23T15:18:09.363Z",
+      "records": 11,
+      "connectorVersion": 1,
+      "sourceVersion": "Dec2025",
+      "sha256": "733957adaf9ac2f131fd5673a84b08305a7f19daca50710bfbf5c9d296e39cf0"
+    },
+    {
+      "sourceId": "uk_mhra",
+      "file": "uk_mhra.json.gz",
+      "builtAt": "2026-11-23T15:18:09.797Z",
+      "records": 2032,
+      "connectorVersion": 3,
+      "sourceVersion": "2026-11-17",
+      "sha256": "dc439bd7e5f67beacdb0edbb1c789e5a57ee9316f6e5ccaab6a2ff7cb0333984"
+    },
+    {
+      "sourceId": "nl_algoritmeregister",
+      "file": "nl_algoritmeregister.json.gz",
+      "builtAt": "2026-11-23T15:18:12.040Z",
+      "records": 253,
+      "connectorVersion": 2,
+      "sourceVersion": "2026-11-23",
+      "sha256": "0b08b360ca36488873b4321d824060048341a50eccbeefcb76f983773e9a47b8"
+    },
+    {
+      "sourceId": "nhtsa_odi",
+      "file": "nhtsa_odi.json.gz",
+      "builtAt": "2026-11-23T15:18:16.262Z",
+      "records": 585,
+      "connectorVersion": 1,
+      "sourceVersion": "2026-11-19",
+      "sha256": "57c25f48f5e87403f5d33dc26e129ff48311ab09cc411cd4936399e8d568d120"
+    },
+    {
+      "sourceId": "fedramp",
+      "file": "fedramp.json.gz",
+      "builtAt": "2026-11-23T15:18:18.788Z",
+      "records": 555,
+      "connectorVersion": 1,
+      "sourceVersion": "2026-10-13",
+      "sha256": "f60d10e095a541f948c44e3b0698e87bc15adaf52a126c39d9d3ae91da0a4bba"
+    },
+    {
+      "sourceId": "epoch_ai",
+      "file": "epoch_ai.json.gz",
+      "builtAt": "2026-11-23T15:31:40.587Z",
+      "records": 384,
+      "connectorVersion": 1,
+      "sourceVersion": "2026-11-20",
+      "sha256": "fb9f9d5a74974b402377586454b3037446860ee9bb56b9366e451f9efceea2e5"
+    },
+    {
+      "sourceId": "c2pa_conforming",
+      "file": "c2pa_conforming.json.gz",
+      "builtAt": "2026-11-23T15:18:20.261Z",
+      "records": 217,
+      "connectorVersion": 2,
+      "sourceVersion": "2026-11-20",
+      "sha256": "6f2089d6f9ff530c5790a567cd1d1eddbbd46d6884f80170fa8e337c2ea5359e"
+    }
+  ]
+}

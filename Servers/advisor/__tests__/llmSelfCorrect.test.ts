@@ -148,6 +148,106 @@ describe("llmSelfCorrect / buildCorrectionDirective", () => {
 });
 
 /* ------------------------------------------------------------------ */
+/* generateObjectWithSelfCorrection — token usage                     */
+/* ------------------------------------------------------------------ */
+
+describe("llmSelfCorrect / token usage", () => {
+  const noObject = (usage: Record<string, number>, cause?: Error) =>
+    new NoObjectGeneratedError({
+      message: "No object generated",
+      cause,
+      text: "",
+      response: { id: "r", timestamp: new Date(0), modelId: "m" },
+      usage: usage as never,
+      finishReason: "stop",
+    });
+
+  it("adds up the usage of every call, a failed attempt included, and reports each call", async () => {
+    let invocation = 0;
+    const mock: GenerateObjectImpl = (async () => {
+      invocation += 1;
+      if (invocation === 1) {
+        throw noObject(
+          { inputTokens: 100, outputTokens: 10, totalTokens: 110 },
+          makeZodError("name", "too short"),
+        );
+      }
+      return {
+        object: { name: "Bob", count: 2 },
+        usage: { inputTokens: 120, outputTokens: 20, totalTokens: 140 },
+      };
+    }) as unknown as GenerateObjectImpl;
+    const perCall: unknown[] = [];
+
+    const result = await generateObjectWithSelfCorrection<Sample>(
+      {
+        model: {},
+        schema: sampleSchema,
+        system: "s",
+        prompt: "p",
+        onUsage: (usage) => perCall.push(usage),
+      },
+      mock,
+    );
+
+    expect(result.usage).toEqual({ inputTokens: 220, outputTokens: 30, totalTokens: 250 });
+    expect(perCall).toEqual([
+      { inputTokens: 100, outputTokens: 10, totalTokens: 110 },
+      { inputTokens: 120, outputTokens: 20, totalTokens: 140 },
+    ]);
+  });
+
+  it("reports the usage of the calls before a failure that is thrown", async () => {
+    const mock: GenerateObjectImpl = (async () => {
+      throw noObject(
+        { inputTokens: 7, outputTokens: 1, totalTokens: 8 },
+        makeZodError("count", "must be a number"),
+      );
+    }) as unknown as GenerateObjectImpl;
+    const perCall: unknown[] = [];
+
+    await expect(
+      generateObjectWithSelfCorrection<Sample>(
+        {
+          model: {},
+          schema: sampleSchema,
+          system: "s",
+          prompt: "p",
+          maxSelfCorrectionAttempts: 1,
+          onUsage: (usage) => perCall.push(usage),
+        },
+        mock,
+      ),
+    ).rejects.toBeDefined();
+
+    expect(perCall).toHaveLength(2);
+    expect(perCall[0]).toEqual({ inputTokens: 7, outputTokens: 1, totalTokens: 8 });
+  });
+
+  it("counts zero tokens when the provider reports none, and works out a missing total", async () => {
+    const none: GenerateObjectImpl = (async () => ({
+      object: { name: "Alice", count: 1 },
+    })) as unknown as GenerateObjectImpl;
+    const partial: GenerateObjectImpl = (async () => ({
+      object: { name: "Alice", count: 1 },
+      usage: { inputTokens: 40, outputTokens: 2 },
+    })) as unknown as GenerateObjectImpl;
+    const params = { model: {}, schema: sampleSchema, system: "s", prompt: "p" };
+
+    expect((await generateObjectWithSelfCorrection<Sample>(params, none)).usage).toEqual({
+      inputTokens: 0,
+      outputTokens: 0,
+      totalTokens: 0,
+    });
+    expect((await generateObjectWithSelfCorrection<Sample>(params, partial)).usage).toEqual({
+      inputTokens: 40,
+      outputTokens: 2,
+      totalTokens: 42,
+    });
+  });
+});
+
+/* ------------------------------------------------------------------ */
 /* generateObjectWithSelfCorrection — happy path                      */
 /* ------------------------------------------------------------------ */
 
@@ -744,6 +844,153 @@ describe("llmSelfCorrect / json-object fallback", () => {
     // First call rejected json_schema → wrapper retried once in json-object mode.
     expect(result.object).toEqual(valid);
     expect(invocation).toBe(2);
+  });
+
+  it("reports that the call fell back to JSON-object mode, so a caller can keep it for later calls", async () => {
+    let invocation = 0;
+    const mock: GenerateObjectImpl = (async () => {
+      invocation += 1;
+      if (invocation === 1) throw new Error("This response_format type is unavailable now");
+      return { object: { name: "Zoe", count: 5 } };
+    }) as unknown as GenerateObjectImpl;
+
+    const result = await generateObjectWithSelfCorrection<Sample>(
+      { model: fakeModel, schema: sampleSchema, system: "s", prompt: "p" },
+      mock,
+    );
+
+    expect(result.fellBackToJsonObject).toBe(true);
+  });
+
+  it("reports no fallback for a call that succeeds at once", async () => {
+    const mock: GenerateObjectImpl = jest.fn(async () => ({
+      object: { name: "Zoe", count: 5 },
+    })) as unknown as GenerateObjectImpl;
+
+    const result = await generateObjectWithSelfCorrection<Sample>(
+      { model: fakeModel, schema: sampleSchema, system: "s", prompt: "p" },
+      mock,
+    );
+
+    expect(result.fellBackToJsonObject).toBe(false);
+  });
+
+  it("reports the fallback also when the downgraded call is answered in prose and salvaged", async () => {
+    let invocation = 0;
+    const mock: GenerateObjectImpl = (async () => {
+      invocation += 1;
+      if (invocation === 1) throw new Error("This response_format type is unavailable now");
+      throw new NoObjectGeneratedError({
+        message: "No object generated: could not parse the response.",
+        text: 'We{"name": "Zoe", "count": 5}',
+        response: { id: "r", timestamp: new Date(0), modelId: "m" },
+        usage: { inputTokens: 1, outputTokens: 9, totalTokens: 10 },
+        finishReason: "stop",
+      });
+    }) as unknown as GenerateObjectImpl;
+
+    const result = await generateObjectWithSelfCorrection<Sample>(
+      { model: fakeModel, schema: sampleSchema, system: "s", prompt: "p" },
+      mock,
+    );
+
+    expect(result.object).toEqual({ name: "Zoe", count: 5 });
+    expect(result.fellBackToJsonObject).toBe(true);
+  });
+
+  it("reports no fallback for a salvage that needed none", async () => {
+    const mock: GenerateObjectImpl = (async () => {
+      throw new NoObjectGeneratedError({
+        message: "No object generated: could not parse the response.",
+        text: 'We{"name": "Zoe", "count": 5}',
+        response: { id: "r", timestamp: new Date(0), modelId: "m" },
+        usage: { inputTokens: 1, outputTokens: 9, totalTokens: 10 },
+        finishReason: "stop",
+      });
+    }) as unknown as GenerateObjectImpl;
+
+    const result = await generateObjectWithSelfCorrection<Sample>(
+      { model: fakeModel, schema: sampleSchema, system: "s", prompt: "p" },
+      mock,
+    );
+
+    expect(result.fellBackToJsonObject).toBe(false);
+  });
+
+  it("calls onJsonObjectFallback once when the call downgrades to JSON-object mode", async () => {
+    let invocation = 0;
+    const mock: GenerateObjectImpl = (async () => {
+      invocation += 1;
+      if (invocation === 1) throw new Error("This response_format type is unavailable now");
+      return { object: { name: "Zoe", count: 5 } };
+    }) as unknown as GenerateObjectImpl;
+    const onJsonObjectFallback = jest.fn();
+
+    await generateObjectWithSelfCorrection<Sample>(
+      { model: fakeModel, schema: sampleSchema, system: "s", prompt: "p", onJsonObjectFallback },
+      mock,
+    );
+
+    expect(onJsonObjectFallback).toHaveBeenCalledTimes(1);
+  });
+
+  it("calls onJsonObjectFallback also for a call that downgrades and then throws", async () => {
+    // The downgraded call fails validation until the budget is spent: the result that would
+    // report the fall back never comes, so only the hook can tell the caller.
+    let invocation = 0;
+    const zodErr = makeZodError("name", "String must contain at least 3 character(s)");
+    const mock: GenerateObjectImpl = (async () => {
+      invocation += 1;
+      if (invocation === 1) throw new Error("This response_format type is unavailable now");
+      throw zodErr;
+    }) as unknown as GenerateObjectImpl;
+    const onJsonObjectFallback = jest.fn();
+
+    await expect(
+      generateObjectWithSelfCorrection<Sample>(
+        {
+          model: fakeModel,
+          schema: sampleSchema,
+          system: "s",
+          prompt: "p",
+          maxSelfCorrectionAttempts: 1,
+          onJsonObjectFallback,
+        },
+        mock,
+      ),
+    ).rejects.toBe(zodErr);
+    expect(invocation).toBe(3);
+    expect(onJsonObjectFallback).toHaveBeenCalledTimes(1);
+  });
+
+  it("calls onJsonObjectFallback once when JSON-object mode is rejected as well", async () => {
+    const mock: GenerateObjectImpl = (async () => {
+      throw new Error("This response_format type is unavailable now");
+    }) as unknown as GenerateObjectImpl;
+    const onJsonObjectFallback = jest.fn();
+
+    await expect(
+      generateObjectWithSelfCorrection<Sample>(
+        { model: fakeModel, schema: sampleSchema, system: "s", prompt: "p", onJsonObjectFallback },
+        mock,
+      ),
+    ).rejects.toThrow(/response_format/i);
+    expect(onJsonObjectFallback).toHaveBeenCalledTimes(1);
+  });
+
+  it("never calls onJsonObjectFallback when the first attempt works, and passes it on to no call", async () => {
+    const mock = jest.fn(async (_params: unknown) => ({
+      object: { name: "Zoe", count: 5 },
+    }));
+    const onJsonObjectFallback = jest.fn();
+
+    await generateObjectWithSelfCorrection<Sample>(
+      { model: fakeModel, schema: sampleSchema, system: "s", prompt: "p", onJsonObjectFallback },
+      mock as unknown as GenerateObjectImpl,
+    );
+
+    expect(onJsonObjectFallback).not.toHaveBeenCalled();
+    expect(mock.mock.calls[0][0]).not.toHaveProperty("onJsonObjectFallback");
   });
 
   it("does not fall back more than once (rethrows if json-object mode also fails)", async () => {

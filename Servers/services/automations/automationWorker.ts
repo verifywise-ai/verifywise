@@ -12,6 +12,7 @@ import {
   enqueueAutomationAction,
   enqueueRiskLinkRecompute,
   enqueueVendorRiskLinkRecompute,
+  FAILED_JOB_RETENTION,
 } from "./automationProducer";
 import { uploadFile } from "../../utils/fileUpload.utils";
 import { mapReportTypeToFileSource } from "../../controllers/reporting.ctrl";
@@ -279,7 +280,9 @@ async function sendReportNotification() {
               0,
             ),
             removeOnComplete: true,
-            removeOnFail: false,
+            // No fixed jobId, so the failed copy (owner name, project details)
+            // gets the queue's failed-job cap instead of staying for good.
+            removeOnFail: FAILED_JOB_RETENTION,
           },
         );
         continue;

@@ -1,8 +1,15 @@
 export * from "../services/slack/slackProducer";
 
-import { removeRetiredSlackPolicyScheduler } from "../services/slack/slackProducer";
-import logger from "../utils/logger/fileLogger";
 import {
+  notificationQueue,
+  removeRetiredSlackPolicyScheduler,
+} from "../services/slack/slackProducer";
+import { scheduleVendorResearchScan } from "../services/vendorResearch/queue";
+import { scheduleVendorRiskDatabaseLoad } from "../services/vendorResearch/vrdb/queue";
+import logger from "../utils/logger/fileLogger";
+import { removeLegacyRepeatableJobs } from "./legacyRepeatableJobs";
+import {
+  automationQueue,
   scheduleReportNotification,
   scheduleVendorReviewDateNotification,
   schedulePMMHourlyCheck,
@@ -46,9 +53,22 @@ async function safeSchedule(name: string, fn: () => Promise<void>): Promise<void
 }
 
 export async function addAllJobs(): Promise<void> {
-  // bullmq v6 is stricter about obliterate/scheduler state and may throw in
-  // constrained CI environments. Schedule each job independently so one failing
-  // scheduler cannot take down the whole server startup sequence.
+  // bullmq v6 is stricter about scheduler state and may throw in constrained CI
+  // environments. Schedule each job independently so one failing scheduler
+  // cannot take down the whole server startup sequence.
+  //
+  // Every start of every backend replica runs this, so nothing here empties a
+  // queue: the automation queue also holds one-off jobs (extension sync runs,
+  // manual reports, emails, risk link recomputes) that users or other replicas
+  // queued or are running. Upserting a scheduler by id is idempotent. A
+  // scheduler taken out of the code stays in Redis until it is removed by id, as
+  // scheduleExtensionSyncTick does for the old Jira check.
+  await safeSchedule("automation-legacy-repeatables", () =>
+    removeLegacyRepeatableJobs(automationQueue),
+  );
+  await safeSchedule("slack-legacy-repeatables", () =>
+    removeLegacyRepeatableJobs(notificationQueue),
+  );
   await safeSchedule("vendor-review-date-notification", scheduleVendorReviewDateNotification);
   await safeSchedule("report-notification", scheduleReportNotification);
   await safeSchedule("pmm-hourly-check", schedulePMMHourlyCheck);
@@ -64,28 +84,26 @@ export async function addAllJobs(): Promise<void> {
   await safeSchedule("proactive-weekly-digest", scheduleProactiveWeeklyDigest);
   await safeSchedule("workflow-autopilot-jobs", scheduleWorkflowAutopilotJobs);
   await safeSchedule("report-scheduler-tick", scheduleReportSchedulerTick);
-  await safeSchedule("mrm-revalidation-sweep", scheduleMrmRevalidationSweep); // non-obliterating — safe to run after the obliterating schedulers
-  await safeSchedule("mrm-retention-prune", scheduleMrmRetentionPrune); // non-obliterating — safe to run after the obliterating schedulers
-  await safeSchedule("data-retention-prune", scheduleDataRetentionPrune); // non-obliterating — safe to run after the obliterating schedulers
-  await safeSchedule("file-expiry-sweep", scheduleFileExpirySweep); // non-obliterating — safe to run after the obliterating schedulers
-  await safeSchedule("intake-confirmation-sweep", scheduleIntakeConfirmationSweep); // non-obliterating — safe to run after the obliterating schedulers
-  await safeSchedule("lifecycle-confirmation-sweep", scheduleLifecycleConfirmationSweep); // non-obliterating — safe to run after the obliterating schedulers
-  await safeSchedule("policy-review-reminder-sweep", schedulePolicyReviewReminderSweep); // non-obliterating — safe to run after the obliterating schedulers
+  await safeSchedule("mrm-revalidation-sweep", scheduleMrmRevalidationSweep);
+  await safeSchedule("mrm-retention-prune", scheduleMrmRetentionPrune);
+  await safeSchedule("data-retention-prune", scheduleDataRetentionPrune);
+  await safeSchedule("file-expiry-sweep", scheduleFileExpirySweep);
+  await safeSchedule("intake-confirmation-sweep", scheduleIntakeConfirmationSweep);
+  await safeSchedule("lifecycle-confirmation-sweep", scheduleLifecycleConfirmationSweep);
+  await safeSchedule("policy-review-reminder-sweep", schedulePolicyReviewReminderSweep);
   // The two jobs the sweep replaced. Their schedulers persist in Redis.
   // Can be removed one release after the policy review reminder sweep ships.
   await safeSchedule("retired-policy-due-soon-notification", removeRetiredPolicyDueSoonScheduler);
   await safeSchedule("retired-slack-policy-notification", removeRetiredSlackPolicyScheduler);
-  await safeSchedule("training-assignment-reminder-sweep", scheduleTrainingAssignmentReminderSweep); // non-obliterating — safe to run after the obliterating schedulers
-  await safeSchedule("evidence-freshness-sweep", scheduleEvidenceFreshnessSweep); // non-obliterating — safe to run after the obliterating schedulers
-  await safeSchedule("deadline-escalation-sweep", scheduleDeadlineEscalationSweep); // non-obliterating — safe to run after the obliterating schedulers
-  await safeSchedule("stale-inheritance-notify-sweep", scheduleStaleInheritanceNotifySweep); // non-obliterating — safe to run after the obliterating schedulers
-  await safeSchedule("approval-overdue-sweep", scheduleApprovalOverdueSweep); // non-obliterating — safe to run after the obliterating schedulers
+  await safeSchedule("training-assignment-reminder-sweep", scheduleTrainingAssignmentReminderSweep);
+  await safeSchedule("evidence-freshness-sweep", scheduleEvidenceFreshnessSweep);
+  await safeSchedule("deadline-escalation-sweep", scheduleDeadlineEscalationSweep);
+  await safeSchedule("stale-inheritance-notify-sweep", scheduleStaleInheritanceNotifySweep);
+  await safeSchedule("approval-overdue-sweep", scheduleApprovalOverdueSweep);
+  await safeSchedule("vendor-research-scan", scheduleVendorResearchScan);
+  await safeSchedule("vendor-risk-database-load", scheduleVendorRiskDatabaseLoad); // loads the bundled lists; nothing while VENDOR_RESEARCH_RECORDS is false
   await safeSchedule("ai-trust-index-sync", scheduleAiTrustIndexSync);
-  await safeSchedule("extension-sync-tick", scheduleExtensionSyncTick); // non-obliterating — safe to run after the obliterating schedulers
-  // Ordering constraint: obliterate-using schedulers (e.g. vendor-review,
-  // report-notification) must run BEFORE all non-obliterating ones, or they wipe
-  // jobs the non-obliterating schedulers already added. scheduleMrmRevalidationSweep
-  // is non-obliterating, so its placement here (after the obliterating ones) is fine.
+  await safeSchedule("extension-sync-tick", scheduleExtensionSyncTick);
 }
 
 if (require.main === module) {

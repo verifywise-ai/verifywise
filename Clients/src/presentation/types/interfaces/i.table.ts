@@ -12,6 +12,7 @@ import { EventModel } from "../../../domain/models/Common/evenTracker/eventTrack
 import { CustomSelectOptionWithIcon } from "../../../domain/types/widget.types";
 import type { JiraIncidentLink } from "../../../application/repository/jiraIncidents.repository";
 import { FileColumn } from "../../../application/hooks/useFileColumnVisibility";
+import type { ResearchAlert } from "../../../application/utils/vendorResearchAlerts";
 import { ApprovalWorkflowModel } from "src/domain/models/Common/approvalWorkflow/approvalWorkflow.model";
 import { TrainingRegistarModel } from "src/domain/models/Common/trainingRegistar/trainingRegistar.model";
 import { AIIncidentManagementModel } from "src/domain/models/Common/incidentManagement/incidentManagement.model";
@@ -291,6 +292,11 @@ export interface ITableWithPlaceholderProps {
   hidePagination?: boolean;
   vendorRisks?: VendorRisk[];
   visibleColumns?: Set<string>;
+  /**
+   * Shows the page's alert for a message from a row action. The research action on each row
+   * is only shown when this is given, since it has nowhere to say what happened otherwise.
+   */
+  onNotify?: (alert: ResearchAlert) => void;
   /** Shown instead of the first-run empty state when a search or filter hides every vendor. */
   noMatchesMessage?: string;
 }

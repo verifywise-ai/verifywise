@@ -1,0 +1,332 @@
+{
+  "names": [
+    {
+      "name": "a legal form after a name, then another name",
+      "text": "Acme Analytics, Inc., Initrode",
+      "names": ["Acme Analytics, Inc.", "Initrode"]
+    },
+    {
+      "name": "two legal forms in a row",
+      "text": "Hanbit Electronics Co., Ltd.",
+      "names": ["Hanbit Electronics Co., Ltd."]
+    },
+    {
+      "name": "a legal form written with dots",
+      "text": "Northwind Traders, L.L.C., NWT",
+      "names": ["Northwind Traders, L.L.C.", "NWT"]
+    },
+    {
+      "name": "a legal form in capitals",
+      "text": "ACME ANALYTICS, INC",
+      "names": ["ACME ANALYTICS, INC"]
+    },
+    {
+      "name": "a legal form of two words",
+      "text": "Acme Analytics, Pty Ltd",
+      "names": ["Acme Analytics, Pty Ltd"]
+    },
+    {
+      "name": "a legal form after a semicolon",
+      "text": "Acme Analytics; Inc.",
+      "names": ["Acme Analytics, Inc."]
+    },
+    {
+      "name": "a legal form on a line of its own",
+      "text": "Acme Analytics\nInc.",
+      "names": ["Acme Analytics, Inc."]
+    },
+    {
+      "name": "the article of an inverted name",
+      "text": "Contoso Company, The",
+      "names": ["Contoso Company, The"]
+    },
+    {
+      "name": "two legal names with the same form",
+      "text": "Acme Analytics, Inc., Acme Systems, Inc.",
+      "names": ["Acme Analytics, Inc.", "Acme Systems, Inc."]
+    },
+    {
+      "name": "the legal form Inc.",
+      "text": "Acme, Inc.",
+      "names": ["Acme, Inc."]
+    },
+    {
+      "name": "the legal form Incorporated",
+      "text": "Acme, Incorporated",
+      "names": ["Acme, Incorporated"]
+    },
+    {
+      "name": "the legal form LLC",
+      "text": "Acme, LLC",
+      "names": ["Acme, LLC"]
+    },
+    {
+      "name": "the legal form Ltd.",
+      "text": "Acme, Ltd.",
+      "names": ["Acme, Ltd."]
+    },
+    {
+      "name": "the legal form Limited",
+      "text": "Acme, Limited",
+      "names": ["Acme, Limited"]
+    },
+    {
+      "name": "the legal form Corp.",
+      "text": "Acme, Corp.",
+      "names": ["Acme, Corp."]
+    },
+    {
+      "name": "the legal form Corporation",
+      "text": "Acme, Corporation",
+      "names": ["Acme, Corporation"]
+    },
+    {
+      "name": "the legal form Co.",
+      "text": "Acme, Co.",
+      "names": ["Acme, Co."]
+    },
+    {
+      "name": "the legal form Company",
+      "text": "Acme, Company",
+      "names": ["Acme, Company"]
+    },
+    {
+      "name": "the legal form GmbH",
+      "text": "Acme, GmbH",
+      "names": ["Acme, GmbH"]
+    },
+    {
+      "name": "the legal form AG",
+      "text": "Acme, AG",
+      "names": ["Acme, AG"]
+    },
+    {
+      "name": "the legal form S.A.",
+      "text": "Acme, S.A.",
+      "names": ["Acme, S.A."]
+    },
+    {
+      "name": "the legal form B.V.",
+      "text": "Acme, B.V.",
+      "names": ["Acme, B.V."]
+    },
+    {
+      "name": "the legal form N.V.",
+      "text": "Acme, N.V.",
+      "names": ["Acme, N.V."]
+    },
+    {
+      "name": "the legal form plc",
+      "text": "Acme, plc",
+      "names": ["Acme, plc"]
+    },
+    {
+      "name": "the legal form Pty",
+      "text": "Acme, Pty",
+      "names": ["Acme, Pty"]
+    },
+    {
+      "name": "the legal form Pte.",
+      "text": "Acme, Pte.",
+      "names": ["Acme, Pte."]
+    },
+    {
+      "name": "the legal form Oy",
+      "text": "Acme, Oy",
+      "names": ["Acme, Oy"]
+    },
+    {
+      "name": "the legal form AB",
+      "text": "Acme, AB",
+      "names": ["Acme, AB"]
+    },
+    {
+      "name": "the legal form AS",
+      "text": "Acme, AS",
+      "names": ["Acme, AS"]
+    },
+    {
+      "name": "the legal form SAS",
+      "text": "Acme, SAS",
+      "names": ["Acme, SAS"]
+    },
+    {
+      "name": "the legal form SARL",
+      "text": "Acme, SARL",
+      "names": ["Acme, SARL"]
+    },
+    {
+      "name": "the legal form S.r.l.",
+      "text": "Acme, S.r.l.",
+      "names": ["Acme, S.r.l."]
+    },
+    {
+      "name": "the legal form S.p.A.",
+      "text": "Acme, S.p.A.",
+      "names": ["Acme, S.p.A."]
+    },
+    {
+      "name": "the legal form K.K.",
+      "text": "Acme, K.K.",
+      "names": ["Acme, K.K."]
+    },
+    {
+      "name": "the legal form L.P.",
+      "text": "Acme, L.P.",
+      "names": ["Acme, L.P."]
+    },
+    {
+      "name": "the legal form LLP",
+      "text": "Acme, LLP",
+      "names": ["Acme, LLP"]
+    },
+    {
+      "name": "the legal form Pvt.",
+      "text": "Acme, Pvt.",
+      "names": ["Acme, Pvt."]
+    },
+    {
+      "name": "names with no legal form, as before",
+      "text": "Facebook, Instagram;  WhatsApp\nMeta Quest",
+      "names": ["Facebook", "Instagram", "WhatsApp", "Meta Quest"]
+    },
+    {
+      "name": "a legal form inside a name, as before",
+      "text": "monday.com Ltd., MNDY",
+      "names": ["monday.com Ltd.", "MNDY"]
+    },
+    {
+      "name": "a legal form with no name before it is a name",
+      "text": "SAS, JMP",
+      "names": ["SAS", "JMP"]
+    },
+    {
+      "name": "a form the list does not have is a name of its own",
+      "text": "Acme Analytics, S.L.",
+      "names": ["Acme Analytics", "S.L."]
+    },
+    {
+      "name": "a legal form written with a slash",
+      "text": "Acme, A/S",
+      "names": ["Acme, A/S"]
+    },
+    {
+      "name": "a legal form written with a slash in lower case",
+      "text": "Acme, a/s",
+      "names": ["Acme, a/s"]
+    },
+    {
+      "name": "the other legal forms written with a slash",
+      "text": "Acme, I/S; Beta, K/S; Gamma, P/S; Delta, N/V; Epsilon, S/A",
+      "names": ["Acme, I/S", "Beta, K/S", "Gamma, P/S", "Delta, N/V", "Epsilon, S/A"]
+    },
+    {
+      "name": "a word with a slash that is no legal form is a name of its own",
+      "text": "Acme, A/B",
+      "names": ["Acme", "A/B"]
+    }
+  ],
+  "storedLength": [
+    {
+      "name": "8 names of 61 characters separated by semicolons: 495 typed, 502 stored",
+      "lengths": [61, 61, 61, 61, 61, 61, 61, 61],
+      "separator": ";",
+      "accepted": false
+    },
+    {
+      "name": "8 names of 61 characters on lines of their own: 495 typed, 502 stored",
+      "lengths": [61, 61, 61, 61, 61, 61, 61, 61],
+      "separator": "\n",
+      "accepted": false
+    },
+    {
+      "name": "8 names of 61 characters separated by a comma and a space: 502 typed",
+      "lengths": [61, 61, 61, 61, 61, 61, 61, 61],
+      "separator": ", ",
+      "accepted": false
+    },
+    {
+      "name": "8 names of 60 characters separated by semicolons: 494 stored",
+      "lengths": [60, 60, 60, 60, 60, 60, 60, 60],
+      "separator": ";",
+      "accepted": true
+    },
+    {
+      "name": "names separated by semicolons that are exactly 500 characters stored",
+      "lengths": [61, 61, 61, 61, 61, 61, 60, 60],
+      "separator": ";",
+      "accepted": true
+    },
+    {
+      "name": "names separated by semicolons that are 501 characters stored",
+      "lengths": [61, 61, 61, 61, 61, 61, 61, 60],
+      "separator": ";",
+      "accepted": false
+    }
+  ],
+  "controlCharacters": [
+    {
+      "name": "a name of one letter and a control character",
+      "text": "A\u0001",
+      "accepted": false,
+      "message": "Each of the other names must be between 2 and 80 characters",
+      "stored": "A"
+    },
+    {
+      "name": "a name of one letter after a NUL",
+      "text": "Meta, F\u0000",
+      "accepted": false,
+      "message": "Each of the other names must be between 2 and 80 characters",
+      "stored": "Meta, F"
+    },
+    {
+      "name": "a name of one letter and two bells",
+      "text": "X\u0007\u0007",
+      "accepted": false,
+      "message": "Each of the other names must be between 2 and 80 characters",
+      "stored": "X"
+    },
+    {
+      "name": "nothing but control characters",
+      "text": "\u0001\u0002",
+      "accepted": true,
+      "message": "",
+      "stored": ""
+    },
+    {
+      "name": "control characters inside names",
+      "text": "Face\u0000book, Insta\u001fgram",
+      "accepted": true,
+      "message": "",
+      "stored": "Facebook, Instagram"
+    },
+    {
+      "name": "a DEL inside a name",
+      "text": "Ac\u007fme",
+      "accepted": true,
+      "message": "",
+      "stored": "Acme"
+    },
+    {
+      "name": "a tab, which is white space and stays a space",
+      "text": "Acme\tCloud",
+      "accepted": true,
+      "message": "",
+      "stored": "Acme Cloud"
+    },
+    {
+      "name": "a name of 80 letters and a NUL",
+      "text": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\u0000",
+      "accepted": true,
+      "message": "",
+      "stored": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+    },
+    {
+      "name": "a name of 81 letters with a NUL inside",
+      "text": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\u0000xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+      "accepted": false,
+      "message": "Each of the other names must be between 2 and 80 characters",
+      "stored": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+    }
+  ]
+}

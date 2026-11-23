@@ -12,12 +12,19 @@ jest.mock("../../utils/scheduledReport.utils", () => ({
   listScheduledReportsQuery: jest.fn(async () => []),
   getScheduledReportQuery: jest.fn(async () => null),
   updateScheduledReportQuery: jest.fn(),
+  setActiveQuery: jest.fn(),
+  softDeleteQuery: jest.fn(),
   UPDATABLE_FIELDS: jest.requireActual("../../utils/scheduledReport.utils").UPDATABLE_FIELDS,
 }));
 jest.mock("../../services/reporting/reportAuthorization", () => ({
   assertReportScopeAllowed: jest.fn(async () => []),
 }));
-import { createScheduledReport, updateScheduledReport } from "../scheduledReport.ctrl";
+import {
+  createScheduledReport,
+  deleteScheduledReport,
+  pauseScheduledReport,
+  updateScheduledReport,
+} from "../scheduledReport.ctrl";
 import { getTranslator } from "../../utils/i18n.utils";
 
 function mockRes() {
@@ -624,5 +631,52 @@ describe("scheduled report parameters and schedule config", () => {
       "an OSFI E-23 report covers the whole organization; choose organization scope",
     );
     expect(utils.updateScheduledReportQuery).not.toHaveBeenCalled();
+  });
+});
+
+// Pause and delete stop a schedule's delivery, so they need the same scope
+// gate as resume, update and run-now: an Editor who is not on a project must
+// not be able to stop that project's reports.
+describe.each([
+  ["pauseScheduledReport", pauseScheduledReport, "setActiveQuery"],
+  ["deleteScheduledReport", deleteScheduledReport, "softDeleteQuery"],
+])("%s scope gate", (_name, handler, writeQuery) => {
+  const utils = require("../../utils/scheduledReport.utils");
+  const authz = require("../../services/reporting/reportAuthorization");
+  const req = { params: { id: "7" }, organizationId: 42, userId: 9, role: "Editor" } as any;
+
+  beforeEach(() => {
+    utils.getScheduledReportQuery.mockReset();
+    utils[writeQuery].mockClear();
+    authz.assertReportScopeAllowed.mockClear();
+  });
+
+  it("refuses a caller outside the schedule's scope", async () => {
+    utils.getScheduledReportQuery.mockResolvedValueOnce({ id: 7, scope: "project", project_id: 5 });
+    authz.assertReportScopeAllowed.mockResolvedValueOnce(["you are not a member of this project"]);
+    const res = mockRes();
+    await handler(req, res);
+    expect(res.status).toHaveBeenCalledWith(403);
+    expect(authz.assertReportScopeAllowed).toHaveBeenCalledWith(
+      expect.objectContaining({ scope: "project", projectId: 5, userId: 9 }),
+    );
+    expect(utils[writeQuery]).not.toHaveBeenCalled();
+  });
+
+  it("writes for a caller inside the schedule's scope", async () => {
+    utils.getScheduledReportQuery.mockResolvedValueOnce({ id: 7, scope: "project", project_id: 5 });
+    authz.assertReportScopeAllowed.mockResolvedValueOnce([]);
+    const res = mockRes();
+    await handler(req, res);
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(utils[writeQuery]).toHaveBeenCalled();
+  });
+
+  it("stays a 200 no-op for a schedule this organization does not hold", async () => {
+    utils.getScheduledReportQuery.mockResolvedValueOnce(null);
+    const res = mockRes();
+    await handler(req, res);
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(authz.assertReportScopeAllowed).not.toHaveBeenCalled();
   });
 });

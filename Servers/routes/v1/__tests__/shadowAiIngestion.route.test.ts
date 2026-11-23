@@ -13,6 +13,31 @@ jest.mock("../../../middleware/auth.middleware", () => ({
   __esModule: true,
   default: (_req: unknown, res: any) => res.status(401).json({ message: "Unauthorized" }),
 }));
+// The registry also mounts the vendor research routes. Their controller reaches the database and the
+// job queue (Redis), and authorize() reads the role permissions from the database when it runs.
+// This test only reads the registered layers and the shadow-ai paths, so it stays free of both.
+jest.mock("../../../controllers/vendorResearch.ctrl", () => ({
+  startVendorResearchRun: jest.fn(),
+  getLatestVendorResearch: jest.fn(),
+  getVendorResearchRunTrace: jest.fn(),
+  getResearchConfig: jest.fn(),
+  getDecisionStats: jest.fn(),
+  getResearchSettings: jest.fn(),
+  saveResearchSettings: jest.fn(),
+  listVendorRiskFindings: jest.fn(),
+  acceptVendorRiskFinding: jest.fn(),
+  dismissVendorRiskFinding: jest.fn(),
+}));
+// The registry also mounts the create and the update of a vendor. They run the vendor controller,
+// which reaches the database and the queues for the same reason, and this test reads layers only.
+jest.mock("../../../controllers/vendor.ctrl", () => ({
+  createVendorV1: jest.fn(),
+  updateVendorByIdV1: jest.fn(),
+}));
+jest.mock("../../../middleware/accessControl.middleware", () => ({
+  __esModule: true,
+  default: () => (_req: unknown, _res: unknown, next: () => void) => next(),
+}));
 // The intake tier suggestion and intake submission routes reuse intake form
 // handlers, which need signing secrets at import time; shadow-ai ingestion
 // uses none.
@@ -96,14 +121,23 @@ describe("v1 registry — /api/v1/shadow-ai/events", () => {
 });
 
 describe("v1 registry — registration convention", () => {
-  it("mounts the shadow-ai ingestion router via router.use", () => {
-    // Express 5 layers expose matchers instead of a regexp.
-    const layer = (v1Routes as any).stack.find(
-      (l: any) =>
-        !l.route &&
-        Array.isArray(l.matchers) &&
-        l.matchers.some((m: any) => m("/shadow-ai/events")),
+  // The router.use layer that serves `path`. Express 5 layers expose matchers instead of a regexp.
+  const layerFor = (path: string) =>
+    (v1Routes as any).stack.find(
+      (l: any) => !l.route && Array.isArray(l.matchers) && l.matchers.some((m: any) => m(path)),
     );
-    expect(layer).toBeDefined();
+
+  it("mounts the shadow-ai ingestion router via router.use", () => {
+    expect(layerFor("/shadow-ai/events")).toBeDefined();
+  });
+
+  // Added after ADR 0001, so they are versioned. The vendor reads and the delete stay on the legacy
+  // /api/vendors; the create and the update are under /api/v1/vendors too, with the research routes.
+  it.each([
+    ["the research routes of a vendor", "/vendors/1/research"],
+    ["the research config and settings", "/vendor-research/config"],
+    ["the decisions on a finding", "/vendor-risk-findings/1/accept"],
+  ])("mounts %s via router.use", (_label, path) => {
+    expect(layerFor(path)).toBeDefined();
   });
 });

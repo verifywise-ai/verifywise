@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  A fixture of the operator's RSS feed (https://webgate.ec.europa.eu/fsd/fsf/public/rss), with the
+  shape of its items as read on 2026-10-30: title, link, description, enclosure (url, length,
+  type), pubDate and guid. The token of the real feed is never copied (Q2): every address here
+  carries the placeholder token=fixture-token.
+-->
+<rss version="2.0">
+  <channel>
+    <title>Financial Sanctions Files</title>
+    <link>https://webgate.ec.europa.eu/fsd/fsf/public/rss</link>
+    <description>Consolidated list of persons, groups and entities subject to EU financial sanctions</description>
+    <lastBuildDate>Fri, 30 Oct 2026 22:07:55 GMT</lastBuildDate>
+    <item>
+      <title>CSV - v1.1</title>
+      <link>https://webgate.ec.europa.eu/fsd/fsf/public/files/csvFullSanctionsList_1_1/content?token=fixture-token</link>
+      <description>Consolidated Sanctions List in CSV format</description>
+      <enclosure url="https://webgate.ec.europa.eu/fsd/fsf/public/files/csvFullSanctionsList_1_1/content?token=fixture-token" length="2048" type="text/plain" />
+      <pubDate>Fri, 23 Oct 2026 15:10:13 GMT</pubDate>
+      <guid>https://webgate.ec.europa.eu/fsd/fsf/public/files/csvFullSanctionsList_1_1/content?token=fixture-token&amp;checksum=00aa</guid>
+    </item>
+    <item>
+      <title>XML (Based on XSD) - v1.1</title>
+      <link>https://webgate.ec.europa.eu/fsd/fsf/public/files/xmlFullSanctionsList_1_1/content?token=fixture-token</link>
+      <description>Consolidated Sanctions List based on the XML Schema Definition (XSD)</description>
+      <enclosure url="https://webgate.ec.europa.eu/fsd/fsf/public/files/xmlFullSanctionsList_1_1/content?token=fixture-token" length="4096" type="application/xml" />
+      <pubDate>Fri, 23 Oct 2026 15:10:13 GMT</pubDate>
+      <guid>https://webgate.ec.europa.eu/fsd/fsf/public/files/xmlFullSanctionsList_1_1/content?token=fixture-token&amp;checksum=00bb</guid>
+    </item>
+    <item>
+      <title>XML (Based on XSD) - v1.0</title>
+      <link>https://webgate.ec.europa.eu/fsd/fsf/public/files/xmlFullSanctionsList/content?token=fixture-token</link>
+      <description>Consolidated Sanctions List based on the XML Schema Definition (XSD)</description>
+      <enclosure url="https://webgate.ec.europa.eu/fsd/fsf/public/files/xmlFullSanctionsList/content?token=fixture-token" length="4096" type="application/xml" />
+      <pubDate>Fri, 23 Oct 2026 15:10:13 GMT</pubDate>
+      <guid>https://webgate.ec.europa.eu/fsd/fsf/public/files/xmlFullSanctionsList/content?token=fixture-token&amp;checksum=00cc</guid>
+    </item>
+  </channel>
+</rss>

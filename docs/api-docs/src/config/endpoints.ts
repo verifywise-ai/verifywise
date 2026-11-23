@@ -10023,6 +10023,7 @@ export const reportingscheduledReportsEndpoints: Endpoint[] = [
     method: 'GET',
     path: '/reporting/scheduled-reports',
     summary: "List Scheduled Reports",
+    description: "Scheduled reports of the caller's organization. Admins see all; other roles see organization-wide schedules and those of projects they own, are a member of or reach through a group.",
     requiresAuth: true,
     responses: [
       { status: 200, description: "Success" },
@@ -13657,7 +13658,7 @@ export const v1V1reportTemplatesEndpoints: Endpoint[] = [
     method: 'PATCH',
     path: '/v1/report-templates/{id}',
     summary: "Update Template",
-    description: "Updates a custom template's metadata and, when any config field is sent, appends a new version. A version written without parameters_config or framework_config (missing or null) keeps the previous version's value; an explicit {} framework_config is stored and means every framework. Unlike the frozen PATCH /reporting/templates/{id}, it accepts parameters_config. System templates and other organizations' templates answer 404.",
+    description: "Updates a custom template's metadata and, when any config field is sent, appends a new version. A config field the body leaves out (missing or null) keeps the previous version's value, so a partial edit never resets the rest; an explicit value, {} included, is stored as sent (an empty framework_config means every framework). A body whose config fields are all null has nothing to write (400), and a parameters_config change without sections_config is refused (400) when the new kind refuses one of the inherited sections. Unlike the frozen PATCH /reporting/templates/{id}, it accepts parameters_config. System templates and other organizations' templates answer 404.",
     requiresAuth: true,
     parameters: [
       { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
@@ -13723,12 +13724,12 @@ export const v1V1scheduledReportsEndpoints: Endpoint[] = [
     method: 'GET',
     path: '/v1/scheduled-reports/{id}',
     summary: "Get Scheduled Report",
-    description: "One scheduled report of the caller's organization, with its template version's parameters_config.",
+    description: "One scheduled report of the caller's organization, with its template version's parameters_config. Admins read any schedule; other roles read organization-wide schedules and those of projects they own, are a member of or reach through a group, and get 404 for the rest.",
     requiresAuth: true,
     responses: [
       { status: 200, description: "Success" },
       { status: 401, description: "Unauthorized" },
-      { status: 404, description: "Scheduled report not found in this organization" },
+      { status: 404, description: "Scheduled report not found in this organization, or not readable by the caller" },
       { status: 500, description: "Internal server error" },
     ],
     tag: "v1: V1/Scheduled Reports",
@@ -14082,6 +14083,109 @@ export const vendorEndpoints: Endpoint[] = [
     ],
     tag: "Vendors",
   },
+  {
+    method: 'GET',
+    path: '/v1/vendors/{id}/research/latest',
+    summary: "Get Latest Vendor Research",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: Vendors",
+  },
+  {
+    method: 'GET',
+    path: '/v1/vendors/{id}/research/runs/{runId}/trace',
+    summary: "Get Vendor Research Run Trace",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: Vendors",
+  },
+  {
+    method: 'POST',
+    path: '/v1/vendors/{id}/research',
+    summary: "Start Vendor Research Run",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: Vendors",
+  },
+  {
+    method: 'POST',
+    path: '/v1/vendors',
+    summary: "Create Vendor V1",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: Vendors",
+  },
+  {
+    method: 'PATCH',
+    path: '/v1/vendors/{id}',
+    summary: "Update Vendor By Id V1",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: Vendors",
+  },
+];
+
+// v1: Vendor Research endpoints
+export const vendorResearchEndpoints: Endpoint[] = [
+  {
+    method: 'GET',
+    path: '/v1/vendor-research/config',
+    summary: "Get Research Config",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: Vendor Research",
+  },
+  {
+    method: 'GET',
+    path: '/v1/vendor-research/decision-stats',
+    summary: "Get Decision Stats",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: Vendor Research",
+  },
+  {
+    method: 'GET',
+    path: '/v1/vendor-research/settings',
+    summary: "Get Research Settings",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: Vendor Research",
+  },
+  {
+    method: 'PUT',
+    path: '/v1/vendor-research/settings',
+    summary: "Save Research Settings",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: Vendor Research",
+  },
 ];
 
 // Vendor Risks endpoints
@@ -14225,6 +14329,43 @@ export const vendorRiskEndpoints: Endpoint[] = [
   },
 ];
 
+// v1: Vendor Risk Findings endpoints
+export const vendorRiskFindingsEndpoints: Endpoint[] = [
+  {
+    method: 'GET',
+    path: '/v1/vendor-risk-findings',
+    summary: "List Vendor Risk Findings",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: Vendor Risk Findings",
+  },
+  {
+    method: 'POST',
+    path: '/v1/vendor-risk-findings/{id}/accept',
+    summary: "Accept Vendor Risk Finding",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: Vendor Risk Findings",
+  },
+  {
+    method: 'POST',
+    path: '/v1/vendor-risk-findings/{id}/dismiss',
+    summary: "Dismiss Vendor Risk Finding",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: Vendor Risk Findings",
+  },
+];
+
 // Webhooks endpoints
 export const webhookEndpoints: Endpoint[] = [
   {
@@ -14353,6 +14494,8 @@ export const allEndpoints = {
   v1V1useCaseLifecycle: v1V1useCaseLifecycleEndpoints,
   v1V1vendorRisks: v1V1vendorRisksEndpoints,
   vendor: vendorEndpoints,
+  vendorResearch: vendorResearchEndpoints,
   vendorRisk: vendorRiskEndpoints,
+  vendorRiskFindings: vendorRiskFindingsEndpoints,
   webhook: webhookEndpoints,
 };

@@ -179,6 +179,60 @@ describe("Test vendor mappers functions", () => {
       const model = mapVendorResponseDTOToModel(dto);
       expect(model.created_at).toBeUndefined();
     });
+    it("should carry the other names of the vendor, and keep none as none", () => {
+      expect(mapVendorResponseDTOToModel(new VendorDTOBuilder().build()).other_names).toBe(
+        "Facebook, Instagram",
+      );
+      expect(
+        mapVendorResponseDTOToModel(new VendorDTOBuilder().withOtherNames(null).build())
+          .other_names,
+      ).toBeNull();
+      expect(
+        mapVendorResponseDTOToModel(new VendorDTOBuilder().withOtherNames(undefined).build())
+          .other_names,
+      ).toBeUndefined();
+    });
+  });
+  describe("the identifiers of the vendor", () => {
+    const NONE = { country: null, registration_number: null, lei: null, sec_cik: null };
+    const IDENTIFIERS = {
+      country: "DE",
+      registration_number: "HRB 86891",
+      lei: "TEST00ACMEANALYT0154",
+      sec_cik: "0000098765",
+    };
+    const identifiersOf = (vendor: object) => {
+      const { country, registration_number, lei, sec_cik } = vendor as typeof IDENTIFIERS;
+      return { country, registration_number, lei, sec_cik };
+    };
+
+    it("are carried from the API to the model, and none stay none", () => {
+      expect(identifiersOf(mapVendorResponseDTOToModel(new VendorDTOBuilder().build()))).toEqual(
+        IDENTIFIERS,
+      );
+      expect(
+        identifiersOf(
+          mapVendorResponseDTOToModel(new VendorDTOBuilder().withIdentifiers(NONE).build()),
+        ),
+      ).toEqual(NONE);
+    });
+
+    it("are carried to a new vendor, and left out when the vendor has none", () => {
+      expect(identifiersOf(mapVendorToCreateDTO(new VendorModelBuilder().build()))).toEqual(
+        IDENTIFIERS,
+      );
+      const created = mapVendorToCreateDTO(new VendorModelBuilder().withIdentifiers(NONE).build());
+      for (const field of Object.keys(NONE)) expect(created).toHaveProperty(field, undefined);
+    });
+
+    it("are carried to an update, null included: it clears them", () => {
+      expect(identifiersOf(mapVendorToUpdateDTO(new VendorModelBuilder().build()))).toEqual(
+        IDENTIFIERS,
+      );
+      expect(
+        identifiersOf(mapVendorToUpdateDTO(new VendorModelBuilder().withIdentifiers(NONE).build())),
+      ).toEqual(NONE);
+    });
   });
   describe("mapVendorResponseDTOsToModels", () => {
     it("should map array of VendorResponseDTOs to array of Vendor models", () => {
@@ -209,6 +263,14 @@ describe("Test vendor mappers functions", () => {
       const dto = new VendorModelBuilder().withoutVendorName().build();
       const createDTO = mapVendorToCreateDTO(dto);
       expect(createDTO.vendor_name).toBe("");
+    });
+    it("should carry the other names, and leave them out when the vendor has none", () => {
+      expect(mapVendorToCreateDTO(new VendorModelBuilder().build()).other_names).toBe(
+        "Facebook, Instagram",
+      );
+      expect(
+        mapVendorToCreateDTO(new VendorModelBuilder().withOtherNames(null).build()),
+      ).toHaveProperty("other_names", undefined);
     });
     it("should return empty string for vendor_provides if not provided", () => {
       const dto = new VendorModelBuilder().withoutProvider().build();
@@ -255,6 +317,17 @@ describe("Test vendor mappers functions", () => {
     });
   });
   describe("mapVendorToUpdateDTO", () => {
+    it("should carry the other names, an empty text and null included: they clear them", () => {
+      expect(mapVendorToUpdateDTO(new VendorModelBuilder().build()).other_names).toBe(
+        "Facebook, Instagram",
+      );
+      expect(
+        mapVendorToUpdateDTO(new VendorModelBuilder().withOtherNames("").build()).other_names,
+      ).toBe("");
+      expect(
+        mapVendorToUpdateDTO(new VendorModelBuilder().withOtherNames(null).build()).other_names,
+      ).toBeNull();
+    });
     it("should map Vendor model to UpdateVendorDTO correctly", () => {
       const dto = new VendorModelBuilder().build();
       const updateDTO = mapVendorToUpdateDTO(dto);

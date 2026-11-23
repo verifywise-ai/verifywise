@@ -631,6 +631,10 @@ export const de: Record<string, string> = {
     "Diese Einstellung gilt für beide Protokolltypen des AI Gateway.",
   "Delete records": "Datensätze löschen",
   "Failed to save settings": "Einstellungen konnten nicht gespeichert werden",
+  "Edit prompt messages, test with variables, and publish versions.":
+    "Prompt-Nachrichten bearbeiten, mit Variablen testen und Versionen veröffentlichen.",
+  "Browse {models} LLM models across {providers} providers.":
+    "{models} LLM-Modelle von {providers} Anbietern durchsuchen.",
 };
 
 export const fr: Record<string, string> = {
@@ -1268,6 +1272,10 @@ export const fr: Record<string, string> = {
     "Ce paramètre s'applique aux deux types de journaux de l'AI Gateway.",
   "Delete records": "Supprimer les enregistrements",
   "Failed to save settings": "Impossible d'enregistrer les paramètres",
+  "Edit prompt messages, test with variables, and publish versions.":
+    "Modifiez les messages du prompt, testez avec des variables et publiez des versions.",
+  "Browse {models} LLM models across {providers} providers.":
+    "Parcourez {models} modèles LLM de {providers} fournisseurs.",
 };
 
 export const es: Record<string, string> = {
@@ -1903,4 +1911,8 @@ export const es: Record<string, string> = {
     "Este ajuste se aplica a ambos tipos de registros del AI Gateway.",
   "Delete records": "Eliminar registros",
   "Failed to save settings": "No se pudo guardar la configuración",
+  "Edit prompt messages, test with variables, and publish versions.":
+    "Edite los mensajes del prompt, pruebe con variables y publique versiones.",
+  "Browse {models} LLM models across {providers} providers.":
+    "Explore {models} modelos LLM de {providers} proveedores.",
 };

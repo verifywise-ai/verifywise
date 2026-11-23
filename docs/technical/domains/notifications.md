@@ -141,8 +141,21 @@ Before delivering notifications:
 |------|---------|----------|
 | `model_risk_candidates` | Model gained a project, or a new model risk, leaving unseen shared-project candidates for a project risk | In-app |
 | `vendor_risk_candidates` | Vendor gained a use case, or a new vendor risk, leaving unseen candidate parents for a project risk in that use case | In-app |
+| `vendor_research_findings` | An automatic or a scheduled vendor research run completed with at least one finding; sent to the vendor's assignee | In-app |
 | `risk_deadline_due_soon` | Project risk deadline within 7 days (in-app + email) or 1 day (Slack) | In-app + Email / Slack |
 | `model_risk_due_soon` | Model risk target date within 7 days (in-app + email) or 1 day (Slack) | In-app + Email / Slack |
+
+#### Vendor research notice
+
+The vendor research agent (see [Vendors](./vendors.md#vendor-research-agent)) tells a vendor's assignee, when the vendor has one and that person is a user of the vendor's organization, that an **automatic** run (after the vendor was created) or a **scheduled** run (of the [scheduled scan](./vendors.md#the-scheduled-scan)) stored findings. With a scan interval of 7 days an assignee can get one notice per vendor a week. A manual run sends nothing: the person who started it is looking at the result. `handleVendorResearchJob` sends the notice after the run has ended, so a failure to send is logged and cannot change the run.
+
+The organization check is `isUserOfOrganization` (`services/vendorResearch/assignee.ts`, a wrapper around `findUsersNotInOrganization`), the one the accept uses for the default action owner. The vendor create and update of the API refuse a new assignee of another organization, but the stored assignee can still be one: a user who has since left the organization (an assignee who is not changed is not checked again), a vendor stored before that check, or one written by a writer that does not check (the advisor's vendor functions, `services/vendor.service.ts`, the demo driver); the foreign key behind it accepts any user. For such a person (or an id that cannot be a user id) no notification is written, nothing is raised, the run is unaffected, and one debug line with ids only is logged. A failing lookup is a real failure: it is logged as an error and does not change the run.
+
+- Title `Vendor research findings`; message `1 potential risk found for "Acme". Review it in Vendors > Research findings.` (or `3 potential risks found for "Acme". Review them in Vendors > Research findings.`), in the recipient's language. In-app only, no email.
+- Entity: `vendor` (the vendor's id and name). Link: `/vendors/research-findings?findingsVendorId=<vendor id>`, which opens the Research findings tab on that vendor. A notification stored before the findings had a tab of their own links to `/vendors/risks?findingsVendorId=<vendor id>`; the Vendors page redirects that link to the new path, keeping the query string. The existing `/vendors?vendorId=` link would open the vendor modal instead.
+- `metadata`: `{ run_id, vendor_id, count }`.
+- **Dedup: one notification per run.** The partial unique index `notifications_vendor_research_findings_uniq` is on `(organization_id, user_id, (metadata->>'run_id')) WHERE type = 'vendor_research_findings'`. A run belongs to one vendor, so the run id is enough to tell one notice from the next. Two attempts to announce the same run collide, and `notifyAssigneeOfVendorResearch` treats that unique violation (23505 on this index only) as a suppressed duplicate. Any other 23505 still throws.
+- The enum value and the index are two migrations, in this order: `20261010161236-vendor-research-notification-type.js`, then `20261010161240-vendor-research-notification-unique.js`. A new Postgres enum value cannot be used until the statement that added it has committed, and the index predicate names it. The first migration's `down` is a no-op, as for `vendor_risk_candidates`.
 
 ### AI Detection Notifications
 
@@ -231,6 +244,18 @@ const rateLimitConfig = {
 | `MEMBER_ROLE_CHANGED_*` | Role changes |
 | `POLICY_REVIEW_REMINDER` | Policy review due soon or overdue (daily sweep) |
 | `AI_DETECTION_SCAN_ALERT` | AI Detection scan needs attention, or a scheduled/webhook scan failed |
+| `ASSIGNMENT_NOTIFICATION` | "You have been assigned" for a vendor, risk, project, model and so on (`notifyUserAssigned`) |
+
+### Assignment emails
+
+`notifyUserAssigned` (`services/inAppNotification.service.ts`) writes the in-app notification and sends the `ASSIGNMENT_NOTIFICATION` email. The template is HTML, and the text that someone else wrote reaches it in one of two ways, under the escaping rule of the [email service](../infrastructure/email-service.md#template-variable-replacement):
+
+- **Plain slots.** The recipient's name, the assigner's name and the entity name (`recipient_name`, `assigner_name`, `entity_name`) are passed as written. `compileMjmlToHtml` escapes every value whose key does not end in `Html` or `_html`, so the service must not escape them as well: `Smith & Co` would show as `Smith &amp; Co`. The same goes for `entity_url`, which is built from the front-end address and ids and sits in an `href` (an `&` in it becomes `&amp;`, which is right there), and for the values that come from constants (role, entity type, role description, date).
+- **The raw slot.** `entity_context_html` is a table that the service builds itself (`buildEntityContextHtml`) from the entity context box (framework, project, parent type, parent name, description). It is inserted as it is, so the service escapes each value with `escapeHtml` of `utils/sanitization.utils.ts` (`&`, `<`, `>`, `"` and `'`), and builds the colors of the markup from `emailColorTokens`.
+
+A name such as `Smith & Co` shows as typed, and text that a person or a model wrote cannot add a tag, a link or an image. An accepted vendor research finding is the case that matters most: its risk and impact text come from a model that read a web page. `services/tests/inAppNotification.service.spec.ts` renders the real template with such text to prove both slots.
+
+The subject line and the in-app notification are plain text, not HTML, and keep what was written; the app shows the notification as text.
 
 ### Queue Processing
 

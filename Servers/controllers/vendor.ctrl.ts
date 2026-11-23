@@ -3,6 +3,7 @@ import { Request, Response } from "express";
 import { STATUS_CODE } from "../utils/statusCode.utils";
 import { toId } from "../utils/validations/validation.utils";
 import { assertVendorRequestBody, parseRouteId } from "../utils/validations/vendorRequest.utils";
+import { withoutV1OnlyVendorFields } from "../utils/validations/vendorValidation.utils";
 import {
   getAllVendorsQuery,
   getVendorByIdQuery,
@@ -15,6 +16,8 @@ import {
 } from "../domain.layer/exceptions/custom.exception";
 import { getVendorRiskSuggestions as getVendorRiskSuggestionsService } from "../services/vendors/riskSuggestions";
 import * as vendorService from "../services/vendor.service";
+import { triggerAutoResearch } from "../services/vendorResearch/trigger";
+import logger from "../utils/logger/fileLogger";
 import { translateError } from "../utils/i18n.utils";
 
 export async function getAllVendors(req: Request, res: Response): Promise<any> {
@@ -255,9 +258,41 @@ async function failedWrite(
   return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
 }
 
+/**
+ * POST /vendors, the legacy create: the frozen legacy contract, which never had the other names and
+ * the identifiers (ADR 0001, sections 1 and 2), so it ignores them. They are dropped here, before
+ * anything reads the body.
+ */
 export async function createVendor(req: Request, res: Response): Promise<any> {
+  return createVendorFrom(req, res, withoutV1OnlyVendorFields(req.body));
+}
+
+/**
+ * POST /v1/vendors: the same create, which also takes the other names and the identifiers (ADR
+ * 0001, sections 2 and 5).
+ */
+export async function createVendorV1(req: Request, res: Response): Promise<any> {
+  if (!isJsonObject(req.body)) return refuseBody(req, res);
+  return createVendorFrom(req, res, req.body);
+}
+
+/**
+ * True for a body that is a JSON object. Express leaves `req.body` undefined for a request without
+ * a body or with another content type than JSON, and a JSON body can also be a list, a text, a
+ * number or null; the shared create and update read fields of it, so such a body failed there with
+ * a TypeError (a 500). The legacy routes refuse it too, with a 400 from the shared request check
+ * (assertVendorRequestBody).
+ */
+const isJsonObject = (body: unknown): body is Record<string, unknown> =>
+  typeof body === "object" && body !== null && !Array.isArray(body);
+
+/** The 400 for a v1 vendor write whose body is not a JSON object, before any transaction. */
+const refuseBody = (req: Request, res: Response) =>
+  res.status(400).json(STATUS_CODE[400](req.t!("The request body must be a JSON object")));
+
+async function createVendorFrom(req: Request, res: Response, vendorData: Request["body"]) {
   try {
-    assertVendorRequestBody(req.body);
+    assertVendorRequestBody(vendorData);
   } catch (error) {
     return res.status(400).json(STATUS_CODE[400](translateError(req, error)));
   }
@@ -271,13 +306,23 @@ export async function createVendor(req: Request, res: Response): Promise<any> {
   });
 
   try {
-    const createdVendor = await vendorService.createVendor(req.body, {
+    const createdVendor = await vendorService.createVendor(vendorData, {
       userId: req.userId,
       role: req.role!,
       organizationId: req.organizationId!,
     });
 
     if (createdVendor) {
+      // Research the new vendor's risks in the background, for a vendor made on the Vendors page.
+      // Not awaited, so it cannot fail the response. triggerAutoResearch is written never to
+      // reject; the catch is for the day it does, because a rejection that nothing handles ends the
+      // process.
+      triggerAutoResearch({
+        organizationId: req.organizationId!,
+        vendorId: createdVendor.id!,
+        isDemo: !!createdVendor.is_demo,
+      }).catch((err) => logger.error("Vendor research auto-start failed:", err));
+
       await logSuccess({
         eventType: "Create",
         description: `Created vendor: ${createdVendor.vendor_name}`,
@@ -303,13 +348,42 @@ export async function createVendor(req: Request, res: Response): Promise<any> {
   }
 }
 
+/**
+ * PATCH /vendors/:id, the legacy update: the frozen legacy contract, which never had the other names
+ * and the identifiers (ADR 0001, sections 1 and 2), so it ignores them. They are dropped here,
+ * before anything reads the body.
+ */
 export async function updateVendorById(req: Request, res: Response): Promise<any> {
   const vendorId = parseRouteId(req.params.id);
   if (vendorId === null) {
     return res.status(400).json(STATUS_CODE[400](req.t!("Invalid vendor ID")));
   }
+  return updateVendorByIdFrom(req, res, withoutV1OnlyVendorFields(req.body), vendorId);
+}
+
+/**
+ * PATCH /v1/vendors/:id: the same update, which also takes the other names and the identifiers (ADR
+ * 0001, sections 2 and 5).
+ */
+export async function updateVendorByIdV1(req: Request, res: Response): Promise<any> {
+  // "abc" and "12abc" are refused, as the other v1 vendor routes refuse them, and so is an id
+  // past 2^53, which a number cannot hold exactly.
+  const vendorId = parseRouteId(req.params.id);
+  if (vendorId === null || !Number.isSafeInteger(vendorId)) {
+    return res.status(400).json(STATUS_CODE[400](req.t!("Invalid vendor ID")));
+  }
+  if (!isJsonObject(req.body)) return refuseBody(req, res);
+  return updateVendorByIdFrom(req, res, req.body, vendorId);
+}
+
+async function updateVendorByIdFrom(
+  req: Request,
+  res: Response,
+  updateData: Request["body"],
+  vendorId: number,
+) {
   try {
-    assertVendorRequestBody(req.body);
+    assertVendorRequestBody(updateData);
   } catch (error) {
     return res.status(400).json(STATUS_CODE[400](translateError(req, error)));
   }
@@ -337,7 +411,7 @@ export async function updateVendorById(req: Request, res: Response): Promise<any
   }
 
   try {
-    const vendor = await vendorService.updateVendor(vendorId, req.body, {
+    const vendor = await vendorService.updateVendor(vendorId, updateData, {
       userId,
       role,
       organizationId: req.organizationId!,

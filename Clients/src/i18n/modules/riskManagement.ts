@@ -202,6 +202,25 @@ export const de: Record<string, string> = {
   "Search vendor risks": "Anbieterrisiken suchen",
   "Why are you dismissing {name}?": "Warum verwerfen Sie {name}?",
   "What happened?": "Was ist passiert?",
+  // Linked risks forms and the new risk form, used with vendor risks
+  "The project risk becomes a child of this vendor risk and is flagged for review when the level of this vendor risk changes.":
+    "Das Projektrisiko wird diesem Anbieterrisiko untergeordnet und zur Prüfung markiert, wenn sich die Stufe dieses Anbieterrisikos ändert.",
+  "Risks of this vendor are listed first.": "Risiken dieses Anbieters werden zuerst aufgeführt.",
+  "Why dismiss this suggestion?": "Warum wird dieser Vorschlag verworfen?",
+  "Optional. A reason helps tune the next suggestions.":
+    "Optional. Ein Grund hilft, die nächsten Vorschläge zu verbessern.",
+  "The risk level is calculated from the likelihood and the severity you select.":
+    "Die Risikostufe wird aus der gewählten Wahrscheinlichkeit und dem gewählten Schweregrad berechnet.",
+  // Risk scale labels used by the vendor research review
+  "Rare": "Selten",
+  "Unlikely": "Unwahrscheinlich",
+  "Possible": "Möglich",
+  "Likely": "Wahrscheinlich",
+  "Almost certain": "Nahezu sicher",
+  "Very High Risk": "Sehr hohes Risiko",
+  "Medium Risk": "Mittleres Risiko",
+  "Low Risk": "Geringes Risiko",
+  "Very Low Risk": "Sehr geringes Risiko",
   "The risk level is a weighted score: likelihood plus three times severity, so severity counts more. Pick a likelihood and a severity and the level follows from the score.":
     "Die Risikostufe ist ein gewichteter Wert: Eintrittswahrscheinlichkeit plus das Dreifache der Schwere, die Schwere zählt also stärker. Wählen Sie Wahrscheinlichkeit und Schwere, und die Stufe ergibt sich aus dem Wert.",
   "Heat map (inherent level)": "Heatmap (inhärente Stufe)",
@@ -411,6 +430,26 @@ export const fr: Record<string, string> = {
   "Search vendor risks": "Rechercher des risques fournisseurs",
   "Why are you dismissing {name}?": "Pourquoi rejetez-vous {name} ?",
   "What happened?": "Que s'est-il passé ?",
+  // Linked risks forms and the new risk form, used with vendor risks
+  "The project risk becomes a child of this vendor risk and is flagged for review when the level of this vendor risk changes.":
+    "Le risque de projet devient un enfant de ce risque fournisseur et est signalé pour révision lorsque le niveau de ce risque fournisseur change.",
+  "Risks of this vendor are listed first.":
+    "Les risques de ce fournisseur apparaissent en premier.",
+  "Why dismiss this suggestion?": "Pourquoi rejeter cette suggestion ?",
+  "Optional. A reason helps tune the next suggestions.":
+    "Facultatif. Une raison aide à affiner les prochaines suggestions.",
+  "The risk level is calculated from the likelihood and the severity you select.":
+    "Le niveau de risque est calculé à partir de la probabilité et de la gravité que vous sélectionnez.",
+  // Risk scale labels used by the vendor research review
+  "Rare": "Rare",
+  "Unlikely": "Peu probable",
+  "Possible": "Possible",
+  "Likely": "Probable",
+  "Almost certain": "Presque certain",
+  "Very High Risk": "Risque très élevé",
+  "Medium Risk": "Risque moyen",
+  "Low Risk": "Risque faible",
+  "Very Low Risk": "Risque très faible",
   "The risk level is a weighted score: likelihood plus three times severity, so severity counts more. Pick a likelihood and a severity and the level follows from the score.":
     "Le niveau de risque est un score pondéré : la probabilité plus trois fois la gravité, la gravité compte donc davantage. Choisissez une probabilité et une gravité, et le niveau découle du score.",
   "Heat map (inherent level)": "Carte thermique (niveau inhérent)",
@@ -620,6 +659,25 @@ export const es: Record<string, string> = {
   "Search vendor risks": "Buscar riesgos de proveedor",
   "Why are you dismissing {name}?": "¿Por qué descartas {name}?",
   "What happened?": "¿Qué ocurrió?",
+  // Linked risks forms and the new risk form, used with vendor risks
+  "The project risk becomes a child of this vendor risk and is flagged for review when the level of this vendor risk changes.":
+    "El riesgo de proyecto pasa a depender de este riesgo de proveedor y se marca para revisión cuando cambia el nivel de este riesgo de proveedor.",
+  "Risks of this vendor are listed first.": "Los riesgos de este proveedor aparecen primero.",
+  "Why dismiss this suggestion?": "¿Por qué descartar esta sugerencia?",
+  "Optional. A reason helps tune the next suggestions.":
+    "Opcional. Un motivo ayuda a ajustar las próximas sugerencias.",
+  "The risk level is calculated from the likelihood and the severity you select.":
+    "El nivel de riesgo se calcula a partir de la probabilidad y la gravedad que selecciones.",
+  // Risk scale labels used by the vendor research review
+  "Rare": "Raro",
+  "Unlikely": "Improbable",
+  "Possible": "Posible",
+  "Likely": "Probable",
+  "Almost certain": "Casi seguro",
+  "Very High Risk": "Riesgo muy alto",
+  "Medium Risk": "Riesgo medio",
+  "Low Risk": "Riesgo bajo",
+  "Very Low Risk": "Riesgo muy bajo",
   "The risk level is a weighted score: likelihood plus three times severity, so severity counts more. Pick a likelihood and a severity and the level follows from the score.":
     "El nivel de riesgo es una puntuación ponderada: la probabilidad más tres veces la gravedad, por lo que la gravedad pesa más. Elija una probabilidad y una gravedad, y el nivel se deduce de la puntuación.",
   "Heat map (inherent level)": "Mapa de calor (nivel inherente)",

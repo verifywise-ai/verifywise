@@ -136,7 +136,7 @@ export const normalizeVendorRiskLikelihood = <T>(likelihood: T): T => {
  *
  * @throws ValidationException naming action_owner.
  */
-const assertVendorRiskOwnerInOrganization = async (
+export const assertVendorRiskOwnerInOrganization = async (
   actionOwner: unknown,
   organizationId: number,
   transaction: Transaction,

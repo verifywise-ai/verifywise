@@ -139,7 +139,8 @@ describe("JiraAssetsConfiguration copy", () => {
 
   it("uses sentence case and the Jira spelling for its steps, fields and buttons", async () => {
     renderPage();
-    await screen.findByTestId("shared-sync-panel");
+    // The panel renders at once; the import section only once GET /config has answered.
+    await screen.findByText("Import & sync");
     for (const text of [
       "Step 1: Connection settings",
       "Step 2: Select schema & object type",

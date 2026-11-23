@@ -95,6 +95,54 @@ describe("Report templates tenant isolation", () => {
     expect(row.is_active).toBe(true);
   });
 
+  // A config PATCH appends a version. Every config field it leaves out must
+  // keep the previous version's value, and another organization's PATCH must
+  // append nothing.
+  it("keeps unsent config fields on a v1 PATCH and appends nothing cross-tenant", async () => {
+    const { owner, attacker } = await seedTwoTenantContexts();
+    const config = {
+      sections_config: { sections: [{ reportSectionKey: "projectRisks", defaultEnabled: true }] },
+      ai_blocks_config: { blocks: [{ key: "summary" }] },
+      framework_config: { frameworkIds: ["native:2"] },
+      format_config: { theme: "dark" },
+      branding_config: { footer: "Internal" },
+      schedule_defaults: { frequency: "monthly" },
+      delivery_defaults: { saveToStorage: true },
+    };
+    const created = await owner.request
+      .post("/api/v1/report-templates")
+      .send({ ...VALID_BODY, ...config });
+    expect(created.status).toBe(201);
+    const id = (created.body?.data ?? created.body).id;
+
+    const sections = { sections: [{ reportSectionKey: "vendorRisks", defaultEnabled: true }] };
+    expect(
+      (
+        await attacker.request
+          .patch(`/api/v1/report-templates/${id}`)
+          .send({ sections_config: sections })
+      ).status,
+    ).toBe(404);
+    const patched = await owner.request
+      .patch(`/api/v1/report-templates/${id}`)
+      .send({ sections_config: sections, branding_config: {} });
+    expect(patched.status).toBe(200);
+
+    const versions: any[] = await sequelize.query(
+      `SELECT * FROM report_template_versions WHERE template_id = :id ORDER BY version`,
+      { replacements: { id }, type: QueryTypes.SELECT },
+    );
+    expect(versions.map((v) => v.version)).toEqual([1, 2]);
+    const latest = versions[1];
+    expect(latest.sections_config).toEqual(sections);
+    expect(latest.branding_config).toEqual({});
+    expect(latest.ai_blocks_config).toEqual(config.ai_blocks_config);
+    expect(latest.framework_config).toEqual(config.framework_config);
+    expect(latest.format_config).toEqual(config.format_config);
+    expect(latest.schedule_defaults).toEqual(config.schedule_defaults);
+    expect(latest.delivery_defaults).toEqual(config.delivery_defaults);
+  });
+
   it("lists only the caller's own templates alongside system templates", async () => {
     const { owner, attacker } = await seedTwoTenantContexts();
     await seedTemplate(owner);

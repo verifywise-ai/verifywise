@@ -155,9 +155,7 @@ describe("legacy /api/reporting/templates contract", () => {
     // parameters_config is bound as NULL, so the INSERT falls back to the
     // previous version's value: the template keeps its kind.
     expect(opts.replacements.parameters_config).toBeNull();
-    expect(sql).toMatch(
-      /COALESCE\(\s*CAST\(:parameters_config AS JSONB\),\s*\(SELECT parameters_config FROM report_template_versions\s+WHERE template_id = :template_id ORDER BY version DESC LIMIT 1\)/,
-    );
+    expect(sql).toContain("COALESCE(CAST(:parameters_config AS JSONB), prev.parameters_config,");
   });
 
   it("treats an update carrying only parameters_config as having no updatable fields", async () => {

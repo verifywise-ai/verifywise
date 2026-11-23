@@ -14,8 +14,8 @@
  *
  * Design decisions:
  *   - Pure additive wrapper. The return type carries telemetry
- *     (`attempts`, `selfCorrected`) but the success-case payload is
- *     identical to `generateObject`'s `{ object }`.
+ *     (`attempts`, `selfCorrected`, `fellBackToJsonObject`) but the
+ *     success-case payload is identical to `generateObject`'s `{ object }`.
  *   - Dependency-injectable `generateImpl` for unit tests — avoids
  *     module mocking which is brittle.
  *   - Transport-level retries delegated to the SDK via the inner call's
@@ -106,6 +106,19 @@ export interface SelfCorrectingParams<T> {
    */
   extendedRecovery?: boolean;
   /**
+   * Called once, when this call downgrades from json_schema to JSON-object mode, and so also for a
+   * call that goes on to throw, which reports no `fellBackToJsonObject`. A caller that makes many
+   * calls with the same model can then start the next ones in JSON-object mode.
+   */
+  onJsonObjectFallback?: () => void;
+  /**
+   * Called with the usage of each model call this invocation makes, as soon as the call is over:
+   * for an answer, and for a failed attempt that reports its usage (an answer that holds no valid
+   * object). A caller then learns what a call cost even when it ends by throwing, which returns no
+   * result to read `usage` from.
+   */
+  onUsage?: (usage: TokenUsage) => void;
+  /**
    * Pass-through for any other generateObject params we don't surface
    * directly (e.g., `maxOutputTokens`, `seed`, `mode`). Merged into the
    * inner call without further validation — caller is responsible for
@@ -114,8 +127,40 @@ export interface SelfCorrectingParams<T> {
   extra?: Record<string, unknown>;
 }
 
+/** The tokens a model call used, as the provider reports them; 0 where it reports none. */
+export interface TokenUsage {
+  inputTokens: number;
+  outputTokens: number;
+  totalTokens: number;
+}
+
+const countOf = (value: unknown): number | null =>
+  typeof value === "number" && Number.isFinite(value) && value >= 0 ? value : null;
+
+/**
+ * The usage of one call as `TokenUsage`. The AI SDK reports `inputTokens` and `outputTokens`
+ * (older providers `promptTokens` and `completionTokens`), each possibly undefined; a missing
+ * total is the sum of the other two.
+ */
+export function readUsage(raw: unknown): TokenUsage {
+  const usage = typeof raw === "object" && raw !== null ? (raw as Record<string, unknown>) : {};
+  const inputTokens = countOf(usage.inputTokens) ?? countOf(usage.promptTokens) ?? 0;
+  const outputTokens = countOf(usage.outputTokens) ?? countOf(usage.completionTokens) ?? 0;
+  return {
+    inputTokens,
+    outputTokens,
+    totalTokens: countOf(usage.totalTokens) ?? inputTokens + outputTokens,
+  };
+}
+
 export interface SelfCorrectingResult<T> {
   object: T;
+  /**
+   * The tokens of every call this invocation made, the attempts that failed included. Optional in
+   * the type so that a stand-in for this function (a test double) need not report it; the real
+   * function always does.
+   */
+  usage?: TokenUsage;
   /**
    * Number of self-correction attempts (1 = succeeded first try). The two
    * transport downgrades re-issue the call without counting, so this can be
@@ -124,6 +169,13 @@ export interface SelfCorrectingResult<T> {
   attempts: number;
   /** True iff at least one retry was a self-correction (not the first call). */
   selfCorrected: boolean;
+  /**
+   * True when this call had to downgrade from json_schema to JSON-object mode.
+   * A caller that makes many calls with the same model can then start the next
+   * ones in JSON-object mode (`jsonObjectFallbackMiddleware`) instead of paying
+   * a rejected request and a warning on each of them.
+   */
+  fellBackToJsonObject: boolean;
   /** Validation issues from the prior failed attempt, if any. */
   lastValidationIssues?: ValidationIssue[];
 }
@@ -444,6 +496,14 @@ export async function generateObjectWithSelfCorrection<T>(
   let fellBackToJsonObject = false;
   let extra = params.extra;
   let cappedOutputTokens = false;
+  const usage: TokenUsage = { inputTokens: 0, outputTokens: 0, totalTokens: 0 };
+  const countCall = (raw: unknown) => {
+    const used = readUsage(raw);
+    usage.inputTokens += used.inputTokens;
+    usage.outputTokens += used.outputTokens;
+    usage.totalTokens += used.totalTokens;
+    params.onUsage?.(used);
+  };
 
   for (let attempt = 1; attempt <= maxAttempts + 1; attempt++) {
     try {
@@ -465,15 +525,21 @@ export async function generateObjectWithSelfCorrection<T>(
         // over any abortSignal a caller left in `extra`.
         ...(params.timeoutMs ? { abortSignal: AbortSignal.timeout(params.timeoutMs) } : {}),
       };
-      const { object } = await gen(callParams);
+      const generated = await gen(callParams);
+      const { object } = generated;
+      countCall((generated as { usage?: unknown }).usage);
 
       return {
         object: object as unknown as T,
+        usage,
         attempts: attempt,
         selfCorrected: attempt > 1,
+        fellBackToJsonObject,
         lastValidationIssues: lastIssues,
       };
     } catch (err) {
+      // An answer that held no valid object was still paid for.
+      if (NoObjectGeneratedError.isInstance(err)) countCall(err.usage);
       const issues = extractValidationIssues(err);
       const isLastAttempt = attempt > maxAttempts;
 
@@ -509,8 +575,10 @@ export async function generateObjectWithSelfCorrection<T>(
             );
             return {
               object: salvaged,
+              usage,
               attempts: attempt,
               selfCorrected: attempt > 1,
+              fellBackToJsonObject,
               lastValidationIssues: lastIssues,
             };
           }
@@ -567,6 +635,7 @@ export async function generateObjectWithSelfCorrection<T>(
           logger.warn(
             "[llmSelfCorrect] provider rejected json_schema response_format; retrying in JSON-object mode",
           );
+          params.onJsonObjectFallback?.();
           attempt--; // the transport switch must not consume the self-correction budget
           continue;
         }

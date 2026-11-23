@@ -1518,6 +1518,62 @@ export const notifyRiskOfVendorCandidates = async (
 };
 
 /**
+ * Tell a vendor's assignee that an automatic research run stored `count` risk findings for the
+ * vendor. In-app only. The link opens the findings of the vendor on the Research findings tab of
+ * the Vendors page, not the vendor modal that buildEntityUrl(VENDOR) opens. Returns false when
+ * nothing was sent: the vendor has no assignee, or this run was announced already.
+ */
+export const notifyAssigneeOfVendorResearch = async (
+  organizationId: number,
+  vendor: { id: number; name: string; assignee: number | null },
+  runId: number,
+  count: number,
+): Promise<boolean> => {
+  if (vendor.assignee == null) return false;
+  const lang = await getUserLanguage(vendor.assignee);
+  try {
+    await sendInAppNotification(
+      organizationId,
+      {
+        user_id: vendor.assignee,
+        type: NotificationType.VENDOR_RESEARCH_FINDINGS,
+        title: translate(lang, "Vendor research findings"),
+        message:
+          count === 1
+            ? translate(
+                lang,
+                '{count} potential risk found for "{vendorName}". Review it in Vendors > Research findings.',
+                { count, vendorName: vendor.name },
+              )
+            : translate(
+                lang,
+                '{count} potential risks found for "{vendorName}". Review them in Vendors > Research findings.',
+                { count, vendorName: vendor.name },
+              ),
+        entity_type: NotificationEntityType.VENDOR,
+        entity_id: vendor.id,
+        entity_name: vendor.name,
+        action_url: `/vendors/research-findings?findingsVendorId=${vendor.id}`,
+        // The sent-record key is run_id, which the unique index reads.
+        metadata: { run_id: runId, vendor_id: vendor.id, count },
+      },
+      false,
+    );
+    return true;
+  } catch (error) {
+    // The run was announced already, possibly by a concurrent attempt: a suppressed duplicate,
+    // not an error. Matched by name so another 23505 still throws.
+    const pg =
+      (error as { parent?: { code?: string; constraint?: string } })?.parent ??
+      (error as { original?: { code?: string; constraint?: string } })?.original;
+    if (pg?.code === "23505" && pg?.constraint === "notifications_vendor_research_findings_uniq") {
+      return false;
+    }
+    throw error;
+  }
+};
+
+/**
  * Notify a file uploader that their file is inside the 7-day pre-expiry
  * window. Called by the daily fileExpirySweep for each row it matches; the
  * sweep writes no state back, so a re-run on the same day sends again —
@@ -1982,6 +2038,10 @@ export interface AssignmentEntityContext {
 
 /**
  * Build HTML for entity context to include in email
+ *
+ * The values are text that someone else wrote (a framework or project name, the description of a
+ * risk that a model wrote after reading a web page), so each one is escaped: it shows as typed and
+ * cannot add a tag, a link or an image to the email. The markup around the values is ours.
  */
 function buildEntityContextHtml(context?: AssignmentEntityContext): string {
   if (!context) return "";
@@ -2111,6 +2171,13 @@ export const notifyUserAssigned = async (
       {
         template: EMAIL_TEMPLATES.ASSIGNMENT_NOTIFICATION,
         subject: `You've been assigned as ${assignment.roleType}: ${assignment.entityName}`,
+        // compileMjmlToHtml escapes every value whose key does not end in Html or _html, so the
+        // three names (text that a person, or a model that read a web page, wrote) are passed as
+        // written and show as typed; escaping them here too would show "&amp;" for "&". The subject
+        // and the in-app message above are plain text and keep what was written. The rest comes
+        // from constants (role, entity type, role description, date) or is a link built from ids
+        // that sits in an href (entity_url). entity_context_html is the one raw-HTML slot: markup
+        // built above from escaped values.
         variables: {
           recipient_name: assignee.name || "User",
           assigner_name: assignerName,

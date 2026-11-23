@@ -161,14 +161,19 @@ describe("GET /api/riskLinks/dismissals", () => {
   });
 
   it("admits a SuperAdmin to the admin reports", async () => {
-    // SuperAdmin is not a roles row (it lives in super_admins); what the route
-    // gate sees is req.role === "SuperAdmin", so the request carries exactly
-    // that for a user of the seeded org.
+    // SuperAdmin is not a roles row (it lives in super_admins); the route gate admits a pure super
+    // admin (isPureSuperAdmin): role "SuperAdmin", the super_admins flag, and no organization. A
+    // request that only says "SuperAdmin", or has an organization, is refused.
     const { owner } = await seedTwoTenantContexts();
     const superAdmin = testRequest(
       await createTestApp({
         bypassAuth: true,
-        mockUser: { userId: owner.userId, organizationId: owner.orgId, role: "SuperAdmin" },
+        mockUser: {
+          userId: owner.userId,
+          organizationId: null,
+          role: "SuperAdmin",
+          isSuperAdmin: true,
+        },
       }),
     );
 

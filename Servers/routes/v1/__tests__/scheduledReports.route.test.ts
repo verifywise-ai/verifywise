@@ -166,7 +166,8 @@ describe("/api/v1/scheduled-reports", () => {
   });
 
   it("reads a schedule with its version's parameters_config", async () => {
-    // Any signed-in role may read, as with the legacy list.
+    // Any signed-in role may ask; which schedules it sees is the query's
+    // project-visibility rule, given the viewer from the token.
     const res = await request(app).get(`${BASE}/3`).set(auth).set("x-role", "Auditor");
     expect(res.status).toBe(200);
     expect(res.body.data).toMatchObject({
@@ -174,14 +175,23 @@ describe("/api/v1/scheduled-reports", () => {
       report_parameters: { isFinal: false },
       parameters_config: { kind: "osfi_e23", fields: [{ key: "isFinal", type: "boolean" }] },
     });
-    expect(getScheduledReportQuery).toHaveBeenCalledWith(3, 42);
+    expect(getScheduledReportQuery).toHaveBeenCalledWith(3, 42, { userId: 9, role: "Auditor" });
   });
 
   it("answers 404 when reading another organization's schedule", async () => {
     const res = await request(app).get(`${BASE}/3`).set(auth).set("x-org", "7");
     expect(res.status).toBe(404);
     expect(res.body.data).toBe("not found");
-    expect(getScheduledReportQuery).toHaveBeenCalledWith(3, 7);
+    expect(getScheduledReportQuery).toHaveBeenCalledWith(3, 7, { userId: 9, role: "Admin" });
+  });
+
+  // The query returns null for a schedule the viewer may not read, which the
+  // endpoint must report exactly like a missing one.
+  it("answers 404 when the viewer may not read the schedule", async () => {
+    (getScheduledReportQuery as jest.Mock).mockResolvedValueOnce(null);
+    const res = await request(app).get(`${BASE}/3`).set(auth).set("x-role", "Editor");
+    expect(res.status).toBe(404);
+    expect(res.body.data).toBe("not found");
   });
 
   it("answers 404 for a non-integer id without querying", async () => {

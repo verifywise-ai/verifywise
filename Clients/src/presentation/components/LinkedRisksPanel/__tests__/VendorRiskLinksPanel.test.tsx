@@ -285,6 +285,28 @@ describe("VendorRiskLinksPanel link form", () => {
     ]);
   });
 
+  // The form is a titled card like the other forms of the tab, with Cancel before Link, the
+  // order of StandardModal's footer.
+  it("opens in a card with Cancel before Link", async () => {
+    mockUseVendorRiskLinks.mockReturnValue(queryResult([]));
+    renderPanel();
+
+    await userEvent.click(screen.getByRole("button", { name: "Link a project risk" }));
+
+    // The toolbar button has the same label as the card's title.
+    expect(screen.getAllByText("Link a project risk")).toHaveLength(2);
+    // The flag follows the level of this vendor risk, the parent, not that of the project risk:
+    // the card names it, so that "its" cannot be read as the child's own level.
+    expect(
+      screen.getByText(
+        "The project risk becomes a child of this vendor risk and is flagged for review when the level of this vendor risk changes.",
+      ),
+    ).toBeInTheDocument();
+    const labels = screen.getAllByRole("button").map((button) => button.textContent);
+    expect(labels.indexOf("Cancel")).toBeGreaterThan(-1);
+    expect(labels.indexOf("Cancel")).toBeLessThan(labels.indexOf("Link"));
+  });
+
   it("links the chosen project risk as a child of this vendor risk", async () => {
     mockUseVendorRiskLinks.mockReturnValue(queryResult([]));
     mockGetAllProjectRisks.mockResolvedValue({ data: [{ id: 12, risk_name: "Shared risk" }] });
@@ -489,6 +511,18 @@ describe("VendorRiskLinksPanel relate form", () => {
     ]);
   });
 
+  it("opens in a card with Cancel before Link", async () => {
+    mockUseVendorRiskLinks.mockReturnValue(queryResult([]));
+    renderPanel();
+
+    await userEvent.click(screen.getByRole("button", { name: "Relate a vendor risk" }));
+
+    expect(screen.getAllByText("Relate a vendor risk")).toHaveLength(2);
+    const labels = screen.getAllByRole("button").map((button) => button.textContent);
+    expect(labels.indexOf("Cancel")).toBeGreaterThan(-1);
+    expect(labels.indexOf("Cancel")).toBeLessThan(labels.indexOf("Link"));
+  });
+
   it("relates the chosen vendor risk to this one", async () => {
     mockUseVendorRiskLinks.mockReturnValue(queryResult([]));
     mockGetAllVendorRisks.mockResolvedValue({ data: vendorRiskRows });
@@ -529,9 +563,14 @@ describe("VendorRiskLinksPanel relate form", () => {
 
     expect(screen.getByPlaceholderText("Search vendor risks")).toBeInTheDocument();
     expect(screen.queryByPlaceholderText("Search risks")).toBeNull();
-    // Only the form's own Cancel: the toolbar buttons stay as they are.
+    // Only the form's own Cancel: the toolbar buttons keep their labels and stay in place, the
+    // one whose form is open disabled.
     expect(screen.getAllByRole("button", { name: "Cancel" })).toHaveLength(1);
     expect(screen.getByRole("button", { name: "Relate a vendor risk" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "Link a project risk" })).toBeEnabled();
+
+    await userEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    expect(screen.queryByPlaceholderText("Search vendor risks")).toBeNull();
+    expect(screen.getByRole("button", { name: "Relate a vendor risk" })).toBeEnabled();
   });
 });

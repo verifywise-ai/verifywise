@@ -28,6 +28,15 @@ describe("StepProgressDialog", () => {
     expect(screen.getByText("25%")).toBeInTheDocument();
   });
 
+  it("names its progress bar after the dialog title", () => {
+    renderWithProviders(
+      <StepProgressDialog open={true} title="Loading dashboard" steps={steps} currentStep={1} />,
+    );
+
+    const bar = screen.getByRole("progressbar", { name: "Loading dashboard" });
+    expect(bar).toHaveAttribute("aria-valuenow", "50");
+  });
+
   it("renders the correct step when currentStep is provided", () => {
     renderWithProviders(
       <StepProgressDialog open={true} title="Import Progress" steps={steps} currentStep={2} />,

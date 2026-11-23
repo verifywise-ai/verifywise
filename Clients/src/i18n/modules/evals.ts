@@ -534,6 +534,10 @@ export const de: Record<string, string> = {
   "Project settings": "Projekteinstellungen",
   "Saved Models": "Gespeicherte Modelle",
   "The type of LLM application being evaluated": "Der Typ der zu bewertenden LLM-Anwendung",
+  "Manage your organization's LLM provider API keys and project configuration.":
+    "Verwalten Sie die API-Schlüssel der LLM-Anbieter und die Projektkonfiguration Ihrer Organisation.",
+  "Monitor your project's evaluation performance, track key metrics, and view recent experiments at a glance.":
+    "Überwachen Sie die Evaluierungsleistung Ihres Projekts, verfolgen Sie wichtige Kennzahlen und sehen Sie aktuelle Experimente auf einen Blick.",
   "Create scorer": "Bewerter erstellen",
   "LLM Evals settings": "LLM-Bewertungseinstellungen",
   "Start experiment": "Experiment starten",
@@ -1199,6 +1203,10 @@ export const fr: Record<string, string> = {
   "Project settings": "Paramètres du projet",
   "Saved Models": "Modèles enregistrés",
   "The type of LLM application being evaluated": "Le type d'application LLM évalué",
+  "Manage your organization's LLM provider API keys and project configuration.":
+    "Gérez les clés API des fournisseurs de LLM et la configuration des projets de votre organisation.",
+  "Monitor your project's evaluation performance, track key metrics, and view recent experiments at a glance.":
+    "Surveillez les performances d'évaluation de votre projet, suivez les indicateurs clés et consultez d'un coup d'œil les expériences récentes.",
   "Create scorer": "Créer un évaluateur",
   "LLM Evals settings": "Paramètres d'évaluations LLM",
   "Start experiment": "Lancer l'expérience",
@@ -1864,6 +1872,10 @@ export const es: Record<string, string> = {
   "Project settings": "Configuración del proyecto",
   "Saved Models": "Modelos guardados",
   "The type of LLM application being evaluated": "El tipo de aplicación LLM que se está evaluando",
+  "Manage your organization's LLM provider API keys and project configuration.":
+    "Gestione las claves de API de los proveedores de LLM y la configuración de proyectos de su organización.",
+  "Monitor your project's evaluation performance, track key metrics, and view recent experiments at a glance.":
+    "Supervise el rendimiento de evaluación de su proyecto, siga las métricas clave y consulte de un vistazo los experimentos recientes.",
   "Create scorer": "Crear evaluador",
   "LLM Evals settings": "Configuración de LLM Evals",
   "Start experiment": "Iniciar experimento",
