@@ -38,6 +38,9 @@ export interface CEMarkingIncidentOption {
   status: string;
   occurred_date?: string;
   description?: string;
+  /** The use case the incident belongs to (projects.id), when set. */
+  project_id?: number | null;
+  archived?: boolean;
 }
 
 /**

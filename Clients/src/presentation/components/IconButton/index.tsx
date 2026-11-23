@@ -393,6 +393,11 @@ function IconButton({
       return ["edit"];
     }
 
+    // An archived incident opens read-only and can be restored (incident.edit).
+    if (normalizedType === "incident" && isArchived) {
+      return onRestore ? ["view", "restore"] : ["view"];
+    }
+
     // Without incident.edit an incident opens read-only, unless the role
     // records approval (incident.approve): then it can open it to approve.
     if (normalizedType === "incident" && canEdit === false) {
@@ -451,6 +456,7 @@ function IconButton({
       incident: {
         archive: "Archive incident",
         approve: "Record approval",
+        restore: "Restore incident",
       },
       risk: {
         restore: "Restore risk",
@@ -566,7 +572,7 @@ function IconButton({
                 } else if (item === "pause_resume") {
                   await handleToggleStatus(e);
                 } else if (item === "restore") {
-                  // Task restore action
+                  // Restore an archived task, incident, report run or deleted risk
                   handleRestore(e);
                 } else if (item === "link_objects") {
                   handleLinkedObjects(e);

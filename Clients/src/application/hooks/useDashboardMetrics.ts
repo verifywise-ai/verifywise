@@ -598,9 +598,13 @@ export const useDashboardMetrics = () => {
 
       // Handle the API response structure
       const incidentsData = response.data || response.incidents || response;
-      const incidentsArray = Array.isArray(incidentsData) ? incidentsData : [];
+      // Archived incidents are left out, as on the incidents page's default
+      // view, so the dashboard's counts match it.
+      const incidentsArray = (Array.isArray(incidentsData) ? incidentsData : []).filter(
+        (incident: any) => !incident?.archived,
+      );
 
-      // Count open incidents from ALL incidents
+      // Count open incidents
       const openCount = incidentsArray.filter((incident: any) => incident.status === "Open").length;
 
       const metrics = {

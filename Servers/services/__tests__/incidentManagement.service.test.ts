@@ -321,9 +321,9 @@ describe("updateIncident (shared incident write path)", () => {
         },
       ],
     });
-    // Unchanged FKs come from the locked row.
+    // Only the changed reference is checked; unchanged ones are not looked up.
     expect(mockRefs).toHaveBeenCalledWith(
-      { model_inventory_id: null, project_id: 3, assignee_id: 999 },
+      { model_inventory_id: undefined, project_id: undefined, assignee_id: 999 },
       1,
       mockTransaction,
     );

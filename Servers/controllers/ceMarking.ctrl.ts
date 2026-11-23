@@ -6,6 +6,34 @@ import { countSubControlsEUByProjectId, countAnswersEUByProjectId } from "../uti
 import logger from "../utils/logger/fileLogger";
 import { logEvent } from "../utils/logger/dbLogger";
 
+/** 400 messages for a bad `linkedIncidents` list (translated per request). */
+export const LINKED_INCIDENTS_NOT_A_LIST_MESSAGE =
+  "Linked incidents must be a list of incident ids.";
+export const LINKED_INCIDENTS_NOT_FOUND_MESSAGE =
+  "Some linked incidents do not exist in your organization.";
+
+/**
+ * Parses the `linkedIncidents` of a CE marking update: a list of positive
+ * integer ids (numbers, or strings of digits), returned without duplicates.
+ * Returns null for anything else (not a list, or an entry such as "abc",
+ * 1.5, 0 or null), which the update answers with 400.
+ */
+export const parseLinkedIncidentIds = (value: unknown): number[] | null => {
+  if (!Array.isArray(value)) return null;
+  const ids: number[] = [];
+  for (const entry of value) {
+    const id =
+      typeof entry === "number"
+        ? entry
+        : typeof entry === "string" && /^\d+$/.test(entry.trim())
+          ? Number(entry.trim())
+          : NaN;
+    if (!Number.isSafeInteger(id) || id <= 0) return null;
+    if (!ids.includes(id)) ids.push(id);
+  }
+  return ids;
+};
+
 // Default conformity steps - will be created for each new CE Marking record
 const DEFAULT_CONFORMITY_STEPS = [
   { step_number: 1, step_name: "Confirm high risk classification" },
@@ -159,10 +187,15 @@ export const getCEMarking = async (req: Request, res: Response) => {
       },
     );
 
-    // Get linked incidents
+    // Get linked incidents: only incidents that exist in this organization.
+    // Deleting an incident removes its links (FK ON DELETE CASCADE); the join
+    // also hides any link stored before the update validated ids.
     const linkedIncidents = await sequelize.query(
-      `SELECT incident_id FROM ce_marking_incidents
-       WHERE ce_marking_id = :ceMarkingId AND organization_id = :organizationId`,
+      `SELECT c.incident_id FROM ce_marking_incidents c
+       JOIN ai_incident_managements i
+         ON i.id = c.incident_id AND i.organization_id = c.organization_id
+       WHERE c.ce_marking_id = :ceMarkingId AND c.organization_id = :organizationId
+       ORDER BY c.incident_id`,
       {
         replacements: { ceMarkingId: ceMarking.id, organizationId },
         type: QueryTypes.SELECT,
@@ -344,6 +377,35 @@ export const updateCEMarking = async (req: Request, res: Response) => {
 
     const existing: any = existingResult[0];
     const auditEntries: any[] = [];
+
+    // Linked incidents: positive integer ids of incidents in this
+    // organization, checked before anything is written.
+    let linkedIncidentIds: number[] | undefined;
+    if (updates.linkedIncidents !== undefined) {
+      const parsed = parseLinkedIncidentIds(updates.linkedIncidents);
+      if (!parsed) {
+        await transaction.rollback();
+        return res.status(400).json(STATUS_CODE[400](req.t!(LINKED_INCIDENTS_NOT_A_LIST_MESSAGE)));
+      }
+      if (parsed.length > 0) {
+        const found = (await sequelize.query(
+          `SELECT id FROM ai_incident_managements
+            WHERE organization_id = :organizationId AND id IN (:ids)`,
+          {
+            replacements: { organizationId, ids: parsed },
+            type: QueryTypes.SELECT,
+            transaction,
+          },
+        )) as { id: number }[];
+        if (found.length !== parsed.length) {
+          await transaction.rollback();
+          return res.status(400).json(STATUS_CODE[400](req.t!(LINKED_INCIDENTS_NOT_FOUND_MESSAGE)));
+        }
+      }
+      linkedIncidentIds = parsed;
+      // The count is the server's, not the caller's.
+      updates.totalIncidents = parsed.length;
+    }
 
     // Build update query for main CE Marking table
     const updateFields: string[] = [];
@@ -538,8 +600,8 @@ export const updateCEMarking = async (req: Request, res: Response) => {
       );
     }
 
-    // Handle linked incidents updates
-    if (updates.linkedIncidents && Array.isArray(updates.linkedIncidents)) {
+    // Handle linked incidents updates (validated above)
+    if (linkedIncidentIds) {
       // Remove existing linked incidents
       await sequelize.query(
         `DELETE FROM ce_marking_incidents WHERE ce_marking_id = :ceMarkingId AND organization_id = :organizationId`,
@@ -551,7 +613,7 @@ export const updateCEMarking = async (req: Request, res: Response) => {
       );
 
       // Add new linked incidents
-      for (const incidentId of updates.linkedIncidents) {
+      for (const incidentId of linkedIncidentIds) {
         await sequelize.query(
           `INSERT INTO ce_marking_incidents (ce_marking_id, organization_id, incident_id, linked_by, linked_at)
            VALUES (:ceMarkingId, :organizationId, :incidentId, :userId, NOW())`,
@@ -573,7 +635,7 @@ export const updateCEMarking = async (req: Request, res: Response) => {
             ceMarkingId: existing.id,
             organizationId,
             oldValue: existing.total_incidents?.toString() || "0",
-            newValue: updates.linkedIncidents.length.toString(),
+            newValue: linkedIncidentIds.length.toString(),
             userId,
           },
           type: QueryTypes.INSERT,

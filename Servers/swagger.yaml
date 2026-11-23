@@ -20513,7 +20513,7 @@ paths:
       tags:
         - Incidents
       summary: 'Update Incident By Id'
-      description: 'Needs incident.edit or incident.approve, then per field: changing approval_status or approval_notes needs incident.approve, changing any other field (archived included) needs incident.edit. A field sent with its stored value is not a change. approved_by and approval_date are set by the server and ignored in the request: when approval_status changes to Approved or Rejected, approved_by is the caller''s name and approval_date is now; when it changes to Pending or Not required, both are cleared. Changed fields follow the create rules (enums, lengths, dates; harm categories an update adds must be listed values, stored ones outside the list may stay); a required field cannot be set to null or an empty string, and the dates the incident ends up with must keep date_detected on or after occurred_date. Fields left out are not changed.'
+      description: 'Needs incident.edit or incident.approve, then per field: changing approval_status or approval_notes needs incident.approve, changing any other field (archived included) needs incident.edit. A field sent with its stored value is not a change. An archived incident takes only { "archived": false } (restore); any other change answers 409 ("Restore this incident before editing it.") and nothing is written. approved_by and approval_date are set by the server and ignored in the request: when approval_status changes to Approved or Rejected, approved_by is the caller''s name and approval_date is now; when it changes to Pending or Not required, both are cleared. Changed fields follow the create rules (enums, lengths, dates; harm categories an update adds must be listed values, stored ones outside the list may stay); a required field cannot be set to null or an empty string, and the dates the incident ends up with must keep date_detected on or after occurred_date. Fields left out are not changed.'
       operationId: updateIncidentById
       security:
         -
@@ -20542,13 +20542,14 @@ paths:
         '404':
           description: 'Incident not found'
         '409':
-          description: 'The incident changed since expected_updated_at'
+          description: 'The incident changed since expected_updated_at, or the incident is archived and the request changes more than archived (code INCIDENT_ARCHIVED)'
         '500':
           description: 'Internal server error'
     delete:
       tags:
         - Incidents
       summary: 'Delete Incident By Id'
+      description: 'Permanently deletes the incident. A deletion entry is recorded in its change history, and the incident_deleted automation is sent after the delete commits.'
       operationId: deleteIncidentById
       security:
         -
@@ -20563,10 +20564,14 @@ paths:
       responses:
         '200':
           description: 'Deleted successfully'
+        '400':
+          description: 'The id is not a positive integer'
         '401':
           description: Unauthorized
         '403':
           description: 'The role does not hold incident.delete'
+        '404':
+          description: 'Incident not found in the organization. Nothing is deleted and no automation is sent.'
         '500':
           description: 'Internal server error'
   '/ai-incident-managements/{id}/archive':
@@ -20574,6 +20579,7 @@ paths:
       tags:
         - Incidents
       summary: 'Archive Incident By Id'
+      description: 'Archives the incident through the incident update path: the row is locked, the change is recorded in change history ("Archived") and the incident_updated automation is sent after commit. Archiving an archived incident changes nothing. The request body is ignored. To restore, send { "archived": false } to PATCH /ai-incident-managements/{id}.'
       operationId: archiveIncidentById
       security:
         -
@@ -20592,11 +20598,15 @@ paths:
               type: object
       responses:
         '200':
-          description: Success
+          description: 'The incident after the change'
+        '400':
+          description: 'The id is not a positive integer'
         '401':
           description: Unauthorized
         '403':
           description: 'The role does not hold incident.edit'
+        '404':
+          description: 'Incident not found in the organization'
         '500':
           description: 'Internal server error'
   '/ce-marking/{projectId}':
@@ -20642,11 +20652,20 @@ paths:
           application/json:
             schema:
               type: object
+              properties:
+                linkedIncidents:
+                  type: array
+                  description: 'Replaces the linked incidents. Each entry is a positive integer id (a number or a string of digits) of an incident in the caller''s organization; duplicates are ignored. totalIncidents is then set to the number of linked incidents.'
+                  items: {type: integer}
       responses:
         '200':
           description: Success
+        '400':
+          description: 'linkedIncidents is not a list of positive integer ids ("Linked incidents must be a list of incident ids."), or names an incident that does not exist in the organization ("Some linked incidents do not exist in your organization."). Nothing is written.'
         '401':
           description: Unauthorized
+        '404':
+          description: 'Use case or CE marking record not found'
         '500':
           description: 'Internal server error'
   /search:

@@ -28,7 +28,7 @@ vi.mock("../../../../application/repository/ceMarking.repository", () => ({
   updateRegistration: (...args: any[]) => mockUpdateRegistration(...args),
   getAllPolicies: (...args: any[]) => mockGetAllPolicies(...args),
   getAllEvidences: (...args: any[]) => mockGetAllEvidences(...args),
-  getAllIncidents: (...args: any[]) => mockGetAllIncidents(...args),
+  getLinkableIncidents: (...args: any[]) => mockGetAllIncidents(...args),
   updateLinkedPolicies: (...args: any[]) => mockUpdateLinkedPolicies(...args),
   updateLinkedEvidences: (...args: any[]) => mockUpdateLinkedEvidences(...args),
   updateLinkedIncidents: (...args: any[]) => mockUpdateLinkedIncidents(...args),
@@ -260,5 +260,7 @@ describe("CEMarking", () => {
 
     fireEvent.click(screen.getByText("View incidents for this use case"));
     expect(await screen.findByText("Type: Bias")).toBeInTheDocument();
+    // The picker asks for this use case's incidents, keeping the linked one.
+    expect(mockGetAllIncidents).toHaveBeenCalledWith("1", [3]);
   });
 });

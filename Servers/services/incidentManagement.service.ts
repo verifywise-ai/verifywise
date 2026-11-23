@@ -17,13 +17,21 @@
  *      which fields are recorded in change history; nothing changed means no
  *      write, no updated_at bump, no history and no automations;
  *   7. `incident_updated` automations are enqueued only after commit.
+ *
+ * Archive and restore are updates of `archived` through the same path
+ * (setIncidentArchived). Creating (createIncident) and deleting
+ * (deleteIncident) also live here, so the console, the AI Advisor and any
+ * other writer record the same history and send the same automations.
  */
 
 import { Transaction } from "sequelize";
 import { sequelize } from "../database/db";
 import { AIIncidentManagementModel } from "../domain.layer/models/incidentManagement/incidemtManagement.model";
+import { IAIIncidentManagement } from "../domain.layer/interfaces/i.aiIncidentManagement";
 import { ConflictException } from "../domain.layer/exceptions/custom.exception";
 import {
+  createNewIncidentQuery,
+  deleteIncidentByIdQuery,
   diffIncidentColumns,
   enqueueIncidentUpdatedAutomations,
   getIncidentApproverName,
@@ -37,14 +45,23 @@ import {
 import {
   applyReopenApprovalReset,
   approvalStampFor,
+  INCIDENT_CREATE_DEFAULTS,
+  isBlankIncidentValue,
+  parseCreateHarmCategories,
+  validateCompleteIncidentCreation,
   validateCompleteIncidentUpdate,
   withoutServerSetApprovalFields,
 } from "../utils/validations/incidentManagementValidation.utils";
 import { ValidationError } from "../utils/validations/validation.utils";
 import {
   formatEntityFieldChanges,
+  recordEntityCreation,
+  recordEntityDeletion,
   recordMultipleFieldChanges,
 } from "../utils/changeHistory.base.utils";
+import { recordIncidentCreation } from "../utils/incidentChangeHistory.utils";
+import { isCriticalIncidentSeverity } from "../domain.layer/enums/ai-incident-management.enum";
+import { triggerIncidentResponse } from "./workflows/triggers";
 import logger from "../utils/logger/fileLogger";
 
 /** Message for a write that lost an optimistic-concurrency check. */
@@ -106,6 +123,43 @@ export class IncidentAccessDeniedError extends Error {
     this.name = "IncidentAccessDeniedError";
   }
 }
+
+/** Message for a change to an archived incident other than restoring it. */
+export const INCIDENT_ARCHIVED_MESSAGE = "Restore this incident before editing it.";
+
+/**
+ * Thrown when an update changes an archived incident's fields other than
+ * `archived` (restoring it). The controller answers 409 with
+ * INCIDENT_ARCHIVED_MESSAGE; nothing is written.
+ */
+export class IncidentArchivedError extends Error {
+  constructor(public readonly fields: string[]) {
+    super(INCIDENT_ARCHIVED_MESSAGE);
+    this.name = "IncidentArchivedError";
+  }
+}
+
+/**
+ * The reference columns (use case, model, owner) an update changes against
+ * the stored row: only those are checked against the organization, so a
+ * reference that has since become invalid (an owner who left the
+ * organization) never blocks other edits, archive or restore.
+ */
+const changedReferences = (
+  stored: Record<string, unknown>,
+  updates: Record<string, unknown>,
+): Record<"model_inventory_id" | "project_id" | "assignee_id", unknown> => {
+  const changed = (column: "model_inventory_id" | "project_id" | "assignee_id") =>
+    updates[column] !== undefined &&
+    String(updates[column] ?? "").trim() !== String(stored[column] ?? "")
+      ? updates[column]
+      : undefined;
+  return {
+    model_inventory_id: changed("model_inventory_id"),
+    project_id: changed("project_id"),
+    assignee_id: changed("assignee_id"),
+  };
+};
 
 export interface UpdateIncidentOptions {
   /**
@@ -226,25 +280,21 @@ export async function updateIncident(
       throw new IncidentAccessDeniedError("approve", needs.approve);
     }
 
+    // An archived incident is read-only until restored: the only change it
+    // takes is `archived` itself (restore, possibly with nothing else).
+    if (stored.archived) {
+      const blocked = [...needs.edit, ...needs.approve].filter((column) => column !== "archived");
+      if (blocked.length > 0) throw new IncidentArchivedError(blocked);
+    }
+
     // Field validation first: a malformed value never reaches the reference SQL.
     const validationErrors: ValidationError[] = validateCompleteIncidentUpdate(updates, stored);
     if (validationErrors.length > 0) throw new IncidentUpdateValidationError(validationErrors);
 
+    // Only references the update changes are checked; unchanged ones (and
+    // ones sent back with their stored value) are not looked up.
     const invalidRefs = await validateIncidentReferences(
-      {
-        model_inventory_id:
-          updates.model_inventory_id !== undefined
-            ? updates.model_inventory_id
-            : stored.model_inventory_id,
-        project_id: updates.project_id !== undefined ? updates.project_id : stored.project_id,
-        // Only a new owner is checked: one who has since left the organization
-        // stays on the incident and must not block every other edit.
-        assignee_id:
-          updates.assignee_id !== undefined &&
-          String(updates.assignee_id ?? "").trim() !== String(stored.assignee_id ?? "")
-            ? updates.assignee_id
-            : undefined,
-      },
+      changedReferences(stored, updates),
       organizationId,
       transaction,
     );
@@ -315,6 +365,270 @@ export async function updateIncident(
         transactionAborted: true,
       });
     }
+    throw error;
+  }
+}
+
+/**
+ * Archives (`archived: true`) or restores (`archived: false`) an incident
+ * through updateIncident, so both take the row lock and record the change in
+ * history ("Archived": No -> Yes, or back) and send `incident_updated` after
+ * commit. Archiving an archived incident (or restoring an active one) changes
+ * nothing and records nothing. Returns null when the incident does not exist
+ * in the organization. Callers check incident.edit first; archived is an
+ * incident detail, so the write needs edit access and never approval.
+ */
+export function setIncidentArchived(
+  organizationId: number,
+  incidentId: number,
+  archived: boolean,
+  userId: number | null | undefined,
+  options: Pick<UpdateIncidentOptions, "changedBySystem" | "transaction"> = {},
+): Promise<AIIncidentManagementModel | null> {
+  return updateIncident(organizationId, incidentId, { archived }, userId, {
+    ...options,
+    access: { canEdit: true, canApprove: false },
+  });
+}
+
+/**
+ * Thrown when a create fails validation: field rules, or a reference
+ * (use case, model, owner) outside the organization, including one deleted
+ * between the check and the insert. `errors` match the HTTP 400 body.
+ */
+export class IncidentCreateValidationError extends Error {
+  constructor(public readonly errors: ValidationError[]) {
+    super("Incident creation validation failed");
+    this.name = "IncidentCreateValidationError";
+  }
+}
+
+/** Who creates an incident, and whether they may record an approval decision. */
+export interface CreateIncidentActor {
+  /** The acting user: recorded in history and as approver when they approve. */
+  userId?: number | null;
+  /** incident.approve: without it the incident starts Pending, without notes. */
+  canApprove: boolean;
+  /**
+   * Record creation history as the system (null actor) when there is no
+   * user, as the AI Advisor does for an execution without one.
+   */
+  changedBySystem?: boolean;
+}
+
+/**
+ * The saved incident's values for creation history, without the column
+ * defaults the caller did not send (false booleans such as archived and
+ * interim_report, an empty harm category list): history lists what the
+ * incident was created with, not every default.
+ */
+export const creationHistoryValues = (
+  saved: Record<string, unknown>,
+  input: Record<string, unknown> | undefined,
+): Record<string, unknown> =>
+  Object.fromEntries(
+    Object.entries(saved).filter(
+      ([key, value]) =>
+        input?.[key] !== undefined ||
+        !(value === false || (Array.isArray(value) && value.length === 0)),
+    ),
+  );
+
+/**
+ * Creates an incident for a person (the console, the AI Advisor). In order:
+ *   1. field validation (validateCompleteIncidentCreation), before any
+ *      transaction;
+ *   2. the references (use case, model, owner) must be in the organization,
+ *      checked on the create transaction;
+ *   3. approval: only an actor with incident.approve may record a decision;
+ *      the approver and date are the server's (the actor and now);
+ *   4. the insert (`incident_added` is enqueued after commit by the query);
+ *   5. creation history, as the actor or as the system;
+ *   6. after commit, the incident response workflow for critical severity.
+ * Throws IncidentCreateValidationError for 1, 2 and a reference deleted
+ * after the check (the insert's foreign key), ValidationException from the
+ * write query's description backstop, and anything else unchanged.
+ */
+export async function createIncident(
+  organizationId: number,
+  input: Record<string, unknown>,
+  actor: CreateIncidentActor,
+): Promise<AIIncidentManagementModel> {
+  const fieldErrors = validateCompleteIncidentCreation(input);
+  if (fieldErrors.length > 0) throw new IncidentCreateValidationError(fieldErrors);
+
+  const transaction = await sequelize.transaction();
+  // Set once the transaction is committed or rolled back, so the catch below
+  // never rolls back a finished one.
+  let finished = false;
+  const rollback = async () => {
+    if (finished) return;
+    finished = true;
+    try {
+      await transaction.rollback();
+    } catch (rollbackError) {
+      logger.error(`[incident] create rollback failed: ${rollbackError}`);
+    }
+  };
+  try {
+    // Plain reads, no locks. A reference deleted after this check fails the
+    // insert's FK check, answered below with the same error.
+    const invalidRefs = await validateIncidentReferences(
+      {
+        model_inventory_id: input.model_inventory_id,
+        project_id: input.project_id,
+        assignee_id: input.assignee_id,
+      },
+      organizationId,
+      transaction,
+    );
+    if (invalidRefs.length > 0) {
+      throw new IncidentCreateValidationError(invalidReferenceErrors(invalidRefs));
+    }
+
+    // Validation allowed an absent, null or "" approval_status / status:
+    // those take the defaults (Pending, Open).
+    const approvalStatus =
+      actor.canApprove && !isBlankIncidentValue(input.approval_status)
+        ? input.approval_status
+        : INCIDENT_CREATE_DEFAULTS.approval_status;
+    const stamped = approvalStampFor(undefined, approvalStatus) === "stamp" && !!actor.userId;
+    // undefined is stored as NULL (createNewIncidentQuery).
+    const approvedBy = stamped
+      ? await getIncidentApproverName(actor.userId!, organizationId, transaction)
+      : undefined;
+
+    const incident = new AIIncidentManagementModel({
+      ai_project: input.ai_project,
+      model_inventory_id: input.model_inventory_id ?? null,
+      project_id: input.project_id ?? null,
+      assignee_id: input.assignee_id ?? null,
+      type: input.type,
+      severity: input.severity,
+      status: isBlankIncidentValue(input.status) ? INCIDENT_CREATE_DEFAULTS.status : input.status,
+      occurred_date: input.occurred_date ? input.occurred_date : null,
+      date_detected: input.date_detected ? input.date_detected : null,
+      reporter: input.reporter,
+      approval_status: approvalStatus,
+      approved_by: approvedBy,
+      // A list, or the comma-separated string form; validated above.
+      categories_of_harm: parseCreateHarmCategories(input.categories_of_harm) as string[],
+      affected_persons_groups: input.affected_persons_groups,
+      description: input.description,
+      relationship_causality: input.relationship_causality,
+      immediate_mitigations: input.immediate_mitigations,
+      planned_corrective_actions: input.planned_corrective_actions,
+      model_system_version: input.model_system_version,
+      interim_report: input.interim_report,
+      archived: input.archived || false,
+      approval_date: stamped ? new Date() : undefined,
+      approval_notes: actor.canApprove ? input.approval_notes : undefined,
+      created_at: new Date(),
+      updated_at: new Date(),
+    } as Partial<IAIIncidentManagement>);
+
+    const saved = await createNewIncidentQuery(incident, organizationId, transaction);
+
+    // History records the incident as saved (defaults, parsed harm
+    // categories and the server's approval fields), not the request.
+    if (saved.id && (actor.userId || actor.changedBySystem)) {
+      const values = creationHistoryValues(
+        (saved.dataValues ?? saved) as unknown as Record<string, unknown>,
+        input,
+      );
+      if (actor.userId) {
+        await recordIncidentCreation(saved.id, actor.userId, organizationId, values, transaction);
+      } else {
+        await recordEntityCreation(
+          "incident",
+          saved.id,
+          null,
+          organizationId,
+          values,
+          transaction,
+          true,
+        );
+      }
+    }
+
+    // Phase 6 / issue 3813: the critical incident_response autopilot
+    // workflow, only once the incident exists. Never blocks the create.
+    if (saved.id && isCriticalIncidentSeverity(saved.severity)) {
+      const savedId = saved.id;
+      transaction.afterCommit(() => {
+        triggerIncidentResponse(organizationId, savedId, saved.severity).catch((err) =>
+          logger.error(`[incident] incident_response trigger failed: ${err}`),
+        );
+      });
+    }
+
+    await transaction.commit();
+    finished = true;
+    return saved;
+  } catch (error) {
+    await rollback();
+    const deletedReference = incidentReferenceFieldFromError(error);
+    if (deletedReference) {
+      throw new IncidentCreateValidationError(invalidReferenceErrors([deletedReference]));
+    }
+    throw error;
+  }
+}
+
+/**
+ * Permanently deletes an incident (incident.delete; the caller checks it).
+ * In one transaction: a Jira link is marked deleted_in_verifywise, the row is
+ * deleted, and a deletion entry ("Incident": Active -> Deleted) is recorded in
+ * incident_change_history as `userId`, or as the system with
+ * `changedBySystem`. The history table has no foreign key to the incident,
+ * so the entry outlives it (and goes to the audit ledger after commit). The
+ * `incident_deleted` automation is enqueued only after commit.
+ *
+ * Returns the deleted row, or null when the incident does not exist in the
+ * organization: then nothing is written and nothing is sent.
+ */
+export async function deleteIncident(
+  organizationId: number,
+  incidentId: number,
+  userId: number | null | undefined,
+  options: { changedBySystem?: boolean } = {},
+): Promise<Record<string, unknown> | null> {
+  const transaction = await sequelize.transaction();
+  // Set once the transaction is committed or rolled back, so the catch below
+  // never rolls back a finished one.
+  let finished = false;
+  const rollback = async () => {
+    if (finished) return;
+    finished = true;
+    try {
+      await transaction.rollback();
+    } catch (rollbackError) {
+      logger.error(`[incident] delete rollback failed: ${rollbackError}`);
+    }
+  };
+  try {
+    // No SELECT ... FOR UPDATE first: the delete takes the link before the
+    // incident, the order the Jira status sync locks them in.
+    const deleted = await deleteIncidentByIdQuery(incidentId, organizationId, transaction);
+    if (!deleted) {
+      await rollback();
+      return null;
+    }
+    if (userId || options.changedBySystem) {
+      await recordEntityDeletion(
+        "incident",
+        incidentId,
+        userId ?? null,
+        organizationId,
+        transaction,
+        options.changedBySystem ?? false,
+      );
+    }
+    await transaction.commit();
+    finished = true;
+    return deleted;
+  } catch (error) {
+    await rollback();
     throw error;
   }
 }
