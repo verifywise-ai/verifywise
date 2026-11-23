@@ -157,8 +157,8 @@ describe("reportTemplate.utils", () => {
     await createTemplateVersionQuery(7, 42, { sections_config: { sections: [] } }, 9);
     const [sql, opts] = q.mock.calls[0];
     expect(opts.replacements.framework_config).toBeNull();
-    expect(sql).toMatch(
-      /COALESCE\(\s*CAST\(:framework_config AS JSONB\),\s*\(SELECT framework_config FROM report_template_versions\s+WHERE template_id = :template_id ORDER BY version DESC LIMIT 1\),\s*'\{\}'::jsonb\s*\)/,
+    expect(sql).toContain(
+      "COALESCE(CAST(:framework_config AS JSONB), prev.framework_config, '{}'::jsonb)",
     );
   });
 
@@ -200,6 +200,52 @@ describe("reportTemplate.utils", () => {
     const [sql, opts] = q.mock.calls[0];
     expect(opts.replacements.parameters_config).toBeNull();
     expect(sql).toMatch(/COALESCE\(\s*CAST\(:parameters_config AS JSONB\)/);
+  });
+
+  // A PATCH that edits one part of a template must not reset the rest: every
+  // config column it leaves out keeps the previous version's value.
+  it.each([
+    "sections_config",
+    "ai_blocks_config",
+    "format_config",
+    "branding_config",
+    "schedule_defaults",
+    "delivery_defaults",
+  ])(
+    "createTemplateVersionQuery keeps the previous version's %s when none is sent",
+    async (column) => {
+      q.mockResolvedValueOnce([{ id: 35, version: 3 }]);
+      await createTemplateVersionQuery(7, 42, { framework_config: { frameworkIds: [] } }, 9);
+      const [sql, opts] = q.mock.calls[0];
+      expect(opts.replacements[column]).toBeNull();
+      expect(sql).toContain(`COALESCE(CAST(:${column} AS JSONB), prev.${column},`);
+    },
+  );
+
+  it("createTemplateVersionQuery stores explicit config values as sent", async () => {
+    q.mockResolvedValueOnce([{ id: 36, version: 3 }]);
+    await createTemplateVersionQuery(
+      7,
+      42,
+      { ai_blocks_config: {}, format_config: { pdf: true }, delivery_defaults: null },
+      9,
+    );
+    const { replacements } = q.mock.calls[0][1];
+    expect(replacements.ai_blocks_config).toBe("{}");
+    expect(replacements.format_config).toBe(JSON.stringify({ pdf: true }));
+    expect(replacements.delivery_defaults).toBeNull();
+  });
+
+  // The first version has nothing to inherit: sections fall back to an empty
+  // list, every other column to {}.
+  it("createTemplateVersionQuery falls back to the column defaults for a first version", async () => {
+    q.mockResolvedValueOnce([{ id: 37, version: 1 }]);
+    await createTemplateVersionQuery(7, 42, {}, 9);
+    const [sql] = q.mock.calls[0];
+    expect(sql).toContain(
+      "prev.sections_config, jsonb_build_object('sections', jsonb_build_array()))",
+    );
+    expect(sql).toMatch(/LEFT JOIN LATERAL \(\s*SELECT \* FROM report_template_versions/);
   });
 
   it("createTemplateVersionQuery rejects a parameters_config that is not an object", async () => {
