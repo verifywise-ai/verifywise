@@ -57,6 +57,16 @@ export function vendorRiskLevelLabel(
   return bucket ? VENDOR_LABEL_BY_BUCKET[bucket] : null;
 }
 
+/**
+ * Sort rank of a vendor risk level: 0 when not assessed (empty or unknown),
+ * then 1 (No risk, and an older "Very low") to 5 (Very high), so the order
+ * matches the cards.
+ */
+export function vendorRiskLevelRank(level: string | null | undefined): number {
+  const label = vendorRiskLevelLabel(level);
+  return label ? VENDOR_RISK_LEVEL_LABELS.indexOf(label) + 1 : 0;
+}
+
 /** The level a risk shows: current level when set, else the inherent level. */
 export function getEffectiveRiskLevel(risk: RiskLevelFields): string {
   return risk.current_risk_level || risk.risk_level_autocalculated || "";

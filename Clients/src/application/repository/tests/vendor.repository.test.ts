@@ -182,7 +182,7 @@ describe("vendor.repository", () => {
       const result = await createNewVendor({ body });
 
       expect(apiServices.post).toHaveBeenCalledTimes(1);
-      expect(apiServices.post).toHaveBeenCalledWith("/vendors", body);
+      expect(apiServices.post).toHaveBeenCalledWith("/vendors", body, undefined);
       expect(result).toEqual(mockResponse);
     });
 
@@ -225,7 +225,7 @@ describe("vendor.repository", () => {
       const result = await update({ id: 1, body });
 
       expect(apiServices.patch).toHaveBeenCalledTimes(1);
-      expect(apiServices.patch).toHaveBeenCalledWith("/vendors/1", body);
+      expect(apiServices.patch).toHaveBeenCalledWith("/vendors/1", body, undefined);
       expect(result).toEqual(mockResponse);
     });
 
@@ -266,7 +266,7 @@ describe("vendor.repository", () => {
       const result = await deleteVendor({ id: 1 });
 
       expect(apiServices.delete).toHaveBeenCalledTimes(1);
-      expect(apiServices.delete).toHaveBeenCalledWith("/vendors/1");
+      expect(apiServices.delete).toHaveBeenCalledWith("/vendors/1", undefined);
       expect(result).toEqual(mockResponse);
     });
 

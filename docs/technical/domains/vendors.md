@@ -216,7 +216,9 @@ POST /vendors/
 
 ### Processing
 
-1. Validate required fields
+1. Validate required fields. `review_date` is optional: a vendor created
+   without one (absent, `''` or `null`) has `review_date` NULL. It used to
+   default to the moment of creation.
 2. Check that `assignee` and `reviewer` are members of the organization (400 otherwise)
 3. Create vendor record
 4. Create vendor-project associations
@@ -342,6 +344,13 @@ isn't on every linked use case can therefore save the vendor, where the old
 delete-visible-then-reinsert-all hit the primary key and answered 500. The
 response's `projects` is read back from `vendors_projects` after the write.
 
+The vendor form fetches the use cases each time it opens. New links are
+picked from approved use cases only, but a link the vendor already has to a
+use case pending approval or rejected stays selected, named with its status
+("Beta (Pending approval)", "Gamma (Rejected)"), and is sent back on save, so
+it goes only when the user removes it. Ids the form doesn't list (use cases
+the user can't see) are sent back unchanged too.
+
 ### Deleting a vendor
 
 A vendor delete is a hard delete (`deleteVendorByIdQuery`,
@@ -437,6 +446,25 @@ related row's `relatedRisk.vendorName` is only set here) and
 `.../shared-projects`; writes go through the existing `POST /api/riskLinks` and
 `PATCH /api/riskLinks/:id`.
 
+**Who sees the link actions.** The tab gates on the keys the routes authorize
+(`routes/riskLinks.route.ts`, defaults in `config/rolePermissions.config.ts`),
+through `useCan` and the client's `BUILTIN_UI_PERMISSIONS`:
+
+| UI | Route | Key | Built-in roles |
+|----|-------|-----|----------------|
+| **Link a project risk**, **Relate a vendor risk** and their forms | `POST /api/riskLinks` | `riskLinks.edit` | Admin, Editor |
+| Row actions: Confirm, Dismiss (with its reason form), Remove link, Restore | `PATCH /api/riskLinks/:id` | `riskLinks.review` | Admin, Editor, Reviewer |
+| **Suggest children**, **Scan for related vendor risks** | `POST .../suggest-hierarchy`, `POST .../vendor-risks/recompute` | `riskLinks.admin` | Admin, SuperAdmin |
+
+Actions a user may not take are hidden, not disabled, as the vendor tables hide
+row actions without `vendor.edit`. An Auditor sees the links, their reasons
+and the Show dismissed toggle, and no actions; the empty state's "Link a
+project risk…" hint shows only with `riskLinks.edit`. A custom role follows its
+loaded permissions. The project risk panel (`LinkedRisksPanel/index.tsx`)
+applies the same keys to **Link a risk** and the row actions, and shows **Mark
+reviewed** on a "Parent level changed" flag only with `riskLinks.edit` (the
+acknowledge route's key); the flag itself shows to everyone.
+
 ### Related vendor risks
 
 Two vendor risks can be related, never parent and child. The row is a
@@ -502,8 +530,13 @@ A child that inherits through two of one vendor's risks counts once for that
 vendor. The same report feeds the table's **Inherited by** column ("3 project
 risks", or "2 suggested" when nothing is confirmed yet). Its link opens the
 vendor risk on its Linked risks tab, and its tooltip names the use cases.
-Saving or deleting a vendor risk invalidates all three reports
-(`VENDOR_INSIGHTS_KEY`).
+Saving, deleting or restoring a vendor risk invalidates all three reports
+(`VENDOR_INSIGHTS_KEY`) in the shared mutation hooks
+(`hooks/useVendorRiskMutations.ts`), so a change made from a vendor's risk
+dialog refreshes them too; so do a vendor update or delete. These hooks and
+the vendor ones turn off the global error toast (`suppressGlobalErrorToast`)
+because the modals and the page show their own, one per failure; a delete that
+answers 404 says "Vendor not found." / "Risk not found.".
 
 ### Candidate notices
 
@@ -599,12 +632,34 @@ up within the organization: a user from another organization shows as
 - Export functionality
 - Page tour for guidance
 
+### Lists, filters and exports
+
+`GET /vendorRisks/all` answers one row per (vendor risk, use case of its
+vendor). `useVendorRisks` and the dashboard make the rows distinct by risk id
+first (`distinctVendorRisks`, `application/utils/vendorRiskRows.ts`), keeping
+each risk's `project_ids` and `project_titles`, so counts, cards, the heat map,
+tables and exports show each risk once. The use case filter matches any of a
+risk's use cases.
+
+Each tab has its own use case filter: the Vendors tab's narrows the vendor
+list only, the Risks tab's the risks only. The Vendors tab's risk counts are
+the vendor's active risks, whatever the Risks tab filters. Filter options use
+the stored enum values (data sensitivity, business criticality, severity) and
+the card level labels ("No risk" to "Very high").
+
+The risk export is the risks on screen (search, filters, card, heat map cell),
+once each, with use case names. The vendor export adds use cases and risk
+counts, and formats the review date with the table's formatter. A search or
+filter that hides every row shows "No vendors (vendor risks) match your search
+or filters." instead of the first-run empty state, and both tables move back to
+the last page with rows when the list shrinks.
+
 ### Components
 
 | Component | Purpose |
 |-----------|---------|
-| `AddNewVendor` | Create/edit vendor modal |
-| `AddNewRisk` | Create/edit risk modal (Risk details, Custom fields, Activity, Linked risks); `initialTab="linked-risks"` opens an existing risk on its links |
+| `AddNewVendor` | Create/edit vendor modal. The review date starts empty and can be cleared; a failed save keeps the form as typed |
+| `AddNewRisk` | Create/edit risk modal (Risk details, Custom fields, Activity, Linked risks); `initialTab="linked-risks"` opens an existing risk on its links. With no vendor it won't save ("Add a vendor first…"); `vendor_id` and `action_owner` are sent as numbers; a failed save keeps the form |
 | `VendorRiskLinksPanel` | The Linked risks tab: child project risks and related vendor risks, plus Suggest children and the related scan |
 | `RelateVendorRiskForm` | Picker that relates another vendor risk to this one |
 | `VendorRiskInsights` | Heat map, blast radius, duplicate and coverage sections above the risks table |
@@ -639,7 +694,8 @@ in-app notice. The Home queue lists due vendors regardless. Both use the same
 rule for `Reviewed` vendors (dropped only once the review date has passed). The
 sweep runs every action of every matching automation and sends one in-app
 notice per vendor per run. The vendor form stores the picked day at noon UTC
-(`calendarDayAtNoonUtc`), so its UTC day is the day the user picked; vendors
+(`calendarDayAtNoonUtc`), so its UTC day is the day the user picked; a vendor
+without a review date gets no reminder; vendors
 saved before that may read a day early for users east of UTC until next saved.
 The job is scheduled at midnight UTC (`tz: "UTC"`). See
 [Automations → Vendor Review Notifications](../infrastructure/automations.md#vendor-review-notifications).

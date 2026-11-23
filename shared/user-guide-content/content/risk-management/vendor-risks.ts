@@ -252,6 +252,42 @@ export const vendorRisksContent: ArticleContent = {
       text: 'Schedule vendor risk reviews based on risk score. High-risk vendors should be reviewed more frequently than low-risk vendors.',
     },
     {
+      type: 'heading',
+      id: 'vendor-risk-levels',
+      level: 2,
+      text: 'Vendor risk levels',
+    },
+    {
+      type: 'paragraph',
+      text: 'Each risk on the Risks tab gets a risk level from the likelihood and severity you pick: No risk, Low, Medium, High or Very high. The summary cards and the risk level filter use the same five levels, and count each risk once even when its vendor serves several use cases.',
+    },
+    {
+      type: 'heading',
+      id: 'linked-risks',
+      level: 2,
+      text: 'Linked risks',
+    },
+    {
+      type: 'paragraph',
+      text: 'Open a vendor risk and go to its Linked risks tab to see the project risks that inherit from it and the vendor risks related to it. VerifyWise also suggests links there.',
+    },
+    {
+      type: 'paragraph',
+      text: 'What you can do depends on your permissions:',
+    },
+    {
+      type: 'bullet-list',
+      items: [
+        { bold: 'Link a project risk or relate a vendor risk', text: 'Admins and Editors' },
+        { bold: 'Confirm, dismiss, remove or restore a link', text: 'Admins, Editors and Reviewers' },
+        { bold: 'Suggest children or scan for related vendor risks', text: 'Admins' },
+      ],
+    },
+    {
+      type: 'paragraph',
+      text: 'Auditors see the links without these actions. For a custom role, the riskLinks.edit permission decides who can link risks and riskLinks.review who can confirm, dismiss, remove or restore links. The same rules apply on a project risk\'s Linked risks tab.',
+    },
+    {
       type: 'article-links',
       title: 'Related articles',
       items: [

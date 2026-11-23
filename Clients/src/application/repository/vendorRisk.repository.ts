@@ -1,5 +1,6 @@
 import { apiServices } from "../../infrastructure/api/networkServices";
 import { VendorRiskModel } from "../../domain/models/Common/vendorRisk/vendorRisk.model";
+import { RequestParams } from "../../infrastructure/api/api.types";
 
 export async function getAllVendorRisks({
   signal,
@@ -58,24 +59,39 @@ export async function getVendorRiskById({
   return response.data;
 }
 
-export async function createVendorRisk({ body }: { body: Partial<VendorRiskModel> }): Promise<any> {
-  const response = await apiServices.post("/vendorRisks", body);
+/** `config` lets a caller that shows its own error turn off the global toast. */
+export async function createVendorRisk({
+  body,
+  config,
+}: {
+  body: Partial<VendorRiskModel>;
+  config?: RequestParams;
+}): Promise<any> {
+  const response = await apiServices.post("/vendorRisks", body, config);
   return response;
 }
 
 export async function updateVendorRisk({
   id,
   body,
+  config,
 }: {
   id: number;
   body: Partial<VendorRiskModel>;
+  config?: RequestParams;
 }): Promise<any> {
-  const response = await apiServices.patch(`/vendorRisks/${id}`, body);
+  const response = await apiServices.patch(`/vendorRisks/${id}`, body, config);
   return response;
 }
 
-export async function deleteVendorRisk({ id }: { id: number }): Promise<any> {
-  const response = await apiServices.delete(`/vendorRisks/${id}`);
+export async function deleteVendorRisk({
+  id,
+  config,
+}: {
+  id: number;
+  config?: RequestParams;
+}): Promise<any> {
+  const response = await apiServices.delete(`/vendorRisks/${id}`, config);
   return response;
 }
 
