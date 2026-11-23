@@ -39,6 +39,8 @@ export const BUILTIN_UI_PERMISSIONS = {
   "postMarketMonitoring.edit": EDITOR,
   "evals.edit": EDITOR,
   "riskLinks.admin": SUPER,
+  "riskLinks.edit": EDITOR,
+  "riskLinks.review": CONTRIBUTOR,
   "aiApp.edit": EDITOR,
   "aiApp.admin": ADMIN,
   "task.edit": EDITOR,

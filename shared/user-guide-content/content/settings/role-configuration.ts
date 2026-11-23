@@ -104,6 +104,7 @@ export const roleConfigurationContent: ArticleContent = {
         'View use cases, assessments and compliance status',
         'Approve or reject items in approval workflows where they are an assigned approver',
         'Approve or request changes on policies they are assigned to review',
+        'Confirm, dismiss or remove suggested and linked risks',
         'View models, vendors, risks, policies and training records',
         'Upload and manage evidence files',
         'View reports',

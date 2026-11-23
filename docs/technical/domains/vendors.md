@@ -427,6 +427,25 @@ related row's `relatedRisk.vendorName` is only set here) and
 `.../shared-projects`; writes go through the existing `POST /api/riskLinks` and
 `PATCH /api/riskLinks/:id`.
 
+**Who sees the link actions.** The tab gates on the keys the routes authorize
+(`routes/riskLinks.route.ts`, defaults in `config/rolePermissions.config.ts`),
+through `useCan` and the client's `BUILTIN_UI_PERMISSIONS`:
+
+| UI | Route | Key | Built-in roles |
+|----|-------|-----|----------------|
+| **Link a project risk**, **Relate a vendor risk** and their forms | `POST /api/riskLinks` | `riskLinks.edit` | Admin, Editor |
+| Row actions: Confirm, Dismiss (with its reason form), Remove link, Restore | `PATCH /api/riskLinks/:id` | `riskLinks.review` | Admin, Editor, Reviewer |
+| **Suggest children**, **Scan for related vendor risks** | `POST .../suggest-hierarchy`, `POST .../vendor-risks/recompute` | `riskLinks.admin` | Admin, SuperAdmin |
+
+Actions a user may not take are hidden, not disabled, as the vendor tables hide
+row actions without `vendor.edit`. An Auditor sees the links, their reasons
+and the Show dismissed toggle, and no actions; the empty state's "Link a
+project risk…" hint shows only with `riskLinks.edit`. A custom role follows its
+loaded permissions. The project risk panel (`LinkedRisksPanel/index.tsx`)
+applies the same keys to **Link a risk** and the row actions, and shows **Mark
+reviewed** on a "Parent level changed" flag only with `riskLinks.edit` (the
+acknowledge route's key); the flag itself shows to everyone.
+
 ### Related vendor risks
 
 Two vendor risks can be related, never parent and child. The row is a
