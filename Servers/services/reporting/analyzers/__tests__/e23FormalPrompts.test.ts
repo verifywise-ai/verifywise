@@ -235,16 +235,12 @@ describe("B3: an empty fix-it list buys no invented remediation", () => {
 });
 
 describe("B4: the E-23 reference date is the cover's UTC day", () => {
-  const realTz = process.env.TZ;
-  beforeAll(() => {
-    process.env.TZ = "America/Toronto";
-  });
-  afterAll(() => {
-    process.env.TZ = realTz;
-  });
-
-  // 02:00 UTC on the 21st is still the 20th in Toronto.
+  // 02:00 UTC on the 21st: still the 20th anywhere west of Greenwich, so on a
+  // host there the local and UTC days differ. Every expectation below is
+  // computed from this Date, so the tests hold in any time zone.
   const LATE = new Date("2026-11-21T02:00:00Z");
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const localDay = `${LATE.getFullYear()}-${pad(LATE.getMonth() + 1)}-${pad(LATE.getDate())}`;
 
   it("uses the UTC day on an E-23 run, as the cover does", () => {
     const rd = e23ReportData();
@@ -256,7 +252,7 @@ describe("B4: the E-23 reference date is the cover's UTC day", () => {
   it("keeps a general report on the local day it always used", () => {
     const rd = nonKindReportData();
     rd.metadata.generatedAt = LATE;
-    expect(reportReferenceDay(rd)).toBe("2026-11-20");
-    expect(collectFacts(rd).generatedAt).toBe("2026-11-20");
+    expect(reportReferenceDay(rd)).toBe(localDay);
+    expect(collectFacts(rd).generatedAt).toBe(localDay);
   });
 });
