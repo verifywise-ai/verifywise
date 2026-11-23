@@ -26,15 +26,90 @@ jest.mock("../../../utils/roleMap", () => ({
 jest.mock("../../../database/db", () => ({
   sequelize: { query: jest.fn(async () => []), transaction: jest.fn(async (cb: any) => cb("TX")) },
 }));
-// Template 7 and its version 30 exist in organization 42 only.
-jest.mock("../../../utils/reportTemplate.utils", () => ({
-  getTemplateByIdQuery: jest.fn(async (id: number, org: number) =>
-    id === 7 && org === 42 ? { id: 7, name: "Board pack", llm_key_id: null } : null,
-  ),
-  getVersionByIdQuery: jest.fn(async (id: number, org: number) =>
-    id === 30 && org === 42 ? { id: 30, template_id: 7, parameters_config: {} } : null,
-  ),
-}));
+// Template 7 and its version 30 exist in organization 42 only; template 8 is a
+// system template every organization can read (and copy) but not change. The
+// writes honour the same tenant guards as the real queries: an update or a new
+// version of a template outside the caller's organization matches nothing.
+jest.mock("../../../utils/reportTemplate.utils", () => {
+  const templates: Record<number, any> = {
+    7: {
+      id: 7,
+      organization_id: 42,
+      name: "Board pack",
+      description: "Quarterly board pack",
+      category: "governance",
+      default_scope: "organization",
+      supported_scopes: ["organization"],
+      recommended_frequency: "quarterly",
+      is_system_template: false,
+      llm_key_id: null,
+    },
+    8: {
+      id: 8,
+      organization_id: null,
+      name: "OSFI E-23 report",
+      description: "Model risk completeness",
+      category: "compliance",
+      default_scope: "organization",
+      supported_scopes: ["organization"],
+      recommended_frequency: "quarterly",
+      is_system_template: true,
+      llm_key_id: null,
+    },
+  };
+  const visible = (id: number, org: number) =>
+    templates[id] &&
+    (templates[id].organization_id === null || templates[id].organization_id === org)
+      ? templates[id]
+      : null;
+  const owned = (id: number, org: number) =>
+    templates[id] && templates[id].organization_id === org ? templates[id] : null;
+  return {
+    getTemplateByIdQuery: jest.fn(async (id: number, org: number) => visible(id, org)),
+    getVersionByIdQuery: jest.fn(async (id: number, org: number) =>
+      id === 30 && org === 42 ? { id: 30, template_id: 7, parameters_config: {} } : null,
+    ),
+    getLatestVersionQuery: jest.fn(async (templateId: number, org: number) =>
+      visible(templateId, org)
+        ? {
+            id: templateId * 10,
+            template_id: templateId,
+            sections_config: { sections: [{ reportSectionKey: "mrmFleet", defaultEnabled: true }] },
+            ai_blocks_config: { blocks: [] },
+            framework_config: { frameworkIds: ["native:2"] },
+            parameters_config: { kind: "osfi_e23" },
+            format_config: { theme: "dark" },
+          }
+        : null,
+    ),
+    createTemplateQuery: jest.fn(async (input: any, org: number) => ({
+      id: 100,
+      organization_id: org,
+      name: input.name,
+      description: input.description ?? null,
+      category: input.category,
+      default_scope: input.default_scope,
+      supported_scopes: input.supported_scopes,
+      recommended_frequency: input.recommended_frequency ?? null,
+      is_system_template: false,
+    })),
+    updateTemplateQuery: jest.fn(async (id: number, org: number, input: any) =>
+      owned(id, org) && !owned(id, org).is_system_template ? { ...owned(id, org), ...input } : null,
+    ),
+    createTemplateVersionQuery: jest.fn(async (templateId: number, org: number, config: any) =>
+      templateId === 100 || (owned(templateId, org) && !owned(templateId, org).is_system_template)
+        ? {
+            id: 500,
+            template_id: templateId,
+            sections_config: config.sections_config,
+            ai_blocks_config: config.ai_blocks_config,
+            framework_config: config.framework_config,
+            parameters_config: config.parameters_config ?? {},
+          }
+        : undefined,
+    ),
+  };
+});
 jest.mock("../../../utils/reportRun.utils", () => ({
   getLastParametersQuery: jest.fn(async () => ({ parameters: { audience: "osfi" } })),
 }));
@@ -57,6 +132,11 @@ jest.mock("../../../utils/logger/fileLogger", () => ({
 
 import routes from "../reportTemplates.route";
 import { getLastParametersQuery } from "../../../utils/reportRun.utils";
+import {
+  createTemplateQuery,
+  createTemplateVersionQuery,
+  updateTemplateQuery,
+} from "../../../utils/reportTemplate.utils";
 import { runScheduledReport } from "../../../services/reporting/reportRunOrchestrator";
 
 const app = express();
@@ -127,5 +207,140 @@ describe("/api/v1/report-templates", () => {
     const res = await request(app).get(`${BASE}/7/last-parameters`).set(auth).set("x-org", "7");
     expect(res.status).toBe(404);
     expect(getLastParametersQuery).not.toHaveBeenCalled();
+  });
+
+  describe("template writes", () => {
+    const createBody = {
+      name: "E-23 copy",
+      category: "compliance",
+      default_scope: "organization",
+      sections_config: { sections: [{ reportSectionKey: "mrmFleet", defaultEnabled: true }] },
+      parameters_config: { kind: "osfi_e23" },
+    };
+
+    it("answers 401 without a token", async () => {
+      expect((await request(app).post(BASE).send(createBody)).status).toBe(401);
+      expect((await request(app).patch(`${BASE}/7`).send({ name: "x" })).status).toBe(401);
+      expect((await request(app).post(`${BASE}/8/duplicate`)).status).toBe(401);
+      expect(createTemplateQuery).not.toHaveBeenCalled();
+      expect(updateTemplateQuery).not.toHaveBeenCalled();
+    });
+
+    it.each(["Reviewer", "Auditor"])("answers 403 when an %s writes", async (role) => {
+      const create = await request(app).post(BASE).set(auth).set("x-role", role).send(createBody);
+      const update = await request(app)
+        .patch(`${BASE}/7`)
+        .set(auth)
+        .set("x-role", role)
+        .send({ name: "x" });
+      const copy = await request(app).post(`${BASE}/8/duplicate`).set(auth).set("x-role", role);
+      expect([create.status, update.status, copy.status]).toEqual([403, 403, 403]);
+      expect(createTemplateQuery).not.toHaveBeenCalled();
+      expect(updateTemplateQuery).not.toHaveBeenCalled();
+    });
+
+    it("creates a template that keeps its parameters_config", async () => {
+      const res = await request(app).post(BASE).set(auth).set("x-role", "Editor").send(createBody);
+      expect(res.status).toBe(201);
+      expect(res.body.data.latestVersion.parameters_config).toEqual({ kind: "osfi_e23" });
+      const [templateId, org, config] = (createTemplateVersionQuery as jest.Mock).mock.calls[0];
+      expect([templateId, org]).toEqual([100, 42]);
+      expect(config.parameters_config).toEqual({ kind: "osfi_e23" });
+    });
+
+    it("refuses an unknown report kind on create", async () => {
+      const res = await request(app)
+        .post(BASE)
+        .set(auth)
+        .send({ ...createBody, parameters_config: { kind: "made_up" } });
+      expect(res.status).toBe(400);
+      expect(createTemplateQuery).not.toHaveBeenCalled();
+    });
+
+    it("updates a template's parameters_config with a new version", async () => {
+      const res = await request(app)
+        .patch(`${BASE}/7`)
+        .set(auth)
+        .send({ parameters_config: { kind: "osfi_e23" } });
+      expect(res.status).toBe(200);
+      expect(res.body.data.latestVersion.parameters_config).toEqual({ kind: "osfi_e23" });
+      expect((createTemplateVersionQuery as jest.Mock).mock.calls[0][2].parameters_config).toEqual({
+        kind: "osfi_e23",
+      });
+    });
+
+    it("answers 404 when another organization's template is updated", async () => {
+      const res = await request(app)
+        .patch(`${BASE}/7`)
+        .set(auth)
+        .set("x-org", "43")
+        .send({ name: "Hijacked", parameters_config: { kind: "osfi_e23" } });
+      expect(res.status).toBe(404);
+    });
+
+    it("duplicates a system template into the caller's organization", async () => {
+      const res = await request(app)
+        .post(`${BASE}/8/duplicate`)
+        .set(auth)
+        .set("x-role", "Editor")
+        // A body cannot rename the copy or move it to another organization.
+        .send({ name: "Other", organization_id: 99 });
+      expect(res.status).toBe(201);
+      const [input, org] = (createTemplateQuery as jest.Mock).mock.calls[0];
+      expect(org).toBe(42);
+      expect(input).toMatchObject({
+        name: "OSFI E-23 report (copy)",
+        description: "Model risk completeness",
+        category: "compliance",
+        default_scope: "organization",
+        supported_scopes: ["organization"],
+        recommended_frequency: "quarterly",
+      });
+      const [templateId, versionOrg, config] = (createTemplateVersionQuery as jest.Mock).mock
+        .calls[0];
+      expect([templateId, versionOrg]).toEqual([100, 42]);
+      expect(config).toMatchObject({
+        sections_config: { sections: [{ reportSectionKey: "mrmFleet", defaultEnabled: true }] },
+        ai_blocks_config: { blocks: [] },
+        framework_config: { frameworkIds: ["native:2"] },
+        parameters_config: { kind: "osfi_e23" },
+      });
+      // Only the fields the copy is defined to carry.
+      expect(config.format_config).toBeUndefined();
+      expect(res.body.data).toMatchObject({
+        id: 100,
+        organization_id: 42,
+        name: "OSFI E-23 report (copy)",
+        latestVersion: { parameters_config: { kind: "osfi_e23" } },
+      });
+    });
+
+    it("duplicates the organization's own template", async () => {
+      const res = await request(app).post(`${BASE}/7/duplicate`).set(auth);
+      expect(res.status).toBe(201);
+      expect((createTemplateQuery as jest.Mock).mock.calls[0][0].name).toBe("Board pack (copy)");
+    });
+
+    it("answers 404 when another organization's template is duplicated", async () => {
+      const res = await request(app).post(`${BASE}/7/duplicate`).set(auth).set("x-org", "43");
+      expect(res.status).toBe(404);
+      expect(createTemplateQuery).not.toHaveBeenCalled();
+    });
+
+    it("keeps a long name within the column when copying", async () => {
+      const { getTemplateByIdQuery } = jest.requireMock("../../../utils/reportTemplate.utils");
+      (getTemplateByIdQuery as jest.Mock).mockResolvedValueOnce({
+        id: 7,
+        organization_id: 42,
+        name: "x".repeat(255),
+        category: "governance",
+        default_scope: "project",
+      });
+      const res = await request(app).post(`${BASE}/7/duplicate`).set(auth);
+      expect(res.status).toBe(201);
+      const name = (createTemplateQuery as jest.Mock).mock.calls[0][0].name;
+      expect(name).toHaveLength(255);
+      expect(name.endsWith(" (copy)")).toBe(true);
+    });
   });
 });

@@ -1030,6 +1030,7 @@
   "Provider is required": "Le fournisseur est requis",
   "Published policies require formal revision process": "Les politiques publiées nécessitent un processus de révision formel",
   "Quantitative risk validation failed": "La validation du risque quantitatif a échoué",
+  "quarterly schedules are created and changed through /api/v1/scheduled-reports": "les planifications trimestrielles sont créées et modifiées via /api/v1/scheduled-reports",
   "query fields cannot exceed 50 characters": "les champs de query ne peuvent pas dépasser 50 caractères",
   "query must be an object": "query doit être un objet",
   "query must have entityType, condition, and attribute strings": "query doit contenir les chaînes entityType, condition et attribute",

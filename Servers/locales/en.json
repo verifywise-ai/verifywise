@@ -1030,6 +1030,7 @@
   "Provider is required": "Provider is required",
   "Published policies require formal revision process": "Published policies require formal revision process",
   "Quantitative risk validation failed": "Quantitative risk validation failed",
+  "quarterly schedules are created and changed through /api/v1/scheduled-reports": "quarterly schedules are created and changed through /api/v1/scheduled-reports",
   "query fields cannot exceed 50 characters": "query fields cannot exceed 50 characters",
   "query must be an object": "query must be an object",
   "query must have entityType, condition, and attribute strings": "query must have entityType, condition, and attribute strings",
