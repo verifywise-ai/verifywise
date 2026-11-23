@@ -11,6 +11,8 @@ import type {
 import { requirementNumber } from "../e23/contradictionRules";
 import { E23_FRAMEWORK_ID, E23_KIND } from "../e23/e23Parameters";
 import { COVERAGE_LABELS } from "../e23/e23Text";
+import { METRIC_STALE_DAYS } from "../e23/mrmFleet";
+import { utcDay } from "../dateUtils";
 import {
   oneLine,
   prepareE23Contradictions,
@@ -52,20 +54,64 @@ export const E23_NO_COMPLIANCE_RULE =
   "This report sets the institution's self-assessed E-23 statuses against its model risk management records. Never state or imply that the institution complies with E-23, that the guideline or any requirement is fulfilled, met or fully aligned with, or what OSFI's view or expectations are; say only what the records show against the self-assessed statuses.";
 
 /**
- * The E-23 lines of the shared prompt header: audience, the no-compliance rule
- * and the exact number of requirement groups (a real run counted the framework
- * line as a seventeenth group). "" for any other report, whose prompts must
- * stay exactly as they were. OSFI is the default audience.
+ * The report's rules compare only some groups with the MRM records; the rest
+ * are self-assessment only by design. A real run called that a verification
+ * gap the institution should close.
+ */
+export const E23_SELF_ASSESSMENT_ONLY_LINE =
+  "Groups marked 'self-assessment only' are outside what this report's rules check by design; do not describe them as a gap, weakness or verification shortfall of the institution.";
+
+/** The run's E-23 group count, and how many the rules check against the MRM records. */
+export function e23GroupCounts(rd: ReportData): {
+  total: number;
+  checked: number;
+  selfAssessmentOnly: number;
+} {
+  const coverage = coverageOf(rd);
+  const values = e23Groups(rd).map((g) => coverage(g.title));
+  return {
+    total: values.length,
+    checked: values.filter((c) => c === "checked").length,
+    selfAssessmentOnly: values.filter((c) => c === "selfAssessmentOnly").length,
+  };
+}
+
+/**
+ * Which date each figure is tied to. A real run attributed the period's
+ * activity counts to the 90-day monitoring window, and dated a position by the
+ * period's end.
+ */
+function datesLine(rd: ReportData): string {
+  const asAt = utcDay(rd.metadata?.generatedAt);
+  const params = rd.metadata?.reportParameters;
+  const position = asAt
+    ? `Position as at ${asAt}: the counts of models, tiers, validations, open findings and monitoring are as at this date.`
+    : null;
+  const period =
+    params?.periodStart && params?.periodEnd
+      ? `Activity counts (validations signed off, findings opened and closed, threshold breaches, revalidation events) cover the reporting period ${params.periodStart} to ${params.periodEnd} only; the ${METRIC_STALE_DAYS}-day monitoring window applies only to the count of models with a recently received metric.`
+      : "No reporting period was set, so no activity is counted.";
+  return [position, period].filter(Boolean).join(" ");
+}
+
+/**
+ * The E-23 lines of the shared prompt header: audience, the no-compliance rule,
+ * the self-assessment-only rule, the exact number of requirement groups (a
+ * real run counted the framework line as a seventeenth group) and which date
+ * each figure is tied to. "" for any other report, whose prompts must stay
+ * exactly as they were. OSFI is the default audience.
  */
 export function e23HeaderLines(rd: ReportData): string {
   if (!isE23Run(rd)) return "";
-  const groups = e23Groups(rd).length;
+  const groups = e23GroupCounts(rd);
   return [
     audienceLine(rd),
     E23_NO_COMPLIANCE_RULE,
-    groups > 0
-      ? `E-23 requirement groups in this report: ${groups}. The framework itself is not a group.`
+    E23_SELF_ASSESSMENT_ONLY_LINE,
+    groups.total > 0
+      ? `E-23 requirement groups in this report: ${groups.total} (${groups.checked} checked against the model risk management records, ${groups.selfAssessmentOnly} self-assessment only). The framework itself is not a group.`
       : null,
+    datesLine(rd),
   ]
     .filter(Boolean)
     .join("\n");

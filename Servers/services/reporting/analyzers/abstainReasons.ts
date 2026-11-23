@@ -33,7 +33,16 @@ export const OPERATIONAL_ABSTAIN_REASONS = [
   NO_SUMMARY_PRODUCED,
 ] as const;
 
-export const ANALYTICAL_ABSTAIN_REASONS = [INSUFFICIENT_DATA, NO_FIX_IT_ITEMS] as const;
+/** An E-23 analysis the prose guard (e23Guard.ts) rejected twice: it claimed
+ *  compliance or a regulator's view, or cited figures the input does not hold.
+ *  Printed as written under "Analyses not produced", so the reader knows why. */
+export const E23_GUARD_REJECTED = "the AI text made claims the report data does not support";
+
+export const ANALYTICAL_ABSTAIN_REASONS = [
+  INSUFFICIENT_DATA,
+  NO_FIX_IT_ITEMS,
+  E23_GUARD_REJECTED,
+] as const;
 
 /** Every reason the analyzers can emit. mapToSummaries.test.ts walks this to
  *  prove each one is classified, so a new reason cannot leak into a report. */

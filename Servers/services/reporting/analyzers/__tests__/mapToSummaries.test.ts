@@ -223,6 +223,7 @@ describe("isOperationalAbstention", () => {
     const analytical = new Set([
       "insufficient data for this section",
       "the fix-it list has no items, so there is no remediation to recommend",
+      "the AI text made claims the report data does not support",
     ]);
     for (const reason of ALL_ABSTAIN_REASONS) {
       expect(isOperationalAbstention(reason)).toBe(!analytical.has(reason));

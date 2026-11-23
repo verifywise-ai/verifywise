@@ -9,6 +9,7 @@
  */
 import type { ReportData } from "../../../domain.layer/interfaces/i.reportGeneration";
 import { isoDate } from "../dataCollector";
+import { utcDay } from "../dateUtils";
 import { E23_KIND } from "../e23/e23Parameters";
 import {
   flattenFrameworkRequirements,
@@ -177,11 +178,8 @@ export const referenceDay = (value: unknown): string => isoDate(value) ?? isoDat
  */
 export const reportReferenceDay = (reportData: ReportData): string => {
   const value = reportData?.metadata?.generatedAt;
-  if (reportData?.metadata?.reportKind === E23_KIND && value) {
-    const d = value instanceof Date ? value : new Date(value as string);
-    if (!Number.isNaN(d.getTime())) return d.toISOString().slice(0, 10);
-  }
-  return referenceDay(value);
+  const utc = reportData?.metadata?.reportKind === E23_KIND ? utcDay(value) : undefined;
+  return utc ?? referenceDay(value);
 };
 
 interface SectionSpec {

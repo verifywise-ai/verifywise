@@ -58,12 +58,12 @@ const NONE: AiBlocks = {
 
 const SUMMARIES = {
   frameworkRequirements: "Every requirement is self-assessed as done.",
-  mrmFleet: "Three of nine models are untiered.",
+  mrmFleet: "3 of 9 models are untiered.",
   e23Contradictions: "One rule fired: 2.2.3 claims every model is rated.",
 };
 
 const finding = (section: string, related: string[] = []) => ({
-  text: "Rule C2 fired: 3 of 9 models carry no MRM tier although 2.2.3 is claimed Implemented.",
+  text: "Rule C2 fired: 3 of 9 models carry no MRM tier although every model is claimed rated.",
   section,
   severity: "high",
   basis: "observed",
@@ -169,7 +169,7 @@ describe("B2: the no-compliance rule and the group count reach every formal prom
       expect(prompt).toContain(NO_COMPLIANCE_RULE);
       expect(prompt).toContain("OSFI's view");
       expect(prompt).toContain(
-        "E-23 requirement groups in this report: 3. The framework itself is not a group.",
+        "E-23 requirement groups in this report: 3 (2 checked against the model risk management records, 1 self-assessment only). The framework itself is not a group.",
       );
     }
     const board = ANALYZERS.executiveSummary.buildUserPrompt(

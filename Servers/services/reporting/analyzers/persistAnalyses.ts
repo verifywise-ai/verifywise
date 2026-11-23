@@ -52,6 +52,12 @@ export async function persistAnalyses(
             ...(result?.positionCorrections?.length
               ? { position_corrections: result.positionCorrections }
               : {}),
+            // G1: what the E-23 prose guard fed back or dropped, only when it
+            // acted.
+            ...(result?.guardRetried ? { guard_retried: true } : {}),
+            ...(result?.guardRejections?.length
+              ? { guard_rejections: result.guardRejections }
+              : {}),
             // Design §10: the snapshot this run was built from, so the NEXT run
             // of this schedule can diff against it with no second LLM call.
             // Spread, not `facts: facts ?? null` — getPriorFactsSnapshotQuery
