@@ -19,7 +19,7 @@ import {
   stopAiDetectionProgressCleanup,
 } from "./services/aiDetection.service";
 import { warnIfGatewayKeyMissing } from "./utils/aiGatewayKeyCheck";
-import { syncBundledFrameworkText } from "./services/frameworkTextSync/sync";
+import { syncFrameworkText } from "./services/frameworkTextSync/sync";
 import { warnIfLocalOverrideIgnored } from "./extensions/jira-incidents/siteUrl";
 import logger from "./utils/logger/fileLogger";
 import { startSyslogListener, SyslogListenerHandle } from "./services/shadowAiSyslog/listener";
@@ -116,10 +116,11 @@ try {
   // Warn when the AI Gateway is in use but the shared key is missing (rule in
   // aiGatewayKeyCheck). Runs in the background; it never blocks startup.
   void warnIfGatewayKeyMissing(logger);
-  // Bring the bundled frameworks' item text in step with Servers/structures,
+  // Bring every framework's item text (the 24 bundled and the 4 built-ins) and
+  // description in step with Servers/structures,
   // so a wording fix needs no migration (services/frameworkTextSync). Runs in
   // the background; it logs and never blocks or stops startup.
-  void syncBundledFrameworkText(logger).catch((error: unknown) =>
+  void syncFrameworkText(logger).catch((error: unknown) =>
     logger.warn(`[framework-text-sync] failed: ${(error as Error)?.message ?? error}`),
   );
   // The Jira incidents local site URL override only counts in development and test.

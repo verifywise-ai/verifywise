@@ -1,98 +1,114 @@
 {
+  "eu-ai-act": {
+    "revision": 1,
+    "fingerprint": "91742eda1f044cf2446228ade8df917f0380eddf7ebf9a541c204f48c54ee0a8"
+  },
+  "iso-42001": {
+    "revision": 1,
+    "fingerprint": "a93d0a3aecdcec37e7b07f34727914bfffa297c5843c8f41684454c784b65c5a"
+  },
+  "iso-27001": {
+    "revision": 1,
+    "fingerprint": "094a56737db2aacb53e413fedd6cdf24ad1280dafeae98016488fd26b21d6906"
+  },
+  "nist-ai-rmf": {
+    "revision": 1,
+    "fingerprint": "ee0ae1a19d07cc9ac82999274c8cd0400f61d30a3b13e9ac49940ced2c5843c9"
+  },
   "soc2": {
     "revision": 1,
-    "fingerprint": "16ed1f34c1b1115f245e2bbcc5747ba8a80729a34548b2a8af8440d26b1d0d2e"
+    "fingerprint": "1355b513bfb0163e2c4b2cfb3a444feb37773cd7ebdd60c0a2a44a587713f1a3"
   },
   "gdpr": {
     "revision": 1,
-    "fingerprint": "5117f22e1031b035f8f5c34289cd071fe9b7be70de55d55e8bfde09f0ecfcdb3"
+    "fingerprint": "e62b09b7339d21d119e3b68c531f2eff2a9ffd16168df68927918683b03465dd"
   },
   "pci-dss": {
     "revision": 1,
-    "fingerprint": "e5b11d8b280740202db1667d4ebd9139a36d952e17175c4e8a8ed2e336c8d210"
+    "fingerprint": "4b3f300972ab87f3f62a2119ed5a20bba096ee22ed884b9d026a306b196256e7"
   },
   "ccpa": {
     "revision": 1,
-    "fingerprint": "a44f693b30d9ce09e21c74e61b91341020e7284c8d563f086506d33fc1f965d8"
+    "fingerprint": "d76b1e24cb0051d8bf2906420ddd8b307fa47398b6a6348d0bccb65d97e13ea2"
   },
   "dora": {
     "revision": 1,
-    "fingerprint": "9a0df4b3fd4018292f896cc37eb8fb05203ec25090a515901c57225372f43c97"
+    "fingerprint": "0e2f85435b159f18b1c3a6cbdcc0d8398d309c8ed1c5f52e9f0cd96f08dd521e"
   },
   "altai": {
     "revision": 1,
-    "fingerprint": "7dd65ed3e0d222306a62bd359f531de6c93daaccca3862c5649e9e87448fa8c9"
+    "fingerprint": "f34d8d6221793c1d79e417ffbe6c82d58e07726aaecea8b6d282622cbd861488"
   },
   "ftc-ai-guidelines": {
     "revision": 1,
-    "fingerprint": "78fe08660c350fc31ea39d60446eda3226b69f9c3989e3b91ae38f5194827d78"
+    "fingerprint": "a97f3ef15bdf46830459f56f58424b343abb5e3c69a6364dff7b4a9f83aa848e"
   },
   "nyc-local-law-144": {
     "revision": 1,
-    "fingerprint": "4d85bb91d913324db2059d87e7c96ad1c6d59fe6d34a5141555a5f0f3707379f"
+    "fingerprint": "b844c4e8f7d390542722a7e33ebe712ec036e7c772cdc520a9e35c0d8f4402c7"
   },
   "cis-controls": {
     "revision": 1,
-    "fingerprint": "902455003d3cc84222f82e83fa21884cd3b5d80c52b0a95a5888df9c1e38f82f"
+    "fingerprint": "3620d3905782b1e75de7d525aa94eeebe7d475dd1eb21d68e9ed477886ee00c3"
   },
   "ai-ethics": {
     "revision": 1,
-    "fingerprint": "7e5065be919e56b8ae6d18b82078560b69cd376ffd66f8b96f8fddf602b0d6e0"
+    "fingerprint": "67c0254e25b953edad81e22c8b2f7f506ce9acf4d1e34e74a3736dd221b8d6b1"
   },
   "oecd-ai-principles": {
     "revision": 1,
-    "fingerprint": "a2231de9825d7a0bb55ceaf8991cb789c36598ef45487208a17d5477b5d1ec25"
+    "fingerprint": "6a145dce525fc8abdbd5b0e238379d331ebf7994232f13a2b665e387684a3128"
   },
   "data-governance": {
     "revision": 1,
-    "fingerprint": "73cb1fa1065704ff41531692fe9f4cb94910be604d04e9218593c41d694f4357"
+    "fingerprint": "20b5a3d6bc3b98f0f5ab52dbde0071836e6571d91506e0793b44fb48635c2192"
   },
   "uae-pdpl": {
     "revision": 1,
-    "fingerprint": "69652639db7f80eaac8a25ee9893fee2f6aac89b6d458ddfcb54edf094da7eb9"
+    "fingerprint": "2294b02baf1317b0ed725bae0fba5557d69383d2702fbd7ba2a1572d69c481a0"
   },
   "saudi-pdpl": {
     "revision": 1,
-    "fingerprint": "0cf16f4b89fd2d5a68c6ec62c167f15cc7da576cf5bb9ca24e4ab6b86bcd419f"
+    "fingerprint": "976ef9eea08552067b9da63b2321e67dd781c2ba10ca46e15f9a5be74563287c"
   },
   "qatar-pdpl": {
     "revision": 1,
-    "fingerprint": "19d20e607f6813b6ea1e8d3b89047b3f7a557f8e5cfd15df5945e429748c7e1d"
+    "fingerprint": "e5609b2d334c793e362fd6f646de16a4adbcd8bd89766d419403d484a951b158"
   },
   "bahrain-pdpl": {
     "revision": 1,
-    "fingerprint": "c3f60fd00639963c9a0629585a3f8ab8aa37469f67906e40fee31f66bbb135a0"
+    "fingerprint": "e99ef91e6fa6e4ec981a4f14c0712a6512f7bd9cab10dcaaef64e049ea1a9332"
   },
   "quebec-law25": {
     "revision": 1,
-    "fingerprint": "7620fbdc9dabcd08f94082c2f4c6366caddb823d47db0667be97913345b7d8b0"
+    "fingerprint": "a19f2474ba41e4dbfd1d14ce7ed52df9ade04da6c41d2fee3804229c38dcdfd2"
   },
   "texas-ai-act": {
     "revision": 1,
-    "fingerprint": "ec46d2ffd2cdf4a583deb939a890ce505fca843e0614e28e3f737b458b41ae49"
+    "fingerprint": "6a0c1596618ac644141179158a42eb59689562a27577d14a94092508086eae7c"
   },
   "colorado-ai-act": {
     "revision": 1,
-    "fingerprint": "878e0fa614312aaca871a4cf7da32dd11a50bb82496139ab0a450ca4b3e98a4e"
+    "fingerprint": "ecc348aa6d45a95911ad07a60bd5c6882b1860f420eb8f6f1d0a818c296ad006"
   },
   "hipaa": {
     "revision": 1,
-    "fingerprint": "c8efbfa5de3188a7f4606da05bcc5083fe33b059c732b9ab4b235262a29bd81a"
+    "fingerprint": "99e6f73d2b9942d70ce01491971817fb8b22a25c8f39e08d6f205212c78aa565"
   },
   "nist-csf": {
     "revision": 1,
-    "fingerprint": "3ca7afcc7cd0dc550f8f39e08baa2bf9aef596702aae1a7f389df64aed8e7a05"
+    "fingerprint": "34af718559d3598ee8a8dea0154dbbb8819a5b7b1215b5bad264063f8ce11b67"
   },
   "osfi-e23": {
     "revision": 1,
-    "fingerprint": "e1abe1e0e566487661fa33805355001dfad298a1dd9273b17099199c20d69c47"
+    "fingerprint": "de7c026bf78a018f76b7e1b61f115daf93941612efd1948a21cd65dbaec13904"
   },
   "en-18286": {
     "revision": 1,
-    "fingerprint": "a92826dcb4d193e71caf23c54dd4ba9fb46f814300c8bbe91bf8abdd840fd468"
+    "fingerprint": "e05f8bb781634604adac63d2a921f45f7f2a1c9b5e768af73e73edfe08e1373e"
   },
   "en-18286-ai-systems": {
     "revision": 1,
-    "fingerprint": "7224d6fd0aea5ca70e80ad406981196fb87f681177dc85fe033364ec6b49b672"
+    "fingerprint": "0af1902222d38916259b7c906cc393f91125d60d36e6475d5cac8bf82fc6ea21"
   }
 }

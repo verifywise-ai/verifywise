@@ -12,8 +12,7 @@
  */
 import { writeFileSync, readFileSync, existsSync } from "fs";
 import { join } from "path";
-import { FRAMEWORK_STRUCTURES } from "../structures";
-import { frameworkTextFingerprint, textRevisionOf } from "../services/frameworkTextSync/plan";
+import { textRevisionEntries } from "../services/frameworkTextSync/revisions";
 
 export const RECORD_PATH = join(__dirname, "..", "structures", "frameworkTextRevisions.json");
 
@@ -25,16 +24,14 @@ function main() {
     : {};
   const next: Recorded = {};
   const problems: string[] = [];
-  for (const fw of FRAMEWORK_STRUCTURES) {
-    const revision = textRevisionOf(fw);
-    const fingerprint = frameworkTextFingerprint(fw.seed);
-    const before = previous[fw.key];
+  for (const { key, revision, fingerprint, where } of textRevisionEntries()) {
+    const before = previous[key];
     if (before && before.fingerprint !== fingerprint && revision <= before.revision) {
       problems.push(
-        `${fw.key}: the text changed but textRevision is still ${revision}; set it to ${before.revision + 1} in its .structure.ts`,
+        `${key}: the text changed but the text revision is still ${revision}; set it to ${before.revision + 1} in ${where}`,
       );
     }
-    next[fw.key] = { revision, fingerprint };
+    next[key] = { revision, fingerprint };
   }
   if (problems.length) {
     console.error(problems.join("\n"));

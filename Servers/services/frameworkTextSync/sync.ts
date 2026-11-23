@@ -30,7 +30,9 @@ import { sequelize } from "../../database/db";
 import { FRAMEWORK_STRUCTURES } from "../../structures";
 import type { FrameworkStructure } from "../../structures/types";
 import { pgTextArray } from "../../utils/pgArray.utils";
-import { planFrameworkTextSync, StructLevel, StructRow, TextUpdate, textRevisionOf } from "./plan";
+import { planFrameworkTextSync, StructLevel, StructRow, textRevisionOf } from "./plan";
+import { KeyedRow, KeyedTarget, planKeyedTarget, TextValue } from "./keyed";
+import { BUILTIN_TEXT_SOURCES, BuiltinTextSource, descriptionTarget } from "./builtins";
 
 /** First key of the two-key advisory lock; the second is the framework id. */
 export const LOCK_NAMESPACE = 7152023;
@@ -39,6 +41,8 @@ export interface FrameworkTextSyncResult {
   key: string;
   updated: number;
   skipped?: string;
+  /** Items in the code with no database row (not inserted; needs a migration). */
+  missing?: number;
   /**
    * How the skip is logged: "warn" needs someone's attention (the items no
    * longer line up), "info" is expected (an older build, tables not migrated
@@ -101,22 +105,51 @@ function tableFor(fw: FrameworkStructure, level: StructLevel): string {
   return fw.tables.l3_struct!;
 }
 
-async function applyUpdate(fw: FrameworkStructure, update: TextUpdate, transaction: Transaction) {
+/** One row's new text; an array value is written as TEXT[]. */
+interface RowWrite {
+  table: string;
+  id: number;
+  values: Record<string, TextValue>;
+}
+
+async function writeRow(write: RowWrite, transaction: Transaction) {
   const sets: string[] = [];
-  const replacements: Record<string, unknown> = { id: update.id };
-  for (const [column, value] of Object.entries(update.values)) {
-    if (column === "questions" || column === "evidence_examples") {
+  const replacements: Record<string, unknown> = { id: write.id };
+  for (const [column, value] of Object.entries(write.values)) {
+    if (Array.isArray(value)) {
       sets.push(`${column} = CAST(:${column} AS TEXT[])`);
-      replacements[column] = pgTextArray(value as string[]);
+      replacements[column] = pgTextArray(value);
     } else {
       sets.push(`${column} = :${column}`);
       replacements[column] = value;
     }
   }
-  await sequelize.query(
-    `UPDATE ${tableFor(fw, update.level)} SET ${sets.join(", ")} WHERE id = :id`,
-    { replacements, transaction },
-  );
+  await sequelize.query(`UPDATE ${write.table} SET ${sets.join(", ")} WHERE id = :id`, {
+    replacements,
+    transaction,
+  });
+}
+
+/** Reads and plans every keyed target; the first skip stops the source. */
+async function planKeyed(
+  frameworkId: number,
+  targets: KeyedTarget[],
+  transaction: Transaction,
+): Promise<{ writes: RowWrite[]; missing: number } | { skip: string }> {
+  const writes: RowWrite[] = [];
+  let missing = 0;
+  for (const t of targets) {
+    const rows = (await sequelize.query(t.select, {
+      replacements: { frameworkId },
+      type: QueryTypes.SELECT,
+      transaction,
+    })) as KeyedRow[];
+    const plan = planKeyedTarget(t, rows);
+    if ("skip" in plan) return { skip: plan.skip };
+    writes.push(...plan.updates);
+    missing += plan.missing;
+  }
+  return { writes, missing };
 }
 
 async function storedRevision(frameworkId: number, transaction: Transaction): Promise<number> {
@@ -138,9 +171,23 @@ async function recordRevision(frameworkId: number, revision: number, transaction
   );
 }
 
-async function syncOne(fw: FrameworkStructure): Promise<FrameworkTextSyncResult> {
+type Planned =
+  | { writes: RowWrite[]; missing?: number }
+  | { skip: string; notice: FrameworkTextSyncResult["notice"] };
+
+/**
+ * The part bundled and built-in frameworks share: the lock, the table check,
+ * the revision gate, the writes and recording the revision.
+ */
+async function syncSource(source: {
+  id: number;
+  key: string;
+  revision: number;
+  tables: string[];
+  plan: (transaction: Transaction) => Promise<Planned>;
+}): Promise<FrameworkTextSyncResult> {
   const skip = (skipped: string, notice: FrameworkTextSyncResult["notice"]) => ({
-    key: fw.key,
+    key: source.key,
     updated: 0,
     skipped,
     notice,
@@ -150,17 +197,11 @@ async function syncOne(fw: FrameworkStructure): Promise<FrameworkTextSyncResult>
     // it: if that one fails and rolls back, this one still does the work, and
     // after a success it finds nothing left to write.
     await sequelize.query(`SELECT pg_advisory_xact_lock(:ns, :id)`, {
-      replacements: { ns: LOCK_NAMESPACE, id: fw.id },
+      replacements: { ns: LOCK_NAMESPACE, id: source.id },
       transaction,
     });
 
-    const needed = [
-      fw.tables.l1_struct,
-      fw.tables.l2_struct,
-      fw.tables.l3_struct,
-      "framework_text_revisions",
-    ].filter((t): t is string => !!t);
-    for (const table of needed) {
+    for (const table of [...source.tables, "framework_text_revisions"]) {
       if (!(await tableExists(table, transaction))) {
         return skip(`table ${table} does not exist yet`, "info");
       }
@@ -168,51 +209,118 @@ async function syncOne(fw: FrameworkStructure): Promise<FrameworkTextSyncResult>
 
     // An older build (a rollback, or an old instance restarting during a
     // rolling update) must not restore older wording.
-    const revision = textRevisionOf(fw);
-    const stored = await storedRevision(fw.id, transaction);
-    if (revision < stored) {
-      return skip(`the database holds text revision ${stored}, this build ${revision}`, "info");
+    const stored = await storedRevision(source.id, transaction);
+    if (source.revision < stored) {
+      return skip(
+        `the database holds text revision ${stored}, this build ${source.revision}`,
+        "info",
+      );
     }
 
-    const rows = await readRows(fw, transaction);
-    // A framework this database never seeded has no rows; nothing to sync.
-    if (!rows.l1.length) return skip("not seeded in this database", "none");
+    const planned = await source.plan(transaction);
+    if ("skip" in planned) return skip(planned.skip, planned.notice);
 
-    const plan = planFrameworkTextSync(fw.seed, rows);
-    if ("skip" in plan) return skip(plan.skip, "warn");
+    for (const write of planned.writes) await writeRow(write, transaction);
+    await recordRevision(source.id, source.revision, transaction);
+    const result: FrameworkTextSyncResult = { key: source.key, updated: planned.writes.length };
+    if (planned.missing) result.missing = planned.missing;
+    return result;
+  });
+}
 
-    for (const update of plan.updates) await applyUpdate(fw, update, transaction);
-    await recordRevision(fw.id, revision, transaction);
-    return { key: fw.key, updated: plan.updates.length };
+function syncBundled(fw: FrameworkStructure): Promise<FrameworkTextSyncResult> {
+  return syncSource({
+    id: fw.id,
+    key: fw.key,
+    revision: textRevisionOf(fw),
+    tables: [fw.tables.l1_struct, fw.tables.l2_struct, fw.tables.l3_struct].filter(
+      (t): t is string => !!t,
+    ),
+    plan: async (transaction) => {
+      const rows = await readRows(fw, transaction);
+      // A framework this database never seeded has no rows; nothing to sync.
+      if (!rows.l1.length) return { skip: "not seeded in this database", notice: "none" };
+      const plan = planFrameworkTextSync(fw.seed, rows);
+      if ("skip" in plan) return { skip: plan.skip, notice: "warn" };
+      const description = await planKeyed(
+        fw.id,
+        [descriptionTarget(fw.id, fw.seed.description ?? null)],
+        transaction,
+      );
+      if ("skip" in description) return { skip: description.skip, notice: "warn" };
+      return {
+        writes: [
+          ...plan.updates.map((u) => ({
+            table: tableFor(fw, u.level),
+            id: u.id,
+            values: u.values,
+          })),
+          ...description.writes,
+        ],
+      };
+    },
+  });
+}
+
+function syncBuiltin(source: BuiltinTextSource): Promise<FrameworkTextSyncResult> {
+  return syncSource({
+    id: source.id,
+    key: source.key,
+    revision: source.textRevision,
+    tables: source.tables,
+    plan: async (transaction) => {
+      const planned = await planKeyed(
+        source.id,
+        [...source.targets(), descriptionTarget(source.id, source.description)],
+        transaction,
+      );
+      if ("skip" in planned) return { skip: planned.skip, notice: "warn" };
+      return planned;
+    },
   });
 }
 
 /**
- * Syncs every bundled framework. One framework's failure is reported and does
- * not stop the others.
+ * Syncs every bundled and built-in framework. One framework's failure is
+ * reported and does not stop the others.
  */
-export async function syncBundledFrameworkText(
+export async function syncFrameworkText(
   log: { info: (m: string) => void; warn: (m: string) => void },
-  frameworks: FrameworkStructure[] = FRAMEWORK_STRUCTURES,
+  options: { bundled?: FrameworkStructure[]; builtins?: BuiltinTextSource[] } = {},
 ): Promise<FrameworkTextSyncResult[]> {
+  const jobs: Array<{ key: string; run: () => Promise<FrameworkTextSyncResult> }> = [
+    ...(options.builtins ?? BUILTIN_TEXT_SOURCES).map((b) => ({
+      key: b.key,
+      run: () => syncBuiltin(b),
+    })),
+    ...(options.bundled ?? FRAMEWORK_STRUCTURES).map((fw) => ({
+      key: fw.key,
+      run: () => syncBundled(fw),
+    })),
+  ];
   const results: FrameworkTextSyncResult[] = [];
-  for (const fw of frameworks) {
+  for (const job of jobs) {
     try {
-      const result = await syncOne(fw);
+      const result = await job.run();
       results.push(result);
       if (result.updated) {
         log.info(
-          `[framework-text-sync] ${fw.key}: updated ${result.updated} item(s) from the registry`,
+          `[framework-text-sync] ${job.key}: updated ${result.updated} item(s) from the code`,
         );
       } else if (result.skipped && result.notice === "warn") {
-        log.warn(`[framework-text-sync] ${fw.key}: skipped, ${result.skipped}`);
+        log.warn(`[framework-text-sync] ${job.key}: skipped, ${result.skipped}`);
       } else if (result.skipped && result.notice === "info") {
-        log.info(`[framework-text-sync] ${fw.key}: skipped, ${result.skipped}`);
+        log.info(`[framework-text-sync] ${job.key}: skipped, ${result.skipped}`);
+      }
+      if (result.missing) {
+        log.info(
+          `[framework-text-sync] ${job.key}: ${result.missing} item(s) in the code have no database row (adding items needs a migration)`,
+        );
       }
     } catch (error) {
       const message = (error as Error)?.message ?? String(error);
-      results.push({ key: fw.key, updated: 0, skipped: `error: ${message}`, notice: "warn" });
-      log.warn(`[framework-text-sync] ${fw.key}: failed, ${message}`);
+      results.push({ key: job.key, updated: 0, skipped: `error: ${message}`, notice: "warn" });
+      log.warn(`[framework-text-sync] ${job.key}: failed, ${message}`);
     }
   }
   return results;

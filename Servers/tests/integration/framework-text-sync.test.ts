@@ -13,7 +13,8 @@ jest.setTimeout(120000);
 import { QueryTypes } from "sequelize";
 import { sequelize } from "../../database/db";
 import { FRAMEWORK_STRUCTURES, requireStructureByKey } from "../../structures";
-import { syncBundledFrameworkText } from "../../services/frameworkTextSync/sync";
+import { FrameworkTextSyncResult, syncFrameworkText } from "../../services/frameworkTextSync/sync";
+import { BUILTIN_TEXT_SOURCES } from "../../services/frameworkTextSync/builtins";
 import { textRevisionOf } from "../../services/frameworkTextSync/plan";
 
 const fw = requireStructureByKey("osfi-e23");
@@ -21,6 +22,10 @@ const L1 = `verifywise.${fw.tables.l1_struct}`;
 const L2 = `verifywise.${fw.tables.l2_struct}`;
 const PARENT = fw.cols.l2_struct_parent;
 const quiet = { info: () => {}, warn: () => {} };
+type Log = { info: (m: string) => void; warn: (m: string) => void };
+/** Syncs only the given bundled frameworks (OSFI E-23 by default). */
+const syncBundled = (log: Log = quiet, frameworks = [fw]) =>
+  syncFrameworkText(log, { bundled: frameworks, builtins: [] });
 
 async function firstRows() {
   const [l1] = (await sequelize.query(
@@ -39,11 +44,34 @@ describe("bundled framework text sync", () => {
     await sequelize.close();
   });
 
-  it("changes nothing in any framework right after the migrations", async () => {
-    const results = await syncBundledFrameworkText(quiet);
-    const problems = results.filter((r) => r.updated > 0 || r.skipped);
-    expect(problems).toEqual([]);
-    expect(results).toHaveLength(FRAMEWORK_STRUCTURES.length);
+  // Right after the migrations every framework already holds the code's text,
+  // with two known exceptions on a fresh install: ISO 27001 Annex A controls
+  // that 20260420113913 left under the wrong titles (the sync realigns them to
+  // their control numbers), and NIST MEASURE 2.10–2.13, which the seed could
+  // not insert (DECIMAL(4,1) subcategory ids), so the code has 4 items with no
+  // row.
+  it("changes nothing right after the migrations except the known ISO 27001 fix", async () => {
+    const results = await syncFrameworkText(quiet);
+    expect(results).toHaveLength(FRAMEWORK_STRUCTURES.length + BUILTIN_TEXT_SOURCES.length);
+    const byKey = new Map(results.map((r) => [r.key, r]));
+    const others = results.filter((r) => r.key !== "iso-27001" && r.key !== "nist-ai-rmf");
+    expect(others.filter((r) => r.updated > 0 || r.skipped || r.missing)).toEqual([]);
+    expect(byKey.get("nist-ai-rmf")).toEqual({ key: "nist-ai-rmf", updated: 0, missing: 4 });
+    const iso27001 = byKey.get("iso-27001") as FrameworkTextSyncResult;
+    expect(iso27001.skipped).toBeUndefined();
+    expect(iso27001.updated).toBeGreaterThan(0);
+
+    const [a519] = (await sequelize.query(
+      `SELECT ac.title FROM annexcontrols_struct_iso27001 ac
+         JOIN annexcategories_struct_iso27001 cat ON cat.id = ac.category_id
+        WHERE cat.annex_id = 'A.5' AND ac.order_no = 19`,
+      { type: QueryTypes.SELECT },
+    )) as Array<{ title: string }>;
+    expect(a519.title).toBe("Information security in supplier relationships");
+
+    // A second run has nothing left to do anywhere.
+    const again = await syncFrameworkText(quiet);
+    expect(again.filter((r) => r.updated > 0 || r.skipped)).toEqual([]);
   });
 
   it("restores drifted text in place and keeps row ids", async () => {
@@ -56,7 +84,7 @@ describe("bundled framework text sync", () => {
       { replacements: { id: before.l2.id } },
     );
 
-    const results = await syncBundledFrameworkText(quiet, [fw]);
+    const results = await syncBundled();
     expect(results).toEqual([{ key: "osfi-e23", updated: 2 }]);
 
     const after = await firstRows();
@@ -64,7 +92,7 @@ describe("bundled framework text sync", () => {
     expect(after.l2).toEqual(before.l2);
 
     // A second run has nothing left to do.
-    expect(await syncBundledFrameworkText(quiet, [fw])).toEqual([{ key: "osfi-e23", updated: 0 }]);
+    expect(await syncBundled()).toEqual([{ key: "osfi-e23", updated: 0 }]);
   });
 
   // An extra item means positions no longer identify the same items, so
@@ -81,10 +109,7 @@ describe("bundled framework text sync", () => {
     const warnings: string[] = [];
 
     try {
-      const results = await syncBundledFrameworkText(
-        { info: () => {}, warn: (m) => warnings.push(m) },
-        [fw],
-      );
+      const results = await syncBundled({ info: () => {}, warn: (m: string) => warnings.push(m) });
       expect(results[0]).toMatchObject({ key: "osfi-e23", updated: 0, notice: "warn" });
       expect(results[0].skipped).toContain("the database");
       expect(warnings.join("\n")).toContain("osfi-e23: skipped");
@@ -95,18 +120,21 @@ describe("bundled framework text sync", () => {
       expect(row.title).toBe("Old title");
     } finally {
       await sequelize.query(`DELETE FROM ${L2} WHERE id = :id`, { replacements: { id: extra.id } });
-      await syncBundledFrameworkText(quiet, [fw]);
+      await syncBundled();
     }
   });
 
   it("records each framework's text revision after syncing", async () => {
-    await syncBundledFrameworkText(quiet);
+    await syncFrameworkText(quiet);
     const rows = (await sequelize.query(
       `SELECT framework_id, revision FROM framework_text_revisions`,
       { type: QueryTypes.SELECT },
     )) as Array<{ framework_id: number; revision: number }>;
-    const byId = new Map(rows.map((r) => [r.framework_id, r.revision]));
+    const byId = new Map(
+      rows.map((r: { framework_id: number; revision: number }) => [r.framework_id, r.revision]),
+    );
     for (const each of FRAMEWORK_STRUCTURES) expect(byId.get(each.id)).toBe(textRevisionOf(each));
+    for (const each of BUILTIN_TEXT_SOURCES) expect(byId.get(each.id)).toBe(each.textRevision);
   });
 
   // A rollback, or an old instance restarting during a rolling update, must
@@ -121,16 +149,14 @@ describe("bundled framework text sync", () => {
       { replacements: { id: fw.id } },
     );
     try {
-      const [result] = await syncBundledFrameworkText(quiet, [fw]);
+      const [result] = await syncBundled();
       expect(result).toMatchObject({ key: "osfi-e23", updated: 0, notice: "info" });
       expect(result.skipped).toContain("text revision 5, this build 1");
       expect((await firstRows()).l2.title).toBe("Newer wording");
 
       // A build at or above the stored revision writes its text and records it.
       const newer = { ...fw, textRevision: 6 };
-      expect(await syncBundledFrameworkText(quiet, [newer])).toEqual([
-        { key: "osfi-e23", updated: 1 },
-      ]);
+      expect(await syncBundled(quiet, [newer])).toEqual([{ key: "osfi-e23", updated: 1 }]);
       const [stored] = (await sequelize.query(
         `SELECT revision FROM framework_text_revisions WHERE framework_id = :id`,
         { replacements: { id: fw.id }, type: QueryTypes.SELECT },
@@ -141,7 +167,7 @@ describe("bundled framework text sync", () => {
         `UPDATE framework_text_revisions SET revision = :revision WHERE framework_id = :id`,
         { replacements: { id: fw.id, revision: textRevisionOf(fw) } },
       );
-      await syncBundledFrameworkText(quiet, [fw]);
+      await syncBundled();
     }
   });
 
@@ -152,10 +178,7 @@ describe("bundled framework text sync", () => {
     await sequelize.query(`UPDATE ${L2} SET title = 'Old title' WHERE id = :id`, {
       replacements: { id: l2.id },
     });
-    const [a, b] = await Promise.all([
-      syncBundledFrameworkText(quiet, [fw]),
-      syncBundledFrameworkText(quiet, [fw]),
-    ]);
+    const [a, b] = await Promise.all([syncBundled(), syncBundled()]);
     expect(a[0].updated + b[0].updated).toBe(1);
     expect([a[0].skipped, b[0].skipped]).toEqual([undefined, undefined]);
   });

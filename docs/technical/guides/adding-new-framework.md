@@ -313,10 +313,26 @@ item replaced by an unrelated one at the same position can't be told apart
 from a rewording, so that also needs a migration. Write the migration that
 brings the rows in line, and the next start syncs the text again.
 
-Only the 24 bundled frameworks are covered. The four built-ins (EU AI Act,
-ISO 42001, ISO 27001, NIST AI RMF) have their own tables and still need a
-migration for text changes. The `frameworks` row (name, description) is not
-synced either.
+**The four built-ins and every framework's description are covered too.**
+EU AI Act, ISO 42001, ISO 27001 and NIST AI RMF have their own struct tables;
+`services/frameworkTextSync/builtins.ts` describes, for each table, how a row
+is identified (the key the seed migration used: `order_no`, a clause code, or
+a title within its clause) and the text it should hold from the TS under
+`Servers/structures`. To change built-in wording, edit the TS, bump the
+`textRevision` of its entry in `builtins.ts`, and run
+`npm run framework-text:record`. The `frameworks` row's description is synced
+for all 28 frameworks (bundled: `seed.description`; built-ins: `description`
+in `builtins.ts`). Names are never synced, because code looks frameworks up by
+name (for example `WHERE name = 'EU AI Act'` and the client's badge map).
+
+For the built-ins, a database row with no item in the code is left alone
+(ISO 42001 clause 6.1.1–6.1.4 and 6.3 exist only through migrations), and an
+item in the code with no row is not inserted but logged (NIST MEASURE
+2.10–2.13 are missing on every install; that needs a migration). ISO 27001
+Annex A controls are keyed by their control number, which also corrects the
+controls that installs created after `20260420113913` hold under the wrong
+title. Demo answers, implementation text, EU roles and risk tiers,
+applicability and status are never synced.
 
 The sync runs in the background and never blocks or stops startup. Each
 framework is written in its own transaction under an advisory lock, so
