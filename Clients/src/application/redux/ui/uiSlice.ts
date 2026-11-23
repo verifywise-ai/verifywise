@@ -28,6 +28,13 @@ interface UiState {
    * AddNewRiskForm hook reads it to prefill the edit form.
    */
   inputValues: InputValues;
+  /**
+   * Monotonic counter replacing the legacy VerifyWiseContext boolean
+   * `photoRefreshFlag`. Profile photo upload/remove bumps it; avatar
+   * components (SidebarFooter, AdvisorChat CustomMessage) use it as an
+   * effect dependency to refetch the photo blob.
+   */
+  photoRefreshCounter: number;
 }
 
 const initialState: UiState = {
@@ -47,6 +54,7 @@ const initialState: UiState = {
     compliance: false,
   },
   inputValues: {},
+  photoRefreshCounter: 0,
 };
 
 const uiSlice = createSlice({
@@ -87,6 +95,9 @@ const uiSlice = createSlice({
     setInputValues: (state, action: PayloadAction<InputValues>) => {
       state.inputValues = action.payload;
     },
+    bumpPhotoRefresh: (state) => {
+      state.photoRefreshCounter += 1;
+    },
   },
 });
 
@@ -100,6 +111,7 @@ export const {
   setSetupModalOpen,
   setComponentVisibility,
   setInputValues,
+  bumpPhotoRefresh,
 } = uiSlice.actions;
 
 /** True while the first-login setup modal is on screen. */
@@ -118,3 +130,7 @@ export const selectComponentsVisible = (state: { ui?: UiState }): ComponentVisib
 /** Row-selected-for-edit shuttle (migrated from VerifyWiseContext). */
 export const selectInputValues = (state: { ui?: UiState }): InputValues =>
   state.ui?.inputValues ?? {};
+
+/** Profile-photo refresh signal (migrated from VerifyWiseContext). */
+export const selectPhotoRefreshCounter = (state: { ui?: UiState }): number =>
+  state.ui?.photoRefreshCounter ?? 0;
