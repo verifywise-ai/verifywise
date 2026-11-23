@@ -91,7 +91,7 @@ function open(existing: VendorModel) {
 const group = (name = HEADING) => screen.getByRole("group", { name });
 /** The section's open/close button; its name starts with the heading. */
 const toggle = () =>
-  screen.getByRole("button", { name: new RegExp(`^${HEADING.replace(/[()]/g, "\\$&")}`) });
+  screen.getByRole("button", { name: (accessibleName) => accessibleName.startsWith(HEADING) });
 /** A field of the section, which is opened first when it is closed (a vendor with none). */
 const field = (name: RegExp) => {
   if (toggle().getAttribute("aria-expanded") === "false") fireEvent.click(toggle());
