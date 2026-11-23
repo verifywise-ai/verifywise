@@ -35,6 +35,7 @@ describe("planKeyedTarget", () => {
         },
       ],
       missing: 0,
+      retitled: [],
     });
   });
 
@@ -43,6 +44,7 @@ describe("planKeyedTarget", () => {
     expect(planKeyedTarget(t, [{ id: 1, key: "1", hint: "" }])).toEqual({
       updates: [],
       missing: 0,
+      retitled: [],
     });
   });
 
@@ -53,7 +55,7 @@ describe("planKeyedTarget", () => {
       { id: 10, key: "1", title: "Policy", questions: ["Is there one?"] },
       { id: 99, key: "9", title: "Migration-only", questions: [] },
     ]);
-    expect(plan).toEqual({ updates: [], missing: 1 });
+    expect(plan).toEqual({ updates: [], missing: 1, retitled: [] });
   });
 
   it("gives every row sharing a key that key's text", () => {
@@ -71,6 +73,34 @@ describe("planKeyedTarget", () => {
       { id: 11, key: "2", title: "Policy" },
     ]);
     expect(plan).toEqual({ skip: expect.stringContaining("reordering needs a migration") });
+  });
+
+  // EU AI Act repeats control titles under different categories; rewording
+  // one of them is not a move.
+  it("does not read a title repeated under another parent as a move", () => {
+    const t = target({
+      columns: { title: "text" },
+      guardMovesOn: "title",
+      expected: new Map([
+        ["1/1", { title: "Oversight documentation, reworded" }],
+        ["2/1", { title: "Oversight documentation" }],
+      ]),
+    });
+    const plan = planKeyedTarget(t, [
+      { id: 10, key: "1/1", title: "Oversight documentation" },
+      { id: 11, key: "2/1", title: "Oversight documentation" },
+    ]);
+    expect(plan).toMatchObject({
+      updates: [{ id: 10, values: { title: "Oversight documentation, reworded" } }],
+    });
+  });
+
+  it("reports retitled rows when the target asks for it", () => {
+    const plan = planKeyedTarget(target({ columns: { title: "text" }, reportTitleChanges: true }), [
+      { id: 10, key: "1", title: "Cloud services" },
+      { id: 11, key: "2", title: "Inventory" },
+    ]);
+    expect(plan).toMatchObject({ retitled: ['1: "Cloud services" -> "Policy"'] });
   });
 
   it("realigns moved titles when the target has no guard", () => {

@@ -40,6 +40,12 @@ export interface KeyedTarget {
   expected: Map<string, Record<string, TextValue>>;
   /** Column checked for moved items, for targets keyed by position. */
   guardMovesOn?: string;
+  /**
+   * Report every row whose title this sync changes, for a target where a new
+   * title can change what existing answers on the row refer to (the ISO 27001
+   * Annex A realignment).
+   */
+  reportTitleChanges?: boolean;
 }
 
 export interface KeyedRow {
@@ -55,7 +61,8 @@ export interface KeyedUpdate {
   kinds: Record<string, ColumnKind>;
 }
 
-export type KeyedPlan = { updates: KeyedUpdate[]; missing: number } | { skip: string };
+export type KeyedPlan =
+  { updates: KeyedUpdate[]; missing: number; retitled: string[] } | { skip: string };
 
 const asText = (v: unknown): string | null => (typeof v === "string" && v !== "" ? v : null);
 const asList = (v: unknown): string[] => (Array.isArray(v) ? v.map(String) : []);
@@ -75,10 +82,28 @@ export function planKeyedTarget(target: KeyedTarget, rows: KeyedRow[]): KeyedPla
   }
 
   if (target.guardMovesOn) {
+    // Only siblings can trade places. A key's parent is everything before its
+    // last "/" (keys are "category/control/subcontrol"), and titles repeat
+    // under different parents (EU AI Act has 11 repeated control titles), so
+    // the comparison stays within one parent.
     const column = target.guardMovesOn;
-    const dbValues = new Set(rows.map((r) => asText(r[column])));
-    const expectedValues = new Set([...target.expected.values()].map((v) => asText(v[column])));
+    const parentOf = (key: string) => key.slice(0, Math.max(0, key.lastIndexOf("/")));
+    const siblings = (values: Iterable<[string, unknown]>) => {
+      const byParent = new Map<string, Set<string | null>>();
+      for (const [key, value] of values) {
+        const set = byParent.get(parentOf(key)) ?? new Set<string | null>();
+        set.add(asText(value));
+        byParent.set(parentOf(key), set);
+      }
+      return byParent;
+    };
+    const dbByParent = siblings(rows.map((r) => [r.key, r[column]] as [string, unknown]));
+    const expectedByParent = siblings(
+      [...target.expected.entries()].map(([key, v]) => [key, v[column]] as [string, unknown]),
+    );
     for (const [key, values] of target.expected) {
+      const dbValues = dbByParent.get(parentOf(key)) ?? new Set();
+      const expectedValues = expectedByParent.get(parentOf(key)) ?? new Set();
       for (const row of rowsByKey.get(key) ?? []) {
         const want = asText(values[column]);
         const have = asText(row[column]);
@@ -94,6 +119,7 @@ export function planKeyedTarget(target: KeyedTarget, rows: KeyedRow[]): KeyedPla
   }
 
   const updates: KeyedUpdate[] = [];
+  const retitled: string[] = [];
   let missing = 0;
   for (const [key, values] of target.expected) {
     const matches = rowsByKey.get(key);
@@ -109,12 +135,15 @@ export function planKeyedTarget(target: KeyedTarget, rows: KeyedRow[]): KeyedPla
           changed[column] = kind === "text" ? asText(values[column]) : asList(values[column]);
         }
       }
+      if (target.reportTitleChanges && "title" in changed) {
+        retitled.push(`${key}: "${asText(row.title)}" -> "${changed.title}"`);
+      }
       if (Object.keys(changed).length) {
         updates.push({ table: target.table, id: row.id, values: changed, kinds: target.columns });
       }
     }
   }
-  return { updates, missing };
+  return { updates, missing, retitled };
 }
 
 /** Fingerprint of everything a set of targets would write, for the revision check. */
@@ -122,7 +151,9 @@ export function keyedTextFingerprint(targets: KeyedTarget[]): string {
   const normalized = targets.map((t) => [
     t.table,
     [...t.expected.entries()]
-      .sort(([a], [b]) => a.localeCompare(b))
+      // Code-point order, not localeCompare: the fingerprint must not depend
+      // on the machine's locale, and some keys hold free text.
+      .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
       .map(([key, values]) => [
         key,
         Object.keys(t.columns).map((c) =>

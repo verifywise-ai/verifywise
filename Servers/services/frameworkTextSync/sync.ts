@@ -41,8 +41,13 @@ export interface FrameworkTextSyncResult {
   key: string;
   updated: number;
   skipped?: string;
-  /** Items in the code with no database row (not inserted; needs a migration). */
+  /**
+   * Items in the code with no database row (not inserted; needs a
+   * migration). Reported on the first sync at a revision only.
+   */
   missing?: number;
+  /** Rows whose title changed where answers may refer to the old title. */
+  retitled?: string[];
   /**
    * How the skip is logged: "warn" needs someone's attention (the items no
    * longer line up), "info" is expected (an older build, tables not migrated
@@ -135,8 +140,9 @@ async function planKeyed(
   frameworkId: number,
   targets: KeyedTarget[],
   transaction: Transaction,
-): Promise<{ writes: RowWrite[]; missing: number } | { skip: string }> {
+): Promise<{ writes: RowWrite[]; missing: number; retitled: string[] } | { skip: string }> {
   const writes: RowWrite[] = [];
+  const retitled: string[] = [];
   let missing = 0;
   for (const t of targets) {
     const rows = (await sequelize.query(t.select, {
@@ -148,8 +154,9 @@ async function planKeyed(
     if ("skip" in plan) return { skip: plan.skip };
     writes.push(...plan.updates);
     missing += plan.missing;
+    retitled.push(...plan.retitled.map((r) => `${t.label} ${r}`));
   }
-  return { writes, missing };
+  return { writes, missing, retitled };
 }
 
 async function storedRevision(frameworkId: number, transaction: Transaction): Promise<number> {
@@ -172,7 +179,7 @@ async function recordRevision(frameworkId: number, revision: number, transaction
 }
 
 type Planned =
-  | { writes: RowWrite[]; missing?: number }
+  | { writes: RowWrite[]; missing?: number; retitled?: string[] }
   | { skip: string; notice: FrameworkTextSyncResult["notice"] };
 
 /**
@@ -223,7 +230,9 @@ async function syncSource(source: {
     for (const write of planned.writes) await writeRow(write, transaction);
     await recordRevision(source.id, source.revision, transaction);
     const result: FrameworkTextSyncResult = { key: source.key, updated: planned.writes.length };
-    if (planned.missing) result.missing = planned.missing;
+    // A known gap is reported once per revision, not on every start.
+    if (planned.missing && stored < source.revision) result.missing = planned.missing;
+    if (planned.retitled?.length) result.retitled = planned.retitled;
     return result;
   });
 }
@@ -311,6 +320,11 @@ export async function syncFrameworkText(
         log.warn(`[framework-text-sync] ${job.key}: skipped, ${result.skipped}`);
       } else if (result.skipped && result.notice === "info") {
         log.info(`[framework-text-sync] ${job.key}: skipped, ${result.skipped}`);
+      }
+      for (const line of result.retitled ?? []) {
+        log.warn(
+          `[framework-text-sync] ${job.key}: retitled ${line}; answers and evidence on this row were given under the old title`,
+        );
       }
       if (result.missing) {
         log.info(

@@ -162,6 +162,26 @@ describe("planFrameworkTextSync", () => {
     });
   });
 
+  it("does not read a title repeated under another parent as a move", () => {
+    const repeated = twoLevel([
+      { title: "A", items: [{ title: "General, reworded" }] },
+      { title: "B", items: [{ title: "General" }] },
+    ]);
+    const rows: StructRows = {
+      l1: [
+        { id: 1, parent_id: null, order_no: 1, title: "A", description: null },
+        { id: 2, parent_id: null, order_no: 2, title: "B", description: null },
+      ],
+      l2: [
+        { id: 3, parent_id: 1, order_no: 1, title: "General", description: null },
+        { id: 4, parent_id: 2, order_no: 1, title: "General", description: null },
+      ],
+    };
+    expect(planFrameworkTextSync(repeated, rows)).toEqual({
+      updates: [{ level: "l2", id: 3, values: { title: "General, reworded" } }],
+    });
+  });
+
   it("reports a position the registry repeats as a registry problem", () => {
     const repeated = twoLevel([
       {

@@ -26,7 +26,11 @@ function main() {
   const problems: string[] = [];
   for (const { key, revision, fingerprint, where } of textRevisionEntries()) {
     const before = previous[key];
-    if (before && before.fingerprint !== fingerprint && revision <= before.revision) {
+    if (before && revision < before.revision) {
+      problems.push(
+        `${key}: the text revision went down from ${before.revision} to ${revision}; databases that hold ${before.revision} would stop syncing. Set it back to at least ${before.revision} in ${where}`,
+      );
+    } else if (before && before.fingerprint !== fingerprint && revision <= before.revision) {
       problems.push(
         `${key}: the text changed but the text revision is still ${revision}; set it to ${before.revision + 1} in ${where}`,
       );

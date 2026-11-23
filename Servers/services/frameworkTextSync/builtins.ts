@@ -62,6 +62,7 @@ const target = (t: Omit<KeyedTarget, "expected"> & { entries: Entries }): KeyedT
     select: t.select,
     columns: t.columns,
     guardMovesOn: t.guardMovesOn,
+    reportTitleChanges: t.reportTitleChanges,
     expected,
   };
 };
@@ -335,6 +336,7 @@ function iso27001Targets(): KeyedTarget[] {
     // fix for installs created after 20260420113913.
     target({
       label: "ISO 27001 annex controls",
+      reportTitleChanges: true,
       table: "annexcontrols_struct_iso27001",
       select: `SELECT ac.id, cat.annex_id || '/' || ac.order_no AS key,
                       ac.title, ac.requirement_summary, ac.key_questions, ac.evidence_examples

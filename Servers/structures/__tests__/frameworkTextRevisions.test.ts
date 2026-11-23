@@ -23,6 +23,11 @@ describe("framework text revisions", () => {
       if (!entry) {
         throw new Error(`${key} has no recorded text revision: run npm run framework-text:record`);
       }
+      if (revision < entry.revision) {
+        throw new Error(
+          `${key}: the text revision went down from ${entry.revision} to ${revision}; databases that hold ${entry.revision} would stop syncing. Set it back in ${where}`,
+        );
+      }
       if (fingerprint !== entry.fingerprint && revision <= entry.revision) {
         throw new Error(
           `${key}: the text changed, so bump its text revision to ${entry.revision + 1} in ${where}, then run npm run framework-text:record`,

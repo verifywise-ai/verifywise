@@ -183,20 +183,30 @@ export function planFrameworkTextSync(seed: FrameworkSeed, rows: StructRows): Te
  */
 function movedTitle(paired: Record<StructLevel, Array<[SeedItem, StructRow]>>): string | null {
   for (const level of ["l1", "l2", "l3"] as StructLevel[]) {
-    const pairs = paired[level];
-    const dbTitles = new Set(pairs.map(([, row]) => row.title));
-    const seedTitles = new Set(pairs.map(([item]) => item.title));
-    for (const [item, row] of pairs) {
-      if (item.title === row.title) continue;
-      // Name the title that moved: the row's current one when the registry
-      // now gives it to another position, else the new one taken from another row.
-      const moving = seedTitles.has(row.title)
-        ? row.title
-        : dbTitles.has(item.title)
-          ? item.title
-          : null;
-      if (moving) {
-        return `${level.replace("l", "level ")}: "${moving}" is at a different position than in the database (reordering needs a migration)`;
+    // Only siblings can trade places: the registry repeats titles under
+    // different parents (EU AI Act controls, EN 18286 "General"), so a
+    // level-wide comparison would read a plain rewording as a move.
+    const byParent = new Map<number | null, Array<[SeedItem, StructRow]>>();
+    for (const pair of paired[level]) {
+      const group = byParent.get(pair[1].parent_id) ?? [];
+      group.push(pair);
+      byParent.set(pair[1].parent_id, group);
+    }
+    for (const pairs of byParent.values()) {
+      const dbTitles = new Set(pairs.map(([, row]) => row.title));
+      const seedTitles = new Set(pairs.map(([item]) => item.title));
+      for (const [item, row] of pairs) {
+        if (item.title === row.title) continue;
+        // Name the title that moved: the row's current one when the registry
+        // now gives it to another position, else the new one taken from another row.
+        const moving = seedTitles.has(row.title)
+          ? row.title
+          : dbTitles.has(item.title)
+            ? item.title
+            : null;
+        if (moving) {
+          return `${level.replace("l", "level ")}: "${moving}" is at a different position than in the database (reordering needs a migration)`;
+        }
       }
     }
   }
