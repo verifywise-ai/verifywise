@@ -23,11 +23,8 @@ vi.mock("../../../CustomFieldsSection", () => ({
 vi.mock("../../../../../application/tools/extractToken", () => ({
   extractUserToken: vi.fn().mockReturnValue({ id: 1 }),
 }));
-vi.mock("../../../../../application/contexts/VerifyWise.context", () => ({
-  VerifyWiseContext: React.createContext({
-    inputValues: {},
-    dashboardValues: {},
-  }),
+vi.mock("../../../../../application/hooks/useProjectsCache", () => ({
+  useProjectsCache: () => ({ setProjectsCache: vi.fn(), refreshProjects: vi.fn() }),
 }));
 vi.mock("../../../../utils/inputStyles", () => ({
   getAutocompleteStyles: () => new Proxy({}, { get: () => ({}) }),

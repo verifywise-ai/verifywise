@@ -9,7 +9,7 @@ import ExternalOwnerFields from "../../ExternalOwner/ExternalOwnerFields";
 import { Alert, Box, SelectChangeEvent, Stack, Typography, useTheme } from "@mui/material";
 import { TabContext } from "@mui/lab";
 import { X as ClearIcon } from "lucide-react";
-import { Suspense, useCallback, useContext, useMemo, useRef, useState, useEffect } from "react";
+import { Suspense, useCallback, useMemo, useRef, useState, useEffect } from "react";
 import CustomFieldsSection, { type CustomFieldsSectionHandle } from "../../CustomFieldsSection";
 import TabBar from "../../TabBar";
 import { CustomizableButton } from "../../../components/button/customizable-button";
@@ -27,6 +27,7 @@ import Select from "../../../components/Inputs/Select";
 import useUsers from "../../../../application/hooks/useUsers";
 import useFrameworks from "../../../../application/hooks/useFrameworks";
 import { useUseCaseOrgSettings } from "../../../../application/hooks/useUseCaseOrgSettings";
+import { useProjectsCache } from "../../../../application/hooks/useProjectsCache";
 import { GEOGRAPHY_ITEMS } from "../../../../application/constants/geography";
 import DatePicker from "../../../components/Inputs/Datepicker";
 import { startDateCalendarDay } from "../../../tools/isoDateToString";
@@ -37,7 +38,6 @@ import CustomizableToast from "../../Toast";
 import { ChevronDown as GreyDownArrowIcon } from "lucide-react";
 import Checkbox from "../../../components/Inputs/Checkbox";
 import { Project } from "../../../../domain/types/Project";
-import { VerifyWiseContext } from "../../../../application/contexts/VerifyWise.context";
 import { FrameworkTypeEnum } from "./constants";
 import { FormValues } from "./constants";
 import { initialState } from "./constants";
@@ -118,7 +118,7 @@ export const ProjectForm = ({
   onSubmitRef,
 }: ProjectFormProps) => {
   const theme = useTheme();
-  const { setProjects } = useContext(VerifyWiseContext);
+  const { setProjectsCache } = useProjectsCache();
 
   // An edited use case has EU AI Act when its stored frameworks include it;
   // the edit form does not change frameworks.
@@ -595,7 +595,7 @@ export const ProjectForm = ({
           let targetId: number | undefined;
           if (projectToEdit) {
             // Update the project in the projects list
-            setProjects((prevProjects: Project[]) =>
+            setProjectsCache((prevProjects: Project[]) =>
               prevProjects.map((project) =>
                 project.id === projectToEdit.id ? (res.data.data as Project) : project,
               ),
@@ -604,7 +604,7 @@ export const ProjectForm = ({
           } else {
             // Add new project to the projects list
             const newProject = res.data.data.project as Project;
-            setProjects((prevProjects: Project[]) => [...prevProjects, newProject]);
+            setProjectsCache((prevProjects: Project[]) => [...prevProjects, newProject]);
             targetId = (newProject as { id?: number })?.id;
           }
           // Flush any staged custom field changes (create OR update).
@@ -674,7 +674,7 @@ export const ProjectForm = ({
     getFirstInvalidField,
     projectStatusItems,
     riskClassificationItems,
-    setProjects,
+    setProjectsCache,
     onClose,
   ]);
 
