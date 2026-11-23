@@ -240,16 +240,17 @@ describe("the lookup of a vendor, in the database", () => {
       ["nhtsa_sgo", "not_researched"],
       ["fda_ai_devices", "not_researched"],
       ["fda_device_recalls", "not_researched"],
-      // The 23 lists of 2026-11-10 follow, in the order of the registry: the ones that serve
+      // The lists of 2026-11-10 follow, in the order of the registry: the ones that serve
       // security_incidents or legal_regulatory were never copied here, so failed; the others serve
       // categories this run does not research, and GLEIF, read through, has no connector here.
+      // eu_dg_comp is not among them: the shipped manifest has no bundle of it, so it is no part of
+      // a run's coverage (coveredSources in vrdb/sources.ts).
       ["canada_sema", "failed"],
       ["california_breaches", "failed"],
       ["uk_ofsi", "failed"],
       ["charlotin", "not_researched"],
       ["ftc_penalties", "failed"],
       ["piperoll", "not_researched"],
-      ["eu_dg_comp", "failed"],
       ["disclose_io", "failed"],
       ["uk_cma", "failed"],
       ["canada_ai_register", "not_researched"],
