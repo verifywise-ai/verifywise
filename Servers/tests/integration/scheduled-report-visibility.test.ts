@@ -30,6 +30,7 @@ describe("scheduled report visibility", () => {
   let ownerId: number;
   let memberId: number;
   let outsiderId: number;
+  let groupMemberId: number;
   let projectSchedule: number;
   let orgSchedule: number;
 
@@ -42,6 +43,7 @@ describe("scheduled report visibility", () => {
     ownerId = await createTestUser(orgId, 3, `owner-${stamp}@test.com`, "Password123!");
     memberId = await createTestUser(orgId, 4, `member-${stamp}@test.com`, "Password123!");
     outsiderId = await createTestUser(orgId, 3, `outsider-${stamp}@test.com`, "Password123!");
+    groupMemberId = await createTestUser(orgId, 3, `group-${stamp}@test.com`, "Password123!");
 
     const projectId = await insertOne(
       `INSERT INTO projects
@@ -55,6 +57,22 @@ describe("scheduled report visibility", () => {
       `INSERT INTO projects_members (organization_id, project_id, user_id)
        VALUES (:orgId, :projectId, :memberId)`,
       { replacements: { orgId, projectId, memberId } },
+    );
+    // A group attached to the use case grants its members the same access as
+    // team members (#5253), reports included.
+    const groupId = await insertOne(
+      `INSERT INTO groups (organization_id, name) VALUES (:orgId, 'Model risk') RETURNING id`,
+      { orgId },
+    );
+    await sequelize.query(
+      `INSERT INTO group_members (group_id, user_id, organization_id)
+       VALUES (:groupId, :groupMemberId, :orgId)`,
+      { replacements: { groupId, groupMemberId, orgId } },
+    );
+    await sequelize.query(
+      `INSERT INTO project_groups (project_id, group_id, organization_id)
+       VALUES (:projectId, :groupId, :orgId)`,
+      { replacements: { projectId, groupId, orgId } },
     );
 
     const templateId = await insertOne(
@@ -90,20 +108,22 @@ describe("scheduled report visibility", () => {
   const listIds = async (role: string, userId: number) =>
     (await listScheduledReportsQuery(orgId, { role, userId })).map((r: any) => r.id).sort();
 
-  it("lists a project schedule only to Admins and the project's owner and members", async () => {
+  it("lists a project schedule only to Admins and the project's people", async () => {
     const both = [projectSchedule, orgSchedule].sort();
     expect(await listIds("Admin", adminId)).toEqual(both);
     expect(await listIds("Editor", ownerId)).toEqual(both);
     expect(await listIds("Auditor", memberId)).toEqual(both);
+    expect(await listIds("Editor", groupMemberId)).toEqual(both);
     expect(await listIds("Editor", outsiderId)).toEqual([orgSchedule]);
   });
 
-  it("reads a project schedule only for Admins and the project's owner and members", async () => {
+  it("reads a project schedule only for Admins and the project's people", async () => {
     const read = (role: string, userId: number) =>
       getScheduledReportQuery(projectSchedule, orgId, { role, userId });
     expect((await read("Admin", adminId))?.id).toBe(projectSchedule);
     expect((await read("Editor", ownerId))?.id).toBe(projectSchedule);
     expect((await read("Auditor", memberId))?.id).toBe(projectSchedule);
+    expect((await read("Editor", groupMemberId))?.id).toBe(projectSchedule);
     expect(await read("Editor", outsiderId)).toBeNull();
   });
 

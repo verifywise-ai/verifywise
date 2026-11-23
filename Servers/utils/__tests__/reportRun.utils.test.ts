@@ -65,7 +65,7 @@ describe("reportRun.utils", () => {
 // downloaded or analysed either.
 describe("canViewRunQuery", () => {
   const AUDITOR = { userId: 3, role: "Auditor" };
-  const MEMBERSHIP_SQL = "p.owner = :viewerUserId OR pm.user_id = :viewerUserId";
+  const MEMBERSHIP_SQL = "p.owner = :visibilityUserId OR EXISTS";
   const PROJECT_SCOPE_SQL = "COALESCE(rr.config_snapshot->>'project_id', sr.project_id::text)";
 
   beforeEach(() => q.mockReset());
@@ -83,7 +83,10 @@ describe("canViewRunQuery", () => {
     q.mockResolvedValueOnce([]);
     await canViewRunQuery(9, 7, AUDITOR);
     expect(q.mock.calls[0][0]).toContain(MEMBERSHIP_SQL);
-    expect(q.mock.calls[0][1].replacements.viewerUserId).toBe(3);
+    expect(q.mock.calls[0][1].replacements.visibilityUserId).toBe(3);
+    // Group members reach a use case like team members do (#5253), so they
+    // see its runs too.
+    expect(q.mock.calls[0][0]).toContain("FROM project_groups pg");
   });
 
   it("leaves Admin and SuperAdmin unrestricted", async () => {
@@ -92,7 +95,7 @@ describe("canViewRunQuery", () => {
       q.mockResolvedValueOnce([{ ok: 1 }]);
       await canViewRunQuery(9, 7, { userId: 1, role });
       expect(q.mock.calls[0][0]).not.toContain(MEMBERSHIP_SQL);
-      expect(q.mock.calls[0][1].replacements.viewerUserId).toBeUndefined();
+      expect(q.mock.calls[0][1].replacements.visibilityUserId).toBeUndefined();
     }
   });
 
@@ -122,11 +125,11 @@ describe("canViewRunQuery", () => {
     // null matches no project owner and no membership row, so only
     // organization-scoped runs (no project) can come back.
     expect(q.mock.calls[0][0]).toContain(MEMBERSHIP_SQL);
-    expect(q.mock.calls[0][1].replacements.viewerUserId).toBeNull();
+    expect(q.mock.calls[0][1].replacements.visibilityUserId).toBeNull();
   });
 
   describe("getLastParametersQuery", () => {
-    const MEMBERSHIP_SQL = "p.owner = :viewerUserId OR pm.user_id = :viewerUserId";
+    const MEMBERSHIP_SQL = "p.owner = :visibilityUserId OR EXISTS";
     it("applies run visibility for a non-Admin viewer, like the run list", async () => {
       q.mockResolvedValueOnce([]);
       await getLastParametersQuery(3, 7, { userId: 9, role: "Editor" });
@@ -136,7 +139,8 @@ describe("canViewRunQuery", () => {
       expect(opts.replacements).toMatchObject({
         templateId: 3,
         organization_id: 7,
-        viewerUserId: 9,
+        visibilityUserId: 9,
+        organizationId: 7,
       });
     });
 

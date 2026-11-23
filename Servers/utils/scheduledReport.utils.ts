@@ -1,6 +1,6 @@
 import { sequelize } from "../database/db";
 import { QueryTypes } from "sequelize";
-import { projectVisibilitySql, ReportViewer } from "./reportVisibility.utils";
+import { reportVisibilityPredicate, ReportViewer } from "./reportVisibility.utils";
 import { computeNextRun } from "../services/reporting/scheduleCalculator";
 
 export async function createScheduledReportQuery(
@@ -46,21 +46,21 @@ export async function createScheduledReportQuery(
 }
 
 // A schedule carries its recipients and its stored report details, so it is
-// read under the same rule as the runs it produces: a project schedule only by
-// Admins and the project's owner and members, an organization-wide one by any
-// member. The viewer is required on the list so no caller can get every
-// schedule of the organization by omission.
-const SCHEDULE_PROJECT_ID_SQL = "sr.project_id::text";
-
+// read under the same rule as the runs it produces (reportVisibility.utils):
+// a project schedule only by Admins and the people who can open the project
+// (owner, member, or through a group), an organization-wide one by any member.
+// The viewer is required on the list so no caller can get every schedule of
+// the organization by omission.
 function scheduleVisibility(
   viewer: ReportViewer | undefined,
+  organization_id: number,
   replacements: Record<string, unknown>,
-) {
+): string {
   if (!viewer) return "";
-  const predicate = projectVisibilitySql(viewer, SCHEDULE_PROJECT_ID_SQL);
+  const predicate = reportVisibilityPredicate(viewer, organization_id, "sr.project_id");
   if (!predicate) return "";
-  replacements.viewerUserId = viewer.userId;
-  return ` AND ${predicate}`;
+  Object.assign(replacements, predicate.replacements);
+  return ` AND ${predicate.sql}`;
 }
 
 export async function listScheduledReportsQuery(
@@ -68,7 +68,7 @@ export async function listScheduledReportsQuery(
   viewer: ReportViewer,
 ): Promise<any[]> {
   const replacements: Record<string, unknown> = { organization_id };
-  const visibility = scheduleVisibility(viewer, replacements);
+  const visibility = scheduleVisibility(viewer, organization_id, replacements);
   return sequelize.query(
     `SELECT sr.* FROM scheduled_reports sr
       WHERE sr.organization_id = :organization_id AND sr.deleted_at IS NULL${visibility}
@@ -94,7 +94,7 @@ export async function getScheduledReportQuery(
   viewer?: ReportViewer,
 ): Promise<any> {
   const replacements: Record<string, unknown> = { id, organization_id };
-  const visibility = scheduleVisibility(viewer, replacements);
+  const visibility = scheduleVisibility(viewer, organization_id, replacements);
   const rows: any[] = await sequelize.query(
     `SELECT sr.*, ${VERSION_PARAMETERS_SQL}
        FROM scheduled_reports sr

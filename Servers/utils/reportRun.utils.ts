@@ -1,5 +1,5 @@
 import { sequelize } from "../database/db";
-import { projectVisibilitySql, ReportViewer } from "./reportVisibility.utils";
+import { reportVisibilityPredicate, ReportViewer } from "./reportVisibility.utils";
 import { QueryTypes } from "sequelize";
 import { deleteFileById } from "./fileUpload.utils";
 import type { ReportParameters } from "../domain.layer/interfaces/i.reportTemplate";
@@ -115,13 +115,15 @@ const RUN_FROM_SQL = `FROM report_runs rr
        ON sr.id = rr.scheduled_report_id AND sr.organization_id = :organization_id`;
 
 /**
- * The membership predicate for a run, or null when the viewer may see
- * everything. The rule itself is shared with schedules (reportVisibility.utils):
- * an organization-scoped report (no project) is visible to all — the spec calls
- * the legacy inner join to `projects` a bug precisely because it hid those.
+ * The visibility predicate for a run, or null when the viewer may see
+ * everything. The rule is shared with schedules (reportVisibility.utils): a
+ * project's run is visible to the people who can open the project (owner,
+ * member, or through a group), and an organization-scoped run (no project) to
+ * all — the spec calls the legacy inner join to `projects` a bug precisely
+ * because it hid those.
  */
-function viewerVisibilitySql(viewer: ReportRunViewer): string | null {
-  return projectVisibilitySql(viewer, RUN_PROJECT_ID_SQL);
+function viewerVisibilitySql(viewer: ReportRunViewer, organizationId: number) {
+  return reportVisibilityPredicate(viewer, organizationId, RUN_PROJECT_ID_SQL, { asText: true });
 }
 
 /**
@@ -151,10 +153,10 @@ export async function canViewRunQuery(
   const where: string[] = ["rr.id = :id", "rr.organization_id = :organization_id"];
   const replacements: any = { id, organization_id };
 
-  const visibility = viewerVisibilitySql(viewer);
+  const visibility = viewerVisibilitySql(viewer, organization_id);
   if (visibility) {
-    where.push(visibility);
-    replacements.viewerUserId = viewer.userId;
+    where.push(visibility.sql);
+    Object.assign(replacements, visibility.replacements);
   }
 
   const rows: any[] = await sequelize.query(
@@ -202,12 +204,12 @@ export async function listRunsQuery(
     where.push("rr.archived_at IS NULL");
   }
 
-  const visibility = viewerVisibilitySql(viewer);
+  const visibility = viewerVisibilitySql(viewer, organization_id);
   if (visibility) {
-    where.push(visibility);
-    // NULL here means "no user", which matches no project owner and no member
-    // row — a viewer we cannot identify sees organization-scoped runs only.
-    replacements.viewerUserId = viewer.userId;
+    where.push(visibility.sql);
+    // A null userId means "no user", which matches no owner, member or group,
+    // so a viewer we cannot identify sees organization-scoped runs only.
+    Object.assign(replacements, visibility.replacements);
   }
 
   const whereSql = where.join(" AND ");
@@ -275,10 +277,10 @@ export async function getLastParametersQuery(
     "jsonb_typeof(rr.config_snapshot->'report_parameters') = 'object'",
   ];
   const replacements: Record<string, unknown> = { templateId, organization_id };
-  const visibility = viewerVisibilitySql(viewer);
+  const visibility = viewerVisibilitySql(viewer, organization_id);
   if (visibility) {
-    where.push(visibility);
-    replacements.viewerUserId = viewer.userId;
+    where.push(visibility.sql);
+    Object.assign(replacements, visibility.replacements);
   }
 
   const rows: { parameters: unknown }[] = await sequelize.query(

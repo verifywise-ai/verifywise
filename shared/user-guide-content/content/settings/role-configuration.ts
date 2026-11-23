@@ -389,7 +389,7 @@ export const roleConfigurationContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Admins see every use case in the organization. Other roles, custom roles included, see the use cases they own, are a team member of or reach through a group attached to the use case. Likewise, Admins see every task, and other roles see the tasks they created or are assigned to. Reports work the same way: Admins see every generated and scheduled report, and other roles see the organization-wide ones plus those for use cases they own or are a team member of.',
+      text: 'Admins see every use case in the organization. Other roles, custom roles included, see the use cases they own, are a team member of or reach through a group attached to the use case. Likewise, Admins see every task, and other roles see the tasks they created or are assigned to. Reports work the same way: Admins see every generated and scheduled report, and other roles see the organization-wide ones plus those for the use cases they can see.',
     },
     {
       type: 'paragraph',
