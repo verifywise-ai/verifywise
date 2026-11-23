@@ -101,10 +101,11 @@ export function useStandardTable<T>(
 
   // "Showing X - Y" range string
   const getRange = useMemo(() => {
-    const start = page * rowsPerPage + 1;
-    const end = Math.min(page * rowsPerPage + rowsPerPage, sortedRows?.length ?? 0);
+    // The clamped page, so a shrunken list never reads "Showing 11 - 1".
+    const start = validPage * rowsPerPage + 1;
+    const end = Math.min(validPage * rowsPerPage + rowsPerPage, sortedRows?.length ?? 0);
     return `${start} - ${end}`;
-  }, [page, rowsPerPage, sortedRows?.length]);
+  }, [validPage, rowsPerPage, sortedRows?.length]);
 
   const handleChangePage = useCallback((_: unknown, newPage: number) => {
     setPage(newPage);

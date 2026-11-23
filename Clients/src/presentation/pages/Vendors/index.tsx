@@ -8,7 +8,14 @@ import RiskTable from "../../components/Table/RisksTable";
 import { Suspense, useEffect, useState, useMemo, useCallback, useRef } from "react";
 import AddNewVendor from "../../components/Modals/NewVendor";
 import useUsers from "../../../application/hooks/useUsers";
-import { tabPanelStyle } from "./style";
+import {
+  tabPanelStyle,
+  vendorToolbarStyle,
+  vendorFilterRowStyle,
+  vendorViewControlsStyle,
+  vendorActionsStyle,
+  addNewButtonStyle,
+} from "./style";
 import { logEngine } from "../../../application/tools/log.engine";
 import Alert from "../../components/Alert";
 import PageTour from "../../components/PageTour";
@@ -38,7 +45,12 @@ import { PageHeaderExtended } from "../../components/Layout/PageHeaderExtended";
 import { VendorModel } from "../../../domain/models/Common/vendor/vendor.model";
 import { ExistingRisk } from "../../../domain/interfaces/i.vendor";
 import TabBar from "../../components/TabBar";
-import { ReviewStatus } from "../../../domain/enums/status.enum";
+import {
+  BusinessCriticality,
+  DataSensitivity,
+  ReviewStatus,
+} from "../../../domain/enums/status.enum";
+import { Severity } from "../../../domain/enums/severity.enum";
 import { ExportMenu } from "../../components/Table/ExportMenu";
 import { ColumnSelector } from "../../components/Table/ColumnSelector";
 import { FilterColumn, FilterCondition } from "../../components/Table/FilterBy";
@@ -54,10 +66,24 @@ import VendorRiskInsights from "./VendorRiskInsights";
 import { matchesHeatCell } from "./VendorRiskInsights/HeatMapSection";
 import ListStateWrapper from "../../components/ListStateWrapper";
 import { chartTheme } from "../../themes/chartTheme";
-import { vendorRiskLevelLabel } from "../../../application/utils/riskLevel";
+import {
+  VENDOR_RISK_LEVEL_LABELS,
+  vendorRiskLevelLabel,
+} from "../../../application/utils/riskLevel";
+import {
+  buildVendorExportRows,
+  buildVendorRiskExportRows,
+  vendorRiskCountByVendor,
+} from "../../../application/utils/vendorRiskRows";
+import useFormattedDate from "../../../application/hooks/useFormattedDate";
 
 // Constants
 const REDIRECT_DELAY_MS = 2000;
+const NO_MATCHING_VENDORS = "No vendors match your search or filters.";
+const NO_MATCHING_RISKS = "No vendor risks match your search or filters.";
+
+/** Filter options whose values are the stored enum values, so they can match. */
+const enumOptions = (values: string[]) => values.map((value) => ({ value, label: value }));
 
 type VendorColumnKey =
   "vendor_name" | "assignee" | "review_status" | "risk" | "scorecard" | "review_date" | "actions";
@@ -103,10 +129,13 @@ const Vendors = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const can = useCanCheck();
   const { users } = useUsers();
+  const formatDate = useFormattedDate();
 
   const [selectedVendor, setSelectedVendor] = useState<VendorModel | null>(null);
   const [selectedRisk, setSelectedRisk] = useState<ExistingRisk | null>(null);
-  const [selectedProjectId, setSelectedProjectId] = useState<string>("all");
+  // Each tab has its own use case filter (decision 12).
+  const [vendorProjectId, setVendorProjectId] = useState<string>("all");
+  const [riskProjectId, setRiskProjectId] = useState<string>("all");
   const [filterStatus, setFilterStatus] = useState<"active" | "deleted" | "all">("active");
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [risksSearchTerm, setRisksSearchTerm] = useState<string>("");
@@ -155,16 +184,30 @@ const Vendors = () => {
     error: vendorsError,
     refetch: refetchVendors,
   } = useVendors(
-    { projectId: selectedProjectId },
+    { projectId: vendorProjectId },
     // The vendor list renders its own inline error state.
+    { suppressGlobalErrorToast: true },
+  );
+  // Every vendor, whatever the Vendors tab filters: the Risks tab names the
+  // vendor of each risk and offers all vendors in its modal. Shares the
+  // cached list when the Vendors tab isn't filtered by use case.
+  const { data: allVendors = [] } = useVendors(
+    { projectId: "all" },
     { suppressGlobalErrorToast: true },
   );
   const { vendorRisksSummary, refetchVendorRisks, vendorRisks, loadingVendorRisks } =
     useVendorRisks({
-      projectId: selectedProjectId?.toString(),
+      projectId: riskProjectId,
       vendorId: "all",
       filter: filterStatus,
     });
+  // The Vendors tab counts each vendor's active risks, whatever the Risks tab
+  // filters by status or use case.
+  const { vendorRisks: activeVendorRisks } = useVendorRisks({ filter: "active" });
+  const vendorRiskCounts = useMemo(
+    () => vendorRiskCountByVendor(activeVendorRisks),
+    [activeVendorRisks],
+  );
 
   // Saving, deleting or re-assigning a vendor risk changes its reach, its
   // duplicates and its coverage, so the insights refresh with the list.
@@ -252,23 +295,13 @@ const Vendors = () => {
         id: "data_sensitivity",
         label: "Data sensitivity",
         type: "select" as const,
-        options: [
-          { value: "Low", label: "Low" },
-          { value: "Medium", label: "Medium" },
-          { value: "High", label: "High" },
-          { value: "Critical", label: "Critical" },
-        ],
+        options: enumOptions(Object.values(DataSensitivity)),
       },
       {
         id: "business_criticality",
         label: "Business criticality",
         type: "select" as const,
-        options: [
-          { value: "Low", label: "Low" },
-          { value: "Medium", label: "Medium" },
-          { value: "High", label: "High" },
-          { value: "Critical", label: "Critical" },
-        ],
+        options: enumOptions(Object.values(BusinessCriticality)),
       },
       {
         id: "review_date",
@@ -321,9 +354,9 @@ const Vendors = () => {
       // Extract project_id from conditions
       const projectCondition = conditions.find((c) => c.columnId === "project_id");
       if (projectCondition && projectCondition.operator === "is" && projectCondition.value) {
-        setSelectedProjectId(projectCondition.value);
+        setVendorProjectId(projectCondition.value);
       } else {
-        setSelectedProjectId("all");
+        setVendorProjectId("all");
       }
       // Pass to base handler for client-side filtering
       handleVendorFilterChangeBase(conditions, logic);
@@ -342,11 +375,11 @@ const Vendors = () => {
     return Array.from(vendorIds)
       .sort()
       .map((vendorId) => {
-        const vendor = vendors.find((v: VendorModel) => v.id?.toString() === vendorId);
+        const vendor = allVendors.find((v: VendorModel) => v.id?.toString() === vendorId);
         const vendorName = vendor ? vendor.vendor_name : `Vendor ${vendorId}`;
         return { value: vendorId, label: vendorName };
       });
-  }, [vendorRisks, vendors]);
+  }, [vendorRisks, allVendors]);
 
   const getUniqueRiskActionOwners = useCallback(() => {
     const ownerIds = new Set<string>();
@@ -393,24 +426,14 @@ const Vendors = () => {
         id: "risk_severity",
         label: "Risk severity",
         type: "select" as const,
-        options: [
-          { value: "Low", label: "Low" },
-          { value: "Medium", label: "Medium" },
-          { value: "High", label: "High" },
-          { value: "Critical", label: "Critical" },
-        ],
+        options: enumOptions(Object.values(Severity)),
       },
       {
         id: "risk_level",
         label: "Risk level",
         type: "select" as const,
-        options: [
-          { value: "Very high", label: "Very high" },
-          { value: "High", label: "High" },
-          { value: "Medium", label: "Medium" },
-          { value: "Low", label: "Low" },
-          { value: "No risk", label: "No risk" },
-        ],
+        // The card labels, highest first, as the cards read them.
+        options: enumOptions([...VENDOR_RISK_LEVEL_LABELS].reverse()),
       },
       {
         id: "action_owner",
@@ -426,7 +449,8 @@ const Vendors = () => {
   const getVendorRiskFieldValue = useCallback((item: any, fieldId: string): FilterFieldValue => {
     switch (fieldId) {
       case "project_id":
-        return item.project_id?.toString();
+        // A risk belongs to every use case its vendor serves.
+        return item.project_ids?.map((id: number) => id.toString()) ?? [];
       case "risk_description":
         return item.risk_description;
       case "vendor_id":
@@ -458,9 +482,9 @@ const Vendors = () => {
       // Extract project_id from conditions
       const projectCondition = conditions.find((c) => c.columnId === "project_id");
       if (projectCondition && projectCondition.operator === "is" && projectCondition.value) {
-        setSelectedProjectId(projectCondition.value);
+        setRiskProjectId(projectCondition.value);
       } else {
-        setSelectedProjectId("all");
+        setRiskProjectId("all");
       }
 
       // Move the risk level card only when the risk level condition changes,
@@ -603,7 +627,7 @@ const Vendors = () => {
       // Check if we're on the risks tab
       if (isRisksTab) {
         // Check if there are any vendors
-        if (vendors.length === 0) {
+        if (allVendors.length === 0) {
           setAlert({
             variant: "info",
             title: "No vendors available",
@@ -628,8 +652,15 @@ const Vendors = () => {
     }
     // Dependencies: location.state triggers the effect when openCreateModal is passed via navigation
     // navigate, location.pathname are needed for state clearing
-    // isRisksTab, vendors.length, isVendorsLoading determine which modal to open or if validation is needed
-  }, [location.state, navigate, location.pathname, isRisksTab, vendors.length, isVendorsLoading]);
+    // isRisksTab, allVendors.length, isVendorsLoading determine which modal to open or if validation is needed
+  }, [
+    location.state,
+    navigate,
+    location.pathname,
+    isRisksTab,
+    allVendors.length,
+    isVendorsLoading,
+  ]);
 
   const handleDeleteVendor = async (vendorId?: number) => {
     if (!vendorId) {
@@ -909,31 +940,29 @@ const Vendors = () => {
       { id: "vendor_name", label: "Name" },
       { id: "assignee", label: "Assignee" },
       { id: "review_status", label: "Status" },
+      { id: "use_cases", label: "Use cases" },
+      { id: "risk_count", label: "Risks" },
       { id: "scorecard", label: "Scorecard" },
       { id: "review_date", label: "Review date" },
     ];
   }, []);
 
-  // Prepare export data - format the data for export
-  const exportData = useMemo(() => {
-    return filteredVendors.map((vendor: VendorModel) => {
-      const assigneeUser = users.find((user) => user.id === vendor.assignee);
-      const assigneeName = assigneeUser
-        ? `${assigneeUser.name} ${assigneeUser.surname}`
-        : "Unassigned";
+  const projectTitles = useMemo(
+    () => new Map(projects.map((project: Project) => [project.id, project.project_title])),
+    [projects],
+  );
 
-      return {
-        vendor_name: vendor.vendor_name,
-        assignee: assigneeName,
-        review_status: vendor.review_status || "Not started",
-        scorecard:
-          vendor.risk_score !== null && vendor.risk_score !== undefined
-            ? `${vendor.risk_score}%`
-            : "N/A",
-        review_date: vendor.review_date || "N/A",
-      };
-    });
-  }, [filteredVendors, users]);
+  // The vendors on screen; review dates read as the day the table shows.
+  const exportData = useMemo(
+    () =>
+      buildVendorExportRows(filteredVendors, {
+        users,
+        projectTitles,
+        riskCounts: vendorRiskCounts,
+        formatDate: (date) => formatDate(date),
+      }),
+    [filteredVendors, users, projectTitles, vendorRiskCounts, formatDate],
+  );
 
   // Define export columns for vendor risks table
   const vendorRisksExportColumns = useMemo(() => {
@@ -948,28 +977,31 @@ const Vendors = () => {
     ];
   }, []);
 
-  // Prepare export data for vendor risks
-  const vendorRisksExportData = useMemo(() => {
-    return vendorRisks.map((risk: any) => {
-      const vendor = vendors.find((v) => v.id === risk.vendor_id);
-      const vendorName = vendor ? vendor.vendor_name : "-";
+  const vendorNames = useMemo(
+    () =>
+      new Map(
+        allVendors
+          .filter((vendor: VendorModel) => vendor.id !== undefined)
+          .map((vendor: VendorModel) => [vendor.id!, vendor.vendor_name]),
+      ),
+    [allVendors],
+  );
 
-      const actionOwnerUser = users.find((user) => user.id === risk.action_owner);
-      const actionOwnerName = actionOwnerUser
-        ? `${actionOwnerUser.name} ${actionOwnerUser.surname}`
-        : "-";
+  // The risks on screen (search, filters, card and heat map cell), each once.
+  const vendorRisksExportData = useMemo(
+    () => buildVendorRiskExportRows(filteredVendorRisks, { users, vendorNames }),
+    [filteredVendorRisks, users, vendorNames],
+  );
 
-      return {
-        risk_description: risk.risk_description || "-",
-        vendor_name: vendorName,
-        project_titles: risk.project_titles || "-",
-        action_owner: actionOwnerName,
-        risk_severity: risk.risk_severity || "-",
-        likelihood: risk.likelihood || "-",
-        risk_level: risk.risk_level || "-",
-      };
-    });
-  }, [vendorRisks, vendors, users]);
+  // A search or filter that hides everything says so, instead of the
+  // first-run empty state.
+  const isVendorListFiltered = !!searchQuery.trim() || (vendorFilterConditions?.length ?? 0) > 0;
+  const isRiskListFiltered =
+    !!risksSearchTerm.trim() ||
+    (vendorRiskFilterConditions?.length ?? 0) > 0 ||
+    !!selectedRiskLevel ||
+    !!heatCell ||
+    filterStatus === "deleted";
 
   // The table renders its own placeholder for an empty list, so the
   // same element serves as the empty state and the table stays mounted (keeping
@@ -980,8 +1012,9 @@ const Vendors = () => {
       users={users}
       onDelete={handleDeleteVendor}
       onEdit={handleEditVendor}
-      vendorRisks={vendorRisks}
+      vendorRisks={activeVendorRisks}
       visibleColumns={vendorVisibleColumns}
+      noMatchesMessage={isVendorListFiltered ? NO_MATCHING_VENDORS : undefined}
     />
   );
 
@@ -1100,8 +1133,8 @@ const Vendors = () => {
         </Box>
         {value === "1" && (
           <Stack spacing={2}>
-            <Stack direction="row" justifyContent="space-between" alignItems="center">
-              <Stack direction="row" gap={2} alignItems="center">
+            <Stack direction="row" sx={vendorToolbarStyle}>
+              <Box sx={vendorFilterRowStyle}>
                 <TableFilter
                   columns={vendorFilterColumns}
                   onFilterChange={handleVendorFilterChange}
@@ -1110,20 +1143,22 @@ const Vendors = () => {
                   data={vendors}
                   getFieldValue={getVendorFieldValue}
                 />
-                <ColumnSelector
-                  columns={allVendorColumns}
-                  visibleColumns={vendorVisibleColumns}
-                  onToggleColumn={toggleVendorColumn}
-                  onResetToDefaults={resetVendorColumns}
-                />
-                <SearchBox
-                  placeholder="Search vendors..."
-                  value={searchQuery}
-                  onChange={handleSearchChange}
-                  fullWidth={false}
-                />
-              </Stack>
-              <Stack direction="row" gap="8px" alignItems="center">
+                <Box sx={vendorViewControlsStyle}>
+                  <ColumnSelector
+                    columns={allVendorColumns}
+                    visibleColumns={vendorVisibleColumns}
+                    onToggleColumn={toggleVendorColumn}
+                    onResetToDefaults={resetVendorColumns}
+                  />
+                  <SearchBox
+                    placeholder="Search vendors..."
+                    value={searchQuery}
+                    onChange={handleSearchChange}
+                    fullWidth={false}
+                  />
+                </Box>
+              </Box>
+              <Stack direction="row" sx={vendorActionsStyle}>
                 <ExportMenu
                   data={exportData}
                   columns={exportColumns}
@@ -1134,11 +1169,7 @@ const Vendors = () => {
                   <CustomizableButton
                     variant="contained"
                     text="Add new vendor"
-                    sx={{
-                      backgroundColor: "brand.primary",
-                      border: "1px solid brand.primary",
-                      gap: 2,
-                    }}
+                    sx={addNewButtonStyle}
                     icon={<AddCircleOutlineIcon size={16} />}
                     onClick={() => {
                       openAddNewVendor();
@@ -1154,8 +1185,8 @@ const Vendors = () => {
 
         {value !== "1" && (
           <Stack spacing={2}>
-            <Stack direction="row" justifyContent="space-between" alignItems="center">
-              <Stack direction="row" gap={2} alignItems="center">
+            <Stack direction="row" sx={vendorToolbarStyle}>
+              <Box sx={vendorFilterRowStyle}>
                 <Select
                   id="filter-status"
                   value={filterStatus}
@@ -1179,21 +1210,23 @@ const Vendors = () => {
                   data={vendorRisks}
                   getFieldValue={getVendorRiskFieldValue}
                 />
-                <ColumnSelector
-                  columns={allVendorRiskColumns}
-                  visibleColumns={vendorRiskVisibleColumns}
-                  onToggleColumn={toggleVendorRiskColumn}
-                  onResetToDefaults={resetVendorRiskColumns}
-                />
-                <SearchBox
-                  placeholder="Search risks..."
-                  value={risksSearchTerm}
-                  onChange={setRisksSearchTerm}
-                  inputProps={{ "aria-label": "Search risks" }}
-                  fullWidth={false}
-                />
-              </Stack>
-              <Stack direction="row" gap="8px" alignItems="center">
+                <Box sx={vendorViewControlsStyle}>
+                  <ColumnSelector
+                    columns={allVendorRiskColumns}
+                    visibleColumns={vendorRiskVisibleColumns}
+                    onToggleColumn={toggleVendorRiskColumn}
+                    onResetToDefaults={resetVendorRiskColumns}
+                  />
+                  <SearchBox
+                    placeholder="Search risks..."
+                    value={risksSearchTerm}
+                    onChange={setRisksSearchTerm}
+                    inputProps={{ "aria-label": "Search risks" }}
+                    fullWidth={false}
+                  />
+                </Box>
+              </Box>
+              <Stack direction="row" sx={vendorActionsStyle}>
                 <ExportMenu
                   data={vendorRisksExportData}
                   columns={vendorRisksExportColumns}
@@ -1204,11 +1237,7 @@ const Vendors = () => {
                   <CustomizableButton
                     variant="contained"
                     text="Add new risk"
-                    sx={{
-                      backgroundColor: "brand.primary",
-                      border: "1px solid brand.primary",
-                      gap: 2,
-                    }}
+                    sx={addNewButtonStyle}
                     icon={<AddCircleOutlineIcon size={16} />}
                     onClick={() => {
                       setSelectedRisk(null);
@@ -1251,8 +1280,9 @@ const Vendors = () => {
               />
               <RiskTable
                 users={users}
-                vendors={vendors}
+                vendors={allVendors}
                 vendorRisks={filteredVendorRisks}
+                noMatchesMessage={isRiskListFiltered ? NO_MATCHING_RISKS : undefined}
                 onDelete={handleDeleteRisk}
                 onEdit={handleEditRisk}
                 isDeletingAllowed={isDeletingAllowed}
@@ -1283,7 +1313,7 @@ const Vendors = () => {
         value={value}
         onSuccess={refreshVendorRisks}
         existingRisk={selectedRisk}
-        vendors={vendors}
+        vendors={allVendors}
         initialTab={riskModalTab}
         onRestore={isDeletingAllowed ? handleRestoreRisk : undefined}
       />

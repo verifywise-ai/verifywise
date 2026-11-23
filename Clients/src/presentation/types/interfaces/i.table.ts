@@ -254,6 +254,8 @@ export interface IRiskTableProps {
   onOpenLinks?: (riskId: number) => void;
   /** Restores a deleted vendor risk; deleted rows offer it when set. */
   onRestore?: (riskId: number) => void;
+  /** Shown instead of the first-run empty state when a search or filter hides every risk. */
+  noMatchesMessage?: string;
 }
 
 export interface ITasksTableProps {
@@ -289,6 +291,8 @@ export interface ITableWithPlaceholderProps {
   hidePagination?: boolean;
   vendorRisks?: VendorRisk[];
   visibleColumns?: Set<string>;
+  /** Shown instead of the first-run empty state when a search or filter hides every vendor. */
+  noMatchesMessage?: string;
 }
 
 export interface TrainingTableProps {

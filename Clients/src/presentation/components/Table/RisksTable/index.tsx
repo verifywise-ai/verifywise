@@ -17,7 +17,7 @@ import { TableEmptyStateLayout } from "../TableEmptyStateLayout";
 import IconButton from "../../IconButton";
 import ViewRelationshipsButton from "../../ViewRelationshipsButton";
 import Chip from "../../Chip";
-import { ShieldAlert, TrendingDown, Grid3X3, ListChecks } from "lucide-react";
+import { ShieldAlert, TrendingDown, Grid3X3, ListChecks, SearchX } from "lucide-react";
 import { VendorRisk } from "../../../../domain/types/VendorRisk";
 import { User } from "../../../../domain/types/User";
 import { IRiskTableProps } from "../../../types/interfaces/i.table";
@@ -33,7 +33,9 @@ import { useCustomFieldDefinitions } from "../../../../application/hooks/useCust
 import useFormattedDate from "../../../../application/hooks/useFormattedDate";
 import { formatCustomFieldValue } from "../../CustomFieldsSection/formatCustomFieldValue";
 import { palette } from "../../../themes/palette";
-import { riskLevelRank } from "../../../../application/utils/riskLevel";
+import { distinctVendorRisks } from "../../../../application/utils/vendorRiskRows";
+import { compareVendorRisks } from "../../../../application/utils/vendorSort";
+import { buildUserSortNames } from "../../../../application/utils/userSort";
 
 const titleOfTableColumns: StandardColumn[] = [
   { id: "risk_description", label: "risk description", sortable: true },
@@ -53,54 +55,6 @@ type EnrichedRisk = VendorRisk & {
   inherited_by: number;
 };
 
-const getSeverityValue = (severity: string): number => {
-  const s = severity.toLowerCase();
-  if (s.includes("catastrophic")) return 6;
-  if (s.includes("critical")) return 5;
-  if (s.includes("major")) return 4;
-  if (s.includes("moderate")) return 3;
-  if (s.includes("minor")) return 2;
-  if (s.includes("negligible")) return 1;
-  return 0;
-};
-
-const getLikelihoodValue = (likelihood: string): number => {
-  const l = likelihood.toLowerCase();
-  if (l.includes("almost certain")) return 5;
-  if (l.includes("likely")) return 4;
-  if (l.includes("possible")) return 3;
-  if (l.includes("unlikely")) return 2;
-  if (l.includes("rare")) return 1;
-  return 0;
-};
-
-function riskSortComparator(a: EnrichedRisk, b: EnrichedRisk, key: string): number {
-  switch (key) {
-    case "risk_description":
-      return (a.risk_description?.toLowerCase() || "").localeCompare(
-        b.risk_description?.toLowerCase() || "",
-      );
-    case "vendor_name":
-      return (a.vendor_name?.toLowerCase() || "").localeCompare(b.vendor_name?.toLowerCase() || "");
-    case "project_titles":
-      return (a.project_titles?.toLowerCase() || "").localeCompare(
-        b.project_titles?.toLowerCase() || "",
-      );
-    case "action_owner":
-      return (a.action_owner || 0) - (b.action_owner || 0);
-    case "risk_severity":
-      return getSeverityValue(a.risk_severity) - getSeverityValue(b.risk_severity);
-    case "likelihood":
-      return getLikelihoodValue(a.likelihood) - getLikelihoodValue(b.likelihood);
-    case "risk_level":
-      return riskLevelRank(a.risk_level) - riskLevelRank(b.risk_level);
-    case "inherited_by":
-      return a.inherited_by - b.inherited_by;
-    default:
-      return 0;
-  }
-}
-
 const RiskTable: React.FC<IRiskTableProps> = ({
   users,
   vendors,
@@ -113,6 +67,7 @@ const RiskTable: React.FC<IRiskTableProps> = ({
   exposure,
   onOpenLinks,
   onRestore,
+  noMatchesMessage,
 }) => {
   const formatDate = useFormattedDate();
   const theme = useTheme();
@@ -162,26 +117,23 @@ const RiskTable: React.FC<IRiskTableProps> = ({
     }));
   }, [vendors]);
 
-  // Group risks by id so each risk appears only once, and collect all project titles
-  const uniqueRisks = useMemo(() => {
-    const groupedRisks: Record<number, VendorRisk & { project_titles: string[] }> = {};
-    vendorRisks?.forEach((row: VendorRisk & { project_title?: string }) => {
-      const key = row.risk_id!;
-      if (!groupedRisks[key]) {
-        groupedRisks[key] = {
-          ...row,
-          project_titles: row.project_title ? [row.project_title] : [],
-        };
-      } else if (row.project_title) {
-        groupedRisks[key].project_titles.push(row.project_title);
-      }
-    });
-    return Object.values(groupedRisks).map((risk) => ({
-      ...risk,
-      project_titles: Array.from(new Set(risk.project_titles)).join(", "),
-      inherited_by: exposure?.get(risk.risk_id!)?.children ?? 0,
-    }));
-  }, [vendorRisks, exposure]);
+  // Each risk once (the API sends a row per use case), with its use case titles.
+  const uniqueRisks = useMemo(
+    () =>
+      distinctVendorRisks(vendorRisks).map((risk) => ({
+        ...risk,
+        project_titles: risk.project_titles.join(", "),
+        inherited_by: exposure?.get(risk.risk_id!)?.children ?? 0,
+      })),
+    [vendorRisks, exposure],
+  );
+
+  // People sort by display name, not by user id.
+  const userSortNames = useMemo(() => buildUserSortNames(users ?? []), [users]);
+  const riskSortComparator = useCallback(
+    (a: EnrichedRisk, b: EnrichedRisk, key: string) => compareVendorRisks(a, b, key, userSortNames),
+    [userSortNames],
+  );
 
   const {
     sortConfig,
@@ -527,27 +479,31 @@ const RiskTable: React.FC<IRiskTableProps> = ({
             />
           }
         >
-          <EmptyState
-            icon={ShieldAlert}
-            message="No risks identified yet. Document and track risks related to your AI systems."
-            showBorder
-          >
-            <EmptyStateTip
-              icon={TrendingDown}
-              title="Identify AI-specific risks"
-              description="Document risks related to bias, data quality, security, transparency, and model drift. Cover both technical and organizational risks."
-            />
-            <EmptyStateTip
-              icon={Grid3X3}
-              title="Assess likelihood and impact"
-              description="Rate each risk by likelihood and impact. The risk score and level help you prioritize what needs attention first."
-            />
-            <EmptyStateTip
-              icon={ListChecks}
-              title="Create treatment plans"
-              description="Define mitigation strategies for each risk and track their progress. Link treatments to specific controls for full traceability."
-            />
-          </EmptyState>
+          {noMatchesMessage ? (
+            <EmptyState icon={SearchX} message={noMatchesMessage} showBorder />
+          ) : (
+            <EmptyState
+              icon={ShieldAlert}
+              message="No risks identified yet. Document and track risks related to your AI systems."
+              showBorder
+            >
+              <EmptyStateTip
+                icon={TrendingDown}
+                title="Identify AI-specific risks"
+                description="Document risks related to bias, data quality, security, transparency, and model drift. Cover both technical and organizational risks."
+              />
+              <EmptyStateTip
+                icon={Grid3X3}
+                title="Assess likelihood and impact"
+                description="Rate each risk by likelihood and impact. The risk score and level help you prioritize what needs attention first."
+              />
+              <EmptyStateTip
+                icon={ListChecks}
+                title="Create treatment plans"
+                description="Define mitigation strategies for each risk and track their progress. Link treatments to specific controls for full traceability."
+              />
+            </EmptyState>
+          )}
         </TableEmptyStateLayout>
       ) : (
         <TableContainer>

@@ -580,6 +580,28 @@ up within the organization: a user from another organization shows as
 - Export functionality
 - Page tour for guidance
 
+### Lists, filters and exports
+
+`GET /vendorRisks/all` answers one row per (vendor risk, use case of its
+vendor). `useVendorRisks` and the dashboard make the rows distinct by risk id
+first (`distinctVendorRisks`, `application/utils/vendorRiskRows.ts`), keeping
+each risk's `project_ids` and `project_titles`, so counts, cards, the heat map,
+tables and exports show each risk once. The use case filter matches any of a
+risk's use cases.
+
+Each tab has its own use case filter: the Vendors tab's narrows the vendor
+list only, the Risks tab's the risks only. The Vendors tab's risk counts are
+the vendor's active risks, whatever the Risks tab filters. Filter options use
+the stored enum values (data sensitivity, business criticality, severity) and
+the card level labels ("No risk" to "Very high").
+
+The risk export is the risks on screen (search, filters, card, heat map cell),
+once each, with use case names. The vendor export adds use cases and risk
+counts, and formats the review date with the table's formatter. A search or
+filter that hides every row shows "No vendors (vendor risks) match your search
+or filters." instead of the first-run empty state, and both tables move back to
+the last page with rows when the list shrinks.
+
 ### Components
 
 | Component | Purpose |
