@@ -9,6 +9,9 @@ import {
   archiveTemplateQuery,
   createTemplateVersionQuery,
   slugify,
+  copyName,
+  freeCopyName,
+  getOrganizationTemplateSlugsQuery,
 } from "../reportTemplate.utils";
 
 const q = sequelize.query as jest.Mock;
@@ -146,11 +149,30 @@ describe("reportTemplate.utils", () => {
     });
   });
 
-  it("createTemplateVersionQuery defaults framework_config to the column default", async () => {
-    q.mockResolvedValueOnce([{ id: 32, version: 1 }]);
+  // A PATCH that edits sections only must not widen the template to every
+  // framework: a missing selection inherits the previous version's, and the
+  // first version falls back to the column default {}.
+  it("createTemplateVersionQuery keeps the previous version's framework_config when none is sent", async () => {
+    q.mockResolvedValueOnce([{ id: 32, version: 2 }]);
     await createTemplateVersionQuery(7, 42, { sections_config: { sections: [] } }, 9);
-    const [, opts] = q.mock.calls[0];
-    expect(opts.replacements.framework_config).toBe("{}");
+    const [sql, opts] = q.mock.calls[0];
+    expect(opts.replacements.framework_config).toBeNull();
+    expect(sql).toMatch(
+      /COALESCE\(\s*CAST\(:framework_config AS JSONB\),\s*\(SELECT framework_config FROM report_template_versions\s+WHERE template_id = :template_id ORDER BY version DESC LIMIT 1\),\s*'\{\}'::jsonb\s*\)/,
+    );
+  });
+
+  it("createTemplateVersionQuery treats a null framework_config like a missing one", async () => {
+    q.mockResolvedValueOnce([{ id: 32, version: 2 }]);
+    await createTemplateVersionQuery(7, 42, { framework_config: null }, 9);
+    expect(q.mock.calls[0][1].replacements.framework_config).toBeNull();
+  });
+
+  // Clearing the selection stays possible: an explicit {} is stored as sent.
+  it("createTemplateVersionQuery stores an explicit empty framework_config", async () => {
+    q.mockResolvedValueOnce([{ id: 32, version: 2 }]);
+    await createTemplateVersionQuery(7, 42, { framework_config: {} }, 9);
+    expect(q.mock.calls[0][1].replacements.framework_config).toBe("{}");
   });
 
   // A copy of the E-23 template must stay an E-23 report: parameters_config
@@ -191,5 +213,47 @@ describe("reportTemplate.utils", () => {
     expect(slugify("Quarterly Board Pack!")).toBe("quarterly-board-pack");
     expect(slugify("  --Weird__Name--  ")).toBe("weird-name");
     expect(slugify("!!!")).toBe("template");
+  });
+
+  it("copyName numbers copies after the first", () => {
+    expect(copyName("Board pack", 1)).toBe("Board pack (copy)");
+    expect(copyName("Board pack", 2)).toBe("Board pack (copy 2)");
+  });
+
+  it("copyName trims the base name by code points, never the suffix", () => {
+    // 254 astral characters: trimming by UTF-16 units would split one in half.
+    const name = copyName("😀".repeat(254), 1);
+    expect(name.endsWith(" (copy)")).toBe(true);
+    expect(name).not.toMatch(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])/);
+    expect(Array.from(name).length).toBeLessThanOrEqual(255);
+  });
+
+  it("copyName keeps the suffix in the slug of a long name", () => {
+    const long = "a".repeat(255);
+    const first = slugify(copyName(long, 1));
+    const second = slugify(copyName(long, 2));
+    expect(first.endsWith("-copy")).toBe(true);
+    expect(second.endsWith("-copy-2")).toBe(true);
+    expect(first).not.toBe(second);
+  });
+
+  it("freeCopyName skips slugs the organization holds, archived included", () => {
+    expect(freeCopyName("Pack", new Set())).toBe("Pack (copy)");
+    expect(freeCopyName("Pack", new Set(["pack-copy", "pack-copy-2"]))).toBe("Pack (copy 3)");
+  });
+
+  it("freeCopyName gives up after a thousand copies", () => {
+    const taken = new Set(Array.from({ length: 1000 }, (_, i) => slugify(copyName("Pack", i + 1))));
+    expect(freeCopyName("Pack", taken)).toBeNull();
+  });
+
+  it("getOrganizationTemplateSlugsQuery reads every slug of the organization's own templates", async () => {
+    q.mockResolvedValueOnce([{ slug: "a" }, { slug: "b" }]);
+    expect(await getOrganizationTemplateSlugsQuery(42)).toEqual(new Set(["a", "b"]));
+    const [sql, opts] = q.mock.calls[0];
+    expect(sql).toContain("organization_id = :organization_id");
+    // Archived templates still hold their slug.
+    expect(sql).not.toContain("is_active");
+    expect(opts.replacements.organization_id).toBe(42);
   });
 });

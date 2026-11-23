@@ -7,11 +7,10 @@ import { renderWithProviders } from "../../../../test/renderWithProviders";
 
 const updateMutate = vi.fn();
 const archiveMutate = vi.fn();
-const mockCreate = vi.fn();
-const mockGetTemplate = vi.fn();
+const duplicateMutate = vi.fn();
+let duplicatePending = false;
 
-// As the list endpoint returns it: `SELECT * FROM report_templates`, with no
-// version attached. Only GET /templates/:id carries latestVersion.
+// As the list endpoint returns it: `SELECT * FROM report_templates`.
 const SYSTEM_TEMPLATE = {
   id: 2,
   name: "EU AI Act pack",
@@ -21,27 +20,6 @@ const SYSTEM_TEMPLATE = {
   supported_scopes: ["project", "organization"],
   recommended_frequency: "quarterly",
   is_system_template: true,
-};
-
-const SECTIONS_CONFIG = {
-  sections: [{ reportSectionKey: "projectRisks", defaultEnabled: true }],
-};
-const AI_BLOCKS_CONFIG = { executiveSummary: true };
-const FRAMEWORK_CONFIG = { frameworkIds: ["native:2"] };
-const PARAMETERS_CONFIG = {
-  kind: "osfi_e23",
-  fields: [{ key: "institutionName", label: "Institution name", type: "text", required: true }],
-};
-
-const SYSTEM_TEMPLATE_FULL = {
-  ...SYSTEM_TEMPLATE,
-  latestVersion: {
-    id: 9,
-    sections_config: SECTIONS_CONFIG,
-    ai_blocks_config: AI_BLOCKS_CONFIG,
-    framework_config: FRAMEWORK_CONFIG,
-    parameters_config: PARAMETERS_CONFIG,
-  },
 };
 
 const CUSTOM_TEMPLATE = {
@@ -60,11 +38,14 @@ vi.mock("../../../../application/hooks/useReporting", () => ({
   }),
   useUpdateTemplate: () => ({ mutate: updateMutate, isPending: false }),
   useArchiveTemplate: () => ({ mutate: archiveMutate, isPending: false }),
-  useCreateTemplate: () => ({ mutate: mockCreate, isPending: false }),
+  useDuplicateTemplate: () => ({ mutate: duplicateMutate, isPending: duplicatePending }),
 }));
 
+// The copy is built server-side; the tab must not fetch the template itself.
+const repositoryCalls = vi.fn();
 vi.mock("../../../../application/repository/reporting.repository", () => ({
-  getTemplate: (...args: unknown[]) => mockGetTemplate(...args),
+  getTemplate: (...args: unknown[]) => repositoryCalls("getTemplate", ...args),
+  createTemplate: (...args: unknown[]) => repositoryCalls("createTemplate", ...args),
 }));
 
 vi.mock("../../../../infrastructure/api/customAxios", () => ({
@@ -81,8 +62,8 @@ describe("TemplatesTab", () => {
   beforeEach(() => {
     updateMutate.mockReset();
     archiveMutate.mockReset();
-    mockCreate.mockReset();
-    mockGetTemplate.mockReset().mockResolvedValue(SYSTEM_TEMPLATE_FULL);
+    duplicateMutate.mockReset();
+    repositoryCalls.mockReset();
     vi.mocked(showAlert).mockClear();
   });
 
@@ -194,54 +175,23 @@ describe("TemplatesTab", () => {
     expect(onUse).toHaveBeenCalledWith(1, "run-now");
   });
 
-  it("duplicates a system template as a copy owned by the org", async () => {
+  // The server copies the latest version's sections, AI blocks, framework
+  // selection and report kind (POST /v1/report-templates/:id/duplicate), so
+  // the tab sends only the id and builds no body of its own.
+  it("duplicates a system template through the server-side copy", async () => {
     const user = userEvent.setup();
     renderWithProviders(<TemplatesTab onUse={vi.fn()} />);
 
     const system = screen.getByRole("region", { name: /system templates/i });
     await user.click(within(system).getByRole("button", { name: /duplicate/i }));
 
-    // createTemplateQuery (Servers/utils/reportTemplate.utils.ts) 400s unless
-    // default_scope is exactly "project" or "organization" — an omitted
-    // default_scope must not reach the request body, or every Duplicate
-    // click fails.
-    await waitFor(() =>
-      expect(mockCreate).toHaveBeenCalledWith(
-        expect.objectContaining({
-          name: "EU AI Act pack (copy)",
-          default_scope: "organization",
-        }),
-        expect.anything(),
-      ),
-    );
+    expect(duplicateMutate).toHaveBeenCalledTimes(1);
+    expect(duplicateMutate).toHaveBeenCalledWith(2, expect.anything());
+    expect(repositoryCalls).not.toHaveBeenCalled();
   });
 
-  // The list row has no latestVersion, so reading the section config off it
-  // produced a copy with no sections. The wizard then refuses to leave its
-  // Sections step and the copy can never be run, scheduled or repaired.
-  it("carries the source template's section config into the copy", async () => {
-    const user = userEvent.setup();
-    renderWithProviders(<TemplatesTab onUse={vi.fn()} />);
-
-    const system = screen.getByRole("region", { name: /system templates/i });
-    await user.click(within(system).getByRole("button", { name: /duplicate/i }));
-
-    expect(mockGetTemplate).toHaveBeenCalledWith(2);
-    await waitFor(() =>
-      expect(mockCreate).toHaveBeenCalledWith(
-        expect.objectContaining({
-          sections_config: SECTIONS_CONFIG,
-          ai_blocks_config: AI_BLOCKS_CONFIG,
-        }),
-        expect.anything(),
-      ),
-    );
-  });
-
-  // An omitted framework selection is not "no preference" — the wizard seeds []
-  // from it, and empty means every framework in scope. A copy that loses it
-  // reports on everything under the original's name and description.
-  it("carries the source template's framework selection into the copy", async () => {
+  it("says when the copy fails", async () => {
+    duplicateMutate.mockImplementation((_id, opts) => opts.onError(new Error("network")));
     const user = userEvent.setup();
     renderWithProviders(<TemplatesTab onUse={vi.fn()} />);
 
@@ -249,16 +199,14 @@ describe("TemplatesTab", () => {
     await user.click(within(system).getByRole("button", { name: /duplicate/i }));
 
     await waitFor(() =>
-      expect(mockCreate).toHaveBeenCalledWith(
-        expect.objectContaining({ framework_config: FRAMEWORK_CONFIG }),
-        expect.anything(),
+      expect(showAlert).toHaveBeenCalledWith(
+        expect.objectContaining({ variant: "error", body: "Failed to duplicate template" }),
       ),
     );
   });
 
-  // The report kind lives in parameters_config. A copy without it would list
-  // the E-23 sections under a general template, and every run would be refused.
-  it("carries the source template's report parameters config into the copy", async () => {
+  it("confirms a successful copy", async () => {
+    duplicateMutate.mockImplementation((_id, opts) => opts.onSuccess({ id: 12 }));
     const user = userEvent.setup();
     renderWithProviders(<TemplatesTab onUse={vi.fn()} />);
 
@@ -266,22 +214,39 @@ describe("TemplatesTab", () => {
     await user.click(within(system).getByRole("button", { name: /duplicate/i }));
 
     await waitFor(() =>
-      expect(mockCreate).toHaveBeenCalledWith(
-        expect.objectContaining({ parameters_config: PARAMETERS_CONFIG }),
-        expect.anything(),
+      expect(showAlert).toHaveBeenCalledWith(
+        expect.objectContaining({ variant: "success", body: "Template duplicated" }),
       ),
     );
   });
 
-  it("does not create an unusable copy when the full template cannot be fetched", async () => {
-    mockGetTemplate.mockRejectedValue(new Error("network"));
+  // The server picks a free "(copy N)" name, so a 409 here is not a name the
+  // user can change: no "Choose a different name".
+  it("reports a 409 on duplicate as a plain failure", async () => {
+    duplicateMutate.mockImplementation((_id, opts) => opts.onError({ response: { status: 409 } }));
     const user = userEvent.setup();
     renderWithProviders(<TemplatesTab onUse={vi.fn()} />);
 
     const system = screen.getByRole("region", { name: /system templates/i });
     await user.click(within(system).getByRole("button", { name: /duplicate/i }));
 
-    await waitFor(() => expect(showAlert).toHaveBeenCalled());
-    expect(mockCreate).not.toHaveBeenCalled();
+    await waitFor(() =>
+      expect(showAlert).toHaveBeenCalledWith(
+        expect.objectContaining({ variant: "error", body: "Failed to duplicate template" }),
+      ),
+    );
+  });
+});
+
+describe("TemplatesTab while a copy is in flight", () => {
+  it("disables Duplicate", () => {
+    duplicatePending = true;
+    try {
+      renderWithProviders(<TemplatesTab onUse={vi.fn()} />);
+      const system = screen.getByRole("region", { name: /system templates/i });
+      expect(within(system).getByRole("button", { name: /duplicate/i })).toBeDisabled();
+    } finally {
+      duplicatePending = false;
+    }
   });
 });
