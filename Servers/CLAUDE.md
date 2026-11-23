@@ -209,11 +209,13 @@ every contributor must follow:
 
 The Express route layer is the single source of truth for the API surface.
 `docs/api-docs/src/config/endpoints.ts` is generated and must never be edited by
-hand. In `Servers/swagger.yaml` the generator owns the paths, methods, tags,
-`operationId`, `security`, deprecation markings and the `Requires role:` note;
-never hand-edit those. Everything else (summaries, descriptions, parameters,
-request bodies, responses and `components.schemas`) has no other source: the
-generator keeps it as written. Correct it in `swagger.yaml`, then run step 3
+hand. In `Servers/swagger.yaml` the generator owns `info.description`
+(`API_DOC_DESCRIPTION` in `scripts/generateSwagger.ts`), the top-level `tags`
+list, which paths and methods exist, and each operation's tags,
+`operationId`, `security`, deprecation markings and `Requires role:` note;
+never hand-edit those. The rest of an operation (summary, description,
+parameters, request body, responses) and `components.schemas` have no other
+source: the generator keeps them as written. Correct it in `swagger.yaml`, then run step 3
 below and commit the regenerated output, so CI's drift check sees a stable file.
 
 ### Adding or changing an endpoint

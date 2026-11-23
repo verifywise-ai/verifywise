@@ -1064,7 +1064,10 @@ export const notifyApprovalStepOverdueEscalation = async (
  * message and subject are keyed and reach the recipient in their language;
  * the email body stays English.
  *
- * @param vendor.reviewDate - The review day, already formatted for display.
+ * @param vendor.reviewDate - The review day formatted in English, for the email.
+ * @param vendor.reviewDay - The stored review date; the in-app message
+ *   formats it in the recipient's locale (its UTC day). Falls back to
+ *   reviewDate when absent or invalid.
  */
 export const notifyVendorReviewDue = async (
   organizationId: number,
@@ -1073,6 +1076,7 @@ export const notifyVendorReviewDue = async (
     id: number;
     name: string;
     reviewDate: string;
+    reviewDay?: Date | string | null;
     riskLevel: string;
     lastReviewDate?: string;
     projectCount: number;
@@ -1080,16 +1084,22 @@ export const notifyVendorReviewDue = async (
   baseUrl: string,
 ): Promise<void> => {
   const reviewer = await getUserById(reviewerId);
+  const lang = await getUserLanguage(reviewerId);
+  const day = vendor.reviewDay ? new Date(vendor.reviewDay) : null;
+  const localDate =
+    day && !Number.isNaN(day.getTime())
+      ? day.toLocaleDateString(DATE_LOCALES[lang], { dateStyle: "long", timeZone: "UTC" })
+      : vendor.reviewDate;
 
   await sendInAppNotification(
     organizationId,
     {
       user_id: reviewerId,
-      lang: await getUserLanguage(reviewerId),
+      lang,
       type: NotificationType.VENDOR_REVIEW_DUE,
       titleKey: "Vendor review due",
       messageKey: 'The review of vendor "{name}" is due on {date}.',
-      messageVars: { name: vendor.name, date: vendor.reviewDate },
+      messageVars: { name: vendor.name, date: localDate },
       entity_type: NotificationEntityType.VENDOR,
       entity_id: vendor.id,
       entity_name: vendor.name,

@@ -40,6 +40,7 @@ const vendor = {
   id: 4,
   name: "Acme AI",
   reviewDate: "January 15, 2030",
+  reviewDay: "2030-01-15T12:00:00.000Z",
   riskLevel: "Not assessed",
   projectCount: 2,
 };
@@ -92,10 +93,30 @@ describe("notifyVendorReviewDue", () => {
     expect(mockCreate.mock.calls[0][0].message).toBe(
       de('The review of vendor "{name}" is due on {date}.', {
         name: "Acme AI",
-        date: "January 15, 2030",
+        date: "15. Januar 2030",
       }),
     );
-    expect(mockSendTemplate.mock.calls[0][3].vendor_name).toBe("Acme AI");
+    expect(mockSendTemplate.mock.calls[0][3].review_date).toBe("January 15, 2030");
     expect(mockLanguage).toHaveBeenCalledTimes(1);
+  });
+
+  it("reads the stored review date's UTC day, whatever the server's time zone", async () => {
+    mockLanguage.mockResolvedValue("fr");
+
+    await notifyVendorReviewDue(
+      3,
+      11,
+      { ...vendor, reviewDay: "2030-01-15T23:30:00.000Z" },
+      BASE_URL,
+    );
+
+    expect(mockCreate.mock.calls[0][0].message).toContain("15 janvier 2030");
+  });
+
+  it("falls back to the English date when no review day is passed", async () => {
+    mockLanguage.mockResolvedValue("de");
+    await notifyVendorReviewDue(3, 11, { ...vendor, reviewDay: undefined }, BASE_URL);
+
+    expect(mockCreate.mock.calls[0][0].message).toContain("January 15, 2030");
   });
 });

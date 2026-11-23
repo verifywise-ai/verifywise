@@ -115,15 +115,6 @@ export const de: Record<string, string> = {
   "{count} risk": "{count} Risiko",
   "{count} risks": "{count} Risiken",
   "Showing {range} of {total} vendor(s)": "Anzeige: {range} von {total} Anbieter(n)",
-  "name": "Name",
-  "assignee": "zugewiesen an",
-  "status": "Status",
-  "scorecard": "Bewertungskarte",
-  "review date": "Prüfdatum",
-  "risk description": "Risikobeschreibung",
-  "action owner": "Aktionsverantwortlicher",
-  "risk severity": "Risikoschwere",
-  "risk level": "Risikostufe",
 };
 
 export const fr: Record<string, string> = {
@@ -241,15 +232,6 @@ export const fr: Record<string, string> = {
   "{count} risk": "{count} risque",
   "{count} risks": "{count} risques",
   "Showing {range} of {total} vendor(s)": "Affichage de {range} sur {total} fournisseur(s)",
-  "name": "nom",
-  "assignee": "assigné",
-  "status": "statut",
-  "scorecard": "tableau de bord",
-  "review date": "date de révision",
-  "risk description": "description du risque",
-  "action owner": "responsable d'action",
-  "risk severity": "gravité du risque",
-  "risk level": "niveau de risque",
 };
 
 export const es: Record<string, string> = {
@@ -363,13 +345,4 @@ export const es: Record<string, string> = {
   "{count} risk": "{count} riesgo",
   "{count} risks": "{count} riesgos",
   "Showing {range} of {total} vendor(s)": "Mostrando {range} de {total} proveedor(es)",
-  "name": "nombre",
-  "assignee": "asignado a",
-  "status": "estado",
-  "scorecard": "cuadro de mando",
-  "review date": "fecha de revisión",
-  "risk description": "descripción del riesgo",
-  "action owner": "responsable de la acción",
-  "risk severity": "gravedad del riesgo",
-  "risk level": "nivel de riesgo",
 };

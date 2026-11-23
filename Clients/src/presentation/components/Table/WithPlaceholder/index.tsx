@@ -60,12 +60,12 @@ type SortConfig = {
 };
 
 const titleOfTableColumns = [
-  { id: "vendor_name", label: "name", sortable: true },
-  { id: "assignee", label: "assignee", sortable: true },
-  { id: "review_status", label: "status", sortable: true },
-  { id: "risk", label: "risks", sortable: true },
-  { id: "scorecard", label: "scorecard", sortable: true },
-  { id: "review_date", label: "review date", sortable: true },
+  { id: "vendor_name", label: "Name", sortable: true },
+  { id: "assignee", label: "Assignee", sortable: true },
+  { id: "review_status", label: "Status", sortable: true },
+  { id: "risk", label: "Risks", sortable: true },
+  { id: "scorecard", label: "Scorecard", sortable: true },
+  { id: "review_date", label: "Review date", sortable: true },
   { id: "actions", label: "", sortable: false },
 ];
 
@@ -98,7 +98,8 @@ const SortableTableHead: React.FC<{
                     "cursor": "pointer",
                     "userSelect": "none",
                     "&:hover": {
-                      backgroundColor: "background.hover",
+                      // One step darker than the header row (background.hover).
+                      backgroundColor: "border.light",
                     },
                   }
                 : {}),
