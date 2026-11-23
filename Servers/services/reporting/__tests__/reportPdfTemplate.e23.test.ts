@@ -43,7 +43,35 @@ const E23_ONLY_TEXT = [
   "e23-",
 ];
 
+/**
+ * The template formats dates with the host's locale and time zone (the footer
+ * calls toLocaleDateString() with no arguments, the cover passes "en-US" but no
+ * time zone). Pinned to en-US and UTC here, so the snapshot is the same on a
+ * developer machine and on CI; the template itself is develop's and unchanged.
+ */
+const realToLocaleDateString = Date.prototype.toLocaleDateString;
+beforeAll(() => {
+  Date.prototype.toLocaleDateString = function (
+    this: Date,
+    locales?: Intl.LocalesArgument,
+    options?: Intl.DateTimeFormatOptions,
+  ) {
+    return realToLocaleDateString.call(this, locales ?? "en-US", {
+      timeZone: "UTC",
+      ...options,
+    });
+  };
+});
+afterAll(() => {
+  Date.prototype.toLocaleDateString = realToLocaleDateString;
+});
+
 describe("report-pdf.ejs: general reports", () => {
+  it("formats dates the same whatever the host locale and time zone", () => {
+    expect(new Date("2026-11-20T12:00:00Z").toLocaleDateString()).toBe("11/20/2026");
+    expect(new Date("2026-11-20T23:30:00Z").toLocaleDateString()).toBe("11/20/2026");
+  });
+
   it("renders a non-kind report byte for byte as before the E-23 report existed", () => {
     // Recorded from the template before the E-23 blocks were added.
     expect(renderReportHtml(nonKindReportData())).toMatchSnapshot();

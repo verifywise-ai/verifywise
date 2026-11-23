@@ -1068,7 +1068,7 @@ body {
     <!-- Page Footer (rendered as part of content) -->
     <div class="page-footer">
       <span>Acme</span>
-      <span>2026-11-20</span>
+      <span>11/20/2026</span>
     </div>
 
   </div>
