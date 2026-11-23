@@ -14,7 +14,7 @@ export const osfiE23ReportContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'The report is a self-assessment prepared from your VerifyWise records. It is not an OSFI assessment. The cover and the sign-off page both say so.',
+      text: 'The report is a self-assessment prepared from your VerifyWise records. It is not an OSFI assessment. The Scope and method section and the sign-off page both say so.',
     },
     {
       type: 'paragraph',
@@ -46,7 +46,7 @@ export const osfiE23ReportContent: ArticleContent = {
       items: [
         { text: 'In the sidebar, open **Record > Evidence & reports > Reporting** and select the **Templates** tab' },
         { text: 'Under the system templates, find **OSFI E-23 completeness report** and click **Run now**' },
-        { text: '**Scope**: the report always covers the whole organization, so there is nothing to choose here' },
+        { text: '**Scope**: the report always covers the whole organization. Leave OSFI E-23 selected under Frameworks' },
         { text: '**Report details**: fill in the reporting period, names and audience (see below)' },
         { text: '**Sections**: the template turns on everything except the model inventory appendix. Turn the appendix on if you want a full list of models' },
         { text: '**AI Insights**: executive summary, key findings, recommended actions and the E-23 gap analysis are on by default' },
