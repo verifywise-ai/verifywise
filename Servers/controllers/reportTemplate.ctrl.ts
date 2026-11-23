@@ -30,6 +30,25 @@ import { parseFrameworkSelection } from "../services/reporting/frameworkSelectio
 import { NotFoundException } from "../domain.layer/exceptions/custom.exception";
 import { runScheduledReport } from "../services/reporting/reportRunOrchestrator";
 import { assertReportScopeAllowed } from "../services/reporting/reportAuthorization";
+import {
+  parameterErrorMessages,
+  parametersConfigErrors,
+  sectionKeysOf,
+  validateRunInput,
+} from "../services/reporting/reportParameters";
+
+/**
+ * A template may declare no kind (a general report) or a known one, and its
+ * parameter fields must be well formed. An unknown kind would unlock nothing
+ * and refuse every kind-limited section; a malformed field list would fail
+ * every run and break the run wizard. Both are rejected at write time rather
+ * than at every run.
+ */
+function respondToInvalidParametersConfig(req: Request, res: Response): Response | null {
+  const errors = parametersConfigErrors(req.body?.parameters_config);
+  if (!errors.length) return null;
+  return res.status(400).json(STATUS_CODE[400]({ errors: parameterErrorMessages(errors, req.t) }));
+}
 
 export async function listTemplates(req: Request, res: Response): Promise<any> {
   try {
@@ -68,6 +87,7 @@ const VERSION_CONFIG_FIELDS = [
   "branding_config",
   "schedule_defaults",
   "delivery_defaults",
+  "parameters_config",
 ];
 
 const hasVersionConfig = (body: any): boolean =>
@@ -108,6 +128,9 @@ export async function createTemplate(req: Request, res: Response): Promise<any> 
     organizationId: req.organizationId!,
   });
   try {
+    const configRejected = respondToInvalidParametersConfig(req, res);
+    if (configRejected) return configRejected;
+
     // Both INSERTs share one transaction. A template with no version is
     // unusable — the wizard reads latestVersion.sections_config and disables
     // its submit button without one — so a failure on the second write must
@@ -173,6 +196,8 @@ export async function updateTemplate(req: Request, res: Response): Promise<any> 
     if (!metadataChanged && !versionChanged) {
       return res.status(400).json(STATUS_CODE[400](req.t!("no updatable fields supplied")));
     }
+    const configRejected = respondToInvalidParametersConfig(req, res);
+    if (configRejected) return configRejected;
 
     // A PATCH carrying both metadata and config is two writes; they share one
     // transaction so a failing version insert (e.g. the 23505 version race)
@@ -342,6 +367,24 @@ export async function runTemplateNow(req: Request, res: Response): Promise<any> 
       );
     }
 
+    // Sections limited to a report kind are refused outside it, and the
+    // parameters are checked against the version's declared fields. A run of
+    // a kind template that sends no parameters gets the required-field errors.
+    // Template run-now uses the period the user sent; only schedule runs
+    // derive it (see runScheduledReport).
+    const parametersConfig = version.parameters_config ?? {};
+    const checked = validateRunInput(
+      parametersConfig,
+      sectionKeysOf(req.body.sectionsConfig),
+      req.body.reportParameters,
+      { now: new Date(), requirePeriod: true, scope: isProjectScope ? "project" : "organization" },
+    );
+    if (checked.errors.length) {
+      return res
+        .status(400)
+        .json(STATUS_CODE[400]({ errors: parameterErrorMessages(checked.errors, req.t) }));
+    }
+
     // An omitted scope resolves to "organization" here, so this endpoint is the
     // widest report in the product reachable with the least input.
     const scopeErrors = await assertReportScopeAllowed({
@@ -371,6 +414,8 @@ export async function runTemplateNow(req: Request, res: Response): Promise<any> 
       project_framework_id: req.body.projectFrameworkId ?? null,
       sections_config: req.body.sectionsConfig ?? null,
       ai_blocks_config: req.body.aiBlocksConfig ?? null,
+      parameters_config: parametersConfig,
+      report_parameters: checked.value,
       format: req.body.format ?? "pdf",
       // Storage is what gives the run a file_id, and a run without one has
       // nothing to download. Run now puts a report in the list; it is not a

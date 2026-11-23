@@ -17,6 +17,7 @@ import { ReportFormat } from "../services/reporting";
 import { createRunQuery, updateRunStatusQuery } from "../utils/reportRun.utils";
 import { enqueueAutomationAction } from "../services/automations/automationProducer";
 import { MANUAL_REPORT_JOB } from "../services/reporting/reportJobConstants";
+import { parameterErrorMessages, validateRunInput } from "../services/reporting/reportParameters";
 
 /**
  * The `files.source` a generated report is saved under. Always one of
@@ -205,6 +206,21 @@ export async function generateReportsV2(req: Request, res: Response): Promise<an
   const projectFrameworkId = toId(projectFrameworkIdRaw);
   const userId = req.userId;
   const reportFormat: ReportFormat = format === "pdf" ? "pdf" : "docx";
+
+  // The Generate page has no template and so no report kind: sections limited
+  // to a kind (the E-23 ones) are refused here rather than silently dropped.
+  const requestedKeys = (Array.isArray(reportType) ? reportType : [reportType]).filter(
+    (k: unknown): k is string => typeof k === "string",
+  );
+  const kindErrors = validateRunInput(undefined, requestedKeys, undefined, {
+    now: new Date(),
+    requirePeriod: true,
+  }).errors;
+  if (kindErrors.length) {
+    return res
+      .status(400)
+      .json(STATUS_CODE[400]({ errors: parameterErrorMessages(kindErrors, req.t) }));
+  }
 
   logProcessing({
     description: `enqueueing generateReportsV2 for project ID ${projectId}, report type: ${reportType}, format: ${reportFormat}`,

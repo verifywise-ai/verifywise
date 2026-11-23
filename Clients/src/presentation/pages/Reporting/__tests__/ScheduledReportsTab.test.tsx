@@ -101,4 +101,24 @@ describe("ScheduledReportsTab", () => {
     expect(screen.getByLabelText("Name")).toHaveValue("Weekly compliance digest");
     expect(screen.getByLabelText("Timezone")).toHaveValue("UTC");
   });
+
+  it("offers quarterly with a run-in month and saves anchorMonth", () => {
+    render(<ScheduledReportsTab />);
+    clickRowAction("Edit");
+    expect(screen.queryByLabelText("Run in month")).not.toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText("Frequency"), { target: { value: "quarterly" } });
+    const expectedDefault = ((new Date().getMonth() + 1) % 12) + 1;
+    expect(screen.getByLabelText("Run in month")).toHaveValue(String(expectedDefault));
+    fireEvent.change(screen.getByLabelText("Run in month"), { target: { value: "2" } });
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+
+    expect(updateMutate.mock.calls[0][0].body.scheduleConfig).toEqual({
+      frequency: "quarterly",
+      anchorMonth: 2,
+      hour: 9,
+      minute: 0,
+      timezone: "UTC",
+    });
+  });
 });

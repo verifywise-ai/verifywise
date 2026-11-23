@@ -5,7 +5,10 @@ name: ZAP API Scan
 # the real login endpoint and injected into every scan request via a ZAP
 # replacer rule. The job fails when High/Critical alerts are found.
 #
-# Tuning: add suppressions to .zap/rules.tsv as false positives are triaged.
+# The active scan is bounded by ascan.maxScanDurationInMins (scan step below):
+# `-T` only caps ZAP startup + passive wait, it does NOT bound active scanning.
+# Tuning: add suppressions to .zap/rules.tsv as false positives are triaged
+# (see docs/security/zap-triage-runbook.md).
 
 permissions:
   contents: read
@@ -19,7 +22,7 @@ jobs:
   zap-api-scan:
     name: ZAP authenticated API scan
     runs-on: ubuntu-latest
-    timeout-minutes: 75
+    timeout-minutes: 120
 
     services:
       postgres:
@@ -135,6 +138,7 @@ jobs:
           docker run --rm --network host \
             -v ${{ github.workspace }}:/zap/wrk:rw \
             -e ZAP_TOKEN \
+            -e PYTHONUNBUFFERED=1 \
             ghcr.io/zaproxy/zaproxy:stable \
             zap-api-scan.py \
             -t /zap/wrk/Servers/swagger.yaml -f openapi \
@@ -143,7 +147,8 @@ jobs:
             -T 50 \
             -r /zap/wrk/zap-reports/api-scan.html \
             -J /zap/wrk/zap-reports/api-scan.json \
-            -z "-config replacer.full_list(0).description=auth \
+            -z "-config ascan.maxScanDurationInMins=45 \
+                -config replacer.full_list(0).description=auth \
                 -config replacer.full_list(0).enabled=true \
                 -config replacer.full_list(0).matchtype=REQ_HEADER \
                 -config replacer.full_list(0).matchstr=Authorization \
@@ -152,6 +157,11 @@ jobs:
 
       - name: Fail on High/Critical alerts
         run: |
+          if [ ! -f zap-reports/api-scan.json ]; then
+            echo "::error::ZAP API scan produced no report (zap-reports/api-scan.json missing)."
+            echo "This is a scanner/infrastructure failure, not a clean scan — check the scan step logs."
+            exit 1
+          fi
           HIGH=$(jq '[.site[].alerts[] | select((.riskcode | tonumber) >= 3)] | length' zap-reports/api-scan.json)
           echo "High/Critical alerts: $HIGH"
           if [ "$HIGH" -gt 0 ]; then
@@ -166,3 +176,22 @@ jobs:
           name: zap-api-scan-report
           path: zap-reports/
           retention-days: 30
+
+      # Alert table in the Actions UI so weekly triage (see
+      # docs/security/zap-triage-runbook.md) needs no artifact download.
+      - name: Summarize alerts in job summary
+        if: always()
+        run: |
+          REPORT=zap-reports/api-scan.json
+          echo "## ZAP authenticated API scan" >> "$GITHUB_STEP_SUMMARY"
+          if [ ! -f "$REPORT" ]; then
+            echo ":warning: No report produced — the scan did not complete." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          if ! jq -e '[.site[].alerts[]] | length > 0' "$REPORT" > /dev/null; then
+            echo ":white_check_mark: No alerts." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          echo "| Risk | Alert | Instances |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|---|---|---|" >> "$GITHUB_STEP_SUMMARY"
+          jq -r '[.site[].alerts[]] | sort_by(-(.riskcode | tonumber)) | .[] | "| \(.risk) | \(.name) | \(.instances | length) |"' "$REPORT" >> "$GITHUB_STEP_SUMMARY"

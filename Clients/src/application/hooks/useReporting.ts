@@ -10,6 +10,8 @@
 
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from "@tanstack/react-query";
 import * as repo from "../repository/reporting.repository";
+import { GetMyOrganization } from "../repository/organization.repository";
+import { useAuth } from "./useAuth";
 import type {
   ReportRun,
   ReportTemplateWriteBody,
@@ -202,3 +204,28 @@ const useRunMutation = (fn: (id: number) => Promise<unknown>) => {
 export const useArchiveRun = () => useRunMutation(repo.archiveRun);
 export const useRestoreRun = () => useRunMutation(repo.restoreRun);
 export const useDeleteRun = () => useRunMutation(repo.deleteRun);
+
+// Prefill for the run wizard's report details step. A failed lookup only
+// costs the prefill, so it is not retried.
+export const useLastReportParameters = (templateId: number | undefined, enabled: boolean) =>
+  useQuery({
+    queryKey: ["reporting", "last-parameters", templateId],
+    queryFn: () => repo.getLastReportParameters(templateId as number),
+    enabled: enabled && templateId != null,
+    retry: false,
+  });
+
+// The organization's display name, the default institution name on a report.
+export const useOrganizationName = (enabled: boolean) => {
+  const { organizationId } = useAuth();
+  return useQuery({
+    queryKey: ["organization", organizationId, "name"],
+    queryFn: async () => {
+      const r = await GetMyOrganization({ routeUrl: `/organizations/${organizationId}` });
+      return String(r?.data?.data?.name ?? "");
+    },
+    enabled: enabled && organizationId != null,
+    staleTime: 5 * 60 * 1000,
+    retry: false,
+  });
+};

@@ -142,7 +142,7 @@ export const validateVendorContactPerson = (value: any): ValidationResult => {
     minLength: VENDOR_VALIDATION_LIMITS.VENDOR_CONTACT_PERSON.MIN,
     maxLength: VENDOR_VALIDATION_LIMITS.VENDOR_CONTACT_PERSON.MAX,
     trimWhitespace: true,
-    pattern: VALIDATION_PATTERNS.LETTERS_ONLY, // Only letters and spaces allowed
+    pattern: VALIDATION_PATTERNS.PERSON_NAME,
   });
 };
 

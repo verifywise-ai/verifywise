@@ -14,6 +14,14 @@ export interface ReportRun {
   file_id: number | null;
   output_filename: string | null;
   output_mime_type: string | null;
+  companion_file_id?: number | null;
+  companion_filename?: string | null;
+  companion_mime_type?: string | null;
+  /**
+   * The run's final flag from its report parameters, as text ("true" or
+   * "false"); null when the report takes no such parameter.
+   */
+  is_final?: string | null;
   error_message: string | null;
   /** Per-channel delivery outcome; carries the delivery reason behind partial_success. */
   delivery_status: Record<string, { status?: string; enabled?: boolean }> | null;
@@ -56,6 +64,8 @@ export interface ReportSectionCatalogEntry {
   key: string;
   label: string;
   group: string;
+  /** Report kinds this section is limited to. Absent means every report. */
+  kinds?: string[];
 }
 
 // ---------------------------------------------------------------------------
@@ -65,7 +75,7 @@ export interface ReportSectionCatalogEntry {
 export type ReportScope = "project" | "organization";
 
 /**
- * The seven AI blocks Phase 2 shipped on the backend. Mirrors
+ * The AI blocks the backend runs. Mirrors
  * Servers/domain.layer/interfaces/i.reportTemplate.ts AiBlocksConfig.
  */
 export interface AiBlocksConfig {
@@ -76,6 +86,8 @@ export interface AiBlocksConfig {
   riskAnalysis?: boolean;
   complianceGap?: boolean;
   vendorRisk?: boolean;
+  /** The OSFI E-23 gap analysis; offered only for templates of kind osfi_e23. */
+  e23Gap?: boolean;
 }
 
 /**
@@ -88,6 +100,33 @@ export interface FrameworkConfig {
    * framework in scope, which is what every report did before this existed.
    */
   frameworkIds?: string[];
+}
+
+export type ReportFrequency = "daily" | "weekly" | "monthly" | "quarterly";
+
+export type ReportParameterFieldType = "text" | "textarea" | "date" | "select" | "boolean";
+
+export interface ReportParameterField {
+  key: string;
+  label: string;
+  type: ReportParameterFieldType;
+  required: boolean;
+  maxLength?: number;
+  options?: { value: string; label: string }[];
+}
+
+/** Mirrors Servers/domain.layer/interfaces/i.reportTemplate.ts ReportParametersConfig. */
+export interface ReportParametersConfig {
+  kind?: string;
+  fields?: ReportParameterField[];
+}
+
+export type ReportParameters = Record<string, string | boolean>;
+
+/** GET /api/v1/report-templates/:id/last-parameters (without period and isFinal). */
+export interface LastReportParameters {
+  parameters: ReportParameters;
+  periodEnd: string | null;
 }
 
 export interface TemplateSectionConfig {
@@ -112,6 +151,7 @@ export interface ReportTemplateVersion {
   // Optional, unlike its siblings, even though the column is NOT NULL DEFAULT
   // '{}': responses generated before the column existed carry no such key.
   framework_config?: FrameworkConfig;
+  parameters_config?: ReportParametersConfig;
   format_config: Record<string, unknown>;
   branding_config: Record<string, unknown>;
   schedule_defaults: Record<string, unknown>;
@@ -172,6 +212,7 @@ export type AnalysisSectionKey =
   | "riskAnalysis"
   | "complianceGap"
   | "vendorRisk"
+  | "e23Gap"
   | "sectionSummaries";
 
 /** The `severity` / `priority` enum shared by the analyzer schemas. */
@@ -252,6 +293,21 @@ export interface VendorRiskPayload {
   abstain_reason: string | null;
 }
 
+/** How far the MRM data bears out a group's self-assessed statuses. Never a compliance rating. */
+export type E23GapPosition = "consistent" | "partly consistent" | "inconsistent" | "not assessable";
+
+export interface E23GapPayload {
+  narrative: string;
+  principles: Array<{
+    group: string;
+    position: E23GapPosition;
+    explanation: string;
+    basis?: AnalysisBasis | null;
+    what_would_close_this?: string | null;
+  }>;
+  abstain_reason: string | null;
+}
+
 export type AnalysisPayload =
   | ExecutiveSummaryPayload
   | KeyFindingsPayload
@@ -259,6 +315,7 @@ export type AnalysisPayload =
   | RiskAnalysisPayload
   | ComplianceGapPayload
   | VendorRiskPayload
+  | E23GapPayload
   | SectionSummariesPayload
   // An abstained or failed analyzer persists a null payload. Consumers must
   // narrow before reading any field.
@@ -300,4 +357,5 @@ export interface ScheduledReportUpdateBody {
   format?: "pdf" | "docx";
   scheduleConfig?: Record<string, unknown>;
   deliveryConfig?: Record<string, unknown>;
+  reportParameters?: ReportParameters;
 }

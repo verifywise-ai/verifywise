@@ -1,6 +1,11 @@
 jest.mock("../../services/reporting/scheduledReportService", () => ({
   validateScheduledReportInput: jest.fn(() => []),
   validateTemplateVersionOwnership: jest.fn(async () => []),
+  validateScheduledReportParameters: jest.fn(async () => ({ value: {}, errors: [] })),
+}));
+jest.mock("../../utils/reportTemplate.utils", () => ({
+  getTemplateByIdQuery: jest.fn(),
+  getVersionByIdQuery: jest.fn(),
 }));
 jest.mock("../../utils/scheduledReport.utils", () => ({
   createScheduledReportQuery: jest.fn(async () => ({ id: 1 })),
@@ -13,6 +18,7 @@ jest.mock("../../services/reporting/reportAuthorization", () => ({
   assertReportScopeAllowed: jest.fn(async () => []),
 }));
 import { createScheduledReport, updateScheduledReport } from "../scheduledReport.ctrl";
+import { getTranslator } from "../../utils/i18n.utils";
 
 function mockRes() {
   const r: any = {};
@@ -372,6 +378,251 @@ describe("updateScheduledReport", () => {
     );
 
     expect(res.status).toHaveBeenCalledWith(403);
+    expect(utils.updateScheduledReportQuery).not.toHaveBeenCalled();
+  });
+});
+
+describe("scheduled report parameters and schedule config", () => {
+  const actualSvc = jest.requireActual("../../services/reporting/scheduledReportService");
+  const { E23_KIND, E23_PARAMETER_FIELDS } = jest.requireActual(
+    "../../services/reporting/e23/e23Parameters",
+  );
+  const e23Version = {
+    id: 30,
+    template_id: 7,
+    parameters_config: { kind: E23_KIND, fields: E23_PARAMETER_FIELDS },
+  };
+  const scheduleParams = {
+    institutionName: "Northern Bank",
+    accountableExecutiveName: "Ada Park",
+    accountableExecutiveTitle: "Chief risk officer",
+    preparedByName: "Sam Lee",
+    preparedByTitle: "Model risk lead",
+    audience: "osfi",
+  };
+  const body = {
+    templateId: 7,
+    templateVersionId: 30,
+    name: "Quarterly E-23",
+    scope: "organization",
+    sectionsConfig: { sections: [{ reportSectionKey: "mrmFleet", defaultEnabled: true }] },
+    aiBlocksConfig: {},
+    format: "pdf",
+    scheduleConfig: {
+      frequency: "quarterly",
+      anchorMonth: 2,
+      dayOfMonth: 1,
+      hour: 9,
+      minute: 0,
+      timezone: "UTC",
+    },
+    deliveryConfig: { saveToStorage: true },
+    reportParameters: scheduleParams,
+  };
+
+  let svc: any;
+  let tplUtils: any;
+  let utils: any;
+  beforeEach(() => {
+    svc = require("../../services/reporting/scheduledReportService");
+    tplUtils = require("../../utils/reportTemplate.utils");
+    utils = require("../../utils/scheduledReport.utils");
+    svc.validateScheduledReportInput.mockImplementation(actualSvc.validateScheduledReportInput);
+    svc.validateScheduledReportParameters.mockImplementation(
+      actualSvc.validateScheduledReportParameters,
+    );
+    tplUtils.getVersionByIdQuery.mockResolvedValue(e23Version);
+    utils.createScheduledReportQuery.mockClear();
+    utils.updateScheduledReportQuery.mockClear();
+  });
+  afterEach(() => {
+    svc.validateScheduledReportInput.mockImplementation(() => []);
+    svc.validateScheduledReportParameters.mockImplementation(async () => ({
+      value: {},
+      errors: [],
+    }));
+  });
+
+  it("stores the validated parameters on create", async () => {
+    const res = mockRes();
+    await createScheduledReport({ body, organizationId: 42, userId: 9 } as any, res);
+    expect(res.status).toHaveBeenCalledWith(201);
+    expect(utils.createScheduledReportQuery.mock.calls[0][0].reportParameters).toEqual(
+      scheduleParams,
+    );
+  });
+
+  it("translates a schedule config error on create, the frequencies as a placeholder", async () => {
+    const res = mockRes();
+    await createScheduledReport(
+      {
+        body: { ...body, scheduleConfig: { ...body.scheduleConfig, frequency: "yearly" } },
+        organizationId: 42,
+        userId: 9,
+        t: getTranslator("de"),
+      } as any,
+      res,
+    );
+    expect(res.status).toHaveBeenCalledWith(400);
+    const errors: string[] = res.json.mock.calls[0][0].data.errors;
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toContain("daily, weekly, monthly, quarterly");
+    expect(errors[0]).not.toContain("frequency must be one of");
+    expect(utils.createScheduledReportQuery).not.toHaveBeenCalled();
+  });
+
+  it("translates a schedule config error on PATCH", async () => {
+    const res = mockRes();
+    await updateScheduledReport(
+      {
+        params: { id: "7" },
+        body: { scheduleConfig: { frequency: "quarterly", hour: 9, minute: 0, timezone: "UTC" } },
+        organizationId: 42,
+        userId: 9,
+        t: getTranslator("fr"),
+      } as any,
+      res,
+    );
+    expect(res.status).toHaveBeenCalledWith(400);
+    const errors: string[] = res.json.mock.calls[0][0].data.errors;
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toContain("anchorMonth");
+    expect(errors[0]).not.toBe(
+      "anchorMonth must be an integer from 1 to 12 for quarterly schedules",
+    );
+    expect(utils.updateScheduledReportQuery).not.toHaveBeenCalled();
+  });
+
+  it("400s a schedule that sends a reporting period", async () => {
+    const res = mockRes();
+    await createScheduledReport(
+      {
+        body: { ...body, reportParameters: { ...scheduleParams, periodStart: "2026-08-01" } },
+        organizationId: 42,
+        userId: 9,
+      } as any,
+      res,
+    );
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json.mock.calls[0][0].data.errors).toContain(
+      "the reporting period is set at run time for schedules",
+    );
+    expect(utils.createScheduledReportQuery).not.toHaveBeenCalled();
+  });
+
+  it("400s a quarterly schedule without an anchor month", async () => {
+    const { anchorMonth: _omit, ...noAnchor } = body.scheduleConfig;
+    const res = mockRes();
+    await createScheduledReport(
+      { body: { ...body, scheduleConfig: noAnchor }, organizationId: 42, userId: 9 } as any,
+      res,
+    );
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json.mock.calls[0][0].data.errors).toContain(
+      "anchorMonth must be an integer from 1 to 12 for quarterly schedules",
+    );
+    expect(utils.createScheduledReportQuery).not.toHaveBeenCalled();
+  });
+
+  it("400s a schedule of an E-23 template that sends no parameters", async () => {
+    const { reportParameters: _omit, ...noParams } = body;
+    const res = mockRes();
+    await createScheduledReport({ body: noParams, organizationId: 42, userId: 9 } as any, res);
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json.mock.calls[0][0].data.errors).toContain("Institution name is required");
+  });
+
+  it("400s an E-23-only section on a schedule of a general template", async () => {
+    tplUtils.getVersionByIdQuery.mockResolvedValue({ id: 30, template_id: 7 });
+    const { reportParameters: _omit, ...noParams } = body;
+    const res = mockRes();
+    await createScheduledReport({ body: noParams, organizationId: 42, userId: 9 } as any, res);
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json.mock.calls[0][0].data.errors).toContain(
+      "section mrmFleet is only available in an OSFI E-23 report",
+    );
+  });
+
+  it("validates a PATCH of the parameters against the schedule's template version", async () => {
+    utils.getScheduledReportQuery.mockResolvedValueOnce({
+      id: 7,
+      scope: "organization",
+      project_id: null,
+      template_version_id: 30,
+      sections_config: body.sectionsConfig,
+      report_parameters: scheduleParams,
+    });
+    const res = mockRes();
+    await updateScheduledReport(
+      {
+        params: { id: "7" },
+        body: { reportParameters: { ...scheduleParams, institutionName: "" } },
+        organizationId: 42,
+        userId: 9,
+      } as any,
+      res,
+    );
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json.mock.calls[0][0].data.errors).toEqual(["Institution name is required"]);
+    expect(utils.updateScheduledReportQuery).not.toHaveBeenCalled();
+  });
+
+  it("400s a PATCH to a quarterly schedule without an anchor month", async () => {
+    utils.getScheduledReportQuery.mockResolvedValueOnce({
+      id: 7,
+      scope: "organization",
+      project_id: null,
+    });
+    const res = mockRes();
+    await updateScheduledReport(
+      {
+        params: { id: "7" },
+        body: { scheduleConfig: { frequency: "quarterly", hour: 9, minute: 0, timezone: "UTC" } },
+        organizationId: 42,
+        userId: 9,
+      } as any,
+      res,
+    );
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(utils.updateScheduledReportQuery).not.toHaveBeenCalled();
+  });
+
+  it("400s a project-scoped schedule of an E-23 template", async () => {
+    const res = mockRes();
+    await createScheduledReport(
+      { body: { ...body, scope: "project", projectId: 5 }, organizationId: 42, userId: 9 } as any,
+      res,
+    );
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json.mock.calls[0][0].data.errors).toContain(
+      "an OSFI E-23 report covers the whole organization; choose organization scope",
+    );
+    expect(utils.createScheduledReportQuery).not.toHaveBeenCalled();
+  });
+
+  it("400s a PATCH that moves an E-23 schedule to project scope", async () => {
+    utils.getScheduledReportQuery.mockResolvedValueOnce({
+      id: 7,
+      scope: "organization",
+      project_id: null,
+      template_version_id: 30,
+      sections_config: body.sectionsConfig,
+      report_parameters: scheduleParams,
+    });
+    const res = mockRes();
+    await updateScheduledReport(
+      {
+        params: { id: "7" },
+        body: { scope: "project", projectId: 5 },
+        organizationId: 42,
+        userId: 9,
+      } as any,
+      res,
+    );
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json.mock.calls[0][0].data.errors).toContain(
+      "an OSFI E-23 report covers the whole organization; choose organization scope",
+    );
     expect(utils.updateScheduledReportQuery).not.toHaveBeenCalled();
   });
 });

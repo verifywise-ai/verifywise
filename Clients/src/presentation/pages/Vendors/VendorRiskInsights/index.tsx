@@ -107,7 +107,7 @@ export default function VendorRiskInsights({
           onChange={(_event, next) => select(next as SectionKey)}
         />
       </TabContext>
-      <Typography sx={{ ...textStyles.body, color: "text.tertiary", mt: 6, mb: 8 }}>
+      <Typography sx={{ ...textStyles.body, color: "text.tertiary", mt: "12px", mb: "16px" }}>
         {active.description}
       </Typography>
       {tab === "heatMap" &&

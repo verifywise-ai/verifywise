@@ -653,8 +653,10 @@ function humanizeHandlerName(name: string): string {
 // Merge discovered endpoints into existing swagger.yaml
 // ---------------------------------------------------------------------------
 
-// Generator-owned API description. swagger.yaml is never hand-edited, so the
-// versioning conventions live here and are (re)applied on every run.
+// Generator-owned API description, (re)applied on every run, so the
+// versioning conventions live here: an edit to info.description in
+// swagger.yaml is overwritten. Operation metadata and schemas are the parts
+// of swagger.yaml that are edited by hand (see Servers/CLAUDE.md).
 const API_DOC_DESCRIPTION = `AI Governance Platform API.
 
 **Versioning (ADR 0001):** paths under \`/v1/...\` (relative to the \`/api\`

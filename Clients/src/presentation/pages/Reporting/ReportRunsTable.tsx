@@ -39,7 +39,11 @@ import {
   useRunAnalyses,
 } from "../../../application/hooks/useReporting";
 import useFormattedDate from "../../../application/hooks/useFormattedDate";
-import { downloadReportRun } from "../../../application/repository/reporting.repository";
+import { showAlert } from "../../../infrastructure/api/customAxios";
+import {
+  downloadReportRun,
+  downloadReportRunFixItList,
+} from "../../../application/repository/reporting.repository";
 
 const ROWS_PER_PAGE_DEFAULT = 10;
 
@@ -101,6 +105,24 @@ const statusDetail = (r: any): string => {
 const reportName = (r: any): string => r.output_filename ?? `Run #${r.id}`;
 
 /**
+ * Draft or Final, for runs of a report that takes the final parameter (the
+ * OSFI E-23 report): is_final is "true" or "false" there and null otherwise,
+ * so other reports get no chip.
+ */
+const versionChip = (r: any) => {
+  if (r.is_final == null) return null;
+  const isFinal = r.is_final === "true";
+  return (
+    <Chip
+      label={isFinal ? "Final" : "Draft"}
+      variant={isFinal ? "info" : "default"}
+      size="small"
+      uppercase={false}
+    />
+  );
+};
+
+/**
  * scope_project_id is the run's project (from config_snapshot, falling back to
  * the schedule); NULL means the report covers the whole organization. The title
  * can be missing if the project has since been deleted.
@@ -147,9 +169,15 @@ export default function ReportRunsTable({ variant }: { variant: "live" | "archiv
   // Mirrors ArchiveTab's original handler: turn the Blob into an object URL,
   // trigger a save via a throwaway anchor, then revoke the URL. Without this
   // the returned Blob is discarded and clicking Download does nothing.
-  const handleDownload = async (id: number, filename: string | null) => {
+  // The fix-it list of an E-23 run downloads the same way, from its own endpoint.
+  const handleDownload = async (
+    id: number,
+    filename: string | null,
+    fetchFile: (id: number) => Promise<Blob> = downloadReportRun,
+    failureMessage = "Failed to download the report",
+  ) => {
     try {
-      const blob = await downloadReportRun(id);
+      const blob = await fetchFile(id);
       const url = URL.createObjectURL(blob);
       try {
         const a = document.createElement("a");
@@ -161,8 +189,9 @@ export default function ReportRunsTable({ variant }: { variant: "live" | "archiv
       } finally {
         URL.revokeObjectURL(url);
       }
-    } catch (error) {
-      console.error("Failed to download report run:", error);
+    } catch {
+      // Same toast as the other Reporting tabs, so a failed download is never silent.
+      showAlert({ variant: "error", body: failureMessage, isToast: true });
     }
   };
 
@@ -217,7 +246,10 @@ export default function ReportRunsTable({ variant }: { variant: "live" | "archiv
             {rows.map((r) => (
               <TableRow key={r.id} sx={singleTheme.tableStyles.primary.body.row}>
                 <TableCell sx={{ ...bodyCell, color: textColors.primary }}>
-                  {reportName(r)}
+                  <Stack direction="row" alignItems="center" gap="8px">
+                    <span>{reportName(r)}</span>
+                    {versionChip(r)}
+                  </Stack>
                 </TableCell>
                 <TableCell sx={{ ...bodyCell, color: textColors.secondary }}>
                   {r.template_name ?? "—"}
@@ -259,6 +291,17 @@ export default function ReportRunsTable({ variant }: { variant: "live" | "archiv
                     isArchived={variant === "archived"}
                     onDownload={
                       r.file_id ? () => handleDownload(r.id, r.output_filename ?? null) : undefined
+                    }
+                    onDownloadCompanion={
+                      r.companion_file_id
+                        ? () =>
+                            handleDownload(
+                              r.id,
+                              r.companion_filename ?? null,
+                              downloadReportRunFixItList,
+                              "Failed to download the fix-it list",
+                            )
+                        : undefined
                     }
                     onView={() => setSelectedRunId(r.id)}
                     onEdit={() => {}}

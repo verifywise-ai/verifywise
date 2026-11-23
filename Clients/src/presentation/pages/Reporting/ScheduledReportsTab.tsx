@@ -28,19 +28,14 @@ import {
 } from "../../../application/hooks/useReporting";
 import useFormattedDate from "../../../application/hooks/useFormattedDate";
 import { showAlert } from "../../../infrastructure/api/customAxios";
-
-const FREQUENCIES = ["daily", "weekly", "monthly"];
+import { FREQUENCY_ITEMS, MONTH_ITEMS, withFrequency } from "./scheduleOptions";
+import { reportRequestErrorMessage } from "./reportParameters";
 
 const COLUMNS = ["Name", "Scope", "Next run", "Status", "Actions"];
 
 // The runs table renders this column as "Organization"; the raw enum value
 // would have the two tables disagree on the same word.
 const scopeLabel = (scope: string) => (scope === "project" ? "Project" : "Organization");
-
-const FREQUENCY_ITEMS = FREQUENCIES.map((f) => ({
-  _id: f,
-  name: f.charAt(0).toUpperCase() + f.slice(1),
-}));
 
 const FORMAT_ITEMS = [
   { _id: "pdf", name: "PDF" },
@@ -53,7 +48,13 @@ type Draft = {
   id: number;
   name: string;
   format: "pdf" | "docx";
-  schedule: { frequency: string; hour: number; minute: number; timezone: string };
+  schedule: {
+    frequency: string;
+    hour: number;
+    minute: number;
+    timezone: string;
+    anchorMonth?: number;
+  };
 };
 
 export default function ScheduledReportsTab() {
@@ -90,7 +91,17 @@ export default function ScheduledReportsTab() {
         // only when it is present, and the hook's invalidate refreshes the row.
         body: { name: draft.name, format: draft.format, scheduleConfig: draft.schedule },
       },
-      { onSuccess: () => setDraft(null), onError: onActionError },
+      {
+        onSuccess: () => setDraft(null),
+        // A 400 here names the problem (e.g. a day of month past 28 on a
+        // quarterly schedule), so show the server's words.
+        onError: (error) =>
+          showAlert({
+            variant: "error",
+            body: reportRequestErrorMessage(error, "Action failed"),
+            isToast: true,
+          }),
+      },
     );
   };
 
@@ -203,11 +214,26 @@ export default function ScheduledReportsTab() {
               onChange={(e) =>
                 setDraft({
                   ...draft,
-                  schedule: { ...draft.schedule, frequency: String(e.target.value) },
+                  schedule: withFrequency(draft.schedule, String(e.target.value)),
                 })
               }
               getOptionValue={(item) => item._id}
             />
+            {draft.schedule.frequency === "quarterly" && (
+              <Select
+                id="scheduled-report-anchor-month"
+                label="Run in month"
+                value={String(draft.schedule.anchorMonth)}
+                items={MONTH_ITEMS}
+                onChange={(e) =>
+                  setDraft({
+                    ...draft,
+                    schedule: { ...draft.schedule, anchorMonth: Number(e.target.value) },
+                  })
+                }
+                getOptionValue={(item) => item._id}
+              />
+            )}
             <Stack direction="row" spacing={6}>
               <Field
                 id="scheduled-report-hour"

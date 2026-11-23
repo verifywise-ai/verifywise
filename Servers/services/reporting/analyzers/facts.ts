@@ -9,6 +9,8 @@
  */
 import type { ReportData } from "../../../domain.layer/interfaces/i.reportGeneration";
 import { isoDate } from "../dataCollector";
+import { utcDay } from "../dateUtils";
+import { E23_KIND } from "../e23/e23Parameters";
 import {
   flattenFrameworkRequirements,
   isTerminalStatus,
@@ -35,7 +37,7 @@ import {
  * run carries no change block at all — which is exactly what a first run
  * renders. One comparison is the honest price of a rename.
  */
-export const FACTS_SCHEMA_VERSION = 2;
+export const FACTS_SCHEMA_VERSION = 3;
 
 /** Structured, storable snapshot. Persisted to report_run_analyses.audit_metadata
  *  so a later run can diff against it without a second LLM call. */
@@ -168,7 +170,25 @@ const deadline = (row: any): number => {
  */
 export const referenceDay = (value: unknown): string => isoDate(value) ?? isoDate(new Date())!;
 
+/**
+ * The reference day of a report run. An OSFI E-23 run takes the UTC day of
+ * its timestamp, the day its cover prints (formatReportDate formats in UTC),
+ * so the AI text and the cover never name different days on a host west of
+ * Greenwich. Every other report keeps referenceDay's local day, unchanged.
+ */
+export const reportReferenceDay = (reportData: ReportData): string => {
+  const value = reportData?.metadata?.generatedAt;
+  const utc = reportData?.metadata?.reportKind === E23_KIND ? utcDay(value) : undefined;
+  return utc ?? referenceDay(value);
+};
+
 interface SectionSpec {
+  /**
+   * True when the section's data was not measured this run, so it records no
+   * aggregate at all: a zero here would read as an improvement in the change
+   * lines (a contradiction check that did not run is not a clean one).
+   */
+  skip?: (section: any) => boolean;
   /** The rows to aggregate, flattened here for the nested sections. */
   rows: (section: any) => any[];
   /** Numeric fields already sitting on the section object — copied, never recomputed. */
@@ -222,6 +242,9 @@ const sumRollups = (section: any) => {
   });
   return { totals, buckets: { status } };
 };
+
+/** E-23 fix-it severity, HIGHER IS MORE MATERIAL. */
+const FIX_IT_RANK: Record<string, number> = { high: 3, medium: 2, low: 1 };
 
 const SPECS: Record<string, SectionSpec> = {
   projectRisks: {
@@ -374,6 +397,86 @@ const SPECS: Record<string, SectionSpec> = {
     label: (r) =>
       `${oneLine(r._framework)}${r._useCase ? ` (${r._useCase})` : ""}: ${text(oneLine(r.title))} (${text(oneLine(r.status))}, owner ${text(oneLine(r.owner))}, due ${text(r.dueDate)})`,
   },
+  // OSFI E-23 sections (spec 8.10). Every figure is copied from the section the
+  // collector built; nothing is recomputed. The ranked rows are the models with
+  // exceptions, the fired rules and the fix-it items.
+  mrmFleet: {
+    rows: (s) => s.exceptions ?? [],
+    aggregates: (s) => {
+      const totals: Record<string, number> = {
+        models: s.totals?.models,
+        untiered: s.totals?.untiered,
+        tier1: s.totals?.byTier?.["1"],
+        tier2: s.totals?.byTier?.["2"],
+        tier3: s.totals?.byTier?.["3"],
+        // Named for its meaning, renamed whenever that changes, so a stored
+        // previous run's value under the old meaning is never diffed against
+        // it (RETIRED_AGGREGATES). Only a passing latest outcome counts.
+        validatedPassed: s.validationCoverage?.validated,
+        lastValidationNotPassed: s.validationCoverage?.notPassed,
+        inReview: s.validationCoverage?.inReview,
+        notStarted: s.validationCoverage?.notStarted,
+        overdueValidations: s.validationCoverage?.overdue,
+        openCritical: s.openFindingsBySeverity?.critical,
+        openHigh: s.openFindingsBySeverity?.high,
+        openMedium: s.openFindingsBySeverity?.medium,
+        openLow: s.openFindingsBySeverity?.low,
+        withActiveThresholds: s.monitoring?.withActiveThresholds,
+        withRecentMetric: s.monitoring?.withRecentMetric,
+      };
+      // Activity is counted only within a period; without one the zeros
+      // would be figures nobody measured.
+      if (s.activity?.period) {
+        totals.validationsSignedOff = s.activity.validationsSignedOff;
+        totals.findingsOpened = s.activity.findingsOpened;
+        totals.findingsClosed = s.activity.findingsClosed;
+        totals.breaches = s.activity.breaches;
+        totals.revalidationEvents = s.activity.revalidationEvents;
+      }
+      Object.keys(totals).forEach((k) => (totals[k] = Number(totals[k]) || 0));
+      return { totals, buckets: {} };
+    },
+    rank: (r) => (r.issues ?? []).length,
+    label: (r) =>
+      `${text(oneLine(r.name))} (${r.tier ? `tier ${r.tier}` : "untiered"}: ${(r.issues ?? []).map(oneLine).join(", ")})`,
+  },
+  e23Contradictions: {
+    skip: (s) => !s.available,
+    rows: (s) => s.fired ?? [],
+    aggregates: (s) => {
+      const coverage = Object.values(s.coverage ?? {});
+      return {
+        totals: {
+          rulesFired: (s.fired ?? []).length,
+          rulesChecked: (s.checked ?? []).length,
+          rulesNotRun: (s.notRun ?? []).length,
+          groupsChecked: coverage.filter((c) => c === "checked").length,
+          groupsSelfAssessmentOnly: coverage.filter((c) => c === "selfAssessmentOnly").length,
+        },
+        buckets: {},
+      };
+    },
+    rank: (r) => Number(r.affectedCount) || 0,
+    label: (r) =>
+      `${text(r.ruleId)} ${text(oneLine(r.requirementTitle))}: ${text(oneLine(r.finding))} (claimed ${text(oneLine(r.claimedStatus))})`,
+  },
+  e23FixItList: {
+    rows: (s) => s.items ?? [],
+    // Every severity always present, so a severity that empties shows as a
+    // change rather than vanishing.
+    aggregates: (s) => ({
+      totals: {
+        high: Number(s.counts?.high) || 0,
+        medium: Number(s.counts?.medium) || 0,
+        low: Number(s.counts?.low) || 0,
+      },
+      buckets: {},
+    }),
+    owner: "owner",
+    rank: (r) => (FIX_IT_RANK[r.severity] ?? 0) * 2 + (r.overdue ? 1 : 0),
+    label: (r) =>
+      `${text(r.severity)}: ${text(oneLine(r.what))} (${text(oneLine(r.where))}, owner ${text(oneLine(r.owner))}, due ${text(r.dueDate)})`,
+  },
 };
 
 export function collectFacts(reportData: ReportData): FactsSnapshot {
@@ -398,6 +501,7 @@ export function collectFacts(reportData: ReportData): FactsSnapshot {
     const data: any = (reportData?.sections as any)?.[key];
     if (!data) continue;
     const spec = SPECS[key];
+    if (spec.skip?.(data)) continue;
     const rows: any[] = (spec.rows(data) ?? []).filter(Boolean);
 
     for (const field of spec.totals ?? []) {
@@ -486,7 +590,7 @@ export function collectFacts(reportData: ReportData): FactsSnapshot {
 
   return {
     schema: FACTS_SCHEMA_VERSION,
-    generatedAt: referenceDay(meta.generatedAt),
+    generatedAt: reportReferenceDay(reportData),
     framework: meta.frameworkName ?? "AI governance",
     subject: meta.projectTitle ?? "the organization",
     sections,
@@ -494,7 +598,108 @@ export function collectFacts(reportData: ReportData): FactsSnapshot {
 }
 
 /** Prompt-ready text. `prior` renders a delta line per changed aggregate. */
-export function renderFacts(facts: FactsSnapshot, prior?: FactsSnapshot | null): string {
+/** The fix-it aggregates the formal-report analyzers may see (spec 8.5 vs 8.6). */
+const FORMAL_FIX_IT_AGGREGATES = ["items", "high", "medium", "low"];
+
+/** Label for the fix-it counts in the formal-report analyzers' facts block. */
+export const FORMAL_FIX_IT_LABEL = "Remediation item counts";
+
+/** A ranked-row label ("top1", "top_showing"); the rest are counts. */
+const isTopLabel = (name: string): boolean => /^top(\d+|_showing)$/.test(name);
+
+/**
+ * The snapshot as the formal-report analyzers (executiveSummary, keyFindings,
+ * e23Gap) may see it: the fix-it list reduced to its total and per-severity
+ * counts. Item labels and per-owner counts belong to the internal fix-it
+ * document and never reach a prompt whose output prints in the formal report.
+ * For the board version (`board`), which names no model (spec 8.3), the MRM
+ * status keeps its counts and loses its named exceptions.
+ * Returns the same object when there is nothing to remove.
+ */
+export function formalFactsView(facts: FactsSnapshot, opts?: { board?: boolean }): FactsSnapshot;
+export function formalFactsView(
+  facts: FactsSnapshot | null | undefined,
+  opts?: { board?: boolean },
+): FactsSnapshot | null;
+export function formalFactsView(
+  facts: FactsSnapshot | null | undefined,
+  opts: { board?: boolean } = {},
+): FactsSnapshot | null {
+  if (!facts) return null;
+  const list = facts.sections?.e23FixItList;
+  const fleet = facts.sections?.mrmFleet;
+  if (!list && !(opts.board && fleet)) return facts;
+  const sections = { ...facts.sections };
+  if (list) {
+    sections.e23FixItList = Object.fromEntries(
+      FORMAL_FIX_IT_AGGREGATES.filter((k) => k in list).map((k) => [k, list[k]]),
+    );
+  }
+  if (opts.board && fleet) {
+    sections.mrmFleet = Object.fromEntries(
+      Object.entries(fleet).filter(([name]) => !isTopLabel(name)),
+    );
+  }
+  return { ...facts, sections };
+}
+
+/**
+ * Words for the aggregate names an E-23 run's facts carry. A live run copied
+ * the raw names ("validatedNothingOpen", "rulesFired") into the printed
+ * report, so an E-23 run's facts are rendered with these instead.
+ */
+const FACT_NAME_LABELS: Record<string, string> = {
+  // "none open" read to a live model as "no open findings"; the row counts
+  // models whose latest validation passed, with no validation open.
+  validatedPassed: "validated with no validation open",
+  lastValidationNotPassed: "last validation not passed",
+  inReview: "validation in progress",
+  notStarted: "validation not started",
+  overdueValidations: "validation overdue",
+  withActiveThresholds: "models with active thresholds",
+  withRecentMetric: "models with a recently received metric",
+  openCritical: "open critical findings",
+  openHigh: "open high findings",
+  openMedium: "open medium findings",
+  openLow: "open low findings",
+  validationsSignedOff: "validations signed off",
+  findingsOpened: "findings opened",
+  findingsClosed: "findings closed",
+  breaches: "threshold breaches",
+  revalidationEvents: "revalidation events",
+  rulesFired: "rules that fired",
+  rulesChecked: "rules checked",
+  rulesNotRun: "rules not run",
+  groupsChecked: "groups checked against the records",
+  groupsSelfAssessmentOnly: "groups self-assessment only",
+  noEvidence: "without evidence",
+  models: "models in scope",
+  tier1: "tier 1 models",
+  tier2: "tier 2 models",
+  tier3: "tier 3 models",
+  untiered: "untiered models",
+};
+
+/** An aggregate name as words: the label above, else split at case and digits. */
+export const factNameAsWords = (name: string): string =>
+  FACT_NAME_LABELS[name] ??
+  name
+    .replace(/_/g, " ")
+    .replace(/([a-z])([A-Z0-9])/g, "$1 $2")
+    .replace(/([0-9])([A-Za-z])/g, "$1 $2")
+    .toLowerCase();
+
+export function renderFacts(
+  facts: FactsSnapshot,
+  prior?: FactsSnapshot | null,
+  opts: { labels?: Record<string, string>; humanNames?: boolean } = {},
+): string {
+  const labelOf = (key: string) => opts.labels?.[key] || SECTION_LABELS[key] || key;
+  const nameOf = (name: string) => (opts.humanNames ? factNameAsWords(name) : name);
+  const pair = (name: string, value: number | string) => {
+    const shown = typeof value === "number" ? String(value) : `"${value}"`;
+    return opts.humanNames ? `${nameOf(name)}: ${shown}` : `${name}=${shown}`;
+  };
   const lines: string[] = [
     `Reference date: ${facts.generatedAt} — treat this as today when comparing any date below.`,
     `Framework: ${facts.framework}`,
@@ -505,14 +710,12 @@ export function renderFacts(facts: FactsSnapshot, prior?: FactsSnapshot | null):
 
   Object.keys(facts.sections).forEach((key) => {
     const body = Object.entries(facts.sections[key])
-      .map(([name, value]) =>
-        typeof value === "number" ? `${name}=${value}` : `${name}="${value}"`,
-      )
+      .map(([name, value]) => pair(name, value))
       .join("; ");
-    lines.push(`[${SECTION_LABELS[key] || key}] ${body}`);
+    lines.push(`[${labelOf(key)}] ${body}`);
   });
 
-  const deltas = changedAggregates(facts, prior);
+  const deltas = changedAggregates(facts, prior, labelOf, nameOf);
   // `prior &&` is narrowing only — changedAggregates already returns [] without it.
   if (prior && deltas.length > 0) {
     // slice(0, 10) is a no-op for a snapshot written by collectFacts and
@@ -526,6 +729,18 @@ export function renderFacts(facts: FactsSnapshot, prior?: FactsSnapshot | null):
 }
 
 /**
+ * Aggregate names a stored snapshot may hold that the current one no longer
+ * writes, per section. A name missing from the current snapshot otherwise
+ * reads as a figure that fell to 0. The MRM validated count has changed
+ * meaning twice: `validated` (any sign-off) became `validatedNothingOpen`
+ * when the rows became exclusive, then `validatedPassed` when a not_validated
+ * outcome stopped counting. None of the old values is compared with the new.
+ */
+const RETIRED_AGGREGATES: Record<string, ReadonlySet<string>> = {
+  mrmFleet: new Set(["validated", "validatedNothingOpen"]),
+};
+
+/**
  * One line per changed NUMERIC aggregate.
  *
  * ponytail: numbers only. The top-N labels churn between runs without the
@@ -533,7 +748,12 @@ export function renderFacts(facts: FactsSnapshot, prior?: FactsSnapshot | null):
  * aggregate the prior snapshot never recorded is not reported as a change —
  * the facts block above already shows it.
  */
-function changedAggregates(facts: FactsSnapshot, prior?: FactsSnapshot | null): string[] {
+function changedAggregates(
+  facts: FactsSnapshot,
+  prior: FactsSnapshot | null | undefined,
+  labelOf: (key: string) => string,
+  nameOf: (name: string) => string = (name) => name,
+): string[] {
   if (!prior?.sections) return [];
   const out: string[] = [];
   Object.keys(facts.sections).forEach((key) => {
@@ -549,6 +769,9 @@ function changedAggregates(facts: FactsSnapshot, prior?: FactsSnapshot | null): 
     // collected for this report — a configuration change — and zeroing its
     // aggregates would assert an estate change nothing here has data for.
     new Set([...Object.keys(now), ...Object.keys(before)]).forEach((name) => {
+      // Skipped only when the current run no longer writes it: a name that is
+      // still written reports its change like any other.
+      if (RETIRED_AGGREGATES[key]?.has(name) && !(name in now)) return;
       const was = before[name];
       // Absent on the current side means the bucket emptied. Guarded by the
       // `was` check below, so a string aggregate is still never diffed.
@@ -556,7 +779,7 @@ function changedAggregates(facts: FactsSnapshot, prior?: FactsSnapshot | null): 
       if (typeof value !== "number" || typeof was !== "number" || was === value) return;
       const delta = value - was;
       out.push(
-        `${SECTION_LABELS[key] || key} ${name}: ${value} (was ${was}, ${delta > 0 ? "+" : ""}${delta})`,
+        `${labelOf(key)} ${nameOf(name)}: ${value} (was ${was}, ${delta > 0 ? "+" : ""}${delta})`,
       );
     });
   });

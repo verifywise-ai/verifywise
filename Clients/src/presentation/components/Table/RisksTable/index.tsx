@@ -38,13 +38,13 @@ import { compareVendorRisks } from "../../../../application/utils/vendorSort";
 import { buildUserSortNames } from "../../../../application/utils/userSort";
 
 const titleOfTableColumns: StandardColumn[] = [
-  { id: "risk_description", label: "risk description", sortable: true },
-  { id: "vendor_name", label: "vendor", sortable: true },
-  { id: "project_titles", label: "use case", sortable: true },
-  { id: "action_owner", label: "action owner", sortable: true },
-  { id: "risk_severity", label: "risk severity", sortable: true },
-  { id: "risk_level", label: "risk level", sortable: true },
-  { id: "inherited_by", label: "inherited by", sortable: true },
+  { id: "risk_description", label: "Risk description", sortable: true },
+  { id: "vendor_name", label: "Vendor", sortable: true },
+  { id: "project_titles", label: "Use case", sortable: true },
+  { id: "action_owner", label: "Action owner", sortable: true },
+  { id: "risk_severity", label: "Risk severity", sortable: true },
+  { id: "risk_level", label: "Risk level", sortable: true },
+  { id: "inherited_by", label: "Inherited by", sortable: true },
   { id: "actions", label: " ", sortable: false },
 ];
 
@@ -418,7 +418,7 @@ const RiskTable: React.FC<IRiskTableProps> = ({
                   }}
                   onClick={(e) => e.stopPropagation()}
                 >
-                  <Stack direction="row" alignItems="center" gap={0.5}>
+                  <Stack direction="row" alignItems="center" gap="1px">
                     <ViewRelationshipsButton
                       entityId={(row.risk_id || 0) + 200000}
                       entityType="risk"

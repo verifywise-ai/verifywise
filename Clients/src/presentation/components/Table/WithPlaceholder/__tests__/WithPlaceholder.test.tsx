@@ -156,8 +156,8 @@ describe("the research action of a vendor row", () => {
     expect(researchButtonOf("Beta Labs")).toBeEnabled();
 
     // Sorting by name, ascending and then descending, puts Beta Labs in the first row.
-    await userEvent.click(screen.getByText("name"));
-    await userEvent.click(screen.getByText("name"));
+    await userEvent.click(screen.getByText("Name"));
+    await userEvent.click(screen.getByText("Name"));
     const rows = screen.getAllByRole("row").slice(1);
     expect(within(rows[0]).getByText("Beta Labs")).toBeInTheDocument();
 

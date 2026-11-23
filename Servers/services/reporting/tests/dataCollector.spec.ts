@@ -142,6 +142,17 @@ describe("dataCollector", () => {
       expect(result.branding.organizationName).toBe("Acme Corp");
     });
 
+    it("puts the report kind and parameters on the metadata", async () => {
+      const collector = createDataCollector(10, 1, 1, 100, 5);
+      const result = await collector.collectAllData([], {
+        reportKind: "osfi_e23",
+        reportParameters: { institutionName: "Northern Bank" },
+      });
+
+      expect(result.metadata.reportKind).toBe("osfi_e23");
+      expect(result.metadata.reportParameters).toEqual({ institutionName: "Northern Bank" });
+    });
+
     it("should collect project risks when section included", async () => {
       mockGetProjectRisks.mockResolvedValue([
         {

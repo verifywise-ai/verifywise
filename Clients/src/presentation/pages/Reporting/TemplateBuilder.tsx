@@ -12,32 +12,14 @@ import type {
   ReportScope,
   ReportSectionCatalogEntry,
 } from "../../../domain/interfaces/i.reporting";
+import { aiBlocksForKind, DEFAULT_AI_BLOCKS } from "./aiBlocks";
 
 const STEPS = ["Details", "Sections", "AI insights"];
 
-// All seven Phase 2 blocks, listed explicitly. The defaults mirror the
-// behaviour-preserving manual-run set: the two project-scoped analyzers
-// (complianceGap, vendorRisk) stay off because they add LLM spend to every
-// run of the template.
-const AI_BLOCKS: Array<{ key: keyof AiBlocksConfig; label: string }> = [
-  { key: "sectionSummaries", label: "Per-section summaries" },
-  { key: "executiveSummary", label: "Executive summary" },
-  { key: "keyFindings", label: "Key findings" },
-  { key: "recommendedActions", label: "Recommended actions" },
-  { key: "riskAnalysis", label: "Risk analysis" },
-  { key: "complianceGap", label: "Compliance gap analysis" },
-  { key: "vendorRisk", label: "Third-party risk analysis" },
-];
-
-const DEFAULT_AI_BLOCKS: AiBlocksConfig = {
-  sectionSummaries: true,
-  executiveSummary: true,
-  keyFindings: true,
-  recommendedActions: true,
-  riskAnalysis: true,
-  complianceGap: false,
-  vendorRisk: false,
-};
+// Templates built here are general reports (no report kind), so a block
+// limited to a kind, such as the E-23 gap analysis, is never offered; its key
+// is still sent as an explicit false (DEFAULT_AI_BLOCKS).
+const AI_BLOCKS = aiBlocksForKind(undefined);
 
 const CATEGORY_ITEMS = [
   { _id: "governance", name: "Governance" },
@@ -70,10 +52,14 @@ export default function TemplateBuilder({ onClose }: { onClose: () => void }) {
   const { data: catalog = [], isLoading } = useSectionCatalog();
   const create = useCreateTemplate();
 
-  const groups = catalog.reduce<Record<string, ReportSectionCatalogEntry[]>>((acc, entry) => {
-    (acc[entry.group] ??= []).push(entry);
-    return acc;
-  }, {});
+  // Templates built here have no report kind, so a section limited to one
+  // (the E-23 sections) would only be refused by the server on every run.
+  const groups = catalog
+    .filter((entry) => !entry.kinds?.length)
+    .reduce<Record<string, ReportSectionCatalogEntry[]>>((acc, entry) => {
+      (acc[entry.group] ??= []).push(entry);
+      return acc;
+    }, {});
 
   const canNext = () => {
     if (active === 0) return name.trim().length > 0;

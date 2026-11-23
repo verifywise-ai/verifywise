@@ -58,6 +58,8 @@ import {
 } from "../../../../domain/interfaces/i.vendor";
 import { Framework } from "../../../../domain/types/Framework";
 import RiskLevel from "../../RiskLevel";
+import { useTranslation } from "../../../../application/hooks/useTranslation";
+import { fill } from "../../../../i18n/fill";
 
 interface AddNewRiskProps {
   isOpen: boolean;
@@ -150,6 +152,7 @@ const AddNewRisk: React.FC<AddNewRiskProps> = ({
   onRestore,
 }) => {
   const can = useCanCheck();
+  const { t } = useTranslation();
   const canEdit = can("vendor.edit");
   // A preview is for a new risk: with an existing one the form edits that.
   const draft = existingRisk ? null : (preview ?? null);
@@ -463,7 +466,7 @@ const AddNewRisk: React.FC<AddNewRiskProps> = ({
         }
         setAlert({
           variant: "success",
-          body: "Vendor-Risk created successfully",
+          body: "Vendor risk created successfully",
         });
         setTimeout(() => setAlert(null), 3000);
         setIsOpen();
@@ -484,7 +487,9 @@ const AddNewRisk: React.FC<AddNewRiskProps> = ({
 
       setAlert({
         variant: "error",
-        body: `An error occurred: ${(error as Error).message || "Please try again."}`,
+        body: fill(t("An error occurred: {message}"), {
+          message: (error as Error).message || t("Please try again."),
+        }),
       });
 
       setTimeout(() => setAlert(null), 3000);
@@ -527,7 +532,7 @@ const AddNewRisk: React.FC<AddNewRiskProps> = ({
         }
         setAlert({
           variant: "success",
-          body: "Vendor-Risk updated successfully",
+          body: "Vendor risk updated successfully",
         });
         setTimeout(() => setAlert(null), 3000);
         setIsOpen();
@@ -548,7 +553,9 @@ const AddNewRisk: React.FC<AddNewRiskProps> = ({
 
       setAlert({
         variant: "error",
-        body: `An error occurred: ${(error as Error).message || "Please try again."}`,
+        body: fill(t("An error occurred: {message}"), {
+          message: (error as Error).message || t("Please try again."),
+        }),
       });
 
       setTimeout(() => setAlert(null), 3000);
@@ -575,8 +582,8 @@ const AddNewRisk: React.FC<AddNewRiskProps> = ({
   // being done about it, then where it applies and how severe it is. The
   // validation focus order (VENDOR_RISK_MODAL_FIELD_ORDER) follows the same path.
   const risksPanel = (
-    <Stack spacing={8}>
-      <Stack direction="row" spacing={6}>
+    <Stack spacing="16px">
+      <Stack direction="row" spacing="12px">
         <Box flex={1}>
           <Select
             items={VENDOR_OPTIONS}
@@ -627,7 +634,7 @@ const AddNewRisk: React.FC<AddNewRiskProps> = ({
         placeholder="Describe the specific risk related to this vendor (e.g., data breach, service outage, compliance gap)."
       />
 
-      <Stack direction="row" spacing={6}>
+      <Stack direction="row" spacing="12px">
         <Box flex={1}>
           <Field
             id="vendor-risk-impact-description-input"
@@ -692,7 +699,7 @@ const AddNewRisk: React.FC<AddNewRiskProps> = ({
 
       <Divider />
 
-      <Stack spacing={2}>
+      <Stack spacing="4px">
         <Typography sx={{ ...textStyles.subsectionTitle, color: "text.primary" }}>
           Calculate risk level
         </Typography>
@@ -767,7 +774,7 @@ const AddNewRisk: React.FC<AddNewRiskProps> = ({
         maxWidth="1000px"
       >
         <TabContext value={activeTab}>
-          <Box sx={{ marginBottom: 3 }}>
+          <Box sx={{ marginBottom: "6px" }}>
             <TabBar
               tabs={
                 existingRisk?.id

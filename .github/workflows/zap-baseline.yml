@@ -154,3 +154,25 @@ jobs:
           name: zap-baseline-reports
           path: zap-reports/
           retention-days: 30
+
+      # Alert tables in the Actions UI so weekly triage (see
+      # docs/security/zap-triage-runbook.md) needs no artifact download.
+      - name: Summarize alerts in job summary
+        if: always()
+        run: |
+          echo "## ZAP baseline (passive) scan" >> "$GITHUB_STEP_SUMMARY"
+          for REPORT in baseline-frontend baseline-backend; do
+            FILE="zap-reports/${REPORT}.json"
+            echo "### ${REPORT}" >> "$GITHUB_STEP_SUMMARY"
+            if [ ! -f "$FILE" ]; then
+              echo ":warning: No report produced — the scan did not complete." >> "$GITHUB_STEP_SUMMARY"
+              continue
+            fi
+            if ! jq -e '[.site[].alerts[]] | length > 0' "$FILE" > /dev/null; then
+              echo ":white_check_mark: No alerts." >> "$GITHUB_STEP_SUMMARY"
+              continue
+            fi
+            echo "| Risk | Alert | Instances |" >> "$GITHUB_STEP_SUMMARY"
+            echo "|---|---|---|" >> "$GITHUB_STEP_SUMMARY"
+            jq -r '[.site[].alerts[]] | sort_by(-(.riskcode | tonumber)) | .[] | "| \(.risk) | \(.name) | \(.instances | length) |"' "$FILE" >> "$GITHUB_STEP_SUMMARY"
+          done

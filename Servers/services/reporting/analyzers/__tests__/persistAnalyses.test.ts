@@ -88,4 +88,72 @@ describe("persistAnalyses audit_metadata", () => {
     const status = await persistAnalyses(77, 5, 3, analyses, snapshot);
     expect(status).toEqual({ executiveSummary: "ok", keyFindings: "abstained" });
   });
+
+  it("records what the E-23 prose guard rejected, and only when it acted", async () => {
+    const rejections = [
+      {
+        stage: "removed",
+        field: "summary",
+        reason: "compliance",
+        sentence: "The institution is compliant.",
+        detail: 'states or implies compliance ("compliant")',
+      },
+    ];
+    await persistAnalyses(77, 5, 3, {
+      ...analyses,
+      executiveSummary: {
+        payload: null,
+        abstained: true,
+        abstain_reason: "the AI text made claims the report data does not support",
+        model: "m",
+        attempts: 2,
+        guardRetried: true,
+        guardRejections: rejections,
+      },
+    });
+    const rows = mockUpsert.mock.calls.map(([i]: any[]) => i);
+    const exec = rows.find((i: any) => i.section_key === "executiveSummary");
+    expect(exec.audit_metadata).toMatchObject({
+      guard_retried: true,
+      guard_rejections: rejections,
+    });
+    rows
+      .filter((i: any) => i.section_key !== "executiveSummary")
+      .forEach((i: any) => {
+        expect(Object.keys(i.audit_metadata)).not.toContain("guard_retried");
+        expect(Object.keys(i.audit_metadata)).not.toContain("guard_rejections");
+      });
+    mockUpsert.mockClear();
+  });
+
+  it("records the e23Gap position corrections, and only when there are some", async () => {
+    const corrections = [{ group: "Principle 1.1", from: "consistent", to: "not assessable" }];
+    await persistAnalyses(77, 5, 3, {
+      ...analyses,
+      e23Gap: {
+        payload: { narrative: "n", principles: [], abstain_reason: null },
+        abstained: false,
+        abstain_reason: null,
+        model: "m",
+        attempts: 1,
+        positionCorrections: corrections,
+      },
+    });
+    const rows = mockUpsert.mock.calls.map(([i]: any[]) => i);
+    const gap = rows.find((i: any) => i.section_key === "e23Gap");
+    expect(gap.audit_metadata.position_corrections).toEqual(corrections);
+    rows
+      .filter((i: any) => i.section_key !== "e23Gap")
+      .forEach((i: any) =>
+        expect(Object.keys(i.audit_metadata)).not.toContain("position_corrections"),
+      );
+
+    mockUpsert.mockClear();
+    await persistAnalyses(77, 5, 3, {
+      e23Gap: { ...analyses.executiveSummary, positionCorrections: [] },
+    });
+    expect(Object.keys(mockUpsert.mock.calls[0][0].audit_metadata)).not.toContain(
+      "position_corrections",
+    );
+  });
 });

@@ -16,7 +16,9 @@ import { logProcessing, logFailure } from "../utils/logger/logHelper";
 import {
   validateScheduledReportInput,
   validateTemplateVersionOwnership,
+  validateScheduledReportParameters,
 } from "../services/reporting/scheduledReportService";
+import { parameterErrorMessages } from "../services/reporting/reportParameters";
 import {
   createScheduledReportQuery,
   listScheduledReportsQuery,
@@ -52,8 +54,20 @@ export async function createScheduledReport(req: Request, res: Response): Promis
     organizationId: req.organizationId!,
   });
   try {
+    // Sections and parameter answers are checked against the template
+    // version: a kind's sections are refused outside it, and a schedule of a
+    // kind template must carry every required answer except the period,
+    // which each run derives.
+    const parameters = await validateScheduledReportParameters({
+      templateVersionId: req.body?.templateVersionId,
+      organizationId: req.organizationId!,
+      sectionsConfig: req.body?.sectionsConfig,
+      reportParameters: req.body?.reportParameters,
+      // The resolver derives a missing scope the same way.
+      scope: req.body?.scope ?? (req.body?.projectId ? "project" : "organization"),
+    });
     const errors = [
-      ...validateScheduledReportInput(req.body),
+      ...validateScheduledReportInput(req.body, req.t),
       ...frameworkSelectionErrors(req.body?.frameworkIds),
       // await is load-bearing: see validateTemplateVersionOwnership's note.
       ...(await validateTemplateVersionOwnership(
@@ -61,6 +75,7 @@ export async function createScheduledReport(req: Request, res: Response): Promis
         req.body?.templateVersionId,
         req.organizationId!,
       )),
+      ...parameterErrorMessages(parameters.errors, req.t),
     ];
     if (errors.length) return res.status(400).json(STATUS_CODE[400]({ errors }));
 
@@ -79,7 +94,11 @@ export async function createScheduledReport(req: Request, res: Response): Promis
       return res.status(403).json(STATUS_CODE[403]({ errors: scopeErrors }));
     }
 
-    const row = await createScheduledReportQuery(req.body, req.organizationId!, req.userId!);
+    const row = await createScheduledReportQuery(
+      { ...req.body, reportParameters: parameters.value },
+      req.organizationId!,
+      req.userId!,
+    );
     return res.status(201).json(STATUS_CODE[201](row));
   } catch (error) {
     await logFailure({
@@ -240,17 +259,51 @@ export async function updateScheduledReport(req: Request, res: Response): Promis
       if (authzErrors.length) {
         return res.status(403).json(STATUS_CODE[403]({ errors: authzErrors }));
       }
+
+      // New sections, answers or scope are checked against the schedule's
+      // own template version, each against the stored value of the others
+      // when only one is patched. The validated answers replace the raw ones.
+      if (
+        input.reportParameters !== undefined ||
+        input.sectionsConfig !== undefined ||
+        input.scope !== undefined
+      ) {
+        const parameters = await validateScheduledReportParameters({
+          templateVersionId: existing.template_version_id,
+          organizationId: req.organizationId!,
+          sectionsConfig: input.sectionsConfig ?? existing.sections_config,
+          reportParameters: input.reportParameters ?? existing.report_parameters,
+          scope: effectiveScope,
+        });
+        if (parameters.errors.length) {
+          return res
+            .status(400)
+            .json(STATUS_CODE[400]({ errors: parameterErrorMessages(parameters.errors, req.t) }));
+        }
+        if (input.reportParameters !== undefined) input.reportParameters = parameters.value;
+      }
     }
 
-    // Re-validate the delivery block if it is being replaced, so a PATCH
-    // cannot smuggle in the malformed recipients that create rejects.
-    if (input.deliveryConfig !== undefined || input.sectionsConfig !== undefined) {
-      const errors = validateScheduledReportInput({
-        scope: input.scope ?? "organization",
-        projectId: input.projectId,
-        sectionsConfig: input.sectionsConfig ?? { sections: [{ reportSectionKey: "placeholder" }] },
-        deliveryConfig: input.deliveryConfig ?? { saveToStorage: true },
-      } as any);
+    // Re-validate the delivery and schedule blocks if they are being replaced,
+    // so a PATCH cannot smuggle in what create rejects (malformed recipients,
+    // a quarterly schedule with no anchor month).
+    if (
+      input.deliveryConfig !== undefined ||
+      input.sectionsConfig !== undefined ||
+      input.scheduleConfig !== undefined
+    ) {
+      const errors = validateScheduledReportInput(
+        {
+          scope: input.scope ?? "organization",
+          projectId: input.projectId,
+          sectionsConfig: input.sectionsConfig ?? {
+            sections: [{ reportSectionKey: "placeholder" }],
+          },
+          deliveryConfig: input.deliveryConfig ?? { saveToStorage: true },
+          scheduleConfig: input.scheduleConfig ?? { frequency: "daily" },
+        } as any,
+        req.t,
+      );
       if (errors.length) return res.status(400).json(STATUS_CODE[400]({ errors }));
     }
 

@@ -30,6 +30,7 @@ import {
   listRuns,
   getRun,
   downloadRun,
+  downloadRunCompanion,
   getRunAnalyses,
 } from "../reportRun.ctrl";
 import {
@@ -546,5 +547,86 @@ describe("archiveRun / restoreRun / deleteRun", () => {
       expect(mockSetArchived).toHaveBeenCalledWith(1, 5, true, 3);
       expect(res.status).toHaveBeenCalledWith(200);
     });
+  });
+});
+
+// GET /api/v1/report-runs/:id/download/fix-it-list: the internal fix-it list
+// stored beside an E-23 report. The same three guards as downloadRun.
+describe("downloadRunCompanion", () => {
+  const RUN = {
+    id: 77,
+    organization_id: 5,
+    file_id: 9,
+    output_filename: "E23.pdf",
+    output_mime_type: "application/pdf",
+    companion_file_id: 12,
+    companion_filename: 'E23_fix-it-list".pdf',
+    companion_mime_type: "application/pdf",
+  };
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockCanView.mockResolvedValue(true);
+  });
+
+  it("404s for a run the caller cannot see, without reading the run or a file", async () => {
+    mockCanView.mockResolvedValue(false);
+    const res = createMockRes();
+
+    await downloadRunCompanion(createMockReq({ id: "77" }, "Auditor") as Request, res as Response);
+
+    expect(res.status).toHaveBeenCalledWith(404);
+    expect(mockGetRun).not.toHaveBeenCalled();
+    expect(mockGetFile).not.toHaveBeenCalled();
+    expect(res.end).not.toHaveBeenCalled();
+  });
+
+  it("404s for another organization's run, scoping the lookup by the authed org", async () => {
+    mockGetRun.mockResolvedValue(null as any);
+    const res = createMockRes();
+
+    await downloadRunCompanion(createMockReq({ id: "77" }) as Request, res as Response);
+
+    expect(mockGetRun).toHaveBeenCalledWith(77, 5);
+    expect(res.status).toHaveBeenCalledWith(404);
+    expect(mockGetFile).not.toHaveBeenCalled();
+  });
+
+  it("404s for a run without a fix-it list, never falling back to the formal report", async () => {
+    mockGetRun.mockResolvedValue({ ...RUN, companion_file_id: null } as any);
+    const res = createMockRes();
+
+    await downloadRunCompanion(createMockReq({ id: "77" }) as Request, res as Response);
+
+    expect(res.status).toHaveBeenCalledWith(404);
+    expect(mockGetFile).not.toHaveBeenCalled();
+  });
+
+  it("serves the companion file, org-scoped, under its own sanitised name", async () => {
+    mockGetRun.mockResolvedValue(RUN as any);
+    mockGetFile.mockResolvedValue({ content: Buffer.from("fix") } as any);
+    const res = createMockRes();
+
+    await downloadRunCompanion(createMockReq({ id: "77" }) as Request, res as Response);
+
+    expect(mockGetFile).toHaveBeenCalledWith(12, 5);
+    expect(res.setHeader).toHaveBeenCalledWith(
+      "Content-Disposition",
+      'attachment; filename="E23_fix-it-list.pdf"',
+    );
+    expect(res.setHeader).toHaveBeenCalledWith("Content-Type", "application/pdf");
+    expect(res.setHeader).toHaveBeenCalledWith("X-Content-Type-Options", "nosniff");
+    expect(res.end).toHaveBeenCalledWith(Buffer.from("fix"));
+  });
+
+  it("404s when the companion file row is gone", async () => {
+    mockGetRun.mockResolvedValue(RUN as any);
+    mockGetFile.mockResolvedValue(null as any);
+    const res = createMockRes();
+
+    await downloadRunCompanion(createMockReq({ id: "77" }) as Request, res as Response);
+
+    expect(res.status).toHaveBeenCalledWith(404);
+    expect(res.end).not.toHaveBeenCalled();
   });
 });
