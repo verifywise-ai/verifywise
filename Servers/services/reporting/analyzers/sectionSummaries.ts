@@ -2,7 +2,7 @@ import { generateText } from "ai";
 import type { ReportData } from "../../../domain.layer/interfaces/i.reportGeneration";
 import logger from "../../../utils/logger/fileLogger";
 import { isBoardRun } from "./e23Gap";
-import { referenceDay } from "./facts";
+import { reportReferenceDay } from "./facts";
 import {
   type E23PromptOptions,
   hasContent,
@@ -189,7 +189,7 @@ export async function runSectionSummaries(
 
   const frameworkName = reportData.metadata?.frameworkName ?? "AI governance";
   const projectTitle = reportData.metadata?.projectTitle ?? "the organization";
-  const referenceDate = referenceDay(reportData.metadata?.generatedAt);
+  const referenceDate = reportReferenceDay(reportData);
   const opts: E23PromptOptions = { board: isBoardRun(reportData) };
 
   // One deadline for the whole stage, fixed before the first call so a late

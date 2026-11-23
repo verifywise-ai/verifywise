@@ -9,6 +9,7 @@
  */
 import type { ReportData } from "../../../domain.layer/interfaces/i.reportGeneration";
 import { isoDate } from "../dataCollector";
+import { E23_KIND } from "../e23/e23Parameters";
 import {
   flattenFrameworkRequirements,
   isTerminalStatus,
@@ -167,6 +168,21 @@ const deadline = (row: any): number => {
  * it is deliberate — the alternative is two date helpers.
  */
 export const referenceDay = (value: unknown): string => isoDate(value) ?? isoDate(new Date())!;
+
+/**
+ * The reference day of a report run. An OSFI E-23 run takes the UTC day of
+ * its timestamp, the day its cover prints (formatReportDate formats in UTC),
+ * so the AI text and the cover never name different days on a host west of
+ * Greenwich. Every other report keeps referenceDay's local day, unchanged.
+ */
+export const reportReferenceDay = (reportData: ReportData): string => {
+  const value = reportData?.metadata?.generatedAt;
+  if (reportData?.metadata?.reportKind === E23_KIND && value) {
+    const d = value instanceof Date ? value : new Date(value as string);
+    if (!Number.isNaN(d.getTime())) return d.toISOString().slice(0, 10);
+  }
+  return referenceDay(value);
+};
 
 interface SectionSpec {
   /**
@@ -572,7 +588,7 @@ export function collectFacts(reportData: ReportData): FactsSnapshot {
 
   return {
     schema: FACTS_SCHEMA_VERSION,
-    generatedAt: referenceDay(meta.generatedAt),
+    generatedAt: reportReferenceDay(reportData),
     framework: meta.frameworkName ?? "AI governance",
     subject: meta.projectTitle ?? "the organization",
     sections,

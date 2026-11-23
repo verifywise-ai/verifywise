@@ -11,12 +11,16 @@ import {
 } from "./schemas";
 import { GROUNDING_RULES, renderSections, SECTION_LABELS } from "./prompts";
 import {
-  audienceLine,
   e23GapData,
+  e23HeaderLines,
   enforceE23GapPositions,
+  enforceE23SectionKeys,
+  fixItListEmptyAndComplete,
   fixItPromptBlock,
+  isE23Run,
   type PositionCorrection,
 } from "./e23Gap";
+import { NO_FIX_IT_ITEMS } from "./abstainReasons";
 
 export { ANALYZER_VERSION } from "./prompts";
 
@@ -73,6 +77,12 @@ export interface AnalyzerDefinition {
   key: AnalysisSectionKey;
   schema: z.ZodTypeAny;
   buildSystemPrompt: () => string;
+  /**
+   * A stated reason to abstain without an LLM call, decided from the data
+   * alone; null to go on. Checked before buildUserPrompt, whose "" carries no
+   * reason of its own.
+   */
+  abstainWithoutCall?: (reportData: ReportData) => string | null;
   /** Returns "" when there is nothing worth spending an LLM call on. */
   buildUserPrompt: (reportData: ReportData, extras: AnalyzerExtras) => string;
   /**
@@ -99,14 +109,15 @@ function subjectOf(reportData: ReportData): { fw: string; subject: string } {
 }
 
 /**
- * The shared prompt header. An E-23 run adds its audience line, so every
- * analyzer writes for the board or the examiner; any other report's header is
- * exactly what it was.
+ * The shared prompt header. An E-23 run adds its audience line, the
+ * no-compliance rule and the group count, so every analyzer writes for the
+ * board or the examiner within spec §3; any other report's header is exactly
+ * what it was.
  */
 function header(reportData: ReportData): string {
   const { fw, subject } = subjectOf(reportData);
-  const audience = audienceLine(reportData);
-  return `Framework: ${fw}\nSubject: ${subject}${audience ? `\n${audience}` : ""}`;
+  const e23 = e23HeaderLines(reportData);
+  return `Framework: ${fw}\nSubject: ${subject}${e23 ? `\n${e23}` : ""}`;
 }
 
 /**
@@ -119,12 +130,20 @@ function header(reportData: ReportData): string {
  */
 function renderSummaries(
   summaries: Record<string, string> | undefined,
-  opts: { formal?: boolean } = {},
+  opts: { formal?: boolean; withKeys?: boolean } = {},
 ): string {
-  return Object.entries(summaries ?? {})
-    .filter(([key, v]) => v && v.length > 0 && !(opts.formal && INTERNAL_ONLY_SUMMARIES.has(key)))
-    .map(([key, summary]) => `[${SECTION_LABELS[key] || key}]\n${summary}`)
+  const entries = Object.entries(summaries ?? {}).filter(
+    ([key, v]) => v && v.length > 0 && !(opts.formal && INTERNAL_ONLY_SUMMARIES.has(key)),
+  );
+  const body = entries
+    .map(
+      ([key, summary]) =>
+        `[${SECTION_LABELS[key] || key}]${opts.withKeys ? ` (section key: ${key})` : ""}\n${summary}`,
+    )
     .join("\n\n");
+  return body && opts.withKeys
+    ? `${body}\n\nSection keys in this input (section and related_sections must use these exactly): ${entries.map(([key]) => key).join(", ")}`
+    : body;
 }
 
 /**
@@ -169,10 +188,15 @@ export const ANALYZERS: Record<AnalysisSectionKey, AnalyzerDefinition> = {
     schema: keyFindingsSchema,
     buildSystemPrompt: () =>
       `${GROUNDING_RULES}\n\nYou are extracting Key Findings: five to eight of the most important observations across the supplied sections. Attribute each finding to the section key it came from.\n\nA finding must carry the evidence that makes it a finding — a count, a share, a status, a date or a named item — and must not simply restate a sentence from the section analyses. Where the estate facts show the same weakness in more than one section, say so in the finding text and name the sections it spans; one finding that connects two sections is worth more than two findings that repeat each other.\n\nEvery finding also carries three further fields, and each key must be present:\n- basis: "observed" when the supplied data states the claim directly, "inferred" when it follows from the supplied data by reasoning the data does not itself state, "absent" when the claim is that something required is missing. The label describes the CLAIM. It never licenses naming a control, vendor, risk or person that does not appear verbatim in the supplied data. Use null only when none of the three fits.\n- what_would_close_this: the specific condition under which this stops being a finding, written so the next report could check it against the same fields. Use null only when the data gives you no concrete condition to name.\n- related_sections: the other section keys this finding draws on, spelled exactly as they appear in the input. Use an empty array when the finding sits inside a single section.`,
+    // An E-23 run shows each summary's section key: the field takes a key,
+    // and a model shown only labels copies one (up to 41 characters, past the
+    // 40 the schema allows) and loses the whole analysis. A general report
+    // keeps today's prompt; its labels all fit the field.
     buildUserPrompt: (rd, extras) => {
-      const body = renderSummaries(extras.sectionSummaries, FORMAL);
+      const body = renderSummaries(extras.sectionSummaries, { ...FORMAL, withKeys: isE23Run(rd) });
       return body ? `${header(rd)}\n\n${factsBlock(extras, FORMAL)}Section analyses:\n${body}` : "";
     },
+    enforce: enforceE23SectionKeys,
   },
 
   recommendedActions: {
@@ -180,6 +204,9 @@ export const ANALYZERS: Record<AnalysisSectionKey, AnalyzerDefinition> = {
     schema: recommendedActionsSchema,
     buildSystemPrompt: () =>
       `${GROUNDING_RULES}\n\nYou are producing three to five prioritised, actionable recommendations.\n\nOwner rule: set suggestedOwner ONLY when that exact person or role name appears verbatim in the supplied data. Otherwise it MUST be null. Never infer an owner from context and never invent one.\n\nEvery action also carries basis, and the key must be present: "observed" when the supplied data states the problem this action addresses, "inferred" when the problem follows from the supplied data by reasoning the data does not itself state, "absent" when the problem is that something required is missing. The label describes the CLAIM, not the subject — an "inferred" action still may not name anything absent from the supplied data. Use null only when none of the three fits.`,
+    // An E-23 run whose fix-it list is complete and empty has nothing to act
+    // on: abstain with that reason instead of letting the model invent work.
+    abstainWithoutCall: (rd) => (fixItListEmptyAndComplete(rd) ? NO_FIX_IT_ITEMS : null),
     // An E-23 run also hands it the fix-it list, so its actions point at real
     // items; fixItPromptBlock is "" for every other report.
     buildUserPrompt: (rd, extras) => {

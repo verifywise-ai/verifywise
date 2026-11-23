@@ -1,6 +1,6 @@
 const mockGenerateText = jest.fn();
 jest.mock("ai", () => ({ generateText: (...a: any[]) => mockGenerateText(...a) }));
-// sectionSummaries imports referenceDay from ./facts, which imports isoDate
+// sectionSummaries imports reportReferenceDay from ./facts, which imports isoDate
 // from dataCollector, which imports the real sequelize instance at module
 // load. Unmocked, that opens a DB connection during a unit test.
 jest.mock("../../../../database/db", () => ({ sequelize: {} }));

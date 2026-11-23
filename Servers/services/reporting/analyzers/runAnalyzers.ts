@@ -273,6 +273,8 @@ export async function runAnalyzers(input: RunAnalyzersInput): Promise<AnalyzerRe
     stageExtras: AnalyzerExtras,
   ): Promise<readonly [AnalysisSectionKey, AnalyzerRunResult]> => {
     const def = ANALYZERS[key];
+    const stated = def.abstainWithoutCall?.(reportData);
+    if (stated) return [key, abstain(stated, modelLabel)] as const;
     const userPrompt = def.buildUserPrompt(reportData, stageExtras);
     if (!userPrompt) {
       // Summary consumers' buildUserPrompt returns "" for exactly one reason:

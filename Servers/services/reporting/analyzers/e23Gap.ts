@@ -11,7 +11,13 @@ import type {
 import { requirementNumber } from "../e23/contradictionRules";
 import { E23_FRAMEWORK_ID, E23_KIND } from "../e23/e23Parameters";
 import { COVERAGE_LABELS } from "../e23/e23Text";
-import { oneLine, prepareE23Contradictions, prepareE23FixItList, prepareMrmFleet } from "./prompts";
+import {
+  oneLine,
+  prepareE23Contradictions,
+  prepareE23FixItList,
+  prepareMrmFleet,
+  SECTION_LABELS,
+} from "./prompts";
 
 /** A position the code changed after parsing; recorded in audit_metadata. */
 export interface PositionCorrection {
@@ -20,7 +26,7 @@ export interface PositionCorrection {
   to: string;
 }
 
-const isE23Run = (rd: ReportData): boolean => rd?.metadata?.reportKind === E23_KIND;
+export const isE23Run = (rd: ReportData): boolean => rd?.metadata?.reportKind === E23_KIND;
 
 /** The board version of an E-23 report, whose prompts name no model (spec 8.3). */
 export const isBoardRun = (rd: ReportData): boolean =>
@@ -30,24 +36,71 @@ export const isBoardRun = (rd: ReportData): boolean =>
  * The audience line of an E-23 run, or "" for any other report (whose prompts
  * must stay exactly as they were). OSFI is the default audience.
  */
-export function audienceLine(rd: ReportData): string {
-  if (!isE23Run(rd)) return "";
+function audienceLine(rd: ReportData): string {
   return isBoardRun(rd)
     ? "Audience: Board of directors. Write in a formal register and lead with the consequences for the institution; summarise models and requirements as counts rather than listing them one by one."
     : "Audience: OSFI supervisory review. Write in a formal register and lead with the evidence: the counts, statuses and records each statement rests on.";
 }
 
+/**
+ * Spec §3: the report is a self-assessment, never a compliance opinion. Lives
+ * in the shared header so every analyzer of an E-23 run carries it, not only
+ * e23Gap: a real run's executive summary claimed "complete fulfillment" of
+ * E-23 and "complete alignment with OSFI's expectations".
+ */
+export const E23_NO_COMPLIANCE_RULE =
+  "This report sets the institution's self-assessed E-23 statuses against its model risk management records. Never state or imply that the institution complies with E-23, that the guideline or any requirement is fulfilled, met or fully aligned with, or what OSFI's view or expectations are; say only what the records show against the self-assessed statuses.";
+
+/**
+ * The E-23 lines of the shared prompt header: audience, the no-compliance rule
+ * and the exact number of requirement groups (a real run counted the framework
+ * line as a seventeenth group). "" for any other report, whose prompts must
+ * stay exactly as they were. OSFI is the default audience.
+ */
+export function e23HeaderLines(rd: ReportData): string {
+  if (!isE23Run(rd)) return "";
+  const groups = e23Groups(rd).length;
+  return [
+    audienceLine(rd),
+    E23_NO_COMPLIANCE_RULE,
+    groups > 0
+      ? `E-23 requirement groups in this report: ${groups}. The framework itself is not a group.`
+      : null,
+  ]
+    .filter(Boolean)
+    .join("\n");
+}
+
 /** Most fix-it items the recommendedActions prompt is handed. */
 export const MAX_FIX_IT_PROMPT_ITEMS = 20;
+
+/** The fix-it list could not be read in full: a notice sits on its section. */
+const fixItIncomplete = (rd: ReportData): boolean =>
+  (rd?.sectionNotices ?? []).some((n) => n.sectionKey === "e23FixItList");
+
+/**
+ * True when recommendedActions has nothing to act on: an E-23 run whose fix-it
+ * list was read in full and holds no items. The fixed rules found nothing to
+ * remediate, so the analyzer abstains rather than inventing work.
+ */
+export function fixItListEmptyAndComplete(rd: ReportData): boolean {
+  const list = rd?.sections?.e23FixItList;
+  return !!list && (list.items?.length ?? 0) === 0 && !fixItIncomplete(rd);
+}
 
 /**
  * The fix-it list as recommendedActions input (spec 8.5), so its actions point
  * at real items. "" when the run has no fix-it list, which keeps every other
- * report's prompt unchanged.
+ * report's prompt unchanged. An empty list that is incomplete (a notice says
+ * part of it could not be read) gets an explicit block instead of silence, so
+ * the model does not fill the gap with remediation nothing supports.
  */
 export function fixItPromptBlock(rd: ReportData): string {
   const list = rd?.sections?.e23FixItList;
-  if (!list?.items?.length) return "";
+  if (!list) return "";
+  if (!list.items?.length) {
+    return "\n\nThe fix-it list has no items, but part of its data could not be read, so it may be incomplete: do not invent remediation. At most recommend restoring the missing data or keeping current controls, or set abstain_reason.";
+  }
   return `\n\nFix-it items from the internal fix-it list (fixed rules, highest severity first). Point each action at one or more of these items:\n${prepareE23FixItList(list, MAX_FIX_IT_PROMPT_ITEMS)}`;
 }
 
@@ -200,4 +253,38 @@ export function enforceE23GapPositions(
     return { ...p, position: to };
   });
   return { payload: { ...payload, principles: next }, corrections };
+}
+
+/** Every section key, and its label, normalised to the key. */
+const SECTION_KEY_LOOKUP = new Map<string, string>(
+  Object.entries(SECTION_LABELS).flatMap(([key, label]) => [
+    [norm(key), key],
+    [norm(label), key],
+  ]),
+);
+
+/** The section key a value names, by key or label; the value itself when it names none. */
+const toSectionKey = (value: unknown): unknown =>
+  typeof value === "string" ? (SECTION_KEY_LOOKUP.get(norm(value)) ?? value) : value;
+
+/**
+ * keyFindings on an E-23 run: a `section` or `related_sections` entry the model
+ * wrote as a section label is mapped back to the key the field holds. Nothing
+ * is dropped and no other field changes; a general report's payload is
+ * returned as it is.
+ */
+export function enforceE23SectionKeys(
+  payload: any,
+  rd: ReportData,
+): { payload: any; corrections: PositionCorrection[] } {
+  const findings: any[] = Array.isArray(payload?.findings) ? payload.findings : [];
+  if (!isE23Run(rd) || findings.length === 0) return { payload, corrections: [] };
+  const next = findings.map((f) => ({
+    ...f,
+    section: toSectionKey(f.section),
+    ...(Array.isArray(f.related_sections) && {
+      related_sections: f.related_sections.map(toSectionKey),
+    }),
+  }));
+  return { payload: { ...payload, findings: next }, corrections: [] };
 }

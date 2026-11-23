@@ -19,7 +19,7 @@ import { hasNoActiveOwner } from "../collectors/frameworkRollup";
 import { COVERAGE_LABELS, FIX_IT_SEVERITY_LABELS } from "../e23/e23Text";
 import { METRIC_STALE_DAYS } from "../e23/mrmFleet";
 
-export const ANALYZER_VERSION = "report-analyzer-v4";
+export const ANALYZER_VERSION = "report-analyzer-v5";
 
 const MAX_DATA_ITEMS = 50;
 /** Hard backstop on the joined section body, independent of the per-array

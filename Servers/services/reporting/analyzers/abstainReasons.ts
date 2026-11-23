@@ -21,6 +21,10 @@ export const LLM_CALL_FAILED =
 export const NO_SUMMARIES_AVAILABLE = "no section summaries were available to summarise";
 export const NO_SUMMARY_PRODUCED = "no section produced a summary";
 export const INSUFFICIENT_DATA = "insufficient data for this section";
+/** An E-23 run whose fix-it list was read in full and holds no items: the
+ *  fixed rules found nothing to remediate, so no action is invented. */
+export const NO_FIX_IT_ITEMS =
+  "the fix-it list has no items, so there is no remediation to recommend";
 
 export const OPERATIONAL_ABSTAIN_REASONS = [
   NO_LLM_KEY,
@@ -29,7 +33,7 @@ export const OPERATIONAL_ABSTAIN_REASONS = [
   NO_SUMMARY_PRODUCED,
 ] as const;
 
-export const ANALYTICAL_ABSTAIN_REASONS = [INSUFFICIENT_DATA] as const;
+export const ANALYTICAL_ABSTAIN_REASONS = [INSUFFICIENT_DATA, NO_FIX_IT_ITEMS] as const;
 
 /** Every reason the analyzers can emit. mapToSummaries.test.ts walks this to
  *  prove each one is classified, so a new reason cannot leak into a report. */

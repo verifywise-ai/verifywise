@@ -220,7 +220,10 @@ describe("isOperationalAbstention", () => {
     // asserts the two files still agree on the vocabulary: an operational
     // reason added there without adding it to the exported set would print
     // verbatim into the report, which is the defect this guard exists for.
-    const analytical = new Set(["insufficient data for this section"]);
+    const analytical = new Set([
+      "insufficient data for this section",
+      "the fix-it list has no items, so there is no remediation to recommend",
+    ]);
     for (const reason of ALL_ABSTAIN_REASONS) {
       expect(isOperationalAbstention(reason)).toBe(!analytical.has(reason));
     }
