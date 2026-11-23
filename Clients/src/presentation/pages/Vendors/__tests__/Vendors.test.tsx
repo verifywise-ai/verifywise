@@ -16,6 +16,10 @@ interface CapturedFilter {
   getFieldValue: (item: any, fieldId: string) => FilterFieldValue;
 }
 let mockTableFilters: CapturedFilter[] = [];
+const mockDeleteVendor = vi.fn();
+const mockDeleteVendorRisk = vi.fn();
+let mockVendorTableOnDelete: ((id: number) => Promise<void>) | undefined;
+let mockRiskTableOnDelete: ((id: number) => Promise<void>) | undefined;
 
 // Mock hooks used by Vendors page
 vi.mock("../../../../application/hooks/useUsers", () => ({
@@ -32,7 +36,7 @@ vi.mock("../../../../application/hooks/useVendors", () => ({
       refetch: vi.fn(),
     };
   },
-  useDeleteVendor: () => ({ mutateAsync: vi.fn() }),
+  useDeleteVendor: () => ({ mutateAsync: mockDeleteVendor }),
 }));
 
 vi.mock("../../../../application/hooks/useVendorRisks", () => ({
@@ -66,7 +70,7 @@ vi.mock("../../../../application/hooks/useProjects", () => ({
 }));
 
 vi.mock("../../../../application/hooks/useVendorRiskMutations", () => ({
-  useDeleteVendorRisk: () => ({ mutateAsync: vi.fn() }),
+  useDeleteVendorRisk: () => ({ mutateAsync: mockDeleteVendorRisk }),
   useRestoreVendorRisk: () => ({ mutateAsync: vi.fn() }),
 }));
 
@@ -119,11 +123,17 @@ vi.mock("../../../components/PageTour", () => ({
 }));
 
 vi.mock("../../../components/Table/WithPlaceholder/index", () => ({
-  default: () => <div data-testid="vendor-table" />,
+  default: (props: { onDelete?: (id: number) => Promise<void> }) => {
+    mockVendorTableOnDelete = props.onDelete;
+    return <div data-testid="vendor-table" />;
+  },
 }));
 
 vi.mock("../../../components/Table/RisksTable", () => ({
-  default: () => <div data-testid="risk-table" />,
+  default: (props: { onDelete?: (id: number) => Promise<void> }) => {
+    mockRiskTableOnDelete = props.onDelete;
+    return <div data-testid="risk-table" />;
+  },
 }));
 
 vi.mock("../../../components/Table/ExportMenu", () => ({
@@ -273,5 +283,45 @@ describe("Vendors", () => {
 
     expect(screen.queryByText("Failed to load vendors. Please try again later.")).toBeNull();
     expect(screen.getByTestId("vendor-table")).toBeInTheDocument();
+  });
+
+  // VC-L1: a failed delete throws, so the 404 message used to be unreachable.
+  it("says the vendor is gone when its delete answers 404", async () => {
+    mockVendorsData = [{ id: 3, vendor_name: "Acme" }];
+    mockDeleteVendor.mockRejectedValue(Object.assign(new Error("Not found"), { status: 404 }));
+    renderWithProviders(<Vendors />, { route: "/vendors" });
+
+    await act(async () => {
+      await mockVendorTableOnDelete?.(3);
+    });
+
+    expect(await screen.findByText("Vendor not found.")).toBeInTheDocument();
+  });
+
+  it("shows one failure message when a risk delete fails for another reason", async () => {
+    mockDeleteVendorRisk.mockRejectedValue(Object.assign(new Error("Boom"), { status: 500 }));
+    renderWithProviders(<Vendors />, { route: "/vendors/risks" });
+
+    await act(async () => {
+      await mockRiskTableOnDelete?.(8);
+    });
+
+    expect(
+      await screen.findAllByText(
+        "Failed to delete risk. It may have already been deleted or there was a network error.",
+      ),
+    ).toHaveLength(1);
+    expect(screen.queryByText("Risk not found.")).toBeNull();
+  });
+
+  it("says the risk is gone when its delete answers 404", async () => {
+    mockDeleteVendorRisk.mockRejectedValue(Object.assign(new Error("Not found"), { status: 404 }));
+    renderWithProviders(<Vendors />, { route: "/vendors/risks" });
+
+    await act(async () => {
+      await mockRiskTableOnDelete?.(8);
+    });
+
+    expect(await screen.findByText("Risk not found.")).toBeInTheDocument();
   });
 });

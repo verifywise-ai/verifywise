@@ -71,11 +71,13 @@ export const getVendorRiskData = (distribution: {
   low: number;
   veryLow: number;
 }) => [
-  { label: "Very High", value: distribution.veryHigh || 0, color: COLORS.critical },
+  // The vendor risk levels, as the Vendors page cards name them. The lowest,
+  // "No risk", is counted in the veryLow bucket (riskLevelBucket).
+  { label: "Very high", value: distribution.veryHigh || 0, color: COLORS.critical },
   { label: "High", value: distribution.high || 0, color: COLORS.high },
   { label: "Medium", value: distribution.medium || 0, color: COLORS.medium },
   { label: "Low", value: distribution.low || 0, color: COLORS.low },
-  { label: "Very Low", value: distribution.veryLow || 0, color: COLORS.veryLow },
+  { label: "No risk", value: distribution.veryLow || 0, color: COLORS.veryLow },
 ];
 
 export const getModelRiskData = (distribution: {

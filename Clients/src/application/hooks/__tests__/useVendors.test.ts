@@ -94,7 +94,10 @@ describe("useCreateVendor", () => {
     mockCreateNewVendor.mockResolvedValue({ data: { id: 10 } });
     const { result } = renderHook(() => useCreateVendor(), { wrapper: createWrapper() });
     await result.current.mutateAsync({ name: "New Vendor" } as any);
-    expect(mockCreateNewVendor).toHaveBeenCalledWith({ body: { name: "New Vendor" } });
+    expect(mockCreateNewVendor).toHaveBeenCalledWith({
+      body: { name: "New Vendor" },
+      config: { suppressGlobalErrorToast: true },
+    });
   });
 });
 
@@ -105,7 +108,11 @@ describe("useUpdateVendor", () => {
     mockUpdateVendor.mockResolvedValue({ data: { id: 1 } });
     const { result } = renderHook(() => useUpdateVendor(), { wrapper: createWrapper() });
     await result.current.mutateAsync({ id: 1, data: { name: "Updated" } } as any);
-    expect(mockUpdateVendor).toHaveBeenCalledWith({ id: 1, body: { name: "Updated" } });
+    expect(mockUpdateVendor).toHaveBeenCalledWith({
+      id: 1,
+      body: { name: "Updated" },
+      config: { suppressGlobalErrorToast: true },
+    });
   });
 });
 
@@ -116,6 +123,9 @@ describe("useDeleteVendor", () => {
     mockDeleteVendor.mockResolvedValue({});
     const { result } = renderHook(() => useDeleteVendor(), { wrapper: createWrapper() });
     await result.current.mutateAsync(5);
-    expect(mockDeleteVendor).toHaveBeenCalledWith({ id: 5 });
+    expect(mockDeleteVendor).toHaveBeenCalledWith({
+      id: 5,
+      config: { suppressGlobalErrorToast: true },
+    });
   });
 });

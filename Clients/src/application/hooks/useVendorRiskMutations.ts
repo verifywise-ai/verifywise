@@ -7,6 +7,21 @@ import {
   restoreVendorRisk,
 } from "../repository/vendorRisk.repository";
 import { vendorRiskQueryKeys } from "./useVendorRisks";
+import { VENDOR_INSIGHTS_KEY } from "./useRiskLinks";
+import { OWN_ERROR_MESSAGE } from "./useVendors";
+
+/**
+ * A vendor risk write changes the list and the insight reports (reach,
+ * duplicates, coverage), wherever it was made: the Vendors page or a vendor's
+ * risk dialog.
+ */
+const refreshAfterVendorRiskWrite = (
+  queryClient: ReturnType<typeof useQueryClient>,
+  listKey: readonly unknown[] = vendorRiskQueryKeys.lists(),
+) => {
+  queryClient.invalidateQueries({ queryKey: listKey });
+  queryClient.invalidateQueries({ queryKey: VENDOR_INSIGHTS_KEY });
+};
 
 // Hook to create a new vendor risk
 export const useCreateVendorRisk = () => {
@@ -14,13 +29,10 @@ export const useCreateVendorRisk = () => {
 
   return useMutation({
     mutationFn: async (riskData: any) => {
-      const response = await createVendorRisk({ body: riskData });
+      const response = await createVendorRisk({ body: riskData, config: OWN_ERROR_MESSAGE });
       return response;
     },
-    onSuccess: () => {
-      // Invalidate and refetch vendor risks
-      queryClient.invalidateQueries({ queryKey: vendorRiskQueryKeys.lists() });
-    },
+    onSuccess: () => refreshAfterVendorRiskWrite(queryClient),
   });
 };
 
@@ -30,13 +42,10 @@ export const useUpdateVendorRisk = () => {
 
   return useMutation({
     mutationFn: async ({ id, data }: { id: number; data: any }) => {
-      const response = await updateVendorRisk({ id, body: data });
+      const response = await updateVendorRisk({ id, body: data, config: OWN_ERROR_MESSAGE });
       return response;
     },
-    onSuccess: () => {
-      // Invalidate and refetch vendor risks
-      queryClient.invalidateQueries({ queryKey: vendorRiskQueryKeys.lists() });
-    },
+    onSuccess: () => refreshAfterVendorRiskWrite(queryClient),
   });
 };
 
@@ -46,13 +55,10 @@ export const useDeleteVendorRisk = () => {
 
   return useMutation({
     mutationFn: async (id: number) => {
-      const response = await deleteVendorRisk({ id });
+      const response = await deleteVendorRisk({ id, config: OWN_ERROR_MESSAGE });
       return response;
     },
-    onSuccess: () => {
-      // Invalidate and refetch vendor risks
-      queryClient.invalidateQueries({ queryKey: vendorRiskQueryKeys.lists() });
-    },
+    onSuccess: () => refreshAfterVendorRiskWrite(queryClient),
   });
 };
 
@@ -62,9 +68,7 @@ export const useRestoreVendorRisk = () => {
 
   return useMutation({
     mutationFn: async (id: number) => restoreVendorRisk({ id }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: vendorRiskQueryKeys.all });
-    },
+    onSuccess: () => refreshAfterVendorRiskWrite(queryClient, vendorRiskQueryKeys.all),
   });
 };
 

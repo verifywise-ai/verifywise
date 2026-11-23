@@ -77,6 +77,10 @@ import {
 } from "../../../application/utils/vendorRiskRows";
 import useFormattedDate from "../../../application/hooks/useFormattedDate";
 
+/** True when a request failed with 404: the record is already gone. */
+const isNotFound = (error: unknown): boolean =>
+  (error as { status?: number } | null)?.status === 404;
+
 // Constants
 const REDIRECT_DELAY_MS = 2000;
 const NO_MATCHING_VENDORS = "No vendors match your search or filters.";
@@ -678,50 +682,27 @@ const Vendors = () => {
     setIsSubmitting(true);
 
     try {
-      const response = await deleteVendorMutation.mutateAsync(vendorId);
-
-      if (response.status === 202) {
-        setAlert({
-          variant: "success",
-          body: "Vendor deleted successfully.",
-        });
-        setTimeout(() => {
-          setAlert(null);
-        }, 3000);
-        await refreshVendorRisks();
-      } else if (response.status === 404) {
-        setAlert({
-          variant: "error",
-          body: "Vendor not found.",
-        });
-        setTimeout(() => {
-          setAlert(null);
-        }, 3000);
-      } else {
-        console.error("Unexpected response. Please try again.");
-        logEngine({
-          type: "error",
-          message: "Unexpected response. Please try again.",
-        });
-        setAlert({
-          variant: "error",
-          body: "Unexpected error. Please try again.",
-        });
-        setTimeout(() => setAlert(null), 3000);
-      }
+      // A failed delete throws; 2xx is the only answer that returns.
+      await deleteVendorMutation.mutateAsync(vendorId);
+      setAlert({
+        variant: "success",
+        body: "Vendor deleted successfully.",
+      });
+      await refreshVendorRisks();
     } catch (error) {
-      console.error("Error deleting vendor:", error);
       logEngine({
         type: "error",
         message: `An error occurred: ${error}`,
       });
       setAlert({
         variant: "error",
-        body: "Failed to delete vendor. It may have already been deleted or there was a network error.",
+        body: isNotFound(error)
+          ? "Vendor not found."
+          : "Failed to delete vendor. It may have already been deleted or there was a network error.",
       });
-      setTimeout(() => setAlert(null), 3000);
     } finally {
       setIsSubmitting(false);
+      setTimeout(() => setAlert(null), 3000);
     }
   };
 
@@ -737,48 +718,26 @@ const Vendors = () => {
     setIsSubmitting(true);
 
     try {
-      const response = await deleteVendorRiskMutation.mutateAsync(riskId);
-
-      if (response.status === 202) {
-        setAlert({
-          variant: "success",
-          body: "Risk deleted successfully.",
-        });
-        setTimeout(() => {
-          setAlert(null);
-        }, 3000);
-        await refreshVendorRisks();
-      } else if (response.status === 404) {
-        setAlert({
-          variant: "error",
-          body: "Risk not found.",
-        });
-        setTimeout(() => setAlert(null), 3000);
-      } else {
-        console.error("Unexpected response. Please try again.");
-        logEngine({
-          type: "error",
-          message: "Unexpected response. Please try again.",
-        });
-        setAlert({
-          variant: "error",
-          body: "Unexpected error. Please try again.",
-        });
-        setTimeout(() => setAlert(null), 3000);
-      }
+      await deleteVendorRiskMutation.mutateAsync(riskId);
+      setAlert({
+        variant: "success",
+        body: "Risk deleted successfully.",
+      });
+      await refreshVendorRisks();
     } catch (error) {
-      console.error("Error deleting Risk:", error);
       logEngine({
         type: "error",
         message: `An error occurred: ${error}`,
       });
       setAlert({
         variant: "error",
-        body: "Failed to delete risk. It may have already been deleted or there was a network error.",
+        body: isNotFound(error)
+          ? "Risk not found."
+          : "Failed to delete risk. It may have already been deleted or there was a network error.",
       });
-      setTimeout(() => setAlert(null), 3000);
     } finally {
       setIsSubmitting(false);
+      setTimeout(() => setAlert(null), 3000);
     }
   };
 

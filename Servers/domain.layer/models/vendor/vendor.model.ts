@@ -279,7 +279,9 @@ export class VendorModel extends Model<VendorModel> implements IVendor {
     vendor.review_result = review_result ? review_result.trim() : "";
     vendor.review_status = review_status || "Not started";
     vendor.reviewer = reviewer && reviewer > 0 ? reviewer : null;
-    vendor.review_date = review_date || new Date();
+    // No review date means none: '' and null are left out of the insert, so the
+    // column stays NULL (it used to default to the moment of creation).
+    vendor.review_date = review_date || undefined;
     vendor.order_no = order_no;
     vendor.is_demo = is_demo;
     vendor.created_at = new Date();

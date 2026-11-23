@@ -216,7 +216,9 @@ POST /vendors/
 
 ### Processing
 
-1. Validate required fields
+1. Validate required fields. `review_date` is optional: a vendor created
+   without one (absent, `''` or `null`) has `review_date` NULL. It used to
+   default to the moment of creation.
 2. Check that `assignee` and `reviewer` are members of the organization (400 otherwise)
 3. Create vendor record
 4. Create vendor-project associations
@@ -323,6 +325,13 @@ to the others are kept, and an id the user can't see is ignored. An Editor who
 isn't on every linked use case can therefore save the vendor, where the old
 delete-visible-then-reinsert-all hit the primary key and answered 500. The
 response's `projects` is read back from `vendors_projects` after the write.
+
+The vendor form fetches the use cases each time it opens. New links are
+picked from approved use cases only, but a link the vendor already has to a
+use case pending approval or rejected stays selected, named with its status
+("Beta (Pending approval)", "Gamma (Rejected)"), and is sent back on save, so
+it goes only when the user removes it. Ids the form doesn't list (use cases
+the user can't see) are sent back unchanged too.
 
 ### Deleting a vendor
 
@@ -483,8 +492,13 @@ A child that inherits through two of one vendor's risks counts once for that
 vendor. The same report feeds the table's **Inherited by** column ("3 project
 risks", or "2 suggested" when nothing is confirmed yet). Its link opens the
 vendor risk on its Linked risks tab, and its tooltip names the use cases.
-Saving or deleting a vendor risk invalidates all three reports
-(`VENDOR_INSIGHTS_KEY`).
+Saving, deleting or restoring a vendor risk invalidates all three reports
+(`VENDOR_INSIGHTS_KEY`) in the shared mutation hooks
+(`hooks/useVendorRiskMutations.ts`), so a change made from a vendor's risk
+dialog refreshes them too; so do a vendor update or delete. These hooks and
+the vendor ones turn off the global error toast (`suppressGlobalErrorToast`)
+because the modals and the page show their own, one per failure; a delete that
+answers 404 says "Vendor not found." / "Risk not found.".
 
 ### Candidate notices
 
@@ -606,8 +620,8 @@ the last page with rows when the list shrinks.
 
 | Component | Purpose |
 |-----------|---------|
-| `AddNewVendor` | Create/edit vendor modal |
-| `AddNewRisk` | Create/edit risk modal (Risk details, Custom fields, Activity, Linked risks); `initialTab="linked-risks"` opens an existing risk on its links |
+| `AddNewVendor` | Create/edit vendor modal. The review date starts empty and can be cleared; a failed save keeps the form as typed |
+| `AddNewRisk` | Create/edit risk modal (Risk details, Custom fields, Activity, Linked risks); `initialTab="linked-risks"` opens an existing risk on its links. With no vendor it won't save ("Add a vendor first…"); `vendor_id` and `action_owner` are sent as numbers; a failed save keeps the form |
 | `VendorRiskLinksPanel` | The Linked risks tab: child project risks and related vendor risks, plus Suggest children and the related scan |
 | `RelateVendorRiskForm` | Picker that relates another vendor risk to this one |
 | `VendorRiskInsights` | Heat map, blast radius, duplicate and coverage sections above the risks table |
@@ -642,7 +656,8 @@ in-app notice. The Home queue lists due vendors regardless. Both use the same
 rule for `Reviewed` vendors (dropped only once the review date has passed). The
 sweep runs every action of every matching automation and sends one in-app
 notice per vendor per run. The vendor form stores the picked day at noon UTC
-(`calendarDayAtNoonUtc`), so its UTC day is the day the user picked; vendors
+(`calendarDayAtNoonUtc`), so its UTC day is the day the user picked; a vendor
+without a review date gets no reminder; vendors
 saved before that may read a day early for users east of UTC until next saved.
 The job is scheduled at midnight UTC (`tz: "UTC"`). See
 [Automations → Vendor Review Notifications](../infrastructure/automations.md#vendor-review-notifications).
