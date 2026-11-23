@@ -44,7 +44,14 @@ jest.mock("../../../utils/scheduledReport.utils", () => ({
   listScheduledReportsQuery: jest.fn(async () => []),
   getScheduledReportQuery: jest.fn(async (id: number, org: number) =>
     id === 3 && org === 42
-      ? { id: 3, scope: "organization", project_id: null, template_version_id: 30 }
+      ? {
+          id: 3,
+          scope: "organization",
+          project_id: null,
+          template_version_id: 30,
+          report_parameters: { isFinal: false },
+          parameters_config: { kind: "osfi_e23", fields: [{ key: "isFinal", type: "boolean" }] },
+        }
       : null,
   ),
   updateScheduledReportQuery: jest.fn(async (id: number, org: number, input: any) =>
@@ -74,6 +81,7 @@ jest.mock("../../../utils/logger/fileLogger", () => ({
 import routes from "../scheduledReports.route";
 import {
   createScheduledReportQuery,
+  getScheduledReportQuery,
   updateScheduledReportQuery,
 } from "../../../utils/scheduledReport.utils";
 
@@ -101,7 +109,9 @@ describe("/api/v1/scheduled-reports", () => {
   it("answers 401 without a token", async () => {
     expect((await request(app).post(BASE).send(createBody)).status).toBe(401);
     expect((await request(app).patch(`${BASE}/3`).send({ name: "Renamed" })).status).toBe(401);
+    expect((await request(app).get(`${BASE}/3`)).status).toBe(401);
     expect(createScheduledReportQuery).not.toHaveBeenCalled();
+    expect(getScheduledReportQuery).not.toHaveBeenCalled();
     expect(updateScheduledReportQuery).not.toHaveBeenCalled();
   });
 
@@ -153,5 +163,30 @@ describe("/api/v1/scheduled-reports", () => {
       .send({ name: "Renamed" });
     expect(res.status).toBe(404);
     expect((updateScheduledReportQuery as jest.Mock).mock.calls[0].slice(0, 2)).toEqual([3, 7]);
+  });
+
+  it("reads a schedule with its version's parameters_config", async () => {
+    // Any signed-in role may read, as with the legacy list.
+    const res = await request(app).get(`${BASE}/3`).set(auth).set("x-role", "Auditor");
+    expect(res.status).toBe(200);
+    expect(res.body.data).toMatchObject({
+      id: 3,
+      report_parameters: { isFinal: false },
+      parameters_config: { kind: "osfi_e23", fields: [{ key: "isFinal", type: "boolean" }] },
+    });
+    expect(getScheduledReportQuery).toHaveBeenCalledWith(3, 42);
+  });
+
+  it("answers 404 when reading another organization's schedule", async () => {
+    const res = await request(app).get(`${BASE}/3`).set(auth).set("x-org", "7");
+    expect(res.status).toBe(404);
+    expect(res.body.data).toBe("not found");
+    expect(getScheduledReportQuery).toHaveBeenCalledWith(3, 7);
+  });
+
+  it("answers 404 for a non-integer id without querying", async () => {
+    const res = await request(app).get(`${BASE}/abc`).set(auth);
+    expect(res.status).toBe(404);
+    expect(getScheduledReportQuery).not.toHaveBeenCalled();
   });
 });

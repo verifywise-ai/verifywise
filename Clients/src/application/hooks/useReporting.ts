@@ -28,6 +28,19 @@ export const useTemplates = () =>
 export const useScheduledReports = () =>
   useQuery({ queryKey: ["reporting", "scheduled"], queryFn: repo.getScheduledReports });
 
+// One schedule for the edit dialog. Its key sits under ["reporting",
+// "scheduled"], so saving an edit (which invalidates that prefix) refreshes it.
+// No refetch on window focus: the dialog's untouched details are prefilled
+// from this data, and a refresh must not change them under the user.
+export const useScheduledReport = (id: number | undefined) =>
+  useQuery({
+    queryKey: ["reporting", "scheduled", id],
+    queryFn: () => repo.getScheduledReport(id as number),
+    enabled: id != null,
+    retry: false,
+    refetchOnWindowFocus: false,
+  });
+
 type RunPageParams = {
   scheduledReportId?: number;
   archived?: boolean;

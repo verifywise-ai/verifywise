@@ -123,6 +123,43 @@ export async function listScheduledReports(req: Request, res: Response): Promise
   }
 }
 
+/**
+ * One schedule with its template version's parameters_config, so the edit
+ * dialog knows which report details the schedule declares. Read access matches
+ * listScheduledReports, which already returns every schedule of the
+ * organization (report_parameters included) to any signed-in member; a scope
+ * gate here would hide nothing the list does not show.
+ */
+export async function getScheduledReport(req: Request, res: Response): Promise<any> {
+  logProcessing({
+    description: "getScheduledReport",
+    functionName: "getScheduledReport",
+    fileName: "scheduledReport.ctrl.ts",
+    userId: req.userId!,
+    organizationId: req.organizationId!,
+  });
+  try {
+    const id = Number(req.params.id);
+    if (!Number.isInteger(id) || id <= 0) {
+      return res.status(404).json(STATUS_CODE[404](req.t!("not found")));
+    }
+    const row = await getScheduledReportQuery(id, req.organizationId!);
+    if (!row) return res.status(404).json(STATUS_CODE[404](req.t!("not found")));
+    return res.status(200).json(STATUS_CODE[200](row));
+  } catch (error) {
+    await logFailure({
+      eventType: "Read",
+      description: "getScheduledReport failed",
+      functionName: "getScheduledReport",
+      fileName: "scheduledReport.ctrl.ts",
+      error: error as Error,
+      userId: req.userId!,
+      organizationId: req.organizationId!,
+    });
+    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+  }
+}
+
 export async function pauseScheduledReport(req: Request, res: Response): Promise<any> {
   try {
     await setActiveQuery(Number(req.params.id), req.organizationId!, false);

@@ -134,7 +134,7 @@ export const osfiE23ReportContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'A schedule doesn\'t ask for dates. Each run reports on the quarter that ends the day before it runs. If your fiscal quarter ends on 31 October, schedule the run for 1 November. All other answers, including the final version box, are stored with the schedule and used on every run.',
+      text: 'A schedule doesn\'t ask for dates. Each run reports on the quarter that ends the day before it runs. If your fiscal quarter ends on 31 October, schedule the run for 1 November. All other answers, including the final version box, are stored with the schedule and used on every run. To change them later, for example to switch from draft to final, open the schedule\'s actions menu on the **Scheduled** tab and click **Edit**.',
     },
     {
       type: 'callout',

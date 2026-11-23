@@ -1341,6 +1341,7 @@ It seeds whether or not any organization has added E-23; without the framework t
 |--------|----------|-------------|
 | POST | `/api/v1/report-templates/:id/run` | Run a template now, with `reportParameters` for kinds that take them (`reportTemplate.edit`) |
 | GET | `/api/v1/report-templates/:id/last-parameters` | Answers from the organization's latest `success` or `partial_success` run of the template that the caller may see (the same two statuses the prior glance reads), for the wizard prefill. Period and `isFinal` are left out; the old `periodEnd` comes back separately so the next period starts the day after it (`reportTemplate.edit`) |
+| GET | `/api/v1/scheduled-reports/:id` | One schedule of the organization with its template version's `parameters_config`, which the legacy list lacks; the schedule edit dialog uses it to show and save the stored report details (`report_parameters`). Same read access as the legacy list: any signed-in member, no scope gate. 404 for a missing, other-organization or non-integer id |
 | GET | `/api/v1/report-runs/:id/download/fix-it-list` | Download the run's internal fix-it list. Same visibility gate and organization checks as the formal report download |
 
 ### Sections and the formal report
