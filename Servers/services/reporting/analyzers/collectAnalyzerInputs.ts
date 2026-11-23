@@ -250,12 +250,17 @@ export function collectFactsInput(
   prior?: FactsSnapshot | null,
 ): { snapshot: FactsSnapshot; facts: string; formalFacts: string } {
   const snapshot = collectFacts(reportData);
-  const facts = renderFacts(snapshot, prior);
+  // An E-23 run's facts read as words ("rules that fired: 0"), never as field
+  // names: the model copies what it sees, and a live run printed
+  // "validatedNothingOpen" in the formal report. Other reports are unchanged.
+  const humanNames = reportData?.metadata?.reportKind === E23_KIND;
+  const facts = renderFacts(snapshot, prior, { humanNames });
   const board = isBoardRun(reportData);
   const formalFacts =
     snapshot.sections.e23FixItList || board
       ? renderFacts(formalFactsView(snapshot, { board }), formalFactsView(prior, { board }), {
           labels: { e23FixItList: FORMAL_FIX_IT_LABEL },
+          humanNames,
         })
       : facts;
   return { snapshot, facts, formalFacts };

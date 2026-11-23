@@ -670,6 +670,8 @@ export interface MrmFleetSectionData {
     monitoringActive: number;
     openFindings: number;
     criticalHighFindings: number;
+    /** Open findings of this tier by severity. Absent on data built before it existed. */
+    openBySeverity?: Record<"critical" | "high" | "medium" | "low", number>;
   }>;
   /** Only models with at least one exception; the rest appear as counts. */
   exceptions: Array<{

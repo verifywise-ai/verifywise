@@ -322,17 +322,34 @@ describe("G1 guard in runAnalyzers", () => {
     ]);
   });
 
-  it("abstains with a stated reason when the re-issue still makes the claim", async () => {
+  it("drops the sentence that still makes the claim after the re-issue, keeping the rest", async () => {
     mockGenerate.mockResolvedValue({ object: summaryPayload(BAD_SUMMARY), attempts: 1 });
+    const out = await runAnalyzers({
+      reportData: kestrelBay(),
+      llmKey,
+      blocks: { ...NONE, executiveSummary: true },
+      extras: { formalFacts: extrasFor(kestrelBay()).formalFacts },
+    });
+    expect(mockGenerate).toHaveBeenCalledTimes(2);
+    const r = out.executiveSummary!;
+    expect(r.abstained).toBe(false);
+    expect(r.payload.summary).toBe(`${CLEAN[0]} ${CLEAN[2]}`);
+    expect(r.guardRejections!.some((g) => g.stage === "removed")).toBe(true);
+  });
+
+  it("abstains with a stated reason when nothing sound is left", async () => {
+    mockGenerate.mockResolvedValue({ object: summaryPayload(BAD[0][0]), attempts: 1 });
     const out = await runAnalyzers({
       reportData: kestrelBay(),
       llmKey,
       blocks: { ...NONE, executiveSummary: true },
     });
     expect(mockGenerate).toHaveBeenCalledTimes(2);
-    const r = out.executiveSummary!;
-    expect(r).toMatchObject({ abstained: true, abstain_reason: E23_GUARD_REJECTED, payload: null });
-    expect(r.guardRejections!.some((g) => g.stage === "removed")).toBe(true);
+    expect(out.executiveSummary).toMatchObject({
+      abstained: true,
+      abstain_reason: E23_GUARD_REJECTED,
+      payload: null,
+    });
     expect(ANALYTICAL_ABSTAIN_REASONS).toContain(E23_GUARD_REJECTED);
   });
 

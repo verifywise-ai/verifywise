@@ -642,12 +642,60 @@ export function formalFactsView(
   return { ...facts, sections };
 }
 
+/**
+ * Words for the aggregate names an E-23 run's facts carry. A live run copied
+ * the raw names ("validatedNothingOpen", "rulesFired") into the printed
+ * report, so an E-23 run's facts are rendered with these instead.
+ */
+const FACT_NAME_LABELS: Record<string, string> = {
+  validatedNothingOpen: "validated with none open",
+  inReview: "validation in progress",
+  notStarted: "validation not started",
+  overdueValidations: "validation overdue",
+  withActiveThresholds: "models with active thresholds",
+  withRecentMetric: "models with a recently received metric",
+  openCritical: "open critical findings",
+  openHigh: "open high findings",
+  openMedium: "open medium findings",
+  openLow: "open low findings",
+  validationsSignedOff: "validations signed off",
+  findingsOpened: "findings opened",
+  findingsClosed: "findings closed",
+  breaches: "threshold breaches",
+  revalidationEvents: "revalidation events",
+  rulesFired: "rules that fired",
+  rulesChecked: "rules checked",
+  rulesNotRun: "rules not run",
+  groupsChecked: "groups checked against the records",
+  groupsSelfAssessmentOnly: "groups self-assessment only",
+  noEvidence: "without evidence",
+  models: "models in scope",
+  tier1: "tier 1 models",
+  tier2: "tier 2 models",
+  tier3: "tier 3 models",
+  untiered: "untiered models",
+};
+
+/** An aggregate name as words: the label above, else split at case and digits. */
+export const factNameAsWords = (name: string): string =>
+  FACT_NAME_LABELS[name] ??
+  name
+    .replace(/_/g, " ")
+    .replace(/([a-z])([A-Z0-9])/g, "$1 $2")
+    .replace(/([0-9])([A-Za-z])/g, "$1 $2")
+    .toLowerCase();
+
 export function renderFacts(
   facts: FactsSnapshot,
   prior?: FactsSnapshot | null,
-  opts: { labels?: Record<string, string> } = {},
+  opts: { labels?: Record<string, string>; humanNames?: boolean } = {},
 ): string {
   const labelOf = (key: string) => opts.labels?.[key] || SECTION_LABELS[key] || key;
+  const nameOf = (name: string) => (opts.humanNames ? factNameAsWords(name) : name);
+  const pair = (name: string, value: number | string) => {
+    const shown = typeof value === "number" ? String(value) : `"${value}"`;
+    return opts.humanNames ? `${nameOf(name)}: ${shown}` : `${name}=${shown}`;
+  };
   const lines: string[] = [
     `Reference date: ${facts.generatedAt} — treat this as today when comparing any date below.`,
     `Framework: ${facts.framework}`,
@@ -658,14 +706,12 @@ export function renderFacts(
 
   Object.keys(facts.sections).forEach((key) => {
     const body = Object.entries(facts.sections[key])
-      .map(([name, value]) =>
-        typeof value === "number" ? `${name}=${value}` : `${name}="${value}"`,
-      )
+      .map(([name, value]) => pair(name, value))
       .join("; ");
     lines.push(`[${labelOf(key)}] ${body}`);
   });
 
-  const deltas = changedAggregates(facts, prior, labelOf);
+  const deltas = changedAggregates(facts, prior, labelOf, nameOf);
   // `prior &&` is narrowing only — changedAggregates already returns [] without it.
   if (prior && deltas.length > 0) {
     // slice(0, 10) is a no-op for a snapshot written by collectFacts and
@@ -690,6 +736,7 @@ function changedAggregates(
   facts: FactsSnapshot,
   prior: FactsSnapshot | null | undefined,
   labelOf: (key: string) => string,
+  nameOf: (name: string) => string = (name) => name,
 ): string[] {
   if (!prior?.sections) return [];
   const out: string[] = [];
@@ -712,7 +759,9 @@ function changedAggregates(
       const value = now[name] ?? 0;
       if (typeof value !== "number" || typeof was !== "number" || was === value) return;
       const delta = value - was;
-      out.push(`${labelOf(key)} ${name}: ${value} (was ${was}, ${delta > 0 ? "+" : ""}${delta})`);
+      out.push(
+        `${labelOf(key)} ${nameOf(name)}: ${value} (was ${was}, ${delta > 0 ? "+" : ""}${delta})`,
+      );
     });
   });
   return out;

@@ -13,11 +13,13 @@ import { E23_FRAMEWORK_ID, E23_KIND } from "../e23/e23Parameters";
 import { COVERAGE_LABELS } from "../e23/e23Text";
 import { METRIC_STALE_DAYS } from "../e23/mrmFleet";
 import { utcDay } from "../dateUtils";
+import { hasNoActiveOwner } from "../collectors/frameworkRollup";
 import {
   oneLine,
   prepareE23Contradictions,
   prepareE23FixItList,
   prepareMrmFleet,
+  rulesLine,
   SECTION_LABELS,
 } from "./prompts";
 
@@ -229,6 +231,139 @@ function firedGroups(rd: ReportData): Set<string> {
     if (g.rows.some((r) => fired.has(requirementNumber(r.title)))) out.add(norm(g.title));
   });
   return out;
+}
+
+/** "(B.1)" at the end of a group title: its section letter and number. */
+const SECTION_SUFFIX = /\(([A-Z])(?:\.(\d+))?\)\s*$/;
+
+/**
+ * The section of each group, read off its title. E-23 numbers its groups B.1,
+ * B.2, C.1 ... and D.2 holds eight groups of its own, so a letter whose
+ * suffixes each hold one group is one section ("B"), and a letter with a
+ * suffix shared by several groups keeps the number ("D.1", "D.2"). A title
+ * with no suffix ("Appendix 1 – Model information tracking") is its own
+ * section, named by the part before the dash.
+ */
+function sectionsOf(titles: string[]): Map<string, string> {
+  const parsed = titles.map((title) => ({ title, m: SECTION_SUFFIX.exec(title) }));
+  const perSuffix = new Map<string, number>();
+  parsed.forEach(({ m }) => {
+    if (m) perSuffix.set(m[0], (perSuffix.get(m[0]) ?? 0) + 1);
+  });
+  const splitLetters = new Set(
+    parsed.filter(({ m }) => m && (perSuffix.get(m[0]) ?? 0) > 1).map(({ m }) => m![1]),
+  );
+  return new Map(
+    parsed.map(({ title, m }) => [
+      title,
+      !m
+        ? title.split(/\s+[–-]\s+/)[0].trim()
+        : splitLetters.has(m[1]) && m[2]
+          ? `${m[1]}.${m[2]}`
+          : m[1],
+    ]),
+  );
+}
+
+const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
+
+/**
+ * Figures a live run lacked and then got wrong: requirement due dates and
+ * evidence ("no due dates"), groups and requirements per section and by
+ * coverage, models and open findings by tier ("does not distribute findings
+ * by tier"), and the rules line worded so that 0 fired cannot read as "no
+ * result". For the formal analyzers of an E-23 run; "" for any other report.
+ */
+export function e23DataBlock(rd: ReportData): string {
+  if (!isE23Run(rd)) return "";
+  const lines: string[] = ["E-23 data for this report, computed from its own records:"];
+  const groups = e23Groups(rd);
+  if (groups.length > 0) {
+    const coverage = coverageOf(rd);
+    const rows = groups.flatMap((g) => g.rows);
+    const done = rows.filter((r) => r.isDone);
+    const statuses = new Map<string, number>();
+    done.forEach((r) => statuses.set(r.status, (statuses.get(r.status) ?? 0) + 1));
+    const byStatus = [...statuses.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .map(([status, n]) => `${oneLine(status)} ${n}`)
+      .join(", ");
+    const withEvidence = rows.filter((r) => r.evidenceCount > 0).length;
+    lines.push(
+      `E-23 requirements: ${rows.length} in total; done ${done.length}${byStatus ? ` (${byStatus})` : ""}; with a due date ${rows.filter((r) => r.dueDate).length}; overdue ${rows.filter((r) => r.isOverdue).length}; with an owner ${rows.filter((r) => !hasNoActiveOwner(r.owner)).length}; with evidence attached ${withEvidence}; without evidence ${rows.length - withEvidence}.`,
+    );
+
+    const sections = sectionsOf(groups.map((g) => g.title));
+    type Tally = {
+      groups: number;
+      checked: number;
+      self: number;
+      reqs: number;
+      reqsChecked: number;
+      reqsSelf: number;
+    };
+    const blank = (): Tally => ({
+      groups: 0,
+      checked: 0,
+      self: 0,
+      reqs: 0,
+      reqsChecked: 0,
+      reqsSelf: 0,
+    });
+    const bySection = new Map<string, Tally>();
+    const all = blank();
+    const groupLines: string[] = [];
+    groups.forEach((g) => {
+      const c = coverage(g.title);
+      const n = g.rows.length;
+      for (const t of [all, bySection.get(sections.get(g.title)!) ?? blank()]) {
+        t.groups += 1;
+        t.reqs += n;
+        if (c === "checked") {
+          t.checked += 1;
+          t.reqsChecked += n;
+        } else if (c === "selfAssessmentOnly") {
+          t.self += 1;
+          t.reqsSelf += n;
+        }
+        if (t !== all) bySection.set(sections.get(g.title)!, t);
+      }
+      groupLines.push(
+        `- ${oneLine(g.title)}: ${plural(n, "requirement")}, ${c === "checked" ? "checked" : c ? "self-assessment only" : "coverage unknown"}`,
+      );
+    });
+    const tallyText = (t: Tally) =>
+      `${plural(t.groups, "group")} (${t.checked} checked, ${t.self} self-assessment only); ${plural(t.reqs, "requirement")} (${t.reqsChecked} in checked groups, ${t.reqsSelf} in self-assessment-only groups)`;
+    lines.push(
+      "E-23 groups by section (checked: compared with the model risk management records by the report's rules; the others are self-assessment only by design):",
+      ...[...bySection.entries()].map(([name, t]) => `- Section ${oneLine(name)}: ${tallyText(t)}`),
+      `- All groups: ${tallyText(all)}`,
+      "E-23 groups:",
+      ...groupLines,
+    );
+  }
+
+  const c = rd.sections?.e23Contradictions;
+  lines.push(
+    c?.available
+      ? `${rulesLine(c)}; rules not run: ${c.notRun.length}.`
+      : "The contradiction rules did not run, so no rule result is available.",
+  );
+
+  const fleet = rd.sections?.mrmFleet;
+  if (fleet?.perTier?.length) {
+    lines.push(
+      "Models by tier, as at the position date:",
+      ...fleet.perTier.map((t) => {
+        const s = t.openBySeverity;
+        const severity = s
+          ? ` (critical ${s.critical}, high ${s.high}, medium ${s.medium}, low ${s.low})`
+          : "";
+        return `- Tier ${t.tier}: models ${t.models}, tiering current ${t.tieringCurrent}, validated ${t.validated}, monitoring active ${t.monitoringActive}, open findings ${t.openFindings}${severity}`;
+      }),
+    );
+  }
+  return `${lines.join("\n")}\n\n`;
 }
 
 /**

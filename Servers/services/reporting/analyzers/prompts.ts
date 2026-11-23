@@ -19,7 +19,7 @@ import { hasNoActiveOwner } from "../collectors/frameworkRollup";
 import { COVERAGE_LABELS, FIX_IT_SEVERITY_LABELS } from "../e23/e23Text";
 import { METRIC_STALE_DAYS } from "../e23/mrmFleet";
 
-export const ANALYZER_VERSION = "report-analyzer-v6";
+export const ANALYZER_VERSION = "report-analyzer-v7";
 
 const MAX_DATA_ITEMS = 50;
 /** Hard backstop on the joined section body, independent of the per-array
@@ -544,6 +544,18 @@ export function prepareMrmFleet(fleet: MrmFleetSectionData, opts: E23PromptOptio
 }
 
 /**
+ * The rules line, worded so it cannot be misread: a live run read "rules
+ * fired: 0" as "all 13 rules checked produced no result".
+ */
+export function rulesLine(c: E23ContradictionsSectionData): string {
+  const n = c.checked.length;
+  const fired = c.fired.length;
+  return `Rules checked: ${n}; rules that fired: ${fired} of ${n} (${
+    fired === 0 ? "no contradiction found" : "each one a contradiction listed below"
+  })`;
+}
+
+/**
  * Compact text for the contradictions section: fired rules, rules not run,
  * data coverage. The board version leaves out the example models.
  */
@@ -554,7 +566,7 @@ export function prepareE23Contradictions(
   if (!c.available) {
     return "The contradiction checks did not run: the E-23 checklist is not on file or could not be read. This is not a clean result.";
   }
-  const lines = [`Rules checked: ${c.checked.length}; rules fired: ${c.fired.length}`];
+  const lines = [rulesLine(c)];
   lines.push("Fired rules:");
   if (c.fired.length === 0) lines.push("none");
   c.fired.forEach((f) => {

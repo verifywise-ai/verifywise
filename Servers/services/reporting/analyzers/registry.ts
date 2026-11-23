@@ -11,6 +11,7 @@ import {
 } from "./schemas";
 import { GROUNDING_RULES, renderSections, SECTION_LABELS } from "./prompts";
 import {
+  e23DataBlock,
   e23GapData,
   e23HeaderLines,
   enforceE23GapPositions,
@@ -179,7 +180,7 @@ export const ANALYZERS: Record<AnalysisSectionKey, AnalyzerDefinition> = {
       const body = renderSummaries(extras.sectionSummaries, FORMAL);
       if (!body) return "";
       const { fw, subject } = subjectOf(rd);
-      return `${header(rd)}\n\n${factsBlock(extras, FORMAL)}Section analyses:\n${body}\n\nWrite the executive summary for ${subject} against ${fw}.`;
+      return `${header(rd)}\n\n${factsBlock(extras, FORMAL)}${e23DataBlock(rd)}Section analyses:\n${body}\n\nWrite the executive summary for ${subject} against ${fw}.`;
     },
   },
 
@@ -194,7 +195,9 @@ export const ANALYZERS: Record<AnalysisSectionKey, AnalyzerDefinition> = {
     // keeps today's prompt; its labels all fit the field.
     buildUserPrompt: (rd, extras) => {
       const body = renderSummaries(extras.sectionSummaries, { ...FORMAL, withKeys: isE23Run(rd) });
-      return body ? `${header(rd)}\n\n${factsBlock(extras, FORMAL)}Section analyses:\n${body}` : "";
+      return body
+        ? `${header(rd)}\n\n${factsBlock(extras, FORMAL)}${e23DataBlock(rd)}Section analyses:\n${body}`
+        : "";
     },
     enforce: enforceE23SectionKeys,
   },
@@ -212,7 +215,7 @@ export const ANALYZERS: Record<AnalysisSectionKey, AnalyzerDefinition> = {
     buildUserPrompt: (rd, extras) => {
       const body = renderSummaries(extras.sectionSummaries);
       return body
-        ? `${header(rd)}\n\n${factsBlock(extras)}Section analyses:\n${body}${fixItPromptBlock(rd)}`
+        ? `${header(rd)}\n\n${factsBlock(extras)}${e23DataBlock(rd)}Section analyses:\n${body}${fixItPromptBlock(rd)}`
         : "";
     },
   },
@@ -302,7 +305,7 @@ export const ANALYZERS: Record<AnalysisSectionKey, AnalyzerDefinition> = {
     buildUserPrompt: (rd, extras) => {
       const data = e23GapData(rd);
       return data
-        ? `${header(rd)}\n\n${factsBlock(extras, FORMAL)}${data}\n\nWrite the E-23 gap analysis for ${subjectOf(rd).subject}.`
+        ? `${header(rd)}\n\n${factsBlock(extras, FORMAL)}${e23DataBlock(rd)}${data}\n\nWrite the E-23 gap analysis for ${subjectOf(rd).subject}.`
         : "";
     },
     enforce: enforceE23GapPositions,

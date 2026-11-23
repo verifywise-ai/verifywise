@@ -114,6 +114,7 @@ describe("buildMrmFleet", () => {
       monitoringActive: 0,
       openFindings: 0,
       criticalHighFindings: 0,
+      openBySeverity: { critical: 0, high: 0, medium: 0, low: 0 },
     });
     expect(fleet).not.toHaveProperty("perTier.0.attestationStatus");
   });

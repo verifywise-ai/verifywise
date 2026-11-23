@@ -78,6 +78,7 @@ export function buildMrmFleet(
     monitoringActive: 0,
     openFindings: 0,
     criticalHighFindings: 0,
+    openBySeverity: { critical: 0, high: 0, medium: 0, low: 0 },
   }));
   const exceptions: MrmFleetSectionData["exceptions"] = [];
   let untiered = 0;
@@ -114,6 +115,9 @@ export function buildMrmFleet(
       if (m.activeThresholds > 0) row.monitoringActive += 1;
       row.openFindings += open.length;
       row.criticalHighFindings += criticalHigh.length;
+      for (const f of open) {
+        if (SEVERITIES.has(f.severity)) row.openBySeverity[f.severity as Severity] += 1;
+      }
     }
 
     const issues: string[] = [];

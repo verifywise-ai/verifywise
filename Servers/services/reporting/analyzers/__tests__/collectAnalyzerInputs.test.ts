@@ -488,7 +488,7 @@ describe("collectAnalyzerInputs", () => {
         expect(prompt).not.toContain(TITLE);
         expect(prompt).not.toContain(CLOSES);
         expect(prompt).not.toMatch(/internal document/i);
-        expect(prompt).toContain("[Remediation item counts] items=1; high=1; medium=0; low=0");
+        expect(prompt).toContain("[Remediation item counts] items: 1; high: 1; medium: 0; low: 0");
         expect(prompt).toContain("Most requirements are self-assessed as done.");
       },
     );
@@ -533,7 +533,7 @@ describe("collectAnalyzerInputs", () => {
     it("keeps the MRM counts and drops the named exceptions for the board", () => {
       const { facts, formalFacts } = collectFactsInput(e23FixItReportData({ audience: "board" }));
       for (const name of NAMES) expect(formalFacts).not.toContain(name);
-      expect(formalFacts).toContain("untiered=");
+      expect(formalFacts).toContain("untiered models: ");
       // The full block (recommendedActions, internal document) keeps them.
       expect(facts).toContain("Fraud detector");
     });
