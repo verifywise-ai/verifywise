@@ -6,7 +6,12 @@ jest.mock("../../utils/logger/fileLogger", () => ({
   default: { debug: jest.fn(), error: jest.fn() },
 }));
 
-import { verifyLLMKey, LLM_KEY_VERIFY_TIMEOUT_MS, MAX_BODY_BYTES } from "../llmKeyVerification";
+import {
+  verifyLLMKey,
+  LLM_KEY_VERIFY_TIMEOUT_MS,
+  MAX_BODY_BYTES,
+  withoutTrailingSlashes,
+} from "../llmKeyVerification";
 import { safeFetch } from "../../utils/safeOutboundUrl";
 import logger from "../../utils/logger/fileLogger";
 
@@ -270,5 +275,20 @@ describe("verifyLLMKey", () => {
       (logger.error as jest.Mock).mock.calls,
     ]);
     expect(logged).not.toContain("sk-proj-dont-log-me");
+  });
+});
+
+describe("withoutTrailingSlashes", () => {
+  it("drops every trailing slash and nothing else", () => {
+    expect(withoutTrailingSlashes("https://gw.example/v1/")).toBe("https://gw.example/v1");
+    expect(withoutTrailingSlashes("https://gw.example/v1///")).toBe("https://gw.example/v1");
+    expect(withoutTrailingSlashes("https://gw.example/v1")).toBe("https://gw.example/v1");
+    expect(withoutTrailingSlashes("///")).toBe("");
+  });
+
+  it("stays fast on a long run of slashes", () => {
+    const started = Date.now();
+    expect(withoutTrailingSlashes(`x${"/".repeat(200_000)}y`)).toBe(`x${"/".repeat(200_000)}y`);
+    expect(Date.now() - started).toBeLessThan(500);
   });
 });

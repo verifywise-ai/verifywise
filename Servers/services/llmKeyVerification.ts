@@ -214,10 +214,17 @@ const verifyOpenRouter = async (input: LLMKeyToVerify): Promise<LLMKeyVerificati
 const customListHas = (ids: string[], model: string): boolean =>
   ids.some((id) => id === model || id === `${model}:latest` || id.endsWith(`/${model}`));
 
+/** The URL without its trailing slashes; a loop, not a regex, as the URL is the user's text. */
+export const withoutTrailingSlashes = (url: string): string => {
+  let end = url.length;
+  while (end > 0 && url[end - 1] === "/") end--;
+  return url.slice(0, end);
+};
+
 const verifyCustom = async (input: LLMKeyToVerify): Promise<LLMKeyVerificationResult> => {
   if (!input.url) return unreachable;
   const headers = buildHeaders({ authorization: `Bearer ${input.key}` }, input.custom_headers);
-  const res = await request(`${input.url.replace(/\/+$/, "")}/models`, headers);
+  const res = await request(`${withoutTrailingSlashes(input.url)}/models`, headers);
   if (!res) return unreachable;
   // Some compatible servers have no /models (404/405): that is "cannot check".
   const verdict = classifyStatus(res);
