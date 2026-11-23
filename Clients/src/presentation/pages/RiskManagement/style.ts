@@ -27,7 +27,7 @@ export const riskFilterRowStyle = {
   gap: "8px",
   alignItems: "center",
   flex: "1 1 0",
-  minWidth: "320px",
+  minWidth: "min(320px, 100%)",
 };
 
 /** Columns and Search wrap to the next line together, never apart. */
@@ -55,8 +55,7 @@ export const analyticsIconButtonStyle = {
 export const addNewRiskButtonStyle = {
   backgroundColor: singleTheme.buttons.primary.contained.backgroundColor,
   border: `1px solid ${singleTheme.buttons.primary.contained.backgroundColor}`,
-  gap: "8px",
-  whiteSpace: "nowrap",
+  gap: "4px",
 };
 
 // C. Popover (Insert Risk Mega Dropdown)
