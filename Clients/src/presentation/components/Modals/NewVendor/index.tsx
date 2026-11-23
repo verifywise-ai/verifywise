@@ -69,6 +69,7 @@ import {
   getRiskScoreColor,
 } from "../../../../domain/utils/vendorScorecard.utils";
 import { radiusPx, palette as vwPalette } from "../../../themes/palette";
+import { translateKey } from "../../../../i18n/domTranslator";
 
 const initialState: VendorModalFormValues = {
   vendorName: "",
@@ -81,7 +82,8 @@ const initialState: VendorModalFormValues = {
   reviewer: null as number | null,
   reviewResult: "",
   assignee: null as number | null,
-  reviewDate: new Date().toISOString(),
+  // Optional: a new vendor has no review date until one is picked.
+  reviewDate: "",
   // Scorecard fields
   dataSensitivity: "",
   businessCriticality: "",
@@ -139,6 +141,28 @@ const REGULATORY_EXPOSURE_OPTIONS = [
   { _id: RegulatoryExposure.CCPA, name: "CCPA (california)" },
   { _id: RegulatoryExposure.Other, name: "Other" },
 ];
+
+type UseCaseApproval = "pending" | "rejected";
+
+/** A use case the vendor can be linked to; `approval` is set while it isn't approved. */
+type UseCaseOption = { _id: number; name: string; approval?: UseCaseApproval };
+
+const USE_CASE_APPROVAL_LABELS: Record<UseCaseApproval, string> = {
+  pending: "Pending approval",
+  rejected: "Rejected",
+};
+
+/** The approval state that keeps a use case out of useProjects' approvedProjects, if any. */
+const approvalOfUseCase = (project: any): UseCaseApproval | undefined => {
+  if (project?.has_pending_approval || project?.approval_status === "pending") return "pending";
+  if (project?.approval_status === "rejected") return "rejected";
+  return undefined;
+};
+
+const useCaseOptionLabel = (option: UseCaseOption) =>
+  option.approval
+    ? `${option.name} (${translateKey(USE_CASE_APPROVAL_LABELS[option.approval])})`
+    : option.name;
 
 const AddNewVendor: React.FC<AddNewVendorProps> = ({
   isOpen,
@@ -209,18 +233,16 @@ const AddNewVendor: React.FC<AddNewVendorProps> = ({
     return code === null ? undefined : new Intl.DisplayNames([lang], { type: "region" }).of(code);
   }, [lang, values.country]);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [projectsLoaded, setProjectsLoaded] = useState(false); // Track if projects are loaded
   const [alert, setAlert] = useState<{
     variant: "success" | "info" | "warning" | "error";
     title?: string;
     body: string;
   } | null>(null);
-  const [projectOptions, setProjectOptions] = useState<{ _id: number; name: string }[]>([]);
   const [isScorecardExpanded, setIsScorecardExpanded] = useState(false);
   const [activeTab, setActiveTab] = useState("details");
   const can = useCanCheck();
   const { users } = useUsers();
-  const { approvedProjects } = useProjects();
+  const { data: allProjects, approvedProjects, refetch: refetchProjects } = useProjects();
   const queryClient = useQueryClient();
 
   // TanStack Query hooks
@@ -241,14 +263,29 @@ const AddNewVendor: React.FC<AddNewVendorProps> = ({
     name: `${user.name} ${user.surname}`,
   }));
 
-  const formattedProjects = useMemo(() => {
-    return Array.isArray(approvedProjects)
-      ? approvedProjects.map((project: any) => ({
-          _id: project.id,
-          name: project.project_title,
-        }))
-      : [];
-  }, [approvedProjects]);
+  // New links come from approved use cases only. A link the vendor already
+  // has to a pending or rejected use case stays selected, with its status, so
+  // saving sends it back instead of dropping it.
+  const projectOptions = useMemo<UseCaseOption[]>(() => {
+    const approved: UseCaseOption[] = (approvedProjects ?? []).map((project: any) => ({
+      _id: project.id,
+      name: project.project_title,
+    }));
+    const approvedIds = new Set(approved.map((option) => option._id));
+    const linkedNotApproved: UseCaseOption[] = (allProjects ?? [])
+      .filter(
+        (project: any) =>
+          values.projectIds.includes(project.id) &&
+          !approvedIds.has(project.id) &&
+          approvalOfUseCase(project),
+      )
+      .map((project: any) => ({
+        _id: project.id,
+        name: project.project_title,
+        approval: approvalOfUseCase(project),
+      }));
+    return [...approved, ...linkedNotApproved];
+  }, [approvedProjects, allProjects, values.projectIds]);
 
   useEffect(() => {
     if (!isOpen) {
@@ -258,12 +295,11 @@ const AddNewVendor: React.FC<AddNewVendorProps> = ({
     }
   }, [isOpen, resetErrors]);
 
+  // Use cases are approved, added and removed while the page stays open, so
+  // the list is fetched again each time the modal opens.
   useEffect(() => {
-    if (isOpen && !projectsLoaded) {
-      setProjectOptions(formattedProjects);
-      setProjectsLoaded(true);
-    }
-  }, [isOpen, projectsLoaded, formattedProjects]);
+    if (isOpen) void refetchProjects();
+  }, [isOpen, refetchProjects]);
 
   useEffect(() => {
     if (isOpen && !existingVendor) {
@@ -339,11 +375,11 @@ const AddNewVendor: React.FC<AddNewVendorProps> = ({
    * @param newDate - The new date value or null
    */
   const handleDateChange = (newDate: Dayjs | null) => {
-    if (newDate?.isValid()) {
-      setValues((prevValues) => ({
-        ...prevValues,
-        reviewDate: newDate && newDate.isValid() ? newDate.toISOString() : "",
-      }));
+    // Cleared: no review date. A half-typed date is ignored until it is valid.
+    if (newDate === null) {
+      setValues((prevValues) => ({ ...prevValues, reviewDate: "" }));
+    } else if (newDate.isValid()) {
+      setValues((prevValues) => ({ ...prevValues, reviewDate: newDate.toISOString() }));
     }
   };
 
@@ -404,6 +440,7 @@ const AddNewVendor: React.FC<AddNewVendorProps> = ({
       review_status:
         REVIEW_STATUS_OPTIONS?.find((s) => s._id === values.reviewStatus)?.name ?? null,
       reviewer: values.reviewer ?? undefined,
+      // None picked sends null: the server stores NULL, and an update clears it.
       review_date: calendarDayAtNoonUtc(values.reviewDate) || null,
       // Scorecard fields
       data_sensitivity: values.dataSensitivity || undefined,
@@ -444,7 +481,8 @@ const AddNewVendor: React.FC<AddNewVendorProps> = ({
         }
 
         onSuccess();
-        // The vendor is saved, so the form starts afresh; a save that fails keeps what was typed.
+        // Saved: a second Save must not create the vendor again, so the form starts afresh. A save
+        // that fails keeps what was typed.
         setValues(initialState);
         if (cfFlushFailed) {
           // The vendor is in the DB. Keep the modal open so the warning
@@ -480,6 +518,7 @@ const AddNewVendor: React.FC<AddNewVendorProps> = ({
 
       setTimeout(() => setAlert(null), 3000);
     } finally {
+      // A failed save keeps what the user typed; closing the modal resets it.
       setIsSubmitting(false);
     }
   };
@@ -543,6 +582,7 @@ const AddNewVendor: React.FC<AddNewVendorProps> = ({
 
       setTimeout(() => setAlert(null), 3000);
     } finally {
+      // A failed save keeps what the user typed; closing the modal resets it.
       setIsSubmitting(false);
     }
   };
@@ -569,23 +609,24 @@ const AddNewVendor: React.FC<AddNewVendorProps> = ({
           placeholder="Select use cases"
           error={errors.projectIds}
           disabled={isEditingDisabled}
-          value={
-            projectOptions?.filter((project) => values.projectIds?.includes(project._id)) || []
-          }
-          options={projectOptions || []}
+          value={projectOptions.filter((project) => values.projectIds?.includes(project._id))}
+          options={projectOptions}
           noOptionsText={
-            values?.projectIds?.length === projectOptions?.length
+            projectOptions.every((project) => values.projectIds?.includes(project._id))
               ? "All use cases are selected"
               : "No options"
           }
-          onChange={(_event, newValue: { _id: number; name: string }[]) => {
-            handleOnChange(
-              "projectIds",
-              newValue.map((project) => project._id),
-            );
+          onChange={(_event, newValue: UseCaseOption[]) => {
+            // Links to use cases not in the list (not visible to this user,
+            // or not loaded yet) are not the user's to remove here.
+            const listed = new Set(projectOptions.map((project) => project._id));
+            handleOnChange("projectIds", [
+              ...values.projectIds.filter((id) => !listed.has(id)),
+              ...newValue.map((project) => project._id),
+            ]);
           }}
-          getOptionLabel={(project: { _id: number; name: string }) => project.name}
-          renderOption={(props, option: { _id: number; name: string }) => {
+          getOptionLabel={useCaseOptionLabel}
+          renderOption={(props, option: UseCaseOption) => {
             const { key, ...optionProps } = props;
             return (
               <Box key={`${option._id}-${key}`} component="li" {...optionProps}>
@@ -716,6 +757,7 @@ const AddNewVendor: React.FC<AddNewVendorProps> = ({
             }}
             date={values.reviewDate ? dayjs(values.reviewDate) : null}
             handleDateChange={handleDateChange}
+            isClearable
             disabled={isEditingDisabled}
           />
         </Stack>

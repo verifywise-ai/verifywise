@@ -60,6 +60,11 @@ const existingRisk: ExistingRisk = {
 };
 
 describe("NewRisk (AddNewRisk)", () => {
+  // A failed validation scrolls to the first invalid field; jsdom has no scrolling.
+  beforeAll(() => {
+    Element.prototype.scrollIntoView = vi.fn();
+  });
+
   it("renders without crashing when open", () => {
     renderWithProviders(<AddNewRisk isOpen={true} setIsOpen={vi.fn()} vendors={[]} />);
     expect(document.body).toBeTruthy();
@@ -166,6 +171,86 @@ describe("NewRisk (AddNewRisk)", () => {
     expect(payload.data.risk_level).not.toBe(existingRisk.risk_level);
 
     getRiskLevelSpy.mockRestore();
+  });
+
+  // VC-H1: a failed save used to empty the form in its finally block.
+  it("keeps the form as it was when the save fails", async () => {
+    updateMutateAsync.mockReset();
+    updateMutateAsync.mockRejectedValue(new Error("Server down"));
+    const setIsOpen = vi.fn();
+    renderWithProviders(
+      <AddNewRisk isOpen={true} setIsOpen={setIsOpen} vendors={[]} existingRisk={existingRisk} />,
+    );
+
+    const description = document.getElementById("vendor-risk-description-input");
+    await userEvent.type(description as HTMLElement, " again");
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+
+    await waitFor(() => expect(updateMutateAsync).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(screen.getByRole("button", { name: "Save" })).not.toBeDisabled());
+    expect(document.getElementById("vendor-risk-description-input")).toHaveValue(
+      "Vendor outage again",
+    );
+    expect(document.getElementById("vendor-risk-action-plan-input")).toHaveValue("Second provider");
+    expect(setIsOpen).not.toHaveBeenCalled();
+  });
+
+  // VC-M3: with no vendor there is nothing to attach the risk to, and no
+  // placeholder vendor can be saved.
+  it("refuses to save a new risk when there are no vendors", async () => {
+    createMutateAsync.mockReset();
+    renderWithProviders(<AddNewRisk isOpen={true} setIsOpen={vi.fn()} vendors={[]} />);
+
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+
+    expect(
+      await screen.findByText("Add a vendor first. Each vendor risk belongs to a vendor."),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("No Vendor Exists")).toBeNull();
+    expect(createMutateAsync).not.toHaveBeenCalled();
+  });
+
+  it("doesn't say there are no vendors while the vendor list is loading", () => {
+    renderWithProviders(
+      <AddNewRisk isOpen={true} setIsOpen={vi.fn()} vendors={[]} vendorsLoading={true} />,
+    );
+    expect(screen.queryByText("No vendors yet")).toBeNull();
+  });
+
+  // VC-L3: action_owner is a user id, and vendor_id too.
+  it("sends the action owner and vendor as numbers", async () => {
+    updateMutateAsync.mockReset();
+    updateMutateAsync.mockResolvedValue({ status: 202, data: {} });
+    renderWithProviders(
+      <AddNewRisk isOpen={true} setIsOpen={vi.fn()} vendors={[]} existingRisk={existingRisk} />,
+    );
+
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+
+    await waitFor(() => expect(updateMutateAsync).toHaveBeenCalledTimes(1));
+    const { data } = updateMutateAsync.mock.calls[0][0];
+    expect(data.action_owner).toBe(1);
+    expect(data.vendor_id).toBe(3);
+  });
+
+  // An owner removed from the organization is stored as null; "null" is not an owner.
+  it("asks for an action owner when the stored one was cleared", async () => {
+    updateMutateAsync.mockReset();
+    renderWithProviders(
+      <AddNewRisk
+        isOpen={true}
+        setIsOpen={vi.fn()}
+        vendors={[]}
+        existingRisk={{ ...existingRisk, action_owner: null as unknown as string }}
+      />,
+    );
+
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+
+    expect(
+      await screen.findByText("Please select an action owner from the dropdown"),
+    ).toBeInTheDocument();
+    expect(updateMutateAsync).not.toHaveBeenCalled();
   });
 });
 

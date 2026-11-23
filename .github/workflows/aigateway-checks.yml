@@ -99,6 +99,7 @@ jobs:
             tests/unit \
             tests/test_cache_service.py \
             tests/test_cost_service.py \
+            tests/test_encryption.py \
             tests/test_proxy_tool_calling.py \
             tests/test_virtual_key_endpoint_names.py \
             tests/test_endpoint_delete_keeps_key_limits.py \

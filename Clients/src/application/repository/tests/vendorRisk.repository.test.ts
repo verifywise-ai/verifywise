@@ -242,7 +242,7 @@ describe("vendorRisk.repository", () => {
       const result = await createVendorRisk({ body });
 
       expect(apiServices.post).toHaveBeenCalledTimes(1);
-      expect(apiServices.post).toHaveBeenCalledWith("/vendorRisks", body);
+      expect(apiServices.post).toHaveBeenCalledWith("/vendorRisks", body, undefined);
       expect(result).toEqual(mockResponse);
     });
 
@@ -285,7 +285,7 @@ describe("vendorRisk.repository", () => {
       const result = await updateVendorRisk({ id: 1, body });
 
       expect(apiServices.patch).toHaveBeenCalledTimes(1);
-      expect(apiServices.patch).toHaveBeenCalledWith("/vendorRisks/1", body);
+      expect(apiServices.patch).toHaveBeenCalledWith("/vendorRisks/1", body, undefined);
       expect(result).toEqual(mockResponse);
     });
 
@@ -340,7 +340,7 @@ describe("vendorRisk.repository", () => {
       const result = await deleteVendorRisk({ id: 1 });
 
       expect(apiServices.delete).toHaveBeenCalledTimes(1);
-      expect(apiServices.delete).toHaveBeenCalledWith("/vendorRisks/1");
+      expect(apiServices.delete).toHaveBeenCalledWith("/vendorRisks/1", undefined);
       expect(result).toEqual(mockResponse);
     });
 

@@ -196,7 +196,8 @@ describe("the vendor risk form opened on a preview", () => {
       vendor_id: 3,
       risk_description: "A breach exposed customer records",
       impact_description: TEXTS.impact,
-      action_owner: "4",
+      // Sent as a number, as the form sends it for any risk it saves.
+      action_owner: 4,
       action_plan: TEXTS.plan,
       risk_severity: "Major",
       // The level the form works out for Likely and Major, as it does for any risk it saves.

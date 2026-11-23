@@ -33,8 +33,8 @@ export interface VendorRiskFormDetails {
   vendor_id: string | number;
   risk_description: string;
   impact_description: string;
-  /** The id of a user of the organization, as the owner list writes it. */
-  action_owner?: string;
+  /** The id of a user of the organization, sent as a number; null when there is none. */
+  action_owner?: string | number | null;
   action_plan: string;
   risk_severity: string;
   /** The level the form works out from the likelihood and the severity, for example "High risk". */

@@ -518,7 +518,9 @@ POST /v1/vendors
 
 ### Processing
 
-1. Validate required fields
+1. Validate required fields. `review_date` is optional: a vendor created
+   without one (absent, `''` or `null`) has `review_date` NULL. It used to
+   default to the moment of creation.
 2. Check that `assignee` and `reviewer` are members of the organization (400 otherwise)
 3. Create vendor record
 4. Create vendor-project associations
@@ -784,6 +786,13 @@ isn't on every linked use case can therefore save the vendor, where the old
 delete-visible-then-reinsert-all hit the primary key and answered 500. The
 response's `projects` is read back from `vendors_projects` after the write.
 
+The vendor form fetches the use cases each time it opens. New links are
+picked from approved use cases only, but a link the vendor already has to a
+use case pending approval or rejected stays selected, named with its status
+("Beta (Pending approval)", "Gamma (Rejected)"), and is sent back on save, so
+it goes only when the user removes it. Ids the form doesn't list (use cases
+the user can't see) are sent back unchanged too.
+
 ### Deleting a vendor
 
 A vendor delete is a hard delete (`deleteVendorByIdQuery`,
@@ -879,6 +888,25 @@ related row's `relatedRisk.vendorName` is only set here) and
 `.../shared-projects`; writes go through the existing `POST /api/riskLinks` and
 `PATCH /api/riskLinks/:id`.
 
+**Who sees the link actions.** The tab gates on the keys the routes authorize
+(`routes/riskLinks.route.ts`, defaults in `config/rolePermissions.config.ts`),
+through `useCan` and the client's `BUILTIN_UI_PERMISSIONS`:
+
+| UI | Route | Key | Built-in roles |
+|----|-------|-----|----------------|
+| **Link a project risk**, **Relate a vendor risk** and their forms | `POST /api/riskLinks` | `riskLinks.edit` | Admin, Editor |
+| Row actions: Confirm, Dismiss (with its reason form), Remove link, Restore | `PATCH /api/riskLinks/:id` | `riskLinks.review` | Admin, Editor, Reviewer |
+| **Suggest children**, **Scan for related vendor risks** | `POST .../suggest-hierarchy`, `POST .../vendor-risks/recompute` | `riskLinks.admin` | Admin, SuperAdmin |
+
+Actions a user may not take are hidden, not disabled, as the vendor tables hide
+row actions without `vendor.edit`. An Auditor sees the links, their reasons
+and the Show dismissed toggle, and no actions; the empty state's "Link a
+project risk…" hint shows only with `riskLinks.edit`. A custom role follows its
+loaded permissions. The project risk panel (`LinkedRisksPanel/index.tsx`)
+applies the same keys to **Link a risk** and the row actions, and shows **Mark
+reviewed** on a "Parent level changed" flag only with `riskLinks.edit` (the
+acknowledge route's key); the flag itself shows to everyone.
+
 ### Related vendor risks
 
 Two vendor risks can be related, never parent and child. The row is a
@@ -971,10 +999,16 @@ A child that inherits through two of one vendor's risks counts once for that
 vendor. The same report feeds the table's **Inherited by** column ("3 project
 risks", or "2 suggested" when nothing is confirmed yet). Its link opens the
 vendor risk on its Linked risks tab, and its tooltip names the use cases.
-Saving or deleting a vendor risk invalidates all three reports
-(`VENDOR_INSIGHTS_KEY`) and every read of the register (`vendorRiskQueryKeys.all`, in
-`refreshVendorRisks` of the page), so that both the register and the heat map are read
-again. The **Inherited by** column belongs to the register on
+Saving, deleting or restoring a vendor risk invalidates all three reports
+(`VENDOR_INSIGHTS_KEY`) in the shared mutation hooks
+(`hooks/useVendorRiskMutations.ts`), so a change made from a vendor's risk
+dialog refreshes them too; so do a vendor update or delete. The page also
+invalidates every read of the register (`vendorRiskQueryKeys.all`, in its
+`refreshVendorRisks`), so that both the register and the heat map are read
+again. These hooks and the vendor ones turn off the global error toast
+(`suppressGlobalErrorToast`) because the modals and the page show their own,
+one per failure; a delete that answers 404 says "Vendor not found." / "Risk not
+found.". The **Inherited by** column belongs to the register on
 the Risks tab, which reads the exposure report only while that tab is shown
 (`useVendorExposure(enabled)`); the Blast radius report reads it itself.
 
@@ -1486,12 +1520,34 @@ up within the organization: a user from another organization shows as
 
 The header (title and description, `TAB_HEADERS`) follows the tab, and the tab names and tooltips are `TAB_TEXT`; the strings have de, fr and es keys in `i18n/modules/vendors.ts` (`Vendors/__tests__/tabs.test.ts` fails when one is missing), and `npm run i18n:audit:strict` must stay at 0 gaps. That audit reads a string only up to its first apostrophe and only in the attribute itself, so `src/i18n/__tests__/pageHeaders.translations.test.ts` reads the title, description and subtitle of every page header (`PageHeaderExtended`, `PageHeader`, `PageTitle`, `GovernanceLayout`) as code and fails when one has no de, fr or es key; a description that is built from data (`Manage users for organization #{orgId}`) is written as a template, translated with `t()` and filled with `fill()`. The description under the title is `TabDescription`: the four descriptions differ in length and wrap, so it lays them in one cell of a grid and shows the open tab's, which keeps the tab bar under it at the same height on every tab (it moved by a line at 1024 px when each description was rendered alone). A path that is none of the last three is the Vendors tab. The page's `TabBar` is `scrollable`, so the four tabs scroll with arrows when they do not fit. The `?vendorId=` and `?riskId=` parameters name a link that opens that vendor's or risk's form over the page. A link is taken up once (`handledLink`), and let go of when the URL no longer names one, which every outcome of the read ends in, so the same link followed a second time (Wise Search to the same vendor again) opens it again; the query is cleared whether or not the vendor came back. The reads are numbered (`linkReads`), and the answer of a read that a later link replaced is dropped: reads are not answered in the order they were asked, and a slow earlier link would otherwise open its vendor over the later link's, or move the reader back to the Vendors tab. The `?riskId=` parameter (the activity link `/vendors/risks?riskId=N`, and Wise Search's `/vendors?tab=risks&riskId=N`) opens that risk's form and ends on `/vendors/risks` with the query cleared: the page navigates to the Risks tab, with `replace`, instead of clearing the search parameters from the path it was on. A `?findingsVendorId=` on `/vendors/risks` (a notification stored before the findings had a tab) is sent to `/vendors/research-findings`. The tab panels mount only the active tab, so the findings list and the latest run (Research findings tab) and the insight reports (Insights tab, one per sub-tab) are read when their tab is first shown; the vendor list, the register and the vendor lists the findings need are read by the page itself and stay mounted across tabs, as does the count of the Research findings tab (`usePendingFindingsCount`), so that it shows on every tab. The breadcrumbs name the three paths (`presentation/components/breadcrumbs/routeMapping.ts`, static entries that win over the dynamic `/vendors/<slug>` pattern, which would say "Vendor details"): `/vendors/risks` is "Vendor risks", `/vendors/research-findings` is "Research findings" and `/vendors/insights` is "Insights". The tab bar's icons come from `presentation/utils/lucideIconMap.ts`, which lists the icons by name (`Copy`, `Grid3x3` and `Radar`, which the Insights sub-tabs name, were added to it).
 
+### Lists, filters and exports
+
+`GET /vendorRisks/all` answers one row per (vendor risk, use case of its
+vendor). `useVendorRisks` and the dashboard make the rows distinct by risk id
+first (`distinctVendorRisks`, `application/utils/vendorRiskRows.ts`), keeping
+each risk's `project_ids` and `project_titles`, so counts, cards, the heat map,
+tables and exports show each risk once. The use case filter matches any of a
+risk's use cases.
+
+Each tab has its own use case filter: the Vendors tab's narrows the vendor
+list only, the Risks tab's the risks only. The Vendors tab's risk counts are
+the vendor's active risks, whatever the Risks tab filters. Filter options use
+the stored enum values (data sensitivity, business criticality, severity) and
+the card level labels ("No risk" to "Very high").
+
+The risk export is the risks on screen (search, filters, card, heat map cell),
+once each, with use case names. The vendor export adds use cases and risk
+counts, and formats the review date with the table's formatter. A search or
+filter that hides every row shows "No vendors (vendor risks) match your search
+or filters." instead of the first-run empty state, and both tables move back to
+the last page with rows when the list shrinks.
+
 ### Components
 
 | Component | Purpose |
 |-----------|---------|
-| `AddNewVendor` | Create/edit vendor modal |
-| `AddNewRisk` | Create/edit risk modal (Risk details, Custom fields, Activity, Linked risks); `initialTab="linked-risks"` opens an existing risk on its links. Given a `preview` (`VendorRiskPreview`) it is the **draft** of a research finding: pre-filled, vendor fixed, and its Save hands the form to `preview.onSave` instead of creating the risk itself (see [Vendor research](#vendor-research)) |
+| `AddNewVendor` | Create/edit vendor modal. The review date starts empty and can be cleared; a failed save keeps the form as typed |
+| `AddNewRisk` | Create/edit risk modal (Risk details, Custom fields, Activity, Linked risks); `initialTab="linked-risks"` opens an existing risk on its links. Given a `preview` (`VendorRiskPreview`) it is the **draft** of a research finding: pre-filled, vendor fixed, and its Save hands the form to `preview.onSave` instead of creating the risk itself (see [Vendor research](#vendor-research)). With no vendor it won't save ("Add a vendor first…"); `vendor_id` and `action_owner` are sent as numbers; a failed save keeps the form |
 | `VendorRiskLinksPanel` | The Linked risks tab: child project risks and related vendor risks, plus Suggest children and the related scan |
 | `RelateVendorRiskForm` | Picker that relates another vendor risk to this one |
 | `InlineFormCard` | Bordered frame, title and Cancel/primary actions for the forms that open inside the Linked risks tab |
@@ -1531,7 +1587,7 @@ The header (title and description, `TAB_HEADERS`) follows the tab, and the tab n
 - **Groups and order.** The findings stand in groups (`groupFindings`): with a vendor chosen, under the name of their category, in the order of the categories; with all vendors, under the name of their vendor, and each row then names its category in a chip. A group heading shows the number of its findings, and each group is a list labelled by its heading inside the one list "Pending research findings". Inside a group the rows are ordered by risk level, highest first, then by credibility, then newest first (`orderFindings`). The focus after a decision follows the order on screen.
 - Each row (`FindingRow`) is one line until it is opened: a button that holds a chevron, the risk level chip and the risk text (two lines at most while the row is closed); under it the credibility line and the cautions of the finding (see **Credibility**), and the **Dismiss** and **Preview** buttons. A click of the risk, or Enter or Space on it, opens the details (`aria-expanded`, `aria-controls`), which are rendered only while the row is open: the impact under "Why it matters to you"; the action plan under "What to do" (accepting writes it to the register, so the person who decides can read all three texts that will be written, and the form of **Preview** shows them again to change; nothing is shown for a finding without one); under "Why this risk level" the rationale (plain text; a finding without one, which is the case for the findings of runs from before the sentence existed, has the caption with the next line alone) and the line "Severity: Major · Likelihood: Likely", which stands where each scale used to have a chip; and the sources: the host as a link (`http` and `https` only), the publication date, the tags of the source (see **Credibility**) and the quote as plain text. The texts are plain text like the quote. The **Preview** and **Dismiss** buttons of a row are described by that row's risk text (`aria-describedby`), so a screen reader says which risk a button decides.
 - **Preview suggested risk** and **Dismiss** are hidden for users without `vendor.edit`, who see the section read-only. There is no one-click accept: a finding is added to the register through the vendor risk form, so the person sees, and can change, what will be written.
-- **Preview suggested risk** opens `AddNewRisk` (the vendor risk form) on the finding, in place on the Research findings tab: nothing is requested and nothing is navigated to. The section passes a `VendorRiskPreview` (`domain/interfaces/i.vendor.ts`): a title ("Review suggested risk"), a description, the finding's `values` and an `onSave`. The form opens filled in with the finding's risk, impact, action plan, likelihood and severity (the register's top likelihood, `Almost certain`, is matched without regard to case); the vendor is fixed to the finding's; the **owner** starts on the vendor's assignee when that user belongs to the organization, else on the person adding the risk (`defaultActionOwner`), so the form can be saved as it opens; the risk level is the form's own, worked out from likelihood and severity as for any vendor risk (it can differ from the level chip on the card, which is the research's matrix: the form's level is the one saved); frameworks can be picked, and the custom fields of vendor risks are there, required ones included. A preview does not check the role again: the section only offers it to roles with `vendor.edit`. The section and its preview form read the organization's whole vendor list (`useVendors({ projectId: "all" })` in `pages/Vendors/index.tsx`), not the list that the page's use case filter narrows, since the findings are not filtered by use case: a preview starts on its vendor and on that vendor's assignee whatever the filter. The page's own vendor risk form does the same for an existing risk (opened from the register table, from **Open risk** after an accept, or through the `riskId` URL parameter): its Vendor field lists all the organization's vendors, so a risk whose vendor the use case filter leaves out still shows its own vendor. **Add new risk** still lists only the vendors of the use case in the filter.
+- **Preview suggested risk** opens `AddNewRisk` (the vendor risk form) on the finding, in place on the Research findings tab: nothing is requested and nothing is navigated to. The section passes a `VendorRiskPreview` (`domain/interfaces/i.vendor.ts`): a title ("Review suggested risk"), a description, the finding's `values` and an `onSave`. The form opens filled in with the finding's risk, impact, action plan, likelihood and severity (the register's top likelihood, `Almost certain`, is matched without regard to case); the vendor is fixed to the finding's; the **owner** starts on the vendor's assignee when that user belongs to the organization, else on the person adding the risk (`defaultActionOwner`), so the form can be saved as it opens; the risk level is the form's own, worked out from likelihood and severity as for any vendor risk (it can differ from the level chip on the card, which is the research's matrix: the form's level is the one saved); frameworks can be picked, and the custom fields of vendor risks are there, required ones included. A preview does not check the role again: the section only offers it to roles with `vendor.edit`. The section and its preview form read the organization's whole vendor list (`useVendors({ projectId: "all" })` in `pages/Vendors/index.tsx`), not the list that the Vendors tab's use case filter narrows, since the findings are not filtered by use case: a preview starts on its vendor and on that vendor's assignee whatever the filter. The page's own vendor risk form reads the same list, for a new risk and for an existing one (opened from the register table, from **Open risk** after an accept, or through the `riskId` URL parameter), and is told while it loads (`vendorsLoading`), so its Vendor field lists all the organization's vendors and an existing risk always shows its own vendor.
 - **Save** in the form calls `onSave`, which sends the accept request with the form's values (`toAcceptBody` in `application/utils/vendorResearchPreview.ts`: the owner as a number, the texts, the register's likelihood and severity, the level, the frameworks; no vendor). The risk is created and the finding settled in one transaction (see [Accept and dismiss](#accept-and-dismiss)). The form then saves the values of the custom fields on the new risk and closes, the row goes, and a toast ("Risk added to the register") and a notice with an **Open risk** button for the new risk are shown. If the custom field values cannot be saved, the form still closes (saving again would add the risk twice) and a warning says to open the risk and try again. **Cancel**, or closing the form any other way, changes nothing: the finding is still pending. A request that fails leaves the form open with everything that was typed, so that it can be saved again; the global error toast reports the failure.
 - **Dismiss** opens `DismissFindingModal` (a `StandardModal`) with a required reason and an optional note of up to 500 characters, counted in code points as the server counts them (most emoji are one, a flag or a skin-tone emoji are two), and announces "Finding dismissed." when it is done.
 - After a decision, focus moves to the first button of the row that takes the decided row's place: the next row, else the previous one, else the line that says nothing is left ("No pending research findings." or, when research is not set up, "Vendor research is not set up.", both with `tabIndex={-1}`), so that a screen reader says the new state, else the line at the top of the tab ("AI-suggested from web sources. Verify before accepting."). Focus moves only if it has fallen to the page, so it never pulls a user back who has moved on.
@@ -1578,7 +1634,8 @@ in-app notice. The Home queue lists due vendors regardless. Both use the same
 rule for `Reviewed` vendors (dropped only once the review date has passed). The
 sweep runs every action of every matching automation and sends one in-app
 notice per vendor per run. The vendor form stores the picked day at noon UTC
-(`calendarDayAtNoonUtc`), so its UTC day is the day the user picked; vendors
+(`calendarDayAtNoonUtc`), so its UTC day is the day the user picked; a vendor
+without a review date gets no reminder; vendors
 saved before that may read a day early for users east of UTC until next saved.
 The job is scheduled at midnight UTC (`tz: "UTC"`). See
 [Automations → Vendor Review Notifications](../infrastructure/automations.md#vendor-review-notifications).

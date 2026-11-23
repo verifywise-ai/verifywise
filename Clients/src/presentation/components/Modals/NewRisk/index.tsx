@@ -68,6 +68,8 @@ interface AddNewRiskProps {
   onSuccess?: () => void;
   /** The form lists these for the vendor field and reads nothing else of them. */
   vendors: Array<Pick<VendorModel, "id" | "vendor_name">>;
+  /** The vendor list is still loading: don't say there are no vendors yet. */
+  vendorsLoading?: boolean;
   /** The tab an existing risk opens on, e.g. "linked-risks" from the table's reach link. */
   initialTab?: "details" | "linked-risks";
   /**
@@ -133,12 +135,16 @@ const valuesOfPreview = (preview: VendorRiskPreview): VendorRiskModalFormValues 
   risk_severity: optionIdOf(RISK_SEVERITY_OPTIONS, preview.values.risk_severity),
 });
 
+/** Shown on the vendor field when there is no vendor to attach a risk to. */
+const NO_VENDOR_MESSAGE = "Add a vendor first. Each vendor risk belongs to a vendor.";
+
 const AddNewRisk: React.FC<AddNewRiskProps> = ({
   isOpen,
   setIsOpen,
   existingRisk,
   onSuccess = () => {},
   vendors,
+  vendorsLoading = false,
   initialTab,
   preview,
   onRestore,
@@ -155,15 +161,19 @@ const AddNewRisk: React.FC<AddNewRiskProps> = ({
       ? // The page shows the progress toast and the outcome.
         () => onRestore(existingRisk.id!)
       : undefined;
-  const VENDOR_OPTIONS =
-    vendors?.length > 0
-      ? vendors
-          .filter((vendor) => vendor.id !== undefined)
-          .map((vendor) => ({
-            _id: vendor.id as number,
-            name: vendor.vendor_name,
-          }))
-      : [{ _id: "no-vendor" as string | number, name: "No Vendor Exists" }];
+  // Only real vendors: there is no placeholder option that could be saved.
+  const VENDOR_OPTIONS = useMemo(
+    () =>
+      (vendors ?? [])
+        .filter((vendor) => vendor.id !== undefined)
+        .map((vendor) => ({
+          _id: vendor.id as number,
+          name: vendor.vendor_name,
+        })),
+    [vendors],
+  );
+  const hasNoVendors = !vendorsLoading && VENDOR_OPTIONS.length === 0;
+  const existingVendorId = existingRisk?.vendor_id;
 
   const [values, setValues] = useState<VendorRiskModalFormValues>(initialState);
   const valuesRef = useRef(values);
@@ -187,12 +197,21 @@ const AddNewRisk: React.FC<AddNewRiskProps> = ({
         return r.accepted ? "" : r.message;
       },
       vendor_id: (v: unknown) => {
-        const id = v as string;
-        return !id || Number(id) === 0 ? "Please select a vendor from the dropdown" : "";
+        if (hasNoVendors && !existingVendorId) return NO_VENDOR_MESSAGE;
+        const id = Number(v);
+        // A vendor in the list, or the risk's own vendor while the list loads.
+        const known =
+          VENDOR_OPTIONS.some((option) => option._id === id) ||
+          (existingVendorId !== undefined && String(existingVendorId) === String(v));
+        return Number.isInteger(id) && id > 0 && known
+          ? ""
+          : "Please select a vendor from the dropdown";
       },
       action_owner: (v: unknown) => {
-        const owner = v as string;
-        return !owner ? "Please select an action owner from the dropdown" : "";
+        const owner = Number(v);
+        return Number.isInteger(owner) && owner > 0
+          ? ""
+          : "Please select an action owner from the dropdown";
       },
       risk_severity: (v: unknown) => {
         const severity = v as string;
@@ -207,7 +226,7 @@ const AddNewRisk: React.FC<AddNewRiskProps> = ({
           : "";
       },
     }),
-    [],
+    [VENDOR_OPTIONS, hasNoVendors, existingVendorId],
   );
 
   const { errors, validateAll, validateField, clearFieldError, getFirstInvalidField, resetErrors } =
@@ -277,7 +296,8 @@ const AddNewRisk: React.FC<AddNewRiskProps> = ({
         ...prevValues,
         risk_description: existingRisk.risk_description,
         impact_description: existingRisk.impact_description,
-        action_owner: String(existingRisk.action_owner) || "",
+        // An owner removed from the organization is stored as null: no owner.
+        action_owner: existingRisk.action_owner ? String(existingRisk.action_owner) : "",
         risk_severity: optionIdOf(RISK_SEVERITY_OPTIONS, existingRisk.risk_severity),
         likelihood: optionIdOf(LIKELIHOOD_OPTIONS, existingRisk.likelihood),
         action_plan: existingRisk.action_plan,
@@ -338,12 +358,13 @@ const AddNewRisk: React.FC<AddNewRiskProps> = ({
       selectedLikelihood.name as RiskLikelihood,
       selectedSeverity.name as RiskSeverity,
     );
+    const actionOwner = Number(values.action_owner);
     const _riskDetails: VendorRiskFormDetails = {
-      vendor_id: values.vendor_id,
+      vendor_id: Number(values.vendor_id),
       risk_description: values.risk_description,
       impact_description: values.impact_description,
-      action_owner: formattedUsers?.find((user) => String(user._id) === String(values.action_owner))
-        ?._id,
+      // A user id, as the server stores it; null when there is none.
+      action_owner: Number.isInteger(actionOwner) && actionOwner > 0 ? actionOwner : null,
       action_plan: values.action_plan,
       risk_severity: selectedSeverity.name,
       risk_level: risk_risklevel.level,
@@ -433,6 +454,8 @@ const AddNewRisk: React.FC<AddNewRiskProps> = ({
           }
         }
         onSuccess();
+        // Saved: a second Save must not create the risk again.
+        setValues(initialState);
         if (cfFlushFailed) {
           // Risk is created. Keep modal open so the inline warning from
           // CustomFieldsSection stays visible.
@@ -466,8 +489,8 @@ const AddNewRisk: React.FC<AddNewRiskProps> = ({
 
       setTimeout(() => setAlert(null), 3000);
     } finally {
+      // A failed save keeps what the user typed; closing the modal resets it.
       setIsSubmitting(false);
-      setValues(initialState);
     }
   };
 
@@ -530,8 +553,8 @@ const AddNewRisk: React.FC<AddNewRiskProps> = ({
 
       setTimeout(() => setAlert(null), 3000);
     } finally {
+      // A failed save keeps what the user typed; closing the modal resets it.
       setIsSubmitting(false);
-      setValues(initialState);
     }
   };
 
@@ -558,7 +581,7 @@ const AddNewRisk: React.FC<AddNewRiskProps> = ({
           <Select
             items={VENDOR_OPTIONS}
             label="Vendor"
-            placeholder="Select vendor"
+            placeholder={hasNoVendors ? "No vendors yet" : "Select vendor"}
             isHidden={false}
             id="vendor_id"
             onChange={(e) => handleOnChange("vendor_id", e.target.value)}

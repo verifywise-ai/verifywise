@@ -67,6 +67,14 @@ export const vendorManagementContent: ArticleContent = {
       caption: 'The vendor registry lists all registered AI vendors with their risk scores and review status.',
     },
     {
+      type: 'paragraph',
+      text: 'The Vendors and Risks tabs each have their own search and filters, including a use case filter, so narrowing one tab leaves the other as it was. The Risks column counts each of a vendor\'s active risks once, whatever the Risks tab is filtered to.',
+    },
+    {
+      type: 'paragraph',
+      text: 'Export downloads what the tab shows after search and filters. The vendor export includes each vendor\'s use cases and risk count; the risk export lists each risk once, with its use cases.',
+    },
+    {
       type: 'heading',
       id: 'adding-vendors',
       level: 2,
@@ -74,7 +82,7 @@ export const vendorManagementContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'To register a new vendor, click "Add vendor" and fill in:',
+      text: 'To register a new vendor, click "Add new vendor" and fill in:',
     },
     {
       type: 'ordered-list',
@@ -153,7 +161,7 @@ export const vendorManagementContent: ArticleContent = {
       type: 'bullet-list',
       items: [
         { bold: 'Reviewer', text: 'The person conducting the assessment' },
-        { bold: 'Review date', text: 'When the next review is due' },
+        { bold: 'Review date', text: 'When the next review is due. It\'s optional: a new vendor starts without one, and you can clear it later' },
         { bold: 'Review result', text: 'Findings and conclusions from the review' },
       ],
     },
@@ -165,7 +173,7 @@ export const vendorManagementContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'A vendor shows on the reviewer\'s Home page (or the assignee\'s, when no reviewer is set) from 14 days before its review date. When you finish a review, mark it Reviewed and set the next review date in the same save. A vendor marked Reviewed leaves Home once its review date has passed; any other vendor stays there as overdue.',
+      text: 'A vendor shows on the reviewer\'s Home page (or the assignee\'s, when no reviewer is set) from 14 days before its review date. When you finish a review, mark it Reviewed and set the next review date in the same save. A vendor marked Reviewed leaves Home once its review date has passed; any other vendor stays there as overdue. A vendor with no review date doesn\'t show on Home and gets no reminders.',
     },
     {
       type: 'paragraph',
@@ -293,6 +301,10 @@ export const vendorManagementContent: ArticleContent = {
         { text: 'Impact assessment when vendor issues arise' },
         { text: 'Vendor concentration across your portfolio' },
       ],
+    },
+    {
+      type: 'paragraph',
+      text: 'You can link a vendor to approved use cases. If a linked use case is later pending approval or rejected, the link stays: the vendor form shows it with its status, for example "Fraud scoring (Pending approval)", and saving keeps it.',
     },
     {
       type: 'callout',

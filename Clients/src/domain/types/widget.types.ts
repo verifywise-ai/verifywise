@@ -51,6 +51,8 @@ export interface DatePickerCoreProps {
   onAccept?: (date: Dayjs | null) => void;
   /** Blocks typing in the field, leaving the calendar as the only way to change the date. */
   isFieldReadOnly?: boolean;
+  /** Shows a clear button in the field, for an optional date that can be emptied. */
+  isClearable?: boolean;
 }
 
 export interface DropDownsProps {

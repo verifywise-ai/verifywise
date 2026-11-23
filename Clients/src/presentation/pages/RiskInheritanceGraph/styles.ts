@@ -64,6 +64,26 @@ export const errorTextSx: SxProps<Theme> = {
 };
 
 // Legend / stats panel styles
+export const LEGEND_PANEL_MAX_WIDTH = 260;
+
+// React Flow insets every <Panel> 15px from the canvas edge (.react-flow__panel margin).
+const FLOW_PANEL_MARGIN = 15;
+
+/**
+ * fitView options shared by the canvas and its fit-view control. The left padding reserves
+ * the top-left legend panel plus its margin on both sides so no node sits under it; the
+ * other sides keep the usual 8% breathing room. Units are explicit so the value means the
+ * same in xyflow 12 and 13.
+ */
+export const GRAPH_FIT_VIEW_OPTIONS = {
+  padding: {
+    top: "8%",
+    right: "8%",
+    bottom: "8%",
+    left: `${LEGEND_PANEL_MAX_WIDTH + FLOW_PANEL_MARGIN * 2}px`,
+  },
+} as const;
+
 export const controlPanelSx: SxProps<Theme> = {
   gap: 4, // 8px — related items
   py: 6, // the guide's card padding: 12px 16px
@@ -74,7 +94,7 @@ export const controlPanelSx: SxProps<Theme> = {
   borderColor: "divider",
   boxShadow: (theme) => theme.boxShadow,
   minWidth: 200,
-  maxWidth: 260,
+  maxWidth: LEGEND_PANEL_MAX_WIDTH,
 };
 
 export const legendLabelSx: SxProps<Theme> = {

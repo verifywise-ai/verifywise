@@ -53,6 +53,12 @@ export default function VendorRiskLinksPanel({ vendorRiskId }: VendorRiskLinksPa
   const [dismissing, setDismissing] = useState<RiskLink | null>(null);
   // Scans, suggestions and the graph authorize on riskLinks.admin.
   const isAdmin = useCan("riskLinks.admin");
+  // The same keys the server checks: creating a link needs riskLinks.edit
+  // (Admin, Editor); confirming, dismissing, removing or restoring one is a
+  // status change and needs riskLinks.review (Admin, Editor, Reviewer). An
+  // Auditor holds neither and sees no link actions.
+  const canEdit = useCan("riskLinks.edit");
+  const canReview = useCan("riskLinks.review");
   const { t } = useTranslation();
   const { formRef, openerRef } = useFormFocus(form);
 
@@ -166,26 +172,30 @@ export default function VendorRiskLinksPanel({ vendorRiskId }: VendorRiskLinksPa
             stay in place (disabled while theirs is open) so nothing shifts
             under the pointer. Same as the project risk panel.
           */}
-          <CustomizableButton
-            ref={openerRef("child")}
-            size="small"
-            variant="text"
-            startIcon={<Link2 size={16} />}
-            onClick={() => setForm("child")}
-            isDisabled={form === "child"}
-          >
-            Link a project risk
-          </CustomizableButton>
-          <CustomizableButton
-            ref={openerRef("related")}
-            size="small"
-            variant="text"
-            startIcon={<Plus size={16} />}
-            onClick={() => setForm("related")}
-            isDisabled={form === "related"}
-          >
-            Relate a vendor risk
-          </CustomizableButton>
+          {canEdit && (
+            <>
+              <CustomizableButton
+                ref={openerRef("child")}
+                size="small"
+                variant="text"
+                startIcon={<Link2 size={16} />}
+                onClick={() => setForm("child")}
+                isDisabled={form === "child"}
+              >
+                Link a project risk
+              </CustomizableButton>
+              <CustomizableButton
+                ref={openerRef("related")}
+                size="small"
+                variant="text"
+                startIcon={<Plus size={16} />}
+                onClick={() => setForm("related")}
+                isDisabled={form === "related"}
+              >
+                Relate a vendor risk
+              </CustomizableButton>
+            </>
+          )}
           {isAdmin && (
             <CustomizableButton
               size="small"
@@ -208,7 +218,7 @@ export default function VendorRiskLinksPanel({ vendorRiskId }: VendorRiskLinksPa
         </CustomizableButton>
       </Stack>
 
-      {form && (
+      {canEdit && form && (
         <Box ref={formRef}>
           {form === "child" ? (
             <LinkChildRiskForm
@@ -237,10 +247,12 @@ export default function VendorRiskLinksPanel({ vendorRiskId }: VendorRiskLinksPa
       {!isLoading && links.length === 0 && (
         <Stack spacing="8px" alignItems="center">
           <EmptyState icon={Network} message="No linked risks yet." showBorder={false} />
-          <Typography sx={{ ...textStyles.caption, color: "text.accent" }}>
-            Link a project risk that this vendor risk applies to, or relate another vendor risk.
-            Suggestions appear here too.
-          </Typography>
+          {canEdit && (
+            <Typography sx={{ ...textStyles.caption, color: "text.accent" }}>
+              Link a project risk that this vendor risk applies to, or relate another vendor risk.
+              Suggestions appear here too.
+            </Typography>
+          )}
           {isAdmin ? (
             <CustomizableButton
               size="small"
@@ -293,6 +305,7 @@ export default function VendorRiskLinksPanel({ vendorRiskId }: VendorRiskLinksPa
                   link={link}
                   dismissing={dismissing?.id === link.id}
                   statusPending={updateStatus.isPending}
+                  canReview={canReview}
                   onAction={handleAction}
                   onSubmitDismissal={(dismissal) => submitDismissal(link, dismissal)}
                   onCancelDismissal={() => setDismissing(null)}

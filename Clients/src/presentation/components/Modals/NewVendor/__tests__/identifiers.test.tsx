@@ -15,7 +15,11 @@ vi.mock("../../../../../application/hooks/useAuth", () => ({
   useAuth: () => ({ userRoleName: "Admin" }),
 }));
 vi.mock("../../../../../application/hooks/useProjects", () => ({
-  useProjects: () => ({ approvedProjects: [{ id: 1, project_title: "Support bot" }] }),
+  // The modal fetches the use cases again each time it opens.
+  useProjects: () => ({
+    approvedProjects: [{ id: 1, project_title: "Support bot" }],
+    refetch: () => Promise.resolve(),
+  }),
 }));
 vi.mock("../../../../../application/hooks/useUsers", () => ({
   default: () => ({ users: [{ id: 2, name: "Ann", surname: "Lee" }] }),

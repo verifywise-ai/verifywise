@@ -670,8 +670,9 @@ describe("Vendors, research findings on their own tab", () => {
     vi.mocked(getVendorRiskById).mockResolvedValue({ data: acceptedRisk() } as never);
     renderPage("/vendors/risks");
     await userEvent.click(await screen.findByRole("button", { name: "Filter by use case 3" }));
+    // The Risks tab has its own use case filter: it narrows the register, not the vendor list.
     await waitFor(() =>
-      expect(mockUseVendors).toHaveBeenCalledWith({ projectId: "3" }, expect.anything()),
+      expect(registerState.reads).toContainEqual(expect.objectContaining({ projectId: "3" })),
     );
     // The filter is kept when the person goes on to the findings.
     await userEvent.click(tab(/^Research findings/));
@@ -684,40 +685,9 @@ describe("Vendors, research findings on their own tab", () => {
     expect(vendorsOfThePageEditor()?.map((v) => v.id)).toContain(7);
   });
 
-  // The list of every vendor is read once, when the page opens. When it has no data (it is still
-  // loading, or it failed) while the list of the use case in the filter loaded, the editor of an
-  // existing risk falls back to the use case's list rather than to no vendor at all.
-  it("gives the editor of an existing risk the use case's vendors while the list of every vendor has no data", async () => {
-    mockVendorsData = [
-      { id: 7, vendor_name: "Acme Cloud" },
-      { id: 8, vendor_name: "Other vendor" },
-    ];
-    mockVendorsByProject = { "3": [{ id: 7, vendor_name: "Acme Cloud" }] };
-    pageRiskEditor.vendors = null;
-    research.accept.mockResolvedValue({
-      finding: finding({ status: "accepted" }),
-      vendorRisk: acceptedRisk(),
-    });
-    vi.mocked(getVendorRiskById).mockResolvedValue({ data: acceptedRisk() } as never);
-    renderPage("/vendors/risks");
-    await userEvent.click(await screen.findByRole("button", { name: "Filter by use case 3" }));
-    await waitFor(() =>
-      expect(mockUseVendors).toHaveBeenCalledWith({ projectId: "3" }, expect.anything()),
-    );
-    // The filter is kept when the person goes on to the findings.
-    await userEvent.click(tab(/^Research findings/));
-    const row = (await screen.findByText(FIRST)).closest("li") as HTMLElement;
-    await addThroughTheForm(row);
-
-    mockAllVendorsUnavailable = true;
-    await userEvent.click(await screen.findByRole("button", { name: "Open risk" }));
-
-    await waitFor(() => expect(pageRiskEditor.vendors).not.toBeNull());
-    expect(vendorsOfThePageEditor()?.map((v) => v.id)).toEqual([7]);
-  });
-
-  // The nearest neighbour: a new risk is still offered the vendors of the use case in the filter.
-  it("still gives a new risk only the vendors of the use case in the filter", async () => {
+  // A new risk is offered every vendor, whatever the use case filter of the Risks tab narrows
+  // the register to: each risk belongs to a vendor, and the filter narrows risks, not vendors.
+  it("gives a new risk every vendor, whatever the use case filter", async () => {
     mockVendorsData = [
       { id: 7, vendor_name: "Acme Cloud" },
       { id: 8, vendor_name: "Other vendor" },
@@ -727,14 +697,15 @@ describe("Vendors, research findings on their own tab", () => {
     pageRiskEditor.vendors = null;
     renderPage("/vendors/risks");
     await userEvent.click(await screen.findByRole("button", { name: "Filter by use case 3" }));
+    // The Risks tab has its own use case filter: it narrows the register, not the vendor list.
     await waitFor(() =>
-      expect(mockUseVendors).toHaveBeenCalledWith({ projectId: "3" }, expect.anything()),
+      expect(registerState.reads).toContainEqual(expect.objectContaining({ projectId: "3" })),
     );
 
     await userEvent.click(screen.getByRole("button", { name: "Add new risk" }));
 
     await waitFor(() => expect(pageRiskEditor.vendors).not.toBeNull());
-    expect(vendorsOfThePageEditor()?.map((v) => v.id)).toEqual([8]);
+    expect(vendorsOfThePageEditor()?.map((v) => v.id)).toEqual([7, 8]);
   });
 
   // The findings are not filtered by use case, so the section shows a finding of a vendor the
@@ -750,8 +721,9 @@ describe("Vendors, research findings on their own tab", () => {
     renderPage("/vendors/risks");
 
     await userEvent.click(await screen.findByRole("button", { name: "Filter by use case 3" }));
+    // The Risks tab has its own use case filter: it narrows the register, not the vendor list.
     await waitFor(() =>
-      expect(mockUseVendors).toHaveBeenCalledWith({ projectId: "3" }, expect.anything()),
+      expect(registerState.reads).toContainEqual(expect.objectContaining({ projectId: "3" })),
     );
     await userEvent.click(tab(/^Research findings/));
     const row = (await screen.findByText(FIRST)).closest("li") as HTMLElement;
@@ -1690,7 +1662,8 @@ describe("Vendors, the tabs", () => {
     });
 
     it("refreshes neither when the risk was not found", async () => {
-      deleteVendorRisk.mockResolvedValue({ status: 404 });
+      // A failed delete rejects, with the status of the answer.
+      deleteVendorRisk.mockRejectedValue(Object.assign(new Error("Not found"), { status: 404 }));
       const invalidate = renderWithSpy();
 
       await userEvent.click(await screen.findByRole("button", { name: "Delete risk 1" }));

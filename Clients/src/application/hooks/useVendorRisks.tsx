@@ -5,7 +5,7 @@
  * @param {string} [params.projectId] - The optional project ID to filter vendor risks.
  * @param {string} [params.vendorId] - The optional vendor ID to filter vendor risks.
  * @returns {Object} - The hook returns an object containing:
- *   - `vendorRisks` {VendorRisk[]} - The list of vendor risks.
+ *   - `vendorRisks` {DistinctVendorRisk[]} - Each vendor risk once, with its use cases.
  *   - `loadingVendorRisks` {boolean} - The loading state of the vendor risks.
  *   - `error` {string | boolean} - The error state of the vendor risks request.
  *   - `vendorRisksSummary` {Object} - The summary of vendor risks categorized by risk levels.
@@ -14,7 +14,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { riskLevelBucket } from "../utils/riskLevel";
-import { VendorRisk } from "../../domain/types/VendorRisk";
+import { distinctVendorRisks, VendorRiskRow } from "../utils/vendorRiskRows";
 import { getAllVendorRisks } from "../repository/vendorRisk.repository";
 
 // Query keys for vendor risks
@@ -43,8 +43,10 @@ const useVendorRisks = ({
     error,
     refetch: refetchVendorRisks,
   } = useQuery({
-    queryKey: vendorRiskQueryKeys.list({ projectId, vendorId, filter }),
-    queryFn: async (): Promise<VendorRisk[]> => {
+    // The use case and vendor are filtered here, not by the API, so they stay
+    // out of the key: every caller with the same status shares one request.
+    queryKey: vendorRiskQueryKeys.list({ filter }),
+    queryFn: async (): Promise<VendorRiskRow[]> => {
       const response = await getAllVendorRisks({ filter });
       return response?.data || [];
     },
@@ -52,16 +54,22 @@ const useVendorRisks = ({
     gcTime: 10 * 60 * 1000, // 10 minutes
   });
 
+  // The API answers one row per (risk, use case): keep each risk once, with
+  // all its use cases, before counting or filtering.
+  const distinctRisks = useMemo(() => distinctVendorRisks(vendorRisks), [vendorRisks]);
+
   // Filter risks based on projectId and vendorId
   const filteredVendorRisks = useMemo(() => {
-    return vendorRisks.filter((risk) => {
+    return distinctRisks.filter((risk) => {
       const matchesProject =
-        !projectId || projectId === "all" || risk.project_id?.toString() === projectId;
+        !projectId ||
+        projectId === "all" ||
+        risk.project_ids.some((id) => id.toString() === projectId);
       const matchesVendor =
         !vendorId || vendorId === "all" || risk.vendor_id?.toString() === vendorId;
       return matchesProject && matchesVendor;
     });
-  }, [vendorRisks, projectId, vendorId]);
+  }, [distinctRisks, projectId, vendorId]);
 
   const vendorRisksSummary = useMemo(() => {
     return filteredVendorRisks.reduce(
