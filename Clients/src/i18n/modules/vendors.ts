@@ -4,14 +4,8 @@
 export const de: Record<string, string> = {
   "Preview suggested risk": "Vorschau des vorgeschlagenen Risikos",
   "Add vendor risk": "Anbieterrisiko hinzufügen",
-  "Vendor List": "Anbieterliste",
   "Vendor list": "Anbieterliste",
-  "Vendor risks list": "Liste der Anbieterrisiken",
   "Vendor risk insights": "Erkenntnisse zu Anbieterrisiken",
-  "This table includes a list of external entities that provide AI-related products, services, or components. You can create and manage all vendors here.":
-    "Diese Tabelle enthält eine Liste externer Stellen, die KI-bezogene Produkte, Dienstleistungen oder Komponenten bereitstellen. Hier können Sie alle Anbieter erstellen und verwalten.",
-  "This table includes a list of risks related to a vendor. You can create and manage all vendor risks here.":
-    "Diese Tabelle enthält eine Liste von Risiken im Zusammenhang mit einem Anbieter. Hier können Sie alle Anbieterrisiken erstellen und verwalten.",
   "Risks that the research agent suggested for your vendors. Review each finding, then add it to the vendor risk register or dismiss it.":
     "Risiken, die der Recherche-Agent für Ihre Anbieter vorgeschlagen hat. Prüfen Sie jeden Befund und nehmen Sie ihn dann in das Anbieterrisikoregister auf oder verwerfen Sie ihn.",
   "Heat map, blast radius, duplicates and framework coverage of vendor risks.":
@@ -446,19 +440,71 @@ export const de: Record<string, string> = {
     "Keine Anbieter entsprechen Ihrer Suche oder Ihren Filtern.",
   "No vendor risks match your search or filters.":
     "Keine Anbieterrisiken entsprechen Ihrer Suche oder Ihren Filtern.",
+  "Add a new vendor risk": "Neues Anbieterrisiko hinzufügen",
+  "All use cases are selected": "Alle Anwendungsfälle sind ausgewählt",
+  "An error occurred: {message}": "Ein Fehler ist aufgetreten: {message}",
+  "An error occurred.": "Ein Fehler ist aufgetreten.",
+  "Please try again.": "Bitte versuchen Sie es erneut.",
+  "Delete this vendor?": "Diesen Anbieter löschen?",
+  "Document and assess a potential risk associated with your vendor. Provide details of the risk, its impact, and your mitigation plan.":
+    "Dokumentieren und bewerten Sie ein mögliches Risiko im Zusammenhang mit Ihrem Anbieter. Beschreiben Sie das Risiko, seine Auswirkungen und Ihren Minderungsplan.",
+  "Edit risk": "Risiko bearbeiten",
+  "Edit vendor": "Anbieter bearbeiten",
+  "Failed to load vendor risks": "Anbieterrisiken konnten nicht geladen werden",
+  "Failed to load vendors. Please try again later.":
+    "Anbieter konnten nicht geladen werden. Bitte versuchen Sie es später erneut.",
+  "Filtering by risk level: {level}": "Gefiltert nach Risikostufe: {level}",
+  "Loading vendors": "Anbieter werden geladen",
+  "No review date": "Kein Prüfdatum",
+  "Please select a use case from the dropdown":
+    "Bitte wählen Sie einen Anwendungsfall aus der Liste aus",
+  "Vendor contact person must only contain letters, spaces, apostrophes, hyphens and periods":
+    "Die Kontaktperson des Anbieters darf nur Buchstaben, Leerzeichen, Apostrophe, Bindestriche und Punkte enthalten",
+  "Please select an assignee from the dropdown":
+    "Bitte wählen Sie aus der Liste aus, wem der Anbieter zugewiesen ist",
+  "Please select a vendor from the dropdown": "Bitte wählen Sie einen Anbieter aus der Liste aus",
+  "Please select an action owner from the dropdown":
+    "Bitte wählen Sie einen Aktionsverantwortlichen aus der Liste aus",
+  "Please select a risk severity from the dropdown":
+    "Bitte wählen Sie einen Schweregrad aus der Liste aus",
+  "Please select a risk likelihood from the dropdown":
+    "Bitte wählen Sie eine Wahrscheinlichkeit aus der Liste aus",
+  "Select applicable frameworks": "Anwendbare Rahmenwerke auswählen",
+  "This table includes a list of external entities that provide AI-related products, services, or components. You can create and manage all vendors here.":
+    "Diese Tabelle enthält externe Stellen, die KI-bezogene Produkte, Dienste oder Komponenten bereitstellen. Hier können Sie alle Anbieter anlegen und verwalten.",
+  "This table includes a list of risks related to a vendor. You can create and manage all vendor risks here.":
+    "Diese Tabelle enthält die Risiken im Zusammenhang mit Anbietern. Hier können Sie alle Anbieterrisiken anlegen und verwalten.",
+  "Update risk details including description, impact assessment, and mitigation plan.":
+    "Aktualisieren Sie die Risikodetails, einschließlich Beschreibung, Auswirkungsbewertung und Minderungsplan.",
+  "Update vendor details including products/services provided, contact information, and review status.":
+    "Aktualisieren Sie die Anbieterdetails, einschließlich bereitgestellter Produkte/Dienste, Kontaktinformationen und Prüfstatus.",
+  "Use this form to register a new vendor. Include details about what they provide, who is responsible, and the outcome of your review. Provide enough details so your team can assess risks, responsibilities, and compliance requirements.":
+    "Verwenden Sie dieses Formular, um einen neuen Anbieter zu registrieren. Geben Sie an, was er bereitstellt, wer verantwortlich ist und welches Ergebnis Ihre Prüfung hatte. Machen Sie genug Angaben, damit Ihr Team Risiken, Verantwortlichkeiten und Compliance-Anforderungen bewerten kann.",
+  "User {id}": "Benutzer {id}",
+  "Vendor risks list": "Liste der Anbieterrisiken",
+  "Vendor risks - {vendor} ({count})": "Anbieterrisiken - {vendor} ({count})",
+  "Vendor risks ({count})": "Anbieterrisiken ({count})",
+  "When you delete this vendor, all data related to this vendor will be removed. This action is non-recoverable.":
+    "Wenn Sie diesen Anbieter löschen, werden alle zugehörigen Daten entfernt. Diese Aktion kann nicht rückgängig gemacht werden.",
+  "Each factor is normalized to a 0-1 scale before applying weights. The final score ranges from 0% (lowest risk) to 100% (highest risk).":
+    "Jeder Faktor wird vor der Gewichtung auf eine Skala von 0 bis 1 normalisiert. Der endgültige Wert reicht von 0 % (geringstes Risiko) bis 100 % (höchstes Risiko).",
+  "Risk score =": "Risikobewertung =",
+  "(Data sensitivity × 30%) +": "(Datensensitivität × 30 %) +",
+  "(Business criticality × 30%) +": "(Geschäftskritikalität × 30 %) +",
+  "(Past issues × 20%) +": "(Vergangene Probleme × 20 %) +",
+  "(Regulatory exposure × 20%)": "(Regulatorische Exposition × 20 %)",
+  "CCPA (California)": "CCPA (Kalifornien)",
+  "{count} risk": "{count} Risiko",
+  "{count} risks": "{count} Risiken",
+  "Showing {range} of {total} vendor": "Anzeige: {range} von {total} Anbieter",
+  "Showing {range} of {total} vendors": "Anzeige: {range} von {total} Anbietern",
 };
 
 export const fr: Record<string, string> = {
   "Preview suggested risk": "Aperçu du risque suggéré",
   "Add vendor risk": "Ajouter un risque fournisseur",
-  "Vendor List": "Liste des fournisseurs",
   "Vendor list": "Liste des fournisseurs",
-  "Vendor risks list": "Liste des risques fournisseurs",
   "Vendor risk insights": "Analyses des risques fournisseurs",
-  "This table includes a list of external entities that provide AI-related products, services, or components. You can create and manage all vendors here.":
-    "Ce tableau contient la liste des entités externes qui fournissent des produits, des services ou des composants liés à l'IA. Vous pouvez y créer et gérer tous les fournisseurs.",
-  "This table includes a list of risks related to a vendor. You can create and manage all vendor risks here.":
-    "Ce tableau contient la liste des risques liés à un fournisseur. Vous pouvez y créer et gérer tous les risques fournisseurs.",
   "Risks that the research agent suggested for your vendors. Review each finding, then add it to the vendor risk register or dismiss it.":
     "Risques que l'agent de recherche a suggérés pour vos fournisseurs. Examinez chaque résultat, puis ajoutez-le au registre des risques fournisseurs ou rejetez-le.",
   "Heat map, blast radius, duplicates and framework coverage of vendor risks.":
@@ -895,19 +941,71 @@ export const fr: Record<string, string> = {
     "Aucun fournisseur ne correspond à votre recherche ou à vos filtres.",
   "No vendor risks match your search or filters.":
     "Aucun risque fournisseur ne correspond à votre recherche ou à vos filtres.",
+  "Add a new vendor risk": "Ajouter un nouveau risque fournisseur",
+  "All use cases are selected": "Tous les cas d'usage sont sélectionnés",
+  "An error occurred: {message}": "Une erreur s'est produite : {message}",
+  "An error occurred.": "Une erreur s'est produite.",
+  "Please try again.": "Veuillez réessayer.",
+  "Delete this vendor?": "Supprimer ce fournisseur ?",
+  "Document and assess a potential risk associated with your vendor. Provide details of the risk, its impact, and your mitigation plan.":
+    "Documentez et évaluez un risque potentiel lié à votre fournisseur. Décrivez le risque, son impact et votre plan d'atténuation.",
+  "Edit risk": "Modifier le risque",
+  "Edit vendor": "Modifier le fournisseur",
+  "Failed to load vendor risks": "Impossible de charger les risques fournisseurs",
+  "Failed to load vendors. Please try again later.":
+    "Impossible de charger les fournisseurs. Veuillez réessayer plus tard.",
+  "Filtering by risk level: {level}": "Filtré par niveau de risque : {level}",
+  "Loading vendors": "Chargement des fournisseurs",
+  "No review date": "Aucune date de révision",
+  "Please select a use case from the dropdown":
+    "Veuillez sélectionner un cas d'usage dans la liste",
+  "Vendor contact person must only contain letters, spaces, apostrophes, hyphens and periods":
+    "La personne de contact du fournisseur ne peut contenir que des lettres, des espaces, des apostrophes, des traits d'union et des points",
+  "Please select an assignee from the dropdown":
+    "Veuillez sélectionner une personne assignée dans la liste",
+  "Please select a vendor from the dropdown": "Veuillez sélectionner un fournisseur dans la liste",
+  "Please select an action owner from the dropdown":
+    "Veuillez sélectionner un responsable d'action dans la liste",
+  "Please select a risk severity from the dropdown":
+    "Veuillez sélectionner une gravité dans la liste",
+  "Please select a risk likelihood from the dropdown":
+    "Veuillez sélectionner une probabilité dans la liste",
+  "Select applicable frameworks": "Sélectionner les référentiels applicables",
+  "This table includes a list of external entities that provide AI-related products, services, or components. You can create and manage all vendors here.":
+    "Ce tableau liste les entités externes qui fournissent des produits, services ou composants liés à l'IA. Vous pouvez y créer et gérer tous les fournisseurs.",
+  "This table includes a list of risks related to a vendor. You can create and manage all vendor risks here.":
+    "Ce tableau liste les risques liés aux fournisseurs. Vous pouvez y créer et gérer tous les risques fournisseurs.",
+  "Update risk details including description, impact assessment, and mitigation plan.":
+    "Mettez à jour les détails du risque : description, évaluation de l'impact et plan d'atténuation.",
+  "Update vendor details including products/services provided, contact information, and review status.":
+    "Mettez à jour les détails du fournisseur : produits/services fournis, coordonnées et statut de relecture.",
+  "Use this form to register a new vendor. Include details about what they provide, who is responsible, and the outcome of your review. Provide enough details so your team can assess risks, responsibilities, and compliance requirements.":
+    "Utilisez ce formulaire pour enregistrer un nouveau fournisseur. Indiquez ce qu'il fournit, qui en est responsable et le résultat de votre relecture. Donnez assez de détails pour que votre équipe puisse évaluer les risques, les responsabilités et les exigences de conformité.",
+  "User {id}": "Utilisateur {id}",
+  "Vendor risks list": "Liste des risques fournisseurs",
+  "Vendor risks - {vendor} ({count})": "Risques fournisseurs - {vendor} ({count})",
+  "Vendor risks ({count})": "Risques fournisseurs ({count})",
+  "When you delete this vendor, all data related to this vendor will be removed. This action is non-recoverable.":
+    "Si vous supprimez ce fournisseur, toutes les données qui s'y rapportent seront supprimées. Cette action est irréversible.",
+  "Each factor is normalized to a 0-1 scale before applying weights. The final score ranges from 0% (lowest risk) to 100% (highest risk).":
+    "Chaque facteur est ramené sur une échelle de 0 à 1 avant d'appliquer les pondérations. Le score final va de 0 % (risque le plus faible) à 100 % (risque le plus élevé).",
+  "Risk score =": "Score de risque =",
+  "(Data sensitivity × 30%) +": "(Sensibilité des données × 30 %) +",
+  "(Business criticality × 30%) +": "(Criticité métier × 30 %) +",
+  "(Past issues × 20%) +": "(Problèmes passés × 20 %) +",
+  "(Regulatory exposure × 20%)": "(Exposition réglementaire × 20 %)",
+  "CCPA (California)": "CCPA (Californie)",
+  "{count} risk": "{count} risque",
+  "{count} risks": "{count} risques",
+  "Showing {range} of {total} vendor": "Affichage de {range} sur {total} fournisseur",
+  "Showing {range} of {total} vendors": "Affichage de {range} sur {total} fournisseurs",
 };
 
 export const es: Record<string, string> = {
   "Preview suggested risk": "Vista previa del riesgo sugerido",
   "Add vendor risk": "Añadir riesgo de proveedor",
-  "Vendor List": "Lista de proveedores",
   "Vendor list": "Lista de proveedores",
-  "Vendor risks list": "Lista de riesgos del proveedor",
   "Vendor risk insights": "Información sobre los riesgos del proveedor",
-  "This table includes a list of external entities that provide AI-related products, services, or components. You can create and manage all vendors here.":
-    "Esta tabla incluye una lista de entidades externas que proporcionan productos, servicios o componentes relacionados con la IA. Aquí puede crear y gestionar todos los proveedores.",
-  "This table includes a list of risks related to a vendor. You can create and manage all vendor risks here.":
-    "Esta tabla incluye una lista de riesgos relacionados con un proveedor. Aquí puede crear y gestionar todos los riesgos de proveedor.",
   "Risks that the research agent suggested for your vendors. Review each finding, then add it to the vendor risk register or dismiss it.":
     "Riesgos que el agente de investigación sugirió para sus proveedores. Revise cada hallazgo y luego añádalo al registro de riesgos de proveedores o descártelo.",
   "Heat map, blast radius, duplicates and framework coverage of vendor risks.":
@@ -1339,4 +1437,58 @@ export const es: Record<string, string> = {
     "Ningún proveedor coincide con tu búsqueda o tus filtros.",
   "No vendor risks match your search or filters.":
     "Ningún riesgo de proveedor coincide con tu búsqueda o tus filtros.",
+  "Add a new vendor risk": "Añadir un nuevo riesgo de proveedor",
+  "All use cases are selected": "Todos los casos de uso están seleccionados",
+  "An error occurred: {message}": "Se produjo un error: {message}",
+  "An error occurred.": "Se produjo un error.",
+  "Please try again.": "Inténtelo de nuevo.",
+  "Delete this vendor?": "¿Eliminar este proveedor?",
+  "Document and assess a potential risk associated with your vendor. Provide details of the risk, its impact, and your mitigation plan.":
+    "Documente y evalúe un posible riesgo asociado a su proveedor. Describa el riesgo, su impacto y su plan de mitigación.",
+  "Edit risk": "Editar riesgo",
+  "Edit vendor": "Editar proveedor",
+  "Failed to load vendor risks": "No se pudieron cargar los riesgos del proveedor",
+  "Failed to load vendors. Please try again later.":
+    "No se pudieron cargar los proveedores. Inténtelo de nuevo más tarde.",
+  "Filtering by risk level: {level}": "Filtrado por nivel de riesgo: {level}",
+  "Loading vendors": "Cargando proveedores",
+  "No review date": "Sin fecha de revisión",
+  "Please select a use case from the dropdown": "Seleccione un caso de uso de la lista",
+  "Vendor contact person must only contain letters, spaces, apostrophes, hyphens and periods":
+    "La persona de contacto del proveedor solo puede contener letras, espacios, apóstrofos, guiones y puntos",
+  "Please select an assignee from the dropdown": "Seleccione a quién se asigna de la lista",
+  "Please select a vendor from the dropdown": "Seleccione un proveedor de la lista",
+  "Please select an action owner from the dropdown":
+    "Seleccione un responsable de la acción de la lista",
+  "Please select a risk severity from the dropdown": "Seleccione una gravedad de la lista",
+  "Please select a risk likelihood from the dropdown": "Seleccione una probabilidad de la lista",
+  "Select applicable frameworks": "Seleccione los marcos aplicables",
+  "This table includes a list of external entities that provide AI-related products, services, or components. You can create and manage all vendors here.":
+    "Esta tabla incluye las entidades externas que proporcionan productos, servicios o componentes relacionados con la IA. Aquí puede crear y gestionar todos los proveedores.",
+  "This table includes a list of risks related to a vendor. You can create and manage all vendor risks here.":
+    "Esta tabla incluye los riesgos relacionados con proveedores. Aquí puede crear y gestionar todos los riesgos de proveedor.",
+  "Update risk details including description, impact assessment, and mitigation plan.":
+    "Actualice los detalles del riesgo, incluidos la descripción, la evaluación del impacto y el plan de mitigación.",
+  "Update vendor details including products/services provided, contact information, and review status.":
+    "Actualice los detalles del proveedor, incluidos los productos/servicios que ofrece, la información de contacto y el estado de revisión.",
+  "Use this form to register a new vendor. Include details about what they provide, who is responsible, and the outcome of your review. Provide enough details so your team can assess risks, responsibilities, and compliance requirements.":
+    "Use este formulario para registrar un nuevo proveedor. Indique qué proporciona, quién es el responsable y el resultado de su revisión. Aporte suficientes detalles para que su equipo pueda evaluar los riesgos, las responsabilidades y los requisitos de cumplimiento.",
+  "User {id}": "Usuario {id}",
+  "Vendor risks list": "Lista de riesgos de proveedores",
+  "Vendor risks - {vendor} ({count})": "Riesgos del proveedor - {vendor} ({count})",
+  "Vendor risks ({count})": "Riesgos del proveedor ({count})",
+  "When you delete this vendor, all data related to this vendor will be removed. This action is non-recoverable.":
+    "Si elimina este proveedor, se eliminarán todos los datos relacionados con él. Esta acción no se puede deshacer.",
+  "Each factor is normalized to a 0-1 scale before applying weights. The final score ranges from 0% (lowest risk) to 100% (highest risk).":
+    "Cada factor se normaliza a una escala de 0 a 1 antes de aplicar las ponderaciones. La puntuación final va del 0 % (riesgo más bajo) al 100 % (riesgo más alto).",
+  "Risk score =": "Puntuación de riesgo =",
+  "(Data sensitivity × 30%) +": "(Sensibilidad de los datos × 30 %) +",
+  "(Business criticality × 30%) +": "(Criticidad para el negocio × 30 %) +",
+  "(Past issues × 20%) +": "(Incidencias anteriores × 20 %) +",
+  "(Regulatory exposure × 20%)": "(Exposición regulatoria × 20 %)",
+  "CCPA (California)": "CCPA (California)",
+  "{count} risk": "{count} riesgo",
+  "{count} risks": "{count} riesgos",
+  "Showing {range} of {total} vendor": "Mostrando {range} de {total} proveedor",
+  "Showing {range} of {total} vendors": "Mostrando {range} de {total} proveedores",
 };

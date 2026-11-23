@@ -106,7 +106,7 @@ const FULL: AISummaries = {
 describe("report-pdf.ejs template", () => {
   it("recommendedActions renders without executiveSummary (its own top-level guard)", () => {
     const html = render({ sectionSummaries: {}, recommendedActions: FULL.recommendedActions });
-    expect(html).not.toContain("Executive Summary");
+    expect(html).not.toContain("Executive summary");
     expect(html).toContain("Recommended actions");
     expect(html).toContain("Close the DPIA gap");
     expect(html).toContain("Compliance Lead");
@@ -116,7 +116,7 @@ describe("report-pdf.ejs template", () => {
 
   it("complianceGap renders narrative, caveat and gap rows", () => {
     const html = render({ sectionSummaries: {}, complianceGap: FULL.complianceGap });
-    expect(html).toContain("Compliance Gap Analysis");
+    expect(html).toContain("Compliance gap analysis");
     expect(html).toContain("Two controls lack evidence.");
     expect(html).toContain("Scope note");
     expect(html).toContain("Readiness scores were unavailable");
@@ -158,7 +158,7 @@ describe("report-pdf.ejs template", () => {
       {
         summaries: { sectionSummaries: {}, complianceGap: FULL.complianceGap },
         toc: "Compliance gap analysis",
-        body: "Compliance Gap Analysis",
+        body: "Compliance gap analysis",
       },
       {
         summaries: { sectionSummaries: {}, vendorRisk: FULL.vendorRisk },
@@ -188,7 +188,7 @@ describe("report-pdf.ejs template", () => {
     const body = html.slice(html.indexOf("</ul>"));
     // "RISK ANALYSIS GROUP" is an HTML comment outside the sections guard, so
     // it always prints — a stable anchor even when every section is falsy.
-    expect(body.indexOf("Compliance Gap Analysis")).toBeLessThan(
+    expect(body.indexOf("Compliance gap analysis")).toBeLessThan(
       body.indexOf("Third-party risk analysis"),
     );
     expect(body.indexOf("Third-party risk analysis")).toBeLessThan(
@@ -200,7 +200,6 @@ describe("report-pdf.ejs template", () => {
     const html = render({ sectionSummaries: {} });
     for (const s of [
       "Recommended actions",
-      "Compliance Gap Analysis",
       "Compliance gap analysis",
       "Third-party risk analysis",
       "Prioritised gaps",
@@ -283,7 +282,7 @@ describe("report-pdf.ejs template", () => {
     expect(body).not.toContain("avoid-break");
     // The blocks themselves must still render.
     expect(body).toContain("Recommended actions");
-    expect(body).toContain("Compliance Gap Analysis");
+    expect(body).toContain("Compliance gap analysis");
     expect(body).toContain("Third-party risk analysis");
   });
 
@@ -761,7 +760,7 @@ describe("section notices", () => {
 
     it("include frameworkRequirements in the compliance group guard", () => {
       const html = render(undefined, { frameworkRequirements });
-      expect(html).toContain("Compliance & Governance");
+      expect(html).toContain("Compliance & governance");
     });
 
     it("keeps the due date on one line and the group heading with its table", () => {

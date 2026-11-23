@@ -88,12 +88,17 @@ export const vendorManagementContent: ArticleContent = {
       type: 'ordered-list',
       items: [
         { bold: 'Vendor name', text: 'The official company or product name' },
+        { bold: 'Use cases', text: 'The use cases this vendor serves. You can pick approved use cases' },
         { bold: 'Other names (optional)', text: 'Other names the vendor is known by, separated by commas, for example "Facebook" for "Meta Platforms". A legal name written with a comma, such as "Acme Analytics, Inc.", counts as one name. The web research looks for sources that use them too' },
-        { bold: 'Vendor provides', text: 'Description of what the vendor supplies' },
-        { bold: 'Assignee', text: 'Person responsible for managing this vendor relationship' },
         { bold: 'Website', text: 'Vendor\'s official website URL' },
         { bold: 'Vendor contact person', text: 'Primary contact at the vendor' },
+        { bold: 'Assignee', text: 'Person responsible for managing this vendor relationship' },
+        { bold: 'What does the vendor provide?', text: 'Description of what the vendor supplies' },
       ],
+    },
+    {
+      type: 'paragraph',
+      text: 'All of these except other names are required. Review status, reviewer, review date, review result, the identifiers and the scorecard are optional.',
     },
     {
       type: 'paragraph',
@@ -204,11 +209,11 @@ export const vendorManagementContent: ArticleContent = {
       items: [
         { bold: 'None', text: 'No sensitive data is shared' },
         { bold: 'Internal only', text: 'Internal business data only' },
-        { bold: 'PII', text: 'Personally identifiable information' },
-        { bold: 'Financial', text: 'Financial data or records' },
-        { bold: 'Health', text: 'Health-related information' },
-        { bold: 'Model weights', text: 'Proprietary model parameters' },
-        { bold: 'Other', text: 'Other sensitive data types' },
+        { bold: 'Personally identifiable information (PII)', text: 'Names, emails, identifiers and other personal data' },
+        { bold: 'Financial data', text: 'Financial data or records' },
+        { bold: 'Health data (e.g. HIPAA)', text: 'Health-related information' },
+        { bold: 'Model weights or AI assets', text: 'Proprietary model parameters' },
+        { bold: 'Other sensitive data', text: 'Other sensitive data types' },
       ],
     },
     {
@@ -288,16 +293,16 @@ export const vendorManagementContent: ArticleContent = {
       type: 'heading',
       id: 'project-linking',
       level: 2,
-      text: 'Linking vendors to projects',
+      text: 'Linking vendors to use cases',
     },
     {
       type: 'paragraph',
-      text: 'Associate vendors with the projects that use their services. This lets you see:',
+      text: 'Link each vendor to the use cases that rely on its services. This lets you see:',
     },
     {
       type: 'bullet-list',
       items: [
-        { text: 'Which projects depend on which vendors' },
+        { text: 'Which use cases depend on which vendors' },
         { text: 'Impact assessment when vendor issues arise' },
         { text: 'Vendor concentration across your portfolio' },
       ],
@@ -310,7 +315,7 @@ export const vendorManagementContent: ArticleContent = {
       type: 'callout',
       variant: 'warning',
       title: 'Important',
-      text: 'When a vendor experiences an incident or regulatory action, review all linked projects to assess potential impact.',
+      text: 'When a vendor experiences an incident or regulatory action, review all of its use cases to assess potential impact.',
     },
     {
       type: 'heading',
@@ -320,7 +325,7 @@ export const vendorManagementContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'A deleted vendor risk is not gone. Pick "Deleted" in the status filter on the Risks tab to list deleted risks. Opening one shows it read-only. If you can edit vendors, choose Restore in its row menu or in the risk window to bring it back with its custom fields and frameworks.',
+      text: 'A deleted vendor risk is not gone. Pick "Deleted only" or "Active + deleted" in the status filter on the Risks tab to list deleted risks. Opening one shows it read-only. If you can edit vendors, choose Restore in its row menu or in the risk window to bring it back with its custom fields and frameworks.',
     },
     {
       type: 'paragraph',
@@ -349,6 +354,12 @@ export const vendorManagementContent: ArticleContent = {
           articleId: 'vendor-risks',
           title: 'Vendor risk assessment',
           description: 'Assess and track vendor-specific risks',
+        },
+        {
+          collectionId: 'risk-management',
+          articleId: 'vendor-risk-list',
+          title: 'Vendor risks list',
+          description: 'Find, filter, export and restore vendor risks',
         },
         {
           collectionId: 'ai-governance',

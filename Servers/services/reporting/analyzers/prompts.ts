@@ -6,10 +6,20 @@
  * to the prompt that produced them.
  */
 
-import type { FrameworkRequirementRow } from "../../../domain.layer/interfaces/i.reportGeneration";
+import type {
+  E23ContradictionsSectionData,
+  E23FixItItem,
+  E23FixItListSectionData,
+  FrameworkRequirementRow,
+  MrmFleetSectionData,
+  MrmInventoryAppendixSectionData,
+  MrmTierValue,
+} from "../../../domain.layer/interfaces/i.reportGeneration";
 import { hasNoActiveOwner } from "../collectors/frameworkRollup";
+import { COVERAGE_LABELS, FIX_IT_SEVERITY_LABELS } from "../e23/e23Text";
+import { METRIC_STALE_DAYS } from "../e23/mrmFleet";
 
-export const ANALYZER_VERSION = "report-analyzer-v3";
+export const ANALYZER_VERSION = "report-analyzer-v9";
 
 const MAX_DATA_ITEMS = 50;
 /** Hard backstop on the joined section body, independent of the per-array
@@ -33,6 +43,11 @@ export const SECTION_LABELS: Record<string, string> = {
   policyManager: "Policy Manager",
   incidentManagement: "Incident Management",
   frameworkRequirements: "Framework requirements",
+  mrmFleet: "Model risk management status",
+  e23Contradictions: "Where the checklist and the data disagree",
+  e23FixItList: "Fix-it list (internal document)",
+  mrmInventoryAppendix: "Model inventory appendix",
+  signOff: "Sign-off",
 };
 
 /**
@@ -147,7 +162,53 @@ export const SECTION_INSTRUCTIONS: Record<string, string> = {
 - How many requirements are overdue against the reference date, and which requirement groups hold them?
 - How many requirements have no owner, and how many have no evidence attached? Do the two overlap or sit in different groups?
 - Name the specific requirements furthest from done, overdue ones first, and say what is missing for each.`,
+
+  // OSFI E-23 sections. Every count below is a field of the section's compact
+  // text (prepareMrmFleet, prepareE23Contradictions, prepareE23FixItList).
+  // None asks for a compliance verdict: the report is a self-assessment.
+  mrmFleet: `- What share of the models in scope is untiered, and what share has an overdue validation?
+- How are open findings spread across critical, high, medium and low, and which tier carries the critical or high ones?
+- How many models have active thresholds, and how many of those received a metric in the monitoring window?
+- Name the models with exceptions that a reader should look at first, and say what the exceptions are.`,
+
+  e23Contradictions: `- How many rules fired out of the rules checked, and which requirements do they name?
+- Which fired rule affects the most models, and what does the data show against the claimed status?
+- Which requirement groups were checked against the model risk data, and which rest on self-assessment only?
+- Which rules were not run, and why? A rule not run is not a clean result; say so.`,
+
+  e23FixItList: `- How many items are high, medium and low severity, and how many of the high ones come from fired contradiction rules?
+- Which items are past their due date, and which have no owner?
+- Do the items cluster on a few requirements, models or owners, or are they spread across the list?
+- Name the items a reader should start with, and say what closes each.`,
 };
+
+/**
+ * The board version names no model (spec 8.3), so the sections whose general
+ * questions ask for model names get count-only questions instead.
+ */
+const BOARD_SECTION_INSTRUCTIONS: Record<string, string> = {
+  mrmFleet: `- What share of the models in scope is untiered, and what share has an overdue validation?
+- How are open findings spread across critical, high, medium and low, and which tier carries the critical or high ones?
+- How many models have active thresholds, and how many of those received a metric in the monitoring window?
+- How many models have exceptions, and what does that mean for the institution? Give counts; do not name models.`,
+};
+
+/** The questions for one section's summary, for the report's audience. */
+export function sectionInstruction(key: string, opts: E23PromptOptions = {}): string {
+  return (
+    (opts.board ? BOARD_SECTION_INSTRUCTIONS[key] : undefined) ??
+    SECTION_INSTRUCTIONS[key] ??
+    GENERIC_SECTION_INSTRUCTION
+  );
+}
+
+/**
+ * Sections no summary is written for: the sign-off page carries no data, the
+ * inventory appendix is a reference listing, and the at-a-glance figures
+ * repeat what the other E-23 sections and the facts block already state.
+ * Skipped rather than sent with the generic instruction.
+ */
+export const NO_SECTION_SUMMARY = new Set(["signOff", "mrmInventoryAppendix", "e23Glance"]);
 
 /** Fallback for a section key with no entry above: today's generic text, so an
  *  unmapped section degrades to current behaviour instead of losing its summary. */
@@ -431,15 +492,148 @@ function prepareFrameworkRequirements(data: any): string {
   return lines.join("\n");
 }
 
+const E23_MAX_LINES = 25;
+
+/** "… and N more" when a list was cut at `max`. */
+const moreLine = (total: number, max: number): string[] =>
+  total > max ? [`… and ${total - max} more`] : [];
+
+const tierText = (tier: MrmTierValue | null | undefined): string =>
+  tier ? `Tier ${tier}` : "Untiered";
+
+/**
+ * How an E-23 section is put to the model. The board version of the report
+ * names no model (spec 8.3), so its prompts carry counts only.
+ */
+export interface E23PromptOptions {
+  board?: boolean;
+}
+
+/**
+ * Compact text for the MRM status section: figures, then the models with
+ * exceptions (only their count for the board).
+ */
+export function prepareMrmFleet(fleet: MrmFleetSectionData, opts: E23PromptOptions = {}): string {
+  const { totals, validationCoverage: v, openFindingsBySeverity: f, monitoring: m } = fleet;
+  const a = fleet.activity;
+  const lines = [
+    `Models in scope (not retired): ${totals.models}; tier 1: ${totals.byTier["1"]}, tier 2: ${totals.byTier["2"]}, tier 3: ${totals.byTier["3"]}, untiered: ${totals.untiered}`,
+    `Validation coverage (each model counted once; the five add up to the models in scope): validated with no validation open ${v.validated}, validation in progress ${v.inReview}, validation overdue ${v.overdue}, last validation not passed ${v.notPassed}, not started ${v.notStarted}`,
+    `Open findings by severity: critical ${f.critical}, high ${f.high}, medium ${f.medium}, low ${f.low}`,
+    `Monitoring: with active thresholds ${m.withActiveThresholds}, with a metric received in the last ${METRIC_STALE_DAYS} days ${m.withRecentMetric}`,
+    a.period
+      ? `Activity from ${a.period.start} to ${a.period.end}: validations signed off ${a.validationsSignedOff}, findings opened ${a.findingsOpened}, findings closed ${a.findingsClosed}, threshold breaches ${a.breaches}, revalidation events ${a.revalidationEvents}`
+      : "Activity in period: no report period was set, so none is counted",
+    "By tier:",
+    ...fleet.perTier.map(
+      (t) =>
+        `  ${tierText(t.tier)}: models ${t.models}, tiering current ${t.tieringCurrent}, with a passed signed-off validation ${t.validated}, monitoring active ${t.monitoringActive}, open findings ${t.openFindings}, critical or high findings ${t.criticalHighFindings}`,
+    ),
+  ];
+  if (opts.board) {
+    lines.push(`Models with exceptions: ${fleet.exceptions.length}`);
+    return lines.join("\n");
+  }
+  lines.push(`Models with exceptions (${fleet.exceptions.length}):`);
+  if (fleet.exceptions.length === 0) lines.push("none");
+  fleet.exceptions.slice(0, E23_MAX_LINES).forEach((e) => {
+    lines.push(`- ${oneLine(e.name)} (${tierText(e.tier)}): ${e.issues.map(oneLine).join(", ")}`);
+  });
+  lines.push(...moreLine(fleet.exceptions.length, E23_MAX_LINES));
+  return lines.join("\n");
+}
+
+/**
+ * The rules line, worded so it cannot be misread: a live run read "rules
+ * fired: 0" as "all 13 rules checked produced no result".
+ */
+export function rulesLine(c: E23ContradictionsSectionData): string {
+  const n = c.checked.length;
+  const fired = c.fired.length;
+  return `Rules checked: ${n}; rules that fired: ${fired} of ${n} (${
+    fired === 0 ? "no contradiction found" : "each one a contradiction listed below"
+  })`;
+}
+
+/**
+ * Compact text for the contradictions section: fired rules, rules not run,
+ * data coverage. The board version leaves out the example models.
+ */
+export function prepareE23Contradictions(
+  c: E23ContradictionsSectionData,
+  opts: E23PromptOptions = {},
+): string {
+  if (!c.available) {
+    return "The contradiction checks did not run: the E-23 checklist is not on file or could not be read. This is not a clean result.";
+  }
+  const lines = [rulesLine(c)];
+  lines.push("Fired rules:");
+  if (c.fired.length === 0) lines.push("none");
+  c.fired.forEach((f) => {
+    const examples =
+      !opts.board && f.examples.length
+        ? `; examples: ${f.examples.map(oneLine).join(", ")}${f.moreCount > 0 ? `, and ${f.moreCount} more` : ""}`
+        : "";
+    lines.push(
+      `- ${f.ruleId} ${oneLine(f.requirementTitle)}: claimed ${oneLine(f.claimedStatus)}; the data shows ${oneLine(f.finding)}; models affected ${f.affectedCount}${examples}`,
+    );
+  });
+  if (c.notRun.length > 0) {
+    lines.push("Rules not run:");
+    c.notRun.forEach((n) => lines.push(`- ${n.ruleId} (${n.requirement}): ${oneLine(n.reason)}`));
+  }
+  const coverage = Object.entries(c.coverage);
+  if (coverage.length > 0) {
+    lines.push("Data coverage by requirement group:");
+    coverage.forEach(([group, value]) =>
+      lines.push(`- ${oneLine(group)}: ${COVERAGE_LABELS[value]}`),
+    );
+  }
+  return lines.join("\n");
+}
+
+/** One fix-it item as a single prompt line. */
+export const fixItLine = (i: E23FixItItem): string =>
+  `- [${FIX_IT_SEVERITY_LABELS[i.severity]}] ${oneLine(i.what)} | ${oneLine(i.where)} | owner ${oneLine(i.owner)} | ${
+    i.dueDate ? `due ${oneLine(i.dueDate)}${i.overdue ? " (overdue)" : ""}` : "no due date"
+  }`;
+
+/** Compact text for the fix-it list: counts, then one line per item in list order. */
+export function prepareE23FixItList(list: E23FixItListSectionData, max = E23_MAX_LINES): string {
+  const { high, medium, low } = list.counts;
+  const lines = [
+    `${list.items.length} ${list.items.length === 1 ? "item" : "items"}: ${high} high, ${medium} medium, ${low} low`,
+  ];
+  list.items.slice(0, max).forEach((i) => lines.push(fixItLine(i)));
+  lines.push(...moreLine(list.items.length, max));
+  return lines.join("\n");
+}
+
+/** Compact text for the inventory appendix (not summarised, but bounded if ever sent). */
+function prepareMrmInventoryAppendix(a: MrmInventoryAppendixSectionData): string {
+  const row = (r: MrmInventoryAppendixSectionData["active"][number]) =>
+    `- ${oneLine(r.name)} ${oneLine(r.version)} (${tierText(r.tier)}, ${oneLine(r.status) || "no status"}; owner ${oneLine(r.owner) || "none"}; approver ${oneLine(r.approver) || "none"}; latest validation ${oneLine(r.latestOutcome) || "none"}; next review due ${oneLine(r.nextReviewDue) || "none"}; active thresholds ${r.activeThresholds ? "yes" : "no"}; open findings ${r.openFindings})`;
+  const list = (title: string, rows: MrmInventoryAppendixSectionData["active"]) => [
+    `${title} (${rows.length}):`,
+    ...rows.slice(0, E23_MAX_LINES).map(row),
+    ...moreLine(rows.length, E23_MAX_LINES),
+  ];
+  return [...list("Models in use", a.active), ...list("Retired models", a.retired)].join("\n");
+}
+
 /**
  * Ported from aiSummarizer.ts:74-125. The per-section caps are load-bearing:
  * without them a large tenant's report exceeds the model context window and
  * every analyzer fails at once.
  */
-export function prepareSectionData(key: string, data: any): string {
+export function prepareSectionData(key: string, data: any, opts: E23PromptOptions = {}): string {
   if (!data) return "No data available for this section.";
 
   if (key === "frameworkRequirements") return prepareFrameworkRequirements(data);
+  if (key === "mrmFleet") return prepareMrmFleet(data, opts);
+  if (key === "e23Contradictions") return prepareE23Contradictions(data, opts);
+  if (key === "e23FixItList") return prepareE23FixItList(data);
+  if (key === "mrmInventoryAppendix") return prepareMrmInventoryAppendix(data);
 
   const clone = { ...data };
 

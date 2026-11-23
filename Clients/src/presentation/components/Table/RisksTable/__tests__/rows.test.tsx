@@ -77,7 +77,7 @@ describe("vendor risks table rows", () => {
       row(2, "Owned by Adam", { action_owner: 2 }),
     ]);
 
-    await userEvent.click(screen.getByText("action owner"));
+    await userEvent.click(screen.getByText("Action owner"));
 
     const descriptions = screen
       .getAllByRole("row")

@@ -84,6 +84,36 @@ describe("ReportAnalysisPanel", () => {
     expect(screen.getByText("medium")).toBeInTheDocument();
   });
 
+  it("renders the E-23 gap analysis with position labels, never the raw position", () => {
+    renderWithProviders(
+      <ReportAnalysisPanel
+        analyses={[
+          row("e23Gap", {
+            narrative: "The tiering claim is not borne out by the inventory.",
+            principles: [
+              {
+                group: "Principle 2.2 – Model risk assessment (C.2)",
+                position: "partly consistent",
+                explanation: "Three models carry no MRM tier.",
+              },
+            ],
+            abstain_reason: null,
+          }),
+        ]}
+      />,
+    );
+    expect(screen.getByText("E-23 gap analysis")).toBeInTheDocument();
+    expect(
+      screen.getByText("The tiering claim is not borne out by the inventory."),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Principle 2.2 – Model risk assessment (C.2)")).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "Data partly consistent with self-assessment. Three models carry no MRM tier.",
+      ),
+    ).toBeInTheDocument();
+  });
+
   it("renders recommended actions with owner and rationale", () => {
     renderWithProviders(
       <ReportAnalysisPanel

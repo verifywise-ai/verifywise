@@ -92,6 +92,9 @@ import {
   vendorRiskCountByVendor,
 } from "../../../application/utils/vendorRiskRows";
 import useFormattedDate from "../../../application/hooks/useFormattedDate";
+import { useTranslation } from "../../../application/hooks/useTranslation";
+import { fill } from "../../../i18n/fill";
+import { LazyFallback } from "../../../application/utils/lazyRoute";
 
 /** True when a request failed with 404: the record is already gone. */
 const isNotFound = (error: unknown): boolean =>
@@ -150,6 +153,7 @@ const Vendors = () => {
   const can = useCanCheck();
   const { users } = useUsers();
   const formatDate = useFormattedDate();
+  const { t } = useTranslation();
 
   const [selectedVendor, setSelectedVendor] = useState<VendorModel | null>(null);
   const [selectedRisk, setSelectedRisk] = useState<ExistingRisk | null>(null);
@@ -262,10 +266,12 @@ const Vendors = () => {
       .sort()
       .map((assigneeId) => {
         const user = users.find((u) => u.id.toString() === assigneeId);
-        const userName = user ? `${user.name} ${user.surname}`.trim() : `User ${assigneeId}`;
+        const userName = user
+          ? `${user.name} ${user.surname}`.trim()
+          : fill(t("User {id}"), { id: assigneeId });
         return { value: assigneeId, label: userName };
       });
-  }, [vendors, users]);
+  }, [vendors, users, t]);
 
   const getUniqueVendorReviewers = useCallback(() => {
     const reviewerIds = new Set<string>();
@@ -278,10 +284,12 @@ const Vendors = () => {
       .sort()
       .map((reviewerId) => {
         const user = users.find((u) => u.id.toString() === reviewerId);
-        const userName = user ? `${user.name} ${user.surname}`.trim() : `User ${reviewerId}`;
+        const userName = user
+          ? `${user.name} ${user.surname}`.trim()
+          : fill(t("User {id}"), { id: reviewerId });
         return { value: reviewerId, label: userName };
       });
-  }, [vendors, users]);
+  }, [vendors, users, t]);
 
   // FilterBy - Filter columns configuration for Vendors tab
   const vendorFilterColumns: FilterColumn[] = useMemo(
@@ -410,10 +418,10 @@ const Vendors = () => {
       .sort()
       .map((vendorId) => {
         const vendor = allVendors.find((v: VendorModel) => v.id?.toString() === vendorId);
-        const vendorName = vendor ? vendor.vendor_name : `Vendor ${vendorId}`;
+        const vendorName = vendor ? vendor.vendor_name : fill(t("Vendor {id}"), { id: vendorId });
         return { value: vendorId, label: vendorName };
       });
-  }, [vendorRisks, allVendors]);
+  }, [vendorRisks, allVendors, t]);
 
   const getUniqueRiskActionOwners = useCallback(() => {
     const ownerIds = new Set<string>();
@@ -426,10 +434,12 @@ const Vendors = () => {
       .sort()
       .map((ownerId) => {
         const user = users.find((u) => u.id.toString() === ownerId);
-        const userName = user ? `${user.name} ${user.surname}`.trim() : `User ${ownerId}`;
+        const userName = user
+          ? `${user.name} ${user.surname}`.trim()
+          : fill(t("User {id}"), { id: ownerId });
         return { value: ownerId, label: userName };
       });
-  }, [vendorRisks, users]);
+  }, [vendorRisks, users, t]);
 
   // FilterBy - Filter columns configuration for Vendor Risks tab
   const vendorRiskFilterColumns: FilterColumn[] = useMemo(
@@ -548,7 +558,8 @@ const Vendors = () => {
       setSelectedRiskLevel(riskLevel);
       setAlert({
         variant: "info",
-        title: `Filtering by risk level: ${riskLevel}`,
+        // The title is built at render time, so it follows a language switch.
+        riskLevel,
         body: "The table now shows only vendor risks with this risk level. Click the card again to see all risks.",
       });
     } else {
@@ -566,6 +577,8 @@ const Vendors = () => {
   const [alert, setAlert] = useState<{
     variant: "success" | "info" | "warning" | "error";
     title?: string;
+    /** Set by a risk card click; the title is "Filtering by risk level: …". */
+    riskLevel?: string;
     body: string;
   } | null>(null);
   const [showAlert, setShowAlert] = useState(false);
@@ -1065,7 +1078,13 @@ const Vendors = () => {
     <PageHeaderExtended
       title={TAB_HEADERS[value].title}
       description={<TabDescription texts={TAB_DESCRIPTIONS} active={value} />}
-      helpArticlePath={value === TAB_VENDORS ? "risk-management/vendor-management" : undefined}
+      helpArticlePath={
+        value === TAB_VENDORS
+          ? "risk-management/vendor-management"
+          : value === TAB_RISKS
+            ? "risk-management/vendor-risk-list"
+            : undefined
+      }
       tipBoxEntity="vendors"
       summaryCards={
         isRisksTab && !loadingVendorRisks && !isVendorsLoading ? (
@@ -1125,12 +1144,16 @@ const Vendors = () => {
       }
       alert={
         alert && (
-          <Suspense fallback={<div>Loading...</div>}>
+          <Suspense fallback={<LazyFallback />}>
             <Fade in={showAlert} timeout={300}>
               <Box sx={{ position: "fixed" }}>
                 <Alert
                   variant={alert.variant}
-                  title={alert.title}
+                  title={
+                    alert.riskLevel
+                      ? fill(t("Filtering by risk level: {level}"), { level: t(alert.riskLevel) })
+                      : alert.title
+                  }
                   body={alert.body}
                   isToast={true}
                   onClick={() => {
@@ -1145,7 +1168,7 @@ const Vendors = () => {
       }
     >
       <TabContext value={value}>
-        <Box sx={{ mt: 2 }}>
+        <Box sx={{ mt: "4px" }}>
           <TabBar
             tabs={[
               {
@@ -1185,7 +1208,7 @@ const Vendors = () => {
           />
         </Box>
         {value === TAB_VENDORS && (
-          <Stack spacing={2}>
+          <Stack spacing="4px">
             <Stack direction="row" sx={vendorToolbarStyle}>
               <Box sx={vendorFilterRowStyle}>
                 <TableFilter
@@ -1218,7 +1241,7 @@ const Vendors = () => {
                   data={exportData}
                   columns={exportColumns}
                   filename="vendors"
-                  title="Vendor List"
+                  title="Vendor list"
                 />
                 <div data-joyride-id="add-new-vendor" ref={refs[0]}>
                   <CustomizableButton
@@ -1239,7 +1262,7 @@ const Vendors = () => {
         )}
 
         {isRisksTab && (
-          <Stack spacing={2}>
+          <Stack spacing="4px">
             <Stack direction="row" sx={vendorToolbarStyle}>
               <Box sx={vendorFilterRowStyle}>
                 {/* No visible label, so it is named for screen readers; tinted
@@ -1288,7 +1311,7 @@ const Vendors = () => {
                   data={vendorRisksExportData}
                   columns={vendorRisksExportColumns}
                   filename="vendor-risks"
-                  title="Vendor Risks"
+                  title="Vendor risks"
                 />
                 <Box data-joyride-id="add-vendor-risk-button">
                   <CustomizableButton
@@ -1325,7 +1348,7 @@ const Vendors = () => {
           </ListStateWrapper>
         </TabPanel>
         <TabPanel value={TAB_RISKS} sx={tabPanelStyle}>
-          <Stack spacing={4}>
+          <Stack spacing="8px">
             {heatCell && (
               <HeatCellNotice
                 onClear={() => {

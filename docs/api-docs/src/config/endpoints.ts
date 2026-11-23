@@ -13545,6 +13545,73 @@ export const v1V1projectsEndpoints: Endpoint[] = [
   },
 ];
 
+// v1: V1/Report Runs endpoints
+export const v1V1reportRunsEndpoints: Endpoint[] = [
+  {
+    method: 'GET',
+    path: '/v1/report-runs/{id}/download/fix-it-list',
+    summary: "Download Run Companion",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Report Runs",
+  },
+];
+
+// v1: V1/Report Templates endpoints
+export const v1V1reportTemplatesEndpoints: Endpoint[] = [
+  {
+    method: 'POST',
+    path: '/v1/report-templates/{id}/run',
+    summary: "Run Template Now",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Report Templates",
+  },
+  {
+    method: 'GET',
+    path: '/v1/report-templates/{id}/last-parameters',
+    summary: "Get Last Parameters",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Report Templates",
+  },
+];
+
+// v1: V1/Scheduled Reports endpoints
+export const v1V1scheduledReportsEndpoints: Endpoint[] = [
+  {
+    method: 'POST',
+    path: '/v1/scheduled-reports',
+    summary: "Create Scheduled Report",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Scheduled Reports",
+  },
+  {
+    method: 'PATCH',
+    path: '/v1/scheduled-reports/{id}',
+    summary: "Update Scheduled Report",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Scheduled Reports",
+  },
+];
+
 // v1: V1/Training endpoints
 export const v1V1trainingEndpoints: Endpoint[] = [
   {
@@ -13867,9 +13934,16 @@ export const vendorEndpoints: Endpoint[] = [
     method: 'GET',
     path: '/vendors/{id}/riskSuggestions',
     summary: "Get Vendor Risk Suggestions",
+    description: "Read-only. Derives vendor risks from the vendor's questionnaire answers (data sensitivity, business criticality, past issues, regulatory exposure) and leaves out any the vendor already has a near-identical active risk for. Writes nothing.",
     requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
     responses: [
       { status: 200, description: "Success" },
+      { status: 400, description: "Invalid vendor ID" },
+      { status: 401, description: "Unauthorized" },
+      { status: 404, description: "No vendor with this ID in the organization" },
       { status: 500, description: "Internal server error" },
     ],
     tag: "Vendors",
@@ -14018,8 +14092,14 @@ export const vendorRiskEndpoints: Endpoint[] = [
     path: '/vendorRisks/by-frameworkid/{id}',
     summary: "Get Vendor Risks By Framework Id",
     requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+      { name: 'filter', in: 'query', type: 'string', required: false, description: "The filter" },
+    ],
     responses: [
       { status: 200, description: "Success" },
+      { status: 400, description: "Invalid framework ID or filter" },
+      { status: 401, description: "Unauthorized" },
       { status: 500, description: "Internal server error" },
     ],
     tag: "Vendor Risks",
@@ -14049,7 +14129,9 @@ export const vendorRiskEndpoints: Endpoint[] = [
     ],
     responses: [
       { status: 200, description: "Success" },
+      { status: 400, description: "Invalid vendor risk ID" },
       { status: 401, description: "Unauthorized" },
+      { status: 404, description: "No active vendor risk with this ID in the organization" },
       { status: 500, description: "Internal server error" },
     ],
     tag: "Vendor Risks",
@@ -14067,8 +14149,10 @@ export const vendorRiskEndpoints: Endpoint[] = [
     },
     responses: [
       { status: 202, description: "Accepted" },
-      { status: 400, description: "Validation error, e.g. an action owner who is not a member of the organization" },
+      { status: 400, description: "Invalid vendor risk ID, or a validation error (missing or invalid field, unknown framework ID, action owner who is not a member of the organization)" },
       { status: 401, description: "Unauthorized" },
+      { status: 403, description: "Forbidden: needs the vendor.edit permission" },
+      { status: 404, description: "No active vendor risk with this ID in the organization" },
       { status: 500, description: "Internal server error" },
     ],
     tag: "Vendor Risks",
@@ -14083,7 +14167,10 @@ export const vendorRiskEndpoints: Endpoint[] = [
     ],
     responses: [
       { status: 202, description: "Accepted" },
+      { status: 400, description: "Invalid vendor risk ID" },
       { status: 401, description: "Unauthorized" },
+      { status: 403, description: "Forbidden: needs the vendor.edit permission" },
+      { status: 404, description: "No active vendor risk with this ID in the organization" },
       { status: 500, description: "Internal server error" },
     ],
     tag: "Vendor Risks",
@@ -14098,8 +14185,9 @@ export const vendorRiskEndpoints: Endpoint[] = [
     },
     responses: [
       { status: 201, description: "Created successfully" },
-      { status: 400, description: "Validation error, e.g. an action owner who is not a member of the organization" },
+      { status: 400, description: "Validation error (missing or invalid field, unknown framework ID, action owner who is not a member of the organization)" },
       { status: 401, description: "Unauthorized" },
+      { status: 403, description: "Forbidden: needs the vendor.edit permission" },
       { status: 500, description: "Internal server error" },
     ],
     tag: "Vendor Risks",
@@ -14264,6 +14352,9 @@ export const allEndpoints = {
   v1V1modelRisks: v1V1modelRisksEndpoints,
   v1V1policyTemplates: v1V1policyTemplatesEndpoints,
   v1V1projects: v1V1projectsEndpoints,
+  v1V1reportRuns: v1V1reportRunsEndpoints,
+  v1V1reportTemplates: v1V1reportTemplatesEndpoints,
+  v1V1scheduledReports: v1V1scheduledReportsEndpoints,
   v1V1training: v1V1trainingEndpoints,
   v1V1useCaseLifecycle: v1V1useCaseLifecycleEndpoints,
   v1V1vendorRisks: v1V1vendorRisksEndpoints,

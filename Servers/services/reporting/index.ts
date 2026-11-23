@@ -12,9 +12,10 @@ import {
 import { ReportType } from "../../domain.layer/models/reporting/reporting.model";
 import { createDataCollector, createScopedDataCollector } from "./dataCollector";
 import { resolveFrameworkTargets } from "./reportScope";
-import { generatePDF, closeBrowser } from "./pdfGenerator";
+import { generatePDF, generateFixItPDF, closeBrowser } from "./pdfGenerator";
 import { generateDOCX } from "./docxGenerator";
-import logger from "../../utils/logger/fileLogger";
+import { generateFixItDOCX } from "./docxFixIt";
+import logger, { logStructuredError } from "../../utils/logger/fileLogger";
 import { runAnalyzers } from "./analyzers/runAnalyzers";
 import {
   collectAllowedOwners,
@@ -27,6 +28,11 @@ import {
 import { mapAnalysesToSummaries } from "./analyzers/mapToSummaries";
 import { getLLMKeysWithKeyQuery } from "../../utils/llmKey.utils";
 import { SECTION_KEYS } from "./sectionCatalog";
+import { getPriorE23GlanceQuery } from "../../utils/reportRun.utils";
+import { E23_KIND } from "./e23/e23Parameters";
+import { parseStoredE23Glance, toE23GlanceSnapshot } from "./e23/glance";
+import { FIX_IT_FILENAME_SUFFIX } from "./e23/e23Text";
+import type { E23GlanceSnapshot } from "../../domain.layer/interfaces/i.reportGeneration";
 
 /**
  * Valid section keys that can be passed directly from the frontend.
@@ -86,6 +92,61 @@ function getRequestedSections(reportType: string | string[]): string[] {
 }
 
 /**
+ * The previous comparable E-23 run's glance: same schedule for a scheduled
+ * run, same template (any trigger) otherwise. A failed lookup only loses the
+ * comparison, never the report.
+ */
+async function priorE23Glance(
+  request: ReportGenerationRequest,
+  organizationId: number,
+): Promise<E23GlanceSnapshot | null> {
+  try {
+    // Validated here, once: a malformed stored glance means no comparison.
+    return parseStoredE23Glance(
+      await getPriorE23GlanceQuery(organizationId, {
+        scheduledReportId: request.scheduledReportId,
+        templateId: request.templateId,
+      }),
+    );
+  } catch (error) {
+    logStructuredError(
+      `Report: previous E-23 glance lookup failed, no comparison shown (organizationId=${organizationId})`,
+      error,
+      "priorE23Glance",
+      "index.ts",
+    );
+    return null;
+  }
+}
+
+/** "Q3 report.pdf" -> "Q3 report" for the given extension; unchanged otherwise. */
+const baseNameOf = (filename: string, ext: string): string =>
+  filename.endsWith(ext) ? filename.slice(0, -ext.length) : filename;
+
+/**
+ * Render the fix-it list in the run's format. A renderer that throws counts
+ * as a failed render, so the caller has one failure path.
+ */
+async function generateFixItCompanion(
+  reportData: ReportData,
+  request: ReportGenerationRequest,
+): Promise<ReportGenerationResult> {
+  try {
+    return request.format === "pdf"
+      ? await generateFixItPDF(reportData, request.runId)
+      : await generateFixItDOCX(reportData, request.runId);
+  } catch (error) {
+    return {
+      success: false,
+      filename: "",
+      content: Buffer.alloc(0),
+      mimeType: "",
+      error: error instanceof Error ? error.message : "Unknown error",
+    };
+  }
+}
+
+/**
  * Generate a report in the specified format
  */
 export async function generateReport(
@@ -124,8 +185,16 @@ export async function generateReport(
     // Determine which sections to include
     const sections = getRequestedSections(request.reportType);
 
-    // Collect all report data
-    const reportData = await dataCollector.collectAllData(sections);
+    // Collect all report data. The kind and parameters ride on the metadata
+    // so the renderers can read them alongside everything else they show.
+    // An E-23 run also gets the previous comparable run's glance (spec 8.10).
+    const run = { reportKind: request.reportKind, reportParameters: request.reportParameters };
+    const reportData =
+      request.reportKind === E23_KIND
+        ? await dataCollector.collectAllData(sections, run, {
+            priorE23Glance: await priorE23Glance(request, organizationId),
+          })
+        : await dataCollector.collectAllData(sections, run);
 
     // AI analysis (optional, per-block gated)
     let analyses: Record<string, any> | undefined;
@@ -148,12 +217,15 @@ export async function generateReport(
         //
         // Design §10: a scheduled run diffs against the last run of the same
         // schedule. A manual run has no schedule, priorFacts stays null, and
-        // renderFacts emits no change block — exactly what renders today.
+        // renderFacts emits no change block — exactly what renders today. An
+        // OSFI E-23 manual run is the exception: it diffs against the previous
+        // run of its template (spec 8.10).
         const priorFacts = await collectPriorFacts(
           request.scheduledReportId,
           reportData.metadata.organizationId,
+          { templateId: request.templateId, kind: request.reportKind },
         );
-        const { facts, snapshot } = collectFactsInput(reportData, priorFacts);
+        const { facts, formalFacts, snapshot } = collectFactsInput(reportData, priorFacts);
         factsSnapshot = snapshot;
 
         // Both readiness and evidence-gap lookups key off a framework id. A
@@ -184,9 +256,9 @@ export async function generateReport(
                 ),
                 collectEvidenceGapsInput(analyzerFrameworkId, reportData.metadata.organizationId),
               ]);
-              return { readiness, evidenceGaps, facts };
+              return { readiness, evidenceGaps, facts, formalFacts };
             })()
-          : { facts };
+          : { facts, formalFacts };
 
         analyses = await runAnalyzers({
           reportData,
@@ -228,6 +300,30 @@ export async function generateReport(
         : `${request.reportName}${extension}`;
     }
 
+    // The internal fix-it list of an E-23 run (spec 8.6), named after the
+    // formal report before the AI marker below is added to that name. Both or
+    // neither: a fix-it list that fails fails the whole result, so a formal
+    // report never goes out while its internal list silently did not generate.
+    let companion: ReportGenerationResult["companion"];
+    if (result.success && request.reportKind === E23_KIND && sections.includes("e23FixItList")) {
+      const ext = request.format === "pdf" ? ".pdf" : ".docx";
+      const fixIt = await generateFixItCompanion(reportData, request);
+      if (!fixIt.success) {
+        return {
+          success: false,
+          filename: "",
+          content: Buffer.alloc(0),
+          mimeType: "",
+          error: `The fix-it list could not be generated: ${fixIt.error ?? "unknown error"}`,
+        };
+      }
+      companion = {
+        filename: `${baseNameOf(result.filename, ext)}${FIX_IT_FILENAME_SUFFIX}${ext}`,
+        content: fixIt.content,
+        mimeType: fixIt.mimeType,
+      };
+    }
+
     // Mark AI-enhanced reports in the filename for frontend badge detection
     if (request.aiEnhanced && result.success && reportData.aiSummaries) {
       const ext = request.format === "pdf" ? ".pdf" : ".docx";
@@ -235,15 +331,24 @@ export async function generateReport(
       result.filename = `${baseName}_AI_${ext}`;
     }
 
-    const collectionFailures = (reportData.sectionNotices ?? [])
-      .filter((n) => n.reason === "collection_failed" && n.detail)
-      .map((n) => n.detail as string);
+    // Deduplicated: one unreadable source (the MRM data) can raise a notice on
+    // several sections, and the run message should name it once.
+    const collectionFailures = [
+      ...new Set(
+        (reportData.sectionNotices ?? [])
+          .filter((n) => n.reason === "collection_failed" && n.detail)
+          .map((n) => n.detail as string),
+      ),
+    ];
+    const glance = reportData.sections.e23Glance;
 
     return {
       ...result,
+      ...(companion && { companion }),
       analyses,
       factsSnapshot,
       ...(collectionFailures.length > 0 && { collectionFailures }),
+      ...(glance && { e23Glance: toE23GlanceSnapshot(glance, reportData.metadata.generatedAt) }),
     };
   } catch (error) {
     console.error("Error generating report:", error);

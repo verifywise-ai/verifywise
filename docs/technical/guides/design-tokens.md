@@ -248,14 +248,21 @@ const monoFontFamily = [
 
 ### Using Theme Spacing
 
+The theme sets `spacing: 2` (`themes/light.ts`), so `theme.spacing()` and
+numeric `sx` values use a **2px** base, not MUI's default 8px: `gap: 2` is
+4px, `padding: 8` is 16px. Screens use exact pixel strings instead, which
+read the same whatever the base:
+
 ```typescript
-// MUI theme.spacing() uses 8px base
 sx={{
-  padding: 2,        // 16px (2 * 8)
-  marginTop: 1,      // 8px (1 * 8)
-  gap: 1.5,          // 12px (1.5 * 8)
+  padding: "16px",
+  marginTop: "8px",
+  gap: "12px",
 }}
 ```
+
+The `theme.spacing(...)` calls in the style patterns below are on the same
+2px base (`theme.spacing(2)` is 4px).
 
 ## Component Sizes
 

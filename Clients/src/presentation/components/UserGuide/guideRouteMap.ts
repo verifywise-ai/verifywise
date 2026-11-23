@@ -104,7 +104,7 @@ export const GUIDE_ROUTE_RULES: GuideRouteRule[] = [
   { prefix: "/datasets", target: "ai-governance/datasets" },
   { prefix: "/approval-workflows", target: "ai-governance/approval-workflows" },
   { prefix: "/risk-management", target: "risk-management/risk-assessment" },
-  { prefix: "/vendors/risks", target: "risk-management/vendor-risks" },
+  { prefix: "/vendors/risks", target: "risk-management/vendor-risk-list" },
   { prefix: "/vendors", target: "risk-management/vendor-management" },
   { prefix: "/framework", target: "compliance/assessments" },
   { prefix: "/projects", target: "compliance/assessments" },

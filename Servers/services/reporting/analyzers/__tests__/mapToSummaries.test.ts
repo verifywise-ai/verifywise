@@ -174,7 +174,7 @@ describe("mapAnalysesToSummaries", () => {
     });
   });
 
-  it("labels every one of the seven analyzer keys, exactly once", () => {
+  it("labels every one of the eight analyzer keys, exactly once", () => {
     // ONE map. docxGenerator imports it and pdfGenerator passes it to EJS, so a
     // renderer that gains a block cannot drift its heading away from the other.
     expect(ANALYSIS_LABELS).toEqual({
@@ -185,6 +185,7 @@ describe("mapAnalysesToSummaries", () => {
       riskAnalysis: "Risk analysis",
       complianceGap: "Compliance gap analysis",
       vendorRisk: "Third-party risk analysis",
+      e23Gap: "E-23 gap analysis",
     });
   });
 });
@@ -219,7 +220,11 @@ describe("isOperationalAbstention", () => {
     // asserts the two files still agree on the vocabulary: an operational
     // reason added there without adding it to the exported set would print
     // verbatim into the report, which is the defect this guard exists for.
-    const analytical = new Set(["insufficient data for this section"]);
+    const analytical = new Set([
+      "insufficient data for this section",
+      "the fix-it list has no items, so there is no remediation to recommend",
+      "the AI text made claims the report data does not support",
+    ]);
     for (const reason of ALL_ABSTAIN_REASONS) {
       expect(isOperationalAbstention(reason)).toBe(!analytical.has(reason));
     }

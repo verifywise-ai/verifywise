@@ -92,6 +92,35 @@ describe("Report Generation Service", () => {
       expect(result.mimeType).toBe("application/pdf");
     });
 
+    it("hands the report kind and parameters to the collector for the metadata", async () => {
+      (generatePDF as jest.Mock).mockResolvedValue({
+        success: true,
+        filename: "r.pdf",
+        content: Buffer.from("pdf"),
+        mimeType: "application/pdf",
+      });
+
+      await generateReport(
+        {
+          ...baseRequest,
+          reportKind: "osfi_e23",
+          reportParameters: { institutionName: "Northern Bank" },
+        },
+        1,
+        1,
+      );
+
+      // No schedule or template id, so there is no previous run to compare with.
+      expect(mockDataCollector.collectAllData).toHaveBeenCalledWith(
+        expect.any(Array),
+        {
+          reportKind: "osfi_e23",
+          reportParameters: { institutionName: "Northern Bank" },
+        },
+        { priorE23Glance: null },
+      );
+    });
+
     it("should generate DOCX report successfully", async () => {
       const mockDocxResult = {
         success: true,

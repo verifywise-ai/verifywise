@@ -71,6 +71,12 @@ export const de: Record<string, string> = {
   "You haven&apos;t created any templates yet.": "Sie haben noch keine Vorlagen erstellt.",
   "Want a report? We'll create one using the info from your Compliance, Assessment, and Vendor/Risk sections.":
     "Möchten Sie einen Bericht? Wir erstellen einen anhand der Informationen aus Ihren Bereichen Compliance, Beurteilung und Anbieter/Risiko.",
+  "An OSFI E-23 report covers the whole organization.":
+    "Ein OSFI-E-23-Bericht deckt die gesamte Organisation ab.",
+  "Reporting period:": "Berichtszeitraum:",
+  "Run in month": "Ausführen im Monat",
+  "Unticked, every page is marked as a draft":
+    "Ohne Häkchen wird jede Seite als Entwurf gekennzeichnet",
 };
 
 export const fr: Record<string, string> = {
@@ -140,6 +146,12 @@ export const fr: Record<string, string> = {
   "You haven&apos;t created any templates yet.": "Vous n'avez encore créé aucun modèle.",
   "Want a report? We'll create one using the info from your Compliance, Assessment, and Vendor/Risk sections.":
     "Vous voulez un rapport ? Nous en créerons un à partir des informations de vos sections Conformité, Évaluation et Fournisseurs/Risques.",
+  "An OSFI E-23 report covers the whole organization.":
+    "Un rapport OSFI E-23 couvre l'ensemble de l'organisation.",
+  "Reporting period:": "Période de déclaration :",
+  "Run in month": "Exécuter au mois de",
+  "Unticked, every page is marked as a draft":
+    "Non cochée, chaque page est marquée comme brouillon",
 };
 
 export const es: Record<string, string> = {
@@ -210,4 +222,9 @@ export const es: Record<string, string> = {
   "You haven&apos;t created any templates yet.": "Aún no ha creado ninguna plantilla.",
   "Want a report? We'll create one using the info from your Compliance, Assessment, and Vendor/Risk sections.":
     "¿Desea un informe? Crearemos uno con la información de sus secciones de Cumplimiento, Evaluación y Proveedores/Riesgos.",
+  "An OSFI E-23 report covers the whole organization.":
+    "Un informe OSFI E-23 abarca toda la organización.",
+  "Reporting period:": "Periodo del informe:",
+  "Run in month": "Ejecutar en el mes",
+  "Unticked, every page is marked as a draft": "Sin marcar, cada página se marca como borrador",
 };

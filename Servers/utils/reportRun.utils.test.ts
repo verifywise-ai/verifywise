@@ -7,7 +7,7 @@ jest.mock("../database/db", () => ({
   },
 }));
 
-import { listRunsQuery, setRunArchivedQuery, deleteRunQuery } from "./reportRun.utils";
+import { listRunsQuery, setRunArchivedQuery, deleteRunQuery, getRunQuery } from "./reportRun.utils";
 
 const ADMIN = { userId: 1, role: "Admin" };
 const AUDITOR = { userId: 42, role: "Auditor" };
@@ -227,5 +227,73 @@ describe("deleteRunQuery", () => {
 
     expect(await deleteRunQuery(1, 999)).toBe(false);
     expect(mockQuery).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("deleteRunQuery with a companion file", () => {
+  const TX = { id: "tx" };
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockTransaction.mockImplementation((cb: any) => cb(TX));
+    mockQuery.mockResolvedValue([]);
+  });
+
+  it("deletes the report file, the fix-it file and the run, in one transaction", async () => {
+    mockQuery.mockResolvedValueOnce([{ id: 1, file_id: 42, companion_file_id: 43 }]);
+
+    expect(await deleteRunQuery(1, 5)).toBe(true);
+
+    const fileDeletes = mockQuery.mock.calls.filter((c) =>
+      (c[0] as string).includes("DELETE FROM files"),
+    );
+    expect(fileDeletes.map((c) => (c[1] as any).replacements)).toEqual([
+      expect.objectContaining({ id: 42, organizationId: 5 }),
+      expect.objectContaining({ id: 43, organizationId: 5 }),
+    ]);
+    expect(mockQuery.mock.calls[mockQuery.mock.calls.length - 1][0]).toContain(
+      "DELETE FROM report_runs",
+    );
+    for (const call of mockQuery.mock.calls) {
+      expect((call[1] as any).transaction).toBe(TX);
+    }
+  });
+
+  it("deletes the fix-it file even when the formal report was never stored", async () => {
+    mockQuery.mockResolvedValueOnce([{ id: 1, file_id: null, companion_file_id: 43 }]);
+
+    await deleteRunQuery(1, 5);
+
+    const fileDeletes = mockQuery.mock.calls.filter((c) =>
+      (c[0] as string).includes("DELETE FROM files"),
+    );
+    expect(fileDeletes.map((c) => (c[1] as any).replacements.id)).toEqual([43]);
+  });
+});
+
+describe("run reads carry the companion and the final flag", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it("listRunsQuery selects the companion columns and isFinal from the parameters", async () => {
+    mockQuery.mockResolvedValueOnce([{ total: 0 }]).mockResolvedValueOnce([]);
+
+    await listRunsQuery(1, {}, ADMIN);
+
+    const sql = mockQuery.mock.calls[1][0] as string;
+    expect(sql).toContain("rr.*");
+    expect(sql).toContain("config_snapshot->'report_parameters'->>'isFinal' AS is_final");
+  });
+
+  it("getRunQuery selects isFinal too, org-scoped", async () => {
+    mockQuery.mockResolvedValueOnce([]);
+
+    await getRunQuery(3, 5);
+
+    const [sql, opts] = mockQuery.mock.calls[0] as [string, any];
+    expect(sql).toContain("->>'isFinal' AS is_final");
+    expect(sql).toContain("organization_id = :organization_id");
+    expect(opts.replacements).toEqual({ id: 3, organization_id: 5 });
   });
 });

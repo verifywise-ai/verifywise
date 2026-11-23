@@ -278,9 +278,66 @@ export const vendorRiskSchema = z
   })
   .strict();
 
+/**
+ * The OSFI E-23 gap analysis (spec 8.5). `position` describes how far the MRM
+ * data is consistent with the self-assessed statuses, never a compliance
+ * rating; the renderers print it through POSITION_LABELS. Two positions are
+ * also enforced in code after parsing (registry.ts, e23Gap enforce).
+ */
+export const E23_POSITIONS = [
+  "consistent",
+  "partly consistent",
+  "inconsistent",
+  "not assessable",
+] as const;
+
+export const e23GapSchema = z
+  .object({
+    narrative: z
+      .string()
+      .min(40)
+      .max(2500)
+      .describe(
+        "Two to four paragraphs on how far the model risk management records bear out the self-assessed E-23 statuses. Explain the contradictions listed in the input; never add new ones. Flowing prose, no markdown.",
+      ),
+    principles: z
+      .array(
+        z
+          .object({
+            group: z
+              .string()
+              .min(1)
+              .max(200)
+              .describe("E-23 requirement group title, copied verbatim from the input."),
+            position: z
+              .enum(E23_POSITIONS)
+              .describe(
+                'How far the model risk management data is consistent with the self-assessed statuses in this group. "not assessable" for every group the input marks "Self-assessment only". Never "consistent" for a group that holds a requirement a listed contradiction names.',
+              ),
+            explanation: z
+              .string()
+              .min(10)
+              .max(600)
+              .describe(
+                "Why this position, naming the contradiction, count or status in the input that supports it.",
+              ),
+            basis,
+            what_would_close_this: whatWouldCloseThis,
+          })
+          .strict(),
+      )
+      .min(0)
+      .max(16)
+      .describe("One entry per E-23 requirement group present in the input. May be empty."),
+    abstain_reason: abstainReason,
+  })
+  .strict();
+
 export type ExecutiveSummaryOutput = z.infer<typeof executiveSummarySchema>;
 export type KeyFindingsOutput = z.infer<typeof keyFindingsSchema>;
 export type RecommendedActionsOutput = z.infer<typeof recommendedActionsSchema>;
 export type RiskAnalysisOutput = z.infer<typeof riskAnalysisSchema>;
 export type ComplianceGapOutput = z.infer<typeof complianceGapSchema>;
 export type VendorRiskOutput = z.infer<typeof vendorRiskSchema>;
+export type E23GapOutput = z.infer<typeof e23GapSchema>;
+export type E23Position = (typeof E23_POSITIONS)[number];

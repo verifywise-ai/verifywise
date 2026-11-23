@@ -23,6 +23,11 @@ export interface ReportSectionCatalogEntry {
   label: string;
   /** Grouping label for UI presentation. */
   group: string;
+  /**
+   * Report kinds this section is limited to. Absent means every report can
+   * use it.
+   */
+  kinds?: string[];
 }
 
 export const REPORT_SECTION_CATALOG: ReportSectionCatalogEntry[] = [
@@ -38,6 +43,36 @@ export const REPORT_SECTION_CATALOG: ReportSectionCatalogEntry[] = [
     label: "Framework requirements",
     group: "Compliance and governance",
   },
+  {
+    key: "mrmFleet",
+    label: "Model risk management status",
+    group: "Compliance and governance",
+    kinds: ["osfi_e23"],
+  },
+  {
+    key: "e23Contradictions",
+    label: "Where the checklist and the data disagree",
+    group: "Compliance and governance",
+    kinds: ["osfi_e23"],
+  },
+  {
+    key: "e23FixItList",
+    label: "Fix-it list (internal document)",
+    group: "Compliance and governance",
+    kinds: ["osfi_e23"],
+  },
+  {
+    key: "mrmInventoryAppendix",
+    label: "Model inventory appendix",
+    group: "Compliance and governance",
+    kinds: ["osfi_e23"],
+  },
+  {
+    key: "signOff",
+    label: "Sign-off",
+    group: "Compliance and governance",
+    kinds: ["osfi_e23"],
+  },
   { key: "models", label: "AI models", group: "Organization" },
   { key: "vendors", label: "Vendors", group: "Organization" },
   { key: "trainingRegistry", label: "Training registry", group: "Organization" },
@@ -46,3 +81,14 @@ export const REPORT_SECTION_CATALOG: ReportSectionCatalogEntry[] = [
 ];
 
 export const SECTION_KEYS: string[] = REPORT_SECTION_CATALOG.map((s) => s.key);
+
+/**
+ * Keys that are limited to a report kind other than the one given. A general
+ * report (kind undefined) violates for every kind-restricted key.
+ */
+export function kindViolations(keys: string[], kind: string | undefined): string[] {
+  return keys.filter((key) => {
+    const entry = REPORT_SECTION_CATALOG.find((e) => e.key === key);
+    return !!entry?.kinds && (kind === undefined || !entry.kinds.includes(kind));
+  });
+}

@@ -2,8 +2,36 @@ import { generateReport } from "./index";
 import { resolveReportRequest } from "./reportTemplateResolver";
 import { deliverReport } from "./reportDeliveryService";
 import { createRunQuery, updateRunStatusQuery } from "../../utils/reportRun.utils";
+import { uploadFile } from "../../utils/fileUpload.utils";
 import { gapsMessage } from "./noticeText";
 import { persistAnalyses } from "./analyzers/persistAnalyses";
+import { rollingPeriod } from "./scheduleCalculator";
+import type {
+  ReportParameters,
+  ReportParametersConfig,
+} from "../../domain.layer/interfaces/i.reportTemplate";
+
+const PERIOD_KEYS = ["periodStart", "periodEnd"];
+
+/**
+ * The parameters a run uses. A schedule stores every answer except the
+ * period, so a run of a schedule (scheduler tick or the schedule's run-now)
+ * gets the rolling period ending the day before its run date. Template
+ * run-now has no schedule (id null) and keeps the dates the user sent.
+ */
+function runParameters(sched: any, opts: { scheduledFor?: Date }): ReportParameters {
+  const params: ReportParameters = { ...(sched.report_parameters ?? {}) };
+  const config: ReportParametersConfig = sched.parameters_config ?? {};
+  const declaresPeriod = (config.fields ?? []).some((f) => PERIOD_KEYS.includes(f.key));
+  const frequency = sched.schedule_config?.frequency;
+  if (sched.id != null && declaresPeriod && frequency) {
+    Object.assign(
+      params,
+      rollingPeriod(frequency, opts.scheduledFor ?? new Date(), sched.schedule_config?.timezone),
+    );
+  }
+  return params;
+}
 
 // The run status vocabulary is fixed at: queued, running, success, partial_success, failed.
 // partial_success means "generated, but a delivery channel failed or part of a section could
@@ -29,6 +57,7 @@ export async function runScheduledReport(
   opts: { triggeredBy: "scheduler" | "manual"; userId?: number; scheduledFor?: Date },
 ): Promise<ReportRunOutcome> {
   const startedAt = Date.now();
+  const reportParameters = runParameters(sched, opts);
   const run = await createRunQuery({
     organization_id: sched.organization_id,
     scheduled_report_id: sched.id ?? null,
@@ -56,24 +85,29 @@ export async function runScheduledReport(
       sections_config: sched.sections_config,
       ai_blocks_config: sched.ai_blocks_config,
       delivery_config: sched.delivery_config,
+      // What the run was made with, period included. The run history reads
+      // isFinal from here, and last-parameters prefills the next run from it.
+      report_parameters: reportParameters,
     },
     scheduled_for: opts.scheduledFor ?? null,
   });
 
+  const userId = sched.owner_id ?? sched.created_by;
+  // The files this run has stored so far, as run columns. Every later status
+  // write carries them, the failure one included: a file that is kept must
+  // stay linked to its run, or it can neither be downloaded nor deleted with it.
+  let stored: Record<string, unknown> = {};
   try {
     // The schedule id is what makes a prior-run comparison possible: this run's
     // predecessor is the last run of the same schedule. Attached here rather
     // than in resolveReportRequest, which maps template config and knows
-    // nothing about runs.
+    // nothing about runs. The run id goes on the fix-it list's cover.
     const request = {
-      ...resolveReportRequest(sched, sched.llm_key_id),
+      ...resolveReportRequest({ ...sched, report_parameters: reportParameters }, sched.llm_key_id),
       scheduledReportId: sched.id ?? undefined,
+      runId: run.id,
     };
-    const result = await generateReport(
-      request,
-      sched.owner_id ?? sched.created_by,
-      sched.organization_id,
-    );
+    const result = await generateReport(request, userId, sched.organization_id);
     if (!result.success) {
       const error = result.error ?? "generation failed";
       await updateRunStatusQuery(run.id, sched.organization_id, {
@@ -83,15 +117,58 @@ export async function runScheduledReport(
       });
       return { runId: run.id, status: "failed", error };
     }
+
+    // The internal fix-it list (spec 8.6) is stored first and always, whatever
+    // "Save to storage" says: that channel governs the formal report only, and
+    // a schedule without it would otherwise produce a list nobody can open.
+    // It never goes to deliverReport, so no email link or attachment can carry
+    // it. If it cannot be stored the run fails before anything is delivered.
+    const companion = result.companion;
+    if (companion) {
+      try {
+        const file: any = await uploadFile(
+          {
+            fieldname: "report",
+            originalname: companion.filename,
+            mimetype: companion.mimeType,
+            buffer: companion.content,
+            size: companion.content.length,
+          },
+          userId,
+          null,
+          "All reports",
+          sched.organization_id,
+        );
+        if (!file?.id) throw new Error("the file store returned no id");
+        stored = {
+          companion_file_id: file.id,
+          companion_filename: companion.filename,
+          companion_mime_type: companion.mimeType,
+        };
+      } catch (e: any) {
+        const error = `The fix-it list could not be stored: ${e?.message ?? String(e)}`;
+        await updateRunStatusQuery(run.id, sched.organization_id, {
+          status: "failed",
+          error_message: error,
+          duration_ms: Date.now() - startedAt,
+        });
+        return { runId: run.id, status: "failed", error };
+      }
+    }
+
+    // The formal report only: deliverReport never sees the companion.
     const delivery = await deliverReport(
       sched.delivery_config,
       { content: result.content, filename: result.filename, mimeType: result.mimeType },
-      {
-        organizationId: sched.organization_id,
-        userId: sched.owner_id ?? sched.created_by,
-        runId: run.id,
-      },
+      { organizationId: sched.organization_id, userId, runId: run.id },
     );
+    stored = {
+      ...stored,
+      file_id: delivery.fileId,
+      output_filename: result.filename,
+      output_mime_type: result.mimeType,
+      delivery_status: delivery,
+    };
     const channels = [delivery.storage, delivery.emailLink, delivery.attachment];
     const anyFailed = channels.some((c: any) => c?.status === "failed");
     const gaps = result.collectionFailures ?? [];
@@ -105,19 +182,23 @@ export async function runScheduledReport(
     );
     await updateRunStatusQuery(run.id, sched.organization_id, {
       status,
-      file_id: delivery.fileId,
-      output_filename: result.filename,
-      output_mime_type: result.mimeType,
-      delivery_status: delivery,
+      ...stored,
       ...(gaps.length > 0 && {
         error_message: gapsMessage(gaps),
       }),
       ai_status: aiStatus ?? undefined,
       duration_ms: Date.now() - startedAt,
+      // An E-23 run keeps its "at a glance" figures on the run, so the next
+      // run of the same schedule or template can show the change (spec 8.10).
+      ...(result.e23Glance && { configSnapshotPatch: { e23_glance: result.e23Glance } }),
     });
     return { runId: run.id, status };
   } catch (e: any) {
+    // A late failure (persisting analyses, the final status write) comes after
+    // delivery: the formal report may already be stored or emailed, so the
+    // stored files stay where they are, and stay linked to the run.
     await updateRunStatusQuery(run.id, sched.organization_id, {
+      ...stored,
       status: "failed",
       error_message: e.message,
       duration_ms: Date.now() - startedAt,

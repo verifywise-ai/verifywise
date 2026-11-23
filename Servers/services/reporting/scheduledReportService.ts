@@ -1,5 +1,13 @@
 import { getTemplateByIdQuery, getVersionByIdQuery } from "../../utils/reportTemplate.utils";
 import { isValidEmail } from "../email/types";
+import { scheduleConfigErrors } from "./scheduleCalculator";
+import {
+  parameterErrorMessages,
+  ReportParameterError,
+  sectionKeysOf,
+  validateRunInput,
+} from "./reportParameters";
+import type { ReportParameters } from "../../domain.layer/interfaces/i.reportTemplate";
 
 export interface ScheduledReportInput {
   templateId: number;
@@ -14,14 +22,23 @@ export interface ScheduledReportInput {
   format: "pdf" | "docx";
   scheduleConfig: any;
   deliveryConfig: any;
+  reportParameters?: unknown;
 }
 
-export function validateScheduledReportInput(input: ScheduledReportInput): string[] {
+/**
+ * `t` is the request translator: the schedule config messages go through it
+ * (without one, as in tests, they come back in English).
+ */
+export function validateScheduledReportInput(
+  input: ScheduledReportInput,
+  t?: (key: string, vars?: Record<string, string | number>) => string,
+): string[] {
   const errs: string[] = [];
   if (input.scope === "project" && !input.projectId) errs.push("project scope requires projectId");
   if (input.scope === "organization" && input.projectId)
     errs.push("organization scope must not set projectId");
   if (!input.sectionsConfig?.sections?.length) errs.push("at least one section is required");
+  errs.push(...parameterErrorMessages(scheduleConfigErrors(input.scheduleConfig), t));
   const d = input.deliveryConfig || {};
   if (!d.saveToStorage && !d.sendEmailLink && !d.attachFile)
     errs.push("at least one delivery option is required");
@@ -72,4 +89,32 @@ export async function validateTemplateVersionOwnership(
     return ["templateVersionId does not belong to templateId"];
   }
   return [];
+}
+
+/**
+ * Check a schedule's sections and stored parameter answers against its
+ * template version. A schedule never stores the reporting period: each run
+ * derives it (see rollingPeriod), so a period sent here is refused.
+ *
+ * An unknown or foreign version yields no errors here;
+ * validateTemplateVersionOwnership reports that case.
+ */
+export async function validateScheduledReportParameters(input: {
+  templateVersionId: number;
+  organizationId: number;
+  sectionsConfig: unknown;
+  reportParameters: unknown;
+  /** The schedule's scope as it will be stored (after a PATCH, not before). */
+  scope: string | undefined;
+}): Promise<{ value: ReportParameters; errors: ReportParameterError[] }> {
+  const version = input.templateVersionId
+    ? await getVersionByIdQuery(Number(input.templateVersionId), input.organizationId)
+    : null;
+  if (!version) return { value: {}, errors: [] };
+  return validateRunInput(
+    version.parameters_config ?? {},
+    sectionKeysOf(input.sectionsConfig),
+    input.reportParameters,
+    { now: new Date(), requirePeriod: false, scope: input.scope },
+  );
 }

@@ -25,6 +25,7 @@ import { quantitativeRiskAssessmentContent } from './risk-management/quantitativ
 import { riskMitigationContent } from './risk-management/risk-mitigation';
 import { vendorManagementContent } from './risk-management/vendor-management';
 import { vendorRisksContent } from './risk-management/vendor-risks';
+import { vendorRiskListContent } from './risk-management/vendor-risk-list';
 import { euAiActContent } from './compliance/eu-ai-act';
 import { iso42001Content } from './compliance/iso-42001';
 import { iso27001Content } from './compliance/iso-27001';
@@ -49,6 +50,7 @@ import { policyTemplatesContent } from './policies/policy-templates';
 import { trainingTrackingContent } from './training/training-tracking';
 import { dashboardAnalyticsContent } from './reporting/dashboard-analytics';
 import { generatingReportsContent } from './reporting/generating-reports';
+import { osfiE23ReportContent } from './reporting/osfi-e23-report';
 import { organizationSettingsContent } from './settings/organization-settings';
 import { userManagementContent } from './settings/user-management';
 import { roleConfigurationContent } from './settings/role-configuration';
@@ -162,6 +164,7 @@ export const articleContentMap: Record<string, ArticleContent> = {
   'risk-management/risk-mitigation': riskMitigationContent,
   'risk-management/vendor-management': vendorManagementContent,
   'risk-management/vendor-risks': vendorRisksContent,
+  'risk-management/vendor-risk-list': vendorRiskListContent,
   // Compliance
   'compliance/eu-ai-act': euAiActContent,
   'compliance/iso-42001': iso42001Content,
@@ -183,6 +186,7 @@ export const articleContentMap: Record<string, ArticleContent> = {
   // Reporting
   'reporting/dashboard-analytics': dashboardAnalyticsContent,
   'reporting/generating-reports': generatingReportsContent,
+  'reporting/osfi-e23-report': osfiE23ReportContent,
   // Settings
   'settings/organization-settings': organizationSettingsContent,
   'settings/user-management': userManagementContent,
