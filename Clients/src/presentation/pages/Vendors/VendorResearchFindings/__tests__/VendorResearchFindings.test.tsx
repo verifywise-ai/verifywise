@@ -2,7 +2,8 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { act, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient } from "@tanstack/react-query";
-import { useNavigate } from "react-router";
+import { useLocation, useNavigate } from "react-router";
+import { LLM_KEY_CREATE_PATH } from "../../../../../application/constants/llmKeyDeepLink";
 import { renderWithProviders } from "../../../../../test/renderWithProviders";
 import {
   acceptedRisk,
@@ -42,7 +43,8 @@ vi.mock(
 
 const role = vi.hoisted(() => ({ canEdit: true, isAdmin: false }));
 vi.mock("../../../../../application/hooks/useCan", () => ({
-  useCan: (key: string) => key === "vendor.edit" && role.canEdit,
+  useCan: (key: string) =>
+    (key === "vendor.edit" && role.canEdit) || (key === "llmKeys.admin" && role.isAdmin),
   useCanCheck: () => (key: string) => key === "vendor.edit" && role.canEdit,
 }));
 vi.mock("../../../../../application/hooks/useIsAdmin", () => ({
@@ -192,11 +194,12 @@ beforeEach(() => {
   role.canEdit = true;
   role.isAdmin = false;
   formEdits.current = {};
-  mocks.config.mockResolvedValue({ hasLlmKey: true, autoRunEnabled: true });
+  mocks.config.mockResolvedValue({ hasLlmKey: true, autoRunAllowed: true, autoRunEnabled: true });
   mocks.settings.mockResolvedValue({
     researchKeyId: null,
     analysisKeyId: null,
     scanIntervalDays: null,
+    autoResearchOnCreate: true,
   });
   mocks.saveSettings.mockImplementation(async (settings) => settings);
   mocks.list.mockResolvedValue({ rows: [finding(), secondFinding()], total: 2 });
@@ -243,29 +246,77 @@ describe("the states of the section", () => {
 
   it("says research is not set up when nothing is pending and the organization has no LLM key", async () => {
     mocks.list.mockResolvedValue({ rows: [], total: 0 });
-    mocks.config.mockResolvedValue({ hasLlmKey: false, autoRunEnabled: true });
+    mocks.config.mockResolvedValue({
+      hasLlmKey: false,
+      autoRunAllowed: true,
+      autoRunEnabled: true,
+    });
     renderSection({ route: WITH_VENDOR_7 });
 
     expect(await screen.findByText("Vendor research is not set up.")).toBeInTheDocument();
     expect(screen.queryByText("No pending research findings.")).not.toBeInTheDocument();
   });
 
+  it("offers no vendor filter before research is set up and nothing is pending", async () => {
+    mocks.list.mockResolvedValue({ rows: [], total: 0 });
+    mocks.config.mockResolvedValue({
+      hasLlmKey: false,
+      autoRunAllowed: true,
+      autoRunEnabled: true,
+    });
+    renderSection();
+
+    expect(await screen.findByText("Vendor research is not set up.")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Vendor")).not.toBeInTheDocument();
+  });
+
   it("tells an Admin to add an LLM key", async () => {
     role.isAdmin = true;
     mocks.list.mockResolvedValue({ rows: [], total: 0 });
-    mocks.config.mockResolvedValue({ hasLlmKey: false, autoRunEnabled: true });
+    mocks.config.mockResolvedValue({
+      hasLlmKey: false,
+      autoRunAllowed: true,
+      autoRunEnabled: true,
+    });
     renderSection({ route: WITH_VENDOR_7 });
 
     expect(await screen.findByText("Vendor research is not set up.")).toBeInTheDocument();
-    expect(
-      screen.getByText("Add an LLM key under Settings → API Keys, in the LLM Keys section."),
-    ).toBeInTheDocument();
+    expect(screen.getByText("Research needs an LLM key.", { exact: false })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Add an LLM key" })).toBeInTheDocument();
+  });
+
+  it("takes whoever can add a key straight to the add-key form", async () => {
+    role.isAdmin = true;
+    mocks.list.mockResolvedValue({ rows: [], total: 0 });
+    mocks.config.mockResolvedValue({
+      hasLlmKey: false,
+      autoRunAllowed: true,
+      autoRunEnabled: true,
+    });
+    const LocationProbe = () => {
+      const location = useLocation();
+      return <span data-testid="location">{`${location.pathname}${location.search}`}</span>;
+    };
+    renderWithProviders(
+      <>
+        <VendorResearchFindings vendors={VENDORS} onOpenRisk={vi.fn()} onNotify={vi.fn()} />
+        <LocationProbe />
+      </>,
+      { route: WITH_VENDOR_7 },
+    );
+
+    await userEvent.click(await screen.findByRole("button", { name: "Add an LLM key" }));
+    expect(screen.getByTestId("location")).toHaveTextContent(LLM_KEY_CREATE_PATH);
   });
 
   it("keeps the setup hint from everyone who is not an Admin", async () => {
     role.isAdmin = false;
     mocks.list.mockResolvedValue({ rows: [], total: 0 });
-    mocks.config.mockResolvedValue({ hasLlmKey: false, autoRunEnabled: true });
+    mocks.config.mockResolvedValue({
+      hasLlmKey: false,
+      autoRunAllowed: true,
+      autoRunEnabled: true,
+    });
     renderSection({ route: WITH_VENDOR_7 });
 
     expect(await screen.findByText("Vendor research is not set up.")).toBeInTheDocument();
@@ -283,7 +334,11 @@ describe("the states of the section", () => {
   it("says no findings are pending, with no setup hint, once the organization has an LLM key", async () => {
     role.isAdmin = true;
     mocks.list.mockResolvedValue({ rows: [], total: 0 });
-    mocks.config.mockResolvedValue({ hasLlmKey: true, autoRunEnabled: false });
+    mocks.config.mockResolvedValue({
+      hasLlmKey: true,
+      autoRunAllowed: true,
+      autoRunEnabled: false,
+    });
     renderSection({ route: WITH_VENDOR_7 });
 
     expect(await screen.findByText("No pending research findings.")).toBeInTheDocument();
@@ -304,13 +359,17 @@ describe("the states of the section", () => {
     expect(screen.queryByText("Vendor research is not set up.")).not.toBeInTheDocument();
 
     await act(async () => {
-      config.resolve({ hasLlmKey: true, autoRunEnabled: true });
+      config.resolve({ hasLlmKey: true, autoRunAllowed: true, autoRunEnabled: true });
     });
     expect(await screen.findByText("No pending research findings.")).toBeInTheDocument();
   });
 
   it("shows the rows even when the organization is not set up, and only disables Research again", async () => {
-    mocks.config.mockResolvedValue({ hasLlmKey: false, autoRunEnabled: true });
+    mocks.config.mockResolvedValue({
+      hasLlmKey: false,
+      autoRunAllowed: true,
+      autoRunEnabled: true,
+    });
     renderSection({ route: WITH_VENDOR_7 });
 
     expect(await screen.findByText(FIRST)).toBeInTheDocument();
@@ -2262,7 +2321,11 @@ describe("keyboard and screen reader use of the rows", () => {
   });
 
   it("moves focus to the line that says research is not set up when that is what the empty list says", async () => {
-    mocks.config.mockResolvedValue({ hasLlmKey: false, autoRunEnabled: true });
+    mocks.config.mockResolvedValue({
+      hasLlmKey: false,
+      autoRunAllowed: true,
+      autoRunEnabled: true,
+    });
     mocks.list.mockResolvedValue({ rows: [finding()], total: 1 });
     accepts([]);
     renderSection();
@@ -4306,7 +4369,11 @@ describe("the research settings", () => {
 
   it("are not offered while the organization has no LLM key, because there is nothing to choose from", async () => {
     role.isAdmin = true;
-    mocks.config.mockResolvedValue({ hasLlmKey: false, autoRunEnabled: true });
+    mocks.config.mockResolvedValue({
+      hasLlmKey: false,
+      autoRunAllowed: true,
+      autoRunEnabled: true,
+    });
     renderSection({ route: WITH_VENDOR_7 });
     await screen.findByText(FIRST);
 
@@ -4360,6 +4427,7 @@ describe("the research settings", () => {
       researchKeyId: 20,
       analysisKeyId: null,
       scanIntervalDays: null,
+      autoResearchOnCreate: true,
     });
     renderSection({ route: WITH_VENDOR_7 });
     await userEvent.click(await screen.findByRole("button", SETTINGS_BUTTON));

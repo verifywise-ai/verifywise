@@ -61,7 +61,8 @@ vi.mock(
 
 const role = vi.hoisted(() => ({ canEdit: true, isAdmin: true }));
 vi.mock("../../../../../application/hooks/useCan", () => ({
-  useCan: (key: string) => key === "vendor.edit" && role.canEdit,
+  useCan: (key: string) =>
+    (key === "vendor.edit" && role.canEdit) || (key === "llmKeys.admin" && role.isAdmin),
   useCanCheck: () => (key: string) => key === "vendor.edit" && role.canEdit,
 }));
 vi.mock("../../../../../application/hooks/useIsAdmin", () => ({
@@ -579,11 +580,12 @@ beforeEach(() => {
   vi.clearAllMocks();
   role.canEdit = true;
   role.isAdmin = true;
-  mocks.config.mockResolvedValue({ hasLlmKey: true, autoRunEnabled: true });
+  mocks.config.mockResolvedValue({ hasLlmKey: true, autoRunAllowed: true, autoRunEnabled: true });
   mocks.settings.mockResolvedValue({
     researchKeyId: null,
     analysisKeyId: null,
     scanIntervalDays: null,
+    autoResearchOnCreate: true,
   });
   mocks.saveSettings.mockImplementation(async (settings) => settings);
   mocks.list.mockResolvedValue({ rows: [finding(), secondFinding()], total: 2 });
@@ -2167,15 +2169,18 @@ describe.each(LANGS)("research findings in %s", (lang) => {
 
   it("translates the not-set-up state, with the hint for an Admin", async () => {
     mocks.list.mockResolvedValue({ rows: [], total: 0 });
-    mocks.config.mockResolvedValue({ hasLlmKey: false, autoRunEnabled: true });
+    mocks.config.mockResolvedValue({
+      hasLlmKey: false,
+      autoRunAllowed: true,
+      autoRunEnabled: true,
+    });
     renderSection();
 
     expect(await screen.findByText(tr(lang, "Vendor research is not set up."))).toBeInTheDocument();
     expect(
-      screen.getByText(
-        tr(lang, "Add an LLM key under Settings → API Keys, in the LLM Keys section."),
-      ),
+      screen.getByText(tr(lang, "Research needs an LLM key."), { exact: false }),
     ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: tr(lang, "Add an LLM key") })).toBeInTheDocument();
 
     expectNoUntranslatedText(lang, FIXTURES);
   });
@@ -2207,7 +2212,11 @@ describe.each(LANGS)("research findings in %s", (lang) => {
   });
 
   it("translates the tooltip of Research again when research is not set up", async () => {
-    mocks.config.mockResolvedValue({ hasLlmKey: false, autoRunEnabled: true });
+    mocks.config.mockResolvedValue({
+      hasLlmKey: false,
+      autoRunAllowed: true,
+      autoRunEnabled: true,
+    });
     renderSection();
 
     // The button is rebuilt inside its tooltip once the settings say research is not set up.

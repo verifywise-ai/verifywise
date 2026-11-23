@@ -14,7 +14,7 @@
  */
 
 import TabContext from "@mui/lab/TabContext";
-import { Box, Stack, Typography, alpha, useTheme } from "@mui/material";
+import { Box, ButtonBase, Stack, Typography, alpha, useTheme } from "@mui/material";
 import Field from "../../Inputs/Field";
 import Select from "../../Inputs/Select";
 import DatePicker from "../../Inputs/Datepicker";
@@ -241,6 +241,11 @@ const AddNewVendor: React.FC<AddNewVendorProps> = ({
     body: string;
   } | null>(null);
   const [isScorecardExpanded, setIsScorecardExpanded] = useState(false);
+  const [isIdentifiersExpanded, setIsIdentifiersExpanded] = useState(false);
+  // An identifier that failed its check is never hidden behind the closed section.
+  const identifiersShown =
+    isIdentifiersExpanded ||
+    Boolean(errors.country || errors.registrationNumber || errors.lei || errors.secCik);
   const [activeTab, setActiveTab] = useState("details");
   const can = useCanCheck();
   const { users } = useUsers();
@@ -334,6 +339,14 @@ const AddNewVendor: React.FC<AddNewVendorProps> = ({
         lei: existingVendor.lei ?? "",
         secCik: existingVendor.sec_cik ?? "",
       }));
+      if (
+        existingVendor.country ||
+        existingVendor.registration_number ||
+        existingVendor.lei ||
+        existingVendor.sec_cik
+      ) {
+        setIsIdentifiersExpanded(true);
+      }
       // Expand scorecard if any scorecard fields have values
       if (
         existingVendor.data_sensitivity ||
@@ -788,61 +801,88 @@ const AddNewVendor: React.FC<AddNewVendorProps> = ({
         spacing="8px"
         sx={{ width: 686 }}
       >
-        <Stack spacing="2px">
-          <Typography id="vendor-form-identifiers" variant="subtitle1" sx={{ fontWeight: 600 }}>
-            Identifiers
-          </Typography>
-          <Typography variant="body2" sx={{ color: theme.palette.text.secondary }}>
-            Turns a match by name into a match by identifier.
-          </Typography>
-        </Stack>
-        <Stack direction={"row"} spacing="12px">
-          <Field // country
-            id={VENDOR_MODAL_FIELD_IDS.country}
-            label="Country"
-            width={220}
-            isOptional
-            value={values.country}
-            onChange={(e) => handleOnChange("country", e.target.value)}
-            error={errors.country}
-            disabled={isEditingDisabled}
-            placeholder="e.g. DE"
-            helperText={countryName}
-          />
-          <Field // registrationNumber
-            id={VENDOR_MODAL_FIELD_IDS.registrationNumber}
-            label="Registration number"
-            width={220}
-            isOptional
-            value={values.registrationNumber}
-            onChange={(e) => handleOnChange("registrationNumber", e.target.value)}
-            error={errors.registrationNumber}
-            disabled={isEditingDisabled}
-            placeholder="As the company register writes it"
-          />
-          <Field // lei
-            id={VENDOR_MODAL_FIELD_IDS.lei}
-            label="LEI"
-            width={220}
-            isOptional
-            value={values.lei}
-            onChange={(e) => handleOnChange("lei", e.target.value)}
-            error={errors.lei}
-            disabled={isEditingDisabled}
-            placeholder="20 letters and digits"
-          />
-        </Stack>
-        <Field // secCik
-          id={VENDOR_MODAL_FIELD_IDS.secCik}
-          label="SEC CIK"
-          width={220}
-          isOptional
-          value={values.secCik}
-          onChange={(e) => handleOnChange("secCik", e.target.value)}
-          error={errors.secCik}
-          disabled={isEditingDisabled}
-          placeholder="Up to 10 digits"
-        />
+        <ButtonBase
+          aria-expanded={identifiersShown}
+          aria-controls="vendor-form-identifiers-fields"
+          onClick={() => setIsIdentifiersExpanded(!identifiersShown)}
+          sx={{
+            "display": "flex",
+            "alignItems": "center",
+            "justifyContent": "space-between",
+            "padding": "12px 16px",
+            "border": `1px solid ${theme.palette.divider}`,
+            "borderRadius": radiusPx.sm,
+            "backgroundColor": theme.palette.grey[50],
+            "textAlign": "left",
+            "&:hover": { backgroundColor: theme.palette.grey[100] },
+          }}
+        >
+          <Stack spacing="2px">
+            <Typography id="vendor-form-identifiers" variant="subtitle1" sx={{ fontWeight: 600 }}>
+              Identifiers (optional)
+            </Typography>
+            <Typography variant="body2" sx={{ color: theme.palette.text.secondary }}>
+              Research uses them to find this exact company, such as its SEC filings and its LEI
+              record, instead of matching by name.
+            </Typography>
+          </Stack>
+          {identifiersShown ? (
+            <ChevronUp size={16} style={{ color: theme.palette.text.tertiary, flexShrink: 0 }} />
+          ) : (
+            <ChevronDown size={16} style={{ color: theme.palette.text.tertiary, flexShrink: 0 }} />
+          )}
+        </ButtonBase>
+        {identifiersShown && (
+          <Stack id="vendor-form-identifiers-fields" spacing="8px">
+            <Stack direction={"row"} spacing="12px">
+              <Field // country
+                id={VENDOR_MODAL_FIELD_IDS.country}
+                label="Country"
+                width={220}
+                isOptional
+                value={values.country}
+                onChange={(e) => handleOnChange("country", e.target.value)}
+                error={errors.country}
+                disabled={isEditingDisabled}
+                placeholder="e.g. DE"
+                helperText={countryName}
+              />
+              <Field // registrationNumber
+                id={VENDOR_MODAL_FIELD_IDS.registrationNumber}
+                label="Registration number"
+                width={220}
+                isOptional
+                value={values.registrationNumber}
+                onChange={(e) => handleOnChange("registrationNumber", e.target.value)}
+                error={errors.registrationNumber}
+                disabled={isEditingDisabled}
+                placeholder="As the company register writes it"
+              />
+              <Field // lei
+                id={VENDOR_MODAL_FIELD_IDS.lei}
+                label="LEI"
+                width={220}
+                isOptional
+                value={values.lei}
+                onChange={(e) => handleOnChange("lei", e.target.value)}
+                error={errors.lei}
+                disabled={isEditingDisabled}
+                placeholder="20 letters and digits"
+              />
+            </Stack>
+            <Field // secCik
+              id={VENDOR_MODAL_FIELD_IDS.secCik}
+              label="SEC CIK"
+              width={220}
+              isOptional
+              value={values.secCik}
+              onChange={(e) => handleOnChange("secCik", e.target.value)}
+              error={errors.secCik}
+              disabled={isEditingDisabled}
+              placeholder="Up to 10 digits"
+            />
+          </Stack>
+        )}
       </Stack>
 
       {/* Vendor Scorecard Section */}

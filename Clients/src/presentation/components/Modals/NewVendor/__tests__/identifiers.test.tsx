@@ -73,7 +73,9 @@ const vendor = (identifiers: Identifiers = {}) =>
     ...identifiers,
   });
 
-const CAPTION = "Turns a match by name into a match by identifier.";
+const HEADING = "Identifiers (optional)";
+const CAPTION =
+  "Research uses them to find this exact company, such as its SEC filings and its LEI record, instead of matching by name.";
 
 function open(existing: VendorModel) {
   renderWithProviders(
@@ -86,8 +88,15 @@ function open(existing: VendorModel) {
   );
 }
 
-const group = (name = "Identifiers") => screen.getByRole("group", { name });
-const field = (name: RegExp) => within(group()).getByLabelText(name);
+const group = (name = HEADING) => screen.getByRole("group", { name });
+/** The section's open/close button; its name starts with the heading. */
+const toggle = () =>
+  screen.getByRole("button", { name: new RegExp(`^${HEADING.replace(/[()]/g, "\\$&")}`) });
+/** A field of the section, which is opened first when it is closed (a vendor with none). */
+const field = (name: RegExp) => {
+  if (toggle().getAttribute("aria-expanded") === "false") fireEvent.click(toggle());
+  return within(group()).getByLabelText(name);
+};
 const save = () => userEvent.click(screen.getByRole("button", { name: /^save$/i }));
 const saved = () => updateVendor.mock.calls[0][0].data;
 
@@ -269,6 +278,16 @@ describe("NewVendor: the identifiers of the vendor", () => {
     });
   });
 
+  it("a new vendor starts with the section closed, and its button opens it", async () => {
+    renderWithProviders(<AddNewVendor isOpen={true} setIsOpen={vi.fn()} onSuccess={vi.fn()} />);
+
+    expect(toggle()).toHaveAttribute("aria-expanded", "false");
+    expect(screen.queryByLabelText(/^lei/i)).not.toBeInTheDocument();
+    await userEvent.click(toggle());
+    expect(toggle()).toHaveAttribute("aria-expanded", "true");
+    expect(within(group()).getByLabelText(/^lei/i)).toBeInTheDocument();
+  });
+
   describe("in the person's language", () => {
     afterAll(() => setLanguage("en"));
 
@@ -276,7 +295,7 @@ describe("NewVendor: the identifiers of the vendor", () => {
       await setLanguage("de");
       open(vendor({ country: "CH" }));
 
-      const german = await screen.findByRole("group", { name: tr("de", "Identifiers") });
+      const german = await screen.findByRole("group", { name: tr("de", HEADING) });
       expect(within(german).getByText("Schweiz")).toBeInTheDocument();
       for (const text of [CAPTION, "Country", "Registration number", "SEC CIK"]) {
         expect(within(german).getByText(tr("de", text))).toBeInTheDocument();
