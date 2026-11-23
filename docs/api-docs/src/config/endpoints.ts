@@ -13650,7 +13650,7 @@ export const v1V1reportTemplatesEndpoints: Endpoint[] = [
     method: 'POST',
     path: '/v1/report-templates/{id}/duplicate',
     summary: "Duplicate Template",
-    description: "Copies a system template or one of the organization's own into the caller's organization, named '<name> (copy)'. The copy carries the metadata and the latest version's sections_config, ai_blocks_config, framework_config and parameters_config. No request body.",
+    description: "Copies a system template or one of the organization's own into the caller's organization, named '<name> (copy)', or the next free '<name> (copy N)' (archived templates hold their slug too). The copy carries the metadata and the latest version's whole config. An archived source answers 404. No request body.",
     requiresAuth: true,
     parameters: [
       { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
@@ -13660,7 +13660,7 @@ export const v1V1reportTemplatesEndpoints: Endpoint[] = [
       { status: 401, description: "Unauthorized" },
       { status: 403, description: "The role lacks reportTemplate.edit" },
       { status: 404, description: "Template not found or not visible to the organization" },
-      { status: 409, description: "A template with the copy name already exists" },
+      { status: 409, description: "No free copy name: the first thousand are taken, or concurrent copies took the chosen name three times" },
       { status: 500, description: "Internal server error" },
     ],
     tag: "v1: V1/Report Templates",

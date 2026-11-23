@@ -29644,7 +29644,7 @@ paths:
   '/v1/report-templates/{id}/duplicate':
     post:
       summary: 'Duplicate Template'
-      description: "Copies a system template or one of the organization's own into the caller's organization, named '<name> (copy)'. The copy carries the metadata and the latest version's sections_config, ai_blocks_config, framework_config and parameters_config. No request body.\n"
+      description: "Copies a system template or one of the organization's own into the caller's organization, named '<name> (copy)', or the next free '<name> (copy N)' (archived templates hold their slug too). The copy carries the metadata and the latest version's whole config. An archived source answers 404. No request body.\n"
       parameters:
         -
           name: id
@@ -29662,7 +29662,7 @@ paths:
         '404':
           description: 'Template not found or not visible to the organization'
         '409':
-          description: 'A template with the copy name already exists'
+          description: 'No free copy name: the first thousand are taken, or concurrent copies took the chosen name three times'
         '500':
           description: 'Internal server error'
       tags:
