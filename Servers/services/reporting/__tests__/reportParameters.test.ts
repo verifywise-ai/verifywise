@@ -2,6 +2,8 @@ import fs from "fs";
 import path from "path";
 import {
   PARAMETER_MESSAGES,
+  parameterErrorMessages,
+  parametersConfigErrors,
   reportKindErrors,
   validateReportParameters,
   validateRunInput,
@@ -9,6 +11,27 @@ import {
 import { E23_PARAMETER_FIELDS } from "../e23/e23Parameters";
 
 const config = { kind: "osfi_e23", fields: E23_PARAMETER_FIELDS };
+
+// Malformed parameters_config values a template write must refuse.
+const BAD_PARAMETER_CONFIGS: unknown[] = [
+  "x",
+  [],
+  { fields: "x" },
+  { fields: [null] },
+  { fields: [{ key: "", label: "A", type: "text" }] },
+  { fields: [{ key: "a", type: "text" }] },
+  { fields: [{ key: "a", label: "A", type: "number" }] },
+  { fields: [{ key: "a", label: "A", type: "select" }] },
+  { fields: [{ key: "a", label: "A", type: "select", options: ["x"] }] },
+  {
+    fields: [
+      { key: "a", label: "A", type: "text" },
+      { key: "a", label: "B", type: "date" },
+    ],
+  },
+  { kind: "made_up" },
+];
+
 const now = new Date("2026-11-22T12:00:00Z");
 
 const valid = {
@@ -166,6 +189,9 @@ describe("PARAMETER_MESSAGES", () => {
       }
     }
     for (const e of reportKindErrors({ kind: "made_up" })) messages.add(e.message);
+    for (const cfg of BAD_PARAMETER_CONFIGS) {
+      for (const e of parametersConfigErrors(cfg)) messages.add(e.message);
+    }
     expect(messages.size).toBeGreaterThan(10);
     for (const m of messages) expect(PARAMETER_MESSAGES).toContain(m);
   });
@@ -190,5 +216,79 @@ describe("report kind and scope rules", () => {
     expect(reportKindErrors({ kind: "made_up" })).toEqual([
       { key: "kind", message: "unknown report kind: {kind}", params: { kind: "made_up" } },
     ]);
+  });
+});
+
+describe("parametersConfigErrors", () => {
+  const messages = (cfg: unknown) => parameterErrorMessages(parametersConfigErrors(cfg));
+
+  it("accepts no config, an empty one, and the E-23 config", () => {
+    expect(parametersConfigErrors(undefined)).toEqual([]);
+    expect(parametersConfigErrors(null)).toEqual([]);
+    expect(parametersConfigErrors({})).toEqual([]);
+    expect(parametersConfigErrors({ kind: "osfi_e23", fields: [] })).toEqual([]);
+    expect(parametersConfigErrors(config)).toEqual([]);
+  });
+
+  it("refuses a config that is not an object", () => {
+    expect(messages("x")).toEqual(["parameters config must be an object"]);
+    expect(messages([])).toEqual(["parameters config must be an object"]);
+  });
+
+  it("refuses fields that are not a list", () => {
+    expect(messages({ fields: "x" })).toEqual(["parameters config fields must be a list"]);
+    expect(messages({ fields: { key: "a" } })).toEqual(["parameters config fields must be a list"]);
+  });
+
+  it("names the field and the problem", () => {
+    expect(messages({ fields: [null] })).toEqual(["parameter field 1 must be an object"]);
+    expect(messages({ fields: [{ key: " ", label: "A", type: "text" }] })).toEqual([
+      "parameter field 1 needs a key",
+    ]);
+    expect(messages({ fields: [{ key: "a", label: "", type: "text" }] })).toEqual([
+      "parameter field a needs a label",
+    ]);
+    expect(messages({ fields: [{ key: "a", label: "A", type: "number" }] })).toEqual([
+      "parameter field a has an unknown type: number",
+    ]);
+    expect(messages({ fields: [{ key: "a", label: "A" }] })).toEqual([
+      "parameter field a has an unknown type: undefined",
+    ]);
+  });
+
+  it("needs a list of value and label options on a select", () => {
+    const select = (options: unknown) => ({
+      fields: [{ key: "a", label: "A", type: "select", options }],
+    });
+    expect(messages(select(undefined))).toEqual(["parameter field a needs a list of options"]);
+    expect(messages(select("x"))).toEqual(["parameter field a needs a list of options"]);
+    expect(messages(select(["x"]))).toEqual([
+      "parameter field a has an option without a text value and label",
+    ]);
+    expect(messages(select([{ value: "x" }]))).toEqual([
+      "parameter field a has an option without a text value and label",
+    ]);
+    expect(messages(select([{ value: "x", label: "X" }]))).toEqual([]);
+  });
+
+  it("refuses a key used twice", () => {
+    expect(
+      messages({
+        fields: [
+          { key: "a", label: "A", type: "text" },
+          { key: "a", label: "B", type: "date" },
+        ],
+      }),
+    ).toEqual(["parameter field key a is used more than once"]);
+  });
+
+  it("still refuses an unknown kind", () => {
+    expect(messages({ kind: "made_up", fields: [] })).toEqual(["unknown report kind: made_up"]);
+  });
+
+  it("reports every malformed config with at least one error", () => {
+    for (const cfg of BAD_PARAMETER_CONFIGS) {
+      expect(parametersConfigErrors(cfg).length).toBeGreaterThan(0);
+    }
   });
 });

@@ -15,6 +15,20 @@ export const PERIOD_KEYS = ["periodStart", "periodEnd"];
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
+/**
+ * The fields a stored parameters_config declares. The stored value is not
+ * trusted to be well formed: fields that are not a list count as none, and an
+ * entry that is not a field (no text key) is skipped, so a bad template opens
+ * the wizard without a details step instead of crashing it.
+ */
+export function declaredFields(fields: unknown): ReportParameterField[] {
+  if (!Array.isArray(fields)) return [];
+  return fields.filter(
+    (f): f is ReportParameterField =>
+      typeof f === "object" && f !== null && typeof (f as { key?: unknown }).key === "string",
+  );
+}
+
 /** Today as YYYY-MM-DD in UTC, the day the server compares the period end with. */
 export const todayIso = () => new Date().toISOString().slice(0, 10);
 

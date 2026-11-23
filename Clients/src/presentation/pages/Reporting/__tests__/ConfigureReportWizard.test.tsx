@@ -392,6 +392,23 @@ describe("report details step", () => {
     };
   });
 
+  it.each([["x"], [{ key: "a" }], [[null, "x", 3]]])(
+    "treats malformed fields (%j) as none instead of crashing",
+    (fields) => {
+      const template = {
+        ...TEMPLATE_FIXTURE,
+        latestVersion: { ...TEMPLATE_FIXTURE.latestVersion, parameters_config: { fields } },
+      };
+      render(<ConfigureReportWizard template={template} mode="run-now" onClose={vi.fn()} />);
+      expect(screen.queryByText("Report details")).not.toBeInTheDocument();
+      // Scope -> Sections -> AI insights -> Review, as for any template without fields.
+      next();
+      next();
+      next();
+      expect(screen.getByRole("button", { name: /run now/i })).toBeInTheDocument();
+    },
+  );
+
   it("is absent for a template that declares no fields", () => {
     render(<ConfigureReportWizard template={TEMPLATE_FIXTURE} mode="run-now" onClose={vi.fn()} />);
     expect(screen.queryByText("Report details")).not.toBeInTheDocument();

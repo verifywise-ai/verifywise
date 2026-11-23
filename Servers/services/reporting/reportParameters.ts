@@ -32,6 +32,95 @@ export interface ReportParameterError {
   params?: Record<string, string | number>;
 }
 
+const FIELD_TYPES: readonly string[] = ["date", "text", "textarea", "select", "boolean"];
+
+const isText = (v: unknown): v is string => typeof v === "string" && v.trim() !== "";
+const isObject = (v: unknown): v is Record<string, unknown> =>
+  typeof v === "object" && v !== null && !Array.isArray(v);
+
+/** The problems of one declared field; `name` is its key, or its position without one. */
+function fieldConfigErrors(f: Record<string, unknown>, position: number): ReportParameterError[] {
+  const errors: ReportParameterError[] = [];
+  const name = isText(f.key) ? f.key : String(position);
+  if (!isText(f.key)) {
+    errors.push({ key: "fields", message: "parameter field {name} needs a key", params: { name } });
+  }
+  if (!isText(f.label)) {
+    errors.push({
+      key: "fields",
+      message: "parameter field {name} needs a label",
+      params: { name },
+    });
+  }
+  if (!FIELD_TYPES.includes(f.type as string)) {
+    errors.push({
+      key: "fields",
+      message: "parameter field {name} has an unknown type: {type}",
+      params: { name, type: String(f.type) },
+    });
+  } else if (f.type === "select") {
+    if (!Array.isArray(f.options)) {
+      errors.push({
+        key: "fields",
+        message: "parameter field {name} needs a list of options",
+        params: { name },
+      });
+    } else if (!f.options.every((o) => isObject(o) && isText(o.value) && isText(o.label))) {
+      errors.push({
+        key: "fields",
+        message: "parameter field {name} has an option without a text value and label",
+        params: { name },
+      });
+    }
+  }
+  return errors;
+}
+
+/**
+ * Checks a template version's parameters_config at write time. A malformed
+ * declaration would otherwise fail every run of the template (a 500 on
+ * run-now, a skipped scheduler tick) and break the run wizard. Absent means a
+ * general report with no parameters.
+ */
+export function parametersConfigErrors(config: unknown): ReportParameterError[] {
+  if (config === undefined || config === null) return [];
+  if (!isObject(config)) {
+    return [{ key: "parameters_config", message: "parameters config must be an object" }];
+  }
+  const errors = reportKindErrors(config as ReportParametersConfig);
+  const fields = config.fields;
+  if (fields === undefined || fields === null) return errors;
+  if (!Array.isArray(fields)) {
+    return [...errors, { key: "fields", message: "parameters config fields must be a list" }];
+  }
+  const seen = new Set<string>();
+  const repeated = new Set<string>();
+  fields.forEach((f, i) => {
+    const position = i + 1;
+    if (!isObject(f)) {
+      errors.push({
+        key: "fields",
+        message: "parameter field {name} must be an object",
+        params: { name: String(position) },
+      });
+      return;
+    }
+    errors.push(...fieldConfigErrors(f, position));
+    if (isText(f.key)) {
+      if (seen.has(f.key)) repeated.add(f.key);
+      seen.add(f.key);
+    }
+  });
+  for (const key of repeated) {
+    errors.push({
+      key: "fields",
+      message: "parameter field key {name} is used more than once",
+      params: { name: key },
+    });
+  }
+  return errors;
+}
+
 const PERIOD_KEYS = ["periodStart", "periodEnd"];
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -219,6 +308,15 @@ export const PARAMETER_MESSAGES = [
   "section {key} is only available in an OSFI E-23 report",
   "an OSFI E-23 report covers the whole organization; choose organization scope",
   "unknown report kind: {kind}",
+  "parameters config must be an object",
+  "parameters config fields must be a list",
+  "parameter field {name} must be an object",
+  "parameter field {name} needs a key",
+  "parameter field {name} needs a label",
+  "parameter field {name} has an unknown type: {type}",
+  "parameter field {name} needs a list of options",
+  "parameter field {name} has an option without a text value and label",
+  "parameter field key {name} is used more than once",
 ] as const;
 
 const fill = (text: string, params?: Record<string, string | number>): string =>

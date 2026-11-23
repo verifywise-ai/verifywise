@@ -32,18 +32,20 @@ import { runScheduledReport } from "../services/reporting/reportRunOrchestrator"
 import { assertReportScopeAllowed } from "../services/reporting/reportAuthorization";
 import {
   parameterErrorMessages,
-  reportKindErrors,
+  parametersConfigErrors,
   sectionKeysOf,
   validateRunInput,
 } from "../services/reporting/reportParameters";
 
 /**
- * A template may declare no kind (a general report) or a known one. An
- * unknown kind would unlock nothing and refuse every kind-limited section, so
- * it is rejected at write time rather than at every run.
+ * A template may declare no kind (a general report) or a known one, and its
+ * parameter fields must be well formed. An unknown kind would unlock nothing
+ * and refuse every kind-limited section; a malformed field list would fail
+ * every run and break the run wizard. Both are rejected at write time rather
+ * than at every run.
  */
-function respondToUnknownKind(req: Request, res: Response): Response | null {
-  const errors = reportKindErrors(req.body?.parameters_config);
+function respondToInvalidParametersConfig(req: Request, res: Response): Response | null {
+  const errors = parametersConfigErrors(req.body?.parameters_config);
   if (!errors.length) return null;
   return res.status(400).json(STATUS_CODE[400]({ errors: parameterErrorMessages(errors, req.t) }));
 }
@@ -126,8 +128,8 @@ export async function createTemplate(req: Request, res: Response): Promise<any> 
     organizationId: req.organizationId!,
   });
   try {
-    const kindRejected = respondToUnknownKind(req, res);
-    if (kindRejected) return kindRejected;
+    const configRejected = respondToInvalidParametersConfig(req, res);
+    if (configRejected) return configRejected;
 
     // Both INSERTs share one transaction. A template with no version is
     // unusable — the wizard reads latestVersion.sections_config and disables
@@ -194,8 +196,8 @@ export async function updateTemplate(req: Request, res: Response): Promise<any> 
     if (!metadataChanged && !versionChanged) {
       return res.status(400).json(STATUS_CODE[400](req.t!("no updatable fields supplied")));
     }
-    const kindRejected = respondToUnknownKind(req, res);
-    if (kindRejected) return kindRejected;
+    const configRejected = respondToInvalidParametersConfig(req, res);
+    if (configRejected) return configRejected;
 
     // A PATCH carrying both metadata and config is two writes; they share one
     // transaction so a failing version insert (e.g. the 23505 version race)

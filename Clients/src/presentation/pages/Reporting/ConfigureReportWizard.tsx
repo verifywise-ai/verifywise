@@ -29,6 +29,7 @@ import { aiBlocksForKind, DEFAULT_AI_BLOCKS, E23_REPORT_KIND } from "./aiBlocks"
 import ReportDetailsStep from "./ReportDetailsStep";
 import {
   buildParameterPrefill,
+  declaredFields,
   reportRequestErrorMessage,
   todayIso,
   toRequestParameters,
@@ -83,9 +84,11 @@ export default function ConfigureReportWizard({
 }) {
   const theme = useTheme();
   const parametersConfig = template.latestVersion?.parameters_config;
-  const fields: ReportParameterField[] = parametersConfig?.fields?.length
-    ? parametersConfig.fields
-    : NO_FIELDS;
+  const declared = parametersConfig?.fields;
+  const fields: ReportParameterField[] = useMemo(() => {
+    const list = declaredFields(declared);
+    return list.length > 0 ? list : NO_FIELDS;
+  }, [declared]);
   const hasDetails = fields.length > 0;
   const baseSteps = mode === "run-now" ? RUN_NOW_STEPS : SCHEDULE_STEPS;
   const STEPS = hasDetails ? [baseSteps[0], DETAILS_STEP, ...baseSteps.slice(1)] : baseSteps;

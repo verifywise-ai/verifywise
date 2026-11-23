@@ -450,6 +450,50 @@ describe("report kind on template writes", () => {
     expect(createTemplateVersionQuery).not.toHaveBeenCalled();
   });
 
+  it("400s a template create whose parameter fields are not a list", async () => {
+    const res = mockRes();
+    await createTemplate(
+      mockReq({
+        body: {
+          name: "Copy",
+          category: "governance",
+          default_scope: "organization",
+          parameters_config: { fields: "x" },
+        },
+      }) as any,
+      res,
+    );
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json.mock.calls[0][0].data.errors).toEqual([
+      "parameters config fields must be a list",
+    ]);
+    expect(createTemplateQuery).not.toHaveBeenCalled();
+  });
+
+  it("400s a template PATCH with a malformed parameter field, translated", async () => {
+    const res = mockRes();
+    await updateTemplate(
+      mockReq({
+        params: { id: "7" },
+        t: getTranslator("de"),
+        body: {
+          parameters_config: {
+            fields: [
+              { key: "a", label: "A", type: "text" },
+              { key: "a", label: "B", type: "text" },
+            ],
+          },
+        },
+      }) as any,
+      res,
+    );
+    expect(res.status).toHaveBeenCalledWith(400);
+    const [message] = res.json.mock.calls[0][0].data.errors;
+    expect(message).toContain("a");
+    expect(message).not.toBe("parameter field key a is used more than once");
+    expect(createTemplateVersionQuery).not.toHaveBeenCalled();
+  });
+
   it("accepts the E-23 kind on create", async () => {
     (createTemplateQuery as jest.Mock).mockResolvedValue({ id: 7 });
     (createTemplateVersionQuery as jest.Mock).mockResolvedValue({ id: 30, version: 1 });
