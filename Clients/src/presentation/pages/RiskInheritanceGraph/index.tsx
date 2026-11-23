@@ -324,7 +324,8 @@ const RiskInheritanceGraphInner: React.FC = () => {
               nodeTypes={nodeTypes}
               proOptions={proOptions}
               fitView
-              fitViewOptions={{ padding: 0.2 }}
+              forceColorMode="light"
+              fitViewOptions={{ padding: "8%" }}
               minZoom={0.1}
               maxZoom={2}
               defaultEdgeOptions={{ type: "smoothstep" }}

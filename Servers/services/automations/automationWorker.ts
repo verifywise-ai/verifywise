@@ -5,10 +5,8 @@ import sendEmail from "./actions/sendEmail";
 import { resolveProjectOwnerName } from "../../utils/project.utils";
 import logger from "../../utils/logger/fileLogger";
 import { getAllOrganizationsQuery } from "../../utils/organization.utils";
-import { getAllVendorsQuery } from "../../utils/vendor.utils";
 import { sequelize } from "../../database/db";
 import { TenantAutomationActionModel } from "../../domain.layer/models/tenantAutomationAction/tenantAutomationAction.model";
-import { buildVendorReplacements } from "../../utils/automation/vendor.automation.utils";
 import { replaceTemplateVariables } from "../../utils/automation/automation.utils";
 import {
   enqueueAutomationAction,
@@ -95,7 +93,7 @@ async function runRiskDetection(): Promise<void> {
 import { compileMjmlToHtml } from "../../tools/mjmlCompiler";
 import { readFileSync } from "fs";
 import { join } from "path";
-import { notifyVendorReviewDue } from "../inAppNotification.service";
+import { sendVendorReviewDateNotification } from "./vendorReviewReminders";
 import {
   detectRiskAnomaly,
   findOverdueTasks,
@@ -119,105 +117,6 @@ import {
 const handlers = {
   send_email: sendEmail,
 };
-
-async function sendVendorReviewDateNotification() {
-  const organizations = await getAllOrganizationsQuery();
-  for (let org of organizations) {
-    const organizationId = org.id!;
-    const vendors = await getAllVendorsQuery(organizationId);
-    const automations = (await sequelize.query(
-      `SELECT
-        pat.key AS trigger_key,
-        paa.key AS action_key,
-        a.id AS automation_id,
-        a.params AS automation_params,
-        aa.*
-      FROM automation_triggers pat
-      JOIN automations a ON a.trigger_id = pat.id AND a.organization_id = :organizationId
-      JOIN automation_actions_data aa ON a.id = aa.automation_id AND aa.organization_id = :organizationId
-      JOIN automation_actions paa ON aa.action_type_id = paa.id
-      WHERE pat.key = 'vendor_review_date_approaching' AND a.is_active
-      ORDER BY aa."order" ASC;`,
-      { replacements: { organizationId } },
-    )) as [
-      (TenantAutomationActionModel & {
-        trigger_key: string;
-        action_key: string;
-        automation_id: number;
-        automation_params: { daysBefore: number };
-      })[],
-      number,
-    ];
-    if (automations[0].length === 0) {
-      continue;
-    }
-    const automation = automations[0][0];
-    for (let vendor of vendors) {
-      const automationParams = automation.automation_params || {};
-
-      const notificationDate = new Date(vendor.review_date!);
-      notificationDate.setDate(notificationDate.getDate() - (automationParams.daysBefore || 0));
-      notificationDate.setHours(0, 0, 0, 0);
-
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      if (notificationDate.getTime() !== today.getTime()) {
-        continue;
-      }
-      const params = automation.params!;
-
-      // Build replacements with review information
-      const replacements = buildVendorReplacements(vendor);
-
-      // Replace variables in subject and body
-      const processedParams = {
-        ...params,
-        subject: replaceTemplateVariables(params.subject || "", replacements),
-        body: replaceTemplateVariables(params.body || "", replacements),
-        automation_id: automation.automation_id,
-      };
-
-      // Enqueue with processed params
-      await enqueueAutomationAction(automation.action_key, {
-        ...processedParams,
-        organizationId,
-      });
-
-      // Send in-app + dedicated email notification
-      const baseUrl = process.env.FRONTEND_URL || "http://localhost:3000";
-      const reviewerUserId = vendor.reviewer || vendor.assignee;
-      if (reviewerUserId) {
-        try {
-          const reviewDateStr = vendor.review_date
-            ? new Date(vendor.review_date).toLocaleDateString("en-US", {
-                year: "numeric",
-                month: "long",
-                day: "numeric",
-              })
-            : "Not set";
-          await notifyVendorReviewDue(
-            organizationId,
-            reviewerUserId,
-            {
-              id: vendor.id!,
-              name: vendor.vendor_name,
-              reviewDate: reviewDateStr,
-              riskLevel: vendor.risk_score != null ? `Score: ${vendor.risk_score}` : "Not assessed",
-              lastReviewDate: undefined,
-              projectCount: vendor.projects?.length || 0,
-            },
-            baseUrl,
-          );
-        } catch (notifyError) {
-          console.error(
-            `Failed to send vendor review due notification for vendor ${vendor.id}:`,
-            notifyError,
-          );
-        }
-      }
-    }
-  }
-}
 
 async function generateAndUploadReport(
   reportType: string,

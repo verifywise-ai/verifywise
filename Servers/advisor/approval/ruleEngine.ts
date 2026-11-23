@@ -117,7 +117,8 @@ export function deriveFacts(params: {
     risk_level: riskLevel,
     tool_category: toolCategory,
     tool_name: toolName,
-    user_role: userRole || "Editor",
+    // No role matches no role rule; never a privileged default.
+    user_role: userRole || "Unknown",
     is_bulk: isBulk,
     affected_fields: inputParams.affected_fields as string[] | undefined,
   };

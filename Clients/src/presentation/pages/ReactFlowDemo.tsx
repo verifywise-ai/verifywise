@@ -88,6 +88,7 @@ const ReactFlowDemo: React.FC = () => {
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
         fitView
+        forceColorMode="light"
       >
         <Controls />
         <MiniMap />

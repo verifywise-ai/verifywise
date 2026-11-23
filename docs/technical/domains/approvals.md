@@ -521,6 +521,32 @@ ai_incident_managements
 | Reviewer | -                | ✓               | ✓ (if assigned) | ✓ (if requestor) |
 | Auditor  | -                | -               | -               | -                |
 
+## AI advisor approval rules
+
+Separate from the workflows above: every AI advisor write tool goes through
+the approval gateway (`Servers/advisor/approval/approvalGateway.ts`), which
+asks the rule engine (`ruleEngine.ts`) whether to run it at once, queue it for
+an Admin, or refuse it. Default rules are in `rules/defaultRules.ts`; an
+organization can add or override rules by name through
+`/api/ai-approval-rules`, which needs `aiConfirmation.admin` to create, update
+or delete (Admins by default). Listing and the dry run (`POST /test`) only need
+a login.
+
+- **Requester role.** The gateway looks up the requester's current role in the
+  organization and passes it as the `user_role` fact. A user whose role can't
+  be resolved is `Unknown`, which matches no role rule. If the lookup itself
+  fails, the write is refused rather than evaluated without a role. Until
+  2026-11 no role was passed and every requester was `Editor`, so role rules
+  never matched.
+- **`auditor-write-block`.** Refuses every advisor write by an Auditor except
+  `AUDITOR_WRITE_TOOLS`: tools that run without approval (info level), as the
+  requester, on the requester's own records. Today that is marking
+  notifications read. A tool that needs approval runs as the approving Admin,
+  so it can't act for the Auditor. The refusal shows the rule's reason.
+- **Limit.** The rule matches the built-in role name `Auditor`. A custom
+  read-only role is not covered by it and relies on each tool's own permission
+  check for the user who asked.
+
 ## Utility Functions
 
 ### Workflow Utils

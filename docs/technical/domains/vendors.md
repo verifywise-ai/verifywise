@@ -612,6 +612,18 @@ up within the organization: a user from another organization shows as
 | `vendor_added` | New vendor created |
 | `vendor_updated` | Vendor modified |
 | `vendor_deleted` | Vendor deleted |
+| `vendor_review_date_approaching` | Daily sweep: the review date is today plus the automation's `daysBefore` (UTC days) |
+
+Review reminders exist only as this automation: an organization without an
+active `vendor_review_date_approaching` automation gets no reminder email or
+in-app notice. The Home queue lists due vendors regardless. Both use the same
+rule for `Reviewed` vendors (dropped only once the review date has passed). The
+sweep runs every action of every matching automation and sends one in-app
+notice per vendor per run. The vendor form stores the picked day at noon UTC
+(`calendarDayAtNoonUtc`), so its UTC day is the day the user picked; vendors
+saved before that may read a day early for users east of UTC until next saved.
+The job is scheduled at midnight UTC (`tz: "UTC"`). See
+[Automations → Vendor Review Notifications](../infrastructure/automations.md#vendor-review-notifications).
 
 ## Validation Rules
 
