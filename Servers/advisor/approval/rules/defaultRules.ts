@@ -18,17 +18,44 @@ export interface RuleDefinition {
  * Default rules ordered by priority (highest first).
  * Higher priority rules are evaluated first — first match wins.
  */
+/**
+ * The write tools an Auditor may still use through the advisor: the console
+ * gates these by who the user is (their notifications, notes and saved views;
+ * approval steps, tasks and monitoring cycles assigned to them), not by a
+ * write permission an Auditor lacks. Every other write is refused for an
+ * Auditor by `auditor-write-block`.
+ */
+export const AUDITOR_WRITE_TOOLS = [
+  "agent_mark_notification_read",
+  "agent_mark_all_notifications_read",
+  "agent_create_note",
+  "agent_update_note",
+  "agent_delete_note",
+  "agent_approve_approval_step",
+  "agent_reject_approval_step",
+  "agent_withdraw_approval_request",
+  "agent_update_task_status",
+  "agent_submit_pmm_responses",
+  "agent_flag_pmm_concern",
+  "agent_save_entity_graph_view",
+];
+
 export const defaultRules: RuleDefinition[] = [
   // ── Auto-reject rules (highest priority) ──
 
   {
     name: "auditor-write-block",
-    description: "Auditors cannot perform write operations",
+    description: "Auditors cannot perform write operations, except their own and assigned items",
     priority: 1000,
     conditions: {
       all: [
         { fact: "user_role", operator: "equal", value: "Auditor" },
         { fact: "operation_type", operator: "notEqual", value: "read" },
+        // Deny by default. Only these stay open to an Auditor: their own
+        // notifications, notes and saved views, and work assigned to them
+        // (approval steps, task status, monitoring questionnaires). Each of
+        // these tools checks the user who asked.
+        { fact: "tool_name", operator: "notIn", value: AUDITOR_WRITE_TOOLS },
       ],
     },
     eventType: "auto-reject",
