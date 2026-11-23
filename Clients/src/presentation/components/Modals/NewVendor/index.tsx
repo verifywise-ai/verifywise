@@ -25,6 +25,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useFormValidation } from "../../../../application/hooks/useFormValidation";
 import dayjs, { Dayjs } from "dayjs";
+import { calendarDayAtNoonUtc } from "../../../../application/utils/calendarDay";
 import Alert from "../../Alert";
 import { checkStringValidation } from "../../../../application/validations/stringValidation";
 import { useProjects } from "../../../../application/hooks/useProjects";
@@ -341,7 +342,7 @@ const AddNewVendor: React.FC<AddNewVendorProps> = ({
       review_result: values.reviewResult,
       review_status: REVIEW_STATUS_OPTIONS?.find((s) => s._id === values.reviewStatus)?.name || "",
       reviewer: values.reviewer ?? undefined,
-      review_date: values.reviewDate,
+      review_date: calendarDayAtNoonUtc(values.reviewDate),
       // Scorecard fields
       data_sensitivity: values.dataSensitivity || undefined,
       business_criticality: values.businessCriticality || undefined,

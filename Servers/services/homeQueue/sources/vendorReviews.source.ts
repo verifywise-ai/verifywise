@@ -3,7 +3,7 @@ import { sequelize } from "../../../database/db";
 import { addDays, DUE_SOON_DAYS, toIso, utcDateSql } from "./dateOnly";
 import type { HomeQueueItem, HomeQueueSource } from "../../../domain.layer/interfaces/i.homeQueue";
 
-const REVIEW_DATE = utcDateSql("v.review_date");
+export const REVIEW_DATE = utcDateSql("v.review_date");
 
 /**
  * Which vendors are due for review, whoever the recipient is (alias `v`). The
@@ -11,23 +11,26 @@ const REVIEW_DATE = utcDateSql("v.review_date");
  * Keep the rule here so a change applies to both. A 'Reviewed' vendor drops
  * out only once its review_date is before today; the usual workflow marks it
  * Reviewed and sets the next cycle's date in the same save, and that upcoming
- * review must still show. (IS DISTINCT FROM keeps a NULL status in.)
+ * review must still show. (IS DISTINCT FROM keeps a NULL status in.) The
+ * review reminder sweep (automations/vendorReviewReminders.ts) shares
+ * VENDOR_REVIEW_OPEN_CONDITION, so both drop the same vendors.
  */
+export const VENDOR_REVIEW_OPEN_CONDITION = `(v.review_status IS DISTINCT FROM 'Reviewed' OR ${REVIEW_DATE} >= :today)`;
+
 export const VENDOR_REVIEW_DUE_CONDITION = `
     v.organization_id = :organizationId
     AND v.review_date IS NOT NULL
-    AND (v.review_status IS DISTINCT FROM 'Reviewed' OR ${REVIEW_DATE} >= :today)
+    AND ${VENDOR_REVIEW_OPEN_CONDITION}
     AND ${REVIEW_DATE} <= :windowEnd`;
 
 /**
- * Mirrors the `vendor_review_due` sweep's recipient and widens its window.
- * The sweep (automationWorker.ts, the vendor_review_date_approaching loop)
- * notifies `vendor.reviewer || vendor.assignee`; so the recipient here is the
- * reviewer, or the assignee when there is no reviewer (NULL or 0, as `||`
- * reads it). Unlike the sweep, a vendor whose review_status is 'Reviewed' is
- * excluded only when its review_date is before today, by product decision
- * (2026-11-13); a Reviewed vendor due today or later stays in, as do NULL and
- * other statuses. Window:
+ * Mirrors the review reminder sweep's recipient and widens its window. The
+ * sweep (automations/vendorReviewReminders.ts) notifies `vendor.reviewer ||
+ * vendor.assignee`; so the recipient here is the reviewer, or the assignee
+ * when there is no reviewer (NULL or 0, as `||` reads it). A vendor whose
+ * review_status is 'Reviewed' is excluded only when its review_date is before
+ * today, by product decision (2026-11-13); a Reviewed vendor due today or
+ * later stays in, as do NULL and other statuses. Window:
  * review_date <= today + 14 days, overdue included. Vendors have no
  * soft-delete flag. Exported so tests can pin the rule.
  */

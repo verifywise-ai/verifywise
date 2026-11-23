@@ -145,9 +145,8 @@ export async function scheduleVendorReviewDateNotification() {
   // Vendor Review Date Notification Every day at 12 am
   await automationQueue.upsertJobScheduler(
     "send_vendor_notification",
-    {
-      pattern: "0 0 * * *",
-    },
+    // UTC midnight: the sweep matches review dates on UTC days.
+    { pattern: "0 0 * * *", tz: "UTC" },
     {
       name: "send_vendor_notification",
       data: { type: "review_date" },
