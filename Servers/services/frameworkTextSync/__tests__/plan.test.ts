@@ -1,4 +1,4 @@
-import { planFrameworkTextSync, StructRows } from "../plan";
+import { frameworkTextFingerprint, planFrameworkTextSync, StructRows } from "../plan";
 import type { FrameworkSeed } from "../../../structures/types";
 import { FRAMEWORK_STRUCTURES } from "../../../structures";
 
@@ -139,6 +139,44 @@ describe("planFrameworkTextSync", () => {
     });
   });
 
+  // Reordering keeps the count, so position alone would put each item's text
+  // on a row that holds another item's status and evidence.
+  it("skips the framework when the registry swaps two items", () => {
+    const swapped = twoLevel([
+      { ...seed.structure[0], items: [seed.structure[0].items![1], seed.structure[0].items![0]] },
+    ]);
+    expect(planFrameworkTextSync(swapped, matchingRows())).toEqual({
+      skip: expect.stringContaining("reordering needs a migration"),
+    });
+  });
+
+  it("skips the framework when items shift (one inserted, another removed)", () => {
+    const shifted = twoLevel([
+      {
+        ...seed.structure[0],
+        items: [{ title: "New first item" }, seed.structure[0].items![0]],
+      },
+    ]);
+    expect(planFrameworkTextSync(shifted, matchingRows())).toEqual({
+      skip: expect.stringContaining('"Policy" is at a different position'),
+    });
+  });
+
+  it("reports a position the registry repeats as a registry problem", () => {
+    const repeated = twoLevel([
+      {
+        title: "Governance",
+        items: [
+          { title: "Policy", order_no: 1 },
+          { title: "Inventory", order_no: 1 },
+        ],
+      },
+    ]);
+    expect(planFrameworkTextSync(repeated, matchingRows())).toEqual({
+      skip: expect.stringContaining("registry order numbers repeat at 1"),
+    });
+  });
+
   it("syncs the third level of a three-level framework", () => {
     const three: FrameworkSeed = {
       name: "Three",
@@ -173,4 +211,19 @@ describe("planFrameworkTextSync", () => {
       }
     },
   );
+});
+
+describe("frameworkTextFingerprint", () => {
+  it("changes with any synced text and with positions, and ignores null vs empty", () => {
+    const base = frameworkTextFingerprint(seed);
+    const reworded = twoLevel([{ ...seed.structure[0], description: "Reworded" }]);
+    expect(frameworkTextFingerprint(reworded)).not.toBe(base);
+    const blank = twoLevel([
+      {
+        ...seed.structure[0],
+        items: [seed.structure[0].items![0], { title: "Inventory", description: "" }],
+      },
+    ]);
+    expect(frameworkTextFingerprint(blank)).toBe(base);
+  });
 });

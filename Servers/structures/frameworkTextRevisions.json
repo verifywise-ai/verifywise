@@ -1,0 +1,98 @@
+{
+  "soc2": {
+    "revision": 1,
+    "fingerprint": "16ed1f34c1b1115f245e2bbcc5747ba8a80729a34548b2a8af8440d26b1d0d2e"
+  },
+  "gdpr": {
+    "revision": 1,
+    "fingerprint": "5117f22e1031b035f8f5c34289cd071fe9b7be70de55d55e8bfde09f0ecfcdb3"
+  },
+  "pci-dss": {
+    "revision": 1,
+    "fingerprint": "e5b11d8b280740202db1667d4ebd9139a36d952e17175c4e8a8ed2e336c8d210"
+  },
+  "ccpa": {
+    "revision": 1,
+    "fingerprint": "a44f693b30d9ce09e21c74e61b91341020e7284c8d563f086506d33fc1f965d8"
+  },
+  "dora": {
+    "revision": 1,
+    "fingerprint": "9a0df4b3fd4018292f896cc37eb8fb05203ec25090a515901c57225372f43c97"
+  },
+  "altai": {
+    "revision": 1,
+    "fingerprint": "7dd65ed3e0d222306a62bd359f531de6c93daaccca3862c5649e9e87448fa8c9"
+  },
+  "ftc-ai-guidelines": {
+    "revision": 1,
+    "fingerprint": "78fe08660c350fc31ea39d60446eda3226b69f9c3989e3b91ae38f5194827d78"
+  },
+  "nyc-local-law-144": {
+    "revision": 1,
+    "fingerprint": "4d85bb91d913324db2059d87e7c96ad1c6d59fe6d34a5141555a5f0f3707379f"
+  },
+  "cis-controls": {
+    "revision": 1,
+    "fingerprint": "902455003d3cc84222f82e83fa21884cd3b5d80c52b0a95a5888df9c1e38f82f"
+  },
+  "ai-ethics": {
+    "revision": 1,
+    "fingerprint": "7e5065be919e56b8ae6d18b82078560b69cd376ffd66f8b96f8fddf602b0d6e0"
+  },
+  "oecd-ai-principles": {
+    "revision": 1,
+    "fingerprint": "a2231de9825d7a0bb55ceaf8991cb789c36598ef45487208a17d5477b5d1ec25"
+  },
+  "data-governance": {
+    "revision": 1,
+    "fingerprint": "73cb1fa1065704ff41531692fe9f4cb94910be604d04e9218593c41d694f4357"
+  },
+  "uae-pdpl": {
+    "revision": 1,
+    "fingerprint": "69652639db7f80eaac8a25ee9893fee2f6aac89b6d458ddfcb54edf094da7eb9"
+  },
+  "saudi-pdpl": {
+    "revision": 1,
+    "fingerprint": "0cf16f4b89fd2d5a68c6ec62c167f15cc7da576cf5bb9ca24e4ab6b86bcd419f"
+  },
+  "qatar-pdpl": {
+    "revision": 1,
+    "fingerprint": "19d20e607f6813b6ea1e8d3b89047b3f7a557f8e5cfd15df5945e429748c7e1d"
+  },
+  "bahrain-pdpl": {
+    "revision": 1,
+    "fingerprint": "c3f60fd00639963c9a0629585a3f8ab8aa37469f67906e40fee31f66bbb135a0"
+  },
+  "quebec-law25": {
+    "revision": 1,
+    "fingerprint": "7620fbdc9dabcd08f94082c2f4c6366caddb823d47db0667be97913345b7d8b0"
+  },
+  "texas-ai-act": {
+    "revision": 1,
+    "fingerprint": "ec46d2ffd2cdf4a583deb939a890ce505fca843e0614e28e3f737b458b41ae49"
+  },
+  "colorado-ai-act": {
+    "revision": 1,
+    "fingerprint": "878e0fa614312aaca871a4cf7da32dd11a50bb82496139ab0a450ca4b3e98a4e"
+  },
+  "hipaa": {
+    "revision": 1,
+    "fingerprint": "c8efbfa5de3188a7f4606da05bcc5083fe33b059c732b9ab4b235262a29bd81a"
+  },
+  "nist-csf": {
+    "revision": 1,
+    "fingerprint": "3ca7afcc7cd0dc550f8f39e08baa2bf9aef596702aae1a7f389df64aed8e7a05"
+  },
+  "osfi-e23": {
+    "revision": 1,
+    "fingerprint": "e1abe1e0e566487661fa33805355001dfad298a1dd9273b17099199c20d69c47"
+  },
+  "en-18286": {
+    "revision": 1,
+    "fingerprint": "a92826dcb4d193e71caf23c54dd4ba9fb46f814300c8bbe91bf8abdd840fd468"
+  },
+  "en-18286-ai-systems": {
+    "revision": 1,
+    "fingerprint": "7224d6fd0aea5ca70e80ad406981196fb87f681177dc85fe033364ec6b49b672"
+  }
+}

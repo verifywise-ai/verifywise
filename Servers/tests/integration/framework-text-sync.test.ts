@@ -12,8 +12,9 @@ jest.setTimeout(120000);
 
 import { QueryTypes } from "sequelize";
 import { sequelize } from "../../database/db";
-import { requireStructureByKey } from "../../structures";
+import { FRAMEWORK_STRUCTURES, requireStructureByKey } from "../../structures";
 import { syncBundledFrameworkText } from "../../services/frameworkTextSync/sync";
+import { textRevisionOf } from "../../services/frameworkTextSync/plan";
 
 const fw = requireStructureByKey("osfi-e23");
 const L1 = `verifywise.${fw.tables.l1_struct}`;
@@ -42,7 +43,7 @@ describe("bundled framework text sync", () => {
     const results = await syncBundledFrameworkText(quiet);
     const problems = results.filter((r) => r.updated > 0 || r.skipped);
     expect(problems).toEqual([]);
-    expect(results).toHaveLength(24);
+    expect(results).toHaveLength(FRAMEWORK_STRUCTURES.length);
   });
 
   it("restores drifted text in place and keeps row ids", async () => {
@@ -84,7 +85,7 @@ describe("bundled framework text sync", () => {
         { info: () => {}, warn: (m) => warnings.push(m) },
         [fw],
       );
-      expect(results[0]).toMatchObject({ key: "osfi-e23", updated: 0 });
+      expect(results[0]).toMatchObject({ key: "osfi-e23", updated: 0, notice: "warn" });
       expect(results[0].skipped).toContain("the database");
       expect(warnings.join("\n")).toContain("osfi-e23: skipped");
       const [row] = (await sequelize.query(`SELECT title FROM ${L2} WHERE id = :id`, {
@@ -98,18 +99,64 @@ describe("bundled framework text sync", () => {
     }
   });
 
-  // Several backend instances start together; the one that finds the
-  // framework's lock held leaves it to the holder.
-  it("leaves a framework to the instance already syncing it", async () => {
-    await sequelize.transaction(async (transaction) => {
-      await sequelize.query(`SELECT pg_advisory_xact_lock(7152023, :id)`, {
-        replacements: { id: fw.id },
-        transaction,
-      });
-      const results = await syncBundledFrameworkText(quiet, [fw]);
-      expect(results).toEqual([
-        { key: "osfi-e23", updated: 0, skipped: "another instance is syncing it" },
-      ]);
+  it("records each framework's text revision after syncing", async () => {
+    await syncBundledFrameworkText(quiet);
+    const rows = (await sequelize.query(
+      `SELECT framework_id, revision FROM framework_text_revisions`,
+      { type: QueryTypes.SELECT },
+    )) as Array<{ framework_id: number; revision: number }>;
+    const byId = new Map(rows.map((r) => [r.framework_id, r.revision]));
+    for (const each of FRAMEWORK_STRUCTURES) expect(byId.get(each.id)).toBe(textRevisionOf(each));
+  });
+
+  // A rollback, or an old instance restarting during a rolling update, must
+  // not write its older wording over the newer text.
+  it("leaves the text alone for a build older than the database's revision", async () => {
+    const { l2 } = await firstRows();
+    await sequelize.query(`UPDATE ${L2} SET title = 'Newer wording' WHERE id = :id`, {
+      replacements: { id: l2.id },
     });
+    await sequelize.query(
+      `UPDATE framework_text_revisions SET revision = 5 WHERE framework_id = :id`,
+      { replacements: { id: fw.id } },
+    );
+    try {
+      const [result] = await syncBundledFrameworkText(quiet, [fw]);
+      expect(result).toMatchObject({ key: "osfi-e23", updated: 0, notice: "info" });
+      expect(result.skipped).toContain("text revision 5, this build 1");
+      expect((await firstRows()).l2.title).toBe("Newer wording");
+
+      // A build at or above the stored revision writes its text and records it.
+      const newer = { ...fw, textRevision: 6 };
+      expect(await syncBundledFrameworkText(quiet, [newer])).toEqual([
+        { key: "osfi-e23", updated: 1 },
+      ]);
+      const [stored] = (await sequelize.query(
+        `SELECT revision FROM framework_text_revisions WHERE framework_id = :id`,
+        { replacements: { id: fw.id }, type: QueryTypes.SELECT },
+      )) as Array<{ revision: number }>;
+      expect(stored.revision).toBe(6);
+    } finally {
+      await sequelize.query(
+        `UPDATE framework_text_revisions SET revision = :revision WHERE framework_id = :id`,
+        { replacements: { id: fw.id, revision: textRevisionOf(fw) } },
+      );
+      await syncBundledFrameworkText(quiet, [fw]);
+    }
+  });
+
+  // Several backend instances start together: they take turns on the lock,
+  // the drift is fixed once, and neither fails.
+  it("lets instances starting together take turns", async () => {
+    const { l2 } = await firstRows();
+    await sequelize.query(`UPDATE ${L2} SET title = 'Old title' WHERE id = :id`, {
+      replacements: { id: l2.id },
+    });
+    const [a, b] = await Promise.all([
+      syncBundledFrameworkText(quiet, [fw]),
+      syncBundledFrameworkText(quiet, [fw]),
+    ]);
+    expect(a[0].updated + b[0].updated).toBe(1);
+    expect([a[0].skipped, b[0].skipped]).toEqual([undefined, undefined]);
   });
 });

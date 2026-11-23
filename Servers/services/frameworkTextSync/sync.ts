@@ -14,8 +14,12 @@
  *   a migration.
  * - A framework whose tables do not exist yet (migrations not run) is skipped.
  * - Each framework is written in its own transaction under an advisory lock,
- *   so several backend instances starting together do not write the same rows
- *   twice; an instance that finds the lock held skips that framework.
+ *   so several backend instances starting together take turns; the later one
+ *   finds nothing left to write.
+ * - Text only moves forward: each framework's textRevision (structures/types)
+ *   is recorded in framework_text_revisions, and a build with a lower revision
+ *   than the database's (a rollback, an old instance restarting during a
+ *   rolling update) leaves the text alone.
  * - Errors are logged and never stop the server.
  *
  * Struct tables hold no organization data (no organization_id), so one write
@@ -25,34 +29,27 @@ import { QueryTypes, Transaction } from "sequelize";
 import { sequelize } from "../../database/db";
 import { FRAMEWORK_STRUCTURES } from "../../structures";
 import type { FrameworkStructure } from "../../structures/types";
-import { planFrameworkTextSync, StructLevel, StructRow, TextUpdate } from "./plan";
+import { pgTextArray } from "../../utils/pgArray.utils";
+import { planFrameworkTextSync, StructLevel, StructRow, TextUpdate, textRevisionOf } from "./plan";
 
 /** First key of the two-key advisory lock; the second is the framework id. */
-const LOCK_NAMESPACE = 7152023;
-
-// Expected skips that need no one's attention: another instance is syncing the
-// framework, or this database never seeded it.
-const LOCK_HELD = "another instance is syncing it";
-const NOT_SEEDED = "not seeded in this database";
-const QUIET_SKIPS = new Set([LOCK_HELD, NOT_SEEDED]);
+export const LOCK_NAMESPACE = 7152023;
 
 export interface FrameworkTextSyncResult {
   key: string;
   updated: number;
   skipped?: string;
-}
-
-/** Postgres text[] literal, escaped the way the seed migrations write it. */
-function pgTextArray(values: string[]): string {
-  if (!values.length) return "{}";
-  return `{${values
-    .map((v) => `"${String(v).replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`)
-    .join(",")}}`;
+  /**
+   * How the skip is logged: "warn" needs someone's attention (the items no
+   * longer line up), "info" is expected (an older build, tables not migrated
+   * yet), "none" is routine (never seeded here).
+   */
+  notice?: "warn" | "info" | "none";
 }
 
 async function tableExists(table: string, transaction: Transaction): Promise<boolean> {
   const rows = (await sequelize.query(`SELECT to_regclass(:name) AS t`, {
-    replacements: { name: `verifywise.${table}` },
+    replacements: { name: table },
     type: QueryTypes.SELECT,
     transaction,
   })) as Array<{ t: string | null }>;
@@ -68,7 +65,7 @@ async function readRows(fw: FrameworkStructure, transaction: Transaction) {
 
   const l1 = await select(
     `SELECT id, NULL::int AS parent_id, order_no, title, description
-       FROM verifywise.${tables.l1_struct}
+       FROM ${tables.l1_struct}
       WHERE framework_id = :frameworkId`,
     { frameworkId: fw.id },
   );
@@ -77,7 +74,7 @@ async function readRows(fw: FrameworkStructure, transaction: Transaction) {
     ? await select(
         `SELECT id, ${cols.l2_struct_parent} AS parent_id, order_no, title, description,
                 summary, questions, evidence_examples
-           FROM verifywise.${tables.l2_struct}
+           FROM ${tables.l2_struct}
           WHERE ${cols.l2_struct_parent} IN (:parents)`,
         { parents: l1Ids },
       )
@@ -89,7 +86,7 @@ async function readRows(fw: FrameworkStructure, transaction: Transaction) {
       ? await select(
           `SELECT id, ${cols.l3_struct_parent} AS parent_id, order_no, title, description,
                   summary, questions, evidence_examples
-             FROM verifywise.${tables.l3_struct}
+             FROM ${tables.l3_struct}
             WHERE ${cols.l3_struct_parent} IN (:parents)`,
           { parents: l2Ids },
         )
@@ -117,37 +114,75 @@ async function applyUpdate(fw: FrameworkStructure, update: TextUpdate, transacti
     }
   }
   await sequelize.query(
-    `UPDATE verifywise.${tableFor(fw, update.level)} SET ${sets.join(", ")} WHERE id = :id`,
+    `UPDATE ${tableFor(fw, update.level)} SET ${sets.join(", ")} WHERE id = :id`,
     { replacements, transaction },
   );
 }
 
-async function syncOne(fw: FrameworkStructure): Promise<FrameworkTextSyncResult> {
-  return sequelize.transaction(async (transaction) => {
-    const lock = (await sequelize.query(`SELECT pg_try_advisory_xact_lock(:ns, :id) AS locked`, {
-      replacements: { ns: LOCK_NAMESPACE, id: fw.id },
-      type: QueryTypes.SELECT,
-      transaction,
-    })) as Array<{ locked: boolean }>;
-    if (!lock[0]?.locked) return { key: fw.key, updated: 0, skipped: LOCK_HELD };
+async function storedRevision(frameworkId: number, transaction: Transaction): Promise<number> {
+  const rows = (await sequelize.query(
+    `SELECT revision FROM framework_text_revisions WHERE framework_id = :frameworkId`,
+    { replacements: { frameworkId }, type: QueryTypes.SELECT, transaction },
+  )) as Array<{ revision: number }>;
+  return rows[0]?.revision ?? 0;
+}
 
-    const needed = [fw.tables.l1_struct, fw.tables.l2_struct, fw.tables.l3_struct].filter(
-      (t): t is string => !!t,
-    );
+async function recordRevision(frameworkId: number, revision: number, transaction: Transaction) {
+  await sequelize.query(
+    `INSERT INTO framework_text_revisions (framework_id, revision, updated_at)
+     VALUES (:frameworkId, :revision, NOW())
+     ON CONFLICT (framework_id) DO UPDATE
+       SET revision = EXCLUDED.revision, updated_at = NOW()
+     WHERE framework_text_revisions.revision < EXCLUDED.revision`,
+    { replacements: { frameworkId, revision }, transaction },
+  );
+}
+
+async function syncOne(fw: FrameworkStructure): Promise<FrameworkTextSyncResult> {
+  const skip = (skipped: string, notice: FrameworkTextSyncResult["notice"]) => ({
+    key: fw.key,
+    updated: 0,
+    skipped,
+    notice,
+  });
+  return sequelize.transaction(async (transaction) => {
+    // Wait for an instance already syncing this framework rather than skip
+    // it: if that one fails and rolls back, this one still does the work, and
+    // after a success it finds nothing left to write.
+    await sequelize.query(`SELECT pg_advisory_xact_lock(:ns, :id)`, {
+      replacements: { ns: LOCK_NAMESPACE, id: fw.id },
+      transaction,
+    });
+
+    const needed = [
+      fw.tables.l1_struct,
+      fw.tables.l2_struct,
+      fw.tables.l3_struct,
+      "framework_text_revisions",
+    ].filter((t): t is string => !!t);
     for (const table of needed) {
       if (!(await tableExists(table, transaction))) {
-        return { key: fw.key, updated: 0, skipped: `table ${table} does not exist yet` };
+        return skip(`table ${table} does not exist yet`, "info");
       }
+    }
+
+    // An older build (a rollback, or an old instance restarting during a
+    // rolling update) must not restore older wording.
+    const revision = textRevisionOf(fw);
+    const stored = await storedRevision(fw.id, transaction);
+    if (revision < stored) {
+      return skip(`the database holds text revision ${stored}, this build ${revision}`, "info");
     }
 
     const rows = await readRows(fw, transaction);
     // A framework this database never seeded has no rows; nothing to sync.
-    if (!rows.l1.length) return { key: fw.key, updated: 0, skipped: NOT_SEEDED };
+    if (!rows.l1.length) return skip("not seeded in this database", "none");
 
     const plan = planFrameworkTextSync(fw.seed, rows);
-    if ("skip" in plan) return { key: fw.key, updated: 0, skipped: plan.skip };
+    if ("skip" in plan) return skip(plan.skip, "warn");
 
     for (const update of plan.updates) await applyUpdate(fw, update, transaction);
+    await recordRevision(fw.id, revision, transaction);
     return { key: fw.key, updated: plan.updates.length };
   });
 }
@@ -169,12 +204,14 @@ export async function syncBundledFrameworkText(
         log.info(
           `[framework-text-sync] ${fw.key}: updated ${result.updated} item(s) from the registry`,
         );
-      } else if (result.skipped && !QUIET_SKIPS.has(result.skipped)) {
+      } else if (result.skipped && result.notice === "warn") {
         log.warn(`[framework-text-sync] ${fw.key}: skipped, ${result.skipped}`);
+      } else if (result.skipped && result.notice === "info") {
+        log.info(`[framework-text-sync] ${fw.key}: skipped, ${result.skipped}`);
       }
     } catch (error) {
       const message = (error as Error)?.message ?? String(error);
-      results.push({ key: fw.key, updated: 0, skipped: `error: ${message}` });
+      results.push({ key: fw.key, updated: 0, skipped: `error: ${message}`, notice: "warn" });
       log.warn(`[framework-text-sync] ${fw.key}: failed, ${message}`);
     }
   }

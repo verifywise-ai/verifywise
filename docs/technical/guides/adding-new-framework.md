@@ -288,25 +288,40 @@ the app reads the text from there. On every backend start,
 `services/frameworkTextSync` brings it back in step with the registry: for
 each bundled framework it compares the struct rows with `seed.structure` and
 rewrites the text columns that differ (`title`, `description`, and on levels 2
-and 3 also `summary`, `questions`, `evidence_examples`). So:
+and 3 also `summary`, `questions`, `evidence_examples`).
 
-- **A wording fix needs no migration.** Edit the text in `<key>.structure.ts`;
-  every database picks it up on its next start. Row ids don't change, so
-  implementation rows, statuses, evidence and progress stay attached.
-- **Adding, removing or reordering items still needs a migration.** Rows are
-  matched by position (`order_no`, which is the seed's own value or the item's
-  1-based index, within its parent). When a framework's items no longer line
-  up with the registry, the sync skips that framework and logs
-  `[framework-text-sync] <key>: skipped, ...`; write a migration that brings
-  the rows in line, and the next start syncs the text again.
-- Only the 24 bundled frameworks are covered. The four built-ins (EU AI Act,
-  ISO 42001, ISO 27001, NIST AI RMF) have their own tables and still need a
-  migration for text changes. The `frameworks` row (name, description) is not
-  synced either.
+**To change wording:** edit the text in `<key>.structure.ts`, bump that
+framework's `textRevision` (1 when absent, so the first change sets it to 2),
+then run `npm run framework-text:record` in `Servers`. No migration is needed;
+every database picks the text up on its next start. Row ids don't change, so
+implementation rows, statuses, evidence and progress stay attached.
+`structures/__tests__/frameworkTextRevisions.test.ts` fails when the text
+changed without a bump, and the record script refuses to record it.
 
-The sync runs in the background, takes a per-framework advisory lock so
-several instances starting together don't write twice, and never blocks or
-stops startup. Tests: `services/frameworkTextSync/__tests__/plan.test.ts` and
+The revision is what keeps text moving forward. Each database records the
+revision it holds (`framework_text_revisions`), and a build with a lower one
+(a rollback, or an old instance restarting during a rolling update) leaves
+the text alone.
+
+**Adding, removing or reordering items still needs a migration.** Rows are
+matched by position (`order_no`, the seed's own value or the item's 1-based
+index, within its parent). The sync skips a framework and logs
+`[framework-text-sync] <key>: skipped, ...` when its items no longer line up:
+a different number of items, or a title that now sits at another position (a
+reorder, a swap, or a shift from one item inserted and another removed). An
+item replaced by an unrelated one at the same position can't be told apart
+from a rewording, so that also needs a migration. Write the migration that
+brings the rows in line, and the next start syncs the text again.
+
+Only the 24 bundled frameworks are covered. The four built-ins (EU AI Act,
+ISO 42001, ISO 27001, NIST AI RMF) have their own tables and still need a
+migration for text changes. The `frameworks` row (name, description) is not
+synced either.
+
+The sync runs in the background and never blocks or stops startup. Each
+framework is written in its own transaction under an advisory lock, so
+instances starting together take turns. Tests:
+`services/frameworkTextSync/__tests__/plan.test.ts` and
 `tests/integration/framework-text-sync.test.ts`, which also checks that a
 freshly migrated database needs no change in any framework.
 

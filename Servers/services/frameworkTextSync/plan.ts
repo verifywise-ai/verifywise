@@ -19,7 +19,12 @@
  * identifies the same item, so the framework is skipped with a reason and
  * the change needs a migration.
  */
+import { createHash } from "crypto";
+import type { FrameworkStructure } from "../../structures/types";
 import type { FrameworkSeed, SeedLevel1, SeedLevel2, SeedLevel3 } from "../../structures/types";
+
+/** A build's text revision for a framework, 1 when the registry omits it. */
+export const textRevisionOf = (fw: FrameworkStructure): number => fw.textRevision ?? 1;
 
 export type StructLevel = "l1" | "l2" | "l3";
 
@@ -105,10 +110,11 @@ function pair<T extends SeedItem>(
   const seen = new Set<number>();
   for (let i = 0; i < items.length; i++) {
     const order = orderOf(items[i], i);
-    const row = byOrder.get(order);
-    if (!row || seen.has(order)) {
-      return { mismatch: `${label}: no database row at position ${order}` };
+    if (seen.has(order)) {
+      return { mismatch: `${label}: registry order numbers repeat at ${order}` };
     }
+    const row = byOrder.get(order);
+    if (!row) return { mismatch: `${label}: no database row at position ${order}` };
     seen.add(order);
     pairs.push([items[i], row]);
   }
@@ -128,7 +134,10 @@ export function planFrameworkTextSync(seed: FrameworkSeed, rows: StructRows): Te
   const l1 = pair("level 1", seed.structure ?? [], rows.l1);
   if ("mismatch" in l1) return { skip: l1.mismatch };
 
+  // Paired items, per level, for the moved-title check below.
+  const paired: Record<StructLevel, Array<[SeedItem, StructRow]>> = { l1: [], l2: [], l3: [] };
   for (const [l1Item, l1Row] of l1.pairs) {
+    paired.l1.push([l1Item, l1Row]);
     collect("l1", l1Item, l1Row);
     const l2 = pair(
       `level 2 under "${l1Item.title}"`,
@@ -138,6 +147,7 @@ export function planFrameworkTextSync(seed: FrameworkSeed, rows: StructRows): Te
     if ("mismatch" in l2) return { skip: l2.mismatch };
 
     for (const [l2Item, l2Row] of l2.pairs) {
+      paired.l2.push([l2Item, l2Row]);
       collect("l2", l2Item, l2Row);
       if (!threeLevel) continue;
       const l3 = pair(
@@ -146,9 +156,74 @@ export function planFrameworkTextSync(seed: FrameworkSeed, rows: StructRows): Te
         childrenOf(rows.l3, l2Row.id),
       );
       if ("mismatch" in l3) return { skip: l3.mismatch };
-      for (const [l3Item, l3Row] of l3.pairs) collect("l3", l3Item, l3Row);
+      for (const [l3Item, l3Row] of l3.pairs) {
+        paired.l3.push([l3Item, l3Row]);
+        collect("l3", l3Item, l3Row);
+      }
     }
   }
 
+  const moved = movedTitle(paired);
+  if (moved) return { skip: moved };
+
   return { updates };
+}
+
+/**
+ * Position identifies an item only while items stay in place. When the
+ * registry reorders items, shifts them (one inserted and another removed) or
+ * swaps them, the count still matches, and a sync would put each item's text
+ * on a row that holds another item's status and evidence. Those show up as a
+ * title that is now at a different position: a retitled row whose new title
+ * is another row's current title, or whose current title the registry now
+ * gives to another row. Such a framework is skipped; the move needs a
+ * migration. A pure wording change never matches, since the new title is new.
+ * (An item replaced by an unrelated one in the same place cannot be told
+ * apart from a rewording; that also needs a migration.)
+ */
+function movedTitle(paired: Record<StructLevel, Array<[SeedItem, StructRow]>>): string | null {
+  for (const level of ["l1", "l2", "l3"] as StructLevel[]) {
+    const pairs = paired[level];
+    const dbTitles = new Set(pairs.map(([, row]) => row.title));
+    const seedTitles = new Set(pairs.map(([item]) => item.title));
+    for (const [item, row] of pairs) {
+      if (item.title === row.title) continue;
+      // Name the title that moved: the row's current one when the registry
+      // now gives it to another position, else the new one taken from another row.
+      const moving = seedTitles.has(row.title)
+        ? row.title
+        : dbTitles.has(item.title)
+          ? item.title
+          : null;
+      if (moving) {
+        return `${level.replace("l", "level ")}: "${moving}" is at a different position than in the database (reordering needs a migration)`;
+      }
+    }
+  }
+  return null;
+}
+
+/**
+ * A fingerprint of everything the sync writes, in order: each item's
+ * position and text. structures/__tests__/frameworkTextRevisions.test.ts
+ * compares it with the recorded one so a text change cannot ship without a
+ * textRevision bump.
+ */
+export function frameworkTextFingerprint(seed: FrameworkSeed): string {
+  const walk = (items: SeedItem[] | undefined): unknown[] =>
+    (items ?? []).map((item, i) => {
+      const l = item as SeedLevel3 & { items?: SeedItem[] };
+      return [
+        orderOf(item, i),
+        l.title,
+        text(l.description),
+        text(l.summary),
+        list(l.questions),
+        list(l.evidence_examples),
+        walk(l.items),
+      ];
+    });
+  return createHash("sha256")
+    .update(JSON.stringify(walk(seed.structure)))
+    .digest("hex");
 }
