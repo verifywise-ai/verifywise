@@ -226,6 +226,24 @@ POST /vendors/
 6. Queue the `vendor_added` automation, sent once the transaction commits (`transaction.afterCommit`); `vendor_updated` and `vendor_deleted` work the same way, and a delete that finds no vendor answers 404 and queues nothing
 7. After commit, notify the assignee and reviewer
 
+### One write path
+
+Vendor and vendor risk creates, updates and deletes live in
+`services/vendor.service.ts` and `services/vendorRisk.service.ts`. The REST
+controllers and the Advisor's write tools (`advisor/functions/vendorFunctions.ts`)
+both call them, so a write from either gets the same validation, use case
+visibility, change history, onboarding workflow, assignment notices and related
+vendor risk rescoring. The callers check `vendor.edit` and the request body
+(`assertVendorRequestBody`, `assertVendorRiskRequestBody`) first.
+
+The Advisor's tools act as the user who asked for the change (else the
+approver), with that user's role in the organization: a tool call from a user
+without `vendor.edit` is refused, before an approval is requested and again
+when it runs. A new vendor from the Advisor needs the same fields as in the
+console (name, what it provides, website, contact person) and is assigned to
+the user who asked unless the call names an assignee. Only use cases that user
+can see are linked.
+
 ### User references
 
 `vendors.assignee`, `vendors.reviewer` and `vendorrisks.action_owner` are user
@@ -347,8 +365,9 @@ A vendor delete is a hard delete (`deleteVendorByIdQuery`,
 - the vendor, and each risk that was still active, get a "deleted" history
   entry. A risk deleted earlier already has one.
 
-The console records the deleting user. The Advisor's delete tool has no user,
-so its deletions are recorded as made by the system.
+The deletion is recorded as made by the user who asked for it, in the console
+or through the Advisor. A deletion with no known user is recorded as made by
+the system.
 
 ## Vendor Risk Management
 
@@ -709,6 +728,8 @@ Vendors with `is_demo=true`:
 | `domain.layer/models/vendorsProjects/vendorsProjects.model.ts` | Junction model |
 | `utils/vendor.utils.ts` | Vendor queries |
 | `utils/vendorRisk.utils.ts` | Risk queries |
+| `services/vendor.service.ts` | Vendor create, update, delete (REST and Advisor) |
+| `services/vendorRisk.service.ts` | Vendor risk create, update, delete (REST and Advisor) |
 | `controllers/vendor.ctrl.ts` | Controller |
 | `routes/vendor.route.ts` | Routes |
 | `services/riskLinks/vendorReports.ts` | Exposure, duplicate and coverage reports |

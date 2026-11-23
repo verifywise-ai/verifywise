@@ -54,6 +54,7 @@ describe("ScanDetailsHeader", () => {
         onRecalculate={vi.fn()}
         isExporting={false}
         onExport={vi.fn()}
+        onViewGraph={vi.fn()}
       />,
     );
 
@@ -71,6 +72,7 @@ describe("ScanDetailsHeader", () => {
         onRecalculate={vi.fn()}
         isExporting={false}
         onExport={vi.fn()}
+        onViewGraph={vi.fn()}
       />,
     );
 
@@ -86,6 +88,7 @@ describe("ScanDetailsHeader", () => {
         onRecalculate={vi.fn()}
         isExporting={false}
         onExport={vi.fn()}
+        onViewGraph={vi.fn()}
       />,
     );
 
@@ -101,6 +104,7 @@ describe("ScanDetailsHeader", () => {
         onRecalculate={vi.fn()}
         isExporting={false}
         onExport={vi.fn()}
+        onViewGraph={vi.fn()}
       />,
     );
 
@@ -116,6 +120,7 @@ describe("ScanDetailsHeader", () => {
         onRecalculate={vi.fn()}
         isExporting={false}
         onExport={vi.fn()}
+        onViewGraph={vi.fn()}
       />,
     );
 
@@ -133,6 +138,7 @@ describe("ScanDetailsHeader", () => {
         onRecalculate={vi.fn()}
         isExporting={false}
         onExport={vi.fn()}
+        onViewGraph={vi.fn()}
       />,
     );
 
@@ -152,6 +158,7 @@ describe("ScanDetailsHeader", () => {
         onRecalculate={onRecalculate}
         isExporting={false}
         onExport={onExport}
+        onViewGraph={vi.fn()}
       />,
     );
 
@@ -176,6 +183,7 @@ describe("ScanDetailsHeader", () => {
         onRecalculate={onRecalculate}
         isExporting={false}
         onExport={vi.fn()}
+        onViewGraph={vi.fn()}
       />,
     );
 
@@ -193,6 +201,7 @@ describe("ScanDetailsHeader", () => {
         onRecalculate={vi.fn()}
         isExporting={false}
         onExport={vi.fn()}
+        onViewGraph={vi.fn()}
       />,
     );
 
@@ -209,6 +218,7 @@ describe("ScanDetailsHeader", () => {
         onRecalculate={vi.fn()}
         isExporting={false}
         onExport={vi.fn()}
+        onViewGraph={vi.fn()}
       />,
     );
 
@@ -224,9 +234,44 @@ describe("ScanDetailsHeader", () => {
         onRecalculate={vi.fn()}
         isExporting={false}
         onExport={vi.fn()}
+        onViewGraph={vi.fn()}
       />,
     );
 
     expect(screen.queryByText(/No risk score has been calculated/)).not.toBeInTheDocument();
+  });
+
+  it("opens the dependency graph from View graph on a completed scan", () => {
+    const onViewGraph = vi.fn();
+    renderWithProviders(
+      <ScanDetailsHeader
+        scan={makeScanResponse()}
+        onBack={vi.fn()}
+        isRecalculating={false}
+        onRecalculate={vi.fn()}
+        isExporting={false}
+        onExport={vi.fn()}
+        onViewGraph={onViewGraph}
+      />,
+    );
+
+    fireEvent.click(screen.getByText("View graph"));
+    expect(onViewGraph).toHaveBeenCalledTimes(1);
+  });
+
+  it("hides View graph until the scan has completed", () => {
+    renderWithProviders(
+      <ScanDetailsHeader
+        scan={makeScanResponse({ status: "cancelled" })}
+        onBack={vi.fn()}
+        isRecalculating={false}
+        onRecalculate={vi.fn()}
+        isExporting={false}
+        onExport={vi.fn()}
+        onViewGraph={vi.fn()}
+      />,
+    );
+
+    expect(screen.queryByText("View graph")).not.toBeInTheDocument();
   });
 });
