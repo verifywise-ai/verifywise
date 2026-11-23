@@ -11,6 +11,7 @@ import {
   HeadingLevel,
   Paragraph,
   ShadingType,
+  TableLayoutType,
   Table,
   TableCell,
   TableRow,
@@ -120,9 +121,27 @@ function cellParts(cell: TableCellInput | null | undefined): {
 }
 
 /**
- * Create a standard table with headers and borders
+ * Text width of the reports' pages, in twips: the docx default A4 page
+ * (11906) less the one-inch margins both generators set.
  */
-export function createTable(headers: string[], rows: TableCellInput[][]): Table {
+const CONTENT_WIDTH_TWIPS = 11906 - 2 * 1440;
+
+/**
+ * Create a standard table with headers and borders. `fixedWidths` (percent per
+ * column) holds the columns at those widths with a fixed layout, so tables
+ * sharing them line up; without it Word sizes the columns itself.
+ */
+export function createTable(
+  headers: string[],
+  rows: TableCellInput[][],
+  opts: { fixedWidths?: number[] } = {},
+): Table {
+  const columnWidths = opts.fixedWidths?.map((pct) =>
+    Math.round((CONTENT_WIDTH_TWIPS * pct) / 100),
+  );
+  const cellWidth = (i: number) =>
+    columnWidths ? { width: { size: columnWidths[i], type: WidthType.DXA } } : {};
+
   const borderStyle = {
     style: BorderStyle.SINGLE,
     size: 1,
@@ -130,8 +149,9 @@ export function createTable(headers: string[], rows: TableCellInput[][]): Table 
   };
 
   const headerCells = headers.map(
-    (header) =>
+    (header, i) =>
       new TableCell({
+        ...cellWidth(i),
         shading: {
           fill: COLORS.backgroundAlt,
           type: ShadingType.CLEAR,
@@ -162,8 +182,9 @@ export function createTable(headers: string[], rows: TableCellInput[][]): Table 
     (row, rowIndex) =>
       new TableRow({
         children: row.map(
-          (cell) =>
+          (cell, i) =>
             new TableCell({
+              ...cellWidth(i),
               shading:
                 rowIndex % 2 === 1
                   ? {
@@ -213,6 +234,7 @@ export function createTable(headers: string[], rows: TableCellInput[][]): Table 
       size: 100,
       type: WidthType.PERCENTAGE,
     },
+    ...(columnWidths && { columnWidths, layout: TableLayoutType.FIXED }),
     rows: [
       new TableRow({
         children: headerCells,

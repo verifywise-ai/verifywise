@@ -104,6 +104,11 @@
   font-size: 10px;
 }
 
+/* Columns held at the block's widths, so tables sharing widths line up. */
+.e23-fixed {
+  table-layout: fixed;
+}
+
 .e23-small th,
 .e23-small td {
   padding: 6px 8px;

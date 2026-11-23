@@ -65,8 +65,17 @@ export type E23Block =
       headers: string[];
       rows: E23Cell[][];
       small?: boolean;
-      /** Column widths in percent, for the PDF; DOCX sizes columns itself. */
+      /**
+       * Column widths in percent. Without `fixed`, only the PDF applies them,
+       * as a hint to its automatic layout, and the DOCX sizes columns itself.
+       */
       widths?: number[];
+      /**
+       * Hold `widths` exactly, in both formats: the PDF lays the table out
+       * fixed and the DOCX gets a fixed layout and column grid. Tables that
+       * share widths then line their columns up.
+       */
+      fixed?: boolean;
     }
   /** The PDF's completeness chart for frameworkRequirements.frameworks[index]; DOCX has none. */
   | { kind: "chart"; index: number };
@@ -381,6 +390,13 @@ function completenessSection(
 // Model risk management status
 // ---------------------------------------------------------------------------
 
+/**
+ * Column widths of the section's two-column count tables (Fleet, Validation
+ * coverage, Open findings, Monitoring coverage, Activity): one set for all,
+ * so their value columns sit at the same position on the page.
+ */
+export const COUNT_TABLE_WIDTHS = [70, 30];
+
 function mrmSection(data: ReportData, board: boolean): E23Section | null {
   const fleet = data.sections.mrmFleet;
   if (!fleet) {
@@ -391,12 +407,21 @@ function mrmSection(data: ReportData, board: boolean): E23Section | null {
     return { id: "mrm", heading, blocks: [{ kind: "paragraph", text: NO_MODELS }] };
   }
 
-  const kv = (title: string, rows: Array<[string, number]>): E23Block => ({
+  /** A two-column count table, its value column aligned with the others'. */
+  const counts = (
+    title: string,
+    headers: [string, string],
+    rows: Array<[string, number]>,
+  ): E23Block => ({
     kind: "table",
     title,
-    headers: ["Measure", "Models"],
+    headers,
     rows: rows.map(([label, n]) => [label, String(n)]),
+    widths: COUNT_TABLE_WIDTHS,
+    fixed: true,
   });
+  const kv = (title: string, rows: Array<[string, number]>): E23Block =>
+    counts(title, ["Measure", "Models"], rows);
 
   const { totals, validationCoverage: v, openFindingsBySeverity: f, monitoring, activity } = fleet;
   const blocks: E23Block[] = [
@@ -413,17 +438,16 @@ function mrmSection(data: ReportData, board: boolean): E23Section | null {
       ["Not started", v.notStarted],
       ["Overdue", v.overdue],
     ]),
-    {
-      kind: "table",
-      title: "Open findings by severity",
-      headers: ["Severity", "Findings"],
-      rows: [
-        ["Critical", String(f.critical)],
-        ["High", String(f.high)],
-        ["Medium", String(f.medium)],
-        ["Low", String(f.low)],
+    counts(
+      "Open findings by severity",
+      ["Severity", "Findings"],
+      [
+        ["Critical", f.critical],
+        ["High", f.high],
+        ["Medium", f.medium],
+        ["Low", f.low],
       ],
-    },
+    ),
     kv("Monitoring coverage", [
       ["With active thresholds", monitoring.withActiveThresholds],
       [`With a metric received in the last ${METRIC_STALE_DAYS} days`, monitoring.withRecentMetric],
@@ -431,20 +455,21 @@ function mrmSection(data: ReportData, board: boolean): E23Section | null {
   ];
 
   if (activity.period) {
-    blocks.push({
-      kind: "table",
-      title: `Activity from ${formatReportDate(activity.period.start)} to ${formatReportDate(
-        activity.period.end,
-      )}`,
-      headers: ["Activity", "Count"],
-      rows: [
-        ["Validations signed off", String(activity.validationsSignedOff)],
-        ["Findings opened", String(activity.findingsOpened)],
-        ["Findings closed", String(activity.findingsClosed)],
-        ["Threshold breaches", String(activity.breaches)],
-        ["Revalidation events", String(activity.revalidationEvents)],
-      ],
-    });
+    blocks.push(
+      counts(
+        `Activity from ${formatReportDate(activity.period.start)} to ${formatReportDate(
+          activity.period.end,
+        )}`,
+        ["Activity", "Count"],
+        [
+          ["Validations signed off", activity.validationsSignedOff],
+          ["Findings opened", activity.findingsOpened],
+          ["Findings closed", activity.findingsClosed],
+          ["Threshold breaches", activity.breaches],
+          ["Revalidation events", activity.revalidationEvents],
+        ],
+      ),
+    );
   } else {
     blocks.push({
       kind: "paragraph",

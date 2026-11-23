@@ -66,6 +66,7 @@ function blockElements(block: E23Block): Element[] {
         createTable(
           block.headers,
           block.rows.map((row) => row.map(toCell)),
+          block.fixed && block.widths ? { fixedWidths: block.widths } : undefined,
         ),
         createTableSpacing(),
       ];

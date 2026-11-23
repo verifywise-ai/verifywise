@@ -24,7 +24,7 @@
       </ul>
       <% } else if (block.kind === 'table') { %>
       <% if (block.title) { %><h4 class="e23-subheading"><%= block.title %></h4><% } %>
-      <table class="data-table e23-table<%= block.small ? ' e23-small' : '' %>">
+      <table class="data-table e23-table<%= block.small ? ' e23-small' : '' %><%= block.fixed ? ' e23-fixed' : '' %>">
         <% if (block.widths) { %>
         <colgroup><% block.widths.forEach(function(w) { %><col style="width: <%= w %>%;"><% }); %></colgroup>
         <% } %>
