@@ -47,6 +47,8 @@ import { vendorRiskCountByVendor } from "../../../../application/utils/vendorRis
 import { compareVendors } from "../../../../application/utils/vendorSort";
 import { buildUserSortNames } from "../../../../application/utils/userSort";
 import { clampPage } from "../../../../application/utils/tablePage";
+import { useTranslation } from "../../../../application/hooks/useTranslation";
+import { fill, pluralKey } from "../../../../i18n/fill";
 
 const VENDORS_ROWS_PER_PAGE_KEY = "verifywise_vendors_rows_per_page";
 const VENDORS_SORTING_KEY = "verifywise_vendors_sorting";
@@ -58,12 +60,12 @@ type SortConfig = {
 };
 
 const titleOfTableColumns = [
-  { id: "vendor_name", label: "name", sortable: true },
-  { id: "assignee", label: "assignee", sortable: true },
-  { id: "review_status", label: "status", sortable: true },
-  { id: "risk", label: "risks", sortable: true },
-  { id: "scorecard", label: "scorecard", sortable: true },
-  { id: "review_date", label: "review date", sortable: true },
+  { id: "vendor_name", label: "Name", sortable: true },
+  { id: "assignee", label: "Assignee", sortable: true },
+  { id: "review_status", label: "Status", sortable: true },
+  { id: "risk", label: "Risks", sortable: true },
+  { id: "scorecard", label: "Scorecard", sortable: true },
+  { id: "review_date", label: "Review date", sortable: true },
   { id: "actions", label: "", sortable: false },
 ];
 
@@ -96,7 +98,8 @@ const SortableTableHead: React.FC<{
                     "cursor": "pointer",
                     "userSelect": "none",
                     "&:hover": {
-                      backgroundColor: "rgba(0, 0, 0, 0.04)",
+                      // One step darker than the header row (background.hover).
+                      backgroundColor: "border.light",
                     },
                   }
                 : {}),
@@ -158,6 +161,7 @@ const TableWithPlaceholder: React.FC<ITableWithPlaceholderProps> = ({
   const formatDate = useFormattedDate();
   const theme = useTheme();
   const can = useCanCheck();
+  const { t, lang } = useTranslation();
   const [page, setPage] = useState(0);
 
   // Initialize rowsPerPage from localStorage or default to 5
@@ -387,7 +391,9 @@ const TableWithPlaceholder: React.FC<ITableWithPlaceholderProps> = ({
                           }}
                           showIcon={false}
                         >
-                          {riskCount} risk{riskCount !== 1 ? "s" : ""}
+                          {fill(t(pluralKey(lang, riskCount, "{count} risk", "{count} risks")), {
+                            count: riskCount,
+                          })}
                         </VWLink>
                       ) : (
                         <Typography variant="body2" sx={{ color: "text.muted" }}>
@@ -405,7 +411,7 @@ const TableWithPlaceholder: React.FC<ITableWithPlaceholderProps> = ({
                         sortConfig.key === "scorecard" ? "background.surface" : "inherit",
                     }}
                   >
-                    <Box display="flex" alignItems="center" gap={1}>
+                    <Box display="flex" alignItems="center" gap="2px">
                       {(() => {
                         // The server computes risk_score; null means no scorecard answer.
                         const riskScore = row.risk_score;
@@ -423,7 +429,7 @@ const TableWithPlaceholder: React.FC<ITableWithPlaceholderProps> = ({
                             sx={{
                               display: "flex",
                               alignItems: "center",
-                              gap: 1,
+                              gap: "2px",
                               padding: "4px 8px",
                               borderRadius: radiusPx.sm,
                               backgroundColor: `${riskColor}20`,
@@ -480,7 +486,7 @@ const TableWithPlaceholder: React.FC<ITableWithPlaceholderProps> = ({
                   }}
                   onClick={(e) => e.stopPropagation()}
                 >
-                  <Stack direction="row" alignItems="center" gap={0.5}>
+                  <Stack direction="row" alignItems="center" gap="1px">
                     <ViewRelationshipsButton
                       entityId={row.id || 0}
                       entityType="vendor"
@@ -519,6 +525,8 @@ const TableWithPlaceholder: React.FC<ITableWithPlaceholderProps> = ({
       customFieldDefs,
       formatCfValue,
       formatDate,
+      t,
+      lang,
     ],
   );
 
@@ -586,7 +594,17 @@ const TableWithPlaceholder: React.FC<ITableWithPlaceholderProps> = ({
                       opacity: 0.7,
                     }}
                   >
-                    Showing {getRange} of {sortedVendors?.length} vendor(s)
+                    {fill(
+                      t(
+                        pluralKey(
+                          lang,
+                          sortedVendors?.length ?? 0,
+                          "Showing {range} of {total} vendor",
+                          "Showing {range} of {total} vendors",
+                        ),
+                      ),
+                      { range: getRange, total: sortedVendors?.length ?? 0 },
+                    )}
                   </TableCell>
                   <TablePagination
                     count={sortedVendors?.length}

@@ -89,7 +89,7 @@ export const vendorRisksContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Higher data sensitivity increases vendor risk. Classify the most sensitive data shared with the vendor:',
+      text: 'Higher data sensitivity increases vendor risk. Classify the most sensitive data shared with the vendor. From lowest to highest weight in the risk score:',
     },
     {
       type: 'ordered-list',
@@ -97,9 +97,10 @@ export const vendorRisksContent: ArticleContent = {
         { bold: 'None', text: 'No sensitive data (lowest risk)' },
         { bold: 'Internal only', text: 'Internal business data' },
         { bold: 'Personally identifiable information (PII)', text: 'Names, emails, identifiers and other personal data' },
+        { bold: 'Other sensitive data', text: 'Sensitive data that fits none of the other options. It weighs the same as PII' },
+        { bold: 'Model weights or AI assets', text: 'Proprietary model parameters or training data' },
         { bold: 'Financial data', text: 'Financial records, transactions or payment information' },
-        { bold: 'Health data (e.g. HIPAA)', text: 'Health and medical information subject to privacy regulation' },
-        { bold: 'Model weights or AI assets', text: 'Proprietary model parameters or training data (highest risk)' },
+        { bold: 'Health data (e.g. HIPAA)', text: 'Health and medical information subject to privacy regulation (highest risk)' },
       ],
     },
     {
@@ -133,7 +134,7 @@ export const vendorRisksContent: ArticleContent = {
     {
       type: 'checklist',
       items: [
-        'Number of projects depending on this vendor',
+        'Number of use cases depending on this vendor',
         'Availability of alternative vendors',
         'Time required to switch providers',
         'Revenue impact if vendor services are unavailable',
@@ -291,6 +292,12 @@ export const vendorRisksContent: ArticleContent = {
       type: 'article-links',
       title: 'Related articles',
       items: [
+        {
+          collectionId: 'risk-management',
+          articleId: 'vendor-risk-list',
+          title: 'Vendor risks list',
+          description: 'Find, filter, export and restore vendor risks',
+        },
         {
           collectionId: 'risk-management',
           articleId: 'vendor-management',

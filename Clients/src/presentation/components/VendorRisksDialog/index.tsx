@@ -32,6 +32,8 @@ import TablePaginationActions from "../TablePagination";
 import { ChevronsUpDown, ShieldAlert } from "lucide-react";
 import { IVendorRisk, IVendorRisksDialogProps } from "../../../domain/interfaces/i.vendor";
 import { pageOfLabel } from "../Table/pageOfLabel";
+import { useTranslation } from "../../../application/hooks/useTranslation";
+import { fill } from "../../../i18n/fill";
 
 const SelectorVertical = (props: any) => <ChevronsUpDown size={16} {...props} />;
 
@@ -53,6 +55,7 @@ const VendorRisksDialog: React.FC<IVendorRisksDialogProps> = ({
   // Get vendors data for the modal
   const { data: vendors = [] } = useVendors({ projectId: "all" });
   const theme = useTheme();
+  const { t } = useTranslation();
 
   useEffect(() => {
     if (open && vendorId) {
@@ -111,7 +114,14 @@ const VendorRisksDialog: React.FC<IVendorRisksDialogProps> = ({
       <StandardModal
         isOpen={open}
         onClose={onClose}
-        title={`Vendor Risks ${vendorName ? `- ${vendorName}` : ""} (${vendorRisks.length})`}
+        title={
+          vendorName
+            ? fill(t("Vendor risks - {vendor} ({count})"), {
+                vendor: vendorName,
+                count: vendorRisks.length,
+              })
+            : fill(t("Vendor risks ({count})"), { count: vendorRisks.length })
+        }
         description="View all risks associated with this vendor"
         maxWidth="800px"
         hideFooter={true}
@@ -122,13 +132,13 @@ const VendorRisksDialog: React.FC<IVendorRisksDialogProps> = ({
               display: "flex",
               justifyContent: "center",
               alignItems: "center",
-              py: 4,
+              py: "8px",
             }}
           >
             <CircularProgress size={40} />
           </Stack>
         ) : error ? (
-          <MuiAlert severity="error" sx={{ mt: 2 }}>
+          <MuiAlert severity="error" sx={{ mt: "4px" }}>
             {error}
           </MuiAlert>
         ) : (
@@ -150,7 +160,7 @@ const VendorRisksDialog: React.FC<IVendorRisksDialogProps> = ({
                       ...singleTheme.tableStyles.primary.header.cell,
                     }}
                   >
-                    Risk Description
+                    Risk description
                   </TableCell>
                   <TableCell
                     style={{
@@ -171,7 +181,7 @@ const VendorRisksDialog: React.FC<IVendorRisksDialogProps> = ({
                       ...singleTheme.tableStyles.primary.header.cell,
                     }}
                   >
-                    Risk Level
+                    Risk level
                   </TableCell>
                 </TableRow>
               </TableHead>
@@ -187,7 +197,7 @@ const VendorRisksDialog: React.FC<IVendorRisksDialogProps> = ({
                             ...singleTheme.tableStyles.primary.body.row,
                             "cursor": "pointer",
                             "&:hover": {
-                              backgroundColor: "rgba(0, 0, 0, 0.04)",
+                              backgroundColor: "background.hover",
                             },
                           }}
                           onClick={() => handleRiskClick(risk.id)}

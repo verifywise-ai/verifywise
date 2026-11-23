@@ -1702,16 +1702,13 @@ components:
               items:
                 type: object
     VendorRiskInput:
+      description: 'A vendor risk as sent on create (POST) and update (PATCH). The required fields apply to create; an update sends only the fields it changes. risk_level is computed by the server from likelihood and risk_severity, and a sent value is ignored.'
       type: object
       required:
         - vendor_id
         - risk_description
-        - impact_description
         - likelihood
         - risk_severity
-        - action_plan
-        - action_owner
-        - risk_level
       properties:
         vendor_id:
           type: integer
@@ -1744,10 +1741,16 @@ components:
           type: string
         action_owner:
           type: integer
-          description: 'User ID of the action owner.'
+          description: 'User ID of the action owner. Must be a member of the organization.'
         risk_level:
           type: string
-          description: 'Free-text risk level.'
+          readOnly: true
+          description: 'Ignored. The server computes the risk level from likelihood and risk_severity.'
+        frameworks:
+          type: array
+          items:
+            type: integer
+          description: 'Framework IDs to link. Replaces the existing links; omit or send null on update to leave them unchanged. An unknown framework ID is a 400.'
         is_demo:
           type: boolean
           default: false
@@ -1765,9 +1768,6 @@ components:
           type: string
         impact_description:
           type: string
-        impact:
-          type: string
-          nullable: true
         likelihood:
           type: string
           enum:
@@ -1798,6 +1798,17 @@ components:
         updated_at:
           type: string
           format: date-time
+        is_deleted:
+          type: boolean
+        deleted_at:
+          type: string
+          format: date-time
+          nullable: true
+        frameworks:
+          type: array
+          items:
+            type: integer
+          description: 'Linked framework IDs. Returned only by the single-risk read (GET by id), and only when the risk has links.'
     VendorRiskAllProjectsResponse:
       description: 'Extended vendor risk with joined vendor/project info.'
       type: object
@@ -8950,9 +8961,38 @@ paths:
   '/vendorRisks/by-frameworkid/{id}':
     get:
       summary: 'Get Vendor Risks By Framework Id'
+      parameters:
+        -
+          name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        -
+          name: filter
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - active
+              - deleted
+              - all
+            default: active
       responses:
         '200':
           description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: {type: string}
+                  data: {type: array, items: {allOf: [{$ref: '#/components/schemas/VendorRiskResponse'}, {type: object, properties: {vendor_name: {type: string}}}]}}
+        '400':
+          description: 'Invalid framework ID or filter'
+        '401':
+          description: Unauthorized
         '500':
           description: 'Internal server error'
       tags:
@@ -9022,8 +9062,12 @@ paths:
                 properties:
                   message: {type: string}
                   data: {$ref: '#/components/schemas/VendorRiskResponse'}
+        '400':
+          description: 'Invalid vendor risk ID'
         '401':
           description: Unauthorized
+        '404':
+          description: 'No active vendor risk with this ID in the organization'
         '500':
           description: 'Internal server error'
     patch:
@@ -9058,9 +9102,13 @@ paths:
                   message: {type: string}
                   data: {$ref: '#/components/schemas/VendorRiskResponse'}
         '400':
-          description: 'Validation error, e.g. an action owner who is not a member of the organization'
+          description: 'Invalid vendor risk ID, or a validation error (missing or invalid field, unknown framework ID, action owner who is not a member of the organization)'
         '401':
           description: Unauthorized
+        '403':
+          description: 'Forbidden: needs the vendor.edit permission'
+        '404':
+          description: 'No active vendor risk with this ID in the organization'
         '500':
           description: 'Internal server error'
     delete:
@@ -9087,9 +9135,15 @@ paths:
                 type: object
                 properties:
                   message: {type: string}
-                  data: {$ref: '#/components/schemas/VendorRiskResponse'}
+                  data: {type: boolean, example: true}
+        '400':
+          description: 'Invalid vendor risk ID'
         '401':
           description: Unauthorized
+        '403':
+          description: 'Forbidden: needs the vendor.edit permission'
+        '404':
+          description: 'No active vendor risk with this ID in the organization'
         '500':
           description: 'Internal server error'
   /vendorRisks:
@@ -9118,9 +9172,11 @@ paths:
                   message: {type: string}
                   data: {$ref: '#/components/schemas/VendorRiskResponse'}
         '400':
-          description: 'Validation error, e.g. an action owner who is not a member of the organization'
+          description: 'Validation error (missing or invalid field, unknown framework ID, action owner who is not a member of the organization)'
         '401':
           description: Unauthorized
+        '403':
+          description: 'Forbidden: needs the vendor.edit permission'
         '500':
           description: 'Internal server error'
   /vendors:
@@ -9449,9 +9505,30 @@ paths:
   '/vendors/{id}/riskSuggestions':
     get:
       summary: 'Get Vendor Risk Suggestions'
+      description: 'Read-only. Derives vendor risks from the vendor''s questionnaire answers (data sensitivity, business criticality, past issues, regulatory exposure) and leaves out any the vendor already has a near-identical active risk for. Writes nothing.'
+      parameters:
+        -
+          name: id
+          in: path
+          required: true
+          schema:
+            type: integer
       responses:
         '200':
           description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: {type: string}
+                  data: {type: object, properties: {vendor_id: {type: integer}, vendor_name: {type: string}, questionnaire_complete: {type: boolean}, existing_risk_count: {type: integer}, suggestions: {type: array, items: {type: object, properties: {archetype: {type: string, enum: [data_sensitivity, business_criticality, past_issues, regulatory_exposure]}, risk_description: {type: string}, impact_description: {type: string}, action_plan: {type: string}, likelihood: {type: string}, risk_severity: {type: string}, risk_level: {type: string}, reasons: {type: array, items: {type: string}}}}}, suppressed: {type: array, items: {type: object, properties: {archetype: {type: string}, matched_vendor_risk_id: {type: integer}}}}}}
+        '400':
+          description: 'Invalid vendor ID'
+        '401':
+          description: Unauthorized
+        '404':
+          description: 'No vendor with this ID in the organization'
         '500':
           description: 'Internal server error'
       tags:

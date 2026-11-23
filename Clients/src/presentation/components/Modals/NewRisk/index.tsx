@@ -53,6 +53,8 @@ import { ExistingRisk } from "../../../../domain/interfaces/i.vendor";
 import { Framework } from "../../../../domain/types/Framework";
 import RiskLevel from "../../RiskLevel";
 import { radiusPx } from "../../../themes/palette";
+import { useTranslation } from "../../../../application/hooks/useTranslation";
+import { fill } from "../../../../i18n/fill";
 
 interface AddNewRiskProps {
   isOpen: boolean;
@@ -118,6 +120,7 @@ const AddNewRisk: React.FC<AddNewRiskProps> = ({
   onRestore,
 }) => {
   const can = useCanCheck();
+  const { t } = useTranslation();
   const canEdit = can("vendor.edit");
   // A deleted risk opens read-only; restoring it is the only change.
   const isDeleted = Boolean(existingRisk?.is_deleted);
@@ -375,7 +378,7 @@ const AddNewRisk: React.FC<AddNewRiskProps> = ({
         }
         setAlert({
           variant: "success",
-          body: "Vendor-Risk created successfully",
+          body: "Vendor risk created successfully",
         });
         setTimeout(() => setAlert(null), 3000);
         setIsOpen();
@@ -396,7 +399,9 @@ const AddNewRisk: React.FC<AddNewRiskProps> = ({
 
       setAlert({
         variant: "error",
-        body: `An error occurred: ${(error as Error).message || "Please try again."}`,
+        body: fill(t("An error occurred: {message}"), {
+          message: (error as Error).message || t("Please try again."),
+        }),
       });
 
       setTimeout(() => setAlert(null), 3000);
@@ -439,7 +444,7 @@ const AddNewRisk: React.FC<AddNewRiskProps> = ({
         }
         setAlert({
           variant: "success",
-          body: "Vendor-Risk updated successfully",
+          body: "Vendor risk updated successfully",
         });
         setTimeout(() => setAlert(null), 3000);
         setIsOpen();
@@ -460,7 +465,9 @@ const AddNewRisk: React.FC<AddNewRiskProps> = ({
 
       setAlert({
         variant: "error",
-        body: `An error occurred: ${(error as Error).message || "Please try again."}`,
+        body: fill(t("An error occurred: {message}"), {
+          message: (error as Error).message || t("Please try again."),
+        }),
       });
 
       setTimeout(() => setAlert(null), 3000);
@@ -484,10 +491,10 @@ const AddNewRisk: React.FC<AddNewRiskProps> = ({
   );
 
   const risksPanel = (
-    <Stack spacing={6}>
-      <Stack direction="row" spacing={6}>
-        <Stack flex={1} spacing={6}>
-          <Stack direction="row" spacing={6}>
+    <Stack spacing="12px">
+      <Stack direction="row" spacing="12px">
+        <Stack flex={1} spacing="12px">
+          <Stack direction="row" spacing="12px">
             <Box flex={1}>
               <Select
                 items={VENDOR_OPTIONS}
@@ -538,7 +545,7 @@ const AddNewRisk: React.FC<AddNewRiskProps> = ({
             />
           </Box>
         </Stack>
-        <Stack flex={1} spacing={6}>
+        <Stack flex={1} spacing="12px">
           <Box>
             <Field
               id="vendor-risk-action-plan-input"
@@ -576,10 +583,10 @@ const AddNewRisk: React.FC<AddNewRiskProps> = ({
 
       {/* Applicable Frameworks */}
       <Stack>
-        <Typography fontWeight={600} fontSize={16} mb={2}>
+        <Typography fontWeight={600} fontSize={16} mb="4px">
           Applicable frameworks
         </Typography>
-        <Typography fontSize={13} color="text.secondary" mb={2}>
+        <Typography fontSize={13} color="text.secondary" mb="4px">
           Select the compliance frameworks this vendor risk applies to.
         </Typography>
         <Autocomplete
@@ -636,16 +643,16 @@ const AddNewRisk: React.FC<AddNewRiskProps> = ({
       </Stack>
 
       <Stack>
-        <Divider sx={{ mb: 4 }} />
+        <Divider sx={{ mb: "8px" }} />
         <Box>
-          <Typography fontWeight={600} fontSize={16} mb={2}>
+          <Typography fontWeight={600} fontSize={16} mb="4px">
             Calculate risk level
           </Typography>
-          <Typography fontSize={13} color="text.secondary" mb={4}>
+          <Typography fontSize={13} color="text.secondary" mb="8px">
             The risk level is a weighted score: likelihood plus three times severity, so severity
             counts more. Pick a likelihood and a severity and the level follows from the score.
           </Typography>
-          <Stack direction="row" spacing={6}>
+          <Stack direction="row" spacing="12px">
             <RiskLevel
               likelihood={Number(values.likelihood) || 1}
               riskSeverity={Number(values.risk_severity) || 1}
@@ -705,7 +712,7 @@ const AddNewRisk: React.FC<AddNewRiskProps> = ({
         maxWidth="1000px"
       >
         <TabContext value={activeTab}>
-          <Box sx={{ marginBottom: 3 }}>
+          <Box sx={{ marginBottom: "6px" }}>
             <TabBar
               tabs={
                 existingRisk?.id

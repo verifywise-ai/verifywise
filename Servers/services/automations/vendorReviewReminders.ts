@@ -161,6 +161,7 @@ export async function sendVendorReviewDateNotification(): Promise<void> {
                     id: vendor.id!,
                     name: vendor.vendor_name,
                     reviewDate: formatVendorReviewDate(vendor.review_date),
+                    reviewDay: vendor.review_date,
                     riskLevel:
                       vendor.risk_score != null ? `Score: ${vendor.risk_score}` : "Not assessed",
                     lastReviewDate: undefined,

@@ -36,7 +36,7 @@ vendors
 ### Vendor Projects Table
 
 ```
-vendor_projects (junction table)
+vendors_projects (junction table)
 ├── vendor_id (PK, FK → vendors)
 ├── project_id (PK, FK → projects)
 └── is_demo
@@ -44,14 +44,16 @@ vendor_projects (junction table)
 
 ### Vendor Risks Table
 
+The table is `vendorrisks` (the queries are raw SQL; the Sequelize model's
+`tableName: "vendor_risks"` is not what they read).
+
 ```
-vendor_risks
+vendorrisks
 ├── id (PK)
 ├── vendor_id (FK → vendors)
 ├── order_no
 ├── risk_description
 ├── impact_description
-├── impact (ENUM)
 ├── likelihood (ENUM)
 ├── risk_severity (ENUM)
 ├── action_plan
@@ -123,18 +125,6 @@ enum RegulatoryExposure {
   EU_AI_ACT = "EU AI act"
   CCPA = "CCPA"
   OTHER = "Other"
-}
-```
-
-### Risk Impact
-
-```typescript
-enum Impact {
-  NEGLIGIBLE = "Negligible"
-  MINOR = "Minor"
-  MODERATE = "Moderate"
-  MAJOR = "Major"
-  CRITICAL = "Critical"
 }
 ```
 
@@ -371,25 +361,20 @@ the system.
 
 ## Vendor Risk Management
 
-### Risk Lifecycle
-
-```
-[Created] → [Assessed] → [Mitigated]
-                 ↓
-           [Accepted]
-```
+A vendor risk has no status or lifecycle column: it is active or soft-deleted
+(see [Soft Delete](#soft-delete)).
 
 ### Risk Properties
 
 | Property | Description |
 |----------|-------------|
-| risk_description | What is the risk |
-| impact_description | How it affects organization |
-| impact | Severity level |
-| likelihood | Probability |
-| risk_severity | Combined assessment |
+| risk_description | What the risk is (required on create) |
+| impact_description | How it affects the organization |
+| likelihood | `Rare` … `Almost certain` (required on create) |
+| risk_severity | `Negligible` … `Catastrophic` (required on create) |
+| risk_level | Computed by the server from likelihood and severity (see [Vendor risk level](#vendor-risk-level)) |
 | action_plan | Mitigation strategy |
-| action_owner | Responsible user |
+| action_owner | Responsible user, a member of the organization |
 
 Removing a user from an organization sets `action_owner` to NULL on that
 organization's vendor risks they own (and `assignee` / `reviewer` on its
@@ -556,7 +541,9 @@ written; the owner decides from the Linked risks tab.
 
 ## Vendor Risk Suggestions
 
-`GET /vendors/:id/riskSuggestions` is a **read-only report**. For one vendor it reads the four
+`GET /vendors/:id/riskSuggestions` is a **read-only report** (any signed-in member; 400 for an
+id that isn't a positive integer, 404 when the organization has no such vendor). No screen
+calls it yet. For one vendor it reads the four
 questionnaire columns (`data_sensitivity`, `business_criticality`, `past_issues`,
 `regulatory_exposure`), derives the vendor risks those answers imply, and returns them with the
 field and raw value that produced each (`reasons`) and a derived `risk_level`. It **writes
@@ -658,23 +645,23 @@ the last page with rows when the list shrinks.
 
 | Component | Purpose |
 |-----------|---------|
-| `AddNewVendor` | Create/edit vendor modal. The review date starts empty and can be cleared; a failed save keeps the form as typed |
-| `AddNewRisk` | Create/edit risk modal (Risk details, Custom fields, Activity, Linked risks); `initialTab="linked-risks"` opens an existing risk on its links. With no vendor it won't save ("Add a vendor first…"); `vendor_id` and `action_owner` are sent as numbers; a failed save keeps the form |
+| `AddNewVendor` (`components/Modals/NewVendor/`) | Create/edit vendor modal. The review date starts empty and can be cleared; a failed save keeps the form as typed |
+| `AddNewRisk` (`components/Modals/NewRisk/`) | Create/edit risk modal (Risk details, Custom fields, Activity, Linked risks); `initialTab="linked-risks"` opens an existing risk on its links. With no vendor it won't save ("Add a vendor first…"); `vendor_id` and `action_owner` are sent as numbers; a failed save keeps the form |
 | `VendorRiskLinksPanel` | The Linked risks tab: child project risks and related vendor risks, plus Suggest children and the related scan |
 | `RelateVendorRiskForm` | Picker that relates another vendor risk to this one |
 | `VendorRiskInsights` | Heat map, blast radius, duplicate and coverage sections above the risks table |
-| `RiskTable` | Display vendor risks, including the Inherited by column |
-| `TableWithPlaceholder` | Main vendor list |
-| `FilterBy` | Dynamic filtering |
+| `RiskTable` (`components/Table/RisksTable/`) | Display vendor risks, including the Inherited by column |
+| `TableWithPlaceholder` (`components/Table/WithPlaceholder/`) | Main vendor list |
+| `FilterBy` (`components/Table/FilterBy.tsx`, with `useFilterBy`) | Dynamic filtering |
 
 ### Hooks
 
 | Hook | Purpose |
 |------|---------|
-| `useVendors()` | Fetch vendors |
-| `useDeleteVendor()` | Delete mutation |
-| `useVendorRisks()` | Fetch risks |
-| `useDeleteVendorRisk()` | Delete risk mutation |
+| `useVendors()` (`hooks/useVendors.ts`) | Fetch vendors |
+| `useDeleteVendor()` (`hooks/useVendors.ts`) | Delete mutation |
+| `useVendorRisks()` (`hooks/useVendorRisks.tsx`, default export) | Fetch risks, distinct by risk id |
+| `useDeleteVendorRisk()` (`hooks/useVendorRiskMutations.ts`) | Delete risk mutation; save and restore are there too |
 | `useVendorExposure()`, `useVendorDuplicateCandidates()`, `useVendorFrameworkCoverage()` | Vendor risk insight reports (`hooks/useRiskLinks.ts`) |
 | `useSuggestVendorRiskHierarchy(id)` | Suggest children on one vendor risk |
 | `useRecomputeVendorRiskLinks()` | Scan every vendor risk for related vendor risks (Admin) |
@@ -697,7 +684,10 @@ notice per vendor per run. The vendor form stores the picked day at noon UTC
 (`calendarDayAtNoonUtc`), so its UTC day is the day the user picked; a vendor
 without a review date gets no reminder; vendors
 saved before that may read a day early for users east of UTC until next saved.
-The job is scheduled at midnight UTC (`tz: "UTC"`). See
+The job is scheduled at midnight UTC (`tz: "UTC"`). The in-app notice's
+title and message and the email subject are i18n keys
+(`notifyVendorReviewDue`, `services/inAppNotification.service.ts`), so they
+reach the recipient in their language; the email body stays English. See
 [Automations → Vendor Review Notifications](../infrastructure/automations.md#vendor-review-notifications).
 
 ## Validation Rules
@@ -712,10 +702,13 @@ The job is scheduled at midnight UTC (`tz: "UTC"`). See
 
 ### Demo Vendors
 
-Vendors with `is_demo=true`:
-- Cannot be modified
-- Used for sample data
-- Throws error on modification attempt
+Vendors with `is_demo=true` are sample data, written by the demo seed
+(`infrastructure.layer/driver/autoDriver.driver.ts`) through the query layer.
+A create through the service that sends `is_demo: true` is refused
+(`canBeModified`, 403 "Demo vendors cannot be modified"), so the API can't
+make new demo vendors. Existing demo vendors and their risks can be edited
+and deleted like any other: that is deliberate, so an organization can work
+with the sample data it starts with.
 
 ## Key Files
 
@@ -744,9 +737,10 @@ Vendors with `is_demo=true`:
 |------|---------|
 | `pages/Vendors/index.tsx` | Main page |
 | `pages/Vendors/VendorRiskInsights/` | Heat map, blast radius, duplicates, coverage |
-| `components/AddNewVendor/` | Vendor form |
-| `hooks/useVendors.ts` | Data hook |
-| `repository/vendor.repository.ts` | API calls |
+| `components/Modals/NewVendor/` | Vendor form |
+| `components/Modals/NewRisk/` | Vendor risk form |
+| `hooks/useVendors.ts`, `hooks/useVendorRisks.tsx`, `hooks/useVendorRiskMutations.ts` | Data hooks |
+| `repository/vendor.repository.ts`, `repository/vendorRisk.repository.ts` | API calls |
 
 ## Related Documentation
 

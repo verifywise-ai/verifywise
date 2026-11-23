@@ -14,7 +14,7 @@
  */
 
 import TabContext from "@mui/lab/TabContext";
-import { Box, Stack, Typography, useTheme } from "@mui/material";
+import { Box, Stack, Typography, alpha, useTheme } from "@mui/material";
 import Field from "../../Inputs/Field";
 import Select from "../../Inputs/Select";
 import DatePicker from "../../Inputs/Datepicker";
@@ -55,6 +55,9 @@ import {
 } from "../../../../domain/utils/vendorScorecard.utils";
 import { radiusPx, palette as vwPalette } from "../../../themes/palette";
 import { translateKey } from "../../../../i18n/domTranslator";
+import { useTranslation } from "../../../../application/hooks/useTranslation";
+import { fill } from "../../../../i18n/fill";
+import { LazyFallback } from "../../../../application/utils/lazyRoute";
 
 const initialState = {
   vendorName: "",
@@ -110,8 +113,8 @@ const REGULATORY_EXPOSURE_OPTIONS = [
   { _id: RegulatoryExposure.HIPAA, name: "HIPAA (US)" },
   { _id: RegulatoryExposure.SOC2, name: "SOC 2" },
   { _id: RegulatoryExposure.ISO27001, name: "ISO 27001" },
-  { _id: RegulatoryExposure.EUAIAct, name: "EU AI act" },
-  { _id: RegulatoryExposure.CCPA, name: "CCPA (california)" },
+  { _id: RegulatoryExposure.EUAIAct, name: "EU AI Act" },
+  { _id: RegulatoryExposure.CCPA, name: "CCPA (California)" },
   { _id: RegulatoryExposure.Other, name: "Other" },
 ];
 
@@ -145,15 +148,16 @@ const AddNewVendor: React.FC<AddNewVendorProps> = ({
   onChange = () => {},
 }) => {
   const theme = useTheme();
+  const { t } = useTranslation();
   const [values, setValues] = useState(initialState);
   const validators = useMemo(
     () => ({
       vendorName: (v: unknown) => {
-        const r = checkStringValidation("Vendor Name", v as string, 1, 64);
+        const r = checkStringValidation("Vendor name", v as string, 1, 64);
         return r.accepted ? "" : r.message;
       },
       website: (v: unknown) => {
-        const r = checkStringValidation("Vendor Website", v as string, 1, 64);
+        const r = checkStringValidation("Vendor website", v as string, 1, 64);
         return r.accepted ? "" : r.message;
       },
       reviewResult: (v: unknown) => {
@@ -168,12 +172,12 @@ const AddNewVendor: React.FC<AddNewVendorProps> = ({
         return "";
       },
       vendorProvides: (v: unknown) => {
-        const r = checkStringValidation("Vendor Provides", v as string, 1, 256);
+        const r = checkStringValidation("Vendor provides", v as string, 1, 256);
         return r.accepted ? "" : r.message;
       },
       vendorContactPerson: (v: unknown) => {
         const r = checkStringValidation(
-          "Vendor Contact Person",
+          "Vendor contact person",
           v as string,
           1,
           64,
@@ -450,7 +454,9 @@ const AddNewVendor: React.FC<AddNewVendorProps> = ({
 
       setAlert({
         variant: "error",
-        body: `An error occurred: ${(error as Error).message || "Please try again."}`,
+        body: fill(t("An error occurred: {message}"), {
+          message: (error as Error).message || t("Please try again."),
+        }),
       });
 
       setTimeout(() => setAlert(null), 3000);
@@ -512,7 +518,9 @@ const AddNewVendor: React.FC<AddNewVendorProps> = ({
       });
       setAlert({
         variant: "error",
-        body: `An error occurred: ${(error as Error).message || "Please try again."}`,
+        body: fill(t("An error occurred: {message}"), {
+          message: (error as Error).message || t("Please try again."),
+        }),
       });
 
       setTimeout(() => setAlert(null), 3000);
@@ -523,8 +531,8 @@ const AddNewVendor: React.FC<AddNewVendorProps> = ({
   };
 
   const vendorDetailsPanel = (
-    <Stack spacing={6}>
-      <Stack direction={"row"} spacing={6}>
+    <Stack spacing="12px">
+      <Stack direction={"row"} spacing="12px">
         <Field // vendorName
           label="Vendor name"
           width={220}
@@ -590,7 +598,7 @@ const AddNewVendor: React.FC<AddNewVendorProps> = ({
           }}
         />
       </Stack>
-      <Stack direction={"row"} spacing={6}>
+      <Stack direction={"row"} spacing="12px">
         <Field // website
           label="Website"
           width={220}
@@ -639,7 +647,7 @@ const AddNewVendor: React.FC<AddNewVendorProps> = ({
         placeholder="Describe the products or services this vendor delivers (e.g., cloud hosting, legal advisory, AI APIs)."
         rows={2}
       />
-      <Stack direction={"row"} spacing={6}>
+      <Stack direction={"row"} spacing="12px">
         <Select // reviewStatus
           items={REVIEW_STATUS_OPTIONS}
           label="Review status"
@@ -694,7 +702,7 @@ const AddNewVendor: React.FC<AddNewVendorProps> = ({
       />
 
       {/* Vendor Scorecard Section */}
-      <Stack spacing={2} sx={{ width: 686 }}>
+      <Stack spacing="4px" sx={{ width: 686 }}>
         <Box
           sx={{
             "display": "flex",
@@ -711,32 +719,31 @@ const AddNewVendor: React.FC<AddNewVendorProps> = ({
           }}
           onClick={() => setIsScorecardExpanded(!isScorecardExpanded)}
         >
-          <Box sx={{ display: "flex", alignItems: "center", gap: 2, flex: 1 }}>
+          <Box sx={{ display: "flex", alignItems: "center", gap: "4px", flex: 1 }}>
             <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
               Vendor scorecard (advanced)
             </Typography>
             <EnhancedTooltip
-              title="Vendor Risk Score Calculation"
+              title="Vendor risk score calculation"
               content={
                 <>
                   <Typography
                     variant="body2"
                     sx={{
-                      color: "rgba(255, 255, 255, 0.85)",
+                      color: alpha(vwPalette.text.inverse, 0.85),
                       fontSize: "13px",
                       lineHeight: 1.6,
-                      mb: 2,
+                      mb: "4px",
                     }}
                   >
                     The risk score is calculated using a weighted formula:
                   </Typography>
                   <Box
                     sx={{
-                      backgroundColor: "rgba(255, 255, 255, 0.05)",
+                      backgroundColor: alpha(vwPalette.text.inverse, 0.05),
                       borderRadius: radiusPx.sm,
                       padding: "12px",
-                      mb: 2,
-                      fontFamily: "monospace",
+                      mb: "4px",
                     }}
                   >
                     <Typography
@@ -746,17 +753,17 @@ const AddNewVendor: React.FC<AddNewVendorProps> = ({
                         lineHeight: 1.8,
                       }}
                     >
-                      Risk Score = <br />
-                      &nbsp;&nbsp;(Data Sensitivity × 30%) +<br />
-                      &nbsp;&nbsp;(Business Criticality × 30%) +<br />
-                      &nbsp;&nbsp;(Past Issues × 20%) +<br />
-                      &nbsp;&nbsp;(Regulatory Exposure × 20%)
+                      Risk score = <br />
+                      &nbsp;&nbsp;(Data sensitivity × 30%) +<br />
+                      &nbsp;&nbsp;(Business criticality × 30%) +<br />
+                      &nbsp;&nbsp;(Past issues × 20%) +<br />
+                      &nbsp;&nbsp;(Regulatory exposure × 20%)
                     </Typography>
                   </Box>
                   <Typography
                     variant="body2"
                     sx={{
-                      color: "rgba(255, 255, 255, 0.7)",
+                      color: alpha(vwPalette.text.inverse, 0.7),
                       fontSize: "12px",
                       lineHeight: 1.5,
                     }}
@@ -776,7 +783,7 @@ const AddNewVendor: React.FC<AddNewVendorProps> = ({
                   "cursor": "pointer",
                   "textDecoration": "underline",
                   "ml": "auto",
-                  "mr": 2,
+                  "mr": "4px",
                   "&:hover": {
                     color: theme.palette.primary.dark,
                   },
@@ -803,10 +810,10 @@ const AddNewVendor: React.FC<AddNewVendorProps> = ({
                     sx={{
                       display: "flex",
                       alignItems: "center",
-                      gap: 1,
+                      gap: "2px",
                       padding: "4px 8px",
                       borderRadius: radiusPx.sm,
-                      backgroundColor: `${riskColor}20`,
+                      backgroundColor: alpha(riskColor, 0.125),
                       border: `1px solid ${riskColor}`,
                       minWidth: "50px",
                     }}
@@ -837,8 +844,8 @@ const AddNewVendor: React.FC<AddNewVendorProps> = ({
         </Box>
 
         {isScorecardExpanded && (
-          <Stack spacing={6}>
-            <Stack direction="row" spacing={6}>
+          <Stack spacing="12px">
+            <Stack direction="row" spacing="12px">
               <Box sx={{ flex: 1 }}>
                 <Select
                   items={DATA_SENSITIVITY_OPTIONS}
@@ -868,7 +875,7 @@ const AddNewVendor: React.FC<AddNewVendorProps> = ({
                 />
               </Box>
             </Stack>
-            <Stack direction="row" spacing={6}>
+            <Stack direction="row" spacing="12px">
               <Box sx={{ flex: 1 }}>
                 <Select
                   items={PAST_ISSUES_OPTIONS}
@@ -907,7 +914,7 @@ const AddNewVendor: React.FC<AddNewVendorProps> = ({
   return (
     <Stack>
       {alert && (
-        <Suspense fallback={<div>Loading...</div>}>
+        <Suspense fallback={<LazyFallback />}>
           <Alert
             variant={alert.variant}
             title={alert.title}
@@ -943,7 +950,7 @@ const AddNewVendor: React.FC<AddNewVendorProps> = ({
         maxWidth="734px"
       >
         <TabContext value={activeTab}>
-          <Box sx={{ marginBottom: 3 }}>
+          <Box sx={{ marginBottom: "6px" }}>
             <TabBar
               tabs={
                 existingVendor
