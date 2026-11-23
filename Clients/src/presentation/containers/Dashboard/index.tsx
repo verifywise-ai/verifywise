@@ -1,8 +1,7 @@
 import { Stack, Typography, Box } from "@mui/material";
 import "./index.css";
 import { Outlet, useLocation } from "react-router";
-import { useContext, useEffect, FC, useState } from "react";
-import { VerifyWiseContext } from "../../../application/contexts/VerifyWise.context";
+import { useEffect, FC, useState } from "react";
 import { EvalsSidebarProvider } from "../../../application/contexts/EvalsSidebar.context";
 import { AIDetectionSidebarProvider } from "../../../application/contexts/AIDetectionSidebar.context";
 import { ShadowAISidebarProvider } from "../../../application/contexts/ShadowAISidebar.context";
@@ -22,6 +21,7 @@ import type { DemoDataLoaderStatus } from "../../components/DemoDataLoader";
 import Alert from "../../components/Alert";
 import { AlertState } from "../../../application/interfaces/appStates";
 import { useDashboard } from "../../../application/hooks/useDashboard";
+import { useProjectsCache } from "../../../application/hooks/useProjectsCache";
 import { useActiveModule } from "../../../application/hooks/useActiveModule";
 import AppSwitcher from "../../components/AppSwitcher";
 import ChangeNotice from "../../components/ChangeNotice";
@@ -36,7 +36,7 @@ interface DashboardProps {
 }
 
 const Dashboard: FC<DashboardProps> = ({ reloadTrigger }) => {
-  const { setDashboardValues, setProjects } = useContext(VerifyWiseContext);
+  const { setProjectsCache } = useProjectsCache();
   const location = useLocation();
   const { activeModule, setActiveModule } = useActiveModule();
   const { userRoleName, isSuperAdmin, organizationId } = useAuth();
@@ -80,19 +80,14 @@ const Dashboard: FC<DashboardProps> = ({ reloadTrigger }) => {
       try {
         const response = await getAllProjects();
         if (!response?.data) return;
-        setProjects(response.data);
-        setDashboardValues((prevValues: any) => ({
-          ...prevValues,
-          projects: response.data,
-          selectedProjectId: response.data[0]?.id || "", // Set the first project ID as the default selected one
-        }));
+        setProjectsCache(response.data);
       } catch (error) {
         console.error("Error fetching projects:", error);
       }
     };
 
     fetchProjects();
-  }, [setDashboardValues, reloadTrigger, location.pathname, refreshProjectsFlag]);
+  }, [setProjectsCache, reloadTrigger, location.pathname, refreshProjectsFlag]);
 
   // Handle create demo data. The overlay shows progress while the request
   // runs, then reloads from its "Explore the demo" button.
@@ -156,12 +151,7 @@ const Dashboard: FC<DashboardProps> = ({ reloadTrigger }) => {
           fetchDashboard(),
           getAllProjects({ forceFresh: true }).then((projectsResponse) => {
             if (projectsResponse?.data) {
-              setProjects(projectsResponse.data);
-              setDashboardValues((prevValues: any) => ({
-                ...prevValues,
-                projects: projectsResponse.data,
-                selectedProjectId: projectsResponse.data[0]?.id || "",
-              }));
+              setProjectsCache(projectsResponse.data);
             }
           }),
         ]);

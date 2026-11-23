@@ -26,18 +26,6 @@ vi.mock("../../../../application/hooks/useDashboard", () => ({
   }),
 }));
 
-vi.mock("../../../../application/contexts/VerifyWise.context", async () => {
-  const React = await import("react");
-  const contextValue = {
-    setDashboardValues: vi.fn(),
-    setProjects: vi.fn(),
-    dashboardValues: {},
-    projects: [],
-  };
-  const VerifyWiseContext = React.createContext(contextValue);
-  return { VerifyWiseContext };
-});
-
 vi.mock("../../../../application/repository/project.repository", () => ({
   getAllProjects: vi.fn().mockResolvedValue({ data: [] }),
 }));
