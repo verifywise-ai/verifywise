@@ -23,21 +23,12 @@ export const defaultRules: RuleDefinition[] = [
 
   {
     name: "auditor-write-block",
-    description: "Auditors cannot change governance records",
+    description: "Auditors cannot perform write operations",
     priority: 1000,
     conditions: {
       all: [
         { fact: "user_role", operator: "equal", value: "Auditor" },
         { fact: "operation_type", operator: "notEqual", value: "read" },
-        // Only the record types an Auditor holds no write permission for.
-        // Notifications, approval steps assigned to them, task status, notes
-        // and other "general" tools stay open: each tool checks its own
-        // permission for the user who asked.
-        {
-          fact: "tool_category",
-          operator: "in",
-          value: ["admin", "policy", "risk", "vendor", "incident", "model", "training", "evidence"],
-        },
       ],
     },
     eventType: "auto-reject",

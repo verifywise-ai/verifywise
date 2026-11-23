@@ -13,7 +13,6 @@ import { writeToolExecutors } from "../confirmation/createWriteTool";
 import type { ConfirmationRequest, ConfirmationToolResult } from "../confirmation/types";
 import type { SubmitForApprovalConfig, ApprovalContext, StateHistoryEntry } from "./types";
 import { sequelize } from "../../database/db";
-import { getUserRoleInOrganization } from "../../utils/userPermission.utils";
 import { QueryTypes } from "sequelize";
 import { v4 as uuidv4 } from "uuid";
 import logger, { logStructured } from "../../utils/logger/fileLogger";
@@ -219,15 +218,10 @@ async function submitForApprovalImpl(
 
   if (!noExecutor) {
     try {
-      // The requester's current role in this organization, so role rules
-      // (auditor-write-block, custom rules on user_role) match. A user whose
-      // role can't be resolved matches no role.
-      const requesterRole = await getUserRoleInOrganization(config.organizationId, config.userId);
       const facts = deriveFacts({
         toolName: config.toolName,
         riskLevel: config.riskLevel,
         inputParams: config.inputParams,
-        userRole: requesterRole?.name ?? "Unknown",
       });
       const ruleResult = await evaluateRules(config.organizationId, facts);
       ruleDecision = ruleResult.decision;
