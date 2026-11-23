@@ -552,7 +552,7 @@ export const VALIDATION_PATTERNS = {
   // .../validations/stringValidation.ts). Used by validateVendorContactPerson,
   // which no REST route calls: the API only requires a non-empty contact
   // person (assertVendorRequestBody), so the form is where the rule applies.
-  PERSON_NAME: /^\p{L}[\p{L}\p{M} '’.·\u200C\u200D-]*$/u,
+  PERSON_NAME: /^\p{L}(?:[\p{L}\p{M} '’.·-]|\u200C|\u200D)*$/u,
   NUMBERS_ONLY: /^[0-9]+$/,
 } as const;
 
