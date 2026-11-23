@@ -100,6 +100,13 @@ describe("the rule engine sees the requester's role", () => {
     "agent_create_automation",
     "agent_send_invitation",
     "agent_approve_policy_review",
+    // Not checked against the requester yet, so not open to Auditors.
+    "agent_update_task_status",
+    "agent_save_entity_graph_view",
+    "agent_update_note",
+    "agent_delete_note",
+    "agent_submit_pmm_responses",
+    "agent_flag_pmm_concern",
   ])("refuses an Auditor's %s, which is not on the allowlist", async (tool) => {
     mockRole.mockResolvedValue({ id: 4, name: "Auditor", organizationId: null });
     writeToolExecutors.set(tool, executor);
