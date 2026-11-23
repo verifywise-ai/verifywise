@@ -16,7 +16,7 @@
  */
 import type { ReportData } from "../../../domain.layer/interfaces/i.reportGeneration";
 import { utcDay } from "../dateUtils";
-import { e23GroupCounts } from "./e23Gap";
+import { e23GroupCounts, e23RequirementTotal } from "./e23Gap";
 import type { AnalysisSectionKey } from "./registry";
 
 export type GuardReason =
@@ -62,10 +62,13 @@ export interface GuardRejection extends GuardViolation {
  * Claims the report must never make (spec §3: a self-assessment, never a
  * compliance opinion or OSFI's view). A `negatable` pattern is allowed when a
  * negation governs it: a "not", "no", "never", "nor", "without", "cannot" or
- * "n't" earlier in the same clause ("This report does not state that any
+ * "n't" earlier in the same clause, or "says nothing about" right before it
+ * ("it says nothing about how OSFI would view"; "nothing" and "none" alone
+ * govern nothing: "Nothing is overdue and every requirement is fulfilled") ("This report does not state that any
  * requirement is fulfilled"). A clause ends at ; : or a dash, and at a comma
  * followed by a connective (and, but, so, while, which, therefore ...), so
- * "No rule fired, so the institution complies" is still caught.
+ * "No rule fired, so the institution complies" is still caught, while "it says
+ * nothing about how OSFI would view the institution" is not.
  */
 export const COMPLIANCE_CLAIM_PATTERNS: Array<{
   pattern: RegExp;
@@ -126,6 +129,8 @@ const MISREADING_PATTERNS: Array<{ pattern: RegExp; label: string }> = [
 const CLAUSE_BOUNDARY =
   /[;:—–]|,\s+(?:and|but|so|while|whereas|although|though|yet|which|therefore|hence|thus)\b/gi;
 const NEGATION = /\b(?:not|no|never|neither|nor|without|cannot)\b|n't\b/i;
+/** "says nothing about (how|what|whether)" ending right where the claim starts. */
+const NOTHING_ABOUT = /\bnothing\s+about(?:\s+(?:how|what|whether))?\s+$/i;
 
 /** True when a negation earlier in the same clause governs the match at `at`. */
 function negated(sentence: string, at: number): boolean {
@@ -133,7 +138,8 @@ function negated(sentence: string, at: number): boolean {
   for (const b of sentence.slice(0, at).matchAll(CLAUSE_BOUNDARY)) {
     start = b.index! + b[0].length;
   }
-  return NEGATION.test(sentence.slice(start, at));
+  const clause = sentence.slice(start, at);
+  return NEGATION.test(clause) || NOTHING_ABOUT.test(clause);
 }
 
 function complianceClaim(sentence: string): string | null {
@@ -238,15 +244,23 @@ const PAIR =
 const GROUP_COUNT =
   /(?<![A-Za-z0-9_.]|[A-Za-z]-)(\d+)\s+(?:E-23\s+)?(?:requirement\s+)?(?:groups|framework\s+components)\b/gi;
 
+/** A sentence about one section: "Section B", or a group code ("B.1"). */
+const ONE_SECTION = /\bSection [A-Z]\b|\b[A-Z]\.\d+\b/;
+
+/** Words that make a decimal a rate ("0.6 per model", "1 across 5"). */
+const RATE = /\b(?:per|across|each|average)\b/i;
+
 /** "as of <date>" / "as at <date>": a position date. */
 const AS_AT = /\bas\s+(?:of|at)\s*$/i;
 
 /**
  * Period figures (activity counts) and the monitoring window they do not
  * belong to. A sentence that names both is fine when it also ties the figure
- * to the period ("... in the last 90 days, and 0 breaches in the period");
- * only one that puts a period figure in the window with no period in sight is
- * an error.
+ * to the period, by the word ("... in the last 90 days, and 0 breaches in the
+ * period") or by both the period's start and end dates ("... between
+ * 2026-07-01 and 2026-09-30"); only one that puts a period figure in the
+ * window with no period in sight is an error. One of the two dates, or any
+ * other date, does not name the period ("in the last 90 days to 2026-09-30").
  */
 const ACTIVITY =
   /\bsign-?offs?\b|\bsigned off\b|\bfindings? (?:opened|closed)\b|\bbreach|\brevalidation events?\b/i;
@@ -257,7 +271,7 @@ const PERIOD = /\bperiod\b/i;
  * What a figure counts, read off the words after it ("13 models", "4 of the
  * 13 validations", "the other 9 validated models"). Used only to keep a
  * percentage to a ratio of like with like: 6 groups over 13 models is no
- * percentage of anything.
+ * percentage of anything. The report totals carry their kind too.
  */
 const KIND_WORDS: Array<[RegExp, string]> = [
   [/^models?$/, "models"],
@@ -315,6 +329,13 @@ export interface GuardContext {
   asAt: string | null;
   /** Group counts the input states: the totals, and every "N groups" it prints. */
   groupCounts: Set<number>;
+  /**
+   * The report's totals, each with its kind (requirements, models in scope,
+   * groups): a percentage may be a cited figure over one of them.
+   */
+  totals: Array<{ value: number; kind: string }>;
+  /** The reporting period's start and end dates (ISO); empty unless both are set. */
+  periodDates: string[];
 }
 
 export function guardContext(input: string, rd: ReportData): GuardContext {
@@ -325,6 +346,12 @@ export function guardContext(input: string, rd: ReportData): GuardContext {
   const dayGaps = new Set<number>();
   days.forEach((a) => days.forEach((b) => a > b && dayGaps.add(Math.round(a - b))));
   const stated = [...rest.matchAll(/(\d+)\s+groups?\b/g)].map((m) => Number(m[1]));
+  const params = rd.metadata?.reportParameters;
+  const totals = [
+    { value: e23RequirementTotal(rd), kind: "requirements" },
+    { value: Number(rd.sections?.mrmFleet?.totals?.models) || 0, kind: "models" },
+    { value: groups.total, kind: "groups" },
+  ].filter((t) => t.value > 0);
   return {
     numbers: numbersOf(rest),
     percents: new Set(
@@ -337,6 +364,11 @@ export function guardContext(input: string, rd: ReportData): GuardContext {
     dayGaps,
     asAt: utcDay(rd.metadata?.generatedAt) ?? null,
     groupCounts: new Set([groups.total, groups.checked, groups.selfAssessmentOnly, ...stated]),
+    totals,
+    periodDates:
+      params?.periodStart && params?.periodEnd
+        ? [String(params.periodStart), String(params.periodEnd)]
+        : [],
   };
 }
 
@@ -376,13 +408,31 @@ const sameKind = (a: Figure, b: Figure): boolean => !a.kind || !b.kind || a.kind
 /**
  * A figure the input does not hold may still be read off it in one step from
  * two grounded figures the same item cites: a difference ("13 models, 4
- * signed off in the period, so the other 9") or a sum. Operands come from the
- * item, never from the whole input, or almost any number would pass.
+ * signed off in the period, so the other 9"), a sum, or a rate: in a sentence
+ * that says "per", "across", "each" or "average", a figure written with a
+ * decimal point may be a part over its whole at the written precision ("3
+ * findings across 5 models, or 0.6 per model"; 1/3 as "0.33"). Operands come
+ * from the item, never from the whole input, or almost any number would pass;
+ * with several figures in an item, the rate words and part <= whole keep
+ * the quotients few.
  */
-function derivable(n: number, item: Figure[]): boolean {
+function derivable(raw: string, written: string, item: Figure[], rate: boolean): boolean {
+  const n = Number(raw);
+  // Places as written ("0.60" has two), so the quotient rounds as the prose did.
+  const places = rate && /^\.\d+$/.test(written) ? written.length - 1 : null;
+  const scale = 10 ** (places ?? 0);
   const g = item.filter((f) => f.grounded);
   return g.some((a, i) =>
-    g.some((b, j) => i !== j && (a.value - b.value === n || (i < j && a.value + b.value === n))),
+    g.some(
+      (b, j) =>
+        i !== j &&
+        (a.value - b.value === n ||
+          (i < j && a.value + b.value === n) ||
+          (places !== null &&
+            b.value > 0 &&
+            a.value <= b.value &&
+            Math.round((a.value / b.value) * scale) === Math.round(n * scale))),
+    ),
   );
 }
 
@@ -414,12 +464,19 @@ export function checkSentence(
       add("asAt", `the position is as at ${ctx.asAt}, not ${d.iso}`);
     }
   }
-  if (MONITORING_WINDOW.test(sentence) && ACTIVITY.test(sentence) && !PERIOD.test(sentence)) {
+  const namesPeriod =
+    PERIOD.test(sentence) ||
+    (ctx.periodDates.length > 0 && ctx.periodDates.every((p) => dates.some((d) => d.iso === p)));
+  if (MONITORING_WINDOW.test(sentence) && ACTIVITY.test(sentence) && !namesPeriod) {
     add("period", "activity counts belong to the reporting period, not to the monitoring window");
   }
 
+  // 0 groups in one section ("Section B ... has 0 groups checked") cannot be
+  // an invented total; "0 requirement groups" of the whole report can be.
+  const oneSection = ONE_SECTION.test(sentence);
   for (const m of rest.matchAll(GROUP_COUNT)) {
-    if (!ctx.groupCounts.has(Number(m[1]))) {
+    const n = Number(m[1]);
+    if (!(n === 0 && oneSection) && !ctx.groupCounts.has(n)) {
       add("groupCount", `"${m[0]}" does not match the group counts the input states`);
     }
   }
@@ -440,31 +497,28 @@ export function checkSentence(
       if (ctx.percents.has(raw)) continue;
       // The ratio of two grounded figures of the same kind the item cites
       // ("3 opened and 2 closed ... 67%"; "26 of the 42 requirements ... 31% of
-      // all 83 requirements"). Not any two numbers in the input: with dozens
-      // of small counts there, nearly every percentage is some ratio (46 is
-      // 6/13, groups over models), which would let a wrong figure through.
+      // all 83 requirements"), or of one of them over a report total of the
+      // same kind, both kinds known ("46 requirements or 55.4 percent", of the
+      // 83). Not any two numbers in the input: with dozens of small counts
+      // there, nearly every percentage is some ratio (46 is 6/13, groups over
+      // models), which would let a wrong figure through.
       const g = item.filter((f) => f.grounded);
-      const ratio = g.some((a, i) =>
-        g.some(
-          (b, j) =>
-            i !== j &&
-            b.value > 0 &&
-            a.value <= b.value &&
-            sameKind(a, b) &&
-            Math.abs((a.value / b.value) * 100 - value) <= 0.5,
-        ),
-      );
+      const near = (a: number, b: number) =>
+        b > 0 && a <= b && Math.abs((a / b) * 100 - value) <= 0.5;
+      const ratio =
+        g.some((a, i) => g.some((b, j) => i !== j && sameKind(a, b) && near(a.value, b.value))) ||
+        g.some((a) => ctx.totals.some((t) => a.kind === t.kind && near(a.value, t.value)));
       if (!ratio) {
         add(
           "percentage",
-          `${m[0].trim()} is neither in the input nor the ratio of two like figures this item cites`,
+          `${m[0].trim()} is neither in the input nor the ratio of two like figures this item cites, or of one over a report total of its kind`,
         );
       }
       continue;
     }
     if (ctx.numbers.has(raw)) continue;
     if (kindAfter(rest, m.index! + m[0].length) === "days" && ctx.dayGaps.has(value)) continue;
-    if (derivable(value, item)) continue;
+    if (derivable(raw, m[2], item, RATE.test(sentence))) continue;
     add("number", `${raw} is not in the input and does not follow in one step from it`);
   }
   return out;
@@ -618,5 +672,5 @@ export function guardDirective(violations: GuardViolation[]): string {
 ## UNSUPPORTED STATEMENTS DETECTED
 Your previous response broke the rules of this report in these sentences:
 ${[...new Set(lines)].join("\n")}
-Answer again from scratch. This report is a self-assessment: never state or imply compliance, fulfilment, alignment with or satisfaction of E-23 or OSFI's expectations, or what OSFI's view is. Use only figures and dates that appear in the input, or follow from two of them in one step; a percentage must be in the input or the ratio of two like figures you cite in the same paragraph or finding. Write field names as words, never as identifiers. If the data cannot support a statement, leave it out.`;
+Answer again from scratch. This report is a self-assessment: never state or imply compliance, fulfilment, alignment with or satisfaction of E-23 or OSFI's expectations, or what OSFI's view is. Use only figures and dates that appear in the input, or follow from two of them in one step; a percentage must be in the input, or the ratio of two like figures you cite in the same paragraph or finding, or of one of them over the report's total of the same kind (requirements, models in scope, groups). Write field names as words, never as identifiers. If the data cannot support a statement, leave it out.`;
 }

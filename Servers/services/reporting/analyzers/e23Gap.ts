@@ -78,6 +78,10 @@ export function e23GroupCounts(rd: ReportData): {
   };
 }
 
+/** The run's E-23 requirement count, as e23DataBlock prints it ("N in total"). */
+export const e23RequirementTotal = (rd: ReportData): number =>
+  e23Groups(rd).reduce((sum, g) => sum + g.rows.length, 0);
+
 /**
  * Which date each figure is tied to. A real run attributed the period's
  * activity counts to the 90-day monitoring window, and dated a position by the
