@@ -13,24 +13,9 @@ import {
   useTemplates,
   useUpdateTemplate,
   useArchiveTemplate,
-  useCreateTemplate,
+  useDuplicateTemplate,
 } from "../../../application/hooks/useReporting";
-import { getTemplate } from "../../../application/repository/reporting.repository";
 import { showAlert } from "../../../infrastructure/api/customAxios";
-import type {
-  FrameworkConfig,
-  ReportParametersConfig,
-  ReportTemplateWriteBody,
-} from "../../../domain/interfaces/i.reporting";
-
-// The create body carries framework_config and parameters_config the same way
-// it carries sections_config — createTemplateVersionQuery reads them all off
-// one body. ReportTemplateWriteBody does not declare them yet, so widen here
-// rather than send the fields untyped.
-type TemplateCreateBody = ReportTemplateWriteBody & {
-  framework_config?: FrameworkConfig;
-  parameters_config?: ReportParametersConfig;
-};
 
 // Same three the builder offers. Kept in sync by hand — the backend takes any
 // string, so a mismatch is a UX bug, not a type error.
@@ -62,7 +47,7 @@ export default function TemplatesTab({
   const { data: templates = [], isLoading } = useTemplates();
   const update = useUpdateTemplate();
   const archive = useArchiveTemplate();
-  const duplicate = useCreateTemplate();
+  const duplicate = useDuplicateTemplate();
 
   const [editing, setEditing] = useState<any>(null);
   const [form, setForm] = useState({ name: "", description: "", category: "" });
@@ -106,57 +91,11 @@ export default function TemplatesTab({
   // System templates cannot be edited in place (see the is_system_template
   // guard below), so Duplicate is how an org turns one into a starting point
   // it can customize: a new, org-owned template seeded from the same config.
-  // Field names match ReportTemplateWriteBody (snake_case, same as
-  // TemplateBuilder's create call) rather than the camelCase the wizard's
-  // own run/schedule bodies use — this goes through POST /templates, not
-  // POST /templates/:id/run.
-  //
-  // The section config has to be fetched first: useTemplates is backed by
-  // `SELECT * FROM report_templates`, which carries no version — only
-  // GET /templates/:id attaches latestVersion. Reading it off the list row
-  // gave every copy an empty sections_config, and the wizard then refuses to
-  // leave its Sections step (canNext needs one enabled section), so the copy
-  // could never be run or scheduled and the Edit modal could not repair it.
-  //
-  // createTemplateQuery (Servers/utils/reportTemplate.utils.ts) 400s unless
-  // default_scope is exactly "project" or "organization"; the source
-  // template always has one, but fall back to "project" defensively rather
-  // than send undefined and 400 on every click.
-  //
-  // framework_config travels with the section config for the same reason it is
-  // fetched at all: an omitted selection is not "no preference", it means every
-  // framework in scope. Dropping it turns a copy of a framework-specific
-  // template into an org-wide report carrying the original's name and
-  // description — the silent widening the run/schedule 400-gates exist to stop.
-  const handleDuplicate = async (t: any) => {
-    let source;
-    try {
-      source = await getTemplate(t.id);
-    } catch {
-      showAlert({
-        variant: "error",
-        body: "Failed to load the template to duplicate.",
-        isToast: true,
-      });
-      return;
-    }
-
-    const body: TemplateCreateBody = {
-      name: `${source.name} (copy)`,
-      description: source.description ?? null,
-      category: source.category ?? CATEGORIES[0],
-      default_scope: source.default_scope ?? "project",
-      supported_scopes: source.supported_scopes ?? undefined,
-      recommended_frequency: source.recommended_frequency ?? undefined,
-      sections_config: source.latestVersion?.sections_config ?? undefined,
-      ai_blocks_config: source.latestVersion?.ai_blocks_config ?? undefined,
-      framework_config: source.latestVersion?.framework_config ?? undefined,
-      // The report kind (e.g. OSFI E-23) lives here; a copy without it would
-      // offer the kind's sections under a general template that refuses them.
-      parameters_config: source.latestVersion?.parameters_config ?? undefined,
-    };
-
-    duplicate.mutate(body, { onError: mutationError("Failed to duplicate template") });
+  // The server builds the copy (POST /v1/report-templates/:id/duplicate) from
+  // the template's latest version, including its framework selection and
+  // report kind, so nothing has to be fetched and re-sent from here.
+  const handleDuplicate = (t: any) => {
+    duplicate.mutate(t.id, { onError: mutationError("Failed to duplicate template") });
   };
 
   if (isLoading) {

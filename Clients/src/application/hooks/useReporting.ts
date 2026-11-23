@@ -147,6 +147,14 @@ export const useUpdateTemplate = () => {
   });
 };
 
+export const useDuplicateTemplate = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => repo.duplicateTemplate(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["reporting", "templates"] }),
+  });
+};
+
 export const useArchiveTemplate = () => {
   const qc = useQueryClient();
   return useMutation({

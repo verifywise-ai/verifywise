@@ -14,6 +14,7 @@ vi.mock("../../repository/reporting.repository", () => ({
   ]),
   createTemplate: vi.fn(async () => ({ id: 7 })),
   updateTemplate: vi.fn(async () => ({ id: 7 })),
+  duplicateTemplate: vi.fn(async () => ({ id: 8 })),
   archiveTemplate: vi.fn(async () => ({ ok: true })),
   getRunAnalyses: vi.fn(async () => []),
   updateScheduledReport: vi.fn(async () => ({ id: 7 })),
@@ -32,6 +33,7 @@ import {
   useSectionCatalog,
   useCreateTemplate,
   useUpdateTemplate,
+  useDuplicateTemplate,
   useArchiveTemplate,
   useRunAnalyses,
   useReportRuns,
@@ -98,6 +100,18 @@ describe("useReporting template hooks", () => {
     const { result } = renderHook(() => useUpdateTemplate(), { wrapper: wrap });
     result.current.mutate({ id: 7, body: { name: "Renamed" } });
     await waitFor(() => expect(repo.updateTemplate).toHaveBeenCalledWith(7, { name: "Renamed" }));
+  });
+
+  it("useDuplicateTemplate copies by id and refreshes the template list", async () => {
+    const client = new QueryClient();
+    const invalidate = vi.spyOn(client, "invalidateQueries");
+    const wrapper = ({ children }: any) =>
+      React.createElement(QueryClientProvider, { client }, children);
+    const { result } = renderHook(() => useDuplicateTemplate(), { wrapper });
+    result.current.mutate(4);
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(repo.duplicateTemplate).toHaveBeenCalledWith(4);
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: ["reporting", "templates"] });
   });
 
   it("useRunAnalyses stays disabled without a run id", () => {
