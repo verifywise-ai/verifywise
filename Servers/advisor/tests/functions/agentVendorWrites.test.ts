@@ -176,7 +176,12 @@ describe("agent_create_vendor", () => {
       criticality_level: "High (critical to core services or products)",
       project_id: 12,
     });
-    expect(result).toEqual({ success: true, id: 1, vendor_name: "Model host" });
+    expect(result).toEqual({
+      success: true,
+      id: 1,
+      vendor_name: "Model host",
+      linked_use_case_ids: [],
+    });
     expect(mockCreateVendor).toHaveBeenCalledWith(
       {
         vendor_name: "Model host",
@@ -246,6 +251,11 @@ describe("agent_update_vendor and agent_flag_vendor_for_review", () => {
       { vendor_contact_person: "Grace Hopper" },
       { userId: REQUESTER, role: "Editor", organizationId: ORG },
     );
+  });
+
+  it("ignores an assignee on update: the schema and the approval card don't offer it", async () => {
+    await run("agent_update_vendor", { vendor_id: 1, website: "https://a.b", assignee: 12 });
+    expect(mockUpdateVendor.mock.calls[0][1]).toEqual({ website: "https://a.b" });
   });
 
   it("refuses an update with no fields", async () => {

@@ -38,7 +38,7 @@ import { getUserRoleInOrganization } from "../../../utils/userPermission.utils";
 
 const mockRole = getUserRoleInOrganization as jest.Mock;
 const mockEvaluate = evaluateRules as jest.Mock;
-const TOOL = "agent_update_test_record";
+const TOOL = "agent_update_test_vendor";
 const executor = jest.fn(async () => ({ success: true }));
 
 const submit = () =>
@@ -71,6 +71,28 @@ describe("the rule engine sees the requester's role", () => {
     expect(result.outcome).toBe("rejected");
     expect(executor).not.toHaveBeenCalled();
   });
+
+  it.each(["agent_mark_notification_read", "agent_update_task_status", "agent_create_note"])(
+    "lets an Auditor's %s through to the tool's own permission check",
+    async (tool) => {
+      mockRole.mockResolvedValue({ id: 4, name: "Auditor", organizationId: null });
+      writeToolExecutors.set(tool, executor);
+      try {
+        const result = await submitForApproval({
+          organizationId: 42,
+          userId: 5,
+          toolName: tool,
+          actionType: "update",
+          riskLevel: "warning",
+          description: tool,
+          inputParams: {},
+        });
+        expect(result.outcome).not.toBe("rejected");
+      } finally {
+        writeToolExecutors.delete(tool);
+      }
+    },
+  );
 
   it("does not reject an Editor's write", async () => {
     mockRole.mockResolvedValue({ id: 3, name: "Editor", organizationId: null });

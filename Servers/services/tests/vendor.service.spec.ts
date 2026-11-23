@@ -129,6 +129,12 @@ describe("createVendor", () => {
     );
   });
 
+  it("does not notify the user who assigned the new vendor to themselves", async () => {
+    mockCreateQuery.mockResolvedValue({ ...created, assignee: USER });
+    await createVendor({ ...input, assignee: USER }, actor);
+    expect(mockNotify).not.toHaveBeenCalled();
+  });
+
   it("records no history for an unknown user", async () => {
     await createVendor(input, { role: "Admin", organizationId: ORG });
     expect(recordVendorCreation).not.toHaveBeenCalled();

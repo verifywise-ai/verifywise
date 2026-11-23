@@ -188,9 +188,12 @@ export async function createVendor(
     vendorName: created.vendor_name,
     projectIds: created.projects ?? [],
   }).catch((err) => logger.error("Vendor risk candidate notice failed:", err));
+  // Never the user who made the vendor, who assigned themselves.
+  const notMe = (userId: number | null | undefined) =>
+    userId && userId !== actor.userId ? userId : undefined;
   await notifyVendorAssignees(actor, created, {
-    assignee: created.assignee,
-    reviewer: created.reviewer,
+    assignee: notMe(created.assignee),
+    reviewer: notMe(created.reviewer),
   });
 
   return created;

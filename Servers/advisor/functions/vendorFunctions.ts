@@ -583,7 +583,11 @@ async function updateVendorRequest(
   return { ...editor, id: id.value, input: fields as VendorInput };
 }
 
-const updateFields = (params: Record<string, unknown>) => pick(params, VENDOR_FIELDS);
+/** An update changes only what its schema offers (and its card shows): no assignee. */
+const VENDOR_UPDATE_FIELDS = Object.fromEntries(
+  Object.entries(VENDOR_FIELDS).filter(([param]) => param !== "assignee"),
+);
+const updateFields = (params: Record<string, unknown>) => pick(params, VENDOR_UPDATE_FIELDS);
 
 const flagFields = (params: Record<string, unknown>) => ({
   review_status: "Requires follow-up",
@@ -704,7 +708,13 @@ const agentCreateVendor = createWriteToolFn({
     );
     if (!result.ok) return { success: false, message: result.message };
     if (!result.value) return { success: false, message: "Vendor was not created" };
-    return { success: true, id: result.value.id, vendor_name: result.value.vendor_name };
+    return {
+      success: true,
+      id: result.value.id,
+      vendor_name: result.value.vendor_name,
+      // A use case the user can't see is not linked; this says which were.
+      linked_use_case_ids: result.value.projects ?? [],
+    };
   },
 });
 
