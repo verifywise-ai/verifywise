@@ -19,20 +19,16 @@ export interface RuleDefinition {
  * Higher priority rules are evaluated first — first match wins.
  */
 /**
- * The write tools an Auditor may still use through the advisor: each acts
- * only on what belongs to the user who asked (their notifications, a note
- * they author, an approval step they are an approver on, an approval request
- * they made) and checks that itself. Every other write is refused for an
- * Auditor by `auditor-write-block`. Add a tool here only once its executor
- * checks ownership or assignment for the requester.
+ * The write tools an Auditor may still use through the advisor. Each acts only
+ * on the requester's own records and runs without an approval step (info
+ * level), so it runs as the requester. A tool that needs approval runs as the
+ * approving Admin, so it can't act for the Auditor and is not listed. Every
+ * other write is refused for an Auditor by `auditor-write-block`. Add a tool
+ * here only once it checks ownership for the user it runs as.
  */
 export const AUDITOR_WRITE_TOOLS = [
   "agent_mark_notification_read",
   "agent_mark_all_notifications_read",
-  "agent_create_note",
-  "agent_approve_approval_step",
-  "agent_reject_approval_step",
-  "agent_withdraw_approval_request",
 ];
 
 export const defaultRules: RuleDefinition[] = [

@@ -70,6 +70,8 @@ describe("the rule engine sees the requester's role", () => {
     expect(mockRole).toHaveBeenCalledWith(42, 5);
     expect(mockEvaluate.mock.calls[0][1]).toMatchObject({ user_role: "Auditor" });
     expect(result.outcome).toBe("rejected");
+    // The rule's own reason, not its internal name.
+    expect(result.errorMessage).toBe("Auditors have read-only access");
     expect(executor).not.toHaveBeenCalled();
   });
 
@@ -107,6 +109,11 @@ describe("the rule engine sees the requester's role", () => {
     "agent_delete_note",
     "agent_submit_pmm_responses",
     "agent_flag_pmm_concern",
+    // Run as the approving Admin, so they can't act for the Auditor.
+    "agent_create_note",
+    "agent_approve_approval_step",
+    "agent_reject_approval_step",
+    "agent_withdraw_approval_request",
   ])("refuses an Auditor's %s, which is not on the allowlist", async (tool) => {
     mockRole.mockResolvedValue({ id: 4, name: "Auditor", organizationId: null });
     writeToolExecutors.set(tool, executor);
@@ -127,7 +134,7 @@ describe("the rule engine sees the requester's role", () => {
     }
   });
 
-  it("allowlists only tools that exist", () => {
+  it("allowlists only tools that run without approval, as the requester", () => {
     const fs = jest.requireActual("fs") as typeof import("fs");
     const path = jest.requireActual("path") as typeof import("path");
     const dir = path.join(__dirname, "../../functions");
@@ -137,7 +144,7 @@ describe("the rule engine sees the requester's role", () => {
       .map((file) => fs.readFileSync(path.join(dir, file), "utf8"))
       .join("\n");
     for (const tool of AUDITOR_WRITE_TOOLS) {
-      expect(source).toContain(`toolName: "${tool}"`);
+      expect(source).toMatch(new RegExp(`toolName: "${tool}",\\s*warningLevel: "info"`));
     }
   });
 
@@ -156,5 +163,16 @@ describe("the rule engine sees the requester's role", () => {
     await submit();
 
     expect(mockEvaluate.mock.calls[0][1]).toMatchObject({ user_role: "Unknown" });
+  });
+
+  it("refuses the write when the requester's role can't be looked up", async () => {
+    mockRole.mockRejectedValue(new Error("roles table timed out"));
+
+    const result = await submit();
+
+    expect(result.outcome).toBe("rejected");
+    expect(result.errorMessage).toBe("Your role could not be checked. Try again.");
+    expect(mockEvaluate).not.toHaveBeenCalled();
+    expect(executor).not.toHaveBeenCalled();
   });
 });
