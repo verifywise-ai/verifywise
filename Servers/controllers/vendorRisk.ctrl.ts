@@ -2,57 +2,27 @@ import { Request, Response } from "express";
 import { sequelize } from "../database/db";
 import { STATUS_CODE } from "../utils/statusCode.utils";
 import {
-  deleteVendorRiskByIdQuery,
   getAllVendorRisksAllProjectsQuery,
   getVendorRiskByIdQuery,
   getVendorRisksByProjectIdQuery,
   getVendorRisksByVendorIdQuery,
-  updateVendorRiskByIdQuery,
-  createVendorRiskFrameworkAssociations,
-  deleteVendorRiskFrameworkAssociations,
   getVendorRisksByFrameworkIdQuery,
-  normalizeVendorRiskLikelihood,
   restoreVendorRiskByIdQuery,
 } from "../utils/vendorRisk.utils";
-import { VendorRiskModel } from "../domain.layer/models/vendorRisk/vendorRisk.model";
-import { ValidationException } from "../domain.layer/exceptions/custom.exception";
 import { logProcessing, logSuccess, logFailure } from "../utils/logger/logHelper";
-import { recordMultipleFieldChanges } from "../utils/vendorRiskChangeHistory.utils";
-import { trackEntityChanges } from "../utils/changeHistory.base.utils";
-import { notifyUserAssigned } from "../services/inAppNotification.service";
-import {
-  assertActionOwnerOfOrganization,
-  CreateVendorRiskInput,
-  createVendorRiskInTransaction,
-  runVendorRiskPostCommitEffects,
-} from "../services/vendors/vendorRiskCreate.service";
-import { toId } from "../utils/validations/validation.utils";
 import { enqueueVendorRiskLinkRecompute } from "../services/automations/automationProducer";
+import * as vendorRiskService from "../services/vendorRisk.service";
 import logger from "../utils/logger/fileLogger";
-import { QueryTypes } from "sequelize";
 
 import { translateError } from "../utils/i18n.utils";
+import { ValidationException } from "../domain.layer/exceptions/custom.exception";
 import {
-  assertFrameworksExist,
   assertVendorRiskRequestBody,
   parseRouteId,
   parseVendorRiskListFilter,
-  toIdList,
 } from "../utils/validations/vendorRequest.utils";
 
 const INVALID_FILTER = "Filter must be active, deleted or all";
-// Helper function to get user name
-async function getUserNameById(userId: number): Promise<string> {
-  const result = await sequelize.query<{ name: string; surname: string }>(
-    `SELECT name, surname FROM users WHERE id = :userId`,
-    { replacements: { userId }, type: QueryTypes.SELECT },
-  );
-  if (result[0]) {
-    return `${result[0].name} ${result[0].surname}`.trim();
-  }
-  return "Someone";
-}
-
 export async function getAllVendorRisksAllProjects(req: Request, res: Response): Promise<any> {
   const filter = parseVendorRiskListFilter(req.query.filter);
   if (filter === null) {
@@ -284,13 +254,37 @@ async function readVendorRiskById(
   }
 }
 
+/** A failed write's answer: 400 invalid, else 500. */
+async function failedWrite(
+  req: Request,
+  res: Response,
+  error: unknown,
+  eventType: "Create" | "Update" | "Delete",
+  functionName: string,
+): Promise<any> {
+  const invalid = error instanceof ValidationException;
+  await logFailure({
+    eventType,
+    description: invalid
+      ? `Validation failed: ${(error as Error).message}`
+      : `Failed to ${eventType.toLowerCase()} vendor risk`,
+    functionName,
+    fileName: "vendorRisk.ctrl.ts",
+    error: error as Error,
+    userId: req.userId!,
+    organizationId: req.organizationId!,
+  });
+  return res
+    .status(invalid ? 400 : 500)
+    .json(STATUS_CODE[invalid ? 400 : 500](translateError(req, error)));
+}
+
 export async function createVendorRisk(req: Request, res: Response): Promise<any> {
   try {
     assertVendorRiskRequestBody(req.body, "create");
   } catch (error) {
     return res.status(400).json(STATUS_CODE[400](translateError(req, error)));
   }
-  const transaction = await sequelize.transaction();
 
   logProcessing({
     description: "starting createVendorRisk",
@@ -301,19 +295,12 @@ export async function createVendorRisk(req: Request, res: Response): Promise<any
   });
 
   try {
-    const input: CreateVendorRiskInput = req.body;
-    const createdVendorRisk = await createVendorRiskInTransaction(
-      input,
-      req.userId,
-      req.organizationId!,
-      transaction,
-    );
+    const createdVendorRisk = await vendorRiskService.createVendorRisk(req.body, {
+      userId: req.userId,
+      organizationId: req.organizationId!,
+    });
 
     if (createdVendorRisk) {
-      await transaction.commit();
-
-      await runVendorRiskPostCommitEffects(createdVendorRisk, req.userId, req.organizationId!);
-
       await logSuccess({
         eventType: "Create",
         description: "Created new vendor risk",
@@ -325,7 +312,6 @@ export async function createVendorRisk(req: Request, res: Response): Promise<any
       return res.status(201).json(STATUS_CODE[201](createdVendorRisk));
     }
 
-    await transaction.rollback();
     await logSuccess({
       eventType: "Create",
       description: "Vendor risk creation returned null",
@@ -336,31 +322,7 @@ export async function createVendorRisk(req: Request, res: Response): Promise<any
     });
     return res.status(503).json(STATUS_CODE[503]({}));
   } catch (error) {
-    await transaction.rollback();
-    // A request the create refuses (an action owner of another organization) is the caller's to
-    // correct, not a failure of the server.
-    if (error instanceof ValidationException) {
-      await logFailure({
-        eventType: "Create",
-        description: `Validation failed: ${error.message}`,
-        functionName: "createVendorRisk",
-        fileName: "vendorRisk.ctrl.ts",
-        error,
-        userId: req.userId!,
-        organizationId: req.organizationId!,
-      });
-      return res.status(400).json(STATUS_CODE[400](translateError(req, error)));
-    }
-    await logFailure({
-      eventType: "Create",
-      description: "Failed to create vendor risk",
-      functionName: "createVendorRisk",
-      fileName: "vendorRisk.ctrl.ts",
-      error: error as Error,
-      userId: req.userId!,
-      organizationId: req.organizationId!,
-    });
-    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
+    return failedWrite(req, res, error, "Create", "createVendorRisk");
   }
 }
 
@@ -374,16 +336,6 @@ export async function updateVendorRiskById(req: Request, res: Response): Promise
   } catch (error) {
     return res.status(400).json(STATUS_CODE[400](translateError(req, error)));
   }
-  const transaction = await sequelize.transaction();
-  // Likelihood in its enum spelling, so the history diff doesn't record
-  // "Almost certain → Almost Certain" for a save that changes nothing.
-  const updatedVendorRisk =
-    req.body.likelihood === undefined
-      ? req.body
-      : { ...req.body, likelihood: normalizeVendorRiskLikelihood(req.body.likelihood) };
-  // null, like absent, leaves the framework links alone.
-  const frameworks: number[] | undefined =
-    req.body.frameworks == null ? undefined : toIdList(req.body.frameworks);
 
   logProcessing({
     description: `starting updateVendorRiskById for ID ${vendorRiskId}`,
@@ -394,134 +346,12 @@ export async function updateVendorRiskById(req: Request, res: Response): Promise
   });
 
   try {
-    // Fetch existing vendor risk for change tracking
-    const existingVendorRisk = await getVendorRiskByIdQuery(vendorRiskId, req.organizationId!);
-
-    if (!existingVendorRisk) {
-      await transaction.rollback();
-      await logSuccess({
-        eventType: "Update",
-        description: `Vendor risk not found for update: ID ${vendorRiskId}`,
-        functionName: "updateVendorRiskById",
-        fileName: "vendorRisk.ctrl.ts",
-        userId: req.userId!,
-        organizationId: req.organizationId!,
-      });
-      return res.status(404).json(STATUS_CODE[404]({}));
-    }
-
-    // The action owner is emailed the risk's text and the vendor's name, so a new owner must be a
-    // user of the organization, as on the create. An owner the request leaves as it is stored is not
-    // checked again: a risk whose owner has since left the organization can still be edited.
-    const requestedOwner: unknown = updatedVendorRisk.action_owner;
-    const storedOwner: unknown = (existingVendorRisk as { action_owner?: unknown }).action_owner;
-    if (requestedOwner && toId(requestedOwner) !== toId(storedOwner)) {
-      await assertActionOwnerOfOrganization(requestedOwner, req.organizationId!, transaction);
-    }
-
-    if (frameworks) await assertFrameworksExist(frameworks, transaction);
-
-    const vendorRiskModel = new VendorRiskModel();
-    await vendorRiskModel.updateVendorRisk(updatedVendorRisk);
-
-    const vendorRisk = await updateVendorRiskByIdQuery(
-      vendorRiskId,
-      vendorRiskModel,
-      req.organizationId!,
-      transaction,
-    );
+    const vendorRisk = await vendorRiskService.updateVendorRisk(vendorRiskId, req.body, {
+      userId: req.userId,
+      organizationId: req.organizationId!,
+    });
 
     if (vendorRisk) {
-      // Replace framework associations if provided
-      if (frameworks !== undefined) {
-        await deleteVendorRiskFrameworkAssociations(vendorRiskId, req.organizationId!, transaction);
-        if (frameworks.length > 0) {
-          await createVendorRiskFrameworkAssociations(
-            frameworks,
-            vendorRiskId,
-            req.organizationId!,
-            transaction,
-          );
-        }
-      }
-
-      // Track and record changes
-      const userId = req.userId;
-      if (userId) {
-        // The level as stored (computed), not as the request sent it.
-        // Name lookups scoped to this organization, on the write's transaction.
-        const changes = await trackEntityChanges(
-          "vendor_risk",
-          { ...existingVendorRisk, frameworks: existingVendorRisk.frameworks ?? [] },
-          {
-            ...updatedVendorRisk,
-            risk_level: vendorRisk.risk_level,
-            vendor_id: updatedVendorRisk.vendor_id === undefined ? undefined : vendorRisk.vendor_id,
-            frameworks,
-          },
-          { organizationId: req.organizationId!, transaction },
-        );
-        if (changes.length > 0) {
-          await recordMultipleFieldChanges(
-            vendorRiskId,
-            userId,
-            req.organizationId!,
-            changes,
-            transaction,
-          );
-        }
-      }
-
-      await transaction.commit();
-
-      // Wording, vendor or frameworks may have changed: rescore its pairs.
-      enqueueVendorRiskLinkRecompute(req.organizationId!, vendorRiskId).catch((err) =>
-        logger.error("Vendor risk link recompute enqueue failed:", err),
-      );
-
-      // Notify action_owner if changed to a new user
-      // Compared as ids, as the check above does: the stored owner sent again as text ("8") is not
-      // a new owner, is not checked, and so must not be told again either.
-      const oldActionOwner = (existingVendorRisk as any).action_owner;
-      // The saved value, not the request's: the form sends the id as a string.
-      const newActionOwner = vendorRisk.action_owner;
-      if (newActionOwner && toId(newActionOwner) !== toId(oldActionOwner)) {
-        const assignerName = await getUserNameById(req.userId!);
-        const baseUrl = process.env.FRONTEND_URL || "http://localhost:5173";
-
-        // Get vendor name for context
-        let vendorName: string | undefined;
-        if (vendorRisk.vendor_id) {
-          const vendorResult = await sequelize.query<{ vendor_name: string }>(
-            `SELECT vendor_name FROM vendors WHERE organization_id = :organizationId AND id = :vendorId`,
-            {
-              replacements: { organizationId: req.organizationId!, vendorId: vendorRisk.vendor_id },
-              type: QueryTypes.SELECT,
-            },
-          );
-          vendorName = vendorResult[0]?.vendor_name;
-        }
-
-        notifyUserAssigned(
-          req.organizationId!,
-          newActionOwner,
-          {
-            entityType: "Vendor Risk",
-            entityId: vendorRiskId,
-            entityName: vendorRisk.risk_description || `Vendor Risk #${vendorRiskId}`,
-            roleType: "Action Owner",
-            entityUrl: `${baseUrl}/vendors?vendorRiskId=${vendorRiskId}`,
-          },
-          assignerName,
-          baseUrl,
-          {
-            parentType: vendorName ? "Vendor" : undefined,
-            parentName: vendorName,
-            description: vendorRisk.impact_description || undefined,
-          },
-        ).catch((err) => console.error("Failed to send action owner notification:", err));
-      }
-
       await logSuccess({
         eventType: "Update",
         description: `Updated vendor risk ID ${vendorRiskId}`,
@@ -533,7 +363,6 @@ export async function updateVendorRiskById(req: Request, res: Response): Promise
       return res.status(202).json(STATUS_CODE[202](vendorRisk));
     }
 
-    await transaction.rollback();
     await logSuccess({
       eventType: "Update",
       description: `Vendor risk not found for update: ID ${vendorRiskId}`,
@@ -544,30 +373,7 @@ export async function updateVendorRiskById(req: Request, res: Response): Promise
     });
     return res.status(404).json(STATUS_CODE[404]({}));
   } catch (error) {
-    await transaction.rollback();
-    // An action owner of another organization is the caller's to correct, as on the create.
-    if (error instanceof ValidationException) {
-      await logFailure({
-        eventType: "Update",
-        description: `Validation failed: ${error.message}`,
-        functionName: "updateVendorRiskById",
-        fileName: "vendorRisk.ctrl.ts",
-        error,
-        userId: req.userId!,
-        organizationId: req.organizationId!,
-      });
-      return res.status(400).json(STATUS_CODE[400](translateError(req, error)));
-    }
-    await logFailure({
-      eventType: "Update",
-      description: "Failed to update vendor risk",
-      functionName: "updateVendorRiskById",
-      fileName: "vendorRisk.ctrl.ts",
-      error: error as Error,
-      userId: req.userId!,
-      organizationId: req.organizationId!,
-    });
-    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
+    return failedWrite(req, res, error, "Update", "updateVendorRiskById");
   }
 }
 
@@ -576,7 +382,6 @@ export async function deleteVendorRiskById(req: Request, res: Response): Promise
   if (vendorRiskId === null) {
     return res.status(400).json(STATUS_CODE[400](req.t!("Invalid vendor risk ID")));
   }
-  const transaction = await sequelize.transaction();
 
   logProcessing({
     description: `starting deleteVendorRiskById for ID ${vendorRiskId}`,
@@ -587,15 +392,12 @@ export async function deleteVendorRiskById(req: Request, res: Response): Promise
   });
 
   try {
-    const deletedVendorRisk = await deleteVendorRiskByIdQuery(
-      vendorRiskId,
-      req.organizationId!,
-      transaction,
-      req.userId!,
-    );
+    const deletedVendorRisk = await vendorRiskService.deleteVendorRisk(vendorRiskId, {
+      userId: req.userId,
+      organizationId: req.organizationId!,
+    });
 
     if (deletedVendorRisk) {
-      await transaction.commit();
       await logSuccess({
         eventType: "Delete",
         description: `Deleted vendor risk ID ${vendorRiskId}`,
@@ -607,7 +409,6 @@ export async function deleteVendorRiskById(req: Request, res: Response): Promise
       return res.status(202).json(STATUS_CODE[202](deletedVendorRisk));
     }
 
-    await transaction.rollback();
     await logSuccess({
       eventType: "Delete",
       description: `Vendor risk not found for deletion: ID ${vendorRiskId}`,
@@ -618,17 +419,7 @@ export async function deleteVendorRiskById(req: Request, res: Response): Promise
     });
     return res.status(404).json(STATUS_CODE[404]({}));
   } catch (error) {
-    await transaction.rollback();
-    await logFailure({
-      eventType: "Delete",
-      description: "Failed to delete vendor risk",
-      functionName: "deleteVendorRiskById",
-      fileName: "vendorRisk.ctrl.ts",
-      error: error as Error,
-      userId: req.userId!,
-      organizationId: req.organizationId!,
-    });
-    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
+    return failedWrite(req, res, error, "Delete", "deleteVendorRiskById");
   }
 }
 

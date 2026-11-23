@@ -1,20 +1,37 @@
 import { IVendor } from "../../domain.layer/interfaces/i.vendor";
 import { IVendorRisk } from "../../domain.layer/interfaces/i.vendorRisk";
-import {
-  getAllVendorsQuery,
-  createNewVendorQuery,
-  updateVendorByIdQuery,
-  deleteVendorByIdQuery,
-} from "../../utils/vendor.utils";
+import { getAllVendorsQuery, getVendorByIdQuery } from "../../utils/vendor.utils";
 import {
   getAllVendorRisksAllProjectsQuery,
-  createNewVendorRiskQuery,
-  updateVendorRiskByIdQuery,
-  deleteVendorRiskByIdQuery,
+  getVendorRiskByIdQuery,
 } from "../../utils/vendorRisk.utils";
 import { createWriteToolFn } from "../confirmation/createWriteTool";
-import { sequelize } from "../../database/db";
 import logger from "../../utils/logger/fileLogger";
+import {
+  createVendor,
+  deleteVendor,
+  updateVendor,
+  type VendorActor,
+  type VendorInput,
+} from "../../services/vendor.service";
+import {
+  createVendorRisk,
+  deleteVendorRisk,
+  updateVendorRisk,
+  type VendorRiskInput,
+} from "../../services/vendorRisk.service";
+import {
+  assertVendorRequestBody,
+  assertVendorRiskRequestBody,
+} from "../../utils/validations/vendorRequest.utils";
+import {
+  BusinessLogicException,
+  ValidationException,
+} from "../../domain.layer/exceptions/custom.exception";
+import { getUserRoleInOrganization } from "../../utils/userPermission.utils";
+import { roleInfoHasPermission } from "../../utils/rolePermissions.utils";
+import { parseIdValue } from "../../utils/validations/trainingAssignmentValidation.utils";
+import { actingRequesterId } from "./actingRequester";
 
 export interface FetchVendorsParams {
   review_status?: "Not started" | "In review" | "Reviewed" | "Requires follow-up";
@@ -425,75 +442,306 @@ const getVendorExecutiveSummary = async (
 };
 
 // ── Write Tools (Human Confirmation Flow) ──────────────────────────
+//
+// Each write runs as the user who asked (else the approver), with the
+// console's permission (vendor.edit), through the console's own services:
+// same validation, use case visibility, history, notices and workflows. Its
+// checks run once before the approval is requested, so nobody is asked to
+// approve a call that cannot run, and again when it executes.
+
+const EDIT_REFUSAL = "your role does not allow editing vendors";
+
+/** Advisor parameter → vendor field (the console's names). */
+const VENDOR_FIELDS: Record<string, string> = {
+  vendor_name: "vendor_name",
+  description: "vendor_provides",
+  website: "website",
+  contact_person: "vendor_contact_person",
+  review_status: "review_status",
+  data_sensitivity: "data_sensitivity",
+  criticality_level: "business_criticality",
+  assignee: "assignee",
+};
+
+/** Fields the console requires on create, by Advisor parameter. */
+const REQUIRED_ON_CREATE = ["vendor_name", "description", "website", "contact_person"];
+
+/** Advisor parameter → vendor risk field (the console's names). */
+const VENDOR_RISK_FIELDS: Record<string, string> = {
+  risk_description: "risk_description",
+  impact_description: "impact_description",
+  severity: "risk_severity",
+  likelihood: "likelihood",
+  action_plan: "action_plan",
+  action_owner: "action_owner",
+};
+
+const pick = (params: Record<string, unknown>, fields: Record<string, string>) => {
+  const input: Record<string, unknown> = {};
+  for (const [param, field] of Object.entries(fields)) {
+    const value = params[param];
+    if (value !== undefined && value !== null) input[field] = value;
+  }
+  return input;
+};
+
+type Refusal = { ok: false; message: string };
+type Request<T> = Refusal | ({ ok: true; actor: VendorActor & { userId: number } } & T);
+
+const refused = (message: string): Refusal => ({ ok: false, message });
+
+/**
+ * The acting user, with their role, when it holds vendor.edit in this
+ * organization; else why not. Fails closed on an unknown user.
+ */
+async function vendorEditor(
+  params: Record<string, unknown>,
+  organizationId: number,
+  notDone: string,
+): Promise<Refusal | { ok: true; actor: VendorActor & { userId: number } }> {
+  const userId = actingRequesterId(params);
+  const role = await getUserRoleInOrganization(organizationId, userId);
+  if (!userId || !role || !(await roleInfoHasPermission(organizationId, role, "vendor.edit"))) {
+    return refused(`${notDone}: ${EDIT_REFUSAL}.`);
+  }
+  return { ok: true, actor: { userId, role: role.name, organizationId } };
+}
+
+/** The console's request checks; a failure is the reason, not an error. */
+const bodyProblem = (check: () => void): string | null => {
+  try {
+    check();
+    return null;
+  } catch (error) {
+    return error instanceof ValidationException ? error.message : String(error);
+  }
+};
+
+/** Rejected inputs the services throw for (validation, demo vendors) become refusals. */
+const refusalFor = async <T>(notDone: string, write: () => Promise<T>) => {
+  try {
+    return { ok: true as const, value: await write() };
+  } catch (error) {
+    if (error instanceof ValidationException || error instanceof BusinessLogicException) {
+      return { ok: false as const, message: `${notDone}: ${error.message}` };
+    }
+    throw error;
+  }
+};
+
+// ── Vendors ──
+
+async function createVendorRequest(
+  params: Record<string, unknown>,
+  organizationId: number,
+): Promise<Request<{ input: VendorInput }>> {
+  const notDone = "Vendor was not created";
+  const missing = REQUIRED_ON_CREATE.filter(
+    (param) => typeof params[param] !== "string" || !(params[param] as string).trim(),
+  );
+  if (missing.length > 0) return refused(`${notDone}: ${missing.join(", ")} required`);
+
+  const editor = await vendorEditor(params, organizationId, notDone);
+  if (!editor.ok) return editor;
+
+  const input: Record<string, unknown> = {
+    review_status: "Not started",
+    // Assigned to the user who asked unless the request names someone.
+    assignee: editor.actor.userId,
+    ...pick(params, VENDOR_FIELDS),
+  };
+  if (params.project_id !== undefined && params.project_id !== null) {
+    const projectId = parseIdValue(params.project_id, "Use case ID must be a positive integer");
+    if (!projectId.ok) return refused(`${notDone}: ${projectId.message}`);
+    input.projects = [projectId.value];
+  }
+  const problem = bodyProblem(() => assertVendorRequestBody(input));
+  if (problem) return refused(`${notDone}: ${problem}`);
+  return { ...editor, input: input as VendorInput };
+}
+
+async function updateVendorRequest(
+  params: Record<string, unknown>,
+  organizationId: number,
+  fields: Record<string, unknown>,
+): Promise<Request<{ id: number; input: VendorInput }>> {
+  const id = parseIdValue(params.vendor_id, "Vendor ID must be a positive integer");
+  if (!id.ok) return refused(id.message);
+  const notDone = `Vendor #${id.value} was not updated`;
+  if (Object.keys(fields).length === 0) return refused("No fields to update");
+
+  const editor = await vendorEditor(params, organizationId, notDone);
+  if (!editor.ok) return editor;
+  const problem = bodyProblem(() => assertVendorRequestBody(fields));
+  if (problem) return refused(`${notDone}: ${problem}`);
+  if (!(await getVendorByIdQuery(id.value, organizationId))) {
+    return refused(`Vendor #${id.value} not found`);
+  }
+  return { ...editor, id: id.value, input: fields as VendorInput };
+}
+
+/** An update changes only what its schema offers (and its card shows): no assignee. */
+const VENDOR_UPDATE_FIELDS = Object.fromEntries(
+  Object.entries(VENDOR_FIELDS).filter(([param]) => param !== "assignee"),
+);
+const updateFields = (params: Record<string, unknown>) => pick(params, VENDOR_UPDATE_FIELDS);
+
+const flagFields = (params: Record<string, unknown>) => ({
+  review_status: "Requires follow-up",
+  review_result: (params.reason as string) || "Flagged for review by AI advisor",
+});
+
+async function deleteVendorRequest(
+  params: Record<string, unknown>,
+  organizationId: number,
+): Promise<Request<{ id: number }>> {
+  const id = parseIdValue(params.vendor_id, "Vendor ID must be a positive integer");
+  if (!id.ok) return refused(id.message);
+  const editor = await vendorEditor(params, organizationId, `Vendor #${id.value} was not deleted`);
+  if (!editor.ok) return editor;
+  if (!(await getVendorByIdQuery(id.value, organizationId))) {
+    return refused(`Vendor #${id.value} not found`);
+  }
+  return { ...editor, id: id.value };
+}
+
+// ── Vendor risks ──
+
+async function createVendorRiskRequest(
+  params: Record<string, unknown>,
+  organizationId: number,
+): Promise<Request<{ input: VendorRiskInput }>> {
+  const notDone = "Vendor risk was not created";
+  const vendorId = parseIdValue(params.vendor_id, "Vendor ID must be a positive integer");
+  if (!vendorId.ok) return refused(`${notDone}: ${vendorId.message}`);
+  if (!(typeof params.risk_name === "string" && params.risk_name.trim())) {
+    return refused(`${notDone}: risk_name required`);
+  }
+
+  const editor = await vendorEditor(params, organizationId, notDone);
+  if (!editor.ok) return editor;
+
+  const details = typeof params.risk_description === "string" ? params.risk_description : "";
+  const input: Record<string, unknown> = {
+    vendor_id: vendorId.value,
+    risk_description: params.risk_name.trim() + (details ? `: ${details}` : ""),
+    impact_description: details || null,
+    risk_severity: params.severity ?? "Moderate",
+    likelihood: params.likelihood ?? "Possible",
+  };
+  const problem = bodyProblem(() => assertVendorRiskRequestBody(input, "create"));
+  if (problem) return refused(`${notDone}: ${problem}`);
+  if (!(await getVendorByIdQuery(vendorId.value, organizationId))) {
+    return refused(`${notDone}: vendor #${vendorId.value} not found`);
+  }
+  return { ...editor, input };
+}
+
+async function updateVendorRiskRequest(
+  params: Record<string, unknown>,
+  organizationId: number,
+): Promise<Request<{ id: number; input: VendorRiskInput }>> {
+  const id = parseIdValue(params.vendor_risk_id, "Vendor risk ID must be a positive integer");
+  if (!id.ok) return refused(id.message);
+  const notDone = `Vendor risk #${id.value} was not updated`;
+  const input = pick(params, VENDOR_RISK_FIELDS);
+  if (Object.keys(input).length === 0) return refused("No fields to update");
+  if (input.action_owner !== undefined) {
+    const owner = parseIdValue(input.action_owner, "Action owner ID must be a positive integer");
+    if (!owner.ok) return refused(`${notDone}: ${owner.message}`);
+    input.action_owner = owner.value;
+  }
+
+  const editor = await vendorEditor(params, organizationId, notDone);
+  if (!editor.ok) return editor;
+  const problem = bodyProblem(() => assertVendorRiskRequestBody(input, "update"));
+  if (problem) return refused(`${notDone}: ${problem}`);
+  if (!(await getVendorRiskByIdQuery(id.value, organizationId))) {
+    return refused(`Vendor risk #${id.value} not found`);
+  }
+  return { ...editor, id: id.value, input };
+}
+
+async function deleteVendorRiskRequest(
+  params: Record<string, unknown>,
+  organizationId: number,
+): Promise<Request<{ id: number }>> {
+  const id = parseIdValue(params.vendor_risk_id, "Vendor risk ID must be a positive integer");
+  if (!id.ok) return refused(id.message);
+  const editor = await vendorEditor(
+    params,
+    organizationId,
+    `Vendor risk #${id.value} was not deleted`,
+  );
+  if (!editor.ok) return editor;
+  if (!(await getVendorRiskByIdQuery(id.value, organizationId))) {
+    return refused(`Vendor risk #${id.value} not found`);
+  }
+  return { ...editor, id: id.value };
+}
+
+const precheck =
+  (
+    request: (
+      params: Record<string, unknown>,
+      organizationId: number,
+    ) => Promise<Refusal | { ok: true }>,
+  ) =>
+  async (params: Record<string, unknown>, organizationId: number) => {
+    const result = await request(params, organizationId);
+    return result.ok ? null : result.message;
+  };
 
 const agentCreateVendor = createWriteToolFn({
   toolName: "agent_create_vendor",
   warningLevel: "warning",
   descriptionFn: (params) => `Create vendor "${params.vendor_name}"`,
+  precheckFn: precheck(createVendorRequest),
   executeFn: async (params, organizationId) => {
-    const transaction = await sequelize.transaction();
-    try {
-      const vendorData: Partial<IVendor> = {
-        vendor_name: params.vendor_name as string,
-        vendor_provides: (params.description as string) || "",
-        website: (params.website as string) || "",
-        vendor_contact_person: (params.contact_person as string) || "",
-        review_status: (params.review_status as IVendor["review_status"]) || "Not started",
-        data_sensitivity: params.data_sensitivity as IVendor["data_sensitivity"],
-        business_criticality: params.criticality_level as IVendor["business_criticality"],
-        assignee: (params.assignee as number) || (null as any),
-        projects: params.project_id ? [params.project_id as number] : [],
-      };
-      const result = await createNewVendorQuery(vendorData as IVendor, organizationId, transaction);
-      await transaction.commit();
-      return { id: result.id, vendor_name: result.vendor_name };
-    } catch (error) {
-      await transaction.rollback();
-      throw error;
-    }
+    const request = await createVendorRequest(params, organizationId);
+    if (!request.ok) return { success: false, message: request.message };
+    const result = await refusalFor("Vendor was not created", () =>
+      createVendor(request.input, request.actor),
+    );
+    if (!result.ok) return { success: false, message: result.message };
+    if (!result.value) return { success: false, message: "Vendor was not created" };
+    return {
+      success: true,
+      id: result.value.id,
+      vendor_name: result.value.vendor_name,
+      // A use case the user can't see is not linked; this says which were.
+      linked_use_case_ids: result.value.projects ?? [],
+    };
   },
 });
+
+const runVendorUpdate =
+  (fieldsFor: (params: Record<string, unknown>) => Record<string, unknown>) =>
+  async (params: Record<string, unknown>, organizationId: number) => {
+    const request = await updateVendorRequest(params, organizationId, fieldsFor(params));
+    if (!request.ok) return { success: false, message: request.message };
+    const result = await refusalFor(`Vendor #${request.id} was not updated`, () =>
+      updateVendor(request.id, request.input, request.actor),
+    );
+    if (!result.ok) return { success: false, message: result.message };
+    if (!result.value) return { success: false, message: `Vendor #${request.id} not found` };
+    return {
+      success: true,
+      id: result.value.id,
+      vendor_name: result.value.vendor_name,
+      review_status: result.value.review_status,
+    };
+  };
 
 const agentUpdateVendor = createWriteToolFn({
   toolName: "agent_update_vendor",
   warningLevel: "warning",
   descriptionFn: (params) =>
     `Update vendor #${params.vendor_id}${params.vendor_name ? ` name to "${params.vendor_name}"` : ""}`,
-  executeFn: async (params, organizationId) => {
-    const transaction = await sequelize.transaction();
-    try {
-      const vendorData: Partial<IVendor> = {};
-      if (params.vendor_name !== undefined) vendorData.vendor_name = params.vendor_name as string;
-      if (params.description !== undefined)
-        vendorData.vendor_provides = params.description as string;
-      if (params.website !== undefined) vendorData.website = params.website as string;
-      if (params.contact_person !== undefined)
-        vendorData.vendor_contact_person = params.contact_person as string;
-      if (params.review_status !== undefined)
-        vendorData.review_status = params.review_status as IVendor["review_status"];
-      if (params.data_sensitivity !== undefined)
-        vendorData.data_sensitivity = params.data_sensitivity as IVendor["data_sensitivity"];
-      if (params.criticality_level !== undefined)
-        vendorData.business_criticality =
-          params.criticality_level as IVendor["business_criticality"];
-
-      const result = await updateVendorByIdQuery(
-        {
-          id: params.vendor_id as number,
-          vendor: vendorData,
-          userId: 0,
-          role: "Admin",
-          transaction,
-        },
-        organizationId,
-      );
-      await transaction.commit();
-      return { id: result.id, vendor_name: result.vendor_name };
-    } catch (error) {
-      await transaction.rollback();
-      throw error;
-    }
-  },
+  precheckFn: precheck((params, organizationId) =>
+    updateVendorRequest(params, organizationId, updateFields(params)),
+  ),
+  executeFn: runVendorUpdate(updateFields),
 });
 
 const agentDeleteVendor = createWriteToolFn({
@@ -501,20 +749,13 @@ const agentDeleteVendor = createWriteToolFn({
   warningLevel: "danger",
   descriptionFn: (params) =>
     `Permanently delete vendor #${params.vendor_id} and all associated risks`,
+  precheckFn: precheck(deleteVendorRequest),
   executeFn: async (params, organizationId) => {
-    const transaction = await sequelize.transaction();
-    try {
-      const deleted = await deleteVendorByIdQuery(
-        params.vendor_id as number,
-        organizationId,
-        transaction,
-      );
-      await transaction.commit();
-      return { deleted, vendor_id: params.vendor_id };
-    } catch (error) {
-      await transaction.rollback();
-      throw error;
-    }
+    const request = await deleteVendorRequest(params, organizationId);
+    if (!request.ok) return { success: false, message: request.message };
+    const deleted = await deleteVendor(request.id, request.actor);
+    if (!deleted) return { success: false, message: `Vendor #${request.id} not found` };
+    return { success: true, deleted, vendor_id: request.id };
   },
 });
 
@@ -522,32 +763,16 @@ const agentCreateVendorRisk = createWriteToolFn({
   toolName: "agent_create_vendor_risk",
   warningLevel: "warning",
   descriptionFn: (params) => `Create risk "${params.risk_name}" for vendor #${params.vendor_id}`,
+  precheckFn: precheck(createVendorRiskRequest),
   executeFn: async (params, organizationId) => {
-    const transaction = await sequelize.transaction();
-    try {
-      const riskData: Partial<IVendorRisk> = {
-        vendor_id: params.vendor_id as number,
-        risk_description:
-          (params.risk_name as string) +
-          (params.risk_description ? `: ${params.risk_description}` : ""),
-        impact_description: (params.risk_description as string) || "",
-        risk_severity: (params.severity as IVendorRisk["risk_severity"]) || "Moderate",
-        likelihood: (params.likelihood as IVendorRisk["likelihood"]) || "Possible",
-        action_plan: "",
-        action_owner: 0,
-        risk_level: "",
-      };
-      const result = await createNewVendorRiskQuery(
-        riskData as IVendorRisk,
-        organizationId,
-        transaction,
-      );
-      await transaction.commit();
-      return { id: result.id, vendor_id: result.vendor_id };
-    } catch (error) {
-      await transaction.rollback();
-      throw error;
-    }
+    const request = await createVendorRiskRequest(params, organizationId);
+    if (!request.ok) return { success: false, message: request.message };
+    const result = await refusalFor("Vendor risk was not created", () =>
+      createVendorRisk(request.input, request.actor),
+    );
+    if (!result.ok) return { success: false, message: result.message };
+    if (!result.value) return { success: false, message: "Vendor risk was not created" };
+    return { success: true, id: result.value.id, vendor_id: result.value.vendor_id };
   },
 });
 
@@ -555,33 +780,16 @@ const agentUpdateVendorRisk = createWriteToolFn({
   toolName: "agent_update_vendor_risk",
   warningLevel: "warning",
   descriptionFn: (params) => `Update vendor risk #${params.vendor_risk_id}`,
+  precheckFn: precheck(updateVendorRiskRequest),
   executeFn: async (params, organizationId) => {
-    const transaction = await sequelize.transaction();
-    try {
-      const riskData: Partial<IVendorRisk> = {};
-      if (params.risk_description !== undefined)
-        riskData.risk_description = params.risk_description as string;
-      if (params.impact_description !== undefined)
-        riskData.impact_description = params.impact_description as string;
-      if (params.severity !== undefined)
-        riskData.risk_severity = params.severity as IVendorRisk["risk_severity"];
-      if (params.likelihood !== undefined)
-        riskData.likelihood = params.likelihood as IVendorRisk["likelihood"];
-      if (params.action_plan !== undefined) riskData.action_plan = params.action_plan as string;
-      if (params.action_owner !== undefined) riskData.action_owner = params.action_owner as number;
-
-      const result = await updateVendorRiskByIdQuery(
-        params.vendor_risk_id as number,
-        riskData as Partial<IVendorRisk>,
-        organizationId,
-        transaction,
-      );
-      await transaction.commit();
-      return { id: result?.id, vendor_id: result?.vendor_id };
-    } catch (error) {
-      await transaction.rollback();
-      throw error;
-    }
+    const request = await updateVendorRiskRequest(params, organizationId);
+    if (!request.ok) return { success: false, message: request.message };
+    const result = await refusalFor(`Vendor risk #${request.id} was not updated`, () =>
+      updateVendorRisk(request.id, request.input, request.actor),
+    );
+    if (!result.ok) return { success: false, message: result.message };
+    if (!result.value) return { success: false, message: `Vendor risk #${request.id} not found` };
+    return { success: true, id: result.value.id, vendor_id: result.value.vendor_id };
   },
 });
 
@@ -589,20 +797,13 @@ const agentDeleteVendorRisk = createWriteToolFn({
   toolName: "agent_delete_vendor_risk",
   warningLevel: "danger",
   descriptionFn: (params) => `Delete vendor risk #${params.vendor_risk_id}`,
+  precheckFn: precheck(deleteVendorRiskRequest),
   executeFn: async (params, organizationId) => {
-    const transaction = await sequelize.transaction();
-    try {
-      const deleted = await deleteVendorRiskByIdQuery(
-        params.vendor_risk_id as number,
-        organizationId,
-        transaction,
-      );
-      await transaction.commit();
-      return { deleted, vendor_risk_id: params.vendor_risk_id };
-    } catch (error) {
-      await transaction.rollback();
-      throw error;
-    }
+    const request = await deleteVendorRiskRequest(params, organizationId);
+    if (!request.ok) return { success: false, message: request.message };
+    const deleted = await deleteVendorRisk(request.id, request.actor);
+    if (!deleted) return { success: false, message: `Vendor risk #${request.id} not found` };
+    return { success: true, deleted, vendor_risk_id: request.id };
   },
 });
 
@@ -611,34 +812,10 @@ const agentFlagVendorForReview = createWriteToolFn({
   warningLevel: "warning",
   descriptionFn: (params) =>
     `Flag vendor #${params.vendor_id} for review${params.reason ? `: ${params.reason}` : ""}`,
-  executeFn: async (params, organizationId) => {
-    const transaction = await sequelize.transaction();
-    try {
-      const vendorData: Partial<IVendor> = {
-        review_status: "Requires follow-up",
-        review_result: (params.reason as string) || "Flagged for review by AI advisor",
-      };
-      const result = await updateVendorByIdQuery(
-        {
-          id: params.vendor_id as number,
-          vendor: vendorData,
-          userId: 0,
-          role: "Admin",
-          transaction,
-        },
-        organizationId,
-      );
-      await transaction.commit();
-      return {
-        id: result.id,
-        vendor_name: result.vendor_name,
-        review_status: result.review_status,
-      };
-    } catch (error) {
-      await transaction.rollback();
-      throw error;
-    }
-  },
+  precheckFn: precheck((params, organizationId) =>
+    updateVendorRequest(params, organizationId, flagFields(params)),
+  ),
+  executeFn: runVendorUpdate(flagFields),
 });
 
 const availableVendorTools: any = {

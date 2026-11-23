@@ -526,6 +526,24 @@ POST /v1/vendors
 6. Queue the `vendor_added` automation, sent once the transaction commits (`transaction.afterCommit`); `vendor_updated` and `vendor_deleted` work the same way, and a delete that finds no vendor answers 404 and queues nothing
 7. After commit, notify the assignee and reviewer
 
+### One write path
+
+Vendor and vendor risk creates, updates and deletes live in
+`services/vendor.service.ts` and `services/vendorRisk.service.ts`. The REST
+controllers and the Advisor's write tools (`advisor/functions/vendorFunctions.ts`)
+both call them, so a write from either gets the same validation, use case
+visibility, change history, onboarding workflow, assignment notices and related
+vendor risk rescoring. The callers check `vendor.edit` and the request body
+(`assertVendorRequestBody`, `assertVendorRiskRequestBody`) first.
+
+The Advisor's tools act as the user who asked for the change (else the
+approver), with that user's role in the organization: a tool call from a user
+without `vendor.edit` is refused, before an approval is requested and again
+when it runs. A new vendor from the Advisor needs the same fields as in the
+console (name, what it provides, website, contact person) and is assigned to
+the user who asked unless the call names an assignee. Only use cases that user
+can see are linked.
+
 ### User references
 
 `vendors.assignee`, `vendors.reviewer` and `vendorrisks.action_owner` are user
@@ -780,8 +798,9 @@ A vendor delete is a hard delete (`deleteVendorByIdQuery`,
 - the vendor, and each risk that was still active, get a "deleted" history
   entry. A risk deleted earlier already has one.
 
-The console records the deleting user. The Advisor's delete tool has no user,
-so its deletions are recorded as made by the system.
+The deletion is recorded as made by the user who asked for it, in the console
+or through the Advisor. A deletion with no known user is recorded as made by
+the system.
 
 ## Vendor Risk Management
 
@@ -1350,7 +1369,7 @@ cd Servers && npx ts-node scripts/vendorResearchBackfillCredibility.ts          
 2. A missing finding, or one whose vendor is gone, is a 404. A finding that is not `pending` is a 409.
 3. The action owner is resolved (below).
 4. When the person picked frameworks, each of them must exist (`checkFrameworksExist`); one that does not is a 400 "Invalid frameworks", and nothing has been written.
-5. The vendor risk is created with `createVendorRiskInTransaction` (`services/vendors/vendorRiskCreate.service.ts`): the insert into `vendorrisks` with the description, impact, likelihood, severity and action plan (each the edit of the request when there is one, else the finding's; no order number) and the risk level the insert computes from the likelihood and the severity, the frameworks the person picked (each checked to be a framework before the insert, so an unknown id is a 400 and never a failed insert that aborts the transaction), and the change-history record of the creation by the user, with the framework links. The vendor risk form (`createVendorRisk`) calls the same function, so a risk created either way is created by the same rules. The vendor is the finding's own, whatever the request says.
+5. The vendor risk is created with `createVendorRiskInTransaction` (`services/vendors/vendorRiskCreate.service.ts`): the insert into `vendorrisks` with the description, impact, likelihood, severity and action plan (each the edit of the request when there is one, else the finding's; no order number) and the risk level the insert computes from the likelihood and the severity, the frameworks the person picked (each checked to be a framework before the insert, so an unknown id is a 400 and never a failed insert that aborts the transaction), and the change-history record of the creation by the user, with the framework links. The vendor risk form and the Advisor create through `createVendorRisk` in `services/vendorRisk.service.ts`, which applies the same rules in a transaction of its own; `createVendorRiskInTransaction` exists because the accept writes the risk and the finding's decision in one transaction. The two are kept in step until they share one implementation. The vendor is the finding's own, whatever the request says.
 6. The finding is marked `accepted`, with `accepted_vendor_risk_id`, `decided_by` and `decided_at`.
 
 Anything that goes wrong rolls the whole accept back and leaves the finding `pending`. Only after the commit does `runVendorRiskPostCommitEffects` run, again the same as for the form: the related-risk recompute job, the candidate notice to the owners of project risks in the vendor's use cases, and the action owner's assignment notice, each fire-and-forget. A rolled-back accept announces nothing.
@@ -1592,7 +1611,9 @@ Vendors with `is_demo=true`:
 | `domain.layer/models/vendorsProjects/vendorsProjects.model.ts` | Junction model |
 | `utils/vendor.utils.ts` | Vendor queries |
 | `utils/vendorRisk.utils.ts` | Risk queries |
-| `controllers/vendor.ctrl.ts` | Controller; `createVendor` starts the automatic research. `createVendorV1` and `updateVendorByIdV1` run the same create and update with the other names and identifiers; the legacy `createVendor` and `updateVendorById` drop those fields (`withoutV1OnlyVendorFields`) |
+| `services/vendor.service.ts` | Vendor create, update, delete (REST and Advisor), including the other names and identifiers |
+| `services/vendorRisk.service.ts` | Vendor risk create, update, delete (REST and Advisor) |
+| `controllers/vendor.ctrl.ts` | Controller; `createVendor` starts the automatic research after the service has saved the vendor (console creates only, not Advisor ones). `createVendorV1` and `updateVendorByIdV1` run the same create and update with the other names and identifiers; the legacy `createVendor` and `updateVendorById` drop those fields (`withoutV1OnlyVendorFields`) |
 | `routes/vendor.route.ts` | Routes (vendor CRUD, legacy `/api/vendors`) |
 | `services/riskLinks/vendorReports.ts` | Exposure, duplicate and coverage reports |
 | `utils/vendorRiskReport.utils.ts` | Queries behind those reports |
@@ -1640,7 +1661,7 @@ Vendors with `is_demo=true`:
 | `services/vendorResearch/assignee.ts` | `isUserOfOrganization`: whether a user that someone else named (the vendor's assignee, the action owner of an accepted finding) belongs to the organization; an id that cannot be a user id (zero, negative, a fraction, `NaN`, above `Number.MAX_SAFE_INTEGER`) is answered `false` without a lookup, and a failing lookup rejects |
 | `services/vendorResearch/config.ts` | The environment variables of the agent |
 | `services/webResearch/` | The web research toolkit, see [Web research toolkit](../infrastructure/web-research.md): `publicUrl.ts` (URL and address policy), `guardedFetch.ts`, `robots.ts`, `pageText.ts`, `readPage.ts`, `pdfText.ts` (PDF reader), `scriptedText.ts` and `renderPage.ts` (pages that a script builds), `limiter.ts`, `webSearch.ts` (`SearchEngine`, the queue), `providerSearch.ts` (Claude's web search and the fallback), `gdeltSearch.ts` (the news of the GDELT Project), `webSession.ts` (budgets, provenance, ledger), `promptText.ts`, `researchLoop.ts` |
-| `services/vendors/vendorRiskCreate.service.ts` | Vendor risk creation shared by the vendor risk form and accept |
+| `services/vendors/vendorRiskCreate.service.ts` | Vendor risk creation inside the caller's transaction, for the accept of a finding (same rules as `services/vendorRisk.service.ts`) |
 | `services/vendors/textSimilarity.ts` | Tokeniser and Jaccard score (risk suggestions and research de-duplication) |
 | `services/inAppNotification.service.ts` | `notifyAssigneeOfVendorResearch`; the assignment email, whose context box escapes the text it shows with `escapeHtml` of `utils/sanitization.utils.ts` (the names are escaped by the mail compiler) |
 | `services/vendorResearch/queue.ts` | The `vendor-research` queue and `enqueueVendorResearch`: the `vendor_research` job, its id and its options; `scheduleVendorResearchScan`: the hourly `vendor_research_scan` job |

@@ -6,8 +6,10 @@ import { Request, Response } from "express";
 // create and the update refuse a user of another organization (SEC-1), on the /api/v1 routes and on
 // the legacy ones, which share the code. The update of /api/v1 also reads its id strictly.
 //
-// The membership lookup (utils/user.utils) is replaced by a table of members per organization; the
-// check that reads it (services/vendorResearch/assignee) and the controller run for real.
+// The insert and the update are mocked, but each runs the real guard first, as the real queries do
+// (assertVendorUsersInOrganization in utils/vendor.utils). The membership table it reads
+// (organization_members) is answered from a table of members per organization; the guard, the
+// lookup behind it (utils/user.utils), the vendor service and the controller run for real.
 jest.mock("../../database/db", () => ({
   sequelize: { query: jest.fn(), transaction: jest.fn() },
 }));
@@ -30,7 +32,6 @@ jest.mock("../../utils/changeHistory.base.utils", () => ({
   ...(jest.requireActual("../../utils/changeHistory.base.utils") as object),
   trackEntityChanges: jest.fn(),
 }));
-jest.mock("../../utils/user.utils", () => ({ findUsersNotInOrganization: jest.fn() }));
 jest.mock("../../utils/vendorChangeHistory.utils", () => ({
   recordVendorCreation: jest.fn(),
   trackVendorChanges: jest.fn(),
@@ -81,7 +82,6 @@ import { notifyUserAssigned } from "../../services/inAppNotification.service";
 import { notifyVendorRiskCandidates } from "../../services/riskLinks/vendorCandidates";
 import { triggerAutoResearch } from "../../services/vendorResearch/trigger";
 import { triggerVendorOnboarding } from "../../services/workflows/triggers";
-import { findUsersNotInOrganization } from "../../utils/user.utils";
 import { recordVendorCreation } from "../../utils/vendorChangeHistory.utils";
 import { trackEntityChanges } from "../../utils/changeHistory.base.utils";
 import {
@@ -94,6 +94,11 @@ import { createVendor, createVendorV1, updateVendorById, updateVendorByIdV1 } fr
 
 type AnyMock = jest.Mock<(...args: any[]) => any>;
 const asMock = (fn: unknown): AnyMock => fn as AnyMock;
+
+/** The tenant guard the real insert and update run before writing. */
+const { assertVendorUsersInOrganization } = jest.requireActual(
+  "../../utils/vendor.utils",
+) as typeof import("../../utils/vendor.utils");
 
 const ORG = 4;
 const OTHER_ORG = 8;
@@ -161,14 +166,22 @@ const modelOf = (people: { assignee?: unknown; reviewer?: unknown }) => {
   return model;
 };
 
-/** Nothing was written and nobody was told. */
+/** Nothing was written and nobody was told: the guard refused before the insert or the update. */
 const expectNothingWritten = () => {
-  expect(createNewVendorQuery).not.toHaveBeenCalled();
-  expect(updateVendorByIdQuery).not.toHaveBeenCalled();
   expect(recordVendorCreation).not.toHaveBeenCalled();
   expect(transaction.commit).not.toHaveBeenCalled();
   expect(notifyUserAssigned).not.toHaveBeenCalled();
 };
+
+/** The membership lookups made, as [user ids, organization, transaction]. */
+const memberLookups = () =>
+  asMock(sequelize.query)
+    .mock.calls.filter(([sql]) => String(sql).includes("user_id IN (:userIds)"))
+    .map(([, options]: any[]) => [
+      options.replacements.userIds,
+      options.replacements.organizationId,
+      options.transaction,
+    ]);
 
 beforeEach(() => {
   jest.resetAllMocks();
@@ -177,29 +190,44 @@ beforeEach(() => {
   asMock(trackEntityChanges).mockResolvedValue([]);
   transaction = { commit: jest.fn(), rollback: jest.fn() };
   asMock(sequelize.transaction).mockResolvedValue(transaction);
-  asMock(sequelize.query).mockResolvedValue([{ name: "Casey", surname: "Sample" }]);
-  asMock(findUsersNotInOrganization).mockImplementation(
-    async (ids: number[], organizationId: number) =>
-      ids.filter((id) => !(MEMBERS[organizationId] ?? []).includes(id)),
-  );
+  asMock(sequelize.query).mockImplementation(async (sql: string, options: any) => {
+    if (!String(sql).includes("user_id IN (:userIds)"))
+      return [{ name: "Casey", surname: "Sample" }];
+    const { organizationId, userIds } = options.replacements;
+    return (userIds as number[])
+      .filter((id) => (MEMBERS[organizationId] ?? []).includes(id))
+      .map((id) => ({ id }));
+  });
   // The factory takes the assignee third and the reviewer eighth, as the controller passes them.
   asMock((VendorModel as any).createNewVendor).mockImplementation(async (...args: unknown[]) =>
     modelOf({ assignee: args[2], reviewer: args[7] }),
   );
   asMock(VendorModel).mockImplementation((stored: typeof storedVendor) => modelOf(stored));
-  asMock(createNewVendorQuery).mockImplementation(async (model: any) => ({
-    id: VENDOR_ID,
-    vendor_name: "Example Ltd",
-    assignee: model.assignee,
-    reviewer: model.reviewer,
-  }));
+  asMock(createNewVendorQuery).mockImplementation(
+    async (model: any, organizationId: number, tx: any) => {
+      await assertVendorUsersInOrganization(model, organizationId, tx);
+      return {
+        id: VENDOR_ID,
+        vendor_name: "Example Ltd",
+        assignee: model.assignee,
+        reviewer: model.reviewer,
+      };
+    },
+  );
   asMock(getVendorByIdQuery).mockResolvedValue({ ...storedVendor });
   // The database stores the people as numbers, whatever form the request gave them in.
-  asMock(updateVendorByIdQuery).mockImplementation(async ({ vendor }: any) => ({
-    ...storedVendor,
-    assignee: Number(vendor.assignee),
-    reviewer: vendor.reviewer === null ? null : Number(vendor.reviewer),
-  }));
+  asMock(updateVendorByIdQuery).mockImplementation(
+    async ({ vendor, transaction: tx }: any, organizationId: number) => {
+      // The real update checks against the row it read; here, the one the service read.
+      const stored = await asMock(getVendorByIdQuery).mock.results.at(-1)!.value;
+      await assertVendorUsersInOrganization(vendor, organizationId, tx, stored);
+      return {
+        ...storedVendor,
+        assignee: Number(vendor.assignee),
+        reviewer: vendor.reviewer === null ? null : Number(vendor.reviewer),
+      };
+    },
+  );
   asMock(notifyUserAssigned).mockResolvedValue(undefined);
   asMock(triggerVendorOnboarding).mockResolvedValue(undefined);
   asMock(notifyVendorRiskCandidates).mockResolvedValue(undefined);
@@ -218,9 +246,9 @@ describe.each([
     expect(res.status).toHaveBeenCalledWith(400);
     expect(res.json).toHaveBeenCalledWith({
       message: "Bad Request",
-      data: "The assignee must be a user of your organization",
+      data: "The vendor assignee must be a member of this organization",
     });
-    expect(asMock(findUsersNotInOrganization)).toHaveBeenCalledWith([STRANGER], ORG, transaction);
+    expect(memberLookups()).toEqual([[[STRANGER], ORG, transaction]]);
     expect(transaction.rollback).toHaveBeenCalledTimes(1);
     expectNothingWritten();
   });
@@ -233,7 +261,7 @@ describe.each([
     expect(res.status).toHaveBeenCalledWith(400);
     expect(res.json).toHaveBeenCalledWith({
       message: "Bad Request",
-      data: "The reviewer must be a user of your organization",
+      data: "The vendor reviewer must be a member of this organization",
     });
     expectNothingWritten();
   });
@@ -267,7 +295,7 @@ describe.each([
     await create(makeReq({ ...CREATE_BODY, assignee: String(COLLEAGUE) }), res);
 
     expect(res.status).toHaveBeenCalledWith(201);
-    expect(asMock(findUsersNotInOrganization)).toHaveBeenCalledWith([COLLEAGUE], ORG, transaction);
+    expect(memberLookups()).toEqual([[[COLLEAGUE], ORG, transaction]]);
   });
 
   it.each([[null], [0], [undefined]])(
@@ -278,12 +306,7 @@ describe.each([
       await create(makeReq({ ...CREATE_BODY, reviewer }), res);
 
       expect(res.status).toHaveBeenCalledWith(201);
-      expect(findUsersNotInOrganization).toHaveBeenCalledTimes(1);
-      expect(asMock(findUsersNotInOrganization)).toHaveBeenCalledWith(
-        [COLLEAGUE],
-        ORG,
-        transaction,
-      );
+      expect(memberLookups()).toEqual([[[COLLEAGUE], ORG, transaction]]);
     },
   );
 });
@@ -302,7 +325,7 @@ describe.each([
     expect(res.status).toHaveBeenCalledWith(400);
     expect(res.json).toHaveBeenCalledWith({
       message: "Bad Request",
-      data: "The assignee must be a user of your organization",
+      data: "The vendor assignee must be a member of this organization",
     });
     expect(transaction.rollback).toHaveBeenCalledTimes(1);
     expectNothingWritten();
@@ -316,7 +339,7 @@ describe.each([
     expect(res.status).toHaveBeenCalledWith(400);
     expect(res.json).toHaveBeenCalledWith({
       message: "Bad Request",
-      data: "The reviewer must be a user of your organization",
+      data: "The vendor reviewer must be a member of this organization",
     });
     expectNothingWritten();
   });
@@ -327,11 +350,7 @@ describe.each([
     await update(makeReq({ assignee: OTHER_COLLEAGUE }, params), res);
 
     expect(res.status).toHaveBeenCalledWith(202);
-    expect(asMock(findUsersNotInOrganization)).toHaveBeenCalledWith(
-      [OTHER_COLLEAGUE],
-      ORG,
-      transaction,
-    );
+    expect(memberLookups()).toEqual([[[OTHER_COLLEAGUE], ORG, transaction]]);
     expect(asMock(notifyUserAssigned).mock.calls[0].slice(0, 2)).toEqual([ORG, OTHER_COLLEAGUE]);
   });
 
@@ -354,7 +373,7 @@ describe.each([
     );
 
     expect(res.status).toHaveBeenCalledWith(202);
-    expect(findUsersNotInOrganization).not.toHaveBeenCalled();
+    expect(memberLookups()).toEqual([]);
     expect(notifyUserAssigned).not.toHaveBeenCalled();
   });
 });

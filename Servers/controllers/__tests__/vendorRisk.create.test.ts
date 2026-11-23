@@ -40,7 +40,6 @@ jest.mock("../../utils/riskLink.utils", () => ({
   getVendorNoticeContextQuery: jest.fn(),
 }));
 // The membership lookup behind the action owner check; the check itself runs for real.
-jest.mock("../../utils/user.utils", () => ({ findUsersNotInOrganization: jest.fn() }));
 jest.mock("../../utils/logger/fileLogger", () => ({
   __esModule: true,
   default: { debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn() },
@@ -74,7 +73,6 @@ import { notifyUserAssigned } from "../../services/inAppNotification.service";
 import { notifyVendorRiskCandidates } from "../../services/riskLinks/vendorCandidates";
 import { enqueueVendorRiskLinkRecompute } from "../../services/automations/automationProducer";
 import { getVendorNoticeContextQuery } from "../../utils/riskLink.utils";
-import { findUsersNotInOrganization } from "../../utils/user.utils";
 import { logFailure, logSuccess } from "../../utils/logger/logHelper";
 import { createVendorRisk } from "../vendorRisk.ctrl";
 
@@ -128,13 +126,51 @@ const flush = () => new Promise((resolve) => setImmediate(resolve));
 
 const callOrder = (fn: unknown): number => asMock(fn).mock.invocationCallOrder[0];
 
+/** A user of another organization only. */
+const OUTSIDER = 77;
+
+/** The tenant guard the real insert runs before writing. */
+const { assertVendorRiskOwnerInOrganization } = jest.requireActual(
+  "../../utils/vendorRisk.utils",
+) as typeof import("../../utils/vendorRisk.utils");
+
+/** The membership lookups made, as [user ids, organization, transaction]. */
+const memberLookups = () =>
+  asMock(sequelize.query)
+    .mock.calls.filter(([sql]) => String(sql).includes("user_id IN (:userIds)"))
+    .map(([, options]: any[]) => [
+      options.replacements.userIds,
+      options.replacements.organizationId,
+      options.transaction,
+    ]);
+
+/** The insert, running the owner guard first as the real one does. */
+const insertWithGuard = (owner: number) => {
+  asMock(VendorRiskModel.createNewVendorRisk).mockResolvedValue({
+    ...builtModel,
+    action_owner: owner,
+  });
+  asMock(createNewVendorRiskQuery).mockImplementation(
+    async (model: any, organizationId: number, tx: any) => {
+      await assertVendorRiskOwnerInOrganization(model.action_owner, organizationId, tx);
+      return { ...insertedRisk, action_owner: owner };
+    },
+  );
+};
+
 describe("createVendorRisk", () => {
   beforeEach(() => {
     jest.resetAllMocks();
     transaction = { commit: jest.fn(), rollback: jest.fn() };
     asMock(sequelize.transaction).mockResolvedValue(transaction);
     asMock(sequelize.query).mockImplementation(
-      async (sql: string, options?: { replacements?: { ids?: number[] } }) => {
+      async (sql: string, options?: { replacements?: { ids?: number[]; userIds?: number[] } }) => {
+        // Every user but OUTSIDER is a member of the organization.
+        if (sql.includes("user_id IN (:userIds)")) {
+          return (options?.replacements?.userIds ?? [])
+            .filter((id) => id !== OUTSIDER)
+            .map((id) => ({ id }));
+        }
         if (sql.includes("FROM users")) return [{ name: "Ada", surname: "Lovelace" }];
         if (sql.includes("FROM vendors")) return [{ vendor_name: "Acme Corp" }];
         // Every framework id but UNKNOWN_FRAMEWORK is a framework.
@@ -403,34 +439,33 @@ describe("createVendorRisk", () => {
   });
 
   it("answers 400 for an action owner of another organization, writes nothing and tells nobody", async () => {
-    // User 77 belongs to another organization only.
-    asMock(findUsersNotInOrganization).mockResolvedValue([77]);
+    insertWithGuard(OUTSIDER);
     const res = makeRes();
 
-    await createVendorRisk(makeReq({ body: { ...requestBody, action_owner: 77 } }), res);
+    await createVendorRisk(makeReq({ body: { ...requestBody, action_owner: OUTSIDER } }), res);
     await flush();
 
     expect(res.status).toHaveBeenCalledWith(400);
     expect(res.json).toHaveBeenCalledWith({
       message: "Bad Request",
-      data: "The action owner must be a user of your organization",
+      data: "The action owner must be a member of this organization",
     });
-    expect(asMock(findUsersNotInOrganization)).toHaveBeenCalledWith([77], ORG_ID, transaction);
+    expect(memberLookups()).toEqual([[[OUTSIDER], ORG_ID, transaction]]);
     expect(transaction.rollback).toHaveBeenCalledTimes(1);
     expect(transaction.commit).not.toHaveBeenCalled();
-    expect(createNewVendorRiskQuery).not.toHaveBeenCalled();
+    expect(recordVendorRiskCreation).not.toHaveBeenCalled();
     expect(notifyUserAssigned).not.toHaveBeenCalled();
     expect(enqueueVendorRiskLinkRecompute).not.toHaveBeenCalled();
   });
 
   it("creates the risk for an action owner of the organization", async () => {
-    asMock(findUsersNotInOrganization).mockResolvedValue([]);
+    insertWithGuard(9);
     const res = makeRes();
 
     await createVendorRisk(makeReq({ body: { ...requestBody, action_owner: 9 } }), res);
 
     expect(res.status).toHaveBeenCalledWith(201);
-    expect(asMock(findUsersNotInOrganization)).toHaveBeenCalledWith([9], ORG_ID, transaction);
+    expect(memberLookups()).toEqual([[[9], ORG_ID, transaction]]);
   });
 
   // The one deliberate behaviour change of the extraction: the original left the transaction open.

@@ -18,12 +18,16 @@ import { notifyVendorRiskCandidates } from "../riskLinks/vendorCandidates";
 import { isUserOfOrganization } from "../vendorResearch/assignee";
 
 /**
- * Creating a vendor risk does more than insert a row. The rules live here, in two halves, so any
- * flow that creates a vendor risk behaves exactly like the vendor risk form:
+ * Creating a vendor risk inside a transaction the caller owns: the accept of a research finding,
+ * which writes the finding's decision and the new risk together. The rules are those of the vendor
+ * risk form and the Advisor (`createVendorRisk` in `services/vendorRisk.service.ts`, which opens
+ * its own transaction), in two halves:
  *
  * 1. `createVendorRiskInTransaction`: the insert, framework links and change history, all inside
  *    a transaction the caller owns and later commits or rolls back.
  * 2. `runVendorRiskPostCommitEffects`: what follows once that transaction has committed.
+ *
+ * Keep the two in step until they share one implementation.
  */
 
 export interface CreateVendorRiskInput {
@@ -60,8 +64,9 @@ async function getUserNameById(userId: number): Promise<string> {
  * Refuses an action owner who is not a user of the organization. The action owner is told of the
  * risk by email, with its text and the vendor's name, and nothing in the database ties the owner to
  * the organization, so a user of another organization is refused before anything is written. No
- * owner (null, 0, nothing) is told nothing and needs no check. The create and the update of a
- * vendor risk (`updateVendorRiskById`) both call it.
+ * owner (null, 0, nothing) is told nothing and needs no check. The insert repeats the check
+ * (`assertVendorRiskOwnerInOrganization` in `utils/vendorRisk.utils.ts`); this one runs first, so the
+ * accept answers with its own sentence.
  *
  * @throws ValidationException when the action owner is not a user id, or not a user of the
  *   organization

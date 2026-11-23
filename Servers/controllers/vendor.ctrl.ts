@@ -3,110 +3,22 @@ import { Request, Response } from "express";
 import { STATUS_CODE } from "../utils/statusCode.utils";
 import { toId } from "../utils/validations/validation.utils";
 import { assertVendorRequestBody, parseRouteId } from "../utils/validations/vendorRequest.utils";
+import { withoutV1OnlyVendorFields } from "../utils/validations/vendorValidation.utils";
 import {
-  withNormalizedIdentifiers,
-  withoutV1OnlyVendorFields,
-} from "../utils/validations/vendorValidation.utils";
-import {
-  createNewVendorQuery,
-  deleteVendorByIdQuery,
   getAllVendorsQuery,
   getVendorByIdQuery,
   getVendorByProjectIdQuery,
-  updateVendorByIdQuery,
-  visibleVendorProjectIds,
 } from "../utils/vendor.utils";
-import { sequelize } from "../database/db";
 import { logFailure, logProcessing, logSuccess } from "../utils/logger/logHelper";
-import { VendorModel } from "../domain.layer/models/vendor/vendor.model";
 import {
   ValidationException,
   BusinessLogicException,
 } from "../domain.layer/exceptions/custom.exception";
-import {
-  recordVendorCreation,
-  recordMultipleFieldChanges,
-} from "../utils/vendorChangeHistory.utils";
-import { trackEntityChanges } from "../utils/changeHistory.base.utils";
-import { notifyUserAssigned } from "../services/inAppNotification.service";
 import { getVendorRiskSuggestions as getVendorRiskSuggestionsService } from "../services/vendors/riskSuggestions";
-import { triggerVendorOnboarding } from "../services/workflows/triggers";
-import { notifyVendorRiskCandidates } from "../services/riskLinks/vendorCandidates";
+import * as vendorService from "../services/vendor.service";
 import { triggerAutoResearch } from "../services/vendorResearch/trigger";
-import { isUserOfOrganization } from "../services/vendorResearch/assignee";
-import { enqueueVendorRiskLinkRecomputeBatch } from "../services/automations/automationProducer";
-import { getActiveVendorRiskIdsQuery } from "../utils/vendorRiskLink.utils";
 import logger from "../utils/logger/fileLogger";
-import { QueryTypes, Transaction } from "sequelize";
-
 import { translateError } from "../utils/i18n.utils";
-import { calculateVendorRiskScore } from "../utils/vendorScorecard.utils";
-// Helper function to get user name
-async function getUserNameById(userId: number): Promise<string> {
-  const result = await sequelize.query<{ name: string; surname: string }>(
-    `SELECT name, surname FROM users WHERE id = :userId`,
-    { replacements: { userId }, type: QueryTypes.SELECT },
-  );
-  if (result[0]) {
-    return `${result[0].name} ${result[0].surname}`.trim();
-  }
-  return "Someone";
-}
-
-/**
- * An id off the wire that is a positive whole number a float holds exactly, or NaN: "12abc", "abc",
- * "-3" and "1.5" are not ids (`parseInt` would read "12abc" as 12).
- */
-const positiveId = (value: unknown): number => {
-  const id = toId(value);
-  return Number.isSafeInteger(id) && id > 0 ? id : NaN;
-};
-
-/** Whether a user field of a vendor holds a user: the model reads null, 0 and nothing as no user. */
-const namesAUser = (value: unknown): boolean =>
-  value !== undefined && value !== null && value !== "" && Number(value) !== 0;
-
-/**
- * Refuses an assignee or a reviewer who is not a user of the organization. The user is told of the
- * assignment by email with the vendor's name and what it provides, and nothing in the database ties
- * these fields to the vendor's organization, so a user of another organization would be sent them.
- *
- * `before` is the stored vendor on an update: a user who is already stored there is not checked
- * again, because the form sends every field back and is not told of it a second time. Without that,
- * a vendor whose assignee has since left the organization could not be edited at all.
- *
- * @throws ValidationException when the assignee or the reviewer is not a user of the organization
- */
-async function checkVendorUsers(
-  vendor: { assignee?: unknown; reviewer?: unknown },
-  organizationId: number,
-  transaction: Transaction,
-  before?: { assignee?: unknown; reviewer?: unknown },
-): Promise<void> {
-  const isNew = (value: unknown, stored: unknown): boolean =>
-    namesAUser(value) && (before === undefined || Number(value) !== Number(stored));
-
-  if (
-    isNew(vendor.assignee, before?.assignee) &&
-    !(await isUserOfOrganization(positiveId(vendor.assignee), organizationId, transaction))
-  ) {
-    throw new ValidationException(
-      "The assignee must be a user of your organization",
-      "assignee",
-      vendor.assignee,
-    );
-  }
-  if (
-    isNew(vendor.reviewer, before?.reviewer) &&
-    !(await isUserOfOrganization(positiveId(vendor.reviewer), organizationId, transaction))
-  ) {
-    throw new ValidationException(
-      "The reviewer must be a user of your organization",
-      "reviewer",
-      vendor.reviewer,
-    );
-  }
-}
 
 export async function getAllVendors(req: Request, res: Response): Promise<any> {
   logProcessing({
@@ -316,6 +228,36 @@ export async function getVendorRiskSuggestions(req: Request, res: Response): Pro
   }
 }
 
+/** A failed write's answer: 400 invalid, 403 demo vendor, else 500. */
+async function failedWrite(
+  req: Request,
+  res: Response,
+  error: unknown,
+  eventType: "Create" | "Update",
+  functionName: string,
+): Promise<any> {
+  const log = (description: string) =>
+    logFailure({
+      eventType,
+      description,
+      functionName,
+      fileName: "vendor.ctrl.ts",
+      error: error as Error,
+      userId: req.userId!,
+      organizationId: req.organizationId!,
+    });
+  if (error instanceof ValidationException) {
+    await log(`Validation failed: ${error.message}`);
+    return res.status(400).json(STATUS_CODE[400](translateError(req, error)));
+  }
+  if (error instanceof BusinessLogicException) {
+    await log(`Business logic error: ${error.message}`);
+    return res.status(403).json(STATUS_CODE[403](translateError(req, error)));
+  }
+  await log(`Failed to ${eventType.toLowerCase()} vendor`);
+  return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
+}
+
 /**
  * POST /vendors, the legacy create: the frozen legacy contract, which never had the other names and
  * the identifiers (ADR 0001, sections 1 and 2), so it ignores them. They are dropped here, before
@@ -354,7 +296,6 @@ async function createVendorFrom(req: Request, res: Response, vendorData: Request
   } catch (error) {
     return res.status(400).json(STATUS_CODE[400](translateError(req, error)));
   }
-  const transaction = await sequelize.transaction();
 
   logProcessing({
     description: "starting createVendor",
@@ -365,70 +306,23 @@ async function createVendorFrom(req: Request, res: Response, vendorData: Request
   });
 
   try {
-    // Create vendor using the enhanced VendorModel method
-    const vendorModel = await VendorModel.createNewVendor(
-      vendorData.vendor_name,
-      vendorData.vendor_provides,
-      vendorData.assignee,
-      vendorData.website,
-      vendorData.vendor_contact_person,
-      vendorData.review_result,
-      vendorData.review_status,
-      vendorData.reviewer,
-      vendorData.review_date,
-      vendorData.order_no,
-      vendorData.is_demo || false,
-      // Only use cases the user can see, as on update.
-      Array.isArray(vendorData.projects)
-        ? await visibleVendorProjectIds(
-            vendorData.projects,
-            { userId: req.userId!, role: req.role!, transaction },
-            req.organizationId!,
-          )
-        : [],
-      vendorData.data_sensitivity,
-      vendorData.business_criticality,
-      vendorData.past_issues,
-      vendorData.regulatory_exposure,
-      vendorData.risk_score,
-      vendorData.other_names,
-      {
-        country: vendorData.country,
-        registration_number: vendorData.registration_number,
-        lei: vendorData.lei,
-        sec_cik: vendorData.sec_cik,
-      },
-    );
-
-    // Validate vendor data before saving
-    await vendorModel.validateVendorData();
-
-    // Check if vendor can be modified (demo restrictions)
-    vendorModel.canBeModified();
-
-    await checkVendorUsers(vendorModel, req.organizationId!, transaction);
-
-    const createdVendor = await createNewVendorQuery(vendorModel, req.organizationId!, transaction);
+    const createdVendor = await vendorService.createVendor(vendorData, {
+      userId: req.userId,
+      role: req.role!,
+      organizationId: req.organizationId!,
+    });
 
     if (createdVendor) {
-      // Record creation in change history
-      if (req.userId) {
-        await recordVendorCreation(
-          createdVendor.id!,
-          req.userId,
-          req.organizationId!,
-          {
-            // The identifiers in the form they are stored.
-            ...withNormalizedIdentifiers(vendorData),
-            risk_score: createdVendor.risk_score,
-            // The links written (visible use cases only), none if empty.
-            projects: createdVendor.projects?.length ? createdVendor.projects : undefined,
-          },
-          transaction,
-        );
-      }
+      // Research the new vendor's risks in the background, for a vendor made on the Vendors page.
+      // Not awaited, so it cannot fail the response. triggerAutoResearch is written never to
+      // reject; the catch is for the day it does, because a rejection that nothing handles ends the
+      // process.
+      triggerAutoResearch({
+        organizationId: req.organizationId!,
+        vendorId: createdVendor.id!,
+        isDemo: !!createdVendor.is_demo,
+      }).catch((err) => logger.error("Vendor research auto-start failed:", err));
 
-      await transaction.commit();
       await logSuccess({
         eventType: "Create",
         description: `Created vendor: ${createdVendor.vendor_name}`,
@@ -437,81 +331,9 @@ async function createVendorFrom(req: Request, res: Response, vendorData: Request
         userId: req.userId!,
         organizationId: req.organizationId!,
       });
-
-      // Phase 6 / issue 3813 — kick off the vendor_onboarding autopilot
-      // workflow after a successful create. Fire-and-forget; never blocks
-      // or fails the response.
-      triggerVendorOnboarding(req.organizationId!, createdVendor.id!).catch((err) =>
-        console.error("Failed to trigger vendor_onboarding workflow:", err),
-      );
-
-      // A new vendor normally has no vendor risks yet, so this usually finds
-      // nothing. Fire-and-forget, like the model counterpart.
-      notifyVendorRiskCandidates({
-        organizationId: req.organizationId!,
-        vendorId: createdVendor.id!,
-        vendorName: createdVendor.vendor_name,
-        projectIds: createdVendor.projects ?? [],
-      }).catch((err) => logger.error("Vendor risk candidate notice failed:", err));
-
-      // Research the new vendor's risks in the background. Not awaited, so it cannot fail the
-      // response. triggerAutoResearch is written never to reject; the catch is for the day it does,
-      // because a rejection that nothing handles ends the process.
-      triggerAutoResearch({
-        organizationId: req.organizationId!,
-        vendorId: createdVendor.id!,
-        isDemo: !!createdVendor.is_demo,
-      }).catch((err) => logger.error("Vendor research auto-start failed:", err));
-
-      // Send assignment notifications (fire-and-forget)
-      const baseUrl = process.env.FRONTEND_URL || "http://localhost:3000";
-      const assignerName = await getUserNameById(req.userId!);
-
-      // Build entity context for vendor
-      const vendorContext = {
-        description: createdVendor.vendor_provides || undefined,
-      };
-
-      // Notify assignee if assigned
-      if (createdVendor.assignee) {
-        notifyUserAssigned(
-          req.organizationId!,
-          createdVendor.assignee,
-          {
-            entityType: "vendor",
-            entityId: createdVendor.id!,
-            entityName: createdVendor.vendor_name,
-            roleType: "Assignee",
-            entityUrl: `/vendors?vendorId=${createdVendor.id}`,
-          },
-          assignerName,
-          baseUrl,
-          vendorContext,
-        ).catch((err) => console.error("Failed to send assignee notification:", err));
-      }
-
-      // Notify reviewer if assigned
-      if (createdVendor.reviewer) {
-        notifyUserAssigned(
-          req.organizationId!,
-          createdVendor.reviewer,
-          {
-            entityType: "vendor",
-            entityId: createdVendor.id!,
-            entityName: createdVendor.vendor_name,
-            roleType: "Reviewer",
-            entityUrl: `/vendors?vendorId=${createdVendor.id}`,
-          },
-          assignerName,
-          baseUrl,
-          vendorContext,
-        ).catch((err) => console.error("Failed to send reviewer notification:", err));
-      }
-
       return res.status(201).json(STATUS_CODE[201](createdVendor));
     }
 
-    await transaction.rollback();
     await logSuccess({
       eventType: "Create",
       description: "Vendor creation returned null",
@@ -522,44 +344,7 @@ async function createVendorFrom(req: Request, res: Response, vendorData: Request
     });
     return res.status(503).json(STATUS_CODE[503]({}));
   } catch (error) {
-    await transaction.rollback();
-
-    if (error instanceof ValidationException) {
-      await logFailure({
-        eventType: "Create",
-        description: `Validation failed: ${error.message}`,
-        functionName: "createVendor",
-        fileName: "vendor.ctrl.ts",
-        error: error as Error,
-        userId: req.userId!,
-        organizationId: req.organizationId!,
-      });
-      return res.status(400).json(STATUS_CODE[400](translateError(req, error)));
-    }
-
-    if (error instanceof BusinessLogicException) {
-      await logFailure({
-        eventType: "Create",
-        description: `Business logic error: ${error.message}`,
-        functionName: "createVendor",
-        fileName: "vendor.ctrl.ts",
-        error: error as Error,
-        userId: req.userId!,
-        organizationId: req.organizationId!,
-      });
-      return res.status(403).json(STATUS_CODE[403](translateError(req, error)));
-    }
-
-    await logFailure({
-      eventType: "Create",
-      description: "Failed to create vendor",
-      functionName: "createVendor",
-      fileName: "vendor.ctrl.ts",
-      error: error as Error,
-      userId: req.userId!,
-      organizationId: req.organizationId!,
-    });
-    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
+    return failedWrite(req, res, error, "Create", "createVendor");
   }
 }
 
@@ -581,10 +366,10 @@ export async function updateVendorById(req: Request, res: Response): Promise<any
  * 0001, sections 2 and 5).
  */
 export async function updateVendorByIdV1(req: Request, res: Response): Promise<any> {
-  // Refused before the shared update opens its transaction: "abc" would reach the query as NaN (a
-  // 500), and "12abc" would update vendor 12, as the other v1 vendor routes already refuse.
-  const vendorId = positiveId(req.params.id);
-  if (Number.isNaN(vendorId)) {
+  // "abc" and "12abc" are refused, as the other v1 vendor routes refuse them, and so is an id
+  // past 2^53, which a number cannot hold exactly.
+  const vendorId = parseRouteId(req.params.id);
+  if (vendorId === null || !Number.isSafeInteger(vendorId)) {
     return res.status(400).json(STATUS_CODE[400](req.t!("Invalid vendor ID")));
   }
   if (!isJsonObject(req.body)) return refuseBody(req, res);
@@ -602,7 +387,6 @@ async function updateVendorByIdFrom(
   } catch (error) {
     return res.status(400).json(STATUS_CODE[400](translateError(req, error)));
   }
-  const transaction = await sequelize.transaction();
 
   logProcessing({
     description: `starting updateVendorById for ID ${vendorId}`,
@@ -612,142 +396,28 @@ async function updateVendorByIdFrom(
     organizationId: req.organizationId!,
   });
 
+  const { userId, role } = req;
+  if (!userId || !role) {
+    await logFailure({
+      eventType: "Update",
+      description: "Unauthorized access attempt to update vendor",
+      functionName: "updateVendorById",
+      fileName: "vendor.ctrl.ts",
+      error: new Error("Unauthorized"),
+      userId: req.userId!,
+      organizationId: req.organizationId!,
+    });
+    return res.status(401).json(STATUS_CODE[401](req.t!("Unauthorized")));
+  }
+
   try {
-    const { userId, role } = req;
-    if (!userId || !role) {
-      await transaction.rollback();
-      await logFailure({
-        eventType: "Update",
-        description: "Unauthorized access attempt to update vendor",
-        functionName: "updateVendorById",
-        fileName: "vendor.ctrl.ts",
-        error: new Error("Unauthorized"),
-        userId: req.userId!,
-        organizationId: req.organizationId!,
-      });
-      return res.status(401).json(STATUS_CODE[401](req.t!("Unauthorized")));
-    }
-
-    // Find existing vendor
-    // Read and lock on the write's transaction: the before/after diffs below
-    // (links, assignee, reviewer) must see the row this save overwrites.
-    const existingVendor = await getVendorByIdQuery(vendorId, req.organizationId!, {
-      transaction,
-      forUpdate: true,
+    const vendor = await vendorService.updateVendor(vendorId, updateData, {
+      userId,
+      role,
+      organizationId: req.organizationId!,
     });
-
-    if (!existingVendor) {
-      await transaction.rollback();
-      await logSuccess({
-        eventType: "Update",
-        description: `Vendor not found for update: ID ${vendorId}`,
-        functionName: "updateVendorById",
-        fileName: "vendor.ctrl.ts",
-        userId: req.userId!,
-        organizationId: req.organizationId!,
-      });
-      return res.status(404).json(STATUS_CODE[404]({}));
-    }
-
-    // Create VendorModel instance and update it. The stored use case links
-    // are not carried over: links are written only when the request sends
-    // `projects`, so a field-only save never touches them.
-    const vendorModel = new VendorModel({ ...existingVendor, projects: undefined });
-
-    // Track changes before updating, with the identifiers in the form they are stored.
-    // The risk score as it will be stored: computed from the answers this
-    // request writes, else the stored ones (as updateVendorByIdQuery does).
-    const answer = (
-      field: "data_sensitivity" | "business_criticality" | "past_issues" | "regulatory_exposure",
-    ) => (updateData[field] !== undefined ? updateData[field] : existingVendor[field]);
-    // Name lookups are scoped to this organization and run on the write's
-    // transaction. Use case links are diffed after the write, from storage.
-    const historyContext = { organizationId: req.organizationId!, transaction };
-    const changes = await trackEntityChanges(
-      "vendor",
-      vendorModel,
-      {
-        ...withNormalizedIdentifiers(updateData),
-        projects: undefined,
-        risk_score: calculateVendorRiskScore({
-          data_sensitivity: answer("data_sensitivity"),
-          business_criticality: answer("business_criticality"),
-          past_issues: answer("past_issues"),
-          regulatory_exposure: answer("regulatory_exposure"),
-        }),
-      },
-      historyContext,
-    );
-
-    // Update vendor using the enhanced method
-    await vendorModel.updateVendor({
-      vendor_name: updateData.vendor_name,
-      vendor_provides: updateData.vendor_provides,
-      assignee: updateData.assignee,
-      website: updateData.website,
-      vendor_contact_person: updateData.vendor_contact_person,
-      review_result: updateData.review_result,
-      review_status: updateData.review_status,
-      reviewer: updateData.reviewer,
-      review_date: updateData.review_date,
-      order_no: updateData.order_no,
-      projects: updateData.projects,
-      data_sensitivity: updateData.data_sensitivity,
-      business_criticality: updateData.business_criticality,
-      past_issues: updateData.past_issues,
-      regulatory_exposure: updateData.regulatory_exposure,
-      risk_score: updateData.risk_score,
-      other_names: updateData.other_names,
-      country: updateData.country,
-      registration_number: updateData.registration_number,
-      lei: updateData.lei,
-      sec_cik: updateData.sec_cik,
-    });
-
-    // updateVendor checked each field the request sent. The whole row is not
-    // validated again: an imported vendor can have empty required fields, and
-    // a save that doesn't touch them must not fail on them.
-
-    await checkVendorUsers(vendorModel, req.organizationId!, transaction, existingVendor);
-
-    const vendor = await updateVendorByIdQuery(
-      {
-        id: vendorId,
-        vendor: vendorModel,
-        userId,
-        role,
-        transaction,
-      },
-      req.organizationId!,
-    );
 
     if (vendor) {
-      // The use case links as stored before and after: the request may name
-      // use cases the user can't see, which are neither added nor removed.
-      // History records the count only (changeHistory.config.ts).
-      const projectIdsBefore = (existingVendor.projects ?? []).map(Number);
-      const projectIdsAfter = (vendor.projects ?? []).map(Number);
-      changes.push(
-        ...(await trackEntityChanges(
-          "vendor",
-          { projects: projectIdsBefore },
-          { projects: projectIdsAfter },
-          historyContext,
-        )),
-      );
-
-      // Record changes in change history
-      if (changes.length > 0) {
-        await recordMultipleFieldChanges(
-          vendorId,
-          userId,
-          req.organizationId!,
-          changes,
-          transaction,
-        );
-      }
-
-      await transaction.commit();
       await logSuccess({
         eventType: "Update",
         description: `Updated vendor ID ${vendorId}`,
@@ -756,84 +426,9 @@ async function updateVendorByIdFrom(
         userId: req.userId!,
         organizationId: req.organizationId!,
       });
-
-      // Only use cases this update added or removed, read from the links as
-      // stored before and after the write. A plain field edit sends no
-      // projects, so both lists match and nothing fires.
-      const addedProjectIds = projectIdsAfter.filter((id) => !projectIdsBefore.includes(id));
-      if (addedProjectIds.length > 0) {
-        notifyVendorRiskCandidates({
-          organizationId: req.organizationId!,
-          vendorId,
-          vendorName: vendor.vendor_name,
-          projectIds: addedProjectIds,
-        }).catch((err) => logger.error("Vendor risk candidate notice failed:", err));
-      }
-
-      // Use cases shared with another vendor feed the related vendor risk
-      // score, so a change in either direction rescores this vendor's risks.
-      const removedProjectIds = projectIdsBefore.filter((id) => !projectIdsAfter.includes(id));
-      if (addedProjectIds.length > 0 || removedProjectIds.length > 0) {
-        getActiveVendorRiskIdsQuery(req.organizationId!, vendorId)
-          .then((ids) =>
-            enqueueVendorRiskLinkRecomputeBatch(req.organizationId!, ids, `vendor-${vendorId}`),
-          )
-          .catch((err) => logger.error("Vendor risk link recompute enqueue failed:", err));
-      }
-
-      // Send assignment notifications for newly assigned users (fire-and-forget)
-      const baseUrl = process.env.FRONTEND_URL || "http://localhost:3000";
-      const assignerName = await getUserNameById(userId);
-
-      // Build entity context for vendor
-      const vendorContext = {
-        description: vendor.vendor_provides || undefined,
-      };
-
-      // Check if assignee changed
-      const oldAssignee = existingVendor.assignee;
-      const newAssignee = vendor.assignee;
-      if (newAssignee && newAssignee !== oldAssignee && newAssignee !== userId) {
-        notifyUserAssigned(
-          req.organizationId!,
-          newAssignee,
-          {
-            entityType: "vendor",
-            entityId: vendorId,
-            entityName: vendor.vendor_name,
-            roleType: "Assignee",
-            entityUrl: `/vendors?vendorId=${vendorId}`,
-          },
-          assignerName,
-          baseUrl,
-          vendorContext,
-        ).catch((err) => console.error("Failed to send assignee notification:", err));
-      }
-
-      // Check if reviewer changed
-      const oldReviewer = existingVendor.reviewer;
-      const newReviewer = vendor.reviewer;
-      if (newReviewer && newReviewer !== oldReviewer && newReviewer !== userId) {
-        notifyUserAssigned(
-          req.organizationId!,
-          newReviewer,
-          {
-            entityType: "vendor",
-            entityId: vendorId,
-            entityName: vendor.vendor_name,
-            roleType: "Reviewer",
-            entityUrl: `/vendors?vendorId=${vendorId}`,
-          },
-          assignerName,
-          baseUrl,
-          vendorContext,
-        ).catch((err) => console.error("Failed to send reviewer notification:", err));
-      }
-
       return res.status(202).json(STATUS_CODE[202](vendor));
     }
 
-    await transaction.rollback();
     await logSuccess({
       eventType: "Update",
       description: `Vendor not found for update: ID ${vendorId}`,
@@ -844,44 +439,7 @@ async function updateVendorByIdFrom(
     });
     return res.status(404).json(STATUS_CODE[404]({}));
   } catch (error) {
-    await transaction.rollback();
-
-    if (error instanceof ValidationException) {
-      await logFailure({
-        eventType: "Update",
-        description: `Validation failed: ${error.message}`,
-        functionName: "updateVendorById",
-        fileName: "vendor.ctrl.ts",
-        error: error as Error,
-        userId: req.userId!,
-        organizationId: req.organizationId!,
-      });
-      return res.status(400).json(STATUS_CODE[400](translateError(req, error)));
-    }
-
-    if (error instanceof BusinessLogicException) {
-      await logFailure({
-        eventType: "Update",
-        description: `Business logic error: ${error.message}`,
-        functionName: "updateVendorById",
-        fileName: "vendor.ctrl.ts",
-        error: error as Error,
-        userId: req.userId!,
-        organizationId: req.organizationId!,
-      });
-      return res.status(403).json(STATUS_CODE[403](translateError(req, error)));
-    }
-
-    await logFailure({
-      eventType: "Update",
-      description: "Failed to update vendor",
-      functionName: "updateVendorById",
-      fileName: "vendor.ctrl.ts",
-      error: error as Error,
-      userId: req.userId!,
-      organizationId: req.organizationId!,
-    });
-    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
+    return failedWrite(req, res, error, "Update", "updateVendorById");
   }
 }
 
@@ -890,7 +448,6 @@ export async function deleteVendorById(req: Request, res: Response): Promise<any
   if (vendorId === null) {
     return res.status(400).json(STATUS_CODE[400](req.t!("Invalid vendor ID")));
   }
-  const transaction = await sequelize.transaction();
 
   logProcessing({
     description: `starting deleteVendorById for ID ${vendorId}`,
@@ -901,15 +458,13 @@ export async function deleteVendorById(req: Request, res: Response): Promise<any
   });
 
   try {
-    const deletedVendor = await deleteVendorByIdQuery(
-      vendorId,
-      req.organizationId!,
-      transaction,
-      req.userId!,
-    );
+    const deletedVendor = await vendorService.deleteVendor(vendorId, {
+      userId: req.userId,
+      role: req.role!,
+      organizationId: req.organizationId!,
+    });
 
     if (deletedVendor) {
-      await transaction.commit();
       await logSuccess({
         eventType: "Delete",
         description: `Deleted vendor ID ${vendorId}`,
@@ -921,7 +476,6 @@ export async function deleteVendorById(req: Request, res: Response): Promise<any
       return res.status(202).json(STATUS_CODE[202](deletedVendor));
     }
 
-    await transaction.rollback();
     await logSuccess({
       eventType: "Delete",
       description: `Vendor not found for deletion: ID ${vendorId}`,
@@ -932,7 +486,6 @@ export async function deleteVendorById(req: Request, res: Response): Promise<any
     });
     return res.status(404).json(STATUS_CODE[404]({}));
   } catch (error) {
-    await transaction.rollback();
     await logFailure({
       eventType: "Delete",
       description: "Failed to delete vendor",

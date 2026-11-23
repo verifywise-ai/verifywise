@@ -129,7 +129,7 @@ export const toolsDefinition: any[] = [
     function: {
       name: "agent_create_vendor",
       description:
-        "Create a new vendor in the vendor registry. Requires human confirmation before execution. Use this when the user asks to add or register a new vendor.",
+        "Create a new vendor in the vendor registry. Requires human confirmation before execution. Use this when the user asks to add or register a new vendor. A name, what the vendor provides, a website and a contact person are required; ask for any the user did not give.",
       parameters: {
         type: "object",
         properties: {
@@ -176,12 +176,18 @@ export const toolsDefinition: any[] = [
             ],
             description: "How critical the vendor is to business operations.",
           },
+          assignee: {
+            type: "number",
+            description:
+              "User ID of the person responsible for the vendor. Defaults to the user who asked.",
+          },
           project_id: {
             type: "number",
-            description: "Project ID to associate the vendor with.",
+            description:
+              "Use case ID to link the vendor to. Only a use case the user can see is linked.",
           },
         },
-        required: ["vendor_name"],
+        required: ["vendor_name", "description", "website", "contact_person"],
       },
     },
   },
@@ -336,8 +342,8 @@ export const toolsDefinition: any[] = [
             description: "Updated action plan.",
           },
           action_owner: {
-            type: "string",
-            description: "Updated action owner.",
+            type: "number",
+            description: "User ID of the new action owner.",
           },
         },
         required: ["vendor_risk_id"],
@@ -349,7 +355,7 @@ export const toolsDefinition: any[] = [
     function: {
       name: "agent_delete_vendor_risk",
       description:
-        "Soft-delete a vendor risk entry (marks as deleted). This is irreversible via the advisor. Requires human confirmation before execution.",
+        "Delete a vendor risk entry. It can be restored from the Risks tab of the Vendors page, not through the advisor. Requires human confirmation before execution.",
       parameters: {
         type: "object",
         properties: {

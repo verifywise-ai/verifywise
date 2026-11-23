@@ -319,6 +319,16 @@ export const vendorManagementContent: ArticleContent = {
       text: 'A risk\'s Activity tab shows when it was deleted or restored, and by whom.',
     },
     {
+      type: 'heading',
+      id: 'ai-advisor',
+      level: 2,
+      text: 'Vendors and the AI advisor',
+    },
+    {
+      type: 'paragraph',
+      text: 'The AI advisor can add, edit, flag and delete vendors and vendor risks for you. It acts as you: it makes these changes only if your role can edit vendors, the same checks apply as on the Vendors page, and the Activity tab records the change under your name. A new vendor needs a name, what the vendor provides, a website and a contact person. It is assigned to you unless you name someone else, and it is linked only to use cases you can see. The advisor cannot restore a deleted vendor risk; do that from the Risks tab.',
+    },
+    {
       type: 'article-links',
       title: 'Related articles',
       items: [
