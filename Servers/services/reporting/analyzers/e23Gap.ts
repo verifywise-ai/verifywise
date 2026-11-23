@@ -359,7 +359,7 @@ export function e23DataBlock(rd: ReportData): string {
         const severity = s
           ? ` (critical ${s.critical}, high ${s.high}, medium ${s.medium}, low ${s.low})`
           : "";
-        return `- Tier ${t.tier}: models ${t.models}, tiering current ${t.tieringCurrent}, validated ${t.validated}, monitoring active ${t.monitoringActive}, open findings ${t.openFindings}${severity}`;
+        return `- Tier ${t.tier}: models ${t.models}, tiering current ${t.tieringCurrent}, with a passed signed-off validation ${t.validated}, monitoring active ${t.monitoringActive}, open findings ${t.openFindings}${severity}`;
       }),
     );
   }

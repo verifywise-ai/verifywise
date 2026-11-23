@@ -246,8 +246,7 @@ report carries the existing `no_framework_target` notice. The section is
 selectable in custom templates (the TemplateBuilder reads the catalog) and on the
 legacy Generate page only for `frameworkId >= 5`. The analyzers receive it:
 `complianceGap` gets it beside `compliance` and `clausesAndAnnexes`, and the facts
-block carries it (`ANALYZER_VERSION` `report-analyzer-v3`, `FACTS_SCHEMA_VERSION`
-2). Imported (Excel) frameworks are not covered.
+block carries it. Imported (Excel) frameworks are not covered.
 
 ### Framework selection
 
@@ -693,7 +692,7 @@ Three standing rendering constraints:
 
 ### Versioning
 
-`ANALYZER_VERSION` (`analyzers/prompts.ts`) is stamped into `report_run_analyses.audit_metadata`; it currently reads `report-analyzer-v3`. **Bump it on any prompt or schema change** — it is how a stored analysis is traced back to the prompt and schema that produced it.
+`ANALYZER_VERSION` (`analyzers/prompts.ts`) is stamped into `report_run_analyses.audit_metadata`; it currently reads `report-analyzer-v9`. **Bump it on any prompt or schema change** — it is how a stored analysis is traced back to the prompt and schema that produced it.
 
 ## PDF Generation
 
@@ -1349,7 +1348,7 @@ It seeds whether or not any organization has added E-23; without the framework t
 Data collection (`dataCollector.ts`) reads the same data for both audiences:
 
 - `frameworkRequirements` for `native:26`, with a data coverage label per group ("Checked against MRM data" when at least one contradiction rule targets a requirement in it, else "Self-assessment only").
-- `mrmFleet` (`e23/mrmFleet.ts`): a report-only collector over the MRM tables. Every count leaves out retired models and no per-tier verdict is printed. `getAttestationSummary` is unchanged. Validation coverage puts each model in scope in exactly one row, so the rows add up to the models in scope: "Validation overdue" (an open validation past its next due date) first, then "Validation in progress" (any other open validation, first or revalidation), then "Validated, no validation open" (a signed-off outcome, no validation open; the wording keeps it from reading as "no open findings"), else "Not started". Labels live in `e23Text.ts` (`VALIDATION_COVERAGE_LABELS`). The "By tier" table's `validated` column still means "has a signed-off validation". The facts block stores the validated row as `validatedNothingOpen` and prints it on E-23 runs as "validated with no validation open". A stored previous run's `validated` (which also counted models with an open revalidation) is listed in `RETIRED_AGGREGATES` (`facts.ts`), so it is neither diffed against the new row nor reported as a drop to 0.
+- `mrmFleet` (`e23/mrmFleet.ts`): a report-only collector over the MRM tables. Every count leaves out retired models and no per-tier verdict is printed. `getAttestationSummary` is unchanged. Validation coverage puts each model in scope in exactly one row, so the rows add up to the models in scope: "Validation overdue" (an open validation past its next due date) first, then "Validation in progress" (any other open validation, first or revalidation), then "Last validation not passed" (the latest sign-off's outcome is `not_validated`, nothing open), then "Validated, no validation open" (the latest outcome passed, `validated` or `validated_with_findings`, nothing open; the wording keeps it from reading as "no open findings"), else "Not started" (no sign-off, or one with no outcome recorded). Only `validated` and `validated_with_findings` count as validated, here and in the "By tier" table, whose column reads "Validation passed" (and "with a passed signed-off validation" in the prompts) so it is not confused with the exclusive row. A model whose latest outcome is `not_validated` is therefore never counted as validated, while C13 (an Approved model whose latest outcome is `not_validated`) keeps its own condition. Labels live in `e23Text.ts` (`VALIDATION_COVERAGE_LABELS`). The facts block stores the rows as `validatedPassed` and `lastValidationNotPassed` and prints them on E-23 runs as "validated with no validation open" and "last validation not passed". The earlier names of the validated count, `validated` (any sign-off) and `validatedNothingOpen` (any outcome), are listed in `RETIRED_AGGREGATES` (`facts.ts`): when the current run no longer writes them they are neither diffed against the new row nor reported as a drop to 0; a retired name the current run still writes reports its change as usual.
 - `e23Contradictions` (`e23/contradictionRules.ts`): the fixed rules below.
 - `e23FixItList` (`e23/fixItList.ts`): the deterministic fix-it list.
 - `mrmInventoryAppendix` and `signOff`.

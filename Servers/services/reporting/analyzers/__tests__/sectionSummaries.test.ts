@@ -115,7 +115,13 @@ describe("runSectionSummaries", () => {
           e23Glance: { modelsInScope: 4 },
           mrmFleet: {
             totals: { models: 1, untiered: 0, byTier: { "1": 1, "2": 0, "3": 0 } },
-            validationCoverage: { validated: 1, inReview: 0, notStarted: 0, overdue: 0 },
+            validationCoverage: {
+              validated: 1,
+              inReview: 0,
+              notPassed: 0,
+              notStarted: 0,
+              overdue: 0,
+            },
             openFindingsBySeverity: { critical: 0, high: 0, medium: 0, low: 0 },
             monitoring: { withActiveThresholds: 1, withRecentMetric: 1 },
             activity: {

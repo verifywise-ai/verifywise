@@ -85,7 +85,7 @@ const contradictions: E23ContradictionsSectionData = {
 
 const fleet = {
   totals: { models: 12, untiered: 3, byTier: { "1": 4, "2": 3, "3": 2 } },
-  validationCoverage: { validated: 5, inReview: 2, notStarted: 5, overdue: 4 },
+  validationCoverage: { validated: 5, inReview: 2, notPassed: 0, notStarted: 5, overdue: 4 },
   openFindingsBySeverity: { critical: 1, high: 2, medium: 7, low: 9 },
 } as unknown as MrmFleetSectionData;
 

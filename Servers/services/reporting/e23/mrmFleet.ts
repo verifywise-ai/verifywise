@@ -17,6 +17,13 @@ import type {
   MrmModelFacts,
   MrmTierValue,
 } from "../../../domain.layer/interfaces/i.reportGeneration";
+import { MrmValidationOutcome } from "../../../domain.layer/enums/mrm.enum";
+
+/** Outcomes that pass: validated, with or without findings. not_validated does not. */
+const PASSED_OUTCOMES = new Set<string>([
+  MrmValidationOutcome.VALIDATED,
+  MrmValidationOutcome.VALIDATED_WITH_FINDINGS,
+]);
 
 /** A model with active thresholds but no metric received within this many days is stale. */
 export const METRIC_STALE_DAYS = 90;
@@ -67,7 +74,7 @@ export function buildMrmFleet(
   const live = models.filter((m) => !m.retired);
 
   const byTier: Record<MrmTierValue, number> = { "1": 0, "2": 0, "3": 0 };
-  const validationCoverage = { validated: 0, inReview: 0, notStarted: 0, overdue: 0 };
+  const validationCoverage = { validated: 0, inReview: 0, notPassed: 0, notStarted: 0, overdue: 0 };
   const openFindingsBySeverity = { critical: 0, high: 0, medium: 0, low: 0 };
   const monitoring = { withActiveThresholds: 0, withRecentMetric: 0 };
   const perTier = TIERS.map((tier) => ({
@@ -84,7 +91,12 @@ export function buildMrmFleet(
   let untiered = 0;
 
   for (const m of live) {
-    const validated = !!m.latestSignedOff?.outcome;
+    // Only a passing outcome counts as validated. A latest sign-off of
+    // not_validated is its own row (and C13's condition, unchanged); one with
+    // no outcome recorded counts as not started, as before.
+    const outcome = m.latestSignedOff?.outcome ?? null;
+    const validated = outcome !== null && PASSED_OUTCOMES.has(outcome);
+    const notPassed = outcome === MrmValidationOutcome.NOT_VALIDATED;
     const overdue = isValidationOverdue(m, generatedAt);
     const open = m.findings.filter(isOpenFinding);
     const criticalHigh = open.filter(isCriticalOrHigh);
@@ -94,9 +106,11 @@ export function buildMrmFleet(
 
     // Exactly one row per model, so the rows add up to the models in scope:
     // an overdue validation first, then one in progress (a first validation
-    // or a revalidation), then a signed-off validation with no validation open.
+    // or a revalidation), then a latest validation that did not pass, then a
+    // passed validation with no validation open.
     if (overdue) validationCoverage.overdue += 1;
     else if (m.hasOpenValidation) validationCoverage.inReview += 1;
+    else if (notPassed) validationCoverage.notPassed += 1;
     else if (validated) validationCoverage.validated += 1;
     else validationCoverage.notStarted += 1;
 

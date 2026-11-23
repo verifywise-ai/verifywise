@@ -140,7 +140,7 @@ function liveRun(): ReportData {
   });
   rd.sections.mrmFleet = {
     totals: { models: 13, untiered: 0, byTier: { "1": 5, "2": 5, "3": 3 } },
-    validationCoverage: { validated: 13, inReview: 0, notStarted: 0, overdue: 0 },
+    validationCoverage: { validated: 13, inReview: 0, notPassed: 0, notStarted: 0, overdue: 0 },
     openFindingsBySeverity: sev(0, 0, 3, 2),
     monitoring: { withActiveThresholds: 13, withRecentMetric: 13 },
     activity: {
@@ -405,7 +405,7 @@ describe("I1 and I3: what the formal analyzers are given on an E-23 run", () => 
     );
     expect(prompt).toContain("- Principle 2.2 – Model risk rating (C.2): 8 requirements, checked");
     expect(prompt).toContain(
-      "- Tier 1: models 5, tiering current 5, validated 5, monitoring active 5, open findings 3 (critical 0, high 0, medium 2, low 1)",
+      "- Tier 1: models 5, tiering current 5, with a passed signed-off validation 5, monitoring active 5, open findings 3 (critical 0, high 0, medium 2, low 1)",
     );
     expect(prompt).toContain(
       "Rules checked: 13; rules that fired: 0 of 13 (no contradiction found); rules not run: 0.",
@@ -415,6 +415,11 @@ describe("I1 and I3: what the formal analyzers are given on an E-23 run", () => 
   it("names the validated row so it cannot read as no open findings", () => {
     const prompt = ANALYZERS.e23Gap.buildUserPrompt(rd, extrasFor(rd));
     expect(prompt).toContain("validated with no validation open 13");
+    expect(prompt).toContain("last validation not passed 0");
+    expect(prompt).toContain(
+      "Tier 1: models 5, tiering current 5, with a passed signed-off validation 5",
+    );
+    expect(prompt).not.toMatch(/, validated \d/);
     expect(prompt).not.toContain("none open");
   });
 

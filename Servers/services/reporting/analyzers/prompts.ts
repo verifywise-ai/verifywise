@@ -19,7 +19,7 @@ import { hasNoActiveOwner } from "../collectors/frameworkRollup";
 import { COVERAGE_LABELS, FIX_IT_SEVERITY_LABELS } from "../e23/e23Text";
 import { METRIC_STALE_DAYS } from "../e23/mrmFleet";
 
-export const ANALYZER_VERSION = "report-analyzer-v8";
+export const ANALYZER_VERSION = "report-analyzer-v9";
 
 const MAX_DATA_ITEMS = 50;
 /** Hard backstop on the joined section body, independent of the per-array
@@ -518,7 +518,7 @@ export function prepareMrmFleet(fleet: MrmFleetSectionData, opts: E23PromptOptio
   const a = fleet.activity;
   const lines = [
     `Models in scope (not retired): ${totals.models}; tier 1: ${totals.byTier["1"]}, tier 2: ${totals.byTier["2"]}, tier 3: ${totals.byTier["3"]}, untiered: ${totals.untiered}`,
-    `Validation coverage (each model counted once; the four add up to the models in scope): validated with no validation open ${v.validated}, validation in progress ${v.inReview}, validation overdue ${v.overdue}, not started ${v.notStarted}`,
+    `Validation coverage (each model counted once; the five add up to the models in scope): validated with no validation open ${v.validated}, validation in progress ${v.inReview}, validation overdue ${v.overdue}, last validation not passed ${v.notPassed}, not started ${v.notStarted}`,
     `Open findings by severity: critical ${f.critical}, high ${f.high}, medium ${f.medium}, low ${f.low}`,
     `Monitoring: with active thresholds ${m.withActiveThresholds}, with a metric received in the last ${METRIC_STALE_DAYS} days ${m.withRecentMetric}`,
     a.period
@@ -527,7 +527,7 @@ export function prepareMrmFleet(fleet: MrmFleetSectionData, opts: E23PromptOptio
     "By tier:",
     ...fleet.perTier.map(
       (t) =>
-        `  ${tierText(t.tier)}: models ${t.models}, tiering current ${t.tieringCurrent}, validated ${t.validated}, monitoring active ${t.monitoringActive}, open findings ${t.openFindings}, critical or high findings ${t.criticalHighFindings}`,
+        `  ${tierText(t.tier)}: models ${t.models}, tiering current ${t.tieringCurrent}, with a passed signed-off validation ${t.validated}, monitoring active ${t.monitoringActive}, open findings ${t.openFindings}, critical or high findings ${t.criticalHighFindings}`,
     ),
   ];
   if (opts.board) {

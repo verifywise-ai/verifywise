@@ -649,10 +649,12 @@ export interface MrmFleetSectionData {
   };
   /** Each model in scope in exactly one bucket; the four add up to totals.models. */
   validationCoverage: {
-    /** Signed-off validation, no validation open. */
+    /** Latest sign-off passed (validated, or validated with findings), no validation open. */
     validated: number;
     /** An open validation (first or revalidation), not overdue. */
     inReview: number;
+    /** Latest sign-off not_validated, no validation open. */
+    notPassed: number;
     notStarted: number;
     overdue: number;
   };
