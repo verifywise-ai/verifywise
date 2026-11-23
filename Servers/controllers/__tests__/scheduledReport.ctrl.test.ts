@@ -10,7 +10,14 @@ jest.mock("../../utils/reportTemplate.utils", () => ({
 jest.mock("../../utils/scheduledReport.utils", () => ({
   createScheduledReportQuery: jest.fn(async () => ({ id: 1 })),
   listScheduledReportsQuery: jest.fn(async () => []),
-  getScheduledReportQuery: jest.fn(async () => null),
+  // An existing, readable organization schedule unless a test says otherwise:
+  // every write first loads the schedule as the caller sees it, and a missing
+  // or unreadable one is a 404 (or a no-op for pause, resume and delete).
+  getScheduledReportQuery: jest.fn(async (id: number) => ({
+    id,
+    scope: "organization",
+    project_id: null,
+  })),
   updateScheduledReportQuery: jest.fn(),
   setActiveQuery: jest.fn(),
   softDeleteQuery: jest.fn(),
@@ -23,6 +30,8 @@ import {
   createScheduledReport,
   deleteScheduledReport,
   pauseScheduledReport,
+  resumeScheduledReport,
+  runScheduledReportNow,
   updateScheduledReport,
 } from "../scheduledReport.ctrl";
 import { getTranslator } from "../../utils/i18n.utils";
@@ -639,6 +648,7 @@ describe("scheduled report parameters and schedule config", () => {
 // not be able to stop that project's reports.
 describe.each([
   ["pauseScheduledReport", pauseScheduledReport, "setActiveQuery"],
+  ["resumeScheduledReport", resumeScheduledReport, "setActiveQuery"],
   ["deleteScheduledReport", deleteScheduledReport, "softDeleteQuery"],
 ])("%s scope gate", (_name, handler, writeQuery) => {
   const utils = require("../../utils/scheduledReport.utils");
@@ -672,11 +682,59 @@ describe.each([
     expect(utils[writeQuery]).toHaveBeenCalled();
   });
 
-  it("stays a 200 no-op for a schedule this organization does not hold", async () => {
+  // null covers a missing schedule, another organization's, and one outside
+  // the caller's projects: all three answer the same and write nothing.
+  it("stays a 200 no-op that writes nothing for a schedule the caller cannot see", async () => {
     utils.getScheduledReportQuery.mockResolvedValueOnce(null);
     const res = mockRes();
     await handler(req, res);
     expect(res.status).toHaveBeenCalledWith(200);
+    expect(utils.getScheduledReportQuery).toHaveBeenCalledWith(7, 42, {
+      userId: 9,
+      role: "Editor",
+    });
+    expect(authz.assertReportScopeAllowed).not.toHaveBeenCalled();
+    expect(utils[writeQuery]).not.toHaveBeenCalled();
+  });
+});
+
+describe("non-numeric schedule ids", () => {
+  it("answers a pause of a non-numeric id like a missing one, without querying", async () => {
+    const utils = require("../../utils/scheduledReport.utils");
+    utils.getScheduledReportQuery.mockClear();
+    utils.setActiveQuery.mockClear();
+    const res = mockRes();
+    await pauseScheduledReport(
+      { params: { id: "abc" }, organizationId: 42, userId: 9, role: "Editor" } as any,
+      res,
+    );
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(utils.getScheduledReportQuery).not.toHaveBeenCalled();
+    expect(utils.setActiveQuery).not.toHaveBeenCalled();
+  });
+
+  it("answers run-now of a non-numeric id with 404", async () => {
+    const res = mockRes();
+    await runScheduledReportNow(
+      { params: { id: "abc" }, organizationId: 42, userId: 9, role: "Editor" } as any,
+      res,
+    );
+    expect(res.status).toHaveBeenCalledWith(404);
+  });
+});
+
+describe("runScheduledReportNow", () => {
+  it("answers 404 without running for a schedule the caller cannot see", async () => {
+    const utils = require("../../utils/scheduledReport.utils");
+    const authz = require("../../services/reporting/reportAuthorization");
+    utils.getScheduledReportQuery.mockResolvedValueOnce(null);
+    authz.assertReportScopeAllowed.mockClear();
+    const res = mockRes();
+    await runScheduledReportNow(
+      { params: { id: "7" }, organizationId: 42, userId: 9, role: "Editor" } as any,
+      res,
+    );
+    expect(res.status).toHaveBeenCalledWith(404);
     expect(authz.assertReportScopeAllowed).not.toHaveBeenCalled();
   });
 });

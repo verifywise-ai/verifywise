@@ -1075,6 +1075,8 @@ All endpoints are auth-protected and org-scoped.
 | PATCH | `/api/reporting/runs/:id/restore` | Move a run back into the Generate tab |
 | DELETE | `/api/reporting/runs/:id` | Permanently delete a run |
 
+Every write to an existing schedule (PATCH, run-now, pause, resume, delete) first loads it as the caller sees it, under the same visibility rule as the read endpoints (`utils/reportVisibility.utils.ts`). A schedule the caller cannot read is treated like a missing one: PATCH and run-now answer 404, and pause, resume and delete answer a 200 no-op that writes nothing, as they do for another organization's id. A 403 is left only for a schedule the caller can already see but may not change, such as an organization-wide schedule for a non-Admin, so no write endpoint confirms that an id exists.
+
 ### Template Write Path
 
 **System templates are read-only for every org.** `organization_id IS NULL` marks a seeded template. The guard lives in the query WHERE clause — `organization_id = :org AND is_system_template = false` — not in a controller branch, so a write against a system template matches zero rows and the controller returns **404**. There is no code path that can be reordered into a bypass.
@@ -1211,11 +1213,11 @@ The rule, in order: Admin and SuperAdmin bypass it entirely. `"organization"` sc
 | Controller function | Scope evaluated |
 |---|---|
 | `createScheduledReport` | `body.scope`, `body.projectId` |
-| `updateScheduledReport` | the **effective post-patch** scope/projectId — the row's stored values with the patch applied, computed even when the patch itself carries neither field, since `deliveryConfig` alone can redirect who receives the report |
-| `runScheduledReportNow` and `resumeScheduledReport` | the stored schedule's `scope` and `project_id` |
+| `updateScheduledReport` | the stored schedule's `scope` and `project_id` **and** the effective post-patch scope/projectId — the row's stored values with the patch applied, computed even when the patch itself carries neither field, since `deliveryConfig` alone can redirect who receives the report. The stored scope is checked too so an Editor cannot move an organization-wide schedule into a project of theirs |
+| `runScheduledReportNow`, `pauseScheduledReport`, `resumeScheduledReport`, `deleteScheduledReport` | the stored schedule's `scope` and `project_id` |
 | `runTemplateNow` | the resolved scope — an omitted body defaults to `"organization"`, the widest case, so an absent scope is refused for a non-Admin rather than silently permitted |
 
-**Refusal is 403, not 404.** This diverges from the read side deliberately: the read side hides a denied run behind a 404 to avoid confirming another organization's id exists over a sequential id space, but every produce-side call already knows its own organization's row — there is nothing to hide, and the client needs to distinguish "malformed request" (400) from "not allowed" (403). Validation is ordered before authorization on every one of these endpoints, so a malformed body still gets its 400 even for a caller who would otherwise be refused.
+**Refusal is 403 only for a schedule the caller can see.** A write to an existing schedule first loads it under the read side's visibility rule. A schedule the caller cannot read (another project's) answers exactly like a missing id: 404 for PATCH and run-now, a 200 no-op for pause, resume and delete, so the sequential id space is not an oracle. A schedule the caller can see but may not produce, such as an organization-wide one for a non-Admin, is refused with 403, which reveals nothing they could not already read. Body validation that needs no stored row runs first, so a malformed body still gets its 400; checks against the stored row (scope invariants, the report kind) run after the lookup, so an unreadable schedule gets its 404 first.
 
 **Every field a PATCH can touch is covered, not only `scope` and `projectId`.** `updateScheduledReport` fetches the row unconditionally and authorizes against its post-patch scope on every PATCH — including one that touches only `deliveryConfig`. A PATCH carrying `{ deliveryConfig: { attachFile: true, recipients: [...] } }` and nothing else can redirect a project schedule's email recipients without ever mentioning `scope` or `projectId`; fetching the row (and therefore authorizing) only when those two fields were present in the body left exactly that path ungated. `resumeScheduledReport` is gated the same way, since resuming re-enables delivery on whatever scope the schedule already has.
 
@@ -1237,7 +1239,7 @@ The wizard (`ConfigureReportWizard.tsx`) now:
 
 | Operation | Access |
 |-----------|--------|
-| Writes (create/update/run-now/pause/resume/delete scheduled reports) | Admin / Editor via `authorize` middleware, additionally scope-gated by `assertReportScopeAllowed` — organization scope requires Admin, project scope requires ownership or membership (Admin/SuperAdmin unrestricted); refusal is **403** — see [One Rule, Applied to Every Produce-Side Endpoint](#one-rule-applied-to-every-produce-side-endpoint) |
+| Writes (create/update/run-now/pause/resume/delete scheduled reports) | Admin / Editor via `authorize` middleware, additionally scope-gated by `assertReportScopeAllowed` — organization scope requires Admin, project scope requires ownership, membership or a group attached to the use case (Admin/SuperAdmin unrestricted); a schedule the caller cannot read answers like a missing id (404, or a 200 no-op for pause/resume/delete), refusal of a visible one is **403** — see [One Rule, Applied to Every Produce-Side Endpoint](#one-rule-applied-to-every-produce-side-endpoint) |
 | Template writes (create / update / archive) | Admin / Editor (via `authorize` middleware) |
 | Reads (section catalog, templates, scheduled reports, runs) | Any authenticated user (JWT) |
 | Any single run — fetch, download, analyses, archive, restore, delete | Authenticated + org-scoped + project-membership-scoped via `canViewRunQuery` (Admin/SuperAdmin unrestricted); denial is 404 — see [One Rule, Applied to Every Per-Run Endpoint](#one-rule-applied-to-every-per-run-endpoint) |

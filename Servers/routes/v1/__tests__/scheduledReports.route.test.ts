@@ -162,7 +162,22 @@ describe("/api/v1/scheduled-reports", () => {
       .set("x-org", "7")
       .send({ name: "Renamed" });
     expect(res.status).toBe(404);
-    expect((updateScheduledReportQuery as jest.Mock).mock.calls[0].slice(0, 2)).toEqual([3, 7]);
+    // The schedule is looked up as the caller sees it, so nothing is written.
+    expect(updateScheduledReportQuery).not.toHaveBeenCalled();
+  });
+
+  // A schedule the caller may not read (the query returns null for it) must
+  // look exactly like a missing one on a write, so ids cannot be probed.
+  it("answers 404 when the caller may not read the schedule they edit", async () => {
+    (getScheduledReportQuery as jest.Mock).mockResolvedValueOnce(null);
+    const res = await request(app)
+      .patch(`${BASE}/3`)
+      .set(auth)
+      .set("x-role", "Editor")
+      .send({ name: "Renamed" });
+    expect(res.status).toBe(404);
+    expect(getScheduledReportQuery).toHaveBeenCalledWith(3, 42, { userId: 9, role: "Editor" });
+    expect(updateScheduledReportQuery).not.toHaveBeenCalled();
   });
 
   it("reads a schedule with its version's parameters_config", async () => {
