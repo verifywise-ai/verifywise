@@ -529,9 +529,6 @@ const refusalFor = async <T>(notDone: string, write: () => Promise<T>) => {
   }
 };
 
-const parseId = (value: unknown, label: string) =>
-  parseIdValue(value, `${label} ID must be a positive integer`);
-
 // ── Vendors ──
 
 async function createVendorRequest(
@@ -554,7 +551,7 @@ async function createVendorRequest(
     ...pick(params, VENDOR_FIELDS),
   };
   if (params.project_id !== undefined && params.project_id !== null) {
-    const projectId = parseId(params.project_id, "Use case");
+    const projectId = parseIdValue(params.project_id, "Use case ID must be a positive integer");
     if (!projectId.ok) return refused(`${notDone}: ${projectId.message}`);
     input.projects = [projectId.value];
   }
@@ -568,7 +565,7 @@ async function updateVendorRequest(
   organizationId: number,
   fields: Record<string, unknown>,
 ): Promise<Request<{ id: number; input: VendorInput }>> {
-  const id = parseId(params.vendor_id, "Vendor");
+  const id = parseIdValue(params.vendor_id, "Vendor ID must be a positive integer");
   if (!id.ok) return refused(id.message);
   const notDone = `Vendor #${id.value} was not updated`;
   if (Object.keys(fields).length === 0) return refused("No fields to update");
@@ -598,7 +595,7 @@ async function deleteVendorRequest(
   params: Record<string, unknown>,
   organizationId: number,
 ): Promise<Request<{ id: number }>> {
-  const id = parseId(params.vendor_id, "Vendor");
+  const id = parseIdValue(params.vendor_id, "Vendor ID must be a positive integer");
   if (!id.ok) return refused(id.message);
   const editor = await vendorEditor(params, organizationId, `Vendor #${id.value} was not deleted`);
   if (!editor.ok) return editor;
@@ -615,7 +612,7 @@ async function createVendorRiskRequest(
   organizationId: number,
 ): Promise<Request<{ input: VendorRiskInput }>> {
   const notDone = "Vendor risk was not created";
-  const vendorId = parseId(params.vendor_id, "Vendor");
+  const vendorId = parseIdValue(params.vendor_id, "Vendor ID must be a positive integer");
   if (!vendorId.ok) return refused(`${notDone}: ${vendorId.message}`);
   if (!(typeof params.risk_name === "string" && params.risk_name.trim())) {
     return refused(`${notDone}: risk_name required`);
@@ -644,13 +641,13 @@ async function updateVendorRiskRequest(
   params: Record<string, unknown>,
   organizationId: number,
 ): Promise<Request<{ id: number; input: VendorRiskInput }>> {
-  const id = parseId(params.vendor_risk_id, "Vendor risk");
+  const id = parseIdValue(params.vendor_risk_id, "Vendor risk ID must be a positive integer");
   if (!id.ok) return refused(id.message);
   const notDone = `Vendor risk #${id.value} was not updated`;
   const input = pick(params, VENDOR_RISK_FIELDS);
   if (Object.keys(input).length === 0) return refused("No fields to update");
   if (input.action_owner !== undefined) {
-    const owner = parseId(input.action_owner, "Action owner");
+    const owner = parseIdValue(input.action_owner, "Action owner ID must be a positive integer");
     if (!owner.ok) return refused(`${notDone}: ${owner.message}`);
     input.action_owner = owner.value;
   }
@@ -669,7 +666,7 @@ async function deleteVendorRiskRequest(
   params: Record<string, unknown>,
   organizationId: number,
 ): Promise<Request<{ id: number }>> {
-  const id = parseId(params.vendor_risk_id, "Vendor risk");
+  const id = parseIdValue(params.vendor_risk_id, "Vendor risk ID must be a positive integer");
   if (!id.ok) return refused(id.message);
   const editor = await vendorEditor(
     params,
