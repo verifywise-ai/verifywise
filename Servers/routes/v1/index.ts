@@ -44,6 +44,9 @@ import homeQueueRoutes from "./homeQueue.route";
 import changeNoticeRoutes from "./changeNotice.route";
 import modelInventoriesRoutes from "./modelInventories.route";
 import modelRisksRoutes from "./modelRisks.route";
+import reportTemplatesRoutes from "./reportTemplates.route";
+import scheduledReportsRoutes from "./scheduledReports.route";
+import reportRunsRoutes from "./reportRuns.route";
 import vendorRisksRoutes from "./vendorRisks.route";
 
 const router = express.Router();
@@ -126,6 +129,11 @@ router.use("/change-notices", changeNoticeRoutes);
 router.use("/model-inventories", modelInventoriesRoutes);
 router.use("/model-risks", modelRisksRoutes);
 
+// Report runs and schedules that carry report parameters (OSFI E-23 report);
+// the legacy /api/reporting routers are frozen.
+router.use("/report-templates", reportTemplatesRoutes);
+router.use("/scheduled-reports", scheduledReportsRoutes);
+router.use("/report-runs", reportRunsRoutes);
 // Reading and restoring deleted vendor risks (vendors audit PR C); the
 // /api/vendorRisks router is frozen.
 router.use("/vendor-risks", vendorRisksRoutes);

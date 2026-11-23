@@ -2,7 +2,7 @@
  * @fileoverview Report Runs Controller
  *
  * Endpoints for the enterprise reporting run archive: list runs, fetch a run,
- * and download a run's generated file.
+ * and download a run's generated file (and an E-23 run's internal fix-it list).
  *
  * All endpoints require JWT authentication and are org-scoped via
  * req.organizationId. Organization scope alone is not enough for a single run:
@@ -111,25 +111,39 @@ export async function getRun(req: Request, res: Response): Promise<any> {
   }
 }
 
-export async function downloadRun(req: Request, res: Response): Promise<any> {
+/**
+ * Serve one of a run's stored files: the report itself, or the internal
+ * fix-it list stored beside an OSFI E-23 report. Guarded the same way for
+ * both: the visibility gate, then the org-scoped run row, then the
+ * org-scoped file. A run without the asked-for file is a 404; the fix-it
+ * route never falls back to the report.
+ */
+async function sendRunFile(
+  req: Request,
+  res: Response,
+  pick: (run: any) => { fileId: number | null; filename: string | null; mimeType: string | null },
+): Promise<any> {
   try {
     if (await denyUnlessVisible(req, res)) return;
     const run = await getRunQuery(Number(req.params.id), req.organizationId!);
-    if (!run || !run.file_id) return res.status(404).json(STATUS_CODE[404](req.t!("not found")));
+    const stored = run ? pick(run) : null;
+    if (!run || !stored?.fileId) {
+      return res.status(404).json(STATUS_CODE[404](req.t!("not found")));
+    }
     // Org-scoped file fetch (WHERE organization_id = :org AND id = :id) returns
     // a FileModel whose bytes live in `content` or external storage.
-    const file: any = await getFileById(run.file_id, req.organizationId!);
+    const file: any = await getFileById(stored.fileId, req.organizationId!);
     if (!file) return res.status(404).json(STATUS_CODE[404](req.t!("file missing")));
     const content = await resolveFileContent(file);
     // Same shape as the file-manager download path (fileManager.ctrl.ts):
-    // sanitize before the name reaches a header — a quote or CRLF in
-    // output_filename would otherwise rewrite it — declare nosniff, and write
+    // sanitize before the name reaches a header — a quote or CRLF in the
+    // stored filename would otherwise rewrite it — declare nosniff, and write
     // the buffer with res.end so the body is never handled as a rendered
     // response body.
-    const safeFilename = String(run.output_filename || `report-${run.id}`)
+    const safeFilename = String(stored.filename || `report-${run.id}`)
       .replace(/["\r\n]/g, "")
       .replace(/[^\x20-\x7E]/g, "_");
-    res.setHeader("Content-Type", run.output_mime_type || "application/octet-stream");
+    res.setHeader("Content-Type", stored.mimeType || "application/octet-stream");
     res.setHeader("X-Content-Type-Options", "nosniff");
     res.setHeader("Content-Disposition", `attachment; filename="${safeFilename}"`);
     res.setHeader("Content-Length", content ? content.length : 0);
@@ -138,6 +152,23 @@ export async function downloadRun(req: Request, res: Response): Promise<any> {
   } catch (e) {
     return res.status(500).json(STATUS_CODE[500]((e as Error).message));
   }
+}
+
+export async function downloadRun(req: Request, res: Response): Promise<any> {
+  return sendRunFile(req, res, (run) => ({
+    fileId: run.file_id,
+    filename: run.output_filename,
+    mimeType: run.output_mime_type,
+  }));
+}
+
+/** The internal fix-it list of an OSFI E-23 run (GET /api/v1/report-runs/:id/download/fix-it-list). */
+export async function downloadRunCompanion(req: Request, res: Response): Promise<any> {
+  return sendRunFile(req, res, (run) => ({
+    fileId: run.companion_file_id,
+    filename: run.companion_filename,
+    mimeType: run.companion_mime_type,
+  }));
 }
 
 // Guarded like downloadRun: the visibility gate first, then the org-scoped run

@@ -1,0 +1,202 @@
+/**
+ * OSFI E-23 formal report styles. Included only in E-23 kind reports, so a
+ * general report's HTML is unchanged. {{color…}} tokens are replaced at
+ * render time like pdf.css.
+ */
+
+/* Repeats on every printed page: Chromium prints a fixed element on each page. */
+.e23-watermark {
+  position: fixed;
+  top: 45%;
+  left: 0;
+  right: 0;
+  text-align: center;
+  transform: rotate(-35deg);
+  font-size: 56px;
+  font-weight: 700;
+  color: var(--color-error);
+  opacity: 0.12;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 1000;
+}
+
+.e23-cover-institution {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--color-primary);
+  margin-bottom: 40px;
+}
+
+.e23-section {
+  page-break-before: always;
+  break-before: page;
+  margin-bottom: 32px;
+}
+
+/*
+ * The formal report's table of contents already ends its page, and the fix-it
+ * list's cover fills its own; a forced break would leave a blank page.
+ */
+#e23-scope,
+#e23-fixit-items {
+  page-break-before: auto;
+  break-before: auto;
+}
+
+/*
+ * Section headings: the same plain bold heading as report-pdf.ejs's group
+ * header, here so a page without that inline block (the fix-it list) gets it
+ * too.
+ */
+.e23-section .group-header {
+  margin: 0 0 16px 0;
+}
+
+.e23-section .group-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  margin: 0;
+}
+
+.e23-paragraph {
+  font-size: 12px;
+  line-height: 1.6;
+  margin: 0 0 10px 0;
+}
+
+.e23-muted {
+  font-size: 11px;
+  color: var(--color-text-secondary);
+}
+
+.e23-subheading {
+  font-size: 13px;
+  font-weight: 600;
+  margin: 16px 0 6px 0;
+  page-break-after: avoid;
+  break-after: avoid;
+}
+
+.e23-note {
+  font-size: 10px;
+  color: var(--color-text-secondary);
+  margin: 0 0 8px 0;
+}
+
+.e23-list {
+  font-size: 11px;
+  padding-left: 18px;
+  margin: 0 0 12px 0;
+}
+
+.e23-list li {
+  margin-bottom: 4px;
+}
+
+.e23-table th,
+.e23-table td {
+  padding: 8px 10px;
+}
+
+.e23-small {
+  font-size: 10px;
+}
+
+/* Columns held at the block's widths, so tables sharing widths line up. */
+.e23-fixed {
+  table-layout: fixed;
+}
+
+.e23-small th,
+.e23-small td {
+  padding: 6px 8px;
+}
+
+.e23-table td.e23-indent {
+  padding-left: 24px;
+}
+
+.e23-table td.e23-nowrap {
+  white-space: nowrap;
+}
+
+.e23-secondary {
+  font-size: 9px;
+  color: var(--color-text-secondary);
+}
+
+.e23-chart {
+  margin-bottom: 12px;
+}
+
+.e23-signatory {
+  margin: 28px 0;
+  page-break-inside: avoid;
+  break-inside: avoid;
+}
+
+.e23-signatory-role {
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.e23-signatory p {
+  font-size: 12px;
+  margin-bottom: 2px;
+}
+
+.e23-sign-line {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  margin-top: 28px;
+  font-size: 12px;
+}
+
+.e23-sign-line span:first-child {
+  min-width: 72px;
+}
+
+.e23-sign-rule {
+  width: 280px;
+  border-bottom: 1px solid var(--color-text-primary);
+}
+
+.e23-draft-label {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--color-error);
+  margin-top: 20px;
+}
+
+/*
+ * AI-written prose: the same labelled box as report-pdf.ejs's
+ * .ai-analysis-box, here so the fix-it list (which lacks those inline
+ * styles) shows it too.
+ */
+.e23-ai-box {
+  border-left: 4px solid var(--color-primary);
+  background: #f0faf7;
+  padding: 16px 20px;
+  margin: 16px 0 24px 0;
+  border-radius: 0 4px 4px 0;
+}
+
+.e23-ai-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--color-primary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+}
+
+.e23-ai-content {
+  font-size: 12px;
+  line-height: 1.6;
+  color: #344054;
+  white-space: pre-wrap;
+}

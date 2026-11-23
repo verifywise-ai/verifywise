@@ -25,3 +25,15 @@ export const isoDate = (value: unknown): string | undefined => {
   const pad = (n: number) => String(n).padStart(2, "0");
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 };
+
+/**
+ * The UTC calendar day of a timestamp, `YYYY-MM-DD`, or undefined when there is
+ * no usable date. For a run's generation time on the OSFI E-23 report, whose
+ * cover prints the UTC day (formatReportDate); not for pg DATE columns, which
+ * isoDate reads as local midnight.
+ */
+export const utcDay = (value: unknown): string | undefined => {
+  if (!value) return undefined;
+  const d = value instanceof Date ? value : new Date(value as string | number);
+  return Number.isNaN(d.getTime()) ? undefined : d.toISOString().slice(0, 10);
+};

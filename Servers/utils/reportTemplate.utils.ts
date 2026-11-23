@@ -199,6 +199,12 @@ export async function archiveTemplateQuery(id: number, organization_id: number):
 // specific template goes through this INSERT, and dropping the column here is
 // how a copy of "ISO 42001 Internal Audit Pack" ends up reporting on
 // everything under an ISO-42001 name.
+//
+// parameters_config holds the report kind (e.g. "osfi_e23") that unlocks the
+// kind's sections. A copy must carry it, and a version written without it (a
+// PATCH that edits sections only) keeps the previous version's value rather
+// than quietly turning an E-23 template into a general one whose sections
+// every run would then refuse.
 export async function createTemplateVersionQuery(
   template_id: number,
   organization_id: number,
@@ -206,15 +212,34 @@ export async function createTemplateVersionQuery(
   userId: number,
   transaction?: Transaction,
 ): Promise<any> {
+  const parametersConfig = config.parameters_config;
+  if (
+    parametersConfig !== undefined &&
+    parametersConfig !== null &&
+    (typeof parametersConfig !== "object" || Array.isArray(parametersConfig))
+  ) {
+    throw new ValidationException(
+      "parameters_config must be an object",
+      "parameters_config",
+      parametersConfig,
+    );
+  }
   const rows: any = await sequelize.query(
     `INSERT INTO report_template_versions
        (template_id, version, sections_config, ai_blocks_config, framework_config,
-        format_config, branding_config, schedule_defaults, delivery_defaults, created_by)
+        parameters_config, format_config, branding_config, schedule_defaults,
+        delivery_defaults, created_by)
      SELECT :template_id,
             (SELECT COALESCE(MAX(version), 0) + 1
                FROM report_template_versions WHERE template_id = :template_id),
-            :sections_config, :ai_blocks_config, :framework_config, :format_config,
-            :branding_config, :schedule_defaults, :delivery_defaults, :created_by
+            :sections_config, :ai_blocks_config, :framework_config,
+            COALESCE(
+              CAST(:parameters_config AS JSONB),
+              (SELECT parameters_config FROM report_template_versions
+                WHERE template_id = :template_id ORDER BY version DESC LIMIT 1),
+              '{}'::jsonb
+            ),
+            :format_config, :branding_config, :schedule_defaults, :delivery_defaults, :created_by
       WHERE EXISTS (
         SELECT 1 FROM report_templates
          WHERE id = :template_id
@@ -231,6 +256,7 @@ export async function createTemplateVersionQuery(
         // {} is the column default and means "every framework in scope" —
         // the same fallback the wizard applies when it seeds [].
         framework_config: JSON.stringify(config.framework_config ?? {}),
+        parameters_config: parametersConfig ? JSON.stringify(parametersConfig) : null,
         format_config: JSON.stringify(config.format_config ?? {}),
         branding_config: JSON.stringify(config.branding_config ?? {}),
         schedule_defaults: JSON.stringify(config.schedule_defaults ?? {}),

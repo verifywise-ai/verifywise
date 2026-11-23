@@ -1,6 +1,6 @@
 # Reporting Domain
 
-> **Last Updated:** 2026-11-22
+> **Last Updated:** 2026-11-23
 
 ## Overview
 
@@ -997,6 +997,8 @@ framework-gated section to the frameworks that open it, mirroring the gates in
 | Use Case Risk Deep Dive | `use-case-risk-deep-dive` | project | weekly | all in scope |
 | New Use Case Onboarding Assessment | `use-case-onboarding-assessment` | project | monthly | EU AI Act |
 
+The OSFI E-23 completeness template is seeded separately, by its own migration, and is not in this table or file; see [OSFI E-23 completeness report](#osfi-e23-completeness-report).
+
 "All in scope" is the empty selection — the seeded `framework_config` is
 `{"frameworkIds": []}`. Every template also carries one of five canonical
 categories (`executive`, `compliance`, `risk`, `operational`, `governance`) and
@@ -1052,7 +1054,7 @@ All endpoints are auth-protected and org-scoped.
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | `/api/reporting/sections` | Section catalog (the 13-section taxonomy) |
+| GET | `/api/reporting/sections` | Section catalog (the 18-section taxonomy) |
 | GET | `/api/reporting/templates` | List available templates |
 | GET | `/api/reporting/templates/:id` | Get a template |
 | POST | `/api/reporting/templates` | Create a template |
@@ -1098,7 +1100,7 @@ The frontend wizard (`ConfigureReportWizard.tsx`, `mode="run-now"`) skips the Sc
 
 ### Section Catalog
 
-`Servers/services/reporting/sectionCatalog.ts` is the single owner of the 13-section taxonomy; it backs `GET /api/reporting/sections` and `VALID_SECTION_KEYS` derives from it (catalog keys plus the `all` wildcard). A test pins the catalog against the frontend's `REPORT_SECTION_GROUPS` backend-key set, so drift between the two fails CI rather than silently rejecting a section the wizard can still offer.
+`Servers/services/reporting/sectionCatalog.ts` is the single owner of the 18-section taxonomy; it backs `GET /api/reporting/sections` and `VALID_SECTION_KEYS` derives from it (catalog keys plus the `all` wildcard). A test pins the catalog against the frontend's `REPORT_SECTION_GROUPS` backend-key set, so drift between the two fails CI rather than silently rejecting a section the wizard can still offer.
 
 ### Services
 
@@ -1295,6 +1297,113 @@ Any new report source goes into `REPORT_FILE_SOURCES` and nowhere else; a source
 - `validateId("id")`: a non-numeric id, 0, or an id above 2147483647 (the Postgres `INTEGER` maximum) answers **400**.
 - One statement: `DELETE FROM files WHERE organization_id = :org AND id = :id AND source IN (REPORT_FILE_SOURCES) RETURNING id`. Folder mappings go with the row through `file_folder_mappings.file_id ... ON DELETE CASCADE`.
 - When nothing was deleted (missing id, another organization's file, or any non-report file such as evidence or a File Manager upload) it answers **404** and touches nothing.
+
+## OSFI E-23 completeness report
+
+A report of kind `osfi_e23` sets the self-assessed OSFI Guideline E-23 checklist (bundled framework 26) against the model risk management records and says where the two disagree. It is shipped as one system template. Spec: `docs/superpowers/specs/2026-11-22-osfi-e23-mrm-completeness-report-design.md`. MRM side: [mrm.md](./mrm.md).
+
+### The system template
+
+Seeded by `Servers/database/migrations/20261122130000-seed-osfi-e23-report-template.js`, idempotent per slug like the library seed (an existing system row is reactivated, `down()` deactivates).
+
+| Field | Value |
+|-------|-------|
+| Slug / name | `osfi-e23-completeness` / "OSFI E-23 completeness report" |
+| Category | `compliance` |
+| Scope | `default_scope` organization, `supported_scopes` `["organization"]` (the library seed hard-codes both) |
+| Recommended frequency | `quarterly` (the wizard opens the Schedule step on it) |
+| `framework_config` | `{"frameworkIds":["native:26"]}`. A literal id is safe here: bundled framework ids are fixed by their structure file, not a SERIAL |
+| `format_config` | `{"format":"pdf"}` |
+| Sections on | `frameworkRequirements`, `mrmFleet`, `e23Contradictions`, `e23FixItList`, `signOff` |
+| Sections off | `mrmInventoryAppendix` (listed with `defaultEnabled: false`); no other catalog section is listed |
+| AI blocks on | `executiveSummary`, `keyFindings`, `recommendedActions`, `e23Gap`; every other block false |
+| `parameters_config` | `{"kind":"osfi_e23","fields":[...]}` |
+
+It seeds whether or not any organization has added E-23; without the framework the report prints the "not on file" notices and runs no rule. The migration holds the parameter fields as a JSON copy of `E23_PARAMETER_FIELDS` (`services/reporting/e23/e23Parameters.ts`), since migrations do not import TypeScript. `database/seeders/__tests__/osfiE23ReportTemplate.test.ts` asserts the copy deep-equals the constant, that every seeded section key is in the catalog and passes `kindViolations` for `osfi_e23`, and that no library template uses a kind-gated section or `e23Gap`.
+
+### Report kind and parameters
+
+`report_template_versions.parameters_config` (JSONB, default `{}`) carries `kind` and `fields`. The kind, not the slug, drives every E-23 behaviour, so a duplicated template stays an E-23 report. `KNOWN_REPORT_KINDS` in `services/reporting/reportParameters.ts` lists the accepted kinds; any other value is refused.
+
+- **Kind-gated sections.** Catalog entries `mrmFleet`, `e23Contradictions`, `e23FixItList`, `mrmInventoryAppendix` and `signOff` carry `kinds: ["osfi_e23"]`. `validateRunInput` refuses them, with 400, in any request whose template is not of that kind, including the legacy Generate page (`reporting.ctrl.ts`, which has no template and so no kind). `frameworkRequirements` has no `kinds`.
+- **Organization scope only.** `validateRunInput` refuses an `osfi_e23` run or schedule with any other scope. Organization-scope reports are Admin-only (`reportAuthorization.ts`), so this report is too.
+- **Parameter fields.** `periodStart`, `periodEnd`, `institutionName`, `accountableExecutiveName`/`Title`, `headOfValidationName`/`Title` (optional), `preparedByName`/`Title`, `audience` (`osfi` | `board`), `scopeNote` (optional, 1000 chars), `isFinal` (boolean). Text fields cap at 200 characters. Validation checks required fields, lengths, real dates, start ≤ end, no future end date and select values; unknown keys are rejected, not dropped. Messages go through `req.t`.
+- **Storage.** A schedule keeps its answers in `scheduled_reports.report_parameters`; each run records what it used in `report_runs.config_snapshot.report_parameters`. A schedule never stores the period: at run time `rollingPeriod` (`scheduleCalculator.ts`) sets it to one interval ending the day before the run, by the run's calendar date in the schedule's `timezone` (UTC when none), the same timezone `computeNextRun` fires in.
+- **Draft or final.** `isFinal` false (the default) puts "Draft: not for distribution" on every page of the formal report (PDF watermark, DOCX header) and prints "Draft" in place of the signature lines. The run list reads `is_final` from the snapshot to show a Draft or Final chip.
+- **Content language.** All fixed E-23 text (`services/reporting/e23/e23Text.ts`) is English only.
+
+### Quarterly schedules
+
+`quarterly` is a `ReportFrequency` for every template. The schedule config needs `anchorMonth` (1–12, the month of one of the four runs); `dayOfMonth` is optional, 1–28. `computeNextRun` builds the cron from the four months `anchorMonth`, +3, +6, +9. An invalid stored anchor logs a warning and falls back to January rather than building a bad cron. `rollingPeriod("quarterly", runDate)` is the three months ending the day before the run, clamped to month end.
+
+### Endpoints (`/api/v1`)
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/v1/report-templates/:id/run` | Run a template now, with `reportParameters` for kinds that take them (`reportTemplate.edit`) |
+| GET | `/api/v1/report-templates/:id/last-parameters` | Answers from the organization's latest `success` or `partial_success` run of the template that the caller may see (the same two statuses the prior glance reads), for the wizard prefill. Period and `isFinal` are left out; the old `periodEnd` comes back separately so the next period starts the day after it (`reportTemplate.edit`) |
+| GET | `/api/v1/report-runs/:id/download/fix-it-list` | Download the run's internal fix-it list. Same visibility gate and organization checks as the formal report download |
+
+### Sections and the formal report
+
+Data collection (`dataCollector.ts`) reads the same data for both audiences:
+
+- `frameworkRequirements` for `native:26`, with a data coverage label per group ("Checked against MRM data" when at least one contradiction rule targets a requirement in it, else "Self-assessment only").
+- `mrmFleet` (`e23/mrmFleet.ts`): a report-only collector over the MRM tables. Every count leaves out retired models and no per-tier verdict is printed. `getAttestationSummary` is unchanged. Validation coverage puts each model in scope in exactly one row, so the rows add up to the models in scope: "Validation overdue" (an open validation past its next due date) first, then "Validation in progress" (any other open validation, first or revalidation), then "Validated, none open" (a signed-off outcome, nothing open), else "Not started". Labels live in `e23Text.ts` (`VALIDATION_COVERAGE_LABELS`). The "By tier" table's `validated` column still means "has a signed-off validation". The facts block names the validated row `validatedNothingOpen`, so a stored previous run's `validated` (which also counted models with an open revalidation) is never diffed against it.
+- `e23Contradictions` (`e23/contradictionRules.ts`): the fixed rules below.
+- `e23FixItList` (`e23/fixItList.ts`): the deterministic fix-it list.
+- `mrmInventoryAppendix` and `signOff`.
+
+`e23/formalView.ts` turns the data into renderer-neutral blocks that `report-pdf.ejs` and the DOCX builder only lay out, so both formats say the same thing. Order: cover, Scope and method (with limitations), At a glance, executive summary (AI), E-23 program completeness, Model risk management status, Where the checklist and the data disagree, E-23 gap analysis (AI), Model inventory appendix, notices, Sign-off.
+
+`audience` decides the level of detail, never the figures. The board version shows one line per requirement group, no requirement rows and no model names, and never the appendix. Its AI prompts name no model either: the MRM status and contradiction text the prompts receive (`prepareMrmFleet`, `prepareE23Contradictions` with `board`) keep the counts and drop the exception list and rule examples, the `mrmFleet` section summary asks for counts instead of names, and the formal facts block (`formalFactsView` with `board`) drops the named MRM exceptions.
+
+**At a glance** (`e23/glance.ts`, no AI): requirements done of the total, groups checked against MRM data, rules fired of 13, models in scope, untiered models, overdue validations, open critical or high findings, and fix-it items by severity. With E-23 on more than one pairing (the organization project and use cases), a requirement counts once by its number, and as done only when every pairing's row for it is done. A figure whose source could not be read prints "Not checked". Each run stores its figures in `config_snapshot.e23_glance`. The change since the previous comparable run comes from the latest finished run of the same schedule, or for a manual run, of the same template whatever triggered it.
+
+### Contradiction rules
+
+A rule fires only when its requirement is `Implemented` or `Audited` in the organization's E-23 checklist and the data condition holds for at least one non-retired model (C1: when there are none). Rules find their requirement by number, matched against the title prefix (text before the first space). A number that matches no row puts the rule under "Rules not run", never counted as clean. A unit test pins every rule number against the structure file.
+
+| Rule | Requirement | Fires when |
+|------|-------------|------------|
+| C1 | 2.1.4 | No models in the inventory |
+| C2 | 2.2.3 | A model has no MRM tier |
+| C3 | 2.2.4 | A tiered model's rating was last set or affirmed (later of `mrm_tiered_at` and its latest validation sign-off) longer ago than its tier cadence (`REVALIDATION_CADENCE_MONTHS`: 12/18/24 months), or it is flagged for revalidation with no open validation |
+| C4 | 3.1.3 | A model has no `owner` MRM role |
+| C5 | 3.4.1 | A model's latest validator currently also holds its `developer` role |
+| C6 | 3.4.2 | A model has an overdue validation |
+| C7 | 3.4.6 | A model's latest signed-off validation report has one of its six sections missing or empty |
+| C8 | 3.4.7 | A model has neither an `approver` MRM role nor an inventory approver |
+| C9 | 3.4.9 | An `Approved` model has a critical or high finding at stage `open` with an empty remediation plan |
+| C10 | 3.6.4 | A tier 1 or tier 2 model has no active threshold |
+| C11 | 3.6.1 | A model has active thresholds but no metric received in the last 90 days (`METRIC_STALE_DAYS`) |
+| C12 | 2.2.8 | An open critical or high finding is past its due date |
+| C13 | 3.4.7 | An `Approved` model's latest signed-off validation outcome is `not_validated` |
+
+When no rule fires, the section says "No contradictions found by the rules in this report" and lists the rules checked.
+
+### Fix-it list: a second file
+
+When `e23FixItList` is on, one run produces two files in the run's format: the formal report and the internal fix-it list (`e23/fixItView.ts`, `e23-fixit-pdf.ejs` / `docxFixIt.ts`). The fix-it list has its own cover and "Internal: not for external distribution" on the cover and every page footer. Its body is the fix-it items, then the AI recommended actions, which for this report render only here and never in the formal report. The formal renderers print `E23FormalView.aiSummaries`, which leaves out both `recommendedActions` and the `recommendations` list derived from them, and `report-pdf.ejs` also guards its Recommendations block with `!isE23`.
+
+- **Items** come from fired rules, open E-23 requirements (no owner, overdue, needs rework, done without evidence, other not done) and model-level gaps. Severity is high, medium or low by item type. The list is sorted by severity, then overdue first, then requirement order or model name. The AI does not rank or edit it. With E-23 on more than one pairing, a requirement gives one item per item type: the most urgent pairing's text and due date, every owner, and the pairings named after the requirement in Where.
+- **Both or neither.** If the fix-it list fails to render, `generateReport` fails the whole result. If it cannot be stored, the orchestrator marks the run failed before anything is delivered.
+- **Storage.** The orchestrator uploads the fix-it list first, whatever "Save to storage" says, and records it in `report_runs.companion_file_id`, `companion_filename` and `companion_mime_type`. "Save to storage" governs the formal report only.
+- **Never emailed.** `deliverReport` is handed the formal report only, so no email link or attachment can carry the fix-it list.
+- **Deleting a run** deletes both files.
+- **Late failure.** A run that fails after its files are stored (persisting analyses, or the final status write) keeps the files and keeps them linked on the run, so both stay downloadable and are deleted with it.
+
+### Analyzers
+
+- **`e23Gap`** (`analyzers/e23Gap.ts`, registered in `registry.ts`). Input: the E-23 groups of `frameworkRequirements` with their rollups and coverage label (when that section is not selected, the same rows the rules ran on, which the collector keeps on `ReportData.e23Requirements`), `e23Contradictions`, `mrmFleet`, the formal facts block, and the audience line. Output (zod, strict): `narrative`, `principles[]` (`group` verbatim, `position` of `consistent` / `partly consistent` / `inconsistent` / `not assessable`, `explanation`, `basis`, `what_would_close_this`) and `abstain_reason`. Positions print as "Data consistent with self-assessment" and so on, never as a compliance rating. The analyzer abstains without a call when the run is not an E-23 report or has no E-23 requirements.
+- **E-23 prose guard** (`analyzers/e23Guard.ts`, run in `runAnalyzers.ts` after the shallowness gate and before `enforce`). On an E-23 run only, the prose of executiveSummary, keyFindings, e23Gap and recommendedActions (fix-it file) is checked against the exact prompt the analyzer received, with no model call. (a) Compliance and regulator-view claims (`COMPLIANCE_CLAIM_PATTERNS`), allowed when a negation governs them in the same clause ("does not state that any requirement is fulfilled"; a clause ends at ; : a dash, or a comma plus and/but/so/which...), two known misreadings, and internal field names (camelCase, `name=value`). (b) Figures are checked per item (a paragraph of a whole field, or one finding/action/principle with all its prose fields): a number must be in the input, or follow in one step (difference or sum) from two grounded figures the same item cites, or be a day count between two input dates; an "X of Y" must sit on one input line; a group count must be one the input states (totals and the per-section lines); a percentage must be stated as a percentage in the input, or be the ratio (within 0.5) of two grounded figures of the same kind in the same item, the kind read off the next words ("13 models", "6 of 16 groups"), so 6 groups over 13 models is no percentage; dates must be in the input or a day either side of one; "as of/as at" must name the as-at day; a sentence that puts period activity in the monitoring window with no mention of the period is flagged. (c) A violation re-issues the call once with the sentences named. What still fails is removed smallest cut first: the sentence; then a nullable field cut under its schema minimum becomes null, and a row whose required field is cut under its minimum is dropped; the analyzer abstains with "the AI text made claims the report data does not support" only when a required whole field falls under its minimum or a list analyzer has no row left. `audit_metadata.guard_retried` and `guard_rejections` record it.
+- **E-23 analyzer inputs** (`e23DataBlock` in `analyzers/e23Gap.ts`, in the four formal prompts on E-23 runs): requirements with due date, overdue, owner and evidence counts and the status split; groups and requirements per section (read off the group title suffix: B.1, B.2, B.3 collapse to B; D.1 and D.2 stay apart because D.2 holds several groups) and by coverage; every group with its requirement count and coverage; the rules line ("rules that fired: 0 of 13 (no contradiction found)"); models and open findings by severity per tier. An E-23 run's facts block is rendered with words instead of field names (`factNameAsWords`); other reports keep `name=value`. The header also states the group split, that self-assessment-only groups are no gap, and the as-at date vs the reporting period.
+- **Position enforcement.** `enforceE23GapPositions` runs after parsing. A group that is self-assessment only, or that resolves to no known group, becomes `not assessable`. A group holding a requirement a fired rule names cannot be `consistent` and becomes `partly consistent`. A corrected row is kept, not dropped, and each change is stored in the analysis row's `audit_metadata.position_corrections` (`{group, from, to}`), which is present only when something changed.
+- **Formal versus internal inputs.** Analyzers whose output prints in the formal report (`executiveSummary`, `keyFindings`, `e23Gap`) get the formal facts block, in which the fix-it list is reduced to counts, and no fix-it section summary. `recommendedActions` gets the full facts and up to 20 fix-it items (`fixItPromptBlock`) so its actions point at real items. Every prompt of an E-23 run carries the audience line.
+- **Gating.** `e23Gap` is a flag in `AiBlocksConfig`. It is off in `LEGACY_BLOCKS` and `NO_BLOCKS`, and the wizard offers it only for an `osfi_e23` template (`aiBlocksForKind`).
+- **Prior facts.** For an E-23 manual run, `collectPriorFacts` compares against the organization's previous run of the same template. Scheduled runs keep comparing against their own schedule. `FACTS_SCHEMA_VERSION` is 3.
+
+Without an LLM key the AI blocks abstain as in any report. At a glance, completeness, MRM status, contradictions and the fix-it list never depend on the LLM.
 
 ## Related Documentation
 

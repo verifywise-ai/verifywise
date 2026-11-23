@@ -49,6 +49,7 @@ import { policyTemplatesContent } from './policies/policy-templates';
 import { trainingTrackingContent } from './training/training-tracking';
 import { dashboardAnalyticsContent } from './reporting/dashboard-analytics';
 import { generatingReportsContent } from './reporting/generating-reports';
+import { osfiE23ReportContent } from './reporting/osfi-e23-report';
 import { organizationSettingsContent } from './settings/organization-settings';
 import { userManagementContent } from './settings/user-management';
 import { roleConfigurationContent } from './settings/role-configuration';
@@ -183,6 +184,7 @@ export const articleContentMap: Record<string, ArticleContent> = {
   // Reporting
   'reporting/dashboard-analytics': dashboardAnalyticsContent,
   'reporting/generating-reports': generatingReportsContent,
+  'reporting/osfi-e23-report': osfiE23ReportContent,
   // Settings
   'settings/organization-settings': organizationSettingsContent,
   'settings/user-management': userManagementContent,

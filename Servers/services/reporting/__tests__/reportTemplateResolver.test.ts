@@ -84,7 +84,24 @@ describe("resolveReportRequest", () => {
       riskAnalysis: true,
       complianceGap: false,
       vendorRisk: false,
+      e23Gap: false,
     });
+  });
+
+  it("maps the E-23 gap analysis flag", () => {
+    const req = resolveReportRequest(
+      {
+        name: "Q",
+        format: "pdf",
+        scope: "organization",
+        sections_config: { sections: [{ reportSectionKey: "frameworkRequirements" }] },
+        ai_blocks_config: { e23Gap: true },
+        parameters_config: { kind: "osfi_e23" },
+      },
+      9,
+    );
+    expect(req.aiBlocks!.e23Gap).toBe(true);
+    expect(req.aiEnhanced).toBe(true);
   });
 
   it("keeps aiEnhanced true when only a new block is on", () => {
@@ -130,6 +147,7 @@ describe("resolveReportRequest", () => {
       riskAnalysis: false,
       complianceGap: false,
       vendorRisk: false,
+      e23Gap: false,
     });
   });
 });
@@ -156,5 +174,36 @@ describe("framework selection", () => {
     });
 
     expect(request.frameworkIds).toBeUndefined();
+  });
+
+  it("maps the version's report kind, the run's parameters and the template id", () => {
+    const request = resolveReportRequest({
+      scope: "organization",
+      template_id: 12,
+      sections_config: { sections: [{ reportSectionKey: "mrmFleet", defaultEnabled: true }] },
+      parameters_config: { kind: "osfi_e23", fields: [] },
+      report_parameters: { institutionName: "Northern Bank", periodEnd: "2026-10-31" },
+      name: "E-23",
+      format: "pdf",
+    });
+
+    expect(request.reportKind).toBe("osfi_e23");
+    expect(request.reportParameters).toEqual({
+      institutionName: "Northern Bank",
+      periodEnd: "2026-10-31",
+    });
+    expect(request.templateId).toBe(12);
+  });
+
+  it("leaves the kind undefined for a general template", () => {
+    const request = resolveReportRequest({
+      scope: "organization",
+      sections_config: { sections: [{ reportSectionKey: "compliance", defaultEnabled: true }] },
+      parameters_config: {},
+      name: "General",
+      format: "pdf",
+    });
+
+    expect(request.reportKind).toBeUndefined();
   });
 });

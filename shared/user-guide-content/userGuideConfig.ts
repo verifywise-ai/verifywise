@@ -513,7 +513,7 @@ export const collections: Collection[] = [
     title: 'Reporting',
     description: 'Generate reports and gain insights into your AI governance program.',
     icon: 'BarChart3',
-    articleCount: 2,
+    articleCount: 3,
     articles: [
       {
         id: 'dashboard-analytics',
@@ -526,6 +526,12 @@ export const collections: Collection[] = [
         title: 'Generating reports',
         description: 'Create project and organization reports for compliance and audits.',
         keywords: ['report', 'generate', 'create', 'project', 'organization', 'compliance', 'audit', 'download'],
+      },
+      {
+        id: 'osfi-e23-report',
+        title: 'OSFI E-23 completeness report',
+        description: 'Check your E-23 checklist against your model risk records and get an internal fix-it list.',
+        keywords: ['osfi', 'e-23', 'e23', 'model risk', 'mrm', 'completeness', 'contradictions', 'fix-it list', 'board', 'examiner', 'quarterly', 'sign-off'],
       },
     ],
   },

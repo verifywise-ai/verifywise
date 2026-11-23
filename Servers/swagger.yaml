@@ -8017,6 +8017,12 @@ tags:
   -
     name: 'v1: V1/Projects'
   -
+    name: 'v1: V1/Report Runs'
+  -
+    name: 'v1: V1/Report Templates'
+  -
+    name: 'v1: V1/Scheduled Reports'
+  -
     name: 'v1: V1/Training'
   -
     name: 'v1: V1/Use Case Lifecycle'
@@ -29350,6 +29356,76 @@ paths:
       tags:
         - 'v1: V1/Vendor Risks'
       operationId: restoreVendorRiskById
+      security:
+        -
+          bearerAuth: []
+  '/v1/report-templates/{id}/run':
+    post:
+      summary: 'Run Template Now'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Report Templates'
+      operationId: v1_report_templates_runTemplateNow
+      security:
+        -
+          bearerAuth: []
+  '/v1/report-templates/{id}/last-parameters':
+    get:
+      summary: 'Get Last Parameters'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Report Templates'
+      operationId: getLastParameters
+      security:
+        -
+          bearerAuth: []
+  /v1/scheduled-reports:
+    post:
+      summary: 'Create Scheduled Report'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Scheduled Reports'
+      operationId: v1_scheduled_reports_createScheduledReport
+      security:
+        -
+          bearerAuth: []
+  '/v1/scheduled-reports/{id}':
+    patch:
+      summary: 'Update Scheduled Report'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Scheduled Reports'
+      operationId: v1_scheduled_reports_updateScheduledReport
+      security:
+        -
+          bearerAuth: []
+  '/v1/report-runs/{id}/download/fix-it-list':
+    get:
+      summary: 'Download Run Companion'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Report Runs'
+      operationId: downloadRunCompanion
       security:
         -
           bearerAuth: []

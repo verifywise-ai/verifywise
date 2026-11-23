@@ -153,6 +153,40 @@ describe("reportTemplate.utils", () => {
     expect(opts.replacements.framework_config).toBe("{}");
   });
 
+  // A copy of the E-23 template must stay an E-23 report: parameters_config
+  // carries the kind that unlocks its sections.
+  it("createTemplateVersionQuery carries parameters_config into the new version", async () => {
+    q.mockResolvedValueOnce([{ id: 33, version: 1 }]);
+    await createTemplateVersionQuery(
+      7,
+      42,
+      { sections_config: { sections: [] }, parameters_config: { kind: "osfi_e23", fields: [] } },
+      9,
+    );
+    const [sql, opts] = q.mock.calls[0];
+    expect(sql).toContain("parameters_config");
+    expect(JSON.parse(opts.replacements.parameters_config)).toEqual({
+      kind: "osfi_e23",
+      fields: [],
+    });
+  });
+
+  // A PATCH that edits sections only must not strip the kind from the template.
+  it("createTemplateVersionQuery keeps the previous version's parameters_config when none is sent", async () => {
+    q.mockResolvedValueOnce([{ id: 34, version: 2 }]);
+    await createTemplateVersionQuery(7, 42, { sections_config: { sections: [] } }, 9);
+    const [sql, opts] = q.mock.calls[0];
+    expect(opts.replacements.parameters_config).toBeNull();
+    expect(sql).toMatch(/COALESCE\(\s*CAST\(:parameters_config AS JSONB\)/);
+  });
+
+  it("createTemplateVersionQuery rejects a parameters_config that is not an object", async () => {
+    await expect(
+      createTemplateVersionQuery(7, 42, { parameters_config: ["osfi_e23"] }, 9),
+    ).rejects.toThrow("parameters_config must be an object");
+    expect(q).not.toHaveBeenCalled();
+  });
+
   it("slugify collapses punctuation and trims separators", () => {
     expect(slugify("Quarterly Board Pack!")).toBe("quarterly-board-pack");
     expect(slugify("  --Weird__Name--  ")).toBe("weird-name");

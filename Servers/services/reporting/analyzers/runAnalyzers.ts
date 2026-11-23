@@ -7,6 +7,7 @@ import {
 import { generateObjectWithSelfCorrection } from "../../../advisor/llmSelfCorrect";
 import logger from "../../../utils/logger/fileLogger";
 import {
+  E23_GUARD_REJECTED,
   INSUFFICIENT_DATA,
   LLM_CALL_FAILED,
   NO_LLM_KEY,
@@ -21,6 +22,16 @@ import {
   type AnalyzerExtras,
 } from "./registry";
 import { runSectionSummaries } from "./sectionSummaries";
+import { isE23Run, type PositionCorrection } from "./e23Gap";
+import {
+  findViolations,
+  guardContext,
+  guardDirective,
+  isGuarded,
+  withoutViolations,
+  type GuardRejection,
+  type GuardViolation,
+} from "./e23Guard";
 
 /**
  * Every key that can be gated or produce a result.
@@ -46,6 +57,16 @@ export interface AnalyzerRunResult {
    *  into audit_metadata by persistAnalyses — that is what makes the gate's
    *  firing observable after the run rather than only in the log. */
   restatementRetried?: boolean;
+  /** Positions an analyzer's `enforce` hook changed after parsing (e23Gap).
+   *  Present only when something was changed; persisted as
+   *  audit_metadata.position_corrections. */
+  positionCorrections?: PositionCorrection[];
+  /** E-23 runs: whether the prose guard (e23Guard.ts) re-issued the call.
+   *  Present only when it did; persisted as audit_metadata.guard_retried. */
+  guardRetried?: boolean;
+  /** E-23 runs: what the prose guard rejected, fed back ("retried") or dropped
+   *  ("removed"); persisted as audit_metadata.guard_rejections. */
+  guardRejections?: GuardRejection[];
 }
 
 export type AnalyzerResults = Partial<Record<AnalyzedKey, AnalyzerRunResult>>;
@@ -101,6 +122,7 @@ const VERBATIM_FIELDS: Partial<Record<AnalysisSectionKey, { list: string; field:
   complianceGap: { list: "gaps", field: "control" },
   vendorRisk: { list: "concerns", field: "vendor" },
   riskAnalysis: { list: "top_risks", field: "name" },
+  e23Gap: { list: "principles", field: "group" },
 };
 
 /**
@@ -211,6 +233,7 @@ const PROSE_FIELD: Partial<Record<AnalysisSectionKey, string>> = {
   riskAnalysis: "narrative",
   complianceGap: "narrative",
   vendorRisk: "narrative",
+  e23Gap: "narrative",
 };
 
 /** Appended to the system prompt for the one re-issue the gate allows. */
@@ -266,6 +289,8 @@ export async function runAnalyzers(input: RunAnalyzersInput): Promise<AnalyzerRe
     stageExtras: AnalyzerExtras,
   ): Promise<readonly [AnalysisSectionKey, AnalyzerRunResult]> => {
     const def = ANALYZERS[key];
+    const stated = def.abstainWithoutCall?.(reportData);
+    if (stated) return [key, abstain(stated, modelLabel)] as const;
     const userPrompt = def.buildUserPrompt(reportData, stageExtras);
     if (!userPrompt) {
       // Summary consumers' buildUserPrompt returns "" for exactly one reason:
@@ -366,6 +391,79 @@ export async function runAnalyzers(input: RunAnalyzersInput): Promise<AnalyzerRe
       }
     }
 
+    // The E-23 prose guard (G1): on an E-23 run, compliance claims and figures
+    // or dates the input does not hold buy one re-issue with feedback naming
+    // them; what still fails is dropped, or the analysis abstains. It reads
+    // the payload, never the model's good will. Other reports skip it.
+    const guardRejections: GuardRejection[] = [];
+    let guardRetried = false;
+    if (isE23Run(reportData) && isGuarded(key) && payload && !payload.abstain_reason) {
+      const ctx = guardContext(userPrompt, reportData);
+      const record = (stage: GuardRejection["stage"], found: GuardViolation[]) =>
+        found.forEach((v) =>
+          guardRejections.push({ ...v, sentence: v.sentence.slice(0, 300), stage }),
+        );
+      let found = findViolations(key, payload, ctx);
+      if (found.length > 0) {
+        record("retried", found);
+        guardRetried = true;
+        attempts += 1;
+        logger.warn(
+          `Report analyzer "${key}" (${ANALYZER_VERSION}) wrote ${found.length} statement${
+            found.length === 1 ? "" : "s"
+          } the E-23 guard rejects; re-issuing once`,
+        );
+        try {
+          const retry = await call(system + guardDirective(found));
+          attempts += retry.attempts - 1;
+          payload = sanitize(retry.object);
+          // An honest abstention on the re-issue is kept: nothing to check.
+          found = payload?.abstain_reason ? [] : findViolations(key, payload, ctx);
+        } catch (e) {
+          logger.warn(
+            `Report analyzer "${key}" (${ANALYZER_VERSION}) guard re-issue failed; checking the first payload`,
+            e,
+          );
+        }
+        if (found.length > 0) {
+          record("removed", found);
+          payload = withoutViolations(key, payload, found);
+          if (!payload) {
+            return [
+              key,
+              {
+                payload: null,
+                abstained: true,
+                abstain_reason: E23_GUARD_REJECTED,
+                model: modelLabel,
+                attempts,
+                restatementRetried,
+                guardRetried,
+                guardRejections,
+              },
+            ] as const;
+          }
+        }
+      }
+    }
+
+    // Constraints the prompt asks for but the code guarantees (e23Gap's
+    // positions), applied to the payload that is kept: after parsing,
+    // provenance and the gate, before anything is persisted or rendered.
+    let positionCorrections: PositionCorrection[] = [];
+    if (def.enforce && payload && !payload.abstain_reason) {
+      const enforced = def.enforce(payload, reportData);
+      payload = enforced.payload;
+      positionCorrections = enforced.corrections;
+      if (positionCorrections.length > 0) {
+        logger.warn(
+          `Report analyzer "${key}" (${ANALYZER_VERSION}) returned ${positionCorrections.length} position${
+            positionCorrections.length === 1 ? "" : "s"
+          } outside its constraints; corrected`,
+        );
+      }
+    }
+
     return [
       key,
       {
@@ -375,6 +473,9 @@ export async function runAnalyzers(input: RunAnalyzersInput): Promise<AnalyzerRe
         model: modelLabel,
         attempts,
         restatementRetried,
+        ...(positionCorrections.length > 0 && { positionCorrections }),
+        ...(guardRetried && { guardRetried }),
+        ...(guardRejections.length > 0 && { guardRejections }),
       },
     ] as const;
   };

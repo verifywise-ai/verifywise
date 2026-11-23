@@ -30,6 +30,7 @@ jest.mock("../../utils/i18n.utils", () => ({
 jest.mock("../../utils/statusCode.utils", () => ({
   STATUS_CODE: {
     202: (d: any) => ({ message: "Accepted", data: d }),
+    400: (d: any) => ({ message: "Bad Request", data: d }),
     404: (d: any) => ({ message: "Not Found", data: d }),
     500: (d: any) => ({ message: "Internal Server Error", data: d }),
   },
@@ -92,6 +93,26 @@ describe("generateReportsV2 (async)", () => {
     );
     expect(res.status).toHaveBeenCalledWith(202);
     expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ data: { runId: 77 } }));
+  });
+
+  it("400s an E-23-only section on the legacy generate page without creating a run", async () => {
+    const req = {
+      ...createMockReq({ projectId: "7", reportType: ["projectRisks", "mrmFleet"], format: "pdf" }),
+      t: (k: string, v?: Record<string, string | number>) =>
+        k.replace(/\{(\w+)\}/g, (_m: string, n: string) => String(v?.[n])),
+    };
+    const res = createMockRes();
+
+    await generateReportsV2(req as Request, res as Response);
+
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: { errors: ["section mrmFleet is only available in an OSFI E-23 report"] },
+      }),
+    );
+    expect(mockCreateRun).not.toHaveBeenCalled();
+    expect(mockEnqueue).not.toHaveBeenCalled();
   });
 
   it("stores 0 for the framework ids when a use case with no framework omits them", async () => {

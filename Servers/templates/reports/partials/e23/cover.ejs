@@ -1,0 +1,18 @@
+<%# A cover page (E23Cover from services/reporting/e23/formalView.ts): the formal report's and the fix-it list's. Locals: coverInstitution, cover. %>
+    <div class="cover-page">
+      <% if (branding.organizationLogo) { %>
+      <img src="<%= branding.organizationLogo %>" alt="<%= coverInstitution %>" class="cover-logo">
+      <p class="cover-subtitle"><%= coverInstitution %></p>
+      <% } else { %>
+      <div class="e23-cover-institution"><%= coverInstitution %></div>
+      <% } %>
+
+      <h1 class="cover-title"><%= cover.title %></h1>
+      <p class="cover-subtitle"><%= cover.subtitle %></p>
+
+      <div class="cover-meta">
+        <% cover.lines.forEach(function(line) { %>
+        <p class="cover-meta-item"><strong><%= line.label %>:</strong> <%= line.value %></p>
+        <% }); %>
+      </div>
+    </div>

@@ -28,6 +28,10 @@ const SECTIONS_CONFIG = {
 };
 const AI_BLOCKS_CONFIG = { executiveSummary: true };
 const FRAMEWORK_CONFIG = { frameworkIds: ["native:2"] };
+const PARAMETERS_CONFIG = {
+  kind: "osfi_e23",
+  fields: [{ key: "institutionName", label: "Institution name", type: "text", required: true }],
+};
 
 const SYSTEM_TEMPLATE_FULL = {
   ...SYSTEM_TEMPLATE,
@@ -36,6 +40,7 @@ const SYSTEM_TEMPLATE_FULL = {
     sections_config: SECTIONS_CONFIG,
     ai_blocks_config: AI_BLOCKS_CONFIG,
     framework_config: FRAMEWORK_CONFIG,
+    parameters_config: PARAMETERS_CONFIG,
   },
 };
 
@@ -246,6 +251,23 @@ describe("TemplatesTab", () => {
     await waitFor(() =>
       expect(mockCreate).toHaveBeenCalledWith(
         expect.objectContaining({ framework_config: FRAMEWORK_CONFIG }),
+        expect.anything(),
+      ),
+    );
+  });
+
+  // The report kind lives in parameters_config. A copy without it would list
+  // the E-23 sections under a general template, and every run would be refused.
+  it("carries the source template's report parameters config into the copy", async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<TemplatesTab onUse={vi.fn()} />);
+
+    const system = screen.getByRole("region", { name: /system templates/i });
+    await user.click(within(system).getByRole("button", { name: /duplicate/i }));
+
+    await waitFor(() =>
+      expect(mockCreate).toHaveBeenCalledWith(
+        expect.objectContaining({ parameters_config: PARAMETERS_CONFIG }),
         expect.anything(),
       ),
     );

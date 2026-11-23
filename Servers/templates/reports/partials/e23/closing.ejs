@@ -1,0 +1,37 @@
+<%# After the notices in an E-23 report: analyses not produced, then the sign-off page. %>
+    <% if (e23.abstentions.length > 0) { %>
+    <div class="subsection">
+      <div class="subsection-header">
+        <h3 class="subsection-title"><%= e23.abstentionsHeading %></h3>
+      </div>
+      <ul class="ai-findings-list">
+        <% e23.abstentions.forEach(function(a) { %>
+        <li><strong><%= a.label %>:</strong> <%= a.reason %></li>
+        <% }); %>
+      </ul>
+    </div>
+    <% } %>
+
+    <% if (e23.signOff) { %>
+    <section class="e23-section" id="e23-signoff">
+      <div class="group-header">
+        <h2 class="group-title"><%= e23.signOff.heading %></h2>
+      </div>
+      <p class="e23-paragraph"><%= e23.signOff.statement %></p>
+      <% e23.signOff.signatories.forEach(function(s) { %>
+      <div class="e23-signatory">
+        <div class="e23-signatory-role"><%= s.role %></div>
+        <p><%= e23.signOff.fields.name %>: <%= s.name || '—' %></p>
+        <p><%= e23.signOff.fields.title %>: <%= s.title || '—' %></p>
+        <% if (!e23.signOff.draft) { %>
+        <div class="e23-sign-line"><span><%= e23.signOff.fields.signature %></span><span class="e23-sign-rule"></span></div>
+        <div class="e23-sign-line"><span><%= e23.signOff.fields.date %></span><span class="e23-sign-rule"></span></div>
+        <% } %>
+      </div>
+      <% }); %>
+      <% if (e23.signOff.draft) { %>
+      <p class="e23-draft-label"><%= e23.signOff.draft.label %></p>
+      <p class="e23-paragraph e23-muted"><%= e23.signOff.draft.note %></p>
+      <% } %>
+    </section>
+    <% } %>
