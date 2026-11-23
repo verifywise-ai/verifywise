@@ -4,12 +4,17 @@ jest.mock("../../utils/incidentManagement.utils", () => ({
   getAllIncidentsQuery: jest.fn(),
 }));
 jest.mock("../../services/incidentManagement.service", () => ({
+  INCIDENT_EDIT_DENIED_MESSAGE: "Your role does not allow editing this incident's details.",
+  IncidentAccessDeniedError: class IncidentAccessDeniedError extends Error {},
   IncidentUpdateValidationError: class IncidentUpdateValidationError extends Error {
     constructor(public errors: { message: string }[]) {
       super("Incident update validation failed");
     }
   },
   updateIncident: jest.fn(),
+}));
+jest.mock("../../utils/userPermission.utils", () => ({
+  userHasPermission: jest.fn<any>().mockResolvedValue(true),
 }));
 jest.mock("../scope", () => ({
   requireOrganization: jest.fn<any>().mockResolvedValue(undefined),
@@ -20,6 +25,7 @@ import {
   IncidentUpdateValidationError,
   updateIncident,
 } from "../../services/incidentManagement.service";
+import { userHasPermission } from "../../utils/userPermission.utils";
 import { incidentTools } from "../tools/incidents";
 
 const CALLER = { userId: 7, organizationId: 3, role: "Admin", isSuperAdmin: false };
@@ -33,7 +39,10 @@ const payload = (res: any) => JSON.parse(res.content[0].text);
 const incident = (fields: object) => ({ toSafeJSON: () => fields });
 
 describe("mcp/tools/incidents", () => {
-  beforeEach(() => jest.clearAllMocks());
+  beforeEach(() => {
+    jest.clearAllMocks();
+    (userHasPermission as jest.Mock<any>).mockResolvedValue(true);
+  });
 
   it("list_incidents returns each incident through toSafeJSON, as the console does", async () => {
     (getAllIncidentsQuery as jest.Mock<any>).mockResolvedValue([incident({ id: 1 })]);
@@ -54,8 +63,19 @@ describe("mcp/tools/incidents", () => {
       4,
       { ai_project: "Drift in scoring", status: "Closed" },
       7,
+      // Details only: the tool never records approval.
+      { access: { canEdit: true, canApprove: false } },
     );
+    expect(userHasPermission).toHaveBeenCalledWith(3, 7, "incident.edit");
     expect(payload(res)).toEqual({ incident: { id: 4, status: "Closed" } });
+  });
+
+  it("update_incident is refused, writing nothing, when the caller lacks incident.edit", async () => {
+    (userHasPermission as jest.Mock<any>).mockResolvedValue(false);
+    await expect(
+      tool("update_incident").handler({ organizationId: 3, incidentId: 4, status: "Open" }, CALLER),
+    ).rejects.toThrow("Your role does not allow editing this incident's details.");
+    expect(updateIncident).not.toHaveBeenCalled();
   });
 
   it("update_incident refuses a call with nothing to change", async () => {

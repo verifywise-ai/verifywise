@@ -43,6 +43,8 @@ export const de: Record<string, string> = {
   "New incident added successfully!": "Neuer Vorfall erfolgreich hinzugefügt!",
   "Quickly find specific incidents by searching titles or descriptions. Perfect for locating incidents in large lists.":
     "Finden Sie schnell bestimmte Vorfälle durch Suchen von Titeln oder Beschreibungen. Perfekt zum Auffinden von Vorfällen in großen Listen.",
+  "Record approval": "Genehmigung erfassen",
+  "Set when approved or rejected": "Wird bei Genehmigung oder Ablehnung gesetzt",
 };
 
 export const fr: Record<string, string> = {
@@ -86,6 +88,8 @@ export const fr: Record<string, string> = {
   "New incident added successfully!": "Nouvel incident ajouté avec succès !",
   "Quickly find specific incidents by searching titles or descriptions. Perfect for locating incidents in large lists.":
     "Trouvez rapidement des incidents spécifiques en recherchant par titre ou description. Parfait pour localiser des incidents dans de grandes listes.",
+  "Record approval": "Enregistrer l'approbation",
+  "Set when approved or rejected": "Défini lors de l'approbation ou du rejet",
 };
 
 export const es: Record<string, string> = {
@@ -130,4 +134,6 @@ export const es: Record<string, string> = {
   "New incident added successfully!": "¡Nuevo incidente añadido correctamente!",
   "Quickly find specific incidents by searching titles or descriptions. Perfect for locating incidents in large lists.":
     "Encuentre rápidamente incidentes específicos buscando por títulos o descripciones. Ideal para localizar incidentes en listas extensas.",
+  "Record approval": "Registrar la aprobación",
+  "Set when approved or rejected": "Se establece al aprobar o rechazar",
 };

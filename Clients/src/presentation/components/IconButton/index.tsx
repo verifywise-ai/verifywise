@@ -69,6 +69,7 @@ function IconButton({
   checkForRisks,
   onDeleteWithRisks,
   onView,
+  onApprove,
   openLinkedPolicies,
   entityId: _entityId,
   onSendTest,
@@ -392,9 +393,10 @@ function IconButton({
       return ["edit"];
     }
 
-    // Without incident.edit an incident opens read-only.
+    // Without incident.edit an incident opens read-only, unless the role
+    // records approval (incident.approve): then it can open it to approve.
     if (normalizedType === "incident" && canEdit === false) {
-      return ["view"];
+      return onApprove ? ["view", "approve"] : ["view"];
     }
 
     if (normalizedType === "vendor") {
@@ -448,6 +450,7 @@ function IconButton({
     const LABELS_BY_TYPE: Record<string, Record<string, string>> = {
       incident: {
         archive: "Archive incident",
+        approve: "Record approval",
       },
       risk: {
         restore: "Restore risk",
@@ -550,6 +553,10 @@ function IconButton({
                   handleMakeVisible(e);
                 } else if (item === "view") {
                   handleView(e);
+                } else if (item === "approve") {
+                  onApprove?.();
+                  closeActionMenu(e);
+                  onMouseEvent?.(e);
                 } else if (item === "Send Test") {
                   await handleSendTestNotification(e);
                 } else if (item === "Activate/Deactivate") {

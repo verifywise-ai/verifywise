@@ -18,6 +18,12 @@ jest.mock("../../middleware/accessControl.middleware", () => ({
     mw.permissionKey = permission;
     return mw;
   }),
+  // authorizeAny(...keys) is recorded as all of its keys.
+  authorizeAny: jest.fn((...permissions: string[]) => {
+    const mw: any = (_req: any, _res: any, next: any) => next();
+    mw.permissionKeys = permissions;
+    return mw;
+  }),
 }));
 
 import riskLinksRouter from "../riskLinks.route";
@@ -33,6 +39,15 @@ const permissionFor = (router: any, method: string, routePath: string) => {
   );
   expect(layer).toBeDefined();
   return layer.route.stack.map((s: any) => s.handle.permissionKey).filter(Boolean);
+};
+
+/** The keys an authorizeAny() gate on the route accepts (any one of them passes). */
+const anyOfPermissionsFor = (router: any, method: string, routePath: string) => {
+  const layer = router.stack.find(
+    (l: any) => l.route?.path === routePath && l.route.methods[method],
+  );
+  expect(layer).toBeDefined();
+  return layer.route.stack.flatMap((s: any) => s.handle.permissionKeys ?? []);
 };
 
 /** Built-in roles holding `key`, sorted, from the static built-in matrix. */
@@ -143,12 +158,33 @@ describe("screen keys the server now enforces", () => {
     ],
     [postMarketMonitoringRouter, "post", "/questions/reorder", "postMarketMonitoring.edit", EDITOR],
     [incidentRouter, "post", "/", "incident.create", EDITOR],
-    [incidentRouter, "patch", "/:id", "incident.edit", CONTRIBUTOR],
-    [incidentRouter, "patch", "/:id/archive", "incident.edit", CONTRIBUTOR],
     [incidentRouter, "delete", "/:id", "incident.delete", ADMIN],
   ])("%#: %s %s requires %s", (router, method, routePath, key, roles) => {
     expect(permissionFor(router, method as string, routePath as string)).toEqual([key]);
     expect(builtinRolesFor(key as string)).toEqual([...(roles as string[])].sort());
+  });
+
+  // Not a like-for-like swap (2026-11): these were incident.edit for Admin,
+  // Editor and Reviewer. Approval moved to incident.approve, so Reviewers
+  // (approve only) keep the update route but lose archiving, and the update
+  // handler checks which key each changed field needs.
+  it("incident archive requires incident.edit, now Admin and Editor (Reviewer dropped)", () => {
+    expect(permissionFor(incidentRouter, "patch", "/:id/archive")).toEqual(["incident.edit"]);
+    expect(builtinRolesFor("incident.edit")).toEqual(EDITOR);
+  });
+
+  it("incident update lets in incident.edit or incident.approve, the same roles as before", () => {
+    expect(permissionFor(incidentRouter, "patch", "/:id")).toEqual([]);
+    expect(anyOfPermissionsFor(incidentRouter, "patch", "/:id")).toEqual([
+      "incident.edit",
+      "incident.approve",
+    ]);
+    expect(builtinRolesFor("incident.approve")).toEqual(["Admin", "Reviewer"]);
+    const either = new Set([
+      ...builtinRolesFor("incident.edit"),
+      ...builtinRolesFor("incident.approve"),
+    ]);
+    expect([...either].sort()).toEqual(CONTRIBUTOR);
   });
 
   // Stakeholder actions stay open to every role: any user can be assigned to

@@ -8,6 +8,7 @@ import {
   deleteIncidentByIdQuery,
   archiveIncidentByIdQuery,
   validateIncidentReferences,
+  getIncidentApproverName,
   incidentReferenceFieldFromError,
   invalidReferenceErrors,
   IncidentListFilters,
@@ -22,15 +23,24 @@ import {
   validateModelInventoryId,
   validateProjectId,
   validateAssigneeId,
+  approvalStampFor,
 } from "../utils/validations/incidentManagementValidation.utils";
 import { recordIncidentCreation } from "../utils/incidentChangeHistory.utils";
 import { triggerIncidentResponse } from "../services/workflows/triggers";
-import { isCriticalIncidentSeverity } from "../domain.layer/enums/ai-incident-management.enum";
+import {
+  AIIncidentManagementApprovalStatus,
+  isCriticalIncidentSeverity,
+} from "../domain.layer/enums/ai-incident-management.enum";
 import {
   updateIncident,
+  IncidentAccessDeniedError,
   IncidentUpdateValidationError,
+  INCIDENT_APPROVE_DENIED_MESSAGE,
   INCIDENT_CHANGED_MESSAGE,
+  INCIDENT_EDIT_DENIED_MESSAGE,
+  type IncidentWriteAccess,
 } from "../services/incidentManagement.service";
+import { requestHasPermission } from "../utils/rolePermissions.utils";
 import {
   ConflictException,
   ValidationException,
@@ -79,6 +89,15 @@ const validationExceptionResponse = (req: Request, error: ValidationException, m
       },
     ],
   });
+
+/** The caller's incident write access, from the request's role (built-in or custom). */
+const incidentWriteAccess = async (req: Request): Promise<IncidentWriteAccess> => {
+  const [canEdit, canApprove] = await Promise.all([
+    requestHasPermission(req, "incident.edit"),
+    requestHasPermission(req, "incident.approve"),
+  ]);
+  return { canEdit, canApprove };
+};
 
 /**
  * Get all incidents
@@ -276,6 +295,20 @@ export async function createNewIncident(req: Request, res: Response) {
       return invalidReferenceResponse(invalidRefs);
     }
 
+    // Approval on create: only a caller with incident.approve may record a
+    // decision. Anyone else's incident starts Pending, without notes. The
+    // approver and date are the server's: the creator and now for Approved
+    // or Rejected, empty otherwise; the request's values are ignored.
+    const canApprove = await requestHasPermission(req, "incident.approve");
+    const approvalStatus = canApprove
+      ? (req.body.approval_status ?? AIIncidentManagementApprovalStatus.PENDING)
+      : AIIncidentManagementApprovalStatus.PENDING;
+    const stamped = approvalStampFor(undefined, approvalStatus) === "stamp" && !!req.userId;
+    // undefined is stored as NULL (createNewIncidentQuery).
+    const approvedBy = stamped
+      ? await getIncidentApproverName(req.userId!, req.organizationId!, transaction)
+      : undefined;
+
     const incident = new AIIncidentManagementModel({
       ai_project: req.body.ai_project,
       model_inventory_id: req.body.model_inventory_id ?? null,
@@ -287,8 +320,8 @@ export async function createNewIncident(req: Request, res: Response) {
       occurred_date: req.body.occurred_date ? req.body.occurred_date : null,
       date_detected: req.body.date_detected ? req.body.date_detected : null,
       reporter: req.body.reporter,
-      approval_status: req.body.approval_status,
-      approved_by: req.body.approved_by,
+      approval_status: approvalStatus,
+      approved_by: approvedBy,
       categories_of_harm: req.body.categories_of_harm
         ? Array.isArray(req.body.categories_of_harm)
           ? req.body.categories_of_harm
@@ -302,8 +335,8 @@ export async function createNewIncident(req: Request, res: Response) {
       model_system_version: req.body.model_system_version,
       interim_report: req.body.interim_report,
       archived: req.body.archived || false,
-      approval_date: req.body.approval_date ? req.body.approval_date : null,
-      approval_notes: req.body.approval_notes,
+      approval_date: stamped ? new Date() : undefined,
+      approval_notes: canApprove ? req.body.approval_notes : undefined,
       created_at: new Date(),
       updated_at: new Date(),
     });
@@ -312,11 +345,18 @@ export async function createNewIncident(req: Request, res: Response) {
 
     // Record creation in change history
     if (savedIncident.id && req.userId) {
+      // History records the approval as stored, not as requested.
       await recordIncidentCreation(
         savedIncident.id,
         req.userId,
         req.organizationId!,
-        req.body,
+        {
+          ...req.body,
+          approval_status: incident.approval_status,
+          approved_by: incident.approved_by,
+          approval_date: incident.approval_date,
+          approval_notes: incident.approval_notes,
+        },
         transaction,
       );
     }
@@ -386,15 +426,19 @@ export async function updateIncidentById(req: Request, res: Response) {
   const { expected_updated_at: expectedUpdatedAt, ...updates } = req.body ?? {};
 
   try {
-    // Shared write path: locks the row, checks expected_updated_at, validates
-    // against the locked row, drops a stale closure approval on reopen,
+    // The route lets in either key; which one each changed field needs is
+    // decided in the write path against the locked row.
+    const access = await incidentWriteAccess(req);
+    // Shared write path: locks the row, checks expected_updated_at and the
+    // caller's access, validates against the locked row, drops a stale
+    // closure approval on reopen, sets the approver and approval date,
     // writes changed fields and records change history.
     const savedIncident = await updateIncident(
       req.organizationId!,
       incidentId,
       updates,
       req.userId,
-      { expectedUpdatedAt },
+      { expectedUpdatedAt, access },
     );
     if (!savedIncident) {
       logStructured(
@@ -414,6 +458,21 @@ export async function updateIncidentById(req: Request, res: Response) {
     );
     return res.status(200).json(STATUS_CODE[200](savedIncident.toSafeJSON()));
   } catch (error) {
+    if (error instanceof IncidentAccessDeniedError) {
+      // An expected refusal, not a server fault: keep it out of the error stream.
+      logger.warn(
+        `Incident ${incidentId} update refused: no permission for ${error.fields.join(", ")}`,
+      );
+      return res
+        .status(403)
+        .json(
+          STATUS_CODE[403](
+            error.need === "edit"
+              ? req.t!(INCIDENT_EDIT_DENIED_MESSAGE)
+              : req.t!(INCIDENT_APPROVE_DENIED_MESSAGE),
+          ),
+        );
+    }
     if (error instanceof IncidentUpdateValidationError) {
       const errorDetails = error.errors.map((err: ValidationError) => ({
         field: err.field,

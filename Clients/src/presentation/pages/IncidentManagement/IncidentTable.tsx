@@ -67,6 +67,7 @@ const IncidentTable: React.FC<IncidentTableProps> = ({
   onView,
   onArchive,
   canEdit = true,
+  canApprove = false,
   paginated = true,
   archivedId,
   visibleColumns,
@@ -302,6 +303,9 @@ const IncidentTable: React.FC<IncidentTableProps> = ({
                           onEdit={() => onEdit?.(incident.id?.toString(), "edit")}
                           onDelete={() => onArchive?.(incident.id?.toString(), "archive")}
                           onView={() => onView?.(incident.id?.toString(), "view")}
+                          onApprove={
+                            canApprove ? () => onEdit?.(incident.id?.toString(), "edit") : undefined
+                          }
                           onMouseEvent={() => {}}
                           warningTitle="Are you sure?"
                           warningMessage="You are about to archive this incident. This action cannot be undone. You can also choose to edit or view the incident instead."
@@ -323,6 +327,7 @@ const IncidentTable: React.FC<IncidentTableProps> = ({
       onArchive,
       onView,
       canEdit,
+      canApprove,
       isVisible,
       sortConfig.key,
       visibleTableColumns.length,

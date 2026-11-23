@@ -8,10 +8,11 @@
  *   - DELETE /ai-incident-managements/:id                 -> incident.delete
  *
  * Keep existing custom roles working the way 20261111120001 did:
- *   - a role that may report incidents (incident.create), holds a
- *     contributor-tier key (as built-in Reviewers do) or holds
- *     organization.admin may edit, approve and archive them;
+ *   - a role that may report incidents (incident.create) or holds
+ *     organization.admin may edit and archive them;
  *   - a role that holds organization.admin may also delete them.
+ * Reviewer-like roles (contributor-tier keys without incident.create) get the
+ * approve-only key instead, in 20261123120000, as built-in Reviewers do.
  * Other custom roles lose these writes until an Admin grants the keys.
  * Built-in roles get the keys from code (Servers/config/rolePermissions.config.ts).
  *
@@ -22,13 +23,7 @@
 const GRANTS = [
   {
     key: "incident.edit",
-    heldKeys: [
-      "incident.create",
-      "file.contribute",
-      "fileManager.contribute",
-      "riskLinks.review",
-      "organization.admin",
-    ],
+    heldKeys: ["incident.create", "organization.admin"],
   },
   { key: "incident.delete", heldKeys: ["organization.admin"] },
 ];
