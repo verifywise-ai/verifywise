@@ -47,6 +47,7 @@ import {
   textParam,
 } from "./e23Text";
 import { METRIC_STALE_DAYS } from "./mrmFleet";
+import { e23RequirementCounts } from "./glance";
 
 /** A table cell: plain text, or a main line with a smaller secondary line. */
 export type E23Cell =
@@ -320,9 +321,12 @@ function completenessSection(
       return c ? COVERAGE_LABELS[c] : undefined;
     };
     blocks.push({ kind: "subheading", text: fw.frameworkName });
+    // E-23 is counted as the glance counts it: each requirement once across
+    // pairings. Other frameworks keep their pooled rollup.
+    const counts = isE23 ? e23RequirementCounts({ frameworks: [fw] }) : fw.rollup;
     blocks.push({
       kind: "paragraph",
-      text: `${fw.rollup.done} of ${fw.rollup.total} requirements implemented or audited`,
+      text: `${counts.done} of ${counts.total} requirements implemented or audited`,
       muted: true,
     });
     blocks.push({ kind: "chart", index });

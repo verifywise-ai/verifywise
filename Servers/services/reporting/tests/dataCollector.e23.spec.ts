@@ -44,6 +44,7 @@ import type {
 } from "../../../domain.layer/interfaces/i.reportGeneration";
 import { buildMrmFleet } from "../e23/mrmFleet";
 import { buildE23FixItView } from "../e23/fixItView";
+import { buildE23FormalView } from "../e23/formalView";
 import { E23_NOT_ON_FILE, NO_FIX_IT_ITEMS } from "../e23/e23Text";
 
 const E23_RUN = {
@@ -375,6 +376,68 @@ describe("E-23 kind run", () => {
     );
     expect(glance.fixIt).toEqual(s.e23FixItList!.counts);
     expect(s.mrmFleet).toEqual(buildMrmFleet(models, activity, data.metadata.generatedAt));
+  });
+
+  it("glance and completeness line give the same count with E-23 on three pairings", async () => {
+    // The organization project and two use cases carry E-23. 2.2.3 is done in
+    // all three; 2.2.4 is done in two, so it is not done.
+    const pairing = (projectId: number, projectTitle: string): FrameworkTarget => ({
+      ...e23Target,
+      projectId,
+      projectTitle,
+      isOrganizationalProject: projectId === 7,
+      projectFrameworkId: 70 + projectId,
+    });
+    const targets = [pairing(7, "Organization"), pairing(8, "Credit"), pairing(9, "Fraud")];
+    jest
+      .spyOn(frameworkRequirements, "collectFrameworkRequirements")
+      .mockImplementation(async (t) => {
+        const recordsDone = t.projectId !== 9;
+        return {
+          frameworks: [
+            {
+              frameworkId: 26,
+              frameworkName: "OSFI E-23",
+              groups: [
+                {
+                  title: "Model risk management",
+                  orderNo: 1,
+                  requirements: [
+                    row({ title: "2.2.3 Rating", implId: t.projectId * 10 + 1, orderNo: 1 }),
+                    row({
+                      title: "2.2.4 Records",
+                      implId: t.projectId * 10 + 2,
+                      orderNo: 2,
+                      isDone: recordsDone,
+                      status: recordsDone ? "Implemented" : "Draft",
+                    }),
+                  ],
+                  rollup: rollup(recordsDone ? 2 : 1, 2),
+                },
+              ],
+              rollup: rollup(recordsDone ? 2 : 1, 2),
+            },
+          ],
+        };
+      });
+    const collector = createScopedDataCollector(10, 1, "organization", targets);
+
+    const data = await collector.collectAllData(["frameworkRequirements", ...ALL_E23], E23_RUN);
+    const glance = data.sections.e23Glance!;
+    const view = buildE23FormalView(data)!;
+    const completenessLines = view.main
+      .flatMap((section) => section.blocks)
+      .flatMap((b) =>
+        b.kind === "paragraph" && b.text.endsWith("requirements implemented or audited")
+          ? [b.text]
+          : [],
+      );
+
+    // The section's own rollup pools the pairings (5 of 6); the report does not print it.
+    const fw26 = data.sections.frameworkRequirements!.frameworks[0];
+    expect([fw26.rollup.done, fw26.rollup.total]).toEqual([5, 6]);
+    expect([glance.requirementsDone, glance.requirementsTotal]).toEqual([1, 2]);
+    expect(completenessLines).toEqual(["1 of 2 requirements implemented or audited"]);
   });
 
   it("puts the prior run's figures on the glance", async () => {

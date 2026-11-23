@@ -49,6 +49,23 @@ const pickFigures = (g: E23GlanceFigures): E23GlanceFigures => ({
   fixIt: { high: g.fixIt.high, medium: g.fixIt.medium, low: g.fixIt.low },
 });
 
+/**
+ * The E-23 requirements done and in total. A requirement counts once however
+ * many pairings carry E-23, and is done only when every pairing's row for it
+ * is done. The glance and the formal report's completeness line both print
+ * these, so the report never states two different counts.
+ */
+export function e23RequirementCounts(requirements: FrameworkRequirementsSectionData | undefined): {
+  done: number;
+  total: number;
+} {
+  const byNumber = [...e23RowsByNumber(requirements).values()];
+  return {
+    done: byNumber.filter((rows) => rows.every((p) => p.row.isDone)).length,
+    total: byNumber.length,
+  };
+}
+
 export function buildE23Glance(input: {
   requirements: FrameworkRequirementsSectionData | undefined;
   contradictions: E23ContradictionsSectionData | undefined;
@@ -71,13 +88,11 @@ export function buildE23Glance(input: {
     ...(input.mrmUnavailable && { mrmUnavailable: true }),
   };
 
-  // A requirement counts once however many pairings carry E-23, and is done
-  // only when every pairing's row for it is done.
-  const byNumber = [...e23RowsByNumber(input.requirements).values()];
+  const requirementCounts = e23RequirementCounts(input.requirements);
 
   return {
-    requirementsDone: byNumber.filter((rows) => rows.every((p) => p.row.isDone)).length,
-    requirementsTotal: byNumber.length,
+    requirementsDone: requirementCounts.done,
+    requirementsTotal: requirementCounts.total,
     groupsChecked: coverage.filter((c) => c === "checked").length,
     groupsTotal: coverage.length,
     rulesFired: input.contradictions?.fired.length ?? 0,
