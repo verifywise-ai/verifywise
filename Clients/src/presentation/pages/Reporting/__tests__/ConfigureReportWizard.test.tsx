@@ -423,7 +423,24 @@ describe("report details step", () => {
     next();
     fireEvent.change(screen.getByLabelText(/Institution name/), { target: { value: "  " } });
     expect(screen.getByText("Institution name is required")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /next/i })).toBeDisabled();
+    next();
+    // Still on Report details.
+    expect(screen.getByLabelText(/Institution name/)).toBeInTheDocument();
+  });
+
+  it("shows a blank required field's message when Next is pressed, and stays on the step", () => {
+    // First run: no previous run, so the accountable executive has no default.
+    lastParameters = null;
+    render(<ConfigureReportWizard template={E23_TEMPLATE} mode="run-now" onClose={vi.fn()} />);
+    next();
+    expect(screen.getByLabelText(/Accountable executive name/)).toHaveValue("");
+    expect(screen.queryByText("Accountable executive name is required")).not.toBeInTheDocument();
+
+    next();
+
+    expect(screen.getByText("Accountable executive name is required")).toBeInTheDocument();
+    expect(screen.getByLabelText(/Accountable executive name/)).toBeInTheDocument();
+    expect(runNowMutate).not.toHaveBeenCalled();
   });
 
   it("rejects a period end in the future", () => {
@@ -431,7 +448,8 @@ describe("report details step", () => {
     next();
     fireEvent.change(screen.getByLabelText("Period end"), { target: { value: isoDate(2) } });
     expect(screen.getByText("Period end cannot be in the future")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /next/i })).toBeDisabled();
+    next();
+    expect(screen.getByLabelText("Period end")).toBeInTheDocument();
   });
 
   it("sends organization scope and the answers on run now", () => {

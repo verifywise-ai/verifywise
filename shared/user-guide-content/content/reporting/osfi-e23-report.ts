@@ -171,7 +171,7 @@ export const osfiE23ReportContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'The report uses 13 fixed rules. A rule only fires when its E-23 requirement is marked Implemented or Audited and your records show the opposite for at least one model. Retired models are ignored.',
+      text: 'The report uses 13 fixed rules. A rule only fires when its E-23 requirement is marked Implemented or Audited and your records show the opposite for at least one model (or, for 2.1.4, when the inventory is empty). Retired models are ignored.',
     },
     {
       type: 'table',

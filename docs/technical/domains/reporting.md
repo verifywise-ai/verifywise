@@ -1054,7 +1054,7 @@ All endpoints are auth-protected and org-scoped.
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | `/api/reporting/sections` | Section catalog (the 13-section taxonomy) |
+| GET | `/api/reporting/sections` | Section catalog (the 18-section taxonomy) |
 | GET | `/api/reporting/templates` | List available templates |
 | GET | `/api/reporting/templates/:id` | Get a template |
 | POST | `/api/reporting/templates` | Create a template |
@@ -1100,7 +1100,7 @@ The frontend wizard (`ConfigureReportWizard.tsx`, `mode="run-now"`) skips the Sc
 
 ### Section Catalog
 
-`Servers/services/reporting/sectionCatalog.ts` is the single owner of the 13-section taxonomy; it backs `GET /api/reporting/sections` and `VALID_SECTION_KEYS` derives from it (catalog keys plus the `all` wildcard). A test pins the catalog against the frontend's `REPORT_SECTION_GROUPS` backend-key set, so drift between the two fails CI rather than silently rejecting a section the wizard can still offer.
+`Servers/services/reporting/sectionCatalog.ts` is the single owner of the 18-section taxonomy; it backs `GET /api/reporting/sections` and `VALID_SECTION_KEYS` derives from it (catalog keys plus the `all` wildcard). A test pins the catalog against the frontend's `REPORT_SECTION_GROUPS` backend-key set, so drift between the two fails CI rather than silently rejecting a section the wizard can still offer.
 
 ### Services
 
@@ -1341,7 +1341,7 @@ It seeds whether or not any organization has added E-23; without the framework t
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | POST | `/api/v1/report-templates/:id/run` | Run a template now, with `reportParameters` for kinds that take them (`reportTemplate.edit`) |
-| GET | `/api/v1/report-templates/:id/last-parameters` | Answers from the organization's latest successful run of the template that the caller may see, for the wizard prefill. Period and `isFinal` are left out; the old `periodEnd` comes back separately so the next period starts the day after it (`reportTemplate.edit`) |
+| GET | `/api/v1/report-templates/:id/last-parameters` | Answers from the organization's latest `success` or `partial_success` run of the template that the caller may see (the same two statuses the prior glance reads), for the wizard prefill. Period and `isFinal` are left out; the old `periodEnd` comes back separately so the next period starts the day after it (`reportTemplate.edit`) |
 | GET | `/api/v1/report-runs/:id/download/fix-it-list` | Download the run's internal fix-it list. Same visibility gate and organization checks as the formal report download |
 
 ### Sections and the formal report
@@ -1356,7 +1356,7 @@ Data collection (`dataCollector.ts`) reads the same data for both audiences:
 
 `e23/formalView.ts` turns the data into renderer-neutral blocks that `report-pdf.ejs` and the DOCX builder only lay out, so both formats say the same thing. Order: cover, Scope and method (with limitations), At a glance, executive summary (AI), E-23 program completeness, Model risk management status, Where the checklist and the data disagree, E-23 gap analysis (AI), Model inventory appendix, notices, Sign-off.
 
-`audience` decides the level of detail, never the figures. The board version shows one line per requirement group, no requirement rows and no model names, and never the appendix.
+`audience` decides the level of detail, never the figures. The board version shows one line per requirement group, no requirement rows and no model names, and never the appendix. Its AI prompts name no model either: the MRM status and contradiction text the prompts receive (`prepareMrmFleet`, `prepareE23Contradictions` with `board`) keep the counts and drop the exception list and rule examples, the `mrmFleet` section summary asks for counts instead of names, and the formal facts block (`formalFactsView` with `board`) drops the named MRM exceptions.
 
 **At a glance** (`e23/glance.ts`, no AI): requirements done of the total, groups checked against MRM data, rules fired of 13, models in scope, untiered models, overdue validations, open critical or high findings, and fix-it items by severity. A figure whose source could not be read prints "Not checked". Each run stores its figures in `config_snapshot.e23_glance`. The change since the previous comparable run comes from the latest finished run of the same schedule, or for a manual run, of the same template whatever triggered it.
 
@@ -1384,7 +1384,7 @@ When no rule fires, the section says "No contradictions found by the rules in th
 
 ### Fix-it list: a second file
 
-When `e23FixItList` is on, one run produces two files in the run's format: the formal report and the internal fix-it list (`e23/fixItView.ts`, `e23-fixit-pdf.ejs` / `docxFixIt.ts`). The fix-it list has its own cover and "Internal: not for external distribution" on the cover and every page footer. Its body is the fix-it items, then the AI recommended actions, which for this report render only here and never in the formal report.
+When `e23FixItList` is on, one run produces two files in the run's format: the formal report and the internal fix-it list (`e23/fixItView.ts`, `e23-fixit-pdf.ejs` / `docxFixIt.ts`). The fix-it list has its own cover and "Internal: not for external distribution" on the cover and every page footer. Its body is the fix-it items, then the AI recommended actions, which for this report render only here and never in the formal report. The formal renderers print `E23FormalView.aiSummaries`, which leaves out both `recommendedActions` and the `recommendations` list derived from them, and `report-pdf.ejs` also guards its Recommendations block with `!isE23`.
 
 - **Items** come from fired rules, open E-23 requirements (no owner, overdue, needs rework, done without evidence, other not done) and model-level gaps. Severity is high, medium or low by item type. The list is sorted by severity, then overdue first, then requirement order or model name. The AI does not rank or edit it.
 - **Both or neither.** If the fix-it list fails to render, `generateReport` fails the whole result. If it cannot be stored, the orchestrator marks the run failed before anything is delivered.
@@ -1394,7 +1394,7 @@ When `e23FixItList` is on, one run produces two files in the run's format: the f
 
 ### Analyzers
 
-- **`e23Gap`** (`analyzers/e23Gap.ts`, registered in `registry.ts`). Input: the E-23 groups of `frameworkRequirements` with their rollups and coverage label, `e23Contradictions`, `mrmFleet`, the formal facts block, and the audience line. Output (zod, strict): `narrative`, `principles[]` (`group` verbatim, `position` of `consistent` / `partly consistent` / `inconsistent` / `not assessable`, `explanation`, `basis`, `what_would_close_this`) and `abstain_reason`. Positions print as "Data consistent with self-assessment" and so on, never as a compliance rating. The analyzer abstains without a call when the run is not an E-23 report or has no E-23 requirements.
+- **`e23Gap`** (`analyzers/e23Gap.ts`, registered in `registry.ts`). Input: the E-23 groups of `frameworkRequirements` with their rollups and coverage label (when that section is not selected, the same rows the rules ran on, which the collector keeps on `ReportData.e23Requirements`), `e23Contradictions`, `mrmFleet`, the formal facts block, and the audience line. Output (zod, strict): `narrative`, `principles[]` (`group` verbatim, `position` of `consistent` / `partly consistent` / `inconsistent` / `not assessable`, `explanation`, `basis`, `what_would_close_this`) and `abstain_reason`. Positions print as "Data consistent with self-assessment" and so on, never as a compliance rating. The analyzer abstains without a call when the run is not an E-23 report or has no E-23 requirements.
 - **Position enforcement.** `enforceE23GapPositions` runs after parsing. A group that is self-assessment only, or that resolves to no known group, becomes `not assessable`. A group holding a requirement a fired rule names cannot be `consistent` and becomes `partly consistent`. A corrected row is kept, not dropped, and each change is stored in the analysis row's `audit_metadata.position_corrections` (`{group, from, to}`), which is present only when something changed.
 - **Formal versus internal inputs.** Analyzers whose output prints in the formal report (`executiveSummary`, `keyFindings`, `e23Gap`) get the formal facts block, in which the fix-it list is reduced to counts, and no fix-it section summary. `recommendedActions` gets the full facts and up to 20 fix-it items (`fixItPromptBlock`) so its actions point at real items. Every prompt of an E-23 run carries the audience line.
 - **Gating.** `e23Gap` is a flag in `AiBlocksConfig`. It is off in `LEGACY_BLOCKS` and `NO_BLOCKS`, and the wizard offers it only for an `osfi_e23` template (`aiBlocksForKind`).

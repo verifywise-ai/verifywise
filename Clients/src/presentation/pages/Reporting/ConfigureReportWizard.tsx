@@ -133,6 +133,9 @@ export default function ConfigureReportWizard({
   // asynchronously (previous run, organization name) and must not overwrite it.
   const [parameterEdits, setParameterEdits] = useState<ReportParameters>({});
   const [touched, setTouched] = useState<Set<string>>(() => new Set());
+  // Set when Next is pressed on an invalid details step: from then on every
+  // field's error shows, including blank required fields never edited.
+  const [detailsAttempted, setDetailsAttempted] = useState(false);
   const { userToken } = useAuth();
   const { data: lastParameters } = useLastReportParameters(template.id, hasDetails);
   const { data: organizationName = "" } = useOrganizationName(hasDetails);
@@ -151,11 +154,13 @@ export default function ConfigureReportWizard({
   const parameterValues = { ...prefill, ...parameterEdits };
   const requirePeriod = mode === "run-now";
   const parameterErrors = validateParameters(fields, parameterValues, { today, requirePeriod });
-  // Errors appear once a field has been edited; a blank required field the
-  // user has not reached yet still blocks Next through canNext.
-  const shownParameterErrors = Object.fromEntries(
-    Object.entries(parameterErrors).filter(([key]) => touched.has(key)),
-  );
+  // Errors appear once a field has been edited, or all at once when Next is
+  // pressed with any left (goNext), so a blank required field the user never
+  // touched does not block the step without saying why.
+  const shownParameterErrors = detailsAttempted
+    ? parameterErrors
+    : Object.fromEntries(Object.entries(parameterErrors).filter(([key]) => touched.has(key)));
+  const detailsInvalid = Object.keys(parameterErrors).length > 0;
   const setParameter = (key: string, value: string | boolean) => {
     setParameterEdits((prev) => ({ ...prev, [key]: value }));
     setTouched((prev) => new Set(prev).add(key));
@@ -188,7 +193,7 @@ export default function ConfigureReportWizard({
 
   const canNext = () => {
     if (step === "Scope" && scope === "project" && !projectId) return false;
-    if (step === DETAILS_STEP && Object.keys(parameterErrors).length > 0) return false;
+    // The details step keeps Next enabled: goNext reveals its errors instead.
     if (step === "Sections" && !sections.some((s: any) => s.defaultEnabled !== false)) return false;
     if (
       step === "Delivery" &&
@@ -200,6 +205,14 @@ export default function ConfigureReportWizard({
     // Nothing can be submitted without a template version to run.
     if (isLastStep && !template.latestVersion?.id) return false;
     return true;
+  };
+
+  const goNext = () => {
+    if (step === DETAILS_STEP && detailsInvalid) {
+      setDetailsAttempted(true);
+      return;
+    }
+    setActive(active + 1);
   };
 
   const toggleSection = (key: string, checked: boolean) => {
@@ -278,7 +291,7 @@ export default function ConfigureReportWizard({
       title={mode === "run-now" ? "Run report" : "Schedule report"}
       steps={STEPS}
       activeStep={active}
-      onNext={() => setActive(active + 1)}
+      onNext={goNext}
       onBack={() => setActive(active - 1)}
       onSubmit={submit}
       canProceed={canNext()}
