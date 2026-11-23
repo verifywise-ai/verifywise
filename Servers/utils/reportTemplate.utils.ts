@@ -1,5 +1,6 @@
 import { sequelize } from "../database/db";
 import { QueryTypes, Transaction } from "sequelize";
+import { VERSION_JSON_COLUMNS } from "./reportTemplateVersionColumns";
 import { ValidationException } from "../domain.layer/exceptions/custom.exception";
 
 // System templates (organization_id IS NULL) plus this org's custom templates.
@@ -239,25 +240,19 @@ export async function archiveTemplateQuery(id: number, organization_id: number):
 // The SELECT ... WHERE EXISTS is the tenant guard: a template id belonging to
 // another org inserts zero rows and returns undefined.
 //
-// framework_config is carried like every other config column and is not
-// optional to thread: an empty framework_config means EVERY framework in
-// scope, so a version written without it does not merely lose a preference —
-// it silently widens what the template reports on. Duplicating a framework-
-// specific template goes through this INSERT, and dropping the column here is
-// how a copy of "ISO 42001 Internal Audit Pack" ends up reporting on
-// everything under an ISO-42001 name.
-//
-// parameters_config holds the report kind (e.g. "osfi_e23") that unlocks the
-// kind's sections. A copy must carry it, and a version written without it (a
-// PATCH that edits sections only) keeps the previous version's value rather
-// than quietly turning an E-23 template into a general one whose sections
-// every run would then refuse.
-//
-// framework_config is inherited the same way, for the same kind of reason: a
-// sections-only PATCH used to write {} and so widen a framework-specific
-// template to every framework. Only a missing or null value inherits; an
-// explicit {} is stored, so a caller can still clear the selection. A first
-// version (no previous one) gets the column default {}.
+// Every config column inherits: a version written without a column (or with
+// null) keeps the previous version's value, so a PATCH that edits one part of
+// a template never resets the rest. An explicit value, {} included, is stored
+// as sent, so a caller can still clear a column. A first version (no previous
+// one) gets the column default. This matters most for:
+// - framework_config: {} means EVERY framework in scope, so a reset would not
+//   merely lose a preference but widen what the template reports on.
+// - parameters_config: holds the report kind (e.g. "osfi_e23") that unlocks
+//   the kind's sections; losing it would turn an E-23 template into a general
+//   one whose sections every run then refuses.
+// - sections_config and ai_blocks_config: a reset empties the report.
+// Duplicating a template passes every column of the source's latest version.
+// The columns and their first-version defaults: ./reportTemplateVersionColumns.ts.
 export async function createTemplateVersionQuery(
   template_id: number,
   organization_id: number,
@@ -277,28 +272,33 @@ export async function createTemplateVersionQuery(
       parametersConfig,
     );
   }
+  const replacements: Record<string, unknown> = {
+    template_id,
+    organization_id,
+    created_by: userId,
+  };
+  for (const { column } of VERSION_JSON_COLUMNS) {
+    const value = config[column];
+    replacements[column] = value === undefined || value === null ? null : JSON.stringify(value);
+  }
+  const columns = VERSION_JSON_COLUMNS.map((c) => c.column).join(", ");
+  const values = VERSION_JSON_COLUMNS.map(
+    ({ column, fallback }) => `COALESCE(CAST(:${column} AS JSONB), prev.${column}, ${fallback})`,
+  ).join(",\n            ");
   const rows: any = await sequelize.query(
     `INSERT INTO report_template_versions
-       (template_id, version, sections_config, ai_blocks_config, framework_config,
-        parameters_config, format_config, branding_config, schedule_defaults,
-        delivery_defaults, created_by)
+       (template_id, version, ${columns}, created_by)
      SELECT :template_id,
             (SELECT COALESCE(MAX(version), 0) + 1
                FROM report_template_versions WHERE template_id = :template_id),
-            :sections_config, :ai_blocks_config,
-            COALESCE(
-              CAST(:framework_config AS JSONB),
-              (SELECT framework_config FROM report_template_versions
-                WHERE template_id = :template_id ORDER BY version DESC LIMIT 1),
-              '{}'::jsonb
-            ),
-            COALESCE(
-              CAST(:parameters_config AS JSONB),
-              (SELECT parameters_config FROM report_template_versions
-                WHERE template_id = :template_id ORDER BY version DESC LIMIT 1),
-              '{}'::jsonb
-            ),
-            :format_config, :branding_config, :schedule_defaults, :delivery_defaults, :created_by
+            ${values},
+            :created_by
+       FROM (SELECT 1) AS one
+       LEFT JOIN LATERAL (
+         SELECT * FROM report_template_versions
+          WHERE template_id = :template_id
+          ORDER BY version DESC LIMIT 1
+       ) AS prev ON true
       WHERE EXISTS (
         SELECT 1 FROM report_templates
          WHERE id = :template_id
@@ -306,28 +306,7 @@ export async function createTemplateVersionQuery(
            AND is_system_template = false
       )
      RETURNING *`,
-    {
-      replacements: {
-        template_id,
-        organization_id,
-        sections_config: JSON.stringify(config.sections_config ?? { sections: [] }),
-        ai_blocks_config: JSON.stringify(config.ai_blocks_config ?? {}),
-        // null inherits the previous version's selection (see above); {} is
-        // stored as sent and means "every framework in scope".
-        framework_config:
-          config.framework_config === undefined || config.framework_config === null
-            ? null
-            : JSON.stringify(config.framework_config),
-        parameters_config: parametersConfig ? JSON.stringify(parametersConfig) : null,
-        format_config: JSON.stringify(config.format_config ?? {}),
-        branding_config: JSON.stringify(config.branding_config ?? {}),
-        schedule_defaults: JSON.stringify(config.schedule_defaults ?? {}),
-        delivery_defaults: JSON.stringify(config.delivery_defaults ?? {}),
-        created_by: userId,
-      },
-      type: QueryTypes.SELECT,
-      transaction,
-    },
+    { replacements, type: QueryTypes.SELECT, transaction },
   );
   return rows[0];
 }

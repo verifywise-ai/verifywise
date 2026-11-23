@@ -27,7 +27,8 @@ import {
   getOrganizationTemplateSlugsQuery,
   freeCopyName,
 } from "../utils/reportTemplate.utils";
-import { REPORT_SECTION_CATALOG } from "../services/reporting/sectionCatalog";
+import { VERSION_CONFIG_COLUMNS } from "../utils/reportTemplateVersionColumns";
+import { REPORT_SECTION_CATALOG, kindViolations } from "../services/reporting/sectionCatalog";
 import { parseFrameworkSelection } from "../services/reporting/frameworkSelection";
 import { NotFoundException } from "../domain.layer/exceptions/custom.exception";
 import { runScheduledReport } from "../services/reporting/reportRunOrchestrator";
@@ -81,20 +82,15 @@ const FILE_NAME = "reportTemplate.ctrl.ts";
 
 // Config fields live on the version row, not the template row. Any of these in
 // a PATCH body means "append a new version"; see the append-only note in
-// reportTemplate.utils.ts.
-const VERSION_CONFIG_FIELDS = [
-  "sections_config",
-  "ai_blocks_config",
-  "format_config",
-  "branding_config",
-  "schedule_defaults",
-  "delivery_defaults",
-  "parameters_config",
-  "framework_config",
-];
+// reportTemplate.utils.ts. The list is owned by the utils so the INSERT, this
+// check and duplicateTemplate's copy cannot drift apart.
+const VERSION_CONFIG_FIELDS = VERSION_CONFIG_COLUMNS;
 
+// A null config field means "keep the previous value" (createTemplateVersionQuery
+// inherits it), so it does not count as a change: a body of nulls only would
+// otherwise append a version identical to the last one.
 const hasVersionConfig = (body: any): boolean =>
-  VERSION_CONFIG_FIELDS.some((f) => body?.[f] !== undefined);
+  VERSION_CONFIG_FIELDS.some((f) => body?.[f] !== undefined && body?.[f] !== null);
 
 // Maps CustomException subclasses to their status, mirroring
 // customField.ctrl.ts. A Postgres unique violation (23505) becomes 409 —
@@ -179,6 +175,39 @@ export async function createTemplate(req: Request, res: Response): Promise<any> 
   }
 }
 
+/**
+ * A PATCH that changes the report kind but not the sections keeps the previous
+ * version's sections. When the new kind refuses one of them, every later run
+ * would fail, so the write is refused instead and the caller is asked to send
+ * sections that fit. The legacy route drops parameters_config, so this only
+ * applies to the v1 PATCH.
+ */
+async function respondToInheritedSectionsOutsideKind(
+  req: Request,
+  res: Response,
+  id: number,
+): Promise<Response | null> {
+  const body = req.body ?? {};
+  if (body.parameters_config == null || body.sections_config != null) return null;
+  // Only the caller's own custom templates are writable; anything else is left
+  // to the write below, which answers 404 rather than leaking a 400.
+  const tpl = await getTemplateByIdQuery(id, req.organizationId!);
+  if (!tpl || tpl.is_system_template || tpl.organization_id !== req.organizationId) return null;
+  const latest = await getLatestVersionQuery(id, req.organizationId!);
+  if (!latest) return null;
+  const refused = kindViolations(
+    sectionKeysOf(latest.sections_config),
+    body.parameters_config.kind,
+  );
+  if (!refused.length) return null;
+  const errors = refused.map((key) => ({
+    key,
+    message: "section {key} is only available in an OSFI E-23 report",
+    params: { key },
+  }));
+  return res.status(400).json(STATUS_CODE[400]({ errors: parameterErrorMessages(errors, req.t) }));
+}
+
 export async function updateTemplate(req: Request, res: Response): Promise<any> {
   const id = Number(req.params.id);
   logProcessing({
@@ -207,6 +236,8 @@ export async function updateTemplate(req: Request, res: Response): Promise<any> 
     }
     const configRejected = respondToInvalidParametersConfig(req, res);
     if (configRejected) return configRejected;
+    const kindRejected = await respondToInheritedSectionsOutsideKind(req, res, id);
+    if (kindRejected) return kindRejected;
 
     // A PATCH carrying both metadata and config is two writes; they share one
     // transaction so a failing version insert (e.g. the 23505 version race)
