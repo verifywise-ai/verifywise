@@ -51,6 +51,11 @@ describe("MRM status count tables", () => {
     const blocks = view.main.find((s) => s.id === "mrm")!.blocks;
     const at = blocks.findIndex((b) => b.kind === "table" && b.title === "Validation coverage");
     const table = blocks[at] as TableBlock;
+    // "none open" read to a live model as "no open findings".
+    expect(VALIDATION_COVERAGE_LABELS.validated).toBe("Validated, no validation open");
+    expect(VALIDATION_COVERAGE_NOTE).toContain(
+      "then a completed validation with no validation open.",
+    );
     expect(table.rows.map((r) => r[0])).toEqual([
       VALIDATION_COVERAGE_LABELS.validated,
       VALIDATION_COVERAGE_LABELS.inReview,

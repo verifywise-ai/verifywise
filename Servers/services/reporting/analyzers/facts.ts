@@ -648,7 +648,9 @@ export function formalFactsView(
  * report, so an E-23 run's facts are rendered with these instead.
  */
 const FACT_NAME_LABELS: Record<string, string> = {
-  validatedNothingOpen: "validated with none open",
+  // "none open" read to a live model as "no open findings"; the row counts
+  // models whose validation is complete with no validation open.
+  validatedNothingOpen: "validated with no validation open",
   inReview: "validation in progress",
   notStarted: "validation not started",
   overdueValidations: "validation overdue",
@@ -732,6 +734,17 @@ export function renderFacts(
  * aggregate the prior snapshot never recorded is not reported as a change —
  * the facts block above already shows it.
  */
+/**
+ * Aggregate names a stored snapshot may hold that the current one no longer
+ * writes, per section. A name missing from the current snapshot otherwise
+ * reads as a figure that fell to 0. `mrmFleet.validated` became
+ * `validatedNothingOpen` when the validation rows became exclusive (it also
+ * changed meaning, so the two are never compared).
+ */
+const RETIRED_AGGREGATES: Record<string, ReadonlySet<string>> = {
+  mrmFleet: new Set(["validated"]),
+};
+
 function changedAggregates(
   facts: FactsSnapshot,
   prior: FactsSnapshot | null | undefined,
@@ -753,6 +766,7 @@ function changedAggregates(
     // collected for this report — a configuration change — and zeroing its
     // aggregates would assert an estate change nothing here has data for.
     new Set([...Object.keys(now), ...Object.keys(before)]).forEach((name) => {
+      if (RETIRED_AGGREGATES[key]?.has(name)) return;
       const was = before[name];
       // Absent on the current side means the bucket emptied. Guarded by the
       // `was` check below, so a string aggregate is still never diffed.

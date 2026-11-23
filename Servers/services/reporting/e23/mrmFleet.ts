@@ -94,7 +94,7 @@ export function buildMrmFleet(
 
     // Exactly one row per model, so the rows add up to the models in scope:
     // an overdue validation first, then one in progress (a first validation
-    // or a revalidation), then a signed-off validation with nothing open.
+    // or a revalidation), then a signed-off validation with no validation open.
     if (overdue) validationCoverage.overdue += 1;
     else if (m.hasOpenValidation) validationCoverage.inReview += 1;
     else if (validated) validationCoverage.validated += 1;

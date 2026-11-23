@@ -241,7 +241,7 @@ describe("validation coverage", () => {
   it("puts every model in exactly one row, overdue first, so the rows add up to the models in scope", () => {
     const fleet = buildMrmFleet(
       [
-        // Signed off, nothing open.
+        // Signed off, no validation open.
         model(),
         // Signed off, revalidation open and not yet due.
         model({ hasOpenValidation: true, openValidationNextDue: "2027-01-01T00:00:00.000Z" }),
@@ -249,7 +249,7 @@ describe("validation coverage", () => {
         model({ hasOpenValidation: true, openValidationNextDue: "2026-01-01T00:00:00.000Z" }),
         // Never signed off, first validation open.
         model({ latestSignedOff: null, hasOpenValidation: true, openValidationNextDue: null }),
-        // Never signed off, nothing open.
+        // Never signed off, no validation open.
         model({ latestSignedOff: null }),
         model({ status: "Retired", retired: true }),
       ],

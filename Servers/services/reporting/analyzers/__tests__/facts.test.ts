@@ -878,6 +878,19 @@ describe("facts for the OSFI E-23 sections (spec 8.10)", () => {
     expect(f.top1).toContain("3 models have no MRM tier");
   });
 
+  it("reports no fake drop for an aggregate a stored run holds under a retired name", () => {
+    // Runs stored before the validation rows became exclusive hold the
+    // validated count as `validated`; it is `validatedNothingOpen` now. The
+    // old name is not a figure that fell to 0.
+    const prior = collectFacts(e23());
+    const fleet = prior.sections.mrmFleet as Record<string, number | string>;
+    fleet.validated = fleet.validatedNothingOpen;
+    delete fleet.validatedNothingOpen;
+    const text = renderFacts(collectFacts(e23()), prior);
+    expect(text).not.toMatch(/\bvalidated: 0 \(was/);
+    expect(text).not.toContain("Change since the previous report run");
+  });
+
   it("reports the change since the previous run for the new aggregates", () => {
     const prior = collectFacts(e23());
     const nowData = e23FixItReportData({ items: [] });

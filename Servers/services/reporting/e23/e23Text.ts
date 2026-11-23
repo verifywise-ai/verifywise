@@ -152,14 +152,14 @@ export const NOT_CHECKED = "Not checked";
  * add up to the models in scope.
  */
 export const VALIDATION_COVERAGE_LABELS = {
-  validated: "Validated, none open",
+  validated: "Validated, no validation open",
   inReview: "Validation in progress",
   overdue: "Validation overdue",
   notStarted: "Not started",
 } as const;
 
 export const VALIDATION_COVERAGE_NOTE =
-  "Each model in scope is counted once: an overdue validation first, then one in progress (first validation or revalidation), then a completed validation with none open.";
+  "Each model in scope is counted once: an overdue validation first, then one in progress (first validation or revalidation), then a completed validation with no validation open.";
 
 export const E23_HEADINGS = {
   scope: "Scope and method",

@@ -191,7 +191,7 @@ function liveRun(): ReportData {
 
 const SUMMARIES = {
   frameworkRequirements: "All 83 requirements are done: 51 Implemented and 32 Audited.",
-  mrmFleet: "All 13 models are validated with none open; 5 findings are open.",
+  mrmFleet: "All 13 models are validated with no validation open; 5 findings are open.",
   e23Contradictions: "None of the 13 rules fired.",
 };
 
@@ -252,7 +252,7 @@ describe("G2 (b): one-step derivations, per-section counts and dates from the in
       "The data therefore places at most 4 of the 13 validations in that period, and it does not show when the other 9 were completed.",
     ],
     [
-      "All 13 models are validated with none open. 4 validation sign-offs fall in the 2026-07-01 to 2026-09-30 period, so the other 9 validated models were signed off before that period or outside its counted activity.",
+      "All 13 models are validated with no validation open. 4 validation sign-offs fall in the 2026-07-01 to 2026-09-30 period, so the other 9 validated models were signed off before that period or outside its counted activity.",
       "The next report can show sign-off dates for the 9 models without a sign-off in the period.",
     ],
     [
@@ -289,7 +289,7 @@ describe("G2 (b): one-step derivations, per-section counts and dates from the in
   it("passes the rest of the live run's rejected sentences", () => {
     expect(
       violationsOfFinding(
-        "All 13 models are validated with none open, and 4 validations were signed off in the period. At least 9 validations therefore were not signed off in that period, and the data gives no sign-off dates to show how current they are.",
+        "All 13 models are validated with no validation open, and 4 validations were signed off in the period. At least 9 validations therefore were not signed off in that period, and the data gives no sign-off dates to show how current they are.",
       ),
     ).toEqual([]);
     const principle = {
@@ -378,7 +378,8 @@ describe("I2: internal field names", () => {
     for (const block of [facts, formalFacts]) {
       expect(block).not.toMatch(/\b[a-z]+[A-Z][A-Za-z0-9]*\b/);
       expect(block).not.toMatch(/\w=\d/);
-      expect(block).toContain("validated with none open: 13");
+      expect(block).toContain("validated with no validation open: 13");
+      expect(block).not.toContain("none open");
       expect(block).toContain("rules that fired: 0");
     }
   });
@@ -409,6 +410,12 @@ describe("I1 and I3: what the formal analyzers are given on an E-23 run", () => 
     expect(prompt).toContain(
       "Rules checked: 13; rules that fired: 0 of 13 (no contradiction found); rules not run: 0.",
     );
+  });
+
+  it("names the validated row so it cannot read as no open findings", () => {
+    const prompt = ANALYZERS.e23Gap.buildUserPrompt(rd, extrasFor(rd));
+    expect(prompt).toContain("validated with no validation open 13");
+    expect(prompt).not.toContain("none open");
   });
 
   it("puts the same plain rules line in the contradictions text", () => {
@@ -459,7 +466,7 @@ describe("G2 (d): drop a sentence, then an item, before abstaining a section", (
   it("keeps a paragraph break when it drops a sentence", async () => {
     mockGenerate.mockResolvedValue({
       object: {
-        summary: `${GOOD}\n\n${BAD} All 13 models are validated with none open.`,
+        summary: `${GOOD}\n\n${BAD} All 13 models are validated with no validation open.`,
         abstain_reason: null,
       },
       attempts: 1,
@@ -471,7 +478,7 @@ describe("G2 (d): drop a sentence, then an item, before abstaining a section", (
       extras: { formalFacts: extrasFor(liveRun()).formalFacts },
     });
     expect(out.executiveSummary!.payload.summary).toBe(
-      `${GOOD}\n\nAll 13 models are validated with none open.`,
+      `${GOOD}\n\nAll 13 models are validated with no validation open.`,
     );
   });
 
@@ -492,7 +499,7 @@ describe("G2 (d): drop a sentence, then an item, before abstaining a section", (
     const payload = {
       findings: [
         finding(
-          `All 13 models are validated with none open. ${BAD}`,
+          `All 13 models are validated with no validation open. ${BAD}`,
           "The next report shows validatedNothingOpen at 13.",
         ),
       ],
@@ -508,7 +515,7 @@ describe("G2 (d): drop a sentence, then an item, before abstaining a section", (
     const r = out.keyFindings!;
     expect(r.abstained).toBe(false);
     expect(r.payload.findings[0]).toMatchObject({
-      text: "All 13 models are validated with none open.",
+      text: "All 13 models are validated with no validation open.",
       what_would_close_this: null,
     });
   });
