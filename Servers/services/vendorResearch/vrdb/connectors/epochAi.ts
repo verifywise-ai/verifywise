@@ -315,8 +315,13 @@ function readModels(fetched: Fetched): ReadResult<OrganisationRow> | null {
       unreadable += 1;
       continue;
     }
-    // The model is the key of the list: a file that names one twice is not this list.
-    if (modelNames.has(model)) return null;
+    // The model is the key of the list. The list has named a model twice (two rows of
+    // "Magistral Small 1.1" in November 2026): the first row is read, a repeat is counted as
+    // unreadable, so that one slip of the list's does not fail the whole of it.
+    if (modelNames.has(model)) {
+      unreadable += 1;
+      continue;
+    }
     modelNames.add(model);
 
     const modified = modifiedDayOf(cells[columns.modified]);

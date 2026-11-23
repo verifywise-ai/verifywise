@@ -1238,9 +1238,9 @@ describe("epochAiConnector", () => {
   });
 
   describe("the names of the models", () => {
-    it("is not the list when a model name is used twice, however it is spelled", async () => {
-      const twice = await failureOf(
-        downloadOf(
+    it("reads the first row of a model named twice, however it is spelled, and counts the repeat", async () => {
+      const twice = epochAiConnector.parse(
+        await downloadOf(
           csvOf([
             industryRow("Alpha Labs", { Model: "Alpha" }),
             industryRow("Beta Labs", { Model: "Alpha" }),
@@ -1248,9 +1248,11 @@ describe("epochAiConnector", () => {
           ]),
         ),
       );
-      expect(twice).toBeInstanceOf(NotTheListError);
-      const spelled = await failureOf(
-        downloadOf(
+      expect(twice.errors).toBe(0);
+      expect(twice.skipped).toBe(1);
+      expect(idsOf(twice)).toEqual(["alphalabs"]);
+      const spelled = epochAiConnector.parse(
+        await downloadOf(
           csvOf([
             industryRow("Alpha Labs", { Model: "Alpha Model" }),
             industryRow("Beta Labs", { Model: ` Alpha${cp(0xa0)} \n Model ` }),
@@ -1258,7 +1260,8 @@ describe("epochAiConnector", () => {
           ]),
         ),
       );
-      expect(spelled).toBeInstanceOf(NotTheListError);
+      expect(spelled.skipped).toBe(1);
+      expect(idsOf(spelled)).toEqual(["alphalabs"]);
     });
 
     it("takes names that differ by a letter, or by the case of one, for different models", async () => {
