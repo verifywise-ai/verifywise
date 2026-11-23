@@ -58,12 +58,22 @@ const AdvisorChatInner = ({
   // Saved in Settings → Preferences. The transport still sends it as `parallel`.
   const { userPreferences } = useUserPreferences();
   // A request that failed before the stream opened (bad key, network, 5xx).
+  // Cleared by the next message and by a change of LLM key.
   const [runtimeError, setRuntimeError] = useState<string | null>(null);
+  const [errorKeyId, setErrorKeyId] = useState(selectedLLMKeyId);
+  if (errorKeyId !== selectedLLMKeyId) {
+    setErrorKeyId(selectedLLMKeyId);
+    setRuntimeError(null);
+  }
+  const runtimeCallbacks = useMemo(
+    () => ({ onError: setRuntimeError, onSend: () => setRuntimeError(null) }),
+    [],
+  );
   const runtime = useAdvisorRuntime(
     selectedLLMKeyId,
     pageContext,
     userPreferences.parallel_agents ?? false,
-    setRuntimeError,
+    runtimeCallbacks,
   );
 
   return (

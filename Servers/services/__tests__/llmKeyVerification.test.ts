@@ -6,16 +6,15 @@ jest.mock("../../utils/logger/fileLogger", () => ({
   default: { debug: jest.fn(), error: jest.fn() },
 }));
 
-import { verifyLLMKey, LLM_KEY_VERIFY_TIMEOUT_MS } from "../llmKeyVerification";
+import { verifyLLMKey, LLM_KEY_VERIFY_TIMEOUT_MS, MAX_BODY_BYTES } from "../llmKeyVerification";
 import { safeFetch } from "../../utils/safeOutboundUrl";
 import logger from "../../utils/logger/fileLogger";
 
 const mockFetch = safeFetch as unknown as jest.Mock<any>;
 
-const reply = (status: number, body: unknown = {}) => ({
-  status,
-  text: async () => (typeof body === "string" ? body : JSON.stringify(body)),
-});
+// A real Response, so the capped body reader runs as in production.
+const reply = (status: number, body: unknown = {}) =>
+  new Response(typeof body === "string" ? body : JSON.stringify(body), { status });
 
 const sentHeaders = (call = 0): Headers =>
   (mockFetch.mock.calls[call][1] as RequestInit).headers as Headers;
@@ -117,6 +116,31 @@ describe("verifyLLMKey", () => {
       await expect(verifyLLMKey(openai)).resolves.toEqual({ ok: false, code: "invalid_key" });
     });
 
+    it("keeps a plain invalid_api_key refusal as invalid_key", async () => {
+      mockFetch.mockResolvedValue(
+        reply(401, { error: { message: "Incorrect API key provided", code: "invalid_api_key" } }),
+      );
+      await expect(verifyLLMKey(openai)).resolves.toEqual({ ok: false, code: "invalid_key" });
+    });
+
+    it.each([
+      "You have insufficient permissions for this operation. Missing scopes: api.model.read.",
+      "Missing scopes: api.model.read",
+      "insufficient permissions",
+    ])("treats a restricted key (%s) as could-not-check", async (message) => {
+      mockFetch.mockResolvedValue(reply(401, { error: { message } }));
+      await expect(verifyLLMKey(openai)).resolves.toEqual({
+        ok: false,
+        code: "unreachable",
+        reason: "cannot_list_models",
+      });
+    });
+
+    it("skips the model check when the list is over the size cap", async () => {
+      mockFetch.mockResolvedValue(reply(200, "x".repeat(MAX_BODY_BYTES + 1)));
+      await expect(verifyLLMKey(openai)).resolves.toEqual({ ok: true });
+    });
+
     it("lets a custom header override the default one, as the SDK does", async () => {
       mockFetch.mockResolvedValue(reply(200, { data: [{ id: "gpt-4o" }] }));
       await verifyLLMKey({ ...openai, custom_headers: { "OpenAI-Organization": "org-1" } });
@@ -154,11 +178,39 @@ describe("verifyLLMKey", () => {
       expect(mockFetch.mock.calls[0][0]).toBe("https://proxy.example.com/v1/models");
     });
 
-    it("reports a model missing from the list as model_unavailable", async () => {
+    it("warns, without refusing, when the model is missing from the list", async () => {
       mockFetch.mockResolvedValue(reply(200, { data: [{ id: "mistral" }] }));
       await expect(verifyLLMKey(custom)).resolves.toEqual({
         ok: false,
-        code: "model_unavailable",
+        code: "unreachable",
+        reason: "model_not_listed",
+      });
+    });
+
+    it.each([["llama-3:latest"], ["meta/llama-3"]])(
+      "accepts the model listed as %s",
+      async (id) => {
+        mockFetch.mockResolvedValue(reply(200, { data: [{ id }] }));
+        await expect(verifyLLMKey(custom)).resolves.toEqual({ ok: true });
+      },
+    );
+
+    it("does not take a longer id that only starts with the model", async () => {
+      mockFetch.mockResolvedValue(reply(200, { data: [{ id: "llama-3-70b" }] }));
+      await expect(verifyLLMKey(custom)).resolves.toMatchObject({ reason: "model_not_listed" });
+    });
+
+    it("treats a model list over the size cap as unreachable, without reading it all", async () => {
+      const big = JSON.stringify({ data: [{ id: "x".repeat(MAX_BODY_BYTES + 10) }] });
+      mockFetch.mockResolvedValue(reply(200, big));
+      await expect(verifyLLMKey(custom)).resolves.toEqual({ ok: false, code: "unreachable" });
+    });
+
+    it("treats a refusal for missing scopes as could-not-check", async () => {
+      mockFetch.mockResolvedValue(reply(403, { error: { message: "insufficient permissions" } }));
+      await expect(verifyLLMKey(custom)).resolves.toMatchObject({
+        code: "unreachable",
+        reason: "cannot_list_models",
       });
     });
 
@@ -184,6 +236,27 @@ describe("verifyLLMKey", () => {
     it("reports a network error or timeout as unreachable", async () => {
       mockFetch.mockRejectedValue(Object.assign(new Error("aborted"), { name: "TimeoutError" }));
       await expect(verifyLLMKey(openai)).resolves.toEqual({ ok: false, code: "unreachable" });
+    });
+  });
+
+  describe("a key with characters a key cannot have", () => {
+    it.each([
+      ["a curly quote", "sk-proj-abc\u2019def"],
+      ["a line break", "sk-proj-abc\ndef"],
+      ["a trailing line break", "sk-proj-abcdef\n"],
+    ])("refuses %s without calling the provider", async (_label, key) => {
+      await expect(verifyLLMKey({ name: "OpenAI", key, model: "gpt-4o" })).resolves.toEqual({
+        ok: false,
+        code: "invalid_key",
+        reason: "bad_characters",
+      });
+      expect(mockFetch).not.toHaveBeenCalled();
+    });
+
+    it("refuses it for Anthropic too", async () => {
+      await expect(
+        verifyLLMKey({ name: "Anthropic", key: "sk-ant-\u2019", model: "claude-sonnet-4-5" }),
+      ).resolves.toMatchObject({ code: "invalid_key", reason: "bad_characters" });
     });
   });
 

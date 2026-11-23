@@ -50,6 +50,12 @@ components:
                 - invalid_key
                 - model_unavailable
                 - unreachable
+            reason:
+              type: string
+              enum:
+                - bad_characters
+                - cannot_list_models
+                - model_not_listed
     Error:
       type: object
       properties:
@@ -29973,7 +29979,7 @@ paths:
   /v1/llm-keys:
     post:
       summary: 'Create an LLM key, checked with its provider first'
-      description: 'Checks the key with its provider before saving: one free request (Anthropic GET /v1/models/{model}, OpenAI GET /v1/models, OpenRouter GET /api/v1/key, Custom GET {url}/models) sent with the key and its custom headers, 8 second timeout. A refusal is a 400 with data.code workspace_required, invalid_key or model_unavailable. When the provider cannot be reached (network error, timeout, 5xx, 429, or a Custom URL the outbound policy refuses) the answer is a 409 with data.code unreachable, unless the body sets skip_verification: true, which saves the key unchecked. A rejected key is never saved, even with skip_verification. Anthropic keys not tied to a workspace need the anthropic-workspace-id custom header.'
+      description: 'Checks the key with its provider before saving: one free request (Anthropic GET /v1/models/{model}, OpenAI GET /v1/models, OpenRouter GET /api/v1/key, Custom GET {url}/models) sent with the key and its custom headers, 8 second timeout. A refusal is a 400 with data.code workspace_required, invalid_key or model_unavailable. When the provider cannot be reached (network error, timeout, 5xx, 429, or a Custom URL the outbound policy refuses) the answer is a 409 with data.code unreachable, unless the body sets skip_verification: true, which saves the key unchecked. A rejected key is never saved, even with skip_verification. data.reason, when present, names a more specific cause: bad_characters (400, the key has characters no key can have), cannot_list_models (409, a 401/403 saying the key lacks the permission to list models) or model_not_listed (409, a Custom endpoint whose /models list lacks the model; ids equal to model:latest or ending in /model count as listed). With no model the check uses the default model the Advisor uses. Anthropic keys not tied to a workspace need the anthropic-workspace-id custom header.'
       requestBody:
         required: true
         content:
@@ -30033,7 +30039,7 @@ paths:
   '/v1/llm-keys/{id}':
     patch:
       summary: 'Update an LLM key, checked with its provider first'
-      description: 'Checks the key with its provider before saving when the body changes the provider, key, URL, model or headers (unsent fields keep their stored values): one free request (Anthropic GET /v1/models/{model}, OpenAI GET /v1/models, OpenRouter GET /api/v1/key, Custom GET {url}/models) sent with the key and its custom headers, 8 second timeout. A refusal is a 400 with data.code workspace_required, invalid_key or model_unavailable. When the provider cannot be reached (network error, timeout, 5xx, 429, or a Custom URL the outbound policy refuses) the answer is a 409 with data.code unreachable, unless the body sets skip_verification: true, which saves the key unchecked. A rejected key is never saved, even with skip_verification. Anthropic keys not tied to a workspace need the anthropic-workspace-id custom header.'
+      description: 'Checks the key with its provider before saving when the body changes the provider, key, URL, model or headers (unsent fields keep their stored values). A change of provider or endpoint must send the key again (otherwise 400, before any provider call), and drops the stored custom headers unless the body sends custom_headers. A url without a name applies only to a Custom key: one free request (Anthropic GET /v1/models/{model}, OpenAI GET /v1/models, OpenRouter GET /api/v1/key, Custom GET {url}/models) sent with the key and its custom headers, 8 second timeout. A refusal is a 400 with data.code workspace_required, invalid_key or model_unavailable. When the provider cannot be reached (network error, timeout, 5xx, 429, or a Custom URL the outbound policy refuses) the answer is a 409 with data.code unreachable, unless the body sets skip_verification: true, which saves the key unchecked. A rejected key is never saved, even with skip_verification. data.reason, when present, names a more specific cause: bad_characters (400, the key has characters no key can have), cannot_list_models (409, a 401/403 saying the key lacks the permission to list models) or model_not_listed (409, a Custom endpoint whose /models list lacks the model; ids equal to model:latest or ending in /model count as listed). With no model the check uses the default model the Advisor uses. Anthropic keys not tied to a workspace need the anthropic-workspace-id custom header.'
       parameters:
         -
           name: id

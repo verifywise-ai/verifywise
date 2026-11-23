@@ -18,6 +18,7 @@ import {
 import { ILLMKey, LLMProvider } from "../domain.layer/interfaces/i.llmKey";
 import { resetVulnerabilityConsentOnProviderChangeQuery } from "../utils/aiDetectionRiskScoring.utils";
 import { LLMKeyToVerify, verifyLLMKey } from "../services/llmKeyVerification";
+import { resolveModelId } from "../advisor/llmModelFactory";
 
 import { translateError } from "../utils/i18n.utils";
 import { roleHasPermission } from "../utils/rolePermissions.utils";
@@ -172,6 +173,7 @@ interface WriteOptions {
  * Check the key and send the refusal when it fails. Returns true when a
  * response was sent. A rejection is a 400; "could not check" is a 409 unless
  * the body says skip_verification: true, in which case the save goes on.
+ * Both carry { message, code } and, for a more specific cause, `reason`.
  */
 const refuseUnverifiedKey = async (
   req: Request,
@@ -180,17 +182,19 @@ const refuseUnverifiedKey = async (
 ): Promise<boolean> => {
   const result = await verifyLLMKey(input);
   if (result.ok) return false;
-  const { code } = result;
+  const { code, reason } = result;
+  const extra = reason ? { reason } : {};
   if (code === "unreachable") {
     if (req.body?.skip_verification === true) return false;
-    res.status(409).json(
-      STATUS_CODE[409]({
-        message: req.t!("Could not reach {provider} to check this key.", {
-          provider: input.name === "Custom" ? req.t!("the endpoint") : input.name,
-        }),
-        code,
-      }),
-    );
+    const message =
+      reason === "cannot_list_models"
+        ? req.t!("This key cannot list models, so it could not be fully checked.")
+        : reason === "model_not_listed"
+          ? req.t!("{model} is not in this endpoint's model list.", { model: input.model })
+          : req.t!("Could not reach {provider} to check this key.", {
+              provider: input.name === "Custom" ? req.t!("the endpoint") : input.name,
+            });
+    res.status(409).json(STATUS_CODE[409]({ message, code, ...extra }));
     return true;
   }
   const message =
@@ -200,10 +204,16 @@ const refuseUnverifiedKey = async (
         )
       : code === "model_unavailable"
         ? req.t!("This key cannot use {model}. Choose another model.", { model: input.model })
-        : req.t!("The provider rejected this key. Check that you copied all of it.");
-  res.status(400).json(STATUS_CODE[400]({ message, code }));
+        : reason === "bad_characters"
+          ? req.t!("The key contains characters a key cannot have. Paste it again.")
+          : req.t!("The provider rejected this key. Check that you copied all of it.");
+  res.status(400).json(STATUS_CODE[400]({ message, code, ...extra }));
   return true;
 };
+
+/** Only the error's name: a fetch or header error can quote the key. */
+const logVerificationFailure = (error: unknown) =>
+  logger.error(`Error verifying LLM key: ${(error as Error)?.name ?? "unknown error"}`);
 
 export const createLLMKey = (req: Request, res: Response) =>
   createLLMKeyWith(req, res, { verify: false });
@@ -263,7 +273,8 @@ const createLLMKeyWith = async (req: Request, res: Response, { verify }: WriteOp
       const refused = await refuseUnverifiedKey(req, res, {
         name: name as LLMProvider,
         key,
-        model: typeof model === "string" ? model : "",
+        // The model the Advisor will use, the provider default when none is set.
+        model: resolveModelId({ name, model: typeof model === "string" ? model : null }),
         url,
         custom_headers: custom_headers || null,
       });
@@ -272,8 +283,10 @@ const createLLMKeyWith = async (req: Request, res: Response, { verify }: WriteOp
         return;
       }
     } catch (error) {
-      logger.error("Error verifying LLM key:", error);
-      return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
+      logVerificationFailure(error);
+      return res
+        .status(500)
+        .json(STATUS_CODE[500](req.t!("The key could not be checked. Try again.")));
     }
   }
 
@@ -382,14 +395,6 @@ const updateLLMKeyWith = async (req: Request, res: Response, { verify }: WriteOp
     }
   }
 
-  // For Custom provider, use user-provided URL; otherwise auto-populate
-  let url: string | undefined;
-  if (name === "Custom") {
-    url = userUrl;
-  } else if (name) {
-    url = getLLMProviderUrl(name as LLMProvider);
-  }
-
   // A change to anything the provider sees is checked against the key as it
   // will be saved: the request's fields over the stored ones. Before the
   // transaction opens, since the provider can take seconds.
@@ -399,28 +404,74 @@ const updateLLMKeyWith = async (req: Request, res: Response, { verify }: WriteOp
     userUrl !== undefined ||
     model !== undefined ||
     custom_headers !== undefined;
-  if (verify && changesWhatProviderSees) {
+  const mustCheck = verify && changesWhatProviderSees;
+  // A URL without a provider only means something for a stored Custom key.
+  const urlOnly = !name && userUrl !== undefined;
+
+  let stored: Awaited<ReturnType<typeof getLLMKeyWithKeyByIdQuery>> = null;
+  if (mustCheck || urlOnly) {
     try {
-      const stored = await getLLMKeyWithKeyByIdQuery(id, req.organizationId!);
-      if (!stored) {
-        logStructured("error", `LLM Key not found for update: ID ${id}`, functionName, fileName);
-        return res.status(404).json(STATUS_CODE[404]({}));
-      }
+      stored = await getLLMKeyWithKeyByIdQuery(id, req.organizationId!);
+    } catch (error) {
+      logger.error(`Error loading LLM key ${id}: ${(error as Error)?.name ?? "unknown error"}`);
+      return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
+    }
+    if (!stored) {
+      logStructured("error", `LLM Key not found for update: ID ${id}`, functionName, fileName);
+      return res.status(404).json(STATUS_CODE[404]({}));
+    }
+  }
+
+  // For Custom provider, use user-provided URL; otherwise auto-populate
+  let url: string | undefined;
+  if (name === "Custom") {
+    url = userUrl;
+  } else if (name) {
+    url = getLLMProviderUrl(name as LLMProvider);
+  } else if (urlOnly && stored?.name === "Custom") {
+    if (typeof userUrl !== "string" || !userUrl) {
+      return res
+        .status(400)
+        .json(STATUS_CODE[400](req.t!("Endpoint URL is required for Custom provider")));
+    }
+    url = userUrl;
+  }
+
+  // A new provider or endpoint never gets the stored key or headers: the key
+  // has to be sent again, and stored headers are dropped unless resent.
+  const urlChanged = !!stored && url !== undefined && url !== stored.url;
+  const destinationChanged = !!stored && ((!!name && name !== stored.name) || urlChanged);
+  if (verify && destinationChanged && !key) {
+    return res
+      .status(400)
+      .json(
+        STATUS_CODE[400](
+          req.t!("Enter the API key again when you change the provider or the endpoint."),
+        ),
+      );
+  }
+  const headersToSave =
+    custom_headers !== undefined ? custom_headers || null : verify && urlChanged ? null : undefined;
+
+  if (mustCheck && stored) {
+    try {
+      const effectiveName = (name || stored.name) as LLMProvider;
       const refused = await refuseUnverifiedKey(req, res, {
-        name: (name || stored.name) as LLMProvider,
+        name: effectiveName,
         key: key || stored.key,
-        model: model || stored.model,
+        model: resolveModelId({ name: effectiveName, model: model || stored.model }),
         url: url !== undefined ? url : stored.url,
-        custom_headers:
-          custom_headers !== undefined ? custom_headers || null : stored.custom_headers,
+        custom_headers: headersToSave !== undefined ? headersToSave : stored.custom_headers,
       });
       if (refused) {
         logStructured("error", `LLM Key ${id} failed verification`, functionName, fileName);
         return;
       }
     } catch (error) {
-      logger.error("Error verifying LLM key:", error);
-      return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
+      logVerificationFailure(error);
+      return res
+        .status(500)
+        .json(STATUS_CODE[500](req.t!("The key could not be checked. Try again.")));
     }
   }
 
@@ -433,7 +484,7 @@ const updateLLMKeyWith = async (req: Request, res: Response, { verify }: WriteOp
       ...(key && { key }),
       ...(url !== undefined && { url }),
       ...(model && { model }),
-      ...(custom_headers !== undefined && { custom_headers: custom_headers || null }),
+      ...(headersToSave !== undefined && { custom_headers: headersToSave }),
     };
     // A different provider or endpoint invalidates AI Detection's consent to
     // send code through this key; compare against the stored values first.

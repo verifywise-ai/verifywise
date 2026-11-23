@@ -37,6 +37,7 @@ import {
 } from "../../utils/llmKey.utils";
 import { verifyLLMKey } from "../../services/llmKeyVerification";
 import { sequelize } from "../../database/db";
+import logger from "../../utils/logger/fileLogger";
 
 const mockVerify = verifyLLMKey as unknown as jest.Mock<any>;
 const mockCreate = createLLMKeyQuery as unknown as jest.Mock<any>;
@@ -180,7 +181,7 @@ describe("updateLLMKeyV1", () => {
     name: "Anthropic",
     key: "sk-ant-stored",
     model: "claude-sonnet-4-5",
-    url: "https://api.anthropic.com/v1",
+    url: "https://anthropic.example.com",
     custom_headers: { "anthropic-workspace-id": "wrkspc_old" },
   };
 
@@ -200,7 +201,7 @@ describe("updateLLMKeyV1", () => {
       name: "Anthropic",
       key: "sk-ant-stored",
       model: "claude-opus-4-1",
-      url: "https://api.anthropic.com/v1",
+      url: "https://anthropic.example.com",
       custom_headers: { "anthropic-workspace-id": "wrkspc_old" },
     });
     expect(r.status).toHaveBeenCalledWith(200);
@@ -248,6 +249,168 @@ describe("updateLLMKeyV1", () => {
   });
 });
 
+describe("createLLMKeyV1 details", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockCreate.mockResolvedValue({ id: 1 });
+  });
+
+  it.each([
+    ["Anthropic", undefined, "claude-sonnet-4-20250514"],
+    ["OpenAI", "", "gpt-4o-mini"],
+    ["OpenRouter", null, "gpt-4o-mini"],
+  ])(
+    "checks %s with the default model the Advisor uses when none is set (%p)",
+    async (name, model, expected) => {
+      mockVerify.mockResolvedValue({ ok: true });
+      await createLLMKeyV1(req({ name, key: "k", model }), res());
+      expect(mockVerify).toHaveBeenCalledWith(expect.objectContaining({ model: expected }));
+    },
+  );
+
+  it.each([
+    ["cannot_list_models", "This key cannot list models, so it could not be fully checked."],
+    ["model_not_listed", "claude-sonnet-4-5 is not in this endpoint's model list."],
+  ])("answers a soft %s with a 409 and its own message", async (reason, message) => {
+    mockVerify.mockResolvedValue({ ok: false, code: "unreachable", reason });
+    const r = res();
+    await createLLMKeyV1(req(anthropicBody), r);
+    expect(r.status).toHaveBeenCalledWith(409);
+    expect(sent(r).data).toEqual({ message, code: "unreachable", reason });
+  });
+
+  it("saves past a soft model_not_listed with skip_verification", async () => {
+    mockVerify.mockResolvedValue({ ok: false, code: "unreachable", reason: "model_not_listed" });
+    const r = res();
+    await createLLMKeyV1(req({ ...anthropicBody, skip_verification: true }), r);
+    expect(r.status).toHaveBeenCalledWith(201);
+  });
+
+  it("names a key with impossible characters", async () => {
+    mockVerify.mockResolvedValue({ ok: false, code: "invalid_key", reason: "bad_characters" });
+    const r = res();
+    await createLLMKeyV1(req(anthropicBody), r);
+    expect(r.status).toHaveBeenCalledWith(400);
+    expect(sent(r).data).toEqual({
+      message: "The key contains characters a key cannot have. Paste it again.",
+      code: "invalid_key",
+      reason: "bad_characters",
+    });
+  });
+
+  it("logs only the error's name when the check throws, never its text", async () => {
+    mockVerify.mockRejectedValue(new TypeError("invalid header value sk-ant-usr-1"));
+    const r = res();
+    await createLLMKeyV1(req(anthropicBody), r);
+    expect(r.status).toHaveBeenCalledWith(500);
+    const logged = JSON.stringify((logger.error as jest.Mock).mock.calls);
+    expect(logged).toContain("TypeError");
+    expect(logged).not.toContain("sk-ant-usr-1");
+    expect(JSON.stringify(sent(r))).not.toContain("sk-ant-usr-1");
+  });
+});
+
+describe("updateLLMKeyV1 destination changes", () => {
+  const storedCustom = {
+    id: 4,
+    name: "Custom",
+    key: "sk-stored-secret",
+    model: "llama-3",
+    url: "https://old.example.com/v1",
+    custom_headers: { Authorization: "Bearer stored-secret" },
+  };
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockUpdate.mockResolvedValue({ id: 4 });
+    mockVerify.mockResolvedValue({ ok: true });
+  });
+
+  it("asks for the key again when the provider changes, before calling anyone", async () => {
+    mockStored.mockResolvedValue(storedCustom);
+    const r = res();
+    await updateLLMKeyV1(req({ name: "OpenAI", model: "gpt-4o" }, { id: "4" }), r);
+    expect(r.status).toHaveBeenCalledWith(400);
+    expect(sent(r).data).toBe(
+      "Enter the API key again when you change the provider or the endpoint.",
+    );
+    expect(mockVerify).not.toHaveBeenCalled();
+    expect(mockUpdate).not.toHaveBeenCalled();
+  });
+
+  it("asks for the key again when a Custom URL changes", async () => {
+    mockStored.mockResolvedValue(storedCustom);
+    const r = res();
+    await updateLLMKeyV1(req({ url: "https://new.example.com/v1" }, { id: "4" }), r);
+    expect(r.status).toHaveBeenCalledWith(400);
+    expect(mockVerify).not.toHaveBeenCalled();
+  });
+
+  it("checks and saves a URL-only change on a Custom key, dropping the stored headers", async () => {
+    mockStored.mockResolvedValue(storedCustom);
+    const r = res();
+    await updateLLMKeyV1(req({ url: "https://new.example.com/v1", key: "sk-new" }, { id: "4" }), r);
+    expect(mockVerify).toHaveBeenCalledWith({
+      name: "Custom",
+      key: "sk-new",
+      model: "llama-3",
+      url: "https://new.example.com/v1",
+      custom_headers: null,
+    });
+    expect(r.status).toHaveBeenCalledWith(200);
+    expect(mockUpdate.mock.calls[0][1]).toEqual({
+      key: "sk-new",
+      url: "https://new.example.com/v1",
+      custom_headers: null,
+    });
+  });
+
+  it("keeps headers sent with a URL change", async () => {
+    mockStored.mockResolvedValue(storedCustom);
+    await updateLLMKeyV1(
+      req(
+        { url: "https://new.example.com/v1", key: "sk-new", custom_headers: { "X-T": "1" } },
+        { id: "4" },
+      ),
+      res(),
+    );
+    expect(mockVerify).toHaveBeenCalledWith(
+      expect.objectContaining({ custom_headers: { "X-T": "1" } }),
+    );
+    expect(mockUpdate.mock.calls[0][1]).toMatchObject({ custom_headers: { "X-T": "1" } });
+  });
+
+  it("does not ask for the key when the URL stays the same", async () => {
+    mockStored.mockResolvedValue(storedCustom);
+    const r = res();
+    await updateLLMKeyV1(
+      req({ name: "Custom", url: "https://old.example.com/v1", model: "mistral" }, { id: "4" }),
+      r,
+    );
+    expect(r.status).toHaveBeenCalledWith(200);
+    expect(mockVerify).toHaveBeenCalledWith(
+      expect.objectContaining({
+        key: "sk-stored-secret",
+        custom_headers: { Authorization: "Bearer stored-secret" },
+      }),
+    );
+  });
+
+  it("ignores a URL sent for a built-in provider", async () => {
+    mockStored.mockResolvedValue({
+      ...storedCustom,
+      name: "OpenAI",
+      url: "https://openai.example.com",
+    });
+    const r = res();
+    await updateLLMKeyV1(req({ url: "https://evil.example.com" }, { id: "4" }), r);
+    expect(mockVerify).toHaveBeenCalledWith(
+      expect.objectContaining({ url: "https://openai.example.com" }),
+    );
+    expect(mockUpdate.mock.calls[0][1]).not.toHaveProperty("url");
+  });
+});
+
 describe("legacy writes", () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -259,6 +422,15 @@ describe("legacy writes", () => {
     const r = res();
     await createLLMKey(req(anthropicBody), r);
     expect(r.status).toHaveBeenCalledWith(201);
+    expect(mockVerify).not.toHaveBeenCalled();
+  });
+
+  it("updateLLMKey saves a URL-only change on a Custom key to that URL", async () => {
+    mockStored.mockResolvedValue({ id: 4, name: "Custom", url: "https://old.example.com/v1" });
+    const r = res();
+    await updateLLMKey(req({ url: "https://new.example.com/v1" }, { id: "4" }), r);
+    expect(r.status).toHaveBeenCalledWith(200);
+    expect(mockUpdate.mock.calls[0][1]).toEqual({ url: "https://new.example.com/v1" });
     expect(mockVerify).not.toHaveBeenCalled();
   });
 

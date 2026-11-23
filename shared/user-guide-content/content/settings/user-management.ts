@@ -312,7 +312,7 @@ export const userManagementContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'An Anthropic key that is not tied to a workspace needs the workspace ID. Enter it in **Workspace ID** (it starts with `wrkspc_`), or create the key inside a workspace in the Anthropic Console. If VerifyWise cannot reach the provider to check the key, click **Save anyway** to save it unchecked.',
+      text: 'An Anthropic key that is not tied to a workspace needs the workspace ID. Enter it in **Workspace ID** (it starts with `wrkspc_`), or create the key inside a workspace in the Anthropic Console. If VerifyWise cannot finish the check (the provider is unreachable, the key may not list models, or a custom endpoint does not list the model), click **Save anyway** to save it as it is. When you edit a key and change its provider or endpoint URL, enter the API key again.',
     },
     {
       type: 'heading',

@@ -16,6 +16,7 @@
  * Every request goes through `safeFetch`: a Custom URL is admin-supplied, and
  * a URL the outbound policy refuses (loopback, metadata) counts as
  * "unreachable", which the caller can still save with skip_verification.
+ * At most MAX_BODY_BYTES of an answer are read.
  *
  * The key is never logged, and neither are the custom headers.
  */
@@ -26,17 +27,29 @@ import { LLMProvider } from "../domain.layer/interfaces/i.llmKey";
 export const LLM_KEY_VERIFY_TIMEOUT_MS = 8000;
 export const ANTHROPIC_VERSION = "2023-06-01";
 export const ANTHROPIC_WORKSPACE_HEADER = "anthropic-workspace-id";
+/** A model list larger than this is not read. */
+export const MAX_BODY_BYTES = 1024 * 1024;
 
 /**
  * Why a key was not accepted. `workspace_required`, `invalid_key` and
  * `model_unavailable` mean the provider answered and refused; `unreachable`
- * means the check could not be made (network error, timeout, 5xx, rate
- * limit, refused URL), which says nothing about the key.
+ * means the check could not be made or finished (network error, timeout,
+ * 5xx, rate limit, refused URL, a key that may not list models, a Custom
+ * model the endpoint does not list), so the key can still be saved.
  */
 export type LLMKeyVerificationCode =
   "workspace_required" | "invalid_key" | "model_unavailable" | "unreachable";
 
-export type LLMKeyVerificationResult = { ok: true } | { ok: false; code: LLMKeyVerificationCode };
+/**
+ * A more specific cause, for the message:
+ * - `bad_characters` (invalid_key): the key has characters no key can have.
+ * - `cannot_list_models` (unreachable): the key may not list models.
+ * - `model_not_listed` (unreachable): a Custom endpoint's list lacks the model.
+ */
+export type LLMKeyVerificationReason = "bad_characters" | "cannot_list_models" | "model_not_listed";
+
+export type LLMKeyVerificationResult =
+  { ok: true } | { ok: false; code: LLMKeyVerificationCode; reason?: LLMKeyVerificationReason };
 
 export interface LLMKeyToVerify {
   name: LLMProvider;
@@ -50,7 +63,13 @@ const ANTHROPIC_BASE = "https://api.anthropic.com/v1";
 const OPENAI_BASE = "https://api.openai.com/v1";
 const OPENROUTER_BASE = "https://openrouter.ai/api/v1";
 
-/** The provider's auth headers first, then the key's custom headers, which win (as in the SDKs). */
+/** Keys are printable ASCII; anything else (curly quotes, line breaks) cannot go in a header. */
+const HAS_NON_KEY_CHARACTERS = /[^\x21-\x7E]/;
+
+/**
+ * The provider's auth headers first, then the key's custom headers, which win
+ * (as in the SDKs). Throws when an auth header cannot be set.
+ */
 const buildHeaders = (
   auth: Record<string, string>,
   custom: Record<string, string> | null | undefined,
@@ -71,7 +90,33 @@ const buildHeaders = (
 interface ProviderResponse {
   status: number;
   body: string;
+  /** The answer was larger than MAX_BODY_BYTES; `body` is empty. */
+  tooLarge: boolean;
 }
+
+/** Reads at most MAX_BODY_BYTES, cancelling the stream past that. */
+const readCapped = async (response: Response): Promise<{ body: string; tooLarge: boolean }> => {
+  const length = Number(response.headers.get("content-length"));
+  if (Number.isFinite(length) && length > MAX_BODY_BYTES) {
+    await response.body?.cancel().catch(() => undefined);
+    return { body: "", tooLarge: true };
+  }
+  const reader = response.body?.getReader();
+  if (!reader) return { body: "", tooLarge: false };
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    total += value.byteLength;
+    if (total > MAX_BODY_BYTES) {
+      await reader.cancel().catch(() => undefined);
+      return { body: "", tooLarge: true };
+    }
+    chunks.push(value);
+  }
+  return { body: Buffer.concat(chunks).toString("utf8"), tooLarge: false };
+};
 
 const request = async (url: string, headers: Headers): Promise<ProviderResponse | null> => {
   try {
@@ -80,8 +125,11 @@ const request = async (url: string, headers: Headers): Promise<ProviderResponse 
       headers,
       signal: AbortSignal.timeout(LLM_KEY_VERIFY_TIMEOUT_MS),
     });
-    const body = await response.text().catch(() => "");
-    return { status: response.status, body };
+    const { body, tooLarge } = await readCapped(response).catch(() => ({
+      body: "",
+      tooLarge: false,
+    }));
+    return { status: response.status, body, tooLarge };
   } catch (error) {
     // Network error, DNS, timeout or a URL the outbound policy refuses.
     logger.debug(`LLM key check request failed: ${(error as Error)?.name ?? "error"}`);
@@ -104,20 +152,27 @@ const modelIdsFrom = (body: string): string[] | null => {
 };
 
 const unreachable: LLMKeyVerificationResult = { ok: false, code: "unreachable" };
-const rejected = (code: LLMKeyVerificationCode): LLMKeyVerificationResult => ({ ok: false, code });
+const fail = (
+  code: LLMKeyVerificationCode,
+  reason?: LLMKeyVerificationReason,
+): LLMKeyVerificationResult => (reason ? { ok: false, code, reason } : { ok: false, code });
 
-/** 401/403 refuse the key; other non-2xx answers (429, 5xx, ...) are not a verdict on it. */
-const classifyStatus = (status: number): LLMKeyVerificationResult | null => {
-  if (status === 401 || status === 403) return rejected("invalid_key");
-  if (status < 200 || status >= 300) return unreachable;
+/** A 401/403 that says the key lacks a permission (not that the key is wrong). */
+const MISSING_PERMISSION = /missing scopes?|api\.model\.read|insufficient (permissions|scopes?)/i;
+
+/**
+ * 401/403 refuse the key, unless the answer says the key only lacks the
+ * permission to list models (a restricted OpenAI key): that is "could not
+ * check". Other non-2xx answers (429, 5xx, ...) are not a verdict on the key.
+ */
+const classifyStatus = (res: ProviderResponse): LLMKeyVerificationResult | null => {
+  if (res.status === 401 || res.status === 403) {
+    return MISSING_PERMISSION.test(res.body)
+      ? fail("unreachable", "cannot_list_models")
+      : fail("invalid_key");
+  }
+  if (res.status < 200 || res.status >= 300) return unreachable;
   return null;
-};
-
-/** A listed model check: absent from a list the endpoint returned means this key cannot use it. */
-const checkModelInList = (body: string, model: string): LLMKeyVerificationResult => {
-  const ids = modelIdsFrom(body);
-  if (ids && !ids.includes(model)) return rejected("model_unavailable");
-  return { ok: true };
 };
 
 const verifyAnthropic = async (input: LLMKeyToVerify): Promise<LLMKeyVerificationResult> => {
@@ -129,25 +184,35 @@ const verifyAnthropic = async (input: LLMKeyToVerify): Promise<LLMKeyVerificatio
   if (!res) return unreachable;
   // A key outside any workspace is refused with a 400 that names the header.
   if (res.status >= 400 && res.status < 500 && res.body.includes(ANTHROPIC_WORKSPACE_HEADER)) {
-    return rejected("workspace_required");
+    return fail("workspace_required");
   }
-  if (res.status === 404) return rejected("model_unavailable");
-  return classifyStatus(res.status) ?? { ok: true };
+  if (res.status === 404) return fail("model_unavailable");
+  if (res.status === 401 || res.status === 403) return fail("invalid_key");
+  return classifyStatus(res) ?? { ok: true };
 };
 
 const verifyOpenAI = async (input: LLMKeyToVerify): Promise<LLMKeyVerificationResult> => {
   const headers = buildHeaders({ authorization: `Bearer ${input.key}` }, input.custom_headers);
   const res = await request(`${OPENAI_BASE}/models`, headers);
   if (!res) return unreachable;
-  return classifyStatus(res.status) ?? checkModelInList(res.body, input.model);
+  const verdict = classifyStatus(res);
+  if (verdict) return verdict;
+  const ids = res.tooLarge ? null : modelIdsFrom(res.body);
+  // Absent from the list the key sees: this key cannot use the model.
+  if (ids && !ids.includes(input.model)) return fail("model_unavailable");
+  return { ok: true };
 };
 
 const verifyOpenRouter = async (input: LLMKeyToVerify): Promise<LLMKeyVerificationResult> => {
   const headers = buildHeaders({ authorization: `Bearer ${input.key}` }, input.custom_headers);
   const res = await request(`${OPENROUTER_BASE}/key`, headers);
   if (!res) return unreachable;
-  return classifyStatus(res.status) ?? { ok: true };
+  return classifyStatus(res) ?? { ok: true };
 };
+
+/** Local servers list "llama3:latest" for "llama3"; routers prefix a vendor ("openai/gpt-4o"). */
+const customListHas = (ids: string[], model: string): boolean =>
+  ids.some((id) => id === model || id === `${model}:latest` || id.endsWith(`/${model}`));
 
 const verifyCustom = async (input: LLMKeyToVerify): Promise<LLMKeyVerificationResult> => {
   if (!input.url) return unreachable;
@@ -155,7 +220,14 @@ const verifyCustom = async (input: LLMKeyToVerify): Promise<LLMKeyVerificationRe
   const res = await request(`${input.url.replace(/\/+$/, "")}/models`, headers);
   if (!res) return unreachable;
   // Some compatible servers have no /models (404/405): that is "cannot check".
-  return classifyStatus(res.status) ?? checkModelInList(res.body, input.model);
+  const verdict = classifyStatus(res);
+  if (verdict) return verdict;
+  if (res.tooLarge) return unreachable;
+  const ids = modelIdsFrom(res.body);
+  // A compatible server's list is not always complete (aliases, routing), so
+  // a missing model is a warning the admin can save past.
+  if (ids && !customListHas(ids, input.model)) return fail("unreachable", "model_not_listed");
+  return { ok: true };
 };
 
 const verifiers: Record<LLMProvider, (input: LLMKeyToVerify) => Promise<LLMKeyVerificationResult>> =
@@ -169,7 +241,21 @@ const verifiers: Record<LLMProvider, (input: LLMKeyToVerify) => Promise<LLMKeyVe
 export const verifyLLMKey = async (input: LLMKeyToVerify): Promise<LLMKeyVerificationResult> => {
   const verify = verifiers[input.name];
   if (!verify) return unreachable;
-  const result = await verify(input);
-  logger.debug(`LLM key check for ${input.name}: ${result.ok ? "accepted" : result.code}`);
+  let result: LLMKeyVerificationResult;
+  if (HAS_NON_KEY_CHARACTERS.test(input.key)) {
+    result = fail("invalid_key", "bad_characters");
+  } else {
+    try {
+      result = await verify(input);
+    } catch (error) {
+      // An auth header the key cannot be put in. The error is not logged: it
+      // can quote the value.
+      if (error instanceof TypeError) result = fail("invalid_key", "bad_characters");
+      else throw error;
+    }
+  }
+  logger.debug(
+    `LLM key check for ${input.name}: ${result.ok ? "accepted" : `${result.code}${result.reason ? ` (${result.reason})` : ""}`}`,
+  );
   return result;
 };

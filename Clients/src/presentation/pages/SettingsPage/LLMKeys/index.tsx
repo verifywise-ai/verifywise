@@ -151,18 +151,30 @@ const LLMKeys = () => {
   // Custom headers state
   const [headerRows, setHeaderRows] = useState<HeaderRow[]>([]);
 
-  // Anthropic: the optional workspace id, and any other headers the key
-  // already had (set through the API), which an edit keeps.
+  // Anthropic: the optional workspace id.
   const [workspaceId, setWorkspaceId] = useState("");
-  const [otherAnthropicHeaders, setOtherAnthropicHeaders] = useState<Record<string, string>>({});
+  // Headers a built-in provider's key already had (set through the API),
+  // which an edit keeps only while the provider stays the same. Any other
+  // provider gets custom_headers: null, so a former Custom key's headers
+  // never go along with the new key.
+  const [keptHeaders, setKeptHeaders] = useState<{
+    provider: LLMProviderName;
+    headers: Record<string, string>;
+  } | null>(null);
+  // The key being edited as stored: a new provider or endpoint needs the key again.
+  const [editedFrom, setEditedFrom] = useState<{
+    name: LLMProviderName;
+    url?: string | null;
+  } | null>(null);
 
   // The result of the server's check on save, shown under the field it is about.
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
-  const [isUnreachable, setIsUnreachable] = useState(false);
+  // "Could not check": the server's message, shown with "Save anyway".
+  const [unreachableMessage, setUnreachableMessage] = useState<string | null>(null);
 
   const clearVerification = useCallback(() => {
     setFieldErrors({});
-    setIsUnreachable(false);
+    setUnreachableMessage(null);
   }, []);
 
   const showAlert = useCallback((variant: AlertState["variant"], title: string, body: string) => {
@@ -267,13 +279,20 @@ const LLMKeys = () => {
     return Object.entries(headers).map(([key, value]) => ({ key, value }));
   };
 
-  // Anthropic's headers: the ones the key already had, plus the workspace id.
-  const getAnthropicHeaders = useCallback((): Record<string, string> | null => {
-    const headers: Record<string, string> = { ...otherAnthropicHeaders };
+  // A built-in provider's headers: the ones its key already had (same
+  // provider only), plus the workspace id for Anthropic. Null when none.
+  const getBuiltInHeaders = useCallback((): Record<string, string> | null => {
+    const headers: Record<string, string> =
+      keptHeaders && keptHeaders.provider === formData.name ? { ...keptHeaders.headers } : {};
     const workspace = workspaceId.trim();
-    if (workspace) headers[ANTHROPIC_WORKSPACE_HEADER] = workspace;
+    if (formData.name === "Anthropic" && workspace) headers[ANTHROPIC_WORKSPACE_HEADER] = workspace;
     return Object.keys(headers).length > 0 ? headers : null;
-  }, [otherAnthropicHeaders, workspaceId]);
+  }, [keptHeaders, workspaceId, formData.name]);
+
+  const destinationChanged =
+    !!editedFrom &&
+    (formData.name !== editedFrom.name ||
+      (formData.name === "Custom" && (formData.url ?? "") !== (editedFrom.url ?? "")));
 
   // Reset model when provider changes, auto-selecting the recommended model
   const handleProviderChange = useCallback(
@@ -295,7 +314,6 @@ const LLMKeys = () => {
       }
       if (providerName !== "Anthropic") {
         setWorkspaceId("");
-        setOtherAnthropicHeaders({});
       }
       clearVerification();
     },
@@ -355,9 +373,10 @@ const LLMKeys = () => {
     setCustomModelName("");
     setHeaderRows([]);
     setWorkspaceId("");
-    setOtherAnthropicHeaders({});
+    setKeptHeaders(null);
+    setEditedFrom(null);
     setFieldErrors({});
-    setIsUnreachable(false);
+    setUnreachableMessage(null);
   }, []);
 
   /**
@@ -370,7 +389,7 @@ const LLMKeys = () => {
       const isCreate = isCreateModalOpen;
       setIsLoading(true);
       setFieldErrors({});
-      setIsUnreachable(false);
+      setUnreachableMessage(null);
       try {
         const body: LLMKeyWriteBody = {
           name: formData.name,
@@ -380,8 +399,8 @@ const LLMKeys = () => {
         if (isCustomProvider) {
           body.url = formData.url;
           body.custom_headers = getCustomHeadersFromRows();
-        } else if (isAnthropic) {
-          body.custom_headers = getAnthropicHeaders();
+        } else {
+          body.custom_headers = getBuiltInHeaders();
         }
         if (skipVerification) body.skip_verification = true;
 
@@ -401,7 +420,8 @@ const LLMKeys = () => {
         const verification = verificationErrorFrom(error);
         if (verification) {
           // The form stays open so the user can fix the field.
-          if (verification.code === "unreachable") setIsUnreachable(true);
+          if (verification.code === "unreachable")
+            setUnreachableMessage(verification.message || UNREACHABLE_MESSAGES[formData.name]);
           else if (verification.code === "workspace_required")
             setFieldErrors({ workspace: verification.message });
           else if (verification.code === "model_unavailable")
@@ -409,12 +429,15 @@ const LLMKeys = () => {
           else setFieldErrors({ key: verification.message });
           return;
         }
+        // Any other failure: the server's message for a 4xx (already
+        // translated), a generic one otherwise. The form stays open so
+        // nothing typed is lost. The global toast is off for this request.
+        const status = typeof error?.status === "number" ? error.status : undefined;
         const errorMessage =
-          error?.data?.message ||
-          error?.response?.data?.message ||
-          (isCreate ? "Failed to add API key" : "Failed to update API key");
+          (status !== undefined && status < 500 && typeof error?.message === "string"
+            ? error.message
+            : undefined) || (isCreate ? "Failed to add API key" : "Failed to update API key");
         showAlert("error", "Error", errorMessage);
-        resetForm();
       } finally {
         setIsLoading(false);
       }
@@ -423,9 +446,8 @@ const LLMKeys = () => {
       isCreateModalOpen,
       formData,
       isCustomProvider,
-      isAnthropic,
       getCustomHeadersFromRows,
-      getAnthropicHeaders,
+      getBuiltInHeaders,
       keyToEdit,
       showAlert,
       refreshKeys,
@@ -464,15 +486,19 @@ const LLMKeys = () => {
       custom_headers: isCustom ? data.custom_headers : undefined,
     });
     setFieldErrors({});
-    setIsUnreachable(false);
+    setUnreachableMessage(null);
 
-    if (data.name === "Anthropic") {
-      const { [ANTHROPIC_WORKSPACE_HEADER]: storedWorkspace, ...rest } = data.custom_headers ?? {};
-      setWorkspaceId(storedWorkspace ?? "");
-      setOtherAnthropicHeaders(rest);
-    } else {
+    setEditedFrom({ name: data.name, url: data.url });
+    if (isCustom) {
       setWorkspaceId("");
-      setOtherAnthropicHeaders({});
+      setKeptHeaders(null);
+    } else {
+      const { [ANTHROPIC_WORKSPACE_HEADER]: storedWorkspace, ...rest } = data.custom_headers ?? {};
+      setWorkspaceId(data.name === "Anthropic" ? (storedWorkspace ?? "") : "");
+      setKeptHeaders({
+        provider: data.name,
+        headers: data.name === "Anthropic" ? rest : (data.custom_headers ?? {}),
+      });
     }
 
     if (isCustom) {
@@ -889,6 +915,11 @@ const LLMKeys = () => {
               autoComplete="off"
               isRequired
               error={fieldErrors.key}
+              helperText={
+                destinationChanged
+                  ? "You changed the provider or endpoint, so enter the API key again."
+                  : undefined
+              }
             />
             {!isCustomProvider && currentProviderConfig && (
               <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, mt: 0.5 }}>
@@ -914,10 +945,10 @@ const LLMKeys = () => {
                 </Link>
               </Box>
             )}
-            {isUnreachable && (
+            {unreachableMessage && (
               <Alert
                 variant="warning"
-                body={UNREACHABLE_MESSAGES[formData.name]}
+                body={unreachableMessage}
                 inline
                 action={{ label: "Save anyway", onClick: () => void submitKey(true) }}
                 sx={{ mt: "8px" }}

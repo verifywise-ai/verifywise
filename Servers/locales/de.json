@@ -1678,5 +1678,10 @@
   "the endpoint": "der Endpunkt",
   "This Anthropic key is not tied to a workspace. Create the key inside a workspace in the Anthropic Console, or enter the workspace ID.": "Dieser Anthropic-Schlüssel ist keinem Workspace zugeordnet. Erstellen Sie den Schlüssel in einem Workspace in der Anthropic Console oder geben Sie die Workspace-ID ein.",
   "The provider rejected this key. Check that you copied all of it.": "Der Anbieter hat diesen Schlüssel abgelehnt. Prüfen Sie, ob Sie ihn vollständig kopiert haben.",
-  "This key cannot use {model}. Choose another model.": "Dieser Schlüssel kann {model} nicht verwenden. Wählen Sie ein anderes Modell."
+  "This key cannot use {model}. Choose another model.": "Dieser Schlüssel kann {model} nicht verwenden. Wählen Sie ein anderes Modell.",
+  "This key cannot list models, so it could not be fully checked.": "Dieser Schlüssel kann keine Modelle auflisten und konnte daher nicht vollständig geprüft werden.",
+  "{model} is not in this endpoint's model list.": "{model} ist nicht in der Modellliste dieses Endpunkts.",
+  "The key contains characters a key cannot have. Paste it again.": "Der Schlüssel enthält Zeichen, die ein Schlüssel nicht enthalten kann. Fügen Sie ihn erneut ein.",
+  "Enter the API key again when you change the provider or the endpoint.": "Geben Sie den API-Schlüssel erneut ein, wenn Sie den Anbieter oder den Endpunkt ändern.",
+  "The key could not be checked. Try again.": "Der Schlüssel konnte nicht geprüft werden. Versuchen Sie es erneut."
 }

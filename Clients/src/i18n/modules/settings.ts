@@ -787,6 +787,8 @@ export const de: Record<string, string> = {
     "OpenRouter war nicht erreichbar, um diesen Schlüssel zu prüfen.",
   "Could not reach the endpoint to check this key.":
     "Der Endpunkt war nicht erreichbar, um diesen Schlüssel zu prüfen.",
+  "You changed the provider or endpoint, so enter the API key again.":
+    "Sie haben den Anbieter oder den Endpunkt geändert. Geben Sie den API-Schlüssel daher erneut ein.",
 };
 
 export const fr: Record<string, string> = {
@@ -1576,6 +1578,8 @@ export const fr: Record<string, string> = {
     "Impossible de joindre OpenRouter pour vérifier cette clé.",
   "Could not reach the endpoint to check this key.":
     "Impossible de joindre le point de terminaison pour vérifier cette clé.",
+  "You changed the provider or endpoint, so enter the API key again.":
+    "Vous avez changé de fournisseur ou de point de terminaison : saisissez à nouveau la clé API.",
 };
 
 export const es: Record<string, string> = {
@@ -2358,4 +2362,6 @@ export const es: Record<string, string> = {
     "No se pudo contactar con OpenRouter para comprobar esta clave.",
   "Could not reach the endpoint to check this key.":
     "No se pudo contactar con el endpoint para comprobar esta clave.",
+  "You changed the provider or endpoint, so enter the API key again.":
+    "Cambiaste el proveedor o el endpoint, así que vuelve a introducir la clave de API.",
 };

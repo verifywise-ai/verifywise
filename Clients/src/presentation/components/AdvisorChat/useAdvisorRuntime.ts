@@ -171,8 +171,12 @@ export const useAdvisorRuntime = (
   selectedLLMKeyId?: number,
   pageContext?: AdvisorDomain,
   parallelAgents?: boolean,
-  /** Called with the error message when a request fails outside the stream. */
-  onRuntimeError?: (message: string) => void,
+  callbacks?: {
+    /** Called with the error message when a request fails outside the stream. */
+    onError?: (message: string) => void;
+    /** Called when a chat request is sent. */
+    onSend?: () => void;
+  },
 ) => {
   const conversationContext = useAdvisorConversationSafe();
 
@@ -211,6 +215,11 @@ export const useAdvisorRuntime = (
           return token ? { Authorization: `Bearer ${token}` } : {};
         },
         body: { llmKeyId: selectedLLMKeyId, parallel: parallelAgents ?? false },
+        // Every send goes through here, so the chat can clear an old error.
+        fetch: (input, init) => {
+          callbacksRef.current?.onSend?.();
+          return fetch(input, init);
+        },
       }),
     [selectedLLMKeyId, parallelAgents],
   );
@@ -285,14 +294,14 @@ export const useAdvisorRuntime = (
   // by the backend's `onError` in `streamAdvisorV2`. This hook catches
   // the cases that don't reach that backend handler and hands them to the
   // chat, which shows them inline.
-  const onRuntimeErrorRef = useRef(onRuntimeError);
+  const callbacksRef = useRef(callbacks);
   useEffect(() => {
-    onRuntimeErrorRef.current = onRuntimeError;
-  }, [onRuntimeError]);
+    callbacksRef.current = callbacks;
+  }, [callbacks]);
   const onError = useCallback((error: unknown) => {
     console.error("[advisor] chat runtime error:", error);
     const message = error instanceof Error ? error.message : String(error);
-    onRuntimeErrorRef.current?.(message);
+    callbacksRef.current?.onError?.(message);
   }, []);
 
   const runtime = useChatRuntime({

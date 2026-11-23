@@ -87,14 +87,14 @@ describe("AdvisorChat", () => {
       undefined,
       undefined,
       true,
-      expect.any(Function),
+      expect.objectContaining({ onError: expect.any(Function), onSend: expect.any(Function) }),
     );
   });
 
   it("shows a request error in the chat with a link to the LLM keys page", async () => {
     renderWithProviders(<AdvisorChat />);
-    const onRuntimeError = vi.mocked(useAdvisorRuntime).mock.calls[0][3]!;
-    act(() => onRuntimeError("This API key is not scoped to a workspace"));
+    const { onError } = vi.mocked(useAdvisorRuntime).mock.calls[0][3]!;
+    act(() => onError!("This API key is not scoped to a workspace"));
 
     expect(screen.getByText("The AI advisor could not answer")).toBeInTheDocument();
     expect(screen.getByText("This API key is not scoped to a workspace")).toBeInTheDocument();
@@ -104,6 +104,24 @@ describe("AdvisorChat", () => {
     expect(mockNavigate).toHaveBeenCalledWith("/settings/apikeys");
 
     await user.click(screen.getByRole("button", { name: "Close notification" }));
+    expect(screen.queryByText("The AI advisor could not answer")).not.toBeInTheDocument();
+  });
+
+  it("clears the error when the next message is sent", () => {
+    renderWithProviders(<AdvisorChat />);
+    const { onError, onSend } = vi.mocked(useAdvisorRuntime).mock.calls[0][3]!;
+    act(() => onError!("boom"));
+    expect(screen.getByText("The AI advisor could not answer")).toBeInTheDocument();
+    act(() => onSend!());
+    expect(screen.queryByText("The AI advisor could not answer")).not.toBeInTheDocument();
+  });
+
+  it("clears the error when another LLM key is chosen", () => {
+    const { rerender } = renderWithProviders(<AdvisorChat selectedLLMKeyId={1} />);
+    const { onError } = vi.mocked(useAdvisorRuntime).mock.calls[0][3]!;
+    act(() => onError!("boom"));
+    expect(screen.getByText("The AI advisor could not answer")).toBeInTheDocument();
+    rerender(<AdvisorChat selectedLLMKeyId={2} />);
     expect(screen.queryByText("The AI advisor could not answer")).not.toBeInTheDocument();
   });
 });

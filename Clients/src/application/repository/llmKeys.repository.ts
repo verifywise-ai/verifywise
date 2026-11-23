@@ -9,7 +9,10 @@ import { apiServices } from "../../infrastructure/api/networkServices";
 export type LLMKeyWriteBody = Partial<LLMKeysModel> & { skip_verification?: boolean };
 
 export async function createLLMKey({ body }: { body: LLMKeyWriteBody }): Promise<any> {
-  const response = await apiServices.post("/v1/llm-keys", body);
+  // The form shows refusals and failures itself, so no global toast.
+  const response = await apiServices.post("/v1/llm-keys", body, {
+    suppressGlobalErrorToast: true,
+  });
   return response;
 }
 
@@ -20,7 +23,9 @@ export async function editLLMKey({
   id: string;
   body: LLMKeyWriteBody;
 }): Promise<any> {
-  const response = await apiServices.patch(`/v1/llm-keys/${id}`, body);
+  const response = await apiServices.patch(`/v1/llm-keys/${id}`, body, {
+    suppressGlobalErrorToast: true,
+  });
   return response;
 }
 
