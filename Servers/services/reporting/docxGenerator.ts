@@ -4,7 +4,7 @@
  * Following VerifyWise clean architecture patterns
  */
 
-import { NOTICE_TEXT } from "./noticeText";
+import { archivedIncidentsNote, NOTICE_TEXT } from "./noticeText";
 import {
   Document,
   Packer,
@@ -31,6 +31,7 @@ import {
   createAIAnalysisBox,
   createBullet,
   createEmptyState,
+  createNote,
   createSectionHeader,
   createSubsectionHeader,
   createTable,
@@ -1198,6 +1199,10 @@ function createOrganizationSection(reportData: ReportData): (Paragraph | Table)[
       elements.push(createTableSpacing());
     } else {
       elements.push(createEmptyState("No incidents have been reported."));
+    }
+    const archived = sections.incidentManagement.archivedIncidents ?? 0;
+    if (archived > 0) {
+      elements.push(createNote(archivedIncidentsNote(archived)));
     }
   }
 

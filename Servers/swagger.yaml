@@ -20542,6 +20542,7 @@ paths:
       tags:
         - Incidents
       summary: 'Delete Incident By Id'
+      description: 'Permanently deletes the incident. A deletion entry is recorded in its change history, and the incident_deleted automation is sent after the delete commits.'
       operationId: deleteIncidentById
       security:
         -
@@ -20556,10 +20557,14 @@ paths:
       responses:
         '200':
           description: 'Deleted successfully'
+        '400':
+          description: 'The id is not a positive integer'
         '401':
           description: Unauthorized
         '403':
           description: 'The role does not hold incident.delete'
+        '404':
+          description: 'Incident not found in the organization. Nothing is deleted and no automation is sent.'
         '500':
           description: 'Internal server error'
   '/ai-incident-managements/{id}/archive':
@@ -20567,6 +20572,7 @@ paths:
       tags:
         - Incidents
       summary: 'Archive Incident By Id'
+      description: 'Archives the incident, or restores it with { "archived": false }. Both go through the incident update path: the row is locked, the change is recorded in change history ("Archived") and the incident_updated automation is sent after commit. Archiving an archived incident (or restoring an active one) changes nothing.'
       operationId: archiveIncidentById
       security:
         -
@@ -20583,13 +20589,22 @@ paths:
           application/json:
             schema:
               type: object
+              properties:
+                archived:
+                  type: boolean
+                  default: true
+                  description: 'true archives the incident (the default when absent), false restores it.'
       responses:
         '200':
-          description: Success
+          description: 'The incident after the change'
+        '400':
+          description: 'The id is not a positive integer, or archived is present and not a boolean ("archived must be true or false")'
         '401':
           description: Unauthorized
         '403':
           description: 'The role does not hold incident.edit'
+        '404':
+          description: 'Incident not found in the organization'
         '500':
           description: 'Internal server error'
   '/ce-marking/{projectId}':
@@ -20635,11 +20650,20 @@ paths:
           application/json:
             schema:
               type: object
+              properties:
+                linkedIncidents:
+                  type: array
+                  description: 'Replaces the linked incidents. Each entry is a positive integer id (a number or a string of digits) of an incident in the caller''s organization; duplicates are ignored. totalIncidents is then set to the number of linked incidents.'
+                  items: {type: integer}
       responses:
         '200':
           description: Success
+        '400':
+          description: 'linkedIncidents is not a list of positive integer ids ("Linked incidents must be a list of incident ids."), or names an incident that does not exist in the organization ("Some linked incidents do not exist in your organization."). Nothing is written.'
         '401':
           description: Unauthorized
+        '404':
+          description: 'Use case or CE marking record not found'
         '500':
           description: 'Internal server error'
   /search:

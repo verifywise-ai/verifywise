@@ -1351,14 +1351,17 @@ export const aiIncidentEndpoints: Endpoint[] = [
     method: 'DELETE',
     path: '/ai-incident-managements/{id}',
     summary: "Delete Incident By Id",
+    description: "Permanently deletes the incident. A deletion entry is recorded in its change history, and the incident_deleted automation is sent after the delete commits.",
     requiresAuth: true,
     parameters: [
       { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
     ],
     responses: [
       { status: 200, description: "Deleted successfully" },
+      { status: 400, description: "The id is not a positive integer" },
       { status: 401, description: "Unauthorized" },
       { status: 403, description: "The role does not hold incident.delete" },
+      { status: 404, description: "Incident not found in the organization. Nothing is deleted and no automation is sent." },
       { status: 500, description: "Internal server error" },
     ],
     tag: "Incidents",
@@ -1367,14 +1370,20 @@ export const aiIncidentEndpoints: Endpoint[] = [
     method: 'PATCH',
     path: '/ai-incident-managements/{id}/archive',
     summary: "Archive Incident By Id",
+    description: "Archives the incident, or restores it with { \"archived\": false }. Both go through the incident update path: the row is locked, the change is recorded in change history (\"Archived\") and the incident_updated automation is sent after commit. Archiving an archived incident (or restoring an active one) changes nothing.",
     requiresAuth: true,
     parameters: [
       { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
     ],
+    requestBody: {
+      "archived": "boolean (optional)",
+    },
     responses: [
-      { status: 200, description: "Success" },
+      { status: 200, description: "The incident after the change" },
+      { status: 400, description: "The id is not a positive integer, or archived is present and not a boolean (\"archived must be true or false\")" },
       { status: 401, description: "Unauthorized" },
       { status: 403, description: "The role does not hold incident.edit" },
+      { status: 404, description: "Incident not found in the organization" },
       { status: 500, description: "Internal server error" },
     ],
     tag: "Incidents",
@@ -2276,9 +2285,14 @@ export const ceMarkingEndpoints: Endpoint[] = [
     parameters: [
       { name: 'projectId', in: 'path', type: 'integer', required: true, description: "The projectId" },
     ],
+    requestBody: {
+      "linkedIncidents": "array (optional)",
+    },
     responses: [
       { status: 200, description: "Success" },
+      { status: 400, description: "linkedIncidents is not a list of positive integer ids (\"Linked incidents must be a list of incident ids.\"), or names an incident that does not exist in the organization (\"Some linked incidents do not exist in your organization.\"). Nothing is written." },
       { status: 401, description: "Unauthorized" },
+      { status: 404, description: "Use case or CE marking record not found" },
       { status: 500, description: "Internal server error" },
     ],
     tag: "CE Marking",

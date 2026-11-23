@@ -1707,42 +1707,44 @@ export class ReportDataCollector {
    * Collect incident management section data
    * For organizational reports: all incidents
    * For use case reports: incidents linked to project
+   * Archived incidents are left out of both; `archivedIncidents` counts the
+   * ones left out, so the report can say so.
    */
   private async collectIncidentManagement(
     isOrganizational: boolean,
   ): Promise<IncidentManagementSectionData> {
     try {
-      let incidentsQuery: string;
+      let scope: string;
       let replacements: Record<string, any> = {};
 
       if (isOrganizational) {
-        // Get all incidents for organizational reports
-        incidentsQuery = `
-          SELECT aim.*
-          FROM ai_incident_managements aim
-          WHERE aim.organization_id = :organizationId
-          ORDER BY aim.created_at DESC
-        `;
+        scope = "aim.organization_id = :organizationId";
         replacements = { organizationId: this.organizationId };
       } else {
         // Get only project-linked incidents for use case reports.
         // ai_project is a varchar column, so bind the project id as text.
-        incidentsQuery = `
-          SELECT aim.*
-          FROM ai_incident_managements aim
-          WHERE aim.organization_id = :organizationId AND aim.ai_project = :projectId
-          ORDER BY aim.created_at DESC
-        `;
+        scope = "aim.organization_id = :organizationId AND aim.ai_project = :projectId";
         replacements = { organizationId: this.organizationId, projectId: String(this.projectId) };
       }
 
-      const incidents = (await sequelize.query(incidentsQuery, {
-        replacements,
-        type: QueryTypes.SELECT,
-      })) as any[];
+      const incidents = (await sequelize.query(
+        `SELECT aim.*
+          FROM ai_incident_managements aim
+          WHERE ${scope} AND aim.archived IS NOT TRUE
+          ORDER BY aim.created_at DESC`,
+        { replacements, type: QueryTypes.SELECT },
+      )) as any[];
+      const archivedRows = (await sequelize.query(
+        `SELECT COUNT(*)::int AS archived
+          FROM ai_incident_managements aim
+          WHERE ${scope} AND aim.archived IS TRUE`,
+        { replacements, type: QueryTypes.SELECT },
+      )) as { archived?: number }[];
+      const archived = Number(archivedRows[0]?.archived ?? 0) || 0;
 
       return {
         totalIncidents: incidents.length,
+        archivedIncidents: archived,
         incidents: incidents.map((inc) => ({
           id: inc.id,
           incidentId: inc.incident_id || `INC-${inc.id}`,
@@ -1764,7 +1766,7 @@ export class ReportDataCollector {
       };
     } catch (error) {
       console.error("[ReportDataCollector] Error collecting incident management:", error);
-      return { totalIncidents: 0, incidents: [] };
+      return { totalIncidents: 0, archivedIncidents: 0, incidents: [] };
     }
   }
 }

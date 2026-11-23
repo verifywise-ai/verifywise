@@ -274,7 +274,21 @@ export const incidentManagementContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Closed incidents can be archived to keep your active incident list manageable while maintaining complete records for audit purposes. Archived incidents remain searchable and can be restored if needed.',
+      text: 'Archive an incident from its row menu to take it out of your active incident list. Archiving keeps the full record and its change history, and you can undo it at any time. Archived incidents are left out of:',
+    },
+    {
+      type: 'bullet-list',
+      items: [
+        { text: 'The incidents page, unless you choose to show them' },
+        { text: 'The dashboard incident counts' },
+        { text: 'Search' },
+        { text: 'The list of incidents you can link on a use case\'s CE marking tab' },
+        { text: 'Reports, which note how many archived incidents were left out' },
+      ],
+    },
+    {
+      type: 'paragraph',
+      text: 'To see archived incidents, change the view above the table from "Active only" to "Archived only" or "Active + archived". Archived incidents are marked "Archived" and open read-only. To bring one back, choose Restore incident in its row menu. Archiving and restoring need the same permission as editing, and both are recorded in the incident\'s change history.',
     },
     {
       type: 'article-links',

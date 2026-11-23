@@ -433,6 +433,35 @@ describe("useDashboardMetrics", () => {
     expect(result.current.incidentStatusMetrics!.distribution.emergencyAction).toBe(1);
   });
 
+  it("leaves archived incidents out of the incident counts", async () => {
+    mockGetAllEntities.mockImplementation(async ({ routeUrl }: any) => {
+      if (routeUrl === "/ai-incident-managements") {
+        return {
+          data: [
+            { id: 1, status: "Open", archived: false },
+            { id: 2, status: "Open", archived: true },
+            { id: 3, status: "Closed", archived: true },
+            { id: 4, status: "Closed" },
+          ],
+        };
+      }
+      return { data: [] };
+    });
+
+    const { result } = renderHook(() => useDashboardMetrics());
+
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false);
+    });
+
+    expect(result.current.incidentMetrics!.total).toBe(2);
+    expect(result.current.incidentMetrics!.openCount).toBe(1);
+    expect(result.current.incidentMetrics!.recent.map((i: { id: number }) => i.id)).toEqual([1, 4]);
+    expect(result.current.incidentStatusMetrics!.total).toBe(2);
+    expect(result.current.incidentStatusMetrics!.distribution.open).toBe(1);
+    expect(result.current.incidentStatusMetrics!.distribution.closed).toBe(1);
+  });
+
   it("should fetch model risk metrics with distribution", async () => {
     mockGetAllEntities.mockImplementation(async ({ routeUrl }: any) => {
       if (routeUrl === "/modelRisks") {

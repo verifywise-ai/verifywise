@@ -117,7 +117,8 @@ export const toolsDefinition: any[] = [
           },
           project_id: {
             type: "number",
-            description: "Associated AI project ID.",
+            description:
+              "Id of the use case the incident belongs to. Must be a use case in the organization.",
           },
         },
         required: ["title", "description"],

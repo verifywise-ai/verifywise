@@ -6,22 +6,21 @@ import {
 } from "../../domain.layer/enums/ai-incident-management.enum";
 import {
   getAllIncidentsQuery,
-  createNewIncidentQuery,
   getIncidentApproverName,
-  deleteIncidentByIdQuery,
-  archiveIncidentByIdQuery,
 } from "../../utils/incidentManagement.utils";
 import { AIIncidentManagementModel } from "../../domain.layer/models/incidentManagement/incidemtManagement.model";
 import { createWriteToolFn } from "../confirmation/createWriteTool";
 import {
+  createIncident,
+  deleteIncident,
+  IncidentCreateValidationError,
   IncidentUpdateValidationError,
+  setIncidentArchived,
   updateIncident,
 } from "../../services/incidentManagement.service";
-import { sequelize } from "../../database/db";
 import logger from "../../utils/logger/fileLogger";
 import { userHasPermission } from "../../utils/userPermission.utils";
 import { actingRequesterId } from "./actingRequester";
-import { validateCompleteIncidentCreation } from "../../utils/validations/incidentManagementValidation.utils";
 
 /** Reporter of an Advisor-created incident when no requesting user is known. */
 const ADVISOR_REPORTER = "AI Advisor";
@@ -491,6 +490,10 @@ const precheckIncident =
   (permission: IncidentPermission) => (params: Record<string, unknown>, organizationId: number) =>
     incidentPermissionRefusal(permission, params, organizationId);
 
+/** The user the tool runs for (the approver), or null for an execution without one. */
+const executingUserId = (params: Record<string, unknown>): number | null =>
+  (params._userId as number | undefined) || null;
+
 const agentCreateIncident = createWriteToolFn({
   toolName: "agent_create_incident",
   warningLevel: "warning",
@@ -500,50 +503,50 @@ const agentCreateIncident = createWriteToolFn({
   executeFn: async (params, organizationId) => {
     const refusal = await incidentPermissionRefusal("incident.create", params, organizationId);
     if (refusal) return { success: false, message: refusal };
-    const transaction = await sequelize.transaction();
+    // The incident's reporter is the user who asked for it.
+    const requesterId = actingRequesterId(params);
+    const reporter = requesterId
+      ? await getIncidentApproverName(requesterId, organizationId)
+      : ADVISOR_REPORTER;
+    const today = new Date();
+    const input: Record<string, unknown> = {
+      ai_project: (params.title as string) || "",
+      // Required by the tool schema; the create path enforces the length rule.
+      description: params.description as string,
+      type: (params.type as string) || "Malfunction",
+      severity: (params.severity as string) || "Minor",
+      status: "Open",
+      occurred_date: today,
+      date_detected: today,
+      reporter,
+      categories_of_harm: [],
+    };
+    // The use case the tool schema offers; checked against the organization.
+    if (params.project_id !== undefined && params.project_id !== null) {
+      input.project_id = params.project_id;
+    }
+    const userId = executingUserId(params);
     try {
-      // The incident's reporter is the user who asked for it.
-      const requesterId = actingRequesterId(params);
-      const reporter = requesterId
-        ? await getIncidentApproverName(requesterId, organizationId, transaction)
-        : ADVISOR_REPORTER;
-      const incidentData = {
-        ai_project: (params.title as string) || "",
-        // Required by the tool schema; the write query enforces the length rule.
-        description: params.description as string,
-        type: (params.type as string) || "Malfunction",
-        severity: (params.severity as string) || "Minor",
-        status: "Open",
-        occurred_date: new Date(),
-        date_detected: new Date(),
-        reporter,
-        approval_status: "Pending",
-        approved_by: "",
-        categories_of_harm: [],
-        affected_persons_groups: "",
-        relationship_causality: "",
-        immediate_mitigations: "",
-        planned_corrective_actions: "",
-        model_system_version: "",
-        interim_report: false,
-        approval_date: null,
-        approval_notes: "",
-        archived: false,
-        is_demo: false,
-      } as unknown as AIIncidentManagementModel;
-
-      // The REST create's field rules. The description is left to the write
-      // query (assertValidIncidentDescription), which throws its own error.
-      const fieldErrors = validateCompleteIncidentCreation(incidentData).filter(
-        (error) => error.field !== "description",
-      );
-      if (fieldErrors.length > 0) throw new Error(fieldErrors.map((e) => e.message).join(" "));
-
-      const result = await createNewIncidentQuery(incidentData, organizationId, transaction);
-      await transaction.commit();
-      return { id: result.id, ai_project: result.ai_project, status: result.status };
+      // The console's create path: validation, reference checks, creation
+      // history (as the user, or the system without one) and the critical
+      // incident workflow. The Advisor never records approval, so the
+      // incident starts Pending.
+      const result = await createIncident(organizationId, input, {
+        userId,
+        canApprove: false,
+        changedBySystem: userId === null,
+      });
+      return {
+        id: result.id,
+        incident_id: result.incident_id,
+        ai_project: result.ai_project,
+        project_id: result.project_id ?? null,
+        status: result.status,
+      };
     } catch (error) {
-      await transaction.rollback();
+      if (error instanceof IncidentCreateValidationError) {
+        throw new Error(error.errors.map((e) => e.message).join(" "));
+      }
       throw error;
     }
   },
@@ -567,7 +570,7 @@ async function applyIncidentUpdate(
   fields: Record<string, unknown>,
 ) {
   const incidentId = params.incident_id as number;
-  const userId = (params._userId as number | undefined) || null;
+  const userId = executingUserId(params);
   let result;
   try {
     result = await updateIncident(organizationId, incidentId, fields, userId, {
@@ -627,19 +630,14 @@ const agentArchiveIncident = createWriteToolFn({
   executeFn: async (params, organizationId) => {
     const refusal = await incidentPermissionRefusal("incident.edit", params, organizationId);
     if (refusal) return { success: false, message: refusal };
-    const transaction = await sequelize.transaction();
-    try {
-      const result = await archiveIncidentByIdQuery(
-        params.incident_id as number,
-        organizationId,
-        transaction,
-      );
-      await transaction.commit();
-      return { id: result.id, ai_project: result.ai_project, archived: true };
-    } catch (error) {
-      await transaction.rollback();
-      throw error;
-    }
+    const incidentId = params.incident_id as number;
+    const userId = executingUserId(params);
+    // The shared update path: row lock, change history, automations.
+    const result = await setIncidentArchived(organizationId, incidentId, true, userId, {
+      changedBySystem: userId === null,
+    });
+    if (!result) throw new Error(`Incident #${incidentId} not found`);
+    return { id: result.id, ai_project: result.ai_project, archived: true };
   },
 });
 
@@ -651,19 +649,21 @@ const agentDeleteIncident = createWriteToolFn({
   executeFn: async (params, organizationId) => {
     const refusal = await incidentPermissionRefusal("incident.delete", params, organizationId);
     if (refusal) return { success: false, message: refusal };
-    const transaction = await sequelize.transaction();
-    try {
-      const result = await deleteIncidentByIdQuery(
-        params.incident_id as number,
-        organizationId,
-        transaction,
-      );
-      await transaction.commit();
-      return { deleted: true, incident_id: params.incident_id, ai_project: result?.ai_project };
-    } catch (error) {
-      await transaction.rollback();
-      throw error;
+    const incidentId = params.incident_id as number;
+    const userId = executingUserId(params);
+    // Records the deletion in history and sends incident_deleted after commit.
+    const deleted = await deleteIncident(organizationId, incidentId, userId, {
+      changedBySystem: userId === null,
+    });
+    if (!deleted) {
+      // Nothing deleted, nothing sent.
+      return {
+        deleted: false,
+        incident_id: incidentId,
+        message: `Incident #${incidentId} not found.`,
+      };
     }
+    return { deleted: true, incident_id: incidentId, ai_project: deleted.ai_project };
   },
 });
 

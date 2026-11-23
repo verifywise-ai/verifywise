@@ -412,14 +412,23 @@ export const enqueueIncidentUpdatedAutomations = async (
   });
 };
 
+/**
+ * Deletes an incident and returns the deleted row, or null when there is no
+ * such incident in the organization (nothing is deleted and nothing is sent).
+ * The organization's `incident_deleted` automation is enqueued only after the
+ * transaction commits, so a rolled-back delete never sends it. Change history
+ * is the caller's (services/incidentManagement.service.ts deleteIncident).
+ */
 export const deleteIncidentByIdQuery = async (
   id: number,
   organizationId: number,
   transaction: Transaction,
-) => {
+): Promise<Record<string, unknown> | null> => {
   try {
     // A Jira-imported incident keeps its link row, marked so the issue is
-    // never imported again (the FK then nulls incident_id).
+    // never imported again (the FK then nulls incident_id). The link is
+    // written before the incident (lock order link -> incident, as the
+    // Jira status sync takes them).
     await sequelize.query(
       `UPDATE jira_incident_links
           SET state = 'deleted_in_verifywise', state_reason = NULL, updated_at = now()
@@ -432,8 +441,12 @@ export const deleteIncidentByIdQuery = async (
         replacements: { organizationId, id },
         transaction,
       },
-    )) as [AIIncidentManagementModel[], number];
+    )) as [Record<string, unknown>[], number];
     const deletedIncident = result[0][0];
+    // Missing, or in another organization: no automation, so no blank
+    // "incident deleted" email.
+    if (!deletedIncident) return null;
+
     const automations = (await sequelize.query(
       `SELECT
               pat.key AS trigger_key,
@@ -454,24 +467,19 @@ export const deleteIncidentByIdQuery = async (
       const automation = automations[0][0];
       if (automation["trigger_key"] === "incident_deleted") {
         const params = automation.params!;
-
-        // Build replacements
-        const replacements = buildIncidentReplacements({
-          ...deletedIncident,
-        });
-
-        // Replace variables in subject and body
+        const replacements = buildIncidentReplacements({ ...deletedIncident });
         const processedParams = {
           ...params,
           subject: replaceTemplateVariables(params.subject || "", replacements),
           body: replaceTemplateVariables(params.body || "", replacements),
           automation_id: automation.automation_id,
         };
-
-        // Enqueue with processed params
-        await enqueueAutomationAction(automation.action_key, {
-          ...processedParams,
-          organizationId,
+        // After commit: a delete that rolls back must not send "incident deleted".
+        transaction.afterCommit(() => {
+          enqueueAutomationAction(automation.action_key, {
+            ...processedParams,
+            organizationId,
+          }).catch((error) => logger.error(`[incident] incident_deleted enqueue failed: ${error}`));
         });
       } else {
         console.warn(`No matching trigger found for key: ${automation["trigger_key"]}`);
@@ -480,46 +488,6 @@ export const deleteIncidentByIdQuery = async (
     return deletedIncident;
   } catch (error) {
     console.error("Error deleting incident:", error);
-    throw error;
-  }
-};
-
-/**
- * Archive an incident by ID
- */
-
-export const archiveIncidentByIdQuery = async (
-  id: number,
-  organizationId: number,
-  transaction: Transaction,
-) => {
-  const updated_at = new Date();
-  try {
-    await sequelize.query(
-      `UPDATE ai_incident_managements
-         SET archived = true,
-             updated_at = :updated_at
-         WHERE organization_id = :organizationId AND id = :id`,
-      {
-        replacements: { organizationId, id, updated_at },
-        transaction,
-      },
-    );
-
-    const result = await sequelize.query(
-      `${INCIDENT_SELECT}
-       WHERE i.organization_id = :organizationId AND i.id = :id`,
-      {
-        replacements: { organizationId, id },
-        mapToModel: true,
-        model: AIIncidentManagementModel,
-        transaction,
-      },
-    );
-
-    return result[0];
-  } catch (error) {
-    console.error("Error archiving incident:", error);
     throw error;
   }
 };

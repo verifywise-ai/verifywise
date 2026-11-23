@@ -53,7 +53,7 @@ import {
   updateRegistration,
   getAllPolicies,
   getAllEvidences,
-  getAllIncidents,
+  getLinkableIncidents,
   updateLinkedPolicies,
   updateLinkedEvidences,
   updateLinkedIncidents,
@@ -668,10 +668,12 @@ const CEMarking: React.FC<CEMarkingProps> = ({ projectId }) => {
     setIsIncidentsModalOpen(true);
     setLoadingIncidents(true);
     try {
-      const incidents = await getAllIncidents();
+      const linked = data?.linkedIncidents || [];
+      // This use case's non-archived incidents, plus any already linked.
+      const incidents = await getLinkableIncidents(projectId, linked);
       setAvailableIncidents(incidents || []);
       // Set currently linked incidents as selected
-      setSelectedIncidents(data?.linkedIncidents || []);
+      setSelectedIncidents(linked);
     } catch {
       showAlert("Failed to load incidents", "error");
     } finally {
@@ -1947,7 +1949,8 @@ const CEMarking: React.FC<CEMarkingProps> = ({ projectId }) => {
           <Box sx={{ maxHeight: "400px", overflowY: "auto" }}>
             {availableIncidents.length === 0 ? (
               <Typography sx={{ textAlign: "center", py: 4, color: theme.palette.text.secondary }}>
-                No incidents available. Create incidents in the Incident Management section first.
+                No incidents to link. Incidents appear here when they belong to this use case and
+                are not archived.
               </Typography>
             ) : (
               <Stack spacing={0}>

@@ -8,7 +8,7 @@ import {
   Stack,
   Tooltip,
 } from "@mui/material";
-import { AlertTriangle, FileWarning, ClipboardList, Bell } from "lucide-react";
+import { AlertTriangle, Archive, FileWarning, ClipboardList, Bell } from "lucide-react";
 import { EmptyState } from "../../components/EmptyState";
 import EmptyStateTip from "../../components/EmptyState/EmptyStateTip";
 import CustomizableSkeleton from "../../components/Skeletons";
@@ -66,6 +66,8 @@ const IncidentTable: React.FC<IncidentTableProps> = ({
   onEdit,
   onView,
   onArchive,
+  onRestore,
+  archiveView = "active",
   canEdit = true,
   canApprove = false,
   paginated = true,
@@ -175,7 +177,12 @@ const IncidentTable: React.FC<IncidentTableProps> = ({
                     ...incidentRowHover,
                     ...(archivedId === incident.id?.toString() && incidentTableRowDeletingStyle),
                   }}
-                  onClick={() => onEdit?.(incident.id?.toString(), "edit")}
+                  // An archived incident opens read-only; restore it to edit it.
+                  onClick={() =>
+                    incident.archived
+                      ? onView?.(incident.id?.toString(), "view")
+                      : onEdit?.(incident.id?.toString(), "edit")
+                  }
                 >
                   {isVisible("incident_id") && (
                     <TableCell
@@ -189,10 +196,13 @@ const IncidentTable: React.FC<IncidentTableProps> = ({
                             : palette.background.alt,
                       }}
                     >
-                      {jiraLinks?.get(incident.id) ? (
+                      {jiraLinks?.get(incident.id) || incident.archived ? (
                         <Stack direction="row" alignItems="center" flexWrap="wrap" gap="8px">
                           <span>{incident.incident_id}</span>
-                          <JiraIssueChip link={jiraLinks.get(incident.id)!} />
+                          {jiraLinks?.get(incident.id) && (
+                            <JiraIssueChip link={jiraLinks.get(incident.id)!} />
+                          )}
+                          {incident.archived && <Chip label="Archived" size="small" />}
                         </Stack>
                       ) : (
                         <>{incident.incident_id} </>
@@ -300,15 +310,21 @@ const IncidentTable: React.FC<IncidentTableProps> = ({
                           id={incident.id}
                           type="Incident"
                           canEdit={canEdit}
+                          isArchived={!!incident.archived}
                           onEdit={() => onEdit?.(incident.id?.toString(), "edit")}
                           onDelete={() => onArchive?.(incident.id?.toString(), "archive")}
+                          onRestore={
+                            canEdit && onRestore
+                              ? () => onRestore(incident.id?.toString())
+                              : undefined
+                          }
                           onView={() => onView?.(incident.id?.toString(), "view")}
                           onApprove={
                             canApprove ? () => onEdit?.(incident.id?.toString(), "edit") : undefined
                           }
                           onMouseEvent={() => {}}
-                          warningTitle="Are you sure?"
-                          warningMessage="You are about to archive this incident. This action cannot be undone. You can also choose to edit or view the incident instead."
+                          warningTitle="Archive this incident?"
+                          warningMessage="Archived incidents are left out of the default incident list, the dashboard, search and reports. You can restore it later from the Archived only view."
                         />
                       </Stack>
                     </TableCell>
@@ -325,6 +341,7 @@ const IncidentTable: React.FC<IncidentTableProps> = ({
       archivedId,
       onEdit,
       onArchive,
+      onRestore,
       onView,
       canEdit,
       canApprove,
@@ -340,6 +357,22 @@ const IncidentTable: React.FC<IncidentTableProps> = ({
       <Stack spacing={2}>
         <CustomizableSkeleton variant="rectangular" width="100%" height={400} />
       </Stack>
+    );
+  }
+
+  if ((!sortedRows || sortedRows.length === 0) && archiveView === "archived") {
+    return (
+      <TableEmptyStateLayout
+        header={
+          <StandardTableHead
+            columns={visibleTableColumns}
+            sortConfig={sortConfig}
+            onSort={handleSort}
+          />
+        }
+      >
+        <EmptyState icon={Archive} message="No archived incidents." />
+      </TableEmptyStateLayout>
     );
   }
 

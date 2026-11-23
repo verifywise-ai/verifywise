@@ -1,16 +1,8 @@
 import { Request, Response } from "express";
-import { sequelize } from "../database/db";
 import { AIIncidentManagementModel } from "../domain.layer/models/incidentManagement/incidemtManagement.model";
 import {
   getAllIncidentsQuery,
   getIncidentByIdQuery,
-  createNewIncidentQuery,
-  deleteIncidentByIdQuery,
-  archiveIncidentByIdQuery,
-  validateIncidentReferences,
-  getIncidentApproverName,
-  incidentReferenceFieldFromError,
-  invalidReferenceErrors,
   IncidentListFilters,
 } from "../utils/incidentManagement.utils";
 import { STATUS_CODE } from "../utils/statusCode.utils";
@@ -18,22 +10,18 @@ import logger, { logStructured } from "../utils/logger/fileLogger";
 import { ValidationError } from "../utils/validations/validation.utils";
 import { translateError, translateRequest } from "../utils/i18n.utils";
 import {
-  validateCompleteIncidentCreation,
   validateIncidentIdParam,
   validateModelInventoryId,
   validateProjectId,
   validateAssigneeId,
-  approvalStampFor,
-  parseCreateHarmCategories,
-  INCIDENT_CREATE_DEFAULTS,
-  isBlankIncidentValue,
 } from "../utils/validations/incidentManagementValidation.utils";
-import { recordIncidentCreation } from "../utils/incidentChangeHistory.utils";
-import { triggerIncidentResponse } from "../services/workflows/triggers";
-import { isCriticalIncidentSeverity } from "../domain.layer/enums/ai-incident-management.enum";
 import {
+  createIncident,
+  deleteIncident,
+  setIncidentArchived,
   updateIncident,
   IncidentAccessDeniedError,
+  IncidentCreateValidationError,
   IncidentUpdateValidationError,
   INCIDENT_APPROVE_DENIED_MESSAGE,
   INCIDENT_CHANGED_MESSAGE,
@@ -89,24 +77,6 @@ const validationExceptionResponse = (req: Request, error: ValidationException, m
       },
     ],
   });
-
-/**
- * The saved incident's values for creation history, without the column
- * defaults the caller did not send (false booleans such as archived and
- * interim_report, an empty harm category list): history lists what the
- * incident was created with, not every default.
- */
-const creationHistoryValues = (
-  saved: Record<string, unknown>,
-  body: Record<string, unknown> | undefined,
-): Record<string, unknown> =>
-  Object.fromEntries(
-    Object.entries(saved).filter(
-      ([key, value]) =>
-        body?.[key] !== undefined ||
-        !(value === false || (Array.isArray(value) && value.length === 0)),
-    ),
-  );
 
 /** The caller's incident write access, from the request's role (built-in or custom). */
 const incidentWriteAccess = async (req: Request): Promise<IncidentWriteAccess> => {
@@ -249,147 +219,15 @@ export async function getIncidentById(req: Request, res: Response) {
  */
 export async function createNewIncident(req: Request, res: Response) {
   const creationFailed = translateRequest(req, "Incident creation validation failed");
-  const validationErrors = validateCompleteIncidentCreation(req.body);
-  if (validationErrors.length > 0) {
-    logStructured(
-      "error",
-      "Incident creation validation failed",
-      "createNewIncident",
-      "incidentManagement.controller.ts",
-    );
-    return res.status(400).json(
-      STATUS_CODE[400]({
-        status: "error",
-        message: creationFailed,
-        errors: validationErrors.map((err: ValidationError) => ({
-          field: err.field,
-          message: translateError(req, err),
-          code: err.code,
-        })),
-      }),
-    );
-  }
-
-  const invalidReferenceResponse = (fields: string[]) =>
-    res.status(400).json(
-      STATUS_CODE[400]({
-        status: "error",
-        message: creationFailed,
-        errors: invalidReferenceErrors(fields).map((err) => ({
-          field: err.field,
-          message: translateError(req, err),
-          code: err.code,
-        })),
-      }),
-    );
-
-  const transaction = await sequelize.transaction();
-  // Set once the transaction is committed or rolled back, so the catch below
-  // never rolls back a finished one (that throws and leaves the request hanging).
-  let finished = false;
-  const rollback = async () => {
-    if (finished) return;
-    finished = true;
-    try {
-      await transaction.rollback();
-    } catch (rollbackError) {
-      logger.error("❌ Rollback failed in createNewIncident:", rollbackError);
-    }
-  };
   try {
-    // Checked on the create transaction (plain reads, no locks). A reference
-    // deleted after this check fails the insert's FK check, answered below
-    // with the same 400.
-    const invalidRefs = await validateIncidentReferences(
-      {
-        model_inventory_id: req.body.model_inventory_id,
-        project_id: req.body.project_id,
-        assignee_id: req.body.assignee_id,
-      },
-      req.organizationId!,
-      transaction,
-    );
-    if (invalidRefs.length > 0) {
-      await rollback();
-      return invalidReferenceResponse(invalidRefs);
-    }
-
-    // Approval on create: only a caller with incident.approve may record a
-    // decision. Anyone else's incident starts Pending, without notes. The
-    // approver and date are the server's: the creator and now for Approved
-    // or Rejected, empty otherwise; the request's values are ignored.
-    const canApprove = await requestHasPermission(req, "incident.approve");
-    // Validation allowed an absent, null or "" approval_status / status:
-    // those take the defaults (Pending, Open).
-    const approvalStatus =
-      canApprove && !isBlankIncidentValue(req.body.approval_status)
-        ? req.body.approval_status
-        : INCIDENT_CREATE_DEFAULTS.approval_status;
-    const stamped = approvalStampFor(undefined, approvalStatus) === "stamp" && !!req.userId;
-    // undefined is stored as NULL (createNewIncidentQuery).
-    const approvedBy = stamped
-      ? await getIncidentApproverName(req.userId!, req.organizationId!, transaction)
-      : undefined;
-
-    const incident = new AIIncidentManagementModel({
-      ai_project: req.body.ai_project,
-      model_inventory_id: req.body.model_inventory_id ?? null,
-      project_id: req.body.project_id ?? null,
-      assignee_id: req.body.assignee_id ?? null,
-      type: req.body.type,
-      severity: req.body.severity,
-      status: isBlankIncidentValue(req.body.status)
-        ? INCIDENT_CREATE_DEFAULTS.status
-        : req.body.status,
-      occurred_date: req.body.occurred_date ? req.body.occurred_date : null,
-      date_detected: req.body.date_detected ? req.body.date_detected : null,
-      reporter: req.body.reporter,
-      approval_status: approvalStatus,
-      approved_by: approvedBy,
-      // A list, or the comma-separated string form; validated above.
-      categories_of_harm: parseCreateHarmCategories(req.body.categories_of_harm) as string[],
-      affected_persons_groups: req.body.affected_persons_groups,
-      description: req.body.description,
-      relationship_causality: req.body.relationship_causality,
-      immediate_mitigations: req.body.immediate_mitigations,
-      planned_corrective_actions: req.body.planned_corrective_actions,
-      model_system_version: req.body.model_system_version,
-      interim_report: req.body.interim_report,
-      archived: req.body.archived || false,
-      approval_date: stamped ? new Date() : undefined,
-      approval_notes: canApprove ? req.body.approval_notes : undefined,
-      created_at: new Date(),
-      updated_at: new Date(),
+    // The shared create path (services/incidentManagement.service.ts), also
+    // used by the AI Advisor: validation, reference checks, the server's
+    // approval fields, creation history and the critical incident workflow.
+    // Only a caller with incident.approve may record an approval decision.
+    const savedIncident = await createIncident(req.organizationId!, req.body ?? {}, {
+      userId: req.userId,
+      canApprove: await requestHasPermission(req, "incident.approve"),
     });
-
-    const savedIncident = await createNewIncidentQuery(incident, req.organizationId!, transaction);
-
-    // Change history records the incident as saved (defaults, parsed harm
-    // categories and the server's approval fields), not the request body.
-    if (savedIncident.id && req.userId) {
-      await recordIncidentCreation(
-        savedIncident.id,
-        req.userId,
-        req.organizationId!,
-        creationHistoryValues(
-          (savedIncident.dataValues ?? savedIncident) as unknown as Record<string, unknown>,
-          req.body,
-        ),
-        transaction,
-      );
-    }
-
-    await transaction.commit();
-    finished = true;
-
-    // Phase 6 / issue 3813 — launch the critical incident_response autopilot
-    // workflow when the new incident is critical-tier. Fire-and-forget; never
-    // blocks or fails the response.
-    if (savedIncident.id && isCriticalIncidentSeverity(savedIncident.severity)) {
-      triggerIncidentResponse(req.organizationId!, savedIncident.id, savedIncident.severity).catch(
-        (err) => console.error("Failed to trigger incident_response workflow:", err),
-      );
-    }
 
     logStructured(
       "successful",
@@ -399,12 +237,28 @@ export async function createNewIncident(req: Request, res: Response) {
     );
     return res.status(201).json(STATUS_CODE[201](savedIncident.toSafeJSON()));
   } catch (error) {
-    await rollback();
+    if (error instanceof IncidentCreateValidationError) {
+      logStructured(
+        "error",
+        "Incident creation validation failed",
+        "createNewIncident",
+        "incidentManagement.controller.ts",
+      );
+      return res.status(400).json(
+        STATUS_CODE[400]({
+          status: "error",
+          message: creationFailed,
+          errors: error.errors.map((err: ValidationError) => ({
+            field: err.field,
+            message: translateError(req, err),
+            code: err.code,
+          })),
+        }),
+      );
+    }
     if (error instanceof ValidationException) {
       return res.status(400).json(validationExceptionResponse(req, error, creationFailed));
     }
-    const deletedReference = incidentReferenceFieldFromError(error);
-    if (deletedReference) return invalidReferenceResponse([deletedReference]);
     logStructured(
       "error",
       "failed to create new incident",
@@ -543,36 +397,40 @@ export async function updateIncidentById(req: Request, res: Response) {
   }
 }
 
-/**
- * Delete incident by ID
- */
-export async function deleteIncidentById(req: Request, res: Response) {
+/** 400 for an :id that is not a positive integer; null when it is valid. */
+const invalidIncidentIdResponse = (req: Request, res: Response, handler: string) => {
   const incidentId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
-
   const idValidation = validateIncidentIdParam(incidentId);
-  if (!idValidation.isValid) {
-    logStructured(
-      "error",
-      `Invalid incident ID parameter: ${req.params.id}`,
-      "deleteIncidentById",
-      "incidentManagement.controller.ts",
-    );
-    return res.status(400).json(
+  if (idValidation.isValid) return { incidentId };
+  logStructured(
+    "error",
+    `Invalid incident ID parameter: ${req.params.id}`,
+    handler,
+    "incidentManagement.controller.ts",
+  );
+  return {
+    response: res.status(400).json(
       STATUS_CODE[400]({
         status: "error",
         message: idValidation.message || "Invalid incident ID",
         code: idValidation.code || "INVALID_PARAMETER",
       }),
-    );
-  }
+    ),
+  };
+};
 
-  const transaction = await sequelize.transaction();
+/**
+ * Delete incident by ID (incident.delete). Records a deletion entry in change
+ * history; `incident_deleted` is sent after commit. 404 when the incident
+ * does not exist in the organization (nothing is sent).
+ */
+export async function deleteIncidentById(req: Request, res: Response) {
+  const { incidentId, response } = invalidIncidentIdResponse(req, res, "deleteIncidentById");
+  if (response) return response;
+
   try {
-    const existingIncident = (await getIncidentByIdQuery(
-      incidentId,
-      req.organizationId!,
-    )) as AIIncidentManagementModel;
-    if (!existingIncident) {
+    const deleted = await deleteIncident(req.organizationId!, incidentId!, req.userId);
+    if (!deleted) {
       logStructured(
         "successful",
         "no incident found",
@@ -582,9 +440,6 @@ export async function deleteIncidentById(req: Request, res: Response) {
       return res.status(404).json(STATUS_CODE[404](req.t!("Incident not found")));
     }
 
-    await deleteIncidentByIdQuery(incidentId, req.organizationId!, transaction);
-    await transaction.commit();
-
     logStructured(
       "successful",
       "incident deleted",
@@ -593,7 +448,6 @@ export async function deleteIncidentById(req: Request, res: Response) {
     );
     return res.status(200).json(STATUS_CODE[200](req.t!("Incident deleted successfully")));
   } catch (error) {
-    await transaction.rollback();
     logStructured(
       "error",
       "failed to delete incident",
@@ -605,36 +459,39 @@ export async function deleteIncidentById(req: Request, res: Response) {
   }
 }
 
+/** Message for an archive request whose `archived` is not a boolean. */
+export const INCIDENT_ARCHIVED_FLAG_MESSAGE = "archived must be true or false";
+
 /**
- * Archive incident by ID
+ * Archive (body `{}` or `{ archived: true }`) or restore
+ * (`{ archived: false }`) an incident (incident.edit). Both go through the
+ * shared update path: row lock, change history ("Archived") and the
+ * `incident_updated` automation after commit. Returns the incident.
  */
 export async function archiveIncidentById(req: Request, res: Response) {
-  const incidentId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
+  const { incidentId, response } = invalidIncidentIdResponse(req, res, "archiveIncidentById");
+  if (response) return response;
 
-  const idValidation = validateIncidentIdParam(incidentId);
-  if (!idValidation.isValid) {
-    logStructured(
-      "error",
-      `Invalid incident ID parameter: ${req.params.id}`,
-      "archiveIncidentById",
-      "incidentManagement.controller.ts",
-    );
+  const requested = (req.body ?? {}).archived;
+  if (requested !== undefined && typeof requested !== "boolean") {
     return res.status(400).json(
       STATUS_CODE[400]({
         status: "error",
-        message: idValidation.message || "Invalid incident ID",
-        code: idValidation.code || "INVALID_PARAMETER",
+        message: req.t!(INCIDENT_ARCHIVED_FLAG_MESSAGE),
+        code: "INVALID_PARAMETER",
       }),
     );
   }
+  const archived = requested ?? true;
 
-  const transaction = await sequelize.transaction();
   try {
-    const existingIncident = (await getIncidentByIdQuery(
-      incidentId,
+    const incident = await setIncidentArchived(
       req.organizationId!,
-    )) as AIIncidentManagementModel;
-    if (!existingIncident) {
+      incidentId!,
+      archived,
+      req.userId,
+    );
+    if (!incident) {
       logStructured(
         "successful",
         "no incident found",
@@ -644,22 +501,14 @@ export async function archiveIncidentById(req: Request, res: Response) {
       return res.status(404).json(STATUS_CODE[404](req.t!("Incident not found")));
     }
 
-    const archivedIncident = await archiveIncidentByIdQuery(
-      incidentId,
-      req.organizationId!,
-      transaction,
-    );
-    await transaction.commit();
-
     logStructured(
       "successful",
-      "incident archived",
+      archived ? "incident archived" : "incident restored",
       "archiveIncidentById",
       "incidentManagement.controller.ts",
     );
-    return res.status(200).json(STATUS_CODE[200](archivedIncident.toSafeJSON()));
+    return res.status(200).json(STATUS_CODE[200](incident.toSafeJSON()));
   } catch (error) {
-    await transaction.rollback();
     logStructured(
       "error",
       "failed to archive incident",

@@ -38,6 +38,12 @@ import { TableFilter } from "../../components/Table/TableFilter";
 import { useFilterBy } from "../../../application/hooks/useFilterBy";
 import { ColumnSelector } from "../../components/Table/ColumnSelector";
 import { useColumnVisibility, ColumnConfig } from "../../../application/hooks/useColumnVisibility";
+import Select from "../../components/Inputs/Select";
+import {
+  INCIDENT_ARCHIVE_VIEW_OPTIONS,
+  incidentsForArchiveView,
+  type IncidentArchiveView,
+} from "./archiveView";
 
 import Alert from "../../components/Alert";
 import { useJiraIncidentLinks } from "../../../application/hooks/useJiraIncidentLinks";
@@ -180,6 +186,9 @@ const IncidentManagement: React.FC = () => {
 
   // Card filter state
   const [selectedStatus, setSelectedStatus] = useState<string | null>(null);
+
+  // Active, active + archived, or archived incidents
+  const [archiveView, setArchiveView] = useState<IncidentArchiveView>("active");
 
   // Auto-dismiss info alerts after 3 seconds
   useEffect(() => {
@@ -382,17 +391,18 @@ const IncidentManagement: React.FC = () => {
   } = useFilterBy<AIIncidentManagementModel>(getIncidentFieldValue);
 
   /** -------------------- FILTERING -------------------- */
-  // Archived incidents never show, so the filter chips count only the rest
-  const nonArchivedIncidents = useMemo(
-    () => incidentsData.filter((i) => !i.archived),
-    [incidentsData],
+  // The incidents of the chosen view (active by default), so the filter
+  // chips count only what the table can show.
+  const viewIncidents = useMemo(
+    () => incidentsForArchiveView(incidentsData, archiveView),
+    [incidentsData, archiveView],
   );
 
   const filteredData = useMemo(() => {
     // Apply card filter by status
     let result = selectedStatus
-      ? nonArchivedIncidents.filter((i) => i.status === selectedStatus)
-      : nonArchivedIncidents;
+      ? viewIncidents.filter((i) => i.status === selectedStatus)
+      : viewIncidents;
 
     // Apply FilterBy conditions
     result = filterIncidentData(result);
@@ -403,13 +413,14 @@ const IncidentManagement: React.FC = () => {
       result = result.filter(
         (i) =>
           (i.id || "").toString().toLowerCase().includes(search) ||
+          (i.incident_id || "").toLowerCase().includes(search) ||
           (i.ai_project || "").toLowerCase().includes(search) ||
           (i.reporter || "").toLowerCase().includes(search),
       );
     }
 
     return result;
-  }, [filterIncidentData, nonArchivedIncidents, searchTerm, selectedStatus]);
+  }, [filterIncidentData, viewIncidents, searchTerm, selectedStatus]);
 
   /** -------------------- FETCHING -------------------- */
   const fetchIncidentsData = async (showLoading = true) => {
@@ -540,19 +551,25 @@ const IncidentManagement: React.FC = () => {
     if (data) setIsNewIncidentModalOpen(true);
   };
 
-  const handleArchiveIncident = async (id: string, mode: string) => {
+  /**
+   * Archives (`archived: true`) or restores (`archived: false`) an incident.
+   * Both are reversible and recorded in the incident's change history.
+   */
+  const setIncidentArchived = async (id: string, archived: boolean) => {
     try {
       setSelectedIncidentId(id);
-      setModalMode(mode);
       setArchiveId(id);
 
-      // Optimistically remove from local state for snappy UI feedback
-      setIncidentsData((prevData) => prevData.filter((item) => item.id?.toString() !== id));
+      // Optimistic: flag the row so the current view updates at once
+      setIncidentsData((prevData) =>
+        prevData.map((item) =>
+          item.id?.toString() === id ? new AIIncidentManagementModel({ ...item, archived }) : item,
+        ),
+      );
 
-      //API route to match your backend: /:id/archive
       await archiveIncidentById({
         routeUrl: `/ai-incident-managements/${id}`,
-        body: {},
+        body: { archived },
       });
 
       // Re-fetch to ensure consistent state
@@ -563,17 +580,22 @@ const IncidentManagement: React.FC = () => {
 
       setAlert({
         variant: "success",
-        body: "Incident archived successfully.",
+        body: archived ? "Incident archived successfully." : "Incident restored.",
       });
     } catch (error) {
-      console.error("❌ Error archiving incident:", error);
+      logEngine({
+        type: "error",
+        message: `Failed to ${archived ? "archive" : "restore"} incident: ${error}`,
+      });
 
       // Revert optimistic update
       await fetchIncidentsData(false);
 
       setAlert({
         variant: "error",
-        body: "Failed to archive incident. Please try again.",
+        body: archived
+          ? "Failed to archive incident. Please try again."
+          : "Could not restore the incident. Please try again.",
       });
     } finally {
       setSelectedIncidentId(null);
@@ -581,6 +603,9 @@ const IncidentManagement: React.FC = () => {
       setArchiveId(null);
     }
   };
+
+  const handleArchiveIncident = (id: string) => setIncidentArchived(id, true);
+  const handleRestoreIncident = (id: string) => setIncidentArchived(id, false);
 
   const handleCloseModal = () => {
     setIsNewIncidentModalOpen(false);
@@ -840,12 +865,20 @@ const IncidentManagement: React.FC = () => {
           sx={incidentFilterRow}
         >
           <Stack direction="row" spacing={2} alignItems="center">
+            <Select
+              id="incident-archive-view"
+              value={archiveView}
+              items={INCIDENT_ARCHIVE_VIEW_OPTIONS}
+              onChange={(event) => setArchiveView(event.target.value as IncidentArchiveView)}
+              sx={{ width: "170px" }}
+            />
+
             <TableFilter
               columns={incidentFilterColumns}
               onFilterChange={handleIncidentFilterChange}
               defaultConditions={incidentFilterConditions}
               defaultLogic={incidentFilterLogic}
-              data={nonArchivedIncidents}
+              data={viewIncidents}
               getFieldValue={getIncidentFieldValue}
             />
 
@@ -893,7 +926,9 @@ const IncidentManagement: React.FC = () => {
           isLoading={isLoading}
           onEdit={handleEditIncident}
           onArchive={handleArchiveIncident}
+          onRestore={handleRestoreIncident}
           onView={handleViewIncident}
+          archiveView={archiveView}
           canEdit={canEditIncidents}
           canApprove={canApproveIncidents}
           archivedId={archiveId}

@@ -147,8 +147,8 @@ Mounted at `/api/ai-incident-managements`.
 | GET | `/:id` | Any member | Get incident by ID (404 when missing or in another organization) |
 | POST | `/` | `incident.create` (Admin, Editor) | Create incident |
 | PATCH | `/:id` | `incident.edit` or `incident.approve` (Admin, Editor, Reviewer), then per field (below) | Update incident, including approval |
-| PATCH | `/:id/archive` | `incident.edit` (Admin, Editor) | Archive incident |
-| DELETE | `/:id` | `incident.delete` (Admin) | Delete incident |
+| PATCH | `/:id/archive` | `incident.edit` (Admin, Editor) | Archive incident; `{ "archived": false }` restores it (see [Archive, restore and delete](#archive-restore-and-delete)) |
+| DELETE | `/:id` | `incident.delete` (Admin) | Delete incident (404 when missing or in another organization) |
 
 Until 2026-11, edit, archive and delete needed only a login, so Auditors could change or delete incidents. Migration `20261122180000` grants `incident.edit` to custom roles that hold `incident.create` or `organization.admin`, and `incident.delete` to custom roles that hold `organization.admin`.
 
@@ -176,6 +176,59 @@ On create (`createNewIncident`), a caller without `incident.approve` gets an inc
 `updateIncident` refuses a call with neither `access` nor `changedBySystem`. System writers (`changedBySystem: true`, the Jira status sync) default to `SYSTEM_INCIDENT_ACCESS`: details only, never approval. The Advisor's incident tools and the MCP `update_incident` tool check `incident.edit` for their user and pass edit-only access: they change details only and never record approval.
 
 On the incidents page, the drawer enables the approval status and notes only with `incident.approve` and every other field only with `incident.edit` (`incident.create` for a new incident). "Approved by" and "Approval date" are read-only and show the server's values. Without `incident.edit` the row menu offers View, plus "Record approval" with `incident.approve`, which opens the drawer with only the approval fields editable (its title reads "Record approval"); clicking the row does the same. Roles with neither key open incidents read-only. The page has no delete action. The Advisor's incident write tools check the same keys for the user who asked, when the write is proposed and again when it runs.
+
+### Archive, restore and delete
+
+Archiving is reversible. `PATCH /:id/archive` takes an optional body
+`{ "archived": true | false }`: absent or `true` archives, `false` restores; any
+other value of `archived` answers 400 ("archived must be true or false"). The
+controller calls `setIncidentArchived` (`services/incidentManagement.service.ts`),
+which is `updateIncident(..., { archived }, userId, { access: { canEdit: true, canApprove: false } })`:
+the route already requires `incident.edit`, and `archived` is an incident
+detail. So archive and restore take the row lock, record an "Archived" change
+(No → Yes, or back) in `incident_change_history`, and send `incident_updated`
+after commit. Archiving an archived incident, or restoring an active one,
+changes nothing and records nothing. The answer is the incident (200), or 404
+when it is not in the organization. The Advisor's `agent_archive_incident`
+uses the same function.
+
+Archived incidents are left out of:
+
+- the incidents page's default view (see [Main Page](#main-page));
+- the dashboard's incident counts and status chart (`fetchIncidentMetrics` in
+  `Clients/src/application/hooks/useDashboardMetrics.ts`), so they match the page;
+- Wise Search (`alwaysWhere: "archived IS NOT TRUE"` on `incident_management`
+  in `Servers/utils/search.utils.ts`, see [search.md](./search.md));
+- the CE marking "Link incidents" picker (see [CE Marking Integration](#ce-marking-integration));
+- reports (see [Reports](#reports));
+- the Home queue (`services/homeQueue/sources/incidents.source.ts`), the Jira
+  status sync and the Advisor's incident lists and analytics, as before.
+
+`GET /ai-incident-managements` and the MCP `list_incidents` tool still return
+archived incidents (with `archived: true`); the client filters.
+
+Deleting (`DELETE /:id`, `incident.delete`, Admin only) is permanent and is not
+offered on the incidents page. `deleteIncident` (`services/incidentManagement.service.ts`),
+used by the route and the Advisor's `agent_delete_incident`, runs in one
+transaction:
+
+1. `deleteIncidentByIdQuery` marks a Jira link `deleted_in_verifywise`, then
+   deletes the row (`DELETE ... RETURNING *`). No `SELECT ... FOR UPDATE`
+   first: the delete takes the link before the incident, the lock order of the
+   Jira status sync.
+2. When nothing was deleted (missing, or another organization's), it returns
+   null: nothing is written, no automation is sent. The route answers 404 and
+   the Advisor tool `{ deleted: false, incident_id, message }`.
+3. Otherwise a deletion entry is recorded with `recordEntityDeletion`
+   (`field_name` "Incident", "Active" → "Deleted", action `deleted`), as the
+   user or as the system for an Advisor execution without one.
+   `incident_change_history.incident_id` has no foreign key, so the entry
+   outlives the incident; it also goes to the audit ledger after commit.
+4. `incident_deleted` is enqueued in `transaction.afterCommit`, so a delete
+   that rolls back sends nothing.
+
+The incident's CE marking links go with it (`fk_ce_incidents_incident`,
+`ON DELETE CASCADE`).
 
 ### Change History
 
@@ -209,8 +262,9 @@ POST /aiIncidentManagement/
 
 ### Reference checks on create
 
-Field validation (`validateCompleteIncidentCreation`) runs first, outside any
-transaction. The references (`project_id`, `model_inventory_id`, and
+Both run in `createIncident` (`Servers/services/incidentManagement.service.ts`),
+the create path of the REST create and the Advisor. Field validation
+(`validateCompleteIncidentCreation`) runs first, outside any transaction. The references (`project_id`, `model_inventory_id`, and
 `assignee_id` against `organization_members`) are then checked by
 `validateIncidentReferences` inside the create transaction, before the insert,
 with plain reads (no row locks). `''`, null and an absent field all mean "no
@@ -221,9 +275,11 @@ update path). A bad reference rolls the transaction back and answers 400
 per bad reference). Both messages are translated with the request language
 (locale keys `Incident creation validation failed` and
 `{field} does not reference an entity in your organization`). A database error
-in the check rolls back and answers 500. The handler tracks whether its
+in the check rolls back and answers 500. `createIncident` tracks whether its
 transaction has been committed or rolled back and only rolls back an open one,
-so an error after the commit still gets an answer.
+so an error after the commit still gets an answer. Validation failures, bad
+references and a reference deleted after the check are thrown as
+`IncidentCreateValidationError`, which the controller answers with this 400.
 
 A use case, model or owner account deleted by another transaction after the
 check fails the insert's foreign key check (Postgres 23503).
@@ -268,8 +324,9 @@ reopened.
 - Reopening a Closed incident whose `approval_status` is `Approved` resets it to
   `Pending` and clears `approved_by`, `approval_date` and `approval_notes`
   (see below)
-- Archived incidents remain in database (soft delete); archiving does not depend
-  on status, and reopening does not change the `archived` flag
+- Archived incidents remain in database (soft delete) and can be restored;
+  archiving does not depend on status, and reopening does not change the
+  `archived` flag
 
 ### Approval Workflow
 
@@ -317,7 +374,9 @@ re-approval in a later update.
 All updates to an existing incident go through
 `updateIncident(organizationId, incidentId, updates, userId, { access?, transaction?, changedBySystem?, expectedUpdatedAt? })`
 in `Servers/services/incidentManagement.service.ts`. Callers today: the HTTP
-update (`PATCH /ai-incident-managements/:id`), the AI Advisor tools
+update (`PATCH /ai-incident-managements/:id`), archive and restore
+(`PATCH /:id/archive` and the Advisor's `agent_archive_incident`, through
+`setIncidentArchived`), the AI Advisor tools
 `agent_update_incident` / `agent_update_incident_status`, the MCP
 `update_incident` tool, and the Jira
 incidents status sync (`changedBySystem: true`, see
@@ -455,10 +514,10 @@ All incident modifications are tracked:
 
 | Event | Recorded |
 |-------|----------|
-| Creation | All initial field values |
+| Creation | All initial field values (console and Advisor, through `createIncident`; Jira import as the system) |
 | Update | Field-by-field changes (old → new) |
-| Deletion | Deletion event |
-| Archival | Archived flag change |
+| Deletion | "Incident": Active → Deleted (action `deleted`); kept after the incident is gone |
+| Archival and restore | "Archived": No → Yes, or Yes → No |
 
 ### Change History Entry
 
@@ -481,6 +540,13 @@ All incident modifications are tracked:
 **Location:** `pages/IncidentManagement/index.tsx`
 
 **Features:**
+- A view select: "Active only" (the default), "Active + archived" or "Archived
+  only" (`incidentsForArchiveView`). Archived rows carry an "Archived" chip,
+  open read-only, and their row menu offers View and, with `incident.edit`,
+  "Restore incident" (`PATCH /:id/archive` with `{ archived: false }`). The
+  archive confirmation says archived incidents leave the default list,
+  dashboard, search and reports and can be restored from the "Archived only"
+  view. The status cards count active incidents only.
 - Incident list with filtering
 - Filter by: incident_id, ai_project, type, severity, status, approval_status
 - Search functionality
@@ -529,7 +595,7 @@ The modal is organized into 4 sections:
 - Sort state persistence
 - Row options: 5, 10, 15, 25
 - Color-coded status/severity chips
-- Edit, archive, view actions; "Record approval" for roles with `incident.approve` but not `incident.edit`
+- Edit, archive, view actions; "Record approval" for roles with `incident.approve` but not `incident.edit`; View and "Restore incident" on archived rows
 - Confirmation dialogs
 
 ## Validation Rules
@@ -578,9 +644,14 @@ The rules live in `Servers/utils/validations/incidentManagementValidation.utils.
   stored off-list value as a checked box (labelled with the raw value) that the user can untick.
   Create accepts only the page's values. The server does not require a category; the drawer does
   (at least one), as it always has.
-- **Where it runs.** Create: the REST controller, before the transaction, and the Advisor's
-  `agent_create_incident` (which names the requesting user as reporter, or "AI Advisor" without
-  one). Update: `updateIncident` (`services/incidentManagement.service.ts`) against the locked row,
+- **Where it runs.** Create: `createIncident` (`services/incidentManagement.service.ts`), before
+  its transaction. Both the REST create and the Advisor's `agent_create_incident` use it, so both
+  get the same validation, reference checks (including `project_id`), server-set approval fields,
+  creation history and the incident response workflow for Very serious incidents (enqueued after
+  commit). The Advisor names the requesting user as reporter ("AI Advisor" without one), passes the
+  tool's `project_id` (an id outside the organization is refused with the reference error), never
+  records approval (`canApprove: false`), and records history as the executing user, or as the
+  system without one. The MCP server has no incident create tool. Update: `updateIncident` (`services/incidentManagement.service.ts`) against the locked row,
   so the REST update, the Advisor tools, the MCP `update_incident` tool and the Jira status sync all
   get it. The Jira import (`createIncidentForImport`) builds every required field from its
   configuration (use case, type, reporter, severity map, status map; both dates are the Jira
@@ -660,13 +731,47 @@ Incident ──── ce_marking_incidents ──── CE Marking
 
 This supports EU AI Act Article 73 requirements for documenting serious incidents alongside conformity assessments.
 
+`PUT /ce-marking/:projectId` (`controllers/ceMarking.ctrl.ts`) checks
+`linkedIncidents` before writing anything: it must be a list of positive
+integer ids (numbers or strings of digits, `parseLinkedIncidentIds`;
+duplicates are dropped), and every id must be an incident of the caller's
+organization. Anything else answers 400 ("Linked incidents must be a list of
+incident ids." / "Some linked incidents do not exist in your organization.")
+and nothing is written. `total_incidents` is then set to the number of linked
+ids, not the caller's count. Until 2026-11 another organization's incident id
+was stored and returned, and a non-numeric id answered 500.
+
+Links to deleted incidents are removed by the foreign key
+(`fk_ce_incidents_incident`, `ON DELETE CASCADE`). `GET` also reads the links
+joined to `ai_incident_managements` in the same organization, so a link stored
+before the validation existed (another organization's incident) is never
+returned.
+
+The "Link incidents" picker on the CE marking tab
+(`getLinkableIncidents` in `Clients/src/application/repository/ceMarking.repository.ts`)
+lists the use case's non-archived incidents, matched on `project_id` (the
+incident's foreign key to the use case; `ai_project` is free text and older
+rows hold a title there, so it is not used), plus every incident already
+linked, so a link to an incident since archived or without a use case can
+still be removed.
+
+## Reports
+
+The reports' incident management section (`collectIncidentManagement` in
+`Servers/services/reporting/dataCollector.ts`, organization and use case
+reports) leaves archived incidents out and counts them in
+`archivedIncidents`. When it is above 0 the PDF (`report-pdf.ejs`) and Word
+(`docxGenerator.ts`) reports add a line under the table, "N archived
+incidents are not included." (`archivedIncidentsNote` in
+`services/reporting/noticeText.ts`; reports are English only).
+
 ## Automation Triggers
 
 | Trigger | Event |
 |---------|-------|
 | `incident_added` | New incident created |
 | `incident_updated` | Incident modified |
-| `incident_deleted` | Incident deleted |
+| `incident_deleted` | Incident deleted (after commit; never for a missing incident) |
 
 `incident_added` is enqueued in `transaction.afterCommit` inside
 `createNewIncidentQuery`, so it applies to every caller (the HTTP create, the AI
@@ -840,6 +945,10 @@ Known issues outside this change, recorded so they are not lost:
   controllers). For those, a user id from another organization written into a
   tracked field would be shown with that user's name. Fix: pass
   `{ organizationId, transaction }` from each caller.
+- **Use case reports match incidents on `ai_project` (pre-existing).**
+  `collectIncidentManagement` compares `ai_project` (free text) with the
+  project id, so a use case report's incident section is normally empty. Fix:
+  match on `project_id`.
 - **TIMESTAMP WITHOUT TIME ZONE dates shift on non-UTC servers
   (pre-existing).** pg parses these columns (oid 1114) as server-local time
   and the API serialises them with `toISOString()`, so `occurred_date`,
