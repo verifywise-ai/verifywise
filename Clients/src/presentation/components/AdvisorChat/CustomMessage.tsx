@@ -1,4 +1,5 @@
-import { FC, useContext, useEffect, useState, useRef, useCallback, memo } from "react";
+import { FC, useEffect, useState, useRef, useCallback, memo } from "react";
+import { useSelector } from "react-redux";
 import { Stack, Box, useTheme, Avatar, Typography, Theme } from "@mui/material";
 import { MessagePrimitive, useMessagePartText, useAuiState } from "@assistant-ui/react";
 import Markdown from "react-markdown";
@@ -8,8 +9,10 @@ import { Bot, Copy, Check } from "lucide-react";
 import { ChartRenderer } from "./ChartRenderer";
 import ConfirmationToolUI from "./ConfirmationToolUI";
 import VWAvatar from "../Avatar/VWAvatar";
-import { VerifyWiseContext } from "../../../application/contexts/VerifyWise.context";
 import { useProfilePhotoFetch } from "../../../application/hooks/useProfilePhotoFetch";
+import { useAuth } from "../../../application/hooks/useAuth";
+import useUsers from "../../../application/hooks/useUsers";
+import { selectPhotoRefreshCounter } from "../../../application/redux/ui/uiSlice";
 import useFormattedDate from "../../../application/hooks/useFormattedDate";
 import { User } from "../../../domain/types/User";
 import { radiusPx, palette as vwPalette } from "../../themes/palette";
@@ -493,7 +496,9 @@ const DEFAULT_USER: User = {
 
 const CustomMessageComponent: FC = () => {
   const theme = useTheme();
-  const { userId, users, photoRefreshFlag } = useContext(VerifyWiseContext);
+  const { userId } = useAuth();
+  const { users } = useUsers();
+  const photoRefreshCounter = useSelector(selectPhotoRefreshCounter);
   const { fetchProfilePhotoAsBlobUrl } = useProfilePhotoFetch();
   const [avatarUrl, setAvatarUrl] = useState<string>("");
   const bubbleRef = useRef<HTMLDivElement>(null);
@@ -522,7 +527,7 @@ const CustomMessageComponent: FC = () => {
       cancel = true;
       if (previousUrl) URL.revokeObjectURL(previousUrl);
     };
-  }, [userId, fetchProfilePhotoAsBlobUrl, photoRefreshFlag]);
+  }, [userId, fetchProfilePhotoAsBlobUrl, photoRefreshCounter]);
 
   const userAvatar = {
     firstname: user.name,
