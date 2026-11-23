@@ -32,12 +32,13 @@ export const de: Record<string, string> = {
     "Wie viele Projektrisiken und Anwendungsfälle von den Risiken jedes Anbieters erben.",
   "Vendor {id}": "Anbieter {id}",
   "{linked} of {total}": "{linked} von {total}",
-  "Vendors with reach": "Anbieter mit Reichweite",
+  "Vendors with linked project risks": "Anbieter mit verknüpften Projektrisiken",
   "Inheriting project risks": "Erbende Projektrisiken",
   "Affected use cases": "Betroffene Anwendungsfälle",
-  "Vendor risks with children": "Anbieterrisiken mit untergeordneten Risiken",
-  "Vendor risks with no children": "Anbieterrisiken ohne untergeordnete Risiken",
+  "Vendor risks linked": "Verknüpfte Anbieterrisiken",
+  "Vendor risks not linked yet": "Noch nicht verknüpfte Anbieterrisiken",
   "View on map": "Auf der Karte anzeigen",
+  "Suggested links": "Vorgeschlagene Verknüpfungen",
   "No vendor risks yet.": "Noch keine Anbieterrisiken.",
   "Duplicate vendor risks": "Doppelte Anbieterrisiken",
   "Risks of the same vendor that look like one risk entered twice.":
@@ -69,9 +70,9 @@ export const de: Record<string, string> = {
     "Jeder der anderen Namen muss zwischen 2 und 80 Zeichen lang sein",
   "Each of the other names must contain a letter or a digit":
     "Jeder der anderen Namen muss einen Buchstaben oder eine Ziffer enthalten",
-  "Identifiers": "Kennungen",
-  "Turns a match by name into a match by identifier.":
-    "Macht aus einem Treffer über den Namen einen Treffer über eine Kennung.",
+  "Identifiers (optional)": "Kennungen (optional)",
+  "Research uses them to find this exact company, such as its SEC filings and its LEI record, instead of matching by name.":
+    "Die Recherche findet damit genau dieses Unternehmen, etwa seine SEC-Meldungen und seinen LEI-Eintrag, statt nach dem Namen zu suchen.",
   "Country": "Land",
   "e.g. DE": "z. B. DE",
   "Registration number": "Registernummer",
@@ -102,8 +103,8 @@ export const de: Record<string, string> = {
   "Pending research findings": "Ausstehende Recherchebefunde",
   "Could not load research findings.": "Die Recherchebefunde konnten nicht geladen werden.",
   "Vendor research is not set up.": "Die Anbieterrecherche ist nicht eingerichtet.",
-  "Add an LLM key under Settings → API Keys, in the LLM Keys section.":
-    "Fügen Sie unter Einstellungen → API-Schlüssel im Bereich LLM-Schlüssel einen LLM-Schlüssel hinzu.",
+  "Research needs an LLM key.": "Die Recherche benötigt einen LLM-Schlüssel.",
+  "Add an LLM key": "LLM-Schlüssel hinzufügen",
   "Research settings": "Recherche-Einstellungen",
   "Choose which LLM key runs the vendor research. The research key makes many small calls, so a fast, inexpensive model is enough. The analysis key writes the risks from what the research found, once per run, so a stronger model can help.":
     "Wählen Sie, welcher LLM-Schlüssel die Anbieterrecherche ausführt. Der Recherche-Schlüssel führt viele kleine Aufrufe aus, daher genügt ein schnelles, günstiges Modell. Der Analyse-Schlüssel verfasst die Risiken aus den Ergebnissen der Recherche, einmal pro Durchlauf, daher kann ein stärkeres Modell helfen.",
@@ -121,6 +122,11 @@ export const de: Record<string, string> = {
   "Loading research settings": "Recherche-Einstellungen werden geladen",
   "Could not load the research settings.":
     "Die Recherche-Einstellungen konnten nicht geladen werden.",
+  "Research new vendors automatically": "Neue Anbieter automatisch recherchieren",
+  "Starts a research run when a vendor is added. Each run uses the keys above.":
+    "Startet eine Recherche, wenn ein Anbieter hinzugefügt wird. Jede Recherche verwendet die oben gewählten Schlüssel.",
+  "Automatic research is turned off for this deployment.":
+    "Die automatische Recherche ist für diese Installation deaktiviert.",
   "Research settings saved.": "Recherche-Einstellungen gespeichert.",
   "One of the chosen LLM keys no longer exists. Choose the keys again.":
     "Einer der gewählten LLM-Schlüssel existiert nicht mehr. Wählen Sie die Schlüssel erneut.",
@@ -532,12 +538,13 @@ export const fr: Record<string, string> = {
     "Combien de risques de projet et de cas d'usage héritent des risques de chaque fournisseur.",
   "Vendor {id}": "Fournisseur {id}",
   "{linked} of {total}": "{linked} sur {total}",
-  "Vendors with reach": "Fournisseurs avec portée",
+  "Vendors with linked project risks": "Fournisseurs avec risques de projet liés",
   "Inheriting project risks": "Risques de projet héritiers",
   "Affected use cases": "Cas d'usage concernés",
-  "Vendor risks with children": "Risques fournisseurs avec enfants",
-  "Vendor risks with no children": "Risques fournisseurs sans enfants",
+  "Vendor risks linked": "Risques fournisseurs liés",
+  "Vendor risks not linked yet": "Risques fournisseurs pas encore liés",
   "View on map": "Voir sur la carte",
+  "Suggested links": "Liens suggérés",
   "No vendor risks yet.": "Aucun risque fournisseur pour l'instant.",
   "Duplicate vendor risks": "Risques fournisseurs en double",
   "Risks of the same vendor that look like one risk entered twice.":
@@ -569,9 +576,9 @@ export const fr: Record<string, string> = {
     "Chacun des autres noms doit comporter entre 2 et 80 caractères",
   "Each of the other names must contain a letter or a digit":
     "Chacun des autres noms doit contenir une lettre ou un chiffre",
-  "Identifiers": "Identifiants",
-  "Turns a match by name into a match by identifier.":
-    "Transforme une correspondance par le nom en correspondance par identifiant.",
+  "Identifiers (optional)": "Identifiants (facultatif)",
+  "Research uses them to find this exact company, such as its SEC filings and its LEI record, instead of matching by name.":
+    "La recherche s'en sert pour trouver cette entreprise précise, par exemple ses dépôts auprès de la SEC et sa fiche LEI, au lieu de chercher par le nom.",
   "Country": "Pays",
   "e.g. DE": "p. ex. DE",
   "Registration number": "Numéro d'immatriculation",
@@ -602,8 +609,8 @@ export const fr: Record<string, string> = {
   "Pending research findings": "Résultats de recherche en attente",
   "Could not load research findings.": "Impossible de charger les résultats de recherche.",
   "Vendor research is not set up.": "La recherche sur les fournisseurs n'est pas configurée.",
-  "Add an LLM key under Settings → API Keys, in the LLM Keys section.":
-    "Ajoutez une clé LLM sous Paramètres → Clés API, dans la section Clés LLM.",
+  "Research needs an LLM key.": "La recherche nécessite une clé LLM.",
+  "Add an LLM key": "Ajouter une clé LLM",
   "Research settings": "Paramètres de la recherche",
   "Choose which LLM key runs the vendor research. The research key makes many small calls, so a fast, inexpensive model is enough. The analysis key writes the risks from what the research found, once per run, so a stronger model can help.":
     "Choisissez la clé LLM qui exécute la recherche sur les fournisseurs. La clé de recherche effectue de nombreux petits appels, un modèle rapide et peu coûteux suffit donc. La clé d'analyse rédige les risques à partir de ce que la recherche a trouvé, une fois par exécution : un modèle plus puissant peut aider.",
@@ -620,6 +627,11 @@ export const fr: Record<string, string> = {
     "Une analyse planifiée recherche de nouveau chaque fournisseur selon ce calendrier et prévient la personne assignée lorsqu'elle trouve quelque chose. Elle n'analyse que les sources qu'elle n'a pas encore vues et utilise les clés ci-dessus.",
   "Loading research settings": "Chargement des paramètres de la recherche",
   "Could not load the research settings.": "Impossible de charger les paramètres de la recherche.",
+  "Research new vendors automatically": "Rechercher automatiquement les nouveaux fournisseurs",
+  "Starts a research run when a vendor is added. Each run uses the keys above.":
+    "Lance une recherche lorsqu'un fournisseur est ajouté. Chaque recherche utilise les clés ci-dessus.",
+  "Automatic research is turned off for this deployment.":
+    "La recherche automatique est désactivée pour ce déploiement.",
   "Research settings saved.": "Paramètres de la recherche enregistrés.",
   "One of the chosen LLM keys no longer exists. Choose the keys again.":
     "L'une des clés LLM choisies n'existe plus. Choisissez à nouveau les clés.",
@@ -1033,12 +1045,13 @@ export const es: Record<string, string> = {
     "Cuántos riesgos de proyecto y casos de uso heredan de los riesgos de cada proveedor.",
   "Vendor {id}": "Proveedor {id}",
   "{linked} of {total}": "{linked} de {total}",
-  "Vendors with reach": "Proveedores con alcance",
+  "Vendors with linked project risks": "Proveedores con riesgos de proyecto vinculados",
   "Inheriting project risks": "Riesgos de proyecto que heredan",
   "Affected use cases": "Casos de uso afectados",
-  "Vendor risks with children": "Riesgos del proveedor con dependientes",
-  "Vendor risks with no children": "Riesgos del proveedor sin dependientes",
+  "Vendor risks linked": "Riesgos del proveedor vinculados",
+  "Vendor risks not linked yet": "Riesgos del proveedor aún sin vincular",
   "View on map": "Ver en el mapa",
+  "Suggested links": "Vínculos sugeridos",
   "No vendor risks yet.": "Todavía no hay riesgos del proveedor.",
   "Duplicate vendor risks": "Riesgos del proveedor duplicados",
   "Risks of the same vendor that look like one risk entered twice.":
@@ -1070,9 +1083,9 @@ export const es: Record<string, string> = {
     "Cada uno de los otros nombres debe tener entre 2 y 80 caracteres",
   "Each of the other names must contain a letter or a digit":
     "Cada uno de los otros nombres debe contener una letra o un dígito",
-  "Identifiers": "Identificadores",
-  "Turns a match by name into a match by identifier.":
-    "Convierte una coincidencia por nombre en una coincidencia por identificador.",
+  "Identifiers (optional)": "Identificadores (opcional)",
+  "Research uses them to find this exact company, such as its SEC filings and its LEI record, instead of matching by name.":
+    "La investigación los usa para encontrar esta empresa exacta, como sus registros ante la SEC y su ficha LEI, en lugar de buscar por el nombre.",
   "Country": "País",
   "e.g. DE": "p. ej., DE",
   "Registration number": "Número de registro",
@@ -1103,8 +1116,8 @@ export const es: Record<string, string> = {
   "Pending research findings": "Hallazgos de investigación pendientes",
   "Could not load research findings.": "No se pudieron cargar los hallazgos de la investigación.",
   "Vendor research is not set up.": "La investigación de proveedores no está configurada.",
-  "Add an LLM key under Settings → API Keys, in the LLM Keys section.":
-    "Añada una clave de LLM en Configuración → Claves de API, en la sección Claves de LLM.",
+  "Research needs an LLM key.": "La investigación necesita una clave de LLM.",
+  "Add an LLM key": "Añadir una clave de LLM",
   "Research settings": "Ajustes de la investigación",
   "Choose which LLM key runs the vendor research. The research key makes many small calls, so a fast, inexpensive model is enough. The analysis key writes the risks from what the research found, once per run, so a stronger model can help.":
     "Elija qué clave de LLM ejecuta la investigación de proveedores. La clave de investigación hace muchas llamadas pequeñas, así que basta un modelo rápido y económico. La clave de análisis redacta los riesgos a partir de lo que encontró la investigación, una vez por ejecución, por lo que un modelo más potente puede ayudar.",
@@ -1121,6 +1134,11 @@ export const es: Record<string, string> = {
     "Un análisis programado vuelve a investigar a cada proveedor con esta frecuencia y avisa a la persona asignada cuando encuentra algo. Solo analiza fuentes que no ha visto antes y usa las claves de arriba.",
   "Loading research settings": "Cargando los ajustes de la investigación",
   "Could not load the research settings.": "No se pudieron cargar los ajustes de la investigación.",
+  "Research new vendors automatically": "Investigar automáticamente los proveedores nuevos",
+  "Starts a research run when a vendor is added. Each run uses the keys above.":
+    "Inicia una investigación cuando se añade un proveedor. Cada investigación usa las claves anteriores.",
+  "Automatic research is turned off for this deployment.":
+    "La investigación automática está desactivada en esta instalación.",
   "Research settings saved.": "Ajustes de la investigación guardados.",
   "One of the chosen LLM keys no longer exists. Choose the keys again.":
     "Una de las claves de LLM elegidas ya no existe. Elija las claves de nuevo.",

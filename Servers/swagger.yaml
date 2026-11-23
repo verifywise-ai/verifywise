@@ -29854,9 +29854,17 @@ paths:
   /v1/vendor-research/config:
     get:
       summary: 'Get Research Config'
+      description: 'What the page needs to know to offer vendor research. Booleans only, never a key. autoRunAllowed is the deployment switch (VENDOR_RESEARCH_AUTO_RUN); autoRunEnabled is whether a new vendor of the organization is researched as soon as it is added, which needs both autoRunAllowed and the organization setting autoResearchOnCreate.'
       responses:
         '200':
           description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: {type: string}
+                  data: {type: object, properties: {hasLlmKey: {type: boolean}, autoRunAllowed: {type: boolean}, autoRunEnabled: {type: boolean}}}
         '500':
           description: 'Internal server error'
       tags:
@@ -29882,9 +29890,19 @@ paths:
   /v1/vendor-research/settings:
     get:
       summary: 'Get Research Settings'
+      description: 'The LLM keys the vendor research uses, the scheduled scan interval and whether a new vendor is researched as soon as it is added. Admins only.'
       responses:
         '200':
           description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: {type: string}
+                  data: {type: object, properties: {researchKeyId: {type: integer, nullable: true}, analysisKeyId: {type: integer, nullable: true}, scanIntervalDays: {type: integer, nullable: true, enum: [7, 14, 30, null]}, autoResearchOnCreate: {type: boolean, description: 'Research a new vendor as soon as it is added. True when the organization has not chosen.'}}}
+        '403':
+          description: Forbidden
         '500':
           description: 'Internal server error'
       tags:
@@ -29895,9 +29913,45 @@ paths:
           bearerAuth: []
     put:
       summary: 'Save Research Settings'
+      description: 'Stores the research settings of the organization. researchKeyId and analysisKeyId are required (an LLM key id or null for the default). scanIntervalDays and autoResearchOnCreate are optional: a body that leaves one out keeps the stored value.'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - researchKeyId
+                - analysisKeyId
+              properties:
+                researchKeyId:
+                  type: integer
+                  nullable: true
+                analysisKeyId:
+                  type: integer
+                  nullable: true
+                scanIntervalDays:
+                  type: integer
+                  nullable: true
+                  enum: [7, 14, 30, null]
+                autoResearchOnCreate:
+                  type: boolean
       responses:
         '200':
           description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: {type: string}
+                  data: {type: object, properties: {researchKeyId: {type: integer, nullable: true}, analysisKeyId: {type: integer, nullable: true}, scanIntervalDays: {type: integer, nullable: true, enum: [7, 14, 30, null]}, autoResearchOnCreate: {type: boolean, description: 'Research a new vendor as soon as it is added. True when the organization has not chosen.'}}}
+        '400':
+          description: 'A key id, scanIntervalDays or autoResearchOnCreate is not valid'
+        '403':
+          description: Forbidden
+        '404':
+          description: 'LLM key not found'
         '500':
           description: 'Internal server error'
       tags:

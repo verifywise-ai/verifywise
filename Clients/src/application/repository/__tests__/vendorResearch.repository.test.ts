@@ -119,7 +119,7 @@ beforeEach(() => vi.clearAllMocks());
 
 describe("getVendorResearchConfig", () => {
   it("reads /v1/vendor-research/config and unwraps the data", async () => {
-    const config = { hasLlmKey: false, autoRunEnabled: true };
+    const config = { hasLlmKey: false, autoRunAllowed: true, autoRunEnabled: true };
     mockGet.mockResolvedValue(success(config));
 
     await expect(getVendorResearchConfig()).resolves.toEqual(config);
@@ -130,7 +130,12 @@ describe("getVendorResearchConfig", () => {
 
 describe("getVendorResearchSettings", () => {
   it("reads /v1/vendor-research/settings and unwraps the choice", async () => {
-    const settings = { researchKeyId: 4, analysisKeyId: null, scanIntervalDays: 14 };
+    const settings = {
+      researchKeyId: 4,
+      analysisKeyId: null,
+      scanIntervalDays: 14,
+      autoResearchOnCreate: true,
+    };
     mockGet.mockResolvedValue(success(settings));
 
     await expect(getVendorResearchSettings()).resolves.toEqual(settings);
@@ -141,7 +146,12 @@ describe("getVendorResearchSettings", () => {
 
 describe("saveVendorResearchSettings", () => {
   it("puts the two keys and the scan interval to /v1/vendor-research/settings and unwraps what the server kept", async () => {
-    const saved = { researchKeyId: 4, analysisKeyId: 9, scanIntervalDays: 7 };
+    const saved = {
+      researchKeyId: 4,
+      analysisKeyId: 9,
+      scanIntervalDays: 7,
+      autoResearchOnCreate: true,
+    };
     mockPut.mockResolvedValue(success(saved));
 
     await expect(saveVendorResearchSettings(saved)).resolves.toEqual(saved);
@@ -151,19 +161,26 @@ describe("saveVendorResearchSettings", () => {
 
   it("sends null for a key that is left to the default and for a scan that is off, because the server wants all fields", async () => {
     mockPut.mockResolvedValue(
-      success({ researchKeyId: null, analysisKeyId: null, scanIntervalDays: null }),
+      success({
+        researchKeyId: null,
+        analysisKeyId: null,
+        scanIntervalDays: null,
+        autoResearchOnCreate: true,
+      }),
     );
 
     await saveVendorResearchSettings({
       researchKeyId: null,
       analysisKeyId: null,
       scanIntervalDays: null,
+      autoResearchOnCreate: true,
     });
 
     expect(mockPut).toHaveBeenCalledWith("/v1/vendor-research/settings", {
       researchKeyId: null,
       analysisKeyId: null,
       scanIntervalDays: null,
+      autoResearchOnCreate: true,
     });
   });
 });
@@ -344,6 +361,7 @@ describe("a failed call", () => {
           researchKeyId: null,
           analysisKeyId: null,
           scanIntervalDays: null,
+          autoResearchOnCreate: true,
         }),
     ],
     ["listVendorRiskFindings", () => listVendorRiskFindings({})],

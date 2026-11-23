@@ -60,6 +60,7 @@ beforeEach(() => {
     researchKeyId: 20,
     analysisKeyId: 10,
     scanIntervalDays: null,
+    autoResearchOnCreate: true,
   });
   mocks.save.mockImplementation(async (settings) => settings);
 });
@@ -109,6 +110,7 @@ describe("research settings with a list of keys that could not be read", () => {
       researchKeyId: 20,
       analysisKeyId: 10,
       scanIntervalDays: null,
+      autoResearchOnCreate: true,
     });
   });
 });

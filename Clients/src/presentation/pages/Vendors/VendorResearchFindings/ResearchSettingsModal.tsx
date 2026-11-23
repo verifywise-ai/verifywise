@@ -2,12 +2,14 @@ import { useState } from "react";
 import { Stack, Typography } from "@mui/material";
 import StandardModal from "../../../components/Modals/StandardModal";
 import Select from "../../../components/Inputs/Select";
+import Toggle from "../../../components/Inputs/Toggle";
 import CustomizableSkeleton from "../../../components/Skeletons";
 import { textStyles } from "../../../themes/typography";
 import useTranslation from "../../../../application/hooks/useTranslation";
 import { useLLMKeys } from "../../../../application/hooks/useLLMKeys";
 import {
   useSaveVendorResearchSettings,
+  useVendorResearchConfig,
   useVendorResearchSettings,
 } from "../../../../application/hooks/useVendorResearch";
 import { readVendorResearchError } from "../../../../application/repository/vendorResearch.repository";
@@ -49,7 +51,10 @@ interface ResearchSettingsModalProps {
  * call. Each can be left to the default (the newest key for the research, the research key for
  * the analysis). Under the research key it says which search each kind of key gets and what a
  * provider's search costs. The same window sets how often the scheduled scan researches every
- * vendor again (off, weekly, every two weeks or monthly; off until an Admin chooses).
+ * vendor again (off, weekly, every two weeks or monthly; off until an Admin chooses), and whether a
+ * new vendor is researched as soon as it is added (on until an Admin turns it off). When the
+ * deployment turned the automatic research off (VENDOR_RESEARCH_AUTO_RUN), that switch is shown
+ * disabled with a note, and the saved choice is sent back unchanged.
  *
  * The parent mounts it only while it is open, so each opening starts from what is saved. Nothing
  * is offered before the saved choice and the keys are there, and what the person changes is kept
@@ -71,12 +76,14 @@ export default function ResearchSettingsModal({ onClose, onNotify }: ResearchSet
     unread: keysUnread,
     refetch: refetchKeys,
   } = useLLMKeys();
+  const config = useVendorResearchConfig();
   const save = useSaveVendorResearchSettings();
   // What the person changed on screen. A select they did not touch shows what is saved.
   const [changes, setChanges] = useState<{
     research?: KeyChoice;
     analysis?: KeyChoice;
     scan?: ScanChoice;
+    autoResearch?: boolean;
   }>({});
 
   const saved = settings.data;
@@ -92,6 +99,9 @@ export default function ResearchSettingsModal({ onClose, onNotify }: ResearchSet
   const scan: ScanChoice = SCAN_INTERVALS.some((interval) => interval.days === wantedScan)
     ? wantedScan
     : SCAN_OFF;
+  const autoResearch = changes.autoResearch ?? saved?.autoResearchOnCreate ?? true;
+  // Until the config is read the switch is offered: the server applies the deployment's switch.
+  const autoRunAllowed = config.data?.autoRunAllowed ?? true;
 
   const keyOptions = keys.map((key) => ({
     _id: key.id,
@@ -112,6 +122,7 @@ export default function ResearchSettingsModal({ onClose, onNotify }: ResearchSet
         researchKeyId: toKeyId(research),
         analysisKeyId: toKeyId(analysis),
         scanIntervalDays: toScanDays(scan),
+        autoResearchOnCreate: autoResearch,
       });
     } catch (error) {
       // The window stays open with what was chosen. The global error toast reports every failure
@@ -200,6 +211,29 @@ export default function ResearchSettingsModal({ onClose, onNotify }: ResearchSet
             {t(
               "A scheduled scan researches every vendor again on this schedule and tells its assignee when it finds something. It analyses only sources it has not seen before, and it uses the keys above.",
             )}
+          </Typography>
+        </Stack>
+        <Stack sx={{ gap: "8px" }}>
+          <Stack
+            direction="row"
+            sx={{ alignItems: "center", justifyContent: "space-between", gap: "16px" }}
+          >
+            <Typography sx={{ ...textStyles.formLabel, color: "text.primary" }}>
+              {t("Research new vendors automatically")}
+            </Typography>
+            <Toggle
+              ariaLabel={t("Research new vendors automatically")}
+              checked={autoResearch}
+              disabled={!autoRunAllowed}
+              onChange={(event) =>
+                setChanges((current) => ({ ...current, autoResearch: event.target.checked }))
+              }
+            />
+          </Stack>
+          <Typography sx={{ ...textStyles.bodySmall, color: "text.tertiary" }}>
+            {autoRunAllowed
+              ? t("Starts a research run when a vendor is added. Each run uses the keys above.")
+              : t("Automatic research is turned off for this deployment.")}
           </Typography>
         </Stack>
       </Stack>

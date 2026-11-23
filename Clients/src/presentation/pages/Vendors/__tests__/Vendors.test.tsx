@@ -542,7 +542,11 @@ describe("Vendors, research findings on their own tab", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockVendorsData = [{ id: 7, vendor_name: "Acme Cloud" }];
-    research.config.mockResolvedValue({ hasLlmKey: true, autoRunEnabled: true });
+    research.config.mockResolvedValue({
+      hasLlmKey: true,
+      autoRunAllowed: true,
+      autoRunEnabled: true,
+    });
     research.list.mockResolvedValue({ rows: [finding()], total: 1 });
     research.latest.mockResolvedValue(run());
   });
@@ -825,7 +829,11 @@ describe("Vendors, the tabs", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockVendorsData = [{ id: 7, vendor_name: "Acme Cloud" }];
-    research.config.mockResolvedValue({ hasLlmKey: true, autoRunEnabled: true });
+    research.config.mockResolvedValue({
+      hasLlmKey: true,
+      autoRunAllowed: true,
+      autoRunEnabled: true,
+    });
     research.list.mockResolvedValue({ rows: [finding()], total: 1 });
     research.latest.mockResolvedValue(run());
   });

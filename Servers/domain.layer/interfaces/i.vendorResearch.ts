@@ -553,12 +553,16 @@ export interface VendorResearchKeyChoice {
 export const SCAN_INTERVAL_DAYS = [7, 14, 30] as const;
 
 /**
- * What an administrator chose for the research of the organization: the keys, and how often the
- * scheduled scan researches each vendor again. A scan interval that is null means the scan is off,
- * which is what an organization has until it chooses.
+ * What an administrator chose for the research of the organization: the keys, how often the
+ * scheduled scan researches each vendor again, and whether a new vendor is researched as soon as it
+ * is added. A scan interval that is null means the scan is off, which is what an organization has
+ * until it chooses. `autoResearchOnCreate` is true until an administrator turns it off; the
+ * deployment's VENDOR_RESEARCH_AUTO_RUN can still turn the automatic start off for every
+ * organization.
  */
 export interface VendorResearchSettings extends VendorResearchKeyChoice {
   scanIntervalDays: number | null;
+  autoResearchOnCreate: boolean;
 }
 
 /**

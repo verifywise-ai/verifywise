@@ -124,7 +124,7 @@ beforeEach(() => {
   role.canEdit = true;
   role.isAdmin = false;
   formEdits.current = {};
-  mocks.config.mockResolvedValue({ hasLlmKey: true, autoRunEnabled: true });
+  mocks.config.mockResolvedValue({ hasLlmKey: true, autoRunAllowed: true, autoRunEnabled: true });
   listOf([finding(), secondFinding()]);
   mocks.latest.mockResolvedValue(run({ category_summary: FOUR_OUTCOMES }));
 });

@@ -52,8 +52,8 @@ export async function getVendorResearchSettings(): Promise<VendorResearchSetting
 }
 
 /**
- * Both fields are always sent (the server takes a whole choice, and `null` is a choice), and the
- * answer is what it kept. A key that is not the organization's is a 404.
+ * Every field is sent (the server takes a whole choice, and `null` is a choice), and the answer is
+ * what it kept. A key that is not the organization's is a 404.
  */
 export async function saveVendorResearchSettings(
   settings: VendorResearchSettings,

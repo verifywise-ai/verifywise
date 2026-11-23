@@ -13,6 +13,7 @@ vi.mock(
     ...(await importOriginal<
       typeof import("../../../../../application/repository/vendorResearch.repository")
     >()),
+    getVendorResearchConfig: vi.fn(),
     getVendorResearchSettings: vi.fn(),
     saveVendorResearchSettings: vi.fn(),
   }),
@@ -38,6 +39,7 @@ import { invalidateLLMKeyQueries } from "../../../../../application/hooks/useLLM
 import ResearchSettingsModal from "../ResearchSettingsModal";
 
 const mocks = {
+  config: vi.mocked(repository.getVendorResearchConfig),
   settings: vi.mocked(repository.getVendorResearchSettings),
   save: vi.mocked(repository.saveVendorResearchSettings),
   invalidateKeys: vi.mocked(invalidateLLMKeyQueries),
@@ -65,6 +67,7 @@ type SavedSettings = {
   researchKeyId: number | null;
   analysisKeyId: number | null;
   scanIntervalDays: number | null;
+  autoResearchOnCreate: boolean;
 };
 
 const renderModal = () => {
@@ -90,6 +93,9 @@ const choose = async (select: HTMLElement, name: string) => {
 /** The options of the open select, by name. The shared Select writes a space after each name. */
 const optionNames = async () =>
   (await screen.findAllByRole("option")).map((option) => option.textContent?.trim());
+const AUTO_RESEARCH = "Research new vendors automatically";
+const autoResearchOf = (dialog: HTMLElement) =>
+  within(dialog).getByRole("switch", { name: AUTO_RESEARCH }) as HTMLInputElement;
 const clickSave = (dialog: HTMLElement) =>
   userEvent.click(within(dialog).getByRole("button", { name: "Save" }));
 
@@ -100,8 +106,10 @@ beforeEach(() => {
     researchKeyId: null,
     analysisKeyId: null,
     scanIntervalDays: null,
+    autoResearchOnCreate: true,
   });
   mocks.save.mockImplementation(async (settings) => settings);
+  mocks.config.mockResolvedValue({ hasLlmKey: true, autoRunAllowed: true, autoRunEnabled: true });
 });
 
 describe("what the window shows", () => {
@@ -167,6 +175,7 @@ describe("what the window shows", () => {
       researchKeyId: 10,
       analysisKeyId: 20,
       scanIntervalDays: null,
+      autoResearchOnCreate: true,
     });
     renderModal();
     const { research, analysis } = selectsOf(await openWindow());
@@ -203,6 +212,7 @@ describe("what the window shows", () => {
       researchKeyId: null,
       analysisKeyId: null,
       scanIntervalDays: days,
+      autoResearchOnCreate: true,
     });
     renderModal();
     const { scan } = selectsOf(await openWindow());
@@ -226,6 +236,7 @@ describe("what the window shows", () => {
       researchKeyId: null,
       analysisKeyId: null,
       scanIntervalDays: 21,
+      autoResearchOnCreate: true,
     });
     renderModal();
     const { scan } = selectsOf(await openWindow());
@@ -250,6 +261,7 @@ describe("what the window shows", () => {
       researchKeyId: 99,
       analysisKeyId: 98,
       scanIntervalDays: null,
+      autoResearchOnCreate: true,
     });
     renderModal();
     const { research, analysis } = selectsOf(await openWindow());
@@ -301,7 +313,12 @@ describe("while it loads", () => {
 // The keys are read by another request than the settings. When that one fails, the window must
 // not show the saved keys as the default, or saving would write the default over them.
 describe("when the keys cannot be read", () => {
-  const SAVED = { researchKeyId: 20, analysisKeyId: 10, scanIntervalDays: null };
+  const SAVED = {
+    researchKeyId: 20,
+    analysisKeyId: 10,
+    scanIntervalDays: null,
+    autoResearchOnCreate: true,
+  };
 
   it.each([
     ["with no list", [] as LLMKeysModel[]],
@@ -372,6 +389,7 @@ describe("saving", () => {
       researchKeyId: 10,
       analysisKeyId: 20,
       scanIntervalDays: null,
+      autoResearchOnCreate: true,
     });
     expect(onNotify).toHaveBeenCalledWith({
       variant: "success",
@@ -384,6 +402,7 @@ describe("saving", () => {
       researchKeyId: 10,
       analysisKeyId: 20,
       scanIntervalDays: null,
+      autoResearchOnCreate: true,
     });
     const { onClose } = renderModal();
     const dialog = await openWindow();
@@ -398,6 +417,7 @@ describe("saving", () => {
       researchKeyId: null,
       analysisKeyId: null,
       scanIntervalDays: null,
+      autoResearchOnCreate: true,
     });
   });
 
@@ -413,6 +433,7 @@ describe("saving", () => {
       researchKeyId: null,
       analysisKeyId: null,
       scanIntervalDays: 14,
+      autoResearchOnCreate: true,
     });
   });
 
@@ -421,6 +442,7 @@ describe("saving", () => {
       researchKeyId: null,
       analysisKeyId: null,
       scanIntervalDays: 30,
+      autoResearchOnCreate: true,
     });
     const { onClose } = renderModal();
     const dialog = await openWindow();
@@ -433,6 +455,7 @@ describe("saving", () => {
       researchKeyId: null,
       analysisKeyId: null,
       scanIntervalDays: null,
+      autoResearchOnCreate: true,
     });
   });
 
@@ -441,6 +464,7 @@ describe("saving", () => {
       researchKeyId: null,
       analysisKeyId: null,
       scanIntervalDays: 7,
+      autoResearchOnCreate: true,
     });
     const { onClose } = renderModal();
     const dialog = await openWindow();
@@ -453,6 +477,7 @@ describe("saving", () => {
       researchKeyId: 20,
       analysisKeyId: null,
       scanIntervalDays: 7,
+      autoResearchOnCreate: true,
     });
   });
 
@@ -461,6 +486,7 @@ describe("saving", () => {
       researchKeyId: 10,
       analysisKeyId: null,
       scanIntervalDays: null,
+      autoResearchOnCreate: true,
     });
     const { onClose } = renderModal();
     const dialog = await openWindow();
@@ -472,6 +498,7 @@ describe("saving", () => {
       researchKeyId: 10,
       analysisKeyId: null,
       scanIntervalDays: null,
+      autoResearchOnCreate: true,
     });
   });
 
@@ -482,7 +509,12 @@ describe("saving", () => {
     const dialog = await screen.findByRole("dialog", { name: "Research settings" });
     expect(within(dialog).queryByRole("combobox")).not.toBeInTheDocument();
 
-    loading.resolve({ researchKeyId: 10, analysisKeyId: null, scanIntervalDays: null });
+    loading.resolve({
+      researchKeyId: 10,
+      analysisKeyId: null,
+      scanIntervalDays: null,
+      autoResearchOnCreate: true,
+    });
     const { research } = selectsOf(await openWindow());
 
     expect(research).toHaveTextContent(FAST);
@@ -504,7 +536,12 @@ describe("saving", () => {
     expect(mocks.save).toHaveBeenCalledTimes(1);
     expect(onClose).not.toHaveBeenCalled();
 
-    answer.resolve({ researchKeyId: 20, analysisKeyId: null, scanIntervalDays: null });
+    answer.resolve({
+      researchKeyId: 20,
+      analysisKeyId: null,
+      scanIntervalDays: null,
+      autoResearchOnCreate: true,
+    });
     await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1));
   });
 
@@ -548,6 +585,80 @@ describe("saving", () => {
     );
     expect(mocks.invalidateKeys).toHaveBeenCalledTimes(1);
     expect(onClose).not.toHaveBeenCalled();
+  });
+});
+
+describe("researching new vendors automatically", () => {
+  const savedWith = (autoResearchOnCreate: boolean) =>
+    mocks.settings.mockResolvedValue({
+      researchKeyId: null,
+      analysisKeyId: null,
+      scanIntervalDays: null,
+      autoResearchOnCreate,
+    });
+
+  it("is on when nothing has been chosen, and says what it does", async () => {
+    renderModal();
+    const dialog = await openWindow();
+
+    expect(autoResearchOf(dialog)).toBeChecked();
+    expect(autoResearchOf(dialog)).toBeEnabled();
+    expect(dialog).toHaveTextContent(
+      "Starts a research run when a vendor is added. Each run uses the keys above.",
+    );
+  });
+
+  it("shows what is saved", async () => {
+    savedWith(false);
+    renderModal();
+    const dialog = await openWindow();
+
+    await waitFor(() => expect(autoResearchOf(dialog)).not.toBeChecked());
+  });
+
+  it("sends false when it is switched off", async () => {
+    const { onClose } = renderModal();
+    const dialog = await openWindow();
+
+    await userEvent.click(autoResearchOf(dialog));
+    await clickSave(dialog);
+
+    await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1));
+    expect(mocks.save.mock.calls[0][0]).toEqual({
+      researchKeyId: null,
+      analysisKeyId: null,
+      scanIntervalDays: null,
+      autoResearchOnCreate: false,
+    });
+  });
+
+  it("sends the saved choice as it is when only a key was changed", async () => {
+    savedWith(false);
+    const { onClose } = renderModal();
+    const dialog = await openWindow();
+
+    await choose(selectsOf(dialog).research, DEEP);
+    await clickSave(dialog);
+
+    await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1));
+    expect(mocks.save.mock.calls[0][0]).toMatchObject({
+      researchKeyId: 20,
+      autoResearchOnCreate: false,
+    });
+  });
+
+  it("is disabled, with a note, when the deployment turned automatic research off", async () => {
+    mocks.config.mockResolvedValue({
+      hasLlmKey: true,
+      autoRunAllowed: false,
+      autoRunEnabled: false,
+    });
+    renderModal();
+    const dialog = await openWindow();
+
+    await waitFor(() => expect(autoResearchOf(dialog)).toBeDisabled());
+    expect(dialog).toHaveTextContent("Automatic research is turned off for this deployment.");
+    expect(dialog).not.toHaveTextContent("Starts a research run when a vendor is added.");
   });
 });
 

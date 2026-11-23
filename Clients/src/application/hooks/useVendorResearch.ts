@@ -156,14 +156,18 @@ export function useVendorResearchSettings(enabled = true) {
 
 /**
  * Saving puts the choice the server kept into the cache, so that the window opened next reads it
- * at once. A 404 says a chosen key is gone (another Admin deleted it): the list of keys the
- * person chose from is out of date, so it is read again.
+ * at once, and reads the config again, whose `autoRunEnabled` follows the organization's setting.
+ * A 404 says a chosen key is gone (another Admin deleted it): the list of keys the person chose
+ * from is out of date, so it is read again.
  */
 export function useSaveVendorResearchSettings() {
   const queryClient = useQueryClient();
   return useMutation<VendorResearchSettings, APIError, VendorResearchSettings>({
     mutationFn: (settings) => saveVendorResearchSettings(settings),
-    onSuccess: (saved) => queryClient.setQueryData(settingsKey(), saved),
+    onSuccess: (saved) => {
+      queryClient.setQueryData(settingsKey(), saved);
+      void queryClient.invalidateQueries({ queryKey: configKey() });
+    },
     onError: (error) => {
       if (error.status === 404) void invalidateLLMKeyQueries(queryClient);
     },

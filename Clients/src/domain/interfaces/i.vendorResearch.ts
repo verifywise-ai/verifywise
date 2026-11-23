@@ -438,9 +438,15 @@ export interface AcceptFindingBody {
   frameworks?: number[];
 }
 
-/** What the server has set up. Research can run when the organization has an LLM key. */
+/**
+ * What the server has set up. Research can run when the organization has an LLM key.
+ * `autoRunAllowed` is the deployment's switch for the automatic research of a new vendor;
+ * `autoRunEnabled` is whether it happens for this organization, which needs the deployment's switch
+ * and the organization's setting.
+ */
 export interface VendorResearchConfig {
   hasLlmKey: boolean;
+  autoRunAllowed: boolean;
   autoRunEnabled: boolean;
 }
 
@@ -448,12 +454,14 @@ export interface VendorResearchConfig {
  * Which of the organization's LLM keys the research uses, as an Admin chose, and how often the
  * scheduled scan researches the vendors again. `null` leaves a key to the default: the newest key
  * for the research, and the research key for the analysis. For `scanIntervalDays`, `null` is off,
- * and the server takes 7, 14 or 30.
+ * and the server takes 7, 14 or 30. `autoResearchOnCreate` says whether a new vendor is researched
+ * as soon as it is added (on until an Admin turns it off).
  */
 export interface VendorResearchSettings {
   researchKeyId: number | null;
   analysisKeyId: number | null;
   scanIntervalDays: number | null;
+  autoResearchOnCreate: boolean;
 }
 
 /**

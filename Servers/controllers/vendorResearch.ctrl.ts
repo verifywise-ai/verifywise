@@ -431,7 +431,12 @@ export async function getDecisionStats(req: Request, res: Response): Promise<any
   }
 }
 
-/** What the page needs to know to offer research. It carries booleans only, never a key. */
+/**
+ * What the page needs to know to offer research. It carries booleans only, never a key.
+ * `autoRunAllowed` is the deployment's VENDOR_RESEARCH_AUTO_RUN; `autoRunEnabled` is whether a new
+ * vendor of the organization is researched as soon as it is added, which needs both the deployment
+ * and the organization's setting.
+ */
 export async function getResearchConfig(req: Request, res: Response): Promise<any> {
   const functionName = "getResearchConfig";
 
@@ -445,7 +450,10 @@ export async function getResearchConfig(req: Request, res: Response): Promise<an
 
   try {
     const config = getVendorResearchConfig();
-    const llmKeys = await getLLMKeysQuery(req.organizationId!);
+    const [llmKeys, settings] = await Promise.all([
+      getLLMKeysQuery(req.organizationId!),
+      getVendorResearchSettingsQuery(req.organizationId!),
+    ]);
 
     await logSuccess({
       eventType: "Read",
@@ -458,7 +466,8 @@ export async function getResearchConfig(req: Request, res: Response): Promise<an
     return res.status(200).json(
       STATUS_CODE[200]({
         hasLlmKey: llmKeys.length > 0,
-        autoRunEnabled: config.autoRun,
+        autoRunAllowed: config.autoRun,
+        autoRunEnabled: config.autoRun && settings.autoResearchOnCreate,
       }),
     );
   } catch (error) {
@@ -498,6 +507,19 @@ function scanIntervalOf(
   if (given === null) return { ok: true, value: null };
   const offered = (SCAN_INTERVAL_DAYS as readonly unknown[]).includes(given);
   return offered ? { ok: true, value: given as number } : { ok: false };
+}
+
+/**
+ * Whether a new vendor is researched as soon as it is added, in a request body: a boolean, or
+ * `undefined` when the body does not name it, which leaves the stored choice as it is; anything
+ * else is `ok: false`.
+ */
+function autoResearchOf(
+  body: Record<string, unknown>,
+): { ok: true; value: boolean | undefined } | { ok: false } {
+  if (!("autoResearchOnCreate" in body)) return { ok: true, value: undefined };
+  const given = body.autoResearchOnCreate;
+  return typeof given === "boolean" ? { ok: true, value: given } : { ok: false };
 }
 
 /**
@@ -546,7 +568,8 @@ export async function getResearchSettings(req: Request, res: Response): Promise<
  * Stores which of the organization's LLM keys the research and the analysis use, and how often the
  * scheduled scan researches a vendor again. Both key choices are in the body, each a key id or null
  * for the default; a key that is not the organization's is a 404. `scanIntervalDays` is 7, 14, 30
- * or null (off); a body that does not name it leaves it as it is.
+ * or null (off); a body that does not name it leaves it as it is. `autoResearchOnCreate` is a
+ * boolean, and a body that does not name it leaves it as it is too.
  */
 export async function saveResearchSettings(req: Request, res: Response): Promise<any> {
   const functionName = "saveResearchSettings";
@@ -600,6 +623,22 @@ export async function saveResearchSettings(req: Request, res: Response): Promise
       .json(STATUS_CODE[400](req.t!("scanIntervalDays must be 7, 14, 30 or null")));
   }
 
+  const autoResearch = autoResearchOf(body ?? {});
+  if (!autoResearch.ok) {
+    await logFailure({
+      eventType: "Update",
+      description: "refused the automatic research setting of the vendor research: not a boolean",
+      functionName,
+      fileName: FILE_NAME,
+      error: new ValidationException("autoResearchOnCreate must be true or false"),
+      userId: req.userId!,
+      organizationId: req.organizationId!,
+    });
+    return res
+      .status(400)
+      .json(STATUS_CODE[400](req.t!("autoResearchOnCreate must be true or false")));
+  }
+
   try {
     const saved = await saveVendorResearchSettings({
       organizationId: req.organizationId!,
@@ -607,6 +646,7 @@ export async function saveResearchSettings(req: Request, res: Response): Promise
       researchKeyId,
       analysisKeyId,
       scanIntervalDays: scanInterval.value,
+      autoResearchOnCreate: autoResearch.value,
     });
     if (!saved.ok) {
       await logFailure({
