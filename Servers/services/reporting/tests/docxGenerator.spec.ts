@@ -318,19 +318,31 @@ describe("DOCX Generator", () => {
       aiSummaries,
     });
 
+    it("prints a section heading as plain bold text: no shading, no rail, sentence case", async () => {
+      const result = await generateDOCX(
+        withSummaries({ sectionSummaries: {}, recommendedActions }),
+      );
+      const xml = await docxXml(result.content);
+      const paragraph = xml.split("</w:p>").find((p) => p.includes(">Recommended actions</w:t>"));
+      expect(paragraph).toBeDefined();
+      expect(paragraph).toContain("<w:b/>");
+      expect(paragraph).not.toContain("<w:shd");
+      expect(paragraph).not.toContain("<w:pBdr");
+    });
+
     it("renders recommended actions even when the executive summary abstained", async () => {
       const result = await generateDOCX(
         withSummaries({ sectionSummaries: {}, recommendedActions }),
       );
       const text = await docxText(result.content);
 
-      expect(text).toContain("RECOMMENDED ACTIONS");
+      expect(text).toContain("Recommended actions");
       expect(text).toContain("Close the DPIA gap");
       expect(text).toContain("[high · Jane Ops]");
       expect(text).toContain("Refresh vendor attestations");
       expect(text).toContain("[— · Unassigned]");
       expect(text).toContain("1. Recommended actions");
-      expect(text).not.toContain("EXECUTIVE SUMMARY");
+      expect(text).not.toContain("Executive summary");
       expect(text).not.toContain("Compliance gap analysis");
       expect(text).not.toContain("Third-party risk analysis");
     });
@@ -339,7 +351,7 @@ describe("DOCX Generator", () => {
       const result = await generateDOCX(withSummaries({ sectionSummaries: {}, complianceGap }));
       const text = await docxText(result.content);
 
-      expect(text).toContain("COMPLIANCE GAP ANALYSIS");
+      expect(text).toContain("Compliance gap analysis");
       expect(text).toContain("Two clauses lack evidence.");
       expect(text).toContain("SCOPE NOTE");
       expect(text).toContain("Scores reflect stored readiness only.");
@@ -355,7 +367,7 @@ describe("DOCX Generator", () => {
       const result = await generateDOCX(withSummaries({ sectionSummaries: {}, vendorRisk }));
       const text = await docxText(result.content);
 
-      expect(text).toContain("THIRD-PARTY RISK ANALYSIS");
+      expect(text).toContain("Third-party risk analysis");
       expect(text).toContain("One processor has no independent assurance report.");
       expect(text).toContain("Acme Cloud: ");
       expect(text).toContain("No SOC 2 Type II (high)");
@@ -382,11 +394,11 @@ describe("DOCX Generator", () => {
       expect(text).toContain("4. Third-party risk analysis");
 
       // The TOC promises this order; the body must actually follow it.
-      expect(text.indexOf("RECOMMENDED ACTIONS")).toBeLessThan(
-        text.indexOf("COMPLIANCE GAP ANALYSIS"),
+      expect(text.indexOf("Recommended actions")).toBeLessThan(
+        text.indexOf("Compliance gap analysis"),
       );
-      expect(text.indexOf("COMPLIANCE GAP ANALYSIS")).toBeLessThan(
-        text.indexOf("THIRD-PARTY RISK ANALYSIS"),
+      expect(text.indexOf("Compliance gap analysis")).toBeLessThan(
+        text.indexOf("Third-party risk analysis"),
       );
     });
 
@@ -432,9 +444,9 @@ describe("DOCX Generator", () => {
       const result = await generateDOCX(withSummaries({ sectionSummaries: {} }));
       const text = await docxText(result.content);
 
-      expect(text).not.toContain("RECOMMENDED ACTIONS");
-      expect(text).not.toContain("COMPLIANCE GAP ANALYSIS");
-      expect(text).not.toContain("THIRD-PARTY RISK ANALYSIS");
+      expect(text).not.toContain("Recommended actions");
+      expect(text).not.toContain("Compliance gap analysis");
+      expect(text).not.toContain("Third-party risk analysis");
     });
 
     it("renders structured findings with severity, basis, counterfactual and related sections", async () => {
@@ -812,7 +824,8 @@ describe("DOCX Generator", () => {
       const result = await generateDOCX(frameworkData());
       const text = await docxText(result.content);
       expect(text).toContain("1. Compliance &amp; governance");
-      expect(text).toContain("COMPLIANCE &amp; GOVERNANCE");
+      // The heading is its own run; the TOC entry above carries the number.
+      expect(text).toContain("\nCompliance &amp; governance\n");
     });
 
     it("labels the notice for the section", async () => {

@@ -59,27 +59,16 @@ export function createTocEntry(text: string): Paragraph {
 }
 
 /**
- * Create a group header (matches PDF group-header style - uppercase with left border)
+ * Create a section heading (matches the PDF group-header: plain bold text in
+ * sentence case, no shading or rail)
  */
 export function createSectionHeader(title: string): Paragraph {
   return new Paragraph({
     heading: HeadingLevel.HEADING_2,
-    spacing: { before: 400, after: 300 },
-    shading: {
-      fill: COLORS.backgroundAlt,
-      type: ShadingType.CLEAR,
-    },
-    border: {
-      left: {
-        color: COLORS.primary,
-        size: 24,
-        style: BorderStyle.SINGLE,
-        space: 8,
-      },
-    },
+    spacing: { before: 480, after: 240 },
     children: [
       new TextRun({
-        text: title.toUpperCase(),
+        text: title,
         bold: true,
         size: 36, // 18pt
         color: COLORS.textPrimary,

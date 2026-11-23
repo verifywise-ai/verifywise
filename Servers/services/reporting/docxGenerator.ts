@@ -340,7 +340,7 @@ function createExecutiveSummarySection(aiSummaries: AISummaries): (Paragraph | T
     return [];
   }
 
-  elements.push(createSectionHeader("Executive Summary"));
+  elements.push(createSectionHeader("Executive summary"));
   elements.push(...createAIAnalysisBox(aiSummaries.executiveSummary, "AI-Generated Analysis"));
 
   // Key Findings. Prefer the structured list; the flat strings remain the
@@ -432,7 +432,7 @@ function createRecommendedActionsSection(reportData: ReportData): (Paragraph | T
     return [];
   }
 
-  elements.push(createSectionHeader("Recommended Actions"));
+  elements.push(createSectionHeader("Recommended actions"));
   recommendedActions.forEach((a) => {
     elements.push(
       new Paragraph({
@@ -481,7 +481,7 @@ function createComplianceGapSection(reportData: ReportData): (Paragraph | Table)
   if (!gap) return [];
 
   const elements: (Paragraph | Table)[] = [];
-  elements.push(createSectionHeader("Compliance Gap Analysis"));
+  elements.push(createSectionHeader("Compliance gap analysis"));
   elements.push(...createAIAnalysisBox(gap.narrative, "AI-Generated Analysis"));
 
   if (gap.scores_caveat) {
@@ -545,7 +545,7 @@ function createVendorRiskSection(reportData: ReportData): (Paragraph | Table)[] 
   if (!vendorRisk) return [];
 
   const elements: (Paragraph | Table)[] = [];
-  elements.push(createSectionHeader("Third-Party Risk Analysis"));
+  elements.push(createSectionHeader("Third-party risk analysis"));
   elements.push(...createAIAnalysisBox(vendorRisk.narrative, "AI-Generated Analysis"));
   (vendorRisk.concerns ?? []).forEach((c) => {
     elements.push(
@@ -596,7 +596,7 @@ function createRiskAnalysisSection(reportData: ReportData): (Paragraph | Table)[
     return [];
   }
 
-  elements.push(createSectionHeader("Risk Analysis"));
+  elements.push(createSectionHeader("Risk analysis"));
 
   // Project/Use Case Risks
   if (sections.projectRisks) {
@@ -747,7 +747,7 @@ function createComplianceSection(
     return [];
   }
 
-  elements.push(createSectionHeader("Compliance & Governance"));
+  elements.push(createSectionHeader("Compliance & governance"));
 
   // Controls (EU AI Act)
   if (sections.compliance) {

@@ -554,12 +554,9 @@ body {
       --color-primary: #13715B;
     }
 
-    /* Group Header Styles */
+    /* Section headings: plain bold text, sentence case */
     .group-header {
-      background: var(--color-background-alt);
-      padding: 16px 24px;
-      margin: 32px 0 24px 0;
-      border-left: 4px solid var(--color-primary);
+      margin: 32px 0 16px 0;
     }
 
     .group-title {
@@ -567,8 +564,6 @@ body {
       font-weight: 700;
       color: var(--color-text-primary);
       margin: 0;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
     }
 
     .subsection {
@@ -730,7 +725,7 @@ body {
     
     <div class="ai-executive-summary">
       <div class="group-header">
-        <h2 class="group-title">Executive Summary</h2>
+        <h2 class="group-title">Executive summary</h2>
       </div>
       <div class="ai-analysis-box">
         <div class="ai-analysis-label">AI-Generated Analysis</div>
@@ -811,7 +806,7 @@ body {
     
     <div>
       <div class="group-header">
-        <h2 class="group-title">Compliance Gap Analysis</h2>
+        <h2 class="group-title">Compliance gap analysis</h2>
       </div>
       <div class="ai-analysis-box">
         <div class="ai-analysis-label">AI-Generated Analysis</div>
@@ -881,7 +876,7 @@ body {
     <!-- ============================================ -->
     
     <div class="group-header">
-      <h2 class="group-title">Compliance & Governance</h2>
+      <h2 class="group-title">Compliance & governance</h2>
     </div>
 
     <!-- Controls Subsection (EU AI Act) -->

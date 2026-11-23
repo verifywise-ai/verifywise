@@ -45,12 +45,9 @@ const isE23 = typeof e23 !== 'undefined' && !!e23;
       --color-primary: <%= branding.primaryColor || '{{colorBrandPrimary}}' %>;
     }
 
-    /* Group Header Styles */
+    /* Section headings: plain bold text, sentence case */
     .group-header {
-      background: var(--color-background-alt);
-      padding: 16px 24px;
-      margin: 32px 0 24px 0;
-      border-left: 4px solid var(--color-primary);
+      margin: 32px 0 16px 0;
     }
 
     .group-title {
@@ -58,8 +55,6 @@ const isE23 = typeof e23 !== 'undefined' && !!e23;
       font-weight: 700;
       color: var(--color-text-primary);
       margin: 0;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
     }
 
     .subsection {
@@ -250,7 +245,7 @@ const isE23 = typeof e23 !== 'undefined' && !!e23;
     <% if (typeof aiSummaries !== 'undefined' && aiSummaries && aiSummaries.executiveSummary) { %>
     <div class="ai-executive-summary">
       <div class="group-header">
-        <h2 class="group-title">Executive Summary</h2>
+        <h2 class="group-title">Executive summary</h2>
       </div>
       <div class="ai-analysis-box">
         <div class="ai-analysis-label">AI-Generated Analysis</div>
@@ -345,7 +340,7 @@ const isE23 = typeof e23 !== 'undefined' && !!e23;
     <% if (typeof aiSummaries !== 'undefined' && aiSummaries && aiSummaries.complianceGap) { %>
     <div>
       <div class="group-header">
-        <h2 class="group-title">Compliance Gap Analysis</h2>
+        <h2 class="group-title">Compliance gap analysis</h2>
       </div>
       <div class="ai-analysis-box">
         <div class="ai-analysis-label">AI-Generated Analysis</div>
@@ -429,7 +424,7 @@ const isE23 = typeof e23 !== 'undefined' && !!e23;
     <!-- ============================================ -->
     <% if (sections.projectRisks || sections.vendorRisks || sections.modelRisks) { %>
     <div class="group-header">
-      <h2 class="group-title">Risk Analysis</h2>
+      <h2 class="group-title">Risk analysis</h2>
     </div>
 
     <!-- Use Case Risks Subsection -->
@@ -621,7 +616,7 @@ const isE23 = typeof e23 !== 'undefined' && !!e23;
     <!-- ============================================ -->
     <% if (sections.compliance || sections.assessment || sections.clausesAndAnnexes || sections.nistSubcategories || (sections.frameworkRequirements && !isE23)) { %>
     <div class="group-header">
-      <h2 class="group-title">Compliance & Governance</h2>
+      <h2 class="group-title">Compliance & governance</h2>
     </div>
 
     <!-- Controls Subsection (EU AI Act) -->

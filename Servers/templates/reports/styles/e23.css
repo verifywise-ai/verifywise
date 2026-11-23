@@ -45,14 +45,12 @@
 }
 
 /*
- * Section headings: the same box as report-pdf.ejs's group header, here so a
- * page without that inline block (the fix-it list) gets it too.
+ * Section headings: the same plain bold heading as report-pdf.ejs's group
+ * header, here so a page without that inline block (the fix-it list) gets it
+ * too.
  */
 .e23-section .group-header {
-  background: var(--color-background-alt);
-  padding: 16px 24px;
-  margin: 0 0 24px 0;
-  border-left: 4px solid var(--color-primary);
+  margin: 0 0 16px 0;
 }
 
 .e23-section .group-title {
@@ -60,8 +58,6 @@
   font-weight: 700;
   color: var(--color-text-primary);
   margin: 0;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
 }
 
 .e23-paragraph {

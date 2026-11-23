@@ -49,7 +49,8 @@ const between = (text: string, start: string, end?: string): string => {
   return text.slice(from, to < 0 ? undefined : to);
 };
 
-const upper = (s: string) => s.toUpperCase();
+/** A section heading: its own text run, so a TOC entry ("1. Scope and method") does not match. */
+const heading = (s: string) => `\n${s}\n`;
 
 describe("generateDOCX: general reports", () => {
   it("contains no E-23 text and keeps recommended actions", async () => {
@@ -61,7 +62,7 @@ describe("generateDOCX: general reports", () => {
       E23_HEADINGS.signOff,
     ]) {
       expect(text).not.toContain(t);
-      expect(text).not.toContain(upper(t));
+      expect(text).not.toContain(heading(t));
     }
     expect(text).toContain("Assign an owner");
     expect(await headerText(nonKindReportData())).not.toContain(DRAFT_WATERMARK);
@@ -87,15 +88,15 @@ describe("generateDOCX: OSFI E-23 formal report", () => {
   it("renders the sections in spec order", () => {
     const order = [
       E23_REPORT_TITLE,
-      upper(E23_HEADINGS.scope),
-      upper(E23_HEADINGS.glance),
-      upper("Executive Summary"),
-      upper(E23_HEADINGS.completeness),
-      upper(E23_HEADINGS.mrm),
-      upper(E23_HEADINGS.contradictions),
-      upper(E23_HEADINGS.appendix),
+      heading(E23_HEADINGS.scope),
+      heading(E23_HEADINGS.glance),
+      heading("Executive summary"),
+      heading(E23_HEADINGS.completeness),
+      heading(E23_HEADINGS.mrm),
+      heading(E23_HEADINGS.contradictions),
+      heading(E23_HEADINGS.appendix),
       "Analyses not produced",
-      upper(E23_HEADINGS.signOff),
+      heading(E23_HEADINGS.signOff),
     ].map((marker) => examiner.lastIndexOf(marker));
     expect(order.every((i) => i >= 0)).toBe(true);
     expect([...order].sort((a, b) => a - b)).toEqual(order);
@@ -114,27 +115,27 @@ describe("generateDOCX: OSFI E-23 formal report", () => {
     for (const name of ["Credit scorer", "Fraud detector", "Pricing engine", "Legacy scorecard"]) {
       expect(board).not.toContain(name);
     }
-    expect(board).not.toContain(upper(E23_HEADINGS.appendix));
+    expect(board).not.toContain(heading(E23_HEADINGS.appendix));
     expect(board).toContain(COVERAGE_LABELS.checked);
   });
 
   it("shows identical at-a-glance figures to both audiences", () => {
     const glance = (t: string) =>
-      between(t, upper(E23_HEADINGS.glance), upper("Executive Summary"));
+      between(t, heading(E23_HEADINGS.glance), heading("Executive summary"));
     expect(glance(board)).toBe(glance(examiner));
     expect(glance(examiner)).toContain("+3 (was 1 of 83)");
   });
 
   it("prints Not checked for unavailable figures", async () => {
     const text = await partText(e23ReportData({ notOnFile: true, noPrevious: true }));
-    expect(between(text, upper(E23_HEADINGS.glance), upper("Executive Summary"))).toContain(
+    expect(between(text, heading(E23_HEADINGS.glance), heading("Executive summary"))).toContain(
       NOT_CHECKED,
     );
   });
 
   it("puts the draft watermark in the header and Draft in the sign-off", async () => {
     expect(await headerText(e23ReportData())).toContain(DRAFT_WATERMARK);
-    const signOff = between(examiner, upper(E23_HEADINGS.signOff));
+    const signOff = between(examiner, heading(E23_HEADINGS.signOff));
     expect(signOff).toContain(SIGN_OFF_STATEMENT);
     expect(signOff).toContain("Draft");
     expect(signOff).not.toContain("Signature");
@@ -143,7 +144,7 @@ describe("generateDOCX: OSFI E-23 formal report", () => {
   it("prints signature lines and no watermark on a final report", async () => {
     const data = e23ReportData({ isFinal: true, withHeadOfValidation: true });
     expect(await headerText(data)).not.toContain(DRAFT_WATERMARK);
-    const signOff = between(await partText(data), upper(E23_HEADINGS.signOff));
+    const signOff = between(await partText(data), heading(E23_HEADINGS.signOff));
     expect(signOff).toContain("Signature");
     expect(signOff).toContain("Val Head");
   });
@@ -171,9 +172,9 @@ describe("generateDOCX: OSFI E-23 formal report", () => {
   it("keeps a selected section whose data failed, pointing at the notices", async () => {
     const text = await partText(e23ReportData({ mrmFailed: true, withAppendix: true }));
     for (const [start, end] of [
-      [upper(E23_HEADINGS.mrm), upper(E23_HEADINGS.contradictions)],
-      [upper(E23_HEADINGS.contradictions), upper(E23_HEADINGS.appendix)],
-      [upper(E23_HEADINGS.appendix), "Part of these sections could not be read"],
+      [heading(E23_HEADINGS.mrm), heading(E23_HEADINGS.contradictions)],
+      [heading(E23_HEADINGS.contradictions), heading(E23_HEADINGS.appendix)],
+      [heading(E23_HEADINGS.appendix), "Part of these sections could not be read"],
     ]) {
       expect(between(text, start, end)).toContain(SECTION_NOT_COMPLETED);
     }

@@ -105,7 +105,7 @@ describe("report-pdf.ejs: OSFI E-23 formal report", () => {
       'class="cover-title"',
       'id="e23-scope"',
       'id="e23-glance"',
-      "Executive Summary",
+      '<h2 class="group-title">Executive summary</h2>',
       'id="e23-completeness"',
       'id="e23-mrm"',
       'id="e23-contradictions"',

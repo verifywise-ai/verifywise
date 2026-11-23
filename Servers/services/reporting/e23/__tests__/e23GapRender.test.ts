@@ -102,8 +102,8 @@ describe("the e23Gap block in the formal report", () => {
     const result = await generateDOCX(withGap());
     expect(result.success).toBe(true);
     const text = await docxText(result.content);
-    const gapAt = text.lastIndexOf(ANALYSIS_LABELS.e23Gap.toUpperCase());
-    expect(gapAt).toBeGreaterThan(text.lastIndexOf(E23_HEADINGS.contradictions.toUpperCase()));
+    const gapAt = text.lastIndexOf(ANALYSIS_LABELS.e23Gap);
+    expect(gapAt).toBeGreaterThan(text.lastIndexOf(E23_HEADINGS.contradictions));
     expect(text).toContain(POSITION_LABELS["partly consistent"]);
     expect(text).toContain(GAP_NARRATIVE);
   });
