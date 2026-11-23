@@ -9,7 +9,7 @@
 
   <section>
     <h3>Overview</h3>
-    <p>The Vendor Management page consists of two main tabs:</p>
+    <p>The Vendor Management page consists of four tabs:</p>
     <ul>
       <li>
         <strong>Vendors Tab:</strong> Manage vendor information, review status, and assignments
@@ -17,6 +17,14 @@
       <li>
         <strong>Risks Tab:</strong> Track and manage vendor-specific risks with automated risk
         calculations
+      </li>
+      <li>
+        <strong>Research Findings Tab:</strong> Review the risks that the research agent suggested
+        for your vendors and add them to the register or dismiss them
+      </li>
+      <li>
+        <strong>Insights Tab:</strong> See vendor risks on a heat map, and check blast radius,
+        duplicate risks and framework coverage
       </li>
     </ul>
   </section>
@@ -132,6 +140,49 @@
   </section>
 
   <section>
+    <h3>Research Findings Tab</h3>
+    <p>
+      The Research findings tab lists the risks that the research agent found for your vendors from
+      public web sources. The number beside the tab is how many are waiting for a decision. The
+      findings are AI-suggested, so verify them before you accept them.
+    </p>
+    <ul>
+      <li>
+        <strong>Preview:</strong> Opens the vendor risk form filled in with the finding. Save it to
+        add the risk to the register
+      </li>
+      <li><strong>Dismiss:</strong> Removes the finding from the list, with a reason</li>
+      <li>
+        <strong>Vendor filter:</strong> Choose a vendor to see its findings and when it was last
+        researched, and to research it again
+      </li>
+    </ul>
+  </section>
+
+  <section>
+    <h3>Insights Tab</h3>
+    <p>The Insights tab has a report for each view of your vendor risks:</p>
+    <ul>
+      <li>
+        <strong>Heat Map:</strong> Vendor risks by likelihood and severity. Select a cell to open
+        the Risks tab with only the risks in that cell. The other filters of the Risks tab are
+        cleared, so the list holds exactly the risks of the cell
+      </li>
+      <li>
+        <strong>Blast Radius:</strong> How many project risks and use cases inherit from the risks
+        of each vendor
+      </li>
+      <li>
+        <strong>Duplicate Vendor Risks:</strong> Risks of the same vendor that look like one risk
+        entered twice
+      </li>
+      <li>
+        <strong>Framework Coverage:</strong> Vendor risks that are not mapped to a framework yet
+      </li>
+    </ul>
+  </section>
+
+  <section>
     <h3>Adding New Vendor Risks</h3>
     <p>To add a new risk associated with a vendor:</p>
     <ol>
@@ -147,15 +198,15 @@
             <strong>Action Owner:</strong> Team member responsible for managing this risk (required)
           </li>
           <li>
-            <strong>Risk Description:</strong> Detailed description of the risk (required, max 256
+            <strong>Risk Description:</strong> Detailed description of the risk (required, max 500
             characters)
           </li>
           <li>
             <strong>Impact Description:</strong> Description of potential impact if risk occurs
-            (required, max 256 characters)
+            (required, max 500 characters)
           </li>
           <li>
-            <strong>Action Plan:</strong> Steps to mitigate or manage this risk (required, max 256
+            <strong>Action Plan:</strong> Steps to mitigate or manage this risk (required, max 1000
             characters)
           </li>
         </ul>

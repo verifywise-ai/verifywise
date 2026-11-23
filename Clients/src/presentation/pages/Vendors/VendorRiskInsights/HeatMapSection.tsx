@@ -1,9 +1,7 @@
 import { useMemo } from "react";
-import { Typography } from "@mui/material";
 import RiskHeatMap from "../../../components/RiskVisualization/RiskHeatMap";
 import type { HeatMapCellRef, HeatMapRisk } from "../../../types/interfaces/i.risk";
 import type { VendorRisk } from "../../../../domain/types/VendorRisk";
-import { captionSx } from "../../RiskInheritanceGraph/DismissalAnalytics/styles";
 
 const LIKELIHOOD_ORDER = ["rare", "unlikely", "possible", "likely", "almost certain"];
 const SEVERITY_ORDER = ["negligible", "minor", "moderate", "major", "catastrophic"];
@@ -32,7 +30,8 @@ interface HeatMapSectionProps {
 
 /**
  * Vendor risks on the same likelihood × severity grid the project risks view
- * uses. Selecting a cell filters the table below; selecting it again clears.
+ * uses. Selecting a cell filters the register on the Risks tab (the page takes
+ * the reader there); selecting it again clears the filter.
  */
 export default function HeatMapSection({ risks, selectedCell, onSelectCell }: HeatMapSectionProps) {
   const plotted = useMemo<HeatMapRisk[]>(() => {
@@ -51,12 +50,9 @@ export default function HeatMapSection({ risks, selectedCell, onSelectCell }: He
     return out;
   }, [risks]);
 
+  // The panel's tab description says what a cell does; no second caption here.
   return (
     <>
-      <Typography sx={captionSx}>
-        Each cell counts vendor risks by likelihood and severity. Select a cell to filter the table
-        below, and select it again to show every risk.
-      </Typography>
       <RiskHeatMap
         risks={plotted}
         selectedCell={selectedCell}

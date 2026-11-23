@@ -71,6 +71,50 @@ test.describe("Vendors Page", () => {
     await expect(page).toHaveURL(/\/vendors$/, { timeout: 10_000 });
   });
 
+  test("has Research findings and Insights tabs beside Vendors and Risks", async ({
+    authedPage: page,
+  }) => {
+    await page.goto("/vendors");
+
+    await expect(page.getByRole("tab", { name: /^research findings/i })).toBeVisible({
+      timeout: 10_000,
+    });
+    await expect(page.getByRole("tab", { name: /^insights/i })).toBeVisible();
+  });
+
+  test("clicking Research findings tab navigates to /vendors/research-findings", async ({
+    authedPage: page,
+  }) => {
+    await page.goto("/vendors");
+    const findingsTab = page.getByRole("tab", { name: /^research findings/i });
+    await expect(findingsTab).toBeVisible({ timeout: 10_000 });
+    await findingsTab.click();
+    await expect(page).toHaveURL(/\/vendors\/research-findings/, { timeout: 10_000 });
+    // Not found by name again: while the pointer rests on a tab, its tooltip is open and the tab's
+    // accessible name is the tooltip's text, so the name locator above no longer matches it.
+    await expect(page.getByRole("tab", { selected: true })).toContainText(/research findings/i);
+  });
+
+  test("clicking Insights tab navigates to /vendors/insights", async ({ authedPage: page }) => {
+    await page.goto("/vendors");
+    const insightsTab = page.getByRole("tab", { name: /^insights/i });
+    await expect(insightsTab).toBeVisible({ timeout: 10_000 });
+    await insightsTab.click();
+    await expect(page).toHaveURL(/\/vendors\/insights/, { timeout: 10_000 });
+    // Not found by name again: see the Research findings tab above. The Insights page has a section
+    // tab bar of its own with a selected tab, so take the first selected tab: the page's own bar.
+    await expect(page.getByRole("tab", { selected: true }).first()).toContainText(/insights/i);
+  });
+
+  test("a notification link to the Risks tab with findings lands on the Research findings tab", async ({
+    authedPage: page,
+  }) => {
+    await page.goto("/vendors/risks?findingsVendorId=1");
+    await expect(page).toHaveURL(/\/vendors\/research-findings\?findingsVendorId=1/, {
+      timeout: 10_000,
+    });
+  });
+
   // --- Tier 2: Search & Filter ---
 
   test("searching for nonexistent vendor filters results", async ({ authedPage: page }) => {

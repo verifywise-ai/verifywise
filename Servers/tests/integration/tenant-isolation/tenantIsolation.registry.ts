@@ -228,6 +228,46 @@ export const tenantIsolationRegistry: IsolationEntity[] = [
     testFile: "eu-ai-act-classifications.isolation.test.ts",
   },
   {
+    name: "vendor_research_runs",
+    tables: ["vendor_research_runs"],
+    baseRoute: "/api/v1/vendors/:id/research",
+  },
+  {
+    name: "vendor_research_settings",
+    tables: ["vendor_research_settings"],
+    baseRoute: "/api/v1/vendor-research/settings",
+  },
+  // No route of its own: the research pipeline writes it and the scheduled scan reads it.
+  {
+    name: "vendor_research_sources",
+    tables: ["vendor_research_sources"],
+    baseRoute: "/api/v1/vendors/:id/research",
+  },
+  // No route of its own: the research pipeline writes it and reads it back at the next run.
+  {
+    name: "vendor_research_snapshots",
+    tables: ["vendor_research_snapshots"],
+    baseRoute: "/api/v1/vendors/:id/research",
+  },
+  // No route of its own: the worker writes it when a run starts, and the start of a run reads it
+  // (the daily cap). It holds no vendor data and outlives the run's vendor.
+  {
+    name: "vendor_research_run_ledger",
+    tables: ["vendor_research_run_ledger"],
+    baseRoute: "/api/v1/vendors/:id/research",
+  },
+  // No route of its own: the research pipeline writes it.
+  {
+    name: "vendor_vrdb_matches",
+    tables: ["vendor_vrdb_matches"],
+    baseRoute: "/api/v1/vendors/:id/research",
+  },
+  {
+    name: "vendor_risk_findings",
+    tables: ["vendor_risk_findings"],
+    baseRoute: "/api/v1/vendor-risk-findings",
+  },
+  {
     // AI Detection review decisions kept per repository, and what was done with
     // a scan's suggested risks. Routes are nested under a scan, so a hand-written file covers them.
     name: "ai_detection_decisions",

@@ -72,7 +72,8 @@ export const getAllVendorsQuery = async (organizationId: number): Promise<IVendo
 };
 
 /**
- * @param options.transaction read on this transaction.
+ * @param options.transaction read on this transaction. When the caller holds a transaction, pass
+ *   it: the query then runs on its connection instead of taking a second one from the pool.
  * @param options.forUpdate lock the vendor row (SELECT ... FOR UPDATE) until
  *   the transaction ends; requires options.transaction.
  */
@@ -347,6 +348,20 @@ export const createNewVendorQuery = async (
     past_issues: replacements.past_issues,
     regulatory_exposure: replacements.regulatory_exposure,
   });
+  // The other names and the identifiers are optional
+  for (const field of [
+    "other_names",
+    "country",
+    "registration_number",
+    "lei",
+    "sec_cik",
+  ] as const) {
+    if (vendor[field] !== undefined) {
+      fields.push(field);
+      values.push(field);
+      replacements[field] = vendor[field];
+    }
+  }
 
   const fieldsList = fields.join(", ");
   const valuesList = values.map((v) => `:${v}`).join(", ");
@@ -463,6 +478,11 @@ export const updateVendorByIdQuery = async (
     "business_criticality",
     "past_issues",
     "regulatory_exposure",
+    "other_names",
+    "country",
+    "registration_number",
+    "lei",
+    "sec_cik",
   ].filter((f) => {
     // For review and scorecard fields, allow undefined or null to be updated (to clear the field)
     // For other required fields, only update if they have a value
@@ -472,6 +492,12 @@ export const updateVendorByIdQuery = async (
       "business_criticality",
       "past_issues",
       "regulatory_exposure",
+      // Not scorecard answers, but a person clears them the same way: by sending them empty.
+      "other_names",
+      "country",
+      "registration_number",
+      "lei",
+      "sec_cik",
     ].includes(f);
     const value = vendor[f as keyof IVendor];
 

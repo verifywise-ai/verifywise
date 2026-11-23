@@ -51,6 +51,14 @@ export function useLLMKeys() {
     isFetching: query.isFetching,
     isError: query.isError,
     errorUpdatedAt: query.errorUpdatedAt,
+    // True while there is no list that was read: before the first answer, after a failure, and
+    // while a list that could not be read is asked for again (the query is pending then, so
+    // `loading`, which settles at the first answer, and `isError` are both false). A screen that
+    // saves something chosen from the list waits for this to be false: an empty list is then a
+    // real one.
+    unread: hasOrganization && !query.isSuccess,
+    // For a screen that offers to read the list again after it could not be read.
+    refetch: query.refetch,
   };
 }
 

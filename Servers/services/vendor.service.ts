@@ -25,6 +25,7 @@ import {
 } from "../utils/vendorChangeHistory.utils";
 import { trackEntityChanges } from "../utils/changeHistory.base.utils";
 import { calculateVendorRiskScore } from "../utils/vendorScorecard.utils";
+import { withNormalizedIdentifiers } from "../utils/validations/vendorValidation.utils";
 import { notifyUserAssigned } from "./inAppNotification.service";
 import { triggerVendorOnboarding } from "./workflows/triggers";
 import { notifyVendorRiskCandidates } from "./riskLinks/vendorCandidates";
@@ -54,6 +55,15 @@ export interface VendorInput {
   business_criticality?: string;
   past_issues?: string;
   regulatory_exposure?: string;
+  /**
+   * The other names and the identifiers: only /api/v1 takes them, so the
+   * legacy routes drop them first (withoutV1OnlyVendorFields).
+   */
+  other_names?: string | null;
+  country?: string | null;
+  registration_number?: string | null;
+  lei?: string | null;
+  sec_cik?: string | null;
 }
 
 /**
@@ -145,6 +155,15 @@ export async function createVendor(
       fields.business_criticality,
       fields.past_issues,
       fields.regulatory_exposure,
+      // The score is computed on insert (createNewVendorQuery), never taken from the input.
+      undefined,
+      fields.other_names,
+      {
+        country: fields.country,
+        registration_number: fields.registration_number,
+        lei: fields.lei,
+        sec_cik: fields.sec_cik,
+      },
     );
     await vendorModel.validateVendorData();
     // Demo restrictions.
@@ -163,7 +182,8 @@ export async function createVendor(
         actor.userId,
         actor.organizationId,
         {
-          ...fields,
+          // The identifiers in the form they are stored.
+          ...withNormalizedIdentifiers(fields),
           risk_score: created.risk_score,
           // The links written (visible use cases only), none if empty.
           projects: created.projects?.length ? created.projects : undefined,
@@ -239,7 +259,8 @@ export async function updateVendor(
       "vendor",
       vendorModel,
       {
-        ...fields,
+        // The identifiers in the form they are stored.
+        ...withNormalizedIdentifiers(fields),
         projects: undefined,
         risk_score: calculateVendorRiskScore({
           data_sensitivity: answer("data_sensitivity"),
@@ -270,6 +291,11 @@ export async function updateVendor(
       business_criticality: fields.business_criticality,
       past_issues: fields.past_issues,
       regulatory_exposure: fields.regulatory_exposure,
+      other_names: fields.other_names,
+      country: fields.country,
+      registration_number: fields.registration_number,
+      lei: fields.lei,
+      sec_cik: fields.sec_cik,
     });
 
     const updated = await updateVendorByIdQuery(

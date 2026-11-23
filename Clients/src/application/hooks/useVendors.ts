@@ -8,6 +8,7 @@ import {
   deleteVendor,
 } from "../repository/vendor.repository";
 import { VendorModel } from "../../domain/models/Common/vendor/vendor.model";
+import { VENDOR_RESEARCH_KEY } from "./useVendorResearch";
 import { VENDOR_INSIGHTS_KEY } from "./useRiskLinks";
 import { vendorRiskQueryKeys } from "./useVendorRisks";
 
@@ -118,6 +119,8 @@ export const useDeleteVendor = () => {
     onSuccess: () => {
       // Invalidate and refetch vendor lists; the vendor's risks went with it.
       queryClient.invalidateQueries({ queryKey: vendorQueryKeys.lists() });
+      // The findings and the runs of the vendor go with it, and the Research findings tab counts them.
+      queryClient.invalidateQueries({ queryKey: VENDOR_RESEARCH_KEY });
       queryClient.invalidateQueries({ queryKey: vendorRiskQueryKeys.lists() });
       queryClient.invalidateQueries({ queryKey: VENDOR_INSIGHTS_KEY });
     },

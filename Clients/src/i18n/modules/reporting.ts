@@ -71,6 +71,8 @@ export const de: Record<string, string> = {
     "Was dieser Bericht abdeckt und für wen er gedacht ist",
   "Word (DOCX)": "Word (DOCX)",
   "You haven&apos;t created any templates yet.": "Sie haben noch keine Vorlagen erstellt.",
+  "Want a report? We'll create one using the info from your Compliance, Assessment, and Vendor/Risk sections.":
+    "Möchten Sie einen Bericht? Wir erstellen einen anhand der Informationen aus Ihren Bereichen Compliance, Beurteilung und Anbieter/Risiko.",
   "An OSFI E-23 report covers the whole organization.":
     "Ein OSFI-E-23-Bericht deckt die gesamte Organisation ab.",
   "Reporting period:": "Berichtszeitraum:",
@@ -150,6 +152,8 @@ export const fr: Record<string, string> = {
   "What this report covers and who it is for": "Ce que couvre ce rapport et à qui il est destiné",
   "Word (DOCX)": "Word (DOCX)",
   "You haven&apos;t created any templates yet.": "Vous n'avez encore créé aucun modèle.",
+  "Want a report? We'll create one using the info from your Compliance, Assessment, and Vendor/Risk sections.":
+    "Vous voulez un rapport ? Nous en créerons un à partir des informations de vos sections Conformité, Évaluation et Fournisseurs/Risques.",
   "An OSFI E-23 report covers the whole organization.":
     "Un rapport OSFI E-23 couvre l'ensemble de l'organisation.",
   "Reporting period:": "Période de déclaration :",
@@ -230,6 +234,8 @@ export const es: Record<string, string> = {
   "What this report covers and who it is for": "Qué abarca este informe y a quién está dirigido",
   "Word (DOCX)": "Word (DOCX)",
   "You haven&apos;t created any templates yet.": "Aún no ha creado ninguna plantilla.",
+  "Want a report? We'll create one using the info from your Compliance, Assessment, and Vendor/Risk sections.":
+    "¿Desea un informe? Crearemos uno con la información de sus secciones de Cumplimiento, Evaluación y Proveedores/Riesgos.",
   "An OSFI E-23 report covers the whole organization.":
     "Un informe OSFI E-23 abarca toda la organización.",
   "Reporting period:": "Periodo del informe:",

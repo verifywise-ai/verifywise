@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import "./index.css";
-import { Box, SelectChangeEvent, Stack, useTheme, Fade } from "@mui/material";
+import { Box, SelectChangeEvent, Stack, Fade } from "@mui/material";
 import { useLocation, useNavigate, useSearchParams } from "react-router";
 import TableWithPlaceholder from "../../components/Table/WithPlaceholder/index";
 import RiskTable from "../../components/Table/RisksTable";
@@ -29,7 +29,7 @@ import { CustomizableButton } from "../../components/button/customizable-button"
 import CustomizableSkeleton from "../../components/Skeletons";
 import CustomizableToast from "../../components/Toast";
 import { StatusTileCards, StatusTileItem } from "../../components/Cards/StatusTileCards";
-import useVendorRisks from "../../../application/hooks/useVendorRisks";
+import useVendorRisks, { vendorRiskQueryKeys } from "../../../application/hooks/useVendorRisks";
 import Select from "../../components/Inputs/Select";
 import { useCanCheck } from "../../../application/hooks/useCan";
 import SearchBox from "../../components/Search/SearchBox";
@@ -62,9 +62,25 @@ import { Project } from "../../../domain/types/Project";
 import { useQueryClient } from "@tanstack/react-query";
 import { useVendorExposure, VENDOR_INSIGHTS_KEY } from "../../../application/hooks/useRiskLinks";
 import type { HeatMapCellRef } from "../../types/interfaces/i.risk";
+import type { ResearchAlert } from "../../../application/utils/vendorResearchAlerts";
+import VendorResearchFindings from "./VendorResearchFindings";
 import VendorRiskInsights from "./VendorRiskInsights";
 import { matchesHeatCell } from "./VendorRiskInsights/HeatMapSection";
+import HeatCellNotice from "./VendorRiskInsights/HeatCellNotice";
+import { usePendingFindingsCount } from "../../../application/hooks/useVendorResearch";
 import ListStateWrapper from "../../components/ListStateWrapper";
+import {
+  TAB_FINDINGS,
+  TAB_DESCRIPTIONS,
+  TAB_HEADERS,
+  TAB_INSIGHTS,
+  TAB_PATHS,
+  TAB_RISKS,
+  TAB_TEXT,
+  TAB_VENDORS,
+  tabOfPath,
+} from "./tabs";
+import TabDescription from "./TabDescription";
 import { chartTheme } from "../../themes/chartTheme";
 import {
   VENDOR_RISK_LEVEL_LABELS,
@@ -126,11 +142,11 @@ const VENDOR_RISKS_TABLE_COLUMNS: ColumnConfig<VendorRiskColumnKey>[] = [
 ];
 
 const Vendors = () => {
-  const theme = useTheme();
   const location = useLocation();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const hasProcessedUrlParam = useRef(false);
+  const handledLink = useRef<string | null>(null);
+  const linkReads = useRef(0);
   const [isOpen, setIsOpen] = useState(false);
   const [isRiskModalOpen, setIsRiskModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -171,18 +187,24 @@ const Vendors = () => {
   // Selected risk level for card filtering
   const [selectedRiskLevel, setSelectedRiskLevel] = useState<string | null>(null);
   const [heatCell, setHeatCell] = useState<HeatMapCellRef | null>(null);
+  // Whether the notice of a heat map cell takes the focus when it opens: only when the reader came
+  // from choosing the cell, not when they open the Risks tab by hand.
+  const [focusNotice, setFocusNotice] = useState(false);
+  // Where the focus goes when the notice is dismissed with its own link: that link is removed with
+  // the notice, and the focus would fall to the page.
+  const registerRegion = useRef<HTMLDivElement>(null);
   const [riskModalTab, setRiskModalTab] = useState<"details" | "linked-risks">("details");
   const queryClient = useQueryClient();
 
-  const currentPath = location.pathname;
-  const isRisksTab = currentPath.includes("/vendors/risks");
+  const value = tabOfPath(location.pathname);
+  const isRisksTab = value === TAB_RISKS;
 
   const { data: exposure } = useVendorExposure(isRisksTab);
   const exposureById = useMemo(
     () => new Map((exposure?.risks ?? []).map((risk) => [risk.vendor_risk_id, risk])),
     [exposure],
   );
-  const value = isRisksTab ? "2" : "1";
+  const pendingFindings = usePendingFindingsCount(value);
 
   // TanStack Query hooks
   const { data: projects = [] } = useProjects();
@@ -196,22 +218,29 @@ const Vendors = () => {
     // The vendor list renders its own inline error state.
     { suppressGlobalErrorToast: true },
   );
-  // Every vendor, whatever the Vendors tab filters: the Risks tab names the
-  // vendor of each risk and offers all vendors in its modal. Shares the
-  // cached list when the Vendors tab isn't filtered by use case.
+  // Every vendor, whatever the Vendors tab filters: the Risks tab names the vendor of each risk and
+  // offers all vendors in its modal, and the research findings, which are not filtered by use case,
+  // read it for their section and its preview form. Shares the cached list when the Vendors tab
+  // isn't filtered by use case.
   const { data: allVendors = [], isLoading: isAllVendorsLoading } = useVendors(
     { projectId: "all" },
     { suppressGlobalErrorToast: true },
   );
-  const { vendorRisksSummary, refetchVendorRisks, vendorRisks, loadingVendorRisks } =
+  const { vendorRisksSummary, vendorRisks, loadingVendorRisks } = useVendorRisks({
+    projectId: riskProjectId,
+    vendorId: "all",
+    filter: filterStatus,
+  });
+  // Every active vendor risk, not what the register is narrowed to: the insights plot them (the use
+  // case and "Risk status" controls are on the Risks tab, and the reports beside the heat map read
+  // all of them too), and the Vendors tab counts each vendor's. With the register on its defaults
+  // this is the very same read.
+  const { vendorRisks: activeVendorRisks, loadingVendorRisks: loadingInsightRisks } =
     useVendorRisks({
-      projectId: riskProjectId,
+      projectId: "all",
       vendorId: "all",
-      filter: filterStatus,
+      filter: "active",
     });
-  // The Vendors tab counts each vendor's active risks, whatever the Risks tab
-  // filters by status or use case.
-  const { vendorRisks: activeVendorRisks } = useVendorRisks({ filter: "active" });
   const vendorRiskCounts = useMemo(
     () => vendorRiskCountByVendor(activeVendorRisks),
     [activeVendorRisks],
@@ -220,9 +249,10 @@ const Vendors = () => {
   // Saving, deleting or re-assigning a vendor risk changes its reach, its
   // duplicates and its coverage, so the insights refresh with the list.
   const refreshVendorRisks = useCallback(async () => {
-    await refetchVendorRisks();
+    // Every read of the register: the one the Risks tab shows and the one the insights plot.
+    await queryClient.invalidateQueries({ queryKey: vendorRiskQueryKeys.all });
     await queryClient.invalidateQueries({ queryKey: VENDOR_INSIGHTS_KEY });
-  }, [refetchVendorRisks, queryClient]);
+  }, [queryClient]);
 
   // FilterBy - Dynamic options generators for Vendors tab
   const getUniqueVendorAssignees = useCallback(() => {
@@ -356,8 +386,8 @@ const Vendors = () => {
   const {
     filterData: filterVendorData,
     handleFilterChange: handleVendorFilterChangeBase,
-    conditions: vendorFilterConditions,
-    logic: vendorFilterLogic,
+    conditions: vendorConditions,
+    logic: vendorLogic,
   } = useFilterBy<VendorModel>(getVendorFieldValue);
 
   // Wrapper to extract project_id from filter conditions and update API filter
@@ -486,8 +516,8 @@ const Vendors = () => {
   const {
     filterData: filterVendorRiskData,
     handleFilterChange: handleVendorRiskFilterChangeBase,
-    conditions: vendorRiskFilterConditions,
-    logic: vendorRiskFilterLogic,
+    conditions: vendorRiskConditions,
+    logic: vendorRiskLogic,
   } = useFilterBy<any>(getVendorRiskFieldValue);
 
   // Wrapper to extract project_id from filter conditions and update API filter for vendor risks
@@ -507,7 +537,7 @@ const Vendors = () => {
         const c = list.find((condition) => condition.columnId === "risk_level");
         return c ? `${c.operator}|${c.value}` : "";
       };
-      if (levelOf(conditions) !== levelOf(vendorRiskFilterConditions)) {
+      if (levelOf(conditions) !== levelOf(vendorRiskConditions)) {
         const riskLevelCondition = conditions.find((c) => c.columnId === "risk_level");
         setSelectedRiskLevel(
           riskLevelCondition?.operator === "is" && riskLevelCondition.value
@@ -519,7 +549,7 @@ const Vendors = () => {
       // Pass to base handler for client-side filtering
       handleVendorRiskFilterChangeBase(conditions, logic);
     },
-    [vendorRiskFilterConditions, handleVendorRiskFilterChangeBase],
+    [vendorRiskConditions, handleVendorRiskFilterChangeBase],
   );
 
   // Handle risk card click to filter vendor risks by risk level
@@ -553,6 +583,23 @@ const Vendors = () => {
   } | null>(null);
   const [showAlert, setShowAlert] = useState(false);
 
+  // The page shows its alert through a Fade that only opens while `showAlert` is true, and only
+  // an info alert turns that on (the effect below). So a message from the research section opens
+  // the Fade itself, whatever its variant, and takes itself down again after a few seconds.
+  const researchAlertTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  useEffect(() => () => clearTimeout(researchAlertTimer.current), []);
+  const handleResearchNotify = useCallback((next: ResearchAlert) => {
+    clearTimeout(researchAlertTimer.current);
+    setAlert(next);
+    setShowAlert(true);
+    if (next.variant !== "info") {
+      researchAlertTimer.current = setTimeout(() => {
+        setShowAlert(false);
+        researchAlertTimer.current = setTimeout(() => setAlert(null), 300);
+      }, 3000);
+    }
+  }, []);
+
   // Auto-dismiss info alert after 3 seconds with fade animation
   useEffect(() => {
     if (alert && alert.variant === "info") {
@@ -582,12 +629,17 @@ const Vendors = () => {
   };
 
   const handleChange = (_: React.SyntheticEvent, newValue: string) => {
-    if (newValue === "1") {
-      navigate("/vendors");
-    } else if (newValue === "2") {
-      navigate("/vendors/risks");
-    }
+    const path = TAB_PATHS[newValue];
+    if (path) navigate(path);
   };
+
+  // A notification written before the findings had a tab of their own links to the Risks tab with
+  // the vendor in the URL. It is taken to the findings, with the rest of the URL as it was.
+  useEffect(() => {
+    if (isRisksTab && searchParams.has("findingsVendorId")) {
+      navigate({ pathname: TAB_PATHS[TAB_FINDINGS], search: location.search }, { replace: true });
+    }
+  }, [isRisksTab, searchParams, location.search, navigate]);
 
   useEffect(() => {
     if (allVisible) {
@@ -595,45 +647,69 @@ const Vendors = () => {
     }
   }, [allVisible]);
 
-  // Handle vendorId and riskId URL params to open edit modal from Wise Search
+  // A link that names a vendor or a risk (Wise Search, the activity feed) opens it over the page.
+  // The effect runs again whenever the URL or the load state changes, so `handledLink` holds the
+  // link that was taken up, and the same link is not read twice. It is let go of once the URL no
+  // longer names one, which is where every outcome of the read ends: the link that comes next, the
+  // same one or another, is a new one. A link that waits for the vendors to load is not taken up yet.
+  // A link can be followed while the read of the one before it is on its way, and the reads are not
+  // answered in the order they were asked: `linkReads` numbers them, and the answer of a read that a
+  // later link has replaced is dropped, or it would open its vendor over the later link's.
   useEffect(() => {
-    if (hasProcessedUrlParam.current || isVendorsLoading) return;
-
     const vendorId = searchParams.get("vendorId");
     const riskId = searchParams.get("riskId");
+    const link = vendorId ? `vendor:${vendorId}` : riskId ? `risk:${riskId}` : null;
+
+    if (link === null) {
+      handledLink.current = null;
+      return;
+    }
+    if (isVendorsLoading || handledLink.current === link) return;
+    handledLink.current = link;
+    linkReads.current += 1;
+    const read = linkReads.current;
+    const isLatest = () => read === linkReads.current;
 
     if (vendorId) {
-      hasProcessedUrlParam.current = true;
       // Fetch vendor and open edit modal
       getVendorById({ id: Number(vendorId) })
         .then((response) => {
+          if (!isLatest()) return;
           if (response?.data) {
             setSelectedVendor(response.data);
             setIsOpen(true);
-            setSearchParams({}, { replace: true });
           }
+          // Whether or not a vendor came back: the query is what names the link, and it is what
+          // would hold the next one back.
+          setSearchParams({}, { replace: true });
         })
         .catch((err) => {
           console.error("Error fetching vendor from URL param:", err);
+          if (!isLatest()) return;
           setSearchParams({}, { replace: true });
         });
     } else if (riskId) {
-      hasProcessedUrlParam.current = true;
       // Switch to risks tab and fetch risk
       if (!isRisksTab) {
-        navigate("/vendors/risks", { replace: true });
+        navigate(TAB_PATHS[TAB_RISKS], { replace: true });
       }
       getVendorRiskById({ id: Number(riskId) })
         .then((response) => {
+          if (!isLatest()) return;
           if (response?.data) {
             setSelectedRisk(response.data);
             setIsRiskModalOpen(true);
-            setSearchParams({}, { replace: true });
           }
+          // Whether or not a risk came back: on the Risks route no tab was switched above, so this
+          // is the only thing that clears the query. Not setSearchParams({}): it keeps the path of
+          // the render the effect ran in, which for a link to /vendors?riskId= is the Vendors tab,
+          // not the Risks tab navigated to above.
+          navigate(TAB_PATHS[TAB_RISKS], { replace: true });
         })
         .catch((err) => {
           console.error("Error fetching vendor risk from URL param:", err);
-          setSearchParams({}, { replace: true });
+          if (!isLatest()) return;
+          navigate(TAB_PATHS[TAB_RISKS], { replace: true });
         });
     }
   }, [searchParams, isVendorsLoading, isRisksTab, navigate, setSearchParams]);
@@ -875,19 +951,23 @@ const Vendors = () => {
     return filtered;
   }, [filterVendorRiskData, vendorRisks, selectedRiskLevel, heatCell, risksSearchTerm]);
 
-  const handleHeatCell = useCallback((cell: HeatMapCellRef | null) => {
+  // The register is on the Risks tab, so choosing a cell of the heat map on the Insights tab takes
+  // the reader there. The heat map is of every active risk, so the register comes up with nothing
+  // else narrowing it (a use case, "Risk status", a filter, the search, a summary
+  // card): otherwise it would list fewer risks than the cell holds, and the controls of the
+  // toolbar, which start blank when the Risks tab opens, would not show why. Focus goes to the
+  // notice that says a cell is filtering the register, since the cell the reader chose is gone.
+  const handleHeatCell = (cell: HeatMapCellRef | null) => {
     setHeatCell(cell);
-    if (cell) {
-      setAlert({
-        variant: "info",
-        title: "Filtering by heat map cell",
-        body: "The table now shows only vendor risks in the selected cell. Select the cell again to see all risks.",
-      });
-    } else {
-      setAlert(null);
-      setShowAlert(false);
-    }
-  }, []);
+    if (!cell) return;
+    handleVendorRiskFilterChange([], "and");
+    // A summary card is not a filter condition, so emptying the filter does not let go of it.
+    setSelectedRiskLevel(null);
+    setFilterStatus("active");
+    setRisksSearchTerm("");
+    setFocusNotice(true);
+    navigate(TAB_PATHS[TAB_RISKS]);
+  };
 
   // Filter vendors using FilterBy and search
   const filteredVendors = useMemo(() => {
@@ -970,10 +1050,10 @@ const Vendors = () => {
 
   // A search or filter that hides everything says so, instead of the
   // first-run empty state.
-  const isVendorListFiltered = !!searchQuery.trim() || (vendorFilterConditions?.length ?? 0) > 0;
+  const isVendorListFiltered = !!searchQuery.trim() || (vendorConditions?.length ?? 0) > 0;
   const isRiskListFiltered =
     !!risksSearchTerm.trim() ||
-    (vendorRiskFilterConditions?.length ?? 0) > 0 ||
+    (vendorRiskConditions?.length ?? 0) > 0 ||
     !!selectedRiskLevel ||
     !!heatCell ||
     filterStatus === "deleted";
@@ -989,24 +1069,25 @@ const Vendors = () => {
       onEdit={handleEditVendor}
       vendorRisks={activeVendorRisks}
       visibleColumns={vendorVisibleColumns}
+      onNotify={handleResearchNotify}
       noMatchesMessage={isVendorListFiltered ? NO_MATCHING_VENDORS : undefined}
     />
   );
 
   return (
     <PageHeaderExtended
-      title={value === "1" ? "Vendor list" : "Vendor risks list"}
-      description={
-        value === "1"
-          ? "This table includes a list of external entities that provide AI-related products, services, or components. You can create and manage all vendors here."
-          : "This table includes a list of risks related to a vendor. You can create and manage all vendor risks here."
-      }
+      title={TAB_HEADERS[value].title}
+      description={<TabDescription texts={TAB_DESCRIPTIONS} active={value} />}
       helpArticlePath={
-        value === "1" ? "risk-management/vendor-management" : "risk-management/vendor-risk-list"
+        value === TAB_VENDORS
+          ? "risk-management/vendor-management"
+          : value === TAB_RISKS
+            ? "risk-management/vendor-risk-list"
+            : undefined
       }
       tipBoxEntity="vendors"
       summaryCards={
-        value !== "1" && !loadingVendorRisks && !isVendorsLoading ? (
+        isRisksTab && !loadingVendorRisks && !isVendorsLoading ? (
           <StatusTileCards
             items={
               [
@@ -1091,36 +1172,52 @@ const Vendors = () => {
           <TabBar
             tabs={[
               {
-                label: "Vendors",
-                value: "1",
+                label: TAB_TEXT[TAB_VENDORS].label,
+                value: TAB_VENDORS,
                 icon: "Building",
                 count: filteredVendors.length,
                 isLoading: isVendorsLoading,
-                tooltip: "Third-party AI suppliers and their review status",
+                tooltip: TAB_TEXT[TAB_VENDORS].tooltip,
               },
               {
-                label: "Risks",
-                value: "2",
+                label: TAB_TEXT[TAB_RISKS].label,
+                value: TAB_RISKS,
                 icon: "AlertTriangle",
                 count: filteredVendorRisks.length,
                 isLoading: loadingVendorRisks,
-                tooltip: "Security and compliance risks from vendor relationships",
+                tooltip: TAB_TEXT[TAB_RISKS].tooltip,
+              },
+              {
+                label: TAB_TEXT[TAB_FINDINGS].label,
+                value: TAB_FINDINGS,
+                icon: "Sparkles",
+                count: pendingFindings,
+                tooltip: TAB_TEXT[TAB_FINDINGS].tooltip,
+              },
+              {
+                label: TAB_TEXT[TAB_INSIGHTS].label,
+                value: TAB_INSIGHTS,
+                icon: "Activity",
+                tooltip: TAB_TEXT[TAB_INSIGHTS].tooltip,
               },
             ]}
             activeTab={value}
             onChange={handleChange}
             dataJoyrideId="vendor-list-tab"
+            scrollable
           />
         </Box>
-        {value === "1" && (
+        {value === TAB_VENDORS && (
           <Stack spacing="4px">
             <Stack direction="row" sx={vendorToolbarStyle}>
               <Box sx={vendorFilterRowStyle}>
                 <TableFilter
                   columns={vendorFilterColumns}
                   onFilterChange={handleVendorFilterChange}
-                  defaultConditions={vendorFilterConditions}
-                  defaultLogic={vendorFilterLogic}
+                  // Mounted only on this tab, while the page keeps what it was set to (see the
+                  // Risks toolbar below): it opens on that, not blank.
+                  defaultConditions={vendorConditions}
+                  defaultLogic={vendorLogic}
                   data={vendors}
                   getFieldValue={getVendorFieldValue}
                 />
@@ -1164,12 +1261,15 @@ const Vendors = () => {
           </Stack>
         )}
 
-        {value !== "1" && (
+        {isRisksTab && (
           <Stack spacing="4px">
             <Stack direction="row" sx={vendorToolbarStyle}>
               <Box sx={vendorFilterRowStyle}>
+                {/* No visible label, so it is named for screen readers; tinted
+                    while it hides something, like the other filters. */}
                 <Select
                   id="filter-status"
+                  ariaLabel="Risk status"
                   value={filterStatus}
                   items={[
                     { _id: "active", name: "Active only" },
@@ -1177,17 +1277,16 @@ const Vendors = () => {
                     { _id: "deleted", name: "Deleted only" },
                   ]}
                   onChange={handleFilterStatusChange}
-                  sx={{
-                    width: "160px",
-                    minHeight: "34px",
-                    borderRadius: theme.shape.borderRadius,
-                  }}
+                  isFilterApplied={filterStatus !== "active"}
+                  sx={{ width: "160px" }}
                 />
                 <TableFilter
                   columns={vendorRiskFilterColumns}
                   onFilterChange={handleVendorRiskFilterChange}
-                  defaultConditions={vendorRiskFilterConditions}
-                  defaultLogic={vendorRiskFilterLogic}
+                  // The toolbar is mounted only on this tab, while the page keeps what it was set
+                  // to: it must open on that, not blank.
+                  defaultConditions={vendorRiskConditions}
+                  defaultLogic={vendorRiskLogic}
                   data={vendorRisks}
                   getFieldValue={getVendorRiskFieldValue}
                 />
@@ -1232,7 +1331,7 @@ const Vendors = () => {
           </Stack>
         )}
 
-        <TabPanel value="1" sx={tabPanelStyle}>
+        <TabPanel value={TAB_VENDORS} sx={tabPanelStyle}>
           <ListStateWrapper
             items={filteredVendors}
             isLoading={isVendorsLoading}
@@ -1248,32 +1347,55 @@ const Vendors = () => {
             {vendorList}
           </ListStateWrapper>
         </TabPanel>
-        <TabPanel value="2" sx={tabPanelStyle}>
-          {loadingVendorRisks ? (
-            <CustomizableSkeleton variant="rectangular" width="100%" height={400} />
-          ) : (
-            <Stack spacing="8px">
-              <VendorRiskInsights
-                risks={vendorRisks}
-                selectedCell={heatCell}
-                onSelectCell={handleHeatCell}
-                onOpenRisk={(id) => handleEditRisk(id)}
+        <TabPanel value={TAB_RISKS} sx={tabPanelStyle}>
+          <Stack spacing="8px">
+            {heatCell && (
+              <HeatCellNotice
+                onClear={() => {
+                  handleHeatCell(null);
+                  registerRegion.current?.focus();
+                }}
+                focusOnMount={focusNotice}
+                onFocused={() => setFocusNotice(false)}
               />
-              <RiskTable
-                users={users}
-                vendors={allVendors}
-                vendorRisks={filteredVendorRisks}
-                noMatchesMessage={isRiskListFiltered ? NO_MATCHING_RISKS : undefined}
-                onDelete={handleDeleteRisk}
-                onEdit={handleEditRisk}
-                isDeletingAllowed={isDeletingAllowed}
-                visibleColumns={vendorRiskVisibleColumns}
-                exposure={exposureById}
-                onOpenLinks={(id) => handleEditRisk(id, "linked-risks")}
-                onRestore={isDeletingAllowed ? handleRestoreRisk : undefined}
-              />
-            </Stack>
-          )}
+            )}
+            <Box ref={registerRegion} tabIndex={-1} role="region" aria-label="Vendor risks list">
+              {loadingVendorRisks ? (
+                <CustomizableSkeleton variant="rectangular" width="100%" height={400} />
+              ) : (
+                <RiskTable
+                  users={users}
+                  vendors={allVendors}
+                  vendorRisks={filteredVendorRisks}
+                  noMatchesMessage={isRiskListFiltered ? NO_MATCHING_RISKS : undefined}
+                  onDelete={handleDeleteRisk}
+                  onEdit={handleEditRisk}
+                  isDeletingAllowed={isDeletingAllowed}
+                  visibleColumns={vendorRiskVisibleColumns}
+                  exposure={exposureById}
+                  onOpenLinks={(id) => handleEditRisk(id, "linked-risks")}
+                  onRestore={isDeletingAllowed ? handleRestoreRisk : undefined}
+                />
+              )}
+            </Box>
+          </Stack>
+        </TabPanel>
+        <TabPanel value={TAB_FINDINGS} sx={tabPanelStyle}>
+          {/* Not part of the register: it has its own data, states and skeleton. */}
+          <VendorResearchFindings
+            vendors={allVendors}
+            onOpenRisk={(id) => handleEditRisk(id)}
+            onNotify={handleResearchNotify}
+          />
+        </TabPanel>
+        <TabPanel value={TAB_INSIGHTS} sx={tabPanelStyle}>
+          <VendorRiskInsights
+            risks={activeVendorRisks}
+            loading={loadingInsightRisks}
+            selectedCell={heatCell}
+            onSelectCell={handleHeatCell}
+            onOpenRisk={(id) => handleEditRisk(id)}
+          />
         </TabPanel>
       </TabContext>
 

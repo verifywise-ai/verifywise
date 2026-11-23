@@ -55,7 +55,8 @@ export async function createNewVendor({
   body: Partial<VendorModel>;
   config?: RequestParams;
 }): Promise<any> {
-  const response = await apiServices.post("/vendors", body, config);
+  // ADR 0001: the body takes the other names and the identifiers, so the create is under /v1.
+  const response = await apiServices.post("/v1/vendors", body, config);
   return response;
 }
 
@@ -68,7 +69,8 @@ export async function update({
   body: Partial<VendorModel>;
   config?: RequestParams;
 }): Promise<any> {
-  const response = await apiServices.patch(`/vendors/${id}`, body, config);
+  // ADR 0001: as the create. The reads and the delete did not change, so they stay on /vendors.
+  const response = await apiServices.patch(`/v1/vendors/${id}`, body, config);
   return response;
 }
 

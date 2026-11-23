@@ -415,9 +415,9 @@ npm run start
 
 | | |
 |---|---|
-| **Routes** | `/vendors`, `/vendors/risks` |
+| **Routes** | `/vendors`, `/vendors/risks`, `/vendors/research-findings`, `/vendors/insights` |
 | **Prerequisites** | At least one project exists |
-| **Manual interaction** | 1. Go to `/vendors`.<br>2. Click **Add new vendor**.<br>3. Fill name, select project, status.<br>4. Save and verify row appears.<br>5. Switch to **Risks** tab and add a vendor risk. |
+| **Manual interaction** | 1. Go to `/vendors`.<br>2. Click **Add new vendor**.<br>3. Fill name, select project, status.<br>4. Save and verify row appears.<br>5. Switch to **Risks** tab and add a vendor risk.<br>6. Open the **Research findings** and **Insights** tabs; choose a heat map cell and verify the **Risks** tab opens filtered by it. |
 | **API equivalent** | `GET/POST /api/vendors`, `GET/POST /api/vendorRisks`, `GET /api/projects` |
 | **Automated tests** | `Clients/e2e/vendors.spec.ts`, `Servers/tests/integration/vendors.test.ts`, `Servers/controllers/__tests__/vendor.ctrl.test.ts` |
 | **Run** | `npx playwright test e2e/vendors.spec.ts` |

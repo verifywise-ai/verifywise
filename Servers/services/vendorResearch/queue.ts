@@ -1,0 +1,130 @@
+/**
+ * The queue of the vendor research runs, and the producer that adds a run to it.
+ *
+ * A run has a queue of its own, with a worker of its own (see worker.ts), and does not share the
+ * queue of the automations. A run holds its place for minutes (up to 5 for the research loop, 2 for
+ * the analysis and half a minute for the checks after it), while every other job on that queue is
+ * short, so on a shared queue a burst of runs kept the notifications, the recomputes and the
+ * reports waiting, and a long line of other jobs could leave a run queued past the 15 minutes
+ * after which it is not started. The backend also used to empty the automation queue each time it
+ * started (`obliterate` in the schedulers of automationProducer.ts), which lost the runs that were
+ * waiting; no start empties a queue any more. A run whose job is lost another way (Redis wiped) is
+ * ended by the stale rule, as before.
+ *
+ * The queue also carries the repeating job of the scheduled scan (see scan.ts): one job an hour that
+ * starts the runs of the vendors that are due. It is a scheduler of BullMQ, which the backend
+ * registers at startup in jobs/producer.ts; registering it again replaces its options (a changed
+ * minute takes effect at the next start), or changes nothing when they are the same.
+ */
+import { type JobsOptions, Queue } from "bullmq";
+import { REDIS_URL } from "../../database/redis";
+import type { ResearchTrigger } from "../../domain.layer/interfaces/i.vendorResearch";
+
+/** The name of the queue of the research runs. The producer and the worker must agree on it. */
+export const VENDOR_RESEARCH_QUEUE = "vendor-research";
+
+export const vendorResearchQueue = new Queue(VENDOR_RESEARCH_QUEUE, {
+  connection: { url: REDIS_URL },
+});
+
+/** The name of the job that carries out one vendor research run; the worker checks it. */
+export const VENDOR_RESEARCH_JOB = "vendor_research";
+
+/** The name of the repeating job of the scheduled scan; the worker checks it too. */
+export const VENDOR_RESEARCH_SCAN_JOB = "vendor_research_scan";
+
+/**
+ * The id of the queue job of one vendor research run.
+ *
+ * One id per RUN, not per vendor. BullMQ silently ignores an `add` whose jobId still exists, and
+ * the job of an earlier run can still sit in Redis: the stale sweep fails a run that waited too
+ * long, for example because the worker was down, and its job stays in the queue. An id per vendor
+ * would then swallow the `add` of the vendor's next run, and that run would never start. The
+ * partial unique index vendor_research_runs_active_uniq already allows one active run per vendor,
+ * so an id per vendor would add no protection.
+ *
+ * The id has no colon: BullMQ 6.3.11 rejects a custom id with a colon unless it has exactly three
+ * parts.
+ */
+export const vendorResearchJobId = (
+  organizationId: number,
+  vendorId: number,
+  runId: number,
+): string => `vendor-research-${organizationId}-${vendorId}-${runId}`;
+
+/**
+ * Two attempts, for the failures that make the job throw: those of Redis and the database before
+ * the run is marked running, when the run is still queued and a retry can start it. The pipeline
+ * catches a failing model call, and a web that cannot be reached at all, itself and ends the run as
+ * failed; a search that fails or a page that cannot be read is a result inside the run. So a retry
+ * never pays for the model calls or the searches twice. Settled jobs are removed, so no retained
+ * job holds on to an id.
+ */
+export const VENDOR_RESEARCH_JOB_OPTIONS: JobsOptions = {
+  attempts: 2,
+  backoff: { type: "exponential", delay: 5000 },
+  removeOnComplete: true,
+  removeOnFail: true,
+};
+
+/**
+ * The BullMQ priority of the job of a scheduled run. BullMQ takes a job with no priority before any
+ * job with one, so the run a person asked for, and the automatic one after a vendor is created,
+ * which have none, are taken before the runs the hourly scan queued that are still waiting,
+ * however many it queued. They can still wait for the scheduled runs that are already running to
+ * free a place, which the bound of a scan pass keeps within the 15 minutes after which a run is
+ * not started (`markRunRunningQuery`, see scan.ts). Scheduled runs keep their order among
+ * themselves (one priority).
+ */
+export const SCHEDULED_RUN_PRIORITY = 10;
+
+/** The options of the job of a run: those of every run, and the priority of a scheduled one. */
+export const jobOptionsFor = (triggerType: ResearchTrigger | undefined): JobsOptions =>
+  triggerType === "scheduled"
+    ? { ...VENDOR_RESEARCH_JOB_OPTIONS, priority: SCHEDULED_RUN_PRIORITY }
+    : VENDOR_RESEARCH_JOB_OPTIONS;
+
+/**
+ * Research one vendor in the background, for a run that was just created as queued. `triggerType`
+ * sets the priority of the job (see SCHEDULED_RUN_PRIORITY); a caller that leaves it out queues
+ * the job with none, as a person's run.
+ */
+export async function enqueueVendorResearch(
+  organizationId: number,
+  vendorId: number,
+  runId: number,
+  triggerType?: ResearchTrigger,
+) {
+  return vendorResearchQueue.add(
+    VENDOR_RESEARCH_JOB,
+    { organizationId, vendorId, runId },
+    {
+      jobId: vendorResearchJobId(organizationId, vendorId, runId),
+      ...jobOptionsFor(triggerType),
+    },
+  );
+}
+
+/**
+ * Adds the repeating job of the scheduled scan: at 11 minutes past every hour (UTC), a minute no
+ * other scheduler uses (the top of the hour, every 5 and 15 minutes, the approval overdue sweep at
+ * 17, the vendor risk database syncs at 23, 29, 41, 47, 53 and 59), so the runs it starts end
+ * before the hourly KEV sync at 23. The time zone is pinned, as it is for the syncs of the vendor
+ * risk database: a server in another zone would otherwise run the scan at another minute of the
+ * hour, which may be the minute of one of them. The scheduler id is the job name, and an upsert by
+ * id replaces the scheduler's options, so a changed minute takes effect at the next start and an
+ * unchanged one changes nothing: every start of the backend can call this. It does not empty the
+ * queue, which holds the runs that are waiting. The job has a single attempt and is not kept: a
+ * scan that fails is logged by the worker, and the scan of the next hour does its work.
+ */
+export async function scheduleVendorResearchScan(): Promise<void> {
+  await vendorResearchQueue.upsertJobScheduler(
+    VENDOR_RESEARCH_SCAN_JOB,
+    { pattern: "11 * * * *", tz: "UTC" },
+    {
+      name: VENDOR_RESEARCH_SCAN_JOB,
+      data: {},
+      opts: { removeOnComplete: true, removeOnFail: true },
+    },
+  );
+}

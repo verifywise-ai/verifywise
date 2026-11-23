@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { Alert, Box, CircularProgress, Stack, Typography } from "@mui/material";
-import { Network } from "lucide-react";
+import { Alert, Box, CircularProgress, Divider, Stack, Typography } from "@mui/material";
+import { Link2, Network, Plus } from "lucide-react";
 import { CustomizableButton } from "../button/customizable-button";
 import { EmptyState } from "../EmptyState";
 import { textStyles } from "../../themes/typography";
@@ -21,6 +21,7 @@ import { useWatchedLinks } from "./useWatchedLinks";
 import { useFormFocus } from "./useFormFocus";
 import { groupingNotice } from "./groupingNotice";
 import { useCan } from "../../../application/hooks/useCan";
+import { radiusPx } from "../../themes/palette";
 
 interface VendorRiskLinksPanelProps {
   vendorRiskId: number;
@@ -165,8 +166,8 @@ export default function VendorRiskLinksPanel({ vendorRiskId }: VendorRiskLinksPa
 
   return (
     <Stack spacing="16px" sx={{ py: "16px" }}>
-      <Stack direction="row" justifyContent="space-between">
-        <Stack direction="row" spacing="8px">
+      <Stack direction="row" justifyContent="space-between" alignItems="center">
+        <Stack direction="row" spacing="8px" alignItems="center">
           {/*
             Each form has its own Cancel, so these buttons only open a form, and
             stay in place (disabled while theirs is open) so nothing shifts
@@ -178,6 +179,7 @@ export default function VendorRiskLinksPanel({ vendorRiskId }: VendorRiskLinksPa
                 ref={openerRef("child")}
                 size="small"
                 variant="text"
+                startIcon={<Link2 size={16} />}
                 onClick={() => setForm("child")}
                 isDisabled={form === "child"}
               >
@@ -187,6 +189,7 @@ export default function VendorRiskLinksPanel({ vendorRiskId }: VendorRiskLinksPa
                 ref={openerRef("related")}
                 size="small"
                 variant="text"
+                startIcon={<Plus size={16} />}
                 onClick={() => setForm("related")}
                 isDisabled={form === "related"}
               >
@@ -274,13 +277,29 @@ export default function VendorRiskLinksPanel({ vendorRiskId }: VendorRiskLinksPa
         if (group.length === 0) return null;
         return (
           <Box key={title}>
-            <Typography sx={{ ...textStyles.subsectionTitle, color: "text.primary", mb: "4px" }}>
-              {title}
-            </Typography>
-            <Typography sx={{ ...textStyles.caption, color: "text.accent", mb: "8px" }}>
+            <Stack direction="row" spacing="8px" alignItems="baseline">
+              <Typography sx={{ ...textStyles.subsectionTitle, color: "text.primary" }}>
+                {title}
+              </Typography>
+              <Typography sx={{ ...textStyles.bodySmall, color: "text.tertiary" }}>
+                {group.length}
+              </Typography>
+            </Stack>
+            <Typography sx={{ ...textStyles.body, color: "text.tertiary", mb: "8px" }}>
               {caption}
             </Typography>
-            <Stack spacing="8px">
+            {/* One bordered list per group, a divider between rows, so each
+                link's chips and actions read as one line. */}
+            <Stack
+              divider={<Divider flexItem />}
+              sx={{
+                "border": 1,
+                "borderColor": "border.light",
+                "borderRadius": radiusPx.sm,
+                "bgcolor": "background.main",
+                "& > :not(hr)": { px: "14px", py: "10px" },
+              }}
+            >
               {group.map((link) => (
                 <LinkRow
                   key={link.id}

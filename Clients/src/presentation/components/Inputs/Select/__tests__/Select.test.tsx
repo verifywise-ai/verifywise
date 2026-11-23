@@ -1,4 +1,4 @@
-import { screen } from "@testing-library/react";
+import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { renderWithProviders } from "../../../../../test/renderWithProviders";
 import Select from "../index";
@@ -136,6 +136,28 @@ describe("Select Component", () => {
 
     const combobox = screen.getByRole("combobox");
     expect(combobox.className).toContain("Mui-disabled");
+  });
+
+  it("keeps an item out of the translator when it says so, in the menu and as the selected value", async () => {
+    const user = userEvent.setup();
+    const items = [
+      { _id: 1, name: "Other", noTranslate: true },
+      { _id: 2, name: "Plain" },
+    ];
+
+    renderWithProviders(
+      <Select id="test" label="Pick" value={1} items={items} onChange={vi.fn()} />,
+    );
+
+    expect(within(screen.getByRole("combobox")).getByText("Other")).toHaveAttribute(
+      "data-vw-no-translate",
+      "true",
+    );
+    await user.click(screen.getByRole("combobox"));
+    const [other, plain] = screen.getAllByRole("option");
+    expect(within(other).getByText("Other")).toHaveAttribute("data-vw-no-translate", "true");
+    // An item that does not ask for it is left to the translator, as before.
+    expect(within(plain).getByText("Plain")).not.toHaveAttribute("data-vw-no-translate");
   });
 
   it("renders custom renderValue", () => {
