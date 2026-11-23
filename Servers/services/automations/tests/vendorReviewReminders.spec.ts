@@ -2,12 +2,9 @@ const mockQuery = jest.fn();
 jest.mock("../../../database/db", () => ({
   sequelize: { query: (...args: unknown[]) => mockQuery(...args) },
 }));
-jest.mock("../../../utils/logger/fileLogger", () => ({
-  __esModule: true,
-  default: { error: jest.fn(), warn: jest.fn(), info: jest.fn(), debug: jest.fn() },
-}));
+jest.mock("../../../utils/logger/fileLogger", () => ({ logStructuredError: jest.fn() }));
 jest.mock("../../../utils/organization.utils", () => ({ getAllOrganizationsQuery: jest.fn() }));
-jest.mock("../../../utils/vendor.utils", () => ({ getAllVendorsQuery: jest.fn() }));
+jest.mock("../../../utils/vendor.utils", () => ({ getVendorByIdQuery: jest.fn() }));
 jest.mock("../automationProducer", () => ({ enqueueAutomationAction: jest.fn() }));
 jest.mock("../../inAppNotification.service", () => ({ notifyVendorReviewDue: jest.fn() }));
 
@@ -20,13 +17,20 @@ import {
 import { VENDOR_REVIEW_OPEN_CONDITION } from "../../homeQueue/sources/vendorReviews.source";
 import { formatVendorReviewDate } from "../../../utils/automation/vendor.automation.utils";
 import { getAllOrganizationsQuery } from "../../../utils/organization.utils";
-import { getAllVendorsQuery } from "../../../utils/vendor.utils";
+import { getVendorByIdQuery } from "../../../utils/vendor.utils";
 import { enqueueAutomationAction } from "../automationProducer";
 import { notifyVendorReviewDue } from "../../inAppNotification.service";
-import logger from "../../../utils/logger/fileLogger";
+import { logStructuredError } from "../../../utils/logger/fileLogger";
 
 const orgs = getAllOrganizationsQuery as jest.Mock;
-const vendorsOf = getAllVendorsQuery as jest.Mock;
+const byId = getVendorByIdQuery as jest.Mock;
+const logged = logStructuredError as jest.Mock;
+
+/** The organization's vendors, as getVendorByIdQuery returns them. */
+const vendorsOf = {
+  mockResolvedValue: (list: { id: number }[]) =>
+    byId.mockImplementation(async (id: number) => list.find((v) => v.id === id) ?? null),
+};
 const enqueue = enqueueAutomationAction as jest.Mock;
 const notify = notifyVendorReviewDue as jest.Mock;
 
@@ -64,6 +68,7 @@ const answer = (
   mockQuery.mockImplementation(async (sql: string, opts: any) => {
     const { organizationId, reviewDate } = opts.replacements;
     if (sql === REMINDER_ACTIONS_SQL) return actions[organizationId] ?? [];
+    if (sql.includes("FROM users u")) return [{ full_name: "Rae Viewer" }];
     if (sql === VENDORS_DUE_ON_SQL)
       return (due[organizationId]?.[reviewDate] ?? []).map((id) => ({ id }));
     throw new Error(`unexpected query: ${sql}`);
@@ -82,7 +87,7 @@ describe("vendor review reminder sweep", () => {
 
     await sendVendorReviewDateNotification();
 
-    expect(vendorsOf).not.toHaveBeenCalled();
+    expect(byId).not.toHaveBeenCalled();
     expect(enqueue).not.toHaveBeenCalled();
     expect(notify).not.toHaveBeenCalled();
   });
@@ -123,8 +128,8 @@ describe("vendor review reminder sweep", () => {
       ["send_email", "Today", 11],
     ]);
     expect(enqueue.mock.calls[0][1]).toMatchObject({ organizationId: 1, to: ["a@example.com"] });
-    // Vendors are loaded once per organization, not per automation.
-    expect(vendorsOf).toHaveBeenCalledTimes(1);
+    // Only due vendors are loaded, each once however many automations match.
+    expect(byId.mock.calls).toEqual([[3, 1]]);
   });
 
   it("fills the template with the vendor and its review date on the UTC day", async () => {
@@ -137,6 +142,21 @@ describe("vendor review reminder sweep", () => {
       subject: "Review Vendor 3",
       body: "Due November 30, 2026",
     });
+  });
+
+  it("fills in the reviewer's name, looked up within the organization", async () => {
+    answer(
+      { 1: [action(10, "send_email", 7, "Reviewer {{vendor.reviewer}}")] },
+      { 1: { "2026-11-30": [3] } },
+    );
+    vendorsOf.mockResolvedValue([vendor(3)]);
+
+    await sendVendorReviewDateNotification();
+
+    expect(enqueue.mock.calls[0][1].subject).toBe("Reviewer Rae Viewer");
+    const lookup = mockQuery.mock.calls.find(([sql]) => sql.includes("FROM users u"))!;
+    expect(lookup[0]).toContain("organization_members");
+    expect(lookup[1].replacements).toEqual({ organizationId: 1, reviewer: 7 });
   });
 
   it("sends the reviewer one in-app notice per vendor, however many automations match", async () => {
@@ -188,9 +208,11 @@ describe("vendor review reminder sweep", () => {
 
     await sendVendorReviewDateNotification();
 
-    expect(logger.error).toHaveBeenCalledWith(
+    expect(logged).toHaveBeenCalledWith(
       expect.stringContaining("organization 1"),
       expect.any(Error),
+      "sendVendorReviewDateNotification",
+      "vendorReviewReminders.ts",
     );
     expect(enqueue).toHaveBeenCalledWith(
       "send_email",
@@ -208,11 +230,39 @@ describe("vendor review reminder sweep", () => {
 
     await sendVendorReviewDateNotification();
 
-    expect(logger.error).toHaveBeenCalledWith(
+    expect(logged).toHaveBeenCalledWith(
       expect.stringContaining("automation 10"),
       expect.any(Error),
+      "sendVendorReviewDateNotification",
+      "vendorReviewReminders.ts",
     );
     expect(enqueue).toHaveBeenLastCalledWith("send_slack", expect.anything());
+  });
+
+  it("keeps going to the next vendor after one vendor's action fails", async () => {
+    answer({ 1: [action(10, "send_email", 7)] }, { 1: { "2026-11-30": [3, 4] } });
+    vendorsOf.mockResolvedValue([vendor(3), vendor(4)]);
+    enqueue.mockRejectedValueOnce(new Error("queue down"));
+
+    await sendVendorReviewDateNotification();
+
+    expect(logged).toHaveBeenCalledWith(
+      expect.stringContaining("vendor 3"),
+      expect.any(Error),
+      "sendVendorReviewDateNotification",
+      "vendorReviewReminders.ts",
+    );
+    expect(enqueue).toHaveBeenCalledTimes(2);
+    expect(notify.mock.calls.map((c) => c[2].id)).toEqual([4]);
+  });
+
+  it("skips a due vendor that is gone by the time it is loaded", async () => {
+    answer({ 1: [action(10, "send_email", 7)] }, { 1: { "2026-11-30": [3, 9] } });
+    vendorsOf.mockResolvedValue([vendor(3)]);
+
+    await sendVendorReviewDateNotification();
+
+    expect(enqueue).toHaveBeenCalledTimes(1);
   });
 });
 
@@ -228,6 +278,9 @@ describe("reminder rules", () => {
     ["3", 3],
     [undefined, 0],
     [-2, 0],
+    [3650, 3650],
+    [3651, 0],
+    [1e9, 0],
     [1.5, 0],
     ["soon", 0],
   ])("reads days before %p as %p", (value, expected) => {
