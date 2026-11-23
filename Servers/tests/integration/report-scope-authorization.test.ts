@@ -158,7 +158,14 @@ describe("report scope authorization", () => {
     const res = await testRequest(await appFor(editorId, "Editor", orgId)).post(
       `${SCHEDULES}/${id}/run-now`,
     );
-    expect(res.status).toBe(403);
+    // The Editor cannot read this schedule, so it answers like a missing one:
+    // a 403 would confirm the id exists.
+    expect(res.status).toBe(404);
+    const runs = (await sequelize.query(
+      `SELECT id FROM report_runs WHERE scheduled_report_id = :id`,
+      { replacements: { id }, type: QueryTypes.SELECT },
+    )) as unknown[];
+    expect(runs).toHaveLength(0);
   });
 
   // The PATCH path was ungated whenever the body carried neither `scope` nor
@@ -189,10 +196,9 @@ describe("report scope authorization", () => {
           recipients: ["editor@external.example"],
         },
       });
-    expect(res.status).toBe(403);
-    // Pin the refusal to the scope rule itself, not merely to some other
-    // 403-shaped branch that happens to also leave the row untouched.
-    expect(JSON.stringify(res.body)).toContain("not a member");
+    // The Editor cannot read this schedule, so it answers like a missing one
+    // (a 403 would confirm the id exists). What matters is the row below.
+    expect(res.status).toBe(404);
 
     const after = (await sequelize.query(
       `SELECT delivery_config FROM scheduled_reports WHERE id = :id`,
@@ -202,17 +208,42 @@ describe("report scope authorization", () => {
   });
 
   it("refuses an Editor resuming a foreign project schedule", async () => {
-    const created = await testRequest(await appFor(adminId, "Admin", orgId))
+    const admin = testRequest(await appFor(adminId, "Admin", orgId));
+    const created = await admin
       .post(SCHEDULES)
       .send(schedulePayload({ scope: "project", projectId: foreignProjectId }));
     expect(created.status).toBe(201);
     const id = (created.body?.data ?? created.body).id;
+    expect((await admin.post(`${SCHEDULES}/${id}/pause`)).status).toBe(200);
+
+    const editor = testRequest(await appFor(editorId, "Editor", orgId));
+    // Resume, pause and delete answer a schedule the caller cannot read the
+    // way they answer a missing id, a 200 no-op, so the id is not confirmed.
+    expect((await editor.post(`${SCHEDULES}/${id}/resume`)).status).toBe(200);
+    expect((await editor.delete(`${SCHEDULES}/${id}`)).status).toBe(200);
+
+    const rows = (await sequelize.query(
+      `SELECT is_active, deleted_at FROM scheduled_reports WHERE id = :id`,
+      { replacements: { id }, type: QueryTypes.SELECT },
+    )) as Array<{ is_active: boolean; deleted_at: unknown }>;
+    expect(rows[0].is_active).toBe(false);
+    expect(rows[0].deleted_at).toBeNull();
+  });
+
+  // Visibility is what turns a refusal into a 404: an Editor who can see an
+  // organization-wide schedule but may not produce organization reports still
+  // gets the 403, which tells them nothing they could not already read.
+  it("still answers 403 for a schedule the Editor can see but may not run", async () => {
+    const created = await testRequest(await appFor(adminId, "Admin", orgId))
+      .post(SCHEDULES)
+      .send(schedulePayload({ scope: "organization" }));
+    expect(created.status).toBe(201);
+    const id = (created.body?.data ?? created.body).id;
 
     const res = await testRequest(await appFor(editorId, "Editor", orgId)).post(
-      `${SCHEDULES}/${id}/resume`,
+      `${SCHEDULES}/${id}/run-now`,
     );
     expect(res.status).toBe(403);
-    expect(JSON.stringify(res.body)).toContain("not a member");
   });
 
   // Positive control for the two refusals above: the fix must not block a

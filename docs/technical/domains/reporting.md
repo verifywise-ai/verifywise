@@ -1067,6 +1067,8 @@ All endpoints are auth-protected and org-scoped.
 | POST | `/api/reporting/scheduled-reports/:id/pause` | Pause schedule (same scope gate as resume: `assertReportScopeAllowed` on the row's scope) |
 | POST | `/api/reporting/scheduled-reports/:id/resume` | Resume schedule |
 | DELETE | `/api/reporting/scheduled-reports/:id` | Soft-delete a scheduled report (same scope gate as resume) |
+
+Every write to an existing schedule (PATCH, run-now, pause, resume, delete) first loads it as the caller sees it, under the same visibility rule as the read endpoints (`utils/reportVisibility.utils.ts`). A schedule the caller cannot read is treated like a missing one: PATCH and run-now answer 404, and pause, resume and delete answer a 200 no-op that writes nothing, as they do for another organization's id. A 403 is left only for a schedule the caller can already see but may not change, such as an organization-wide schedule for a non-Admin, so no write endpoint confirms that an id exists.
 | GET | `/api/reporting/runs` | List report runs — **paginated**, returns `{rows, total, limit, offset}`, and filterable by `?archived=true\|false` (see [Run Listing is Paginated](#run-listing-is-paginated) and [Run Archiving](#run-archiving)) |
 | GET | `/api/reporting/runs/:id` | Get a run (org-scoped **and** membership-scoped — see [One Rule, Applied to Every Per-Run Endpoint](#one-rule-applied-to-every-per-run-endpoint)) |
 | GET | `/api/reporting/runs/:id/download` | Download a run's output (same gate, then org-scoped run and org-scoped file) |
