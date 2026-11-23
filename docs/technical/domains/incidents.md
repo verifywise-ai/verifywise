@@ -144,7 +144,7 @@ Mounted at `/api/ai-incident-managements`.
 | Method | Endpoint | Permission | Description |
 |--------|----------|------------|-------------|
 | GET | `/` | Any member | Get all incidents |
-| GET | `/:id` | Any member | Get incident by ID |
+| GET | `/:id` | Any member | Get incident by ID (404 when missing or in another organization) |
 | POST | `/` | `incident.create` (Admin, Editor) | Create incident |
 | PATCH | `/:id` | `incident.edit` or `incident.approve` (Admin, Editor, Reviewer), then per field (below) | Update incident, including approval |
 | PATCH | `/:id/archive` | `incident.edit` (Admin, Editor) | Archive incident |
@@ -183,7 +183,7 @@ On the incidents page, the drawer enables the approval status and notes only wit
 |--------|----------|-------------|
 | GET | `/incident-change-history/:incidentId` | Get change history |
 
-Query params: `limit`, `offset` for pagination
+Query params: `limit` (an integer from 1 to 100, default 100) and `offset` (a whole number of 0 or more, default 0). Anything else, such as `-5`, `12abc` or `101`, answers 400 ("limit must be an integer from 1 to 100" / "offset must be a whole number of 0 or more"). The parser (`historyPageNumber`, `MAX_HISTORY_LIMIT` in `Servers/utils/historyPaging.utils.ts`) is shared with the use case history endpoint.
 
 ## Create Incident Request
 
@@ -283,10 +283,11 @@ reopened.
 
 Stored values are those of `AIIncidentManagementApprovalStatus`
 (`Servers/domain.layer/enums/ai-incident-management.enum.ts`): `Pending`,
-`Approved`, `Rejected`, `Not required`. The column is `VARCHAR(20)`, not a DB
-enum. `APPROVAL_STATUS_ENUM` in the validation utils still lists
-`Not Required` (capital R) and the edit form labels the option that way, but
-the value the form saves is `Not required`.
+`Approved`, `Rejected`, `Not required`. The column is `VARCHAR(20)` with the
+CHECK constraint `ai_incident_managements_approval_status_check`.
+`APPROVAL_STATUS_ENUM` in the validation utils is built from the enum. The edit
+form labels the option "Not Required", but the value it saves is
+`Not required`.
 
 When approved or rejected (set by the server, see
 [Editing versus approving](#editing-versus-approving)):
@@ -535,25 +536,70 @@ The modal is organized into 4 sections:
 
 ### Field Validation
 
-| Field | Rule |
-|-------|------|
-| description | 5-32,767 characters (`INCIDENT_DESCRIPTION_MAX_LENGTH`, Jira's text-field limit; column is TEXT) |
-| categories_of_harm | At least one required |
-| relationship_causality | 3-255 characters |
-| ai_project | 2-255 characters |
-| reporter | 2-100 characters |
-| severity | Valid enum value |
-| status | Valid enum value |
-| approval_status | Valid enum value |
-| occurred_date | Required |
-| date_detected | Required, >= occurred_date |
+The rules live in `Servers/utils/validations/incidentManagementValidation.utils.ts` (`FIELD_RULES`,
+`validateCompleteIncidentCreation`, `validateIncidentUpdateBusinessRules`). Enum lists come from
+`Servers/domain.layer/enums/ai-incident-management.enum.ts` and match the CHECK constraints.
+
+| Field | Create | Update |
+|-------|--------|--------|
+| ai_project (use case) | Required, text, at most 255 characters (VARCHAR(255)) | Cannot be blanked; same rule when changed |
+| type | Required, one of `IncidentType` (the column has no CHECK, so this is the only gate) | Cannot be blanked; same rule when changed |
+| severity | Required, one of `Severity` (Minor, Serious, Very serious) | Cannot be blanked; same rule when changed |
+| status | Optional, defaults to Open; one of `AIIncidentManagementStatus` | Cannot be blanked; same rule when changed |
+| approval_status | Optional, defaults to Pending; one of `AIIncidentManagementApprovalStatus` | Cannot be blanked; same rule when changed |
+| occurred_date, date_detected | Required; a real date (YYYY-MM-DD or an ISO date-time); not later than today in UTC+14 | Cannot be blanked; same rule when changed |
+| date_detected vs occurred_date | Detected on or after occurred (calendar dates) | Checked when either date changes, on the dates the row ends up with (request over the stored row) |
+| reporter | Required, text, at most 255 characters | Cannot be blanked; same rule when changed |
+| model_system_version | Optional text, at most 255 characters | Same |
+| description | 5-32,767 characters (`INCIDENT_DESCRIPTION_MAX_LENGTH`, Jira's text-field limit; column is TEXT) | Checked only when it changes |
+| affected_persons_groups, relationship_causality, immediate_mitigations, planned_corrective_actions, approval_notes | Optional text (TEXT, no length limit) | Same |
+| categories_of_harm | Optional: a list of `HarmCategory` values (Health, Safety, Rights, Property, Environment), or the comma-separated string form; empty is allowed | A list (empty allowed); items the update adds must be `HarmCategory` values, stored items outside the list may stay; null, strings and other JSON are refused |
+| interim_report, archived | Optional booleans | Same |
+| model_inventory_id, project_id, assignee_id | Optional positive integer ids in the organization | Same |
+
+- **"Today in any time zone."** A date may be at most today's date in UTC+14, the furthest-ahead
+  time zone (`latestIncidentDate`: now plus 14 hours, as a UTC date), so a user anywhere can enter
+  their own today, and anything later is refused. The drawer refuses dates after the user's own
+  today, and in edit mode checks the future rule only for a date the user changed.
+- **Update checks only what changes.** A field the update leaves out, or sends with its stored value
+  (`isSameIncidentValue`), is not re-checked, so an older row whose values predate a rule (an
+  unknown type, a long reporter, reversed dates) can still be edited. A changed required field sent
+  as null or "" is refused.
+- **Errors.** Each failing field gives `{ field, message, code }` in the standard 400 body (create:
+  "Incident creation validation failed", update: "Incident update validation failed"); codes are
+  `REQUIRED_FIELD`, `INVALID_TYPE`, `MAX_LENGTH`, `INVALID_ENUM_VALUE`, `INVALID_DATE`,
+  `FUTURE_DATE`, `INVALID_DATE_ORDER`, `INVALID_HARM_CATEGORY`. Messages carry an `i18nKey` and are
+  translated for the request (`{field} is required`, `{field} must be one of: {values}`, ...;
+  `Servers/locales/*.json`).
+- **Harm categories.** The server list is the page's (`HarmCategory`, also
+  `Clients/src/domain/enums/aiIncidentManagement.enum.ts`), the values existing rows store. The
+  older Article 73 list ("Health and Safety", ...) is gone. A row that stores a value outside the
+  list stays editable: on update only the items being added are checked, and the drawer shows a
+  stored off-list value as a checked box (labelled with the raw value) that the user can untick.
+  Create accepts only the page's values. The server does not require a category; the drawer does
+  (at least one), as it always has.
+- **Where it runs.** Create: the REST controller, before the transaction, and the Advisor's
+  `agent_create_incident` (which names the requesting user as reporter, or "AI Advisor" without
+  one). Update: `updateIncident` (`services/incidentManagement.service.ts`) against the locked row,
+  so the REST update, the Advisor tools, the MCP `update_incident` tool and the Jira status sync all
+  get it. The Jira import (`createIncidentForImport`) builds every required field from its
+  configuration (use case, type, reporter, severity map, status map; both dates are the Jira
+  issue's creation time; no harm categories), and its configuration is validated when saved, so it
+  needs no defaults.
+- **Creation history** records the saved row (defaults, parsed harm categories and the server's
+  approval fields), not the request body, leaving out column defaults the caller did not send
+  (false `archived` / `interim_report`, an empty harm category list). Occurred and detected dates
+  are formatted from the stored day's local date parts (`GENERIC_FORMATTERS.calendarDate`), so a
+  server east of UTC does not record the day before.
+- **Whitespace-only `status` / `approval_status` on create** count as omitted and take the
+  defaults.
 
 The description rule (5 to 32,767 characters, measured after trimming whitespace) is defined once per
 side and the two must stay in sync:
 
 - **Backend:** `INCIDENT_DESCRIPTION_MAX_LENGTH`, `validateDescription` and
   `isIncidentDescriptionChanged` in `Servers/utils/validations/incidentManagementValidation.utils.ts`.
-  - The controller rejects up front: `createIncidentSchema` includes `description`, and
+  - The controller rejects up front: `validateCompleteIncidentCreation` checks `description`, and
     `validateIncidentUpdateBusinessRules` checks it when an update changes it. Failures return the
     standard 400 body `{ status, message, errors: [{ field: "description", message, code }] }`,
     with each message translated for the request. The update handler reads the stored incident
@@ -569,16 +615,22 @@ side and the two must stay in sync:
     other fields of an older row with a shorter description still works.
   - `agent_create_incident` requires `description`; both Advisor tool schemas state the rule.
 - **Frontend:** `Clients/src/application/validations/incidentValidation.ts`, used inline by the
-  incident drawer. In edit mode the drawer skips the check when the description is unchanged from
-  the loaded value, as the backend does. The drawer closes only after the save succeeds; while
+  incident drawer. The drawer mirrors the server: use case, incident type, severity, both dates and
+  reporter are required (marked with an asterisk); occurred and detected dates cannot be after the
+  user's today; detected cannot be before occurred; model / system version is at most 255
+  characters. In edit mode the drawer skips a rule when the field is unchanged from the loaded value
+  (the date order when neither date changed), as the backend does. The drawer closes only after the save succeeds; while
   saving, Esc, Cancel, the close icon and the backdrop are ignored, and a save that settles after a
   newer draft was opened does not touch it. The drawer fills the form from `initialData` only when
   it opens or a different incident (`incidentId`) is loaded, and the page memoises `initialData` on
   the selected incident, so a page re-render (such as the failed-save toast) keeps the user's
   edits. On failure the toast shows server field messages only for allowlisted fields
-  (`getApiValidationMessage` in `application/utils/apiErrorReason.ts`): description messages as
-  sent, reference fields (`project_id`, `model_inventory_id`, `assignee_id`) as a sentence naming
-  the picker. Anything else falls back to the generic text.
+  (`getApiValidationMessage` in `application/utils/apiErrorReason.ts`,
+  `INCIDENT_SAVE_ERROR_FIELDS` on the incidents page): every field the server's incident rules
+  check (description, use case, type, severity, status, approval status, dates, reporter, text
+  fields, harm categories, booleans) with the server's translated message as sent, and reference
+  fields (`project_id`, `model_inventory_id`, `assignee_id`) as a sentence naming the picker.
+  Anything else falls back to the generic text.
 
 The messages are identical on both sides: "Description is required.", "Description must be at least
 5 characters." and "Description cannot exceed 32,767 characters." (translated in
@@ -587,17 +639,12 @@ The messages are identical on both sides: "Description is required.", "Descripti
 ### Business Rule Validation
 
 ```typescript
-// Creation rules
-validateIncidentCreationBusinessRules(data) {
-  if (date_detected < date_occurred) {
-    throw Error("Detection date cannot be before occurrence date");
-  }
-}
+// Creation: date_detected on or after occurred_date (field errors above).
+validateCompleteIncidentCreation(data) // → ValidationError[]
 
-// Update rules: none. Any status transition is allowed, including reopening.
-validateIncidentUpdateBusinessRules(data, existing) {
-  return [];
-}
+// Update: the field rules for changed fields plus the date order on the
+// effective dates. Any status transition is allowed, including reopening.
+validateIncidentUpdateBusinessRules(data, existing) // → ValidationError[]
 
 // Side effect of a reopen (applied before saving and change tracking)
 applyReopenApprovalReset(existing, update) // Approved → Pending on Closed → other

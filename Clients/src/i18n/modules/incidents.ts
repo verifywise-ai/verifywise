@@ -45,6 +45,13 @@ export const de: Record<string, string> = {
     "Finden Sie schnell bestimmte Vorfälle durch Suchen von Titeln oder Beschreibungen. Perfekt zum Auffinden von Vorfällen in großen Listen.",
   "Record approval": "Genehmigung erfassen",
   "Set when approved or rejected": "Wird bei Genehmigung oder Ablehnung gesetzt",
+  "Incident type is required.": "Der Vorfallstyp ist erforderlich.",
+  "Severity is required.": "Der Schweregrad ist erforderlich.",
+  "Cannot be in the future.": "Darf nicht in der Zukunft liegen.",
+  "Detected date cannot be before the occurred date.":
+    "Das Erkennungsdatum darf nicht vor dem Ereignisdatum liegen.",
+  "Model / system version cannot exceed 255 characters.":
+    "Modell-/Systemversion darf 255 Zeichen nicht überschreiten.",
 };
 
 export const fr: Record<string, string> = {
@@ -90,6 +97,13 @@ export const fr: Record<string, string> = {
     "Trouvez rapidement des incidents spécifiques en recherchant par titre ou description. Parfait pour localiser des incidents dans de grandes listes.",
   "Record approval": "Enregistrer l'approbation",
   "Set when approved or rejected": "Défini lors de l'approbation ou du rejet",
+  "Incident type is required.": "Le type d'incident est obligatoire.",
+  "Severity is required.": "La gravité est obligatoire.",
+  "Cannot be in the future.": "Ne peut pas être dans le futur.",
+  "Detected date cannot be before the occurred date.":
+    "La date de détection ne peut pas être antérieure à la date de survenance.",
+  "Model / system version cannot exceed 255 characters.":
+    "La version du modèle / système ne peut pas dépasser 255 caractères.",
 };
 
 export const es: Record<string, string> = {
@@ -136,4 +150,11 @@ export const es: Record<string, string> = {
     "Encuentre rápidamente incidentes específicos buscando por títulos o descripciones. Ideal para localizar incidentes en listas extensas.",
   "Record approval": "Registrar la aprobación",
   "Set when approved or rejected": "Se establece al aprobar o rechazar",
+  "Incident type is required.": "El tipo de incidente es obligatorio.",
+  "Severity is required.": "La gravedad es obligatoria.",
+  "Cannot be in the future.": "No puede estar en el futuro.",
+  "Detected date cannot be before the occurred date.":
+    "La fecha de detección no puede ser anterior a la fecha del suceso.",
+  "Model / system version cannot exceed 255 characters.":
+    "La versión del modelo / sistema no puede superar los 255 caracteres.",
 };

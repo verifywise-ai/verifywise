@@ -24,7 +24,16 @@ import { Project } from "../../../../domain/types/Project";
 import { useModalKeyHandling } from "../../../../application/hooks/useModalKeyHandling";
 import { useFormValidation } from "../../../../application/hooks/useFormValidation";
 import { focusFormFieldById } from "../../../../application/utils/formValidationFocus";
-import { validateIncidentDescription } from "../../../../application/validations/incidentValidation";
+import {
+  INCIDENT_FUTURE_DATE_MESSAGE,
+  INCIDENT_MODEL_VERSION_TOO_LONG_MESSAGE,
+  INCIDENT_SEVERITY_REQUIRED_MESSAGE,
+  INCIDENT_TEXT_MAX_LENGTH,
+  INCIDENT_TYPE_REQUIRED_MESSAGE,
+  isIncidentDateInFuture,
+  validateIncidentDescription,
+  validateIncidentDetectedDate,
+} from "../../../../application/validations/incidentValidation";
 import {
   INCIDENT_FORM_FIELD_IDS,
   INCIDENT_FORM_FIELD_ORDER,
@@ -259,36 +268,71 @@ const SideDrawerIncident: FC<SideDrawerIncidentProps> = ({
   // user's edits apart from untouched fields.
   const baselineRef = useRef<NewIncidentFormValues | null>(null);
 
-  const validators = useMemo(
-    () => ({
+  const validators = useMemo(() => {
+    // In edit mode a field is validated only when it is one of the fields the
+    // user changed (the ones the save sends), as the server does, so other
+    // fields of an older incident whose values predate a rule can still be
+    // edited.
+    const unchanged = (key: keyof NewIncidentFormValues, v: unknown) => {
+      const baseline = baselineRef.current;
+      return isEdit && !!baseline && isSameFormValue(key, v, baseline[key]);
+    };
+    return {
       ai_project: (v: unknown) => (!v ? "Project is required." : ""),
+      type: (v: unknown) => (!v && !unchanged("type", v) ? INCIDENT_TYPE_REQUIRED_MESSAGE : ""),
+      severity: (v: unknown) =>
+        !v && !unchanged("severity", v) ? INCIDENT_SEVERITY_REQUIRED_MESSAGE : "",
       occurred_date: (v: unknown) => {
         if (!v) return "Occurred date is required.";
-        if (dayjs(v as string).isAfter(dayjs())) return "Cannot be in the future.";
+        if (!unchanged("occurred_date", v) && isIncidentDateInFuture(v)) {
+          return INCIDENT_FUTURE_DATE_MESSAGE;
+        }
         return "";
       },
-      date_detected: (v: unknown) => (!v ? "Detected date is required." : ""),
-      reporter: (v: unknown) => (!v ? "Reporter is required." : ""),
-      // In edit mode the description is validated only when it is one of the
-      // fields the user changed (the ones the save sends), so other fields of
-      // an older incident with a shorter description can still be edited.
-      description: (v: unknown) => {
-        const baseline = baselineRef.current;
-        if (isEdit && baseline && isSameFormValue("description", v, baseline.description)) {
-          return "";
-        }
-        return validateIncidentDescription(v);
+      date_detected: (v: unknown, all: NewIncidentFormValues) => {
+        if (!v) return "Detected date is required.";
+        // The order rule involves both dates: checked when either changed.
+        // The future rule only when the detected date itself changed, as on
+        // the server.
+        const detectedUnchanged = unchanged("date_detected", v);
+        if (detectedUnchanged && unchanged("occurred_date", all.occurred_date)) return "";
+        return validateIncidentDetectedDate(v, all.occurred_date, {
+          checkFuture: !detectedUnchanged,
+        });
       },
+      reporter: (v: unknown) => (!v ? "Reporter is required." : ""),
+      model_system_version: (v: unknown) =>
+        typeof v === "string" &&
+        v.length > INCIDENT_TEXT_MAX_LENGTH &&
+        !unchanged("model_system_version", v)
+          ? INCIDENT_MODEL_VERSION_TOO_LONG_MESSAGE
+          : "",
+      description: (v: unknown) =>
+        unchanged("description", v) ? "" : validateIncidentDescription(v),
       categories_of_harm: (v: unknown) => {
         const cats = v as string[];
         return !cats || cats.length < 1 ? "Please select at least one Category of Harm." : "";
       },
-    }),
-    [isEdit],
-  );
+    };
+  }, [isEdit]);
 
   const { errors, validateAll, clearFieldError, resetErrors, getFirstInvalidField } =
     useFormValidation<NewIncidentFormValues>(validators);
+
+  // The page's harm categories, plus (when editing) any older value the
+  // incident stores outside that list, so it shows as a checked box the user
+  // can untick. The server accepts kept values but not new off-list ones.
+  const harmOptions = useMemo(() => {
+    const stored =
+      isEdit && Array.isArray(initialData?.categories_of_harm)
+        ? initialData.categories_of_harm
+        : [];
+    const extra = stored.filter(
+      (category): category is string =>
+        typeof category === "string" && !(harmCategories as string[]).includes(category),
+    );
+    return [...harmCategories, ...new Set(extra)] as string[];
+  }, [isEdit, initialData]);
 
   // Use the useProjects hook to get approved projects only
   const { approvedProjects } = useProjects();
@@ -432,6 +476,8 @@ const SideDrawerIncident: FC<SideDrawerIncidentProps> = ({
           [prop]: newDate.format("YYYY-MM-DD"),
         }));
         clearFieldError(prop);
+        // The detected date's order error depends on the occurred date too.
+        if (prop === "occurred_date") clearFieldError("date_detected");
       }
     },
     [clearFieldError],
@@ -676,6 +722,7 @@ const SideDrawerIncident: FC<SideDrawerIncidentProps> = ({
                       value={values.type}
                       onChange={handleFieldChange("type")}
                       error={errors.type}
+                      isRequired
                       sx={{ flex: 1 }}
                       disabled={detailsDisabled}
                     />
@@ -693,6 +740,7 @@ const SideDrawerIncident: FC<SideDrawerIncidentProps> = ({
                       value={values.severity}
                       onChange={handleFieldChange("severity")}
                       error={errors.severity}
+                      isRequired
                       sx={{ flex: 1 }}
                       disabled={detailsDisabled}
                     />
@@ -792,6 +840,7 @@ const SideDrawerIncident: FC<SideDrawerIncidentProps> = ({
                       label="Model / system version"
                       value={values.model_system_version || ""}
                       onChange={handleFieldChange("model_system_version")}
+                      error={errors.model_system_version}
                       placeholder="Model/system version"
                       sx={{ flex: 1 }}
                       disabled={detailsDisabled}
@@ -849,7 +898,7 @@ const SideDrawerIncident: FC<SideDrawerIncidentProps> = ({
                   row
                   sx={{ gap: theme.spacing(3), flexWrap: "nowrap" }}
                 >
-                  {harmCategories.map((category) => (
+                  {harmOptions.map((category) => (
                     <Box key={category} sx={{ flex: 1 }}>
                       <Checkbox
                         id={`harm-category-${category}`}

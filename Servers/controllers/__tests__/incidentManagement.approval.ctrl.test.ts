@@ -163,11 +163,11 @@ describe("createNewIncident — approval on create", () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    mockCreate.mockImplementation(async () => ({
-      id: 5,
-      severity: "Serious",
-      toSafeJSON: () => ({ id: 5 }),
-    }));
+    // Returns the row as the insert stores it, as createNewIncidentQuery does.
+    mockCreate.mockImplementation(async (incident: any) => {
+      const row = { ...(incident.dataValues ?? incident), id: 5 };
+      return { ...row, dataValues: row, toSafeJSON: () => ({ id: 5 }) };
+    });
   });
 
   it("starts Pending, without approver, date or notes, for a creator without incident.approve", async () => {

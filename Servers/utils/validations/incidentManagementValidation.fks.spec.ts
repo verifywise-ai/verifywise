@@ -40,16 +40,25 @@ describe("incident reference FK validation — issue #4583", () => {
   });
 
   describe("complete create/update validation", () => {
-    // Create payloads need a valid description; these cases are about FKs only.
+    // Create payloads need every required field; these cases are about FKs only.
     const description = "Model output drifted after retraining.";
+    const required = {
+      ai_project: "Support chatbot",
+      type: "Malfunction",
+      severity: "Minor",
+      occurred_date: "2026-06-23",
+      date_detected: "2026-06-23",
+      reporter: "Ada Lovelace",
+    };
 
     it("passes when no FK fields are present (legacy payloads)", () => {
-      expect(validateCompleteIncidentCreation({ description })).toEqual([]);
+      expect(validateCompleteIncidentCreation({ ...required, description })).toEqual([]);
       expect(validateCompleteIncidentUpdate({ description })).toEqual([]);
     });
 
     it("passes when all FK fields are valid", () => {
       const errors = validateCompleteIncidentCreation({
+        ...required,
         description,
         model_inventory_id: 1,
         project_id: 2,
@@ -60,6 +69,7 @@ describe("incident reference FK validation — issue #4583", () => {
 
     it("flags every invalid FK field on create", () => {
       const errors = validateCompleteIncidentCreation({
+        ...required,
         description,
         model_inventory_id: 0,
         project_id: "nope",

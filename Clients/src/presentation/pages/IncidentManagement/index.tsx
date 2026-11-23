@@ -74,11 +74,31 @@ const INCIDENT_TABLE_COLUMNS: ColumnConfig<IncidentColumnKey>[] = [
 ];
 
 /**
- * Server field errors that may appear in the save-failure toast. Reference
- * fields name database columns, so they get a sentence instead.
+ * Server field errors that may appear in the save-failure toast: every field
+ * the server's incident rules check, with the server's translated message.
+ * Reference fields name database columns, so they get a sentence instead.
  */
 const INCIDENT_SAVE_ERROR_FIELDS: UserFacingFieldErrors = {
-  passThrough: ["description"],
+  passThrough: [
+    "description",
+    "ai_project",
+    "type",
+    "severity",
+    "status",
+    "approval_status",
+    "occurred_date",
+    "date_detected",
+    "reporter",
+    "model_system_version",
+    "affected_persons_groups",
+    "relationship_causality",
+    "immediate_mitigations",
+    "planned_corrective_actions",
+    "approval_notes",
+    "categories_of_harm",
+    "interim_report",
+    "archived",
+  ],
   replace: {
     project_id: "The selected use case is no longer available.",
     model_inventory_id: "The selected affected model is no longer available.",

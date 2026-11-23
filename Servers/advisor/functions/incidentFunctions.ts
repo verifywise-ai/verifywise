@@ -7,6 +7,7 @@ import {
 import {
   getAllIncidentsQuery,
   createNewIncidentQuery,
+  getIncidentApproverName,
   deleteIncidentByIdQuery,
   archiveIncidentByIdQuery,
 } from "../../utils/incidentManagement.utils";
@@ -20,6 +21,10 @@ import { sequelize } from "../../database/db";
 import logger from "../../utils/logger/fileLogger";
 import { userHasPermission } from "../../utils/userPermission.utils";
 import { actingRequesterId } from "./actingRequester";
+import { validateCompleteIncidentCreation } from "../../utils/validations/incidentManagementValidation.utils";
+
+/** Reporter of an Advisor-created incident when no requesting user is known. */
+const ADVISOR_REPORTER = "AI Advisor";
 
 export interface FetchIncidentsParams {
   type?:
@@ -497,6 +502,11 @@ const agentCreateIncident = createWriteToolFn({
     if (refusal) return { success: false, message: refusal };
     const transaction = await sequelize.transaction();
     try {
+      // The incident's reporter is the user who asked for it.
+      const requesterId = actingRequesterId(params);
+      const reporter = requesterId
+        ? await getIncidentApproverName(requesterId, organizationId, transaction)
+        : ADVISOR_REPORTER;
       const incidentData = {
         ai_project: (params.title as string) || "",
         // Required by the tool schema; the write query enforces the length rule.
@@ -506,7 +516,7 @@ const agentCreateIncident = createWriteToolFn({
         status: "Open",
         occurred_date: new Date(),
         date_detected: new Date(),
-        reporter: "",
+        reporter,
         approval_status: "Pending",
         approved_by: "",
         categories_of_harm: [],
@@ -521,6 +531,13 @@ const agentCreateIncident = createWriteToolFn({
         archived: false,
         is_demo: false,
       } as unknown as AIIncidentManagementModel;
+
+      // The REST create's field rules. The description is left to the write
+      // query (assertValidIncidentDescription), which throws its own error.
+      const fieldErrors = validateCompleteIncidentCreation(incidentData).filter(
+        (error) => error.field !== "description",
+      );
+      if (fieldErrors.length > 0) throw new Error(fieldErrors.map((e) => e.message).join(" "));
 
       const result = await createNewIncidentQuery(incidentData, organizationId, transaction);
       await transaction.commit();

@@ -440,6 +440,151 @@ describe("NewIncident (SideDrawerIncident)", () => {
     });
   });
 
+  describe("field rules shared with the server", () => {
+    const reversedDates = {
+      ...savableData,
+      occurred_date: "2026-09-02",
+      date_detected: "2026-09-01",
+    } as unknown as NewIncidentFormValues;
+
+    it("does not save a new incident without an incident type", () => {
+      const onSuccess = vi.fn();
+      renderWithProviders(
+        <SideDrawerIncident
+          isOpen={true}
+          setIsOpen={vi.fn()}
+          onSuccess={onSuccess}
+          initialData={{ ...savableData, type: "" }}
+        />,
+      );
+      fireEvent.click(screen.getByText("Save incident"));
+      expect(onSuccess).not.toHaveBeenCalled();
+    });
+
+    it("does not save a detected date before the occurred date", () => {
+      const onSuccess = vi.fn();
+      renderWithProviders(
+        <SideDrawerIncident
+          isOpen={true}
+          setIsOpen={vi.fn()}
+          onSuccess={onSuccess}
+          initialData={reversedDates}
+        />,
+      );
+      fireEvent.click(screen.getByText("Save incident"));
+      expect(onSuccess).not.toHaveBeenCalled();
+    });
+
+    it("does not save a detected date in the future", () => {
+      const onSuccess = vi.fn();
+      renderWithProviders(
+        <SideDrawerIncident
+          isOpen={true}
+          setIsOpen={vi.fn()}
+          onSuccess={onSuccess}
+          initialData={{ ...savableData, date_detected: "2999-01-01" }}
+        />,
+      );
+      fireEvent.click(screen.getByText("Save incident"));
+      expect(onSuccess).not.toHaveBeenCalled();
+    });
+
+    it("does not save a model / system version over 255 characters", () => {
+      const onSuccess = vi.fn();
+      renderWithProviders(
+        <SideDrawerIncident
+          isOpen={true}
+          setIsOpen={vi.fn()}
+          onSuccess={onSuccess}
+          initialData={{ ...savableData, model_system_version: "v".repeat(256) }}
+        />,
+      );
+      fireEvent.click(screen.getByText("Save incident"));
+      expect(onSuccess).not.toHaveBeenCalled();
+    });
+
+    it("lets an older incident with reversed dates be edited when the dates are untouched", async () => {
+      const onSuccess = vi.fn().mockResolvedValue(undefined);
+      renderWithProviders(
+        <SideDrawerIncident
+          isOpen={true}
+          setIsOpen={vi.fn()}
+          onSuccess={onSuccess}
+          initialData={{ ...reversedDates, incident_id: "INC-1" }}
+          isEdit
+        />,
+      );
+      fireEvent.change(screen.getByTestId("field-description"), {
+        target: { value: "Updated description of the incident." },
+      });
+      fireEvent.click(screen.getByText("Update incident"));
+      await waitFor(() => expect(onSuccess).toHaveBeenCalledTimes(1));
+    });
+  });
+
+  describe("harm categories outside the page's list", () => {
+    const legacyHarm = {
+      ...savableData,
+      incident_id: "INC-2",
+      categories_of_harm: ["Health and Safety", "Rights"],
+    } as unknown as NewIncidentFormValues;
+
+    it("shows a stored off-list category as a checked box when editing", () => {
+      renderWithProviders(
+        <SideDrawerIncident isOpen={true} setIsOpen={vi.fn()} initialData={legacyHarm} isEdit />,
+      );
+      const box = document.getElementById("harm-category-Health and Safety") as HTMLInputElement;
+      expect(box).toBeTruthy();
+      expect(box.checked).toBe(true);
+    });
+
+    it("lets the user untick it, sending the list without it", async () => {
+      const onSuccess = vi.fn().mockResolvedValue(undefined);
+      renderWithProviders(
+        <SideDrawerIncident
+          isOpen={true}
+          setIsOpen={vi.fn()}
+          onSuccess={onSuccess}
+          initialData={legacyHarm}
+          isEdit
+        />,
+      );
+      fireEvent.click(document.getElementById("harm-category-Health and Safety")!);
+      fireEvent.click(screen.getByText("Update incident"));
+      await waitFor(() => expect(onSuccess).toHaveBeenCalledTimes(1));
+      expect(onSuccess.mock.calls[0][0].categories_of_harm).toEqual(["Rights"]);
+      // Still shown, unchecked, so it can be ticked back.
+      expect(
+        (document.getElementById("harm-category-Health and Safety") as HTMLInputElement).checked,
+      ).toBe(false);
+    });
+
+    it("offers only the page's categories when creating", () => {
+      renderWithProviders(
+        <SideDrawerIncident isOpen={true} setIsOpen={vi.fn()} initialData={legacyHarm} />,
+      );
+      expect(document.getElementById("harm-category-Health and Safety")).toBeNull();
+    });
+  });
+
+  it("lets an incident whose stored detected date is in the future be edited when it is untouched", async () => {
+    const onSuccess = vi.fn().mockResolvedValue(undefined);
+    renderWithProviders(
+      <SideDrawerIncident
+        isOpen={true}
+        setIsOpen={vi.fn()}
+        onSuccess={onSuccess}
+        initialData={{ ...savableData, incident_id: "INC-3", date_detected: "2999-01-01" }}
+        isEdit
+      />,
+    );
+    fireEvent.change(screen.getByTestId("field-description"), {
+      target: { value: "Updated description of the incident." },
+    });
+    fireEvent.click(screen.getByText("Update incident"));
+    await waitFor(() => expect(onSuccess).toHaveBeenCalledTimes(1));
+  });
+
   it("compares lists as sets, so reordering harm categories is not an edit", () => {
     expect(
       isSameFormValue("categories_of_harm", ["Economic Loss", "Other"], ["Other", "Economic Loss"]),

@@ -37,3 +37,16 @@ export enum IncidentType {
   SECURITY_BREACH = "Security breach",
   PERFORMANCE_DEGRADATION = "Performance degradation",
 }
+
+/**
+ * Categories of harm an incident records. The values are the ones the
+ * incident page offers (Clients/src/domain/enums/aiIncidentManagement.enum.ts)
+ * and existing rows store.
+ */
+export enum HarmCategory {
+  HEALTH = "Health",
+  SAFETY = "Safety",
+  FUNDAMENTAL_RIGHTS = "Rights",
+  PROPERTY = "Property",
+  ENVIRONMENT = "Environment",
+}

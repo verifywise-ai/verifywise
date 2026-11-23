@@ -103,25 +103,34 @@ export const VENDOR_RISK_MODAL_FIELD_IDS: Partial<Record<keyof VendorRiskModalFo
 /** Incident drawer modal (`Modals/NewIncident`) — validator keys and DOM ids. */
 export interface IncidentFormValues {
   ai_project: string;
+  type: string;
+  severity: string;
   occurred_date: string;
   date_detected: string;
   reporter: string;
+  model_system_version?: string;
   description: string;
   categories_of_harm: string[];
 }
 
 export const INCIDENT_FORM_FIELD_ORDER: (keyof IncidentFormValues)[] = [
   "ai_project",
+  "type",
+  "severity",
   "occurred_date",
   "date_detected",
   "reporter",
+  "model_system_version",
   "description",
   "categories_of_harm",
 ];
 
 export const INCIDENT_FORM_FIELD_IDS: Partial<Record<string, string>> = {
   ai_project: "ai_project",
+  type: "type",
+  severity: "severity",
   reporter: "reporter",
+  model_system_version: "model_version",
   description: "description",
   // Focus wrapper around the harm-category checkbox group (first checkbox is focused).
   categories_of_harm: "categories-of-harm",
