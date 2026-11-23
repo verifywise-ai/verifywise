@@ -170,3 +170,32 @@
   color: var(--color-error);
   margin-top: 20px;
 }
+
+/*
+ * AI-written prose: the same labelled box as report-pdf.ejs's
+ * .ai-analysis-box, here so the fix-it list (which lacks those inline
+ * styles) shows it too.
+ */
+.e23-ai-box {
+  border-left: 4px solid var(--color-primary);
+  background: #f0faf7;
+  padding: 16px 20px;
+  margin: 16px 0 24px 0;
+  border-radius: 0 4px 4px 0;
+}
+
+.e23-ai-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--color-primary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+}
+
+.e23-ai-content {
+  font-size: 12px;
+  line-height: 1.6;
+  color: #344054;
+  white-space: pre-wrap;
+}

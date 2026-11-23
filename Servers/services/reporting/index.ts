@@ -217,10 +217,13 @@ export async function generateReport(
         //
         // Design §10: a scheduled run diffs against the last run of the same
         // schedule. A manual run has no schedule, priorFacts stays null, and
-        // renderFacts emits no change block — exactly what renders today.
+        // renderFacts emits no change block — exactly what renders today. An
+        // OSFI E-23 manual run is the exception: it diffs against the previous
+        // run of its template (spec 8.10).
         const priorFacts = await collectPriorFacts(
           request.scheduledReportId,
           reportData.metadata.organizationId,
+          { templateId: request.templateId, kind: request.reportKind },
         );
         const { facts, snapshot } = collectFactsInput(reportData, priorFacts);
         factsSnapshot = snapshot;

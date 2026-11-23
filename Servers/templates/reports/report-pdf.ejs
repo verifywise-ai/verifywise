@@ -336,7 +336,7 @@ const isE23 = typeof e23 !== 'undefined' && !!e23;
       </div>
       <% } %>
 
-    <%_ if (isE23) { /* Recommended actions go to the internal fix-it list for this report. The e23Gap analysis renders after e23.main. */ -%>
+    <%_ if (isE23) { /* Recommended actions go to the internal fix-it list for this report. The e23Gap analysis is the last of e23.main. */ -%>
     <%- e23Partial('sections', { e23Sections: e23.main }) %>
     <%_ } -%>
     <!-- ============================================ -->

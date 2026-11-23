@@ -174,7 +174,7 @@ describe("mapAnalysesToSummaries", () => {
     });
   });
 
-  it("labels every one of the seven analyzer keys, exactly once", () => {
+  it("labels every one of the eight analyzer keys, exactly once", () => {
     // ONE map. docxGenerator imports it and pdfGenerator passes it to EJS, so a
     // renderer that gains a block cannot drift its heading away from the other.
     expect(ANALYSIS_LABELS).toEqual({
@@ -185,6 +185,7 @@ describe("mapAnalysesToSummaries", () => {
       riskAnalysis: "Risk analysis",
       complianceGap: "Compliance gap analysis",
       vendorRisk: "Third-party risk analysis",
+      e23Gap: "E-23 gap analysis",
     });
   });
 });

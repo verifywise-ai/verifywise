@@ -84,7 +84,24 @@ describe("resolveReportRequest", () => {
       riskAnalysis: true,
       complianceGap: false,
       vendorRisk: false,
+      e23Gap: false,
     });
+  });
+
+  it("maps the E-23 gap analysis flag", () => {
+    const req = resolveReportRequest(
+      {
+        name: "Q",
+        format: "pdf",
+        scope: "organization",
+        sections_config: { sections: [{ reportSectionKey: "frameworkRequirements" }] },
+        ai_blocks_config: { e23Gap: true },
+        parameters_config: { kind: "osfi_e23" },
+      },
+      9,
+    );
+    expect(req.aiBlocks!.e23Gap).toBe(true);
+    expect(req.aiEnhanced).toBe(true);
   });
 
   it("keeps aiEnhanced true when only a new block is on", () => {
@@ -130,6 +147,7 @@ describe("resolveReportRequest", () => {
       riskAnalysis: false,
       complianceGap: false,
       vendorRisk: false,
+      e23Gap: false,
     });
   });
 });

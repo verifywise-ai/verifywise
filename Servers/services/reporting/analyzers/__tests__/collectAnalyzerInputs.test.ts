@@ -19,8 +19,10 @@ jest.mock("../../../../utils/evidenceAi.utils", () => ({
 // Same reason: reportRunAnalysis.utils imports the real sequelize instance at
 // module load (reportRunAnalysis.utils.ts:1).
 const mockPriorFacts = jest.fn();
+const mockPriorFactsByTemplate = jest.fn();
 jest.mock("../../../../utils/reportRunAnalysis.utils", () => ({
   getPriorFactsSnapshotQuery: (...a: any[]) => mockPriorFacts(...a),
+  getPriorFactsSnapshotByTemplateQuery: (...a: any[]) => mockPriorFactsByTemplate(...a),
 }));
 
 // collectAnalyzerInputs now imports ./facts, which imports isoDate from
@@ -44,6 +46,7 @@ describe("collectAnalyzerInputs", () => {
     mockFrameworkScore.mockReset().mockResolvedValue({ avg_score: 40 });
     mockGaps.mockReset().mockResolvedValue([{ control_id: 1, gap_type: "no_evidence" }]);
     mockPriorFacts.mockReset().mockResolvedValue(null);
+    mockPriorFactsByTemplate.mockReset().mockResolvedValue(null);
   });
 
   it("skips the evidence-gap query for a framework it does not cover", async () => {
@@ -176,6 +179,7 @@ describe("collectAnalyzerInputs", () => {
       riskAnalysis: true,
       complianceGap: false,
       vendorRisk: false,
+      e23Gap: false,
     });
   });
 
@@ -183,6 +187,23 @@ describe("collectAnalyzerInputs", () => {
     const blocks = resolveBlocks({ aiEnhanced: true } as any);
     expect(blocks.complianceGap).toBe(false);
     expect(blocks.vendorRisk).toBe(false);
+  });
+
+  it("leaves the E-23 gap analysis off for manual legacy runs and when AI is off", () => {
+    expect(resolveBlocks({ aiEnhanced: true } as any).e23Gap).toBe(false);
+    expect(resolveBlocks({ aiEnhanced: false } as any).e23Gap).toBe(false);
+  });
+
+  it("harvests fix-it owners as allowed suggested owners, never the Unassigned placeholder", () => {
+    const owners = collectAllowedOwners({
+      sections: {
+        e23FixItList: {
+          items: [{ owner: "Rae Rater" }, { owner: "Unassigned" }, { owner: "Sam Steward" }],
+          counts: { high: 0, medium: 0, low: 0 },
+        },
+      },
+    } as any);
+    expect(owners.sort()).toEqual(["Rae Rater", "Sam Steward"]);
   });
 
   it("prefers an explicit aiBlocks over the legacy default", () => {
@@ -394,5 +415,45 @@ describe("collectAnalyzerInputs", () => {
 
     mockPriorFacts.mockResolvedValue({ generatedAt: "2026-06-01T00:00:00.000Z" });
     expect(await collectPriorFacts(12, 5)).toBeNull();
+  });
+
+  describe("an OSFI E-23 manual run compares against the template's previous run (spec 8.10)", () => {
+    const stored = {
+      schema: FACTS_SCHEMA_VERSION,
+      generatedAt: "2026-08-20",
+      framework: "OSFI E-23",
+      subject: "Organization",
+      sections: { e23FixItList: { items: 9 } },
+    };
+
+    it("falls back to the template for kind osfi_e23 when the run has no schedule", async () => {
+      mockPriorFactsByTemplate.mockResolvedValue(stored);
+      expect(await collectPriorFacts(undefined, 5, { templateId: 31, kind: "osfi_e23" })).toEqual(
+        stored,
+      );
+      expect(mockPriorFactsByTemplate).toHaveBeenCalledWith(31, 5);
+      expect(mockPriorFacts).not.toHaveBeenCalled();
+    });
+
+    it("keeps a scheduled E-23 run on its own schedule", async () => {
+      mockPriorFacts.mockResolvedValue(stored);
+      await collectPriorFacts(12, 5, { templateId: 31, kind: "osfi_e23" });
+      expect(mockPriorFacts).toHaveBeenCalledWith(12, 5);
+      expect(mockPriorFactsByTemplate).not.toHaveBeenCalled();
+    });
+
+    it("never uses the template for any other kind of report", async () => {
+      expect(await collectPriorFacts(undefined, 5, { templateId: 31 })).toBeNull();
+      expect(await collectPriorFacts(undefined, 5, { templateId: 31, kind: "other" })).toBeNull();
+      expect(await collectPriorFacts(undefined, 5, { kind: "osfi_e23" })).toBeNull();
+      expect(mockPriorFactsByTemplate).not.toHaveBeenCalled();
+    });
+
+    it("refuses a template prior written under another vocabulary", async () => {
+      mockPriorFactsByTemplate.mockResolvedValue({ ...stored, schema: FACTS_SCHEMA_VERSION - 1 });
+      expect(
+        await collectPriorFacts(undefined, 5, { templateId: 31, kind: "osfi_e23" }),
+      ).toBeNull();
+    });
   });
 });

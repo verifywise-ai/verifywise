@@ -75,7 +75,7 @@ export interface ReportSectionCatalogEntry {
 export type ReportScope = "project" | "organization";
 
 /**
- * The seven AI blocks Phase 2 shipped on the backend. Mirrors
+ * The AI blocks the backend runs. Mirrors
  * Servers/domain.layer/interfaces/i.reportTemplate.ts AiBlocksConfig.
  */
 export interface AiBlocksConfig {
@@ -86,6 +86,8 @@ export interface AiBlocksConfig {
   riskAnalysis?: boolean;
   complianceGap?: boolean;
   vendorRisk?: boolean;
+  /** The OSFI E-23 gap analysis; offered only for templates of kind osfi_e23. */
+  e23Gap?: boolean;
 }
 
 /**
@@ -204,6 +206,7 @@ export type AnalysisSectionKey =
   | "riskAnalysis"
   | "complianceGap"
   | "vendorRisk"
+  | "e23Gap"
   | "sectionSummaries";
 
 /** The `severity` / `priority` enum shared by the analyzer schemas. */
@@ -284,6 +287,21 @@ export interface VendorRiskPayload {
   abstain_reason: string | null;
 }
 
+/** How far the MRM data bears out a group's self-assessed statuses. Never a compliance rating. */
+export type E23GapPosition = "consistent" | "partly consistent" | "inconsistent" | "not assessable";
+
+export interface E23GapPayload {
+  narrative: string;
+  principles: Array<{
+    group: string;
+    position: E23GapPosition;
+    explanation: string;
+    basis?: AnalysisBasis | null;
+    what_would_close_this?: string | null;
+  }>;
+  abstain_reason: string | null;
+}
+
 export type AnalysisPayload =
   | ExecutiveSummaryPayload
   | KeyFindingsPayload
@@ -291,6 +309,7 @@ export type AnalysisPayload =
   | RiskAnalysisPayload
   | ComplianceGapPayload
   | VendorRiskPayload
+  | E23GapPayload
   | SectionSummariesPayload
   // An abstained or failed analyzer persists a null payload. Consumers must
   // narrow before reading any field.

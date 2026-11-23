@@ -17,7 +17,6 @@ import {
   BorderStyle,
   Footer,
   PageNumber,
-  ShadingType,
   convertInchesToTwip,
 } from "docx";
 import {
@@ -29,6 +28,7 @@ import { ANALYSIS_LABELS } from "./analyzers/mapToSummaries";
 import {
   COLORS,
   TableCellInput,
+  createAIAnalysisBox,
   createBullet,
   createEmptyState,
   createSectionHeader,
@@ -328,66 +328,6 @@ function createTableOfContents(reportData: ReportData): Paragraph[] {
   );
 
   return paragraphs;
-}
-
-/**
- * Create an AI analysis box (green left border, light green background)
- */
-function createAIAnalysisBox(
-  content: string,
-  label: string = "AI Analysis",
-  borderColor: string = COLORS.primary,
-  bgColor: string = COLORS.aiBg,
-): Paragraph[] {
-  return [
-    new Paragraph({
-      spacing: { before: 200, after: 40 },
-      border: {
-        left: {
-          color: borderColor,
-          size: 24,
-          style: BorderStyle.SINGLE,
-          space: 8,
-        },
-      },
-      shading: {
-        fill: bgColor,
-        type: ShadingType.CLEAR,
-      },
-      children: [
-        new TextRun({
-          text: label.toUpperCase(),
-          bold: true,
-          size: 18,
-          color: borderColor,
-        }),
-      ],
-    }),
-    new Paragraph({
-      spacing: { after: 200 },
-      border: {
-        left: {
-          color: borderColor,
-          size: 24,
-          style: BorderStyle.SINGLE,
-          space: 8,
-        },
-      },
-      shading: {
-        fill: bgColor,
-        type: ShadingType.CLEAR,
-      },
-      children: content.split("\n").map(
-        (line, i) =>
-          new TextRun({
-            text: line,
-            size: 20,
-            color: COLORS.textPrimary,
-            ...(i > 0 && { break: 1 }),
-          }),
-      ),
-    }),
-  ];
 }
 
 /**
@@ -1394,7 +1334,6 @@ export async function generateDOCX(reportData: ReportData): Promise<ReportGenera
       ...createE23Sections(e23.intro),
       ...aiExecutiveSummary,
       ...createE23Sections(e23.main),
-      // The e23Gap analysis renders here, after the contradictions.
       ...createComplianceGapSection(reportData),
       ...createVendorRiskSection(reportData),
       ...riskSection,

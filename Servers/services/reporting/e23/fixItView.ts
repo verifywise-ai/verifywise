@@ -13,7 +13,9 @@
 
 import type { E23FixItItem, ReportData } from "../../../domain.layer/interfaces/i.reportGeneration";
 import { NOTICE_TEXT } from "../noticeText";
+import { ANALYSIS_LABELS } from "../analyzers/mapToSummaries";
 import {
+  AI_GENERATED_LABEL,
   E23_NOT_ON_FILE,
   FIX_IT_HEADERS,
   FIX_IT_HEADING,
@@ -23,6 +25,8 @@ import {
   FIX_IT_TITLE,
   INTERNAL_MARKING,
   NO_FIX_IT_ITEMS,
+  RECOMMENDED_ACTIONS_HEADERS,
+  RECOMMENDED_ACTIONS_HEADING,
   textParam,
 } from "./e23Text";
 import {
@@ -30,6 +34,7 @@ import {
   type E23Cell,
   type E23Cover,
   type E23Section,
+  capitalizeOrDash,
   formatReportDate,
   isE23Report,
 } from "./formalView";
@@ -132,17 +137,51 @@ function itemsSection(data: ReportData): E23Section {
   return { id: "fixit-items", heading: FIX_IT_HEADING, blocks };
 }
 
+/**
+ * The AI recommended actions (spec 8.6): moved here from the formal report for
+ * this template, because they name suggested owners and read as a to-do list.
+ * When they were not produced, their abstention is said here instead, since
+ * the formal report leaves it out. Null when the block was not run.
+ */
+function actionsSection(data: ReportData): E23Section | null {
+  const ai = data.aiSummaries;
+  const actions = ai?.recommendedActions ?? [];
+  const abstention = ai?.abstentions?.recommendedActions;
+  if (actions.length === 0 && !abstention) return null;
+  const blocks: E23Block[] =
+    actions.length > 0
+      ? [
+          {
+            kind: "ai",
+            label: AI_GENERATED_LABEL,
+            text: "These actions were written by AI from the fix-it items and the report data. Check each one before acting on it.",
+          },
+          {
+            kind: "table",
+            headers: RECOMMENDED_ACTIONS_HEADERS,
+            small: true,
+            widths: [32, 32, 10, 10, 16],
+            rows: actions.map((a) => [
+              a.action,
+              a.sourceSignal || DASH,
+              capitalizeOrDash(a.priority),
+              capitalizeOrDash(a.basis),
+              a.suggestedOwner || "Unassigned",
+            ]),
+          },
+        ]
+      : [{ kind: "paragraph", text: `${ANALYSIS_LABELS.recommendedActions}: ${abstention}` }];
+  return { id: "fixit-actions", heading: RECOMMENDED_ACTIONS_HEADING, blocks };
+}
+
 /** The fix-it document's content, or null for a report that is not an E-23 kind run. */
 export function buildE23FixItView(data: ReportData, opts: { runId?: number }): E23FixItView | null {
   if (!isE23Report(data)) return null;
   const params = data.metadata.reportParameters ?? {};
   const institution = textParam(params.institutionName) || data.branding.organizationName;
 
-  const sections = [
-    itemsSection(data),
-    // The AI recommended actions follow the items here (spec 8.6): this
-    // template moves them out of the formal report.
-  ];
+  const actions = actionsSection(data);
+  const sections = [itemsSection(data), ...(actions ? [actions] : [])];
 
   return {
     institution,

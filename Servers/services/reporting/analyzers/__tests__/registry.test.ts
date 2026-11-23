@@ -9,11 +9,15 @@ import {
   SECTION_LABELS,
 } from "../prompts";
 
+/** Every analyzer but e23Gap, which reads only an OSFI E-23 run's sections. */
+const GENERAL_ANALYZERS = () => Object.values(ANALYZERS).filter((def) => def.key !== "e23Gap");
+
 describe("analyzer registry", () => {
-  it("exposes exactly the six analyzers", () => {
+  it("exposes exactly the seven analyzers", () => {
     expect(Object.keys(ANALYZERS).sort()).toEqual(
       [
         "complianceGap",
+        "e23Gap",
         "executiveSummary",
         "keyFindings",
         "recommendedActions",
@@ -21,7 +25,7 @@ describe("analyzer registry", () => {
         "vendorRisk",
       ].sort(),
     );
-    expect(ANALYSIS_SECTION_KEYS).toHaveLength(6);
+    expect(ANALYSIS_SECTION_KEYS).toHaveLength(7);
   });
 
   it("carries a version string, pinned to the prompt generation that produced it", () => {
@@ -29,7 +33,7 @@ describe("analyzer registry", () => {
     // Stamped into report_run_analyses.audit_metadata: stored analyses must
     // stay traceable to the prompts that produced them, so this is pinned
     // exactly and bumped deliberately alongside a prompt or schema change.
-    expect(ANALYZER_VERSION).toBe("report-analyzer-v3");
+    expect(ANALYZER_VERSION).toBe("report-analyzer-v4");
   });
 
   it("every analyzer builds a non-empty system and user prompt when its own sections/summaries are present", () => {
@@ -68,7 +72,8 @@ describe("analyzer registry", () => {
         compliance: "Compliance controls are mostly complete.",
       },
     };
-    for (const def of Object.values(ANALYZERS)) {
+    // e23Gap reads only an OSFI E-23 run's sections; e23Gap.test.ts covers it.
+    for (const def of GENERAL_ANALYZERS()) {
       expect(def.buildSystemPrompt().length).toBeGreaterThan(50);
       expect(def.buildUserPrompt(reportData, extras).length).toBeGreaterThan(20);
     }
@@ -280,13 +285,9 @@ describe("analyzer registry", () => {
     // or a section silently falls back to the generic text.
     // The five E-23-only sections are rendered from data, not summarised, so
     // they carry a label but no analytic instruction.
-    const e23Only = [
-      "mrmFleet",
-      "e23Contradictions",
-      "e23FixItList",
-      "mrmInventoryAppendix",
-      "signOff",
-    ];
+    // Two E-23 sections are never summarised (NO_SECTION_SUMMARY): the
+    // sign-off page carries no data and the appendix is a reference listing.
+    const e23Only = ["mrmInventoryAppendix", "signOff"];
     expect(Object.keys(SECTION_INSTRUCTIONS).sort()).toEqual(
       Object.keys(SECTION_LABELS)
         .filter((k) => !e23Only.includes(k))
@@ -588,11 +589,11 @@ describe("analyzer registry", () => {
       },
     };
 
-    it("all six carry the facts block, so a single prompt holds the whole estate", () => {
+    it("all six general analyzers carry the facts block, so a single prompt holds the whole estate", () => {
       // Correlation between sections is only expressible once one prompt sees
       // more than one section. The three raw-section analyzers get it too:
-      // aggregates are exactly what they lack.
-      for (const def of Object.values(ANALYZERS)) {
+      // aggregates are exactly what they lack. (e23Gap: see e23Gap.test.ts.)
+      for (const def of GENERAL_ANALYZERS()) {
         expect(def.buildUserPrompt(reportData, extras)).toContain("FACTS-MARKER");
       }
     });

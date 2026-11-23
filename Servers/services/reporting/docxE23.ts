@@ -9,6 +9,7 @@ import type { E23Block, E23Cell, E23Cover, E23FormalView, E23Section } from "./e
 import {
   COLORS,
   TableCellInput,
+  createAIAnalysisBox,
   createBullet,
   createSectionHeader,
   createSubsectionHeader,
@@ -50,6 +51,8 @@ function blockElements(block: E23Block): Element[] {
   switch (block.kind) {
     case "paragraph":
       return [text(block.text, { muted: block.muted })];
+    case "ai":
+      return createAIAnalysisBox(block.text, block.label);
     case "subheading":
       return [subheading(block.text), ...(block.note ? [text(block.note, { muted: true })] : [])];
     case "list":

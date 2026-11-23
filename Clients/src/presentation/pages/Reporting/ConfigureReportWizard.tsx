@@ -18,6 +18,7 @@ import useFrameworks from "../../../application/hooks/useFrameworks";
 import { useLLMKeyStatus } from "../../../application/hooks/useLLMKeyStatus";
 import { showAlert } from "../../../infrastructure/api/customAxios";
 import type { AiBlocksConfig } from "../../../domain/interfaces/i.reporting";
+import { aiBlocksForKind, DEFAULT_AI_BLOCKS } from "./aiBlocks";
 
 // Run now skips Schedule and Delivery entirely: there is no recurrence to set
 // up and the run is saved to storage unconditionally (see reportTemplate.ctrl
@@ -40,30 +41,6 @@ const FORMAT_ITEMS = [
   { _id: "pdf", name: "PDF" },
   { _id: "docx", name: "Word (DOCX)" },
 ];
-
-// The seven blocks Phase 2 shipped on the backend. Previously three of these
-// were hardcoded here and the other four were unreachable from the UI.
-const AI_BLOCKS: Array<{ key: keyof AiBlocksConfig; label: string }> = [
-  { key: "sectionSummaries", label: "Per-section summaries" },
-  { key: "executiveSummary", label: "Executive summary" },
-  { key: "keyFindings", label: "Key findings" },
-  { key: "recommendedActions", label: "Recommended actions" },
-  { key: "riskAnalysis", label: "Risk analysis" },
-  { key: "complianceGap", label: "Compliance gap analysis" },
-  { key: "vendorRisk", label: "Third-party risk analysis" },
-];
-
-// complianceGap and vendorRisk default off: each enabled block is one
-// language-model call on every scheduled run.
-const DEFAULT_AI_BLOCKS: AiBlocksConfig = {
-  sectionSummaries: true,
-  executiveSummary: true,
-  keyFindings: true,
-  recommendedActions: true,
-  riskAnalysis: true,
-  complianceGap: false,
-  vendorRisk: false,
-};
 
 const FRAMEWORKS_LABEL_ID = "configure-report-frameworks-label";
 const FRAMEWORKS_INPUT_ID = "configure-report-frameworks";
@@ -110,6 +87,9 @@ export default function ConfigureReportWizard({
   const [ai, setAi] = useState<AiBlocksConfig>(
     template.latestVersion?.ai_blocks_config ?? DEFAULT_AI_BLOCKS,
   );
+  // A block limited to a report kind (the E-23 gap analysis) is offered only
+  // for a template of that kind.
+  const aiBlocks = aiBlocksForKind(template.latestVersion?.parameters_config?.kind);
   // ponytail: no template carries a format in format_config today (it is
   // persisted as {}), so there is nothing to seed from — plain "pdf" default.
   const [format, setFormat] = useState<"pdf" | "docx">("pdf");
@@ -436,7 +416,7 @@ export default function ConfigureReportWizard({
             </Typography>
           )}
           <Stack>
-            {AI_BLOCKS.map(({ key, label }) => (
+            {aiBlocks.map(({ key, label }) => (
               <Checkbox
                 key={key}
                 id={`configure-report-ai-${key}`}

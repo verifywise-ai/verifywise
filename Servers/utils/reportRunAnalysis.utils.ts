@@ -117,3 +117,39 @@ export const getPriorFactsSnapshotQuery = async (
   )) as [any[], number];
   return result[0][0]?.facts ?? null;
 };
+
+/**
+ * The most recent facts snapshot of a template's finished runs in this
+ * organization, whatever triggered them: the prior for a manual OSFI E-23 run
+ * (spec 8.10), which has no schedule to compare against.
+ *
+ * Tenant isolation as above, on both sides of the join; a system template is
+ * shared by every organization, so the organization filter is what keeps one
+ * organization's figures out of another's comparison. The current run cannot
+ * match itself: its analyses are written after generation, and it is still
+ * `running` until then.
+ */
+export const getPriorFactsSnapshotByTemplateQuery = async (
+  templateId: number,
+  organizationId: number,
+) => {
+  const result = (await sequelize.query(
+    `SELECT ra.audit_metadata -> 'facts' AS facts
+       FROM report_run_analyses ra
+       JOIN report_runs r ON r.id = ra.report_run_id
+      WHERE r.template_id = :template_id
+        AND r.organization_id = :organization_id
+        AND r.status IN ('success', 'partial_success')
+        AND ra.organization_id = :organization_id
+        AND ra.audit_metadata -> 'facts' IS NOT NULL
+      ORDER BY ra.analyzed_at DESC
+      LIMIT 1;`,
+    {
+      replacements: {
+        template_id: templateId,
+        organization_id: organizationId,
+      },
+    },
+  )) as [any[], number];
+  return result[0][0]?.facts ?? null;
+};

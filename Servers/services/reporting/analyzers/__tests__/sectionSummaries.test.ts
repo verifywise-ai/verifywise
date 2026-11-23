@@ -104,6 +104,38 @@ describe("runSectionSummaries", () => {
     expect(mockGenerateText).not.toHaveBeenCalled();
   });
 
+  it("writes no summary for the sign-off page, the inventory appendix or the E-23 glance", async () => {
+    const out = await runSectionSummaries(
+      "model" as any,
+      {
+        sections: {
+          signOff: { note: "present" },
+          mrmInventoryAppendix: { active: [{ name: "M1" }], retired: [] },
+          e23Glance: { modelsInScope: 4 },
+          mrmFleet: {
+            totals: { models: 1, untiered: 0, byTier: { "1": 1, "2": 0, "3": 0 } },
+            validationCoverage: { validated: 1, inReview: 0, notStarted: 0, overdue: 0 },
+            openFindingsBySeverity: { critical: 0, high: 0, medium: 0, low: 0 },
+            monitoring: { withActiveThresholds: 1, withRecentMetric: 1 },
+            activity: {
+              period: null,
+              validationsSignedOff: 0,
+              findingsOpened: 0,
+              findingsClosed: 0,
+              breaches: 0,
+              revalidationEvents: 0,
+            },
+            perTier: [],
+            exceptions: [],
+          },
+        },
+      } as any,
+    );
+    expect(Object.keys(out)).toEqual(["mrmFleet"]);
+    expect(mockGenerateText).toHaveBeenCalledTimes(1);
+    expect(mockGenerateText.mock.calls[0][0].prompt).toContain("Models in scope (not retired): 1");
+  });
+
   it("skips a dataCollector-shaped empty section (zero counts, empty arrays)", async () => {
     const out = await runSectionSummaries(
       "model" as any,

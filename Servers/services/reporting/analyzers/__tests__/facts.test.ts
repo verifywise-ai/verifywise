@@ -11,6 +11,7 @@ import {
   renderFacts,
   type FactsSnapshot,
 } from "../facts";
+import { e23FixItReportData } from "../../tests/helpers/e23ReportData";
 
 // Every fixture below uses the vocabulary dataCollector ACTUALLY emits for that
 // section, not a plausible-looking one. Project and vendor risks carry the
@@ -735,8 +736,8 @@ describe("renderFacts", () => {
     expect(out).toContain('top_showing="showing 3 of 60"');
   });
 
-  it("FACTS_SCHEMA_VERSION is 2", () => {
-    expect(FACTS_SCHEMA_VERSION).toBe(2);
+  it("FACTS_SCHEMA_VERSION is 3", () => {
+    expect(FACTS_SCHEMA_VERSION).toBe(3);
   });
 
   it("collectFacts emits frameworkRequirements aggregates", () => {
@@ -813,5 +814,83 @@ describe("renderFacts", () => {
     expect(f.top2).toContain("Late");
     expect(f.top3).toContain("Ownerless");
     expect(f.top_showing).toBe("showing 3 of 6");
+  });
+});
+
+describe("facts for the OSFI E-23 sections (spec 8.10)", () => {
+  const e23 = () => e23FixItReportData();
+
+  it("bumps the vocabulary version for the new aggregates", () => {
+    expect(FACTS_SCHEMA_VERSION).toBe(3);
+  });
+
+  it("aggregates the MRM status: fleet, tiers, validation, findings, monitoring and activity", () => {
+    const fleet = collectFacts(e23()).sections.mrmFleet;
+    expect(fleet).toEqual(
+      expect.objectContaining({
+        models: 9,
+        untiered: 3,
+        tier1: 2,
+        tier2: 3,
+        tier3: 1,
+        validated: 4,
+        inReview: 2,
+        notStarted: 3,
+        overdueValidations: 1,
+        openCritical: 1,
+        openHigh: 2,
+        withActiveThresholds: 5,
+        withRecentMetric: 4,
+        validationsSignedOff: 2,
+        findingsOpened: 3,
+        // The exceptions are the ranked rows.
+        items: 2,
+      }),
+    );
+    expect(fleet.top1).toContain("Fraud detector");
+  });
+
+  it("aggregates the contradictions, and records nothing when the checks did not run", () => {
+    const c = collectFacts(e23()).sections.e23Contradictions;
+    expect(c).toEqual(
+      expect.objectContaining({
+        rulesFired: 1,
+        rulesChecked: 3,
+        rulesNotRun: 1,
+        groupsChecked: 2,
+        groupsSelfAssessmentOnly: 1,
+      }),
+    );
+    expect(c.top1).toContain("3 models have no MRM tier");
+
+    // Not run is not clean: zeros here would read as contradictions resolved.
+    const notOnFile = collectFacts(e23FixItReportData({ notOnFile: true })).sections;
+    expect(notOnFile.e23Contradictions).toBeUndefined();
+  });
+
+  it("aggregates the fix-it list by severity, every severity always present", () => {
+    const items = [{ ...e23().sections.e23FixItList!.items[0] }];
+    const f = collectFacts(e23FixItReportData({ items })).sections.e23FixItList;
+    expect(f).toEqual(expect.objectContaining({ items: 1, high: 1, medium: 0, low: 0 }));
+    expect(f.top1).toContain("3 models have no MRM tier");
+  });
+
+  it("reports the change since the previous run for the new aggregates", () => {
+    const prior = collectFacts(e23());
+    const nowData = e23FixItReportData({ items: [] });
+    nowData.sections.mrmFleet = {
+      ...nowData.sections.mrmFleet!,
+      totals: { ...nowData.sections.mrmFleet!.totals, untiered: 1 },
+      validationCoverage: { ...nowData.sections.mrmFleet!.validationCoverage, overdue: 0 },
+    };
+    nowData.sections.e23Contradictions = {
+      ...nowData.sections.e23Contradictions!,
+      fired: [],
+    };
+    const text = renderFacts(collectFacts(nowData), prior);
+    expect(text).toContain("Model risk management status untiered: 1 (was 3, -2)");
+    expect(text).toContain("Model risk management status overdueValidations: 0 (was 1, -1)");
+    expect(text).toContain("Where the checklist and the data disagree rulesFired: 0 (was 1, -1)");
+    expect(text).toContain("Fix-it list (internal document) high: 0 (was 2, -2)");
   });
 });

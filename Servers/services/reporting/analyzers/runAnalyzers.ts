@@ -21,6 +21,7 @@ import {
   type AnalyzerExtras,
 } from "./registry";
 import { runSectionSummaries } from "./sectionSummaries";
+import type { PositionCorrection } from "./e23Gap";
 
 /**
  * Every key that can be gated or produce a result.
@@ -46,6 +47,10 @@ export interface AnalyzerRunResult {
    *  into audit_metadata by persistAnalyses — that is what makes the gate's
    *  firing observable after the run rather than only in the log. */
   restatementRetried?: boolean;
+  /** Positions an analyzer's `enforce` hook changed after parsing (e23Gap).
+   *  Present only when something was changed; persisted as
+   *  audit_metadata.position_corrections. */
+  positionCorrections?: PositionCorrection[];
 }
 
 export type AnalyzerResults = Partial<Record<AnalyzedKey, AnalyzerRunResult>>;
@@ -101,6 +106,7 @@ const VERBATIM_FIELDS: Partial<Record<AnalysisSectionKey, { list: string; field:
   complianceGap: { list: "gaps", field: "control" },
   vendorRisk: { list: "concerns", field: "vendor" },
   riskAnalysis: { list: "top_risks", field: "name" },
+  e23Gap: { list: "principles", field: "group" },
 };
 
 /**
@@ -211,6 +217,7 @@ const PROSE_FIELD: Partial<Record<AnalysisSectionKey, string>> = {
   riskAnalysis: "narrative",
   complianceGap: "narrative",
   vendorRisk: "narrative",
+  e23Gap: "narrative",
 };
 
 /** Appended to the system prompt for the one re-issue the gate allows. */
@@ -366,6 +373,23 @@ export async function runAnalyzers(input: RunAnalyzersInput): Promise<AnalyzerRe
       }
     }
 
+    // Constraints the prompt asks for but the code guarantees (e23Gap's
+    // positions), applied to the payload that is kept: after parsing,
+    // provenance and the gate, before anything is persisted or rendered.
+    let positionCorrections: PositionCorrection[] = [];
+    if (def.enforce && payload && !payload.abstain_reason) {
+      const enforced = def.enforce(payload, reportData);
+      payload = enforced.payload;
+      positionCorrections = enforced.corrections;
+      if (positionCorrections.length > 0) {
+        logger.warn(
+          `Report analyzer "${key}" (${ANALYZER_VERSION}) returned ${positionCorrections.length} position${
+            positionCorrections.length === 1 ? "" : "s"
+          } outside its constraints; corrected`,
+        );
+      }
+    }
+
     return [
       key,
       {
@@ -375,6 +399,7 @@ export async function runAnalyzers(input: RunAnalyzersInput): Promise<AnalyzerRe
         model: modelLabel,
         attempts,
         restatementRetried,
+        ...(positionCorrections.length > 0 && { positionCorrections }),
       },
     ] as const;
   };

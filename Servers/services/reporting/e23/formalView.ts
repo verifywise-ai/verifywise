@@ -22,16 +22,20 @@ import { ANALYSIS_LABELS } from "../analyzers/mapToSummaries";
 import { E23_RULES } from "./contradictionRules";
 import { E23_FRAMEWORK_ID, E23_KIND } from "./e23Parameters";
 import {
+  AI_GENERATED_LABEL,
   AUDIENCE_LINES,
+  CLOSES_WHEN_PREFIX,
   COVERAGE_LABELS,
   DRAFT_WATERMARK,
   E23_CHECKS_NOT_READ,
+  E23_GAP_HEADERS,
   E23_HEADINGS,
   E23_NOT_ON_FILE,
   E23_REPORT_TITLE,
   NO_CONTRADICTIONS,
   NO_MODELS,
   NOT_CHECKED,
+  POSITION_LABELS,
   SECTION_NOT_COMPLETED,
   SIGN_OFF_DRAFT,
   SIGN_OFF_DRAFT_NOTE,
@@ -48,6 +52,8 @@ export type E23Cell =
 
 export type E23Block =
   | { kind: "paragraph"; text: string; muted?: boolean }
+  /** AI-written prose in the labelled box the general report uses. */
+  | { kind: "ai"; label: string; text: string }
   | { kind: "subheading"; text: string; note?: string }
   | { kind: "list"; title?: string; items: string[] }
   | {
@@ -575,6 +581,46 @@ function contradictionsSection(
 }
 
 // ---------------------------------------------------------------------------
+// E-23 gap analysis (AI)
+// ---------------------------------------------------------------------------
+
+/** "partly consistent" -> "Partly consistent"; dash when absent. */
+export const capitalizeOrDash = (value: string | null | undefined): string =>
+  value ? capitalize(value) : DASH;
+
+/**
+ * The e23Gap analysis (spec 8.3 item 8), or null when it was not produced (its
+ * abstention is listed with the others). The whole section is AI-written: the
+ * narrative sits in the labelled box and the table title says so too.
+ * Positions are printed through POSITION_LABELS, never as the raw value.
+ */
+function e23GapSection(data: ReportData): E23Section | null {
+  const gap = data.aiSummaries?.e23Gap;
+  if (!gap) return null;
+  const blocks: E23Block[] = [{ kind: "ai", label: AI_GENERATED_LABEL, text: gap.narrative }];
+  if (gap.principles.length > 0) {
+    blocks.push({
+      kind: "table",
+      title: `Position by requirement group (${AI_GENERATED_LABEL})`,
+      headers: E23_GAP_HEADERS,
+      widths: [28, 20, 40, 12],
+      rows: gap.principles.map((p) => [
+        p.group,
+        POSITION_LABELS[p.position] ?? DASH,
+        {
+          main: p.explanation,
+          ...(p.what_would_close_this && {
+            secondary: `${CLOSES_WHEN_PREFIX} ${p.what_would_close_this}`,
+          }),
+        },
+        capitalizeOrDash(p.basis),
+      ]),
+    });
+  }
+  return { id: "e23gap", heading: ANALYSIS_LABELS.e23Gap, blocks };
+}
+
+// ---------------------------------------------------------------------------
 // Model inventory appendix
 // ---------------------------------------------------------------------------
 
@@ -695,7 +741,8 @@ export function buildE23FormalView(data: ReportData): E23FormalView | null {
     completenessSection(data, board, notOnFile),
     mrmSection(data, board),
     contradictionsSection(data, board, notOnFile),
-    // e23Gap (the AI gap analysis) is added after contradictions (spec 8.3 item 8).
+    // The AI gap analysis follows the contradictions it explains (spec 8.3 item 8).
+    e23GapSection(data),
   ].filter((s): s is E23Section => s !== null);
   const appendix = appendixSection(data, board);
 

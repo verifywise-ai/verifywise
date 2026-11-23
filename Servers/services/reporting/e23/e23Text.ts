@@ -67,6 +67,25 @@ export const POSITION_LABELS = {
   "not assessable": "Not assessable from VerifyWise data",
 } as const;
 
+/** The label every AI-written block carries, as in the general report. */
+export const AI_GENERATED_LABEL = "AI-Generated Analysis";
+
+/** Headers of the e23Gap table (spec 8.5). */
+export const E23_GAP_HEADERS = ["Requirement group", "Position", "Explanation", "Basis"];
+
+/** Under an e23Gap explanation and a recommended action's reason. */
+export const CLOSES_WHEN_PREFIX = "Closes when:";
+
+/** The recommended actions, in the fix-it list for this report (spec 8.6). */
+export const RECOMMENDED_ACTIONS_HEADING = "Recommended actions";
+export const RECOMMENDED_ACTIONS_HEADERS = [
+  "Action",
+  "Why",
+  "Priority",
+  "Basis",
+  "Suggested owner",
+];
+
 export const COVERAGE_LABELS = {
   checked: "Checked against MRM data",
   selfAssessmentOnly: "Self-assessment only",

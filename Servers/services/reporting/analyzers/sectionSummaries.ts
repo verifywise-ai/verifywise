@@ -6,6 +6,7 @@ import {
   GENERIC_SECTION_INSTRUCTION,
   hasContent,
   MAX_PROMPT_CHARS,
+  NO_SECTION_SUMMARY,
   prepareSectionData,
   SECTION_INSTRUCTIONS,
   SECTION_LABELS,
@@ -179,7 +180,7 @@ export async function runSectionSummaries(
   reportData: ReportData,
 ): Promise<Record<string, string>> {
   const entries = Object.entries((reportData?.sections ?? {}) as Record<string, any>).filter(
-    ([, data]) => hasContent(data),
+    ([key, data]) => !NO_SECTION_SUMMARY.has(key) && hasContent(data),
   );
   if (entries.length === 0) return {};
 

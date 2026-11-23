@@ -35,7 +35,7 @@ import {
  * run carries no change block at all — which is exactly what a first run
  * renders. One comparison is the honest price of a rename.
  */
-export const FACTS_SCHEMA_VERSION = 2;
+export const FACTS_SCHEMA_VERSION = 3;
 
 /** Structured, storable snapshot. Persisted to report_run_analyses.audit_metadata
  *  so a later run can diff against it without a second LLM call. */
@@ -169,6 +169,12 @@ const deadline = (row: any): number => {
 export const referenceDay = (value: unknown): string => isoDate(value) ?? isoDate(new Date())!;
 
 interface SectionSpec {
+  /**
+   * True when the section's data was not measured this run, so it records no
+   * aggregate at all: a zero here would read as an improvement in the change
+   * lines (a contradiction check that did not run is not a clean one).
+   */
+  skip?: (section: any) => boolean;
   /** The rows to aggregate, flattened here for the nested sections. */
   rows: (section: any) => any[];
   /** Numeric fields already sitting on the section object — copied, never recomputed. */
@@ -222,6 +228,9 @@ const sumRollups = (section: any) => {
   });
   return { totals, buckets: { status } };
 };
+
+/** E-23 fix-it severity, HIGHER IS MORE MATERIAL. */
+const FIX_IT_RANK: Record<string, number> = { high: 3, medium: 2, low: 1 };
 
 const SPECS: Record<string, SectionSpec> = {
   projectRisks: {
@@ -374,6 +383,82 @@ const SPECS: Record<string, SectionSpec> = {
     label: (r) =>
       `${oneLine(r._framework)}${r._useCase ? ` (${r._useCase})` : ""}: ${text(oneLine(r.title))} (${text(oneLine(r.status))}, owner ${text(oneLine(r.owner))}, due ${text(r.dueDate)})`,
   },
+  // OSFI E-23 sections (spec 8.10). Every figure is copied from the section the
+  // collector built; nothing is recomputed. The ranked rows are the models with
+  // exceptions, the fired rules and the fix-it items.
+  mrmFleet: {
+    rows: (s) => s.exceptions ?? [],
+    aggregates: (s) => {
+      const totals: Record<string, number> = {
+        models: s.totals?.models,
+        untiered: s.totals?.untiered,
+        tier1: s.totals?.byTier?.["1"],
+        tier2: s.totals?.byTier?.["2"],
+        tier3: s.totals?.byTier?.["3"],
+        validated: s.validationCoverage?.validated,
+        inReview: s.validationCoverage?.inReview,
+        notStarted: s.validationCoverage?.notStarted,
+        overdueValidations: s.validationCoverage?.overdue,
+        openCritical: s.openFindingsBySeverity?.critical,
+        openHigh: s.openFindingsBySeverity?.high,
+        openMedium: s.openFindingsBySeverity?.medium,
+        openLow: s.openFindingsBySeverity?.low,
+        withActiveThresholds: s.monitoring?.withActiveThresholds,
+        withRecentMetric: s.monitoring?.withRecentMetric,
+      };
+      // Activity is counted only within a period; without one the zeros
+      // would be figures nobody measured.
+      if (s.activity?.period) {
+        totals.validationsSignedOff = s.activity.validationsSignedOff;
+        totals.findingsOpened = s.activity.findingsOpened;
+        totals.findingsClosed = s.activity.findingsClosed;
+        totals.breaches = s.activity.breaches;
+        totals.revalidationEvents = s.activity.revalidationEvents;
+      }
+      Object.keys(totals).forEach((k) => (totals[k] = Number(totals[k]) || 0));
+      return { totals, buckets: {} };
+    },
+    rank: (r) => (r.issues ?? []).length,
+    label: (r) =>
+      `${text(oneLine(r.name))} (${r.tier ? `tier ${r.tier}` : "untiered"}: ${(r.issues ?? []).map(oneLine).join(", ")})`,
+  },
+  e23Contradictions: {
+    skip: (s) => !s.available,
+    rows: (s) => s.fired ?? [],
+    aggregates: (s) => {
+      const coverage = Object.values(s.coverage ?? {});
+      return {
+        totals: {
+          rulesFired: (s.fired ?? []).length,
+          rulesChecked: (s.checked ?? []).length,
+          rulesNotRun: (s.notRun ?? []).length,
+          groupsChecked: coverage.filter((c) => c === "checked").length,
+          groupsSelfAssessmentOnly: coverage.filter((c) => c === "selfAssessmentOnly").length,
+        },
+        buckets: {},
+      };
+    },
+    rank: (r) => Number(r.affectedCount) || 0,
+    label: (r) =>
+      `${text(r.ruleId)} ${text(oneLine(r.requirementTitle))}: ${text(oneLine(r.finding))} (claimed ${text(oneLine(r.claimedStatus))})`,
+  },
+  e23FixItList: {
+    rows: (s) => s.items ?? [],
+    // Every severity always present, so a severity that empties shows as a
+    // change rather than vanishing.
+    aggregates: (s) => ({
+      totals: {
+        high: Number(s.counts?.high) || 0,
+        medium: Number(s.counts?.medium) || 0,
+        low: Number(s.counts?.low) || 0,
+      },
+      buckets: {},
+    }),
+    owner: "owner",
+    rank: (r) => (FIX_IT_RANK[r.severity] ?? 0) * 2 + (r.overdue ? 1 : 0),
+    label: (r) =>
+      `${text(r.severity)}: ${text(oneLine(r.what))} (${text(oneLine(r.where))}, owner ${text(oneLine(r.owner))}, due ${text(r.dueDate)})`,
+  },
 };
 
 export function collectFacts(reportData: ReportData): FactsSnapshot {
@@ -398,6 +483,7 @@ export function collectFacts(reportData: ReportData): FactsSnapshot {
     const data: any = (reportData?.sections as any)?.[key];
     if (!data) continue;
     const spec = SPECS[key];
+    if (spec.skip?.(data)) continue;
     const rows: any[] = (spec.rows(data) ?? []).filter(Boolean);
 
     for (const field of spec.totals ?? []) {

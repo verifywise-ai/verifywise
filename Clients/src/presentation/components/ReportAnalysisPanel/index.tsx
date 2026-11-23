@@ -8,6 +8,8 @@ import { EmptyState } from "../EmptyState";
 import type {
   AnalysisPayload,
   ComplianceGapPayload,
+  E23GapPayload,
+  E23GapPosition,
   ExecutiveSummaryPayload,
   KeyFindingsPayload,
   RecommendedActionsPayload,
@@ -37,7 +39,20 @@ const SECTION_LABELS: Record<string, string> = {
   riskAnalysis: "Risk analysis",
   complianceGap: "Compliance gap analysis",
   vendorRisk: "Third-party risk analysis",
+  e23Gap: "E-23 gap analysis",
   sectionSummaries: "Per-section summaries",
+};
+
+/**
+ * How an E-23 gap position reads. Mirrors POSITION_LABELS in
+ * Servers/services/reporting/e23/e23Text.ts: the raw value is a data-consistency
+ * scale, and printing it bare would read as a compliance rating.
+ */
+const E23_POSITION_LABELS: Record<E23GapPosition, string> = {
+  "consistent": "Data consistent with self-assessment",
+  "partly consistent": "Data partly consistent with self-assessment",
+  "inconsistent": "Data inconsistent with self-assessment",
+  "not assessable": "Not assessable from VerifyWise data",
 };
 
 /**
@@ -255,6 +270,24 @@ function sectionBody(sectionKey: string, payload: AnalysisPayload): ReactNode {
           {p.narrative && <Prose text={p.narrative} />}
           {concerns.map((c, i) => (
             <ListItem key={i} primary={c.vendor} chipLabel={c.severity} secondary={c.concern} />
+          ))}
+        </Stack>
+      );
+    }
+
+    case "e23Gap": {
+      const p = payload as E23GapPayload;
+      const principles = p.principles ?? [];
+      if (!p.narrative && !principles.length) return null;
+      return (
+        <Stack spacing="12px">
+          {p.narrative && <Prose text={p.narrative} />}
+          {principles.map((g, i) => (
+            <ListItem
+              key={i}
+              primary={g.group}
+              secondary={`${E23_POSITION_LABELS[g.position] ?? g.position}. ${g.explanation}`}
+            />
           ))}
         </Stack>
       );

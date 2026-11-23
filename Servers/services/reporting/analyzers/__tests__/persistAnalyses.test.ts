@@ -88,4 +88,35 @@ describe("persistAnalyses audit_metadata", () => {
     const status = await persistAnalyses(77, 5, 3, analyses, snapshot);
     expect(status).toEqual({ executiveSummary: "ok", keyFindings: "abstained" });
   });
+
+  it("records the e23Gap position corrections, and only when there are some", async () => {
+    const corrections = [{ group: "Principle 1.1", from: "consistent", to: "not assessable" }];
+    await persistAnalyses(77, 5, 3, {
+      ...analyses,
+      e23Gap: {
+        payload: { narrative: "n", principles: [], abstain_reason: null },
+        abstained: false,
+        abstain_reason: null,
+        model: "m",
+        attempts: 1,
+        positionCorrections: corrections,
+      },
+    });
+    const rows = mockUpsert.mock.calls.map(([i]: any[]) => i);
+    const gap = rows.find((i: any) => i.section_key === "e23Gap");
+    expect(gap.audit_metadata.position_corrections).toEqual(corrections);
+    rows
+      .filter((i: any) => i.section_key !== "e23Gap")
+      .forEach((i: any) =>
+        expect(Object.keys(i.audit_metadata)).not.toContain("position_corrections"),
+      );
+
+    mockUpsert.mockClear();
+    await persistAnalyses(77, 5, 3, {
+      e23Gap: { ...analyses.executiveSummary, positionCorrections: [] },
+    });
+    expect(Object.keys(mockUpsert.mock.calls[0][0].audit_metadata)).not.toContain(
+      "position_corrections",
+    );
+  });
 });

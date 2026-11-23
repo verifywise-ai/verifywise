@@ -111,6 +111,33 @@ describe("ConfigureReportWizard", () => {
     }
   });
 
+  it("offers the E-23 gap analysis only for an E-23 template, off by default", () => {
+    const { unmount } = render(
+      <ConfigureReportWizard template={TEMPLATE_FIXTURE} mode="schedule" onClose={() => {}} />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: /next/i }));
+    fireEvent.click(screen.getByRole("button", { name: /next/i }));
+    expect(screen.queryByLabelText("E-23 gap analysis")).not.toBeInTheDocument();
+    unmount();
+
+    render(
+      <ConfigureReportWizard
+        template={{
+          ...TEMPLATE_FIXTURE,
+          latestVersion: {
+            ...TEMPLATE_FIXTURE.latestVersion,
+            parameters_config: { kind: "osfi_e23", fields: [] },
+          },
+        }}
+        mode="schedule"
+        onClose={() => {}}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: /next/i }));
+    fireEvent.click(screen.getByRole("button", { name: /next/i }));
+    expect(screen.getByLabelText("E-23 gap analysis")).not.toBeChecked();
+  });
+
   it("no longer renders raw camelCase keys as labels", () => {
     render(
       <ConfigureReportWizard template={TEMPLATE_FIXTURE} mode="schedule" onClose={() => {}} />,

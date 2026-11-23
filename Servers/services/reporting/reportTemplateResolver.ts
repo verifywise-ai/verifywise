@@ -17,6 +17,7 @@ export function resolveReportRequest(sched: any, llmKeyId?: number): ReportGener
     riskAnalysis: !!ai.riskAnalysis,
     complianceGap: !!ai.complianceGap,
     vendorRisk: !!ai.vendorRisk,
+    e23Gap: !!ai.e23Gap,
   };
   // aiEnhanced stays as the coarse "did the user want any AI at all" flag that
   // the renderers and the filename marker already key off. aiBlocks carries the

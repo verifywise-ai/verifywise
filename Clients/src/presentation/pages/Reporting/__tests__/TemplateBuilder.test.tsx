@@ -42,7 +42,7 @@ describe("TemplateBuilder", () => {
     expect(screen.getByRole("button", { name: /next/i })).toBeEnabled();
   });
 
-  it("submits name, sections and the seven AI blocks", () => {
+  it("submits name, sections and every AI block, never offering the E-23-only one", () => {
     render(<TemplateBuilder onClose={() => {}} />);
     fireEvent.change(screen.getByLabelText(/template name/i), {
       target: { value: "Board pack" },
@@ -50,6 +50,8 @@ describe("TemplateBuilder", () => {
     fireEvent.click(screen.getByRole("button", { name: /next/i })); // sections
     fireEvent.click(screen.getByLabelText("Use case risks"));
     fireEvent.click(screen.getByRole("button", { name: /next/i })); // AI
+    // A template built here has no report kind, so the E-23 block is not offered.
+    expect(screen.queryByLabelText("E-23 gap analysis")).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /create template/i }));
 
     expect(mutate).toHaveBeenCalledTimes(1);
@@ -57,8 +59,9 @@ describe("TemplateBuilder", () => {
     expect(body.name).toBe("Board pack");
     expect(body.sections_config.sections).toHaveLength(1);
     expect(body.sections_config.sections[0].reportSectionKey).toBe("projectRisks");
-    // All seven blocks must be present as explicit booleans; a missing key
+    // Every block must be present as an explicit boolean; a missing key
     // reads as "off" on the backend, which is a different meaning from false.
-    expect(Object.keys(body.ai_blocks_config)).toHaveLength(7);
+    expect(Object.keys(body.ai_blocks_config)).toHaveLength(8);
+    expect(body.ai_blocks_config.e23Gap).toBe(false);
   });
 });

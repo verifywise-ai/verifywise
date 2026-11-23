@@ -7,6 +7,11 @@
       <% section.blocks.forEach(function(block) { %>
       <% if (block.kind === 'paragraph') { %>
       <p class="e23-paragraph<%= block.muted ? ' e23-muted' : '' %>"><%= block.text %></p>
+      <% } else if (block.kind === 'ai') { %>
+      <div class="e23-ai-box">
+        <div class="e23-ai-label"><%= block.label %></div>
+        <div class="e23-ai-content"><%= block.text %></div>
+      </div>
       <% } else if (block.kind === 'subheading') { %>
       <h4 class="e23-subheading"><%= block.text %></h4>
       <% if (block.note) { %><p class="e23-note"><%= block.note %></p><% } %>

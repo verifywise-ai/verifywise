@@ -47,6 +47,11 @@ export async function persistAnalyses(
             // that never runs the gate (sectionSummaries) genuinely did not
             // re-issue, and `false` says so.
             restatement_retried: !!result?.restatementRetried,
+            // Spec 8.5: positions the code corrected after parsing (e23Gap),
+            // only when there were any.
+            ...(result?.positionCorrections?.length
+              ? { position_corrections: result.positionCorrections }
+              : {}),
             // Design §10: the snapshot this run was built from, so the NEXT run
             // of this schedule can diff against it with no second LLM call.
             // Spread, not `facts: facts ?? null` — getPriorFactsSnapshotQuery

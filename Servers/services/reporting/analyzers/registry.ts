@@ -2,6 +2,7 @@ import type { z } from "zod";
 import type { ReportData } from "../../../domain.layer/interfaces/i.reportGeneration";
 import {
   complianceGapSchema,
+  e23GapSchema,
   executiveSummarySchema,
   keyFindingsSchema,
   recommendedActionsSchema,
@@ -9,6 +10,13 @@ import {
   vendorRiskSchema,
 } from "./schemas";
 import { GROUNDING_RULES, renderSections, SECTION_LABELS } from "./prompts";
+import {
+  audienceLine,
+  e23GapData,
+  enforceE23GapPositions,
+  fixItPromptBlock,
+  type PositionCorrection,
+} from "./e23Gap";
 
 export { ANALYZER_VERSION } from "./prompts";
 
@@ -18,7 +26,8 @@ export type AnalysisSectionKey =
   | "recommendedActions"
   | "riskAnalysis"
   | "complianceGap"
-  | "vendorRisk";
+  | "vendorRisk"
+  | "e23Gap";
 
 export const ANALYSIS_SECTION_KEYS: AnalysisSectionKey[] = [
   "executiveSummary",
@@ -27,6 +36,7 @@ export const ANALYSIS_SECTION_KEYS: AnalysisSectionKey[] = [
   "riskAnalysis",
   "complianceGap",
   "vendorRisk",
+  "e23Gap",
 ];
 
 /**
@@ -61,6 +71,15 @@ export interface AnalyzerDefinition {
   buildSystemPrompt: () => string;
   /** Returns "" when there is nothing worth spending an LLM call on. */
   buildUserPrompt: (reportData: ReportData, extras: AnalyzerExtras) => string;
+  /**
+   * Constraints enforced in code on a parsed, provenance-checked payload,
+   * where asking the model is not enough. Returns the corrected payload and
+   * what was changed; runAnalyzers records the changes in audit_metadata.
+   */
+  enforce?: (
+    payload: any,
+    reportData: ReportData,
+  ) => { payload: any; corrections: PositionCorrection[] };
 }
 
 const RISK_SECTIONS = ["projectRisks", "vendorRisks", "modelRisks"];
@@ -75,9 +94,15 @@ function subjectOf(reportData: ReportData): { fw: string; subject: string } {
   };
 }
 
+/**
+ * The shared prompt header. An E-23 run adds its audience line, so every
+ * analyzer writes for the board or the examiner; any other report's header is
+ * exactly what it was.
+ */
 function header(reportData: ReportData): string {
   const { fw, subject } = subjectOf(reportData);
-  return `Framework: ${fw}\nSubject: ${subject}`;
+  const audience = audienceLine(reportData);
+  return `Framework: ${fw}\nSubject: ${subject}${audience ? `\n${audience}` : ""}`;
 }
 
 /**
@@ -135,9 +160,13 @@ export const ANALYZERS: Record<AnalysisSectionKey, AnalyzerDefinition> = {
     schema: recommendedActionsSchema,
     buildSystemPrompt: () =>
       `${GROUNDING_RULES}\n\nYou are producing three to five prioritised, actionable recommendations.\n\nOwner rule: set suggestedOwner ONLY when that exact person or role name appears verbatim in the supplied data. Otherwise it MUST be null. Never infer an owner from context and never invent one.\n\nEvery action also carries basis, and the key must be present: "observed" when the supplied data states the problem this action addresses, "inferred" when the problem follows from the supplied data by reasoning the data does not itself state, "absent" when the problem is that something required is missing. The label describes the CLAIM, not the subject — an "inferred" action still may not name anything absent from the supplied data. Use null only when none of the three fits.`,
+    // An E-23 run also hands it the fix-it list, so its actions point at real
+    // items; fixItPromptBlock is "" for every other report.
     buildUserPrompt: (rd, extras) => {
       const body = renderSummaries(extras.sectionSummaries);
-      return body ? `${header(rd)}\n\n${factsBlock(extras)}Section analyses:\n${body}` : "";
+      return body
+        ? `${header(rd)}\n\n${factsBlock(extras)}Section analyses:\n${body}${fixItPromptBlock(rd)}`
+        : "";
     },
   },
 
@@ -216,5 +245,19 @@ export const ANALYZERS: Record<AnalysisSectionKey, AnalyzerDefinition> = {
       const body = renderSections(rd.sections as any, VENDOR_SECTIONS);
       return body ? `${header(rd)}\n\n${factsBlock(extras)}Vendor data:\n${body}` : "";
     },
+  },
+
+  e23Gap: {
+    key: "e23Gap",
+    schema: e23GapSchema,
+    buildSystemPrompt: () =>
+      `${GROUNDING_RULES}\n\nYou are writing the E-23 gap analysis of a self-assessment report on model risk management under OSFI Guideline E-23. Never state or imply OSFI's view, a certification or compliance. Explain the contradictions listed; never add new ones. \`position\` describes how far the MRM data is consistent with the self-assessed statuses.\n\nWrite one principles entry per E-23 requirement group in the input, with the group title copied exactly as written. Position rules:\n- A group whose data coverage is "Self-assessment only" is "not assessable": no rule compares it with the model risk management records.\n- A group holding a requirement that a listed contradiction names is never "consistent".\n- Otherwise choose "consistent", "partly consistent" or "inconsistent" from the contradictions and the model risk management status in the input.\n\nEvery principle also carries two further fields, and each key must be present:\n- basis: "observed" when the input states what the explanation says, "inferred" when it follows from the input by reasoning the input does not state, "absent" when the point is that something required is missing from the records. The label describes the claim; the group must still appear verbatim in the input. Use null only when none of the three fits.\n- what_would_close_this: the specific condition under which the records would bear out the self-assessed status, written so the next report could check it. Use null only when the input gives no concrete condition to name.`,
+    buildUserPrompt: (rd, extras) => {
+      const data = e23GapData(rd);
+      return data
+        ? `${header(rd)}\n\n${factsBlock(extras)}${data}\n\nWrite the E-23 gap analysis for ${subjectOf(rd).subject}.`
+        : "";
+    },
+    enforce: enforceE23GapPositions,
   },
 };

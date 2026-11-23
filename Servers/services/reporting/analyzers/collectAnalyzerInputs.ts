@@ -8,7 +8,11 @@ import {
   getWeakestControlsQuery,
 } from "../../../utils/readiness.utils";
 import { getEvidenceGapsQuery } from "../../../utils/evidenceAi.utils";
-import { getPriorFactsSnapshotQuery } from "../../../utils/reportRunAnalysis.utils";
+import {
+  getPriorFactsSnapshotByTemplateQuery,
+  getPriorFactsSnapshotQuery,
+} from "../../../utils/reportRunAnalysis.utils";
+import { E23_KIND } from "../e23/e23Parameters";
 import logger from "../../../utils/logger/fileLogger";
 import type { AiBlocks } from "./runAnalyzers";
 import { flattenFrameworkRequirements } from "./prompts";
@@ -37,7 +41,8 @@ const READINESS_FRAMEWORK_IDS: Record<string, number> = {
  *
  * complianceGap and vendorRisk stay off — they are the new, project-scoped
  * analyzers, and enabling them here would add unbudgeted spend to every manual
- * report. Phase 3 lets the wizard choose.
+ * report. Phase 3 lets the wizard choose. e23Gap stays off too: it belongs to
+ * the OSFI E-23 template, which always sends its own blocks.
  */
 const LEGACY_BLOCKS: AiBlocks = {
   sectionSummaries: true,
@@ -47,6 +52,7 @@ const LEGACY_BLOCKS: AiBlocks = {
   riskAnalysis: true,
   complianceGap: false,
   vendorRisk: false,
+  e23Gap: false,
 };
 
 const NO_BLOCKS: AiBlocks = {
@@ -57,6 +63,7 @@ const NO_BLOCKS: AiBlocks = {
   riskAnalysis: false,
   complianceGap: false,
   vendorRisk: false,
+  e23Gap: false,
 };
 
 export function resolveBlocks(request: ReportGenerationRequest): AiBlocks {
@@ -207,6 +214,9 @@ export function collectAllowedOwners(reportData: ReportData): string[] {
     "reviewer",
     "approver",
   ]);
+  // An E-23 run's fix-it owners: requirement owners and models' owner roles.
+  // "Unassigned" is dropped by harvest like every other placeholder.
+  harvest(sections.e23FixItList?.items, ["owner"]);
   // The collector's lookup-miss placeholder is not a person.
   owners.delete("Unknown user");
 
@@ -258,17 +268,25 @@ function isFactsSnapshot(value: any): value is FactsSnapshot {
  * generateReport's catch would otherwise drop every analysis because a
  * comparison could not be made.
  *
- * A run with no schedule (a manual report) has no predecessor, so the query is
- * skipped entirely and the caller renders exactly what it renders today.
+ * A run with no schedule has no predecessor, so the query is skipped and the
+ * caller renders exactly what it renders today. The one exception is an OSFI
+ * E-23 report (spec 8.10): many customers run it by hand each quarter, so a
+ * run with no schedule compares against the organization's previous run of
+ * the same template, whatever triggered it. A scheduled E-23 run keeps
+ * comparing against its own schedule.
  */
 export async function collectPriorFacts(
   scheduledReportId: number | undefined,
   organizationId: number,
+  opts: { templateId?: number; kind?: string } = {},
 ): Promise<FactsSnapshot | null> {
-  if (!scheduledReportId) return null;
+  const byTemplate = !scheduledReportId && opts.kind === E23_KIND && !!opts.templateId;
+  if (!scheduledReportId && !byTemplate) return null;
 
   try {
-    const stored = await getPriorFactsSnapshotQuery(scheduledReportId, organizationId);
+    const stored = scheduledReportId
+      ? await getPriorFactsSnapshotQuery(scheduledReportId, organizationId)
+      : await getPriorFactsSnapshotByTemplateQuery(opts.templateId as number, organizationId);
     return isFactsSnapshot(stored) ? stored : null;
   } catch (error) {
     logger.warn("Report analyzers: prior facts lookup failed, degrading to no comparison", error);

@@ -20,6 +20,8 @@ export interface AiBlocksConfig {
   riskAnalysis?: boolean;
   complianceGap?: boolean;
   vendorRisk?: boolean;
+  /** The OSFI E-23 gap analysis; offered only for templates of kind osfi_e23. */
+  e23Gap?: boolean;
 }
 
 /** A template version's default target frameworks. Empty means all in scope. */

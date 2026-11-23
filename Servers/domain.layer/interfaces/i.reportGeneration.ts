@@ -75,7 +75,7 @@ export interface ReportGenerationRequest {
   sections?: ReportSection[];
   aiEnhanced?: boolean;
   /**
-   * Per-block gating for the seven AI blocks. When omitted (manual runs, which
+   * Per-block gating for the eight AI blocks. When omitted (manual runs, which
    * have no template) `aiEnhanced: true` resolves to the five blocks that
    * reproduce today's aiSummarizer output — see LEGACY_BLOCKS.
    */
@@ -87,6 +87,8 @@ export interface ReportGenerationRequest {
     riskAnalysis: boolean;
     complianceGap: boolean;
     vendorRisk: boolean;
+    /** The OSFI E-23 gap analysis; offered only for E-23 templates. */
+    e23Gap: boolean;
   };
   llmKeyId?: number;
   /**
@@ -142,6 +144,8 @@ export interface ReportGenerationResult {
        * sectionSummaries never runs the gate.
        */
       restatementRetried?: boolean;
+      /** e23Gap positions corrected after parsing; see AnalyzerRunResult. */
+      positionCorrections?: Array<{ group: string; from: string; to: string }>;
     }
   >;
   /**
@@ -252,6 +256,18 @@ export interface AISummaries {
       concern: string;
       severity: string;
       basis?: "observed" | "inferred" | "absent" | null;
+    }>;
+  };
+  /** Structured output of the e23Gap analyzer, forwarded whole. Renderers
+   *  print `position` through POSITION_LABELS, never the raw value. */
+  e23Gap?: {
+    narrative: string;
+    principles: Array<{
+      group: string;
+      position: "consistent" | "partly consistent" | "inconsistent" | "not assessable";
+      explanation: string;
+      basis?: "observed" | "inferred" | "absent" | null;
+      what_would_close_this?: string | null;
     }>;
   };
 }

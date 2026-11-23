@@ -280,3 +280,63 @@ export function createBullet(text: string, label?: string): Paragraph {
     ],
   });
 }
+
+/**
+ * Create an AI analysis box (green left border, light green background)
+ */
+export function createAIAnalysisBox(
+  content: string,
+  label: string = "AI Analysis",
+  borderColor: string = COLORS.primary,
+  bgColor: string = COLORS.aiBg,
+): Paragraph[] {
+  return [
+    new Paragraph({
+      spacing: { before: 200, after: 40 },
+      border: {
+        left: {
+          color: borderColor,
+          size: 24,
+          style: BorderStyle.SINGLE,
+          space: 8,
+        },
+      },
+      shading: {
+        fill: bgColor,
+        type: ShadingType.CLEAR,
+      },
+      children: [
+        new TextRun({
+          text: label.toUpperCase(),
+          bold: true,
+          size: 18,
+          color: borderColor,
+        }),
+      ],
+    }),
+    new Paragraph({
+      spacing: { after: 200 },
+      border: {
+        left: {
+          color: borderColor,
+          size: 24,
+          style: BorderStyle.SINGLE,
+          space: 8,
+        },
+      },
+      shading: {
+        fill: bgColor,
+        type: ShadingType.CLEAR,
+      },
+      children: content.split("\n").map(
+        (line, i) =>
+          new TextRun({
+            text: line,
+            size: 20,
+            color: COLORS.textPrimary,
+            ...(i > 0 && { break: 1 }),
+          }),
+      ),
+    }),
+  ];
+}
