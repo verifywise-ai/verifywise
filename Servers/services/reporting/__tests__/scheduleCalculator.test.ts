@@ -130,4 +130,51 @@ describe("rollingPeriod", () => {
   it.each(cases)("%s run %s -> %s..%s", (f, run, start, end) => {
     expect(rollingPeriod(f as any, d(run))).toEqual({ periodStart: start, periodEnd: end });
   });
+
+  describe("in the schedule's timezone", () => {
+    it("east of UTC: a 09:00 Auckland quarterly run on 1 January covers the last quarter", () => {
+      // 2027-01-01 09:00 in Auckland (NZDT, +13) is 2026-12-31 20:00 UTC.
+      const run = computeNextRun(
+        {
+          frequency: "quarterly",
+          anchorMonth: 1,
+          dayOfMonth: 1,
+          hour: 9,
+          minute: 0,
+          timezone: "Pacific/Auckland",
+        },
+        new Date("2026-11-22T00:00:00Z"),
+      );
+      expect(run.toISOString()).toBe("2026-12-31T20:00:00.000Z");
+      expect(rollingPeriod("quarterly", run, "Pacific/Auckland")).toEqual({
+        periodStart: "2026-10-01",
+        periodEnd: "2026-12-31",
+      });
+    });
+
+    it("west of UTC: a 20:00 Los Angeles daily run covers the local day before", () => {
+      // 2026-06-10 20:00 in Los Angeles (PDT, -7) is 2026-06-11 03:00 UTC.
+      const run = new Date("2026-06-11T03:00:00Z");
+      expect(rollingPeriod("daily", run, "America/Los_Angeles")).toEqual({
+        periodStart: "2026-06-09",
+        periodEnd: "2026-06-09",
+      });
+    });
+
+    it("uses UTC when the schedule names no timezone", () => {
+      const run = new Date("2026-06-11T03:00:00Z");
+      expect(rollingPeriod("daily", run)).toEqual({
+        periodStart: "2026-06-10",
+        periodEnd: "2026-06-10",
+      });
+      expect(rollingPeriod("daily", run, "")).toEqual(rollingPeriod("daily", run));
+    });
+
+    it("falls back to UTC, with a warning, for a timezone it cannot read", () => {
+      (logger.warn as jest.Mock).mockClear();
+      const run = new Date("2026-06-11T03:00:00Z");
+      expect(rollingPeriod("daily", run, "Mars/Olympus")).toEqual(rollingPeriod("daily", run));
+      expect(logger.warn).toHaveBeenCalledWith(expect.stringContaining("Mars/Olympus"));
+    });
+  });
 });

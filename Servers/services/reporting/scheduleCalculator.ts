@@ -78,16 +78,34 @@ function subMonthsClamped(d: Date, months: number): Date {
   return new Date(Date.UTC(year, month, Math.min(d.getUTCDate(), lastDay)));
 }
 
-// The period a scheduled run covers: starts one interval before `runDate`
-// (UTC date, month math clamps to month end) and ends the day before it, so
-// consecutive runs never overlap.
+// The calendar date of `d` in `timezone`, as a UTC midnight. A timezone the
+// runtime cannot read falls back to UTC rather than failing the run.
+function localDate(d: Date, timezone: string): Date {
+  try {
+    const parts = new Intl.DateTimeFormat("en-US", {
+      timeZone: timezone,
+      year: "numeric",
+      month: "numeric",
+      day: "numeric",
+    }).formatToParts(d);
+    const part = (type: string) => Number(parts.find((p) => p.type === type)?.value);
+    return new Date(Date.UTC(part("year"), part("month") - 1, part("day")));
+  } catch {
+    logger.warn(`rollingPeriod: unknown timezone "${timezone}", using UTC`);
+    return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
+  }
+}
+
+// The period a scheduled run covers: starts one interval before the run's
+// calendar date in the schedule's timezone (UTC when none; month math clamps
+// to month end) and ends the day before it, so consecutive runs never overlap.
+// computeNextRun fires in that timezone, so the date is read there too.
 export function rollingPeriod(
   frequency: ReportFrequency,
   runDate: Date,
+  timezone?: string | null,
 ): { periodStart: string; periodEnd: string } {
-  const run = new Date(
-    Date.UTC(runDate.getUTCFullYear(), runDate.getUTCMonth(), runDate.getUTCDate()),
-  );
+  const run = localDate(runDate, timezone || "UTC");
   const end = new Date(run.getTime() - 86_400_000);
   let start: Date;
   if (frequency === "daily") start = end;

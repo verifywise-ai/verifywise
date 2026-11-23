@@ -25,7 +25,10 @@ function runParameters(sched: any, opts: { scheduledFor?: Date }): ReportParamet
   const declaresPeriod = (config.fields ?? []).some((f) => PERIOD_KEYS.includes(f.key));
   const frequency = sched.schedule_config?.frequency;
   if (sched.id != null && declaresPeriod && frequency) {
-    Object.assign(params, rollingPeriod(frequency, opts.scheduledFor ?? new Date()));
+    Object.assign(
+      params,
+      rollingPeriod(frequency, opts.scheduledFor ?? new Date(), sched.schedule_config?.timezone),
+    );
   }
   return params;
 }

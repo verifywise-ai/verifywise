@@ -389,6 +389,30 @@ describe("runScheduledReport", () => {
       expect(request.reportKind).toBe("osfi_e23");
     });
 
+    it("derives the rolling period from the run's date in the schedule's timezone", async () => {
+      // 2027-01-01 09:00 in Auckland is 2026-12-31 20:00 UTC.
+      await runScheduledReport(
+        {
+          ...sched,
+          parameters_config: e23Config,
+          report_parameters: { institutionName: "Northern Bank" },
+          schedule_config: {
+            frequency: "quarterly",
+            anchorMonth: 1,
+            hour: 9,
+            minute: 0,
+            timezone: "Pacific/Auckland",
+          },
+        } as any,
+        { triggeredBy: "scheduler", scheduledFor: new Date("2026-12-31T20:00:00Z") },
+      );
+
+      expect(createRunQuery.mock.calls[0][0].config_snapshot.report_parameters).toMatchObject({
+        periodStart: "2026-10-01",
+        periodEnd: "2026-12-31",
+      });
+    });
+
     it("merges the rolling period on a schedule's run-now too", async () => {
       await runScheduledReport(
         {
