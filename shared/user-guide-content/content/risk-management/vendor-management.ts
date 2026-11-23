@@ -135,9 +135,23 @@ export const vendorManagementContent: ArticleContent = {
       type: 'bullet-list',
       items: [
         { bold: 'Reviewer', text: 'The person conducting the assessment' },
-        { bold: 'Review date', text: 'When the review was performed' },
+        { bold: 'Review date', text: 'When the next review is due. Leave it empty if no review is planned.' },
         { bold: 'Review result', text: 'Findings and conclusions from the review' },
       ],
+    },
+    {
+      type: 'heading',
+      id: 'review-reminders',
+      level: 3,
+      text: 'Review reminders',
+    },
+    {
+      type: 'paragraph',
+      text: 'A vendor shows on the reviewer\'s Home page (or the assignee\'s, when no reviewer is set) from 14 days before its review date. When you finish a review, mark it Reviewed and set the next review date in the same save. The vendor leaves Home once its review date has passed.',
+    },
+    {
+      type: 'paragraph',
+      text: 'Emails and in-app reminders go out only if your organization has an active automation with the "Vendor review date approaching" trigger. It runs once a day and sends on the day set by its "days before" setting, counted in UTC. Several automations can use this trigger, and each one runs all of its actions. See Automations for how to set one up.',
     },
     {
       type: 'heading',

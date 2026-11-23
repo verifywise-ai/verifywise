@@ -612,6 +612,15 @@ up within the organization: a user from another organization shows as
 | `vendor_added` | New vendor created |
 | `vendor_updated` | Vendor modified |
 | `vendor_deleted` | Vendor deleted |
+| `vendor_review_date_approaching` | Daily sweep: the review date is today plus the automation's `daysBefore` (UTC days) |
+
+Review reminders exist only as this automation: an organization without an
+active `vendor_review_date_approaching` automation gets no reminder email or
+in-app notice. The Home queue lists due vendors regardless. Both use the same
+rule for `Reviewed` vendors (dropped only once the review date has passed). The
+sweep runs every action of every matching automation and sends one in-app
+notice per vendor per run. See
+[Automations → Vendor Review Notifications](../infrastructure/automations.md#vendor-review-notifications).
 
 ## Validation Rules
 
