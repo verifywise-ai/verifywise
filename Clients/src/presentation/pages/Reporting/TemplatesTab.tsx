@@ -26,7 +26,7 @@ const CATEGORY_ITEMS = CATEGORIES.map((c) => ({
   name: c.charAt(0).toUpperCase() + c.slice(1),
 }));
 
-// A 409 from PATCH/POST /templates is always a unique-name violation. Saying
+// A 409 from an edit is always a unique-name violation. Saying
 // "failed" there sends the user hunting for a server problem that isn't one.
 const mutationError = (fallback: string) => (err: any) =>
   showAlert({
@@ -94,8 +94,17 @@ export default function TemplatesTab({
   // The server builds the copy (POST /v1/report-templates/:id/duplicate) from
   // the template's latest version, including its framework selection and
   // report kind, so nothing has to be fetched and re-sent from here.
+  //
+  // The server also picks the name ("(copy)", "(copy 2)", ...), so the
+  // duplicate-name message from mutationError does not apply: the user never
+  // chose a name, and a 409 left here (a lost slug race) is a plain failure.
   const handleDuplicate = (t: any) => {
-    duplicate.mutate(t.id, { onError: mutationError("Failed to duplicate template") });
+    duplicate.mutate(t.id, {
+      onSuccess: () =>
+        showAlert({ variant: "success", body: "Template duplicated", isToast: true }),
+      onError: () =>
+        showAlert({ variant: "error", body: "Failed to duplicate template", isToast: true }),
+    });
   };
 
   if (isLoading) {
@@ -216,6 +225,7 @@ export default function TemplatesTab({
             variant="outlined"
             text="Duplicate"
             onClick={() => handleDuplicate(t)}
+            isDisabled={duplicate.isPending}
             sx={secondaryButtonSx}
           />
         )}

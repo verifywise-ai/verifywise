@@ -8,6 +8,7 @@ import { renderWithProviders } from "../../../../test/renderWithProviders";
 const updateMutate = vi.fn();
 const archiveMutate = vi.fn();
 const duplicateMutate = vi.fn();
+let duplicatePending = false;
 
 // As the list endpoint returns it: `SELECT * FROM report_templates`.
 const SYSTEM_TEMPLATE = {
@@ -37,7 +38,7 @@ vi.mock("../../../../application/hooks/useReporting", () => ({
   }),
   useUpdateTemplate: () => ({ mutate: updateMutate, isPending: false }),
   useArchiveTemplate: () => ({ mutate: archiveMutate, isPending: false }),
-  useDuplicateTemplate: () => ({ mutate: duplicateMutate, isPending: false }),
+  useDuplicateTemplate: () => ({ mutate: duplicateMutate, isPending: duplicatePending }),
 }));
 
 // The copy is built server-side; the tab must not fetch the template itself.
@@ -204,8 +205,24 @@ describe("TemplatesTab", () => {
     );
   });
 
-  // The copy is named "<name> (copy)"; a second copy collides with the first.
-  it("says the name is taken when a copy already exists", async () => {
+  it("confirms a successful copy", async () => {
+    duplicateMutate.mockImplementation((_id, opts) => opts.onSuccess({ id: 12 }));
+    const user = userEvent.setup();
+    renderWithProviders(<TemplatesTab onUse={vi.fn()} />);
+
+    const system = screen.getByRole("region", { name: /system templates/i });
+    await user.click(within(system).getByRole("button", { name: /duplicate/i }));
+
+    await waitFor(() =>
+      expect(showAlert).toHaveBeenCalledWith(
+        expect.objectContaining({ variant: "success", body: "Template duplicated" }),
+      ),
+    );
+  });
+
+  // The server picks a free "(copy N)" name, so a 409 here is not a name the
+  // user can change: no "Choose a different name".
+  it("reports a 409 on duplicate as a plain failure", async () => {
     duplicateMutate.mockImplementation((_id, opts) => opts.onError({ response: { status: 409 } }));
     const user = userEvent.setup();
     renderWithProviders(<TemplatesTab onUse={vi.fn()} />);
@@ -215,10 +232,21 @@ describe("TemplatesTab", () => {
 
     await waitFor(() =>
       expect(showAlert).toHaveBeenCalledWith(
-        expect.objectContaining({
-          body: "A template with this name already exists. Choose a different name.",
-        }),
+        expect.objectContaining({ variant: "error", body: "Failed to duplicate template" }),
       ),
     );
+  });
+});
+
+describe("TemplatesTab while a copy is in flight", () => {
+  it("disables Duplicate", () => {
+    duplicatePending = true;
+    try {
+      renderWithProviders(<TemplatesTab onUse={vi.fn()} />);
+      const system = screen.getByRole("region", { name: /system templates/i });
+      expect(within(system).getByRole("button", { name: /duplicate/i })).toBeDisabled();
+    } finally {
+      duplicatePending = false;
+    }
   });
 });

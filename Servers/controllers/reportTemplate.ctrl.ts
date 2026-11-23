@@ -24,6 +24,8 @@ import {
   archiveTemplateQuery,
   createTemplateVersionQuery,
   getVersionByIdQuery,
+  getOrganizationTemplateSlugsQuery,
+  freeCopyName,
 } from "../utils/reportTemplate.utils";
 import { REPORT_SECTION_CATALOG } from "../services/reporting/sectionCatalog";
 import { parseFrameworkSelection } from "../services/reporting/frameworkSelection";
@@ -257,21 +259,33 @@ export async function updateTemplate(req: Request, res: Response): Promise<any> 
   }
 }
 
-const COPY_SUFFIX = " (copy)";
-// report_templates.name is VARCHAR(255): trim the source name so the suffix fits.
-const MAX_TEMPLATE_NAME = 255;
+// A concurrent duplicate can take the chosen slug between the lookup and the
+// INSERT; that unique violation is retried with a fresh lookup, a few times.
+const DUPLICATE_ATTEMPTS = 3;
+
+const isSlugConflict = (error: unknown): boolean => {
+  const pgErr = (error as any)?.parent ?? (error as any)?.original;
+  return pgErr?.code === "23505" && pgErr?.constraint === "uq_report_templates_org_slug";
+};
 
 /**
  * POST /v1/report-templates/:id/duplicate — copy a template the organization
  * can see (a system template or one of its own) into the caller's
  * organization, as a new custom template.
  *
- * The copy carries the latest version's sections, AI blocks, framework
- * selection and report kind. framework_config is not optional: an empty one
- * means every framework in scope, so dropping it would widen a framework-
- * specific template under the original's name. parameters_config holds the
- * kind (e.g. OSFI E-23); without it the copy would offer the kind's sections
- * under a general template that refuses them.
+ * The server picks the name: "<name> (copy)", or "(copy 2)", "(copy 3)", ...
+ * when an earlier copy, archived or not, holds that slug. The user never chose
+ * a name, so a duplicate-name 409 would be no use to them.
+ *
+ * The copy carries the latest version's whole config: sections, AI blocks,
+ * framework selection, report kind, format, branding and schedule/delivery
+ * defaults. framework_config is not optional: an empty one means every
+ * framework in scope, so dropping it would widen a framework-specific template
+ * under the original's name. parameters_config holds the kind (e.g. OSFI
+ * E-23); without it the copy would offer the kind's sections under a general
+ * template that refuses them.
+ *
+ * An archived source answers 404, as it is absent from the template list.
  */
 export async function duplicateTemplate(req: Request, res: Response): Promise<any> {
   const id = Number(req.params.id);
@@ -284,28 +298,45 @@ export async function duplicateTemplate(req: Request, res: Response): Promise<an
   });
   try {
     const source = await getTemplateByIdQuery(id, req.organizationId!);
-    if (!source) return res.status(404).json(STATUS_CODE[404](req.t!("not found")));
+    if (!source || source.is_active === false) {
+      return res.status(404).json(STATUS_CODE[404](req.t!("not found")));
+    }
     const latest = await getLatestVersionQuery(source.id, req.organizationId!);
-
-    const body = {
-      name: `${String(source.name).slice(0, MAX_TEMPLATE_NAME - COPY_SUFFIX.length)}${COPY_SUFFIX}`,
-      description: source.description ?? null,
-      category: source.category,
-      // createTemplateQuery 400s unless default_scope is exactly "project" or
-      // "organization"; every stored template has one, the fallback is defensive.
-      default_scope: source.default_scope ?? "project",
-      supported_scopes: source.supported_scopes ?? undefined,
-      recommended_frequency: source.recommended_frequency ?? undefined,
-      sections_config: latest?.sections_config ?? undefined,
-      ai_blocks_config: latest?.ai_blocks_config ?? undefined,
-      framework_config: latest?.framework_config ?? undefined,
-      parameters_config: latest?.parameters_config ?? undefined,
-    };
-    const { tpl, version } = await insertTemplateWithVersion(
-      body,
-      req.organizationId!,
-      req.userId!,
+    const config = Object.fromEntries(
+      [...VERSION_CONFIG_FIELDS, "framework_config"].map((f) => [f, latest?.[f] ?? undefined]),
     );
+
+    let created: { tpl: any; version: any } | null = null;
+    for (let attempt = 1; !created; attempt++) {
+      const name = freeCopyName(
+        source.name,
+        await getOrganizationTemplateSlugsQuery(req.organizationId!),
+      );
+      if (!name) {
+        return res.status(409).json(STATUS_CODE[409](req.t!("too many copies of this template")));
+      }
+      try {
+        created = await insertTemplateWithVersion(
+          {
+            name,
+            description: source.description ?? null,
+            category: source.category,
+            // createTemplateQuery 400s unless default_scope is exactly
+            // "project" or "organization"; every stored template has one,
+            // the fallback is defensive.
+            default_scope: source.default_scope ?? "project",
+            supported_scopes: source.supported_scopes ?? undefined,
+            recommended_frequency: source.recommended_frequency ?? undefined,
+            ...config,
+          },
+          req.organizationId!,
+          req.userId!,
+        );
+      } catch (error) {
+        if (!isSlugConflict(error) || attempt >= DUPLICATE_ATTEMPTS) throw error;
+      }
+    }
+    const { tpl, version } = created;
     await logSuccess({
       eventType: "Create",
       description: `Duplicated report template ${id} as ${tpl.id}`,

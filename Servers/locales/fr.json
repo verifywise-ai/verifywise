@@ -1367,6 +1367,7 @@
   "Token not found": "Jeton introuvable",
   "tomorrow": "demain",
   "Too many concurrent scans. Please try again later.": "Trop d'analyses simultanées. Veuillez réessayer plus tard.",
+  "too many copies of this template": "trop de copies de ce modèle",
   "too many slugs (max 200)": "trop de slugs (200 maximum)",
   "Too many submissions. Please try again later.": "Trop de soumissions. Veuillez réessayer plus tard.",
   "Tool not found": "Outil introuvable",

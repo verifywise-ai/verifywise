@@ -1367,6 +1367,7 @@
   "Token not found": "Token nicht gefunden",
   "tomorrow": "morgen",
   "Too many concurrent scans. Please try again later.": "Zu viele gleichzeitige Scans. Bitte versuchen Sie es später erneut.",
+  "too many copies of this template": "zu viele Kopien dieser Vorlage",
   "too many slugs (max 200)": "zu viele slugs (max. 200)",
   "Too many submissions. Please try again later.": "Zu viele Einreichungen. Bitte versuchen Sie es später erneut.",
   "Tool not found": "Tool nicht gefunden",

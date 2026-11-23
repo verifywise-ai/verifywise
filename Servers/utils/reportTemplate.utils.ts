@@ -68,6 +68,53 @@ export function slugify(name: string): string {
   );
 }
 
+// Every slug the organization's own templates hold, archived ones included:
+// uq_report_templates_org_slug covers inactive rows too, so an archived
+// template's slug is still taken.
+export async function getOrganizationTemplateSlugsQuery(
+  organization_id: number,
+): Promise<Set<string>> {
+  const rows: any[] = await sequelize.query(
+    `SELECT slug FROM report_templates WHERE organization_id = :organization_id`,
+    { replacements: { organization_id }, type: QueryTypes.SELECT },
+  );
+  return new Set(rows.map((r) => r.slug));
+}
+
+// report_templates.name is VARCHAR(255) and slugify keeps 200 characters.
+const MAX_TEMPLATE_NAME = 255;
+const MAX_SLUG = 200;
+const MAX_COPY_NUMBER = 1000;
+
+const copySuffix = (n: number) => (n === 1 ? " (copy)" : ` (copy ${n})`);
+
+/**
+ * The name of copy number `n` of a template: "<name> (copy)", then
+ * "<name> (copy 2)", ... The base name is trimmed, never the suffix, by code
+ * points so a character outside the BMP is not cut in half: first to fit the
+ * name column, then until the slug is short enough that slugify's 200-character
+ * cut does not drop the suffix (two copies of a long name would otherwise share
+ * a slug).
+ */
+export function copyName(name: string, n: number): string {
+  const suffix = copySuffix(n);
+  const base = Array.from(String(name)).slice(0, MAX_TEMPLATE_NAME - Array.from(suffix).length);
+  while (base.length && slugify(base.join("") + suffix).length >= MAX_SLUG) base.pop();
+  return base.join("") + suffix;
+}
+
+/**
+ * The first copy name whose slug is not in `takenSlugs`, or null when the first
+ * MAX_COPY_NUMBER are all taken.
+ */
+export function freeCopyName(name: string, takenSlugs: Set<string>): string | null {
+  for (let n = 1; n <= MAX_COPY_NUMBER; n++) {
+    const candidate = copyName(name, n);
+    if (!takenSlugs.has(slugify(candidate))) return candidate;
+  }
+  return null;
+}
+
 // Custom templates are always org-owned and never system templates: the
 // literal false is in the SQL rather than the replacements so a caller cannot
 // promote its own template by sending is_system_template: true.

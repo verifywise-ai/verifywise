@@ -64,7 +64,13 @@ jest.mock("../../../utils/reportTemplate.utils", () => {
       : null;
   const owned = (id: number, org: number) =>
     templates[id] && templates[id].organization_id === org ? templates[id] : null;
+  const actual = jest.requireActual("../../../utils/reportTemplate.utils");
   return {
+    // The copy-name choice runs for real against the slugs the org holds.
+    slugify: actual.slugify,
+    copyName: actual.copyName,
+    freeCopyName: actual.freeCopyName,
+    getOrganizationTemplateSlugsQuery: jest.fn(async () => new Set<string>()),
     getTemplateByIdQuery: jest.fn(async (id: number, org: number) => visible(id, org)),
     getVersionByIdQuery: jest.fn(async (id: number, org: number) =>
       id === 30 && org === 42 ? { id: 30, template_id: 7, parameters_config: {} } : null,
@@ -79,6 +85,9 @@ jest.mock("../../../utils/reportTemplate.utils", () => {
             framework_config: { frameworkIds: ["native:2"] },
             parameters_config: { kind: "osfi_e23" },
             format_config: { theme: "dark" },
+            branding_config: { logo: "seal.png" },
+            schedule_defaults: { frequency: "quarterly" },
+            delivery_defaults: { saveToStorage: true },
           }
         : null,
     ),
@@ -304,9 +313,11 @@ describe("/api/v1/report-templates", () => {
         ai_blocks_config: { blocks: [] },
         framework_config: { frameworkIds: ["native:2"] },
         parameters_config: { kind: "osfi_e23" },
+        format_config: { theme: "dark" },
+        branding_config: { logo: "seal.png" },
+        schedule_defaults: { frequency: "quarterly" },
+        delivery_defaults: { saveToStorage: true },
       });
-      // Only the fields the copy is defined to carry.
-      expect(config.format_config).toBeUndefined();
       expect(res.body.data).toMatchObject({
         id: 100,
         organization_id: 42,
@@ -327,7 +338,7 @@ describe("/api/v1/report-templates", () => {
       expect(createTemplateQuery).not.toHaveBeenCalled();
     });
 
-    it("keeps a long name within the column when copying", async () => {
+    it("keeps a long name within the column and its slug when copying", async () => {
       const { getTemplateByIdQuery } = jest.requireMock("../../../utils/reportTemplate.utils");
       (getTemplateByIdQuery as jest.Mock).mockResolvedValueOnce({
         id: 7,
@@ -339,8 +350,69 @@ describe("/api/v1/report-templates", () => {
       const res = await request(app).post(`${BASE}/7/duplicate`).set(auth);
       expect(res.status).toBe(201);
       const name = (createTemplateQuery as jest.Mock).mock.calls[0][0].name;
-      expect(name).toHaveLength(255);
-      expect(name.endsWith(" (copy)")).toBe(true);
+      expect(name.length).toBeLessThanOrEqual(255);
+      expect(name.endsWith("x (copy)")).toBe(true);
+    });
+
+    // uq_report_templates_org_slug covers archived rows, so a copy whose slug
+    // an earlier (even deleted) copy holds would 409 on every click.
+    it("numbers the copy when earlier copies hold the name", async () => {
+      const { getOrganizationTemplateSlugsQuery } = jest.requireMock(
+        "../../../utils/reportTemplate.utils",
+      );
+      (getOrganizationTemplateSlugsQuery as jest.Mock).mockResolvedValueOnce(
+        new Set(["board-pack", "board-pack-copy", "board-pack-copy-2"]),
+      );
+      const res = await request(app).post(`${BASE}/7/duplicate`).set(auth);
+      expect(res.status).toBe(201);
+      expect((createTemplateQuery as jest.Mock).mock.calls[0][0].name).toBe("Board pack (copy 3)");
+      expect(getOrganizationTemplateSlugsQuery).toHaveBeenCalledWith(42);
+    });
+
+    it("retries with a fresh name when a concurrent copy takes the slug", async () => {
+      const { getOrganizationTemplateSlugsQuery } = jest.requireMock(
+        "../../../utils/reportTemplate.utils",
+      );
+      (getOrganizationTemplateSlugsQuery as jest.Mock)
+        .mockResolvedValueOnce(new Set())
+        .mockResolvedValueOnce(new Set(["board-pack-copy"]));
+      (createTemplateQuery as jest.Mock).mockRejectedValueOnce(
+        Object.assign(new Error("duplicate key"), {
+          parent: { code: "23505", constraint: "uq_report_templates_org_slug" },
+        }),
+      );
+      const res = await request(app).post(`${BASE}/7/duplicate`).set(auth);
+      expect(res.status).toBe(201);
+      const names = (createTemplateQuery as jest.Mock).mock.calls.map(([input]) => input.name);
+      expect(names).toEqual(["Board pack (copy)", "Board pack (copy 2)"]);
+    });
+
+    it("gives up after a few slug races", async () => {
+      const race = Object.assign(new Error("duplicate key"), {
+        parent: { code: "23505", constraint: "uq_report_templates_org_slug" },
+      });
+      (createTemplateQuery as jest.Mock)
+        .mockRejectedValueOnce(race)
+        .mockRejectedValueOnce(race)
+        .mockRejectedValueOnce(race);
+      const res = await request(app).post(`${BASE}/7/duplicate`).set(auth);
+      expect(res.status).toBe(409);
+      expect(createTemplateQuery).toHaveBeenCalledTimes(3);
+    });
+
+    it("answers 404 for an archived template, copying nothing", async () => {
+      const { getTemplateByIdQuery } = jest.requireMock("../../../utils/reportTemplate.utils");
+      (getTemplateByIdQuery as jest.Mock).mockResolvedValueOnce({
+        id: 7,
+        organization_id: 42,
+        name: "Board pack",
+        category: "governance",
+        default_scope: "project",
+        is_active: false,
+      });
+      const res = await request(app).post(`${BASE}/7/duplicate`).set(auth);
+      expect(res.status).toBe(404);
+      expect(createTemplateQuery).not.toHaveBeenCalled();
     });
   });
 });
