@@ -260,6 +260,173 @@ describe("G1 guard: what it catches", () => {
   });
 });
 
+/**
+ * The same run with the sample report's fleet: 13 models (5, 5, 3 by tier), 5
+ * open findings (medium 3, low 2; tier 1 holds 3), monitoring on all 13, and
+ * no breach or revalidation event in the period.
+ */
+function sampleFleet(): ReportData {
+  const r = kestrelBay();
+  r.sections.mrmFleet = {
+    ...r.sections.mrmFleet!,
+    totals: { models: 13, untiered: 0, byTier: { "1": 5, "2": 5, "3": 3 } },
+    openFindingsBySeverity: { critical: 0, high: 0, medium: 3, low: 2 },
+    monitoring: { withActiveThresholds: 13, withRecentMetric: 13 },
+    activity: { ...r.sections.mrmFleet!.activity, breaches: 0, revalidationEvents: 0 },
+    perTier: [
+      {
+        tier: "1",
+        models: 5,
+        tieringCurrent: 5,
+        validated: 5,
+        monitoringActive: 5,
+        openFindings: 3,
+        criticalHighFindings: 0,
+      },
+      {
+        tier: "2",
+        models: 5,
+        tieringCurrent: 5,
+        validated: 5,
+        monitoringActive: 5,
+        openFindings: 1,
+        criticalHighFindings: 0,
+      },
+      {
+        tier: "3",
+        models: 3,
+        tieringCurrent: 3,
+        validated: 3,
+        monitoringActive: 3,
+        openFindings: 1,
+        criticalHighFindings: 0,
+      },
+    ],
+  };
+  return r;
+}
+
+/** The executive summary prompt of `r`, plus any line an analyzer's own data block would add. */
+const ctxFor = (r: ReportData, extra = ""): GuardContext =>
+  guardContext(`${ANALYZERS.executiveSummary.buildUserPrompt(r, extrasFor(r))}\n${extra}`, r);
+
+/**
+ * Sentences a reviewer checked against the sample run's real figures: each was
+ * rejected and each is right. Next to each, a near miss the rule must still catch.
+ */
+describe("G1 guard: reviewed false positives pass, near misses still fail", () => {
+  let fleet: GuardContext;
+  beforeAll(() => {
+    fleet = ctxFor(sampleFleet());
+  });
+
+  it("percentage: a cited figure over a report total of the same kind (46 of 83 requirements)", () => {
+    const c = ctxFor(sampleFleet(), "Self-assessment only: 10 groups holding 46 requirements.");
+    expect(
+      checkProse(
+        "The other 10 groups, holding 46 requirements or 55.4 percent, are self-assessment only by design.",
+        c,
+      ),
+    ).toEqual([]);
+    // No total of any kind gives 60 percent.
+    expect(
+      checkProse(
+        "The other 10 groups, holding 46 requirements or 60 percent, are outside the rules.",
+        c,
+      ).map((v) => v.reason),
+    ).toContain("percentage");
+    // 10/83 is 12 percent, but groups over requirements is no percentage of anything.
+    expect(
+      checkProse("The other 10 groups are 12 percent of the framework.", c).map((v) => v.reason),
+    ).toContain("percentage");
+  });
+
+  it("compliance: 'nothing' negates its clause, a bare consequence still does not", () => {
+    expect(
+      checkProse(
+        "It does not certify anything, and it says nothing about how OSFI would view the institution.",
+        fleet,
+      ),
+    ).toEqual([]);
+    expect(
+      checkProse("No rule fired, so the institution complies with E-23.", fleet).map(
+        (v) => v.reason,
+      ),
+    ).toContain("compliance");
+    expect(
+      checkProse("Nothing fired, and OSFI would view that favourably.", fleet).map((v) => v.reason),
+    ).toContain("compliance");
+  });
+
+  it("number: a decimal quotient of two cited figures, at its written precision", () => {
+    expect(
+      checkProse(
+        "Open model findings stand at 5 (medium 3, low 2, with no critical or high), and tier 1 holds 3 of them (60%): 2 medium and 1 low across its 5 models, or 0.6 per model against 0.2 for tier 2 (1 across 5) and 0.33 for tier 3 (1 across 3).",
+        fleet,
+      ),
+    ).toEqual([]);
+    expect(
+      checkProse("Tier 1 holds 3 open findings across its 5 models, or 0.6 per model.", fleet),
+    ).toEqual([]);
+    // 3/5 is 0.6, and no two figures here give 0.5.
+    expect(
+      checkProse("Tier 1 holds 3 open findings across its 5 models, or 0.5 per model.", fleet).map(
+        (v) => v.reason,
+      ),
+    ).toContain("number");
+    // 1/3 written to two places is 0.33, not 0.34.
+    expect(
+      checkProse("Tier 3 holds 1 open finding across its 3 models, or 0.34 per model.", fleet).map(
+        (v) => v.reason,
+      ),
+    ).toContain("number");
+  });
+
+  it("period: the period's own dates tie the activity figure to it", () => {
+    expect(
+      checkProse(
+        "Monitoring is active on all 13, each has a metric received within the last 90 days, and no threshold breach or revalidation event was recorded between 2026-07-01 and 2026-09-30.",
+        fleet,
+      ),
+    ).toEqual([]);
+    expect(
+      checkProse(
+        "The records show active thresholds on 13 of 13 models, a metric received in the last 90 days for 13 of 13, and 0 threshold breaches.",
+        fleet,
+      ).map((v) => v.reason),
+    ).toContain("period");
+    // A date that is not the period's start or end does not name the period.
+    expect(
+      checkProse(
+        "In the last 90 days up to 2026-11-23, 0 threshold breaches were recorded.",
+        fleet,
+      ).map((v) => v.reason),
+    ).toContain("period");
+  });
+
+  it("groupCount: 0 groups is never an invented total", () => {
+    const c = ctxFor(sampleFleet(), "Section B: 15 requirements across 3 groups.");
+    expect(
+      checkProse(
+        "Section B (15 requirements across 3 groups, including organizational enablement and model risk reporting) has 0 groups checked.",
+        c,
+      ),
+    ).toEqual([]);
+    expect(checkProse("Section B has 4 groups checked.", c).map((v) => v.reason)).toContain(
+      "groupCount",
+    );
+  });
+
+  it("identifier: a field name in prose is still caught", () => {
+    expect(
+      checkProse(
+        "The 100 percent self-assessed completion reported in frameworkRequirements is corroborated by records only for those 37 requirements.",
+        fleet,
+      ).map((v) => v.reason),
+    ).toContain("identifier");
+  });
+});
+
 describe("G1 prompt: the E-23 header states the by-design scope and the dates", () => {
   it("says self-assessment-only groups are no gap, and ties activity counts to the period", () => {
     const prompt = ANALYZERS.executiveSummary.buildUserPrompt(rd, extrasFor(rd));
