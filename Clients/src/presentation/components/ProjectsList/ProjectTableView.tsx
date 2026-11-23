@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback, useEffect, useContext } from "react";
+import React, { useState, useMemo, useCallback, useEffect } from "react";
 import {
   Table,
   TableBody,
@@ -39,7 +39,7 @@ import { IProjectTableViewProps } from "../../../domain/interfaces/i.project";
 import { Project } from "../../../domain/types/Project";
 import useFormattedDate from "../../../application/hooks/useFormattedDate";
 import { startDateCalendarDay } from "../../tools/isoDateToString";
-import { VerifyWiseContext } from "../../../application/contexts/VerifyWise.context";
+import { useProjectsCache } from "../../../application/hooks/useProjectsCache";
 import Alert from "../Alert";
 import { useCanCheck } from "../../../application/hooks/useCan";
 import { text, palette as vwPalette } from "../../themes/palette";
@@ -198,7 +198,7 @@ const ProjectTableView: React.FC<IProjectTableViewProps> = ({
   const formatUserDate = useFormattedDate();
   const theme = useTheme();
   const navigate = useNavigateSearch();
-  const { setProjects } = useContext(VerifyWiseContext);
+  const { setProjectsCache } = useProjectsCache();
   const can = useCanCheck();
   const [page, setPage] = useState(0);
   // The use case whose delete dialog is open.
@@ -318,7 +318,9 @@ const ProjectTableView: React.FC<IProjectTableViewProps> = ({
         title: "Success",
         body: "Use case deleted successfully.",
       });
-      setProjects((prevProjects) => prevProjects.filter((project) => project.id !== projectId));
+      setProjectsCache((prevProjects) =>
+        prevProjects.filter((project) => project.id !== projectId),
+      );
       // Call the callback if provided to refresh the parent component
       if (onProjectDeleted) {
         onProjectDeleted();
@@ -327,7 +329,7 @@ const ProjectTableView: React.FC<IProjectTableViewProps> = ({
         setAlert(null);
       }, 3000);
     },
-    [setProjects, onProjectDeleted],
+    [setProjectsCache, onProjectDeleted],
   );
 
   // Sort the projects based on current sort configuration
