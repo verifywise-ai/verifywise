@@ -281,6 +281,35 @@ A registry framework adds no routes, so `Servers/swagger.yaml` doesn't change.
 Run `npm run generate:swagger` and `npm run generate:endpoints` only if you
 also changed routes.
 
+## Changing an existing framework's text
+
+The seed migration copies each item's text into the struct tables once, and
+the app reads the text from there. On every backend start,
+`services/frameworkTextSync` brings it back in step with the registry: for
+each bundled framework it compares the struct rows with `seed.structure` and
+rewrites the text columns that differ (`title`, `description`, and on levels 2
+and 3 also `summary`, `questions`, `evidence_examples`). So:
+
+- **A wording fix needs no migration.** Edit the text in `<key>.structure.ts`;
+  every database picks it up on its next start. Row ids don't change, so
+  implementation rows, statuses, evidence and progress stay attached.
+- **Adding, removing or reordering items still needs a migration.** Rows are
+  matched by position (`order_no`, which is the seed's own value or the item's
+  1-based index, within its parent). When a framework's items no longer line
+  up with the registry, the sync skips that framework and logs
+  `[framework-text-sync] <key>: skipped, ...`; write a migration that brings
+  the rows in line, and the next start syncs the text again.
+- Only the 24 bundled frameworks are covered. The four built-ins (EU AI Act,
+  ISO 42001, ISO 27001, NIST AI RMF) have their own tables and still need a
+  migration for text changes. The `frameworks` row (name, description) is not
+  synced either.
+
+The sync runs in the background, takes a per-framework advisory lock so
+several instances starting together don't write twice, and never blocks or
+stops startup. Tests: `services/frameworkTextSync/__tests__/plan.test.ts` and
+`tests/integration/framework-text-sync.test.ts`, which also checks that a
+freshly migrated database needs no change in any framework.
+
 ## Checklist
 
 - [ ] `<key>.structure.ts` with a unique id, key, `framework_type` and table names
