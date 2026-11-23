@@ -11,16 +11,15 @@ const coverageItem = {
   synergy_details: { multi_framework_controls: ["A3"] },
 };
 
-let mockContextValue: any = { projects: [], userId: 1, organizationId: 1 };
+let mockProjects: any[] = [];
 
-vi.mock("../../../../application/contexts/VerifyWise.context", () => ({
-  VerifyWiseContext: {
-    get _currentValue() {
-      return mockContextValue;
-    },
-    Provider: ({ children }: any) => children,
-    Consumer: ({ children }: any) => children(mockContextValue),
-  },
+// Auth identity now comes from the useAuth hook (Redux JWT), not the legacy context.
+vi.mock("../../../../application/hooks/useAuth", () => ({
+  useAuth: () => ({ userId: 1, organizationId: 1 }),
+}));
+
+vi.mock("../../../../application/hooks/useProjects", () => ({
+  useProjects: () => ({ data: mockProjects, isLoading: false }),
 }));
 
 let mockCoverage: any[] | undefined = undefined;
@@ -72,11 +71,7 @@ import UnifiedInsights from "../UnifiedInsights";
 describe("UnifiedInsights", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockContextValue = {
-      projects: [{ id: 3, project_title: "Project A" }],
-      userId: 1,
-      organizationId: 1,
-    };
+    mockProjects = [{ id: 3, project_title: "Project A" }];
     mockCoverage = undefined;
     mockCoverageLoading = false;
     mockRefreshPending = false;
