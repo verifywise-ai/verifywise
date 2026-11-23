@@ -302,8 +302,9 @@ export const ROLE_PERMISSIONS = {
   // key was contributor tier (Reviewers too) and also covered approval,
   // because the incident drawer is where approval is recorded. Approval moved
   // to incident.approve; Reviewers keep approval and lose editing and
-  // archiving. Migration 20261123120000 grants incident.approve to every
-  // custom role that holds incident.edit, so no custom role loses anything.
+  // archiving. Custom roles follow the same split: migration 20261122180000
+  // gives incident.edit to Editor-like and Admin-like roles, 20261123120000
+  // gives incident.approve to Reviewer-like and Admin-like roles.
   "incident.edit": {
     module: "Incidents",
     description: "Edit and archive AI incidents",

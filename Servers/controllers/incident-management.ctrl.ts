@@ -306,7 +306,7 @@ export async function createNewIncident(req: Request, res: Response) {
     const stamped = approvalStampFor(undefined, approvalStatus) === "stamp" && !!req.userId;
     // undefined is stored as NULL (createNewIncidentQuery).
     const approvedBy = stamped
-      ? await getIncidentApproverName(req.userId!, transaction)
+      ? await getIncidentApproverName(req.userId!, req.organizationId!, transaction)
       : undefined;
 
     const incident = new AIIncidentManagementModel({
@@ -459,11 +459,9 @@ export async function updateIncidentById(req: Request, res: Response) {
     return res.status(200).json(STATUS_CODE[200](savedIncident.toSafeJSON()));
   } catch (error) {
     if (error instanceof IncidentAccessDeniedError) {
-      logStructured(
-        "error",
+      // An expected refusal, not a server fault: keep it out of the error stream.
+      logger.warn(
         `Incident ${incidentId} update refused: no permission for ${error.fields.join(", ")}`,
-        "updateIncidentById",
-        "incidentManagement.controller.ts",
       );
       return res
         .status(403)

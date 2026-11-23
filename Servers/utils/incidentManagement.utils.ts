@@ -307,12 +307,15 @@ export const incidentWriteNeeds = (
  */
 export const getIncidentApproverName = async (
   userId: number,
+  organizationId: number,
   transaction?: Transaction,
 ): Promise<string> => {
   const rows = (await sequelize.query(
-    `SELECT NULLIF(TRIM(CONCAT_WS(' ', name, surname)), '') AS full_name
-       FROM users WHERE id = :userId`,
-    { replacements: { userId }, type: QueryTypes.SELECT, transaction },
+    `SELECT NULLIF(TRIM(CONCAT_WS(' ', u.name, u.surname)), '') AS full_name
+       FROM users u
+       JOIN organization_members om ON om.user_id = u.id AND om.organization_id = :organizationId
+      WHERE u.id = :userId`,
+    { replacements: { userId, organizationId }, type: QueryTypes.SELECT, transaction },
   )) as Array<{ full_name: string | null }>;
   return rows[0]?.full_name ?? `User #${userId}`;
 };

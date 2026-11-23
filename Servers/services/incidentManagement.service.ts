@@ -255,13 +255,18 @@ export async function updateIncident(
     const effective: Record<string, unknown> = { ...applyReopenApprovalReset(stored, updates) };
     const stamp = approvalStampFor(stored.approval_status, effective.approval_status);
     if (stamp === "stamp") {
-      effective.approved_by = userId ? await getIncidentApproverName(userId, transaction) : null;
+      effective.approved_by = userId
+        ? await getIncidentApproverName(userId, organizationId, transaction)
+        : null;
       effective.approval_date = new Date();
     } else if (stamp === "clear") {
       effective.approved_by = null;
       effective.approval_date = null;
     }
     const changed = diffIncidentColumns(stored, effective);
+    // approval_date is compared as a calendar day, so a second decision on the
+    // same day would keep the first one's time. A new decision always writes it.
+    if (stamp === "stamp") changed.approval_date = effective.approval_date;
     const changedColumns = Object.keys(changed);
 
     if (changedColumns.length === 0) {

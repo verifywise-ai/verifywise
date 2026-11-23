@@ -263,7 +263,8 @@ describe("incident edit, approve, archive and delete permissions", () => {
       "incident.edit",
       "organization.admin",
     ]);
-    expect(await grantedKeys(orgId, reviewerLike)).toEqual(["incident.edit", "riskLinks.review"]);
+    // Reviewer-like roles get approval only (incident.approve, in 20261123120000).
+    expect(await grantedKeys(orgId, reviewerLike)).toEqual(["riskLinks.review"]);
     expect(await grantedKeys(orgId, reader)).toEqual(["framework.audit"]);
 
     const userId = await createTestUser(
@@ -280,40 +281,59 @@ describe("incident edit, approve, archive and delete permissions", () => {
     expect((await request.delete(`${ROUTE}/${id}`)).status).toBe(403);
   });
 
-  it("grants incident.approve to every custom role holding incident.edit", async () => {
-    const editorLike = await customRole(orgId, "Incident editor", ["incident.edit"]);
+  it("grants incident.approve to Admin-like and Reviewer-like custom roles only", async () => {
     const reporter = await customRole(orgId, "Incident reporter only", ["incident.create"]);
-    const denied = await customRole(orgId, "Denied editor", []);
+    const editorLike = await customRole(orgId, "Incident editor", [
+      "incident.create",
+      "file.contribute",
+    ]);
+    const reviewerLike = await customRole(orgId, "Incident reviewer", ["riskLinks.review"]);
+    const orgAdmin = await customRole(orgId, "Org admin too", ["organization.admin"]);
+    const denied = await customRole(orgId, "Denied reviewer", []);
     await sequelize.query(
       `INSERT INTO role_permissions (organization_id, role_id, permission_key, allowed)
-       VALUES (:orgId, :denied, 'incident.edit', FALSE)`,
+       VALUES (:orgId, :denied, 'riskLinks.review', FALSE)`,
       { replacements: { orgId, denied } },
     );
 
+    await migration.up({ sequelize });
     await approveMigration.up({ sequelize });
     await approveMigration.up({ sequelize }); // idempotent
     invalidateRoleMapCache();
     invalidateRolePermissionsCache();
 
-    expect(await grantedKeys(orgId, editorLike)).toEqual(["incident.approve", "incident.edit"]);
-    expect(await grantedKeys(orgId, reporter)).toEqual(["incident.create"]);
+    expect(await grantedKeys(orgId, reporter)).toEqual(["incident.create", "incident.edit"]);
+    expect(await grantedKeys(orgId, editorLike)).toEqual([
+      "file.contribute",
+      "incident.create",
+      "incident.edit",
+    ]);
+    expect(await grantedKeys(orgId, reviewerLike)).toEqual([
+      "incident.approve",
+      "riskLinks.review",
+    ]);
+    expect(await grantedKeys(orgId, orgAdmin)).toEqual([
+      "incident.approve",
+      "incident.delete",
+      "incident.edit",
+      "organization.admin",
+    ]);
     expect(await grantedKeys(orgId, denied)).toEqual([]);
 
-    // The custom role keeps both what it could do before: edit and approve.
+    // A Reviewer-like custom role approves but cannot edit details.
     const userId = await createTestUser(
       orgId,
-      editorLike,
-      `editor-like-${Date.now()}@test.com`,
+      reviewerLike,
+      `reviewer-like-${Date.now()}@test.com`,
       "Password123!",
     );
-    const request = await clientFor(orgId, userId, "Incident editor");
+    const request = await clientFor(orgId, userId, "Incident reviewer");
     const id = await createTestIncident(orgId, adminId);
     expect(
-      (
-        await request
-          .patch(`${ROUTE}/${id}`)
-          .send({ status: "Investigating", approval_status: "Approved" })
-      ).status,
+      (await request.patch(`${ROUTE}/${id}`).send({ approval_status: "Approved" })).status,
     ).toBe(200);
+    expect((await request.patch(`${ROUTE}/${id}`).send({ status: "Investigating" })).status).toBe(
+      403,
+    );
   });
 });

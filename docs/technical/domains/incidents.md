@@ -150,7 +150,7 @@ Mounted at `/api/ai-incident-managements`.
 | PATCH | `/:id/archive` | `incident.edit` (Admin, Editor) | Archive incident |
 | DELETE | `/:id` | `incident.delete` (Admin) | Delete incident |
 
-Until 2026-11, edit, archive and delete needed only a login, so Auditors could change or delete incidents. Migration `20261122180000` grants `incident.edit` to custom roles that hold `incident.create`, a contributor-tier key (`file.contribute`, `fileManager.contribute`, `riskLinks.review`) or `organization.admin`, and `incident.delete` to custom roles that hold `organization.admin`.
+Until 2026-11, edit, archive and delete needed only a login, so Auditors could change or delete incidents. Migration `20261122180000` grants `incident.edit` to custom roles that hold `incident.create` or `organization.admin`, and `incident.delete` to custom roles that hold `organization.admin`.
 
 #### Editing versus approving
 
@@ -161,7 +161,7 @@ Two keys split the work on an existing incident:
 | `incident.edit` | Admin, Editor | Every field except the approval ones (status, severity, description, owner, `archived`, ...), and the archive route |
 | `incident.approve` | Admin, Reviewer | `approval_status` and `approval_notes` |
 
-Until 2026-11 `incident.edit` covered both and Reviewers held it only because the drawer is where approval is recorded. Reviewers now approve but cannot edit or archive; Editors edit but cannot approve. Migration `20261123120000` grants `incident.approve` to every custom role that holds `incident.edit`, so no custom role lost anything.
+Until 2026-11 `incident.edit` covered both and Reviewers held it only because the drawer is where approval is recorded. Reviewers now approve but cannot edit or archive; Editors edit but cannot approve. Custom roles get the same split: migration `20261123120000` grants `incident.approve` to roles that hold `organization.admin`, and to Reviewer-like roles (a contributor-tier key such as `file.contribute`, `fileManager.contribute` or `riskLinks.review`, but no `incident.create`). Editor-like roles (`incident.create`) keep `incident.edit` without approval.
 
 The update route lets in a caller holding either key (`authorizeAny` in `middleware/accessControl.middleware.ts`). The controller resolves both keys for the caller (`requestHasPermission`) and passes them to `updateIncident` as `access: { canEdit, canApprove }`. Against the locked row, `incidentWriteNeeds` (`utils/incidentManagement.utils.ts`) lists the columns the request actually changes (the same `isSameIncidentValue` comparison as the diff, so a value sent back unchanged does not count) and splits them by key. A change the caller's access does not cover throws `IncidentAccessDeniedError`; the controller answers 403 with a translated message ("Your role does not allow editing this incident's details." or "Your role does not allow approving or rejecting incidents."), and nothing is written. The check runs on the caller's request, before the reopen reset and the approval stamp, so an Editor can still reopen an approved incident (the reset is the server's rewrite, not the Editor's approval change).
 

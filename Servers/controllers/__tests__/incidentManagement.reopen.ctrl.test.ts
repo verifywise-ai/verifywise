@@ -37,7 +37,7 @@ jest.mock("../../utils/changeHistory.base.utils", () => ({
 jest.mock("../../services/workflows/triggers", () => ({ triggerIncidentResponse: jest.fn() }));
 jest.mock("../../utils/logger/fileLogger", () => ({
   __esModule: true,
-  default: { debug: jest.fn(), error: jest.fn(), info: jest.fn() },
+  default: { debug: jest.fn(), error: jest.fn(), info: jest.fn(), warn: jest.fn() },
   logStructured: jest.fn(),
 }));
 jest.mock("../../utils/i18n.utils", () => ({

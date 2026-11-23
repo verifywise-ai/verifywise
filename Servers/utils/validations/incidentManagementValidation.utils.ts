@@ -353,6 +353,18 @@ export const validateIncidentUpdateBusinessRules = (
       });
     }
   }
+  // A value outside the enum (or null) would otherwise reach the CHECK /
+  // NOT NULL constraint and answer 500.
+  if (data && "approval_status" in data && data.approval_status !== undefined) {
+    const result = validateApprovalStatus(data.approval_status);
+    if (!result.isValid) {
+      errors.push({
+        field: "approval_status",
+        message: result.message || "Invalid value",
+        code: result.code || "INVALID_VALUE",
+      });
+    }
+  }
   return errors;
 };
 

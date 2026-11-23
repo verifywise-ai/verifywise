@@ -38,7 +38,7 @@ jest.mock("../../utils/changeHistory.base.utils", () => ({
 jest.mock("../../services/workflows/triggers", () => ({ triggerIncidentResponse: jest.fn() }));
 jest.mock("../../utils/logger/fileLogger", () => ({
   __esModule: true,
-  default: { debug: jest.fn(), error: jest.fn(), info: jest.fn() },
+  default: { debug: jest.fn(), error: jest.fn(), info: jest.fn(), warn: jest.fn() },
   logStructured: jest.fn(),
 }));
 
@@ -135,7 +135,7 @@ describe("updateIncidentById — approval is its own permission", () => {
     const changed = mockUpdate.mock.calls[0][1];
     expect(changed.approved_by).toBe("Rita Reviewer");
     expect(changed.approval_date).toBeInstanceOf(Date);
-    expect(mockApprover).toHaveBeenCalledWith(9, mockTransaction);
+    expect(mockApprover).toHaveBeenCalledWith(9, 1, mockTransaction);
   });
 });
 
@@ -205,7 +205,7 @@ describe("createNewIncident — approval on create", () => {
       approval_notes: "Self-approved",
     });
     expect(saved.approval_date).toBeInstanceOf(Date);
-    expect(mockApprover).toHaveBeenCalledWith(9, mockTransaction);
+    expect(mockApprover).toHaveBeenCalledWith(9, 1, mockTransaction);
   });
 
   it("leaves approver and date empty for a Pending incident even with incident.approve", async () => {

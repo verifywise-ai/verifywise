@@ -29,7 +29,7 @@ jest.mock("../../services/workflows/triggers", () => ({
 }));
 jest.mock("../../utils/logger/fileLogger", () => ({
   __esModule: true,
-  default: { debug: jest.fn(), error: jest.fn(), info: jest.fn() },
+  default: { debug: jest.fn(), error: jest.fn(), info: jest.fn(), warn: jest.fn() },
   logStructured: jest.fn(),
 }));
 

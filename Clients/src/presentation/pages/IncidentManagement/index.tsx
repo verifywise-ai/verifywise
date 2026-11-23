@@ -459,8 +459,9 @@ const IncidentManagement: React.FC = () => {
     const incidentId = searchParams.get("incidentId");
     if (incidentId && !hasProcessedUrlParam.current && !isLoading) {
       hasProcessedUrlParam.current = true;
-      // Use existing handleViewIncident pattern which fetches and opens modal
-      handleViewIncident(incidentId, "view");
+      // Opens the drawer editable for anyone who can edit or approve (a
+      // Reviewer arriving from Home records approval); others get view mode.
+      handleEditIncident(incidentId, "edit");
       setSearchParams({}, { replace: true });
     }
   }, [searchParams, isLoading, setSearchParams]);
