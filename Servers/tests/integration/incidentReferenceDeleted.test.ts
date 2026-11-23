@@ -127,6 +127,7 @@ describe("a reference deleted after the incident reference check", () => {
       await expect(
         updateIncident(owner.orgId, incidentId, { project_id: projectId }, owner.userId, {
           transaction,
+          access: { canEdit: true, canApprove: true },
         }),
       ).rejects.toMatchObject({
         name: "IncidentUpdateValidationError",

@@ -146,11 +146,36 @@ Mounted at `/api/ai-incident-managements`.
 | GET | `/` | Any member | Get all incidents |
 | GET | `/:id` | Any member | Get incident by ID |
 | POST | `/` | `incident.create` (Admin, Editor) | Create incident |
-| PATCH | `/:id` | `incident.edit` (Admin, Editor, Reviewer) | Update incident, including approval |
-| PATCH | `/:id/archive` | `incident.edit` (Admin, Editor, Reviewer) | Archive incident |
+| PATCH | `/:id` | `incident.edit` or `incident.approve` (Admin, Editor, Reviewer), then per field (below) | Update incident, including approval |
+| PATCH | `/:id/archive` | `incident.edit` (Admin, Editor) | Archive incident |
 | DELETE | `/:id` | `incident.delete` (Admin) | Delete incident |
 
-Until 2026-11, edit, archive and delete needed only a login, so Auditors could change or delete incidents. Reviewers hold `incident.edit` because the incident drawer is where approval is recorded; an approval-only permission is a planned follow-up. Migration `20261122180000` grants `incident.edit` to custom roles that hold `incident.create`, a contributor-tier key (`file.contribute`, `fileManager.contribute`, `riskLinks.review`) or `organization.admin`, and `incident.delete` to custom roles that hold `organization.admin`. On the incidents page, roles without `incident.edit` open incidents read-only and the row menu offers only View. The page has no delete action. The Advisor's incident write tools check the same keys for the user who asked, when the write is proposed and again when it runs.
+Until 2026-11, edit, archive and delete needed only a login, so Auditors could change or delete incidents. Migration `20261122180000` grants `incident.edit` to custom roles that hold `incident.create` or `organization.admin`, and `incident.delete` to custom roles that hold `organization.admin`.
+
+#### Editing versus approving
+
+Two keys split the work on an existing incident:
+
+| Key | Built-in roles | Covers |
+|-----|----------------|--------|
+| `incident.edit` | Admin, Editor | Every field except the approval ones (status, severity, description, owner, `archived`, ...), and the archive route |
+| `incident.approve` | Admin, Reviewer | `approval_status` and `approval_notes` |
+
+Until 2026-11 `incident.edit` covered both and Reviewers held it only because the drawer is where approval is recorded. Reviewers now approve but cannot edit or archive; Editors edit but cannot approve. Custom roles get the same split: migration `20261123120000` grants `incident.approve` to roles that hold `organization.admin`, and to Reviewer-like roles (a contributor-tier key such as `file.contribute`, `fileManager.contribute` or `riskLinks.review`, but no `incident.create`). Editor-like roles (`incident.create`) keep `incident.edit` without approval.
+
+The update route lets in a caller holding either key (`authorizeAny` in `middleware/accessControl.middleware.ts`). The controller resolves both keys for the caller (`requestHasPermission`) and passes them to `updateIncident` as `access: { canEdit, canApprove }`. Against the locked row, `incidentWriteNeeds` (`utils/incidentManagement.utils.ts`) lists the columns the request actually changes (the same `isSameIncidentValue` comparison as the diff, so a value sent back unchanged does not count) and splits them by key. A change the caller's access does not cover throws `IncidentAccessDeniedError`; the controller answers 403 with a translated message ("Your role does not allow editing this incident's details." or "Your role does not allow approving or rejecting incidents."), and nothing is written. The check runs on the caller's request, before the reopen reset and the approval stamp, so an Editor can still reopen an approved incident (the reset is the server's rewrite, not the Editor's approval change).
+
+`approved_by` and `approval_date` are set by the server, never by the caller: every write path drops them from the request (`withoutServerSetApprovalFields`). When `approval_status` changes (`approvalStampFor`):
+
+- to Approved or Rejected: `approved_by` is the acting user's name (`name surname` from `users`, `getIncidentApproverName`, `User #<id>` without a name) and `approval_date` is now;
+- to Pending or Not required: both are cleared;
+- unchanged (for example only the notes change): both stay as stored.
+
+On create (`createNewIncident`), a caller without `incident.approve` gets an incident that starts Pending with no approver, date or notes, whatever was sent. A caller with it may create the incident Approved or Rejected; the server then records them as approver, dated now. Creation history records the approval as stored.
+
+`updateIncident` refuses a call with neither `access` nor `changedBySystem`. System writers (`changedBySystem: true`, the Jira status sync) default to `SYSTEM_INCIDENT_ACCESS`: details only, never approval. The Advisor's incident tools and the MCP `update_incident` tool check `incident.edit` for their user and pass edit-only access: they change details only and never record approval.
+
+On the incidents page, the drawer enables the approval status and notes only with `incident.approve` and every other field only with `incident.edit` (`incident.create` for a new incident). "Approved by" and "Approval date" are read-only and show the server's values. Without `incident.edit` the row menu offers View, plus "Record approval" with `incident.approve`, which opens the drawer with only the approval fields editable (its title reads "Record approval"); clicking the row does the same. Roles with neither key open incidents read-only. The page has no delete action. The Advisor's incident write tools check the same keys for the user who asked, when the write is proposed and again when it runs.
 
 ### Change History
 
@@ -263,10 +288,11 @@ enum. `APPROVAL_STATUS_ENUM` in the validation utils still lists
 `Not Required` (capital R) and the edit form labels the option that way, but
 the value the form saves is `Not required`.
 
-When approved:
-- `approved_by` populated with approver name
-- `approval_date` set to current timestamp
-- `approval_notes` optional comments
+When approved or rejected (set by the server, see
+[Editing versus approving](#editing-versus-approving)):
+- `approved_by` is the name of the user who changed the status
+- `approval_date` is the moment of the change
+- `approval_notes` optional comments (needs `incident.approve`)
 
 Approval is sign-off on closing the incident. When a Closed incident is reopened
 (status moves from `Closed` to anything else) and its stored approval is
@@ -276,10 +302,10 @@ update to `approval_status = Pending` with `approved_by`, `approval_date` and
 `approval_notes` set to null. Change history keeps the old values. `Pending`,
 `Rejected` and `Not required` are left as they are.
 
-If the same update changes **any** approval field (`approval_status`,
-`approved_by`, `approval_date`, `approval_notes` with a value different from the
-stored one), the caller has made an explicit approval decision and the update is
-kept as sent. A field sent back with its stored value counts as "not touched"
+If the same update changes an approval field the caller may set
+(`approval_status` or `approval_notes` with a value different from the stored
+one; `approved_by` and `approval_date` are dropped from every request), the
+caller has made an explicit approval decision and the update is kept as sent. A field sent back with its stored value counts as "not touched"
 (the edit form always sends every field; `''` and null are treated as the same,
 dates are compared as instants). So keeping an incident `Approved` through a
 reopen is not possible by resubmitting the old approval: it needs a deliberate
@@ -288,10 +314,11 @@ re-approval in a later update.
 ### Shared update path
 
 All updates to an existing incident go through
-`updateIncident(organizationId, incidentId, updates, userId, { transaction?, changedBySystem?, expectedUpdatedAt? })`
+`updateIncident(organizationId, incidentId, updates, userId, { access?, transaction?, changedBySystem?, expectedUpdatedAt? })`
 in `Servers/services/incidentManagement.service.ts`. Callers today: the HTTP
 update (`PATCH /ai-incident-managements/:id`), the AI Advisor tools
-`agent_update_incident` / `agent_update_incident_status`, and the Jira
+`agent_update_incident` / `agent_update_incident_status`, the MCP
+`update_incident` tool, and the Jira
 incidents status sync (`changedBySystem: true`, see
 [Imported incidents](#imported-incidents-jira-incidents-extension)). In order, it:
 
@@ -330,7 +357,10 @@ incidents status sync (`changedBySystem: true`, see
    memoises the drawer's `initialData` on the selected incident so re-renders
    never reset the form, and Save is disabled while a save is in flight.
    Background writers (AI Advisor, sync jobs) do not pass `expectedUpdatedAt`.
-3. Validates against the locked row: `validateCompleteIncidentUpdate` and
+3. Checks the caller's access against the locked row (see
+   [Editing versus approving](#editing-versus-approving)): 403 when a changed
+   field needs a key the caller lacks.
+4. Validates against the locked row: `validateCompleteIncidentUpdate` and
    `validateIncidentReferences` (FKs must belong to the organization; unchanged
    FKs come from the row; `''`, null and undefined mean "no reference" and are
    not looked up; anything that is not a positive integer is invalid and never
@@ -340,8 +370,9 @@ incidents status sync (`changedBySystem: true`, see
    `errors: [{ field, message, code }]`). A reference deleted after this check
    fails the UPDATE's foreign key check; that violation is thrown as the same
    `INVALID_REFERENCE` error (see [Reference checks on create](#reference-checks-on-create)).
-4. Applies the reopen approval reset.
-5. Diffs the update against the row with `diffIncidentColumns`
+5. Applies the reopen approval reset, then sets or clears `approved_by` and
+   `approval_date` when `approval_status` changes.
+6. Diffs the update against the row with `diffIncidentColumns`
    (`Servers/utils/incidentManagement.utils.ts`). Keys that are not updatable
    columns are ignored. Values go through the same `isSameIncidentValue` helper
    (`incidentManagementValidation.utils.ts`) that the reset uses to decide
@@ -358,9 +389,9 @@ incidents status sync (`changedBySystem: true`, see
    - foreign keys compare as numbers, `archived` / `interim_report` treat empty
      as false, harm categories compare as lists.
    `archived` is never written as NULL.
-6. If nothing changed, returns the row as it is: no UPDATE, no `updated_at`
+7. If nothing changed, returns the row as it is: no UPDATE, no `updated_at`
    bump, no history, no automations.
-7. Otherwise writes exactly the changed columns plus `updated_at`
+8. Otherwise writes exactly the changed columns plus `updated_at`
    (`updateIncidentByIdQuery`) and records exactly those columns in
    `incident_change_history` (`formatEntityFieldChanges`). That includes
    `model_inventory_id` ("Affected model"), `project_id` ("Linked use case") and
@@ -382,7 +413,7 @@ incidents status sync (`changedBySystem: true`, see
    `changedBySystem: true`, with a null actor and `changed_by_system = true`
    (shown as "System"). The AI Advisor uses the system form when its execution
    carries no user id.
-8. Enqueues the `incident_updated` automation (`enqueueIncidentUpdatedAutomations`)
+9. Enqueues the `incident_updated` automation (`enqueueIncidentUpdatedAutomations`)
    in `transaction.afterCommit`, so nothing is sent for a rolled-back change.
 
 It returns the updated incident, or `null` when the incident does not exist in
@@ -452,7 +483,7 @@ All incident modifications are tracked:
 - Incident list with filtering
 - Filter by: incident_id, ai_project, type, severity, status, approval_status
 - Search functionality
-- Role-based create (Admin/Editor only)
+- Role-based create (`incident.create`: Admin, Editor), edit (`incident.edit`) and approval (`incident.approve`)
 - Export functionality
 
 ### Key Components
@@ -485,10 +516,10 @@ The modal is organized into 4 sections:
    - Planned corrective actions
 
 4. **Approval & Reporting**
-   - Approval status
-   - Approver, approval date
-   - Approval notes
-   - Interim report toggle
+   - Approval status (needs `incident.approve`)
+   - Approved by, approval date (read-only, set by the server)
+   - Approval notes (needs `incident.approve`)
+   - Interim report toggle (needs `incident.edit`)
 
 ### Table Features
 
@@ -497,7 +528,7 @@ The modal is organized into 4 sections:
 - Sort state persistence
 - Row options: 5, 10, 15, 25
 - Color-coded status/severity chips
-- Edit, archive, view actions
+- Edit, archive, view actions; "Record approval" for roles with `incident.approve` but not `incident.edit`
 - Confirmation dialogs
 
 ## Validation Rules

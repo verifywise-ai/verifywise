@@ -128,12 +128,45 @@ describe("keys added for issue #5314 — same built-in roles as the lists they r
     ["evals.edit", ["Admin", "Editor"]],
     ["apiKeys.admin", ["Admin"]],
     ["incident.create", ["Admin", "Editor"]],
-    ["incident.edit", ["Admin", "Editor", "Reviewer"]],
     ["incident.delete", ["Admin"]],
   ])("%s is held by %j", (key, roles) => {
     const holders = BUILTIN_ROLES.filter((role) =>
       BUILTIN_ROLE_PERMISSIONS[role].has(key as PermissionKey),
     );
     expect([...holders].sort()).toEqual([...roles].sort());
+  });
+});
+
+// Not parity: a deliberate change (2026-11). incident.edit was Admin, Editor
+// and Reviewer and covered approval too, because Reviewers record approval in
+// the incident drawer. Approval moved to incident.approve (Admin, Reviewer);
+// incident.edit is now Admin and Editor. legacyRoles records the new lists,
+// so the parity tests above hold by construction; this block pins the change
+// itself, and what each built-in role gained or lost.
+describe("incident approval split out of incident.edit", () => {
+  const holders = (key: PermissionKey) =>
+    BUILTIN_ROLES.filter((role) => BUILTIN_ROLE_PERMISSIONS[role].has(key)).sort();
+
+  it("incident.edit is Admin and Editor (Reviewer removed)", () => {
+    expect(holders("incident.edit")).toEqual(["Admin", "Editor"]);
+  });
+
+  it("incident.approve is Admin and Reviewer", () => {
+    expect(holders("incident.approve")).toEqual(["Admin", "Reviewer"]);
+    expect(ROLE_PERMISSIONS["incident.approve"].module).toBe("Incidents");
+  });
+
+  it("Reviewers keep approval and lose editing; Editors keep editing and never approve", () => {
+    expect(BUILTIN_ROLE_PERMISSIONS["Reviewer"].has("incident.approve")).toBe(true);
+    expect(BUILTIN_ROLE_PERMISSIONS["Reviewer"].has("incident.edit")).toBe(false);
+    expect(BUILTIN_ROLE_PERMISSIONS["Editor"].has("incident.edit")).toBe(true);
+    expect(BUILTIN_ROLE_PERMISSIONS["Editor"].has("incident.approve")).toBe(false);
+  });
+
+  it("Auditors and pure super admins hold neither", () => {
+    for (const role of ["Auditor", "SuperAdmin"]) {
+      expect(BUILTIN_ROLE_PERMISSIONS[role].has("incident.edit")).toBe(false);
+      expect(BUILTIN_ROLE_PERMISSIONS[role].has("incident.approve")).toBe(false);
+    }
   });
 });

@@ -58,6 +58,8 @@ export interface IconButtonProps {
   checkForRisks?: () => Promise<boolean>;
   onDeleteWithRisks?: (deleteRisks: boolean) => void;
   onView?: () => void;
+  /** "incident" type without canEdit: offers "Record approval" (incident.approve). */
+  onApprove?: () => void;
   openLinkedPolicies?: () => void;
   entityId?: number | string;
   onSendTest?: () => Promise<void>;

@@ -24,6 +24,8 @@ export const de: Record<string, string> = {
   "Project / Organization": "Projekt / Organisation",
   "AI analyses": "KI-Analysen",
   "Action failed": "Aktion fehlgeschlagen",
+  "Template duplicated": "Vorlage dupliziert",
+  "Failed to duplicate template": "Vorlage konnte nicht dupliziert werden",
   "Add a language-model key in Settings to enable AI insights.":
     "Fügen Sie in den Einstellungen einen Sprachmodell-Schlüssel hinzu, um KI-Einblicke zu aktivieren.",
   "All frameworks in scope": "Alle Rahmenwerke im Umfang",
@@ -77,6 +79,10 @@ export const de: Record<string, string> = {
   "Run in month": "Ausführen im Monat",
   "Unticked, every page is marked as a draft":
     "Ohne Häkchen wird jede Seite als Entwurf gekennzeichnet",
+  "Could not load the report details. Other changes can still be saved.":
+    "Die Berichtsdetails konnten nicht geladen werden. Andere Änderungen können trotzdem gespeichert werden.",
+  "Update the name, output format, delivery schedule and report details.":
+    "Aktualisieren Sie Name, Ausgabeformat, Zustellungszeitplan und Berichtsdetails.",
 };
 
 export const fr: Record<string, string> = {
@@ -102,6 +108,8 @@ export const fr: Record<string, string> = {
   "Project / Organization": "Projet / Organisation",
   "AI analyses": "Analyses IA",
   "Action failed": "L'action a échoué",
+  "Template duplicated": "Modèle dupliqué",
+  "Failed to duplicate template": "Échec de la duplication du modèle",
   "Add a language-model key in Settings to enable AI insights.":
     "Ajoutez une clé de modèle de langage dans les Paramètres pour activer les analyses IA.",
   "All frameworks in scope": "Tous les référentiels de la portée",
@@ -152,6 +160,10 @@ export const fr: Record<string, string> = {
   "Run in month": "Exécuter au mois de",
   "Unticked, every page is marked as a draft":
     "Non cochée, chaque page est marquée comme brouillon",
+  "Could not load the report details. Other changes can still be saved.":
+    "Impossible de charger les détails du rapport. Les autres modifications peuvent quand même être enregistrées.",
+  "Update the name, output format, delivery schedule and report details.":
+    "Modifiez le nom, le format de sortie, le calendrier de livraison et les détails du rapport.",
 };
 
 export const es: Record<string, string> = {
@@ -177,6 +189,8 @@ export const es: Record<string, string> = {
   "Project / Organization": "Proyecto / Organización",
   "AI analyses": "Análisis de IA",
   "Action failed": "La acción falló",
+  "Template duplicated": "Plantilla duplicada",
+  "Failed to duplicate template": "No se pudo duplicar la plantilla",
   "Add a language-model key in Settings to enable AI insights.":
     "Agregue una clave de modelo de lenguaje en Configuración para habilitar los análisis de IA.",
   "All frameworks in scope": "Todos los marcos del alcance",
@@ -227,4 +241,8 @@ export const es: Record<string, string> = {
   "Reporting period:": "Periodo del informe:",
   "Run in month": "Ejecutar en el mes",
   "Unticked, every page is marked as a draft": "Sin marcar, cada página se marca como borrador",
+  "Could not load the report details. Other changes can still be saved.":
+    "No se pudieron cargar los detalles del informe. Los demás cambios se pueden guardar igualmente.",
+  "Update the name, output format, delivery schedule and report details.":
+    "Actualice el nombre, el formato de salida, la programación de entrega y los detalles del informe.",
 };

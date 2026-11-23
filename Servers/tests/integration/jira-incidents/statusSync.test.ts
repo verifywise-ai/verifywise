@@ -15,6 +15,8 @@ import { JiraAuthError } from "../../../extensions/jira-incidents/jiraIncidents.
 import { updateIncident } from "../../../services/incidentManagement.service";
 import { sequelize } from "../../../database/db";
 
+const EDIT_ACCESS = { canEdit: true, canApprove: false };
+
 async function stateFor(orgId: number): Promise<RunState> {
   const config = (await loadConfig(orgId))!;
   return {
@@ -61,7 +63,9 @@ describe("jira incidents status sync", () => {
         { orgA },
       )
     ).map((e) => e.kind);
-  const vwSet = (status: string) => updateIncident(orgA, incidentId, { status }, userA);
+  // A VerifyWise user with incident.edit changing the status.
+  const vwSet = (status: string) =>
+    updateIncident(orgA, incidentId, { status }, userA, { access: EDIT_ACCESS });
 
   beforeEach(async () => {
     mock = await withMock();
@@ -364,7 +368,9 @@ describe("jira incidents status sync after an unmapped import", () => {
         await rows<any>(`SELECT * FROM jira_incident_links WHERE organization_id = :orgA`, { orgA })
       )[0];
 
-    await updateIncident(orgA, (await linkRow()).incident_id, { status: "Closed" }, userA);
+    await updateIncident(orgA, (await linkRow()).incident_id, { status: "Closed" }, userA, {
+      access: EDIT_ACCESS,
+    });
     const s = await sync(orgA);
 
     expect(mock.state.issues[0].statusId).toBe("4");
@@ -439,7 +445,9 @@ describe("jira incidents status sync with several links", () => {
   });
 
   it("marks only the link when Jira refuses one issue with 403", async () => {
-    await updateIncident(orgA, first.incidentId, { status: "Closed" }, userA);
+    await updateIncident(orgA, first.incidentId, { status: "Closed" }, userA, {
+      access: EDIT_ACCESS,
+    });
     mock.state.failNext.push({
       status: 403,
       path: `/rest/api/3/issue/${first.issueId}/transitions`,

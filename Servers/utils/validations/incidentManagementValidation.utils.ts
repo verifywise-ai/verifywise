@@ -353,6 +353,18 @@ export const validateIncidentUpdateBusinessRules = (
       });
     }
   }
+  // A value outside the enum (or null) would otherwise reach the CHECK /
+  // NOT NULL constraint and answer 500.
+  if (data && "approval_status" in data && data.approval_status !== undefined) {
+    const result = validateApprovalStatus(data.approval_status);
+    if (!result.isValid) {
+      errors.push({
+        field: "approval_status",
+        message: result.message || "Invalid value",
+        code: result.code || "INVALID_VALUE",
+      });
+    }
+  }
   return errors;
 };
 
@@ -504,6 +516,55 @@ export const applyReopenApprovalReset = <T extends Record<string, any>>(
     approval_date: null,
     approval_notes: null,
   };
+};
+
+/**
+ * Approval fields the server sets: who recorded the decision and when.
+ * Callers cannot send them; every write path drops them from the request.
+ */
+export const SERVER_SET_APPROVAL_FIELDS = ["approved_by", "approval_date"] as const;
+
+/** Approval fields a caller may change, with incident.approve. */
+export const CALLER_APPROVAL_FIELDS: ReadonlySet<string> = new Set([
+  "approval_status",
+  "approval_notes",
+]);
+
+/** Approval statuses that record a decision, so they name an approver and a date. */
+const DECISION_STATUSES: ReadonlySet<string> = new Set([
+  AIIncidentManagementApprovalStatus.APPROVED,
+  AIIncidentManagementApprovalStatus.REJECTED,
+]);
+
+/** `values` without the server-set approval fields (approved_by, approval_date). */
+export const withoutServerSetApprovalFields = <T extends Record<string, unknown>>(values: T): T => {
+  const copy: Record<string, unknown> = { ...values };
+  for (const field of SERVER_SET_APPROVAL_FIELDS) delete copy[field];
+  return copy as T;
+};
+
+/**
+ * What a write does to approved_by and approval_date, given the stored
+ * approval status (undefined on create) and the one being written:
+ *
+ * - "stamp": the status changes to Approved or Rejected. The server records
+ *   the acting user as approver and now as the approval date.
+ * - "clear": the status changes to Pending or Not required (or a new incident
+ *   starts without a decision). Both are cleared.
+ * - "keep": the status does not change (or is not written). Both stay as
+ *   stored, so editing approval notes does not re-sign the decision.
+ */
+export const approvalStampFor = (
+  storedStatus: unknown,
+  nextStatus: unknown,
+): "stamp" | "clear" | "keep" => {
+  if (nextStatus === undefined) return "keep";
+  if (
+    storedStatus !== undefined &&
+    isSameIncidentValue("approval_status", storedStatus, nextStatus)
+  )
+    return "keep";
+  return DECISION_STATUSES.has(String(nextStatus)) ? "stamp" : "clear";
 };
 
 /**

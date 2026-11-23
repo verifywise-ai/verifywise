@@ -15,9 +15,12 @@
 import { z } from "zod";
 import { getAllIncidentsQuery } from "../../utils/incidentManagement.utils";
 import {
+  INCIDENT_EDIT_DENIED_MESSAGE,
+  IncidentAccessDeniedError,
   IncidentUpdateValidationError,
   updateIncident,
 } from "../../services/incidentManagement.service";
+import { userHasPermission } from "../../utils/userPermission.utils";
 import { AIIncidentManagementModel } from "../../domain.layer/models/incidentManagement/incidemtManagement.model";
 import {
   AIIncidentManagementStatus,
@@ -87,12 +90,27 @@ const updateIncidentTool: ToolDef = {
     }
 
     await requireOrganization(args.organizationId);
+    // The fields this tool changes are incident details: the REST route's
+    // incident.edit, checked on the caller's current role. The tool never
+    // records approval.
+    if (!(await userHasPermission(args.organizationId, caller.userId, "incident.edit"))) {
+      throw new Error(INCIDENT_EDIT_DENIED_MESSAGE);
+    }
     let incident;
     try {
       // No expected version: like the Advisor, the model is not an editor
       // holding a loaded copy of the incident.
-      incident = await updateIncident(args.organizationId, args.incidentId, updates, caller.userId);
+      incident = await updateIncident(
+        args.organizationId,
+        args.incidentId,
+        updates,
+        caller.userId,
+        {
+          access: { canEdit: true, canApprove: false },
+        },
+      );
     } catch (error) {
+      if (error instanceof IncidentAccessDeniedError) throw new Error(error.message);
       if (error instanceof IncidentUpdateValidationError) {
         throw new Error(error.errors.map((e) => e.message).join(" "));
       }

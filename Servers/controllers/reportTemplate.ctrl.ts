@@ -24,6 +24,8 @@ import {
   archiveTemplateQuery,
   createTemplateVersionQuery,
   getVersionByIdQuery,
+  getOrganizationTemplateSlugsQuery,
+  freeCopyName,
 } from "../utils/reportTemplate.utils";
 import { REPORT_SECTION_CATALOG } from "../services/reporting/sectionCatalog";
 import { parseFrameworkSelection } from "../services/reporting/frameworkSelection";
@@ -88,6 +90,7 @@ const VERSION_CONFIG_FIELDS = [
   "schedule_defaults",
   "delivery_defaults",
   "parameters_config",
+  "framework_config",
 ];
 
 const hasVersionConfig = (body: any): boolean =>
@@ -119,6 +122,23 @@ const respondWithError = (req: Request, res: Response, error: unknown): Response
   return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
 };
 
+// Both INSERTs share one transaction. A template with no version is unusable —
+// the wizard reads latestVersion.sections_config and disables its submit button
+// without one — so a failure on the second write must not leave the first
+// committed as an undeletable-looking orphan in GET /templates. Shared by
+// create and duplicate, so a copy is written exactly the way a new template is.
+async function insertTemplateWithVersion(
+  body: any,
+  organizationId: number,
+  userId: number,
+): Promise<{ tpl: any; version: any }> {
+  return sequelize.transaction(async (t) => {
+    const tpl = await createTemplateQuery(body, organizationId, userId, t);
+    const version = await createTemplateVersionQuery(tpl.id, organizationId, body, userId, t);
+    return { tpl, version };
+  });
+}
+
 export async function createTemplate(req: Request, res: Response): Promise<any> {
   logProcessing({
     description: "createTemplate",
@@ -131,22 +151,11 @@ export async function createTemplate(req: Request, res: Response): Promise<any> 
     const configRejected = respondToInvalidParametersConfig(req, res);
     if (configRejected) return configRejected;
 
-    // Both INSERTs share one transaction. A template with no version is
-    // unusable — the wizard reads latestVersion.sections_config and disables
-    // its submit button without one — so a failure on the second write must
-    // not leave the first committed as an undeletable-looking orphan in
-    // GET /templates.
-    const { tpl, version } = await sequelize.transaction(async (t) => {
-      const tpl = await createTemplateQuery(req.body, req.organizationId!, req.userId!, t);
-      const version = await createTemplateVersionQuery(
-        tpl.id,
-        req.organizationId!,
-        req.body,
-        req.userId!,
-        t,
-      );
-      return { tpl, version };
-    });
+    const { tpl, version } = await insertTemplateWithVersion(
+      req.body,
+      req.organizationId!,
+      req.userId!,
+    );
     await logSuccess({
       eventType: "Create",
       description: `Created report template ${tpl.id}`,
@@ -242,6 +251,107 @@ export async function updateTemplate(req: Request, res: Response): Promise<any> 
       eventType: "Update",
       description: "updateTemplate failed",
       functionName: "updateTemplate",
+      fileName: FILE_NAME,
+      error: error as Error,
+      userId: req.userId!,
+      organizationId: req.organizationId!,
+    });
+    return respondWithError(req, res, error);
+  }
+}
+
+// A concurrent duplicate can take the chosen slug between the lookup and the
+// INSERT; that unique violation is retried with a fresh lookup, a few times.
+const DUPLICATE_ATTEMPTS = 3;
+
+const isSlugConflict = (error: unknown): boolean => {
+  const pgErr = (error as any)?.parent ?? (error as any)?.original;
+  return pgErr?.code === "23505" && pgErr?.constraint === "uq_report_templates_org_slug";
+};
+
+/**
+ * POST /v1/report-templates/:id/duplicate — copy a template the organization
+ * can see (a system template or one of its own) into the caller's
+ * organization, as a new custom template.
+ *
+ * The server picks the name: "<name> (copy)", or "(copy 2)", "(copy 3)", ...
+ * when an earlier copy, archived or not, holds that slug. The user never chose
+ * a name, so a duplicate-name 409 would be no use to them.
+ *
+ * The copy carries the latest version's whole config: sections, AI blocks,
+ * framework selection, report kind, format, branding and schedule/delivery
+ * defaults. framework_config is not optional: an empty one means every
+ * framework in scope, so dropping it would widen a framework-specific template
+ * under the original's name. parameters_config holds the kind (e.g. OSFI
+ * E-23); without it the copy would offer the kind's sections under a general
+ * template that refuses them.
+ *
+ * An archived source answers 404, as it is absent from the template list.
+ */
+export async function duplicateTemplate(req: Request, res: Response): Promise<any> {
+  const id = Number(req.params.id);
+  logProcessing({
+    description: `duplicateTemplate ${id}`,
+    functionName: "duplicateTemplate",
+    fileName: FILE_NAME,
+    userId: req.userId!,
+    organizationId: req.organizationId!,
+  });
+  try {
+    const source = await getTemplateByIdQuery(id, req.organizationId!);
+    if (!source || source.is_active === false) {
+      return res.status(404).json(STATUS_CODE[404](req.t!("not found")));
+    }
+    const latest = await getLatestVersionQuery(source.id, req.organizationId!);
+    const config = Object.fromEntries(
+      VERSION_CONFIG_FIELDS.map((f) => [f, latest?.[f] ?? undefined]),
+    );
+
+    let created: { tpl: any; version: any } | null = null;
+    for (let attempt = 1; !created; attempt++) {
+      const name = freeCopyName(
+        source.name,
+        await getOrganizationTemplateSlugsQuery(req.organizationId!),
+      );
+      if (!name) {
+        return res.status(409).json(STATUS_CODE[409](req.t!("too many copies of this template")));
+      }
+      try {
+        created = await insertTemplateWithVersion(
+          {
+            name,
+            description: source.description ?? null,
+            category: source.category,
+            // createTemplateQuery 400s unless default_scope is exactly
+            // "project" or "organization"; every stored template has one,
+            // the fallback is defensive.
+            default_scope: source.default_scope ?? "project",
+            supported_scopes: source.supported_scopes ?? undefined,
+            recommended_frequency: source.recommended_frequency ?? undefined,
+            ...config,
+          },
+          req.organizationId!,
+          req.userId!,
+        );
+      } catch (error) {
+        if (!isSlugConflict(error) || attempt >= DUPLICATE_ATTEMPTS) throw error;
+      }
+    }
+    const { tpl, version } = created;
+    await logSuccess({
+      eventType: "Create",
+      description: `Duplicated report template ${id} as ${tpl.id}`,
+      functionName: "duplicateTemplate",
+      fileName: FILE_NAME,
+      userId: req.userId!,
+      organizationId: req.organizationId!,
+    });
+    return res.status(201).json(STATUS_CODE[201]({ ...tpl, latestVersion: version }));
+  } catch (error) {
+    await logFailure({
+      eventType: "Create",
+      description: "duplicateTemplate failed",
+      functionName: "duplicateTemplate",
       fileName: FILE_NAME,
       error: error as Error,
       userId: req.userId!,

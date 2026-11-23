@@ -330,6 +330,12 @@ export interface IncidentTableProps {
   onArchive?: (id: string, mode: string) => void;
   /** False hides edit and archive in the row menu (no incident.edit). */
   canEdit?: boolean;
+  /**
+   * The role may record approval (incident.approve). Without incident.edit the
+   * row menu then offers "Record approval", which opens the drawer with only
+   * the approval fields editable.
+   */
+  canApprove?: boolean;
   paginated?: boolean;
   archivedId?: string | null;
   visibleColumns?: Set<string>;

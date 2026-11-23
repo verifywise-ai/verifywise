@@ -33,6 +33,8 @@ const READER = ["Admin", "Editor", "Reviewer", "Auditor"] as const;
 const SUPER = ["Admin", "SuperAdmin"] as const;
 /** Editors plus Auditors, who record audit results on framework controls. */
 const AUDIT = ["Admin", "Editor", "Auditor"] as const;
+/** Admins plus Reviewers, who sign off without editing (incident approval). */
+const APPROVER = ["Admin", "Reviewer"] as const;
 
 export const ROLE_PERMISSIONS = {
   // ── Admin tier (was authorize(["Admin"])) ────────────────────────────────
@@ -297,6 +299,18 @@ export const ROLE_PERMISSIONS = {
     description: "Report new AI incidents",
     legacyRoles: EDITOR,
   },
+  // Deliberate narrowing (2026-11), not a like-for-like swap: until then this
+  // key was contributor tier (Reviewers too) and also covered approval,
+  // because the incident drawer is where approval is recorded. Approval moved
+  // to incident.approve; Reviewers keep approval and lose editing and
+  // archiving. Custom roles follow the same split: migration 20261122180000
+  // gives incident.edit to Editor-like and Admin-like roles, 20261123120000
+  // gives incident.approve to Reviewer-like and Admin-like roles.
+  "incident.edit": {
+    module: "Incidents",
+    description: "Edit and archive AI incidents",
+    legacyRoles: EDITOR,
+  },
   "riskLinks.edit": {
     module: "Risks",
     description: "Link related risks and acknowledge inherited risk level changes",
@@ -304,11 +318,6 @@ export const ROLE_PERMISSIONS = {
   },
 
   // ── Contributor tier (was authorize(["Admin", "Reviewer", "Editor"])) ────
-  "incident.edit": {
-    module: "Incidents",
-    description: "Edit, approve and archive AI incidents",
-    legacyRoles: CONTRIBUTOR,
-  },
   "file.contribute": {
     module: "Files",
     description: "Upload files",
@@ -410,6 +419,18 @@ export const ROLE_PERMISSIONS = {
     module: "API keys",
     description: "Create, revoke and delete API keys",
     legacyRoles: ADMIN,
+  },
+
+  // ── Incident approval (2026-11) ──────────────────────────────────────────
+  // New key, no legacy allowlist: split out of incident.edit (see there).
+  // The update route accepts incident.edit or incident.approve, and the write
+  // path (services/incidentManagement.service.ts) then requires this key for
+  // approval_status and approval_notes changes. Built-in Reviewers record
+  // approval; Editors do not.
+  "incident.approve": {
+    module: "Incidents",
+    description: "Approve or reject AI incidents",
+    legacyRoles: APPROVER,
   },
 } satisfies Record<string, PermissionMeta>;
 

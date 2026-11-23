@@ -6,6 +6,12 @@ import { renderWithProviders as render } from "../../../../test/renderWithProvid
 
 const updateMutate = vi.fn();
 const deleteMutate = vi.fn();
+const showAlert = vi.fn();
+
+// The schedule as GET /v1/scheduled-reports/:id returns it. A general
+// template's version declares no fields; tests swap in a kind's.
+const GENERAL_DETAIL = { data: { id: 7, report_parameters: {}, parameters_config: {} } };
+let detail: Record<string, unknown> = GENERAL_DETAIL;
 
 const ROW = {
   id: 7,
@@ -19,13 +25,43 @@ const ROW = {
 
 vi.mock("../../../../application/hooks/useReporting", () => ({
   useScheduledReports: () => ({ data: [ROW] }),
+  useScheduledReport: () => ({ isPending: false, isFetching: false, isError: false, ...detail }),
+  useOrganizationName: () => ({ data: "Acme Bank" }),
   useRunNow: () => ({ mutate: vi.fn(), isPending: false }),
   useSetActive: () => ({ mutate: vi.fn(), isPending: false }),
   useUpdateScheduledReport: () => ({ mutate: updateMutate, isPending: false }),
   useDeleteScheduledReport: () => ({ mutate: deleteMutate, isPending: false }),
 }));
 
+vi.mock("../../../../infrastructure/api/customAxios", async (importOriginal) => ({
+  ...(await importOriginal<object>()),
+  showAlert: (...args: unknown[]) => showAlert(...args),
+}));
+
+vi.mock("../../../../application/hooks/useAuth", () => ({
+  useAuth: () => ({ userToken: { name: "Pat", surname: "Lee" }, organizationId: 1 }),
+}));
+
 import ScheduledReportsTab from "../ScheduledReportsTab";
+
+// The E-23 version's declared fields (Servers e23Parameters.ts), trimmed to
+// the ones the dialog needs: a period (never shown for a schedule), a required
+// text field and the final version box.
+const E23_FIELDS = [
+  { key: "periodStart", label: "Period start", type: "date", required: true },
+  { key: "periodEnd", label: "Period end", type: "date", required: true },
+  { key: "institutionName", label: "Institution name", type: "text", required: true },
+  { key: "preparedByName", label: "Prepared by name", type: "text", required: true },
+  { key: "scopeNote", label: "Scope note", type: "text", required: true },
+  { key: "isFinal", label: "Final version", type: "boolean", required: false },
+];
+const kindDetail = (stored: Record<string, unknown>) => ({
+  data: {
+    id: 7,
+    report_parameters: stored,
+    parameters_config: { kind: "osfi_e23", fields: E23_FIELDS },
+  },
+});
 
 // Row actions live behind the shared row-actions menu (components/IconButton):
 // open the row's gear menu, then pick the item. The menu item is a menuitem and
@@ -41,6 +77,8 @@ describe("ScheduledReportsTab", () => {
   beforeEach(() => {
     updateMutate.mockClear();
     deleteMutate.mockClear();
+    showAlert.mockClear();
+    detail = GENERAL_DETAIL;
   });
 
   it("asks for confirmation before deleting and names the schedule", () => {
@@ -119,6 +157,176 @@ describe("ScheduledReportsTab", () => {
       hour: 9,
       minute: 0,
       timezone: "UTC",
+    });
+  });
+
+  describe("report details", () => {
+    it("shows no details and sends no reportParameters for a general template", () => {
+      render(<ScheduledReportsTab />);
+      clickRowAction("Edit");
+
+      expect(screen.queryByLabelText("Final version")).not.toBeInTheDocument();
+      expect(
+        screen.getByText("Update the name, output format and delivery schedule."),
+      ).toBeInTheDocument();
+      fireEvent.click(screen.getByRole("button", { name: "Save" }));
+
+      expect(updateMutate).toHaveBeenCalledTimes(1);
+      expect(updateMutate.mock.calls[0][0].body).not.toHaveProperty("reportParameters");
+    });
+
+    it("prefills the stored answers and saves the final version box", () => {
+      detail = kindDetail({
+        institutionName: "Kestrel Bank",
+        preparedByName: "Sam Roe",
+        scopeNote: "All models",
+        isFinal: false,
+      });
+      render(<ScheduledReportsTab />);
+      clickRowAction("Edit");
+
+      // A schedule's period is derived per run, so it is not offered.
+      expect(screen.queryByLabelText("Period start")).not.toBeInTheDocument();
+      expect(screen.getByLabelText(/Institution name/)).toHaveValue("Kestrel Bank");
+      expect(screen.getByLabelText("Final version")).not.toBeChecked();
+
+      fireEvent.click(screen.getByLabelText("Final version"));
+      fireEvent.click(screen.getByRole("button", { name: "Save" }));
+
+      expect(updateMutate).toHaveBeenCalledTimes(1);
+      expect(updateMutate.mock.calls[0][0]).toEqual({
+        id: 7,
+        body: {
+          name: "Weekly compliance digest",
+          format: "pdf",
+          scheduleConfig: { frequency: "weekly", hour: 9, minute: 0, timezone: "UTC" },
+          reportParameters: {
+            institutionName: "Kestrel Bank",
+            preparedByName: "Sam Roe",
+            scopeNote: "All models",
+            isFinal: true,
+          },
+        },
+      });
+    });
+
+    it("blocks Save and shows the error while a required answer is blank", () => {
+      detail = kindDetail({
+        institutionName: "Kestrel Bank",
+        preparedByName: "Sam Roe",
+        scopeNote: "All models",
+        isFinal: false,
+      });
+      render(<ScheduledReportsTab />);
+      clickRowAction("Edit");
+
+      fireEvent.change(screen.getByLabelText(/Institution name/), { target: { value: " " } });
+      fireEvent.click(screen.getByRole("button", { name: "Save" }));
+
+      expect(updateMutate).not.toHaveBeenCalled();
+      expect(screen.getByText("Institution name is required")).toBeInTheDocument();
+    });
+
+    it("keeps Save disabled until the schedule has loaded", () => {
+      detail = { data: undefined, isPending: true, isFetching: true };
+      render(<ScheduledReportsTab />);
+      clickRowAction("Edit");
+
+      const save = screen.getByRole("button", { name: "Save" });
+      expect(save).toBeDisabled();
+      fireEvent.click(save);
+      expect(updateMutate).not.toHaveBeenCalled();
+    });
+
+    it("says when the details fail to load and still saves the other fields", () => {
+      detail = { data: undefined, isError: true };
+      render(<ScheduledReportsTab />);
+      clickRowAction("Edit");
+
+      expect(showAlert).toHaveBeenCalledWith(
+        expect.objectContaining({ variant: "error", isToast: true }),
+      );
+      fireEvent.click(screen.getByRole("button", { name: "Save" }));
+      expect(updateMutate).toHaveBeenCalledTimes(1);
+      expect(updateMutate.mock.calls[0][0].body).not.toHaveProperty("reportParameters");
+    });
+
+    it("renames a kind schedule without resending its stored answers", () => {
+      detail = kindDetail({
+        institutionName: "Kestrel Bank",
+        preparedByName: "Sam Roe",
+        scopeNote: "All models",
+        isFinal: false,
+      });
+      render(<ScheduledReportsTab />);
+      clickRowAction("Edit");
+
+      fireEvent.change(screen.getByLabelText("Name"), { target: { value: "Quarterly E-23" } });
+      fireEvent.click(screen.getByRole("button", { name: "Save" }));
+
+      expect(updateMutate).toHaveBeenCalledTimes(1);
+      expect(updateMutate.mock.calls[0][0].body).toEqual({
+        name: "Quarterly E-23",
+        format: "pdf",
+        scheduleConfig: { frequency: "weekly", hour: 9, minute: 0, timezone: "UTC" },
+      });
+    });
+
+    it("does not block a rename on a stored required answer that is missing", () => {
+      // scopeNote has no default, so it stays blank and invalid.
+      detail = kindDetail({ institutionName: "Kestrel Bank", isFinal: false });
+      render(<ScheduledReportsTab />);
+      clickRowAction("Edit");
+
+      fireEvent.change(screen.getByLabelText("Name"), { target: { value: "Quarterly E-23" } });
+      fireEvent.click(screen.getByRole("button", { name: "Save" }));
+
+      expect(updateMutate).toHaveBeenCalledTimes(1);
+      expect(updateMutate.mock.calls[0][0].body).not.toHaveProperty("reportParameters");
+      expect(screen.queryByText("Scope note is required")).not.toBeInTheDocument();
+    });
+
+    it("fills answers the schedule lacks from the organization and the user", () => {
+      detail = kindDetail({ scopeNote: "All models", isFinal: false });
+      render(<ScheduledReportsTab />);
+      clickRowAction("Edit");
+
+      expect(screen.getByLabelText(/Institution name/)).toHaveValue("Acme Bank");
+      expect(screen.getByLabelText(/Prepared by name/)).toHaveValue("Pat Lee");
+      fireEvent.click(screen.getByLabelText("Final version"));
+      fireEvent.click(screen.getByRole("button", { name: "Save" }));
+
+      expect(updateMutate.mock.calls[0][0].body.reportParameters).toEqual({
+        institutionName: "Acme Bank",
+        preparedByName: "Pat Lee",
+        scopeNote: "All models",
+        isFinal: true,
+      });
+    });
+
+    it("keeps Save enabled during a background refetch of loaded details", () => {
+      detail = { ...kindDetail({ institutionName: "Kestrel Bank" }), isFetching: true };
+      render(<ScheduledReportsTab />);
+      clickRowAction("Edit");
+
+      expect(screen.getByRole("button", { name: "Save" })).toBeEnabled();
+    });
+
+    it("does not report a load failure while a retry is in flight", () => {
+      detail = { data: undefined, isError: true, isFetching: true };
+      render(<ScheduledReportsTab />);
+      clickRowAction("Edit");
+
+      expect(showAlert).not.toHaveBeenCalled();
+    });
+
+    it("does not report a load failure when earlier details are still loaded", () => {
+      detail = { ...kindDetail({ institutionName: "Kestrel Bank" }), isError: true };
+      render(<ScheduledReportsTab />);
+      clickRowAction("Edit");
+
+      expect(showAlert).not.toHaveBeenCalled();
+      expect(screen.getByLabelText(/Institution name/)).toHaveValue("Kestrel Bank");
     });
   });
 });

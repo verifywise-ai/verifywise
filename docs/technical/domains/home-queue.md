@@ -32,7 +32,7 @@ Every query filters by `organization_id`. `today` is the UTC date computed in th
 | `risks` | `risks.source.ts` | `risk_owner` is you and the risk is not deleted. Its mitigation status is Not Started (NULL counts), Requires review, or `deadline < today` and status not Completed or Canceled. | everyone |
 | `policyReviews` | `policyReviews.source.ts` | You are `policy_owner_id` or an assigned reviewer, the policy is not Archived or Deprecated and `next_review_date <= today + 14`. | everyone |
 | `vendorReviews` | `vendorReviews.source.ts` | You are `reviewer` (or `assignee` when no reviewer) and `review_date <= today + 14`. A vendor with status Reviewed is excluded only when its review date is before today. | everyone |
-| `incidents` | `incidents.source.ts` | `assignee_id` is you, status is not Closed, not archived. | everyone |
+| `incidents` | `incidents.source.ts` | `assignee_id` is you, status is not Closed, not archived. | `incident.edit` or `incident.approve` (an Auditor assigned an incident cannot act on it) |
 | `mrmFindings` | `mrmFindings.source.ts` | `owner_id` is you and stage is not Resolved or Closed. | everyone |
 
 Order (`sort.ts`): overdue first, then `dueDate` ascending, then `waitingSince` ascending, nulls last, item id as the tie break.
