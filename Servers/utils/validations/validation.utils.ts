@@ -546,6 +546,10 @@ export const VALIDATION_PATTERNS = {
   URL: /^https?:\/\/.+/,
   ALPHANUMERIC: /^[a-zA-Z0-9]+$/,
   LETTERS_ONLY: /^[a-zA-Z\s]+$/,
+  // A person's name: a letter in any script, then letters, marks, spaces and
+  // ' ’ . - ("José García", "O'Brien", "Anne-Marie"). Same as the client's
+  // PERSON_NAME_PATTERN (Clients/src/application/validations/stringValidation.ts).
+  PERSON_NAME: /^\p{L}[\p{L}\p{M}\s'’.-]*$/u,
   NUMBERS_ONLY: /^[0-9]+$/,
 } as const;
 

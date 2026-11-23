@@ -117,9 +117,51 @@ describe("Test String Validation", () => {
     );
     expect(result).toEqual({
       accepted: false,
-      message: "Contact Person must only contain letters and spaces",
+      message: "Contact Person must only contain letters, spaces, apostrophes, hyphens and periods",
     });
   });
+  it.each([
+    "José García",
+    "Zoë Müller",
+    "O'Brien",
+    "O’Brien",
+    "Anne-Marie",
+    "J. Smith",
+    "Ngô Bảo Châu",
+    "Łukasz",
+  ])("accepts the contact person name %s", (name) => {
+    expect(
+      checkStringValidation(
+        "Contact Person",
+        name,
+        0,
+        50,
+        false,
+        false,
+        false,
+        false,
+        "contactPerson",
+      ).accepted,
+    ).toBe(true);
+  });
+  it.each(["John_Doe", "-Anne", "'Brien", "Jane <b>", "a@b.co"])(
+    "rejects the contact person name %s",
+    (name) => {
+      expect(
+        checkStringValidation(
+          "Contact Person",
+          name,
+          0,
+          50,
+          false,
+          false,
+          false,
+          false,
+          "contactPerson",
+        ).accepted,
+      ).toBe(false);
+    },
+  );
   it("if type is contactPerson and value contains only letters and spaces, should return accepted true with success message", () => {
     const result = checkStringValidation(
       "Contact Person",

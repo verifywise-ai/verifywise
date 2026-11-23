@@ -1,5 +1,8 @@
 import { isValidEmail } from "./emailAddress.rule";
 
+/** A person's name: letters in any script, then letters, marks, spaces, ' ’ . - */
+export const PERSON_NAME_PATTERN = /^\p{L}[\p{L}\p{M}\s'’.-]*$/u;
+
 /**
  * Converts feedback information into an object containing acceptance status and a message.
  *
@@ -87,10 +90,15 @@ export function checkStringValidation(
     }
   }
 
-  // Custom validation for vendor contact person
+  // Custom validation for vendor contact person: letters in any script
+  // ("José", "Zoë Müller"), with spaces, apostrophes, hyphens and periods
+  // ("O'Brien", "Anne-Marie", "J. Smith"). Must start with a letter.
   if (type === "contactPerson") {
-    if (!/^[a-zA-Z\s]+$/.test(value.trim())) {
-      return feedbackToString(false, `${title} must only contain letters and spaces`);
+    if (!PERSON_NAME_PATTERN.test(value.trim())) {
+      return feedbackToString(
+        false,
+        `${title} must only contain letters, spaces, apostrophes, hyphens and periods`,
+      );
     }
   }
 

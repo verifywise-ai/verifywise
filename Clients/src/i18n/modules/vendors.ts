@@ -78,6 +78,8 @@ export const de: Record<string, string> = {
   "No review date": "Kein Prüfdatum",
   "Please select a use case from the dropdown":
     "Bitte wählen Sie einen Anwendungsfall aus der Liste aus",
+  "Vendor contact person must only contain letters, spaces, apostrophes, hyphens and periods":
+    "Die Kontaktperson des Anbieters darf nur Buchstaben, Leerzeichen, Apostrophe, Bindestriche und Punkte enthalten",
   "Please select an assignee from the dropdown":
     "Bitte wählen Sie aus der Liste aus, wem der Anbieter zugewiesen ist",
   "Please select a vendor from the dropdown": "Bitte wählen Sie einen Anbieter aus der Liste aus",
@@ -195,6 +197,8 @@ export const fr: Record<string, string> = {
   "No review date": "Aucune date de révision",
   "Please select a use case from the dropdown":
     "Veuillez sélectionner un cas d'usage dans la liste",
+  "Vendor contact person must only contain letters, spaces, apostrophes, hyphens and periods":
+    "La personne de contact du fournisseur ne peut contenir que des lettres, des espaces, des apostrophes, des traits d'union et des points",
   "Please select an assignee from the dropdown":
     "Veuillez sélectionner une personne assignée dans la liste",
   "Please select a vendor from the dropdown": "Veuillez sélectionner un fournisseur dans la liste",
@@ -311,6 +315,8 @@ export const es: Record<string, string> = {
   "Loading vendors": "Cargando proveedores",
   "No review date": "Sin fecha de revisión",
   "Please select a use case from the dropdown": "Seleccione un caso de uso de la lista",
+  "Vendor contact person must only contain letters, spaces, apostrophes, hyphens and periods":
+    "La persona de contacto del proveedor solo puede contener letras, espacios, apóstrofos, guiones y puntos",
   "Please select an assignee from the dropdown": "Seleccione a quién se asigna de la lista",
   "Please select a vendor from the dropdown": "Seleccione un proveedor de la lista",
   "Please select an action owner from the dropdown":
