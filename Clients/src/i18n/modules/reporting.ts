@@ -75,6 +75,10 @@ export const de: Record<string, string> = {
   "Run in month": "Ausführen im Monat",
   "Unticked, every page is marked as a draft":
     "Ohne Häkchen wird jede Seite als Entwurf gekennzeichnet",
+  "Could not load the report details. Other changes can still be saved.":
+    "Die Berichtsdetails konnten nicht geladen werden. Andere Änderungen können trotzdem gespeichert werden.",
+  "Update the name, output format, delivery schedule and report details.":
+    "Aktualisieren Sie Name, Ausgabeformat, Zustellungszeitplan und Berichtsdetails.",
 };
 
 export const fr: Record<string, string> = {
@@ -148,6 +152,10 @@ export const fr: Record<string, string> = {
   "Run in month": "Exécuter au mois de",
   "Unticked, every page is marked as a draft":
     "Non cochée, chaque page est marquée comme brouillon",
+  "Could not load the report details. Other changes can still be saved.":
+    "Impossible de charger les détails du rapport. Les autres modifications peuvent quand même être enregistrées.",
+  "Update the name, output format, delivery schedule and report details.":
+    "Modifiez le nom, le format de sortie, le calendrier de livraison et les détails du rapport.",
 };
 
 export const es: Record<string, string> = {
@@ -221,4 +229,8 @@ export const es: Record<string, string> = {
   "Reporting period:": "Periodo del informe:",
   "Run in month": "Ejecutar en el mes",
   "Unticked, every page is marked as a draft": "Sin marcar, cada página se marca como borrador",
+  "Could not load the report details. Other changes can still be saved.":
+    "No se pudieron cargar los detalles del informe. Los demás cambios se pueden guardar igualmente.",
+  "Update the name, output format, delivery schedule and report details.":
+    "Actualice el nombre, el formato de salida, la programación de entrega y los detalles del informe.",
 };

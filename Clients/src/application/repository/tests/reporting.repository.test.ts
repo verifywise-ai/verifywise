@@ -2,6 +2,7 @@ import {
   getTemplates,
   getTemplate,
   getScheduledReports,
+  getScheduledReport,
   createScheduledReport,
   runScheduledReportNow,
   setScheduledReportActive,
@@ -91,6 +92,29 @@ describe("reporting.repository", () => {
       await getScheduledReports();
 
       expect(apiServices.get).toHaveBeenCalledWith("/reporting/scheduled-reports");
+    });
+  });
+
+  describe("getScheduledReport", () => {
+    it("reads one schedule from v1, with its version's parameters_config", async () => {
+      const row = {
+        id: 5,
+        report_parameters: { isFinal: false },
+        parameters_config: { kind: "osfi_e23", fields: [] },
+      };
+      vi.mocked(apiServices.get).mockResolvedValue({
+        status: 200,
+        statusText: "OK",
+        data: { data: row },
+      });
+
+      const result = await getScheduledReport(5);
+
+      // The edit dialog shows its own message when this fails.
+      expect(apiServices.get).toHaveBeenCalledWith("/v1/scheduled-reports/5", {
+        suppressGlobalErrorToast: true,
+      });
+      expect(result).toEqual(row);
     });
   });
 

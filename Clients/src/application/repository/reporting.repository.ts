@@ -20,6 +20,7 @@ import type {
   ReportSectionCatalogEntry,
   ReportTemplate,
   ReportTemplateWriteBody,
+  ScheduledReportDetail,
   ScheduledReportUpdateBody,
 } from "../../domain/interfaces/i.reporting";
 
@@ -42,6 +43,11 @@ export async function getScheduledReports(): Promise<any[]> {
   return extract(await apiServices.get("/reporting/scheduled-reports"));
 }
 // v1 accepts reportParameters and the quarterly frequency.
+// One schedule with its template version's declared report details. The edit
+// dialog says itself when this fails, so the global toast is not wanted.
+export async function getScheduledReport(id: number): Promise<ScheduledReportDetail> {
+  return extract(await apiServices.get(`/v1/scheduled-reports/${id}`, OWN_ERROR_UI));
+}
 export async function createScheduledReport(body: any): Promise<any> {
   return extract(await apiServices.post("/v1/scheduled-reports", body, OWN_ERROR_UI));
 }

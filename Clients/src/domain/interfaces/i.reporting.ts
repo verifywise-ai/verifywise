@@ -341,6 +341,18 @@ export interface ReportRunPage {
   offset: number;
 }
 
+/**
+ * GET /api/v1/scheduled-reports/:id: the stored schedule row plus its template
+ * version's parameters_config, which the legacy list does not carry.
+ */
+export interface ScheduledReportDetail {
+  id: number;
+  name: string;
+  report_parameters?: ReportParameters | null;
+  parameters_config?: ReportParametersConfig;
+  [key: string]: unknown;
+}
+
 export interface ScheduledReportUpdateBody {
   name?: string;
   scope?: ReportScope;

@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Stack,
   Table,
@@ -21,6 +21,7 @@ import Field from "../../components/Inputs/Field";
 import Select from "../../components/Inputs/Select";
 import {
   useScheduledReports,
+  useScheduledReport,
   useRunNow,
   useSetActive,
   useUpdateScheduledReport,
@@ -29,7 +30,17 @@ import {
 import useFormattedDate from "../../../application/hooks/useFormattedDate";
 import { showAlert } from "../../../infrastructure/api/customAxios";
 import { FREQUENCY_ITEMS, MONTH_ITEMS, withFrequency } from "./scheduleOptions";
-import { reportRequestErrorMessage } from "./reportParameters";
+import ReportDetailsStep from "./ReportDetailsStep";
+import {
+  PERIOD_KEYS,
+  buildParameterPrefill,
+  declaredFields,
+  reportRequestErrorMessage,
+  todayIso,
+  toRequestParameters,
+  validateParameters,
+} from "./reportParameters";
+import type { ReportParameters } from "../../../domain/interfaces/i.reporting";
 
 const COLUMNS = ["Name", "Scope", "Next run", "Status", "Actions"];
 
@@ -42,8 +53,10 @@ const FORMAT_ITEMS = [
   { _id: "docx", name: "Word (DOCX)" },
 ];
 
-// The three fields worth editing in place. Scope, sections and AI blocks stay
-// in the create wizard — changing those is a different report, not an edit.
+// The fields worth editing in place: name, format and schedule here, plus the
+// report details (report_parameters) the schedule's template version declares,
+// kept apart in parameterEdits. Scope, sections and AI blocks stay in the
+// create wizard — changing those is a different report, not an edit.
 type Draft = {
   id: number;
   name: string;
@@ -66,9 +79,64 @@ export default function ScheduledReportsTab() {
   const deleteReport = useDeleteScheduledReport();
   const [draft, setDraft] = useState<Draft | null>(null);
 
+  // Report details: the legacy list does not carry the version's declared
+  // fields, so the dialog loads the schedule itself. Edits win over the stored
+  // answers; errors show on edited fields, or on all of them after a Save
+  // attempt, as in the run wizard.
+  const detail = useScheduledReport(draft?.id);
+  const [parameterEdits, setParameterEdits] = useState<ReportParameters>({});
+  const [touched, setTouched] = useState<Set<string>>(() => new Set());
+  const [saveAttempted, setSaveAttempted] = useState(false);
+  const declared = detail.data?.parameters_config?.fields;
+  // Period fields are never stored on a schedule (each run derives them), so a
+  // version declaring only those has nothing to edit here.
+  const fields = useMemo(() => declaredFields(declared), [declared]);
+  const hasDetails = fields.some((f) => !PERIOD_KEYS.includes(f.key));
+  const today = todayIso();
+  const storedParameters = detail.data?.report_parameters;
+  const prefill = useMemo(
+    () =>
+      buildParameterPrefill(fields, {
+        last: { parameters: storedParameters ?? {}, periodEnd: null },
+        organizationName: "",
+        userFullName: "",
+        today,
+      }),
+    [fields, storedParameters, today],
+  );
+  const parameterValues = { ...prefill, ...parameterEdits };
+  const parameterErrors = hasDetails
+    ? validateParameters(fields, parameterValues, { today, requirePeriod: false })
+    : {};
+  const shownParameterErrors = saveAttempted
+    ? parameterErrors
+    : Object.fromEntries(Object.entries(parameterErrors).filter(([key]) => touched.has(key)));
+  const setParameter = (key: string, value: string | boolean) => {
+    setParameterEdits((prev) => ({ ...prev, [key]: value }));
+    setTouched((prev) => new Set(prev).add(key));
+  };
+  // Until the schedule has loaded it is unknown whether it declares details,
+  // and a Save then could not send them. A failed load leaves the stored
+  // answers untouched (no reportParameters is sent), so Save stays available.
+  const detailsLoading = draft != null && detail.isFetching;
+  const draftId = draft?.id;
+  const detailFailed = detail.isError;
+  useEffect(() => {
+    if (draftId != null && detailFailed) {
+      showAlert({
+        variant: "error",
+        body: "Could not load the report details. Other changes can still be saved.",
+        isToast: true,
+      });
+    }
+  }, [draftId, detailFailed]);
+
   const onActionError = () => showAlert({ variant: "error", body: "Action failed", isToast: true });
 
-  const openEdit = (r: any) =>
+  const openEdit = (r: any) => {
+    setParameterEdits({});
+    setTouched(new Set());
+    setSaveAttempted(false);
     setDraft({
       id: r.id,
       name: r.name ?? "",
@@ -81,15 +149,29 @@ export default function ScheduledReportsTab() {
         ...(r.schedule_config ?? {}),
       },
     });
+  };
 
   const submitEdit = () => {
-    if (!draft) return;
+    if (!draft || detailsLoading) return;
+    if (hasDetails && Object.keys(parameterErrors).length > 0) {
+      setSaveAttempted(true);
+      return;
+    }
     updateReport.mutate(
       {
         id: draft.id,
         // scheduleConfig always goes along: the backend recomputes next_run_at
         // only when it is present, and the hook's invalidate refreshes the row.
-        body: { name: draft.name, format: draft.format, scheduleConfig: draft.schedule },
+        // reportParameters only for a version that declares details: the
+        // server rejects answers a template does not ask for.
+        body: {
+          name: draft.name,
+          format: draft.format,
+          scheduleConfig: draft.schedule,
+          ...(hasDetails
+            ? { reportParameters: toRequestParameters(fields, parameterValues, false) }
+            : {}),
+        },
       },
       {
         onSuccess: () => setDraft(null),
@@ -186,10 +268,15 @@ export default function ScheduledReportsTab() {
           isOpen
           onClose={() => setDraft(null)}
           title="Edit scheduled report"
-          description="Update the name, output format and delivery schedule."
+          description={
+            hasDetails
+              ? "Update the name, output format, delivery schedule and report details."
+              : "Update the name, output format and delivery schedule."
+          }
           onSubmit={submitEdit}
           submitButtonText="Save"
           isSubmitting={updateReport.isPending}
+          isSubmitDisabled={detailsLoading}
         >
           <Stack spacing={6}>
             <Field
@@ -275,6 +362,16 @@ export default function ScheduledReportsTab() {
                 }
               />
             </Stack>
+            {hasDetails && (
+              <ReportDetailsStep
+                fields={fields}
+                values={parameterValues}
+                errors={shownParameterErrors}
+                onChange={setParameter}
+                mode="schedule"
+                frequency={draft.schedule.frequency}
+              />
+            )}
           </Stack>
         </StandardModal>
       )}

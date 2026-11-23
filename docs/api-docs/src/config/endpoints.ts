@@ -13600,6 +13600,17 @@ export const v1V1scheduledReportsEndpoints: Endpoint[] = [
     tag: "v1: V1/Scheduled Reports",
   },
   {
+    method: 'GET',
+    path: '/v1/scheduled-reports/{id}',
+    summary: "Get Scheduled Report",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Scheduled Reports",
+  },
+  {
     method: 'PATCH',
     path: '/v1/scheduled-reports/{id}',
     summary: "Update Scheduled Report",

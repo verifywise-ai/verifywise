@@ -28,6 +28,16 @@ export const useTemplates = () =>
 export const useScheduledReports = () =>
   useQuery({ queryKey: ["reporting", "scheduled"], queryFn: repo.getScheduledReports });
 
+// One schedule for the edit dialog. Its key sits under ["reporting",
+// "scheduled"], so saving an edit (which invalidates that prefix) refreshes it.
+export const useScheduledReport = (id: number | undefined) =>
+  useQuery({
+    queryKey: ["reporting", "scheduled", id],
+    queryFn: () => repo.getScheduledReport(id as number),
+    enabled: id != null,
+    retry: false,
+  });
+
 type RunPageParams = {
   scheduledReportId?: number;
   archived?: boolean;

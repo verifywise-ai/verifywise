@@ -29479,6 +29479,19 @@ paths:
         -
           bearerAuth: []
   '/v1/scheduled-reports/{id}':
+    get:
+      summary: 'Get Scheduled Report'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Scheduled Reports'
+      operationId: getScheduledReport
+      security:
+        -
+          bearerAuth: []
     patch:
       summary: 'Update Scheduled Report'
       responses:
