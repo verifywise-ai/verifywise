@@ -146,6 +146,21 @@ export const FIX_IT_FILENAME_SUFFIX = "_fix-it-list";
 /** A glance figure whose source could not be measured in this run. */
 export const NOT_CHECKED = "Not checked";
 
+/**
+ * Rows of the validation coverage table. Each model in scope is in exactly one
+ * row (mrmFleet.ts: overdue, then in progress, then validated), so the rows
+ * add up to the models in scope.
+ */
+export const VALIDATION_COVERAGE_LABELS = {
+  validated: "Validated, none open",
+  inReview: "Validation in progress",
+  overdue: "Validation overdue",
+  notStarted: "Not started",
+} as const;
+
+export const VALIDATION_COVERAGE_NOTE =
+  "Each model in scope is counted once: an overdue validation first, then one in progress (first validation or revalidation), then a completed validation with none open.";
+
 export const E23_HEADINGS = {
   scope: "Scope and method",
   limitations: "Limitations",

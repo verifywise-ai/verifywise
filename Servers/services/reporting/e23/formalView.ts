@@ -45,6 +45,8 @@ import {
   SIGN_OFF_STATEMENT,
   scopeAndMethod,
   textParam,
+  VALIDATION_COVERAGE_LABELS,
+  VALIDATION_COVERAGE_NOTE,
 } from "./e23Text";
 import { METRIC_STALE_DAYS } from "./mrmFleet";
 import { e23RequirementCounts } from "./glance";
@@ -433,11 +435,12 @@ function mrmSection(data: ReportData, board: boolean): E23Section | null {
       ["Untiered", totals.untiered],
     ]),
     kv("Validation coverage", [
-      ["Validated", v.validated],
-      ["In review", v.inReview],
-      ["Not started", v.notStarted],
-      ["Overdue", v.overdue],
+      [VALIDATION_COVERAGE_LABELS.validated, v.validated],
+      [VALIDATION_COVERAGE_LABELS.inReview, v.inReview],
+      [VALIDATION_COVERAGE_LABELS.overdue, v.overdue],
+      [VALIDATION_COVERAGE_LABELS.notStarted, v.notStarted],
     ]),
+    { kind: "paragraph", text: VALIDATION_COVERAGE_NOTE, muted: true },
     counts(
       "Open findings by severity",
       ["Severity", "Findings"],

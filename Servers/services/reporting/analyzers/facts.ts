@@ -411,7 +411,10 @@ const SPECS: Record<string, SectionSpec> = {
         tier1: s.totals?.byTier?.["1"],
         tier2: s.totals?.byTier?.["2"],
         tier3: s.totals?.byTier?.["3"],
-        validated: s.validationCoverage?.validated,
+        // Renamed when the rows became exclusive (a model with an open
+        // revalidation no longer also counts as validated), so a stored
+        // previous run's `validated` is never diffed against the new meaning.
+        validatedNothingOpen: s.validationCoverage?.validated,
         inReview: s.validationCoverage?.inReview,
         notStarted: s.validationCoverage?.notStarted,
         overdueValidations: s.validationCoverage?.overdue,

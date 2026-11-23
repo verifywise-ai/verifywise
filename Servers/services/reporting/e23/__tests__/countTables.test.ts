@@ -9,7 +9,7 @@ jest.mock("playwright", () => ({ chromium: { launch: jest.fn() } }));
 
 import JSZip from "jszip";
 import { buildE23FormalView, COUNT_TABLE_WIDTHS, type E23Block } from "../formalView";
-import { E23_HEADINGS } from "../e23Text";
+import { E23_HEADINGS, VALIDATION_COVERAGE_LABELS, VALIDATION_COVERAGE_NOTE } from "../e23Text";
 import { renderReportHtml } from "../../pdfGenerator";
 import { generateDOCX } from "../../docxGenerator";
 import { e23ReportData } from "../../tests/helpers/e23ReportData";
@@ -44,6 +44,26 @@ describe("MRM status count tables", () => {
     const byTier = tables.find((t) => t.title === "By tier")!;
     expect(byTier.widths).toBeUndefined();
     expect(byTier.fixed).toBeUndefined();
+  });
+
+  it("labels the validation coverage rows from e23Text, with the counted-once note after them", () => {
+    const view = buildE23FormalView(e23ReportData())!;
+    const blocks = view.main.find((s) => s.id === "mrm")!.blocks;
+    const at = blocks.findIndex((b) => b.kind === "table" && b.title === "Validation coverage");
+    const table = blocks[at] as TableBlock;
+    expect(table.rows.map((r) => r[0])).toEqual([
+      VALIDATION_COVERAGE_LABELS.validated,
+      VALIDATION_COVERAGE_LABELS.inReview,
+      VALIDATION_COVERAGE_LABELS.overdue,
+      VALIDATION_COVERAGE_LABELS.notStarted,
+    ]);
+    // The fixture's rows add up to its 9 models in scope.
+    expect(table.rows.reduce((n, r) => n + Number(r[1]), 0)).toBe(9);
+    expect(blocks[at + 1]).toEqual({
+      kind: "paragraph",
+      text: VALIDATION_COVERAGE_NOTE,
+      muted: true,
+    });
   });
 
   it("PDF: renders each count table with a fixed layout and 70/30 columns", () => {

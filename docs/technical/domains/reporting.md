@@ -1,6 +1,6 @@
 # Reporting Domain
 
-> **Last Updated:** 2026-11-22
+> **Last Updated:** 2026-11-23
 
 ## Overview
 
@@ -1349,7 +1349,7 @@ It seeds whether or not any organization has added E-23; without the framework t
 Data collection (`dataCollector.ts`) reads the same data for both audiences:
 
 - `frameworkRequirements` for `native:26`, with a data coverage label per group ("Checked against MRM data" when at least one contradiction rule targets a requirement in it, else "Self-assessment only").
-- `mrmFleet` (`e23/mrmFleet.ts`): a report-only collector over the MRM tables. Every count leaves out retired models and no per-tier verdict is printed. `getAttestationSummary` is unchanged.
+- `mrmFleet` (`e23/mrmFleet.ts`): a report-only collector over the MRM tables. Every count leaves out retired models and no per-tier verdict is printed. `getAttestationSummary` is unchanged. Validation coverage puts each model in scope in exactly one row, so the rows add up to the models in scope: "Validation overdue" (an open validation past its next due date) first, then "Validation in progress" (any other open validation, first or revalidation), then "Validated, none open" (a signed-off outcome, nothing open), else "Not started". Labels live in `e23Text.ts` (`VALIDATION_COVERAGE_LABELS`). The "By tier" table's `validated` column still means "has a signed-off validation". The facts block names the validated row `validatedNothingOpen`, so a stored previous run's `validated` (which also counted models with an open revalidation) is never diffed against it.
 - `e23Contradictions` (`e23/contradictionRules.ts`): the fixed rules below.
 - `e23FixItList` (`e23/fixItList.ts`): the deterministic fix-it list.
 - `mrmInventoryAppendix` and `signOff`.

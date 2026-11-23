@@ -833,7 +833,7 @@ describe("facts for the OSFI E-23 sections (spec 8.10)", () => {
         tier1: 2,
         tier2: 3,
         tier3: 1,
-        validated: 4,
+        validatedNothingOpen: 3,
         inReview: 2,
         notStarted: 3,
         overdueValidations: 1,
@@ -847,6 +847,9 @@ describe("facts for the OSFI E-23 sections (spec 8.10)", () => {
         items: 2,
       }),
     );
+    // The old key meant "ever signed off"; a stored run's value must not be
+    // diffed against the exclusive row.
+    expect(fleet).not.toHaveProperty("validated");
     expect(fleet.top1).toContain("Fraud detector");
   });
 

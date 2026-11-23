@@ -220,6 +220,51 @@ describe("buildMrmFleet", () => {
   });
 });
 
+describe("validation coverage", () => {
+  const sum = (v: Record<string, number>) => Object.values(v).reduce((a, b) => a + b, 0);
+
+  it("counts a validated model with an open revalidation once, as in progress", () => {
+    const revalidating = model({
+      hasOpenValidation: true,
+      openValidationNextDue: "2027-01-01T00:00:00.000Z",
+    });
+    const fleet = buildMrmFleet([revalidating], activity, GENERATED_AT);
+    expect(fleet.validationCoverage).toEqual({
+      validated: 0,
+      inReview: 1,
+      notStarted: 0,
+      overdue: 0,
+    });
+  });
+
+  it("puts every model in exactly one row, overdue first, so the rows add up to the models in scope", () => {
+    const fleet = buildMrmFleet(
+      [
+        // Signed off, nothing open.
+        model(),
+        // Signed off, revalidation open and not yet due.
+        model({ hasOpenValidation: true, openValidationNextDue: "2027-01-01T00:00:00.000Z" }),
+        // Signed off, revalidation open and overdue.
+        model({ hasOpenValidation: true, openValidationNextDue: "2026-01-01T00:00:00.000Z" }),
+        // Never signed off, first validation open.
+        model({ latestSignedOff: null, hasOpenValidation: true, openValidationNextDue: null }),
+        // Never signed off, nothing open.
+        model({ latestSignedOff: null }),
+        model({ status: "Retired", retired: true }),
+      ],
+      activity,
+      GENERATED_AT,
+    );
+    expect(fleet.validationCoverage).toEqual({
+      validated: 1,
+      inReview: 2,
+      notStarted: 1,
+      overdue: 1,
+    });
+    expect(sum(fleet.validationCoverage)).toBe(fleet.totals.models);
+  });
+});
+
 describe("buildInventoryAppendix", () => {
   it("splits retired models into their own table, each sorted by name", () => {
     const data = buildInventoryAppendix([

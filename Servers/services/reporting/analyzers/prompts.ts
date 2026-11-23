@@ -518,7 +518,7 @@ export function prepareMrmFleet(fleet: MrmFleetSectionData, opts: E23PromptOptio
   const a = fleet.activity;
   const lines = [
     `Models in scope (not retired): ${totals.models}; tier 1: ${totals.byTier["1"]}, tier 2: ${totals.byTier["2"]}, tier 3: ${totals.byTier["3"]}, untiered: ${totals.untiered}`,
-    `Validation coverage: validated ${v.validated}, in review ${v.inReview}, not started ${v.notStarted}, overdue ${v.overdue}`,
+    `Validation coverage (each model counted once; the four add up to the models in scope): validated with none open ${v.validated}, validation in progress ${v.inReview}, validation overdue ${v.overdue}, not started ${v.notStarted}`,
     `Open findings by severity: critical ${f.critical}, high ${f.high}, medium ${f.medium}, low ${f.low}`,
     `Monitoring: with active thresholds ${m.withActiveThresholds}, with a metric received in the last ${METRIC_STALE_DAYS} days ${m.withRecentMetric}`,
     a.period

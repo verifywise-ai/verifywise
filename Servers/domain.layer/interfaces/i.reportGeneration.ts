@@ -636,8 +636,11 @@ export interface MrmFleetSectionData {
     untiered: number;
     byTier: Record<MrmTierValue, number>;
   };
+  /** Each model in scope in exactly one bucket; the four add up to totals.models. */
   validationCoverage: {
+    /** Signed-off validation, none open. */
     validated: number;
+    /** An open validation (first or revalidation), not overdue. */
     inReview: number;
     notStarted: number;
     overdue: number;

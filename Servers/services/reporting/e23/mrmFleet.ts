@@ -91,11 +91,13 @@ export function buildMrmFleet(
     if (m.tier) byTier[m.tier] += 1;
     else untiered += 1;
 
-    if (validated) validationCoverage.validated += 1;
+    // Exactly one row per model, so the rows add up to the models in scope:
+    // an overdue validation first, then one in progress (a first validation
+    // or a revalidation), then a signed-off validation with nothing open.
     if (overdue) validationCoverage.overdue += 1;
     else if (m.hasOpenValidation) validationCoverage.inReview += 1;
-    // Every non-retired model lands in at least one bucket.
-    if (!validated && !m.hasOpenValidation) validationCoverage.notStarted += 1;
+    else if (validated) validationCoverage.validated += 1;
+    else validationCoverage.notStarted += 1;
 
     for (const f of open) {
       if (SEVERITIES.has(f.severity)) openFindingsBySeverity[f.severity as Severity] += 1;

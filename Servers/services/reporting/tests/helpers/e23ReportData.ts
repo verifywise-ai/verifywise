@@ -245,7 +245,7 @@ export function e23ReportData(opts: E23FixtureOptions = {}): ReportData {
     totals: opts.noModels
       ? { models: 0, untiered: 0, byTier: { "1": 0, "2": 0, "3": 0 } }
       : { models: 9, untiered: 3, byTier: { "1": 2, "2": 3, "3": 1 } },
-    validationCoverage: { validated: 4, inReview: 2, notStarted: 3, overdue: 1 },
+    validationCoverage: { validated: 3, inReview: 2, notStarted: 3, overdue: 1 },
     openFindingsBySeverity: { critical: 1, high: 2, medium: 0, low: 1 },
     monitoring: { withActiveThresholds: 5, withRecentMetric: 4 },
     activity: {
