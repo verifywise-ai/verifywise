@@ -177,7 +177,7 @@ export const createNewTaskQuery = async (
       // Build replacements
       const replacements = buildTaskReplacements({
         ...createdTask.dataValues,
-        creator_name: creator_name[0][0].full_name,
+        creator_name: creator_name[0][0]?.full_name ?? "",
         assignee_names: assignee_names[0].map((a) => a.full_name).join(", "),
       });
 
@@ -453,7 +453,7 @@ export const getTaskByIdQuery = async (
         replacements: { creator_id: task.dataValues.creator_id },
       },
     )) as [{ full_name: string }[], number];
-    (task.dataValues as any)["creator_name"] = creator_name[0][0].full_name;
+    (task.dataValues as any)["creator_name"] = creator_name[0][0]?.full_name ?? "";
     const assigneeIds = (task.dataValues as any)["assignees"] as number[];
     const assignee_names: [{ full_name: string }[], number] =
       assigneeIds && assigneeIds.length > 0
@@ -696,7 +696,7 @@ export const updateTaskByIdQuery = async (
       // Build replacements
       const replacements = buildTaskUpdateReplacements(existingTask, {
         ...updatedTask.dataValues,
-        creator_name: creator_name[0][0].full_name,
+        creator_name: creator_name[0][0]?.full_name ?? "",
         assignee_names: assignee_names[0].map((a) => a.full_name).join(", "),
       });
 
@@ -867,7 +867,7 @@ export const deleteTaskByIdQuery = async ({
       // Build replacements
       const replacements = buildTaskReplacements({
         ...deletedTask,
-        creator_name: creator_name[0][0].full_name,
+        creator_name: creator_name[0][0]?.full_name ?? "",
         assignee_names: assignee_names[0].map((a) => a.full_name).join(", "),
       });
 

@@ -33,6 +33,9 @@ export interface WorkflowContext {
  *  - pause: halt the run and put it in 'awaiting_approval'. `approvalId` links
  *    the run to the ai_action_approvals row whose resolution resumes it; without
  *    it the run cannot be resumed (see engine.persistRun / resumeWorkflow).
+ *  - end: the run has nothing left to do (its subject is gone or no longer
+ *    qualifies): the step is recorded as skipped with `reason`, the remaining
+ *    steps never run, and the run completes. Not a failure.
  *  - fail: short-circuit the run into 'failed'
  */
 export type StepResult =
@@ -40,6 +43,7 @@ export type StepResult =
   | { type: "skip"; reason?: string }
   | { type: "branch"; gotoStepId: string }
   | { type: "pause"; reason?: string; approvalId?: string }
+  | { type: "end"; reason?: string }
   | { type: "fail"; error: string };
 
 /**

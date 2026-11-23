@@ -18,6 +18,7 @@ import {
 } from "./jiraIncidents.store";
 import { buildImportJql, formatJqlDate, importCutoff } from "./jql";
 import { severityForPriority } from "./mapping";
+import { incidentPagePath } from "../../utils/incidentLinks.utils";
 
 class AlreadyLinked extends Error {}
 
@@ -238,7 +239,7 @@ async function addRemoteLink(
   try {
     await state.client.upsertRemoteLink(target.jiraIssueId, {
       globalId: `verifywise:incident:${state.orgId}:${target.incidentId}`,
-      url: `${frontendUrl.replace(/\/+$/, "")}/ai-incident-managements?incidentId=${target.incidentId}`,
+      url: `${frontendUrl.replace(/\/+$/, "")}${incidentPagePath(target.incidentId)}`,
       title: `VerifyWise ${target.incidentCode}`,
     });
   } catch (err) {

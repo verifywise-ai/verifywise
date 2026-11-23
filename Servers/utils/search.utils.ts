@@ -19,6 +19,7 @@ import { sequelize } from "../database/db";
 import { QueryTypes } from "sequelize";
 import { projectAccessSql } from "./projectVisibility.utils";
 import { riskVisibilityCondition, RiskViewer } from "./riskVisibility.utils";
+import { incidentPagePath } from "./incidentLinks.utils";
 
 /**
  * Search constants
@@ -291,7 +292,7 @@ const ENTITY_CONFIGS: Record<string, EntityConfig> = {
     titleColumn: "ai_project",
     subtitleColumn: "description",
     icon: "AlertCircle",
-    route: (id) => `/ai-incident-managements?incidentId=${id}`,
+    route: (id) => incidentPagePath(id),
     // Archived incidents are left out, as on the incidents page's default view.
     alwaysWhere: "archived IS NOT TRUE",
   },

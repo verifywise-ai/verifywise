@@ -16,7 +16,9 @@
  *   6. one diff (diffIncidentColumns) decides which columns are written and
  *      which fields are recorded in change history; nothing changed means no
  *      write, no updated_at bump, no history and no automations;
- *   7. `incident_updated` automations are enqueued only after commit.
+ *   7. `incident_updated` automations are enqueued only after commit, and so
+ *      is the incident response workflow when the update raises severity
+ *      into the critical tier (at most one run per incident).
  *
  * Archive and restore are updates of `archived` through the same path
  * (setIncidentArchived). Creating (createIncident) and deleting
@@ -192,6 +194,15 @@ export interface UpdateIncidentOptions {
   expectedUpdatedAt?: unknown;
 }
 
+/**
+ * Whether an update moves severity from below the critical tier into it.
+ * `changedSeverity` is the diffed value: undefined when severity is unchanged.
+ */
+export const isCriticalEscalation = (storedSeverity: unknown, changedSeverity: unknown): boolean =>
+  changedSeverity !== undefined &&
+  isCriticalIncidentSeverity(changedSeverity) &&
+  !isCriticalIncidentSeverity(storedSeverity);
+
 /** The instant of a Date or date string, or NaN when it is not one. */
 const toTime = (value: unknown): number => {
   if (value instanceof Date) return value.getTime();
@@ -351,6 +362,18 @@ export async function updateIncident(
         logger.error(`[incident] automation enqueue failed for #${incidentId}: ${error}`),
       );
     });
+
+    // Raising an incident into the critical tier starts the incident response
+    // workflow, as creating it critical does. The trigger starts at most one
+    // run per incident, so an incident that already had one is left alone.
+    if (isCriticalEscalation(stored.severity, changed.severity)) {
+      const severity = changed.severity as string;
+      transaction.afterCommit(() => {
+        triggerIncidentResponse(organizationId, incidentId, severity).catch((err) =>
+          logger.error(`[incident] incident_response trigger failed: ${err}`),
+        );
+      });
+    }
 
     if (ownsTransaction) await transaction.commit();
     return saved;

@@ -1676,5 +1676,11 @@
   "This file has a private analysis by another user": "Für diese Datei gibt es eine private Analyse eines anderen Benutzers",
   "A private analysis would replace another user's analysis of this file": "Eine private Analyse würde die Analyse eines anderen Benutzers für diese Datei ersetzen",
   "Incident creation validation failed": "Validierung beim Erstellen des Vorfalls fehlgeschlagen",
-  "{field} does not reference an entity in your organization": "{field} verweist auf keinen Eintrag in Ihrer Organisation"
+  "{field} does not reference an entity in your organization": "{field} verweist auf keinen Eintrag in Ihrer Organisation",
+  "Critical incident needs a response": "Kritischer Vorfall erfordert eine Reaktion",
+  "Incident {reference} in \"{useCase}\" was rated {severity}.": "Vorfall {reference} in „{useCase}“ wurde als {severity} eingestuft.",
+  "Critical incident: {reference}": "Kritischer Vorfall: {reference}",
+  "Minor": "Gering",
+  "Serious": "Schwerwiegend",
+  "Very serious": "Sehr schwerwiegend"
 }
