@@ -63,6 +63,10 @@ export interface AnalyzerExtras {
   /** Rendered output of renderFacts(). Whole-estate, so a single prompt can
    *  relate one section to another. */
   facts?: string;
+  /** The facts block for the analyzers whose output prints in the formal
+   *  report: on an E-23 run the fix-it list is counts only. Falls back to
+   *  `facts` when absent. */
+  formalFacts?: string;
 }
 
 export interface AnalyzerDefinition {
@@ -113,9 +117,12 @@ function header(reportData: ReportData): string {
  * reason: raw sections run ~38k tokens per prompt vs ~6k for summaries, sent
  * three times per report.
  */
-function renderSummaries(summaries: Record<string, string> | undefined): string {
+function renderSummaries(
+  summaries: Record<string, string> | undefined,
+  opts: { formal?: boolean } = {},
+): string {
   return Object.entries(summaries ?? {})
-    .filter(([, v]) => v && v.length > 0)
+    .filter(([key, v]) => v && v.length > 0 && !(opts.formal && INTERNAL_ONLY_SUMMARIES.has(key)))
     .map(([key, summary]) => `[${SECTION_LABELS[key] || key}]\n${summary}`)
     .join("\n\n");
 }
@@ -126,9 +133,22 @@ function renderSummaries(summaries: Record<string, string> | undefined): string 
  * ALL six analyzers: aggregates are exactly what the raw-section analyzers
  * lack, and a whole-estate block is what makes cross-section claims possible.
  */
-function factsBlock(extras: AnalyzerExtras): string {
-  return extras.facts ? `${extras.facts}\n\n` : "";
+function factsBlock(extras: AnalyzerExtras, opts: { formal?: boolean } = {}): string {
+  const facts = opts.formal ? (extras.formalFacts ?? extras.facts) : extras.facts;
+  return facts ? `${facts}\n\n` : "";
 }
+
+/**
+ * Section summaries that never reach an analyzer whose output prints in the
+ * formal report (spec 8.5 vs 8.6): the fix-it list's summary names items,
+ * owners and what closes each, which belong to the internal document only.
+ * executiveSummary, keyFindings and e23Gap get the fix-it counts from the
+ * formal facts block instead; recommendedActions keeps everything.
+ */
+const INTERNAL_ONLY_SUMMARIES = new Set(["e23FixItList"]);
+
+/** The formal-report inputs: no internal-only summaries, fix-it as counts. */
+const FORMAL = { formal: true } as const;
 
 export const ANALYZERS: Record<AnalysisSectionKey, AnalyzerDefinition> = {
   executiveSummary: {
@@ -137,10 +157,10 @@ export const ANALYZERS: Record<AnalysisSectionKey, AnalyzerDefinition> = {
     buildSystemPrompt: () =>
       `${GROUNDING_RULES}\n\nYou are writing the Executive Summary, in three to five paragraphs.\n\nRequired lead: open with the single most consequential finding in this report and the specific evidence that supports it — a count, a share, a date or a named item. Everything after the lead follows from it: why it matters under this framework, what else in the estate it connects to, and what the reader should do about it. Do not work through a fixed outline, and do not give a paragraph to a topic the data does not support.\n\nName the framework and the subject explicitly wherever you would otherwise write "the framework" or "the organization" — never write "the framework" when the input names it.`,
     buildUserPrompt: (rd, extras) => {
-      const body = renderSummaries(extras.sectionSummaries);
+      const body = renderSummaries(extras.sectionSummaries, FORMAL);
       if (!body) return "";
       const { fw, subject } = subjectOf(rd);
-      return `${header(rd)}\n\n${factsBlock(extras)}Section analyses:\n${body}\n\nWrite the executive summary for ${subject} against ${fw}.`;
+      return `${header(rd)}\n\n${factsBlock(extras, FORMAL)}Section analyses:\n${body}\n\nWrite the executive summary for ${subject} against ${fw}.`;
     },
   },
 
@@ -150,8 +170,8 @@ export const ANALYZERS: Record<AnalysisSectionKey, AnalyzerDefinition> = {
     buildSystemPrompt: () =>
       `${GROUNDING_RULES}\n\nYou are extracting Key Findings: five to eight of the most important observations across the supplied sections. Attribute each finding to the section key it came from.\n\nA finding must carry the evidence that makes it a finding — a count, a share, a status, a date or a named item — and must not simply restate a sentence from the section analyses. Where the estate facts show the same weakness in more than one section, say so in the finding text and name the sections it spans; one finding that connects two sections is worth more than two findings that repeat each other.\n\nEvery finding also carries three further fields, and each key must be present:\n- basis: "observed" when the supplied data states the claim directly, "inferred" when it follows from the supplied data by reasoning the data does not itself state, "absent" when the claim is that something required is missing. The label describes the CLAIM. It never licenses naming a control, vendor, risk or person that does not appear verbatim in the supplied data. Use null only when none of the three fits.\n- what_would_close_this: the specific condition under which this stops being a finding, written so the next report could check it against the same fields. Use null only when the data gives you no concrete condition to name.\n- related_sections: the other section keys this finding draws on, spelled exactly as they appear in the input. Use an empty array when the finding sits inside a single section.`,
     buildUserPrompt: (rd, extras) => {
-      const body = renderSummaries(extras.sectionSummaries);
-      return body ? `${header(rd)}\n\n${factsBlock(extras)}Section analyses:\n${body}` : "";
+      const body = renderSummaries(extras.sectionSummaries, FORMAL);
+      return body ? `${header(rd)}\n\n${factsBlock(extras, FORMAL)}Section analyses:\n${body}` : "";
     },
   },
 
@@ -255,7 +275,7 @@ export const ANALYZERS: Record<AnalysisSectionKey, AnalyzerDefinition> = {
     buildUserPrompt: (rd, extras) => {
       const data = e23GapData(rd);
       return data
-        ? `${header(rd)}\n\n${factsBlock(extras)}${data}\n\nWrite the E-23 gap analysis for ${subjectOf(rd).subject}.`
+        ? `${header(rd)}\n\n${factsBlock(extras, FORMAL)}${data}\n\nWrite the E-23 gap analysis for ${subjectOf(rd).subject}.`
         : "";
     },
     enforce: enforceE23GapPositions,

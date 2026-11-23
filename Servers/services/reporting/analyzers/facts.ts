@@ -580,7 +580,36 @@ export function collectFacts(reportData: ReportData): FactsSnapshot {
 }
 
 /** Prompt-ready text. `prior` renders a delta line per changed aggregate. */
-export function renderFacts(facts: FactsSnapshot, prior?: FactsSnapshot | null): string {
+/** The fix-it aggregates the formal-report analyzers may see (spec 8.5 vs 8.6). */
+const FORMAL_FIX_IT_AGGREGATES = ["items", "high", "medium", "low"];
+
+/** Label for the fix-it counts in the formal-report analyzers' facts block. */
+export const FORMAL_FIX_IT_LABEL = "Remediation item counts";
+
+/**
+ * The snapshot as the formal-report analyzers (executiveSummary, keyFindings,
+ * e23Gap) may see it: the fix-it list reduced to its total and per-severity
+ * counts. Item labels and per-owner counts belong to the internal fix-it
+ * document and never reach a prompt whose output prints in the formal report.
+ * Returns the same object when there is no fix-it list.
+ */
+export function formalFactsView(facts: FactsSnapshot): FactsSnapshot;
+export function formalFactsView(facts: FactsSnapshot | null | undefined): FactsSnapshot | null;
+export function formalFactsView(facts: FactsSnapshot | null | undefined): FactsSnapshot | null {
+  const list = facts?.sections?.e23FixItList;
+  if (!facts || !list) return facts ?? null;
+  const counts = Object.fromEntries(
+    FORMAL_FIX_IT_AGGREGATES.filter((k) => k in list).map((k) => [k, list[k]]),
+  );
+  return { ...facts, sections: { ...facts.sections, e23FixItList: counts } };
+}
+
+export function renderFacts(
+  facts: FactsSnapshot,
+  prior?: FactsSnapshot | null,
+  opts: { labels?: Record<string, string> } = {},
+): string {
+  const labelOf = (key: string) => opts.labels?.[key] || SECTION_LABELS[key] || key;
   const lines: string[] = [
     `Reference date: ${facts.generatedAt} — treat this as today when comparing any date below.`,
     `Framework: ${facts.framework}`,
@@ -595,10 +624,10 @@ export function renderFacts(facts: FactsSnapshot, prior?: FactsSnapshot | null):
         typeof value === "number" ? `${name}=${value}` : `${name}="${value}"`,
       )
       .join("; ");
-    lines.push(`[${SECTION_LABELS[key] || key}] ${body}`);
+    lines.push(`[${labelOf(key)}] ${body}`);
   });
 
-  const deltas = changedAggregates(facts, prior);
+  const deltas = changedAggregates(facts, prior, labelOf);
   // `prior &&` is narrowing only — changedAggregates already returns [] without it.
   if (prior && deltas.length > 0) {
     // slice(0, 10) is a no-op for a snapshot written by collectFacts and
@@ -619,7 +648,11 @@ export function renderFacts(facts: FactsSnapshot, prior?: FactsSnapshot | null):
  * aggregate the prior snapshot never recorded is not reported as a change —
  * the facts block above already shows it.
  */
-function changedAggregates(facts: FactsSnapshot, prior?: FactsSnapshot | null): string[] {
+function changedAggregates(
+  facts: FactsSnapshot,
+  prior: FactsSnapshot | null | undefined,
+  labelOf: (key: string) => string,
+): string[] {
   if (!prior?.sections) return [];
   const out: string[] = [];
   Object.keys(facts.sections).forEach((key) => {
@@ -641,9 +674,7 @@ function changedAggregates(facts: FactsSnapshot, prior?: FactsSnapshot | null): 
       const value = now[name] ?? 0;
       if (typeof value !== "number" || typeof was !== "number" || was === value) return;
       const delta = value - was;
-      out.push(
-        `${SECTION_LABELS[key] || key} ${name}: ${value} (was ${was}, ${delta > 0 ? "+" : ""}${delta})`,
-      );
+      out.push(`${labelOf(key)} ${name}: ${value} (was ${was}, ${delta > 0 ? "+" : ""}${delta})`);
     });
   });
   return out;

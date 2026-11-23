@@ -200,6 +200,28 @@ describe("e23Gap provenance and position constraints", () => {
     expect(corrections[0].to).toBe("not assessable");
   });
 
+  it("fails closed: a shortened or paraphrased group set to consistent becomes not assessable, recorded", () => {
+    const { payload, corrections } = def.enforce!(
+      validPayload([
+        principle("Model inventory", "consistent"),
+        principle("Validation of models, broadly", "partly consistent"),
+      ]),
+      e23ReportData(),
+    );
+    expect(payload.principles.map((p: any) => p.position)).toEqual([
+      "not assessable",
+      "not assessable",
+    ]);
+    expect(corrections).toEqual([
+      { group: "Model inventory", from: "consistent", to: "not assessable" },
+      {
+        group: "Validation of models, broadly",
+        from: "partly consistent",
+        to: "not assessable",
+      },
+    ]);
+  });
+
   it("treats every group as not assessable when the MRM comparison did not run", () => {
     const { payload } = def.enforce!(
       validPayload([principle(E23_GROUP_INVENTORY, "inconsistent")]),
@@ -238,6 +260,30 @@ describe("e23Gap through runAnalyzers", () => {
     ]);
     expect(out.e23Gap!.positionCorrections).toEqual([
       { group: E23_GROUP_SELF, from: "inconsistent", to: "not assessable" },
+    ]);
+  });
+
+  it("corrects a shortened group that passed provenance, and records it", async () => {
+    // A substring of a real group title passes the provenance check.
+    const shortened = E23_GROUP_INVENTORY.split(" ").slice(0, 3).join(" ");
+    expect(E23_GROUP_INVENTORY).toContain(shortened);
+    mockGenerate.mockResolvedValue({
+      object: validPayload([principle(shortened, "consistent")]),
+      attempts: 1,
+      selfCorrected: false,
+    });
+
+    const out = await runAnalyzers({
+      reportData: e23ReportData(),
+      llmKey,
+      blocks: { ...NONE, e23Gap: true },
+    });
+
+    expect(out.e23Gap!.payload.principles).toEqual([
+      expect.objectContaining({ group: shortened, position: "not assessable" }),
+    ]);
+    expect(out.e23Gap!.positionCorrections).toEqual([
+      { group: shortened, from: "consistent", to: "not assessable" },
     ]);
   });
 

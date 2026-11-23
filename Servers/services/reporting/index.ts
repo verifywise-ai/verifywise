@@ -225,7 +225,7 @@ export async function generateReport(
           reportData.metadata.organizationId,
           { templateId: request.templateId, kind: request.reportKind },
         );
-        const { facts, snapshot } = collectFactsInput(reportData, priorFacts);
+        const { facts, formalFacts, snapshot } = collectFactsInput(reportData, priorFacts);
         factsSnapshot = snapshot;
 
         // Both readiness and evidence-gap lookups key off a framework id. A
@@ -256,9 +256,9 @@ export async function generateReport(
                 ),
                 collectEvidenceGapsInput(analyzerFrameworkId, reportData.metadata.organizationId),
               ]);
-              return { readiness, evidenceGaps, facts };
+              return { readiness, evidenceGaps, facts, formalFacts };
             })()
-          : { facts };
+          : { facts, formalFacts };
 
         analyses = await runAnalyzers({
           reportData,

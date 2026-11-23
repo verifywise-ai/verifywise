@@ -16,7 +16,14 @@ import { E23_KIND } from "../e23/e23Parameters";
 import logger from "../../../utils/logger/fileLogger";
 import type { AiBlocks } from "./runAnalyzers";
 import { flattenFrameworkRequirements } from "./prompts";
-import { FACTS_SCHEMA_VERSION, collectFacts, renderFacts, type FactsSnapshot } from "./facts";
+import {
+  FACTS_SCHEMA_VERSION,
+  FORMAL_FIX_IT_LABEL,
+  collectFacts,
+  formalFactsView,
+  renderFacts,
+  type FactsSnapshot,
+} from "./facts";
 
 /**
  * frameworks.id -> readiness framework_type.
@@ -231,13 +238,23 @@ export function collectAllowedOwners(reportData: ReportData): string[] {
  * the caller needs both. `prior` is that stored snapshot; with none supplied
  * the rendered block simply carries no change lines. The parameter exists from
  * the start so §10 is a one-argument change at the call site, not a rewrite.
+ *
+ * `formalFacts` is the block for the analyzers whose output prints in the
+ * formal report: on an E-23 run the fix-it list is reduced to its counts
+ * there (spec 8.5 vs 8.6). Without a fix-it list it equals `facts`.
  */
 export function collectFactsInput(
   reportData: ReportData,
   prior?: FactsSnapshot | null,
-): { snapshot: FactsSnapshot; facts: string } {
+): { snapshot: FactsSnapshot; facts: string; formalFacts: string } {
   const snapshot = collectFacts(reportData);
-  return { snapshot, facts: renderFacts(snapshot, prior) };
+  const facts = renderFacts(snapshot, prior);
+  const formalFacts = snapshot.sections.e23FixItList
+    ? renderFacts(formalFactsView(snapshot), formalFactsView(prior), {
+        labels: { e23FixItList: FORMAL_FIX_IT_LABEL },
+      })
+    : facts;
+  return { snapshot, facts, formalFacts };
 }
 
 /**

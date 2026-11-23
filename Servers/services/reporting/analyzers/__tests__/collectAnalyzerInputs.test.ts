@@ -30,6 +30,8 @@ jest.mock("../../../../utils/reportRunAnalysis.utils", () => ({
 jest.mock("../../../../database/db", () => ({ sequelize: {} }));
 
 import { FACTS_SCHEMA_VERSION } from "../facts";
+import { ANALYZERS } from "../registry";
+import { e23FixItReportData, FIX_IT_ITEMS } from "../../tests/helpers/e23ReportData";
 import {
   collectReadinessInput,
   collectEvidenceGapsInput,
@@ -454,6 +456,74 @@ describe("collectAnalyzerInputs", () => {
       expect(
         await collectPriorFacts(undefined, 5, { templateId: 31, kind: "osfi_e23" }),
       ).toBeNull();
+    });
+  });
+
+  describe("fix-it content stays out of the formal-report analyzers (spec 8.5 vs 8.6)", () => {
+    const OWNER = "Quinn Fixowner";
+    const TITLE = "Retire the shadow pricing spreadsheet";
+    const CLOSES = "The spreadsheet is archived and its model is tiered";
+    const rd = () =>
+      e23FixItReportData({
+        items: [{ ...FIX_IT_ITEMS[0], what: TITLE, owner: OWNER, closesWhen: CLOSES }],
+      });
+    const inputs = () => {
+      const { facts, formalFacts } = collectFactsInput(rd());
+      return {
+        facts,
+        formalFacts,
+        sectionSummaries: {
+          frameworkRequirements: "Most requirements are self-assessed as done.",
+          e23FixItList: `Start with ${TITLE}, owned by ${OWNER}; it closes when ${CLOSES}.`,
+        },
+      };
+    };
+
+    it.each(["executiveSummary", "keyFindings"] as const)(
+      "%s gets the fix-it counts and no item, owner, closes-when or internal-document text",
+      (key) => {
+        const prompt = ANALYZERS[key].buildUserPrompt(rd(), inputs());
+        expect(prompt).not.toBe("");
+        expect(prompt).not.toContain(OWNER);
+        expect(prompt).not.toContain(TITLE);
+        expect(prompt).not.toContain(CLOSES);
+        expect(prompt).not.toMatch(/internal document/i);
+        expect(prompt).toContain("[Remediation item counts] items=1; high=1; medium=0; low=0");
+        expect(prompt).toContain("Most requirements are self-assessed as done.");
+      },
+    );
+
+    it("e23Gap gets the counts-only facts block too", () => {
+      const prompt = ANALYZERS.e23Gap.buildUserPrompt(rd(), inputs());
+      expect(prompt).not.toBe("");
+      expect(prompt).not.toContain(OWNER);
+      expect(prompt).not.toContain(TITLE);
+      expect(prompt).not.toMatch(/internal document/i);
+    });
+
+    it("recommendedActions keeps the full fix-it input", () => {
+      const prompt = ANALYZERS.recommendedActions.buildUserPrompt(rd(), inputs());
+      expect(prompt).toContain(OWNER);
+      expect(prompt).toContain(TITLE);
+      expect(prompt).toMatch(/internal document/);
+      expect(prompt).toContain(`it closes when ${CLOSES}`);
+    });
+
+    it("leaves formalFacts identical to facts on a report without a fix-it list", () => {
+      const data = rd();
+      delete (data.sections as any).e23FixItList;
+      const { facts, formalFacts } = collectFactsInput(data);
+      expect(formalFacts).toBe(facts);
+    });
+
+    it("keeps owner and item rows out of the formal change lines as well", () => {
+      const prior = collectFactsInput(rd()).snapshot;
+      const now = e23FixItReportData({ items: [] });
+      const { facts, formalFacts } = collectFactsInput(now, prior);
+      expect(facts).toMatch(/Fix-it list \(internal document\) high: 0 \(was 1, -1\)/);
+      expect(formalFacts).toContain("Remediation item counts high: 0 (was 1, -1)");
+      expect(formalFacts).not.toContain(OWNER);
+      expect(formalFacts).not.toMatch(/internal document/i);
     });
   });
 });

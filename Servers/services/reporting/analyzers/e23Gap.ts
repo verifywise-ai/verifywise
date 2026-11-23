@@ -163,6 +163,12 @@ export function e23GapData(rd: ReportData): string {
  * requirement a fired rule names is never "consistent". A violating row is
  * corrected to the allowed value, never dropped, and every change is returned
  * for the audit record.
+ *
+ * Fails closed: provenance accepts any substring of the prompt, so a shortened
+ * or paraphrased group ("Model inventory") can pass it while matching no E-23
+ * group, and would otherwise escape both constraints. A group that resolves to
+ * no known coverage entry is "not assessable", the same as a group nothing
+ * compared.
  */
 export function enforceE23GapPositions(
   payload: any,
@@ -176,7 +182,8 @@ export function enforceE23GapPositions(
   const corrections: PositionCorrection[] = [];
   const next = principles.map((p) => {
     let to: string = p.position;
-    if (coverage(p.group) === "selfAssessmentOnly") to = "not assessable";
+    const c = coverage(p.group);
+    if (c === null || c === "selfAssessmentOnly") to = "not assessable";
     else if (p.position === "consistent" && groupKeys(p.group).some((k) => fired.has(k))) {
       to = "partly consistent";
     }
