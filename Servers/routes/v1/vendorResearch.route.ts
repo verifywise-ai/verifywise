@@ -4,6 +4,7 @@ const router = express.Router();
 import {
   getDecisionStats,
   getResearchConfig,
+  getResearchSearchStatus,
   getResearchSettings,
   saveResearchSettings,
 } from "../../controllers/vendorResearch.ctrl";
@@ -21,6 +22,9 @@ router.get("/decision-stats", authenticateJWT, authorize("llmKeys.admin"), getDe
 // Which of the organization's LLM keys the research and the analysis use. Those who manage the keys
 // choose; it is a choice of a provider that sees the vendor data (built-in: Admin only).
 router.get("/settings", authenticateJWT, authorize("llmKeys.admin"), getResearchSettings);
+// Which search each key gets and whether the news search has been failing: what the settings
+// window warns about. It names keys by id, so it goes to the same people as the settings.
+router.get("/search-status", authenticateJWT, authorize("llmKeys.admin"), getResearchSearchStatus);
 
 // PUT requests
 router.put("/settings", authenticateJWT, authorize("llmKeys.admin"), saveResearchSettings);

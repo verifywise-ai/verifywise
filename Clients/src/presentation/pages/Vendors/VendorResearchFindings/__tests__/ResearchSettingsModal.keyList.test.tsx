@@ -18,6 +18,11 @@ vi.mock(
       typeof import("../../../../../application/repository/vendorResearch.repository")
     >()),
     getVendorResearchSettings: vi.fn(),
+    // No line about the search: what these tests read is elsewhere.
+    getVendorResearchSearchStatus: vi.fn(async () => ({
+      engines: { default: null, byKey: {} },
+      gdeltNewsFailing: false,
+    })),
     saveVendorResearchSettings: vi.fn(),
   }),
 );

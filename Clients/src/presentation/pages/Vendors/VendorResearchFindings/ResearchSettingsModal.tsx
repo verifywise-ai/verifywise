@@ -1,15 +1,20 @@
 import { useState } from "react";
-import { Stack, Typography } from "@mui/material";
+import { useNavigate } from "react-router";
+import { Box, Stack, Typography } from "@mui/material";
+import { AlertTriangle, Info } from "lucide-react";
 import StandardModal from "../../../components/Modals/StandardModal";
 import Select from "../../../components/Inputs/Select";
 import Toggle from "../../../components/Inputs/Toggle";
 import CustomizableSkeleton from "../../../components/Skeletons";
+import { VWLink } from "../../../components/Link";
 import { textStyles } from "../../../themes/typography";
 import useTranslation from "../../../../application/hooks/useTranslation";
 import { useLLMKeys } from "../../../../application/hooks/useLLMKeys";
+import { LLM_KEY_CREATE_PATH } from "../../../../application/constants/llmKeyDeepLink";
 import {
   useSaveVendorResearchSettings,
   useVendorResearchConfig,
+  useVendorResearchSearchStatus,
   useVendorResearchSettings,
 } from "../../../../application/hooks/useVendorResearch";
 import { readVendorResearchError } from "../../../../application/repository/vendorResearch.repository";
@@ -56,6 +61,13 @@ interface ResearchSettingsModalProps {
  * deployment turned the automatic research off (VENDOR_RESEARCH_AUTO_RUN), that switch is shown
  * disabled with a note, and the saved choice is sent back unchanged.
  *
+ * When the research key on screen gets its news from GDELT alone (any key but an Anthropic key
+ * that calls Anthropic's API; the server says which, see `useVendorResearchSearchStatus`), a line
+ * under it says so, because GDELT can refuse a server and a run then finds no news. When the
+ * organization's latest GDELT runs all got no news, the line becomes a warning. It points to an
+ * Anthropic key: one of the list when there is one, otherwise the form that adds one. A status
+ * that could not be read shows no line.
+ *
  * The parent mounts it only while it is open, so each opening starts from what is saved. Nothing
  * is offered before the saved choice and the keys are there, and what the person changes is kept
  * apart from what is saved, so that a choice that arrives late never overwrites a change. A
@@ -77,6 +89,8 @@ export default function ResearchSettingsModal({ onClose, onNotify }: ResearchSet
     refetch: refetchKeys,
   } = useLLMKeys();
   const config = useVendorResearchConfig();
+  const searchStatus = useVendorResearchSearchStatus();
+  const navigate = useNavigate();
   const save = useSaveVendorResearchSettings();
   // What the person changed on screen. A select they did not touch shows what is saved.
   const [changes, setChanges] = useState<{
@@ -102,6 +116,12 @@ export default function ResearchSettingsModal({ onClose, onNotify }: ResearchSet
   const autoResearch = changes.autoResearch ?? saved?.autoResearchOnCreate ?? true;
   // Until the config is read the switch is offered: the server applies the deployment's switch.
   const autoRunAllowed = config.data?.autoRunAllowed ?? true;
+
+  // The search of the research key on screen; undefined until the server has said.
+  const engines = searchStatus.data?.engines;
+  const researchEngine = research === DEFAULT_KEY ? engines?.default : engines?.byKey[research];
+  const hasAnthropicKey = keys.some((key) => engines?.byKey[key.id] === "anthropic");
+  const gdeltFailing = searchStatus.data?.gdeltNewsFailing === true;
 
   const keyOptions = keys.map((key) => ({
     _id: key.id,
@@ -181,6 +201,41 @@ export default function ResearchSettingsModal({ onClose, onNotify }: ResearchSet
               "Anthropic keys search with Claude's own web search, billed by Anthropic at about $10 per 1,000 searches (about 20 to 30 a run); the search results also count as input tokens of the research model. Other keys search the news of the last 3 months through the GDELT Project at no charge.",
             )}
           </Typography>
+          {researchEngine === "gdelt" && (
+            <Stack
+              role="status"
+              data-testid="research-settings-news-notice"
+              direction="row"
+              sx={{
+                alignItems: "flex-start",
+                gap: "6px",
+                color: gdeltFailing ? "status.warning.text" : "text.secondary",
+              }}
+            >
+              <Box component="span" sx={{ display: "inline-flex", mt: "2px", flexShrink: 0 }}>
+                {gdeltFailing ? (
+                  <AlertTriangle size={14} strokeWidth={1.5} aria-hidden="true" />
+                ) : (
+                  <Info size={14} strokeWidth={1.5} aria-hidden="true" />
+                )}
+              </Box>
+              <Typography sx={{ ...textStyles.bodySmall, color: "inherit" }}>
+                {gdeltFailing
+                  ? t("Recent research runs got no news because GDELT did not answer.")
+                  : t("This key gets news only from GDELT, which sometimes refuses requests.")}{" "}
+                {hasAnthropicKey ? (
+                  t("Choose an Anthropic key for more reliable news.")
+                ) : (
+                  <VWLink
+                    onClick={() => navigate(LLM_KEY_CREATE_PATH)}
+                    sx={{ fontSize: "inherit", verticalAlign: "baseline" }}
+                  >
+                    {t("Add an Anthropic key for more reliable news")}
+                  </VWLink>
+                )}
+              </Typography>
+            </Stack>
+          )}
         </Stack>
         <Select
           id="research-settings-analysis-key"

@@ -267,6 +267,28 @@ export const getLatestRunQuery = (
 ): Promise<IVendorResearchRun | null> =>
   findRun("vendor_id = :vendorId", { organizationId, vendorId });
 
+/**
+ * The category summaries of the organization's latest completed runs that searched the news
+ * through GDELT and were created in the last `days` days, newest first, at most `limit` of them.
+ * Only the summaries are read: what the research settings window needs to tell whether GDELT has
+ * been failing (see services/vendorResearch/searchStatus.ts).
+ */
+export const listRecentGdeltRunSummariesQuery = async (
+  organizationId: number,
+  limit: number,
+  days: number,
+): Promise<unknown[]> => {
+  const rows = (await sequelize.query(
+    `SELECT category_summary FROM vendor_research_runs
+     WHERE organization_id = :organizationId AND status = 'completed' AND search_engine = 'gdelt'
+       AND created_at >= NOW() - (:days * INTERVAL '1 day')
+     ORDER BY created_at DESC, id DESC
+     LIMIT :limit`,
+    { replacements: { organizationId, limit, days }, type: QueryTypes.SELECT },
+  )) as Array<{ category_summary: unknown }>;
+  return rows.map((row) => row.category_summary);
+};
+
 /** A run by id, whatever its status; null when it does not exist or belongs to another organization. */
 export const getRunByIdQuery = (
   organizationId: number,
