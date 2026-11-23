@@ -387,8 +387,8 @@ export async function runTemplateNow(req: Request, res: Response): Promise<any> 
     });
 
     // success and partial_success both produced a downloadable report —
-    // partial_success only means a delivery channel (e.g. email) failed, not
-    // that the run itself is an error. Only "failed" (no report was
+    // partial_success only means a delivery channel (e.g. email) failed or part
+    // of a section could not be read, not that the run itself is an error. Only "failed" (no report was
     // generated) is reported as an error, and even then the run id is
     // included so the caller can look up what happened.
     if (outcome.status === "failed") {

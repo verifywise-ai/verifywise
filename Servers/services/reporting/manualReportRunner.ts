@@ -1,3 +1,4 @@
+import { gapsMessage } from "./noticeText";
 import { generateReport } from "./index";
 import { updateRunStatusQuery } from "../../utils/reportRun.utils";
 import { uploadFile } from "../../utils/fileUpload.utils";
@@ -54,8 +55,10 @@ export async function executeManualRun(
 
     const aiStatus = await persistAnalyses(runId, organizationId, userId, result.analyses);
 
+    const gaps = result.collectionFailures ?? [];
     await updateRunStatusQuery(runId, organizationId, {
-      status: "success",
+      status: gaps.length > 0 ? "partial_success" : "success",
+      ...(gaps.length > 0 && { error_message: gapsMessage(gaps) }),
       file_id: uploaded?.id ?? null,
       output_filename: uploaded?.filename ?? result.filename,
       output_mime_type: result.mimeType,

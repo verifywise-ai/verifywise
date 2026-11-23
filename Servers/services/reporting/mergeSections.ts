@@ -18,8 +18,10 @@ import {
   AssessmentSectionData,
   ClausesAndAnnexesSectionData,
   ComplianceSectionData,
+  FrameworkRequirementsSectionData,
   NistSubcategoriesSectionData,
 } from "../../domain.layer/interfaces/i.reportGeneration";
+import { rollupFromGroups } from "./collectors/frameworkRollup";
 
 /** One pairing's contribution to a section. */
 export interface SectionContribution<T> {
@@ -112,4 +114,41 @@ export function mergeNistSubcategories(
   });
 
   return { functions: Array.from(byName.values()) };
+}
+
+export function mergeFrameworkRequirements(
+  items: SectionContribution<FrameworkRequirementsSectionData>[],
+): FrameworkRequirementsSectionData | undefined {
+  if (items.length === 0) return undefined;
+  if (items.length === 1) return items[0].data;
+
+  // One entry per framework, however many use cases carry it. More than one
+  // pairing contributed, so every group is labelled with its use case, also
+  // for a framework only one use case carries: the reader otherwise cannot
+  // tell which use case's SOC 2 a block shows.
+  const byFramework = new Map<number, SectionContribution<FrameworkRequirementsSectionData>[]>();
+  for (const item of items) {
+    for (const fw of item.data.frameworks ?? []) {
+      const list = byFramework.get(fw.frameworkId) ?? [];
+      list.push({ ...item, data: { frameworks: [fw] } });
+      byFramework.set(fw.frameworkId, list);
+    }
+  }
+
+  const frameworks = [...byFramework.entries()]
+    .sort(([a], [b]) => a - b)
+    .map(([frameworkId, parts]) => {
+      const labels = labelsFor(parts);
+      const groups = parts.flatMap((part, i) =>
+        part.data.frameworks[0].groups.map((g) => ({ ...g, useCase: labels[i] })),
+      );
+      return {
+        frameworkId,
+        frameworkName: parts[0].data.frameworks[0].frameworkName,
+        groups,
+        rollup: rollupFromGroups(groups),
+      };
+    });
+
+  return { frameworks };
 }

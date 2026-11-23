@@ -160,7 +160,11 @@ export const ANALYZERS: Record<AnalysisSectionKey, AnalyzerDefinition> = {
     buildUserPrompt: (rd, extras) => {
       const readiness = extras.readiness;
       const evidenceGaps = extras.evidenceGaps;
-      const compliance = renderSections(rd.sections as any, ["compliance", "clausesAndAnnexes"]);
+      const compliance = renderSections(rd.sections as any, [
+        "compliance",
+        "clausesAndAnnexes",
+        "frameworkRequirements",
+      ]);
       const hasReadiness = !!(
         readiness?.controlScores?.length ||
         readiness?.weakestControls?.length ||

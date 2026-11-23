@@ -655,6 +655,176 @@ describe("DOCX Generator", () => {
     });
   });
 
+  describe("table cells with newlines (existing callers)", () => {
+    it("keeps a multi-line assessment answer as one run at the normal size and colour", async () => {
+      const result = await generateDOCX({
+        ...mockReportData,
+        sections: {
+          assessment: {
+            overallProgress: 50,
+            totalQuestions: 1,
+            answeredQuestions: 1,
+            topics: [
+              {
+                id: 1,
+                title: "Topic",
+                progress: 100,
+                subtopics: [
+                  {
+                    id: 1,
+                    title: "Sub",
+                    questions: [
+                      {
+                        id: 1,
+                        question: "Q?",
+                        answer: "line1\r\nline2\nline3",
+                        status: "Answered",
+                      },
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+        } as unknown as ReportData["sections"],
+      });
+      const xml = await docxXml(result.content);
+      const run = xml.match(/<w:r>(?:(?!<\/w:r>).)*line1(?:(?!<\/w:r>).)*<\/w:r>/s)?.[0] ?? "";
+      expect(run).toContain("line1\r\nline2\nline3");
+      expect(run).toContain('<w:sz w:val="20"/>');
+      expect(run).not.toContain('<w:sz w:val="16"/>');
+      expect(run).not.toContain("595959");
+    });
+
+    it("prints a null cell as '-' instead of failing the export", async () => {
+      const result = await generateDOCX({
+        ...mockReportData,
+        sections: {
+          projectRisks: {
+            totalRisks: 1,
+            risksByLevel: [],
+            risks: [
+              {
+                id: 1,
+                name: null,
+                description: "",
+                riskLevel: "High",
+                impact: "Major",
+                likelihood: "Likely",
+                mitigationStatus: "Open",
+                owner: "Alice",
+              },
+            ],
+          },
+        } as unknown as ReportData["sections"],
+      });
+      expect(result.success).toBe(true);
+      expect(await docxText(result.content)).toContain("Alice");
+    });
+  });
+
+  describe("framework requirements", () => {
+    const rollup = (total: number, done: number) => ({
+      total,
+      done,
+      unassigned: 0,
+      noEvidence: 0,
+      overdue: 0,
+      statusBreakdown: {},
+    });
+    const row = (over: Record<string, unknown>) => ({
+      implId: 1,
+      level: 2 as const,
+      title: "Req",
+      orderNo: 1,
+      status: "In progress",
+      owner: null,
+      reviewer: null,
+      approver: null,
+      dueDate: null,
+      isDone: false,
+      isOverdue: false,
+      evidenceCount: 0,
+      evidenceFiles: [] as string[],
+      riskCount: 0,
+      ...over,
+    });
+    const frameworkData = (): ReportData => ({
+      ...mockReportData,
+      sections: {
+        frameworkRequirements: {
+          frameworks: [
+            {
+              frameworkId: 26,
+              frameworkName: "OSFI E-23",
+              rollup: rollup(3, 1),
+              groups: [
+                {
+                  title: "Governance",
+                  orderNo: 1,
+                  useCase: "Credit scoring",
+                  rollup: rollup(3, 1),
+                  requirements: [
+                    row({
+                      implId: 10,
+                      title: "Model inventory",
+                      status: "Implemented",
+                      isDone: true,
+                      owner: "Jane Doe",
+                      dueDate: "2026-12-01",
+                      evidenceCount: 3,
+                      evidenceFiles: ["a.pdf", "b.docx"],
+                      children: [
+                        row({
+                          implId: 11,
+                          level: 3,
+                          title: "Inventory sub item",
+                        }),
+                      ],
+                    }),
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+      },
+    });
+
+    it("renders framework requirements with progress line, group headings and evidence line", async () => {
+      const result = await generateDOCX(frameworkData());
+      const text = await docxText(result.content);
+
+      expect(result.success).toBe(true);
+      expect(text).toContain("OSFI E-23");
+      expect(text).toContain("1 of 3 requirements implemented or audited");
+      expect(text).toContain("Credit scoring · Governance");
+      expect(text).toContain("Requirement");
+      expect(text).toContain("Due date");
+      expect(text).toContain("Model inventory");
+      expect(text).toContain("Jane Doe");
+      expect(text).toContain("2026-12-01");
+      expect(text).toContain("Inventory sub item");
+      expect(text).toContain("Evidence: a.pdf, b.docx, and 1 more");
+    });
+
+    it("includes frameworkRequirements in the compliance group guard", async () => {
+      const result = await generateDOCX(frameworkData());
+      const text = await docxText(result.content);
+      expect(text).toContain("1. Compliance &amp; governance");
+      expect(text).toContain("COMPLIANCE &amp; GOVERNANCE");
+    });
+
+    it("labels the notice for the section", async () => {
+      const result = await generateDOCX({
+        ...mockReportData,
+        sections: {},
+        sectionNotices: [{ sectionKey: "frameworkRequirements", reason: "no_data" }],
+      });
+      expect(await docxText(result.content)).toContain("Framework requirements");
+    });
+  });
+
   describe("section notices", () => {
     it("names the section and explains why it is empty", async () => {
       // Nothing but notices: both "has any section" guards return [], so this
@@ -683,6 +853,42 @@ describe("DOCX Generator", () => {
 
       expect(text).toContain("somethingNew");
       expect(text).toContain("brand_new_reason");
+    });
+
+    describe("collection_failed", () => {
+      const failed = {
+        sectionKey: "frameworkRequirements",
+        reason: "collection_failed",
+        detail: "SOC 2 for <b>Chatbot</b>",
+      } as const;
+
+      it("renders its own subsection with the pairing and what to do", async () => {
+        const result = await generateDOCX({ ...mockReportData, sectionNotices: [failed] });
+        const text = await docxText(result.content);
+
+        expect(text).toContain("Sections that could not be completed");
+        expect(text).toContain("Part of these sections could not be read");
+        expect(text).toContain("Framework requirements");
+        expect(text).toContain("SOC 2 for &lt;b&gt;Chatbot&lt;/b&gt;: could not be read.");
+        expect(text).toContain("could not be read.");
+        expect(text).toContain("What to do: generate the report again.");
+        expect(text).not.toContain("Sections with no data");
+      });
+
+      it("keeps no_data notices under Sections with no data only", async () => {
+        const result = await generateDOCX({
+          ...mockReportData,
+          sectionNotices: [failed, { sectionKey: "vendors", reason: "no_data" }],
+        });
+        const text = await docxText(result.content);
+
+        expect(text.indexOf("Sections that could not be completed")).toBeLessThan(
+          text.indexOf("Sections with no data"),
+        );
+        const noDataPart = text.slice(text.indexOf("Sections with no data"));
+        expect(noDataPart).toContain("Vendors");
+        expect(noDataPart).not.toContain("Framework requirements");
+      });
     });
 
     it("renders nothing when there are no notices", async () => {

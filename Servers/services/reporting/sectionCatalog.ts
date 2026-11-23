@@ -33,6 +33,11 @@ export const REPORT_SECTION_CATALOG: ReportSectionCatalogEntry[] = [
   { key: "assessment", label: "Assessment tracker", group: "Compliance and governance" },
   { key: "clausesAndAnnexes", label: "Clauses and annexes", group: "Compliance and governance" },
   { key: "nistSubcategories", label: "NIST subcategories", group: "Compliance and governance" },
+  {
+    key: "frameworkRequirements",
+    label: "Framework requirements",
+    group: "Compliance and governance",
+  },
   { key: "models", label: "AI models", group: "Organization" },
   { key: "vendors", label: "Vendors", group: "Organization" },
   { key: "trainingRegistry", label: "Training registry", group: "Organization" },

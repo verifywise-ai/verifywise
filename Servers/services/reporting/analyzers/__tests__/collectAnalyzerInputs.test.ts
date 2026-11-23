@@ -120,6 +120,35 @@ describe("collectAnalyzerInputs", () => {
     expect(owners).toEqual(expect.arrayContaining(["Alice", "Bob", "Carol"]));
   });
 
+  it("harvests framework requirement owners, reviewers and approvers but not the Unknown user placeholder", () => {
+    const row = (over: any) => ({ title: "T", status: "Waiting", ...over });
+    const owners = collectAllowedOwners({
+      sections: {
+        frameworkRequirements: {
+          frameworks: [
+            {
+              frameworkName: "SOC 2",
+              groups: [
+                {
+                  title: "CC1",
+                  requirements: [
+                    row({
+                      owner: "Dana",
+                      reviewer: "Unknown user",
+                      children: [row({ approver: "Eve", owner: "Unknown user" })],
+                    }),
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+      },
+    } as any);
+    expect(owners).toEqual(expect.arrayContaining(["Dana", "Eve"]));
+    expect(owners).not.toContain("Unknown user");
+  });
+
   it("harvests approvers from the models section — its omission is why every action had a null owner", () => {
     // dataCollector.collectModelsList emits `approver` as a resolved name
     // string; model_inventories has no owner column. Leaving the section out
@@ -234,6 +263,65 @@ describe("collectAnalyzerInputs", () => {
 
     expect(collectFactsInput(rd, prior).facts).toContain("totalPolicies: 2 (was 1, +1)");
     expect(collectFactsInput(rd).facts).not.toContain("Change since");
+  });
+
+  describe("a frameworkRequirements section that could not be read", () => {
+    const rollup = (total: number) => ({
+      total,
+      done: 0,
+      unassigned: 0,
+      noEvidence: 0,
+      overdue: 0,
+      statusBreakdown: {},
+    });
+    const withFramework = (total: number) => ({
+      frameworks: [
+        {
+          frameworkId: 5,
+          frameworkName: "SOC 2",
+          groups: [{ title: "CC1", orderNo: 1, requirements: [], rollup: rollup(total) }],
+          rollup: rollup(total),
+        },
+      ],
+    });
+    const base = {
+      metadata: { generatedAt: new Date(2026, 6, 22), frameworkName: "SOC 2", projectTitle: "A" },
+      charts: {},
+    };
+    const prior = collectFactsInput({
+      ...base,
+      sections: { frameworkRequirements: withFramework(10) },
+    } as any).snapshot;
+
+    it("is left out of the snapshot and of the change lines", () => {
+      const out = collectFactsInput(
+        {
+          ...base,
+          sections: { frameworkRequirements: withFramework(2) },
+          sectionNotices: [
+            { sectionKey: "frameworkRequirements", reason: "collection_failed", detail: "GDPR" },
+          ],
+        } as any,
+        prior,
+      );
+
+      expect(out.snapshot.sections.frameworkRequirements).toBeUndefined();
+      expect(out.facts).not.toContain("Change since");
+    });
+
+    it("is unchanged without a failure notice", () => {
+      const out = collectFactsInput(
+        {
+          ...base,
+          sections: { frameworkRequirements: withFramework(2) },
+          sectionNotices: [],
+        } as any,
+        prior,
+      );
+
+      expect(out.snapshot.sections.frameworkRequirements).toBeDefined();
+      expect(out.facts).toContain("Change since");
+    });
   });
 
   it("does not query for a prior snapshot when the run belongs to no schedule", async () => {

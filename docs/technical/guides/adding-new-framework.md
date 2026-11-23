@@ -23,7 +23,7 @@ generic endpoints (`/api/frameworks/:frameworkId/...`) and the generic UI
 | Tables | Bespoke (`controls_eu`, `subclauses_iso`, `subclauses_iso27001`, `nist_ai_rmf_subcategories`, ...) | Generated from the structure's `tables` / `cols` |
 | API | Per-framework routers (`/api/eu-ai-act`, `/api/iso-42001`, `/api/iso-27001`, `/api/nist-ai-rmf`) | Generic `/api/frameworks/:frameworkId/...` |
 | UI | Per-framework pages | `GenericFramework` + `GenericFrameworkDrawer` |
-| Reports | Covered by the reporting service | **Not covered yet** (see [Compliance Frameworks](../domains/compliance-frameworks.md#reporting-limitation)) |
+| Reports | Covered by the reporting service | Covered by the generic `frameworkRequirements` section (see [Compliance Frameworks](../domains/compliance-frameworks.md#reporting)) |
 
 Add new frameworks through the registry, not as core frameworks.
 

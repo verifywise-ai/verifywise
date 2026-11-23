@@ -155,6 +155,9 @@ export function generateComplianceProgressChart(
   const labelHeight = 18;
   const titleHeight = title ? 35 : 0;
   const height = data.length * rowHeight + titleHeight + 20;
+  // Right-hand space for "100%" plus a count such as "480/480" without overlap.
+  const labelArea = 110;
+  const barWidth = width - labelArea;
 
   let svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">`;
 
@@ -166,7 +169,7 @@ export function generateComplianceProgressChart(
   // Progress bars
   data.forEach((item, index) => {
     const y = titleHeight + index * rowHeight;
-    const progressWidth = (item.percentage / 100) * (width - 60);
+    const progressWidth = (item.percentage / 100) * barWidth;
     const progressColor =
       item.percentage >= 80
         ? status.success.text
@@ -178,7 +181,7 @@ export function generateComplianceProgressChart(
     svg += `<text x="0" y="${y + labelHeight}" font-family="Inter, system-ui, sans-serif" font-size="12" fill="${text.primary}">${item.category}</text>`;
 
     // Progress bar background
-    svg += `<rect x="0" y="${y + labelHeight + 6}" width="${width - 60}" height="${barHeight}" rx="4" fill="${background.hover}"/>`;
+    svg += `<rect x="0" y="${y + labelHeight + 6}" width="${barWidth}" height="${barHeight}" rx="4" fill="${background.hover}"/>`;
 
     // Progress bar fill
     if (progressWidth > 0) {
@@ -186,7 +189,7 @@ export function generateComplianceProgressChart(
     }
 
     // Percentage label
-    svg += `<text x="${width - 50}" y="${y + labelHeight + 20}" font-family="Inter, system-ui, sans-serif" font-size="12" font-weight="500" fill="${progressColor}">${item.percentage}%</text>`;
+    svg += `<text x="${barWidth + 8}" y="${y + labelHeight + 20}" font-family="Inter, system-ui, sans-serif" font-size="12" font-weight="500" fill="${progressColor}">${item.percentage}%</text>`;
 
     // Count label
     svg += `<text x="${width}" y="${y + labelHeight + 20}" text-anchor="end" font-family="Inter, system-ui, sans-serif" font-size="10" fill="${text.icon}">${item.completed}/${item.total}</text>`;

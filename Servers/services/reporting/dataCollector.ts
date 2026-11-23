@@ -23,6 +23,7 @@ import {
   TrainingRegistrySectionData,
   PolicyManagerSectionData,
   IncidentManagementSectionData,
+  FrameworkRequirementsSectionData,
 } from "../../domain.layer/interfaces/i.reportGeneration";
 import type { SectionNotice } from "../../domain.layer/interfaces/i.reportGeneration";
 import {
@@ -42,12 +43,18 @@ import {
   getClausesReportQueryISO27001,
   getAnnexesReportQueryISO27001,
 } from "../../utils/reporting.utils";
+import { isoDate } from "./dateUtils";
 import { FrameworkTarget, ReportScope, resolveFrameworkTargets } from "./reportScope";
+import {
+  collectFrameworkRequirements,
+  isBundledFrameworkId,
+} from "./collectors/frameworkRequirements";
 import { parseFrameworkSelection, type ParsedFrameworkSelection } from "./frameworkSelection";
 import {
   mergeAssessment,
   mergeClausesAndAnnexes,
   mergeCompliance,
+  mergeFrameworkRequirements,
   mergeNistSubcategories,
   SectionContribution,
 } from "./mergeSections";
@@ -56,8 +63,11 @@ import { getUserByIdQuery } from "../../utils/user.utils";
 import { getProjectByIdQuery } from "../../utils/project.utils";
 import { getAllFrameworkByIdQuery } from "../../utils/framework.utils";
 import { sequelize } from "../../database/db";
+import logger from "../../utils/logger/fileLogger";
 import { QueryTypes } from "sequelize";
 import { effectiveRiskLevelSql, getEffectiveRiskLevel } from "../../utils/riskLevel.utils";
+
+export { isoDate };
 
 /**
  * Risk level colour mapping.
@@ -86,28 +96,6 @@ const RISK_LEVEL_COLORS: Record<string, string> = {
   "Very low risk": riskMark.veryLow,
   "Very Low": riskMark.veryLow,
   "No risk": text.icon,
-};
-
-/**
- * ISO `YYYY-MM-DD`, or undefined when there is no usable date.
- *
- * EXPORTED deliberately: this is the report pipeline's ONE date
- * normalisation. The analyzers' facts substrate (§1/§3) hands the model a
- * reference date and asks it to compare due dates against it, so both sides of
- * that comparison must be sliced the same way or they disagree by a day.
- *
- * Locale-independent on purpose: `toLocaleDateString()` renders whatever the
- * server's locale happens to be. Built from LOCAL components rather than
- * `toISOString()` — pg hands back a DATE column as local midnight, and
- * UTC-shifting that reports the previous day anywhere west of Greenwich.
- */
-export const isoDate = (value: unknown): string | undefined => {
-  if (!value) return undefined;
-  if (typeof value === "string") return value.slice(0, 10);
-  const d = value instanceof Date ? value : new Date(value as string | number);
-  if (Number.isNaN(d.getTime())) return undefined;
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 };
 
 // A future status chart should use status.success.text, status.warning.text,
@@ -450,6 +438,58 @@ export class ReportDataCollector {
       }
     } else if (requested("nistSubcategories")) {
       sectionNotices.push({ sectionKey: "nistSubcategories", reason: noticeReason });
+    }
+
+    // Bundled frameworks (ids 5-28) share one generic section.
+    const bundledTargets = targets.filter((t) => isBundledFrameworkId(t.frameworkId));
+    if (bundledTargets.length > 0) {
+      if (sections.includes("frameworkRequirements") || sections.includes("all")) {
+        const generatedAt = metadata.generatedAt;
+        // One pairing that cannot be read must not lose the report: collect
+        // each independently, name the failed one in a notice, merge the rest.
+        const failedTargets: FrameworkTarget[] = [];
+        const contributions: SectionContribution<FrameworkRequirementsSectionData>[] = [];
+        for (const t of bundledTargets) {
+          try {
+            contributions.push({
+              useCase: t.projectTitle,
+              framework: t.frameworkName,
+              data: await collectFrameworkRequirements(
+                t,
+                this.organizationId,
+                generatedAt,
+                this.resolveUserNames.bind(this),
+              ),
+            });
+          } catch (error) {
+            logger.error(
+              `Report: frameworkRequirements collection failed (organizationId=${this.organizationId}, ` +
+                `frameworkId=${t.frameworkId}, projectFrameworkId=${t.projectFrameworkId}): ` +
+                `${error instanceof Error ? (error.stack ?? error.message) : String(error)}`,
+            );
+            failedTargets.push(t);
+          }
+        }
+        // "<framework> for <use case>"; the project id is appended only when two
+        // failures would otherwise read the same.
+        const describe = (t: FrameworkTarget) =>
+          t.isOrganizationalProject
+            ? `${t.frameworkName} (organization)`
+            : `${t.frameworkName} for ${t.projectTitle}`;
+        const counts = new Map<string, number>();
+        failedTargets.forEach((t) => counts.set(describe(t), (counts.get(describe(t)) ?? 0) + 1));
+        for (const t of failedTargets) {
+          const base = describe(t);
+          sectionNotices.push({
+            sectionKey: "frameworkRequirements",
+            reason: "collection_failed",
+            detail: counts.get(base)! > 1 ? `${base} (use case #${t.projectId})` : base,
+          });
+        }
+        sectionData.frameworkRequirements = mergeFrameworkRequirements(contributions);
+      }
+    } else if (requested("frameworkRequirements")) {
+      sectionNotices.push({ sectionKey: "frameworkRequirements", reason: noticeReason });
     }
 
     // ============================================
