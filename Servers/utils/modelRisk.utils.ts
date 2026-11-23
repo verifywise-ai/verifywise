@@ -108,21 +108,25 @@ export async function createNewModelRiskQuery(
     transaction ?? null,
   );
   const result = await sequelize.query(
-    `INSERT INTO model_risks (organization_id, risk_name, risk_category, risk_level, status, owner, target_date, description, mitigation_plan, impact, likelihood, key_metrics, current_values, threshold, model_id, created_at, updated_at, is_demo)
-        VALUES (:organization_id, :risk_name, :risk_category, :risk_level, :status, :owner, :target_date, :description, :mitigation_plan, :impact, :likelihood, :key_metrics, :current_values, :threshold, :model_id, :created_at, :updated_at, :is_demo) RETURNING *`,
+    `INSERT INTO model_risks (organization_id, risk_name, risk_category, risk_level, status, owner, target_date, description, mitigation_plan, impact, likelihood, severity, key_metrics, current_values, threshold, model_id, created_at, updated_at, is_demo)
+        VALUES (:organization_id, :risk_name, :risk_category, :risk_level, :status, :owner, :target_date, :description, :mitigation_plan, :impact, :likelihood, :severity, :key_metrics, :current_values, :threshold, :model_id, :created_at, :updated_at, :is_demo) RETURNING *`,
     {
       replacements: {
         organization_id: organizationId,
         risk_name: data.risk_name || "",
-        risk_category: data.risk_category,
-        risk_level: data.risk_level,
+        // Unset optional fields are stored as NULL: a named replacement left
+        // undefined makes the insert fail (M-M10).
+        risk_category: data.risk_category || null,
+        risk_level: data.risk_level || null,
         status: data.status || "Open",
         owner: ownerId,
-        target_date: data.target_date,
+        target_date: data.target_date || null,
         description: data.description || "",
         mitigation_plan: data.mitigation_plan || "",
         impact: data.impact || "",
-        likelihood: data.likelihood || "",
+        // A likelihood and severity label each, or NULL (never "").
+        likelihood: data.likelihood || null,
+        severity: data.severity || null,
         key_metrics: data.key_metrics || "",
         current_values: data.current_values || "",
         threshold: data.threshold || "",
@@ -198,6 +202,7 @@ export async function updateModelRiskByIdQuery(
     "mitigation_plan",
     "impact",
     "likelihood",
+    "severity",
     "key_metrics",
     "current_values",
     "threshold",

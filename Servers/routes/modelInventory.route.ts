@@ -13,12 +13,13 @@ import {
 import { getModelEvaluations, getAllModelEvaluations } from "../controllers/modelEvaluations.ctrl";
 import authorize from "../middleware/accessControl.middleware";
 import { requireProjectAccess } from "../middleware/projectAccess.middleware";
+import { validateModelIdParam } from "../middleware/validators/modelInventory.validator";
 
 // GET
 router.get("/", authenticateJWT, getAllModelInventories);
 router.get("/evaluations", authenticateJWT, getAllModelEvaluations);
 router.get("/:id/evaluations", authenticateJWT, getModelEvaluations);
-router.get("/:id", authenticateJWT, getModelInventoryById);
+router.get("/:id", authenticateJWT, validateModelIdParam, getModelInventoryById);
 // Decision 8: the inventory is the organization's register and stays visible
 // to everyone in it; the models of one use case need access to that use case.
 router.get(
@@ -34,10 +35,22 @@ router.get("/by-frameworkId/:frameworkId", authenticateJWT, getModelByFrameworkI
 router.post("/", authenticateJWT, authorize("model.edit"), createNewModelInventory);
 
 // PATCH (Update)
-router.patch("/:id", authenticateJWT, authorize("model.edit"), updateModelInventoryById);
+router.patch(
+  "/:id",
+  authenticateJWT,
+  authorize("model.edit"),
+  validateModelIdParam,
+  updateModelInventoryById,
+);
 
 // DELETE
-router.delete("/:id", authenticateJWT, authorize("model.edit"), deleteModelInventoryById);
+router.delete(
+  "/:id",
+  authenticateJWT,
+  authorize("model.edit"),
+  validateModelIdParam,
+  deleteModelInventoryById,
+);
 
 // Note: Model Lifecycle endpoints are now provided by the model-lifecycle plugin
 // Install the plugin from the marketplace to enable lifecycle tracking

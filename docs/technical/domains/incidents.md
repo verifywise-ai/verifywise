@@ -139,14 +139,18 @@ enum HarmCategory {
 
 ### Incident CRUD
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/aiIncidentManagement/` | Get all incidents |
-| GET | `/aiIncidentManagement/:id` | Get incident by ID |
-| POST | `/aiIncidentManagement/` | Create incident |
-| PATCH | `/aiIncidentManagement/:id` | Update incident |
-| PATCH | `/aiIncidentManagement/:id/archive` | Archive incident |
-| DELETE | `/aiIncidentManagement/:id` | Delete incident |
+Mounted at `/api/ai-incident-managements`.
+
+| Method | Endpoint | Permission | Description |
+|--------|----------|------------|-------------|
+| GET | `/` | Any member | Get all incidents |
+| GET | `/:id` | Any member | Get incident by ID |
+| POST | `/` | `incident.create` (Admin, Editor) | Create incident |
+| PATCH | `/:id` | `incident.edit` (Admin, Editor, Reviewer) | Update incident, including approval |
+| PATCH | `/:id/archive` | `incident.edit` (Admin, Editor, Reviewer) | Archive incident |
+| DELETE | `/:id` | `incident.delete` (Admin) | Delete incident |
+
+Until 2026-11, edit, archive and delete needed only a login, so Auditors could change or delete incidents. Reviewers hold `incident.edit` because the incident drawer is where approval is recorded; an approval-only permission is a planned follow-up. Migration `20261122180000` grants `incident.edit` to custom roles that hold `incident.create`, a contributor-tier key (`file.contribute`, `fileManager.contribute`, `riskLinks.review`) or `organization.admin`, and `incident.delete` to custom roles that hold `organization.admin`. On the incidents page, roles without `incident.edit` open incidents read-only and the row menu offers only View. The page has no delete action. The Advisor's incident write tools check the same keys for the user who asked, when the write is proposed and again when it runs.
 
 ### Change History
 
@@ -177,6 +181,43 @@ POST /aiIncidentManagement/
   model_system_version: "GPT-4-turbo v1.2"
 }
 ```
+
+### Reference checks on create
+
+Field validation (`validateCompleteIncidentCreation`) runs first, outside any
+transaction. The references (`project_id`, `model_inventory_id`, and
+`assignee_id` against `organization_members`) are then checked by
+`validateIncidentReferences` inside the create transaction, before the insert,
+with plain reads (no row locks). `''`, null and an absent field all mean "no
+reference" and are stored as NULL (`toIncidentReferenceValue`, shared with the
+update path). A bad reference rolls the transaction back and answers 400
+(`message: "Incident creation validation failed"`, one
+`{ field, message: "<field> does not reference an entity in your organization", code: "INVALID_REFERENCE" }`
+per bad reference). Both messages are translated with the request language
+(locale keys `Incident creation validation failed` and
+`{field} does not reference an entity in your organization`). A database error
+in the check rolls back and answers 500. The handler tracks whether its
+transaction has been committed or rolled back and only rolls back an open one,
+so an error after the commit still gets an answer.
+
+A use case, model or owner account deleted by another transaction after the
+check fails the insert's foreign key check (Postgres 23503).
+`incidentReferenceFieldFromError` (`Servers/utils/incidentManagement.utils.ts`)
+recognises a violation of `ai_incident_managements` on one of those three
+columns, and the create answers the same 400 for that field instead of a 500.
+The column comes from the constraint name
+(`ai_incident_managements_<column>_fkey`), which does not depend on the
+server's message language; the English `Key (<column>)=` detail is only a
+fallback. The update path (`updateIncident`) maps the same violation to the
+same `INVALID_REFERENCE` error, with `transactionAborted: true` on the
+`IncidentUpdateValidationError`: Postgres has aborted the transaction, so a
+caller that passed its own can only roll it back.
+
+**Known limit.** An owner removed from the organization (membership deleted,
+account kept) at the same moment as a create or an owner change can remain the
+incident's owner: membership has no foreign key, and the check takes no locks
+on purpose, because locking the referenced rows deadlocks with the user,
+member and organization deletion paths.
 
 ## Incident Lifecycle
 
@@ -296,7 +337,9 @@ incidents status sync (`changedBySystem: true`, see
    reaches SQL). Field validation errors are thrown before the reference
    lookups run. Failures throw `IncidentUpdateValidationError`; the
    controller keeps its 400 body (`message: "Incident update validation failed"`,
-   `errors: [{ field, message, code }]`).
+   `errors: [{ field, message, code }]`). A reference deleted after this check
+   fails the UPDATE's foreign key check; that violation is thrown as the same
+   `INVALID_REFERENCE` error (see [Reference checks on create](#reference-checks-on-create)).
 4. Applies the reopen approval reset.
 5. Diffs the update against the row with `diffIncidentColumns`
    (`Servers/utils/incidentManagement.utils.ts`). Keys that are not updatable
@@ -344,6 +387,35 @@ incidents status sync (`changedBySystem: true`, see
 
 It returns the updated incident, or `null` when the incident does not exist in
 the organization.
+
+### Owner removed from the organization
+
+Removing a user from an organization (`removeUserFromOrganizationQuery` in
+`Servers/utils/user.utils.ts`, behind `DELETE /users/:id` and the super
+admin's `DELETE /super-admin/organizations/:id/users/:userId`) clears
+`assignee_id` on that organization's incidents they own, in the removal's
+transaction. Incidents in other organizations they still belong to keep them
+as owner.
+
+- The removal first locks the membership row (`FOR UPDATE`). If there is no
+  membership it returns `removed: false` and changes nothing.
+- Known limit: incident creates and owner changes check membership without a
+  lock, so one that runs at the same moment as the removal can still set the
+  member being removed as owner, after the clear has run.
+- Each cleared incident gets `updated_at` bumped (an editor holding the old
+  version gets the usual 409) and an `Owner` change (`<name>` → `-`) in
+  `incident_change_history`, recorded as the system
+  (`changed_by_system = true`, null actor) in one bulk insert
+  (`recordEntityFieldChangeBulk`; its ledger appends run one after another
+  after commit). The history is written before the membership is deleted,
+  so the tenant-scoped user lookup still names them. It runs in a savepoint:
+  a failed history write is logged and never blocks the removal.
+- No `incident_updated` automation is sent for the clear.
+- Deleting the whole organization (`deleteOrganization`) passes
+  `organizationDeleted`, which skips this clear and its history: the
+  incidents are deleted with the organization.
+- Deleting an account goes through the same clear for every organization; the
+  FK's `ON DELETE SET NULL` is the fallback.
 
 ## Change Tracking
 

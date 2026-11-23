@@ -48,6 +48,9 @@ import {
   riskFilterRowStyle,
   analyticsIconButtonStyle,
   addNewRiskButtonStyle,
+  riskActionsStyle,
+  riskToolbarStyle,
+  riskViewControlsStyle,
   riskPopoverStyle,
   riskPopoverContentStyle,
   riskMenuItemStyle,
@@ -670,7 +673,7 @@ const RiskManagement = () => {
       loadingToast={isLoading.loading && <CustomizableToast title={isLoading.message} />}
     >
       <Stack className="risk-management-row" sx={riskMainStackStyle}>
-        <Stack direction="row" justifyContent="space-between" alignItems="flex-end">
+        <Stack direction="row" sx={riskToolbarStyle}>
           <Box sx={riskFilterRowStyle}>
             <div data-joyride-id="risk-filters">
               <TableFilter
@@ -682,21 +685,23 @@ const RiskManagement = () => {
                 getFieldValue={getRiskFieldValue}
               />
             </div>
-            <ColumnSelector
-              columns={allColumns}
-              visibleColumns={visibleColumns}
-              onToggleColumn={toggleColumn}
-              onResetToDefaults={resetToDefaults}
-            />
-            <SearchBox
-              placeholder="Search risks..."
-              value={searchTerm}
-              onChange={setSearchTerm}
-              inputProps={{ "aria-label": "Search risks" }}
-              fullWidth={false}
-            />
+            <Box sx={riskViewControlsStyle}>
+              <ColumnSelector
+                columns={allColumns}
+                visibleColumns={visibleColumns}
+                onToggleColumn={toggleColumn}
+                onResetToDefaults={resetToDefaults}
+              />
+              <SearchBox
+                placeholder="Search risks..."
+                value={searchTerm}
+                onChange={setSearchTerm}
+                inputProps={{ "aria-label": "Search risks" }}
+                fullWidth={false}
+              />
+            </Box>
           </Box>
-          <Stack direction="row" gap="8px" alignItems="center">
+          <Stack direction="row" sx={riskActionsStyle}>
             <ExportMenu
               data={exportData}
               columns={exportColumns}

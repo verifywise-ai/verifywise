@@ -50,6 +50,8 @@ import { useFormValidation } from "../../../../application/hooks/useFormValidati
 import { focusFormFieldById } from "../../../../application/utils/formValidationFocus";
 import { checkStringValidation } from "../../../../application/validations/stringValidation";
 import { useCanCheck } from "../../../../application/hooks/useCan";
+import { useAuth } from "../../../../application/hooks/useAuth";
+import { modelApprovalLocks } from "../../../../application/utils/modelApproval";
 import ReadOnlyFieldset from "../../ReadOnlyFieldset";
 import { palette, radiusPx } from "../../../themes/palette";
 
@@ -341,14 +343,56 @@ const NewModelInventory: FC<NewModelInventoryProps> = ({
     [frameworkIdToNameMap, values.frameworks],
   );
 
-  // Transform users to the format expected by SelectComponent
+  // The approval rule (mirrors the server): only an Admin or the model's
+  // saved approver decides. Options the user cannot pick stay listed, disabled.
+  const { userId } = useAuth();
+  const isAdmin = can("organization.admin");
+  const approvalLocks = useMemo(
+    () =>
+      modelApprovalLocks({
+        savedApprover: isEdit ? initialData?.approver : null,
+        savedStatus: isEdit ? (initialData?.status ?? null) : null,
+        approver: values.approver,
+        userId,
+        isAdmin,
+      }),
+    [isEdit, initialData?.approver, initialData?.status, values.approver, userId, isAdmin],
+  );
+
+  // A status the user can no longer set (a non-Admin named a new approver
+  // while a decision was picked) goes back to the saved status when that is
+  // still allowed, else Pending, instead of staying selected and failing on
+  // save. Pending is always allowed in those cases, so this settles at once.
+  const savedStatus = isEdit ? initialData?.status : undefined;
+  useEffect(() => {
+    if (values.status && !approvalLocks.canPickStatus(values.status)) {
+      const fallback =
+        savedStatus && approvalLocks.canPickStatus(savedStatus)
+          ? savedStatus
+          : ModelInventoryStatus.PENDING;
+      setValues((prev) => ({ ...prev, status: fallback }));
+    }
+  }, [approvalLocks, values.status, savedStatus]);
+
+  const statusItems = useMemo(
+    () =>
+      statusOptions.map((option) => ({
+        ...option,
+        disabled: !approvalLocks.canPickStatus(option._id),
+      })),
+    [approvalLocks],
+  );
+
+  // Transform users to the format expected by SelectComponent. A non-Admin
+  // sees their own name but cannot pick it as a new approver.
   const userOptions = useMemo(() => {
     return users.map((user) => ({
       _id: user.id,
       name: `${user.name} ${user.surname}`,
       email: user.email,
+      disabled: !approvalLocks.canPickApprover(user.id),
     }));
-  }, [users]);
+  }, [users, approvalLocks]);
 
   const modelInventoryList = useMemo(() => {
     return modelInventoryOptions.map((u: { model: string; provider: string }) => ({
@@ -691,10 +735,11 @@ const NewModelInventory: FC<NewModelInventoryProps> = ({
           items={userOptions}
           onChange={handleOnSelectChange("approver")}
           placeholder="Select approver"
-          disabled={isLoadingUsers}
+          // Only an Admin or the saved approver re-assigns a model that has one.
+          disabled={isLoadingUsers || approvalLocks.approverLocked}
         />
         <SelectComponent
-          items={statusOptions}
+          items={statusItems}
           value={values.status}
           error={errors.status}
           sx={{ width: 220 }}

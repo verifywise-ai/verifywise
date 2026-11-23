@@ -107,10 +107,8 @@ export const generatingReportsContent: ArticleContent = {
       ],
     },
     {
-      type: 'callout',
-      variant: 'info',
-      title: 'Current limitation',
-      text: 'Framework content in reports currently covers EU AI Act, ISO 42001, ISO 27001 and NIST AI RMF only. The 21 other built-in frameworks, such as SOC 2 or GDPR, are not included in reports yet.',
+      type: 'paragraph',
+      text: 'Reports also include a "Framework requirements" section for the built-in frameworks, such as SOC 2, GDPR, HIPAA, OSFI E-23 and the others. For each framework it shows how many requirements are implemented or audited, progress for each group of requirements, and the owner, due date and evidence for each requirement. Frameworks you import from Excel are not included yet.',
     },
     {
       type: 'heading',

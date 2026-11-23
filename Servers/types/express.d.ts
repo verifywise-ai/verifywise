@@ -6,6 +6,12 @@ declare module "express" {
   interface Request {
     userId?: number;
     role?: string;
+    /**
+     * File id from the route, parsed once by requireFileAccess after the
+     * access check. Handlers behind it use this instead of re-parsing, so the
+     * file checked is the file acted on.
+     */
+    fileId?: number;
     /** Resolved request language from Accept-Language. Set by i18nMiddleware. */
     lang?: SupportedLang;
     /** Translator bound to req.lang. Set by i18nMiddleware. */

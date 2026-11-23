@@ -2,7 +2,7 @@ import { IVendor } from "../../domain.layer/interfaces/i.vendor";
 import { IVendorRisk } from "../../domain.layer/interfaces/i.vendorRisk";
 import { getVendorByIdQuery } from "../../utils/vendor.utils";
 import { getVendorRisksByVendorIdQuery } from "../../utils/vendorRisk.utils";
-import { calculateRiskLevel } from "../../utils/validations/vendorRiskValidation.utils";
+import { calculateRiskLevel } from "../../utils/riskLevel.utils";
 
 /**
  * Roadmap item 6 — Vendor questionnaire → vendor risk suggestions.
@@ -45,12 +45,13 @@ export const MAX_EXISTING_VENDOR_RISKS = 200;
 
 export const VENDOR_SUGGESTION_SUPPRESS_THRESHOLD = 0.25;
 
+/** The levels calculateRiskLevel gives, highest first wins. */
 const LEVEL_RANK: Record<string, number> = {
-  "Very High": 5,
-  High: 4,
-  Medium: 3,
-  Low: 2,
-  "Very Low": 1,
+  "Very high risk": 5,
+  "High risk": 4,
+  "Medium risk": 3,
+  "Low risk": 2,
+  "No risk": 1,
 };
 
 /**
@@ -129,9 +130,10 @@ function jaccard(a: Set<string>, b: Set<string>): number {
 const withDerivedLevel = (
   candidate: Omit<ArchetypeCandidate, "level" | "risk_level">,
 ): ArchetypeCandidate | null => {
-  const level = calculateRiskLevel(candidate.risk_severity, candidate.likelihood);
+  // The same formula and spelling a saved vendor risk gets.
+  const level = calculateRiskLevel(candidate.likelihood, candidate.risk_severity);
   if (!level) return null;
-  return { ...candidate, level, risk_level: `${level} Risk` };
+  return { ...candidate, level, risk_level: level };
 };
 
 function buildCandidates(vendor: IVendor): ArchetypeCandidate[] {

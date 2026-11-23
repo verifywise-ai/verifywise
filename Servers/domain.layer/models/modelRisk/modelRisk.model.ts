@@ -82,7 +82,13 @@ export class ModelRiskModel extends Model<ModelRiskModel> implements IModelRisk 
     type: DataType.STRING,
     allowNull: true,
   })
-  likelihood?: string;
+  likelihood?: string | null;
+
+  @Column({
+    type: DataType.STRING,
+    allowNull: true,
+  })
+  severity?: string | null;
 
   @Column({
     type: DataType.TEXT,
@@ -212,6 +218,7 @@ export class ModelRiskModel extends Model<ModelRiskModel> implements IModelRisk 
       mitigation_plan: this.mitigation_plan,
       impact: this.impact,
       likelihood: this.likelihood,
+      severity: this.severity,
       key_metrics: this.key_metrics,
       current_values: this.current_values,
       threshold: this.threshold,
@@ -242,7 +249,8 @@ export class ModelRiskModel extends Model<ModelRiskModel> implements IModelRisk 
       description: data.description || "",
       mitigation_plan: data.mitigation_plan || "",
       impact: data.impact || "",
-      likelihood: data.likelihood || "",
+      likelihood: data.likelihood || null,
+      severity: data.severity || null,
       key_metrics: data.key_metrics || "",
       current_values: data.current_values || "",
       threshold: data.threshold || "",

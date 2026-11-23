@@ -11,7 +11,8 @@ interface UseStandardTableOptions<T> {
   defaultSortColumn: string;
   defaultSortDirection?: SortDirection;
   defaultRowsPerPage?: number;
-  sortComparator: (a: T, b: T, key: string) => number;
+  /** `direction` lets a comparator keep empty values last in both directions. */
+  sortComparator: (a: T, b: T, key: string, direction: "asc" | "desc") => number;
 }
 
 interface UseStandardTableReturn<T> {
@@ -84,7 +85,10 @@ export function useStandardTable<T>(
     const sortableRows = [...rows];
     const direction = sortConfig.direction === "asc" ? 1 : -1;
 
-    return sortableRows.sort((a: T, b: T) => direction * sortComparator(a, b, sortConfig.key));
+    const order = sortConfig.direction;
+    return sortableRows.sort(
+      (a: T, b: T) => direction * sortComparator(a, b, sortConfig.key, order),
+    );
   }, [rows, sortConfig, sortComparator]);
 
   // Ensure page is valid when rows change
@@ -101,10 +105,11 @@ export function useStandardTable<T>(
 
   // "Showing X - Y" range string
   const getRange = useMemo(() => {
-    const start = page * rowsPerPage + 1;
-    const end = Math.min(page * rowsPerPage + rowsPerPage, sortedRows?.length ?? 0);
+    // The clamped page, so a shrunken list never reads "Showing 11 - 1".
+    const start = validPage * rowsPerPage + 1;
+    const end = Math.min(validPage * rowsPerPage + rowsPerPage, sortedRows?.length ?? 0);
     return `${start} - ${end}`;
-  }, [page, rowsPerPage, sortedRows?.length]);
+  }, [validPage, rowsPerPage, sortedRows?.length]);
 
   const handleChangePage = useCallback((_: unknown, newPage: number) => {
     setPage(newPage);

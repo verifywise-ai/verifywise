@@ -159,9 +159,10 @@ const MetricsFeedSection = ({ onError, onSuccess }: MetricsFeedSectionProps) => 
   return (
     <Box>
       <Typography sx={mrmSectionIntroStyle}>
-        One open endpoint. Your monitoring pipeline (Airflow, dbt, cron, notebook &mdash; anything
-        that can POST) sends model-performance metrics here. VerifyWise evaluates them against
-        thresholds and raises alerts. We never reach into your stack.
+        Your monitoring pipeline sends model metrics to this endpoint with an ingestion token. Any
+        tool that can send an HTTP POST works: Airflow, dbt, a cron job or a notebook. VerifyWise
+        checks each value against its thresholds and raises alerts. It doesn&apos;t connect to your
+        systems.
       </Typography>
 
       <Typography sx={mrmSubHeadingStyle}>Endpoint</Typography>
@@ -332,13 +333,14 @@ const MetricsFeedSection = ({ onError, onSuccess }: MetricsFeedSectionProps) => 
           setTokenName("");
         }}
         title="Create ingestion token"
-        description="Name a machine-to-machine token your pipeline will use to push metrics."
+        description="Name the token after the pipeline that will use it, so you can tell your tokens apart."
         onSubmit={handleCreate}
         submitButtonText="Create"
         isSubmitting={createToken.isPending}
         fitContent
+        compact
       >
-        <Stack sx={{ gap: "48px" }}>
+        <Stack sx={{ gap: "16px" }}>
           <Field
             id="mrm-token-name"
             label="Token name"
@@ -354,7 +356,7 @@ const MetricsFeedSection = ({ onError, onSuccess }: MetricsFeedSectionProps) => 
         isOpen={plaintext != null}
         onClose={() => setPlaintext(null)}
         title="Copy your token now"
-        description="This is the only time the token is shown. Store it securely — it cannot be retrieved again."
+        description="This is the only time the token is shown. Store it somewhere safe. You will not be able to view it again."
         submitButtonText="Done"
         onSubmit={() => setPlaintext(null)}
         fitContent

@@ -7648,6 +7648,7 @@ export const modelInventoryEndpoints: Endpoint[] = [
     responses: [
       { status: 200, description: "Model inventory deleted" },
       { status: 401, description: "Missing or invalid JWT" },
+      { status: 403, description: "The model has a saved approver and the caller is neither that approver nor an Admin" },
       { status: 404, description: "Model inventory not found" },
       { status: 500, description: "Internal server error" },
     ],
@@ -13305,6 +13306,58 @@ export const v1V1lifecycleSettingsEndpoints: Endpoint[] = [
   },
 ];
 
+// v1: V1/Model Inventories endpoints
+export const v1V1modelInventoriesEndpoints: Endpoint[] = [
+  {
+    method: 'POST',
+    path: '/v1/model-inventories',
+    summary: "Create New Model Inventory",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Model Inventories",
+  },
+  {
+    method: 'PATCH',
+    path: '/v1/model-inventories/{id}',
+    summary: "Update Model Inventory By Id",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Model Inventories",
+  },
+];
+
+// v1: V1/Model Risks endpoints
+export const v1V1modelRisksEndpoints: Endpoint[] = [
+  {
+    method: 'POST',
+    path: '/v1/model-risks',
+    summary: "Create New Model Risk",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Model Risks",
+  },
+  {
+    method: 'PATCH',
+    path: '/v1/model-risks/{id}',
+    summary: "Update Model Risk By Id",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Model Risks",
+  },
+];
+
 // v1: V1/Policy Templates endpoints
 export const v1V1policyTemplatesEndpoints: Endpoint[] = [
   {
@@ -13676,6 +13729,32 @@ export const v1V1useCaseLifecycleEndpoints: Endpoint[] = [
   },
 ];
 
+// v1: V1/Vendor Risks endpoints
+export const v1V1vendorRisksEndpoints: Endpoint[] = [
+  {
+    method: 'GET',
+    path: '/v1/vendor-risks/{id}',
+    summary: "Get Vendor Risk By Id Including Deleted",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Vendor Risks",
+  },
+  {
+    method: 'PATCH',
+    path: '/v1/vendor-risks/{id}/restore',
+    summary: "Restore Vendor Risk By Id",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Vendor Risks",
+  },
+];
+
 // Vendors endpoints
 export const vendorEndpoints: Endpoint[] = [
   {
@@ -13885,6 +13964,7 @@ export const vendorRiskEndpoints: Endpoint[] = [
     },
     responses: [
       { status: 202, description: "Accepted" },
+      { status: 400, description: "Validation error, e.g. an action owner who is not a member of the organization" },
       { status: 401, description: "Unauthorized" },
       { status: 500, description: "Internal server error" },
     ],
@@ -13915,6 +13995,7 @@ export const vendorRiskEndpoints: Endpoint[] = [
     },
     responses: [
       { status: 201, description: "Created successfully" },
+      { status: 400, description: "Validation error, e.g. an action owner who is not a member of the organization" },
       { status: 401, description: "Unauthorized" },
       { status: 500, description: "Internal server error" },
     ],
@@ -14039,10 +14120,13 @@ export const allEndpoints = {
   v1V1importedFrameworkAssessments: v1V1importedFrameworkAssessmentsEndpoints,
   v1V1intakeFormReviewTime: v1V1intakeFormReviewTimeEndpoints,
   v1V1lifecycleSettings: v1V1lifecycleSettingsEndpoints,
+  v1V1modelInventories: v1V1modelInventoriesEndpoints,
+  v1V1modelRisks: v1V1modelRisksEndpoints,
   v1V1policyTemplates: v1V1policyTemplatesEndpoints,
   v1V1projects: v1V1projectsEndpoints,
   v1V1training: v1V1trainingEndpoints,
   v1V1useCaseLifecycle: v1V1useCaseLifecycleEndpoints,
+  v1V1vendorRisks: v1V1vendorRisksEndpoints,
   vendor: vendorEndpoints,
   vendorRisk: vendorRiskEndpoints,
   webhook: webhookEndpoints,

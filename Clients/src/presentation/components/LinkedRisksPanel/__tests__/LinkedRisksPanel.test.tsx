@@ -32,8 +32,10 @@ vi.mock("../../../../application/hooks/useIsAdmin", () => ({
 }));
 // The screen gates on a permission key (#5314); same flag as useIsAdmin.
 vi.mock("../../../../application/hooks/useCan", () => ({
-  useCan: () => mockIsAdmin(),
-  useCanCheck: () => () => mockIsAdmin(),
+  // The link and status actions (riskLinks.edit/review) stay on: the role
+  // matrix is covered by linkPermissions.test.tsx.
+  useCan: (key: string) => (key === "riskLinks.admin" ? mockIsAdmin() : true),
+  useCanCheck: () => (key: string) => (key === "riskLinks.admin" ? mockIsAdmin() : true),
   usePermissionsSettled: () => true,
 }));
 

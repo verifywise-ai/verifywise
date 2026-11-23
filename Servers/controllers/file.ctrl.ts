@@ -25,6 +25,8 @@ import {
 } from "../repositories/file.repository";
 import { parseBulkIds, assertOrgOwnsIds, withBulkTransaction } from "../utils/bulkAction.utils";
 import { getUserProjects } from "../utils/project.utils";
+import { resolveFileContent } from "../services/storage";
+import { withStorageCleanup } from "../services/storage/transactionRegistry";
 import {
   ForbiddenException,
   ValidationException,
@@ -58,9 +60,10 @@ export async function getFileContentById(req: Request, res: Response): Promise<a
   });
 
   try {
-    // Authorization check: verify user has access to this file
-    const orgId = req.organizationId ? Number(req.organizationId) : undefined;
-    const hasAccess = await canUserAccessFile(fileId, userId, role, req.organizationId!, orgId);
+    // Authorization check: the File Manager download's rule (Admin; any
+    // member for an organization-level file; uploader, project owner or
+    // member for a project file).
+    const hasAccess = await canUserAccessFile(fileId, userId, role, req.organizationId!);
     if (!hasAccess) {
       await logFailure({
         eventType: "Read",
@@ -76,6 +79,8 @@ export async function getFileContentById(req: Request, res: Response): Promise<a
 
     const file = await getFileById(fileId, req.organizationId!);
     if (file) {
+      const content = await resolveFileContent(file);
+
       await logSuccess({
         eventType: "Read",
         description: `Retrieved file content for ID ${req.params.id}`,
@@ -87,7 +92,7 @@ export async function getFileContentById(req: Request, res: Response): Promise<a
 
       res.setHeader("Content-Type", file.type);
       res.setHeader("Content-Disposition", `attachment; filename="${file.filename}"`);
-      return res.status(200).end(file.content);
+      return res.status(200).end(content ?? undefined);
     }
 
     await logSuccess({
@@ -262,50 +267,52 @@ export async function postFileContent(req: RequestWithFile, res: Response): Prom
       throw new ForbiddenException("You do not have access to the target project", "project_id");
     }
 
-    const filesToDelete = JSON.parse(body.delete || "[]") as number[];
-    if (filesToDelete.length > 0) {
-      // Verify every file belongs to this organization before deleting, so
-      // cross-organization ids cannot be probed or removed (#4722).
-      await assertOrgOwnsIds({
-        table: "files",
-        ids: filesToDelete,
-        organizationId: req.organizationId!,
-        transaction,
-      });
-      for (let fileToDelete of filesToDelete) {
-        await deleteFileById(fileToDelete, req.organizationId!, transaction);
+    const question = await withStorageCleanup(transaction, async () => {
+      const filesToDelete = JSON.parse(body.delete || "[]") as number[];
+      if (filesToDelete.length > 0) {
+        // Verify every file belongs to this organization before deleting, so
+        // cross-organization ids cannot be probed or removed (#4722).
+        await assertOrgOwnsIds({
+          table: "files",
+          ids: filesToDelete,
+          organizationId: req.organizationId!,
+          transaction,
+        });
+        for (let fileToDelete of filesToDelete) {
+          await deleteFileById(fileToDelete, req.organizationId!, transaction);
+        }
       }
-    }
 
-    let uploadedFiles: FileType[] = [];
-    for (let file of req.files! as UploadedFile[]) {
-      const uploadedFile = await uploadFile(
-        file,
-        userId,
+      let uploadedFiles: FileType[] = [];
+      for (let file of req.files! as UploadedFile[]) {
+        const uploadedFile = await uploadFile(
+          file,
+          userId,
+          projectId,
+          "Assessment tracker group",
+          req.organizationId!,
+          transaction,
+        );
+        uploadedFiles.push({
+          id: uploadedFile.id!.toString(),
+          fileName: uploadedFile.filename,
+          project_id: uploadedFile.project_id,
+          uploaded_by: uploadedFile.uploaded_by,
+          uploaded_time: uploadedFile.uploaded_time,
+          type: uploadedFile.type,
+          source: uploadedFile.source,
+        });
+      }
+
+      return addFileToAnswerEU(
+        questionId,
         projectId,
-        "Assessment tracker group",
+        uploadedFiles,
+        filesToDelete,
         req.organizationId!,
         transaction,
       );
-      uploadedFiles.push({
-        id: uploadedFile.id!.toString(),
-        fileName: uploadedFile.filename,
-        project_id: uploadedFile.project_id,
-        uploaded_by: uploadedFile.uploaded_by,
-        uploaded_time: uploadedFile.uploaded_time,
-        type: uploadedFile.type,
-        source: uploadedFile.source,
-      });
-    }
-
-    const question = await addFileToAnswerEU(
-      questionId,
-      projectId,
-      uploadedFiles,
-      filesToDelete,
-      req.organizationId!,
-      transaction,
-    );
+    });
     await transaction.commit();
 
     await logSuccess({

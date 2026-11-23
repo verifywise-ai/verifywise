@@ -143,18 +143,20 @@ describe("screen keys the server now enforces", () => {
     ],
     [postMarketMonitoringRouter, "post", "/questions/reorder", "postMarketMonitoring.edit", EDITOR],
     [incidentRouter, "post", "/", "incident.create", EDITOR],
+    [incidentRouter, "patch", "/:id", "incident.edit", CONTRIBUTOR],
+    [incidentRouter, "patch", "/:id/archive", "incident.edit", CONTRIBUTOR],
+    [incidentRouter, "delete", "/:id", "incident.delete", ADMIN],
   ])("%#: %s %s requires %s", (router, method, routePath, key, roles) => {
     expect(permissionFor(router, method as string, routePath as string)).toEqual([key]);
     expect(builtinRolesFor(key as string)).toEqual([...(roles as string[])].sort());
   });
 
   // Stakeholder actions stay open to every role: any user can be assigned to
-  // answer a cycle. Incidents can be edited by anyone the page lets in.
+  // answer a cycle.
   it.each([
     [postMarketMonitoringRouter, "post", "/cycles/:cycleId/responses"],
     [postMarketMonitoringRouter, "post", "/cycles/:cycleId/submit"],
     [postMarketMonitoringRouter, "post", "/cycles/:cycleId/flag"],
-    [incidentRouter, "patch", "/:id"],
   ])("%#: %s %s has no permission key", (router, method, routePath) => {
     expect(permissionFor(router, method as string, routePath as string)).toEqual([]);
   });

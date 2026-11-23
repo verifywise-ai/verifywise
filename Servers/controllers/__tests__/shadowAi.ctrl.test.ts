@@ -18,14 +18,14 @@ jest.mock("../../utils/shadowAiTools.utils", () => ({
   updateToolStatusQuery: jest.fn(),
   linkToolToModelInventoryQuery: jest.fn(),
 }));
-jest.mock("../../utils/modelRisk.utils", () => ({
-  createNewModelRiskQuery: jest.fn(),
+jest.mock("../../services/modelInventory.service", () => ({
+  createModelInventoryService: jest.fn<any>().mockResolvedValue({ id: 10 }),
+}));
+jest.mock("../../services/modelRisk.service", () => ({
+  createModelRiskService: jest.fn(),
 }));
 jest.mock("../../utils/user.utils", () => ({
   getUserByIdQuery: jest.fn(),
-}));
-jest.mock("../../utils/changeHistory.base.utils", () => ({
-  recordEntityCreation: jest.fn(),
 }));
 jest.mock("../../utils/shadowAiRules.utils", () => ({
   getAllRulesQuery: jest.fn(),
@@ -98,9 +98,9 @@ import {
   canStartLifecycle,
   startLifecycleForModel,
 } from "../../extensions/model-lifecycle/modelLifecycle.service";
-import { createNewModelRiskQuery } from "../../utils/modelRisk.utils";
+import { createModelRiskService } from "../../services/modelRisk.service";
+import { createModelInventoryService } from "../../services/modelInventory.service";
 import { getUserByIdQuery } from "../../utils/user.utils";
-import { recordEntityCreation } from "../../utils/changeHistory.base.utils";
 import { getSyslogListenerState } from "../../services/shadowAiSyslog/listener";
 import { readSyslogListenerConfig } from "../../services/shadowAiSyslog/config";
 import { invalidateSourceCacheAfterCommit } from "../../services/shadowAiSyslog/sourceCache";
@@ -627,7 +627,7 @@ describe("shadowAi.ctrl", () => {
       await startGovernance(req, res);
       expect(res.status).toHaveBeenCalledWith(409);
       expect(mockSequelizeQuery).not.toHaveBeenCalled();
-      expect(createNewModelRiskQuery).not.toHaveBeenCalled();
+      expect(createModelRiskService).not.toHaveBeenCalled();
     });
 
     it("should return 403 for non-write role", async () => {
@@ -680,9 +680,7 @@ describe("shadowAi.ctrl", () => {
     it("should return 201 on success", async () => {
       mockGetToolById.mockResolvedValue({ id: 1, name: "ChatGPT" });
       mockLinkTool.mockResolvedValue(undefined);
-      mockSequelizeQuery
-        .mockResolvedValueOnce([[{ id: 10 }]]) // INSERT INTO model_inventories RETURNING id
-        .mockResolvedValueOnce(undefined); // UPDATE shadow_ai_tools
+      mockSequelizeQuery.mockResolvedValueOnce(undefined); // UPDATE shadow_ai_tools
       const req = createReq({
         params: { id: "1" },
         body: {
@@ -701,14 +699,57 @@ describe("shadowAi.ctrl", () => {
       expect(res.status).toHaveBeenCalledWith(201);
     });
 
+    it("creates the model through the model service, in the transaction (M-M5)", async () => {
+      mockGetToolById.mockResolvedValue({ id: 1, name: "ChatGPT" });
+      mockLinkTool.mockResolvedValue(undefined);
+      mockSequelizeQuery.mockResolvedValueOnce(undefined);
+      const req = createReq({
+        params: { id: "1" },
+        body: {
+          model_inventory: { provider: "OpenAI", model: "GPT-4", status: "Approved" },
+          governance_owner_id: "2",
+        },
+      });
+      await startGovernance(req, createRes());
+      expect(createModelInventoryService).toHaveBeenCalledWith(
+        expect.objectContaining({
+          provider: "OpenAI",
+          model: "GPT-4",
+          provider_model: "OpenAI / GPT-4",
+          version: "N/A",
+          status: "Approved",
+          approver: null,
+        }),
+        expect.objectContaining({ organizationId: 1 }),
+        expect.anything(),
+      );
+    });
+
+    it("stores an unknown status as Pending", async () => {
+      mockGetToolById.mockResolvedValue({ id: 1, name: "ChatGPT" });
+      mockLinkTool.mockResolvedValue(undefined);
+      mockSequelizeQuery.mockResolvedValueOnce(undefined);
+      const req = createReq({
+        params: { id: "1" },
+        body: {
+          model_inventory: { provider: "OpenAI", model: "GPT-4", status: "Deployed" },
+          governance_owner_id: "2",
+        },
+      });
+      await startGovernance(req, createRes());
+      expect(createModelInventoryService).toHaveBeenCalledWith(
+        expect.objectContaining({ status: "Pending" }),
+        expect.anything(),
+        expect.anything(),
+      );
+    });
+
     it("records the form's risk assessment as a risk on the new model", async () => {
-      const mockCreateRisk = createNewModelRiskQuery as jest.MockedFunction<any>;
+      const mockCreateRisk = createModelRiskService as jest.MockedFunction<any>;
       mockCreateRisk.mockResolvedValue({ id: 55 });
       mockGetToolById.mockResolvedValue({ id: 1, name: "ChatGPT" });
       mockLinkTool.mockResolvedValue(undefined);
-      mockSequelizeQuery
-        .mockResolvedValueOnce([[{ id: 10 }]]) // INSERT INTO model_inventories RETURNING id
-        .mockResolvedValueOnce(undefined); // UPDATE shadow_ai_tools
+      mockSequelizeQuery.mockResolvedValueOnce(undefined); // UPDATE shadow_ai_tools
       const req = createReq({
         params: { id: "1" },
         body: {
@@ -719,6 +760,7 @@ describe("shadowAi.ctrl", () => {
       });
       const res = createRes();
       await startGovernance(req, res);
+      // The model risk service records the history and tells the owner.
       expect(mockCreateRisk).toHaveBeenCalledWith(
         expect.objectContaining({
           risk_name: "Use of ChatGPT",
@@ -727,18 +769,10 @@ describe("shadowAi.ctrl", () => {
           description: "Customer data pasted in",
           model_id: 10,
         }),
-        1,
+        { organizationId: 1, userId: expect.any(Number) },
         expect.anything(),
       );
       expect(mockLinkTool).toHaveBeenCalledWith(1, 1, 10, 55, expect.anything());
-      expect(recordEntityCreation).toHaveBeenCalledWith(
-        "model_risk",
-        55,
-        expect.any(Number),
-        1,
-        expect.objectContaining({ risk_name: "Use of ChatGPT" }),
-        expect.anything(),
-      );
       expect(res.status).toHaveBeenCalledWith(201);
       expect(res.json).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -748,10 +782,10 @@ describe("shadowAi.ctrl", () => {
     });
 
     it("creates no risk when the risk assessment is empty", async () => {
-      const mockCreateRisk = createNewModelRiskQuery as jest.MockedFunction<any>;
+      const mockCreateRisk = createModelRiskService as jest.MockedFunction<any>;
       mockGetToolById.mockResolvedValue({ id: 1, name: "ChatGPT" });
       mockLinkTool.mockResolvedValue(undefined);
-      mockSequelizeQuery.mockResolvedValueOnce([[{ id: 10 }]]).mockResolvedValueOnce(undefined);
+      mockSequelizeQuery.mockResolvedValueOnce(undefined);
       const req = createReq({
         params: { id: "1" },
         body: {
@@ -776,9 +810,7 @@ describe("shadowAi.ctrl", () => {
         mockStart.mockResolvedValueOnce(started);
         mockGetToolById.mockResolvedValue({ id: 1, name: "ChatGPT" });
         mockLinkTool.mockResolvedValue(undefined);
-        mockSequelizeQuery
-          .mockResolvedValueOnce([[{ id: 10 }]]) // INSERT INTO model_inventories RETURNING id
-          .mockResolvedValueOnce(undefined); // UPDATE shadow_ai_tools
+        mockSequelizeQuery.mockResolvedValueOnce(undefined); // UPDATE shadow_ai_tools
         const req = createReq({
           params: { id: "1" },
           body: {
@@ -811,7 +843,7 @@ describe("shadowAi.ctrl", () => {
       (canStartLifecycle as jest.MockedFunction<any>).mockResolvedValueOnce(false);
       mockGetToolById.mockResolvedValue({ id: 1, name: "ChatGPT" });
       mockLinkTool.mockResolvedValue(undefined);
-      mockSequelizeQuery.mockResolvedValueOnce([[{ id: 10 }]]).mockResolvedValueOnce(undefined);
+      mockSequelizeQuery.mockResolvedValueOnce(undefined);
       const req = createReq({
         params: { id: "1" },
         body: {
@@ -835,7 +867,7 @@ describe("shadowAi.ctrl", () => {
       const mockStart = startLifecycleForModel as jest.MockedFunction<any>;
       mockGetToolById.mockResolvedValue({ id: 1, name: "ChatGPT" });
       mockLinkTool.mockResolvedValue(undefined);
-      mockSequelizeQuery.mockResolvedValueOnce([[{ id: 10 }]]).mockResolvedValueOnce(undefined);
+      mockSequelizeQuery.mockResolvedValueOnce(undefined);
       const req = createReq({
         params: { id: "1" },
         body: {

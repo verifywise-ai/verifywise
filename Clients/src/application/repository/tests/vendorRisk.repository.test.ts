@@ -8,6 +8,7 @@ import {
   createVendorRisk,
   updateVendorRisk,
   deleteVendorRisk,
+  restoreVendorRisk,
 } from "../vendorRisk.repository";
 
 vi.mock("../../../infrastructure/api/networkServices", () => {
@@ -198,7 +199,7 @@ describe("vendorRisk.repository", () => {
       const result = await getVendorRiskById({ id: 1 });
 
       expect(apiServices.get).toHaveBeenCalledTimes(1);
-      expect(apiServices.get).toHaveBeenCalledWith("/vendorRisks/1", {
+      expect(apiServices.get).toHaveBeenCalledWith("/v1/vendor-risks/1", {
         signal: undefined,
       });
       expect(result).toEqual(mockResponse.data);
@@ -241,7 +242,7 @@ describe("vendorRisk.repository", () => {
       const result = await createVendorRisk({ body });
 
       expect(apiServices.post).toHaveBeenCalledTimes(1);
-      expect(apiServices.post).toHaveBeenCalledWith("/vendorRisks", body);
+      expect(apiServices.post).toHaveBeenCalledWith("/vendorRisks", body, undefined);
       expect(result).toEqual(mockResponse);
     });
 
@@ -284,7 +285,7 @@ describe("vendorRisk.repository", () => {
       const result = await updateVendorRisk({ id: 1, body });
 
       expect(apiServices.patch).toHaveBeenCalledTimes(1);
-      expect(apiServices.patch).toHaveBeenCalledWith("/vendorRisks/1", body);
+      expect(apiServices.patch).toHaveBeenCalledWith("/vendorRisks/1", body, undefined);
       expect(result).toEqual(mockResponse);
     });
 
@@ -314,6 +315,18 @@ describe("vendorRisk.repository", () => {
     });
   });
 
+  describe("restoreVendorRisk", () => {
+    it("sends PATCH /v1/vendor-risks/:id/restore", async () => {
+      const mockResponse = { data: { data: { id: 1, is_deleted: false } }, status: 200 };
+      vi.mocked(apiServices.patch).mockResolvedValue(mockResponse as never);
+
+      const result = await restoreVendorRisk({ id: 1 });
+
+      expect(apiServices.patch).toHaveBeenCalledWith("/v1/vendor-risks/1/restore");
+      expect(result).toEqual(mockResponse);
+    });
+  });
+
   describe("deleteVendorRisk", () => {
     it("should make DELETE request to /vendorRisks/:id", async () => {
       const mockResponse = {
@@ -327,7 +340,7 @@ describe("vendorRisk.repository", () => {
       const result = await deleteVendorRisk({ id: 1 });
 
       expect(apiServices.delete).toHaveBeenCalledTimes(1);
-      expect(apiServices.delete).toHaveBeenCalledWith("/vendorRisks/1");
+      expect(apiServices.delete).toHaveBeenCalledWith("/vendorRisks/1", undefined);
       expect(result).toEqual(mockResponse);
     });
 

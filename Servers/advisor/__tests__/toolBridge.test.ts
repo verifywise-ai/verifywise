@@ -157,3 +157,25 @@ describe("bridgeTools — tool result sanitization", () => {
     expectSchemaValid(result);
   });
 });
+
+describe("bridgeTools — internal parameters", () => {
+  it("drops underscore keys from the model and sets only the real user", async () => {
+    let received: Record<string, unknown> | undefined;
+    const tools = bridgeTools(
+      [DEF("t")],
+      {
+        t: async (params: Record<string, unknown>) => {
+          received = params;
+          return { ok: true };
+        },
+      },
+      1,
+      42,
+    );
+    const bridged = tools.t as { execute: (p: Record<string, unknown>) => Promise<unknown> };
+
+    await bridged.execute({ risk_id: 7, _requesterId: 5, _userId: 3, _organizationId: 9 });
+
+    expect(received).toEqual({ risk_id: 7, _userId: 42 });
+  });
+});

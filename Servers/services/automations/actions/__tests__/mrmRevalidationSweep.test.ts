@@ -1,12 +1,14 @@
 import { runRevalidationSweep } from "../mrmRevalidationSweep";
 import {
   getDueRevalidationsQuery,
+  getLapsedScheduledReviewsQuery,
   triggerRevalidation,
 } from "../../../../utils/mrmRevalidation.utils";
 import { notifyRevalidationDue } from "../../../../utils/mrmAlerts.utils";
 
 jest.mock("../../../../utils/mrmRevalidation.utils", () => ({
   getDueRevalidationsQuery: jest.fn(),
+  getLapsedScheduledReviewsQuery: jest.fn(),
   triggerRevalidation: jest.fn(),
   MrmRevalidationTriggerSource: { SCHEDULED: "scheduled" },
 }));
@@ -22,6 +24,7 @@ jest.mock("../../../../utils/logger/fileLogger", () => ({
 }));
 
 const mockDue = getDueRevalidationsQuery as jest.Mock;
+const mockLapsed = getLapsedScheduledReviewsQuery as jest.Mock;
 const mockTrigger = triggerRevalidation as jest.Mock;
 const mockNotify = notifyRevalidationDue as jest.Mock;
 
@@ -30,6 +33,70 @@ const NEXT_DUE = new Date("2026-06-01T00:00:00Z");
 beforeEach(() => {
   jest.clearAllMocks();
   mockNotify.mockResolvedValue(undefined);
+  mockLapsed.mockResolvedValue([]);
+});
+
+describe("runRevalidationSweep scheduled reviews", () => {
+  it("opens a revalidation dated to the missed due date and sends the overdue alert", async () => {
+    mockDue.mockResolvedValue([]);
+    mockLapsed.mockResolvedValue([{ model_inventory_id: 9, next_due: NEXT_DUE }]);
+    mockTrigger.mockResolvedValue({ created_validation: true, validation_id: 91 });
+
+    const summary = await runRevalidationSweep(1, new Date("2026-07-01T00:00:00Z"));
+
+    expect(summary).toEqual({ organization_id: 1, due: 1, opened: 1, annotated: 0 });
+    expect(mockTrigger).toHaveBeenCalledWith(
+      1,
+      9,
+      "scheduled",
+      "scheduled revalidation due",
+      { next_due: NEXT_DUE, swept_at: "2026-07-01T00:00:00.000Z" },
+      undefined,
+      { next_due: NEXT_DUE },
+    );
+    expect(mockNotify).toHaveBeenCalledWith(1, 9, 91, NEXT_DUE);
+  });
+
+  it("does not alert when it annotates an already-open validation", async () => {
+    mockDue.mockResolvedValue([]);
+    mockLapsed.mockResolvedValue([{ model_inventory_id: 9, next_due: NEXT_DUE }]);
+    mockTrigger.mockResolvedValue({ created_validation: false, validation_id: 91 });
+
+    const summary = await runRevalidationSweep(1);
+
+    expect(summary.annotated).toBe(1);
+    expect(mockNotify).not.toHaveBeenCalled();
+  });
+
+  it("checks lapsed reviews after the overdue open validations", async () => {
+    const order: string[] = [];
+    mockDue.mockImplementation(async () => {
+      order.push("due");
+      return [];
+    });
+    mockLapsed.mockImplementation(async () => {
+      order.push("lapsed");
+      return [];
+    });
+
+    await runRevalidationSweep(1);
+    expect(order).toEqual(["due", "lapsed"]);
+  });
+
+  it("one failing model does not stop the others", async () => {
+    mockDue.mockResolvedValue([]);
+    mockLapsed.mockResolvedValue([
+      { model_inventory_id: 9, next_due: NEXT_DUE },
+      { model_inventory_id: 10, next_due: NEXT_DUE },
+    ]);
+    mockTrigger
+      .mockRejectedValueOnce(new Error("boom"))
+      .mockResolvedValueOnce({ created_validation: true, validation_id: 101 });
+
+    const summary = await runRevalidationSweep(1);
+    expect(summary.opened).toBe(1);
+    expect(mockNotify).toHaveBeenCalledWith(1, 10, 101, NEXT_DUE);
+  });
 });
 
 describe("runRevalidationSweep overdue alerts", () => {

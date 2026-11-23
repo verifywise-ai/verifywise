@@ -137,6 +137,7 @@ export default function ScanDetailsPage() {
         onRecalculate={handleRecalculateRiskScore}
         isExporting={isExporting}
         onExport={handleExportAIBOM}
+        onViewGraph={() => setShowDepGraph(true)}
       />
 
       {/* Older scan: status changes are not kept for later scans */}

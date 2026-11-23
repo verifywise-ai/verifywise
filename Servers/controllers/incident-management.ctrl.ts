@@ -8,12 +8,14 @@ import {
   deleteIncidentByIdQuery,
   archiveIncidentByIdQuery,
   validateIncidentReferences,
+  incidentReferenceFieldFromError,
+  invalidReferenceErrors,
   IncidentListFilters,
 } from "../utils/incidentManagement.utils";
 import { STATUS_CODE } from "../utils/statusCode.utils";
 import logger, { logStructured } from "../utils/logger/fileLogger";
 import { ValidationError } from "../utils/validations/validation.utils";
-import { translateError } from "../utils/i18n.utils";
+import { translateError, translateRequest } from "../utils/i18n.utils";
 import {
   validateCompleteIncidentCreation,
   validateIncidentIdParam,
@@ -208,6 +210,7 @@ export async function getIncidentById(req: Request, res: Response) {
  * Create new incident
  */
 export async function createNewIncident(req: Request, res: Response) {
+  const creationFailed = translateRequest(req, "Incident creation validation failed");
   const validationErrors = validateCompleteIncidentCreation(req.body);
   if (validationErrors.length > 0) {
     logStructured(
@@ -219,7 +222,7 @@ export async function createNewIncident(req: Request, res: Response) {
     return res.status(400).json(
       STATUS_CODE[400]({
         status: "error",
-        message: "Incident creation validation failed",
+        message: creationFailed,
         errors: validationErrors.map((err: ValidationError) => ({
           field: err.field,
           message: translateError(req, err.message),
@@ -229,30 +232,50 @@ export async function createNewIncident(req: Request, res: Response) {
     );
   }
 
-  const invalidRefs = await validateIncidentReferences(
-    {
-      model_inventory_id: req.body.model_inventory_id,
-      project_id: req.body.project_id,
-      assignee_id: req.body.assignee_id,
-    },
-    req.organizationId!,
-  );
-  if (invalidRefs.length > 0) {
-    return res.status(400).json(
+  const invalidReferenceResponse = (fields: string[]) =>
+    res.status(400).json(
       STATUS_CODE[400]({
         status: "error",
-        message: "Incident creation validation failed",
-        errors: invalidRefs.map((field) => ({
-          field,
-          message: `${field} does not reference an entity in your organization`,
-          code: "INVALID_REFERENCE",
+        message: creationFailed,
+        errors: invalidReferenceErrors(fields).map((err) => ({
+          field: err.field,
+          message: translateError(req, err),
+          code: err.code,
         })),
       }),
     );
-  }
 
   const transaction = await sequelize.transaction();
+  // Set once the transaction is committed or rolled back, so the catch below
+  // never rolls back a finished one (that throws and leaves the request hanging).
+  let finished = false;
+  const rollback = async () => {
+    if (finished) return;
+    finished = true;
+    try {
+      await transaction.rollback();
+    } catch (rollbackError) {
+      logger.error("❌ Rollback failed in createNewIncident:", rollbackError);
+    }
+  };
   try {
+    // Checked on the create transaction (plain reads, no locks). A reference
+    // deleted after this check fails the insert's FK check, answered below
+    // with the same 400.
+    const invalidRefs = await validateIncidentReferences(
+      {
+        model_inventory_id: req.body.model_inventory_id,
+        project_id: req.body.project_id,
+        assignee_id: req.body.assignee_id,
+      },
+      req.organizationId!,
+      transaction,
+    );
+    if (invalidRefs.length > 0) {
+      await rollback();
+      return invalidReferenceResponse(invalidRefs);
+    }
+
     const incident = new AIIncidentManagementModel({
       ai_project: req.body.ai_project,
       model_inventory_id: req.body.model_inventory_id ?? null,
@@ -299,6 +322,7 @@ export async function createNewIncident(req: Request, res: Response) {
     }
 
     await transaction.commit();
+    finished = true;
 
     // Phase 6 / issue 3813 — launch the critical incident_response autopilot
     // workflow when the new incident is critical-tier. Fire-and-forget; never
@@ -317,12 +341,12 @@ export async function createNewIncident(req: Request, res: Response) {
     );
     return res.status(201).json(STATUS_CODE[201](savedIncident.toSafeJSON()));
   } catch (error) {
-    await transaction.rollback();
+    await rollback();
     if (error instanceof ValidationException) {
-      return res
-        .status(400)
-        .json(validationExceptionResponse(req, error, "Incident creation validation failed"));
+      return res.status(400).json(validationExceptionResponse(req, error, creationFailed));
     }
+    const deletedReference = incidentReferenceFieldFromError(error);
+    if (deletedReference) return invalidReferenceResponse([deletedReference]);
     logStructured(
       "error",
       "failed to create new incident",
@@ -393,7 +417,7 @@ export async function updateIncidentById(req: Request, res: Response) {
     if (error instanceof IncidentUpdateValidationError) {
       const errorDetails = error.errors.map((err: ValidationError) => ({
         field: err.field,
-        message: translateError(req, err.message),
+        message: translateError(req, err),
         code: err.code,
       }));
       logStructured(

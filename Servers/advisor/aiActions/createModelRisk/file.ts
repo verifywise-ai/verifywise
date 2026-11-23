@@ -16,7 +16,7 @@ import {
 } from "../../../domain.layer/enums/approval-workflow.enum";
 import type { AiActionFileResult } from "../types";
 import { ensureAiActionWorkflow } from "../workflow";
-import { AgentCreateModelRiskSchema } from "./schema";
+import { AgentCreateModelRiskFileSchema } from "./schema";
 import { renderCreateModelRiskPreview } from "./preview";
 
 export const CREATE_MODEL_RISK_TOOL_NAME = "agent_create_model_risk";
@@ -39,7 +39,7 @@ export async function fileCreateModelRisk(
   const { _userId: _u, _organizationId: _o, ...userParams } = params as Record<string, unknown>;
   void _u;
   void _o;
-  const parsed = AgentCreateModelRiskSchema.safeParse(userParams);
+  const parsed = AgentCreateModelRiskFileSchema.safeParse(userParams);
   if (!parsed.success) {
     const errorList = parsed.error.issues
       .map((i) => `- ${i.path.join(".") || "(root)"}: ${i.message}`)

@@ -90,12 +90,17 @@ describe("history name lookups on the caller's transaction", () => {
     const incidentId = await insertClosedApprovedIncident(owner.orgId);
 
     // Turn the owner-name lookup into a real database error (division by zero).
+    // Matches the user formatter's query (config/changeHistory.config.ts),
+    // with or without its organization_members join.
+    const isOwnerNameLookup = (sql: string) =>
+      /FROM users u\b[\s\S]*WHERE u\.id = :userId/.test(sql);
+    let lookupsFailed = 0;
     const realQuery = sequelize.query.bind(sequelize);
     const spy = jest
       .spyOn(sequelize, "query")
       .mockImplementation(((sql: unknown, options: unknown) =>
         realQuery(
-          typeof sql === "string" && sql.includes("FROM users WHERE id = :userId")
+          typeof sql === "string" && isOwnerNameLookup(sql) && ++lookupsFailed
             ? "SELECT 1/0 AS name"
             : (sql as string),
           options as any,
@@ -120,6 +125,9 @@ describe("history name lookups on the caller's transaction", () => {
     } finally {
       spy.mockRestore();
     }
+    // The lookup really failed; if the formatter's SQL changes, update the
+    // matcher instead of letting this test pass without the failure.
+    expect(lookupsFailed).toBeGreaterThan(0);
 
     const rows = await sequelize.query<{ field_name: string; new_value: string }>(
       `SELECT field_name, new_value FROM incident_change_history

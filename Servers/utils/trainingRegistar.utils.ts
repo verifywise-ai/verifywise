@@ -116,13 +116,17 @@ export const getAllTrainingRegistarQuery = async (
 export const getTrainingRegistarByIdQuery = async (
   id: number,
   organizationId: number,
+  options: { transaction?: Transaction; lock?: boolean } = {},
 ): Promise<ITrainingRegister> => {
   const trainingRegistarsById = await sequelize.query(
-    `SELECT * FROM trainingregistar WHERE organization_id = :organizationId AND id = :id`,
+    `SELECT * FROM trainingregistar WHERE organization_id = :organizationId AND id = :id${
+      options.lock ? " FOR UPDATE" : ""
+    }`,
     {
       replacements: { organizationId, id },
       mapToModel: true,
       model: TrainingRegistarModel,
+      ...(options.transaction ? { transaction: options.transaction } : {}),
     },
   );
   // Return the first training registar or null if none found
@@ -139,8 +143,11 @@ export const updateTrainingRegistarByIdQuery = async (
   trainingRegistar: Partial<TrainingRegistarModel>,
   organizationId: number,
   transaction: Transaction,
+  /** The row as it was, when the caller has already read (and locked) it. */
+  existing?: ITrainingRegister,
 ): Promise<TrainingRegistarModel> => {
-  const existingTrainingRegistar = await getTrainingRegistarByIdQuery(id, organizationId);
+  const existingTrainingRegistar =
+    existing ?? (await getTrainingRegistarByIdQuery(id, organizationId, { transaction }));
   const updateTrainingRegistar: Partial<
     Record<keyof TrainingRegistarModel, any> & { people?: number }
   > & { organizationId?: number } = {};
@@ -179,6 +186,8 @@ export const updateTrainingRegistarByIdQuery = async (
     transaction,
   });
   const updatedTrainingRegistar = result[0];
+  // Not in this organization: nothing was updated, so no automation runs.
+  if (!updatedTrainingRegistar) return null as any;
   const automations = (await sequelize.query(
     `SELECT
       pat.key AS trigger_key,
@@ -249,6 +258,8 @@ export const deleteTrainingRegistarByIdQuery = async (
     },
   );
   const deletedTrainingRegistar = result[0];
+  // Not in this organization: nothing was deleted, so no automation runs.
+  if (!deletedTrainingRegistar) return false;
   const automations = (await sequelize.query(
     `SELECT
       pat.key AS trigger_key,

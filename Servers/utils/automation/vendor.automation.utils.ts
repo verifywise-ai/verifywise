@@ -1,8 +1,17 @@
+/**
+ * A vendor review date as "November 22, 2026", read on its UTC day like the
+ * reminder sweep and the Home queue, so the server's time zone can't shift it.
+ */
+export function formatVendorReviewDate(value: Date | string | null | undefined): string {
+  if (!value) return "Not set";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "Not set";
+  return date.toLocaleDateString("en-US", { dateStyle: "long", timeZone: "UTC" });
+}
+
 // Build replacement dict for vendor
 export function buildVendorReplacements(vendor: any): Record<string, any> {
-  const _reviewDate = new Date(vendor.review_date);
-  _reviewDate.setHours(0, 0, 0, 0);
-  const reviewDate = _reviewDate.toLocaleDateString("en-US", { dateStyle: "long" });
+  const reviewDate = formatVendorReviewDate(vendor.review_date);
   return {
     "vendor.name": vendor.vendor_name,
     "vendor.id": vendor.id,
@@ -19,13 +28,8 @@ export function buildVendorReplacements(vendor: any): Record<string, any> {
 }
 
 export function buildVendorUpdateReplacements(oldVendor: any, newVendor: any): Record<string, any> {
-  const _reviewDate = new Date(newVendor.review_date);
-  _reviewDate.setHours(0, 0, 0, 0);
-  const reviewDate = _reviewDate.toLocaleDateString("en-US", { dateStyle: "long" });
-
-  const _oldReviewDate = new Date(oldVendor.review_date);
-  _oldReviewDate.setHours(0, 0, 0, 0);
-  const oldReviewDate = _oldReviewDate.toLocaleDateString("en-US", { dateStyle: "long" });
+  const reviewDate = formatVendorReviewDate(newVendor.review_date);
+  const oldReviewDate = formatVendorReviewDate(oldVendor.review_date);
 
   // Build changes summary - only show changed fields with arrow, unchanged fields without arrow
   const changes: string[] = [];

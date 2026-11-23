@@ -52,7 +52,8 @@ model_risks
 ├── description
 ├── mitigation_plan
 ├── impact
-├── likelihood
+├── likelihood (likelihood label or NULL)
+├── severity (severity label or NULL)
 ├── key_metrics
 ├── current_values
 ├── threshold
@@ -109,6 +110,8 @@ enum ModelStatus {
   RESTRICTED = "Restricted"
   PENDING = "Pending"
   BLOCKED = "Blocked"
+  REJECTED = "Rejected"
+  RETIRED = "Retired"
 }
 ```
 
@@ -135,6 +138,65 @@ enum ModelRiskLevel {
 }
 ```
 
+Decision 10: the level comes from the shared likelihood x severity formula
+(`utils/riskLevel.utils.ts`, the one project risks use since #5376; client
+mirror `presentation/tools/riskCalculator.ts`). `likelihood` takes the
+likelihood labels (Rare, Unlikely, Possible, Likely, Almost Certain) and
+`severity` the severity labels (Negligible, Minor, Moderate, Major,
+Catastrophic), stored in the labels' spelling. The four stored levels stay,
+so reports, filters, MRM, PMM and risk links read `risk_level` as before.
+`calculateModelRiskLevel` maps the formula's result:
+
+| Formula | `risk_level` |
+|---|---|
+| No risk, Low risk | Low |
+| Medium risk | Medium |
+| High risk | High |
+| Very high risk | Critical |
+
+`services/modelRisk.service.ts` (`applyModelRiskFormula`) applies it on
+every write path (REST legacy and v1, advisor tools, `agent_create_model_risk`,
+intake approval, Shadow AI): when the save leaves the risk with both a
+likelihood and a severity (sent, else stored: on update the merged row, so a
+save that sends only the severity recomputes from the stored likelihood),
+the server sets `risk_level` and ignores a sent one. With either missing the
+sent or stored level is kept, so older rows and Shadow AI (which sets its
+level from data sensitivity and sends no likelihood) keep working. An
+intake approval sends the accepted suggestion's likelihood and severity, so
+its level comes from the formula too; the reviewer edits those two, not a
+level (see `intake-forms.md`). A label is matched without
+regard to case or surrounding spaces; "" or null clears it; anything else is
+a 400 on every route ("Likelihood must be one of: ..." / "Severity must be
+one of: ...", en/de/fr). The client form (`NewModelRisk`) has both selects,
+shows the computed level read-only (`presentation/tools/modelRiskLevel.ts`,
+same mapping) and sends no level once both are set; editing an older risk
+without both still shows the level select.
+
+Migration `20261120094040-model-risk-likelihood-severity-lists` adds
+`severity` and normalizes `likelihood`: a label match gets the label's
+spelling, a blank value becomes NULL, and anything else is appended to the
+risk's `description` as "Previous likelihood: <value>" (after a blank line;
+on its own when the description is empty) before `likelihood` is set to
+NULL. `risk_level` is not recomputed (no row has a severity yet). `down`
+drops `severity` and moves each "Previous likelihood" line back while it is
+still the description's last line; a re-spelled label keeps the new
+spelling.
+
+Advisor: `agent_create_model_risk` and `agent_suggest_model_risk` require
+likelihood and severity when filed. An approval is parsed again when it is
+approved, through `normalizeStoredLabels` (`aiActions/createModelRisk/schema.ts`):
+a label in any case gets its spelling, and a free-text likelihood from an
+approval filed before the lists becomes a "Previous likelihood" line in the
+description (for `agent_update_model_risk`, appended to the stored one). A
+stored create or suggestion runs with both inputs, or with a `risk_level`
+and no pair (kept); with neither it is refused rather than stored without a
+level.
+
+Risk links: the `risk_links_flag_stale` trigger flags confirmed
+`inherits_from` links to a model risk whenever its `risk_level` changes, so a
+level the formula moves is flagged exactly like a picked one, and an update
+that leaves the level where it was flags nothing.
+
 ### Risk Status
 
 ```typescript
@@ -159,6 +221,13 @@ enum ModelRiskStatus {
 | POST | `/modelInventory/` | Create model; each linked use case needs the caller's access |
 | PATCH | `/modelInventory/:id` | Update model; each use case linked or unlinked needs the caller's access |
 | DELETE | `/modelInventory/:id` | Delete model; `?deleteRisks=true` archives its risks (see below) |
+| POST | `/v1/model-inventories/` | Create model, strict validation (see Validation Rules) |
+| PATCH | `/v1/model-inventories/:id` | Update model, strict validation |
+
+`GET /modelInventory/:id` answers 404 for a model the organization does not
+have (it was 204). On every `/:id` route of both routers, legacy and v1, an id
+that is not a positive integer is a 400 (`validateModelIdParam`), not a
+database error. `GET /:id/evaluations` keeps its own 400.
 
 The inventory itself stays visible to the whole organization (decision 8);
 what belongs to one use case needs access to that use case (Admin, owner or
@@ -218,9 +287,10 @@ check. Model risks follow their model (org-wide). Dataset writes and
 `model_risks.model_id` is `ON DELETE SET NULL` (migration
 `20261117160827-model-risks-keep-on-model-delete`; it was `CASCADE`, which
 deleted every risk of a model, archived ones and their links too, with no
-history). A model deleted outside this path (demo data clean-up, AI Advisor)
-leaves its risks the same way. The history of an AI Advisor delete is
-recorded as the system's (no user).
+history). A model deleted outside this path (demo data clean-up) leaves its
+risks the same way. The AI Advisor's `agent_delete_model` deletes through
+`deleteModelInventoryService` with "Delete risks too", as the acting user, so
+its history names that user and an MRM-protected model is refused.
 
 ### Model Risks
 
@@ -231,6 +301,8 @@ recorded as the system's (no user).
 | POST | `/modelRisks/` | Create risk |
 | PUT | `/modelRisks/:id` | Update risk (PATCH too) |
 | DELETE | `/modelRisks/:id` | Soft delete |
+| POST | `/v1/model-risks/` | Create risk, strict validation |
+| PATCH | `/v1/model-risks/:id` | Update risk, strict validation |
 
 Query parameter: `filter=active|deleted|all`
 
@@ -312,7 +384,9 @@ Model ─────┬───── Project A (direct)
 |----------|-------------|
 | risk_name | Title of the risk |
 | risk_category | Performance/Bias/Security/Data/Compliance |
-| risk_level | Low/Medium/High/Critical |
+| risk_level | Low/Medium/High/Critical, from likelihood and severity when both are set |
+| likelihood | Rare/Unlikely/Possible/Likely/Almost Certain |
+| severity | Negligible/Minor/Moderate/Major/Catastrophic |
 | owner | Responsible person |
 | target_date | Resolution deadline |
 | mitigation_plan | Remediation steps |
@@ -462,27 +536,205 @@ security_assessment_data: [
 
 ## Validation Rules
 
-### Required Fields
+### v1 (strict)
 
-- provider
-- model
-- version
-- approver
-- capabilities
-- status_date
-- reference_link
-- biases
-- limitations
-- hosting_provider
+`middleware/validators/modelInventory.validator.ts`, express-validator, 400
+with `{ errors: [{ field, message, location }] }`, one message per field.
 
-### Risk Validation
+| | Model | Model risk |
+|---|---|---|
+| Required on create | `provider`, `model`, `version` (non-empty strings) | `risk_name` (non-empty), `risk_category`, `likelihood`, `severity` (lists), `owner` (positive integer), `target_date` (ISO 8601) |
+| Defaulted by the server | `status` (Pending), `status_date` (now) | `status` (Open) |
+| Checked when sent | `status`, `type` (enums; `type` "" or null = unclassified), `status_date` (ISO 8601), `approver` (positive integer; "", 0, null = none), `projects`, `frameworks` (integer arrays), `capabilities` (string or string array), `security_assessment`, `deleteProjects`, `deleteFrameworks` (booleans), text fields (strings) | `status`, `risk_level` (enums; the level is ignored when likelihood and severity are set), `likelihood`, `severity` (lists; on update null or "" clears one, and the stored level stays), `model_id` (positive integer; "" or null = none), text fields |
 
-- risk_name
-- risk_category (valid enum)
-- risk_level (valid enum)
-- status (valid enum)
-- owner
-- target_date
+The required set is the create forms' (`NewModelInventory`, `NewModelRisk`)
+minus the fields the server defaults, so the forms never send a body v1
+refuses. On update nothing is required, and a required field that is sent
+must still be valid (a non-empty `provider`, a real `target_date`). The model
+forms create and update through v1.
+
+### Legacy
+
+The legacy routes accept what they accepted. A value the database cannot
+store (an unknown status or type, a bad date: Postgres `22P02`, `22007`,
+`22008`) answers 400 "A value in this request is not valid." instead of 500.
+A model risk with only a name is created with `risk_category`, `risk_level`,
+`target_date` and `owner` NULL (`createNewModelRiskQuery` stores unset
+optional fields as NULL; an undefined named replacement used to fail the
+insert).
+
+### Status and approver shape (all routes)
+
+Before the approval rule runs, the model create and update services
+(`assertModelApprovalInput`) answer 400 with a field message for a `status`
+that is sent but is not one of the model statuses (an array, an object, a
+number, an unknown name). The `approver` is normalized once, at the start
+of the service, with the house id parser (`toPositiveId`): null, "", 0 or "0"
+is no approver (the legacy meaning of `approver || undefined`; the v1
+validator refuses 0 and "0" first), a positive int32 (a number or digits,
+leading zeros allowed on the legacy route, so "07" is 7) is that id, anything
+else ("00", "-1", "1e3", 2147483648, an array) is a 400. The approval rule, the membership check, the
+notice and the write then all read that number, and approvers are compared
+as numbers. On v1 the approver, model risk owner and model id must already
+be what `toPositiveId` accepts (no leading zeros). On create, "" and null still mean "not sent"
+(Pending), as the legacy route always accepted; on update they are refused.
+The rule itself fails closed: a status that is sent but not valid counts as a
+change touching a decision. The v1 enum chains also require a string, since
+`isIn` alone accepts `["Approved"]`.
+
+### Demo flag
+
+`is_demo` is never taken from a request body, on any route: the model and
+model risk services drop it, and a create always stores `false`. Only the
+demo seed creates demo rows.
+
+## Approval rule
+
+Who may decide a model's approval (decision 9), the rule risks got in #5418
+applied to the model's `approver` and `status`
+(`utils/modelApproval.utils.ts`, `assertModelApprovalAllowed`). "Decides"
+means an Admin (`organization.admin`) or the model's **saved** approver, never
+the approver the same save names.
+
+- **Decisions** are Approved, Restricted, Blocked and Rejected. Pending and
+  Retired (a lifecycle step) are not.
+- **R1.** While the model has a saved approver, moving its status to or from
+  a decision needs someone who decides. Sending the stored status back is not
+  a change. Moving between Pending and Retired is free.
+- **R2.** While the model has a saved approver, changing or clearing it needs
+  someone who decides, whatever the status. This is stricter than R2 for
+  risks, which lets any editor re-assign a Pending or Not required risk: a
+  risk whose approver is cleared falls back to Not required (R4), so it can no
+  longer be decided, but models have no "Not required" status to fall back to.
+  Clearing the approver of a Pending model would let an editor decide it in a
+  second save.
+- **R2b.** A decided model with no saved approver (a legacy row, or one an
+  editor decided before naming anyone) may be given an approver by a
+  non-Admin only in a save that also moves it out of the decisions, to
+  Pending or Retired. Otherwise the model would show a decision next to an
+  approver who never made it (403). An Admin may name one any time. Moving it
+  to Pending first and naming an approver in a later save is allowed too: it
+  ends in Pending.
+- **R3.** A non-Admin cannot name themself as the new approver. Keeping
+  yourself as the saved approver is fine.
+- In a save that names a new approver, only an Admin also moves the status to
+  a decision. Leaving a decision in that save is allowed (with a saved
+  approver, R2 already asks for the approver or an Admin).
+- With no approver saved or named, any editor sets any status, as before.
+  (Risks differ here: a risk with no approver is always Not required.)
+- **Delete.** Deleting a model that has a saved approver needs that approver
+  or an Admin, whatever its status (`assertModelDeleteAllowed`, read under the
+  delete's row lock). Without this, an editor the rule refuses could delete
+  the model and add it again, decided, with no approver. A model with no
+  approver is deleted by anyone with `model.edit`, as before. It applies to
+  `DELETE /api/modelInventory/:id` (v1 has no model delete) and the advisor's
+  `agent_delete_model`, both through `deleteModelInventoryService`; the
+  refusal is the same 403 message.
+
+The rule never rewrites the status; a refused change is a 403
+`{ "message": "Forbidden", "data": "Only the model's approver or an Admin can change its approval." }`
+(R3 reuses the risk wording, "You can't name yourself as the approver. Ask an
+Admin or pick someone else."), translated en/de/fr. It applies on the legacy
+and v1 routes, as #5418 did for risks, in Shadow AI's start governance
+(which names no approver), in the advisor's model tools and
+`agent_register_model`, and in an intake approval that creates a model (as
+the approving user: a non-Admin cannot approve a submission that names them
+the model's approver, R3, 403 "This submission names you as the model's
+approver. Another reviewer or an Admin must approve it."; an approver outside the organization is a
+400). The update reads the model `FOR UPDATE` in its transaction and checks
+against that row.
+
+The controller asks for the caller's Admin role only when the body sends a
+`status` or an `approver` (the only fields the rule reads it for); a delete
+always asks.
+
+The model form mirrors the rule (`Clients/src/application/utils/modelApproval.ts`):
+statuses the user cannot set are listed but disabled, the approver select is
+disabled for a user who does not decide on a model that has an approver, and
+a non-Admin's own name cannot be picked. When a picked status becomes
+unavailable (a non-Admin names a new approver while a decision is selected),
+the form puts back the saved status, or Pending for a new model, instead of
+letting the save fail with a 403.
+
+## Write services
+
+`services/modelInventory.service.ts` and `services/modelRisk.service.ts`
+hold every model and model risk write with what goes with it. They take
+plain arguments (organization, user, data, optional transaction; no req or
+res), so the REST controllers, Shadow AI and the AI advisor share them. With
+a caller's transaction, the notices run after it commits (`tx.afterCommit`);
+without one the service opens and commits its own
+(`utils/transaction.utils.ts` `inTransaction`, which logs a rollback that
+fails through `logRollbackFailure` with the function, file, user and
+organization, then throws the original error). The "model added / updated /
+deleted" automations in the model queries are enqueued after commit too, so
+a rolled-back write (a failed start governance, say) announces nothing.
+
+Every model write goes through these services: the REST controllers, Shadow
+AI's start governance, the advisor's model and model risk tools, the
+advisor's approved `agent_register_model` and `agent_create_model_risk`
+actions (as the requester, who needs `model.edit`; in the approval's
+transaction, so the notices follow its commit), and an intake approval that
+creates a model and its accepted model risks (as the approving user). Links
+in the approver and owner notices use `utils/frontendUrl.utils.ts`
+`frontendBaseUrl` (FRONTEND_URL, else the local frontend on port 5173).
+
+| Function | What it carries |
+|---|---|
+| `createModelInventoryService` | approval rule, `is_demo` false, insert + "model added" automation (in the query), creation history, after commit: approver notice, **deployment step when created as Approved**, model risk candidate notice |
+| `updateModelInventoryService` | row lock, approval rule, history diff against the locked row, after commit: deployment step when the status moves to Approved, approver notice for a new approver, candidate notice for added use cases. Takes the fields, or a function that builds them from the locked row (the advisor's `provider_model`) |
+| `deleteModelInventoryService` | row lock, 404 (`NotFoundException`), approver or Admin for a model with an approver (403, `ModelApprovalForbiddenError`), MRM 409 (`ConflictException`), deletion history, risk release |
+| `linkModelToUseCaseService` | link one use case (no-op if linked), candidate notice; use case links are not tracked history fields |
+| `createModelRiskService` / `updateModelRiskService` / `deleteModelRiskService` | history, owner notices, candidate notice on create |
+
+The deployment step (`runModelDeployedSideEffects`) is the "risk assessment
+required" notice and the `model_deployment` workflow. Before, a model created
+as Approved skipped it, and on update the previous status was read after the
+row had been changed in place, so a move to Approved did not trigger it
+either. Shadow AI's start governance creates its model and model risk through
+the services, so the model now has a creation history row, runs the "model
+added" automation and, when added as Approved, the deployment step.
+
+### AI advisor
+
+The advisor's model and model risk write tools run as the acting user (the
+requester after an approval, else the chatting user, `actingUserId`) through
+`advisor/functions/modelWriteScope.ts`: they need `model.edit`, as the
+console's routes, and the user's role decides whether they are an Admin for
+the approval rule. A refusal (approval rule, a reference outside the
+organization, a missing row, an MRM-protected model) is the tool's failure
+message `{ success: false, message }`, not a thrown error.
+
+| Tool | Writes through |
+|---|---|
+| `agent_update_model` | `updateModelInventoryService` (status sets `status_date`; a name or provider change renames `provider_model`, built from the row the service locked) |
+| `agent_retire_model` | `updateModelInventoryService` with status **Retired** (it used to set Blocked) |
+| `agent_delete_model` | `deleteModelInventoryService`, risks archived; a model with an approver needs that approver or an Admin |
+| `agent_link_model_to_project` | `linkModelToUseCaseService`, which checks write access to the use case, as the console's model save does (`model.edit` and use case access; no `useCase.edit`) |
+| `agent_register_model` (approved action) | `createModelInventoryService`, and `linkModelToUseCaseService` for a model it reuses |
+| `agent_create_model_risk` (approved action) | `createModelRiskService` |
+| `agent_suggest_model_risk`, `agent_update_model_risk`, `agent_change_model_risk_status`, `agent_attach/detach_model_risk_to/from_model`, `agent_delete_model_risk` | the model risk service (history, owner notices) |
+
+`agent_update_model_lifecycle_phase` was removed: a model has no lifecycle
+phase field (the model-lifecycle extension keeps a checklist per phase), so it
+could only refuse, after a human had confirmed it. Use `agent_update_model`
+with `status`.
+
+`agent_restore_model_risk` still writes directly (there is no restore in the
+service). The model risk tools strip `_requesterId` before their strict
+schema check, which refused every approved card before.
+
+## Model risk owner notices
+
+Decision 12. A model risk's owner gets the same in-app assignment notice (and
+assignment email) as a use case risk owner: on create with an owner, and on
+update when the owner changes to another user (an unchanged owner is not told
+again; like use case risks, an assigner who picks themself is told too).
+`notifyModelRiskOwner` sends it through `notifyUserAssigned` with role "Risk
+Owner", entity "Model Risk", and the link
+`/model-inventory/model-risks?modelRiskId=<id>`. It goes only to a member of
+the organization. Model risks have no bulk actions, so there is no grouped
+notice.
 
 ## Automation Triggers
 
@@ -506,6 +758,10 @@ Creating a model, attaching a model to a new project, and creating a model risk 
 | `utils/modelRisk.utils.ts` | Risk queries |
 | `controllers/modelInventory.ctrl.ts` | Controller |
 | `routes/modelInventory.route.ts` | Routes |
+| `routes/v1/modelInventories.route.ts`, `routes/v1/modelRisks.route.ts` | v1 writes |
+| `middleware/validators/modelInventory.validator.ts` | v1 validation, id param |
+| `services/modelInventory.service.ts`, `services/modelRisk.service.ts` | Write services |
+| `utils/modelApproval.utils.ts` | Approval rule |
 | `Servers/extensions/mlflow/` | MLFlow extension (routes, controller, sync service) |
 
 ### Frontend

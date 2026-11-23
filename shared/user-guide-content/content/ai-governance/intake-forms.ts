@@ -766,7 +766,7 @@ export const intakeFormsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'With the score, the form\'s LLM suggests up to 10 risks for each submission, highest rated first. Some come from the MIT and IBM risk catalogs. The rest are written for the submission. Each one names its source, likelihood and severity. It comes with a drafted impact, mitigation plan and implementation strategy. Model submissions also get a model risk category and level.',
+      text: 'With the score, the form\'s LLM suggests up to 10 risks for each submission, highest rated first. Some come from the MIT and IBM risk catalogs. The rest are written for the submission. Each one names its source, likelihood and severity. It comes with a drafted impact, mitigation plan and implementation strategy. Model submissions also get a model risk category, and a model risk level worked out from the likelihood and severity. To change a model risk\'s level, change its likelihood or severity: the level updates as you pick, and the approved model risk gets that level.',
     },
     {
       type: 'paragraph',

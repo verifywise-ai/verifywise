@@ -102,9 +102,24 @@ const SCREEN_GATES: Array<{
     key: "riskLinks.admin",
     superAdmin: true,
   },
+  {
+    gate: "risk and vendor risk panels: link a risk, mark a parent change reviewed",
+    roles: ["Admin", "Editor"],
+    key: "riskLinks.edit",
+  },
+  {
+    gate: "risk and vendor risk panels: confirm, dismiss, remove and restore links",
+    roles: ["Admin", "Editor", "Reviewer"],
+    key: "riskLinks.review",
+  },
   { gate: "ModelInventory and Datasets create", roles: ["Admin", "Editor"], key: "model.edit" },
   { gate: "AIApps create", roles: ["Admin", "Editor"], key: "aiApp.edit" },
   { gate: "IncidentManagement create", roles: ["Admin", "Editor"], key: "incident.create" },
+  {
+    gate: "IncidentManagement edit, approve and archive",
+    roles: ["Admin", "Editor", "Reviewer"],
+    key: "incident.edit",
+  },
   { gate: "Tasks create", roles: ["Admin", "Editor"], key: "task.edit" },
   {
     gate: "dataset bulk upload button",

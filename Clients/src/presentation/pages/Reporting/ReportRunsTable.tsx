@@ -55,8 +55,8 @@ const STATUS_LABEL: Record<string, string> = {
   failed: "Failed",
 };
 
-// partial_success is a success with a delivery caveat — the file exists and is
-// downloadable, so it must not read as an error.
+// partial_success is a success with a caveat (a delivery channel failed or part of a
+// section could not be read) — the file exists and is downloadable, so it must not read as an error.
 const STATUS_VARIANT: Record<string, "default" | "info" | "success" | "warning" | "error"> = {
   queued: "default",
   running: "info",
@@ -74,18 +74,21 @@ const CHANNEL_LABEL: Record<string, string> = {
 /**
  * What to show on hover over the status.
  *
- * error_message is only written on the failed path; a partial_success has a
- * NULL one and records which channel broke in delivery_status instead. Without
- * the second branch "Partial success" is a dead end for the user.
+ * A partial_success can carry both reasons at once: error_message says which
+ * parts of the report could not be read, delivery_status says which channel
+ * broke. Both are shown, so neither hides the other.
  */
 const statusDetail = (r: any): string => {
-  if (r.error_message) return r.error_message;
+  const parts: string[] = [];
+  if (r.error_message) parts.push(r.error_message);
   const delivery = r.delivery_status;
-  if (!delivery || typeof delivery !== "object") return "";
-  const failed = Object.keys(CHANNEL_LABEL)
-    .filter((k) => delivery[k]?.status === "failed")
-    .map((k) => CHANNEL_LABEL[k]);
-  return failed.length ? `Delivery failed: ${failed.join(", ")}` : "";
+  if (delivery && typeof delivery === "object") {
+    const failed = Object.keys(CHANNEL_LABEL)
+      .filter((k) => delivery[k]?.status === "failed")
+      .map((k) => CHANNEL_LABEL[k]);
+    if (failed.length) parts.push(`Delivery failed: ${failed.join(", ")}`);
+  }
+  return parts.join(" ");
 };
 
 /**

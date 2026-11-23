@@ -98,6 +98,11 @@ export interface ReportGenerationResult {
   mimeType: string;
   error?: string;
   /**
+   * Pairings whose data could not be read (collection_failed notices). The
+   * report was still produced; the run orchestrator marks it partial_success.
+   */
+  collectionFailures?: string[];
+  /**
    * Structured analyzer output, keyed by section key. The runner persists this
    * to report_run_analyses; the renderers read the flattened copy on
    * ReportData.aiSummaries instead.
@@ -247,7 +252,14 @@ export interface SectionNotice {
     /** A pairing exists; the query returned zero rows. */
     | "no_data"
     /** A plugin:/custom: framework was selected but that path is not available yet. */
-    | "unresolved_framework";
+    | "unresolved_framework"
+    /**
+     * A query for one pairing threw. The rest of the section and the report
+     * are complete; `detail` names the pairing that is missing.
+     */
+    | "collection_failed";
+  /** For collection_failed: which pairing could not be read, e.g. "SOC 2 for Chatbot". */
+  detail?: string;
 }
 
 // Unified report data structure
@@ -269,6 +281,7 @@ export interface ReportData {
     assessment?: AssessmentSectionData;
     clausesAndAnnexes?: ClausesAndAnnexesSectionData;
     nistSubcategories?: NistSubcategoriesSectionData;
+    frameworkRequirements?: FrameworkRequirementsSectionData;
     // Organization group
     vendors?: VendorsListSectionData;
     models?: ModelsListSectionData;
@@ -453,6 +466,52 @@ export interface PolicyManagerSectionData {
     status: string;
     reviewDate?: string;
     owner?: string;
+  }>;
+}
+
+// Bundled framework requirements (Compliance & Governance group, framework ids 5-28)
+export interface FrameworkRequirementRow {
+  implId: number;
+  level: 2 | 3;
+  title: string;
+  orderNo: number;
+  status: string; // raw IMPL_STATUSES value
+  owner: string | null; // display name
+  reviewer: string | null;
+  approver: string | null;
+  dueDate: string | null; // ISO date via isoDate
+  isDone: boolean;
+  isOverdue: boolean;
+  evidenceCount: number;
+  evidenceFiles: string[]; // file names, max 10, sorted
+  riskCount: number;
+  children?: FrameworkRequirementRow[]; // L3 under L2
+}
+
+export interface FrameworkRequirementRollup {
+  total: number;
+  done: number;
+  unassigned: number;
+  noEvidence: number;
+  overdue: number;
+  statusBreakdown: Record<string, number>; // keyed by raw status
+}
+
+export interface FrameworkRequirementGroup {
+  title: string;
+  orderNo: number;
+  /** Set only when more than one use case pairing contributed (see compliance). */
+  useCase?: string;
+  requirements: FrameworkRequirementRow[];
+  rollup: FrameworkRequirementRollup;
+}
+
+export interface FrameworkRequirementsSectionData {
+  frameworks: Array<{
+    frameworkId: number;
+    frameworkName: string;
+    groups: FrameworkRequirementGroup[];
+    rollup: FrameworkRequirementRollup;
   }>;
 }
 

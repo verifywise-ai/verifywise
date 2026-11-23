@@ -29,7 +29,6 @@ export const de: Record<string, string> = {
   "Rename": "Umbenennen",
   "Save Model": "Modell speichern",
   "Standard Q&A evaluation": "Standard-Q&A-Bewertung",
-  "Start Experiment": "Experiment starten",
   "Threshold (4/5ths rule)": "Schwellenwert (4/5-Regel)",
   "View and manage model configurations. These preferences are automatically saved when you run an experiment and auto-loaded for new experiments in the same project.":
     "Modellkonfigurationen anzeigen und verwalten. Diese Einstellungen werden beim Ausführen eines Experiments automatisch gespeichert und für neue Experimente im selben Projekt automatisch geladen.",
@@ -56,7 +55,6 @@ export const de: Record<string, string> = {
   "Download example": "Beispiel herunterladen",
   "Download JSON": "JSON herunterladen",
   "Generate audit reports": "Prüfberichte erstellen",
-  "Generate Evaluation Report": "Bewertungsbericht erstellen",
   "Generate your first report": "Ersten Bericht erstellen",
   "Go back": "Zurück",
   "Import existing dataset in JSON format": "Vorhandenen Datensatz im JSON-Format importieren",
@@ -116,7 +114,6 @@ export const de: Record<string, string> = {
   "Precision": "Präzision",
   "Prediction": "Vorhersage",
   "Project name": "Projektname",
-  "Report Preview": "Berichtsvorschau",
   "Report title": "Berichtstitel",
   "Retrieval context": "Retrieval-Kontext",
   "Scenario:": "Szenario:",
@@ -225,7 +222,6 @@ export const de: Record<string, string> = {
   "The audit calculates performance differences across groups. See pass rates, accuracy gaps, and statistical significance scores.":
     "Die Prüfung berechnet Leistungsunterschiede zwischen Gruppen. Zeigt Bestehensquoten, Genauigkeitsunterschiede und statistische Signifikanzwerte.",
   "e.g., Coding Tasks Evaluation": "z. B. Coding-Aufgaben-Bewertung",
-  "e.g., GPT-4 vs Claude Showdown": "z. B. GPT-4 vs Claude",
   "e.g., General, Safety, Factual": "z. B. Allgemein, Sicherheit, Faktisch",
   "All time": "Gesamter Zeitraum",
   "Group": "Gruppieren",
@@ -235,7 +231,6 @@ export const de: Record<string, string> = {
   "Recent experiments": "Letzte Experimente",
   "Recent projects": "Letzte Projekte",
   "API Compatibility": "API-Kompatibilität",
-  "Agent Metrics": "Agenten-Metriken",
   "All available providers have been configured. Remove a key to add a different one.":
     "Alle verfügbaren Anbieter wurden konfiguriert. Entfernen Sie einen Schlüssel, um einen anderen hinzuzufügen.",
   "All contestants will be evaluated using this dataset":
@@ -245,8 +240,6 @@ export const de: Record<string, string> = {
   "Audit settings": "Audit-Einstellungen",
   "Average scores by criteria": "Durchschnittliche Werte nach Kriterien",
   "Battle Failed": "Vergleich fehlgeschlagen",
-  "Bias and Toxicity will be evaluated on each assistant turn and aggregated":
-    "Bias und Toxizität werden bei jedem Assistenten-Schritt bewertet und aggregiert",
   "Choose the regulatory framework that applies to your bias audit":
     "Wählen Sie das regulatorische Rahmenwerk, das für Ihr Bias-Audit gilt",
   "Column mapping": "Spaltenzuordnung",
@@ -259,9 +252,7 @@ export const de: Record<string, string> = {
   "Conversation Format": "Konversationsformat",
   "Conversation Turns": "Konversationszüge",
   "Conversation type": "Konversationstyp",
-  "Conversational Metrics": "Konversationsmetriken",
   "Conversational metrics": "Konversationsmetriken",
-  "Create Scorer": "Bewerter erstellen",
   "Create a scorer to use custom evaluation criteria":
     "Erstellen Sie einen Bewerter, um benutzerdefinierte Bewertungskriterien zu verwenden",
   "Custom scorers": "Benutzerdefinierte Bewerter",
@@ -279,14 +270,10 @@ export const de: Record<string, string> = {
     "Bearbeiten Sie die Prompts unten und klicken Sie dann auf Speichern, um Ihren Datensatz zu aktualisieren.",
   "Encrypted keys for running evaluations across all projects":
     "Verschlüsselte Schlüssel zum Ausführen von Bewertungen über alle Projekte hinweg",
-  "Evaluation Metrics": "Bewertungsmetriken",
-  "Evaluation Reports": "Bewertungsberichte",
   "Evaluation criteria": "Bewertungskriterien",
   "Expected Outcome": "Erwartetes Ergebnis",
-  "Expected Outcome:": "Erwartetes Ergebnis:",
   "Experiments to include": "Einzubeziehende Experimente",
   "Format Preview": "Formatvorschau",
-  "Generate new report": "Neuen Bericht generieren",
   "Ground truth column": "Ground-Truth-Spalte",
   "How Simulated Mode Works": "So funktioniert der Simulationsmodus",
   "Industry-standard benchmarks powered by DeepEval for comprehensive LLM evaluation.":
@@ -295,7 +282,6 @@ export const de: Record<string, string> = {
   "JSON file with prompts and expected outputs": "JSON-Datei mit Prompts und erwarteten Ausgaben",
   "Judge": "Bewerter",
   "Judge's reasoning": "Begründung des Bewerters",
-  "LLM Evals Settings": "LLM-Bewertungseinstellungen",
   "LLM use case": "LLM-Anwendungsfall",
   "Loading performance data...": "Leistungsdaten werden geladen...",
   "Loading providers...": "Anbieter werden geladen...",
@@ -325,17 +311,13 @@ export const de: Record<string, string> = {
   "No prompts found in this dataset.": "Keine Prompts in diesem Datensatz gefunden.",
   "No prompts in this dataset yet.": "Noch keine Prompts in diesem Datensatz.",
   "No samples found": "Keine Stichproben gefunden",
-  "Option 1: Use custom dataset": "Option 1: Benutzerdefinierten Datensatz verwenden",
-  "Option 2: Your datasets": "Option 2: Ihre Datensätze",
   "Outcome column": "Ergebnisspalte",
   "POST /v1/chat/completions": "POST /v1/chat/completions",
-  "Per-Turn Safety Metrics": "Sicherheitsmetriken pro Zug",
   "Please select at least one evaluation criterion":
     "Bitte wählen Sie mindestens ein Bewertungskriterium",
   "Prediction column": "Vorhersagespalte",
   "Provider API keys": "Anbieter-API-Schlüssel",
   "Quality metrics": "Qualitätsmetriken",
-  "RAG Metrics": "RAG-Metriken",
   "Report sections": "Berichtsabschnitte",
   "Required columns": "Erforderliche Spalten",
   "Review & run": "Überprüfen & ausführen",
@@ -350,12 +332,9 @@ export const de: Record<string, string> = {
   "Safety metrics": "Sicherheitsmetriken",
   "Score column": "Wertspalte",
   "Select Provider": "Anbieter auswählen",
-  "Select a Provider": "Anbieter auswählen",
   "Select a compliance framework": "Compliance-Rahmenwerk auswählen",
   "Select provider type": "Anbietertyp auswählen",
   "Select the model you want to evaluate.": "Wählen Sie das Modell, das Sie bewerten möchten.",
-  "Standard Benchmarks": "Standard-Benchmarks",
-  "Standard Judge Configuration": "Standard-Bewerter-Konfiguration",
   "Standard metrics require a Judge LLM.": "Standardmetriken erfordern ein Bewerter-LLM.",
   "The LLM that will compare and score the responses":
     "Das LLM, das die Antworten vergleicht und bewertet",
@@ -367,14 +346,11 @@ export const de: Record<string, string> = {
   "Ties": "Unentschieden",
   "Topics": "Themen",
   "Track metric scores across eval runs": "Metrikwerte über Bewertungsläufe hinweg verfolgen",
-  "Universal Core Metrics": "Universelle Kernmetriken",
   "Upload applicant data": "Bewerberdaten hochladen",
   "Use Case": "Anwendungsfall",
   "Win Rate": "Gewinnrate",
   "Winner": "Gewinner",
   "Wins": "Siege",
-  "You can start tracking metrics once you define your experiments":
-    "Sie können mit der Verfolgung von Metriken beginnen, sobald Sie Ihre Experimente definieren",
   "Your scorers": "Ihre Bewerter",
   "Your custom scorer will be used instead.":
     "Stattdessen wird Ihr benutzerdefinierter Bewerter verwendet.",
@@ -383,22 +359,17 @@ export const de: Record<string, string> = {
   "API key removed successfully": "API-Schlüssel erfolgreich entfernt",
   "API key verified and saved successfully": "API-Schlüssel überprüft und erfolgreich gespeichert",
   "Action Relevance": "Aktionsrelevanz",
-  "Agent Planning": "Agentenplanung",
-  "Agent Task Execution": "Agentenaufgabenausführung",
-  "Agent Workflow Automation": "Agenten-Ablauf-Automatisierung",
   "An unknown error occurred": "Ein unbekannter Fehler ist aufgetreten",
   "Answer Correctness": "Antwortrichtigkeit",
   "Answer Relevancy": "Antwortrelevanz",
   "Are you sure you want to delete this bias audit? This action cannot be undone.":
     "Möchten Sie dieses Bias-Audit wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.",
   "Arena": "Arena",
-  "Arena Comparison": "Arena-Vergleich",
   "Arena battle started!": "Arena-Vergleich gestartet!",
   "Arena comparison deleted": "Arena-Vergleich gelöscht",
   "Argument Correctness": "Argument-Richtigkeit",
   "Auto-generated suggestions based on failing metrics":
     "Automatisch generierte Vorschläge basierend auf nicht bestandenen Metriken",
-  "Basic Chatbot": "Basis-Chatbot",
   "Battle results downloaded": "Vergleichsergebnisse heruntergeladen",
   "Bias": "Bias",
   "Bias, Toxicity, Hallucination analysis with governance notes":
@@ -411,7 +382,6 @@ export const de: Record<string, string> = {
     "Ein leerer Datensatz kann nicht verwendet werden. Bitte laden Sie eine Datei mit mindestens einem Prompt hoch.",
   "Cannot use an empty dataset. Please upload a file with prompts that have actual content.":
     "Ein leerer Datensatz kann nicht verwendet werden. Bitte laden Sie eine Datei mit Prompts mit tatsächlichem Inhalt hoch.",
-  "Coding Helper": "Programmierhilfe",
   "Coherence": "Kohärenz",
   "Context Precision": "Kontext-Präzision",
   "Context Recall": "Kontext-Recall",
@@ -429,20 +399,15 @@ export const de: Record<string, string> = {
   "Could not find experiment to rerun":
     "Experiment zum erneuten Ausführen konnte nicht gefunden werden",
   "Custom / Self-hosted": "Benutzerdefiniert / Selbst gehostet",
-  "Customer Support (Single-Turn)": "Kundensupport (Einzelschritt)",
-  "Customer Support Multi-Turn": "Kundensupport mehrstufig",
   "Dataset removed": "Datensatz entfernt",
   "Dataset, judge model, enabled metrics, and thresholds":
     "Datensatz, Bewertermodell, aktivierte Metriken und Schwellenwerte",
   "Description saved": "Beschreibung gespeichert",
-  "Document Q&A Multi-Turn": "Dokument-Q&A mehrstufig",
   "Empty dataset": "Leerer Datensatz",
   "Evaluates LLMs across 57 subjects including STEM, humanities, social sciences. Tests knowledge breadth and reasoning.":
     "Bewertet LLMs über 57 Fächer hinweg, einschließlich MINT, Geisteswissenschaften und Sozialwissenschaften. Testet Wissensbreite und Schlussfolgerung.",
   "Evaluates code generation capabilities with Python programming problems and unit tests.":
     "Bewertet die Codegenerierungsfähigkeiten mit Python-Programmierproblemen und Unit-Tests.",
-  "Evaluation Context": "Bewertungskontext",
-  "Evaluation Setup": "Bewertungs-Setup",
   "Experiment deleted": "Experiment gelöscht",
   "Experiment name": "Experimentname",
   "Experiment results downloaded": "Experimentergebnisse heruntergeladen",
@@ -480,7 +445,6 @@ export const de: Record<string, string> = {
   "Failed to upload": "Hochladen fehlgeschlagen",
   "Faithfulness": "Treue",
   "Gemini": "Gemini",
-  "General Assistant Multi-Turn": "Allgemeiner Assistent mehrstufig",
   "Hallucination": "Halluzination",
   "Head-to-head model comparison results": "Direkte Modellvergleichsergebnisse",
   "Instruction Following": "Anweisungsbefolgung",
@@ -490,14 +454,11 @@ export const de: Record<string, string> = {
     "Großer Datensatz für Common-Sense-Reasoning, der Pronomen-Auflösung im Kontext testet.",
   "Last 100 days": "Letzte 100 Tage",
   "Leaderboard": "Rangliste",
-  "Limitations & Recommendations": "Einschränkungen & Empfehlungen",
   "Local": "Lokal",
   "Local provider removed": "Lokaler Anbieter entfernt",
   "Measures whether a language model is truthful in generating answers to questions.":
     "Misst, ob ein Sprachmodell wahrheitsgemäße Antworten auf Fragen generiert.",
-  "Metric Results": "Metrik-Ergebnisse",
   "Metrics used to score model outputs": "Metriken zur Bewertung von Modellausgaben",
-  "Model Under Test": "Zu testendes Modell",
   "Model added successfully": "Modell erfolgreich hinzugefügt",
   "Model deleted successfully": "Modell erfolgreich gelöscht",
   "Must be OpenAI-compatible API (POST /v1/chat/completions)":
@@ -527,7 +488,6 @@ export const de: Record<string, string> = {
   "Please select a provider and enter an API key":
     "Bitte wählen Sie einen Anbieter und geben Sie einen API-Schlüssel ein",
   "Please select a provider and model": "Bitte wählen Sie einen Anbieter und ein Modell",
-  "Product Docs": "Produktdokumentation",
   "Project deleted": "Projekt gelöscht",
   "Project deleted successfully": "Projekt erfolgreich gelöscht",
   "Project renamed successfully": "Projekt erfolgreich umbenannt",
@@ -536,23 +496,18 @@ export const de: Record<string, string> = {
   "Project, organization, evaluator, and date information":
     "Projekt-, Organisations-, Bewerter- und Datumsinformationen",
   "Provider, model ID, and generation parameters": "Anbieter, Modell-ID und Generierungsparameter",
-  "Research Papers": "Forschungsarbeiten",
   "Results copied to clipboard": "Ergebnisse in die Zwischenablage kopiert",
   "Role Adherence": "Rolleneinhaltung",
   "Run and compare model evaluations": "Modellbewertungen ausführen und vergleichen",
-  "Safety & Compliance": "Sicherheit & Compliance",
-  "Sample-Level Details": "Details auf Stichprobenebene",
   "Science exam questions requiring reasoning. Includes Easy and Challenge sets with varying difficulty.":
     "Wissenschaftliche Prüfungsfragen, die Schlussfolgerungen erfordern. Umfasst Easy- und Challenge-Sets mit unterschiedlichem Schwierigkeitsgrad.",
   "Scorer created successfully": "Bewerter erfolgreich erstellt",
   "Scorer deleted": "Bewerter gelöscht",
   "Scorer name": "Bewertername",
   "Scorer updated successfully": "Bewerter erfolgreich aktualisiert",
-  "Select Model": "Modell auswählen",
   "Starting new evaluation run...": "Neuer Bewertungslauf wird gestartet...",
   "Step Efficiency": "Schritt-Effizienz",
   "Task Completion": "Aufgabenabschluss",
-  "Tech Support Multi-Turn": "Tech-Support mehrstufig",
   "Template datasets": "Vorlagendatensätze",
   "Test datasets for evaluating models": "Testdatensätze zur Bewertung von Modellen",
   "Tests common-sense reasoning by predicting the most plausible continuation of a scenario.":
@@ -626,8 +581,6 @@ export const de: Record<string, string> = {
   "Unknown model": "Unbekanntes Modell",
   "Multi-turn dataset": "Mehrstufiger Datensatz",
   "LLM judge": "LLM-Juror",
-  "Coherence, helpfulness, task completion and safety start unticked: they don't return scores on multi-turn runs yet.":
-    "Kohärenz, Hilfsbereitschaft, Aufgabenerfüllung und Sicherheit sind zunächst nicht ausgewählt: Bei mehrstufigen Läufen liefern sie noch keine Werte.",
   "Bias and toxicity are scored on each assistant turn, then combined into one score":
     "Voreingenommenheit und Toxizität werden für jede Antwort des Assistenten bewertet und dann zu einem Wert zusammengefasst",
   "RAG metrics": "RAG-Metriken",
@@ -655,8 +608,6 @@ export const de: Record<string, string> = {
     "Führen Sie Ihr erstes Experiment aus, um Werte zu verfolgen",
   "Evaluation metrics": "Bewertungsmetriken",
   "Search bias audits": "Bias-Audits durchsuchen",
-  "Generate PDF or CSV reports from completed experiments. Reports follow the EvalCards standard for AI evaluation documentation.":
-    "Erstellen Sie PDF- oder CSV-Berichte aus abgeschlossenen Experimenten. Die Berichte folgen dem EvalCards-Standard für die Dokumentation von KI-Bewertungen.",
   "Report preview": "Berichtsvorschau",
   "Generate evaluation report": "Bewertungsbericht erstellen",
   "PDF: structured report with charts and tables":
@@ -745,7 +696,6 @@ export const fr: Record<string, string> = {
   "Rename": "Renommer",
   "Save Model": "Enregistrer le modèle",
   "Standard Q&A evaluation": "Évaluation Q&R standard",
-  "Start Experiment": "Lancer l'expérience",
   "Threshold (4/5ths rule)": "Seuil (règle des 4/5)",
   "View and manage model configurations. These preferences are automatically saved when you run an experiment and auto-loaded for new experiments in the same project.":
     "Consultez et gérez les configurations de modèles. Ces préférences sont enregistrées automatiquement lors de l'exécution d'une expérience et rechargées pour les nouvelles expériences du même projet.",
@@ -772,7 +722,6 @@ export const fr: Record<string, string> = {
   "Download example": "Télécharger l'exemple",
   "Download JSON": "Télécharger le JSON",
   "Generate audit reports": "Générer des rapports d'audit",
-  "Generate Evaluation Report": "Générer un rapport d'évaluation",
   "Generate your first report": "Générer votre premier rapport",
   "Go back": "Retour",
   "Import existing dataset in JSON format": "Importer un jeu de données existant au format JSON",
@@ -830,7 +779,6 @@ export const fr: Record<string, string> = {
   "Precision": "Précision",
   "Prediction": "Prédiction",
   "Project name": "Nom du projet",
-  "Report Preview": "Aperçu du rapport",
   "Report title": "Titre du rapport",
   "Retrieval context": "Contexte de récupération",
   "Scenario:": "Scénario :",
@@ -938,7 +886,6 @@ export const fr: Record<string, string> = {
   "The audit calculates performance differences across groups. See pass rates, accuracy gaps, and statistical significance scores.":
     "L'audit calcule les écarts de performance entre groupes. Consultez les taux de réussite, les écarts de précision et les scores de significativité statistique.",
   "e.g., Coding Tasks Evaluation": "ex. Évaluation des tâches de codage",
-  "e.g., GPT-4 vs Claude Showdown": "ex. Duel GPT-4 vs Claude",
   "e.g., General, Safety, Factual": "ex. Général, Sécurité, Factuel",
   "All time": "Depuis le début",
   "Group": "Grouper",
@@ -949,7 +896,6 @@ export const fr: Record<string, string> = {
   "Recent experiments": "Expériences récentes",
   "Recent projects": "Projets récents",
   "API Compatibility": "Compatibilité API",
-  "Agent Metrics": "Métriques d'agent",
   "All available providers have been configured. Remove a key to add a different one.":
     "Tous les fournisseurs disponibles ont été configurés. Supprimez une clé pour en ajouter une autre.",
   "All contestants will be evaluated using this dataset":
@@ -959,8 +905,6 @@ export const fr: Record<string, string> = {
   "Audit settings": "Paramètres d'audit",
   "Average scores by criteria": "Scores moyens par critère",
   "Battle Failed": "Confrontation échouée",
-  "Bias and Toxicity will be evaluated on each assistant turn and aggregated":
-    "Le biais et la toxicité seront évalués à chaque tour d'assistant et agrégés",
   "Choose the regulatory framework that applies to your bias audit":
     "Choisissez le référentiel réglementaire qui s'applique à votre audit de biais",
   "Column mapping": "Mappage des colonnes",
@@ -973,9 +917,7 @@ export const fr: Record<string, string> = {
   "Conversation Format": "Format de conversation",
   "Conversation Turns": "Tours de conversation",
   "Conversation type": "Type de conversation",
-  "Conversational Metrics": "Métriques conversationnelles",
   "Conversational metrics": "Métriques conversationnelles",
-  "Create Scorer": "Créer un évaluateur",
   "Create a scorer to use custom evaluation criteria":
     "Créez un évaluateur pour utiliser des critères d'évaluation personnalisés",
   "Custom scorers": "Évaluateurs personnalisés",
@@ -993,14 +935,10 @@ export const fr: Record<string, string> = {
     "Modifiez les invites ci-dessous, puis cliquez sur Enregistrer pour mettre à jour votre jeu de données.",
   "Encrypted keys for running evaluations across all projects":
     "Clés chiffrées pour exécuter des évaluations sur tous les projets",
-  "Evaluation Metrics": "Métriques d'évaluation",
-  "Evaluation Reports": "Rapports d'évaluation",
   "Evaluation criteria": "Critères d'évaluation",
   "Expected Outcome": "Résultat attendu",
-  "Expected Outcome:": "Résultat attendu :",
   "Experiments to include": "Expériences à inclure",
   "Format Preview": "Aperçu du format",
-  "Generate new report": "Générer un nouveau rapport",
   "Ground truth column": "Colonne de vérité terrain",
   "How Simulated Mode Works": "Fonctionnement du mode simulé",
   "Industry-standard benchmarks powered by DeepEval for comprehensive LLM evaluation.":
@@ -1009,7 +947,6 @@ export const fr: Record<string, string> = {
   "JSON file with prompts and expected outputs": "Fichier JSON avec invites et sorties attendues",
   "Judge": "Juge",
   "Judge's reasoning": "Raisonnement du juge",
-  "LLM Evals Settings": "Paramètres d'évaluations LLM",
   "LLM use case": "Cas d'usage LLM",
   "Loading performance data...": "Chargement des données de performance...",
   "Loading providers...": "Chargement des fournisseurs...",
@@ -1039,17 +976,13 @@ export const fr: Record<string, string> = {
   "No prompts found in this dataset.": "Aucune invite trouvée dans ce jeu de données.",
   "No prompts in this dataset yet.": "Pas encore d'invites dans ce jeu de données.",
   "No samples found": "Aucun échantillon trouvé",
-  "Option 1: Use custom dataset": "Option 1 : Utiliser un jeu de données personnalisé",
-  "Option 2: Your datasets": "Option 2 : Vos jeux de données",
   "Outcome column": "Colonne de résultat",
   "POST /v1/chat/completions": "POST /v1/chat/completions",
-  "Per-Turn Safety Metrics": "Métriques de sécurité par tour",
   "Please select at least one evaluation criterion":
     "Veuillez sélectionner au moins un critère d'évaluation",
   "Prediction column": "Colonne de prédiction",
   "Provider API keys": "Clés API du fournisseur",
   "Quality metrics": "Métriques de qualité",
-  "RAG Metrics": "Métriques RAG",
   "Report sections": "Sections du rapport",
   "Required columns": "Colonnes requises",
   "Review & run": "Examiner & exécuter",
@@ -1064,12 +997,9 @@ export const fr: Record<string, string> = {
   "Safety metrics": "Métriques de sécurité",
   "Score column": "Colonne de score",
   "Select Provider": "Sélectionner un fournisseur",
-  "Select a Provider": "Sélectionner un fournisseur",
   "Select a compliance framework": "Sélectionner un référentiel de conformité",
   "Select provider type": "Sélectionner le type de fournisseur",
   "Select the model you want to evaluate.": "Sélectionnez le modèle que vous souhaitez évaluer.",
-  "Standard Benchmarks": "Benchmarks standards",
-  "Standard Judge Configuration": "Configuration du juge standard",
   "Standard metrics require a Judge LLM.": "Les métriques standards nécessitent un LLM juge.",
   "The LLM that will compare and score the responses":
     "Le LLM qui comparera et notera les réponses",
@@ -1082,14 +1012,11 @@ export const fr: Record<string, string> = {
   "Topics": "Thèmes",
   "Track metric scores across eval runs":
     "Suivre les scores de métriques sur les exécutions d'évaluation",
-  "Universal Core Metrics": "Métriques universelles de base",
   "Upload applicant data": "Téléverser les données des candidats",
   "Use Case": "Cas d'usage",
   "Win Rate": "Taux de victoire",
   "Winner": "Gagnant",
   "Wins": "Victoires",
-  "You can start tracking metrics once you define your experiments":
-    "Vous pouvez commencer à suivre les métriques une fois vos expériences définies",
   "Your scorers": "Vos évaluateurs",
   "Your custom scorer will be used instead.":
     "Votre évaluateur personnalisé sera utilisé à la place.",
@@ -1098,22 +1025,17 @@ export const fr: Record<string, string> = {
   "API key removed successfully": "Clé API supprimée avec succès",
   "API key verified and saved successfully": "Clé API vérifiée et enregistrée avec succès",
   "Action Relevance": "Pertinence de l'action",
-  "Agent Planning": "Planification de l'agent",
-  "Agent Task Execution": "Exécution des tâches de l'agent",
-  "Agent Workflow Automation": "Automatisation de flux d'agents",
   "An unknown error occurred": "Une erreur inconnue s'est produite",
   "Answer Correctness": "Exactitude de la réponse",
   "Answer Relevancy": "Pertinence de la réponse",
   "Are you sure you want to delete this bias audit? This action cannot be undone.":
     "Voulez-vous vraiment supprimer cet audit de biais ? Cette action est irréversible.",
   "Arena": "Arène",
-  "Arena Comparison": "Comparaison Arène",
   "Arena battle started!": "Confrontation Arène démarrée !",
   "Arena comparison deleted": "Comparaison Arène supprimée",
   "Argument Correctness": "Exactitude de l'argument",
   "Auto-generated suggestions based on failing metrics":
     "Suggestions générées automatiquement basées sur les métriques en échec",
-  "Basic Chatbot": "Chatbot de base",
   "Battle results downloaded": "Résultats de la confrontation téléchargés",
   "Bias": "Biais",
   "Bias, Toxicity, Hallucination analysis with governance notes":
@@ -1126,7 +1048,6 @@ export const fr: Record<string, string> = {
     "Impossible d'utiliser un jeu de données vide. Veuillez téléverser un fichier avec au moins une invite.",
   "Cannot use an empty dataset. Please upload a file with prompts that have actual content.":
     "Impossible d'utiliser un jeu de données vide. Veuillez téléverser un fichier avec des invites contenant du contenu réel.",
-  "Coding Helper": "Assistant de code",
   "Coherence": "Cohérence",
   "Context Precision": "Précision du contexte",
   "Context Recall": "Rappel du contexte",
@@ -1143,20 +1064,15 @@ export const fr: Record<string, string> = {
   "Correctness": "Exactitude",
   "Could not find experiment to rerun": "Impossible de trouver l'expérience à réexécuter",
   "Custom / Self-hosted": "Personnalisé / Auto-hébergé",
-  "Customer Support (Single-Turn)": "Support client (tour unique)",
-  "Customer Support Multi-Turn": "Support client multi-tours",
   "Dataset removed": "Jeu de données supprimé",
   "Dataset, judge model, enabled metrics, and thresholds":
     "Jeu de données, modèle juge, métriques activées et seuils",
   "Description saved": "Description enregistrée",
-  "Document Q&A Multi-Turn": "Q&R sur document multi-tours",
   "Empty dataset": "Jeu de données vide",
   "Evaluates LLMs across 57 subjects including STEM, humanities, social sciences. Tests knowledge breadth and reasoning.":
     "Évalue les LLM sur 57 sujets, y compris STEM, sciences humaines et sociales. Teste l'étendue des connaissances et le raisonnement.",
   "Evaluates code generation capabilities with Python programming problems and unit tests.":
     "Évalue les capacités de génération de code avec des problèmes de programmation Python et des tests unitaires.",
-  "Evaluation Context": "Contexte d'évaluation",
-  "Evaluation Setup": "Configuration d'évaluation",
   "Experiment deleted": "Expérience supprimée",
   "Experiment name": "Nom de l'expérience",
   "Experiment results downloaded": "Résultats de l'expérience téléchargés",
@@ -1194,7 +1110,6 @@ export const fr: Record<string, string> = {
   "Failed to upload": "Échec du téléversement",
   "Faithfulness": "Fidélité",
   "Gemini": "Gemini",
-  "General Assistant Multi-Turn": "Assistant général multi-tours",
   "Hallucination": "Hallucination",
   "Head-to-head model comparison results": "Résultats de comparaison directe entre modèles",
   "Instruction Following": "Suivi des instructions",
@@ -1204,14 +1119,11 @@ export const fr: Record<string, string> = {
     "Jeu de données à grande échelle pour le raisonnement de bon sens, testant la résolution des pronoms en contexte.",
   "Last 100 days": "Derniers 100 jours",
   "Leaderboard": "Classement",
-  "Limitations & Recommendations": "Limitations et recommandations",
   "Local": "Local",
   "Local provider removed": "Fournisseur local supprimé",
   "Measures whether a language model is truthful in generating answers to questions.":
     "Mesure si un modèle de langage est véridique dans la génération de réponses aux questions.",
-  "Metric Results": "Résultats des métriques",
   "Metrics used to score model outputs": "Métriques utilisées pour noter les sorties des modèles",
-  "Model Under Test": "Modèle testé",
   "Model added successfully": "Modèle ajouté avec succès",
   "Model deleted successfully": "Modèle supprimé avec succès",
   "Must be OpenAI-compatible API (POST /v1/chat/completions)":
@@ -1240,7 +1152,6 @@ export const fr: Record<string, string> = {
   "Please select a provider and enter an API key":
     "Veuillez sélectionner un fournisseur et saisir une clé API",
   "Please select a provider and model": "Veuillez sélectionner un fournisseur et un modèle",
-  "Product Docs": "Documentation produit",
   "Project deleted": "Projet supprimé",
   "Project deleted successfully": "Projet supprimé avec succès",
   "Project renamed successfully": "Projet renommé avec succès",
@@ -1250,23 +1161,18 @@ export const fr: Record<string, string> = {
     "Informations sur le projet, l'organisation, l'évaluateur et la date",
   "Provider, model ID, and generation parameters":
     "Fournisseur, ID de modèle et paramètres de génération",
-  "Research Papers": "Articles de recherche",
   "Results copied to clipboard": "Résultats copiés dans le presse-papiers",
   "Role Adherence": "Respect du rôle",
   "Run and compare model evaluations": "Exécuter et comparer les évaluations de modèles",
-  "Safety & Compliance": "Sécurité et conformité",
-  "Sample-Level Details": "Détails au niveau de l'échantillon",
   "Science exam questions requiring reasoning. Includes Easy and Challenge sets with varying difficulty.":
     "Questions d'examen scientifique nécessitant un raisonnement. Comprend les ensembles Easy et Challenge de difficulté variable.",
   "Scorer created successfully": "Évaluateur créé avec succès",
   "Scorer deleted": "Évaluateur supprimé",
   "Scorer name": "Nom de l'évaluateur",
   "Scorer updated successfully": "Évaluateur mis à jour avec succès",
-  "Select Model": "Sélectionner un modèle",
   "Starting new evaluation run...": "Démarrage d'une nouvelle exécution d'évaluation...",
   "Step Efficiency": "Efficacité de l'étape",
   "Task Completion": "Achèvement de la tâche",
-  "Tech Support Multi-Turn": "Support technique multi-tours",
   "Template datasets": "Jeux de données modèles",
   "Test datasets for evaluating models": "Jeux de données de test pour évaluer les modèles",
   "Tests common-sense reasoning by predicting the most plausible continuation of a scenario.":
@@ -1340,8 +1246,6 @@ export const fr: Record<string, string> = {
   "Unknown model": "Modèle inconnu",
   "Multi-turn dataset": "Jeu de données multi-tours",
   "LLM judge": "Juge LLM",
-  "Coherence, helpfulness, task completion and safety start unticked: they don't return scores on multi-turn runs yet.":
-    "Cohérence, utilité, accomplissement de la tâche et sécurité sont décochés au départ : ils ne renvoient pas encore de score sur les exécutions multi-tours.",
   "Bias and toxicity are scored on each assistant turn, then combined into one score":
     "Les biais et la toxicité sont évalués à chaque tour de l'assistant, puis combinés en un seul score",
   "RAG metrics": "Métriques RAG",
@@ -1369,8 +1273,6 @@ export const fr: Record<string, string> = {
     "Lancez votre première expérience pour suivre les scores",
   "Evaluation metrics": "Métriques d'évaluation",
   "Search bias audits": "Rechercher des audits de biais",
-  "Generate PDF or CSV reports from completed experiments. Reports follow the EvalCards standard for AI evaluation documentation.":
-    "Générez des rapports PDF ou CSV à partir des expériences terminées. Les rapports suivent la norme EvalCards pour la documentation des évaluations d'IA.",
   "Report preview": "Aperçu du rapport",
   "Generate evaluation report": "Générer un rapport d'évaluation",
   "PDF: structured report with charts and tables":
@@ -1460,7 +1362,6 @@ export const es: Record<string, string> = {
   "Rename": "Cambiar nombre",
   "Save Model": "Guardar modelo",
   "Standard Q&A evaluation": "Evaluación de preguntas y respuestas estándar",
-  "Start Experiment": "Iniciar experimento",
   "Threshold (4/5ths rule)": "Umbral (regla de los 4/5)",
   "View and manage model configurations. These preferences are automatically saved when you run an experiment and auto-loaded for new experiments in the same project.":
     "Vea y gestione las configuraciones de los modelos. Estas preferencias se guardan automáticamente al ejecutar un experimento y se cargan de forma automática para nuevos experimentos en el mismo proyecto.",
@@ -1487,7 +1388,6 @@ export const es: Record<string, string> = {
   "Download example": "Descargar ejemplo",
   "Download JSON": "Descargar JSON",
   "Generate audit reports": "Generar informes de auditoría",
-  "Generate Evaluation Report": "Generar informe de evaluación",
   "Generate your first report": "Genera tu primer informe",
   "Go back": "Volver",
   "Import existing dataset in JSON format": "Importar conjunto de datos existente en formato JSON",
@@ -1545,7 +1445,6 @@ export const es: Record<string, string> = {
   "Precision": "Precisión",
   "Prediction": "Predicción",
   "Project name": "Nombre del proyecto",
-  "Report Preview": "Vista previa del informe",
   "Report title": "Título del informe",
   "Retrieval context": "Contexto de recuperación",
   "Scenario:": "Escenario:",
@@ -1653,7 +1552,6 @@ export const es: Record<string, string> = {
   "The audit calculates performance differences across groups. See pass rates, accuracy gaps, and statistical significance scores.":
     "La auditoría calcula las diferencias de rendimiento entre los grupos. Vea las tasas de aprobación, las brechas de precisión y las puntuaciones de significancia estadística.",
   "e.g., Coding Tasks Evaluation": "p. ej., Evaluación de tareas de programación",
-  "e.g., GPT-4 vs Claude Showdown": "p. ej., GPT-4 vs Claude Showdown",
   "e.g., General, Safety, Factual": "p. ej., General, Seguridad, Factual",
   "All time": "Todo el tiempo",
   "Group": "Grupo",
@@ -1664,7 +1562,6 @@ export const es: Record<string, string> = {
   "Recent experiments": "Experimentos recientes",
   "Recent projects": "Proyectos recientes",
   "API Compatibility": "Compatibilidad de API",
-  "Agent Metrics": "Métricas del agente",
   "All available providers have been configured. Remove a key to add a different one.":
     "Todos los proveedores disponibles han sido configurados. Elimine una clave para añadir otra distinta.",
   "All contestants will be evaluated using this dataset":
@@ -1674,8 +1571,6 @@ export const es: Record<string, string> = {
   "Audit settings": "Configuración de auditoría",
   "Average scores by criteria": "Puntuaciones medias por criterio",
   "Battle Failed": "La batalla falló",
-  "Bias and Toxicity will be evaluated on each assistant turn and aggregated":
-    "El sesgo y la toxicidad se evaluarán en cada turno del asistente y se agregarán",
   "Choose the regulatory framework that applies to your bias audit":
     "Elija el marco regulatorio que se aplica a su auditoría de sesgo",
   "Column mapping": "Asignación de columnas",
@@ -1688,9 +1583,7 @@ export const es: Record<string, string> = {
   "Conversation Format": "Formato de conversación",
   "Conversation Turns": "Turnos de conversación",
   "Conversation type": "Tipo de conversación",
-  "Conversational Metrics": "Métricas conversacionales",
   "Conversational metrics": "Métricas conversacionales",
-  "Create Scorer": "Crear evaluador",
   "Create a scorer to use custom evaluation criteria":
     "Cree un evaluador para utilizar criterios de evaluación personalizados",
   "Custom scorers": "Evaluadores personalizados",
@@ -1708,14 +1601,10 @@ export const es: Record<string, string> = {
     "Edite los prompts de abajo y luego haga clic en Guardar para actualizar su conjunto de datos.",
   "Encrypted keys for running evaluations across all projects":
     "Claves cifradas para ejecutar evaluaciones en todos los proyectos",
-  "Evaluation Metrics": "Métricas de evaluación",
-  "Evaluation Reports": "Informes de evaluación",
   "Evaluation criteria": "Criterios de evaluación",
   "Expected Outcome": "Resultado esperado",
-  "Expected Outcome:": "Resultado esperado:",
   "Experiments to include": "Experimentos a incluir",
   "Format Preview": "Vista previa del formato",
-  "Generate new report": "Generar nuevo informe",
   "Ground truth column": "Columna de valores reales",
   "How Simulated Mode Works": "Cómo funciona el modo simulado",
   "Industry-standard benchmarks powered by DeepEval for comprehensive LLM evaluation.":
@@ -1724,7 +1613,6 @@ export const es: Record<string, string> = {
   "JSON file with prompts and expected outputs": "Archivo JSON con prompts y salidas esperadas",
   "Judge": "Juez",
   "Judge's reasoning": "Razonamiento del juez",
-  "LLM Evals Settings": "Configuración de LLM Evals",
   "LLM use case": "Caso de uso de LLM",
   "Loading performance data...": "Cargando datos de rendimiento...",
   "Loading providers...": "Cargando proveedores...",
@@ -1754,17 +1642,13 @@ export const es: Record<string, string> = {
   "No prompts found in this dataset.": "No se han encontrado prompts en este conjunto de datos.",
   "No prompts in this dataset yet.": "Aún no hay prompts en este conjunto de datos.",
   "No samples found": "No se han encontrado muestras",
-  "Option 1: Use custom dataset": "Opción 1: Usar un conjunto de datos personalizado",
-  "Option 2: Your datasets": "Opción 2: Tus conjuntos de datos",
   "Outcome column": "Columna de resultado",
   "POST /v1/chat/completions": "POST /v1/chat/completions",
-  "Per-Turn Safety Metrics": "Métricas de seguridad por turno",
   "Please select at least one evaluation criterion":
     "Seleccione al menos un criterio de evaluación",
   "Prediction column": "Columna de predicción",
   "Provider API keys": "Claves de API del proveedor",
   "Quality metrics": "Métricas de calidad",
-  "RAG Metrics": "Métricas de RAG",
   "Report sections": "Secciones del informe",
   "Required columns": "Columnas obligatorias",
   "Review & run": "Revisar y ejecutar",
@@ -1779,12 +1663,9 @@ export const es: Record<string, string> = {
   "Safety metrics": "Métricas de seguridad",
   "Score column": "Columna de puntuación",
   "Select Provider": "Seleccionar proveedor",
-  "Select a Provider": "Seleccionar un proveedor",
   "Select a compliance framework": "Seleccionar un marco de cumplimiento",
   "Select provider type": "Seleccionar tipo de proveedor",
   "Select the model you want to evaluate.": "Selecciona el modelo que quieres evaluar.",
-  "Standard Benchmarks": "Benchmarks estándar",
-  "Standard Judge Configuration": "Configuración estándar del evaluador",
   "Standard metrics require a Judge LLM.": "Las métricas estándar requieren un LLM evaluador.",
   "The LLM that will compare and score the responses":
     "El LLM que comparará y puntuará las respuestas",
@@ -1797,14 +1678,11 @@ export const es: Record<string, string> = {
   "Topics": "Temas",
   "Track metric scores across eval runs":
     "Realiza un seguimiento de las puntuaciones de métricas en las ejecuciones de evaluación",
-  "Universal Core Metrics": "Métricas básicas universales",
   "Upload applicant data": "Subir datos de candidatos",
   "Use Case": "Caso de uso",
   "Win Rate": "Tasa de victorias",
   "Winner": "Ganador",
   "Wins": "Victorias",
-  "You can start tracking metrics once you define your experiments":
-    "Puede empezar a hacer un seguimiento de las métricas una vez que defina sus experimentos",
   "Your scorers": "Tus evaluadores",
   "Your custom scorer will be used instead.": "En su lugar, se usará su evaluador personalizado.",
   "API key added successfully": "Clave de API añadida correctamente",
@@ -1812,22 +1690,17 @@ export const es: Record<string, string> = {
   "API key removed successfully": "Clave de API eliminada correctamente",
   "API key verified and saved successfully": "Clave API verificada y guardada correctamente",
   "Action Relevance": "Relevancia de la acción",
-  "Agent Planning": "Planificación de agentes",
-  "Agent Task Execution": "Ejecución de tareas del agente",
-  "Agent Workflow Automation": "Automatización del flujo de trabajo del agente",
   "An unknown error occurred": "Se ha producido un error desconocido",
   "Answer Correctness": "Corrección de la respuesta",
   "Answer Relevancy": "Relevancia de la respuesta",
   "Are you sure you want to delete this bias audit? This action cannot be undone.":
     "¿Está seguro de que desea eliminar esta auditoría de sesgo? Esta acción no se puede deshacer.",
   "Arena": "Arena",
-  "Arena Comparison": "Comparación en arena",
   "Arena battle started!": "¡Enfrentamiento en arena iniciado!",
   "Arena comparison deleted": "Comparación en arena eliminada",
   "Argument Correctness": "Corrección del argumento",
   "Auto-generated suggestions based on failing metrics":
     "Sugerencias generadas automáticamente según las métricas que no superan el umbral",
-  "Basic Chatbot": "Chatbot básico",
   "Battle results downloaded": "Resultados del enfrentamiento descargados",
   "Bias": "Sesgo",
   "Bias, Toxicity, Hallucination analysis with governance notes":
@@ -1840,7 +1713,6 @@ export const es: Record<string, string> = {
     "No se puede usar un conjunto de datos vacío. Cargue un archivo con al menos un prompt.",
   "Cannot use an empty dataset. Please upload a file with prompts that have actual content.":
     "No se puede usar un conjunto de datos vacío. Cargue un archivo con prompts que tengan contenido real.",
-  "Coding Helper": "Asistente de programación",
   "Coherence": "Coherencia",
   "Context Precision": "Precisión del contexto",
   "Context Recall": "Exhaustividad del contexto",
@@ -1857,20 +1729,15 @@ export const es: Record<string, string> = {
   "Correctness": "Corrección",
   "Could not find experiment to rerun": "No se encontró el experimento para volver a ejecutar",
   "Custom / Self-hosted": "Personalizado / Autoalojado",
-  "Customer Support (Single-Turn)": "Atención al cliente (un solo turno)",
-  "Customer Support Multi-Turn": "Atención al cliente multiturno",
   "Dataset removed": "Conjunto de datos eliminado",
   "Dataset, judge model, enabled metrics, and thresholds":
     "Conjunto de datos, modelo juez, métricas activadas y umbrales",
   "Description saved": "Descripción guardada",
-  "Document Q&A Multi-Turn": "Preguntas y respuestas sobre documentos multiturno",
   "Empty dataset": "Conjunto de datos vacío",
   "Evaluates LLMs across 57 subjects including STEM, humanities, social sciences. Tests knowledge breadth and reasoning.":
     "Evalúa los LLM en 57 materias, incluidas STEM, humanidades y ciencias sociales. Pone a prueba la amplitud de conocimientos y el razonamiento.",
   "Evaluates code generation capabilities with Python programming problems and unit tests.":
     "Evalúa las capacidades de generación de código con problemas de programación en Python y pruebas unitarias.",
-  "Evaluation Context": "Contexto de la evaluación",
-  "Evaluation Setup": "Configuración de la evaluación",
   "Experiment deleted": "Experimento eliminado",
   "Experiment name": "Nombre del experimento",
   "Experiment results downloaded": "Resultados del experimento descargados",
@@ -1908,7 +1775,6 @@ export const es: Record<string, string> = {
   "Failed to upload": "Error al subir",
   "Faithfulness": "Fidelidad",
   "Gemini": "Gemini",
-  "General Assistant Multi-Turn": "Asistente general multiturno",
   "Hallucination": "Alucinación",
   "Head-to-head model comparison results": "Resultados de la comparación directa de modelos",
   "Instruction Following": "Seguimiento de instrucciones",
@@ -1918,14 +1784,11 @@ export const es: Record<string, string> = {
     "Conjunto de datos a gran escala para razonamiento de sentido común, que pone a prueba la resolución de pronombres en contexto.",
   "Last 100 days": "Últimos 100 días",
   "Leaderboard": "Clasificación",
-  "Limitations & Recommendations": "Limitaciones y recomendaciones",
   "Local": "Local",
   "Local provider removed": "Proveedor local eliminado",
   "Measures whether a language model is truthful in generating answers to questions.":
     "Mide si un modelo de lenguaje es veraz al generar respuestas a las preguntas.",
-  "Metric Results": "Resultados de métricas",
   "Metrics used to score model outputs": "Métricas utilizadas para puntuar las salidas del modelo",
-  "Model Under Test": "Modelo en prueba",
   "Model added successfully": "Modelo añadido correctamente",
   "Model deleted successfully": "Modelo eliminado correctamente",
   "Must be OpenAI-compatible API (POST /v1/chat/completions)":
@@ -1954,7 +1817,6 @@ export const es: Record<string, string> = {
   "Please select a provider and enter an API key":
     "Seleccione un proveedor e introduzca una clave de API",
   "Please select a provider and model": "Selecciona un proveedor y un modelo",
-  "Product Docs": "Documentación del producto",
   "Project deleted": "Proyecto eliminado",
   "Project deleted successfully": "Proyecto eliminado correctamente",
   "Project renamed successfully": "Proyecto renombrado correctamente",
@@ -1964,23 +1826,18 @@ export const es: Record<string, string> = {
     "Información del proyecto, la organización, el evaluador y la fecha",
   "Provider, model ID, and generation parameters":
     "Proveedor, ID del modelo y parámetros de generación",
-  "Research Papers": "Artículos de investigación",
   "Results copied to clipboard": "Resultados copiados al portapapeles",
   "Role Adherence": "Cumplimiento del rol",
   "Run and compare model evaluations": "Ejecuta y compara evaluaciones de modelos",
-  "Safety & Compliance": "Seguridad y cumplimiento",
-  "Sample-Level Details": "Detalles a nivel de muestra",
   "Science exam questions requiring reasoning. Includes Easy and Challenge sets with varying difficulty.":
     "Preguntas de examen de ciencias que requieren razonamiento. Incluye conjuntos Easy y Challenge con dificultad variable.",
   "Scorer created successfully": "Evaluador creado correctamente",
   "Scorer deleted": "Evaluador eliminado",
   "Scorer name": "Nombre del evaluador",
   "Scorer updated successfully": "Evaluador actualizado correctamente",
-  "Select Model": "Seleccionar modelo",
   "Starting new evaluation run...": "Iniciando nueva ejecución de evaluación...",
   "Step Efficiency": "Eficiencia de los pasos",
   "Task Completion": "Finalización de tareas",
-  "Tech Support Multi-Turn": "Soporte técnico multiturno",
   "Template datasets": "Conjuntos de datos de plantilla",
   "Test datasets for evaluating models": "Conjuntos de datos de prueba para evaluar modelos",
   "Tests common-sense reasoning by predicting the most plausible continuation of a scenario.":
@@ -2054,8 +1911,6 @@ export const es: Record<string, string> = {
   "Unknown model": "Modelo desconocido",
   "Multi-turn dataset": "Conjunto de datos de varios turnos",
   "LLM judge": "Juez LLM",
-  "Coherence, helpfulness, task completion and safety start unticked: they don't return scores on multi-turn runs yet.":
-    "Coherencia, utilidad, finalización de la tarea y seguridad empiezan sin marcar: todavía no devuelven puntuaciones en ejecuciones de varios turnos.",
   "Bias and toxicity are scored on each assistant turn, then combined into one score":
     "El sesgo y la toxicidad se puntúan en cada turno del asistente y luego se combinan en una sola puntuación",
   "RAG metrics": "Métricas de RAG",
@@ -2084,8 +1939,6 @@ export const es: Record<string, string> = {
     "Ejecuta tu primer experimento para empezar a seguir las puntuaciones",
   "Evaluation metrics": "Métricas de evaluación",
   "Search bias audits": "Buscar auditorías de sesgo",
-  "Generate PDF or CSV reports from completed experiments. Reports follow the EvalCards standard for AI evaluation documentation.":
-    "Genere informes PDF o CSV a partir de experimentos completados. Los informes siguen el estándar EvalCards para la documentación de evaluaciones de IA.",
   "Report preview": "Vista previa del informe",
   "Generate evaluation report": "Generar informe de evaluación",
   "PDF: structured report with charts and tables":

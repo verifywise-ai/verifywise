@@ -1,10 +1,69 @@
 import { sequelize } from "../database/db";
 import { buildVisibilityFilterForEvidence } from "./visibility.utils";
+import { buildFileAccessFilter } from "./fileUpload.utils";
 import type { QualityGrade } from "../domain.layer/interfaces/i.evidenceAi";
 import { logStructured } from "./logger/fileLogger";
 
 /**
+ * Who may replace a file's stored analysis (one row per file).
+ *
+ * The stored analysis belongs to its author. Another user may not replace it
+ * when either side is private: a private analysis is hidden from everyone
+ * else, and a private re-run would hide a colleague's public one. Exempt: a
+ * caller allowed to override (file.admin), and an analysis whose author is
+ * unknown or no longer a member of the organization.
+ */
+export interface AnalysisReplaceGuard {
+  /** The user writing the new analysis. */
+  userId: number | null;
+  /** The new analysis's visibility. */
+  visibility: string;
+  /** The caller may replace anyone's analysis. */
+  canOverride: boolean;
+}
+
+/** The stored analysis as isAnalysisReplaceBlocked reads it. */
+export interface AnalysisAuthor {
+  visibility: string;
+  analyzed_by: number | null;
+  /** Whether analyzed_by is still a member of the organization. */
+  author_is_member: boolean;
+}
+
+/** True when the guard's caller may not replace `existing`. */
+export const isAnalysisReplaceBlocked = (
+  existing: AnalysisAuthor | null,
+  guard: AnalysisReplaceGuard,
+): boolean =>
+  !!existing &&
+  !guard.canOverride &&
+  existing.analyzed_by != null &&
+  existing.author_is_member &&
+  Number(existing.analyzed_by) !== guard.userId &&
+  (existing.visibility === "private" || guard.visibility === "private");
+
+/**
+ * isAnalysisReplaceBlocked as SQL over the evidence_ai_analysis row being
+ * updated, so the write re-checks what the early check saw.
+ */
+const REPLACE_ALLOWED_SQL = `(
+      :canOverride
+      OR analyzed_by IS NULL
+      OR analyzed_by IS NOT DISTINCT FROM :guardUserId
+      OR (visibility <> 'private' AND :guardVisibility <> 'private')
+      OR NOT EXISTS (
+        SELECT 1 FROM organization_members om
+         WHERE om.user_id = evidence_ai_analysis.analyzed_by
+           AND om.organization_id = evidence_ai_analysis.organization_id
+      )
+    )`;
+
+/**
  * Insert or update an AI analysis result for a file.
+ *
+ * With a `guard`, an existing row is replaced only when the guard allows it
+ * (isAnalysisReplaceBlocked, re-checked in the UPDATE); otherwise nothing is
+ * written and null is returned.
  *
  * `audit_metadata` is optional — analyzer-v2 produces it (per-dimension
  * rationales, document signals, evidence quotes). Heuristic-v1 leaves
@@ -25,6 +84,7 @@ export const upsertAnalysisQuery = async (
     visibility?: string;
     audit_metadata?: any | null;
   },
+  guard?: AnalysisReplaceGuard,
 ) => {
   const auditMetadataJson =
     data.audit_metadata != null ? JSON.stringify(data.audit_metadata) : null;
@@ -54,11 +114,19 @@ export const upsertAnalysisQuery = async (
          visibility = :visibility,
          audit_metadata = :audit_metadata::jsonb
        WHERE id = :id AND organization_id = :organizationId
+         ${guard ? `AND ${REPLACE_ALLOWED_SQL}` : ""}
        RETURNING *`,
       {
         replacements: {
           id: existingId,
           organizationId,
+          ...(guard
+            ? {
+                canOverride: guard.canOverride,
+                guardUserId: guard.userId,
+                guardVisibility: guard.visibility,
+              }
+            : {}),
           summary: data.summary,
           key_findings: JSON.stringify(data.key_findings),
           compliance_areas: JSON.stringify(data.compliance_areas),
@@ -72,7 +140,7 @@ export const upsertAnalysisQuery = async (
         },
       },
     );
-    return (updated as any[])[0];
+    return (updated as any[])[0] ?? null;
   }
 
   const [created] = await sequelize.query(
@@ -129,24 +197,56 @@ export const getAnalysisByFileIdQuery = async (
 };
 
 /**
- * Get quality scores for all analyzed files (dashboard view).
+ * Visibility and author of a file's stored analysis, and whether the author
+ * is still a member of the organization, or null when there is none. Input
+ * to isAnalysisReplaceBlocked.
+ */
+export const getAnalysisAuthorQuery = async (
+  fileId: number,
+  organizationId: number,
+): Promise<AnalysisAuthor | null> => {
+  const [rows] = await sequelize.query(
+    `SELECT eaa.visibility, eaa.analyzed_by,
+            EXISTS (
+              SELECT 1 FROM organization_members om
+               WHERE om.user_id = eaa.analyzed_by
+                 AND om.organization_id = eaa.organization_id
+            ) AS author_is_member
+       FROM evidence_ai_analysis eaa
+      WHERE eaa.file_id = :fileId AND eaa.organization_id = :organizationId
+      LIMIT 1`,
+    { replacements: { fileId, organizationId } },
+  );
+  return (rows as any[])[0] ?? null;
+};
+
+/**
+ * Get quality scores for analyzed files (dashboard view).
+ *
+ * Each row carries the analysis itself (summary, findings, suggested links),
+ * so the list is limited to files the caller can access (the rule
+ * canUserAccessFile applies to GET /analysis/:fileId) on top of the
+ * visibility filter.
  */
 export const getQualityScoresQuery = async (
   organizationId: number,
-  userId?: number | null,
+  userId: number | null,
+  role: string,
   visibility?: string,
 ) => {
-  const vis = buildVisibilityFilterForEvidence(userId ?? null, visibility, "eaa");
+  const vis = buildVisibilityFilterForEvidence(userId, visibility, "eaa");
+  const access = buildFileAccessFilter("f", userId, role);
   const [rows] = await sequelize.query(
     `SELECT eaa.*, f.filename
      FROM evidence_ai_analysis eaa
-     LEFT JOIN files f ON f.id = eaa.file_id
+     LEFT JOIN files f ON f.id = eaa.file_id AND f.organization_id = eaa.organization_id
      WHERE eaa.organization_id = :organizationId
      ${vis.clause}
+     ${access.clause}
      ORDER BY CASE eaa.overall_quality_grade
        WHEN 'F' THEN 0 WHEN 'D' THEN 1 WHEN 'C' THEN 2
        WHEN 'B' THEN 3 WHEN 'A' THEN 4 ELSE 5 END ASC`,
-    { replacements: { organizationId, ...vis.replacements } },
+    { replacements: { organizationId, ...vis.replacements, ...access.replacements } },
   );
   return rows as any[];
 };
@@ -414,8 +514,16 @@ export const getEvidenceGapsQuery = async (
 /**
  * Get suggested control links for a file.
  */
-export const getSuggestionsQuery = async (fileId: number, organizationId: number) => {
-  const analysis = await getAnalysisByFileIdQuery(fileId, organizationId);
+/**
+ * Suggested control links from the file's analysis the caller can see: a
+ * public one, or their own private one.
+ */
+export const getSuggestionsQuery = async (
+  fileId: number,
+  organizationId: number,
+  userId: number | null,
+) => {
+  const analysis = await getAnalysisByFileIdQuery(fileId, organizationId, userId);
   if (!analysis) return null;
 
   return {

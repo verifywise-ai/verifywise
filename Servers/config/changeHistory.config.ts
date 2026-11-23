@@ -149,6 +149,45 @@ const namedRowFormatter =
     }
   };
 
+/** The integer ids in a list value (an array, or one id), without repeats, ascending. */
+const idList = (value: unknown): number[] => {
+  const raw = Array.isArray(value) ? value : value === null || value === undefined ? [] : [value];
+  return [...new Set(raw.map((v) => Number(v)).filter((n) => Number.isInteger(n) && n > 0))].sort(
+    (a, b) => a - b,
+  );
+};
+
+/**
+ * Formatter for a list of ids that reference rows by name, like
+ * namedRowFormatter for one id: names in id order, joined, "-" for none.
+ * `sql` selects `id` and `name` filtered by `:ids` (and `:organizationId`
+ * when `scoped`). A scoped lookup without an organization in the context
+ * does not query and shows the `${label} #id` fallbacks.
+ */
+const namedRowsFormatter =
+  (sql: string, label: string, scoped = true): FieldFormatter =>
+  async (value: unknown, context?: FormatterContext): Promise<string> => {
+    const ids = idList(value);
+    if (ids.length === 0) return "-";
+    const fallback = (id: number) => `${label} #${id}`;
+    if (scoped && context?.organizationId === undefined) return ids.map(fallback).join(", ");
+    try {
+      const rows = await selectInSavepoint<{ id: number; name: string | null }>(
+        sql,
+        { ids, organizationId: context?.organizationId ?? null },
+        context?.transaction,
+      );
+      const names = new Map(rows.map((row) => [Number(row.id), row.name]));
+      return ids.map((id) => names.get(id) || fallback(id)).join(", ");
+    } catch (error) {
+      logger.error(`Error fetching ${label} names for IDs ${JSON.stringify(ids)}: ${error}`);
+      return ids.map(fallback).join(", ");
+    }
+  };
+
+/** Comparison key for a list of ids: the set, so a reorder records nothing. */
+const idSetKey = (value: unknown): string => idList(value).join(",");
+
 /** Comparison key for a nullable id column: "" for none, else the number as text. */
 const nullableIdKey = (value: unknown): string =>
   value === null || value === undefined || value === "" || Number(value) === 0
@@ -490,6 +529,7 @@ export const ENTITY_CONFIGS: { [key in EntityType]: EntityConfig } = {
       "past_issues",
       "regulatory_exposure",
       "risk_score",
+      "projects",
     ],
     fieldLabels: {
       vendor_name: "Vendor name",
@@ -506,12 +546,23 @@ export const ENTITY_CONFIGS: { [key in EntityType]: EntityConfig } = {
       past_issues: "Past issues",
       regulatory_exposure: "Regulatory exposure",
       risk_score: "Risk score",
+      projects: "Use cases",
     },
     fieldFormatters: {
       review_date: GENERIC_FORMATTERS.date,
       reviewer: GENERIC_FORMATTERS.user,
       assignee: GENERIC_FORMATTERS.user,
+      // A count, not names: every vendor viewer reads this history, and
+      // most of them can't see every use case a vendor is linked to.
+      projects: async (value: unknown): Promise<string> => {
+        const linked = idList(value).length;
+        if (linked === 0) return "-";
+        return linked === 1 ? "1 use case" : `${linked} use cases`;
+      },
     },
+    // The links as stored before and after the write (vendor.ctrl.ts), as a
+    // set: a swap records a change even when the count stays the same.
+    fieldComparators: { projects: idSetKey },
   },
 
   use_case: {
@@ -757,6 +808,8 @@ export const ENTITY_CONFIGS: { [key in EntityType]: EntityConfig } = {
       "action_plan",
       "action_owner",
       "risk_level",
+      "vendor_id",
+      "frameworks",
     ],
     fieldLabels: {
       risk_description: "Risk description",
@@ -767,10 +820,23 @@ export const ENTITY_CONFIGS: { [key in EntityType]: EntityConfig } = {
       action_plan: "Action plan",
       action_owner: "Action owner",
       risk_level: "Risk level",
+      vendor_id: "Vendor",
+      frameworks: "Frameworks",
     },
     fieldFormatters: {
       action_owner: GENERIC_FORMATTERS.user,
+      vendor_id: namedRowFormatter(
+        "SELECT vendor_name AS name FROM vendors WHERE id = :id AND organization_id = :organizationId",
+        "Vendor",
+      ),
+      // Frameworks are shared by every organization.
+      frameworks: namedRowsFormatter(
+        "SELECT id, name FROM frameworks WHERE id IN (:ids)",
+        "Framework",
+        false,
+      ),
     },
+    fieldComparators: { vendor_id: nullableIdKey, frameworks: idSetKey },
   },
 
   policy: {
@@ -952,6 +1018,7 @@ export const ENTITY_CONFIGS: { [key in EntityType]: EntityConfig } = {
       "mitigation_plan",
       "impact",
       "likelihood",
+      "severity",
       "model_id",
     ],
     fieldLabels: {
@@ -965,6 +1032,7 @@ export const ENTITY_CONFIGS: { [key in EntityType]: EntityConfig } = {
       mitigation_plan: "Mitigation plan",
       impact: "Impact",
       likelihood: "Likelihood",
+      severity: "Severity",
       model_id: "Associated model",
     },
     fieldFormatters: {

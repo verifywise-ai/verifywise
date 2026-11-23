@@ -32,6 +32,10 @@ jest.mock("../../utils/project.utils", () => ({ createNewProjectQuery: jest.fn()
 jest.mock("../../utils/rolePermissions.utils", () => ({
   requestHasPermission: jest.fn(async () => true),
 }));
+// Approve reads the caller's Admin role before its transaction opens.
+jest.mock("../../utils/organizationAdmin.utils", () => ({
+  requestCallerIsAdmin: jest.fn<any>().mockResolvedValue(false),
+}));
 // Approving a use case reads the org's use case defaults (#5192): none set.
 jest.mock("../../utils/useCaseOrgSettings.utils", () => ({
   getUseCaseOrgSettings: async (organizationId: number) => ({

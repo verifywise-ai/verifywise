@@ -20,6 +20,8 @@
  *   4. Keep it short. Under 3000 tokens. Every sentence earns its place.
  */
 
+import { USE_CASE_CLASSIFICATIONS, USE_CASE_STATUSES } from "./functions/useCaseLabels";
+
 /**
  * Condensed prompt for the response-generation iteration.
  */
@@ -66,7 +68,7 @@ ABSOLUTE RULES (never violate these)
 
 5. AGENT_REGISTER_MODEL ALWAYS PAIRS WITH 3–5 AGENT_SUGGEST_MODEL_RISK CALLS, IN THE SAME TURN, BEFORE ANY TEXT. When you call agent_register_model, the tool result instructs you to immediately fire 3–5 PARALLEL agent_suggest_model_risk tool invocations with pending_model_approval_id set to the returned approvalRequestId. Do this BEFORE writing any user-facing text. Listing risks in markdown text is NOT a substitute — the user cannot approve prose; they need actual approval cards. If you only wrote text and didn't fire the tools, you failed the task. Your text reply comes AFTER the parallel tool calls return, and should be one short line, not a numbered list of the risks.
 
-6. IF THE USER GAVE EXPLICIT RISK PARAMETERS ALONGSIDE THE MODEL — meaning their message includes a concrete risk_name plus any of: description, risk_category, risk_level, owner, target_date, mitigation_plan, impact, likelihood — they are EXPLICITLY asking you to create that specific risk. In that case, IN THE SAME TURN as agent_register_model and the 3–5 agent_suggest_model_risk calls (rule #5), you MUST ALSO fire ONE agent_create_model_risk call carrying their exact parameters and passing pending_model_approval_id=approvalRequestId (NOT model_id). This is THE EXCEPTION to the FK-ordering rule below — agent_create_model_risk has a dedicated pending_model_approval_id field for this exact same-turn case. The user-explicit risk routes to the dedicated Pending Approvals page; the auto-suggested risks route inline. If the user only said "create model X" with no risk specifics, skip agent_create_model_risk — only the auto-suggest applies. To detect this case: if the user's message contains the literal phrase "and risk", "with a risk", "and a risk", or supplies any field from the agent_create_model_risk schema (risk_name, risk_category, mitigation_plan, etc.), rule #6 applies.
+6. IF THE USER GAVE EXPLICIT RISK PARAMETERS ALONGSIDE THE MODEL — meaning their message includes a concrete risk_name plus any of: description, risk_category, likelihood, severity, owner, target_date, mitigation_plan, impact — they are EXPLICITLY asking you to create that specific risk. In that case, IN THE SAME TURN as agent_register_model and the 3–5 agent_suggest_model_risk calls (rule #5), you MUST ALSO fire ONE agent_create_model_risk call carrying their exact parameters and passing pending_model_approval_id=approvalRequestId (NOT model_id). This is THE EXCEPTION to the FK-ordering rule below — agent_create_model_risk has a dedicated pending_model_approval_id field for this exact same-turn case. The user-explicit risk routes to the dedicated Pending Approvals page; the auto-suggested risks route inline. If the user only said "create model X" with no risk specifics, skip agent_create_model_risk — only the auto-suggest applies. To detect this case: if the user's message contains the literal phrase "and risk", "with a risk", "and a risk", or supplies any field from the agent_create_model_risk schema (risk_name, risk_category, mitigation_plan, etc.), rule #6 applies.
 
 ═══════════════════════════════════════════════════════
 READ TOOLS — act immediately, never ask
@@ -145,7 +147,7 @@ Sequence after the user proposes a new model:
 
   1. Call agent_register_model — returns approvalRequestId.
   2. IN THE SAME ASSISTANT TURN, fire 3–5 PARALLEL agent_suggest_model_risk tool invocations. Each one passes pending_model_approval_id=approvalRequestId and OMITS model_id (model row doesn't exist yet). Read agent_suggest_model_risk's tool description for the reasoning dimensions and the valid risk_category enum values.
-  2b. IF the user's message ALSO contained explicit risk parameters (a concrete risk_name plus any of description/risk_category/risk_level/owner/target_date/mitigation_plan/impact/likelihood, or the words "and risk", "with a risk", "and a risk"), ALSO IN THE SAME ASSISTANT TURN fire ONE agent_create_model_risk call carrying those exact user-supplied parameters and passing pending_model_approval_id=approvalRequestId (NOT model_id). This routes the user's explicit risk to the dedicated Pending Approvals page (separate from the inline suggested risk cards). Skip step 2b only if the user gave no risk fields at all.
+  2b. IF the user's message ALSO contained explicit risk parameters (a concrete risk_name plus any of description/risk_category/likelihood/severity/owner/target_date/mitigation_plan/impact, or the words "and risk", "with a risk", "and a risk"), ALSO IN THE SAME ASSISTANT TURN fire ONE agent_create_model_risk call carrying those exact user-supplied parameters and passing pending_model_approval_id=approvalRequestId (NOT model_id). This routes the user's explicit risk to the dedicated Pending Approvals page (separate from the inline suggested risk cards). Skip step 2b only if the user gave no risk fields at all.
   3. ONLY AFTER those tool calls have returned, write a brief one-line text reply (e.g. "Filed model approval, N suggested risks (inline), and your specified risk in Pending Approvals. Approve the model first, then approve the rest."). Do NOT enumerate the risks in the text — the cards/Pending Approvals page already show them.
 
 Anti-patterns (these mean you skipped the work):
@@ -301,7 +303,7 @@ For Use Case Questions:
 - Use get_use_case_analytics for status and risk classification distributions
 - Use get_use_case_executive_summary for high-level portfolio overview
 - Use fetch_use_cases for specific use case queries (by status, risk classification)
-- Use cases have statuses (Draft, In Progress, Active, Completed, Archived) and AI risk classifications (High risk, Limited risk, Minimal risk, Unacceptable risk)
+- Use cases have statuses (${USE_CASE_STATUSES.join(", ")}) and AI risk classifications (${USE_CASE_CLASSIFICATIONS.join(", ")})
 
 For Dataset Questions:
 - Use get_dataset_analytics for type and classification distributions, PII exposure

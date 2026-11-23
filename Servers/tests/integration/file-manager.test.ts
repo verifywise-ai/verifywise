@@ -106,6 +106,25 @@ describe("File Manager API", () => {
       expect(row.source).toBe("File Manager");
       expect(Buffer.from(row.content).toString()).toBe(CSV_BODY);
     });
+
+    it("stores bytes in the content column with NULL storage columns under the default provider", async () => {
+      const app = await adminApp();
+      const fileId = await uploadFile(app);
+
+      // Backward-compatibility lock: with no STORAGE_PROVIDER configured the
+      // storage abstraction must behave exactly like the pre-abstraction code —
+      // bytes in content, no external pointer. This is what keeps existing
+      // deployments working without configuration changes.
+      const [row] = (await sequelize.query(
+        `SELECT storage_provider, storage_key, octet_length(content) AS content_length
+           FROM files WHERE id = :fileId`,
+        { replacements: { fileId }, type: "SELECT" as any },
+      )) as any[];
+
+      expect(row.storage_provider).toBeNull();
+      expect(row.storage_key).toBeNull();
+      expect(row.content_length).toBe(Buffer.byteLength(CSV_BODY));
+    });
   });
 
   describe("GET /api/file-manager", () => {

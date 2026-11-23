@@ -43,7 +43,7 @@ interface TieringTabProps {
 }
 
 const TIER_LEGEND =
-  "Tier 1 full independent validation + continuous monitoring · annual revalidation.  Tier 2 standard validation + periodic monitoring · 18-month cycle.  Tier 3 lightweight review · biennial.  Tiering rules and cadence are configured in Settings → Tiering rules.";
+  "Tier 1: full independent validation with continuous monitoring, revalidated every 12 months. Tier 2: standard validation with periodic monitoring, every 18 months. Tier 3: a lighter review, every 24 months. See Settings → Tiering rules.";
 
 const TieringTab = ({ onError, onSuccess }: TieringTabProps) => {
   const formatDate = useFormattedDate();
@@ -93,11 +93,9 @@ const TieringTab = ({ onError, onSuccess }: TieringTabProps) => {
   return (
     <Box>
       <Typography sx={mrmSectionIntroStyle}>
-        Model risk tiering (your model&apos;s risk rating / materiality classification). Sort every
-        model into a risk tier so the critical ones get enhanced scrutiny and the low-risk ones get
-        proportionate, lighter oversight. The tier sets validation depth, revalidation frequency and
-        monitoring cadence — so it is the keystone every other step depends on. Tier assignment is
-        manual.
+        Give each model a risk tier based on how much harm it could cause if it were wrong. The tier
+        sets the depth of its validation and how often it is revalidated. You set tiers by hand.
+        Raising a model&apos;s tier opens a revalidation for it.
       </Typography>
 
       <Box sx={mrmToolbarStyle}>
@@ -177,7 +175,7 @@ const TieringTab = ({ onError, onSuccess }: TieringTabProps) => {
         title="Assign tier"
         description={
           selectedModel
-            ? `Set the risk tier and materiality drivers for ${fleetModelName(selectedModel)}.`
+            ? `Choose a tier for ${fleetModelName(selectedModel)} and note why. The tier sets how often the model is revalidated.`
             : ""
         }
         onSubmit={handleAssign}
@@ -185,7 +183,7 @@ const TieringTab = ({ onError, onSuccess }: TieringTabProps) => {
         isSubmitting={assignTier.isPending}
         fitContent
       >
-        <Stack sx={{ gap: "48px" }}>
+        <Stack sx={{ gap: "16px" }}>
           <Select
             id="mrm-assign-tier"
             label="Tier"

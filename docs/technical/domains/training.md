@@ -340,6 +340,18 @@ Assignees are checked against the organization's current members, since a user c
 
 Changing a training's status to Completed does not complete its assignments. A finished training record does not show that each person took it, so completing everyone is an explicit action.
 
+### Advisor
+
+The Advisor's training writes run as the user who asked (else the approver), with the console's permission, through the console's own services, so an Advisor write leaves the same rows, history, automations and notices as a console one:
+
+| Tool | Permission | Service |
+|------|-----------|---------|
+| `agent_create_training_record`, `agent_update_training_record` | `training.edit` | `services/trainingRecord.service.ts` (also behind `POST`/`PATCH /api/training`) |
+| `agent_delete_training_record` | `training.admin` | `services/trainingRecord.service.ts` (also behind `DELETE /api/training/:id`) |
+| `agent_assign_training_to_user` | `training.edit` | `assignTraining` in `services/trainingAssignment.service.ts` (also behind `POST /assignments`) |
+
+Each tool's checks run before the approval is requested, so nobody is asked to approve a call that cannot run, and again when it executes: the permission, held by the user who asked (never an `_`-prefixed parameter from the model, which the tool bridge drops); for a record, a valid id of a record in the organization, a title to create and at least one field to update; for an assignment, the ids, the due date, the training in the organization and the person a member. `PATCH /api/training/:id` with nothing to write answers 400, and an update or delete of a record outside the organization answers 404 even when a training automation is active. The assignment takes a required `due_date`, emails the assignee and is a `warning`-level write: a person confirms it first. Its approval card names the training and the person (name and email). A training record has no due date: the record tools take `duration` (free text such as "2 hours") and refuse a `due_date`, including one in an approval stored before this changed.
+
 ### Change history
 
 Assign, due date change, complete, reopen and remove each write a row to `training_change_history` with the field name `Assignment: <person>`, and so to the audit ledger. They appear in the Activity tab of the training record. The person's name, the old state and the actor are stored on the row, so reopening or removing an assignment keeps the record of what it was. Completion is self-reported and needs no proof; certificates belong in the training's evidence.

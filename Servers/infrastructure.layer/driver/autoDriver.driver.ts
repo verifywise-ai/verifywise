@@ -363,7 +363,9 @@ export async function insertMockData(
           mitigation_plan:
             "Implement continuous monitoring of model performance metrics. Schedule quarterly model retraining with updated data. Establish drift detection alerts at 5% accuracy threshold.",
           impact: "Medium",
+          // Likely x Minor: Medium by the shared formula.
           likelihood: "Likely",
+          severity: "Minor",
           key_metrics: "Precision, Recall, F1-Score, Demographic Parity",
           current_values: "Precision: 0.82, Recall: 0.78, F1: 0.80",
           threshold: "F1-Score must remain above 0.75",
@@ -387,7 +389,9 @@ export async function insertMockData(
           mitigation_plan:
             "Remove name-based features from model input. Implement blind evaluation mode. Conduct third-party fairness audit and remediate findings.",
           impact: "High",
-          likelihood: "Confirmed",
+          // Almost Certain x Moderate: High by the shared formula.
+          likelihood: "Almost Certain",
+          severity: "Moderate",
           key_metrics: "Statistical Parity Difference, Equalized Odds",
           current_values: "SPD: 0.12 (threshold: 0.05)",
           threshold: "SPD must be below 0.05",

@@ -252,6 +252,10 @@ export interface IRiskTableProps {
   exposure?: Map<number, VendorRiskExposure>;
   /** Opens a vendor risk on its Linked risks tab; falls back to onEdit. */
   onOpenLinks?: (riskId: number) => void;
+  /** Restores a deleted vendor risk; deleted rows offer it when set. */
+  onRestore?: (riskId: number) => void;
+  /** Shown instead of the first-run empty state when a search or filter hides every risk. */
+  noMatchesMessage?: string;
 }
 
 export interface ITasksTableProps {
@@ -287,6 +291,8 @@ export interface ITableWithPlaceholderProps {
   hidePagination?: boolean;
   vendorRisks?: VendorRisk[];
   visibleColumns?: Set<string>;
+  /** Shown instead of the first-run empty state when a search or filter hides every vendor. */
+  noMatchesMessage?: string;
 }
 
 export interface TrainingTableProps {
@@ -316,6 +322,8 @@ export interface IncidentTableProps {
   onEdit?: (id: string, mode: string) => void;
   onView?: (id: string, mode: string) => void;
   onArchive?: (id: string, mode: string) => void;
+  /** False hides edit and archive in the row menu (no incident.edit). */
+  canEdit?: boolean;
   paginated?: boolean;
   archivedId?: string | null;
   visibleColumns?: Set<string>;

@@ -3,8 +3,12 @@ import logger from "../../utils/logger/fileLogger";
 import { getEvidenceGapsQuery, upsertAnalysisQuery } from "../../utils/evidenceAi.utils";
 import { parseDocument, isSupportedMimeType } from "../parsers";
 import { analyzeEvidence } from "../evidenceAnalyzer/analyzer.service";
+import { resolveFileContent } from "../../services/storage";
 import { getLLMKeysWithKeyQuery, getLLMProviderUrl } from "../../utils/llmKey.utils";
 import type { LLMProvider } from "../../domain.layer/interfaces/i.llmKey";
+import { getUserRoleInOrganization } from "../../utils/userPermission.utils";
+import { roleInfoHasPermission } from "../../utils/rolePermissions.utils";
+import { canUserAccessFile } from "../../utils/fileUpload.utils";
 
 export interface AnalyzeDocumentParams {
   file_id: number;
@@ -31,6 +35,31 @@ export interface DetectGapsParams {
 }
 
 /**
+ * Refuse unless the signed-in user may analyze the file, by the rules the
+ * "Analyze with AI" endpoint applies: the fileManager.contribute permission
+ * (authorize on POST /evidence-ai/analyze) and canUserAccessFile
+ * (requireFileAccess). The role is read from the user's row in the
+ * organization. A file the user cannot access is reported exactly like a
+ * missing one, so its existence is not disclosed.
+ */
+const assertCanAnalyzeFile = async (
+  fileId: number,
+  organizationId: number,
+  userId: number | undefined,
+): Promise<void> => {
+  const role = await getUserRoleInOrganization(organizationId, userId);
+  if (!userId || !role) {
+    throw new Error("Analyzing a document needs a signed-in user of this organization");
+  }
+  if (!(await roleInfoHasPermission(organizationId, role, "fileManager.contribute"))) {
+    throw new Error("Your role cannot analyze documents. It needs permission to contribute files.");
+  }
+  if (!(await canUserAccessFile(fileId, userId, role.name, organizationId))) {
+    throw new Error(`File ${fileId} not found in this organization`);
+  }
+};
+
+/**
  * Analyze a document with the real evidence analyzer (#4913) — the same
  * LLM-backed analyzer the "Analyze with AI" endpoint runs.
  *
@@ -42,17 +71,21 @@ export interface DetectGapsParams {
  * persisted through upsertAnalysisQuery, so it feeds the same gaps and
  * quality views as the endpoint's analysis, except when it was graded from
  * caller text or would replace a private analysis; `persisted` and
- * `not_persisted_reason` say which. Requires an LLM key.
+ * `not_persisted_reason` say which. Requires an LLM key, and the signed-in
+ * user must be allowed to analyze the file (assertCanAnalyzeFile).
  */
 const analyzeDocument = async (
   params: AnalyzeDocumentParams,
   organizationId: number,
+  userId?: number,
 ): Promise<any> => {
   try {
     const { file_id, document_text } = params;
 
+    await assertCanAnalyzeFile(file_id, organizationId, userId);
+
     const [fileRows] = await sequelize.query(
-      `SELECT id, filename, type, content, uploaded_time
+      `SELECT id, filename, type, content, storage_provider, storage_key, uploaded_time
          FROM files
         WHERE id = :fileId AND organization_id = :organizationId`,
       { replacements: { fileId: file_id, organizationId } },
@@ -63,11 +96,12 @@ const analyzeDocument = async (
     }
 
     // Stored content wins; caller text is only a fallback for content-less
-    // rows.
+    // rows. Bytes may live in the content column or external storage.
     let text = "";
     let fromStoredContent = false;
-    if (file.content) {
-      const buffer = Buffer.isBuffer(file.content) ? file.content : Buffer.from(file.content);
+    const storedContent = await resolveFileContent(file);
+    if (storedContent) {
+      const buffer = Buffer.isBuffer(storedContent) ? storedContent : Buffer.from(storedContent);
       if (isSupportedMimeType(file.type)) {
         text = (await parseDocument(buffer, file.type)).text;
       } else {

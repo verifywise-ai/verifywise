@@ -279,7 +279,9 @@ export class VendorModel extends Model<VendorModel> implements IVendor {
     vendor.review_result = review_result ? review_result.trim() : "";
     vendor.review_status = review_status || "Not started";
     vendor.reviewer = reviewer && reviewer > 0 ? reviewer : null;
-    vendor.review_date = review_date || new Date();
+    // No review date means none: '' and null are left out of the insert, so the
+    // column stays NULL (it used to default to the moment of creation).
+    vendor.review_date = review_date || undefined;
     vendor.order_no = order_no;
     vendor.is_demo = is_demo;
     vendor.created_at = new Date();
@@ -589,9 +591,15 @@ export class VendorModel extends Model<VendorModel> implements IVendor {
       review_status: this.review_status,
       reviewer: this.reviewer,
       review_date: this.review_date?.toISOString(),
+      data_sensitivity: this.data_sensitivity,
+      business_criticality: this.business_criticality,
+      past_issues: this.past_issues,
+      regulatory_exposure: this.regulatory_exposure,
+      risk_score: this.risk_score,
       is_demo: this.is_demo,
       created_at: (this.createdAt ?? this.created_at)?.toISOString(),
       updated_at: (this.updatedAt ?? this.updated_at)?.toISOString(),
+      projects: this.projects,
     };
   }
 
