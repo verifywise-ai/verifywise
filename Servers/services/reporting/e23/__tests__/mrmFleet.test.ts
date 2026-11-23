@@ -57,6 +57,7 @@ describe("buildMrmFleet", () => {
       inReview: 0,
       notStarted: 0,
       overdue: 0,
+      notPassed: 0,
     });
     expect(fleet.openFindingsBySeverity).toEqual({ critical: 0, high: 0, medium: 0, low: 0 });
     expect(fleet.monitoring).toEqual({ withActiveThresholds: 0, withRecentMetric: 0 });
@@ -86,6 +87,7 @@ describe("buildMrmFleet", () => {
       inReview: 0,
       notStarted: 0,
       overdue: 0,
+      notPassed: 0,
     });
     expect(fleet.openFindingsBySeverity.critical).toBe(0);
     expect(fleet.monitoring).toEqual({ withActiveThresholds: 0, withRecentMetric: 0 });
@@ -158,6 +160,7 @@ describe("buildMrmFleet", () => {
       inReview: 0,
       notStarted: 2,
       overdue: 0,
+      notPassed: 0,
     });
   });
 
@@ -235,13 +238,14 @@ describe("validation coverage", () => {
       inReview: 1,
       notStarted: 0,
       overdue: 0,
+      notPassed: 0,
     });
   });
 
   it("puts every model in exactly one row, overdue first, so the rows add up to the models in scope", () => {
     const fleet = buildMrmFleet(
       [
-        // Signed off, nothing open.
+        // Signed off, no validation open.
         model(),
         // Signed off, revalidation open and not yet due.
         model({ hasOpenValidation: true, openValidationNextDue: "2027-01-01T00:00:00.000Z" }),
@@ -249,7 +253,7 @@ describe("validation coverage", () => {
         model({ hasOpenValidation: true, openValidationNextDue: "2026-01-01T00:00:00.000Z" }),
         // Never signed off, first validation open.
         model({ latestSignedOff: null, hasOpenValidation: true, openValidationNextDue: null }),
-        // Never signed off, nothing open.
+        // Never signed off, no validation open.
         model({ latestSignedOff: null }),
         model({ status: "Retired", retired: true }),
       ],
@@ -259,6 +263,83 @@ describe("validation coverage", () => {
     expect(fleet.validationCoverage).toEqual({
       validated: 1,
       inReview: 2,
+      notStarted: 1,
+      overdue: 1,
+      notPassed: 0,
+    });
+    expect(sum(fleet.validationCoverage)).toBe(fleet.totals.models);
+  });
+});
+
+describe("validation coverage: a latest validation that did not pass", () => {
+  const sum = (v: Record<string, number>) => Object.values(v).reduce((a, b) => a + b, 0);
+  const signedOff = (outcome: string | null) => ({
+    latestSignedOff: {
+      validatorId: null,
+      outcome,
+      signedOffAt: "2026-06-01T00:00:00.000Z",
+      emptyReportSections: [],
+    },
+  });
+
+  it("counts a not_validated model with nothing open in its own row only, never as validated", () => {
+    const fleet = buildMrmFleet(
+      [model({ tier: "1", ...signedOff("not_validated") })],
+      activity,
+      GENERATED_AT,
+    );
+    expect(fleet.validationCoverage).toEqual({
+      validated: 0,
+      inReview: 0,
+      notPassed: 1,
+      notStarted: 0,
+      overdue: 0,
+    });
+    expect(fleet.perTier.find((t) => t.tier === "1")!.validated).toBe(0);
+  });
+
+  it("counts validated and validated_with_findings as passed, in the row and per tier", () => {
+    const fleet = buildMrmFleet(
+      [
+        model({ tier: "2", ...signedOff("validated") }),
+        model({ tier: "2", ...signedOff("validated_with_findings") }),
+      ],
+      activity,
+      GENERATED_AT,
+    );
+    expect(fleet.validationCoverage.validated).toBe(2);
+    expect(fleet.perTier.find((t) => t.tier === "2")!.validated).toBe(2);
+  });
+
+  it("keeps the order: overdue, then in progress, then not passed, then validated, then not started", () => {
+    const fleet = buildMrmFleet(
+      [
+        // Not passed, but a revalidation is open: in progress.
+        model({
+          ...signedOff("not_validated"),
+          hasOpenValidation: true,
+          openValidationNextDue: "2027-01-01T00:00:00.000Z",
+        }),
+        // Not passed, revalidation open and overdue: overdue.
+        model({
+          ...signedOff("not_validated"),
+          hasOpenValidation: true,
+          openValidationNextDue: "2026-01-01T00:00:00.000Z",
+        }),
+        // Not passed, nothing open.
+        model({ ...signedOff("not_validated") }),
+        // Passed, nothing open.
+        model({ ...signedOff("validated") }),
+        // Signed off with no outcome recorded: not started, as before.
+        model({ ...signedOff(null) }),
+      ],
+      activity,
+      GENERATED_AT,
+    );
+    expect(fleet.validationCoverage).toEqual({
+      validated: 1,
+      inReview: 1,
+      notPassed: 1,
       notStarted: 1,
       overdue: 1,
     });

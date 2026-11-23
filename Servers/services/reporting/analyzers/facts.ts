@@ -409,10 +409,11 @@ const SPECS: Record<string, SectionSpec> = {
         tier1: s.totals?.byTier?.["1"],
         tier2: s.totals?.byTier?.["2"],
         tier3: s.totals?.byTier?.["3"],
-        // Renamed when the rows became exclusive (a model with an open
-        // revalidation no longer also counts as validated), so a stored
-        // previous run's `validated` is never diffed against the new meaning.
-        validatedNothingOpen: s.validationCoverage?.validated,
+        // Named for its meaning, renamed whenever that changes, so a stored
+        // previous run's value under the old meaning is never diffed against
+        // it (RETIRED_AGGREGATES). Only a passing latest outcome counts.
+        validatedPassed: s.validationCoverage?.validated,
+        lastValidationNotPassed: s.validationCoverage?.notPassed,
         inReview: s.validationCoverage?.inReview,
         notStarted: s.validationCoverage?.notStarted,
         overdueValidations: s.validationCoverage?.overdue,
@@ -648,7 +649,10 @@ export function formalFactsView(
  * report, so an E-23 run's facts are rendered with these instead.
  */
 const FACT_NAME_LABELS: Record<string, string> = {
-  validatedNothingOpen: "validated with none open",
+  // "none open" read to a live model as "no open findings"; the row counts
+  // models whose latest validation passed, with no validation open.
+  validatedPassed: "validated with no validation open",
+  lastValidationNotPassed: "last validation not passed",
   inReview: "validation in progress",
   notStarted: "validation not started",
   overdueValidations: "validation overdue",
@@ -725,6 +729,18 @@ export function renderFacts(
 }
 
 /**
+ * Aggregate names a stored snapshot may hold that the current one no longer
+ * writes, per section. A name missing from the current snapshot otherwise
+ * reads as a figure that fell to 0. The MRM validated count has changed
+ * meaning twice: `validated` (any sign-off) became `validatedNothingOpen`
+ * when the rows became exclusive, then `validatedPassed` when a not_validated
+ * outcome stopped counting. None of the old values is compared with the new.
+ */
+const RETIRED_AGGREGATES: Record<string, ReadonlySet<string>> = {
+  mrmFleet: new Set(["validated", "validatedNothingOpen"]),
+};
+
+/**
  * One line per changed NUMERIC aggregate.
  *
  * ponytail: numbers only. The top-N labels churn between runs without the
@@ -753,6 +769,9 @@ function changedAggregates(
     // collected for this report — a configuration change — and zeroing its
     // aggregates would assert an estate change nothing here has data for.
     new Set([...Object.keys(now), ...Object.keys(before)]).forEach((name) => {
+      // Skipped only when the current run no longer writes it: a name that is
+      // still written reports its change like any other.
+      if (RETIRED_AGGREGATES[key]?.has(name) && !(name in now)) return;
       const was = before[name];
       // Absent on the current side means the bucket emptied. Guarded by the
       // `was` check below, so a string aggregate is still never diffed.

@@ -51,10 +51,17 @@ describe("MRM status count tables", () => {
     const blocks = view.main.find((s) => s.id === "mrm")!.blocks;
     const at = blocks.findIndex((b) => b.kind === "table" && b.title === "Validation coverage");
     const table = blocks[at] as TableBlock;
+    // "none open" read to a live model as "no open findings".
+    expect(VALIDATION_COVERAGE_LABELS.validated).toBe("Validated, no validation open");
+    expect(VALIDATION_COVERAGE_LABELS.notPassed).toBe("Last validation not passed");
+    expect(VALIDATION_COVERAGE_NOTE).toBe(
+      "Each model in scope is counted once: an overdue validation first, then one in progress (first validation or revalidation), then a latest validation that did not pass, then a passed validation with no validation open.",
+    );
     expect(table.rows.map((r) => r[0])).toEqual([
       VALIDATION_COVERAGE_LABELS.validated,
       VALIDATION_COVERAGE_LABELS.inReview,
       VALIDATION_COVERAGE_LABELS.overdue,
+      VALIDATION_COVERAGE_LABELS.notPassed,
       VALIDATION_COVERAGE_LABELS.notStarted,
     ]);
     // The fixture's rows add up to its 9 models in scope.
@@ -64,6 +71,12 @@ describe("MRM status count tables", () => {
       text: VALIDATION_COVERAGE_NOTE,
       muted: true,
     });
+  });
+
+  it("heads the By tier validation column so it cannot be read as the exclusive row", () => {
+    const byTier = mrmTables().find((t) => t.title === "By tier")!;
+    expect(byTier.headers).toContain("Validation passed");
+    expect(byTier.headers).not.toContain("Validated");
   });
 
   it("PDF: renders each count table with a fixed layout and 70/30 columns", () => {

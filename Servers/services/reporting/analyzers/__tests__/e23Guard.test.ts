@@ -134,7 +134,7 @@ function kestrelBay(): ReportData {
   };
   rd.sections.mrmFleet = {
     totals: { models: 7, untiered: 0, byTier: { "1": 2, "2": 3, "3": 2 } },
-    validationCoverage: { validated: 4, inReview: 1, notStarted: 2, overdue: 0 },
+    validationCoverage: { validated: 4, inReview: 1, notPassed: 0, notStarted: 2, overdue: 0 },
     openFindingsBySeverity: { critical: 0, high: 1, medium: 2, low: 1 },
     monitoring: { withActiveThresholds: 6, withRecentMetric: 6 },
     activity: {
