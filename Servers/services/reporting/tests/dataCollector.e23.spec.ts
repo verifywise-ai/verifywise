@@ -183,6 +183,8 @@ describe("E-23 kind run", () => {
     expect(spy).toHaveBeenCalledTimes(1);
     expect(spy.mock.calls[0][0]).toBe(e23Target);
     expect(data.sections.frameworkRequirements).toBeUndefined();
+    // Kept off the sections for the analyzers (e23Gap), which need them too.
+    expect(data.e23Requirements?.frameworks.map((f) => f.frameworkId)).toEqual([26]);
     expect(data.sections.e23Contradictions?.available).toBe(true);
     expect(data.sections.mrmFleet).toBeDefined();
     expect(data.sections.mrmInventoryAppendix).toBeDefined();
@@ -478,6 +480,7 @@ describe("non-kind run", () => {
 
     expect(mockCollectMrm).not.toHaveBeenCalled();
     expect(Object.keys(data.sections)).toEqual(["frameworkRequirements"]);
+    expect(data.e23Requirements).toBeUndefined();
     expect(data.sectionNotices).toEqual([]);
   });
 });

@@ -111,7 +111,7 @@ describe("Report last-parameters tenant isolation", () => {
     });
   });
 
-  it("ignores runs of other templates and runs that did not succeed", async () => {
+  it("takes the latest successful or partially successful run, ignoring other templates and failed runs", async () => {
     const { owner } = await seedTwoTenantContexts();
     const templateId = await seedSystemTemplate("e23-target");
     const otherTemplateId = await seedSystemTemplate("e23-other");
@@ -121,6 +121,13 @@ describe("Report last-parameters tenant isolation", () => {
       templateId,
       { institutionName: "Kept", periodEnd: "2026-07-31" },
       "2026-08-02T10:00:00Z",
+    );
+    await seedRun(
+      owner,
+      templateId,
+      { institutionName: "Partly delivered", periodEnd: "2026-08-31" },
+      "2026-09-02T10:00:00Z",
+      "partial_success",
     );
     await seedRun(
       owner,
@@ -139,8 +146,8 @@ describe("Report last-parameters tenant isolation", () => {
     const res = await owner.request.get(lastParameters(templateId));
     expect(res.status).toBe(200);
     expect(res.body.data).toEqual({
-      parameters: { institutionName: "Kept" },
-      periodEnd: "2026-07-31",
+      parameters: { institutionName: "Partly delivered" },
+      periodEnd: "2026-08-31",
     });
   });
 

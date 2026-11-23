@@ -183,6 +183,26 @@ export const SECTION_INSTRUCTIONS: Record<string, string> = {
 };
 
 /**
+ * The board version names no model (spec 8.3), so the sections whose general
+ * questions ask for model names get count-only questions instead.
+ */
+const BOARD_SECTION_INSTRUCTIONS: Record<string, string> = {
+  mrmFleet: `- What share of the models in scope is untiered, and what share has an overdue validation?
+- How are open findings spread across critical, high, medium and low, and which tier carries the critical or high ones?
+- How many models have active thresholds, and how many of those received a metric in the monitoring window?
+- How many models have exceptions, and what does that mean for the institution? Give counts; do not name models.`,
+};
+
+/** The questions for one section's summary, for the report's audience. */
+export function sectionInstruction(key: string, opts: E23PromptOptions = {}): string {
+  return (
+    (opts.board ? BOARD_SECTION_INSTRUCTIONS[key] : undefined) ??
+    SECTION_INSTRUCTIONS[key] ??
+    GENERIC_SECTION_INSTRUCTION
+  );
+}
+
+/**
  * Sections no summary is written for: the sign-off page carries no data, the
  * inventory appendix is a reference listing, and the at-a-glance figures
  * repeat what the other E-23 sections and the facts block already state.
@@ -481,8 +501,19 @@ const moreLine = (total: number, max: number): string[] =>
 const tierText = (tier: MrmTierValue | null | undefined): string =>
   tier ? `Tier ${tier}` : "Untiered";
 
-/** Compact text for the MRM status section: figures, then the models with exceptions. */
-export function prepareMrmFleet(fleet: MrmFleetSectionData): string {
+/**
+ * How an E-23 section is put to the model. The board version of the report
+ * names no model (spec 8.3), so its prompts carry counts only.
+ */
+export interface E23PromptOptions {
+  board?: boolean;
+}
+
+/**
+ * Compact text for the MRM status section: figures, then the models with
+ * exceptions (only their count for the board).
+ */
+export function prepareMrmFleet(fleet: MrmFleetSectionData, opts: E23PromptOptions = {}): string {
   const { totals, validationCoverage: v, openFindingsBySeverity: f, monitoring: m } = fleet;
   const a = fleet.activity;
   const lines = [
@@ -498,8 +529,12 @@ export function prepareMrmFleet(fleet: MrmFleetSectionData): string {
       (t) =>
         `  ${tierText(t.tier)}: models ${t.models}, tiering current ${t.tieringCurrent}, validated ${t.validated}, monitoring active ${t.monitoringActive}, open findings ${t.openFindings}, critical or high findings ${t.criticalHighFindings}`,
     ),
-    `Models with exceptions (${fleet.exceptions.length}):`,
   ];
+  if (opts.board) {
+    lines.push(`Models with exceptions: ${fleet.exceptions.length}`);
+    return lines.join("\n");
+  }
+  lines.push(`Models with exceptions (${fleet.exceptions.length}):`);
   if (fleet.exceptions.length === 0) lines.push("none");
   fleet.exceptions.slice(0, E23_MAX_LINES).forEach((e) => {
     lines.push(`- ${oneLine(e.name)} (${tierText(e.tier)}): ${e.issues.map(oneLine).join(", ")}`);
@@ -508,8 +543,14 @@ export function prepareMrmFleet(fleet: MrmFleetSectionData): string {
   return lines.join("\n");
 }
 
-/** Compact text for the contradictions section: fired rules, rules not run, data coverage. */
-export function prepareE23Contradictions(c: E23ContradictionsSectionData): string {
+/**
+ * Compact text for the contradictions section: fired rules, rules not run,
+ * data coverage. The board version leaves out the example models.
+ */
+export function prepareE23Contradictions(
+  c: E23ContradictionsSectionData,
+  opts: E23PromptOptions = {},
+): string {
   if (!c.available) {
     return "The contradiction checks did not run: the E-23 checklist is not on file or could not be read. This is not a clean result.";
   }
@@ -517,9 +558,10 @@ export function prepareE23Contradictions(c: E23ContradictionsSectionData): strin
   lines.push("Fired rules:");
   if (c.fired.length === 0) lines.push("none");
   c.fired.forEach((f) => {
-    const examples = f.examples.length
-      ? `; examples: ${f.examples.map(oneLine).join(", ")}${f.moreCount > 0 ? `, and ${f.moreCount} more` : ""}`
-      : "";
+    const examples =
+      !opts.board && f.examples.length
+        ? `; examples: ${f.examples.map(oneLine).join(", ")}${f.moreCount > 0 ? `, and ${f.moreCount} more` : ""}`
+        : "";
     lines.push(
       `- ${f.ruleId} ${oneLine(f.requirementTitle)}: claimed ${oneLine(f.claimedStatus)}; the data shows ${oneLine(f.finding)}; models affected ${f.affectedCount}${examples}`,
     );
@@ -572,12 +614,12 @@ function prepareMrmInventoryAppendix(a: MrmInventoryAppendixSectionData): string
  * without them a large tenant's report exceeds the model context window and
  * every analyzer fails at once.
  */
-export function prepareSectionData(key: string, data: any): string {
+export function prepareSectionData(key: string, data: any, opts: E23PromptOptions = {}): string {
   if (!data) return "No data available for this section.";
 
   if (key === "frameworkRequirements") return prepareFrameworkRequirements(data);
-  if (key === "mrmFleet") return prepareMrmFleet(data);
-  if (key === "e23Contradictions") return prepareE23Contradictions(data);
+  if (key === "mrmFleet") return prepareMrmFleet(data, opts);
+  if (key === "e23Contradictions") return prepareE23Contradictions(data, opts);
   if (key === "e23FixItList") return prepareE23FixItList(data);
   if (key === "mrmInventoryAppendix") return prepareMrmInventoryAppendix(data);
 

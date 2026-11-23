@@ -594,6 +594,7 @@ export class ReportDataCollector {
       renderedCharts,
       sections: sectionData,
       sectionNotices,
+      ...(e23Requirements && { e23Requirements }),
     };
   }
 

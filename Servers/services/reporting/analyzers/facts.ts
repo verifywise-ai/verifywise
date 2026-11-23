@@ -586,22 +586,43 @@ const FORMAL_FIX_IT_AGGREGATES = ["items", "high", "medium", "low"];
 /** Label for the fix-it counts in the formal-report analyzers' facts block. */
 export const FORMAL_FIX_IT_LABEL = "Remediation item counts";
 
+/** A ranked-row label ("top1", "top_showing"); the rest are counts. */
+const isTopLabel = (name: string): boolean => /^top(\d+|_showing)$/.test(name);
+
 /**
  * The snapshot as the formal-report analyzers (executiveSummary, keyFindings,
  * e23Gap) may see it: the fix-it list reduced to its total and per-severity
  * counts. Item labels and per-owner counts belong to the internal fix-it
  * document and never reach a prompt whose output prints in the formal report.
- * Returns the same object when there is no fix-it list.
+ * For the board version (`board`), which names no model (spec 8.3), the MRM
+ * status keeps its counts and loses its named exceptions.
+ * Returns the same object when there is nothing to remove.
  */
-export function formalFactsView(facts: FactsSnapshot): FactsSnapshot;
-export function formalFactsView(facts: FactsSnapshot | null | undefined): FactsSnapshot | null;
-export function formalFactsView(facts: FactsSnapshot | null | undefined): FactsSnapshot | null {
-  const list = facts?.sections?.e23FixItList;
-  if (!facts || !list) return facts ?? null;
-  const counts = Object.fromEntries(
-    FORMAL_FIX_IT_AGGREGATES.filter((k) => k in list).map((k) => [k, list[k]]),
-  );
-  return { ...facts, sections: { ...facts.sections, e23FixItList: counts } };
+export function formalFactsView(facts: FactsSnapshot, opts?: { board?: boolean }): FactsSnapshot;
+export function formalFactsView(
+  facts: FactsSnapshot | null | undefined,
+  opts?: { board?: boolean },
+): FactsSnapshot | null;
+export function formalFactsView(
+  facts: FactsSnapshot | null | undefined,
+  opts: { board?: boolean } = {},
+): FactsSnapshot | null {
+  if (!facts) return null;
+  const list = facts.sections?.e23FixItList;
+  const fleet = facts.sections?.mrmFleet;
+  if (!list && !(opts.board && fleet)) return facts;
+  const sections = { ...facts.sections };
+  if (list) {
+    sections.e23FixItList = Object.fromEntries(
+      FORMAL_FIX_IT_AGGREGATES.filter((k) => k in list).map((k) => [k, list[k]]),
+    );
+  }
+  if (opts.board && fleet) {
+    sections.mrmFleet = Object.fromEntries(
+      Object.entries(fleet).filter(([name]) => !isTopLabel(name)),
+    );
+  }
+  return { ...facts, sections };
 }
 
 export function renderFacts(

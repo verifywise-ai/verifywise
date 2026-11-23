@@ -308,6 +308,13 @@ export interface ReportData {
   aiSummaries?: AISummaries;
   /** Always present, possibly empty. See SectionNotice. */
   sectionNotices: SectionNotice[];
+  /**
+   * OSFI E-23 kind runs only: the E-23 requirement rows the contradiction
+   * rules ran on, collected whether or not the frameworkRequirements section
+   * was selected. Not rendered; the e23Gap analyzer reads it when the section
+   * is absent. Undefined when the checklist is not on file or failed to read.
+   */
+  e23Requirements?: FrameworkRequirementsSectionData;
   sections: {
     // Risk Analysis group
     projectRisks?: ProjectRisksSectionData;

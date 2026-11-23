@@ -16,6 +16,7 @@ import { E23_KIND } from "../e23/e23Parameters";
 import logger from "../../../utils/logger/fileLogger";
 import type { AiBlocks } from "./runAnalyzers";
 import { flattenFrameworkRequirements } from "./prompts";
+import { isBoardRun } from "./e23Gap";
 import {
   FACTS_SCHEMA_VERSION,
   FORMAL_FIX_IT_LABEL,
@@ -241,7 +242,8 @@ export function collectAllowedOwners(reportData: ReportData): string[] {
  *
  * `formalFacts` is the block for the analyzers whose output prints in the
  * formal report: on an E-23 run the fix-it list is reduced to its counts
- * there (spec 8.5 vs 8.6). Without a fix-it list it equals `facts`.
+ * there (spec 8.5 vs 8.6), and the board version also loses the named MRM
+ * exceptions (spec 8.3). Otherwise it equals `facts`.
  */
 export function collectFactsInput(
   reportData: ReportData,
@@ -249,11 +251,13 @@ export function collectFactsInput(
 ): { snapshot: FactsSnapshot; facts: string; formalFacts: string } {
   const snapshot = collectFacts(reportData);
   const facts = renderFacts(snapshot, prior);
-  const formalFacts = snapshot.sections.e23FixItList
-    ? renderFacts(formalFactsView(snapshot), formalFactsView(prior), {
-        labels: { e23FixItList: FORMAL_FIX_IT_LABEL },
-      })
-    : facts;
+  const board = isBoardRun(reportData);
+  const formalFacts =
+    snapshot.sections.e23FixItList || board
+      ? renderFacts(formalFactsView(snapshot, { board }), formalFactsView(prior, { board }), {
+          labels: { e23FixItList: FORMAL_FIX_IT_LABEL },
+        })
+      : facts;
   return { snapshot, facts, formalFacts };
 }
 

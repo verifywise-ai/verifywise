@@ -526,4 +526,30 @@ describe("collectAnalyzerInputs", () => {
       expect(formalFacts).not.toMatch(/internal document/i);
     });
   });
+
+  describe("the board version names no model in the formal facts (spec 8.3)", () => {
+    const NAMES = ["Fraud detector", "Credit scorer"];
+
+    it("keeps the MRM counts and drops the named exceptions for the board", () => {
+      const { facts, formalFacts } = collectFactsInput(e23FixItReportData({ audience: "board" }));
+      for (const name of NAMES) expect(formalFacts).not.toContain(name);
+      expect(formalFacts).toContain("untiered=");
+      // The full block (recommendedActions, internal document) keeps them.
+      expect(facts).toContain("Fraud detector");
+    });
+
+    it("keeps the named exceptions for OSFI, with or without a fix-it list", () => {
+      expect(collectFactsInput(e23FixItReportData()).formalFacts).toContain("Fraud detector");
+      const data = e23FixItReportData();
+      delete (data.sections as any).e23FixItList;
+      expect(collectFactsInput(data).formalFacts).toContain("Fraud detector");
+    });
+
+    it("drops them on a board run without a fix-it list too", () => {
+      const data = e23FixItReportData({ audience: "board" });
+      delete (data.sections as any).e23FixItList;
+      const { formalFacts } = collectFactsInput(data);
+      for (const name of NAMES) expect(formalFacts).not.toContain(name);
+    });
+  });
 });

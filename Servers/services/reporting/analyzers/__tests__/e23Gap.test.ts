@@ -70,6 +70,16 @@ const validPayload = (principles: any[] = []) => ({
 });
 
 const def = ANALYZERS.e23Gap;
+
+/** Every model the E-23 fixture names, in the MRM exceptions or the rule examples. */
+const MODEL_NAMES = [
+  "Fraud detector",
+  "Pricing engine",
+  "Churn model",
+  "AML screen",
+  "Chatbot",
+  "Credit scorer",
+];
 const userPrompt = (rd: ReportData, facts?: string) =>
   def.buildUserPrompt(rd, facts ? { facts } : {});
 
@@ -124,11 +134,31 @@ describe("e23Gap prompts", () => {
     expect(prompt).toContain("FACTS BLOCK");
   });
 
+  it("reads the E-23 rows the rules used when the completeness section was not selected", () => {
+    const rd = e23ReportData();
+    const withSection = userPrompt(rd);
+    rd.e23Requirements = rd.sections.frameworkRequirements;
+    delete rd.sections.frameworkRequirements;
+    const prompt = userPrompt(rd);
+    expect(prompt).not.toBe("");
+    expect(prompt).toBe(withSection);
+  });
+
   it("carries the audience line: evidence first for OSFI, consequences first for the board", () => {
     expect(userPrompt(e23ReportData())).toMatch(/Audience: OSFI supervisory review\..*evidence/);
     expect(userPrompt(e23ReportData({ audience: "board" }))).toMatch(
       /Audience: Board of directors\..*consequences/,
     );
+  });
+
+  it("names no model in the board version and keeps the names for OSFI (spec 8.3)", () => {
+    const board = userPrompt(e23ReportData({ audience: "board" }));
+    for (const name of MODEL_NAMES) expect(board).not.toContain(name);
+    expect(board).toContain("Models with exceptions: 2");
+    expect(board).toContain("3 models have no MRM tier");
+    const osfi = userPrompt(e23ReportData());
+    expect(osfi).toContain("Fraud detector (Untiered): Untiered, No owner role");
+    expect(osfi).toContain("examples: Fraud detector, Pricing engine");
   });
 
   it("never asks the model for a compliance verdict", () => {

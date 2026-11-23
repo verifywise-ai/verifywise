@@ -1,14 +1,15 @@
 import { generateText } from "ai";
 import type { ReportData } from "../../../domain.layer/interfaces/i.reportGeneration";
 import logger from "../../../utils/logger/fileLogger";
+import { isBoardRun } from "./e23Gap";
 import { referenceDay } from "./facts";
 import {
-  GENERIC_SECTION_INSTRUCTION,
+  type E23PromptOptions,
   hasContent,
   MAX_PROMPT_CHARS,
   NO_SECTION_SUMMARY,
   prepareSectionData,
-  SECTION_INSTRUCTIONS,
+  sectionInstruction,
   SECTION_LABELS,
 } from "./prompts";
 
@@ -100,8 +101,8 @@ async function runWithConcurrency<T>(tasks: Array<() => Promise<T>>, limit: numb
 }
 
 /** Clamp section data to the shared prompt budget, matching renderSections' marker (Fix 4). */
-function clampSectionData(key: string, data: any): string {
-  const body = prepareSectionData(key, data);
+function clampSectionData(key: string, data: any, opts: E23PromptOptions): string {
+  const body = prepareSectionData(key, data, opts);
   return body.length > MAX_PROMPT_CHARS
     ? `${body.slice(0, MAX_PROMPT_CHARS)}\n\n[TRUNCATED: section data exceeded the prompt budget]`
     : body;
@@ -116,6 +117,8 @@ async function summariseSection(
   model: any,
   /** Epoch ms the whole stage must be finished by. */
   stageDeadline: number,
+  /** The board version of an E-23 report names no model. */
+  opts: E23PromptOptions = {},
 ): Promise<string> {
   try {
     // Whichever runs out first. A section that cannot start at all is skipped
@@ -132,7 +135,7 @@ async function summariseSection(
 Reference date: ${referenceDate} — treat this as today when comparing any date in the data.
 
 Analyze the following data and write a section analysis (300-450 words) that answers these questions:
-${SECTION_INSTRUCTIONS[key] ?? GENERIC_SECTION_INSTRUCTION}
+${sectionInstruction(key, opts)}
 
 Every claim must carry the value it rests on: a count, a share, a status, a name or a date. A sentence that would read the same for any other organization is not an analysis.
 
@@ -141,7 +144,7 @@ Write in professional third-person tone. Do not use markdown formatting. Do not 
 Use only the data provided — never introduce a fact that does not appear in it. Counting, ranking and computing ratios or differences over the supplied values is expected.
 
 Data:
-${clampSectionData(key, data)}`;
+${clampSectionData(key, data, opts)}`;
 
     const result = await generateText({
       model,
@@ -187,6 +190,7 @@ export async function runSectionSummaries(
   const frameworkName = reportData.metadata?.frameworkName ?? "AI governance";
   const projectTitle = reportData.metadata?.projectTitle ?? "the organization";
   const referenceDate = referenceDay(reportData.metadata?.generatedAt);
+  const opts: E23PromptOptions = { board: isBoardRun(reportData) };
 
   // One deadline for the whole stage, fixed before the first call so a late
   // wave inherits what earlier ones left rather than starting its own clock.
@@ -204,6 +208,7 @@ export async function runSectionSummaries(
             referenceDate,
             model,
             stageDeadline,
+            opts,
           ),
     ),
     MAX_CONCURRENT,

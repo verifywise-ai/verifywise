@@ -261,8 +261,9 @@ export async function listRunsQuery(
 }
 
 /**
- * The answers from the latest successful run of a template that this viewer
- * may see, for prefilling the next run. The period and the final flag are
+ * The answers from the latest successful or partially successful run of a
+ * template that this viewer may see, for prefilling the next run. The period
+ * and the final flag are
  * left out (each run asks for its own, and final must be a deliberate choice
  * every time); the old end date is returned separately so the caller can
  * start the next period the day after it.
@@ -281,7 +282,10 @@ export async function getLastParametersQuery(
   const where: string[] = [
     "rr.template_id = :templateId",
     "rr.organization_id = :organization_id",
-    "rr.status = 'success'",
+    // partial_success: the report was generated (a delivery channel or part
+    // of a section failed), so its answers are as good as a success's. The
+    // prior glance (getPriorE23GlanceQuery) uses the same two statuses.
+    "rr.status IN ('success', 'partial_success')",
     "jsonb_typeof(rr.config_snapshot->'report_parameters') = 'object'",
   ];
   const replacements: Record<string, unknown> = { templateId, organization_id };

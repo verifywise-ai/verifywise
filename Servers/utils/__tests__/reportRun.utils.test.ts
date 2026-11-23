@@ -146,6 +146,14 @@ describe("canViewRunQuery", () => {
       expect(q.mock.calls[0][0]).not.toContain(MEMBERSHIP_SQL);
     });
 
+    it("prefills from a partially successful run too, like the prior glance", async () => {
+      q.mockResolvedValueOnce([]);
+      await getLastParametersQuery(3, 7, ADMIN);
+      const sql = q.mock.calls[0][0];
+      expect(sql).toContain("rr.status IN ('success', 'partial_success')");
+      expect(sql).not.toContain("rr.status = 'success'");
+    });
+
     it("strips the period and the final flag from the prefill", async () => {
       q.mockResolvedValueOnce([
         {

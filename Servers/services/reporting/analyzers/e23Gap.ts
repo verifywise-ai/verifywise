@@ -8,6 +8,7 @@ import type {
   FrameworkRequirementRow,
   ReportData,
 } from "../../../domain.layer/interfaces/i.reportGeneration";
+import { requirementNumber } from "../e23/contradictionRules";
 import { E23_FRAMEWORK_ID, E23_KIND } from "../e23/e23Parameters";
 import { COVERAGE_LABELS } from "../e23/e23Text";
 import { oneLine, prepareE23Contradictions, prepareE23FixItList, prepareMrmFleet } from "./prompts";
@@ -21,13 +22,17 @@ export interface PositionCorrection {
 
 const isE23Run = (rd: ReportData): boolean => rd?.metadata?.reportKind === E23_KIND;
 
+/** The board version of an E-23 report, whose prompts name no model (spec 8.3). */
+export const isBoardRun = (rd: ReportData): boolean =>
+  isE23Run(rd) && rd.metadata.reportParameters?.audience === "board";
+
 /**
  * The audience line of an E-23 run, or "" for any other report (whose prompts
  * must stay exactly as they were). OSFI is the default audience.
  */
 export function audienceLine(rd: ReportData): string {
   if (!isE23Run(rd)) return "";
-  return rd.metadata.reportParameters?.audience === "board"
+  return isBoardRun(rd)
     ? "Audience: Board of directors. Write in a formal register and lead with the consequences for the institution; summarise models and requirements as counts rather than listing them one by one."
     : "Audience: OSFI supervisory review. Write in a formal register and lead with the evidence: the counts, statuses and records each statement rests on.";
 }
@@ -60,8 +65,6 @@ const groupKeys = (group: unknown): string[] => {
   return at >= 0 ? [key, key.slice(at + 3)] : [key];
 };
 
-const requirementNumber = (title: string): string => title.trim().split(/\s+/)[0] ?? "";
-
 const flatten = (rows: FrameworkRequirementRow[] = []): FrameworkRequirementRow[] =>
   rows.flatMap((r) => [r, ...flatten(r.children ?? [])]);
 
@@ -73,11 +76,15 @@ interface E23Group {
 
 /**
  * The E-23 groups of the run, merged by title: several pairings repeat the
- * same group, and coverage is keyed by title (contradictionRules.ts).
+ * same group, and coverage is keyed by title (contradictionRules.ts). Read off
+ * the completeness section when it was selected, else off the rows the
+ * collector gathered for the rules (ReportData.e23Requirements), so the
+ * analysis does not depend on which sections were picked.
  */
 function e23Groups(rd: ReportData): E23Group[] {
   const byTitle = new Map<string, E23Group>();
-  (rd?.sections?.frameworkRequirements?.frameworks ?? [])
+  const source = rd?.sections?.frameworkRequirements ?? rd?.e23Requirements;
+  (source?.frameworks ?? [])
     .filter((fw) => fw.frameworkId === E23_FRAMEWORK_ID)
     .forEach((fw) =>
       fw.groups.forEach((g) => {
@@ -134,6 +141,7 @@ export function e23GapData(rd: ReportData): string {
   const groups = e23Groups(rd);
   if (groups.length === 0) return "";
 
+  const opts = { board: isBoardRun(rd) };
   const coverage = coverageOf(rd);
   const groupLines = groups.map((g) => {
     const c = coverage(g.title);
@@ -149,11 +157,11 @@ export function e23GapData(rd: ReportData): string {
     "",
     "Contradictions found by the fixed rules:",
     contradictions
-      ? prepareE23Contradictions(contradictions)
+      ? prepareE23Contradictions(contradictions, opts)
       : "The contradiction checks did not run because the model risk management data could not be read. This is not a clean result.",
     "",
     "Model risk management status:",
-    fleet ? prepareMrmFleet(fleet) : "The model risk management data could not be read.",
+    fleet ? prepareMrmFleet(fleet, opts) : "The model risk management data could not be read.",
   ].join("\n");
 }
 
