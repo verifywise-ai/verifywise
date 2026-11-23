@@ -106,11 +106,12 @@ const e23Requirements: FrameworkRequirementsSectionData = {
         {
           title: "Model risk management",
           orderNo: 1,
+          // The rollup matches the rows: the glance counts the rows.
           requirements: [row({ title: "2.2.3 Rating", implId: 1, orderNo: 1 })],
-          rollup: rollup(1, 2),
+          rollup: rollup(1, 1),
         },
       ],
-      rollup: rollup(1, 2),
+      rollup: rollup(1, 1),
     },
   ],
 };
@@ -336,7 +337,7 @@ describe("E-23 kind run", () => {
     expect(data.sections.signOff).toBeUndefined();
     expect(data.sections.e23Glance).toMatchObject({
       requirementsDone: 1,
-      requirementsTotal: 2,
+      requirementsTotal: 1,
       modelsInScope: 1,
       untiered: 1,
       rulesTotal: 13,

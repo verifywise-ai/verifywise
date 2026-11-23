@@ -17,7 +17,7 @@ import type {
   FrameworkRequirementsSectionData,
   MrmFleetSectionData,
 } from "../../../domain.layer/interfaces/i.reportGeneration";
-import { E23_RULES } from "./contradictionRules";
+import { E23_RULES, e23RowsByNumber } from "./contradictionRules";
 import { E23_FRAMEWORK_ID } from "./e23Parameters";
 
 const NUMERIC_FIELDS = [
@@ -71,9 +71,13 @@ export function buildE23Glance(input: {
     ...(input.mrmUnavailable && { mrmUnavailable: true }),
   };
 
+  // A requirement counts once however many pairings carry E-23, and is done
+  // only when every pairing's row for it is done.
+  const byNumber = [...e23RowsByNumber(input.requirements).values()];
+
   return {
-    requirementsDone: e23.reduce((n, f) => n + f.rollup.done, 0),
-    requirementsTotal: e23.reduce((n, f) => n + f.rollup.total, 0),
+    requirementsDone: byNumber.filter((rows) => rows.every((p) => p.row.isDone)).length,
+    requirementsTotal: byNumber.length,
     groupsChecked: coverage.filter((c) => c === "checked").length,
     groupsTotal: coverage.length,
     rulesFired: input.contradictions?.fired.length ?? 0,

@@ -155,6 +155,98 @@ describe("buildE23FixItList: requirement sources", () => {
   });
 });
 
+describe("buildE23FixItList: several E-23 pairings", () => {
+  // The organization project and two use cases each carry E-23. The merged
+  // section has one framework 26 entry whose groups repeat per pairing.
+  const emptyRollup = {
+    total: 0,
+    done: 0,
+    unassigned: 0,
+    noEvidence: 0,
+    overdue: 0,
+    statusBreakdown: {},
+  };
+  const pairings = (
+    ...parts: Array<[string, FrameworkRequirementRow[]]>
+  ): FrameworkRequirementsSectionData => ({
+    frameworks: [
+      {
+        frameworkId: 26,
+        frameworkName: "OSFI E-23",
+        groups: parts.map(([useCase, requirements]) => ({
+          title: "Governance",
+          orderNo: 1,
+          useCase,
+          requirements,
+          rollup: emptyRollup,
+        })),
+        rollup: emptyRollup,
+      },
+    ],
+  });
+  const at = (title: string, orderNo: number, over: Partial<FrameworkRequirementRow> = {}) =>
+    row({ title, orderNo, ...over });
+  const done = { status: "Implemented", isDone: true };
+
+  const requirements = pairings(
+    [
+      "Organization",
+      [
+        at("2.1.1 Policy", 1, { isOverdue: true, dueDate: "2026-10-05", owner: "Ann Owner" }),
+        at("2.1.2 Inventory", 2, { status: "Draft" }),
+        at("2.1.3 Roles", 3, { owner: null }),
+      ],
+    ],
+    [
+      "Credit scoring",
+      [
+        at("2.1.1 Policy", 1, { isOverdue: true, dueDate: "2026-09-01", owner: "Bo Owner" }),
+        at("2.1.2 Inventory", 2, { status: "In progress" }),
+        at("2.1.3 Roles", 3, { status: "Needs rework" }),
+      ],
+    ],
+    [
+      "Fraud",
+      [
+        at("2.1.1 Policy", 1, done),
+        at("2.1.2 Inventory", 2, { status: "Draft" }),
+        at("2.1.3 Roles", 3, done),
+      ],
+    ],
+  );
+
+  it("gives one item per source and requirement number, naming the pairings", () => {
+    const list = build(requirements);
+
+    expect(list.items.map((i) => [i.source, i.where])).toEqual([
+      [3, "2.1.1 Policy (Organization, Credit scoring)"],
+      // Same severity, due state and order number: sorted by where.
+      [4, "2.1.3 Roles (Credit scoring)"],
+      [2, "2.1.3 Roles (Organization)"],
+      [6, "2.1.2 Inventory (Organization, Credit scoring, Fraud)"],
+    ]);
+    expect(list.counts).toEqual({ high: 1, medium: 2, low: 1 });
+  });
+
+  it("takes the most urgent due date and every owner across the pairings", () => {
+    const [overdue] = build(requirements).items;
+
+    expect(overdue).toMatchObject({
+      severity: "high",
+      overdue: true,
+      dueDate: "2026-09-01",
+      owner: "Ann Owner, Bo Owner",
+    });
+  });
+
+  it("leaves a single pairing's items as they were", () => {
+    const list = build(pairings(["Organization", [at("2.1.2 Inventory", 2, { status: "Draft" })]]));
+
+    expect(list.items).toHaveLength(1);
+    expect(list.items[0].where).toBe("2.1.2 Inventory");
+  });
+});
+
 describe("buildE23FixItList: source 1 contradictions", () => {
   const fired = (ruleId: string) => ({
     ...none,
@@ -294,16 +386,18 @@ describe("buildE23FixItList: source 7 model gaps", () => {
 describe("buildE23FixItList: ordering and counts", () => {
   it("sorts by severity, overdue first, sortKey, then where; counts match", () => {
     const low = row({ status: "Draft", orderNo: 1 });
-    const medB = row({ owner: null, orderNo: 5, title: "1.5 B" });
-    const medA = row({ owner: null, orderNo: 5, title: "1.5 A" });
+    // Requirement numbers are unique in the structure; equal order numbers
+    // here only exercise the where tiebreak.
+    const medB = row({ owner: null, orderNo: 5, title: "1.5.2 B" });
+    const medA = row({ owner: null, orderNo: 5, title: "1.5.1 A" });
     const highLate = row({ isOverdue: true, orderNo: 9, title: "1.9 late" });
     const highEarly = row({ isOverdue: true, orderNo: 2, title: "1.2 early" });
     const list = build(reqs(low, medB, medA, highLate, highEarly));
     expect(list.items.map((i) => i.where)).toEqual([
       "1.2 early",
       "1.9 late",
-      "1.5 A",
-      "1.5 B",
+      "1.5.1 A",
+      "1.5.2 B",
       low.title,
     ]);
     expect(list.counts).toEqual({ high: 2, medium: 2, low: 1 });

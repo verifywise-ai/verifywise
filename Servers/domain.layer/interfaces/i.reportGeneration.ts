@@ -737,7 +737,10 @@ export interface E23FixItListSectionData {
 
 /** The fixed "at a glance" figures of an E-23 report (spec 8.3 item 3). */
 export interface E23GlanceFigures {
-  /** E-23 (framework 26) requirements implemented or audited, pooled over pairings. */
+  /**
+   * E-23 (framework 26) requirements implemented or audited. Each requirement
+   * number counts once across pairings, done only when done in every pairing.
+   */
   requirementsDone: number;
   requirementsTotal: number;
   /** E-23 groups checked against MRM data, of all groups the rules know. */

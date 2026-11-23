@@ -1,7 +1,9 @@
 import type {
   E23ContradictionsSectionData,
   E23FixItListSectionData,
+  FrameworkRequirementGroup,
   FrameworkRequirementRollup,
+  FrameworkRequirementRow,
   FrameworkRequirementsSectionData,
   MrmFleetSectionData,
 } from "../../../../domain.layer/interfaces/i.reportGeneration";
@@ -16,10 +18,49 @@ const rollup = (done: number, total: number): FrameworkRequirementRollup => ({
   statusBreakdown: {},
 });
 
+const req = (
+  title: string,
+  isDone: boolean,
+  children?: FrameworkRequirementRow[],
+): FrameworkRequirementRow => ({
+  implId: 0,
+  level: 2,
+  title,
+  orderNo: 0,
+  status: isDone ? "Implemented" : "Draft",
+  owner: "Ann Owner",
+  reviewer: null,
+  approver: null,
+  dueDate: null,
+  isDone,
+  isOverdue: false,
+  evidenceCount: 1,
+  evidenceFiles: [],
+  riskCount: 0,
+  ...(children && { children }),
+});
+
+const group = (requirements: FrameworkRequirementRow[], useCase?: string) =>
+  ({
+    title: "Governance",
+    orderNo: 1,
+    ...(useCase && { useCase }),
+    requirements,
+    rollup: rollup(0, 0),
+  }) as FrameworkRequirementGroup;
+
+// 83 E-23 requirements, the first 30 done.
+const e23Rows = Array.from({ length: 83 }, (_, i) => req(`2.${i + 1} Requirement`, i < 30));
+
 const requirements: FrameworkRequirementsSectionData = {
   frameworks: [
     { frameworkId: 5, frameworkName: "SOC 2", groups: [], rollup: rollup(9, 9) },
-    { frameworkId: 26, frameworkName: "OSFI E-23", groups: [], rollup: rollup(30, 83) },
+    {
+      frameworkId: 26,
+      frameworkName: "OSFI E-23",
+      groups: [group(e23Rows)],
+      rollup: rollup(30, 83),
+    },
   ],
 };
 
@@ -70,12 +111,27 @@ describe("buildE23Glance", () => {
     });
   });
 
-  it("pools E-23 rollups when several entries carry framework 26", () => {
+  it("counts a requirement once across pairings, done only when every pairing's row is", () => {
+    // Organization project and two use cases. 2.1 is done everywhere; 2.2 is
+    // done in two of three; 2.3 nowhere; the L3 2.1.1 is done everywhere.
+    const rows = (doneIn2: boolean) => [
+      req("2.1 Policy", true, [req("2.1.1 Policy detail", true)]),
+      req("2.2 Inventory", doneIn2),
+      req("2.3 Roles", false),
+    ];
     const glance = buildE23Glance({
       requirements: {
         frameworks: [
-          { frameworkId: 26, frameworkName: "OSFI E-23", groups: [], rollup: rollup(1, 83) },
-          { frameworkId: 26, frameworkName: "OSFI E-23", groups: [], rollup: rollup(2, 83) },
+          {
+            frameworkId: 26,
+            frameworkName: "OSFI E-23",
+            groups: [
+              group(rows(true), "Organization"),
+              group(rows(true), "Credit scoring"),
+              group(rows(false), "Fraud"),
+            ],
+            rollup: rollup(9, 12),
+          },
         ],
       },
       contradictions,
@@ -83,8 +139,8 @@ describe("buildE23Glance", () => {
       fixIt,
       previous: null,
     });
-    expect(glance.requirementsDone).toBe(3);
-    expect(glance.requirementsTotal).toBe(166);
+    expect(glance.requirementsDone).toBe(2);
+    expect(glance.requirementsTotal).toBe(4);
   });
 
   it("is all zeros, flagged, when the MRM data could not be read", () => {

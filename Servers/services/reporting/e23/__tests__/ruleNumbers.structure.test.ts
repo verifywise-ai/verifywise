@@ -13,6 +13,11 @@ describe("E-23 rule requirement numbers", () => {
   );
   const numbers = new Set(titles.map((t) => t.trim().split(" ")[0]));
 
+  it("gives every requirement its own number", () => {
+    // The fix-it list and the glance merge pairings by requirement number.
+    expect(numbers.size).toBe(titles.length);
+  });
+
   it("loads the OSFI E-23 structure", () => {
     expect(structure?.key).toBe("osfi-e23");
     expect(titles.length).toBeGreaterThan(0);

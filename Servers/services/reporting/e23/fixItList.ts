@@ -16,7 +16,7 @@ import type {
 } from "../../../domain.layer/interfaces/i.reportGeneration";
 import type { Status } from "../../../types/status.type";
 import { hasNoActiveOwner } from "../collectors/frameworkRollup";
-import type { E23RuleId } from "./contradictionRules";
+import { e23RowsByNumber, type E23RuleId, type PlacedE23Row } from "./contradictionRules";
 import { FIX_IT_CLOSES_WHEN } from "./e23Text";
 import { isCriticalOrHigh, isOpenFinding, isValidationOverdue, time } from "./mrmFleet";
 import { E23_FRAMEWORK_ID } from "./e23Parameters";
@@ -87,6 +87,53 @@ function requirementItem(row: FrameworkRequirementRow): E23FixItItem | null {
     };
   }
   return null;
+}
+
+// More urgent first: overdue, then the earlier due date (none last).
+function moreUrgent(a: E23FixItItem, b: E23FixItItem): boolean {
+  if (a.overdue !== b.overdue) return a.overdue;
+  return (a.dueDate ?? "\uffff") < (b.dueDate ?? "\uffff");
+}
+
+/**
+ * The requirement items, one per (source, requirement number). With E-23 on
+ * several pairings each requirement appears once per pairing; their items
+ * merge into one: the worst severity, the most urgent pairing's text and due
+ * date, every owner, and the pairings named in `where`.
+ */
+function requirementItems(byNumber: Map<string, PlacedE23Row[]>): E23FixItItem[] {
+  const pairingCount = new Set(
+    [...byNumber.values()].flat().flatMap((p) => (p.useCase === undefined ? [] : [p.useCase])),
+  ).size;
+  const items: E23FixItItem[] = [];
+  for (const placed of byNumber.values()) {
+    const bySource = new Map<number, Array<{ item: E23FixItItem; useCase?: string }>>();
+    for (const p of placed) {
+      const item = requirementItem(p.row);
+      if (!item) continue;
+      bySource.set(item.source, [
+        ...(bySource.get(item.source) ?? []),
+        { item, useCase: p.useCase },
+      ]);
+    }
+    for (const list of bySource.values()) {
+      const lead = list.reduce((a, c) => (moreUrgent(c.item, a.item) ? c : a)).item;
+      const useCases = [...new Set(list.flatMap((e) => (e.useCase ? [e.useCase] : [])))];
+      items.push({
+        ...lead,
+        severity: list
+          .map((e) => e.item.severity)
+          .reduce((a, c) => (SEVERITY_RANK[c] < SEVERITY_RANK[a] ? c : a)),
+        overdue: list.some((e) => e.item.overdue),
+        owner: [...new Set(list.map((e) => e.item.owner))].join(", "),
+        where:
+          pairingCount > 1 && useCases.length > 0
+            ? `${lead.where} (${useCases.join(", ")})`
+            : lead.where,
+      });
+    }
+  }
+  return items;
 }
 
 function modelItem(m: MrmModelFacts, generatedAt: Date): E23FixItItem | null {
@@ -171,10 +218,7 @@ export function buildE23FixItList(input: {
     items.push(item);
   }
 
-  for (const row of rows) {
-    const item = requirementItem(row);
-    if (item) items.push(item);
-  }
+  items.push(...requirementItems(e23RowsByNumber(input.requirements)));
 
   for (const m of input.models.filter((x) => !x.retired)) {
     const item = modelItem(m, input.generatedAt);

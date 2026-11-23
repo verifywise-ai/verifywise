@@ -219,6 +219,38 @@ export const requirementNumber = (title: string): string => title.trim().split(/
 const flattenRows = (rows: FrameworkRequirementRow[]): FrameworkRequirementRow[] =>
   rows.flatMap((r) => [r, ...flattenRows(r.children ?? [])]);
 
+/** One E-23 requirement row and the pairing (use case) it came from. */
+export interface PlacedE23Row {
+  row: FrameworkRequirementRow;
+  /** Set only when more than one pairing contributed to the section. */
+  useCase?: string;
+}
+
+/**
+ * Every E-23 row (L3 children included), keyed by requirement number, in
+ * section order. With E-23 on several pairings (the organization project and
+ * use cases) the merged section repeats each requirement once per pairing;
+ * this is where those repeats come together as one requirement.
+ */
+export function e23RowsByNumber(
+  requirements: FrameworkRequirementsSectionData | undefined,
+): Map<string, PlacedE23Row[]> {
+  const byNumber = new Map<string, PlacedE23Row[]>();
+  for (const f of requirements?.frameworks ?? []) {
+    if (f.frameworkId !== E23_FRAMEWORK_ID) continue;
+    for (const group of f.groups) {
+      for (const row of flattenRows(group.requirements)) {
+        // A row without a title cannot be matched to another pairing's.
+        const key = requirementNumber(row.title) || `impl:${row.implId}`;
+        const list = byNumber.get(key) ?? [];
+        list.push({ row, ...(group.useCase !== undefined && { useCase: group.useCase }) });
+        byNumber.set(key, list);
+      }
+    }
+  }
+  return byNumber;
+}
+
 const byName = (a: string, b: string) => a.localeCompare(b, undefined, { sensitivity: "base" });
 
 export function evaluateE23Rules(input: {
