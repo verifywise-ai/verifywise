@@ -1672,5 +1672,8 @@
   "{field} does not reference an entity in your organization": "{field} does not reference an entity in your organization",
   "Critical incident needs a response": "Critical incident needs a response",
   "Incident {reference} in \"{useCase}\" was rated {severity}.": "Incident {reference} in \"{useCase}\" was rated {severity}.",
-  "Critical incident: {reference}": "Critical incident: {reference}"
+  "Critical incident: {reference}": "Critical incident: {reference}",
+  "Minor": "Minor",
+  "Serious": "Serious",
+  "Very serious": "Very serious"
 }

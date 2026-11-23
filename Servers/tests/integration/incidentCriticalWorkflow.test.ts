@@ -11,6 +11,11 @@ jest.setTimeout(60000);
  *  - Approving the first gate creates ONE remediation task for the owner;
  *    approving the second notifies every Admin in the app and by email; a
  *    repeated execution creates and sends nothing more.
+ *  - Review fixes: many concurrent triggers finish without exhausting the
+ *    pool; a run for an incident that no longer qualifies ends without any
+ *    approval; failed and stale pending runs do not block; an Admin whose
+ *    email failed is retried through a new approval; a task_added automation
+ *    and a task without a creator do not break task creation.
  *
  * Redis, email and automation queues are stubbed; the workflow engine, the
  * approval gateway and every query run for real.
@@ -40,7 +45,10 @@ import { createTestIncident } from "../factories/test-entities.factory";
 import { register } from "../../services/workflows/registry";
 import { incidentResponseWorkflow } from "../../services/workflows/definitions/incidentResponse.workflow";
 import * as triggers from "../../services/workflows/triggers";
-import { loadRun } from "../../services/workflows/engine";
+import { createRun, loadRun } from "../../services/workflows/engine";
+import { createNewTaskQuery } from "../../utils/task.utils";
+import { TaskPriority } from "../../domain.layer/enums/task-priority.enum";
+import { TaskStatus } from "../../domain.layer/enums/task-status.enum";
 import { approveAction } from "../../advisor/approval/approvalGateway";
 import * as aiAuditTrail from "../../services/aiAuditTrail.service";
 import { notificationService } from "../../services/notificationService";
@@ -346,5 +354,250 @@ describe("critical incident response workflow", () => {
     expect(tasks).toHaveLength(1);
     expect(tasks[0].assignees).toEqual([ownerId]);
     expect(tasks[0].creator_id).toBe(adminId);
+  });
+
+  it("many concurrent triggers finish well inside the pool's acquire timeout, one run each", async () => {
+    const incidents: number[] = [];
+    for (let i = 0; i < 8; i++) incidents.push(await createTestIncident(orgId, ownerId));
+    await sequelize.query(
+      `UPDATE ai_incident_managements SET severity = 'Very serious' WHERE id IN (:ids)`,
+      { replacements: { ids: incidents } },
+    );
+
+    const started = Date.now();
+    // 8 incidents, each triggered twice at once: 16 concurrent triggers on a
+    // pool of 5 connections.
+    await Promise.all(
+      incidents.flatMap((id) => [
+        triggers.triggerIncidentResponse(orgId, id, "Very serious"),
+        triggers.triggerIncidentResponse(orgId, id, "Very serious"),
+      ]),
+    );
+    await settle();
+    const elapsed = Date.now() - started;
+
+    expect(elapsed).toBeLessThan(20000);
+    for (const id of incidents) {
+      const runs = await runsFor(orgId, id);
+      expect(runs).toHaveLength(1);
+      expect(runs[0].state).toBe("awaiting_approval");
+    }
+  });
+
+  it("a run for an incident that is not critical ends at once and requests no approval", async () => {
+    const incidentId = await createTestIncident(orgId, ownerId); // Minor
+
+    await triggers.triggerIncidentResponse(orgId, incidentId, "Very serious");
+    await settle();
+
+    const [run] = await runsFor(orgId, incidentId);
+    expect(run.state).toBe("completed");
+    const loaded = await loadRun(run.id, orgId);
+    expect(loaded?.results.map((r) => r.stepId)).toEqual(["classify_incident"]);
+    const approvals = (await sequelize.query(
+      `SELECT id FROM ai_action_approvals WHERE organization_id = :orgId`,
+      { replacements: { orgId }, type: QueryTypes.SELECT },
+    )) as unknown[];
+    expect(approvals).toHaveLength(0);
+  });
+
+  it("approving after the incident was archived ends the run without a task", async () => {
+    const created = await createIncident(orgId, incidentInput({ assignee_id: ownerId }), {
+      userId: adminId,
+      canApprove: true,
+    });
+    await settle();
+    const [run] = await runsFor(orgId, created.id!);
+    await sequelize.query(`UPDATE ai_incident_managements SET archived = true WHERE id = :id`, {
+      replacements: { id: created.id },
+    });
+
+    await approveAction(orgId, run.awaiting_approval_id!, adminId);
+    await settle();
+
+    expect(await tasksIn(orgId)).toHaveLength(0);
+    const [after] = await runsFor(orgId, created.id!);
+    expect(after.state).toBe("completed");
+    expect(after.awaiting_approval_id).toBeNull();
+  });
+
+  it("approving after severity was lowered ends the run without a task", async () => {
+    const created = await createIncident(orgId, incidentInput({ assignee_id: ownerId }), {
+      userId: adminId,
+      canApprove: true,
+    });
+    await settle();
+    const [run] = await runsFor(orgId, created.id!);
+    await updateIncident(orgId, created.id!, { severity: "Serious" }, adminId, {
+      access: FULL_ACCESS,
+    });
+
+    await approveAction(orgId, run.awaiting_approval_id!, adminId);
+    await settle();
+
+    expect(await tasksIn(orgId)).toHaveLength(0);
+    expect((await runsFor(orgId, created.id!))[0].state).toBe("completed");
+  });
+
+  it("a failed or stale pending run does not block a new one; a fresh pending run does", async () => {
+    const insertRun = async (incidentId: number, state: string, ageMinutes: number) =>
+      sequelize.query(
+        `INSERT INTO ai_workflow_runs
+           (organization_id, workflow_type, trigger_name, trigger_payload, state, created_at)
+         VALUES (:orgId, 'incident_response', 'incident.critical',
+                 jsonb_build_object('incidentId', CAST(:incidentId AS int)), :state,
+                 NOW() - make_interval(mins => :age))`,
+        { replacements: { orgId, incidentId, state, age: ageMinutes } },
+      );
+
+    const failed = await createTestIncident(orgId, ownerId, { ai_project: "f" });
+    await insertRun(failed, "failed", 1);
+    const stale = await createTestIncident(orgId, ownerId, { ai_project: "s" });
+    await insertRun(stale, "pending", triggers.INCIDENT_RESPONSE_STALE_PENDING_MINUTES + 5);
+    const fresh = await createTestIncident(orgId, ownerId, { ai_project: "p" });
+    await insertRun(fresh, "pending", 1);
+    for (const id of [failed, stale, fresh]) {
+      await sequelize.query(
+        `UPDATE ai_incident_managements SET severity = 'Very serious' WHERE id = :id`,
+        { replacements: { id } },
+      );
+      await triggers.triggerIncidentResponse(orgId, id, "Very serious");
+    }
+    await settle();
+
+    expect(await runsFor(orgId, failed)).toHaveLength(2);
+    expect(await runsFor(orgId, stale)).toHaveLength(2);
+    expect(await runsFor(orgId, fresh)).toHaveLength(1);
+  });
+
+  it("createRun on a caller's transaction rolls back with it", async () => {
+    const incidentId = await createTestIncident(orgId, ownerId);
+    await expect(
+      sequelize.transaction(async (transaction) => {
+        await createRun(
+          incidentResponseWorkflow,
+          { organizationId: orgId, triggerPayload: { incidentId } },
+          transaction,
+        );
+        throw new Error("roll back");
+      }),
+    ).rejects.toThrow("roll back");
+
+    expect(await runsFor(orgId, incidentId)).toHaveLength(0);
+  });
+
+  it("an Admin whose email failed is retried through a new approval, and only they", async () => {
+    const created = await createIncident(orgId, incidentInput({ assignee_id: ownerId }), {
+      userId: adminId,
+      canApprove: true,
+    });
+    await settle();
+    const [run] = await runsFor(orgId, created.id!);
+    await approveAction(orgId, run.awaiting_approval_id!, adminId);
+    await settle();
+
+    // The second Admin's email fails on the first attempt.
+    const secondEmail = (
+      (await sequelize.query(`SELECT email FROM users WHERE id = :id`, {
+        replacements: { id: secondAdminId },
+        type: QueryTypes.SELECT,
+      })) as Array<{ email: string }>
+    )[0].email;
+    let failOnce = true;
+    emails.mockImplementation(async (to: string) => {
+      if (to === secondEmail && failOnce) {
+        failOnce = false;
+        throw new Error("smtp down");
+      }
+    });
+
+    const [gate2] = await runsFor(orgId, created.id!);
+    await approveAction(orgId, gate2.awaiting_approval_id!, adminId);
+    await settle();
+
+    const [retryGate] = await runsFor(orgId, created.id!);
+    expect(retryGate.state).toBe("awaiting_approval");
+    expect(retryGate.awaiting_approval_id).not.toBe(gate2.awaiting_approval_id);
+    let notices = await escalationNotices(orgId);
+    expect(notices).toHaveLength(2);
+    expect(notices.find((n) => n.user_id === adminId)!.metadata.sent).toBe(true);
+    expect(notices.find((n) => n.user_id === secondAdminId)!.metadata.sent).toBe(false);
+
+    // The failed claim was released, so the retry needs no wait.
+    expect(notices.find((n) => n.user_id === secondAdminId)!.metadata.claimed_at).toBeUndefined();
+    const before = emails.mock.calls.length;
+    await approveAction(orgId, retryGate.awaiting_approval_id!, adminId);
+    await settle();
+
+    expect((await runsFor(orgId, created.id!))[0].state).toBe("completed");
+    const retried = emails.mock.calls.slice(before).map(([to]) => to);
+    expect(retried).toEqual([secondEmail]);
+    notices = await escalationNotices(orgId);
+    expect(notices).toHaveLength(2);
+    expect(notices.every((n) => n.metadata.sent === true)).toBe(true);
+  });
+
+  it("the run records its task on the run row", async () => {
+    const created = await createIncident(orgId, incidentInput({ assignee_id: ownerId }), {
+      userId: adminId,
+      canApprove: true,
+    });
+    await settle();
+    const [run] = await runsFor(orgId, created.id!);
+    await approveAction(orgId, run.awaiting_approval_id!, adminId);
+    await settle();
+
+    const loaded = await loadRun(run.id, orgId);
+    const [task] = await tasksIn(orgId);
+    expect((loaded?.triggerPayload as any)._effects.remediation_task).toMatchObject({
+      taskId: task.id,
+      assigneeId: ownerId,
+      assigneeSource: "owner",
+    });
+  });
+
+  it("task creation survives a task_added automation, with and without a creator", async () => {
+    const [{ id: automationId }] = (await sequelize.query(
+      `INSERT INTO automations (organization_id, name, trigger_id, is_active)
+       SELECT :orgId, 'On task', id, true FROM automation_triggers WHERE key = 'task_added'
+       RETURNING id`,
+      { replacements: { orgId }, type: QueryTypes.SELECT },
+    )) as Array<{ id: number }>;
+    await sequelize.query(
+      `INSERT INTO automation_actions_data (organization_id, automation_id, action_type_id, params, "order")
+       SELECT :orgId, :automationId, id, '{"subject":"s","body":"b"}'::jsonb, 1
+         FROM automation_actions ORDER BY id LIMIT 1`,
+      { replacements: { orgId, automationId } },
+    );
+
+    for (const creator of [adminId, null]) {
+      await sequelize.transaction(async (transaction) =>
+        createNewTaskQuery(
+          {
+            title: `Task by ${creator ?? "system"}`,
+            creator_id: creator as number,
+            priority: TaskPriority.HIGH,
+            status: TaskStatus.OPEN,
+          },
+          orgId,
+          transaction,
+          [{ user_id: ownerId }],
+        ),
+      );
+    }
+
+    expect(await tasksIn(orgId)).toHaveLength(2);
+
+    // And through the workflow, with the automation present.
+    const created = await createIncident(orgId, incidentInput({ assignee_id: ownerId }), {
+      userId: adminId,
+      canApprove: true,
+    });
+    await settle();
+    const [run] = await runsFor(orgId, created.id!);
+    const result = await approveAction(orgId, run.awaiting_approval_id!, adminId);
+    await settle();
+    expect(result.success).toBe(true);
+    expect(await tasksIn(orgId)).toHaveLength(3);
   });
 });

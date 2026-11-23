@@ -1,8 +1,10 @@
 /**
  * triggerIncidentResponse starts at most one incident_response run per
  * incident: the existing-run lookup and the run insert happen under a
- * per-incident advisory lock, and an incident that already has a run (in any
- * state) gets no second one.
+ * per-incident advisory lock on ONE transaction (the run is created on it),
+ * and an incident that already has a live run gets no second one. Failed runs
+ * and stale pending runs do not count; a run that cannot start is marked
+ * failed.
  */
 import { beforeEach, describe, expect, it, jest } from "@jest/globals";
 
@@ -15,6 +17,7 @@ jest.mock("../../../database/db", () => ({
 }));
 jest.mock("../engine", () => ({
   createRun: jest.fn(),
+  persistRun: jest.fn(),
   runWorkflow: jest.fn(),
   startWorkflow: jest.fn(),
 }));
@@ -26,14 +29,15 @@ jest.mock("../../../utils/organization.utils", () => ({
 }));
 
 import { sequelize } from "../../../database/db";
-import { createRun, runWorkflow, startWorkflow } from "../engine";
+import { createRun, persistRun, runWorkflow, startWorkflow } from "../engine";
 import { getWorkflow } from "../registry";
-import { triggerIncidentResponse } from "../triggers";
+import { INCIDENT_RESPONSE_STALE_PENDING_MINUTES, triggerIncidentResponse } from "../triggers";
 
 const mockQuery = sequelize.query as unknown as jest.Mock<any>;
 const mockCreateRun = createRun as unknown as jest.Mock<any>;
 const mockRunWorkflow = runWorkflow as unknown as jest.Mock<any>;
 const mockGetWorkflow = getWorkflow as unknown as jest.Mock<any>;
+const mockPersistRun = persistRun as unknown as jest.Mock<any>;
 
 const wf = { id: "incident_response", triggerName: "incident.critical", steps: [] };
 
@@ -49,6 +53,7 @@ beforeEach(() => {
   mockGetWorkflow.mockReturnValue(wf);
   mockCreateRun.mockResolvedValue(501);
   mockRunWorkflow.mockResolvedValue({ id: 501, state: "awaiting_approval" });
+  mockPersistRun.mockResolvedValue(undefined);
 });
 
 describe("triggerIncidentResponse (once per incident)", () => {
@@ -61,7 +66,8 @@ describe("triggerIncidentResponse (once per incident)", () => {
       organizationId: 42,
       triggerPayload: { incidentId: 99, severity: "Very serious" },
     };
-    expect(mockCreateRun).toHaveBeenCalledWith(wf, params);
+    // Created on the lock's own transaction: no second pooled connection.
+    expect(mockCreateRun).toHaveBeenCalledWith(wf, params, mockTx);
     expect(mockRunWorkflow).toHaveBeenCalledWith(wf, 501, params);
     expect(startWorkflow).not.toHaveBeenCalled();
   });
@@ -122,5 +128,41 @@ describe("triggerIncidentResponse (once per incident)", () => {
 
     await expect(triggerIncidentResponse(42, 99, "Very serious")).resolves.toBeUndefined();
     expect(mockRunWorkflow).not.toHaveBeenCalled();
+  });
+
+  it("ignores failed runs and pending runs older than the stale limit", async () => {
+    dbWith([]);
+
+    await triggerIncidentResponse(42, 99, "Very serious");
+
+    const lookup = (mockQuery.mock.calls as any[])[1];
+    expect(lookup[0]).toContain("state <> 'failed'");
+    expect(lookup[0]).toContain("state = 'pending'");
+    expect(lookup[1].replacements.staleMinutes).toBe(INCIDENT_RESPONSE_STALE_PENDING_MINUTES);
+    expect(INCIDENT_RESPONSE_STALE_PENDING_MINUTES).toBe(10);
+  });
+
+  it("marks the run failed when it cannot be started, so it never blocks the incident", async () => {
+    dbWith([]);
+    mockRunWorkflow.mockRejectedValue(new Error("connection lost"));
+
+    await expect(triggerIncidentResponse(42, 99, "Very serious")).resolves.toBeUndefined();
+
+    expect(mockPersistRun).toHaveBeenCalledWith(
+      501,
+      42,
+      "failed",
+      0,
+      [],
+      expect.stringContaining("connection lost"),
+    );
+  });
+
+  it("does not mark anything failed when no run was created", async () => {
+    dbWith([{ id: 7 }]);
+
+    await triggerIncidentResponse(42, 99, "Very serious");
+
+    expect(mockPersistRun).not.toHaveBeenCalled();
   });
 });

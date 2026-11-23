@@ -8,8 +8,8 @@
  * Steps (Incident + Risk + Compliance agents):
  *   1. classify_incident       — load the incident by id in the run's
  *                                 organization and confirm it is critical.
- *                                 A missing or no longer critical incident
- *                                 skips the rest of the run.
+ *                                 A missing, archived or no longer critical
+ *                                 incident ends the run (completed, no gate).
  *   2. link_related_risks       — pull risks so the later steps have context.
  *   3. create_remediation_tasks — WRITE, gated. The first visit opens an
  *                                 approval and pauses; once an Admin approves,
@@ -17,11 +17,15 @@
  *                                 the incident's owner (createRemediationTask).
  *   4. escalate_notify_admins   — WRITE, gated the same way. Once approved, the
  *                                 resume notifies every Admin in the app and by
- *                                 email (notifyAdminsOfCriticalIncident).
+ *                                 email (notifyAdminsOfCriticalIncident). When
+ *                                 any Admin could not be reached, the step opens
+ *                                 a new approval to retry; approving it reaches
+ *                                 only the Admins still missing.
  *
- * Rejecting either approval cancels the run (engine). Each write records what
- * it did under a lock on the run, so running a step again for the same run
- * never repeats it.
+ * Both writes re-read the incident when they run: if it was deleted,
+ * archived or lowered below the critical tier since, the run ends there.
+ * Rejecting an approval cancels the run (engine). Each write records what it
+ * did on the run, so running a step again for the same run never repeats it.
  */
 
 import { WorkflowContext, WorkflowDefinition, StepResult } from "../types";
@@ -42,25 +46,29 @@ function runIncidentId(ctx: WorkflowContext): number {
 }
 
 /**
+ * Why the response no longer applies to `incident`, or null when it does:
+ * gone, archived, or below the critical tier.
+ */
+function noLongerApplies(incident: ResponseIncident | null, incidentId: unknown): string | null {
+  if (!incident) return `Incident ${incidentId || "?"} not found`;
+  if (incident.archived) return `Incident ${incident.id} is archived`;
+  if (!isCriticalIncidentSeverity(incident.severity)) {
+    return `Incident ${incident.id} is not critical (${incident.severity || "unknown"})`;
+  }
+  return null;
+}
+
+/**
  * Step 1 — classify the incident and decide whether the response runs.
  * The incident is read directly by id, scoped to the run's organization.
+ * When the response does not apply, the run ends here: no later step and no
+ * approval request.
  */
 async function classifyIncident(ctx: WorkflowContext): Promise<StepResult> {
   const incidentId = Number(ctx.triggerPayload.incidentId);
   const incident = await loadIncidentForResponse(ctx.organizationId, incidentId);
-  if (!incident) {
-    return {
-      type: "skip",
-      reason: `Incident ${ctx.triggerPayload.incidentId ?? "?"} not found`,
-    };
-  }
-
-  if (!isCriticalIncidentSeverity(incident.severity)) {
-    return {
-      type: "skip",
-      reason: `Incident ${incident.id} is not critical (${incident.severity || "unknown"})`,
-    };
-  }
+  const reason = noLongerApplies(incident, ctx.triggerPayload.incidentId);
+  if (reason || !incident) return { type: "end", reason: reason ?? "Incident not found" };
 
   return {
     type: "ok",
@@ -94,11 +102,20 @@ async function linkRelatedRisks(ctx: WorkflowContext): Promise<StepResult> {
 
 /**
  * The incident as it is now, for a write that runs after approval (possibly
- * days after classify_incident): the owner may have changed, or the incident
- * may have been deleted.
+ * days after classify_incident): the owner may have changed, and the
+ * incident may have been deleted, archived or lowered. `end` is set when the
+ * response no longer applies.
  */
-async function currentIncident(ctx: WorkflowContext): Promise<ResponseIncident | null> {
-  return loadIncidentForResponse(ctx.organizationId, runIncidentId(ctx));
+async function currentIncident(
+  ctx: WorkflowContext,
+): Promise<{ incident: ResponseIncident; end?: undefined } | { end: StepResult }> {
+  const incidentId = runIncidentId(ctx);
+  const incident = await loadIncidentForResponse(ctx.organizationId, incidentId);
+  const reason = noLongerApplies(incident, incidentId);
+  if (reason || !incident) {
+    return { end: { type: "end", reason: reason ?? "Incident not found" } };
+  }
+  return { incident };
 }
 
 /**
@@ -117,10 +134,9 @@ async function createRemediationTasks(ctx: WorkflowContext): Promise<StepResult>
       `Approve creation of a remediation task for critical incident ${incidentId || "?"}`,
     );
   }
-  const incident = await currentIncident(ctx);
-  if (!incident) {
-    return { type: "skip", reason: `Incident ${incidentId || "?"} no longer exists` };
-  }
+  const current = await currentIncident(ctx);
+  if (current.end) return current.end;
+  const { incident } = current;
   const outcome = await createRemediationTask(ctx, incident);
   return {
     type: "ok",
@@ -151,11 +167,21 @@ async function escalateNotifyAdmins(ctx: WorkflowContext): Promise<StepResult> {
       `Approve admin escalation for critical incident ${incidentId || "?"}`,
     );
   }
-  const incident = await currentIncident(ctx);
-  if (!incident) {
-    return { type: "skip", reason: `Incident ${incidentId || "?"} no longer exists` };
-  }
+  const current = await currentIncident(ctx);
+  if (current.end) return current.end;
+  const { incident } = current;
   const outcome = await notifyAdminsOfCriticalIncident(ctx, incident);
+  if (outcome.failed.length > 0) {
+    // Keep the escalation retryable: a new approval re-runs this step, which
+    // then reaches only the Admins still missing.
+    return requestGateApproval(
+      ctx,
+      "incident_response",
+      "escalate_notify_admins",
+      `Retry admin escalation for critical incident ${incident.id}: ` +
+        `${outcome.failed.length} Admin(s) could not be notified`,
+    );
+  }
   return {
     type: "ok",
     output: {
@@ -163,7 +189,7 @@ async function escalateNotifyAdmins(ctx: WorkflowContext): Promise<StepResult> {
       incidentId: incident.id,
       notified: outcome.notified,
       alreadyNotified: outcome.alreadyNotified,
-      failed: outcome.failed,
+      inFlight: outcome.inFlight,
     },
   };
 }

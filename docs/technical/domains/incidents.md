@@ -829,57 +829,91 @@ after commit, fire-and-forget, from:
   lower never start it.
 
 **Once per incident.** The trigger takes a per-incident advisory lock
-(`pg_advisory_xact_lock`), looks for any `ai_workflow_runs` row of type
-`incident_response` whose `trigger_payload->>'incidentId'` is the incident, and
-creates a run only when there is none. Runs are never deleted, so the existing
-row is the durable record; there is no extra column. An incident created
-critical never gets a second run when it is later lowered and raised again, and
-neither does one escalated twice. Concurrent writers (a create racing an
-update, two updates) serialise on the lock and produce one run.
+(`pg_advisory_xact_lock`) and, on that one transaction, looks for an
+`ai_workflow_runs` row of type `incident_response` whose
+`trigger_payload->>'incidentId'` is the incident, and creates the run (row and
+audit entry, `createRun(..., transaction)`) only when there is none. Holding
+the lock never waits on a second pooled connection. Every run counts except:
+
+- a `failed` run, which never did the response;
+- a `pending` run older than `INCIDENT_RESPONSE_STALE_PENDING_MINUTES` (10
+  minutes): the process stopped between creating and running it (a live run
+  leaves `pending` within milliseconds).
+
+A `cancelled` run (an Admin rejected a step) and a `completed` one do count.
+If starting the run throws, the trigger marks it `failed`, so it never blocks a
+later escalation. Runs are not deleted (no retention rule covers
+`ai_workflow_runs`), so the row itself is the record; there is no extra column.
+An incident created critical gets no second run when it is later lowered and
+raised again, and neither does one escalated twice. Concurrent writers (a
+create racing an update, two updates) serialise on the lock and produce one
+run.
 
 ### Steps
 
 | Step | Kind | What it does |
 |------|------|--------------|
-| `classify_incident` | Read | Loads the incident by id in the run's organization (`loadIncidentForResponse`, `getIncidentByIdQuery`); skips the run when it is gone or no longer critical |
+| `classify_incident` | Read | Loads the incident by id in the run's organization (`loadIncidentForResponse`, `getIncidentByIdQuery`); when it is gone, archived or no longer critical the run **ends** here |
 | `link_related_risks` | Read | Collects risks for context |
 | `create_remediation_tasks` | Write, gated | Pauses on a workflow gate approval; once approved, creates one remediation task |
 | `escalate_notify_admins` | Write, gated | Pauses on its own gate approval; once approved, notifies every Admin |
+
+A step ends a run with the engine's `end` result (`StepResult` in
+`services/workflows/types.ts`): the step is recorded as skipped with the
+reason, no later step runs, no approval is requested, and the run is
+`completed`. (A `skip` result only skips the one step.)
 
 Each gated step opens an approval in the Admin queue (`requestGateApproval`)
 and the run waits in `awaiting_approval`. Approving resumes the run at that
 step, which then performs its write; rejecting cancels the run. One approval
 authorises one write, so the escalation needs a second approval. Both writes
-re-read the incident at approval time (the owner may have changed) and skip if
-it was deleted.
+re-read the incident at approval time (the owner may have changed); if it was
+deleted, archived or lowered below the critical tier since, the run ends
+without the write.
 
 **Remediation task** (`createRemediationTask`,
 `Servers/services/workflows/incidentResponseActions.ts`): one task, High
 priority, Open, titled "Respond to critical incident <reference>", with a
 description that links to the incident. Assigned to the incident's owner
 (`assignee_id`); when there is none, or the owner has left the organization, to
-the user who created the incident (its creation history); failing that, to the
-Admin who approved the step. Only current organization members qualify; when
-none does, the task is created unassigned. The approving Admin is the task's
-creator; task history records the creation as a system change. The assignee
-gets the usual task-assigned notice. Tasks cannot link to incidents
-(`task_entity_links` has no incident type), so the link is in the description.
+the user who created the incident (its creation history; data retention may
+have pruned it for an old incident, in which case this candidate is skipped);
+failing that, to the Admin who approved the step. Only current organization
+members qualify; when none does, the task is created unassigned. The task's
+creator (`creator_id`) is the approving user, else the assignee, else the
+organization's first Admin, so it is not null. Task history records the
+creation as a system change. The assignee gets the usual task-assigned notice.
+Tasks cannot link to incidents (`task_entity_links` has no incident type), so
+the link is in the description.
 
 **Admin escalation** (`notifyAdminsOfCriticalIncident`): every organization
-member with role Admin gets an in-app notice (`system` type, keyed title and
-message in their language, linked to `/ai-incident-managements?incidentId=<id>`)
-and an email (`incident-critical-escalation.mjml`, keyed subject; English body),
-through `notifyCriticalIncidentEscalation`.
+member with role Admin gets an in-app notice (`system` type, linked to
+`/ai-incident-managements?incidentId=<id>`) and an email
+(`incident-critical-escalation.mjml`; English body). Title, message, subject
+and the severity label are in the Admin's language
+(`buildCriticalIncidentEscalation`, `incidentSeverityLabel`). If any Admin
+could not be reached, the step opens a new approval ("Retry admin
+escalation ..."); approving it delivers only to the Admins still missing.
 
-**Each write runs once per run.** Both writes first lock the run's
-`ai_workflow_runs` row (`FOR NO KEY UPDATE`), so a second execution of the same
-step waits for the first. The task is recorded in `ai_action_audit_log`
-(`rule_name = workflow.incident_response.remediation_task_created`, task id in
-`metadata`) in the task's own transaction; a later execution returns that task
-instead of creating another. Each Admin notice carries
-`metadata.workflow_action = incident_critical_escalation` and
-`metadata.workflow_run_id`; a later execution skips Admins who already have
-one, so it only reaches Admins a failed first attempt missed.
+**Each write runs once per run.**
+
+- Task: created on a transaction that locks the run's `ai_workflow_runs` row
+  (`FOR NO KEY UPDATE`); in the same transaction the task is recorded on the
+  run row at `trigger_payload._effects.remediation_task` (task id, assignee,
+  how the assignee was chosen). The engine never rewrites `trigger_payload`,
+  and no retention rule prunes the table, so a later execution for the same
+  run finds it and returns that task instead of creating another.
+- Admin notices: each Admin's notice row is the claim for that Admin
+  (`metadata.workflow_action = incident_critical_escalation`,
+  `metadata.workflow_run_id`, `metadata.sent`, `metadata.claimed_at`). Under
+  the run lock, on one transaction, the step inserts an unsent row for each
+  Admin without one and claims every unsent row not claimed in the last
+  `ESCALATION_CLAIM_LEASE_MINUTES` (5). After commit it publishes the row in
+  real time and sends the email, and only then sets `sent: true`. A failure
+  leaves the row unsent and releases its claim, so the retry approval reaches
+  that Admin at once, with the same in-app row. An Admin already `sent` is
+  never notified again; a row claimed within the lease is being delivered by
+  another execution and is left to it.
 
 ## AI Advisor Integration
 

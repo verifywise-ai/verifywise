@@ -1679,5 +1679,8 @@
   "{field} does not reference an entity in your organization": "{field} ne fait référence à aucun élément de votre organisation",
   "Critical incident needs a response": "Un incident critique nécessite une réponse",
   "Incident {reference} in \"{useCase}\" was rated {severity}.": "L'incident {reference} dans « {useCase} » a été classé {severity}.",
-  "Critical incident: {reference}": "Incident critique : {reference}"
+  "Critical incident: {reference}": "Incident critique : {reference}",
+  "Minor": "Mineur",
+  "Serious": "Grave",
+  "Very serious": "Très grave"
 }

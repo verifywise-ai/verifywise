@@ -169,13 +169,13 @@ export const incidentManagementContent: ArticleContent = {
         },
         {
           bold: 'Admin escalation',
-          text: 'Approving the second request notifies every Admin about the incident, in the app and by email.',
+          text: 'Approving the second request notifies every Admin about the incident, in the app and by email. If some Admins cannot be reached, a new request appears to try them again.',
         },
       ],
     },
     {
       type: 'paragraph',
-      text: 'Rejecting either request stops the response. Each incident gets one response: lowering its severity and raising it to Very serious again does not start another.',
+      text: 'Rejecting either request stops the response. So does archiving the incident or lowering its severity before a request is approved. Each incident gets one response: lowering its severity and raising it to Very serious again does not start another.',
     },
     {
       type: 'heading',

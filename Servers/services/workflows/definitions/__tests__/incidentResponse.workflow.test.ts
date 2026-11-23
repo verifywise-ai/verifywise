@@ -14,6 +14,10 @@
 
 import { describe, expect, it, jest, beforeEach } from "@jest/globals";
 
+// The engine (used by the end-to-end "no approval" case) persists through it.
+jest.mock("../../../../database/db", () => ({
+  sequelize: { query: jest.fn(async () => []) },
+}));
 jest.mock("../../incidentResponseActions", () => ({
   loadIncidentForResponse: jest.fn(),
   createRemediationTask: jest.fn(),
@@ -52,6 +56,7 @@ const incident = (overrides: Record<string, unknown> = {}) => ({
   type: "Security breach",
   assigneeId: 5,
   ownerName: "Ada Owner",
+  archived: false,
   ...overrides,
 });
 const fetchRisks = availableRiskTools.fetch_risks as unknown as jest.Mock;
@@ -140,20 +145,45 @@ describe("workflows / incidentResponse classify_incident (key decision)", () => 
     expect(result.type).toBe("ok");
   });
 
-  it("skips the workflow when the incident is no longer critical", async () => {
+  it("ends the run when the incident is no longer critical", async () => {
     loadIncident.mockResolvedValue(incident({ severity: "Minor" }));
 
     const result = await stepById("classify_incident").handler(ctx());
 
-    expect(result.type).toBe("skip");
+    expect(result.type).toBe("end");
   });
 
-  it("skips when the incident cannot be found in the organization", async () => {
+  it("ends the run when the incident cannot be found in the organization", async () => {
     loadIncident.mockResolvedValue(null);
 
     const result = await stepById("classify_incident").handler(ctx());
 
-    expect(result.type).toBe("skip");
+    expect(result.type).toBe("end");
+  });
+});
+
+describe("workflows / incidentResponse classify_incident ends, not skips", () => {
+  it("ends the run for an archived incident", async () => {
+    loadIncident.mockResolvedValue(incident({ archived: true }));
+
+    const result = await stepById("classify_incident").handler(ctx());
+
+    expect(result).toEqual({ type: "end", reason: expect.stringContaining("archived") });
+  });
+
+  it("a run whose incident is not critical requests no approval", async () => {
+    loadIncident.mockResolvedValue(incident({ severity: "Minor" }));
+    const { runWorkflow } = jest.requireActual("../../engine") as typeof import("../../engine");
+
+    const run = await runWorkflow(incidentResponseWorkflow, 5, {
+      organizationId: 42,
+      triggerPayload: { incidentId: 99 },
+    });
+
+    expect(run.state).toBe("completed");
+    expect(run.results.map((r) => r.stepId)).toEqual(["classify_incident"]);
+    expect(fetchRisks).not.toHaveBeenCalled();
+    expect(mockRequestGateApproval).not.toHaveBeenCalled();
   });
 });
 
@@ -260,16 +290,40 @@ describe("workflows / incidentResponse write steps after approval (Decision 9)",
     expect(loadIncident).toHaveBeenCalledWith(42, 99);
   });
 
-  it.each(["create_remediation_tasks", "escalate_notify_admins"])(
-    "%s skips when the incident was deleted before approval",
-    async (stepId) => {
-      loadIncident.mockResolvedValue(null);
+  it.each([
+    ["create_remediation_tasks", "deleted", null],
+    ["escalate_notify_admins", "deleted", null],
+    ["create_remediation_tasks", "archived", { archived: true }],
+    ["escalate_notify_admins", "archived", { archived: true }],
+    ["create_remediation_tasks", "lowered", { severity: "Serious" }],
+    ["escalate_notify_admins", "lowered", { severity: "Minor" }],
+  ])("%s ends the run when the incident was %s before approval", async (stepId, _why, change) => {
+    loadIncident.mockResolvedValue(change === null ? null : incident(change as any));
 
-      const result = await stepById(stepId).handler(approved());
+    const result = await stepById(stepId as string).handler(approved());
 
-      expect(result.type).toBe("skip");
-      expect(createTask).not.toHaveBeenCalled();
-      expect(notifyAdmins).not.toHaveBeenCalled();
-    },
-  );
+    expect(result.type).toBe("end");
+    expect(createTask).not.toHaveBeenCalled();
+    expect(notifyAdmins).not.toHaveBeenCalled();
+  });
+
+  it("escalate_notify_admins opens a retry approval when an Admin was not reached", async () => {
+    loadIncident.mockResolvedValue(incident());
+    notifyAdmins.mockResolvedValue({
+      notified: [1],
+      alreadyNotified: [],
+      inFlight: [],
+      failed: [2],
+    });
+
+    const result = await stepById("escalate_notify_admins").handler(approved());
+
+    expect(result.type).toBe("pause");
+    expect(mockRequestGateApproval).toHaveBeenCalledWith(
+      expect.anything(),
+      "incident_response",
+      "escalate_notify_admins",
+      expect.stringContaining("Retry admin escalation"),
+    );
+  });
 });

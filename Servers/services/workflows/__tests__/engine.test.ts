@@ -25,7 +25,7 @@ jest.mock("../../../utils/logger/fileLogger", () => ({
   __esModule: true,
 }));
 
-import { runWorkflow } from "../engine";
+import { createRun, runWorkflow } from "../engine";
 import type { WorkflowDefinition, WorkflowStep } from "../types";
 import { sequelize } from "../../../database/db";
 
@@ -228,5 +228,65 @@ describe("workflows / runWorkflow", () => {
     expect(run.state).toBe("failed");
     expect(run.error).toContain("kaboom");
     expect(persistStates()).toContain("failed");
+  });
+});
+
+describe("workflows / an `end` step result", () => {
+  it("completes the run at that step: no later step runs, nothing pauses", async () => {
+    const later = jest.fn(async () => ({ type: "ok" as const, output: {} }));
+    const gate = jest.fn(async () => ({ type: "pause" as const, approvalId: "a" }));
+    const wf = workflow([
+      step({ id: "check", handler: async () => ({ type: "end", reason: "gone" }) }),
+      step({ id: "later", handler: later }),
+      step({ id: "gate", handler: gate }),
+    ]);
+
+    const run = await runWorkflow(wf, 9, params);
+
+    expect(run.state).toBe("completed");
+    expect(later).not.toHaveBeenCalled();
+    expect(gate).not.toHaveBeenCalled();
+    expect(run.results).toEqual([
+      expect.objectContaining({
+        stepId: "check",
+        status: "skipped",
+        output: { reason: "gone", ended: true },
+      }),
+    ]);
+    expect(persistStates()).toContain("completed");
+    expect(persistStates()).not.toContain("awaiting_approval");
+    expect(persistStates()).not.toContain("failed");
+    expect(auditTransitions()).toEqual(expect.arrayContaining(["step_ended", "completed"]));
+  });
+});
+
+describe("workflows / createRun on a caller's transaction", () => {
+  it("writes the run row and its audit entry on the given transaction", async () => {
+    mockQuery.mockResolvedValueOnce([{ id: 77 }] as any);
+    const tx = { id: "tx" } as any;
+
+    const id = await createRun(workflow([step({ id: "a" })]), params, tx);
+
+    expect(id).toBe(77);
+    expect(mockQuery).toHaveBeenCalledTimes(2);
+    for (const call of mockQuery.mock.calls) {
+      expect((call[1] as any).transaction).toBe(tx);
+    }
+  });
+
+  it("propagates an audit failure inside the caller's transaction", async () => {
+    mockQuery.mockResolvedValueOnce([{ id: 77 }] as any);
+    mockQuery.mockRejectedValueOnce(new Error("aborted"));
+
+    await expect(
+      createRun(workflow([step({ id: "a" })]), params, { id: "tx" } as any),
+    ).rejects.toThrow("aborted");
+  });
+
+  it("without a transaction, an audit failure is logged and the run still created", async () => {
+    mockQuery.mockResolvedValueOnce([{ id: 78 }] as any);
+    mockQuery.mockRejectedValueOnce(new Error("audit down"));
+
+    await expect(createRun(workflow([step({ id: "a" })]), params)).resolves.toBe(78);
   });
 });
