@@ -56,16 +56,17 @@ export function isIncidentDateInFuture(value: unknown, today: Dayjs = dayjs()): 
 
 /**
  * Returns an error message for the detected date given the occurred date, or
- * "" when valid: it must not be in the future, and must be on or after the
- * occurred date (the server refuses both). Required is checked separately.
+ * "" when valid: it must not be in the future (unless `checkFuture` is false,
+ * for an unchanged date in edit mode), and must be on or after the occurred
+ * date (the server refuses both). Required is checked separately.
  */
 export function validateIncidentDetectedDate(
   detected: unknown,
   occurred: unknown,
-  today: Dayjs = dayjs(),
+  { checkFuture = true, today = dayjs() }: { checkFuture?: boolean; today?: Dayjs } = {},
 ): string {
   if (!detected) return "";
-  if (isIncidentDateInFuture(detected, today)) return INCIDENT_FUTURE_DATE_MESSAGE;
+  if (checkFuture && isIncidentDateInFuture(detected, today)) return INCIDENT_FUTURE_DATE_MESSAGE;
   if (occurred && dayjs(detected as string).isBefore(dayjs(occurred as string), "day")) {
     return INCIDENT_DATE_ORDER_MESSAGE;
   }

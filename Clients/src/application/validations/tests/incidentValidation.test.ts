@@ -70,23 +70,32 @@ describe("incident date rules", () => {
   });
 
   it("accepts a detected date on or after the occurred date, up to today", () => {
-    expect(validateIncidentDetectedDate("2026-11-20", "2026-11-20", today)).toBe("");
-    expect(validateIncidentDetectedDate("2026-11-23", "2026-11-01", today)).toBe("");
+    expect(validateIncidentDetectedDate("2026-11-20", "2026-11-20", { today })).toBe("");
+    expect(validateIncidentDetectedDate("2026-11-23", "2026-11-01", { today })).toBe("");
   });
 
   it("refuses a detected date before the occurred date", () => {
-    expect(validateIncidentDetectedDate("2026-11-19", "2026-11-20", today)).toBe(
+    expect(validateIncidentDetectedDate("2026-11-19", "2026-11-20", { today })).toBe(
       INCIDENT_DATE_ORDER_MESSAGE,
     );
   });
 
   it("refuses a detected date in the future", () => {
-    expect(validateIncidentDetectedDate("2026-11-24", "2026-11-20", today)).toBe(
+    expect(validateIncidentDetectedDate("2026-11-24", "2026-11-20", { today })).toBe(
       INCIDENT_FUTURE_DATE_MESSAGE,
     );
   });
 
+  it("skips only the future rule when asked (an unchanged date in edit mode)", () => {
+    expect(
+      validateIncidentDetectedDate("2026-11-30", "2026-11-20", { checkFuture: false, today }),
+    ).toBe("");
+    expect(
+      validateIncidentDetectedDate("2026-11-30", "2026-12-01", { checkFuture: false, today }),
+    ).toBe(INCIDENT_DATE_ORDER_MESSAGE);
+  });
+
   it("leaves an empty detected date to the required check", () => {
-    expect(validateIncidentDetectedDate("", "2026-11-20", today)).toBe("");
+    expect(validateIncidentDetectedDate("", "2026-11-20", { today })).toBe("");
   });
 });

@@ -206,3 +206,21 @@ describe("incident change-history formatters are tenant-scoped", () => {
     );
   });
 });
+
+describe("incident day columns in change history", () => {
+  it("records a stored TIMESTAMP day (a Date at local midnight) as that day east of UTC", async () => {
+    // node-pg reads TIMESTAMP WITHOUT TIME ZONE as server-local time. On a
+    // UTC+9 server, 2026-06-23 is the instant 2026-06-22T15:00Z, whose local
+    // date parts are the 23rd. Jest pins the zone, so the local parts are
+    // simulated on the Date.
+    const stored = new Date("2026-06-22T15:00:00.000Z");
+    stored.getFullYear = () => 2026;
+    stored.getMonth = () => 5;
+    stored.getDate = () => 23;
+    expect(stored.toISOString().slice(0, 10)).toBe("2026-06-22");
+    expect(await formatters.occurred_date(stored)).toBe("2026-06-23");
+    expect(await formatters.date_detected(stored)).toBe("2026-06-23");
+    // A YYYY-MM-DD string (what the drawer sends) is that day too.
+    expect(await formatters.date_detected("2026-06-23")).toBe("2026-06-23");
+  });
+});

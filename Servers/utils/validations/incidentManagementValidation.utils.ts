@@ -170,7 +170,8 @@ const fieldError = (
   return { field, code, message: fillPlaceholders(i18nKey, i18nVars), i18nKey, i18nVars };
 };
 
-const isBlank = (value: unknown): boolean =>
+/** undefined, null, or a string that is empty after trimming. */
+export const isBlankIncidentValue = (value: unknown): boolean =>
   value === undefined || value === null || (typeof value === "string" && value.trim() === "");
 
 /** A text field: a string, non-blank when required, at most `max` characters. */
@@ -196,7 +197,7 @@ const checkEnum = (
   value: unknown,
   allowed: readonly string[],
 ): IncidentFieldError | null => {
-  if (isBlank(value)) return fieldError(field, "REQUIRED_FIELD", REQUIRED_KEY);
+  if (isBlankIncidentValue(value)) return fieldError(field, "REQUIRED_FIELD", REQUIRED_KEY);
   if (typeof value !== "string" || !allowed.includes(value)) {
     return fieldError(field, "INVALID_ENUM_VALUE", ONE_OF_KEY, { values: allowed.join(", ") });
   }
@@ -222,17 +223,22 @@ const sentCalendarDate = (value: unknown): string | null => {
     : null;
 };
 
+/** Hours the furthest-ahead time zone (UTC+14) is ahead of UTC. */
+const FURTHEST_AHEAD_UTC_OFFSET_HOURS = 14;
+
 /**
- * The latest calendar date an incident date may have: tomorrow in UTC. The
- * caller's "today" is at most one day ahead of UTC (UTC+14), so a date that
- * is today anywhere in the world is accepted, and anything later is refused.
+ * The latest calendar date an incident date may have: today in UTC+14, the
+ * furthest-ahead time zone. A date that is today anywhere in the world is
+ * accepted, and anything later is refused.
  */
 export const latestIncidentDate = (now: Date = new Date()): string =>
-  new Date(now.getTime() + 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  new Date(now.getTime() + FURTHEST_AHEAD_UTC_OFFSET_HOURS * 60 * 60 * 1000)
+    .toISOString()
+    .slice(0, 10);
 
 /** A required date that is a real calendar date and not in the future. */
 const checkDate = (field: string, value: unknown): IncidentFieldError | null => {
-  if (isBlank(value)) return fieldError(field, "REQUIRED_FIELD", REQUIRED_KEY);
+  if (isBlankIncidentValue(value)) return fieldError(field, "REQUIRED_FIELD", REQUIRED_KEY);
   const date = sentCalendarDate(value);
   if (!date) return fieldError(field, "INVALID_DATE", DATE_KEY);
   if (date > latestIncidentDate()) return fieldError(field, "FUTURE_DATE", FUTURE_KEY);
@@ -245,14 +251,32 @@ const checkBoolean = (field: string, value: unknown): IncidentFieldError | null 
     ? null
     : fieldError(field, "INVALID_TYPE", BOOLEAN_KEY);
 
-/** A list (possibly empty) of strings from INCIDENT_HARM_CATEGORIES_ENUM. */
-const checkHarmCategories = (value: unknown): IncidentFieldError | null =>
+/**
+ * A list (possibly empty) of strings from INCIDENT_HARM_CATEGORIES_ENUM.
+ * Items in `kept` (the stored categories, on update) are also accepted, so a
+ * row holding an older value outside the list can still be edited; only the
+ * items an update adds must come from the list.
+ */
+const checkHarmCategories = (
+  value: unknown,
+  kept: readonly unknown[] = [],
+): IncidentFieldError | null =>
   Array.isArray(value) &&
-  value.every((item) => typeof item === "string" && INCIDENT_HARM_CATEGORIES_ENUM.includes(item))
+  value.every(
+    (item) =>
+      (typeof item === "string" && INCIDENT_HARM_CATEGORIES_ENUM.includes(item)) ||
+      kept.some((stored) => JSON.stringify(stored) === JSON.stringify(item)),
+  )
     ? null
     : fieldError("categories_of_harm", "INVALID_HARM_CATEGORY", HARM_KEY, {
         values: INCIDENT_HARM_CATEGORIES_ENUM.join(", "),
       });
+
+/** The stored harm categories as a list (the JSON column may come back as a string). */
+const storedHarmCategories = (stored: unknown): unknown[] => {
+  const list = toHarmArray(stored);
+  return Array.isArray(list) ? list : [];
+};
 
 /**
  * Harm categories as a create request may send them: a list, or the
@@ -313,7 +337,7 @@ const FIELD_RULES: Record<string, (value: unknown) => IncidentFieldError | null>
   planned_corrective_actions: (v) =>
     checkText("planned_corrective_actions", v, { required: false }),
   approval_notes: (v) => checkText("approval_notes", v, { required: false }),
-  categories_of_harm: checkHarmCategories,
+  categories_of_harm: (v) => checkHarmCategories(v),
   interim_report: (v) => checkBoolean("interim_report", v),
   archived: (v) => checkBoolean("archived", v),
 };
@@ -395,7 +419,7 @@ export const validateCompleteIncidentCreation = (data: any): ValidationError[] =
   }
   for (const [field, rule] of Object.entries(FIELD_RULES)) {
     let value = body[field];
-    if (field in INCIDENT_CREATE_DEFAULTS && isBlank(value)) continue;
+    if (field in INCIDENT_CREATE_DEFAULTS && isBlankIncidentValue(value)) continue;
     if (field === "categories_of_harm") value = parseCreateHarmCategories(value);
     const error = rule(value);
     if (error) errors.push(error);
@@ -444,7 +468,10 @@ export const validateIncidentUpdateBusinessRules = (
   }
   for (const [field, rule] of Object.entries(FIELD_RULES)) {
     if (!changes(field)) continue;
-    const error = rule(update[field]);
+    const error =
+      field === "categories_of_harm"
+        ? checkHarmCategories(update[field], storedHarmCategories(stored.categories_of_harm))
+        : rule(update[field]);
     if (error) errors.push(error);
   }
   if (changes("occurred_date") || changes("date_detected")) {

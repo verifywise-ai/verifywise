@@ -292,10 +292,13 @@ const SideDrawerIncident: FC<SideDrawerIncidentProps> = ({
       date_detected: (v: unknown, all: NewIncidentFormValues) => {
         if (!v) return "Detected date is required.";
         // The order rule involves both dates: checked when either changed.
-        if (unchanged("date_detected", v) && unchanged("occurred_date", all.occurred_date)) {
-          return "";
-        }
-        return validateIncidentDetectedDate(v, all.occurred_date);
+        // The future rule only when the detected date itself changed, as on
+        // the server.
+        const detectedUnchanged = unchanged("date_detected", v);
+        if (detectedUnchanged && unchanged("occurred_date", all.occurred_date)) return "";
+        return validateIncidentDetectedDate(v, all.occurred_date, {
+          checkFuture: !detectedUnchanged,
+        });
       },
       reporter: (v: unknown) => (!v ? "Reporter is required." : ""),
       model_system_version: (v: unknown) =>
@@ -315,6 +318,21 @@ const SideDrawerIncident: FC<SideDrawerIncidentProps> = ({
 
   const { errors, validateAll, clearFieldError, resetErrors, getFirstInvalidField } =
     useFormValidation<NewIncidentFormValues>(validators);
+
+  // The page's harm categories, plus (when editing) any older value the
+  // incident stores outside that list, so it shows as a checked box the user
+  // can untick. The server accepts kept values but not new off-list ones.
+  const harmOptions = useMemo(() => {
+    const stored =
+      isEdit && Array.isArray(initialData?.categories_of_harm)
+        ? initialData.categories_of_harm
+        : [];
+    const extra = stored.filter(
+      (category): category is string =>
+        typeof category === "string" && !(harmCategories as string[]).includes(category),
+    );
+    return [...harmCategories, ...new Set(extra)] as string[];
+  }, [isEdit, initialData]);
 
   // Use the useProjects hook to get approved projects only
   const { approvedProjects } = useProjects();
@@ -880,7 +898,7 @@ const SideDrawerIncident: FC<SideDrawerIncidentProps> = ({
                   row
                   sx={{ gap: theme.spacing(3), flexWrap: "nowrap" }}
                 >
-                  {harmCategories.map((category) => (
+                  {harmOptions.map((category) => (
                     <Box key={category} sx={{ flex: 1 }}>
                       <Checkbox
                         id={`harm-category-${category}`}

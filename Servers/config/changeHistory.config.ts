@@ -936,8 +936,11 @@ export const ENTITY_CONFIGS: { [key in EntityType]: EntityConfig } = {
       ),
       assignee_id: async (value: unknown, context?: FormatterContext) =>
         GENERIC_FORMATTERS.user(value === null || value === "" ? value : Number(value), context),
-      occurred_date: GENERIC_FORMATTERS.date,
-      date_detected: GENERIC_FORMATTERS.date,
+      // TIMESTAMP (no time zone) day columns: a stored row's Date is local
+      // midnight, so read its local date parts (toISOString is a day early
+      // east of UTC).
+      occurred_date: GENERIC_FORMATTERS.calendarDate,
+      date_detected: GENERIC_FORMATTERS.calendarDate,
       approval_date: GENERIC_FORMATTERS.date,
       interim_report: GENERIC_FORMATTERS.boolean,
       archived: GENERIC_FORMATTERS.boolean,

@@ -26,6 +26,7 @@ import {
   approvalStampFor,
   parseCreateHarmCategories,
   INCIDENT_CREATE_DEFAULTS,
+  isBlankIncidentValue,
 } from "../utils/validations/incidentManagementValidation.utils";
 import { recordIncidentCreation } from "../utils/incidentChangeHistory.utils";
 import { triggerIncidentResponse } from "../services/workflows/triggers";
@@ -88,6 +89,24 @@ const validationExceptionResponse = (req: Request, error: ValidationException, m
       },
     ],
   });
+
+/**
+ * The saved incident's values for creation history, without the column
+ * defaults the caller did not send (false booleans such as archived and
+ * interim_report, an empty harm category list): history lists what the
+ * incident was created with, not every default.
+ */
+const creationHistoryValues = (
+  saved: Record<string, unknown>,
+  body: Record<string, unknown> | undefined,
+): Record<string, unknown> =>
+  Object.fromEntries(
+    Object.entries(saved).filter(
+      ([key, value]) =>
+        body?.[key] !== undefined ||
+        !(value === false || (Array.isArray(value) && value.length === 0)),
+    ),
+  );
 
 /** The caller's incident write access, from the request's role (built-in or custom). */
 const incidentWriteAccess = async (req: Request): Promise<IncidentWriteAccess> => {
@@ -303,7 +322,7 @@ export async function createNewIncident(req: Request, res: Response) {
     // Validation allowed an absent, null or "" approval_status / status:
     // those take the defaults (Pending, Open).
     const approvalStatus =
-      canApprove && req.body.approval_status
+      canApprove && !isBlankIncidentValue(req.body.approval_status)
         ? req.body.approval_status
         : INCIDENT_CREATE_DEFAULTS.approval_status;
     const stamped = approvalStampFor(undefined, approvalStatus) === "stamp" && !!req.userId;
@@ -319,7 +338,9 @@ export async function createNewIncident(req: Request, res: Response) {
       assignee_id: req.body.assignee_id ?? null,
       type: req.body.type,
       severity: req.body.severity,
-      status: req.body.status || INCIDENT_CREATE_DEFAULTS.status,
+      status: isBlankIncidentValue(req.body.status)
+        ? INCIDENT_CREATE_DEFAULTS.status
+        : req.body.status,
       occurred_date: req.body.occurred_date ? req.body.occurred_date : null,
       date_detected: req.body.date_detected ? req.body.date_detected : null,
       reporter: req.body.reporter,
@@ -350,7 +371,10 @@ export async function createNewIncident(req: Request, res: Response) {
         savedIncident.id,
         req.userId,
         req.organizationId!,
-        savedIncident.dataValues ?? savedIncident,
+        creationHistoryValues(
+          (savedIncident.dataValues ?? savedIncident) as unknown as Record<string, unknown>,
+          req.body,
+        ),
         transaction,
       );
     }

@@ -547,20 +547,20 @@ The rules live in `Servers/utils/validations/incidentManagementValidation.utils.
 | severity | Required, one of `Severity` (Minor, Serious, Very serious) | Cannot be blanked; same rule when changed |
 | status | Optional, defaults to Open; one of `AIIncidentManagementStatus` | Cannot be blanked; same rule when changed |
 | approval_status | Optional, defaults to Pending; one of `AIIncidentManagementApprovalStatus` | Cannot be blanked; same rule when changed |
-| occurred_date, date_detected | Required; a real date (YYYY-MM-DD or an ISO date-time); not later than tomorrow in UTC | Cannot be blanked; same rule when changed |
+| occurred_date, date_detected | Required; a real date (YYYY-MM-DD or an ISO date-time); not later than today in UTC+14 | Cannot be blanked; same rule when changed |
 | date_detected vs occurred_date | Detected on or after occurred (calendar dates) | Checked when either date changes, on the dates the row ends up with (request over the stored row) |
 | reporter | Required, text, at most 255 characters | Cannot be blanked; same rule when changed |
 | model_system_version | Optional text, at most 255 characters | Same |
 | description | 5-32,767 characters (`INCIDENT_DESCRIPTION_MAX_LENGTH`, Jira's text-field limit; column is TEXT) | Checked only when it changes |
 | affected_persons_groups, relationship_causality, immediate_mitigations, planned_corrective_actions, approval_notes | Optional text (TEXT, no length limit) | Same |
-| categories_of_harm | Optional: a list of `HarmCategory` values (Health, Safety, Rights, Property, Environment), or the comma-separated string form; empty is allowed | A list of `HarmCategory` values (empty allowed); null, strings and other JSON are refused |
+| categories_of_harm | Optional: a list of `HarmCategory` values (Health, Safety, Rights, Property, Environment), or the comma-separated string form; empty is allowed | A list (empty allowed); items the update adds must be `HarmCategory` values, stored items outside the list may stay; null, strings and other JSON are refused |
 | interim_report, archived | Optional booleans | Same |
 | model_inventory_id, project_id, assignee_id | Optional positive integer ids in the organization | Same |
 
-- **"Today in any time zone."** A date may be at most tomorrow's date in UTC (`latestIncidentDate`):
-  the furthest-ahead time zone (UTC+14) is one calendar day ahead of UTC, so a user anywhere can
-  enter their own today, and anything later is refused. The drawer refuses dates after the user's
-  own today.
+- **"Today in any time zone."** A date may be at most today's date in UTC+14, the furthest-ahead
+  time zone (`latestIncidentDate`: now plus 14 hours, as a UTC date), so a user anywhere can enter
+  their own today, and anything later is refused. The drawer refuses dates after the user's own
+  today, and in edit mode checks the future rule only for a date the user changed.
 - **Update checks only what changes.** A field the update leaves out, or sends with its stored value
   (`isSameIncidentValue`), is not re-checked, so an older row whose values predate a rule (an
   unknown type, a long reporter, reversed dates) can still be edited. A changed required field sent
@@ -573,8 +573,11 @@ The rules live in `Servers/utils/validations/incidentManagementValidation.utils.
   `Servers/locales/*.json`).
 - **Harm categories.** The server list is the page's (`HarmCategory`, also
   `Clients/src/domain/enums/aiIncidentManagement.enum.ts`), the values existing rows store. The
-  older Article 73 list ("Health and Safety", ...) was never stored and is gone. The server does not
-  require a category; the drawer does (at least one), as it always has.
+  older Article 73 list ("Health and Safety", ...) is gone. A row that stores a value outside the
+  list stays editable: on update only the items being added are checked, and the drawer shows a
+  stored off-list value as a checked box (labelled with the raw value) that the user can untick.
+  Create accepts only the page's values. The server does not require a category; the drawer does
+  (at least one), as it always has.
 - **Where it runs.** Create: the REST controller, before the transaction, and the Advisor's
   `agent_create_incident` (which names the requesting user as reporter, or "AI Advisor" without
   one). Update: `updateIncident` (`services/incidentManagement.service.ts`) against the locked row,
@@ -584,7 +587,12 @@ The rules live in `Servers/utils/validations/incidentManagementValidation.utils.
   issue's creation time; no harm categories), and its configuration is validated when saved, so it
   needs no defaults.
 - **Creation history** records the saved row (defaults, parsed harm categories and the server's
-  approval fields), not the request body.
+  approval fields), not the request body, leaving out column defaults the caller did not send
+  (false `archived` / `interim_report`, an empty harm category list). Occurred and detected dates
+  are formatted from the stored day's local date parts (`GENERIC_FORMATTERS.calendarDate`), so a
+  server east of UTC does not record the day before.
+- **Whitespace-only `status` / `approval_status` on create** count as omitted and take the
+  defaults.
 
 The description rule (5 to 32,767 characters, measured after trimming whitespace) is defined once per
 side and the two must stay in sync:
@@ -617,9 +625,12 @@ side and the two must stay in sync:
   it opens or a different incident (`incidentId`) is loaded, and the page memoises `initialData` on
   the selected incident, so a page re-render (such as the failed-save toast) keeps the user's
   edits. On failure the toast shows server field messages only for allowlisted fields
-  (`getApiValidationMessage` in `application/utils/apiErrorReason.ts`): description messages as
-  sent, reference fields (`project_id`, `model_inventory_id`, `assignee_id`) as a sentence naming
-  the picker. Anything else falls back to the generic text.
+  (`getApiValidationMessage` in `application/utils/apiErrorReason.ts`,
+  `INCIDENT_SAVE_ERROR_FIELDS` on the incidents page): every field the server's incident rules
+  check (description, use case, type, severity, status, approval status, dates, reporter, text
+  fields, harm categories, booleans) with the server's translated message as sent, and reference
+  fields (`project_id`, `model_inventory_id`, `assignee_id`) as a sentence naming the picker.
+  Anything else falls back to the generic text.
 
 The messages are identical on both sides: "Description is required.", "Description must be at least
 5 characters." and "Description cannot exceed 32,767 characters." (translated in

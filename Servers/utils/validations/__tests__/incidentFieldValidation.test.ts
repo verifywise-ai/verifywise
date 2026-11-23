@@ -66,6 +66,12 @@ describe("incident field validation", () => {
   });
 
   describe("create", () => {
+    it("treats whitespace-only status and approval_status as omitted (defaults)", () => {
+      expect(
+        validateCompleteIncidentCreation({ ...VALID, status: "  ", approval_status: " " }),
+      ).toEqual([]);
+    });
+
     it("accepts a complete incident without status or approval_status (defaults)", () => {
       expect(validateCompleteIncidentCreation(VALID)).toEqual([]);
       expect(
@@ -163,7 +169,14 @@ describe("incident field validation", () => {
       ).toEqual([]);
     });
 
-    it("allows today in any time zone (tomorrow in UTC) and refuses later dates", () => {
+    it("takes the latest date from UTC+14, the furthest-ahead time zone", () => {
+      // 09:00 UTC is 23:00 in UTC+14: today everywhere is at most the 23rd.
+      expect(latestIncidentDate(new Date("2026-11-23T09:00:00Z"))).toBe("2026-11-23");
+      // 10:00 UTC is midnight in UTC+14: the 24th has started there.
+      expect(latestIncidentDate(new Date("2026-11-23T10:00:00Z"))).toBe("2026-11-24");
+    });
+
+    it("allows today in any time zone and refuses later dates", () => {
       expect(latestIncidentDate()).toBe("2026-11-24");
       expect(
         validateCompleteIncidentCreation({
@@ -283,6 +296,34 @@ describe("incident field validation", () => {
     it("refuses a future date on update", () => {
       const errors = validateCompleteIncidentUpdate({ date_detected: "2027-01-01" }, STORED);
       expect(errorFor(errors, "date_detected")).toMatchObject({ code: "FUTURE_DATE" });
+    });
+
+    it("keeps stored categories outside the list editable; only added items are checked", () => {
+      const legacy = { ...STORED, categories_of_harm: ["Health and Safety"] };
+      // The drawer sends the full list, including the stored off-list value.
+      expect(
+        validateCompleteIncidentUpdate(
+          { categories_of_harm: ["Health and Safety", "Rights"] },
+          legacy,
+        ),
+      ).toEqual([]);
+      // Removing it is fine; so is a JSON-string stored column.
+      expect(validateCompleteIncidentUpdate({ categories_of_harm: ["Rights"] }, legacy)).toEqual(
+        [],
+      );
+      expect(
+        validateCompleteIncidentUpdate(
+          { categories_of_harm: ["Other", "Safety"] },
+          { ...STORED, categories_of_harm: '["Other"]' },
+        ),
+      ).toEqual([]);
+      // A new off-list value is still refused.
+      expect(
+        validateCompleteIncidentUpdate(
+          { categories_of_harm: ["Health and Safety", "Bogus"] },
+          legacy,
+        ),
+      ).toEqual([expect.objectContaining({ field: "categories_of_harm" })]);
     });
 
     it("validates harm categories as a list of page values; null and other JSON are refused", () => {

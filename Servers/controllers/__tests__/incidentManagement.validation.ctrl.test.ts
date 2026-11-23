@@ -170,6 +170,38 @@ describe("incident controller field validation", () => {
       });
     });
 
+    it("stores the defaults for whitespace-only status and approval status (not a 500)", async () => {
+      const res = makeRes();
+      await createNewIncident(
+        makeReq({ ...VALID_CREATE, status: "  ", approval_status: "   " }),
+        res,
+      );
+      expect(res.status).toHaveBeenCalledWith(201);
+      expect(mockCreate.mock.calls[0][0]).toMatchObject({
+        status: "Open",
+        approval_status: "Pending",
+      });
+    });
+
+    it("leaves column defaults the caller did not send out of creation history", async () => {
+      mockCreate.mockImplementation(async (incident: any) => {
+        const row = { ...incident, id: 3, archived: false, interim_report: false };
+        return { ...row, dataValues: row, toSafeJSON: () => row };
+      });
+      const res = makeRes();
+      await createNewIncident(makeReq(VALID_CREATE), res);
+      const recorded = mockHistory.mock.calls[0][3] as Record<string, unknown>;
+      expect(recorded).not.toHaveProperty("archived");
+      expect(recorded).not.toHaveProperty("interim_report");
+      expect(recorded).not.toHaveProperty("categories_of_harm");
+      expect(recorded).toMatchObject({ status: "Open", severity: "Serious" });
+
+      // A value the caller sent is recorded, even when false.
+      mockHistory.mockClear();
+      await createNewIncident(makeReq({ ...VALID_CREATE, interim_report: false }), makeRes());
+      expect(mockHistory.mock.calls[0][3]).toHaveProperty("interim_report", false);
+    });
+
     it("parses the comma-separated harm category form", async () => {
       const res = makeRes();
       await createNewIncident(
