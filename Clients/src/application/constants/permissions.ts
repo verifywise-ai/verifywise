@@ -18,6 +18,8 @@ const ADMIN: readonly BuiltinRoleName[] = ["Admin"];
 const EDITOR: readonly BuiltinRoleName[] = ["Admin", "Editor"];
 const AUDIT: readonly BuiltinRoleName[] = ["Admin", "Editor", "Auditor"];
 const CONTRIBUTOR: readonly BuiltinRoleName[] = ["Admin", "Editor", "Reviewer"];
+/** Admins plus Reviewers, who sign off without editing (incident approval). */
+const APPROVER: readonly BuiltinRoleName[] = ["Admin", "Reviewer"];
 /** A pure super admin (no organization) holds these too. */
 const SUPER: readonly BuiltinRoleName[] = ["Admin", "SuperAdmin"];
 
@@ -45,7 +47,8 @@ export const BUILTIN_UI_PERMISSIONS = {
   "aiApp.admin": ADMIN,
   "task.edit": EDITOR,
   "incident.create": EDITOR,
-  "incident.edit": CONTRIBUTOR,
+  "incident.edit": EDITOR,
+  "incident.approve": APPROVER,
   "ext.datasetBulkUpload.edit": EDITOR,
   "ext.frameworkImport.edit": EDITOR,
   "fileManager.contribute": CONTRIBUTOR,

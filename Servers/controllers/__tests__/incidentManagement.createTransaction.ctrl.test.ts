@@ -5,6 +5,10 @@ const mockTransaction = {
   rollback: jest.fn<() => Promise<void>>(),
   afterCommit: jest.fn(),
 };
+// Holds both incident keys (an Admin); incidentManagement.approval.ctrl.test.ts covers the rest.
+jest.mock("../../utils/rolePermissions.utils", () => ({
+  requestHasPermission: jest.fn(async () => true),
+}));
 jest.mock("../../database/db", () => ({
   sequelize: { transaction: jest.fn(async () => mockTransaction) },
 }));

@@ -55,6 +55,7 @@ describe("updateIncident against the database", () => {
     });
     const saved = await updateIncident(owner.orgId, incidentId, updates, owner.userId, {
       expectedUpdatedAt,
+      access: { canEdit: true, canApprove: true },
     });
 
     expect(saved).not.toBeNull();
@@ -77,6 +78,7 @@ describe("updateIncident against the database", () => {
     await expect(
       updateIncident(owner.orgId, incidentId, { status: "Open" }, owner.userId, {
         expectedUpdatedAt,
+        access: { canEdit: true, canApprove: true },
       }),
     ).rejects.toBeInstanceOf(ConflictException);
   });

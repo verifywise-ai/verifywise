@@ -185,6 +185,8 @@ const IncidentManagement: React.FC = () => {
 
   const isCreatingDisabled = !useCan("incident.create");
   const canEditIncidents = useCan("incident.edit");
+  // Approval (status and notes) is its own key: Reviewers approve but do not edit.
+  const canApproveIncidents = useCan("incident.approve");
   // Until a custom role's permissions load, keep the asked-for mode; the server still enforces.
   const permissionsSettled = usePermissionsSettled();
 
@@ -501,10 +503,11 @@ const IncidentManagement: React.FC = () => {
     }
   };
 
-  // Roles without incident.edit open the incident read-only.
+  // Roles with neither incident.edit nor incident.approve open the incident
+  // read-only; the drawer then enables only the fields the role may change.
   const handleEditIncident = async (id: string, mode: string) => {
     setSelectedIncidentId(id);
-    setModalMode(canEditIncidents || !permissionsSettled ? mode : "view");
+    setModalMode(canEditIncidents || canApproveIncidents || !permissionsSettled ? mode : "view");
     const data = await fetchIncidentDataForSelectedId(id);
     if (data) setIsNewIncidentModalOpen(true);
   };
@@ -871,6 +874,7 @@ const IncidentManagement: React.FC = () => {
           onArchive={handleArchiveIncident}
           onView={handleViewIncident}
           canEdit={canEditIncidents}
+          canApprove={canApproveIncidents}
           archivedId={archiveId}
           visibleColumns={incidentVisibleColumns}
           jiraLinks={jiraLinks}
@@ -886,6 +890,11 @@ const IncidentManagement: React.FC = () => {
         mode={mode}
         incidentId={selectedIncident?.id}
         jiraLink={selectedIncident ? jiraLinks.get(selectedIncident.id) : undefined}
+        // A new incident needs incident.create (the Add button's gate); an
+        // existing one needs incident.edit. Until a custom role's permissions
+        // load, keep everything open; the server still enforces.
+        canEditDetails={!permissionsSettled || (selectedIncident ? canEditIncidents : true)}
+        canApprove={!permissionsSettled || canApproveIncidents}
       />
 
       <PageTour

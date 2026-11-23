@@ -1286,10 +1286,12 @@ export const aiIncidentEndpoints: Endpoint[] = [
     method: 'POST',
     path: '/ai-incident-managements',
     summary: "Create New Incident",
+    description: "Needs incident.create. approved_by and approval_date are set by the server and ignored in the request. A caller without incident.approve always gets approval_status Pending with no approval_notes. A caller with incident.approve may send Approved or Rejected; the server then records the caller's name as approved_by and now as approval_date.",
     requiresAuth: true,
     responses: [
       { status: 201, description: "Created successfully" },
       { status: 401, description: "Unauthorized" },
+      { status: 403, description: "The role does not hold incident.create" },
       { status: 500, description: "Internal server error" },
     ],
     tag: "Incidents",
@@ -1313,13 +1315,18 @@ export const aiIncidentEndpoints: Endpoint[] = [
     method: 'PATCH',
     path: '/ai-incident-managements/{id}',
     summary: "Update Incident By Id",
+    description: "Needs incident.edit or incident.approve, then per field: changing approval_status or approval_notes needs incident.approve, changing any other field (archived included) needs incident.edit. A field sent with its stored value is not a change. approved_by and approval_date are set by the server and ignored in the request: when approval_status changes to Approved or Rejected, approved_by is the caller's name and approval_date is now; when it changes to Pending or Not required, both are cleared.",
     requiresAuth: true,
     parameters: [
       { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
     ],
     responses: [
       { status: 200, description: "Success" },
+      { status: 400, description: "Validation failed" },
       { status: 401, description: "Unauthorized" },
+      { status: 403, description: "The role holds neither incident.edit nor incident.approve, or the request changes a field that needs the key it lacks (\"Your role does not allow editing this incident's details.\" / \"Your role does not allow approving or rejecting incidents.\"). Nothing is written." },
+      { status: 404, description: "Incident not found" },
+      { status: 409, description: "The incident changed since expected_updated_at" },
       { status: 500, description: "Internal server error" },
     ],
     tag: "Incidents",
@@ -1335,6 +1342,7 @@ export const aiIncidentEndpoints: Endpoint[] = [
     responses: [
       { status: 200, description: "Deleted successfully" },
       { status: 401, description: "Unauthorized" },
+      { status: 403, description: "The role does not hold incident.delete" },
       { status: 500, description: "Internal server error" },
     ],
     tag: "Incidents",
@@ -1350,6 +1358,7 @@ export const aiIncidentEndpoints: Endpoint[] = [
     responses: [
       { status: 200, description: "Success" },
       { status: 401, description: "Unauthorized" },
+      { status: 403, description: "The role does not hold incident.edit" },
       { status: 500, description: "Internal server error" },
     ],
     tag: "Incidents",

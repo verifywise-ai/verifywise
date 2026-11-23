@@ -60,4 +60,36 @@ const authorize =
     }
   };
 
+/**
+ * Like authorize(), but passes when the role holds ANY of `permissions`.
+ *
+ * For a route shared by holders of different keys whose handler then checks
+ * which key each part of the request needs (the incident update: details need
+ * incident.edit, approval needs incident.approve). The route alone is not the
+ * whole gate, so the handler must check the keys again.
+ *
+ * Same answers as authorize(): 401 without a role, 403 when the role holds
+ * none of the keys.
+ *
+ * @example
+ * router.patch("/:id", authenticateJWT, authorizeAny("incident.edit", "incident.approve"), update);
+ */
+export const authorizeAny =
+  (...permissions: [PermissionKey, PermissionKey, ...PermissionKey[]]) =>
+  async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    if (!req.role) {
+      console.error("Authorization failed: No role found in request");
+      return res.status(401).json(STATUS_CODE[401](req.t!("Authentication required")));
+    }
+
+    try {
+      for (const permission of permissions) {
+        if (await requestHasPermission(req, permission)) return next();
+      }
+      return res.status(403).json(STATUS_CODE[403](req.t!("Access denied")));
+    } catch (error) {
+      return next(error);
+    }
+  };
+
 export default authorize;

@@ -64,6 +64,13 @@ interface SideDrawerIncidentProps {
   incidentId?: number;
   /** The incident's Jira issue (Jira incidents extension), shown next to the incident ID. */
   jiraLink?: JiraIncidentLink;
+  /**
+   * The caller holds incident.edit (edit) or incident.create (new): every
+   * field but the approval ones is editable. Default true.
+   */
+  canEditDetails?: boolean;
+  /** The caller holds incident.approve: approval status and notes are editable. Default true. */
+  canApprove?: boolean;
 }
 
 export interface NewIncidentFormValues {
@@ -183,10 +190,16 @@ export const INCIDENT_FIELD_LABELS: Partial<Record<keyof NewIncidentFormValues, 
   interim_report: "This incident has an interim report",
 };
 
-/** Fields the drawer never sends as edits: identity and the version token. */
+/**
+ * Fields the drawer never sends as edits: identity, the version token, and
+ * who approved and when, which the server sets when the approval status
+ * changes.
+ */
 const NON_EDITABLE_FIELDS = new Set<keyof NewIncidentFormValues>([
   "incident_id",
   "expected_updated_at",
+  "approved_by",
+  "approval_date",
 ]);
 
 const severityOptions = [
@@ -226,6 +239,8 @@ const SideDrawerIncident: FC<SideDrawerIncidentProps> = ({
   mode,
   incidentId,
   jiraLink,
+  canEditDetails = true,
+  canApprove = true,
 }) => {
   const theme = useTheme();
   const [values, setValues] = useState<NewIncidentFormValues>(initialData || initialState);
@@ -410,7 +425,7 @@ const SideDrawerIncident: FC<SideDrawerIncidentProps> = ({
   );
 
   const handleDateChange = useCallback(
-    (prop: "occurred_date" | "date_detected" | "approval_date") => (newDate: Dayjs | null) => {
+    (prop: "occurred_date" | "date_detected") => (newDate: Dayjs | null) => {
       if (newDate?.isValid()) {
         setValues((prev) => ({
           ...prev,
@@ -460,7 +475,9 @@ const SideDrawerIncident: FC<SideDrawerIncidentProps> = ({
     if (e) e.preventDefault();
     // In-flight guard: a second click while a save is pending does nothing.
     if (isSavingRef.current) return;
-    if (validateAll(values, INCIDENT_FORM_FIELD_ORDER)) {
+    // An approver who cannot edit details changes only approval fields, which
+    // have no rules; the details are as stored and not theirs to fix.
+    if (!canEditDetails || validateAll(values, INCIDENT_FORM_FIELD_ORDER)) {
       const formData: NewIncidentFormValues = {
         ...values,
         project_id: toId(values.project_id),
@@ -470,7 +487,11 @@ const SideDrawerIncident: FC<SideDrawerIncidentProps> = ({
       // When editing, send only what the user changed (plus the version), so
       // a save never writes back stale copies of fields someone else changed.
       const baseline = baselineRef.current;
-      let body: Partial<NewIncidentFormValues> = formData;
+      let body: Partial<NewIncidentFormValues> = Object.fromEntries(
+        Object.entries(formData).filter(
+          ([key]) => key !== "approved_by" && key !== "approval_date",
+        ),
+      );
       if (isEdit && baseline) {
         const changed: Record<string, unknown> = {};
         for (const key of Object.keys(formData) as (keyof NewIncidentFormValues)[]) {
@@ -506,6 +527,11 @@ const SideDrawerIncident: FC<SideDrawerIncidentProps> = ({
   };
 
   const isViewMode = mode === "view";
+  // Details need incident.edit (incident.create for a new one); approval
+  // status and notes need incident.approve. The server checks the same.
+  const detailsDisabled = isViewMode || !canEditDetails;
+  const approvalDisabled = isViewMode || !canApprove;
+  const isApprovalOnly = isEdit && !canEditDetails && canApprove;
 
   useModalKeyHandling({ isOpen, onClose: handleClose });
 
@@ -538,7 +564,11 @@ const SideDrawerIncident: FC<SideDrawerIncidentProps> = ({
             <Stack direction="row" justifyContent="space-between" alignItems="center" mb={3}>
               <Stack direction="row" alignItems="center" spacing={1}>
                 <Typography fontWeight={600} color={theme.palette.text.primary}>
-                  {isEdit ? "Edit incident" : "Create new incident"}
+                  {isApprovalOnly
+                    ? "Record approval"
+                    : isEdit
+                      ? "Edit incident"
+                      : "Create new incident"}
                 </Typography>
                 {isEdit && values.incident_id && (
                   <Typography
@@ -631,7 +661,7 @@ const SideDrawerIncident: FC<SideDrawerIncidentProps> = ({
                       error={errors.ai_project}
                       isRequired
                       sx={{ flex: 1 }}
-                      disabled={isViewMode}
+                      disabled={detailsDisabled}
                     />
                   </Stack>
                   <Stack sx={{ gap: 3, width: "50%" }}>
@@ -647,7 +677,7 @@ const SideDrawerIncident: FC<SideDrawerIncidentProps> = ({
                       onChange={handleFieldChange("type")}
                       error={errors.type}
                       sx={{ flex: 1 }}
-                      disabled={isViewMode}
+                      disabled={detailsDisabled}
                     />
                   </Stack>
                 </Stack>
@@ -664,7 +694,7 @@ const SideDrawerIncident: FC<SideDrawerIncidentProps> = ({
                       onChange={handleFieldChange("severity")}
                       error={errors.severity}
                       sx={{ flex: 1 }}
-                      disabled={isViewMode}
+                      disabled={detailsDisabled}
                     />
                   </Stack>
                   <Stack sx={{ gap: 3, width: "50%" }}>
@@ -677,7 +707,7 @@ const SideDrawerIncident: FC<SideDrawerIncidentProps> = ({
                       onChange={handleFieldChange("status")}
                       error={errors.status}
                       sx={{ flex: 1 }}
-                      disabled={isViewMode}
+                      disabled={detailsDisabled}
                     />
                   </Stack>
                 </Stack>
@@ -694,7 +724,7 @@ const SideDrawerIncident: FC<SideDrawerIncidentProps> = ({
                       onChange={handleFieldChange("model_inventory_id")}
                       isOptional
                       sx={{ flex: 1 }}
-                      disabled={isViewMode}
+                      disabled={detailsDisabled}
                     />
                   </Stack>
                   <Stack sx={{ gap: 3, width: "50%", minWidth: 0 }}>
@@ -707,7 +737,7 @@ const SideDrawerIncident: FC<SideDrawerIncidentProps> = ({
                       onChange={handleFieldChange("assignee_id")}
                       isOptional
                       sx={{ flex: 1 }}
-                      disabled={isViewMode}
+                      disabled={detailsDisabled}
                     />
                   </Stack>
                 </Stack>
@@ -723,7 +753,7 @@ const SideDrawerIncident: FC<SideDrawerIncidentProps> = ({
                         isRequired
                         error={errors.occurred_date}
                         sx={{ flex: 1 }}
-                        disabled={isViewMode}
+                        disabled={detailsDisabled}
                       />
                     </Stack>
                     <Stack sx={{ gap: 3, width: "50%" }}>
@@ -734,7 +764,7 @@ const SideDrawerIncident: FC<SideDrawerIncidentProps> = ({
                         isRequired
                         error={errors.date_detected}
                         sx={{ flex: 1 }}
-                        disabled={isViewMode}
+                        disabled={detailsDisabled}
                       />
                     </Stack>
                   </Suspense>
@@ -753,7 +783,7 @@ const SideDrawerIncident: FC<SideDrawerIncidentProps> = ({
                       error={errors.reporter}
                       isRequired
                       sx={{ flex: 1 }}
-                      disabled={isViewMode}
+                      disabled={detailsDisabled}
                     />
                   </Stack>
                   <Stack sx={{ gap: 3, width: "50%" }}>
@@ -764,7 +794,7 @@ const SideDrawerIncident: FC<SideDrawerIncidentProps> = ({
                       onChange={handleFieldChange("model_system_version")}
                       placeholder="Model/system version"
                       sx={{ flex: 1 }}
-                      disabled={isViewMode}
+                      disabled={detailsDisabled}
                     />
                   </Stack>
                 </Stack>
@@ -828,7 +858,7 @@ const SideDrawerIncident: FC<SideDrawerIncidentProps> = ({
                         isChecked={values.categories_of_harm.includes(category)}
                         value={category}
                         onChange={() => handleHarmCategoryChange(category)}
-                        isDisabled={isViewMode}
+                        isDisabled={detailsDisabled}
                       />
                     </Box>
                   ))}
@@ -851,7 +881,7 @@ const SideDrawerIncident: FC<SideDrawerIncidentProps> = ({
                   onChange={handleFieldChange("affected_persons_groups")}
                   placeholder="List affected persons or groups"
                   rows={2}
-                  disabled={isViewMode}
+                  disabled={detailsDisabled}
                 />
                 <Field
                   id="description"
@@ -862,7 +892,7 @@ const SideDrawerIncident: FC<SideDrawerIncidentProps> = ({
                   placeholder="Describe the incident"
                   rows={3}
                   isRequired
-                  disabled={isViewMode}
+                  disabled={detailsDisabled}
                 />
                 <Field
                   id="relationship"
@@ -871,7 +901,7 @@ const SideDrawerIncident: FC<SideDrawerIncidentProps> = ({
                   onChange={handleFieldChange("relationship_causality")}
                   placeholder="Explain the relationship to AI system"
                   rows={2}
-                  disabled={isViewMode}
+                  disabled={detailsDisabled}
                 />
               </Stack>
 
@@ -915,7 +945,7 @@ const SideDrawerIncident: FC<SideDrawerIncidentProps> = ({
                   onChange={handleFieldChange("immediate_mitigations")}
                   placeholder="Describe immediate mitigations"
                   rows={2}
-                  disabled={isViewMode}
+                  disabled={detailsDisabled}
                 />
                 <Field
                   id="planned_corrective_actions"
@@ -924,7 +954,7 @@ const SideDrawerIncident: FC<SideDrawerIncidentProps> = ({
                   onChange={handleFieldChange("planned_corrective_actions")}
                   placeholder="Describe planned corrective actions"
                   rows={2}
-                  disabled={isViewMode}
+                  disabled={detailsDisabled}
                 />
               </Stack>
 
@@ -972,41 +1002,34 @@ const SideDrawerIncident: FC<SideDrawerIncidentProps> = ({
                       value={values.approval_status}
                       onChange={handleFieldChange("approval_status")}
                       sx={{ flex: 1 }}
-                      disabled={isViewMode}
+                      disabled={approvalDisabled}
                     />
                   </Stack>
+                  {/* Set by the server when the approval status changes. */}
                   <Stack sx={{ gap: 3, width: "50%" }}>
-                    <SelectComponent
+                    <Field
                       id="approved_by"
                       label="Approved by"
-                      placeholder="Select approver"
-                      items={userOptions}
                       value={values.approved_by || ""}
-                      onChange={handleFieldChange("approved_by")}
+                      placeholder="Set when approved or rejected"
                       sx={{ flex: 1 }}
-                      disabled={isViewMode}
+                      disabled
                     />
                   </Stack>
                 </Stack>
 
-                {/* Row: Approval Date */}
+                {/* Row: Approval Date (read-only, set by the server) */}
                 <Stack direction={"row"} gap={theme.spacing(8)} sx={{ mt: 2 }}>
-                  <Suspense fallback={<div>Loading...</div>}>
-                    <Stack sx={{ gap: 3, width: "50%" }}>
-                      <DatePicker
-                        label="Approval date"
-                        date={values.approval_date ? dayjs(values.approval_date) : null}
-                        handleDateChange={(d) =>
-                          setValues((prev) => ({
-                            ...prev,
-                            approval_date: d ? d.format("YYYY-MM-DD") : "",
-                          }))
-                        }
-                        sx={{ flex: 1 }}
-                        disabled={isViewMode}
-                      />
-                    </Stack>
-                  </Suspense>
+                  <Stack sx={{ gap: 3, width: "50%" }}>
+                    <Field
+                      id="approval_date"
+                      label="Approval date"
+                      value={values.approval_date || ""}
+                      placeholder="Set when approved or rejected"
+                      sx={{ flex: 1 }}
+                      disabled
+                    />
+                  </Stack>
                 </Stack>
 
                 <Field
@@ -1016,7 +1039,7 @@ const SideDrawerIncident: FC<SideDrawerIncidentProps> = ({
                   onChange={handleFieldChange("approval_notes")}
                   placeholder="Add approval notes"
                   rows={2}
-                  disabled={isViewMode}
+                  disabled={approvalDisabled}
                 />
 
                 {/* Interim Report Toggle */}
@@ -1034,7 +1057,7 @@ const SideDrawerIncident: FC<SideDrawerIncidentProps> = ({
                       fontSize: 13,
                     },
                   }}
-                  disabled={isViewMode}
+                  disabled={detailsDisabled}
                 />
               </Stack>
             </Stack>

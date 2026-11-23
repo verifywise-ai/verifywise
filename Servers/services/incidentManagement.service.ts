@@ -1,18 +1,22 @@
 /**
  * Shared write path for updating an AI incident.
  *
- * Every caller that changes an existing incident (the HTTP controller and
- * the AI Advisor tools today, integrations such as issue-tracker sync next)
- * goes through updateIncident so the same rules apply everywhere:
+ * Every caller that changes an existing incident (the HTTP controller, the
+ * AI Advisor tools, the MCP server and the Jira incidents status sync) goes
+ * through updateIncident so the same rules apply everywhere:
  *   1. the row is loaded once, locked FOR UPDATE inside the transaction;
  *   2. optional optimistic-concurrency check (expectedUpdatedAt);
- *   3. validation against the locked row;
- *   4. reopening a Closed incident drops a stale Approved closure sign-off
- *      (applyReopenApprovalReset);
- *   5. one diff (diffIncidentColumns) decides which columns are written and
+ *   3. the caller's access: changed details need incident.edit, changed
+ *      approval_status / approval_notes need incident.approve
+ *      (IncidentAccessDeniedError, HTTP 403);
+ *   4. validation against the locked row;
+ *   5. reopening a Closed incident drops a stale Approved closure sign-off
+ *      (applyReopenApprovalReset), and the server sets approved_by and
+ *      approval_date when approval_status changes (approvalStampFor);
+ *   6. one diff (diffIncidentColumns) decides which columns are written and
  *      which fields are recorded in change history; nothing changed means no
  *      write, no updated_at bump, no history and no automations;
- *   6. `incident_updated` automations are enqueued only after commit.
+ *   7. `incident_updated` automations are enqueued only after commit.
  */
 
 import { Transaction } from "sequelize";
@@ -22,15 +26,19 @@ import { ConflictException } from "../domain.layer/exceptions/custom.exception";
 import {
   diffIncidentColumns,
   enqueueIncidentUpdatedAutomations,
+  getIncidentApproverName,
   getIncidentByIdQuery,
   incidentReferenceFieldFromError,
+  incidentWriteNeeds,
   invalidReferenceErrors,
   updateIncidentByIdQuery,
   validateIncidentReferences,
 } from "../utils/incidentManagement.utils";
 import {
   applyReopenApprovalReset,
+  approvalStampFor,
   validateCompleteIncidentUpdate,
+  withoutServerSetApprovalFields,
 } from "../utils/validations/incidentManagementValidation.utils";
 import { ValidationError } from "../utils/validations/validation.utils";
 import {
@@ -62,7 +70,50 @@ export class IncidentUpdateValidationError extends Error {
   readonly transactionAborted: boolean;
 }
 
+/**
+ * What the caller may change: incident.edit (the incident's details,
+ * archived included) and incident.approve (approval_status and
+ * approval_notes). Resolved by the caller from its own permission source
+ * (the request's role, the Advisor's requester, the MCP caller).
+ */
+export interface IncidentWriteAccess {
+  canEdit: boolean;
+  canApprove: boolean;
+}
+
+/** Access of a system writer (`changedBySystem`): details only, never sign-off. */
+export const SYSTEM_INCIDENT_ACCESS: IncidentWriteAccess = { canEdit: true, canApprove: false };
+
+/** Message for a write that needs incident.edit and the caller lacks it. */
+export const INCIDENT_EDIT_DENIED_MESSAGE =
+  "Your role does not allow editing this incident's details.";
+/** Message for a write that needs incident.approve and the caller lacks it. */
+export const INCIDENT_APPROVE_DENIED_MESSAGE =
+  "Your role does not allow approving or rejecting incidents.";
+
+/**
+ * Thrown when the update changes fields the caller's access does not cover:
+ * `need` is the missing key ("edit" for incident.edit, "approve" for
+ * incident.approve) and `fields` the changed fields that need it. The
+ * message is the matching one above; the controller answers 403.
+ */
+export class IncidentAccessDeniedError extends Error {
+  constructor(
+    public readonly need: "edit" | "approve",
+    public readonly fields: string[],
+  ) {
+    super(need === "edit" ? INCIDENT_EDIT_DENIED_MESSAGE : INCIDENT_APPROVE_DENIED_MESSAGE);
+    this.name = "IncidentAccessDeniedError";
+  }
+}
+
 export interface UpdateIncidentOptions {
+  /**
+   * What the caller may change (see IncidentWriteAccess). Required unless
+   * `changedBySystem` is set, which defaults to SYSTEM_INCIDENT_ACCESS. An
+   * update without either is refused: the write path never guesses access.
+   */
+  access?: IncidentWriteAccess;
   /**
    * Run inside the caller's transaction; the caller commits or rolls back.
    * After an IncidentUpdateValidationError the transaction is still usable
@@ -102,8 +153,14 @@ const isAbsentVersion = (value: unknown): boolean => value === null || value ===
  * (or the unchanged one when nothing differs), or null when it does not
  * exist in the organization.
  *
- * Throws ConflictException when `expectedUpdatedAt` is stale and
- * IncidentUpdateValidationError when the update is invalid.
+ * Throws ConflictException when `expectedUpdatedAt` is stale,
+ * IncidentAccessDeniedError when the update changes a field `options.access`
+ * does not cover, and IncidentUpdateValidationError when the update is
+ * invalid.
+ *
+ * approved_by and approval_date in `updates` are ignored: the server sets
+ * them when approval_status changes (the acting user and now for Approved or
+ * Rejected, cleared for Pending or Not required).
  *
  * History is recorded as `userId`, or as the system when
  * `options.changedBySystem` is set. With neither, no history is written.
@@ -111,10 +168,17 @@ const isAbsentVersion = (value: unknown): boolean => value === null || value ===
 export async function updateIncident(
   organizationId: number,
   incidentId: number,
-  updates: Record<string, unknown>,
+  requested: Record<string, unknown>,
   userId: number | null | undefined,
   options: UpdateIncidentOptions = {},
 ): Promise<AIIncidentManagementModel | null> {
+  const access = options.access ?? (options.changedBySystem ? SYSTEM_INCIDENT_ACCESS : undefined);
+  if (!access) {
+    throw new Error("updateIncident needs the caller's access (options.access)");
+  }
+  // Who approved and when is the server's to record, never the caller's.
+  const updates = withoutServerSetApprovalFields(requested);
+
   // A version that is present but not a date-time is a bad request (400),
   // not a conflict (409). Only null / undefined skip the check.
   const expectedTime = isAbsentVersion(options.expectedUpdatedAt)
@@ -151,6 +215,17 @@ export async function updateIncident(
       throw new ConflictException(INCIDENT_CHANGED_MESSAGE, "incident", "updated_at");
     }
 
+    // Only fields the caller actually changes count: the drawer may send
+    // values back unchanged. Checked on the caller's request, before the
+    // server's own rewrites (reopen reset, approval stamp).
+    const needs = incidentWriteNeeds(stored, updates);
+    if (needs.edit.length > 0 && !access.canEdit) {
+      throw new IncidentAccessDeniedError("edit", needs.edit);
+    }
+    if (needs.approve.length > 0 && !access.canApprove) {
+      throw new IncidentAccessDeniedError("approve", needs.approve);
+    }
+
     // Field validation first: a malformed value never reaches the reference SQL.
     const validationErrors: ValidationError[] = validateCompleteIncidentUpdate(updates, stored);
     if (validationErrors.length > 0) throw new IncidentUpdateValidationError(validationErrors);
@@ -177,7 +252,15 @@ export async function updateIncident(
       throw new IncidentUpdateValidationError(invalidReferenceErrors(invalidRefs));
     }
 
-    const effective = applyReopenApprovalReset(stored, updates);
+    const effective: Record<string, unknown> = { ...applyReopenApprovalReset(stored, updates) };
+    const stamp = approvalStampFor(stored.approval_status, effective.approval_status);
+    if (stamp === "stamp") {
+      effective.approved_by = userId ? await getIncidentApproverName(userId, transaction) : null;
+      effective.approval_date = new Date();
+    } else if (stamp === "clear") {
+      effective.approved_by = null;
+      effective.approval_date = null;
+    }
     const changed = diffIncidentColumns(stored, effective);
     const changedColumns = Object.keys(changed);
 

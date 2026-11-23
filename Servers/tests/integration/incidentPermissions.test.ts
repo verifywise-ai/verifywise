@@ -14,6 +14,7 @@ import { invalidateRoleMapCache } from "../../utils/roleMap";
 import { invalidateRolePermissionsCache } from "../../utils/rolePermissions.utils";
 
 const migration = require("../../database/migrations/20261122180000-grant-incident-edit-delete-to-custom-roles.js");
+const approveMigration = require("../../database/migrations/20261123120000-grant-incident-approve-to-custom-roles.js");
 
 const ROUTE = "/api/ai-incident-managements";
 
@@ -59,7 +60,7 @@ async function grantedKeys(orgId: number, roleId: number): Promise<string[]> {
   return rows.map((r) => r.permission_key);
 }
 
-describe("incident edit, archive and delete permissions", () => {
+describe("incident edit, approve, archive and delete permissions", () => {
   let orgId: number;
   let adminId: number;
 
@@ -90,25 +91,150 @@ describe("incident edit, archive and delete permissions", () => {
     expect(row).toEqual({ status: "Open", archived: false });
   });
 
-  it.each([
-    ["Editor", 3],
-    ["Reviewer", 2],
-  ])("lets a %s edit and archive but not delete", async (role, roleId) => {
+  async function memberClient(role: string, roleId: number) {
     const userId = await createTestUser(
       orgId,
       roleId,
       `${role}-${Date.now()}@test.com`,
       "Password123!",
     );
-    const request = await clientFor(orgId, userId, role);
+    return { userId, request: await clientFor(orgId, userId, role) };
+  }
+
+  async function storedRow(id: number) {
+    const [row] = await sequelize.query<Record<string, any>>(
+      `SELECT status, description, archived, approval_status, approved_by, approval_date,
+              approval_notes
+         FROM ai_incident_managements WHERE id = :id`,
+      { replacements: { id }, type: QueryTypes.SELECT },
+    );
+    return row;
+  }
+
+  async function displayName(userId: number): Promise<string> {
+    const [row] = await sequelize.query<{ name: string; surname: string }>(
+      `SELECT name, surname FROM users WHERE id = :userId`,
+      { replacements: { userId }, type: QueryTypes.SELECT },
+    );
+    return `${row.name} ${row.surname}`;
+  }
+
+  it("lets an Editor edit and archive, but not approve or delete", async () => {
+    const { request } = await memberClient("Editor", 3);
     const id = await createTestIncident(orgId, adminId);
 
     expect((await request.patch(`${ROUTE}/${id}`).send({ status: "Investigating" })).status).toBe(
       200,
     );
+    const approve = await request.patch(`${ROUTE}/${id}`).send({ approval_status: "Approved" });
+    expect(approve.status).toBe(403);
+    expect(approve.body.data).toBe("Your role does not allow approving or rejecting incidents.");
+    expect((await request.patch(`${ROUTE}/${id}`).send({ approval_notes: "Fine" })).status).toBe(
+      403,
+    );
+    expect(await storedRow(id)).toMatchObject({
+      status: "Investigating",
+      approval_status: "Pending",
+      approval_notes: null,
+    });
+
     expect((await request.delete(`${ROUTE}/${id}`)).status).toBe(403);
     expect(await stillExists(id)).toBe(true);
     expect((await request.patch(`${ROUTE}/${id}/archive`).send({})).status).toBe(200);
+  });
+
+  it("lets a Reviewer record approval, but not edit details or archive", async () => {
+    const { userId, request } = await memberClient("Reviewer", 2);
+    const id = await createTestIncident(orgId, adminId);
+
+    const approve = await request
+      .patch(`${ROUTE}/${id}`)
+      .send({ approval_status: "Approved", approval_notes: "Signed off" });
+    expect(approve.status).toBe(200);
+    expect(approve.body.data).toMatchObject({
+      approval_status: "Approved",
+      approved_by: await displayName(userId),
+      approval_notes: "Signed off",
+    });
+
+    const edit = await request.patch(`${ROUTE}/${id}`).send({ description: "Rewritten by them" });
+    expect(edit.status).toBe(403);
+    expect(edit.body.data).toBe("Your role does not allow editing this incident's details.");
+    // The drawer's whole-form save: unchanged details do not count as edits.
+    expect(
+      (
+        await request
+          .patch(`${ROUTE}/${id}`)
+          .send({ description: "Test incident description", approval_status: "Rejected" })
+      ).status,
+    ).toBe(200);
+
+    expect((await request.patch(`${ROUTE}/${id}`).send({ archived: true })).status).toBe(403);
+    expect((await request.patch(`${ROUTE}/${id}/archive`).send({})).status).toBe(403);
+    expect((await request.delete(`${ROUTE}/${id}`)).status).toBe(403);
+    expect(await storedRow(id)).toMatchObject({
+      description: "Test incident description",
+      archived: false,
+      approval_status: "Rejected",
+    });
+  });
+
+  it("sets the approver and date on the server and ignores spoofed values", async () => {
+    const request = await clientFor(orgId, adminId, "Admin");
+    const id = await createTestIncident(orgId, adminId);
+
+    const res = await request.patch(`${ROUTE}/${id}`).send({
+      status: "Mitigated",
+      approval_status: "Approved",
+      approved_by: "Somebody Else",
+      approval_date: "2020-01-01",
+    });
+    expect(res.status).toBe(200);
+    let row = await storedRow(id);
+    expect(row.status).toBe("Mitigated");
+    expect(row.approved_by).toBe(await displayName(adminId));
+    expect(new Date(row.approval_date).getFullYear()).toBeGreaterThanOrEqual(2026);
+
+    // Sending only a spoofed approver changes nothing.
+    await request.patch(`${ROUTE}/${id}`).send({ approved_by: "Mallory" });
+    expect((await storedRow(id)).approved_by).toBe(await displayName(adminId));
+
+    // Back to Pending clears both.
+    await request.patch(`${ROUTE}/${id}`).send({ approval_status: "Pending" });
+    row = await storedRow(id);
+    expect(row).toMatchObject({
+      approval_status: "Pending",
+      approved_by: null,
+      approval_date: null,
+    });
+  });
+
+  it("starts an Editor's new incident Pending with no approver, whatever is sent", async () => {
+    const { request } = await memberClient("Editor", 3);
+
+    const res = await request.post(ROUTE).send({
+      ai_project: "Support chatbot",
+      type: "Malfunction",
+      severity: "Minor",
+      status: "Open",
+      occurred_date: "2026-06-23",
+      date_detected: "2026-06-23",
+      reporter: "Ada Lovelace",
+      categories_of_harm: ["Safety"],
+      description: "The chatbot gave unsafe advice",
+      approval_status: "Approved",
+      approved_by: "Somebody Else",
+      approval_date: "2020-01-01",
+      approval_notes: "Self-approved",
+    });
+
+    expect(res.status).toBe(201);
+    expect(await storedRow(res.body.data.id)).toMatchObject({
+      approval_status: "Pending",
+      approved_by: null,
+      approval_date: null,
+      approval_notes: null,
+    });
   });
 
   it("lets an Admin delete", async () => {
@@ -152,5 +278,42 @@ describe("incident edit, archive and delete permissions", () => {
       200,
     );
     expect((await request.delete(`${ROUTE}/${id}`)).status).toBe(403);
+  });
+
+  it("grants incident.approve to every custom role holding incident.edit", async () => {
+    const editorLike = await customRole(orgId, "Incident editor", ["incident.edit"]);
+    const reporter = await customRole(orgId, "Incident reporter only", ["incident.create"]);
+    const denied = await customRole(orgId, "Denied editor", []);
+    await sequelize.query(
+      `INSERT INTO role_permissions (organization_id, role_id, permission_key, allowed)
+       VALUES (:orgId, :denied, 'incident.edit', FALSE)`,
+      { replacements: { orgId, denied } },
+    );
+
+    await approveMigration.up({ sequelize });
+    await approveMigration.up({ sequelize }); // idempotent
+    invalidateRoleMapCache();
+    invalidateRolePermissionsCache();
+
+    expect(await grantedKeys(orgId, editorLike)).toEqual(["incident.approve", "incident.edit"]);
+    expect(await grantedKeys(orgId, reporter)).toEqual(["incident.create"]);
+    expect(await grantedKeys(orgId, denied)).toEqual([]);
+
+    // The custom role keeps both what it could do before: edit and approve.
+    const userId = await createTestUser(
+      orgId,
+      editorLike,
+      `editor-like-${Date.now()}@test.com`,
+      "Password123!",
+    );
+    const request = await clientFor(orgId, userId, "Incident editor");
+    const id = await createTestIncident(orgId, adminId);
+    expect(
+      (
+        await request
+          .patch(`${ROUTE}/${id}`)
+          .send({ status: "Investigating", approval_status: "Approved" })
+      ).status,
+    ).toBe(200);
   });
 });

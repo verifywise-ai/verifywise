@@ -204,14 +204,18 @@ export const incidentManagementContent: ArticleContent = {
       type: 'checklist',
       items: [
         'Approval status (Pending, Approved, Rejected, Not required)',
-        'Who approved the incident closure',
-        'Approval date and timestamp',
+        'Who approved or rejected the incident (filled in automatically)',
+        'Approval date (filled in automatically)',
         'Approval notes and conditions',
       ],
     },
     {
       type: 'paragraph',
-      text: 'Because approval signs off the closure, reopening a closed incident that was approved sets its approval status back to Pending and clears the approver, approval date and approval notes. The previous values stay in the incident\'s activity history. Once the incident is resolved again, approve it again before closing it. If you change any approval field in the same save that reopens the incident, your approval values are kept instead.',
+      text: 'You don\'t pick the approver or the date. When someone sets the approval status to Approved or Rejected, VerifyWise records that person as the approver and the current date as the approval date. Setting it back to Pending or Not required clears both. Changing only the approval notes keeps them.',
+    },
+    {
+      type: 'paragraph',
+      text: 'Because approval signs off the closure, reopening a closed incident that was approved sets its approval status back to Pending and clears the approver, approval date and approval notes. The previous values stay in the incident\'s activity history. Once the incident is resolved again, approve it again before closing it. If you change the approval status or approval notes in the same save that reopens the incident, your approval values are kept instead.',
     },
     {
       type: 'heading',
@@ -250,7 +254,11 @@ export const incidentManagementContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Admins and Editors can report, edit and archive incidents. Reviewers can edit, approve and archive them but not report new ones. Auditors can open incidents but not change them. Only Admins can permanently delete an incident; the incidents page has no delete action. For custom roles, an Admin grants these as the "Edit, approve and archive AI incidents" and "Permanently delete AI incidents" permissions. The same rules apply to requests made through the AI Advisor.',
+      text: 'Editing an incident and approving it are separate permissions. Admins can do both. Editors can report, edit and archive incidents but cannot change the approval status or approval notes. Reviewers can record approval (the approval status and notes) but cannot change the rest of the incident, archive it or report new ones. A Reviewer opens an incident from its row, or with Record approval in the row menu, and only the approval fields can be changed. Auditors can open incidents but not change them. Only Admins can permanently delete an incident; the incidents page has no delete action.',
+    },
+    {
+      type: 'paragraph',
+      text: 'For custom roles, an Admin grants these as the "Report new AI incidents", "Edit and archive AI incidents", "Approve or reject AI incidents" and "Permanently delete AI incidents" permissions. Custom roles that could edit incidents before approval became a separate permission were given "Approve or reject AI incidents" too, so they kept what they could do. The same rules apply to requests made through the AI Advisor, which can edit incidents but not approve them.',
     },
     {
       type: 'heading',

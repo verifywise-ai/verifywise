@@ -115,10 +115,14 @@ const SCREEN_GATES: Array<{
   { gate: "ModelInventory and Datasets create", roles: ["Admin", "Editor"], key: "model.edit" },
   { gate: "AIApps create", roles: ["Admin", "Editor"], key: "aiApp.edit" },
   { gate: "IncidentManagement create", roles: ["Admin", "Editor"], key: "incident.create" },
+  // Until 2026-11 one key, incident.edit (Admin, Editor, Reviewer), covered
+  // editing, approving and archiving. Approval is now its own key: Reviewers
+  // approve but no longer edit or archive.
+  { gate: "IncidentManagement edit and archive", roles: ["Admin", "Editor"], key: "incident.edit" },
   {
-    gate: "IncidentManagement edit, approve and archive",
-    roles: ["Admin", "Editor", "Reviewer"],
-    key: "incident.edit",
+    gate: "IncidentManagement approval status and notes",
+    roles: ["Admin", "Reviewer"],
+    key: "incident.approve",
   },
   { gate: "Tasks create", roles: ["Admin", "Editor"], key: "task.edit" },
   {

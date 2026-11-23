@@ -1,5 +1,5 @@
 import { sequelize } from "../database/db";
-import { Transaction } from "sequelize";
+import { QueryTypes, Transaction } from "sequelize";
 import { AIIncidentManagementModel } from "../domain.layer/models/incidentManagement/incidemtManagement.model";
 import { TenantAutomationActionModel } from "../domain.layer/models/tenantAutomationAction/tenantAutomationAction.model";
 import {
@@ -12,6 +12,7 @@ import { findUsersNotInOrganization } from "./user.utils";
 import { enqueueAutomationAction } from "../services/automations/automationProducer";
 import {
   assertValidIncidentDescription,
+  CALLER_APPROVAL_FIELDS,
   INCIDENT_DATE_COLUMNS,
   INCIDENT_FK_COLUMNS,
   isSameIncidentValue,
@@ -276,6 +277,44 @@ export const diffIncidentColumns = (
     changed[column] = toColumnValue(column, updates[column]);
   }
   return changed;
+};
+
+/**
+ * What a caller's write needs, split by permission key: the columns of
+ * `updates` whose value differs from `stored` that need incident.approve
+ * (approval_status, approval_notes) and those that need incident.edit
+ * (every other column). A field sent back with its stored value is not a
+ * change (the edit drawer may send the whole form). Pass the caller's
+ * request, before the server rewrites it (reopen reset, approval stamp).
+ */
+export const incidentWriteNeeds = (
+  stored: Record<string, unknown>,
+  updates: Record<string, unknown>,
+): { edit: IncidentColumn[]; approve: IncidentColumn[] } => {
+  const edit: IncidentColumn[] = [];
+  const approve: IncidentColumn[] = [];
+  for (const column of Object.keys(diffIncidentColumns(stored, updates)) as IncidentColumn[]) {
+    if (CALLER_APPROVAL_FIELDS.has(column)) approve.push(column);
+    else edit.push(column);
+  }
+  return { edit, approve };
+};
+
+/**
+ * The name recorded as an incident's approver: the acting user's
+ * "name surname", as the incident list shows owners. Falls back to
+ * `User #<id>` (as change history does) when the user has no name.
+ */
+export const getIncidentApproverName = async (
+  userId: number,
+  transaction?: Transaction,
+): Promise<string> => {
+  const rows = (await sequelize.query(
+    `SELECT NULLIF(TRIM(CONCAT_WS(' ', name, surname)), '') AS full_name
+       FROM users WHERE id = :userId`,
+    { replacements: { userId }, type: QueryTypes.SELECT, transaction },
+  )) as Array<{ full_name: string | null }>;
+  return rows[0]?.full_name ?? `User #${userId}`;
 };
 
 /**

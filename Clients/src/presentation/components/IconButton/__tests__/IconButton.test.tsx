@@ -272,6 +272,17 @@ describe("IconButton", () => {
     expect(items).toEqual(["View"]);
   });
 
+  it("offers View and Record approval to an approver without incident.edit", async () => {
+    const onApprove = vi.fn();
+    await renderWithMenuOpen({ onView: vi.fn(), onApprove, type: "incident", canEdit: false });
+    const items = within(screen.getByRole("menu"))
+      .getAllByRole("menuitem")
+      .map((item) => item.textContent);
+    expect(items).toEqual(["View", "Record approval"]);
+    await userEvent.click(screen.getByText("Record approval"));
+    expect(onApprove).toHaveBeenCalledTimes(1);
+  });
+
   it("calls onDownload when Download item clicked", async () => {
     const onDownload = vi.fn().mockResolvedValue(undefined);
     await renderWithMenuOpen({ onDownload, type: "evidence" });

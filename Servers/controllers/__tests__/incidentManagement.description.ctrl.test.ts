@@ -1,5 +1,9 @@
 import { beforeEach, describe, expect, it, jest } from "@jest/globals";
 
+// Holds both incident keys (an Admin); incidentManagement.approval.ctrl.test.ts covers the rest.
+jest.mock("../../utils/rolePermissions.utils", () => ({
+  requestHasPermission: jest.fn(async () => true),
+}));
 jest.mock("../../database/db", () => ({
   sequelize: {
     transaction: jest.fn(async () => ({

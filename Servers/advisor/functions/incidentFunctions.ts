@@ -460,7 +460,11 @@ const getIncidentExecutiveSummary = async (
 
 // The REST routes' gates (routes/aiIncidentManagement.route.ts), held by the
 // user who asked, else the approver. Checked when the write is proposed and
-// again when it runs, since roles can change while an approval waits.
+// again when it runs, since roles can change while an approval waits. The
+// tools change incident details only, so updates need incident.edit; holding
+// only incident.approve is not enough. A created incident starts Pending,
+// with no approver, as the REST create does for a caller without
+// incident.approve.
 const INCIDENT_REFUSAL = {
   "incident.create": "your role does not allow reporting incidents",
   "incident.edit": "your role does not allow editing or archiving incidents",
@@ -534,6 +538,11 @@ const agentCreateIncident = createWriteToolFn({
  * History is recorded as the approving user, or as the system when the
  * execution carries no user id. No expectedUpdatedAt: the tool is a
  * background writer, not an editor holding a loaded copy.
+ *
+ * Callers have checked incident.edit for the user who asked. The tools only
+ * change incident details and never record approval (there is no Advisor
+ * approval tool), so the write path gets edit access without approval: an
+ * approval field reaching it would be refused.
  */
 async function applyIncidentUpdate(
   params: Record<string, unknown>,
@@ -546,6 +555,7 @@ async function applyIncidentUpdate(
   try {
     result = await updateIncident(organizationId, incidentId, fields, userId, {
       changedBySystem: userId === null,
+      access: { canEdit: true, canApprove: false },
     });
   } catch (error) {
     // Surface the field messages (for example the description length rule)

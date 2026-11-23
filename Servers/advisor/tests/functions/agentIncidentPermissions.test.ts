@@ -18,6 +18,12 @@ jest.mock("../../../utils/incidentManagement.utils", () => ({
   updateIncidentByIdQuery: jest.fn(),
   deleteIncidentByIdQuery: jest.fn(),
   archiveIncidentByIdQuery: jest.fn(),
+  validateIncidentReferences: jest.fn(async () => []),
+  enqueueIncidentUpdatedAutomations: jest.fn(async () => undefined),
+}));
+jest.mock("../../../utils/changeHistory.base.utils", () => ({
+  ...(jest.requireActual("../../../utils/changeHistory.base.utils") as object),
+  recordMultipleFieldChanges: jest.fn(),
 }));
 jest.mock("../../../services/automations/automationProducer", () => ({
   enqueueAutomationAction: jest.fn(),
@@ -29,6 +35,7 @@ import { submitForApproval } from "../../approval/approvalGateway";
 import { userHasPermission } from "../../../utils/userPermission.utils";
 import { sequelize } from "../../../database/db";
 import * as incidentUtils from "../../../utils/incidentManagement.utils";
+import { storedIncident } from "../../../services/__tests__/helpers/incidentFixtures";
 
 type AsyncMock = jest.Mock<(...args: any[]) => Promise<any>>;
 const hasPermission = userHasPermission as unknown as AsyncMock;
@@ -88,6 +95,48 @@ describe("advisor incident writes need the REST permission keys", () => {
     );
 
     expect(hasPermission).toHaveBeenCalledWith(4, 7, "incident.delete");
+  });
+
+  // The tools change details only (incident.edit); holding incident.approve
+  // alone is not enough, and they never record approval.
+  it("an approver without incident.edit cannot update through the Advisor", async () => {
+    hasPermission.mockImplementation(
+      async (_org: number, _user: number, key: string) => key === "incident.approve",
+    );
+
+    const result = (await writeToolExecutors.get("agent_update_incident")!(
+      { incident_id: 42, status: "Closed", _userId: 9 },
+      4,
+    )) as any;
+
+    expect(result.success).toBe(false);
+    expect(incidentUtils.updateIncidentByIdQuery).not.toHaveBeenCalled();
+  });
+
+  it("an update never carries approval fields to the write", async () => {
+    hasPermission.mockResolvedValue(true);
+    const stored = storedIncident();
+    stored.dataValues.status = "Open";
+    stored.dataValues.approval_status = "Pending";
+    (incidentUtils.getIncidentByIdQuery as unknown as AsyncMock).mockResolvedValue(stored);
+    (incidentUtils.updateIncidentByIdQuery as unknown as AsyncMock).mockImplementation(
+      async (_id: number, changed: any) => ({ id: 42, ...changed }),
+    );
+
+    await writeToolExecutors.get("agent_update_incident")!(
+      {
+        incident_id: 42,
+        status: "Investigating",
+        approval_status: "Approved",
+        approved_by: "Someone else",
+        _userId: 9,
+      },
+      4,
+    );
+
+    const changed = (incidentUtils.updateIncidentByIdQuery as unknown as AsyncMock).mock
+      .calls[0][1];
+    expect(changed).toEqual({ status: "Investigating" });
   });
 
   it("deletes when the user holds incident.delete", async () => {

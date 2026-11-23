@@ -26,11 +26,15 @@ interface IncidentRow {
   created_at: Date | string | null;
 }
 
-/** Opens the incident's view modal on the incidents page (`incidentId` param, the row id). */
+/**
+ * Opens the incident's view modal on the incidents page (`incidentId` param, the row id).
+ * Only for roles that can act on an incident (edit it or record its approval):
+ * an Auditor assigned an incident could open it but do nothing with it.
+ */
 export const incidentsSource: HomeQueueSource = {
   id: "incidents",
   part: "automate",
-  isVisible: () => true,
+  isVisible: (ctx) => ctx.can("incident.edit") || ctx.can("incident.approve"),
   async load(ctx) {
     const rows = await sequelize.query<IncidentRow>(INCIDENTS_SQL, {
       replacements: {
