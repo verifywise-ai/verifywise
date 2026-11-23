@@ -1060,7 +1060,11 @@ export const notifyApprovalStepOverdueEscalation = async (
 };
 
 /**
- * Notify vendor review due
+ * Remind a vendor's reviewer (or assignee) that its review is due. Title,
+ * message and subject are keyed and reach the recipient in their language;
+ * the email body stays English.
+ *
+ * @param vendor.reviewDate - The review day, already formatted for display.
  */
 export const notifyVendorReviewDue = async (
   organizationId: number,
@@ -1081,9 +1085,11 @@ export const notifyVendorReviewDue = async (
     organizationId,
     {
       user_id: reviewerId,
+      lang: await getUserLanguage(reviewerId),
       type: NotificationType.VENDOR_REVIEW_DUE,
-      title: "Vendor review due",
-      message: `Vendor "${vendor.name}" review is due on ${vendor.reviewDate}`,
+      titleKey: "Vendor review due",
+      messageKey: 'The review of vendor "{name}" is due on {date}.',
+      messageVars: { name: vendor.name, date: vendor.reviewDate },
       entity_type: NotificationEntityType.VENDOR,
       entity_id: vendor.id,
       entity_name: vendor.name,
@@ -1092,7 +1098,8 @@ export const notifyVendorReviewDue = async (
     true,
     {
       template: EMAIL_TEMPLATES.VENDOR_REVIEW_DUE,
-      subject: `Vendor review due: ${vendor.name}`,
+      subjectKey: "Vendor review due: {name}",
+      subjectVars: { name: vendor.name },
       variables: {
         reviewer_name: reviewer ? `${reviewer.name}` : "Reviewer",
         vendor_name: vendor.name,
