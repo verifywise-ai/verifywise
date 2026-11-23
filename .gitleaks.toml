@@ -54,4 +54,9 @@ regexes = [
   # Truncated example JWT in JSDoc/swagger response examples (header segment
   # only, ends in "...") — e.g. Servers/controllers/*.ctrl.ts.
   '''eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9\.\.\.''',
+  # Report section key for the OSFI E-23 contradiction rules, compared as
+  # `key === "e23Contradictions"` in Servers/services/reporting (sectionCatalog,
+  # prompts, e23/formalView). A section identifier, not a credential; the
+  # generic-api-key rule reads the mixed-case-plus-digits name as a key.
+  '''^e23Contradictions$''',
 ]
