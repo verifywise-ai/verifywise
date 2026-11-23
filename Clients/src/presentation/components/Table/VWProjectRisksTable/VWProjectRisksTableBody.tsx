@@ -12,9 +12,10 @@ import {
 import { VWLink } from "../../Link";
 import singleTheme from "../../../themes/v1SingleTheme";
 import Checkbox from "../../Inputs/Checkbox";
-import { Suspense, useContext, useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
+import { useDispatch } from "react-redux";
 import { ProjectRisk } from "../../../../domain/types/ProjectRisk";
-import { VerifyWiseContext } from "../../../../application/contexts/VerifyWise.context";
+import { setInputValues } from "../../../../application/redux/ui/uiSlice";
 import IconButton from "../../IconButton";
 import ViewRelationshipsButton from "../../ViewRelationshipsButton";
 import useFormattedDate from "../../../../application/hooks/useFormattedDate";
@@ -81,7 +82,7 @@ const VWProjectRisksTableBody = ({
   };
   const isColVisible = (colId: string) => !visibleColumns || visibleColumns.has(colId);
   const theme = useTheme();
-  const { setInputValues } = useContext(VerifyWiseContext);
+  const dispatch = useDispatch();
   const can = useCanCheck();
   const { users } = useUsers();
   const isDeletingAllowed = can("risks.edit");
@@ -95,10 +96,12 @@ const VWProjectRisksTableBody = ({
   });
   const handleEditRisk = (row: RiskModel, event?: React.SyntheticEvent) => {
     setSelectedRow(row);
-    setInputValues({
-      ...row,
-      assessment_mapping: row.assessment_mapping ? Number(row.assessment_mapping) : 0,
-    });
+    dispatch(
+      setInputValues({
+        ...row,
+        assessment_mapping: row.assessment_mapping ? Number(row.assessment_mapping) : 0,
+      }),
+    );
     // ensure the anchor is an HTMLElement or null to satisfy the setter type
     const anchorEl = (event?.currentTarget as unknown as HTMLElement) ?? null;
     setAnchor(anchorEl);
