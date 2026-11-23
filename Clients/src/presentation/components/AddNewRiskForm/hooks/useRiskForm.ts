@@ -1,5 +1,6 @@
-import { useState, useCallback, useRef, useContext, useEffect } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { useSearchParams } from "react-router";
+import { useSelector } from "react-redux";
 import { Likelihood, Severity } from "../../RiskLevel/constants";
 import { RiskLikelihood, RiskSeverity } from "../../RiskLevel/riskValues";
 import { RiskFormValues, MitigationFormValues } from "../interface";
@@ -14,7 +15,7 @@ import { ApiResponse } from "../../../../domain/interfaces/i.response";
 import { createProjectRisk } from "../../../../application/repository/projectRisk.repository";
 import { useUpdateProjectRisk } from "../../../../application/hooks/useUpdateProjectRisk";
 import useUsers from "../../../../application/hooks/useUsers";
-import { VerifyWiseContext } from "../../../../application/contexts/VerifyWise.context";
+import { selectInputValues } from "../../../../application/redux/ui/uiSlice";
 import { useCanCheck } from "../../../../application/hooks/useCan";
 import { RiskCalculator } from "../../../tools/riskCalculator";
 import { CustomFieldsSectionHandle } from "../../CustomFieldsSection";
@@ -168,7 +169,7 @@ export function useRiskForm(props: AddNewRiskFormProps): UseRiskFormReturn {
   const users = usersProp || hookData.users;
   const usersLoading = usersLoadingProp !== undefined ? usersLoadingProp : hookData.loading;
 
-  const { inputValues } = useContext(VerifyWiseContext);
+  const inputValues = useSelector(selectInputValues);
   const updateProjectRiskMutation = useUpdateProjectRisk();
 
   const isEditingDisabled = !can("risks.edit");
