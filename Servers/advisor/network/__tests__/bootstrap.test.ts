@@ -16,6 +16,7 @@ import { describe, expect, it, beforeAll } from "@jest/globals";
 import { bootstrapAgentNetwork, getNetworkStatus } from "../agentNetwork";
 import { getAllAgents } from "../agentRegistry";
 import { listAgents } from "../../agents/agentRegistry";
+import { AGENT_TOOL_MAP } from "../../agents/agentToolMap";
 
 // network-registry agents (RegisteredAgent: name + capabilities.tools)
 const NETWORK_DOMAIN_AGENTS = [
@@ -46,6 +47,17 @@ describe("bootstrapAgentNetwork", () => {
       expect(agent).toBeDefined();
       expect(agent!.name).toBe(name);
       expect(agent!.capabilities.tools.length).toBeGreaterThan(0);
+    }
+  });
+
+  it("registers each network-registry domain agent with its AGENT_TOOL_MAP tools", () => {
+    // The *.agent.ts files read their tools from AGENT_TOOL_MAP by name; a
+    // renamed agent there would register with no tools instead of failing.
+    const byName = new Map(getAllAgents().map((a) => [a.name, a]));
+    for (const name of NETWORK_DOMAIN_AGENTS) {
+      const mapped = AGENT_TOOL_MAP.find((a) => a.name === name);
+      expect(mapped).toBeDefined();
+      expect(byName.get(name)?.capabilities.tools).toEqual(mapped!.tools);
     }
   });
 

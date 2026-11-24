@@ -1,7 +1,7 @@
 import { describe, expect, it } from "@jest/globals";
 import * as fs from "fs";
 import * as path from "path";
-import { AGENT_TOOL_MAP } from "../agentToolMap";
+import { AGENT_TOOL_MAP, CAPABILITY_HINT_LIMIT, getAgentToolNames } from "../agentToolMap";
 
 /**
  * Every tool an agent claims must be a real Advisor tool: the router keeps
@@ -68,4 +68,15 @@ describe("AGENT_TOOL_MAP tool names", () => {
       expect(tools.filter((tool, i) => tools.indexOf(tool) !== i)).toEqual([]);
     },
   );
+
+  it.each(AGENT_TOOL_MAP.map((agent) => [agent.name, agent.tools] as const))(
+    "%s fits in the embedding description",
+    (_agentName, tools) => {
+      expect(tools.length).toBeLessThanOrEqual(CAPABILITY_HINT_LIMIT);
+    },
+  );
+
+  it("returns no tools for an unknown agent instead of throwing", () => {
+    expect(getAgentToolNames("no-such-agent")).toEqual([]);
+  });
 });

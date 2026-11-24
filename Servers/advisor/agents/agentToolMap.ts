@@ -1,18 +1,17 @@
 /**
  * Agent → tool mapping (single source of truth for tool subsetting).
  *
- * Why a static config rather than the existing dual registry?
+ * Why a static config rather than the agent registries?
  *   - `network/agentRegistry.ts` (RegisteredAgent) and `agents/agentRegistry.ts`
- *     (AgentDefinition) both exist and both expect runtime registration that
- *     never happens — registerRiskAgent / registerEvidenceAgent / etc. are
- *     never called from the boot path.
- *   - Bringing those registries online would be a bigger refactor that's
- *     out of scope for tool subsetting.
+ *     (AgentDefinition) are filled at boot by bootstrapAgentNetwork()
+ *     (network/agentNetwork.ts, called from index.ts), but the router runs
+ *     per request and only needs names and keywords, so it reads this plain
+ *     config instead of depending on registry state.
  *
  * This file holds each agent's keywords and tool names so the router can
- * answer "given this user message, which tool names should the LLM see?"
- * without depending on the agent registries. The domain agents in
- * `*.agent.ts` read their tool lists from here (getAgentToolNames).
+ * answer "given this user message, which tool names should the LLM see?".
+ * The domain agents in `*.agent.ts` read their tool lists from here
+ * (getAgentToolNames).
  *
  * RULE OF THUMB when editing:
  *   - Tool names listed here MUST be the same names registered in the
@@ -21,7 +20,20 @@
  *   - Any tool NOT listed in any agent here becomes a "universal" tool —
  *     always available regardless of routing. New tools default to
  *     universal, which is the safe behaviour.
+ *   - Claiming a tool hides it whenever another agent is matched instead.
+ *     Leave read, lookup and catalogue tools unclaimed unless they only make
+ *     sense in this agent's domain, and claim a write tool only when every
+ *     lookup it needs stays reachable when this agent matches (unclaimed or
+ *     claimed by this agent too).
+ *   - The embedding matcher describes an agent with its first
+ *     CAPABILITY_HINT_LIMIT tool names, so keep each list within it, most
+ *     descriptive tools first.
  */
+
+import { logStructured } from "../../utils/logger/fileLogger";
+
+/** How many tool names the embedding matcher puts in an agent's description. */
+export const CAPABILITY_HINT_LIMIT = 25;
 
 export interface AgentToolEntry {
   name: string;
@@ -56,13 +68,9 @@ export const AGENT_TOOL_MAP: AgentToolEntry[] = [
     tools: [
       "fetch_risks",
       "get_risk_analytics",
-      "get_executive_summary",
       "get_risk_history_timeseries",
-      "get_risk_change_history",
       "fetch_model_risks",
       "get_model_risk_analytics",
-      "get_model_risk_executive_summary",
-      "list_unattached_model_risks",
       "agent_create_risk",
       "agent_update_risk",
       "agent_delete_risk",
@@ -71,7 +79,6 @@ export const AGENT_TOOL_MAP: AgentToolEntry[] = [
       "agent_bulk_update_risk_status",
       "agent_link_risk_to_project",
       "agent_create_model_risk",
-      "agent_suggest_model_risk",
       "agent_update_model_risk",
       "agent_delete_model_risk",
       "agent_change_model_risk_status",
@@ -100,9 +107,7 @@ export const AGENT_TOOL_MAP: AgentToolEntry[] = [
     tools: [
       "fetch_vendors",
       "get_vendor_analytics",
-      "get_vendor_executive_summary",
       "fetch_vendor_risks",
-      "get_vendor_change_history",
       "agent_create_vendor",
       "agent_update_vendor",
       "agent_delete_vendor",
@@ -135,40 +140,20 @@ export const AGENT_TOOL_MAP: AgentToolEntry[] = [
       "ce marking",
       "high-risk",
       "article",
+      "iso42001",
+      "iso27001",
+      "42001",
+      "27001",
+      "ai rmf",
+      "annex",
+      "clause",
+      "subcategory",
     ],
     tools: [
       "get_compliance_score",
-      "get_compliance_details",
-      "get_all_projects_compliance",
-      "get_project_compliance_progress",
-      "fetch_frameworks",
-      "get_framework_analytics",
-      "get_eu_ai_act_control_categories",
-      "get_eu_ai_act_controls_by_category",
-      "get_eu_ai_act_project_compliance",
-      "get_eu_ai_act_project_assessment",
-      "get_eu_ai_act_compliance_progress",
-      "get_iso42001_clauses_structure",
-      "get_iso42001_annexes_structure",
-      "get_iso42001_project_clauses",
-      "get_iso42001_project_annexes",
       "get_iso42001_progress",
-      "get_iso27001_clauses_structure",
-      "get_iso27001_annexes_structure",
-      "get_iso27001_project_clauses",
-      "get_iso27001_project_annexes",
       "get_iso27001_progress",
-      "get_nist_functions",
-      "get_nist_categories_by_function",
-      "get_nist_subcategory_detail",
-      "get_nist_progress",
-      "get_nist_progress_by_function",
-      "get_nist_status_breakdown",
-      "get_nist_org_progress",
       "get_ce_marking_status",
-      "fetch_evidence",
-      "get_evidence_analytics",
-      "get_evidence_executive_summary",
       "agent_save_eu_ai_act_control",
       "agent_save_eu_ai_act_assessment_answer",
       "agent_save_iso42001_clauses",
@@ -202,8 +187,6 @@ export const AGENT_TOOL_MAP: AgentToolEntry[] = [
     tools: [
       "fetch_incidents",
       "get_incident_analytics",
-      "get_incident_executive_summary",
-      "get_incident_change_history",
       "agent_create_incident",
       "agent_update_incident",
       "agent_delete_incident",
@@ -233,20 +216,9 @@ export const AGENT_TOOL_MAP: AgentToolEntry[] = [
       "model lineage",
     ],
     tools: [
-      "fetch_model_inventories",
       "get_model_inventory_analytics",
-      "get_model_inventory_executive_summary",
-      "get_model_change_history",
-      "list_use_cases_for_model",
-      "list_models_for_use_case",
-      "list_frameworks_for_model",
-      "list_models_for_framework",
-      "list_datasets_for_model",
-      "list_files_for_model",
-      "suggest_risks_for_model",
       "fetch_datasets",
       "get_dataset_analytics",
-      "get_dataset_executive_summary",
       "fetch_model_risks",
       "get_model_risk_analytics",
       "agent_register_model",
@@ -254,18 +226,12 @@ export const AGENT_TOOL_MAP: AgentToolEntry[] = [
       "agent_retire_model",
       "agent_delete_model",
       "agent_link_model_to_project",
-      "agent_unlink_model_from_use_case",
-      "agent_link_model_to_framework",
-      "agent_unlink_model_from_framework",
-      "agent_link_model_to_dataset",
-      "agent_unlink_model_from_dataset",
-      "agent_attach_file_to_model",
-      "agent_detach_file_from_model",
       "agent_register_dataset",
       "agent_update_dataset",
       "agent_delete_dataset",
       "agent_link_dataset_to_model",
-      "agent_suggest_model_risk",
+      "agent_link_model_to_dataset",
+      "agent_unlink_model_from_dataset",
       "agent_create_model_risk",
       "agent_attach_model_risk_to_model",
       "agent_detach_model_risk_from_model",
@@ -289,19 +255,12 @@ export const AGENT_TOOL_MAP: AgentToolEntry[] = [
     tools: [
       "fetch_policies",
       "get_policy_analytics",
-      "get_policy_executive_summary",
       "get_policy_review_status",
-      "get_policy_change_history",
-      "search_policy_templates",
-      "get_template_recommendations",
-      "get_policy_linked_objects",
       "agent_create_policy",
       "agent_update_policy",
       "agent_delete_policy",
       "agent_submit_policy_for_review",
       "agent_approve_policy_review",
-      "agent_link_object_to_policy",
-      "agent_unlink_object_from_policy",
     ],
   },
   {
@@ -320,15 +279,7 @@ export const AGENT_TOOL_MAP: AgentToolEntry[] = [
       "evidence gap",
       "control link",
     ],
-    tools: [
-      "analyze_document",
-      "score_evidence_quality",
-      "match_controls",
-      "detect_evidence_gaps",
-      "fetch_evidence",
-      "get_evidence_analytics",
-      "get_evidence_executive_summary",
-    ],
+    tools: ["analyze_document", "score_evidence_quality", "match_controls", "detect_evidence_gaps"],
   },
   {
     name: "control-assessment-agent",
@@ -368,15 +319,10 @@ export const AGENT_TOOL_MAP: AgentToolEntry[] = [
     tools: [
       "fetch_tasks",
       "get_task_analytics",
-      "get_task_executive_summary",
-      "get_task_change_history",
       "agent_create_task",
       "agent_update_task",
       "agent_delete_task",
-      "agent_restore_task",
       "agent_assign_task",
-      "agent_update_task_status",
-      "agent_set_task_priority",
     ],
   },
   {
@@ -406,9 +352,19 @@ export const AGENT_TOOL_MAP: AgentToolEntry[] = [
 /**
  * Tool names an agent claims, for the agent definitions in `*.agent.ts`, so
  * they register the same list the router uses instead of keeping a copy.
+ * Called at boot: an unknown name logs an error and returns no tools rather
+ * than stopping the server (the bootstrap test fails on it instead).
  */
 export function getAgentToolNames(agentName: string): string[] {
   const entry = AGENT_TOOL_MAP.find((agent) => agent.name === agentName);
-  if (!entry) throw new Error(`No AGENT_TOOL_MAP entry for ${agentName}`);
+  if (!entry) {
+    logStructured(
+      "error",
+      `no AGENT_TOOL_MAP entry for ${agentName}; registering it without tools`,
+      "getAgentToolNames",
+      "agentToolMap.ts",
+    );
+    return [];
+  }
   return [...entry.tools];
 }
