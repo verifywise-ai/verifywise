@@ -248,7 +248,7 @@ export const incidentManagementContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'You don\'t pick the approver or the date. When someone sets the approval status to Approved or Rejected, VerifyWise records that person as the approver and the current date (UTC) as the approval date. Setting it back to Pending or Not required clears both. Changing only the approval notes keeps them.',
+      text: 'You don\'t pick the approver or the date. When someone sets the approval status to Approved or Rejected, VerifyWise records that person as the approver and today\'s date where they are as the approval date. Setting it back to Pending or Not required clears both. Changing only the approval notes keeps them.',
     },
     {
       type: 'paragraph',

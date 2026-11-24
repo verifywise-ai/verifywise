@@ -25,6 +25,7 @@ jest.mock("../../utils/tokens.utils", () => ({
   touchApiTokenLastUsedQuery: jest.fn(),
 }));
 jest.mock("../../utils/context/context", () => ({
+  readClientDateHeader: jest.requireActual("../../utils/context/context").readClientDateHeader,
   asyncLocalStorage: {
     run: jest.fn((_ctx: any, cb: () => void) => cb()),
   },
@@ -46,6 +47,7 @@ import { getTenantHash } from "../../tools/getTenantHash";
 import { isValidTenantHash } from "../../utils/security.utils";
 import { getRoleNameById } from "../../utils/roleMap";
 import { getActiveApiTokenByHashQuery, touchApiTokenLastUsedQuery } from "../../utils/tokens.utils";
+import { asyncLocalStorage } from "../../utils/context/context";
 
 // Cast mocks for type safety
 const mockGetTokenPayload = getTokenPayload as jest.MockedFunction<typeof getTokenPayload>;
@@ -347,6 +349,19 @@ describe("authenticateJWT middleware", () => {
       expect(req.role).toBe("Admin");
       expect(req.organizationId).toBe(10);
       expect(next).toHaveBeenCalled();
+    });
+
+    it("puts the client's local date header into the request context", async () => {
+      setupValidMocks();
+      const req = createReq("Bearer valid-token") as any;
+      req.headers["x-client-date"] = "2026-11-24";
+
+      await authenticateJWT(req as Request, createRes() as Response, next);
+
+      expect(asyncLocalStorage.run).toHaveBeenCalledWith(
+        expect.objectContaining({ userId: 1, organizationId: 10, clientDate: "2026-11-24" }),
+        expect.any(Function),
+      );
     });
   });
 

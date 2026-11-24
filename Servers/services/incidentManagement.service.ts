@@ -70,6 +70,7 @@ import { recordIncidentCreation } from "../utils/incidentChangeHistory.utils";
 import { isCriticalIncidentSeverity } from "../domain.layer/enums/ai-incident-management.enum";
 import { triggerIncidentResponse } from "./workflows/triggers";
 import logger from "../utils/logger/fileLogger";
+import { getRequestClientDate } from "../utils/context/context";
 
 /** Message for a write that lost an optimistic-concurrency check. */
 export const INCIDENT_CHANGED_MESSAGE =
@@ -379,7 +380,7 @@ export async function updateIncident(
         ? await getIncidentApproverName(userId, organizationId, transaction)
         : null;
       effective.approved_by_id = userId ?? null;
-      effective.approval_date = incidentToday();
+      effective.approval_date = incidentToday(getRequestClientDate());
     } else if (stamp === "clear") {
       effective.approved_by = null;
       effective.approved_by_id = null;
@@ -609,7 +610,7 @@ export async function createIncident(
       model_system_version: input.model_system_version,
       interim_report: input.interim_report,
       archived: input.archived || false,
-      approval_date: stamped ? incidentToday() : undefined,
+      approval_date: stamped ? incidentToday(getRequestClientDate()) : undefined,
       approval_notes: actor.canApprove ? input.approval_notes : undefined,
       created_at: new Date(),
       updated_at: new Date(),

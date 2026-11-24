@@ -596,8 +596,30 @@ export const formatIncidentDay = (
   return date.toLocaleDateString(locale, { ...options, timeZone: "UTC" });
 };
 
-/** Today's date (UTC) as "YYYY-MM-DD": the approval date the server records. */
-export const incidentToday = (now: Date = new Date()): string => now.toISOString().slice(0, 10);
+/** Hours the furthest-behind time zone (UTC-12) is behind UTC. */
+const FURTHEST_BEHIND_UTC_OFFSET_HOURS = 12;
+
+/** The earliest date that is today somewhere: today in UTC-12. */
+export const earliestIncidentToday = (now: Date = new Date()): string =>
+  new Date(now.getTime() - FURTHEST_BEHIND_UTC_OFFSET_HOURS * 60 * 60 * 1000)
+    .toISOString()
+    .slice(0, 10);
+
+/**
+ * The day the acting user records (an approval date, the Advisor's incident
+ * days), as "YYYY-MM-DD": the local date their browser sent (the
+ * X-Client-Date header, see getRequestClientDate) when it is a real date
+ * that is today somewhere on earth right now (today in UTC-12 to today in
+ * UTC+14), else today in UTC. So an approver in Toronto at 20:00 records
+ * their own day, not tomorrow, and no caller can backdate or postdate it.
+ */
+export const incidentToday = (clientDate?: unknown, now: Date = new Date()): string => {
+  if (typeof clientDate === "string" && /^\d{4}-\d{2}-\d{2}$/.test(clientDate)) {
+    const day = sentCalendarDate(clientDate);
+    if (day && day >= earliestIncidentToday(now) && day <= latestIncidentDate(now)) return day;
+  }
+  return now.toISOString().slice(0, 10);
+};
 
 /**
  * A user id sent for reporter_id: a positive integer (number or digits), or

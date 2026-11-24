@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, jest } from "@jest/globals";
+import { afterEach, beforeEach, describe, expect, it, jest } from "@jest/globals";
 
 // The Advisor's incident create, archive and delete use the console's write
 // paths (services/incidentManagement.service.ts).
@@ -22,6 +22,7 @@ jest.mock("../../../services/incidentManagement.service", () => ({
 }));
 
 import { writeToolExecutors } from "../../confirmation/createWriteTool";
+import { asyncLocalStorage } from "../../../utils/context/context";
 import "../../functions/incidentFunctions";
 import {
   createIncident,
@@ -84,6 +85,50 @@ describe("agent_create_incident", () => {
       userId: null,
       canApprove: false,
       changedBySystem: true,
+    });
+  });
+
+  describe("incident days", () => {
+    // 20:00 on 2026-11-24 in Toronto: already 2026-11-25 in UTC. Only Date
+    // is faked, so the promises still resolve.
+    beforeEach(() => {
+      jest.useFakeTimers({
+        now: new Date("2026-11-25T01:00:00.000Z"),
+        doNotFake: [
+          "nextTick",
+          "setImmediate",
+          "clearImmediate",
+          "setTimeout",
+          "clearTimeout",
+          "setInterval",
+          "clearInterval",
+          "queueMicrotask",
+        ],
+      });
+    });
+    afterEach(() => jest.useRealTimers());
+
+    const createdDays = () => {
+      const input = mockCreate.mock.calls[0][1] as Record<string, unknown>;
+      return [input.occurred_date, input.date_detected];
+    };
+
+    it("uses the requester's local date sent with the request", async () => {
+      await asyncLocalStorage.run({ clientDate: "2026-11-24" }, () =>
+        run("agent_create_incident", { title: "Chatbot", description: "Gave unsafe advice" }),
+      );
+      expect(createdDays()).toEqual(["2026-11-24", "2026-11-24"]);
+    });
+
+    it("uses today in UTC without a client date, or with one that is not today anywhere", async () => {
+      await run("agent_create_incident", { title: "Chatbot", description: "Gave unsafe advice" });
+      await asyncLocalStorage.run({ clientDate: "2026-11-20" }, () =>
+        run("agent_create_incident", { title: "Chatbot", description: "Gave unsafe advice" }),
+      );
+      expect(mockCreate.mock.calls.map((call) => (call[1] as any).occurred_date)).toEqual([
+        "2026-11-25",
+        "2026-11-25",
+      ]);
     });
   });
 

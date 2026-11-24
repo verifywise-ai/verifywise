@@ -19,6 +19,8 @@ import {
   updateIncident,
 } from "../../services/incidentManagement.service";
 import logger from "../../utils/logger/fileLogger";
+import { getRequestClientDate } from "../../utils/context/context";
+import { incidentToday } from "../../utils/validations/incidentManagementValidation.utils";
 import { userHasPermission } from "../../utils/userPermission.utils";
 import { actingRequesterId } from "./actingRequester";
 
@@ -508,7 +510,9 @@ const agentCreateIncident = createWriteToolFn({
     const reporter = requesterId
       ? await getIncidentApproverName(requesterId, organizationId)
       : ADVISOR_REPORTER;
-    const today = new Date();
+    // The user's own calendar day when their browser sent it with the
+    // request (X-Client-Date), else today in UTC.
+    const today = incidentToday(getRequestClientDate());
     const input: Record<string, unknown> = {
       ai_project: (params.title as string) || "",
       // Required by the tool schema; the create path enforces the length rule.

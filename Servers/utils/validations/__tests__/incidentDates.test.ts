@@ -1,5 +1,6 @@
 import { describe, expect, it } from "@jest/globals";
 import {
+  earliestIncidentToday,
   formatIncidentDay,
   incidentCalendarDate,
   incidentToday,
@@ -10,6 +11,11 @@ import {
   validateIncidentUpdateBusinessRules,
   withoutServerSetApprovalFields,
 } from "../incidentManagementValidation.utils";
+import {
+  asyncLocalStorage,
+  getRequestClientDate,
+  readClientDateHeader,
+} from "../../context/context";
 import {
   mapIncidentRow,
   storedIncidentRow,
@@ -49,9 +55,51 @@ describe(`incident dates (process TZ ${process.env.TZ ?? "default"})`, () => {
     expect(formatIncidentDay(null, "en-US")).toBe("");
   });
 
-  it("records today's UTC date as the approval date", () => {
-    expect(incidentToday(new Date("2026-11-24T02:30:00.000Z"))).toBe("2026-11-24");
-    expect(incidentToday(new Date("2026-11-23T23:59:59.000Z"))).toBe("2026-11-23");
+  it("records today's UTC date when no client date is sent", () => {
+    expect(incidentToday(undefined, new Date("2026-11-24T02:30:00.000Z"))).toBe("2026-11-24");
+    expect(incidentToday(undefined, new Date("2026-11-23T23:59:59.000Z"))).toBe("2026-11-23");
+  });
+
+  it("records the client's local date when it is today somewhere on earth", () => {
+    // 20:00 on 2026-11-24 in Toronto is 01:00 on 2026-11-25 in UTC.
+    const now = new Date("2026-11-25T01:00:00.000Z");
+    expect(incidentToday("2026-11-24", now)).toBe("2026-11-24");
+    expect(incidentToday("2026-11-25", now)).toBe("2026-11-25");
+    // Today in UTC-12 (2026-11-24) and in UTC+14 (2026-11-25) are the bounds.
+    expect(earliestIncidentToday(now)).toBe("2026-11-24");
+    expect(incidentToday("2026-11-23", now)).toBe("2026-11-25");
+    expect(incidentToday("2026-11-26", now)).toBe("2026-11-25");
+  });
+
+  it("accepts tomorrow only where it is already tomorrow (UTC+14)", () => {
+    // 11:00 UTC on 2026-11-24 is 01:00 on 2026-11-25 in Kiritimati and
+    // 23:00 on 2026-11-23 in UTC-12.
+    const now = new Date("2026-11-24T11:00:00.000Z");
+    expect(incidentToday("2026-11-25", now)).toBe("2026-11-25");
+    expect(incidentToday("2026-11-23", now)).toBe("2026-11-23");
+    expect(incidentToday("2026-11-22", now)).toBe("2026-11-24");
+    expect(incidentToday("2026-11-26", now)).toBe("2026-11-24");
+  });
+
+  it("reads the client date header into the request context", () => {
+    expect(readClientDateHeader({ "x-client-date": " 2026-11-24 " })).toBe("2026-11-24");
+    expect(readClientDateHeader({ "x-client-date": ["2026-11-24", "2026-11-25"] })).toBe(
+      "2026-11-24",
+    );
+    expect(readClientDateHeader({})).toBeUndefined();
+    expect(readClientDateHeader({ "x-client-date": "x".repeat(33) })).toBeUndefined();
+    expect(getRequestClientDate()).toBeUndefined();
+    asyncLocalStorage.run({ clientDate: "2026-11-24" }, () => {
+      expect(getRequestClientDate()).toBe("2026-11-24");
+    });
+  });
+
+  it("ignores a client date that is not a bare real date", () => {
+    const now = new Date("2026-03-01T12:00:00.000Z");
+    for (const bad of ["2026-02-30", "2026-3-1", "2026-03-01T00:00:00Z", "", "today", 20260301]) {
+      expect(incidentToday(bad, now)).toBe("2026-03-01");
+    }
+    expect(incidentToday("2026-02-29", new Date("2026-02-28T20:00:00.000Z"))).toBe("2026-02-28");
   });
 
   it("serialises a stored row's dates as YYYY-MM-DD with the people's ids and names", () => {
