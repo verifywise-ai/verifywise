@@ -1667,5 +1667,8 @@
   "This file has a private analysis by another user": "This file has a private analysis by another user",
   "A private analysis would replace another user's analysis of this file": "A private analysis would replace another user's analysis of this file",
   "Incident creation validation failed": "Incident creation validation failed",
-  "{field} does not reference an entity in your organization": "{field} does not reference an entity in your organization"
+  "{field} does not reference an entity in your organization": "{field} does not reference an entity in your organization",
+  "Enter a Brave Search API key.": "Enter a Brave Search API key.",
+  "Brave did not accept this key. Check that you copied all of it.": "Brave did not accept this key. Check that you copied all of it.",
+  "Could not reach Brave to check this key.": "Could not reach Brave to check this key."
 }

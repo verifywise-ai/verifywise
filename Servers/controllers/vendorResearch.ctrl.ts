@@ -18,13 +18,16 @@ import { getLLMKeysQuery } from "../utils/llmKey.utils";
 import {
   STALE_RUN_MINUTES,
   failStaleRunsQuery,
+  getBraveKeyQuery,
   getDecisionCountsQuery,
   getLatestRunQuery,
   getRunTraceQuery,
   getVendorResearchSettingsQuery,
   listFindingsQuery,
   listRecentRunSummariesQuery,
+  saveBraveKeyQuery,
 } from "../utils/vendorResearch.utils";
+import { checkBraveKey } from "../services/vendorResearch/braveKeyCheck";
 import { getVendorResearchConfig } from "../services/vendorResearch/config";
 import {
   RECENT_RUNS_READ,
@@ -729,6 +732,173 @@ export async function saveResearchSettings(req: Request, res: Response): Promise
     await logFailure({
       eventType: "Update",
       description: "failed to save the LLM key choice of the vendor research",
+      functionName,
+      fileName: FILE_NAME,
+      error: error as Error,
+      userId: req.userId!,
+      organizationId: req.organizationId!,
+    });
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
+  }
+}
+
+/** What the search key endpoints answer: never the key, only whether there is one and its end. */
+const searchKeyStatusOf = (key: string | null) => ({
+  configured: key !== null,
+  last4: key === null ? null : key.slice(-4),
+});
+
+/**
+ * Whether the organization has a Brave Search key for its vendor research, and the last four
+ * characters of it. For those who manage the organization's LLM keys.
+ */
+export async function getResearchSearchKey(req: Request, res: Response): Promise<any> {
+  const functionName = "getResearchSearchKey";
+
+  logProcessing({
+    description: "starting getResearchSearchKey",
+    functionName,
+    fileName: FILE_NAME,
+    userId: req.userId!,
+    organizationId: req.organizationId!,
+  });
+
+  try {
+    const key = await getBraveKeyQuery(req.organizationId!);
+
+    await logSuccess({
+      eventType: "Read",
+      description: "retrieved the search key status of the vendor research",
+      functionName,
+      fileName: FILE_NAME,
+      userId: req.userId!,
+      organizationId: req.organizationId!,
+    });
+    return res.status(200).json(STATUS_CODE[200]({ provider: "brave", ...searchKeyStatusOf(key) }));
+  } catch (error) {
+    await logFailure({
+      eventType: "Read",
+      description: "failed to retrieve the search key status of the vendor research",
+      functionName,
+      fileName: FILE_NAME,
+      error: error as Error,
+      userId: req.userId!,
+      organizationId: req.organizationId!,
+    });
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
+  }
+}
+
+/**
+ * Stores the organization's Brave Search key. The body is `{ key, skipCheck? }`. The key is checked
+ * with Brave first: a key Brave refuses (or text that cannot be a key) is a 422 with
+ * `code: "invalid_key"`; a check that could not be made is a 422 with `code: "unreachable"`, unless
+ * the body says `skipCheck: true`, which saves the key anyway. Spaces around a pasted key are
+ * dropped. The key itself never appears in an answer or a log line.
+ */
+export async function saveResearchSearchKey(req: Request, res: Response): Promise<any> {
+  const functionName = "saveResearchSearchKey";
+
+  logProcessing({
+    description: "starting saveResearchSearchKey",
+    functionName,
+    fileName: FILE_NAME,
+    userId: req.userId!,
+    organizationId: req.organizationId!,
+  });
+
+  const body = req.body as Record<string, unknown> | undefined;
+  const isObject = typeof body === "object" && body !== null && !Array.isArray(body);
+  const rawKey = isObject ? body.key : undefined;
+  if (typeof rawKey !== "string" || rawKey.trim() === "") {
+    await logFailure({
+      eventType: "Update",
+      description: "refused the search key of the vendor research: no key in the body",
+      functionName,
+      fileName: FILE_NAME,
+      error: new ValidationException("key must be a non-empty string"),
+      userId: req.userId!,
+      organizationId: req.organizationId!,
+    });
+    return res.status(400).json(STATUS_CODE[400](req.t!("Enter a Brave Search API key.")));
+  }
+  const key = rawKey.trim();
+  const skipCheck = isObject && body.skipCheck === true;
+
+  try {
+    const check = await checkBraveKey(key);
+    if (!check.ok && !(check.code === "unreachable" && skipCheck)) {
+      await logFailure({
+        eventType: "Update",
+        description: `refused the search key of the vendor research: ${check.code}`,
+        functionName,
+        fileName: FILE_NAME,
+        error: new ValidationException(`Brave Search key check failed: ${check.code}`),
+        userId: req.userId!,
+        organizationId: req.organizationId!,
+      });
+      const message =
+        check.code === "invalid_key"
+          ? req.t!("Brave did not accept this key. Check that you copied all of it.")
+          : req.t!("Could not reach Brave to check this key.");
+      return res.status(422).json(STATUS_CODE[422]({ message, code: check.code }));
+    }
+
+    await saveBraveKeyQuery(req.organizationId!, key, req.userId!);
+
+    await logSuccess({
+      eventType: "Update",
+      description: check.ok
+        ? "saved the search key of the vendor research"
+        : "saved the search key of the vendor research without a check",
+      functionName,
+      fileName: FILE_NAME,
+      userId: req.userId!,
+      organizationId: req.organizationId!,
+    });
+    return res.status(200).json(STATUS_CODE[200](searchKeyStatusOf(key)));
+  } catch (error) {
+    await logFailure({
+      eventType: "Update",
+      description: "failed to save the search key of the vendor research",
+      functionName,
+      fileName: FILE_NAME,
+      error: error as Error,
+      userId: req.userId!,
+      organizationId: req.organizationId!,
+    });
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
+  }
+}
+
+/** Removes the organization's Brave Search key; the research goes back to its other searches. */
+export async function deleteResearchSearchKey(req: Request, res: Response): Promise<any> {
+  const functionName = "deleteResearchSearchKey";
+
+  logProcessing({
+    description: "starting deleteResearchSearchKey",
+    functionName,
+    fileName: FILE_NAME,
+    userId: req.userId!,
+    organizationId: req.organizationId!,
+  });
+
+  try {
+    await saveBraveKeyQuery(req.organizationId!, null, req.userId!);
+
+    await logSuccess({
+      eventType: "Delete",
+      description: "removed the search key of the vendor research",
+      functionName,
+      fileName: FILE_NAME,
+      userId: req.userId!,
+      organizationId: req.organizationId!,
+    });
+    return res.status(200).json(STATUS_CODE[200](searchKeyStatusOf(null)));
+  } catch (error) {
+    await logFailure({
+      eventType: "Delete",
+      description: "failed to remove the search key of the vendor research",
       functionName,
       fileName: FILE_NAME,
       error: error as Error,

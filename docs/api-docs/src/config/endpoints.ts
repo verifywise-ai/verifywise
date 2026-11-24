@@ -14200,6 +14200,51 @@ export const vendorResearchEndpoints: Endpoint[] = [
     ],
     tag: "v1: Vendor Research",
   },
+  {
+    method: 'GET',
+    path: '/v1/vendor-research/search-key',
+    summary: "Get Research Search Key",
+    description: "Whether the organization stored a Brave Search API key for the vendor research, and its last four characters. The key itself is never returned. Admins only.",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 403, description: "Forbidden" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: Vendor Research",
+  },
+  {
+    method: 'PUT',
+    path: '/v1/vendor-research/search-key',
+    summary: "Save Research Search Key",
+    description: "Stores the organization's Brave Search API key, encrypted, after one test request to Brave. Spaces around the key are dropped. A key Brave refuses, or text that cannot be a key (10 to 200 printable characters, no spaces), is a 422 with code invalid_key. A check that could not be made is a 422 with code unreachable, unless skipCheck is true, which stores the key anyway. Admins only.",
+    requiresAuth: true,
+    requestBody: {
+      "key": "string (required)",
+      "skipCheck": "boolean (optional)",
+    },
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 400, description: "No key in the body" },
+      { status: 403, description: "Forbidden" },
+      { status: 422, description: "The key was not stored: Brave refused it (invalid_key) or could not be reached to check it (unreachable)" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: Vendor Research",
+  },
+  {
+    method: 'DELETE',
+    path: '/v1/vendor-research/search-key',
+    summary: "Delete Research Search Key",
+    description: "Removes the organization's Brave Search API key; the vendor research goes back to its other searches. Admins only.",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 403, description: "Forbidden" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: Vendor Research",
+  },
 ];
 
 // Vendor Risks endpoints

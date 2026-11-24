@@ -29984,6 +29984,102 @@ paths:
       security:
         -
           bearerAuth: []
+  /v1/vendor-research/search-key:
+    get:
+      summary: 'Get Research Search Key'
+      description: 'Whether the organization stored a Brave Search API key for the vendor research, and its last four characters. The key itself is never returned. Admins only.'
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: {type: string}
+                  data: {type: object, properties: {provider: {type: string, enum: [brave]}, configured: {type: boolean}, last4: {type: string, nullable: true, description: 'The last four characters of the stored key; null when none is stored. The key itself is never returned.'}}}
+        '403':
+          description: Forbidden
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: Vendor Research'
+      operationId: getResearchSearchKey
+      security:
+        -
+          bearerAuth: []
+    put:
+      summary: 'Save Research Search Key'
+      description: 'Stores the organization''s Brave Search API key, encrypted, after one test request to Brave. Spaces around the key are dropped. A key Brave refuses, or text that cannot be a key (10 to 200 printable characters, no spaces), is a 422 with code invalid_key. A check that could not be made is a 422 with code unreachable, unless skipCheck is true, which stores the key anyway. Admins only.'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - key
+              properties:
+                key:
+                  type: string
+                  description: 'The Brave Search API key.'
+                skipCheck:
+                  type: boolean
+                  description: 'Store the key when Brave could not be reached to check it. A key Brave refuses is never stored.'
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: {type: string}
+                  data: {type: object, properties: {configured: {type: boolean}, last4: {type: string, nullable: true, description: 'The last four characters of the stored key; null when none is stored. The key itself is never returned.'}}}
+        '400':
+          description: 'No key in the body'
+        '403':
+          description: Forbidden
+        '422':
+          description: 'The key was not stored: Brave refused it (invalid_key) or could not be reached to check it (unreachable)'
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: {type: string}
+                  data: {type: object, properties: {message: {type: string}, code: {type: string, enum: [invalid_key, unreachable]}}}
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: Vendor Research'
+      operationId: saveResearchSearchKey
+      security:
+        -
+          bearerAuth: []
+    delete:
+      summary: 'Delete Research Search Key'
+      description: 'Removes the organization''s Brave Search API key; the vendor research goes back to its other searches. Admins only.'
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: {type: string}
+                  data: {type: object, properties: {configured: {type: boolean}, last4: {type: string, nullable: true, description: 'The last four characters of the stored key; null when none is stored. The key itself is never returned.'}}}
+        '403':
+          description: Forbidden
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: Vendor Research'
+      operationId: deleteResearchSearchKey
+      security:
+        -
+          bearerAuth: []
   /v1/vendor-risk-findings:
     get:
       summary: 'List Vendor Risk Findings'
