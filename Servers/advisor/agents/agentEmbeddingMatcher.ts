@@ -22,7 +22,7 @@ import { createOpenAI } from "@ai-sdk/openai";
 import { createHash } from "crypto";
 import { sequelize } from "../../database/db";
 import logger from "../../utils/logger/fileLogger";
-import { AGENT_TOOL_MAP, type AgentToolEntry } from "./agentToolMap";
+import { AGENT_TOOL_MAP, CAPABILITY_HINT_LIMIT, type AgentToolEntry } from "./agentToolMap";
 
 /**
  * Same model as the control matcher — keeps both caches consistent and
@@ -83,7 +83,7 @@ export function buildAgentSourceText(agent: AgentToolEntry): string {
   // Tool names give the embedding model a strong signal about what the
   // agent does, but they're underscore-cased, so we pretty-print them.
   const toolHints = agent.tools
-    .slice(0, 25)
+    .slice(0, CAPABILITY_HINT_LIMIT)
     .map((t) => t.replace(/^agent_/, "").replace(/_/g, " "))
     .join(", ");
   return [
