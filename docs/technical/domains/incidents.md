@@ -58,7 +58,7 @@ Sequelize registers its `DATEONLY` parser for the `date` type on every pooled
 connection, so raw `sequelize.query` reads get the string too, never a JS Date
 at server-local midnight. A request may send an ISO date-time; its date part
 (`YYYY-MM-DD` prefix, offset ignored) is stored. A JS Date built by server
-code (the Advisor's today, a Jira issue's creation time) is stored as its UTC
+code (a Jira issue's creation time) is stored as its UTC
 date (`toIncidentDateValue` in `incidentManagementValidation.utils.ts`).
 People-facing formatting (automation emails, reports) uses
 `formatIncidentDay`, which formats the day in UTC so a server west of UTC
@@ -91,22 +91,32 @@ users' current full names, null without an id); the page shows
   `reporter_id`), and the server writes their full name into `reporter`,
   ignoring any text sent. The drawer picks reporters by user id; the Advisor
   sends the requesting user's id and name.
-- **Reporter on update:** a changed `reporter_id` is checked the same way and
-  rewrites `reporter`. A changed `reporter` text without `reporter_id` clears
-  the stored `reporter_id` (the text now names someone else). An unchanged
-  `reporter_id` is never re-checked, so a reporter who has left the
-  organization does not block other edits. The drawer shows a reporter who is
-  not among the listed users (text only, or departed) as an extra option.
+- **Reporter on update:** a `reporter_id` sent (changed or not) makes
+  `reporter` that member's current full name, ignoring any text sent. A
+  changed one is checked the same way as on create; an unchanged one whose
+  user has left the organization keeps the stored reporter, so it never
+  blocks other edits. A changed `reporter` text sent without `reporter_id`
+  clears the stored `reporter_id` (the text now names someone else). Clearing
+  `reporter_id` (null or "") leaves the text, sent or stored, as the reporter,
+  so it must not be blank. The drawer sends `reporter` and `reporter_id`
+  together whenever the reporter changed, and offers the reporter the incident
+  was opened with as an extra option when it is not among the listed users
+  (text only, or departed), so the user can go back to it.
 - **Approver:** `approved_by_id` is server-set like `approved_by` and
   `approval_date` (dropped from every request). A decision stamps the acting
-  user's id and name and today's UTC date; Pending or Not required, and the
-  reopen reset, clear all three.
+  user's id and name and the user's own date (see
+  [Editing versus approving](#editing-versus-approving)); Pending or
+  Not required, and the reopen reset, clear all three.
 - **Removed or deleted users:** removing a member from the organization does
   not clear `reporter_id` or `approved_by_id` (they record who did something,
   not who is responsible now, unlike the owner); deleting the account nulls
   them through the foreign key, and the page falls back to the stored text.
-- Change history tracks the text columns (`reporter`, `approved_by`), not the
-  ids, so a change of reporter is recorded once, by name.
+- Change history tracks both the text and the id columns, under the same
+  labels ("Reporter", "Approved by"; ids formatted as the user's name,
+  scoped to the organization). The service records one row per person change
+  (`incidentHistoryColumns`, and `creationHistoryValues` on create): the user
+  row when the person is a user, else the text row. So a change between two
+  users with the same name is still recorded.
 
 ### Incident Change History Table
 
@@ -228,9 +238,11 @@ The update route lets in a caller holding either key (`authorizeAny` in `middlew
 
 `approved_by` and `approval_date` are set by the server, never by the caller: every write path drops them from the request (`withoutServerSetApprovalFields`). When `approval_status` changes (`approvalStampFor`):
 
-- to Approved or Rejected: `approved_by` is the acting user's name (`name surname` from `users`, `getIncidentApproverName`, `User #<id>` without a name), `approved_by_id` their id and `approval_date` today's UTC date (`incidentToday`);
+- to Approved or Rejected: `approved_by` is the acting user's name (`name surname` from `users`, `getIncidentApproverName`, `User #<id>` without a name), `approved_by_id` their id and `approval_date` the acting user's calendar day (`incidentToday`, below);
 - to Pending or Not required: all three are cleared;
 - unchanged (for example only the notes change): they stay as stored.
+
+The approval date is the actor's own day, not the UTC one: an approver in Toronto at 20:00 records that day, not tomorrow. The console sends the browser's local date in the `X-Client-Date` header on every request (`Clients/src/infrastructure/api/clientDate.ts`, added by the axios interceptor and the Advisor chat transport); `authenticateJWT` stores it unchecked in the request context (`readClientDateHeader` / `getRequestClientDate` in `Servers/utils/context/context.ts`). `incidentToday(clientDate)` uses it only when it is a bare real date (`YYYY-MM-DD`) that is today somewhere on earth right now (from today in UTC-12, `earliestIncidentToday`, to today in UTC+14, `latestIncidentDate`), else today in UTC; so a caller can move the date by at most their own time zone, never backdate it. API-token callers and the MCP server send no header and get the UTC date. The approver and the fact the server sets the date stay server-controlled. The Advisor's new incidents use the same day for `occurred_date` and `date_detected`.
 
 On create (`createNewIncident`), a caller without `incident.approve` gets an incident that starts Pending with no approver, date or notes, whatever was sent. A caller with it may create the incident Approved or Rejected; the server then records them as approver, dated today. Creation history records the approval as stored.
 
@@ -270,7 +282,10 @@ Archived incidents are left out of:
 - the dashboard's incident counts and status chart (`fetchIncidentMetrics` in
   `Clients/src/application/hooks/useDashboardMetrics.ts`), so they match the page;
 - Wise Search (`alwaysWhere: "archived IS NOT TRUE"` on `incident_management`
-  in `Servers/utils/search.utils.ts`, see [search.md](./search.md));
+  in `Servers/utils/search.utils.ts`, see [search.md](./search.md)), which
+  also matches the reporter user's current full name (`searchExpressions`,
+  members of the incident's organization only) besides the stored `reporter`
+  text;
 - the CE marking "Link incidents" picker (see [CE Marking Integration](#ce-marking-integration));
 - reports (see [Reports](#reports));
 - the Home queue (`services/homeQueue/sources/incidents.source.ts`), the Jira
@@ -422,7 +437,7 @@ form labels the option "Not Required", but the value it saves is
 When approved or rejected (set by the server, see
 [Editing versus approving](#editing-versus-approving)):
 - `approved_by` is the name of the user who changed the status
-- `approval_date` is the moment of the change
+- `approval_date` is the day of the change, in the approver's time zone
 - `approval_notes` optional comments (needs `incident.approve`)
 
 Approval is sign-off on closing the incident. When a Closed incident is reopened
@@ -692,8 +707,8 @@ The rules live in `Servers/utils/validations/incidentManagementValidation.utils.
 | approval_status | Optional, defaults to Pending; one of `AIIncidentManagementApprovalStatus` | Cannot be blanked; same rule when changed |
 | occurred_date, date_detected | Required; a real date (YYYY-MM-DD or an ISO date-time); not later than today in UTC+14 | Cannot be blanked; same rule when changed |
 | date_detected vs occurred_date | Detected on or after occurred (calendar dates) | Checked when either date changes, on the dates the row ends up with (request over the stored row) |
-| reporter | Required as a `reporter_id` or text (at most 255 characters); with a `reporter_id` the text is the user's full name | Cannot be blanked (unless the same update sets a `reporter_id`); same rule when changed |
-| reporter_id | Optional user id (positive integer) of a member of the organization | Checked only when changed; a changed reporter text without it clears it |
+| reporter | Required as a `reporter_id` or text (at most 255 characters); with a `reporter_id` the text is the user's full name | A `reporter_id` sent sets the text to the user's name; otherwise checked on the reporter the row ends up with (text sent, or stored) when the text changes or `reporter_id` is cleared |
+| reporter_id | Optional user id (positive integer) of a member of the organization | Membership checked only when changed; a changed reporter text sent without it clears it |
 | model_system_version | Optional text, at most 255 characters | Same |
 | description | 5-32,767 characters (`INCIDENT_DESCRIPTION_MAX_LENGTH`, Jira's text-field limit; column is TEXT) | Checked only when it changes |
 | affected_persons_groups, relationship_causality, immediate_mitigations, planned_corrective_actions, approval_notes | Optional text (TEXT, no length limit) | Same |
