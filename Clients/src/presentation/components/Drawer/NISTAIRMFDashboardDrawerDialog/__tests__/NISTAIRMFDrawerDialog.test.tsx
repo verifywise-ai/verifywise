@@ -21,7 +21,8 @@ const mockCategory = {
 const mockSubcategory = {
   id: 1,
   title: "Test Subcategory",
-  index: "1",
+  // The API sends the NIST reference, category included (subcategory_id).
+  index: "1.1",
   description: "Test description",
   status: NISTAIRMFStatus.NOT_STARTED,
   category_id: 1,
