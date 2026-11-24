@@ -4,7 +4,13 @@ import uiReducer, {
   setActiveModule,
   setRowsPerPage,
   setSetupModalOpen,
+  setComponentVisibility,
+  setInputValues,
+  bumpPhotoRefresh,
   selectSetupModalOpen,
+  selectComponentsVisible,
+  selectInputValues,
+  selectPhotoRefreshCounter,
 } from "../uiSlice";
 import type { AppModule } from "../uiSlice";
 
@@ -13,6 +19,14 @@ describe("uiSlice", () => {
     sidebar: { collapsed: false },
     appModule: { active: "main" as AppModule },
     modelInventory: { statusFilter: "all" },
+    componentsVisible: {
+      home: false,
+      sidebar: false,
+      projectFrameworks: false,
+      compliance: false,
+    },
+    inputValues: {},
+    photoRefreshCounter: 0,
   };
 
   it("should return initial state on unknown action", () => {
@@ -77,6 +91,52 @@ describe("uiSlice", () => {
       expect(selectSetupModalOpen({ ui: open })).toBe(true);
       const closed = uiReducer(open, setSetupModalOpen(false));
       expect(selectSetupModalOpen({ ui: closed })).toBe(false);
+    });
+  });
+
+  describe("setComponentVisibility", () => {
+    it("flips only the targeted flag", () => {
+      const state = uiReducer(
+        initialState,
+        setComponentVisibility({ component: "home", value: true }),
+      );
+      expect(state.componentsVisible).toEqual({
+        home: true,
+        sidebar: false,
+        projectFrameworks: false,
+        compliance: false,
+      });
+      expect(selectComponentsVisible({ ui: state }).home).toBe(true);
+    });
+
+    it("accumulates flags across dispatches", () => {
+      let state = uiReducer(
+        initialState,
+        setComponentVisibility({ component: "sidebar", value: true }),
+      );
+      state = uiReducer(state, setComponentVisibility({ component: "compliance", value: true }));
+      expect(selectComponentsVisible({ ui: state })).toEqual({
+        home: false,
+        sidebar: true,
+        projectFrameworks: false,
+        compliance: true,
+      });
+    });
+  });
+
+  describe("setInputValues", () => {
+    it("replaces the edit-target shuttle", () => {
+      const state = uiReducer(initialState, setInputValues({ id: 7, risk_name: "Risk A" }));
+      expect(selectInputValues({ ui: state })).toEqual({ id: 7, risk_name: "Risk A" });
+    });
+  });
+
+  describe("bumpPhotoRefresh", () => {
+    it("increments the counter monotonically", () => {
+      const once = uiReducer(initialState, bumpPhotoRefresh());
+      const twice = uiReducer(once, bumpPhotoRefresh());
+      expect(selectPhotoRefreshCounter({ ui: once })).toBe(1);
+      expect(selectPhotoRefreshCounter({ ui: twice })).toBe(2);
     });
   });
 });
