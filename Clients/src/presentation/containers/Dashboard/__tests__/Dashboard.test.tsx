@@ -26,6 +26,14 @@ vi.mock("../../../../application/hooks/useDashboard", () => ({
   }),
 }));
 
+const projectsCache = vi.hoisted(() => ({
+  setProjectsCache: vi.fn(),
+  refreshProjects: vi.fn().mockResolvedValue(undefined),
+}));
+vi.mock("../../../../application/hooks/useProjectsCache", () => ({
+  useProjectsCache: () => projectsCache,
+}));
+
 vi.mock("../../../../application/repository/project.repository", () => ({
   getAllProjects: vi.fn().mockResolvedValue({ data: [] }),
 }));
@@ -141,12 +149,10 @@ describe("Dashboard container", () => {
     expect(screen.getByTestId("outlet")).toBeInTheDocument();
   });
 
-  it("calls getAllProjects on mount", async () => {
-    const { getAllProjects } =
-      await import("../../../../application/repository/project.repository");
+  it("refetches the projects list through React Query on mount", async () => {
     renderWithProviders(<Dashboard reloadTrigger={false} />);
     await waitFor(() => {
-      expect(getAllProjects).toHaveBeenCalled();
+      expect(projectsCache.refreshProjects).toHaveBeenCalled();
     });
   });
 

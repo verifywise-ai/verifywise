@@ -8,7 +8,6 @@ import { ShadowAISidebarProvider } from "../../../application/contexts/ShadowAIS
 import { AIGatewaySidebarProvider } from "../../../application/contexts/AIGatewaySidebar.context";
 import { AITrustIndexSidebarProvider } from "../../../application/contexts/AITrustIndexSidebar.context";
 import DemoAppBanner from "../../components/DemoBanner/DemoAppBanner";
-import { getAllProjects } from "../../../application/repository/project.repository";
 import {
   postAutoDrivers,
   deleteAutoDrivers,
@@ -36,7 +35,7 @@ interface DashboardProps {
 }
 
 const Dashboard: FC<DashboardProps> = ({ reloadTrigger }) => {
-  const { setProjectsCache } = useProjectsCache();
+  const { refreshProjects } = useProjectsCache();
   const location = useLocation();
   const { activeModule, setActiveModule } = useActiveModule();
   const { userRoleName, isSuperAdmin, organizationId } = useAuth();
@@ -75,19 +74,13 @@ const Dashboard: FC<DashboardProps> = ({ reloadTrigger }) => {
     }
   }, [dashboard, refreshProjectsFlag]);
 
+  // Refetch through React Query, which cancels an older refetch still in flight, so the newest
+  // answer always wins.
   useEffect(() => {
-    const fetchProjects = async () => {
-      try {
-        const response = await getAllProjects();
-        if (!response?.data) return;
-        setProjectsCache(response.data);
-      } catch (error) {
-        console.error("Error fetching projects:", error);
-      }
-    };
-
-    fetchProjects();
-  }, [setProjectsCache, reloadTrigger, location.pathname, refreshProjectsFlag]);
+    refreshProjects().catch((error) => {
+      console.error("Error fetching projects:", error);
+    });
+  }, [refreshProjects, reloadTrigger, location.pathname, refreshProjectsFlag]);
 
   // Handle create demo data. The overlay shows progress while the request
   // runs, then reloads from its "Explore the demo" button.
@@ -147,14 +140,7 @@ const Dashboard: FC<DashboardProps> = ({ reloadTrigger }) => {
         });
 
         // Refresh dashboard and projects data
-        await Promise.all([
-          fetchDashboard(),
-          getAllProjects({ forceFresh: true }).then((projectsResponse) => {
-            if (projectsResponse?.data) {
-              setProjectsCache(projectsResponse.data);
-            }
-          }),
-        ]);
+        await Promise.all([fetchDashboard(), refreshProjects()]);
 
         // Force refresh projects flag to trigger updates in child components
         setRefreshProjectsFlag((prev) => !prev);

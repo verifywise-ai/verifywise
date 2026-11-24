@@ -28,7 +28,7 @@ This document catalogs the VerifyWise frontend: the app shell, route table, navi
 | `Clients/src/App.tsx` | Top-level component. Sets up global providers, theme, alert toasts, onboarding modal, command palette, smart prompt, user-guide sidebar, and renders `<Routes>{createRoutes(...)}</Routes>`. |
 
 Key `App.tsx` details:
-- **Global providers:** Redux `Provider` + `PersistGate`, `VerifyWiseContext`, `ExtensionsProvider`, `UserGuideSidebarProvider`, `SmartPromptProvider`, `AdvisorConversationProvider`, and five module-specific sidebar contexts (`Evals`, `AIDetection`, `ShadowAI`, `AIGateway`, `AITrustIndex`).
+- **Global providers:** Redux `Provider` + `PersistGate`, `ExtensionsProvider`, `UserGuideSidebarProvider`, `SmartPromptProvider`, `AdvisorConversationProvider`, and five module-specific sidebar contexts (`Evals`, `AIDetection`, `ShadowAI`, `AIGateway`, `AITrustIndex`).
 - **Theme:** `ConditionalThemeWrapper` applies the MUI `light` theme to all routes except `/aiTrustCentre/*` public pages.
 - **Sidebars hidden on:** auth routes (`/login`, `/admin-reg`, `/user-reg`, `/register`, `/forgot-password`, `/reset-password`, `/set-new-password`, `/reset-password-continue`) and public routes (`/use-case-form-intake`, `/intake/*`, `/shared/*`, `/aiTrustCentre/*`).
 - **Onboarding:** `SetupModal` is shown on `/` or `/start-here` when the org creator's onboarding is incomplete. It offers demo data or a blank start.

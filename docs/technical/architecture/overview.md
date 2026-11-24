@@ -242,7 +242,7 @@ Clients/src/
 ### 5. State Management (Frontend)
 - **Redux**: Authentication, UI state, persisted preferences
 - **React Query**: Server state, API caching
-- **Context API**: Legacy global state (VerifyWiseContext)
+- **Context API**: Scoped providers only (extensions, user guide, Advisor); the global VerifyWiseContext was removed in November 2026
 
 ## Security Architecture
 

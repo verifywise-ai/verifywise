@@ -594,10 +594,13 @@ export const ProjectForm = ({
         if (res.status === 201 || res.status === 200 || res.status === 202) {
           let targetId: number | undefined;
           if (projectToEdit) {
-            // Update the project in the projects list
+            // Update the project in the projects list. The answer is the bare row, without the
+            // fields the list joins in (such as `framework`), so it is merged into the entry.
             setProjectsCache((prevProjects: Project[]) =>
               prevProjects.map((project) =>
-                project.id === projectToEdit.id ? (res.data.data as Project) : project,
+                project.id === projectToEdit.id
+                  ? { ...project, ...(res.data.data as Project) }
+                  : project,
               ),
             );
             targetId = projectToEdit.id;

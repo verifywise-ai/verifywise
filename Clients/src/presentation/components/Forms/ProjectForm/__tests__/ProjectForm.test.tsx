@@ -244,13 +244,15 @@ describe("ProjectForm server errors", () => {
     expect(screen.getByRole("alert")).toHaveTextContent(message);
     await submit(submitRef);
     expect(screen.queryByRole("alert")).toBeNull();
-    // The saved use case is written into the projects cache in place.
+    // The saved use case is merged into its entry in the projects cache: the answer is the bare
+    // row, so fields the list joins in (such as `framework`) are kept.
     expect(projectsCacheResult.setProjectsCache).toHaveBeenCalledTimes(1);
     const updater = projectsCacheResult.setProjectsCache.mock.calls[0][0] as (
       prev: object[],
     ) => object[];
-    expect(updater([{ id: 7, stale: true }, { id: 2 }])).toEqual([
-      euAiActUseCase(["Deployer"]),
+    const framework = [{ framework_id: 1, name: "EU AI Act" }];
+    expect(updater([{ id: 7, framework, goal: "old goal" }, { id: 2 }])).toEqual([
+      { framework, ...euAiActUseCase(["Deployer"]) },
       { id: 2 },
     ]);
   });

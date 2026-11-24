@@ -118,7 +118,7 @@ const Framework = () => {
 
   const dispatch = useDispatch();
   const projects = useProjects().data ?? [];
-  const { setProjectsCache } = useProjectsCache();
+  const { setProjectsCache, refreshProjects } = useProjectsCache();
   const can = useCanCheck();
   const { t } = useTranslation();
   const { refs, allVisible } = useMultipleOnScreen<HTMLElement>({
@@ -155,12 +155,7 @@ const Framework = () => {
   // Function to refresh project data after framework changes
   const refreshProjectData = async () => {
     try {
-      // Import the projects repository function
-      const { getAllProjects } = await import("../../../application/repository/project.repository");
-      const response = await getAllProjects();
-      if (response?.data) {
-        setProjectsCache(response.data);
-      }
+      await refreshProjects();
     } catch (error) {
       console.error("Error refreshing projects:", error);
     }
