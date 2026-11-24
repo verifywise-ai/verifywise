@@ -23,6 +23,10 @@ export const DATE_FILTER_OPERATORS: FilterOperator[] = [
   "in_7_days",
   "in_2_weeks",
   "in_30_days",
+  "in_last_1_day",
+  "in_last_7_days",
+  "in_last_2_weeks",
+  "in_last_30_days",
   "is_past",
   "is_today",
 ];
@@ -57,6 +61,20 @@ function isWithinDays(date: Date | null, days: number): boolean {
   dateToCompare.setHours(12, 0, 0, 0); // Midday to avoid timezone issues
 
   return dateToCompare >= now && dateToCompare <= futureDate;
+}
+
+/**
+ * True when the date's local calendar day is today or one of the `days`
+ * days before it. Compared by local calendar day (year, month, day), so a
+ * day-only value read as local midnight never shifts across a UTC boundary.
+ */
+function isWithinLastDays(date: Date | null, days: number): boolean {
+  if (!date) return false;
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const earliest = new Date(now.getFullYear(), now.getMonth(), now.getDate() - days);
+  const day = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  return day >= earliest && day <= today;
 }
 
 function isToday(date: Date | null): boolean {
@@ -121,6 +139,14 @@ function matchesScalar(
         return isWithinDays(dateValue, 14);
       case "in_30_days":
         return isWithinDays(dateValue, 30);
+      case "in_last_1_day":
+        return isWithinLastDays(dateValue, 1);
+      case "in_last_7_days":
+        return isWithinLastDays(dateValue, 7);
+      case "in_last_2_weeks":
+        return isWithinLastDays(dateValue, 14);
+      case "in_last_30_days":
+        return isWithinLastDays(dateValue, 30);
       case "is_today":
         return isToday(dateValue);
       case "is_past":

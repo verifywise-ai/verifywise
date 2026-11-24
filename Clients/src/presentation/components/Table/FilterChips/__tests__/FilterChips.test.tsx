@@ -162,6 +162,29 @@ describe("FilterChips", () => {
     expect(screen.getByTestId("filter-chip-due")).toHaveTextContent("Due date: Past");
   });
 
+  it("a recent date column offers today, last 7 days and last 30 days, counting past days", async () => {
+    const recentColumns: FilterColumn[] = columns.map((c) =>
+      c.id === "due" ? { ...c, label: "Occurred date", dateRange: "recent" as const } : c,
+    );
+    const { user, onFilterChange } = renderChips({ columns: recentColumns });
+    await user.click(screen.getByTestId("filter-chip-due"));
+
+    // Today (A) and five days ago (C) are in the last 7 days; in three days (B) is not.
+    expect(menuItems().map((i) => i.textContent)).toEqual([
+      "All",
+      "Today1",
+      "Last 7 days2",
+      "Last 30 days2",
+    ]);
+
+    await user.click(screen.getByTestId("filter-chip-option-due-in_last_7_days"));
+    expect(onFilterChange).toHaveBeenLastCalledWith(
+      [expect.objectContaining({ columnId: "due", operator: "in_last_7_days", value: "" })],
+      "and",
+    );
+    expect(screen.getByTestId("filter-chip-due")).toHaveTextContent("Occurred date: Last 7 days");
+  });
+
   it("Clear filters resets every chip", async () => {
     const { user, onFilterChange } = renderChips();
     await user.click(screen.getByTestId("filter-chip-status"));
