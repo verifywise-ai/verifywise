@@ -84,7 +84,17 @@ async function notifyNistAiRmfAssignment(
       categoryName = `Category ${result[0].category_id}`;
       description = result[0].subcategory_description;
       // Build subcategory identifier like "GV-1.1"
-      const funcAbbrev = result[0].func_type.substring(0, 2).toUpperCase();
+      // NIST's own codes; the first two letters would give MAP and MANAGE the
+      // same "MA".
+      const NIST_FUNCTION_CODES: Record<string, string> = {
+        GOVERN: "GV",
+        MAP: "MP",
+        MEASURE: "MS",
+        MANAGE: "MG",
+      };
+      const funcAbbrev =
+        NIST_FUNCTION_CODES[result[0].func_type] ??
+        result[0].func_type.substring(0, 2).toUpperCase();
       // subcategory_id already holds the category ("1.1"), so it follows the
       // function abbreviation directly.
       entityName = `${funcAbbrev}-${result[0].subcategory_id} ${entityName}`;

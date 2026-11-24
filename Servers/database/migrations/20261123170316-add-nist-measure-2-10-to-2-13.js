@@ -14,7 +14,7 @@
  * subcategories the struct table lacks — on every install today that is
  * MEASURE 2.10–2.13 — and gives every project that already uses NIST AI RMF
  * a "Not started" row for each, as createNewSubcategoriesQuery does for a new
- * project. Idempotent; down() reverses the column type only when no value
+ * project (a demo project's rows are demo rows). Idempotent; down() reverses the column type only when no value
  * would collide.
  */
 
@@ -84,7 +84,7 @@ module.exports = {
             await sequelize.query(
               `INSERT INTO verifywise.nist_ai_rmf_subcategories
                  (organization_id, subcategory_meta_id, projects_frameworks_id, status, is_demo, created_at)
-               SELECT pf.organization_id, :metaId, pf.id, 'Not started', false, NOW()
+               SELECT pf.organization_id, :metaId, pf.id, 'Not started', COALESCE(pf.is_demo, false), NOW()
                  FROM verifywise.projects_frameworks pf
                 WHERE pf.framework_id = :frameworkId
                   AND NOT EXISTS (
