@@ -37,7 +37,6 @@
  *   query Brave does not take, a body that is too large, not JSON or of another shape) is a
  *   SearchEngineError: one search fails, and the run keeps the engine.
  */
-import { createHmac, randomBytes } from "node:crypto";
 import { safeFetch } from "../../utils/safeOutboundUrl";
 import { MAX_SNIPPET_CHARS, cleanText, cutAtCodePoint } from "../vendorResearch/text";
 import { SearchUnavailableError } from "./providerSearch";
@@ -418,11 +417,10 @@ class RateLimited extends Error {
 /** The most keys whose queue is kept; past it, the queue made first is dropped. */
 const MAX_SHARED_QUEUES = 1_000;
 /**
- * The queue of each key, by an HMAC of the key under a secret made at start-up, so the key itself is
- * never a map key and the map keys cannot be matched against a list of known keys.
+ * The queue of each key, by the key. The map stays in this process and is never logged or sent; the
+ * engines built with a key hold it in memory the same way.
  */
 const sharedQueues = new Map<string, SearchQueue>();
-const QUEUE_ID_SECRET = randomBytes(32);
 
 /**
  * The queue of the requests made with `apiKey` in this process (one every BRAVE_MIN_GAP_MS), made on
@@ -430,15 +428,14 @@ const QUEUE_ID_SECRET = randomBytes(32);
  * same time stay within the key's rate together.
  */
 export function braveQueueFor(apiKey: string): SearchQueue {
-  const id = createHmac("sha256", QUEUE_ID_SECRET).update(apiKey).digest("hex");
-  const known = sharedQueues.get(id);
+  const known = sharedQueues.get(apiKey);
   if (known) return known;
   if (sharedQueues.size >= MAX_SHARED_QUEUES) {
     const oldest = sharedQueues.keys().next().value;
     if (oldest !== undefined) sharedQueues.delete(oldest);
   }
   const queue = createSearchQueue({ minGapMs: BRAVE_MIN_GAP_MS });
-  sharedQueues.set(id, queue);
+  sharedQueues.set(apiKey, queue);
   return queue;
 }
 
