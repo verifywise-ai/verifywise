@@ -70,7 +70,7 @@ export const generatingReportsContent: ArticleContent = {
         {
           icon: 'Building2',
           title: 'Organization reports',
-          description: 'Reports covering your entire organization\'s governance program for a framework you pick.',
+          description: 'Reports covering your entire organization\'s governance program for one framework you pick. The EU AI Act is not offered for organization reports.',
         },
       ],
     },
@@ -102,7 +102,7 @@ export const generatingReportsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Turn on **AI-enhanced report** to add an executive summary, key findings, risk highlights and recommendations. This needs an LLM key in **Settings → LLM keys**.',
+      text: 'Turn on **AI-enhanced report** to add an executive summary, key findings, risk highlights and recommendations. The toggle only appears once your organization has an LLM key, added under **Settings → API keys**.',
     },
     {
       type: 'heading',
@@ -111,25 +111,23 @@ export const generatingReportsContent: ArticleContent = {
       text: 'Generating a use case report',
     },
     {
+      type: 'paragraph',
+      text: 'Generating reports from the Generate tab needs the Admin role. Other roles see an "Access Restricted" message.',
+    },
+    {
       type: 'ordered-list',
       items: [
         { text: 'In the sidebar, open **Record > Evidence & reports > Reporting**' },
         { text: 'On the **Generate** tab, click **Generate report** and choose **Use case report**' },
-        { text: 'Select the use case. The sections on offer follow the framework tied to it' },
-        { text: 'Optionally enter a report name, then choose PDF or Word' },
-        { text: 'Optionally turn on **AI-enhanced report**, then click **Next**' },
+        { text: 'Optionally turn on **AI-enhanced report**' },
+        { text: 'Select the use case. Only approved use cases are listed' },
+        { text: 'Optionally enter a report name, choose PDF or Word and click **Next**' },
         { text: 'Choose the sections to include and click **Generate report**' },
       ],
     },
     {
       type: 'paragraph',
-      text: 'The report is generated in the background. When it is ready it downloads and appears in the list on the Generate tab.',
-    },
-    {
-      type: 'image',
-      src: '/images/user-guide/generate-project-report.png',
-      alt: 'Generate project report modal with fields for selecting a use case, report type, and custom report name',
-      caption: 'Select a use case and report type to generate a use case-specific report.',
+      text: 'The sections on offer follow the framework tied to the use case. A use case with more than one framework reports on the first one. The report is generated in the background. When it is ready it downloads and appears in the list on the Generate tab.',
     },
     {
       type: 'heading',
@@ -141,17 +139,11 @@ export const generatingReportsContent: ArticleContent = {
       type: 'ordered-list',
       items: [
         { text: 'On the **Generate** tab, click **Generate report** and choose **Organization report**' },
+        { text: 'Optionally turn on **AI-enhanced report**' },
         { text: 'Select the organizational project and the framework for the report' },
-        { text: 'Optionally enter a report name, then choose PDF or Word' },
-        { text: 'Optionally turn on **AI-enhanced report**, then click **Next**' },
+        { text: 'Optionally enter a report name, choose PDF or Word and click **Next**' },
         { text: 'Choose the sections to include and click **Generate report**' },
       ],
-    },
-    {
-      type: 'image',
-      src: '/images/user-guide/generate-org-report.png',
-      alt: 'Generate organization report modal with fields for selecting an organizational project, framework, report type, and custom report name',
-      caption: 'Organization reports cover your entire governance program for the framework you select.',
     },
     {
       type: 'heading',
@@ -161,7 +153,7 @@ export const generatingReportsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'A template is a saved report design: its sections, its AI insights and the frameworks it covers. The **Templates** tab lists **System templates**, which come with VerifyWise, and **My templates**, which your organization creates. System templates include a weekly executive brief, an EU AI Act conformity evidence pack, an ISO 42001 internal audit pack, a board governance report and the OSFI E-23 completeness report.',
+      text: 'A template is a saved report design: its sections and AI insights. System templates also set the frameworks they cover. The **Templates** tab lists **System templates**, which come with VerifyWise, and **My templates**, which your organization creates. System templates include a weekly executive brief, an EU AI Act conformity evidence pack, an ISO 42001 internal audit pack, a board governance report and the OSFI E-23 completeness report.',
     },
     {
       type: 'bullet-list',
@@ -228,7 +220,7 @@ export const generatingReportsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'The actions menu on each row offers **Download**, **View analyses** for the AI sections, **Archive** and **Delete permanently**. An OSFI E-23 report also offers **Download fix-it list**.',
+      text: 'The actions menu on each row offers **View analyses** for the AI sections, **Archive** and **Delete permanently**. **Download** appears once the report has finished. An OSFI E-23 report also offers **Download fix-it list**.',
     },
     {
       type: 'heading',
@@ -295,7 +287,7 @@ export const generatingReportsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'This means you may not have permission to generate reports for the selected use case. Check with your administrator to verify your role and permissions.',
+      text: 'Generating reports from the Generate tab needs the Admin role. If you see "Access Restricted", ask an Admin to generate the report or to change your role.',
     },
     {
       type: 'heading',
