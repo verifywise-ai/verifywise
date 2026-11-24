@@ -7,6 +7,7 @@ import {
   FindingStatus,
   VendorResearchConfig,
   VendorResearchRun,
+  VendorResearchSearchStatus,
   VendorResearchSettings,
   VendorRiskFinding,
 } from "../../domain/interfaces/i.vendorResearch";
@@ -52,8 +53,24 @@ export async function getVendorResearchSettings(): Promise<VendorResearchSetting
 }
 
 /**
- * Both fields are always sent (the server takes a whole choice, and `null` is a choice), and the
- * answer is what it kept. A key that is not the organization's is a 404.
+ * Which search each LLM key gets, and whether recent runs got no news. Admin only. A failure raises
+ * no toast: the window that reads it only leaves its warning out.
+ */
+export async function getVendorResearchSearchStatus(): Promise<VendorResearchSearchStatus> {
+  try {
+    const response = await apiServices.get<{ message: string; data: VendorResearchSearchStatus }>(
+      "/v1/vendor-research/search-status",
+      { suppressGlobalErrorToast: true },
+    );
+    return extractData<VendorResearchSearchStatus>(response);
+  } catch (error) {
+    throw toAPIError(error, "Failed to fetch the research search status");
+  }
+}
+
+/**
+ * Every field is sent (the server takes a whole choice, and `null` is a choice), and the answer is
+ * what it kept. A key that is not the organization's is a 404.
  */
 export async function saveVendorResearchSettings(
   settings: VendorResearchSettings,

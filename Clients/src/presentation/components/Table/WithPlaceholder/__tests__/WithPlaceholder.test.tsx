@@ -83,7 +83,7 @@ const researchButtonOf = (vendorName: string) =>
 beforeEach(() => {
   vi.clearAllMocks();
   role.canEdit = true;
-  mocks.config.mockResolvedValue({ hasLlmKey: true, autoRunEnabled: true });
+  mocks.config.mockResolvedValue({ hasLlmKey: true, autoRunAllowed: true, autoRunEnabled: true });
 });
 
 describe("the research action of a vendor row", () => {

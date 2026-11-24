@@ -1621,6 +1621,7 @@
   "Review result must be text": "Le résultat de la révision doit être du texte",
   "The request body must be a JSON object": "Le corps de la requête doit être un objet JSON",
   "scanIntervalDays must be 7, 14, 30 or null": "scanIntervalDays doit valoir 7, 14, 30 ou null",
+  "autoResearchOnCreate must be true or false": "autoResearchOnCreate doit valoir true ou false",
   "Review status must be one of: {options}": "La valeur de « Statut de relecture » doit être l'une des suivantes : {options}",
   "Data sensitivity must be one of: {options}": "La valeur de « Sensibilité des données » doit être l'une des suivantes : {options}",
   "Business criticality must be one of: {options}": "La valeur de « Criticité métier » doit être l'une des suivantes : {options}",

@@ -2,7 +2,8 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { act, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient } from "@tanstack/react-query";
-import { useNavigate } from "react-router";
+import { useLocation, useNavigate } from "react-router";
+import { LLM_KEY_CREATE_PATH } from "../../../../../application/constants/llmKeyDeepLink";
 import { renderWithProviders } from "../../../../../test/renderWithProviders";
 import {
   acceptedRisk,
@@ -40,9 +41,12 @@ vi.mock(
   }),
 );
 
-const role = vi.hoisted(() => ({ canEdit: true, isAdmin: false }));
+// `isAdmin` is the role name, which the page must not consult: what it shows rests on the
+// permissions (`canManageKeys` is llmKeys.admin), which a custom role can hold too.
+const role = vi.hoisted(() => ({ canEdit: true, canManageKeys: false, isAdmin: false }));
 vi.mock("../../../../../application/hooks/useCan", () => ({
-  useCan: (key: string) => key === "vendor.edit" && role.canEdit,
+  useCan: (key: string) =>
+    (key === "vendor.edit" && role.canEdit) || (key === "llmKeys.admin" && role.canManageKeys),
   useCanCheck: () => (key: string) => key === "vendor.edit" && role.canEdit,
 }));
 vi.mock("../../../../../application/hooks/useIsAdmin", () => ({
@@ -133,6 +137,9 @@ const rowOf = (text: string) => {
 /** Opens what the latest run found and checked, which is behind one button of the summary. */
 const openRunDetails = async () =>
   userEvent.click(await screen.findByRole("button", { name: "How it was researched" }));
+/** Opens the names of every list the run asked that held nothing. */
+const openAllLists = async () =>
+  userEvent.click(await screen.findByRole("button", { name: "Show all lists" }));
 /**
  * The line of the source with this host in an open row: the host, the date and the tags of the
  * source. Its quote is under the line.
@@ -190,13 +197,15 @@ const acceptsAndLeavesOnlyTheSecond = () =>
 beforeEach(() => {
   vi.clearAllMocks();
   role.canEdit = true;
+  role.canManageKeys = false;
   role.isAdmin = false;
   formEdits.current = {};
-  mocks.config.mockResolvedValue({ hasLlmKey: true, autoRunEnabled: true });
+  mocks.config.mockResolvedValue({ hasLlmKey: true, autoRunAllowed: true, autoRunEnabled: true });
   mocks.settings.mockResolvedValue({
     researchKeyId: null,
     analysisKeyId: null,
     scanIntervalDays: null,
+    autoResearchOnCreate: true,
   });
   mocks.saveSettings.mockImplementation(async (settings) => settings);
   mocks.list.mockResolvedValue({ rows: [finding(), secondFinding()], total: 2 });
@@ -243,29 +252,77 @@ describe("the states of the section", () => {
 
   it("says research is not set up when nothing is pending and the organization has no LLM key", async () => {
     mocks.list.mockResolvedValue({ rows: [], total: 0 });
-    mocks.config.mockResolvedValue({ hasLlmKey: false, autoRunEnabled: true });
+    mocks.config.mockResolvedValue({
+      hasLlmKey: false,
+      autoRunAllowed: true,
+      autoRunEnabled: true,
+    });
     renderSection({ route: WITH_VENDOR_7 });
 
     expect(await screen.findByText("Vendor research is not set up.")).toBeInTheDocument();
     expect(screen.queryByText("No pending research findings.")).not.toBeInTheDocument();
   });
 
-  it("tells an Admin to add an LLM key", async () => {
-    role.isAdmin = true;
+  it("offers no vendor filter before research is set up and nothing is pending", async () => {
     mocks.list.mockResolvedValue({ rows: [], total: 0 });
-    mocks.config.mockResolvedValue({ hasLlmKey: false, autoRunEnabled: true });
+    mocks.config.mockResolvedValue({
+      hasLlmKey: false,
+      autoRunAllowed: true,
+      autoRunEnabled: true,
+    });
+    renderSection();
+
+    expect(await screen.findByText("Vendor research is not set up.")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Vendor")).not.toBeInTheDocument();
+  });
+
+  it("tells an Admin to add an LLM key", async () => {
+    role.canManageKeys = true;
+    mocks.list.mockResolvedValue({ rows: [], total: 0 });
+    mocks.config.mockResolvedValue({
+      hasLlmKey: false,
+      autoRunAllowed: true,
+      autoRunEnabled: true,
+    });
     renderSection({ route: WITH_VENDOR_7 });
 
     expect(await screen.findByText("Vendor research is not set up.")).toBeInTheDocument();
-    expect(
-      screen.getByText("Add an LLM key under Settings → API Keys, in the LLM Keys section."),
-    ).toBeInTheDocument();
+    expect(screen.getByText("Research needs an LLM key.", { exact: false })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Add an LLM key" })).toBeInTheDocument();
+  });
+
+  it("takes whoever can add a key straight to the add-key form", async () => {
+    role.canManageKeys = true;
+    mocks.list.mockResolvedValue({ rows: [], total: 0 });
+    mocks.config.mockResolvedValue({
+      hasLlmKey: false,
+      autoRunAllowed: true,
+      autoRunEnabled: true,
+    });
+    const LocationProbe = () => {
+      const location = useLocation();
+      return <span data-testid="location">{`${location.pathname}${location.search}`}</span>;
+    };
+    renderWithProviders(
+      <>
+        <VendorResearchFindings vendors={VENDORS} onOpenRisk={vi.fn()} onNotify={vi.fn()} />
+        <LocationProbe />
+      </>,
+      { route: WITH_VENDOR_7 },
+    );
+
+    await userEvent.click(await screen.findByRole("button", { name: "Add an LLM key" }));
+    expect(screen.getByTestId("location")).toHaveTextContent(LLM_KEY_CREATE_PATH);
   });
 
   it("keeps the setup hint from everyone who is not an Admin", async () => {
-    role.isAdmin = false;
+    role.canManageKeys = false;
     mocks.list.mockResolvedValue({ rows: [], total: 0 });
-    mocks.config.mockResolvedValue({ hasLlmKey: false, autoRunEnabled: true });
+    mocks.config.mockResolvedValue({
+      hasLlmKey: false,
+      autoRunAllowed: true,
+      autoRunEnabled: true,
+    });
     renderSection({ route: WITH_VENDOR_7 });
 
     expect(await screen.findByText("Vendor research is not set up.")).toBeInTheDocument();
@@ -281,9 +338,13 @@ describe("the states of the section", () => {
   });
 
   it("says no findings are pending, with no setup hint, once the organization has an LLM key", async () => {
-    role.isAdmin = true;
+    role.canManageKeys = true;
     mocks.list.mockResolvedValue({ rows: [], total: 0 });
-    mocks.config.mockResolvedValue({ hasLlmKey: true, autoRunEnabled: false });
+    mocks.config.mockResolvedValue({
+      hasLlmKey: true,
+      autoRunAllowed: true,
+      autoRunEnabled: false,
+    });
     renderSection({ route: WITH_VENDOR_7 });
 
     expect(await screen.findByText("No pending research findings.")).toBeInTheDocument();
@@ -304,13 +365,17 @@ describe("the states of the section", () => {
     expect(screen.queryByText("Vendor research is not set up.")).not.toBeInTheDocument();
 
     await act(async () => {
-      config.resolve({ hasLlmKey: true, autoRunEnabled: true });
+      config.resolve({ hasLlmKey: true, autoRunAllowed: true, autoRunEnabled: true });
     });
     expect(await screen.findByText("No pending research findings.")).toBeInTheDocument();
   });
 
   it("shows the rows even when the organization is not set up, and only disables Research again", async () => {
-    mocks.config.mockResolvedValue({ hasLlmKey: false, autoRunEnabled: true });
+    mocks.config.mockResolvedValue({
+      hasLlmKey: false,
+      autoRunAllowed: true,
+      autoRunEnabled: true,
+    });
     renderSection({ route: WITH_VENDOR_7 });
 
     expect(await screen.findByText(FIRST)).toBeInTheDocument();
@@ -2262,7 +2327,11 @@ describe("keyboard and screen reader use of the rows", () => {
   });
 
   it("moves focus to the line that says research is not set up when that is what the empty list says", async () => {
-    mocks.config.mockResolvedValue({ hasLlmKey: false, autoRunEnabled: true });
+    mocks.config.mockResolvedValue({
+      hasLlmKey: false,
+      autoRunAllowed: true,
+      autoRunEnabled: true,
+    });
     mocks.list.mockResolvedValue({ rows: [finding()], total: 1 });
     accepts([]);
     renderSection();
@@ -3424,7 +3493,7 @@ describe("the coverage of the latest run", () => {
   const follows = (a: HTMLElement, b: HTMLElement) =>
     Boolean(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
   const CHECKED =
-    "Checked: CISA Known Exploited Vulnerabilities (1), OFAC Specially Designated Nationals list (0), UK Sanctions List (0), EU consolidated list of financial sanctions (0), the National Vulnerability Database";
+    "Checked 4 public lists and registers. 1 had a record: CISA Known Exploited Vulnerabilities.";
 
   it("lists the checked sources and their counts", async () => {
     mocks.latest.mockResolvedValue(
@@ -3434,6 +3503,10 @@ describe("the coverage of the latest run", () => {
     await openRunDetails();
 
     const checked = screen.getByText(CHECKED);
+    expect(
+      screen.getByText("Also checked: the National Vulnerability Database."),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Data as of 10 Oct 2026.")).toBeInTheDocument();
     const cited = screen.getByText(
       "Sources cited: 1 official, 0 trusted press, 0 vendor, 0 unverified",
     );
@@ -3445,16 +3518,29 @@ describe("the coverage of the latest run", () => {
     expect(screen.queryByText(/The server's/)).not.toBeInTheDocument();
   });
 
-  it("says No records in … as of …", async () => {
+  it("names the lists that held nothing only behind Show all lists, and never twice", async () => {
     mocks.latest.mockResolvedValue(run({ coverage: coverage() }));
     renderSection({ route: WITH_VENDOR_7 });
     await openRunDetails();
 
-    expect(
-      screen.getByText(
-        "No records in OFAC Specially Designated Nationals list, UK Sanctions List, EU consolidated list of financial sanctions as of 10 Oct 2026",
-      ),
-    ).toBeInTheDocument();
+    const ALL =
+      "No records: OFAC Specially Designated Nationals list, UK Sanctions List, EU consolidated list of financial sanctions.";
+    // The coverage lines name it nowhere else; the credits under the findings carry the list's
+    // own words, which name it, and stay on screen as its licence asks.
+    const named = () =>
+      screen.queryAllByText(
+        (text) => text.includes("UK Sanctions List") && !text.startsWith("Data sources:"),
+      );
+    expect(screen.getByText(/^Data sources:.*UK Sanctions List, FCDO/)).toBeInTheDocument();
+    expect(screen.queryByText(ALL)).not.toBeInTheDocument();
+    expect(named()).toHaveLength(0);
+    const toggle = screen.getByRole("button", { name: "Show all lists" });
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+    await openAllLists();
+    expect(screen.getByText(ALL)).toBeInTheDocument();
+    expect(named()).toHaveLength(1);
+    await userEvent.click(screen.getByRole("button", { name: "Hide the lists" }));
+    expect(screen.queryByText(ALL)).not.toBeInTheDocument();
   });
 
   it("names a stale source", async () => {
@@ -3503,7 +3589,7 @@ describe("the coverage of the latest run", () => {
     const notChecked = screen.getByText(
       "Not checked: OFAC Specially Designated Nationals list, the vendor's status page",
     );
-    expect(follows(screen.getByText(/^Checked:/), notChecked)).toBe(true);
+    expect(follows(screen.getByText(/^Checked \d/), notChecked)).toBe(true);
   });
 
   it("says Public databases turned off", async () => {
@@ -3522,7 +3608,7 @@ describe("the coverage of the latest run", () => {
 
     expect(await screen.findByText("Public databases turned off")).toBeInTheDocument();
     await openRunDetails();
-    expect(screen.queryByText(/^Checked:/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/^Checked/)).not.toBeInTheDocument();
     expect(screen.queryByText(/^Data sources:/)).not.toBeInTheDocument();
   });
 
@@ -3626,7 +3712,7 @@ describe("the coverage of the latest run", () => {
 
     expect(
       screen.getByText(
-        "Checked: CISA Known Exploited Vulnerabilities (1), the National Vulnerability Database (2), OFAC Specially Designated Nationals list (0), UK Sanctions List (0), EU consolidated list of financial sanctions (0)",
+        "Checked 5 public lists and registers. 2 had records: CISA Known Exploited Vulnerabilities, the National Vulnerability Database.",
       ),
     ).toBeInTheDocument();
     const line = screen.getByText(
@@ -3661,12 +3747,13 @@ describe("the coverage of the latest run", () => {
 
     expect(
       screen.getByText(
-        "Checked: AI Incident Database (2), MITRE ATLAS case studies (1), NHTSA Standing General Order crash reports (0), FDA list of AI-enabled medical devices (0)",
+        "Checked 4 public lists and registers. 2 had records: AI Incident Database, MITRE ATLAS case studies.",
       ),
     ).toBeInTheDocument();
+    await openAllLists();
     expect(
       screen.getByText(
-        "No records in NHTSA Standing General Order crash reports, FDA list of AI-enabled medical devices as of 10 Oct 2026",
+        "No records: NHTSA Standing General Order crash reports, FDA list of AI-enabled medical devices.",
       ),
     ).toBeInTheDocument();
     expect(
@@ -3707,7 +3794,9 @@ describe("the coverage of the latest run", () => {
 
     expect(screen.getByText("Not checked: MITRE ATLAS case studies")).toBeInTheDocument();
     expect(
-      screen.getByText("Checked: FDA list of AI-enabled medical devices (3)"),
+      screen.getByText(
+        "Checked 1 public list or register. 1 had a record: FDA list of AI-enabled medical devices.",
+      ),
     ).toBeInTheDocument();
     expect(
       screen.getByText(/^Data sources: FDA list of AI-enabled medical devices,/),
@@ -3742,13 +3831,12 @@ describe("the coverage of the latest run", () => {
 
       expect(
         screen.getByText(
-          "Checked: US Consolidated Screening List (2), FDA recalls of AI-enabled medical devices (0)",
+          "Checked 2 public lists and registers. 1 had a record: US Consolidated Screening List.",
         ),
       ).toBeInTheDocument();
+      await openAllLists();
       expect(
-        screen.getByText(
-          "No records in FDA recalls of AI-enabled medical devices as of 10 Oct 2026",
-        ),
+        screen.getByText("No records: FDA recalls of AI-enabled medical devices."),
       ).toBeInTheDocument();
       expect(
         screen.getByText(
@@ -3787,7 +3875,9 @@ describe("the coverage of the latest run", () => {
 
       expect(screen.getByText("Not checked: US Consolidated Screening List")).toBeInTheDocument();
       expect(
-        screen.getByText("Checked: CISA Known Exploited Vulnerabilities (1)"),
+        screen.getByText(
+          "Checked 1 public list or register. 1 had a record: CISA Known Exploited Vulnerabilities.",
+        ),
       ).toBeInTheDocument();
       // Neither notice is shown: nothing of the two lists is in the findings.
       expect(screen.queryByText(/Consolidated Screening List but is not endorsed/)).toBeNull();
@@ -3811,7 +3901,7 @@ describe("the coverage of the latest run", () => {
 
       expect(await screen.findByText("Public databases turned off")).toBeInTheDocument();
       await openRunDetails();
-      expect(screen.queryByText(/^Checked:/)).not.toBeInTheDocument();
+      expect(screen.queryByText(/^Checked/)).not.toBeInTheDocument();
       expect(screen.queryByText(/^Data sources:/)).not.toBeInTheDocument();
     });
   });
@@ -3821,7 +3911,7 @@ describe("the coverage of the latest run", () => {
     const OFSI_NOTICE =
       "UK Office of Financial Sanctions Implementation (HM Treasury) enforcement notices, published on GOV.UK. Contains public sector information licensed under the Open Government Licence v3.0. Adapted by VerifyWise; no endorsement by HM Treasury is implied.";
 
-    it("names the list that held a record, counts the ones that held none, and credits only the first", async () => {
+    it("names the lists that held a record, the others only behind Show all lists, and credits only the first", async () => {
       mocks.latest.mockResolvedValue(
         run({
           coverage: coverage({
@@ -3846,7 +3936,7 @@ describe("the coverage of the latest run", () => {
 
       expect(
         await screen.findByText(
-          "Checked: CISA Known Exploited Vulnerabilities (1), UK OFSI financial sanctions enforcement notices (1), 2 more lists with no records",
+          "Checked 4 public lists and registers. 2 had records: CISA Known Exploited Vulnerabilities, UK OFSI financial sanctions enforcement notices.",
         ),
       ).toBeInTheDocument();
       // A list that could not be checked is always named: a silent gap would read as a clean check.
@@ -3857,17 +3947,22 @@ describe("the coverage of the latest run", () => {
         ),
       ).toBeInTheDocument();
       expect(screen.getByText("Not checked: GLEIF LEI records")).toBeInTheDocument();
-      // The lists that held nothing are counted, never named, and owe no credit.
+      // The lists that held nothing are named only on request, and owe no credit.
       expect(screen.queryByText(/AI Hallucination Cases/)).toBeNull();
       expect(screen.queryByText(/Epoch AI/)).toBeNull();
-      expect(screen.queryByText(/^No records in/)).toBeNull();
+      await openAllLists();
+      expect(
+        screen.getByText(
+          "No records: AI Hallucination Cases database, Epoch AI Data on AI Models.",
+        ),
+      ).toBeInTheDocument();
       const line = screen.getByText(
         `Data sources: ${joinAttributions([ATTRIBUTIONS[0], OFSI_NOTICE])}`,
       );
       expect(line.closest("[data-vw-no-translate]")).not.toBeNull();
     });
 
-    it("says nothing of the lists a run asked when none of them held a record, but counts them", async () => {
+    it("counts the lists a run asked when none of them held a record, and credits none", async () => {
       mocks.latest.mockResolvedValue(
         run({
           coverage: coverage({
@@ -3880,7 +3975,9 @@ describe("the coverage of the latest run", () => {
       renderSection({ route: WITH_VENDOR_7 });
       await openRunDetails();
 
-      expect(await screen.findByText("Checked: 3 lists with no records")).toBeInTheDocument();
+      expect(
+        await screen.findByText("Checked 3 public lists and registers. None had a record."),
+      ).toBeInTheDocument();
       expect(screen.queryByText(/^Data sources:/)).not.toBeInTheDocument();
       expect(screen.queryByText(/^Not checked:/)).not.toBeInTheDocument();
     });
@@ -3897,9 +3994,10 @@ describe("the coverage of the latest run", () => {
       if (details !== null) await userEvent.click(details);
       expect(screen.queryByText("What it checked")).not.toBeInTheDocument();
       for (const start of [
-        /^Checked:/,
+        /^Checked/,
         /^Not checked:/,
-        /^No records in/,
+        /^No records:/,
+        /^Data as of/,
         /^Sources cited:/,
         /^Data sources:/,
       ]) {
@@ -4284,8 +4382,8 @@ describe("Research again", () => {
 describe("the research settings", () => {
   const SETTINGS_BUTTON = { name: "Research settings" };
 
-  it("are offered to an Admin of an organization that has an LLM key, and open in a window", async () => {
-    role.isAdmin = true;
+  it("are offered to a role that manages the LLM keys when the organization has one, and open in a window", async () => {
+    role.canManageKeys = true;
     renderSection({ route: WITH_VENDOR_7 });
 
     await userEvent.click(await screen.findByRole("button", SETTINGS_BUTTON));
@@ -4295,8 +4393,25 @@ describe("the research settings", () => {
     expect(await within(dialog).findAllByRole("combobox")).toHaveLength(3);
   });
 
-  it("are not offered to anyone who is not an Admin, and the server is not asked for them", async () => {
+  it("are offered to a custom role that manages the LLM keys, though it is not Admin", async () => {
+    role.canManageKeys = true;
     role.isAdmin = false;
+    renderSection({ route: WITH_VENDOR_7 });
+
+    expect(await screen.findByRole("button", SETTINGS_BUTTON)).toBeInTheDocument();
+  });
+
+  it("are not offered to an Admin role that does not manage the LLM keys", async () => {
+    role.canManageKeys = false;
+    role.isAdmin = true;
+    renderSection({ route: WITH_VENDOR_7 });
+    await screen.findByText(FIRST);
+
+    expect(screen.queryByRole("button", SETTINGS_BUTTON)).not.toBeInTheDocument();
+  });
+
+  it("are not offered to anyone who does not manage the LLM keys, and the server is not asked for them", async () => {
+    role.canManageKeys = false;
     renderSection({ route: WITH_VENDOR_7 });
     await screen.findByText(FIRST);
 
@@ -4305,8 +4420,12 @@ describe("the research settings", () => {
   });
 
   it("are not offered while the organization has no LLM key, because there is nothing to choose from", async () => {
-    role.isAdmin = true;
-    mocks.config.mockResolvedValue({ hasLlmKey: false, autoRunEnabled: true });
+    role.canManageKeys = true;
+    mocks.config.mockResolvedValue({
+      hasLlmKey: false,
+      autoRunAllowed: true,
+      autoRunEnabled: true,
+    });
     renderSection({ route: WITH_VENDOR_7 });
     await screen.findByText(FIRST);
 
@@ -4314,7 +4433,7 @@ describe("the research settings", () => {
   });
 
   it("are not offered before it is known whether the organization has an LLM key", async () => {
-    role.isAdmin = true;
+    role.canManageKeys = true;
     mocks.config.mockReturnValue(new Promise(() => {}));
     renderSection({ route: WITH_VENDOR_7 });
     await screen.findByText(FIRST);
@@ -4323,7 +4442,7 @@ describe("the research settings", () => {
   });
 
   it("are not read from the server until the window is opened", async () => {
-    role.isAdmin = true;
+    role.canManageKeys = true;
     renderSection({ route: WITH_VENDOR_7 });
     const button = await screen.findByRole("button", SETTINGS_BUTTON);
     expect(mocks.settings).not.toHaveBeenCalled();
@@ -4335,7 +4454,7 @@ describe("the research settings", () => {
   });
 
   it("tell the page when they were saved, and the window closes", async () => {
-    role.isAdmin = true;
+    role.canManageKeys = true;
     const { onNotify } = renderSection({ route: WITH_VENDOR_7 });
     await userEvent.click(await screen.findByRole("button", SETTINGS_BUTTON));
     const dialog = await screen.findByRole("dialog", { name: "Research settings" });
@@ -4355,11 +4474,12 @@ describe("the research settings", () => {
   });
 
   it("close on Cancel, and the next opening starts from what is saved", async () => {
-    role.isAdmin = true;
+    role.canManageKeys = true;
     mocks.settings.mockResolvedValue({
       researchKeyId: 20,
       analysisKeyId: null,
       scanIntervalDays: null,
+      autoResearchOnCreate: true,
     });
     renderSection({ route: WITH_VENDOR_7 });
     await userEvent.click(await screen.findByRole("button", SETTINGS_BUTTON));

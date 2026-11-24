@@ -78,6 +78,7 @@
  * and the download fails as too large, never as a shorter list): no cap is given, and this
  * is thirty times the list today.
  */
+import type { CoverageAttestation } from "../../../../domain.layer/interfaces/i.vendorResearch";
 import { compactName } from "../../records/match";
 import { sentence } from "../../records/sentence";
 import type { ParsedRecord } from "../types";
@@ -512,6 +513,24 @@ function otherStatusClause(count: number): string {
   return count === 1
     ? "; 1 other listed product has another status"
     : `; ${count} other listed products have another status`;
+}
+
+const CONFORMANT_PATTERN =
+  /Conformant products: (\d+) \(\d+ generators?, \d+ validators?\), the newest conformed on (\d{4}-\d{2}-\d{2})/;
+
+/**
+ * What a record of this list attests, read back from the text `summaryOf` wrote: the number of
+ * the applicant's conformant products and the day of the newest conformance. A record has one only
+ * when the applicant has a conformant product, so the status is a conformance whenever the
+ * sentence is there; without it nothing is said.
+ */
+export function c2paAttestationOf(
+  summary: string,
+): Pick<CoverageAttestation, "status" | "impact" | "since" | "count"> {
+  const found = CONFORMANT_PATTERN.exec(summary);
+  return found === null
+    ? { status: null, impact: null, since: null, count: 0 }
+    : { status: "c2pa_conforming", impact: null, since: found[2], count: Number(found[1]) };
 }
 
 function summaryOf(row: ApplicantRow): string {

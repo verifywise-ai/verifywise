@@ -12,6 +12,7 @@ jest.mock("../../utils/vendorResearch.utils", () => ({
   getRunTraceQuery: jest.fn(),
   getVendorResearchSettingsQuery: jest.fn(),
   listFindingsQuery: jest.fn(),
+  listRecentRunSummariesQuery: jest.fn(),
 }));
 // The real module opens a BullMQ queue when it is loaded.
 jest.mock("../../services/vendorResearch/trigger", () => ({ startVendorResearch: jest.fn() }));
@@ -38,6 +39,7 @@ import {
   getDecisionStats,
   getLatestVendorResearch,
   getResearchConfig,
+  getResearchSearchStatus,
   getResearchSettings,
   getVendorResearchRunTrace,
   listVendorRiskFindings,
@@ -53,6 +55,7 @@ import {
   getRunTraceQuery,
   getVendorResearchSettingsQuery,
   listFindingsQuery,
+  listRecentRunSummariesQuery,
 } from "../../utils/vendorResearch.utils";
 import { saveVendorResearchSettings } from "../../services/vendorResearch/settings.service";
 import { credibilityRationale, LEGACY_NOTE } from "../../services/vendorResearch/credibilityText";
@@ -81,6 +84,9 @@ const mockGetDecisionCountsQuery = getDecisionCountsQuery as jest.MockedFunction
   typeof getDecisionCountsQuery
 >;
 const mockListFindingsQuery = listFindingsQuery as jest.MockedFunction<typeof listFindingsQuery>;
+const mockRecentSummaries = listRecentRunSummariesQuery as jest.MockedFunction<
+  typeof listRecentRunSummariesQuery
+>;
 const mockGetSettingsQuery = getVendorResearchSettingsQuery as jest.MockedFunction<
   typeof getVendorResearchSettingsQuery
 >;
@@ -276,14 +282,21 @@ beforeEach(() => {
   mockGetLatestRunQuery.mockResolvedValue(null);
   mockGetRunTraceQuery.mockResolvedValue(null);
   mockGetDecisionCountsQuery.mockResolvedValue([]);
+  mockRecentSummaries.mockResolvedValue([]);
   mockGetSettingsQuery.mockResolvedValue({
     researchKeyId: null,
     analysisKeyId: null,
     scanIntervalDays: null,
+    autoResearchOnCreate: true,
   });
   mockSaveSettings.mockResolvedValue({
     ok: true,
-    settings: { researchKeyId: null, analysisKeyId: null, scanIntervalDays: null },
+    settings: {
+      researchKeyId: null,
+      analysisKeyId: null,
+      scanIntervalDays: null,
+      autoResearchOnCreate: true,
+    },
   });
   mockListFindingsQuery.mockResolvedValue({ rows: [], total: 0 });
   mockStartVendorResearch.mockResolvedValue({ ok: true, run: RUN, alreadyRunning: false });
@@ -708,7 +721,7 @@ describe("getResearchConfig", () => {
     expect(res.status).toHaveBeenCalledWith(200);
     expect(bodyOf(res)).toEqual({
       message: "OK",
-      data: { hasLlmKey: true, autoRunEnabled: true },
+      data: { hasLlmKey: true, autoRunAllowed: true, autoRunEnabled: true },
     });
     // The key of the organization is not in anything that was sent.
     expect(sentOf(res)).not.toContain("sk-SENTINEL-2d9b");
@@ -720,7 +733,30 @@ describe("getResearchConfig", () => {
 
     await getResearchConfig(createMockReq(), res);
 
-    expect(bodyOf(res).data).toEqual({ hasLlmKey: false, autoRunEnabled: false });
+    expect(bodyOf(res).data).toEqual({
+      hasLlmKey: false,
+      autoRunAllowed: false,
+      autoRunEnabled: false,
+    });
+  });
+
+  it("answers that research does not start by itself when the organization turned it off", async () => {
+    mockGetSettingsQuery.mockResolvedValue({
+      researchKeyId: null,
+      analysisKeyId: null,
+      scanIntervalDays: null,
+      autoResearchOnCreate: false,
+    });
+    const res = createMockRes();
+
+    await getResearchConfig(createMockReq(), res);
+
+    expect(mockGetSettingsQuery).toHaveBeenCalledWith(ORG);
+    expect(bodyOf(res).data).toEqual({
+      hasLlmKey: false,
+      autoRunAllowed: true,
+      autoRunEnabled: false,
+    });
   });
 
   it("answers 500 when the query throws", async () => {
@@ -733,12 +769,68 @@ describe("getResearchConfig", () => {
   });
 });
 
+describe("getResearchSearchStatus", () => {
+  const noNews = [
+    {
+      category: "security_incidents",
+      outcome: "search_failed",
+      note: "The search was not available",
+    },
+    {
+      category: "legal_regulatory",
+      outcome: "search_failed",
+      note: "The search was not available",
+    },
+  ];
+
+  it("answers the search of each key and of the newest one, and never a key or an address", async () => {
+    mockGetLLMKeysQuery.mockResolvedValue([
+      { id: 7, name: "OpenRouter", url: "https://openrouter.ai/api/v1", key: "sk-SENTINEL-77a1" },
+      { id: 3, name: "Anthropic", url: null, key: "sk-ant-SENTINEL-3c" },
+    ] as any);
+    const res = createMockRes();
+
+    await getResearchSearchStatus(createMockReq(), res);
+
+    expect(mockRecentSummaries).toHaveBeenCalledWith(ORG, 10, 30);
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(bodyOf(res).data).toEqual({
+      engines: { default: "gdelt", byKey: { 7: "gdelt", 3: "anthropic" } },
+      recentRunsFoundNoNews: false,
+    });
+    expect(sentOf(res)).not.toContain("SENTINEL");
+    expect(sentOf(res)).not.toContain("openrouter.ai");
+  });
+
+  it("answers that recent runs found no news when their news searches all failed", async () => {
+    mockRecentSummaries.mockResolvedValue([noNews, noNews]);
+    const res = createMockRes();
+
+    await getResearchSearchStatus(createMockReq(), res);
+
+    expect(bodyOf(res).data).toEqual({
+      engines: { default: null, byKey: {} },
+      recentRunsFoundNoNews: true,
+    });
+  });
+
+  it("answers 500 when a query throws", async () => {
+    mockRecentSummaries.mockRejectedValue(new Error("DB failure"));
+    const res = createMockRes();
+
+    await getResearchSearchStatus(createMockReq(), res);
+
+    expect(res.status).toHaveBeenCalledWith(500);
+  });
+});
+
 describe("getResearchSettings", () => {
   it("answers which keys the organization chose, by id", async () => {
     mockGetSettingsQuery.mockResolvedValue({
       researchKeyId: 4,
       analysisKeyId: 9,
       scanIntervalDays: 14,
+      autoResearchOnCreate: true,
     });
     const res = createMockRes();
 
@@ -748,7 +840,12 @@ describe("getResearchSettings", () => {
     expect(res.status).toHaveBeenCalledWith(200);
     expect(bodyOf(res)).toEqual({
       message: "OK",
-      data: { researchKeyId: 4, analysisKeyId: 9, scanIntervalDays: 14 },
+      data: {
+        researchKeyId: 4,
+        analysisKeyId: 9,
+        scanIntervalDays: 14,
+        autoResearchOnCreate: true,
+      },
     });
   });
 
@@ -761,6 +858,7 @@ describe("getResearchSettings", () => {
       researchKeyId: null,
       analysisKeyId: null,
       scanIntervalDays: null,
+      autoResearchOnCreate: true,
     });
   });
 
@@ -780,7 +878,12 @@ describe("saveResearchSettings", () => {
   it("saves the two choices for the organization, as the user who made them", async () => {
     mockSaveSettings.mockResolvedValue({
       ok: true,
-      settings: { researchKeyId: 4, analysisKeyId: 9, scanIntervalDays: null },
+      settings: {
+        researchKeyId: 4,
+        analysisKeyId: 9,
+        scanIntervalDays: null,
+        autoResearchOnCreate: true,
+      },
     });
     const res = createMockRes();
 
@@ -795,7 +898,12 @@ describe("saveResearchSettings", () => {
     expect(res.status).toHaveBeenCalledWith(200);
     expect(bodyOf(res)).toEqual({
       message: "OK",
-      data: { researchKeyId: 4, analysisKeyId: 9, scanIntervalDays: null },
+      data: {
+        researchKeyId: 4,
+        analysisKeyId: 9,
+        scanIntervalDays: null,
+        autoResearchOnCreate: true,
+      },
     });
   });
 
@@ -814,7 +922,12 @@ describe("saveResearchSettings", () => {
     const savedWith = (scanIntervalDays: number | null) =>
       mockSaveSettings.mockResolvedValue({
         ok: true,
-        settings: { researchKeyId: null, analysisKeyId: null, scanIntervalDays },
+        settings: {
+          researchKeyId: null,
+          analysisKeyId: null,
+          scanIntervalDays,
+          autoResearchOnCreate: true,
+        },
       });
 
     it.each([7, 14, 30])(
@@ -836,6 +949,7 @@ describe("saveResearchSettings", () => {
           researchKeyId: null,
           analysisKeyId: null,
           scanIntervalDays: days,
+          autoResearchOnCreate: true,
         });
       },
     );
@@ -881,6 +995,47 @@ describe("saveResearchSettings", () => {
       );
 
       expect(res.status).toHaveBeenCalledWith(400);
+      expect(mockSaveSettings).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("whether a new vendor is researched as soon as it is added", () => {
+    it.each([true, false])("passes %s on to the save", async (value) => {
+      const res = createMockRes();
+
+      await saveResearchSettings(
+        putReq({ researchKeyId: null, analysisKeyId: null, autoResearchOnCreate: value }),
+        res,
+      );
+
+      expect(mockSaveSettings.mock.calls[0][0].autoResearchOnCreate).toBe(value);
+      expect(res.status).toHaveBeenCalledWith(200);
+    });
+
+    it("passes nothing on when the body does not name it, so that the save keeps what is there", async () => {
+      const res = createMockRes();
+
+      await saveResearchSettings(putReq({ researchKeyId: null, analysisKeyId: null }), res);
+
+      expect(mockSaveSettings.mock.calls[0][0].autoResearchOnCreate).toBeUndefined();
+      expect(res.status).toHaveBeenCalledWith(200);
+    });
+
+    it.each([
+      ["null", null],
+      ["text", "true"],
+      ["a number", 1],
+      ["a list", [true]],
+    ])("refuses %s with 400, before it asks anything", async (_label, value) => {
+      const res = createMockRes();
+
+      await saveResearchSettings(
+        putReq({ researchKeyId: null, analysisKeyId: null, autoResearchOnCreate: value }),
+        res,
+      );
+
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(bodyOf(res).data).toBe("autoResearchOnCreate must be true or false");
       expect(mockSaveSettings).not.toHaveBeenCalled();
     });
   });

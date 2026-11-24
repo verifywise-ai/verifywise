@@ -12,6 +12,7 @@ import {
   dismissVendorRiskFinding,
   getLatestVendorResearch,
   getVendorResearchConfig,
+  getVendorResearchSearchStatus,
   getVendorResearchSettings,
   listVendorRiskFindings,
   saveVendorResearchSettings,
@@ -27,6 +28,7 @@ import type {
   FindingStatus,
   VendorResearchConfig,
   VendorResearchRun,
+  VendorResearchSearchStatus,
   VendorResearchSettings,
   VendorRiskFinding,
 } from "../../domain/interfaces/i.vendorResearch";
@@ -127,6 +129,7 @@ interface FindingsFilter {
 
 const configKey = () => [...VENDOR_RESEARCH_KEY, "config"] as const;
 const settingsKey = () => [...VENDOR_RESEARCH_KEY, "settings"] as const;
+const searchStatusKey = () => [...VENDOR_RESEARCH_KEY, "searchStatus"] as const;
 const latestKey = (vendorId: number | null) =>
   [...VENDOR_RESEARCH_KEY, "latest", vendorId] as const;
 
@@ -155,15 +158,33 @@ export function useVendorResearchSettings(enabled = true) {
 }
 
 /**
+ * Which search each LLM key gets, and whether the organization's recent runs got no news:
+ * what the research settings window warns about. Admin only, like the settings, and read each time
+ * the window opens. A failed read shows no warning and is not retried: the window works without it.
+ */
+export function useVendorResearchSearchStatus() {
+  return useQuery<VendorResearchSearchStatus>({
+    queryKey: searchStatusKey(),
+    queryFn: getVendorResearchSearchStatus,
+    staleTime: 0,
+    retry: false,
+  });
+}
+
+/**
  * Saving puts the choice the server kept into the cache, so that the window opened next reads it
- * at once. A 404 says a chosen key is gone (another Admin deleted it): the list of keys the
- * person chose from is out of date, so it is read again.
+ * at once, and reads the config again, whose `autoRunEnabled` follows the organization's setting.
+ * A 404 says a chosen key is gone (another Admin deleted it): the list of keys the person chose
+ * from is out of date, so it is read again.
  */
 export function useSaveVendorResearchSettings() {
   const queryClient = useQueryClient();
   return useMutation<VendorResearchSettings, APIError, VendorResearchSettings>({
     mutationFn: (settings) => saveVendorResearchSettings(settings),
-    onSuccess: (saved) => queryClient.setQueryData(settingsKey(), saved),
+    onSuccess: (saved) => {
+      queryClient.setQueryData(settingsKey(), saved);
+      void queryClient.invalidateQueries({ queryKey: configKey() });
+    },
     onError: (error) => {
       if (error.status === 404) void invalidateLLMKeyQueries(queryClient);
     },

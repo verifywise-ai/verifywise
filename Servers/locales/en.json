@@ -1200,6 +1200,7 @@
   "Scan of {repository} needs attention: {reasons}": "Scan of {repository} needs attention: {reasons}",
   "Scan was cancelled": "Scan was cancelled",
   "scanIntervalDays must be 7, 14, 30 or null": "scanIntervalDays must be 7, 14, 30 or null",
+  "autoResearchOnCreate must be true or false": "autoResearchOnCreate must be true or false",
   "Scenario not found": "Scenario not found",
   "Scenario not found or cannot be deleted": "Scenario not found or cannot be deleted",
   "Scenario not found or cannot be modified": "Scenario not found or cannot be modified",

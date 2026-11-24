@@ -43,13 +43,10 @@ vi.mock(
   }),
 );
 
-const role = vi.hoisted(() => ({ canEdit: true, isAdmin: false }));
+const role = vi.hoisted(() => ({ canEdit: true }));
 vi.mock("../../../../../application/hooks/useCan", () => ({
   useCan: (key: string) => key === "vendor.edit" && role.canEdit,
   useCanCheck: () => (key: string) => key === "vendor.edit" && role.canEdit,
-}));
-vi.mock("../../../../../application/hooks/useIsAdmin", () => ({
-  useIsAdmin: () => role.isAdmin,
 }));
 vi.mock("../../../../../application/hooks/useAuth", () => ({
   useAuth: () => ({ userId: 4, userRoleName: "Admin" }),
@@ -122,9 +119,8 @@ const legacy = { rule: "legacy_confidence" } as const;
 beforeEach(() => {
   vi.clearAllMocks();
   role.canEdit = true;
-  role.isAdmin = false;
   formEdits.current = {};
-  mocks.config.mockResolvedValue({ hasLlmKey: true, autoRunEnabled: true });
+  mocks.config.mockResolvedValue({ hasLlmKey: true, autoRunAllowed: true, autoRunEnabled: true });
   listOf([finding(), secondFinding()]);
   mocks.latest.mockResolvedValue(run({ category_summary: FOUR_OUTCOMES }));
 });
@@ -205,7 +201,7 @@ describe("how the vendor was researched, behind one button", () => {
     const button = await detailsButton();
     expect(button).toHaveAttribute("aria-expanded", "false");
     expect(screen.queryByText("Security incidents: risks found")).not.toBeInTheDocument();
-    expect(screen.queryByText(/^Checked:/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/^Checked/)).not.toBeInTheDocument();
     expect(screen.queryByText(/^Sources cited:/)).not.toBeInTheDocument();
     expect(screen.queryByText(/^Searches:/)).not.toBeInTheDocument();
     expect(screen.queryByText("What the last research found")).not.toBeInTheDocument();
@@ -221,7 +217,7 @@ describe("how the vendor was researched, behind one button", () => {
     expect(shown.getByText("What it checked")).toBeInTheDocument();
     expect(
       shown.getByText(
-        "Checked: CISA Known Exploited Vulnerabilities (1), OFAC Specially Designated Nationals list (0), UK Sanctions List (0), EU consolidated list of financial sanctions (0), the National Vulnerability Database",
+        "Checked 4 public lists and registers. 1 had a record: CISA Known Exploited Vulnerabilities.",
       ),
     ).toBeInTheDocument();
     expect(

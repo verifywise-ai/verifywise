@@ -14,7 +14,7 @@ import type {
 } from "../../../../domain/interfaces/i.vendorResearch";
 import { fill } from "../../../../i18n/fill";
 
-const creditSx = { ...textStyles.caption, color: "text.accent" };
+const creditSx = { ...textStyles.body, color: "text.tertiary" };
 
 /** The GDELT Project's own site. Its terms allow the news to be used if the project is cited with a link. */
 const GDELT_URL = "https://www.gdeltproject.org/";

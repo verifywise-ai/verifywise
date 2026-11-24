@@ -20,7 +20,7 @@ import {
 } from "../../domain.layer/interfaces/i.vendorResearch";
 import { EXCERPT_GAP, MAX_EXTRA_PARTS, MAX_PAGE_PARTS } from "../webResearch/pageText";
 import { escapeAttribute, escapeForPrompt, unescapeFromPrompt } from "../webResearch/promptText";
-import { MAX_ACTIONS_PER_STEP } from "../webResearch/researchLoop";
+import { LOOP_ACTION_FIELDS, MAX_ACTIONS_PER_STEP } from "../webResearch/researchLoop";
 import { MAX_RESULTS, type SearchEngine, type SearchKind } from "../webResearch/webSearch";
 import { LOOKBACK_MONTHS, monthsBefore } from "./categories";
 import type { EventCluster } from "./clusters";
@@ -164,8 +164,14 @@ export { escapeForPrompt, unescapeFromPrompt };
  * whose part before is not shown, or was cut where no blank was, keeps the continued mark, and a
  * quote takes it on its own. That is `vr-19`. Like `vr-13` to `vr-18` it was not run against the
  * golden set.
+ *
+ * The next version writes the example action of the loop prompt in the order of the schema, with
+ * the query before the kind, and asks for the fields of an action in that order. A provider that
+ * decodes against the schema accepts the fields in that order only: on 2026-11-23 a run through an
+ * OpenAI-compatible gateway copied the old example's order, wrote the kind first and so could not
+ * write the query any more, and every search of the run was refused. That is `vr-20`.
  */
-export const CREDIBILITY_PROMPT_VERSION = "vr-19";
+export const CREDIBILITY_PROMPT_VERSION = "vr-20";
 
 const UNKNOWN_DOMAIN = "unknown";
 
@@ -820,11 +826,12 @@ export function buildLoopSystemPrompt(search: LoopSearch = {}): string {
     `  - part: for read, the number of a part of a long page that you have read (from 1 to ${MAX_PAGE_PARTS}).`,
     "    The part comes from the page the research already holds, so it costs no page read, but only",
     `    the first ${inWords(MAX_EXTRA_PARTS)} parts that you ask for are kept as sources.`,
-    "Leave out the fields that the action does not use.",
+    "Leave out the fields that the action does not use, and write the others in the order of this",
+    `list: ${LOOP_ACTION_FIELDS.join(", ")}.`,
     "",
     "For example, a step of two actions, where Vendor stands for the name of the vendor:",
     `{"thought":"${example.thought}, and the trust page.","actions":[{"action":"search",` +
-      `"category":"security_incidents","kind":"${example.kind}","query":"Vendor data breach"},` +
+      `"category":"security_incidents","query":"Vendor data breach","kind":"${example.kind}"},` +
       '{"action":"read","category":"certifications","url":"https://vendor.example/trust"}]}',
   ].join("\n");
 }

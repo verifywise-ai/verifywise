@@ -106,6 +106,9 @@ describe("the notes", () => {
       unconfirmed: "Possible risks were found but could not be verified or are already recorded",
       overCap: "More risks were found than one run keeps",
       searchUnavailable: "The search was not available",
+      newsUnavailable: "News search was not available; checked on the vendor's own pages only",
+      newsUnavailableWithRecords:
+        "News search was not available; checked on the vendor's own pages and public databases only",
       pagesUnreadable: "The pages could not be read",
       timeLimit: "Not researched: the time limit was reached",
       endedEarly: "Not researched: the research ended before this category was covered",
@@ -397,6 +400,121 @@ describe("summariseCategories", () => {
         outcome: "nothing_found",
         note: "No risks found; 1 of 1 searches were not available",
       });
+    });
+
+    // Run 1 of 2026-11-23: the news engine never answered, and every news category read only the
+    // vendor's own pages (its status page, its home page) and records.
+    const ownPage = (category: ResearchCategory) => ({ category, onVendorSite: true });
+    const otherPage = (category: ResearchCategory) => ({ category, onVendorSite: false });
+    const aRecord = (category: ResearchCategory) => ({
+      category,
+      onVendorSite: false,
+      record: "statuspage",
+    });
+
+    it("says that the vendor's own pages and public databases were checked when they are its sources", () => {
+      expect(
+        entryFor(
+          summarise({
+            calls: [searchFailed("availability"), read("availability")],
+            entries: [ownPage("availability"), aRecord("availability"), otherPage("ai_specific")],
+            modelNotes: [{ category: "availability", note: "All systems operational." }],
+          }),
+          "availability",
+        ),
+      ).toEqual({
+        category: "availability",
+        outcome: "nothing_found",
+        note: "News search was not available; checked on the vendor's own pages and public databases only",
+      });
+    });
+
+    it("says that only the vendor's own pages were checked when they are its only sources", () => {
+      expect(
+        entryFor(
+          summarise({
+            calls: [searchFailed("availability"), read("availability")],
+            entries: [ownPage("availability"), otherPage("ai_specific")],
+          }),
+          "availability",
+        ),
+      ).toEqual({
+        category: "availability",
+        outcome: "nothing_found",
+        note: "News search was not available; checked on the vendor's own pages only",
+      });
+    });
+
+    // A page that was read can still be dropped (too old, the same text, a duplicate): an answered
+    // read proves no source of the category survived.
+    it("is search_failed when a page was read but no source of it survived", () => {
+      for (const entries of [[], [ownPage("ai_specific")]]) {
+        expect(
+          entryFor(
+            summarise({ calls: [searchFailed("availability"), read("availability")], entries }),
+            "availability",
+          ),
+        ).toEqual({
+          category: "availability",
+          outcome: "search_failed",
+          note: "The search was not available",
+        });
+      }
+    });
+
+    it("is search_failed when a source of it is off the vendor's site", () => {
+      expect(
+        entryFor(
+          summarise({
+            calls: [searchFailed("availability"), read("availability")],
+            entries: [ownPage("availability"), otherPage("availability")],
+          }),
+          "availability",
+        ),
+      ).toEqual({
+        category: "availability",
+        outcome: "search_failed",
+        note: "The search was not available",
+      });
+    });
+
+    it("is search_failed when every page it tried failed, whatever its sources", () => {
+      expect(
+        securityWith([searchFailed("security_incidents"), readFailed("security_incidents")], {
+          entries: [aRecord("security_incidents")],
+        }),
+      ).toEqual({
+        category: "security_incidents",
+        outcome: "search_failed",
+        note: "The pages could not be read",
+      });
+    });
+
+    it("counts searches the clock cut off (searchUnavailable) when they left no call", () => {
+      const summary = summarise({
+        calls: [read("financial_health"), searched("availability")],
+        searchUnavailable: ["security_incidents", "legal_regulatory", "financial_health"],
+        entries: [ownPage("financial_health")],
+        stoppedBecause: "finished",
+      });
+
+      expect(entryFor(summary, "security_incidents")).toEqual({
+        category: "security_incidents",
+        outcome: "search_failed",
+        note: "The search was not available",
+      });
+      expect(entryFor(summary, "legal_regulatory")).toEqual({
+        category: "legal_regulatory",
+        outcome: "search_failed",
+        note: "The search was not available",
+      });
+      expect(entryFor(summary, "financial_health")).toEqual({
+        category: "financial_health",
+        outcome: "nothing_found",
+        note: "News search was not available; checked on the vendor's own pages only",
+      });
+      // A category the loop did not reach, with no failed search, is still skipped.
+      expect(entryFor(summary, "certifications").outcome).toBe("skipped");
     });
 
     it("does not apply to a news category that made no search, only reads", () => {

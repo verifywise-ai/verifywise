@@ -16,7 +16,11 @@
  * list with no copy yet is `failed`, one that has not been brought up to date for 48 hours is
  * stale (for a list read by its changes, counted from the end of the last day its copy applied), and the records of a stale copy are offered all the same; a read-through source whose
  * answer could not be refreshed is `failed` and offers its stored records. A list behind a closed
- * gate (gates.ts) is neither looked up nor in the coverage.
+ * gate (gates.ts) is neither looked up nor in the coverage, and so is a bundled list of which the
+ * release ships no bundle (`coveredSources` in sources.ts): it is never loaded here, so it is
+ * neither checked nor not checked. The row of a list that attests (`attests`: FedRAMP, C2PA)
+ * carries what each of its offered records attests (attestations.ts), for the screen to show under
+ * the list's category; it is never a risk.
  */
 import type {
   CoverageSource,
@@ -32,6 +36,8 @@ import {
   saveReadThroughAnswerQuery,
 } from "../../../utils/vrdb.utils";
 import { type VendorResearchConfig, getVendorResearchConfig } from "../config";
+import { attestationOf } from "./attestations";
+import { shippedBundleIds } from "./bundle";
 import { NVD_LIMITS, fetchJson } from "../records";
 import { NAME_ONLY_LOOKUP_NOTE } from "../records/ofac";
 import { joinSentences } from "../records/sentence";
@@ -57,7 +63,7 @@ import { type ReadThroughDeps, type ReadThroughStore, readThrough } from "./read
 import {
   type MirrorSource,
   activeReadThroughs,
-  activeVrdbSources,
+  coveredSources,
   isMirror,
   isStale,
 } from "./sources";
@@ -96,11 +102,19 @@ export interface OfferInput {
   enabled: boolean;
   /** What the read-through did for each of its sources the run researches; none for the others. */
   readThrough: ReadonlyMap<VrdbSourceId, ReadThroughOutcome>;
+  /**
+   * The lists the release ships a bundle of (`shippedBundleIds`); a bundled list not among them is
+   * not in the coverage. Absent or null: every active list is (`coveredSources`).
+   */
+  bundled?: ReadonlySet<VrdbSourceId> | null;
 }
 
-/** The ids of the active lists whose category the run researches. */
-const researchedSources = (researchable: readonly ResearchCategory[]): VrdbSourceId[] =>
-  activeVrdbSources()
+/** The ids of the lists the run covers whose category it researches. */
+const researchedSources = (
+  researchable: readonly ResearchCategory[],
+  bundled: ReadonlySet<VrdbSourceId> | null,
+): VrdbSourceId[] =>
+  coveredSources(bundled)
     .filter((definition) => researchable.includes(definition.category))
     .map((definition) => definition.id);
 
@@ -197,7 +211,7 @@ export function offerRecords(input: OfferInput): { outcome: VrdbOutcome; matches
   /** The CVEs a list matched: a later list does not offer them again (Ruling 10 of the M2 plan). */
   const claimed = new Set<string>();
 
-  for (const definition of activeVrdbSources()) {
+  for (const definition of coveredSources(input.bundled ?? null)) {
     const answer = isMirror(definition) ? undefined : input.readThrough.get(definition.id);
     const lastSuccessAt = isMirror(definition)
       ? copyUpTo(
@@ -294,11 +308,22 @@ export function offerRecords(input: OfferInput): { outcome: VrdbOutcome; matches
       records: offered,
       omitted: { ...(old > 0 ? { old } : {}), ...(more > 0 ? { more } : {}) },
     });
-    coverage.push(
-      listed(answer?.outcome === "failed" ? "failed" : offered.length > 0 ? "found" : "none", {
+    const row = listed(
+      answer?.outcome === "failed" ? "failed" : offered.length > 0 ? "found" : "none",
+      {
         strong: offered.filter((record) => record.vrdb.strength === "strong").length,
         weak: offered.filter((record) => record.vrdb.strength === "weak").length,
-      }),
+      },
+    );
+    coverage.push(
+      definition.attests === true && offered.length > 0
+        ? {
+            ...row,
+            attestations: kept.map(({ row: record }, index) =>
+              attestationOf(definition.id, record, offered[index].vrdb),
+            ),
+          }
+        : row,
     );
   }
   return { outcome: { records, coverage }, matches };
@@ -334,17 +359,20 @@ export function createVrdbLookup(deps: {
   vendorId: number;
   enabled: boolean;
   readThrough?: ReadThroughDeps;
+  /** The lists the release ships a bundle of; read from the shipped manifest when absent. */
+  bundled?: ReadonlySet<VrdbSourceId> | null;
 }): VrdbLookup {
   const { store, organizationId, vendorId, enabled } = deps;
+  const bundled = deps.bundled === undefined ? shippedBundleIds() : deps.bundled;
   return async (input) => {
     const offer = (
       rows: VrdbRow[],
       states: VrdbSourceState[],
       answers: ReadonlyMap<VrdbSourceId, ReadThroughOutcome> = new Map(),
-    ) => offerRecords({ ...input, rows, states, enabled, readThrough: answers });
+    ) => offerRecords({ ...input, rows, states, enabled, readThrough: answers, bundled });
     if (!enabled) return offer([], []).outcome;
 
-    const sources = researchedSources(input.researchable);
+    const sources = researchedSources(input.researchable, bundled);
     const readThroughs = activeReadThroughs().filter((definition) =>
       input.researchable.includes(definition.category),
     );

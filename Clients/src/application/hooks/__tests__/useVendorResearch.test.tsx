@@ -146,7 +146,7 @@ beforeEach(() => vi.clearAllMocks());
 
 describe("useVendorResearchConfig", () => {
   it("exposes the server's configuration", async () => {
-    const config = { hasLlmKey: true, autoRunEnabled: false };
+    const config = { hasLlmKey: true, autoRunAllowed: true, autoRunEnabled: false };
     mockConfig.mockResolvedValue(config);
     const { wrapper } = createHarness();
 
@@ -177,7 +177,12 @@ describe("useVendorResearchConfig", () => {
 
 describe("useVendorResearchSettings", () => {
   it("exposes the keys and the scan interval an Admin chose", async () => {
-    const settings = { researchKeyId: 4, analysisKeyId: null, scanIntervalDays: 14 };
+    const settings = {
+      researchKeyId: 4,
+      analysisKeyId: null,
+      scanIntervalDays: 14,
+      autoResearchOnCreate: true,
+    };
     mockSettings.mockResolvedValue(settings);
     const { wrapper } = createHarness();
 
@@ -202,6 +207,7 @@ describe("useVendorResearchSettings", () => {
       researchKeyId: null,
       analysisKeyId: null,
       scanIntervalDays: null,
+      autoResearchOnCreate: true,
     });
     const { wrapper } = createHarness();
     const first = renderHook(() => useVendorResearchSettings(), { wrapper });
@@ -220,28 +226,41 @@ describe("useSaveVendorResearchSettings", () => {
   const LLM_KEYS_KEY = ["llmKeys", 1] as const;
 
   it("sends the choice and puts what the server kept in the cache, so that the next opening reads it at once", async () => {
-    mockSaveSettings.mockResolvedValue({ researchKeyId: 4, analysisKeyId: 9, scanIntervalDays: 7 });
+    mockSaveSettings.mockResolvedValue({
+      researchKeyId: 4,
+      analysisKeyId: 9,
+      scanIntervalDays: 7,
+      autoResearchOnCreate: true,
+    });
     const { queryClient, wrapper } = createHarness();
     queryClient.setQueryData(SETTINGS_KEY, {
       researchKeyId: null,
       analysisKeyId: null,
       scanIntervalDays: null,
+      autoResearchOnCreate: true,
     });
     const { result } = renderHook(() => useSaveVendorResearchSettings(), { wrapper });
 
     await act(async () => {
-      await result.current.mutateAsync({ researchKeyId: 4, analysisKeyId: 9, scanIntervalDays: 7 });
+      await result.current.mutateAsync({
+        researchKeyId: 4,
+        analysisKeyId: 9,
+        scanIntervalDays: 7,
+        autoResearchOnCreate: true,
+      });
     });
 
     expect(mockSaveSettings).toHaveBeenCalledWith({
       researchKeyId: 4,
       analysisKeyId: 9,
       scanIntervalDays: 7,
+      autoResearchOnCreate: true,
     });
     expect(queryClient.getQueryData(SETTINGS_KEY)).toEqual({
       researchKeyId: 4,
       analysisKeyId: 9,
       scanIntervalDays: 7,
+      autoResearchOnCreate: true,
     });
   });
 
@@ -253,12 +272,18 @@ describe("useSaveVendorResearchSettings", () => {
       researchKeyId: 4,
       analysisKeyId: null,
       scanIntervalDays: null,
+      autoResearchOnCreate: true,
     });
     queryClient.setQueryData(LLM_KEYS_KEY, []);
     const { result } = renderHook(() => useSaveVendorResearchSettings(), { wrapper });
 
     act(() => {
-      result.current.mutate({ researchKeyId: null, analysisKeyId: null, scanIntervalDays: null });
+      result.current.mutate({
+        researchKeyId: null,
+        analysisKeyId: null,
+        scanIntervalDays: null,
+        autoResearchOnCreate: true,
+      });
     });
 
     await waitFor(() => expect(result.current.isError).toBe(true));
@@ -267,6 +292,7 @@ describe("useSaveVendorResearchSettings", () => {
       researchKeyId: 4,
       analysisKeyId: null,
       scanIntervalDays: null,
+      autoResearchOnCreate: true,
     });
     expect(queryClient.getQueryState(LLM_KEYS_KEY)?.isInvalidated).toBe(false);
   });
@@ -278,7 +304,12 @@ describe("useSaveVendorResearchSettings", () => {
     const { result } = renderHook(() => useSaveVendorResearchSettings(), { wrapper });
 
     act(() => {
-      result.current.mutate({ researchKeyId: 4, analysisKeyId: null, scanIntervalDays: null });
+      result.current.mutate({
+        researchKeyId: 4,
+        analysisKeyId: null,
+        scanIntervalDays: null,
+        autoResearchOnCreate: true,
+      });
     });
 
     await waitFor(() => expect(result.current.isError).toBe(true));

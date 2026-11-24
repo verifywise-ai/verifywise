@@ -32,12 +32,13 @@ export const de: Record<string, string> = {
     "Wie viele Projektrisiken und Anwendungsfälle von den Risiken jedes Anbieters erben.",
   "Vendor {id}": "Anbieter {id}",
   "{linked} of {total}": "{linked} von {total}",
-  "Vendors with reach": "Anbieter mit Reichweite",
+  "Vendors with linked project risks": "Anbieter mit verknüpften Projektrisiken",
   "Inheriting project risks": "Erbende Projektrisiken",
   "Affected use cases": "Betroffene Anwendungsfälle",
-  "Vendor risks with children": "Anbieterrisiken mit untergeordneten Risiken",
-  "Vendor risks with no children": "Anbieterrisiken ohne untergeordnete Risiken",
+  "Vendor risks linked": "Verknüpfte Anbieterrisiken",
+  "Vendor risks not linked yet": "Noch nicht verknüpfte Anbieterrisiken",
   "View on map": "Auf der Karte anzeigen",
+  "Suggested links": "Vorgeschlagene Verknüpfungen",
   "No vendor risks yet.": "Noch keine Anbieterrisiken.",
   "Duplicate vendor risks": "Doppelte Anbieterrisiken",
   "Risks of the same vendor that look like one risk entered twice.":
@@ -69,9 +70,9 @@ export const de: Record<string, string> = {
     "Jeder der anderen Namen muss zwischen 2 und 80 Zeichen lang sein",
   "Each of the other names must contain a letter or a digit":
     "Jeder der anderen Namen muss einen Buchstaben oder eine Ziffer enthalten",
-  "Identifiers": "Kennungen",
-  "Turns a match by name into a match by identifier.":
-    "Macht aus einem Treffer über den Namen einen Treffer über eine Kennung.",
+  "Identifiers (optional)": "Kennungen (optional)",
+  "Research uses them to find this exact company, such as its SEC filings and its LEI record, instead of matching by name.":
+    "Die Recherche findet damit genau dieses Unternehmen, etwa seine SEC-Meldungen und seinen LEI-Eintrag, statt nach dem Namen zu suchen.",
   "Country": "Land",
   "e.g. DE": "z. B. DE",
   "Registration number": "Registernummer",
@@ -102,8 +103,8 @@ export const de: Record<string, string> = {
   "Pending research findings": "Ausstehende Recherchebefunde",
   "Could not load research findings.": "Die Recherchebefunde konnten nicht geladen werden.",
   "Vendor research is not set up.": "Die Anbieterrecherche ist nicht eingerichtet.",
-  "Add an LLM key under Settings → API Keys, in the LLM Keys section.":
-    "Fügen Sie unter Einstellungen → API-Schlüssel im Bereich LLM-Schlüssel einen LLM-Schlüssel hinzu.",
+  "Research needs an LLM key.": "Die Recherche benötigt einen LLM-Schlüssel.",
+  "Add an LLM key": "LLM-Schlüssel hinzufügen",
   "Research settings": "Recherche-Einstellungen",
   "Choose which LLM key runs the vendor research. The research key makes many small calls, so a fast, inexpensive model is enough. The analysis key writes the risks from what the research found, once per run, so a stronger model can help.":
     "Wählen Sie, welcher LLM-Schlüssel die Anbieterrecherche ausführt. Der Recherche-Schlüssel führt viele kleine Aufrufe aus, daher genügt ein schnelles, günstiges Modell. Der Analyse-Schlüssel verfasst die Risiken aus den Ergebnissen der Recherche, einmal pro Durchlauf, daher kann ein stärkeres Modell helfen.",
@@ -121,7 +122,21 @@ export const de: Record<string, string> = {
   "Loading research settings": "Recherche-Einstellungen werden geladen",
   "Could not load the research settings.":
     "Die Recherche-Einstellungen konnten nicht geladen werden.",
+  "Research new vendors automatically": "Neue Anbieter automatisch recherchieren",
+  "Starts a research run when a vendor is added. Each run uses the keys above.":
+    "Startet eine Recherche, wenn ein Anbieter hinzugefügt wird. Jede Recherche verwendet die oben gewählten Schlüssel.",
+  "Automatic research is turned off for this deployment.":
+    "Die automatische Recherche ist für diese Installation deaktiviert.",
   "Research settings saved.": "Recherche-Einstellungen gespeichert.",
+  "This key gets news only from GDELT, which sometimes refuses requests.":
+    "Dieser Schlüssel bezieht Nachrichten nur über GDELT, das Anfragen manchmal ablehnt.",
+  "Recent research runs got no news.": "Die letzten Recherchen haben keine Nachrichten gefunden.",
+  "Save, then add an Anthropic key for more reliable news.":
+    "Speichern Sie zuerst und fügen Sie dann einen Anthropic-Schlüssel für zuverlässigere Nachrichten hinzu.",
+  "Choose an Anthropic key for more reliable news.":
+    "Wählen Sie einen Anthropic-Schlüssel für zuverlässigere Nachrichten.",
+  "Add an Anthropic key for more reliable news":
+    "Fügen Sie einen Anthropic-Schlüssel für zuverlässigere Nachrichten hinzu",
   "One of the chosen LLM keys no longer exists. Choose the keys again.":
     "Einer der gewählten LLM-Schlüssel existiert nicht mehr. Wählen Sie die Schlüssel erneut.",
   "No pending research findings.": "Keine ausstehenden Recherchebefunde.",
@@ -288,12 +303,29 @@ export const de: Record<string, string> = {
     "disclose.io-Liste der Programme zur Offenlegung von Schwachstellen",
   "GLEIF LEI records": "GLEIF-LEI-Datensätze",
   "Checked: {sources}": "Geprüft: {sources}",
-  "{count} more lists with no records": "{count} weitere Listen ohne Einträge",
-  "1 more list with no records": "1 weitere Liste ohne Einträge",
-  "{count} lists with no records": "{count} Listen ohne Einträge",
-  "1 list with no records": "1 Liste ohne Einträge",
+  "Checked 1 public list or register.": "1 öffentliche Liste oder 1 öffentliches Register geprüft.",
+  "Checked {count} public lists and registers.": "{count} öffentliche Listen und Register geprüft.",
+  "None had a record.": "Keine enthielt einen Eintrag.",
+  "1 had a record: {sources}.": "1 enthielt einen Eintrag: {sources}.",
+  "{count} had records: {sources}.": "{count} enthielten Einträge: {sources}.",
+  "Also checked: {sources}.": "Außerdem geprüft: {sources}.",
+  "Data as of {dates}.": "Datenstand: {dates}.",
+  "No records: {sources}.": "Keine Einträge: {sources}.",
+  "Show all lists": "Alle Listen anzeigen",
+  "Hide the lists": "Listen ausblenden",
+  "no risks found": "keine Risiken gefunden",
+  "Listed in the FedRAMP Marketplace.": "Im FedRAMP Marketplace gelistet.",
+  "Listed in the FedRAMP Marketplace: {status}.": "Im FedRAMP Marketplace gelistet: {status}.",
+  "Listed in the FedRAMP Marketplace: {status} since {date}.":
+    "Im FedRAMP Marketplace gelistet: {status} seit {date}.",
+  "Listed in the FedRAMP Marketplace: {status} since {date}, impact level {impact}.":
+    "Im FedRAMP Marketplace gelistet: {status} seit {date}, Auswirkungsstufe {impact}.",
+  "Listed in the C2PA Conforming Products List.": "In der C2PA Conforming Products List gelistet.",
+  "Listed in the C2PA Conforming Products List: 1 conforming product, since {date}.":
+    "In der C2PA Conforming Products List gelistet: 1 konformes Produkt, seit {date}.",
+  "Listed in the C2PA Conforming Products List: {count} conforming products, the newest since {date}.":
+    "In der C2PA Conforming Products List gelistet: {count} konforme Produkte, das neueste seit {date}.",
   "Not checked: {sources}": "Nicht geprüft: {sources}",
-  "No records in {sources} as of {dates}": "Keine Einträge ({sources}), Stand: {dates}",
   "{source}: last updated {date}, not up to date":
     "{source}: zuletzt aktualisiert am {date}, nicht aktuell",
   "Sources cited: {official} official, {press} trusted press, {vendor} vendor, {unverified} unverified":
@@ -352,6 +384,12 @@ export const de: Record<string, string> = {
   "More risks were found than one run keeps.":
     "Es wurden mehr Risiken gefunden, als ein Durchlauf behält.",
   "The search was not available.": "Die Suche war nicht verfügbar.",
+  "News search was not available, so this was checked only on the vendor's own pages.":
+    "Die Nachrichtensuche war nicht verfügbar, daher wurde nur auf den eigenen Seiten des Anbieters geprüft.",
+  "News search was not available, so this was checked only on the vendor's own pages and public databases.":
+    "Die Nachrichtensuche war nicht verfügbar, daher wurde nur auf den eigenen Seiten des Anbieters und in öffentlichen Datenbanken geprüft.",
+  "News search was not available, so results may be incomplete.":
+    "Die Nachrichtensuche war nicht verfügbar, daher sind die Ergebnisse möglicherweise unvollständig.",
   "The pages could not be read.": "Die Seiten konnten nicht gelesen werden.",
   "1 potential risk found": "1 mögliches Risiko gefunden",
   "{count} potential risks found": "{count} mögliche Risiken gefunden",
@@ -532,12 +570,13 @@ export const fr: Record<string, string> = {
     "Combien de risques de projet et de cas d'usage héritent des risques de chaque fournisseur.",
   "Vendor {id}": "Fournisseur {id}",
   "{linked} of {total}": "{linked} sur {total}",
-  "Vendors with reach": "Fournisseurs avec portée",
+  "Vendors with linked project risks": "Fournisseurs avec risques de projet liés",
   "Inheriting project risks": "Risques de projet héritiers",
   "Affected use cases": "Cas d'usage concernés",
-  "Vendor risks with children": "Risques fournisseurs avec enfants",
-  "Vendor risks with no children": "Risques fournisseurs sans enfants",
+  "Vendor risks linked": "Risques fournisseurs liés",
+  "Vendor risks not linked yet": "Risques fournisseurs pas encore liés",
   "View on map": "Voir sur la carte",
+  "Suggested links": "Liens suggérés",
   "No vendor risks yet.": "Aucun risque fournisseur pour l'instant.",
   "Duplicate vendor risks": "Risques fournisseurs en double",
   "Risks of the same vendor that look like one risk entered twice.":
@@ -569,9 +608,9 @@ export const fr: Record<string, string> = {
     "Chacun des autres noms doit comporter entre 2 et 80 caractères",
   "Each of the other names must contain a letter or a digit":
     "Chacun des autres noms doit contenir une lettre ou un chiffre",
-  "Identifiers": "Identifiants",
-  "Turns a match by name into a match by identifier.":
-    "Transforme une correspondance par le nom en correspondance par identifiant.",
+  "Identifiers (optional)": "Identifiants (facultatif)",
+  "Research uses them to find this exact company, such as its SEC filings and its LEI record, instead of matching by name.":
+    "La recherche s'en sert pour trouver cette entreprise précise, par exemple ses dépôts auprès de la SEC et sa fiche LEI, au lieu de chercher par le nom.",
   "Country": "Pays",
   "e.g. DE": "p. ex. DE",
   "Registration number": "Numéro d'immatriculation",
@@ -602,8 +641,8 @@ export const fr: Record<string, string> = {
   "Pending research findings": "Résultats de recherche en attente",
   "Could not load research findings.": "Impossible de charger les résultats de recherche.",
   "Vendor research is not set up.": "La recherche sur les fournisseurs n'est pas configurée.",
-  "Add an LLM key under Settings → API Keys, in the LLM Keys section.":
-    "Ajoutez une clé LLM sous Paramètres → Clés API, dans la section Clés LLM.",
+  "Research needs an LLM key.": "La recherche nécessite une clé LLM.",
+  "Add an LLM key": "Ajouter une clé LLM",
   "Research settings": "Paramètres de la recherche",
   "Choose which LLM key runs the vendor research. The research key makes many small calls, so a fast, inexpensive model is enough. The analysis key writes the risks from what the research found, once per run, so a stronger model can help.":
     "Choisissez la clé LLM qui exécute la recherche sur les fournisseurs. La clé de recherche effectue de nombreux petits appels, un modèle rapide et peu coûteux suffit donc. La clé d'analyse rédige les risques à partir de ce que la recherche a trouvé, une fois par exécution : un modèle plus puissant peut aider.",
@@ -620,7 +659,21 @@ export const fr: Record<string, string> = {
     "Une analyse planifiée recherche de nouveau chaque fournisseur selon ce calendrier et prévient la personne assignée lorsqu'elle trouve quelque chose. Elle n'analyse que les sources qu'elle n'a pas encore vues et utilise les clés ci-dessus.",
   "Loading research settings": "Chargement des paramètres de la recherche",
   "Could not load the research settings.": "Impossible de charger les paramètres de la recherche.",
+  "Research new vendors automatically": "Rechercher automatiquement les nouveaux fournisseurs",
+  "Starts a research run when a vendor is added. Each run uses the keys above.":
+    "Lance une recherche lorsqu'un fournisseur est ajouté. Chaque recherche utilise les clés ci-dessus.",
+  "Automatic research is turned off for this deployment.":
+    "La recherche automatique est désactivée pour ce déploiement.",
   "Research settings saved.": "Paramètres de la recherche enregistrés.",
+  "This key gets news only from GDELT, which sometimes refuses requests.":
+    "Cette clé obtient les actualités uniquement via GDELT, qui refuse parfois les requêtes.",
+  "Recent research runs got no news.": "Les dernières recherches n'ont trouvé aucune actualité.",
+  "Save, then add an Anthropic key for more reliable news.":
+    "Enregistrez d'abord, puis ajoutez une clé Anthropic pour des actualités plus fiables.",
+  "Choose an Anthropic key for more reliable news.":
+    "Choisissez une clé Anthropic pour des actualités plus fiables.",
+  "Add an Anthropic key for more reliable news":
+    "Ajoutez une clé Anthropic pour des actualités plus fiables",
   "One of the chosen LLM keys no longer exists. Choose the keys again.":
     "L'une des clés LLM choisies n'existe plus. Choisissez à nouveau les clés.",
   "No pending research findings.": "Aucun résultat de recherche en attente.",
@@ -791,12 +844,31 @@ export const fr: Record<string, string> = {
     "liste disclose.io des programmes de divulgation de vulnérabilités",
   "GLEIF LEI records": "enregistrements LEI de la GLEIF",
   "Checked: {sources}": "Sources consultées : {sources}",
-  "{count} more lists with no records": "{count} autres listes sans enregistrement",
-  "1 more list with no records": "1 autre liste sans enregistrement",
-  "{count} lists with no records": "{count} listes sans enregistrement",
-  "1 list with no records": "1 liste sans enregistrement",
+  "Checked 1 public list or register.": "1 liste ou registre public consulté.",
+  "Checked {count} public lists and registers.": "{count} listes et registres publics consultés.",
+  "None had a record.": "Aucun ne contenait d'enregistrement.",
+  "1 had a record: {sources}.": "1 contenait un enregistrement : {sources}.",
+  "{count} had records: {sources}.": "{count} contenaient des enregistrements : {sources}.",
+  "Also checked: {sources}.": "Également consultés : {sources}.",
+  "Data as of {dates}.": "Données à la date du {dates}.",
+  "No records: {sources}.": "Aucun enregistrement : {sources}.",
+  "Show all lists": "Afficher toutes les listes",
+  "Hide the lists": "Masquer les listes",
+  "no risks found": "aucun risque trouvé",
+  "Listed in the FedRAMP Marketplace.": "Répertorié dans le FedRAMP Marketplace.",
+  "Listed in the FedRAMP Marketplace: {status}.":
+    "Répertorié dans le FedRAMP Marketplace : {status}.",
+  "Listed in the FedRAMP Marketplace: {status} since {date}.":
+    "Répertorié dans le FedRAMP Marketplace : {status} depuis le {date}.",
+  "Listed in the FedRAMP Marketplace: {status} since {date}, impact level {impact}.":
+    "Répertorié dans le FedRAMP Marketplace : {status} depuis le {date}, niveau d'impact {impact}.",
+  "Listed in the C2PA Conforming Products List.":
+    "Répertorié dans la C2PA Conforming Products List.",
+  "Listed in the C2PA Conforming Products List: 1 conforming product, since {date}.":
+    "Répertorié dans la C2PA Conforming Products List : 1 produit conforme, depuis le {date}.",
+  "Listed in the C2PA Conforming Products List: {count} conforming products, the newest since {date}.":
+    "Répertorié dans la C2PA Conforming Products List : {count} produits conformes, le plus récent depuis le {date}.",
   "Not checked: {sources}": "Sources non consultées : {sources}",
-  "No records in {sources} as of {dates}": "Aucun enregistrement ({sources}) à la date du {dates}",
   "{source}: last updated {date}, not up to date":
     "{source} : dernière mise à jour le {date}, pas à jour",
   "Sources cited: {official} official, {press} trusted press, {vendor} vendor, {unverified} unverified":
@@ -853,6 +925,12 @@ export const fr: Record<string, string> = {
   "More risks were found than one run keeps.":
     "Plus de risques ont été trouvés qu'une exécution n'en conserve.",
   "The search was not available.": "La recherche n'était pas disponible.",
+  "News search was not available, so this was checked only on the vendor's own pages.":
+    "La recherche d'actualités n'était pas disponible, la vérification s'est donc limitée aux pages du fournisseur.",
+  "News search was not available, so this was checked only on the vendor's own pages and public databases.":
+    "La recherche d'actualités n'était pas disponible, la vérification s'est donc limitée aux pages du fournisseur et aux bases de données publiques.",
+  "News search was not available, so results may be incomplete.":
+    "La recherche d'actualités n'était pas disponible, les résultats peuvent donc être incomplets.",
   "The pages could not be read.": "Les pages n'ont pas pu être lues.",
   "1 potential risk found": "1 risque potentiel trouvé",
   "{count} potential risks found": "{count} risques potentiels trouvés",
@@ -1033,12 +1111,13 @@ export const es: Record<string, string> = {
     "Cuántos riesgos de proyecto y casos de uso heredan de los riesgos de cada proveedor.",
   "Vendor {id}": "Proveedor {id}",
   "{linked} of {total}": "{linked} de {total}",
-  "Vendors with reach": "Proveedores con alcance",
+  "Vendors with linked project risks": "Proveedores con riesgos de proyecto vinculados",
   "Inheriting project risks": "Riesgos de proyecto que heredan",
   "Affected use cases": "Casos de uso afectados",
-  "Vendor risks with children": "Riesgos del proveedor con dependientes",
-  "Vendor risks with no children": "Riesgos del proveedor sin dependientes",
+  "Vendor risks linked": "Riesgos del proveedor vinculados",
+  "Vendor risks not linked yet": "Riesgos del proveedor aún sin vincular",
   "View on map": "Ver en el mapa",
+  "Suggested links": "Vínculos sugeridos",
   "No vendor risks yet.": "Todavía no hay riesgos del proveedor.",
   "Duplicate vendor risks": "Riesgos del proveedor duplicados",
   "Risks of the same vendor that look like one risk entered twice.":
@@ -1070,9 +1149,9 @@ export const es: Record<string, string> = {
     "Cada uno de los otros nombres debe tener entre 2 y 80 caracteres",
   "Each of the other names must contain a letter or a digit":
     "Cada uno de los otros nombres debe contener una letra o un dígito",
-  "Identifiers": "Identificadores",
-  "Turns a match by name into a match by identifier.":
-    "Convierte una coincidencia por nombre en una coincidencia por identificador.",
+  "Identifiers (optional)": "Identificadores (opcional)",
+  "Research uses them to find this exact company, such as its SEC filings and its LEI record, instead of matching by name.":
+    "La investigación los usa para encontrar esta empresa exacta, como sus registros ante la SEC y su ficha LEI, en lugar de buscar por el nombre.",
   "Country": "País",
   "e.g. DE": "p. ej., DE",
   "Registration number": "Número de registro",
@@ -1103,8 +1182,8 @@ export const es: Record<string, string> = {
   "Pending research findings": "Hallazgos de investigación pendientes",
   "Could not load research findings.": "No se pudieron cargar los hallazgos de la investigación.",
   "Vendor research is not set up.": "La investigación de proveedores no está configurada.",
-  "Add an LLM key under Settings → API Keys, in the LLM Keys section.":
-    "Añada una clave de LLM en Configuración → Claves de API, en la sección Claves de LLM.",
+  "Research needs an LLM key.": "La investigación necesita una clave de LLM.",
+  "Add an LLM key": "Añadir una clave de LLM",
   "Research settings": "Ajustes de la investigación",
   "Choose which LLM key runs the vendor research. The research key makes many small calls, so a fast, inexpensive model is enough. The analysis key writes the risks from what the research found, once per run, so a stronger model can help.":
     "Elija qué clave de LLM ejecuta la investigación de proveedores. La clave de investigación hace muchas llamadas pequeñas, así que basta un modelo rápido y económico. La clave de análisis redacta los riesgos a partir de lo que encontró la investigación, una vez por ejecución, por lo que un modelo más potente puede ayudar.",
@@ -1121,7 +1200,21 @@ export const es: Record<string, string> = {
     "Un análisis programado vuelve a investigar a cada proveedor con esta frecuencia y avisa a la persona asignada cuando encuentra algo. Solo analiza fuentes que no ha visto antes y usa las claves de arriba.",
   "Loading research settings": "Cargando los ajustes de la investigación",
   "Could not load the research settings.": "No se pudieron cargar los ajustes de la investigación.",
+  "Research new vendors automatically": "Investigar automáticamente los proveedores nuevos",
+  "Starts a research run when a vendor is added. Each run uses the keys above.":
+    "Inicia una investigación cuando se añade un proveedor. Cada investigación usa las claves anteriores.",
+  "Automatic research is turned off for this deployment.":
+    "La investigación automática está desactivada en esta instalación.",
   "Research settings saved.": "Ajustes de la investigación guardados.",
+  "This key gets news only from GDELT, which sometimes refuses requests.":
+    "Esta clave obtiene noticias solo a través de GDELT, que a veces rechaza las solicitudes.",
+  "Recent research runs got no news.": "Las últimas investigaciones no obtuvieron noticias.",
+  "Save, then add an Anthropic key for more reliable news.":
+    "Guarde primero y luego añada una clave de Anthropic para obtener noticias más fiables.",
+  "Choose an Anthropic key for more reliable news.":
+    "Elija una clave de Anthropic para obtener noticias más fiables.",
+  "Add an Anthropic key for more reliable news":
+    "Añada una clave de Anthropic para obtener noticias más fiables",
   "One of the chosen LLM keys no longer exists. Choose the keys again.":
     "Una de las claves de LLM elegidas ya no existe. Elija las claves de nuevo.",
   "No pending research findings.": "No hay hallazgos de investigación pendientes.",
@@ -1290,12 +1383,30 @@ export const es: Record<string, string> = {
     "lista de disclose.io de programas de divulgación de vulnerabilidades",
   "GLEIF LEI records": "registros LEI de la GLEIF",
   "Checked: {sources}": "Fuentes consultadas: {sources}",
-  "{count} more lists with no records": "{count} listas más sin registros",
-  "1 more list with no records": "1 lista más sin registros",
-  "{count} lists with no records": "{count} listas sin registros",
-  "1 list with no records": "1 lista sin registros",
+  "Checked 1 public list or register.": "Se consultó 1 lista o registro público.",
+  "Checked {count} public lists and registers.":
+    "Se consultaron {count} listas y registros públicos.",
+  "None had a record.": "Ninguno tenía registros.",
+  "1 had a record: {sources}.": "1 tenía un registro: {sources}.",
+  "{count} had records: {sources}.": "{count} tenían registros: {sources}.",
+  "Also checked: {sources}.": "También se consultó: {sources}.",
+  "Data as of {dates}.": "Datos a fecha de {dates}.",
+  "No records: {sources}.": "Sin registros: {sources}.",
+  "Show all lists": "Mostrar todas las listas",
+  "Hide the lists": "Ocultar las listas",
+  "no risks found": "no se encontraron riesgos",
+  "Listed in the FedRAMP Marketplace.": "Figura en el FedRAMP Marketplace.",
+  "Listed in the FedRAMP Marketplace: {status}.": "Figura en el FedRAMP Marketplace: {status}.",
+  "Listed in the FedRAMP Marketplace: {status} since {date}.":
+    "Figura en el FedRAMP Marketplace: {status} desde el {date}.",
+  "Listed in the FedRAMP Marketplace: {status} since {date}, impact level {impact}.":
+    "Figura en el FedRAMP Marketplace: {status} desde el {date}, nivel de impacto {impact}.",
+  "Listed in the C2PA Conforming Products List.": "Figura en la C2PA Conforming Products List.",
+  "Listed in the C2PA Conforming Products List: 1 conforming product, since {date}.":
+    "Figura en la C2PA Conforming Products List: 1 producto conforme, desde el {date}.",
+  "Listed in the C2PA Conforming Products List: {count} conforming products, the newest since {date}.":
+    "Figura en la C2PA Conforming Products List: {count} productos conformes, el más reciente desde el {date}.",
   "Not checked: {sources}": "Fuentes no consultadas: {sources}",
-  "No records in {sources} as of {dates}": "Ningún registro ({sources}) a fecha de {dates}",
   "{source}: last updated {date}, not up to date":
     "{source}: última actualización el {date}, no está al día",
   "Sources cited: {official} official, {press} trusted press, {vendor} vendor, {unverified} unverified":
@@ -1351,6 +1462,12 @@ export const es: Record<string, string> = {
   "More risks were found than one run keeps.":
     "Se encontraron más riesgos de los que conserva una ejecución.",
   "The search was not available.": "La búsqueda no estaba disponible.",
+  "News search was not available, so this was checked only on the vendor's own pages.":
+    "La búsqueda de noticias no estaba disponible, así que solo se revisaron las páginas propias del proveedor.",
+  "News search was not available, so this was checked only on the vendor's own pages and public databases.":
+    "La búsqueda de noticias no estaba disponible, así que solo se revisaron las páginas propias del proveedor y las bases de datos públicas.",
+  "News search was not available, so results may be incomplete.":
+    "La búsqueda de noticias no estaba disponible, así que los resultados pueden estar incompletos.",
   "The pages could not be read.": "No se pudieron leer las páginas.",
   "1 potential risk found": "1 posible riesgo encontrado",
   "{count} potential risks found": "{count} posibles riesgos encontrados",

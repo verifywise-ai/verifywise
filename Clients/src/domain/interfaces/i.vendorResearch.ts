@@ -181,6 +181,34 @@ export interface CoverageSource {
   /** When the copy was last brought up to date (ISO 8601); null when it never was. */
   last_success_at: string | null;
   stale: boolean;
+  /**
+   * For a list whose entries attest something in the vendor's favour (the FedRAMP Marketplace, the
+   * C2PA Conforming Products List), what each matched record says; absent for other lists and for
+   * older runs. Context, never a risk.
+   */
+  attestations?: CoverageAttestation[];
+}
+
+/** The status a listing attests (FedRAMP's four statuses, or a C2PA conformance). */
+export type AttestationStatus =
+  | "fedramp_authorized"
+  | "fedramp_ready"
+  | "fedramp_in_process"
+  | "agency_in_process"
+  | "c2pa_conforming";
+
+/** What one matched record of an attesting list says, in closed words. */
+export interface CoverageAttestation {
+  status: AttestationStatus | null;
+  /** A FedRAMP impact level as the Marketplace writes it ("High", "LI-SaaS"…); null for none. */
+  impact: string | null;
+  /** The day (YYYY-MM-DD) of the status, or of the newest conformance; null when unknown. */
+  since: string | null;
+  /** How many offerings or products the list names for the vendor. */
+  count: number;
+  strength: "strong" | "weak";
+  /** The day (YYYY-MM-DD) of the copy the record is from. */
+  as_of: string;
 }
 
 /**
@@ -438,22 +466,49 @@ export interface AcceptFindingBody {
   frameworks?: number[];
 }
 
-/** What the server has set up. Research can run when the organization has an LLM key. */
+/**
+ * What the server has set up. Research can run when the organization has an LLM key.
+ * `autoRunAllowed` is the deployment's switch for the automatic research of a new vendor;
+ * `autoRunEnabled` is whether it happens for this organization, which needs the deployment's switch
+ * and the organization's setting.
+ */
 export interface VendorResearchConfig {
   hasLlmKey: boolean;
+  autoRunAllowed: boolean;
   autoRunEnabled: boolean;
+}
+
+/**
+ * The search a research run gets from a key: Claude's own web search for an Anthropic key that
+ * calls Anthropic's API, the news of the GDELT Project for every other key.
+ */
+export type ResearchSearchEngine = "anthropic" | "gdelt";
+
+/**
+ * What the research settings window warns about (Admin only): the search of each LLM key by id,
+ * of the default (the newest key; `null` without a key), and whether the organization's latest
+ * runs that say something about the news (up to 3, last 30 days) all got none.
+ */
+export interface VendorResearchSearchStatus {
+  engines: {
+    default: ResearchSearchEngine | null;
+    byKey: Record<number, ResearchSearchEngine>;
+  };
+  recentRunsFoundNoNews: boolean;
 }
 
 /**
  * Which of the organization's LLM keys the research uses, as an Admin chose, and how often the
  * scheduled scan researches the vendors again. `null` leaves a key to the default: the newest key
  * for the research, and the research key for the analysis. For `scanIntervalDays`, `null` is off,
- * and the server takes 7, 14 or 30.
+ * and the server takes 7, 14 or 30. `autoResearchOnCreate` says whether a new vendor is researched
+ * as soon as it is added (on until an Admin turns it off).
  */
 export interface VendorResearchSettings {
   researchKeyId: number | null;
   analysisKeyId: number | null;
   scanIntervalDays: number | null;
+  autoResearchOnCreate: boolean;
 }
 
 /**

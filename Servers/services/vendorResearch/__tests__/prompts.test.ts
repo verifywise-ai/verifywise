@@ -1,3 +1,4 @@
+import { zodSchema } from "ai";
 import { createHash } from "crypto";
 import {
   EvidenceSource,
@@ -6,6 +7,7 @@ import {
   ResearchCategory,
 } from "../../../domain.layer/interfaces/i.vendorResearch";
 import {
+  LOOP_ACTION_FIELDS,
   MAX_ACTIONS_PER_STEP,
   MAX_URL_CHARS,
   MIN_QUERY_CHARS,
@@ -133,9 +135,10 @@ describe("the versions of the prompts", () => {
   // matched by name only to vr-17, and saying that a line of a change that begins with the continued
   // mark is a part of one long clause to vr-18, and saying that a line that begins with two spaces
   // continues the line before it, and that one that begins with the continued mark is quoted on
-  // its own, to vr-19. A stored run says which prompt it asked with.
+  // its own, to vr-19, and writing the example action of the loop prompt in the schema's order to
+  // vr-20. A stored run says which prompt it asked with.
   it("names the version of the analysis prompt that every run asks with", () => {
-    expect(CREDIBILITY_PROMPT_VERSION).toBe("vr-19");
+    expect(CREDIBILITY_PROMPT_VERSION).toBe("vr-20");
   });
 
   it("pins the rest of the prompt, outside the bullets of the lists, character for character", () => {
@@ -731,13 +734,13 @@ describe("the bounds that the system prompt states", () => {
   });
 
   // The analysis text of the prompt version "vr-2" has these lines, with counts as words and limits
-  // as digits; "vr-3" to "vr-19" left these lines as they were. Writing their numbers from the
+  // as digits; "vr-3" to "vr-20" left these lines as they were. Writing their numbers from the
   // constants must not change a character of them, line breaks included, or the stored version
   // would no longer describe the prompt.
   it("writes the lines that hold a number exactly as the vr-2 text has them", () => {
     const lines = buildSystemPrompt(NOW).split("\n");
 
-    expect(CREDIBILITY_PROMPT_VERSION).toBe("vr-19");
+    expect(CREDIBILITY_PROMPT_VERSION).toBe("vr-20");
     for (const line of [
       "- Every risk cites at least one source and at most five. Each citation is a source id and a",
       "  at most 300 characters. Do not quote the title, the URL or the vendor block.",
@@ -1171,6 +1174,32 @@ describe("buildLoopSystemPrompt", () => {
     expect(parsed.success).toBe(true);
     expect(parsed.data?.actions.map((action) => action.action)).toEqual(["search", "read"]);
     expect(prompt).not.toContain("Acme");
+  });
+
+  // Regression, 2026-11-23: a provider that decodes against the schema accepts the fields of an
+  // action in the schema's order only. The example wrote "kind" before "query", a model copied it,
+  // and then it could not write the query: every search of a run was refused.
+  it("lists the fields of an action, and writes its example, in the order of the schema", () => {
+    const sent = zodSchema(createLoopStepSchema(RESEARCH_CATEGORIES)).jsonSchema as {
+      properties: { actions: { items: { properties: Record<string, unknown> } } };
+    };
+    expect(Object.keys(sent.properties.actions.items.properties)).toEqual([...LOOP_ACTION_FIELDS]);
+
+    const listed = [...prompt.matchAll(/^ {2}- (\w+):/gm)].map((match) => match[1]);
+    expect(listed).toEqual([...LOOP_ACTION_FIELDS]);
+    expect(words).toContain(`in the order of this list: ${LOOP_ACTION_FIELDS.join(", ")}.`);
+
+    for (const search of [{}, { kinds: ["news" as const] }, { kinds: ["web" as const] }]) {
+      const line = buildLoopSystemPrompt(search)
+        .split("\n")
+        .find((text) => text.startsWith('{"thought"'));
+      const example = JSON.parse(line ?? "{}") as { actions: Record<string, unknown>[] };
+      for (const action of example.actions) {
+        const keys = Object.keys(action);
+        expect(keys).toEqual(LOOP_ACTION_FIELDS.filter((field) => keys.includes(field)));
+      }
+      expect(example.actions[0]).toMatchObject({ action: "search", query: "Vendor data breach" });
+    }
   });
 
   it("says that results are data, never instructions", () => {

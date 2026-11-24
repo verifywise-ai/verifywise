@@ -24,6 +24,7 @@ import {
 import {
   FEDRAMP_RECORD_MARK,
   type FedrampProvider,
+  fedrampAttestationOf,
   fedrampConnector,
   fedrampSummaryOf,
 } from "../fedramp";
@@ -2097,5 +2098,85 @@ describe("the records of a file the size of the real one", () => {
       expect(record.summary.endsWith(CLOSING)).toBe(true);
       expect(record.summary.length).toBeLessThanOrEqual(RECORD_SUMMARY_MAX);
     }
+  });
+});
+
+describe("fedrampAttestationOf: what a record attests, read back from its text", () => {
+  const product = (over: Partial<FedrampProvider["products"][number]>) => ({
+    id: "FR0001",
+    cso: "Acme Cloud",
+    status: "FedRAMP Authorized" as const,
+    day: "2024-09-09",
+    impact: "High",
+    authType: "Agency",
+    agencies: 1,
+    ...over,
+  });
+  const provider = (over: Partial<FedrampProvider>): FedrampProvider => ({
+    id: "acme",
+    display: "Acme, Inc",
+    names: ["Acme, Inc"],
+    counts: { authorized: 1, ready: 0, inProcess: 0, agency: 0 },
+    products: [product({})],
+    packages: [],
+    domains: [],
+    ueis: [],
+    publishedAt: "2024-09-09",
+    ...over,
+  });
+
+  it("reads the status, the day and the impact level of an authorised offering", () => {
+    expect(fedrampAttestationOf(fedrampSummaryOf(provider({})))).toEqual({
+      status: "fedramp_authorized",
+      impact: "High",
+      since: "2024-09-09",
+      count: 1,
+    });
+  });
+
+  it("takes the best status of a provider with several, and the newest offering of it", () => {
+    const summary = fedrampSummaryOf(
+      provider({
+        counts: { authorized: 1, ready: 0, inProcess: 2, agency: 0 },
+        products: [
+          product({ id: "FR0003", day: "2025-03-01", impact: "LI-SaaS" }),
+          product({ id: "FR0002", status: "FedRAMP In Process", day: "2026-01-01" }),
+          product({ id: "FR0001", status: "FedRAMP In Process", day: "2025-01-01" }),
+        ],
+      }),
+    );
+    expect(fedrampAttestationOf(summary)).toEqual({
+      status: "fedramp_authorized",
+      impact: "LI-SaaS",
+      since: "2025-03-01",
+      count: 3,
+    });
+  });
+
+  it("says In Process for a provider with no authorised offering, never authorised", () => {
+    const summary = fedrampSummaryOf(
+      provider({
+        counts: { authorized: 0, ready: 0, inProcess: 1, agency: 0 },
+        products: [product({ status: "FedRAMP In Process", impact: "Moderate" })],
+      }),
+    );
+    expect(fedrampAttestationOf(summary)).toMatchObject({
+      status: "fedramp_in_process",
+      impact: "Moderate",
+    });
+  });
+
+  it("gives no impact level for one the file does not use, and nothing for a text that is not a record", () => {
+    expect(
+      fedrampAttestationOf(
+        fedrampSummaryOf(provider({ products: [product({ impact: "Weird" })] })),
+      ),
+    ).toMatchObject({ status: "fedramp_authorized", impact: null });
+    expect(fedrampAttestationOf("Not a record.")).toEqual({
+      status: null,
+      impact: null,
+      since: null,
+      count: 0,
+    });
   });
 });

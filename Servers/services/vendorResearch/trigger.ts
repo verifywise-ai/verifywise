@@ -41,6 +41,7 @@ import {
   finishRunQuery,
   getActiveRunQuery,
   getLastRunCreatedAtQuery,
+  getVendorResearchSettingsQuery,
   withRunStartLockQuery,
 } from "../../utils/vendorResearch.utils";
 import { getVendorResearchConfig } from "./config";
@@ -251,8 +252,10 @@ const NOT_STARTED_REASONS: Record<StartResearchError["code"], string> = {
 };
 
 /**
- * The automatic start after a vendor is created. Nothing is persisted when it does not start, and
- * the reason is logged. It never rejects, so a caller that does not wait for it cannot be hurt by
+ * The automatic start after a vendor is created. It needs both the deployment
+ * (VENDOR_RESEARCH_AUTO_RUN) and the organization's setting (`autoResearchOnCreate`, on until an
+ * administrator turns it off). Nothing is persisted when it does not start, and the reason is
+ * logged. It never rejects, so a caller that does not wait for it cannot be hurt by
  * it.
  */
 export async function triggerAutoResearch(args: {
@@ -270,6 +273,11 @@ export async function triggerAutoResearch(args: {
     const config = getVendorResearchConfig();
     if (!config.autoRun) {
       logger.info(`${label}: not started, automatic research is turned off`);
+      return;
+    }
+    const settings = await getVendorResearchSettingsQuery(organizationId);
+    if (!settings.autoResearchOnCreate) {
+      logger.info(`${label}: not started, automatic research is turned off for the organization`);
       return;
     }
     const result = await startVendorResearch({

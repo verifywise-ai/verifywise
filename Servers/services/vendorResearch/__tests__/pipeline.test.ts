@@ -1486,7 +1486,7 @@ describe("runVendorResearch", () => {
       });
     });
 
-    it("records the prompt version vr-19", async () => {
+    it("records the prompt version vr-20", async () => {
       await run();
 
       expect(onlyFinish().input.promptVersion).toBe(CREDIBILITY_PROMPT_VERSION);
@@ -1495,8 +1495,8 @@ describe("runVendorResearch", () => {
       // sentence for a filing matched by name only. vr-18 says that a line of a change that begins
       // with the continued mark is a part of one long clause. vr-19 says that a line that begins with
       // two spaces continues the line before it, and that one that begins with the mark is quoted
-      // on its own.
-      expect(CREDIBILITY_PROMPT_VERSION).toBe("vr-19");
+      // on its own. vr-20 writes the example action of the loop prompt in the schema's order.
+      expect(CREDIBILITY_PROMPT_VERSION).toBe("vr-20");
       expect(generate.mock.calls[0][0].system).toBe(buildSystemPrompt(NOW));
     });
 

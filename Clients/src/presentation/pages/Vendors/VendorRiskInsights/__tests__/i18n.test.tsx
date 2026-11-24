@@ -148,9 +148,9 @@ describe.each(LANGS)("vendor risk insights in %s", (lang) => {
     }
 
     for (const key of [
-      "Vendors with reach",
-      "Vendor risks with no children",
-      "Vendor risks with children",
+      "Vendors with linked project risks",
+      "Vendor risks not linked yet",
+      "Vendor risks linked",
       "View on map",
     ]) {
       expect((await screen.findAllByText(tr(lang, key))).length).toBeGreaterThan(0);

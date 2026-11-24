@@ -148,6 +148,50 @@ export interface CoverageSource {
   /** When the copy was last brought up to date, ISO 8601; null when it never was. */
   last_success_at: string | null;
   stale: boolean;
+  /**
+   * For a list whose entries attest something in the vendor's favour (`attests` in
+   * vrdb/sources.ts: the FedRAMP Marketplace, the C2PA Conforming Products List), what each record
+   * the run was offered says, in closed words; absent for the other lists and for a run stored
+   * before it. Never a risk: it is context, shown under the list's category.
+   */
+  attestations?: CoverageAttestation[];
+}
+
+/** The status a listing attests, as the list words it (FedRAMP's four, or a C2PA conformance). */
+export const ATTESTATION_STATUSES = [
+  "fedramp_authorized",
+  "fedramp_ready",
+  "fedramp_in_process",
+  "agency_in_process",
+  "c2pa_conforming",
+] as const;
+export type AttestationStatus = (typeof ATTESTATION_STATUSES)[number];
+
+/** The FedRAMP impact levels, as the Marketplace data writes them. */
+export const FEDRAMP_IMPACT_LEVELS = [
+  "High",
+  "Moderate",
+  "Low",
+  "LI-SaaS",
+  "20x Moderate",
+  "20x Low",
+] as const;
+export type FedrampImpactLevel = (typeof FEDRAMP_IMPACT_LEVELS)[number];
+
+/** What one record of an attesting list says of the vendor. */
+export interface CoverageAttestation {
+  /** The best status of the vendor's listings; null when the record does not say. */
+  status: AttestationStatus | null;
+  /** The FedRAMP impact level of the listing of that status; null when there is none. */
+  impact: FedrampImpactLevel | null;
+  /** The day (YYYY-MM-DD) of that status, or of the newest conformance; null when unknown. */
+  since: string | null;
+  /** How many offerings or products the list names for the vendor (0 when it does not say). */
+  count: number;
+  /** A weak match rests on the vendor's name alone, and may be another company. */
+  strength: "strong" | "weak";
+  /** The day (YYYY-MM-DD) of the copy the record is from. */
+  as_of: string;
 }
 
 /** A database the run still asks on the web (NVD, HIBP, the SEC, the status page). */
@@ -553,12 +597,16 @@ export interface VendorResearchKeyChoice {
 export const SCAN_INTERVAL_DAYS = [7, 14, 30] as const;
 
 /**
- * What an administrator chose for the research of the organization: the keys, and how often the
- * scheduled scan researches each vendor again. A scan interval that is null means the scan is off,
- * which is what an organization has until it chooses.
+ * What an administrator chose for the research of the organization: the keys, how often the
+ * scheduled scan researches each vendor again, and whether a new vendor is researched as soon as it
+ * is added. A scan interval that is null means the scan is off, which is what an organization has
+ * until it chooses. `autoResearchOnCreate` is true until an administrator turns it off; the
+ * deployment's VENDOR_RESEARCH_AUTO_RUN can still turn the automatic start off for every
+ * organization.
  */
 export interface VendorResearchSettings extends VendorResearchKeyChoice {
   scanIntervalDays: number | null;
+  autoResearchOnCreate: boolean;
 }
 
 /**
