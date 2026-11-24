@@ -480,6 +480,14 @@ export const deleteIncidentByIdQuery = async (
     // "incident deleted" email.
     if (!deletedIncident) return null;
 
+    // Task links point at the incident by type and id, with no foreign key
+    // to cascade: remove them with the incident, as vendors and policies do.
+    await sequelize.query(
+      `DELETE FROM task_entity_links
+        WHERE organization_id = :organizationId AND entity_type = 'incident' AND entity_id = :id`,
+      { replacements: { organizationId, id }, transaction },
+    );
+
     const automations = (await sequelize.query(
       `SELECT
               pat.key AS trigger_key,

@@ -108,6 +108,8 @@ export const de: Record<string, string> = {
   "Environment": "Umwelt",
   "Archive incident": "Vorfall archivieren",
   "Incident actions": "Aktionen für den Vorfall",
+  "Linked tasks": "Verknüpfte Aufgaben",
+  "No linked tasks you can see.": "Keine verknüpften Aufgaben, die Sie sehen können.",
 };
 
 export const fr: Record<string, string> = {
@@ -216,6 +218,8 @@ export const fr: Record<string, string> = {
   "Environment": "Environnement",
   "Archive incident": "Archiver l'incident",
   "Incident actions": "Actions sur l'incident",
+  "Linked tasks": "Tâches liées",
+  "No linked tasks you can see.": "Aucune tâche liée que vous pouvez voir.",
 };
 
 export const es: Record<string, string> = {
@@ -325,4 +329,6 @@ export const es: Record<string, string> = {
   "Environment": "Medio ambiente",
   "Archive incident": "Archivar incidente",
   "Incident actions": "Acciones del incidente",
+  "Linked tasks": "Tareas vinculadas",
+  "No linked tasks you can see.": "No hay tareas vinculadas que pueda ver.",
 };

@@ -2089,7 +2089,7 @@ export const de: Record<string, string> = {
   "LangChain agents, CrewAI, AutoGen, MCP servers, and other autonomous AI systems will appear here":
     "LangChain-Agenten, CrewAI, AutoGen, MCP-Server und andere autonome KI-Systeme erscheinen hier",
   "Linked": "Verknüpft",
-  "Linked Items": "Verknüpfte Elemente",
+  "Linked items": "Verknüpfte Elemente",
   "Linked controls components": "Verknüpfte Kontrollkomponenten",
   "Linked model": "Verknüpftes Modell",
   "Linked use case": "Verknüpfter Anwendungsfall",
@@ -6781,7 +6781,7 @@ export const fr: Record<string, string> = {
   "LangChain agents, CrewAI, AutoGen, MCP servers, and other autonomous AI systems will appear here":
     "Les agents LangChain, CrewAI, AutoGen, les serveurs MCP et d'autres systèmes IA autonomes apparaîtront ici",
   "Linked": "Lié",
-  "Linked Items": "Éléments liés",
+  "Linked items": "Éléments liés",
   "Linked controls components": "Composants de contrôle liés",
   "Linked model": "Modèle lié",
   "Linked use case": "Cas d'usage associé",
@@ -11462,7 +11462,7 @@ export const es: Record<string, string> = {
   "LangChain agents, CrewAI, AutoGen, MCP servers, and other autonomous AI systems will appear here":
     "Aquí aparecerán los agentes de LangChain, CrewAI, AutoGen, los servidores MCP y otros sistemas de IA autónomos",
   "Linked": "Vinculado",
-  "Linked Items": "Elementos vinculados",
+  "Linked items": "Elementos vinculados",
   "Linked controls components": "Componentes de controles vinculados",
   "Linked model": "Modelo vinculado",
   "Linked use case": "Caso de uso vinculado",

@@ -25,7 +25,7 @@ import {
 import TaskSummaryCards from "./TaskSummaryCards";
 import CreateTask from "../../components/Modals/CreateTask";
 import useUsers from "../../../application/hooks/useUsers";
-import { useTasks, taskQueryKeys } from "../../../application/hooks/useTasks";
+import { useTasks, taskQueryKeys, linkedTaskQueryKeys } from "../../../application/hooks/useTasks";
 import { useUpdateTaskStatus } from "../../../application/hooks/useUpdateTaskStatus";
 import { useUpdateTaskPriority } from "../../../application/hooks/useUpdateTaskPriority";
 import {
@@ -447,6 +447,9 @@ const Tasks: React.FC = () => {
             for (const link of linksToRemove) {
               await removeTaskEntityLink(editingTask.id!, link.id);
             }
+            if (linksToRemove.length > 0) {
+              queryClient.invalidateQueries({ queryKey: linkedTaskQueryKeys.all });
+            }
           } catch (linkError) {
             console.error("Error syncing entity links:", linkError);
             // Don't fail the whole operation, just log the error
@@ -548,6 +551,7 @@ const Tasks: React.FC = () => {
               task.id === taskId ? { ...task, status: TaskStatus.OPEN } : task,
             ) ?? [],
         );
+        queryClient.invalidateQueries({ queryKey: linkedTaskQueryKeys.all });
         setAlert({
           variant: "success",
           title: "Task restored successfully",
@@ -575,6 +579,7 @@ const Tasks: React.FC = () => {
         taskQueryKeys.list({ includeArchived }),
         (old: ITask[] | undefined) => old?.filter((task) => task.id !== taskId) ?? [],
       );
+      queryClient.invalidateQueries({ queryKey: linkedTaskQueryKeys.all });
       setAlert({
         variant: "success",
         title: "Task deleted permanently",

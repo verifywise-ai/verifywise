@@ -13804,6 +13804,28 @@ export const v1V1scheduledReportsEndpoints: Endpoint[] = [
   },
 ];
 
+// v1: V1/Tasks endpoints
+export const v1V1tasksEndpoints: Endpoint[] = [
+  {
+    method: 'GET',
+    path: '/v1/tasks/linked/{entityType}/{entityId}',
+    summary: "List the tasks linked to an entity",
+    description: "The tasks linked to one entity (an incident, a vendor, ...) through task_entity_links that the user can see, with the visibility of GET /tasks. Archived tasks are left out. Not paginated.",
+    requiresAuth: true,
+    parameters: [
+      { name: 'entityType', in: 'path', type: 'EntityType', required: true, description: "The entityType" },
+      { name: 'entityId', in: 'path', type: 'integer', required: true, description: "The entityId" },
+    ],
+    responses: [
+      { status: 200, description: "The linked tasks" },
+      { status: 400, description: "Invalid entity type or ID" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Tasks",
+  },
+];
+
 // v1: V1/Training endpoints
 export const v1V1trainingEndpoints: Endpoint[] = [
   {
@@ -14619,6 +14641,7 @@ export const allEndpoints = {
   v1V1reportRuns: v1V1reportRunsEndpoints,
   v1V1reportTemplates: v1V1reportTemplatesEndpoints,
   v1V1scheduledReports: v1V1scheduledReportsEndpoints,
+  v1V1tasks: v1V1tasksEndpoints,
   v1V1training: v1V1trainingEndpoints,
   v1V1useCaseLifecycle: v1V1useCaseLifecycleEndpoints,
   v1V1vendorRisks: v1V1vendorRisksEndpoints,

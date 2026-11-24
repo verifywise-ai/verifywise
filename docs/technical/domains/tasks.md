@@ -12,6 +12,7 @@ The Task Management domain provides comprehensive functionality for creating, as
 - Status workflow with soft delete
 - Role-based visibility (creators/assignees vs admins)
 - Comprehensive filtering and pagination
+- Linked items: vendors, models, policies, incidents and framework requirements
 - Automation triggers for task events
 - AI Advisor integration for task analytics
 
@@ -100,6 +101,10 @@ enum TaskStatus {
 | PUT | `/tasks/:id/restore` | Restore deleted task |
 | DELETE | `/tasks/:id` | Soft delete task |
 | DELETE | `/tasks/:id/hard` | Permanently delete |
+| GET | `/tasks/:id/entities` | List the task's linked items |
+| POST | `/tasks/:id/entities` | Link an item to the task |
+| GET | `/v1/tasks/linked/:entityType/:entityId` | The tasks linked to one item that the user can see (see [Linked items](#linked-items)) |
+| DELETE | `/tasks/:id/entities/:linkId` | Remove a linked item |
 
 ### Query Parameters (GET /tasks)
 
@@ -124,6 +129,71 @@ enum TaskStatus {
 | `page_size` | 25 | 100 | Items per page |
 | `sort_by` | created_at | - | Sort field |
 | `sort_order` | DESC | - | ASC or DESC |
+
+## Linked items
+
+A task can be linked to items elsewhere in the app. Each link is a row in
+`task_entity_links` (`organization_id`, `task_id`, `entity_type`, `entity_id`,
+`entity_name`). `entity_type` is `VARCHAR(50)` with no CHECK constraint and
+there is no foreign key to the item, so the valid types live in code:
+`VALID_ENTITY_TYPES` and `TASK_ENTITY_TABLES` in
+`Servers/utils/taskEntityLink.utils.ts`.
+
+| Type | Table | Who may link it |
+|------|-------|-----------------|
+| `vendor` | `vendors` | Anyone who can see the task |
+| `model` | `model_inventories` | Anyone who can see the task |
+| `policy` | `policy_manager` | Anyone who can see the task |
+| `incident` | `ai_incident_managements` | Anyone who can see the task, while the incident is not archived |
+| `nist_subcategory`, `iso42001_subclause`, `iso42001_annexcategory`, `iso27001_subclause`, `iso27001_annexcontrol`, `eu_control`, `eu_subcontrol` | the framework's requirement table | Users who can see the requirement's use case (`taskLinkRefusalQuery`) |
+
+Vendors, models, policies and incidents belong to the organization
+(`ORGANIZATION_WIDE_LINK_TYPES`); a link to one never gives the task's
+assignees access to a use case. A link to a framework requirement does
+(`taskAssigneeOfProjectSql`).
+
+Links are written by `POST /tasks/:id/entities` and, inside the task's own
+transaction, by `entity_links` on task create and update
+(`persistTaskEntityLinks`: additive, skips anything invalid or not allowed
+instead of failing the save, except an archived incident, and never re-checks
+a link the task already has). `taskLinkRefusalQuery` is the one access check:
+it answers null (allowed), `"archived_incident"` or `"forbidden"`.
+
+**Incidents.** Every member reads incidents, so linking one needs no use case
+access. An archived incident cannot be linked: `POST /tasks/:id/entities`
+answers 409 ("Restore this incident before linking it to a task."), and so
+does a task create or update whose `entity_links` add one
+(`persistTaskEntityLinks` throws `ArchivedIncidentLinkError`; the whole save
+is rolled back and the drawer shows the error). Links made before the incident
+was archived stay. An incident link is named by the incident's visible id and
+use case ("INC-12 · Credit scoring", `incidentLinkName`, the one server rule
+for it; the remediation task's stored name uses it too), read from the
+incident on every read rather than from the stored `entity_name`, so it
+follows the use case. Reads batch the names: `getEntityLinksForTasksQuery`
+reads every listed task's links in one query and their incidents in one more
+(`GET /tasks` calls it once per request). Hard-deleting an incident deletes its links in the same
+transaction (`deleteIncidentByIdQuery`), as deleting a vendor or a policy
+does. The critical incident workflow links its remediation task to the
+incident (see [incidents.md](./incidents.md#critical-incident-response-workflow)).
+
+**Where links show.** The task drawer's "Linked items" field
+(`presentation/components/EntityLinkSelector`) lists and edits them;
+incidents are picked from a searchable list (by incident ID or use case) with
+archived incidents left out; while they load, or when the read fails, it says
+so rather than "No incidents to link". The incident drawer's "Linked tasks"
+tab (`presentation/components/LinkedTasks`, `useLinkedTasks`) lists the tasks
+linked to the incident that the user can see, through
+`GET /api/v1/tasks/linked/incident/<id>` (any signed-in member; the same
+visibility as `GET /tasks`, archived tasks left out, not paginated; 400 for an
+unknown type or an id that is not a positive integer). The legacy `GET /tasks`
+contract is unchanged. Clicking a task opens it on the tasks page
+(`/tasks?taskId=<id>`); an overdue task shows "Overdue" until completed, as on
+the tasks page. The cached lists live under their own query key root
+(`linkedTaskQueryKeys`, outside `["tasks"]`), so the optimistic list updaters
+of the task mutations never touch them; task creates, updates, archives,
+status and priority changes, bulk actions and link changes invalidate them. Task emails name each link and link to it
+(`buildEntityUrlAsync` in `services/inAppNotification.service.ts`; an
+incident opens `/ai-incident-managements?incidentId=<id>`).
 
 ### Create Task Request
 
@@ -367,6 +437,8 @@ get_task_executive_summary()
 | `utils/task.utils.ts` | Query functions |
 | `utils/validations/tasksValidation.utils.ts` | Validation schemas |
 | `utils/automation/task.automation.utils.ts` | Automation triggers |
+| `utils/taskEntityLink.utils.ts` | Linked items: types, access, names |
+| `controllers/taskEntityLink.ctrl.ts` | Linked items API handlers |
 | `advisor/tools/taskTools.ts` | AI tool definitions |
 
 ### Frontend
@@ -376,6 +448,9 @@ get_task_executive_summary()
 | `domain/enums/task.enum.ts` | Enums |
 | `domain/models/Common/task/task.model.ts` | Task model |
 | `application/repository/task.repository.ts` | API integration |
+| `application/hooks/useTasks.ts` | Task lists, including `useLinkedTasks` |
+| `presentation/components/EntityLinkSelector/` | The task drawer's linked items |
+| `presentation/components/LinkedTasks/` | Read-only list of the tasks linked to an item |
 | `application/dtos/task.dto.ts` | Data transfer objects |
 | `presentation/pages/Tasks/` | Task pages |
 

@@ -69,6 +69,28 @@ export const taskManagementContent: ArticleContent = {
     },
     {
       type: 'heading',
+      id: 'linking-tasks',
+      level: 2,
+      text: 'Linking a task to other items',
+    },
+    {
+      type: 'paragraph',
+      text: 'Open a task and use **Linked items** to connect it to the work it belongs to. Pick a type, then the item:',
+    },
+    {
+      type: 'bullet-list',
+      items: [
+        { bold: 'Vendor, model or policy', text: 'Pick it from the list' },
+        { bold: 'Incident', text: 'Search by incident ID (for example INC-12) or use case. Archived incidents are not listed; restore one to link it' },
+        { bold: 'Use case or organizational framework', text: 'Pick the use case or framework, then the requirement' },
+      ],
+    },
+    {
+      type: 'paragraph',
+      text: 'Save the task to keep the links. A task linked to an incident shows up in that incident\'s **Linked tasks** tab.',
+    },
+    {
+      type: 'heading',
       id: 'managing-tasks',
       level: 2,
       text: 'Managing tasks',

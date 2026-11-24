@@ -180,6 +180,52 @@ paths:
         "500":
           $ref: "#/components/responses/InternalError"
 
+  /v1/tasks/linked/{entityType}/{entityId}:
+    get:
+      summary: List the tasks linked to an entity
+      description: >
+        The tasks linked to one entity (an incident, a vendor, ...) through
+        task_entity_links that the user can see: the same visibility as
+        GET /tasks (Admins see all; others see tasks they created or are
+        assigned to). Archived tasks are left out. Not paginated.
+      operationId: getTasksLinkedToEntity
+      tags: ["v1: Tasks"]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: entityType
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/EntityType"
+        - name: entityId
+          in: path
+          required: true
+          description: The entity's id, a positive integer.
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        "200":
+          description: The linked tasks.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ResponseEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/TaskWithRelations"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
   /tasks/{id}:
     get:
       summary: Get a task by ID
@@ -404,7 +450,9 @@ paths:
       description: >
         Links an entity (vendor, model, policy, compliance control, etc.)
         to the specified task. Validates that both the task and entity exist
-        and that the link is not a duplicate.
+        and that the link is not a duplicate. An archived incident cannot be
+        linked (409); restore it first. The same 409 answers a task create or
+        update whose entity_links add a link to an archived incident.
       operationId: addTaskEntityLink
       tags: [Task Entity Links]
       security:
@@ -435,8 +483,14 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "404":
           $ref: "#/components/responses/NotFound"
+        "403":
+          description: The user may not link this entity (a framework requirement of a use case they cannot see).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ResponseEnvelope"
         "409":
-          description: Duplicate link.
+          description: Duplicate link, or an archived incident.
           content:
             application/json:
               schema:
@@ -522,6 +576,7 @@ components:
         - vendor
         - model
         - policy
+        - incident
         - nist_subcategory
         - iso42001_subclause
         - iso42001_annexcategory

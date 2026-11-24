@@ -52,6 +52,7 @@ import scheduledReportsRoutes from "./scheduledReports.route";
 import reportRunsRoutes from "./reportRuns.route";
 import vendorRisksRoutes from "./vendorRisks.route";
 import llmKeysRoutes from "./llmKeys.route";
+import tasksRoutes from "./tasks.route";
 
 const router = express.Router();
 
@@ -152,5 +153,8 @@ router.use("/vendor-risks", vendorRisksRoutes);
 // LLM key create and update that check the key with its provider first; the
 // legacy /api/llm-keys writes are frozen and save without a check.
 router.use("/llm-keys", llmKeysRoutes);
+// Tasks linked to an entity (incident drawer's linked tasks); the legacy
+// /api/tasks router is frozen.
+router.use("/tasks", tasksRoutes);
 
 export default router;
