@@ -922,6 +922,8 @@ incidents are not included." (`archivedIncidentsNote` in
 | `incident_updated` | Incident modified |
 | `incident_deleted` | Incident deleted (after commit; never for a missing incident) |
 
+`incident_added`, `incident_updated` and `incident_deleted` run every action of every active automation of the trigger; an automation that existed before that change keeps only the event's first action until it is edited and saved (`legacy_first_action_only`). See [Automations → Dispatch of entity events](../infrastructure/automations.md#dispatch-of-entity-events).
+
 `incident_added` is enqueued in `transaction.afterCommit` inside
 `createNewIncidentQuery`, so it applies to every caller (the HTTP create, the AI
 Advisor, the Jira import and the demo driver): a rolled-back create never sends
