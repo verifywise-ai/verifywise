@@ -276,9 +276,8 @@ describe("incident reporter and approver users against the database", () => {
     expect(created.status).toBe(201);
     const name = await fullName(leaver);
 
-    await sequelize.query("DELETE FROM organization_members WHERE user_id = :id", {
-      replacements: { id: leaver },
-    });
+    // Deleting the account (its membership goes with it; a user may not be
+    // left without one).
     await sequelize.query("DELETE FROM users WHERE id = :id", { replacements: { id: leaver } });
 
     const got = await owner.request.get(`${ROUTE}/${created.body.data.id}`);
