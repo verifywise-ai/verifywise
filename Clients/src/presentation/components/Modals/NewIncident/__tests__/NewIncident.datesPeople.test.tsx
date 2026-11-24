@@ -214,4 +214,88 @@ describe("NewIncident dates and reporter", () => {
     expect(select.value).toBe("99");
     expect(within(select).getByRole("option", { name: "Sam Lee" })).toBeInTheDocument();
   });
+
+  it("keeps the text-only reporter as an option after picking someone else, and going back sends nothing", async () => {
+    const onSuccess = vi.fn().mockResolvedValue(undefined);
+    renderWithProviders(
+      <SideDrawerIncident
+        isOpen={true}
+        setIsOpen={vi.fn()}
+        isEdit
+        incidentId={9}
+        onSuccess={onSuccess}
+        initialData={storedIncident}
+      />,
+    );
+    const select = screen.getByTestId("select-reporter") as HTMLSelectElement;
+    await waitFor(() => expect(select).toHaveTextContent("Alex Kim"));
+
+    fireEvent.change(select, { target: { value: "7" } });
+    expect(select.value).toBe("7");
+    expect(within(select).getByRole("option", { name: "Jane" })).toBeInTheDocument();
+
+    fireEvent.change(select, { target: { value: STORED_REPORTER_OPTION } });
+    expect(select.value).toBe(STORED_REPORTER_OPTION);
+
+    fireEvent.change(screen.getByTestId("field-model_version"), { target: { value: "v2" } });
+    fireEvent.click(screen.getByText("Update incident"));
+    await waitFor(() => expect(onSuccess).toHaveBeenCalled());
+    expect(onSuccess.mock.calls[0][0]).toEqual({ model_system_version: "v2" });
+  });
+
+  it("keeps a departed reporter as an option after picking someone else", async () => {
+    renderWithProviders(
+      <SideDrawerIncident
+        isOpen={true}
+        setIsOpen={vi.fn()}
+        isEdit
+        incidentId={9}
+        initialData={{
+          ...storedIncident,
+          reporter: "Sam Lee",
+          reporter_id: 99,
+          reporter_name: "Sam Lee",
+        }}
+      />,
+    );
+    const select = screen.getByTestId("select-reporter") as HTMLSelectElement;
+    await waitFor(() => expect(select).toHaveTextContent("Alex Kim"));
+    fireEvent.change(select, { target: { value: "8" } });
+    expect(select.value).toBe("8");
+    expect(within(select).getByRole("option", { name: "Sam Lee" })).toBeInTheDocument();
+
+    fireEvent.change(select, { target: { value: "99" } });
+    expect(select.value).toBe("99");
+  });
+
+  it("sends the reporter id with the reporter text whenever the reporter changed", async () => {
+    // Stored under the user's old name: re-picking them changes only the
+    // text, which must still go with the id so the server keeps the user.
+    const onSuccess = vi.fn().mockResolvedValue(undefined);
+    renderWithProviders(
+      <SideDrawerIncident
+        isOpen={true}
+        setIsOpen={vi.fn()}
+        isEdit
+        incidentId={9}
+        onSuccess={onSuccess}
+        initialData={{
+          ...storedIncident,
+          reporter: "Alex K.",
+          reporter_id: 7,
+          reporter_name: "Alex Kim",
+        }}
+      />,
+    );
+    const select = screen.getByTestId("select-reporter") as HTMLSelectElement;
+    await waitFor(() => expect(select).toHaveTextContent("Alex Moreau"));
+    fireEvent.change(select, { target: { value: "8" } });
+    fireEvent.change(select, { target: { value: "7" } });
+    fireEvent.click(screen.getByText("Update incident"));
+
+    await waitFor(() => expect(onSuccess).toHaveBeenCalled());
+    const body = onSuccess.mock.calls[0][0];
+    expect(body.reporter_id).toBe(7);
+    expect(body.reporter).toBe("Alex Kim");
+  });
 });

@@ -251,10 +251,12 @@ const isAbsentVersion = (value: unknown): boolean => value === null || value ===
  * and id and today's date for Approved or Rejected, cleared for Pending or
  * Not required).
  *
- * A changed reporter_id must be a member of the organization (else
- * IncidentUpdateValidationError, INVALID_REFERENCE); the reporter text is
- * then set to their full name. A changed reporter text without a reporter_id
- * clears the stored reporter_id.
+ * A reporter_id sent (changed or not) sets the reporter text to that
+ * member's current full name, ignoring any reporter text sent. A changed one
+ * must be a member of the organization (else IncidentUpdateValidationError,
+ * INVALID_REFERENCE); an unchanged one whose user has left keeps the stored
+ * reporter. A changed reporter text sent without a reporter_id clears the
+ * stored reporter_id.
  *
  * History is recorded as `userId`, or as the system when
  * `options.changedBySystem` is set. With neither, no history is written.
@@ -338,16 +340,19 @@ export async function updateIncident(
       organizationId,
       transaction,
     );
-    // A reporter picked from the users (reporter_id) must be a member of the
-    // organization; their full name goes into the reporter text, so readers
-    // of the text stay right. Checked only when the id changes.
+    // A reporter picked from the users (reporter_id, changed or sent back
+    // unchanged) is the reporter: their current full name goes into the
+    // reporter text, whatever text was sent. A changed one must be a member
+    // of the organization. One sent back unchanged whose user has since left
+    // keeps the stored reporter as it is.
+    const reporterIdSent = updates.reporter_id !== undefined;
     const reporterIdChanges =
-      updates.reporter_id !== undefined &&
+      reporterIdSent &&
       !isSameIncidentValue("reporter_id", stored.reporter_id, updates.reporter_id);
-    const reporterName = reporterIdChanges
+    const reporterName = reporterIdSent
       ? await reporterNameFor(updates.reporter_id, organizationId, transaction)
       : undefined;
-    if (reporterName === null) {
+    if (reporterName === null && reporterIdChanges) {
       throw new IncidentUpdateValidationError(invalidReferenceErrors(["reporter_id"]));
     }
     if (invalidRefs.length > 0) {
@@ -355,10 +360,12 @@ export async function updateIncident(
     }
 
     const effective: Record<string, unknown> = { ...applyReopenApprovalReset(stored, updates) };
-    if (reporterName !== undefined) {
+    if (typeof reporterName === "string") {
       effective.reporter = reporterName;
+    } else if (reporterName === null) {
+      effective.reporter = stored.reporter;
     } else if (
-      !reporterIdChanges &&
+      !reporterIdSent &&
       effective.reporter !== undefined &&
       !isSameIncidentValue("reporter", stored.reporter, effective.reporter)
     ) {

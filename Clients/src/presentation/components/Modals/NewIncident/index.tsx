@@ -453,28 +453,45 @@ const SideDrawerIncident: FC<SideDrawerIncidentProps> = ({
       : [];
   }, [approvedProjects]);
 
-  // Reporter options keyed by user id. An incident whose reporter is not a
-  // listed user (text only, or someone who left) keeps it as an extra option.
+  // Reporter options keyed by user id. An incident opened with a reporter who
+  // is not a listed user (text only, or someone who left) keeps that reporter
+  // as an extra option, built from the incident as opened (initialData), so
+  // the user can go back to it after picking someone else.
   const reporterId = toId(values.reporter_id);
-  const reporterIsListed = reporterId !== null && users.some((u) => u.id === reporterId);
-  const storedReporterLabel = values.reporter_name || values.reporter;
+  const baselineReporterId = toId(initialData?.reporter_id);
+  const baselineReporterLabel = initialData
+    ? initialData.reporter_name || initialData.reporter || ""
+    : "";
+  const baselineReporterIsListed =
+    baselineReporterId !== null && users.some((u) => u.id === baselineReporterId);
+  const storedReporterOptionId: string | number = baselineReporterId ?? STORED_REPORTER_OPTION;
+  const hasStoredReporterOption = !baselineReporterIsListed && !!baselineReporterLabel;
   const reporterOptions = useMemo(() => {
     const options: { _id: string | number; name: string }[] = users.map((u) => ({
       _id: u.id,
       name: `${u.name} ${u.surname}`.trim(),
     }));
-    if (!reporterIsListed && storedReporterLabel) {
-      options.unshift({ _id: reporterId ?? STORED_REPORTER_OPTION, name: storedReporterLabel });
+    if (hasStoredReporterOption) {
+      options.unshift({ _id: storedReporterOptionId, name: baselineReporterLabel });
     }
     return options;
-  }, [users, reporterIsListed, storedReporterLabel, reporterId]);
+  }, [users, hasStoredReporterOption, storedReporterOptionId, baselineReporterLabel]);
   const reporterValue = reporterId ?? (values.reporter ? STORED_REPORTER_OPTION : "");
 
   const handleReporterChange = useCallback(
     (e: any) => {
       const picked = e.target.value;
       setValues((prev) => {
-        if (picked === STORED_REPORTER_OPTION) return prev;
+        if (hasStoredReporterOption && String(picked) === String(storedReporterOptionId)) {
+          // Back to the reporter the incident was opened with.
+          if (!initialData) return prev;
+          return {
+            ...prev,
+            reporter_id: initialData.reporter_id,
+            reporter: initialData.reporter,
+            reporter_name: initialData.reporter_name,
+          };
+        }
         const user = users.find((u) => u.id === Number(picked));
         if (!user) return prev;
         // The server writes the user's full name into the reporter text too.
@@ -487,7 +504,7 @@ const SideDrawerIncident: FC<SideDrawerIncidentProps> = ({
       });
       clearFieldError("reporter");
     },
-    [users, clearFieldError],
+    [users, clearFieldError, hasStoredReporterOption, storedReporterOptionId, initialData],
   );
 
   // Owner/assignee options keyed by user id (issue #4583)
@@ -614,6 +631,14 @@ const SideDrawerIncident: FC<SideDrawerIncidentProps> = ({
         for (const key of Object.keys(formData) as (keyof NewIncidentFormValues)[]) {
           if (NON_EDITABLE_FIELDS.has(key)) continue;
           if (!isSameFormValue(key, formData[key], baseline[key])) changed[key] = formData[key];
+        }
+        // The reporter is one value in two fields: send both whenever either
+        // changed. A reporter text alone tells the server the reporter is no
+        // longer a user (re-picking the original user after a rename changes
+        // only the text); with the id, the server writes the user's name.
+        if ("reporter" in changed || "reporter_id" in changed) {
+          changed.reporter = formData.reporter;
+          changed.reporter_id = formData.reporter_id;
         }
         if (values.expected_updated_at) changed.expected_updated_at = values.expected_updated_at;
         body = changed as Partial<NewIncidentFormValues>;

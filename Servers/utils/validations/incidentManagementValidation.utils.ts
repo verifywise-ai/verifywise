@@ -478,10 +478,20 @@ export const validateIncidentUpdateBusinessRules = (
       });
     }
   }
-  const setsReporterId = !isBlankIncidentValue(update.reporter_id);
+  // The reporter the row ends up with. A reporter_id sent (changed or not)
+  // makes the server write that member's name into the reporter text, so the
+  // text sent does not count. Otherwise the text sent, or the stored one, must
+  // be present when the reporter changes: a new text, or the user cleared.
+  const derivesReporter = !isBlankIncidentValue(update.reporter_id);
+  const clearsReporterId = update.reporter_id !== undefined && !derivesReporter;
   for (const [field, rule] of Object.entries(FIELD_RULES)) {
+    if (field === "reporter") {
+      if (derivesReporter || !(changes("reporter") || clearsReporterId)) continue;
+      const error = rule(update.reporter !== undefined ? update.reporter : stored.reporter);
+      if (error) errors.push(error);
+      continue;
+    }
     if (!changes(field)) continue;
-    if (field === "reporter" && setsReporterId) continue;
     const error =
       field === "categories_of_harm"
         ? checkHarmCategories(update[field], storedHarmCategories(stored.categories_of_harm))

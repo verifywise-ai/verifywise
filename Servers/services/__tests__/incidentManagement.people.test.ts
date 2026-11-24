@@ -228,6 +228,65 @@ describe("incident reporter and approver users", () => {
       expect(writtenColumns()).toEqual({ severity: "Minor" });
     });
 
+    it("an unchanged reporter_id with a blank reporter text keeps the user and their name", async () => {
+      const stored = storedIncident();
+      stored.setDataValue("reporter_id", 7);
+      stored.setDataValue("reporter", "Alex Kim");
+      mockGet.mockImplementation(async () => stored);
+      const result = await updateIncident(1, 42, { reporter_id: 7, reporter: "" }, 7, {
+        access: FULL_ACCESS,
+      });
+      // Nothing to write: the reporter stays Alex Kim, user 7.
+      expect(mockUpdate).not.toHaveBeenCalled();
+      expect(result).toBe(stored);
+    });
+
+    it("an unchanged reporter_id with another reporter text keeps the user and writes their name", async () => {
+      const stored = storedIncident();
+      stored.setDataValue("reporter_id", 7);
+      stored.setDataValue("reporter", "Alex K.");
+      mockGet.mockImplementation(async () => stored);
+      await updateIncident(1, 42, { reporter_id: 7, reporter: "Someone else" }, 7, {
+        access: FULL_ACCESS,
+      });
+      // The text follows the member's current full name; the id is kept.
+      expect(writtenColumns()).toEqual({ reporter: "Alex Kim" });
+    });
+
+    it("an unchanged reporter_id whose user has left keeps the stored reporter text", async () => {
+      const stored = storedIncident();
+      stored.setDataValue("reporter_id", 99);
+      stored.setDataValue("reporter", "Former Member");
+      mockGet.mockImplementation(async () => stored);
+      await updateIncident(1, 42, { reporter_id: 99, reporter: "", severity: "Minor" }, 7, {
+        access: FULL_ACCESS,
+      });
+      expect(writtenColumns()).toEqual({ severity: "Minor" });
+    });
+
+    it("clearing reporter_id with a blank reporter text is refused", async () => {
+      const stored = storedIncident();
+      stored.setDataValue("reporter_id", 7);
+      mockGet.mockImplementation(async () => stored);
+      const errors = await validationErrors(
+        updateIncident(1, 42, { reporter_id: null, reporter: "" }, 7, { access: FULL_ACCESS }),
+      );
+      expect(errors).toEqual([
+        expect.objectContaining({ field: "reporter", code: "REQUIRED_FIELD" }),
+      ]);
+      expect(mockUpdate).not.toHaveBeenCalled();
+    });
+
+    it("clearing reporter_id with a new reporter text keeps that text", async () => {
+      const stored = storedIncident();
+      stored.setDataValue("reporter_id", 7);
+      mockGet.mockImplementation(async () => stored);
+      await updateIncident(1, 42, { reporter_id: null, reporter: "Grace Hopper" }, 7, {
+        access: FULL_ACCESS,
+      });
+      expect(writtenColumns()).toEqual({ reporter_id: null, reporter: "Grace Hopper" });
+    });
+
     it("a new reporter text without an id clears the stored reporter_id", async () => {
       const stored = storedIncident();
       stored.setDataValue("reporter_id", 7);

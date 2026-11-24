@@ -112,6 +112,27 @@ describe("reporter validation", () => {
     );
   });
 
+  it("checks the reporter the row ends up with, not only the fields sent", () => {
+    const stored = { reporter: "Jane Doe", reporter_id: 5 };
+    // reporter_id sent back unchanged: the server writes the member's name.
+    expect(validateIncidentUpdateBusinessRules({ reporter: "", reporter_id: 5 }, stored)).toEqual(
+      [],
+    );
+    // Clearing the user leaves the text as the reporter: it must be present.
+    expect(
+      fields(validateIncidentUpdateBusinessRules({ reporter_id: null, reporter: "" }, stored)),
+    ).toEqual(["reporter:REQUIRED_FIELD"]);
+    expect(
+      fields(
+        validateIncidentUpdateBusinessRules({ reporter_id: "" }, { reporter: "", reporter_id: 5 }),
+      ),
+    ).toEqual(["reporter:REQUIRED_FIELD"]);
+    expect(validateIncidentUpdateBusinessRules({ reporter_id: null }, stored)).toEqual([]);
+    expect(
+      validateIncidentUpdateBusinessRules({ reporter_id: null, reporter: "Grace" }, stored),
+    ).toEqual([]);
+  });
+
   it("drops approved_by_id with the other server-set approval fields", () => {
     expect(
       withoutServerSetApprovalFields({
