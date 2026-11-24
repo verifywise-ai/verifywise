@@ -147,7 +147,7 @@ export const riskScoringContent: ArticleContent = {
     {
       type: 'callout',
       variant: 'info',
-      text: 'LLM analysis needs an LLM key configured in **Settings → LLM keys**. It uses your organization\'s own API key; no scan data is stored by the LLM provider.',
+      text: 'LLM analysis needs an LLM key configured in **Settings → API keys**. It uses your organization\'s own API key; no scan data is stored by the LLM provider.',
     },
     {
       type: 'heading',
