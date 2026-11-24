@@ -117,11 +117,14 @@ export function braveQueryOf(query: string, kind: SearchKind): string {
   return cutAtCodePoint(wordsOf(bounded).slice(0, words).join(" "), chars).trimEnd();
 }
 
-/** The address of a request: the endpoint of `kind` and its parameters. */
-export function braveUrlOf(query: string, kind: SearchKind): string {
-  const params = new URLSearchParams({ q: query, count: String(COUNT) });
+/**
+ * The address of a request: the endpoint of `kind` and its parameters, asking for `count` results
+ * (ten for a search; the key check asks for one).
+ */
+export function braveUrlOf(query: string, kind: SearchKind, count: number = COUNT): string {
+  const params = new URLSearchParams({ q: query, count: String(count) });
   if (kind === "web") {
-    params.set("maximum_number_of_urls", String(COUNT));
+    params.set("maximum_number_of_urls", String(count));
     params.set("maximum_number_of_tokens", String(MAX_CONTEXT_TOKENS));
   } else {
     params.set("text_decorations", "false");
