@@ -49,7 +49,7 @@ describe("planKeyedTarget", () => {
   });
 
   // ISO 42001 holds subclause rows (6.1.1–6.1.4, 6.3) that only a migration
-  // created; NIST is missing MEASURE 2.10–2.13. Neither is touched.
+  // created; an item added in the code needs a migration. Neither is touched.
   it("leaves database-only rows alone and counts code items with no row", () => {
     const plan = planKeyedTarget(target(), [
       { id: 10, key: "1", title: "Policy", questions: ["Is there one?"] },

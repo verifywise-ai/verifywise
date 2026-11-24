@@ -5,15 +5,13 @@
  * nist_ai_rmf_subcategories_struct.subcategory_id is written by the seed
  * migration.
  *
- * Keyed rather than positional on purpose: the struct table holds 70 of the 74
- * subcategories this framework declares, so pairing a flat array against the
- * struct rows by index would attach every later entry to the wrong
- * subcategory. An entry whose key has no struct row simply seeds nothing.
+ * Keyed rather than positional on purpose: pairing a flat array against the
+ * struct rows by index would attach entries to the wrong subcategory as soon as
+ * the two differ. An entry whose key has no struct row simply seeds nothing.
  *
- * The four that are missing are MEASURE 2.10-2.13. subcategory_id is
- * numeric(4,1), so each of them rounds to 2.1 and collides with MEASURE 2.1,
- * and the seeding migration's ON CONFLICT DO NOTHING drops them. Their entries
- * are kept below so they seed if that column ever becomes text.
+ * Until migration 20261123170316, subcategory_id was numeric(4,1), so MEASURE
+ * 2.10-2.13 rounded to 2.1, collided with MEASURE 2.1 and were never seeded.
+ * The column is text now and all 74 subcategories have struct rows.
  */
 
 export interface NISTDemoEntry {

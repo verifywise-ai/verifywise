@@ -61,7 +61,7 @@ async function notifyNistAiRmfAssignment(
       func_type: string;
       category_struct_id: number;
       category_id: number;
-      subcategory_id: number;
+      subcategory_id: string;
       subcategory_description: string;
     }>(
       `SELECT ss.function as func_type, cs.id as category_struct_id, cs.category_id, ss.subcategory_id, ss.description as subcategory_description
@@ -84,8 +84,20 @@ async function notifyNistAiRmfAssignment(
       categoryName = `Category ${result[0].category_id}`;
       description = result[0].subcategory_description;
       // Build subcategory identifier like "GV-1.1"
-      const funcAbbrev = result[0].func_type.substring(0, 2).toUpperCase();
-      entityName = `${funcAbbrev}-${result[0].category_id}.${result[0].subcategory_id} ${entityName}`;
+      // NIST's own codes; the first two letters would give MAP and MANAGE the
+      // same "MA".
+      const NIST_FUNCTION_CODES: Record<string, string> = {
+        GOVERN: "GV",
+        MAP: "MP",
+        MEASURE: "MS",
+        MANAGE: "MG",
+      };
+      const funcAbbrev =
+        NIST_FUNCTION_CODES[result[0].func_type] ??
+        result[0].func_type.substring(0, 2).toUpperCase();
+      // subcategory_id already holds the category ("1.1"), so it follows the
+      // function abbreviation directly.
+      entityName = `${funcAbbrev}-${result[0].subcategory_id} ${entityName}`;
       urlPath = `/framework?framework=nist-ai-rmf&functionId=${funcType}&categoryId=${result[0].category_struct_id}&subcategoryId=${entityId}`;
     } else {
       urlPath = `/framework?framework=nist-ai-rmf&subcategoryId=${entityId}`;

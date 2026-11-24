@@ -45,18 +45,16 @@ describe("bundled framework text sync", () => {
   });
 
   // Right after the migrations every framework already holds the code's text,
-  // with two known exceptions on a fresh install: ISO 27001 Annex A controls
+  // with one known exception on a fresh install: ISO 27001 Annex A controls
   // that 20260420113913 left under the wrong titles (the sync realigns them to
-  // their control numbers), and NIST MEASURE 2.10–2.13, which the seed could
-  // not insert (DECIMAL(4,1) subcategory ids), so the code has 4 items with no
-  // row.
+  // their control numbers). NIST MEASURE 2.10–2.13, which the seed could not
+  // insert, are added by 20261123170316, so no item in the code lacks a row.
   it("changes nothing right after the migrations except the known ISO 27001 fix", async () => {
     const results = await syncFrameworkText(quiet);
     expect(results).toHaveLength(FRAMEWORK_STRUCTURES.length + BUILTIN_TEXT_SOURCES.length);
     const byKey = new Map(results.map((r) => [r.key, r]));
-    const others = results.filter((r) => r.key !== "iso-27001" && r.key !== "nist-ai-rmf");
+    const others = results.filter((r) => r.key !== "iso-27001");
     expect(others.filter((r) => r.updated > 0 || r.skipped || r.missing)).toEqual([]);
-    expect(byKey.get("nist-ai-rmf")).toEqual({ key: "nist-ai-rmf", updated: 0, missing: 4 });
     const iso27001 = byKey.get("iso-27001") as FrameworkTextSyncResult;
     expect(iso27001.skipped).toBeUndefined();
     expect(iso27001.updated).toBeGreaterThan(0);

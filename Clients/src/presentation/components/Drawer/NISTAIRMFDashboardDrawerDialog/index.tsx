@@ -312,7 +312,8 @@ const NISTAIRMFDrawerDialog: React.FC<NISTAIRMFDrawerProps> = ({
 
   const title = (
     <>
-      {functionType} {category?.index}.{subcategory?.index}
+      {/* subcategory.index is the NIST reference ("2.10"), category included */}
+      {functionType} {subcategory?.index ?? category?.index}
     </>
   );
 
