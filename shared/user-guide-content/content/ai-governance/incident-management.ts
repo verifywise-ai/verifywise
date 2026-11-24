@@ -62,14 +62,18 @@ export const incidentManagementContent: ArticleContent = {
         { bold: 'Severity', text: ',How serious the incident is (see below)' },
         { bold: 'Occurred date', text: ',When the incident actually happened' },
         { bold: 'Detected date', text: ',When the incident was discovered (may differ from occurrence)' },
-        { bold: 'Reporter', text: ',Who is reporting the incident' },
+        { bold: 'Reporter', text: ',Who is reporting the incident, picked from your organization\'s users' },
         { bold: 'Categories of harm', text: ',At least one kind of harm involved' },
         { bold: 'Description', text: ',A clear description of what occurred, at least 5 characters' },
       ],
     },
     {
       type: 'paragraph',
-      text: 'Neither date can be in the future, and the detected date cannot be before the occurred date. The status starts as Open and the approval status as Pending. The model/system version and the other impact and response fields are optional.',
+      text: 'Both dates start as your own today. Neither can be in the future, and the detected date cannot be before the occurred date. The status starts as Open and the approval status as Pending. The model/system version and the other impact and response fields are optional.',
+    },
+    {
+      type: 'paragraph',
+      text: 'Dates are calendar days with no time attached, so every user sees the same date whatever their time zone. The reporter and the approver show by full name. Incidents imported from Jira, and incidents recorded before reporters were picked as users, show the name that was stored with them.',
     },
     {
       type: 'image',
@@ -244,7 +248,7 @@ export const incidentManagementContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'You don\'t pick the approver or the date. When someone sets the approval status to Approved or Rejected, VerifyWise records that person as the approver and the current date as the approval date. Setting it back to Pending or Not required clears both. Changing only the approval notes keeps them.',
+      text: 'You don\'t pick the approver or the date. When someone sets the approval status to Approved or Rejected, VerifyWise records that person as the approver and the current date (UTC) as the approval date. Setting it back to Pending or Not required clears both. Changing only the approval notes keeps them.',
     },
     {
       type: 'paragraph',

@@ -26,9 +26,10 @@ ai_incident_managements
 ├── ai_project (TEXT NOT NULL)
 ├── type (ENUM)
 ├── severity (ENUM)
-├── occurred_date (TIMESTAMPTZ NOT NULL)
-├── date_detected (TIMESTAMPTZ NOT NULL)
-├── reporter (TEXT NOT NULL)
+├── occurred_date (DATE NOT NULL)
+├── date_detected (DATE NOT NULL)
+├── reporter (VARCHAR(255) NOT NULL) -- name; the reporter_id user's full name when set
+├── reporter_id (FK → users, ON DELETE SET NULL)
 ├── status (ENUM, default: Open)
 ├── categories_of_harm (JSON NOT NULL)
 ├── affected_persons_groups (TEXT)
@@ -39,13 +40,73 @@ ai_incident_managements
 ├── model_system_version (TEXT)
 ├── interim_report (BOOLEAN, default: false)
 ├── approval_status (ENUM, default: Pending)
-├── approved_by (TEXT)
-├── approval_date (TIMESTAMPTZ)
+├── approved_by (VARCHAR(255)) -- name, set by the server
+├── approved_by_id (FK → users, ON DELETE SET NULL) -- set by the server
+├── approval_date (DATE) -- set by the server
 ├── approval_notes (TEXT)
 ├── archived (BOOLEAN, default: false)
 ├── created_at (TIMESTAMPTZ)
 └── updated_at (TIMESTAMPTZ)
 ```
+
+### Dates and people
+
+`occurred_date`, `date_detected` and `approval_date` are `DATE` columns
+(migration `20261123192509-incident-dates-and-people`; they were
+`TIMESTAMP` until 2026-11). The API sends and returns them as `YYYY-MM-DD`.
+Sequelize registers its `DATEONLY` parser for the `date` type on every pooled
+connection, so raw `sequelize.query` reads get the string too, never a JS Date
+at server-local midnight. A request may send an ISO date-time; its date part
+(`YYYY-MM-DD` prefix, offset ignored) is stored. A JS Date built by server
+code (the Advisor's today, a Jira issue's creation time) is stored as its UTC
+date (`toIncidentDateValue` in `incidentManagementValidation.utils.ts`).
+People-facing formatting (automation emails, reports) uses
+`formatIncidentDay`, which formats the day in UTC so a server west of UTC
+never shows the day before.
+
+The migration converted existing rows with `col::date`, the stored wall-clock
+date: the drawer always sent `YYYY-MM-DD` and the server-side writers sent
+Dates as UTC (Sequelize sessions run at `+00:00`), so this is the date each
+row was created with. Its `down` converts back to `TIMESTAMP` at midnight.
+
+On the page, the table and CE marking format the stored day itself
+(`toDateOnlyString` then the user's date format), the occurred date filter
+compares local midnight of that day (`dateOnlyToLocalDay`), and the export
+writes `YYYY-MM-DD`. The drawer's default dates are the user's own today,
+computed when it opens (`createInitialState`), not the UTC date at page load.
+
+`reporter_id` and `approved_by_id` are user foreign keys (`ON DELETE SET
+NULL`, like `assignee_id`). The text columns stay: Jira imports send a name
+only, rows created before 2026-11 have a first name only (no backfill: a first
+name cannot be matched to one user), and the server writes the user's full
+name into the text whenever it sets an id, so readers of the text stay right.
+The list and single reads add `reporter_name` and `approved_by_name` (the
+users' current full names, null without an id); the page shows
+`reporter_name || reporter` and `approved_by_name || approved_by`
+(`AIIncidentManagementModel.reporterLabel` / `approverLabel`).
+
+- **Reporter on create:** required as a `reporter_id` or a non-empty
+  `reporter` text. A `reporter_id` must be a member of the caller's
+  organization (`getIncidentMemberName`; otherwise 400 `INVALID_REFERENCE` on
+  `reporter_id`), and the server writes their full name into `reporter`,
+  ignoring any text sent. The drawer picks reporters by user id; the Advisor
+  sends the requesting user's id and name.
+- **Reporter on update:** a changed `reporter_id` is checked the same way and
+  rewrites `reporter`. A changed `reporter` text without `reporter_id` clears
+  the stored `reporter_id` (the text now names someone else). An unchanged
+  `reporter_id` is never re-checked, so a reporter who has left the
+  organization does not block other edits. The drawer shows a reporter who is
+  not among the listed users (text only, or departed) as an extra option.
+- **Approver:** `approved_by_id` is server-set like `approved_by` and
+  `approval_date` (dropped from every request). A decision stamps the acting
+  user's id and name and today's UTC date; Pending or Not required, and the
+  reopen reset, clear all three.
+- **Removed or deleted users:** removing a member from the organization does
+  not clear `reporter_id` or `approved_by_id` (they record who did something,
+  not who is responsible now, unlike the owner); deleting the account nulls
+  them through the foreign key, and the page falls back to the stored text.
+- Change history tracks the text columns (`reporter`, `approved_by`), not the
+  ids, so a change of reporter is recorded once, by name.
 
 ### Incident Change History Table
 
@@ -167,11 +228,11 @@ The update route lets in a caller holding either key (`authorizeAny` in `middlew
 
 `approved_by` and `approval_date` are set by the server, never by the caller: every write path drops them from the request (`withoutServerSetApprovalFields`). When `approval_status` changes (`approvalStampFor`):
 
-- to Approved or Rejected: `approved_by` is the acting user's name (`name surname` from `users`, `getIncidentApproverName`, `User #<id>` without a name) and `approval_date` is now;
-- to Pending or Not required: both are cleared;
-- unchanged (for example only the notes change): both stay as stored.
+- to Approved or Rejected: `approved_by` is the acting user's name (`name surname` from `users`, `getIncidentApproverName`, `User #<id>` without a name), `approved_by_id` their id and `approval_date` today's UTC date (`incidentToday`);
+- to Pending or Not required: all three are cleared;
+- unchanged (for example only the notes change): they stay as stored.
 
-On create (`createNewIncident`), a caller without `incident.approve` gets an incident that starts Pending with no approver, date or notes, whatever was sent. A caller with it may create the incident Approved or Rejected; the server then records them as approver, dated now. Creation history records the approval as stored.
+On create (`createNewIncident`), a caller without `incident.approve` gets an incident that starts Pending with no approver, date or notes, whatever was sent. A caller with it may create the incident Approved or Rejected; the server then records them as approver, dated today. Creation history records the approval as stored.
 
 `updateIncident` refuses a call with neither `access` nor `changedBySystem`. System writers (`changedBySystem: true`, the Jira status sync) default to `SYSTEM_INCIDENT_ACCESS`: details only, never approval. The Advisor's incident tools and the MCP `update_incident` tool check `incident.edit` for their user and pass edit-only access: they change details only and never record approval.
 
@@ -258,9 +319,9 @@ POST /aiIncidentManagement/
   ai_project: "Customer Service Chatbot",
   type: "Unexpected behavior",
   severity: "Serious",
-  occurred_date: "2025-01-15T10:30:00Z",
-  date_detected: "2025-01-15T11:00:00Z",
-  reporter: "John Smith",
+  occurred_date: "2025-01-15",
+  date_detected: "2025-01-15",
+  reporter_id: 12,          // or reporter: "John Smith" (text only)
   status: "Open",
   categories_of_harm: ["Safety", "Rights"],
   affected_persons_groups: "End users",
@@ -453,15 +514,11 @@ incidents status sync (`changedBySystem: true`, see
    (`incidentManagementValidation.utils.ts`) that the reset uses to decide
    whether an approval field was touched:
    - `''`, null and undefined are all empty;
-   - date columns compare **calendar dates** (`incidentCalendarDate`). The
-     columns are TIMESTAMP WITHOUT TIME ZONE and the project installs no custom
-     pg type parser, so pg parses them (oid 1114) as server-local time: a stored
-     Date is read by its local components (the wall-clock date stored), and a
-     string starting `YYYY-MM-DD` is that date (Postgres ignores any offset for
-     this column type). Known, separate issue: the API serialises these Dates
-     with `toISOString()`, which shifts the date on a non-UTC server; the fix is
-     a single pg type parser for oid 1114, not part of this change;
-   - foreign keys compare as numbers, `archived` / `interim_report` treat empty
+   - date columns compare **calendar dates** (`incidentCalendarDate`): the
+     columns are DATE and read back as `YYYY-MM-DD` strings (see
+     [Dates and people](#dates-and-people)); a string starting `YYYY-MM-DD` is
+     that date, a JS Date its UTC date;
+   - foreign keys (including `reporter_id` and `approved_by_id`) compare as numbers, `archived` / `interim_report` treat empty
      as false, harm categories compare as lists.
    `archived` is never written as NULL.
 7. If nothing changed, returns the row as it is: no UPDATE, no `updated_at`
@@ -635,7 +692,8 @@ The rules live in `Servers/utils/validations/incidentManagementValidation.utils.
 | approval_status | Optional, defaults to Pending; one of `AIIncidentManagementApprovalStatus` | Cannot be blanked; same rule when changed |
 | occurred_date, date_detected | Required; a real date (YYYY-MM-DD or an ISO date-time); not later than today in UTC+14 | Cannot be blanked; same rule when changed |
 | date_detected vs occurred_date | Detected on or after occurred (calendar dates) | Checked when either date changes, on the dates the row ends up with (request over the stored row) |
-| reporter | Required, text, at most 255 characters | Cannot be blanked; same rule when changed |
+| reporter | Required as a `reporter_id` or text (at most 255 characters); with a `reporter_id` the text is the user's full name | Cannot be blanked (unless the same update sets a `reporter_id`); same rule when changed |
+| reporter_id | Optional user id (positive integer) of a member of the organization | Checked only when changed; a changed reporter text without it clears it |
 | model_system_version | Optional text, at most 255 characters | Same |
 | description | 5-32,767 characters (`INCIDENT_DESCRIPTION_MAX_LENGTH`, Jira's text-field limit; column is TEXT) | Checked only when it changes |
 | affected_persons_groups, relationship_causality, immediate_mitigations, planned_corrective_actions, approval_notes | Optional text (TEXT, no length limit) | Same |
@@ -679,9 +737,8 @@ The rules live in `Servers/utils/validations/incidentManagementValidation.utils.
   needs no defaults.
 - **Creation history** records the saved row (defaults, parsed harm categories and the server's
   approval fields), not the request body, leaving out column defaults the caller did not send
-  (false `archived` / `interim_report`, an empty harm category list). Occurred and detected dates
-  are formatted from the stored day's local date parts (`GENERIC_FORMATTERS.calendarDate`), so a
-  server east of UTC does not record the day before.
+  (false `archived` / `interim_report`, an empty harm category list). Dates are recorded as the
+  stored `YYYY-MM-DD` (`GENERIC_FORMATTERS.date`).
 - **Whitespace-only `status` / `approval_status` on create** count as omitted and take the
   defaults.
 
@@ -1077,11 +1134,10 @@ Known issues outside this change, recorded so they are not lost:
   controllers). For those, a user id from another organization written into a
   tracked field would be shown with that user's name. Fix: pass
   `{ organizationId, transaction }` from each caller.
-- **TIMESTAMP WITHOUT TIME ZONE dates shift on non-UTC servers
-  (pre-existing).** pg parses these columns (oid 1114) as server-local time
-  and the API serialises them with `toISOString()`, so `occurred_date`,
-  `date_detected` and `approval_date` can show a day early or late when the
-  server is not on UTC. Fix: a single pg type parser for oid 1114.
+- **Approval date is the UTC day.** The server records `approval_date` as
+  today in UTC, so an approval late in the evening west of UTC shows the next
+  day. Recording the approver's own day would need the client's date or time
+  zone in the request.
 
 ## Related Documentation
 
