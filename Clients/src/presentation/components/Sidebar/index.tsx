@@ -1,5 +1,6 @@
-import React, { useEffect, useContext } from "react";
+import React, { useEffect } from "react";
 import { useLocation, useNavigate } from "react-router";
+import { useDispatch } from "react-redux";
 import {
   Home,
   Flag,
@@ -19,7 +20,7 @@ import {
   Database,
   Rocket,
 } from "lucide-react";
-import { VerifyWiseContext } from "../../../application/contexts/VerifyWise.context";
+import { setComponentVisibility } from "../../../application/redux/ui/uiSlice";
 import useMultipleOnScreen from "../../../application/hooks/useMultipleOnScreen";
 import { useOpenTasksCount } from "../../../application/hooks/useOpenTasksCount";
 import SidebarShell, { SidebarMenuItem, SidebarMenuGroup } from "./SidebarShell";
@@ -55,7 +56,7 @@ const Sidebar: React.FC<SidebarProps> = ({
 }) => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { changeComponentVisibility } = useContext(VerifyWiseContext);
+  const dispatch = useDispatch();
   const { refs: _refs, allVisible } = useMultipleOnScreen<HTMLElement>({
     countToTrigger: 1,
   });
@@ -64,7 +65,7 @@ const Sidebar: React.FC<SidebarProps> = ({
 
   useEffect(() => {
     if (allVisible) {
-      changeComponentVisibility("sidebar", true);
+      dispatch(setComponentVisibility({ component: "sidebar", value: true }));
     }
   }, [allVisible]);
 

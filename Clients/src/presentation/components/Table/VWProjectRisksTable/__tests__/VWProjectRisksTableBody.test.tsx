@@ -2,7 +2,6 @@ import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { renderWithProviders } from "../../../../../test/renderWithProviders";
 import VWProjectRisksTableBody from "../VWProjectRisksTableBody";
-import { VerifyWiseContext } from "../../../../../application/contexts/VerifyWise.context";
 import type { RiskModel } from "../../../../../domain/models/Common/risks/risk.model";
 
 vi.mock("../../../../../application/hooks/useAuth", () => ({
@@ -78,44 +77,8 @@ const defaultProps = {
   ]),
 };
 
-const contextValue = {
-  setInputValues: vi.fn(),
-  uiValues: {},
-  setUiValues: vi.fn(),
-  authValues: {},
-  setAuthValues: vi.fn(),
-  dashboardValues: {
-    dashboard: {},
-    projects: {},
-    compliance: {},
-    assessments: {},
-    vendors: [],
-    users: [],
-  },
-  setDashboardValues: vi.fn(),
-  inputValues: {},
-  token: null,
-  currentProjectId: null,
-  setCurrentProjectId: vi.fn(),
-  userId: null,
-  projects: [],
-  setProjects: vi.fn(),
-  componentsVisible: { home: false, sidebar: false, projectFrameworks: false, compliance: false },
-  changeComponentVisibility: vi.fn(),
-  users: [],
-  refreshUsers: vi.fn(),
-  userRoleName: "Admin",
-  organizationId: null,
-  photoRefreshFlag: false,
-  setPhotoRefreshFlag: vi.fn(),
-};
-
 function renderWithContext(ui: React.ReactElement) {
-  return renderWithProviders(
-    <VerifyWiseContext.Provider value={contextValue}>
-      <table>{ui}</table>
-    </VerifyWiseContext.Provider>,
-  );
+  return renderWithProviders(<table>{ui}</table>);
 }
 
 describe("VWProjectRisksTableBody", () => {
@@ -226,24 +189,19 @@ describe("VWProjectRisksTableBody", () => {
     expect(screen.getByText("-")).toBeInTheDocument();
   });
 
-  it("calls setInputValues on row click with assessment_mapping", async () => {
-    const setInputValues = vi.fn();
+  it("dispatches setInputValues on row click with assessment_mapping", async () => {
     const user = userEvent.setup();
 
     const rowsWithAssessment = [
       { ...mockRows[0], assessment_mapping: 5 },
     ] as unknown as RiskModel[];
 
-    renderWithContext(
-      <VerifyWiseContext.Provider value={{ ...contextValue, setInputValues }}>
-        <table>
-          <VWProjectRisksTableBody {...defaultProps} rows={rowsWithAssessment} />
-        </table>
-      </VerifyWiseContext.Provider>,
+    const { store } = renderWithContext(
+      <VWProjectRisksTableBody {...defaultProps} rows={rowsWithAssessment} />,
     );
 
     await user.click(screen.getByText("Data Breach Risk"));
-    expect(setInputValues).toHaveBeenCalledWith(
+    expect(store.getState().ui.inputValues).toEqual(
       expect.objectContaining({
         assessment_mapping: 5,
       }),

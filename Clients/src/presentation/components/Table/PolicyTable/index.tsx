@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useContext, useMemo } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import {
   Stack,
   Table,
@@ -14,7 +14,8 @@ import {
   Box,
 } from "@mui/material";
 import TablePaginationActions from "../../TablePagination";
-import { VerifyWiseContext } from "../../../../application/contexts/VerifyWise.context";
+import { useDispatch } from "react-redux";
+import { setInputValues } from "../../../../application/redux/ui/uiSlice";
 import singleTheme from "../../../themes/v1SingleTheme";
 import { ChevronsUpDown, ChevronUp, ChevronDown } from "lucide-react";
 import Checkbox from "../../Inputs/Checkbox";
@@ -60,7 +61,7 @@ const CustomizablePolicyTable = ({
   const [rowsPerPage, setRowsPerPage] = useState(() =>
     getPaginationRowCount("policyManager", DEFAULT_ROWS_PER_PAGE),
   );
-  const { setInputValues } = useContext(VerifyWiseContext);
+  const dispatch = useDispatch();
   const { users } = useUsers();
   const userSortNames = useMemo(() => buildUserSortNames(users), [users]);
 
@@ -110,7 +111,7 @@ const CustomizablePolicyTable = ({
 
   const onRowClickHandler = (event: React.MouseEvent<HTMLTableRowElement>, rowData: any) => {
     setSelectedRow(rowData);
-    setInputValues(rowData);
+    dispatch(setInputValues(rowData));
     setAnchorEl(event.currentTarget);
     onRowClick?.(rowData.id);
   };

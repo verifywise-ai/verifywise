@@ -1,4 +1,5 @@
-import { useContext, useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback } from "react";
+import { useDispatch, useSelector } from "react-redux";
 import { Stack, Typography } from "@mui/material";
 import { useSearchParams } from "react-router";
 import { pageHeadingStyle } from "../../Assessment/1.0AssessmentTracker/index.style";
@@ -10,7 +11,10 @@ import ControlCategoryTile from "./ControlCategory";
 import PageTour from "../../../components/PageTour";
 import ComplianceSteps from "./ComplianceSteps";
 import useMultipleOnScreen from "../../../../application/hooks/useMultipleOnScreen";
-import { VerifyWiseContext } from "../../../../application/contexts/VerifyWise.context";
+import {
+  selectComponentsVisible,
+  setComponentVisibility,
+} from "../../../../application/redux/ui/uiSlice";
 import { ComplianceData } from "../../../../domain/interfaces/i.compliance";
 import { Project } from "../../../../domain/types/Project";
 import { projectHighRiskRoles } from "../../../../application/utils/highRiskRoles";
@@ -42,7 +46,8 @@ const ComplianceTracker = ({
   const [controlCategories, setControlCategories] = useState<ControlCategoryModel[]>();
   const [error, setError] = useState<unknown>(null);
   const [loading, setLoading] = useState<boolean>(true);
-  const { componentsVisible, changeComponentVisibility } = useContext(VerifyWiseContext);
+  const componentsVisible = useSelector(selectComponentsVisible);
+  const dispatch = useDispatch();
   const [runComplianceTour, setRunComplianceTour] = useState(false);
   const [initialControlCategoryId, setInitialControlCategoryId] = useState<number | null>(null);
 
@@ -84,7 +89,7 @@ const ComplianceTracker = ({
 
   useEffect(() => {
     if (allVisible) {
-      changeComponentVisibility("compliance", true);
+      dispatch(setComponentVisibility({ component: "compliance", value: true }));
     }
   }, [allVisible]);
 

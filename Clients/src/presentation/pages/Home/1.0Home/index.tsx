@@ -1,6 +1,11 @@
-import { useContext, useEffect, useState, useRef, useMemo } from "react";
+import { useEffect, useState, useRef, useMemo } from "react";
 import { useLocation, useNavigate } from "react-router";
-import { VerifyWiseContext } from "../../../../application/contexts/VerifyWise.context";
+import { useDispatch, useSelector } from "react-redux";
+import {
+  selectComponentsVisible,
+  setComponentVisibility,
+} from "../../../../application/redux/ui/uiSlice";
+import useUsers from "../../../../application/hooks/useUsers";
 import { FrameworkTypeEnum } from "../../../components/Forms/ProjectForm/constants";
 import { ProjectForm } from "../../../components/Forms/ProjectForm";
 import PageTour from "../../../components/PageTour";
@@ -46,8 +51,9 @@ const STAGE_EMPTY: Record<LifecycleStage, string> = {
 const Home = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { componentsVisible, changeComponentVisibility, refreshUsers } =
-    useContext(VerifyWiseContext);
+  const componentsVisible = useSelector(selectComponentsVisible);
+  const dispatch = useDispatch();
+  const { refreshUsers } = useUsers();
   const can = useCanCheck();
   const [isProjectFormModalOpen, setIsProjectFormModalOpen] = useState<boolean>(false);
   const [isScreeningOpen, setIsScreeningOpen] = useState<boolean>(false);
@@ -85,7 +91,7 @@ const Home = () => {
   });
   useEffect(() => {
     if (allVisible) {
-      changeComponentVisibility("home", true);
+      dispatch(setComponentVisibility({ component: "home", value: true }));
     }
   }, [allVisible]);
 

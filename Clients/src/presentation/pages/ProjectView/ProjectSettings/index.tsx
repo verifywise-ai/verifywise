@@ -25,7 +25,7 @@ import {
 } from "@mui/material";
 import { VWLink } from "../../../components/Link";
 import { ChevronDown } from "lucide-react";
-import React, { useState, useCallback, useMemo, useEffect, useRef, useContext } from "react";
+import React, { useState, useCallback, useMemo, useEffect, useRef } from "react";
 import Field from "../../../components/Inputs/Field";
 import DatePicker from "../../../components/Inputs/Datepicker";
 import dayjs, { Dayjs } from "dayjs";
@@ -42,6 +42,7 @@ import {
 import { logEngine } from "../../../../application/tools/log.engine";
 import { useNavigate, useSearchParams } from "react-router";
 import useProjectData from "../../../../application/hooks/useProjectData";
+import { useProjectsCache } from "../../../../application/hooks/useProjectsCache";
 import useUsers from "../../../../application/hooks/useUsers";
 import {
   useGroups,
@@ -61,7 +62,6 @@ import { useRequiredCustomFieldsGate } from "../../../components/CustomFieldsSec
 import useFrameworks from "../../../../application/hooks/useFrameworks";
 import { Framework } from "../../../../domain/types/Framework";
 import { useCanCheck, useCan } from "../../../../application/hooks/useCan";
-import { VerifyWiseContext } from "../../../../application/contexts/VerifyWise.context";
 import { updateProject } from "../../../../application/repository/project.repository";
 import { AiRiskClassification } from "../../../../domain/enums/aiRiskClassification.enum";
 import { HighRiskRole } from "../../../../domain/enums/highRiskRole.enum";
@@ -288,7 +288,7 @@ const OwnerPartyName = ({ party }: { party: OwnerParty }) =>
 
 const ProjectSettings = React.memo(
   ({ triggerRefresh = () => {} }: { triggerRefresh?: (isUpdate: boolean) => void }) => {
-    const { setProjects } = useContext(VerifyWiseContext);
+    const { setProjectsCache } = useProjectsCache();
     const can = useCanCheck();
     const [searchParams] = useSearchParams();
     const projectId = searchParams.get("projectId") ?? "1"; // default project ID is 2
@@ -905,7 +905,7 @@ const ProjectSettings = React.memo(
         isToast: true,
         visible: true,
       });
-      setProjects((prevProjects) =>
+      setProjectsCache((prevProjects) =>
         prevProjects.filter((project) => project.id !== Number(projectId)),
       );
       navigate("/overview");

@@ -3,11 +3,6 @@ import userEvent from "@testing-library/user-event";
 import { renderWithProviders } from "../../../../test/renderWithProviders";
 import CustomizableBasicTable from "../index";
 
-// Mock vendor repository
-vi.mock("../../../../application/repository/vendor.repository", () => ({
-  getAllVendors: vi.fn().mockResolvedValue({ data: [] }),
-}));
-
 // Stub localStorage if not available in test environment
 if (
   typeof globalThis.localStorage === "undefined" ||

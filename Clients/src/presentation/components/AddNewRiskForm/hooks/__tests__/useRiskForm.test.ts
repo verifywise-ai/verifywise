@@ -59,19 +59,6 @@ vi.mock("../../../../application/hooks/useUsers", () => ({
   default: () => ({ users: [{ id: 1, name: "Test", surname: "User" }], loading: false }),
 }));
 
-vi.mock("../../../../application/contexts/VerifyWise.context", () => ({
-  VerifyWiseContext: {
-    _currentValue: { inputValues: {} },
-    Consumer: ({ children }: any) => children({ inputValues: {} }),
-    Provider: ({ children, value }: any) =>
-      React.createElement(
-        React.Fragment,
-        null,
-        typeof children === "function" ? children(value) : children,
-      ),
-  },
-}));
-
 vi.mock("../../../tools/riskCalculator", () => ({
   RiskCalculator: {
     getRiskLevel: () => ({ level: "Low" }),

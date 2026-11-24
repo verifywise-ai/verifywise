@@ -20,28 +20,19 @@ vi.mock("../../../../application/hooks/useUsers", () => ({
   }),
 }));
 
-// Mock contexts
-vi.mock("../../../../application/contexts/VerifyWise.context", () => ({
-  VerifyWiseContext: {
-    Consumer: ({ children }: any) => children({}),
-    Provider: ({ children }: any) => children,
-  },
+// Mock projects hooks (they own the projects list after the context migration)
+const mockUseProjects = vi.fn();
+vi.mock("../../../../application/hooks/useProjects", () => ({
+  useProjects: () => mockUseProjects(),
 }));
 
-// Override useContext to provide VerifyWiseContext values
-const mockUseContext = vi.fn();
-vi.mock("react", async () => {
-  const actual = await vi.importActual("react");
-  return {
-    ...actual,
-    useContext: (...args: any[]) => {
-      // Check if it's the VerifyWiseContext
-      const result = mockUseContext(...args);
-      if (result !== undefined) return result;
-      return (actual as any).useContext(...args);
-    },
-  };
-});
+const mockSetProjectsCache = vi.fn();
+vi.mock("../../../../application/hooks/useProjectsCache", () => ({
+  useProjectsCache: () => ({
+    setProjectsCache: mockSetProjectsCache,
+    refreshProjects: vi.fn(),
+  }),
+}));
 
 // Mock contexts
 const mockIsEnabled = vi.fn((_key: string) => false);
@@ -257,12 +248,7 @@ describe("Framework", () => {
       error: null,
       refreshFilteredFrameworks: vi.fn(),
     });
-    mockUseContext.mockReturnValue({
-      changeComponentVisibility: vi.fn(),
-      projects: [],
-      userRoleName: "Admin",
-      setProjects: vi.fn(),
-    });
+    mockUseProjects.mockReturnValue({ data: [] });
   });
 
   it("renders without crashing", () => {
@@ -293,12 +279,7 @@ describe("Framework", () => {
       refreshFilteredFrameworks: vi.fn(),
     });
     const orgProject = buildOrgProject([{ framework_id: 3, project_framework_id: 20 }]);
-    mockUseContext.mockReturnValue({
-      changeComponentVisibility: vi.fn(),
-      projects: [orgProject],
-      userRoleName: "Admin",
-      setProjects: vi.fn(),
-    });
+    mockUseProjects.mockReturnValue({ data: [orgProject] });
     mockUseParams.mockReturnValue({ tab: "controls" });
     const { container } = renderWithProviders(<Framework />, { route: "/framework/controls" });
     expect(container).toBeTruthy();
@@ -312,12 +293,7 @@ describe("Framework", () => {
       refreshFilteredFrameworks: vi.fn(),
     });
     const orgProject = buildOrgProject([{ framework_id: 3, project_framework_id: 20 }]);
-    mockUseContext.mockReturnValue({
-      changeComponentVisibility: vi.fn(),
-      projects: [orgProject],
-      userRoleName: "Admin",
-      setProjects: vi.fn(),
-    });
+    mockUseProjects.mockReturnValue({ data: [orgProject] });
     mockUseParams.mockReturnValue({ tab: "controls" });
     renderWithProviders(<Framework />, { route: "/framework/controls" });
     expect(screen.getByText("Error loading frameworks. Please try again.")).toBeInTheDocument();
@@ -325,12 +301,7 @@ describe("Framework", () => {
 
   it("shows a message when no ISO frameworks are assigned to the project", () => {
     const orgProject = buildOrgProject([]);
-    mockUseContext.mockReturnValue({
-      changeComponentVisibility: vi.fn(),
-      projects: [orgProject],
-      userRoleName: "Admin",
-      setProjects: vi.fn(),
-    });
+    mockUseProjects.mockReturnValue({ data: [orgProject] });
     mockUseParams.mockReturnValue({ tab: "controls" });
     renderWithProviders(<Framework />, { route: "/framework/controls" });
     expect(screen.getByText("No organizational frameworks assigned yet.")).toBeInTheDocument();
@@ -344,12 +315,7 @@ describe("Framework", () => {
       error: null,
       refreshFilteredFrameworks: vi.fn(),
     });
-    mockUseContext.mockReturnValue({
-      changeComponentVisibility: vi.fn(),
-      projects: [orgProject],
-      userRoleName: "Admin",
-      setProjects: vi.fn(),
-    });
+    mockUseProjects.mockReturnValue({ data: [orgProject] });
     renderWithProviders(<Framework />, { route: "/framework" });
     expect(screen.getByTestId("governance-context-bar")).toBeInTheDocument();
     expect(screen.getByTestId("framework-dashboard")).toBeInTheDocument();
@@ -363,12 +329,7 @@ describe("Framework", () => {
       error: null,
       refreshFilteredFrameworks: vi.fn(),
     });
-    mockUseContext.mockReturnValue({
-      changeComponentVisibility: vi.fn(),
-      projects: [orgProject],
-      userRoleName: "Admin",
-      setProjects: vi.fn(),
-    });
+    mockUseProjects.mockReturnValue({ data: [orgProject] });
     mockUseParams.mockReturnValue({ tab: "controls" });
     renderWithProviders(<Framework />, { route: "/framework/controls" });
     expect(screen.getByTestId("iso27001-clause")).toBeInTheDocument();
@@ -384,12 +345,7 @@ describe("Framework", () => {
       error: null,
       refreshFilteredFrameworks: vi.fn(),
     });
-    mockUseContext.mockReturnValue({
-      changeComponentVisibility: vi.fn(),
-      projects: [orgProject],
-      userRoleName: "Admin",
-      setProjects: vi.fn(),
-    });
+    mockUseProjects.mockReturnValue({ data: [orgProject] });
     mockUseParams.mockReturnValue({ tab: "controls" });
     renderWithProviders(<Framework />, { route: "/framework/controls" });
     expect(screen.getByTestId("iso42001-clause")).toBeInTheDocument();
@@ -405,12 +361,7 @@ describe("Framework", () => {
       error: null,
       refreshFilteredFrameworks: vi.fn(),
     });
-    mockUseContext.mockReturnValue({
-      changeComponentVisibility: vi.fn(),
-      projects: [orgProject],
-      userRoleName: "Admin",
-      setProjects: vi.fn(),
-    });
+    mockUseProjects.mockReturnValue({ data: [orgProject] });
     mockUseParams.mockReturnValue({ tab: "controls" });
     renderWithProviders(<Framework />, { route: "/framework/controls" });
     expect(screen.getByTestId("nist-govern")).toBeInTheDocument();
@@ -433,12 +384,7 @@ describe("Framework", () => {
       error: null,
       refreshFilteredFrameworks: vi.fn(),
     });
-    mockUseContext.mockReturnValue({
-      changeComponentVisibility: vi.fn(),
-      projects: [orgProject],
-      userRoleName: "Admin",
-      setProjects: vi.fn(),
-    });
+    mockUseProjects.mockReturnValue({ data: [orgProject] });
     mockUseParams.mockReturnValue({ tab: "controls" });
     renderWithProviders(<Framework />, { route: "/framework/controls" });
     expect(screen.getByTestId("iso42001-clause")).toBeInTheDocument();
@@ -454,12 +400,7 @@ describe("Framework", () => {
       error: null,
       refreshFilteredFrameworks: vi.fn(),
     });
-    mockUseContext.mockReturnValue({
-      changeComponentVisibility: vi.fn(),
-      projects: [orgProject],
-      userRoleName: "Admin",
-      setProjects: vi.fn(),
-    });
+    mockUseProjects.mockReturnValue({ data: [orgProject] });
 
     mockUseParams.mockReturnValue({ tab: "framework-risks" });
     const { unmount: unmount1 } = renderWithProviders(<Framework />, {
@@ -488,12 +429,7 @@ describe("Framework", () => {
       error: null,
       refreshFilteredFrameworks: vi.fn(),
     });
-    mockUseContext.mockReturnValue({
-      changeComponentVisibility: vi.fn(),
-      projects: [orgProject],
-      userRoleName: "Admin",
-      setProjects: vi.fn(),
-    });
+    mockUseProjects.mockReturnValue({ data: [orgProject] });
     renderWithProviders(<Framework />, { route: "/framework" });
     fireEvent.click(screen.getByText("Manage frameworks"));
     fireEvent.click(screen.getByText("Add/remove frameworks"));
@@ -515,12 +451,7 @@ describe("Framework", () => {
       error: null,
       refreshFilteredFrameworks: vi.fn(),
     });
-    mockUseContext.mockReturnValue({
-      changeComponentVisibility: vi.fn(),
-      projects: [orgProject],
-      userRoleName: "Admin",
-      setProjects: vi.fn(),
-    });
+    mockUseProjects.mockReturnValue({ data: [orgProject] });
     renderWithProviders(<Framework />, { route: "/framework" });
     fireEvent.click(screen.getByText("Manage frameworks"));
     fireEvent.click(screen.getByText("Edit project"));
@@ -530,19 +461,13 @@ describe("Framework", () => {
 
   it("deletes the project through the use case delete dialog from the manage frameworks menu", async () => {
     const orgProject = buildOrgProject([{ framework_id: 3, project_framework_id: 20 }]);
-    const setProjects = vi.fn();
     mockUseFrameworks.mockReturnValue({
       allFrameworks: [iso27001Fw],
       loading: false,
       error: null,
       refreshFilteredFrameworks: vi.fn(),
     });
-    mockUseContext.mockReturnValue({
-      changeComponentVisibility: vi.fn(),
-      projects: [orgProject],
-      userRoleName: "Admin",
-      setProjects,
-    });
+    mockUseProjects.mockReturnValue({ data: [orgProject] });
     renderWithProviders(<Framework />, { route: "/framework" });
     fireEvent.click(screen.getByText("Manage frameworks"));
     fireEvent.click(screen.getByText("Delete project"));
@@ -553,7 +478,7 @@ describe("Framework", () => {
     expect(dialog).not.toHaveTextContent("remove all associated data");
     fireEvent.click(screen.getByText("Delete"));
     await waitFor(() => {
-      expect(setProjects).toHaveBeenCalled();
+      expect(mockSetProjectsCache).toHaveBeenCalled();
     });
     expect(screen.queryByTestId("delete-use-case-modal")).not.toBeInTheDocument();
   });
@@ -566,12 +491,7 @@ describe("Framework", () => {
       error: null,
       refreshFilteredFrameworks: vi.fn(),
     });
-    mockUseContext.mockReturnValue({
-      changeComponentVisibility: vi.fn(),
-      projects: [orgProject],
-      userRoleName: "Admin",
-      setProjects: vi.fn(),
-    });
+    mockUseProjects.mockReturnValue({ data: [orgProject] });
     renderWithProviders(<Framework />, { route: "/framework" });
     fireEvent.click(screen.getByText("Manage frameworks"));
     fireEvent.click(screen.getByText("Delete project"));
@@ -587,12 +507,7 @@ describe("Framework", () => {
       error: null,
       refreshFilteredFrameworks: vi.fn(),
     });
-    mockUseContext.mockReturnValue({
-      changeComponentVisibility: vi.fn(),
-      projects: [orgProject],
-      userRoleName: "Admin",
-      setProjects: vi.fn(),
-    });
+    mockUseProjects.mockReturnValue({ data: [orgProject] });
     mockUseParams.mockReturnValue({ tab: "settings" });
     renderWithProviders(<Framework />, { route: "/framework/settings" });
     expect(screen.getByTestId("framework-settings")).toBeInTheDocument();
@@ -605,12 +520,7 @@ describe("Framework", () => {
 
     it("does not show the imported frameworks list on the overview", () => {
       mockIsEnabled.mockImplementation((key: string) => key === "framework-import");
-      mockUseContext.mockReturnValue({
-        changeComponentVisibility: vi.fn(),
-        projects: [buildOrgProject([])],
-        userRoleName: "Admin",
-        setProjects: vi.fn(),
-      });
+      mockUseProjects.mockReturnValue({ data: [buildOrgProject([])] });
       renderWithProviders(<Framework />, { route: "/framework" });
       expect(screen.queryByText("Imported frameworks")).not.toBeInTheDocument();
     });

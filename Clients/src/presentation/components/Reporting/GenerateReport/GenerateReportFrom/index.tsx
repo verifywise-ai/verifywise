@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useContext, useMemo, useEffect } from "react";
+import React, { useState, useCallback, useMemo, useEffect } from "react";
 import {
   Stack,
   Box,
@@ -14,7 +14,7 @@ import { brand } from "../../../../themes/palette";
 import Field from "../../../Inputs/Field";
 import { fieldStyle } from "./styles";
 import Select from "../../../../components/Inputs/Select";
-import { VerifyWiseContext } from "../../../../../application/contexts/VerifyWise.context";
+import { useProjects } from "../../../../../application/hooks/useProjects";
 import { Project, FrameworkValues } from "../../../../../application/interfaces/appStates";
 import NoFrameworkNotice from "../NoFrameworkNotice";
 import { FileText, FileType, Sparkles } from "lucide-react";
@@ -50,7 +50,7 @@ const GenerateReportFrom: React.FC<ReportProps> = ({
   onValidateRef,
   hasKeys = false,
 }) => {
-  const { dashboardValues } = useContext(VerifyWiseContext);
+  const { data: projectsData } = useProjects();
   const [errors, setErrors] = useState<FormErrors>({});
   const theme = useTheme();
 
@@ -58,7 +58,7 @@ const GenerateReportFrom: React.FC<ReportProps> = ({
 
   // Get projects based on report type
   const availableProjects = useMemo(() => {
-    const projects = Array.isArray(dashboardValues.projects) ? dashboardValues.projects : [];
+    const projects = projectsData ?? [];
 
     if (isOrganizational) {
       // For organizational reports, show only organizational projects
@@ -76,11 +76,11 @@ const GenerateReportFrom: React.FC<ReportProps> = ({
         );
       });
     }
-  }, [dashboardValues.projects, isOrganizational]);
+  }, [projectsData, isOrganizational]);
 
   // Get frameworks for organizational reports
   const organizationFrameworks = useMemo<FrameworkValues[]>(() => {
-    const projects = Array.isArray(dashboardValues.projects) ? dashboardValues.projects : [];
+    const projects = projectsData ?? [];
     const allFrameworks: FrameworkValues[] = projects
       .flatMap((p: Project) => (Array.isArray(p.framework) ? p.framework : []))
       .filter(
@@ -93,11 +93,11 @@ const GenerateReportFrom: React.FC<ReportProps> = ({
       if (!deduped.has(f.framework_id)) deduped.set(f.framework_id, f);
     }
     return Array.from(deduped.values());
-  }, [dashboardValues.projects]);
+  }, [projectsData]);
 
   // Get frameworks for selected project (use case reports)
   const projectFrameworks = useMemo<FrameworkValues[]>(() => {
-    const projects = Array.isArray(dashboardValues.projects) ? dashboardValues.projects : [];
+    const projects = projectsData ?? [];
     const selectedProject = projects.find((project: Project) => project.id === values.project);
 
     const frameworks = selectedProject?.framework;
@@ -109,7 +109,7 @@ const GenerateReportFrom: React.FC<ReportProps> = ({
     // (where the row exists) or crashed dereferencing the missing row in
     // getVisibleEuCategoryIdsForProject (where it does not).
     return Array.isArray(frameworks) ? frameworks : [];
-  }, [dashboardValues.projects, values.project]);
+  }, [projectsData, values.project]);
 
   // Surfaced before the user picks sections or generates, not after the report
   // comes back short.

@@ -19,11 +19,12 @@ vi.mock("../../../CustomFieldsSection", () => ({
 vi.mock("../../../../../application/tools/extractToken", () => ({
   extractUserToken: vi.fn().mockReturnValue({ id: 1 }),
 }));
-vi.mock("../../../../../application/contexts/VerifyWise.context", () => ({
-  VerifyWiseContext: React.createContext({
-    inputValues: {},
-    dashboardValues: {},
-  }),
+const projectsCacheResult = vi.hoisted(() => ({
+  setProjectsCache: vi.fn(),
+  refreshProjects: vi.fn(),
+}));
+vi.mock("../../../../../application/hooks/useProjectsCache", () => ({
+  useProjectsCache: () => projectsCacheResult,
 }));
 vi.mock("../../../../utils/inputStyles", () => ({
   getAutocompleteStyles: () => new Proxy({}, { get: () => ({}) }),
@@ -184,6 +185,7 @@ describe("ProjectForm high-risk roles", () => {
 describe("ProjectForm server errors", () => {
   beforeEach(() => {
     vi.mocked(updateProject).mockReset();
+    projectsCacheResult.setProjectsCache.mockClear();
     Element.prototype.scrollIntoView = vi.fn();
   });
 
@@ -242,5 +244,16 @@ describe("ProjectForm server errors", () => {
     expect(screen.getByRole("alert")).toHaveTextContent(message);
     await submit(submitRef);
     expect(screen.queryByRole("alert")).toBeNull();
+    // The saved use case is merged into its entry in the projects cache: the answer is the bare
+    // row, so fields the list joins in (such as `framework`) are kept.
+    expect(projectsCacheResult.setProjectsCache).toHaveBeenCalledTimes(1);
+    const updater = projectsCacheResult.setProjectsCache.mock.calls[0][0] as (
+      prev: object[],
+    ) => object[];
+    const framework = [{ framework_id: 1, name: "EU AI Act" }];
+    expect(updater([{ id: 7, framework, goal: "old goal" }, { id: 2 }])).toEqual([
+      { framework, ...euAiActUseCase(["Deployer"]) },
+      { id: 2 },
+    ]);
   });
 });

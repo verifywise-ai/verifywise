@@ -152,7 +152,7 @@ import type { RootState } from "../redux/store";
 
 // 3. Hooks and contexts
 import { useAuth } from "../hooks/useAuth";
-import { useVerifyWiseContext } from "../contexts/VerifyWise.context";
+import { useProjects } from "../hooks/useProjects";
 
 // 4. Components
 import { Button } from "../components/Button";
