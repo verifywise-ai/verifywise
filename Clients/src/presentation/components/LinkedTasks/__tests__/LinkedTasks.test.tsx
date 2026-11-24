@@ -1,7 +1,7 @@
 import { vi } from "vitest";
 
 vi.mock("../../../../application/repository/task.repository", () => ({
-  getAllTasks: vi.fn(),
+  getTasksLinkedToEntity: vi.fn(),
 }));
 vi.mock("../../../../application/hooks/useUsers", () => ({
   default: () => ({
@@ -23,10 +23,10 @@ vi.mock("react-router", async (importOriginal) => ({
 import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { renderWithProviders } from "../../../../test/renderWithProviders";
-import { getAllTasks } from "../../../../application/repository/task.repository";
+import { getTasksLinkedToEntity } from "../../../../application/repository/task.repository";
 import LinkedTasks from "../index";
 
-const mockGetAllTasks = getAllTasks as unknown as ReturnType<typeof vi.fn>;
+const mockGetLinked = getTasksLinkedToEntity as unknown as ReturnType<typeof vi.fn>;
 
 const renderList = () =>
   renderWithProviders(
@@ -39,33 +39,23 @@ describe("LinkedTasks", () => {
   });
 
   it("asks only for tasks linked to the entity", async () => {
-    mockGetAllTasks.mockResolvedValue({ data: { tasks: [] } });
+    mockGetLinked.mockResolvedValue([]);
     renderList();
 
     await screen.findByText("Nothing linked.");
-    expect(mockGetAllTasks).toHaveBeenCalledWith(
-      expect.objectContaining({
-        linked_entity: { entity_type: "incident", entity_id: 12 },
-        suppressGlobalErrorToast: true,
-      }),
-    );
-    expect(mockGetAllTasks.mock.calls[0][0].include_archived).toBeUndefined();
+    expect(mockGetLinked).toHaveBeenCalledWith("incident", 12, expect.anything());
   });
 
   it("lists each task with its status, assignees and due date state", async () => {
-    mockGetAllTasks.mockResolvedValue({
-      data: {
-        tasks: [
-          {
-            id: 700,
-            title: "Respond to critical incident INC-12",
-            status: "In Progress",
-            assignees: [5, 6],
-          },
-          { id: 701, title: "Write the post-mortem", status: "Open", assignees: [] },
-        ],
+    mockGetLinked.mockResolvedValue([
+      {
+        id: 700,
+        title: "Respond to critical incident INC-12",
+        status: "In Progress",
+        assignees: [5, 6],
       },
-    });
+      { id: 701, title: "Write the post-mortem", status: "Open", assignees: [] },
+    ]);
     renderList();
 
     expect(await screen.findByText("Respond to critical incident INC-12")).toBeInTheDocument();
@@ -77,17 +67,30 @@ describe("LinkedTasks", () => {
   });
 
   it("opens a task on the tasks page when clicked", async () => {
-    mockGetAllTasks.mockResolvedValue({
-      data: { tasks: [{ id: 700, title: "Contain the harm", status: "Open", assignees: [5] }] },
-    });
+    mockGetLinked.mockResolvedValue([
+      { id: 700, title: "Contain the harm", status: "Open", assignees: [5] },
+    ]);
     renderList();
 
     await userEvent.click(await screen.findByTestId("linked-task-700"));
     expect(navigate).toHaveBeenCalledWith("/tasks?taskId=700");
   });
 
+  it("shows Overdue for an overdue task until it is completed, as the tasks page does", async () => {
+    mockGetLinked.mockResolvedValue([
+      { id: 1, title: "Late one", status: "Open", isOverdue: true, assignees: [] },
+      { id: 2, title: "Done late", status: "Completed", isOverdue: true, assignees: [] },
+    ]);
+    renderList();
+
+    await screen.findByText("Late one");
+    expect(screen.getByText("Overdue")).toBeInTheDocument();
+    expect(screen.getByText("Completed")).toBeInTheDocument();
+    expect(screen.queryByText("Open")).not.toBeInTheDocument();
+  });
+
   it("says so when the tasks cannot be loaded", async () => {
-    mockGetAllTasks.mockRejectedValue(new Error("network"));
+    mockGetLinked.mockRejectedValue(new Error("network"));
     renderList();
 
     expect(await screen.findByText("Could not load the linked tasks.")).toBeInTheDocument();

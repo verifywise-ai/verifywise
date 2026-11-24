@@ -65,6 +65,7 @@ export const de: Record<string, string> = {
   "Archive task": "Aufgabe archivieren",
   "Could not load the linked tasks.": "Die verknüpften Aufgaben konnten nicht geladen werden.",
   "No incidents to link": "Keine Vorfälle zum Verknüpfen",
+  "Could not load incidents.": "Vorfälle konnten nicht geladen werden.",
 };
 
 export const fr: Record<string, string> = {
@@ -131,6 +132,7 @@ export const fr: Record<string, string> = {
   "Archive task": "Archiver la tâche",
   "Could not load the linked tasks.": "Impossible de charger les tâches liées.",
   "No incidents to link": "Aucun incident à lier",
+  "Could not load incidents.": "Impossible de charger les incidents.",
 };
 
 export const es: Record<string, string> = {
@@ -197,4 +199,5 @@ export const es: Record<string, string> = {
   "Archive task": "Archivar tarea",
   "Could not load the linked tasks.": "No se pudieron cargar las tareas vinculadas.",
   "No incidents to link": "No hay incidentes para vincular",
+  "Could not load incidents.": "No se pudieron cargar los incidentes.",
 };

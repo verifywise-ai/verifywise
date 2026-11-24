@@ -744,9 +744,10 @@ The drawer is organized into 4 sections:
 An existing incident's drawer has three tabs: "Incident details" (the form
 above), "Linked tasks" and "Activity" (change history). "Linked tasks"
 (`components/LinkedTasks`) is a read-only list of the tasks linked to the
-incident that the user can see (`GET /tasks?linked_entity_type=incident&linked_entity_id=<id>`,
+incident that the user can see (`GET /api/v1/tasks/linked/incident/<id>`,
 same visibility as the tasks page; archived tasks left out): title, status,
-assignees or "Unassigned", and due date. Clicking a task opens it on the tasks
+assignees or "Unassigned", and due date. With none it says "No linked tasks
+you can see.", since tasks the user cannot see are not listed. Clicking a task opens it on the tasks
 page. Tasks are linked from the task drawer's linked items (see
 [tasks.md](./tasks.md#linked-items)); the critical incident workflow links its
 remediation task itself.

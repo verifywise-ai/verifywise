@@ -59,7 +59,7 @@ describe("EntityLinkSelector", () => {
 
   it("renders without crashing", () => {
     renderWithProviders(<EntityLinkSelector value={[]} onChange={defaultOnChange} />);
-    expect(screen.getByText("Linked Items")).toBeInTheDocument();
+    expect(screen.getByText("Linked items")).toBeInTheDocument();
   });
 
   it("renders entity type selector with options", () => {
@@ -107,7 +107,7 @@ describe("EntityLinkSelector", () => {
       renderWithProviders(<EntityLinkSelector value={[]} onChange={defaultOnChange} />);
       await pickIncidentType();
 
-      const search = screen.getByPlaceholderText("Search incidents");
+      const search = await screen.findByPlaceholderText("Search incidents");
       await userEvent.click(search);
       const listbox = await screen.findByRole("listbox");
       expect(within(listbox).getByText("INC-12 · Credit scoring")).toBeInTheDocument();
@@ -124,7 +124,7 @@ describe("EntityLinkSelector", () => {
       renderWithProviders(<EntityLinkSelector value={[]} onChange={onChange} />);
       await pickIncidentType();
 
-      await userEvent.type(screen.getByPlaceholderText("Search incidents"), "INC-12");
+      await userEvent.type(await screen.findByPlaceholderText("Search incidents"), "INC-12");
       await userEvent.click(await screen.findByText("INC-12 · Credit scoring"));
 
       const buttons = screen.getAllByRole("button");
@@ -143,7 +143,34 @@ describe("EntityLinkSelector", () => {
       renderWithProviders(<EntityLinkSelector value={[]} onChange={defaultOnChange} />);
       await pickIncidentType();
 
-      expect(screen.getByText("No incidents to link")).toBeInTheDocument();
+      expect(await screen.findByText("No incidents to link")).toBeInTheDocument();
+      expect(screen.queryByText("Could not load incidents.")).not.toBeInTheDocument();
+    });
+
+    it("does not say there is nothing to link while incidents are loading", async () => {
+      vi.mocked(getAllEntities).mockImplementation(({ routeUrl }: { routeUrl: string }) =>
+        routeUrl === "/ai-incident-managements"
+          ? new Promise(() => {})
+          : Promise.resolve({ data: [] }),
+      );
+      renderWithProviders(<EntityLinkSelector value={[]} onChange={defaultOnChange} />);
+      await pickIncidentType();
+
+      expect(screen.getByPlaceholderText("Loading...")).toBeInTheDocument();
+      expect(screen.queryByText("No incidents to link")).not.toBeInTheDocument();
+    });
+
+    it("says so when incidents cannot be loaded, not that there are none", async () => {
+      vi.mocked(getAllEntities).mockImplementation(async ({ routeUrl }: { routeUrl: string }) => {
+        if (routeUrl === "/ai-incident-managements") throw new Error("network");
+        return { data: [] };
+      });
+      vi.spyOn(console, "error").mockImplementation(() => {});
+      renderWithProviders(<EntityLinkSelector value={[]} onChange={defaultOnChange} />);
+      await pickIncidentType();
+
+      expect(await screen.findByText("Could not load incidents.")).toBeInTheDocument();
+      expect(screen.queryByText("No incidents to link")).not.toBeInTheDocument();
     });
 
     it("shows an existing incident link with its type", () => {

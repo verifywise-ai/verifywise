@@ -25,6 +25,12 @@ const STATUS_LABEL: Record<string, string> = {
   [TaskStatus.OVERDUE]: "Overdue",
 };
 
+/** Overdue wins over the stored status until the task is completed, as on the tasks page. */
+const statusLabel = (task: ITask): string =>
+  task.isOverdue && task.status !== TaskStatus.COMPLETED
+    ? "Overdue"
+    : (STATUS_LABEL[task.status] ?? task.status);
+
 const rowSx = {
   "display": "flex",
   "alignItems": "center",
@@ -122,7 +128,7 @@ const LinkedTasks: FC<LinkedTasksProps> = ({ entityType, entityId, emptyMessage 
                   </Typography>
                 </Stack>
               </Stack>
-              <Chip label={STATUS_LABEL[task.status] ?? task.status} />
+              <Chip label={statusLabel(task)} />
             </Box>
           </li>
         );

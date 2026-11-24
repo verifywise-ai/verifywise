@@ -9,9 +9,11 @@ import { assignTaskToUser, createTestIncident, createTestTask } from "../factori
 
 /**
  * Tasks linked to incidents (task_entity_links, entity_type "incident"):
- * linking through the API and with a task save, the archived-incident rule,
- * the incident's linked-tasks list (GET /tasks with linked_entity_*), and the
- * cleanup when an incident is hard-deleted.
+ * linking through the API and with a task save, the archived-incident rule
+ * (409 on the link route and on a task save), the incident's linked-tasks
+ * list (GET /api/v1/tasks/linked/:entityType/:entityId; the legacy GET
+ * /tasks contract is unchanged), and the cleanup when an incident is
+ * hard-deleted.
  */
 
 const ROLE = { Admin: 1, Reviewer: 2, Editor: 3, Auditor: 4 } as const;
@@ -128,18 +130,44 @@ describe("tasks linked to incidents", () => {
     expect(await incidentLinks(orgId, incidentId)).toEqual([]);
   });
 
-  it("drops an archived incident sent with a new task, and keeps the task", async () => {
+  it("refuses a new task linked to an archived incident and creates nothing", async () => {
     const incidentId = await createTestIncident(orgId, adminId);
     await admin.patch(`/api/ai-incident-managements/${incidentId}/archive`);
+    const title = `Follow up ${unique()}`;
 
     const res = await editor.post("/api/tasks").send({
-      title: "Follow up",
+      title,
       assignees: [editorId],
       entity_links: [{ entity_id: incidentId, entity_type: "incident" }],
     });
 
-    expect(res.status).toBe(201);
+    expect(res.status).toBe(409);
+    expect(res.body.data).toBe("Restore this incident before linking it to a task.");
     expect(await incidentLinks(orgId, incidentId)).toEqual([]);
+    const created = await sequelize.query(
+      `SELECT id FROM tasks WHERE organization_id = :orgId AND title = :title`,
+      { replacements: { orgId, title }, type: QueryTypes.SELECT },
+    );
+    expect(created).toEqual([]);
+  });
+
+  it("refuses a task update that adds an archived incident and keeps the task as it was", async () => {
+    const incidentId = await createTestIncident(orgId, adminId);
+    await admin.patch(`/api/ai-incident-managements/${incidentId}/archive`);
+    const taskId = await ownTask(editorId, "Before");
+
+    const res = await editor.put(`/api/tasks/${taskId}`).send({
+      title: "After",
+      entity_links: [{ entity_id: incidentId, entity_type: "incident" }],
+    });
+
+    expect(res.status).toBe(409);
+    expect(await incidentLinks(orgId, incidentId)).toEqual([]);
+    const [task] = await sequelize.query<{ title: string }>(
+      `SELECT title FROM tasks WHERE id = :taskId`,
+      { replacements: { taskId }, type: QueryTypes.SELECT },
+    );
+    expect(task.title).toBe("Before");
   });
 
   it("keeps a link made before the incident was archived through a task save", async () => {
@@ -168,9 +196,9 @@ describe("tasks linked to incidents", () => {
     expect(await incidentLinks(orgId, foreignIncident)).toEqual([]);
   });
 
-  describe("GET /tasks with linked_entity_type and linked_entity_id", () => {
+  describe("GET /api/v1/tasks/linked/:entityType/:entityId", () => {
     const linkedTo = (api: Api, incidentId: number | string) =>
-      api.get(`/api/tasks?linked_entity_type=incident&linked_entity_id=${incidentId}`);
+      api.get(`/api/v1/tasks/linked/incident/${incidentId}`);
 
     it("lists only the tasks linked to the incident", async () => {
       const incidentId = await createTestIncident(orgId, adminId);
@@ -184,7 +212,32 @@ describe("tasks linked to incidents", () => {
       const res = await linkedTo(editor, incidentId);
 
       expect(res.status).toBe(200);
-      expect(res.body.data.tasks.map((t: { id: number }) => t.id)).toEqual([linked]);
+      expect(res.body.data.map((t: { id: number }) => t.id)).toEqual([linked]);
+    });
+
+    it("leaves archived tasks out", async () => {
+      const incidentId = await createTestIncident(orgId, adminId);
+      const taskId = await ownTask(editorId);
+      await link(editor, taskId, incidentId);
+      await editor.delete(`/api/tasks/${taskId}`);
+
+      const res = await linkedTo(editor, incidentId);
+
+      expect(res.status).toBe(200);
+      expect(res.body.data).toEqual([]);
+    });
+
+    it("never lists another organization's tasks", async () => {
+      const incidentId = await createTestIncident(orgId, adminId);
+      const taskId = await ownTask(editorId);
+      await link(editor, taskId, incidentId);
+      const otherOrg = await createTestOrganization(`Other ${unique()}`);
+      const otherAdmin = await user(otherOrg, "Admin");
+
+      const res = await linkedTo(await apiAs(otherOrg, otherAdmin, "Admin"), incidentId);
+
+      expect(res.status).toBe(200);
+      expect(res.body.data).toEqual([]);
     });
 
     it("applies task visibility: a member who neither created nor holds the task sees nothing", async () => {
@@ -197,18 +250,33 @@ describe("tasks linked to incidents", () => {
       const adminView = await linkedTo(admin, incidentId);
 
       expect(outsider.status).toBe(200);
-      expect(outsider.body.data.tasks).toEqual([]);
-      expect(adminView.body.data.tasks.map((t: { id: number }) => t.id)).toEqual([taskId]);
+      expect(outsider.body.data).toEqual([]);
+      expect(adminView.body.data.map((t: { id: number }) => t.id)).toEqual([taskId]);
     });
 
     it.each([
-      ["only the type", "/api/tasks?linked_entity_type=incident"],
-      ["only the id", "/api/tasks?linked_entity_id=3"],
-      ["an unknown type", "/api/tasks?linked_entity_type=spaceship&linked_entity_id=3"],
-      ["a non-numeric id", "/api/tasks?linked_entity_type=incident&linked_entity_id=3abc"],
+      ["an unknown type", "/api/v1/tasks/linked/spaceship/3"],
+      ["a non-numeric id", "/api/v1/tasks/linked/incident/3abc"],
+      ["a zero id", "/api/v1/tasks/linked/incident/0"],
     ])("answers 400 for %s", async (_label, url) => {
       const res = await editor.get(url);
       expect(res.status).toBe(400);
+    });
+
+    it("leaves the legacy GET /tasks contract as it was: linked_entity_* is ignored", async () => {
+      const incidentId = await createTestIncident(orgId, adminId);
+      const linked = await ownTask(editorId);
+      const unlinked = await ownTask(editorId);
+      await link(editor, linked, incidentId);
+
+      const res = await editor.get(
+        `/api/tasks?linked_entity_type=incident&linked_entity_id=${incidentId}`,
+      );
+
+      expect(res.status).toBe(200);
+      expect(res.body.data.tasks.map((t: { id: number }) => t.id).sort()).toEqual(
+        [linked, unlinked].sort(),
+      );
     });
   });
 

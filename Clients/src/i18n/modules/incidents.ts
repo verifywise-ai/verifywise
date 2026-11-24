@@ -109,8 +109,7 @@ export const de: Record<string, string> = {
   "Archive incident": "Vorfall archivieren",
   "Incident actions": "Aktionen für den Vorfall",
   "Linked tasks": "Verknüpfte Aufgaben",
-  "No tasks are linked to this incident yet. To link one, open the task and add this incident to its linked items.":
-    "Mit diesem Vorfall sind noch keine Aufgaben verknüpft. Öffnen Sie dazu die Aufgabe und fügen Sie diesen Vorfall zu ihren verknüpften Elementen hinzu.",
+  "No linked tasks you can see.": "Keine verknüpften Aufgaben, die Sie sehen können.",
 };
 
 export const fr: Record<string, string> = {
@@ -220,8 +219,7 @@ export const fr: Record<string, string> = {
   "Archive incident": "Archiver l'incident",
   "Incident actions": "Actions sur l'incident",
   "Linked tasks": "Tâches liées",
-  "No tasks are linked to this incident yet. To link one, open the task and add this incident to its linked items.":
-    "Aucune tâche n'est encore liée à cet incident. Pour en lier une, ouvrez la tâche et ajoutez cet incident à ses éléments liés.",
+  "No linked tasks you can see.": "Aucune tâche liée que vous pouvez voir.",
 };
 
 export const es: Record<string, string> = {
@@ -332,6 +330,5 @@ export const es: Record<string, string> = {
   "Archive incident": "Archivar incidente",
   "Incident actions": "Acciones del incidente",
   "Linked tasks": "Tareas vinculadas",
-  "No tasks are linked to this incident yet. To link one, open the task and add this incident to its linked items.":
-    "Aún no hay tareas vinculadas a este incidente. Para vincular una, abra la tarea y añada este incidente a sus elementos vinculados.",
+  "No linked tasks you can see.": "No hay tareas vinculadas que pueda ver.",
 };

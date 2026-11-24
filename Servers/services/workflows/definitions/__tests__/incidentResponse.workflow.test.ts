@@ -51,6 +51,7 @@ const notifyAdmins = notifyAdminsOfCriticalIncident as unknown as jest.Mock<any>
 const incident = (overrides: Record<string, unknown> = {}) => ({
   id: 99,
   reference: "INC-99",
+  displayId: "INC-99",
   useCase: "Credit scoring",
   severity: "Very serious",
   type: "Security breach",

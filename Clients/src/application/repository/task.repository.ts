@@ -20,7 +20,6 @@ export async function getAllTasks({
   due_date_end,
   search,
   include_archived,
-  linked_entity,
   sort_by = "created_at",
   sort_order = "DESC",
   page = "1",
@@ -38,8 +37,6 @@ export async function getAllTasks({
   due_date_end?: string;
   search?: string;
   include_archived?: boolean;
-  /** Only tasks linked to this entity (vendor, policy, incident, ...). */
-  linked_entity?: { entity_type: EntityLinkType; entity_id: number };
   sort_by?: "due_date" | "priority" | "created_at";
   sort_order?: "ASC" | "DESC";
   page?: string;
@@ -64,10 +61,6 @@ export async function getAllTasks({
   if (due_date_end) params.append("due_date_end", due_date_end);
   if (search) params.append("search", search);
   if (include_archived) params.append("include_archived", "true");
-  if (linked_entity) {
-    params.append("linked_entity_type", linked_entity.entity_type);
-    params.append("linked_entity_id", String(linked_entity.entity_id));
-  }
 
   params.append("sort_by", sort_by);
   params.append("sort_order", sort_order);
@@ -83,6 +76,23 @@ export async function getAllTasks({
   });
 
   return response.data;
+}
+
+/**
+ * The tasks linked to one entity (an incident, a vendor, ...) that the user
+ * can see, archived tasks left out (GET /api/v1/tasks/linked/:type/:id).
+ * Errors are shown by the caller, so the global error toast is skipped.
+ */
+export async function getTasksLinkedToEntity(
+  entityType: EntityLinkType,
+  entityId: number,
+  signal?: AbortSignal,
+): Promise<ITask[]> {
+  const response = await apiServices.get<{ message: string; data: ITask[] }>(
+    `/v1/tasks/linked/${encodeURIComponent(entityType)}/${entityId}`,
+    { signal, suppressGlobalErrorToast: true },
+  );
+  return Array.isArray(response.data?.data) ? response.data.data : [];
 }
 
 /**

@@ -862,7 +862,7 @@ const SideDrawerIncident: FC<SideDrawerIncidentProps> = ({
             <LinkedTasks
               entityType="incident"
               entityId={incidentId}
-              emptyMessage="No tasks are linked to this incident yet. To link one, open the task and add this incident to its linked items."
+              emptyMessage="No linked tasks you can see."
             />
           </Box>
         ) : (

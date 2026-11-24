@@ -59,6 +59,8 @@ const EntityLinkSelector: React.FC<EntityLinkSelectorProps> = ({
   const [models, setModels] = useState<any[]>([]);
   const [policies, setPolicies] = useState<any[]>([]);
   const [incidents, setIncidents] = useState<IncidentOption[]>([]);
+  // The empty message waits for a successful read; a failed one says so.
+  const [incidentsLoad, setIncidentsLoad] = useState<"loading" | "ready" | "error">("loading");
   const [projects, setProjects] = useState<any[]>([]);
   const [frameworks, setFrameworks] = useState<any[]>([]);
   const [projectFrameworks, setProjectFrameworks] = useState<any[]>([]);
@@ -110,8 +112,10 @@ const EntityLinkSelector: React.FC<EntityLinkSelectorProps> = ({
           .filter((incident) => incident?.id && incident.archived !== true)
           .map((incident) => ({ _id: incident.id, name: incidentLinkLabel(incident) })),
       );
+      setIncidentsLoad("ready");
     } catch (error) {
       console.error("Error fetching incidents:", error);
+      setIncidentsLoad("error");
     }
   }, []);
 
@@ -685,7 +689,7 @@ const EntityLinkSelector: React.FC<EntityLinkSelectorProps> = ({
         <AutoCompleteField<IncidentOption>
           key="incident"
           id="incident-link-select"
-          placeholder="Search incidents"
+          placeholder={incidentsLoad === "loading" ? "Loading..." : "Search incidents"}
           options={incidents}
           value={incidents.find((option) => option._id === selectedEntityId) ?? null}
           getOptionLabel={(option) => option.name}
@@ -829,7 +833,7 @@ const EntityLinkSelector: React.FC<EntityLinkSelectorProps> = ({
         fontSize={"13px"}
         sx={{ margin: 0, height: "22px" }}
       >
-        Linked Items
+        Linked items
       </Typography>
 
       {/* Display existing links */}
@@ -979,7 +983,18 @@ const EntityLinkSelector: React.FC<EntityLinkSelectorProps> = ({
         </Typography>
       )}
 
-      {selectedTopLevel === "incident" && incidents.length === 0 && (
+      {selectedTopLevel === "incident" && incidentsLoad === "error" && (
+        <Typography
+          sx={{
+            fontSize: "12px",
+            color: theme.palette.error.main,
+          }}
+        >
+          Could not load incidents.
+        </Typography>
+      )}
+
+      {selectedTopLevel === "incident" && incidentsLoad === "ready" && incidents.length === 0 && (
         <Typography
           sx={{
             fontSize: "12px",

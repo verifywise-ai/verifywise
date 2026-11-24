@@ -6,6 +6,7 @@ import {
   ITaskEntityLink,
   EntityType,
 } from "../repository/taskEntityLink.repository";
+import { linkedTaskQueryKeys } from "./useTasks";
 
 // Query keys for task entity links
 export const taskEntityLinkQueryKeys = {
@@ -53,6 +54,7 @@ export const useAddTaskEntityLink = () => {
       queryClient.invalidateQueries({
         queryKey: taskEntityLinkQueryKeys.byTask(taskId),
       });
+      queryClient.invalidateQueries({ queryKey: linkedTaskQueryKeys.all });
     },
   });
 };
@@ -71,6 +73,7 @@ export const useRemoveTaskEntityLink = () => {
       queryClient.invalidateQueries({
         queryKey: taskEntityLinkQueryKeys.byTask(taskId),
       });
+      queryClient.invalidateQueries({ queryKey: linkedTaskQueryKeys.all });
     },
   });
 };

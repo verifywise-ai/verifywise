@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { apiServices } from "../../../infrastructure/api/networkServices";
 import {
   getAllTasks,
+  getTasksLinkedToEntity,
   getTaskById,
   createTask,
   updateTask,
@@ -155,21 +156,6 @@ describe("task.repository", () => {
       expect(result).toEqual(mockResponse.data);
     });
 
-    it("asks for the tasks linked to one entity", async () => {
-      vi.mocked(apiServices.get).mockResolvedValue({
-        data: { tasks: [] },
-        status: 200,
-        statusText: "OK",
-      });
-
-      await getAllTasks({ linked_entity: { entity_type: "incident", entity_id: 12 } });
-
-      expect(apiServices.get).toHaveBeenCalledWith(
-        "/tasks?linked_entity_type=incident&linked_entity_id=12&sort_by=created_at&sort_order=DESC&page=1&page_size=25",
-        { signal: undefined },
-      );
-    });
-
     it("should make GET request with all filter arrays", async () => {
       const mockResponse = {
         data: {
@@ -216,6 +202,31 @@ describe("task.repository", () => {
       vi.mocked(apiServices.get).mockRejectedValue(networkError);
 
       await expect(getAllTasks({})).rejects.toThrow("Network timeout");
+    });
+  });
+
+  describe("getTasksLinkedToEntity", () => {
+    it("reads the v1 linked-tasks endpoint without the global error toast", async () => {
+      const tasks = [{ id: 700, title: "Contain the harm" }] as ITask[];
+      vi.mocked(apiServices.get).mockResolvedValue({
+        data: { message: "OK", data: tasks },
+        status: 200,
+        statusText: "OK",
+      });
+
+      const result = await getTasksLinkedToEntity("incident", 12);
+
+      expect(apiServices.get).toHaveBeenCalledWith("/v1/tasks/linked/incident/12", {
+        signal: undefined,
+        suppressGlobalErrorToast: true,
+      });
+      expect(result).toEqual(tasks);
+    });
+
+    it("answers an empty list for a body without tasks", async () => {
+      vi.mocked(apiServices.get).mockResolvedValue({ data: {}, status: 200, statusText: "OK" });
+
+      expect(await getTasksLinkedToEntity("incident", 12)).toEqual([]);
     });
   });
 

@@ -22,7 +22,11 @@ import {
 } from "./automation/task.automation.utils";
 import { replaceTemplateVariables } from "./automation/automation.utils";
 import { enqueueAutomationAction } from "../services/automations/automationProducer";
-import { EntityType, getTaskEntityLinksQuery } from "./taskEntityLink.utils";
+import {
+  EntityType,
+  getEntityLinksForTasksQuery,
+  getTaskEntityLinksQuery,
+} from "./taskEntityLink.utils";
 
 interface GetTasksOptions {
   userId: number;
@@ -386,6 +390,8 @@ export const getTasksQuery = async (
     .map((t) => t.id)
     .filter((id): id is number => typeof id === "number");
   const customFieldsByTask = await fetchCustomFieldsForEntities("task", taskIds, organizationId);
+  // Every task's links in one read (incident names in one more), not per task.
+  const linksByTask = await getEntityLinksForTasksQuery(taskIds, organizationId);
 
   // Add assignees and entity links to each task following the project members pattern
   for (const task of tasks) {
@@ -399,8 +405,7 @@ export const getTasksQuery = async (
     );
     (task.dataValues as any)["assignees"] = assignees.map((a: any) => a.user_id);
 
-    // Fetch entity links for this task
-    const entityLinks = await getTaskEntityLinksQuery(task.id!, organizationId);
+    const entityLinks = linksByTask.get(task.id!) ?? [];
     (task.dataValues as any)["entity_links"] = entityLinks.map((link) => ({
       id: link.id,
       entity_id: link.entity_id,

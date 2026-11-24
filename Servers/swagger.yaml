@@ -8100,6 +8100,8 @@ tags:
   -
     name: 'v1: V1/Scheduled Reports'
   -
+    name: 'v1: V1/Tasks'
+  -
     name: 'v1: V1/Training'
   -
     name: 'v1: V1/Use Case Lifecycle'
@@ -30332,6 +30334,39 @@ paths:
       tags:
         - 'v1: V1/Llm Keys'
       operationId: updateLLMKeyV1
+      security:
+        -
+          bearerAuth: []
+  '/v1/tasks/linked/{entityType}/{entityId}':
+    get:
+      summary: 'List the tasks linked to an entity'
+      description: 'The tasks linked to one entity (an incident, a vendor, ...) through task_entity_links that the user can see, with the visibility of GET /tasks. Archived tasks are left out. Not paginated.'
+      parameters:
+        -
+          name: entityType
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/EntityType'
+        -
+          name: entityId
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        '200':
+          description: 'The linked tasks'
+        '400':
+          description: 'Invalid entity type or ID'
+        '401':
+          description: Unauthorized
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Tasks'
+      operationId: getTasksLinkedToEntity
       security:
         -
           bearerAuth: []

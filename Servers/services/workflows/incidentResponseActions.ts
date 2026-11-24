@@ -25,7 +25,7 @@ import logger from "../../utils/logger/fileLogger";
 import { getIncidentByIdQuery } from "../../utils/incidentManagement.utils";
 import { createNotificationQuery } from "../../utils/notification.utils";
 import { createNewTaskQuery } from "../../utils/task.utils";
-import { createTaskEntityLinkQuery } from "../../utils/taskEntityLink.utils";
+import { createTaskEntityLinkQuery, incidentLinkName } from "../../utils/taskEntityLink.utils";
 import { recordEntityCreation } from "../../utils/changeHistory.base.utils";
 import { incidentPagePath } from "../../utils/incidentLinks.utils";
 import { TaskPriority } from "../../domain.layer/enums/task-priority.enum";
@@ -52,6 +52,8 @@ export interface ResponseIncident {
   id: number;
   /** The incident's display id (incident_id), or "#<id>" when it has none. */
   reference: string;
+  /** The stored display id (incident_id), null when it has none. */
+  displayId: string | null;
   useCase: string;
   severity: string;
   type: string;
@@ -82,6 +84,10 @@ export async function loadIncidentForResponse(
       typeof data.incident_id === "string" && data.incident_id.trim() !== ""
         ? data.incident_id
         : `#${data.id}`,
+    displayId:
+      typeof data.incident_id === "string" && data.incident_id.trim() !== ""
+        ? data.incident_id
+        : null,
     useCase: String(data.ai_project ?? ""),
     severity: String(data.severity ?? ""),
     type: String(data.type ?? ""),
@@ -309,9 +315,12 @@ export async function createRemediationTask(
         task_id: Number(task.id),
         entity_id: incident.id,
         entity_type: "incident",
-        entity_name: incident.useCase
-          ? `${incident.reference} · ${incident.useCase.slice(0, 60)}`
-          : incident.reference,
+        // The same name every incident link gets (incidentLinkName).
+        entity_name: incidentLinkName({
+          id: incident.id,
+          incident_id: incident.displayId,
+          ai_project: incident.useCase,
+        }),
       },
       ctx.organizationId,
       transaction,

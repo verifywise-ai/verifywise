@@ -103,6 +103,7 @@ enum TaskStatus {
 | DELETE | `/tasks/:id/hard` | Permanently delete |
 | GET | `/tasks/:id/entities` | List the task's linked items |
 | POST | `/tasks/:id/entities` | Link an item to the task |
+| GET | `/v1/tasks/linked/:entityType/:entityId` | The tasks linked to one item that the user can see (see [Linked items](#linked-items)) |
 | DELETE | `/tasks/:id/entities/:linkId` | Remove a linked item |
 
 ### Query Parameters (GET /tasks)
@@ -119,7 +120,6 @@ enum TaskStatus {
 | `assignee` | number/array | Filter by assignee IDs |
 | `search` | string | Search title/description |
 | `include_archived` | boolean | Include deleted tasks |
-| `linked_entity_type` + `linked_entity_id` | string + positive integer | Only tasks linked to this item (see [Linked items](#linked-items)). Send both or neither: one alone, an unknown type or an id that is not a positive integer answers 400. Visibility rules still apply |
 
 **Pagination:**
 
@@ -145,7 +145,7 @@ there is no foreign key to the item, so the valid types live in code:
 | `model` | `model_inventories` | Anyone who can see the task |
 | `policy` | `policy_manager` | Anyone who can see the task |
 | `incident` | `ai_incident_managements` | Anyone who can see the task, while the incident is not archived |
-| `nist_subcategory`, `iso42001_subclause`, `iso42001_annexcategory`, `iso27001_subclause`, `iso27001_annexcontrol`, `eu_control`, `eu_subcontrol` | the framework's requirement table | Users who can see the requirement's use case (`canLinkTaskToEntityQuery`) |
+| `nist_subcategory`, `iso42001_subclause`, `iso42001_annexcategory`, `iso27001_subclause`, `iso27001_annexcontrol`, `eu_control`, `eu_subcontrol` | the framework's requirement table | Users who can see the requirement's use case (`taskLinkRefusalQuery`) |
 
 Vendors, models, policies and incidents belong to the organization
 (`ORGANIZATION_WIDE_LINK_TYPES`); a link to one never gives the task's
@@ -154,29 +154,44 @@ assignees access to a use case. A link to a framework requirement does
 
 Links are written by `POST /tasks/:id/entities` and, inside the task's own
 transaction, by `entity_links` on task create and update
-(`persistTaskEntityLinks`: additive, skips anything invalid instead of failing
-the save, and never re-checks a link the task already has).
+(`persistTaskEntityLinks`: additive, skips anything invalid or not allowed
+instead of failing the save, except an archived incident, and never re-checks
+a link the task already has). `taskLinkRefusalQuery` is the one access check:
+it answers null (allowed), `"archived_incident"` or `"forbidden"`.
 
 **Incidents.** Every member reads incidents, so linking one needs no use case
 access. An archived incident cannot be linked: `POST /tasks/:id/entities`
-answers 409 ("Restore this incident before linking it to a task.") and
-`persistTaskEntityLinks` skips it. Links made before the incident was
-archived stay. An incident link is named by the incident's visible id and use
-case ("INC-12 · Credit scoring", `INCIDENT_LINK_NAME_SQL`), read from the
+answers 409 ("Restore this incident before linking it to a task."), and so
+does a task create or update whose `entity_links` add one
+(`persistTaskEntityLinks` throws `ArchivedIncidentLinkError`; the whole save
+is rolled back and the drawer shows the error). Links made before the incident
+was archived stay. An incident link is named by the incident's visible id and
+use case ("INC-12 · Credit scoring", `incidentLinkName`, the one server rule
+for it; the remediation task's stored name uses it too), read from the
 incident on every read rather than from the stored `entity_name`, so it
-follows the use case. Hard-deleting an incident deletes its links in the same
+follows the use case. Reads batch the names: `getEntityLinksForTasksQuery`
+reads every listed task's links in one query and their incidents in one more
+(`GET /tasks` calls it once per request). Hard-deleting an incident deletes its links in the same
 transaction (`deleteIncidentByIdQuery`), as deleting a vendor or a policy
 does. The critical incident workflow links its remediation task to the
 incident (see [incidents.md](./incidents.md#critical-incident-response-workflow)).
 
-**Where links show.** The task drawer's "Linked Items" field
+**Where links show.** The task drawer's "Linked items" field
 (`presentation/components/EntityLinkSelector`) lists and edits them;
 incidents are picked from a searchable list (by incident ID or use case) with
-archived incidents left out. The incident drawer's "Linked tasks" tab
-(`presentation/components/LinkedTasks`, `useLinkedTasks`) lists the tasks
-linked to the incident that the user can see, through `GET /tasks` with
-`linked_entity_type=incident`; clicking one opens it on the tasks page
-(`/tasks?taskId=<id>`). Task emails name each link and link to it
+archived incidents left out; while they load, or when the read fails, it says
+so rather than "No incidents to link". The incident drawer's "Linked tasks"
+tab (`presentation/components/LinkedTasks`, `useLinkedTasks`) lists the tasks
+linked to the incident that the user can see, through
+`GET /api/v1/tasks/linked/incident/<id>` (any signed-in member; the same
+visibility as `GET /tasks`, archived tasks left out, not paginated; 400 for an
+unknown type or an id that is not a positive integer). The legacy `GET /tasks`
+contract is unchanged. Clicking a task opens it on the tasks page
+(`/tasks?taskId=<id>`); an overdue task shows "Overdue" until completed, as on
+the tasks page. The cached lists live under their own query key root
+(`linkedTaskQueryKeys`, outside `["tasks"]`), so the optimistic list updaters
+of the task mutations never touch them; task creates, updates, archives,
+status and priority changes, bulk actions and link changes invalidate them. Task emails name each link and link to it
 (`buildEntityUrlAsync` in `services/inAppNotification.service.ts`; an
 incident opens `/ai-incident-managements?incidentId=<id>`).
 

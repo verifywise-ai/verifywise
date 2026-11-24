@@ -42,6 +42,7 @@ jest.mock("../../../utils/task.utils", () => ({
 }));
 jest.mock("../../../utils/taskEntityLink.utils", () => ({
   createTaskEntityLinkQuery: jest.fn(),
+  incidentLinkName: jest.requireActual("../../../utils/taskEntityLink.utils").incidentLinkName,
 }));
 jest.mock("../../../utils/changeHistory.base.utils", () => ({
   recordEntityCreation: jest.fn(),
@@ -100,6 +101,7 @@ const ctx = (overrides: Partial<WorkflowContext> = {}): WorkflowContext => ({
 const incident = (overrides: Partial<ResponseIncident> = {}): ResponseIncident => ({
   id: 99,
   reference: "INC-99",
+  displayId: "INC-99",
   useCase: "Credit scoring",
   severity: "Very serious",
   type: "Security breach",
@@ -252,6 +254,7 @@ describe("loadIncidentForResponse (I-M6)", () => {
     expect(result).toEqual({
       id: 99,
       reference: "INC-99",
+      displayId: "INC-99",
       useCase: "Credit scoring",
       severity: "Very serious",
       type: "Misuse",
@@ -281,6 +284,7 @@ describe("loadIncidentForResponse (I-M6)", () => {
 
     expect(result).toMatchObject({
       reference: "#99",
+      displayId: null,
       assigneeId: null,
       ownerName: null,
       archived: false,
@@ -366,6 +370,14 @@ describe("createRemediationTask (Decision 9b)", () => {
     await createRemediationTask(ctx(), incident({ useCase: "" }));
 
     expect(mockCreateLink.mock.calls[0][0]).toMatchObject({ entity_name: "INC-99" });
+  });
+
+  it("names the link INC-<id> like every incident link when there is no display id", async () => {
+    await createRemediationTask(ctx(), incident({ reference: "#99", displayId: null }));
+
+    expect(mockCreateLink.mock.calls[0][0]).toMatchObject({
+      entity_name: "INC-99 · Credit scoring",
+    });
   });
 
   it("does not link the task when creating it fails", async () => {

@@ -29,6 +29,7 @@ import {
   ITaskEntityLinkForEmail,
 } from "../services/inAppNotification.service";
 import {
+  ArchivedIncidentLinkError,
   getTaskEntityLinksQuery,
   isValidEntityType,
   persistTaskEntityLinks,
@@ -186,6 +187,13 @@ export async function createTask(req: Request, res: Response): Promise<any> {
   } catch (error) {
     await transaction.rollback();
 
+    // A new link to an archived incident fails the whole save.
+    if (error instanceof ArchivedIncidentLinkError) {
+      return res
+        .status(409)
+        .json(STATUS_CODE[409](req.t!("Restore this incident before linking it to a task.")));
+    }
+
     if (error instanceof ValidationException) {
       await logFailure({
         eventType: "Create",
@@ -251,27 +259,9 @@ export async function getAllTasks(req: Request, res: Response): Promise<any> {
       assignee,
       search,
       include_archived,
-      linked_entity_type,
-      linked_entity_id,
       sort_by = "created_at",
       sort_order = "DESC",
     } = req.query;
-
-    // Tasks linked to one entity: both parameters or neither.
-    let linkedEntity: { entity_type: string; entity_id: number } | undefined;
-    if (linked_entity_type !== undefined || linked_entity_id !== undefined) {
-      const entityId = Number(linked_entity_id);
-      if (
-        typeof linked_entity_type !== "string" ||
-        !isValidEntityType(linked_entity_type) ||
-        typeof linked_entity_id !== "string" ||
-        !/^[1-9]\d*$/.test(linked_entity_id) ||
-        !Number.isSafeInteger(entityId)
-      ) {
-        return res.status(400).json(STATUS_CODE[400](req.t!("Invalid entity type or ID")));
-      }
-      linkedEntity = { entity_type: linked_entity_type, entity_id: entityId };
-    }
 
     // Parse filters
     const filters: any = {};
@@ -284,7 +274,6 @@ export async function getAllTasks(req: Request, res: Response): Promise<any> {
       filters.assignee = Array.isArray(assignee) ? assignee.map(Number) : [Number(assignee)];
     if (search) filters.search = search as string;
     if (include_archived) filters.include_archived = include_archived === "true";
-    if (linkedEntity) filters.linked_entity = linkedEntity;
     filters.organization_id = Number(req.organizationId);
 
     // Parse sorting
@@ -337,6 +326,78 @@ export async function getAllTasks(req: Request, res: Response): Promise<any> {
       eventType: "Read",
       description: "Failed to retrieve tasks",
       functionName: "getAllTasks",
+      fileName: "task.ctrl.ts",
+      error: error as Error,
+      userId: req.userId!,
+      organizationId: req.organizationId!,
+    });
+
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
+  }
+}
+
+/**
+ * GET /api/v1/tasks/linked/:entityType/:entityId
+ * The tasks linked to one entity (task_entity_links) that the user can see,
+ * archived tasks left out: the same visibility as GET /tasks.
+ */
+export async function getTasksLinkedToEntity(req: Request, res: Response): Promise<Response> {
+  logProcessing({
+    description: "starting getTasksLinkedToEntity",
+    functionName: "getTasksLinkedToEntity",
+    fileName: "task.ctrl.ts",
+    userId: req.userId!,
+    organizationId: req.organizationId!,
+  });
+
+  try {
+    const { userId, role } = req;
+    if (!userId || !role) {
+      return res.status(401).json(STATUS_CODE[401](req.t!("Unauthorized")));
+    }
+
+    const entityType = String(req.params.entityType ?? "");
+    const rawEntityId = String(req.params.entityId ?? "");
+    const entityId = Number(rawEntityId);
+    if (
+      !isValidEntityType(entityType) ||
+      !/^[1-9]\d*$/.test(rawEntityId) ||
+      !Number.isSafeInteger(entityId)
+    ) {
+      return res.status(400).json(STATUS_CODE[400](req.t!("Invalid entity type or ID")));
+    }
+
+    const tasks = await getTasksQuery({ userId, role }, req.organizationId!, {
+      organization_id: Number(req.organizationId),
+      linked_entity: { entity_type: entityType, entity_id: entityId },
+    });
+
+    await logSuccess({
+      eventType: "Read",
+      description: `Retrieved tasks linked to ${entityType} ${entityId}`,
+      functionName: "getTasksLinkedToEntity",
+      fileName: "task.ctrl.ts",
+      userId: req.userId!,
+      organizationId: req.organizationId!,
+    });
+
+    return res.status(200).json(
+      STATUS_CODE[200](
+        tasks.map((task) => {
+          const values = task.dataValues as unknown as Record<string, unknown>;
+          return {
+            ...task.toJSON(),
+            assignees: values["assignees"] || [],
+            entity_links: values["entity_links"] || [],
+          };
+        }),
+      ),
+    );
+  } catch (error) {
+    await logFailure({
+      eventType: "Read",
+      description: "Failed to retrieve linked tasks",
+      functionName: "getTasksLinkedToEntity",
       fileName: "task.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
@@ -622,6 +683,13 @@ export async function updateTask(req: Request, res: Response): Promise<any> {
     return res.status(200).json(STATUS_CODE[200](taskResponse));
   } catch (error) {
     await transaction.rollback();
+
+    // A new link to an archived incident fails the whole save.
+    if (error instanceof ArchivedIncidentLinkError) {
+      return res
+        .status(409)
+        .json(STATUS_CODE[409](req.t!("Restore this incident before linking it to a task.")));
+    }
 
     if (error instanceof ValidationException) {
       await logFailure({
