@@ -1733,6 +1733,8 @@ export class ReportDataCollector {
             NULLIF(TRIM(CONCAT_WS(' ', ru.name, ru.surname)), '') AS reporter_name
           FROM ai_incident_managements aim
           LEFT JOIN users ru ON ru.id = aim.reporter_id
+            AND EXISTS (SELECT 1 FROM organization_members rom
+                         WHERE rom.user_id = ru.id AND rom.organization_id = aim.organization_id)
           WHERE ${scope} AND aim.archived IS NOT TRUE
           ORDER BY aim.created_at DESC`,
         { replacements, type: QueryTypes.SELECT },

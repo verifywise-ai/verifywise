@@ -81,7 +81,9 @@ only, rows created before 2026-11 have a first name only (no backfill: a first
 name cannot be matched to one user), and the server writes the user's full
 name into the text whenever it sets an id, so readers of the text stay right.
 The list and single reads add `reporter_name` and `approved_by_name` (the
-users' current full names, null without an id); the page shows
+users' current full names while they are members of the incident's
+organization; null without an id or once the user has left, as the report's
+reporter and Wise Search do); the page shows
 `reporter_name || reporter` and `approved_by_name || approved_by`
 (`AIIncidentManagementModel.reporterLabel` / `approverLabel`).
 
@@ -90,12 +92,15 @@ users' current full names, null without an id); the page shows
   organization (`getIncidentMemberName`; otherwise 400 `INVALID_REFERENCE` on
   `reporter_id`), and the server writes their full name into `reporter`,
   ignoring any text sent. The drawer picks reporters by user id; the Advisor
-  sends the requesting user's id and name.
-- **Reporter on update:** a `reporter_id` sent (changed or not) makes
-  `reporter` that member's current full name, ignoring any text sent. A
-  changed one is checked the same way as on create; an unchanged one whose
-  user has left the organization keeps the stored reporter, so it never
-  blocks other edits. A changed `reporter` text sent without `reporter_id`
+  sends the requesting user's id and name when they are a member of the
+  organization, else their name text only ("User #<id>").
+- **Reporter on update:** a changed `reporter_id` is checked the same way as
+  on create and makes `reporter` that member's current full name, ignoring
+  any text sent. One sent back unchanged leaves the stored reporter (id and
+  text) as it is, whatever text was sent: the page shows the user's current
+  name from the join, and a write that does not change the reporter never
+  writes the reporter column (so an approve-only caller or a restore never
+  does), nor is a departed reporter re-checked. A changed `reporter` text sent without `reporter_id`
   clears the stored `reporter_id` (the text now names someone else). Clearing
   `reporter_id` (null or "") leaves the text, sent or stored, as the reporter,
   so it must not be blank. The drawer sends `reporter` and `reporter_id`
@@ -115,8 +120,11 @@ users' current full names, null without an id); the page shows
   labels ("Reporter", "Approved by"; ids formatted as the user's name,
   scoped to the organization). The service records one row per person change
   (`incidentHistoryColumns`, and `creationHistoryValues` on create): the user
-  row when the person is a user, else the text row. So a change between two
-  users with the same name is still recorded.
+  row when the person is a user both before and after the change, so a change
+  between two users with the same name is still recorded; otherwise the text
+  row, so both sides are names (a text-only reporter, or an approver recorded
+  before `approved_by_id` existed, becoming a user reads "Bob" → "Jane
+  Smith", not "-" → "Jane Smith"), even when only the id changed.
 
 ### Incident Change History Table
 
@@ -242,7 +250,7 @@ The update route lets in a caller holding either key (`authorizeAny` in `middlew
 - to Pending or Not required: all three are cleared;
 - unchanged (for example only the notes change): they stay as stored.
 
-The approval date is the actor's own day, not the UTC one: an approver in Toronto at 20:00 records that day, not tomorrow. The console sends the browser's local date in the `X-Client-Date` header on every request (`Clients/src/infrastructure/api/clientDate.ts`, added by the axios interceptor and the Advisor chat transport); `authenticateJWT` stores it unchecked in the request context (`readClientDateHeader` / `getRequestClientDate` in `Servers/utils/context/context.ts`). `incidentToday(clientDate)` uses it only when it is a bare real date (`YYYY-MM-DD`) that is today somewhere on earth right now (from today in UTC-12, `earliestIncidentToday`, to today in UTC+14, `latestIncidentDate`), else today in UTC; so a caller can move the date by at most their own time zone, never backdate it. API-token callers and the MCP server send no header and get the UTC date. The approver and the fact the server sets the date stay server-controlled. The Advisor's new incidents use the same day for `occurred_date` and `date_detected`.
+The approval date is the actor's own day, not the UTC one: an approver in Toronto at 20:00 records that day, not tomorrow. The console sends the browser's local date in the `X-Client-Date` header on every request (`Clients/src/infrastructure/api/clientDate.ts`, added by the axios interceptor and the Advisor chat transport); `authenticateJWT` stores it unchecked in the request context (`readClientDateHeader` / `getRequestClientDate` in `Servers/utils/context/context.ts`). `incidentToday(clientDate)` uses it only when it is a bare real date (`YYYY-MM-DD`) that is today somewhere on earth right now (from today in UTC-12, `earliestIncidentToday`, to today in UTC+14, `latestIncidentDate`), else today in UTC; so a caller can move the date by at most their own time zone, never backdate it. API-token callers and the MCP server send no header and get the UTC date. The approver and the fact the server sets the date stay server-controlled. The Advisor's new incidents use the requester's day for `occurred_date` and `date_detected`: a write tool captures the requester's accepted date when they ask (`createWriteTool`, `acceptedClientDate`) and the approval gateway stores it with the action's params as `_requesterClientDate` (`REQUESTER_CLIENT_DATE_PARAM`, server-set: the tool bridge drops every underscore param from the model, and the wrapper drops this one), so an approver running the action later from another time zone does not change it. Without one the executor uses the current request's date, else UTC. The approval request view (`approvalRequest.utils.ts`) leaves the internal param out.
 
 On create (`createNewIncident`), a caller without `incident.approve` gets an incident that starts Pending with no approver, date or notes, whatever was sent. A caller with it may create the incident Approved or Rejected; the server then records them as approver, dated today. Creation history records the approval as stored.
 
@@ -707,7 +715,7 @@ The rules live in `Servers/utils/validations/incidentManagementValidation.utils.
 | approval_status | Optional, defaults to Pending; one of `AIIncidentManagementApprovalStatus` | Cannot be blanked; same rule when changed |
 | occurred_date, date_detected | Required; a real date (YYYY-MM-DD or an ISO date-time); not later than today in UTC+14 | Cannot be blanked; same rule when changed |
 | date_detected vs occurred_date | Detected on or after occurred (calendar dates) | Checked when either date changes, on the dates the row ends up with (request over the stored row) |
-| reporter | Required as a `reporter_id` or text (at most 255 characters); with a `reporter_id` the text is the user's full name | A `reporter_id` sent sets the text to the user's name; otherwise checked on the reporter the row ends up with (text sent, or stored) when the text changes or `reporter_id` is cleared |
+| reporter | Required as a `reporter_id` or text (at most 255 characters); with a `reporter_id` the text is the user's full name | A changed `reporter_id` sets the text to the user's name, an unchanged one keeps the stored text; otherwise checked on the reporter the row ends up with (text sent, or stored) when the text changes or `reporter_id` is cleared |
 | reporter_id | Optional user id (positive integer) of a member of the organization | Membership checked only when changed; a changed reporter text sent without it clears it |
 | model_system_version | Optional text, at most 255 characters | Same |
 | description | 5-32,767 characters (`INCIDENT_DESCRIPTION_MAX_LENGTH`, Jira's text-field limit; column is TEXT) | Checked only when it changes |
@@ -741,7 +749,7 @@ The rules live in `Servers/utils/validations/incidentManagementValidation.utils.
   its transaction. Both the REST create and the Advisor's `agent_create_incident` use it, so both
   get the same validation, reference checks (including `project_id`), server-set approval fields,
   creation history and the incident response workflow for Very serious incidents (enqueued after
-  commit). The Advisor names the requesting user as reporter ("AI Advisor" without one), passes the
+  commit). The Advisor names the requesting user as reporter (by user id while they are a member, else "User #<id>" as text; "AI Advisor" without one), passes the
   tool's `project_id` (an id outside the organization is refused with the reference error), never
   records approval (`canApprove: false`), and records history as the executing user, or as the
   system without one. The MCP server has no incident create tool. Update: `updateIncident` (`services/incidentManagement.service.ts`) against the locked row,

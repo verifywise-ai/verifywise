@@ -198,21 +198,34 @@ const INCIDENT_PERSON_COLUMNS = [
 ] as const;
 
 /**
- * The changed columns to record in history, with one row per person change
- * (both columns share a label): the user's row when the person is a user,
- * else the name text's row. A user row also records a change between two
- * users who have the same name.
+ * The columns to record in history for `changedColumns`, with one row per
+ * person change (the id and text columns share a label):
+ *
+ * - the user row when the person was a user before and is one after, so a
+ *   change between two users with the same name is still recorded;
+ * - otherwise the name text's row, whose old and new sides are both names
+ *   (a text-only reporter or an approver recorded before approved_by_id
+ *   existed becoming a user, or a user replaced by a text), even when only
+ *   the id changed.
+ *
+ * Pass the stored row as `oldData` and the row as written as `newData`.
  */
 export const incidentHistoryColumns = (
   changedColumns: string[],
+  oldData: Record<string, unknown>,
   newData: Record<string, unknown>,
 ): string[] => {
-  const dropped = new Set<string>();
+  const columns = [...changedColumns];
   for (const [idColumn, textColumn] of INCIDENT_PERSON_COLUMNS) {
-    if (!changedColumns.includes(idColumn) || !changedColumns.includes(textColumn)) continue;
-    dropped.add(isBlankIncidentValue(newData[idColumn]) ? idColumn : textColumn);
+    // A change of the text alone is recorded by the text row.
+    if (!columns.includes(idColumn)) continue;
+    const bothUsers =
+      !isBlankIncidentValue(oldData[idColumn]) && !isBlankIncidentValue(newData[idColumn]);
+    const dropped = bothUsers ? textColumn : idColumn;
+    if (columns.includes(dropped)) columns.splice(columns.indexOf(dropped), 1);
+    if (!bothUsers && !columns.includes(textColumn)) columns.push(textColumn);
   }
-  return changedColumns.filter((column) => !dropped.has(column));
+  return columns;
 };
 
 export interface UpdateIncidentOptions {
@@ -280,11 +293,11 @@ const isAbsentVersion = (value: unknown): boolean => value === null || value ===
  * and id and today's date for Approved or Rejected, cleared for Pending or
  * Not required).
  *
- * A reporter_id sent (changed or not) sets the reporter text to that
- * member's current full name, ignoring any reporter text sent. A changed one
- * must be a member of the organization (else IncidentUpdateValidationError,
- * INVALID_REFERENCE); an unchanged one whose user has left keeps the stored
- * reporter. A changed reporter text sent without a reporter_id clears the
+ * A changed reporter_id must be a member of the organization (else
+ * IncidentUpdateValidationError, INVALID_REFERENCE) and sets the reporter
+ * text to their current full name, ignoring any reporter text sent. A
+ * reporter_id sent back unchanged leaves the stored reporter (id and text)
+ * as it is. A changed reporter text sent without a reporter_id clears the
  * stored reporter_id.
  *
  * History is recorded as `userId`, or as the system when
@@ -369,19 +382,23 @@ export async function updateIncident(
       organizationId,
       transaction,
     );
-    // A reporter picked from the users (reporter_id, changed or sent back
-    // unchanged) is the reporter: their current full name goes into the
-    // reporter text, whatever text was sent. A changed one must be a member
-    // of the organization. One sent back unchanged whose user has since left
-    // keeps the stored reporter as it is.
+    // A reporter picked from the users (reporter_id) is the reporter. A
+    // changed one must be a member of the organization, and their current
+    // full name goes into the reporter text, whatever text was sent. One sent
+    // back unchanged leaves the stored reporter as it is (text included): the
+    // page shows the user's current name from the join, and this write never
+    // touches a column the access and archived checks above did not see
+    // changing.
     const reporterIdSent = updates.reporter_id !== undefined;
     const reporterIdChanges =
       reporterIdSent &&
       !isSameIncidentValue("reporter_id", stored.reporter_id, updates.reporter_id);
-    const reporterName = reporterIdSent
+    const keepsReporterUser =
+      reporterIdSent && !reporterIdChanges && !isBlankIncidentValue(stored.reporter_id);
+    const reporterName = reporterIdChanges
       ? await reporterNameFor(updates.reporter_id, organizationId, transaction)
       : undefined;
-    if (reporterName === null && reporterIdChanges) {
+    if (reporterName === null) {
       throw new IncidentUpdateValidationError(invalidReferenceErrors(["reporter_id"]));
     }
     if (invalidRefs.length > 0) {
@@ -391,7 +408,7 @@ export async function updateIncident(
     const effective: Record<string, unknown> = { ...applyReopenApprovalReset(stored, updates) };
     if (typeof reporterName === "string") {
       effective.reporter = reporterName;
-    } else if (reporterName === null) {
+    } else if (keepsReporterUser) {
       effective.reporter = stored.reporter;
     } else if (
       !reporterIdSent &&
@@ -430,8 +447,8 @@ export async function updateIncident(
       const changes = await formatEntityFieldChanges(
         "incident",
         stored,
-        changed,
-        incidentHistoryColumns(changedColumns, changed),
+        { ...stored, ...changed },
+        incidentHistoryColumns(changedColumns, stored, changed),
         { organizationId, transaction },
       );
       if (changes.length > 0) {

@@ -245,16 +245,35 @@ describe("incident reporter and approver users", () => {
       expect(result).toBe(stored);
     });
 
-    it("an unchanged reporter_id with another reporter text keeps the user and writes their name", async () => {
+    it("an unchanged reporter_id leaves the stored reporter alone, whatever text is sent", async () => {
       const stored = storedIncident();
       stored.setDataValue("reporter_id", 7);
       stored.setDataValue("reporter", "Alex K.");
       mockGet.mockImplementation(async () => stored);
-      await updateIncident(1, 42, { reporter_id: 7, reporter: "Someone else" }, 7, {
-        access: FULL_ACCESS,
+      await updateIncident(
+        1,
+        42,
+        { reporter_id: 7, reporter: "Someone else", severity: "Minor" },
+        7,
+        {
+          access: FULL_ACCESS,
+        },
+      );
+      // The page shows the user's current name from the join; the stored
+      // text is not refreshed by a write that did not change the reporter.
+      expect(writtenColumns()).toEqual({ severity: "Minor" });
+    });
+
+    it("an unchanged reporter_id never writes the reporter for an approve-only caller", async () => {
+      const stored = storedIncident();
+      stored.setDataValue("reporter_id", 7);
+      stored.setDataValue("reporter", "Alex K.");
+      stored.setDataValue("approval_status", Approval.PENDING);
+      mockGet.mockImplementation(async () => stored);
+      await updateIncident(1, 42, { reporter_id: 7, approval_notes: "Checked" }, 7, {
+        access: { canEdit: false, canApprove: true },
       });
-      // The text follows the member's current full name; the id is kept.
-      expect(writtenColumns()).toEqual({ reporter: "Alex Kim" });
+      expect(writtenColumns()).toEqual({ approval_notes: "Checked" });
     });
 
     it("an unchanged reporter_id whose user has left keeps the stored reporter text", async () => {
@@ -373,11 +392,38 @@ describe("incident reporter and approver users", () => {
       await updateIncident(1, 42, { approval_status: Approval.APPROVED }, 7, {
         access: FULL_ACCESS,
       });
+      // No approver before: the name row (the id row's old side would be "-").
       expect([...mockFormatChanges.mock.calls[0][3]].sort()).toEqual([
         "approval_date",
         "approval_status",
-        "approved_by_id",
+        "approved_by",
       ]);
+      expect(mockFormatChanges.mock.calls[0][2]).toMatchObject({ approved_by: "Ada Admin" });
+    });
+
+    it("records the approver's user row when one approver user replaces another", async () => {
+      const stored = storedIncident();
+      stored.setDataValue("approval_status", Approval.PENDING);
+      stored.setDataValue("approved_by_id", 5);
+      stored.setDataValue("approved_by", "Jane Doe" as any);
+      mockGet.mockImplementation(async () => stored);
+      await updateIncident(1, 42, { approval_status: Approval.APPROVED }, 7, {
+        access: FULL_ACCESS,
+      });
+      const columns = mockFormatChanges.mock.calls[0][3] as string[];
+      expect(columns).toContain("approved_by_id");
+      expect(columns).not.toContain("approved_by");
+    });
+
+    it("records a text-only reporter becoming a user as the name row, old text to new name", async () => {
+      const stored = storedIncident();
+      stored.setDataValue("reporter_id", null);
+      stored.setDataValue("reporter", "Bob");
+      mockGet.mockImplementation(async () => stored);
+      await updateIncident(1, 42, { reporter_id: 8 }, 7, { access: FULL_ACCESS });
+      expect(mockFormatChanges.mock.calls[0][3]).toEqual(["reporter"]);
+      expect(mockFormatChanges.mock.calls[0][1]).toMatchObject({ reporter: "Bob" });
+      expect(mockFormatChanges.mock.calls[0][2]).toMatchObject({ reporter: "Alex Moreau" });
     });
 
     it("records the reporter text row when the reporter becomes text only", async () => {
@@ -406,16 +452,28 @@ describe("incident reporter and approver users", () => {
 
   describe("history rows per person", () => {
     it("keeps one row per person change: the user's when set, else the text", () => {
+      const user = (id: number | null) => ({ reporter_id: id, approved_by_id: id });
+      // A user before and after: the user row.
       expect(
-        incidentHistoryColumns(["reporter", "reporter_id", "severity"], { reporter_id: 8 }),
+        incidentHistoryColumns(["reporter", "reporter_id", "severity"], user(7), user(8)),
       ).toEqual(["reporter_id", "severity"]);
-      expect(incidentHistoryColumns(["reporter", "reporter_id"], { reporter_id: null })).toEqual([
+      expect(incidentHistoryColumns(["reporter_id"], user(7), user(8))).toEqual(["reporter_id"]);
+      // No user on one side: the name row, even when only the id changed.
+      expect(incidentHistoryColumns(["reporter", "reporter_id"], user(7), user(null))).toEqual([
         "reporter",
       ]);
+      expect(incidentHistoryColumns(["reporter", "reporter_id"], user(null), user(8))).toEqual([
+        "reporter",
+      ]);
+      expect(incidentHistoryColumns(["reporter_id"], user(null), user(8))).toEqual(["reporter"]);
       expect(
-        incidentHistoryColumns(["approved_by", "approved_by_id"], { approved_by_id: null }),
+        incidentHistoryColumns(["approved_by", "approved_by_id"], user(null), user(8)),
       ).toEqual(["approved_by"]);
-      expect(incidentHistoryColumns(["reporter_id"], { reporter_id: 8 })).toEqual(["reporter_id"]);
+      expect(
+        incidentHistoryColumns(["approved_by", "approved_by_id"], user(5), user(null)),
+      ).toEqual(["approved_by"]);
+      // A text change alone stays a text row.
+      expect(incidentHistoryColumns(["reporter"], user(7), user(7))).toEqual(["reporter"]);
     });
 
     it("records a new incident's user reporter and approver once, as users", () => {

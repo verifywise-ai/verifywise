@@ -408,4 +408,57 @@ describe("incident reporter and approver users against the database", () => {
     });
     expect(otherOrg.incident_management?.results ?? []).toEqual([]);
   });
+
+  it("records a text-only reporter becoming a user as old text to new name", async () => {
+    const { owner } = await seedTwoTenantContexts();
+    const created = await owner.request.post(ROUTE).send(payload({ reporter: "Bob Builder" }));
+    expect(created.status).toBe(201);
+    const id = created.body.data.id;
+
+    const res = await owner.request.patch(`${ROUTE}/${id}`).send({ reporter_id: owner.userId });
+    expect(res.status).toBe(200);
+    expect(await historyRows(id)).toEqual([
+      { field_name: "Reporter", old_value: "Bob Builder", new_value: await fullName(owner.userId) },
+    ]);
+  });
+
+  it("an unchanged reporter_id after a rename leaves the stored reporter text and records nothing", async () => {
+    const { owner } = await seedTwoTenantContexts();
+    const created = await owner.request.post(ROUTE).send(payload({ reporter_id: owner.userId }));
+    const id = created.body.data.id;
+    const original = created.body.data.reporter;
+    await setName(owner.userId, "Renamed", "Person");
+
+    const res = await owner.request
+      .patch(`${ROUTE}/${id}`)
+      .send({ reporter_id: owner.userId, reporter: "Renamed Person" });
+    expect(res.status).toBe(200);
+    expect(res.body.data.reporter).toBe(original);
+    expect(res.body.data.reporter_name).toBe("Renamed Person");
+    expect(await historyRows(id)).toEqual([]);
+  });
+
+  it("shows a reporter who left the organization by the stored text, not their name", async () => {
+    const { owner, attacker } = await seedTwoTenantContexts();
+    const leaver = await createTestUser(owner.orgId, 3, `left-${Date.now()}@test.local`, "Pw123!x");
+    const created = await owner.request.post(ROUTE).send(payload({ reporter_id: leaver }));
+    expect(created.status).toBe(201);
+    const stored = created.body.data.reporter;
+    await setName(leaver, "Elsewhere", "Now");
+    // Moves to the other organization (a user keeps at least one membership).
+    await sequelize.query(
+      `WITH moved AS (
+         INSERT INTO organization_members (organization_id, user_id, role_id)
+         VALUES (:other, :leaver, 3) RETURNING user_id
+       )
+       DELETE FROM organization_members
+        WHERE organization_id = :orgId AND user_id IN (SELECT user_id FROM moved)`,
+      { replacements: { other: attacker.orgId, leaver, orgId: owner.orgId } },
+    );
+
+    const got = await owner.request.get(`${ROUTE}/${created.body.data.id}`);
+    expect(got.body.data.reporter_id).toBe(leaver);
+    expect(got.body.data.reporter_name).toBeNull();
+    expect(got.body.data.reporter).toBe(stored);
+  });
 });

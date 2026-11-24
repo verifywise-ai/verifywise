@@ -23,9 +23,11 @@ import {
  * Base SELECT for incident queries. LEFT JOINs resolve the issue #4583
  * foreign keys (model_inventory_id / project_id / assignee_id) and the
  * reporter / approver users into display names for API consumers.
- * CONCAT_WS skips NULL parts. reporter_name / approved_by_name are null when
- * the id is null (older rows, Jira imports, a deleted user): readers fall
- * back to the reporter / approved_by text.
+ * CONCAT_WS skips NULL parts. reporter_name / approved_by_name are the
+ * user's name only while they are a member of the incident's organization
+ * (as Wise Search matches them); they are null when the id is null (older
+ * rows, Jira imports, a deleted user) or the user has left: readers fall back
+ * to the reporter / approved_by text.
  */
 const INCIDENT_SELECT = `
   SELECT i.*,
@@ -39,7 +41,11 @@ const INCIDENT_SELECT = `
   LEFT JOIN projects p ON p.id = i.project_id
   LEFT JOIN users u ON u.id = i.assignee_id
   LEFT JOIN users ru ON ru.id = i.reporter_id
-  LEFT JOIN users au ON au.id = i.approved_by_id`;
+    AND EXISTS (SELECT 1 FROM organization_members rom
+                 WHERE rom.user_id = ru.id AND rom.organization_id = i.organization_id)
+  LEFT JOIN users au ON au.id = i.approved_by_id
+    AND EXISTS (SELECT 1 FROM organization_members aom
+                 WHERE aom.user_id = au.id AND aom.organization_id = i.organization_id)`;
 
 /** Optional server-side filters for the incident list (issue #4583). */
 export interface IncidentListFilters {
