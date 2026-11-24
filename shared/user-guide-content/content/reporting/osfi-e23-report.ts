@@ -32,7 +32,7 @@ export const osfiE23ReportContent: ArticleContent = {
         { bold: 'Admin role', text: 'The report covers the whole organization. Only an Admin can run or schedule an organization report.' },
         { bold: 'The OSFI E-23 framework', text: 'Add OSFI E-23 on the **Frameworks** page. Then record the status, owner, due date and evidence of each requirement. Without it the report runs, but it says E-23 is not on file. The completeness and contradiction checks are then skipped.' },
         { bold: 'Model risk management records', text: 'Tiers, validations, findings and monitoring thresholds come from the Model risk management tab under **Record > Inventory > Models**. The more of it is filled in, the more the report can check.' },
-        { bold: 'An LLM key (optional)', text: 'The AI sections need an LLM key in **Settings → LLM keys**. Without one you get the report with a note in place of each AI section.' },
+        { bold: 'An LLM key (optional)', text: 'The AI sections need an LLM key in **Settings → API keys**. Without one you get the report with a note in place of each AI section.' },
       ],
     },
     {
