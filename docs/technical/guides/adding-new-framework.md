@@ -327,8 +327,9 @@ name (for example `WHERE name = 'EU AI Act'` and the client's badge map).
 
 For the built-ins, a database row with no item in the code is left alone
 (ISO 42001 clause 6.1.1–6.1.4 and 6.3 exist only through migrations), and an
-item in the code with no row is not inserted but logged (NIST MEASURE
-2.10–2.13 are missing on every install; that needs a migration). ISO 27001
+item in the code with no row is not inserted but logged once per revision
+(adding items needs a migration, as `20261123170316` did for NIST MEASURE
+2.10–2.13). ISO 27001
 Annex A controls are keyed by their control number, which also corrects the
 controls that installs created after `20260420113913` hold under the wrong
 title. Demo answers, implementation text, EU roles and risk tiers,

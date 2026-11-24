@@ -15,8 +15,8 @@
  *   control key also corrects the 24 Annex A controls that installs created
  *   after 20260420113913 hold under the wrong title.
  * - NIST AI RMF: function and category number; subcategory by its category
- *   and order_no (the subcategory_id column is DECIMAL(4,1), which cannot
- *   tell 2.1 from 2.10).
+ *   and order_no (subcategory_id was DECIMAL(4,1) until 20261123170316, which
+ *   could not tell 2.1 from 2.10).
  *
  * Only text is synced. Demo answers and implementation text in the TS files,
  * EU roles and risk tiers, applicability, status and every per-organization

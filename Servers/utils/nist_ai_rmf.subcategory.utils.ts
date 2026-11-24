@@ -585,7 +585,7 @@ export const getNISTAIRMFDashboardOverview = async (
       description: string;
       subcategories: {
         id: number;
-        subcategory_id: number;
+        subcategory_id: string;
         description: string;
         status: string;
         owner: number | null;
@@ -643,7 +643,7 @@ export const getNISTAIRMFDashboardOverview = async (
       owner: number | null;
       struct_id: number;
       function: string;
-      subcategory_id: number;
+      subcategory_id: string;
       description: string;
       category_struct_id: number;
     }[],
