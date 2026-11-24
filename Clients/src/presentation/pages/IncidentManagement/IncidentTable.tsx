@@ -8,7 +8,7 @@ import {
   Stack,
   Tooltip,
 } from "@mui/material";
-import { AlertTriangle, Archive, FileWarning, ClipboardList, Bell } from "lucide-react";
+import { AlertTriangle, Archive, FileWarning, ClipboardList, Bell, SearchX } from "lucide-react";
 import { EmptyState } from "../../components/EmptyState";
 import EmptyStateTip from "../../components/EmptyState/EmptyStateTip";
 import CustomizableSkeleton from "../../components/Skeletons";
@@ -21,6 +21,7 @@ import { AIIncidentManagementModel } from "../../../domain/models/Common/inciden
 import { IncidentTableProps } from "../../types/interfaces/i.table";
 import { incidentRowHover, incidentTableRowDeletingStyle } from "./style";
 import CustomIconButton from "../../components/IconButton";
+import { CustomizableButton } from "../../components/button/customizable-button";
 import JiraIssueChip from "../../components/JiraIssueChip";
 import { useStandardTable } from "../../../application/hooks/useStandardTable";
 import type { StandardColumn } from "../../../domain/types/standardTable";
@@ -36,7 +37,7 @@ const cellStyle = singleTheme.tableStyles.primary.body.cell;
 
 const TABLE_COLUMNS: StandardColumn[] = [
   { id: "incident_id", label: "INCIDENT ID", sortable: true },
-  { id: "ai_project", label: "AI PROJECT", sortable: true },
+  { id: "ai_project", label: "USE CASE", sortable: true },
   { id: "model_inventory_name", label: "AFFECTED MODEL", sortable: true },
   { id: "assignee_name", label: "OWNER", sortable: true },
   { id: "type", label: "TYPE", sortable: true },
@@ -70,6 +71,8 @@ const IncidentTable: React.FC<IncidentTableProps> = ({
   onRestore,
   archiveView = "active",
   hasArchivedIncidents = false,
+  isFiltered = false,
+  onClearFilters,
   canEdit = true,
   canApprove = false,
   paginated = true,
@@ -311,7 +314,7 @@ const IncidentTable: React.FC<IncidentTableProps> = ({
                         ...cellStyle,
                       }}
                     >
-                      <Stack direction="row" spacing={1}>
+                      <Stack direction="row" gap="2px">
                         <CustomIconButton
                           id={incident.id}
                           type="Incident"
@@ -355,12 +358,13 @@ const IncidentTable: React.FC<IncidentTableProps> = ({
       sortConfig.key,
       visibleTableColumns.length,
       formatDate,
+      jiraLinks,
     ],
   );
 
   if (isLoading) {
     return (
-      <Stack spacing={2}>
+      <Stack>
         <CustomizableSkeleton variant="rectangular" width="100%" height={400} />
       </Stack>
     );
@@ -384,6 +388,46 @@ const IncidentTable: React.FC<IncidentTableProps> = ({
         }
       >
         <EmptyState icon={Archive} message="No archived incidents." />
+      </TableEmptyStateLayout>
+    );
+  }
+
+  const emptyHeader = (
+    <StandardTableHead columns={visibleTableColumns} sortConfig={sortConfig} onSort={handleSort} />
+  );
+
+  // A search, status card or filter hides every row: say so, not "none yet".
+  if ((!sortedRows || sortedRows.length === 0) && isFiltered) {
+    return (
+      <TableEmptyStateLayout header={emptyHeader}>
+        <EmptyState icon={SearchX} message="No incidents match these filters.">
+          {onClearFilters && (
+            <Stack alignItems="center">
+              <CustomizableButton
+                variant="outlined"
+                text="Clear filters"
+                onClick={onClearFilters}
+                testId="incidents-clear-filters"
+              />
+            </Stack>
+          )}
+        </EmptyState>
+      </TableEmptyStateLayout>
+    );
+  }
+
+  // Every incident is archived and the view shows active ones only.
+  if (
+    (!sortedRows || sortedRows.length === 0) &&
+    archiveView === "active" &&
+    hasArchivedIncidents
+  ) {
+    return (
+      <TableEmptyStateLayout header={emptyHeader}>
+        <EmptyState
+          icon={Archive}
+          message="No active incidents. Archived incidents are in the Archived only view."
+        />
       </TableEmptyStateLayout>
     );
   }

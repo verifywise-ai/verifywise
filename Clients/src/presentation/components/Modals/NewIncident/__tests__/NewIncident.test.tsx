@@ -78,9 +78,7 @@ describe("NewIncident (SideDrawerIncident)", () => {
 
     fireEvent.click(screen.getByText("Save incident"));
 
-    expect(screen.getByRole("alert")).toHaveTextContent(
-      "Please select at least one Category of Harm.",
-    );
+    expect(screen.getByRole("alert")).toHaveTextContent("Select at least one category of harm.");
     expect(onSuccess).not.toHaveBeenCalled();
   });
 

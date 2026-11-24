@@ -7,7 +7,7 @@ Incident Management in VerifyWise provides a comprehensive system for tracking, 
 ## Key Features
 
 - Incident lifecycle management (Open → Investigating → Mitigated → Closed, plus Suspended and Emergency action; closed incidents can be reopened)
-- Multi-level severity classification (Minor, Serious, Very Serious)
+- Multi-level severity classification (Minor, Serious, Very serious)
 - Approval workflow with audit trail
 - Harm category tracking
 - Field-level change history
@@ -439,8 +439,8 @@ Stored values are those of `AIIncidentManagementApprovalStatus`
 `Approved`, `Rejected`, `Not required`. The column is `VARCHAR(20)` with the
 CHECK constraint `ai_incident_managements_approval_status_check`.
 `APPROVAL_STATUS_ENUM` in the validation utils is built from the enum. The edit
-form labels the option "Not Required", but the value it saves is
-`Not required`.
+form's option labels are the stored values ("Not required"), translated on
+screen; the value saved is never translated.
 
 When approved or rejected (set by the server, see
 [Editing versus approving](#editing-versus-approving)):
@@ -645,11 +645,34 @@ All incident modifications are tracked:
   archive confirmation says archived incidents leave the default list,
   dashboard, search and reports and can be restored from the "Archived only"
   view. The status cards count the incidents of the chosen view, the set a
-  card click filters. "No archived incidents." shows only when there are none;
-  when filters or search hide the archived ones, the usual empty state shows.
-- Incident list with filtering
-- Filter by: incident_id, ai_project, type, severity, status, approval_status
-- Search functionality
+  card click filters. "No archived incidents." shows only when there are none.
+- Empty states (`IncidentTable`): when a search, a status card or a filter
+  hides every row, the table says "No incidents match these filters." with a
+  Clear filters button (clears the search, the status card and the filters,
+  not the view select). With nothing narrowing the list, "Active only" and
+  every incident archived says so and points to the "Archived only" view;
+  otherwise the "No incidents reported yet" state shows.
+- Filters (`TableFilter`): incident ID, use case, affected model, owner, type,
+  severity, status and occurred date. The occurred date column is a
+  `dateRange: "recent"` column: it offers "is today", "since yesterday" and "in
+  the last 7 days / 2 weeks / 30 days" (today and the N days before it), the
+  same ranges in the classic filter and as phase 1 chips (Today, Since
+  yesterday, Last 7 days, Last 2 weeks, Last 30 days), compared by the user's
+  local calendar day (`in_last_*` operators in
+  `Clients/src/application/utils/filterConditions.ts`). Due-date columns on
+  other pages keep the forward-looking "in N days" operators.
+- Search (`incidentMatchesSearch` in `pages/IncidentManagement/incidentSearch.ts`):
+  the visible incident ID ("INC-12"), the use case title and the reporter's
+  name, ignoring case and surrounding spaces. The database id is not searched.
+- Toasts: info and success close after 3 seconds; errors and warnings (such as
+  the edit-conflict message) stay until the user closes them. Clear filters
+  closes only the info toast ("Filtering by ...").
+- After a save, archive or restore the list is fetched again in place (no
+  loading skeleton, no table remount), so the page, sort, filters and scroll
+  position are kept. The skeleton shows on the first load only. The success
+  toast shows only when that refresh worked; when it fails, its "Failed to load
+  incidents" error stays up instead, so a stale list is never shown as fresh
+  (the saved drawer still closes, since the save itself succeeded).
 - Role-based create (`incident.create`: Admin, Editor), edit (`incident.edit`) and approval (`incident.approve`)
 - Export functionality
 
@@ -659,30 +682,54 @@ All incident modifications are tracked:
 |-----------|---------|
 | `IncidentManagement` | Main page |
 | `IncidentTable` | Sortable, paginated table |
-| `NewIncident` | Create/edit/view modal |
+| `NewIncident` | Create/edit/view drawer |
 | `IncidentStatusCard` | Metrics display |
 | `IncidentManagementSteps` | User onboarding tour |
 
 ### Incident Modal Sections
 
-The modal is organized into 4 sections:
+The drawer (`components/Modals/NewIncident`) is a right-hand MUI drawer,
+`min(700px, 100vw)` wide; two-field rows stack on narrow screens. Its header
+shows in every mode: "Create new incident", "Edit incident", "Record approval"
+or "View incident", the incident ID and Jira chip when editing, and a close
+button (a focusable button labelled "Close"). The drawer paper is a modal
+dialog (`role="dialog"`, `aria-modal`) named by its title (`aria-labelledby`).
 
-1. **Incident Information**
-   - Project, type, severity
+Option labels (incident types, harm categories, severity, status, approval
+status) are the stored values in sentence case, translated on screen through
+`Clients/src/i18n/modules/incidents.ts`; the values sent to the API are never
+translated. Names that are data (use cases, users, models) are marked
+`noTranslate`.
+
+The use case picker lists the use cases the user can see (`useProjects`),
+including ones awaiting approval, since the server accepts any use case of the
+organization for `project_id`; rejected ones (`approval_status: "rejected"`)
+are left out. Options are keyed by project id; a title shared by several use
+cases gets the use case ID after it ("Chatbot (UC-5)"). Picking one sets
+`project_id` and copies the title into the free-text `ai_project`. An incident
+whose use case is not in the list (stored as text only, such as a Jira import,
+not visible to the user, or rejected) keeps it as an extra option, selected, so the
+stored value still shows and can be picked again (`STORED_USE_CASE_OPTION` for
+text only).
+
+The drawer is organized into 4 sections:
+
+1. **Incident information**
+   - Use case, type, severity
    - Status, dates
    - Reporter, model version
 
-2. **Impact Assessment**
+2. **Impact assessment**
    - Harm categories (multi-select)
    - Affected persons/groups
    - Description
    - Relationship/causality
 
-3. **Response & Actions**
+3. **Response and actions**
    - Immediate mitigations
    - Planned corrective actions
 
-4. **Approval & Reporting**
+4. **Approval and reporting**
    - Approval status (needs `incident.approve`)
    - Approved by, approval date (read-only, set by the server)
    - Approval notes (needs `incident.approve`)

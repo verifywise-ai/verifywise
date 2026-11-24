@@ -4677,6 +4677,12 @@ export const de: Record<string, string> = {
     "Fügen Sie zuerst einen Anbieter hinzu. Jedes Anbieterrisiko gehört zu einem Anbieter.",
   "The AI advisor could not answer": "Der KI-Berater konnte nicht antworten",
   "Check your LLM key in Settings": "Prüfen Sie Ihren LLM-Schlüssel in den Einstellungen",
+  "since yesterday": "seit gestern",
+  "in the last 7 days": "in den letzten 7 Tagen",
+  "in the last 2 weeks": "in den letzten 2 Wochen",
+  "in the last 30 days": "in den letzten 30 Tagen",
+  "Since yesterday": "Seit gestern",
+  "Last 2 weeks": "Letzte 2 Wochen",
 };
 
 export const fr: Record<string, string> = {
@@ -9359,6 +9365,12 @@ export const fr: Record<string, string> = {
     "Ajoutez d'abord un fournisseur. Chaque risque fournisseur appartient à un fournisseur.",
   "The AI advisor could not answer": "Le conseiller IA n'a pas pu répondre",
   "Check your LLM key in Settings": "Vérifiez votre clé LLM dans les paramètres",
+  "since yesterday": "depuis hier",
+  "in the last 7 days": "au cours des 7 derniers jours",
+  "in the last 2 weeks": "au cours des 2 dernières semaines",
+  "in the last 30 days": "au cours des 30 derniers jours",
+  "Since yesterday": "Depuis hier",
+  "Last 2 weeks": "2 dernières semaines",
 };
 
 export const es: Record<string, string> = {
@@ -14038,4 +14050,10 @@ export const es: Record<string, string> = {
     "Añade primero un proveedor. Cada riesgo de proveedor pertenece a un proveedor.",
   "The AI advisor could not answer": "El asesor de IA no pudo responder",
   "Check your LLM key in Settings": "Revisa tu clave de LLM en Configuración",
+  "since yesterday": "desde ayer",
+  "in the last 7 days": "en los últimos 7 días",
+  "in the last 2 weeks": "en las últimas 2 semanas",
+  "in the last 30 days": "en los últimos 30 días",
+  "Since yesterday": "Desde ayer",
+  "Last 2 weeks": "Últimas 2 semanas",
 };

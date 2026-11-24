@@ -334,6 +334,14 @@ export interface IncidentTableProps {
   archiveView?: "active" | "all" | "archived";
   /** Whether the organization has any archived incident (before filters and search). */
   hasArchivedIncidents?: boolean;
+  /**
+   * A search, status card or filter is narrowing the list. An empty table
+   * then says nothing matches (with onClearFilters) instead of "no incidents
+   * reported yet".
+   */
+  isFiltered?: boolean;
+  /** Clears the search, status card and filters (not the archive view). */
+  onClearFilters?: () => void;
   /** False hides edit, archive and restore in the row menu (no incident.edit). */
   canEdit?: boolean;
   /**
