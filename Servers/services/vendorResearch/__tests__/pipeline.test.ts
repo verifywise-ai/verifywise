@@ -3415,6 +3415,88 @@ describe("runVendorResearch", () => {
     });
   });
 
+  // A run that may search with Brave can end during its research (its time limit, or a research
+  // that throws): its trace is saved then, and the model's thoughts in it may quote Brave's text.
+  describe("the trace of a run that may search with Brave and ends during its research", () => {
+    const BRAVE_THOUGHT = "BRAVE-SNIPPET-QUOTED-IN-A-THOUGHT";
+
+    beforeEach(() => {
+      resolveModel.mockResolvedValue({
+        model: MODEL,
+        modelId: MODEL_ID,
+        search: searchEngineModule.searchSpecOf(
+          { name: "OpenAI", url: "https://api.openai.com/v1/" },
+          "BSA-test-key-0000",
+        ),
+      });
+    });
+
+    afterEach(() => {
+      jest.useRealTimers();
+    });
+
+    it("saves a trace with blank thoughts when the run times out", async () => {
+      research.mockImplementation(({ trace }) => {
+        trace?.step({
+          tool: "search",
+          outcome: "ok",
+          query: "Acme breach",
+          thought: BRAVE_THOUGHT,
+        });
+        return new Promise<ResearchResult>(() => undefined);
+      });
+
+      const result = await run({ runTimeLimitMs: 20 });
+
+      expect(result.outcome).toBe("failed");
+      const { error, trace } = onlyFinish().input;
+      expect(error).toBe(TIMED_OUT_ERROR);
+      expect(trace.steps).toEqual([expect.objectContaining({ tool: "search", thought: "" })]);
+      expect(JSON.stringify(trace)).not.toContain(BRAVE_THOUGHT);
+    });
+
+    it("saves a trace with blank thoughts when the research throws", async () => {
+      research.mockImplementation(async ({ trace }) => {
+        trace?.step({
+          tool: "search",
+          outcome: "ok",
+          query: "Acme breach",
+          thought: BRAVE_THOUGHT,
+        });
+        throw new Error("the web session broke");
+      });
+
+      const result = await run();
+
+      expect(result.outcome).toBe("failed");
+      const { error, trace } = onlyFinish().input;
+      expect(error).toBe("Unexpected error");
+      expect(trace.steps).toEqual([expect.objectContaining({ tool: "search", thought: "" })]);
+      expect(JSON.stringify(trace)).not.toContain(BRAVE_THOUGHT);
+    });
+
+    it("keeps the thoughts of a run that has no Brave key", async () => {
+      resolveModel.mockResolvedValue({
+        model: MODEL,
+        modelId: MODEL_ID,
+        search: { engine: "gdelt" },
+      });
+      research.mockImplementation(async ({ trace }) => {
+        trace?.step({
+          tool: "search",
+          outcome: "ok",
+          query: "Acme breach",
+          thought: BRAVE_THOUGHT,
+        });
+        throw new Error("the web session broke");
+      });
+
+      await run();
+
+      expect(JSON.stringify(onlyFinish().input.trace)).toContain(BRAVE_THOUGHT);
+    });
+  });
+
   describe("the trace", () => {
     const traceOf = (input: any) => input.trace;
 

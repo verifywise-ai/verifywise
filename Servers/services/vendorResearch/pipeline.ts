@@ -778,6 +778,10 @@ async function research(args: RunArgs, deps: PipelineDeps, progress: Progress): 
   let stepsTaken = 0;
 
   let found: ResearchResult;
+  // A run that may search with Brave keeps the model's thoughts out of its trace from the start:
+  // they can quote Brave's text, and a run that times out or fails during the research saves its
+  // trace before the research says whether Brave answered (the check after it covers the rest).
+  if (resolved.search?.braveKey) trace.withholdRejectionText();
   trace.startPhase("research");
   try {
     found = await deps.research({
