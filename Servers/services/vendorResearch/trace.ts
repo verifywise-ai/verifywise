@@ -306,7 +306,13 @@ export function createTraceRecorder(options: { now?: () => number } = {}): Trace
       );
       const snapshot: RunTrace = {
         version: TRACE_VERSION,
-        steps: steps.map((step) => ({ ...step })),
+        // The model's thoughts can copy search text word for word, so a run whose search text may
+        // not be stored (Brave) keeps the steps without them.
+        steps: steps.map((step) =>
+          rejectionTextWithheld && step.thought !== undefined
+            ? { ...step, thought: "" }
+            : { ...step },
+        ),
         modelCalls: modelCalls.map((call) => ({ ...call })),
         rejected: rejected.map((entry) =>
           rejectionTextWithheld && entry.text !== undefined ? { ...entry, text: "" } : { ...entry },
