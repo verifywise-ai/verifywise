@@ -17,7 +17,7 @@ export interface IAutomationActionRow {
   action_key: string;
   params: Record<string, any> | null;
   order?: number | null;
-  /** The automation predates every-action dispatch for risk and policy events. */
+  /** The automation predates every-action dispatch for its trigger's events. */
   legacy_first_action_only?: boolean;
 }
 
@@ -44,11 +44,13 @@ export async function getActiveAutomationActionsQuery(
 }
 
 /**
- * Risk and policy events used to run only one action: the first row of the
- * old query, ordered by aa."order" alone. Automations that existed then are
- * flagged legacy_first_action_only (migration
- * 20261114200100-legacy-automation-first-action) so they keep that behaviour
- * until someone saves them in the editor.
+ * Entity events (risk, policy, vendor, model, use case, task, training and
+ * incident added/updated/deleted) used to run only one action: the first row
+ * of the old query, ordered by aa."order" alone. Automations that existed then
+ * are flagged legacy_first_action_only (migrations
+ * 20261114200100-legacy-automation-first-action for risk and policy,
+ * 20261124120000-legacy-automation-first-action-entities for the rest) so
+ * they keep that behaviour until someone saves them in the editor.
  *
  * Keeps every row of the other automations and, of the legacy rows of the
  * event together, only the single first by aa."order", then a.id. That tie
@@ -67,9 +69,9 @@ export function keepLegacyFirstActionOnly(actions: IAutomationActionRow[]): IAut
 }
 
 /**
- * The actions a risk or policy event runs: getActiveAutomationActionsQuery
- * with the legacy first-action rule applied. Other events (AI Detection) call
- * getActiveAutomationActionsQuery directly and run every action.
+ * The actions an entity event runs: getActiveAutomationActionsQuery with the
+ * legacy first-action rule applied. AI Detection events, which always ran
+ * every action, call getActiveAutomationActionsQuery directly.
  */
 export async function getEventAutomationActionsQuery(
   organizationId: number,
@@ -125,4 +127,33 @@ export async function enqueueAutomationActions(
   transaction.afterCommit(() => {
     void enqueueAll();
   });
+}
+
+/**
+ * Runs an entity event's automations: getEventAutomationActionsQuery, then
+ * enqueueAutomationActions. `buildReplacements` runs only when there is an
+ * action to enqueue, so an event with no automation reads nothing more (and a
+ * builder never sees a row that is not there).
+ *
+ * With a transaction, the actions are read inside it and enqueued once it
+ * commits. `afterCommit: false` enqueues at once instead, for callers that
+ * always did so. `logContext` (e.g. "task_added, task 12") names the event in
+ * a failure log; it defaults to the trigger key.
+ */
+export async function runEventAutomations(
+  organizationId: number,
+  triggerKey: string,
+  buildReplacements: () => Record<string, any> | Promise<Record<string, any>>,
+  options: { transaction?: Transaction; afterCommit?: boolean; logContext?: string } = {},
+): Promise<void> {
+  const { transaction, afterCommit = true, logContext = triggerKey } = options;
+  const actions = await getEventAutomationActionsQuery(organizationId, triggerKey, transaction);
+  if (actions.length === 0) return;
+  await enqueueAutomationActions(
+    actions,
+    await buildReplacements(),
+    organizationId,
+    afterCommit ? transaction : undefined,
+    logContext,
+  );
 }

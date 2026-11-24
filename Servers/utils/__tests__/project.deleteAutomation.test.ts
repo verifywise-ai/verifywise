@@ -14,10 +14,17 @@ jest.mock("../customField.utils", () => ({
   deleteAllCustomFieldValuesForEntityQuery: jest.fn(),
   fetchCustomFieldsForEntities: jest.fn(),
 }));
+jest.mock("../logger/fileLogger", () => ({
+  __esModule: true,
+  default: { info: jest.fn(), error: jest.fn(), warn: jest.fn(), debug: jest.fn() },
+  logStructured: jest.fn(),
+  logStructuredError: jest.fn(),
+}));
 
 import { deleteProjectByIdQuery } from "../project.utils";
 import { sequelize } from "../../database/db";
 import { enqueueAutomationAction } from "../../services/automations/automationProducer";
+import logger from "../logger/fileLogger";
 
 const query = sequelize.query as unknown as jest.Mock<(...args: any[]) => Promise<any>>;
 const enqueue = enqueueAutomationAction as unknown as jest.Mock<(...args: any[]) => Promise<any>>;
@@ -33,24 +40,23 @@ function fakeTransaction() {
   };
 }
 
+/** The project_deleted action rows the trigger lookup answers with. */
+let automationRows: Record<string, unknown>[] = [];
+const actionRow = (automationId: number, order: number, legacy = false) => ({
+  automation_id: automationId,
+  action_key: order === 1 ? "send_email" : "send_slack",
+  params: { subject: `${automationId}-${order}`, body: "" },
+  order,
+  legacy_first_action_only: legacy,
+});
+
 beforeEach(() => {
   jest.clearAllMocks();
+  automationRows = [actionRow(1, 1)];
   enqueue.mockResolvedValue(undefined);
   query.mockImplementation(async (sql: string) => {
     if (sql.startsWith("DELETE FROM projects WHERE")) return [{ id: 111, owner: 3 }];
-    if (sql.includes("FROM automation_triggers")) {
-      return [
-        [
-          {
-            trigger_key: "project_deleted",
-            action_key: "send_email",
-            automation_id: 1,
-            params: { subject: "", body: "" },
-          },
-        ],
-        0,
-      ];
-    }
+    if (sql.includes("FROM automation_triggers")) return automationRows;
     if (sql.includes("AS full_name")) return [[{ full_name: "A B" }], 0];
     return [];
   });
@@ -102,16 +108,59 @@ describe("deleteProjectByIdQuery project_deleted automation", () => {
     expect(enqueue.mock.calls[0][1]).toMatchObject({ organizationId: 5, automation_id: 1 });
   });
 
-  it("never throws from the after-commit hook when queueing fails", async () => {
+  it("never throws from the after-commit hook when queueing fails, and still runs the rest", async () => {
     const tx = fakeTransaction();
+    automationRows = [actionRow(1, 1), actionRow(1, 2)];
     enqueue.mockRejectedValueOnce(new Error("redis down"));
-    const warn = jest.spyOn(console, "warn").mockImplementation(() => {});
 
     await deleteProjectByIdQuery(111, 5, tx as any, { enqueueAutomationAfterCommit: true });
     expect(() => tx.hooks[0]()).not.toThrow();
     await new Promise((resolve) => setImmediate(resolve));
 
-    expect(warn).toHaveBeenCalled();
-    warn.mockRestore();
+    expect(logger.error).toHaveBeenCalledWith(
+      expect.stringContaining("project_deleted, project 111"),
+    );
+    expect(enqueue).toHaveBeenCalledTimes(2);
+  });
+
+  it("queues every action of every active automation, in order", async () => {
+    automationRows = [actionRow(1, 1), actionRow(1, 2), actionRow(4, 1)];
+
+    await deleteProjectByIdQuery(111, 5, fakeTransaction() as any);
+
+    expect(enqueue.mock.calls.map(([, data]) => (data as any).subject)).toEqual([
+      "1-1",
+      "1-2",
+      "4-1",
+    ]);
+  });
+
+  it("keeps a legacy-flagged automation to the event's first action", async () => {
+    automationRows = [
+      actionRow(1, 1, true),
+      actionRow(1, 2, true),
+      actionRow(4, 1),
+      actionRow(4, 2),
+    ];
+
+    await deleteProjectByIdQuery(111, 5, fakeTransaction() as any);
+
+    expect(enqueue.mock.calls.map(([, data]) => (data as any).subject)).toEqual([
+      "1-1",
+      "4-1",
+      "4-2",
+    ]);
+  });
+
+  it("reads the actions inside the transaction, for the project_deleted trigger", async () => {
+    const tx = fakeTransaction();
+    await deleteProjectByIdQuery(111, 5, tx as any);
+    const lookup = query.mock.calls.find(([sql]) =>
+      String(sql).includes("FROM automation_triggers"),
+    );
+    expect(lookup?.[1]).toMatchObject({
+      replacements: { organizationId: 5, triggerKey: "project_deleted" },
+      transaction: tx,
+    });
   });
 });

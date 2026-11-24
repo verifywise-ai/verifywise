@@ -41,7 +41,19 @@ async function createTraining(orgId: number): Promise<number> {
   return (rows as Array<{ id: number }>)[0].id;
 }
 
-async function activateAutomation(orgId: number, triggerKey: string) {
+/**
+ * An active automation on `triggerKey` with `actionCount` actions (subjects
+ * "<name> 1", "<name> 2", ...); `legacy` marks it legacy_first_action_only.
+ */
+async function activateAutomation(
+  orgId: number,
+  triggerKey: string,
+  {
+    actionCount = 1,
+    legacy = false,
+    name = "",
+  }: { actionCount?: number; legacy?: boolean; name?: string } = {},
+) {
   const [trigger] = await sequelize.query<{ id: number }>(
     `SELECT id FROM automation_triggers WHERE key = :triggerKey`,
     { replacements: { triggerKey }, type: QueryTypes.SELECT },
@@ -51,22 +63,31 @@ async function activateAutomation(orgId: number, triggerKey: string) {
     { type: QueryTypes.SELECT },
   );
   const [automation] = await sequelize.query<{ id: number }>(
-    `INSERT INTO automations (organization_id, name, trigger_id, is_active)
-     VALUES (:orgId, :triggerKey, :triggerId, true) RETURNING id`,
-    { replacements: { orgId, triggerKey, triggerId: trigger.id }, type: QueryTypes.SELECT },
-  );
-  await sequelize.query(
-    `INSERT INTO automation_actions_data (organization_id, automation_id, action_type_id, params, "order")
-     VALUES (:orgId, :automationId, :actionId, :params, 1)`,
+    `INSERT INTO automations (organization_id, name, trigger_id, is_active, legacy_first_action_only)
+     VALUES (:orgId, :triggerKey, :triggerId, true, :legacy) RETURNING id`,
     {
-      replacements: {
-        orgId,
-        automationId: automation.id,
-        actionId: action.id,
-        params: JSON.stringify({ subject: "Training {{training.name}}", body: "Changed" }),
-      },
+      replacements: { orgId, triggerKey, triggerId: trigger.id, legacy },
+      type: QueryTypes.SELECT,
     },
   );
+  for (let order = 1; order <= actionCount; order += 1) {
+    await sequelize.query(
+      `INSERT INTO automation_actions_data (organization_id, automation_id, action_type_id, params, "order")
+       VALUES (:orgId, :automationId, :actionId, :params, :order)`,
+      {
+        replacements: {
+          orgId,
+          automationId: automation.id,
+          actionId: action.id,
+          order,
+          params: JSON.stringify({
+            subject: name ? `${name} ${order}` : "Training {{training.name}}",
+            body: "Changed",
+          }),
+        },
+      },
+    );
+  }
 }
 
 describe("Training record writes with active automations", () => {
@@ -123,5 +144,42 @@ describe("Training record writes with active automations", () => {
     expect((await api.delete(`/api/training/${id}`)).status).toBe(202);
     expect(mockEnqueue).toHaveBeenCalledTimes(2);
     expect(mockEnqueue.mock.calls[1][1]).toMatchObject({ subject: "Training AI literacy" });
+  });
+
+  it("runs every action of every active automation; a legacy one keeps the event's first", async () => {
+    const id = await createTraining(orgId);
+    await activateAutomation(orgId, "training_added", { actionCount: 2, name: "A" });
+    await activateAutomation(orgId, "training_added", { actionCount: 1, name: "B" });
+
+    const created = await api.post("/api/training").send({
+      training_name: "Course",
+      duration: "1 hour",
+      provider: "Acme",
+      department: "Ops",
+      status: "Planned",
+      numberOfPeople: 3,
+      description: "x",
+    });
+    expect(created.status).toBe(201);
+    expect(mockEnqueue.mock.calls.map(([, data]) => data.subject)).toEqual(["A 1", "A 2", "B 1"]);
+
+    // Legacy automations on training_updated: of them, only the event's first runs.
+    mockEnqueue.mockClear();
+    await activateAutomation(orgId, "training_updated", {
+      actionCount: 2,
+      name: "L",
+      legacy: true,
+    });
+    await sequelize.query(
+      `UPDATE automations SET legacy_first_action_only = true WHERE organization_id = :orgId`,
+      { replacements: { orgId } },
+    );
+    await activateAutomation(orgId, "training_updated", { actionCount: 2, name: "N" });
+    expect((await api.patch(`/api/training/${id}`).send({ duration: "4 hours" })).status).toBe(202);
+    expect(mockEnqueue.mock.calls.map(([, data]) => data.subject)).toEqual([
+      "Training AI literacy",
+      "N 1",
+      "N 2",
+    ]);
   });
 });

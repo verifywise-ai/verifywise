@@ -1,15 +1,12 @@
 import { sequelize } from "../database/db";
 import { QueryTypes, Transaction } from "sequelize";
 import { AIIncidentManagementModel } from "../domain.layer/models/incidentManagement/incidemtManagement.model";
-import { TenantAutomationActionModel } from "../domain.layer/models/tenantAutomationAction/tenantAutomationAction.model";
 import {
   buildIncidentReplacements,
   buildIncidentUpdateReplacements,
 } from "./automation/incident.automation.utils";
-import { replaceTemplateVariables } from "./automation/automation.utils";
-import logger from "./logger/fileLogger";
+import { runEventAutomations } from "./automation/automationActions.utils";
 import { findUsersNotInOrganization } from "./user.utils";
-import { enqueueAutomationAction } from "../services/automations/automationProducer";
 import {
   assertValidIncidentDescription,
   CALLER_APPROVAL_FIELDS,
@@ -176,52 +173,15 @@ export const createNewIncidentQuery = async (
       },
     );
     const createdIncident = result[0];
-    const automations = (await sequelize.query(
-      `SELECT
-              pat.key AS trigger_key,
-              paa.key AS action_key,
-              a.id AS automation_id,
-              aa.*
-            FROM automation_triggers pat JOIN automations a ON a.trigger_id = pat.id AND a.organization_id = :organizationId JOIN automation_actions_data aa ON a.id = aa.automation_id AND aa.organization_id = :organizationId JOIN automation_actions paa ON aa.action_type_id = paa.id WHERE pat.key = 'incident_added' AND a.is_active ORDER BY aa."order" ASC;`,
-      { replacements: { organizationId }, transaction },
-    )) as [
-      (TenantAutomationActionModel & {
-        trigger_key: string;
-        action_key: string;
-        automation_id: number;
-      })[],
-      number,
-    ];
-    if (automations[0].length > 0) {
-      const automation = automations[0][0];
-      if (automation["trigger_key"] === "incident_added") {
-        const params = automation.params!;
-
-        // Build replacements
-        const replacements = buildIncidentReplacements({
-          ...createdIncident.dataValues,
-        });
-
-        // Replace variables in subject and body
-        const processedParams = {
-          ...params,
-          subject: replaceTemplateVariables(params.subject || "", replacements),
-          body: replaceTemplateVariables(params.body || "", replacements),
-          automation_id: automation.automation_id,
-        };
-
-        // After commit: a rolled-back create (an import that failed later in
-        // its transaction) must not send an "incident added" email.
-        transaction.afterCommit(() => {
-          enqueueAutomationAction(automation.action_key, {
-            ...processedParams,
-            organizationId,
-          }).catch((error) => logger.error(`[incident] incident_added enqueue failed: ${error}`));
-        });
-      } else {
-        console.warn(`No matching trigger found for key: ${automation["trigger_key"]}`);
-      }
-    }
+    // Every action of every active automation; one flagged legacy keeps only the
+    // event's first. After commit: a rolled-back create (an import that failed
+    // later in its transaction) must not send an "incident added" email.
+    await runEventAutomations(
+      organizationId,
+      "incident_added",
+      () => buildIncidentReplacements({ ...createdIncident.dataValues }),
+      { transaction, logContext: `incident_added, incident ${createdIncident.id}` },
+    );
     return createdIncident;
   } catch (error) {
     console.error("Error creating new incident:", error);
@@ -400,50 +360,22 @@ export const updateIncidentByIdQuery = async (
 };
 
 /**
- * Enqueues the organization's active `incident_updated` automation for an
- * update from `oldIncident` to `newIncident`. Call it only after the update
+ * Enqueues every action of the organization's active `incident_updated`
+ * automations (an automation flagged legacy keeps only the event's first) for
+ * an update from `oldIncident` to `newIncident`. Call it only after the update
  * has committed, so an action is never sent for a change that rolled back.
  */
 export const enqueueIncidentUpdatedAutomations = async (
   organizationId: number,
   oldIncident: AIIncidentManagementModel,
   newIncident: AIIncidentManagementModel,
-) => {
-  const automations = (await sequelize.query(
-    `SELECT
-            pat.key AS trigger_key,
-            paa.key AS action_key,
-            a.id AS automation_id,
-            aa.*
-          FROM automation_triggers pat JOIN automations a ON a.trigger_id = pat.id AND a.organization_id = :organizationId JOIN automation_actions_data aa ON a.id = aa.automation_id AND aa.organization_id = :organizationId JOIN automation_actions paa ON aa.action_type_id = paa.id WHERE pat.key = 'incident_updated' AND a.is_active ORDER BY aa."order" ASC;`,
-    { replacements: { organizationId } },
-  )) as [
-    (TenantAutomationActionModel & {
-      trigger_key: string;
-      action_key: string;
-      automation_id: number;
-    })[],
-    number,
-  ];
-  if (automations[0].length === 0) return;
-
-  const automation = automations[0][0];
-  if (automation["trigger_key"] !== "incident_updated") {
-    console.warn(`No matching trigger found for key: ${automation["trigger_key"]}`);
-    return;
-  }
-  const params = automation.params!;
-  const replacements = buildIncidentUpdateReplacements(oldIncident, {
-    ...newIncident.dataValues,
-  });
-  await enqueueAutomationAction(automation.action_key, {
-    ...params,
-    subject: replaceTemplateVariables(params.subject || "", replacements),
-    body: replaceTemplateVariables(params.body || "", replacements),
-    automation_id: automation.automation_id,
+) =>
+  runEventAutomations(
     organizationId,
-  });
-};
+    "incident_updated",
+    () => buildIncidentUpdateReplacements(oldIncident, { ...newIncident.dataValues }),
+    { logContext: `incident_updated, incident ${newIncident.id}` },
+  );
 
 /**
  * Deletes an incident and returns the deleted row, or null when there is no
@@ -480,44 +412,15 @@ export const deleteIncidentByIdQuery = async (
     // "incident deleted" email.
     if (!deletedIncident) return null;
 
-    const automations = (await sequelize.query(
-      `SELECT
-              pat.key AS trigger_key,
-              paa.key AS action_key,
-              a.id AS automation_id,
-              aa.*
-            FROM automation_triggers pat JOIN automations a ON a.trigger_id = pat.id AND a.organization_id = :organizationId JOIN automation_actions_data aa ON a.id = aa.automation_id AND aa.organization_id = :organizationId JOIN automation_actions paa ON aa.action_type_id = paa.id WHERE pat.key = 'incident_deleted' AND a.is_active ORDER BY aa."order" ASC;`,
-      { replacements: { organizationId }, transaction },
-    )) as [
-      (TenantAutomationActionModel & {
-        trigger_key: string;
-        action_key: string;
-        automation_id: number;
-      })[],
-      number,
-    ];
-    if (automations[0].length > 0) {
-      const automation = automations[0][0];
-      if (automation["trigger_key"] === "incident_deleted") {
-        const params = automation.params!;
-        const replacements = buildIncidentReplacements({ ...deletedIncident });
-        const processedParams = {
-          ...params,
-          subject: replaceTemplateVariables(params.subject || "", replacements),
-          body: replaceTemplateVariables(params.body || "", replacements),
-          automation_id: automation.automation_id,
-        };
-        // After commit: a delete that rolls back must not send "incident deleted".
-        transaction.afterCommit(() => {
-          enqueueAutomationAction(automation.action_key, {
-            ...processedParams,
-            organizationId,
-          }).catch((error) => logger.error(`[incident] incident_deleted enqueue failed: ${error}`));
-        });
-      } else {
-        console.warn(`No matching trigger found for key: ${automation["trigger_key"]}`);
-      }
-    }
+    // Every action of every active automation; one flagged legacy keeps only the
+    // event's first. After commit: a delete that rolls back must not send
+    // "incident deleted".
+    await runEventAutomations(
+      organizationId,
+      "incident_deleted",
+      () => buildIncidentReplacements({ ...deletedIncident }),
+      { transaction, logContext: `incident_deleted, incident ${id}` },
+    );
     return deletedIncident;
   } catch (error) {
     console.error("Error deleting incident:", error);

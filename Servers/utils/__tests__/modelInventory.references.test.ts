@@ -114,6 +114,7 @@ describe("updateModelInventoryByIdQuery links", () => {
   }) =>
     mockQuery.mockImplementation(async (sql: string) => {
       if (/^SELECT \* FROM model_inventories/.test(sql)) return [{ id: 10, dataValues: {} }];
+      if (/FROM automation_triggers/.test(sql)) return []; // no model_updated automation
       if (/SELECT DISTINCT framework_id FROM model_inventories_projects_frameworks/.test(sql)) {
         return [(state.linkedFrameworks ?? []).map((framework_id) => ({ framework_id })), 0];
       }

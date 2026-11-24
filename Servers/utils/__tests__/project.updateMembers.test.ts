@@ -53,7 +53,7 @@ function mockDb({
         automation_id: 1,
         params: { subject: "", body: "" },
       };
-      return [automationActive ? [automation] : [], 0];
+      return automationActive ? [automation] : [];
     }
     if (sql.includes("AS full_name")) return [[{ full_name: "A B" }], 0];
     return [];

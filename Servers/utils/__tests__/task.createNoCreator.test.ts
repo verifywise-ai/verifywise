@@ -33,15 +33,13 @@ beforeEach(() => {
     if (sql.includes("INSERT INTO task_assignees")) return [[], 1];
     if (sql.includes("automation_triggers")) {
       return [
-        [
-          {
-            trigger_key: "task_added",
-            action_key: "send_email",
-            automation_id: 3,
-            params: { subject: "New task {{task.creator}}", body: "b" },
-          },
-        ],
-        1,
+        {
+          action_key: "send_email",
+          automation_id: 3,
+          params: { subject: "New task {{task.creator}}", body: "b" },
+          order: 1,
+          legacy_first_action_only: false,
+        },
       ];
     }
     // The creator-name lookup: no user for a NULL creator_id.
