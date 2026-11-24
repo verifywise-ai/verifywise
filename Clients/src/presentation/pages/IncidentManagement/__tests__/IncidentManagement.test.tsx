@@ -106,7 +106,7 @@ describe("IncidentManagement", () => {
 
   it("renders without crashing", () => {
     renderWithProviders(<IncidentManagement />, { route: "/incidents" });
-    expect(screen.getByText("Incident Management")).toBeInTheDocument();
+    expect(screen.getByText("Incident management")).toBeInTheDocument();
   });
 
   it("renders page description", () => {
@@ -123,6 +123,6 @@ describe("IncidentManagement", () => {
 
   it("renders search box", () => {
     renderWithProviders(<IncidentManagement />, { route: "/incidents" });
-    expect(screen.getByPlaceholderText("Search incidents...")).toBeInTheDocument();
+    expect(screen.getByPlaceholderText("Search by ID, use case or reporter")).toBeInTheDocument();
   });
 });

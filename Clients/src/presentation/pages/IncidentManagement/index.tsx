@@ -45,6 +45,7 @@ import {
   incidentsForArchiveView,
   type IncidentArchiveView,
 } from "./archiveView";
+import { incidentMatchesSearch } from "./incidentSearch";
 
 import Alert from "../../components/Alert";
 import { useJiraIncidentLinks } from "../../../application/hooks/useJiraIncidentLinks";
@@ -69,7 +70,7 @@ type IncidentColumnKey =
 
 const INCIDENT_TABLE_COLUMNS: ColumnConfig<IncidentColumnKey>[] = [
   { key: "incident_id", label: "Incident ID", defaultVisible: true, alwaysVisible: true },
-  { key: "ai_project", label: "AI project", defaultVisible: true },
+  { key: "ai_project", label: "Use case", defaultVisible: true },
   { key: "model_inventory_name", label: "Affected model", defaultVisible: true },
   { key: "assignee_name", label: "Owner", defaultVisible: true },
   { key: "type", label: "Type", defaultVisible: true },
@@ -167,17 +168,15 @@ const IncidentManagement: React.FC = () => {
   const jiraLinks = useJiraIncidentLinks(incidentIds);
 
   const [isLoading, setIsLoading] = useState(true);
-  const [, setIsModalLoading] = useState(false);
   const [isNewIncidentModalOpen, setIsNewIncidentModalOpen] = useState(false);
-  const [, setSelectedIncidentId] = useState<string | null>(null);
-  const [, setUsers] = useState<any[]>([]);
   const [alert, setAlert] = useState<{
     variant: "success" | "info" | "warning" | "error";
     title?: string;
     body: string;
   } | null>(null);
-  const [, setShowAlert] = useState(false);
-  const [tableKey, setTableKey] = useState(0);
+  // Bumped by "Clear filters" so the classic filter, which keeps its own
+  // rows, starts over; the phase 1 chips follow the page's conditions.
+  const [filterResetKey, setFilterResetKey] = useState(0);
 
   const [archiveId, setArchiveId] = useState<string | null>(null);
 
@@ -190,9 +189,11 @@ const IncidentManagement: React.FC = () => {
   // Active, active + archived, or archived incidents
   const [archiveView, setArchiveView] = useState<IncidentArchiveView>("active");
 
-  // Auto-dismiss info alerts after 3 seconds
+  // Info and success toasts close after 3 seconds. Errors and warnings stay
+  // until the user closes them: some (an edit conflict) are long and say what
+  // to do next.
   useEffect(() => {
-    if (alert && alert.variant === "info") {
+    if (alert && (alert.variant === "info" || alert.variant === "success")) {
       const timer = setTimeout(() => setAlert(null), 3000);
       return () => clearTimeout(timer);
     }
@@ -292,7 +293,7 @@ const IncidentManagement: React.FC = () => {
       },
       {
         id: "ai_project",
-        label: "AI project",
+        label: "Use case",
         type: "select" as const,
         options: getUniqueProjects(),
       },
@@ -347,6 +348,8 @@ const IncidentManagement: React.FC = () => {
         id: "occurred_date",
         label: "Occurred date",
         type: "date" as const,
+        // Incidents have already happened: "in the last N days", not "in N days".
+        dateRange: "recent" as const,
       },
     ],
     [getUniqueProjects, getUniqueTypes, getUniqueModels, getUniqueOwners],
@@ -391,6 +394,7 @@ const IncidentManagement: React.FC = () => {
     handleFilterChange: handleIncidentFilterChange,
     conditions: incidentFilterConditions,
     logic: incidentFilterLogic,
+    activeFilterCount: incidentActiveFilterCount,
   } = useFilterBy<AIIncidentManagementModel>(getIncidentFieldValue);
 
   /** -------------------- FILTERING -------------------- */
@@ -411,19 +415,22 @@ const IncidentManagement: React.FC = () => {
     result = filterIncidentData(result);
 
     // Apply search filter last
-    if (searchTerm) {
-      const search = searchTerm.toLowerCase();
-      result = result.filter(
-        (i) =>
-          (i.id || "").toString().toLowerCase().includes(search) ||
-          (i.incident_id || "").toLowerCase().includes(search) ||
-          (i.ai_project || "").toLowerCase().includes(search) ||
-          AIIncidentManagementModel.reporterLabel(i).toLowerCase().includes(search),
-      );
+    if (searchTerm.trim()) {
+      result = result.filter((i) => incidentMatchesSearch(i, searchTerm));
     }
 
     return result;
   }, [filterIncidentData, viewIncidents, searchTerm, selectedStatus]);
+
+  const isFiltered = !!searchTerm.trim() || !!selectedStatus || incidentActiveFilterCount > 0;
+
+  const handleClearFilters = useCallback(() => {
+    setSearchTerm("");
+    setSelectedStatus(null);
+    handleIncidentFilterChange([], "and");
+    setFilterResetKey((key) => key + 1);
+    setAlert(null);
+  }, [handleIncidentFilterChange]);
 
   /** -------------------- FETCHING -------------------- */
   const fetchIncidentsData = async (showLoading = true) => {
@@ -432,7 +439,6 @@ const IncidentManagement: React.FC = () => {
       const response = await getAllEntities({
         routeUrl: "/ai-incident-managements",
       });
-      // if (response?.data) setIncidentsData(response.data);
       if (response?.data) {
         const formatted = response.data.map(
           (item: AIIncidentManagementModel) => new AIIncidentManagementModel(item),
@@ -452,29 +458,6 @@ const IncidentManagement: React.FC = () => {
       if (showLoading) setIsLoading(false);
     }
   };
-
-  const fetchUsersData = async () => {
-    try {
-      const response = await getAllEntities({ routeUrl: "/users" });
-      const usersData = Array.isArray(response?.data) ? response.data : [];
-      setUsers(usersData);
-    } catch (error) {
-      console.error("Error fetching users:", error);
-    }
-  };
-
-  /** -------------------- ALERT HANDLING -------------------- */
-  useEffect(() => {
-    if (alert) {
-      setShowAlert(true);
-      const timer = setTimeout(() => {
-        setShowAlert(false);
-        setTimeout(() => setAlert(null), 300);
-      }, 3000);
-      return () => clearTimeout(timer);
-    }
-    return undefined;
-  }, [alert]);
 
   /** -------------------- CHECK FOR NAVIGATION STATE -------------------- */
   useEffect(() => {
@@ -503,7 +486,6 @@ const IncidentManagement: React.FC = () => {
   /** -------------------- INITIAL LOAD -------------------- */
   useEffect(() => {
     fetchIncidentsData();
-    fetchUsersData();
   }, []);
 
   /** -------------------- INCIDENT MODAL HANDLERS -------------------- */
@@ -511,7 +493,6 @@ const IncidentManagement: React.FC = () => {
 
   const fetchIncidentDataForSelectedId = async (id: string) => {
     try {
-      setIsModalLoading(true);
       const response = await getEntityById({
         routeUrl: `/ai-incident-managements/${id}`,
       });
@@ -526,15 +507,12 @@ const IncidentManagement: React.FC = () => {
         });
         return null;
       }
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    } catch (error) {
+    } catch {
       setAlert({
         variant: "error",
         body: "Failed to load incident details.",
       });
       return null;
-    } finally {
-      setIsModalLoading(false);
     }
   };
 
@@ -543,7 +521,6 @@ const IncidentManagement: React.FC = () => {
   // An archived incident always opens read-only (the server refuses edits to
   // it until it is restored), including from a ?incidentId= link.
   const handleEditIncident = async (id: string, mode: string) => {
-    setSelectedIncidentId(id);
     setModalMode(canEditIncidents || canApproveIncidents || !permissionsSettled ? mode : "view");
     const data = await fetchIncidentDataForSelectedId(id);
     if (data?.archived) setModalMode("view");
@@ -551,7 +528,6 @@ const IncidentManagement: React.FC = () => {
   };
 
   const handleViewIncident = async (id: string, mode: string) => {
-    setSelectedIncidentId(id);
     setModalMode(mode);
     const data = await fetchIncidentDataForSelectedId(id);
     if (data) setIsNewIncidentModalOpen(true);
@@ -563,7 +539,6 @@ const IncidentManagement: React.FC = () => {
    */
   const setIncidentArchived = async (id: string, archived: boolean) => {
     try {
-      setSelectedIncidentId(id);
       setArchiveId(id);
 
       // Optimistic: flag the row so the current view updates at once
@@ -584,11 +559,8 @@ const IncidentManagement: React.FC = () => {
         });
       }
 
-      // Re-fetch to ensure consistent state
+      // Re-fetch in place: the table keeps its page, sort and scroll.
       await fetchIncidentsData(false);
-
-      // Force table refresh
-      setTableKey((prev) => prev + 1);
 
       setAlert({
         variant: "success",
@@ -610,7 +582,6 @@ const IncidentManagement: React.FC = () => {
           : "Could not restore the incident. Please try again.",
       });
     } finally {
-      setSelectedIncidentId(null);
       setModalMode("");
       setArchiveId(null);
     }
@@ -622,7 +593,6 @@ const IncidentManagement: React.FC = () => {
   const handleCloseModal = () => {
     setIsNewIncidentModalOpen(false);
     setSelectedIncident(null);
-    setSelectedIncidentId(null);
     setModalMode("");
     setArchiveId(null);
   };
@@ -652,7 +622,9 @@ const IncidentManagement: React.FC = () => {
           body: "New incident added successfully!",
         });
       }
-      await fetchIncidentsData();
+      // Refresh in place, without the loading skeleton, so the table keeps
+      // its page, sort, filters and scroll position.
+      await fetchIncidentsData(false);
       handleCloseModal();
       return true;
     } catch (error) {
@@ -734,7 +706,7 @@ const IncidentManagement: React.FC = () => {
   const exportColumns = useMemo(() => {
     return [
       { id: "incident_id", label: "Incident ID" },
-      { id: "ai_project", label: "AI project" },
+      { id: "ai_project", label: "Use case" },
       { id: "model_inventory_name", label: "Affected model" },
       { id: "assignee_name", label: "Owner" },
       { id: "type", label: "Type" },
@@ -769,7 +741,7 @@ const IncidentManagement: React.FC = () => {
   return (
     <>
       <PageHeaderExtended
-        title="Incident Management"
+        title="Incident management"
         description="End-to-end management of the AI incident lifecycle. You can log events in full detail, analyze root causes, and document corrective and preventive actions."
         helpArticlePath="ai-governance/incident-management"
         tipBoxEntity="ai-incident-managements"
@@ -856,7 +828,7 @@ const IncidentManagement: React.FC = () => {
                     ].find((s) => s.key === key)?.label || key;
                   setAlert({
                     variant: "info",
-                    title: `Filtering by ${label}`,
+                    title: fill(t("Filtering by {status}"), { status: t(label) }),
                     body: "Click the card again to see all incidents.",
                   });
                 }
@@ -885,6 +857,7 @@ const IncidentManagement: React.FC = () => {
             />
 
             <TableFilter
+              key={filterResetKey}
               columns={incidentFilterColumns}
               onFilterChange={handleIncidentFilterChange}
               defaultConditions={incidentFilterConditions}
@@ -902,10 +875,10 @@ const IncidentManagement: React.FC = () => {
 
             <Box data-joyride-id="incident-search">
               <SearchBox
-                placeholder="Search incidents..."
+                placeholder="Search by ID, use case or reporter"
                 value={searchTerm}
                 onChange={setSearchTerm}
-                inputProps={{ "aria-label": "Search incidents" }}
+                inputProps={{ "aria-label": "Search incidents by ID, use case or reporter" }}
                 fullWidth={false}
               />
             </Box>
@@ -916,7 +889,7 @@ const IncidentManagement: React.FC = () => {
               data={exportData}
               columns={exportColumns}
               filename="incident-management"
-              title="Incident Management"
+              title="Incident management"
             />
             <Box data-joyride-id="add-incident-button">
               <CustomizableButton
@@ -932,7 +905,6 @@ const IncidentManagement: React.FC = () => {
         </Stack>
 
         <IncidentTable
-          key={tableKey}
           data={filteredData}
           isLoading={isLoading}
           onEdit={handleEditIncident}
@@ -941,6 +913,8 @@ const IncidentManagement: React.FC = () => {
           onView={handleViewIncident}
           archiveView={archiveView}
           hasArchivedIncidents={incidentsData.some((i) => !!i.archived)}
+          isFiltered={isFiltered}
+          onClearFilters={handleClearFilters}
           canEdit={canEditIncidents}
           canApprove={canApproveIncidents}
           archivedId={archiveId}
