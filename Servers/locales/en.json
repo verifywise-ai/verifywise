@@ -1690,5 +1690,6 @@
   "Critical incident: {reference}": "Critical incident: {reference}",
   "Minor": "Minor",
   "Serious": "Serious",
-  "Very serious": "Very serious"
+  "Very serious": "Very serious",
+  "key must be a non-empty string": "key must be a non-empty string"
 }

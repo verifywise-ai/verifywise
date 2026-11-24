@@ -1697,5 +1697,6 @@
   "Critical incident: {reference}": "Incident critique : {reference}",
   "Minor": "Mineur",
   "Serious": "Grave",
-  "Very serious": "Très grave"
+  "Very serious": "Très grave",
+  "key must be a non-empty string": "key doit être une chaîne non vide"
 }
