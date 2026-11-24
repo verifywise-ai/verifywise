@@ -51,6 +51,7 @@ import reportTemplatesRoutes from "./reportTemplates.route";
 import scheduledReportsRoutes from "./scheduledReports.route";
 import reportRunsRoutes from "./reportRuns.route";
 import vendorRisksRoutes from "./vendorRisks.route";
+import llmKeysRoutes from "./llmKeys.route";
 
 const router = express.Router();
 
@@ -148,5 +149,8 @@ router.use("/report-runs", reportRunsRoutes);
 // Reading and restoring deleted vendor risks (vendors audit PR C); the
 // /api/vendorRisks router is frozen.
 router.use("/vendor-risks", vendorRisksRoutes);
+// LLM key create and update that check the key with its provider first; the
+// legacy /api/llm-keys writes are frozen and save without a check.
+router.use("/llm-keys", llmKeysRoutes);
 
 export default router;

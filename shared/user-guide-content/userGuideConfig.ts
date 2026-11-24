@@ -762,8 +762,8 @@ export const collections: Collection[] = [
       {
         id: 'user-management',
         title: 'User management',
-        description: 'Manage profile, password, team, and preferences.',
-        keywords: ['user', 'management', 'profile', 'password', 'team', 'invite', 'preferences'],
+        description: 'Manage profile, password, team, preferences and LLM keys.',
+        keywords: ['user', 'management', 'profile', 'password', 'team', 'invite', 'preferences', 'llm key', 'api key', 'anthropic', 'workspace'],
       },
       {
         id: 'role-configuration',

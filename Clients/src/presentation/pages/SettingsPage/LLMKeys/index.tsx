@@ -35,6 +35,7 @@ import {
   createLLMKey,
   deleteLLMKey,
   editLLMKey,
+  type LLMKeyWriteBody,
 } from "../../../../application/repository/llmKeys.repository";
 import { getModelsForProvider, getRecommendedModel } from "../../../utils/providers";
 import { LLM_KEY_ADD_PARAM } from "../../../../application/constants/llmKeyDeepLink";
@@ -72,12 +73,56 @@ interface HeaderRow {
   value: string;
 }
 
-const LLMKeys = () => {
-  const initialFormData: LLMKeysFormData = {
-    name: "Anthropic",
-    key: "",
-    model: "",
+const INITIAL_FORM_DATA: LLMKeysFormData = {
+  name: "Anthropic",
+  key: "",
+  model: "",
+};
+
+/** Anthropic keys that are not tied to a workspace send the workspace in this header. */
+const ANTHROPIC_WORKSPACE_HEADER = "anthropic-workspace-id";
+
+/**
+ * How the server's check on save refused a key (POST/PATCH /v1/llm-keys).
+ * "unreachable" is not a refusal: the key can be saved anyway.
+ */
+type VerificationCode = "workspace_required" | "invalid_key" | "model_unavailable" | "unreachable";
+const VERIFICATION_CODES: ReadonlySet<string> = new Set<VerificationCode>([
+  "workspace_required",
+  "invalid_key",
+  "model_unavailable",
+  "unreachable",
+]);
+
+/** One literal per provider, so the page translator can match each whole sentence. */
+const UNREACHABLE_MESSAGES: Record<LLMProviderName, string> = {
+  Anthropic: "Could not reach Anthropic to check this key.",
+  OpenAI: "Could not reach OpenAI to check this key.",
+  OpenRouter: "Could not reach OpenRouter to check this key.",
+  Custom: "Could not reach the endpoint to check this key.",
+};
+
+/** The check's code and translated message, when the error is a check result. */
+const verificationErrorFrom = (
+  error: unknown,
+): { code: VerificationCode; message: string } | null => {
+  const data = (error as { response?: { data?: unknown } })?.response?.data;
+  if (!data || typeof data !== "object") return null;
+  const { code, message } = data as { code?: unknown; message?: unknown };
+  if (typeof code !== "string" || !VERIFICATION_CODES.has(code)) return null;
+  return {
+    code: code as VerificationCode,
+    message: typeof message === "string" ? message : ((error as Error)?.message ?? ""),
   };
+};
+
+interface FieldErrors {
+  key?: string;
+  model?: string;
+  workspace?: string;
+}
+
+const LLMKeys = () => {
   const theme = useTheme();
   const [searchParams, setSearchParams] = useSearchParams();
   const queryClient = useQueryClient();
@@ -101,10 +146,36 @@ const LLMKeys = () => {
   const [alert, setAlert] = useState<AlertState | null>(null);
   const [hoveredKeyId, setHoveredKeyId] = useState<number | null>(null);
   const [deletingKeyId, setDeletingKeyId] = useState<number | null>(null);
-  const [formData, setFormData] = useState<LLMKeysFormData>(initialFormData);
+  const [formData, setFormData] = useState<LLMKeysFormData>(INITIAL_FORM_DATA);
 
   // Custom headers state
   const [headerRows, setHeaderRows] = useState<HeaderRow[]>([]);
+
+  // Anthropic: the optional workspace id.
+  const [workspaceId, setWorkspaceId] = useState("");
+  // Headers a built-in provider's key already had (set through the API),
+  // which an edit keeps only while the provider stays the same. Any other
+  // provider gets custom_headers: null, so a former Custom key's headers
+  // never go along with the new key.
+  const [keptHeaders, setKeptHeaders] = useState<{
+    provider: LLMProviderName;
+    headers: Record<string, string>;
+  } | null>(null);
+  // The key being edited as stored: a new provider or endpoint needs the key again.
+  const [editedFrom, setEditedFrom] = useState<{
+    name: LLMProviderName;
+    url?: string | null;
+  } | null>(null);
+
+  // The result of the server's check on save, shown under the field it is about.
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
+  // "Could not check": the server's message, shown with "Save anyway".
+  const [unreachableMessage, setUnreachableMessage] = useState<string | null>(null);
+
+  const clearVerification = useCallback(() => {
+    setFieldErrors({});
+    setUnreachableMessage(null);
+  }, []);
 
   const showAlert = useCallback((variant: AlertState["variant"], title: string, body: string) => {
     setAlert({ variant, title, body, isToast: false });
@@ -145,12 +216,20 @@ const LLMKeys = () => {
   }, [alert]);
 
   const isCustomProvider = formData.name === "Custom";
+  const isAnthropic = formData.name === "Anthropic";
+
+  // Loose format check: optional, but a workspace id never has spaces.
+  const workspaceFormatError =
+    isAnthropic && /\s/.test(workspaceId.trim())
+      ? "Workspace ID cannot contain spaces."
+      : undefined;
 
   const isCreateButtonDisabled =
     !formData.key ||
     !formData.model ||
     !formData.name ||
     (isCustomProvider && !formData.url) ||
+    !!workspaceFormatError ||
     isLoading;
 
   // Get provider config for current selection
@@ -200,42 +279,72 @@ const LLMKeys = () => {
     return Object.entries(headers).map(([key, value]) => ({ key, value }));
   };
 
+  // A built-in provider's headers: the ones its key already had (same
+  // provider only), plus the workspace id for Anthropic. Null when none.
+  const getBuiltInHeaders = useCallback((): Record<string, string> | null => {
+    const headers: Record<string, string> =
+      keptHeaders && keptHeaders.provider === formData.name ? { ...keptHeaders.headers } : {};
+    const workspace = workspaceId.trim();
+    if (formData.name === "Anthropic" && workspace) headers[ANTHROPIC_WORKSPACE_HEADER] = workspace;
+    return Object.keys(headers).length > 0 ? headers : null;
+  }, [keptHeaders, workspaceId, formData.name]);
+
+  const destinationChanged =
+    !!editedFrom &&
+    (formData.name !== editedFrom.name ||
+      (formData.name === "Custom" && (formData.url ?? "") !== (editedFrom.url ?? "")));
+
   // Reset model when provider changes, auto-selecting the recommended model
-  const handleProviderChange = useCallback((providerName: string) => {
-    const isCustom = providerName === "Custom";
-    const providerId = LLMKeysModel.getProviderIdByName(providerName as LLMProviderName);
-    const recommended = !isCustom && providerId ? getRecommendedModel(providerId) : undefined;
-    setFormData((prev) => ({
-      ...prev,
-      name: providerName as LLMProviderName,
-      model: recommended?.id || "",
-      url: isCustom ? (prev.name === "Custom" ? prev.url : "") : undefined,
-      custom_headers: isCustom ? prev.custom_headers : undefined,
-    }));
-    setIsCustomModel(isCustom);
-    setCustomModelName(isCustom ? "" : "");
-    if (!isCustom) {
-      setHeaderRows([]);
-    }
-  }, []);
+  const handleProviderChange = useCallback(
+    (providerName: string) => {
+      const isCustom = providerName === "Custom";
+      const providerId = LLMKeysModel.getProviderIdByName(providerName as LLMProviderName);
+      const recommended = !isCustom && providerId ? getRecommendedModel(providerId) : undefined;
+      setFormData((prev) => ({
+        ...prev,
+        name: providerName as LLMProviderName,
+        model: recommended?.id || "",
+        url: isCustom ? (prev.name === "Custom" ? prev.url : "") : undefined,
+        custom_headers: isCustom ? prev.custom_headers : undefined,
+      }));
+      setIsCustomModel(isCustom);
+      setCustomModelName("");
+      if (!isCustom) {
+        setHeaderRows([]);
+      }
+      if (providerName !== "Anthropic") {
+        setWorkspaceId("");
+      }
+      clearVerification();
+    },
+    [clearVerification],
+  );
 
   // Handle model selection including custom option
-  const handleModelChange = useCallback((modelId: string) => {
-    if (modelId === "__custom__") {
-      setIsCustomModel(true);
-      setFormData((prev) => ({ ...prev, model: "" }));
-    } else {
-      setIsCustomModel(false);
-      setCustomModelName("");
-      setFormData((prev) => ({ ...prev, model: modelId }));
-    }
-  }, []);
+  const handleModelChange = useCallback(
+    (modelId: string) => {
+      if (modelId === "__custom__") {
+        setIsCustomModel(true);
+        setFormData((prev) => ({ ...prev, model: "" }));
+      } else {
+        setIsCustomModel(false);
+        setCustomModelName("");
+        setFormData((prev) => ({ ...prev, model: modelId }));
+      }
+      clearVerification();
+    },
+    [clearVerification],
+  );
 
   // Handle custom model name input
-  const handleCustomModelChange = useCallback((value: string) => {
-    setCustomModelName(value);
-    setFormData((prev) => ({ ...prev, model: value }));
-  }, []);
+  const handleCustomModelChange = useCallback(
+    (value: string) => {
+      setCustomModelName(value);
+      setFormData((prev) => ({ ...prev, model: value }));
+      clearVerification();
+    },
+    [clearVerification],
+  );
 
   // Header row management
   const handleAddHeaderRow = useCallback(() => {
@@ -251,88 +360,100 @@ const LLMKeys = () => {
       setHeaderRows((prev) =>
         prev.map((row, i) => (i === index ? { ...row, [field]: value } : row)),
       );
+      clearVerification();
     },
-    [],
+    [clearVerification],
   );
 
-  const handleCreateKey = useCallback(async () => {
-    setIsLoading(true);
-    try {
-      const body: any = {
-        name: formData.name,
-        key: formData.key,
-        model: formData.model,
-      };
-      if (isCustomProvider) {
-        body.url = formData.url;
-        body.custom_headers = getCustomHeadersFromRows();
-      }
-      const response = await createLLMKey({ body });
-      if (response && response.data) {
-        showAlert("success", "Success", "API key added successfully");
-        await refreshKeys();
-      }
-    } catch (error: any) {
-      const errorMessage =
-        error?.data?.message || error?.response?.data?.message || "Failed to add API key";
-      showAlert("error", "Error", errorMessage);
-    } finally {
-      setIsLoading(false);
-      setIsCreateModalOpen(false);
-      setIsEditModalOpen(false);
-      setFormData(initialFormData);
-      setIsCustomModel(false);
-      setCustomModelName("");
-      setHeaderRows([]);
-    }
-  }, [
-    refreshKeys,
-    formData,
-    showAlert,
-    initialFormData,
-    isCustomProvider,
-    getCustomHeadersFromRows,
-  ]);
+  const resetForm = useCallback(() => {
+    setIsCreateModalOpen(false);
+    setIsEditModalOpen(false);
+    setFormData(INITIAL_FORM_DATA);
+    setIsCustomModel(false);
+    setCustomModelName("");
+    setHeaderRows([]);
+    setWorkspaceId("");
+    setKeptHeaders(null);
+    setEditedFrom(null);
+    setFieldErrors({});
+    setUnreachableMessage(null);
+  }, []);
 
-  const handleEditKey = useCallback(async () => {
-    setIsLoading(true);
-    try {
-      const body: any = {
-        name: formData.name,
-        key: formData.key,
-        model: formData.model,
-      };
-      if (isCustomProvider) {
-        body.url = formData.url;
-        body.custom_headers = getCustomHeadersFromRows();
+  /**
+   * Create or update the key. The server checks it with the provider first:
+   * a refusal stays in the form under the field it is about; "could not
+   * check" offers "Save anyway", which resends with skip_verification.
+   */
+  const submitKey = useCallback(
+    async (skipVerification: boolean) => {
+      const isCreate = isCreateModalOpen;
+      setIsLoading(true);
+      setFieldErrors({});
+      setUnreachableMessage(null);
+      try {
+        const body: LLMKeyWriteBody = {
+          name: formData.name,
+          key: formData.key,
+          model: formData.model,
+        };
+        if (isCustomProvider) {
+          body.url = formData.url;
+          body.custom_headers = getCustomHeadersFromRows();
+        } else {
+          body.custom_headers = getBuiltInHeaders();
+        }
+        if (skipVerification) body.skip_verification = true;
+
+        const response = isCreate
+          ? await createLLMKey({ body })
+          : await editLLMKey({ id: keyToEdit, body });
+        if (response && response.data) {
+          showAlert(
+            "success",
+            "Success",
+            isCreate ? "API key added successfully" : "API key updated successfully",
+          );
+          await refreshKeys();
+        }
+        resetForm();
+      } catch (error: any) {
+        const verification = verificationErrorFrom(error);
+        if (verification) {
+          // The form stays open so the user can fix the field.
+          if (verification.code === "unreachable")
+            setUnreachableMessage(verification.message || UNREACHABLE_MESSAGES[formData.name]);
+          else if (verification.code === "workspace_required")
+            setFieldErrors({ workspace: verification.message });
+          else if (verification.code === "model_unavailable")
+            setFieldErrors({ model: verification.message });
+          else setFieldErrors({ key: verification.message });
+          return;
+        }
+        // Any other failure: the server's message for a 4xx (already
+        // translated), a generic one otherwise. The form stays open so
+        // nothing typed is lost. The global toast is off for this request.
+        const status = typeof error?.status === "number" ? error.status : undefined;
+        const errorMessage =
+          (status !== undefined && status < 500 && typeof error?.message === "string"
+            ? error.message
+            : undefined) || (isCreate ? "Failed to add API key" : "Failed to update API key");
+        showAlert("error", "Error", errorMessage);
+      } finally {
+        setIsLoading(false);
       }
-      const response = await editLLMKey({ id: keyToEdit, body });
-      if (response && response.data) {
-        showAlert("success", "Success", "API key updated successfully");
-        await refreshKeys();
-      }
-    } catch (error: any) {
-      const errorMessage =
-        error?.data?.message || error?.response?.data?.message || "Failed to update API key";
-      showAlert("error", "Error", errorMessage);
-    } finally {
-      setIsLoading(false);
-      setIsCreateModalOpen(false);
-      setIsEditModalOpen(false);
-      setFormData(initialFormData);
-      setIsCustomModel(false);
-      setCustomModelName("");
-      setHeaderRows([]);
-    }
-  }, [
-    refreshKeys,
-    formData,
-    showAlert,
-    keyToEdit,
-    initialFormData,
-    isCustomProvider,
-    getCustomHeadersFromRows,
-  ]);
+    },
+    [
+      isCreateModalOpen,
+      formData,
+      isCustomProvider,
+      getCustomHeadersFromRows,
+      getBuiltInHeaders,
+      keyToEdit,
+      showAlert,
+      refreshKeys,
+      resetForm,
+    ],
+  );
 
   const handleDeleteKey = useCallback(async () => {
     if (!keyToDelete) return;
@@ -354,15 +475,6 @@ const LLMKeys = () => {
     }
   }, [keyToDelete, refreshKeys]);
 
-  const handleCloseCreateModal = useCallback(() => {
-    setIsCreateModalOpen(false);
-    setIsEditModalOpen(false);
-    setFormData(initialFormData);
-    setIsCustomModel(false);
-    setCustomModelName("");
-    setHeaderRows([]);
-  }, []);
-
   const handleEditButtonClick = useCallback((data: LLMKeysModel) => {
     setKeyToEdit(data.id.toString());
     const isCustom = data.name === "Custom";
@@ -373,6 +485,21 @@ const LLMKeys = () => {
       url: isCustom ? data.url : undefined,
       custom_headers: isCustom ? data.custom_headers : undefined,
     });
+    setFieldErrors({});
+    setUnreachableMessage(null);
+
+    setEditedFrom({ name: data.name, url: data.url });
+    if (isCustom) {
+      setWorkspaceId("");
+      setKeptHeaders(null);
+    } else {
+      const { [ANTHROPIC_WORKSPACE_HEADER]: storedWorkspace, ...rest } = data.custom_headers ?? {};
+      setWorkspaceId(data.name === "Anthropic" ? (storedWorkspace ?? "") : "");
+      setKeptHeaders({
+        provider: data.name,
+        headers: data.name === "Anthropic" ? rest : (data.custom_headers ?? {}),
+      });
+    }
 
     if (isCustom) {
       setIsCustomModel(true);
@@ -399,6 +526,7 @@ const LLMKeys = () => {
 
   const handleFormChange = (name: string, value: string) => {
     setFormData({ ...formData, [name]: value });
+    clearVerification();
   };
 
   return (
@@ -622,15 +750,17 @@ const LLMKeys = () => {
       {/* Create Key Modal */}
       <StandardModal
         isOpen={isCreateModalOpen || isEditModalOpen}
-        onClose={handleCloseCreateModal}
+        onClose={resetForm}
         title={isCreateModalOpen ? "Add API key" : "Edit API key"}
         description={
           isCreateModalOpen
             ? "Connect your LLM provider to enable VerifyWise Advisor."
             : "Update your API key details below."
         }
-        onSubmit={isCreateModalOpen ? handleCreateKey : handleEditKey}
-        submitButtonText={isLoading ? "Saving..." : isCreateModalOpen ? "Add key" : "Save changes"}
+        onSubmit={() => void submitKey(false)}
+        submitButtonText={
+          isLoading ? "Checking key…" : isCreateModalOpen ? "Add key" : "Save changes"
+        }
         isSubmitting={isCreateButtonDisabled}
         maxWidth="600px"
       >
@@ -729,6 +859,7 @@ const LLMKeys = () => {
                 onChange={(e) => handleFormChange("model", e.target.value)}
                 placeholder="e.g., gpt-4, llama-3, claude-3-5-sonnet"
                 isRequired
+                error={fieldErrors.model}
               />
               <Typography sx={{ fontSize: 11, color: vwPalette.text.tertiary, mt: 0.5 }}>
                 Enter the exact model ID supported by your endpoint
@@ -744,6 +875,7 @@ const LLMKeys = () => {
                 onChange={(e) => handleModelChange(e.target.value as string)}
                 placeholder="Select a model"
                 isRequired
+                error={isCustomModel ? undefined : fieldErrors.model}
               />
               {modelOptions.length === 0 && (
                 <Typography sx={{ fontSize: 11, color: vwPalette.text.tertiary, mt: 0.5 }}>
@@ -763,6 +895,7 @@ const LLMKeys = () => {
                 onChange={(e) => handleCustomModelChange(e.target.value)}
                 placeholder="e.g., claude-3-5-sonnet-20241022"
                 isRequired
+                error={fieldErrors.model}
               />
               <Typography sx={{ fontSize: 11, color: vwPalette.text.tertiary, mt: 0.5 }}>
                 Enter the exact model ID from your provider's documentation
@@ -774,11 +907,19 @@ const LLMKeys = () => {
           <Box>
             <Field
               id="llm-form-key"
+              type="password"
               label="API key"
               value={formData.key}
               onChange={(e) => handleFormChange("key", e.target.value)}
               placeholder={currentProviderConfig?.keyPlaceholder || "Enter your API key"}
+              autoComplete="off"
               isRequired
+              error={fieldErrors.key}
+              helperText={
+                destinationChanged
+                  ? "You changed the provider or endpoint, so enter the API key again."
+                  : undefined
+              }
             />
             {!isCustomProvider && currentProviderConfig && (
               <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, mt: 0.5 }}>
@@ -804,7 +945,33 @@ const LLMKeys = () => {
                 </Link>
               </Box>
             )}
+            {unreachableMessage && (
+              <Alert
+                variant="warning"
+                body={unreachableMessage}
+                inline
+                action={{ label: "Save anyway", onClick: () => void submitKey(true) }}
+                sx={{ mt: "8px" }}
+              />
+            )}
           </Box>
+
+          {/* Workspace ID (Anthropic keys that are not tied to a workspace) */}
+          {isAnthropic && (
+            <Field
+              id="llm-form-workspace"
+              label="Workspace ID"
+              isOptional
+              value={workspaceId}
+              onChange={(e) => {
+                setWorkspaceId(e.target.value);
+                clearVerification();
+              }}
+              placeholder="wrkspc_…"
+              helperText="Only for keys that are not tied to a workspace."
+              error={fieldErrors.workspace ?? workspaceFormatError}
+            />
+          )}
 
           {/* Custom Headers (Custom provider only) */}
           {isCustomProvider && (

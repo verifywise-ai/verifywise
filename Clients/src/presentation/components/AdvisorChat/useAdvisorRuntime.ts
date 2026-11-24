@@ -172,6 +172,12 @@ export const useAdvisorRuntime = (
   selectedLLMKeyId?: number,
   pageContext?: AdvisorDomain,
   parallelAgents?: boolean,
+  callbacks?: {
+    /** Called with the error message when a request fails outside the stream. */
+    onError?: (message: string) => void;
+    /** Called when a chat request is sent. */
+    onSend?: () => void;
+  },
 ) => {
   const conversationContext = useAdvisorConversationSafe();
 
@@ -213,6 +219,11 @@ export const useAdvisorRuntime = (
           return headers;
         },
         body: { llmKeyId: selectedLLMKeyId, parallel: parallelAgents ?? false },
+        // Every send goes through here, so the chat can clear an old error.
+        fetch: (input, init) => {
+          callbacksRef.current?.onSend?.();
+          return fetch(input, init);
+        },
       }),
     [selectedLLMKeyId, parallelAgents],
   );
@@ -285,15 +296,16 @@ export const useAdvisorRuntime = (
   // failures, CORS issues, 5xx before the stream opens, etc. Errors that
   // happen INSIDE the stream are already converted to user-visible text
   // by the backend's `onError` in `streamAdvisorV2`. This hook catches
-  // the cases that don't reach that backend handler.
+  // the cases that don't reach that backend handler and hands them to the
+  // chat, which shows them inline.
+  const callbacksRef = useRef(callbacks);
+  useEffect(() => {
+    callbacksRef.current = callbacks;
+  }, [callbacks]);
   const onError = useCallback((error: unknown) => {
     console.error("[advisor] chat runtime error:", error);
     const message = error instanceof Error ? error.message : String(error);
-    // eslint-disable-next-line no-alert
-    alert(
-      `The AI advisor encountered an error: ${message}\n\n` +
-        `If this keeps happening, check your LLM key in Settings or try again in a moment.`,
-    );
+    callbacksRef.current?.onError?.(message);
   }, []);
 
   const runtime = useChatRuntime({

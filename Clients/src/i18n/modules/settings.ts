@@ -773,6 +773,22 @@ export const de: Record<string, string> = {
   "No data to import. Please upload a valid Excel file.":
     "Keine Daten zum Importieren. Laden Sie eine gültige Excel-Datei hoch.",
   "Please upload an Excel file (.xlsx)": "Laden Sie eine Excel-Datei (.xlsx) hoch",
+  "Workspace ID": "Workspace-ID",
+  "Only for keys that are not tied to a workspace.":
+    "Nur für Schlüssel, die keinem Workspace zugeordnet sind.",
+  "Workspace ID cannot contain spaces.": "Die Workspace-ID darf keine Leerzeichen enthalten.",
+  "Save anyway": "Trotzdem speichern",
+  "Checking key…": "Schlüssel wird geprüft…",
+  "Could not reach Anthropic to check this key.":
+    "Anthropic war nicht erreichbar, um diesen Schlüssel zu prüfen.",
+  "Could not reach OpenAI to check this key.":
+    "OpenAI war nicht erreichbar, um diesen Schlüssel zu prüfen.",
+  "Could not reach OpenRouter to check this key.":
+    "OpenRouter war nicht erreichbar, um diesen Schlüssel zu prüfen.",
+  "Could not reach the endpoint to check this key.":
+    "Der Endpunkt war nicht erreichbar, um diesen Schlüssel zu prüfen.",
+  "You changed the provider or endpoint, so enter the API key again.":
+    "Sie haben den Anbieter oder den Endpunkt geändert. Geben Sie den API-Schlüssel daher erneut ein.",
 };
 
 export const fr: Record<string, string> = {
@@ -1547,6 +1563,23 @@ export const fr: Record<string, string> = {
   "No data to import. Please upload a valid Excel file.":
     "Aucune donnée à importer. Téléversez un fichier Excel valide.",
   "Please upload an Excel file (.xlsx)": "Téléversez un fichier Excel (.xlsx)",
+  "Workspace ID": "ID de l'espace de travail",
+  "Only for keys that are not tied to a workspace.":
+    "Uniquement pour les clés qui ne sont liées à aucun espace de travail.",
+  "Workspace ID cannot contain spaces.":
+    "L'ID de l'espace de travail ne peut pas contenir d'espaces.",
+  "Save anyway": "Enregistrer quand même",
+  "Checking key…": "Vérification de la clé…",
+  "Could not reach Anthropic to check this key.":
+    "Impossible de joindre Anthropic pour vérifier cette clé.",
+  "Could not reach OpenAI to check this key.":
+    "Impossible de joindre OpenAI pour vérifier cette clé.",
+  "Could not reach OpenRouter to check this key.":
+    "Impossible de joindre OpenRouter pour vérifier cette clé.",
+  "Could not reach the endpoint to check this key.":
+    "Impossible de joindre le point de terminaison pour vérifier cette clé.",
+  "You changed the provider or endpoint, so enter the API key again.":
+    "Vous avez changé de fournisseur ou de point de terminaison : saisissez à nouveau la clé API.",
 };
 
 export const es: Record<string, string> = {
@@ -2315,4 +2348,20 @@ export const es: Record<string, string> = {
   "No data to import. Please upload a valid Excel file.":
     "No hay datos para importar. Suba un archivo Excel válido.",
   "Please upload an Excel file (.xlsx)": "Suba un archivo Excel (.xlsx)",
+  "Workspace ID": "ID del espacio de trabajo",
+  "Only for keys that are not tied to a workspace.":
+    "Solo para claves que no están vinculadas a un espacio de trabajo.",
+  "Workspace ID cannot contain spaces.": "El ID del espacio de trabajo no puede contener espacios.",
+  "Save anyway": "Guardar de todos modos",
+  "Checking key…": "Comprobando la clave…",
+  "Could not reach Anthropic to check this key.":
+    "No se pudo contactar con Anthropic para comprobar esta clave.",
+  "Could not reach OpenAI to check this key.":
+    "No se pudo contactar con OpenAI para comprobar esta clave.",
+  "Could not reach OpenRouter to check this key.":
+    "No se pudo contactar con OpenRouter para comprobar esta clave.",
+  "Could not reach the endpoint to check this key.":
+    "No se pudo contactar con el endpoint para comprobar esta clave.",
+  "You changed the provider or endpoint, so enter the API key again.":
+    "Cambiaste el proveedor o el endpoint, así que vuelve a introducir la clave de API.",
 };

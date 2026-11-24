@@ -24,7 +24,7 @@ export function detectProvider(name: string | null | undefined): LLMProvider {
  * same id the SDK used, rather than persisting `row.model ?? null` and
  * silently losing the default-substitution case.
  */
-export function resolveModelId(row: LLMKeyRow): string {
+export function resolveModelId(row: Pick<LLMKeyRow, "name" | "model">): string {
   return (
     row.model ||
     (detectProvider(row.name) === "Anthropic" ? "claude-sonnet-4-20250514" : "gpt-4o-mini")
