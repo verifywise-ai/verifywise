@@ -521,6 +521,9 @@ const agentCreateIncident = createWriteToolFn({
       reporter,
       categories_of_harm: [],
     };
+    // The requester as a user, so the incident shows their full name and
+    // stays theirs if they are renamed. The text above is the fallback.
+    if (requesterId) input.reporter_id = requesterId;
     // The use case the tool schema offers; checked against the organization.
     if (params.project_id !== undefined && params.project_id !== null) {
       input.project_id = params.project_id;

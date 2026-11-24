@@ -134,7 +134,8 @@ describe("updateIncidentById — approval is its own permission", () => {
     expect(res.status).toHaveBeenCalledWith(200);
     const changed = mockUpdate.mock.calls[0][1];
     expect(changed.approved_by).toBe("Rita Reviewer");
-    expect(changed.approval_date).toBeInstanceOf(Date);
+    expect(changed.approval_date).toBe(new Date().toISOString().slice(0, 10));
+    expect(changed.approved_by_id).toBe(9);
     expect(mockApprover).toHaveBeenCalledWith(9, 1, mockTransaction);
   });
 });
@@ -204,7 +205,8 @@ describe("createNewIncident — approval on create", () => {
       approved_by: "Rita Reviewer",
       approval_notes: "Self-approved",
     });
-    expect(saved.approval_date).toBeInstanceOf(Date);
+    expect(saved.approval_date).toBe(new Date().toISOString().slice(0, 10));
+    expect(saved.approved_by_id).toBe(9);
     expect(mockApprover).toHaveBeenCalledWith(9, 1, mockTransaction);
   });
 

@@ -3670,12 +3670,23 @@ components:
           $ref: '#/components/schemas/IncidentStatus'
         occurred_date:
           type: string
-          format: date-time
+          format: date
+          description: 'Calendar day, YYYY-MM-DD.'
         date_detected:
           type: string
-          format: date-time
+          format: date
+          description: 'Calendar day, YYYY-MM-DD.'
         reporter:
           type: string
+          description: 'Reporter name: the reporter_id user''s full name when one is set, else free text (Jira imports, incidents created before reporter_id).'
+        reporter_id:
+          type: integer
+          nullable: true
+          description: 'The reporter (a user of the organization), or null.'
+        reporter_name:
+          type: string
+          nullable: true
+          description: 'The reporter_id user''s current full name, or null. Fall back to reporter.'
         categories_of_harm:
           type: array
           items:
@@ -3706,10 +3717,20 @@ components:
         approved_by:
           type: string
           nullable: true
+          description: 'Name of the user who recorded the approval decision (set by the server).'
+        approved_by_id:
+          type: integer
+          nullable: true
+          description: 'The user who recorded the approval decision (set by the server), or null.'
+        approved_by_name:
+          type: string
+          nullable: true
+          description: 'The approved_by_id user''s current full name, or null. Fall back to approved_by.'
         approval_date:
           type: string
-          format: date-time
+          format: date
           nullable: true
+          description: 'Day the approval decision was recorded (UTC), YYYY-MM-DD. Set by the server.'
         approval_notes:
           type: string
           nullable: true
@@ -3728,7 +3749,6 @@ components:
         - status
         - occurred_date
         - date_detected
-        - reporter
         - approval_status
         - categories_of_harm
         - description
@@ -3744,16 +3764,24 @@ components:
           $ref: '#/components/schemas/IncidentStatus'
         occurred_date:
           type: string
-          format: date-time
+          format: date
+          description: 'YYYY-MM-DD (an ISO date-time is accepted; its date part is used).'
         date_detected:
           type: string
-          format: date-time
+          format: date
+          description: 'YYYY-MM-DD (an ISO date-time is accepted; its date part is used).'
         reporter:
           type: string
+          description: 'Reporter name. Required on create unless reporter_id is sent; ignored when reporter_id is sent (the server writes that user''s full name).'
+        reporter_id:
+          type: integer
+          nullable: true
+          description: 'The reporter, a user of your organization (400 INVALID_REFERENCE otherwise).'
         approval_status:
           $ref: '#/components/schemas/IncidentApprovalStatus'
         approved_by:
           type: string
+          description: 'Ignored: set by the server.'
         categories_of_harm:
           oneOf:
             -
@@ -3786,7 +3814,8 @@ components:
           default: false
         approval_date:
           type: string
-          format: date-time
+          format: date
+          description: 'Ignored: set by the server.'
         approval_notes:
           type: string
     UpdateIncidentRequest:
@@ -3803,16 +3832,24 @@ components:
           $ref: '#/components/schemas/IncidentStatus'
         occurred_date:
           type: string
-          format: date-time
+          format: date
+          description: 'YYYY-MM-DD (an ISO date-time is accepted; its date part is used).'
         date_detected:
           type: string
-          format: date-time
+          format: date
+          description: 'YYYY-MM-DD (an ISO date-time is accepted; its date part is used).'
         reporter:
           type: string
+          description: 'Reporter name. Required on create unless reporter_id is sent; ignored when reporter_id is sent (the server writes that user''s full name).'
+        reporter_id:
+          type: integer
+          nullable: true
+          description: 'The reporter, a user of your organization (400 INVALID_REFERENCE otherwise).'
         approval_status:
           $ref: '#/components/schemas/IncidentApprovalStatus'
         approved_by:
           type: string
+          description: 'Ignored: set by the server.'
         categories_of_harm:
           oneOf:
             -
@@ -3842,7 +3879,8 @@ components:
           type: boolean
         approval_date:
           type: string
-          format: date-time
+          format: date
+          description: 'Ignored: set by the server.'
         approval_notes:
           type: string
     Framework:
@@ -20416,7 +20454,7 @@ paths:
       tags:
         - Incidents
       summary: 'Create New Incident'
-      description: 'Needs incident.create. Required: ai_project, type, severity, occurred_date, date_detected, reporter and description (5 to 32,767 characters). status defaults to Open and approval_status to Pending when omitted. type, severity, status and approval_status must be one of their listed values; ai_project, reporter and model_system_version are at most 255 characters; dates are YYYY-MM-DD (or an ISO date-time), not later than today in UTC+14 (the furthest-ahead time zone, so today anywhere is accepted), and date_detected is on or after occurred_date. categories_of_harm is optional: a list (or a comma-separated string) of Health, Safety, Rights, Property, Environment. approved_by and approval_date are set by the server and ignored in the request. A caller without incident.approve always gets approval_status Pending with no approval_notes. A caller with incident.approve may send Approved or Rejected; the server then records the caller''s name as approved_by and now as approval_date.'
+      description: 'Needs incident.create. Required: ai_project, type, severity, occurred_date, date_detected, reporter (or reporter_id) and description (5 to 32,767 characters). status defaults to Open and approval_status to Pending when omitted. type, severity, status and approval_status must be one of their listed values; ai_project, reporter and model_system_version are at most 255 characters; dates are YYYY-MM-DD (or an ISO date-time), not later than today in UTC+14 (the furthest-ahead time zone, so today anywhere is accepted), and date_detected is on or after occurred_date. categories_of_harm is optional: a list (or a comma-separated string) of Health, Safety, Rights, Property, Environment. The reporter is required: a reporter_id (a user of your organization; the server writes their full name into reporter) or a non-empty reporter text. Dates are stored and returned as YYYY-MM-DD. approved_by, approved_by_id and approval_date are set by the server and ignored in the request. A caller without incident.approve always gets approval_status Pending with no approval_notes. A caller with incident.approve may send Approved or Rejected; the server then records the caller''s name as approved_by, their id as approved_by_id and today (UTC) as approval_date.'
       operationId: createNewIncident
       security:
         -
@@ -20432,7 +20470,6 @@ paths:
                 - severity
                 - occurred_date
                 - date_detected
-                - reporter
                 - description
               properties:
                 ai_project:
@@ -20461,6 +20498,10 @@ paths:
                 reporter:
                   type: string
                   maxLength: 255
+                  description: 'Required unless reporter_id is sent.'
+                reporter_id:
+                  type: integer
+                  description: 'A user of your organization; the server writes their full name into reporter.'
                 model_system_version:
                   type: string
                   maxLength: 255
@@ -20513,7 +20554,7 @@ paths:
       tags:
         - Incidents
       summary: 'Update Incident By Id'
-      description: 'Needs incident.edit or incident.approve, then per field: changing approval_status or approval_notes needs incident.approve, changing any other field (archived included) needs incident.edit. A field sent with its stored value is not a change. An archived incident takes only { "archived": false } (restore); any other change answers 409 ("Restore this incident before editing it.") and nothing is written. approved_by and approval_date are set by the server and ignored in the request: when approval_status changes to Approved or Rejected, approved_by is the caller''s name and approval_date is now; when it changes to Pending or Not required, both are cleared. Changed fields follow the create rules (enums, lengths, dates; harm categories an update adds must be listed values, stored ones outside the list may stay); a required field cannot be set to null or an empty string, and the dates the incident ends up with must keep date_detected on or after occurred_date. Fields left out are not changed.'
+      description: 'Needs incident.edit or incident.approve, then per field: changing approval_status or approval_notes needs incident.approve, changing any other field (archived included) needs incident.edit. A field sent with its stored value is not a change. An archived incident takes only { "archived": false } (restore); any other change answers 409 ("Restore this incident before editing it.") and nothing is written. approved_by, approved_by_id and approval_date are set by the server and ignored in the request: when approval_status changes to Approved or Rejected, approved_by is the caller''s name, approved_by_id their id and approval_date today (UTC, YYYY-MM-DD); when it changes to Pending or Not required, all three are cleared. A changed reporter_id must be a user of your organization (400 INVALID_REFERENCE otherwise) and sets reporter to their full name; a changed reporter text without reporter_id clears reporter_id. Changed fields follow the create rules (enums, lengths, dates; harm categories an update adds must be listed values, stored ones outside the list may stay); a required field cannot be set to null or an empty string, and the dates the incident ends up with must keep date_detected on or after occurred_date. Fields left out are not changed.'
       operationId: updateIncidentById
       security:
         -

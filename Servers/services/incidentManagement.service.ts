@@ -38,6 +38,7 @@ import {
   enqueueIncidentUpdatedAutomations,
   getIncidentApproverName,
   getIncidentByIdQuery,
+  getIncidentMemberName,
   incidentReferenceFieldFromError,
   incidentWriteNeeds,
   invalidReferenceErrors,
@@ -48,8 +49,12 @@ import {
   applyReopenApprovalReset,
   approvalStampFor,
   INCIDENT_CREATE_DEFAULTS,
+  incidentToday,
   isBlankIncidentValue,
+  isSameIncidentValue,
   parseCreateHarmCategories,
+  toIncidentDateValue,
+  toIncidentUserId,
   validateCompleteIncidentCreation,
   validateCompleteIncidentUpdate,
   withoutServerSetApprovalFields,
@@ -163,6 +168,24 @@ const changedReferences = (
   };
 };
 
+/**
+ * Resolves a reporter_id the caller sent to the member's full name, for the
+ * reporter text column. Returns undefined when no reporter id is set
+ * (blank), the name when the user is a member of the organization, and
+ * null when they are not (or the value is not a user id): a 400 for the
+ * caller.
+ */
+const reporterNameFor = async (
+  reporterId: unknown,
+  organizationId: number,
+  transaction: Transaction,
+): Promise<string | null | undefined> => {
+  if (isBlankIncidentValue(reporterId)) return undefined;
+  const id = toIncidentUserId(reporterId);
+  if (id === null) return null;
+  return getIncidentMemberName(id, organizationId, transaction);
+};
+
 export interface UpdateIncidentOptions {
   /**
    * What the caller may change (see IncidentWriteAccess). Required unless
@@ -223,9 +246,15 @@ const isAbsentVersion = (value: unknown): boolean => value === null || value ===
  * does not cover, and IncidentUpdateValidationError when the update is
  * invalid.
  *
- * approved_by and approval_date in `updates` are ignored: the server sets
- * them when approval_status changes (the acting user and now for Approved or
- * Rejected, cleared for Pending or Not required).
+ * approved_by, approved_by_id and approval_date in `updates` are ignored:
+ * the server sets them when approval_status changes (the acting user's name
+ * and id and today's date for Approved or Rejected, cleared for Pending or
+ * Not required).
+ *
+ * A changed reporter_id must be a member of the organization (else
+ * IncidentUpdateValidationError, INVALID_REFERENCE); the reporter text is
+ * then set to their full name. A changed reporter text without a reporter_id
+ * clears the stored reporter_id.
  *
  * History is recorded as `userId`, or as the system when
  * `options.changedBySystem` is set. With neither, no history is written.
@@ -309,25 +338,47 @@ export async function updateIncident(
       organizationId,
       transaction,
     );
+    // A reporter picked from the users (reporter_id) must be a member of the
+    // organization; their full name goes into the reporter text, so readers
+    // of the text stay right. Checked only when the id changes.
+    const reporterIdChanges =
+      updates.reporter_id !== undefined &&
+      !isSameIncidentValue("reporter_id", stored.reporter_id, updates.reporter_id);
+    const reporterName = reporterIdChanges
+      ? await reporterNameFor(updates.reporter_id, organizationId, transaction)
+      : undefined;
+    if (reporterName === null) {
+      throw new IncidentUpdateValidationError(invalidReferenceErrors(["reporter_id"]));
+    }
     if (invalidRefs.length > 0) {
       throw new IncidentUpdateValidationError(invalidReferenceErrors(invalidRefs));
     }
 
     const effective: Record<string, unknown> = { ...applyReopenApprovalReset(stored, updates) };
+    if (reporterName !== undefined) {
+      effective.reporter = reporterName;
+    } else if (
+      !reporterIdChanges &&
+      effective.reporter !== undefined &&
+      !isSameIncidentValue("reporter", stored.reporter, effective.reporter)
+    ) {
+      // A new reporter text without a user (the Advisor, an API caller)
+      // names someone else: the stored user no longer applies.
+      effective.reporter_id = null;
+    }
     const stamp = approvalStampFor(stored.approval_status, effective.approval_status);
     if (stamp === "stamp") {
       effective.approved_by = userId
         ? await getIncidentApproverName(userId, organizationId, transaction)
         : null;
-      effective.approval_date = new Date();
+      effective.approved_by_id = userId ?? null;
+      effective.approval_date = incidentToday();
     } else if (stamp === "clear") {
       effective.approved_by = null;
+      effective.approved_by_id = null;
       effective.approval_date = null;
     }
     const changed = diffIncidentColumns(stored, effective);
-    // approval_date is compared as a calendar day, so a second decision on the
-    // same day would keep the first one's time. A new decision always writes it.
-    if (stamp === "stamp") changed.approval_date = effective.approval_date;
     const changedColumns = Object.keys(changed);
 
     if (changedColumns.length === 0) {
@@ -505,6 +556,11 @@ export async function createIncident(
       organizationId,
       transaction,
     );
+    // A reporter picked from the users must be a member of the organization;
+    // the reporter text becomes their full name. Without one, the text sent
+    // (required by validation) is the reporter.
+    const reporterName = await reporterNameFor(input.reporter_id, organizationId, transaction);
+    if (reporterName === null) invalidRefs.push("reporter_id");
     if (invalidRefs.length > 0) {
       throw new IncidentCreateValidationError(invalidReferenceErrors(invalidRefs));
     }
@@ -529,11 +585,13 @@ export async function createIncident(
       type: input.type,
       severity: input.severity,
       status: isBlankIncidentValue(input.status) ? INCIDENT_CREATE_DEFAULTS.status : input.status,
-      occurred_date: input.occurred_date ? input.occurred_date : null,
-      date_detected: input.date_detected ? input.date_detected : null,
-      reporter: input.reporter,
+      occurred_date: toIncidentDateValue(input.occurred_date),
+      date_detected: toIncidentDateValue(input.date_detected),
+      reporter: reporterName ?? input.reporter,
+      reporter_id: reporterName ? toIncidentUserId(input.reporter_id) : null,
       approval_status: approvalStatus,
       approved_by: approvedBy,
+      approved_by_id: stamped ? actor.userId : null,
       // A list, or the comma-separated string form; validated above.
       categories_of_harm: parseCreateHarmCategories(input.categories_of_harm) as string[],
       affected_persons_groups: input.affected_persons_groups,
@@ -544,7 +602,7 @@ export async function createIncident(
       model_system_version: input.model_system_version,
       interim_report: input.interim_report,
       archived: input.archived || false,
-      approval_date: stamped ? new Date() : undefined,
+      approval_date: stamped ? incidentToday() : undefined,
       approval_notes: actor.canApprove ? input.approval_notes : undefined,
       created_at: new Date(),
       updated_at: new Date(),

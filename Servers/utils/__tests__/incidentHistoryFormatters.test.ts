@@ -208,19 +208,14 @@ describe("incident change-history formatters are tenant-scoped", () => {
 });
 
 describe("incident day columns in change history", () => {
-  it("records a stored TIMESTAMP day (a Date at local midnight) as that day east of UTC", async () => {
-    // node-pg reads TIMESTAMP WITHOUT TIME ZONE as server-local time. On a
-    // UTC+9 server, 2026-06-23 is the instant 2026-06-22T15:00Z, whose local
-    // date parts are the 23rd. Jest pins the zone, so the local parts are
-    // simulated on the Date.
-    const stored = new Date("2026-06-22T15:00:00.000Z");
-    stored.getFullYear = () => 2026;
-    stored.getMonth = () => 5;
-    stored.getDate = () => 23;
-    expect(stored.toISOString().slice(0, 10)).toBe("2026-06-22");
-    expect(await formatters.occurred_date(stored)).toBe("2026-06-23");
-    expect(await formatters.date_detected(stored)).toBe("2026-06-23");
-    // A YYYY-MM-DD string (what the drawer sends) is that day too.
+  it("records the stored DATE day as is, in any server time zone", async () => {
+    // DATE columns read back as "YYYY-MM-DD" strings (Sequelize's DATEONLY
+    // parser), so nothing is converted through the server's time zone.
+    expect(await formatters.occurred_date("2026-06-23")).toBe("2026-06-23");
     expect(await formatters.date_detected("2026-06-23")).toBe("2026-06-23");
+    expect(await formatters.approval_date("2026-06-23")).toBe("2026-06-23");
+    // A date-time sent by an older client is its date part.
+    expect(await formatters.occurred_date("2026-06-23T00:00:00.000Z")).toBe("2026-06-23");
+    expect(await formatters.occurred_date(null)).toBe("-");
   });
 });

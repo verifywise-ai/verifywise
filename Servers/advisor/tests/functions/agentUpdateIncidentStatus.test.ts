@@ -73,6 +73,7 @@ describe("agent_update_incident_status — reopening", () => {
       status: "Investigating",
       approval_status: "Pending",
       approved_by: null,
+      approved_by_id: null,
       approval_date: null,
       approval_notes: null,
     });

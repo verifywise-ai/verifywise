@@ -2391,12 +2391,18 @@ components:
           $ref: "#/components/schemas/IncidentStatus"
         occurred_date:
           type: string
-          format: date-time
+          format: date
         date_detected:
           type: string
-          format: date-time
+          format: date
         reporter:
           type: string
+        reporter_id:
+          type: integer
+          nullable: true
+        reporter_name:
+          type: string
+          nullable: true
         categories_of_harm:
           type: array
           items:
@@ -2427,9 +2433,15 @@ components:
         approved_by:
           type: string
           nullable: true
+        approved_by_id:
+          type: integer
+          nullable: true
+        approved_by_name:
+          type: string
+          nullable: true
         approval_date:
           type: string
-          format: date-time
+          format: date
           nullable: true
         approval_notes:
           type: string
@@ -2466,12 +2478,15 @@ components:
           $ref: "#/components/schemas/IncidentStatus"
         occurred_date:
           type: string
-          format: date-time
+          format: date
         date_detected:
           type: string
-          format: date-time
+          format: date
         reporter:
           type: string
+        reporter_id:
+          type: integer
+          nullable: true
         approval_status:
           $ref: "#/components/schemas/IncidentApprovalStatus"
         approved_by:
@@ -2503,7 +2518,7 @@ components:
           default: false
         approval_date:
           type: string
-          format: date-time
+          format: date
         approval_notes:
           type: string
 
@@ -2521,12 +2536,15 @@ components:
           $ref: "#/components/schemas/IncidentStatus"
         occurred_date:
           type: string
-          format: date-time
+          format: date
         date_detected:
           type: string
-          format: date-time
+          format: date
         reporter:
           type: string
+        reporter_id:
+          type: integer
+          nullable: true
         approval_status:
           $ref: "#/components/schemas/IncidentApprovalStatus"
         approved_by:
@@ -2555,6 +2573,6 @@ components:
           type: boolean
         approval_date:
           type: string
-          format: date-time
+          format: date
         approval_notes:
           type: string

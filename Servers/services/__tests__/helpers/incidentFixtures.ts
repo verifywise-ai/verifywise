@@ -17,13 +17,6 @@ import {
 
 export const STORED_UPDATED_AT = new Date("2026-10-10T12:34:56.789Z");
 
-/**
- * A TIMESTAMP WITHOUT TIME ZONE value as pg returns it: the stored
- * wall-clock time parsed as server-local time.
- */
-export const pgTimestamp = (y: number, m: number, d: number, hh = 0, mm = 0): Date =>
-  new Date(y, m - 1, d, hh, mm);
-
 let modelReady = false;
 
 /** Mirrors handleSelectQuery for `mapToModel: true` (sequelize abstract/query.js). */
@@ -61,9 +54,11 @@ export function storedIncidentRow(): Record<string, unknown> {
     type: "Malfunction",
     severity: "Serious",
     status: Status.CLOSED,
-    occurred_date: pgTimestamp(2026, 9, 20),
-    date_detected: pgTimestamp(2026, 9, 21),
+    // DATE columns come back as "YYYY-MM-DD" strings (Sequelize's DATEONLY parser).
+    occurred_date: "2026-09-20",
+    date_detected: "2026-09-21",
     reporter: "Ada",
+    reporter_id: null,
     categories_of_harm: ["Economic Loss"],
     affected_persons_groups: null,
     description: "Model produced unsafe output",
@@ -75,7 +70,8 @@ export function storedIncidentRow(): Record<string, unknown> {
     archived: false,
     approval_status: Approval.APPROVED,
     approved_by: "Jane Doe",
-    approval_date: pgTimestamp(2026, 10, 1),
+    approved_by_id: 5,
+    approval_date: "2026-10-01",
     approval_notes: "Closure signed off",
     is_demo: false,
     organization_id: 1,
@@ -85,6 +81,8 @@ export function storedIncidentRow(): Record<string, unknown> {
     model_inventory_name: null,
     project_title: "Chatbot",
     assignee_name: "Grace Hopper",
+    reporter_name: null,
+    approved_by_name: "Jane Doe",
   };
 }
 

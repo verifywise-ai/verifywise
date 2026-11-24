@@ -17,6 +17,7 @@
   "{field} must be a valid date (YYYY-MM-DD)": "{field} muss ein gültiges Datum sein (JJJJ-MM-TT)",
   "{field} must be one of: {values}": "{field} muss einer der folgenden Werte sein: {values}",
   "{field} must be true or false": "{field} muss true oder false sein",
+  "{field} must be a user id": "{field} muss eine Benutzer-ID sein",
   "date_detected cannot be earlier than occurred_date": "date_detected darf nicht vor occurred_date liegen",
   "{key} must be a whole number from {min} to {max}": "{key} muss eine ganze Zahl von {min} bis {max} sein",
   "{label} — \"{metric}\" = {value} breached its monitoring threshold.": "{label} – „{metric}“ = {value} hat seinen Überwachungsschwellenwert überschritten.",
