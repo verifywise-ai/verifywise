@@ -18,8 +18,10 @@
  * The request goes through `safeFetch` (the outbound policy, an agent that checks every resolved
  * address, redirects refused), with the key in `X-Subscription-Token`. `guardedFetch` is not used:
  * it cannot send that header and does not read the body of an error, which is where Brave says that
- * a key is wrong. Each request has 15 seconds and reads at most 2 MB; the requests of one engine are
- * spaced 1.1 seconds apart, since the free plan allows one a second.
+ * a key is wrong. Each request has 15 seconds and reads at most 2 MB; the requests made with one key
+ * are spaced 1.1 seconds apart, since the free plan allows one a second. The spacing holds across the
+ * process: every engine built with the same key shares one queue (see `braveQueueFor`), so the runs
+ * the worker has going at once do not each send a request a second.
  *
  * Errors:
  * - a key Brave refuses (`error.code` SUBSCRIPTION_TOKEN_INVALID, or a 401 or 403) is a
@@ -29,6 +31,7 @@
  * - anything else (a network error, the time limit, an abort, another status, a body that is too
  *   large, not JSON or of another shape) is a SearchEngineError.
  */
+import { createHash } from "node:crypto";
 import { safeFetch } from "../../utils/safeOutboundUrl";
 import { MAX_SNIPPET_CHARS, cleanText, cutAtCodePoint } from "../vendorResearch/text";
 import { SearchUnavailableError } from "./providerSearch";
@@ -387,12 +390,35 @@ class RateLimited extends Error {
   }
 }
 
+/** The most keys whose queue is kept; past it, the queue made first is dropped. */
+const MAX_SHARED_QUEUES = 1_000;
+/** The queue of each key, by the SHA-256 of the key, so the key itself is never a map key. */
+const sharedQueues = new Map<string, SearchQueue>();
+
+/**
+ * The queue of the requests made with `apiKey` in this process (one every BRAVE_MIN_GAP_MS), made on
+ * first use. Every engine built with the same key gets the same queue, so runs that search at the
+ * same time stay within the key's rate together.
+ */
+export function braveQueueFor(apiKey: string): SearchQueue {
+  const id = createHash("sha256").update(apiKey).digest("hex");
+  const known = sharedQueues.get(id);
+  if (known) return known;
+  if (sharedQueues.size >= MAX_SHARED_QUEUES) {
+    const oldest = sharedQueues.keys().next().value;
+    if (oldest !== undefined) sharedQueues.delete(oldest);
+  }
+  const queue = createSearchQueue({ minGapMs: BRAVE_MIN_GAP_MS });
+  sharedQueues.set(id, queue);
+  return queue;
+}
+
 export interface BraveEngineDeps {
   /** The organization's Brave Search API key. It is sent in a header and nowhere else. */
   apiKey: string;
   /** Replaces `safeFetch`, for tests. */
   fetchImpl?: (url: string, init?: RequestInit) => Promise<Response>;
-  /** Replaces the queue of this engine (one request every BRAVE_MIN_GAP_MS), for tests. */
+  /** Replaces the queue of the key (`braveQueueFor`, one request every BRAVE_MIN_GAP_MS), for tests. */
   queue?: SearchQueue;
   /** Replaces the wait after a 429, for tests. */
   sleep?: (ms: number, signal?: AbortSignal) => Promise<void>;
@@ -402,13 +428,14 @@ export interface BraveEngineDeps {
 
 /**
  * The search engine on Brave Search, with an organization's key: kind `web` on the LLM Context
- * endpoint, kind `news` on the news endpoint (see the module comment). The engine has its own queue,
- * so the requests of one run are spaced for the key's rate. It keeps nothing between searches.
+ * endpoint, kind `news` on the news endpoint (see the module comment). The engine uses the queue of
+ * its key, shared by every engine of that key, so the requests of all the runs are spaced for the
+ * key's rate. It keeps nothing between searches.
  */
 export function createBraveEngine(deps: BraveEngineDeps): SearchEngine {
   const { apiKey } = deps;
   const fetchImpl = deps.fetchImpl ?? safeFetch;
-  const queue = deps.queue ?? createSearchQueue({ minGapMs: BRAVE_MIN_GAP_MS });
+  const queue = deps.queue ?? braveQueueFor(apiKey);
   const sleep = deps.sleep ?? sleepUnlessAborted;
   const timeoutMs = deps.timeoutMs ?? BRAVE_REQUEST_TIMEOUT_MS;
 

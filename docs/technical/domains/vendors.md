@@ -1397,7 +1397,7 @@ cd Servers && npx ts-node scripts/vendorResearchBackfillCredibility.ts          
 | Limit | Value |
 |-------|-------|
 | Steps of the research loop | 24, invalid ones included |
-| `search` actions per run | 8, at most 2 of a run at once (`MAX_SEARCHES_AT_ONCE` in `webSession.ts`); Claude's web search: at most 4 calls at once for the engine of a run and 200 output tokens each (`providerSearch.ts`); GDELT: a body of at most 1,048,576 bytes and 20,000 ms for a request, at least 5,000 ms between two requests of a process (`gdeltSearch.ts`); Brave: a body of at most 2 MB and 15,000 ms for a request, at least 1,100 ms between two requests of an engine (`braveSearch.ts`); see [web research](../infrastructure/web-research.md) |
+| `search` actions per run | 8, at most 2 of a run at once (`MAX_SEARCHES_AT_ONCE` in `webSession.ts`); Claude's web search: at most 4 calls at once for the engine of a run and 200 output tokens each (`providerSearch.ts`); GDELT: a body of at most 1,048,576 bytes and 20,000 ms for a request, at least 5,000 ms between two requests of a process (`gdeltSearch.ts`); Brave: a body of at most 2 MB and 15,000 ms for a request, at least 1,100 ms between two requests of one key in a process (`braveSearch.ts`); see [web research](../infrastructure/web-research.md) |
 | `read` actions per run | 12, successful or not; a page takes at most 20 seconds, 2 MB after decompression and 4 redirects |
 | One model turn of the loop, the whole loop | 60 seconds, 5 minutes |
 | Snippet, page excerpt | 1,500 characters, 8,000 characters |

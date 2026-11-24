@@ -4,6 +4,7 @@ import {
   BRAVE_MAX_RATE_LIMIT_WAIT_MS,
   BRAVE_MIN_GAP_MS,
   braveQueryOf,
+  braveQueueFor,
   createBraveEngine,
   plainTextOf,
   rateLimitWaitMsOf,
@@ -463,7 +464,47 @@ describe("createBraveEngine", () => {
     });
   });
 
-  it("spaces the requests of one engine by its own queue", async () => {
+  describe("the queue of a key", () => {
+    /** Two engines and the times their requests started, by the key each is built with. */
+    function twoEngines(firstKey: string, secondKey: string) {
+      const started: number[] = [];
+      const fetch = jest.fn(async () => {
+        started.push(Date.now());
+        return json(newsBody([]));
+      });
+      const first = createBraveEngine({ apiKey: firstKey, fetchImpl: fetch });
+      const second = createBraveEngine({ apiKey: secondKey, fetchImpl: fetch });
+      return { first, second, started, fetch };
+    }
+
+    it("is one queue for every engine of the same key, and another for another key", () => {
+      expect(braveQueueFor("BSAsameKeyForQueue01")).toBe(braveQueueFor("BSAsameKeyForQueue01"));
+      expect(braveQueueFor("BSAsameKeyForQueue01")).not.toBe(braveQueueFor("BSAotherKeyQueue02"));
+    });
+
+    it("spaces the requests of two engines built with the same key", async () => {
+      const { first, second, started, fetch } = twoEngines(
+        "BSAsharedKey00000003",
+        "BSAsharedKey00000003",
+      );
+      await Promise.all([first.search("a", "news"), second.search("b", "news")]);
+      expect(fetch).toHaveBeenCalledTimes(2);
+      // Timers may fire a little early; the gap is BRAVE_MIN_GAP_MS.
+      expect(Math.abs(started[1] - started[0])).toBeGreaterThanOrEqual(BRAVE_MIN_GAP_MS - 50);
+    });
+
+    it("does not space the requests of two engines built with different keys", async () => {
+      const { first, second, started, fetch } = twoEngines(
+        "BSAfirstKey000000004",
+        "BSAsecondKey00000005",
+      );
+      await Promise.all([first.search("a", "news"), second.search("b", "news")]);
+      expect(fetch).toHaveBeenCalledTimes(2);
+      expect(Math.abs(started[1] - started[0])).toBeLessThan(BRAVE_MIN_GAP_MS / 2);
+    });
+  });
+
+  it("spaces the requests of one engine by the queue of its key", async () => {
     const started: number[] = [];
     const fetch = jest.fn(async () => {
       started.push(Date.now());
