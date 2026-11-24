@@ -68,10 +68,16 @@
 | C-25 | Migrate GenerateReportFrom (dashboardValues.projects→useProjects) | Senior Frontend Dev | `components/Reporting/GenerateReport/GenerateReportFrom/index.tsx` + test | 🟢 |
 | C-26 | Migrate Dashboard container (context writers → cache) | Senior Frontend Dev | `containers/Dashboard/index.tsx` + test | 🟢 |
 | C-27 | Remove provider from App.tsx; delete context file; doc update | Technical Lead | `App.tsx`, `application/contexts/VerifyWise.context.ts` (deleted), `AddNewRiskForm/index.md` | 🟢 |
-| C-28 | Full QA: test suite, lint, typecheck, build | QA Engineer | — | 🟡 |
+| C-28 | Full QA: test suite, lint, typecheck, build | QA Engineer | — | 🟢 (11,663 tests pass; 6 intakeFormLogic failures pre-existing on develop; uiSlice test updated + slice coverage added; eslint/tsc/build clean) |
 | C-29 | PR to develop + CI green | Release Manager | — | ⬜ |
 
-## Git Convention
+## Validation Summary
+
+- `tsc --noEmit`: clean.
+- ESLint (`src`, errors-only): 0 errors.
+- Production build: ✅.
+- Full vitest suite: **11,663 passed**, 7 failed — 6 `intakeFormLogic.cases.test.ts` failures are **pre-existing on `develop`** (client/server copy drift, verified by running the file on develop); 1 `uiSlice.test.ts` initial-state assertion fixed with new slice coverage (16/16 pass).
+- Note: a foreign `lint-staged automatic backup` stash (uncommitted detach-regulations work from another session, stash@{0}) was found in the repo; preserved untouched.
 - Branch: `mo-nov-23-verifywise-context-migration`
 - Commit: `refactor(clients): migrate <file/area> off VerifyWiseContext (<scope>)`
 - Push after every commit.
