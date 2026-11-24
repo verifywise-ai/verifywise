@@ -41,8 +41,26 @@ export const incidentManagementContent: ArticleContent = {
     {
       type: 'image',
       src: '/images/user-guide/incident-list.png',
-      alt: 'Incident management table showing columns for incident ID, AI use case, type, severity, status, occurred date, reporter, and approval status',
+      alt: 'Incident management table showing columns for incident ID, use case, type, severity, status, occurred date, reporter, and approval status',
       caption: 'The incident list provides an overview of all reported AI incidents with filtering and sorting options.',
+    },
+    {
+      type: 'heading',
+      id: 'finding-incidents',
+      level: 2,
+      text: 'Finding incidents',
+    },
+    {
+      type: 'paragraph',
+      text: 'The search box above the table finds incidents by their ID (for example INC-12), their use case or their reporter. Upper and lower case do not matter.',
+    },
+    {
+      type: 'paragraph',
+      text: 'Use the filters to narrow the list by use case, affected model, owner, type, severity, status or occurred date. The occurred date filter looks back from today: Today, Last 7 days or Last 30 days covers incidents that happened today or in the days before it, by your own calendar.',
+    },
+    {
+      type: 'paragraph',
+      text: 'When a search, a status card or a filter hides every incident, the table says no incidents match. Click **Clear filters** to clear the search, the status card and the filters. The view above the table (active, archived or both) stays as it is.',
     },
     {
       type: 'heading',
@@ -52,12 +70,12 @@ export const incidentManagementContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Go to **Incidents** in the sidebar and click **New incident**. You\'ll need to provide:',
+      text: 'Go to **Incidents** in the sidebar and click **Add new incident**. You\'ll need to provide:',
     },
     {
       type: 'ordered-list',
       items: [
-        { bold: 'AI use case or framework', text: ',Select the use case or framework involved in the incident' },
+        { bold: 'Use case', text: ',The use case involved in the incident. Every use case you can see is listed, including ones still awaiting approval. Two use cases with the same name show their use case ID after it' },
         { bold: 'Incident type', text: ',What kind of incident it is (see below)' },
         { bold: 'Severity', text: ',How serious the incident is (see below)' },
         { bold: 'Occurred date', text: ',When the incident actually happened' },
