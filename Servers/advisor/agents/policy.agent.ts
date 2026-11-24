@@ -6,6 +6,7 @@
  */
 
 import { createDomainAgent } from "./baseAgent";
+import { getAgentToolNames } from "./agentToolMap";
 
 export function registerPolicyAgent() {
   return createDomainAgent({
@@ -26,18 +27,7 @@ export function registerPolicyAgent() {
       "guideline",
       "standard operating procedure",
     ],
-    tools: [
-      // Read tools
-      "fetch_policies",
-      "get_policy_analytics",
-      "get_policy_review_status",
-      // Write tools
-      "agent_create_policy",
-      "agent_update_policy",
-      "agent_delete_policy",
-      "agent_submit_policy_for_review",
-      "agent_approve_policy_review",
-    ],
+    tools: getAgentToolNames("policy-agent"),
     systemPromptSuffix: `You are a policy management expert. When working with policies:
 - Understand the full policy lifecycle (draft → review → approved → published)
 - A policy goes under review only by submitting it for approval, and is approved only by its approval workflow's approvers or, when the organization has no policy approval workflow, by an Admin directly
