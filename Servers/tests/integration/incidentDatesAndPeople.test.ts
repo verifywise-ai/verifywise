@@ -10,6 +10,8 @@ import { sequelize } from "../../database/db";
 import { cleanupDatabase, createTestUser } from "./helpers";
 import { seedTwoTenantContexts } from "./tenant-isolation/tenantIsolation.harness";
 import { createTestIncident } from "../factories";
+import { earliestIncidentToday } from "../../utils/validations/incidentManagementValidation.utils";
+import { wiseSearch } from "../../utils/search.utils";
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const migration = require("../../database/migrations/20261123192509-incident-dates-and-people.js");
@@ -34,6 +36,19 @@ const fullName = async (userId: number): Promise<string> => {
   );
   return rows[0].full_name;
 };
+
+const setName = async (userId: number, name: string, surname: string) => {
+  await sequelize.query("UPDATE users SET name = :name, surname = :surname WHERE id = :userId", {
+    replacements: { userId, name, surname },
+  });
+};
+
+const historyRows = async (incidentId: number) =>
+  sequelize.query<{ field_name: string; old_value: string; new_value: string }>(
+    `SELECT field_name, old_value, new_value FROM incident_change_history
+      WHERE incident_id = :incidentId AND action = 'updated' ORDER BY id`,
+    { replacements: { incidentId }, type: QueryTypes.SELECT },
+  );
 
 const columnTypes = async (): Promise<Record<string, string>> => {
   const rows = await sequelize.query<{ column_name: string; data_type: string }>(
@@ -284,5 +299,113 @@ describe("incident reporter and approver users against the database", () => {
     expect(got.body.data.reporter_id).toBeNull();
     expect(got.body.data.reporter_name).toBeNull();
     expect(got.body.data.reporter).toBe(name);
+  });
+
+  it("never leaves an incident without a reporter: an unchanged reporter_id keeps the user and their name", async () => {
+    const { owner } = await seedTwoTenantContexts();
+    const created = await owner.request.post(ROUTE).send(payload({ reporter_id: owner.userId }));
+    expect(created.status).toBe(201);
+    const id = created.body.data.id;
+    const name = await fullName(owner.userId);
+
+    const blankText = await owner.request
+      .patch(`${ROUTE}/${id}`)
+      .send({ reporter_id: owner.userId, reporter: "" });
+    expect(blankText.status).toBe(200);
+    expect(blankText.body.data.reporter_id).toBe(owner.userId);
+    expect(blankText.body.data.reporter).toBe(name);
+
+    const otherText = await owner.request
+      .patch(`${ROUTE}/${id}`)
+      .send({ reporter_id: owner.userId, reporter: "Someone else" });
+    expect(otherText.status).toBe(200);
+    expect(otherText.body.data.reporter_id).toBe(owner.userId);
+    expect(otherText.body.data.reporter).toBe(name);
+
+    const cleared = await owner.request
+      .patch(`${ROUTE}/${id}`)
+      .send({ reporter_id: null, reporter: "" });
+    expect(cleared.status).toBe(400);
+    expect(JSON.stringify(cleared.body)).toContain("reporter");
+    const got = await owner.request.get(`${ROUTE}/${id}`);
+    expect(got.body.data.reporter_id).toBe(owner.userId);
+  });
+
+  it("dates an approval with the approver's local date when it is today somewhere, else UTC", async () => {
+    const { owner } = await seedTwoTenantContexts();
+    const incidentId = await createTestIncident(owner.orgId, owner.userId);
+    // Today in UTC-12: always a date that is today somewhere right now.
+    const localDay = earliestIncidentToday();
+
+    const approved = await owner.request
+      .patch(`${ROUTE}/${incidentId}`)
+      .set("X-Client-Date", localDay)
+      .send({ approval_status: "Approved" });
+    expect(approved.status).toBe(200);
+    expect(approved.body.data.approval_date).toBe(localDay);
+    expect(approved.body.data.approved_by_id).toBe(owner.userId);
+
+    const rejected = await owner.request
+      .patch(`${ROUTE}/${incidentId}`)
+      .set("X-Client-Date", "2020-01-01")
+      .send({ approval_status: "Rejected" });
+    expect(rejected.status).toBe(200);
+    expect(rejected.body.data.approval_date).toBe(new Date().toISOString().slice(0, 10));
+  });
+
+  it("records a change of reporter between two users with the same name, once", async () => {
+    const { owner } = await seedTwoTenantContexts();
+    const first = await createTestUser(owner.orgId, 3, `alex1-${Date.now()}@test.local`, "Pw123!x");
+    const second = await createTestUser(
+      owner.orgId,
+      3,
+      `alex2-${Date.now()}@test.local`,
+      "Pw123!x",
+    );
+    await setName(first, "Alex", "Kim");
+    await setName(second, "Alex", "Kim");
+    const created = await owner.request.post(ROUTE).send(payload({ reporter_id: first }));
+    expect(created.status).toBe(201);
+    const id = created.body.data.id;
+
+    const res = await owner.request.patch(`${ROUTE}/${id}`).send({ reporter_id: second });
+    expect(res.status).toBe(200);
+    expect(res.body.data.reporter_id).toBe(second);
+    expect(await historyRows(id)).toEqual([
+      { field_name: "Reporter", old_value: "Alex Kim", new_value: "Alex Kim" },
+    ]);
+
+    // A text-only reporter is recorded by the text row, once.
+    await owner.request.patch(`${ROUTE}/${id}`).send({ reporter: "Grace Hopper" });
+    expect((await historyRows(id)).slice(1)).toEqual([
+      { field_name: "Reporter", old_value: "Alex Kim", new_value: "Grace Hopper" },
+    ]);
+  });
+
+  it("global search finds an incident by its reporter user's current name, within the organization", async () => {
+    const { owner, attacker } = await seedTwoTenantContexts();
+    const created = await owner.request
+      .post(ROUTE)
+      .send(payload({ reporter_id: owner.userId, ai_project: "Renamed reporter case" }));
+    expect(created.status).toBe(201);
+    // Renamed after being picked: the stored text keeps the old name.
+    await setName(owner.userId, "Zephyrine", "Quarrington");
+
+    const found = await wiseSearch({
+      query: "Zephyrine Quarr",
+      organizationId: owner.orgId,
+      userId: owner.userId,
+      riskViewer: { userId: owner.userId, isAdmin: true } as any,
+    });
+    expect(found.incident_management?.results.map((r) => r.id)).toEqual([created.body.data.id]);
+    expect(found.incident_management?.results[0].matchedField).toBe("reporter_name");
+
+    const otherOrg = await wiseSearch({
+      query: "Zephyrine Quarr",
+      organizationId: attacker.orgId,
+      userId: attacker.userId,
+      riskViewer: { userId: attacker.userId, isAdmin: true } as any,
+    });
+    expect(otherOrg.incident_management?.results ?? []).toEqual([]);
   });
 });

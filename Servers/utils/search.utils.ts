@@ -143,6 +143,13 @@ interface EntityConfig {
    * meet (no user input), e.g. leaving archived rows out.
    */
   alwaysWhere?: string;
+  /**
+   * Searchable values that are not columns of the entity's table, by result
+   * key: fixed SQL expressions (no user input) on the entity's row, selected
+   * under the key and matched like the search columns. A lookup in another
+   * table must stay within the row's organization.
+   */
+  searchExpressions?: Record<string, string>;
 }
 
 /**
@@ -289,6 +296,16 @@ const ENTITY_CONFIGS: Record<string, EntityConfig> = {
       "description",
       "immediate_mitigations",
     ],
+    // The reporter user's current full name, as the incidents page shows it
+    // (the reporter text keeps the name they had when picked). Only users
+    // who are members of the incident's organization.
+    searchExpressions: {
+      reporter_name: `(SELECT NULLIF(TRIM(CONCAT_WS(' ', u.name, u.surname)), '')
+         FROM users u
+         JOIN organization_members om
+           ON om.user_id = u.id AND om.organization_id = ai_incident_managements.organization_id
+        WHERE u.id = ai_incident_managements.reporter_id)`,
+    },
     titleColumn: "ai_project",
     subtitleColumn: "description",
     icon: "AlertCircle",
@@ -435,7 +452,12 @@ async function searchEntity(
       ];
       conditions.push(`(${fileSearchConditions.join(" OR ")})`);
     } else {
-      conditions.push(`(${buildILikeConditions(config.searchColumns, "searchPattern")})`);
+      const expressionConditions = Object.values(config.searchExpressions ?? {}).map(
+        (expression) => `${expression} ILIKE :searchPattern`,
+      );
+      conditions.push(
+        `(${[buildILikeConditions(config.searchColumns, "searchPattern"), ...expressionConditions].join(" OR ")})`,
+      );
     }
   }
 
@@ -507,8 +529,11 @@ async function searchEntity(
   // are already distinct; SELECT DISTINCT * also fails outright on a table
   // with a json column (ai_incident_managements.categories_of_harm), which
   // left incidents out of every search.
+  const selectedExpressions = Object.entries(config.searchExpressions ?? {})
+    .map(([key, expression]) => `, ${expression} AS ${key}`)
+    .join("");
   const sql = `
-    SELECT * FROM ${safeTableName}
+    SELECT *${selectedExpressions} FROM ${safeTableName}
     ${whereClause}
     ORDER BY id ASC
     LIMIT :limit
@@ -522,7 +547,11 @@ async function searchEntity(
     });
 
     return rows.map((row: any) => {
-      const matched = getMatchedField(row, config.searchColumns, query);
+      const matched = getMatchedField(
+        row,
+        [...config.searchColumns, ...Object.keys(config.searchExpressions ?? {})],
+        query,
+      );
       return {
         id: row.id,
         entityType,
