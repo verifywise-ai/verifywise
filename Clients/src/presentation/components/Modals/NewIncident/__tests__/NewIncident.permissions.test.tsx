@@ -8,7 +8,7 @@ vi.mock("../../../../../application/repository/entity.repository", () => ({
   getAllEntities: vi.fn().mockResolvedValue({ data: [] }),
 }));
 vi.mock("../../../../../application/hooks/useProjects", () => ({
-  useProjects: () => ({ approvedProjects: [{ id: 3, project_title: "Chatbot" }] }),
+  useProjects: () => ({ data: [{ id: 3, project_title: "Chatbot" }] }),
 }));
 
 import SideDrawerIncident, { type NewIncidentFormValues } from "../index";
