@@ -613,13 +613,21 @@ export const earliestIncidentToday = (now: Date = new Date()): string =>
  * UTC+14), else today in UTC. So an approver in Toronto at 20:00 records
  * their own day, not tomorrow, and no caller can backdate or postdate it.
  */
-export const incidentToday = (clientDate?: unknown, now: Date = new Date()): string => {
-  if (typeof clientDate === "string" && /^\d{4}-\d{2}-\d{2}$/.test(clientDate)) {
-    const day = sentCalendarDate(clientDate);
-    if (day && day >= earliestIncidentToday(now) && day <= latestIncidentDate(now)) return day;
-  }
-  return now.toISOString().slice(0, 10);
+export const incidentToday = (clientDate?: unknown, now: Date = new Date()): string =>
+  acceptedClientDate(clientDate, now) ?? now.toISOString().slice(0, 10);
+
+/**
+ * A client date (see incidentToday) when it is a bare real date that is today
+ * somewhere on earth at `now`, else null.
+ */
+export const acceptedClientDate = (clientDate: unknown, now: Date = new Date()): string | null => {
+  const day = incidentCalendarDay(clientDate);
+  return day && day >= earliestIncidentToday(now) && day <= latestIncidentDate(now) ? day : null;
 };
+
+/** `value` when it is a bare real calendar date ("YYYY-MM-DD"), else null. */
+export const incidentCalendarDay = (value: unknown): string | null =>
+  typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value) ? sentCalendarDate(value) : null;
 
 /**
  * A user id sent for reporter_id: a positive integer (number or digits), or

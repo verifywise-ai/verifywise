@@ -12,7 +12,10 @@ jest.mock("../../../utils/userPermission.utils", () => ({
 }));
 jest.mock("../../../utils/incidentManagement.utils", () => ({
   ...(jest.requireActual("../../../utils/incidentManagement.utils") as object),
-  getIncidentApproverName: jest.fn(async () => "Rita Requester"),
+  // User 7 is a member of the organization; anyone else is not.
+  getIncidentMemberName: jest.fn(async (userId: number) =>
+    userId === 7 ? "Rita Requester" : null,
+  ),
 }));
 jest.mock("../../../services/incidentManagement.service", () => ({
   ...(jest.requireActual("../../../services/incidentManagement.service") as object),
@@ -23,6 +26,7 @@ jest.mock("../../../services/incidentManagement.service", () => ({
 
 import { writeToolExecutors } from "../../confirmation/createWriteTool";
 import { asyncLocalStorage } from "../../../utils/context/context";
+import { REQUESTER_CLIENT_DATE_PARAM } from "../../approval/types";
 import "../../functions/incidentFunctions";
 import {
   createIncident,
@@ -69,6 +73,7 @@ describe("agent_create_incident", () => {
         severity: "Very serious",
         project_id: 12,
         reporter: "Rita Requester",
+        reporter_id: 7,
         status: "Open",
       }),
       { userId: 9, canApprove: false, changedBySystem: false },
@@ -86,6 +91,18 @@ describe("agent_create_incident", () => {
       canApprove: false,
       changedBySystem: true,
     });
+  });
+
+  it("reports as text only when the requester is not a member of the organization", async () => {
+    await run("agent_create_incident", {
+      title: "Chatbot",
+      description: "Gave unsafe advice",
+      _requesterId: 12,
+      _userId: 9,
+    });
+    const input = mockCreate.mock.calls[0][1] as Record<string, unknown>;
+    expect(input.reporter).toBe("User #12");
+    expect(input).not.toHaveProperty("reporter_id");
   });
 
   describe("incident days", () => {
@@ -116,6 +133,28 @@ describe("agent_create_incident", () => {
     it("uses the requester's local date sent with the request", async () => {
       await asyncLocalStorage.run({ clientDate: "2026-11-24" }, () =>
         run("agent_create_incident", { title: "Chatbot", description: "Gave unsafe advice" }),
+      );
+      expect(createdDays()).toEqual(["2026-11-24", "2026-11-24"]);
+    });
+
+    it("uses the requester's date captured when they asked, over the approver's", async () => {
+      await asyncLocalStorage.run({ clientDate: "2026-11-25" }, () =>
+        run("agent_create_incident", {
+          title: "Chatbot",
+          description: "Gave unsafe advice",
+          [REQUESTER_CLIENT_DATE_PARAM]: "2026-11-23",
+        }),
+      );
+      expect(createdDays()).toEqual(["2026-11-23", "2026-11-23"]);
+    });
+
+    it("ignores a captured requester date that is not a calendar date", async () => {
+      await asyncLocalStorage.run({ clientDate: "2026-11-24" }, () =>
+        run("agent_create_incident", {
+          title: "Chatbot",
+          description: "Gave unsafe advice",
+          [REQUESTER_CLIENT_DATE_PARAM]: "2026-02-30",
+        }),
       );
       expect(createdDays()).toEqual(["2026-11-24", "2026-11-24"]);
     });

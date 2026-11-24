@@ -1,6 +1,8 @@
 import { describe, expect, it } from "@jest/globals";
 import {
+  acceptedClientDate,
   earliestIncidentToday,
+  incidentCalendarDay,
   formatIncidentDay,
   incidentCalendarDate,
   incidentToday,
@@ -79,6 +81,17 @@ describe(`incident dates (process TZ ${process.env.TZ ?? "default"})`, () => {
     expect(incidentToday("2026-11-23", now)).toBe("2026-11-23");
     expect(incidentToday("2026-11-22", now)).toBe("2026-11-24");
     expect(incidentToday("2026-11-26", now)).toBe("2026-11-24");
+  });
+
+  it("tells an accepted client date (or none) apart from the UTC fallback", () => {
+    const now = new Date("2026-11-25T01:00:00.000Z");
+    expect(acceptedClientDate("2026-11-24", now)).toBe("2026-11-24");
+    expect(acceptedClientDate("2026-11-23", now)).toBeNull();
+    expect(acceptedClientDate(undefined, now)).toBeNull();
+    expect(incidentCalendarDay("2026-11-23")).toBe("2026-11-23");
+    expect(incidentCalendarDay("2026-02-30")).toBeNull();
+    expect(incidentCalendarDay("2026-11-23T00:00:00Z")).toBeNull();
+    expect(incidentCalendarDay(20261123)).toBeNull();
   });
 
   it("reads the client date header into the request context", () => {

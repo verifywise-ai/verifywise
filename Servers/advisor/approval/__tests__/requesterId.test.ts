@@ -74,4 +74,15 @@ describe("approveAction passes the requester to the executor", () => {
 
     expect(executor).toHaveBeenCalledWith({ risk_id: 7, _userId: 9 }, 42);
   });
+
+  it("passes the requester's date stored with the params at proposal time", async () => {
+    arrange({ input_params: { title: "x", _requesterClientDate: "2026-11-23" }, requested_by: 5 });
+
+    await approveAction(42, "appr-1", 9);
+
+    expect(executor).toHaveBeenCalledWith(
+      { title: "x", _requesterClientDate: "2026-11-23", _userId: 9, _requesterId: 5 },
+      42,
+    );
+  });
 });

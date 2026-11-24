@@ -4,10 +4,7 @@ import {
   Severity,
   IncidentType,
 } from "../../domain.layer/enums/ai-incident-management.enum";
-import {
-  getAllIncidentsQuery,
-  getIncidentApproverName,
-} from "../../utils/incidentManagement.utils";
+import { getAllIncidentsQuery, getIncidentMemberName } from "../../utils/incidentManagement.utils";
 import { AIIncidentManagementModel } from "../../domain.layer/models/incidentManagement/incidemtManagement.model";
 import { createWriteToolFn } from "../confirmation/createWriteTool";
 import {
@@ -20,7 +17,11 @@ import {
 } from "../../services/incidentManagement.service";
 import logger from "../../utils/logger/fileLogger";
 import { getRequestClientDate } from "../../utils/context/context";
-import { incidentToday } from "../../utils/validations/incidentManagementValidation.utils";
+import {
+  incidentCalendarDay,
+  incidentToday,
+} from "../../utils/validations/incidentManagementValidation.utils";
+import { REQUESTER_CLIENT_DATE_PARAM } from "../approval/types";
 import { userHasPermission } from "../../utils/userPermission.utils";
 import { actingRequesterId } from "./actingRequester";
 
@@ -505,14 +506,22 @@ const agentCreateIncident = createWriteToolFn({
   executeFn: async (params, organizationId) => {
     const refusal = await incidentPermissionRefusal("incident.create", params, organizationId);
     if (refusal) return { success: false, message: refusal };
-    // The incident's reporter is the user who asked for it.
+    // The incident's reporter is the user who asked for it: as a user when
+    // they are a member of the organization (the incident then shows their
+    // full name and stays theirs if they are renamed), else as text only
+    // ("User #<id>"), so a reporter_id the create path would refuse is never
+    // sent.
     const requesterId = actingRequesterId(params);
-    const reporter = requesterId
-      ? await getIncidentApproverName(requesterId, organizationId)
-      : ADVISOR_REPORTER;
-    // The user's own calendar day when their browser sent it with the
-    // request (X-Client-Date), else today in UTC.
-    const today = incidentToday(getRequestClientDate());
+    const requesterName = requesterId
+      ? await getIncidentMemberName(requesterId, organizationId)
+      : null;
+    const reporter = requesterId ? (requesterName ?? `User #${requesterId}`) : ADVISOR_REPORTER;
+    // The requester's own calendar day: the one captured when they asked
+    // (an approver may run this later, from another time zone), else the
+    // current request's (X-Client-Date), else today in UTC.
+    const today =
+      incidentCalendarDay(params[REQUESTER_CLIENT_DATE_PARAM]) ??
+      incidentToday(getRequestClientDate());
     const input: Record<string, unknown> = {
       ai_project: (params.title as string) || "",
       // Required by the tool schema; the create path enforces the length rule.
@@ -525,9 +534,7 @@ const agentCreateIncident = createWriteToolFn({
       reporter,
       categories_of_harm: [],
     };
-    // The requester as a user, so the incident shows their full name and
-    // stays theirs if they are renamed. The text above is the fallback.
-    if (requesterId) input.reporter_id = requesterId;
+    if (requesterId && requesterName !== null) input.reporter_id = requesterId;
     // The use case the tool schema offers; checked against the organization.
     if (params.project_id !== undefined && params.project_id !== null) {
       input.project_id = params.project_id;
