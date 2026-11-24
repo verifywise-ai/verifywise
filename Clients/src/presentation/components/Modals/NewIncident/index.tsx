@@ -49,6 +49,7 @@ import { HistorySidebar } from "../../Common/HistorySidebar";
 import TabBar from "../../TabBar";
 import { TabContext } from "@mui/lab";
 import JiraIssueChip from "../../JiraIssueChip";
+import { toLocalDateOnly } from "../../../tools/isoDateToString";
 import type { JiraIncidentLink } from "../../../../application/repository/jiraIncidents.repository";
 
 // To
@@ -94,9 +95,19 @@ export interface NewIncidentFormValues {
   type: string;
   severity: Severity;
   status: IncidentManagementStatus;
+  /** "YYYY-MM-DD" */
   occurred_date: string;
+  /** "YYYY-MM-DD" */
   date_detected: string;
+  /**
+   * The reporter's name. Set from the picked user; older incidents and Jira
+   * imports have only this text (no reporter_id).
+   */
   reporter: string;
+  /** FK to users: the reporter picked from the organization's users. */
+  reporter_id?: number | string | null;
+  /** The reporter_id user's full name as loaded (display only, never sent). */
+  reporter_name?: string | null;
   categories_of_harm: string[];
   affected_persons_groups?: string;
   description: string;
@@ -117,7 +128,13 @@ export interface NewIncidentFormValues {
   expected_updated_at?: string;
 }
 
-const initialState: NewIncidentFormValues = {
+/**
+ * The values of a new incident. Dates default to the user's own today,
+ * computed when the drawer opens (not when the page loaded, and not the UTC
+ * date, which is tomorrow in the US evening and fails "cannot be in the
+ * future").
+ */
+const createInitialState = (): NewIncidentFormValues => ({
   ai_project: "",
   project_id: "",
   model_inventory_id: "",
@@ -125,9 +142,10 @@ const initialState: NewIncidentFormValues = {
   type: "",
   severity: Severity.MINOR,
   status: IncidentManagementStatus.OPEN,
-  occurred_date: new Date().toISOString().split("T")[0],
-  date_detected: new Date().toISOString().split("T")[0],
+  occurred_date: toLocalDateOnly(new Date()),
+  date_detected: toLocalDateOnly(new Date()),
   reporter: "",
+  reporter_id: "",
   categories_of_harm: [],
   description: "",
   affected_persons_groups: "",
@@ -140,7 +158,7 @@ const initialState: NewIncidentFormValues = {
   approved_by: "",
   approval_date: "",
   approval_notes: "",
-};
+});
 
 /** Normalise FK picker values ("" / null / numeric strings) to integer ids or null (issue #4583). */
 const toId = (v: unknown) => (v === undefined || v === null || v === "" ? null : Number(v));
@@ -149,7 +167,16 @@ const FK_FIELDS = new Set<keyof NewIncidentFormValues>([
   "project_id",
   "model_inventory_id",
   "assignee_id",
+  "reporter_id",
 ]);
+
+/**
+ * The reporter picker's option for an incident whose reporter is not one of
+ * the listed users: a name stored as text only (older incidents, Jira
+ * imports) or a user who has left the organization. Picking it keeps the
+ * stored reporter.
+ */
+export const STORED_REPORTER_OPTION = "__stored_reporter__";
 
 /**
  * Whether two form values are the same for change detection: "" / null /
@@ -185,6 +212,7 @@ export const INCIDENT_FIELD_LABELS: Partial<Record<keyof NewIncidentFormValues, 
   occurred_date: "Occurred date",
   date_detected: "Detected date",
   reporter: "Reporter",
+  reporter_id: "Reporter",
   model_system_version: "Model / system version",
   categories_of_harm: "Categories of harm",
   affected_persons_groups: "Affected persons / groups",
@@ -209,6 +237,7 @@ const NON_EDITABLE_FIELDS = new Set<keyof NewIncidentFormValues>([
   "expected_updated_at",
   "approved_by",
   "approval_date",
+  "reporter_name",
 ]);
 
 const severityOptions = [
@@ -252,7 +281,9 @@ const SideDrawerIncident: FC<SideDrawerIncidentProps> = ({
   canApprove = true,
 }) => {
   const theme = useTheme();
-  const [values, setValues] = useState<NewIncidentFormValues>(initialData || initialState);
+  const [values, setValues] = useState<NewIncidentFormValues>(
+    () => initialData || createInitialState(),
+  );
   const [users, setUsers] = useState<User[]>([]);
   const [, setIsLoadingUsers] = useState(false);
   const [modelInventories, setModelInventories] = useState<any[]>([]);
@@ -300,7 +331,9 @@ const SideDrawerIncident: FC<SideDrawerIncidentProps> = ({
           checkFuture: !detectedUnchanged,
         });
       },
-      reporter: (v: unknown) => (!v ? "Reporter is required." : ""),
+      // A picked user or, on older incidents, the stored reporter text.
+      reporter: (v: unknown, all: NewIncidentFormValues) =>
+        !v && toId(all.reporter_id) === null ? "Reporter is required." : "",
       model_system_version: (v: unknown) =>
         typeof v === "string" &&
         v.length > INCIDENT_TEXT_MAX_LENGTH &&
@@ -338,12 +371,17 @@ const SideDrawerIncident: FC<SideDrawerIncidentProps> = ({
   const { approvedProjects } = useProjects();
 
   // A newly opened drawer is a new draft: forget any save still in flight.
+  // A new incident starts from fresh defaults, so its dates are the user's
+  // today when they open it.
   useEffect(() => {
     if (isOpen) {
       draftSeqRef.current += 1;
       isSavingRef.current = false;
       setIsSaving(false);
+      if (!initialData) setValues(createInitialState());
     }
+    // Only on open: initialData changes are handled below.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen]);
 
   // Fetch Users
@@ -415,9 +453,41 @@ const SideDrawerIncident: FC<SideDrawerIncidentProps> = ({
       : [];
   }, [approvedProjects]);
 
-  const userOptions = useMemo(
-    () => users.map((u) => ({ _id: u.name, name: `${u.name} ${u.surname}` })),
-    [users],
+  // Reporter options keyed by user id. An incident whose reporter is not a
+  // listed user (text only, or someone who left) keeps it as an extra option.
+  const reporterId = toId(values.reporter_id);
+  const reporterIsListed = reporterId !== null && users.some((u) => u.id === reporterId);
+  const storedReporterLabel = values.reporter_name || values.reporter;
+  const reporterOptions = useMemo(() => {
+    const options: { _id: string | number; name: string }[] = users.map((u) => ({
+      _id: u.id,
+      name: `${u.name} ${u.surname}`.trim(),
+    }));
+    if (!reporterIsListed && storedReporterLabel) {
+      options.unshift({ _id: reporterId ?? STORED_REPORTER_OPTION, name: storedReporterLabel });
+    }
+    return options;
+  }, [users, reporterIsListed, storedReporterLabel, reporterId]);
+  const reporterValue = reporterId ?? (values.reporter ? STORED_REPORTER_OPTION : "");
+
+  const handleReporterChange = useCallback(
+    (e: any) => {
+      const picked = e.target.value;
+      setValues((prev) => {
+        if (picked === STORED_REPORTER_OPTION) return prev;
+        const user = users.find((u) => u.id === Number(picked));
+        if (!user) return prev;
+        // The server writes the user's full name into the reporter text too.
+        return {
+          ...prev,
+          reporter_id: user.id,
+          reporter: `${user.name} ${user.surname}`.trim(),
+          reporter_name: `${user.name} ${user.surname}`.trim(),
+        };
+      });
+      clearFieldError("reporter");
+    },
+    [users, clearFieldError],
   );
 
   // Owner/assignee options keyed by user id (issue #4583)
@@ -505,7 +575,7 @@ const SideDrawerIncident: FC<SideDrawerIncidentProps> = ({
     draftSeqRef.current += 1;
     setIsOpen(false);
     baselineRef.current = null;
-    setValues(initialState);
+    setValues(createInitialState());
     resetErrors();
     setActiveTab("details");
   };
@@ -529,13 +599,14 @@ const SideDrawerIncident: FC<SideDrawerIncidentProps> = ({
         project_id: toId(values.project_id),
         model_inventory_id: toId(values.model_inventory_id),
         assignee_id: toId(values.assignee_id),
+        reporter_id: toId(values.reporter_id),
       };
       // When editing, send only what the user changed (plus the version), so
       // a save never writes back stale copies of fields someone else changed.
       const baseline = baselineRef.current;
       let body: Partial<NewIncidentFormValues> = Object.fromEntries(
         Object.entries(formData).filter(
-          ([key]) => key !== "approved_by" && key !== "approval_date",
+          ([key]) => key !== "approved_by" && key !== "approval_date" && key !== "reporter_name",
         ),
       );
       if (isEdit && baseline) {
@@ -825,9 +896,9 @@ const SideDrawerIncident: FC<SideDrawerIncidentProps> = ({
                       id="reporter"
                       label="Reporter"
                       placeholder="Select reporter"
-                      items={userOptions}
-                      value={values.reporter}
-                      onChange={handleFieldChange("reporter")}
+                      items={reporterOptions}
+                      value={reporterValue}
+                      onChange={handleReporterChange}
                       error={errors.reporter}
                       isRequired
                       sx={{ flex: 1 }}
